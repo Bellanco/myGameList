@@ -1866,6 +1866,13 @@
     width: 1rem;
     height: 1rem;
   }
+
+  /* Aquí TODOS los botones de la fila son de solo icono, así que la campana deja de ser la excepción y
+     vuelve a la medida de sus vecinos: con el tamaño grande era la única que desentonaba. */
+  .hub-screen-actions .btn.hub-requests-btn .ui-icon {
+    width: 1rem;
+    height: 1rem;
+  }
 }
 
 /* ── Pantallas de error ────────────────────────────────────────────────────────────────────────────
@@ -2043,7 +2050,11 @@
   place-items: center;
 }
 
-.hub-requests-btn .ui-icon { width: var(--ico-xl); height: var(--ico-xl); }
+/* El icono manda más aquí que en un botón con rótulo: es lo ÚNICO que hay dentro. Hace falta nombrar la
+   fila para ganar el empate contra `.hub-screen-actions .btn .ui-icon` (.98 rem), que se declara antes y
+   con las mismas tres clases; sin eso, esta regla no llegaba a aplicarse nunca y la campana salía del
+   tamaño de los iconos que acompañan a un rótulo, perdida en su cuadrado. */
+.hub-screen-actions .btn.hub-requests-btn .ui-icon { width: var(--ico-xl); height: var(--ico-xl); }
 
 /* Spinner del botón de publicar mientras se envía el post (reutiliza hubSpin de _overlays). */
 .hub-spinner {

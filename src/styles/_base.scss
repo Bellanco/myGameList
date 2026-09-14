@@ -280,9 +280,15 @@
    (le basta 3:1). El `--danger` sube a coral porque el rojo sangre del skin se usa como RELLENO, no
    como tinta, y ahí manda `--danger-fill`. */
 :root[data-palette="steam"] {
-  --bg: #212832;
-  --surface: #2a323d;
-  --surface-hover: #303845;
+  /* LAS CUATRO CHAPAS, ABIERTAS UN PASO. Estaban a 1,10–1,15:1 entre vecinas y 1,41:1 entre los extremos:
+     cuatro grises que el ojo no separaba, y una tarjeta sobre el fondo solo existía por su sombra. Ahora van
+     a 1,20 / 1,17 / 1,20 y 1,68:1 de punta a punta. El hueco se ha abierto HACIA ABAJO a propósito: la chapa
+     más alta (`--surface-elevated`) es la que fija el contraste de todas las tintas —ahí el enlace se queda
+     en 4,65:1, que es el peor caso de la paleta— así que no se toca, y lo que baja es el fondo. Resultado:
+     más profundidad y las cuatro medidas de texto EXACTAMENTE iguales que antes (9,51 · 6,09 · 4,94 · 4,65). */
+  --bg: #141922;
+  --surface: #212932;
+  --surface-hover: #2c343f;
   --surface-elevated: #36404d;
   --border: #55606f;
   --text: #f0f4f8;
@@ -314,6 +320,18 @@
   --radius-lg: 4px;
   /* EL FUEGO DE IGNI · el segundo papel. `--wt-igni` es el gráfico; `--fg-link` la tinta. */
   --wt-igni: #ff8f4a;
+  /* LAS CINCO SEÑALES · el tercer papel, y el que le quita el gris al tema. Igni ya estaba (es el fuego de
+     arriba); las otras cuatro entran aquí con sus colores del juego: Aard el azul del empujón, Yrden el
+     púrpura de la trampa, Quen el ámbar del escudo y Axii el verde del encantamiento.
+     QUÉ PINTAN Y QUÉ NO: filetes, marcas, puntos de leyenda y trazos —cosas NO textuales, que piden 3:1—.
+     Ninguna escribe: para eso está `--fg-link`, que es la única tinta de acento y está medida a 4,5:1. Por
+     eso Igni no se desdobla en un naranja «de pintar» y otro «de escribir»: el tema tiene UN fuego.
+     Peor caso de cada una contra las cuatro chapas: Aard 5,30 · Igni 4,65 · Yrden 3,54 · Quen 6,69 · Axii 6,04.
+     DÓNDE SE REPARTEN: `themes/steam.scss` §5c las ata a los cinco sucesos de la aplicación. */
+  --wt-aard: #4fc3ff;
+  --wt-yrden: #a97dff;
+  --wt-quen: #ffc62e;
+  --wt-axii: #6fdc5c;
   --wt-sangre: #8e1c14;
   --wt-papel: #e7d3b0;
   --wt-tinta: #281e13;
@@ -326,14 +344,19 @@
    chips no cambia de color en claro: un pergamino es un pergamino a cualquier hora, y lo que hace que
    siga destacando es que el metal de debajo es más frío que él. */
 :root[data-palette="steam"][data-theme="light"] {
-  --bg: #dde3e9;
-  --surface: #eef2f6;
-  --surface-hover: #d2dae2;
-  --surface-elevated: #e7ecf1;
+  /* LAS CUATRO CHAPAS, ABIERTAS UN PASO — el mismo trabajo que en oscuro y por el motivo contrario. Aquí el
+     suelo lo pone la chapa más HONDA (`--surface-hover`), que es donde peor lo tiene el texto atenuado, así
+     que la rampa se abre HACIA ARRIBA y a cambio las dos tintas grises bajan un punto. De 1,26:1 entre los
+     extremos a 1,51:1, y las tres tintas atenuadas salen MEJOR que antes (atenuado 5,37→5,56 · pestaña
+     inactiva 4,96→5,38 · enlace 5,51→4,88, todas por encima del 4,5:1). */
+  --bg: #d8e0e7;
+  --surface: #f6f9fb;
+  --surface-hover: #c4ced8;
+  --surface-elevated: #ecf1f5;
   --border: #a9b5c2;
   --text: #141b23;
-  --text-muted: #4a5563;
-  --text-dim: #4f5a68;
+  --text-muted: #414b57;
+  --text-dim: #434d5a;
   --steam: #47525f;
   --steam-hover: #2f3945;
   --steam-rgb: 71,82,95;
@@ -350,11 +373,17 @@
   --chip-plat-bg: rgba(71,82,95,.10);
   --chip-plat-border: rgba(71,82,95,.30);
   --hub-text: #141b23;
-  --hub-text-muted: #4a5563;
+  --hub-text-muted: #414b57;
   --tint-rgb: 30,42,56;
   /* En claro el acento es acero PROFUNDO y encima manda el blanco (7,95:1). */
   --on-accent: #fff;
   --wt-igni: #8f3608;
+  /* Las otras cuatro señales, en su versión honda para leerse sobre el acero claro. Peor caso contra las
+     cuatro chapas: Aard 4,43 · Igni 4,88 · Yrden 5,91 · Quen 4,62 · Axii 4,15 (piden 3:1). */
+  --wt-aard: #0a5c94;
+  --wt-yrden: #5622ad;
+  --wt-quen: #7d4a00;
+  --wt-axii: #1c6b1f;
   --wt-sangre: #8e1c14;
   --wt-papel: #e7d3b0;
   --wt-tinta: #281e13;

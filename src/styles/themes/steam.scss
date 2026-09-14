@@ -97,35 +97,106 @@
 :root[data-palette="steam"] .main-row:hover > td:first-child { border-left-color: color-mix(in srgb, var(--steam) 55%, transparent); }
 :root[data-palette="steam"] .main-row.open > td:first-child { border-left-color: var(--wt-igni); }
 
-/* ── §5 · Botones = HOJA DE ACERO. La pieza se recorta en punta por los dos lados —una hoja vista de
-   canto— y la acanaladura de luz la cruza por el centro: el degradado cambia de claro a oscuro justo
-   en el 50 %, que es lo que lee el ojo como filo. Sin `border`: el contorno lo da el recorte. ── */
-:root[data-palette="steam"] .btn:not(.btn-icon):not(.btn-ghost) {
-  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
+/* El color del filete, en la raíz y no en la regla de §5: esa lleva `:not()` y pesaría más que la de
+   cualquier rol, así que un botón que quisiera otro filo no podría pedirlo (es la misma trampa que ya
+   documentan los cuatro altos, unas líneas más abajo). Desde la raíz se hereda, y heredar siempre pierde
+   contra una declaración propia. Lo usan la hoja larga (§5) y el remache (§5b). */
+:root[data-palette="steam"] { --wt-filete: rgba(198,206,216,.70); }
+:root[data-palette="steam"][data-theme="light"] { --wt-filete: rgba(71,82,95,.55); }
+
+/* ── §4b · LA PIEZA DE CHAPA: cómo se troquela CUALQUIER cosa de este tema ────────────────────────────
+   Todo lo que aquí va recortado en ángulo —la hoja de los botones, el remache, la barra inferior, su
+   indicador y la cinta del día— se montaba igual: `clip-path` sobre el propio elemento y el filete por
+   dentro, con un `box-shadow: inset`. Y así se veía mal, siempre por los mismos dos motivos:
+
+     1. `clip-path` SE COME EL `box-shadow` DEL PROPIO ELEMENTO (la regla 2 que documenta `persona.scss`),
+        y un `inset` es un rectángulo: sobrevivía en los cantos rectos y desaparecía en los cortados. Lo
+        que se veía no era un contorno, eran DOS RAYAS sueltas —una arriba y otra abajo— que se paran
+        antes de llegar a las puntas. En una pieza pequeña se come medio perímetro.
+     2. Y recorta también lo que se sale de la caja: el contador de solicitudes y el anillo de foco.
+
+   LA FORMA LA DAN DOS CAPAS DETRÁS DEL CONTENIDO, no el recorte del elemento —la misma solución que ya
+   usaba `cyberpunk.scss` para su muesca—: `::before` lleva el color del filete y `::after` la chapa, 1 px
+   más pequeña, así el filete asoma 1 px en TODOS los cantos, diagonales incluidas. El elemento deja de
+   recortarse, de modo que lo que se sale de la caja vuelve a verse. `isolation` acota el z-index negativo.
+
+   CADA PIEZA PONE SUS TRES FICHAS: `--pz-corte` (el polígono), `--pz-chapa` (el fondo) y `--pz-filete`
+   (el color del canto); `--pz-grosor` si su filete es más gordo que 1 px.
+
+   NO PONE `position`: la cinta del día es `sticky` y el indicador `absolute`, y forzar `relative` aquí
+   les cambiaría el comportamiento. Cada pieza se asegura de estar posicionada por su cuenta. ── */
+@mixin pieza-de-chapa {
+  isolation: isolate;
+  clip-path: none;
+  background: none !important;
+  box-shadow: none !important;
   border: 0 !important;
   border-radius: 0 !important;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    height: auto;
+    margin: 0;
+    clip-path: var(--pz-corte);
+    pointer-events: none;
+  }
+  /* El filete por defecto va como RESPALDO dentro del `var()` y NO declarado en la regla de cada pieza:
+     la de los botones lleva `:not()` y pesa más que la de cada rol, así que declararlo allí dejaba al
+     activo sin su filo de Igni. Es la misma trampa que ya documentan los cuatro altos de §5. */
+  &::before { background: var(--pz-filete, var(--wt-filete)); z-index: -2; }
+  &::after { inset: var(--pz-grosor, 1px); background: var(--pz-chapa); z-index: -1; }
+}
+
+/* ── §5 · Botones = HOJA DE ACERO. La pieza se recorta en punta por los dos lados —una hoja vista de
+   canto— y la acanaladura de luz la cruza por el centro: el degradado cambia de claro a oscuro justo
+   en el 50 %, que es lo que lee el ojo como filo. Sin `border`: el contorno lo da el recorte (§4b). ── */
+:root[data-palette="steam"] .btn:not(.btn-icon):not(.btn-ghost) {
+  @include pieza-de-chapa;
+  /* `.btn` es `position: static` en la hoja base, así que hasta ahora la acanaladura —un `::before`
+     absoluto— NO se colocaba sobre el botón: se iba al ancestro posicionado más cercano y pintaba una
+     raya de 1 px A TODO LO ANCHO del panel, a media altura. Eso son las líneas sueltas que cruzaban las
+     tarjetas. Con la pieza posicionada, cada capa se queda dentro de su botón. */
+  position: relative;
+  --pz-corte: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
   padding-inline: 1.45rem;
   -webkit-backdrop-filter: none; backdrop-filter: none;
   /* Los cuatro altos del degradado van por ficha CON RESPALDO EN EL `var()`, no declarados aquí: esta
      regla lleva `:not()`, así que pesa más que la de cada rol y, si declarase las fichas, ganaría también
-     en ellas — el botón de borrar salía gris. */
-  background: linear-gradient(180deg,
-    var(--wt-h1, #4e5763) 0%, var(--wt-h2, #3c4550) 42%, var(--wt-h3, #2b333d) 52%, var(--wt-h4, #414a56) 100%) !important;
+     en ellas — el botón de borrar salía gris.
+     El degradado entero SÍ se declara aquí, y puede: un `var()` se sustituye sobre el elemento en el que
+     se usa, así que `--wt-acero` recoge los cuatro altos del rol que le toque a cada botón. Está por ficha
+     para que la hoja corta de §5b lo pinte en su propia capa sin repetir aquí los altos ni los dos modos. */
+  --wt-acero: linear-gradient(180deg,
+    var(--wt-h1, #4e5763) 0%, var(--wt-h2, #3c4550) 42%, var(--wt-h3, #2b333d) 52%, var(--wt-h4, #414a56) 100%);
   color: var(--wt-rotulo, var(--steam)) !important;
   /* EL FILETE ES LO QUE SEPARA LA PIEZA DEL PANEL. Sin él, la chapa del botón y la del panel se
      diferenciaban en 1,03:1 —o sea, nada—: el botón existía solo por su rótulo. Con el filo de plata al
      70 % el control llega a 3,9:1 contra el fondo, que es lo que pide la 1.4.11 para una parte no
-     textual. Va como `box-shadow` y no como `border` porque el recorte en punta se comería el borde. */
-  box-shadow: inset 0 0 0 1px rgba(198,206,216,.70) !important;
+     textual. Ahora lo pinta la capa de §4b, así que rodea la pieza ENTERA y no solo sus cantos rectos. */
   transition: filter .18s, transform .1s;
 }
-:root[data-palette="steam"] .btn:not(.btn-icon):not(.btn-ghost)::before {
-  content: ''; position: absolute; left: 12px; right: 12px; top: 50%; height: 1px; margin-top: -1px;
-  /* El filo se insinúa en los DOS EXTREMOS y se apaga donde está el rótulo: a plena luz cruzaba la
-     palabra de lado a lado y parecía que la tachaba. */
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.28) 18%, transparent 38%,
-    transparent 62%, rgba(255,255,255,.28) 82%, transparent);
-  pointer-events: none;
+/* LA CHAPA DE LA HOJA, con lo que la cruza, todo en la misma capa: el acero abajo, la acanaladura de luz
+   encima y —solo en la acción principal y con los efectos encendidos (§13)— el destello que la recorre.
+   El destello va como CAPA DE FONDO y se mueve con `background-position`, no con `transform`: esta capa
+   es ahora la chapa del botón, y moverla se llevaría de paseo el acero. */
+:root[data-palette="steam"] .btn:not(.btn-icon):not(.btn-ghost)::after {
+  background-image:
+    var(--wt-brillo, none),
+    /* Canto de luz en el borde de arriba; solo lo enciende el activo. */
+    var(--wt-canto, none),
+    /* El filo se insinúa en los DOS EXTREMOS y se apaga donde está el rótulo: a plena luz cruzaba la
+       palabra de lado a lado y parecía que la tachaba. El hueco central va por ficha porque la hoja
+       corta necesita uno más ancho: en 43 px, lo que en la hoja larga esquiva un rótulo aquí cruza el
+       icono por la mitad. */
+    var(--wt-surco, linear-gradient(90deg, transparent, rgba(255,255,255,.28) 18%, transparent 38%,
+      transparent 62%, rgba(255,255,255,.28) 82%, transparent)),
+    var(--wt-acero);
+  background-size: 55% 100%, 100% 1px, 100% 1px, 100% 100%;
+  background-position: var(--wt-brillo-x, -120%) 0, 0 0, 0 50%, 0 0;
+  background-repeat: no-repeat;
 }
 :root[data-palette="steam"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: none; filter: brightness(1.14); }
 :root[data-palette="steam"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(1px); }
@@ -146,7 +217,12 @@
      queda como confirmación, no como única señal. */
   --wt-h1: #e2e8ef; --wt-h2: #c3ccd7; --wt-h3: #92a0af; --wt-h4: #d6dee6;
   --wt-rotulo: var(--on-accent);
-  box-shadow: inset 0 0 0 1.5px rgba(255,143,74,.85), inset 0 1px 0 rgba(255,255,255,.6) !important;
+  /* El filo de Igni ya no es un `box-shadow` rectangular —que el recorte partía por la mitad— sino EL
+     FILETE de la pieza (§4b): así sigue la hoja entera, puntas incluidas, y de paso puede ser más gordo
+     sin que se note el corte. El canto de luz de arriba viaja como capa de la chapa. */
+  --pz-filete: rgba(255,143,74,.85);
+  --pz-grosor: 1.5px;
+  --wt-canto: linear-gradient(rgba(255,255,255,.6), rgba(255,255,255,.6));
 }
 /* El destructivo es la hoja al rojo: brasa dentro del acero, no relleno plano. */
 :root[data-palette="steam"] .btn-danger {
@@ -162,10 +238,9 @@
    lleva `:not()` y pesa más que la de cada rol, así que declararlos aquí volvía a pisar al activo y al
    destructivo — el mismo fallo que ya había en la variante oscura. */
 :root[data-palette="steam"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost) {
-  background: linear-gradient(180deg,
-    var(--wt-h1, #f7f9fb) 0%, var(--wt-h2, #dde3e9) 42%, var(--wt-h3, #b7c1cb) 52%, var(--wt-h4, #eaeef2) 100%) !important;
+  --wt-acero: linear-gradient(180deg,
+    var(--wt-h1, #f7f9fb) 0%, var(--wt-h2, #dde3e9) 42%, var(--wt-h3, #b7c1cb) 52%, var(--wt-h4, #eaeef2) 100%);
   color: var(--wt-rotulo, var(--text)) !important;
-  box-shadow: inset 0 0 0 1px rgba(71,82,95,.55) !important;
 }
 :root[data-palette="steam"][data-theme="light"] .btn-steam,
 :root[data-palette="steam"][data-theme="light"] .btn-primary {
@@ -182,11 +257,82 @@
      para las partes no textuales. */
   --wt-h1: #566270; --wt-h2: #434d5a; --wt-h3: #333c47; --wt-h4: #4d5765;
   --wt-rotulo: #fff;
-  box-shadow: inset 0 0 0 1.5px rgba(143,54,8,.6), inset 0 1px 0 rgba(255,255,255,.16) !important;
+  --pz-filete: rgba(143,54,8,.6);
+  --pz-grosor: 1.5px;
+  --wt-canto: linear-gradient(rgba(255,255,255,.16), rgba(255,255,255,.16));
 }
 :root[data-palette="steam"][data-theme="light"] .btn-danger {
   --wt-h1: #f5d9d6; --wt-h2: #e8bcb8; --wt-h3: #cf9691; --wt-h4: #f0cecb;
   --wt-rotulo: #7e1c16;
+}
+
+/* ── §5b · LA HOJA CORTA: los botones que son SOLO UN ICONO —la campana de solicitudes, el «publicar» del
+   compositor y, por debajo de 620 px, la fila entera de acciones, que allí se queda sin rótulos—.
+
+   Una hoja de 43 px no es una hoja. Con el chaflán de §5 —10 px por lado— más de la mitad del contorno se
+   va en los dos picos y la pieza se lee como una gema; y el `padding-inline` de §5 —1,45 rem por lado, el
+   aire del rótulo— no cabía en los 2,7 rem del botón, así que el relleno mandaba sobre la anchura y el
+   icono salía de su caja de contenido.
+
+   Aquí la pieza es OTRA: un REMACHE de acero, cuadrado con las cuatro esquinas matadas. El mismo material
+   y el mismo corte en ángulo que la hoja, a la escala que le toca. Lo demás —las dos capas, el filete que
+   rodea la pieza entera y el contador de solicitudes, que vuelve a verse porque el botón ya no recorta—
+   lo pone §4b, que es de donde salen todas las piezas troqueladas de este tema. ── */
+:root[data-palette="steam"] .btn:not(.btn-icon):not(.btn-ghost).hub-requests-btn,
+:root[data-palette="steam"] .btn:not(.btn-icon):not(.btn-ghost).hub-post-publish {
+  padding-inline: 0;
+  --pz-corte: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px),
+    calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
+  --wt-surco: linear-gradient(90deg, transparent, rgba(255,255,255,.28) 22%, transparent 40%,
+    transparent 60%, rgba(255,255,255,.28) 78%, transparent);
+}
+
+/* Por debajo de 620 px la fila de acciones colapsa a botones de 44 px con `font-size: 0` (ver
+   `_layout.scss`): allí TODOS son de solo icono, así que todos son remaches. Si no, la campana sería la
+   única pieza rematada de la fila. */
+@media (max-width: 620px) {
+  :root[data-palette="steam"] .hub-screen-actions .btn:not(.btn-icon):not(.btn-ghost) {
+    padding-inline: 0;
+    --pz-corte: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px),
+      calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
+    --wt-surco: linear-gradient(90deg, transparent, rgba(255,255,255,.28) 22%, transparent 40%,
+      transparent 60%, rgba(255,255,255,.28) 78%, transparent);
+  }
+}
+
+/* ── §5c · LAS CINCO SEÑALES, REPARTIDAS ──────────────────────────────────────────────────────────────
+   El tema tenía dos metales y un fuego, y con eso pintaba TODO: el resultado era que una pantalla llena de
+   sucesos distintos se leía del mismo gris. Las otras cuatro señales del brujo entran aquí (los colores, en
+   `_base.scss`, CAPA 2) y cada una se ata a UN suceso de la aplicación, que resulta que también son cinco:
+
+     · AARD, el empujón          → «comenzó» / en curso      (antes iba en plata, o sea, en gris)
+     · AXII, el encantamiento    → «finalizó» / completado
+     · IGNI, el fuego            → «abandonó» / abandonado    (quemar la nave)
+     · YRDEN, la trampa          → «añadió» / pendiente       (lo que queda dentro del cerco, esperando)
+     · QUEN, el escudo           → los logros                 (antes compartía ámbar con «en curso»)
+
+   ESTO ARREGLA DOS EMPATES que ya existían: «en curso» y «logro» eran el mismo ámbar, y «pendiente» era plata
+   en estadísticas pero púrpura en el feed. Ahora los cinco dicen lo mismo en las tres pantallas.
+
+   LO QUE TIÑEN Y LO QUE NO. Filete, velo, punto de leyenda, trazo y lacre —cosas NO textuales, 3:1—. Ningún
+   texto cambia de color, así que ninguna de las medidas auditadas se mueve. Y NO tocan los botones: la hoja
+   de acero de §5 es la identidad del tema y se queda como está. ── */
+:root[data-palette="steam"] .hub-feed-activity-item.is-move[data-tab="e"] { --evc: var(--wt-aard); }
+:root[data-palette="steam"] .hub-feed-activity-item.is-move[data-tab="c"] { --evc: var(--wt-axii); }
+:root[data-palette="steam"] .hub-feed-activity-item.is-move[data-tab="v"] { --evc: var(--wt-igni); }
+:root[data-palette="steam"] .hub-feed-activity-item.is-move[data-tab="p"] { --evc: var(--wt-yrden); }
+:root[data-palette="steam"] .hub-feed-activity-item.is-achievements { --evc: var(--wt-quen); }
+
+/* El panel de estadísticas habla con los mismos cinco: leyenda, aro, área y línea de tiempo. Y la rampa
+   secuencial de los repartos por etiqueta pasa a ir de FUEGO A HIELO —Igni → Aard—, que es la dualidad de
+   este tema y separa sus dos extremos más que el naranja→púrpura que traía por defecto. */
+:root[data-palette="steam"] .stats-hub {
+  --stats-e: var(--wt-aard);
+  --stats-c: var(--wt-axii);
+  --stats-v: var(--wt-igni);
+  --stats-p: var(--wt-yrden);
+  --chart-from: var(--wt-igni);
+  --chart-to: var(--wt-aard);
 }
 
 /* ── §6 · Chips = CARTEL DE CONTRATO. Tres capas: el frente es color PLANO (la zona escrita, para que
@@ -262,11 +408,14 @@
 :root[data-palette="steam"] .chip-genre,
 :root[data-palette="steam"] .rl-chip { --wt-tono: var(--cat, var(--steam)); }
 :root[data-palette="steam"] .chip-generic { --wt-tono: var(--warn); }
-:root[data-palette="steam"] .chip-pf,
-:root[data-palette="steam"] .chip-list-c { --wt-tono: var(--success); }
-:root[data-palette="steam"] .chip-pd,
-:root[data-palette="steam"] .chip-list-v { --wt-tono: var(--danger); }
-:root[data-palette="steam"] .chip-list-e { --wt-tono: var(--wt-igni); }
+:root[data-palette="steam"] .chip-pf { --wt-tono: var(--success); }
+:root[data-palette="steam"] .chip-pd { --wt-tono: var(--danger); }
+/* Los cuatro carteles de LISTA lacran con la señal de su suceso, la misma que llevan en el feed y en las
+   estadísticas (§5c): el sello es lo único con color de un cartel de pergamino, así que es donde entra. */
+:root[data-palette="steam"] .chip-list-c { --wt-tono: var(--wt-axii); }
+:root[data-palette="steam"] .chip-list-v { --wt-tono: var(--wt-igni); }
+:root[data-palette="steam"] .chip-list-e { --wt-tono: var(--wt-aard); }
+:root[data-palette="steam"] .chip-list-p { --wt-tono: var(--wt-yrden); }
 :root[data-palette="steam"] .chip-plat,
 :root[data-palette="steam"] .chip-deck { --wt-tono: var(--steam); }
 :root[data-palette="steam"] .hub-feed-game-chip,
@@ -364,31 +513,37 @@
 /* ── §8b · La barra inferior era una píldora de cristal, el acabado de la casa. Aquí es el FRONTAL de la
    chapa: recta, con filete, canto de luz arriba y la sección activa como una placa de acero pulido con
    el filo de Igni encendido. Es la pieza que más se toca en el teléfono. ── */
+/* AFILADA COMO LOS BOTONES: la barra se recorta en punta por los dos lados, igual que una hoja, y por lo
+   mismo que ellos la forma la dan las dos capas de §4b — con el filete por dentro, sus dos puntas se
+   quedaban sin canto. El canto de luz de arriba viaja como capa de la chapa. */
 :root[data-palette="steam"] .bottom-nav-inner {
-  /* AFILADA COMO LOS BOTONES: la barra se recorta en punta por los dos lados, igual que una hoja, y el
-     filete va por dentro (`box-shadow`) porque el recorte se comería un `border`. */
-  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%);
-  border: 0;
-  border-radius: 0;
-  background: linear-gradient(180deg, var(--surface-elevated), var(--bg));
+  @include pieza-de-chapa;
+  --pz-corte: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%);
+  --pz-filete: rgba(198,206,216,.35);
+  --pz-chapa:
+    linear-gradient(var(--wt-canto-nav, rgba(255,255,255,.14)), var(--wt-canto-nav, rgba(255,255,255,.14))) 0 0 / 100% 1px no-repeat,
+    linear-gradient(180deg, var(--surface-elevated), var(--bg));
   -webkit-backdrop-filter: none; backdrop-filter: none;
-  box-shadow: inset 0 0 0 1px rgba(198,206,216,.35), inset 0 1px 0 rgba(255,255,255,.14);
   padding-inline: 1.1rem;
 }
 :root[data-palette="steam"][data-theme="light"] .bottom-nav-inner {
-  box-shadow: inset 0 0 0 1px rgba(71,82,95,.4), inset 0 1px 0 rgba(255,255,255,.9);
+  --pz-filete: rgba(71,82,95,.4);
+  --wt-canto-nav: rgba(255,255,255,.9);
 }
 :root[data-palette="steam"] .bottom-nav-btn { border-radius: var(--radius-sm); }
 :root[data-palette="steam"] .bottom-nav-btn.active { color: var(--on-accent); }
+/* La sección activa es la placa pulida con el filo de Igni. Es `position: absolute`, así que ya posiciona
+   sus capas; el filo de Igni pasa a ser el filete de la pieza y recorre también las dos puntas. */
 :root[data-palette="steam"] .bottom-nav-ind {
-  border-radius: 0;
-  clip-path: polygon(9px 0, calc(100% - 9px) 0, 100% 50%, calc(100% - 9px) 100%, 9px 100%, 0 50%);
-  background: linear-gradient(180deg, #e2e8ef 0%, #c3ccd7 46%, #92a0af 54%, #d6dee6 100%);
-  box-shadow: inset 0 0 0 1.5px rgba(255,143,74,.75);
+  @include pieza-de-chapa;
+  --pz-corte: polygon(9px 0, calc(100% - 9px) 0, 100% 50%, calc(100% - 9px) 100%, 9px 100%, 0 50%);
+  --pz-chapa: linear-gradient(180deg, #e2e8ef 0%, #c3ccd7 46%, #92a0af 54%, #d6dee6 100%);
+  --pz-filete: rgba(255,143,74,.75);
+  --pz-grosor: 1.5px;
 }
 :root[data-palette="steam"][data-theme="light"] .bottom-nav-ind {
-  background: linear-gradient(180deg, #566270 0%, #434d5a 46%, #333c47 54%, #4d5765 100%);
-  box-shadow: inset 0 0 0 1.5px rgba(143,54,8,.6);
+  --pz-chapa: linear-gradient(180deg, #566270 0%, #434d5a 46%, #333c47 54%, #4d5765 100%);
+  --pz-filete: rgba(143,54,8,.6);
 }
 :root[data-palette="steam"][data-theme="light"] .bottom-nav-btn.active { color: #fff; }
 
@@ -461,13 +616,18 @@
 :root[data-palette="steam"] .hub-seg { border: 1px solid var(--border); border-radius: var(--radius-sm); }
 /* LOS NOMBRES DEL HUB NO VAN EN IGNI. El fuego es la señal de lo que se pulsa y de lo que está activo;
    usarlo también para cada nombre del feed llenaba la columna de naranja y le quitaba fuerza justo donde
-   sí hace falta. Los nombres pasan a PLATA BRUÑIDA —el otro metal del tema— y se distinguen del texto
-   corriente por un filete bajo, no por el color, que es lo que sigue funcionando sin ver color. */
+   sí hace falta. Los nombres van en PLATA BRUÑIDA, el otro metal del tema.
+   SIN FILETE BAJO EN REPOSO: lo llevaban para distinguirse sin depender del color, pero en una columna de
+   frases cortas —donde casi cada renglón empieza por un nombre— eso son tres o cuatro subrayados por
+   pantalla y el feed se leía como un formulario. El nombre ya va en otro color Y en negrita (`.hub-feed-
+   move-who`, 700), que es una segunda señal no cromática; el filete se reserva para el paso del ratón,
+   donde además se enciende en Igni. El borde se queda declarado en transparente para que al pasar por
+   encima no se mueva el renglón. */
 :root[data-palette="steam"] .hub-name-link,
 :root[data-palette="steam"] .hub-detail-profile-link,
 :root[data-palette="steam"] .hub-feed-card h3:not(.hub-feed-game-chip) {
   color: var(--steam-hover);
-  border-bottom: 1px solid color-mix(in srgb, var(--steam) 45%, transparent);
+  border-bottom: 1px solid transparent;
 }
 :root[data-palette="steam"] .hub-name-link:hover,
 :root[data-palette="steam"] .hub-detail-profile-link:hover {
@@ -479,23 +639,37 @@
 /* LA CABECERA DE DÍA es la CINTA que separa una jornada de otra: chapa estrecha con los extremos en
    punta —el mismo corte de la hoja—, versales de Cinzel grabadas (sombra arriba, luz abajo) y dos muescas
    a los lados. No es una pastilla más: es lo único que ordena el feed en el tiempo. */
+/* LA CINTA SE INVIERTE respecto al panel, que es como este tema señala lo que manda (§5, el activo).
+   Iba del mismo acero que todo lo demás —1,15:1 contra la tarjeta en oscuro y 1,00:1 en claro, o sea
+   NADA— y lo único que la separaba era su forma. Ahora es la placa PULIDA sobre el panel oscuro y la
+   placa PAVONADA sobre el panel claro, con la fecha grabada en la tinta contraria: 4,09–6,92:1 contra la
+   tarjeta en oscuro y 4,37–7,51:1 en claro, con el rótulo por encima de 4,6:1 en los dos.
+   Es `position: sticky`, así que ya posiciona sus capas por su cuenta (§4b no toca `position`). */
 :root[data-palette="steam"] .hub-feed-day-header {
+  @include pieza-de-chapa;
   font-family: var(--font-display);
   letter-spacing: .18em;
-  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
-  border: 0 !important;
-  border-radius: 0 !important;
   padding: .22rem 1.5rem !important;
-  background: linear-gradient(180deg, #4e5763 0%, #3c4550 46%, #2b333d 54%, #414a56 100%) !important;
-  color: var(--steam) !important;
-  text-shadow: 0 -1px 0 rgba(0,0,0,.7), 0 1px 0 rgba(255,255,255,.16);
-  box-shadow: inset 0 0 0 1px rgba(198,206,216,.45) !important;
+  --pz-corte: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
+  --pz-chapa: linear-gradient(180deg, #a8b3c0 0%, #96a1ae 46%, #7d8896 54%, #9ca7b4 100%);
+  --pz-filete: rgba(18,21,26,.5);
+}
+/* LA FECHA VA EN EL `h4`, Y ESE TIENE COLOR PROPIO (`--hub-text-muted`, en `social.scss`): teñir la cinta
+   no lo cambiaba, así que la fecha se quedaba en el gris de siempre —invisible sobre la placa en los dos
+   temas—. La tinta va aquí, sobre el rótulo, y GRABADA: luz por abajo y sombra por arriba en la placa
+   clara, y al revés en la oscura. Mide 5,08–8,60:1 en oscuro y 4,62–7,94:1 en claro contra su propia
+   placa, contando las cuatro bandas del degradado y no solo la media. */
+:root[data-palette="steam"] .hub-feed-day-header h4 {
+  color: #12151a;
+  text-shadow: 0 1px 0 rgba(255,255,255,.5), 0 -1px 0 rgba(0,0,0,.22);
 }
 :root[data-palette="steam"][data-theme="light"] .hub-feed-day-header {
-  background: linear-gradient(180deg, #f7f9fb 0%, #dde3e9 46%, #b7c1cb 54%, #eaeef2 100%) !important;
-  color: #2f3945 !important;
-  text-shadow: 0 1px 0 rgba(255,255,255,.8), 0 -1px 0 rgba(30,42,56,.25);
-  box-shadow: inset 0 0 0 1px rgba(71,82,95,.45) !important;
+  --pz-chapa: linear-gradient(180deg, #6b7684 0%, #5a6471 46%, #48525e 54%, #626d7a 100%);
+  --pz-filete: rgba(255,255,255,.45);
+}
+:root[data-palette="steam"][data-theme="light"] .hub-feed-day-header h4 {
+  color: #fff;
+  text-shadow: 0 -1px 0 rgba(0,0,0,.55), 0 1px 0 rgba(255,255,255,.14);
 }
 /* EL LIENZO DE LA ACTIVIDAD: la fragua. Un rescoldo naranja entrando por abajo a la izquierda y el
    reflejo frío del acero arriba a la derecha. */
@@ -531,18 +705,26 @@
    su filete del color del evento; el logro, la misma placa con el filo dorado. */
 :root[data-palette="steam"] .hub-feed-activity-item.is-move,
 :root[data-palette="steam"] .hub-feed-activity-item.is-achievements {
-  border: 1px solid color-mix(in srgb, var(--evc), transparent 45%) !important;
+  /* EL FILETE Y EL VELO, SUBIDOS. Estaban al 45 % de transparencia y al 8 % de mezcla: el color del suceso
+     existía en la hoja pero no llegaba al ojo, y el feed entero se leía del mismo gris. Ver §5c. */
+  border: 1px solid color-mix(in srgb, var(--evc), transparent 22%) !important;
   border-radius: var(--radius-sm) !important;
   background: linear-gradient(180deg,
-    color-mix(in srgb, var(--surface-elevated) 92%, var(--evc)),
-    color-mix(in srgb, var(--surface) 92%, var(--evc))) !important;
+    color-mix(in srgb, var(--surface-elevated) 86%, var(--evc)),
+    color-mix(in srgb, var(--surface) 86%, var(--evc))) !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 1px 2px rgba(0,0,0,.35) !important;
 }
 :root[data-palette="steam"] .hub-feed-activity-item.is-achievements {
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), inset 0 0 0 1px rgba(242,199,92,.22), 0 1px 3px rgba(0,0,0,.4) !important;
+  /* El segundo filo del logro sale de Quen y no de un ámbar suelto: es la misma señal que pinta la placa. */
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), inset 0 0 0 1px color-mix(in srgb, var(--evc), transparent 55%), 0 1px 3px rgba(0,0,0,.4) !important;
 }
+/* En CLARO el velo cunde menos —sobre una chapa clara, un 14 % de color casi no se ve— así que sube al 22 %.
+   Sigue siendo velo: el texto de encima no se tiñe y conserva sus contrastes medidos. */
 :root[data-palette="steam"][data-theme="light"] .hub-feed-activity-item.is-move,
 :root[data-palette="steam"][data-theme="light"] .hub-feed-activity-item.is-achievements {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--surface-elevated) 78%, var(--evc)),
+    color-mix(in srgb, var(--surface) 78%, var(--evc))) !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 1px 2px rgba(30,42,56,.18) !important;
 }
 
@@ -559,16 +741,111 @@
 :root[data-palette="steam"] .shine-value { font-family: var(--font-mono); }
 
 /* ── §13 · Firma del tema (bajo `data-effects`): el lacre que se estampa al guardar (`.fx-seal`, en
-   `_effects.scss`) y el filo de la hoja que destella al pasar por la acción principal. ── */
+   `_effects.scss`), el filo de la hoja que destella al pasar por la acción principal, la luz que se
+   pasea por el acero (§13a) y la sangre fresca que resbala por los carteles (§13b). ── */
 @media (prefers-reduced-motion: no-preference) {
+  /* EL DESTELLO VIVE AHORA DENTRO DE LA CHAPA (§5), no en una capa propia: desde que la forma la dan los
+     dos pseudos de §4b, el `::after` ES el acero del botón, y el `translateX` que movía el destello se
+     llevaba de paseo la chapa entera. Va como primera capa de ese mismo fondo y se desplaza con
+     `background-position`, que mueve la capa y deja las de debajo quietas. El recorte ya no hace falta:
+     la capa está dentro de la pieza troquelada, así que el destello no puede salirse de la hoja. */
   :root[data-effects="on"][data-palette="steam"] .btn-steam,
-  :root[data-effects="on"][data-palette="steam"] .btn-primary { position: relative; overflow: hidden; }
-  :root[data-effects="on"][data-palette="steam"] .btn-steam::after,
-  :root[data-effects="on"][data-palette="steam"] .btn-primary::after {
-    content: ''; position: absolute; inset: 0; pointer-events: none;
-    background: linear-gradient(115deg, transparent 42%, rgba(255,255,255,.55) 50%, transparent 58%);
-    transform: translateX(-130%); transition: transform .55s ease;
+  :root[data-effects="on"][data-palette="steam"] .btn-primary {
+    --wt-brillo: linear-gradient(115deg, transparent 42%, rgba(255,255,255,.55) 50%, transparent 58%);
   }
-  :root[data-effects="on"][data-palette="steam"] .btn-steam:hover::after,
-  :root[data-effects="on"][data-palette="steam"] .btn-primary:hover::after { transform: translateX(130%); }
+  :root[data-effects="on"][data-palette="steam"] .btn-steam::after,
+  :root[data-effects="on"][data-palette="steam"] .btn-primary::after { transition: background-position .55s ease; }
+  :root[data-effects="on"][data-palette="steam"] .btn-steam:hover,
+  :root[data-effects="on"][data-palette="steam"] .btn-primary:hover { --wt-brillo-x: 220%; }
+
+  /* ══ §13a · LA LUZ SE PASEA POR EL ACERO ═══════════════════════════════════════════════════════════
+     El tema tenía la veta del cepillado, que es estática, y un destello que solo salía al pasar el ratón
+     por un botón. Le faltaba lo que hace que una chapa PAREZCA chapa: que la luz se mueva por encima. Es
+     una banda especular en diagonal que cruza la página, pasa en dos segundos y medio y no vuelve hasta
+     pasados diecisiete: un reflejo, no un barrido de escáner.
+
+     VA POR DETRÁS DE LOS PANELES (`z-index: -1`), Y ESA ES LA DECISIÓN QUE IMPORTA. Encima de todo se
+     veía mejor, pero un velo claro sobre un tema oscuro sube el fondo más de lo que sube la tinta, así
+     que se come contraste, y esta paleta no tiene de dónde: el enlace está en 4,65:1 y la pestaña
+     inactiva en 4,94:1, a un pelo del 4,5:1 que pide la AA. Medido, con la banda por encima el peor
+     texto queda en 4,55:1 con un pico del 1 % —o sea, para verse tendría que ser invisible— y en 4,16:1
+     con el 5 % que hacía falta para notarla. Por detrás solo toca al texto que va directamente sobre el
+     fondo, que es el que más holgura tiene: el peor caso se queda en 6,34:1 en oscuro (pico al 10 %) y
+     5,05:1 en claro (pico al 12 %). Diez veces más luz y sigue sobrando margen.
+
+     Lo que se ve, entonces, es la chapa DESNUDA de la página —que en este tema es casi media pantalla—
+     cogiendo la luz, y los paneles tapándola al pasar por debajo. Es lo que hace una plancha de metal
+     con cosas encima.
+
+     Va en `body::after` porque el ::before ya lleva la veta (§2), en UNA sola capa fija para toda la
+     página: animar el brillo panel por panel serían decenas de elementos repintándose a la vez. Se mueve
+     con `transform`, que compone la GPU y no repinta nada.
+
+     EN CLARO NO PUEDE SER BLANCA: sobre una chapa que ya está casi en blanco no queda sitio para un
+     reflejo más claro, así que lo que pasa es la SOMBRA del reflejo —una banda de gris azulado—, que es
+     como se ve moverse la luz sobre metal pulido claro. ══ */
+  :root[data-effects="on"][data-palette="steam"] body::after {
+    content: '';
+    position: fixed;
+    /* Más ancha que la ventana por los dos lados: así entra y sale fuera de cuadro y no se ve aparecer. */
+    inset: -10% -55%;
+    pointer-events: none;
+    z-index: -1;
+    background: linear-gradient(102deg,
+      transparent 40%, rgba(255,255,255,.04) 46%, rgba(255,255,255,.10) 50%,
+      rgba(255,255,255,.04) 54%, transparent 60%);
+    animation: wt-luz-acero 17s ease-in-out infinite;
+  }
+  :root[data-effects="on"][data-palette="steam"][data-theme="light"] body::after {
+    background: linear-gradient(102deg,
+      transparent 40%, rgba(86,104,124,.05) 46%, rgba(86,104,124,.12) 50%,
+      rgba(86,104,124,.05) 54%, transparent 60%);
+  }
+  /* La pasada ocupa el 15 % del ciclo; el resto la banda está fuera de cuadro, quieta. */
+  @keyframes wt-luz-acero {
+    0%   { transform: translate3d(-42%, 0, 0); }
+    15%, 100% { transform: translate3d(42%, 0, 0); }
+  }
+
+  /* ══ §13b · LOS CARTELES GOTEAN ════════════════════════════════════════════════════════════════════
+     Un contrato de brujo es papel viejo con sangre encima —el pliego ya la trae seca, en las manchas de
+     `--wt-hoja1..3`—. Esto es la que aún está fresca: una gota se forma arriba, resbala por el cartel y
+     se pierde por el canto de abajo, cada trece segundos y cambiada de sitio en cada uno.
+
+     VA COMO CAPA DE FONDO DEL PROPIO CHIP, no en un pseudo: los dos están cogidos —`::before` es el
+     pliego de papel que asoma por detrás y `::after` el lacre—, y una tercera capa de fondo no cuesta
+     un elemento más. Se mezcla en `multiply`, que es lo que hace la sangre sobre el papel: lo tiñe, no
+     lo tapa.
+
+     SOLO GOTEA UNO DE CADA TRES cuando van en grupo (`.chips`, los géneros y las plataformas de la
+     tabla). Con la tabla llena son decenas de carteles a la vez: que gotearan todos sería a la vez un
+     gasto tonto de pintado y una pared de rojo. Los que van sueltos —el del juego en el feed, el de la
+     reseña, los filtros activos— gotean siempre, porque son uno o dos en pantalla. ══ */
+  :root[data-effects="on"][data-palette="steam"] .chips .chip:nth-child(3n+1),
+  :root[data-effects="on"][data-palette="steam"] .rl-chip,
+  :root[data-effects="on"][data-palette="steam"] .active-filter-chip,
+  :root[data-effects="on"][data-palette="steam"] .hub-feed-game-chip,
+  :root[data-effects="on"][data-palette="steam"] .hub-review-game {
+    /* LA GOTA: la cuenta abajo y el reguero difuminado por encima, 3,5 px de ancho. Va en un rojo más vivo
+       y más opaco que las manchas que el pliego ya trae secas (`--wt-hoja1..3`, pardo y carmín apagado):
+       si fuera del mismo tono se confundía con ellas y no se leía como algo que está pasando ahora. */
+    background-image:
+      radial-gradient(52% 34% at 50% 80%, rgba(150,16,10,.96), rgba(150,16,10,.66) 48%,
+        rgba(150,16,10,.2) 72%, transparent 82%),
+      var(--wt-hoja, none),
+      linear-gradient(var(--wt-papel-f), var(--wt-papel-f)) !important;
+    background-size: 3.5px 16px, 100% 100%, auto !important;
+    background-repeat: no-repeat, no-repeat, no-repeat !important;
+    background-blend-mode: multiply, multiply, normal !important;
+    animation: wt-gotear 13s linear infinite;
+  }
+  /* Cada cartel gotea por un sitio distinto y en otro momento: si no, la fila entera sangra a la vez. */
+  :root[data-effects="on"][data-palette="steam"] .chips .chip:nth-child(6n+1) { --wt-gota-x: 68%; animation-delay: -4.5s; }
+  :root[data-effects="on"][data-palette="steam"] .rl-chip:nth-of-type(2n) { --wt-gota-x: 61%; animation-delay: -7s; }
+  :root[data-effects="on"][data-palette="steam"] .active-filter-chip:nth-of-type(2n) { --wt-gota-x: 72%; animation-delay: -9s; }
+  @keyframes wt-gotear {
+    /* Quieta y fuera del cartel cuatro quintas partes del ciclo; luego cae. */
+    0%, 80%  { background-position: var(--wt-gota-x, 27%) -17px, 0 0, 0 0; }
+    100%     { background-position: var(--wt-gota-x, 27%) calc(100% + 17px), 0 0, 0 0; }
+  }
 }
