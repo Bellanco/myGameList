@@ -956,7 +956,7 @@
 }
 
 .hub-feed-lienzo-fx::before {
-  /* `--lz-bleed` la saca fuera de la capa para que pueda desplazarse sin descubrir el canto (Corazón rebelde). */
+  /* `--lz-bleed` la saca fuera de la capa para que pueda desplazarse sin descubrir el canto (Ladrones de corazones). */
   inset: var(--lz-bleed, 0);
   background-image: var(--lz-img, none);
   background-size: var(--lz-size, auto);
@@ -1346,7 +1346,7 @@
    sin necesidad de gritar.
 
    La FORMA la pone cada tema (`--sys-*`, CAPA 2, junto a los radios): píldora en el Clásico, rótulo sesgado en
-   Corazón rebelde, etiqueta de señalética en Cámara de pruebas, línea de registro en Sin futuro, renglón de
+   Ladrones de corazones, etiqueta de señalética en Cámara de pruebas, línea de registro en Sin futuro, renglón de
    códice en Solo hay guerra y cartel de píxel en Sol y luna.
 
    El COLOR (`--evc`) lo pone el tipo de lista y solo tiñe la marca, el filete y el velo —cosas NO textuales,
@@ -1372,7 +1372,7 @@
   transform: var(--sys-skew);
   clip-path: var(--sys-clip);
 }
-/* El sesgo de Corazón rebelde se contra-aplica al contenido para que el texto quede recto, igual que en sus
+/* El sesgo de Ladrones de corazones se contra-aplica al contenido para que el texto quede recto, igual que en sus
    botones y chips (`themes/persona.scss` §5 y §6). */
 .hub-feed-activity-item.is-move > *,
 .hub-feed-activity-item.is-achievements > * { transform: var(--sys-unskew, none); }

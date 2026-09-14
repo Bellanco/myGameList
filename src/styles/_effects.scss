@@ -5,7 +5,7 @@
    reduced-motion sería peor que no pintarlo). Todos son `pointer-events:none` y se autodestruyen al terminar.
    Colores hardcodeados por tema, mismo criterio que `useShootingStars`. */
 
-/* ── Corazón rebelde · RÁFAGA de líneas de acción (manga) al pulsar un botón primario. ── */
+/* ── Ladrones de corazones · RÁFAGA de líneas de acción (manga) al pulsar un botón primario. ── */
 .fx-p5-burst {
   position: fixed; z-index: 9997; pointer-events: none; width: 240px; height: 240px;
   transform: translate(-50%, -50%) scale(0);
@@ -101,7 +101,7 @@
   border: 2px solid #c6ced8;
 }
 
-/* Corazón rebelde · el SELLO DEL LADRÓN: sin disco, tarjeta ladeada con contorno negro y sombra de bloque. */
+/* Ladrones de corazones · el SELLO DEL LADRÓN: sin disco, tarjeta ladeada con contorno negro y sombra de bloque. */
 :root[data-palette="persona"] .fx-seal {
   width: auto; height: auto; padding: .9rem 1.6rem; border-radius: 0;
   color: #f4f2f5; background: #ff1f3d;

@@ -7,14 +7,14 @@ import { MOMENT_EVENT, type MomentDetail } from '../../core/effects/moments';
  * respetando `prefers-reduced-motion` — misma política que `useShootingStars`. Todo es DOM efímero: el elemento
  * se inyecta, anima una vez y se autodestruye; nunca bloquea el puntero.
  *
- *  - Corazón rebelde (persona): RÁFAGA de líneas de acción al pulsar un botón primario.
+ *  - Ladrones de corazones (persona): RÁFAGA de líneas de acción al pulsar un botón primario.
  *  - Cámara de pruebas (portal): APERTURA DE PORTAL (anillo azul→naranja) desde el punto del clic en un botón.
  *  - Sol y luna (seaofstars): astro SOL↔LUNA que cruza al alternar claro/oscuro.
  *  - Solo hay guerra (grimdark): BOOT-UP de fósforo (destello verde) al activar la paleta (encender el cogitador).
  *
  * Y LOS QUE RESPONDEN A LO QUE PASA EN LA APLICACIÓN, no a lo que pasa en el DOM (ver `core/effects/moments`):
  *  - CERRAR UN JUEGO → un SELLO que cae en el centro: lacre de biblioteca (Clásico), «objetivo cumplido» ladeado
- *    (Corazón rebelde) y lacre con laurel imperial (Solo hay guerra). Tres temas pedían el mismo gesto.
+ *    (Ladrones de corazones) y lacre con laurel imperial (Solo hay guerra). Tres temas pedían el mismo gesto.
  *  - GUARDAR → el filete de latón de la cabecera se ilumina de izquierda a derecha (Clásico).
  *  - FILTRAR → barrido de escáner sobre la lista (Sin futuro).
  *  - LOGRO DESBLOQUEADO → estrella fugaz que cruza (Sol y luna).

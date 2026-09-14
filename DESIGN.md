@@ -62,7 +62,7 @@ Cada tema define los mismos tokens; el resto del sistema se deriva. **Nunca uses
 | id | Nombre | Acento oscuro | Fondo oscuro | Mundo |
 |---|---|---|---|---|
 | `steam` | Clásico | `#d9a13a` latón | `#15100b` | Cuero, papel, cobre y latón, con la **pátina** (`#4ab396`) de segundo acento. El único sin juego detrás |
-| `persona` | Corazón rebelde | `#ff1f3d` | `#0d0d0d` | Persona 5: rojo, negro, blanco y oro de calendario |
+| `persona` | Ladrones de corazones | `#ff1f3d` | `#0d0d0d` | Persona 5: rojo, negro, blanco y oro de calendario |
 | `portal` | Cámara de pruebas | `#29b6f6` | `#12171b` | Aperture moderna en oscuro; la antigua (pergamino) en claro |
 | `cyberpunk` | Sin futuro | `#fcee0a` | `#08090d` | HUD de Night City: amarillo, cian, magenta |
 | `seaofstars` | Sol y luna | `#f5c13e` | `#0e0c24` | Oro de Zale (sol) y azul de Valere (luna) |
@@ -98,7 +98,7 @@ grimdark   #e0a92b  #d8cfae  #e63b3b   (oro latón · hueso de pergamino · rojo
 | `--font-display` | Titulares | = cuerpo | Oswald | Rajdhani | **UnifrakturCook** | = cuerpo |
 | `--font-mono` | Cifras y fechas | system mono | Share Tech Mono | Share Tech Mono | **VT323** | SoS Digits |
 
-*Corazón rebelde* no carga webfont: su display es `'Arial Black', Impact`.
+*Ladrones de corazones* no carga webfont: su display es `'Arial Black', Impact`.
 
 ### Escala
 
@@ -196,7 +196,7 @@ están — y sus bordes tampoco, que ahí el marco de oro o el filete cian **son
 ## 7 · Formas
 
 - Radios **por tema**, no globales: `--radius-sm/md/lg/pill`. Clásico 8/12/22; Cámara de pruebas 3/6/10;
-  Corazón rebelde 3/4/8; Sin futuro y Sol y luna 0/0/2; Solo hay guerra 0/2/3.
+  Ladrones de corazones 3/4/8; Sin futuro y Sol y luna 0/0/2; Solo hay guerra 0/2/3.
 - Un radio de 0 es una decisión, no un olvido: en esos temas la esquina viva **es** la identidad.
 - Pastillas (`--radius-pill`) para chips, botones de filtro y segmentados en todos los temas.
 
