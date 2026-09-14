@@ -1,6 +1,17 @@
 export function IconSprite() {
   return (
     <svg aria-hidden="true" className="svg-sprite">
+      {/* FILTROS DE TEXTURA. Van aquí y no en una hoja porque un `filter: url(#id)` de CSS necesita que la
+          definición exista EN EL DOCUMENTO, y este sprite ya se monta una vez en la raíz. No pintan nada por
+          sí mismos: los usa el skin de «Plata y acero» para desgarrar el canto de sus carteles de contrato,
+          con ruido fractal desplazando el borde (`feTurbulence` + `feDisplacementMap`), de modo que ningún
+          cartel se rompe igual que otro y el desgarro no se repite nunca. */}
+      <defs>
+        <filter id="wt-desgarro">
+          <feTurbulence type="fractalNoise" baseFrequency="0.055" numOctaves="5" seed="6" result="ruido" />
+          <feDisplacementMap in="SourceGraphic" in2="ruido" scale="6.5" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </defs>
       <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M11 5h2v14h-2zM5 11h14v2H5z" /></symbol>
       <symbol id="icon-check" viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.42z" /></symbol>
       <symbol id="icon-download" viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18v10.17l3.59-3.58L17 10l-5 5-5-5 1.41-1.41L11 12.17V2h1z" /></symbol>

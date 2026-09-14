@@ -34,7 +34,7 @@ import { JUEGOS, sembrarBiblioteca } from './seed';
  * acaba ignorando, y esto son más de sesenta recorridos.
  */
 
-const PALETAS = ['steam', 'persona', 'portal', 'cyberpunk', 'seaofstars', 'grimdark'] as const;
+const PALETAS = ['steam', 'persona', 'portal', 'cyberpunk', 'seaofstars', 'grimdark', 'arcade'] as const;
 const TEMAS = ['dark', 'light'] as const;
 
 /**

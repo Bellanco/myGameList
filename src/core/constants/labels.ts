@@ -455,6 +455,8 @@ const APP_ERROR_LEAD: Record<PaletteId, string> = {
   grimdark: 'El Omnissiah no responde.',
   // Sea of Stars: los Hijos del Solsticio y el eclipse que se lo traga todo.
   seaofstars: 'El eclipse se lo ha tragado.',
+  // Arcade de los ochenta: la máquina se ha comido la ficha y la pantalla se ha quedado en negro.
+  arcade: 'La máquina se ha tragado la ficha.',
 };
 
 // SIN CONEXIÓN, contado por el boundary RAÍZ. Es un caso real y distinto de una avería: al entrar sin red en una
@@ -473,6 +475,8 @@ const APP_OFFLINE_LEAD: Record<PaletteId, string> = {
   grimdark: 'La Disformidad se ha tragado la señal.',
   // Sea of Stars: el camino sigue estando, pero ahora mismo no se puede pasar.
   seaofstars: 'El camino está cortado.',
+  // Arcade: la sala sigue ahí, pero se ha ido la corriente y no hay nada encendido.
+  arcade: 'Se ha ido la luz de la sala.',
 };
 
 // Pantalla de reemplazo del error boundary RAÍZ (fallo de render que tumbaría toda la app).

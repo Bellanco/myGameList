@@ -1,0 +1,750 @@
+/* Fuentes propias de esta paleta (fuera de la ruta crítica; solo cargan con este skin).
+   Servidas desde el propio origen. Generado por `scripts/vendor-fonts.mjs`. */
+@use '../fonts/arcade';
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   TEMA · Inserte moneda (arcade de los ochenta) — la sala de recreativos y el DeLorean: VIOLETA ELÉCTRICO
+   sobre noche malva, cian de tubo de neón y rosa chicle de pegatina.
+
+   LA REGLA QUE LO SOSTIENE ENTERO: aquí NADA ES TRANSLÚCIDO Y NADA SE DIFUMINA. El relieve se dibuja
+   con TRES COSAS y siempre las mismas —relleno sólido, filete de TINTA y sombra DURA en diagonal—, que
+   es como se imprimía el volumen cuando no había blur: el cartel de la máquina, la pegatina troquelada
+   y la serigrafía. Una sombra difusa de 24 px aquí no dice «3D», dice «cristal», que es justo el
+   acabado de la casa del que este tema se separa.
+
+     · la TECLA de consola — relleno macizo, filete de tinta de 2 px, sombra dura de 3 px en diagonal;
+       al pulsar, la pieza SE VA a donde estaba su sombra y la sombra desaparece. No baja: se desplaza.
+     · la PEGATINA — óvalo de color PLENO con tinta oscura encima, filo blanco troquelado, sombra dura
+       y pegada de través, como las que se pegaban en la pared de la sala.
+     · el NEÓN — lo que manda, brilla; lo que solo informa, no.
+
+   Se separa de «Sin futuro» —el otro tema de neón— por temperatura y por forma: aquel es amarillo
+   ácido sobre negro azulado con marcos de HUD; este es violeta saturado sobre malva, con serigrafía
+   y óvalos. Identidad de color: CAPA 2 en `_base.scss`. ═══════════════════════════════════════════ */
+
+/* ── §0 · Las dos fichas del relieve. `--arc-ink` es la TINTA: el filete y la sombra dura salen de ella, así
+   que el grosor del trazo del tema entero se toca aquí y no en cuarenta reglas. En claro la tinta no puede ser
+   negra —sobre lavanda una sombra sólida negra es un manchón— y pasa a un violeta hondo translúcido, que es lo
+   mismo que ya hace la elevación del tema claro con `--tint-rgb`. ── */
+:root[data-palette="arcade"] {
+  --arc-ink: #0a0614;
+  --arc-cast: 3px 3px 0 var(--arc-ink);
+  --arc-cast-hi: 5px 5px 0 var(--arc-ink);
+  --arc-cast-panel: 6px 6px 0 var(--arc-ink);
+  --arc-sticker: rgba(255, 250, 255, .78);
+  /* La tinta con la que se ESCRIBE encima de un relleno claro (pegatina, tecla cian o ámbar). */
+  --arc-on-light: #1a0e2e;
+}
+:root[data-palette="arcade"][data-theme="light"] {
+  --arc-ink: #4a2a7a;
+  --arc-cast: 3px 3px 0 rgba(58, 24, 92, .30);
+  --arc-cast-hi: 5px 5px 0 rgba(58, 24, 92, .34);
+  --arc-cast-panel: 5px 5px 0 rgba(58, 24, 92, .16);
+  --arc-sticker: #fff;
+}
+
+/* ── §1 · Tipografía: Orbitron (la geométrica del cartel de la máquina) para rótulos, botones y
+   titulares; Exo 2 para el cuerpo, que es donde hay que leer de verdad —la tabla es densa y Orbitron
+   ahí no se sostiene—; Share Tech Mono para las cifras.
+
+   LA CAJA NO LA PONE EL TEMA: las versales son la preferencia «Texto» de /cuenta (`data-uppercase`), que
+   ya las aplica a botones, pestañas, barra inferior, chips, cabeceras y textos de la ruleta en las siete
+   paletas. Con el interruptor apagado, cada rótulo se lee como está escrito. Lo que sí pone el tema es el
+   TRACKING: Orbitron es ancha y pide aire, vaya en caja alta o baja. (Aparte, la hoja base manda versales
+   siempre en unas pocas piezas —`thead th`, `.flabel`, `.detail-label`—: eso es de la casa, igual en todos
+   los temas, y este no lo toca.) ── */
+:root[data-palette="arcade"] {
+  --font-body: 'Exo 2', system-ui, sans-serif;
+  --font-label: 'Orbitron', system-ui, sans-serif;
+  --font-display: 'Orbitron', system-ui, sans-serif;
+  --font-mono: 'Share Tech Mono', ui-monospace, monospace;
+}
+:root[data-palette="arcade"] body { font-family: var(--font-body); }
+:root[data-palette="arcade"] h2,
+:root[data-palette="arcade"] h3,
+:root[data-palette="arcade"] h4,
+:root[data-palette="arcade"] .modal-title,
+/* El rótulo del modal de alta va suelto en `.modal-hd` (sin `.modal-title` dentro), así que se nombra aparte
+   o ese título se queda en la letra del cuerpo mientras el resto de titulares llevan la del cartel. */
+:root[data-palette="arcade"] .modal-hd,
+:root[data-palette="arcade"] .dialog-title,
+:root[data-palette="arcade"] .app-title,
+:root[data-palette="arcade"] .rl-card-name,
+:root[data-palette="arcade"] .rl-card-tag,
+:root[data-palette="arcade"] .rl-item,
+:root[data-palette="arcade"] .btn,
+:root[data-palette="arcade"] .hub-seg-btn,
+:root[data-palette="arcade"] .tab-btn,
+:root[data-palette="arcade"] .bottom-nav-btn,
+:root[data-palette="arcade"] thead th,
+:root[data-palette="arcade"] .flabel,
+:root[data-palette="arcade"] .detail-label,
+:root[data-palette="arcade"] .row-name,
+:root[data-palette="arcade"] .hub-name-link,
+:root[data-palette="arcade"] .active-filter-chip,
+:root[data-palette="arcade"] .chip { font-family: var(--font-label); letter-spacing: .04em; }
+/* Orbitron es ANCHA: en los rótulos largos (botones de rol, cabeceras de columna) se sale de su caja si
+   además va en negrita. 600 es el peso al que conserva el filo del cartel sin ensancharse más. */
+:root[data-palette="arcade"] .btn,
+:root[data-palette="arcade"] .chip,
+:root[data-palette="arcade"] .bottom-nav-btn,
+:root[data-palette="arcade"] thead th { font-weight: 600; }
+:root[data-palette="arcade"] .score-ring-num,
+:root[data-palette="arcade"] .score-dial-num,
+:root[data-palette="arcade"] .count-badge,
+:root[data-palette="arcade"] .hub-review-medal,
+:root[data-palette="arcade"] .hub-feed-date,
+:root[data-palette="arcade"] .hub-review-date { font-family: var(--font-mono); }
+
+/* NEÓN SOLO EN LO QUE MANDA. El halo se gasta en los titulares y en el nombre de la app, no en el texto
+   corriente: un glow repartido por toda la pantalla deja de decir nada y ensucia la lectura. En CLARO se
+   apaga entero — sobre papel un halo no es luz, es suciedad. */
+:root[data-palette="arcade"] h2 {
+  color: var(--arc-cyan-fg);
+  text-shadow: 0 0 10px rgba(34, 229, 255, .45), 0 0 26px rgba(34, 229, 255, .18);
+}
+:root[data-palette="arcade"] .app-title {
+  filter: drop-shadow(0 0 12px rgba(178, 60, 255, .55));
+}
+:root[data-palette="arcade"][data-theme="light"] h2 { color: var(--fg-link); text-shadow: none; }
+:root[data-palette="arcade"][data-theme="light"] .app-title { filter: none; }
+
+/* ── §2 · Fondo: la REJILLA DEL HORIZONTE. Dos capas y ninguna imagen: el resplandor violeta del sol que se
+   pone (radial, arriba) y la retícula en fuga (dos repeating-linear-gradient cruzados, con máscara). Va
+   `fixed` para que no se mueva al hacer scroll —es el horizonte, no el papel—. ── */
+:root[data-palette="arcade"] body {
+  background-image:
+    radial-gradient(120% 80% at 50% 0%, rgba(178, 60, 255, .16), transparent 60%),
+    radial-gradient(90% 50% at 50% 100%, rgba(255, 61, 158, .10), transparent 70%);
+  background-attachment: fixed;
+}
+:root[data-palette="arcade"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    repeating-linear-gradient(90deg, var(--arc-line) 0 1px, transparent 1px 68px),
+    repeating-linear-gradient(0deg, var(--arc-line) 0 1px, transparent 1px 44px);
+  /* La retícula se APAGA EN EL CENTRO, que es por donde pasa el contenido: se ve en el cielo de arriba y en
+     el suelo de abajo —que es donde de verdad hay lienzo vacío— y no compite con la tabla. */
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent 32%, transparent 62%, #000);
+  mask-image: linear-gradient(180deg, #000, transparent 32%, transparent 62%, #000);
+  opacity: .6;
+}
+:root[data-palette="arcade"][data-theme="light"] body {
+  background-image:
+    radial-gradient(120% 80% at 50% 0%, rgba(123, 27, 208, .08), transparent 60%),
+    radial-gradient(90% 50% at 50% 100%, rgba(194, 0, 95, .05), transparent 70%);
+}
+
+/* ── §3 · Paneles: la chapa de la máquina. Filete de tinta de 2 px y SOMBRA DURA en diagonal, que es lo que
+   los levanta; sin blur y sin halos, como el cartel serigrafiado. Sin `clip-path` (recortaría contenido y
+   sombras en un panel grande; regla 2/3): la esquina viva ya la ponen los radios de la paleta. ── */
+:root[data-palette="arcade"] .toolbar,
+:root[data-palette="arcade"] .table-wrap,
+:root[data-palette="arcade"] .settings-card,
+:root[data-palette="arcade"] .stats-card,
+:root[data-palette="arcade"] .hub-feed-card,
+:root[data-palette="arcade"] .hub-hub-card,
+:root[data-palette="arcade"] .modal,
+:root[data-palette="arcade"] .alert-dialog {
+  border: 2px solid var(--arc-ink) !important;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--steam) 32%, transparent),
+    var(--arc-cast-panel) !important;
+}
+/* Las piezas pequeñas del panel (tarjeta de cifra, caja de ayuda, opción de ajuste) llevan el mismo trazo con
+   la sombra corta: si se quedan planas, el panel parece una lámina con cosas impresas encima. */
+:root[data-palette="arcade"] .stat-tile,
+:root[data-palette="arcade"] .podium-step,
+:root[data-palette="arcade"] .top-chips li,
+:root[data-palette="arcade"] .score-scale-opt,
+:root[data-palette="arcade"] .detail-box,
+:root[data-palette="arcade"] .share-dialog-consent {
+  border: 2px solid var(--arc-ink) !important;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--arc-cast) !important;
+}
+
+/* ── §4 · Tabla: la cabecera es el RÓTULO de la máquina —versales anchas de Orbitron en cian sobre banda
+   violeta— y cada fila lleva el LOMO de color a la izquierda, que se enciende con el puntero y se queda
+   encendido en la que está abierta. ── */
+:root[data-palette="arcade"] thead th {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--steam) 20%, var(--surface)), var(--surface));
+  color: var(--arc-cyan-fg);
+  letter-spacing: .1em;
+  border-bottom: 2px solid var(--arc-ink);
+}
+:root[data-palette="arcade"][data-theme="light"] thead th { color: var(--fg-link); }
+:root[data-palette="arcade"] .main-row > td:first-child { border-left: 4px solid transparent; }
+:root[data-palette="arcade"] .main-row:hover > td:first-child { border-left-color: color-mix(in srgb, var(--steam) 60%, transparent); }
+:root[data-palette="arcade"] .main-row.open > td:first-child,
+:root[data-palette="arcade"] .detail-row.open > td:first-child { border-left-color: var(--steam); }
+
+/* ── §5 · Botones = TECLA DE CONSOLA. Relleno macizo, filete de tinta y sombra dura en diagonal. Al PULSAR,
+   la tecla se desplaza a donde estaba su sombra (`translate(3px,3px)`) y la sombra se va: el hueco se cierra,
+   que es exactamente lo que hace una tecla de máquina. Al pasar el ratón hace lo contrario —se separa un punto
+   más del cartel y la sombra crece—.
+
+   Sustituye al giro en perspectiva y al cristal esmerilado de la casa: aquí el botón no se inclina ni se
+   difumina. `backdrop-filter` y las sombras difusas se apagan a propósito. ── */
+:root[data-palette="arcade"] .btn:not(.btn-ghost) {
+  border-radius: var(--radius-sm) !important;
+  border: 2px solid var(--arc-ink) !important;
+  /* LOS DOS RELLENOS VAN POR FICHA CON RESPALDO EN EL PROPIO `var()`, y NO declarados aquí: esta regla lleva
+     `:not()`, así que pesa MÁS que la de cada rol (`.btn-danger`, `.btn-complete`…) y, si declarase las fichas,
+     ganaría también en ellas — el botón de borrar salía gris. El respaldo dentro del `var()` no compite: lo usa
+     quien no trae rol. */
+  background: linear-gradient(180deg, var(--btn-fill-a, #3b2260), var(--btn-fill-b, #241440)) !important;
+  letter-spacing: .06em;
+  font-size: var(--fs-2xs);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: var(--arc-cast) !important;
+  transform: none;
+  transition: transform .07s ease, box-shadow .07s ease, filter .18s;
+}
+:root[data-palette="arcade"] .btn:not(.btn-ghost):hover {
+  transform: translate(-1px, -1px);
+  filter: brightness(1.1);
+  box-shadow: var(--arc-cast-hi) !important;
+}
+:root[data-palette="arcade"] .btn:not(.btn-ghost):active {
+  transform: translate(3px, 3px);
+  filter: none;
+  box-shadow: 0 0 0 var(--arc-ink) !important;
+}
+/* La acción principal es la tecla ILUMINADA. El relleno arranca un paso por debajo del acento puro
+   (#b957ff → #6d1fc9): sobre el violeta a pelo el blanco se queda en 4,21:1 y aquí da 7,81:1 en el extremo
+   hondo, así que el rótulo cumple caiga donde caiga dentro del degradado. */
+:root[data-palette="arcade"] .btn-steam,
+:root[data-palette="arcade"] .btn-primary {
+  --btn-fill-a: #b957ff;
+  --btn-fill-b: #6d1fc9;
+  color: #fff !important;
+}
+/* Lo que SEÑALA va en cian —el segundo papel de la paleta— y, como el cian es un relleno CLARO, encima va
+   tinta y no blanco (5,94:1 en el extremo hondo del degradado). */
+:root[data-palette="arcade"] .btn-accent,
+:root[data-palette="arcade"] .btn.is-active,
+:root[data-palette="arcade"] .btn-toggle.active,
+:root[data-palette="arcade"] .btn-toggle-deck.active {
+  --btn-fill-a: #5df3ff;
+  --btn-fill-b: #12a8bd;
+  color: #062024 !important;
+  border-color: var(--arc-ink) !important;
+}
+/* El destructivo es MACIZO (no se deshace); los alternables —abandonar, quitar recomendación— se quedan en
+   la tecla apagada con el rótulo teñido, porque se pulsan para volver atrás. */
+:root[data-palette="arcade"] .btn-danger {
+  --btn-fill-a: #ff5f86;
+  --btn-fill-b: #c2004f;
+  color: #fff !important;
+}
+:root[data-palette="arcade"] .btn-complete,
+:root[data-palette="arcade"] .btn-recommend {
+  --btn-fill-a: #6ef7c4;
+  --btn-fill-b: #12a877;
+  color: #06251a !important;
+}
+:root[data-palette="arcade"] .btn-inprogress {
+  --btn-fill-a: #ffd48a;
+  --btn-fill-b: #e08c00;
+  color: #2a1a00 !important;
+}
+:root[data-palette="arcade"] .btn-abandoned,
+:root[data-palette="arcade"] .btn-recommend-active {
+  --btn-fill-a: #6b2745;
+  --btn-fill-b: #45152b;
+  color: #ffc2d0 !important;
+}
+:root[data-palette="arcade"] .consent-btn-accept {
+  --btn-fill-a: #ffd48a;
+  --btn-fill-b: #e08c00;
+  color: #2a1a00 !important;
+}
+/* En claro la tecla apagada es CHAPA CLARA, no el panel oscuro del modo noche. */
+:root[data-palette="arcade"][data-theme="light"] .btn:not(.btn-ghost) {
+  background: linear-gradient(180deg, var(--btn-fill-a, #fff), var(--btn-fill-b, #e6d6fa)) !important;
+  color: var(--text) !important;
+}
+:root[data-palette="arcade"][data-theme="light"] .btn-steam,
+:root[data-palette="arcade"][data-theme="light"] .btn-primary {
+  --btn-fill-a: #9b34f0;
+  --btn-fill-b: #6b12bd;
+  color: #fff !important;
+}
+/* La tecla cian a la luz NO baja al teal profundo del gráfico: con la tinta encima se queda en 3,51:1, y con
+   blanco en 4,68:1 sobre el extremo hondo pero en 1,3:1 sobre el claro —el rótulo se partiría en dos—. El
+   degradado sube un escalón y la tinta cumple en los dos extremos (6,52:1 en el peor). */
+:root[data-palette="arcade"][data-theme="light"] .btn-accent,
+:root[data-palette="arcade"][data-theme="light"] .btn.is-active,
+:root[data-palette="arcade"][data-theme="light"] .btn-toggle.active,
+:root[data-palette="arcade"][data-theme="light"] .btn-toggle-deck.active {
+  --btn-fill-a: #8ff0fb;
+  --btn-fill-b: #31b2c9;
+  color: #04232a !important;
+}
+:root[data-palette="arcade"][data-theme="light"] .btn-abandoned,
+:root[data-palette="arcade"][data-theme="light"] .btn-recommend-active {
+  --btn-fill-a: #ffd9e2;
+  --btn-fill-b: #ffb3c6;
+  color: #6b0026 !important;
+}
+/* El botón fantasma es el ÚNICO sin cuerpo (limpiar filtros): aquí se queda plano a propósito, para que la
+   pantalla tenga una acción que no pese. */
+:root[data-palette="arcade"] .btn-ghost { letter-spacing: .06em; font-size: var(--fs-2xs); }
+
+/* Los botones-icono (engranaje, tema, filtros, papelera del chip) son las teclas PEQUEÑAS del mismo teclado:
+   cuadradas, con su filete y su sombra dura. Redondas se quedaban fuera del cartel. */
+:root[data-palette="arcade"] .btn-icon,
+:root[data-palette="arcade"] .theme-toggle-btn,
+:root[data-palette="arcade"] .palette-select {
+  border-radius: var(--radius-sm) !important;
+  border: 2px solid var(--arc-ink) !important;
+  background: linear-gradient(180deg, #3b2260, #241440) !important;
+  color: var(--text) !important;
+  box-shadow: var(--arc-cast) !important;
+  transition: transform .07s ease, box-shadow .07s ease, filter .18s;
+}
+:root[data-palette="arcade"][data-theme="light"] .btn-icon,
+:root[data-palette="arcade"][data-theme="light"] .theme-toggle-btn,
+:root[data-palette="arcade"][data-theme="light"] .palette-select {
+  background: linear-gradient(180deg, #fff, #e6d6fa) !important;
+}
+:root[data-palette="arcade"] .btn-icon:hover,
+:root[data-palette="arcade"] .theme-toggle-btn:hover {
+  transform: translate(-1px, -1px);
+  filter: brightness(1.12);
+  box-shadow: var(--arc-cast-hi) !important;
+}
+:root[data-palette="arcade"] .btn-icon:active,
+:root[data-palette="arcade"] .theme-toggle-btn:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--arc-ink) !important;
+}
+/* La equis que quita un filtro vive DENTRO de la pegatina: ni filete ni sombra, o serían dos piezas. */
+:root[data-palette="arcade"] .chip-rm,
+:root[data-palette="arcade"] .chip-x,
+:root[data-palette="arcade"] .search-clear {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* ── §6 · Chips = PEGATINA. Óvalo de color PLENO con tinta oscura encima —no el tinte translúcido de la casa,
+   que sobre este fondo se lee como una sombra—, filo blanco troquelado, sombra dura y pegada de través. Cada
+   variante trae su color de la paleta; el género toma el suyo de la rampa categórica (`--cat`), aclarado lo
+   justo para que la tinta cumpla el 4,5:1 sobre el extremo más hondo del degradado. ── */
+:root[data-palette="arcade"] .chip,
+:root[data-palette="arcade"] .hub-friend-chip,
+:root[data-palette="arcade"] .rl-chip,
+:root[data-palette="arcade"] .active-filter-chip {
+  border-radius: var(--radius-pill) !important;
+  padding: .26rem .72rem;
+  font-weight: 700;
+  color: var(--arc-on-light) !important;
+  border: 1.5px solid var(--arc-sticker) !important;
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, .38),
+    0 5px 8px -2px rgba(0, 0, 0, .45);
+}
+:root[data-palette="arcade"] .chip-plat,
+:root[data-palette="arcade"] .active-filter-chip,
+:root[data-palette="arcade"] .hub-friend-chip { background: linear-gradient(160deg, #d3a6ff, #b23cff) !important; }
+:root[data-palette="arcade"] .chip-genre,
+:root[data-palette="arcade"] .rl-chip {
+  background: linear-gradient(160deg,
+    color-mix(in srgb, var(--cat, #b23cff) 45%, #fff),
+    color-mix(in srgb, var(--cat, #b23cff) 85%, #fff)) !important;
+}
+:root[data-palette="arcade"] .chip-generic { background: linear-gradient(160deg, #ffe6a8, #ffd24a) !important; }
+:root[data-palette="arcade"] .chip-pf,
+:root[data-palette="arcade"] .chip-list-c { background: linear-gradient(160deg, #9ff8d4, #2ef0a6) !important; }
+:root[data-palette="arcade"] .chip-pd,
+:root[data-palette="arcade"] .chip-list-v { background: linear-gradient(160deg, #ff9ecb, #ff3d9e) !important; }
+:root[data-palette="arcade"] .chip-list-e { background: linear-gradient(160deg, #ffd0a8, #ff7a3d) !important; }
+:root[data-palette="arcade"] .chip-list-p { background: linear-gradient(160deg, #b9c8ff, #6d8cff) !important; }
+:root[data-palette="arcade"] .chip-deck { background: linear-gradient(160deg, #e4ecff, #c6d4ee) !important; }
+:root[data-palette="arcade"] .chip-more { background: linear-gradient(160deg, #cdbbe8, #a58ec9) !important; }
+/* PEGADAS DE TRAVÉS, y alternando el lado: todas con la misma inclinación parecen un error de maqueta; con
+   una y una se lee como lo que es, un puñado de pegatinas puestas a mano. */
+:root[data-palette="arcade"] .chips .chip:nth-child(odd) { transform: rotate(-2.2deg); }
+:root[data-palette="arcade"] .chips .chip:nth-child(even) { transform: rotate(1.8deg); }
+/* Al pasar el ratón la pegatina se DESPEGA: se endereza, crece un punto y levanta su sombra. */
+@media (hover: hover) {
+  :root[data-palette="arcade"] .chips .chip:hover {
+    transform: rotate(0) translateY(-2px) scale(1.05);
+    filter: none;
+    box-shadow:
+      0 5px 0 rgba(0, 0, 0, .35),
+      0 9px 14px -4px rgba(0, 0, 0, .5);
+  }
+}
+/* En CLARO el color pleno no vale: sobre papel una pegatina saturada con tinta encima canta más que el texto
+   de la fila. El relleno baja a esmalte pastel y la tinta es la del propio tono (los pares ya medidos de
+   `--cat-fg`), con el troquel blanco y un anillo del color por fuera para que siga leyéndose recortada. */
+:root[data-palette="arcade"][data-theme="light"] .chip,
+:root[data-palette="arcade"][data-theme="light"] .hub-friend-chip,
+:root[data-palette="arcade"][data-theme="light"] .rl-chip,
+:root[data-palette="arcade"][data-theme="light"] .active-filter-chip {
+  color: var(--fg-link) !important;
+  border-color: #fff !important;
+  box-shadow:
+    0 0 0 1.5px rgba(123, 27, 208, .35),
+    0 3px 0 rgba(58, 24, 92, .18),
+    0 4px 6px -2px rgba(58, 24, 92, .25);
+}
+:root[data-palette="arcade"][data-theme="light"] .chip-plat,
+:root[data-palette="arcade"][data-theme="light"] .active-filter-chip,
+:root[data-palette="arcade"][data-theme="light"] .hub-friend-chip { background: #ecdcfb !important; }
+:root[data-palette="arcade"][data-theme="light"] .chip-genre,
+:root[data-palette="arcade"][data-theme="light"] .rl-chip {
+  background: color-mix(in srgb, var(--cat, #7b1bd0) 16%, #fff) !important;
+  color: var(--cat-fg, var(--fg-link)) !important;
+}
+:root[data-palette="arcade"][data-theme="light"] .chip-generic { background: #fbeccd !important; color: #74500a !important; }
+:root[data-palette="arcade"][data-theme="light"] .chip-pf,
+:root[data-palette="arcade"][data-theme="light"] .chip-list-c { background: #d4f0e4 !important; color: #0a6044 !important; }
+:root[data-palette="arcade"][data-theme="light"] .chip-pd,
+:root[data-palette="arcade"][data-theme="light"] .chip-list-v { background: #fbdde9 !important; color: #a8005a !important; }
+:root[data-palette="arcade"][data-theme="light"] .chip-list-e { background: #fbe2d2 !important; color: #8a3a0c !important; }
+:root[data-palette="arcade"][data-theme="light"] .chip-list-p { background: #dde3fb !important; color: #2f42b5 !important; }
+:root[data-palette="arcade"][data-theme="light"] .chip-deck { background: #e2e8f6 !important; color: #3b4a68 !important; }
+:root[data-palette="arcade"][data-theme="light"] .chip-more { background: #ece3f7 !important; }
+
+/* LA MISMA PEGATINA EN LA TARJETA DE MÓVIL. Cuando la tabla se pliega en tarjetas, plataforma/género/virtud
+   dejan de ser `.chip` y pasan a ser las mini-píldoras `.rm-*` del meta: si no se nombran aquí, el teléfono
+   —que es donde más se usa la app— se queda con pastillas rectas y pierde la forma del tema. Van sin giro: en
+   una línea que no envuelve, un grado de más descuadra el renglón. */
+:root[data-palette="arcade"] .rm-plat,
+:root[data-palette="arcade"] .rm-genre,
+:root[data-palette="arcade"] .rm-strong {
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--arc-sticker);
+  color: var(--arc-on-light);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, .38);
+}
+:root[data-palette="arcade"] .rm-plat { background: linear-gradient(160deg, #d3a6ff, #b23cff); }
+:root[data-palette="arcade"] .rm-genre { background: linear-gradient(160deg, #8ff4ff, #22e5ff); }
+:root[data-palette="arcade"] .rm-strong { background: linear-gradient(160deg, #9ff8d4, #2ef0a6); }
+:root[data-palette="arcade"][data-theme="light"] .rm-plat { background: #ecdcfb; color: var(--fg-link); }
+:root[data-palette="arcade"][data-theme="light"] .rm-genre { background: #d6eef3; color: #065c6b; }
+:root[data-palette="arcade"][data-theme="light"] .rm-strong { background: #d4f0e4; color: #0a6044; }
+:root[data-palette="arcade"][data-theme="light"] .rm-plat,
+:root[data-palette="arcade"][data-theme="light"] .rm-genre,
+:root[data-palette="arcade"][data-theme="light"] .rm-strong {
+  border-color: #fff;
+  box-shadow: 0 0 0 1.5px rgba(123, 27, 208, .3), 0 2px 0 rgba(58, 24, 92, .16);
+}
+
+/* ── §7 · Campos y filtros: lo que se RELLENA se HUNDE (la regla de la casa), pero aquí el hueco es una
+   RANURA de la chapa, y una ranura no tiene degradado: la sombra interior es DURA y en diagonal, la misma
+   que la de fuera pero al revés. Al enfocar, el tubo de neón cian se enciende alrededor.
+
+   Los cuatro desplegables de la barra de filtros (género, plataforma, puntuación, horas) son `.input-base`,
+   así que entran por aquí: eran lo más plano de la pantalla porque un `<select>` nativo no hereda nada. ── */
+:root[data-palette="arcade"] .input-base,
+:root[data-palette="arcade"] .finput,
+:root[data-palette="arcade"] .ftextarea,
+:root[data-palette="arcade"] .search-input,
+:root[data-palette="arcade"] .filters-row select.input-base {
+  border-radius: var(--radius-sm) !important;
+  border: 2px solid var(--arc-ink) !important;
+  background-color: var(--bg) !important;
+  box-shadow: inset 3px 3px 0 rgba(0, 0, 0, .45) !important;
+}
+:root[data-palette="arcade"][data-theme="light"] .input-base,
+:root[data-palette="arcade"][data-theme="light"] .finput,
+:root[data-palette="arcade"][data-theme="light"] .ftextarea,
+:root[data-palette="arcade"][data-theme="light"] .search-input,
+:root[data-palette="arcade"][data-theme="light"] .filters-row select.input-base {
+  box-shadow: inset 3px 3px 0 rgba(58, 24, 92, .14) !important;
+}
+:root[data-palette="arcade"] .input-base:focus,
+:root[data-palette="arcade"] .finput:focus,
+:root[data-palette="arcade"] .ftextarea:focus,
+:root[data-palette="arcade"] .search-input:focus {
+  border-color: var(--arc-cyan) !important;
+  box-shadow: inset 3px 3px 0 rgba(0, 0, 0, .45), 0 0 0 2px rgba(34, 229, 255, .45) !important;
+}
+/* El rótulo del filtro es el serigrafiado de la chapa: cian, versales anchas y pequeño. */
+:root[data-palette="arcade"] .flabel,
+:root[data-palette="arcade"] .detail-label {
+  color: var(--arc-cyan-fg);
+  letter-spacing: .14em;
+}
+:root[data-palette="arcade"][data-theme="light"] .flabel,
+:root[data-palette="arcade"][data-theme="light"] .detail-label { color: var(--fg-link); }
+
+/* ── §8 · Pestañas: la activa es el rótulo ENCENDIDO —violeta con halo— y el contador, una FICHA ámbar con
+   su tinta y su sombra dura, que es la única cifra de la pantalla que se mira de lejos. ── */
+:root[data-palette="arcade"] .tab-btn {
+  letter-spacing: .06em;
+  font-size: var(--fs-2xs);
+}
+:root[data-palette="arcade"] .tab-btn.active {
+  color: var(--steam-hover);
+  text-shadow: 0 0 10px rgba(178, 60, 255, .5);
+}
+:root[data-palette="arcade"][data-theme="light"] .tab-btn.active { text-shadow: none; }
+:root[data-palette="arcade"] .count-badge {
+  display: inline-block;
+  padding: .05rem .42rem;
+  border-radius: var(--radius-pill);
+  background: #ffd24a;
+  color: #2a1a00;
+  border: 1.5px solid var(--arc-sticker);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, .4);
+}
+:root[data-palette="arcade"] .tab-btn.active .count-badge { color: #2a1a00; }
+:root[data-palette="arcade"][data-theme="light"] .count-badge {
+  background: #f7c945;
+  border-color: #fff;
+  box-shadow: 0 0 0 1.5px rgba(123, 27, 208, .3), 0 2px 0 rgba(58, 24, 92, .16);
+}
+
+/* ── §9 · Estrellas y notas: la estrella llena es una ficha de la máquina, con su punto de luz. ── */
+:root[data-palette="arcade"] .star-full,
+:root[data-palette="arcade"] .score-ring-num { filter: drop-shadow(0 0 6px rgba(255, 210, 74, .45)); }
+:root[data-palette="arcade"][data-theme="light"] .star-full,
+:root[data-palette="arcade"][data-theme="light"] .score-ring-num { filter: none; }
+
+/* ── §10 · FAB (añadir y ruleta): el botón grande de la consola. Se queda redondo —es la bola del joystick—,
+   pero con el filete de tinta y la misma sombra dura que las teclas, y se desplaza igual al pulsarlo. ── */
+:root[data-palette="arcade"] .fab,
+:root[data-palette="arcade"] .fab-roulette {
+  border: 2px solid var(--arc-ink);
+  box-shadow: var(--arc-cast-hi);
+  transition: transform .07s ease, box-shadow .07s ease, filter .18s;
+}
+:root[data-palette="arcade"] .fab:hover,
+:root[data-palette="arcade"] .fab-roulette:hover { transform: translate(-1px, -1px); filter: brightness(1.1); }
+:root[data-palette="arcade"] .fab:active,
+:root[data-palette="arcade"] .fab-roulette:active { transform: translate(5px, 5px); box-shadow: 0 0 0 var(--arc-ink); }
+
+/* ── §11 · Barra de navegación inferior: EL FRONTAL DE LA MÁQUINA, no una píldora flotante. Chapa recta con
+   filete de tinta y sombra dura, y la sección activa como una tecla PULSADA de verdad: violeta macizo,
+   hundida contra su propio filete. Es la pieza que más se toca en el teléfono, así que es donde el relieve
+   tiene que leerse primero. ── */
+:root[data-palette="arcade"] .bottom-nav-inner {
+  border: 2px solid var(--arc-ink);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, #2a1745, #1b0f2e);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: var(--arc-cast-panel);
+}
+:root[data-palette="arcade"][data-theme="light"] .bottom-nav-inner {
+  background: linear-gradient(180deg, #fff, #eadcfa);
+}
+:root[data-palette="arcade"] .bottom-nav-btn { border-radius: var(--radius-sm); letter-spacing: .05em; font-size: var(--fs-2xs); }
+:root[data-palette="arcade"] .bottom-nav-btn.active { color: #fff; }
+:root[data-palette="arcade"][data-theme="light"] .bottom-nav-btn.active { color: #fff; }
+/* La pastilla deslizante deja de ser un velo del acento y pasa a ser la TECLA: relleno macizo y filete. */
+:root[data-palette="arcade"] .bottom-nav-ind {
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, #b957ff, #6d1fc9);
+  box-shadow: inset 0 0 0 2px var(--arc-ink), inset 0 2px 0 rgba(255, 255, 255, .25);
+}
+:root[data-palette="arcade"][data-theme="light"] .bottom-nav-ind {
+  background: linear-gradient(180deg, #9b34f0, #6b12bd);
+}
+
+/* ── §12 · La cápsula (logro / aviso): conserva su forma —la manda la medalla, y las medallas no se tocan
+   (`docs/logros/receta-medalla.md`)—; toma el filete de tinta y la sombra dura del tema. ── */
+:root[data-palette="arcade"] .ach-toast {
+  border: 2px solid var(--arc-ink);
+  box-shadow:
+    0 0 0 1px rgba(var(--glow), .5),
+    var(--arc-cast-panel);
+}
+
+/* ── §13 · Sello de rango: se queda como está (píldora + disco de metal). Es la pieza que NO debe parecer
+   una pegatina ni una medalla, así que no recibe ni el troquel del §6 ni el filete del §5. ── */
+
+/* ── §14 · Insignias de la tabla (rejugar / otra oportunidad): la ENCENDIDA es una pegatina pequeña —mismo
+   troquel y misma sombra dura que los chips— y la apagada, una tecla sin corriente. Las cinco paletas visten
+   este par; sin esto salían con el velo translúcido de la casa, que en este fondo no dice nada. ── */
+:root[data-palette="arcade"] .badge-rejugar-activo,
+:root[data-palette="arcade"] .badge-opp-activo {
+  background: linear-gradient(160deg, #d3a6ff, #b23cff) !important;
+  color: var(--arc-on-light) !important;
+  border: 1.5px solid var(--arc-sticker) !important;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, .4) !important;
+}
+:root[data-palette="arcade"] .badge-rejugar-inactivo,
+:root[data-palette="arcade"] .badge-opp-inactivo {
+  background: linear-gradient(180deg, #3b2260, #241440) !important;
+  color: var(--text-dim) !important;
+  border: 2px solid var(--arc-ink) !important;
+  box-shadow: none !important;
+}
+:root[data-palette="arcade"][data-theme="light"] .badge-rejugar-activo,
+:root[data-palette="arcade"][data-theme="light"] .badge-opp-activo {
+  background: #ecdcfb !important;
+  color: var(--fg-link) !important;
+  border-color: #fff !important;
+  box-shadow: 0 0 0 1.5px rgba(123, 27, 208, .3), 0 2px 0 rgba(58, 24, 92, .16) !important;
+}
+:root[data-palette="arcade"][data-theme="light"] .badge-rejugar-inactivo,
+:root[data-palette="arcade"][data-theme="light"] .badge-opp-inactivo {
+  background: linear-gradient(180deg, #fff, #e6d6fa) !important;
+  color: var(--text-muted) !important;
+}
+
+/* ── §15 · Ruleta = la máquina de premios. El tambor es una RANURA de la chapa (hundido duro, como los
+   campos), el visor de selección un tubo de neón cian recto —no un óvalo—, y las tarjetas del resultado,
+   teclas con su sombra dura. ── */
+:root[data-palette="arcade"] .rl-drum {
+  border: 2px solid var(--arc-ink);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  box-shadow: inset 3px 3px 0 rgba(0, 0, 0, .45);
+}
+:root[data-palette="arcade"] .rl-frame {
+  border: 2px solid var(--arc-cyan);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 14px rgba(34, 229, 255, .45), inset 0 0 10px rgba(34, 229, 255, .22);
+}
+:root[data-palette="arcade"] .rl-card,
+:root[data-palette="arcade"] .rl-ghost {
+  border: 2px solid var(--arc-ink);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--arc-cast);
+}
+:root[data-palette="arcade"] .rl-hint,
+:root[data-palette="arcade"] .rl-card-tag {
+  color: var(--arc-cyan-fg);
+  letter-spacing: .1em;
+}
+:root[data-palette="arcade"][data-theme="light"] .rl-drum { box-shadow: inset 3px 3px 0 rgba(58, 24, 92, .14); }
+:root[data-palette="arcade"][data-theme="light"] .rl-frame {
+  border-color: var(--steam);
+  box-shadow: 0 0 0 1px rgba(123, 27, 208, .25), inset 0 0 0 1px rgba(123, 27, 208, .18);
+}
+:root[data-palette="arcade"][data-theme="light"] .rl-hint,
+:root[data-palette="arcade"][data-theme="light"] .rl-card-tag { color: var(--fg-link); }
+
+/* ── §16 · Hub social. Es la mitad de la app y hasta ahora se quedaba con el acabado de la casa: tarjetas de
+   cristal y chips translúcidos dentro de un tema que no tiene ni cristal ni translúcidos. ── */
+/* El segmento (mis reseñas / de mis amigos) es una fila de teclas dentro de su chapa. */
+:root[data-palette="arcade"] .hub-seg {
+  border: 2px solid var(--arc-ink);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, #2a1745, #1b0f2e);
+  box-shadow: var(--arc-cast);
+}
+:root[data-palette="arcade"][data-theme="light"] .hub-seg { background: linear-gradient(180deg, #fff, #eadcfa); }
+/* El chip con el nombre del juego en la actividad es una PEGATINA cian: el nombre del juego es lo que se
+   busca al recorrer el feed, y el cian es el color con el que este tema señala. */
+:root[data-palette="arcade"] .hub-feed-game-chip,
+:root[data-palette="arcade"] .hub-review-game {
+  padding: .18rem .6rem;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(160deg, #8ff4ff, #22e5ff);
+  border: 1.5px solid var(--arc-sticker);
+  color: var(--arc-on-light);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, .38);
+}
+:root[data-palette="arcade"][data-theme="light"] .hub-feed-game-chip,
+:root[data-palette="arcade"][data-theme="light"] .hub-review-game {
+  background: #d6eef3;
+  border-color: #fff;
+  color: #065c6b;
+  box-shadow: 0 0 0 1.5px rgba(123, 27, 208, .28), 0 2px 0 rgba(58, 24, 92, .16);
+}
+/* Los enlaces a un perfil van en cian y se encienden al pasar por encima, como el rótulo de una máquina. */
+:root[data-palette="arcade"] .hub-name-link,
+:root[data-palette="arcade"] .hub-detail-profile-link { color: var(--arc-cyan-fg); }
+:root[data-palette="arcade"] .hub-name-link:hover,
+:root[data-palette="arcade"] .hub-detail-profile-link:hover { text-shadow: 0 0 8px rgba(34, 229, 255, .55); }
+:root[data-palette="arcade"][data-theme="light"] .hub-name-link,
+:root[data-palette="arcade"][data-theme="light"] .hub-detail-profile-link { color: var(--fg-link); }
+:root[data-palette="arcade"][data-theme="light"] .hub-name-link:hover,
+:root[data-palette="arcade"][data-theme="light"] .hub-detail-profile-link:hover { text-shadow: none; }
+/* Tarjetas del feed y de persona: el filete y la sombra dura del tema. */
+:root[data-palette="arcade"] .hub-feed-activity-item,
+:root[data-palette="arcade"] .hub-user-card {
+  border: 2px solid var(--arc-ink);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--arc-cast);
+}
+/* La muesca de rango de la tarjeta de persona tiene que apartarse lo que mide el filete, o se come el canto. */
+:root[data-palette="arcade"] .hub-user-card { --tier-notch-top: 2px; --tier-notch-right: 2px; }
+/* El separador de día es el rótulo del marcador: versales anchas, filete y ficha. */
+:root[data-palette="arcade"] .hub-feed-day-header {
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--arc-ink);
+  font-family: var(--font-label);
+  letter-spacing: .1em;
+  font-size: var(--fs-3xs);
+  box-shadow: var(--arc-cast);
+}
+/* EL MOVIMIENTO DE LISTA NO ES UN LOGRO. En el feed, «empezó / terminó / dejó» comparte carril con las reseñas
+   y los logros, que aquí van con pegatina y neón; el movimiento se queda en chapa apagada y sin sombra dura,
+   que es como este tema dice «esto ha pasado, pero no es noticia». */
+:root[data-palette="arcade"] .hub-feed-activity-item.is-move {
+  border-width: 1px !important;
+  border-color: color-mix(in srgb, var(--border), transparent 30%) !important;
+  box-shadow: none !important;
+}
+:root[data-palette="arcade"] .hub-feed-move-hour { font-family: var(--font-mono); }
+/* EL LIENZO DE LA ACTIVIDAD: el horizonte otra vez, ahora dentro de la caja — la retícula en fuga abajo y el
+   resplandor del sol violeta entrando por la izquierda, detrás del texto. Las fichas `--lz-*` las declara
+   `_layout.scss`; cada tema solo rellena las suyas. */
+:root[data-palette="arcade"] .hub-feed-lienzo {
+  --lz-img: radial-gradient(closest-side, rgba(178, 60, 255, .22), transparent 72%);
+  --lz-size: 76% 100%;
+  --lz-pos: 2% 50%;
+  --lz-rep: no-repeat;
+  --lz-img2: repeating-linear-gradient(90deg, rgba(178, 60, 255, .16) 0 1px, transparent 1px 46px);
+  --lz-size2: 100% 46%;
+  --lz-pos2: 50% 100%;
+  --lz-rep2: no-repeat;
+  --lz-img2-o: .7;
+}
+:root[data-palette="arcade"][data-theme="light"] .hub-feed-lienzo {
+  --lz-img: radial-gradient(closest-side, rgba(123, 27, 208, .12), transparent 72%);
+  --lz-img2: repeating-linear-gradient(90deg, rgba(123, 27, 208, .10) 0 1px, transparent 1px 46px);
+}
+
+/* ── §17 · Panel de estadísticas: las gráficas también hablan el idioma del tema. Todo lo que es una BARRA o
+   una FICHA pierde el redondeo y gana el filete de tinta —canto vivo, como el resto—, y los arcos cortan a
+   escuadra en vez de terminar en pastilla. Las cifras grandes van en la monoespaciada de marcador. ── */
+:root[data-palette="arcade"] .year-strip-col,
+:root[data-palette="arcade"] .year-scale-ramp,
+:root[data-palette="arcade"] .year-peak,
+:root[data-palette="arcade"] .shine-fill,
+:root[data-palette="arcade"] .shine-rows li,
+:root[data-palette="arcade"] .top-chip-bar,
+:root[data-palette="arcade"] .dot-matrix-dots rect { border-radius: 0; }
+:root[data-palette="arcade"] .donut-seg,
+:root[data-palette="arcade"] .gauge-seg,
+:root[data-palette="arcade"] .gauge-sub-seg,
+:root[data-palette="arcade"] .year-line { stroke-linecap: butt; }
+:root[data-palette="arcade"] .year-strip-col { box-shadow: 0 0 0 1px var(--arc-ink); }
+/* El punto de un año o de una serie es un PÍXEL, no un lunar: cuadrado y con su filete. */
+:root[data-palette="arcade"] .year-node,
+:root[data-palette="arcade"] .timeline-dot,
+:root[data-palette="arcade"] .dumbbell-dot { border-radius: 0; }
+:root[data-palette="arcade"] .stat-tile-value,
+:root[data-palette="arcade"] .gauge-number,
+:root[data-palette="arcade"] .shine-value,
+:root[data-palette="arcade"] .dumbbell-num,
+:root[data-palette="arcade"] .burst-num { font-family: var(--font-mono); }
+:root[data-palette="arcade"] .backlog-canvas { border-bottom: 2px solid var(--arc-ink); }
+/* El enjambre (constancia) trae fichas propias para su marco: aquí, el mismo filete y la misma sombra dura. */
+:root[data-palette="arcade"] .stats-hub {
+  --bee-radius: var(--radius-sm);
+  --bee-frame: inset 0 0 0 2px var(--arc-ink);
+  --bee-cast: var(--arc-cast);
+}
+
+/* ── §18 · Logros: el confeti del instante se dibuja a canto vivo (nada de curvas suavizadas), que es lo que
+   lo hace parecer una explosión de píxeles y no un pétalo. La MEDALLA no se toca: tiene su propia receta
+   (`docs/logros/receta-medalla.md`) y es la misma en las siete paletas. ── */
+:root[data-palette="arcade"] .burst { shape-rendering: crispEdges; }
+:root[data-palette="arcade"] .burst-piece { rx: 0; }

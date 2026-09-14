@@ -1,0 +1,574 @@
+/* Fuentes propias de esta paleta (fuera de la ruta crítica; solo cargan con este skin). */
+@use '../fonts/steam';
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   TEMA · Plata y acero (The Witcher) — el tablón de contratos y la forja. Tres materiales y ninguno
+   más, cada uno con un trabajo:
+
+     · el ACERO es el mundo: las cuatro superficies llevan veta de cepillado y la luz entra por arriba;
+     · la HOJA es lo que se pulsa: el botón es una hoja vista de canto, con chaflán en punta a los lados
+       y la acanaladura de luz recorriéndola por el centro;
+     · el PERGAMINO es lo que etiqueta: cada chip es un cartel de contrato —papel viejo con el canto
+       desgarrado, manchas de sangre y su lacre de cera arriba, en el color del asunto—.
+
+   Lo que en otros temas es un velo de color, aquí es un material. Identidad de color: CAPA 2 en
+   `_base.scss`; los siete tonos del género (Igni, Aard, Golondrina, Yrden, Toussaint, Quen, Skellige)
+   viven en CAPA 2b y son los que tiñen el lacre y el lomo de cada fila. ═══════════════════════════ */
+
+/* ── §0 · Los materiales, en fichas ── */
+:root[data-palette="steam"] {
+  --wt-velo: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27200%27%20height%3D%27200%27%3E%3Cfilter%20id%3D%27v%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%271.4%27%20numOctaves%3D%272%27%20stitchTiles%3D%27stitch%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27100%25%27%20height%3D%27100%25%27%20filter%3D%27url%28%23v%29%27%2F%3E%3C%2Fsvg%3E");
+  --wt-veta: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27300%27%3E%3Cfilter%20id%3D%27m%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.85%200.012%27%20numOctaves%3D%273%27%20stitchTiles%3D%27stitch%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27100%25%27%20height%3D%27100%25%27%20filter%3D%27url%28%23m%29%27%2F%3E%3C%2Fsvg%3E");
+  --wt-lacre-sil: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Cpath%20d%3D%27M90.9%2C50.0L90.7%2C50.9L90.3%2C51.7L89.7%2C52.5L89.0%2C53.3L88.3%2C54.0L87.7%2C54.8L87.5%2C55.5L87.6%2C56.4L88.2%2C57.3L89.0%2C58.3L89.9%2C59.4L90.7%2C60.4L91.2%2C61.5L91.3%2C62.5L91.3%2C63.4L91.0%2C64.3L90.7%2C65.2L90.5%2C66.0L90.3%2C67.0L90.1%2C67.9L89.8%2C68.7L89.1%2C69.4L88.2%2C70.0L87.0%2C70.3L85.6%2C70.6L84.3%2C70.8L83.3%2C71.1L82.5%2C71.6L82.0%2C72.3L81.9%2C73.2L81.8%2C74.2L81.8%2C75.2L81.6%2C76.1L81.2%2C77.0L80.8%2C77.7L80.3%2C78.5L79.9%2C79.3L79.6%2C80.2L79.3%2C81.2L79.0%2C82.3L78.6%2C83.2L78.0%2C83.9L77.1%2C84.2L76.0%2C84.3L74.7%2C84.0L73.4%2C83.7L72.2%2C83.4L71.1%2C83.3L70.2%2C83.4L69.5%2C83.7L68.8%2C84.2L68.1%2C84.7L67.4%2C85.1L66.6%2C85.4L65.9%2C85.7L65.1%2C86.0L64.5%2C86.6L63.9%2C87.4L63.4%2C88.4L62.9%2C89.6L62.3%2C90.8L61.6%2C91.7L60.8%2C92.2L59.9%2C92.3L58.9%2C92.0L57.9%2C91.5L56.9%2C90.9L56.0%2C90.5L55.1%2C90.2L54.2%2C90.0L53.3%2C89.8L52.5%2C89.6L51.6%2C89.2L50.8%2C88.6L50.0%2C88.0L49.2%2C87.4L48.4%2C87.2L47.7%2C87.3L46.8%2C87.8L45.9%2C88.6L45.0%2C89.5L44.1%2C90.2L43.1%2C90.7L42.2%2C90.8L41.4%2C90.5L40.6%2C90.1L39.8%2C89.6L39.1%2C89.2L38.3%2C88.8L37.5%2C88.5L36.7%2C88.1L36.0%2C87.5L35.5%2C86.7L35.0%2C85.8L34.5%2C84.7L34.1%2C83.8L33.6%2C83.1L32.9%2C82.8L31.9%2C82.9L30.8%2C83.3L29.4%2C83.9L28.1%2C84.6L26.7%2C85.1L25.4%2C85.3L24.3%2C85.4L23.1%2C85.4L22.0%2C85.4L20.7%2C85.4L19.4%2C85.4L18.1%2C85.4L16.9%2C85.2L15.9%2C84.8L15.3%2C84.0L14.9%2C82.9L14.9%2C81.6L15.1%2C80.1L15.2%2C78.8L15.2%2C77.6L14.9%2C76.6L14.4%2C75.9L13.7%2C75.2L13.0%2C74.6L12.4%2C73.9L11.8%2C73.1L11.3%2C72.3L10.8%2C71.5L10.2%2C70.8L9.4%2C70.2L8.3%2C69.6L7.2%2C69.1L6.0%2C68.5L5.1%2C67.8L4.6%2C66.9L4.5%2C65.8L4.8%2C64.7L5.3%2C63.5L5.9%2C62.3L6.3%2C61.2L6.6%2C60.2L6.7%2C59.2L6.8%2C58.2L6.9%2C57.3L7.1%2C56.3L7.5%2C55.4L8.0%2C54.4L8.4%2C53.5L8.6%2C52.6L8.4%2C51.7L7.9%2C50.9L7.2%2C50.0L6.4%2C49.1L5.6%2C48.1L5.2%2C47.2L5.2%2C46.2L5.5%2C45.3L6.1%2C44.5L6.8%2C43.6L7.4%2C42.8L7.9%2C42.0L8.3%2C41.1L8.7%2C40.3L9.2%2C39.5L9.8%2C38.8L10.7%2C38.1L11.6%2C37.5L12.5%2C37.0L13.2%2C36.3L13.5%2C35.5L13.4%2C34.6L12.9%2C33.5L12.2%2C32.2L11.5%2C30.9L11.0%2C29.6L10.7%2C28.4L10.7%2C27.3L10.9%2C26.3L11.1%2C25.3L11.3%2C24.3L11.4%2C23.2L11.6%2C22.1L11.9%2C21.0L12.4%2C20.2L13.2%2C19.5L14.3%2C19.2L15.7%2C19.1L17.1%2C19.1L18.5%2C19.2L19.7%2C19.0L20.6%2C18.7L21.2%2C18.0L21.7%2C17.2L22.2%2C16.4L22.7%2C15.5L23.3%2C14.8L23.9%2C14.1L24.7%2C13.5L25.3%2C12.9L25.9%2C12.1L26.4%2C11.1L26.9%2C10.0L27.4%2C8.9L28.1%2C8.1L28.9%2C7.6L30.0%2C7.4L31.2%2C7.7L32.4%2C8.2L33.7%2C8.7L34.8%2C9.2L35.9%2C9.4L36.8%2C9.4L37.7%2C9.4L38.6%2C9.2L39.5%2C9.2L40.4%2C9.3L41.4%2C9.4L42.3%2C9.6L43.2%2C9.6L44.0%2C9.3L44.8%2C8.7L45.6%2C7.8L46.4%2C6.8L47.2%2C6.0L48.1%2C5.4L49.1%2C5.3L50.0%2C5.6L50.9%2C6.1L51.8%2C6.8L52.7%2C7.5L53.5%2C8.0L54.4%2C8.4L55.2%2C8.7L56.0%2C9.1L56.8%2C9.6L57.6%2C10.2L58.3%2C10.9L59.0%2C11.6L59.7%2C12.1L60.5%2C12.2L61.5%2C12.0L62.6%2C11.3L63.8%2C10.5L65.0%2C9.6L66.3%2C8.9L67.5%2C8.5L68.5%2C8.3L69.5%2C8.5L70.5%2C8.7L71.4%2C9.0L72.4%2C9.3L73.4%2C9.5L74.4%2C9.8L75.2%2C10.3L75.9%2C11.1L76.3%2C12.2L76.5%2C13.5L76.6%2C15.0L76.6%2C16.5L76.7%2C17.7L77.0%2C18.7L77.6%2C19.4L78.3%2C19.9L79.0%2C20.3L79.8%2C20.8L80.4%2C21.4L80.9%2C22.2L81.3%2C23.0L81.7%2C23.8L82.2%2C24.5L82.8%2C25.1L83.5%2C25.7L84.2%2C26.3L84.7%2C26.9L85.0%2C27.8L85.0%2C28.8L84.7%2C30.0L84.1%2C31.2L83.6%2C32.4L83.2%2C33.5L83.0%2C34.5L83.1%2C35.3L83.5%2C35.9L83.9%2C36.6L84.4%2C37.2L84.9%2C37.9L85.2%2C38.6L85.6%2C39.3L86.0%2C39.9L86.7%2C40.6L87.7%2C41.2L89.0%2C41.7L90.3%2C42.3L91.5%2C43.0L92.4%2C43.7L92.8%2C44.6L92.8%2C45.5L92.5%2C46.4L91.9%2C47.4L91.3%2C48.3L90.9%2C49.1Z%27%20fill%3D%27%23fff%27%2F%3E%3C%2Fsvg%3E");
+  --wt-lacre-rel: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Cfilter%20id%3D%27c%27%20x%3D%270%27%20y%3D%270%27%20width%3D%27100%25%27%20height%3D%27100%25%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%271.15%27%20numOctaves%3D%273%27%20seed%3D%274%27%20result%3D%27n%27%2F%3E%3CfeDiffuseLighting%20in%3D%27n%27%20surfaceScale%3D%271.1%27%20diffuseConstant%3D%27.92%27%20lighting-color%3D%27%23c8c8c8%27%3E%3CfeDistantLight%20azimuth%3D%27228%27%20elevation%3D%2758%27%2F%3E%3C%2FfeDiffuseLighting%3E%3C%2Ffilter%3E%3Crect%20width%3D%27100%27%20height%3D%27100%27%20filter%3D%27url%28%23c%29%27%2F%3E%3Ccircle%20cx%3D%2750%27%20cy%3D%2750%27%20r%3D%2734%27%20fill%3D%27none%27%20stroke%3D%27%238a8a8a%27%20stroke-width%3D%272.6%27%2F%3E%3Ccircle%20cx%3D%2750%27%20cy%3D%2751%27%20r%3D%2734%27%20fill%3D%27none%27%20stroke%3D%27%23fff%27%20stroke-opacity%3D%27.28%27%20stroke-width%3D%271%27%2F%3E%3Cpath%20d%3D%27M50%2030%20C47.5%2036%2044%2037.5%2044%2041.5%20C44%2045%2046.5%2046.5%2050%2046.5%20C53.5%2046.5%2056%2045%2056%2041.5%20C56%2037.5%2052.5%2036%2050%2030%20Z%20M38%2043%20C35.5%2047%2036.5%2053%2041.5%2055.5%20C44%2051.5%2043%2046.5%2038%2043%20Z%20M62%2043%20C64.5%2047%2063.5%2053%2058.5%2055.5%20C56%2051.5%2057%2046.5%2062%2043%20Z%20M50%2049%20C46.5%2049%2044%2051.5%2044%2055.5%20C44%2061%2047.5%2066%2050%2069.5%20C52.5%2066%2056%2061%2056%2055.5%20C56%2051.5%2053.5%2049%2050%2049%20Z%20M41%2058%20H59%20V61.5%20H41%20Z%27%20fill%3D%27%238a8a8a%27%2F%3E%3C%2Fsvg%3E");
+  --wt-hoja1: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20120%2048%27%20preserveAspectRatio%3D%27none%27%3E%3Ccircle%20cx%3D%2737.6%27%20cy%3D%2733.3%27%20r%3D%271.0%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.11%27%2F%3E%3Ccircle%20cx%3D%275.3%27%20cy%3D%2726.1%27%20r%3D%270.8%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.20%27%2F%3E%3Ccircle%20cx%3D%279.7%27%20cy%3D%2724.9%27%20r%3D%270.9%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.18%27%2F%3E%3Ccircle%20cx%3D%2797.3%27%20cy%3D%2714.0%27%20r%3D%271.4%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.10%27%2F%3E%3Ccircle%20cx%3D%2776.0%27%20cy%3D%2713.9%27%20r%3D%270.8%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.12%27%2F%3E%3Ccircle%20cx%3D%2736.0%27%20cy%3D%2739.4%27%20r%3D%271.5%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.18%27%2F%3E%3Ccircle%20cx%3D%2745.5%27%20cy%3D%2738.5%27%20r%3D%270.8%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.14%27%2F%3E%3Ccircle%20cx%3D%2731.4%27%20cy%3D%2713.4%27%20r%3D%270.8%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.19%27%2F%3E%3Ccircle%20cx%3D%2796.2%27%20cy%3D%2742.6%27%20r%3D%271.3%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.10%27%2F%3E%3Ccircle%20cx%3D%2736.3%27%20cy%3D%2732.6%27%20r%3D%270.8%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.18%27%2F%3E%3Ccircle%20cx%3D%2725.2%27%20cy%3D%2720.8%27%20r%3D%270.8%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.15%27%2F%3E%3Ccircle%20cx%3D%2729.6%27%20cy%3D%2713.9%27%20r%3D%271.3%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.11%27%2F%3E%3Ccircle%20cx%3D%2755.7%27%20cy%3D%2744.9%27%20r%3D%271.0%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.16%27%2F%3E%3Cpath%20d%3D%27M28.7%2C30.3L28.9%2C31.7L28.3%2C33.0L26.5%2C33.0L25.5%2C33.2L24.5%2C34.2L23.4%2C33.8L21.6%2C34.3L20.7%2C33.0L20.2%2C31.6L20.1%2C30.3L20.1%2C28.8L21.7%2C28.3L22.1%2C26.9L23.4%2C27.0L24.5%2C25.1L25.5%2C27.2L27.4%2C26.2L27.1%2C28.3L29.0%2C28.8Z%27%20fill%3D%27%238a5520%27%20fill-opacity%3D%27.10%27%2F%3E%3Cpath%20d%3D%27M106.3%2C28.9L107.4%2C30.8L106.5%2C32.6L105.4%2C34.4L102.8%2C33.4L101.4%2C33.7L99.9%2C33.3L98.5%2C32.8L96.1%2C32.7L97.0%2C30.3L95.5%2C28.9L96.8%2C27.4L97.2%2C25.9L98.1%2C24.4L99.2%2C22.4L101.4%2C22.8L102.6%2C24.9L104.3%2C24.8L105.1%2C26.1L107.9%2C26.7Z%27%20fill%3D%27%238a5520%27%20fill-opacity%3D%27.10%27%2F%3E%3Cpath%20d%3D%27M33.3%2C21.7L35.1%2C23.9L33.9%2C25.7L33.0%2C28.1L30.1%2C26.9L28.4%2C27.2L26.2%2C28.5L24.3%2C27.3L23.8%2C25.0L21.7%2C23.8L22.4%2C21.7L21.4%2C19.4L24.3%2C18.8L25.2%2C17.4L26.0%2C14.3L28.4%2C15.9L30.1%2C16.5L32.7%2C15.7L33.9%2C17.7L33.2%2C20.1Z%27%20fill%3D%27%238a5520%27%20fill-opacity%3D%27.10%27%2F%3E%3Cpath%20d%3D%27M75.5%2C14.4L75.0%2C15.4L75.1%2C16.7L73.9%2C17.2L72.8%2C17.5L71.8%2C18.4L70.2%2C19.4L68.9%2C18.4L67.9%2C17.2L68.4%2C15.5L67.5%2C14.4L68.3%2C13.2L69.0%2C12.3L69.9%2C11.6L70.7%2C10.9L71.8%2C9.1L73.4%2C9.5L74.8%2C10.3L75.9%2C11.4L75.2%2C13.3Z%27%20fill%3D%27%23c2140a%27%20fill-opacity%3D%27.26%27%2F%3E%3Cpath%20d%3D%27M83.0%2C16.0L83.0%2C16.4L83.1%2C17.1L82.5%2C17.1L82.1%2C17.3L81.6%2C17.7L81.1%2C17.6L80.8%2C17.2L80.3%2C16.9L79.7%2C16.6L80.3%2C16.0L80.3%2C15.5L80.6%2C15.2L80.8%2C14.8L81.2%2C14.7L81.6%2C13.8L82.1%2C14.5L82.9%2C14.2L82.8%2C15.2L83.7%2C15.3Z%27%20fill%3D%27%23b81108%27%20fill-opacity%3D%27.40%27%2F%3E%3Cpath%20d%3D%27M99.8%2C10.4L99.5%2C11.0L99.7%2C11.9L98.8%2C11.9L98.3%2C12.4L97.7%2C12.3L97.0%2C12.3L96.1%2C12.6L96.3%2C11.4L95.7%2C11.0L95.9%2C10.4L95.8%2C9.8L95.5%2C8.8L96.5%2C8.8L97.0%2C8.3L97.7%2C8.4L98.4%2C8.1L98.9%2C8.7L99.1%2C9.4L99.6%2C9.8Z%27%20fill%3D%27%23b81108%27%20fill-opacity%3D%27.40%27%2F%3E%3Ccircle%20cx%3D%2755.6%27%20cy%3D%275.7%27%20r%3D%270.6%27%20fill%3D%27%23b81108%27%20fill-opacity%3D%27.46%27%2F%3E%3Ccircle%20cx%3D%27102.8%27%20cy%3D%2742.2%27%20r%3D%270.6%27%20fill%3D%27%23b81108%27%20fill-opacity%3D%27.46%27%2F%3E%3Ccircle%20cx%3D%27109.7%27%20cy%3D%274.7%27%20r%3D%270.4%27%20fill%3D%27%23b81108%27%20fill-opacity%3D%27.46%27%2F%3E%3Ccircle%20cx%3D%27110.3%27%20cy%3D%2735.0%27%20r%3D%270.5%27%20fill%3D%27%23b81108%27%20fill-opacity%3D%27.46%27%2F%3E%3Ccircle%20cx%3D%27107.9%27%20cy%3D%2728.8%27%20r%3D%270.6%27%20fill%3D%27%23b81108%27%20fill-opacity%3D%27.46%27%2F%3E%3Cpath%20d%3D%27M67.9%2036.3%20Q72.7%2033.8%2076.9%2034.0%27%20fill%3D%27none%27%20stroke%3D%27%234a3318%27%20stroke-opacity%3D%27.34%27%20stroke-width%3D%27.7%27%2F%3E%3Cpath%20d%3D%27M67.9%2037.1%20Q72.7%2034.6%2076.9%2034.8%27%20fill%3D%27none%27%20stroke%3D%27%23fffaf0%27%20stroke-opacity%3D%27.42%27%20stroke-width%3D%27.7%27%2F%3E%3Cpath%20d%3D%27M64.1%2017.7%20Q70.4%2019.0%2074.7%2016.3%27%20fill%3D%27none%27%20stroke%3D%27%234a3318%27%20stroke-opacity%3D%27.34%27%20stroke-width%3D%27.7%27%2F%3E%3Cpath%20d%3D%27M64.1%2018.5%20Q70.4%2019.8%2074.7%2017.1%27%20fill%3D%27none%27%20stroke%3D%27%23fffaf0%27%20stroke-opacity%3D%27.42%27%20stroke-width%3D%27.7%27%2F%3E%3C%2Fsvg%3E");
+  --wt-hoja2: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20120%2048%27%20preserveAspectRatio%3D%27none%27%3E%3Ccircle%20cx%3D%2750.2%27%20cy%3D%2715.7%27%20r%3D%270.9%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.12%27%2F%3E%3Ccircle%20cx%3D%2783.4%27%20cy%3D%2725.7%27%20r%3D%270.8%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.19%27%2F%3E%3Ccircle%20cx%3D%2731.4%27%20cy%3D%2737.2%27%20r%3D%270.9%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.19%27%2F%3E%3Ccircle%20cx%3D%2794.5%27%20cy%3D%2729.9%27%20r%3D%271.2%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.17%27%2F%3E%3Ccircle%20cx%3D%2718.7%27%20cy%3D%2726.1%27%20r%3D%270.6%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.18%27%2F%3E%3Ccircle%20cx%3D%2725.4%27%20cy%3D%2740.1%27%20r%3D%271.0%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.18%27%2F%3E%3Ccircle%20cx%3D%2781.2%27%20cy%3D%2716.9%27%20r%3D%270.6%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.17%27%2F%3E%3Ccircle%20cx%3D%2710.9%27%20cy%3D%2720.2%27%20r%3D%271.0%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.19%27%2F%3E%3Ccircle%20cx%3D%2776.0%27%20cy%3D%2728.2%27%20r%3D%271.2%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.14%27%2F%3E%3Ccircle%20cx%3D%2760.7%27%20cy%3D%2717.1%27%20r%3D%270.9%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.16%27%2F%3E%3Ccircle%20cx%3D%27105.2%27%20cy%3D%2734.0%27%20r%3D%270.6%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.15%27%2F%3E%3Ccircle%20cx%3D%2769.1%27%20cy%3D%273.2%27%20r%3D%270.9%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.11%27%2F%3E%3Ccircle%20cx%3D%2727.4%27%20cy%3D%2713.4%27%20r%3D%271.5%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.11%27%2F%3E%3Ccircle%20cx%3D%2710.3%27%20cy%3D%2714.6%27%20r%3D%271.2%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.18%27%2F%3E%3Ccircle%20cx%3D%2763.8%27%20cy%3D%2740.9%27%20r%3D%270.8%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.13%27%2F%3E%3Ccircle%20cx%3D%2742.7%27%20cy%3D%2710.2%27%20r%3D%270.6%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.16%27%2F%3E%3Cpath%20d%3D%27M50.3%2C7.8L51.1%2C10.3L48.7%2C11.6L49.0%2C15.4L45.6%2C14.2L43.5%2C16.0L40.5%2C17.1L39.1%2C13.9L35.4%2C13.7L35.0%2C10.6L35.4%2C7.8L35.4%2C5.2L36.8%2C2.9L39.2%2C1.9L40.4%2C-1.8L43.5%2C0.3L46.6%2C-1.7L49.1%2C0.2L48.2%2C4.4L50.0%2C5.7Z%27%20fill%3D%27%238a5520%27%20fill-opacity%3D%27.10%27%2F%3E%3Cpath%20d%3D%27M19.3%2C32.8L16.1%2C34.2L17.3%2C36.7L15.3%2C37.5L14.2%2C39.7L11.9%2C38.4L9.7%2C39.7L9.1%2C36.7L5.9%2C37.2L6.6%2C34.5L7.1%2C32.8L6.8%2C31.1L6.8%2C29.1L9.4%2C29.3L10.2%2C27.6L11.9%2C28.5L13.3%2C28.6L14.7%2C28.9L16.0%2C29.9L16.8%2C31.2Z%27%20fill%3D%27%238a5520%27%20fill-opacity%3D%27.10%27%2F%3E%3Cpath%20d%3D%27M20.7%2C13.1L21.2%2C15.0L19.3%2C16.0L18.7%2C17.7L17.3%2C19.1L15.4%2C18.2L13.6%2C18.5L12.1%2C17.7L10.5%2C16.7L11.9%2C14.3L11.3%2C13.1L9.3%2C11.2L10.8%2C9.8L12.8%2C9.6L13.6%2C7.7L15.4%2C9.0L16.8%2C8.7L18.2%2C9.2L18.8%2C10.6L19.2%2C11.9Z%27%20fill%3D%27%238a5520%27%20fill-opacity%3D%27.10%27%2F%3E%3Cpath%20d%3D%27M86.6%2C30.9L87.1%2C32.6L86.6%2C34.3L84.3%2C34.2L83.5%2C36.0L81.8%2C36.1L80.3%2C35.7L79.7%2C33.9L79.0%2C32.9L77.7%2C32.2L76.5%2C30.9L78.0%2C29.6L78.0%2C28.1L79.4%2C27.5L80.1%2C25.6L81.8%2C25.0L83.2%2C26.7L85.4%2C26.1L84.7%2C28.8L87.1%2C29.2Z%27%20fill%3D%27%23c2140a%27%20fill-opacity%3D%27.26%27%2F%3E%3Cpath%20d%3D%27M52.6%2C32.3L51.6%2C32.9L51.9%2C33.8L51.2%2C34.1L50.8%2C34.9L49.9%2C34.5L49.3%2C34.3L48.9%2C33.7L48.2%2C33.5L47.4%2C33.2L47.2%2C32.3L48.2%2C31.8L47.9%2C30.9L48.9%2C30.9L49.2%2C30.2L49.9%2C30.3L50.5%2C30.6L51.1%2C30.7L51.9%2C30.9L52.2%2C31.6Z%27%20fill%3D%27%23b81108%27%20fill-opacity%3D%27.40%27%2F%3E%3Cpath%20d%3D%27M70.7%2C20.1L70.4%2C20.4L70.7%2C21.1L70.2%2C21.2L69.8%2C21.4L69.4%2C21.7L69.1%2C21.1L68.5%2C21.3L68.5%2C20.7L68.3%2C20.4L68.2%2C20.1L68.0%2C19.6L68.1%2C19.1L68.5%2C18.9L69.0%2C19.0L69.4%2C19.1L69.7%2C19.0L70.0%2C19.2L70.4%2C19.3L70.6%2C19.7Z%27%20fill%3D%27%23b81108%27%20fill-opacity%3D%27.40%27%2F%3E%3Ccircle%20cx%3D%27109.8%27%20cy%3D%2731.1%27%20r%3D%270.7%27%20fill%3D%27%23b81108%27%20fill-opacity%3D%27.46%27%2F%3E%3Ccircle%20cx%3D%2711.4%27%20cy%3D%2742.9%27%20r%3D%270.4%27%20fill%3D%27%23b81108%27%20fill-opacity%3D%27.46%27%2F%3E%3Ccircle%20cx%3D%27102.1%27%20cy%3D%2716.6%27%20r%3D%270.4%27%20fill%3D%27%23b81108%27%20fill-opacity%3D%27.46%27%2F%3E%3Ccircle%20cx%3D%2723.4%27%20cy%3D%2720.8%27%20r%3D%270.6%27%20fill%3D%27%23b81108%27%20fill-opacity%3D%27.46%27%2F%3E%3Ccircle%20cx%3D%2739.7%27%20cy%3D%2714.0%27%20r%3D%270.7%27%20fill%3D%27%23b81108%27%20fill-opacity%3D%27.46%27%2F%3E%3Cpath%20d%3D%27M22.3%208.0%20Q28.3%205.5%2034.0%204.9%27%20fill%3D%27none%27%20stroke%3D%27%234a3318%27%20stroke-opacity%3D%27.34%27%20stroke-width%3D%27.7%27%2F%3E%3Cpath%20d%3D%27M22.3%208.8%20Q28.3%206.3%2034.0%205.7%27%20fill%3D%27none%27%20stroke%3D%27%23fffaf0%27%20stroke-opacity%3D%27.42%27%20stroke-width%3D%27.7%27%2F%3E%3Cpath%20d%3D%27M29.7%2015.3%20Q35.8%2015.2%2042.5%2015.2%27%20fill%3D%27none%27%20stroke%3D%27%234a3318%27%20stroke-opacity%3D%27.34%27%20stroke-width%3D%27.7%27%2F%3E%3Cpath%20d%3D%27M29.7%2016.1%20Q35.8%2016.0%2042.5%2016.0%27%20fill%3D%27none%27%20stroke%3D%27%23fffaf0%27%20stroke-opacity%3D%27.42%27%20stroke-width%3D%27.7%27%2F%3E%3C%2Fsvg%3E");
+  --wt-hoja3: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20120%2048%27%20preserveAspectRatio%3D%27none%27%3E%3Ccircle%20cx%3D%2711.7%27%20cy%3D%2728.1%27%20r%3D%271.1%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.11%27%2F%3E%3Ccircle%20cx%3D%27108.7%27%20cy%3D%2719.5%27%20r%3D%270.5%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.10%27%2F%3E%3Ccircle%20cx%3D%2799.6%27%20cy%3D%2730.4%27%20r%3D%271.3%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.11%27%2F%3E%3Ccircle%20cx%3D%2759.8%27%20cy%3D%2741.5%27%20r%3D%271.0%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.18%27%2F%3E%3Ccircle%20cx%3D%2725.7%27%20cy%3D%2744.0%27%20r%3D%270.7%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.18%27%2F%3E%3Ccircle%20cx%3D%2779.9%27%20cy%3D%2731.7%27%20r%3D%271.0%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.15%27%2F%3E%3Ccircle%20cx%3D%2751.2%27%20cy%3D%2714.7%27%20r%3D%271.3%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.18%27%2F%3E%3Ccircle%20cx%3D%27112.3%27%20cy%3D%2722.8%27%20r%3D%270.6%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.13%27%2F%3E%3Ccircle%20cx%3D%2737.1%27%20cy%3D%2732.7%27%20r%3D%271.0%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.18%27%2F%3E%3Ccircle%20cx%3D%2799.7%27%20cy%3D%2740.6%27%20r%3D%271.2%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.19%27%2F%3E%3Ccircle%20cx%3D%27100.8%27%20cy%3D%2714.1%27%20r%3D%271.2%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.18%27%2F%3E%3Ccircle%20cx%3D%2765.9%27%20cy%3D%279.9%27%20r%3D%271.1%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.14%27%2F%3E%3Ccircle%20cx%3D%2735.1%27%20cy%3D%2728.9%27%20r%3D%270.7%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.17%27%2F%3E%3Ccircle%20cx%3D%2799.3%27%20cy%3D%2743.9%27%20r%3D%271.1%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.17%27%2F%3E%3Ccircle%20cx%3D%2779.9%27%20cy%3D%2731.2%27%20r%3D%270.5%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.18%27%2F%3E%3Ccircle%20cx%3D%2748.4%27%20cy%3D%2720.4%27%20r%3D%271.0%27%20fill%3D%27%239a5a22%27%20fill-opacity%3D%270.14%27%2F%3E%3Cpath%20d%3D%27M107.6%2C40.5L107.5%2C42.5L108.7%2C45.7L106.1%2C46.7L103.6%2C46.8L101.6%2C47.3L99.2%2C47.8L97.6%2C46.0L94.9%2C45.4L96.0%2C42.4L94.7%2C40.5L95.4%2C38.5L94.7%2C35.6L96.4%2C33.4L99.3%2C33.4L101.6%2C31.5L103.3%2C35.2L106.4%2C33.9L106.8%2C36.8L107.4%2C38.6Z%27%20fill%3D%27%238a5520%27%20fill-opacity%3D%27.10%27%2F%3E%3Cpath%20d%3D%27M87.4%2C33.4L86.6%2C34.7L87.6%2C37.1L85.7%2C37.9L84.1%2C38.4L82.5%2C39.1L80.5%2C39.3L79.1%2C38.0L79.1%2C35.8L76.2%2C35.4L78.3%2C33.4L78.5%2C32.1L79.0%2C30.8L79.5%2C29.4L80.7%2C27.9L82.5%2C29.2L83.8%2C29.3L85.4%2C29.2L87.5%2C29.7L86.2%2C32.1Z%27%20fill%3D%27%238a5520%27%20fill-opacity%3D%27.10%27%2F%3E%3Cpath%20d%3D%27M16.5%2C28.6L18.3%2C31.1L18.5%2C34.2L14.3%2C33.5L13.5%2C37.1L10.7%2C34.6L8.5%2C35.4L5.4%2C36.0L5.4%2C32.5L2.9%2C31.2L5.0%2C28.6L2.2%2C25.8L4.8%2C24.3L7.5%2C24.2L8.9%2C22.9L10.7%2C21.3L13.4%2C20.4L15.3%2C22.3L18.4%2C23.0L16.3%2C26.8Z%27%20fill%3D%27%238a5520%27%20fill-opacity%3D%27.10%27%2F%3E%3Cpath%20d%3D%27M103.1%2C24.5L102.6%2C25.5L102.9%2C26.9L101.3%2C27.0L100.6%2C27.8L99.5%2C27.7L98.5%2C27.7L96.9%2C28.1L97.3%2C26.1L96.3%2C25.5L96.5%2C24.5L96.5%2C23.5L95.9%2C21.8L97.6%2C21.9L98.4%2C20.9L99.5%2C21.1L100.7%2C20.7L101.5%2C21.7L101.8%2C22.8L102.7%2C23.4Z%27%20fill%3D%27%23c2140a%27%20fill-opacity%3D%27.26%27%2F%3E%3Cpath%20d%3D%27M83.3%2C19.3L83.8%2C19.7L83.4%2C20.0L83.0%2C20.1L82.9%2C20.6L82.4%2C20.5L82.0%2C20.6L81.7%2C20.3L81.4%2C20.1L81.2%2C19.7L81.4%2C19.3L81.6%2C19.0L81.3%2C18.5L81.9%2C18.6L82.1%2C18.2L82.4%2C17.8L82.8%2C18.3L83.0%2C18.5L83.3%2C18.7L83.4%2C19.0Z%27%20fill%3D%27%23b81108%27%20fill-opacity%3D%27.40%27%2F%3E%3Cpath%20d%3D%27M85.1%2C15.3L84.8%2C15.5L84.9%2C15.9L84.5%2C16.0L84.3%2C16.3L84.0%2C16.3L83.6%2C16.4L83.5%2C16.0L82.9%2C16.1L83.2%2C15.5L83.1%2C15.3L82.8%2C14.9L82.8%2C14.4L83.2%2C14.2L83.6%2C14.0L84.0%2C14.4L84.3%2C14.4L84.6%2C14.5L84.8%2C14.7L84.9%2C15.0Z%27%20fill%3D%27%23b81108%27%20fill-opacity%3D%27.40%27%2F%3E%3Ccircle%20cx%3D%2718.2%27%20cy%3D%2710.6%27%20r%3D%270.3%27%20fill%3D%27%23b81108%27%20fill-opacity%3D%27.46%27%2F%3E%3Ccircle%20cx%3D%2790.6%27%20cy%3D%2738.6%27%20r%3D%270.4%27%20fill%3D%27%23b81108%27%20fill-opacity%3D%27.46%27%2F%3E%3Ccircle%20cx%3D%2774.5%27%20cy%3D%2739.1%27%20r%3D%270.4%27%20fill%3D%27%23b81108%27%20fill-opacity%3D%27.46%27%2F%3E%3Ccircle%20cx%3D%2742.0%27%20cy%3D%2739.3%27%20r%3D%270.6%27%20fill%3D%27%23b81108%27%20fill-opacity%3D%27.46%27%2F%3E%3Cpath%20d%3D%27M82.7%2025.1%20Q88.3%2024.2%2092.0%2026.8%27%20fill%3D%27none%27%20stroke%3D%27%234a3318%27%20stroke-opacity%3D%27.34%27%20stroke-width%3D%27.7%27%2F%3E%3Cpath%20d%3D%27M82.7%2025.9%20Q88.3%2025.0%2092.0%2027.6%27%20fill%3D%27none%27%20stroke%3D%27%23fffaf0%27%20stroke-opacity%3D%27.42%27%20stroke-width%3D%27.7%27%2F%3E%3C%2Fsvg%3E");
+  /* El papel no cambia entre modos: un pergamino es un pergamino a cualquier hora. */
+  --wt-papel-f: #e7d3b0;
+  --wt-papel-a1: #e0cda8; --wt-papel-a2: #cfb992; --wt-papel-a3: #bca47e;
+  --wt-tostado: .26;
+  /* Cuánto asoma el pliego del rótulo. De aquí salen el recorte, el sitio del lacre y la separación
+     entre carteles, así que todo cuadra con una sola ficha. */
+  --wt-asomo: 4px;
+  --wt-lacre: 17px;
+}
+
+/* ── §1 · Tipografía: EB Garamond para el cuerpo y los rótulos —es letra de documento, no de interfaz—,
+   Cinzel para las cabeceras y las cifras en IBM Plex Mono.
+   LA CAJA NO LA PONE EL TEMA: las versales son la preferencia «Texto» de /cuenta (`data-uppercase`), que
+   ya las aplica a botones, pestañas, chips, cabeceras y ruleta en las siete paletas. Lo que sí pone el
+   tema es el TRACKING, que Cinzel pide aire vaya en caja alta o baja. (Aparte, la hoja base manda versales
+   siempre en `thead th`, `.flabel` y `.detail-label`: eso es de la casa y este tema no lo toca.) ── */
+:root[data-palette="steam"] {
+  --font-body: 'EB Garamond', Georgia, serif;
+  --font-label: 'EB Garamond', Georgia, serif;
+  --font-display: 'Cinzel', Georgia, serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+:root[data-palette="steam"] body { font-family: var(--font-body); font-size: calc(1em + .5px); }
+:root[data-palette="steam"] h2,
+:root[data-palette="steam"] h3,
+:root[data-palette="steam"] thead th { font-family: var(--font-display); letter-spacing: .14em; }
+:root[data-palette="steam"] .score-ring-num,
+:root[data-palette="steam"] .score-dial-num,
+:root[data-palette="steam"] .count-badge,
+:root[data-palette="steam"] .hub-feed-date,
+:root[data-palette="steam"] .hub-review-date,
+:root[data-palette="steam"] .hub-review-medal { font-family: var(--font-mono); }
+
+/* ── §2 · El acero: veta de cepillado en capa propia. El ruido va ANISÓTROPO (la lattice estirada en un
+   eje), que es lo que produce la veta; un `repeating-linear-gradient` de 1 px no es metal, es una
+   persiana. En `overlay` y a media opacidad para que no ensucie el texto. ── */
+:root[data-palette="steam"] body {
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,.05), transparent 24%),
+    radial-gradient(120% 70% at 50% -10%, rgba(198,206,216,.10), transparent 60%);
+  background-attachment: fixed;
+}
+:root[data-palette="steam"] body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: var(--wt-veta); background-size: 300px 300px;
+  mix-blend-mode: overlay; opacity: .38;
+}
+:root[data-palette="steam"][data-theme="light"] body::before { opacity: .22; }
+
+/* ── §3 · Paneles: chapa con canto de luz arriba y filete de acero. ── */
+:root[data-palette="steam"] .toolbar,
+:root[data-palette="steam"] .table-wrap,
+:root[data-palette="steam"] .settings-card,
+:root[data-palette="steam"] .stats-card,
+:root[data-palette="steam"] .hub-feed-card,
+:root[data-palette="steam"] .hub-hub-card,
+:root[data-palette="steam"] .modal,
+:root[data-palette="steam"] .alert-dialog {
+  border: 1px solid var(--border) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.10), var(--e2) !important;
+}
+
+/* ── §4 · Tabla: la cabecera es el encabezado del contrato —versales de Cinzel y doble filete— y cada
+   fila lleva el lomo del color de su género. ── */
+:root[data-palette="steam"] thead th {
+  background: linear-gradient(180deg, var(--surface-elevated), var(--surface));
+  color: var(--steam);
+  border-bottom: 3px double var(--border);
+}
+:root[data-palette="steam"] .main-row > td:first-child { border-left: 3px solid transparent; }
+:root[data-palette="steam"] .main-row:hover > td:first-child { border-left-color: color-mix(in srgb, var(--steam) 55%, transparent); }
+:root[data-palette="steam"] .main-row.open > td:first-child { border-left-color: var(--wt-igni); }
+
+/* ── §5 · Botones = HOJA DE ACERO. La pieza se recorta en punta por los dos lados —una hoja vista de
+   canto— y la acanaladura de luz la cruza por el centro: el degradado cambia de claro a oscuro justo
+   en el 50 %, que es lo que lee el ojo como filo. Sin `border`: el contorno lo da el recorte. ── */
+:root[data-palette="steam"] .btn:not(.btn-icon):not(.btn-ghost) {
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding-inline: 1.45rem;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  /* Los cuatro altos del degradado van por ficha CON RESPALDO EN EL `var()`, no declarados aquí: esta
+     regla lleva `:not()`, así que pesa más que la de cada rol y, si declarase las fichas, ganaría también
+     en ellas — el botón de borrar salía gris. */
+  background: linear-gradient(180deg,
+    var(--wt-h1, #4e5763) 0%, var(--wt-h2, #3c4550) 42%, var(--wt-h3, #2b333d) 52%, var(--wt-h4, #414a56) 100%) !important;
+  color: var(--wt-rotulo, var(--steam)) !important;
+  /* EL FILETE ES LO QUE SEPARA LA PIEZA DEL PANEL. Sin él, la chapa del botón y la del panel se
+     diferenciaban en 1,03:1 —o sea, nada—: el botón existía solo por su rótulo. Con el filo de plata al
+     70 % el control llega a 3,9:1 contra el fondo, que es lo que pide la 1.4.11 para una parte no
+     textual. Va como `box-shadow` y no como `border` porque el recorte en punta se comería el borde. */
+  box-shadow: inset 0 0 0 1px rgba(198,206,216,.70) !important;
+  transition: filter .18s, transform .1s;
+}
+:root[data-palette="steam"] .btn:not(.btn-icon):not(.btn-ghost)::before {
+  content: ''; position: absolute; left: 12px; right: 12px; top: 50%; height: 1px; margin-top: -1px;
+  /* El filo se insinúa en los DOS EXTREMOS y se apaga donde está el rótulo: a plena luz cruzaba la
+     palabra de lado a lado y parecía que la tachaba. */
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.28) 18%, transparent 38%,
+    transparent 62%, rgba(255,255,255,.28) 82%, transparent);
+  pointer-events: none;
+}
+:root[data-palette="steam"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: none; filter: brightness(1.14); }
+:root[data-palette="steam"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(1px); }
+/* La acción principal es la hoja PULIDA: mismo filo, plata en vez de acero pavonado. */
+:root[data-palette="steam"] .btn-steam,
+:root[data-palette="steam"] .btn-primary {
+  --wt-h1: #e9eff6; --wt-h2: #c3cdd9; --wt-h3: #8e9baa; --wt-h4: #dde4ec;
+  --wt-rotulo: var(--on-accent);
+}
+/* Lo que señala toma el fuego de Igni en el rótulo, sobre la misma hoja. */
+:root[data-palette="steam"] .btn-accent,
+:root[data-palette="steam"] .btn.is-active,
+:root[data-palette="steam"] .btn-toggle.active,
+:root[data-palette="steam"] .btn-toggle-deck.active {
+  /* EL ACTIVO SE INVIERTE, también en oscuro: pasa a acero PULIDO con tinta encima. Un botón hundido y
+     más oscuro que el panel no se veía (1,13:1 contra el fondo) y todo el trabajo lo hacía el color del
+     rótulo; invertir la luminancia se lee de un vistazo y sin distinguir colores. El filo de Igni se
+     queda como confirmación, no como única señal. */
+  --wt-h1: #e2e8ef; --wt-h2: #c3ccd7; --wt-h3: #92a0af; --wt-h4: #d6dee6;
+  --wt-rotulo: var(--on-accent);
+  box-shadow: inset 0 0 0 1.5px rgba(255,143,74,.85), inset 0 1px 0 rgba(255,255,255,.6) !important;
+}
+/* El destructivo es la hoja al rojo: brasa dentro del acero, no relleno plano. */
+:root[data-palette="steam"] .btn-danger {
+  --wt-h1: #5a3236; --wt-h2: #43262a; --wt-h3: #2a171a; --wt-h4: #4e2c30;
+  --wt-rotulo: #ffb0a8;
+}
+:root[data-palette="steam"] .btn-complete,
+:root[data-palette="steam"] .btn-recommend { --wt-rotulo: var(--success); }
+:root[data-palette="steam"] .btn-inprogress { --wt-rotulo: var(--warn); }
+:root[data-palette="steam"] .btn-abandoned,
+:root[data-palette="steam"] .btn-recommend-active { --wt-rotulo: var(--fg-red); }
+/* En claro los cuatro altos van otra vez COMO RESPALDO dentro del `var()`, no declarados: esta regla
+   lleva `:not()` y pesa más que la de cada rol, así que declararlos aquí volvía a pisar al activo y al
+   destructivo — el mismo fallo que ya había en la variante oscura. */
+:root[data-palette="steam"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost) {
+  background: linear-gradient(180deg,
+    var(--wt-h1, #f7f9fb) 0%, var(--wt-h2, #dde3e9) 42%, var(--wt-h3, #b7c1cb) 52%, var(--wt-h4, #eaeef2) 100%) !important;
+  color: var(--wt-rotulo, var(--text)) !important;
+  box-shadow: inset 0 0 0 1px rgba(71,82,95,.55) !important;
+}
+:root[data-palette="steam"][data-theme="light"] .btn-steam,
+:root[data-palette="steam"][data-theme="light"] .btn-primary {
+  --wt-h1: #67727f; --wt-h2: #4c5764; --wt-h3: #333c47; --wt-h4: #5d6875;
+  --wt-rotulo: #fff;
+}
+:root[data-palette="steam"][data-theme="light"] .btn-accent,
+:root[data-palette="steam"][data-theme="light"] .btn.is-active,
+:root[data-palette="steam"][data-theme="light"] .btn-toggle.active,
+:root[data-palette="steam"][data-theme="light"] .btn-toggle-deck.active {
+  /* EN CLARO, EL ACTIVO SE INVIERTE. Una chapa clara con la tinta encendida se distinguía poco de la
+     chapa clara de al lado; invertir el par (acero hondo + rótulo claro) es la señal que se lee de
+     lejos, y además sube el contraste del propio control contra su fondo, que es lo que pide la 1.4.11
+     para las partes no textuales. */
+  --wt-h1: #566270; --wt-h2: #434d5a; --wt-h3: #333c47; --wt-h4: #4d5765;
+  --wt-rotulo: #fff;
+  box-shadow: inset 0 0 0 1.5px rgba(143,54,8,.6), inset 0 1px 0 rgba(255,255,255,.16) !important;
+}
+:root[data-palette="steam"][data-theme="light"] .btn-danger {
+  --wt-h1: #f5d9d6; --wt-h2: #e8bcb8; --wt-h3: #cf9691; --wt-h4: #f0cecb;
+  --wt-rotulo: #7e1c16;
+}
+
+/* ── §6 · Chips = CARTEL DE CONTRATO. Tres capas: el frente es color PLANO (la zona escrita, para que
+   el rótulo se lea limpio), el papel viejo va detrás y asoma `--wt-asomo` con el canto desgarrado por
+   el filtro `#wt-desgarro`, y el lacre se sienta a caballo del borde superior: su posición se calcula
+   como `-asomo - lacre/2`, o sea la mitad fuera y la mitad sobre el papel.
+   El color del género NO tiñe el papel: tiñe LA CERA, que va mezclada con pardo oscuro porque la cera
+   nunca es del color puro del tinte. ── */
+:root[data-palette="steam"] .chip,
+:root[data-palette="steam"] .hub-friend-chip,
+:root[data-palette="steam"] .rl-chip,
+:root[data-palette="steam"] .active-filter-chip,
+:root[data-palette="steam"] .hub-feed-game-chip,
+:root[data-palette="steam"] .hub-review-game {
+  position: relative; z-index: 0; display: inline-block; vertical-align: middle;
+  font-family: var(--font-body); font-size: var(--fs-xs); font-weight: 600; line-height: 1.25;
+  color: var(--wt-tinta) !important;
+  background-image: var(--wt-hoja, none), linear-gradient(var(--wt-papel-f), var(--wt-papel-f)) !important;
+  background-size: 100% 100%, auto; background-repeat: no-repeat, no-repeat;
+  background-blend-mode: multiply, normal;
+  border: 0 !important; border-radius: 0 !important;
+  padding: 0 2px 1px !important;
+  margin: calc(var(--wt-asomo) + var(--wt-lacre) / 2 + 2px) calc(var(--wt-asomo) * 2 + 5px) calc(var(--wt-asomo) + 3px) 0;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 1px 2px rgba(0,0,0,.22) !important;
+}
+/* EL PAPEL, detrás. El canto lo rompe un filtro de turbulencia: cada cartel se desgarra distinto y no
+   se repite nunca (el filtro vive en el sprite de iconos, ver `IconSprite.tsx`). */
+:root[data-palette="steam"] .chip::before,
+:root[data-palette="steam"] .hub-friend-chip::before,
+:root[data-palette="steam"] .rl-chip::before,
+:root[data-palette="steam"] .active-filter-chip::before,
+:root[data-palette="steam"] .hub-feed-game-chip::before,
+:root[data-palette="steam"] .hub-review-game::before {
+  content: ''; position: absolute; z-index: -1;
+  inset: calc(-1 * var(--wt-asomo));
+  filter: url(#wt-desgarro);
+  background-image: var(--wt-hoja, none), var(--wt-velo),
+    linear-gradient(168deg, var(--wt-papel-a1), var(--wt-papel-a2) 60%, var(--wt-papel-a3));
+  background-size: 100% 100%, 200px 200px, auto;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-blend-mode: multiply, soft-light, normal;
+  box-shadow: inset 0 0 14px rgba(120,58,14,var(--wt-tostado)), 0 3px 5px rgba(0,0,0,.45);
+}
+/* EL LACRE, a caballo del canto de arriba. */
+:root[data-palette="steam"] .chip::after,
+:root[data-palette="steam"] .hub-friend-chip::after,
+:root[data-palette="steam"] .rl-chip::after,
+:root[data-palette="steam"] .active-filter-chip::after,
+:root[data-palette="steam"] .hub-feed-game-chip::after,
+:root[data-palette="steam"] .hub-review-game::after {
+  content: ''; position: absolute; z-index: 2;
+  width: var(--wt-lacre); height: var(--wt-lacre);
+  top: calc(-1 * var(--wt-asomo) - var(--wt-lacre) / 2); left: 6px;
+  transform: rotate(-7deg);
+  -webkit-mask-image: var(--wt-lacre-sil); mask-image: var(--wt-lacre-sil);
+  -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  background-image: var(--wt-lacre-rel),
+    radial-gradient(60% 60% at 40% 32%, rgba(255,255,255,.20) 0%, transparent 58%),
+    linear-gradient(166deg, color-mix(in srgb, var(--wt-cera) 84%, #fff) 0%, var(--wt-cera) 46%, color-mix(in srgb, var(--wt-cera) 62%, #000) 100%);
+  background-size: 100% 100%, auto, auto;
+  background-blend-mode: soft-light, soft-light, normal;
+  --wt-cera: color-mix(in srgb, var(--wt-tono, var(--steam)) 52%, #2b1410);
+  filter: drop-shadow(0 1.5px 1.5px rgba(18,10,4,.8));
+}
+/* El lacre cambia de lado en cada cartel, y las manchas rotan entre tres hojas: si no, la tabla
+   entera repetiría la misma mancha y el mismo sello en el mismo sitio. */
+:root[data-palette="steam"] .chips .chip:nth-child(even)::after { left: auto; right: 6px; transform: rotate(6deg); }
+:root[data-palette="steam"] .chips .chip:nth-child(3n+1) { --wt-hoja: var(--wt-hoja1); }
+:root[data-palette="steam"] .chips .chip:nth-child(3n+2) { --wt-hoja: var(--wt-hoja2); }
+:root[data-palette="steam"] .chips .chip:nth-child(3n) { --wt-hoja: var(--wt-hoja3); }
+/* El tono de la cera por variante: el género toma el de su categoría; el resto, el suyo de siempre. */
+:root[data-palette="steam"] .chip-genre,
+:root[data-palette="steam"] .rl-chip { --wt-tono: var(--cat, var(--steam)); }
+:root[data-palette="steam"] .chip-generic { --wt-tono: var(--warn); }
+:root[data-palette="steam"] .chip-pf,
+:root[data-palette="steam"] .chip-list-c { --wt-tono: var(--success); }
+:root[data-palette="steam"] .chip-pd,
+:root[data-palette="steam"] .chip-list-v { --wt-tono: var(--danger); }
+:root[data-palette="steam"] .chip-list-e { --wt-tono: var(--wt-igni); }
+:root[data-palette="steam"] .chip-plat,
+:root[data-palette="steam"] .chip-deck { --wt-tono: var(--steam); }
+:root[data-palette="steam"] .hub-feed-game-chip,
+:root[data-palette="steam"] .hub-review-game { --wt-tono: var(--wt-igni); }
+/* La misma etiqueta en la tarjeta de móvil, donde la tabla se pliega y los chips pasan a ser `.rm-*`.
+   Sin lacre: a ese tamaño el sello sería mayor que el rótulo. */
+:root[data-palette="steam"] .rm-plat,
+:root[data-palette="steam"] .rm-genre,
+:root[data-palette="steam"] .rm-strong {
+  border: 0; border-radius: 0; color: var(--wt-tinta);
+  background: linear-gradient(168deg, var(--wt-papel-a1), var(--wt-papel-a2) 70%);
+  box-shadow: 0 1px 2px rgba(0,0,0,.3);
+}
+
+/* ── §6b · Los botones-icono (cuenta, ajustes, tema, filtros) eran lo único sin cuerpo: un icono suelto
+   sobre el fondo, que en claro casi no se veía. Ahora son REMACHES de la chapa —disco de acero con
+   filete y canto de luz— y al pulsarlos se hunden. El FAB es el mismo remache, en grande. ── */
+:root[data-palette="steam"] .btn-icon,
+:root[data-palette="steam"] .theme-toggle-btn,
+:root[data-palette="steam"] .palette-select {
+  background: linear-gradient(180deg, #414a56, #2b323b) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--steam) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 1px 2px rgba(0,0,0,.45) !important;
+  transition: filter .18s, box-shadow .12s, transform .1s;
+}
+:root[data-palette="steam"][data-theme="light"] .btn-icon,
+:root[data-palette="steam"][data-theme="light"] .theme-toggle-btn,
+:root[data-palette="steam"][data-theme="light"] .palette-select {
+  background: linear-gradient(180deg, #fbfcfd, #ccd5de) !important;
+  color: var(--steam) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 1px 2px rgba(30,42,56,.22) !important;
+}
+:root[data-palette="steam"] .btn-icon:hover,
+:root[data-palette="steam"] .theme-toggle-btn:hover {
+  color: var(--wt-igni) !important;
+  border-color: color-mix(in srgb, var(--wt-igni) 60%, var(--border)) !important;
+  filter: brightness(1.12);
+  transform: none;
+}
+:root[data-palette="steam"] .btn-icon:active,
+:root[data-palette="steam"] .theme-toggle-btn:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.5) !important;
+}
+:root[data-palette="steam"] .fab,
+:root[data-palette="steam"] .fab-roulette {
+  border: 1px solid var(--border);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 4px 10px rgba(0,0,0,.45);
+}
+:root[data-palette="steam"] .fab:active,
+:root[data-palette="steam"] .fab-roulette:active { box-shadow: inset 0 2px 5px rgba(0,0,0,.55); }
+
+/* ── §7 · Campos: ranura en la chapa. Lo que se rellena sigue hundido, pero aquí el hueco es de metal:
+   sombra interior dura y, al enfocar, el filo de Igni. ── */
+:root[data-palette="steam"] .input-base,
+:root[data-palette="steam"] .finput,
+:root[data-palette="steam"] .ftextarea,
+:root[data-palette="steam"] .search-input {
+  border-radius: var(--radius-sm) !important;
+  background: color-mix(in srgb, var(--bg) 82%, #000) !important;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.45), inset 0 -1px 0 rgba(255,255,255,.07) !important;
+}
+:root[data-palette="steam"][data-theme="light"] .input-base,
+:root[data-palette="steam"][data-theme="light"] .finput,
+:root[data-palette="steam"][data-theme="light"] .ftextarea,
+:root[data-palette="steam"][data-theme="light"] .search-input {
+  background: #fff !important;
+  box-shadow: inset 0 2px 4px rgba(30,42,56,.14) !important;
+}
+:root[data-palette="steam"] .input-base:focus,
+:root[data-palette="steam"] .finput:focus,
+:root[data-palette="steam"] .ftextarea:focus,
+:root[data-palette="steam"] .search-input:focus {
+  border-color: var(--wt-igni) !important;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.45), 0 0 0 2px rgba(255,143,74,.35) !important;
+}
+:root[data-palette="steam"] .flabel,
+:root[data-palette="steam"] .detail-label { font-family: var(--font-display); letter-spacing: .12em; color: var(--steam); }
+
+/* ── §8 · Pestañas e insignias. ── */
+:root[data-palette="steam"] .tab-btn.active { color: var(--tab-active); }
+:root[data-palette="steam"] .badge-rejugar-activo,
+:root[data-palette="steam"] .badge-opp-activo {
+  background: linear-gradient(180deg, #e9eff6, #b6c1cd) !important;
+  color: var(--on-accent) !important; border: 0 !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,.4) !important;
+}
+:root[data-palette="steam"] .badge-rejugar-inactivo,
+:root[data-palette="steam"] .badge-opp-inactivo {
+  background: linear-gradient(180deg, #39414b, #262d36) !important;
+  color: var(--text-dim) !important; border: 0 !important; box-shadow: none !important;
+}
+
+/* ── §8b · La barra inferior era una píldora de cristal, el acabado de la casa. Aquí es el FRONTAL de la
+   chapa: recta, con filete, canto de luz arriba y la sección activa como una placa de acero pulido con
+   el filo de Igni encendido. Es la pieza que más se toca en el teléfono. ── */
+:root[data-palette="steam"] .bottom-nav-inner {
+  /* AFILADA COMO LOS BOTONES: la barra se recorta en punta por los dos lados, igual que una hoja, y el
+     filete va por dentro (`box-shadow`) porque el recorte se comería un `border`. */
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%);
+  border: 0;
+  border-radius: 0;
+  background: linear-gradient(180deg, var(--surface-elevated), var(--bg));
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  box-shadow: inset 0 0 0 1px rgba(198,206,216,.35), inset 0 1px 0 rgba(255,255,255,.14);
+  padding-inline: 1.1rem;
+}
+:root[data-palette="steam"][data-theme="light"] .bottom-nav-inner {
+  box-shadow: inset 0 0 0 1px rgba(71,82,95,.4), inset 0 1px 0 rgba(255,255,255,.9);
+}
+:root[data-palette="steam"] .bottom-nav-btn { border-radius: var(--radius-sm); }
+:root[data-palette="steam"] .bottom-nav-btn.active { color: var(--on-accent); }
+:root[data-palette="steam"] .bottom-nav-ind {
+  border-radius: 0;
+  clip-path: polygon(9px 0, calc(100% - 9px) 0, 100% 50%, calc(100% - 9px) 100%, 9px 100%, 0 50%);
+  background: linear-gradient(180deg, #e2e8ef 0%, #c3ccd7 46%, #92a0af 54%, #d6dee6 100%);
+  box-shadow: inset 0 0 0 1.5px rgba(255,143,74,.75);
+}
+:root[data-palette="steam"][data-theme="light"] .bottom-nav-ind {
+  background: linear-gradient(180deg, #566270 0%, #434d5a 46%, #333c47 54%, #4d5765 100%);
+  box-shadow: inset 0 0 0 1.5px rgba(143,54,8,.6);
+}
+:root[data-palette="steam"][data-theme="light"] .bottom-nav-btn.active { color: #fff; }
+
+/* ── §9 · La puntuación, que era lo más plano del tema ─────────────────────────────────────────────
+   LA NOTA ES UN MEDALLÓN TROQUELADO: el arco de color sigue diciendo la nota (lo pinta la hoja base con
+   un `conic-gradient`), pero ahora se apoya en metal — disco de acero con su canto de luz, filo oscuro
+   por fuera y la cifra GRABADA, con sombra arriba y luz abajo, que es como se lee un número golpeado en
+   una chapa. ── */
+:root[data-palette="steam"] .score-ring,
+:root[data-palette="steam"] .score-dial {
+  box-shadow: 0 0 0 1px rgba(10,14,18,.85), inset 0 1px 0 rgba(255,255,255,.25), 0 2px 4px rgba(0,0,0,.45);
+}
+:root[data-palette="steam"] .score-ring::after {
+  background: radial-gradient(circle at 36% 30%, #414a56, #262d36 72%) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 0 0 1px rgba(10,14,18,.7);
+}
+:root[data-palette="steam"][data-theme="light"] .score-ring::after {
+  background: radial-gradient(circle at 36% 30%, #fbfcfd, #d7dee5 72%) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 0 1px rgba(71,82,95,.3);
+}
+:root[data-palette="steam"] .score-ring-num,
+:root[data-palette="steam"] .score-dial-num {
+  font-weight: 500;
+  letter-spacing: .02em;
+  text-shadow: 0 -1px 0 rgba(0,0,0,.75), 0 1px 0 rgba(255,255,255,.22);
+}
+:root[data-palette="steam"][data-theme="light"] .score-ring-num,
+:root[data-palette="steam"][data-theme="light"] .score-dial-num {
+  text-shadow: 0 1px 0 rgba(255,255,255,.9), 0 -1px 0 rgba(30,42,56,.3);
+}
+/* LAS ESTRELLAS, TROQUELADAS: la llena es una pieza de oro con su filo oscuro y su punto de luz; la
+   vacía es el HUECO en la chapa, hundido, no una estrella gris. Así la fila de cinco se lee como cinco
+   troqueles y no como un texto. */
+:root[data-palette="steam"] .stars .f,
+:root[data-palette="steam"] .star-full,
+:root[data-palette="steam"] .star-inp button.f {
+  color: var(--star-full);
+  text-shadow: 0 1px 0 rgba(60,38,0,.55), 0 0 6px rgba(242,199,92,.35);
+}
+:root[data-palette="steam"] .stars,
+:root[data-palette="steam"] .star-inp button:not(.f) {
+  text-shadow: 0 1px 0 rgba(255,255,255,.10), 0 -1px 0 rgba(0,0,0,.55);
+}
+:root[data-palette="steam"][data-theme="light"] .stars .f,
+:root[data-palette="steam"][data-theme="light"] .star-full,
+:root[data-palette="steam"][data-theme="light"] .star-inp button.f {
+  text-shadow: 0 1px 0 rgba(255,255,255,.7), 0 -1px 0 rgba(90,58,0,.35);
+}
+:root[data-palette="steam"][data-theme="light"] .stars,
+:root[data-palette="steam"][data-theme="light"] .star-inp button:not(.f) {
+  text-shadow: 0 1px 0 rgba(255,255,255,.9), 0 -1px 0 rgba(30,42,56,.25);
+}
+
+/* ── §10 · Ruleta: tambor de chapa y visor con el filo de Igni. ── */
+:root[data-palette="steam"] .rl-drum {
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--bg) 85%, #000);
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.5);
+}
+:root[data-palette="steam"] .rl-frame {
+  border: 2px solid var(--wt-igni); border-radius: var(--radius-sm);
+  box-shadow: 0 0 12px rgba(255,143,74,.35), inset 0 0 8px rgba(255,143,74,.18);
+}
+:root[data-palette="steam"] .rl-card,
+:root[data-palette="steam"] .rl-ghost { border: 1px solid var(--border); border-radius: var(--radius-sm); }
+:root[data-palette="steam"] .rl-hint,
+:root[data-palette="steam"] .rl-card-tag { color: var(--fg-link); letter-spacing: .1em; }
+
+/* ── §11 · Hub social. ── */
+:root[data-palette="steam"] .hub-seg { border: 1px solid var(--border); border-radius: var(--radius-sm); }
+/* LOS NOMBRES DEL HUB NO VAN EN IGNI. El fuego es la señal de lo que se pulsa y de lo que está activo;
+   usarlo también para cada nombre del feed llenaba la columna de naranja y le quitaba fuerza justo donde
+   sí hace falta. Los nombres pasan a PLATA BRUÑIDA —el otro metal del tema— y se distinguen del texto
+   corriente por un filete bajo, no por el color, que es lo que sigue funcionando sin ver color. */
+:root[data-palette="steam"] .hub-name-link,
+:root[data-palette="steam"] .hub-detail-profile-link,
+:root[data-palette="steam"] .hub-feed-card h3:not(.hub-feed-game-chip) {
+  color: var(--steam-hover);
+  border-bottom: 1px solid color-mix(in srgb, var(--steam) 45%, transparent);
+}
+:root[data-palette="steam"] .hub-name-link:hover,
+:root[data-palette="steam"] .hub-detail-profile-link:hover {
+  color: var(--wt-igni);
+  border-bottom-color: color-mix(in srgb, var(--wt-igni) 70%, transparent);
+}
+:root[data-palette="steam"] .hub-feed-activity-item,
+:root[data-palette="steam"] .hub-user-card { border-radius: var(--radius-sm); }
+/* LA CABECERA DE DÍA es la CINTA que separa una jornada de otra: chapa estrecha con los extremos en
+   punta —el mismo corte de la hoja—, versales de Cinzel grabadas (sombra arriba, luz abajo) y dos muescas
+   a los lados. No es una pastilla más: es lo único que ordena el feed en el tiempo. */
+:root[data-palette="steam"] .hub-feed-day-header {
+  font-family: var(--font-display);
+  letter-spacing: .18em;
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: .22rem 1.5rem !important;
+  background: linear-gradient(180deg, #4e5763 0%, #3c4550 46%, #2b333d 54%, #414a56 100%) !important;
+  color: var(--steam) !important;
+  text-shadow: 0 -1px 0 rgba(0,0,0,.7), 0 1px 0 rgba(255,255,255,.16);
+  box-shadow: inset 0 0 0 1px rgba(198,206,216,.45) !important;
+}
+:root[data-palette="steam"][data-theme="light"] .hub-feed-day-header {
+  background: linear-gradient(180deg, #f7f9fb 0%, #dde3e9 46%, #b7c1cb 54%, #eaeef2 100%) !important;
+  color: #2f3945 !important;
+  text-shadow: 0 1px 0 rgba(255,255,255,.8), 0 -1px 0 rgba(30,42,56,.25);
+  box-shadow: inset 0 0 0 1px rgba(71,82,95,.45) !important;
+}
+/* EL LIENZO DE LA ACTIVIDAD: la fragua. Un rescoldo naranja entrando por abajo a la izquierda y el
+   reflejo frío del acero arriba a la derecha. */
+:root[data-palette="steam"] .hub-feed-lienzo {
+  --lz-img: radial-gradient(closest-side, rgba(255,143,74,.16), transparent 72%);
+  --lz-size: 70% 90%; --lz-pos: 4% 96%; --lz-rep: no-repeat;
+  --lz-img2: radial-gradient(closest-side, rgba(198,206,216,.13), transparent 70%);
+  --lz-size2: 62% 62%; --lz-pos2: 100% 0; --lz-rep2: no-repeat;
+}
+
+/* El nombre del juego en el feed y en la reseña: la hoja base le pone `overflow:hidden` para recortar
+   con puntos suspensivos, y eso se comía el papel de atrás y el lacre. Aquí el pliego va HACIA DENTRO
+   (`inset: 0`), de modo que el desgarro se ve igual sin salirse de la caja, y se retira el lacre: a
+   ese tamaño taparía el rótulo. */
+:root[data-palette="steam"] .hub-feed-game-chip,
+:root[data-palette="steam"] .hub-review-game {
+  padding: .12rem .55rem !important;
+  background-image: none !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+:root[data-palette="steam"] .hub-feed-game-chip::before,
+:root[data-palette="steam"] .hub-review-game::before {
+  inset: 0;
+  background-image: var(--wt-hoja1), var(--wt-velo),
+    linear-gradient(168deg, var(--wt-papel-a1), var(--wt-papel-a2) 60%, var(--wt-papel-a3));
+}
+:root[data-palette="steam"] .hub-feed-game-chip::after,
+:root[data-palette="steam"] .hub-review-game::after { content: none; }
+
+/* LOS AVISOS DEL FEED —«empezó/terminó/dejó» y los logros— se quedaban con la píldora translúcida de
+   la casa, que en un tema de metal no dice nada. El movimiento es una PLACA atornillada a la chapa, con
+   su filete del color del evento; el logro, la misma placa con el filo dorado. */
+:root[data-palette="steam"] .hub-feed-activity-item.is-move,
+:root[data-palette="steam"] .hub-feed-activity-item.is-achievements {
+  border: 1px solid color-mix(in srgb, var(--evc), transparent 45%) !important;
+  border-radius: var(--radius-sm) !important;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--surface-elevated) 92%, var(--evc)),
+    color-mix(in srgb, var(--surface) 92%, var(--evc))) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 1px 2px rgba(0,0,0,.35) !important;
+}
+:root[data-palette="steam"] .hub-feed-activity-item.is-achievements {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), inset 0 0 0 1px rgba(242,199,92,.22), 0 1px 3px rgba(0,0,0,.4) !important;
+}
+:root[data-palette="steam"][data-theme="light"] .hub-feed-activity-item.is-move,
+:root[data-palette="steam"][data-theme="light"] .hub-feed-activity-item.is-achievements {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 1px 2px rgba(30,42,56,.18) !important;
+}
+
+/* ── §12 · Panel de estadísticas: barras a canto vivo y cifras de mono. ── */
+:root[data-palette="steam"] .year-strip-col,
+:root[data-palette="steam"] .year-scale-ramp,
+:root[data-palette="steam"] .shine-fill,
+:root[data-palette="steam"] .top-chip-bar { border-radius: 0; }
+:root[data-palette="steam"] .donut-seg,
+:root[data-palette="steam"] .gauge-seg,
+:root[data-palette="steam"] .year-line { stroke-linecap: butt; }
+:root[data-palette="steam"] .stat-tile-value,
+:root[data-palette="steam"] .gauge-number,
+:root[data-palette="steam"] .shine-value { font-family: var(--font-mono); }
+
+/* ── §13 · Firma del tema (bajo `data-effects`): el lacre que se estampa al guardar (`.fx-seal`, en
+   `_effects.scss`) y el filo de la hoja que destella al pasar por la acción principal. ── */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-effects="on"][data-palette="steam"] .btn-steam,
+  :root[data-effects="on"][data-palette="steam"] .btn-primary { position: relative; overflow: hidden; }
+  :root[data-effects="on"][data-palette="steam"] .btn-steam::after,
+  :root[data-effects="on"][data-palette="steam"] .btn-primary::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(115deg, transparent 42%, rgba(255,255,255,.55) 50%, transparent 58%);
+    transform: translateX(-130%); transition: transform .55s ease;
+  }
+  :root[data-effects="on"][data-palette="steam"] .btn-steam:hover::after,
+  :root[data-effects="on"][data-palette="steam"] .btn-primary:hover::after { transform: translateX(130%); }
+}

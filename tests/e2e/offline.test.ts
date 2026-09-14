@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import { sembrarBiblioteca } from './seed';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { APP_ERROR_UI } from '../../src/core/constants/labels';
+import { DEFAULT_PALETTE } from '../../src/core/constants/palettes';
 
 /**
  * SIN CONEXIÓN, en el build de producción y con el service worker de verdad.
@@ -39,7 +40,7 @@ test.describe('espacio social sin conexión', () => {
     // La pantalla se monta y el aviso está a la vista, con el titular del tema por defecto.
     const aviso = page.getByLabel(SOCIAL_UI.offline.sectionAria);
     await expect(aviso).toBeVisible();
-    await expect(aviso).toContainText(SOCIAL_UI.offline.leadByPalette.steam);
+    await expect(aviso).toContainText(SOCIAL_UI.offline.leadByPalette[DEFAULT_PALETTE]);
     // Y en ningún sitio aparece el error crudo de la capa de red.
     await expect(page.getByText(/network offline|Failed to fetch|client is offline/i)).toHaveCount(0);
   });
@@ -55,8 +56,8 @@ test.describe('espacio social sin conexión', () => {
     await context.setOffline(true);
     await page.getByRole('button', { name: /Social/ }).first().click();
 
-    await expect(page.getByText(APP_ERROR_UI.offlineLeadByPalette.steam)).toBeVisible();
-    await expect(page.getByText(APP_ERROR_UI.leadByPalette.steam)).toHaveCount(0);
+    await expect(page.getByText(APP_ERROR_UI.offlineLeadByPalette[DEFAULT_PALETTE])).toBeVisible();
+    await expect(page.getByText(APP_ERROR_UI.leadByPalette[DEFAULT_PALETTE])).toHaveCount(0);
 
     // Y hay salida: recargar aquí volvería a fallar, así que la acción lleva a las listas, que sí funcionan
     // sin conexión. Sin esto el usuario se quedaba dando vueltas en la pantalla de error.
