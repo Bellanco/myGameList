@@ -357,7 +357,7 @@ test.describe('logros · el aviso del instante', () => {
  * 1.4.3 — no el 3:1 de un adorno—. Un acento que cumple sobre el fondo de la app puede no cumplir sobre la
  * superficie elevada de la cápsula, y eso solo se ve mirándolo en las doce.
  */
-const PALETAS = ['steam', 'persona', 'portal', 'cyberpunk', 'seaofstars', 'grimdark'] as const;
+const PALETAS = ['steam', 'persona', 'portal', 'cyberpunk', 'seaofstars', 'grimdark', 'arcade'] as const;
 const TEMAS = ['dark', 'light'] as const;
 
 for (const palette of PALETAS) {

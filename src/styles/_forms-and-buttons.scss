@@ -382,47 +382,8 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 /* Neutro */
 .btn-secondary { color: var(--text); }
 
-/* ── LOS BOTONES DE CLÁSICO, CADA UNO CON SU PAPEL ──────────────────────────────────────────────────────
-   Esta paleta no tiene skin (es la ausencia de `data-palette`, ver `preferences.ts`), así que se quedaba con el
-   cristal de la casa para TODO: el principal, el de acento y el secundario eran la misma caja marrón y solo los
-   distinguía el texto. Ahora se reparten los dos metales del tema: el LATÓN rellena la acción principal y la
-   PÁTINA viste la de acento —lo que abre algo o está activo—, mientras el secundario recibe superficie propia
-   para dejar de confundirse con el fondo. Tres cuerpos distintos, no tres etiquetas distintas. */
-:root:not([data-palette]) .btn-accent,
-:root:not([data-palette]) .btn.is-active,
-:root:not([data-palette]) .btn-toggle.active,
-:root:not([data-palette]) .btn-toggle-deck.active {
-  color: var(--fg-link);
-  border-color: rgba(var(--patina-rgb), .55);
-  background: linear-gradient(160deg, rgba(var(--patina-rgb), .18), rgba(var(--patina-rgb), .07));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 6px 14px rgba(var(--patina-rgb), .14);
-}
-
-:root:not([data-palette]) .btn-accent:hover,
-:root:not([data-palette]) .btn.is-active:hover {
-  border-color: rgba(var(--patina-rgb), .75);
-}
-
-:root:not([data-palette]) .btn-secondary {
-  background: linear-gradient(180deg, var(--surface-elevated), var(--surface-hover));
-  border-color: var(--border);
-}
-
-/* EL PRIMARIO, LATÓN DE VERDAD. El degradado de la casa arranca un paso por debajo del acento para que el
-   blanco de encima cumpla; aquí encima NO va blanco sino tinta oscura (`--on-accent`, 7,4:1 sobre el latón
-   puro), así que el botón puede lucir el metal sin rebajarlo — y con los fondos nuevos, más hondos, lo
-   necesita: al 55 % sobre negro se leía como una caja oliva. Solo en oscuro: en claro el acento es cobre
-   profundo con rótulo blanco y ahí el degradado de la casa es el correcto. */
-:root:not([data-palette]):not([data-theme="light"]) .btn-steam,
-:root:not([data-palette]):not([data-theme="light"]) .btn-primary {
-  background: linear-gradient(180deg, var(--steam-hover), var(--steam));
-  border-color: color-mix(in srgb, var(--steam) 78%, #000);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 8px 18px rgba(var(--steam-rgb),.22);
-}
-:root:not([data-palette]):not([data-theme="light"]) .btn-steam:hover,
-:root:not([data-palette]):not([data-theme="light"]) .btn-primary:hover {
-  background: linear-gradient(180deg, #fbd77a, var(--steam-hover));
-}
+/* Los botones de «Plata y acero» (steam) ya NO viven aquí: esa paleta pasó a tener skin propio
+   (`themes/steam.scss`), que es donde se forjan sus hojas de acero. */
 
 /* Roles: el color va en texto + borde; la superficie es el mismo cristal (sin rellenos planos). */
 

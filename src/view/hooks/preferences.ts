@@ -7,7 +7,7 @@
 // La lógica de aplicación debe seguir siendo IDÉNTICA a la de `public/theme-init.js`, que corre antes del primer
 // render para evitar el flash de tema/paleta/caja.
 import { EFFECTS_KEY, PALETTE_KEY, STEAM_BUTTON_KEY, THEME_KEY, UPPERCASE_KEY } from '../../core/constants/storageKeys';
-import { DEFAULT_PALETTE, paletteBg, parsePaletteId, type PaletteId } from '../../core/constants/palettes';
+import { paletteBg, parsePaletteId, type PaletteId } from '../../core/constants/palettes';
 import { createPreferenceStore, hydratePreferencesFromCloud } from '../../model/repository/preferenceStore';
 import { loadPaletteSkin } from './paletteSkin';
 
@@ -76,13 +76,10 @@ export const palettePreference = createPreferenceStore<PaletteId>({
   cloudField: 'palette',
   fromCloud: (value) => (typeof value === 'string' ? parsePaletteId(value) : null),
   applyToDom: (palette) => {
-    const root = document.documentElement;
-    if (palette === DEFAULT_PALETTE) {
-      root.removeAttribute('data-palette');
-    } else {
-      loadPaletteSkin(palette);
-      root.setAttribute('data-palette', palette);
-    }
+    // `loadPaletteSkin` es no-op para las que no tienen skin bajo demanda (la de por defecto, que lo trae en el
+    // bundle base, y Clásico, que no tiene), así que no hace falta preguntar por cuál es cuál.
+    loadPaletteSkin(palette);
+    document.documentElement.setAttribute('data-palette', palette);
     applyThemeColor(themePreference.get());
   },
 });

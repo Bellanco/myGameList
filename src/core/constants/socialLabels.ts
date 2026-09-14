@@ -28,6 +28,8 @@ const SOCIAL_ERROR_LEAD: Record<PaletteId, string> = {
   grimdark: 'El astrópata ha perdido la señal.',
   // Sea of Stars: acampar con el grupo es donde el viaje se vuelve compañía.
   seaofstars: 'Nadie ha llegado al campamento.',
+  // Arcade: la sala de recreativos, con las máquinas encendidas y nadie delante de ellas.
+  arcade: 'No queda nadie en la sala de recreativos.',
 };
 
 // SIN CONEXIÓN, que no es lo mismo que un error: la aplicación arranca y las listas funcionan igual (el service
@@ -48,6 +50,8 @@ const SOCIAL_OFFLINE_LEAD: Record<PaletteId, string> = {
   grimdark: 'La Disformidad se ha tragado la señal.',
   // Sea of Stars: el campamento sigue ahí; lo que no hay ahora mismo es camino para llegar.
   seaofstars: 'El camino al campamento está cortado.',
+  // Arcade: la sala sigue abierta, pero sin señal no se ve quién hay dentro.
+  arcade: 'La sala está a oscuras: no llega la señal.',
 };
 
 export const SOCIAL_UI = {

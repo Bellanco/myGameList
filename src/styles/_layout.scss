@@ -986,30 +986,7 @@
    Son anónimas a propósito: qué es cada una lo decide cada `themes/*.scss`. Ver `SocialFeedScreen`. */
 .hub-feed-lienzo-fx > i { display: none; }
 
-/* ── CLÁSICO · DOS FOCOS ──────────────────────────────────────────────────────────────────────────────────────
-   El tema por defecto no tiene skin propio (`paletteSkin.ts`), así que su lienzo vive aquí. `:not([data-palette])`
-   casa SOLO con él: la paleta por defecto es la única que no pone el atributo.
-   Un foco del acento entrando por la izquierda, detrás del texto, y otro más tenue arriba a la derecha. Laten a
-   contratiempo (11 y 8,5 s), lo justo para que el hueco se lea como una sala con dos luces y no como una mancha. */
-:root:not([data-palette]) .hub-feed-lienzo {
-  --lz-img: radial-gradient(closest-side, rgba(var(--steam-rgb), .19), transparent 72%);
-  --lz-size: 78% 100%;
-  --lz-pos: 4% 50%;
-  --lz-rep: no-repeat;
-  --lz-img2: radial-gradient(closest-side, rgba(var(--steam-rgb), .14), transparent 70%);
-  --lz-size2: 62% 62%;
-  --lz-pos2: 100% 0;
-  --lz-rep2: no-repeat;
-}
-
-/* El latido es DECORACIÓN, así que cuelga de `data-effects` como la firma de cada tema: apagado, quedan los dos
-   focos quietos y el lienzo sigue haciendo su trabajo. */
-@media (prefers-reduced-motion: no-preference) {
-  :root[data-effects="on"]:not([data-palette]) .hub-feed-lienzo-fx::before { animation: lz-steam-breathe 11s ease-in-out infinite; }
-  :root[data-effects="on"]:not([data-palette]) .hub-feed-lienzo-fx::after { animation: lz-steam-breathe 8.5s ease-in-out -4s infinite; }
-}
-
-@keyframes lz-steam-breathe { 0%, 100% { opacity: .42; } 50% { opacity: 1; } }
+/* El lienzo de «Plata y acero» se pinta en su skin (`themes/steam.scss`), como el de las otras paletas. */
 
 .hub-identity-hero .hub-avatar { flex: 0 0 auto; width: 2.5rem; height: 2.5rem; font-size: var(--fs-lg); }
 
@@ -1575,23 +1552,7 @@
   white-space: nowrap;
 }
 
-/* La etiqueta de juego de la paleta POR DEFECTO ("Clásico"), que hasta ahora no tenía: caía en la píldora gris
-   genérica de arriba —el respaldo para un tema que no la vista en su §6— y por eso era la única paleta en la que
-   el nombre de un juego no se distinguía de un dato cualquiera. Se nota sobre todo desde que ese mismo rótulo
-   encabeza el detalle de una reseña propia (ver `.hub-review-detail-game`).
-   El selector es `:root:not([data-palette])` porque "Clásico" es la ausencia de atributo (ver `preferences.ts`),
-   y suma (0,3,0): lo mismo que las reglas de los temas, así que ni les gana ni les pierde — cada paleta sigue
-   mandando en la suya.
-   ÁMBAR, y no el azul del acento, por dos motivos: el azul ya es el de los géneros, que salen justo debajo en la
-   misma tarjeta, y el ámbar es el color con el que esta paleta ya escribe una INSIGNIA (`--deco-badge-idle-fg`),
-   que es exactamente lo que aquí se está pintando. La fórmula —velo del tono, texto del `--fg-*` y filete del
-   mismo tono— es la de toda la familia de chips (`.chip-genre`, `.chip-pf`, `.chip-pd`), así que el contraste ya
-   está medido en los dos temas y la etiqueta se lee como una más de la casa. */
-:root:not([data-palette]) .hub-feed-game-chip {
-  background: rgba(var(--warn-rgb), .16);
-  border: 1px solid rgba(var(--warn-rgb), .34);
-  color: var(--fg-amber);
-}
+/* La etiqueta de juego de «Plata y acero» es un cartel de contrato y se pinta en su skin. */
 
 .hub-skeleton {
   background: var(--surface-hover);

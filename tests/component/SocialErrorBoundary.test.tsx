@@ -8,6 +8,7 @@ vi.mock('../../src/model/repository/firebaseRepository', () => ({
 
 import { SocialErrorBoundary } from '../../src/view/components/socialhub/SocialErrorBoundary';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
+import { DEFAULT_PALETTE } from '../../src/core/constants/palettes';
 
 // Componente hijo que lanza según un flag mutable (para simular recuperación tras el reintento).
 const control = { crash: true };
@@ -43,7 +44,7 @@ describe('SocialErrorBoundary', () => {
 
     // Se ve el aviso, no el contenido, y el botón está deshabilitado. El texto del botón NO cambia (nada de
     // cuenta atrás): la espera se explica en una nota aparte, sin cifras.
-    expect(screen.getByText(SOCIAL_UI.errorBoundary.titleByPalette.steam)).toBeInTheDocument();
+    expect(screen.getByText(SOCIAL_UI.errorBoundary.titleByPalette[DEFAULT_PALETTE])).toBeInTheDocument();
     const btn = screen.getByRole('button');
     expect(btn).toBeDisabled();
     expect(btn).toHaveTextContent(SOCIAL_UI.errorBoundary.retry);
@@ -54,7 +55,7 @@ describe('SocialErrorBoundary', () => {
     // Aunque se pulse, no reintenta (guardia dura): sigue el fallback.
     control.crash = false; // aunque el hijo ya no fallaría, el cooldown impide el reintento.
     fireEvent.click(btn);
-    expect(screen.getByText(SOCIAL_UI.errorBoundary.titleByPalette.steam)).toBeInTheDocument();
+    expect(screen.getByText(SOCIAL_UI.errorBoundary.titleByPalette[DEFAULT_PALETTE])).toBeInTheDocument();
     expect(screen.queryByText('contenido recuperado')).not.toBeInTheDocument();
   });
 

@@ -7,8 +7,12 @@
      "personalidad" de cada paleta — fondos, acento, semánticos, estrellas, chip de
      plataforma y textos del hub. Cambiar/añadir una paleta = editar solo esos ~26 tokens.
    El tema (claro/oscuro) se elige con `data-theme`; la paleta con `data-palette`. Ambos
-   atributos van en <html>. La paleta por defecto (sin atributo) es "steam" (idéntica a la
-   histórica). Los radios no dependen ni de tema ni de paleta. */
+   atributos van en <html>. TODAS las paletas escriben su `data-palette`, la de por defecto
+   incluida: antes la de por defecto era la AUSENCIA del atributo y sus tokens vivían sueltos en
+   `:root`, lo que obligaba a escribir `:root[data-palette="steam"]` cada vez que algo era suyo y
+   ataba el sistema a CUÁL era la de por defecto — cambiarla significaba mover cien declaraciones
+   de sitio. Ahora `:root` guarda solo lo COMÚN (CAPA 0 y 1) y cada paleta su bloque; cambiar la de
+   por defecto es cambiar `DEFAULT_PALETTE` en `constants/palettes.ts`. */
 
 /* ══ CAPA 0 · SISTEMA — MEDIDAS, NO COLORES ════════════════════════════════════
    Todo lo que NO es color y se repetía a mano por las hojas: tamaño de letra, papeles
@@ -236,28 +240,24 @@
   --score-track: rgba(var(--tint-rgb),.12);
 }
 
-/* LAS TRES TINTAS ROJAS DE CLÁSICO SIGUEN A SU BURDEOS. Las de arriba son las de la casa y valen para las seis
-   paletas —ninguna las redefine—, pero en Clásico el rojo dejó de ser coral, y un mensaje de error en coral
-   dentro de un tema de burdeos canta. Se acotan con `:not([data-palette])` porque Clásico es la paleta que NO
-   escribe el atributo (ver `preferences.ts`), así que esto no toca a las otras cinco. Medido sobre las cuatro
-   superficies de la paleta: 6,58:1 en el peor caso (la elevada), muy por encima del 4,5:1 del texto. */
-:root:not([data-palette]) {
-  --fg-red: #f5a0a8;
-  --fg-red-soft: #f0a6ae;
-  --fg-red-pink: #ffb0b8;
+/* LAS TINTAS ROJAS DE «PLATA Y ACERO». Las de CAPA 1 valen para las demás paletas; aquí el rojo es
+   SANGRE —el del contrato manchado— y no un coral, así que las tres se recalibran sobre el acero:
+   5,2:1 en el peor de los cuatro fondos, muy por encima del 4,5:1 del texto. */
+:root[data-palette="steam"] {
+  --fg-red: #ff9d95;
+  --fg-red-soft: #ff9089;
+  --fg-red-pink: #ffa9a2;
 }
-
-:root:not([data-palette])[data-theme="light"] {
-  --fg-red: #8f2f34;
-  --fg-red-soft: #8f2f34;
-  --fg-red-pink: #8c2b39;
+:root[data-palette="steam"][data-theme="light"] {
+  --fg-red: #9e2620;
+  --fg-red-soft: #9e2620;
+  --fg-red-pink: #8e1c14;
 }
 
 /* ══ CAPA 2 · IDENTIDAD DE PALETA ═══════════════════════════════════════════════
    Cada paleta define el mismo juego de ~26 tokens. Los bloques oscuros viven en
-   `:root[data-palette="x"]`; los claros añaden además `--tint-rgb`. "steam" es la
-   paleta por defecto: sus valores viven en `:root` / `:root[data-theme="light"]`
-   para que la app funcione sin ningún atributo `data-palette`. */
+   `:root[data-palette="x"]`; los claros añaden además `--tint-rgb`. Todas juegan con las
+   mismas reglas, la de por defecto incluida (ver la nota de arriba). */
 
 /* `--text-dim` EN LOS BLOQUES OSCUROS: no lo bajes sin medir. Es el color de la pestaña INACTIVA
    (`.tab-btn` en `_layout.scss`), es decir, texto normal sobre `--surface` en la navegación principal, así que
@@ -267,132 +267,99 @@
    cyberpunk #6d7986, grimdark #637f6e. `seaofstars` ya cumplía (5.00) y no se ha tocado. `steam` ya no
    entra en esa lista: cambió de paleta entera (ver su bloque) y su atenuado se recalculó con ella. */
 
-/* ── steam · «Cuero y latón» (paleta por defecto) ─────────────────────────────────────────────────
-   Es el único tema que NO sale de un juego, así que es el único sin canon que respetar. En vez de
-   imitar el azul de Steam se viste de lo que la aplicación ES —una estantería—: cuero, papel, cobre y
-   latón. Eso resuelve además el parecido con «Cámara de pruebas», que compartía con el azul anterior
-   familia de fondo (gris azulado, a un 8 % de luminancia) y de acento (el mismo tono a dos
-   saturaciones): lo que los separaba era el skin, no el color. Ningún otro tema oscuro es CÁLIDO.
-   El fondo es marrón VISIBLE, no un negro teñido —sube dos puntos respecto al azul—, y por eso el
-   texto sube con él a hueso (#f5ece0) en vez de al gris claro de antes.
-   MEDIDAS, peor de los cuatro fondos (bg / surface / hover / elevated): texto 11,5:1 · atenuado 6,4:1 ·
-   pátina como anillo de foco 4,4:1 (le basta 3:1) · pátina como texto de enlace 5,9:1 · tinta sobre el
-   relleno del acento 7,4:1 — con el azul anterior ese último caso eran 2,8:1, es decir, el botón primario
-   NO llegaba a la AA en el tema por defecto. */
-:root {
-  /* LOS CUATRO FONDOS, SEPARADOS DE VERDAD. Antes iban del 9 % al 18 % de luminosidad y el salto entre el fondo
-     y la superficie era de 1,08:1 —o sea, nada—: una tarjeta sobre el lienzo no se veía, y lo único que la
-     dibujaba era su borde. Ahora el fondo baja y la elevada sube, con un escalón parejo entre las cuatro. */
-  --bg: #15100b;
-  --surface: #221a13;
-  --surface-hover: #30251a;
-  --surface-elevated: #3f3122;
-  --border: #57452f;
-  --text: #f7efe4;
-  --text-muted: #c4b39d;
-  /* Pestaña INACTIVA sobre `--surface` (ver el bloque de arriba): 6,17:1, con margen de sobra. */
-  --text-dim: #ab9884;
-  --steam: #d9a13a;
-  --steam-hover: #ecc45c;
-  --steam-rgb: 217,161,58;
-  --tab-active: #ecc45c;
-
-  /* ── LA PÁTINA · el segundo acento ────────────────────────────────────────────────────────────────────
-     El tema entero vivía entre los 27° y los 43° de tono: cuero, cobre y latón, todo la misma familia, y por
-     eso se leía plano por mucho contraste que se le diera. La pátina es el verde azulado del cobre viejo —ya
-     estaba en su rampa de géneros—, así que no viene de fuera del mundo del tema: es el mismo metal, más
-     viejo. Se reparte POR PAPEL y no por adorno: el latón es lo que se RELLENA (la acción principal, la
-     pestaña activa) y la pátina es lo que se ESCRIBE y lo que SEÑALA (enlaces, nombres, anillo de foco,
-     botón de acento). Dos metales, dos trabajos.
-     VERDE CARDENILLO Y NO TURQUESA, y esto es una decisión de vecindario: un verde azulado luminoso se acercaba
-     al cian de «Cámara de pruebas» (h 199°, s 91%) y las dos paletas empezaban a parecerse pese a tener fondos
-     opuestos —cuero cálido contra gris azulado—. En OSCURO el parecido era el peor, porque ahí el color va
-     claro sobre fondo hondo y es cuando más canta: por eso aquí no basta con girar el tono, hay que APAGARLO.
-     El valor de abajo está a 51° del cian de Portal y con un tercio de su saturación (31-35 % contra 91 %), o
-     sea un verde de metal viejo y no un neón; y a 45° del verde salvia con el que esta misma paleta dice
-     «correcto», que es el otro color del que tenía que separarse.
-     `--patina` es el gráfico (filetes, rellenos tenues, 3:1) y `--fg-link` la tinta (4,5:1 sobre los cuatro
-     fondos: 5,96:1 en el peor, la superficie elevada). */
-  --patina: #5aa886;
-  --patina-rgb: 90,168,134;
-  /* Verde SALVIA, no el verde menta de un tema frío: es el único semántico que no es cálido y tenía que
-     convivir con el cuero sin parecer un injerto. */
-  --success: #8fbf7a;
-  --success-rgb: 143,191,122;
-  /* En una paleta cálida el ámbar de aviso y el oro del acento son vecinos, así que el aviso se va al
-     COBRE anaranjado: se separan por tono y saturación (naranja vs. dorado), y además el aviso nunca va
-     solo —siempre lleva icono o texto—, mientras que el acento es relleno. */
-  --warn: #e2903f;
-  --warn-rgb: 226,144,63;
-  /* BURDEOS DE ENCUADERNACIÓN, no coral. El rojo de esta paleta era un coral anaranjado (#ef6f5a) que caía justo
-     entre el cobre del aviso y el latón del acento: los tres eran el mismo calor, y el botón de borrar no se
-     distinguía del de añadir más que por el texto. El burdeos se separa por TONO —carmín, no naranja— sin salir
-     del mundo de cuero y papel: es el rojo de las cubiertas de una biblioteca vieja. */
-  --danger: #d9535f;
-  --danger-rgb: 217,83,95;
-  --star-empty: #4a3c2c;
-  --star-full: #ecc45c;
-  --chip-plat-fg: #ddd0bd;
-  --chip-plat-bg: rgba(205,185,155,.13);
-  --chip-plat-border: rgba(215,195,165,.30);
-  --hub-text: #f7efe2;
-  --hub-text-muted: #c9b79d;
-  /* El latón es un acento CLARO: el blanco encima se queda en 1,8:1 y la tinta oscura da 7,4:1 (misma
-     regla que el amarillo de «Sin futuro» o el oro de «Sol y luna»). */
-  --on-accent: #241a08;
-  /* Los dos papeles que se van a la pátina (ver arriba). El anillo de foco pide 3:1 no textual y da 5,4:1
-     sobre el peor de los cuatro fondos; la tinta de enlace pide 4,5:1 y da 7,2:1. */
-  --focus-ring: var(--patina);
-  --fg-link: #86bfa0;
+/* ── steam · «Plata y acero» (The Witcher) ────────────────────────────────────────────────────────
+   Deja de ser la biblioteca de cuero y latón: ahora es el ACERO del brujo. Las cuatro superficies son
+   metal templado —gris azulado, no negro— y sobre ellas el color entra por donde en esta aplicación
+   llena la pantalla: el GÉNERO. Los siete tonos de la rampa salen del mundo del juego y no de una
+   rueda de color (ver CAPA 2b): Igni, Aard, Golondrina, Yrden, Toussaint, Quen y Skellige.
+   DOS METALES Y UN FUEGO, repartidos por PAPEL igual que hacían el latón y la pátina:
+     · la PLATA (`--steam`) es lo que se RELLENA — la acción principal, la pestaña activa;
+     · el fuego de IGNI (`--fg-link`, `--focus-ring`) es lo que SEÑALA y lo que se ESCRIBE.
+   MEDIDAS, peor de los cuatro fondos: texto 9,5:1 · atenuado 6,1:1 · pestaña inactiva 4,9:1 · tinta
+   sobre el relleno de plata 6,5:1 en su extremo hondo · Igni como enlace 4,65:1 y como anillo 4,65:1
+   (le basta 3:1). El `--danger` sube a coral porque el rojo sangre del skin se usa como RELLENO, no
+   como tinta, y ahí manda `--danger-fill`. */
+:root[data-palette="steam"] {
+  --bg: #212832;
+  --surface: #2a323d;
+  --surface-hover: #303845;
+  --surface-elevated: #36404d;
+  --border: #55606f;
+  --text: #f0f4f8;
+  --text-muted: #bcc6d3;
+  /* Pestaña INACTIVA sobre `--surface`: 4,94:1. */
+  --text-dim: #a7b3c2;
+  --steam: #c6ced8;
+  --steam-hover: #e3e9f0;
+  --steam-rgb: 198,206,216;
+  --tab-active: #e3e9f0;
+  --success: #8ecf7c;
+  --success-rgb: 142,207,124;
+  --warn: #f2c75c;
+  --warn-rgb: 242,199,92;
+  --danger: #ff6b62;
+  --danger-rgb: 255,107,98;
+  --star-empty: #4b5666;
+  --star-full: #f2c75c;
+  --chip-plat-fg: #cfd7e1;
+  --chip-plat-bg: rgba(198,206,216,.12);
+  --chip-plat-border: rgba(198,206,216,.32);
+  --hub-text: #f0f4f8;
+  --hub-text-muted: #bcc6d3;
+  /* La plata es un acento CLARO: encima va tinta, no blanco (11,5:1 sobre la plata pura). */
+  --on-accent: #12151a;
+  /* Esquina viva, de hoja: 2/3/4. La píldora sigue siendo píldora para lo que es redondo por función. */
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  /* EL FUEGO DE IGNI · el segundo papel. `--wt-igni` es el gráfico; `--fg-link` la tinta. */
+  --wt-igni: #ff8f4a;
+  --wt-sangre: #8e1c14;
+  --wt-papel: #e7d3b0;
+  --wt-tinta: #281e13;
+  --focus-ring: #ff8f4a;
+  --fg-link: #ff8f4a;
+  --sys-radius: var(--radius-sm); --sys-pad: .3rem .9rem;
 }
-/* CLARO = EL MISMO CUERO A LA LUZ: crema y cobre. Este claro ya era beis; lo único que desentonaba era
-   el acento AZUL encima del beis, herencia de cuando el oscuro era azul. Con el cobre, los dos modos
-   cuentan la misma historia, y el tema sigue siendo otra cosa que el pergamino de «Cámara de pruebas»
-   (amarillo y envejecido, la Aperture antigua) y que la vitela de «Solo hay guerra». */
-:root[data-theme="light"] {
-  /* Los cuatro fondos también se separan aquí: el crema y el blanco roto se distinguían en 1,13:1 y una
-     tarjeta sobre el lienzo no se veía sin su borde. */
-  --bg: #f3e9da;
-  --surface: #fffaf2;
-  --surface-hover: #e8dbc5;
-  --surface-elevated: #fbf4e9;
-  --border: #d6c2a3;
-  --text: #241a12;
-  --text-muted: #6b5a48;
-  --text-dim: #6f5d4b;
-  --steam: #a8560f;
-  --steam-hover: #8f470b;
-  --steam-rgb: 168,86,15;
-  --tab-active: #8f470b;
-  --success: #1f7a4d;
-  --success-rgb: 31,122,77;
-  --warn: #a3681a;
-  --warn-rgb: 163,104,26;
-  /* El mismo burdeos a la luz: más hondo, porque aquí tiene que leerse sobre crema. */
-  --danger: #8f2f34;
-  --danger-rgb: 143,47,52;
-  --star-empty: #dbcab2;
-  /* Las estrellas son un GRÁFICO, así que les aplica el 3:1 de la 1.4.11 y no el 4,5:1 del texto. El oro
-     natural de esta paleta (#b3771a) se quedaba en 2,90:1 sobre `--surface-hover` —la fila con el puntero
-     encima—, así que baja a un cobre dorado más hondo: 3,66:1 en el peor de los cuatro fondos (el azul
-     que había antes andaba en 3,04:1, o sea que también mejora). */
-  --star-full: #a06612;
-  --chip-plat-fg: #6b5a48;
-  --chip-plat-bg: rgba(120,95,65,.13);
-  --chip-plat-border: rgba(120,95,65,.34);
-  --hub-text: #241a12;
-  --hub-text-muted: #6b5a48;
-  --tint-rgb: 62,44,22;
-  /* Obligatorio: el bloque OSCURO de esta misma paleta pone tinta en `--on-accent` (su acento es latón
-     claro) y, al ser `:root` a secas, se heredaría aquí. En claro el acento es cobre PROFUNDO y encima
-     manda el blanco (5,25:1); la tinta se quedaría en 2,1:1. */
+/* CLARO = EL MISMO ACERO A LA LUZ: plomo pulido, no papel. Las cuatro superficies siguen siendo metal
+   —gris azulado claro— y las tintas bajan a su versión honda para leerse sobre él. El cartel de los
+   chips no cambia de color en claro: un pergamino es un pergamino a cualquier hora, y lo que hace que
+   siga destacando es que el metal de debajo es más frío que él. */
+:root[data-palette="steam"][data-theme="light"] {
+  --bg: #dde3e9;
+  --surface: #eef2f6;
+  --surface-hover: #d2dae2;
+  --surface-elevated: #e7ecf1;
+  --border: #a9b5c2;
+  --text: #141b23;
+  --text-muted: #4a5563;
+  --text-dim: #4f5a68;
+  --steam: #47525f;
+  --steam-hover: #2f3945;
+  --steam-rgb: 71,82,95;
+  --tab-active: #2f3945;
+  --success: #196641;
+  --success-rgb: 25,102,65;
+  --warn: #6f4800;
+  --warn-rgb: 111,72,0;
+  --danger: #9e2620;
+  --danger-rgb: 158,38,32;
+  --star-empty: #b9c3cd;
+  --star-full: #6f4800;
+  --chip-plat-fg: #3f4a58;
+  --chip-plat-bg: rgba(71,82,95,.10);
+  --chip-plat-border: rgba(71,82,95,.30);
+  --hub-text: #141b23;
+  --hub-text-muted: #4a5563;
+  --tint-rgb: 30,42,56;
+  /* En claro el acento es acero PROFUNDO y encima manda el blanco (7,95:1). */
   --on-accent: #fff;
-  /* LA PÁTINA A LA LUZ: el mismo verde azulado del cobre viejo, profundo para leerse sobre crema. Gráfico
-     (`--patina`) a 3:1 y tinta (`--fg-link`) a 5,29:1 en el peor de los cuatro fondos. */
-  --patina: #10745f;
-  --patina-rgb: 16,116,95;
-  --focus-ring: var(--patina);
-  --fg-link: #0a5f4f;
+  --wt-igni: #8f3608;
+  --wt-sangre: #8e1c14;
+  --wt-papel: #e7d3b0;
+  --wt-tinta: #281e13;
+  --focus-ring: #8f3608;
+  --fg-link: #8f3608;
 }
 
 /* ── Corazón rebelde (Persona 5) — rojo/negro/oro, pop-art ── */
@@ -793,6 +760,105 @@
   --fg-link: #00505e;
 }
 
+/* ── Inserte moneda (arcade de los ochenta) — VIOLETA ELÉCTRICO sobre noche malva: la sala de recreativos y el
+   DeLorean. Un mundo de LUZ EMITIDA y no de luz reflejada: todo lo que manda brilla (acento violeta, cian de
+   tubo de neón y rosa chicle de pegatina), y el fondo es el violeta hondo del cartel de una máquina apagada.
+   Se separa de «Sin futuro» —el otro tema de neón— por TEMPERATURA y por forma: aquel es amarillo ácido sobre
+   negro azulado con marcos de HUD; este es violeta saturado sobre malva, con botón de consola y pegatina.
+   `--arc-cyan/pink/gold` y `--arc-line` (la rejilla del horizonte) son tokens extra del skin. ── */
+:root[data-palette="arcade"] {
+  --bg: #150a24;
+  --surface: #1f0f36;
+  --surface-hover: #2c1750;
+  --surface-elevated: #3a2066;
+  --border: #6134a3;
+  --text: #f8ecff;
+  --text-muted: #cfb1f2;
+  /* Pestaña INACTIVA sobre `--surface` (ver el bloque de CAPA 2): 5,21:1 en el peor de los cuatro fondos. */
+  --text-dim: #b394e0;
+  --steam: #b23cff;
+  --steam-hover: #d98cff;
+  --steam-rgb: 178,60,255;
+  --tab-active: #d98cff;
+  --success: #2ef0a6;
+  --success-rgb: 46,240,166;
+  --warn: #ffb43d;
+  --warn-rgb: 255,180,61;
+  --danger: #ff2e6a;
+  --danger-rgb: 255,46,106;
+  --star-empty: #40266e;
+  --star-full: #ffd24a;
+  --chip-plat-fg: #e3d3f9;
+  --chip-plat-bg: rgba(178,60,255,.14);
+  --chip-plat-border: rgba(216,140,255,.40);
+  --hub-text: #f8ecff;
+  --hub-text-muted: #c3a5e8;
+  /* El relleno del acento NO va a pelo en este tema: el skin pinta la acción principal con el violeta un paso
+     más hondo (#8f2be8 → #6d16b4), donde el blanco da 5,71:1. Sobre el violeta puro se quedaría en 4,21:1. */
+  --on-accent: #fff;
+  /* ESQUINA VIVA, que es la mitad de la identidad: el botón es una tecla de máquina recreativa, con bisel y
+     canto, no una pastilla. Los chips se salen de esta regla a propósito (son pegatinas ovaladas) y piden
+     `--radius-pill`, que no depende de la paleta. */
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  /* EL CIAN ES EL SEÑALADOR. El violeta rellena (acción principal, pestaña activa) y el cian escribe y señala
+     (enlaces, anillo de foco): dos luces, dos trabajos, como el latón y la pátina de Clásico. Anillo de foco
+     8,95:1 sobre el peor de los cuatro fondos (le basta 3:1) y tinta de enlace 10:1. */
+  --arc-cyan: #22e5ff;
+  --arc-cyan-fg: #7df0ff;
+  --arc-pink: #ff3d9e;
+  --arc-gold: #ffd24a;
+  /* La rejilla del horizonte (fondo) y el filo de las pegatinas. */
+  --arc-line: rgba(178,60,255,.22);
+  --focus-ring: var(--arc-cyan);
+  --fg-link: var(--arc-cyan-fg);
+  /* El aviso del feed toma la forma de la pegatina: óvalo con filo. */
+  --sys-radius: var(--radius-pill); --sys-pad: .3rem .95rem;
+}
+/* CLARO = LA MISMA SALA CON LA LUZ DADA: lavanda de papel, violeta de tinta y el neón apagado a color plano.
+   No es el oscuro invertido: aquí no hay luz emitida, así que el brillo se cambia por TINTA SATURADA y por el
+   filo de la pegatina, que es lo que sobrevive sobre papel. */
+:root[data-palette="arcade"][data-theme="light"] {
+  --bg: #eee2fb;
+  --surface: #fdf9ff;
+  --surface-hover: #e0cff7;
+  --surface-elevated: #f7efff;
+  --border: #c2a4e8;
+  --text: #22093f;
+  --text-muted: #5b3d85;
+  --text-dim: #5f4289;
+  --steam: #7b1bd0;
+  --steam-hover: #5e0fa8;
+  --steam-rgb: 123,27,208;
+  --tab-active: #5e0fa8;
+  --success: #0f7a55;
+  --success-rgb: 15,122,85;
+  --warn: #9a5f06;
+  --warn-rgb: 154,95,6;
+  --danger: #c2004f;
+  --danger-rgb: 194,0,79;
+  --star-empty: #cdb6e8;
+  --star-full: #8a5a00;
+  --chip-plat-fg: #4a2b72;
+  --chip-plat-bg: rgba(123,27,208,.10);
+  --chip-plat-border: rgba(123,27,208,.34);
+  --hub-text: #22093f;
+  --hub-text-muted: #5b3d85;
+  --tint-rgb: 58,24,92;
+  --on-accent: #fff;
+  /* A LA LUZ EL CIAN NO SIRVE: como tinta sobre lavanda se queda en 1,8:1 y como anillo, invisible. Los dos
+     papeles vuelven al violeta profundo (5,95:1 de tinta; 5,90:1 de anillo), y el cian se queda solo donde es
+     GRÁFICO —el filo de las pegatinas y la rejilla—, un punto más hondo para que se vea sobre papel. */
+  --arc-cyan: #0a7f96;
+  --arc-cyan-fg: #6a12bc;
+  --arc-pink: #c2005f;
+  --arc-gold: #a06b00;
+  --arc-line: rgba(123,27,208,.16);
+  --focus-ring: #6b12bd;
+  --fg-link: #6a12bc;
+}
+
 /* ══ CAPA 2b · RAMPA CATEGÓRICA ════════════════════════════════════════════════
    SIETE tonos por tema para lo que NO es semántico: el género de un juego, la serie de
    una gráfica, el tipo de evento del feed. Nace de un problema concreto: hasta ahora TODO
@@ -820,15 +886,17 @@
    —«Metroidvania», «RPG»— en un número del 1 al 7 estable, y el componente pone
    `--cat`/`--cat-fg` en el elemento. Añadir un tono octavo es tocar ESTOS doce bloques y la
    constante `CATEGORY_TONES`; ningún componente sabe qué color le toca a cada género. */
-/* steam (Clásico) — latón, cobre, salvia, añil, burdeos, oliva y verdín de la biblioteca vieja */
-:root {
-  --cat-1: #ecc45c; --cat-2: #e2903f; --cat-3: #8fbf7a; --cat-4: #8a9ce0; --cat-5: #e0736e; --cat-6: #a8b06a; --cat-7: #57b6ab;
-  --cat-1-fg: #ecc45c; --cat-2-fg: #e2903f; --cat-3-fg: #8fbf7a; --cat-4-fg: #8a9ce0; --cat-5-fg: #e27b76; --cat-6-fg: #a8b06a; --cat-7-fg: #57b6ab;
+/* steam (Plata y acero) — las señales del brujo y los sitios del Continente: Igni, Aard, Golondrina,
+   Yrden, Toussaint, Quen y Skellige. Sobre el acero apagado cada género salta sin volver la tabla un
+   arcoíris; medidos todos por encima del 4,5:1 en los cuatro fondos. */
+:root[data-palette="steam"] {
+  --cat-1: #ff8f4a; --cat-2: #7fbcff; --cat-3: #8ecf7c; --cat-4: #c69ff7; --cat-5: #ff8ba8; --cat-6: #f2c75c; --cat-7: #45c3b8;
+  --cat-1-fg: #ff8f4a; --cat-2-fg: #7fbcff; --cat-3-fg: #8ecf7c; --cat-4-fg: #c69ff7; --cat-5-fg: #ff8ba8; --cat-6-fg: #f2c75c; --cat-7-fg: #45c3b8;
 }
-/* steam (Clásico) — latón, cobre, salvia, añil, burdeos, oliva y verdín de la biblioteca vieja */
-:root[data-theme="light"] {
-  --cat-1: #8a5a00; --cat-2: #a8560f; --cat-3: #1f7a4d; --cat-4: #2d3665; --cat-5: #8f2f34; --cat-6: #5a6127; --cat-7: #26705f;
-  --cat-1-fg: #875800; --cat-2-fg: #9a4f0e; --cat-3-fg: #1c7047; --cat-4-fg: #2d3665; --cat-5-fg: #8f2f34; --cat-6-fg: #5a6127; --cat-7-fg: #256e5d;
+/* steam (Plata y acero) — los mismos siete a la luz, en su versión honda para leerse sobre el acero claro */
+:root[data-palette="steam"][data-theme="light"] {
+  --cat-1: #8f3608; --cat-2: #15538f; --cat-3: #266628; --cat-4: #5f33a3; --cat-5: #9c1f4b; --cat-6: #6f4800; --cat-7: #085a5e;
+  --cat-1-fg: #8f3608; --cat-2-fg: #15538f; --cat-3-fg: #266628; --cat-4-fg: #5f33a3; --cat-5-fg: #9c1f4b; --cat-6-fg: #6f4800; --cat-7-fg: #085a5e;
 }
 /* persona — rojo rebelde, oro de calendario, verde, turquesa de datos, naranja, azul Terciopelo y hueso */
 :root[data-palette="persona"] {
@@ -879,6 +947,18 @@
 :root[data-palette="seaofstars"][data-theme="light"] {
   --cat-1: #7a5000; --cat-2: #0a5fa8; --cat-3: #2f7a24; --cat-4: #6a30c4; --cat-5: #a83a12; --cat-6: #06788a; --cat-7: #b0286a;
   --cat-1-fg: #704900; --cat-2-fg: #095190; --cat-3-fg: #245c1b; --cat-4-fg: #642dba; --cat-5-fg: #8f310f; --cat-6-fg: #045865; --cat-7-fg: #932158;
+}
+
+/* arcade (Inserte moneda) — violeta de neón, cian de tubo, rosa chicle, oro de ficha, menta de fósforo, naranja de
+   atardecer y azul eléctrico: los siete colores de una máquina encendida */
+:root[data-palette="arcade"] {
+  --cat-1: #b23cff; --cat-2: #22e5ff; --cat-3: #ff3d9e; --cat-4: #ffd24a; --cat-5: #2ef0a6; --cat-6: #ff7a3d; --cat-7: #6d8cff;
+  --cat-1-fg: #d78bff; --cat-2-fg: #6ceeff; --cat-3-fg: #ff86c4; --cat-4-fg: #ffd96b; --cat-5-fg: #6ef5c0; --cat-6-fg: #ff9d6b; --cat-7-fg: #9fb2ff;
+}
+/* arcade (Inserte moneda) — los mismos siete a la luz: tinta saturada en vez de luz emitida */
+:root[data-palette="arcade"][data-theme="light"] {
+  --cat-1: #7b1bd0; --cat-2: #0a6f83; --cat-3: #b3005f; --cat-4: #8a5a00; --cat-5: #0f7a55; --cat-6: #a3450c; --cat-7: #2f42b5;
+  --cat-1-fg: #7515c7; --cat-2-fg: #065c6b; --cat-3-fg: #a8005a; --cat-4-fg: #74500a; --cat-5-fg: #0a6044; --cat-6-fg: #8a3a0c; --cat-7-fg: #2f42b5;
 }
 
 /* ══ CAPA 3 · DECORATIVOS / EXPRESIVOS ═════════════════════════════════════════
@@ -997,31 +1077,5 @@ button { -webkit-tap-highlight-color: transparent; }
 :root[data-uppercase="on"] .rl-item,
 :root[data-uppercase="on"] .rl-hint { text-transform: uppercase; }
 
-/* ══ EFECTOS · Clásico (steam) ═════════════════════════════════════════════════
-   Firma del tema por defecto (que hasta ahora no tenía ninguna). Cuelgan de la preferencia de efectos
-   (`data-effects="on"`) y de la paleta por defecto (sin `data-palette`). Los animados van bajo
-   `prefers-reduced-motion: no-preference`; el subrayado es una micro-afordancia de hover. */
-:root[data-effects="on"]:not([data-palette]) .hub-name-link {
-  background-image: linear-gradient(var(--steam-hover), var(--steam-hover));
-  background-repeat: no-repeat;
-  background-position: 0 100%;
-  background-size: 0% 2px;
-  transition: background-size .3s ease;
-}
-:root[data-effects="on"]:not([data-palette]) .hub-name-link:hover { background-size: 100% 2px; }
-@media (prefers-reduced-motion: no-preference) {
-  /* Barrido de brillo al pasar por el botón primario (como las cards de la tienda Steam). */
-  :root[data-effects="on"]:not([data-palette]) .btn-steam { position: relative; overflow: hidden; }
-  :root[data-effects="on"]:not([data-palette]) .btn-steam::after {
-    content: ""; position: absolute; inset: 0; pointer-events: none;
-    background: linear-gradient(115deg, transparent 42%, rgba(255,255,255,.25) 50%, transparent 58%);
-    transform: translateX(-130%); transition: transform .6s ease;
-  }
-  :root[data-effects="on"]:not([data-palette]) .btn-steam:hover::after { transform: translateX(130%); }
-  /* Halo azul pulsante en la insignia de "oportunidad" activa. */
-  :root[data-effects="on"]:not([data-palette]) .badge-opp-activo { animation: steam-opp-glow 2.6s ease-in-out infinite; }
-  @keyframes steam-opp-glow {
-    0%, 100% { box-shadow: 0 0 0 1px rgba(var(--steam-rgb),.30), 0 0 8px rgba(var(--steam-rgb),.15); }
-    50%      { box-shadow: 0 0 0 1px rgba(var(--steam-rgb),.55), 0 0 18px rgba(var(--steam-rgb),.34); }
-  }
-}
+/* Los efectos de firma de «Plata y acero» viven en su skin (`themes/steam.scss`), con el resto de su
+   dirección de arte. Aquí solo quedan los tokens. */
