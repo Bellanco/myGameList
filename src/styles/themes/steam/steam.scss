@@ -57,6 +57,36 @@
 :root[data-palette="steam"] .hub-review-date,
 :root[data-palette="steam"] .hub-review-medal { font-family: var(--font-mono); }
 
+/* ── §1b · LOS NOMBRES DE PERSONA NO SE ESCRIBEN EN CAPITALES ROMANAS ─────────────────────────────────
+   Cinzel es una capital romana: sus «minúsculas» son versalitas, así que CUALQUIER `h3` con esta letra sale
+   en caja alta aunque el texto esté escrito en minúscula y `text-transform` valga `none`. En un rótulo
+   —cabecera de columna, titular de sección— eso es exactamente lo que se busca; en el NOMBRE DE UNA PERSONA
+   no: nadie se llama «GERALT DE RIVIA», y además pisa la preferencia «Texto» de /cuenta, que es quien decide
+   la caja de la interfaz en las ocho paletas (`data-uppercase`, MODO MAYÚSCULAS en `_base.scss`).
+
+   Son los tres sitios donde el hub escribe un nombre propio como titular: la tarjeta del directorio
+   (`/social/profiles`), la cabecera de un perfil y la firma de una reseña —esta última con enlace
+   (`.hub-detail-profile-link`) o sin él, que es el `h3` suelto de `ReviewDetailHead`; el `:not()` lo separa
+   del caso en el que ese mismo `h3` lo ocupa el nombre de un JUEGO, que sí es un rótulo—. El cuarto sitio,
+   el nombre dentro del feed (`.hub-name-link`), ya heredaba la letra del cuerpo y por eso no está aquí.
+
+   CON EL INTERRUPTOR ENCENDIDO vuelven a Cinzel con su tracking: si alguien pide versales, que las lleve con
+   la letra del tema y no con una mayúscula cualquiera. El `text-transform` lo sigue poniendo la hoja base. ── */
+:root[data-palette="steam"] .hub-user-card-name,
+:root[data-palette="steam"] .hub-profile-hero-name,
+:root[data-palette="steam"] .hub-feed-card-head-text > h3:not(.hub-review-detail-game),
+:root[data-palette="steam"] .hub-detail-profile-link {
+  font-family: var(--font-label);
+  letter-spacing: .01em;
+}
+:root[data-palette="steam"][data-uppercase="on"] .hub-user-card-name,
+:root[data-palette="steam"][data-uppercase="on"] .hub-profile-hero-name,
+:root[data-palette="steam"][data-uppercase="on"] .hub-feed-card-head-text > h3:not(.hub-review-detail-game),
+:root[data-palette="steam"][data-uppercase="on"] .hub-detail-profile-link {
+  font-family: var(--font-display);
+  letter-spacing: .14em;
+}
+
 /* ── §2 · El acero: veta de cepillado en capa propia. El ruido va ANISÓTROPO (la lattice estirada en un
    eje), que es lo que produce la veta; un `repeating-linear-gradient` de 1 px no es metal, es una
    persiana. En `overlay` y a media opacidad para que no ensucie el texto. ── */
