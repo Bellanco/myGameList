@@ -29,6 +29,11 @@ export const UPPERCASE_KEY = 'mis-listas-uppercase';
 // (no necesita anti-flash: solo condiciona un botón de la toolbar, no la pintura inicial del tema).
 export const STEAM_BUTTON_KEY = 'mis-listas-steam-button';
 
+// F5 — FORMA del listado: 'list' (renglones) o 'grid' (mosaico de cajas). Es de presentación pura y se
+// sincroniza por cuenta (publicConfig.listShape), como el resto de la apariencia. No la lee `theme-init.js`: la
+// forma la decide React al montar el listado, y antes de eso no hay ninguna fila que pintar.
+export const LIST_SHAPE_KEY = 'mis-listas-list-shape';
+
 // F1 — efectos visuales ANIMADOS de los temas (barridos, glitch, parpadeo CRT, deriva de texturas, estrellas
 // fugaces…). Valores: 'on' (activados, por defecto) | 'off' (desactivados). Se aplica vía `data-effects="on"`
 // en <html> (los efectos CSS cuelgan de ese atributo) y se sincroniza por cuenta (publicConfig.effects). No lo

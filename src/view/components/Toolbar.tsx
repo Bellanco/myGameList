@@ -7,6 +7,7 @@ import type { TabOptions } from '../../viewmodel/toolbarFilters';
 import { renderStars } from '../../core/utils/renderStars';
 import { gradeFloorForStars } from '../../core/utils/scoreScale';
 import { useScoreScale } from '../hooks/useScoreScale';
+import { useListShape } from '../hooks/useListShape';
 import { Icon } from './Icon';
 
 interface ToolbarProps {
@@ -41,6 +42,7 @@ export const Toolbar = memo(function Toolbar({
   showSteamButton,
 }: ToolbarProps) {
   const scoreScale = useScoreScale();
+  const { shape, setShape } = useListShape();
   const [searchDraft, setSearchDraft] = useState(filters.search);
 
   useEffect(() => {
@@ -124,6 +126,29 @@ export const Toolbar = memo(function Toolbar({
               <Icon name={COMMON_ICONS.close} />
             </button>
           ) : null}
+        </div>
+        {/* F5 — LA FORMA DEL LISTADO, aquí y no en Ajustes: se cambia a menudo —según si buscas un juego
+            concreto o paseas por la colección—, y una decisión de cada rato escondida en otra pantalla no la usa
+            nadie. No recibe props: la preferencia es global y el store la comparte con el listado. */}
+        <div className="shape-switch" role="group" aria-label={UI_MESSAGES.toolbar.shapeAria}>
+          {([
+            ['list', COMMON_ICONS.viewList, UI_MESSAGES.toolbar.shapeList],
+            ['grid', COMMON_ICONS.viewGrid, UI_MESSAGES.toolbar.shapeGrid],
+          ] as const).map(([value, icon, label]) => (
+            <button
+              key={value}
+              type="button"
+              className={`btn-icon shape-switch-btn${shape === value ? ' is-on' : ''}`}
+              // `aria-pressed` y no `radio`: son dos botones que encienden o apagan una forma, y es lo que un
+              // lector de pantalla sabe leer sin que haya que montar un grupo de radios con navegación propia.
+              aria-pressed={shape === value}
+              title={label}
+              aria-label={label}
+              onClick={() => setShape(value)}
+            >
+              <Icon name={icon} />
+            </button>
+          ))}
         </div>
         {compactFilters ? (
           <button

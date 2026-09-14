@@ -158,6 +158,8 @@ export interface FirestorePublicConfig {
   showSteamButton?: boolean;
   /** F1 — efectos visuales animados de los temas (por defecto true; false los desactiva). */
   effects?: boolean;
+  /** F5 — forma del listado: 'list' (renglones) o 'grid' (mosaico). Por defecto, renglones. */
+  listShape?: 'list' | 'grid';
   /**
    * F4 — de qué listas ve su dueño los mensajes de actividad, como letras en orden canónico ('cevp' = todas,
    * '' = ninguna). Ajuste de LECTURA: no cambia lo que se publica ni lo que ven los demás. Vive aquí (owner-only)

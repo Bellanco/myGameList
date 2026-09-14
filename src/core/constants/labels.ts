@@ -355,6 +355,15 @@ export const UI_MESSAGES = {
        «Buscar» a secas del placeholder no aclara. */
     searchLabel: 'Buscar en la lista por nombre de juego',
     clearSearch: 'Limpiar búsqueda',
+    /* F5 — forma del listado. El grupo se anuncia como lo que es (dos opciones excluyentes) y cada botón dice
+       a QUÉ se cambia, no cómo se está viendo: es lo que espera quien lo pulsa. */
+    shapeAria: 'Forma del listado',
+    shapeList: 'Ver en lista',
+    shapeGrid: 'Ver en cajas',
+    /* F5 — el ORDEN, que en las formas nuevas ya no lo llevan las cabeceras de columna. Dice en palabras lo que
+       la cabecera decía con una flechita. */
+    sortLabel: 'Ordenar',
+    sortDirection: (asc: boolean) => (asc ? 'De menor a mayor. Pulsa para invertir' : 'De mayor a menor. Pulsa para invertir'),
     toggleFilters: (open: boolean) => (open ? 'Ocultar filtros' : 'Mostrar filtros'),
     steamDeck: 'Steam Deck',
     removeFilter: (label: string) => `Quitar filtro ${label}`,
