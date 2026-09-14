@@ -38,8 +38,8 @@ export const DEFAULT_PALETTE: PaletteId = 'arcade';
 
 export const PALETTES: readonly PaletteMeta[] = [
   { id: 'arcade', label: 'Inserte moneda', accent: '#b23cff', accent2: '#22e5ff', bg: { dark: '#150a24', light: '#eee2fb' } },
-  { id: 'steam', label: 'Plata y acero', accent: '#c6ced8', accent2: '#ff8f4a', bg: { dark: '#212832', light: '#dde3e9' } },
-  { id: 'persona', label: 'Corazón rebelde', accent: '#ff1f3d', bg: { dark: '#0d0d0d', light: '#f4f1ee' } },
+  { id: 'steam', label: 'Plata y acero', accent: '#c6ced8', accent2: '#ff8f4a', bg: { dark: '#141922', light: '#d8e0e7' } },
+  { id: 'persona', label: 'Ladrones de corazones', accent: '#ff1f3d', bg: { dark: '#0d0d0d', light: '#f4f1ee' } },
   { id: 'portal', label: 'Cámara de pruebas', accent: '#0091d6', accent2: '#f57a00', bg: { dark: '#12171b', light: '#e7ecf0' } },
   { id: 'cyberpunk', label: 'Sin futuro', accent: '#fcee0a', accent2: '#00f0ff', bg: { dark: '#08090d', light: '#e7eaee' } },
   { id: 'seaofstars', label: 'Sol y luna', accent: '#f5c13e', accent2: '#2bb3c4', bg: { dark: '#0e0c24', light: '#a6e9ec' } },
