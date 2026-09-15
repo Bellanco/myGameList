@@ -34,8 +34,18 @@ const ARABIGOS: Record<string, string> = Object.fromEntries(
 const EDICIONES =
   /\b(goty|game of the year|definitive|complete|deluxe|enhanced|remastered|remaster|redux|anniversary|classic|directors cut|edition|ultimate|collection|trilogy|bundle|pack|hd|version)\b/g;
 
-/** Tipos de ficha que SIGUEN siendo el juego: principal, remake, remaster, expandido y port. */
-const TIPOS_JUEGO = new Set([0, 8, 9, 10, 11]);
+/**
+ * Tipos de ficha que SIGUEN siendo el juego: principal (0), expansión independiente (4), remake (8), remaster
+ * (9), expandido (10) y port (11).
+ *
+ * El 4 faltaba, y se llevó por delante tres juegos reales de una biblioteca de 302: *Wolfenstein: The Old Blood*
+ * (461 votos), *Dishonored: Death of the Outsider* (236) y *Commandos: Beyond the Call of Duty* (106). Una
+ * «expansión independiente» no es un DLC: se compra y se juega sola, así que está en la estantería de su dueño
+ * como cualquier otro juego y tiene su propia carátula. Quedan fuera, a propósito, el DLC (1), la expansión que
+ * exige el juego base (2), los packs (3, 13) y los mods (5): esos no son entradas de una biblioteca, y colarlos
+ * era lo que ponía la carátula de un pack de skins donde iba la del juego.
+ */
+const TIPOS_JUEGO = new Set([0, 4, 8, 9, 10, 11]);
 
 /**
  * Forma canónica de un título para compararlo: sin acentos, sin marcas, sin puntuación, y con los números
