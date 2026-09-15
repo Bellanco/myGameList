@@ -48,6 +48,17 @@ const PRECACHE_ASSETS = self.__PRECACHE_ASSETS__ || [];
 
 const CACHE_NAME = `mygamelist-${BUILD_ID}`;
 
+/**
+ * LAS CARÁTULAS VAN EN SU PROPIO CUBO, y sin el id del build en el nombre. La caché normal se tira entera en
+ * cada despliegue (ver el `activate`), y eso es lo correcto para los chunks —el build nuevo estrena nombres—
+ * pero sería absurdo para las carátulas: son de IGDB, no del build, no cambian al publicar y una biblioteca
+ * grande son ~300 imágenes y varios megas. Con el nombre atado al build, cada versión que publicaras obligaría
+ * a todo el mundo a volver a bajárselas.
+ *
+ * La `v1` del nombre es la manija para tirarlas a propósito si algún día hace falta; no la toques por publicar.
+ */
+const COVER_CACHE_NAME = 'mygamelist-covers-v1';
+
 /** Shell mínimo: la raíz (con la que se responde a cualquier ruta de la SPA offline) y el manifest. */
 const SHELL = ['/', '/manifest.json'];
 
@@ -122,7 +133,9 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const names = await caches.keys();
-    await Promise.all(names.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name)));
+    // El cubo de carátulas SOBREVIVE al despliegue a propósito: ver `COVER_CACHE_NAME`.
+    const conservar = new Set([CACHE_NAME, COVER_CACHE_NAME]);
+    await Promise.all(names.filter((name) => !conservar.has(name)).map((name) => caches.delete(name)));
     await self.clients.claim();
   })());
 });
@@ -207,8 +220,8 @@ async function handleImmutableAsset(request) {
 }
 
 /** Iconos, manifest y demás estáticos: se sirve la copia y se revalida en segundo plano. */
-async function handleStaleWhileRevalidate(request, event) {
-  const cache = await caches.open(CACHE_NAME);
+async function handleStaleWhileRevalidate(request, event, cacheName = CACHE_NAME) {
+  const cache = await caches.open(cacheName);
   const hit = await cache.match(request);
 
   const revalidate = fetch(request)
@@ -267,6 +280,12 @@ self.addEventListener('fetch', (event) => {
 
   if (url.pathname.startsWith('/assets/')) {
     event.respondWith(handleImmutableAsset(request));
+    return;
+  }
+
+  // Carátulas: misma estrategia, otro cubo, para que un despliegue no se las lleve por delante.
+  if (url.pathname === '/cover') {
+    event.respondWith(handleStaleWhileRevalidate(request, event, COVER_CACHE_NAME));
     return;
   }
 
