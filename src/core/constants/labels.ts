@@ -428,6 +428,10 @@ export const UI_MESSAGES = {
     replayability: 'Rejugabilidad',
     retry: 'Dar otra oportunidad',
     review: 'Análisis',
+    /* El análisis ya no se vuelca en el detalle: se va a leer a su pantalla. El texto dice a DÓNDE lleva, no
+       qué hay dentro, porque quien lo pulsa ya sabe que escribió uno. */
+    reviewLink: 'Leer el análisis',
+    reviewLinkAria: (name: string) => `Leer el análisis de ${name}`,
   },
 } as const;
 

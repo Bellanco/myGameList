@@ -471,6 +471,11 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   border-color: color-mix(in srgb, var(--steam) 40%, var(--border));
 }
 .btn:active { transform: perspective(460px) rotateX(8deg) translateY(0); }
+/* Un ENLACE con pinta de botón sigue siendo un enlace, y trae de serie el subrayado del navegador: dentro de una
+   pastilla se lee como un fallo de estilo. Quien decide que algo parezca un botón es la clase, no la etiqueta.
+   (La etiqueta sí importa para lo demás: `/perfil/resenas/:id` se abre en otra pestaña y se copia porque es un
+   enlace de verdad, no un botón que navega por su cuenta.) */
+a.btn, a.btn:hover { text-decoration: none; }
 
 /* Acción principal sólida (CTA fuerte): conserva el relleno azul, con relieve e inclinación. */
 /* El degradado arranca UN PASO por debajo del acento puro (antes salía de `--steam` a pelo). Con el texto
