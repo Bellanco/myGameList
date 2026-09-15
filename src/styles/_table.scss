@@ -501,8 +501,9 @@ table.is-cards {
    ocupa todo el ancho, y dentro de ella van las cajas. Así el virtualizador sigue midiendo FILAS de verdad
    (`GameTable` agrupa los juegos de N en N) en vez de creer que cada caja es un renglón: con mil juegos, esa
    diferencia son mil filas contadas de más y una barra de desplazamiento que no lleva a ninguna parte. El
-   número de columnas lo calcula el componente y llega en `--grid-cols`; el `minmax` de aquí usa el MISMO mínimo
-   (232 px), que es lo que hace que las dos cuentas coincidan. ── */
+   número de columnas lo calcula el componente —con `GRID_CARD_MIN_PX`, hoy 168 px— y llega en `--grid-cols`;
+   aquí solo se parte el ancho en tantas columnas iguales, así que no hay ninguna medida que mantener a la vez
+   en los dos sitios: la densidad del mosaico se cambia en esa constante y nada más. ── */
 table.is-grid {
   thead { display: none; }
 
@@ -527,6 +528,55 @@ table.is-grid {
   border-radius: var(--radius-md);
   box-shadow: var(--e1);
   transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+/* LA RANURA DE LA CARÁTULA. Proporción 3:4 fija, que es la del arte vertical de las tiendas (comprobado
+   sobre el catálogo real: 57 de 60 juegos la tienen). Fija y declarada por CSS, no heredada de la imagen, por
+   lo mismo que la caja recorta el nombre a dos líneas: en una rejilla la fila mide lo que mida su caja más
+   alta, y el virtualizador mide FILAS. Si el alto lo pusiera la imagen al cargar, cada carátula que llegara
+   recalcularía su fila y la barra de desplazamiento saltaría mientras se baja.
+
+   Sin imagen NO queda un hueco gris: se pinta el tono que la rampa categórica le reparte a ese nombre, el mismo
+   mecanismo que tiñe los géneros. Es estable (hash del título) y lo viste cada tema, así que un juego sin
+   carátula no parece un juego roto. */
+.game-cover {
+  position: relative;
+  z-index: 1;
+  pointer-events: none; /* como el resto del contenido: la pulsación es del botón que hay debajo */
+  display: grid;
+  place-items: center;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: calc(var(--radius-md) - 3px);
+  /* MUY rebajada hacia la superficie, y el número importa: con la rampa al 90 % esto eran siete rectángulos
+     saturados por fila —un muestrario de colores, no una biblioteca— y el monograma quedaba verde sobre verde.
+     Al 20 % el color solo insinúa de qué juego se trata y deja que manden el nombre y la nota, que es el orden
+     de lectura que el mosaico ya tenía. Cuando llegue la carátula de verdad, esto no se ve. */
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--cat) 20%, var(--surface)),
+    color-mix(in srgb, var(--cat) 8%, var(--surface))
+  );
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hair) 70%, transparent);
+}
+
+.game-cover-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.game-cover-monogram {
+  font-size: 2.6rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  line-height: 1;
+  /* No vale `--cat-fg`: está calculado para leerse SOBRE el relleno lleno de la rampa, y aquí el fondo es casi
+     la superficie. Se tiñe el color del texto con su tono, que contrasta con el fondo pase lo que pase. */
+  color: color-mix(in srgb, var(--cat) 55%, var(--text));
+  opacity: .5;
+  user-select: none;
 }
 
 /* El disparador cubre la caja entera: la caja se pulsa, no un enlace dentro de ella. Va detrás del contenido
