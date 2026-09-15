@@ -549,7 +549,7 @@ table.is-grid {
   overflow: hidden;
   border-radius: calc(var(--radius-md) - 3px);
   /* MUY rebajada hacia la superficie, y el número importa: con la rampa al 90 % esto eran siete rectángulos
-     saturados por fila —un muestrario de colores, no una biblioteca— y el monograma quedaba verde sobre verde.
+     saturados por fila —un muestrario de colores, no una biblioteca— y el título quedaba verde sobre verde.
      Al 20 % el color solo insinúa de qué juego se trata y deja que manden el nombre y la nota, que es el orden
      de lectura que el mosaico ya tenía. Cuando llegue la carátula de verdad, esto no se ve. */
   background: linear-gradient(
@@ -569,7 +569,7 @@ table.is-grid {
 
 /* LA PORTADA DE CASA. Compone el título como una portada sobria en vez de dejar dos iniciales en medio del
    azulejo: entre carátulas de verdad, unas iniciales sueltas se leen como un fallo de carga, y un título
-   compuesto se lee como una decisión. Iniciales arriba, filete, y el nombre centrado. */
+   compuesto se lee como una decisión. Solo el nombre, centrado y con aire. */
 .game-cover-placeholder {
   display: flex;
   flex-direction: column;
@@ -584,18 +584,6 @@ table.is-grid {
   /* No vale `--cat-fg`: está calculado para leerse SOBRE el relleno lleno de la rampa, y aquí el fondo es casi
      la superficie. Se tiñe el color del texto con su tono, que contrasta con el fondo pase lo que pase. */
   color: color-mix(in srgb, var(--cat) 55%, var(--text));
-}
-
-.game-cover-mark {
-  font-size: 1.35rem;
-  font-weight: 800;
-  letter-spacing: .12em;
-  line-height: 1;
-  opacity: .45;
-  /* El filete es lo que convierte «dos letras y un nombre» en una composición. Fino, como el resto de la casa. */
-  padding-bottom: .5rem;
-  border-bottom: 1px solid currentColor;
-  border-bottom-color: color-mix(in srgb, currentColor 22%, transparent);
 }
 
 .game-cover-title {
