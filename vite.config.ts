@@ -7,6 +7,10 @@ import react from '@vitejs/plugin-react';
 // permisivo que producción, o se prueba con textos que en la web real se recortan.
 import { sanitizeAnnouncement } from './src/core/announcement/announcement';
 
+// El MISMO emparejador que usa la Pages Function, no una copia: si el servidor de desarrollo resolviera las
+// carátulas con otras reglas, probar en local no demostraría nada sobre producción.
+import { resolverCaratula, type EntornoIgdb } from './functions/_lib/igdbCover';
+
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version?: string };
 
 /**
@@ -192,6 +196,170 @@ function localAnnouncementApi(): Plugin {
   };
 }
 
+/**
+ * `/cover` EN EL SERVIDOR DE DESARROLLO. Solo en `serve`: ni una línea entra en el build.
+ *
+ * POR QUÉ HACE FALTA, y es la misma historia que el aviso: las carátulas las sirve una Pages Function
+ * (`functions/cover.ts`) y las Pages Functions las ejecuta Cloudflare, no Vite. Con `npm run dev` —que es lo que
+ * abren «Mis Listas.command» y «Mis Listas.bat»— esa ruta devolvía el `index.html` del SPA, así que no salía ni
+ * una carátula y no había forma de saber si el trabajo estaba bien hecho.
+ *
+ * ES EL MISMO CONTRATO: se importa el emparejador de VERDAD, con sus mismas reglas, su mismo `m=1` y su mismo
+ * modo ampliado. Lo único que no tiene es el cupo por IP, que aquí no pinta nada: quien llama es la persona que
+ * ha levantado el servidor en su propia máquina.
+ *
+ * LAS CREDENCIALES SALEN DE `.dev.vars` (el secreto) y de `wrangler.toml` (el client id, que es público y cuya
+ * fuente de verdad es ese fichero). Sin el secreto, la ruta contesta 501 y lo dice por consola una vez: es la
+ * diferencia entre «no hay carátulas porque no las has configurado» y «no hay carátulas y no sé por qué».
+ *
+ * LA CACHÉ VIVE EN UN FICHERO IGNORADO (`.covers.local.json`) en vez de en KV, por lo mismo que el aviso:
+ * sobrevive al reinicio del servidor y se limpia borrando el fichero.
+ */
+function localCoverApi(): Plugin {
+  const RUTA = '/cover';
+  const FICHERO = new URL('./.covers.local.json', import.meta.url);
+  const IMAGENES = 'https://images.igdb.com/igdb/image/upload';
+  /* Los mismos dos tamaños que sirve la Function (ver `functions/cover.ts`): el normal es el que cabe en la
+     ranura del mosaico, y el ancho el que pide el renglón para recortar su franja sin ampliar seis veces una
+     imagen de 264 px. Si aquí solo hubiera uno, en desarrollo el renglón saldría borroso y en producción no,
+     que es justo la diferencia que este plugin existe para no tener. */
+  const TAMANOS = { normal: 't_cover_big', ancho: 't_1080p' } as const;
+
+  /** Lee un valor de un fichero en formato `CLAVE=valor`, que es el de `.dev.vars`. */
+  const deDevVars = (clave: string): string => {
+    try {
+      const texto = readFileSync(new URL('./.dev.vars', import.meta.url), 'utf-8');
+      return new RegExp(`^${clave}=(.*)$`, 'm').exec(texto)?.[1]?.trim() ?? '';
+    } catch {
+      return '';
+    }
+  };
+
+  const deWranglerToml = (clave: string): string => {
+    try {
+      const texto = readFileSync(new URL('./wrangler.toml', import.meta.url), 'utf-8');
+      return new RegExp(`^${clave}\\s*=\\s*"([^"]*)"`, 'm').exec(texto)?.[1] ?? '';
+    } catch {
+      return '';
+    }
+  };
+
+  /** Remedo mínimo de KV: solo `get`/`put` con caducidad, que es todo lo que usa el emparejador. */
+  type Guardado = { valor: string; caduca: number };
+  let almacen: Record<string, Guardado> = {};
+  try {
+    almacen = JSON.parse(readFileSync(FICHERO, 'utf-8')) as Record<string, Guardado>;
+  } catch {
+    almacen = {};
+  }
+  const guardar = () => {
+    try {
+      writeFileSync(FICHERO, `${JSON.stringify(almacen, null, 2)}\n`);
+    } catch {
+      // Disco lleno o permiso: se sigue con la caché en memoria.
+    }
+  };
+  const kv = {
+    get: async (clave: string) => {
+      const dato = almacen[clave];
+      if (!dato) return null;
+      if (dato.caduca && dato.caduca < Date.now()) {
+        delete almacen[clave];
+        return null;
+      }
+      return dato.valor;
+    },
+    put: async (clave: string, valor: string, opciones?: { expirationTtl?: number }) => {
+      almacen[clave] = { valor, caduca: opciones?.expirationTtl ? Date.now() + opciones.expirationTtl * 1000 : 0 };
+      guardar();
+    },
+    delete: async () => {},
+    list: async () => ({ keys: [], list_complete: true }),
+  };
+
+  let avisado = false;
+
+  return {
+    name: 'local-cover-api',
+    apply: 'serve',
+
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (!req.url || req.url.split('?')[0] !== RUTA) {
+          next();
+          return;
+        }
+
+        const env = {
+          IGDB_CLIENT_ID: deWranglerToml('IGDB_CLIENT_ID'),
+          IGDB_CLIENT_SECRET: deDevVars('IGDB_CLIENT_SECRET'),
+          COVERS: kv,
+        } as unknown as EntornoIgdb;
+
+        if (!env.IGDB_CLIENT_ID || !env.IGDB_CLIENT_SECRET) {
+          if (!avisado) {
+            avisado = true;
+            // eslint-disable-next-line no-console
+            console.warn(
+              '[carátulas] No hay credenciales de IGDB en desarrollo: copia `.dev.vars.example` a `.dev.vars` y ' +
+                'pon ahí IGDB_CLIENT_SECRET. Hasta entonces las cajas enseñarán su portada de casa.',
+            );
+          }
+          res.statusCode = 501;
+          res.setHeader('Cache-Control', 'no-store');
+          res.end('Las carátulas no están configuradas en desarrollo');
+          return;
+        }
+
+        const url = new URL(req.url, 'http://localhost');
+        const nombre = (url.searchParams.get('n') ?? '').trim();
+        if (!nombre) {
+          res.statusCode = 400;
+          res.end('Falta el nombre del juego');
+          return;
+        }
+        const plataformas = (url.searchParams.get('p') ?? '').split(',').map((p) => p.trim()).filter(Boolean);
+        const soloMapa = url.searchParams.get('m') === '1';
+        const ampliado = url.searchParams.get('x') === '1';
+        const tamano = url.searchParams.get('s') === 'ancho' ? TAMANOS.ancho : TAMANOS.normal;
+
+        void (async () => {
+          try {
+            const coverId = await resolverCaratula(env, nombre, plataformas, ampliado);
+            if (!coverId) {
+              res.statusCode = 404;
+              res.setHeader('Cache-Control', 'no-store');
+              res.end('Sin carátula');
+              return;
+            }
+            if (soloMapa) {
+              res.statusCode = 204;
+              res.setHeader('Cache-Control', 'no-store');
+              res.end();
+              return;
+            }
+            const imagen = await fetch(`${IMAGENES}/${tamano}/${coverId}.jpg`);
+            if (!imagen.ok) {
+              res.statusCode = 502;
+              res.end('La carátula no se pudo descargar');
+              return;
+            }
+            res.statusCode = 200;
+            res.setHeader('Content-Type', imagen.headers.get('Content-Type') ?? 'image/jpeg');
+            // Sin caché de navegador en local: se quiere ver el efecto de un cambio al recargar.
+            res.setHeader('Cache-Control', 'no-store');
+            res.end(Buffer.from(await imagen.arrayBuffer()));
+          } catch {
+            res.statusCode = 502;
+            res.setHeader('Cache-Control', 'no-store');
+            res.end('No se pudo resolver la carátula');
+          }
+        })();
+      });
+    },
+  };
+}
+
 export default defineConfig({
   // Identificador de build inyectado en tiempo de compilación; lo usa la telemetría para etiquetar errores/eventos.
   define: {
@@ -201,6 +369,7 @@ export default defineConfig({
     react(),
     serviceWorkerPrecache(),
     localAnnouncementApi(),
+    localCoverApi(),
   ],
   server: {
     port: 8000,
