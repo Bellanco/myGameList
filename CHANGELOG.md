@@ -41,6 +41,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   otras cuatro que ya tienen su familia con significado —rojo los puntos débiles, verde los fuertes, ámbar el
   año, gris el «+N»—; en «Plata y acero», «Cámara de pruebas» y «Ladrones de corazones» era gris, y en
   «Grimdark», verde. Pasa a la familia fría, con el tono que le toca a cada una dentro de su propia identidad.
+- **El análisis ya no se vuelca en el detalle del juego**: hay un enlace que lleva a su pantalla
+  (`/perfil/resenas/:id`), donde se lee con su ancho de lectura, su medallón y sus análisis sugeridos. Volcado
+  ocupaba el detalle entero —hay reseñas de veinte mil caracteres— y empujaba fuera de la vista el resto de los
+  datos, que es justo lo que se abre el detalle para ver: el detalle pasa de unos 600 px a 245.
 - **El mosaico funciona en el teléfono.** Elegir «tarjetas» en un móvil revertía a renglones sin avisar.
 - Las mayúsculas del listado obedecen a la preferencia de apariencia, como el resto de los rótulos.
 

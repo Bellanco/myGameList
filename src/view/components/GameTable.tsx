@@ -1,4 +1,5 @@
-import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { Link } from 'react-router-dom';
 import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import { COMMON_ICONS, TAB_ICONS } from '../../core/constants/icons';
 import { categoryToneStyle } from '../../core/constants/categoryTone';
@@ -72,7 +73,10 @@ interface VirtualRow {
    Venían de 63 y 74, del renglón de una sola línea que había antes del rediseño. */
 const MAIN_ROW_ESTIMATE_PX = 146;
 const COMPACT_ROW_ESTIMATE_PX = 130;
-const DETAIL_ROW_ESTIMATE_PX = 320;
+/* El detalle desplegado. Eran 320 px de cuando volcaba el análisis entero; desde que ese texto es un enlace a
+   su pantalla, el detalle mide 245 px (278 los que reparten sus datos en tres líneas). MEDIDO sobre el build
+   con la biblioteca real, como los de arriba. */
+const DETAIL_ROW_ESTIMATE_PX = 250;
 /* Mosaico: alto de una FILA de cajas (no de una caja) y ancho mínimo de caja, que es lo que decide cuántas
    caben. El reparto en columnas lo hace SOLO esta cuenta: `.game-grid` recibe el resultado en `--grid-cols` y
    se limita a partir el ancho en tantas columnas iguales (`minmax(0, 1fr)`), así que no hay ningún número que
@@ -950,8 +954,6 @@ export const GameTable = memo(function GameTable({
                   );
                 }
 
-                const reviewLines = game.review ? game.review.split('\n') : [];
-
                 return (
                   <tr key={`detail-${game.id}`} id={`game-detail-${game.id}`} data-index={rowIndex} ref={virtualize ? virtualizer.measureElement : undefined} className={`detail-row open ${game.id === removingId ? 'is-leaving' : ''}`.trim()}>
                     <td>
@@ -1023,16 +1025,26 @@ export const GameTable = memo(function GameTable({
                             <div>{renderBooleanBadge('retry', Boolean(game.retry))}</div>
                           </div>
                         )}
+                        {/* EL ANÁLISIS NO SE VUELCA AQUÍ: se va a leer a su pantalla. Volcado ocupaba el detalle
+                            entero —hay reseñas de veinte mil caracteres— y empujaba fuera de la vista todo lo
+                            demás, que es lo que se abre el detalle para ver. El enlace lleva a
+                            `/perfil/resenas/:id`, donde ya se lee con su ancho de lectura y su medallón.
+                            Es un ENLACE y no un botón porque es navegación: así se puede abrir en otra pestaña,
+                            copiar la dirección o volver con el botón de atrás. Y ocupa una celda de la rejilla
+                            del detalle, no la fila entera (`is-wide`), que es de donde sale el sitio. */}
                         {showReview && supportsReview(currentTab) && game.review ? (
-                          <div className="detail-box is-wide">
+                          <div className="detail-box">
                             <span className="detail-label">{UI_MESSAGES.detail.review}</span>
-                            <div className="detail-value">
-                              {reviewLines.map((line, i) => (
-                                <Fragment key={i}>
-                                  {line}
-                                  {i < reviewLines.length - 1 && <br />}
-                                </Fragment>
-                              ))}
+                            <div>
+                              <Link
+                                className="btn btn-secondary"
+                                to={`/perfil/resenas/${game.id}`}
+                                aria-label={UI_MESSAGES.detail.reviewLinkAria(game.name)}
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                <Icon name={COMMON_ICONS.eye} />
+                                <span>{UI_MESSAGES.detail.reviewLink}</span>
+                              </Link>
                             </div>
                           </div>
                         ) : null}
