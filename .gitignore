@@ -1,4 +1,6 @@
 # Ignorar datos de usuario locales
+# (incluida la lista de erratas, que se deriva de myGames.json y es igual de personal)
+erratas-biblioteca.md
 /data/myGames.json
 /myGames.json
 
