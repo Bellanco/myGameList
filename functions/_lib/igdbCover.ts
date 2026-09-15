@@ -347,6 +347,22 @@ export function claveCache(nombre: string, plataformas: readonly string[]): stri
  * El id de carátula de un juego, de la caché si está y de IGDB si no. Guarda TAMBIÉN los fallos (como cadena
  * vacía): sin eso, cada errata de la biblioteca vuelve a preguntar en cada visita.
  */
+/**
+ * Lo que ya está en la caché, sin preguntar a nadie: el id, `null` si consta que no tiene carátula, y
+ * `undefined` si de este juego no se sabe nada todavía. Se expone aparte de `resolverCaratula` para que el
+ * endpoint pueda distinguir «servir de caché» (gratis) de «hay que consultar IGDB» (lo que cuesta y lo que hay
+ * que racionar).
+ */
+export async function leerCaratulaCacheada(
+  env: EntornoIgdb,
+  nombre: string,
+  plataformas: readonly string[],
+): Promise<string | null | undefined> {
+  const cacheado = await env.COVERS?.get(claveCache(nombre, plataformas));
+  if (cacheado === null || cacheado === undefined) return undefined;
+  return cacheado === '' ? null : cacheado;
+}
+
 export async function resolverCaratula(
   env: EntornoIgdb,
   nombre: string,

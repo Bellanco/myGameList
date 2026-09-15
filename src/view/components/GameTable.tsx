@@ -7,6 +7,7 @@ import { COMPACT_TABLE_MAX_WIDTH } from '../../core/constants/uiConfig';
 import { FilePickerButton } from './FilePickerButton';
 import { GameCover } from './GameCover';
 import { coverUrl } from '../../core/utils/coverUrl';
+import { sabemosQueNoTiene } from '../../core/utils/coverMemory';
 import type { GameItem, TabId, TabSort } from '../../model/types/game';
 import type { TabAction } from '../../viewmodel/useGameListViewModel';
 import { resolveGrade } from '../../core/utils/scoreScale';
@@ -14,6 +15,7 @@ import { Icon } from './Icon';
 import { ScoreDisplay } from './ScoreDisplay';
 import { useScoreScale } from '../hooks/useScoreScale';
 import { useListShape } from '../hooks/useListShape';
+import { useCovers } from '../hooks/useCovers';
 
 interface GameTableProps {
   games: GameItem[];
@@ -84,6 +86,17 @@ const GRID_GAP_PX = 10;
 /** `tone`: tiñe cada píldora con el color que le toca a su nombre en la rampa categórica (`categoryTone`).
     Solo lo piden los géneros; el resto de categorías ya tienen un color con significado propio (la plataforma
     es neutra, los puntos fuertes verdes y los débiles rojos) y teñirlas rompería esa lectura. */
+/**
+ * La URL de la carátula, o `null` si no hay que pedir nada: porque la preferencia está apagada, o porque en una
+ * visita anterior ya se supo que ese juego no tiene carátula. Lo segundo es lo que evita repetir cada visita los
+ * mismos 404 —que no los cachea nadie, a propósito— por los juegos que nunca van a tener imagen.
+ */
+function coverSrc(covers: boolean, game: GameItem): string | null {
+  if (!covers) return null;
+  const url = coverUrl(game.name, game.platforms);
+  return sabemosQueNoTiene(url) ? null : url;
+}
+
 function renderTags(values: string[], className: string, maxVisible?: number, tone = false) {
   if (!values.length) return <span>—</span>;
   const overflow = maxVisible && values.length > maxVisible ? values.length - maxVisible : 0;
@@ -319,6 +332,9 @@ export const GameTable = memo(function GameTable({
      la fila) y una media query de `_table.scss` (para ocultar las columnas). Ahora lo decide un sitio y el CSS
      obedece a la clase `is-cards`, que es lo que permite que la forma sea una preferencia y no un breakpoint. */
   const { shape } = useListShape();
+  /* Apagada por defecto: sin encenderla, `src` va vacío, no se pide ninguna imagen y la caja se queda con su
+     portada de casa. Es la preferencia la que autoriza a que el servidor consulte los títulos en IGDB. */
+  const { covers } = useCovers();
   const cards = shape === 'list' || narrowScreen;
   /* COLUMNAS DEL MOSAICO. Se mide el contenedor y se divide, que es la misma cuenta que hará el `minmax` del
      CSS; hacerlo aquí es lo que permite que el virtualizador siga midiendo FILAS de verdad (una fila virtual =
@@ -700,7 +716,7 @@ export const GameTable = memo(function GameTable({
                                 >
                                   <span className="sr-only">{game.name}</span>
                                 </button>
-                                <GameCover name={game.name} src={coverUrl(game.name, game.platforms)} />
+                                <GameCover name={game.name} src={coverSrc(covers, game)} />
                                 <header className="game-card-head">
                                   <h3 className="game-card-name" title={game.name}>{game.name}</h3>
                                   {(currentTab === 'c' || currentTab === 'p') || (showShameScore && hasScore(game)) ? (

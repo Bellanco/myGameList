@@ -151,6 +151,11 @@ export const APPEARANCE_UI = {
   effectsAria: 'Efectos visuales animados de los temas',
   effectsOn: 'Activados',
   effectsOff: 'Desactivados',
+  coversLabel: 'Carátulas de los juegos',
+  coversAria: 'Descargar las carátulas de los juegos',
+  coversOn: 'Activadas',
+  coversOff: 'Desactivadas',
+  coversHint: 'Al activarlas, la app busca la carátula de cada juego de tus listas. Las imágenes se sirven desde este mismo sitio: tu navegador no contacta con nadie más.',
 } as const;
 
 /**

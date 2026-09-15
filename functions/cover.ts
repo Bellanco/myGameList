@@ -16,7 +16,7 @@
 //
 // POR QUÉ EL NOMBRE VA EN LA CADENA DE CONSULTA Y NO EN LA RUTA: hay juegos con barra en el título
 // («Half Life / Black Mesa»), y una barra codificada dentro de una ruta la normalizan los intermediarios.
-import { resolverCaratula, type EntornoIgdb } from './_lib/igdbCover';
+import { leerCaratulaCacheada, resolverCaratula, type EntornoIgdb } from './_lib/igdbCover';
 
 const IMAGENES = 'https://images.igdb.com/igdb/image/upload';
 /** Tamaño de IGDB: 264×374, que es lo que pide la ranura 3:4 del mosaico sin quedarse corto en pantallas densas. */
@@ -40,6 +40,32 @@ const CACHE_ACIERTO = 'public, max-age=2592000, stale-while-revalidate=86400';
  */
 const CACHE_FALLO = 'no-store';
 
+/**
+ * CUÁNTOS JUEGOS NUEVOS PUEDE RESOLVER UNA MISMA IP EN UNA HORA. Sin esto, `/cover` es un proxy abierto a IGDB:
+ * cualquiera puede pedirle nombres inventados y gastar la cuota de la aplicación de Twitch, las peticiones de
+ * Cloudflare y llenar el KV de claves basura. No hay sesión que exigir —la app funciona sin cuenta—, así que el
+ * límite va por IP.
+ *
+ * Solo cuenta lo que OBLIGA a consultar IGDB: servir una carátula ya emparejada es gratis y no gasta cupo, así
+ * que navegar por una biblioteca ya llena nunca topa. 500 da de sobra para llenar una biblioteca grande de una
+ * sentada (la de referencia tiene 302) y deja margen para volver a intentarlo.
+ *
+ * Es un tope BLANDO: KV no tiene incremento atómico, así que dos peticiones simultáneas pueden leer el mismo
+ * valor y contar una sola vez. Sirve para acotar el abuso, no como frontera de seguridad.
+ */
+const MAX_RESOLUCIONES_HORA = 500;
+
+/** Cupo gastado por una IP en la hora en curso; devuelve `false` cuando ya no queda. */
+async function quedaCupo(env: Env, request: Request): Promise<boolean> {
+  const ip = request.headers.get('CF-Connecting-IP') || 'desconocida';
+  const hora = new Date().toISOString().slice(0, 13); // «2026-09-15T18»
+  const clave = `igdb:cupo:v1:${ip}:${hora}`;
+  const usado = Number(await env.COVERS?.get(clave)) || 0;
+  if (usado >= MAX_RESOLUCIONES_HORA) return false;
+  await env.COVERS?.put(clave, String(usado + 1), { expirationTtl: 3600 });
+  return true;
+}
+
 interface Env extends EntornoIgdb {}
 
 export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise<Response> = async ({ request, env }) => {
@@ -56,16 +82,38 @@ export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise
     return new Response('Falta el nombre del juego', { status: 400 });
   }
 
-  const coverId = await resolverCaratula(
-    env,
-    nombre,
-    plataformas.split(',').map((p) => p.trim()).filter(Boolean),
-  );
+  /* Modo «solo resolver» (`m=1`), el que usa el llenado inicial. Deja el emparejamiento en KV y contesta sin
+     cuerpo: de otro modo, calentar una biblioteca de 300 juegos se descargaría ~6 MB de imágenes que nadie está
+     mirando todavía. Cuando luego se pinte el mosaico, cada carátula ya sale de la caché. */
+  const soloMapa = url.searchParams.get('m') === '1';
+
+  const listaPlataformas = plataformas.split(',').map((p) => p.trim()).filter(Boolean);
+
+  /* Primero la caché, y solo si no hay nada se gasta cupo: lo que se raciona es CONSULTAR a IGDB, no servir lo
+     ya sabido. Así una biblioteca ya llena se navega sin tocar el contador. */
+  let coverId = await leerCaratulaCacheada(env, nombre, listaPlataformas);
+  if (coverId === undefined) {
+    if (!(await quedaCupo(env, request))) {
+      // 429 y `no-store`: es pasajero. Con `Retry-After` en segundos hasta que termine la hora en curso.
+      const restan = 3600 - (Math.floor(Date.now() / 1000) % 3600);
+      return new Response('Demasiadas carátulas nuevas seguidas; inténtalo más tarde', {
+        status: 429,
+        headers: { 'Cache-Control': 'no-store', 'Retry-After': String(restan) },
+      });
+    }
+    coverId = await resolverCaratula(env, nombre, listaPlataformas);
+  }
 
   if (!coverId) {
     // 404 y no una imagen de relleno: quien pinta el hueco es el cliente, que ya tiene su portada de casa puesta
     // debajo. Devolver aquí un PNG genérico obligaría a descargarlo para tapar algo que ya está pintado.
     return new Response('Sin carátula', { status: 404, headers: { 'Cache-Control': CACHE_FALLO } });
+  }
+
+  if (soloMapa) {
+    // 204: hay carátula y ya está apuntada, pero aquí no se envía. `no-store` porque lo que importa de esta
+    // respuesta es el efecto en KV, no la respuesta en sí.
+    return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });
   }
 
   // El id viene de IGDB, pero se valida igual antes de meterlo en una URL: si algún día llega por otro camino,

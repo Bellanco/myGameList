@@ -33,6 +33,8 @@ export const STEAM_BUTTON_KEY = 'mis-listas-steam-button';
 // sincroniza por cuenta (publicConfig.listShape), como el resto de la apariencia. No la lee `theme-init.js`: la
 // forma la decide React al montar el listado, y antes de eso no hay ninguna fila que pintar.
 export const LIST_SHAPE_KEY = 'mis-listas-list-shape';
+/** Carátulas de los juegos. Ausente = APAGADA: nadie descarga nada sin haberlo pedido. */
+export const COVERS_KEY = 'mis-listas-covers';
 
 // F1 — efectos visuales ANIMADOS de los temas (barridos, glitch, parpadeo CRT, deriva de texturas, estrellas
 // fugaces…). Valores: 'on' (activados, por defecto) | 'off' (desactivados). Se aplica vía `data-effects="on"`

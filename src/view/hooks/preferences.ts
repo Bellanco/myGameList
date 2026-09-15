@@ -6,7 +6,7 @@
 //
 // La lógica de aplicación debe seguir siendo IDÉNTICA a la de `public/theme-init.js`, que corre antes del primer
 // render para evitar el flash de tema/paleta/caja.
-import { EFFECTS_KEY, LIST_SHAPE_KEY, PALETTE_KEY, STEAM_BUTTON_KEY, THEME_KEY, UPPERCASE_KEY } from '../../core/constants/storageKeys';
+import { COVERS_KEY, EFFECTS_KEY, LIST_SHAPE_KEY, PALETTE_KEY, STEAM_BUTTON_KEY, THEME_KEY, UPPERCASE_KEY } from '../../core/constants/storageKeys';
 import { paletteBg, parsePaletteId, type PaletteId } from '../../core/constants/palettes';
 import { createPreferenceStore, hydratePreferencesFromCloud } from '../../model/repository/preferenceStore';
 import { loadPaletteSkin } from './paletteSkin';
@@ -138,6 +138,22 @@ export const steamButtonPreference = createPreferenceStore<boolean>({
   parse: (raw) => raw === 'on',
   serialize: onOff.serialize,
   cloudField: 'showSteamButton',
+  fromCloud: onOff.fromCloud,
+});
+
+/**
+ * CARÁTULAS DE LOS JUEGOS. Apagada por defecto, y eso es lo importante de esta preferencia: encenderla es lo que
+ * autoriza a que el mosaico pida imágenes, y con ellas a que el servidor consulte IGDB por los títulos de tu
+ * biblioteca. Sin encenderla, la app no pide ni una sola carátula y las cajas se quedan con su portada de casa.
+ *
+ * Por eso `parse` exige el `'on'` explícito (mismo criterio que el botón de Steam) en vez de `raw !== 'off'`:
+ * ausencia de valor es NO, nunca «supongo que sí».
+ */
+export const coversPreference = createPreferenceStore<boolean>({
+  key: COVERS_KEY,
+  parse: (raw) => raw === 'on',
+  serialize: onOff.serialize,
+  cloudField: 'covers',
   fromCloud: onOff.fromCloud,
 });
 
