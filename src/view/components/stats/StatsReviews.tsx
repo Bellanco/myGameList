@@ -56,8 +56,13 @@ interface StatsReviewsProps {
   onOpenReview: (gameId: number) => void;
   /** Volver de una reseña concreta a donde se abrió. */
   onBackToList: () => void;
-  /** ¿Ese "donde se abrió" es el panel? Cambia solo el rótulo del botón, para no prometer otra pantalla. */
-  backToPanel?: boolean;
+  /**
+   * Rótulo de ese botón, que nombra el sitio al que lleva. Era un booleano («¿se vino del panel?») y se quedó
+   * corto en cuanto hubo un tercer origen —el detalle de un juego del listado—: un booleano solo sabe contar
+   * dos historias, y prometer una pantalla y llevar a otra es lo que hace que nadie se fíe del botón de volver.
+   * Sin rótulo, el de por defecto de `ReviewDetailHead`: «Volver a las reseñas».
+   */
+  backLabel?: string;
 }
 
 /**
@@ -71,7 +76,7 @@ interface StatsReviewsProps {
  * Va por ruta propia y no enlazando al hub social porque tus reseñas son tuyas: enlazar allí las habría dejado
  * detrás del asistente de configuración del espacio social para quien no lo tenga montado.
  */
-export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, onOpenReview, onBackToList, backToPanel = false }: StatsReviewsProps) {
+export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, onOpenReview, onBackToList, backLabel }: StatsReviewsProps) {
   const reviews = useMemo(() => collectReviews(games), [games]);
   const open = gameId > 0 ? reviews.find((entry) => entry.id === gameId) : undefined;
 
@@ -148,7 +153,7 @@ export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, 
         // cabecera se queda con el juego, que es lo único que aquí las diferencia. Antes se pasaba un chip con
         // «Tus reseñas», que ni siquiera era un nombre y repetía lo que ya dice el encabezado de la pantalla.
         onBack={onBackToList}
-        backLabel={backToPanel ? L.backToStats : undefined}
+        backLabel={backLabel}
         status=""
         statusKind=""
         // El botón de compartir solo aparece aquí, sobre TUS reseñas. La misma pantalla se usa en el hub social

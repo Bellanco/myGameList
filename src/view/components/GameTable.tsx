@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import { COMMON_ICONS, TAB_ICONS } from '../../core/constants/icons';
 import { categoryToneStyle } from '../../core/constants/categoryTone';
-import { TAB_TITLES, UI_MESSAGES } from '../../core/constants/labels';
+import { TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from '../../core/constants/labels';
 import { COMPACT_TABLE_MAX_WIDTH } from '../../core/constants/uiConfig';
 import { FilePickerButton } from './FilePickerButton';
 import { GameCover } from './GameCover';
@@ -1039,10 +1039,15 @@ export const GameTable = memo(function GameTable({
                               <Link
                                 className="btn btn-secondary"
                                 to={`/perfil/resenas/${game.id}`}
+                                /* DE DÓNDE SE VIENE, para que el botón de volver de aquella pantalla devuelva
+                                   AQUÍ y no al listado de reseñas, que es de donde se llega normalmente. El
+                                   panel ya usaba este mismo estado para distinguir sus dos orígenes; esta es la
+                                   tercera puerta. */
+                                state={{ backTo: TAB_ROUTE[currentTab] }}
                                 aria-label={UI_MESSAGES.detail.reviewLinkAria(game.name)}
                                 onClick={(event) => event.stopPropagation()}
                               >
-                                <Icon name={COMMON_ICONS.eye} />
+                                <Icon name={COMMON_ICONS.arrowsToEye} />
                                 <span>{UI_MESSAGES.detail.reviewLink}</span>
                               </Link>
                             </div>

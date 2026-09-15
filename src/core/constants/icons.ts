@@ -2,6 +2,7 @@ import type { TabId } from '../../model/types/game';
 
 export type IconName =
   | 'plus'
+  | 'arrows-to-eye'
   | 'check'
   | 'download'
   | 'upload'
@@ -65,6 +66,7 @@ export const TAB_ICONS: Record<TabId, IconName> = {
 
 export const COMMON_ICONS = {
   plus: 'plus',
+  arrowsToEye: 'arrows-to-eye',
   close: 'close',
   logout: 'logout',
   edit: 'edit',
