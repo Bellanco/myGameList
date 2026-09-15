@@ -96,20 +96,38 @@ describe('GameTable — rejilla de columnas de la vista plegada', () => {
     expect(sinNota.container.querySelector('table')?.classList.contains('meta-score')).toBe(false);
   });
 
-  it('las píldoras del meta van en el DOM en el mismo orden en el que se ven, y sin el año', () => {
-    // La rejilla coloca cada categoría en su columna, pero el orden del documento es el que oye un lector de
-    // pantalla: si discrepan, se lee la fila en un orden distinto del que se ve.
-    // El año NO entra en la tarjeta: «2026 +2» se lee como una operación aritmética en vez de como «ese año y
-    // otros dos», y su ancho es el que le hace falta al género para verse entero. Sigue en la columna de
-    // escritorio y en el detalle desplegado, donde salen todos los años y no solo el último.
+  it('las ranuras de categoría van en el DOM en el mismo orden en el que se ven', () => {
+    // La rejilla de columnas invisibles coloca cada categoría en su sitio, pero el orden del documento es el
+    // que oye un lector de pantalla: si discrepan, se lee la fila en un orden distinto del que se ve.
     const { container } = renderGames('c', [makeGame(1)]);
-    const clases = Array.from(container.querySelectorAll('.row-meta .row-meta-item')).map(
-      (item) => item.className.replace('row-meta-item ', ''),
+    const clases = Array.from(container.querySelectorAll('.row-cats .row-cat')).map(
+      (item) => item.className.replace('row-cat ', ''),
     );
-    expect(clases).toEqual(['rm-score', 'rm-plat', 'rm-genre', 'rm-strong']);
+    expect(clases).toEqual(['row-cat-year', 'row-cat-plat', 'row-cat-genre']);
 
-    // Pero la columna de escritorio y el detalle sí siguen contando el año.
+    // Y la columna de escritorio sigue existiendo (es la que el `<colgroup>` dimensiona).
     expect(container.querySelector('td.col-c-year')).not.toBeNull();
+  });
+
+  it('el año del renglón enseña el más reciente y cuenta los demás', () => {
+    // jsdom declara 1024 px de ancho, o sea por debajo del umbral compacto: aquí se mide el renglón de
+    // TELÉFONO, donde la ranura del año mide 6,6 rem y solo cabe uno. El contador es lo que dice que hay más;
+    // en escritorio caben tres y el «+N» aparece a partir del cuarto.
+    const { container } = renderGames('c', [makeGame(1, { years: [2019, 2024, 2021] })]);
+    const chips = Array.from(container.querySelectorAll('.row-cat-year .chip')).map((chip) => chip.textContent);
+
+    expect(chips).toEqual(['2024', '+2']);
+  });
+
+  it('la ranura de la nota se pinta aunque el juego no tenga puntuación, para que las filas no se descuadren', () => {
+    // Si la ranura se encogiera, la insignia de al lado cambiaría de sitio en unas filas sí y en otras no:
+    // es justo la desalineación que el renglón viene a quitar.
+    const { container } = renderGames('v', [makeGame(1, { grade: 0, score: 0 }), makeGame(2, { grade: 80, score: 4 })]);
+    const rangos = container.querySelectorAll('.row-actions .row-score');
+
+    expect(rangos.length).toBe(2);
+    expect(rangos[0].textContent).toBe('');
+    expect(rangos[1].textContent).not.toBe('');
   });
 
   // El `colSpan` de las filas a lo ancho —el detalle desplegado y los espaciadores del virtualizador, que

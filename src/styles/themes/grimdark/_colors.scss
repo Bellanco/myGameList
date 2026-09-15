@@ -27,9 +27,12 @@
   --danger-rgb: 230,59,59;
   --star-empty: #2f5240;
   --star-full: #e0b23a;
-  --chip-plat-fg: #b6d4bb;
-  --chip-plat-bg: rgba(120,200,140,.10);
-  --chip-plat-border: rgba(120,220,150,.30);
+  /* PLATAFORMA · la categoría no puede compartir familia de color con las otras: el rojo es de los puntos
+     débiles, el verde de los fuertes, el ámbar del año y el gris del «+N». Le toca la familia fría, y el tono
+     sale de la identidad de este tema. */
+  --chip-plat-fg: #c3b6ea;
+  --chip-plat-bg: rgba(155,138,224,.12);
+  --chip-plat-border: rgba(155,138,224,.32);
   --hub-text: #d6efd8;
   --hub-text-muted: #90b89a;
   --radius-sm: 0px;
@@ -67,9 +70,9 @@
   --danger-rgb: 179,38,30;
   --star-empty: #c9c1ab;
   --star-full: #a3771a;
-  --chip-plat-fg: #565b4e;
-  --chip-plat-bg: rgba(80,90,70,.10);
-  --chip-plat-border: rgba(80,90,70,.28);
+  --chip-plat-fg: #463483;
+  --chip-plat-bg: rgba(70,52,131,.10);
+  --chip-plat-border: rgba(70,52,131,.28);
   --hub-text: #1b1e1a;
   --hub-text-muted: #565b4e;
   --tint-rgb: 26,30,24;

@@ -36,6 +36,11 @@ export const LIST_SHAPE_KEY = 'mis-listas-list-shape';
 /** Carátulas de los juegos. Ausente = APAGADA: nadie descarga nada sin haberlo pedido. */
 export const COVERS_KEY = 'mis-listas-covers';
 
+// TAMAÑO de los cuadros del mosaico: 'sm' | 'md' (por defecto) | 'lg'. Cuánto ocupa cada cuadro es cuestión de
+// gusto y de pantalla —caben 8 o 5 por fila en el mismo monitor—, así que lo elige quien mira. Se sincroniza
+// por cuenta (publicConfig.gridSize), como el resto de la apariencia.
+export const GRID_SIZE_KEY = 'mis-listas-grid-size';
+
 // F1 — efectos visuales ANIMADOS de los temas (barridos, glitch, parpadeo CRT, deriva de texturas, estrellas
 // fugaces…). Valores: 'on' (activados, por defecto) | 'off' (desactivados). Se aplica vía `data-effects="on"`
 // en <html> (los efectos CSS cuelgan de ese atributo) y se sincroniza por cuenta (publicConfig.effects). No lo

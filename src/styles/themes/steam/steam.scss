@@ -450,16 +450,6 @@
 :root[data-palette="steam"] .chip-deck { --wt-tono: var(--steam); }
 :root[data-palette="steam"] .hub-feed-game-chip,
 :root[data-palette="steam"] .hub-review-game { --wt-tono: var(--wt-igni); }
-/* La misma etiqueta en la tarjeta de móvil, donde la tabla se pliega y los chips pasan a ser `.rm-*`.
-   Sin lacre: a ese tamaño el sello sería mayor que el rótulo. */
-:root[data-palette="steam"] .rm-plat,
-:root[data-palette="steam"] .rm-genre,
-:root[data-palette="steam"] .rm-strong {
-  border: 0; border-radius: 0; color: var(--wt-tinta);
-  background: linear-gradient(168deg, var(--wt-papel-a1), var(--wt-papel-a2) 70%);
-  box-shadow: 0 1px 2px rgba(0,0,0,.3);
-}
-
 /* ── §6b · Los botones-icono (cuenta, ajustes, tema, filtros) eran lo único sin cuerpo: un icono suelto
    sobre el fondo, que en claro casi no se veía. Ahora son REMACHES de la chapa —disco de acero con
    filete y canto de luz— y al pulsarlos se hunden. El FAB es el mismo remache, en grande. ── */

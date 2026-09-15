@@ -44,9 +44,12 @@
   --danger-rgb: 255,112,120;
   --star-empty: #415056;
   --star-full: #f5c451;
-  --chip-plat-fg: #bcc7cb;
-  --chip-plat-bg: rgba(255,122,60,.14);
-  --chip-plat-border: rgba(255,122,60,.34);
+  /* PLATAFORMA · la categoría no puede compartir familia de color con las otras: el rojo es de los puntos
+     débiles, el verde de los fuertes, el ámbar del año y el gris del «+N». Le toca la familia fría, y el tono
+     sale de la identidad de este tema. */
+  --chip-plat-fg: #a8c9f5;
+  --chip-plat-bg: rgba(121,180,255,.14);
+  --chip-plat-border: rgba(121,180,255,.34);
   --hub-text: #f2f6f7;
   --hub-text-muted: #bcc7cb;
   /* El naranja es un acento CLARO: encima va tinta de forja, no blanco (7,44:1 sobre el relleno). */
@@ -85,9 +88,9 @@
   --danger-rgb: 174,39,39;
   --star-empty: #b0bfc3;
   --star-full: #845400;
-  --chip-plat-fg: #3f4c50;
-  --chip-plat-bg: rgba(173,60,6,.10);
-  --chip-plat-border: rgba(173,60,6,.30);
+  --chip-plat-fg: #12559a;
+  --chip-plat-bg: rgba(18,85,154,.10);
+  --chip-plat-border: rgba(18,85,154,.30);
   --hub-text: #101718;
   --hub-text-muted: #3f4c50;
   /* El tono con el que se tiñen sombras y veladuras: la pizarra azulada del taller, no un marrón. */

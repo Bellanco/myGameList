@@ -160,6 +160,8 @@ export interface FirestorePublicConfig {
   effects?: boolean;
   /** F5 — forma del listado: 'list' (renglones) o 'grid' (mosaico). Por defecto, renglones. */
   listShape?: 'list' | 'grid';
+  /** F5 — tamaño de los cuadros del mosaico: 'sm' | 'md' (por defecto) | 'lg'. */
+  gridSize?: 'sm' | 'md' | 'lg';
   /**
    * Carátulas de los juegos. Por defecto AUSENTE, que se lee como apagada: descargar imágenes implica que el
    * servidor pregunte por tus títulos, y eso se activa a mano, nunca por omisión.

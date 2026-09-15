@@ -415,31 +415,6 @@
 :root[data-palette="arcade"][data-theme="light"] .chip-deck { background: #e2e8f6 !important; color: #3b4a68 !important; }
 :root[data-palette="arcade"][data-theme="light"] .chip-more { background: #ece3f7 !important; }
 
-/* LA MISMA PEGATINA EN LA TARJETA DE MÓVIL. Cuando la tabla se pliega en tarjetas, plataforma/género/virtud
-   dejan de ser `.chip` y pasan a ser las mini-píldoras `.rm-*` del meta: si no se nombran aquí, el teléfono
-   —que es donde más se usa la app— se queda con pastillas rectas y pierde la forma del tema. Van sin giro: en
-   una línea que no envuelve, un grado de más descuadra el renglón. */
-:root[data-palette="arcade"] .rm-plat,
-:root[data-palette="arcade"] .rm-genre,
-:root[data-palette="arcade"] .rm-strong {
-  border-radius: var(--radius-pill);
-  border: 1.5px solid var(--arc-sticker);
-  color: var(--arc-on-light);
-  box-shadow: 0 2px 0 rgba(0, 0, 0, .38);
-}
-:root[data-palette="arcade"] .rm-plat { background: linear-gradient(160deg, #d3a6ff, #b23cff); }
-:root[data-palette="arcade"] .rm-genre { background: linear-gradient(160deg, #8ff4ff, #22e5ff); }
-:root[data-palette="arcade"] .rm-strong { background: linear-gradient(160deg, #9ff8d4, #2ef0a6); }
-:root[data-palette="arcade"][data-theme="light"] .rm-plat { background: #ecdcfb; color: var(--fg-link); }
-:root[data-palette="arcade"][data-theme="light"] .rm-genre { background: #d6eef3; color: #065c6b; }
-:root[data-palette="arcade"][data-theme="light"] .rm-strong { background: #d4f0e4; color: #0a6044; }
-:root[data-palette="arcade"][data-theme="light"] .rm-plat,
-:root[data-palette="arcade"][data-theme="light"] .rm-genre,
-:root[data-palette="arcade"][data-theme="light"] .rm-strong {
-  border-color: #fff;
-  box-shadow: 0 0 0 1.5px rgba(123, 27, 208, .3), 0 2px 0 rgba(58, 24, 92, .16);
-}
-
 /* ── §7 · Campos y filtros: lo que se RELLENA se HUNDE (la regla de la casa), pero aquí el hueco es una
    RANURA de la chapa, y una ranura no tiene degradado: la sombra interior es DURA y en diagonal, la misma
    que la de fuera pero al revés. Al enfocar, el tubo de neón cian se enciende alrededor.

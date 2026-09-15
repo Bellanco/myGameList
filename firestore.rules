@@ -268,7 +268,13 @@ service cloud.firestore {
     }
 
     function publicConfigWriteIsValid() {
-      return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale", "palette", "theme", "uppercase", "showSteamButton", "effects", "consent", "feedMoveTabs"])
+      // F5 — `listShape`, `covers` y `gridSize` ENTRAN EN LA LISTA, y llegan tarde: el cliente ya escribía las
+      // dos primeras desde que existen y esta allowlist las denegaba en silencio, igual que le pasó a `effects`
+      // (ver el test «L2» de `tests/integration/firestore.rules.test.ts`). Y no fallaba solo esa clave: un
+      // `hasOnly` que no cuadra rechaza la escritura ENTERA, así que en cuanto alguien cambiaba la forma del
+      // listado dejaban de sincronizarse también su paleta y su tema. Añadirlas solo ABRE lo que se admite:
+      // ningún documento que hoy se guarda deja de guardarse por esto.
+      return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale", "palette", "theme", "uppercase", "showSteamButton", "effects", "consent", "feedMoveTabs", "listShape", "covers", "gridSize"])
         && (!("scoreScale" in request.resource.data)
             || request.resource.data.scoreScale in ["stars", "grade"])
         && (!("theme" in request.resource.data)
@@ -281,6 +287,14 @@ service cloud.firestore {
             || request.resource.data.showSteamButton is bool)
         && (!("effects" in request.resource.data)
             || request.resource.data.effects is bool)
+        // F5 — forma del listado, tamaño de sus cuadros y carátulas. Los dos primeros son enumerados cerrados y
+        // se validan como `theme`: una cadena cualquiera ahí no es una preferencia, es basura en el documento.
+        && (!("listShape" in request.resource.data)
+            || request.resource.data.listShape in ["list", "grid"])
+        && (!("gridSize" in request.resource.data)
+            || request.resource.data.gridSize in ["sm", "md", "lg"])
+        && (!("covers" in request.resource.data)
+            || request.resource.data.covers is bool)
         // F4 — listas de las que su dueño ve los mensajes de actividad: letras de lista ('cevp'), nunca más de
         // cuatro. Se acota el tamaño como en `palette`: es una preferencia, no un sitio donde guardar texto.
         && (!("feedMoveTabs" in request.resource.data)

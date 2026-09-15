@@ -6,7 +6,7 @@
 //
 // La lógica de aplicación debe seguir siendo IDÉNTICA a la de `public/theme-init.js`, que corre antes del primer
 // render para evitar el flash de tema/paleta/caja.
-import { COVERS_KEY, EFFECTS_KEY, LIST_SHAPE_KEY, PALETTE_KEY, STEAM_BUTTON_KEY, THEME_KEY, UPPERCASE_KEY } from '../../core/constants/storageKeys';
+import { COVERS_KEY, EFFECTS_KEY, GRID_SIZE_KEY, LIST_SHAPE_KEY, PALETTE_KEY, STEAM_BUTTON_KEY, THEME_KEY, UPPERCASE_KEY } from '../../core/constants/storageKeys';
 import { paletteBg, parsePaletteId, type PaletteId } from '../../core/constants/palettes';
 import { createPreferenceStore, hydratePreferencesFromCloud } from '../../model/repository/preferenceStore';
 import { loadPaletteSkin } from './paletteSkin';
@@ -127,6 +127,28 @@ export const listShapePreference = createPreferenceStore<ListShape>({
   cloudField: 'listShape',
   fromCloud: (value) => (value === 'grid' || value === 'list' ? value : null),
   applyToDom: (shape) => document.documentElement.setAttribute('data-list-shape', shape),
+});
+
+/**
+ * TAMAÑO DE LOS CUADROS del mosaico. Tres pasos —apretado, normal, holgado— y no un deslizador continuo: lo que
+ * se elige de verdad es «me caben más» o «se ven mejor», y con tres escalones eso son dos pulsaciones en vez de
+ * apuntar a un punto de una barra.
+ *
+ * Cambia el ANCHO MÍNIMO de cuadro que usa `GameTable` para repartir columnas, así que un paso no es un salto
+ * fijo de columnas: a 1440 px salen 8, 6 y 5; en un teléfono, 3, 2 y 1.
+ *
+ * Se escribe en `<html>` con `data-grid-size` para que un tema pueda vestir cada densidad a su manera sin que
+ * ningún componente le pase nada, igual que la forma.
+ */
+export type GridSize = 'sm' | 'md' | 'lg';
+
+export const gridSizePreference = createPreferenceStore<GridSize>({
+  key: GRID_SIZE_KEY,
+  parse: (raw) => (raw === 'sm' || raw === 'lg' ? raw : 'md'),
+  serialize: (size) => size,
+  cloudField: 'gridSize',
+  fromCloud: (value) => (value === 'sm' || value === 'md' || value === 'lg' ? value : null),
+  applyToDom: (size) => document.documentElement.setAttribute('data-grid-size', size),
 });
 
 /**

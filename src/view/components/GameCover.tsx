@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { categoryToneStyle } from '../../core/constants/categoryTone';
 
 /**
@@ -27,23 +27,48 @@ import { categoryToneStyle } from '../../core/constants/categoryTone';
 export const GameCover = memo(function GameCover({
   name,
   src,
+  src2x,
 }: {
   /** Nombre del juego: de él salen el color del relleno y el título de la portada de casa. */
   name: string;
   /** URL de la carátula. Sin ella (lo normal hasta que el emparejador la encuentre) se pinta el relleno. */
   src?: string | null;
+  /**
+   * La misma carátula al doble de resolución, para pantallas de densidad doble. Se ofrece junto a `src` y ELIGE
+   * EL NAVEGADOR: en una pantalla normal ni se pide, así que nadie descarga bytes que no puede ver.
+   *
+   * Con descriptores `1x`/`2x` y no con `w` + `sizes`: la caja mide siempre entre 190 y 240 px, así que lo que
+   * varía no es el hueco sino la densidad. Con `sizes` habría que adivinar el ancho que calcula el JS de la
+   * rejilla, y adivinarlo mal hace que el navegador elija peor que si no le dijéramos nada.
+   */
+  src2x?: string | null;
 }): React.JSX.Element {
-  /* SIN ESTADO DE ERROR, y es deliberado. Hubo una versión que apuntaba qué `src` había fallado para no volver a
-     pintarlo, y se comía carátulas buenas: `onError` NO distingue «esta imagen no existe» de «esta carga se ha
-     cancelado», y la rejilla virtualizada cancela cargas todo el rato al reciclar filas mientras se baja. Un
-     juego que pasaba rápido por pantalla quedaba marcado como roto para el resto de la sesión.
-     No hace falta reaccionar a nada: con la portada de casa debajo, una imagen que no llega no pinta y se ve la
-     portada; si llega más tarde, la tapa. El caso se resuelve solo. */
+  /* EL ESTADO DE LA CARGA, que es de ESTE elemento y no una decisión guardada. Hubo una versión que apuntaba
+     qué `src` había fallado para no volver a pintarlo, y se comía carátulas buenas: `onError` NO distingue
+     «esta imagen no existe» de «esta carga se ha cancelado», y la rejilla virtualizada cancela cargas todo el
+     rato al reciclar filas mientras se baja. Un juego que pasaba rápido por pantalla quedaba marcado como roto
+     para el resto de la sesión.
+     Aquí no se guarda nada: el estado vive y muere con el elemento, y lo único que decide es cuál de las tres
+     caras se enseña ahora mismo. Si una carga se cancela, la siguiente vez vuelve a empezar en «cargando».
+       · `cargando` — hay URL y todavía no ha llegado: se ve la portada de casa, quieta. Mientras se espera no
+                      pasa nada, y es a propósito: un esqueleto animado sobre una portada que ya está pintada es
+                      ruido sobre algo que no falta.
+       · `lista`    — llegó, y es AQUÍ donde ocurre el gesto: la imagen no aparece de golpe, ENTRA. Cómo entra lo
+                      pone cada tema (ver `_table.scss` y las hojas de cada skin).
+       · `sin`      — no hay URL (preferencia apagada, o ya se sabía que no tiene) o la petición falló: se queda
+                      la portada de casa, que es una portada de verdad y no un hueco. */
+  const [estado, setEstado] = useState<'cargando' | 'lista' | 'sin'>(src ? 'cargando' : 'sin');
+
+  /* Al reciclarse el elemento le cambia el `src` sin desmontarse, así que el estado tiene que volver a empezar:
+     sin esto, una caja que ya había cargado enseñaría la imagen ANTERIOR marcada como lista mientras baja la
+     nueva. */
+  useEffect(() => { setEstado(src ? 'cargando' : 'sin'); }, [src]);
+
   return (
-    <div className="game-cover" style={categoryToneStyle(name)} aria-hidden="true">
-      {/* La portada de casa va SIEMPRE, y la imagen se superpone cuando llega. Es lo que hace que no haya ni
-          parpadeo mientras carga ni hueco si la Function responde 404 (juego sin carátula o sin emparejar):
-          debajo ya hay algo pintado y no hay que reaccionar a nada. */}
+    <div className="game-cover" data-carga={estado} style={categoryToneStyle(name)} aria-hidden="true">
+      {/* La portada de casa va SIEMPRE debajo: es lo que hace que no haya hueco si la Function responde 404
+          (juego sin carátula o sin emparejar). Mientras se espera se atenúa —el gesto de carga es el que manda
+          en ese momento— y vuelve entera si la imagen no llega. */}
       <span className="game-cover-placeholder">
         <span className="game-cover-title">{name}</span>
       </span>
@@ -53,9 +78,12 @@ export const GameCover = memo(function GameCover({
         <img
           className="game-cover-img"
           src={src}
+          srcSet={src2x ? `${src} 1x, ${src2x} 2x` : undefined}
           alt=""
           loading="lazy"
           decoding="async"
+          onLoad={() => setEstado('lista')}
+          onError={() => setEstado('sin')}
         />
       ) : null}
     </div>

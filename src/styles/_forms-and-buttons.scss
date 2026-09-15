@@ -8,31 +8,126 @@
 }
 .toolbar-top { display: flex; align-items: center; gap: .6rem; width: 100%; }
 
-/* F5 — CONMUTADOR DE FORMA (lista / cajas). Grupo segmentado: dos botones pegados dentro de una misma caja, que
-   es como se lee «esto son dos maneras de lo mismo» y no «dos acciones sueltas». El activo se rellena con el
-   velo del acento; el otro se queda en tinta atenuada, sin borde propio que compita con el del grupo. */
+/* F5 — CONMUTADOR DE FORMA (lista / cuadros). Grupo segmentado: dos botones pegados dentro de una misma caja,
+   que es como se lee «esto son dos maneras de lo mismo» y no «dos acciones sueltas». El activo se rellena con
+   el velo del acento; el otro se queda en tinta atenuada, sin borde propio que compita con el del grupo.
+   Vive en la cabecera del listado (`.list-head`, ver `_table.scss`), al lado de lo que cambia; estuvo en la
+   caja de filtros y allí se leía como un filtro más. */
 .shape-switch {
   display: flex;
   flex: 0 0 auto;
   gap: .15rem;
-  padding: .2rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
+  padding: .15rem;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-pill);
+  background: var(--bg);
+  box-shadow: var(--sunk);
 }
 .shape-switch-btn {
-  width: 2.1rem;
-  height: 2.1rem;
+  width: 1.95rem;
+  height: 1.95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
+  cursor: pointer;
   background: transparent;
   color: var(--text-dim);
-  border-radius: calc(var(--radius-sm) - 2px);
+  border-radius: var(--radius-pill);
+  transition: background .18s ease, color .18s ease;
 }
 .shape-switch-btn:hover { color: var(--text); background: var(--overlay-hover); }
 .shape-switch-btn.is-on {
   background: var(--steam-soft);
   color: var(--fg-link);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--steam) 40%, transparent);
 }
+.shape-switch-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+/* TAMAÑO DE LOS CUADROS: un deslizador en CUÑA, la figura de un control de volumen. Fina a la izquierda
+   (cuadros pequeños, caben más) y gruesa a la derecha (grandes, caben menos): se entiende sin rótulo, y de paso
+   dibuja lo que hace en vez de limitarse a marcar una posición.
+
+   CÓMO ESTÁ HECHA. La cuña son DOS capas recortadas con el mismo `clip-path` sobre la cápsula: el canal
+   apagado (`::before`, a todo lo ancho) y el relleno del acento (`::after`, tan ancho como diga la posición).
+   El `<input type="range">` va encima, con su carril en transparente: se ve la cuña, pero quien manda sigue
+   siendo un control nativo con su teclado y su arrastre.
+   El relleno sale de `--grid-size-pos` (0..2), que pone el componente. Aquí solo se convierte en porcentaje, y
+   por eso no hay ningún número de pasos que mantener a la par con el JavaScript salvo ese divisor. */
+.grid-size {
+  --grid-size-pasos: 2;
+  --grid-size-cuna: polygon(0 58%, 100% 31%, 100% 69%, 0 66%);
+
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: .3rem .55rem;
+  border-radius: var(--radius-pill);
+}
+.grid-size::before,
+.grid-size::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: .65rem;
+  height: .7rem;
+  transform: translateY(-50%);
+  clip-path: var(--grid-size-cuna);
+  pointer-events: none;
+}
+/* El canal: la cuña entera, a media tinta. */
+.grid-size::before {
+  right: .55rem;
+  background: color-mix(in srgb, var(--text-dim) 26%, transparent);
+}
+/* Y el relleno, hasta donde esté la manecilla. El ancho se mide sobre el carril ÚTIL, que es el que recorre el
+   centro de la manecilla: de ahí el medio disco que se descuenta a cada lado. */
+.grid-size::after {
+  width: calc((100% - 1.1rem - .7rem) * var(--grid-size-pos, 0) / var(--grid-size-pasos) + .35rem);
+  /* El acento rebajado: es un control de ajuste fino que se usa de vez en cuando, no una señal que tenga que
+     llamar desde el otro lado de la pantalla. A plena tinta competía con la pestaña activa. */
+  background: color-mix(in srgb, var(--fg-link) 62%, transparent);
+}
+
+.grid-size-range {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  z-index: 1;
+  width: 4.4rem;
+  height: 1rem;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.grid-size-range:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 4px; border-radius: var(--radius-pill); }
+
+/* El carril nativo desaparece: lo que se ve es la cuña de debajo. Se declaran los dos juegos de seudoelementos
+   (WebKit y Gecko) por separado porque no se pueden juntar en un mismo selector: un navegador que no entiende
+   uno descarta la regla entera. */
+.grid-size-range::-webkit-slider-runnable-track { height: .7rem; background: transparent; }
+.grid-size-range::-moz-range-track { height: .7rem; background: transparent; }
+
+/* LA MANECILLA: un disco pequeño de la superficie con su filete, como el resto de las piezas de la barra. Sin
+   aro de acento: la cuña ya dice dónde está, y dos señales para lo mismo era lo que hacía ruido. */
+@mixin grid-size-manecilla {
+  width: .7rem;
+  height: .7rem;
+  border: 1px solid color-mix(in srgb, var(--fg-link) 55%, transparent);
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(var(--shadow-rgb), .28);
+  cursor: pointer;
+}
+.grid-size-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  /* WebKit centra la manecilla respecto al BORDE SUPERIOR del carril, no respecto a su centro. */
+  margin-top: 0;
+  @include grid-size-manecilla;
+}
+.grid-size-range::-moz-range-thumb { @include grid-size-manecilla; }
 .shape-switch-btn .ui-icon { width: var(--ico-md); height: var(--ico-md); }
 .search-wrap { position: relative; flex: 1 1 auto; min-width: 0; width: 100%; }
 /* LO QUE SE RELLENA SE HUNDE. El campo pide `--sunk` y el botón `--e2`: la misma caja con la luz al revés,
@@ -580,7 +675,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   box-sizing: border-box;
   flex: none;
   width: 1.2rem;
-  height: 1.2rem;
+  height: 1rem;
   margin: 0;
   border: 1.5px solid var(--border);
   border-radius: 0.4rem;
