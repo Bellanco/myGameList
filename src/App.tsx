@@ -13,6 +13,7 @@ import { FloatingControls } from './view/components/FloatingControls';
 import { TabBar } from './view/components/TabBar';
 import { Toolbar } from './view/components/Toolbar';
 import { GameTable } from './view/components/GameTable';
+import { useCoverBackfill } from './view/hooks/useCoverBackfill';
 import { StatusBanner } from './view/components/StatusBanner';
 import { useAchievementNotice } from './view/hooks/useAchievementNotice';
 import { useAnnouncement } from './view/hooks/useAnnouncement';
@@ -198,6 +199,7 @@ export default function App() {
   // porque la serie debe acumularse se visite o no esa pantalla; sin este registro no hay forma de saber cómo
   // evoluciona el backlog (`listedAt` se reescribe al mover de lista). Local, silencioso y en idle.
   useBacklogSnapshot(vm.data);
+  useCoverBackfill(vm.data);
   // Estrellas fugaces aleatorias por los bordes de botones/chips (solo en la paleta "Sol y luna").
   useShootingStars();
   // Efectos de firma por interacción (wipe P5 al navegar, apertura de portal al clic, sol↔luna, boot-up 40K).

@@ -10,12 +10,16 @@
 //
 // La dependencia va en un solo sentido (este módulo importa de `legal.ts`, nunca al revés) para que no se forme
 // un ciclo con `constants/routes`, que también toma `LEGAL_ROUTES` de allí.
-import { LEGAL_CONTACT_EMAIL, LEGAL_CONTROLLER, LEGAL_VERSION, type LegalDocId, type LegalDocument } from './legal';
+import { LEGAL_CONTACT_EMAIL, LEGAL_CONTROLLER, type LegalDocId, type LegalDocument } from './legal';
 
 const TERMS: LegalDocument = {
   id: 'terms',
   title: 'Aviso legal y condiciones de uso',
-  updated: LEGAL_VERSION,
+  // Fecha PROPIA del documento y no `LEGAL_VERSION`, que es lo que `legal.ts` distingue: al declarar las
+  // carátulas (2026-09-15) se añade un tratamiento NUEVO pero OPT-IN y apagado por defecto, que no envía ningún
+  // dato personal —solo el título del juego, y desde el servidor—. Revisar el texto sí; obligar a todo el mundo
+  // a volver a aceptar por algo que no ha empezado a ocurrir todavía, no.
+  updated: '2026-09-15',
   intro:
     'myGameList es un proyecto personal y sin ánimo de lucro para gestionar listas de videojuegos. Al usarlo aceptas estas condiciones.',
   sections: [
@@ -66,7 +70,7 @@ const TERMS: LegalDocument = {
     {
       heading: 'Servicios de terceros',
       paragraphs: [
-        'La app se apoya en GitHub (Gists), Google (inicio de sesión, base de datos y analítica) y Cloudflare (alojamiento). Al usarla, también te aplican sus propias condiciones. Las carátulas y marcas de videojuegos pertenecen a sus titulares.',
+        'La app se apoya en GitHub (Gists), Google (inicio de sesión, base de datos y analítica), Cloudflare (alojamiento) e IGDB/Twitch (datos de videojuegos, solo si activas las carátulas). Al usarla, también te aplican sus propias condiciones. Los datos de videojuegos proceden de IGDB.com. Las carátulas y marcas de videojuegos pertenecen a sus titulares y se muestran con fines identificativos.',
       ],
     },
     {
@@ -87,7 +91,11 @@ const TERMS: LegalDocument = {
 const PRIVACY: LegalDocument = {
   id: 'privacy',
   title: 'Política de privacidad',
-  updated: LEGAL_VERSION,
+  // Fecha PROPIA del documento y no `LEGAL_VERSION`, que es lo que `legal.ts` distingue: al declarar las
+  // carátulas (2026-09-15) se añade un tratamiento NUEVO pero OPT-IN y apagado por defecto, que no envía ningún
+  // dato personal —solo el título del juego, y desde el servidor—. Revisar el texto sí; obligar a todo el mundo
+  // a volver a aceptar por algo que no ha empezado a ocurrir todavía, no.
+  updated: '2026-09-15',
   intro:
     'Esta política explica qué datos trata la app, con qué base y cómo ejercer tus derechos. Está escrita sobre lo que el código hace hoy, no sobre lo que podría hacer.',
   sections: [
@@ -122,6 +130,7 @@ const PRIVACY: LegalDocument = {
         'Google (Firebase Authentication, Cloud Firestore y Analytics): alojamiento de la identidad, del perfil social y de la analítica.',
         'GitHub: alojamiento de tus Gists, en tu propia cuenta.',
         'Cloudflare: alojamiento y entrega de la web.',
+        'IGDB (Twitch), solo si activas las carátulas: recibe el TÍTULO del juego para buscar su portada. La petición la hace el servidor de esta app, no tu navegador, así que IGDB no ve tu dirección IP ni nada que te identifique: solo un nombre de juego, sin saber de quién es la lista ni cuántas más hay. Lo buscado se guarda en una caché compartida por todos los usuarios, de modo que un título ya consultado no se vuelve a preguntar.',
         'Otros usuarios con sesión iniciada: tu nick, tu foto, tu rango, cuándo estuviste activo por última vez, tus logros y tu actividad social, en los términos descritos arriba. Con los logros conviene distinguir dos cosas: la vitrina de medallas solo se PINTA en las fichas de tus amistades, pero el dato viaja en tu perfil, y tu perfil lo puede leer cualquier usuario con sesión, tenga o no amistad contigo. Lo primero es una decisión de presentación; lo que te protege es lo segundo, y es lo que aquí se declara.',
         'Cualquier persona que conozca el identificador de tu Gist social. Ese Gist ya NO es público: la app lo crea (y migra los antiguos) como Gist no listado, así que no aparece en tu perfil de GitHub ni en los buscadores. Pero «no listado» no es «privado»: quien tenga el identificador puede leerlo sin necesidad de sesión en esta app. La app solo lo comparte con tus amistades.',
         'CUALQUIERA, si compartes una reseña con enlace público: esa reseña concreta queda accesible en internet para quien tenga el enlace, sin necesidad de cuenta, hasta que caduque o la retires. Es siempre una acción tuya, reseña a reseña.',
@@ -202,6 +211,14 @@ const COOKIES: LegalDocument = {
       heading: 'Sincronización con GitHub (solo si la configuras)',
       paragraphs: [
         'Si enlazas un Gist, la app habla con la API de GitHub (api.github.com) para leer y escribir tus listas. Es una petición a un servidor ajeno, necesaria para la sincronización que has pedido, y no guarda cookies en tu navegador: la autorización viaja en la propia petición con tu token.',
+      ],
+    },
+    {
+      heading: 'Carátulas de los juegos (solo si las activas)',
+      paragraphs: [
+        'Vienen DESACTIVADAS. Mientras no las enciendas en Cuenta → Apariencia, la app no pide ninguna imagen y no se consulta ningún catálogo.',
+        'Al activarlas, el servidor de esta app busca en IGDB la portada de cada juego de tus listas, usando solo su título. Tu navegador nunca habla con IGDB: pide las imágenes a este mismo sitio, que es quien las trae y las sirve. Por eso IGDB no recibe tu IP y sigue siendo cierto que, navegando por tus listas, tu navegador no contacta con ningún servidor ajeno.',
+        'Lo que viaja es el nombre del juego, nunca tu nota, tu reseña, tus horas ni quién eres. Los emparejamientos se guardan en una caché compartida para no repetir consultas, y las imágenes las conserva tu navegador para que la biblioteca se vea también sin conexión. Puedes apagarlas cuando quieras en el mismo sitio.',
       ],
     },
     {
