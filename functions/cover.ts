@@ -87,11 +87,20 @@ export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise
      mirando todavía. Cuando luego se pinte el mosaico, cada carátula ya sale de la caché. */
   const soloMapa = url.searchParams.get('m') === '1';
 
+  /* MODO AMPLIADO (`x=1`): admite además DLC, packs y mods. Es una lente de diagnóstico del administrador, no
+     una mejora —esas fichas dan peores emparejamientos, no más—, y va en la URL y no en una cabecera por dos
+     razones que se refuerzan: el service worker cachea por URL y sin `Vary` (su cabecera documenta el estropicio
+     que eso causó con `/api/share/mine`), y la caché de KV es compartida. Con el distintivo en la URL, la
+     respuesta ampliada vive en su propio espacio y no puede acabar servida a otra persona.
+     No es una frontera de seguridad: la URL se falsifica. Falsificarla solo te da a ti peores carátulas, y el
+     cupo por IP acota el gasto. Quien manda de verdad sigue siendo `isAdminEmail` en el cliente. */
+  const ampliado = url.searchParams.get('x') === '1';
+
   const listaPlataformas = plataformas.split(',').map((p) => p.trim()).filter(Boolean);
 
   /* Primero la caché, y solo si no hay nada se gasta cupo: lo que se raciona es CONSULTAR a IGDB, no servir lo
      ya sabido. Así una biblioteca ya llena se navega sin tocar el contador. */
-  let coverId = await leerCaratulaCacheada(env, nombre, listaPlataformas);
+  let coverId = await leerCaratulaCacheada(env, nombre, listaPlataformas, ampliado);
   if (coverId === undefined) {
     if (!(await quedaCupo(env, request))) {
       // 429 y `no-store`: es pasajero. Con `Retry-After` en segundos hasta que termine la hora en curso.
@@ -101,7 +110,7 @@ export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise
         headers: { 'Cache-Control': 'no-store', 'Retry-After': String(restan) },
       });
     }
-    coverId = await resolverCaratula(env, nombre, listaPlataformas);
+    coverId = await resolverCaratula(env, nombre, listaPlataformas, ampliado);
   }
 
   if (!coverId) {
