@@ -54,74 +54,12 @@ thead th {
   text-transform: uppercase; letter-spacing: .5px; user-select: none;
   white-space: nowrap; position: sticky; top: 0; z-index: 2;
 }
-thead th.sortable { cursor: pointer; transition: color .2s; padding: 0; }
-/* El botón asume el relleno de la celda para que toda la cabecera sea zona pulsable, heredando
-   tipografía/mayúsculas del <th> para no alterar el aspecto. */
-thead th.sortable .th-sort-btn {
-  display: inline-flex; align-items: center; gap: .4em;
-  width: 100%; padding: .95rem 1rem;
-  background: none; border: 0; margin: 0; cursor: pointer;
-  font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; text-align: left;
-}
-/* Indicador de orden deliberadamente sutil: triángulo diminuto que apenas se percibe salvo en la
-   columna activa; en el resto solo insinúa "ordenable" al pasar el ratón. */
-.th-sort-caret {
-  flex: 0 0 auto; width: 0; height: 0;
-  border-left: 3px solid transparent; border-right: 3px solid transparent;
-  border-bottom: 4px solid currentColor;
-  opacity: 0; transition: opacity .2s, transform .2s;
-}
-@media (hover:hover) {
-  thead th.sortable:hover { color: var(--text); }
-  thead th.sortable:hover .th-sort-caret { opacity: .22; }
-}
-thead th.sorted { color: var(--text); }
-thead th.sorted .th-sort-caret { opacity: .4; }
-thead th.sorted.desc .th-sort-caret { transform: rotate(180deg); }
-@media (prefers-reduced-motion: reduce) {
-  .th-sort-caret { transition: none; }
-}
-
-/* Completados (c): el peso de cada columna (en su <th>/<td>) refleja su importancia
-   (nombre manda, fuertes/débiles los que menos). Solo en escritorio; en tablet/móvil
-   la tabla colapsa a tarjeta y la 1ª celda ocupa el 100%. */
-@media (min-width: 1101px) {
-  .col-c-name   { width: 24%; }
-  .col-c-score  { width: 12%; }
-  .col-c-plat   { width: 15%; }
-  .col-c-genre  { width: 13%; }
-  .col-c-year   { width: 8%; }
-  .col-c-replay { width: 6%; }
-  .col-c-strong { width: 11%; }
-  .col-c-weak   { width: 11%; }
-}
-
-/* Escritorio estrecho: antes de colapsar a tarjeta (≤1100px), en vez de comprimir el nombre
-   hasta partirlo en muchas líneas, retiramos las columnas menos importantes —primero «Puntos
-   débiles», luego «Puntos fuertes»— para dar aire al nombre. Sus datos siguen en el detalle
-   expandible. Al ocultar la columna (th+td), el resto se redistribuye solo. */
-@media (min-width: 1101px) and (max-width: 1340px) {
-  .col-c-weak { display: none; }
-}
-@media (min-width: 1101px) and (max-width: 1200px) {
-  .col-c-strong { display: none; }
-}
-
-/* Tablet/móvil: la tabla colapsa a tarjeta con `table-layout: fixed`. La 1ª columna se lleva el 100% y el
-   resto se anula, para que la tarjeta ocupe todo el ancho (las demás celdas están ocultas).
-   Manda el `<colgroup>`, no las celdas: con `fixed`, la rejilla se construye con la PRIMERA fila de la tabla, y
-   en una biblioteca de más de 120 juegos esa fila es un espaciador del virtualizador que declara `colSpan` con
-   todas las columnas de escritorio. El navegador repartía entonces el ancho a partes iguales entre esas 6–8
-   columnas —46 px cada una en un móvil de 412— y el `width: 100%` de la celda visible no ganaba: el nombre salía
-   a UN CARÁCTER POR LÍNEA y la fila medía 322 px (pasaba en Firefox y en Chrome). Los `<col>` tienen prioridad
-   sobre la primera fila en el algoritmo de `fixed`, así que la rejilla deja de depender de qué fila se pinte
-   primero. Las reglas de celda se quedan como red por si algún día se pinta la tabla sin `colgroup`. */
-table.is-cards col.col-row-main { width: 100%; }
-table.is-cards col.col-row-rest { width: 0; }
-table.is-cards .col-c-name { width: 100%; }
-table.is-cards .col-c-year, table.is-cards .col-c-plat, table.is-cards .col-c-genre,
-table.is-cards .col-c-strong, table.is-cards .col-c-weak,
-table.is-cards .col-c-score, table.is-cards .col-c-replay { width: 0; }
+/* LAS COLUMNAS SE FUERON, y con ellas todo lo que las sostenía: los anchos por importancia de Completados, el
+   plegado progresivo del escritorio estrecho, el `<colgroup>` que fijaba la rejilla de `table-layout: fixed` y
+   los botones de ordenar de la cabecera. El listado tiene UNA columna —el renglón o la fila de tarjetas— y el
+   orden se dice con los chips de su cabecera, así que nada de aquello podía verse ya.
+   `thead th` de arriba SE QUEDA: la bandeja de importados sigue siendo una tabla de tres columnas con su
+   cabecera de verdad. ── */
 
 /* El separador de filas pide `--hair` —el mismo borde a media tinta— y no `--border`: con doscientos juegos en
    pantalla, un filete entero por fila dibuja una reja y la reja se lee antes que los nombres. */
@@ -486,16 +424,12 @@ table.meta-score.meta-grade .row-score { min-width: 2.9rem; }
    esconden. La pone el componente, no una media query: es la preferencia de forma (F5) o una pantalla estrecha,
    y quien lo decide es `GameTable` para que la altura estimada de la fila y lo que se pinta no puedan discrepar. */
 table.is-cards {
-  /* La tabla deja de repartir ancho entre columnas: solo se ve la primera, que se lleva el 100 %. Estas tres
-     reglas vivían repetidas en los dos bloques responsive de `_overlays-and-responsive.scss` (tablet y móvil)
-     con `!important`; ahora son de la FORMA, no del ancho, y por eso están aquí una sola vez. */
+  /* La tabla deja de repartir ancho: su única celda se lleva el 100 %. Estas dos reglas vivían repetidas en los
+     dos bloques responsive de `_overlays-and-responsive.scss` (tablet y móvil) con `!important`; ahora son de
+     la FORMA, no del ancho, y por eso están aquí una sola vez. */
   min-width: 0;
   table-layout: fixed;
-  /* Sin cabecera: en esta forma no hay columnas que pulsar —era justo lo que la hacía parecer una hoja de
-     cálculo— y el orden lo llevan los chips de arriba. */
-  thead { display: none; }
-  tbody tr.main-row td:not(:first-child) { display: none; }
-  tbody tr.main-row td:first-child { width: 100%; }
+  tbody tr.main-row td { width: 100%; }
 
   border-collapse: separate;
   border-spacing: 0 .5rem;
@@ -745,12 +679,11 @@ table.is-cards tbody tr.main-row.has-cover > td:first-child::after {
    aquí solo se parte el ancho en tantas columnas iguales, así que no hay ninguna medida que mantener a la vez
    en los dos sitios: la densidad del mosaico se cambia en esa constante y nada más. ── */
 table.is-grid {
-  /* La tabla base arranca con `min-width: 1050px` para que las columnas no se aplasten; aquí no hay columnas
-     —solo una celda a todo lo ancho con la rejilla dentro—, así que ese mínimo solo servía para sacar el
+  /* La tabla base arranca con `min-width: 1050px`, de cuando tenía columnas que no podían aplastarse; aquí solo
+     hay una celda a todo lo ancho con la rejilla dentro, así que ese mínimo únicamente servía para sacar el
      mosaico fuera de la pantalla en un teléfono. */
   min-width: 0;
   table-layout: fixed;
-  thead { display: none; }
 
   tbody tr.grid-row > td { padding: 0 0 .6rem; border: 0; }
 

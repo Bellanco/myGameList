@@ -63,14 +63,14 @@ interface VirtualRow {
 }
 
 /* Alturas de partida del virtualizador, en píxeles. MEDIDAS SOBRE EL BUILD con la biblioteca real (302 juegos),
-   no elegidas a ojo: 151 px el renglón a 1200 y a 1440 px de ancho —las 302 filas miden lo mismo— y 129 px el
+   no elegidas a ojo: 146 px el renglón a 1200 y a 1440 px de ancho —las 302 filas miden lo mismo— y 129 px el
    mismo renglón en un teléfono de 412, donde las categorías se apilan en dos líneas y la opinión no se pinta
    (131 los que llevan el nombre en dos líneas).
    No hace falta que sean exactas —`measureElement` corrige cada fila en cuanto se pinta— pero sí que estén cerca,
    porque son las que fijan el tamaño total mientras el resto de la lista sigue sin medir: con 1.500 juegos, un
    error del 20 % son 19.000 px de barra de desplazamiento que aparecen de la nada mientras el usuario baja.
    Venían de 63 y 74, del renglón de una sola línea que había antes del rediseño. */
-const MAIN_ROW_ESTIMATE_PX = 151;
+const MAIN_ROW_ESTIMATE_PX = 146;
 const COMPACT_ROW_ESTIMATE_PX = 130;
 const DETAIL_ROW_ESTIMATE_PX = 320;
 /* Mosaico: alto de una FILA de cajas (no de una caja) y ancho mínimo de caja, que es lo que decide cuántas
@@ -151,19 +151,6 @@ function yearsDesc(years?: number[]) {
 
 const MAX_ROW_CHIPS = 3;
 const IMPORT_UI = UI_MESSAGES.import.integrations;
-
-// Clase por columna en Completados (c): controla ancho por importancia y permite ocultar
-// progresivamente las columnas menos importantes en escritorio estrecho (ver _table.scss).
-const C_COLUMN_CLASS: Record<string, string> = {
-  Juego: 'col-c-name',
-  Puntuación: 'col-c-score',
-  Plataformas: 'col-c-plat',
-  Géneros: 'col-c-genre',
-  Año: 'col-c-year',
-  Rejugar: 'col-c-replay',
-  'Puntos fuertes': 'col-c-strong',
-  'Puntos débiles': 'col-c-weak',
-};
 
 // Columnas ordenables: etiqueta de cabecera → clave de orden que entiende `sortGames`/`sortBy`.
 // El resto de cabeceras (Puntos fuertes/débiles, Rejugar…) no son ordenables.
@@ -273,10 +260,6 @@ export const GameTable = memo(function GameTable({
   const showHours = visibility?.showHours ?? true;
   const showReview = visibility?.showReview ?? true;
 
-  // Clase de columna de Completados, solo cuando la pestaña es 'c' (las celdas plat/género/score
-  // se comparten con otras pestañas, que no llevan estas clases de peso/ocultación).
-  const cCol = (cls: string | undefined) => (currentTab === 'c' ? cls : undefined);
-
   // ¿Tiene este juego una nota que mostrar? En la vergüenza la puntuación es OPT-IN (el check del formulario), y
   // los no puntuados se guardan con nota 0, así que basta con mirar la nota efectiva. Se comprueba así, y no por
   // el flag `scored`, porque los juegos guardados ANTES de que ese flag existiera tienen nota pero no flag: con
@@ -292,6 +275,11 @@ export const GameTable = memo(function GameTable({
     [currentTab, games],
   );
 
+  /* QUÉ DATOS LLEVA ESTA LISTA, en el orden en el que se ven. Era la lista de cabeceras de la tabla, y de ahí
+     los nombres; hoy la tabla no tiene cabeceras —ni columnas— y lo único que queda de aquello es esto: la
+     fuente de la que salen los chips de ordenar. Se conserva la lista COMPLETA, con los datos que no se pueden
+     ordenar («Puntos fuertes», «Rejugar»…), porque el filtro por `SORT_COLUMN` de más abajo es quien decide, y
+     tenerlos aquí documenta qué enseña cada pestaña. */
   const getTableHeaders = (): string[] => {
     if (currentTab === 'c') {
       return [
@@ -321,12 +309,6 @@ export const GameTable = memo(function GameTable({
   };
 
   const supportsReview = (tab: TabId) => tab !== 'p';
-  const getColSpan = (tab: TabId) => {
-    if (tab === 'c') return 6 + (showYears ? 1 : 0) + (showReplayable ? 1 : 0);
-    if (tab === 'v') return 5 + (showShameScore ? 1 : 0) + (showRetry ? 1 : 0);
-    if (tab === 'e') return 5;
-    return 4;
-  };
 
   // Por debajo de `COMPACT_TABLE_MAX_WIDTH` no cabe una fila de tabla, se pinte lo que se pinte. Se calcula
   // aquí y no con un listener propio porque este efecto ya escucha `resize` y observa el `<body>`: es
@@ -353,6 +335,19 @@ export const GameTable = memo(function GameTable({
      mods, que dan PEORES emparejamientos— sino una lente para ver qué hay en el catálogo. Su respuesta vive en
      un espacio de caché aparte, así que encenderla no le cambia la carátula a nadie más. */
   const coversAmpliadas = useIsAdmin();
+  /* LA RESOLUCIÓN DE LA FRANJA, y por qué no es la misma para todo el mundo. La portada a 1080p pesa unos 150 kB
+     por juego y la de 720, unos 80: recorrer una biblioteca de trescientos son 45 MB contra 24. Y la diferencia
+     no se ve: se compararon las dos recortadas en la franja y con su velo encima, y a 151 px de alto con el 90 %
+     de la superficie del tema delante, el detalle que aporta doblar los píxeles no llega a la pantalla. Así que
+     la grande deja de ser lo normal y pasa a ser lo que se lleva MITHRIL, que es el rango que paga la factura de
+     los privilegios (ver `PROFILE_TIER_*` en `constants/tiers`).
+     Se resuelve con `useIsAdmin` y no leyendo el perfil porque hoy son lo mismo: `ADMIN_ONLY_TIER` es mithril y
+     el panel solo ofrece ese rango en la fila del propio administrador. Leer el perfil aquí costaría una lectura
+     de Firestore en el listado a todo el mundo, incluido quien no ha abierto el hub social en su vida. Si algún
+     día mithril se le concede a alguien más, ESTA línea es la que hay que cambiar.
+     Y como el modo ampliado: el tamaño viaja en la URL, así que se puede falsificar. Falsificarlo solo te cuesta
+     bytes a ti, y el cupo por IP sigue acotando el gasto de resolver. */
+  const franjaGrande = coversAmpliadas;
   /* El MOSAICO también vale en un teléfono: sus columnas salen del mismo mínimo de caja que en escritorio (a
      412 px caben dos), así que elegir «cajas» en el móvil ya no revierte a renglones sin avisar. */
   const cards = shape === 'list';
@@ -547,8 +542,6 @@ export const GameTable = memo(function GameTable({
 
   const gameMap = useMemo(() => new Map(games.map((g) => [g.id, g])), [games]);
 
-  // Una sola lectura de las cabeceras: la usan el `<thead>` y el `<colgroup>`, y si discrepasen en número el
-  // ancho de columna se repartiría entre columnas que no existen.
   const tableHeaders = getTableHeaders();
 
   // ¿Esta lista tiene COLUMNA de puntuación? Mismo criterio que las cabeceras de escritorio: Completados y
@@ -670,70 +663,21 @@ export const GameTable = memo(function GameTable({
           </div>
         </div>
       ) : null}
-      {/* La clase de lista la usa el CSS para la escalera de revelado del meta compacto: cada pestaña tiene un
-          juego de datos distinto (En curso no lleva nota ni año), así que la píldora que llena la línea en un
-          móvil no es la misma en todas. */}
+      {/* SIGUE SIENDO UNA TABLA, con UNA columna. Y no es una rareza que haya sobrevivido a un refactor: es lo
+          que permite que el virtualizador mida FILAS de verdad —cada renglón, cada fila de tarjetas y cada
+          detalle desplegado son un `<tr>` que se mide— mientras el CSS pinta piezas sueltas. Lo que sí se fue
+          con las columnas es su cabecera: `<thead>` y `<colgroup>` estaban ahí para repartir un ancho entre 6-8
+          columnas que hoy no existen, y sus botones de ordenar llevaban tiempo sin poder pulsarse (el orden se
+          dice con los chips de la cabecera del listado). */}
       <table className={tableClass}>
         {/* A11y-4: la tabla no se anunciaba con ningún nombre, así que en la lista de tablas de un lector de
             pantalla aparecía como "tabla" sin más. Con varias listas (completados, vergüenza, en curso…) el
             nombre es lo único que las distingue. */}
         <caption className="sr-only">{UI_MESSAGES.table.caption(TAB_TITLES[currentTab], games.length)}</caption>
-        {/* Anchos de columna de la vista colapsada (móvil/tablet), donde la tabla es `table-layout: fixed` y
-            solo se ve la primera columna. Con `fixed` la rejilla se construye con la PRIMERA fila, y en una
-            biblioteca grande esa fila es un espaciador del virtualizador que declara `colSpan` con TODAS las
-            columnas de escritorio: el navegador repartía el ancho entre esas 6–8 columnas (46 px cada una en un
-            móvil) e ignoraba el `width: 100%` de la celda visible. Los `<col>` tienen prioridad sobre la primera
-            fila en ese algoritmo, así que fijan la rejilla sin depender de qué fila se pinte primero. */}
-        <colgroup>
-          {tableHeaders.map((header, index) => (
-            <col key={header} className={index === 0 ? 'col-row-main' : 'col-row-rest'} />
-          ))}
-        </colgroup>
-        <thead>
-          <tr>
-            {tableHeaders.map((header) => {
-              const sortKey = SORT_COLUMN[header];
-              const sortable = Boolean(onSort && sortKey);
-              const isSorted = sortable && sort?.col === sortKey;
-              const dir = isSorted ? (sort?.asc ? 'asc' : 'desc') : undefined;
-              const tip = sortable
-                ? UI_MESSAGES.table.sortHeaderTip(header)
-                : header === 'Rejugar'
-                  ? UI_MESSAGES.table.replayHeaderTip
-                  : header === 'Dar otra oportunidad'
-                    ? UI_MESSAGES.table.retryHeaderTip
-                    : undefined;
-              const thClass = [cCol(C_COLUMN_CLASS[header]), sortable ? 'sortable' : '', isSorted ? 'sorted' : '', dir ?? '']
-                .filter(Boolean)
-                .join(' ');
-              return (
-                <th
-                  key={header}
-                  // A11y-4: `scope="col"` explícito. Sin él, la asociación celda↔cabecera depende de la
-                  // heurística del navegador, y es la que permite a un lector de pantalla decir "Plataformas: PC"
-                  // al recorrer una fila en vez de solo "PC".
-                  scope="col"
-                  title={tip}
-                  className={thClass || undefined}
-                  aria-sort={isSorted ? (sort?.asc ? 'ascending' : 'descending') : sortable ? 'none' : undefined}
-                >
-                  {sortable ? (
-                    <button type="button" className="th-sort-btn" onClick={() => onSort?.(currentTab, sortKey)}>
-                      <span>{header}</span>
-                      <span className="th-sort-caret" aria-hidden="true" />
-                    </button>
-                  ) : (
-                    header
-                  )}
-                </th>
-              );
-            })}
-          </tr>
-        </thead>
         <tbody>
           {!games.length ? (
             <tr>
-              <td colSpan={getColSpan(currentTab)} className="table-empty-cell">
+              <td className="table-empty-cell">
                 <div className="table-empty">
                   <svg className="table-empty-icon" aria-hidden="true">
                     <use href={`#icon-${TAB_ICONS[currentTab]}`} />
@@ -777,7 +721,7 @@ export const GameTable = memo(function GameTable({
             <>
               {topSpacerHeight > 0 && !fallbackToFullRender ? (
                 <tr aria-hidden="true">
-                  <td colSpan={getColSpan(currentTab)} className="table-spacer" style={{ height: `${topSpacerHeight}px` }} />
+                  <td className="table-spacer" style={{ height: `${topSpacerHeight}px` }} />
                 </tr>
               ) : null}
               {rowIndexesToRender.map((rowIndex) => {
@@ -797,7 +741,7 @@ export const GameTable = memo(function GameTable({
                       ref={virtualize ? virtualizer.measureElement : undefined}
                       className="grid-row"
                     >
-                      <td colSpan={getColSpan(currentTab)}>
+                      <td>
                         <div className="game-grid" style={{ '--grid-cols': gridColumns } as CSSProperties}>
                           {bloque.map((game) => {
                             const expanded = expandedId === game.id;
@@ -901,7 +845,7 @@ export const GameTable = memo(function GameTable({
                      no como `<img>` porque aquí no se mira: no necesita alt, ni hueco reservado, ni participar
                      en la medición de la fila. Sin preferencia de carátulas encendida —o sin imagen para ese
                      juego— la pieza se queda en su superficie plana, que es la maqueta §2. */
-                  const rowCover = coverSrc(covers, game, coversAmpliadas, 'ancho');
+                  const rowCover = coverSrc(covers, game, coversAmpliadas, franjaGrande ? 'ancho' : 'medio');
                   return (
                     <tr
                       key={`main-${game.id}`}
@@ -918,7 +862,7 @@ export const GameTable = memo(function GameTable({
                         }
                       }}
                     >
-                      <td className={cCol('col-c-name')}>
+                      <td>
                         <button
                           type="button"
                           className="row-toggle"
@@ -1002,22 +946,6 @@ export const GameTable = memo(function GameTable({
                           </span>
                         </button>
                       </td>
-                      {currentTab === 'c' && showYears ? <td className="col-c-year">{renderTags(yearsDesc(game.years), 'chip-generic', MAX_ROW_CHIPS)}</td> : null}
-                      <td className={cCol('col-c-plat')}>{renderTags(game.platforms, 'chip-plat', MAX_ROW_CHIPS)}</td>
-                      <td className={cCol('col-c-genre')}>{renderTags(game.genres, 'chip-genre', MAX_ROW_CHIPS, true)}</td>
-                      {(currentTab === 'c' || currentTab === 'v' || currentTab === 'e') ? (
-                        <td className={cCol('col-c-strong')}>{renderTags(game.strengths || [], 'chip-pf', MAX_ROW_CHIPS)}</td>
-                      ) : null}
-                      {(currentTab === 'c' || currentTab === 'e') ? (
-                        <td className={cCol('col-c-weak')}>{renderTags(game.weaknesses || [], 'chip-pd', MAX_ROW_CHIPS)}</td>
-                      ) : null}
-                      {currentTab === 'v' ? <td>{renderTags(game.reasons || [], 'chip-pd', MAX_ROW_CHIPS)}</td> : null}
-                      {(currentTab === 'c' || currentTab === 'p') ? <td className={cCol('col-c-score')}><ScoreDisplay game={game} /></td> : null}
-                      {/* Vergüenza: la nota, y solo si el juego la tiene (los no puntuados dejan la celda vacía,
-                          sin estrellas a cero ni guion, que darían a entender una puntuación de 0). */}
-                      {showShameScore ? <td>{hasScore(game) ? <ScoreDisplay game={game} /> : null}</td> : null}
-                      {currentTab === 'c' && showReplayable ? <td className="col-c-replay">{renderBooleanBadge('replayable', Boolean(game.replayable))}</td> : null}
-                      {currentTab === 'v' && showRetry ? <td>{renderBooleanBadge('retry', Boolean(game.retry))}</td> : null}
                     </tr>
                   );
                 }
@@ -1026,7 +954,7 @@ export const GameTable = memo(function GameTable({
 
                 return (
                   <tr key={`detail-${game.id}`} id={`game-detail-${game.id}`} data-index={rowIndex} ref={virtualize ? virtualizer.measureElement : undefined} className={`detail-row open ${game.id === removingId ? 'is-leaving' : ''}`.trim()}>
-                    <td colSpan={getColSpan(currentTab)}>
+                    <td>
                       <div className="detail-content">
                         <div className="detail-box">
                           <span className="detail-label">{UI_MESSAGES.detail.platforms}</span>
@@ -1161,7 +1089,7 @@ export const GameTable = memo(function GameTable({
               })}
               {bottomSpacerHeight > 0 && !fallbackToFullRender ? (
                 <tr aria-hidden="true">
-                  <td colSpan={getColSpan(currentTab)} className="table-spacer" style={{ height: `${bottomSpacerHeight}px` }} />
+                  <td className="table-spacer" style={{ height: `${bottomSpacerHeight}px` }} />
                 </tr>
               ) : null}
             </>

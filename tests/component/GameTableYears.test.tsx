@@ -34,18 +34,6 @@ function renderTable(games: GameItem[]) {
 // Los años se guardan ascendentes, pero al pintarlos manda el más reciente: es el dato útil de la fila
 // y, cuando hay más de tres, es el que debe sobrevivir al truncado por `MAX_ROW_CHIPS`.
 describe('GameTable — años de más reciente a más antiguo', () => {
-  it('renders the year chips in descending order', () => {
-    const { container } = renderTable([makeGame({ years: [2018, 2024, 2021] })]);
-    const chips = container.querySelectorAll('.col-c-year .chip');
-    expect(Array.from(chips).map((chip) => chip.textContent)).toEqual(['2024', '2021', '2018']);
-  });
-
-  it('keeps the most recent years when the row truncates the chips', () => {
-    const { container } = renderTable([makeGame({ years: [2015, 2016, 2017, 2018, 2024] })]);
-    const chips = container.querySelectorAll('.col-c-year .chip');
-    expect(Array.from(chips).map((chip) => chip.textContent)).toEqual(['2024', '2018', '2017', '+2']);
-  });
-
   // En el RENGLÓN los años van del más reciente al más antiguo y con su contador, igual que llevaban en su
   // columna. Cuántos caben lo decide el ancho: tres en escritorio, uno en el teléfono —que es el que mide
   // jsdom, con sus 1024 px por debajo del umbral compacto—. Todos, en el detalle desplegado.
