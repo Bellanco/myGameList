@@ -33,17 +33,31 @@ export const GameCover = memo(function GameCover({
   /** URL de la carátula. Sin ella (lo normal hasta que el emparejador la encuentre) se pinta el relleno. */
   src?: string | null;
 }): React.JSX.Element {
+  /* SIN ESTADO DE ERROR, y es deliberado. Hubo una versión que apuntaba qué `src` había fallado para no volver a
+     pintarlo, y se comía carátulas buenas: `onError` NO distingue «esta imagen no existe» de «esta carga se ha
+     cancelado», y la rejilla virtualizada cancela cargas todo el rato al reciclar filas mientras se baja. Un
+     juego que pasaba rápido por pantalla quedaba marcado como roto para el resto de la sesión.
+     No hace falta reaccionar a nada: con la portada de casa debajo, una imagen que no llega no pinta y se ve la
+     portada; si llega más tarde, la tapa. El caso se resuelve solo. */
   return (
     <div className="game-cover" style={categoryToneStyle(name)} aria-hidden="true">
+      {/* La portada de casa va SIEMPRE, y la imagen se superpone cuando llega. Es lo que hace que no haya ni
+          parpadeo mientras carga ni hueco si la Function responde 404 (juego sin carátula o sin emparejar):
+          debajo ya hay algo pintado y no hay que reaccionar a nada. */}
+      <span className="game-cover-placeholder">
+        <span className="game-cover-title">{name}</span>
+      </span>
       {src ? (
         // `loading="lazy"`: en una biblioteca de 300 juegos, el mosaico pediría 300 imágenes de golpe.
         // `decoding="async"` para que descodificar una carátula no bloquee el pintado de la fila.
-        <img className="game-cover-img" src={src} alt="" loading="lazy" decoding="async" />
-      ) : (
-        <span className="game-cover-placeholder">
-          <span className="game-cover-title">{name}</span>
-        </span>
-      )}
+        <img
+          className="game-cover-img"
+          src={src}
+          alt=""
+          loading="lazy"
+          decoding="async"
+        />
+      ) : null}
     </div>
   );
 });

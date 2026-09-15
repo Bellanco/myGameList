@@ -561,6 +561,11 @@ table.is-grid {
 }
 
 .game-cover-img {
+  /* Superpuesta a la portada de casa, que está siempre debajo: si la imagen tarda o no llega, lo que se ve es
+     una portada y no un hueco. `object-fit: cover` porque el arte de IGDB es 264×374 (0,706) y la ranura es 3:4
+     (0,75): sobra un pelo de alto y se recorta, que se nota menos que una banda vacía a los lados. */
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;

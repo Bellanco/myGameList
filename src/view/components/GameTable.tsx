@@ -6,6 +6,7 @@ import { TAB_TITLES, UI_MESSAGES } from '../../core/constants/labels';
 import { COMPACT_TABLE_MAX_WIDTH } from '../../core/constants/uiConfig';
 import { FilePickerButton } from './FilePickerButton';
 import { GameCover } from './GameCover';
+import { coverUrl } from '../../core/utils/coverUrl';
 import type { GameItem, TabId, TabSort } from '../../model/types/game';
 import type { TabAction } from '../../viewmodel/useGameListViewModel';
 import { resolveGrade } from '../../core/utils/scoreScale';
@@ -699,7 +700,7 @@ export const GameTable = memo(function GameTable({
                                 >
                                   <span className="sr-only">{game.name}</span>
                                 </button>
-                                <GameCover name={game.name} />
+                                <GameCover name={game.name} src={coverUrl(game.name, game.platforms)} />
                                 <header className="game-card-head">
                                   <h3 className="game-card-name" title={game.name}>{game.name}</h3>
                                   {(currentTab === 'c' || currentTab === 'p') || (showShameScore && hasScore(game)) ? (
