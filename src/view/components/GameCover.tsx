@@ -15,11 +15,11 @@ import { categoryToneStyle } from '../../core/constants/categoryTone';
  * los géneros (`categoryTone`). Sale de un hash del nombre, así que es ESTABLE —el mismo juego tiene siempre su
  * color— y el tono concreto lo pone cada tema, como todo lo demás.
  *
- * Y LLEVA EL TÍTULO COMPUESTO, no solo las iniciales. La razón es de contexto: una pantalla entera de monogramas
- * se leía bien, pero UN monograma entre carátulas de verdad parece un hueco, un fallo de carga. Con el título
- * puesto deja de parecer que falta algo y pasa a parecer una portada sobria —que es lo que es—. Se descartó el
- * `nocover.png` de IGDB por lo contrario: es un recuadro gris con su logo y «COVER MISSING», o sea la marca de
- * un tercero y cara de error, ajena a los temas.
+ * Y LLEVA EL TÍTULO, solo el título. Hubo un paso intermedio con las iniciales en grande, y el contexto lo
+ * desmintió: una pantalla entera de monogramas se leía bien, pero UNO entre carátulas de verdad parecía un fallo
+ * de carga. El nombre compuesto no: se lee como una portada sobria, que es lo que es, y además identifica el
+ * juego igual de bien que una carátula. Se descartó el `nocover.png` de IGDB por lo contrario: es un recuadro
+ * gris con su logo y «COVER MISSING», o sea la marca de un tercero y cara de error, ajena a los temas.
  *
  * `aria-hidden`: decorativo a propósito. El nombre ya lo anuncian el título de la caja y el texto del botón que
  * la abre; repetirlo aquí haría que un lector de pantalla dijera el juego tres veces por caja.
@@ -28,7 +28,7 @@ export const GameCover = memo(function GameCover({
   name,
   src,
 }: {
-  /** Nombre del juego: de él salen el color del relleno y el monograma. */
+  /** Nombre del juego: de él salen el color del relleno y el título de la portada de casa. */
   name: string;
   /** URL de la carátula. Sin ella (lo normal hasta que el emparejador la encuentre) se pinta el relleno. */
   src?: string | null;
@@ -41,7 +41,6 @@ export const GameCover = memo(function GameCover({
         <img className="game-cover-img" src={src} alt="" loading="lazy" decoding="async" />
       ) : (
         <span className="game-cover-placeholder">
-          <span className="game-cover-mark">{monogram(name)}</span>
           <span className="game-cover-title">{name}</span>
         </span>
       )}
@@ -49,26 +48,3 @@ export const GameCover = memo(function GameCover({
   );
 });
 
-/**
- * Dos letras a partir del título: iniciales de sus dos primeras palabras con peso («Hollow Knight» → HK), o las
- * dos primeras letras si solo hay una («Inside» → IN).
- *
- * Se descarta el artículo inicial y nada más. La tentación es filtrar todas las palabras vacías, pero entonces
- * «Ori and the Blind Forest» y «Ori and the Will of the Wisps» dan las mismas letras: el monograma solo
- * distingue si conserva lo que viene justo detrás del nombre de la saga.
- */
-function monogram(name: string): string {
-  const palabras = name
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^\p{L}\p{N} ]/gu, ' ')
-    .split(/\s+/)
-    .filter(Boolean);
-
-  if (palabras.length > 1 && /^(the|el|la|los|las|a|an)$/i.test(palabras[0])) {
-    palabras.shift();
-  }
-  if (!palabras.length) return '?';
-  if (palabras.length === 1) return palabras[0].slice(0, 2).toUpperCase();
-  return (palabras[0][0] + palabras[1][0]).toUpperCase();
-}
