@@ -66,9 +66,9 @@ export const GameCover = memo(function GameCover({
 
   return (
     <div className="game-cover" data-carga={estado} style={categoryToneStyle(name)} aria-hidden="true">
-      {/* La portada de casa va SIEMPRE debajo: es lo que hace que no haya hueco si la Function responde 404
-          (juego sin carátula o sin emparejar). Mientras se espera se atenúa —el gesto de carga es el que manda
-          en ese momento— y vuelve entera si la imagen no llega. */}
+      {/* La portada de casa va SIEMPRE debajo, y QUIETA: es lo que hace que mientras se espera no falte nada, y
+          que no quede un hueco si la Function responde 404 (juego sin carátula o sin emparejar). El gesto no
+          ocurre aquí, ocurre cuando la imagen entra. */}
       <span className="game-cover-placeholder">
         <span className="game-cover-title">{name}</span>
       </span>

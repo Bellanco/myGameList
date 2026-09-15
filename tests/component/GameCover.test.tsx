@@ -5,7 +5,7 @@
 // —`onError` no distingue «no existe» de «se ha cancelado», y la rejilla virtualizada cancela cargas sin parar—,
 // y que de un juego del que ya se sabe que no tiene carátula no se vuelve a pedir la imagen.
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { GameCover } from '../../src/view/components/GameCover';
 import { coverUrl } from '../../src/core/utils/coverUrl';
 import {
@@ -84,6 +84,47 @@ describe('la ranura', () => {
     const { container } = render(<GameCover name="Celeste" src="/cover?n=Celeste" />);
     expect(container.querySelector('.game-cover')?.getAttribute('aria-hidden')).toBe('true');
     expect(container.querySelector('img')?.getAttribute('alt')).toBe('');
+  });
+
+  /* EL ESTADO DE LA CARGA (`data-carga`) no es decoración: de él cuelga la OPACIDAD de la imagen. La hoja la
+     pinta solo con `[data-carga="lista"]`, así que si el estado no llegara a «lista» la carátula estaría
+     descargada, en el DOM y con su hueco… y a cero. Sería un fallo invisible: ni error en consola, ni test de
+     aspecto que lo note. Por eso se comprueban las tres caras. */
+  it('empieza en «cargando» cuando hay URL, y pasa a «lista» cuando la imagen llega', () => {
+    const { container } = render(<GameCover name="Hades" src="/cover?n=Hades" />);
+    const ranura = () => container.querySelector('.game-cover')?.getAttribute('data-carga');
+
+    expect(ranura()).toBe('cargando');
+    fireEvent.load(container.querySelector('img')!);
+    expect(ranura()).toBe('lista');
+  });
+
+  it('sin URL nace en «sin»: no hay nada que esperar y la portada de casa es lo definitivo', () => {
+    const { container } = render(<GameCover name="Hades" />);
+    expect(container.querySelector('.game-cover')?.getAttribute('data-carga')).toBe('sin');
+  });
+
+  it('si la petición falla vuelve a «sin», pero NO se apunta nada: el fallo es de esta carga, no del juego', () => {
+    const { container } = render(<GameCover name="Hades" src="/cover?n=Hades" />);
+    fireEvent.error(container.querySelector('img')!);
+
+    expect(container.querySelector('.game-cover')?.getAttribute('data-carga')).toBe('sin');
+    // La portada de casa sigue debajo, que es lo que evita el hueco.
+    expect(screen.getByText('Hades')).toBeInTheDocument();
+    // Y la memoria de «este juego no tiene carátula» no se toca: `onError` no distingue «no existe» de
+    // «se ha cancelado», y la rejilla virtualizada cancela cargas todo el rato.
+    expect(sabemosQueNoTiene('/cover?n=Hades')).toBe(false);
+  });
+
+  it('al reciclarse la caja con otra carátula vuelve a empezar, y no enseña la anterior como lista', () => {
+    // La rejilla virtualizada no desmonta las cajas: les cambia el `src`. Sin reiniciar el estado, la caja
+    // seguiría marcada como «lista» y la imagen vieja se vería a plena opacidad mientras baja la nueva.
+    const { container, rerender } = render(<GameCover name="Hades" src="/cover?n=Hades" />);
+    fireEvent.load(container.querySelector('img')!);
+    expect(container.querySelector('.game-cover')?.getAttribute('data-carga')).toBe('lista');
+
+    rerender(<GameCover name="Celeste" src="/cover?n=Celeste" />);
+    expect(container.querySelector('.game-cover')?.getAttribute('data-carga')).toBe('cargando');
   });
 
   it('el mismo juego recibe siempre el mismo tono, en esta y en la próxima sesión', () => {

@@ -101,16 +101,34 @@ La (1) es la que hace que el mosaico se lea como una colección y no como fichas
 
 ## 4. Lo que falta, además de eso
 
-- Vestido propio por tema: las dos formas usan superficies y chips de la paleta, así que cada skin les pone ya
-  su canto, su letra y su color —se comprobó en las seis—, pero ninguna tiene un gesto propio en el renglón ni
-  en la caja.
+- ~~Vestido propio por tema~~: las dos formas usan superficies y chips de la paleta, así que cada skin les pone
+  su canto, su letra y su color —comprobado en las ocho—, y desde el gesto de entrada de la carátula hay además
+  dos con firma propia («Sin futuro»/Grimdark y Portal). Queda por decidir si el renglón y la caja merecen algún
+  gesto más allá de eso.
 - ~~Las otras tres pestañas~~: revisadas. Próximos y En curso no tienen año ni insignia, y la rejilla deja esas
   ranuras a cero sin dejar hueco; Abandonados lleva la nota solo si algún juego está puntuado.
 - Tests: un recorrido (e2e) con biblioteca grande que compruebe que en mosaico no se pintan más cajas por fila
-  de las que caben y que la virtualización sigue midiendo filas. *(La alineación del renglón y la regularidad
-  de la caja sí están cubiertas en `tests/component/GameTableColumns.test.tsx`.)*
-- Decidir si el conmutador va también en /cuenta → Apariencia (hoy solo en la barra).
+  de las que caben y que la virtualización sigue midiendo filas. *(Ya están cubiertas la alineación del renglón
+  y la regularidad de la caja (`GameTableColumns.test.tsx`), las tres caras de la carga (`GameCover.test.tsx`) y
+  la preferencia de tamaño (`gridSizePreference.test.ts`).)*
+- Decidir si el conmutador va también en /cuenta → Apariencia (hoy solo en la barra del listado).
 - El detalle en mosaico funciona, pero no se ha probado con teclado.
+
+**~~Y lo que queda por limpiar~~ — HECHO:** la tabla clásica era código muerto y se ha ido. `shape` solo vale
+`list` o `grid`, así que el `<table>` llevaba siempre `is-cards` o `is-grid` y las dos escondían el `<thead>`: se
+pintaban 8 celdas por fila de las que 7 eran `display:none`, más una cabecera con cinco botones de ordenar que
+nadie podía pulsar. Con ella se fueron `C_COLUMN_CLASS`, `cCol()`, `getColSpan()`, el `<thead>`, el `<colgroup>`
+y, en el CSS, los anchos de `@media (min-width: 1101px)`, el plegado del escritorio estrecho y el bloque
+`.th-sort-*`. **326 nodos menos** en la pantalla del listado.
+
+Lo que SÍ se queda es el `<table>`: es lo que permite que el virtualizador mida FILAS de verdad —cada renglón,
+cada fila de tarjetas y cada detalle son un `<tr>` que se mide— mientras el CSS pinta piezas sueltas. Y con una
+sola columna desaparece la clase de fallo que obligó a poner el `<colgroup>` (el reparto de ancho entre 6-8
+columnas que dejaba el nombre a un carácter por línea): ya no hay nada que repartir. El invariante «una sola
+columna» está cubierto en `GameTableColumns.test.tsx`.
+
+`thead th` sigue en la hoja de estilos, y no es un resto: la bandeja de importados es una tabla de tres columnas
+con cabecera de verdad.
 
 ---
 
@@ -280,7 +298,7 @@ esquinas las que forman el canto de la pieza (las recorta el `overflow: hidden` 
 margen alrededor y la caja dibujaba su borde por fuera — dos cantos separados por unos milímetros, y la portada
 se leía como una lámina pegada encima en vez de como la cara de la pieza.
 
-### 6.5 La espera de una carátula, y el tamaño de los cuadros
+### 6.5 Cómo entra una carátula, y el tamaño de los cuadros
 
 **Cómo entra una carátula.** La imagen aparecía de golpe sobre la portada de casa: un salto seco de un
 fotograma al siguiente que se lee como un fallo de pintado. `GameCover` tiene tres caras (`data-carga`):
@@ -299,6 +317,9 @@ La versión base es un fundido con un punto de acercamiento; «Sin futuro» y Gr
 descolocadas (`steps(1, end)`, que es lo que lo hace glitch y no barrido), y Portal la enciende a parpadeos,
 como el tubo fluorescente de sus chips. Los dos son gestos de FIRMA, así que van con los efectos encendidos;
 apagados queda el fundido de la casa.
+
+**Duran 1,8 s**, que es largo para una transición de interfaz y corto para lo que es: la carátula
+INSTALÁNDOSE. A medio segundo el gesto pasaba tan deprisa que volvía a leerse como un salto.
 
 **La animación es decoración sobre un estado que ya funciona**: la opacidad final la pone la regla y no el
 último fotograma (nada de `fill-mode: both`), así que con `prefers-reduced-motion`, con los efectos apagados o

@@ -3,6 +3,77 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows the git tags.
 
+## [1.3.0] - Sin publicar
+
+> Todavía no lanzada. Lo que hay aquí vive en `feat/formas-listado` y será la versión que se suba a producción
+> cuando se decida; la fecha se pone al poner el tag.
+
+### Added
+- **El listado deja de parecer una hoja de cálculo, y ahora tiene dos formas.** Se elige desde la cabecera del
+  propio listado: **lista** —un renglón por juego— o **tarjetas** —un mosaico por el que pasear—. La forma se
+  recuerda y viaja con la cuenta, así que el móvil y el ordenador enseñan lo mismo.
+- **El renglón, en tres pisos y con columnas invisibles.** Arriba el nombre con la nota y la insignia pegadas al
+  canto derecho; debajo, año, plataformas y géneros, cada uno en su ranura; y debajo, en dos recuadros hundidos,
+  los puntos fuertes y los débiles. Las ranuras tienen ancho fijo, así que el género de una fila cae justo
+  debajo del de la siguiente **sin que haya que dibujar una sola línea ni una cabecera**: se recupera la lectura
+  en vertical que se perdió al quitar las columnas, que era el motivo por el que los datos parecían puestos a lo
+  loco. Medido sobre la biblioteca de referencia, las 302 filas miden exactamente lo mismo.
+- **Las tarjetas enseñan siempre lo mismo y en el mismo sitio:** una plataforma, un género, la nota flotando
+  sobre el canto de la carátula y la insignia sobre el de abajo, y al pie un medidor que cruza la caja con el
+  tono rojo→verde de la nota. Antes cada caja enseñaba lo que tenía —dos chips o cuatro, con año o sin él— y esa
+  desigualdad se leía como descuido.
+- **Un deslizador para el tamaño de las tarjetas**, en forma de cuña como un control de volumen: tres pasos que
+  a 1440 px dan 8, 6 o 5 columnas, y en un teléfono 3, 2 o 1. También viaja con la cuenta.
+- **La carátula entra, no aparece.** Mientras se espera no pasa nada —se ve la portada de casa, quieta—, y el
+  gesto ocurre al llegar la imagen, para que no se plante de golpe. Lo pone cada tema: fundido con un punto de
+  acercamiento en la mayoría, la imagen rearmándose a franjas descolocadas en «Sin futuro» y «Grimdark», y un
+  encendido a parpadeos de tubo fluorescente en «Cámara de pruebas».
+- **La carátula también viste el renglón**, recortada en una franja que lo cruza de lado a lado y con un velo de
+  la superficie del tema encima para que el texto no pierda contraste.
+
+### Changed
+- **El orden ya no se pulsa en las cabeceras**, que era justo lo que hacía que aquello pareciera una tabla de
+  cálculo. Ahora son palabras a la vista en la cabecera del listado: la activa se tiñe con el acento y lleva una
+  punta que dice el sentido, y volver a pulsarla lo invierte.
+- **El recuento, el orden y la forma son una sola pieza**, con la misma superficie y el mismo canto que las
+  filas. El conmutador de forma estaba metido en la caja de filtros, donde se leía como un filtro más.
+- **La plataforma cambia de color en cinco paletas.** Es una categoría más del renglón y compartía sitio con
+  otras cuatro que ya tienen su familia con significado —rojo los puntos débiles, verde los fuertes, ámbar el
+  año, gris el «+N»—; en «Plata y acero», «Cámara de pruebas» y «Ladrones de corazones» era gris, y en
+  «Grimdark», verde. Pasa a la familia fría, con el tono que le toca a cada una dentro de su propia identidad.
+- **El mosaico funciona en el teléfono.** Elegir «tarjetas» en un móvil revertía a renglones sin avisar.
+- Las mayúsculas del listado obedecen a la preferencia de apariencia, como el resto de los rótulos.
+
+### Fixed
+- **La forma del listado y las carátulas no se sincronizaban, y de paso tumbaban las demás preferencias.** La
+  lista de claves admitidas en `publicConfig` (`firestore.rules`) no incluía `listShape` ni `covers`, que el
+  cliente lleva escribiendo desde que existen. Una lista de claves que no cuadra **rechaza la escritura entera**,
+  así que a quien hubiera tocado la forma del listado le dejaban de viajar también la paleta y el tema. Mismo
+  caso que le pasó a `effects` en su día.
+- **Las carátulas no se veían en desarrollo** y no había forma de saber por qué: `/cover` es una Pages Function
+  y el servidor de Vite no las ejecuta, así que devolvía el HTML de la aplicación y el `<img>` se quedaba en
+  blanco, sin un solo error. Ahora el servidor de desarrollo la sirve con el mismo emparejador que producción.
+
+### Performance
+- **La franja del renglón pide la resolución que le toca.** Se compararon las portadas a 1080p y a 720p ya
+  recortadas y con su velo encima: a 151 px de alto no se distinguen. La grande queda para el rango mithril y
+  el resto usa la media, que pesa la mitad: recorrer una biblioteca de trescientos juegos pasa de unos 45 MB a
+  unos 24.
+- **Fuera la tabla de escritorio, que llevaba tiempo sin poder verse.** El listado lleva siempre una de las dos
+  formas nuevas y las dos escondían la cabecera, así que se pintaban 8 celdas por fila de las que 7 eran
+  invisibles, más cinco botones de ordenar que nadie podía pulsar. En la pantalla del listado son **326 nodos
+  menos**.
+
+### Tests
+- Las tres caras de la carga de una carátula, que era un fallo invisible: de ese estado cuelga la opacidad de la
+  imagen, así que si dejara de llegar a «lista» la carátula estaría descargada, en su sitio y a cero, sin error
+  en consola ni nada que lo delatara.
+- La preferencia del tamaño de las tarjetas, incluido que un valor con forma inesperada caiga en el paso de en
+  medio: ese número entra en una división, y un valor raro no da un mosaico feo, da la lista en blanco.
+- Que el listado sigue teniendo una sola columna, que es lo que hace imposible el reparto de ancho que dejaba el
+  nombre a un carácter por línea.
+- Que `publicConfig` admite la forma, el tamaño y las carátulas, y rechaza lo que no sea un valor conocido.
+
 ## [1.2.6] - 2026-09-12
 
 ### Fixed

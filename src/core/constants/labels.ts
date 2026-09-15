@@ -362,8 +362,8 @@ export const UI_MESSAGES = {
     /* F5 — forma del listado. El grupo se anuncia como lo que es (dos opciones excluyentes) y cada botón dice
        a QUÉ se cambia, no cómo se está viendo: es lo que espera quien lo pulsa. */
     shapeAria: 'Forma del listado',
-    shapeList: 'Ver en lista',
-    shapeGrid: 'Ver en tarjetas',
+    shapeList: 'Ver lista',
+    shapeGrid: 'Ver tarjetas',
     /* Recuento de la barra del listado. Dice lo que se está viendo AHORA —con los filtros puestos—, no el total
        de la lista: es el pie de la decisión que se acaba de tomar en los filtros de arriba. */
     listCount: (count: number) => `${count} ${count === 1 ? 'juego' : 'juegos'}`,
