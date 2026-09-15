@@ -9,9 +9,12 @@
  * Las plataformas viajan porque son el desempate entre homónimos: hay dos juegos llamados «Hook» y lo único que
  * dice cuál es el tuyo es que tú tienes el de Mega Drive.
  */
-export function coverUrl(name: string, platforms: readonly string[] = []): string {
+export function coverUrl(name: string, platforms: readonly string[] = [], ampliado = false): string {
   const parametros = new URLSearchParams({ n: name });
   const plataformas = platforms.filter(Boolean).join(',');
   if (plataformas) parametros.set('p', plataformas);
+  /* `x=1` pide el modo ampliado (DLC, packs y mods), que solo enciende la cuenta de administración. Va en la URL
+     a propósito: así su respuesta tiene clave de caché propia y no puede colarse en la de los demás. */
+  if (ampliado) parametros.set('x', '1');
   return `/cover?${parametros.toString()}`;
 }

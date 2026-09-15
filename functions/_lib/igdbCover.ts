@@ -35,17 +35,39 @@ const EDICIONES =
   /\b(goty|game of the year|definitive|complete|deluxe|enhanced|remastered|remaster|redux|anniversary|classic|directors cut|edition|ultimate|collection|trilogy|bundle|pack|hd|version)\b/g;
 
 /**
- * Tipos de ficha que SIGUEN siendo el juego: principal (0), expansión independiente (4), remake (8), remaster
- * (9), expandido (10) y port (11).
+ * Tipos de ficha, en TRES grados. La diferencia no es de calidad del dato: es de qué puede haber en la
+ * estantería de alguien.
  *
- * El 4 faltaba, y se llevó por delante tres juegos reales de una biblioteca de 302: *Wolfenstein: The Old Blood*
- * (461 votos), *Dishonored: Death of the Outsider* (236) y *Commandos: Beyond the Call of Duty* (106). Una
- * «expansión independiente» no es un DLC: se compra y se juega sola, así que está en la estantería de su dueño
- * como cualquier otro juego y tiene su propia carátula. Quedan fuera, a propósito, el DLC (1), la expansión que
- * exige el juego base (2), los packs (3, 13) y los mods (5): esos no son entradas de una biblioteca, y colarlos
- * era lo que ponía la carátula de un pack de skins donde iba la del juego.
+ * FUERTES — el juego en sí: principal (0), expansión independiente (4), remake (8), remaster (9), expandido (10)
+ * y port (11). El 4 faltaba, y se llevó por delante tres juegos reales de una biblioteca de 302: *Wolfenstein:
+ * The Old Blood* (461 votos), *Dishonored: Death of the Outsider* (236) y *Commandos: Beyond the Call of Duty*
+ * (106). Una expansión independiente se compra y se juega sola; está en la estantería como cualquier otro.
  */
-const TIPOS_JUEGO = new Set([0, 4, 8, 9, 10, 11]);
+const TIPOS_FUERTES = new Set([0, 4, 8, 9, 10, 11]);
+
+/**
+ * DÉBIL — la expansión que exige el juego base (2). Se admite porque hay quien la lista como entrada propia
+ * («The Witcher 3: Blood and Wine»), pero SIEMPRE por debajo de un tipo fuerte con el mismo parecido de nombre:
+ * si existe el juego, gana el juego. Sin ese matiz, una expansión con nombre más corto podía desbancarlo.
+ */
+const TIPOS_DEBILES = new Set([2]);
+
+/**
+ * AMPLIADOS — DLC (1), bundle (3), mod (5) y pack (13). Fuera salvo que se pida el modo ampliado, y no por
+ * capricho: NO dan más carátulas, dan peores. Son cosas que se llaman casi igual que el juego y compiten con él.
+ * Con ellos dentro, *Batman: Arkham Knight* emparejaba con «- PlayStation 4 Exclusive Skins Pack» y *Dishonored:
+ * Death of the Outsider* con un «Jewel of the South Pack». Es una lente para mirar qué hay, no una mejora.
+ */
+const TIPOS_AMPLIADOS = new Set([1, 3, 5, 13]);
+
+/** ¿Esta ficha entra, y con qué fuerza? `null` = no entra. */
+function gradoDeTipo(tipo: number | undefined, ampliado: boolean): 1 | 0 | null {
+  if (tipo === undefined) return 1; // ficha sin tipo declarado: se trata como juego, que es lo habitual
+  if (TIPOS_FUERTES.has(tipo)) return 1;
+  if (TIPOS_DEBILES.has(tipo)) return 0;
+  if (ampliado && TIPOS_AMPLIADOS.has(tipo)) return 0;
+  return null;
+}
 
 /**
  * Forma canónica de un título para compararlo: sin acentos, sin marcas, sin puntuación, y con los números
@@ -171,15 +193,15 @@ export function puntuarFicha(buscado: string, ficha: FichaIgdb): number {
 }
 
 /**
- * Orden de preferencia entre candidatos, de más a menos decisivo: parecido del nombre → coincide la plataforma →
- * tiene carátula → cuánta gente lo ha valorado.
+ * Orden de preferencia entre candidatos, de más a menos decisivo: parecido del nombre → es el juego y no una
+ * expansión → coincide la plataforma → tiene carátula → cuánta gente lo ha valorado.
  *
  * La popularidad va la última pero hace un trabajo enorme: es lo que separa el *Portal* de Valve (4.023 votos) de
  * la novela de ordenador de 1986 que se llama igual (6 votos), y el *Dredge* de verdad (245) de un *Dredge+* sin
  * carátula (0). Ojo con subirla de sitio: por encima de la plataforma le quitaría a Hook su Mega Drive.
  */
-function clave(nombre: number, casaPlataforma: boolean, tieneCaratula: boolean, votos: number): number[] {
-  return [nombre, casaPlataforma ? 1 : 0, tieneCaratula ? 1 : 0, votos];
+function clave(nombre: number, grado: number, casaPlataforma: boolean, tieneCaratula: boolean, votos: number): number[] {
+  return [nombre, grado, casaPlataforma ? 1 : 0, tieneCaratula ? 1 : 0, votos];
 }
 
 function ganaA(candidata: number[], campeona: number[] | null): boolean {
@@ -303,6 +325,7 @@ export async function emparejar(
   env: EntornoIgdb,
   nombre: string,
   plataformas: readonly string[],
+  ampliado = false,
 ): Promise<Emparejamiento> {
   const token = await tokenIgdb(env);
   if (!token) return { coverId: null, indeciso: true };
@@ -319,12 +342,13 @@ export async function emparejar(
       continue;
     }
     for (const ficha of fichas) {
-      if (ficha.game_type !== undefined && !TIPOS_JUEGO.has(ficha.game_type)) continue;
+      const grado = gradoDeTipo(ficha.game_type, ampliado);
+      if (grado === null) continue;
       const nota = puntuarFicha(nombre, ficha);
       if (nota < 0.6) continue;
       const abreviaturas = (ficha.platforms ?? []).map((p) => p.abbreviation).filter(Boolean) as string[];
       const casa = quiero.size > 0 && abreviaturas.some((abbr) => quiero.has(abbr));
-      const candidata = clave(nota, casa, Boolean(ficha.cover?.image_id), ficha.total_rating_count ?? 0);
+      const candidata = clave(nota, grado, casa, Boolean(ficha.cover?.image_id), ficha.total_rating_count ?? 0);
       if (ganaA(candidata, campeona)) {
         campeona = candidata;
         elegida = ficha;
@@ -335,7 +359,7 @@ export async function emparejar(
     // verdad, nombre exacto, plataforma y carátula, no hay nada mejor que encontrar.
     // NO se exige que case la plataforma: pedirlo hacía que casi todos los juegos agotaran las cuatro consultas,
     // y ese multiplicador por cuatro es justo lo que revienta el tope de IGDB en la primera carga.
-    if (campeona && campeona[0] >= 0.95 && campeona[2] === 1 && campeona[3] >= VOTOS_CREIBLES) {
+    if (campeona && campeona[0] >= 0.95 && campeona[1] === 1 && campeona[3] === 1 && campeona[4] >= VOTOS_CREIBLES) {
       break;
     }
   }
@@ -347,10 +371,15 @@ export async function emparejar(
   return { coverId: elegida.cover?.image_id ?? null, match: elegida.name, score: campeona[0] };
 }
 
-/** Clave de caché. Incluye la plataforma porque es parte de la pregunta: el «Hook» de Mega Drive no es el de móvil. */
-export function claveCache(nombre: string, plataformas: readonly string[]): string {
+/**
+ * Clave de caché. Incluye la plataforma porque es parte de la pregunta —el «Hook» de Mega Drive no es el de
+ * móvil— y el modo ampliado en un ESPACIO APARTE, que no es un detalle: esta caché la comparten todos los
+ * usuarios, así que sin separarlos la lente de diagnóstico del administrador le pondría a los demás la carátula
+ * de un pack de skins.
+ */
+export function claveCache(nombre: string, plataformas: readonly string[], ampliado = false): string {
   const plats = [...plataformasEsperadas(plataformas)].sort().join('+') || '-';
-  return `igdb:cover:v2:${normalizarTitulo(nombre)}|${plats}`;
+  return `igdb:cover:${ampliado ? 'v2x' : 'v2'}:${normalizarTitulo(nombre)}|${plats}`;
 }
 
 /**
@@ -367,8 +396,9 @@ export async function leerCaratulaCacheada(
   env: EntornoIgdb,
   nombre: string,
   plataformas: readonly string[],
+  ampliado = false,
 ): Promise<string | null | undefined> {
-  const cacheado = await env.COVERS?.get(claveCache(nombre, plataformas));
+  const cacheado = await env.COVERS?.get(claveCache(nombre, plataformas, ampliado));
   if (cacheado === null || cacheado === undefined) return undefined;
   return cacheado === '' ? null : cacheado;
 }
@@ -377,12 +407,13 @@ export async function resolverCaratula(
   env: EntornoIgdb,
   nombre: string,
   plataformas: readonly string[],
+  ampliado = false,
 ): Promise<string | null> {
-  const clave = claveCache(nombre, plataformas);
+  const clave = claveCache(nombre, plataformas, ampliado);
   const cacheado = await env.COVERS?.get(clave);
   if (cacheado !== null && cacheado !== undefined) return cacheado === '' ? null : cacheado;
 
-  const { coverId, indeciso } = await emparejar(env, nombre, plataformas);
+  const { coverId, indeciso } = await emparejar(env, nombre, plataformas, ampliado);
   if (!coverId && indeciso) return null; // no se ha podido preguntar: ni se cachea ni se da por definitivo
   await env.COVERS?.put(clave, coverId ?? '', { expirationTtl: coverId ? HIT_TTL : MISS_TTL });
   return coverId;
