@@ -13,8 +13,13 @@ import { categoryToneStyle } from '../../core/constants/categoryTone';
  *
  * EL RELLENO CUANDO NO HAY IMAGEN no es un hueco gris: es el mismo reparto de la rampa categórica que ya tiñe
  * los géneros (`categoryTone`). Sale de un hash del nombre, así que es ESTABLE —el mismo juego tiene siempre su
- * color— y el tono concreto lo pone cada tema, como todo lo demás. Un juego sin carátula no parece un juego
- * roto, parece un juego con su color.
+ * color— y el tono concreto lo pone cada tema, como todo lo demás.
+ *
+ * Y LLEVA EL TÍTULO COMPUESTO, no solo las iniciales. La razón es de contexto: una pantalla entera de monogramas
+ * se leía bien, pero UN monograma entre carátulas de verdad parece un hueco, un fallo de carga. Con el título
+ * puesto deja de parecer que falta algo y pasa a parecer una portada sobria —que es lo que es—. Se descartó el
+ * `nocover.png` de IGDB por lo contrario: es un recuadro gris con su logo y «COVER MISSING», o sea la marca de
+ * un tercero y cara de error, ajena a los temas.
  *
  * `aria-hidden`: decorativo a propósito. El nombre ya lo anuncian el título de la caja y el texto del botón que
  * la abre; repetirlo aquí haría que un lector de pantalla dijera el juego tres veces por caja.
@@ -35,7 +40,10 @@ export const GameCover = memo(function GameCover({
         // `decoding="async"` para que descodificar una carátula no bloquee el pintado de la fila.
         <img className="game-cover-img" src={src} alt="" loading="lazy" decoding="async" />
       ) : (
-        <span className="game-cover-monogram">{monogram(name)}</span>
+        <span className="game-cover-placeholder">
+          <span className="game-cover-mark">{monogram(name)}</span>
+          <span className="game-cover-title">{name}</span>
+        </span>
       )}
     </div>
   );
