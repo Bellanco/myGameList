@@ -19,7 +19,7 @@ const TERMS: LegalDocument = {
   // carátulas (2026-09-15) se añade un tratamiento NUEVO pero OPT-IN y apagado por defecto, que no envía ningún
   // dato personal —solo el título del juego, y desde el servidor—. Revisar el texto sí; obligar a todo el mundo
   // a volver a aceptar por algo que no ha empezado a ocurrir todavía, no.
-  updated: '2026-09-15',
+  updated: '2026-09-16',
   intro:
     'myGameList es un proyecto personal y sin ánimo de lucro para gestionar listas de videojuegos. Al usarlo aceptas estas condiciones.',
   sections: [
@@ -77,6 +77,12 @@ const TERMS: LegalDocument = {
       heading: 'Licencia del software',
       paragraphs: [
         'El código fuente se publica bajo GNU GPL-3.0-or-later y puedes usarlo, estudiarlo y modificarlo según esa licencia. Estas condiciones regulan el SERVICIO alojado, no la licencia del código, que no se ve limitada por ellas.',
+        /* ATRIBUCIÓN OBLIGATORIA, no un agradecimiento. Los iconos de Font Awesome Free van bajo CC BY 4.0, y
+           esa licencia EXIGE citar la fuente en un sitio visible para quien usa la obra: por eso esta frase
+           está en el aviso legal y no en un comentario del código. Los sprites lo dan por hecho y apuntan aquí
+           (ver `view/components/IconSprite`). Al añadir un icono de una procedencia nueva, esta lista es la que
+           hay que revisar. */
+        'Parte de lo que ves no es de quien firma la app. Los iconos de la interfaz salen de Font Awesome Free (© Fonticons, Inc.), cuyos dibujos se publican bajo CC BY 4.0, y de Material Symbols (© Google, Apache 2.0); los de las medallas de logros, de Lucide (© Lucide Contributors, ISC). Las fuentes se sirven desde este mismo dominio bajo la SIL Open Font License 1.1, con su aviso completo en el propio directorio que las contiene. Cada una conserva su licencia, que es independiente de la del código.',
       ],
     },
     {
