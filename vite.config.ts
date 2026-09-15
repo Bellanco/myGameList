@@ -223,7 +223,10 @@ function localCoverApi(): Plugin {
      ranura del mosaico, y el ancho el que pide el renglón para recortar su franja sin ampliar seis veces una
      imagen de 264 px. Si aquí solo hubiera uno, en desarrollo el renglón saldría borroso y en producción no,
      que es justo la diferencia que este plugin existe para no tener. */
-  const TAMANOS = { normal: 't_cover_big', ancho: 't_1080p' } as const;
+  /* Los MISMOS tres de `functions/cover.ts`. Se repiten aquí porque aquel exporta el tipo, no el mapa; si allí
+     se añade uno, hay que añadirlo aquí — y si se olvida, desarrollo serviría otra imagen que producción, que es
+     justo la divergencia que este plugin existe para no tener. */
+  const TAMANOS: Record<string, string> = { normal: 't_cover_big', medio: 't_720p', ancho: 't_1080p' };
 
   /** Lee un valor de un fichero en formato `CLAVE=valor`, que es el de `.dev.vars`. */
   const deDevVars = (clave: string): string => {
@@ -321,7 +324,7 @@ function localCoverApi(): Plugin {
         const plataformas = (url.searchParams.get('p') ?? '').split(',').map((p) => p.trim()).filter(Boolean);
         const soloMapa = url.searchParams.get('m') === '1';
         const ampliado = url.searchParams.get('x') === '1';
-        const tamano = url.searchParams.get('s') === 'ancho' ? TAMANOS.ancho : TAMANOS.normal;
+        const tamano = TAMANOS[url.searchParams.get('s') ?? ''] ?? TAMANOS.normal;
 
         void (async () => {
           try {

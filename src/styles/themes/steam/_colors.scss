@@ -56,9 +56,12 @@
   --danger-rgb: 255,107,98;
   --star-empty: #4b5666;
   --star-full: #f2c75c;
-  --chip-plat-fg: #cfd7e1;
-  --chip-plat-bg: rgba(198,206,216,.12);
-  --chip-plat-border: rgba(198,206,216,.32);
+  /* PLATAFORMA · la categoría no puede compartir familia de color con las otras: el rojo es de los puntos
+     débiles, el verde de los fuertes, el ámbar del año y el gris del «+N». Le toca la familia fría, y el tono
+     sale de la identidad de este tema. */
+  --chip-plat-fg: #b9d6ff;
+  --chip-plat-bg: rgba(127,188,255,.12);
+  --chip-plat-border: rgba(127,188,255,.32);
   --hub-text: #f0f4f8;
   --hub-text-muted: #bcc6d3;
   /* La plata es un acento CLARO: encima va tinta, no blanco (11,5:1 sobre la plata pura). */
@@ -118,9 +121,9 @@
   --danger-rgb: 158,38,32;
   --star-empty: #b9c3cd;
   --star-full: #6f4800;
-  --chip-plat-fg: #3f4a58;
-  --chip-plat-bg: rgba(71,82,95,.10);
-  --chip-plat-border: rgba(71,82,95,.30);
+  --chip-plat-fg: #15538f;
+  --chip-plat-bg: rgba(21,83,143,.10);
+  --chip-plat-border: rgba(21,83,143,.30);
   --hub-text: #141b23;
   --hub-text-muted: #414b57;
   --tint-rgb: 30,42,56;

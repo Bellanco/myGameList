@@ -146,7 +146,6 @@ export const AppearanceSettings = memo(function AppearanceSettings() {
           <span>{A.coversOff}</span>
         </button>
       </div>
-      <p className="settings-card-note">{A.coversHint}</p>
     </div>
   );
 });

@@ -200,7 +200,9 @@
 
 .main-lists {
   position: relative;
-  /* Contenedor para el meta dinámico de las filas (revela categorías según el ancho). */
+  /* Contenedor del renglón: es su ancho —no el de la ventana— el que decide si las ranuras de categoría van
+     en columnas invisibles o apiladas. Se mide aquí porque el mismo renglón se pinta también dentro de una
+     tarjeta del hub social, que es bastante más estrecha que la pantalla. */
   container-type: inline-size;
   container-name: gamelist;
 }

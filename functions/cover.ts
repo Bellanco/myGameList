@@ -19,8 +19,29 @@
 import { leerCaratulaCacheada, resolverCaratula, type EntornoIgdb } from './_lib/igdbCover';
 
 const IMAGENES = 'https://images.igdb.com/igdb/image/upload';
-/** Tamaño de IGDB: 264×374, que es lo que pide la ranura 3:4 del mosaico sin quedarse corto en pantallas densas. */
-const TAMANO = 't_cover_big';
+/**
+ * LOS TRES TAMAÑOS, y por qué hacen falta los tres.
+ *
+ * `t_cover_big` son 264×374: exactamente lo que pide la ranura 3:4 del mosaico, y ~25 kB por juego.
+ *
+ * `t_1080p` es la misma imagen hasta 1080 px de alto (una portada sale a ~762×1080), y la pide SOLO el renglón
+ * de la lista, donde la portada se recorta en una franja que cruza la fila entera: a 1.400 px de ancho, ampliar
+ * los 264 px de la pequeña son casi seis aumentos y lo que queda es una mancha de color, que es justo lo que no
+ * se quería. Con la grande el aumento baja a menos de dos y la franja se reconoce.
+ *
+ * Cuesta unos 120 kB por juego en vez de 25, y por eso NO es el tamaño por defecto: lo pide quien lo necesita.
+ * El service worker las guarda igual (misma regla de origen propio), así que se paga una vez por juego.
+ *
+ * `t_720p` (508×720, ~82 kB) es el del medio, y existe por una medición concreta: en una pantalla de densidad
+ * doble la caja del mosaico ocupa 471×627 píxeles REALES, así que los 264 de la pequeña se estiran 1,78 veces y
+ * la carátula sale blanda. Con este, el aumento desaparece. No sustituye a la pequeña: el mosaico ofrece los dos
+ * con `srcset` y es el navegador quien elige, de modo que una pantalla normal se sigue llevando sus 25 kB.
+ *
+ * NINGUNO de los tres añade entradas al KV: ahí se guarda el emparejamiento (nombre → id de portada), que es el
+ * mismo para los tres. Lo único que cambia es de qué URL de IGDB se traen los bytes.
+ */
+const TAMANOS = { normal: 't_cover_big', medio: 't_720p', ancho: 't_1080p' } as const;
+type Tamano = keyof typeof TAMANOS;
 
 /** Tope del título. Generoso para nombres reales y suficiente para que nadie use esto como saco de basura. */
 const MAX_NOMBRE = 200;
@@ -96,6 +117,13 @@ export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise
      cupo por IP acota el gasto. Quien manda de verdad sigue siendo `isAdminEmail` en el cliente. */
   const ampliado = url.searchParams.get('x') === '1';
 
+  /* TAMAÑO (`s=medio` o `s=ancho`). Como `x=1`, viaja en la URL y no en una cabecera: el service worker cachea
+     por URL y sin `Vary`, así que cada tamaño tiene que tener su propia clave de caché o el mosaico acabaría
+     pintando la imagen grande —o al revés— según cuál se pidiera primero. Cualquier otro valor cae en el
+     normal, que es lo que hay que servirle a un cliente viejo que no conozca este parámetro. */
+  const pedido = url.searchParams.get('s');
+  const tamano: Tamano = pedido === 'ancho' ? 'ancho' : pedido === 'medio' ? 'medio' : 'normal';
+
   const listaPlataformas = plataformas.split(',').map((p) => p.trim()).filter(Boolean);
 
   /* Primero la caché, y solo si no hay nada se gasta cupo: lo que se raciona es CONSULTAR a IGDB, no servir lo
@@ -131,7 +159,7 @@ export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise
     return new Response('Identificador de carátula inesperado', { status: 502 });
   }
 
-  const imagen = await fetch(`${IMAGENES}/${TAMANO}/${coverId}.jpg`, {
+  const imagen = await fetch(`${IMAGENES}/${TAMANOS[tamano]}/${coverId}.jpg`, {
     // La respuesta de IGDB se cachea en el borde: la misma carátula la comparten todos los que tengan el juego.
     cf: { cacheTtl: 2592000, cacheEverything: true },
   } as RequestInit);

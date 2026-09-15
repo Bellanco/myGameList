@@ -155,7 +155,6 @@ export const APPEARANCE_UI = {
   coversAria: 'Descargar las carátulas de los juegos',
   coversOn: 'Activadas',
   coversOff: 'Desactivadas',
-  coversHint: 'Al activarlas, la app busca la carátula de cada juego de tus listas. Las imágenes se sirven desde este mismo sitio: tu navegador no contacta con nadie más.',
 } as const;
 
 /**
@@ -364,7 +363,15 @@ export const UI_MESSAGES = {
        a QUÉ se cambia, no cómo se está viendo: es lo que espera quien lo pulsa. */
     shapeAria: 'Forma del listado',
     shapeList: 'Ver en lista',
-    shapeGrid: 'Ver en cajas',
+    shapeGrid: 'Ver en cuadros',
+    /* Recuento de la barra del listado. Dice lo que se está viendo AHORA —con los filtros puestos—, no el total
+       de la lista: es el pie de la decisión que se acaba de tomar en los filtros de arriba. */
+    listCount: (count: number) => `${count} ${count === 1 ? 'juego' : 'juegos'}`,
+    /* Tamaño de los cuadros. Es un deslizador de tres posiciones, así que además del nombre del control hace
+       falta el de la POSICIÓN: un `<input type="range">` se anuncia con su número («2 de 3»), que aquí no dice
+       nada, y `aria-valuetext` es lo que lo sustituye por la palabra. */
+    gridSizeAria: 'Tamaño de los cuadros',
+    gridSizeName: (size: 'sm' | 'md' | 'lg') => ({ sm: 'Pequeños', md: 'Normales', lg: 'Grandes' })[size],
     /* F5 — el ORDEN, que en las formas nuevas ya no lo llevan las cabeceras de columna. Dice en palabras lo que
        la cabecera decía con una flechita. */
     sortLabel: 'Ordenar',
