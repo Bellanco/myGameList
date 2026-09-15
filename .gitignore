@@ -25,6 +25,13 @@ Thumbs.db
 *.swp
 *.swo
 
+# Secretos del runtime de Pages en LOCAL (`wrangler pages dev` los lee de aquí). Mismo papel que
+# `wrangler pages secret put` en el desplegado, pero en claro y en disco: NUNCA al repo.
+.dev.vars
+.dev.vars.*
+# …salvo la PLANTILLA sin valores, que sí se versiona: es donde se documenta qué secretos hacen falta.
+!.dev.vars.example
+
 # Ignorar archivos de entorno
 .env
 .env.local
