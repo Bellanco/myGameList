@@ -5,6 +5,7 @@ import { categoryToneStyle } from '../../core/constants/categoryTone';
 import { TAB_TITLES, UI_MESSAGES } from '../../core/constants/labels';
 import { COMPACT_TABLE_MAX_WIDTH } from '../../core/constants/uiConfig';
 import { FilePickerButton } from './FilePickerButton';
+import { GameCover } from './GameCover';
 import type { GameItem, TabId, TabSort } from '../../model/types/game';
 import type { TabAction } from '../../viewmodel/useGameListViewModel';
 import { resolveGrade } from '../../core/utils/scoreScale';
@@ -65,11 +66,18 @@ const MAIN_ROW_ESTIMATE_PX = 63;
 const COMPACT_ROW_ESTIMATE_PX = 74;
 const DETAIL_ROW_ESTIMATE_PX = 320;
 /* Mosaico: alto de una FILA de cajas (no de una caja) y ancho mínimo de caja, que es lo que decide cuántas
-   caben. El ancho tiene que coincidir con el `minmax` de `.game-grid` en `_table.scss`: es la misma cuenta
-   hecha en los dos idiomas —aquí para agrupar los juegos, allí para repartirlos— y si discrepan, una fila
-   pintaría más cajas de las que caben y la rejilla se desbordaría a una segunda línea. */
-const GRID_ROW_ESTIMATE_PX = 150;
-const GRID_CARD_MIN_PX = 232;
+   caben. El reparto en columnas lo hace SOLO esta cuenta: `.game-grid` recibe el resultado en `--grid-cols` y
+   se limita a partir el ancho en tantas columnas iguales (`minmax(0, 1fr)`), así que no hay ningún número que
+   casar con el CSS — pero sí con la realidad, o una fila pintaría más cajas de las que caben.
+
+   MEDIDOS SOBRE EL BUILD con la biblioteca real (302 juegos), como los de arriba. Desde que la caja lleva la
+   ranura de carátula (3:4) el alto se triplica: con 168 px de mínimo salen 7 columnas a 1440 px y 6 a 1200 px,
+   y la fila mide entre 356 y 398 px según cuántas líneas ocupen el nombre y los chips de su caja más alta (en
+   una rejilla, la fila mide lo que mida la más alta); 390 es el valor típico. Con el mínimo anterior de 232 px
+   eran 5 columnas y filas de 440-503 px: carátulas enormes y la pantalla entera para dos filas. Este número es
+   la perilla de la densidad del mosaico. */
+const GRID_ROW_ESTIMATE_PX = 390;
+const GRID_CARD_MIN_PX = 168;
 const GRID_GAP_PX = 10;
 
 /** `tone`: tiñe cada píldora con el color que le toca a su nombre en la rampa categórica (`categoryTone`).
@@ -691,6 +699,7 @@ export const GameTable = memo(function GameTable({
                                 >
                                   <span className="sr-only">{game.name}</span>
                                 </button>
+                                <GameCover name={game.name} />
                                 <header className="game-card-head">
                                   <h3 className="game-card-name" title={game.name}>{game.name}</h3>
                                   {(currentTab === 'c' || currentTab === 'p') || (showShameScore && hasScore(game)) ? (
