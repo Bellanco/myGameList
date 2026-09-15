@@ -430,8 +430,8 @@ export const UI_MESSAGES = {
     review: 'Análisis',
     /* El análisis ya no se vuelca en el detalle: se va a leer a su pantalla. El texto dice a DÓNDE lleva, no
        qué hay dentro, porque quien lo pulsa ya sabe que escribió uno. */
-    reviewLink: 'Leer el análisis',
-    reviewLinkAria: (name: string) => `Leer el análisis de ${name}`,
+    reviewLink: 'Ver análisis',
+    reviewLinkAria: (name: string) => `Ver análisis de ${name}`,
   },
 } as const;
 
