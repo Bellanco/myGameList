@@ -137,12 +137,17 @@ const CHIP_PX_MARCO = 22;
 
 /** El `canvas` de medir, uno para toda la vida de la página: crear uno por medición es lo caro. */
 let lienzoMedidor: CanvasRenderingContext2D | null = null;
-function anchoDelTexto(texto: string, fuente: string | null): number {
+/**
+ * Lo que ocupa una cadena con la letra del tema. El ESPACIADO va aparte porque `measureText` NO lo cuenta:
+ * varios skins separan las letras de sus chips (.04 em en «Cámara de pruebas» y en «Inserte moneda»), y ese
+ * píxel por carácter era exactamente lo que hacía que un género largo asomara por el canto de su ranura.
+ */
+function anchoDelTexto(texto: string, fuente: string | null, espaciado = 0): number {
   if (!fuente) return texto.length * CHIP_PX_POR_LETRA + CHIP_PX_FIJO - CHIP_PX_MARCO;
   if (!lienzoMedidor) lienzoMedidor = document.createElement('canvas').getContext('2d');
   if (!lienzoMedidor) return texto.length * CHIP_PX_POR_LETRA + CHIP_PX_FIJO - CHIP_PX_MARCO;
   lienzoMedidor.font = fuente;
-  return lienzoMedidor.measureText(texto).width;
+  return lienzoMedidor.measureText(texto).width + espaciado * texto.length;
 }
 
 /**
@@ -153,28 +158,38 @@ function anchoDelTexto(texto: string, fuente: string | null): number {
  * que se veía cortado.
  * El marco se saca por diferencia: lo que mide el chip entero menos lo que mide su texto.
  */
-function metricasDelChip(raiz: HTMLElement | null): { fuente: string; marco: number } | null {
+function metricasDelChip(raiz: HTMLElement | null): { fuente: string; marco: number; espaciado: number } | null {
   const chip = raiz?.querySelector('.chip:not(.chip-more)');
   const texto = chip?.textContent?.trim();
   if (!chip || !texto) return null;
   const cs = getComputedStyle(chip);
   const fuente = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-  const marco = chip.getBoundingClientRect().width - anchoDelTexto(texto, fuente);
+  const espaciado = cs.letterSpacing.endsWith('px') ? parseFloat(cs.letterSpacing) : 0;
+  /* El marco se saca por diferencia, y con el espaciado YA descontado: si se colase ahí, se aplicaría igual a
+     un texto de cinco letras que a uno de veinticinco y el error crecería con la longitud. */
+  const marco = chip.getBoundingClientRect().width - anchoDelTexto(texto, fuente, espaciado);
   /* Si la medida sale absurda (fuente aún sin cargar, chip oculto), se cae al marco de la casa. */
-  return { fuente, marco: marco > 4 && marco < 80 ? marco : CHIP_PX_MARCO };
+  return { fuente, espaciado, marco: marco > 4 && marco < 80 ? marco : CHIP_PX_MARCO };
 }
 
 function chipsQueCaben(
   valores: string[],
   ancho: number,
-  metricas: { fuente: string; marco: number } | null,
+  metricas: { fuente: string; marco: number; espaciado: number } | null,
 ): { n: number; apretado: boolean } {
-  if (valores.length <= 1 || ancho <= 0) return { n: 1, apretado: false };
+  if (!valores.length || ancho <= 0) return { n: 1, apretado: false };
   const marco = metricas?.marco ?? CHIP_PX_MARCO;
+  /* UN SOLO VALOR TAMBIÉN SE MIDE. Antes salía de aquí sin mirar —«si solo hay uno, se pinta y ya»—, y eso
+     dejaba sin marcar el caso más visible de todos: el juego que tiene un único género larguísimo
+     («Coleccionista de criaturas») en una ranura que no le llega. No cabía, no había «+N» que lo avisara y
+     tampoco se recortaba, así que el chip asomaba por el canto de la caja y se veía partido. */
+  if (valores.length === 1) {
+    return { n: 1, apretado: anchoDelTexto(valores[0], metricas?.fuente ?? null, metricas?.espaciado) + marco > ancho };
+  }
   let usado = 0;
   let caben = 0;
   for (let i = 0; i < valores.length; i += 1) {
-    const mide = anchoDelTexto(valores[i], metricas?.fuente ?? null) + marco + (i ? CHIP_GAP_PX : 0);
+    const mide = anchoDelTexto(valores[i], metricas?.fuente ?? null, metricas?.espaciado) + marco + (i ? CHIP_GAP_PX : 0);
     /* Si después de éste todavía quedan, hay que reservarle sitio al «+N»: un contador que no se ve no
        cuenta nada, y era lo que se salía de la ranura en las cajas estrechas. */
     const reserva = i < valores.length - 1 ? CHIP_GAP_PX + CHIP_PX_MAS_N : 0;
@@ -271,7 +286,6 @@ function yearsDesc(years?: number[]) {
   return [...(years || [])].sort((a, b) => b - a).map(String);
 }
 
-const MAX_ROW_CHIPS = 3;
 const IMPORT_UI = UI_MESSAGES.import.integrations;
 
 // Columnas ordenables: etiqueta de cabecera → clave de orden que entiende `sortGames`/`sortBy`.
@@ -491,36 +505,29 @@ export const GameTable = memo(function GameTable({
   const anchoCaja = gridWidth > 0 ? (gridWidth - gridGap * (gridColumns - 1)) / gridColumns : 0;
   /* El hueco donde de verdad entran los chips: la caja menos el relleno del cuerpo (.95 rem a cada lado). */
   const anchoRanuraCaja = Math.max(0, anchoCaja - 30.4);
-  /* El renglón es UNO SOLO a cualquier ancho —misma cabecera, mismas ranuras de categoría— y lo único que
-     cambia con el sitio disponible es CUÁNTOS chips caben antes del «+N». Antes había dos marcados distintos
-     (la línea ancha con todos los datos y un meta compacto de columnas fijas para el teléfono), y mantener dos
-     versiones de lo mismo es lo que hacía que la lista y la app móvil se parecieran cada vez menos.
-     El género vive en la ranura elástica, así que puede permitirse uno más cuando hay sitio. */
-  /* EL GÉNERO: tres con sitio y dos en la franja de en medio. Su ranura es la más ancha de la línea —lleva los
-     nombres largos, «Coleccionista de criaturas»— pero por debajo de 1.150 px de contenedor el tercero ya no
-     entra entero, y un «+1» dice lo mismo sin recortar nada. Se mira el ancho del CONTENEDOR y no el de la
-     ventana porque es el contenedor el que reparte, y es el mismo que ya se mide para las columnas del
-     mosaico. */
-  const genreCap = gridWidth > 0 && gridWidth < 1150 ? 2 : MAX_ROW_CHIPS;
-  /* La plataforma se topa antes, y no por gusto: su ranura tiene ancho FIJO —es la que alinea la columna del
-     género— y con tres nombres largos («Cat Quest» tiene PlayStation 4, Nintendo Switch y PC) se partía en dos
-     líneas y ese renglón salía 34 px más alto que los otros trescientos. Dos caben siempre; del resto avisa el
-     «+N», y todas están en el detalle. */
-  const platCap = 2;
-  /* El año, tres con su «+N» en escritorio y UNO en el teléfono. Allí su ranura mide 9 rem y «2026 2012 2010»
-     pide 10: el tercero se metía debajo de la plataforma. Con «2026 +2» cabe, sigue diciendo que hay más de un
-     año y la columna se estrecha a la mitad, que es sitio que la plataforma necesita. */
-  const yearCap = narrowScreen ? 1 : MAX_ROW_CHIPS;
-  /* Fuertes y débiles: su renglón es SUYO —dos recuadros escalonados bajo las categorías— y lo que cabe en cada
-     uno se mide igual que en la caja, con el texto de ESE juego. En el teléfono no se pintan (lo apaga el CSS),
-     así que allí el tope da igual.
-     LOS PESOS SON LOS DE `.row-notes` EN `_table.scss` (.5 / 1,25 / 2,55 fr de un total de 4,3), y es el único
-     sitio del componente donde hay un número que casar con la hoja: el reparto de esa fila no se puede medir
-     desde aquí sin leer el layout ya pintado. Si allí cambian, cambian aquí.
-     Del ancho de la columna se descuentan el relleno del recuadro y su filete (unos 18 px). */
+  /* ── LO QUE CABE EN CADA RANURA DEL RENGLÓN ──────────────────────────────────────────────────────────
+     El renglón es UNO SOLO a cualquier ancho —misma cabecera, mismas ranuras— y lo único que cambia con el
+     sitio disponible es CUÁNTOS chips caben antes del «+N». Antes había dos marcados distintos (la línea ancha
+     y un meta compacto para el teléfono), y mantener dos versiones de lo mismo es lo que hacía que la lista y
+     la app móvil se parecieran cada vez menos.
+
+     Y lo que cabe se MIDE, igual que en la caja, en vez de toparse en un número: los topes tienen que ir al
+     peor caso —el género más largo del catálogo— y por eso dejaban media ranura vacía en unas filas y se
+     pasaban en otras, que es lo que se veía como chips partidos por la mitad.
+     LOS PESOS SON LOS DEL CSS (`.row-cats` y `.row-notes` en `_table.scss`, sobre un total de 4,3 fr): es el
+     único sitio donde este componente tiene números que casar con la hoja, y está así porque el reparto de esa
+     rejilla no se puede conocer desde aquí sin leer el layout ya pintado. Si cambian allí, cambian aquí.
+     En el TELÉFONO la rejilla es otra —el año mide 6,6 rem y el género ocupa su propia línea— así que las
+     medidas también. ── */
   const anchoRenglon = Math.max(0, gridWidth - 35);
-  const anchoNotaBuena = anchoRenglon * (1.25 / 4.3) - 18;
-  const anchoNotaMala = anchoRenglon * (2.55 / 4.3) - 18;
+  const anchoCol = (peso: number) => anchoRenglon * (peso / 4.3) - 16;
+  const anchoCatYear = narrowScreen ? 106 : anchoCol(1.1);
+  const anchoCatPlat = narrowScreen ? Math.max(0, anchoRenglon - 120) : anchoCol(1);
+  const anchoCatGenre = narrowScreen ? anchoRenglon : anchoCol(2.2);
+  /* Los dos recuadros de la opinión, con el mismo criterio. Del ancho de su columna se descuentan el relleno
+     del recuadro y su filete (unos 18 px). */
+  const anchoNotaBuena = anchoCol(1.25) - 2;
+  const anchoNotaMala = anchoCol(2.55) - 2;
   /* Próximos es la única lista sin opinión: todavía no se ha jugado a nada, así que el recuadro no existe en
      vez de salir con las dos mitades vacías. En la vergüenza el lado malo son los MOTIVOS de dejarlo. */
   const tieneOpinion = currentTab === 'c' || currentTab === 'v' || currentTab === 'e';
@@ -573,6 +580,8 @@ export const GameTable = memo(function GameTable({
   // coordenadas de página, así que sin esto sus posiciones vendrían corridas por la altura de lo que hay encima
   // (barra de pestañas, toolbar, filtros abiertos…).
   const [scrollMargin, setScrollMargin] = useState(0);
+  /* Ver el observador de abajo: un cambio de paleta cambia la letra de los chips y hay que rehacer la cuenta. */
+  const [, setPaletaTick] = useState(0);
   useLayoutEffect(() => {
     const update = () => {
       setNarrowScreen(window.innerWidth <= COMPACT_TABLE_MAX_WIDTH);
@@ -588,9 +597,19 @@ export const GameTable = memo(function GameTable({
     // chips): eso mueve el inicio de la tabla, así que hay que recalcular el margen cuando el layout cambia.
     const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
     observer?.observe(document.body);
+    /* CAMBIAR DE PALETA CAMBIA LA LETRA, y con ella cuántos chips caben en una ranura (`chipsQueCaben` mide el
+       texto con la fuente del tema). Ese cambio es un atributo en el `<html>` y no pasa por este componente,
+       así que sin esto la lista se quedaba con el reparto de la letra ANTERIOR hasta el siguiente render: al
+       pasar de una condensada a una ancha —de «Forja y temple» a «Inserte moneda»— se quedaban catorce chips
+       sobresaliendo de su ranura. `paletaTick` solo existe para forzar la vuelta. */
+    const skinObserver = typeof MutationObserver !== 'undefined'
+      ? new MutationObserver(() => setPaletaTick((n) => n + 1))
+      : null;
+    skinObserver?.observe(document.documentElement, { attributes: true, attributeFilter: ['data-palette', 'data-theme'] });
     return () => {
       window.removeEventListener('resize', update);
       observer?.disconnect();
+      skinObserver?.disconnect();
     };
   }, []);
 
@@ -1011,6 +1030,11 @@ export const GameTable = memo(function GameTable({
                   const rowCover = coverDeRenglon(covers, game, coversAmpliadas, franjaGrande);
                   /* El lado malo del renglón: en la vergüenza son los MOTIVOS de dejarlo, no los defectos. */
                   const malos = (currentTab === 'v' ? game.reasons : game.weaknesses) || [];
+                  /* Cuántos chips enseña ESTE juego en cada ranura, medidos con el ancho de su columna. */
+                  const anos = yearsDesc(game.years);
+                  const capsAno = chipsQueCaben(anos, anchoCatYear, metricasChip);
+                  const capsPlatFila = chipsQueCaben(game.platforms, anchoCatPlat, metricasChip);
+                  const capsGeneroFila = chipsQueCaben(game.genres, anchoCatGenre, metricasChip);
                   return (
                     <tr
                       key={`main-${game.id}`}
@@ -1077,10 +1101,16 @@ export const GameTable = memo(function GameTable({
                                 /* Varios años con su «+N», del más reciente al más antiguo: en una lista de
                                    completados, «lo jugué en 2019 y lo rejugué en 2026» es un dato, no un
                                    detalle. Su ranura se dimensiona para que quepan tres sin partirse. */
-                                <span className="row-cat row-cat-year">{renderTags(yearsDesc(game.years), 'chip-generic', yearCap)}</span>
+                                <span className={`row-cat row-cat-year${capsAno.apretado ? ' is-apretado' : ''}`}>
+                                  {renderTags(anos, 'chip-generic', capsAno.n)}
+                                </span>
                               ) : null}
-                              <span className="row-cat row-cat-plat">{renderTags(game.platforms, 'chip-plat', platCap)}</span>
-                              <span className="row-cat row-cat-genre">{renderTags(game.genres, 'chip-genre', genreCap, true)}</span>
+                              <span className={`row-cat row-cat-plat${capsPlatFila.apretado ? ' is-apretado' : ''}`}>
+                                {renderTags(game.platforms, 'chip-plat', capsPlatFila.n)}
+                              </span>
+                              <span className={`row-cat row-cat-genre${capsGeneroFila.apretado ? ' is-apretado' : ''}`}>
+                                {renderTags(game.genres, 'chip-genre', capsGeneroFila.n, true)}
+                              </span>
                             </span>
                             {/* LO QUE SE PENSÓ DEL JUEGO, en el renglón de abajo y en DOS recuadros hundidos e
                                 independientes: uno para lo bueno y otro para lo malo. Hubo una versión con un
