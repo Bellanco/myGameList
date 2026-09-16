@@ -398,49 +398,6 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   }
 }
 
-/* Name with stars */
-.name-with-stars {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
-  min-width: 0;
-}
-.name-with-stars strong {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-}
-.name-text {
-  display: block;
-  min-width: 0;
-  white-space: nowrap;
-  --marquee-distance: 70%;
-}
-.name-text.overflow {
-  animation: marquee 15s ease-in-out infinite;
-}
-@keyframes marquee {
-  0%, 10% {
-    transform: translateX(0);
-  }
-  45%, 55% {
-    transform: translateX(calc(-1 * var(--marquee-distance)));
-  }
-  90%, 100% {
-    transform: translateX(0);
-  }
-}
-.stars-right {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  flex: 0 0 auto;
-  white-space: nowrap;
-  min-width: max-content;
-}
 .toolbar .toolbar select.input-base,
 .filters-row select.input-base {
   flex: 1 1 auto; cursor: pointer; padding-right: 1rem;
@@ -516,8 +473,8 @@ a.btn, a.btn:hover { text-decoration: none; }
 
 /* MENOS EL DESTRUCTIVO, QUE ES MACIZO. Los cinco skins ya lo rellenaban cada uno por su cuenta, así que la
    paleta Clásico era la única de las seis donde borrar era un botón de contorno como cualquier otro rol. Y no
-   es un rol como los demás: `.btn-abandoned` y `.btn-recommend-active` se quedan en contorno a propósito —son
-   alternables, se deshacen— mientras que este no se deshace. `--danger-fill` es el relleno con tinta encima. */
+   es un rol como los demás: `.btn-abandoned` se queda en contorno a propósito —es alternable, se deshace—
+   mientras que este no se deshace. `--danger-fill` es el relleno con tinta encima. */
 .btn-danger {
   background: var(--danger-fill); color: #fff;
   border-color: color-mix(in srgb, var(--danger) 55%, #000);
@@ -526,8 +483,6 @@ a.btn, a.btn:hover { text-decoration: none; }
 .btn-danger:hover { border-color: color-mix(in srgb, var(--danger) 70%, #000); }
 .btn-complete { color: var(--fg-green-soft); border-color: color-mix(in srgb, var(--success) 42%, transparent); }
 .btn-complete:hover { border-color: color-mix(in srgb, var(--success) 58%, transparent); }
-.btn-inprogress { color: var(--fg-amber-soft); border-color: color-mix(in srgb, var(--warn) 42%, transparent); }
-.btn-inprogress:hover { border-color: color-mix(in srgb, var(--warn) 58%, transparent); }
 .btn-abandoned { color: var(--fg-red-pink); border-color: color-mix(in srgb, var(--danger) 38%, transparent); }
 .btn-abandoned:hover { border-color: color-mix(in srgb, var(--danger) 52%, transparent); }
 
@@ -545,10 +500,6 @@ a.btn, a.btn:hover { text-decoration: none; }
   border-color: color-mix(in srgb, var(--warn) 80%, transparent);
   background: color-mix(in srgb, var(--warn) 26%, transparent);
 }
-.btn-recommend { color: var(--fg-green-soft); border-color: color-mix(in srgb, var(--success) 42%, transparent); }
-.btn-recommend:hover { border-color: color-mix(in srgb, var(--success) 58%, transparent); }
-.btn-recommend-active { color: var(--fg-red-soft); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
-.btn-recommend-active:hover { border-color: color-mix(in srgb, var(--danger) 60%, transparent); }
 .btn-toggle { color: var(--text-muted); }
 .btn-toggle span { white-space: nowrap; }
 
@@ -566,28 +517,6 @@ a.btn, a.btn:hover { text-decoration: none; }
 }
 .theme-toggle-btn .ui-icon { width: var(--ico-lg); height: var(--ico-lg); transition: transform .25s; }
 .theme-toggle-btn:hover .ui-icon { transform: rotate(12deg) scale(1.08); }
-
-/* F1 — selector de paleta (header): pastilla compacta con icono + <select> nativo (accesible y robusto). */
-.palette-select {
-  display: inline-flex; align-items: center; gap: .35rem;
-  height: 38px; padding: 0 .55rem;
-  color: var(--text-muted);
-  background: var(--surface-soft);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  transition: color .2s, background .2s, border-color .2s;
-}
-.palette-select:hover,
-.palette-select:focus-within { color: var(--fg-link); background: var(--steam-soft); border-color: var(--steam-soft); }
-.palette-select-icon { display: inline-flex; flex: 0 0 auto; }
-.palette-select-field {
-  border: 0; background: transparent; color: var(--text);
-  font-weight: 600; font-size: var(--fs-xs); margin: 0; padding: 0;
-  cursor: pointer; outline: none; max-width: 9rem;
-}
-.palette-select-field:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; border-radius: 4px; }
-/* El desplegable nativo pinta las opciones con colores del sistema; forzamos legibilidad en ambos temas. */
-.palette-select-field option { background: var(--surface); color: var(--text); }
 .btn-toggle-deck.active { background: rgba(var(--steam-rgb),.15); color: var(--fg-sky); border-color: rgba(var(--steam-rgb),.4); }
 .btn-icon {
   width: 42px; height: 42px; border-radius: 50%; background: transparent;
@@ -645,10 +574,7 @@ a.btn, a.btn:hover { text-decoration: none; }
 @media (prefers-reduced-motion: reduce) {
   .skip-link { transition: none; }
 }
-.filter-field-hidden-label, .form-toggle-label { visibility:hidden; }
-.compact-name-cell { display:flex; align-items:center; justify-content:space-between; gap:.6rem; width:100%; }
-.compact-name-text { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.compact-score { flex:0 0 auto; }
+.filter-field-hidden-label { visibility:hidden; }
 
 /* TagInput suggestion dropdown for Firefox fallback */
 .tag-suggestions {
@@ -795,7 +721,6 @@ a.btn, a.btn:hover { text-decoration: none; }
   height: 1.35rem;
   pointer-events: none;
 }
-
 
 
 /* Aviso dentro del diálogo de compartir: el nombre con el que se firmará no lo eligió su dueño.

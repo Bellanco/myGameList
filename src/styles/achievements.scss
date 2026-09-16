@@ -344,11 +344,6 @@
 // `StatsReviews` para tus reseñas: esta pantalla se abre desde el panel y desde el hub, y un armazón propio se
 // notaría justo en la que existe para no notarse. Aquí solo va lo que es de los logros.
 .ach-screen .ach-figures { margin-bottom: 22px; }
-.ach-group + .ach-group { margin-top: 26px; }
-.ach-group h3 {
-  font-size: var(--fs-xs); letter-spacing: .06em; text-transform: uppercase;
-  color: var(--text-muted); margin: 0 0 6px; font-weight: 700;
-}
 // FILAS PEGADAS Y UN FILETE ENTRE ELLAS. El aire de diez píxeles estiraba el catálogo —334 entradas— a quince
 // pantallas de desplazamiento, y para separar dos filas basta una línea del color del borde: ocupa un píxel y
 // hace el mismo trabajo. La vista global recupera algo de hueco por su cuenta, más abajo, porque allí cada fila
@@ -562,13 +557,6 @@
 .hub-feed-ach-name { font-weight: 700; }
 
 // EL CANTO CONTRARIO AL AVATAR. `margin-left: auto` las empuja al final de la fila; con `flex-wrap` en la
-// tarjeta, en un móvil estrecho caen a la línea de abajo y siguen alineadas a la derecha, que es lo que hace que
-// la burbuja no se descuadre.
-//
-// `nowrap` en la tira: aquí no debe envolver nunca. Si no caben, para eso está el «+N» del tope de cinco.
-.hub-feed-ach-medals { margin-left: auto; flex: none; }
-.hub-feed-ach-medals .ach-strip { flex-wrap: nowrap; justify-content: flex-end; }
-
 // ── LOGROS GLOBALES · el catálogo por lo común que es cada logro ─────────
 // El RECUADRO marca lo conseguido, como en la pantalla de logros globales de Steam en móvil. Y no es la única
 // señal: el texto de la derecha lo dice con palabras, porque un recuadro es forma y color, y en una lista de

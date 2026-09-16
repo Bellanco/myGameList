@@ -96,16 +96,11 @@
 :root[data-palette="portal"] .btn-primary,
 :root[data-palette="portal"] .btn.is-active,
 :root[data-palette="portal"] .btn-toggle.active { background: var(--steam) !important; color: var(--on-accent) !important; border-color: color-mix(in srgb, var(--steam) 60%, #000) !important; }
-:root[data-palette="portal"] .btn-complete,
-:root[data-palette="portal"] .btn-recommend { background: var(--success) !important; color: #04140c !important; border-color: color-mix(in srgb, var(--success) 55%, #000) !important; }
-:root[data-palette="portal"] .btn-inprogress { background: var(--warn) !important; color: #1a1500 !important; border-color: color-mix(in srgb, var(--warn) 55%, #000) !important; }
+:root[data-palette="portal"] .btn-complete { background: var(--success) !important; color: #04140c !important; border-color: color-mix(in srgb, var(--success) 55%, #000) !important; }
 /* Acciones destructivas = TORRETA: rojo del ojo/láser + halo tenue de "puntería". */
 :root[data-palette="portal"] .btn-danger,
-:root[data-palette="portal"] .btn-abandoned,
-:root[data-palette="portal"] .btn-recommend-active { background: var(--danger-fill) !important; color: #fff !important; border-color: color-mix(in srgb, var(--portal-turret) 55%, #000) !important; box-shadow: 0 0 10px color-mix(in srgb, var(--portal-turret) 40%, transparent) !important; }
-:root[data-palette="portal"][data-theme="light"] .btn-complete,
-:root[data-palette="portal"][data-theme="light"] .btn-recommend,
-:root[data-palette="portal"][data-theme="light"] .btn-inprogress { color: #fff !important; }
+:root[data-palette="portal"] .btn-abandoned { background: var(--danger-fill) !important; color: #fff !important; border-color: color-mix(in srgb, var(--portal-turret) 55%, #000) !important; box-shadow: 0 0 10px color-mix(in srgb, var(--portal-turret) 40%, transparent) !important; }
+:root[data-palette="portal"][data-theme="light"] .btn-complete { color: #fff !important; }
 /* En la Aperture ANTIGUA el acento es naranja quemado, no el azul clínico del oscuro: sobre él, la tinta del
    resto de rellenos se quedaba en 3,89:1. Se le da la vuelta como a los tres botones de arriba —naranja un
    punto más hondo y rótulo blanco, señalética industrial de la época— y sube a 5,48:1. En el tema oscuro la
@@ -351,7 +346,6 @@
 :root[data-palette="portal"] .donut-legend b,
 :root[data-palette="portal"] .year-trend-scale,
 :root[data-palette="portal"] .year-axis,
-:root[data-palette="portal"] .year-peak { font-family: var(--font-mono); }
 
 /* Retícula de placa de prueba bajo los lienzos que la admiten (muy tenue, solo insinuada). */
 :root[data-palette="portal"] .backlog-canvas,
