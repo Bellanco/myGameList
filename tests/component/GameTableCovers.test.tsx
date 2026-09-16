@@ -156,6 +156,35 @@ describe('qué carátulas pide el listado', () => {
     );
   });
 
+  /* EL INTERRUPTOR ES UN INTERRUPTOR, NO UN BORRADO. Apagarlo deja de pedir imágenes; volver a encenderlo pide
+     EXACTAMENTE las mismas URL que antes, que es lo que hace que las sirva la caché del navegador y la del
+     service worker en vez de descargarse otra vez. */
+  it('apagar y volver a encender pide las mismas URL, no unas nuevas', () => {
+    const antes = pinta('grid', [juego(1, 'Celeste')]);
+    const url = antes.container.querySelector('.game-cover-img')?.getAttribute('src');
+    expect(url).toBe(coverUrl('Celeste', ['Steam']));
+    cleanup();
+
+    localStorage.setItem('mis-listas-covers', 'off');
+    const apagado = render(
+      <GameTable
+        games={[juego(1, 'Celeste')]}
+        currentTab="c"
+        expandedId={null}
+        onExpandedChange={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onMigrate={vi.fn()}
+        tabActions={[]}
+      />,
+    );
+    expect(apagado.container.querySelector('.game-cover-img')).toBeNull();
+    cleanup();
+
+    const despues = pinta('grid', [juego(1, 'Celeste')]);
+    expect(despues.container.querySelector('.game-cover-img')?.getAttribute('src')).toBe(url);
+  });
+
   it('con la preferencia apagada no se pide nada, en ninguna de las dos formas', () => {
     // Es la garantía que sostiene la promesa de privacidad: sin encenderla, el servidor no pregunta por tus
     // títulos en IGDB. Por eso viene apagada.
