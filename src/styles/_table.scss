@@ -363,25 +363,23 @@ table.meta-score.meta-grade .row-score { min-width: 2.9rem; }
    en vez de partirse a media letra —que es lo que parecía un fallo de pintado—. */
 .row-cat .chip { flex: 0 0 auto; }
 .row-cat .chips {
-  /* Estirado hasta el canto de la ranura, por lo mismo que en la caja: si mide lo que sus chips, el degradado
-     apaga el final del último aunque sobre sitio. */
+  /* Estirado hasta el canto de la ranura, para que el «+N» no se monte sobre el último chip. Aquí tampoco hay
+     máscara ni `overflow`: lo que cabe lo decide la cuenta (ver la nota de `.game-card-slot`). */
   flex: 1 1 auto;
   min-width: 0;
-  /* LA MÁSCARA RECORTA, Y SOLO DE LADO. Antes esto era un `overflow: hidden`, que recorta en los CUATRO cantos:
-     los chips de «Inserte moneda» y «Ladrones de corazones» llevan sombra dura por fuera de su caja, y la
-     ranura se la cortaba a ras, arriba y abajo. La máscara se dibuja MÁS ALTA que el grupo (300 %, centrada),
-     así que en vertical no tapa nada —la pegatina asoma entera— y en horizontal hace lo suyo: lo que llega al
-     final se apaga en el último centímetro en vez de partirse a media letra.
-     Va en el GRUPO y no en la ranura para que el «+N», que es hermano suyo, se quede fuera del degradado. */
-  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 1.1rem), transparent);
-  mask-image: linear-gradient(90deg, #000 calc(100% - 1.1rem), transparent);
-  -webkit-mask-size: 100% 300%;
-  mask-size: 100% 300%;
-  -webkit-mask-position: 0 center;
-  mask-position: 0 center;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
 }
+/* Si un valor suelto es más largo que su ranura —«Coleccionista de criaturas» en la columna del género de una
+   pantalla de 1024— se recorta con puntos suspensivos en vez de invadir la ranura vecina. Solo entonces: lo
+   marca el componente (`is-apretado`), porque es el que sabe si el texto entra o no. */
+.row-cat.is-apretado .chip:not(.chip-more) {
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  flex: 0 1 auto;
+}
+
 /* La ranura del año tiene ancho propio y su columna es `auto`: en las listas que no llevan año —Próximos, En
    curso— la ranura ni se pinta, la columna se queda a cero y la plataforma empieza pegada al canto. */
 .row-cat-year  { grid-column: 1; grid-row: 1; width: 6.6rem; padding-right: .5rem; }
@@ -1059,24 +1057,43 @@ table.is-grid {
   flex: 0 1 auto;
 }
 .game-card-slot .chips {
-  /* EL GRUPO SE ESTIRA HASTA EL CANTO DE LA RANURA. Si mide lo que miden sus chips —que es lo que hace un ítem
-     flex por defecto—, el degradado de la máscara cae siempre sobre el último, y hasta un «PC» que sobra de
-     sitio salía a media tinta. Estirado, el degradado solo alcanza a lo que de verdad llega al final. */
+  /* El grupo se estira hasta el canto de la ranura: así el «+N», que va anclado a la derecha, no se le monta
+     encima al último chip. */
   flex: 1 1 auto;
   min-width: 0;
-  /* EL DESVANECIDO VA EN EL GRUPO DE CHIPS, no en la ranura: el «+N» es hermano suyo (ver `renderTags`), así
-     que la máscara no lo alcanza y no hace falta abrirle ninguna ventana. Es más alta que el grupo (300 %,
-     centrada) para que en vertical no tape nada —las pegatinas de «Inserte moneda» llevan sombra dura por
-     fuera de su caja— y solo actúe de lado. */
-  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 1.6rem), transparent);
-  mask-image: linear-gradient(90deg, #000 calc(100% - 1.6rem), transparent);
-  -webkit-mask-size: 100% 300%;
-  mask-size: 100% 300%;
-  -webkit-mask-position: 0 center;
-  mask-position: 0 center;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
 }
+/* NI MÁSCARA NI `overflow`: NADA RECORTA AQUÍ. Hubo las dos cosas y las dos se vieron:
+   · el `overflow: hidden` corta por los CUATRO cantos, y a las pegatinas de «Inserte moneda» y a las viñetas
+     de «Ladrones de corazones» —que llevan sombra dura por fuera de su caja— les cortaba también arriba y
+     abajo;
+   · y el desvanecido de máscara se comía el final del último chip aunque sobrara sitio, que es lo que dejaba
+     los nombres largos sin su canto redondeado, como si estuvieran partidos.
+   Lo que evita el desbordamiento es la CUENTA, no el recorte: `chipsQueCaben` mide el texto con la letra del
+   tema y solo pinta los que entran, con un margen de seguridad. El único caso que no cabe por definición —un
+   solo valor más largo que la ranura entera— se marca `is-apretado` y se recorta con puntos suspensivos. */
+
+/* EL «+N» VA ANCLADO AL CANTO DE LA RANURA, y su sitio se reserva con relleno. Iba al final de la fila, como
+   un chip más, así que era EL PRIMERO en caerse fuera cuando el texto se pasaba —y un contador que no se ve no
+   cuenta nada—. Anclado, el ancho que queda es el de los chips y es a ellos a quienes se les apaga el final,
+   que es el orden correcto: lo que falta ya lo dice el número.
+   `:has()` para no tener que marcar la ranura desde el componente: si no hay «+N», no hay relleno que reservar
+   y el chip dispone de la ranura entera. */
+.game-card-slot:has(.chip-more) { position: relative; padding-right: 42px; }
+.game-card-slot .chip-more { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
+
+/* LA EXCEPCIÓN: la ranura APRETADA, la que el componente marca cuando ni el primer chip cabe entero (un género
+   como «Coleccionista de criaturas» pide 172 px y en la densidad pequeña la ranura tiene 157). Ahí el único que
+   puede ceder es el chip, porque el «+N» que no se ve no cuenta nada: se recorta con puntos suspensivos y el
+   contador se queda dentro. `inline-block` porque a un ítem flex no le llega el `text-overflow`. */
+.game-card-slot.is-apretado .chip:not(.chip-more) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  flex: 0 1 auto;
+}
+/* Si un valor suelto es más largo que la ranura entera, se recorta con puntos suspensivos (lo marca
+   `is-apretado` desde el componente, más abajo) en vez de salirse de la caja. */
 
 /* La insignia, en el canto de abajo de la lámina y al otro extremo que la nota: las dos señales de la caja
    ocupan las dos esquinas libres de la carátula y dejan el cuerpo entero para lo que se lee. */
