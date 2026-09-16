@@ -31,8 +31,17 @@ import {
 
 const MAX_PLATAFORMAS = 200;
 
-/** Un mes en el navegador. La carátula de un juego no cambia; si el emparejamiento mejora, cambia la respuesta. */
-const CACHE_ACIERTO = 'public, max-age=2592000, stale-while-revalidate=86400';
+/**
+ * UN MES FRESCA Y UN AÑO UTILIZABLE. La carátula de un juego no cambia; si el emparejamiento mejora, cambia la
+ * respuesta, y de ahí que esto no sea `immutable`.
+ *
+ * La palanca que alarga la vida NO es `max-age`, es `stale-while-revalidate`, y la diferencia importa:
+ *   · con `max-age` de un año, la copia se congela de verdad — una errata corregida no se vería en doce meses;
+ *   · con un mes de frescura y un AÑO de `stale-while-revalidate`, pasado el mes el navegador sigue pintando al
+ *     instante lo que tiene y pide la versión nueva por detrás. La imagen nunca falta, nunca se queda vieja más
+ *     de una visita, y la petición que se paga es una cada mes en vez de una por visita.
+ */
+const CACHE_ACIERTO = 'public, max-age=2592000, stale-while-revalidate=31536000';
 /**
  * Y NADA cuando no hay carátula. Esta línea decía `max-age=3600` y costó media biblioteca: durante una ráfaga de
  * 429 se sirvieron 56 respuestas «sin carátula» falsas, y el navegador se las guardó una hora — así que aunque el
