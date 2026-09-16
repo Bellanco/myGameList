@@ -109,12 +109,12 @@ describe('GameTable — una sola columna', () => {
   it('las ranuras de categoría van en el DOM en el mismo orden en el que se ven', () => {
     // La rejilla de columnas invisibles coloca cada categoría en su sitio, pero el orden del documento es el
     // que oye un lector de pantalla: si discrepan, se lee la fila en un orden distinto del que se ve.
+    // Los fuertes y los débiles NO están aquí: viven en su propio renglón (`.row-notes`), debajo.
     const { container } = renderGames('c', [makeGame(1)]);
     const clases = Array.from(container.querySelectorAll('.row-cats .row-cat')).map(
       (item) => item.className.replace('row-cat ', ''),
     );
     expect(clases).toEqual(['row-cat-year', 'row-cat-plat', 'row-cat-genre']);
-
   });
 
   it('el año del renglón enseña el más reciente y cuenta los demás', () => {

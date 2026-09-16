@@ -72,3 +72,20 @@
 :root[data-palette="forja"] .hub-review-medal,
 :root[data-palette="forja"] .hub-feed-date,
 :root[data-palette="forja"] .hub-review-date { font-family: var(--font-mono); }
+
+/* ── §N · LA CAJA SIN CARÁTULA = EL LINGOTE ────────────────────────────────────────────────────────────
+   El tema de casa no se disfraza de nada, así que su pieza es la más sobria de las ocho: el canto muy
+   rebajado que ya tiene (`--radius-lg`), el rescoldo del metal todavía caliente entrando por el filo de
+   abajo y el TEMPLE —el turquesa del agua— en el canto de la izquierda. Los dos estados del metal, uno a
+   cada lado, que es el reparto por papel de toda la paleta. ── */
+:root[data-palette="forja"] .game-card.is-flat {
+  border: 1px solid var(--hair);
+  border-left: 3px solid color-mix(in srgb, var(--forja-temple) 75%, transparent);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(0deg, color-mix(in srgb, var(--steam) 22%, transparent) 0, transparent 42%),
+    linear-gradient(180deg, color-mix(in srgb, var(--text) 9%, transparent) 0 1px, transparent 1px),
+    var(--surface);
+  box-shadow: var(--e2);
+}
+:root[data-palette="forja"] .game-card.is-flat .game-card-meter { height: 4px; opacity: .9; }

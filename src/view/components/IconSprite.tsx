@@ -11,6 +11,16 @@ export function IconSprite() {
           <feTurbulence type="fractalNoise" baseFrequency="0.055" numOctaves="5" seed="6" result="ruido" />
           <feDisplacementMap in="SourceGraphic" in2="ruido" scale="6.5" xChannelSelector="R" yChannelSelector="G" />
         </filter>
+        {/* EL MISMO ROTO, PARA UNA PIEZA GRANDE. El de arriba desplaza el borde 6,5 px, que es lo que
+            rompe el canto de un cartel de 20 px de alto; en el pliego de una caja del mosaico —218 px—
+            ese mismo desplazamiento es el mismo roto repartido en diez veces más borde, y el papel sale
+            casi recto. Este baja la frecuencia del ruido (dientes más largos) y sube el desplazamiento,
+            de modo que el pliego se rasga a la escala a la que se ve. Lo usa la caja sin carátula de
+            «Plata y acero». */}
+        <filter id="wt-desgarro-pliego">
+          <feTurbulence type="fractalNoise" baseFrequency="0.028 0.042" numOctaves="4" seed="11" result="ruido" />
+          <feDisplacementMap in="SourceGraphic" in2="ruido" scale="15" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
       </defs>
       <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M11 5h2v14h-2zM5 11h14v2H5z" /></symbol>
       <symbol id="icon-check" viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.42z" /></symbol>

@@ -353,13 +353,43 @@ table.meta-score.meta-grade .row-score { min-width: 2.9rem; }
    sin género salía cuatro píxeles más bajo que los de al lado, que en una lista larga se nota como un temblor.
    Y ninguna ranura crece a dos líneas: en una lista de trescientos renglones, uno más alto que el resto se ve
    antes que un nombre recortado. Lo que no cabe ya lo cuenta el «+N». */
-.row-cat { display: inline-flex; align-items: center; min-width: 0; min-height: var(--chip-slot-h); overflow: hidden; }
+.row-cat { display: inline-flex; align-items: center; min-width: 0; min-height: var(--chip-slot-h); }
 .row-cat .chips { flex-wrap: nowrap; }
+/* LOS CHIPS DE UNA RANURA NO SE ENCOGEN. Dejarles encoger (`min-width: 0`) reparte la estrechez entre todos, y
+   lo que se ve entonces es «P…» junto a «PlayStation…»: hasta «PC», que cabe en cualquier sitio, salía
+   recortado. Cada chip mide lo que mide su texto y lo que no entra en la ranura se queda fuera, que es como se
+   lee una línea: de izquierda a derecha, y lo que falta ya lo cuenta el «+N».
+   Y el corte no es a hachazo: la ranura se DESVANECE en su último centímetro, así que un género largo se apaga
+   en vez de partirse a media letra —que es lo que parecía un fallo de pintado—. */
+.row-cat .chip { flex: 0 0 auto; }
+.row-cat .chips {
+  /* Estirado hasta el canto de la ranura, por lo mismo que en la caja: si mide lo que sus chips, el degradado
+     apaga el final del último aunque sobre sitio. */
+  flex: 1 1 auto;
+  min-width: 0;
+  /* LA MÁSCARA RECORTA, Y SOLO DE LADO. Antes esto era un `overflow: hidden`, que recorta en los CUATRO cantos:
+     los chips de «Inserte moneda» y «Ladrones de corazones» llevan sombra dura por fuera de su caja, y la
+     ranura se la cortaba a ras, arriba y abajo. La máscara se dibuja MÁS ALTA que el grupo (300 %, centrada),
+     así que en vertical no tapa nada —la pegatina asoma entera— y en horizontal hace lo suyo: lo que llega al
+     final se apaga en el último centímetro en vez de partirse a media letra.
+     Va en el GRUPO y no en la ranura para que el «+N», que es hermano suyo, se quede fuera del degradado. */
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 1.1rem), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 1.1rem), transparent);
+  -webkit-mask-size: 100% 300%;
+  mask-size: 100% 300%;
+  -webkit-mask-position: 0 center;
+  mask-position: 0 center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
 /* La ranura del año tiene ancho propio y su columna es `auto`: en las listas que no llevan año —Próximos, En
    curso— la ranura ni se pinta, la columna se queda a cero y la plataforma empieza pegada al canto. */
 .row-cat-year  { grid-column: 1; grid-row: 1; width: 6.6rem; padding-right: .5rem; }
 .row-cat-plat  { grid-column: 2; grid-row: 1; }
 .row-cat-genre { grid-column: 1 / -1; grid-row: 2; }
+/* El recuadro de la opinión no viaja al teléfono: recortado a una palabra por lado, y sin rótulos, no se
+   entiende. Está entero en el detalle, que se abre pulsando el renglón. */
+.row-notes { display: none; }
 
 /* MÓVILES PEQUEÑOS: fuera el año. Por debajo de este ancho, sus nueve rem son justo los que le hacen falta a la
    plataforma para verse entera, y de los tres datos el año es el que menos se busca al recorrer la lista. Su
@@ -368,56 +398,80 @@ table.meta-score.meta-grade .row-score { min-width: 2.9rem; }
   .row-cat-year { display: none; }
 }
 
-/* El recuadro de la opinión no viaja al teléfono: recortado a una palabra por lado, y sin rótulos, no se
-   entiende. Está entero en el detalle, que se abre pulsando el renglón. */
-.row-notes { display: none; }
-
 /* El hueco de una categoría que falta se QUEDA, tenue: no es un guion que leer, es la ranura diciendo que ahí
    no hay dato, y es lo que mantiene alineadas las filas (y las cajas) entre sí. */
 .chip-none { color: var(--text-dim); opacity: .5; font-size: var(--fs-2xs); line-height: 1.8; }
 
-/* LO QUE SE PENSÓ DEL JUEGO. Un recuadro HUNDIDO —la regla de la casa: lo que se rellena se hunde— con las
-   dos mitades siempre puestas. SIN RÓTULOS: el recuadro ya lo separa de las categorías de arriba, y cuál es
-   cuál lo dicen el color (verde a favor, rojo en contra, los mismos de toda la app) y el sitio (la mitad
-   izquierda siempre es la buena). Dos versalitas repetidas trescientas veces eran más ruido que ayuda. */
+/* LO QUE SE PENSÓ DEL JUEGO. Un recuadro HUNDIDO —la regla de la casa: lo que se rellena se hunde— por cada
+   grupo. SIN RÓTULOS: el recuadro ya lo separa de las categorías de arriba, y cuál es cuál lo dicen el color
+   (verde a favor, rojo en contra, los mismos de toda la app) y el sitio (la mitad izquierda siempre es la
+   buena). Dos versalitas repetidas trescientas veces eran más ruido que ayuda. */
 .row-notes {
-  /* LOS FUERTES Y LOS DÉBILES TAMBIÉN SON COLUMNAS INVISIBLES, como el año o el género: la primera tiene ancho
-     FIJO, así que el recuadro de lo malo arranca siempre en el mismo píxel, tenga la fila de arriba un punto
+  /* LOS FUERTES Y LOS DÉBILES TAMBIÉN SON COLUMNAS INVISIBLES, como el año o el género: cada uno tiene su
+     mitad, así que el recuadro de lo malo arranca siempre en el mismo píxel, tenga la fila de arriba un punto
      fuerte o cuatro. Sin eso, cada uno se colocaba donde le tocaba y volvía el desorden que las categorías ya
      no tienen.
-     La SEGUNDA columna, en cambio, mide lo que miden sus chips (`auto`), y por eso el bloque acaba donde acaba
-     el contenido en vez de cruzar la fila entera. */
-  grid-template-columns: var(--row-note-col, 1fr) auto;
-  justify-content: start;
-  width: fit-content;
-  max-width: 100%;
-  gap: .35rem 0;
+     Y LA LÍNEA SE APROVECHA ENTERA: antes el bloque medía lo que medían sus chips (`width: fit-content`) y la
+     mitad derecha del renglón se quedaba en blanco aunque el juego tuviera cuatro defectos que contar. Ahora
+     las dos mitades se reparten todo el ancho —y por eso caben más chips antes del «+N»—.
+     LA SANGRÍA DE LA IZQUIERDA es la misma columna del AÑO de la línea de arriba —la ficha se declara en la
+     tabla, así que las dos rejillas miden igual esa columna—: lo bueno arranca EXACTAMENTE donde arranca la
+     plataforma, y lo malo a mitad del resto. Las dos filas del renglón se leen entonces como una sola rejilla
+     y no como dos bloques que empiezan cada uno por su cuenta. Donde no hay año (Próximos, En curso) la
+     columna se queda a cero y la sangría desaparece sola.
+     LOS DOS VAN UN PASO POR DELANTE DE SU CATEGORÍA, no debajo de ella: lo bueno cae entre el año y la
+     plataforma, y lo malo entre la plataforma y el género. Alineados justo debajo, las dos filas se leían como
+     una sola columna doble y el renglón se cargaba a la derecha; escalonados, cada cosa señala hacia lo que
+     matiza sin taparlo, que es como quedó dibujado. */
+  grid-template-columns: var(--row-col-notes, 0px) minmax(0, 1.25fr) minmax(0, 2.55fr);
+  gap: .35rem .6rem;
+  width: 100%;
   min-width: 0;
-  margin-top: .1rem;
+  margin-top: .35rem;
 }
-/* CADA GRUPO, SU PROPIO RECUADRO. Hundido —la regla de la casa: lo que se rellena se hunde— y del ancho de sus
-   chips. Sobre la franja de la carátula hace falta un fondo PROPIO, no una transparencia más: si no, el
-   recuadro se diluye y sus chips parecen sueltos encima de la imagen.
+/* CADA GRUPO, SU PROPIO RECUADRO. Hundido y del ancho de su mitad. Sobre la franja de la carátula hace falta un
+   fondo PROPIO, no una transparencia más: si no, el recuadro se diluye y sus chips parecen sueltos encima de la
+   imagen.
    Una sola línea, pase lo que pase: en una lista de trescientas filas, una más alta que el resto se ve antes
-   que un punto fuerte recortado. Lo que no cabe ya lo cuenta el «+N». */
+   que un punto fuerte recortado. Lo que no cabe ya lo cuenta el «+N», y lo que aun así asome se desvanece en el
+   último centímetro (misma máscara que las ranuras de arriba). */
 .row-note {
   display: flex;
   align-items: center;
+  /* El recuadro mide lo que miden SUS CHIPS y no la mitad entera: un cerco medio vacío se lee como un dato que
+     falta. Lo que sí es fijo es dónde EMPIEZA —su columna—, que es lo que mantiene la lectura vertical entre
+     filas: el de lo malo arranca en el mismo píxel tenga la fila de arriba un punto fuerte o cuatro. */
   justify-self: start;
-  min-width: 0;
+  width: fit-content;
   max-width: 100%;
+  min-width: 0;
   min-height: var(--chip-slot-h);
-  overflow: hidden;
   padding: .3rem .45rem;
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--bg) 62%, transparent);
   border: 1px solid color-mix(in srgb, var(--hair) 60%, transparent);
 }
+/* AQUÍ NO HAY DESVANECIDO, y es a propósito. El recuadro mide lo que miden sus chips (`fit-content`), así que
+   el último SIEMPRE toca su canto: una máscara de degradado —que es lo que usan las ranuras de las categorías,
+   donde el ancho es fijo— apagaba el final de la última palabra en todas las filas, y de paso el filete del
+   recuadro, que es lo que se veía como una sombra pegada al final de la fila.
+   Lo que no cabe se recorta con puntos suspensivos: el `max-width` es del recuadro, no de cada chip, así que
+   solo entra en juego cuando un solo punto fuerte es más ancho que su columna entera. Sin `overflow` en el
+   recuadro, que recortaría también arriba y abajo y les comería la sombra dura a las pegatinas. */
+.row-note .chips { min-width: 0; }
+.row-note .chip {
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+}
 /* Fila y columna puestas a mano: si la de los fuertes no existe, la de los débiles NO puede correrse a su
    sitio, que es lo único que mantiene la lectura vertical entre filas. */
-.row-note-good { grid-column: 1; grid-row: 1; margin-right: .6rem; }
-.row-note-bad  { grid-column: 2; grid-row: 1; }
+.row-note-good { grid-column: 2; grid-row: 1; }
+.row-note-bad  { grid-column: 3; grid-row: 1; }
 .row-note .chips { flex-wrap: nowrap; }
+.row-note .chip { flex: 0 0 auto; }
 
 /* FORMA DE TARJETA (`is-cards`): la tabla pasa a una sola columna —el renglón entero— y las celdas de datos se
    esconden. La pone el componente, no una media query: es la preferencia de forma (F5) o una pantalla estrecha,
@@ -691,6 +745,35 @@ table.is-grid {
     grid-template-columns: repeat(var(--grid-cols, 4), minmax(0, 1fr));
     gap: .6rem;
   }
+
+  /* ── LA REJILLA SIN CARÁTULAS: TODAS LAS CAJAS MIDEN LO MISMO ─────────────────────────────────────
+     El ancho ya lo repartía la rejilla en columnas iguales, pero el ALTO lo ponía el contenido: un
+     título de dos líneas hacía su fila más alta que la de al lado y el mosaico se leía escalonado. Con
+     el alto DECLARADO, fila y columna casan con cualquier título y a cualquier ancho.
+
+     DE DÓNDE SALE EL NÚMERO: MEDIDO sobre la caja más llena que puede haber —cabecera, dos líneas de
+     nombre, las dos ranuras fijas y el medidor—, que es el mismo razonamiento por el que el nombre se
+     corta a dos líneas y una ranura reserva su hueco aunque el juego no tenga el dato. Con una línea de
+     título la caja mide 171 px y con dos, 191; los 202 de aquí son esos más el medidor del pie y un
+     respiro. Se probó a apurarlos hasta 186 y la caja del peor caso —título de dos líneas en la densidad
+     pequeña— dejaba 12 px entre la última etiqueta y su canto, con el relleno de abajo y el medidor
+     pidiendo 21: el texto quedaba pegado al filo de color.
+     Lo que sobra cuando el título ocupa una sola línea se queda AL FINAL de la caja, no entre el nombre y
+     las etiquetas: el `margin-top: auto` que las empujaba al pie se retira en la caja plana (más abajo),
+     porque con el alto declarado ese `auto` abría un boquete justo en medio de lo que se lee.
+     Y como el alto ya no depende del contenido, la estimación del virtualizador para una fila del
+     mosaico plano (`GRID_ROW_FLAT_ESTIMATE_PX`) pasa a ser exacta en vez de aproximada.
+
+     El hueco entre cajas sube de .6 a .9 rem: con cajas más grandes, el aire entre ellas tiene que subir
+     en la misma proporción o la rejilla vuelve a leerse amontonada — y hay skins cuya firma es una
+     SOMBRA DURA en diagonal (la chapa de «Inserte moneda», la viñeta de «Ladrones de corazones»), que
+     con .6 rem caía por debajo de la caja siguiente. ── */
+  .game-grid.is-flat {
+    --card-h: 12.6rem;
+    gap: .9rem;
+    grid-auto-rows: var(--card-h);
+  }
+  .game-grid.is-flat .game-card { height: 100%; }
 }
 
 .game-card {
@@ -863,8 +946,17 @@ table.is-grid {
   padding: 0;
 }
 .game-card.is-flat .game-card-score .score-ring::after { background: var(--surface); }
-/* La caja plana respira un poco más: sin lámina, el relleno es lo único que la separa de su canto. */
-.game-card.is-flat .game-card-body { padding: .7rem .8rem .8rem; gap: .55rem; }
+/* La caja plana respira un poco más: sin lámina, el relleno es lo único que la separa de su canto. Y
+   respira MÁS que antes desde que la caja es mayor: con el mínimo de columna en 250 px, el relleno de
+   antes dejaba los datos flotando en medio de un hueco en vez de asentados en la pieza. */
+.game-card.is-flat .game-card-body { padding: .85rem .95rem .95rem; gap: .7rem; }
+.game-card.is-flat .game-card-name { font-size: var(--fs-lg); line-height: 1.22; }
+/* LAS ETIQUETAS VAN PEGADAS AL NOMBRE, no empujadas al pie. En la caja CON carátula el `margin-top: auto` de
+   `.game-card-tags` tiene sentido —el cuerpo mide lo que mide y las etiquetas cierran la pieza—, pero en la
+   plana el alto está declarado, así que ese `auto` se comía todo lo que sobraba y lo metía JUSTO entre el
+   título y los chips: un juego de título corto salía con medio azulejo en blanco por el medio. Con el hueco al
+   final, lo que se lee queda junto y la caja sigue midiendo lo mismo que las de al lado. */
+.game-card.is-flat .game-card-tags { gap: .45rem; margin-top: 0; }
 
 /* EL CUERPO de la caja: lo que se lee. Crece hasta empujar el medidor al pie, de modo que el filo de color
    queda abajo del todo aunque el nombre ocupe una línea en una caja y dos en la de al lado. */
@@ -932,17 +1024,59 @@ table.is-grid {
   gap: .3rem;
   min-width: 0;
   /* Una ranura no se parte en dos líneas: la fila de la rejilla mide lo que mida la caja más alta, así que un
-     género largo en UNA caja subiría el alto de las seis. Lo que no cabe se recorta. */
-  overflow: hidden;
+     género largo en UNA caja subiría el alto de las seis. Lo que no cabe lo apaga la máscara de más abajo —y
+     no un `overflow: hidden`, que recortaría también arriba y abajo y les comería la sombra dura a las
+     pegatinas de «Inserte moneda» y a las viñetas de «Ladrones de corazones»—. */
   /* Y no se queda a cero cuando el juego no tiene el dato: el hueco tenue ocupa el alto de un chip, que es lo
      que hace que todas las cajas enseñen lo mismo en el mismo sitio. */
   min-height: var(--chip-slot-h);
 }
-.game-card-slot .chips { flex-wrap: nowrap; overflow: hidden; }
-.game-card-slot .chip { min-width: 0; overflow: hidden; text-overflow: ellipsis; display: inline-block; }
-/* El «+N» no se toca nunca: es lo que dice que hay más. Quien cede es el chip, que se recorta con puntos
-   suspensivos —de ahí el `inline-block` de arriba, que a un ítem flex no le llega el `text-overflow`—. */
-.game-card-slot .chip-more { flex: 0 0 auto; }
+.game-card-slot .chips { flex-wrap: nowrap; }
+/* LOS CHIPS NO SE ENCOGEN, igual que en la ranura del renglón: repartir la estrechez entre todos dejaba
+   «P…» al lado de «PlayStation…», y hasta «PC» —que cabe en cualquier sitio— salía recortado. Cada uno mide
+   lo que mide su texto; cuántos se pintan lo decide el ANCHO DE LA CAJA (`chipsDeCaja` en `GameTable`), que
+   es quien de verdad sabe cuánto sitio hay, y del resto avisa el «+N».
+   Lo que aun así se salga se apaga en el último centímetro en vez de partirse a media letra. */
+.game-card-slot .chip { flex: 0 0 auto; }
+/* EL «+N» VA ANCLADO AL CANTO DE LA RANURA, y su sitio se reserva con relleno. Iba al final de la fila, como
+   un chip más, así que era EL PRIMERO en caerse fuera cuando el texto se pasaba —y un contador que no se ve no
+   cuenta nada—. Anclado, el ancho que queda es el de los chips y es a ellos a quienes se les apaga el final,
+   que es el orden correcto: lo que falta ya lo dice el número.
+   `:has()` para no tener que marcar la ranura desde el componente: si no hay «+N», no hay relleno que reservar
+   y el chip dispone de la ranura entera. */
+.game-card-slot:has(.chip-more) { position: relative; padding-right: 42px; }
+.game-card-slot .chip-more { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
+
+/* LA EXCEPCIÓN: la ranura APRETADA, la que el componente marca cuando ni el primer chip cabe entero (un género
+   como «Coleccionista de criaturas» pide 172 px y en la densidad pequeña la ranura tiene 157). Ahí el único que
+   puede ceder es el chip, porque el «+N» que no se ve no cuenta nada: se recorta con puntos suspensivos y el
+   contador se queda dentro. `inline-block` porque a un ítem flex no le llega el `text-overflow`. */
+.game-card-slot.is-apretado .chip:not(.chip-more) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  flex: 0 1 auto;
+}
+.game-card-slot .chips {
+  /* EL GRUPO SE ESTIRA HASTA EL CANTO DE LA RANURA. Si mide lo que miden sus chips —que es lo que hace un ítem
+     flex por defecto—, el degradado de la máscara cae siempre sobre el último, y hasta un «PC» que sobra de
+     sitio salía a media tinta. Estirado, el degradado solo alcanza a lo que de verdad llega al final. */
+  flex: 1 1 auto;
+  min-width: 0;
+  /* EL DESVANECIDO VA EN EL GRUPO DE CHIPS, no en la ranura: el «+N» es hermano suyo (ver `renderTags`), así
+     que la máscara no lo alcanza y no hace falta abrirle ninguna ventana. Es más alta que el grupo (300 %,
+     centrada) para que en vertical no tape nada —las pegatinas de «Inserte moneda» llevan sombra dura por
+     fuera de su caja— y solo actúe de lado. */
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 1.6rem), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 1.6rem), transparent);
+  -webkit-mask-size: 100% 300%;
+  mask-size: 100% 300%;
+  -webkit-mask-position: 0 center;
+  mask-position: 0 center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
 
 /* La insignia, en el canto de abajo de la lámina y al otro extremo que la nota: las dos señales de la caja
    ocupan las dos esquinas libres de la carátula y dejan el cuerpo entero para lo que se lee. */
@@ -1024,8 +1158,19 @@ table.is-grid {
        caía en una segunda fila y ese renglón salía más alto que los demás. */
     .row-cats { grid-template-columns: var(--row-col-year, 0px) minmax(0, 1fr) minmax(0, 2.2fr); gap: 0; }
     /* La columna del año solo existe donde hay años (`has-year`, que pone el componente). En el resto se queda
-       a cero y la plataforma empieza pegada al canto, sin un hueco vacío por delante. */
-    &.has-year .row-cats { --row-col-year: minmax(0, 1.1fr); }
+       a cero y la plataforma empieza pegada al canto, sin un hueco vacío por delante.
+       La ficha se declara en la TABLA y no en `.row-cats`: la usan las dos rejillas del renglón —la de las
+       categorías y la de la opinión, que sangra por esa misma columna— y definida dentro de una, la otra no
+       la veía y caía al respaldo de 0 px. */
+    &.has-year {
+      --row-col-year: minmax(0, 1.1fr);
+      /* La sangría de la opinión es MENOR que la columna del año: los pros arrancan a media distancia entre el
+         año y la plataforma, y los débiles a dos tercios del camino entre la plataforma y el género. Los tres
+         pesos (.5 / 1,25 / 2,55 fr) salen de ahí y suman lo mismo que la línea de arriba, que es lo que
+         mantiene las dos filas dentro de la misma rejilla. Sin año (Próximos, En curso) se queda a cero, como
+         la del año. */
+      --row-col-notes: minmax(0, .5fr);
+    }
     .row-cat { grid-row: 1; padding-right: 1rem; }
     /* Tres años con su «+N» («2026 2025 2023 +2») caben sin partirse, y de ahí su peso en el reparto. El
        `width: auto` deshace los 6,6 rem que la ranura mide en el teléfono, donde solo cabe un año. */
@@ -1033,10 +1178,8 @@ table.is-grid {
     .row-cat-plat  { grid-column: 2; }
     .row-cat-genre { grid-column: 3; grid-row: 1; padding-right: 0; }
 
-    /* Y la opinión, debajo. La columna de los fuertes mide lo que miden tres chips con su «+N», que es su tope:
-       de ahí sale el ancho fijo que hace que los débiles empiecen siempre en el mismo píxel. */
-    .row-notes { display: grid; --row-note-col: 22rem; }
-
+    /* Y la opinión, debajo, ocupando la línea entera: media para lo bueno y media para lo malo. */
+    .row-notes { display: grid; }
   }
 }
 

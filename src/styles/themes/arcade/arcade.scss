@@ -747,3 +747,42 @@
    (`docs/logros/receta-medalla.md`) y es la misma en las siete paletas. ── */
 :root[data-palette="arcade"] .burst { shape-rendering: crispEdges; }
 :root[data-palette="arcade"] .burst-piece { rx: 0; }
+
+/* ── §N · LA CAJA SIN CARÁTULA = EL MUEBLE DE LA RECREATIVA ────────────────────────────────────────────
+   La MARQUESINA encendida arriba —la banda de luz del cartel, con sus bombillas—, la chapa con filete de
+   tinta y sombra dura en diagonal (§3), y el medidor del pie convertido en el MARCADOR de la máquina:
+   más alto y de canto a canto. El hueco de la rejilla sin carátulas sube a .9 rem justo por esta sombra
+   (ver `_table.scss`): con el de antes caía por debajo de la caja siguiente. ── */
+:root[data-palette="arcade"] .game-card.is-flat {
+  border: 2px solid var(--arc-cyan);
+  box-shadow: 6px 6px 0 color-mix(in srgb, var(--arc-pink) 70%, transparent);
+  padding-top: 10px;
+}
+/* La marquesina: banda de luz de canto a canto con las bombillas del cartel. */
+:root[data-palette="arcade"] .game-card.is-flat::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 10px;
+  background-image:
+    radial-gradient(circle, var(--arc-gold) 1.4px, transparent 1.6px),
+    linear-gradient(90deg, color-mix(in srgb, var(--steam) 85%, transparent), color-mix(in srgb, var(--arc-cyan) 70%, transparent));
+  background-size: 16px 10px, auto;
+  background-position: 3px center, 0 0;
+  background-repeat: repeat-x, no-repeat;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--steam) 45%, transparent);
+}
+:root[data-palette="arcade"] .game-card.is-flat .game-card-name {
+  color: var(--arc-gold);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--arc-gold) 35%, transparent);
+}
+/* EN CLARO EL RÓTULO NO PUEDE IR ENCENDIDO. El oro de la sala a oscuras da 12,35:1 sobre su superficie,
+   pero el de la sala de día se queda en 4,39:1 sobre la suya —y este nombre mide 16,8 px, así que le
+   aplica el 4,5:1 del texto normal, no el del grande—. Se hunde el mismo tono (la regla de `--text-dim`:
+   tono y saturación intactos, luminosidad movida) hasta 6,3:1, y se apaga el halo, que ahí no ilumina
+   nada: lo que en la noche es un rótulo de neón, de día es pintura sobre chapa. */
+:root[data-palette="arcade"][data-theme="light"] .game-card.is-flat .game-card-name {
+  color: color-mix(in srgb, var(--arc-gold) 78%, #000);
+  text-shadow: none;
+}
+:root[data-palette="arcade"] .game-card.is-flat .game-card-meter { height: 10px; }

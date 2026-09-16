@@ -14,10 +14,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   recuerda y viaja con la cuenta, así que el móvil y el ordenador enseñan lo mismo.
 - **El renglón, en tres pisos y con columnas invisibles.** Arriba el nombre con la nota y la insignia pegadas al
   canto derecho; debajo, año, plataformas y géneros, cada uno en su ranura; y debajo, en dos recuadros hundidos,
-  los puntos fuertes y los débiles. Las ranuras tienen ancho fijo, así que el género de una fila cae justo
-  debajo del de la siguiente **sin que haya que dibujar una sola línea ni una cabecera**: se recupera la lectura
-  en vertical que se perdió al quitar las columnas, que era el motivo por el que los datos parecían puestos a lo
-  loco. Medido sobre la biblioteca de referencia, las 302 filas miden exactamente lo mismo.
+  los puntos fuertes y los débiles, sangrados por la misma columna del año —lo bueno arranca justo donde
+  arranca la plataforma— para que las dos filas se lean como una sola rejilla. Las ranuras tienen ancho fijo, así que el
+  género de una fila cae justo debajo del de la siguiente **sin que haya que dibujar una sola línea ni una
+  cabecera**: se recupera la lectura en vertical que se perdió al quitar las columnas, que era el motivo por el
+  que los datos parecían puestos a lo loco. Medido sobre la biblioteca de referencia, las filas miden exactamente
+  lo mismo y cada ranura —las cinco— empieza siempre en el mismo píxel.
+- **Los chips se adaptan al sitio que hay.** Cuántas plataformas y cuántos géneros se ven antes del «+N» ya no
+  es un número fijo: se **mide el texto** de ESE juego con la letra y el relleno que ese tema le da al chip, y
+  se pintan los que caben en ESA caja. Así una tarjeta grande enseña cuatro plataformas donde una pequeña enseña
+  una, y dos juegos de la misma fila pueden enseñar distinto número si uno tiene los nombres más cortos. Lo
+  mismo en los puntos fuertes y débiles del renglón. El «+N» va anclado al canto de su ranura, así que nunca se cae fuera, y lo que aun así se
+  sale se **desvanece** en el último centímetro en vez de partirse a media letra. Y el desvanecido sustituye al
+  recorte que había antes, que cortaba por los cuatro cantos: en «Inserte moneda» y «Ladrones de corazones» los
+  chips llevan sombra dura por fuera de su caja y la ranura se la cortaba a ras, arriba y abajo.
 - **Las tarjetas enseñan siempre lo mismo y en el mismo sitio:** una plataforma, un género, la nota flotando
   sobre el canto de la carátula y la insignia sobre el de abajo, y al pie un medidor que cruza la caja con el
   tono rojo→verde de la nota. Antes cada caja enseñaba lo que tenía —dos chips o cuatro, con año o sin él— y esa
@@ -30,6 +40,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   encendido a parpadeos de tubo fluorescente en «Cámara de pruebas».
 - **La carátula también viste el renglón**, recortada en una franja que lo cruza de lado a lado y con un velo de
   la superficie del tema encima para que el texto no pierda contraste.
+- **Sin carátulas, la tarjeta es una pieza de su mundo.** Con la preferencia apagada —que es como viene la
+  aplicación— el mosaico eran ocho veces la misma caja con distinto color, y una biblioteca entera se leía
+  monótona. Ahora cada tema le da forma propia: un panel con juntas y vértices biselados en «Cámara de
+  pruebas» —cuatro cantoneras en L, las piezas de esquina del Cubo de Compañía—, el mueble con su marquesina de
+  bombillas en «Inserte moneda», una ventana del HUD achaflanada en
+  «Sin futuro», la cartela del códice con cantoneras de oro en «Solo hay guerra», la viñeta de contorno grueso y
+  sombra dura en «Ladrones de corazones», la caja de diálogo pixelada en «Sol y luna», una placa de acero con
+  veta de damasco inscrita en un pliego de pergamino rasgado en «Plata y acero» y el lingote con su filo
+  templado en «Forja y temple».
+- **Y las tarjetas sin carátula respiran.** La caja crece (el paso de en medio pasa de 205 a 250 px, de 6
+  columnas a 5 en una pantalla de 1440), sube el relleno y el hueco entre cajas, y **todas miden exactamente lo
+  mismo**: el alto va declarado, así que fila y columna casan con cualquier título en vez de escalonarse cuando
+  un nombre ocupa dos líneas. Las etiquetas van pegadas al nombre y no empujadas al pie, que es lo que abría un
+  boquete justo en mitad de lo que se lee.
 
 ### Changed
 - **El orden ya no se pulsa en las cabeceras**, que era justo lo que hacía que aquello pareciera una tabla de
