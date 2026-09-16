@@ -12,11 +12,7 @@ import {
   reabrirLaPregunta,
   reiniciarIndiceDeCaratulas,
 } from '../../src/core/utils/coverDone';
-import {
-  recordarQueNoTiene,
-  reiniciarMemoriaDeCaratulas,
-  sabemosQueNoTiene,
-} from '../../src/core/utils/coverMemory';
+import { reiniciarMemoriaDeCaratulas, sabemosQueNoTiene } from '../../src/core/utils/coverMemory';
 import { coverUrl } from '../../src/core/utils/coverUrl';
 
 function apunta(nombre: string, plataformas: string[], ampliado = false): void {
