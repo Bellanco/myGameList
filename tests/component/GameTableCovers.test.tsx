@@ -21,7 +21,7 @@ function juego(id: number, name: string): GameItem {
   } as GameItem;
 }
 
-function pinta(forma: 'grid' | 'list', juegos: GameItem[], tab: TabId = 'c') {
+function pinta(forma: 'grid' | 'list', juegos: GameItem[], tab: TabId = 'c', allowCovers = true) {
   localStorage.setItem('mis-listas-covers', 'on');
   localStorage.setItem('mis-listas-list-shape', forma);
   return render(
@@ -34,6 +34,7 @@ function pinta(forma: 'grid' | 'list', juegos: GameItem[], tab: TabId = 'c') {
       onDelete={vi.fn()}
       onMigrate={vi.fn()}
       tabActions={[]}
+      allowCovers={allowCovers}
     />,
   );
 }
@@ -80,6 +81,27 @@ describe('qué carátulas pide el listado', () => {
   it('y sin carátula conocida el renglón se queda en su superficie plana', () => {
     recordarQueNoTiene(coverUrl('Jotum', ['Steam']));
     const { container } = pinta('list', [juego(1, 'Jotum')]);
+    const fila = container.querySelector<HTMLElement>('tr.main-row');
+
+    expect(fila?.className).not.toContain('has-cover');
+    expect(fila?.style.getPropertyValue('--row-cover')).toBe('');
+  });
+
+  /* LA LISTA PUEDE NEGAR LAS CARÁTULAS AUNQUE EL CHECK ESTÉ ENCENDIDO, y es lo que sostiene que la biblioteca
+     de otra persona no se resuelva hoy salvo para el rango que las tiene desbloqueadas: tu biblioteca la calienta
+     el recorrido de fondo una vez, pero cada perfil que abres es un catálogo entero de juegos que no tienes. */
+  it('la lista puede negar las carátulas aunque la preferencia esté encendida', () => {
+    const { container } = pinta('grid', [juego(1, 'Celeste')], 'c', false);
+
+    expect(container.querySelector('.game-cover-img')).toBeNull();
+    // Y no queda un hueco donde iba la imagen: la caja se pinta en su forma PLANA, que es la misma vista que ya
+    // existe con la preferencia apagada. Por eso esto no añade un segundo diseño que mantener.
+    expect(container.querySelector('.game-grid.is-flat')).not.toBeNull();
+    expect(container.querySelector('.game-card.is-flat')).not.toBeNull();
+  });
+
+  it('y el renglón tampoco se trae su franja', () => {
+    const { container } = pinta('list', [juego(1, 'Celeste')], 'c', false);
     const fila = container.querySelector<HTMLElement>('tr.main-row');
 
     expect(fila?.className).not.toContain('has-cover');

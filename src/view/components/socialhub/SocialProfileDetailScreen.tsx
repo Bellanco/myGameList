@@ -537,6 +537,16 @@ function SocialProfileDetailScreenBase({
                     sort={sortByTab[currentTab]}
                     onSort={handleSort}
                     readOnly
+                    /* LAS CARÁTULAS AJENAS, SOLO PARA MITHRIL —de momento—. Tu biblioteca la calienta el
+                       recorrido de fondo una vez y ya está resuelta; la de otra persona es un catálogo entero de
+                       juegos que tú no tienes, y se multiplica por cada perfil que abras. Es el gasto que menos
+                       se puede acotar del servicio, así que hasta que haya números para decidir (ver el contador
+                       del día en el panel) se le concede al rango que paga los privilegios, como la franja ancha
+                       del renglón.
+                       Los demás ven la MISMA lista sin imágenes, que es la vista que ya existe con la
+                       preferencia apagada. Y cuando se desbloquee, se quita esta línea y vuelve a mandar el
+                       check de cada uno: no hay nada más que deshacer. */
+                    allowCovers={viewerTier === ADMIN_ONLY_TIER}
                     visibility={{
                       showYears: false,
                       showReplayable: !activeProfileDetail.visibility?.hideReplayable,
