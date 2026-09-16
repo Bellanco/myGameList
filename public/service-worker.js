@@ -74,8 +74,15 @@ const COVER_CACHE_NAME = 'mygamelist-covers-v1';
  * Una carátula es lo más parecido a inmutable que hay aquí: el emparejamiento nombre → portada solo cambia si se
  * corrige una errata del título o si IGDB estrena ficha. Eso pasa en días, no en minutos, así que se sirve de
  * caché sin preguntar y solo se revalida —una vez, en segundo plano— la copia que ya tiene sus días encima.
+ *
+ * DE SIETE DÍAS A NOVENTA. Siete era prudente y salía caro: una biblioteca de trescientas carátulas son
+ * trescientas peticiones cada semana y por dispositivo para recibir exactamente los mismos bytes, porque una
+ * carátula que ya emparejó no cambia. Lo que de verdad cambia tiene otro camino de vuelta y no depende de este
+ * plazo: si se corrige el título, la URL es otra y aquí no hay copia que servir; y si el juego no tenía
+ * carátula, no hay nada guardado —los 404 no se cachean— y se vuelve a preguntar en cuanto caduque la memoria
+ * del navegador. Noventa días es, en la práctica, «revisa de vez en cuando por si el emparejador ha mejorado».
  */
-const COVER_REVALIDATE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+const COVER_REVALIDATE_AFTER_MS = 90 * 24 * 60 * 60 * 1000;
 
 /**
  * TOPE DE CARÁTULAS GUARDADAS. El cubo sobrevive a los despliegues a propósito (ver arriba), así que sin esto lo

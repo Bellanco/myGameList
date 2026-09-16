@@ -94,6 +94,10 @@ describe('/cover — lo que contesta', () => {
     expect(respuesta.status).toBe(200);
     expect(respuesta.headers.get('Content-Type')).toBe('image/jpeg');
     expect(respuesta.headers.get('Cache-Control')).toContain('max-age=2592000');
+    /* Y un AÑO de `stale-while-revalidate`, que es lo que de verdad alarga la vida de la imagen: pasado el mes
+       se sigue pintando al instante la copia que hay y la nueva se pide por detrás. Con un `max-age` largo en su
+       lugar, una errata corregida tardaría ese mismo año en verse. */
+    expect(respuesta.headers.get('Cache-Control')).toContain('stale-while-revalidate=31536000');
     expect(respuesta.headers.get('X-Content-Type-Options')).toBe('nosniff');
   });
 
