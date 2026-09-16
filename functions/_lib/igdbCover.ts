@@ -328,6 +328,35 @@ export interface EntornoIgdb {
 
 const CLAVE_TOKEN = 'igdb:token:v1';
 
+/**
+ * APUNTAR EN KV ES EL MEJOR ESFUERZO, NUNCA UNA CONDICIÓN PARA RESPONDER.
+ *
+ * El `put` de KV LANZA cuando la cuenta agota su presupuesto diario de escrituras —1.000 en el plan gratuito, y
+ * ese techo lo comparten este almacén y el de las reseñas compartidas (ver `docs/plan-compartir-resenas.md`)—.
+ * Sin esta guarda, esa excepción subía hasta la Function, que no tiene `_middleware` que la recoja, y `/cover`
+ * contestaba un 500 con la carátula YA resuelta y a un `fetch` de distancia.
+ *
+ * Y lo que venía detrás era peor que el 500: al no quedar nada apuntado, el mismo juego volvía a preguntarle a
+ * IGDB en la visita siguiente. O sea que el día que el presupuesto se agota —justo cuando el sistema está más
+ * apretado— la caché deja de amortiguar y el gasto contra IGDB se multiplica. Fallar en guardar cuesta una
+ * consulta de más mañana; fallar en responder deja la biblioteca sin carátulas hoy.
+ *
+ * El silencio es a propósito: quien llama no puede hacer nada distinto según se haya guardado o no, y lo único
+ * que cambia es que la próxima vez habrá que volver a preguntar.
+ */
+export async function apuntarSiSePuede(
+  kv: KVNamespace | undefined,
+  clave: string,
+  valor: string,
+  expirationTtl: number,
+): Promise<void> {
+  try {
+    await kv?.put(clave, valor, { expirationTtl });
+  } catch {
+    // Presupuesto agotado, escritura rechazada por ritmo o KV caído: se sigue sirviendo con lo que ya se sabe.
+  }
+}
+
 /** Token de aplicación de Twitch, reutilizado desde KV. Dura ~60 días; se guarda con margen. */
 async function tokenIgdb(env: EntornoIgdb): Promise<string | null> {
   const guardado = await env.COVERS?.get(CLAVE_TOKEN);
@@ -344,7 +373,9 @@ async function tokenIgdb(env: EntornoIgdb): Promise<string | null> {
   // Se caduca ANTES que el token real (la mitad de su vida, con tope de 30 días): renovar de más es gratis,
   // servir carátulas con un token muerto no.
   const vida = Math.min(Math.floor((cuerpo.expires_in ?? 0) / 2) || HIT_TTL, HIT_TTL);
-  await env.COVERS?.put(CLAVE_TOKEN, cuerpo.access_token, { expirationTtl: Math.max(vida, 600) });
+  // Si no se puede guardar, el token recién pedido sirve igual para ESTA petición: lo único que se pierde es
+  // poder reutilizarlo, y Twitch da otro cuando haga falta.
+  await apuntarSiSePuede(env.COVERS, CLAVE_TOKEN, cuerpo.access_token, Math.max(vida, 600));
   return cuerpo.access_token;
 }
 
@@ -531,9 +562,13 @@ export async function emparejarYGuardar(
 ): Promise<string | null> {
   const { coverId, indeciso } = await emparejar(env, nombre, plataformas, ampliado);
   if (!coverId && indeciso) return null; // no se ha podido preguntar: ni se cachea ni se da por definitivo
-  await env.COVERS?.put(claveCache(nombre, plataformas, ampliado), coverId ?? '', {
-    expirationTtl: coverId ? HIT_TTL : MISS_TTL,
-  });
+  // El emparejamiento se devuelve se haya podido guardar o no: ya está resuelto y la carátula se puede servir.
+  await apuntarSiSePuede(
+    env.COVERS,
+    claveCache(nombre, plataformas, ampliado),
+    coverId ?? '',
+    coverId ? HIT_TTL : MISS_TTL,
+  );
   return coverId;
 }
 
