@@ -18,6 +18,7 @@
 // («Half Life / Black Mesa»), y una barra codificada dentro de una ruta la normalizan los intermediarios.
 import { coverExemptionKey } from './_lib/keys';
 import {
+  apuntarSiSePuede,
   emparejarYGuardar,
   esIdDeCaratula,
   leerCaratulaCacheada,
@@ -93,8 +94,12 @@ async function quedaCupo(env: Env, request: Request): Promise<boolean> {
   }
   // El azar es lo que reparte el coste: cada resolución tiene una probabilidad de 1/LOTE de apuntar el lote
   // entero. Sin él haría falta un contador compartido entre peticiones, que es justo lo que KV no da.
+  //
+  // Y se apunta con `apuntarSiSePuede`: si la escritura no sale —presupuesto diario agotado, sobre todo—, lo que
+  // NO puede pasar es que una carátula deje de servirse por no haber podido anotar el contador. El cupo es un
+  // tope blando que ya vive con el retraso de la caché de KV; una anotación perdida cabe de sobra en ese margen.
   if (Math.random() < 1 / LOTE_CUPO) {
-    await env.COVERS?.put(clave, String(usado + LOTE_CUPO), { expirationTtl: 3600 });
+    await apuntarSiSePuede(env.COVERS, clave, String(usado + LOTE_CUPO), 3600);
   }
   return true;
 }

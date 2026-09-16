@@ -29,8 +29,10 @@ function entorno(kv: Kv, completo = true) {
   } as never;
 }
 
-function peticion(consulta: string, ip = '203.0.113.7'): Request {
-  return new Request(`https://mygamelist.pages.dev/cover?${consulta}`, { headers: { 'CF-Connecting-IP': ip } });
+function peticion(consulta: string, ip = '203.0.113.7', cabeceras: Record<string, string> = {}): Request {
+  return new Request(`https://mygamelist.pages.dev/cover?${consulta}`, {
+    headers: { 'CF-Connecting-IP': ip, ...cabeceras },
+  });
 }
 
 /** Ficha de IGDB que empareja con el título pedido. `total_rating_count` alto para que gane sin dudar. */
@@ -198,6 +200,22 @@ describe('/cover — lo que cuesta', () => {
   // Se simula con un 401 y no con el 429 del caso real porque el 429 sí se reintenta —tres veces, con espera
   // creciente y por cada una de las cuatro consultas— y el test tardaría siete segundos en comprobar lo mismo:
   // los dos desembocan en el mismo «no se ha podido preguntar», que es la invariante que aquí se protege.
+  /* GUARDAR ES EL MEJOR ESFUERZO, NUNCA UNA CONDICIÓN PARA RESPONDER. El `put` de KV lanza cuando la cuenta
+     agota su presupuesto diario de escrituras —1.000 en el plan gratuito, y lo comparte con las reseñas
+     compartidas—, y como aquí no hay `_middleware` que recoja la excepción, `/cover` contestaba un 500 con la
+     carátula ya resuelta. Peor: al no quedar nada apuntado, el mismo juego volvía a preguntarle a IGDB en la
+     visita siguiente, justo el día que el sistema está más apretado. */
+  it('sirve la carátula aunque no se pueda escribir en KV', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0); // que le toque apuntar también el cupo: los dos `put` fallan
+    const kv = kvFalso();
+    kv.put.mockRejectedValue(new Error('KV PUT failed: 429 Too Many Requests'));
+
+    const respuesta = await onRequestGet({ request: peticion('n=Celeste'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(200);
+    expect(await respuesta.text()).toBe('jpeg');
+  });
+
   it('si no se ha podido preguntar, no se apunta nada en la caché negativa', async () => {
     fetchSimulado.mockImplementation(async (entrada: Request | string) => {
       const url = String(entrada instanceof Request ? entrada.url : entrada);
