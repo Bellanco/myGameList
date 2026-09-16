@@ -208,6 +208,36 @@ describe('llenado de carátulas', () => {
     await waitFor(() => expect(sabemosQueNoTiene(url)).toBe(false));
   });
 
+  /* APAGAR LAS CARÁTULAS NO TIRA NADA DE LO APRENDIDO, y volver a encenderlas no vuelve a pagarlo. Es lo que
+     hace que el interruptor sea un interruptor y no un borrado: mientras está apagado no se pide una sola
+     imagen, y al encenderlo otra vez la biblioteca se pinta con lo que ya está guardado. */
+  it('apagar y volver a encender no repite el trabajo', async () => {
+    localStorage.setItem('mis-listas-covers', 'on');
+    const datos = biblioteca([juego(1, 'Celeste'), juego(2, 'Portal')]);
+
+    const primera = renderHook(() => useCoverBackfill(datos));
+    await waitFor(() => expect(fetchSimulado).toHaveBeenCalledTimes(2), { timeout: 4000 });
+    await waitFor(() => expect(localStorage.getItem('mis-listas-covers-done-v2')).toContain('Portal'), {
+      timeout: 4000,
+    });
+    primera.unmount();
+
+    // Se apaga: ni una petición más, y lo aprendido sigue donde estaba.
+    localStorage.setItem('mis-listas-covers', 'off');
+    fetchSimulado.mockClear();
+    const apagada = renderHook(() => useCoverBackfill(datos));
+    await new Promise((listo) => setTimeout(listo, 600));
+    expect(fetchSimulado).not.toHaveBeenCalled();
+    expect(localStorage.getItem('mis-listas-covers-done-v2')).toContain('Celeste');
+    apagada.unmount();
+
+    // Y se vuelve a encender: tampoco pide nada, porque no hay nada que volver a resolver.
+    localStorage.setItem('mis-listas-covers', 'on');
+    renderHook(() => useCoverBackfill(datos));
+    await new Promise((listo) => setTimeout(listo, 600));
+    expect(fetchSimulado).not.toHaveBeenCalled();
+  });
+
   /* Lo apuntado con el formato anterior —la URL entera de cada juego, dentro de un JSON— se traduce al leerlo.
      Sin esto, cambiar cómo se apunta obligaría a cada dispositivo a recorrer su biblioteca otra vez: cinco
      minutos de peticiones en segundo plano para volver a aprender lo que ya sabía. */
