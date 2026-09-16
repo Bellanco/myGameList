@@ -1,12 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { TAB_IDS, type TabData } from '../../model/types/game';
 import { coverUrl } from '../../core/utils/coverUrl';
-import {
-  hayQueReintentarAlgo,
-  olvidarQueNoTiene,
-  recordarQueNoTiene,
-  tocaReintentar,
-} from '../../core/utils/coverMemory';
+import { olvidarQueNoTiene, recordarQueNoTiene } from '../../core/utils/coverMemory';
 import { evaluarTopesDeImagenes, pedirAlmacenamientoDuradero } from '../../core/utils/coverLimits';
 import { claveDeJuego, guardarHechos, leerHechos } from '../../core/utils/coverDone';
 import { pedirCupoDeCaratulasLibre } from '../../model/repository/coverQuotaRepository';
@@ -84,27 +79,18 @@ export function useCoverBackfill(data: TabData): void {
       await evaluarTopesDeImagenes(ampliado);
 
       const hechos = leerHechos();
-      /* ¿HAY ALGÚN «NO TIENE» CUMPLIDO? Se pregunta una sola vez, aquí, porque de la respuesta depende cuánto
-         trabajo cuesta el bucle de abajo: si no hay ninguno —lo normal, seis días de cada siete— una biblioteca
-         ya recorrida no llega a componer ni una sola URL. */
-      const reintentar = hayQueReintentarAlgo();
       /* La clave primero y la URL solo para los que faltan: una biblioteca ya recorrida no llega a componer ni
-         una sola URL, que es el caso normal a partir de la segunda visita. */
+         una sola URL, que es el caso normal a partir de la segunda visita.
+         Y LO YA HECHO NO SE REPITE, ni siquiera lo que salió sin carátula: un «no» solo se reabre cambiando el
+         título, y entonces esta misma clave —que lleva el nombre dentro— ya es otra y el juego entra aquí como
+         lo que es, uno nuevo. Ver `coverMemory` para por qué no se reintenta por tiempo. */
       const pendientes: { clave: string; url: string }[] = [];
       for (const tab of TAB_IDS) {
         for (const juego of datosRef.current[tab] ?? []) {
           if (!juego?.name) continue;
           const clave = claveDeJuego(juego.name, juego.platforms ?? [], ampliado);
-          const hecho = hechos.has(clave);
-          if (hecho && !reintentar) continue;
-          const url = coverUrl(juego.name, juego.platforms ?? [], ampliado);
-          /* LOS «NO TIENE» VUELVEN A LA COLA cuando cumplen su semana, aunque estén dados por hechos. Es lo que
-             cierra el círculo: la marca del navegador caduca a la vez que la caché negativa del servidor, así
-             que esta pregunta llega justo cuando al otro lado toca volver a mirar en IGDB. Un juego al que le
-             falta la carátula acaba teniéndola sin que nadie haga nada, y si sigue sin ella se vuelve a callar
-             otra semana en vez de preguntarlo en cada visita. */
-          if (hecho && !tocaReintentar(url)) continue;
-          pendientes.push({ clave, url });
+          if (hechos.has(clave)) continue;
+          pendientes.push({ clave, url: coverUrl(juego.name, juego.platforms ?? [], ampliado) });
         }
       }
       if (!pendientes.length) return;
