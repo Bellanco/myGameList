@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from 'react';
+import { memo, useState } from 'react';
 import { categoryToneStyle } from '../../core/constants/categoryTone';
 
 /**
@@ -61,8 +61,18 @@ export const GameCover = memo(function GameCover({
 
   /* Al reciclarse el elemento le cambia el `src` sin desmontarse, así que el estado tiene que volver a empezar:
      sin esto, una caja que ya había cargado enseñaría la imagen ANTERIOR marcada como lista mientras baja la
-     nueva. */
-  useEffect(() => { setEstado(src ? 'cargando' : 'sin'); }, [src]);
+     nueva.
+     Y el reinicio va DURANTE EL RENDER, comparando con el `src` de la vuelta anterior, en vez de en un efecto.
+     Un efecto corre DESPUÉS de pintar, así que dejaba un fotograma con la URL nueva y el estado viejo —justo la
+     imagen anterior a plena opacidad que esto viene a evitar— y costaba un render de más por cada caja que la
+     rejilla recicla, que al bajar por una biblioteca grande son unos cuantos por fotograma. React vuelve a
+     ejecutar el componente en el acto, sin pintar la vuelta descartada: es el patrón para ajustar estado cuando
+     cambia una prop. */
+  const [anterior, setAnterior] = useState(src);
+  if (src !== anterior) {
+    setAnterior(src);
+    setEstado(src ? 'cargando' : 'sin');
+  }
 
   return (
     <div className="game-cover" data-carga={estado} style={categoryToneStyle(name)} aria-hidden="true">

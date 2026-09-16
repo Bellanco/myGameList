@@ -112,16 +112,41 @@ const GRID_GAP_PX = 10;
     Solo lo piden los géneros; el resto de categorías ya tienen un color con significado propio (la plataforma
     es neutra, los puntos fuertes verdes y los débiles rojos) y teñirlas rompería esa lectura. */
 /**
- * La URL de la carátula, o `null` si no hay que pedir nada: porque la preferencia está apagada, o porque en una
- * visita anterior ya se supo que ese juego no tiene carátula. Lo segundo es lo que evita repetir cada visita los
- * mismos 404 —que no los cachea nadie, a propósito— por los juegos que nunca van a tener imagen.
+ * ¿HAY QUE PEDIR CARÁTULA DE ESTE JUEGO? Devuelve su URL NORMAL —que es a la vez la que pide el mosaico y la
+ * clave con la que se recuerda que un juego no tiene imagen— o `null` cuando no hay nada que pedir: porque la
+ * preferencia está apagada, o porque en una visita anterior ya se supo que ese juego no tiene carátula. Lo
+ * segundo es lo que evita repetir cada visita los mismos 404 —que no los cachea nadie, a propósito— por los
+ * juegos que nunca van a tener imagen.
+ *
+ * Se pregunta SIEMPRE por la normal aunque luego se pida otro tamaño: la memoria se guarda por URL y el «no» de
+ * un juego no depende de a qué resolución se le pida (si la normal dio 404, la ancha también lo dará).
  */
-function coverSrc(covers: boolean, game: GameItem, ampliado = false, tamano: 'normal' | 'medio' | 'ancho' = 'normal'): string | null {
+function coverBase(covers: boolean, game: GameItem, ampliado: boolean): string | null {
   if (!covers) return null;
-  const url = coverUrl(game.name, game.platforms, ampliado, tamano);
-  /* La memoria de «este juego no tiene carátula» se guarda por URL, y ahora hay dos URL por juego. Se pregunta
-     por la NORMAL, que es la que todo el mundo pide primero: si esa dio 404, la ancha también lo dará. */
-  return sabemosQueNoTiene(coverUrl(game.name, game.platforms, ampliado)) ? null : url;
+  const url = coverUrl(game.name, game.platforms, ampliado);
+  return sabemosQueNoTiene(url) ? null : url;
+}
+
+/**
+ * Las dos URL que el mosaico ofrece juntas con `srcset` (ver `GameCover`), de UNA pasada: la de la ranura y la
+ * de densidad doble.
+ *
+ * Que salgan juntas no es cosmético. Pedirlas por separado significaba llamar dos veces a una función que
+ * construía DOS URL cada vez —la del tamaño y la normal para preguntar a la memoria—, o sea cuatro por caja y
+ * por render; con las ~150 cajas que la rejilla mantiene montadas, son seiscientas en cada repintado del
+ * listado. Aquí la normal se construye una vez y sirve para las dos cosas, y la de densidad doble ni se llega a
+ * componer cuando ya se sabe que ese juego no tiene carátula.
+ */
+function coverDeCaja(covers: boolean, game: GameItem, ampliado: boolean): { src: string | null; src2x: string | null } {
+  const src = coverBase(covers, game, ampliado);
+  if (!src) return { src: null, src2x: null };
+  return { src, src2x: coverUrl(game.name, game.platforms, ampliado, 'medio') };
+}
+
+/** La del renglón: una sola, del tamaño con que se recorta la franja que cruza la fila. */
+function coverDeRenglon(covers: boolean, game: GameItem, ampliado: boolean, grande: boolean): string | null {
+  if (!coverBase(covers, game, ampliado)) return null;
+  return coverUrl(game.name, game.platforms, ampliado, grande ? 'ancho' : 'medio');
 }
 
 function renderTags(values: string[], className: string, maxVisible?: number, tone = false) {
@@ -785,7 +810,7 @@ export const GameTable = memo(function GameTable({
                                     no tenga imagen enseña su portada de casa. */}
                                 {covers ? (
                                   <div className="game-card-art">
-                                    <GameCover name={game.name} src={coverSrc(covers, game, coversAmpliadas)} src2x={coverSrc(covers, game, coversAmpliadas, 'medio')} />
+                                    <GameCover name={game.name} {...coverDeCaja(covers, game, coversAmpliadas)} />
                                     {/* La nota, flotando sobre el canto de la carátula: en el mosaico es lo
                                         primero que se busca, y ahí está siempre en el mismo punto de cada caja
                                         en vez de bailar según lo que ocupe el nombre. */}
@@ -849,7 +874,7 @@ export const GameTable = memo(function GameTable({
                      no como `<img>` porque aquí no se mira: no necesita alt, ni hueco reservado, ni participar
                      en la medición de la fila. Sin preferencia de carátulas encendida —o sin imagen para ese
                      juego— la pieza se queda en su superficie plana, que es la maqueta §2. */
-                  const rowCover = coverSrc(covers, game, coversAmpliadas, franjaGrande ? 'ancho' : 'medio');
+                  const rowCover = coverDeRenglon(covers, game, coversAmpliadas, franjaGrande);
                   return (
                     <tr
                       key={`main-${game.id}`}
