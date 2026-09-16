@@ -537,9 +537,24 @@
   box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px color-mix(in srgb, var(--sos-turq) 70%, transparent);
 }
 :root[data-palette="seaofstars"] .game-card.is-flat .game-card-body { padding: 1rem 1.05rem; }
-/* Dentro del 9-slice, como en «Solo hay guerra»: el filo de color no puede pisar el anillo interior. */
+/* EL MEDIDOR = LA BARRA DE PUNTOS DE VIDA de la caja de diálogo, y está SOMBREADA COMO UN SPRITE: tres
+   bandas planas —luz, color y sombra— en vez de un degradado, que es como tiene el volumen todo lo que se
+   dibuja píxel a píxel. El filo turquesa de arriba la separa del cuerpo sin añadir otro cerco.
+   Dentro del 9-slice, como en «Solo hay guerra»: el color no puede pisar el anillo interior. */
+:root[data-palette="seaofstars"] .game-card .game-card-meter {
+  height: 7px;
+  background: color-mix(in srgb, #000 50%, var(--surface));
+  box-shadow: inset 0 1px 0 var(--sos-turq);
+}
+/* El 9-slice solo lo tiene la caja sin lámina, y ahí el color no puede pisar su anillo interior (4 px). */
 :root[data-palette="seaofstars"] .game-card.is-flat .game-card-meter {
   width: auto;
-  margin: 0 5px 5px;
-  height: 4px;
+  margin: 0 4px 4px;
+}
+:root[data-palette="seaofstars"] .game-card .game-card-meter::after {
+  inset: 1px auto 0 0;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, #fff 40%, hsl(var(--score-hue, 0) 58% var(--acc-l))) 0 40%,
+    hsl(var(--score-hue, 0) 58% var(--acc-l)) 40% 75%,
+    color-mix(in srgb, #000 30%, hsl(var(--score-hue, 0) 58% var(--acc-l))) 75% 100%);
 }

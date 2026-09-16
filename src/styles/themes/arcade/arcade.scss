@@ -772,6 +772,11 @@
   background-repeat: repeat-x, no-repeat;
   box-shadow: 0 0 10px color-mix(in srgb, var(--steam) 45%, transparent);
 }
+/* EL CUERPO RESPIRA MENOS QUE EN LA HOJA BASE, y es por los 10 px de la marquesina: entre ella y el filo de
+   abajo, la caja de alto declarado se quedaba sin hueco para un nombre de DOS líneas —«Need for Speed:
+   Underground»— y el que pagaba era el medidor, que se salía por el canto. Arriba no hace falta ese aire
+   porque la marquesina ya separa, y abajo el que cierra es el propio filo. */
+:root[data-palette="arcade"] .game-card.is-flat .game-card-body { padding: .45rem .95rem .5rem; }
 :root[data-palette="arcade"] .game-card.is-flat .game-card-name {
   color: var(--arc-gold);
   text-shadow: 0 0 10px color-mix(in srgb, var(--arc-gold) 35%, transparent);
@@ -785,4 +790,26 @@
   color: color-mix(in srgb, var(--arc-gold) 78%, #000);
   text-shadow: none;
 }
-:root[data-palette="arcade"] .game-card.is-flat .game-card-meter { height: 10px; }
+/* EL MEDIDOR = LA MARQUESINA, otra vez. La misma fila de bombillas que corona la caja (§N) cierra la pieza
+   por abajo, solo que aquí las que se encienden son las de la nota: de un vistazo, y sin leer una cifra, se
+   ve cuántas luces lleva encendidas cada juego.
+   SIN CARRIL: las bombillas apagadas NO se pintan. Con un carril oscuro detrás, la parte que no llega a la
+   nota se leía como una banda negra pegada al canto —una pieza más en una caja que ya tiene su marco—, y lo
+   que cuenta aquí es cuánto se enciende, no cuánto queda por encender. */
+:root[data-palette="arcade"] .game-card .game-card-meter {
+  height: 10px;
+  background: none;
+}
+:root[data-palette="arcade"] .game-card .game-card-meter::after {
+  -webkit-mask-image: radial-gradient(circle, #000 2.2px, transparent 2.6px);
+  mask-image: radial-gradient(circle, #000 2.2px, transparent 2.6px);
+  -webkit-mask-size: 9px 10px;
+  mask-size: 9px 10px;
+  /* EL PATRÓN ARRANCA EN CERO, y esos 3 px que llevaba de desplazamiento no eran inocentes: con celdas de
+     9 px y bombillas de 2,2 px de radio, la del hueco ANTERIOR quedaba centrada en −1,5 y asomaba 0,7 px por
+     el canto —la fila empezaba con media bombilla cortada—. Sin desplazamiento, la primera cae centrada en
+     su celda y la fila entra entera. */
+  -webkit-mask-position: 0 center;
+  mask-position: 0 center;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, hsl(var(--score-hue, 0) 58% var(--acc-l)) 80%, transparent));
+}

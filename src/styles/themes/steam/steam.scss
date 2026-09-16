@@ -930,7 +930,15 @@
 /* El contenido vive DENTRO de la placa, así que al relleno se le suma el pliego: pegada al borde, una
    etiqueta quedaría a caballo del roto. */
 :root[data-palette="steam"] .game-card.is-flat .game-card-body {
-  padding: calc(var(--pliego) + .75rem) calc(var(--pliego) + .8rem) calc(var(--pliego) + .55rem);
+  /* POR ABAJO NO LLEVA RELLENO, y esto NO es una licencia de maquetación: el pliego sumado a los cuatro
+     lados hacía que el cuerpo midiera 208,7 px dentro de una caja de 201,6 declarados, así que el pie se
+     salía por el canto y `overflow: hidden` se lo comía —el medidor de este tema no se veía NUNCA—. El
+     hueco que se le quita por abajo es exactamente el que ocupa el medidor, que ya es el filo de la placa. */
+  padding: calc(var(--pliego) - .1rem) calc(var(--pliego) + .8rem) 0;
+  /* Y LAS LÍNEAS, MÁS JUNTAS. El pliego se lleva 15 px por cada lado, así que con un nombre de DOS líneas
+     —«Need for Speed: Underground»— la placa se quedaba sin hueco y el medidor se salía por debajo del
+     metal. El aire que se recorta es el de entre líneas, no el del marco, que es lo que dibuja el tema. */
+  gap: .4rem;
 }
 /* Sobre el acero se escribe con la tinta del tema —la de papel es la de los carteles—, en las versales de
    documento. Sin subrayado: el filo de Igni bajo el título era una raya más en una pieza que ya tiene su
@@ -944,9 +952,30 @@
 /* La nota y la insignia, remachadas a la placa. */
 :root[data-palette="steam"] .game-card.is-flat .score-ring,
 :root[data-palette="steam"] .game-card.is-flat .game-card-badge { box-shadow: 0 1px 3px rgba(18,10,4,.55); }
-/* El medidor va pegado al canto de abajo DE LA PLACA, no al de la caja: allí lo partiría el roto. */
+/* EL MEDIDOR = EL NIVEL DE CRISTAL de la máquina, empotrado en el filo de abajo DE LA PLACA y no en el de
+   la caja: al canto lo partiría el roto del papel. Sus márgenes son el pliego exacto, así que el tubo
+   empieza y acaba donde empieza y acaba el acero.
+   Y LA LECTURA ES METAL, no pintura: sobre el tono de la nota caen las cuatro bandas de un cilindro pulido
+   —luz arriba, sombra abajo— y el color se rebaja un 25 % contra el acero del tema (`--steam`). Con el tono
+   puro parecía una pegatina de plástico pegada a una placa remachada. */
+:root[data-palette="steam"] .game-card .game-card-meter {
+  height: 6px;
+  background: color-mix(in srgb, #000 50%, var(--surface));
+  box-shadow: inset 0 0 0 1px rgba(10, 14, 18, .85);
+}
+/* EL ENCAJE ES LO ÚNICO QUE CAMBIA ENTRE LAS DOS CAJAS. La de la lámina no tiene placa ni pliego —su canto
+   es el de la propia pieza—, así que el tubo la cruza de lado a lado; aquí se mete dentro del acero. */
 :root[data-palette="steam"] .game-card.is-flat .game-card-meter {
   width: auto;
-  margin: 0 calc(var(--pliego) + 1px) calc(var(--pliego) + 1px);
-  height: 4px;
+  margin: 0 var(--pliego) var(--pliego);
+}
+:root[data-palette="steam"] .game-card .game-card-meter::after {
+  background:
+    linear-gradient(180deg,
+      rgba(255, 255, 255, .7) 0 17%,
+      rgba(255, 255, 255, .2) 17% 34%,
+      rgba(0, 0, 0, .1) 34% 66%,
+      rgba(0, 0, 0, .3) 66% 84%,
+      rgba(0, 0, 0, .5) 84% 100%),
+    color-mix(in srgb, hsl(var(--score-hue, 0) 58% var(--acc-l)) 70%, var(--steam));
 }

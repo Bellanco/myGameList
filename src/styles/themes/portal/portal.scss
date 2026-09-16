@@ -733,6 +733,16 @@
   mask-repeat: no-repeat;
 }
 :root[data-palette="portal"] .game-card.is-flat .game-card-body { padding: 1.05rem 1.15rem; }
-/* El medidor del pie se retira: cruzaría la junta de abajo y los dos vértices biselados, y la nota ya está
-   dicha en el aro de la cabecera. */
-:root[data-palette="portal"] .game-card.is-flat .game-card-meter { display: none; }
+/* EL MEDIDOR = LA TIRA DE LUZ del canal de la pared, encendida hasta la nota. Va a sangre por el canto de
+   abajo y son los dos VÉRTICES BISELADOS los que le dan la forma: el `clip-path` del panel se la corta en
+   diagonal por los dos extremos, así que la tira acaba como acaba la pieza en vez de pisarle las esquinas.
+   Antes se retiraba entera (`display: none`) por no cruzar esa diagonal; resulta que cruzarla es justo lo
+   que la hace parecer parte del panel. */
+:root[data-palette="portal"] .game-card .game-card-meter {
+  display: block;
+  height: 5px;
+  background: color-mix(in srgb, #000 40%, var(--surface));
+}
+:root[data-palette="portal"] .game-card .game-card-meter::after {
+  box-shadow: 0 0 8px color-mix(in srgb, hsl(var(--score-hue, 0) 58% var(--acc-l)) 55%, transparent);
+}
