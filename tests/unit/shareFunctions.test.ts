@@ -8,7 +8,15 @@ import { describe, it, expect, vi } from 'vitest';
 import { JWKS_URL } from '../../functions/_lib/firebaseAuth';
 import { shareDescription, shareTitle } from '../../functions/_lib/html';
 import { isValidToken, newToken } from '../../functions/_lib/http';
-import { dailyQuotaKey, drainPages, ownerKey, shareKey, userShareKey } from '../../functions/_lib/keys';
+import {
+  COVER_DAILY_BUDGET,
+  coverDailyQuotaKey,
+  dailyQuotaKey,
+  drainPages,
+  ownerKey,
+  shareKey,
+  userShareKey,
+} from '../../functions/_lib/keys';
 
 describe('metadatos de la previsualización', () => {
   it('builds a title with game, score and author', () => {
@@ -101,6 +109,22 @@ describe('claves de KV', () => {
   it('keys the daily counter by UTC day', () => {
     expect(dailyQuotaKey('uid1', Date.UTC(2026, 7, 16, 23, 30))).toBe('quota:uid1:2026-08-16');
     expect(dailyQuotaKey('uid1', Date.UTC(2026, 7, 17, 0, 30))).toBe('quota:uid1:2026-08-17');
+  });
+
+  /* El contador de carátulas del día, con el mismo criterio de UTC. Lo escribe `/cover` y lo lee
+     `/api/cover-stats`: la clave es la MISMA función a propósito, porque una copiada en dos sitios es una que un
+     día deja de ser la misma y deja el panel midiendo un contador que nadie llena. */
+  it('keys the daily cover counter by UTC day too', () => {
+    expect(coverDailyQuotaKey(Date.UTC(2026, 7, 16, 23, 30))).toBe('igdb:cupo-dia:v1:2026-08-16');
+    expect(coverDailyQuotaKey(Date.UTC(2026, 7, 17, 0, 30))).toBe('igdb:cupo-dia:v1:2026-08-17');
+  });
+
+  /* Y su prefijo NO puede ser el del cupo por IP (`igdb:cupo:`): son dos cuentas distintas —una acota a un
+     abusador contra IGDB, la otra el gasto de escrituras del servicio— y un prefijo común haría que cualquier
+     recorrido por una de ellas arrastrase la otra. */
+  it('keeps the service counter out of the per-IP prefix', () => {
+    expect(coverDailyQuotaKey(Date.now()).startsWith('igdb:cupo:')).toBe(false);
+    expect(COVER_DAILY_BUDGET).toBeGreaterThan(0);
   });
 });
 
