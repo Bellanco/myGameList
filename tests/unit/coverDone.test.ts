@@ -9,8 +9,15 @@ import {
   guardarHechos,
   leerHechos,
   plataformasYaPedidas,
+  reabrirLaPregunta,
   reiniciarIndiceDeCaratulas,
 } from '../../src/core/utils/coverDone';
+import {
+  recordarQueNoTiene,
+  reiniciarMemoriaDeCaratulas,
+  sabemosQueNoTiene,
+} from '../../src/core/utils/coverMemory';
+import { coverUrl } from '../../src/core/utils/coverUrl';
 
 function apunta(nombre: string, plataformas: string[], ampliado = false): void {
   const hechos = leerHechos();
@@ -21,11 +28,13 @@ function apunta(nombre: string, plataformas: string[], ampliado = false): void {
 beforeEach(() => {
   localStorage.clear();
   reiniciarIndiceDeCaratulas();
+  reiniciarMemoriaDeCaratulas();
 });
 
 afterEach(() => {
   localStorage.clear();
   reiniciarIndiceDeCaratulas();
+  reiniciarMemoriaDeCaratulas();
 });
 
 describe('carátulas ya resueltas', () => {
@@ -83,5 +92,69 @@ describe('carátulas ya resueltas', () => {
     reiniciarIndiceDeCaratulas(); // como volver a abrir la aplicación: solo queda lo escrito
 
     expect(plataformasYaPedidas('Hollow Knight')).toEqual(['Steam']);
+  });
+});
+
+/* GUARDAR UN JUEGO SIN PORTADA ES PEDIR QUE SE LE BUSQUE OTRA VEZ: quien edita está mirando ese juego y se ha
+   fijado en el hueco. Es el atajo al plazo de noventa días, con un mínimo de un día para que ordenar la
+   biblioteca una tarde no se convierta en una ráfaga de peticiones. */
+describe('reabrir la pregunta al editar un juego', () => {
+  const DIA = 24 * 60 * 60 * 1000;
+  const CLAVE_NONE = 'mis-listas-covers-none';
+
+  /** Un juego sin carátula, dado por recorrido, con el «no» apuntado hace lo que se diga. */
+  function sinPortadaDesdeHace(ms: number): void {
+    const url = coverUrl('Jotum', ['Steam']);
+    localStorage.setItem(CLAVE_NONE, JSON.stringify({ [url]: Date.now() - ms }));
+    guardarHechos(new Set([claveDeJuego('Jotum', ['Steam'], false)]));
+    reiniciarMemoriaDeCaratulas();
+    reiniciarIndiceDeCaratulas();
+  }
+
+  it('pasado un día, borra el «no» y lo devuelve a la cola del recorrido', () => {
+    sinPortadaDesdeHace(2 * DIA);
+
+    expect(reabrirLaPregunta('Jotum', ['Steam'])).toBe(true);
+
+    // Las DOS memorias: sin la primera el listado no pide la imagen, y sin la segunda el recorrido —que es el
+    // único que aprende de la respuesta— no vuelve a preguntar por ella.
+    expect(sabemosQueNoTiene(coverUrl('Jotum', ['Steam']))).toBe(false);
+    expect(leerHechos().has(claveDeJuego('Jotum', ['Steam'], false))).toBe(false);
+  });
+
+  it('pero el mismo día no toca nada', () => {
+    sinPortadaDesdeHace(60 * 60 * 1000); // una hora
+
+    expect(reabrirLaPregunta('Jotum', ['Steam'])).toBe(false);
+
+    expect(sabemosQueNoTiene(coverUrl('Jotum', ['Steam']))).toBe(true);
+    expect(leerHechos().has(claveDeJuego('Jotum', ['Steam'], false))).toBe(true);
+  });
+
+  it('y a un juego que ya tiene carátula, editarlo no le cuesta nada', () => {
+    guardarHechos(new Set([claveDeJuego('Celeste', ['Steam'], false)]));
+
+    expect(reabrirLaPregunta('Celeste', ['Steam'])).toBe(false);
+
+    // Lo ya recorrido sigue intacto: no se ha reabierto ninguna petición por guardar una reseña.
+    expect(leerHechos().has(claveDeJuego('Celeste', ['Steam'], false))).toBe(true);
+  });
+
+  it('no se lía con un juego sin nombre', () => {
+    expect(reabrirLaPregunta('', ['Steam'])).toBe(false);
+  });
+
+  /* El modo ampliado tiene su propio espacio de claves, y quien edita no tiene por qué saber en cuál está
+     mirando: se reabren los dos o no se reabre ninguno. */
+  it('reabre también el espacio del modo ampliado', () => {
+    const url = coverUrl('Jotum', ['Steam'], true);
+    localStorage.setItem(CLAVE_NONE, JSON.stringify({ [url]: Date.now() - 2 * DIA }));
+    guardarHechos(new Set([claveDeJuego('Jotum', ['Steam'], true)]));
+    reiniciarMemoriaDeCaratulas();
+
+    expect(reabrirLaPregunta('Jotum', ['Steam'])).toBe(true);
+
+    expect(sabemosQueNoTiene(url)).toBe(false);
+    expect(leerHechos().has(claveDeJuego('Jotum', ['Steam'], true))).toBe(false);
   });
 });

@@ -27,6 +27,8 @@
 
 import { gameTitleKey } from './gameTitleKey';
 import { topesLevantados } from './coverLimits';
+import { MINIMO_TRAS_EDICION, olvidarQueNoTiene, tocaReintentar } from './coverMemory';
+import { coverUrl } from './coverUrl';
 
 /**
  * La `v2` de la clave es un CAMBIO DE FORMATO. Antes se guardaba la URL entera de cada juego
@@ -141,4 +143,40 @@ export function plataformasYaPedidas(nombre: string): string[] | null {
 /** Solo para las pruebas: olvida el índice derivado para que el siguiente acceso relea el almacenamiento. */
 export function reiniciarIndiceDeCaratulas(): void {
   indice = null;
+}
+
+/**
+ * VOLVER A BUSCARLE LA CARÁTULA A UN JUEGO, porque quien lo está editando se ha fijado en que le falta.
+ *
+ * Guardar la ficha de un juego sin portada es la forma natural de decir «mira otra vez»: se está mirando ESE
+ * juego, y muchas veces lo que se acaba de corregir es justo lo que fallaba (el título, la plataforma). Esto
+ * adelanta esa revisión sin esperar a los noventa días del plazo general.
+ *
+ * NO LO HACE SIEMPRE, y ahí está la gracia: solo si el «no» tiene ya un día. Sin ese mínimo, cada guardado sería
+ * una petición y ordenar la biblioteca una tarde se convertiría en una ráfaga. Y solo si consta un «no»: a un
+ * juego que ya tiene carátula, editarlo no le cuesta nada.
+ *
+ * Borra las DOS memorias —la del «no tiene» y la de lo ya recorrido— porque hacen falta las dos: sin la primera
+ * el listado no vuelve a pedir la imagen, y sin la segunda el recorrido de fondo no vuelve a preguntar por ella,
+ * que es el único que aprende de la respuesta. Y lo hace en los dos modos, normal y ampliado, porque cada uno
+ * tiene su propio espacio de claves y quien edita no tiene por qué saber en cuál está mirando.
+ */
+export function reabrirLaPregunta(nombre: string, plataformas: readonly string[]): boolean {
+  if (!nombre) return false;
+  let reabierto = false;
+  for (const ampliado of [false, true]) {
+    const url = coverUrl(nombre, plataformas, ampliado);
+    if (!tocaReintentar(url, MINIMO_TRAS_EDICION)) continue;
+    olvidarQueNoTiene(url);
+    reabierto = true;
+  }
+  if (!reabierto) return false;
+
+  const hechos = leerHechos();
+  let cambiado = false;
+  for (const ampliado of [false, true]) {
+    if (hechos.delete(claveDeJuego(nombre, plataformas, ampliado))) cambiado = true;
+  }
+  if (cambiado) guardarHechos(hechos);
+  return true;
 }
