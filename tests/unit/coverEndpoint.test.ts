@@ -249,6 +249,41 @@ describe('/cover — lo que cuesta', () => {
     expect(respuesta.status).toBe(200);
   });
 
+  /* CUÁNTO DURA LO GUARDADO, que son dos plazos distintos y es deliberado.
+     El ACIERTO no caduca: la ficha de un juego no se mueve, y dejarlo caducar al mes hacía que la biblioteca
+     entera se volviera a resolver cada treinta días contra IGDB y contra el presupuesto de escrituras. Para
+     rectificar está la versión de la clave (`v2` → `v3`), que invalida a todos a la vez y cuando se decide.
+     El «NO TIENE» sí caduca, a la semana: un «no» no es un dato estable —IGDB añade fichas y los títulos se
+     escriben mal—, y esa semana es lo que hace que un juego sin carátula vuelva a intentarlo solo. */
+  it('el acierto se guarda sin caducidad y el «no tiene» por una semana', async () => {
+    const kv = kvFalso();
+    await onRequestGet({ request: peticion('n=Celeste'), env: entorno(kv) });
+    const acierto = kv.put.mock.calls.find(([clave]) => clave === claveCache('Celeste', []));
+    expect(acierto?.[2]).toBeUndefined();
+
+    fichas = []; // IGDB contesta, pero de este juego no tiene nada
+    await onRequestGet({ request: peticion('n=Jotum'), env: entorno(kv) });
+    const fallo = kv.put.mock.calls.find(([clave]) => clave === claveCache('Jotum', []));
+    expect(fallo?.[1]).toBe('');
+    expect(fallo?.[2]).toEqual({ expirationTtl: 60 * 60 * 24 * 7 });
+  });
+
+  /* Y CORREGIR EL TÍTULO EMPIEZA DE CERO, que es la otra forma de rectificar sin esperar a nada: la clave ES el
+     título normalizado, así que un juego reescrito no hereda ni el acierto ni el «no» del nombre anterior. */
+  it('un título corregido se resuelve como si fuera nuevo', async () => {
+    // El nombre mal escrito, ya sabido y sin carátula.
+    const kv = kvFalso({ [claveCache('Max Paine 3', [])]: '' });
+    fichas = [ficha('Max Payne 3')];
+
+    const respuesta = await onRequestGet({ request: peticion('n=Max%20Payne%203'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(200);
+    expect(consultasAIgdb().length).toBeGreaterThan(0);
+    expect(kv.datos.get(claveCache('Max Payne 3', []))).toBe('co1abc');
+    // Y lo viejo se queda donde estaba: caducará solo a la semana, sin que nadie lo barra.
+    expect(kv.datos.get(claveCache('Max Paine 3', []))).toBe('');
+  });
+
   // Un fallo de infraestructura NUNCA puede escribirse como si fuera un dato: guardar un 429 de IGDB como «este
   // juego no tiene carátula» dejó medio catálogo sin imagen durante una semana.
   //

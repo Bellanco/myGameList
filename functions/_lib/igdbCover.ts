@@ -66,12 +66,34 @@ export function urlDeImagen(coverId: string, tamano: TamanoCaratula): string {
 export const MAX_NOMBRE = 200;
 const TOKEN_API = 'https://id.twitch.tv/oauth2/token';
 
-/** Cuánto se guarda un emparejamiento acertado. Un mes: la ficha de un juego no se mueve casi nunca. */
-const HIT_TTL = 60 * 60 * 24 * 30;
 /**
- * Y cuánto se guarda un FALLO. Más corto a propósito, pero no corto de verdad: sin caché negativa, los juegos
- * que no existen —las erratas, sobre todo— vuelven a consultar IGDB en cada visita de cada dispositivo, que es
- * justo el gasto que esta caché viene a evitar. Una semana deja que una errata corregida se note pronto.
+ * EL EMPAREJAMIENTO ACERTADO YA NO CADUCA, y esta es la decisión que más gasto ahorra de todas.
+ *
+ * Duró un mes, y un mes es exactamente el ciclo del desperdicio: al caducar, un juego que llevaba resuelto desde
+ * el principio vuelve a costar sus consultas a IGDB y su escritura de KV, y eso multiplicado por la biblioteca
+ * entera —unas trescientas— cada treinta días, contra un presupuesto de mil escrituras diarias que además se
+ * comparte con los enlaces de reseñas. Se pagaba ese ciclo para nada: la ficha de un juego en IGDB no se mueve,
+ * y cuando se mueve no es para cambiar de portada.
+ *
+ * Lo que sustituye al TTL como forma de rectificar es la VERSIÓN DE LA CLAVE (`igdb:cover:v2:`, ver
+ * `claveCache`). Si algún día el emparejador mejora y hay que rehacer los aciertos de todo el mundo, se sube a
+ * `v3` y caducan todos a la vez, cuando se decide y no cada treinta días por si acaso. El espacio no es el
+ * problema: cada clave son unas decenas de bytes contra 1 GB.
+ *
+ * Y NO CADUCAR NO SIGNIFICA QUEDARSE CLAVADO. Lo que puede cambiar de verdad sigue teniendo su camino de vuelta:
+ * un juego al que se le corrige el título estrena clave —la clave ES el título normalizado—, así que se resuelve
+ * como si fuera nuevo; y uno que hoy no tiene carátula la volverá a buscar, porque ese caso es el de abajo.
+ */
+/** Tope de vida del token de Twitch guardado. No tiene que ver con las carátulas: ver `tokenIgdb`. */
+const TOKEN_TTL_MAX = 60 * 60 * 24 * 30;
+/**
+ * LO QUE SÍ CADUCA: el «este juego no tiene carátula». Una semana, y no se toca al alargar lo demás, porque es
+ * justo lo que impide que un «no» se vuelva permanente.
+ *
+ * Sin caché negativa, los juegos que no existen —las erratas, sobre todo— vuelven a consultar IGDB en cada
+ * visita de cada dispositivo, que es el gasto que esta caché viene a evitar. Pero un «no» no es un dato estable
+ * como un acierto: IGDB añade fichas, y sobre todo el título puede estar mal escrito. Una semana es el plazo en
+ * que un juego sin carátula vuelve a intentarlo por su cuenta, sin que nadie haga nada.
  */
 const MISS_TTL = 60 * 60 * 24 * 7;
 
@@ -348,10 +370,11 @@ export async function apuntarSiSePuede(
   kv: KVNamespace | undefined,
   clave: string,
   valor: string,
-  expirationTtl: number,
+  /** Segundos de vida. Sin él, la clave NO caduca: es lo que se le pasa a un emparejamiento acertado. */
+  expirationTtl?: number,
 ): Promise<void> {
   try {
-    await kv?.put(clave, valor, { expirationTtl });
+    await kv?.put(clave, valor, expirationTtl ? { expirationTtl } : undefined);
   } catch {
     // Presupuesto agotado, escritura rechazada por ritmo o KV caído: se sigue sirviendo con lo que ya se sabe.
   }
@@ -372,7 +395,7 @@ async function tokenIgdb(env: EntornoIgdb): Promise<string | null> {
 
   // Se caduca ANTES que el token real (la mitad de su vida, con tope de 30 días): renovar de más es gratis,
   // servir carátulas con un token muerto no.
-  const vida = Math.min(Math.floor((cuerpo.expires_in ?? 0) / 2) || HIT_TTL, HIT_TTL);
+  const vida = Math.min(Math.floor((cuerpo.expires_in ?? 0) / 2) || TOKEN_TTL_MAX, TOKEN_TTL_MAX);
   // Si no se puede guardar, el token recién pedido sirve igual para ESTA petición: lo único que se pierde es
   // poder reutilizarlo, y Twitch da otro cuando haga falta.
   await apuntarSiSePuede(env.COVERS, CLAVE_TOKEN, cuerpo.access_token, Math.max(vida, 600));
@@ -562,12 +585,15 @@ export async function emparejarYGuardar(
 ): Promise<string | null> {
   const { coverId, indeciso } = await emparejar(env, nombre, plataformas, ampliado);
   if (!coverId && indeciso) return null; // no se ha podido preguntar: ni se cachea ni se da por definitivo
-  // El emparejamiento se devuelve se haya podido guardar o no: ya está resuelto y la carátula se puede servir.
+  /* El emparejamiento se devuelve se haya podido guardar o no: ya está resuelto y la carátula se puede servir.
+     El ACIERTO se guarda sin caducidad y el FALLO por una semana: son dos cosas distintas y el porqué está
+     arriba, en `TOKEN_TTL_MAX` y `MISS_TTL`. Esta línea es la que hace que un juego sin carátula vuelva a
+     buscarla solo, y que uno que ya la tiene no la pague dos veces. */
   await apuntarSiSePuede(
     env.COVERS,
     claveCache(nombre, plataformas, ampliado),
     coverId ?? '',
-    coverId ? HIT_TTL : MISS_TTL,
+    coverId ? undefined : MISS_TTL,
   );
   return coverId;
 }
