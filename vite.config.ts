@@ -9,7 +9,14 @@ import { sanitizeAnnouncement } from './src/core/announcement/announcement';
 
 // El MISMO emparejador que usa la Pages Function, no una copia: si el servidor de desarrollo resolviera las
 // carátulas con otras reglas, probar en local no demostraría nada sobre producción.
-import { resolverCaratula, type EntornoIgdb } from './functions/_lib/igdbCover';
+import {
+  esIdDeCaratula,
+  MAX_NOMBRE,
+  resolverCaratula,
+  tamanoPedido,
+  urlDeImagen,
+  type EntornoIgdb,
+} from './functions/_lib/igdbCover';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version?: string };
 
@@ -218,15 +225,10 @@ function localAnnouncementApi(): Plugin {
 function localCoverApi(): Plugin {
   const RUTA = '/cover';
   const FICHERO = new URL('./.covers.local.json', import.meta.url);
-  const IMAGENES = 'https://images.igdb.com/igdb/image/upload';
-  /* Los mismos dos tamaños que sirve la Function (ver `functions/cover.ts`): el normal es el que cabe en la
-     ranura del mosaico, y el ancho el que pide el renglón para recortar su franja sin ampliar seis veces una
-     imagen de 264 px. Si aquí solo hubiera uno, en desarrollo el renglón saldría borroso y en producción no,
-     que es justo la diferencia que este plugin existe para no tener. */
-  /* Los MISMOS tres de `functions/cover.ts`. Se repiten aquí porque aquel exporta el tipo, no el mapa; si allí
-     se añade uno, hay que añadirlo aquí — y si se olvida, desarrollo serviría otra imagen que producción, que es
-     justo la divergencia que este plugin existe para no tener. */
-  const TAMANOS: Record<string, string> = { normal: 't_cover_big', medio: 't_720p', ancho: 't_1080p' };
+  /* Los tamaños, el tope del título y la comprobación del identificador NO se copian aquí: salen de
+     `functions/_lib/igdbCover`, el mismo módulo del que tira la Pages Function. Estuvieron duplicados, y esa es
+     justo la forma en que un gemelo deja de serlo — añadir un tamaño en un sitio y olvidarlo en el otro hace que
+     desarrollo sirva una imagen distinta de la de producción sin que nada avise. */
 
   /** Lee un valor de un fichero en formato `CLAVE=valor`, que es el de `.dev.vars`. */
   const deDevVars = (clave: string): string => {
@@ -316,7 +318,7 @@ function localCoverApi(): Plugin {
 
         const url = new URL(req.url, 'http://localhost');
         const nombre = (url.searchParams.get('n') ?? '').trim();
-        if (!nombre) {
+        if (!nombre || nombre.length > MAX_NOMBRE) {
           res.statusCode = 400;
           res.end('Falta el nombre del juego');
           return;
@@ -324,7 +326,7 @@ function localCoverApi(): Plugin {
         const plataformas = (url.searchParams.get('p') ?? '').split(',').map((p) => p.trim()).filter(Boolean);
         const soloMapa = url.searchParams.get('m') === '1';
         const ampliado = url.searchParams.get('x') === '1';
-        const tamano = TAMANOS[url.searchParams.get('s') ?? ''] ?? TAMANOS.normal;
+        const tamano = tamanoPedido(url.searchParams.get('s'));
 
         void (async () => {
           try {
@@ -341,7 +343,12 @@ function localCoverApi(): Plugin {
               res.end();
               return;
             }
-            const imagen = await fetch(`${IMAGENES}/${tamano}/${coverId}.jpg`);
+            if (!esIdDeCaratula(coverId)) {
+              res.statusCode = 502;
+              res.end('Identificador de carátula inesperado');
+              return;
+            }
+            const imagen = await fetch(urlDeImagen(coverId, tamano));
             if (!imagen.ok) {
               res.statusCode = 502;
               res.end('La carátula no se pudo descargar');

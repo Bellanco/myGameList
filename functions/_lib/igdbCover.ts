@@ -11,6 +11,59 @@
 import type { KVNamespace } from './keys';
 
 const IGDB_API = 'https://api.igdb.com/v4/games';
+const IMAGENES = 'https://images.igdb.com/igdb/image/upload';
+
+/**
+ * LOS TRES TAMAÑOS DE CARÁTULA, y por qué hacen falta los tres.
+ *
+ * `t_cover_big` son 264×374: exactamente lo que pide la ranura 3:4 del mosaico, y ~25 kB por juego.
+ *
+ * `t_1080p` es la misma imagen hasta 1080 px de alto (una portada sale a ~762×1080), y la pide SOLO el renglón
+ * de la lista, donde la portada se recorta en una franja que cruza la fila entera: a 1.400 px de ancho, ampliar
+ * los 264 px de la pequeña son casi seis aumentos y lo que queda es una mancha de color, que es justo lo que no
+ * se quería. Con la grande el aumento baja a menos de dos y la franja se reconoce.
+ *
+ * Cuesta unos 120 kB por juego en vez de 25, y por eso NO es el tamaño por defecto: lo pide quien lo necesita.
+ * El service worker las guarda igual (misma regla de origen propio), así que se paga una vez por juego.
+ *
+ * `t_720p` (508×720, ~82 kB) es el del medio, y existe por una medición concreta: en una pantalla de densidad
+ * doble la caja del mosaico ocupa 471×627 píxeles REALES, así que los 264 de la pequeña se estiran 1,78 veces y
+ * la carátula sale blanda. Con este, el aumento desaparece. No sustituye a la pequeña: el mosaico ofrece los dos
+ * con `srcset` y es el navegador quien elige, de modo que una pantalla normal se sigue llevando sus 25 kB.
+ *
+ * NINGUNO de los tres añade entradas al KV: ahí se guarda el emparejamiento (nombre → id de portada), que es el
+ * mismo para los tres. Lo único que cambia es de qué URL de IGDB se traen los bytes.
+ *
+ * VIVEN AQUÍ y no en `functions/cover.ts` porque hay DOS sitios que sirven carátulas: la Pages Function de
+ * producción y su gemelo del servidor de desarrollo (`localCoverApi`, en `vite.config.ts`). Mientras el mapa
+ * estuvo copiado en los dos, añadir un tamaño en uno y olvidarlo en el otro hacía que desarrollo sirviera una
+ * imagen distinta de la de producción, que es justo la clase de diferencia que un gemelo existe para no tener.
+ */
+const TAMANOS = { normal: 't_cover_big', medio: 't_720p', ancho: 't_1080p' } as const;
+
+export type TamanoCaratula = keyof typeof TAMANOS;
+
+/** El tamaño que pide el parámetro `s`. Cualquier otra cosa cae en el normal, que es lo que hay que servirle a
+ *  un cliente viejo que no conozca este parámetro. */
+export function tamanoPedido(valor: string | null | undefined): TamanoCaratula {
+  return valor === 'ancho' || valor === 'medio' ? valor : 'normal';
+}
+
+/**
+ * ¿Tiene este identificador la pinta que debe? El id viene de IGDB, pero se comprueba igual antes de meterlo en
+ * una URL: si algún día llegara por otro camino, que no pueda salirse de la ruta.
+ */
+export function esIdDeCaratula(coverId: string): boolean {
+  return /^[a-z0-9_-]{1,64}$/i.test(coverId);
+}
+
+/** Dónde están los bytes de una carátula, al tamaño pedido. */
+export function urlDeImagen(coverId: string, tamano: TamanoCaratula): string {
+  return `${IMAGENES}/${TAMANOS[tamano]}/${coverId}.jpg`;
+}
+
+/** Tope del título. Generoso para nombres reales y suficiente para que nadie use esto como saco de basura. */
+export const MAX_NOMBRE = 200;
 const TOKEN_API = 'https://id.twitch.tv/oauth2/token';
 
 /** Cuánto se guarda un emparejamiento acertado. Un mes: la ficha de un juego no se mueve casi nunca. */
@@ -93,18 +146,24 @@ function sinEdicion(texto: string): string {
   return texto.replace(EDICIONES, ' ').replace(/\s+/g, ' ').trim();
 }
 
-/** Coeficiente de Dice sobre bigramas: reparte bien títulos cortos y parecidos, que es lo que hay aquí. */
-function parecido(a: string, b: string): number {
-  const bigramas = (texto: string) => {
-    const set = new Set<string>();
-    for (let i = 0; i < texto.length - 1; i += 1) set.add(texto.slice(i, i + 2));
-    return set;
-  };
-  const A = bigramas(a);
-  const B = bigramas(b);
+function bigramas(texto: string): Set<string> {
+  const set = new Set<string>();
+  for (let i = 0; i < texto.length - 1; i += 1) set.add(texto.slice(i, i + 2));
+  return set;
+}
+
+/**
+ * Coeficiente de Dice sobre bigramas: reparte bien títulos cortos y parecidos, que es lo que hay aquí.
+ *
+ * Recibe los del BUSCADO ya hechos porque se compara el mismo título contra todos los candidatos: hasta cuatro
+ * consultas de veinte fichas cada una, y cada ficha con sus nombres alternativos. Rehacerlos en cada comparación
+ * era repetir el mismo troceo ochenta veces por juego.
+ */
+function parecido(bigramasBuscado: Set<string>, otro: string): number {
+  const B = bigramas(otro);
   let comunes = 0;
-  for (const par of A) if (B.has(par)) comunes += 1;
-  return (2 * comunes) / (A.size + B.size || 1);
+  for (const par of bigramasBuscado) if (B.has(par)) comunes += 1;
+  return (2 * comunes) / (bigramasBuscado.size + B.size || 1);
 }
 
 /**
@@ -114,29 +173,69 @@ function parecido(a: string, b: string): number {
  * Esto no es un adorno: es EL desempate. Con dos fichas llamadas «Hook» exactamente igual —la de móvil de 2015 y
  * la de Mega Drive de 1992—, lo único que dice cuál es la tuya es que tú tienes la de Mega Drive.
  */
-const TIENDAS_PC = /^(steam|gog|epic|ubisoft connect|uplay|origin|ea app|ea desktop|battle\.net|amazon|itch\.io|pc)$/i;
+const TIENDAS_PC =
+  /^(steam|gog|gog\.com|epic|epic games|ubisoft connect|uplay|origin|ea app|ea desktop|battle\.net|amazon|amazon games|itch\.io|itch|humble|humble bundle|microsoft store|xbox game pass|game pass|windows|pc)$/i;
+
+/**
+ * Cada nombre que puede escribir alguien, con las abreviaturas que IGDB usa para esa máquina. Las claves van en
+ * minúscula y se comparan enteras, así que aquí lo que hace falta es COBERTURA de las formas reales: quien tiene
+ * una PS4 escribe «PS4» o «PlayStation 4» según el día, y con solo una de las dos el desempate por plataforma
+ * —lo que separa el «Hook» de Mega Drive del de móvil— no llegaba a aplicarse.
+ *
+ * Un alias que no exista en IGDB no hace daño: simplemente no casa con ninguna ficha. Lo que sí hace daño es que
+ * falte, porque entonces el juego se emparejaba sin desempate.
+ */
 const FAMILIAS: Record<string, string[]> = {
+  'ps1': ['PS', 'PS1'],
   'ps2': ['PS2'],
   'ps3': ['PS3'],
   'ps4': ['PS4'],
   'ps5': ['PS5'],
   'psp': ['PSP'],
   'ps vita': ['Vita'],
+  'psvita': ['Vita'],
   'playstation': ['PS', 'PS1'],
+  'playstation 1': ['PS', 'PS1'],
+  'playstation 2': ['PS2'],
+  'playstation 3': ['PS3'],
+  'playstation 4': ['PS4'],
+  'playstation 5': ['PS5'],
+  'playstation portable': ['PSP'],
+  'playstation vita': ['Vita'],
   'game boy': ['Game Boy', 'GB'],
   'game boy color': ['GBC'],
   'game boy advance': ['GBA'],
+  'gba': ['GBA'],
   'nintendo ds': ['NDS'],
   'nintendo 3ds': ['3DS'],
+  '3ds': ['3DS'],
   'nintendo switch': ['Switch'],
   'switch': ['Switch'],
+  'nintendo switch 2': ['Switch 2'],
   'wii': ['Wii'],
+  'nintendo wii': ['Wii'],
+  'wii u': ['WiiU'],
+  'nintendo wii u': ['WiiU'],
+  'gamecube': ['NGC'],
+  'nintendo gamecube': ['NGC'],
   'sega mega drive': ['MegaDrive', 'Genesis', 'SMD', 'Sega CD'],
+  'mega drive': ['MegaDrive', 'Genesis', 'SMD', 'Sega CD'],
+  'megadrive': ['MegaDrive', 'Genesis', 'SMD', 'Sega CD'],
+  'genesis': ['MegaDrive', 'Genesis', 'SMD'],
+  'sega saturn': ['Saturn'],
+  'dreamcast': ['DC'],
+  'sega dreamcast': ['DC'],
   'super nintendo': ['SNES', 'SFAM'],
+  'snes': ['SNES', 'SFAM'],
+  'nes': ['NES', 'Famicom'],
   'nintendo 64': ['N64'],
+  'n64': ['N64'],
   'xbox': ['XBOX'],
   'xbox 360': ['X360'],
   'xbox one': ['XONE'],
+  'xbox series x': ['Series X', 'Series X|S'],
+  'xbox series s': ['Series X', 'Series X|S'],
+  'xbox series x|s': ['Series X', 'Series X|S'],
 };
 
 export function plataformasEsperadas(plataformas: readonly string[]): Set<string> {
@@ -172,6 +271,15 @@ export interface FichaIgdb {
  */
 export function puntuarFicha(buscado: string, ficha: FichaIgdb): number {
   const objetivo = normalizarTitulo(buscado);
+  return puntuarContra(objetivo, bigramas(objetivo), ficha);
+}
+
+/**
+ * La misma puntuación, con el título buscado YA normalizado y troceado. Es la que usa el emparejador, que
+ * compara decenas de fichas contra un único título: normalizarlo una vez por ficha —como hacía— era rehacer el
+ * mismo trabajo ochenta veces por juego, en el camino que encima va contra el tope de consultas de IGDB.
+ */
+function puntuarContra(objetivo: string, bigramasObjetivo: Set<string>, ficha: FichaIgdb): number {
   const candidatos = [ficha.name, ...(ficha.alternative_names ?? []).map((alias) => alias.name)].filter(
     (nombre): nombre is string => Boolean(nombre),
   );
@@ -186,7 +294,7 @@ export function puntuarFicha(buscado: string, ficha: FichaIgdb): number {
     // números no se tocan nunca.
     else if (otro.startsWith(`${objetivo} `) && !/^\d/.test(otro.slice(objetivo.length + 1))) valor = 0.9;
     else if (otro.endsWith(` ${objetivo}`)) valor = 0.88;
-    else valor = parecido(objetivo, otro);
+    else valor = parecido(bigramasObjetivo, otro);
     if (valor > mejor) mejor = valor;
   }
   return mejor;
@@ -331,6 +439,10 @@ export async function emparejar(
   if (!token) return { coverId: null, indeciso: true };
 
   const quiero = plataformasEsperadas(plataformas);
+  /* El título buscado se normaliza y se trocea UNA vez, aquí, y no dentro de cada comparación: por debajo hay
+     hasta cuatro consultas de veinte fichas, y cada ficha con sus nombres alternativos. */
+  const objetivo = normalizarTitulo(nombre);
+  const bigramasObjetivo = bigramas(objetivo);
   let campeona: number[] | null = null;
   let elegida: FichaIgdb | null = null;
 
@@ -344,7 +456,7 @@ export async function emparejar(
     for (const ficha of fichas) {
       const grado = gradoDeTipo(ficha.game_type, ampliado);
       if (grado === null) continue;
-      const nota = puntuarFicha(nombre, ficha);
+      const nota = puntuarContra(objetivo, bigramasObjetivo, ficha);
       if (nota < 0.6) continue;
       const abreviaturas = (ficha.platforms ?? []).map((p) => p.abbreviation).filter(Boolean) as string[];
       const casa = quiero.size > 0 && abreviaturas.some((abbr) => quiero.has(abbr));
