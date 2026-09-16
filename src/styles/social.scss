@@ -621,6 +621,18 @@ button.hub-chip.active {
   margin: .4rem 0;
 }
 
+/* EL HUECO MIENTRAS BAJA. Una imagen de una publicación viene de un servidor ajeno y sus medidas no se saben
+   hasta que llega, así que no hay `width`/`height` que poner: sin nada, el elemento mide CERO y todo lo que
+   viene debajo —el resto del texto, las tarjetas siguientes del feed— salta cuando la imagen aparece.
+   Se guarda un sitio modesto y una superficie tenue que dice «aquí viene algo», y se suelta al cargar (el
+   estado lo pone `PostMedia`). No es la altura final —esa no se puede adivinar—, pero convierte el salto de
+   toda la imagen en el trozo que le falte. */
+.hub-post-media[data-carga="cargando"] {
+  min-width: 6rem;
+  min-height: 11rem;
+  background: var(--surface-hover);
+}
+
 .hub-post-hint {
   display: block;
   margin-top: .25rem;
