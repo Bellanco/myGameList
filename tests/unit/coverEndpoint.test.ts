@@ -35,6 +35,11 @@ function peticion(consulta: string, ip = '203.0.113.7', cabeceras: Record<string
   });
 }
 
+/** La misma petición tal y como la manda el navegador cuando la `<img>` cuelga de OTRA web. */
+function peticionAjena(consulta: string, ip = '203.0.113.7'): Request {
+  return peticion(consulta, ip, { 'Sec-Fetch-Site': 'cross-site' });
+}
+
 /** Ficha de IGDB que empareja con el título pedido. `total_rating_count` alto para que gane sin dudar. */
 function ficha(name: string, image_id: string | undefined = 'co1abc') {
   return { name, game_type: 0, total_rating_count: 900, cover: image_id ? { image_id } : undefined, platforms: [] };
@@ -214,6 +219,38 @@ describe('/cover — lo que cuesta', () => {
 
     expect(respuesta.status).toBe(200);
     expect(await respuesta.text()).toBe('jpeg');
+  });
+
+  /* EL PROXY NO RESUELVE JUEGOS PARA OTRAS WEBS. Sin esto, cualquiera podía colgar `<img src=".../cover?n=…">`
+     de su sitio y dejarnos pagando sus consultas a IGDB y sus escrituras de KV. No es una frontera de seguridad
+     —`curl` escribe la cabecera que quiera— y por eso sigue habiendo cupo por IP; es el corte barato del caso
+     real, que lo hace un navegador y lleva su `Sec-Fetch-Site` puesto. */
+  it('no resuelve juegos nuevos pedidos desde otra web', async () => {
+    const kv = kvFalso();
+    const respuesta = await onRequestGet({ request: peticionAjena('n=Celeste'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(403);
+    expect(respuesta.headers.get('Cache-Control')).toBe('no-store');
+    expect(consultasAIgdb()).toHaveLength(0);
+    expect(kv.put).not.toHaveBeenCalled();
+    // Ni siquiera llega a mirar el contador de la IP: lo caro se corta antes de gastar nada.
+    expect(kv.get.mock.calls.filter(([clave]) => String(clave).startsWith('igdb:cupo:'))).toHaveLength(0);
+  });
+
+  it('pero una carátula YA emparejada se sirve venga de donde venga', async () => {
+    // Servirla no cuesta ni una consulta ni una escritura, así que negarla rompería enlaces sin ahorrar nada.
+    const kv = kvFalso({ [claveCache('Celeste', [])]: 'co1abc' });
+    const respuesta = await onRequestGet({ request: peticionAjena('n=Celeste'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(200);
+    expect(consultasAIgdb()).toHaveLength(0);
+  });
+
+  it('y el navegador que no manda `Sec-Fetch-Site` sigue pasando', async () => {
+    // Safari hasta el 16.4 no la manda. Ante la duda se deja pasar: lo que protege de verdad es el cupo por IP.
+    const respuesta = await onRequestGet({ request: peticion('n=Celeste'), env: entorno(kvFalso()) });
+
+    expect(respuesta.status).toBe(200);
   });
 
   it('si no se ha podido preguntar, no se apunta nada en la caché negativa', async () => {
