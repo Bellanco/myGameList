@@ -43,10 +43,15 @@ export function HubAvatar({
         referrerPolicy="no-referrer"
         // El feed y el directorio pintan muchos avatares a la vez, la mayoría fuera de pantalla: sin `lazy` se
         // piden todos de golpe al abrir el hub. `decoding="async"` evita que la decodificación bloquee el hilo
-        // principal, y las dimensiones intrínsecas reservan el hueco para que el texto de al lado no salte
-        // cuando la imagen llega (el tamaño real lo sigue poniendo el CSS de `sizeClass`).
+        // principal.
         loading="lazy"
         decoding="async"
+        // QUIEN RESERVA EL HUECO ES EL CSS, no estos dos números: `.hub-avatar` fija ancho y alto en los tres
+        // tamaños (2,1rem, y 3,1 o 4,5 según `sizeClass`), así que el texto de al lado no salta aunque la foto
+        // tarde. Se quedan como respaldo para el hueco en que la hoja del hub —que viaja en su chunk perezoso—
+        // todavía no ha llegado: ahí un cuadrado es mejor que un elemento sin dimensiones. Por eso son un
+        // cuadrado y no el tamaño de ninguna de las tres variantes, que es lo que serían si reservaran de
+        // verdad.
         width={40}
         height={40}
         onError={() => setFailed(true)}
