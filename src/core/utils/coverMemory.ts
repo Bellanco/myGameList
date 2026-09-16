@@ -17,6 +17,8 @@
  * vez al arrancar: meterla en una base de datos asíncrona solo añadiría esperas al primer pintado.
  */
 
+import { topesLevantados } from './coverLimits';
+
 const CLAVE = 'mis-listas-covers-none';
 /** Tope de la lista. Una biblioteca no tiene tantos juegos sin carátula; si los tuviera, se olvidan los viejos. */
 const MAX = 1000;
@@ -59,7 +61,8 @@ export function recordarQueNoTiene(url: string): void {
      recordar y lo que iba a encontrar la siguiente dejaban de ser lo mismo, y el juego que se cayó de la lista
      volvía a pedir su carátula solo después de recargar. Los `Set` conservan el orden de inserción, así que las
      primeras son las más viejas. */
-  if (set.size > MAX) {
+  // Al rango más alto no se le poda, mientras haya sitio de sobra (ver `coverLimits`).
+  if (set.size > MAX && !topesLevantados()) {
     for (const vieja of [...set].slice(0, set.size - MAX)) set.delete(vieja);
   }
   guardar(set);

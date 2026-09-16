@@ -17,6 +17,13 @@ vi.mock('../../src/model/repository/firebaseRepository', () => ({
 const admin = vi.hoisted(() => ({ manda: false }));
 vi.mock('../../src/view/hooks/useIsAdmin', () => ({ useIsAdmin: () => admin.manda }));
 
+/* La petición del cupo levantado va al servidor con la sesión: aquí solo interesa SI se pide, no qué contesta
+   (eso lo decide la Function, que lee el rango del perfil de verdad). */
+const cupo = vi.hoisted(() => ({ pedido: 0 }));
+vi.mock('../../src/model/repository/coverQuotaRepository', () => ({
+  pedirCupoDeCaratulasLibre: async () => { cupo.pedido += 1; return true; },
+}));
+
 import { useCoverBackfill } from '../../src/view/hooks/useCoverBackfill';
 import { coverUrl } from '../../src/core/utils/coverUrl';
 import { reiniciarMemoriaDeCaratulas, sabemosQueNoTiene } from '../../src/core/utils/coverMemory';
@@ -32,6 +39,7 @@ let fetchSimulado: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   admin.manda = false;
+  cupo.pedido = 0;
   localStorage.clear();
   reiniciarMemoriaDeCaratulas();
   // El hook arranca cuando el navegador está ocioso; en las pruebas, ya.
@@ -134,6 +142,22 @@ describe('llenado de carátulas', () => {
     await new Promise((listo) => setTimeout(listo, 600));
 
     expect(fetchSimulado).not.toHaveBeenCalled();
+  });
+
+  /* El cupo del proxy lo levanta el SERVIDOR, que es quien comprueba el rango de verdad; el cliente solo
+     pregunta, y solo cuando tiene sentido preguntarlo. */
+  it('solo el rango más alto pide que le levanten el cupo', async () => {
+    localStorage.setItem('mis-listas-covers', 'on');
+    renderHook(() => useCoverBackfill(biblioteca([juego(1, 'Celeste')])));
+    await waitFor(() => expect(fetchSimulado).toHaveBeenCalled(), { timeout: 4000 });
+    expect(cupo.pedido).toBe(0);
+
+    cleanup();
+    admin.manda = true;
+    localStorage.clear();
+    localStorage.setItem('mis-listas-covers', 'on');
+    renderHook(() => useCoverBackfill(biblioteca([juego(2, 'Portal')])));
+    await waitFor(() => expect(cupo.pedido).toBe(1), { timeout: 4000 });
   });
 
   /* EL RECORRIDO Y EL LISTADO TIENEN QUE HACER LA MISMA PREGUNTA. El modo ampliado vive en un espacio de claves

@@ -293,15 +293,54 @@ function edadDe(response) {
 }
 
 /**
+ * EL TOPE, LEVANTADO. La aplicación puede pedir que no se pode (lo hace para el rango más alto, y solo mientras
+ * el navegador diga que hay sitio de sobra: ver `core/utils/coverLimits`). El worker no puede comprobar ni el
+ * rango ni el almacenamiento por su cuenta, así que se lo dicen por `postMessage`.
+ *
+ * La bandera se guarda en el propio cubo, como una entrada más, porque el worker se para y arranca cuando el
+ * navegador quiere: en una variable se habría perdido en el primer reinicio y la poda habría vuelto sin que
+ * nadie se enterara.
+ */
+const CLAVE_SIN_TOPE = '/__covers-sin-tope';
+
+async function sinTopeDeCaratulas(cache) {
+  return Boolean(await cache.match(CLAVE_SIN_TOPE));
+}
+
+self.addEventListener('message', (event) => {
+  if (event.data?.tipo !== 'covers-sin-tope') {
+    return;
+  }
+  event.waitUntil((async () => {
+    const cache = await caches.open(COVER_CACHE_NAME);
+    if (event.data.valor) {
+      await cache.put(CLAVE_SIN_TOPE, new Response('1'));
+    } else {
+      // Al volver el tope se poda en el acto: si se ha llegado aquí es porque ya no hay sitio de sobra, y
+      // esperar a la siguiente carátula nueva sería esperar justo cuando no se puede.
+      await cache.delete(CLAVE_SIN_TOPE);
+      await podarCaratulas(cache);
+    }
+  })());
+});
+
+/**
  * Deja el cubo de carátulas por debajo de su tope, tirando las más antiguas. Se cuentan las entradas y no los
  * bytes: `cache.keys()` es una lista de peticiones y medir el peso obligaría a abrir cada respuesta.
  */
 async function podarCaratulas(cache) {
+  if (await sinTopeDeCaratulas(cache)) {
+    return;
+  }
   const claves = await cache.keys();
   if (claves.length <= MAX_COVERS_EN_CACHE) {
     return;
   }
-  const sobran = claves.slice(0, claves.length - MAX_COVERS_EN_CACHE);
+  const caratulas = claves.filter((clave) => !clave.url.endsWith(CLAVE_SIN_TOPE));
+  if (caratulas.length <= MAX_COVERS_EN_CACHE) {
+    return;
+  }
+  const sobran = caratulas.slice(0, caratulas.length - MAX_COVERS_EN_CACHE);
   await Promise.all(sobran.map((clave) => cache.delete(clave)));
 }
 
