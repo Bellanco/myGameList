@@ -14,7 +14,11 @@ function kvFalso(inicial: Record<string, string> = {}) {
   return {
     datos,
     get: vi.fn(async (clave: string) => datos.get(clave) ?? null),
-    put: vi.fn(async (clave: string, valor: string) => { datos.set(clave, valor); }),
+    /* Las opciones se aceptan aunque el remedo no las use: es donde viaja la caducidad, y hay pruebas que
+       comprueban que un acierto se guarda SIN ella y un «no tiene» con una semana. */
+    put: vi.fn(async (clave: string, valor: string, _opciones?: { expirationTtl?: number }) => {
+      datos.set(clave, valor);
+    }),
     delete: vi.fn(async () => {}),
     list: vi.fn(async () => ({ keys: [], list_complete: true })),
   };
