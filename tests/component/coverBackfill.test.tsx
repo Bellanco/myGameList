@@ -12,6 +12,11 @@ vi.mock('../../src/model/repository/firebaseRepository', () => ({
   setPublicConfig: vi.fn(async () => {}),
 }));
 
+/* El modo ampliado sale de quién ha iniciado sesión. Aquí se decide a mano para poder comprobar las dos caras sin
+   montar una sesión de Firebase. */
+const admin = vi.hoisted(() => ({ manda: false }));
+vi.mock('../../src/view/hooks/useIsAdmin', () => ({ useIsAdmin: () => admin.manda }));
+
 import { useCoverBackfill } from '../../src/view/hooks/useCoverBackfill';
 import { coverUrl } from '../../src/core/utils/coverUrl';
 import { reiniciarMemoriaDeCaratulas, sabemosQueNoTiene } from '../../src/core/utils/coverMemory';
@@ -26,6 +31,7 @@ const biblioteca = (juegos: GameItem[]): TabData =>
 let fetchSimulado: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
+  admin.manda = false;
   localStorage.clear();
   reiniciarMemoriaDeCaratulas();
   // El hook arranca cuando el navegador está ocioso; en las pruebas, ya.
@@ -112,5 +118,21 @@ describe('llenado de carátulas', () => {
     renderHook(() => useCoverBackfill(datos)); // como volver a entrar en el listado
     await new Promise((listo) => setTimeout(listo, 600));
     expect(fetchSimulado).not.toHaveBeenCalled();
+  });
+
+  /* EL RECORRIDO Y EL LISTADO TIENEN QUE HACER LA MISMA PREGUNTA. El modo ampliado vive en un espacio de claves
+     aparte —en KV y en la memoria de «este no tiene»—, así que un recorrido hecho en modo normal no calienta lo
+     que el mosaico ampliado va a pedir ni le sirve sus «no»: la cuenta de administración pagaba el recorrido
+     entero para nada y repetía los mismos 404 en cada visita. */
+  it('recorre en el mismo modo en que el listado pide las carátulas', async () => {
+    admin.manda = true;
+    localStorage.setItem('mis-listas-covers', 'on');
+    fetchSimulado.mockImplementation(async () => new Response(null, { status: 404 }));
+    renderHook(() => useCoverBackfill(biblioteca([juego(1, 'Max Paine 3')])));
+
+    await waitFor(() => expect(fetchSimulado).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    expect(String(fetchSimulado.mock.calls[0][0])).toContain('x=1');
+    // Y lo aprendido queda bajo la clave que `coverSrc` consulta para ese mismo modo.
+    await waitFor(() => expect(sabemosQueNoTiene(coverUrl('Max Paine 3', ['Steam'], true))).toBe(true));
   });
 });
