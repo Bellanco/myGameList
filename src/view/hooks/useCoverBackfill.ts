@@ -154,21 +154,43 @@ export function useCoverBackfill(data: TabData): void {
       let guardados = 0;
       for (const { clave, url } of pendientes) {
         if (cancelado) break;
+        /* Se ha acabado el cupo de la hora: no es que este juego no tenga carátula, es que no se ha podido
+           preguntar por él —ni por ninguno de los que vienen detrás—. Ver más abajo por qué eso se para. */
+        let sinCupo = false;
         try {
           const respuesta = await fetch(`${url}&m=1`, { signal: abortar.signal });
-          /* Aquí es donde se aprende quién no tiene carátula, y es el objetivo de pasar por todos: sin esto, esos
-             juegos vuelven a pedir su imagen en cada visita para recibir el mismo 404. El 204 hace el camino de
-             vuelta, para que un título recién corregido estrene carátula sin arrastrar el «no» de antes. */
-          if (respuesta.status === 404) recordarQueNoTiene(url);
-          else if (respuesta.ok) olvidarQueNoTiene(url);
-          // Se apunta pase lo que pase con el resultado: un 404 también es una respuesta, y volver a preguntarlo
-          // en cada visita es justo el gasto que esto evita. La caché negativa del servidor caduca sola.
-          hechos.add(clave);
-          nuevos += 1;
+          /* QUÉ CUENTA COMO RESPUESTA SOBRE ESTE JUEGO, que es la distinción que sostiene todo lo demás.
+               · 404 — «no tiene carátula». Es un dato, y aprenderlo es el objetivo de pasar por todos: sin esto
+                       esos juegos vuelven a pedir su imagen en cada visita para recibir el mismo 404.
+               · 2xx — «sí tiene», y el 204 hace además el camino de vuelta, para que un título recién corregido
+                       estrene carátula sin arrastrar el «no» de antes.
+               · EL RESTO (429 del cupo, 403, 500, 501 sin credenciales) NO DICE NADA DE ESTE JUEGO: dice que no
+                 se ha podido preguntar. Se apuntaba igual, y esa es la misma confusión que el servidor tiene
+                 prohibida —ver el comentario de `consultar` en `_lib/igdbCover.ts`: un fallo de infraestructura
+                 nunca puede escribirse como si fuera un dato—. Quien importe una biblioteca de más de 500 juegos
+                 topa el cupo a los dos minutos, y el resto del recorrido quedaba marcado como hecho para siempre
+                 en ese navegador: esos juegos ya no los calienta nadie y acaban resolviéndose en ráfaga al
+                 pintar el mosaico, que es exactamente el escenario que este recorrido existe para evitar. */
+          if (respuesta.status === 429) {
+            sinCupo = true;
+          } else if (respuesta.status === 404) {
+            recordarQueNoTiene(url);
+            hechos.add(clave);
+            nuevos += 1;
+          } else if (respuesta.ok) {
+            olvidarQueNoTiene(url);
+            hechos.add(clave);
+            nuevos += 1;
+          }
         } catch {
           if (cancelado) break;
           // Un fallo de red NO se apunta: que se reintente en la próxima visita.
         }
+        /* Y con el cupo agotado se PARA, no se sigue. Lo que queda de recorrido recibiría el mismo 429 durante
+           el resto de la hora: cientos de peticiones que no resuelven nada y que encima llegan cuando el
+           servidor ya está diciendo que no. Lo andado queda guardado al salir del bucle y la próxima visita
+           sigue por donde iba. */
+        if (sinCupo) break;
         /* Se guarda cada poco y no al final: si cierras la pestaña a medias, lo andado no se pierde. Y se mide
            contra lo YA guardado, no con un resto: `nuevos` no avanza cuando la petición falla, así que un
            `% 25` volvía a serializar la lista entera en cada fallo seguido —y con la red caída, en todos. */

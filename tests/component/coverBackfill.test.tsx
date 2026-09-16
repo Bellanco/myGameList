@@ -160,6 +160,63 @@ describe('llenado de carátulas', () => {
     await waitFor(() => expect(cupo.pedido).toBe(1), { timeout: 4000 });
   });
 
+  /* LO QUE NO SE PUDO PREGUNTAR NO ES UNA RESPUESTA. El 429 dice que se acabó el cupo de la hora, no que este
+     juego no tenga carátula, y apuntarlo como hecho es la misma confusión que el servidor tiene prohibida (ver
+     `consultar`, en `_lib/igdbCover.ts`). Muerde de verdad al importar una biblioteca grande: pasados los 500
+     juegos de la hora, todo el resto del recorrido quedaba marcado para siempre en ese navegador, y esos juegos
+     acababan resolviéndose en ráfaga al pintar el mosaico — el escenario que este recorrido existe para evitar. */
+  it('no da por hecho lo que el cupo no dejó preguntar', async () => {
+    localStorage.setItem('mis-listas-covers', 'on');
+    // El primero pasa; a partir del segundo, esta IP ya ha gastado su cupo de la hora.
+    fetchSimulado.mockImplementation(async () =>
+      fetchSimulado.mock.calls.length === 1
+        ? new Response(null, { status: 204 })
+        : new Response(null, { status: 429 }),
+    );
+    const datos = biblioteca([juego(1, 'Celeste'), juego(2, 'Portal'), juego(3, 'Hades 2')]);
+
+    const primera = renderHook(() => useCoverBackfill(datos));
+    await waitFor(() => expect(fetchSimulado).toHaveBeenCalledTimes(2), { timeout: 4000 });
+    // Y AHÍ SE PARA: lo que queda recibiría el mismo 429 durante el resto de la hora, así que el tercero ni se
+    // pide. Antes eran cientos de peticiones que no resolvían nada.
+    await new Promise((listo) => setTimeout(listo, 600));
+    expect(fetchSimulado).toHaveBeenCalledTimes(2);
+
+    await waitFor(() => expect(localStorage.getItem('mis-listas-covers-done-v2')).toContain('Celeste'), {
+      timeout: 4000,
+    });
+    expect(localStorage.getItem('mis-listas-covers-done-v2')).not.toContain('Portal');
+    primera.unmount();
+
+    // En la visita siguiente se retoma justo por los dos que quedaron sin preguntar.
+    fetchSimulado.mockClear();
+    fetchSimulado.mockImplementation(async () => new Response(null, { status: 204 }));
+    renderHook(() => useCoverBackfill(datos));
+    await waitFor(() => expect(fetchSimulado).toHaveBeenCalledTimes(2), { timeout: 4000 });
+    const pedidas = fetchSimulado.mock.calls.map(([url]) => String(url));
+    expect(pedidas.some((url) => url.includes('Portal'))).toBe(true);
+    expect(pedidas.some((url) => url.includes('Celeste'))).toBe(false);
+  });
+
+  /* Lo mismo con una avería: un 500 —o el 501 de un entorno sin credenciales de IGDB— no dice nada del juego. */
+  it('tampoco da por hecho lo que falló en el servidor', async () => {
+    localStorage.setItem('mis-listas-covers', 'on');
+    fetchSimulado.mockImplementation(async () => new Response(null, { status: 500 }));
+    const datos = biblioteca([juego(1, 'Celeste')]);
+
+    const primera = renderHook(() => useCoverBackfill(datos));
+    await waitFor(() => expect(fetchSimulado).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    await new Promise((listo) => setTimeout(listo, 400));
+    expect(localStorage.getItem('mis-listas-covers-done-v2') ?? '').not.toContain('Celeste');
+    // Y tampoco se apunta como «este juego no tiene carátula», que es la otra forma de perderlo.
+    expect(sabemosQueNoTiene(coverUrl('Celeste', ['Steam']))).toBe(false);
+    primera.unmount();
+
+    fetchSimulado.mockClear();
+    renderHook(() => useCoverBackfill(datos));
+    await waitFor(() => expect(fetchSimulado).toHaveBeenCalledTimes(1), { timeout: 4000 });
+  });
+
   /* EL RECORRIDO Y EL LISTADO TIENEN QUE HACER LA MISMA PREGUNTA. El modo ampliado vive en un espacio de claves
      aparte —en KV y en la memoria de «este no tiene»—, así que un recorrido hecho en modo normal no calienta lo
      que el mosaico ampliado va a pedir ni le sirve sus «no»: la cuenta de administración pagaba el recorrido
