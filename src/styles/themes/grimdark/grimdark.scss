@@ -608,3 +608,35 @@
     to   { transform: translateY(100%); }
   }
 }
+
+/* ── §N · LA CAJA SIN CARÁTULA = LA CARTELA DEL CÓDICE ─────────────────────────────────────────────────
+   Doble filete de oro con CANTONERAS en dos esquinas opuestas y, por dentro, la pantalla del cogitador:
+   las mismas líneas de barrido verdes de la firma, muy rebajadas. El nombre toma la blackletter de las
+   cartelas (§1). ── */
+:root[data-palette="grimdark"] .game-card.is-flat {
+  border: 2px solid var(--grim-line);
+  background:
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--grim-green) 5%, transparent) 0 1px, transparent 1px 3px),
+    var(--surface);
+  box-shadow: inset 0 0 0 4px var(--surface), inset 0 0 0 5px color-mix(in srgb, var(--grim-line) 60%, transparent);
+}
+:root[data-palette="grimdark"] .game-card.is-flat::before,
+:root[data-palette="grimdark"] .game-card.is-flat::after {
+  content: "";
+  position: absolute;
+  width: 14px; height: 14px;
+  border: 2px solid var(--grim-line);
+  pointer-events: none;
+}
+:root[data-palette="grimdark"] .game-card.is-flat::before { top: 5px; left: 5px; border-right: 0; border-bottom: 0; }
+:root[data-palette="grimdark"] .game-card.is-flat::after { bottom: 5px; right: 5px; border-left: 0; border-top: 0; }
+:root[data-palette="grimdark"] .game-card.is-flat .game-card-name {
+  font-family: var(--font-display);
+  letter-spacing: .02em;
+}
+/* El medidor del pie se mete DENTRO del doble filete: pegado al canto pisaba la cantonera de oro. */
+:root[data-palette="grimdark"] .game-card.is-flat .game-card-meter {
+  width: auto;
+  margin: 0 6px 6px;
+  height: 4px;
+}

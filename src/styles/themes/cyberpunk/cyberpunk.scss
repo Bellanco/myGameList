@@ -670,3 +670,47 @@
     100% { opacity: 1;   filter: none; transform: translateY(0); }
   }
 }
+
+/* ── §N · LA CAJA SIN CARÁTULA = LA VENTANA DEL HUD ────────────────────────────────────────────────────
+   El chaflán NO lo recorta la caja. `clip-path` se come el `border` y el `box-shadow` del propio elemento
+   (la regla 2 que ya documentan §5 y `steam.scss` §4b), y lo que queda es el filete sobreviviendo en los
+   cantos rectos y desapareciendo justo en la diagonal: dos rayas sueltas en vez de un contorno.
+   La forma la dan DOS CAPAS detrás del contenido —`::before` con el color del filete y `::after` con el
+   relleno 1 px más pequeño—, exactamente igual que los botones de este tema. Así el cian rodea la pieza
+   entera, diagonales incluidas. Dentro van la barra amarilla del HUD y las líneas de barrido. ── */
+:root[data-palette="cyberpunk"] .game-card.is-flat {
+  --hud-cut: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+  isolation: isolate;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  clip-path: none;
+}
+:root[data-palette="cyberpunk"] .game-card.is-flat::before,
+:root[data-palette="cyberpunk"] .game-card.is-flat::after {
+  content: "";
+  position: absolute;
+  clip-path: var(--hud-cut);
+  pointer-events: none;
+}
+:root[data-palette="cyberpunk"] .game-card.is-flat::before {
+  inset: 0;
+  z-index: -2;
+  background: color-mix(in srgb, var(--cyber-cyan) 45%, transparent);
+}
+:root[data-palette="cyberpunk"] .game-card.is-flat::after {
+  inset: 1px;
+  z-index: -1;
+  background:
+    linear-gradient(var(--cyber-yellow), var(--cyber-yellow)) 0 0 / 4px 100% no-repeat,
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--cyber-cyan) 6%, transparent) 0 1px, transparent 1px 3px),
+    var(--surface);
+}
+:root[data-palette="cyberpunk"] .game-card.is-flat .game-card-body { padding-left: 1.15rem; }
+/* El medidor se aparta de la esquina cortada de abajo: pegado al canto, el filo de color asomaba por
+   fuera de la diagonal. */
+:root[data-palette="cyberpunk"] .game-card.is-flat .game-card-meter {
+  width: auto;
+  margin: 0 1px 1px 19px;
+  height: 5px;
+}

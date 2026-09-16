@@ -63,15 +63,14 @@ interface VirtualRow {
   ids?: number[];
 }
 
-/* Alturas de partida del virtualizador, en píxeles. MEDIDAS SOBRE EL BUILD con la biblioteca real (302 juegos),
-   no elegidas a ojo: 146 px el renglón a 1200 y a 1440 px de ancho —las 302 filas miden lo mismo— y 129 px el
-   mismo renglón en un teléfono de 412, donde las categorías se apilan en dos líneas y la opinión no se pinta
-   (131 los que llevan el nombre en dos líneas).
+/* Alturas de partida del virtualizador, en píxeles. MEDIDAS SOBRE EL BUILD con una biblioteca real, no elegidas
+   a ojo: 150 px el renglón a 1200 y a 1440 px de ancho —todas las filas miden lo mismo— y 129 px el mismo
+   renglón en un teléfono de 412, donde las categorías se apilan en dos líneas (131 los que llevan el nombre en
+   dos líneas).
    No hace falta que sean exactas —`measureElement` corrige cada fila en cuanto se pinta— pero sí que estén cerca,
    porque son las que fijan el tamaño total mientras el resto de la lista sigue sin medir: con 1.500 juegos, un
-   error del 20 % son 19.000 px de barra de desplazamiento que aparecen de la nada mientras el usuario baja.
-   Venían de 63 y 74, del renglón de una sola línea que había antes del rediseño. */
-const MAIN_ROW_ESTIMATE_PX = 146;
+   error del 20 % son 19.000 px de barra de desplazamiento que aparecen de la nada mientras el usuario baja. */
+const MAIN_ROW_ESTIMATE_PX = 150;
 const COMPACT_ROW_ESTIMATE_PX = 130;
 /* El detalle desplegado. Eran 320 px de cuando volcaba el análisis entero; desde que ese texto es un enlace a
    su pantalla, el detalle mide 245 px (278 los que reparten sus datos en tres líneas). MEDIDO sobre el build
@@ -88,7 +87,11 @@ const DETAIL_ROW_ESTIMATE_PX = 250;
    preferencia se puede cambiar con la lista abierta, así que la estimación tiene que mirarla o la barra de
    desplazamiento nace con el doble o la mitad de la altura que le toca. */
 const GRID_ROW_ESTIMATE_PX: Record<GridSize, number> = { sm: 330, md: 420, lg: 520 };
-const GRID_ROW_FLAT_ESTIMATE_PX = 175;
+/* La fila del mosaico SIN carátulas ya no se estima: se SABE. Desde que la caja plana tiene alto
+   declarado (`--card-h` en `.game-grid.is-flat`, ver `_table.scss`), todas miden lo mismo, así que una
+   fila son esos 12,6 rem —202 px— más el hueco de .6 rem que la celda deja debajo. Antes eran 175 px
+   medidos sobre una caja que crecía con el título. */
+const GRID_ROW_FLAT_ESTIMATE_PX = 212;
 /* ANCHO MÍNIMO DE CUADRO, y por qué es una tabla y no un número. Es la perilla de la densidad —cuanto mayor,
    menos columnas y más sitio dentro de cada cuadro— y ahora la mueve quien mira, con el control de la cabecera
    (`useGridSize`). El paso de en medio es el de siempre: 205 px en escritorio, que es lo que hace falta para
@@ -99,14 +102,98 @@ const GRID_ROW_FLAT_ESTIMATE_PX = 175;
    `--grid-cols`. */
 const GRID_CARD_MIN_PX: Record<GridSize, number> = { sm: 150, md: 205, lg: 268 };
 const GRID_CARD_MIN_NARROW_PX: Record<GridSize, number> = { sm: 104, md: 168, lg: 250 };
-/* Cuántos chips por ranura en la caja, y por qué no son los mismos en las dos. Las plataformas son nombres
-   cortos («Steam», «PC», «GOG») y dos caben de sobra en los 203 px útiles de la caja. Los géneros no: dos
-   largos —«Coleccionista de criaturas» y «Puzles»— salen los dos recortados a la vez, y dos ranuras con puntos
-   suspensivos se leen peor que una entera con su «+1» al lado. Así que la plataforma enseña dos y el género
-   uno, siempre el mismo reparto en todas las cajas. */
-const GRID_CARD_PLAT_CHIPS = 2;
-const GRID_CARD_GENRE_CHIPS = 1;
+/* Y LA MISMA PERILLA, CORRIDA, CUANDO NO HAY CARÁTULAS. Sin el marco 3:4 la caja es mucho más baja, y a
+   205 px de ancho lo que salía era un mosaico de piezas pequeñas y apretadas donde la plataforma y el
+   género no tenían aire: la caja plana no tiene imagen que mirar, así que lo único que hay que leer son
+   sus datos. El paso de en medio sube a 250 px —de 6 columnas a 5 en una pantalla de 1440—, y los otros
+   dos lo acompañan.
+   En un teléfono la tabla es otra, por lo mismo que la de las carátulas: con 250 px allí saldría UNA
+   columna del ancho de la pantalla — y una caja de 372 px de ancho por 202 de alto es lo contrario de lo
+   que se buscaba, media pieza en blanco por cada juego. El paso normal siguen siendo DOS columnas, con el
+   mismo mínimo que usan las carátulas. */
+const GRID_CARD_MIN_FLAT_PX: Record<GridSize, number> = { sm: 185, md: 250, lg: 320 };
+const GRID_CARD_MIN_FLAT_NARROW_PX: Record<GridSize, number> = { sm: 118, md: 168, lg: 230 };
+/* CUÁNTOS CHIPS CABEN EN UNA RANURA DE LA CAJA. Eran dos plataformas y un género FIJOS, medidos sobre la caja
+   de 203 px útiles que había entonces. Luego fueron escalones por ancho, y se quedaban cortos: un escalón tiene
+   que ir al peor caso —el género más largo del catálogo— así que a «PC · Switch», que ocupa un tercio de la
+   ranura, le salía un «+1» con media ranura vacía al lado.
+   Ahora se MIDE EL TEXTO, con la letra que ese tema le da al chip. Hubo un paso intermedio que lo estimaba por
+   el número de letras (5,3 px cada una más 31 fijos, ajustado sobre cinco paletas) y funcionaba en casi todas;
+   se cayó en «Inserte moneda», cuya Orbitron es bastante más ancha que la media, y metía en la ranura chips que
+   no cabían. Un `canvas` mide la cadena exacta con la fuente exacta, así que el problema desaparece de raíz —y
+   con él la diferencia entre una letra condensada y una ancha—.
+   LA FUENTE SE LEE DEL PROPIO CHIP, una sola vez por render de la lista y no por caja: es la única manera de
+   saber qué familia y qué tamaño le toca, porque eso lo decide el skin de cada tema. Mientras no hay ninguno en
+   el DOM (el primer pintado) se usa la estimación de antes, que para entonces es lo bastante buena: en cuanto
+   la lista existe, la siguiente vuelta ya mide. */
+const CHIP_PX_POR_LETRA = 5.3;
+const CHIP_PX_FIJO = 31;
+/* Lo que la ranura le reserva al «+N» por CSS (`padding-right`), no lo que mide el chip: ahí va anclado. */
+const CHIP_PX_MAS_N = 42;
+const CHIP_GAP_PX = 6.4;
+/* Relleno y filete del chip (`.chip`: .64 rem a cada lado más 1 px de borde), que es lo que hay que sumarle al
+   texto medido. */
+const CHIP_PX_MARCO = 22;
+
+/** El `canvas` de medir, uno para toda la vida de la página: crear uno por medición es lo caro. */
+let lienzoMedidor: CanvasRenderingContext2D | null = null;
+function anchoDelTexto(texto: string, fuente: string | null): number {
+  if (!fuente) return texto.length * CHIP_PX_POR_LETRA + CHIP_PX_FIJO - CHIP_PX_MARCO;
+  if (!lienzoMedidor) lienzoMedidor = document.createElement('canvas').getContext('2d');
+  if (!lienzoMedidor) return texto.length * CHIP_PX_POR_LETRA + CHIP_PX_FIJO - CHIP_PX_MARCO;
+  lienzoMedidor.font = fuente;
+  return lienzoMedidor.measureText(texto).width;
+}
+
+/**
+ * LA LETRA Y EL MARCO DEL CHIP tal y como los pinta el tema activo. Los dos se leen del DOM y no se suponen:
+ * la familia la decide el skin (Orbitron en «Inserte moneda» es bastante más ancha que la media) y el relleno
+ * también —las pegatinas de ese mismo tema y los carteles de «Plata y acero» llevan bastante más que el chip
+ * de la casa—. Con el marco estimado a ojo, la cuenta metía en la ranura chips que no cabían, que es justo lo
+ * que se veía cortado.
+ * El marco se saca por diferencia: lo que mide el chip entero menos lo que mide su texto.
+ */
+function metricasDelChip(raiz: HTMLElement | null): { fuente: string; marco: number } | null {
+  const chip = raiz?.querySelector('.chip:not(.chip-more)');
+  const texto = chip?.textContent?.trim();
+  if (!chip || !texto) return null;
+  const cs = getComputedStyle(chip);
+  const fuente = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  const marco = chip.getBoundingClientRect().width - anchoDelTexto(texto, fuente);
+  /* Si la medida sale absurda (fuente aún sin cargar, chip oculto), se cae al marco de la casa. */
+  return { fuente, marco: marco > 4 && marco < 80 ? marco : CHIP_PX_MARCO };
+}
+
+function chipsQueCaben(
+  valores: string[],
+  ancho: number,
+  metricas: { fuente: string; marco: number } | null,
+): { n: number; apretado: boolean } {
+  if (valores.length <= 1 || ancho <= 0) return { n: 1, apretado: false };
+  const marco = metricas?.marco ?? CHIP_PX_MARCO;
+  let usado = 0;
+  let caben = 0;
+  for (let i = 0; i < valores.length; i += 1) {
+    const mide = anchoDelTexto(valores[i], metricas?.fuente ?? null) + marco + (i ? CHIP_GAP_PX : 0);
+    /* Si después de éste todavía quedan, hay que reservarle sitio al «+N»: un contador que no se ve no
+       cuenta nada, y era lo que se salía de la ranura en las cajas estrechas. */
+    const reserva = i < valores.length - 1 ? CHIP_GAP_PX + CHIP_PX_MAS_N : 0;
+    if (usado + mide + reserva > ancho) break;
+    usado += mide;
+    caben += 1;
+  }
+  /* SIEMPRE UNO, aunque no quepa: una ranura con solo el «+2» dentro no dice qué juego es. Pero entonces la
+     ranura va APRETADA —«Coleccionista de criaturas» pide 172 px y en la densidad pequeña hay 157—, y ahí el
+     único que puede ceder es el chip: se recorta con puntos suspensivos para que el «+N» siga viéndose. Es la
+     excepción a que los chips no se encojan, y es al revés que el caso normal: aquí lo que sobra no es sitio,
+     es texto. */
+  return caben > 0 ? { n: caben, apretado: false } : { n: 1, apretado: true };
+}
 const GRID_GAP_PX = 10;
+/* El mismo hueco, para la rejilla SIN carátulas: allí el `gap` sube a .9 rem (ver `_table.scss`), y esta
+   cuenta tiene que usar el de verdad. Con los 10 px del otro, en los anchos justos salía una columna de
+   más y las cajas quedaban por debajo de su mínimo — que es exactamente lo que este cálculo evita. */
+const GRID_GAP_FLAT_PX = 14;
 
 /** `tone`: tiñe cada píldora con el color que le toca a su nombre en la rampa categórica (`categoryTone`).
     Solo lo piden los géneros; el resto de categorías ya tienen un color con significado propio (la plataforma
@@ -156,19 +243,25 @@ function renderTags(values: string[], className: string, maxVisible?: number, to
   if (!values.length) return <span className="chip-none" aria-hidden="true">—</span>;
   const overflow = maxVisible && values.length > maxVisible ? values.length - maxVisible : 0;
   const visible = overflow ? values.slice(0, maxVisible) : values;
+  /* EL «+N» VA FUERA DEL GRUPO, no dentro. Es lo que permite que el desvanecido del final de la ranura —una
+     máscara— se aplique SOLO a los chips: metido dentro, la máscara lo apagaba a él también, y el apaño de
+     abrirle una ventana opaca al final resultó peor que la enfermedad, porque esa ventana atravesaba el chip
+     que pasara por ahí y lo partía en seco. Fuera, la máscara no lo toca y no hay ventana que abrir. */
   return (
-    <div className="chips">
-      {visible.map((value) => (
-        <span key={value} className={`chip ${className}`} style={tone ? categoryToneStyle(value) : undefined}>
-          {value}
-        </span>
-      ))}
+    <>
+      <div className="chips">
+        {visible.map((value) => (
+          <span key={value} className={`chip ${className}`} style={tone ? categoryToneStyle(value) : undefined}>
+            {value}
+          </span>
+        ))}
+      </div>
       {overflow ? (
         <span className="chip chip-more" title={values.slice(maxVisible).join(', ')}>
           {UI_MESSAGES.table.moreCount(overflow)}
         </span>
       ) : null}
-    </div>
+    </>
   );
 }
 
@@ -385,14 +478,30 @@ export const GameTable = memo(function GameTable({
      una fila de cajas) en vez de creer que cada caja va en su propio renglón, que es lo que descuadraría la
      barra de desplazamiento en una biblioteca de mil juegos. */
   const [gridWidth, setGridWidth] = useState(0);
-  const cajaMin = (narrowScreen ? GRID_CARD_MIN_NARROW_PX : GRID_CARD_MIN_PX)[gridSize];
-  const gridColumns = Math.max(1, Math.floor((gridWidth + GRID_GAP_PX) / (cajaMin + GRID_GAP_PX)) || 1);
+  const cajaMin = (narrowScreen
+    ? (covers ? GRID_CARD_MIN_NARROW_PX : GRID_CARD_MIN_FLAT_NARROW_PX)
+    : (covers ? GRID_CARD_MIN_PX : GRID_CARD_MIN_FLAT_PX))[gridSize];
+  const gridGap = covers ? GRID_GAP_PX : GRID_GAP_FLAT_PX;
+  const gridColumns = Math.max(1, Math.floor((gridWidth + gridGap) / (cajaMin + gridGap)) || 1);
+  /* EL ANCHO DE UNA CAJA, que es lo que decide cuántos chips caben en sus ranuras. Sale de la misma cuenta que
+     las columnas —el ancho medido menos los huecos, partido entre las columnas— y no de medir una caja: medirla
+     obligaría a leer el layout DESPUÉS de pintarlo, y el primer pintado saldría con el reparto equivocado.
+     Se le descuenta el relleno del cuerpo (.95 rem a cada lado), porque el hueco donde de verdad entran los
+     chips es el de dentro. */
+  const anchoCaja = gridWidth > 0 ? (gridWidth - gridGap * (gridColumns - 1)) / gridColumns : 0;
+  /* El hueco donde de verdad entran los chips: la caja menos el relleno del cuerpo (.95 rem a cada lado). */
+  const anchoRanuraCaja = Math.max(0, anchoCaja - 30.4);
   /* El renglón es UNO SOLO a cualquier ancho —misma cabecera, mismas ranuras de categoría— y lo único que
      cambia con el sitio disponible es CUÁNTOS chips caben antes del «+N». Antes había dos marcados distintos
      (la línea ancha con todos los datos y un meta compacto de columnas fijas para el teléfono), y mantener dos
      versiones de lo mismo es lo que hacía que la lista y la app móvil se parecieran cada vez menos.
      El género vive en la ranura elástica, así que puede permitirse uno más cuando hay sitio. */
-  const genreCap = narrowScreen ? 2 : MAX_ROW_CHIPS;
+  /* EL GÉNERO: tres con sitio y dos en la franja de en medio. Su ranura es la más ancha de la línea —lleva los
+     nombres largos, «Coleccionista de criaturas»— pero por debajo de 1.150 px de contenedor el tercero ya no
+     entra entero, y un «+1» dice lo mismo sin recortar nada. Se mira el ancho del CONTENEDOR y no el de la
+     ventana porque es el contenedor el que reparte, y es el mismo que ya se mide para las columnas del
+     mosaico. */
+  const genreCap = gridWidth > 0 && gridWidth < 1150 ? 2 : MAX_ROW_CHIPS;
   /* La plataforma se topa antes, y no por gusto: su ranura tiene ancho FIJO —es la que alinea la columna del
      género— y con tres nombres largos («Cat Quest» tiene PlayStation 4, Nintendo Switch y PC) se partía en dos
      líneas y ese renglón salía 34 px más alto que los otros trescientos. Dos caben siempre; del resto avisa el
@@ -402,9 +511,16 @@ export const GameTable = memo(function GameTable({
      pide 10: el tercero se metía debajo de la plataforma. Con «2026 +2» cabe, sigue diciendo que hay más de un
      año y la columna se estrecha a la mitad, que es sitio que la plataforma necesita. */
   const yearCap = narrowScreen ? 1 : MAX_ROW_CHIPS;
-  /* Fuertes y débiles: como las categorías, se topan antes en un teléfono. Con el mismo candado de una sola
-     línea (`nowrap` en el CSS), para que el recuadro mida igual en las trescientas filas. */
-  const notesCap = narrowScreen ? 2 : MAX_ROW_CHIPS;
+  /* Fuertes y débiles: su renglón es SUYO —dos recuadros escalonados bajo las categorías— y lo que cabe en cada
+     uno se mide igual que en la caja, con el texto de ESE juego. En el teléfono no se pintan (lo apaga el CSS),
+     así que allí el tope da igual.
+     LOS PESOS SON LOS DE `.row-notes` EN `_table.scss` (.5 / 1,25 / 2,55 fr de un total de 4,3), y es el único
+     sitio del componente donde hay un número que casar con la hoja: el reparto de esa fila no se puede medir
+     desde aquí sin leer el layout ya pintado. Si allí cambian, cambian aquí.
+     Del ancho de la columna se descuentan el relleno del recuadro y su filete (unos 18 px). */
+  const anchoRenglon = Math.max(0, gridWidth - 35);
+  const anchoNotaBuena = anchoRenglon * (1.25 / 4.3) - 18;
+  const anchoNotaMala = anchoRenglon * (2.55 / 4.3) - 18;
   /* Próximos es la única lista sin opinión: todavía no se ha jugado a nada, así que el recuadro no existe en
      vez de salir con las dos mitades vacías. En la vergüenza el lado malo son los MOTIVOS de dejarlo. */
   const tieneOpinion = currentTab === 'c' || currentTab === 'v' || currentTab === 'e';
@@ -434,6 +550,10 @@ export const GameTable = memo(function GameTable({
   }, [games, expandedId, shape, gridColumns]);
 
   const parentRef = useRef<HTMLDivElement>(null);
+  /* La letra y el relleno del chip en el tema activo, leídos del DOM UNA VEZ por render de la lista (no por
+     caja). Se miran en cada vuelta a propósito: cambiar de paleta cambia las dos cosas, y ese cambio no pasa
+     por este componente. */
+  const metricasChip = metricasDelChip(parentRef.current);
 
   // QUIÉN SCROLLEA DE VERDAD. Hay dos virtualizadores y no son intercambiables: el de elemento necesita un
   // contenedor que scrollee, y apuntado a uno que no scrollea toma como viewport TODO el contenido y pinta todas
@@ -771,9 +891,19 @@ export const GameTable = memo(function GameTable({
                       className="grid-row"
                     >
                       <td>
-                        <div className="game-grid" style={{ '--grid-cols': gridColumns } as CSSProperties}>
+                        {/* `is-flat` en la REJILLA y no solo en cada caja: el alto de fila y el hueco
+                            entre cajas son propiedades de la rejilla, y quien sabe si hay carátulas es
+                            esta vista, no la pieza. */}
+                        <div
+                          className={`game-grid${covers ? '' : ' is-flat'}`}
+                          style={{ '--grid-cols': gridColumns } as CSSProperties}
+                        >
                           {bloque.map((game) => {
                             const expanded = expandedId === game.id;
+                            /* Cuántos chips enseña ESTE juego: lo decide lo que ocupa su texto en el ancho de
+                               la caja, no un número igual para todos (ver `chipsQueCaben`). */
+                            const capsPlat = chipsQueCaben(game.platforms, anchoRanuraCaja, metricasChip);
+                            const capsGenero = chipsQueCaben(game.genres, anchoRanuraCaja, metricasChip);
                             const nota = (currentTab === 'c' || currentTab === 'p') || (showShameScore && hasScore(game)) ? (
                               <span className="game-card-score"><ScoreDisplay game={game} /></span>
                             ) : null;
@@ -838,8 +968,12 @@ export const GameTable = memo(function GameTable({
                                       no se busca —para eso está el renglón, y el detalle los tiene todos— y se
                                       comía el ancho que plataforma y género necesitan para verse enteros. */}
                                   <div className="game-card-tags">
-                                    <div className="game-card-slot">{renderTags(game.platforms, 'chip-plat', GRID_CARD_PLAT_CHIPS)}</div>
-                                    <div className="game-card-slot">{renderTags(game.genres, 'chip-genre', GRID_CARD_GENRE_CHIPS, true)}</div>
+                                    <div className={`game-card-slot${capsPlat.apretado ? ' is-apretado' : ''}`}>
+                                      {renderTags(game.platforms, 'chip-plat', capsPlat.n)}
+                                    </div>
+                                    <div className={`game-card-slot${capsGenero.apretado ? ' is-apretado' : ''}`}>
+                                      {renderTags(game.genres, 'chip-genre', capsGenero.n, true)}
+                                    </div>
                                   </div>
                                 </div>
                                 {/* EL MEDIDOR DEL PIE. La misma nota que el aro, dicha como una barra que cruza
@@ -875,6 +1009,8 @@ export const GameTable = memo(function GameTable({
                      en la medición de la fila. Sin preferencia de carátulas encendida —o sin imagen para ese
                      juego— la pieza se queda en su superficie plana, que es la maqueta §2. */
                   const rowCover = coverDeRenglon(covers, game, coversAmpliadas, franjaGrande);
+                  /* El lado malo del renglón: en la vergüenza son los MOTIVOS de dejarlo, no los defectos. */
+                  const malos = (currentTab === 'v' ? game.reasons : game.weaknesses) || [];
                   return (
                     <tr
                       key={`main-${game.id}`}
@@ -935,9 +1071,7 @@ export const GameTable = memo(function GameTable({
                                 plataformas, géneros—, así que el género de una fila cae debajo del género de la
                                 siguiente sin dibujar ni una línea ni una cabecera. Es el mismo remedio que ya
                                 llevaba el meta de móvil y por el mismo motivo: sin alineación vertical, y sin
-                                cabeceras que digan qué es cada cosa, los chips se leen «ahí a lo loco».
-                                Los puntos fuertes y débiles NO están: viven en el detalle desplegado, que es
-                                donde se ven enteros en vez de recortados a tres. */}
+                                cabeceras que digan qué es cada cosa, los chips se leen «ahí a lo loco». */}
                             <span className="row-cats">
                               {currentTab === 'c' && showYears ? (
                                 /* Varios años con su «+N», del más reciente al más antiguo: en una lista de
@@ -948,7 +1082,7 @@ export const GameTable = memo(function GameTable({
                               <span className="row-cat row-cat-plat">{renderTags(game.platforms, 'chip-plat', platCap)}</span>
                               <span className="row-cat row-cat-genre">{renderTags(game.genres, 'chip-genre', genreCap, true)}</span>
                             </span>
-                            {/* LO QUE SE PENSÓ DEL JUEGO, en el mismo renglón y en DOS recuadros hundidos e
+                            {/* LO QUE SE PENSÓ DEL JUEGO, en el renglón de abajo y en DOS recuadros hundidos e
                                 independientes: uno para lo bueno y otro para lo malo. Hubo una versión con un
                                 solo recuadro partido en dos mitades y se leía como una tabla de dos celdas;
                                 separados, cada grupo es una cosa y se ve dónde empieza y dónde acaba.
@@ -963,11 +1097,13 @@ export const GameTable = memo(function GameTable({
                             {tieneOpinion ? (
                               <span className="row-notes">
                                 {game.strengths?.length ? (
-                                  <span className="row-note row-note-good">{renderTags(game.strengths, 'chip-pf', notesCap)}</span>
+                                  <span className="row-note row-note-good">
+                                    {renderTags(game.strengths, 'chip-pf', chipsQueCaben(game.strengths, anchoNotaBuena, metricasChip).n)}
+                                  </span>
                                 ) : null}
-                                {(currentTab === 'v' ? game.reasons : game.weaknesses)?.length ? (
+                                {malos.length ? (
                                   <span className="row-note row-note-bad">
-                                    {renderTags((currentTab === 'v' ? game.reasons : game.weaknesses) || [], 'chip-pd', notesCap)}
+                                    {renderTags(malos, 'chip-pd', chipsQueCaben(malos, anchoNotaMala, metricasChip).n)}
                                   </span>
                                 ) : null}
                               </span>

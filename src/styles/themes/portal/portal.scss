@@ -669,3 +669,70 @@
     to   { opacity: 1; transform: translateY(0); }
   }
 }
+
+/* ── §N · LA CAJA SIN CARÁTULA = EL PANEL DE LA CÁMARA ─────────────────────────────────────────────────
+   Con las carátulas apagadas —que es como viene la aplicación— el mosaico se quedaba en cajas planas iguales
+   en las ocho paletas: cambiaban el color y la letra, pero la FORMA no, y una biblioteca entera se leía
+   monótona. Aquí la pieza pasa a ser un panel de la cámara de pruebas, y lo que lo dibuja son LAS JUNTAS DEL
+   CUBO: trazos FINOS, de un píxel, como los que separan las placas de un Cubo de Compañía. Nada de bandas
+   anchas —se probaron, y con cuatro bandas de metal de once píxeles la caja se convertía en un marco grueso
+   que se comía el contenido—: aquí la identidad está en la RETÍCULA, no en el grosor.
+
+   DOS PIEZAS Y NADA MÁS: el bisel de los cuatro vértices (`clip-path`), que es la silueta, y las CUATRO
+   CANTONERAS en L, que son las piezas de esquina del cubo —lo primero que se distingue al mirarlo—. Sin
+   marco que cerque la caja: en una rejilla, un recuadro por pieza son quince cercos, y lo que en una caja
+   suelta se lee como panel, repetido se lee como reja. Se probaron también la doble junta concéntrica, la
+   retícula de nueve placas, el disco de la cara y la junta remachada; ésta es la que menos encierra el
+   contenido diciendo lo mismo.
+   El `clip-path` no da problemas aquí, al revés que en «Sin futuro»: esta pieza no tiene filete que perder
+   —el canto lo dibujan las cantoneras, que van en su propia capa— así que no queda ninguna diagonal sin
+   contorno.
+
+   LA JUNTA VA POR FICHA (`--junta`) y no en duro: el CLARO de este tema no es el oscuro invertido sino la
+   Aperture ANTIGUA, y un trazo calculado solo sobre la tinta se perdía encima de su crema. ── */
+:root[data-palette="portal"] .game-card.is-flat {
+  --chaflan: 14px;
+  --junta: color-mix(in srgb, var(--steam) 34%, var(--border));
+  position: relative;
+  clip-path: polygon(
+    var(--chaflan) 0, calc(100% - var(--chaflan)) 0, 100% var(--chaflan),
+    100% calc(100% - var(--chaflan)), calc(100% - var(--chaflan)) 100%,
+    var(--chaflan) 100%, 0 calc(100% - var(--chaflan)), 0 var(--chaflan));
+  border: 0;
+  /* LA PLACA TIENE COLOR PROPIO, y es lo único que de verdad la despega de la pared. Con la superficie normal,
+     caja y fondo se diferenciaban en 1,2:1 —de lejos no se veía dónde acababa una y empezaba la otra— y ni el
+     bisel ni la sombra lo arreglaban, porque sin filete no hay canto que mirar. Se sube a la superficie
+     ELEVADA del tema, que es la ficha que este sistema tiene justo para esto: se nota que la pieza está encima
+     sin convertirla en un panel luminoso.
+     Y la sombra la acompaña: más honda que la elevación de la casa —esa está calculada para piezas CON
+     borde— y con el canto de luz de arriba, que es lo que le da grosor a la placa. */
+  background: var(--surface-elevated);
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, .45),
+    0 2px 4px rgba(0, 0, 0, .35),
+    inset 0 1px 0 color-mix(in srgb, var(--text) 12%, transparent);
+}
+/* LAS CANTONERAS. El marco entero SE DIBUJA y luego se TAPA menos sus cuatro esquinas: es mucho más fiable
+   que componer ocho segmentos con `background-position` —así se intentó primero y salían trazos sueltos— y
+   deja que el trazo siga el bisel sin cuentas. Los 26 px son el largo de la L: con menos parecen erratas y
+   con más vuelve a leerse como un marco. */
+:root[data-palette="portal"] .game-card.is-flat::before {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  pointer-events: none;
+  border: 1px solid var(--junta);
+  --pz-esquina: linear-gradient(#000, #000);
+  -webkit-mask-image: var(--pz-esquina), var(--pz-esquina), var(--pz-esquina), var(--pz-esquina);
+  mask-image: var(--pz-esquina), var(--pz-esquina), var(--pz-esquina), var(--pz-esquina);
+  -webkit-mask-size: 26px 26px;
+  mask-size: 26px 26px;
+  -webkit-mask-position: 0 0, 100% 0, 0 100%, 100% 100%;
+  mask-position: 0 0, 100% 0, 0 100%, 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+:root[data-palette="portal"] .game-card.is-flat .game-card-body { padding: 1.05rem 1.15rem; }
+/* El medidor del pie se retira: cruzaría la junta de abajo y los dos vértices biselados, y la nota ya está
+   dicha en el aro de la cabecera. */
+:root[data-palette="portal"] .game-card.is-flat .game-card-meter { display: none; }

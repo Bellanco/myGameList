@@ -520,3 +520,26 @@
     100% { opacity: 1; filter: none; }
   }
 }
+
+/* ── §N · LA CAJA SIN CARÁTULA = LA CAJA DE DIÁLOGO ────────────────────────────────────────────────────
+   El cuadro de texto del juego, el mismo 9-slice de los paneles (§3): borde de 2 px y anillo interior
+   separado. Dentro, el cielo estrellado en píxeles —cuatro puntos de un píxel, uno por cada color del
+   tema—, que es la firma del skin traída a la pieza sin animarla: son treinta cajas a la vez. ── */
+:root[data-palette="seaofstars"] .game-card.is-flat {
+  border: 2px solid var(--sos-line);
+  border-radius: 0;
+  background:
+    radial-gradient(1px 1px at 18% 24%, var(--sos-turq) 50%, transparent 50%),
+    radial-gradient(1px 1px at 72% 16%, var(--sos-pink) 50%, transparent 50%),
+    radial-gradient(1px 1px at 46% 62%, var(--sos-purple) 50%, transparent 50%),
+    radial-gradient(1px 1px at 88% 78%, var(--steam) 50%, transparent 50%),
+    var(--surface);
+  box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px color-mix(in srgb, var(--sos-turq) 70%, transparent);
+}
+:root[data-palette="seaofstars"] .game-card.is-flat .game-card-body { padding: 1rem 1.05rem; }
+/* Dentro del 9-slice, como en «Solo hay guerra»: el filo de color no puede pisar el anillo interior. */
+:root[data-palette="seaofstars"] .game-card.is-flat .game-card-meter {
+  width: auto;
+  margin: 0 5px 5px;
+  height: 4px;
+}

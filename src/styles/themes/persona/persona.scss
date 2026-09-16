@@ -515,3 +515,24 @@
     }
   }
 }
+
+/* ── §N · LA CAJA SIN CARÁTULA = LA VIÑETA ─────────────────────────────────────────────────────────────
+   Contorno grueso y sombra dura roja, el sticker de cómic de §3 llevado a la pieza del mosaico. El nombre
+   va en la cursiva del tema y SIN RÓTULO: hubo una versión con el título metido en una banda blanca
+   sesgada, y eso era un marco dentro de un marco —la viñeta ya tiene contorno y sombra—, o sea un segundo
+   cerco en la única pieza que no lo necesitaba.
+
+   Y SIN GIRAR, que es lo que más cuesta renunciar aquí: la viñeta pedía un grado y pico de inclinación
+   —el tablero de infiltración del juego no está a escuadra— y en una rejilla eso es lo único que rompe la
+   alineación de filas y columnas. Las cajas seguían midiendo igual, pero el ojo las veía bailar. El
+   desorden se queda en la SOMBRA, que cambia de lado en cada caja. ── */
+:root[data-palette="persona"] .game-card.is-flat {
+  border: 3px solid var(--pop-line);
+  border-radius: 0;
+  box-shadow: 6px 6px 0 var(--steam);
+}
+:root[data-palette="persona"] .game-card.is-flat:nth-child(2n) { box-shadow: -6px 6px 0 var(--steam); }
+:root[data-palette="persona"] .game-card.is-flat .game-card-name {
+  font-style: italic;
+  letter-spacing: .01em;
+}
