@@ -1,28 +1,23 @@
-// La memoria de «este juego no tiene carátula», que ahora CADUCA.
+// La memoria de «este juego no tiene carátula»: qué calla y qué vuelve a abrir la pregunta.
 //
-// Empezó siendo una lista sin fecha, o sea un «no» definitivo: un juego que no tenía carátula el día que se
-// preguntó no la volvía a pedir nunca en ese navegador. Y eso convertía en permanente algo que no lo es —IGDB
-// añade fichas— además de anular la caché negativa del servidor, que sí caduca a la semana. Lo que se protege
-// aquí es el plazo y, sobre todo, que el olvido no cueste peticiones de más mientras no toca.
+// Su razón de ser es que el 404 de una carátula que no existe no lo cachea NADIE —ni el navegador ni el service
+// worker guardan lo que no es un 200, y es deliberado—, así que sin esta lista los mismos veinte juegos sin
+// imagen volvían a preguntarse en cada visita. Por eso el «no» no caduca: reintentar por tiempo es una fuga
+// pequeña pero constante, y de esas preguntas casi ninguna cambia de respuesta.
+//
+// LA VÍA DE VUELTA ES EL TÍTULO, que es además la causa real de la mayoría de los «no»: una errata. Esta memoria
+// se guarda por la URL de la carátula y la URL lleva el nombre dentro, así que corregirlo da una URL que aquí no
+// consta y el juego se pide otra vez. Eso es lo que más se comprueba en este fichero.
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
-  hayQueReintentarAlgo,
   olvidarQueNoTiene,
   recordarQueNoTiene,
   reiniciarMemoriaDeCaratulas,
   sabemosQueNoTiene,
-  tocaReintentar,
 } from '../../src/core/utils/coverMemory';
+import { coverUrl } from '../../src/core/utils/coverUrl';
 
 const CLAVE = 'mis-listas-covers-none';
-const SEMANA = 7 * 24 * 60 * 60 * 1000;
-const URL = '/cover?n=Jotum&p=Steam';
-
-/** Deja una marca escrita con la antigüedad que se quiera, como si la hubiera puesto otra sesión. */
-function marcaDeHace(ms: number, url = URL): void {
-  localStorage.setItem(CLAVE, JSON.stringify({ [url]: Date.now() - ms }));
-  reiniciarMemoriaDeCaratulas();
-}
 
 beforeEach(() => {
   localStorage.clear();
@@ -35,63 +30,59 @@ afterEach(() => {
 });
 
 describe('memoria de los juegos sin carátula', () => {
-  it('un «no tiene» reciente calla la petición', () => {
-    recordarQueNoTiene(URL);
+  it('un «no tiene» calla la petición, y la sigue callando', () => {
+    const url = coverUrl('Jotum', ['Steam']);
+    recordarQueNoTiene(url);
 
-    expect(sabemosQueNoTiene(URL)).toBe(true);
-    expect(tocaReintentar(URL)).toBe(false);
-    expect(hayQueReintentarAlgo()).toBe(false);
+    expect(sabemosQueNoTiene(url)).toBe(true);
+
+    // Y en la siguiente sesión sigue igual: lo apuntado no envejece. Es lo que cierra la fuga de repetir en
+    // cada visita los mismos 404 por los juegos que no van a tener imagen.
+    reiniciarMemoriaDeCaratulas();
+    expect(sabemosQueNoTiene(url)).toBe(true);
   });
 
-  it('y cumplida la semana vuelve a preguntarse', () => {
-    marcaDeHace(SEMANA + 1000);
+  /* LA COMPROBACIÓN QUE IMPORTA: corregir el título reabre la pregunta. Es la única vía de vuelta que queda, así
+     que si esto se rompiera, un juego mal escrito se quedaría sin carátula para siempre por mucho que se
+     arreglara su nombre. */
+  it('corregir el título vuelve a abrir la pregunta', () => {
+    recordarQueNoTiene(coverUrl('Max Paine 3', ['Steam']));
 
-    expect(sabemosQueNoTiene(URL)).toBe(false);
-    expect(tocaReintentar(URL)).toBe(true);
-    expect(hayQueReintentarAlgo()).toBe(true);
+    // El nombre bien escrito es otra URL, y de esa no consta nada: el listado la pedirá.
+    expect(sabemosQueNoTiene(coverUrl('Max Payne 3', ['Steam']))).toBe(false);
+    // Y el mal escrito sigue callado, por si el juego se queda como estaba.
+    expect(sabemosQueNoTiene(coverUrl('Max Paine 3', ['Steam']))).toBe(true);
   });
 
-  it('justo antes de cumplirla, todavía no', () => {
-    marcaDeHace(SEMANA - 60_000);
+  // Cambiar de plataforma también cambia la URL: es parte de la pregunta que se le hace al emparejador (el
+  // «Hook» de Mega Drive no es el de móvil), así que un «no» de una estantería no habla por la otra.
+  it('y cambiar la plataforma también', () => {
+    recordarQueNoTiene(coverUrl('Hook', ['Steam']));
 
-    expect(sabemosQueNoTiene(URL)).toBe(true); // sigue vigente: no se pide la imagen
-    expect(tocaReintentar(URL)).toBe(false);
+    expect(sabemosQueNoTiene(coverUrl('Hook', ['Mega Drive']))).toBe(false);
   });
 
-  /* Volver a apuntarlo es volver a preguntarlo y recibir el mismo no: se calla otra semana en vez de repetir la
-     pregunta en cada visita, que es justo lo que esta memoria existe para evitar. */
-  it('si se vuelve a preguntar y sigue sin tenerla, se calla otra semana', () => {
-    marcaDeHace(SEMANA + 1000);
-    expect(tocaReintentar(URL)).toBe(true);
+  it('si aparece la carátula, se olvida del todo', () => {
+    const url = coverUrl('Jotum', ['Steam']);
+    recordarQueNoTiene(url);
 
-    recordarQueNoTiene(URL);
+    olvidarQueNoTiene(url);
 
-    expect(tocaReintentar(URL)).toBe(false);
-    expect(sabemosQueNoTiene(URL)).toBe(true);
+    expect(sabemosQueNoTiene(url)).toBe(false);
   });
 
-  it('y si aparece la carátula, se olvida del todo', () => {
-    recordarQueNoTiene(URL);
-
-    olvidarQueNoTiene(URL);
-
-    expect(sabemosQueNoTiene(URL)).toBe(false);
-    expect(tocaReintentar(URL)).toBe(false); // no consta: no hay nada que reintentar
-  });
-
-  /* Del formato anterior —una lista de URL sin fecha— no se sabe cuándo se apuntó cada una. Se les da la fecha
-     de AHORA y no una del pasado: darlas por caducadas de golpe haría que el primer arranque tras actualizar
-     saliera preguntando a la vez por todos los juegos sin carátula de la biblioteca. */
-  it('lo apuntado con el formato anterior no provoca una ráfaga al actualizar', () => {
-    localStorage.setItem(CLAVE, JSON.stringify([URL, '/cover?n=Otro&p=Steam']));
+  /* Hubo una versión intermedia que fechaba cada «no» para reintentarlo a la semana, y se deshizo. Lo que
+     escribió se sigue leyendo: nadie tiene que volver a recorrer su biblioteca por un formato que vivió dos
+     días. */
+  it('lee lo que escribió la versión que fechaba cada «no»', () => {
+    const url = coverUrl('Jotum', ['Steam']);
+    localStorage.setItem(CLAVE, JSON.stringify({ [url]: Date.now() - 999_999 }));
     reiniciarMemoriaDeCaratulas();
 
-    expect(sabemosQueNoTiene(URL)).toBe(true);
-    expect(hayQueReintentarAlgo()).toBe(false);
+    expect(sabemosQueNoTiene(url)).toBe(true);
   });
 
-  it('sin nada apuntado no hay nada que reintentar, y se pregunta por todo', () => {
-    expect(sabemosQueNoTiene(URL)).toBe(false);
-    expect(hayQueReintentarAlgo()).toBe(false);
+  it('sin nada apuntado se pregunta por todo', () => {
+    expect(sabemosQueNoTiene(coverUrl('Celeste', ['Steam']))).toBe(false);
   });
 });

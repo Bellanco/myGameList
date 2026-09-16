@@ -27,7 +27,6 @@ vi.mock('../../src/model/repository/coverQuotaRepository', () => ({
 import { useCoverBackfill } from '../../src/view/hooks/useCoverBackfill';
 import { coverUrl } from '../../src/core/utils/coverUrl';
 import { reiniciarMemoriaDeCaratulas, sabemosQueNoTiene } from '../../src/core/utils/coverMemory';
-import { claveDeJuego, guardarHechos } from '../../src/core/utils/coverDone';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
 const juego = (id: number, name: string, platforms: string[] = ['Steam']): GameItem =>
@@ -129,31 +128,56 @@ describe('llenado de carátulas', () => {
     expect(fetchSimulado).not.toHaveBeenCalled();
   });
 
-  /* EL «NO TIENE» VUELVE A LA COLA cuando cumple su semana, aunque el juego esté dado por hecho. Es lo que
-     cierra el círculo con la caché negativa del servidor, que caduca a la vez: sin esto, un juego sin carátula
-     se quedaba sin ella PARA SIEMPRE en ese navegador aunque IGDB estrenase su ficha al día siguiente. */
-  it('vuelve a preguntar por un juego sin carátula cuando su marca cumple la semana', async () => {
+  /* UN JUEGO SIN CARÁTULA NO SE VUELVE A PREGUNTAR, que es para lo que existe este recorrido: el 404 no lo
+     cachea nadie, así que sin esto los mismos juegos sin imagen se preguntaban en cada visita. */
+  it('no repregunta por los juegos que ya se sabe que no tienen carátula', async () => {
     localStorage.setItem('mis-listas-covers', 'on');
     const datos = biblioteca([juego(1, 'Max Paine 3'), juego(2, 'Portal')]);
-    const url = coverUrl('Max Paine 3', ['Steam']);
-    // Como si otra sesión lo hubiera preguntado hace ocho días y hubiera dado por recorrida la biblioteca.
-    localStorage.setItem('mis-listas-covers-none', JSON.stringify({ [url]: Date.now() - 8 * 24 * 3600 * 1000 }));
-    const hechos = new Set([
-      claveDeJuego('Max Paine 3', ['Steam'], false),
-      claveDeJuego('Portal', ['Steam'], false),
-    ]);
-    guardarHechos(hechos);
-    reiniciarMemoriaDeCaratulas();
+    fetchSimulado.mockImplementation(async (url: string) =>
+      String(url).includes('Max+Paine') ? new Response(null, { status: 404 }) : new Response(null, { status: 204 }),
+    );
 
-    // Y esta vez sí la tiene: la ficha ya existe en IGDB.
-    fetchSimulado.mockImplementation(async () => new Response(null, { status: 204 }));
-    renderHook(() => useCoverBackfill(datos));
+    const primera = renderHook(() => useCoverBackfill(datos));
+    await waitFor(() => expect(fetchSimulado).toHaveBeenCalledTimes(2), { timeout: 4000 });
+    await waitFor(() => expect(sabemosQueNoTiene(coverUrl('Max Paine 3', ['Steam']))).toBe(true));
+    // El progreso se guarda al terminar el recorrido: hay que esperarlo o la segunda visita arrancaría sin
+    // memoria y el test estaría comprobando otra cosa.
+    await waitFor(() => expect(localStorage.getItem('mis-listas-covers-done-v2')).toContain('Portal'), {
+      timeout: 4000,
+    });
+    primera.unmount();
 
-    // Solo se repregunta ESE, no la biblioteca entera: Portal sigue dado por hecho.
+    fetchSimulado.mockClear();
+    renderHook(() => useCoverBackfill(datos)); // como volver a entrar, días después
+    await new Promise((listo) => setTimeout(listo, 600));
+
+    expect(fetchSimulado).not.toHaveBeenCalled();
+  });
+
+  /* Y LA ÚNICA VÍA DE VUELTA: corregir el título. La clave de lo ya recorrido lleva el nombre dentro, así que un
+     juego reescrito entra como lo que es —uno nuevo— y se pide otra vez. Sin esto, arreglar una errata no
+     serviría de nada y el juego se quedaría sin carátula para siempre en ese navegador. */
+  it('pero un título corregido se vuelve a pedir como si fuera nuevo', async () => {
+    localStorage.setItem('mis-listas-covers', 'on');
+    fetchSimulado.mockImplementation(async () => new Response(null, { status: 404 }));
+
+    const primera = renderHook(() => useCoverBackfill(biblioteca([juego(1, 'Max Paine 3')])));
     await waitFor(() => expect(fetchSimulado).toHaveBeenCalledTimes(1), { timeout: 4000 });
-    expect(String(fetchSimulado.mock.calls[0][0])).toContain('Max+Paine');
-    // Y al aparecer la carátula, la marca se borra: a partir de aquí el listado la pinta.
-    await waitFor(() => expect(sabemosQueNoTiene(url)).toBe(false));
+    await waitFor(() => expect(sabemosQueNoTiene(coverUrl('Max Paine 3', ['Steam']))).toBe(true));
+    await waitFor(() => expect(localStorage.getItem('mis-listas-covers-done-v2')).toContain('Max Paine 3'), {
+      timeout: 4000,
+    });
+    primera.unmount();
+
+    // El mismo juego, con el nombre arreglado, y esta vez IGDB sí lo tiene.
+    fetchSimulado.mockClear();
+    fetchSimulado.mockImplementation(async () => new Response(null, { status: 204 }));
+    renderHook(() => useCoverBackfill(biblioteca([juego(1, 'Max Payne 3')])));
+
+    await waitFor(() => expect(fetchSimulado).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    expect(String(fetchSimulado.mock.calls[0][0])).toContain('Max+Payne');
+    // Y el nombre nuevo no arrastra el «no» del viejo, que se queda donde estaba por si se deshace el cambio.
+    expect(sabemosQueNoTiene(coverUrl('Max Payne 3', ['Steam']))).toBe(false);
   });
 
   /* Lo apuntado con el formato anterior —la URL entera de cada juego, dentro de un JSON— se traduce al leerlo.
