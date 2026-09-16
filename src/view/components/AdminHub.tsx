@@ -33,6 +33,7 @@ import {
   unbanUser,
   type AdminShareRow,
 } from '../../model/repository/shareAdminRepository';
+import { leerGastoDeCaratulas, type GastoDeCaratulas } from '../../model/repository/coverStatsRepository';
 import { HubAvatar } from './socialhub/HubAvatar';
 import { Icon } from './Icon';
 // La hoja del panel se importa AQUÍ y no desde `index.scss`: como el panel entra por `lazy()`, Vite emite su CSS
@@ -191,6 +192,9 @@ export const AdminHub = memo(function AdminHub() {
   // Estado de ESA respuesta (la del Worker, no la del censo de Firestore): si no llegó, sus totales no se pintan
   // —un cero sin datos afirmaría que no hay ningún enlace ni ningún veto—, y si vino paginada se dice.
   const [sharesSummary, setSharesSummary] = useState<{ total: number; complete: boolean } | null>(null);
+  /* Gasto de carátulas del día. Sale del Worker de carátulas, así que puede no llegar; mientras sea `null` la
+     fila no se pinta, igual que con el censo de enlaces. */
+  const [coverStats, setCoverStats] = useState<GastoDeCaratulas | null>(null);
   const [notice, setNotice] = useState('');
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -333,6 +337,13 @@ export const AdminHub = memo(function AdminHub() {
     void loadShares();
   }, [loadShares]);
 
+  /* Una sola vez al abrir el panel y sin botón de recargar: es un contador que se mueve despacio —lotes de 50—
+     y lo que se mira aquí es si el día se está llenando, no el número al segundo. Volver a abrir el panel lo
+     vuelve a pedir, que es toda la frescura que esto necesita. */
+  useEffect(() => {
+    void leerGastoDeCaratulas().then(setCoverStats);
+  }, []);
+
   /** Acciones de moderación de enlaces: ejecutan, avisan y recargan. La confirmación la pone quien llama. */
   const runShareAction = useCallback(
     async (action: () => Promise<string>) => {
@@ -446,6 +457,14 @@ export const AdminHub = memo(function AdminHub() {
                   <dt>{A.totals.banned}</dt><dd>{bannedUsers.size}</dd>
                 </div>
               </>
+            ) : null}
+            {/* Carátulas del día, del otro Worker. Se resalta al acercarse al tope —no al llegar— porque para
+                cuando se llene ya no hay nada que decidir: lo que se quiere es verlo venir. */}
+            {coverStats ? (
+              <div className={coverStats.gastado >= coverStats.techo * 0.8 ? 'admin-total-flagged' : undefined}>
+                <dt>{A.totals.covers}</dt>
+                <dd title={A.totals.coversHint}>{A.totals.coversValue(coverStats.gastado, coverStats.techo)}</dd>
+              </div>
             ) : null}
             {PROFILE_TIERS.map((tier) => (
               <div key={tier} className={`admin-total-tier tier-${tier}`}>

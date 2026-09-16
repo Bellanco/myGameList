@@ -109,6 +109,38 @@
    incluido, sin colgar manejadores de un `div` que no se puede enfocar. */
 .ach-toast-body::after { content: ''; position: absolute; inset: 0; }
 
+/* EL DISCO · el sitio de la medalla, ocupado por un icono.
+   Lo usan el aviso del administrador y el aviso de la app; el logro no, porque ahí el disco ES la medalla.
+   Conserva la geometría —el mismo lado (`--medal`), el mismo círculo— porque es lo que sostiene el radio de la
+   cápsula: el borde izquierdo es la circunferencia exterior de este disco. Lo que no conserva es la penumbra
+   parda de la medalla: esa es de las medallas, y un aviso con el mismo fondo se leería como un logro raro. Aquí
+   el disco es superficie de la app con un color entrando por el filo.
+
+   QUÉ COLOR, lo dice quien lo usa con `--disc-tint` / `--disc-tint-rgb`: el anuncio no dice nada y se queda con
+   el acento del tema; el aviso pone el tono que le toca (verde, ámbar o rojo). Una receta, tres piezas. */
+.ach-toast-disc {
+  flex: none;
+  width: var(--medal);
+  height: var(--medal);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--disc-ink, var(--fg-link));
+  background:
+    radial-gradient(70% 64% at 28% 18%,
+      color-mix(in srgb, var(--disc-tint, var(--steam)) 22%, var(--surface-elevated)) 0%,
+      var(--surface) 58%,
+      color-mix(in srgb, var(--surface) 82%, #000) 100%);
+  // Un filete del color y una sombra interior abajo: el mismo relieve mínimo del resto de la app, sin inventar
+  // una dirección nueva de luz.
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--disc-tint-rgb, var(--steam-rgb)), .42),
+    inset 0 -8px 14px -10px rgba(0, 0, 0, .65);
+}
+
+// 44% del disco: el mismo aire que deja el dibujo de la medalla dentro de su filo.
+.ach-toast-disc .ui-icon { width: 44%; height: 44%; }
+
 .ach-toast-text { min-width: 0; display: grid; gap: .16rem; }
 /* El rótulo, en la misma voz mono y versalitas que el chip de rareza. Con el acento del tema y no en gris: es la
    línea que dice QUÉ ha pasado, y en gris se leía como un pie de foto. Es texto normal, así que va por
@@ -118,7 +150,7 @@
   align-items: center;
   gap: .4rem;
   font-family: var(--ach-mono);
-  font-size: 11px;
+  font-size: var(--fs-3xs);
   letter-spacing: .07em;
   text-transform: uppercase;
   color: var(--fg-link);
@@ -126,7 +158,7 @@
 /* UNA SOLA LÍNEA, y por geometría: la cápsula mide lo que mide la medalla, así que un nombre que salta de línea
    rompe el círculo exterior. Lo que no cabe se recorta con puntos suspensivos. */
 .ach-toast-name {
-  font-size: 1rem;
+  font-size: var(--fs-lg);
   font-weight: 700;
   color: var(--text);
   line-height: 1.3;
@@ -138,7 +170,7 @@
 // LA DESCRIPCIÓN · el texto en pasado del escalón, tal como lo escribe el catálogo. Una línea, y lo que no cabe
 // se recorta: es la línea que explica de qué va la medalla, no un resumen que haya que redactar aparte.
 .ach-toast-desc {
-  font-size: .82rem;
+  font-size: var(--fs-xs);
   line-height: 1.35;
   color: var(--text-muted);
   white-space: nowrap;
@@ -155,7 +187,10 @@
   transform: translateX(-120%);
   animation: ach-toast-sheen 900ms ease-out 120ms both;
 }
-:root[data-effects='off'] .ach-toast-sheen { display: none; }
+/* Con `:not(...on)` y no con `[data-effects='off']`: al apagar los efectos el atributo se RETIRA (ver
+   `toggleRootFlag`), así que el valor "off" no existe en el DOM y el barrido seguía cruzando la cápsula de
+   quien había pedido no verlo. Mismo arreglo que en `achievements.scss`. */
+:root:not([data-effects="on"]) .ach-toast-sheen { display: none; }
 
 @keyframes ach-toast-in { from { opacity: 0; transform: translateY(10px) scale(.98); } }
 /* ⚑ EL BARRIDO SE APAGA AL SALIR, y no solo se va. Con `overflow: hidden` en la cápsula daba igual —el propio

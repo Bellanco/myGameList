@@ -1,0 +1,131 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+   EL AVISO DE LA APP · LA MISMA CÁPSULA, OTRO DISCO
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+   Sustituye a los CUATRO bloques que decían lo mismo de cuatro maneras: `.status-banner > div` (aviso de la
+   app), `.update-notice-card` (versión nueva), `.hub-offline` (sin red en el hub) y `.hub-profile-requirement`
+   (requisito del perfil). Los dos primeros eran la misma tarjeta con lomo copiada dos veces; los dos segundos,
+   la misma banda ámbar copiada dos veces.
+
+   Y NO SE UNIFICAN EN LA FORMA DE SIEMPRE, sino en LA CÁPSULA: la del aviso de logro, que es la pieza que el
+   proyecto ya tiene resuelta y la única que se reconoce como «la app me está diciendo algo». El aviso del
+   administrador hizo este mismo camino (ver `announcement.scss`) y por eso su hoja empieza diciendo «la misma
+   cápsula, otro disco». Esto es el tercer inquilino de la misma forma.
+
+   LO QUE SE GANA CON ESO, aparte del aspecto: los SKINS DE PALETA cuelgan de `.ach-toast` —el chaflán del HUD en
+   Sin futuro, la placa recta de Cámara de pruebas— así que el aviso adopta la identidad de cada tema sin una
+   sola línea escrita por tema. Un bloque propio habría necesitado seis.
+
+   LO QUE CAMBIA respecto del logro y del anuncio:
+     · el DISCO lleva el icono del TONO, y se tiñe con él (`--disc-tint`): verde, ámbar o rojo.
+     · el HALO (`--glow`) es el del tono y no la rareza: en un aviso, la escala de loot no significa nada.
+     · el ROTULO dice qué clase de aviso es —«Correcto», «Error»…—, que es el papel que en el logro hace el
+       rótulo de rareza.
+     · NO ES PULSABLE. El logro y el anuncio llevan dentro un botón o un enlace que ocupa la cápsula entera; un
+       aviso de estado no lleva a ninguna parte, así que no hay `.ach-toast-body` ni cursor de mano.
+
+   Y VIVEN DONDE VIVE LA CÁPSULA: en el carril flotante de abajo a la izquierda, sobre la barra inferior
+   (`.ach-toast-stack`, que monta `App` una sola vez para las tres). El de estado tenía antes una franja pegajosa
+   bajo la cabecera con su `z-index` y su `sticky`, y todo eso existía para resolver un problema que en el carril
+   no se da: con la lista desplazada el aviso nacía fuera de la pantalla. Los del hub NO van al carril: esos
+   pertenecen a su bloque y se quedan dentro de él (peso ligero, más abajo).
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+@use './capsule';
+
+.ach-toast.is-notice {
+  /* 48 y no los 64 del logro: ahí el disco es la medalla y es la noticia; aquí es un icono que solo dice de qué
+     clase de aviso se trata. El radio se sigue calculando solo (`999px`), así que la cápsula queda igual de
+     cápsula con una fila de texto o con dos. */
+  --medal: 48px;
+  --glow: var(--steam-rgb);
+  --disc-tint: var(--steam);
+  --disc-tint-rgb: var(--steam-rgb);
+  border-radius: 999px;
+  // No lleva a ninguna parte: ni mano ni área pulsable.
+  cursor: default;
+}
+
+/* LOS TONOS · cada uno con sus dos colores, que es la regla de la casa (DESIGN.md §2): el `-rgb` para lo que es
+   GRÁFICO (halo, filo del disco) y la ficha `--fg-*` para lo que es TEXTO, que necesita 4,5:1 y por eso NUNCA es
+   el mismo color. Pintar el rótulo con `--warn` en vez de con `--fg-amber` es justo el fallo que esas fichas
+   existen para evitar. */
+.ach-toast.is-notice.is-ok {
+  --glow: var(--success-rgb); --disc-tint: var(--success); --disc-tint-rgb: var(--success-rgb);
+  --disc-ink: var(--fg-green); --notice-ink: var(--fg-green);
+}
+
+.ach-toast.is-notice.is-warn {
+  --glow: var(--warn-rgb); --disc-tint: var(--warn); --disc-tint-rgb: var(--warn-rgb);
+  --disc-ink: var(--fg-amber); --notice-ink: var(--fg-amber);
+}
+
+.ach-toast.is-notice.is-err {
+  --glow: var(--danger-rgb); --disc-tint: var(--danger); --disc-tint-rgb: var(--danger-rgb);
+  --disc-ink: var(--fg-red); --notice-ink: var(--fg-red);
+}
+
+.ach-toast.is-notice.is-info { --notice-ink: var(--fg-link); }
+
+// El rótulo toma el color del tono; el nombre y la descripción se quedan como en el logro (texto y atenuado),
+// que es lo que mantiene la jerarquía de las tres filas.
+.ach-toast.is-notice .ach-toast-kicker { color: var(--notice-ink); }
+
+/* LA DESCRIPCIÓN, HASTA DOS LÍNEAS, por lo mismo que en el aviso del administrador: en el carril la cápsula mide
+   30rem, y con el botón dentro la frase se quedaba a media palabra («Recarga para verla. Tu información no se
+   per…»). Un aviso que se corta donde le da la gana se lee como un fallo, no como un resumen. */
+.ach-toast.is-notice .ach-toast-desc {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* El texto EMPUJA y la acción se va al extremo. En el logro y en el anuncio esto lo hace `.ach-toast-body`, que
+   es el botón que ocupa la cápsula entera; el aviso no lo lleva —no se pulsa—, así que sin esta línea el
+   «Recargar» se quedaba pegado al final del texto, en medio de la cápsula. */
+.ach-toast.is-notice .ach-toast-text { flex: 1 1 auto; }
+
+/* CON ACCIÓN, LA CÁPSULA SE ESTIRA. Sin ella mide lo que mide su texto, igual que la del logro: es un aviso que
+   se lee y se va. Pero el botón necesita su sitio —al extremo y separado de lo que se lee—, y en una cápsula
+   ajustada al contenido queda encajado junto al título, como si fuera parte de la frase. El tope es el mismo
+   ancho de lectura del resto de la app: una cápsula de 1.800 px con seis palabras dentro no es un aviso. */
+.ach-toast.is-notice.has-action { width: 100%; max-width: 46rem; }
+
+// La acción («Recargar»): al extremo, sin encogerse y sin robarle sitio al texto.
+.ach-toast-action { flex: none; margin-left: auto; padding-left: .35rem; }
+
+/* ── EL PESO LIGERO · la misma cápsula dentro de un bloque ──────────────────────────────────────────────────
+   Para el aviso que no interrumpe nada porque nace con su pantalla: el «sin conexión» del hub y el requisito del
+   editor de perfil. Es la misma pieza en pequeño —mismo disco, mismo rótulo, mismos tonos—, con tres cambios que
+   la hacen convivir con un formulario: sin halo (una cápsula elevada ahí dentro se lee como algo que alguien ha
+   dejado encima), radio del tema en vez de píldora, y el texto ENVUELVE en vez de recortarse, porque aquí no hay
+   carril estrecho que obligue a una línea. */
+.ach-toast.is-notice.is-compact {
+  --medal: 30px;
+  --pad: 5px;
+  padding: var(--pad) .85rem var(--pad) var(--pad);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--disc-tint, var(--steam)) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--disc-tint, var(--steam)) 32%, transparent);
+  box-shadow: none;
+  gap: .6rem;
+  width: auto;
+  max-width: none;
+  animation: none;
+}
+
+.ach-toast.is-notice.is-compact .ach-toast-name {
+  font-size: var(--fs-sm);
+  white-space: normal;
+  overflow: visible;
+}
+
+.ach-toast.is-notice.is-compact .ach-toast-desc {
+  white-space: normal;
+  overflow: visible;
+}
+
+/* Sin título, la descripción hereda la tinta del tono. Es el caso del requisito del perfil («necesitas un juego
+   completado»), que es una sola frase: con el rótulo y el nombre ausentes, la tinta es la única señal que le
+   queda y sin esto se leía como una caja gris más del formulario, que es justo lo que no es. */
+.ach-toast.is-notice.is-compact .ach-toast-desc:only-child { color: var(--notice-ink); }

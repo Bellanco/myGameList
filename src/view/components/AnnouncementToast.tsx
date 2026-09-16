@@ -134,10 +134,11 @@ export function AnnouncementToast({
     return <div className="ann-preview">{capsule}</div>;
   }
 
+  // El carril lo monta `App` una sola vez y lo comparten las tres cápsulas (ver `AchievementToast`).
   return (
-    <div className="ach-toast-stack">
+    <>
       <div className="sr-only" role="status" aria-live="polite">{announced}</div>
       {capsule}
-    </div>
+    </>
   );
 }

@@ -1,4 +1,6 @@
 ﻿import { Icon } from '../Icon';
+import { Notice } from '../Notice';
+import { TierSeal } from '../TierSeal';
 import { HubAvatar } from './HubAvatar';
 import { TAB_TOOLTIPS } from '../../../core/constants/labels';
 import { type SocialUiLabels } from '../../../core/constants/socialLabels';
@@ -6,11 +8,13 @@ import { HubScreen } from './HubScreen';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
 import { TAB_IDS, type TabId } from '../../../model/types/game';
+import type { ProfileTier } from '../../../core/constants/tiers';
 import { useFeedMoveTabs } from '../../hooks/useFeedMoveTabs';
 
 /** Pantalla de edición de perfil social. */
 export function SocialProfileScreen({
   SOCIAL_UI,
+  tier,
   profileName,
   setProfileName,
   completedGames,
@@ -37,6 +41,8 @@ export function SocialProfileScreen({
   ownPhotoIsGeneric,
 }: {
   SOCIAL_UI: SocialUiLabels;
+  /** Rango propio. Lo asigna el administrador; aquí solo se enseña, que es donde nunca se veía. */
+  tier?: ProfileTier;
   profileName: string;
   setProfileName: (v: string) => void;
   /** Juegos completados del usuario. Solo se usa para exigir al menos uno antes de poder crear/guardar el perfil. */
@@ -144,9 +150,15 @@ export function SocialProfileScreen({
             <div className="hub-block-head">
               <span className="hub-block-step">1</span>
               <h3>{SOCIAL_UI.profile.identityTitle}</h3>
+              {/* Al extremo del renglón, como el chip de sincronía de más abajo: es un dato de la cuenta, no un
+                  control del formulario, y en la fila del título no se confunde con nada que se pueda tocar. */}
+              <TierSeal tier={tier} className="hub-block-head-end" />
             </div>
             <p>{SOCIAL_UI.profile.identityDescription}</p>
             <label className="flabel" htmlFor="hub-profile-name">{SOCIAL_UI.profile.nameLabel}</label>
+            {/* EL SELLO DE RANGO, aquí y no en otro sitio: este es el único lugar donde alguien mira SU propio
+                perfil, y hasta ahora el rango propio no se veía en ninguna pantalla —se enseñaba el de los demás
+                (la muesca del directorio) y el tuyo no—. */}
             <div className="hub-identity-hero">
               <HubAvatar photoURL={ownVisiblePhotoURL} />
               <input
@@ -160,7 +172,7 @@ export function SocialProfileScreen({
               />
             </div>
             {missingCompletedGames ? (
-              <p className="hub-profile-requirement" role="status">{SOCIAL_UI.profile.needsCompletedGames}</p>
+              <Notice inline tone="warn" role="status">{SOCIAL_UI.profile.needsCompletedGames}</Notice>
             ) : null}
           </article>
           <article className="hub-profile-block">
@@ -279,14 +291,14 @@ export function SocialProfileScreen({
                   </label>
                 </div>
                 {!hasOwnPhoto ? (
-                  <p className="hub-profile-requirement" role="status">
+                  <Notice inline tone="warn" role="status">
                     {/* Dos motivos distintos para el mismo bloqueo, y al usuario le importa cuál es el suyo: quien no
                         tiene nada en la cuenta ve "no tienes foto"; a quien tiene el monograma de Google eso le
                         sonaría a error de la app, porque él SÍ ve una imagen. */}
                     {hasPhotoURL
                       ? SOCIAL_UI.profile.photoIsGoogleDefault
                       : SOCIAL_UI.profile.photoMissingInGoogle}
-                  </p>
+                  </Notice>
                 ) : null}
               </div>
             ) : null}
@@ -320,7 +332,7 @@ export function SocialProfileScreen({
                 ))}
               </div>
               {visibleMoveTabs.length === 0 ? (
-                <p className="hub-profile-requirement" role="status">{SOCIAL_UI.profile.moveFeedAllOff}</p>
+                <Notice inline tone="warn" role="status">{SOCIAL_UI.profile.moveFeedAllOff}</Notice>
               ) : null}
             </div>
           </article>

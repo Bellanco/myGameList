@@ -1,0 +1,102 @@
+/* COLOR de «Cámara de pruebas» (`data-palette="portal"`) — CAPA 2 (identidad) y CAPA 2b (rampa categórica).
+   Va en el BUNDLE BASE: es lo que pinta el primer fotograma de quien tiene este tema elegido, así que no
+   puede llegar tarde. Lo que sí llega tarde —y por eso vive en el `<id>.scss` de al lado— es la CAPA 3.
+   Las reglas del sistema (qué token hay que definir y qué contraste le toca) están en `../_index.scss`. */
+
+/* ── Cámara de pruebas (Portal) — Aperture Science con el contraste ANTIGUA↔MODERNA del juego: el OSCURO es la
+   Aperture MODERNA (azul clínico, paneles blancos, estéril); el CLARO (más abajo) es la ANTIGUA (años 50–70,
+   cálida y vintage). Alternar claro/oscuro evoca el salto entre zonas, con una transición estilo pantalla de
+   carga (ver `.theme-anim` en _themes.scss). `--portal-orange`/`--portal-cube` son tokens extra de su skin. ── */
+:root[data-palette="portal"] {
+  --bg: #12171b;
+  --surface: #1c242b;
+  --surface-hover: #27323a;
+  --surface-elevated: #313f49;
+  --border: #3d4c57;
+  --text: #e8eff4;
+  --text-muted: #a0b2be;
+  --text-dim: #7d8e9a;
+  --steam: #29b6f6;
+  --steam-hover: #5cc8f7;
+  --steam-rgb: 41,182,246;
+  --tab-active: #5cc8f7;
+  --success: #46c98a;
+  --success-rgb: 70,201,138;
+  --warn: #f2c300;
+  --warn-rgb: 242,195,0;
+  --danger: #ff5140;
+  --danger-rgb: 255,81,64;
+  --star-empty: #3d4c57;
+  --star-full: #ffb02e;
+  /* PLATAFORMA · la categoría no puede compartir familia de color con las otras: el rojo es de los puntos
+     débiles, el verde de los fuertes, el ámbar del año y el gris del «+N». Le toca la familia fría, y el tono
+     sale de la identidad de este tema. */
+  --chip-plat-fg: #a8ddfb;
+  --chip-plat-bg: rgba(41,182,246,.12);
+  --chip-plat-border: rgba(41,182,246,.32);
+  --hub-text: #eef4f8;
+  --hub-text-muted: #a7b8c4;
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  /* Azul clínico de la Aperture moderna: encima va la tinta oscura del propio skin (7,06:1); el blanco por
+     defecto se quedaría en 2,30:1. */
+  --on-accent: #062330;
+  --portal-orange: #ff9e1b;
+  --portal-cube: #f0559c;
+  --portal-turret: #ff3b30; /* ojo/láser de torreta (rojo) — acento de las acciones destructivas */
+  --danger-fill: color-mix(in srgb, var(--portal-turret) 75%, #000);
+  --sys-radius: 2px; --sys-pad: .34rem .9rem .34rem 1.15rem;
+}
+/* CLARO = APERTURE ANTIGUA (años 50–70): pergamino/pared cálida, paneles de madera, ámbar y naranja quemado,
+   verde oliva y rojo teja. El azul clínico se reserva al OSCURO (Aperture moderna). Alternar claro/oscuro
+   "viaja" entre las zonas vieja y nueva. */
+:root[data-palette="portal"][data-theme="light"] {
+  --bg: #e7dabd;
+  --surface: #f2e8d1;
+  --surface-hover: #ebdfc4;
+  --surface-elevated: #f8f0dd;
+  --border: #c7b184;
+  --text: #392a18;
+  --text-muted: #6e5a3e;
+  --text-dim: #746349;
+  --steam: #b46a1a;
+  --steam-hover: #99590f;
+  --steam-rgb: 180,106,26;
+  --tab-active: #99590f;
+  --success: #6f8a2f;
+  --success-rgb: 111,138,47;
+  --warn: #b07f00;
+  --warn-rgb: 176,127,0;
+  --danger: #b23b1f;
+  --danger-rgb: 178,59,31;
+  --star-empty: #cdb78c;
+  --star-full: #c87f1c;
+  --chip-plat-fg: #145f9b;
+  --chip-plat-bg: rgba(20,95,155,.12);
+  --chip-plat-border: rgba(20,95,155,.30);
+  --hub-text: #392a18;
+  --hub-text-muted: #6e5a3e;
+  --tint-rgb: 57,42,24;
+  /* En la Aperture antigua el acento es naranja quemado: ahí manda el blanco, como en la señalética de la
+     época y como ya hacen los botones de esta paleta en claro. */
+  --on-accent: #fff;
+  --portal-orange: #c25a12;
+  --portal-cube: #b04a78;
+  --portal-turret: #b23b1f; /* torreta en tono óxido para la zona antigua */
+  --danger-fill: var(--portal-turret);
+  /* El naranja quemado del acento se queda en 4,00:1 como TEXTO sobre el pergamino del fondo. Un punto más
+     de profundidad y llega a 4,73:1 sin salirse de la gama de la Aperture antigua. El anillo de foco sí
+     cumple con el acento tal cual (3,02:1), así que no se toca. */
+  --fg-link: #8a4f0b;
+}
+/* portal — azul y naranja de portal, verde de gel, rosa del Cubo, rojo de torreta, oro de señal e hielo */
+:root[data-palette="portal"] {
+  --cat-1: #29b6f6; --cat-2: #ff9a00; --cat-3: #a8e63c; --cat-4: #f9b9d0; --cat-5: #ff5140; --cat-6: #fabd20; --cat-7: #9ec9dd;
+  --cat-1-fg: #29b6f6; --cat-2-fg: #ff9a00; --cat-3-fg: #a8e63c; --cat-4-fg: #f9b9d0; --cat-5-fg: #ff867b; --cat-6-fg: #fabd20; --cat-7-fg: #9ec9dd;
+}
+/* portal — azul y naranja de portal, verde de gel, rosa del Cubo, rojo de torreta, oro de señal e hielo */
+:root[data-palette="portal"][data-theme="light"] {
+  --cat-1: #b46a1a; --cat-2: #b5560c; --cat-3: #5d7a1e; --cat-4: #a8306b; --cat-5: #b23b1f; --cat-6: #8a6206; --cat-7: #3f6c82;
+  --cat-1-fg: #8a5114; --cat-2-fg: #98480a; --cat-3-fg: #4d6619; --cat-4-fg: #a62f6a; --cat-5-fg: #a9381d; --cat-6-fg: #7b5805; --cat-7-fg: #3a6378;
+}

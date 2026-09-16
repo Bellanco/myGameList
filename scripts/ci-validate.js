@@ -22,9 +22,31 @@ const root = path.join(__dirname, '..');
 // cualquier cosa rompía el build— y se recuperó sacando del CSS de arranque las hojas de dos pantallas que ya
 // entraban por `lazy()`: el panel de administración (`admin.scss`, lo importa `AdminHub.tsx`) y el modal de la
 // ruleta (`roulette-modal.scss`, lo importa `RouletteModal.tsx`). Son ~24 kB sin comprimir que descargaba todo el
-// mundo para dos pantallas que casi nadie abre. Si algún día hace falta más margen, ese es el camino: mirar qué
-// hojas de `index.scss` pertenecen a un componente perezoso, no subir este número.
-const BOOT_PAYLOAD_BUDGET_KB = 215;
+// mundo para dos pantallas que casi nadie abre.
+//
+// Y DE 215 A 220, que es la primera vez que este número sube por crecimiento normal y no por una decisión de
+// arquitectura. Se subió después de buscar grasa y NO ENCONTRARLA, midiendo —no suponiendo— contra los
+// sourcemaps de los assets que este mismo script precachea:
+//
+//   · De los 52 símbolos de `IconSprite`, CERO son exclusivos de pantallas perezosas. Partir el sprite, que era
+//     la sospecha principal (~31 kB de fuente), no habría sacado del arranque ni un icono.
+//   · De las constantes de `core/constants/labels.ts`, CERO las usa solo un chunk perezoso.
+//   · Las hojas de pantalla perezosa ya están todas fuera de `index.scss`: stats, admin, social, achievements,
+//     reviews, import y el modal de la ruleta.
+//
+// El reparto de lo que queda es: ~63 kB de código propio, ~58 de React, 36 de la tipografía base, ~27 de CSS,
+// 14 de react-router y ~13 entre el virtualizador y los textos. No hay pasajeros.
+//
+// El único candidato con tamaño para diferirse era `socialProjection.ts` (~23 kB de fuente), y se descartó a
+// conciencia: lo usa `gistRepository` tanto al LEER el gist como al escribirlo, así que diferirlo obliga a
+// partir en dos la pieza de la sincronización —la que ya costó una pérdida de datos— por unos 4 kB. No sale a
+// cuenta, y dejarlo escrito aquí evita que alguien lo intente dentro de seis meses creyendo que es fruta baja.
+//
+// QUÉ HACER CUANDO ESTE MARGEN SE AGOTE, por orden: (1) convertir el sprite en un `.svg` externo referenciado
+// con `<use href="/sprite.svg#icon-x">`, que saca ~6 kB de JS a cambio de una petición; (2) revisar si la
+// tipografía base puede servirse con menos pesos. Subir el número otra vez es lo último, y exige volver a hacer
+// estas tres mediciones y escribir el resultado aquí.
+const BOOT_PAYLOAD_BUDGET_KB = 220;
 const publicDir = path.join(root, 'public');
 const requiredFiles = [
   path.join(root, 'index.html'),

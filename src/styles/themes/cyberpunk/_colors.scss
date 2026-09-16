@@ -1,0 +1,93 @@
+/* COLOR de «Sin futuro» (`data-palette="cyberpunk"`) — CAPA 2 (identidad) y CAPA 2b (rampa categórica).
+   Va en el BUNDLE BASE: es lo que pinta el primer fotograma de quien tiene este tema elegido, así que no
+   puede llegar tarde. Lo que sí llega tarde —y por eso vive en el `<id>.scss` de al lado— es la CAPA 3.
+   Las reglas del sistema (qué token hay que definir y qué contraste le toca) están en `../_index.scss`. */
+
+/* ── Sin futuro (Cyberpunk 2077) — HUD de Night City: amarillo ácido + cian + magenta sobre
+   negro azulado, glitch de aberración cromática, marcos angulares. `--cyber-yellow/cyan/magenta` son
+   tokens extra que usa su skin (el amarillo de relleno se mantiene en ambos temas). ── */
+:root[data-palette="cyberpunk"] {
+  --bg: #08090d;
+  --surface: #101319;
+  --surface-hover: #181c25;
+  --surface-elevated: #202531;
+  --border: #333c4a;
+  --text: #eef3f7;
+  --text-muted: #99a6b4;
+  --text-dim: #73808d;
+  --steam: #fcee0a;
+  --steam-hover: #ffff45;
+  --steam-rgb: 252,238,10;
+  --tab-active: #fcee0a;
+  --success: #46e37a;
+  --success-rgb: 70,227,122;
+  --warn: #ff9e1b;
+  --warn-rgb: 255,158,27;
+  --danger: #ff2e4e;
+  --danger-rgb: 255,46,78;
+  --star-empty: #333c4a;
+  --star-full: #fcee0a;
+  --chip-plat-fg: #b9c6d3;
+  --chip-plat-bg: rgba(0,240,255,.08);
+  --chip-plat-border: rgba(0,240,255,.30);
+  --hub-text: #f2f6fa;
+  --hub-text-muted: #a6b3c1;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 2px;
+  /* El acento de esta paleta es AMARILLO ÁCIDO: el blanco por defecto encima se queda en 1,21:1, así que la
+     tinta del HUD toma su relevo. Sirve también en claro, donde el acento es un teal profundo (4,84:1). */
+  --on-accent: #08090d;
+  --cyber-yellow: #fcee0a;
+  --cyber-cyan: #00f0ff;
+  --cyber-magenta: #ff2a6d;
+  /* El cian tiene dos papeles en el skin: RELLENO/filete HUD y TEXTO (enlaces del hub, pistas de la ruleta,
+     los `//` de las fechas). En oscuro el mismo valor sirve para los dos; en claro no, y por eso se separan. */
+  --cyber-cyan-fg: var(--cyber-cyan);
+  --sys-radius: 0; --sys-pad: .3rem .85rem;
+}
+:root[data-palette="cyberpunk"][data-theme="light"] {
+  --bg: #e7eaee;
+  --surface: #f4f6f8;
+  --surface-hover: #dde2e7;
+  --surface-elevated: #fbfcfd;
+  --border: #b7c0ca;
+  --text: #0d1319;
+  --text-muted: #4c5967;
+  --text-dim: #616b74;
+  --steam: #0089a3;
+  --steam-hover: #006f86;
+  --steam-rgb: 0,137,163;
+  --tab-active: #006f86;
+  --success: #1f9e57;
+  --success-rgb: 31,158,87;
+  --warn: #b06f00;
+  --warn-rgb: 176,111,0;
+  --danger: #d11a2e;
+  --danger-rgb: 209,26,46;
+  --star-empty: #b7c0ca;
+  --star-full: #caa500;
+  --chip-plat-fg: #4c5967;
+  --chip-plat-bg: rgba(0,137,163,.10);
+  --chip-plat-border: rgba(0,137,163,.30);
+  --hub-text: #0d1319;
+  --hub-text-muted: #4c5967;
+  --tint-rgb: 13,19,25;
+  --cyber-yellow: #f2df00;
+  --cyber-cyan: #0097b3;
+  --cyber-magenta: #cc0057;
+  /* Como TEXTO sobre los grises claros de esta paleta el cian de relleno se queda en 2,86:1; un punto más
+     hondo y cumple sobre los tres fondos (4,52:1 en el peor). Los rellenos y filetes siguen con el cian de
+     arriba, que es donde se ve el neón. */
+  --cyber-cyan-fg: #00757f;
+}
+/* cyberpunk — amarillo ácido, cian, teal, azul de marca, rojo Arasaka, magenta y plata de HUD */
+:root[data-palette="cyberpunk"] {
+  --cat-1: #fcee0a; --cat-2: #00f0ff; --cat-3: #43e8c8; --cat-4: #2b7bff; --cat-5: #ff2a4d; --cat-6: #ff2a6d; --cat-7: #b9c6d3;
+  --cat-1-fg: #fcee0a; --cat-2-fg: #00f0ff; --cat-3-fg: #43e8c8; --cat-4-fg: #458bff; --cat-5-fg: #ff4664; --cat-6-fg: #ff417d; --cat-7-fg: #b9c6d3;
+}
+/* cyberpunk — amarillo ácido, cian, teal, azul de marca, rojo Arasaka, magenta y plata de HUD */
+:root[data-palette="cyberpunk"][data-theme="light"] {
+  --cat-1: #8a6d00; --cat-2: #00757f; --cat-3: #0c8a72; --cat-4: #1d5fd6; --cat-5: #c5003c; --cat-6: #b3005a; --cat-7: #4c5967;
+  --cat-1-fg: #785f00; --cat-2-fg: #006e77; --cat-3-fg: #0a705d; --cat-4-fg: #1c5ccf; --cat-5-fg: #c5003c; --cat-6-fg: #b3005a; --cat-7-fg: #4c5967;
+}

@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { Notice } from './Notice';
 
 interface StatusBannerProps {
   notice: { kind: 'ok' | 'warn' | 'err'; message: string } | null;
@@ -31,18 +32,19 @@ export const StatusBanner = memo(function StatusBanner({ notice, remoteChangesAp
         {notice ? `${KIND_LABEL[notice.kind]}: ${notice.message}${remoteSuffix}` : ''}
       </div>
 
+      {/* VA AL CARRIL FLOTANTE de abajo a la izquierda, el mismo del aviso de logro y del administrador: lo monta
+          `App` y aquí solo se pinta la cápsula. Antes era una franja pegajosa bajo la cabecera, que es de donde
+          venía su viejo problema —con la lista desplazada nacía fuera de la pantalla— y obligaba a un `sticky`
+          para taparlo. En el carril no hay nada que tapar: está siempre a la vista, encima de la barra inferior.
+
+          El reparto de las tres filas: el rótulo dice QUÉ CLASE de aviso es, el nombre lo que ha pasado y la
+          descripción el detalle que no siempre hay. */}
       {notice ? (
-        <div className="status-banner">
-          <div className={notice.kind === 'ok' ? 'ok' : notice.kind === 'warn' ? 'warn' : 'err'}>
-            <div className="status-line">
-              <strong>{KIND_LABEL[notice.kind]}</strong>
-              <span className="status-copy">{notice.message}</span>
-              {notice.kind === 'ok' && remoteChangesApplied !== null ? (
-                <span className="status-copy">Cambios remotos aplicados: {remoteChangesApplied}</span>
-              ) : null}
-            </div>
-          </div>
-        </div>
+        <Notice tone={notice.kind} kicker={KIND_LABEL[notice.kind]} title={notice.message}>
+          {notice.kind === 'ok' && remoteChangesApplied !== null
+            ? `Cambios remotos aplicados: ${remoteChangesApplied}`
+            : null}
+        </Notice>
       ) : null}
     </>
   );

@@ -1,0 +1,86 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   ÍNDICE DE TEMAS · el COLOR de las ocho paletas (CAPA 2 y CAPA 2b)
+
+   UN TEMA = UNA CARPETA. Todo lo suyo vive en `themes/<id>/` y nada de lo suyo vive fuera:
+
+     themes/<id>/_colors.scss   CAPA 2 (identidad) + CAPA 2b (rampa). Entra por ESTE índice, o sea que
+                                viaja en el bundle base: es lo que pinta el primer fotograma.
+     themes/<id>/<id>.scss      CAPA 3: letra, formas, texturas, ornamento. NO entra aquí — la carga
+                                `view/hooks/paletteSkin.ts` bajo demanda, salvo la del tema por defecto,
+                                que la trae `styles/index.scss` (ver la nota de allí). Se llama como su
+                                carpeta —y no `skin.scss`— para que el chunk de `dist/` diga de quién es:
+                                ocho ficheros con el mismo nombre daban ocho `skin-<hash>.css`.
+     themes/<id>/_fonts.scss    los `@font-face` de ese tema, generados por `scripts/vendor-fonts.mjs`.
+                                Lo usa su propio `<id>.scss`; nadie más lo toca.
+     core/constants/themes/<id>.ts   la ficha del tema en TS: nombre, muestra del selector, `--bg` y las
+                                cuatro frases con las que ese mundo cuenta un error o una falta de red.
+
+   CREAR, EDITAR O BORRAR UN TEMA: la receta completa está en `docs/temas.md`, y `tests/unit/themes.test.ts`
+   comprueba que no quede a medias (que estén las piezas, que los `--bg` no deriven entre el CSS y el TS, y
+   que el skin esté declarado donde le toca). Si añades una carpeta y olvidas la línea de abajo, ese test lo
+   dice por su nombre.
+
+   ORDEN EN LA CASCADA: este índice se carga justo después de `_base.scss` (CAPA 0 y 1) y antes que ninguna
+   hoja de componente, que es donde estaban estos bloques cuando vivían dentro de `_base.scss`. Una hoja
+   común que necesite pisar un token de un tema tiene que hacerlo con MÁS ESPECIFICIDAD, nunca fiándose de ir
+   después. ═══════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ══ CAPA 2 · IDENTIDAD DE PALETA ═══════════════════════════════════════════════
+   Cada paleta define el mismo juego de ~26 tokens en dos bloques gemelos: `:root[data-palette="<id>"]`
+   (oscuro) y `:root[data-palette="<id>"][data-theme="light"]` (claro, que añade además `--tint-rgb`).
+   Todas juegan con las mismas reglas, la de por defecto incluida. La lista de fichas y qué papel tiene
+   cada una está en DESIGN.md §2; lo que NO puede faltar lo comprueba `tests/unit/themes.test.ts`. */
+
+/* `--chip-plat-*` NO ES LIBRE: la plataforma es una CATEGORÍA del listado y comparte renglón con otras cuatro
+   que ya tienen su familia de color con significado —rojo los puntos débiles, verde los fuertes, ámbar el año,
+   gris el «+N»—. Si la plataforma cae en cualquiera de esas familias, el renglón deja de poder leerse por
+   color. Le toca la familia FRÍA (azul, violeta, cian), y el tono concreto lo sigue poniendo cada paleta de
+   dentro de su propia identidad: el azul de la rampa en «Forja y temple», el yrden en «Plata y acero», el azul
+   de Aperture en Portal, el índigo de su rampa en Persona. Al añadir una paleta, elige el suyo con esta regla.
+
+   `--text-dim` EN LOS BLOQUES OSCUROS: no lo bajes sin medir. Es el color de la pestaña INACTIVA
+   (`.tab-btn` en `_layout.scss`), es decir, texto normal sobre `--surface` en la navegación principal, así que
+   le aplica el 4.5:1 de la AA. Cinco de las seis paletas de entonces se quedaban entre 4.00 y 4.28 —fallaba axe en las
+   cinco, ver `tests/e2e/a11y.test.ts`—; los valores actuales rondan el 4.6 subiendo SOLO la luminosidad, con el
+   tono y la saturación de cada identidad intactos. Antes: steam #7e868d, persona #807781, portal #718390,
+   cyberpunk #6d7986, grimdark #637f6e. `seaofstars` ya cumplía (5.00) y no se ha tocado. `steam` ya no
+   entra en esa lista: cambió de paleta entera (ver su bloque) y su atenuado se recalculó con ella. */
+
+/* ══ CAPA 2b · RAMPA CATEGÓRICA ════════════════════════════════════════════════
+   SIETE tonos por tema para lo que NO es semántico: el género de un juego, la serie de una gráfica, el
+   tipo de evento del feed. Nace de un problema concreto: hasta ahora TODO colgaba del acento
+   (`--steam-rgb`), así que la interfaz se leía monócroma y dos géneros distintos eran el mismo color.
+
+   DE DÓNDE SALEN: del mundo de cada tema, no de una paleta genérica — el oro de calendario y el azul de la
+   Sala de Terciopelo en «Ladrones de corazones», el rosa del Cubo Compañero y el naranja de portal en
+   «Cámara de pruebas», la tabla de pinturas Citadel en «Solo hay guerra», el par sol/luna en «Sol y luna»,
+   las señales del brujo en «Plata y acero» y los dos estados del metal en «Forja y temple».
+
+   DOS PAPELES POR TONO, y esto es lo importante:
+     · `--cat-N`    → RELLENO (lomo de fila, barra, punto): es gráfico, así que la 1.4.11 le pide 3:1
+                      contra las cuatro superficies del tema.
+     · `--cat-N-fg` → TEXTO (la etiqueta del chip): es texto, así que le pide el 4,5:1 de la AA. Cuando el
+                      relleno ya cumple, los dos valores COINCIDEN; cuando no, el de texto es el mismo tono
+                      con la luminosidad movida —tono y saturación intactos, igual que `--text-dim`—.
+   Los valores están medidos contra `--bg`, `--surface`, `--surface-hover` y `--surface-elevated` de su
+   propio tema. Si cambias uno, MÍDELO: `tests/e2e/a11y.test.ts` audita las dieciséis combinaciones.
+
+   CÓMO SE USA: `categoryTone()` (en `core/constants/categoryTone.ts`) convierte un nombre —«Metroidvania»,
+   «RPG»— en un número del 1 al 7 estable, y el componente pone `--cat`/`--cat-fg` en el elemento. Añadir un
+   tono octavo es tocar el `_colors.scss` de cada tema y la constante `CATEGORY_TONES`; ningún componente
+   sabe qué color le toca a cada género. */
+
+/* ── LOS OCHO. Cada uno con su propio `as <id>`: Sass saca el namespace del nombre del fichero y ocho
+   `colors` chocarían entre sí. No exportan ningún miembro —son hojas de declaraciones—, así que el nombre
+   solo sirve para distinguirlos aquí.
+   El orden es el del selector de Ajustes (`PALETTES` en `core/constants/palettes.ts`), no el
+   alfabético: así una lista y otra se leen igual. Entre temas no hay dependencias —cada bloque está aislado
+   en su `[data-palette]`—, así que este orden no cambia lo que se pinta; cambiarlo tampoco rompe nada. ── */
+@use './forja/colors' as forja;
+@use './arcade/colors' as arcade;
+@use './steam/colors' as steam;
+@use './persona/colors' as persona;
+@use './portal/colors' as portal;
+@use './cyberpunk/colors' as cyberpunk;
+@use './seaofstars/colors' as seaofstars;
+@use './grimdark/colors' as grimdark;

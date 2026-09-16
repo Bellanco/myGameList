@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TAB_ACTIONS, TAB_ORDER, TAB_TITLES, TAB_TOOLTIPS, VALIDATION_MESSAGES } from '../core/constants/labels';
 import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
+import { reabrirLaPregunta } from '../core/utils/coverDone';
 import { tagKey } from '../core/utils/tags';
 import { DEFAULT_SORT, nextSort, sortGames } from '../core/utils/sortGames';
 import { clampRating } from '../core/utils/normalize';
@@ -10,6 +11,7 @@ import { nextVersion, resolveGradedAt, stampEntry } from '../core/utils/gameStam
 import { mapTabDataTags, type TagCategory } from '../core/utils/tagMutations';
 import { normalizeTag, safeTrim } from '../core/security/sanitize';
 import { normalizeName } from '../core/roulette/roulette';
+import { emitMoment } from '../core/effects/moments';
 import { loadLocalState, loadLocalStateAsync, normalizeData, saveLocalState } from '../model/repository/localRepository';
 import { getGamesAsTabData, getLocalMeta, mirrorTabDataToGames } from '../model/repository/indexedDbRepository';
 import { markDirty } from '../model/repository/syncStateRepository';
@@ -540,10 +542,20 @@ export function useGameListViewModel() {
       }
 
       persist(nextData);
+      /* GUARDAR UN JUEGO SIN PORTADA ES PEDIR QUE SE LE BUSQUE OTRA VEZ. Quien edita está mirando ese juego y se
+         ha fijado en el hueco, y muchas veces lo que acaba de corregir es justo lo que fallaba. La guarda del
+         día y el porqué de todo esto están en `reabrirLaPregunta`; aquí solo se le avisa. Si el juego ya tiene
+         carátula, o si su «no» es de hace un rato, no hace nada. */
+      reabrirLaPregunta(base.name, base.platforms);
       setFormModalOpen(false);
       setDraft(EMPTY_DRAFT);
       notify('ok', 'Juego guardado correctamente');
       void trackAnalyticsEvent('game_saved', { tab, is_edit: Boolean(existing), has_review: Boolean(base.review) });
+      /* Los dos momentos que cada tema celebra a su manera (ver `core/effects/moments`). CERRAR un juego es
+         llegar a la lista del completista desde fuera: guardar uno que YA estaba ahí es una edición, no un
+         final, y celebrarlo cada vez que se corrige una falta de la reseña lo convertiría en ruido. */
+      if (tab === 'c' && !existing) emitMoment('game-closed');
+      emitMoment('library-saved');
       return { id: base.id, previous };
     },
     [data, findGameByName, notify, persist],
@@ -638,6 +650,8 @@ export function useGameListViewModel() {
       persist(nextData);
       notify('ok', `"${moved.name}" pasa a ${TAB_TITLES[targetTab]}`);
       void trackAnalyticsEvent('game_moved', { from: sourceTab, to: targetTab });
+      if (targetTab === 'c') emitMoment('game-closed');
+      emitMoment('library-saved');
     },
     [data, persist, notify],
   );

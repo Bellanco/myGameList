@@ -3,21 +3,27 @@ import type { PaletteId } from '../../core/constants/palettes';
 // Carga bajo demanda de los skins de tema (CAPA 3, `src/styles/themes/*.scss`), sacados del bundle
 // base (auditoría #4). Los COLORES y el layout de cada paleta viven en `_base.scss` (CAPA 2, en el
 // bundle base), así que en el primer paint las paletas ya se ven con sus colores correctos; el skin
-// (tipografía/formas/sombras/texturas) entra un instante después al activarse la paleta. La paleta
-// por defecto (steam) no tiene skin → no descarga nada.
+// (tipografía/formas/sombras/texturas) entra un instante después al activarse la paleta. Ni la paleta
+// por defecto no descarga nada: su skin va en el bundle base.
 //
 // Acoplamiento conocido: 7 reglas de grimdark viven en la sección de cyberpunk y reutilizan sus
 // @keyframes de glitch. Por eso, al activar grimdark cargamos también el skin de cyberpunk (evita
 // mover keyframes entre archivos y el riesgo de romper animaciones).
 const SKIN_LOADERS: Partial<Record<PaletteId, () => Promise<unknown>>> = {
-  persona: () => import('../../styles/themes/persona.scss'),
-  portal: () => import('../../styles/themes/portal.scss'),
-  cyberpunk: () => import('../../styles/themes/cyberpunk.scss'),
+  arcade: () => import('../../styles/themes/arcade/arcade.scss'),
+  steam: () => import('../../styles/themes/steam/steam.scss'),
+  persona: () => import('../../styles/themes/persona/persona.scss'),
+  portal: () => import('../../styles/themes/portal/portal.scss'),
+  cyberpunk: () => import('../../styles/themes/cyberpunk/cyberpunk.scss'),
   grimdark: () => Promise.all([
-    import('../../styles/themes/grimdark.scss'),
-    import('../../styles/themes/cyberpunk.scss'),
+    import('../../styles/themes/grimdark/grimdark.scss'),
+    import('../../styles/themes/cyberpunk/cyberpunk.scss'),
   ]),
-  seaofstars: () => import('../../styles/themes/seaofstars.scss'),
+  seaofstars: () => import('../../styles/themes/seaofstars/seaofstars.scss'),
+  // `forja` NO está aquí a propósito: es la paleta POR DEFECTO y su skin viaja en el bundle base
+  // (`styles/index.scss`), porque es la que pinta el primer fotograma. `arcade` sí entra aquí desde que
+  // dejó de ser la de por defecto: su skin es de los más pesados (rejilla del horizonte, pegatinas,
+  // teclas de consola) y no tiene por qué descargarlo quien nunca elige ese tema.
 };
 
 const requested = new Set<PaletteId>();

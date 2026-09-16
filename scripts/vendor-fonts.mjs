@@ -27,7 +27,15 @@ import { dirname, join } from 'node:path';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const FONT_DIR = join(ROOT, 'public', 'fonts');
-const SCSS_DIR = join(ROOT, 'src', 'styles', 'fonts');
+// Dónde va la hoja de `@font-face` de cada juego de fuentes: la de la tipografía BASE (`dm-sans`) es común a
+// todas las paletas y vive en `styles/fonts/`; las demás son de UN tema y viven dentro de su carpeta, con su
+// color y su skin (ver `styles/themes/_index.scss`). El slug es el id del tema.
+const SCSS_BASE_DIR = join(ROOT, 'src', 'styles', 'fonts');
+const THEMES_DIR = join(ROOT, 'src', 'styles', 'themes');
+const SLUG_BASE = 'dm-sans';
+const hojaDe = (slug) => (slug === SLUG_BASE
+  ? { dir: SCSS_BASE_DIR, file: `_${slug}.scss`, rel: `src/styles/fonts/_${slug}.scss` }
+  : { dir: join(THEMES_DIR, slug), file: '_fonts.scss', rel: `src/styles/themes/${slug}/_fonts.scss` });
 
 // Chrome moderno: sin un User-Agent así, Google sirve TTF en vez de WOFF2 (mucho más pesado).
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
@@ -46,6 +54,11 @@ const SHEETS = [
     families: ['DM+Sans:wght@400;500;600;700;800'],
   },
   {
+    slug: 'forja',
+    comment: 'Skin de la paleta forja «Forja y temple», la de POR DEFECTO. Saira la comparte con portal e IBM Plex Mono con steam.',
+    families: ['Saira:wght@400;500;600', 'IBM+Plex+Mono:wght@500'],
+  },
+  {
     slug: 'cyberpunk',
     comment: 'Skin de la paleta cyberpunk (carga diferida).',
     families: ['Rajdhani:wght@400;500;600;700', 'Share+Tech+Mono'],
@@ -59,6 +72,16 @@ const SHEETS = [
     slug: 'portal',
     comment: 'Skin de la paleta portal (carga diferida). Share Tech Mono la comparte con cyberpunk.',
     families: ['Oswald:wght@400;500;600;700', 'Saira:wght@400;500;600', 'Share+Tech+Mono'],
+  },
+  {
+    slug: 'steam',
+    comment: 'Skin de la paleta steam «Plata y acero» (carga diferida).',
+    families: ['EB+Garamond:wght@400;500;600', 'Cinzel:wght@600;700', 'IBM+Plex+Mono:wght@500'],
+  },
+  {
+    slug: 'arcade',
+    comment: 'Skin de la paleta arcade (carga diferida). Share Tech Mono la comparte con cyberpunk y portal.',
+    families: ['Orbitron:wght@500;600;700;800', 'Exo+2:wght@400;500;600;700', 'Share+Tech+Mono'],
   },
   {
     slug: 'seaofstars',
@@ -166,12 +189,14 @@ async function buildSheet(sheet) {
 }`)
     .join('\n');
 
-  await writeFile(join(SCSS_DIR, `_${sheet.slug}.scss`), `${header}${body}\n`);
-  console.log(`  → src/styles/fonts/_${sheet.slug}.scss (${emitted.length} @font-face)`);
+  const destino = hojaDe(sheet.slug);
+  await mkdir(destino.dir, { recursive: true });
+  await writeFile(join(destino.dir, destino.file), `${header}${body}\n`);
+  console.log(`  → ${destino.rel} (${emitted.length} @font-face)`);
 }
 
 await mkdir(FONT_DIR, { recursive: true });
-await mkdir(SCSS_DIR, { recursive: true });
+await mkdir(SCSS_BASE_DIR, { recursive: true });
 for (const sheet of SHEETS) await buildSheet(sheet);
 
 const total = [...downloaded.values()].length;
@@ -185,7 +210,8 @@ await writeFile(
 Todas las fuentes de este directorio se distribuyen bajo la **SIL Open Font License 1.1** (OFL), que permite
 redistribuirlas junto a la aplicación. Se descargaron de Google Fonts con \`scripts/vendor-fonts.mjs\`.
 
-Familias: DM Sans, Rajdhani, Share Tech Mono, Chakra Petch, UnifrakturCook, VT323, Oswald, Saira, Pixelify Sans.
+Familias: DM Sans, Rajdhani, Share Tech Mono, Chakra Petch, UnifrakturCook, VT323, Oswald, Saira, Pixelify Sans,
+Orbitron, Exo 2, EB Garamond, Cinzel, IBM Plex Mono.
 
 El texto completo de la OFL y la autoría de cada familia están en su ficha de
 [Google Fonts](https://fonts.google.com/) y en el repositorio de cada proyecto.

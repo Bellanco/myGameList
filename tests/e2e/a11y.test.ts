@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { JUEGOS, sembrarBiblioteca } from './seed';
+import { PALETTES } from '../../src/core/constants/palettes';
 
 /**
  * AUDITORÍA DE ACCESIBILIDAD SOBRE EL RENDER REAL.
@@ -8,7 +9,7 @@ import { JUEGOS, sembrarBiblioteca } from './seed';
  * Qué añade sobre lo que ya había: las dieciocho reglas de `jsx-a11y` del linter leen JSX ESTÁTICO. Saben si a un
  * `<img>` le falta el `alt`, pero no pueden saber nada de lo único que se decide al pintar: el contraste real de
  * cada paleta, los roles que resultan tras componer el árbol y el estado de los controles cuando el usuario ya ha
- * interactuado. Con seis paletas propias × dos temas, el contraste es justo lo que se rompe sin que nadie se
+ * interactuado. Con ocho paletas propias × dos temas, el contraste es justo lo que se rompe sin que nadie se
  * entere —basta con retocar un token de color en `_base.scss`—.
  *
  * Se auditan las DOCE combinaciones sobre cinco pantallas:
@@ -34,7 +35,9 @@ import { JUEGOS, sembrarBiblioteca } from './seed';
  * acaba ignorando, y esto son más de sesenta recorridos.
  */
 
-const PALETAS = ['steam', 'persona', 'portal', 'cyberpunk', 'seaofstars', 'grimdark'] as const;
+// Las paletas SE LEEN DEL REGISTRO, no se listan aquí: una lista a mano se queda corta en cuanto alguien añade
+// un tema, y justo entonces es cuando hace falta auditarlo. Ver `docs/temas.md`.
+const PALETAS = PALETTES.map((p) => p.id);
 const TEMAS = ['dark', 'light'] as const;
 
 /**
@@ -140,7 +143,7 @@ async function panelDeEstadisticas(page: Page): Promise<void> {
  *  - cada medalla lleva un aura de rareza (cuatro colores fijos), un numeral en blanco con `text-shadow` sobre
  *    un triángulo en degradado, y el cuadro pintado con un filtro de turbulencia y relieve;
  *  - los rótulos de rareza usan esos mismos cuatro colores COMO TEXTO, que es donde el contraste sí se mide;
- *  - y todo eso convive con las seis paletas, que redefinen `--text`, `--surface` y el acento por debajo.
+ *  - y todo eso convive con las ocho paletas, que redefinen `--text`, `--surface` y el acento por debajo.
  *
  * Va con la biblioteca AMPLIA para que la lista traiga conseguidos y bloqueados a la vez: los bloqueados llevan
  * el cuadro desaturado y su texto atenuado, que es otro juego de contraste distinto del de los conseguidos.

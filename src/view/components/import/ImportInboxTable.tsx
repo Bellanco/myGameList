@@ -36,11 +36,12 @@ function chips(values: string[], className: string) {
 }
 
 /**
- * Tabla de la Bandeja de importados. Reutiliza las clases visuales de `GameTable`, incluida su vista
- * móvil: en pantallas estrechas solo se muestra la PRIMERA columna, así que el nombre y un
- * `row-meta` (plataforma/género en mini-píldoras) van los dos en ella. El `.table-wrap` es un contenedor
- * `gamelist` para que el revelado progresivo del meta funcione igual que en el listado principal.
+ * Tabla de la Bandeja de importados. Reutiliza las clases visuales de `GameTable` (fila, chips, detalle).
  * El detalle está siempre abierto y contiene solo los botones (clasificar/actualizar + descartar).
+ *
+ * LLEVABA UN `row-meta` de mini-píldoras «para móvil» que no se veía en ningún ancho: esa regla solo se
+ * encendía dentro de `table.is-cards`, y esta tabla nunca ha tenido esa clase. Se ha retirado con el rediseño
+ * del renglón, que dejó de tener dos marcados distintos.
  */
 export function ImportInboxTable({ items, isInLists, listOf, onClassify, onEnrich, onDiscard, onCopyName }: ImportInboxTableProps) {
   return (
@@ -83,19 +84,6 @@ export function ImportInboxTable({ items, isInLists, listOf, onClassify, onEnric
                               {TAB_TOOLTIPS[inListTab]}
                             </span>
                           ) : null}
-                        </span>
-                        {/* Meta para móvil/tablet (oculto en escritorio; ahí se ven las columnas). */}
-                        <span className="row-meta" aria-hidden="true">
-                          {item.platforms.map((p) => (
-                            <span key={`p-${p}`} className="row-meta-item rm-plat">
-                              {p}
-                            </span>
-                          ))}
-                          {item.genres.map((g) => (
-                            <span key={`g-${g}`} className="row-meta-item rm-genre">
-                              {g}
-                            </span>
-                          ))}
                         </span>
                       </span>
                     </div>

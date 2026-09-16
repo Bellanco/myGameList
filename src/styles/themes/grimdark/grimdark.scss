@@ -1,7 +1,7 @@
 /* Fuentes propias de esta paleta (fuera de la ruta crítica; solo cargan con este skin).
    Servidas desde el propio origen: antes esto era un `@import url(fonts.googleapis.com)`, que en
    runtime añadía dos saltos a dominios de terceros. Generado por `scripts/vendor-fonts.mjs`. */
-@use '../fonts/grimdark';
+@use './fonts';
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════
    TEMA · Solo hay guerra (Warhammer 40.000) — GRIMDARK GÓTICO IMPERIAL: la app como una PANTALLA DE
@@ -47,14 +47,23 @@
 /* ── §1 · Tipografía: UnifrakturCook (blackletter gótico) para las CARTELAS (titulares/modal/ruleta/día) con
    RESPLANDOR de fósforo verde; Chakra Petch (industrial) para cuerpo, botones, nombres y chips; VT323 (CRT)
    para las LECTURAS de terminal (fechas, notas, medalla, cabecera de tabla). El glow se apaga en claro. ── */
-:root[data-palette="grimdark"] body { font-family: 'Chakra Petch', system-ui, sans-serif; }
+/* PAPELES DE LETRA de este tema. CAPA 0 (`_base.scss`) declara los cuatro papeles y todas las hojas
+   los usan por ficha; aquí es donde este tema decide qué familia va en cada uno. Cambiar la letra del
+   tema es cambiar ESTE bloque, no buscar `font-family` por el fichero. */
+:root[data-palette="grimdark"] {
+  --font-body: 'Chakra Petch', system-ui, sans-serif;
+  --font-label: 'Chakra Petch', system-ui, sans-serif;
+  --font-display: 'UnifrakturCook', 'Times New Roman', serif;
+  --font-mono: 'VT323', ui-monospace, monospace;
+}
+:root[data-palette="grimdark"] body { font-family: var(--font-body); }
 :root[data-palette="grimdark"] h2,
 :root[data-palette="grimdark"] h3,
 :root[data-palette="grimdark"] h4,
 :root[data-palette="grimdark"] .modal-title,
 :root[data-palette="grimdark"] .dialog-title,
 :root[data-palette="grimdark"] .rl-card-name,
-:root[data-palette="grimdark"] .rl-hint { font-family: 'UnifrakturCook', 'Times New Roman', serif; font-weight: 700; letter-spacing: .01em; }
+:root[data-palette="grimdark"] .rl-hint { font-family: var(--font-display); font-weight: 700; letter-spacing: .01em; }
 :root[data-palette="grimdark"] h2,
 :root[data-palette="grimdark"] .rl-card-name { color: var(--grim-green); text-shadow: 0 0 9px rgba(67, 245, 88, .45); }
 :root[data-palette="grimdark"][data-theme="light"] h2,
@@ -67,14 +76,14 @@
 :root[data-palette="grimdark"] .hub-detail-profile-link,
 :root[data-palette="grimdark"] .hub-review-game,
 :root[data-palette="grimdark"] .active-filter-chip,
-:root[data-palette="grimdark"] .chip { font-family: 'Chakra Petch', system-ui, sans-serif; font-weight: 600; letter-spacing: .04em; }
+:root[data-palette="grimdark"] .chip { font-family: var(--font-label); font-weight: 600; letter-spacing: .04em; }
 :root[data-palette="grimdark"] thead th,
 :root[data-palette="grimdark"] .hub-feed-game-chip,
 :root[data-palette="grimdark"] .score-ring-num,
 :root[data-palette="grimdark"] .score-dial-num,
 :root[data-palette="grimdark"] .hub-review-medal,
 :root[data-palette="grimdark"] .hub-feed-date,
-:root[data-palette="grimdark"] .hub-review-date { font-family: 'VT323', ui-monospace, monospace; letter-spacing: .02em; }
+:root[data-palette="grimdark"] .hub-review-date { font-family: var(--font-mono); letter-spacing: .02em; }
 /* La VT323 (pixel) rinde el número pequeño para su cuerpo: se agranda un poco para que se lea mejor, pero
    sigue INSCRITO en el círculo (base .36/.30 → .5/.42 del diámetro). */
 :root[data-palette="grimdark"] .score-ring-num { font-size: calc(var(--sz) * .5); }
@@ -104,7 +113,7 @@
 :root[data-palette="grimdark"][data-theme="light"] .alert-dialog { box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px rgba(154, 111, 20, .5), 0 6px 16px rgba(40, 40, 30, .14) !important; }
 
 /* ── §4 · Tabla: cabecera = LECTURA DE COGITADOR (VT323 verde, filete verde inferior). ── */
-:root[data-palette="grimdark"] thead th { background: transparent; color: var(--grim-green); border-bottom: 1px solid rgba(67, 245, 88, .4); font-size: .95rem; }
+:root[data-palette="grimdark"] thead th { background: transparent; color: var(--grim-green); border-bottom: 1px solid rgba(67, 245, 88, .4); font-size: var(--fs-md); }
 :root[data-palette="grimdark"][data-theme="light"] thead th { color: var(--fg-link); border-bottom-color: rgba(21, 122, 55, .45); }
 
 /* ── §5 · Botones: sello imperial — rectos, borde de oro. Acento = COMANDO de terminal (relleno VERDE fósforo
@@ -115,25 +124,22 @@
 :root[data-palette="grimdark"] .btn-toggle:not(.active) { background: var(--surface-elevated) !important; color: var(--text) !important; }
 :root[data-palette="grimdark"] .btn-accent,
 :root[data-palette="grimdark"] .btn-steam,
+:root[data-palette="grimdark"] .btn-primary,
 :root[data-palette="grimdark"] .btn.is-active,
-:root[data-palette="grimdark"] .btn-toggle.active { background: var(--grim-green) !important; color: #04140a !important; border-color: var(--grim-green) !important; box-shadow: 0 0 12px rgba(67, 245, 88, .4) !important; }
+:root[data-palette="grimdark"] .btn-toggle.active { background: var(--grim-green) !important; color: var(--on-accent) !important; border-color: var(--grim-green) !important; box-shadow: 0 0 12px rgba(67, 245, 88, .4) !important; }
 /* "General" del panel: el sello imperial es de oro, así que el principal se marca tirando ese filete hacia el
    verde de cogitador. Ni relleno ni glow —eso es del comando activo—, solo el borde. */
 :root[data-palette="grimdark"] .scope-tabs > .btn-toggle:first-child:not(.active) { border-color: color-mix(in srgb, var(--grim-green) 55%, var(--grim-gold)); }
 :root[data-palette="grimdark"][data-theme="light"] .btn-accent,
 :root[data-palette="grimdark"][data-theme="light"] .btn-steam,
+:root[data-palette="grimdark"][data-theme="light"] .btn-primary,
 :root[data-palette="grimdark"][data-theme="light"] .btn.is-active,
 :root[data-palette="grimdark"][data-theme="light"] .btn-toggle.active { color: #fff !important; box-shadow: none !important; }
-:root[data-palette="grimdark"] .btn-complete,
-:root[data-palette="grimdark"] .btn-recommend { background: var(--success) !important; color: #04140a !important; border-color: color-mix(in srgb, var(--success) 55%, #000) !important; }
-:root[data-palette="grimdark"] .btn-inprogress { background: var(--warn) !important; color: #1a1200 !important; border-color: color-mix(in srgb, var(--warn) 55%, #000) !important; }
+:root[data-palette="grimdark"] .btn-complete { background: var(--success) !important; color: #04140a !important; border-color: color-mix(in srgb, var(--success) 55%, #000) !important; }
 :root[data-palette="grimdark"] .btn-danger,
-:root[data-palette="grimdark"] .btn-abandoned,
-:root[data-palette="grimdark"] .btn-recommend-active { background: var(--danger-fill) !important; color: #fff !important; border-color: color-mix(in srgb, var(--danger) 55%, #000) !important; }
-:root[data-palette="grimdark"][data-theme="light"] .btn-complete,
-:root[data-palette="grimdark"][data-theme="light"] .btn-recommend,
-:root[data-palette="grimdark"][data-theme="light"] .btn-inprogress { color: #fff !important; }
-:root[data-palette="grimdark"] .btn-ghost { font-family: 'Chakra Petch', system-ui, sans-serif; font-weight: 600; letter-spacing: .05em; }
+:root[data-palette="grimdark"] .btn-abandoned { background: var(--danger-fill) !important; color: #fff !important; border-color: color-mix(in srgb, var(--danger) 55%, #000) !important; }
+:root[data-palette="grimdark"][data-theme="light"] .btn-complete { color: #fff !important; }
+:root[data-palette="grimdark"] .btn-ghost { font-family: var(--font-label); font-weight: 600; letter-spacing: .05em; }
 /* Hover: plano + glow de fósforo verde (sin el giro 3D base). */
 :root[data-palette="grimdark"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 14px rgba(67, 245, 88, .3); }
 :root[data-palette="grimdark"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(0); }
@@ -149,14 +155,14 @@
   background: rgba(67, 245, 88, .08);
   border: 1px solid var(--grim-green);
   color: var(--grim-green);
-  font-size: .95rem;
+  font-size: var(--fs-md);
 }
 :root[data-palette="grimdark"] .hub-friend-chip {
   background: var(--surface-elevated);
   color: var(--grim-gold);
   border: 1px solid var(--grim-gold);
   border-radius: 0;
-  font-family: 'Chakra Petch', system-ui, sans-serif;
+  font-family: var(--font-label);
   font-weight: 600;
 }
 :root[data-palette="grimdark"] .hub-friend-chip::before { content: '\2720'; margin-right: .34em; color: var(--grim-gold); }
@@ -186,7 +192,7 @@
    día es una CARTELA blackletter con filete de oro debajo; la reseña = registro de servo-escriba (cursiva con
    filete verde). La barra fija (sticky) se mantiene (fondo opaco, sin tocar `position`). ── */
 :root[data-palette="grimdark"] .hub-feed-day-header { background: var(--bg) !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; padding: .15rem .6rem .5rem; }
-:root[data-palette="grimdark"] .hub-feed-day-header h4 { font-family: 'UnifrakturCook', 'Times New Roman', serif; font-weight: 700; color: var(--grim-gold); }
+:root[data-palette="grimdark"] .hub-feed-day-header h4 { font-family: var(--font-display); font-weight: 700; color: var(--grim-gold); }
 :root[data-palette="grimdark"] .hub-feed-day-header::after { content: ''; position: absolute; left: 8%; right: 8%; bottom: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--grim-gold), transparent); }
 :root[data-palette="grimdark"] .hub-feed-date,
 :root[data-palette="grimdark"] .hub-review-date {
@@ -198,7 +204,7 @@
   box-shadow: none;
   padding: 0;
   color: var(--grim-green);
-  font-size: .95rem;
+  font-size: var(--fs-md);
   transform: none;
 }
 :root[data-palette="grimdark"] .hub-feed-date::before,
@@ -334,13 +340,12 @@
 :root[data-palette="grimdark"] .donut-legend b,
 :root[data-palette="grimdark"] .year-trend-scale,
 :root[data-palette="grimdark"] .year-axis,
-:root[data-palette="grimdark"] .year-peak { font-family: 'VT323', ui-monospace, monospace; font-size: 1.08em; }
 
 /* La lectura del cuadro de mandos y los números del dial cambian de TIPOGRAFÍA, no de cuerpo: el `1.08em` de
    arriba es relativo al padre, así que aplicado a la cifra grande le borraba sus 2rem y la dejaba en un
    susurro, y a los números del dial (10px de lienzo) los inflaba hasta pisarse. */
 :root[data-palette="grimdark"] .gauge-hero,
-:root[data-palette="grimdark"] .gauge-number { font-family: 'VT323', ui-monospace, monospace; }
+:root[data-palette="grimdark"] .gauge-number { font-family: var(--font-mono); }
 
 /* Filete dorado bajo el rótulo de cada bloque: la cartela del códice. */
 :root[data-palette="grimdark"] .stats-card h3 {
@@ -371,8 +376,8 @@
 }
 /* La hora en la pixelada de la paleta, con su cursor de terminal: el dato lo canta la máquina. */
 :root[data-palette="grimdark"] .hub-feed-move-hour {
-  font-family: 'VT323', ui-monospace, monospace;
-  font-size: .88rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
   color: var(--grim-green);
 }
 :root[data-palette="grimdark"] .hub-feed-move-hour::before { content: '> '; font-weight: 700; }
@@ -461,20 +466,20 @@
    El valor por defecto es la RESERVA: si alguien cambia `LIENZO_FX_VARIANTS` sin tocar esta lista, los números
    que no casen salen con él en vez de dejar el canto vacío. ── */
 :root[data-palette="grimdark"] .hub-feed-lienzo-fx {
-  --lz-sello: url('./assets/seals/mechanicus.svg');
+  --lz-sello: url('./seals/mechanicus.svg');
 }
 
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="0"] { --lz-sello: url('./assets/seals/mechanicus.svg'); }
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="1"] { --lz-sello: url('./assets/seals/custodes.svg'); }
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="2"] { --lz-sello: url('./assets/seals/dark-angels.svg'); }
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="3"] { --lz-sello: url('./assets/seals/raven-guard.svg'); }
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="4"] { --lz-sello: url('./assets/seals/salamanders.svg'); }
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="5"] { --lz-sello: url('./assets/seals/space-wolves.svg'); }
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="6"] { --lz-sello: url('./assets/seals/black-legion.svg'); }
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="7"] { --lz-sello: url('./assets/seals/iron-warriors.svg'); }
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="8"] { --lz-sello: url('./assets/seals/the-fallen.svg'); }
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="9"] { --lz-sello: url('./assets/seals/world-eaters.svg'); }
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="10"] { --lz-sello: url('./assets/seals/gorkamorka.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="0"] { --lz-sello: url('./seals/mechanicus.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="1"] { --lz-sello: url('./seals/custodes.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="2"] { --lz-sello: url('./seals/dark-angels.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="3"] { --lz-sello: url('./seals/raven-guard.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="4"] { --lz-sello: url('./seals/salamanders.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="5"] { --lz-sello: url('./seals/space-wolves.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="6"] { --lz-sello: url('./seals/black-legion.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="7"] { --lz-sello: url('./seals/iron-warriors.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="8"] { --lz-sello: url('./seals/the-fallen.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="9"] { --lz-sello: url('./seals/world-eaters.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="10"] { --lz-sello: url('./seals/gorkamorka.svg'); }
 
 /* LOS DOS APAISADOS. `Imperium of Man` es 2,73:1 y `Blood Ravens` 1,94:1; con la caja cuadrada de los demás
    ocuparían el 37 % y el 51 % del alto, y no se leerían como variedad sino como un sello mal puesto. En vez de
@@ -482,12 +487,12 @@
    enteros y a buen tamaño en la franja de arriba. Ocupan más ancho que los demás y menos alto, que es justo lo
    que son. */
 :root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="11"] {
-  --lz-sello: url('./assets/seals/aquila.svg');
+  --lz-sello: url('./seals/aquila.svg');
   --lz-sello-ancho: 244px;
   --lz-sello-alto: 90px;
 }
 :root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="12"] {
-  --lz-sello: url('./assets/seals/blood-ravens.svg');
+  --lz-sello: url('./seals/blood-ravens.svg');
   --lz-sello-ancho: 215px;
   --lz-sello-alto: 110px;
 }
@@ -565,4 +570,93 @@
   0%, 88%, 95%, 100% { opacity: 0; translate: 0 0; }
   89% { opacity: .32; translate: 9px 0; }
   92% { opacity: .22; translate: 4px -1px; }
+}
+
+/* ══ MOMENTOS · EL COGITADOR TARDA EN DESPERTAR: parpadeo de pantalla mientras carga ════════════════════════
+   La app ya enseña un esqueleto al entrar en una pantalla perezosa (`ScreenSkeleton`). En este tema esa espera
+   no es una barra de progreso: es una máquina vieja arrancando, así que las placas del esqueleto laten con el
+   brillo irregular del fósforo y una línea de barrido las cruza. Termina cuando termina la carga —el esqueleto
+   desaparece y con él el efecto—, que es justo lo que hace que se lea como «está despertando» y no como una
+   animación decorativa que sigue ahí cuando ya hay contenido. ══ */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-effects="on"][data-palette="grimdark"] .screen-skeleton-card {
+    position: relative;
+    animation: grim-cogitator-wake 1.9s steps(12, end) infinite;
+  }
+  :root[data-effects="on"][data-palette="grimdark"] .screen-skeleton-card:nth-of-type(2n) { animation-delay: -.7s; }
+  :root[data-effects="on"][data-palette="grimdark"] .screen-skeleton-card:nth-of-type(3n) { animation-delay: -1.2s; }
+
+  :root[data-effects="on"][data-palette="grimdark"] .screen-skeleton-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(180deg, transparent 42%, rgba(67, 245, 88, .16) 50%, transparent 58%);
+    animation: grim-cogitator-scan 2.6s linear infinite;
+  }
+
+  @keyframes grim-cogitator-wake {
+    0%, 100% { opacity: 1; }
+    12% { opacity: .72; }
+    18% { opacity: 1; }
+    46% { opacity: .85; }
+    52% { opacity: 1; }
+  }
+
+  @keyframes grim-cogitator-scan {
+    from { transform: translateY(-100%); }
+    to   { transform: translateY(100%); }
+  }
+}
+
+/* ── §N · LA CAJA SIN CARÁTULA = LA CARTELA DEL CÓDICE ─────────────────────────────────────────────────
+   Doble filete de oro con CANTONERAS en dos esquinas opuestas y, por dentro, la pantalla del cogitador:
+   las mismas líneas de barrido verdes de la firma, muy rebajadas. El nombre toma la blackletter de las
+   cartelas (§1). ── */
+:root[data-palette="grimdark"] .game-card.is-flat {
+  border: 2px solid var(--grim-line);
+  background:
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--grim-green) 5%, transparent) 0 1px, transparent 1px 3px),
+    var(--surface);
+  box-shadow: inset 0 0 0 4px var(--surface), inset 0 0 0 5px color-mix(in srgb, var(--grim-line) 60%, transparent);
+}
+:root[data-palette="grimdark"] .game-card.is-flat::before,
+:root[data-palette="grimdark"] .game-card.is-flat::after {
+  content: "";
+  position: absolute;
+  width: 14px; height: 14px;
+  border: 2px solid var(--grim-line);
+  pointer-events: none;
+}
+:root[data-palette="grimdark"] .game-card.is-flat::before { top: 5px; left: 5px; border-right: 0; border-bottom: 0; }
+:root[data-palette="grimdark"] .game-card.is-flat::after { bottom: 5px; right: 5px; border-left: 0; border-top: 0; }
+/* LAS CANTONERAS VAN POR DELANTE DEL PIE. El medidor es un hijo posicionado (z-index 1) y las cantoneras son
+   pseudoelementos del padre: sin decirlo, la de abajo a la derecha quedaba DEBAJO de la lectura y el marco
+   se veía comido justo en su esquina. No tapan nada legible: son dos escuadras de 14 px sin sucesos. */
+:root[data-palette="grimdark"] .game-card.is-flat::before,
+:root[data-palette="grimdark"] .game-card.is-flat::after { z-index: 3; }
+:root[data-palette="grimdark"] .game-card.is-flat .game-card-name {
+  font-family: var(--font-display);
+  letter-spacing: .02em;
+}
+/* EL MEDIDOR = LA LECTURA DEL COGITADOR: no es una barra llena sino una fila de bloques verdes con su halo,
+   como sale una cifra en una pantalla de esta casa. Va DENTRO del doble filete (5 px, que es donde acaba el
+   oro) porque pegado al canto lo pisaba. */
+:root[data-palette="grimdark"] .game-card .game-card-meter {
+  height: 6px;
+  background: color-mix(in srgb, #000 55%, var(--surface));
+}
+/* EL ENCAJE, solo en la caja sin lámina: 6 px, porque su marco son 2 px de borde MÁS los 5 del doble filete
+   —y el filo se mide desde dentro del borde—, así que con 5 el primer bloque caía justo encima del oro,
+   pillado contra el marco. Con 6 queda 1 px de aire por los tres lados: el filete se ve entero por debajo y
+   la lectura sigue APOYADA en él, que es su sitio; con más, se despegaba. La caja con lámina no tiene ese
+   doble filete, así que allí la lectura cruza el canto entera. */
+:root[data-palette="grimdark"] .game-card.is-flat .game-card-meter {
+  width: auto;
+  margin: 0 6px 6px;
+}
+:root[data-palette="grimdark"] .game-card .game-card-meter::after {
+  -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 7px);
+  mask-image: repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 7px);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, hsl(var(--score-hue, 0) 58% var(--acc-l)) 70%, transparent));
 }

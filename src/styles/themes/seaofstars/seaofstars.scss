@@ -1,7 +1,7 @@
 /* Fuentes propias de esta paleta (fuera de la ruta crítica; solo cargan con este skin).
    Servidas desde el propio origen: antes esto era un `@import url(fonts.googleapis.com)`, que en
    runtime añadía dos saltos a dominios de terceros. Generado por `scripts/vendor-fonts.mjs`. */
-@use '../fonts/seaofstars';
+@use './fonts';
 /* Números en Silkscreen (los mejores dígitos pixel) SOLO en 0-9 vía unicode-range; el resto del texto usa Pixelify Sans. Silkscreen va incrustado (base64) para no depender de red en runtime. */
 @font-face{font-family:'SoS Digits';font-style:normal;font-weight:100 900;font-display:swap;size-adjust:110%;src:url(data:font/woff2;base64,d09GMgABAAAAACDUABEAAAAAc1wAACBxAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGlIbhAAcbAZgAIQ+CFIJnAwRCAqBpxSBkiMLgzYAATYCJAOGaAQgBYRGB4RMDIEyGwpmRQdixjgAMHx2yMhAsHHANtNLxf/HA02GJOR7JKprV5NUnRSjxHppZpqxPWeO2JpuP0Isn3Ov4hHC4zgO9qdWap45dxcvUZxGXXw/8Nxb3aV/w6i27p5poYiio1hQTiyOIYq3OJ9tR+9p4zYLR5R3f208FD8D20b+JCev/4CnvZ9U2MkZjQ7u4J7o7SzUVNVI6WwIJOW0uo52Sqs/fYh/f2+bc9/fTpMEh7Kb1TTXFbYVR9AEiTKlKSzGo4jHYzBd/Q+EJMSMdcuq80ykKr90zV3RXfY3/0NBa9t5xEoiUaqEhj+mHko5eD5t6TpQVEAKfOWHb3YDZEAdGUEKSr71FbWLervqaY2x/5Z+flXd2D0jaZ+DHBLaRchcZgPHuR9cv8N95J8g/qbZ0vsBIkuW98HTVBltFaZD9UlTBkImywPyEPAXpbZ1WaksC7Z0eA8kIAHRej2HDmOnmSDMsT4kRFxZZaPdY2avJsdX3SI7V/XTmIYWUjkRYUjoh+wiM8j/2fTf9t7Ryk+2P9hBhdgBKjp94Cq/aINFubqzM+Od2bWeViaB/UD2y3u2P1j+4NgBzUrWW8uBhwGG7hNBlxQN9/lFnaohKpr0qcqcNEWXx9H7S064bLOOjnhfc75fophbX9tkyWGC6uq0g+Ia4Rrf+9t9X0tNVZfKWSNjQRdlgVW5JK/2zDG2agP0ov/bWAWDg50ZaN2PM4IwFPbH3wNDiPARIRmi4IX4iEYS1SFnnce66BIWIYAI4TvrnPPZ204ACY4bmgVFJECEB4BWywEIc86t6HpUVrk9R/HkZ4FhQkBAB5EAKKtpNSgtkOHHjazIiobTWPAARIQymlxASYNMWUqpgErjkwrIiBNyu3pTV1IAsb6o3cXgr+9E+QUjfPRaG+Gp3kuExi9FSwBGRdyXhsuxUorKvruRqW2kpIrkqiTK6jy9djO9QdnOlqW9jNo0MpWv/iURH9GAa4r2DqnlDW/Y70xcecMbanqzfTWDj/Ah1yk+Sp8cxcOEc/gmIq2HfU13J/Bl0Ginr9T7Z96j4OT7s2Dc/D87zEAEtD3wcrqKBUZ3kqmlI7FmacVoVWB4O9VsRHPDCaNJC14d5GTwgblnUgCEj749HcDOb+T5g6HIoRLXI3EtPAoHyVf1eAKtAGB/pRhdLv25vQA4LICB5kVdsajKKzOIHk8Oj4icNVcDaekFc1x3jVgeK+K6cr25/pweZ8S5ceuDetoR5Dg23CxOHP8g2PaiLlxPrm/a9dL/AcEAAP+X/FG9nUfNaAB4eG5O5msqD6aDAEYAP6fDIeu3Sbc0FPg/DkebZKOZ9jqj3SYLLTLDQePMMdYs401wzBFHTbEZEZOQUeiiq26666OvfvobQJcpcxYsWbHmwJETZ66Wmm2ZUxa4yo0ff4GCRYgUJVqCREmSpUiTp4BKoWIlKlWpplZnsZ2WOGGMyXbbb48Ddtniiq3qrXXSXNvctMNxQw1zzWkdprlliAbrjDDcSFPxMVhCPAIiUp0p6eiktx566kWOY0iPPmMGDjFiz4YtOy7MFPHizoMPT958BQgXIlSYeDFixQmSKku6DDkyHZatQqky5Wrkq2Ui12prLLfSKit0vgae/5uXocvSiMxSA0THvQDKKHq2+aI19yyKQSr/RV/5fhBZu4Z7t4b28NOzOKL7FsfSvHqFevrPZV7akR4ba8E7cEN7LYgwuhICqtW4hEKt2hIFUp8p2/cK1yWixOgy3e663Jq6AeX+qWAblN1Uw25PWzoYMDpq/RMLZbd1dyauPxEo1bVRirrRKXjqT0IrEjULbJESJPTe3QQh2G6tkVq4egrLP9tuctgf9dGKtygedn/5ldOZ5q3y1JctkiI244XNW5Bcb0s13RtBc01soif8cHU6GUvzX+qA6UddVzm0OWYrWE3GEBYuA+rYHIHnHjw4+lYdNsjKjeWLdO3LiO9KrlVpQqhTgEQIYUC4HxFUF0pUSF9gnmpB57ZHNwc3Z6wNkKpEi7rrIeay3jhhIa8D4wUNJ6FV2oY6sTP3DaWp/l9MRJ7MtGB5x8dtk3aD12CDIB88JAw4YkYXVKIDg50WNNnAT2+YUwH8egnajCHtJPokVQyIyytcjq6ZNKJnO7IKjKXYay7ORGusCvvuvS0fsOxyCmxdV05CwQ2YR+k3jVrqmEcopOU0qkfIuE2iuC3oGXpvHCVFmruIlh245NclnTnLMlW2vTVqw3t7LPOQ6aDw0/w6JT4glVQ8rqrJX+fMBXwaPjd+1iBwWx6bS5RrJm3TqAkYpfmq7M6BXmKItX2fWdcLL3F6PdUhmtnxa3vnorEpFQ2NkRF2D4ZDuQJSO4IIns1Rd9m7oL8MsquC4qxzFBth7pr/xPg2f2J1WVICwwU0L/htZ8DjMLouP4pJWTuJvNwMRNqDEJxaktL1PktQZGjZ94TmpI9rDseglZN4ld2fwEZxp3DOwQDxOUPqHM8P+L9z9CLgcoGMpFOSaRiBLKOQYwrkGYMCU6HINCgxHcqMQ4UZ0wNoFs4TrVrb9yoV5GvNuDGZsmwSzm/ucFPb+fu+VVHQI9gZSH1xptoKEmtYxToqNlCxiYotVGyjYgcVu6jYQ8U+an0EmS1bGC+OZCvpatd0EztMih4hd9kEjIPxJDx/CpFhGzndrmlSt/f2+bSBAGbeaXt2Zwvuzo/pJKtpp+8/hlDNPEpr4KwvIN/cn1qiqDcolqch4VD85GVCnAMAbs7rZF6kJODvywoyK8MgJsEN+g0qWaN6MFuyEdgMGeeXlm+Rqey+kipUQGPN7Fxp/htanUvij83eu9xcu0lk5+57XLwDEGSeReYfnPmSsy3nWOycNCMTmW02jyPZj0qldQeaOZmK8HVnWS7v/BnT21Uj5/LtfHD77bxJaRpykzqI1JWLVsc9z/vRdC6MsVZUpjpPMiaqqIyPWMlyUtm5/KyDNGkUkwOoY9LWfqN0WmtfxzqmpKx6ErGsFVieC3NfkWI/bbK4I5QcAPFlNKbmelJnJyc2HUuYXMMDINOUy5ETB/fJg9vVX+elr2RWrVFnLc6FjK2oubZu5RcYL5UtMS9ypq3wR85PyoG86fhzTqznMtFzEioVlK645Az9ttkNXmZDlScp7liOeO0Nd832xtc1tC33dd8AuzB7+ptgH031JKQdYLMRWITGiske3CpBoDTI8E8m7OxFgO7DujgrlU5aabyNbE67qztd2H8XQyxTYLSbffmsThqLmjEbnIU709h1oPHvau45ZrUXIalI4L0gWfxRi3U+fGeYWU2Ozv2dD5BBekXWfttDsL3Ao4uC6KtUMmgaNWTRY5R1kUedRU/QArcDPmVFE8T6AMYZQWJQCMYkI0j1AUwzWpxJtwjwP9BOEWT7AeZSBPknCYSFFEGxH2ApRbpsGQNZhRqo9gGsMYL6oBCCDUbQ7APYYmTazmEA6/AWuv0AeymC/pMEwkGKYNgPcJSi08ZpuzzSaCa04uZwdKYY0bPY8wajs/O0nSYKYZEmtUwDqwl5onHteOLG8TRb4lfciSvs08AhDRwn5HXFk+OFZ8cLL44XXgXBLQ3c08BjQt6ET8cbX443vh1v/AiCbxr4pan/047A+9ubvlnQp8PJsIEp+rp9dFNT/cw3e1WbWYOYppfse9/y7Qn+n0IAbgPQK3TwkDwgWyHMmIgeMV+juI0yg6TLPPH8NuCwt35bAJglacCyPaAcJerCgxJoNor4Y8dsBW6dIwVpSUmWqM2Lng3PFZhBZ9iynvB2ZS2igCsbKlFdEswoVh24DbdS1gWOio0RqU3AlZdqHyowmCEvIJSrCI0fwlILJkCa9cuvioW6fLIMQYAu60ohfFMdoR5u84mlSJH8kQD75kTxFrp9p4Mi3krLtgsSkBp1pitndci5tGxV7BnByVQFYfg800YfhRqcslgug9pTRqDhYIZM98+eT9gkI90+D51U183V7YZNmbbUaiwFu14rTSIGw6JeWUlLWIiqssQy3WYCuA6QJTa79HegK67udlrIZD6S0GTEclEShUWaBN9heERM7jiB08wJIS+VRAlmK6RACt7E+FOr3gWONSsYaDmK/0VMEVtLaiUuoao1I2qLcqV2qRLMueiFUUpXbYrofR+idlVyj/c3txC6hfyiSncNAfsBpDuggkX+8DU3sHWqcFJT7VMjXhttkMUmUpQIzmdIRKGqWIpwGOaMKYmVgj+YSX9MiZV6IjbRSAHhGHFcPfy/WHosXHrlz5RkUnMAVlM0MzE66O99X9rud4FA0T8j9DJXM+IclGzoejyuVpVVdf6hjoMeypCLBtzEGYktnkeoykgdDII74iWFyOscJLzSETJC2OGtDfy4kUiLvYQtPRDOFxDeJtlxNUJa8zIGtZphiaWhRSmJdaRUpQUtHEb976pwpTQMxCE0no26R770NaxNOB4KUYwqUeumB5FgCbNQraTIHynKUdkopTburx4q6Sh/4AVMdhaR7Zfdn17HJ48FWZ02NZTJQlEhC1Nd5zlXyE041gvCaRWjnvZ+SH0yDjUUnd7teAinSeEJp2wTk9y2MWmUHApzhjbc30JfJLOqZzrSZORDXrk2sEZSIgTFiIZrdBFUnyljuxezBU/Ov0TaCT3+kY0jJfFZgahM+Rrk1UImsYNXL2qlrRDjb7XU/y4Efz4zymgpWP42nG765IPVrwRoes2xx8ow0G4yNyNQWuVzazLq/WPH7FYR1GtDmCNgctRhq4Td8j5POkGhKGSTjqxYk+cQ4OR0KxXpwr4Mnz1xgrvw1xnylU2+ElrPyt1+VlR6aEe5JV6qRk1GGIRz8IBCnp+qksaazZ/Bc3KB9eKY+voc+niGbPfp7WVTsKLhyG0Jnia+fEqnJ8S4D0M+eJHYH/hBR6XYWT5SCVYTP5FC88XnEKXrVFLpxInlys5E6lraNj0rrow5q3ObqmWotMO46A3908cys3etYw9vEaHo3FsCJKvioOXpd09s84rDrzSGCRkmTMmnBI0zhQrkDRvltlZo9tqneFAES7F6k2/0y2kLtCUJYopLT9wPeiSzHfhJ0BhxvmPYcqnX/g9LhGU4XIW5GRnNgEsO7ZDR261I5mgOAz98e9pa0tzyu3ksinwG1UwEjOvA87RlgRoTT0piWwpXxvLDFoggLDDA1WprC4W/I2v/WULxGLEcBAM/890Py0pA/KT05Glh6pYt84eDdjtfXZNW1S0Y/ul0LxMEaBz5ONTXr5/YGKjpQnvw1tQ/Tsty23Bt7zZNvm3m+K3T3qt6gG5f3SAj1QYUAqJ22lkXDQq4ZIW58HSql0WBOttJqiuA7Oqznz6NPIjPlGlRV252oVarVPFnvHRiLjFN46IszfuLotCqQjpO09Uq4cv4YV4OUoEf6k1CwTTUr0aKGxLUct5oSAZZKl9m6bpPytqMharYeCRc0XyUUIJcaRcwKxF9tR7fqxmqnWUL2CyQKm8Egy50SubfpNrnLOZCfovs1C4XMsHzWKq16Q+l5TE09eLBoWGB4LNjYtSdj7NJQYwaIU8VniItViqTO5DKwq0ZP8TEZ2X0lMxcoFrn5YW7x7UFORtok/2c2GOoxTBpDU+icA9zEkafHA30Cfdix4yDvcM9Iw4o6SkfV4Nbmj6+8N4ZfI+1JRaCWJnkMe0vszHi1o3YIt6SQBp5lZbIm4P2ctp3Uamk1sK9RXPN27/i65iTgXkhVJ9h1sySIwsbDnP0KUBLVnuDtam+NsjdCpaWMYcID3nKXwsXnsKpwfTPbiKKPq7DuBF8G4t4hgMvQmEEgbWU93wdfdNaxGvD0TOowYvJNIw2viuWklW2tFXFa54FCmWlOBQV82rSluqnyiYyLnwZb7e7qhVghO6NRNrk4+hCxL7O6aLvJdrHTM36lfXSbOYEXm/bPHxBh9TwoZHdhC6z1buvhrmMxzPkNX7PND5aN6Z3PrFniNiNYWF5PRefu+yUlAAQBOc1AZN7ru8iUuv6Ln8vbFJJOvQCgJ50FsM8GEOwa2FwdrFhzi42zNnFs8Fhc6ZJHjV0jjIv5yjzco7KoApPpgJyU3NTc1Mxd14YnMfe2FOgmJ5zyiZZ6U1ubW5tbm1ubbKvVmdABmWYO5CcF+bOh6b01O/AWK7S3A1WB3P+n4zBWY0HkeURnKepS3D5d4Jh8OjtPl+nPvqKuMEnJggADgEADLgKNAgYw76LGe2sS8T2kbeX9VfyCY4IFo7hN5Qlrc26hGFtYhV2d/E2bO2HTckFh9pCsZcIYMPghn2gRWa9UCIv49xP+UOtYyD9A+sb4ARbiNSBxFNQfICQ4TDYy5hf/OWMhFv6ooon5OdNAe7UlNmdN+jXy44N2wuZNPSb1YFXYAbcZuFq1mXvIdwxxz4Xl0udVH3eXOY4+2iM+7HLBWY+l7Xf+KeuLd550c78zHN6X19sNwa4mOiavdi2OIn4vDXudbZW1V23bndA4xR/7Hw++zaHl1dGmL2l0SvF/99cOLHwK6M85nwS7oO+eV6h+sY9uKievpWjCCt6mK9EgvGcAPyZtzLv7rCIn2vuuRZMmOab9PtIN7dlAmazAy94IZds6/d/ucNR8loQOEitK8EJuD5Cpp0qlSJG841C3eGrm3xfpUlr2aL3Ic/2BZjVQGYZMaffem4FRlSzYcDL0yk65uiRG0fiGfce3+wC0085KTiyM2/wNCSCSpID7xBnEnEfLHOsMMOshhTB3Ic9SLsQUlgJob7skvV/7b9ZnkfRblC530XwSRFjUtOv51/nMQJu4Yu15TSrE6LsrwBVfRbdd9vtK8rN7aVmL88ucQXJckkTwm31kJqCttBsdytSwNNAkXd0pAW42ZNfwgIj7bCvIuAEcqcim8MunWBWf455/X3R9V4QKeZCCFOsagycOrtVMPOzlCKz7HLxfeCSqaMiKYJZ3HArxAFPvwuKs7hkUj870p024ICYGmD65cp9AJMuRrMMi+gZq1s9zeVMuR+1fBr7ArMzG4b7G1hfTplqYciwXKJp2mxl/ElnfCqKBH74Jc4c6EQQ6Epp/P5GpZIW/7v737pc0dvc+o0cVfnGxMg5lvrDtu3FVfFzqc21cWf7aD75F2VkPXltyzyxxWs+c17vgCPgUQY8z0ZmvUUcaFNJAKdZYczSM6Cm4l1hHrbI1KIRHQakvxIKjK9aQZRYSsQkt4HBO7e5ordI7gUKEuIiJyvrN8awEzOoonv8/d8gsVDDihGRlvEmPeshjYxOMtkCLJ1qc43bfTDsyT+OLeMFKz+HI3genqEM/diN1Vkr0cBg9+CWIzOGpMmnsvL1TQJbyhYUO8LIURAjU7cPw1CzSPAtkEj02+kGdGvsRa609kbL65ztQ3DDyiVSpyehg5N2jGGHoIN27TEm9vPcQAHh8BMmSsTxeulpdVRu3XTV2pKh8y7yjyk+TVo6wGUmV1OfFaELq/gUVmTun7dvlrF+PYZKfQ5fX8ViHANfjZqt14qVuXIpLsT2OB9tmIPY/VOXxnaeCsGgN8LT6MZs2GjbJfb/nPIYTtpF9uRfiEc++fluWUqeCaTbNJByjiQPL8H6C9pwLJJTJ8OwEp7msAWuiSCsNWZ/mFwCWGyWmzN3AwMpiKziaArNC5YzC5Sl0cHBenjJvY4B3MghZgT7pHU8hvozRWgZnzRjr4xqMrfKGjrTvRX7vvlvom27rxPmyiCaPsJPkJnMrZhzOO6ndOL8lwjhL7t9hW7AFgPtoxeOjMz4nF7TGaryLGNvZwD3eEg9/Zs5+oMnvad8DFDcsabbKKESE3bqjsvFjpS4VeTKvMwDWtts5rIWasudIEReJafs6V63gCScf5L79xTRO/bHIsxfGDoQFkRHDrDovzO3JPt8P9NvtOSYOBdnMzJ+C1677mpv0DrvoqAZssX3qADkLImJxayPyciIjGuEFtsnI8HcD7ziWP/PmVaTun1RIuvJXReWDXI/L1Exe9VTaNJCRAWe4+rC9sMafWfTzlk0IoVXp5dxHRnVKi4GOsD12/oRw90U3pPZSyqbriWku/nXQAcPHKN9LCKJCizyOR8/uplQyNAWLsrniQCFkQWWWeDPWdTmajc+CD75R9/Sm/EdeKiypGhaTFz2eVkBmxh5LPBedxdUqDEGoL0+5syLrqHHyz1oMJvrwJCwAo18OBiQyRopqjl63yXH3A9g3voMbcMADPjx6O7ieWmA8LOq+gB03fn9LySIJ//yLX0gz7hhqkg2l3ha/Fix9145Gj585Fyt3z4A/M0/Yks3DgFruMzDf/kNPANpx22GwvWaxUtcLsnIVRHNI0A3vrpm0J9PrazRP71eQoQh8CrVbLEgctlsJkz2iqPdBIzql+nHEfXnMLVCC3ZflOKdpzGDK0t4p79mmf3zsZR19k+jeM7MevqY/LYQEz9quPv0L6IQB8VZhwd/R2hwtavGsB6rso2aptdfnH/P89Rv9p6P223Y8Yr4/4CzGfaVMDkuAAmfgXk8d1LmXN1GQZP99nuO0CjN4uO8fJkCIQUuZKZDkbyHDR+tYNPjCxWHHWycEVw1FQpjlmiWZYjVdqs9euKdSdHIrsc+drTDjptQi9994HZzwVm87PO2V8yC20cyCiqJ1ZucactwiK2zFoAhDnVOgw+2xiZL79n8dlFe94YEMQkFltIgNzEaD9z4K/N4lB+FbIoPQ5m/6qaeslsLHbOtxTMKG7G8B1Sq1FsEtLSKb3Bvn1hQ2BlHwq9KZzRF2SJlwdvcAFv7Ana+CSepNTUDq5YY5KYJd2rXqjDPYSjzszq3DusFPkO6ymj+RsDrk/6XcrXcg3O0NteoVcQn/wIQ+eTxdgFUjv58WZjmmYARosLIY5Ols4+8VRRP/rmTePL2zx9F1gF26+goWTeX/YPf7RQmBrVU7PM8hFtDr0kJZ6ZtN50mhNUdC8Hb/XnlDkc8SL4FeTvgxEo8wo/EPc46u4XHo2ojz4Iuv9zOIk2cjWxmYJMe4NVweMAxRH2MIFcVojIwAV16sR5kNz5+FUNlYFXA+UixO9f0Mh7ChuxgbPQYc31XIUqxEgDG7HtvTweY8ZR5u/OVKcMmBw+XG/mxuQD1Lxw2vAyQnRpzVMDgqBvWPE0e3DbwzcGdc+3I78D/uv7Y/B8vKbXGYObpQy9YVxJVEF5YSbd3PGW9ioOkSpuCY2Zf4SckKrIWjZv1TUcuU1fT4gpuVy4wpDe/qTlEyB/UfrLv93AQnFr1831vxitrjNljMS/cMLedZEy+yOZI8qC48l0eYwAj45sifTb2UYVgaghaVNa6j8dpv+taOHBUWAb6iXLXgeRnPp3u8gfgimkfak+2xOQ4nDzSWRIkpS037g84WaKOhj4XM3IgPOiv6RnHToHDragfq/PvBsTOqZirhw9X8UuwuQB3SxrnqKsc8mFznVvs6bAPw+32g4nrteNHNHcZipIjES06OfaTwTDwBQBf5wgB87H3ur9Co0ZXNufIC5rYYm6rMSON/DkY4WI/vWEPwf/24rqOPrinaVro6Bt7VsRopd59gZ/5qA9caU+oLZWDsWcs9ndJPvd8SzRneVz4aePc6o+DvzYICyYm3IYw5n6Nf580QDiVeiHyQDXdyoGNW+ngVWOBLclXkeVfiALQGZdN7RXa045fdspGQPvthkArmnS3Vem4DFWdqVXf5iHLP5VxPsBW8NjBWCbxuOCRmqrYovxP+7i2fOTMc2hT+hyJqOr7UvAuLzDLKbW1bRHmVS6VvdJDs1C/K7w7K9nDm9LI+QaoAaEhOoTUoKVQLP3UzW+V13bUj8C6ooyDAPsXBMyB3A0Gj7nEr/ep/7GP2NK6JYoLkeznnWfMcNx0iX5vmGWXGLdzHRBRmIw8Wv3qvbVrkElbBe7PcR2GXGrEccr/rv2ZJM907KeTOLy//YKao9xMorULqfQtJbbnad+kygoUzAcA+oGjQue93D3tX9sHHSXt5IjRo+9HBCB+X3WPhmV7Ht9ESvYlAOxa/q0EgPvfC1Vt4MlU2XkBBnQBZkRv5v1YMibRZu/fz9ulhqbeJwfSyjIbq0kJJ9JIPVAgplbUvrkS9ahVaEsdn/yxrbTz1cYXriBrSPbI1zDWqcg8zhZAwY1YHMhQuRDnSuuC6qANLL7w0tgyl6zKqKwNtoRqsZy0qrAgxMQrWjuXVJPdCI8ODJLEqGoo2C5XRqGRqzPATx4MhoU0EwAjFmRgEECkEIs6MYCOWDEvIV3T+yUMRWQvYbm5/BIeAxtfwpcgzRcM006+gncBxerq0Gq13FjneXG+GiWqcbCWVblEOfhV7BeZlkYLEiGewjLNpamoVLIUR6VIPfm54CehqYH4VZbL49iyYsOGLXectV9o9uubsGqG+tI6HBMNct9FoMPLO7PkqOBj5zE1PxLONtuVKEq4e9/dy7a51jrjP+fdNPtkihyc4thZljkJOqjaKdWPUcpVSsnkq42vA6bYX127xjekWqREVq6Xx3P5qlTk8ohVc+VUCh3m7QLrVtZ1U4z9jWrnF3Ye7NsAA6eckGeDfBtNZshIAWOvmFA56bQzTJkxZ/GrEcILc/Op+mohu1+VcPFFrphik83svZuof/4urrqm2HWu3GbS45vbF6BEmXKlKlVYLFCQKsFeC1HtilFPqy+HiygLDRrVT+Dn0+v9JrryZq3atFhCo12897P5zZh4fgMNNsQgqdJm3Jff2k3TCyz8RQBiiv7/+t766BuGWOLhq2++hw82AnSi1E9/6/Aso2epI0aRE+jMm06E6LCFHymZLDm8+DjqmK222W6HNdba7wA+CX1io400zljjDZPtpeH2EUaEEWZS+Ggnjq4Bpsm1nG/EEEVCUpKRnBSkJB1M5G+Cm2657f6gvrLExsbP9ZC2m7Fn/OM+jfnaUBTA+6tfhMg40mfa27iI/6XN9ar/r3JenJtfXxeF4DvYietKygv4wCFcoZ0zwj9xcstuJ5qYekE/2/a8TtshnG5B/4LZdsZt+rxOEkYSn2XM9BGcm3i6RwzeHRhSAumz4OPgZe4SCwFPBjQ69u1mn39SIhQwk9pOEe4aELDdpz0UT7dbNBjUmcfzX36d9kveZsh0EzAKs51oR8AmtNPc+MIvECBgBgAAAA==) format('woff2');unicode-range:U+0030-0039;}
 
@@ -15,7 +15,16 @@
 /* ── §1 · Tipografía pixel en TODO el texto (el `body` incluido, como el resto de skins fijan su fuente en el
    body → reseñas, notas y demás quedan temadas por herencia): LETRAS en Pixelify Sans (la fuente que quedaba perfecta para el texto)
    y NÚMEROS en Silkscreen (los mejores dígitos pixel) vía `unicode-range` + `size-adjust` (para igualar tamaños). ── */
-:root[data-palette="seaofstars"] body { font-family: 'SoS Digits', 'Pixelify Sans', system-ui, sans-serif; font-weight: 500; }
+/* PAPELES DE LETRA de este tema. CAPA 0 (`_base.scss`) declara los cuatro papeles y todas las hojas
+   los usan por ficha; aquí es donde este tema decide qué familia va en cada uno. Cambiar la letra del
+   tema es cambiar ESTE bloque, no buscar `font-family` por el fichero. */
+:root[data-palette="seaofstars"] {
+  --font-body: 'SoS Digits', 'Pixelify Sans', system-ui, sans-serif;
+  --font-label: var(--font-body);
+  --font-display: var(--font-body);
+  --font-mono: 'SoS Digits', ui-monospace, monospace;
+}
+:root[data-palette="seaofstars"] body { font-family: var(--font-body); font-weight: 500; }
 :root[data-palette="seaofstars"] h2,
 :root[data-palette="seaofstars"] h3,
 :root[data-palette="seaofstars"] h4,
@@ -37,10 +46,10 @@
 :root[data-palette="seaofstars"] .hub-review-game,
 :root[data-palette="seaofstars"] .active-filter-chip,
 :root[data-palette="seaofstars"] .rl-card-tag,
-:root[data-palette="seaofstars"] .chip { font-family: 'SoS Digits', 'Pixelify Sans', system-ui, sans-serif; font-weight: 600; }
+:root[data-palette="seaofstars"] .chip { font-family: var(--font-body); font-weight: 600; }
 :root[data-palette="seaofstars"] .score-ring-num,
 :root[data-palette="seaofstars"] .score-dial-num,
-:root[data-palette="seaofstars"] .hub-review-medal { font-family: 'SoS Digits', 'Pixelify Sans', system-ui, sans-serif; font-weight: 700; }
+:root[data-palette="seaofstars"] .hub-review-medal { font-family: var(--font-body); font-weight: 700; }
 /* El dígito de Silkscreen (con size-adjust 110%) hace que "100" quede pegado al borde del anillo: 1px menos. */
 :root[data-palette="seaofstars"] .score-ring-num { font-size: calc(var(--sz) * .36 - 1px); }
 /* Iconos de píxel sin suavizado. */
@@ -68,7 +77,10 @@
 /* Término pulsable "PlayStation" de la nota: usa `style` inline con var(--steam) (oro vivo, falla). El inline
    no lleva !important, así que esta regla lo gana y lo lleva a oro profundo accesible. */
 :root[data-palette="seaofstars"][data-theme="light"] .settings-card-note button { color: #6e4700 !important; }
-:root[data-palette="seaofstars"][data-theme="light"] .chip-genre   { color: #6e4700; background: rgba(255,192,31,.22); border-color: rgba(224,149,26,.6); }
+/* El GÉNERO se tiñe con la rampa categórica (CAPA 2b), cuyos valores para este tema en claro están medidos
+   contra sus turquesas —que son el peor fondo de las doce combinaciones—. El oro profundo se queda como
+   respaldo para cualquier chip que se pinte sin tono (formulario, bandeja de importación). */
+:root[data-palette="seaofstars"][data-theme="light"] .chip-genre   { color: var(--cat-fg, #6e4700); background: color-mix(in srgb, var(--cat, #ffc01f) 22%, transparent); border-color: color-mix(in srgb, var(--cat, #e0951a) 60%, transparent); }
 :root[data-palette="seaofstars"][data-theme="light"] .chip-pf      { color: #145c39; background: rgba(63,184,79,.22); border-color: rgba(47,156,86,.55); }
 :root[data-palette="seaofstars"][data-theme="light"] .chip-pd      { color: #8a2416; background: rgba(240,68,62,.20); border-color: rgba(210,58,40,.55); }
 :root[data-palette="seaofstars"][data-theme="light"] .chip-generic { color: #7a3d00; background: rgba(255,138,43,.22); border-color: rgba(219,111,22,.55); }
@@ -121,18 +133,13 @@
 :root[data-palette="seaofstars"] .btn-accent,
 :root[data-palette="seaofstars"] .btn-steam,
 :root[data-palette="seaofstars"] .btn.is-active,
-:root[data-palette="seaofstars"] .btn-toggle.active { background: var(--steam) !important; background-image: none !important; color: #0b1b3a !important; border-color: var(--steam) !important; }
-:root[data-palette="seaofstars"] .btn-complete,
-:root[data-palette="seaofstars"] .btn-recommend { background: var(--success) !important; color: #06180a !important; }
-:root[data-palette="seaofstars"] .btn-inprogress { background: var(--warn) !important; color: #201200 !important; }
+:root[data-palette="seaofstars"] .btn-toggle.active { background: var(--steam) !important; background-image: none !important; color: var(--on-accent) !important; border-color: var(--steam) !important; }
+:root[data-palette="seaofstars"] .btn-complete { background: var(--success) !important; color: #06180a !important; }
 /* Botones de peligro: relleno rojo un poco MÁS PROFUNDO + texto CREMA (el texto oscuro sobre el rojo no se
    distinguía). Cream sobre el rojo profundo pasa AA en oscuro y en claro. */
 :root[data-palette="seaofstars"] .btn-danger,
-:root[data-palette="seaofstars"] .btn-abandoned,
-:root[data-palette="seaofstars"] .btn-recommend-active { background: color-mix(in srgb, var(--danger) 85%, #000) !important; color: #fff7d6 !important; }
+:root[data-palette="seaofstars"] .btn-abandoned { background: color-mix(in srgb, var(--danger) 85%, #000) !important; color: #fff7d6 !important; }
 :root[data-palette="seaofstars"][data-theme="light"] .btn-complete,
-:root[data-palette="seaofstars"][data-theme="light"] .btn-recommend,
-:root[data-palette="seaofstars"][data-theme="light"] .btn-inprogress,
 :root[data-palette="seaofstars"][data-theme="light"] .btn-danger,
 :root[data-palette="seaofstars"][data-theme="light"] .btn-abandoned { color: #fff7d6 !important; }
 :root[data-palette="seaofstars"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 14px color-mix(in srgb, var(--sos-turq) 45%, transparent); }
@@ -287,7 +294,6 @@
 }
 
 :root[data-palette="seaofstars"] .year-scale-ramp { border-radius: 0; }
-:root[data-palette="seaofstars"] .year-peak { border-radius: 0; }
 
 /* Campo de estrellas tenue también bajo la serie, como en los demás lienzos de datos. */
 :root[data-palette="seaofstars"] .year-trend-plot {
@@ -303,7 +309,6 @@
 /* Nada de círculos: los puntos son píxeles. */
 :root[data-palette="seaofstars"] .timeline-dot,
 :root[data-palette="seaofstars"] .dumbbell-dot,
-:root[data-palette="seaofstars"] .ratio-dot,
 :root[data-palette="seaofstars"] .donut-key,
 :root[data-palette="seaofstars"] .dot-matrix-dots i,
 :root[data-palette="seaofstars"] .stats-legend-dot { border-radius: 0; }
@@ -393,7 +398,7 @@
   box-shadow: 0 0 0 2px var(--bg) !important;
 }
 /* El renglón, en la pixelada de los diálogos y algo más grande para que se lea a ese cuerpo. */
-:root[data-palette="seaofstars"] .hub-feed-move-line { font-size: .9rem; }
+:root[data-palette="seaofstars"] .hub-feed-move-line { font-size: var(--fs-md); }
 
 /* ── §16 · LIENZO DE LA ACTIVIDAD SOCIAL: EL CIELO EN LA CAJA ─────────────────────────────────────────────────
    La zona vacía del feed (ver `.hub-feed-lienzo` en `_layout.scss`). Un trozo de campo de estrellas más denso
@@ -481,4 +486,75 @@
   0%, 96.4% { opacity: 0; transform: scale(.3); }
   97.4% { opacity: 1; transform: scale(1); }
   99.4%, 100% { opacity: 0; transform: scale(.4); }
+}
+
+/* ══ MOMENTOS · LA CONSTELACIÓN: al abrir el panel, la figura del radar se DIBUJA en vez de crecer ══════════
+   En el resto de temas la telaraña de géneros brota desde el centro (`radar-bloom`). Aquí no: el trazo se va
+   dibujando de un vértice al siguiente y los puntos se encienden detrás, que es como se lee una constelación
+   —una línea imaginaria entre estrellas que ya estaban ahí—. Es el gesto del cielo del juego, y el panel es el
+   único sitio de la app donde hay una figura que unir.
+
+   `stroke-dasharray` en un valor grande a propósito: el perímetro depende de cuántos géneros tengas, así que
+   se toma uno que sobre para el radio máximo del gráfico en vez de calcularlo por JS. ══ */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-effects="on"][data-palette="seaofstars"] .genre-radar-shape {
+    stroke-dasharray: 1400;
+    stroke-dashoffset: 1400;
+    animation: sos-constellation 1.25s ease-out .15s both;
+  }
+  @keyframes sos-constellation {
+    0%   { stroke-dashoffset: 1400; opacity: .9; fill-opacity: 0; transform: none; }
+    70%  { fill-opacity: .35; }
+    100% { stroke-dashoffset: 0; opacity: 1; fill-opacity: 1; transform: none; }
+  }
+
+  /* Las estrellas se encienden una detrás de otra, no todas a la vez: el orden es el del trazo. */
+  :root[data-effects="on"][data-palette="seaofstars"] .genre-radar-dot {
+    animation: sos-star-lit .5s ease-out both;
+  }
+  :root[data-effects="on"][data-palette="seaofstars"] .genre-radar-axis:nth-of-type(2n) .genre-radar-dot { animation-delay: .95s; }
+  :root[data-effects="on"][data-palette="seaofstars"] .genre-radar-axis:nth-of-type(2n + 1) .genre-radar-dot { animation-delay: 1.1s; }
+  @keyframes sos-star-lit {
+    0%   { opacity: 0; filter: none; }
+    55%  { opacity: 1; filter: drop-shadow(0 0 6px rgba(255, 247, 214, .95)); }
+    100% { opacity: 1; filter: none; }
+  }
+}
+
+/* ── §N · LA CAJA SIN CARÁTULA = LA CAJA DE DIÁLOGO ────────────────────────────────────────────────────
+   El cuadro de texto del juego, el mismo 9-slice de los paneles (§3): borde de 2 px y anillo interior
+   separado. Dentro, el cielo estrellado en píxeles —cuatro puntos de un píxel, uno por cada color del
+   tema—, que es la firma del skin traída a la pieza sin animarla: son treinta cajas a la vez. ── */
+:root[data-palette="seaofstars"] .game-card.is-flat {
+  border: 2px solid var(--sos-line);
+  border-radius: 0;
+  background:
+    radial-gradient(1px 1px at 18% 24%, var(--sos-turq) 50%, transparent 50%),
+    radial-gradient(1px 1px at 72% 16%, var(--sos-pink) 50%, transparent 50%),
+    radial-gradient(1px 1px at 46% 62%, var(--sos-purple) 50%, transparent 50%),
+    radial-gradient(1px 1px at 88% 78%, var(--steam) 50%, transparent 50%),
+    var(--surface);
+  box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px color-mix(in srgb, var(--sos-turq) 70%, transparent);
+}
+:root[data-palette="seaofstars"] .game-card.is-flat .game-card-body { padding: 1rem 1.05rem; }
+/* EL MEDIDOR = LA BARRA DE PUNTOS DE VIDA de la caja de diálogo, y está SOMBREADA COMO UN SPRITE: tres
+   bandas planas —luz, color y sombra— en vez de un degradado, que es como tiene el volumen todo lo que se
+   dibuja píxel a píxel. El filo turquesa de arriba la separa del cuerpo sin añadir otro cerco.
+   Dentro del 9-slice, como en «Solo hay guerra»: el color no puede pisar el anillo interior. */
+:root[data-palette="seaofstars"] .game-card .game-card-meter {
+  height: 7px;
+  background: color-mix(in srgb, #000 50%, var(--surface));
+  box-shadow: inset 0 1px 0 var(--sos-turq);
+}
+/* El 9-slice solo lo tiene la caja sin lámina, y ahí el color no puede pisar su anillo interior (4 px). */
+:root[data-palette="seaofstars"] .game-card.is-flat .game-card-meter {
+  width: auto;
+  margin: 0 4px 4px;
+}
+:root[data-palette="seaofstars"] .game-card .game-card-meter::after {
+  inset: 1px auto 0 0;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, #fff 40%, hsl(var(--score-hue, 0) 58% var(--acc-l))) 0 40%,
+    hsl(var(--score-hue, 0) 58% var(--acc-l)) 40% 75%,
+    color-mix(in srgb, #000 30%, hsl(var(--score-hue, 0) 58% var(--acc-l))) 75% 100%);
 }

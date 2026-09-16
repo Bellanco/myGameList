@@ -1,7 +1,15 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
 import { SocialProfileDetailScreen } from '../../src/view/components/socialhub/SocialProfileDetailScreen';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
+import { ADMIN_ONLY_TIER } from '../../src/core/constants/tiers';
+
+/* La preferencia de carátulas se replica a la nube cuando hay sesión; aquí no hay ninguna, y lo que se mira es
+   qué pide la pantalla, no dónde se guarda el ajuste. */
+vi.mock('../../src/model/repository/firebaseRepository', () => ({
+  getPublicConfig: vi.fn(),
+  setPublicConfig: vi.fn(async () => {}),
+}));
 
 function game(id: number, name: string) {
   return {
@@ -59,6 +67,60 @@ describe('SocialProfileDetailScreen — listados', () => {
     expect(screen.queryByRole('tab', { name: SOCIAL_UI.feed.profileListTabPlanned })).not.toBeInTheDocument();
     // Pero las visibles sí (se renderizan con role="tab").
     expect(screen.getByRole('tab', { name: SOCIAL_UI.feed.profileListTabCompleted })).toBeInTheDocument();
+  });
+});
+
+/* LAS CARÁTULAS DE UNA BIBLIOTECA AJENA. Tu biblioteca la resuelve una vez el recorrido de fondo; la de otra
+   persona es un catálogo entero de juegos que no tienes, y se multiplica por cada perfil que abras. Hasta que
+   haya números para decidir, solo las pide quien tiene el rango que paga los privilegios; los demás ven la misma
+   lista sin imágenes. Cuando se desbloquee, vuelve a mandar el check de cada uno. */
+describe('SocialProfileDetailScreen — carátulas ajenas', () => {
+  const foreignProfile = {
+    displayName: 'Ada',
+    visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false },
+    sharedLists: { c: [game(1, 'Halo')], v: [], e: [], p: [] },
+  };
+
+  function pintaPerfil(viewerTier?: typeof ADMIN_ONLY_TIER) {
+    localStorage.setItem('mis-listas-covers', 'on'); // el check, encendido: lo que decide aquí es el rango
+    localStorage.setItem('mis-listas-list-shape', 'grid');
+    return render(
+      <SocialProfileDetailScreen
+        SOCIAL_UI={SOCIAL_UI}
+        activeProfileDetail={foreignProfile}
+        friendshipState="friends"
+        viewerTier={viewerTier}
+        onAddOrAcceptFriend={vi.fn()}
+        onCancelFriendRequest={vi.fn()}
+        onRemoveFriend={vi.fn()}
+        onBack={vi.fn()}
+        showReviews={false}
+        onToggleReviews={vi.fn()}
+        onOpenReview={vi.fn()}
+        status=""
+        statusKind=""
+      />,
+    );
+  }
+
+  afterEach(() => {
+    cleanup();
+    localStorage.clear();
+  });
+
+  it('no las pide con el rango de partida, aunque el check esté encendido', () => {
+    const { container } = pintaPerfil();
+
+    expect(container.querySelector('.game-cover-img')).toBeNull();
+    // Y la lista sigue estando: lo que cambia es que se pinta sin imágenes. (El nombre sale más de una vez en el
+    // mosaico —el título de la caja y el rótulo para lectores de pantalla—, así que se cuentan todas.)
+    expect(screen.getAllByText('Halo').length).toBeGreaterThan(0);
+  });
+
+  it('y sí con mithril, que es a quien se le ha desbloqueado', () => {
+    const { container } = pintaPerfil(ADMIN_ONLY_TIER);
+
+    expect(container.querySelector('.game-cover-img')).not.toBeNull();
   });
 });
 

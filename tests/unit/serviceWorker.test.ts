@@ -28,6 +28,7 @@ interface FakeCache {
   match: ReturnType<typeof vi.fn>;
   add: ReturnType<typeof vi.fn>;
   delete: ReturnType<typeof vi.fn>;
+  keys: ReturnType<typeof vi.fn>;
 }
 
 function html(body = '<!DOCTYPE html>'): Response {
@@ -52,6 +53,7 @@ function loadServiceWorker(options: { fetchImpl?: (request: Request) => Promise<
     match: vi.fn(async (key: unknown) => (String((key as Request)?.url ?? key).endsWith('/') ? options.shell : undefined)),
     add: vi.fn(async () => {}),
     delete: vi.fn(async () => true),
+    keys: vi.fn(async () => []),
   };
 
   // El `fetch` real rechaza con `AbortError` cuando se aborta su señal, y de eso depende el tope de espera de las
@@ -91,18 +93,25 @@ function loadServiceWorker(options: { fetchImpl?: (request: Request) => Promise<
     self, self.caches, fetchMock, Response, ScopedRequest, URL, setTimeout, clearTimeout,
   );
 
-  return { self, cache, fetchMock, handlers };
+  return { self, cache, fetchMock, handlers, pendientes: [] as Promise<unknown>[] };
 }
 
-/** Dispara un manejador de `fetch` del worker y devuelve la respuesta con la que contestó. */
+/**
+ * Dispara un manejador de `fetch` del worker y devuelve la respuesta con la que contestó.
+ *
+ * Lo que se le pase a `waitUntil` se recoge en `pendientes` y se espera: el trabajo de segundo plano —refrescar
+ * una carátula vieja, podar el cubo— vive ahí, así que sin esto un test no puede afirmar nada sobre él.
+ */
 async function respondTo(sw: ReturnType<typeof loadServiceWorker>, request: Request): Promise<Response> {
   let responded: Promise<Response> | Response = new Response(null, { status: 599 });
   sw.handlers.get('fetch')?.({
     request,
     respondWith: (value: Promise<Response> | Response) => { responded = value; },
-    waitUntil: () => {},
+    waitUntil: (value: Promise<unknown>) => { sw.pendientes.push(Promise.resolve(value)); },
   });
-  return responded;
+  const response = await responded;
+  await Promise.all(sw.pendientes);
+  return response;
 }
 
 describe('service worker — instalación', () => {
@@ -195,5 +204,122 @@ describe('service worker — navegación con la red bloqueada', () => {
     const response = await respondTo(sw, new Request('https://mygamelist.pages.dev/', { headers: { accept: 'text/html' } }));
 
     expect(await response.text()).toContain('de red');
+  });
+});
+
+describe('service worker — carátulas', () => {
+  const COVER = 'https://mygamelist.pages.dev/cover?n=Hollow%20Knight&p=Steam';
+
+  /** Una carátula guardada hace `dias`, tal y como la habría dejado el cubo: con su `Date`, que es lo que se mira. */
+  function guardada(dias: number): Response {
+    const fecha = new Date(Date.now() - dias * 24 * 60 * 60 * 1000).toUTCString();
+    return new Response('jpeg', { status: 200, headers: { 'Content-Type': 'image/jpeg', Date: fecha } });
+  }
+
+  // Con «caché y revalida» —la regla que tenían antes— abrir el mosaico con la biblioteca llena disparaba una
+  // petición y una reescritura del cubo POR CARÁTULA para recibir los mismos bytes: ~300 de cada en una visita.
+  it('sirve la copia guardada sin volver a pedirla', async () => {
+    const sw = loadServiceWorker();
+    // Un mes largo: dentro del plazo, así que ni se pregunta. Antes, a los siete días ya se revalidaba.
+    sw.cache.match.mockImplementation(async () => guardada(40));
+
+    const response = await respondTo(sw, new Request(COVER));
+
+    expect(await response.text()).toBe('jpeg');
+    expect(sw.fetchMock).not.toHaveBeenCalled();
+    expect(sw.cache.put).not.toHaveBeenCalled();
+  });
+
+  /* NOVENTA DÍAS, no ocho. El plazo se alargó porque revalidar cada semana eran ~300 peticiones semanales por
+     dispositivo para recibir los mismos bytes: una carátula ya emparejada no cambia, y lo que sí cambia —un
+     título corregido— estrena URL y aquí no encuentra copia que servir. */
+  it('refresca en segundo plano la copia que ya tiene sus meses, pero responde con la que hay', async () => {
+    const sw = loadServiceWorker({ fetchImpl: async () => new Response('jpeg nuevo', { status: 200 }) });
+    sw.cache.match.mockImplementation(async () => guardada(91));
+
+    const response = await respondTo(sw, new Request(COVER));
+
+    // Quien mira la caja no espera a la red: se lleva la copia de siempre y el refresco ocurre por detrás.
+    expect(await response.text()).toBe('jpeg');
+    expect(sw.fetchMock).toHaveBeenCalledTimes(1);
+    expect(sw.cache.put).toHaveBeenCalledTimes(1);
+  });
+
+  it('sin fecha legible se revalida, que es equivocarse hacia el lado barato', async () => {
+    const sw = loadServiceWorker({ fetchImpl: async () => new Response('jpeg nuevo', { status: 200 }) });
+    sw.cache.match.mockImplementation(async () => new Response('jpeg', { status: 200 }));
+
+    await respondTo(sw, new Request(COVER));
+
+    expect(sw.fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('guarda la carátula que no tenía', async () => {
+    const sw = loadServiceWorker({ fetchImpl: async () => new Response('jpeg', { status: 200 }) });
+    sw.cache.match.mockImplementation(async () => undefined);
+
+    const response = await respondTo(sw, new Request(COVER));
+
+    expect(response.status).toBe(200);
+    expect(sw.cache.put).toHaveBeenCalledTimes(1);
+  });
+
+  // El cubo de carátulas es el único que sobrevive a los despliegues, así que sin poda solo podía crecer: cada
+  // juego renombrado o borrado deja dentro una entrada que nadie volverá a pedir.
+  it('recorta las más antiguas cuando el cubo pasa del tope', async () => {
+    const sw = loadServiceWorker();
+    const claves = Array.from({ length: 900 }, (_, i) => new Request(`${COVER}&i=${i}`));
+    sw.cache.keys.mockImplementation(async () => claves);
+
+    let activated: Promise<unknown> = Promise.resolve();
+    sw.handlers.get('activate')?.({ waitUntil: (value: Promise<unknown>) => { activated = value; } });
+    await activated;
+
+    // 900 guardadas, tope de 800: se van las 100 más viejas, que son las primeras que devuelve `keys()`.
+    expect(sw.cache.delete).toHaveBeenCalledTimes(100);
+    expect(sw.cache.delete).toHaveBeenCalledWith(claves[0]);
+    expect(sw.cache.delete).not.toHaveBeenCalledWith(claves[899]);
+  });
+
+  /* La aplicación puede pedir que no se pode (lo hace para el rango más alto, y solo mientras el navegador diga
+     que hay sitio de sobra). El worker no puede comprobar ni el rango ni el almacenamiento: se lo dicen. */
+  it('no poda si la aplicación le ha dicho que el tope está levantado', async () => {
+    const sw = loadServiceWorker();
+    sw.cache.match.mockImplementation(async (clave: unknown) =>
+      (String((clave as Request)?.url ?? clave).includes('sin-tope') ? new Response('1') : undefined));
+    sw.cache.keys.mockImplementation(async () => Array.from({ length: 900 }, (_, i) => new Request(`${COVER}&i=${i}`)));
+
+    let activated: Promise<unknown> = Promise.resolve();
+    sw.handlers.get('activate')?.({ waitUntil: (value: Promise<unknown>) => { activated = value; } });
+    await activated;
+
+    expect(sw.cache.delete).not.toHaveBeenCalled();
+  });
+
+  it('al volver el tope poda en el acto, sin esperar a la siguiente carátula', async () => {
+    // Se llega aquí porque ya NO hay sitio de sobra: esperar sería esperar justo cuando no se puede.
+    const sw = loadServiceWorker();
+    const claves = Array.from({ length: 900 }, (_, i) => new Request(`${COVER}&i=${i}`));
+    sw.cache.keys.mockImplementation(async () => claves);
+
+    let atendido: Promise<unknown> = Promise.resolve();
+    sw.handlers.get('message')?.({
+      data: { tipo: 'covers-sin-tope', valor: false },
+      waitUntil: (value: Promise<unknown>) => { atendido = value; },
+    });
+    await atendido;
+
+    expect(sw.cache.delete).toHaveBeenCalledTimes(101); // las 100 más viejas y la propia marca
+  });
+
+  it('no toca nada mientras el cubo esté por debajo del tope', async () => {
+    const sw = loadServiceWorker();
+    sw.cache.keys.mockImplementation(async () => Array.from({ length: 300 }, (_, i) => new Request(`${COVER}&i=${i}`)));
+
+    let activated: Promise<unknown> = Promise.resolve();
+    sw.handlers.get('activate')?.({ waitUntil: (value: Promise<unknown>) => { activated = value; } });
+    await activated;
+
+    expect(sw.cache.delete).not.toHaveBeenCalled();
   });
 });

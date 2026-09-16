@@ -27,7 +27,7 @@
   text-align: left;
 }
 
-.hub-gateway-consent p { color: var(--text-muted); font-size: .85rem; line-height: 1.4; margin: 0; }
+.hub-gateway-consent p { color: var(--text-muted); font-size: var(--fs-sm); line-height: 1.4; margin: 0; }
 
 /* La casilla es la acción de la pantalla: se presenta como una fila pulsable (no un check suelto perdido en el
    texto), con el acento del tema y área de toque cómoda en móvil. */
@@ -40,7 +40,7 @@
   background: var(--surface);
   border: 1px solid color-mix(in srgb, var(--fg-sky) 45%, var(--border));
   border-radius: 9px;
-  font-size: .92rem;
+  font-size: var(--fs-md);
   font-weight: 600;
   cursor: pointer;
   transition: background .16s, border-color .16s;
@@ -59,43 +59,24 @@
 .hub-gateway-consent-check:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 
-// Aviso de SIN CONEXIÓN del espacio social. Mismo lenguaje que el requisito de alta del perfil
-// (`.hub-profile-requirement`): banda ámbar de aviso, borde fino y dos líneas con distinto peso —el guiño del tema
-// y, debajo, qué está pasando—. No es un error, así que no toma el rojo; y la forma (radio, color, tipografía) sale
-// de las variables, que es lo que cada tema redefine.
-.hub-offline {
-  margin: 0;
-  padding: .6rem .75rem;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--warn) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--warn) 34%, transparent);
-}
-
-.hub-offline-lead {
-  margin: 0;
-  display: flex; align-items: center; gap: .45rem;
-  font-weight: 700;
-  color: var(--fg-amber);
-}
-
-.hub-offline-lead .ui-icon { flex: 0 0 auto; }
-
-.hub-offline-body {
-  margin: .25rem 0 0;
-  font-size: .82rem;
-  color: var(--text-muted);
-}
+// El aviso de SIN CONEXIÓN y el de REQUISITO DE ALTA del perfil ya no se pintan aquí: los dos eran la misma banda
+// ámbar escrita dos veces, y ahora son `.notice.is-inline` (ver `_notice.scss`), que va en el bundle base. No
+// puede vivir en esta hoja: `social.scss` viaja en el chunk perezoso del hub y el aviso de estado de la app lo
+// necesita desde el arranque.
 
 /* ── Rediseño "Mi perfil social" (edición): pasos numerados, hero de identidad y chip de estado ── */
 .hub-block-head { display: flex; align-items: center; gap: .55rem; }
 
 .hub-block-head h3 { margin: 0; }
 
+/* Lo que se va al extremo del renglón del título (hoy, el sello de rango). */
+.hub-block-head-end { margin-left: auto; }
+
 .hub-block-step {
   flex: 0 0 auto;
   width: 1.5rem; height: 1.5rem; border-radius: 50%;
   display: inline-grid; place-items: center;
-  font-size: .78rem; font-weight: 800;
+  font-size: var(--fs-xs); font-weight: 800;
   background: var(--steam-soft); color: var(--fg-link);
   border: 1px solid color-mix(in srgb, var(--steam) 35%, transparent);
 }
@@ -105,21 +86,15 @@
 
 .hub-identity-hero .finput { flex: 1; min-width: 0; }
 
-/* Requisito de alta sin cumplir (sin juegos completados): explica por qué "Guardar perfil" está deshabilitado. */
-.hub-profile-requirement {
-  margin: .6rem 0 0;
-  padding: .55rem .7rem;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--warn) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--warn) 38%, transparent);
-  color: var(--fg-amber);
-  font-size: .82rem;
-}
+/* Requisito de alta sin cumplir (sin juegos completados, sin foto propia, sin pestañas en el feed): explica por
+   qué está bloqueado lo de al lado. Es `.notice.is-inline`; aquí solo se le da el aire que le toca dentro del
+   bloque, que es lo único que no sabe el aviso. */
+.hub-profile-block .ach-toast.is-compact { margin: .6rem 0 0; }
 
 .hub-profile-sync-chip {
   margin-left: auto;
   display: inline-flex; align-items: center; gap: .4rem;
-  font-size: .72rem; font-weight: 700;
+  font-size: var(--fs-2xs); font-weight: 700;
   padding: .3rem .65rem; border-radius: var(--radius-pill);
   background: var(--surface-soft); border: 1px solid var(--border); color: var(--text-muted);
 }
@@ -155,7 +130,7 @@
   position: absolute; top: 4px; bottom: 4px; left: 0; z-index: 0;
   border-radius: var(--radius-pill);
   background: linear-gradient(180deg, var(--steam), color-mix(in srgb, var(--steam) 72%, #000));
-  box-shadow: 0 6px 16px rgba(var(--steam-rgb),.4);
+  box-shadow: var(--glow-accent-strong);
   transition: transform .32s cubic-bezier(.2,.8,.25,1), width .32s cubic-bezier(.2,.8,.25,1);
 }
 
@@ -168,7 +143,7 @@
   min-width: 0;
   display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
   border: none; background: transparent;
-  color: var(--text-muted); font: inherit; font-weight: 700; font-size: .82rem;
+  color: var(--text-muted); font: inherit; font-weight: 700; font-size: var(--fs-xs);
   padding: .5rem .95rem; border-radius: var(--radius-pill);
   cursor: pointer; white-space: nowrap;
   transition: color .22s ease;
@@ -202,7 +177,7 @@
 
 .hub-games-solo { display: inline-flex; align-items: center; gap: .55rem; }
 
-.hub-games-solo-label { font-size: .95rem; font-weight: 800; color: var(--hub-text); }
+.hub-games-solo-label { font-size: var(--fs-md); font-weight: 800; color: var(--hub-text); }
 
 @media (prefers-reduced-motion: reduce) {
   .hub-seg-ind { transition: none; }
@@ -216,82 +191,6 @@
   gap: .5rem;
 }
 
-.hub-feed-metrics {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: .35rem;
-}
-
-.hub-metric-card {
-  border: 1px solid rgba(var(--steam-rgb),.26);
-  border-radius: var(--radius-md);
-  background: linear-gradient(145deg, rgba(var(--steam-rgb),.14), var(--hub-grad-end));
-  padding: .35rem .4rem;
-  display: flex;
-  flex-direction: column;
-  gap: .12rem;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  min-height: 3.2rem;
-}
-
-.hub-metric-card span {
-  color: var(--hub-text-muted);
-  font-size: .55rem;
-  letter-spacing: .01em;
-  text-transform: uppercase;
-  font-weight: 700;
-  line-height: 1.1;
-  word-break: break-word;
-  display: block;
-  width: 100%;
-}
-
-.hub-metric-card strong {
-  font-size: .82rem;
-  color: var(--hub-text);
-  line-height: 1;
-  font-weight: 800;
-}
-
-@media (min-width: 48rem) {
-  .hub-feed-metrics {
-    gap: .4rem;
-  }
-
-  .hub-metric-card {
-    padding: .5rem .5rem;
-    min-height: 3.5rem;
-  }
-
-  .hub-metric-card span {
-    font-size: .62rem;
-  }
-
-  .hub-metric-card strong {
-    font-size: .95rem;
-  }
-}
-
-@media (min-width: 80rem) {
-  .hub-feed-metrics {
-    gap: .6rem;
-  }
-
-  .hub-metric-card {
-    padding: .65rem .75rem;
-    min-height: 3.8rem;
-  }
-
-  .hub-metric-card span {
-    font-size: .71rem;
-  }
-
-  .hub-metric-card strong {
-    font-size: 1.2rem;
-  }
-}
 
 .hub-profile-card {
   gap: 1.1rem;
@@ -317,24 +216,21 @@
 }
 
 .hub-profile-block h3 {
-  font-size: .95rem;
+  font-size: var(--fs-md);
   color: var(--hub-text);
   margin: 0;
 }
 
 .hub-profile-block p {
-  font-size: .82rem;
+  font-size: var(--fs-xs);
   line-height: 1.4;
   margin: 0;
   color: var(--hub-text-muted);
 }
 
-.hub-profile-block-wide {
-  grid-column: span 1;
-}
 
 .visibility-label {
-  font-size: .7rem;
+  font-size: var(--fs-3xs);
   font-weight: 700;
   color: var(--hub-text-muted);
   text-transform: uppercase;
@@ -347,52 +243,11 @@
 .visibility-check > span:not(.visibility-toggle-track) {
   order: 1; /* etiqueta a la izquierda, ocupa el resto */
   flex: 1;
-  font-size: .88rem;
+  font-size: var(--fs-sm);
   color: var(--hub-text);
   font-weight: 500;
 }
 
-.hub-profile-checkbox {
-  display: inline-flex;
-  align-items: center;
-  gap: .45rem;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.hub-profile-checkbox input {
-  accent-color: var(--steam);
-}
-
-.hub-hub-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: .7rem;
-  flex-wrap: wrap;
-}
-
-.hub-state-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: .28rem .62rem;
-  border-radius: var(--radius-pill);
-  border: 1px solid rgba(var(--warn-rgb),.35);
-  background: rgba(var(--warn-rgb),.12);
-  color: var(--fg-amber-soft);
-  font-size: .74rem;
-  font-weight: 700;
-}
-
-.hub-state-pill-ok {
-  border-color: rgba(var(--success-rgb),.35);
-  background: rgba(var(--success-rgb),.12);
-  color: var(--fg-green-soft);
-}
-
-.hub-lead {
-  font-size: .92rem;
-}
 
 .hub-status-grid {
   display: grid;
@@ -421,35 +276,15 @@
 
 .hub-status-label {
   color: var(--text-muted);
-  font-size: .75rem;
+  font-size: var(--fs-2xs);
   letter-spacing: .02em;
 }
 
 .hub-status-card strong {
   color: var(--text);
-  font-size: .88rem;
+  font-size: var(--fs-sm);
 }
 
-.hub-hub-card-space {
-  gap: 1rem;
-}
-
-.hub-space-welcome {
-  border: 1px solid rgba(var(--steam-rgb),.25);
-  border-radius: var(--radius-sm);
-  background: linear-gradient(145deg, rgba(var(--steam-rgb),.14), var(--hub-grad-end));
-  padding: .85rem .95rem;
-}
-
-.hub-space-welcome h3 {
-  margin: 0;
-  font-size: 1.02rem;
-  color: var(--hub-text);
-}
-
-.hub-space-welcome p {
-  margin: .35rem 0 0;
-}
 
 .hub-hub-tags {
   display: flex;
@@ -466,7 +301,7 @@
   background: rgba(var(--steam-rgb),.1);
   border: 1px solid rgba(var(--steam-rgb),.28);
   color: var(--fg-link);
-  font-size: .74rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
 }
 
@@ -482,17 +317,12 @@ button.hub-chip.active {
   color: var(--fg-green);
 }
 
-.hub-feed-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: .7rem;
-}
 
 /* Rejilla de PERSONAS: la comparten el directorio de perfiles y la bandeja de solicitudes.
    ─────────────────────────────────────────────────────────────────────────────
-   Sustituye al carrusel horizontal (`.hub-feed-row`, abajo), que era el contenedor equivocado para una lista
-   que se explora: escondía el contenido a la derecha, no daba ninguna pista de cuánta gente había y obligaba a
-   arrastrar con el ratón. Y sustituye también a la columna de burbujas de la bandeja, que apilaba las tres
+   Sustituyó al carrusel horizontal, que era el contenedor equivocado para una lista que se explora: escondía
+   el contenido a la derecha, no daba ninguna pista de cuánta gente había y obligaba a arrastrar con el ratón.
+   Y sustituyó también a la columna de burbujas de la bandeja, que apilaba las tres
    listas —recibidas, enviadas y amigos— a pantalla y media de distancia unas de otras.
 
    SIN TOPE DE COLUMNAS, y esto se decidió midiendo. Hubo un tope de 3 columnas (acotando el ancho del
@@ -581,13 +411,13 @@ button.hub-chip.active {
   flex: 1 1 auto;
   min-width: 0;
   padding: .32rem .55rem;
-  font-size: .78rem;
+  font-size: var(--fs-xs);
   gap: .3rem;
 }
 
-.hub-user-card-actions .btn .ui-icon { width: .9rem; height: .9rem; }
+.hub-user-card-actions .btn .ui-icon { width: var(--ico-sm); height: var(--ico-sm); }
 
-.hub-user-card-actions .hub-friend-chip { font-size: .74rem; }
+.hub-user-card-actions .hub-friend-chip { font-size: var(--fs-2xs); }
 
 /* Tarjeta con una acción en curso (aceptar / rechazar / retirar / dejar de ser amigos): se atenúa y muestra un
    spinner, feedback uniforme para las cinco listas. Sustituye a `.hub-request-item.is-busy`, que solo existía en
@@ -625,7 +455,7 @@ button.hub-chip.active {
   }
 
   /* Los que conservan texto encogen la letra en vez de la caja. */
-  .hub-user-card-actions .btn { font-size: .72rem; }
+  .hub-user-card-actions .btn { font-size: var(--fs-2xs); }
 }
 
 /* Recuento junto al título de cada sección. */
@@ -634,30 +464,6 @@ button.hub-chip.active {
   font-weight: 600;
 }
 
-.hub-feed-row {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(17rem, 21rem);
-  gap: .75rem;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: .35rem .1rem .55rem;
-  scrollbar-width: thin;
-  cursor: grab;
-}
-
-.hub-feed-row.is-dragging {
-  cursor: grabbing;
-}
-
-.hub-feed-row::-webkit-scrollbar {
-  height: 7px;
-}
-
-.hub-feed-row::-webkit-scrollbar-thumb {
-  background: rgba(var(--steam-rgb),.36);
-  border-radius: 999px;
-}
 
 .hub-feed-toolbar {
   border: 1px solid var(--border);
@@ -676,50 +482,19 @@ button.hub-chip.active {
 
 .hub-feed-search span {
   color: var(--text-muted);
-  font-size: .75rem;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: .03em;
   font-weight: 700;
 }
 
-.hub-feed-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .45rem;
-}
-
-.hub-filter-chip {
-  border: 1px solid rgba(var(--steam-rgb),.35);
-  background: rgba(var(--steam-rgb),.1);
-  color: var(--hub-text-muted);
-  border-radius: 999px;
-  padding: .28rem .72rem;
-  font-size: .76rem;
-  font-weight: 700;
-  font-family: inherit;
-  transition: border-color .2s ease, background .2s ease, color .2s ease;
-}
-
-.hub-filter-chip.is-active {
-  border-color: rgba(var(--success-rgb),.65);
-  background: rgba(var(--success-rgb),.2);
-  color: var(--fg-green);
-}
 
 .hub-feed-result-count {
   margin: 0;
-  font-size: .78rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
 }
 
-.hub-feed-game-subtitle {
-  display: block;
-  margin-top: .2rem;
-  color: var(--hub-text);
-  font-size: .78rem;
-  font-weight: 600;
-  letter-spacing: .02em;
-}
 
 .hub-feed-day-group {
   gap: .7rem;
@@ -732,7 +507,7 @@ button.hub-chip.active {
   flex: 1 1 auto;
   min-width: 0;
   margin: 0;
-  font-size: .84rem;
+  font-size: var(--fs-sm);
   line-height: 1.35;
   color: var(--text-muted);
 }
@@ -781,11 +556,6 @@ button.hub-chip.active {
 .hub-avatar-img { object-fit: cover; background: var(--surface-hover); }
 
 /* F4 — el avatar del renglón de movimiento: presente para saber de quién es, sin ser el protagonista. */
-.hub-avatar-xs {
-  width: 1.45rem;
-  height: 1.45rem;
-  font-size: .62rem;
-}
 
 /* social/profiles — hero de página de perfil: avatar grande + nombre + recuento, centrado. */
 .hub-profile-hero {
@@ -797,21 +567,11 @@ button.hub-chip.active {
   padding: .4rem 0 .2rem;
 }
 
-.hub-profile-hero-meta {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: .82rem;
-}
 
 /* Fase 3 — skeletons de carga. El FOTOGRAMA del pulso (`hub-skeleton-pulse`) ya no está aquí: se mudó a
    `_motion.scss`, que va en el arranque. Aquí se quedaba sin efecto en el único momento en que hace falta —el
    esqueleto se enseña MIENTRAS baja este chunk, así que su animación llegaba cuando ya no había nada que
    animar—. Las reglas que lo usan (`.hub-skeleton`) viven en `_layout.scss`. */
-
-.hub-feed-email {
-  color: var(--text);
-  font-weight: 700;
-}
 
 
 .hub-post-text {
@@ -831,7 +591,7 @@ button.hub-chip.active {
   background: none;
   color: var(--fg-link);
   font: inherit;
-  font-size: .82rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   cursor: pointer;
   text-decoration: underline;
@@ -861,6 +621,18 @@ button.hub-chip.active {
   margin: .4rem 0;
 }
 
+/* EL HUECO MIENTRAS BAJA. Una imagen de una publicación viene de un servidor ajeno y sus medidas no se saben
+   hasta que llega, así que no hay `width`/`height` que poner: sin nada, el elemento mide CERO y todo lo que
+   viene debajo —el resto del texto, las tarjetas siguientes del feed— salta cuando la imagen aparece.
+   Se guarda un sitio modesto y una superficie tenue que dice «aquí viene algo», y se suelta al cargar (el
+   estado lo pone `PostMedia`). No es la altura final —esa no se puede adivinar—, pero convierte el salto de
+   toda la imagen en el trozo que le falte. */
+.hub-post-media[data-carga="cargando"] {
+  min-width: 6rem;
+  min-height: 11rem;
+  background: var(--surface-hover);
+}
+
 .hub-post-hint {
   display: block;
   margin-top: .25rem;
@@ -887,7 +659,7 @@ button.hub-chip.active {
 
 .hub-gateway-step-caption {
   margin: -.15rem 0 .1rem;
-  font-size: .82rem;
+  font-size: var(--fs-xs);
   color: var(--hub-text-muted);
   font-weight: 700;
   text-transform: uppercase;
@@ -905,7 +677,7 @@ button.hub-chip.active {
 
 .hub-gateway-progress small {
   color: var(--text-muted);
-  font-size: .74rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   letter-spacing: .02em;
 }
@@ -925,7 +697,7 @@ button.hub-chip.active {
   width: 0;
   background: linear-gradient(90deg, rgba(var(--steam-rgb),.82), rgba(var(--success-rgb),.88));
   border-radius: 999px;
-  box-shadow: 0 0 14px rgba(var(--steam-rgb),.28);
+  box-shadow: var(--glow-accent-halo);
   transition: width .42s ease-out;
 }
 
@@ -941,7 +713,7 @@ button.hub-chip.active {
 .hub-gateway-btn {
   min-height: 3.1rem;
   border-radius: .8rem;
-  font-size: .98rem;
+  font-size: var(--fs-lg);
   font-weight: 800;
   display: inline-flex;
   align-items: center;
@@ -952,8 +724,8 @@ button.hub-chip.active {
 
 .hub-gateway-btn-primary {
   min-height: 3.8rem;
-  font-size: 1.06rem;
-  box-shadow: 0 10px 22px rgba(var(--steam-rgb),.16);
+  font-size: var(--fs-lg);
+  box-shadow: var(--glow-accent-lift);
   animation: socialCtaIn .36s ease-out;
 }
 
@@ -974,7 +746,7 @@ button.hub-chip.active {
   cursor: pointer;
   color: var(--fg-link);
   font-weight: 700;
-  font-size: .88rem;
+  font-size: var(--fs-sm);
   padding: .35rem .15rem .5rem;
   list-style: none;
 }
@@ -1027,7 +799,7 @@ button.hub-chip.active {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: .69rem;
+  font-size: var(--fs-3xs);
   font-weight: 900;
   border: 1px solid var(--border);
   color: var(--hub-text);
@@ -1051,7 +823,7 @@ button.hub-chip.active {
 
 .hub-gateway-step-copy strong {
   color: var(--text);
-  font-size: .8rem;
+  font-size: var(--fs-xs);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1059,7 +831,7 @@ button.hub-chip.active {
 
 .hub-gateway-step-copy small {
   color: var(--text-muted);
-  font-size: .72rem;
+  font-size: var(--fs-2xs);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1091,7 +863,7 @@ button.hub-chip.active {
 
 .hub-feed-day-header h4 {
   margin: 0;
-  font-size: .88rem;
+  font-size: var(--fs-sm);
   font-weight: 700;
   letter-spacing: .02em;
   color: var(--hub-text-muted);
@@ -1116,25 +888,9 @@ button.hub-chip.active {
 .hub-name-link:focus-visible {
   outline: none;
   border-radius: .25rem;
-  box-shadow: 0 0 0 2px rgba(var(--steam-rgb),.2);
+  box-shadow: var(--ring-accent);
 }
 
-@container social-card (max-width: 66rem) {
-  .hub-feed-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@container social-card (max-width: 48rem) {
-  .hub-feed-metrics {
-    grid-template-columns: 1fr;
-  }
-
-  .hub-filter-chip {
-    font-size: .72rem;
-    padding: .24rem .62rem;
-  }
-}
 
 @media (max-width:980px) {
   .hub-status-grid {
@@ -1145,9 +901,6 @@ button.hub-chip.active {
     grid-template-columns: 1fr;
   }
 
-  .hub-profile-block-wide {
-    grid-column: span 1;
-  }
 }
 
 @media (max-width:620px) {
@@ -1160,9 +913,6 @@ button.hub-chip.active {
     display: none;
   }
 
-  .hub-feed-row {
-    grid-auto-columns: minmax(14rem, 17rem);
-  }
 
   .hub-hub-gateway {
     min-height: calc(100vh - 150px);
@@ -1175,12 +925,12 @@ button.hub-chip.active {
 
   .hub-gateway-btn {
     min-height: 3.25rem;
-    font-size: 1rem;
+    font-size: var(--fs-lg);
   }
 
   .hub-gateway-btn-primary {
     min-height: 3.95rem;
-    font-size: 1.05rem;
+    font-size: var(--fs-lg);
   }
 
   .hub-gateway-progress {

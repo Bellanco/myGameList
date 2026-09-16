@@ -1,7 +1,7 @@
 /* Table */
 .table-wrap {
   background: var(--surface); border-radius: var(--radius-md);
-  overflow: auto; overflow-x: auto; border: 1px solid var(--border); box-shadow: var(--shadow);
+  overflow: auto; overflow-x: auto; border: 1px solid var(--hair); box-shadow: var(--e2), var(--edge);
   flex: 1 1 auto; min-height: 18rem; scrollbar-width: none;
 }
 .table-wrap::-webkit-scrollbar { display: none; }
@@ -19,9 +19,8 @@ table { width: 100%; border-collapse: collapse; text-align: left; min-width: 105
 
 .hub-feed-card-detail {
   container-type: inline-size;
-  /* Mismo nombre de contenedor que `.main-lists`, para que el revelado progresivo del meta
-     (estrellas → plataforma → género → puntos fuertes) use la misma lógica en el perfil
-     social que en el listado principal, respondiendo al ancho de la tarjeta. */
+  /* Mismo nombre de contenedor que `.main-lists`, para que el renglón se reparta con la misma lógica en el
+     perfil social que en el listado principal, respondiendo al ancho de la tarjeta y no al de la pantalla. */
   container-name: gamelist;
 }
 
@@ -51,81 +50,20 @@ table { width: 100%; border-collapse: collapse; text-align: left; min-width: 105
 }
 thead th {
   background: var(--surface-hover); padding: .95rem 1rem;
-  font-weight: 700; color: var(--text-muted); font-size: .74rem;
+  font-weight: 700; color: var(--text-muted); font-size: var(--fs-2xs);
   text-transform: uppercase; letter-spacing: .5px; user-select: none;
   white-space: nowrap; position: sticky; top: 0; z-index: 2;
 }
-thead th.sortable { cursor: pointer; transition: color .2s; padding: 0; }
-/* El botón asume el relleno de la celda para que toda la cabecera sea zona pulsable, heredando
-   tipografía/mayúsculas del <th> para no alterar el aspecto. */
-thead th.sortable .th-sort-btn {
-  display: inline-flex; align-items: center; gap: .4em;
-  width: 100%; padding: .95rem 1rem;
-  background: none; border: 0; margin: 0; cursor: pointer;
-  font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; text-align: left;
-}
-/* Indicador de orden deliberadamente sutil: triángulo diminuto que apenas se percibe salvo en la
-   columna activa; en el resto solo insinúa "ordenable" al pasar el ratón. */
-.th-sort-caret {
-  flex: 0 0 auto; width: 0; height: 0;
-  border-left: 3px solid transparent; border-right: 3px solid transparent;
-  border-bottom: 4px solid currentColor;
-  opacity: 0; transition: opacity .2s, transform .2s;
-}
-@media (hover:hover) {
-  thead th.sortable:hover { color: var(--text); }
-  thead th.sortable:hover .th-sort-caret { opacity: .22; }
-}
-thead th.sorted { color: var(--text); }
-thead th.sorted .th-sort-caret { opacity: .4; }
-thead th.sorted.desc .th-sort-caret { transform: rotate(180deg); }
-@media (prefers-reduced-motion: reduce) {
-  .th-sort-caret { transition: none; }
-}
+/* LAS COLUMNAS SE FUERON, y con ellas todo lo que las sostenía: los anchos por importancia de Completados, el
+   plegado progresivo del escritorio estrecho, el `<colgroup>` que fijaba la rejilla de `table-layout: fixed` y
+   los botones de ordenar de la cabecera. El listado tiene UNA columna —el renglón o la fila de tarjetas— y el
+   orden se dice con los chips de su cabecera, así que nada de aquello podía verse ya.
+   `thead th` de arriba SE QUEDA: la bandeja de importados sigue siendo una tabla de tres columnas con su
+   cabecera de verdad. ── */
 
-/* Completados (c): el peso de cada columna (en su <th>/<td>) refleja su importancia
-   (nombre manda, fuertes/débiles los que menos). Solo en escritorio; en tablet/móvil
-   la tabla colapsa a tarjeta y la 1ª celda ocupa el 100%. */
-@media (min-width: 1101px) {
-  .col-c-name   { width: 24%; }
-  .col-c-score  { width: 12%; }
-  .col-c-plat   { width: 15%; }
-  .col-c-genre  { width: 13%; }
-  .col-c-year   { width: 8%; }
-  .col-c-replay { width: 6%; }
-  .col-c-strong { width: 11%; }
-  .col-c-weak   { width: 11%; }
-}
-
-/* Escritorio estrecho: antes de colapsar a tarjeta (≤1100px), en vez de comprimir el nombre
-   hasta partirlo en muchas líneas, retiramos las columnas menos importantes —primero «Puntos
-   débiles», luego «Puntos fuertes»— para dar aire al nombre. Sus datos siguen en el detalle
-   expandible. Al ocultar la columna (th+td), el resto se redistribuye solo. */
-@media (min-width: 1101px) and (max-width: 1340px) {
-  .col-c-weak { display: none; }
-}
-@media (min-width: 1101px) and (max-width: 1200px) {
-  .col-c-strong { display: none; }
-}
-
-/* Tablet/móvil: la tabla colapsa a tarjeta con `table-layout: fixed`. La 1ª columna se lleva el 100% y el
-   resto se anula, para que la tarjeta ocupe todo el ancho (las demás celdas están ocultas).
-   Manda el `<colgroup>`, no las celdas: con `fixed`, la rejilla se construye con la PRIMERA fila de la tabla, y
-   en una biblioteca de más de 120 juegos esa fila es un espaciador del virtualizador que declara `colSpan` con
-   todas las columnas de escritorio. El navegador repartía entonces el ancho a partes iguales entre esas 6–8
-   columnas —46 px cada una en un móvil de 412— y el `width: 100%` de la celda visible no ganaba: el nombre salía
-   a UN CARÁCTER POR LÍNEA y la fila medía 322 px (pasaba en Firefox y en Chrome). Los `<col>` tienen prioridad
-   sobre la primera fila en el algoritmo de `fixed`, así que la rejilla deja de depender de qué fila se pinte
-   primero. Las reglas de celda se quedan como red por si algún día se pinta la tabla sin `colgroup`. */
-@media (max-width: 1100px) {
-  col.col-row-main { width: 100%; }
-  col.col-row-rest { width: 0; }
-  .col-c-name { width: 100%; }
-  .col-c-year, .col-c-plat, .col-c-genre,
-  .col-c-strong, .col-c-weak, .col-c-score, .col-c-replay { width: 0; }
-}
-
-tbody tr.main-row { border-top: 1px solid var(--border); transition: background .2s ease, box-shadow .2s ease; cursor: pointer; }
+/* El separador de filas pide `--hair` —el mismo borde a media tinta— y no `--border`: con doscientos juegos en
+   pantalla, un filete entero por fila dibuja una reja y la reja se lee antes que los nombres. */
+tbody tr.main-row { border-top: 1px solid var(--hair); transition: background .2s ease, box-shadow .2s ease; cursor: pointer; }
 /* A11y-2: el disparador de detalles es un <button> real, pero se presenta como el texto del nombre. */
 tbody tr.main-row .row-toggle {
   display: inline-flex; align-items: center; gap: .4rem;
@@ -134,9 +72,9 @@ tbody tr.main-row .row-toggle {
 }
 tbody tr.main-row .row-toggle:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 3px; }
 tbody tr.main-row.striped { background: var(--surface-soft); }
-@media (hover:hover) { tbody tr.main-row:hover { background: var(--surface-hover); box-shadow: inset 3px 0 0 var(--steam, #66c0f4); } }
-tbody td { padding: .95rem 1rem; font-size: .88rem; vertical-align: middle; }
-tbody tr.detail-row { display: none; background: var(--detail-row-bg); border-top: 1px dashed var(--border); }
+@media (hover:hover) { tbody tr.main-row:hover { background: var(--surface-hover); box-shadow: inset 3px 0 0 var(--steam); } }
+tbody td { padding: .95rem 1rem; font-size: var(--fs-sm); vertical-align: middle; }
+tbody tr.detail-row { display: none; background: var(--detail-row-bg); border-top: 1px dashed var(--hair); }
 tbody tr.detail-row.open { display: table-row; }
 /* La celda del detalle NO lleva el relleno de una celda normal: su contenido (`.detail-content`) pone el suyo.
    Estaba escrito como `style={{ padding: 0 }}` inline en las DOS tablas que tienen fila de detalle (el listado
@@ -154,8 +92,7 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 /* Detail */
 .detail-content { padding: 1.1rem 1rem 1.2rem; display: grid; gap: .95rem; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); }
 .detail-box { display: flex; flex-direction: column; gap: .45rem; min-width: 0; }
-.detail-label { font-size: .72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: .9px; }
-.detail-value { font-size: .88rem; line-height: 1.55; color: var(--text); background: var(--surface); padding: .9rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border); white-space: pre-wrap; overflow-wrap: anywhere; }
+.detail-label { font-size: var(--fs-2xs); font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: .9px; }
 .detail-actions { display: flex; flex-wrap: wrap; gap: .75rem; justify-content: flex-end; grid-column: 1/-1; border-top: 1px solid var(--border); padding-top: 1rem; }
 /* Bloque de detalle a FILA COMPLETA (la reseña): un texto largo no debe caber en una de las dos columnas. */
 .detail-box.is-wide { grid-column: 1/-1; }
@@ -167,7 +104,11 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 .chips { display: flex; flex-wrap: wrap; gap: .4rem; min-width: 0; align-items: center; }
 /* Cada chip se mantiene en una sola línea (no parte su texto a la mitad); si no cabe,
    el .chips contenedor (flex-wrap) salta la pastilla entera a la fila siguiente. */
-.chip { padding: .22rem .64rem; border-radius: var(--radius-sm); font-size: .75rem; font-weight: 600; display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap; transition: transform .15s ease, filter .15s ease; }
+/* ALTO DE UNA RANURA. Lo que mide un chip (27 px medidos sobre el build), declarado una vez para que las
+   ranuras que se quedan vacías —las del renglón y las de la caja— reserven exactamente su sitio y ninguna fila
+   salga más baja que la de al lado. Si cambia el relleno o el cuerpo del chip, se cambia aquí. */
+:root { --chip-slot-h: 1.7rem; }
+.chip { padding: .22rem .64rem; border-radius: var(--radius-sm); font-size: var(--fs-2xs); font-weight: 600; display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap; transition: transform .15s ease, filter .15s ease; }
 /* En el detalle el texto lo escribe quien usa la app (puntos fuertes/débiles, plataformas), así que un
    solo chip puede ser más ancho que su bloque. Ahí el `nowrap` no podía salvarlo saltando de línea: se
    salía de la tarjeta y estiraba el ancho del documento, dando scroll horizontal a TODO el listado. Con
@@ -176,7 +117,14 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 @media (hover:hover) { .chip:hover { transform: translateY(-1px); filter: brightness(1.08); } }
 .chip-generic { background: rgba(var(--warn-rgb),.16); color: var(--fg-amber); border: 1px solid rgba(var(--warn-rgb),.32); }
 .chip-plat    { background: var(--chip-plat-bg); color: var(--chip-plat-fg); border: 1px solid var(--chip-plat-border); }
-.chip-genre   { background: rgba(var(--steam-rgb),.18);  color: var(--fg-sky); border: 1px solid rgba(var(--steam-rgb),.35); }
+/* GÉNERO · un tono por nombre (CAPA 2b). `categoryTone()` decide cuál y el componente lo pasa en `--cat`
+   (relleno) y `--cat-fg` (texto); los dos papeles van separados porque el relleno cumple 3:1 y el texto 4,5:1.
+   Los valores por defecto son el acento de siempre, así que un chip pintado SIN tono —el del formulario, el de
+   la bandeja de importación— sigue viéndose exactamente como antes. «Sin futuro» mantiene su propio reparto por
+   tipo (cian/amarillo/teal/carmesí) desde su skin: ahí el color ya decía algo y no se toca. */
+.chip-genre   { background: color-mix(in srgb, var(--cat, rgb(var(--steam-rgb))) 18%, transparent);
+                color: var(--cat-fg, var(--fg-sky));
+                border: 1px solid color-mix(in srgb, var(--cat, rgb(var(--steam-rgb))) 38%, transparent); }
 .chip-pf      { background: rgba(var(--success-rgb),.15);color: var(--fg-green); border: 1px solid rgba(var(--success-rgb),.3); }
 .chip-pd      { background: rgba(var(--danger-rgb),.15);  color: var(--fg-red-soft); border: 1px solid rgba(var(--danger-rgb),.3); }
 .chip-deck    { background: var(--chip-deck-bg); color: var(--chip-deck-fg); border: 1px solid var(--chip-deck-border); }
@@ -193,7 +141,7 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 /* Stars */
 .stars { color: var(--star-empty); letter-spacing: 2px; white-space: nowrap; display: inline-flex; gap: .12rem; }
 .stars .f { color: var(--star-full); }
-.star-inp { display: flex; gap: .18rem; cursor: pointer; font-size: 1.45rem; flex-wrap: wrap; }
+.star-inp { display: flex; gap: .18rem; cursor: pointer; font-size: var(--fs-2xl); flex-wrap: wrap; }
 .star-inp button {
   color: var(--star-empty);
   transition: transform .2s, color .2s;
@@ -207,7 +155,7 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 }
 .star-inp button.f { color: var(--star-full); animation: starPop .34s cubic-bezier(.2,1.2,.3,1); }
 @keyframes starPop { 0% { transform: scale(.6); } 55% { transform: scale(1.3); } 100% { transform: scale(1); } }
-.star-inp-field { align-items: center; justify-content: center; font-size: 1.2rem; }
+.star-inp-field { align-items: center; justify-content: center; font-size: var(--fs-xl); }
 
 /* ── F2 — aro de puntuación (nota 0–100), rojo→verde reutilizando la luminosidad --acc-l de las reseñas ── */
 /* Color del relleno/número según la nota (--score-hue: 0=rojo → ~135=verde). Borde fino; disco central grande. */
@@ -247,7 +195,7 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
   touch-action: none; cursor: pointer; user-select: none;
   background: conic-gradient(hsl(var(--score-hue, 0) 58% var(--acc-l)) calc(var(--score-pct, 0) * 1%), var(--score-track) 0);
 }
-.score-dial::after { content: ""; position: absolute; inset: var(--track-w); border-radius: 50%; background: var(--surface); box-shadow: inset 0 1px 3px rgba(0,0,0,.22); }
+.score-dial::after { content: ""; position: absolute; inset: var(--track-w); border-radius: 50%; background: var(--surface); box-shadow: var(--sunk); }
 .score-dial:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 4px; }
 .score-dial-num {
   position: absolute; inset: 0; z-index: 1;
@@ -262,7 +210,7 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
   width: 1.35rem; height: 1.35rem; border-radius: 50%;
   background: #fff; border: 3px solid hsl(var(--score-hue, 0) 58% var(--acc-l));
   transform: translate(-50%, -50%);
-  box-shadow: 0 1px 5px rgba(0,0,0,.4);
+  box-shadow: var(--e1);
 }
 @media (prefers-reduced-motion: no-preference) {
   .score-ring, .score-dial { transition: background .25s; }
@@ -339,130 +287,917 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 }
 .row-toggle[aria-expanded='true'] .row-chevron { transform: rotate(45deg); opacity: .85; }
 
-/* Meta dinámico (móvil/tablet): oculto por defecto, se muestra en vista colapsada */
-.row-meta { display: none; }
-.row-meta-item { display: none; align-items: center; gap: .2rem; }
-.rm-more { font-weight: 700; font-size: .62rem; opacity: .7; }
-.row-meta .stars { font-size: .74rem; letter-spacing: .5px; }
-/* Nota 0–100 (F2) en el meta compacto: el aro de la columna de escritorio mide 2.35rem, y en esta línea —donde
-   las estrellas van a .74rem— levantaba la fila de 75 a 93 px y se comía el ancho que las píldoras necesitan.
-   Se reduce igual que en los otros sitios compactos que ya lo hacen (`.top-chip-meta`, `.game-cards`). */
-.row-meta .score-ring { --sz: 1.7rem; }
+/* ── EL RENGLÓN, EN DOS PISOS ─────────────────────────────────────────────────────────────────────────────
+   Un solo renglón para todos los anchos (antes había dos marcados distintos, el ancho y el meta compacto del
+   teléfono, y mantener dos versiones de lo mismo es lo que los iba separando):
 
-/* Plataforma, género y puntos fuertes como mini-píldoras discretas, con el color de su categoría
-   (mismos tokens que .chip-plat / .chip-genre / .chip-pf) para poder diferenciarlas. */
-.rm-plat, .rm-genre, .rm-strong {
-  padding: .04rem .4rem; border-radius: var(--radius-sm);
-  font-size: .68rem; font-weight: 600; line-height: 1.5;
-  border: 1px solid transparent;
-  /* La línea del meta no envuelve (`nowrap`), así que una píldora que no cabe tiene que ENCOGERSE, no
-     desbordar: sin `min-width: 0` un ítem flex se niega a bajar de su contenido y antes de esta regla el
-     valor se partía en dos líneas («Xbox Series / X»), desnivelando la altura de unas filas respecto a otras. */
-  min-width: 0; overflow: hidden;
+     1. LA CABECERA (`.row-head`): el nombre a la izquierda y, contra el canto derecho, la nota y la insignia.
+        Lo que se busca al recorrer una lista de arriba abajo está siempre en el mismo punto, y no al final de
+        una línea de chips cuya longitud cambia en cada fila.
+     2. LAS CATEGORÍAS (`.row-cats`): año, plataformas y géneros, cada uno en SU RANURA. Son columnas
+        invisibles —ni líneas ni cabeceras— y son lo que hace que el género de una fila caiga debajo del
+        género de la siguiente. Sin esa alineación, y habiendo quitado las cabeceras que decían qué era cada
+        cosa, los chips se leen «ahí a lo loco» (plan §3.1).
+
+   Con el ancho no cambia la estructura, solo el reparto: en pantalla estrecha las ranuras se apilan
+   —plataforma arriba, género debajo, como en la maqueta de móvil— y los chips se topan antes con el «+N». ── */
+.row-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .6rem;
+  width: 100%;
+  min-width: 0;
 }
-.rm-plat  { background: var(--chip-plat-bg); color: var(--chip-plat-fg); border-color: var(--chip-plat-border); }
-.rm-genre { background: rgba(var(--steam-rgb),.14); color: var(--fg-sky);    border-color: rgba(var(--steam-rgb),.3); }
-.rm-strong { background: rgba(var(--success-rgb),.14); color: var(--fg-green); border-color: rgba(var(--success-rgb),.3); }
-/* Valor de la píldora: se recorta con puntos suspensivos cuando el ancho aprieta. */
-.rm-val { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* El "+N" vive DENTRO de la píldora, que sigue siendo un contenedor flex: no se encoge nunca. */
-.rm-more { flex: 0 0 auto; }
 
-/* Columna de cada categoría en la rejilla del meta (móvil/tablet): nota → plataforma → género → puntos
-   fuertes. Es una posición FIJA, no un orden relativo: a un juego le puede faltar el género y el resto no se
-   corre de sitio, que es lo que hace que las filas se lean en columnas. Qué columnas existen y cuánto miden se
-   decide más abajo, según el ancho y la lista.
-   El AÑO no está: en la tarjeta se pintaba como «2026 +2», que se lee como una operación aritmética y no como
-   «ese año y otros dos», y ocupaba el ancho que el género necesita para verse entero. Sigue en su columna de
-   escritorio y en el detalle desplegado, que es donde se ven todos los años y no solo el último. */
-.rm-score  { grid-column: 1; }
-.rm-plat   { grid-column: 2; }
-.rm-genre  { grid-column: 3; }
-.rm-strong { grid-column: 4; }
+.row-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+}
 
-/* En vista colapsada (≤1100px) la tabla pasa a una sola columna: chevron + meta. */
-@media (max-width: 1100px) {
+/* La ranura de la nota se reserva ENTERA aunque a este juego le falte: si se encogiera, la insignia de al lado
+   se correría de sitio en unas filas sí y en otras no. Cuánto mide lo dice la escala elegida (F2) —cinco
+   estrellas ocupan bastante más que el aro—, no la fila; de ahí las clases `meta-score` / `meta-grade`. */
+.row-score { display: inline-flex; align-items: center; justify-content: flex-end; }
+table.meta-score .row-score { min-width: 6.1rem; }
+table.meta-score.meta-grade .row-score { min-width: 2.9rem; }
+/* La nota y la insignia son las dos señales que se buscan al recorrer la lista, así que se pintan con cuerpo:
+   el aro casi al tamaño del de la tabla y las estrellas un punto por encima del texto de apoyo. Caben sin
+   levantar la fila porque el renglón ya mide dos líneas. */
+.row-actions .score-ring { --sz: 2.3rem; }
+.row-actions .stars { font-size: var(--fs-md); letter-spacing: .9px; }
+.row-actions .badge-rejugar-activo,
+.row-actions .badge-rejugar-inactivo,
+.row-actions .badge-opp-activo,
+.row-actions .badge-opp-inactivo { width: 38px; height: 38px; }
+.row-actions .badge-rejugar-activo .ui-icon,
+.row-actions .badge-rejugar-inactivo .ui-icon,
+.row-actions .badge-opp-activo .ui-icon,
+.row-actions .badge-opp-inactivo .ui-icon { width: var(--ico-lg); height: var(--ico-lg); }
+
+/* LAS COLUMNAS INVISIBLES, TAMBIÉN EN EL TELÉFONO. En estrecho las ranuras se reparten en dos líneas —año y
+   plataformas arriba, género debajo— pero siguen siendo una REJILLA, no chips sueltos: el año de una fila cae
+   sobre el año de la siguiente y la plataforma sobre la plataforma. Apilar sin alinear devolvía el problema que
+   esto vino a resolver, solo que en vertical. */
+.row-cats {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: .3rem 0;
+  width: 100%;
+  min-width: 0;
+}
+/* `min-height`: la ranura de una categoría que falta mide lo mismo que si tuviera su chip. Sin esto, un juego
+   sin género salía cuatro píxeles más bajo que los de al lado, que en una lista larga se nota como un temblor.
+   Y ninguna ranura crece a dos líneas: en una lista de trescientos renglones, uno más alto que el resto se ve
+   antes que un nombre recortado. Lo que no cabe ya lo cuenta el «+N». */
+.row-cat { display: inline-flex; align-items: center; min-width: 0; min-height: var(--chip-slot-h); }
+.row-cat .chips { flex-wrap: nowrap; }
+/* LOS CHIPS DE UNA RANURA NO SE ENCOGEN. Dejarles encoger (`min-width: 0`) reparte la estrechez entre todos, y
+   lo que se ve entonces es «P…» junto a «PlayStation…»: hasta «PC», que cabe en cualquier sitio, salía
+   recortado. Cada chip mide lo que mide su texto y lo que no entra en la ranura se queda fuera, que es como se
+   lee una línea: de izquierda a derecha, y lo que falta ya lo cuenta el «+N».
+   Y el corte no es a hachazo: la ranura se DESVANECE en su último centímetro, así que un género largo se apaga
+   en vez de partirse a media letra —que es lo que parecía un fallo de pintado—. */
+.row-cat .chip { flex: 0 0 auto; }
+.row-cat .chips {
+  /* Estirado hasta el canto de la ranura, para que el «+N» no se monte sobre el último chip. Aquí tampoco hay
+     máscara ni `overflow`: lo que cabe lo decide la cuenta (ver la nota de `.game-card-slot`). */
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* Si un valor suelto es más largo que su ranura —«Coleccionista de criaturas» en la columna del género de una
+   pantalla de 1024— se recorta con puntos suspensivos en vez de invadir la ranura vecina. Solo entonces: lo
+   marca el componente (`is-apretado`), porque es el que sabe si el texto entra o no. */
+.row-cat.is-apretado .chip:not(.chip-more) {
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  flex: 0 1 auto;
+}
+
+/* La ranura del año tiene ancho propio y su columna es `auto`: en las listas que no llevan año —Próximos, En
+   curso— la ranura ni se pinta, la columna se queda a cero y la plataforma empieza pegada al canto. */
+.row-cat-year  { grid-column: 1; grid-row: 1; width: 6.6rem; padding-right: .5rem; }
+.row-cat-plat  { grid-column: 2; grid-row: 1; }
+.row-cat-genre { grid-column: 1 / -1; grid-row: 2; }
+/* El recuadro de la opinión no viaja al teléfono: recortado a una palabra por lado, y sin rótulos, no se
+   entiende. Está entero en el detalle, que se abre pulsando el renglón. */
+.row-notes { display: none; }
+
+/* MÓVILES PEQUEÑOS: fuera el año. Por debajo de este ancho, sus nueve rem son justo los que le hacen falta a la
+   plataforma para verse entera, y de los tres datos el año es el que menos se busca al recorrer la lista. Su
+   columna es `auto`, así que al esconderlo se cierra sola y las otras dos no se descolocan. */
+@container gamelist (max-width: 22rem) {
+  .row-cat-year { display: none; }
+}
+
+/* El hueco de una categoría que falta se QUEDA, tenue: no es un guion que leer, es la ranura diciendo que ahí
+   no hay dato, y es lo que mantiene alineadas las filas (y las cajas) entre sí. */
+.chip-none { color: var(--text-dim); opacity: .5; font-size: var(--fs-2xs); line-height: 1.8; }
+
+/* LO QUE SE PENSÓ DEL JUEGO. Un recuadro HUNDIDO —la regla de la casa: lo que se rellena se hunde— por cada
+   grupo. SIN RÓTULOS: el recuadro ya lo separa de las categorías de arriba, y cuál es cuál lo dicen el color
+   (verde a favor, rojo en contra, los mismos de toda la app) y el sitio (la mitad izquierda siempre es la
+   buena). Dos versalitas repetidas trescientas veces eran más ruido que ayuda. */
+.row-notes {
+  /* LOS FUERTES Y LOS DÉBILES TAMBIÉN SON COLUMNAS INVISIBLES, como el año o el género: cada uno tiene su
+     mitad, así que el recuadro de lo malo arranca siempre en el mismo píxel, tenga la fila de arriba un punto
+     fuerte o cuatro. Sin eso, cada uno se colocaba donde le tocaba y volvía el desorden que las categorías ya
+     no tienen.
+     Y LA LÍNEA SE APROVECHA ENTERA: antes el bloque medía lo que medían sus chips (`width: fit-content`) y la
+     mitad derecha del renglón se quedaba en blanco aunque el juego tuviera cuatro defectos que contar. Ahora
+     las dos mitades se reparten todo el ancho —y por eso caben más chips antes del «+N»—.
+     LA SANGRÍA DE LA IZQUIERDA es la misma columna del AÑO de la línea de arriba —la ficha se declara en la
+     tabla, así que las dos rejillas miden igual esa columna—: lo bueno arranca EXACTAMENTE donde arranca la
+     plataforma, y lo malo a mitad del resto. Las dos filas del renglón se leen entonces como una sola rejilla
+     y no como dos bloques que empiezan cada uno por su cuenta. Donde no hay año (Próximos, En curso) la
+     columna se queda a cero y la sangría desaparece sola.
+     LOS DOS VAN UN PASO POR DELANTE DE SU CATEGORÍA, no debajo de ella: lo bueno cae entre el año y la
+     plataforma, y lo malo entre la plataforma y el género. Alineados justo debajo, las dos filas se leían como
+     una sola columna doble y el renglón se cargaba a la derecha; escalonados, cada cosa señala hacia lo que
+     matiza sin taparlo, que es como quedó dibujado. */
+  grid-template-columns: var(--row-col-notes, 0px) minmax(0, 1.25fr) minmax(0, 2.55fr);
+  gap: .35rem .6rem;
+  width: 100%;
+  min-width: 0;
+  margin-top: .35rem;
+}
+/* CADA GRUPO, SU PROPIO RECUADRO. Hundido y del ancho de su mitad. Sobre la franja de la carátula hace falta un
+   fondo PROPIO, no una transparencia más: si no, el recuadro se diluye y sus chips parecen sueltos encima de la
+   imagen.
+   Una sola línea, pase lo que pase: en una lista de trescientas filas, una más alta que el resto se ve antes
+   que un punto fuerte recortado. Lo que no cabe ya lo cuenta el «+N», y lo que aun así asome se desvanece en el
+   último centímetro (misma máscara que las ranuras de arriba). */
+.row-note {
+  display: flex;
+  align-items: center;
+  /* El recuadro mide lo que miden SUS CHIPS y no la mitad entera: un cerco medio vacío se lee como un dato que
+     falta. Lo que sí es fijo es dónde EMPIEZA —su columna—, que es lo que mantiene la lectura vertical entre
+     filas: el de lo malo arranca en el mismo píxel tenga la fila de arriba un punto fuerte o cuatro. */
+  justify-self: start;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  min-height: var(--chip-slot-h);
+  padding: .3rem .45rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--bg) 62%, transparent);
+  border: 1px solid color-mix(in srgb, var(--hair) 60%, transparent);
+}
+/* AQUÍ NO HAY DESVANECIDO, y es a propósito. El recuadro mide lo que miden sus chips (`fit-content`), así que
+   el último SIEMPRE toca su canto: una máscara de degradado —que es lo que usan las ranuras de las categorías,
+   donde el ancho es fijo— apagaba el final de la última palabra en todas las filas, y de paso el filete del
+   recuadro, que es lo que se veía como una sombra pegada al final de la fila.
+   Lo que no cabe se recorta con puntos suspensivos: el `max-width` es del recuadro, no de cada chip, así que
+   solo entra en juego cuando un solo punto fuerte es más ancho que su columna entera. Sin `overflow` en el
+   recuadro, que recortaría también arriba y abajo y les comería la sombra dura a las pegatinas. */
+.row-note .chips { min-width: 0; }
+.row-note .chip {
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+}
+/* Fila y columna puestas a mano: si la de los fuertes no existe, la de los débiles NO puede correrse a su
+   sitio, que es lo único que mantiene la lectura vertical entre filas. */
+.row-note-good { grid-column: 2; grid-row: 1; }
+.row-note-bad  { grid-column: 3; grid-row: 1; }
+.row-note .chips { flex-wrap: nowrap; }
+.row-note .chip { flex: 0 0 auto; }
+
+/* FORMA DE TARJETA (`is-cards`): la tabla pasa a una sola columna —el renglón entero— y las celdas de datos se
+   esconden. La pone el componente, no una media query: es la preferencia de forma (F5) o una pantalla estrecha,
+   y quien lo decide es `GameTable` para que la altura estimada de la fila y lo que se pinta no puedan discrepar. */
+table.is-cards {
+  /* La tabla deja de repartir ancho: su única celda se lleva el 100 %. Estas dos reglas vivían repetidas en los
+     dos bloques responsive de `_overlays-and-responsive.scss` (tablet y móvil) con `!important`; ahora son de
+     la FORMA, no del ancho, y por eso están aquí una sola vez. */
+  min-width: 0;
+  table-layout: fixed;
+  tbody tr.main-row td { width: 100%; }
+
+  border-collapse: separate;
+  border-spacing: 0 .5rem;
+
   .row-chevron { display: block; }
   /* El disparador ocupa la CELDA ENTERA. Era `inline-flex` a secas, así que se encogía al ancho de su
      contenido: en un móvil de 412 px eran 152 px de los 368 de la tarjeta. Eso tenía dos consecuencias, y la
      segunda es la que se ve: la mitad derecha de la fila no era zona pulsable —solo respondía al `onClick` de
-     ratón del `<tr>`, que no es un control— y el meta se quedaba amontonado a la izquierda dejando el resto de
-     la tarjeta vacío. Con el ancho completo, el objetivo táctil es la fila y el meta dispone de todo el ancho. */
-  tbody tr.main-row .row-toggle { width: 100%; }
-  .row-toggle-body { flex: 1 1 auto; }
-  /* El meta es una REJILLA, no una fila suelta. Con las píldoras sueltas, cada fila las colocaba donde le
-     tocaba según lo que midiera su texto, y la lista se leía desordenada: la plataforma de una fila empezaba
-     en un sitio y la de la siguiente en otro. Con columnas fijas —siempre las mismas, en el mismo sitio— las
-     categorías se alinean de fila a fila igual que en escritorio, y a un juego le puede faltar un dato sin que
-     el resto se corra de columna. Las columnas que la lista no usa se quedan a 0 y no dejan hueco: por eso la
-     separación NO es `gap` (que también separa columnas vacías) sino el margen que cada píldora se reserva en
-     su propia columna vía `max-width`. */
-  .row-meta {
-    display: grid;
-    grid-template-columns:
-      var(--rm-col-score, 0px)
-      var(--rm-col-plat, 0px)
-      var(--rm-col-genre, 0px)
-      var(--rm-col-strong, 0px);
-    align-items: center;
-    margin-top: .15rem; color: var(--text-muted);
-    overflow: hidden; width: 100%;
+     ratón del `<tr>`, que no es un control— y los datos se amontonaban a la izquierda dejando el resto de la
+     pieza vacío. Con el ancho completo, el objetivo táctil es la fila entera. */
+  tbody tr.main-row .row-toggle { width: 100%; align-items: flex-start; gap: .55rem; }
+  .row-chevron { margin-top: .5rem; }
+  .row-toggle-body { flex: 1 1 auto; gap: .45rem; }
+
+  /* CADA FILA ES UNA PIEZA, no un renglón de una cuadrícula: fondo propio, canto redondeado y aire entre una y
+     la siguiente (`border-spacing`, que es la única forma de separar filas en una tabla sin romperla). El
+     rayado de fila era una muleta de cuadrícula; con las filas separadas, sobra. */
+  tbody tr.main-row { border-top: 0; background: transparent; }
+
+  tbody tr.main-row > td:first-child {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--hair);
+    border-radius: var(--radius-md);
+    padding: .7rem .9rem;
+    box-shadow: var(--e1);
+    transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
   }
-  /* Cada píldora se pega al principio de SU columna (no la rellena: un fondo estirado con dos palabras dentro
-     no se lee como una etiqueta) y deja libre el hueco de separación con la siguiente. */
-  /* Fila 1 SIEMPRE, y columna fija: las dos coordenadas puestas a mano. Con la fila en automático, el
-     algoritmo de colocación de grid recorre las píldoras en orden del documento y nunca retrocede, así que a
-     un juego sin género —cuya píldora no llega a existir— la siguiente le caía en una segunda fila y esa
-     tarjeta salía 19 px más alta que las demás. */
-  .row-meta-item { grid-row: 1; justify-self: start; max-width: calc(100% - .4rem); }
-  /* La nota no se recorta JAMÁS: su columna se dimensiona para que quepa entera. */
-  .rm-score { max-width: none; }
-  .rm-score { display: inline-flex; } /* la puntuación siempre que haya meta */
 
-  /* Ancho de la columna de la nota, cuando la lista la tiene (`meta-score`, mismo criterio que la cabecera de
-     escritorio). Se reserva para TODAS las filas de la lista aunque un juego no esté puntuado, o las filas
-     dejarían de alinearse entre sí. Las cinco estrellas ocupan bastante más que el aro de la nota 0–100, y cuál
-     se pinta lo dice la escala elegida (F2), no la fila: de ahí la clase `meta-grade`. */
-  /* Esta columna lleva MÁS aire del que se reserva entre píldoras: la nota no es una pastilla como las demás
-     —es un aro o una fila de estrellas, sin fondo que marque dónde acaba—, y con la separación normal la
-     plataforma parecía pegada a ella. El aro necesita más que las estrellas: es una figura maciza y cerrada,
-     mientras que la fila de estrellas termina en glifos vacíos que ya dejan aire por sí solos. */
-  .meta-score .row-meta { --rm-col-score: 4.9rem; }
-  .meta-score.meta-grade .row-meta { --rm-col-score: 2.6rem; }
+  .row-name {
+    font-size: var(--fs-lg);
+    line-height: 1.25;
+    font-weight: 700;
+  }
 }
 
-/* Revelado progresivo "según lo que quepa", en el mismo orden de importancia que las columnas
-   de escritorio: tras puntuación (siempre), aparecen plataforma → género → puntos fuertes a medida
-   que crece el ancho de la tarjeta, y desaparecen al estrecharse. Misma lógica en todas las vistas.
-   Los umbrales se miden contra el CONTENEDOR (`.main-lists` o la tarjeta del perfil social), que en un móvil
-   es el ancho de pantalla completo; la tarjeta útil son unos 44 px menos (relleno del `main` y de la celda). */
-@container gamelist (min-width: 240px) {
-  .rm-plat  { display: inline-flex; }
-  .row-meta { --rm-col-plat: minmax(0, 1fr); }
+/* LA CARÁTULA EN EL RENGLÓN: UNA FRANJA RECORTADA DE LA PORTADA, A TODO EL ANCHO.
+   La portada se escala manteniendo su proporción hasta llenar el renglón y lo que sobra —que es casi todo, es
+   una imagen vertical en una fila apaisada— se recorta por arriba y por abajo: lo que se ve es un renglón
+   recortado de la carátula, no la carátula entera encogida.
+
+   POR QUÉ LA FILA PIDE LA IMAGEN GRANDE. Con los 264 px de `t_cover_big`, llenar 1.400 son casi seis aumentos y
+   lo que queda es una mancha de color. El renglón pide `s=ancho` (~762 px) y el aumento baja a menos de dos, que
+   es la diferencia entre reconocer el dibujo o no. El mosaico sigue con la pequeña, que es la que cabe en su
+   ranura.
+
+   Encima cae la CAPA, y solo cuando hay imagen: la superficie del tema, casi opaca por la izquierda —donde
+   están el nombre y las etiquetas— y abriéndose hacia la derecha. No es un gris genérico, es `--surface`: la
+   franja se tiñe con la paleta que esté puesta y no canta en ninguna de las ocho.
+
+   Las dos capas van por detrás del contenido (`z-index` negativo) dentro del contexto de apilado que abre
+   `isolation: isolate` en la celda. */
+table.is-cards tbody tr.main-row.has-cover > td:first-child::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image: var(--row-cover);
+  background-repeat: no-repeat;
+  background-size: cover;
+  /* Un poco por encima del centro: en una portada, el tercio superior es donde suelen estar la cara y el
+     logotipo, y el inferior, los créditos y las marcas de tienda. */
+  background-position: center 35%;
 }
-@container gamelist (min-width: 320px) {
-  .rm-genre { display: inline-flex; }
-  /* El género pesa más que las otras columnas elásticas: es donde está el texto largo de verdad —«Estrategia
-     en tiempo real» mide 159 px con su «+1»— mientras que la plataforma suele ser una tienda o una consola de
-     una o dos palabras. A partes iguales el género salía recortado en casi todas las filas. */
-  .row-meta { --rm-col-genre: minmax(0, 1.4fr); }
+table.is-cards tbody tr.main-row.has-cover > td:first-child::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--surface) var(--row-veil-a, 96%), transparent) 0%,
+    color-mix(in srgb, var(--surface) var(--row-veil-b, 90%), transparent) 55%,
+    color-mix(in srgb, var(--surface) var(--row-veil-c, 72%), transparent) 100%
+  );
 }
-/* Puntos fuertes: la última columna que le queda por recoger al meta, y en el teléfono ocupa EL SITIO de la
-   nota en las listas que no tienen columna de nota (`meta-score`): En curso nunca la tiene, y Abandonados solo
-   si algún juego está puntuado, que es el mismo criterio con el que aparece o no esa columna en escritorio.
-   Así ninguna lista se queda con la tarjeta a medias, y ninguna mete cinco columnas en un teléfono —a 340 px
-   útiles saldrían a 67 px cada una y todo quedaría en dos letras y puntos suspensivos—. En tablet, donde sí
-   hay sitio, entra en todas. */
-@container gamelist (min-width: 320px) {
-  table:not(.meta-score) .rm-strong { display: inline-flex; }
-  table:not(.meta-score) .row-meta  { --rm-col-strong: minmax(0, .8fr); }
+/* En el teléfono la capa cierra más: allí el texto ocupa la fila entera —no hay mitad derecha libre— y el
+   dibujo tiene que quedarse en ambiente. */
+@container gamelist (max-width: 46rem) {
+  table.is-cards tbody tr.main-row.has-cover > td:first-child {
+    --row-veil-a: 97%;
+    --row-veil-b: 94%;
+    --row-veil-c: 88%;
+  }
 }
-@container gamelist (min-width: 560px) {
-  .rm-strong { display: inline-flex; }
-  /* Pesa menos que plataforma y género: es la última de la escalera, sus valores son cortos («Ritmo +1») y en
-     En curso —la lista que la muestra ya en el teléfono— el ancho que no se lleva es el que le queda al
-     género. */
-  .row-meta  { --rm-col-strong: minmax(0, .8fr); }
+
+/* El realce al pasar por encima no pinta la fila entera de otro color: levanta la pieza. */
+@media (hover: hover) {
+  table.is-cards tbody tr.main-row:hover { background: transparent; box-shadow: none; }
+  table.is-cards tbody tr.main-row:hover > td:first-child {
+    border-color: color-mix(in srgb, var(--steam) 55%, transparent);
+    box-shadow: var(--e2);
+    transform: translateY(-1px);
+  }
+}
+
+/* ── LA CABECERA DEL LISTADO: RECUENTO, ORDEN Y FORMA ─────────────────────────────────────────────────────
+   Las tres cosas que dicen QUÉ se está viendo y CÓMO, en una sola pieza y a la vista.
+
+   Venían de dos sitios distintos y las dos se leían como añadidos: el conmutador de forma estaba metido en la
+   caja de filtros —donde parecía un filtro más— y el orden era un desplegable del sistema con un botón de
+   flecha al lado, colgando encima de la primera fila. Dos controles ajenos al resto de la interfaz para una
+   decisión, y había que abrir el desplegable para saber por qué estaba ordenada la lista.
+
+   Ahora las opciones del orden están todas puestas, en las mismas píldoras que usa el resto de la app: la
+   activa se rellena con el acento y lleva la punta que dice el sentido, y volver a pulsarla lo invierte. Una
+   pulsada para cambiar de columna, otra para darle la vuelta.
+
+   Y va DENTRO del listado y no en la barra de filtros porque ordena esta lista, no filtra: son dos cosas
+   distintas y conviene que se vean distintas. ── */
+/* LA CABECERA DEL LISTADO: recuento + orden a la izquierda, forma a la derecha. Misma superficie, mismo canto
+   y mismo filete que las filas —es la pieza que las abre—, con el canto de abajo cuadrado para que se lea
+   pegada a la lista y no como una tarjeta suelta flotando encima. */
+.list-head {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  flex-wrap: wrap;
+  margin-bottom: .5rem;
+  padding: .45rem .6rem .45rem .9rem;
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-md);
+  box-shadow: var(--e1);
+  min-width: 0;
+}
+/* Lo que se está viendo, que es el resultado de los filtros de arriba: por eso abre la barra y no cierra la
+   lista. En cifras tabulares para que no baile al filtrar. */
+.list-head-count {
+  flex: 0 0 auto;
+  padding-right: .75rem;
+  /* Un filete lo separa del orden: son dos cosas distintas —qué hay y cómo está puesto— y sin él se leían
+     como una sola frase («149 juegos ordenar juego año…»). */
+  border-right: 1px solid var(--hair);
+  font-family: var(--font-label);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .04em;
+  /* SIN versales forzadas: quién va en mayúsculas lo decide la preferencia de apariencia
+     (`data-uppercase`, ver `_base.scss`), como el resto de los rótulos de interfaz. */
+  color: var(--text-muted);
+}
+/* El orden se come el hueco libre y empuja la forma al canto derecho. */
+.list-head .list-sort { flex: 1 1 auto; min-width: 0; }
+.list-head .grid-size { margin-left: auto; }
+/* Con el control de tamaño puesto, es ÉL quien se pega al hueco libre y la forma le sigue: van juntos, y entre
+   ellos solo el aire que los separa como dos grupos. */
+.list-head .shape-switch { margin-left: auto; }
+.list-head .grid-size + .shape-switch { margin-left: .55rem; }
+
+/* EN ESTRECHO, EN DOS PISOS. Las tres cosas en fila no caben en un teléfono y la barra se partía en tres
+   renglones con el recuento colgando de su filete. Arriba lo que se lee (cuántos hay) y lo que se elige de un
+   toque (la forma); debajo, el carril del orden, que ya se desplaza de lado. */
+@container gamelist (max-width: 46rem) {
+  .list-head { row-gap: .5rem; padding: .5rem .55rem; }
+  .list-head-count { border-right: 0; padding-right: 0; }
+  .list-head .grid-size { margin-left: auto; }
+  .list-head .list-sort { flex: 1 0 100%; order: 3; }
+}
+
+.list-sort {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  min-width: 0;
+}
+.list-sort-label {
+  flex: 0 0 auto;
+  font-family: var(--font-label);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: .08em;
+  color: var(--text-dim);
+}
+/* Se desplazan de lado en vez de envolver: en un teléfono, cinco columnas en dos líneas empujarían la lista
+   media pantalla hacia abajo. La barra se esconde (el carril sí se puede arrastrar) porque el conjunto ya se
+   lee como una fila de pestañas y una barra debajo lo convertiría en un cajón. */
+.list-sort-chips {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: .15rem .1rem;
+  margin: -.15rem -.1rem;
+}
+.list-sort-chips::-webkit-scrollbar { display: none; }
+
+/* SIN ÓVALO. Cada opción era una píldora con su canto, y cinco píldoras seguidas dentro de la barra se leían
+   como cinco botones puestos ahí —tres cercos, uno dentro de otro, contando la barra—. Ahora son PALABRAS: lo
+   único que dice cuál manda es su tinta (la del acento) y la punta que lleva al lado. Nada más. */
+.list-sort-chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .25rem .35rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: var(--font-label);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1.5;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color .18s ease;
+}
+@media (hover: hover) {
+  .list-sort-chip:hover { color: var(--text); }
+}
+.list-sort-chip:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+/* La activa, solo por el nombre: tinta de acento y un punto más de peso. */
+.list-sort-chip.is-on {
+  color: var(--fg-link);
+  font-weight: 800;
+}
+/* LA PUNTA, discreta. Es la confirmación del sentido, no el protagonista: pequeña, a media tinta y sin cerco.
+   Mira hacia abajo (de mayor a menor) y gira al invertir. */
+.list-sort-caret {
+  width: 0; height: 0;
+  border-left: 3.5px solid transparent;
+  border-right: 3.5px solid transparent;
+  border-top: 4.5px solid currentColor;
+  opacity: .65;
+  transition: transform .2s ease;
+}
+.list-sort-chip.is-asc .list-sort-caret { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) {
+  .list-sort-chip, .list-sort-caret { transition: none; }
+}
+
+/* ── EL MOSAICO (forma de CAJA) ───────────────────────────────────────────────────────────────────────────
+   La otra manera de mirar la misma biblioteca: en vez de recorrer renglones, pasear por bloques. Aquí manda la
+   NOTA —es lo que se busca cuando uno pasea— y el nombre es el segundo, al revés que en la lista.
+
+   POR DENTRO SIGUE SIENDO UNA TABLA, y es a propósito: cada fila de la rejilla es un `<tr>` con una celda que
+   ocupa todo el ancho, y dentro de ella van las cajas. Así el virtualizador sigue midiendo FILAS de verdad
+   (`GameTable` agrupa los juegos de N en N) en vez de creer que cada caja es un renglón: con mil juegos, esa
+   diferencia son mil filas contadas de más y una barra de desplazamiento que no lleva a ninguna parte. El
+   número de columnas lo calcula el componente —con `GRID_CARD_MIN_PX`, hoy 168 px— y llega en `--grid-cols`;
+   aquí solo se parte el ancho en tantas columnas iguales, así que no hay ninguna medida que mantener a la vez
+   en los dos sitios: la densidad del mosaico se cambia en esa constante y nada más. ── */
+table.is-grid {
+  /* La tabla base arranca con `min-width: 1050px`, de cuando tenía columnas que no podían aplastarse; aquí solo
+     hay una celda a todo lo ancho con la rejilla dentro, así que ese mínimo únicamente servía para sacar el
+     mosaico fuera de la pantalla en un teléfono. */
+  min-width: 0;
+  table-layout: fixed;
+
+  tbody tr.grid-row > td { padding: 0 0 .6rem; border: 0; }
+
+  .game-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--grid-cols, 4), minmax(0, 1fr));
+    gap: .6rem;
+  }
+
+  /* ── LA REJILLA SIN CARÁTULAS: TODAS LAS CAJAS MIDEN LO MISMO ─────────────────────────────────────
+     El ancho ya lo repartía la rejilla en columnas iguales, pero el ALTO lo ponía el contenido: un
+     título de dos líneas hacía su fila más alta que la de al lado y el mosaico se leía escalonado. Con
+     el alto DECLARADO, fila y columna casan con cualquier título y a cualquier ancho.
+
+     DE DÓNDE SALE EL NÚMERO: MEDIDO sobre la caja más llena que puede haber —cabecera, dos líneas de
+     nombre, las dos ranuras fijas y el medidor—, que es el mismo razonamiento por el que el nombre se
+     corta a dos líneas y una ranura reserva su hueco aunque el juego no tenga el dato. Con una línea de
+     título la caja mide 171 px y con dos, 191; los 202 de aquí son esos más el medidor del pie y un
+     respiro. Se probó a apurarlos hasta 186 y la caja del peor caso —título de dos líneas en la densidad
+     pequeña— dejaba 12 px entre la última etiqueta y su canto, con el relleno de abajo y el medidor
+     pidiendo 21: el texto quedaba pegado al filo de color.
+     Lo que sobra cuando el título ocupa una sola línea se queda AL FINAL de la caja, no entre el nombre y
+     las etiquetas: el `margin-top: auto` que las empujaba al pie se retira en la caja plana (más abajo),
+     porque con el alto declarado ese `auto` abría un boquete justo en medio de lo que se lee.
+     Y como el alto ya no depende del contenido, la estimación del virtualizador para una fila del
+     mosaico plano (`GRID_ROW_FLAT_ESTIMATE_PX`) pasa a ser exacta en vez de aproximada.
+
+     El hueco entre cajas sube de .6 a .9 rem: con cajas más grandes, el aire entre ellas tiene que subir
+     en la misma proporción o la rejilla vuelve a leerse amontonada — y hay skins cuya firma es una
+     SOMBRA DURA en diagonal (la chapa de «Inserte moneda», la viñeta de «Ladrones de corazones»), que
+     con .6 rem caía por debajo de la caja siguiente. ── */
+  .game-grid.is-flat {
+    --card-h: 12.6rem;
+    gap: .9rem;
+    grid-auto-rows: var(--card-h);
+  }
+  .game-grid.is-flat .game-card { height: 100%; }
+}
+
+.game-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  /* SIN relleno propio: la carátula lleva el suyo (`.game-card-art`) y el medidor del pie tiene que llegar de
+     canto a canto, como el filo de un libro. */
+  padding: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-md);
+  box-shadow: var(--e1);
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+/* LA CARÁTULA, A SANGRE. Llevaba un margen alrededor y la caja dibujaba su propio borde por fuera; eso son dos
+   cantos —el de la imagen y el del marco— separados por unos milímetros de superficie, y la portada se leía
+   como una lámina pegada encima en vez de como la cara de la pieza. Ahora la imagen llega a los tres cantos y
+   es ELLA la que los dibuja: las esquinas de arriba de la caja son las suyas (`overflow: hidden` en la caja las
+   recorta) y el filete solo queda en la parte de abajo, que es donde hay superficie. */
+.game-card-art {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* LA RANURA DE LA CARÁTULA. Proporción 3:4 fija, que es la del arte vertical de las tiendas (comprobado
+   sobre el catálogo real: 57 de 60 juegos la tienen). Fija y declarada por CSS, no heredada de la imagen, por
+   lo mismo que la caja recorta el nombre a dos líneas: en una rejilla la fila mide lo que mida su caja más
+   alta, y el virtualizador mide FILAS. Si el alto lo pusiera la imagen al cargar, cada carátula que llegara
+   recalcularía su fila y la barra de desplazamiento saltaría mientras se baja.
+
+   Sin imagen NO queda un hueco gris: se pinta el tono que la rampa categórica le reparte a ese nombre, el mismo
+   mecanismo que tiñe los géneros. Es estable (hash del título) y lo viste cada tema, así que un juego sin
+   carátula no parece un juego roto. */
+.game-cover {
+  position: relative;
+  z-index: 1;
+  pointer-events: none; /* como el resto del contenido: la pulsación es del botón que hay debajo */
+  display: grid;
+  place-items: center;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  /* Sin radio propio: en el mosaico la recorta la caja (sus dos esquinas de arriba son las de la imagen), y en
+     cualquier otro sitio donde se use, quien la contenga. */
+  border-radius: 0;
+  /* MUY rebajada hacia la superficie, y el número importa: con la rampa al 90 % esto eran siete rectángulos
+     saturados por fila —un muestrario de colores, no una biblioteca— y el título quedaba verde sobre verde.
+     Al 20 % el color solo insinúa de qué juego se trata y deja que manden el nombre y la nota, que es el orden
+     de lectura que el mosaico ya tenía. Cuando llegue la carátula de verdad, esto no se ve. */
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--cat) 20%, var(--surface)),
+    color-mix(in srgb, var(--cat) 8%, var(--surface))
+  );
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hair) 70%, transparent);
+}
+
+.game-cover-img {
+  /* Superpuesta a la portada de casa, que está siempre debajo: si la imagen tarda o no llega, lo que se ve es
+     una portada y no un hueco. `object-fit: cover` porque el arte de IGDB es 264×374 (0,706) y la ranura es 3:4
+     (0,75): sobra un pelo de alto y se recorta, que se nota menos que una banda vacía a los lados. */
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* ── CÓMO ENTRA UNA CARÁTULA ──────────────────────────────────────────────────────────────────────────
+     No aparece: ENTRA. El salto seco de «portada de casa» a «carátula» es lo que se leía como un fallo de
+     pintado, y el remedio no es entretener la espera —mientras no hay imagen no falta nada: ya hay una portada
+     pintada, y un esqueleto animado encima es ruido sobre algo que no falta— sino que la que llega se INSTALE
+     en vez de sustituir a la otra de un fotograma al siguiente.
+
+     Es un fundido con un punto de acercamiento, Y ES EL MISMO PARA LAS OCHO PALETAS. Hubo un tiempo en que
+     cada skin ponía el suyo —el destello descompuesto de «Sin futuro» y Grimdark, el tubo fluorescente
+     encendiendo de Portal—, y la idea era buena sobre el papel: la carátula entrando con el lenguaje de su
+     tema. En una rejilla no lo es. Lo que en una pieza suelta se lee como firma, repetido en las quince cajas
+     que llegan a la vez mientras bajas, se lee como una pantalla que falla. El gesto se queda; el dialecto, no.
+     Si algún skin vuelve a querer el suyo, que sea con esto medido delante.
+
+     LA ANIMACIÓN ES DECORACIÓN SOBRE UN ESTADO QUE YA FUNCIONA: la opacidad final la pone la REGLA y no el
+     último fotograma (nada de `both`), así que si la animación no corre —`prefers-reduced-motion`, efectos
+     apagados, un navegador que no entienda alguna propiedad— la imagen se ve igual. Nunca se queda invisible.
+
+     Y mientras no ha cargado está a cero, así que un `<img>` a medio bajar no enseña bandas. ── */
+  opacity: 0;
+}
+.game-cover[data-carga="lista"] .game-cover-img { opacity: 1; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* 1,8 s, y es una duración larga a propósito: no es una transición de interfaz que haya que quitarse de en
+     medio, es la carátula instalándose. A medio segundo el gesto pasaba tan rápido que volvía a leerse como un
+     salto, que es de donde veníamos. */
+  .game-cover[data-carga="lista"] .game-cover-img { animation: coverIn 1.8s ease-out; }
+  @keyframes coverIn {
+    from { opacity: 0; transform: scale(1.035); }
+    to   { opacity: 1; transform: none; }
+  }
+}
+
+/* LA PORTADA DE CASA. Compone el título como una portada sobria en vez de dejar dos iniciales en medio del
+   azulejo: entre carátulas de verdad, unas iniciales sueltas se leen como un fallo de carga, y un título
+   compuesto se lee como una decisión. Solo el nombre, centrado y con aire. */
+.game-cover-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  width: 100%;
+  height: 100%;
+  padding: .9rem .7rem;
+  text-align: center;
+  user-select: none;
+  /* No vale `--cat-fg`: está calculado para leerse SOBRE el relleno lleno de la rampa, y aquí el fondo es casi
+     la superficie. Se tiñe el color del texto con su tono, que contrasta con el fondo pase lo que pase. */
+  color: color-mix(in srgb, var(--cat) 55%, var(--text));
+}
+
+.game-cover-title {
+  font-size: .95rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: .01em;
+  opacity: .78;
+  /* Cuatro líneas y corte: «Warhammer 40,000: Space Marine II» cabe, y un título imposible no revienta el
+     azulejo (el alto es fijo, así que lo que sobra se recortaría feo). */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  line-clamp: 4;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+
+/* El disparador cubre la caja entera: la caja se pulsa, no un enlace dentro de ella. Va detrás del contenido
+   (`z-index: 0` contra el `1` de la cabecera) para no tapar nada seleccionable. */
+.game-card-open {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: inherit;
+}
+.game-card-open:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+/* LA CAJA SIN LÁMINA (`is-flat`): la que sale con las carátulas apagadas, que es como viene la app. No hay
+   marco 3:4 que reservar —trescientos píxeles de alto por caja para no enseñar ninguna imagen—, así que la nota
+   y la insignia dejan de flotar sobre nada y encabezan el cuerpo EN LA MISMA LÍNEA, una a cada canto: siguen
+   siendo las dos señales que se buscan y siguen estando en el mismo punto de todas las cajas. */
+.game-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  min-height: 2.1rem;
+}
+.game-card.is-flat .game-card-score,
+.game-card.is-flat .game-card-badge {
+  position: static;
+  background: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  padding: 0;
+}
+.game-card.is-flat .game-card-score .score-ring::after { background: var(--surface); }
+/* La caja plana respira un poco más: sin lámina, el relleno es lo único que la separa de su canto. Y
+   respira MÁS que antes desde que la caja es mayor: con el mínimo de columna en 250 px, el relleno de
+   antes dejaba los datos flotando en medio de un hueco en vez de asentados en la pieza. */
+.game-card.is-flat .game-card-body { padding: .85rem .95rem .95rem; gap: .7rem; }
+.game-card.is-flat .game-card-name { font-size: var(--fs-lg); line-height: 1.22; }
+/* LAS ETIQUETAS VAN PEGADAS AL NOMBRE, no empujadas al pie. En la caja CON carátula el `margin-top: auto` de
+   `.game-card-tags` tiene sentido —el cuerpo mide lo que mide y las etiquetas cierran la pieza—, pero en la
+   plana el alto está declarado, así que ese `auto` se comía todo lo que sobraba y lo metía JUSTO entre el
+   título y los chips: un juego de título corto salía con medio azulejo en blanco por el medio. Con el hueco al
+   final, lo que se lee queda junto y la caja sigue midiendo lo mismo que las de al lado. */
+.game-card.is-flat .game-card-tags { gap: .45rem; margin-top: 0; }
+
+/* EL CUERPO de la caja: lo que se lee. Crece hasta empujar el medidor al pie, de modo que el filo de color
+   queda abajo del todo aunque el nombre ocupe una línea en una caja y dos en la de al lado. */
+.game-card-body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  flex: 1 1 auto;
+  padding: .6rem .7rem .7rem;
+  pointer-events: none;
+}
+
+/* Dos líneas y corte: los títulos largos son la norma («Return of the Obra Dinn»), y dejar crecer la caja
+   descuadraría toda la fila —en una rejilla, la fila mide lo que mida su caja más alta—. */
+.game-card-name {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+/* LA NOTA, FLOTANDO SOBRE EL CANTO DE LA CARÁTULA. En el mosaico la nota es lo primero que se busca, así que
+   está siempre en el mismo punto de cada caja en vez de bailar según lo que ocupe el nombre. Lleva su propia
+   plaquita —fondo de la superficie con desenfoque— porque debajo puede haber cualquier carátula: sin ella, un
+   aro sobre un cielo claro desaparece. */
+.game-card-score {
+  position: absolute;
+  top: .45rem;
+  right: .45rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  padding: .2rem;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  backdrop-filter: blur(4px);
+  box-shadow: var(--e2);
+}
+.game-card-score .score-ring { --sz: 2.1rem; }
+.game-card-score .score-ring::after { background: color-mix(in srgb, var(--surface) 92%, transparent); }
+.game-card-score .stars { font-size: var(--fs-2xs); padding: 0 .25rem; }
+
+/* RANURAS FIJAS (plan §3.2). Siempre las mismas dos líneas —plataforma y año arriba, género debajo— y en el
+   mismo orden, tenga el juego lo que tenga. Antes cada caja enseñaba lo suyo (dos chips o cuatro, con año o
+   sin él) y, como todas las cajas de una fila miden igual, la desigualdad se leía como descuido. */
+.game-card-tags {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  min-width: 0;
+  margin-top: auto;
+}
+.game-card-slot {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: .3rem;
+  min-width: 0;
+  /* Una ranura no se parte en dos líneas: la fila de la rejilla mide lo que mida la caja más alta, así que un
+     género largo en UNA caja subiría el alto de las seis. Lo que no cabe lo apaga la máscara de más abajo —y
+     no un `overflow: hidden`, que recortaría también arriba y abajo y les comería la sombra dura a las
+     pegatinas de «Inserte moneda» y a las viñetas de «Ladrones de corazones»—. */
+  /* Y no se queda a cero cuando el juego no tiene el dato: el hueco tenue ocupa el alto de un chip, que es lo
+     que hace que todas las cajas enseñen lo mismo en el mismo sitio. */
+  min-height: var(--chip-slot-h);
+}
+.game-card-slot .chips { flex-wrap: nowrap; }
+/* LOS CHIPS NO SE ENCOGEN, igual que en la ranura del renglón: repartir la estrechez entre todos dejaba
+   «P…» al lado de «PlayStation…», y hasta «PC» —que cabe en cualquier sitio— salía recortado. Cada uno mide
+   lo que mide su texto; cuántos se pintan lo decide el ANCHO DE LA CAJA (`chipsDeCaja` en `GameTable`), que
+   es quien de verdad sabe cuánto sitio hay, y del resto avisa el «+N».
+   Lo que aun así se salga se apaga en el último centímetro en vez de partirse a media letra. */
+.game-card-slot .chip { flex: 0 0 auto; }
+/* EL «+N» VA ANCLADO AL CANTO DE LA RANURA, y su sitio se reserva con relleno. Iba al final de la fila, como
+   un chip más, así que era EL PRIMERO en caerse fuera cuando el texto se pasaba —y un contador que no se ve no
+   cuenta nada—. Anclado, el ancho que queda es el de los chips y es a ellos a quienes se les apaga el final,
+   que es el orden correcto: lo que falta ya lo dice el número.
+   `:has()` para no tener que marcar la ranura desde el componente: si no hay «+N», no hay relleno que reservar
+   y el chip dispone de la ranura entera.
+
+   EL SELECTOR LLEVA `.game-card` Y DOBLA LA CLASE DEL CHIP A PROPÓSITO. Los ocho skins redibujan `.chip` desde
+   `:root[data-palette="…"] .chip` (0,3,0) y algunos le devuelven `position: relative` —el cartel de contrato de
+   «Papel y acero» y la caja de diálogo de «Sol y luna»—, que pesa más que el `.game-card-slot .chip-more`
+   (0,2,0) que había aquí y le quitaba el anclaje: el «+N» volvía al flujo, se montaba encima del último chip o
+   se quedaba a 42 px del canto, con el hueco reservado sin usar. Con `.game-card .game-card-slot .chip.chip-more`
+   (0,4,0) manda el anclaje y el tema sigue poniendo el resto (papel, sello, letra).
+   Y LOS MÁRGENES SE ANULAN porque en un absoluto ya no separan de nada: desplazan. El margen que esos carteles
+   se reservan para su lacre bajaba el «+N» 14,5 px por debajo de su ranura. */
+.game-card-slot:has(.chip-more) { position: relative; padding-right: 42px; }
+.game-card .game-card-slot .chip.chip-more {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+}
+
+/* LA EXCEPCIÓN: la ranura APRETADA, la que el componente marca cuando ni el primer chip cabe entero (un género
+   como «Coleccionista de criaturas» pide 172 px y en la densidad pequeña la ranura tiene 157). Ahí el único que
+   puede ceder es el chip, porque el «+N» que no se ve no cuenta nada: se recorta con puntos suspensivos y el
+   contador se queda dentro. `inline-block` porque a un ítem flex no le llega el `text-overflow`. */
+.game-card-slot.is-apretado .chip:not(.chip-more) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  flex: 0 1 auto;
+}
+.game-card-slot .chips {
+  /* El grupo se estira hasta el canto de la ranura: así el «+N», que va anclado a la derecha, no se le monta
+     encima al último chip. */
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* NI MÁSCARA NI `overflow`: NADA RECORTA AQUÍ. Hubo las dos cosas y las dos se vieron:
+   · el `overflow: hidden` corta por los CUATRO cantos, y a las pegatinas de «Inserte moneda» y a las viñetas
+     de «Ladrones de corazones» —que llevan sombra dura por fuera de su caja— les cortaba también arriba y
+     abajo;
+   · y el desvanecido de máscara se comía el final del último chip aunque sobrara sitio, que es lo que dejaba
+     los nombres largos sin su canto redondeado, como si estuvieran partidos.
+   Lo que evita el desbordamiento es la CUENTA, no el recorte: `chipsQueCaben` mide el texto con la letra del
+   tema y solo pinta los que entran, con un margen de seguridad. El único caso que no cabe por definición —un
+   solo valor más largo que la ranura entera— se marca `is-apretado` y se recorta con puntos suspensivos. */
+
+/* Si un valor suelto es más largo que la ranura entera, se recorta con puntos suspensivos (lo marca
+   `is-apretado` desde el componente, más abajo) en vez de salirse de la caja. */
+
+/* La insignia, en el canto de abajo de la lámina y al otro extremo que la nota: las dos señales de la caja
+   ocupan las dos esquinas libres de la carátula y dejan el cuerpo entero para lo que se lee. */
+.game-card-badge {
+  position: absolute;
+  left: .45rem;
+  bottom: .45rem;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: 50%;
+  box-shadow: var(--e2);
+}
+.game-card-badge .badge-rejugar-activo,
+.game-card-badge .badge-rejugar-inactivo,
+.game-card-badge .badge-opp-activo,
+.game-card-badge .badge-opp-inactivo { width: 26px; height: 26px; }
+.game-card-badge .ui-icon { width: var(--ico-sm); height: var(--ico-sm); }
+
+/* EL MEDIDOR DEL PIE: la misma nota que el aro, dicha como un filo que cruza la caja de lado a lado. De un
+   vistazo, y sin leer una sola cifra, una fila de cajas se ordena sola. Mismo tono rojo→verde que el aro
+   (`--score-hue`), así que también dice algo cuando la escala elegida son estrellas. */
+.game-card-meter {
+  position: relative;
+  z-index: 1;
+  display: block;
+  /* NO ENCOGE, y esto no es una precaución: es un ítem flex de una caja de ALTO DECLARADO, así que con el
+     `flex-shrink` de serie un nombre de dos líneas —«Need for Speed: Underground»— le robaba el hueco y el
+     medidor se quedaba en 2,2 px de los 10 suyos. No desaparecía, que habría sido más fácil de ver: se
+     aplastaba, y la fila de bombillas de la recreativa pasaba a leerse como una línea de guiones. */
+  flex: none;
+  height: 6px;
+  width: 100%;
+  background: var(--score-track);
+}
+.game-card-meter::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--score-pct, 0) * 1%);
+  background: hsl(var(--score-hue, 0) 58% var(--acc-l));
+}
+
+@media (hover: hover) {
+  .game-card:hover {
+    border-color: color-mix(in srgb, var(--steam) 55%, transparent);
+    box-shadow: var(--e2);
+    transform: translateY(-2px);
+  }
+}
+.game-card.is-open { border-color: var(--steam); box-shadow: var(--e2); }
+
+/* ── LAS COLUMNAS INVISIBLES (renglón en una pantalla con sitio) ───────────────────────────────────────────
+   Aquí es donde la lista deja de parecer una hoja de cálculo SIN dejar de estar ordenada, que es el equilibrio
+   que costó encontrar. Lo que delataba a la tabla no era tener filas —una biblioteca ES una lista— sino cómo
+   estaban dibujadas: rejilla de líneas, todas las celdas con el mismo peso y el nombre del juego valiendo lo
+   mismo que un «PC». Pero al quitar las cabeceras se perdió lo único que decía QUÉ era cada chip, y con los
+   chips puestos en fila —cada uno donde le tocaba según lo que midiera el de antes— la lista pasó a leerse
+   como «datos ahí a lo loco».
+
+   El remedio es una rejilla de columnas fijas sin una sola línea dibujada: el año siempre empieza donde
+   empieza el año, la plataforma donde la plataforma y el género donde el género, fila tras fila. El ojo
+   recupera la lectura vertical —y con ella el sentido de cada color— sin que aparezca ninguna cabecera.
+
+   LAS COLUMNAS VACÍAS NO DEJAN HUECO: la separación no es `gap` (que también separa columnas que no existen)
+   sino el relleno que cada ranura se reserva por dentro. Y la que la lista no usa —el año fuera de
+   Completados— se queda en `auto` sin contenido, o sea a cero.
+
+   A partir de 46 rem de CONTENEDOR, no de ventana: el mismo renglón en un teléfono apila sus dos líneas, que
+   es lo que cabe allí. ── */
+@container gamelist (min-width: 46rem) {
+  table.is-cards {
+    tbody tr.main-row > td:first-child { padding: .75rem 1.1rem; }
+
+    .row-name { font-size: var(--fs-lg); }
+
+    /* Con sitio, las tres ranuras caben en UNA línea y se reparten TODO el ancho del renglón en vez de
+       amontonarse a la izquierda. Los anchos son proporcionales y no fijos —`fr` y no `rem`— porque lo que
+       tiene que casar es el reparto entre filas, no una medida concreta: así el género, que es el que lleva el
+       texto largo, se queda con la parte del león y los tres siguen empezando en el mismo píxel fila tras fila.
+       El mínimo (`minmax`) es lo que evita que una columna se encoja por debajo de lo que ocupa su contenido y
+       arrastre a las demás.
+       Fila y columna puestas a mano las dos: con la fila en automático, el algoritmo de colocación de grid
+       recorre las ranuras en orden del documento y nunca retrocede, así que a un juego sin año la siguiente le
+       caía en una segunda fila y ese renglón salía más alto que los demás. */
+    .row-cats { grid-template-columns: var(--row-col-year, 0px) minmax(0, 1fr) minmax(0, 2.2fr); gap: 0; }
+    /* La columna del año solo existe donde hay años (`has-year`, que pone el componente). En el resto se queda
+       a cero y la plataforma empieza pegada al canto, sin un hueco vacío por delante.
+       La ficha se declara en la TABLA y no en `.row-cats`: la usan las dos rejillas del renglón —la de las
+       categorías y la de la opinión, que sangra por esa misma columna— y definida dentro de una, la otra no
+       la veía y caía al respaldo de 0 px. */
+    &.has-year {
+      --row-col-year: minmax(0, 1.1fr);
+      /* La sangría de la opinión es MENOR que la columna del año: los pros arrancan a media distancia entre el
+         año y la plataforma, y los débiles a dos tercios del camino entre la plataforma y el género. Los tres
+         pesos (.5 / 1,25 / 2,55 fr) salen de ahí y suman lo mismo que la línea de arriba, que es lo que
+         mantiene las dos filas dentro de la misma rejilla. Sin año (Próximos, En curso) se queda a cero, como
+         la del año. */
+      --row-col-notes: minmax(0, .5fr);
+    }
+    .row-cat { grid-row: 1; padding-right: 1rem; }
+    /* Tres años con su «+N» («2026 2025 2023 +2») caben sin partirse, y de ahí su peso en el reparto. El
+       `width: auto` deshace los 6,6 rem que la ranura mide en el teléfono, donde solo cabe un año. */
+    .row-cat-year  { grid-column: 1; width: auto; }
+    .row-cat-plat  { grid-column: 2; }
+    .row-cat-genre { grid-column: 3; grid-row: 1; padding-right: 0; }
+
+    /* Y la opinión, debajo, ocupando la línea entera: media para lo bueno y media para lo malo. */
+    .row-notes { display: grid; }
+  }
 }
 
 
@@ -507,7 +1242,7 @@ tbody tr.detail-row.open .detail-content { animation: detailReveal .22s ease-out
   width: 3rem; height: 3rem; opacity: .4;
   fill: currentColor; stroke: currentColor;
 }
-.table-empty-title { margin: 0; font-size: .95rem; font-weight: 600; }
+.table-empty-title { margin: 0; font-size: var(--fs-md); font-weight: 600; }
 /* Los dos CTA caben en línea en escritorio; en móvil se apilan antes que encogerse hasta ser ilegibles. */
 .table-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: .6rem; }
 /* Estado vacío con vida: entra con un fade suave y el icono "respira" en vez de quedarse inerte. */
@@ -516,14 +1251,8 @@ tbody tr.detail-row.open .detail-content { animation: detailReveal .22s ease-out
 @keyframes emptyIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes emptyFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 
-/* ── Bandeja de importados: la tabla es un contenedor `gamelist` para que el `row-meta` (plataforma/
-   género en mini-píldoras) se revele en la vista móvil igual que en el listado principal. ── */
-.table-wrap.import-inbox {
-  container-type: inline-size;
-  container-name: gamelist;
-}
-
-/* Primera columna: nombre + meta (juntos, porque en móvil solo se muestra esta columna). */
+/* ── Bandeja de importados ── */
+/* Primera columna: el nombre y sus marcas (ya está en lista, existente…). */
 .import-name-cell {
   display: flex;
   align-items: flex-start;
@@ -550,7 +1279,7 @@ tbody tr.detail-row.open .detail-content { animation: detailReveal .22s ease-out
   background: var(--surface-elevated, var(--surface));
   color: var(--text, inherit);
   border: 1px solid var(--border);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+  box-shadow: var(--e3);
   font-weight: 600;
   text-align: center;
   pointer-events: none;

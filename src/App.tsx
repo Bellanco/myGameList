@@ -13,6 +13,7 @@ import { FloatingControls } from './view/components/FloatingControls';
 import { TabBar } from './view/components/TabBar';
 import { Toolbar } from './view/components/Toolbar';
 import { GameTable } from './view/components/GameTable';
+import { useCoverBackfill } from './view/hooks/useCoverBackfill';
 import { StatusBanner } from './view/components/StatusBanner';
 import { useAchievementNotice } from './view/hooks/useAchievementNotice';
 import { useAnnouncement } from './view/hooks/useAnnouncement';
@@ -198,6 +199,7 @@ export default function App() {
   // porque la serie debe acumularse se visite o no esa pantalla; sin este registro no hay forma de saber cómo
   // evoluciona el backlog (`listedAt` se reescribe al mover de lista). Local, silencioso y en idle.
   useBacklogSnapshot(vm.data);
+  useCoverBackfill(vm.data);
   // Estrellas fugaces aleatorias por los bordes de botones/chips (solo en la paleta "Sol y luna").
   useShootingStars();
   // Efectos de firma por interacción (wipe P5 al navegar, apertura de portal al clic, sol↔luna, boot-up 40K).
@@ -875,31 +877,42 @@ export default function App() {
         showAccount={hasSocialProfile}
       />
       {activeSection === 'lists' ? <TabBar currentTab={currentTab} tabCounts={vm.tabCounts} onTabChange={handleTabChange} /> : null}
-      <StatusBanner notice={vm.notice} remoteChangesApplied={syncVm.lastRemoteChangesApplied} />
-      {/* Fuera del `main` y sin `fallback`: es un carril fijo sobre la barra inferior, y mientras su chunk viaja
-          no hay nada que enseñar en su sitio. */}
-      {/* UNA CÁPSULA EN EL CARRIL, SIEMPRE, y con el logro por delante: lo que acabas de conseguir gana a lo que
-          alguien quiere contarte. El aviso no pierde su turno por esto —la cuenta de veces la apunta la cápsula
-          al MONTARSE, no al decidirse— así que volverá a intentarlo en la siguiente apertura. */}
-      {achievementFlash ? (
-        <Suspense fallback={null}>
-          <AchievementToast
-            flash={achievementFlash}
-            onDone={clearAchievementFlash}
-            onOpen={openAchievements}
-          />
-        </Suspense>
-      ) : announcement.announcement ? (
-        <Suspense fallback={null}>
-          <AnnouncementToast
-            announcement={announcement.announcement}
-            onShown={announcement.markShown}
-            onOpen={announcement.markClicked}
-            onDone={announcement.dismiss}
-          />
-        </Suspense>
-      ) : null}
-      <UpdateNotice />
+      {/* ═══ EL CARRIL DE LOS AVISOS · abajo a la izquierda, sobre la barra inferior ═══════════════════════
+          UN SOLO CARRIL PARA LAS TRES CÁPSULAS, y se monta AQUÍ y no dentro de cada una. Antes lo traía cada
+          componente, y mientras solo lo usaban el logro y el aviso del administrador daba igual porque son
+          excluyentes entre sí; desde que el aviso de la app (`StatusBanner`, `UpdateNotice`) vive también en el
+          carril, la coincidencia es de todos los días —guardar un juego puede conceder un logro y sacar los dos a
+          la vez— y dos carriles fijos caen en el mismo sitio, superpuestos. Con un contenedor único se apilan con
+          el `gap` del carril, que es lo que ya hacía cuando había varias.
+
+          EL ORDEN ES EL DE LECTURA DE ABAJO ARRIBA: lo último que acabas de hacer queda pegado a la barra, que es
+          donde está el ojo justo después de pulsar. Encima, lo que alguien quiere contarte (logro o anuncio).
+
+          Fuera del `main` y sin `fallback`: mientras el chunk de las cápsulas viaja no hay nada que enseñar en su
+          sitio. Y el logro sigue ganando al anuncio: lo que acabas de conseguir manda sobre lo que te cuentan. El
+          anuncio no pierde su turno por eso —la cuenta la apunta la cápsula al MONTARSE, no al decidirse—. */}
+      <div className="ach-toast-stack">
+        {achievementFlash ? (
+          <Suspense fallback={null}>
+            <AchievementToast
+              flash={achievementFlash}
+              onDone={clearAchievementFlash}
+              onOpen={openAchievements}
+            />
+          </Suspense>
+        ) : announcement.announcement ? (
+          <Suspense fallback={null}>
+            <AnnouncementToast
+              announcement={announcement.announcement}
+              onShown={announcement.markShown}
+              onOpen={announcement.markClicked}
+              onDone={announcement.dismiss}
+            />
+          </Suspense>
+        ) : null}
+        <UpdateNotice />
+        <StatusBanner notice={vm.notice} remoteChangesApplied={syncVm.lastRemoteChangesApplied} />
+      </div>
       <main
         id="contenido"
         ref={mainRef}
