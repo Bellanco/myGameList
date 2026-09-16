@@ -878,7 +878,11 @@
    del filtro de los carteles (vive en el mismo sitio, `IconSprite.tsx`): el de 6,5 px rompe un cartel de
    20 px de alto, pero repartido en el canto de una caja de 218 px sale casi recto. ── */
 :root[data-palette="steam"] .game-card.is-flat {
-  --pliego: 15px;
+  /* CUÁNTO PAPEL ASOMA, y por qué es poco. El pliego empezó en 15 px y la placa se quedaba pequeña: la nota y
+     la insignia de rejugar caían a 2 y 6 px de su canto, o sea a caballo entre el metal y el pergamino, y no
+     se leían ni en uno ni en otro. Con 9 px el papel sigue contando lo suyo —el roto se ve igual, que es lo
+     que se mira— y el acero gana los doce píxeles que le hacían falta a lo que va encima. */
+  --pliego: 9px;
   --wt-hoja-pliego: var(--wt-hoja1);
   position: relative;
   isolation: isolate;
@@ -934,11 +938,17 @@
      lados hacía que el cuerpo midiera 208,7 px dentro de una caja de 201,6 declarados, así que el pie se
      salía por el canto y `overflow: hidden` se lo comía —el medidor de este tema no se veía NUNCA—. El
      hueco que se le quita por abajo es exactamente el que ocupa el medidor, que ya es el filo de la placa. */
-  padding: calc(var(--pliego) - .1rem) calc(var(--pliego) + .8rem) 0;
-  /* Y LAS LÍNEAS, MÁS JUNTAS. El pliego se lleva 15 px por cada lado, así que con un nombre de DOS líneas
+  /* ARRIBA, EN CAMBIO, EL PLIEGO SÍ SE SUMA, y con un poco más: lo primero de la caja es la NOTA, y con la
+     escala de 0 a 100 no es una fila de estrellas de 18 px sino un aro de 34 que llena la cabecera entera.
+     Con el relleno justo —o menos, como estaba— el aro arrancaba por encima del canto del metal y se veía a
+     caballo entre la placa y el pergamino; lo mismo la insignia de rejugar. Van 10 px más que antes, que es
+     lo que hace falta para que las dos piezas se apoyen DENTRO del metal: medido, el aro queda a 9 px de su
+     canto y la insignia a 13. */
+  padding: calc(var(--pliego) + .55rem) calc(var(--pliego) + .8rem) 0;
+  /* Y LAS LÍNEAS, MÁS JUNTAS. El pliego se lleva su parte por cada lado, así que con un nombre de DOS líneas
      —«Need for Speed: Underground»— la placa se quedaba sin hueco y el medidor se salía por debajo del
      metal. El aire que se recorta es el de entre líneas, no el del marco, que es lo que dibuja el tema. */
-  gap: .4rem;
+  gap: .3rem;
 }
 /* Sobre el acero se escribe con la tinta del tema —la de papel es la de los carteles—, en las versales de
    documento. Sin subrayado: el filo de Igni bajo el título era una raya más en una pieza que ya tiene su
