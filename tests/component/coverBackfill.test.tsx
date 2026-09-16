@@ -111,12 +111,28 @@ describe('llenado de carátulas', () => {
     await waitFor(() => expect(fetchSimulado).toHaveBeenCalledTimes(2), { timeout: 4000 });
     // El progreso se guarda al terminar el recorrido, no en cada juego: hay que esperarlo o la segunda visita
     // arrancaría sin memoria (y el test estaría comprobando otra cosa).
-    await waitFor(() => expect(localStorage.getItem('mis-listas-covers-done')).toContain('Portal'), { timeout: 4000 });
+    await waitFor(() => expect(localStorage.getItem('mis-listas-covers-done-v2')).toContain('Portal'), { timeout: 4000 });
     primera.unmount();
 
     fetchSimulado.mockClear();
     renderHook(() => useCoverBackfill(datos)); // como volver a entrar en el listado
     await new Promise((listo) => setTimeout(listo, 600));
+    expect(fetchSimulado).not.toHaveBeenCalled();
+  });
+
+  /* Lo apuntado con el formato anterior —la URL entera de cada juego, dentro de un JSON— se traduce al leerlo.
+     Sin esto, cambiar cómo se apunta obligaría a cada dispositivo a recorrer su biblioteca otra vez: cinco
+     minutos de peticiones en segundo plano para volver a aprender lo que ya sabía. */
+  it('no repite lo que ya estaba apuntado con el formato anterior', async () => {
+    localStorage.setItem('mis-listas-covers', 'on');
+    localStorage.setItem(
+      'mis-listas-covers-done',
+      JSON.stringify([coverUrl('Celeste', ['Steam']), coverUrl('Portal', ['Steam'])]),
+    );
+
+    renderHook(() => useCoverBackfill(biblioteca([juego(1, 'Celeste'), juego(2, 'Portal')])));
+    await new Promise((listo) => setTimeout(listo, 600));
+
     expect(fetchSimulado).not.toHaveBeenCalled();
   });
 
