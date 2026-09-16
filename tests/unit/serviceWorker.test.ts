@@ -277,6 +277,37 @@ describe('service worker — carátulas', () => {
     expect(sw.cache.delete).not.toHaveBeenCalledWith(claves[899]);
   });
 
+  /* La aplicación puede pedir que no se pode (lo hace para el rango más alto, y solo mientras el navegador diga
+     que hay sitio de sobra). El worker no puede comprobar ni el rango ni el almacenamiento: se lo dicen. */
+  it('no poda si la aplicación le ha dicho que el tope está levantado', async () => {
+    const sw = loadServiceWorker();
+    sw.cache.match.mockImplementation(async (clave: unknown) =>
+      (String((clave as Request)?.url ?? clave).includes('sin-tope') ? new Response('1') : undefined));
+    sw.cache.keys.mockImplementation(async () => Array.from({ length: 900 }, (_, i) => new Request(`${COVER}&i=${i}`)));
+
+    let activated: Promise<unknown> = Promise.resolve();
+    sw.handlers.get('activate')?.({ waitUntil: (value: Promise<unknown>) => { activated = value; } });
+    await activated;
+
+    expect(sw.cache.delete).not.toHaveBeenCalled();
+  });
+
+  it('al volver el tope poda en el acto, sin esperar a la siguiente carátula', async () => {
+    // Se llega aquí porque ya NO hay sitio de sobra: esperar sería esperar justo cuando no se puede.
+    const sw = loadServiceWorker();
+    const claves = Array.from({ length: 900 }, (_, i) => new Request(`${COVER}&i=${i}`));
+    sw.cache.keys.mockImplementation(async () => claves);
+
+    let atendido: Promise<unknown> = Promise.resolve();
+    sw.handlers.get('message')?.({
+      data: { tipo: 'covers-sin-tope', valor: false },
+      waitUntil: (value: Promise<unknown>) => { atendido = value; },
+    });
+    await atendido;
+
+    expect(sw.cache.delete).toHaveBeenCalledTimes(101); // las 100 más viejas y la propia marca
+  });
+
   it('no toca nada mientras el cubo esté por debajo del tope', async () => {
     const sw = loadServiceWorker();
     sw.cache.keys.mockImplementation(async () => Array.from({ length: 300 }, (_, i) => new Request(`${COVER}&i=${i}`)));

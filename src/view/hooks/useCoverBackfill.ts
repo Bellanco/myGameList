@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import { TAB_IDS, type TabData } from '../../model/types/game';
 import { coverUrl } from '../../core/utils/coverUrl';
 import { olvidarQueNoTiene, recordarQueNoTiene } from '../../core/utils/coverMemory';
+import { evaluarTopesDeImagenes, topesLevantados } from '../../core/utils/coverLimits';
+import { pedirCupoDeCaratulasLibre } from '../../model/repository/coverQuotaRepository';
 import { useCovers } from './useCovers';
 import { useIsAdmin } from './useIsAdmin';
 
@@ -86,7 +88,9 @@ function leerHechos(): Set<string> {
 
 function guardarHechos(hechos: Set<string>): void {
   try {
-    localStorage.setItem(HECHOS_KEY, [...hechos].slice(-MAX_HECHOS).join('\n'));
+    // Al rango más alto no se le recorta la lista mientras haya sitio de sobra (ver `coverLimits`).
+    const lista = topesLevantados() ? [...hechos] : [...hechos].slice(-MAX_HECHOS);
+    localStorage.setItem(HECHOS_KEY, lista.join('\n'));
     // La lista del formato anterior ya está traducida y guardada: quedarse con las dos sería ocupar el doble
     // para decir lo mismo.
     localStorage.removeItem(HECHOS_KEY_V1);
@@ -119,6 +123,19 @@ export function useCoverBackfill(data: TabData): void {
     const abortar = new AbortController();
 
     const recorrer = async () => {
+      /* LOS PRIVILEGIOS DEL RANGO MÁS ALTO, resueltos justo antes de empezar a gastar y no al montar: aquí ya se
+         sabe si hay sesión y el listado está pintado.
+           · El cupo del proxy lo levanta el SERVIDOR, que comprueba el rango de verdad (`/api/cover-quota`).
+             Aquí solo se pregunta, y solo cuando tiene sentido preguntarlo; si dice que no, todo sigue igual.
+           · Los topes del propio navegador los levanta el cliente, y solo mientras haya sitio de sobra.
+         `useIsAdmin` es el disparador porque hoy el rango máximo y la cuenta de administración son lo mismo (ver
+         `ADMIN_ONLY_TIER`); si algún día mithril se le concede a alguien más, esta es la línea que hay que
+         cambiar — la comprobación de verdad, la del servidor, ya lee el rango del perfil. */
+      if (ampliado) {
+        void pedirCupoDeCaratulasLibre();
+      }
+      await evaluarTopesDeImagenes(ampliado);
+
       const hechos = leerHechos();
       /* La clave primero y la URL solo para los que faltan: una biblioteca ya recorrida no llega a componer ni
          una sola URL, que es el caso normal a partir de la segunda visita. */

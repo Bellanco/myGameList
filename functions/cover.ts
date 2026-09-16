@@ -16,6 +16,7 @@
 //
 // POR QUÉ EL NOMBRE VA EN LA CADENA DE CONSULTA Y NO EN LA RUTA: hay juegos con barra en el título
 // («Half Life / Black Mesa»), y una barra codificada dentro de una ruta la normalizan los intermediarios.
+import { coverExemptionKey } from './_lib/keys';
 import {
   emparejarYGuardar,
   esIdDeCaratula,
@@ -84,7 +85,12 @@ async function quedaCupo(env: Env, request: Request): Promise<boolean> {
   const hora = new Date().toISOString().slice(0, 13); // «2026-09-15T18»
   const clave = `igdb:cupo:v1:${ip}:${hora}`;
   const usado = Number(await env.COVERS?.get(clave)) || 0;
-  if (usado >= MAX_RESOLUCIONES_HORA) return false;
+  if (usado >= MAX_RESOLUCIONES_HORA) {
+    /* Agotado, salvo que esta IP tenga el cupo levantado (ver `/api/cover-quota`). La comprobación va AQUÍ y no
+       al principio a propósito: así la lectura de más solo la paga quien ha llegado al tope, y no las miles de
+       peticiones que nunca se acercan a él. */
+    return Boolean(await env.COVERS?.get(coverExemptionKey(ip)));
+  }
   // El azar es lo que reparte el coste: cada resolución tiene una probabilidad de 1/LOTE de apuntar el lote
   // entero. Sin él haría falta un contador compartido entre peticiones, que es justo lo que KV no da.
   if (Math.random() < 1 / LOTE_CUPO) {
