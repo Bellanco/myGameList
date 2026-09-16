@@ -198,7 +198,21 @@ describe('llenado de carátulas', () => {
     expect(pedidas.some((url) => url.includes('Celeste'))).toBe(false);
   });
 
-  /* Lo mismo con una avería: un 500 —o el 501 de un entorno sin credenciales de IGDB— no dice nada del juego. */
+  /* El 501 dice que ESTE ENTORNO no tiene credenciales de IGDB, así que no hay ninguna carátula que resolver:
+     recorrer la biblioteca entera de una en una con su pausa es gasto puro. Se para, como con el 429. */
+  it('no recorre la biblioteca contra un entorno sin carátulas', async () => {
+    localStorage.setItem('mis-listas-covers', 'on');
+    fetchSimulado.mockImplementation(async () => new Response(null, { status: 501 }));
+    renderHook(() => useCoverBackfill(biblioteca([juego(1, 'Celeste'), juego(2, 'Portal'), juego(3, 'Hades 2')])));
+
+    await waitFor(() => expect(fetchSimulado).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    await new Promise((listo) => setTimeout(listo, 600));
+    expect(fetchSimulado).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem('mis-listas-covers-done-v2') ?? '').not.toContain('Celeste');
+  });
+
+  /* Lo mismo con una avería: un 500 no dice nada del juego. Pero este NO para el recorrido — puede ser de un
+     título concreto, y los demás merecen su intento. */
   it('tampoco da por hecho lo que falló en el servidor', async () => {
     localStorage.setItem('mis-listas-covers', 'on');
     fetchSimulado.mockImplementation(async () => new Response(null, { status: 500 }));
