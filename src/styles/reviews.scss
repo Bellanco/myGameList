@@ -32,7 +32,7 @@
   width: 3.4rem; height: 3.4rem;
   border-radius: 50%;
   display: grid; place-items: center;
-  font-size: 1.45rem; font-weight: 800; line-height: 1;
+  font-size: var(--fs-2xl); font-weight: 800; line-height: 1;
   font-variant-numeric: tabular-nums;
   color: var(--acc);
   background: var(--acc-soft);
@@ -52,7 +52,7 @@
 .hub-review-game {
   align-self: stretch;
   margin: 0;
-  font-size: 1.02rem;
+  font-size: var(--fs-lg);
   font-weight: 800;
   /* El color de texto fuerte, NO el tono de "nombre de juego": en una tarjeta de la lista el título ya destaca
      por tamaño y peso, y va junto al medallón, que es quien pone color ahí. El tono de la paleta se reserva para
@@ -94,7 +94,7 @@
 }
 
 .hub-review-date {
-  font-size: .72rem;
+  font-size: var(--fs-2xs);
   color: var(--hub-text-muted);
   letter-spacing: .02em;
 }
@@ -102,7 +102,7 @@
 /* Aviso de "juego sin pasar", en el hueco de la fecha (tus reseñas del panel no la enseñan: esa fecha es la de
    publicación del canal social). Ámbar del tema tirado al naranja, para no confundirlo con un aviso amarillo. */
 .hub-review-unfinished {
-  font-size: .72rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   letter-spacing: .02em;
   color: color-mix(in srgb, var(--warn), var(--danger) 40%);
@@ -125,7 +125,7 @@
 
 .hub-related-title {
   margin: 0 0 .55rem;
-  font-size: .82rem;
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -164,14 +164,29 @@
 .hub-related-entry .hub-review-medal {
   align-self: center;
   width: 2.3rem; height: 2.3rem;
-  font-size: .95rem;
+  font-size: var(--fs-md);
   border-width: 1px;
 }
 
 .hub-related-entry .hub-review-entry-head { gap: .1rem; }
 
+/* EN EL EPÍLOGO EL TÍTULO ES UN TÍTULO, NO UN CARTEL. `.hub-review-game` se estira a todo el ancho de su
+   cabecera (`align-self: stretch`, arriba), que es lo que se quiere en una tarjeta ancha —el título manda—; pero
+   varios temas visten esta misma pieza con el traje de su chip de juego (la pegatina cian de «Inserte moneda»,
+   el cartel de pergamino de «Plata y acero»: cada uno en su §6), y un chip estirado dentro de una tarjeta de
+   17 rem deja de leerse como nombre y pasa a ser una BARRA de color de lado a lado. Aquí la etiqueta mide lo que
+   mide el nombre y se acabó.
+   El `:root` y el `h5` del selector no son adorno: los temas llegan a (0,3,0) desde
+   `:root[data-palette="…"] .hub-review-game`, así que hay que sumar (0,3,1) para ganarles — el mismo truco, y por
+   el mismo motivo, que `.hub-review-detail-game` unas líneas más arriba. Lo demás se les deja pasar a propósito:
+   el color, el relleno y la forma son cosa del tema; esta regla solo discute el ANCHO. */
+:root .hub-related-entry h5.hub-review-game {
+  align-self: start;
+  max-width: 100%;
+}
+
 .hub-related-entry .hub-review-game {
-  font-size: .88rem;
+  font-size: var(--fs-sm);
   line-height: 1.25;
   /* Hasta dos líneas: en una columna estrecha, cortar «Sekiro: Shadows Die Twice» al primer renglón deja el
      título irreconocible, y dejarlo crecer sin tope descuadra la altura de toda la fila. */
@@ -185,7 +200,7 @@
 /* La firma, bajo el título y en segundo plano: aquí se busca el juego, no quién lo escribió. */
 .hub-related-author {
   display: block;
-  font-size: .74rem;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   color: var(--hub-text-muted);
   overflow: hidden;
@@ -205,7 +220,7 @@
   max-width: none;
   line-clamp: 3;
   -webkit-line-clamp: 3;
-  font-size: .8rem;
+  font-size: var(--fs-xs);
   line-height: 1.45;
   color: var(--hub-text-muted);
 }
@@ -242,26 +257,11 @@
   transition: color .2s ease, background .2s ease;
 }
 
-.hub-more-soft .ui-icon { width: .95rem; height: .95rem; }
+.hub-more-soft .ui-icon { width: var(--ico-sm); height: var(--ico-sm); }
 
 .hub-more-soft:hover { color: var(--fg-link); background: var(--surface-soft); }
 
 .hub-more-soft:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-
-/* "Ver más/menos" de cada reseña: a todo el ancho, igual que el "Mostrar más". */
-.hub-review-more {
-  align-self: stretch;
-  width: 100%;
-  margin-top: .35rem;
-  border-radius: var(--radius-md);
-  /* Texto "Ver más/menos" en lugar del chevron; el botón conserva el mismo tamaño (barra a todo el ancho). */
-  font-size: .8rem;
-  font-weight: 700;
-}
-
-.hub-review-more:hover { background: var(--surface-soft); color: var(--fg-link); }
-
-.hub-review-more:active { background: var(--overlay-hover); }
 
 /* "Mostrar más": misma altura, pero la zona pulsable abarca todo el ancho de la columna,
    con feedback de botón muy sutil (hover/active). Va tras .hub-more-soft para ganar en cascada. */
@@ -276,7 +276,7 @@
 
 .hub-feed-load-more:active { background: var(--overlay-hover); }
 
-.hub-game-filter-empty { color: var(--text-muted); font-size: .88rem; padding: .6rem .2rem; margin: 0; }
+.hub-game-filter-empty { color: var(--text-muted); font-size: var(--fs-sm); padding: .6rem .2rem; margin: 0; }
 
 /* Reseñas pulsables: capa transparente que abarca toda la tarjeta y captura el click sin envolver el contenido
    (así el título/estrellas/texto siguen siendo texto seleccionable y el foco recae en un único control). */
@@ -329,7 +329,7 @@
   outline: none;
   border-color: rgba(var(--steam-rgb),.42);
   background: rgba(var(--steam-rgb),.12);
-  box-shadow: 0 0 0 2px rgba(var(--steam-rgb),.2);
+  box-shadow: var(--ring-accent);
 }
 
 

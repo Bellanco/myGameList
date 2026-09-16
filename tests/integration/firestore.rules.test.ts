@@ -58,6 +58,17 @@ describe('firestore.rules', () => {
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { effects: 'off' }));
     });
 
+    it('F5: admite forma del listado, tamaño de los cuadros y carátulas, que la allowlist denegaba en silencio', async () => {
+      // Mismo caso que `effects` en L2, y con la misma consecuencia: como `hasOnly` rechaza el documento ENTERO,
+      // cambiar la forma del listado tumbaba de paso la sincronización de la paleta y el tema.
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { listShape: 'grid', gridSize: 'lg', covers: true }));
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { palette: 'persona', listShape: 'list' }));
+      // Son enumerados cerrados: lo que no está en la lista no entra.
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { listShape: 'mosaico' }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { gridSize: 'xl' }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { covers: 'on' }));
+    });
+
     it('F4: admite `feedMoveTabs` (filtro de movimientos del feed) y rechaza lo que no sea una cadena corta', async () => {
       await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { feedMoveTabs: 'cvep' }));
       // «Ninguna» es una elección legítima, no la ausencia de valor.

@@ -145,7 +145,10 @@ describe('renglón de movimiento de lista', () => {
     expect(card.className).toContain('is-move');
   });
 
-  it('el autor sí es navegable, por el nombre y por el avatar', async () => {
+  /* El aviso de movimiento ya no lleva foto: es una FRASE, y llevaba delante el avatar y un icono de lista que
+     juntos ocupaban más que el propio texto. Al autor se llega por su NOMBRE, que es el único enlace que queda
+     —y el que un lector de pantalla anuncia como tal—. */
+  it('el autor sigue siendo navegable por el nombre, y ya no hay foto que pulsar', async () => {
     const openProfileDetail = vi.fn();
     const user = userEvent.setup();
     renderFeed([move({ tab: 'c' })], { openProfileDetail });
@@ -153,8 +156,7 @@ describe('renglón de movimiento de lista', () => {
     await user.click(screen.getByRole('button', { name: 'Ada' }));
     expect(openProfileDetail).toHaveBeenCalledWith('pid-2');
 
-    await user.click(screen.getByLabelText(SOCIAL_UI.feed.openProfileAria('Ada')));
-    expect(openProfileDetail).toHaveBeenCalledTimes(2);
+    expect(screen.queryByLabelText(SOCIAL_UI.feed.openProfileAria('Ada'))).toBeNull();
   });
 
   it('lo propio y lo ajeno se distinguen igual que en el resto del feed', () => {
@@ -199,14 +201,14 @@ describe('SocialFeedScreen — la tarjeta de LOGROS', () => {
 
     const linea = screen.getByText('Ha conseguido').closest('p') as HTMLElement;
     expect(within(linea).getByText('Créditos finales IV')).toBeInTheDocument();
-    // La medalla NO va incrustada en la frase: vive en el canto contrario al avatar, tenga uno o nueve logros.
-    // Que esté siempre en el mismo sitio es lo que permite leer la tarjeta igual en los dos casos.
+    // La medalla NO va incrustada en la frase: ABRE el aviso, tenga uno o nueve logros. Que esté siempre en el
+    // mismo sitio es lo que permite leer la tarjeta igual en los dos casos.
     expect(within(linea).queryByRole('img')).toBeNull();
     expect(screen.getByRole('img', { name: /Créditos finales IV/ })).toBeInTheDocument();
     expect(screen.queryByText(/1 logros?/)).not.toBeInTheDocument();
   });
 
-  it('con más de cinco enseña cinco medallas y cuenta el resto', () => {
+  it('con más de tres enseña tres medallas y cuenta el resto', () => {
     // El tope existe para que la burbuja no se convierta en una parrilla. Lo que se queda dentro es lo más raro
     // del día —`buildAchievementFeed` ordena por rareza—, así que el recorte se lleva lo más común.
     renderFeed([logros({
@@ -222,8 +224,10 @@ describe('SocialFeedScreen — la tarjeta de LOGROS', () => {
     })]);
 
     expect(screen.getByText('Ha conseguido 7 logros')).toBeInTheDocument();
-    expect(screen.getAllByRole('img', { name: /./ }).filter((el) => el.className.includes('ach-medal'))).toHaveLength(5);
-    expect(screen.getByText('+2')).toBeInTheDocument();
+    // Tres, no cinco: la tira pasó a ABRIR el aviso en vez de cerrarlo, y en esa posición cinco sellos empujaban
+    // la frase fuera de la línea.
+    expect(screen.getAllByRole('img', { name: /./ }).filter((el) => el.className.includes('ach-medal'))).toHaveLength(3);
+    expect(screen.getByText('+4')).toBeInTheDocument();
     // Y lo que queda fuera del corte no está en ninguna parte de la tarjeta: el titular no lo nombra —para eso
     // está el contador— y su medalla tampoco se pinta. Sigue estando en el `aria-label` de la tarjeta, que es
     // quien no puede perder ningún nombre.

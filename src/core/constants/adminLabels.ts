@@ -48,6 +48,13 @@ export const ADMIN_PANEL_UI = {
     /** El censo de enlaces viene paginado y el panel pide una página: si hay más, el número lleva un "+". */
     partialCount: (count: number) => `${count}+`,
     partialHint: 'Solo se ha listado la primera página de enlaces: puede haber más.',
+    /* CARÁTULAS NUEVAS DEL DÍA. Sale del Worker de carátulas, no del censo, y solo se pinta si su respuesta
+       llegó. Es el único sitio donde se ve cuánto del presupuesto de escrituras de KV —que estas comparten con
+       los enlaces— se está gastando: el panel de Cloudflare da el total de la cuenta sin separar quién lo gasta. */
+    covers: 'Carátulas nuevas hoy',
+    coversValue: (spent: number, cap: number) => `${spent} / ${cap}`,
+    coversHint:
+      'Juegos resueltos contra IGDB en el día UTC, sobre el tope del servicio. Se apunta por lotes de 50, así que es un promedio con grano grueso, no una cuenta exacta.',
   },
   // Ficha completa del usuario: todo lo que las reglas dejan leer de su documento y de sus amistades.
   field: {

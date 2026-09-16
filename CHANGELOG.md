@@ -3,6 +3,137 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows the git tags.
 
+## [1.3.0] - 2026-09-16
+
+La versión del **listado con forma** y de las **carátulas**.
+
+### Added
+- **Dos formas para el listado, a elegir en su cabecera:** *lista* —un renglón por juego— o *tarjetas* —un
+  mosaico—. La forma se recuerda y viaja con la cuenta, así que el móvil y el ordenador enseñan lo mismo. Con
+  ella se va la tabla de columnas, que era lo que hacía que esto pareciera una hoja de cálculo.
+- **El renglón, en tres pisos y con columnas invisibles:** nombre con nota e insignia arriba; año, plataformas
+  y géneros en ranuras de ancho fijo; puntos fuertes y débiles debajo. Cada ranura empieza siempre en el mismo
+  píxel, así que se lee en vertical sin dibujar una sola línea.
+- **Los chips se adaptan al sitio que hay.** Se mide el texto de cada juego con la letra de ese tema y se pintan
+  los que caben; el «+N» va anclado al canto y lo que se sale se desvanece en vez de partirse a media letra.
+- **Las tarjetas enseñan siempre lo mismo y en el mismo sitio:** una plataforma, un género, la nota sobre el
+  canto de la carátula, la insignia sobre el de abajo y un medidor al pie con el tono de la nota.
+- **Un deslizador para el tamaño de las tarjetas:** tres pasos, que a 1440 px dan 8, 6 o 5 columnas y en un
+  teléfono 3, 2 o 1.
+- **Carátulas de los juegos** (apagadas por defecto), en la tarjeta y recortadas en una franja en el renglón. No
+  aparecen de golpe: entran, y cómo entran lo pone cada tema.
+- **La tarjeta sin carátula tiene forma propia en cada tema:** el panel con cantoneras en L de «Cámara de
+  pruebas», el mueble con marquesina de «Inserte moneda», la cartela del códice de «Solo hay guerra», el lingote
+  templado de «Forja y temple»… Antes eran ocho veces la misma caja con distinto color.
+- **Tope diario de carátulas nuevas para todo el servicio** (700), además del que ya había por IP, y **el gasto
+  del día a la vista en el panel de administración**. Lo que se raciona son las escrituras de KV, que son 1.000
+  diarias para toda la cuenta y las comparten las carátulas con los enlaces de reseñas.
+- **Se pide almacenamiento persistente**, para que el navegador no tire lo guardado —imágenes, armazón y la
+  biblioteca para verla sin red— cuando le aprieta el disco.
+
+### Changed
+- **El orden se pulsa en palabras**, en la cabecera del listado: la activa se tiñe con el acento y lleva una
+  punta que dice el sentido. Recuento, orden y forma son ahora una sola pieza, con el canto de las filas.
+- **El análisis tiene pantalla propia** (`/perfil/resenas/:id`) en vez de volcarse en el detalle del juego, que
+  pasa de unos 600 px a 245. El botón de volver devuelve al listado del que se vino.
+- **La plataforma cambia de color en cinco paletas**, a la familia fría: compartía el gris o el verde de otras
+  categorías que ya tienen significado propio.
+- **El mosaico funciona en el teléfono** (elegir «tarjetas» revertía a renglones sin avisar) y las mayúsculas del
+  listado obedecen a la preferencia de apariencia.
+- **En el hub social, las carátulas ajenas son de momento solo para el rango mithril.** Tu biblioteca se resuelve
+  una vez; la de otra persona es un catálogo entero de juegos que no tienes, y se multiplica por cada perfil que
+  abras. El resto ve la misma lista sin imágenes.
+
+### Fixed
+- **La forma del listado y las carátulas no se sincronizaban, y tumbaban las demás preferencias.** Las reglas de
+  Firestore no admitían `listShape` ni `covers` en `publicConfig`, y una clave no admitida rechaza la escritura
+  entera: a quien tocara la forma dejaban de viajarle también la paleta y el tema.
+- **Las carátulas no se veían en desarrollo**, y sin un solo error: `/cover` es una Pages Function y el servidor
+  de Vite no las ejecuta. Ahora las sirve con el mismo emparejador que producción.
+- **Un juego sin carátula ya no se queda así para siempre.** Se revisa a los noventa días, guardar su ficha
+  adelanta la revisión (con un día de margen entre gestos) y corregir el título la reabre al instante.
+- **No poder escribir en KV dejaba sin carátula a quien ya la tenía resuelta:** el fallo al guardar tumbaba la
+  respuesta entera. Guardar pasa a ser el mejor esfuerzo, nunca una condición para responder.
+- **El llenado en segundo plano daba por hecho lo que no llegó a preguntarse** (un 429 del cupo, un 501 sin
+  credenciales), así que quien importara más de 500 juegos perdía el precalentamiento de todo lo que vino
+  después.
+
+### Performance
+- **El emparejamiento acertado deja de caducar.** Duraba un mes, y eso era volver a resolver la biblioteca
+  entera contra IGDB cada treinta días para llegar a la misma respuesta. Para rectificar está la versión de la
+  clave, que los invalida a todos a la vez.
+- **La carátula guardada dura más y se refresca sola:** el service worker revalida a los noventa días en vez de
+  a los siete y el navegador conserva la copia un año con `stale-while-revalidate`, pintándola al instante
+  mientras pide la nueva por detrás.
+- **Las listas ajenas reaprovechan la carátula que ya tienes** del mismo título, en vez de descargar otra por
+  tenerla en otra plataforma.
+- **La franja del renglón pide la resolución que le toca:** recorrer una biblioteca de trescientos juegos pasa
+  de unos 45 MB a unos 24. La grande queda para mithril.
+- **Fuera la tabla de escritorio**, que llevaba tiempo sin poder verse: **326 nodos menos** en la pantalla del
+  listado.
+
+### Security
+- **El proxy de carátulas no resuelve juegos nuevos para otras webs.** Una carátula ya emparejada se sirve a
+  quien sea —no cuesta nada—, pero el trabajo caro solo se hace desde aquí.
+- **El modo ampliado de carátulas exige el sello del rango**, verificado en el servidor. Mientras dependió de un
+  parámetro en la URL, cualquiera podía duplicar el gasto del servicio.
+
+### Tests
+- Las tres caras de la carga de una carátula, el tamaño de las tarjetas y que `publicConfig` admite las claves
+  nuevas y rechaza lo desconocido.
+- Lo que cuesta cada respuesta de `/cover`: qué gasta cupo, qué escribe en KV, qué topa y qué se sirve igual.
+- Los tres caminos de vuelta de un juego sin carátula, y que el interruptor de carátulas no borra lo aprendido:
+  apagado no pide nada y al encenderlo se piden las mismas URL, que sirve la caché.
+
+## [1.2.8] - 2026-09-13
+
+### Added
+- **La zona de actividad tiene suelo propio en cada tema.** El hueco del feed no existía como superficie: el
+  estado vacío flotaba sobre la tarjeta y la tarjeta se encogía hasta él. Su capa decorativa acompaña ahora a la
+  ventana en vez de estirarse con el desplazamiento infinito, que dejaba los efectos a mitad de la lista.
+- **La aplicación amortigua sus cargas y sus cambios de pantalla:** entrada suave en cada cambio de ruta,
+  esqueleto y barra de progreso donde antes no había nada mientras llegaba el chunk, armazón en el `index` para
+  que el primer instante no sea un blanco sin explicar, y las filas que entran y salen del listado se mueven en
+  vez de aparecer y desaparecer.
+- **Los cambios se suben sin esperar al siguiente ciclo.** Guardar un juego solo marcaba lo pendiente y la
+  subida esperaba al sondeo del minuto o a volver a la pestaña, así que quien editaba y cerraba se dejaba el
+  cambio en ese dispositivo. Ahora sube a los 5 s de la última edición —una ráfaga de guardados sigue siendo una
+  sola escritura— y la línea de estado distingue «sincronizado» de «queda algo por subir».
+
+### Fixed
+- **El fondo del lienzo social ocupa todo lo que se ve**, y el editor de perfil enseña la misma cara que el
+  resto del hub.
+- **La actividad y su detalle dejaban de cargar a medias.**
+- **La reciprocidad de la foto alcanza a los movimientos de lista:** quien solo aporta un monograma tampoco ve
+  ahí las caras de los demás.
+- **El total del catálogo de logros es el mismo para todo el mundo.**
+- **La curva anual de estadísticas escondía números que cabían** en pantalla estrecha.
+
+### Performance
+- **Quien nunca ha iniciado sesión ya no se descarga Firebase:** son ~65 kB comprimidos que se bajaba todo el
+  mundo, incluido quien solo usa sus listas. Se mira si hay sesión guardada antes de cargar nada, y quien la
+  inicia durante la visita se engancha sin recargar. Verificado contra el build: sin sesión, 26 scripts y ningún
+  chunk de Firebase; con ella, 33.
+- **Una copia menos en cada guardado.** Cada edición escribía tres: el espejo del store y las dos bibliotecas
+  enteras, la de `localStorage` y la de IndexedDB. Ahora las dos viajan en el mismo volcado aplazado.
+- **La configuración de sincronización deja de leerse en cada render** (eran dos `getItem` con sus dos
+  `JSON.parse` por render, y la app re-renderiza con cada tecla del buscador).
+- **Dos peticiones menos al subir y al abrir:** la escritura reutiliza el cuerpo del gist que el ciclo acaba de
+  leer —subir una edición pasa de tres peticiones a dos— y el veredicto del formato se sella, así que la
+  relectura completa deja de repetirse en la primera apertura de cada sesión.
+
+### Documentation
+- Plan para rotar los canales sociales y revocar de verdad un acceso, la arquitectura del README ajustada a lo
+  que el código hace, y por qué el identificador de un gist es la llave —y qué limita eso de la revocación.
+
+## [1.2.7] - 2026-09-12
+
+### Fixed
+- **La app ya no se recarga con un formulario a medio escribir.** La actualización automática entraba mientras
+  se estaba editando un juego y se llevaba por delante lo tecleado.
+- **La marca de cambios pendientes dejaba de bloquear la recarga** aunque ya no quedara nada que subir.
+- **El nick se recorta al límite que aceptan las reglas de amistad**, que lo rechazaban en silencio.
+
 ## [1.2.6] - 2026-09-12
 
 ### Fixed

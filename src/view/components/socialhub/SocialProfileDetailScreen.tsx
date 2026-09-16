@@ -125,6 +125,8 @@ function GameCategoryTabs({
 type SocialProfileDetail = {
   displayName: string;
   photoURL?: string;
+  /** Rango del perfil MIRADO (no el de quien mira, que es `viewerTier`). Viene de la entrada del directorio. */
+  tier?: ProfileTier;
   visibility?: {
     hiddenTabs?: TabId[];
     hideReplayable?: boolean;
@@ -455,11 +457,14 @@ function SocialProfileDetailScreenBase({
           <div className="hub-profile-hero">
             <HubAvatar photoURL={activeProfileDetail.photoURL} sizeClass="hub-avatar-lg" />
             <h3 className="hub-profile-hero-name">{activeProfileDetail.displayName}</h3>
+            {/* AQUÍ NO VA EL SELLO DE RANGO. En el perfil de otra persona el rango no se enseña por ahora; en el
+                directorio sigue estando la muesca de color de la tarjeta, que es la que sirve para recorrer la
+                rejilla, y el sello con la palabra se queda en el editor del perfil propio. */}
             {/* LA TIRA DE LOGROS, justo debajo del nombre y SOLO LA IMAGEN: sin rótulos, sin fechas y sin cifras
-                alrededor. Es lo que la hace funcionar aquí — esta cabecera ya lleva avatar, nombre y muesca de
-                rango, y unas medallas rotuladas la convertirían en un listado. El nombre sale al pasar por
-                encima y también con el tabulador (ver `AchievementStrip`). Detrás de la misma puerta que el
-                resto de la ficha: para un no-amigo no se pinta. */}
+                alrededor. Es lo que la hace funcionar aquí — esta cabecera ya lleva avatar y nombre, y unas
+                medallas rotuladas la convertirían en un listado. El nombre sale al pasar por encima y también
+                con el tabulador (ver `AchievementStrip`). Detrás de la misma puerta que el resto de la ficha:
+                para un no-amigo no se pinta. */}
             {ENABLE_ACHIEVEMENTS && canSeeFullProfile && achievementsMirror ? (
               <ProfileAchievementStrip mirror={achievementsMirror} onOpen={onOpenAchievements || (() => {})} />
             ) : null}
@@ -532,6 +537,25 @@ function SocialProfileDetailScreenBase({
                     sort={sortByTab[currentTab]}
                     onSort={handleSort}
                     readOnly
+                    /* LAS CARÁTULAS AJENAS, SOLO PARA MITHRIL —de momento—. Tu biblioteca la calienta el
+                       recorrido de fondo una vez y ya está resuelta; la de otra persona es un catálogo entero de
+                       juegos que tú no tienes, y se multiplica por cada perfil que abras. Es el gasto que menos
+                       se puede acotar del servicio, así que hasta que haya números para decidir (ver el contador
+                       del día en el panel) se le concede al rango que paga los privilegios, como la franja ancha
+                       del renglón.
+                       Los demás ven la MISMA lista sin imágenes, que es la vista que ya existe con la
+                       preferencia apagada. Y cuando se desbloquee, se quita esta línea y vuelve a mandar el
+                       check de cada uno: no hay nada más que deshacer. */
+                    coverPolicy={{
+                      allowed: viewerTier === ADMIN_ONLY_TIER,
+                      /* Y las que se pidan, reaprovechando lo ya descargado: si de ese título ya hay carátula en
+                         este navegador, se pide con SUS plataformas y la sirve la caché sin salir a la red. Aquí
+                         es donde más vale, porque el mismo juego aparece con la estantería de otra persona
+                         detrás (tu Hollow Knight en Steam, el suyo en Switch) y esa diferencia bastaba para
+                         descargar dos veces la misma imagen — y para abrir un emparejamiento nuevo en el
+                         servidor cuando las plataformas no normalizan igual. */
+                      preferKnown: true,
+                    }}
                     visibility={{
                       showYears: false,
                       showReplayable: !activeProfileDetail.visibility?.hideReplayable,

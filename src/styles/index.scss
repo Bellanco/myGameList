@@ -3,9 +3,15 @@
 // que cualquier regla que use la familia. Generado por `scripts/vendor-fonts.mjs`.
 @use './fonts/dm-sans';
 @use './base';
+// El COLOR de los ocho temas (CAPA 2 y 2b), uno por carpeta. Va aquí, pegado a la base y antes que
+// cualquier hoja de componente, que es exactamente el sitio que ocupaba cuando vivía dentro de `_base.scss`.
+@use './themes';
 @use './layout';
 // El hub social NO se declara aquí: sus estilos exclusivos viven en `social.scss` y los importa `SocialHub.tsx`,
 // de modo que Vite los emite en el chunk perezoso del hub (mismo patrón que `stats.scss` y `admin.scss`).
+// El aviso de la app (`.notice`): una sola pieza para el de estado, el de versión nueva y los del hub. Va en el
+// BUNDLE BASE y no en la hoja de cada pantalla porque el de estado existe desde el primer render.
+@use './notice';
 @use './forms-and-buttons';
 @use './table';
 @use './overlays-and-responsive';
@@ -17,6 +23,14 @@
 // fila). Van en el arranque a propósito: la primera que se ve es el armazón que `index.html` pinta antes de que
 // React monte, y las esperas de chunk ocurren justo cuando su hoja todavía no ha llegado.
 @use './motion';
-// Los skins de tema (CAPA 3, `themes/*.scss`) ya NO se agrupan aquí: se cargan bajo demanda por
-// paleta desde `paletteSkin.ts` (los colores/layout de cada paleta viven en `_base.scss`, CAPA 2, que
-// sí va en el bundle base). Steam (default) no tiene skin. Ver `src/view/hooks/paletteSkin.ts`.
+// Los skins de tema (CAPA 3, `themes/*.scss`) NO se agrupan aquí: se cargan bajo demanda por paleta desde
+// `paletteSkin.ts` (los colores/layout de cada paleta viven en `_base.scss`, CAPA 2, que sí va en el bundle
+// base). Ver `src/view/hooks/paletteSkin.ts`.
+//
+// LA EXCEPCIÓN ES LA PALETA POR DEFECTO, que sí lo trae: es la que pinta el PRIMER FOTOGRAMA de quien abre la
+// app sin haber elegido nada, y un skin que llega un instante después es un cambio de letra y de forma a la
+// vista (los colores no, que esos ya van en CAPA 2). Cargarlo aquí es lo que hacía Clásico cuando era la de
+// por defecto, solo que sus reglas vivían repartidas por las hojas base en vez de en un fichero suyo.
+// Hoy la de por defecto es «Forja y temple», y su skin es SOLO la letra (Saira + IBM Plex Mono): son ~1 kB de
+// reglas más los dos .woff2, que es lo que cuesta que el primer fotograma ya salga con su tipografía.
+@use './themes/forja/forja';

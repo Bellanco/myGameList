@@ -349,6 +349,7 @@ const SocialHubInner = memo(function SocialHubInner({
       return (
         <SocialProfileScreen
           SOCIAL_UI={SOCIAL_UI}
+          tier={ownTier}
           profileName={profileName}
           setProfileName={setProfileName}
           completedGames={completedGames}

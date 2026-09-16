@@ -22,9 +22,20 @@ const LIKELY_HTTP_URL = /^https?:/i;
  * borrada, token de Xbox/PSN caducado…), degrada al enlace clicable. La imagen va envuelta en el enlace original.
  */
 function PostMedia({ media, href }: { media: PostMediaType; href: string }) {
-  const [failed, setFailed] = useState(false);
+  /* Tres estados y no un `failed` suelto, porque hacen falta los tres: mientras CARGA hay que reservar sitio
+     (ver `.hub-post-media[data-carga]`), al llegar se quita esa reserva y si no llega se degrada al enlace. */
+  const [estado, setEstado] = useState<'cargando' | 'lista' | 'fallo'>('cargando');
 
-  if (failed) {
+  /* El feed recicla estas piezas: al llegar publicaciones nuevas, un mismo `PostMedia` puede pasar a pintar otra
+     URL sin desmontarse, y con el estado heredado una imagen buena se quedaría en el enlace de la anterior. Se
+     ajusta durante el render, no en un efecto, para no pintar un fotograma con la URL nueva y el estado viejo. */
+  const [anterior, setAnterior] = useState(media.src);
+  if (media.src !== anterior) {
+    setAnterior(media.src);
+    setEstado('cargando');
+  }
+
+  if (estado === 'fallo') {
     return <a href={href} target="_blank" rel="noopener noreferrer">{href}</a>;
   }
 
@@ -38,7 +49,9 @@ function PostMedia({ media, href }: { media: PostMediaType; href: string }) {
         // Sin `referrerPolicy`: el atributo no existe para `<video>` (solo para img/iframe/script/link/a), así
         // que aquí manda la política del documento — `strict-origin-when-cross-origin` (ver `public/_headers`),
         // que ya manda el origen y no la URL completa.
-        onError={() => setFailed(true)}
+        data-carga={estado}
+        onLoadedMetadata={() => setEstado('lista')}
+        onError={() => setEstado('fallo')}
       />
     );
   }
@@ -52,7 +65,13 @@ function PostMedia({ media, href }: { media: PostMediaType; href: string }) {
         loading="lazy"
         decoding="async"
         referrerPolicy="no-referrer"
-        onError={() => setFailed(true)}
+        /* Lo que reserva el hueco mientras la imagen baja. No se pueden poner `width`/`height`: la imagen es de
+           un servidor ajeno y sus medidas no se saben hasta que llega, así que lo único honesto es guardar un
+           sitio mientras tanto y soltarlo al cargar. Sin esto, el texto de debajo saltaba entero cada vez que
+           una imagen de una publicación terminaba de bajar. */
+        data-carga={estado}
+        onLoad={() => setEstado('lista')}
+        onError={() => setEstado('fallo')}
       />
     </a>
   );

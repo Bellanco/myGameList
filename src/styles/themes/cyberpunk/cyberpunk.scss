@@ -1,7 +1,7 @@
 /* Fuentes propias de esta paleta (fuera de la ruta crítica; solo cargan con este skin).
    Servidas desde el propio origen: antes esto era un `@import url(fonts.googleapis.com)`, que en
    runtime añadía dos saltos a dominios de terceros. Generado por `scripts/vendor-fonts.mjs`. */
-@use '../fonts/cyberpunk';
+@use './fonts';
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════
    TEMA · Sin futuro (Cyberpunk 2077) — HUD de Night City: amarillo ácido + cian + magenta sobre
@@ -12,7 +12,16 @@
 /* ── §1 · Tipografía: Rajdhani (fuente real del HUD) para todo; Share Tech Mono (terminal) para fechas y
    números de puntuación. Los momentos hero (título de sección, resultado de ruleta) llevan el GLITCH de
    aberración cromática: sombras cian/magenta desplazadas. En claro se apaga (sobre fondo claro ensucia). ── */
-:root[data-palette="cyberpunk"] body { font-family: 'Rajdhani', system-ui, sans-serif; }
+/* PAPELES DE LETRA de este tema. CAPA 0 (`_base.scss`) declara los cuatro papeles y todas las hojas
+   los usan por ficha; aquí es donde este tema decide qué familia va en cada uno. Cambiar la letra del
+   tema es cambiar ESTE bloque, no buscar `font-family` por el fichero. */
+:root[data-palette="cyberpunk"] {
+  --font-body: 'Rajdhani', system-ui, sans-serif;
+  --font-label: 'Rajdhani', system-ui, sans-serif;
+  --font-display: 'Rajdhani', system-ui, sans-serif;
+  --font-mono: 'Share Tech Mono', ui-monospace, monospace;
+}
+:root[data-palette="cyberpunk"] body { font-family: var(--font-body); }
 :root[data-palette="cyberpunk"] h2,
 :root[data-palette="cyberpunk"] h3,
 :root[data-palette="cyberpunk"] h4,
@@ -32,12 +41,12 @@
 :root[data-palette="cyberpunk"] .hub-feed-game-chip,
 :root[data-palette="cyberpunk"] .hub-review-game,
 :root[data-palette="cyberpunk"] .active-filter-chip,
-:root[data-palette="cyberpunk"] .chip { font-family: 'Rajdhani', system-ui, sans-serif; font-weight: 600; letter-spacing: .03em; }
+:root[data-palette="cyberpunk"] .chip { font-family: var(--font-label); font-weight: 600; letter-spacing: .03em; }
 :root[data-palette="cyberpunk"] .score-ring-num,
 :root[data-palette="cyberpunk"] .score-dial-num,
 :root[data-palette="cyberpunk"] .hub-review-medal,
 :root[data-palette="cyberpunk"] .hub-feed-date,
-:root[data-palette="cyberpunk"] .hub-review-date { font-family: 'Share Tech Mono', ui-monospace, monospace; }
+:root[data-palette="cyberpunk"] .hub-review-date { font-family: var(--font-mono); }
 /* Glitch de aberración cromática (signature) en los títulos hero: SUTIL — 1px y colores semitransparentes,
    un matiz de fleco cian/magenta que no dobla el texto ni impide leerlo. */
 :root[data-palette="cyberpunk"] h2,
@@ -100,6 +109,7 @@
   :root[data-palette="cyberpunk"] .btn-secondary::before,
   :root[data-palette="cyberpunk"] .btn-danger::before,
   :root[data-palette="cyberpunk"] .btn-abandoned::before { animation: cyber-glitch-layer 17s ease-in-out infinite; }
+
 }
 
 /* ── §1b · GLITCH portado a otras firmas. Misma mecánica confinada que el cyberpunk (destello en ~2% de un ciclo
@@ -143,6 +153,34 @@
 :root[data-palette="cyberpunk"] .modal,
 :root[data-palette="cyberpunk"] .alert-dialog { border: 1px solid rgba(0, 240, 255, .35) !important; border-left: 3px solid var(--cyber-yellow) !important; border-radius: 0 !important; box-shadow: 0 0 18px rgba(0, 240, 255, .06), inset 0 0 0 1px rgba(0, 240, 255, .05) !important; }
 
+/* UNA SOLA BARRA AMARILLA POR BLOQUE, y esto es lo que la hace una marca. La regla de arriba se la da a cada
+   panel, y en las pantallas donde los paneles se ANIDAN —el detalle de un perfil social es el peor caso: la
+   tarjeta del hub, dentro su lienzo, dentro la ficha, y dentro la tabla de juegos— salían CUATRO barras
+   paralelas a 23 px una de otra, como una escalera amarilla pegada al margen izquierdo. Una marca repetida deja
+   de marcar nada: la conserva el panel de fuera, que es el que dice dónde empieza el bloque, y los de dentro se
+   quedan con el filete cian del resto del marco.
+
+   Se escribe con `:is()` en las dos posiciones para no enumerar las sesenta y cuatro combinaciones de paneles.
+   Suma (0,3,1) contra los (0,2,1) de la regla de §3, así que gana sin `!important` extra. */
+:root[data-palette="cyberpunk"] :is(.toolbar, .table-wrap, .settings-card, .stats-card, .hub-feed-card, .hub-hub-card, .modal, .alert-dialog)
+  :is(.toolbar, .table-wrap, .settings-card, .stats-card, .hub-feed-card, .hub-hub-card, .modal, .alert-dialog) {
+  border-left: 1px solid rgba(0, 240, 255, .35) !important;
+}
+
+/* LA FILA SEÑALADA SE MARCA EN CIAN, NO EN AMARILLO. El realce de la fila (`_table.scss`) es un filete de 3 px
+   del acento pegado al canto izquierdo… que es exactamente donde este tema pinta la barra del panel, también
+   amarilla y también de 3 px: las dos se tocaban y se leían como una sola barra de seis, que además parecía
+   salirse del marco de la tabla. El cian es el otro color del HUD y ya es el del filete de los paneles, así que
+   la fila señalada se distingue del canto del bloque sin estrenar ningún color. */
+@media (hover: hover) {
+  :root[data-palette="cyberpunk"] tbody tr.main-row:hover { box-shadow: inset 3px 0 0 var(--cyber-cyan); }
+}
+:root[data-palette="cyberpunk"] tbody tr.main-row.just-changed { animation-name: cyber-row-flash; }
+@keyframes cyber-row-flash {
+  0%   { background: rgba(0, 240, 255, .14); box-shadow: inset 3px 0 0 var(--cyber-cyan); }
+  100% { background: transparent; box-shadow: inset 3px 0 0 transparent; }
+}
+
 /* ── §4 · Tabla: cabecera HUD (Rajdhani, etiqueta amarilla, filete cian inferior). ── */
 :root[data-palette="cyberpunk"] thead th { background: transparent; letter-spacing: .06em; border-bottom: 1px solid rgba(0, 240, 255, .4); }
 
@@ -179,9 +217,7 @@
 :root[data-palette="cyberpunk"] .btn-danger::before,
 :root[data-palette="cyberpunk"] .btn-danger::after,
 :root[data-palette="cyberpunk"] .btn-abandoned::before,
-:root[data-palette="cyberpunk"] .btn-abandoned::after,
-:root[data-palette="cyberpunk"] .btn-recommend-active::before,
-:root[data-palette="cyberpunk"] .btn-recommend-active::after {
+:root[data-palette="cyberpunk"] .btn-abandoned::after {
   content: '';
   position: absolute;
   clip-path: var(--hud-cut);
@@ -191,15 +227,13 @@
 :root[data-palette="cyberpunk"] .btn-secondary::before,
 :root[data-palette="cyberpunk"] .btn-toggle:not(.active)::before,
 :root[data-palette="cyberpunk"] .btn-danger::before,
-:root[data-palette="cyberpunk"] .btn-abandoned::before,
-:root[data-palette="cyberpunk"] .btn-recommend-active::before { inset: 0; z-index: -2; background: var(--hud-edge); }
+:root[data-palette="cyberpunk"] .btn-abandoned::before { inset: 0; z-index: -2; background: var(--hud-edge); }
 /* Capa de relleno, 1px más pequeña → deja asomar el borde 1px en todos los cantos (incl. la diagonal).
    `--hud-fill` permite un relleno distinto por variante (dark elevado en las cian; rojo translúcido en las danger). */
 :root[data-palette="cyberpunk"] .btn-secondary::after,
 :root[data-palette="cyberpunk"] .btn-toggle:not(.active)::after,
 :root[data-palette="cyberpunk"] .btn-danger::after,
-:root[data-palette="cyberpunk"] .btn-abandoned::after,
-:root[data-palette="cyberpunk"] .btn-recommend-active::after { inset: 1px; z-index: -1; background: var(--hud-fill, var(--surface-elevated)); }
+:root[data-palette="cyberpunk"] .btn-abandoned::after { inset: 1px; z-index: -1; background: var(--hud-fill, var(--surface-elevated)); }
 /* En claro el filete es teal más marcado para que se vea sobre fondo claro. */
 :root[data-palette="cyberpunk"][data-theme="light"] .btn-secondary,
 :root[data-palette="cyberpunk"][data-theme="light"] .btn-toggle:not(.active) { --hud-edge: rgba(0, 137, 163, .55); }
@@ -210,8 +244,9 @@
 :root[data-palette="cyberpunk"][data-theme="light"] .scope-tabs > .btn-toggle:first-child:not(.active) { --hud-edge: rgba(0, 137, 163, .95); }
 :root[data-palette="cyberpunk"] .btn-accent,
 :root[data-palette="cyberpunk"] .btn-steam,
+:root[data-palette="cyberpunk"] .btn-primary,
 :root[data-palette="cyberpunk"] .btn.is-active,
-:root[data-palette="cyberpunk"] .btn-toggle.active { background: var(--cyber-yellow) !important; color: #08090d !important; border-color: var(--cyber-yellow) !important; }
+:root[data-palette="cyberpunk"] .btn-toggle.active { background: var(--cyber-yellow) !important; color: var(--on-accent) !important; border-color: var(--cyber-yellow) !important; }
 /* Los botones secundarios "encendidos" —toggle activo (.is-active) y de acento (.btn-accent: Ver perfil/perfiles,
    Añadir amigo, etc.)— NO deben volverse amarillos: el relleno amarillo de §5 chocaba con la doble capa cian y
    asomaba un triángulo por la muesca (se veía roto). Se quedan en la familia HUD pero AZUL ELÉCTRICO "encendido":
@@ -227,16 +262,13 @@
 }
 :root[data-palette="cyberpunk"] .btn-secondary.btn-accent:hover,
 :root[data-palette="cyberpunk"] .btn-secondary.is-active:hover { box-shadow: 0 0 14px rgba(0, 240, 255, .35) !important; }
-:root[data-palette="cyberpunk"] .btn-complete,
-:root[data-palette="cyberpunk"] .btn-recommend { background: var(--success) !important; color: #04140b !important; border-color: color-mix(in srgb, var(--success) 55%, #000) !important; }
-:root[data-palette="cyberpunk"] .btn-inprogress { background: var(--warn) !important; color: #1a1200 !important; border-color: color-mix(in srgb, var(--warn) 55%, #000) !important; }
+:root[data-palette="cyberpunk"] .btn-complete { background: var(--success) !important; color: #04140b !important; border-color: color-mix(in srgb, var(--success) 55%, #000) !important; }
 /* Botones de peligro (cerrar sesión, abandonar, quitar recomendación): estilo HUD del juego — rojo neón
    TRANSLÚCIDO en vez de relleno sólido. Misma técnica de doble capa que los cian (filete rojo que sigue la
    muesca), con relleno rojo tenue (opaco equivalente sobre el fondo oscuro), texto rojo neón y un halo sutil que
    se intensifica al pasar el ratón. `--danger`/`--danger-rgb` ya se adaptan a claro/oscuro. */
 :root[data-palette="cyberpunk"] .btn-danger,
-:root[data-palette="cyberpunk"] .btn-abandoned,
-:root[data-palette="cyberpunk"] .btn-recommend-active {
+:root[data-palette="cyberpunk"] .btn-abandoned {
   color: var(--danger) !important;
   background: transparent !important;
   border-color: transparent !important;
@@ -249,12 +281,9 @@
   box-shadow: 0 0 12px rgba(var(--danger-rgb), .25) !important;
 }
 :root[data-palette="cyberpunk"] .btn-danger:hover,
-:root[data-palette="cyberpunk"] .btn-abandoned:hover,
-:root[data-palette="cyberpunk"] .btn-recommend-active:hover { box-shadow: 0 0 16px rgba(var(--danger-rgb), .5) !important; }
-:root[data-palette="cyberpunk"][data-theme="light"] .btn-complete,
-:root[data-palette="cyberpunk"][data-theme="light"] .btn-recommend,
-:root[data-palette="cyberpunk"][data-theme="light"] .btn-inprogress { color: #fff !important; }
-:root[data-palette="cyberpunk"] .btn-ghost { font-family: 'Rajdhani', system-ui, sans-serif; font-weight: 600; letter-spacing: .05em; }
+:root[data-palette="cyberpunk"] .btn-abandoned:hover { box-shadow: 0 0 16px rgba(var(--danger-rgb), .5) !important; }
+:root[data-palette="cyberpunk"][data-theme="light"] .btn-complete { color: #fff !important; }
+:root[data-palette="cyberpunk"] .btn-ghost { font-family: var(--font-label); font-weight: 600; letter-spacing: .05em; }
 /* Hover: plano + glow neón cian (sin el giro 3D base). */
 :root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 14px rgba(0, 240, 255, .3); }
 :root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(0); }
@@ -350,7 +379,7 @@
    un prefijo cian `//`; la cabecera de día es un rótulo con filete de peligro cian. La barra fija (sticky)
    se mantiene (fondo opaco, sin tocar `position`). ── */
 :root[data-palette="cyberpunk"] .hub-feed-day-header { background: var(--bg) !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; padding: .15rem .6rem .45rem; }
-:root[data-palette="cyberpunk"] .hub-feed-day-header h4 { font-family: 'Rajdhani', system-ui, sans-serif; font-weight: 700; letter-spacing: .06em; color: var(--fg-link); }
+:root[data-palette="cyberpunk"] .hub-feed-day-header h4 { font-family: var(--font-label); font-weight: 700; letter-spacing: .06em; color: var(--fg-link); }
 :root[data-palette="cyberpunk"] .hub-feed-day-header::after { content: ''; position: absolute; left: 8%; right: 8%; bottom: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--cyber-cyan), transparent); }
 :root[data-palette="cyberpunk"] .hub-feed-date,
 :root[data-palette="cyberpunk"] .hub-review-date {
@@ -362,7 +391,7 @@
   box-shadow: none;
   padding: 0;
   color: var(--text-muted);
-  font-size: .72rem;
+  font-size: var(--fs-2xs);
   letter-spacing: .02em;
   transform: none;
 }
@@ -538,7 +567,7 @@
 }
 /* La hora, en la monoespaciada de la paleta y con el mismo prefijo de dato que usan sus fechas. */
 :root[data-palette="cyberpunk"] .hub-feed-move-hour {
-  font-family: 'Share Tech Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
   letter-spacing: .02em;
 }
 :root[data-palette="cyberpunk"] .hub-feed-move-hour::before { content: '// '; color: var(--cyber-cyan-fg); font-weight: 700; }
@@ -619,3 +648,87 @@
 }
 
 @keyframes lz-cyber-sweep { from { background-position: -130% 0; } to { background-position: 260% 0; } }
+
+/* ══ MOMENTOS · LAS CIFRAS SE DESCIFRAN AL ENTRAR ═══════════════════════════════════════════════════════════
+   Un contador del HUD no aparece: cuadra. Las nueve cifras del panel entran desenfocadas y saltando en
+   vertical, como un dígito que aún no ha fijado su valor, y se asientan una detrás de otra —el escalonado por
+   posición es lo que hace que se lea como una lectura en curso y no como una animación de entrada—.
+   No se toca el texto: solo el foco y el salto, así que la cifra es legible desde el primer fotograma para
+   quien no espere a que termine, y el lector de pantalla nunca ve nada raro. ══ */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-effects="on"][data-palette="cyberpunk"] .stat-tile-value {
+    animation: cyber-decipher .52s steps(6, end) both;
+  }
+  :root[data-effects="on"][data-palette="cyberpunk"] .stat-tile:nth-of-type(3n) .stat-tile-value { animation-delay: .08s; }
+  :root[data-effects="on"][data-palette="cyberpunk"] .stat-tile:nth-of-type(3n + 1) .stat-tile-value { animation-delay: .16s; }
+  :root[data-effects="on"][data-palette="cyberpunk"] .stat-tile:nth-of-type(3n + 2) .stat-tile-value { animation-delay: .24s; }
+
+  @keyframes cyber-decipher {
+    0%   { opacity: .25; filter: blur(3px); transform: translateY(-6px); }
+    50%  { opacity: .7;  filter: blur(1.6px); transform: translateY(3px); }
+    80%  { opacity: 1;   filter: blur(.6px); transform: translateY(-1px); }
+    100% { opacity: 1;   filter: none; transform: translateY(0); }
+  }
+}
+
+/* ── §N · LA CAJA SIN CARÁTULA = LA VENTANA DEL HUD ────────────────────────────────────────────────────
+   El chaflán NO lo recorta la caja. `clip-path` se come el `border` y el `box-shadow` del propio elemento
+   (la regla 2 que ya documentan §5 y `steam.scss` §4b), y lo que queda es el filete sobreviviendo en los
+   cantos rectos y desapareciendo justo en la diagonal: dos rayas sueltas en vez de un contorno.
+   La forma la dan DOS CAPAS detrás del contenido —`::before` con el color del filete y `::after` con el
+   relleno 1 px más pequeño—, exactamente igual que los botones de este tema. Así el cian rodea la pieza
+   entera, diagonales incluidas. Dentro van la barra amarilla del HUD y las líneas de barrido. ── */
+:root[data-palette="cyberpunk"] .game-card.is-flat {
+  --hud-cut: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+  isolation: isolate;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  clip-path: none;
+}
+:root[data-palette="cyberpunk"] .game-card.is-flat::before,
+:root[data-palette="cyberpunk"] .game-card.is-flat::after {
+  content: "";
+  position: absolute;
+  clip-path: var(--hud-cut);
+  pointer-events: none;
+}
+:root[data-palette="cyberpunk"] .game-card.is-flat::before {
+  inset: 0;
+  z-index: -2;
+  background: color-mix(in srgb, var(--cyber-cyan) 45%, transparent);
+}
+:root[data-palette="cyberpunk"] .game-card.is-flat::after {
+  inset: 1px;
+  z-index: -1;
+  background:
+    linear-gradient(var(--cyber-yellow), var(--cyber-yellow)) 0 0 / 4px 100% no-repeat,
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--cyber-cyan) 6%, transparent) 0 1px, transparent 1px 3px),
+    var(--surface);
+}
+:root[data-palette="cyberpunk"] .game-card.is-flat .game-card-body { padding-left: 1.15rem; }
+/* EL MEDIDOR = EL FILO DEL PANEL, y lo llena hasta sus cuatro cantos. La pieza de este tema son DOS capas
+   recortadas con la misma muesca: el trazo del HUD (`::before`, a ras) y el panel (`::after`, metido 1 px),
+   y NINGUNA de las dos recorta al contenido —la caja no lleva `clip-path`, solo sus pseudoelementos—. Por
+   eso el filo tiene que traerse la muesca puesta: si no, o se sale del recuadro o queda flotando dentro con
+   tres márgenes distintos, que es como se veía (14 px por la izquierda, 5 por la derecha, 1 por abajo).
+   Ahora ocupa EXACTAMENTE el panel: 1 px por los tres lados, el mismo que separa el panel del trazo. */
+:root[data-palette="cyberpunk"] .game-card .game-card-meter {
+  height: 7px;
+  background: color-mix(in srgb, var(--cyber-cyan) 14%, #000);
+}
+/* LA MUESCA ES DEL PANEL, así que solo la lleva la caja sin lámina, que es la que tiene ese panel recortado;
+   la de la lámina es un rectángulo y allí el filo la cruza entera.
+   CALCADA, no parecida: el vértice de abajo del panel cae a 18 px de su canto izquierdo y sube a 45°, así
+   que a la altura del filo (7 px) esa misma diagonal pasa por 11. Los dos números son la muesca del tema
+   medida a la altura de esta pieza, de modo que su corte es la PROLONGACIÓN del corte del panel. */
+:root[data-palette="cyberpunk"] .game-card.is-flat .game-card-meter {
+  width: auto;
+  margin: 0 1px 1px;
+  clip-path: polygon(11px 0, 100% 0, 100% 100%, 18px 100%);
+}
+:root[data-palette="cyberpunk"] .game-card .game-card-meter::after {
+  /* El sobreancho es el que se lleva la diagonal de la punta: sin él, un 100 % se quedaría corto. */
+  width: calc(var(--score-pct, 0) * 1% + 7px);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}

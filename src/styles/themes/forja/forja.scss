@@ -1,0 +1,98 @@
+/* Fuentes propias de esta paleta. A diferencia de los demás skins, esta hoja NO se carga bajo demanda: entra
+   en el bundle base desde `styles/index.scss` porque es la letra del PRIMER FOTOGRAMA (ver la nota de allí).
+   Servidas desde el propio origen. Generado por `scripts/vendor-fonts.mjs`. */
+@use './fonts';
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   TEMA · Forja y temple (el de casa) — el taller: grafito de tinta fría, METAL AL ROJO para lo que se
+   rellena y TURQUESA DE TEMPLE para lo que señala. Identidad de color: CAPA 2 en `_base.scss`.
+
+   ESTE SKIN ES SOLO LA LETRA, Y ES A PROPÓSITO. Los otros seis temas son mundos —la rejilla del horizonte,
+   el pergamino, el cogitador— y pueden permitirse textura, halo y ornamento porque se eligen a posta. Este
+   es el que se encuentra quien no ha elegido nada, así que su carácter tiene que salir del COLOR y de la
+   LETRA, no de un decorado: el fondo se queda liso, las sombras son las de la casa y ninguna pieza cambia
+   de forma. Un tema por defecto que grita se hace viejo en una semana.
+
+   LA LETRA, entonces, es lo único que pone aquí la personalidad, y se reparte en tres papeles:
+     · SAIRA en los rótulos y titulares — una grotesca ANCHA de rótulo técnico: tiene el aire de instrumento
+       que pide una herramienta, y a tamaños de interfaz se lee de un vistazo;
+     · DM SANS en el cuerpo, que es la letra base de la casa y donde de verdad hay que leer: la tabla es
+       densa y Saira ahí cansa;
+     · IBM PLEX MONO en las cifras — una nota, una fecha y un contador se leen como DATO y no como texto, que
+       es lo que separa una tabla de trabajo de una lista cualquiera.
+   La CAJA no la pone el tema: las versales son la preferencia «Texto» de /cuenta (`data-uppercase`). Lo que
+   sí pone es el TRACKING, porque Saira es ancha y en caja alta pide aire. ═══════════════════════════════ */
+
+/* ── §1 · Los tres papeles de letra ── */
+:root[data-palette="forja"] {
+  --font-label: 'Saira', system-ui, sans-serif;
+  --font-display: 'Saira', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+:root[data-palette="forja"] h2,
+:root[data-palette="forja"] h3,
+:root[data-palette="forja"] h4,
+:root[data-palette="forja"] .modal-title,
+/* El rótulo del modal de alta va suelto en `.modal-hd` (sin `.modal-title` dentro), así que se nombra aparte
+   o ese título se queda en la letra del cuerpo mientras el resto de titulares llevan la del rótulo. */
+:root[data-palette="forja"] .modal-hd,
+:root[data-palette="forja"] .dialog-title,
+:root[data-palette="forja"] .rl-card-name,
+:root[data-palette="forja"] .rl-card-tag,
+:root[data-palette="forja"] .rl-item,
+:root[data-palette="forja"] .btn,
+:root[data-palette="forja"] .hub-seg-btn,
+:root[data-palette="forja"] .tab-btn,
+:root[data-palette="forja"] .bottom-nav-btn,
+:root[data-palette="forja"] thead th,
+:root[data-palette="forja"] .flabel,
+:root[data-palette="forja"] .detail-label,
+:root[data-palette="forja"] .active-filter-chip,
+:root[data-palette="forja"] .chip { font-family: var(--font-label); letter-spacing: .02em; }
+
+/* Los rótulos CORTOS en versales son los que más aire piden: ahí el tracking sube al doble. El nombre de un
+   juego (`.row-name`) NO entra en esta lista a propósito —es contenido, no interfaz, y se queda en la letra
+   del cuerpo—, que es lo que mantiene legible una tabla de doscientas filas. */
+:root[data-palette="forja"] thead th,
+:root[data-palette="forja"] .flabel,
+:root[data-palette="forja"] .detail-label { letter-spacing: .05em; }
+
+/* Saira es ancha: 600 es el peso al que conserva el filo sin ensanchar los rótulos largos (cabeceras de
+   columna, botones de rol). Por encima, «PUNTOS DÉBILES» se sale de su caja. */
+:root[data-palette="forja"] .btn,
+:root[data-palette="forja"] .chip,
+:root[data-palette="forja"] .bottom-nav-btn,
+:root[data-palette="forja"] thead th { font-weight: 600; }
+
+/* ── §2 · Las cifras, en la mono. Son las mismas piezas que numeran los demás temas: la nota del aro y del
+   dial, el contador de las pestañas, la medalla de una reseña y las fechas del feed. ── */
+:root[data-palette="forja"] .score-ring-num,
+:root[data-palette="forja"] .score-dial-num,
+:root[data-palette="forja"] .count-badge,
+:root[data-palette="forja"] .hub-review-medal,
+:root[data-palette="forja"] .hub-feed-date,
+:root[data-palette="forja"] .hub-review-date { font-family: var(--font-mono); }
+
+/* ── §N · LA CAJA SIN CARÁTULA = EL LINGOTE ────────────────────────────────────────────────────────────
+   El tema de casa no se disfraza de nada, así que su pieza es la más sobria de las ocho: el canto muy
+   rebajado que ya tiene (`--radius-lg`), el rescoldo del metal todavía caliente entrando por el filo de
+   abajo y el TEMPLE —el turquesa del agua— en el canto de la izquierda. Los dos estados del metal, uno a
+   cada lado, que es el reparto por papel de toda la paleta. ── */
+:root[data-palette="forja"] .game-card.is-flat {
+  border: 1px solid var(--hair);
+  border-left: 3px solid color-mix(in srgb, var(--forja-temple) 75%, transparent);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(0deg, color-mix(in srgb, var(--steam) 22%, transparent) 0, transparent 42%),
+    linear-gradient(180deg, color-mix(in srgb, var(--text) 9%, transparent) 0 1px, transparent 1px),
+    var(--surface);
+  box-shadow: var(--e2);
+}
+/* SIN MEDIDOR EN LA CAJA SIN CARÁTULA. El tema de casa es el más sobrio de los ocho y su pieza ya dice la
+   nota con el aro de la cabecera; el filo de abajo era una segunda vez.
+   Y no es solo criterio: el canto de esta caja tiene 16 px de radio, cuatro veces lo que mide un filo, así
+   que ninguna de las dos formas de rematarlo funciona —a sangre se le estrechan las puntas siguiendo la
+   curva y parece mal cortado; retirado hasta donde el borde vuelve a ser recto, deja de ser un canto y se
+   queda en un subrayado suelto a media caja—. Los demás temas sí lo llevan: sus cajas tienen el canto vivo
+   o un marco recto donde un filo se apoya sin pelear con nada. */
+:root[data-palette="forja"] .game-card.is-flat .game-card-meter { display: none; }

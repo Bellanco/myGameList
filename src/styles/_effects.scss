@@ -5,7 +5,7 @@
    reduced-motion sería peor que no pintarlo). Todos son `pointer-events:none` y se autodestruyen al terminar.
    Colores hardcodeados por tema, mismo criterio que `useShootingStars`. */
 
-/* ── Corazón rebelde · RÁFAGA de líneas de acción (manga) al pulsar un botón primario. ── */
+/* ── Ladrones de corazones · RÁFAGA de líneas de acción (manga) al pulsar un botón primario. ── */
 .fx-p5-burst {
   position: fixed; z-index: 9997; pointer-events: none; width: 240px; height: 240px;
   transform: translate(-50%, -50%) scale(0);
@@ -60,4 +60,115 @@
   8%   { opacity: .30; }
   30%  { opacity: .05; }
   100% { opacity: 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+   LOS MOMENTOS DE LA APLICACIÓN · cerrar un juego, guardar, filtrar, desbloquear un logro
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+   Los de arriba responden al DOM (un clic, un cambio de atributo). Estos responden a lo que de verdad pasa
+   aquí, y los emite `core/effects/moments`. Mismas reglas: los inyecta el hook solo con su paleta activa,
+   `data-effects="on"` y sin `prefers-reduced-motion`, así que tampoco necesitan guarda propia. */
+
+/* ── EL SELLO · tres temas pedían el mismo gesto al cerrar un juego, así que es UNA pieza con tres caras.
+      Cae de arriba, golpea y se va: un sello se estampa, no aparece. El color y la forma los pone la paleta. ── */
+.fx-seal {
+  position: fixed; z-index: 9997; pointer-events: none;
+  left: 50%; top: 42%;
+  display: grid; place-items: center; gap: .35rem;
+  width: 148px; height: 148px; border-radius: 50%;
+  transform: translate(-50%, -50%) scale(2.4) rotate(-16deg);
+  animation: fx-seal-stamp .92s cubic-bezier(.2, 1.6, .35, 1) forwards;
+}
+.fx-seal-ico { width: 46px; height: 46px; fill: currentColor; }
+.fx-seal-label {
+  font-family: var(--font-label, inherit); font-size: 11px; font-weight: 800;
+  letter-spacing: .14em; text-transform: uppercase; white-space: nowrap;
+}
+@keyframes fx-seal-stamp {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(2.4) rotate(-16deg); }
+  26%  { opacity: 1; transform: translate(-50%, -50%) scale(.94) rotate(-7deg); }
+  38%  { transform: translate(-50%, -50%) scale(1.04) rotate(-7deg); }
+  70%  { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(-7deg); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.06) rotate(-7deg); }
+}
+
+/* «Plata y acero» · LACRE: la misma gota de cera del contrato —sangre seca— pero con el filo de PLATA,
+   que es el metal del tema. Es la firma del tema: el sello que se estampa al guardar. */
+:root[data-palette="steam"] .fx-seal {
+  color: #f0e2c4;
+  background: radial-gradient(circle at 36% 30%, #a6241b, #7a1610 62%, #55100c);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.22), inset 0 -6px 14px rgba(0,0,0,.45), 0 14px 30px rgba(0,0,0,.45);
+  border: 2px solid #c6ced8;
+}
+
+/* Ladrones de corazones · el SELLO DEL LADRÓN: sin disco, tarjeta ladeada con contorno negro y sombra de bloque. */
+:root[data-palette="persona"] .fx-seal {
+  width: auto; height: auto; padding: .9rem 1.6rem; border-radius: 0;
+  color: #f4f2f5; background: #ff1f3d;
+  border: 3px solid #0a0a0a;
+  box-shadow: 8px 8px 0 rgba(10,10,10,.9);
+}
+:root[data-palette="persona"] .fx-seal-label { font-size: 15px; }
+
+/* Solo hay guerra · LACRE IMPERIAL: oro sobre verde de cogitador, con la corona de laurel. */
+:root[data-palette="grimdark"] .fx-seal {
+  color: #e0a92b; border-radius: 2px;
+  background: linear-gradient(160deg, #14281c, #060b08);
+  border: 2px solid #e0a92b;
+  box-shadow: inset 0 0 0 3px rgba(224,169,43,.18), 0 0 26px -6px rgba(67,245,88,.5);
+}
+
+/* ── Clásico · EL FILETE DE LATÓN SE ILUMINA al guardar, de izquierda a derecha. Va colocado sobre la barra de
+      pestañas (el hook lo mide), que es donde ese filete existe de verdad. ── */
+.fx-brass-sweep {
+  position: fixed; z-index: 9996; pointer-events: none;
+  overflow: hidden;
+}
+.fx-brass-sweep::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(236,196,92,.35) 28%, #ecc45c 46%, #fff3d0 50%, #ecc45c 54%, rgba(236,196,92,.35) 72%, transparent);
+  box-shadow: 0 0 14px rgba(236,196,92,.55);
+  transform: translateX(-100%);
+  animation: fx-brass-run .9s ease-out;
+}
+@keyframes fx-brass-run {
+  0%   { transform: translateX(-100%); opacity: 0; }
+  18%  { opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+
+/* ── Sin futuro · BARRIDO DE ESCÁNER al aplicar un filtro: la lista se relee, como un HUD que vuelve a mirar. ── */
+.fx-scan {
+  position: fixed; z-index: 9996; pointer-events: none; overflow: hidden;
+}
+.fx-scan::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 34%;
+  background: linear-gradient(180deg, transparent, rgba(0,240,255,.12) 62%, rgba(0,240,255,.5) 96%, rgba(252,238,10,.75));
+  animation: fx-scan-run .55s linear;
+}
+@keyframes fx-scan-run {
+  0%   { transform: translateY(-110%); opacity: 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { transform: translateY(300%); opacity: 0; }
+}
+
+/* ── Sol y luna · ESTRELLA FUGAZ al desbloquear un logro. Es la misma criatura que las del hook ambiental
+      (`useShootingStars`), pero aquí cruza el cielo entero: hay algo que celebrar, no es decoración de fondo. ── */
+.fx-sos-shoot {
+  position: fixed; z-index: 9997; pointer-events: none;
+  top: 16vh; left: 78vw; width: 3px; height: 3px; border-radius: 50%;
+  background: #fff8d6;
+  box-shadow: 0 0 10px 2px rgba(255,248,214,.9);
+  animation: fx-sos-shoot 1.05s cubic-bezier(.3, .1, .2, 1) forwards;
+}
+.fx-sos-shoot::after {
+  content: ""; position: absolute; right: 0; top: 50%; width: 120px; height: 2px;
+  transform: translateY(-50%) rotate(28deg); transform-origin: right center;
+  background: linear-gradient(90deg, transparent, rgba(143,242,232,.75), #fff8d6);
+}
+@keyframes fx-sos-shoot {
+  0%   { opacity: 0; transform: translate(0, 0); }
+  12%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-72vw, 38vh); }
 }

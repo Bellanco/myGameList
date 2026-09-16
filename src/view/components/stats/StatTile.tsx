@@ -1,5 +1,6 @@
 import { memo, type CSSProperties, type ReactNode } from 'react';
 import { Icon } from '../Icon';
+import { CATEGORY_TONES } from '../../../core/constants/categoryTone';
 
 interface StatTileProps {
   label: string;
@@ -24,10 +25,24 @@ interface StatTileProps {
   onClick?: () => void;
   /** Texto accesible de ese enlace; obligatorio si hay `onClick`, porque el rótulo solo dice la métrica. */
   actionLabel?: string;
+  /**
+   * Tono de la RAMPA CATEGÓRICA (1…7, ver CAPA 2b en `_base.scss`). Da a cada cifra un color propio para que la
+   * fila de tarjetas se lea de un vistazo: hasta ahora las nueve eran del mismo acento y había que leer el
+   * rótulo para saber cuál era cuál. Es decorativo —el dato sigue en el texto—, así que el color solo entra en
+   * el filete y en la cifra, nunca en el rótulo ni en la pista, que son los que cargan el contraste.
+   */
+  tone?: number;
+}
+
+/** Traduce el tono a las dos fichas que lee la hoja: `--cc` para lo gráfico (filete, velo) y `--cc-fg` para
+    la cifra, que es TEXTO y necesita el 4,5:1. Fuera de rango o sin tono, la tarjeta se queda con el acento. */
+function tonoFicha(tone?: number): CSSProperties | undefined {
+  if (!tone || tone < 1 || tone > CATEGORY_TONES) return undefined;
+  return { '--cc': `var(--cat-${tone})`, '--cc-fg': `var(--cat-${tone}-fg)` } as CSSProperties;
 }
 
 /** Cifra grande con su etiqueta. La unidad y la pista van en menor peso para que el número sea lo que se lee. */
-export const StatTile = memo(function StatTile({ label, value, hint, unit, progress, band, onClick, actionLabel }: StatTileProps) {
+export const StatTile = memo(function StatTile({ label, value, hint, unit, progress, band, onClick, actionLabel, tone }: StatTileProps) {
   const pct = (value: number) => `${Math.max(0, Math.min(value, 100))}%`;
   const body = (
     <>
@@ -62,7 +77,7 @@ export const StatTile = memo(function StatTile({ label, value, hint, unit, progr
   // Pulsable solo cuando lleva a alguna parte: así la tarjeta corriente sigue siendo un dato, no un control.
   if (onClick) {
     return (
-      <button type="button" className="stat-tile is-link" onClick={onClick} aria-label={actionLabel}>
+      <button type="button" className="stat-tile is-link" onClick={onClick} aria-label={actionLabel} style={tonoFicha(tone)}>
         {body}
         {/* La marca de destino. Lleva la clase `btn` A PROPÓSITO: así hereda el botón de la paleta activa —el
             chaflán del HUD en Cyberpunk, el sesgo entintado en Persona, el filete de oro en Grimdark…— sin que
@@ -81,5 +96,5 @@ export const StatTile = memo(function StatTile({ label, value, hint, unit, progr
     );
   }
 
-  return <div className="stat-tile">{body}</div>;
+  return <div className="stat-tile" style={tonoFicha(tone)}>{body}</div>;
 });

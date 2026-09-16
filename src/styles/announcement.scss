@@ -29,33 +29,10 @@
   border-radius: 999px;
 }
 
-/* EL DISCO · el sitio de la medalla, ocupado por un icono.
-   Conserva la geometría —el mismo lado (`--medal`), el mismo círculo— porque es lo que sostiene el radio de la
-   cápsula: el borde izquierdo es la circunferencia exterior de este disco. Lo que no conserva es la penumbra
-   parda de la medalla: esa es de las medallas, y un aviso con el mismo fondo se leería como un logro raro. Aquí
-   el disco es superficie de la app con el acento entrando por el filo. */
-.ach-toast-disc {
-  flex: none;
-  width: var(--medal);
-  height: var(--medal);
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  color: var(--fg-link);
-  background:
-    radial-gradient(70% 64% at 28% 18%,
-      color-mix(in srgb, var(--steam) 22%, var(--surface-elevated)) 0%,
-      var(--surface) 58%,
-      color-mix(in srgb, var(--surface) 82%, #000) 100%);
-  // Un filete de acento y una sombra interior abajo: el mismo relieve mínimo del resto de la app, sin inventar
-  // una dirección nueva de luz.
-  box-shadow:
-    inset 0 0 0 1px rgba(var(--steam-rgb), .42),
-    inset 0 -8px 14px -10px rgba(0, 0, 0, .65);
-}
-
-// 44% del disco: el mismo aire que deja el dibujo de la medalla dentro de su filo.
-.ach-toast-disc .ui-icon { width: 44%; height: 44%; }
+/* EL DISCO ya no se pinta aquí: se mudó al parcial `_capsule.scss` junto al resto de la forma, porque desde que
+   el AVISO de la app usa también esta cápsula son tres las piezas que lo necesitan (logro, anuncio y aviso) y la
+   receta tiene que estar escrita una vez. Cada una lo tiñe con su ficha: el anuncio se queda con el valor por
+   defecto, que es el acento del tema. */
 
 /* LA DESCRIPCIÓN, HASTA DOS LÍNEAS. `-webkit-line-clamp` está en todos los navegadores que soporta la app y es
    lo único que recorta por líneas con puntos suspensivos; lo que sobre se corta igual que en el logro, así que

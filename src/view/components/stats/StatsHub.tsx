@@ -9,6 +9,8 @@ import { listForScreen, useAchievements } from '../../../viewmodel/useAchievemen
 import { useAchievementsConfig } from '../../hooks/useAchievementsConfig';
 import { useOpenFrontier } from '../../hooks/useOpenFrontier';
 import { ENABLE_ACHIEVEMENTS } from '../../../core/achievements/flags';
+import { TAB_ROUTE } from '../../../core/constants/labels';
+import { STATS_UI } from '../../../core/constants/statsLabels';
 import { libraryStart } from '../../../core/achievements/metrics';
 import { socialCounters } from '../../../core/achievements/deviceSignals';
 import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
@@ -92,10 +94,24 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
   const openReviewFromPanel = useCallback((gameId: number) => openReviewFrom(gameId, PANEL_ROUTE), [openReviewFrom]);
   const openReviewFromList = useCallback((gameId: number) => openReviewFrom(gameId, REVIEWS_ROUTE), [openReviewFrom]);
   const backToPanel = useCallback(() => { void navigate(PANEL_ROUTE); }, [navigate]);
+  /**
+   * DE DÓNDE SE VINO, y a dónde vuelve el botón. El origen viaja en el estado de la ruta y se valida contra una
+   * lista corta: el panel, cualquiera de las cuatro listas —desde el detalle de un juego— y, si no es ninguno,
+   * el listado de reseñas, que es el sitio del que se llega por defecto.
+   * Se valida y no se navega a lo que venga: el estado de la ruta lo escribe quien enlaza, y una ruta que no
+   * existe deja a quien pulsa en el rebote del catch-all sin saber por qué.
+   */
+  const origen = (location.state as { backTo?: string } | null)?.backTo;
+  const desdeLista = Object.values(TAB_ROUTE).includes(origen ?? '');
   const backFromReview = useCallback(() => {
-    const from = (location.state as { backTo?: string } | null)?.backTo;
-    void navigate(from === PANEL_ROUTE ? PANEL_ROUTE : REVIEWS_ROUTE);
-  }, [navigate, location.state]);
+    if (origen === PANEL_ROUTE) { void navigate(PANEL_ROUTE); return; }
+    if (origen && Object.values(TAB_ROUTE).includes(origen)) { void navigate(origen); return; }
+    void navigate(REVIEWS_ROUTE);
+  }, [navigate, origen]);
+  /* El rótulo nombra el sitio al que lleva. Sin él, `ReviewDetailHead` pone «Volver a las reseñas». */
+  const reviewBackLabel = origen === PANEL_ROUTE
+    ? STATS_UI.reviews.backToStats
+    : desdeLista ? STATS_UI.reviews.backToList : undefined;
   const onReviewsRoute = location.pathname.startsWith(REVIEWS_ROUTE);
 
   if (ENABLE_ACHIEVEMENTS && location.pathname.startsWith(ACHIEVEMENTS_ROUTE)) {
@@ -126,7 +142,7 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
         onBack={backToPanel}
         onOpenReview={openReviewFromList}
         onBackToList={backFromReview}
-        backToPanel={(location.state as { backTo?: string } | null)?.backTo === PANEL_ROUTE}
+        backLabel={reviewBackLabel}
       />
     );
   }

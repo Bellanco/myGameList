@@ -136,6 +136,7 @@ import { SocialHub } from '../../src/view/components/SocialHub';
 import { SHARE_UI } from '../../src/core/constants/shareLabels';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { LEGAL_CONSENT_UI, LEGAL_VERSION } from '../../src/core/constants/legal';
+import { DEFAULT_PALETTE } from '../../src/core/constants/palettes';
 
 function renderHub(initialPath = '/social', games?: unknown) {
   return render(
@@ -1769,7 +1770,7 @@ describe('SocialHub — reciprocidad de la foto', () => {
 
     // El aviso persistente, con el titular del tema por defecto.
     const aviso = await screen.findByLabelText(SOCIAL_UI.offline.sectionAria);
-    expect(aviso.textContent).toContain(SOCIAL_UI.offline.leadByPalette.steam);
+    expect(aviso.textContent).toContain(SOCIAL_UI.offline.leadByPalette[DEFAULT_PALETTE]);
     // Y el mensaje de estado es el de la aplicación, no el del error.
     expect(await screen.findByText(SOCIAL_UI.status.offline)).toBeInTheDocument();
     expect(screen.queryByText('network offline')).not.toBeInTheDocument();

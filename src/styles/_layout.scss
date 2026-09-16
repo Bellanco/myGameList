@@ -13,47 +13,6 @@
 // Al añadir una regla nueva: si su selector menciona SOLO clases que no usa nadie fuera del hub, va en
 // `social.scss`; si toca alguna de las compartidas de arriba, va aquí.
 
-/* Header */
-.app-header {
-  background: linear-gradient(90deg, var(--surface) 0%, var(--surface-hover) 100%);
-  padding: 1rem 1.2rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  position: relative;
-  z-index: 100;
-  border-bottom: 1px solid rgba(var(--steam-rgb),.12);
-  flex: 0 0 auto;
-  backdrop-filter: blur(2px);
-}
-
-.header-left { display: flex; align-items: center; gap: 1rem; }
-
-.app-title { font-weight: 800; font-size: 1.25rem; letter-spacing: .3px; background: linear-gradient(135deg, var(--steam-hover), var(--steam)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-
-.header-subtitle {
-  display: inline-flex;
-  align-items: center;
-  padding: .34rem .8rem;
-  border-radius: var(--radius-pill);
-  border: 1px solid rgba(var(--steam-rgb),.25);
-  border-top-color: rgba(var(--steam-rgb),.45);
-  background: var(--steam-soft);
-  color: var(--fg-link);
-  font-size: .76rem;
-  font-weight: 800;
-  letter-spacing: .035em;
-  text-transform: uppercase;
-  box-shadow: inset 0 1px 0 var(--overlay-hover), 0 6px 16px rgba(var(--steam-rgb),.14);
-}
-
-.header-actions { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
-
-.header-actions .btn { border-radius: var(--radius-pill); transition: all .25s; }
-
-.header-actions .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(var(--steam-rgb),.15); }
-
 /* Status */
 /* EL AVISO SE QUEDA A LA VISTA MIENTRAS DURA.
    ─────────────────────────────────────────────────────────────────────────────
@@ -76,45 +35,11 @@
 
    z-index 90: por encima del contenido y POR DEBAJO de todo lo que debe seguir mandando — la cabecera (100), el
    botón flotante (110), la barra inferior (120), el aviso de consentimiento (130) y los modales (500). */
-.status-banner {
-  max-width: 1800px; margin: .9rem auto 0; padding: 0 1.2rem; flex: 0 0 auto; width: 100%;
-  position: sticky;
-  /* Con `top: 0` la tarjeta queda a ras del borde de la pantalla: el navegador ancla la caja de borde y se come
-     el `.9rem` que tiene en el flujo. Medio rem le devuelve el aire sin gastar alto en un móvil. */
-  top: .5rem;
-  z-index: 90;
-}
-
-.status-banner > div {
-  border: 1px solid var(--border); border-left-width: 4px;
-  background: var(--surface); border-radius: var(--radius-md);
-  padding: .8rem 1rem; box-shadow: var(--shadow); font-size: .92rem;
-}
-
-.status-banner .ok   { border-left-color: var(--success); }
-
-.status-banner .warn { border-left-color: var(--warn); }
-
-.status-banner .err  { border-left-color: var(--danger); }
-
-/* Aviso de versión nueva: mismo lenguaje que el de estado (misma franja, misma tarjeta, mismo acento verde) más
-   el botón de recargar. La forma la sigue poniendo cada tema por sus tokens (--surface, --border, --radius-md). */
-.update-notice { max-width: 1800px; margin: .9rem auto 0; padding: 0 1.2rem; flex: 0 0 auto; width: 100%; }
-
-.update-notice-card {
-  display: flex; align-items: center; flex-wrap: wrap; gap: .8rem;
-  border: 1px solid var(--border); border-left: 4px solid var(--success);
-  background: var(--surface); border-radius: var(--radius-md);
-  padding: .8rem 1rem; box-shadow: var(--shadow); font-size: .92rem;
-}
-
-.update-notice-text { flex: 1 1 240px; display: grid; gap: .2rem; }
-
-.update-notice-text strong { font-size: .95rem; }
-
-.update-notice-text span { color: var(--text-muted); font-size: .82rem; line-height: 1.4; }
-
-.update-notice-card .btn { margin-left: auto; }
+/* ⚑ EL AVISO YA NO VIVE AQUÍ. Tenía dos franjas —una pegajosa bajo la cabecera para el de estado y otra a lo
+   ancho para el de versión nueva— y ahora los dos son cápsulas en el carril flotante de abajo a la izquierda,
+   el mismo del aviso de logro (`.ach-toast-stack` en `_capsule.scss`). Se van con ellas el `sticky` y su
+   `z-index`, que existían para resolver un problema que en el carril no se da: el aviso ya no puede nacer fuera
+   de la pantalla porque no depende de dónde esté el desplazamiento. */
 
 /* Tabs */
 .tabs {
@@ -139,7 +64,7 @@
 .tab-btn {
   background: transparent; color: var(--text-dim);
   border: none;
-  padding: .85rem 1rem; font-weight: 500; font-size: .95rem;
+  padding: .85rem 1rem; font-weight: 500; font-size: var(--fs-md);
   cursor: pointer; transition: color .2s, font-weight .2s;
   white-space: nowrap; display: inline-flex; align-items: center; gap: .5rem;
   font-family: inherit; position: relative;
@@ -161,7 +86,7 @@
 
 /* El subrayado activo ahora lo dibuja el indicador deslizante `.tab-underline` (posicionado por JS). */
 .count-badge {
-  color: var(--text-dim); font-size: .78rem; font-weight: 600;
+  color: var(--text-dim); font-size: var(--fs-xs); font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
@@ -177,7 +102,7 @@
   content: attr(data-tooltip);
   position: absolute; bottom: -35px; left: 50%; transform: translateX(-50%);
   background: var(--surface-elevated); color: var(--text);
-  padding: .5rem .75rem; border-radius: 6px; font-size: .75rem; font-weight: 600;
+  padding: .5rem .75rem; border-radius: 6px; font-size: var(--fs-2xs); font-weight: 600;
   white-space: nowrap; border: 1px solid var(--border); z-index: 10;
   animation: fadeIn .2s ease-in; pointer-events: none;
 }
@@ -186,11 +111,11 @@
 
 /* Tablet y móvil: las etiquetas largas de las pestañas se recortan; pasamos a iconos. */
 @media (max-width:1024px) {
-  .tab-btn { padding: .8rem .7rem; font-size: .85rem; }
+  .tab-btn { padding: .8rem .7rem; font-size: var(--fs-sm); }
 
   .tab-btn .tab-text-full { display: none; }
 
-  .count-badge { font-size: .72rem; }
+  .count-badge { font-size: var(--fs-2xs); }
 }
 
 @media (max-width:720px) {
@@ -234,7 +159,9 @@
 
 .main-lists {
   position: relative;
-  /* Contenedor para el meta dinámico de las filas (revela categorías según el ancho). */
+  /* Contenedor del renglón: es su ancho —no el de la ventana— el que decide si las ranuras de categoría van
+     en columnas invisibles o apiladas. Se mide aquí porque el mismo renglón se pinta también dentro de una
+     tarjeta del hub social, que es bastante más estrecha que la pantalla. */
   container-type: inline-size;
   container-name: gamelist;
 }
@@ -259,12 +186,14 @@
   gap: 1rem;
 }
 
+/* BORDE POR PAPEL (DESIGN.md §8). La tarjeta ya se sostiene con su plano, así que el borde baja a filete: está
+   para decir dónde acaba, no para dibujarla. El marco entero se lo quedan las piezas sin elevación. */
 .settings-card {
   grid-column: span 12;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--hair);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow);
+  box-shadow: var(--e1), var(--edge);
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -272,12 +201,12 @@
 }
 
 .settings-card h2 {
-  font-size: 1rem;
+  font-size: var(--fs-lg);
 }
 
 .settings-card p {
   color: var(--text-muted);
-  font-size: .88rem;
+  font-size: var(--fs-sm);
   line-height: 1.4;
 }
 
@@ -318,13 +247,13 @@
 
 .score-scale-txt { flex: 1 1 auto; display: grid; gap: .1rem; }
 
-.score-scale-txt b { font-size: .92rem; font-weight: 600; }
+.score-scale-txt b { font-size: var(--fs-md); font-weight: 600; }
 
-.score-scale-txt span { color: var(--text-muted); font-size: .8rem; }
+.score-scale-txt span { color: var(--text-muted); font-size: var(--fs-xs); }
 
 .score-scale-sample { flex: 0 0 auto; display: inline-flex; align-items: center; }
 
-.score-scale-locked { display: flex; align-items: center; gap: .35rem; color: var(--text-dim); font-size: .8rem; }
+.score-scale-locked { display: flex; align-items: center; gap: .35rem; color: var(--text-dim); font-size: var(--fs-xs); }
 
 .score-scale-locked .ui-icon { width: 1em; height: 1em; flex: 0 0 auto; }
 
@@ -415,7 +344,7 @@
 
 .settings-card-note {
   color: var(--text-muted);
-  font-size: .88rem;
+  font-size: var(--fs-sm);
 }
 
 .settings-backup-row {
@@ -435,7 +364,7 @@
   border-radius: var(--radius-sm);
   padding: .85rem 1rem;
   color: var(--text);
-  font-size: .88rem;
+  font-size: var(--fs-sm);
   line-height: 1.4;
 }
 
@@ -476,6 +405,9 @@
   border-radius: 999px;
   background: var(--overlay-hover);
   border: 1px solid var(--border);
+  /* La pista es el CARRIL —un hueco— y el mando, la pieza que va encima con su `--e2`: los dos juntos son lo
+     que hace que un interruptor se lea como algo que se desliza y no como dos rectángulos superpuestos. */
+  box-shadow: var(--sunk);
   position: relative;
   transition: background .2s ease, border-color .2s ease;
   flex-shrink: 0;
@@ -486,7 +418,7 @@
   height: 22px;
   border-radius: 50%;
   background: var(--surface);
-  box-shadow: 0 6px 16px rgba(0,0,0,.08);
+  box-shadow: var(--e2);
   position: absolute;
   top: 2px;
   left: 2px;
@@ -504,7 +436,7 @@
 }
 
 .settings-backup-toggle-label {
-  font-size: .95rem;
+  font-size: var(--fs-md);
   color: var(--text);
   line-height: 1.4;
 }
@@ -534,7 +466,7 @@
   border-radius: var(--radius-sm);
   padding: .45rem .6rem;
   font-weight: 700;
-  font-size: .82rem;
+  font-size: var(--fs-xs);
   text-align: center;
   transition: all .2s ease;
 }
@@ -617,9 +549,9 @@
 
 .legal-card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--hair);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow);
+  box-shadow: var(--e1), var(--edge);
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -628,14 +560,14 @@
 
 .legal-actions { display: flex; }
 
-.legal-card h2 { font-size: 1rem; }
+.legal-card h2 { font-size: var(--fs-lg); }
 
-.legal-card p { color: var(--text-muted); font-size: .88rem; line-height: 1.5; }
+.legal-card p { color: var(--text-muted); font-size: var(--fs-sm); line-height: 1.5; }
 
 /* L4 — enlaces a los documentos legales en Ajustes de cuenta. */
-.settings-legal-links { display: flex; flex-wrap: wrap; gap: .35rem 1rem; font-size: .88rem; }
+.settings-legal-links { display: flex; flex-wrap: wrap; gap: .35rem 1rem; font-size: var(--fs-sm); }
 
-.legal-list { display: grid; gap: .35rem; padding-left: 1.1rem; color: var(--text-muted); font-size: .88rem; line-height: 1.4; }
+.legal-list { display: grid; gap: .35rem; padding-left: 1.1rem; color: var(--text-muted); font-size: var(--fs-sm); line-height: 1.4; }
 
 .legal-list li { list-style: disc; }
 
@@ -644,7 +576,7 @@
 
 .settings-card-danger h2 { color: var(--danger); }
 
-.settings-danger-confirm { display: grid; gap: .3rem; margin: .6rem 0; font-size: .85rem; text-align: left; }
+.settings-danger-confirm { display: grid; gap: .3rem; margin: .6rem 0; font-size: var(--fs-sm); text-align: left; }
 
 .settings-danger-confirm input {
   width: 100%;
@@ -656,7 +588,7 @@
   font: inherit;
 }
 
-.settings-danger-feedback { font-size: .85rem; }
+.settings-danger-feedback { font-size: var(--fs-sm); }
 
 .settings-danger-feedback.ok { color: var(--fg-sky); }
 
@@ -681,18 +613,18 @@
   gap: .8rem;
   padding: .85rem 1rem;
   background: var(--surface-elevated);
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow);
+  box-shadow: var(--e3), var(--edge);
 }
 
 .consent-banner-text { flex: 1 1 260px; display: grid; gap: .25rem; }
 
-.consent-banner-text strong { font-size: .95rem; }
+.consent-banner-text strong { font-size: var(--fs-md); }
 
-.consent-banner-text p { color: var(--text-muted); font-size: .82rem; line-height: 1.4; margin: 0; }
+.consent-banner-text p { color: var(--text-muted); font-size: var(--fs-xs); line-height: 1.4; margin: 0; }
 
-.consent-banner-text a { font-size: .8rem; }
+.consent-banner-text a { font-size: var(--fs-xs); }
 
 .consent-banner-actions { display: flex; gap: .5rem; margin-left: auto; }
 
@@ -714,7 +646,7 @@
   background: var(--surface-glass);
   backdrop-filter: blur(8px);
   border-radius: var(--radius-pill);
-  box-shadow: 0 14px 30px rgba(0,0,0,.28);
+  box-shadow: var(--e3);
   display: grid;
   /* Una columna por botón (3 o 4 según haya sesión de "Cuenta"): siempre en UNA fila, anchos iguales.
      Con `repeat(3, …)` fijo, el 4º botón saltaba a una segunda fila. */
@@ -737,7 +669,7 @@
   justify-content: center;
   gap: .5rem;
   font-weight: 700;
-  font-size: .86rem;
+  font-size: var(--fs-sm);
   letter-spacing: .01em;
   transition: background .2s, color .2s, transform .2s;
 }
@@ -791,7 +723,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: linear-gradient(145deg, var(--hub-grad-start), var(--hub-grad-end));
-  box-shadow: var(--shadow);
+  box-shadow: var(--e2), var(--edge);
   /* Marco INTERIOR del hub, fluido (ver la nota de `.main.main-social`): es el segundo de los dos marcos que en
      móvil se comían el 19% del ancho. Se interpola con el viewport en vez de saltar en un breakpoint, y llega al
      valor de siempre (1.25rem) sobre los 1270px. El mínimo no baja de .65rem porque el contenido no debe tocar el
@@ -868,11 +800,11 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-pill);
-  font-size: .68rem;
+  font-size: var(--fs-3xs);
   font-weight: 800;
   line-height: 1;
   border: 2px solid var(--surface);
-  box-shadow: 0 2px 6px rgba(0,0,0,.28);
+  box-shadow: var(--e1);
 
   &.is-active {
     background: var(--success, #2ea043);
@@ -985,7 +917,7 @@
 }
 
 .hub-feed-lienzo-fx::before {
-  /* `--lz-bleed` la saca fuera de la capa para que pueda desplazarse sin descubrir el canto (Corazón rebelde). */
+  /* `--lz-bleed` la saca fuera de la capa para que pueda desplazarse sin descubrir el canto (Ladrones de corazones). */
   inset: var(--lz-bleed, 0);
   background-image: var(--lz-img, none);
   background-size: var(--lz-size, auto);
@@ -1015,41 +947,16 @@
    Son anónimas a propósito: qué es cada una lo decide cada `themes/*.scss`. Ver `SocialFeedScreen`. */
 .hub-feed-lienzo-fx > i { display: none; }
 
-/* ── CLÁSICO · DOS FOCOS ──────────────────────────────────────────────────────────────────────────────────────
-   El tema por defecto no tiene skin propio (`paletteSkin.ts`), así que su lienzo vive aquí. `:not([data-palette])`
-   casa SOLO con él: la paleta por defecto es la única que no pone el atributo.
-   Un foco del acento entrando por la izquierda, detrás del texto, y otro más tenue arriba a la derecha. Laten a
-   contratiempo (11 y 8,5 s), lo justo para que el hueco se lea como una sala con dos luces y no como una mancha. */
-:root:not([data-palette]) .hub-feed-lienzo {
-  --lz-img: radial-gradient(closest-side, rgba(var(--steam-rgb), .19), transparent 72%);
-  --lz-size: 78% 100%;
-  --lz-pos: 4% 50%;
-  --lz-rep: no-repeat;
-  --lz-img2: radial-gradient(closest-side, rgba(var(--steam-rgb), .14), transparent 70%);
-  --lz-size2: 62% 62%;
-  --lz-pos2: 100% 0;
-  --lz-rep2: no-repeat;
-}
+/* El lienzo de «Plata y acero» se pinta en su skin (`themes/steam.scss`), como el de las otras paletas. */
 
-/* El latido es DECORACIÓN, así que cuelga de `data-effects` como la firma de cada tema: apagado, quedan los dos
-   focos quietos y el lienzo sigue haciendo su trabajo. */
-@media (prefers-reduced-motion: no-preference) {
-  :root[data-effects="on"]:not([data-palette]) .hub-feed-lienzo-fx::before { animation: lz-steam-breathe 11s ease-in-out infinite; }
-  :root[data-effects="on"]:not([data-palette]) .hub-feed-lienzo-fx::after { animation: lz-steam-breathe 8.5s ease-in-out -4s infinite; }
-}
-
-@keyframes lz-steam-breathe { 0%, 100% { opacity: .42; } 50% { opacity: 1; } }
-
-.hub-identity-hero .hub-avatar { flex: 0 0 auto; width: 2.5rem; height: 2.5rem; font-size: 1rem; }
+.hub-identity-hero .hub-avatar { flex: 0 0 auto; width: 2.5rem; height: 2.5rem; font-size: var(--fs-lg); }
 
 /* ═══════════════════ Micro-interacciones (efectos añadidos) ═══════════════════
    Todas con su guarda `prefers-reduced-motion` al final de este bloque. */
 
-/* Aviso de estado: entra con un leve fade+desplazamiento al aparecer (antes surgía de golpe). */
-.status-banner > div,
-.update-notice-card { animation: statusBannerIn .3s ease both; }
-
-@keyframes statusBannerIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+/* La entrada del aviso YA NO SE ANIMA AQUÍ: desde que es la cápsula del aviso de logro, la trae ella
+   (`ach-toast-in` en `_capsule.scss`), con su guarda de `prefers-reduced-motion` incluida. Dos animaciones
+   distintas para la misma pieza según dónde esté era exactamente lo que se venía a quitar. */
 
 /* Pestañas: subrayado que se desliza bajo la activa (posición y ancho los fija TabBar por JS). */
 /* Pegado al borde inferior POR DENTRO (antes `bottom: -1px`): asomando 1px generaba desbordamiento vertical
@@ -1100,8 +1007,6 @@
 .hub-feed-empty { animation: emptyIn .5s ease both; }
 
 @media (prefers-reduced-motion: reduce) {
-  .status-banner > div,
-  .update-notice-card,
   .hub-feed-activity-item,
   .hub-requests-count.is-active,
   .hub-friend-chip,
@@ -1120,7 +1025,7 @@
   background: rgba(var(--success-rgb),.16);
   color: var(--fg-green);
   border: 1px solid rgba(var(--success-rgb),.3);
-  font-size: .8rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
 }
 
@@ -1193,6 +1098,7 @@
   border-radius: var(--radius-pill);
   background: var(--surface-hover);
   border: 1px solid var(--border);
+  box-shadow: var(--sunk);
   position: relative;
   transition: background .2s ease, border-color .2s ease;
 }
@@ -1206,7 +1112,7 @@
   height: 14px;
   border-radius: 50%;
   background: var(--text-muted);
-  box-shadow: 0 1px 2px rgba(0,0,0,.3);
+  box-shadow: var(--e1);
   transition: transform .22s cubic-bezier(.2,.8,.25,1), background .2s ease;
 }
 
@@ -1233,7 +1139,7 @@
 }
 
 .hub-hub-card h2 {
-  font-size: 1.1rem;
+  font-size: var(--fs-xl);
   color: var(--fg-link);
 }
 
@@ -1245,7 +1151,7 @@
 .hub-feed-owner-avatar .hub-avatar {
   width: 3.2rem;
   height: 3.2rem;
-  font-size: 1.2rem;
+  font-size: var(--fs-xl);
 }
 
 .hub-feed-card {
@@ -1341,7 +1247,7 @@
 .hub-profile-reviews-list .hub-review-entry,
 .hub-related-list .hub-review-entry {
   background: var(--hub-card-bg);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .14);
+  box-shadow: var(--e1);
 }
 
 /* Barra lateral con el color de la nota. */
@@ -1390,28 +1296,74 @@
 
 .hub-feed-activity-item.is-post { border-left-color: var(--text-muted); cursor: default; }
 
-/* F4 — MOVIMIENTO DE LISTA: la tarjeta más callada del feed, y a propósito.
-   Un renglón —quién, qué hizo, con qué juego, a qué hora— en una burbuja que conserva la silueta de las demás
-   pero renuncia a todo lo que reclama atención: el lomo va en el gris del borde (el color queda reservado a lo
-   que alguien ESCRIBIÓ, reseñas y publicaciones), no hay realce al pasar por encima y el aire se aprieta. Lo que
-   la distingue de una reseña no es el color, es cuánto ocupa. */
-.hub-feed-activity-item.is-move {
-  border-left-color: var(--border);
+/* F4 — MOVIMIENTO DE LISTA: el AVISO DE SISTEMA del chat.
+   Un renglón —quién, qué hizo, con qué juego, a qué hora— que deja de ser una burbuja más para ser lo que es:
+   un apunte, no una conversación. Va CENTRADO y abraza su texto, como el «Fulano se ha unido al grupo» de
+   cualquier chat, con una marca delante y el color de lo que pasó.
+
+   Esto revisa una decisión anterior —«el ancho lo hereda de las reseñas: una burbuja que mide distinto a cada
+   línea rompe la rejilla»—. Sigue siendo cierto ENTRE BURBUJAS, y por eso las reseñas y las publicaciones
+   conservan su ancho; el aviso se sale de esa columna a propósito, y es eso lo que lo distingue de un mensaje
+   sin necesidad de gritar.
+
+   La FORMA la pone cada tema (`--sys-*`, CAPA 2, junto a los radios): píldora en el Clásico, rótulo sesgado en
+   Ladrones de corazones, etiqueta de señalética en Cámara de pruebas, línea de registro en Sin futuro, renglón de
+   códice en Solo hay guerra y cartel de píxel en Sol y luna.
+
+   El COLOR (`--evc`) lo pone el tipo de lista y solo tiñe la marca, el filete y el velo —cosas NO textuales,
+   3:1—: el texto conserva los colores ya auditados, así que esto no puede romper el contraste. */
+/* Los LOGROS comparten aviso: también son algo que PASÓ —no algo que alguien escribió—, tienen la misma
+   anatomía (una línea: quién, qué, y el sello al final) y salían como una reseña más. Lo que los separa del
+   movimiento es su color, que es el del aviso/celebración, y que sí llevan a alguna parte. */
+.hub-feed-activity-item.is-move,
+.hub-feed-activity-item.is-achievements {
+  --evc: var(--text-dim);
+  align-self: center;
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid color-mix(in srgb, var(--evc), transparent 62%);
+  border-radius: var(--sys-radius);
+  background: color-mix(in srgb, var(--evc), transparent 92%);
+  box-shadow: none;
   cursor: default;
   flex-direction: row;
   align-items: center;
   gap: .5rem;
-  padding: .5rem .75rem;
-  /* El ancho lo hereda de `.hub-feed-activity-item`: el MISMO que las reseñas y las publicaciones. Se probó que
-     abrazara el texto (`fit-content`) y quedaba descartado: el feed es una columna de burbujas alineadas, y una
-     que mide distinto a cada línea rompe esa rejilla. Lo que hace ligero a este mensaje es su altura y su color,
-     no su anchura. */
+  padding: var(--sys-pad);
+  transform: var(--sys-skew);
+  clip-path: var(--sys-clip);
 }
+/* El sesgo de Ladrones de corazones se contra-aplica al contenido para que el texto quede recto, igual que en sus
+   botones y chips (`themes/persona.scss` §5 y §6). */
+.hub-feed-activity-item.is-move > *,
+.hub-feed-activity-item.is-achievements > * { transform: var(--sys-unskew, none); }
+/* LA MEDALLA ABRE EL AVISO DE LOGRO, y es la única marca que queda en el feed. Los movimientos de lista no
+   llevan ninguna: su frase ya lo dice y el color del filete distingue terminar de abandonar; cuando TODOS los
+   avisos llevaban icono, el icono no distinguía nada. Aquí el sello es además el del logro conseguido, no un
+   símbolo genérico, así que se reconoce antes de leer el nombre. */
+.hub-feed-event-medals {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  margin-right: .1rem;
+}
+/* Cuatro verbos, cuatro colores. Los tres primeros son los semánticos que ya existen; «añadió» toma el cuarto
+   tono de la rampa categórica, que no significa nada por sí mismo y por eso vale para «esto cambió de sitio». */
+.hub-feed-activity-item.is-move[data-tab="c"] { --evc: var(--success); }
+.hub-feed-activity-item.is-move[data-tab="v"] { --evc: var(--danger); }
+.hub-feed-activity-item.is-move[data-tab="e"] { --evc: var(--steam); }
+.hub-feed-activity-item.is-move[data-tab="p"] { --evc: var(--cat-4); }
+/* El logro, en el ámbar del aviso: no es ninguno de los cuatro movimientos y se distingue de un vistazo.
+   Marca propia (`--sys-mark-ach`) y puntero, porque este sí abre los logros de quien lo consiguió. */
+.hub-feed-activity-item.is-achievements { --evc: var(--warn); cursor: pointer; }
+/* Un aviso no es «tuyo» ni «de otro»: es lo que pasó. Se queda centrado aunque sea propio. */
+.hub-feed-activity-item.is-move.is-own-activity,
+.hub-feed-activity-item.is-achievements.is-own-activity { align-self: center; background: color-mix(in srgb, var(--evc), transparent 88%); }
 
 /* La hora, al final del renglón. Clase propia y NO `hub-feed-date`: varias paletas convierten esa clase en una
    cápsula o le cuelgan un prefijo («//», «>»), y aquí tiene que ser el dato más pequeño de la línea. */
 .hub-feed-move-hour {
-  font-size: .72rem;
+  font-size: var(--fs-2xs);
   color: var(--text-dim);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -1423,6 +1375,46 @@
   background: var(--steam-soft);
 }
 
+/* ── EL AVATAR, FUERA DE LA BURBUJA ────────────────────────────────────────────────────────────────────
+   En un chat la foto acompaña al mensaje; no forma parte de él. Dentro de la tarjeta se comía una línea
+   entera de la cabecera y empujaba el nombre y el juego hacia abajo. Ahora cuelga del canto inferior —a la
+   izquierda si el mensaje es de otro, a la derecha si es tuyo—, que es donde la ponen todos los chats, y la
+   burbuja se sangra para dejarle ese hueco: sin el sangrado se saldría del lienzo, porque la burbuja arranca
+   pegada al borde.
+
+   Solo a partir de 700 px. Por debajo no sobra ancho para regalar cincuenta píxeles a un lado, así que la
+   foto se queda dentro, en la cabecera, como estaba. */
+@media (min-width: 700px) {
+  /* EL SANGRADO VA CON EL AVATAR, y por eso lo pide con `:has()` en vez de mirar la clase de la tarjeta.
+     `.is-review` no significa «esto está en el feed»: la MISMA tarjeta se reutiliza en la lista de reseñas de
+     un perfil y en la rejilla de «Análisis relacionados», donde no hay ninguna foto colgando. Allí el sangrado
+     no dejaba hueco a nada —solo corría la tarjeta 51 px a la derecha— y en la rejilla eso se veía: cada
+     tarjeta ocupa el ancho de su columna, así que las cuatro salían desplazadas y la última se iba FUERA del
+     contenedor por el lado. Con el `:has()` el hueco existe si y solo si hay algo que meter en él, en los ocho
+     temas y en cualquier sitio nuevo donde se reutilice la tarjeta. */
+  .hub-feed-activity-item.is-review:has(> .hub-feed-card-head > .hub-avatar-link),
+  .hub-feed-activity-item.is-recommendation:has(> .hub-feed-card-head > .hub-avatar-link) {
+    overflow: visible;
+    margin-left: 3.2rem;
+  }
+  .hub-feed-activity-item.is-review.is-own-activity:has(> .hub-feed-card-head > .hub-avatar-link),
+  .hub-feed-activity-item.is-recommendation.is-own-activity:has(> .hub-feed-card-head > .hub-avatar-link) {
+    margin-left: 0;
+    margin-right: 3.2rem;
+  }
+  .hub-feed-activity-item.is-review > .hub-feed-card-head > .hub-avatar-link,
+  .hub-feed-activity-item.is-recommendation > .hub-feed-card-head > .hub-avatar-link {
+    position: absolute;
+    left: -3.2rem;
+    bottom: .4rem;
+    z-index: 1;
+  }
+  .hub-feed-activity-item.is-own-activity > .hub-feed-card-head > .hub-avatar-link {
+    left: auto;
+    right: -3.2rem;
+  }
+}
+
 /* El realce de "esto se puede pulsar" queda para lo que de verdad abre algo: ni las publicaciones ni los
    movimientos de lista llevan a ninguna parte. */
 .hub-feed-activity-item:not(.is-post):not(.is-move):hover,
@@ -1430,7 +1422,7 @@
   transform: translateY(-1px);
   border-color: var(--steam);
   border-left-color: var(--steam);
-  box-shadow: var(--shadow);
+  box-shadow: var(--e2);
 }
 
 .hub-feed-activity-item:focus-visible {
@@ -1445,7 +1437,7 @@
 .hub-related-list .hub-review-entry.is-review:has(.hub-review-open:focus-visible) {
   transform: translateY(-1px);
   border-color: var(--acc);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, .18);
+  box-shadow: var(--e2);
 }
 
 /* Cabecera con avatar */
@@ -1453,11 +1445,19 @@
   display: flex;
   align-items: center;
   gap: .6rem;
+  min-width: 0;
 }
 
+/* EL BLOQUE DE TEXTO NO PUEDE SER MÁS ANCHO QUE SU TARJETA, y aquí hace falta decirlo con `max-width` y no con
+   `min-width: 0`: esta cabecera se apila EN COLUMNA (`.hub-feed-card header`, avatar arriba y texto debajo), así
+   que el ancho es el eje TRANSVERSAL y con `align-items: center` cada hijo se dimensiona por su contenido. La
+   etiqueta del juego va en una sola línea, de modo que su contenido mide lo que mida el título: «Like a Dragon
+   Gaiden: The Man Who Erased His Name» estiraba este bloque hasta 320 px dentro de una tarjeta de 253 y se salía
+   por los dos lados, sin que su `text-overflow` llegara a entrar nunca. */
 .hub-feed-card-head-text {
   flex: 1 1 auto;
   min-width: 0;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1474,7 +1474,7 @@
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: .85rem;
+  font-size: var(--fs-sm);
   line-height: 1;
   user-select: none;
 }
@@ -1484,14 +1484,14 @@
 .hub-avatar-md {
   width: 3.1rem;
   height: 3.1rem;
-  font-size: 1.15rem;
+  font-size: var(--fs-xl);
 }
 
 /* Avatar grande para el hero de la página de perfil (debe ir tras .hub-avatar para ganar el tamaño). */
 .hub-avatar-lg {
   width: 4.5rem;
   height: 4.5rem;
-  font-size: 1.6rem;
+  font-size: var(--fs-3xl);
 }
 
 .hub-feed-card .hub-profile-hero-name {
@@ -1512,30 +1512,14 @@
   background: var(--surface-soft);
   border: 1px solid var(--border);
   color: var(--text-muted);
-  font-size: .72rem;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* La etiqueta de juego de la paleta POR DEFECTO ("Clásico"), que hasta ahora no tenía: caía en la píldora gris
-   genérica de arriba —el respaldo para un tema que no la vista en su §6— y por eso era la única paleta en la que
-   el nombre de un juego no se distinguía de un dato cualquiera. Se nota sobre todo desde que ese mismo rótulo
-   encabeza el detalle de una reseña propia (ver `.hub-review-detail-game`).
-   El selector es `:root:not([data-palette])` porque "Clásico" es la ausencia de atributo (ver `preferences.ts`),
-   y suma (0,3,0): lo mismo que las reglas de los temas, así que ni les gana ni les pierde — cada paleta sigue
-   mandando en la suya.
-   ÁMBAR, y no el azul del acento, por dos motivos: el azul ya es el de los géneros, que salen justo debajo en la
-   misma tarjeta, y el ámbar es el color con el que esta paleta ya escribe una INSIGNIA (`--deco-badge-idle-fg`),
-   que es exactamente lo que aquí se está pintando. La fórmula —velo del tono, texto del `--fg-*` y filete del
-   mismo tono— es la de toda la familia de chips (`.chip-genre`, `.chip-pf`, `.chip-pd`), así que el contraste ya
-   está medido en los dos temas y la etiqueta se lee como una más de la casa. */
-:root:not([data-palette]) .hub-feed-game-chip {
-  background: rgba(var(--warn-rgb), .16);
-  border: 1px solid rgba(var(--warn-rgb), .34);
-  color: var(--fg-amber);
-}
+/* La etiqueta de juego de «Plata y acero» es un cartel de contrato y se pinta en su skin. */
 
 .hub-skeleton {
   background: var(--surface-hover);
@@ -1549,6 +1533,42 @@
 }
 
 .hub-skeleton-card { cursor: default; }
+
+/* ══ EL RENGLÓN DE CABECERA DE UNA RESEÑA · cuándo y cuánto ════════════════════════════════════════════════
+   La nota ocupaba una fila entera para ella sola en medio de la tarjeta. Aquí comparte renglón con la fecha —la
+   fecha a la izquierda, la nota al extremo—, que es donde se lee sin robarle sitio al texto de la reseña. Vale
+   igual para las dos escalas: el aro de nota y las cinco estrellas se alinean por su centro con el renglón.
+   NO ENVUELVE, y eso es lo importante en móvil: con `flex-wrap` la nota se iba a una línea nueva ella sola —el
+   problema que se venía a arreglar, pero más abajo—. Lo que cede es la FECHA, que parte en dos líneas si hace
+   falta mientras la nota se queda al extremo, encajada en el mismo bloque. */
+.hub-feed-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: .7rem;
+  min-width: 0;
+}
+
+.hub-feed-meta > .hub-feed-date {
+  margin: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  /* Que envuelva: varias paletas visten esta fecha de cinta y alguna la deja en una sola línea. */
+  white-space: normal;
+}
+
+/* El aro, un punto más pequeño que en la tabla: aquí acompaña a un renglón de texto pequeño, y con su tamaño de
+   serie era él quien decidía el alto de la fila. */
+.hub-feed-meta .score-ring {
+  --sz: 1.95rem;
+  margin-left: auto;
+}
+
+.hub-feed-meta .stars {
+  margin-left: auto;
+  font-size: var(--fs-sm);
+}
 
 .hub-feed-review-text {
   margin: 0;
@@ -1668,7 +1688,7 @@
   padding-left: .7rem;
   border-left: 2px solid var(--border);
   color: var(--text-dim);
-  font-size: .82rem;
+  font-size: var(--fs-xs);
   line-height: 1.35;
   text-wrap: pretty;
 }
@@ -1710,7 +1730,7 @@
 /* Solo el título de la sección (hijo directo) va en mayúsculas; no los <strong> anidados,
    como el nombre del juego (`.row-name`) que GameTable renderiza dentro de la sección. */
 .hub-metadata-section > strong {
-  font-size: .85rem;
+  font-size: var(--fs-sm);
   color: var(--hub-text);
   text-transform: uppercase;
   letter-spacing: .02em;
@@ -1741,8 +1761,6 @@
 /* El editor de perfil va siempre a una columna: los bloques comparten la MISMA anchura. */
 
 @media (min-width:1957px) {
-  .status-banner,
-  .update-notice,
   .main {
     max-width: 92vw;
   }
@@ -1768,7 +1786,7 @@
   }
 
   .bottom-nav-btn span {
-    font-size: .82rem;
+    font-size: var(--fs-xs);
   }
 
   .hub-hub-card {
@@ -1812,6 +1830,13 @@
   }
 
   .hub-screen-actions .btn .ui-icon {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  /* Aquí TODOS los botones de la fila son de solo icono, así que la campana deja de ser la excepción y
+     vuelve a la medida de sus vecinos: con el tamaño grande era la única que desentonaba. */
+  .hub-screen-actions .btn.hub-requests-btn .ui-icon {
     width: 1rem;
     height: 1rem;
   }
@@ -1936,14 +1961,6 @@
   border-color: var(--border);
 }
 
-/* Por qué está apagado el botón, sin cuenta atrás. Va aún más tenue que la línea de acción. */
-.error-note {
-  margin: .35rem 0 0;
-  font-size: .8rem;
-  color: var(--text-dim);
-  max-width: 42ch;
-}
-
 /* La pantalla aparece de golpe tras el fallo; el fundido suaviza ese salto. */
 .error-plain {
   animation: errorIn .26s ease-out both;
@@ -1992,7 +2009,11 @@
   place-items: center;
 }
 
-.hub-requests-btn .ui-icon { width: 1.25rem; height: 1.25rem; }
+/* El icono manda más aquí que en un botón con rótulo: es lo ÚNICO que hay dentro. Hace falta nombrar la
+   fila para ganar el empate contra `.hub-screen-actions .btn .ui-icon` (.98 rem), que se declara antes y
+   con las mismas tres clases; sin eso, esta regla no llegaba a aplicarse nunca y la campana salía del
+   tamaño de los iconos que acompañan a un rótulo, perdida en su cuadrado. */
+.hub-screen-actions .btn.hub-requests-btn .ui-icon { width: var(--ico-xl); height: var(--ico-xl); }
 
 /* Spinner del botón de publicar mientras se envía el post (reutiliza hubSpin de _overlays). */
 .hub-spinner {
@@ -2104,5 +2125,5 @@
 .hub-avatar-link:focus-visible {
   outline: none;
   border-color: rgba(var(--steam-rgb),.42);
-  box-shadow: 0 0 0 2px rgba(var(--steam-rgb),.2);
+  box-shadow: var(--ring-accent);
 }

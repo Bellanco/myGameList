@@ -10,6 +10,7 @@ import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { SocialFeedScreen } from '../../src/view/components/socialhub/SocialFeedScreen';
 import { SocialErrorBoundary } from '../../src/view/components/socialhub/SocialErrorBoundary';
 import type { SocialFeedDayGroup, SocialFeedItem } from '../../src/viewmodel/social/socialFeed';
+import { DEFAULT_PALETTE } from '../../src/core/constants/palettes';
 
 vi.mock('../../src/model/repository/firebaseRepository', () => ({
   reportHandledError: vi.fn(async () => {}),
@@ -68,8 +69,8 @@ describe('feed social sin conexión', () => {
 
     const notice = screen.getByLabelText(SOCIAL_UI.offline.sectionAria);
     expect(notice).toBeTruthy();
-    // El titular es el del tema por defecto (steam); el cuerpo, el de "hay caché".
-    expect(notice.textContent).toContain(SOCIAL_UI.offline.leadByPalette.steam);
+    // El titular es el del tema POR DEFECTO (sea cual sea); el cuerpo, el de "hay caché".
+    expect(notice.textContent).toContain(SOCIAL_UI.offline.leadByPalette[DEFAULT_PALETTE]);
     expect(notice.textContent).toContain(SOCIAL_UI.offline.body);
   });
 
@@ -107,7 +108,7 @@ describe('boundary del hub social ante un fallo de red', () => {
       </SocialErrorBoundary>,
     );
 
-    expect(screen.getByText(SOCIAL_UI.offline.leadByPalette.steam)).toBeTruthy();
+    expect(screen.getByText(SOCIAL_UI.offline.leadByPalette[DEFAULT_PALETTE])).toBeTruthy();
     // Y el reintento NO está bloqueado por la espera de 15 min: la red ya está de vuelta en este entorno.
     expect(screen.getByRole('button', { name: SOCIAL_UI.errorBoundary.retry }).getAttribute('aria-disabled')).toBe('false');
     consoleError.mockRestore();
@@ -121,7 +122,7 @@ describe('boundary del hub social ante un fallo de red', () => {
       </SocialErrorBoundary>,
     );
 
-    expect(screen.getByText(SOCIAL_UI.errorBoundary.titleByPalette.steam)).toBeTruthy();
+    expect(screen.getByText(SOCIAL_UI.errorBoundary.titleByPalette[DEFAULT_PALETTE])).toBeTruthy();
     spy.mockRestore();
   });
 });

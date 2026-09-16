@@ -64,7 +64,10 @@
      · PÍLDORA del canto → la cifra del escalón, montada en el borde de abajo
    El dibujo va en el centro y no lo toca ninguna de las tres. ──────────── */
 .ach-medal {
-  --edge: var(--ach-edge);
+  /* El FILO del temple. Se llamaba `--edge`, que es el nombre del canto de luz de `_base.scss` y ahí va una
+     CADENA DE SOMBRA, no un color: bastaba con una medalla sin `.is-temple-*` para que heredara la global y
+     tumbara todo este `box-shadow`. El nombre nuevo dice lo que es. */
+  --temple: var(--ach-edge);
   --g1: transparent; --g2: transparent;
   position: relative;
   /* UNA CAPA, Y LO QUE PASA DENTRO SE QUEDA DENTRO.
@@ -85,7 +88,7 @@
   // anillo de rareza. De fuera adentro: halo difuso, anillo de rareza, canto negro, filo del temple, cuerpo.
   box-shadow:
     inset 0 0 0 max(1px, calc(var(--sz) * .022)) rgba(4, 3, 2, .92),
-    inset 0 0 0 max(2px, calc(var(--sz) * .058)) var(--edge),
+    inset 0 0 0 max(2px, calc(var(--sz) * .058)) var(--temple),
     inset 0 calc(var(--sz) * -.05) calc(var(--sz) * .1) rgba(0, 0, 0, .8),
     inset 0 calc(var(--sz) * .03) calc(var(--sz) * .07) rgba(255, 214, 140, .1),
     0 1px 2px rgba(6, 5, 4, .45),
@@ -128,9 +131,9 @@
 /* EL TEMPLE · la aleación del filo, y nada más.
    Sólo el filo: los cuatro metales del rango de perfil (`_tiers.scss`) viven en la misma tarjeta del hub, y
    teñir el cuerpo del disco pondría dos escalas de metal a dos centímetros la una de la otra. */
-.ach-medal.is-temple-1 { --edge: rgba(184, 118, 54, .72); }
-.ach-medal.is-temple-2 { --edge: rgba(202, 210, 222, .62); }
-.ach-medal.is-temple-3 { --edge: rgba(244, 200, 96, .82); }
+.ach-medal.is-temple-1 { --temple: rgba(184, 118, 54, .72); }
+.ach-medal.is-temple-2 { --temple: rgba(202, 210, 222, .62); }
+.ach-medal.is-temple-3 { --temple: rgba(244, 200, 96, .82); }
 
 /* LA PÍLDORA · la cifra del escalón, montada en el canto de abajo.
    Ahí y no dentro por una razón de tamaño: a 48 px una pastilla centrada tapa el dibujo y en la esquina se sale
@@ -169,11 +172,11 @@
 // EL BLOQUEADO SE VE. Sin temple —no hay escalón que enseñar— y sin oro, pero con su dibujo legible: es lo ÚNICO
 // que dice de qué va un logro que aún no tienes. Se apaga el oro y se quita la chispa, que es lo que lo hacía
 // parecer conseguido; el trazo se queda en gris de peltre sobre la misma penumbra.
-.ach-medal.is-locked { --edge: rgba(150, 162, 178, .2); --g1: rgba(150, 162, 178, .22); --g2: rgba(150, 162, 178, .10); }
+.ach-medal.is-locked { --temple: rgba(150, 162, 178, .2); --g1: rgba(150, 162, 178, .22); --g2: rgba(150, 162, 178, .10); }
 // El bloqueado conserva la GRADACIÓN del temple y pierde el METAL: mismo escalonado, en peltre.
-.ach-medal.is-locked.is-temple-1 { --edge: rgba(150, 162, 178, .16); }
-.ach-medal.is-locked.is-temple-2 { --edge: rgba(150, 162, 178, .28); }
-.ach-medal.is-locked.is-temple-3 { --edge: rgba(150, 162, 178, .42); }
+.ach-medal.is-locked.is-temple-1 { --temple: rgba(150, 162, 178, .16); }
+.ach-medal.is-locked.is-temple-2 { --temple: rgba(150, 162, 178, .28); }
+.ach-medal.is-locked.is-temple-3 { --temple: rgba(150, 162, 178, .42); }
 .ach-medal.is-locked .ach-art { filter: none; }
 .ach-medal.is-locked .ach-art .ach-fg { stroke: rgba(186, 190, 198, .62); }
 .ach-medal.is-locked .ach-art .ach-hl { display: none; }
@@ -211,7 +214,7 @@
 //     medalla; no hace falta decirlo tres veces.
 .ach-rarity, .ach-row-rarity {
   display: inline-flex; align-items: center; gap: 7px;
-  font-family: var(--ach-mono); font-size: 10.5px;
+  font-family: var(--ach-mono); font-size: var(--fs-3xs);
   // EL TONO NO BAJA MÁS. `--text-dim` a 10,5 px se sale del 4,5:1 que la 1.4.3 pide para texto pequeño en varias
   // de las doce combinaciones de paleta y tema, y este rótulo existe precisamente porque el color de la escala no
   // llega a ese listón (ver arriba). La sutileza se consigue con el tamaño, el tracking y el punto, no apagando
@@ -241,11 +244,16 @@
 // son más de cien a la vez. Quien apaga los efectos se lleva el disco liso: una sola pasada de oro sobre la
 // penumbra, que se lee igual de bien. Es el mismo interruptor que ya gobierna el destello del desbloqueo (§7.4),
 // no uno nuevo.
-:root[data-effects='off'] .ach-medal .ach-art { filter: none; }
-:root[data-effects='off'] .ach-medal .ach-art .ach-sh,
-:root[data-effects='off'] .ach-medal .ach-art .ach-hl { display: none; }
-:root[data-effects='off'] .ach-medal .ach-grain,
-:root[data-effects='off'] .ach-medal .ach-light { display: none; }
+/* OJO AL SELECTOR: se apaga con `:not([data-effects="on"])` y NO con `[data-effects="off"]`. Al desactivar los
+   efectos, la preferencia RETIRA el atributo (ver `toggleRootFlag` en `view/hooks/preferences.ts`), así que el
+   valor "off" no existe nunca en el DOM real y este bloque entero no llegaba a aplicarse: apagar los efectos
+   dejaba el relieve y el grano de las medallas encendidos. El e2e no lo veía porque inyectaba a mano un estado
+   que la aplicación no produce. */
+:root:not([data-effects="on"]) .ach-medal .ach-art { filter: none; }
+:root:not([data-effects="on"]) .ach-medal .ach-art .ach-sh,
+:root:not([data-effects="on"]) .ach-medal .ach-art .ach-hl { display: none; }
+:root:not([data-effects="on"]) .ach-medal .ach-grain,
+:root:not([data-effects="on"]) .ach-medal .ach-light { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .ach-medal .ach-grain { opacity: .12; }
@@ -267,9 +275,9 @@
   position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%);
   background: var(--surface-elevated, var(--surface)); color: var(--text);
   border: 1px solid var(--border, rgba(255,255,255,.14));
-  font-size: 12px; line-height: 1.3; white-space: nowrap;
+  font-size: var(--fs-2xs); line-height: 1.3; white-space: nowrap;
   padding: 4px 8px; border-radius: var(--radius-sm);
-  box-shadow: var(--shadow); pointer-events: none; z-index: 3;
+  box-shadow: var(--e3); pointer-events: none; z-index: 3;
   opacity: 0; visibility: hidden; transition: opacity .12s ease;
 }
 .ach-strip-btn:hover .ach-strip-tip,
@@ -316,11 +324,11 @@
 }
 .ach-figure-label {
   grid-column: 1 / -1;
-  font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted);
+  font-size: var(--fs-3xs); letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted);
 }
-.ach-figure-value { font-size: 30px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ach-figure-value { font-size: var(--fs-3xl); line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }
 // Al otro extremo de la línea de la cifra: es su unidad, y ahí sujeta el ancho en vez de dejarlo caer.
-.ach-figure-hint { justify-self: end; text-align: right; font-size: 12.5px; color: var(--text-muted); }
+.ach-figure-hint { justify-self: end; text-align: right; font-size: var(--fs-xs); color: var(--text-muted); }
 .ach-figure-bar {
   grid-column: 1 / -1;
   display: block; height: 6px; margin-top: 10px; border-radius: 3px;
@@ -336,11 +344,6 @@
 // `StatsReviews` para tus reseñas: esta pantalla se abre desde el panel y desde el hub, y un armazón propio se
 // notaría justo en la que existe para no notarse. Aquí solo va lo que es de los logros.
 .ach-screen .ach-figures { margin-bottom: 22px; }
-.ach-group + .ach-group { margin-top: 26px; }
-.ach-group h3 {
-  font-size: 13px; letter-spacing: .06em; text-transform: uppercase;
-  color: var(--text-muted); margin: 0 0 6px; font-weight: 700;
-}
 // FILAS PEGADAS Y UN FILETE ENTRE ELLAS. El aire de diez píxeles estiraba el catálogo —334 entradas— a quince
 // pantallas de desplazamiento, y para separar dos filas basta una línea del color del borde: ocupa un píxel y
 // hace el mismo trabajo. La vista global recupera algo de hueco por su cuenta, más abajo, porque allí cada fila
@@ -431,11 +434,11 @@
 // UNA LÍNEA CADA UNO, con puntos suspensivos. El listado es de 334 entradas y una condición larga partiendo la
 // fila en tres renglones descuadraba la lista entera; el texto completo sigue estando para quien amplíe.
 .ach-row-name {
-  margin: 0; font-weight: 700; font-size: 15px; line-height: 1.3;
+  margin: 0; font-weight: 700; font-size: var(--fs-md); line-height: 1.3;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .ach-row-condition {
-  margin: 1px 0 0; color: var(--text-muted); font-size: 13.5px; line-height: 1.35;
+  margin: 1px 0 0; color: var(--text-muted); font-size: var(--fs-sm); line-height: 1.35;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
@@ -486,21 +489,21 @@
 // «esto es lo raro»— y el contraste lo pone el tono del tema, que es el que sí está medido. Un solo valor sirve
 // para los dos temas porque `--text` es claro en el oscuro y oscuro en el claro.
 .ach-row-progress-text {
-  font-size: 11.5px; white-space: nowrap; font-variant-numeric: tabular-nums;
+  font-size: var(--fs-2xs); white-space: nowrap; font-variant-numeric: tabular-nums;
   color: color-mix(in srgb, var(--rc, var(--text-muted)) 38%, var(--text));
 }
 
-.ach-row-date { font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.ach-row-date { font-size: var(--fs-xs); color: var(--text-muted); font-variant-numeric: tabular-nums; }
 // La cifra medida. A la vista va sola —«33 %»—; el denominador que la sostiene (§6.6bis) sigue en el rótulo del
 // puntero y en el texto para lector de pantalla, que es donde no estorba a la columna.
-.ach-row-share { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.ach-row-share { font-size: var(--fs-2xs); color: var(--text-dim); font-variant-numeric: tabular-nums; }
 
 // Bloqueado: la misma forma desaturada, NO un hueco. Y la desaturación no es la única señal —es color puro—,
 // así que el estado va también en el texto de la fila y en el nombre accesible.
 .ach-row.is-locked .ach-row-name { color: var(--text-muted); }
 
 .ach-empty { color: var(--text-muted); }
-.ach-empty strong { display: block; color: var(--text); font-size: 17px; margin-bottom: 4px; }
+.ach-empty strong { display: block; color: var(--text); font-size: var(--fs-lg); margin-bottom: 4px; }
 
 // ── EL APARTADO DEL PANEL ────────────────────────────────────────────────
 // La tira pinta TODAS las medallas y se reparte el ancho sola: es lo que la persona viene a mirar, y un «+16»
@@ -554,13 +557,6 @@
 .hub-feed-ach-name { font-weight: 700; }
 
 // EL CANTO CONTRARIO AL AVATAR. `margin-left: auto` las empuja al final de la fila; con `flex-wrap` en la
-// tarjeta, en un móvil estrecho caen a la línea de abajo y siguen alineadas a la derecha, que es lo que hace que
-// la burbuja no se descuadre.
-//
-// `nowrap` en la tira: aquí no debe envolver nunca. Si no caben, para eso está el «+N» del tope de cinco.
-.hub-feed-ach-medals { margin-left: auto; flex: none; }
-.hub-feed-ach-medals .ach-strip { flex-wrap: nowrap; justify-content: flex-end; }
-
 // ── LOGROS GLOBALES · el catálogo por lo común que es cada logro ─────────
 // El RECUADRO marca lo conseguido, como en la pantalla de logros globales de Steam en móvil. Y no es la única
 // señal: el texto de la derecha lo dice con palabras, porque un recuadro es forma y color, y en una lista de
@@ -584,7 +580,7 @@
 // El porcentaje es la columna que ordena la lista, así que aquí manda sobre la rareza declarada. Ahora que es
 // solo la cifra puede permitirse el tamaño: son dos o tres caracteres que se recorren de arriba abajo, y con
 // `tabular-nums` —que viene de la regla de arriba— las unidades caen en la misma vertical.
-.ach-row.is-global .ach-row-share { font-size: 15px; color: var(--text); font-weight: 600; letter-spacing: .01em; }
+.ach-row.is-global .ach-row-share { font-size: var(--fs-md); color: var(--text); font-weight: 600; letter-spacing: .01em; }
 .ach-row.is-global .ach-row-rarity { order: 3; }
 
 
@@ -682,7 +678,7 @@
   flex: none;
   font-family: var(--ach-mono);
   font-variant-numeric: tabular-nums;
-  font-size: 11px;
+  font-size: var(--fs-3xs);
   font-weight: 700;
   color: var(--text);
   white-space: nowrap;

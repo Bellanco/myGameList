@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { sembrarBiblioteca } from './seed';
 import { ACHIEVEMENTS_BY_ID } from '../../src/core/achievements/catalog';
+import { PALETTES } from '../../src/core/constants/palettes';
 
 /**
  * LOS LOGROS, EN EL BUILD DE PRODUCCIÓN.
@@ -194,7 +195,9 @@ test.describe('logros · el aviso del instante', () => {
       .toHaveAttribute('aria-label', new RegExp(`${cerrados + 1} juegos`));
   }
 
-  const toast = (page: Page) => page.locator('.ach-toast');
+  // El aviso de la app comparte carril y clase base (`.ach-toast.is-notice`), así que la cápsula del LOGRO se
+  // pide excluyéndolo: si no, al guardar un juego habría dos y el `toHaveCount(1)` no diría lo que dice.
+  const toast = (page: Page) => page.locator('.ach-toast:not(.is-notice)');
 
   test('un logro: la cápsula lo nombra, con su medalla y su descripción', async ({ page }) => {
     await sembrarBiblioteca(page, { alBorde: 'uno' });
@@ -213,7 +216,7 @@ test.describe('logros · el aviso del instante', () => {
     // La sombra dice la rareza, y «Créditos finales» es raro. No se escribe en ninguna parte: se ve.
     await expect(capsula).toHaveClass(/is-raro/);
     // Y el banner sigue ANUNCIANDO, que es lo que lo hace accesible.
-    await expect(page.locator('.status-banner')).toContainText(`Logro conseguido: ${nombre}`);
+    await expect(page.locator('.ach-toast.is-notice')).toContainText(`Logro conseguido: ${nombre}`);
   });
 
   test('varios: una sola cápsula que los cuenta, con sus medallas solapadas', async ({ page }) => {
@@ -226,7 +229,7 @@ test.describe('logros · el aviso del instante', () => {
     await expect(capsula.locator('.ach-toast-desc'))
       .toHaveText(`${logro('completados-10').nombre} y ${logro('generos-5').nombre}`);
     await expect(capsula.locator('.ach-medal')).toHaveCount(2);
-    await expect(page.locator('.status-banner')).toContainText('2 logros conseguidos');
+    await expect(page.locator('.ach-toast.is-notice')).toContainText('2 logros conseguidos');
   });
 
   test('el hito: la mitad de una escalera se dice sin felicitar por nada', async ({ page }) => {
@@ -267,9 +270,9 @@ test.describe('logros · el aviso del instante', () => {
     await page.getByRole('button', { name: /^Editar - / }).first().click();
     await page.getByRole('button', { name: /^Guardar/i }).first().click();
 
-    await expect(page.locator('.status-banner')).toBeVisible();
+    await expect(page.locator('.ach-toast.is-notice')).toBeVisible();
     await expect(toast(page)).toHaveCount(0);
-    await expect(page.locator('.status-banner')).not.toContainText(/logro/i);
+    await expect(page.locator('.ach-toast.is-notice')).not.toContainText(/logro/i);
   });
 
   /**
@@ -347,15 +350,17 @@ test.describe('logros · el aviso del instante', () => {
  * Por qué hace falta recorrerlas todas y no basta con una: la cápsula NO trae colores propios. Superficie, borde,
  * sombra y el acento de su rótulo son los tokens de cada tema (`--surface-elevated`, `--border`, `--shadow`,
  * `--fg-link`), y dos paletas además le cambian la FORMA —el chaflán del HUD en Sin futuro y el canto recto de
- * Cámara de pruebas—. Con seis paletas y dos temas, eso son doce sitios donde el mismo componente se pinta
+ * Cámara de pruebas—. Con ocho paletas y dos temas, eso son dieciséis sitios donde el mismo componente se pinta
  * distinto y uno donde puede romperse.
  *
  * Y LO QUE SE MIDE ES EL CONTRASTE, con axe y las mismas reglas que el resto de la auditoría. Es el fallo que la
  * maqueta ya avisaba: el rótulo va con el acento del tema y es TEXTO NORMAL, así que le toca el 4,5:1 de la
  * 1.4.3 — no el 3:1 de un adorno—. Un acento que cumple sobre el fondo de la app puede no cumplir sobre la
- * superficie elevada de la cápsula, y eso solo se ve mirándolo en las doce.
+ * superficie elevada de la cápsula, y eso solo se ve mirándolo en las dieciséis.
  */
-const PALETAS = ['steam', 'persona', 'portal', 'cyberpunk', 'seaofstars', 'grimdark'] as const;
+// Las paletas SE LEEN DEL REGISTRO, no se listan aquí: una lista a mano se queda corta en cuanto alguien añade
+// un tema, y justo entonces es cuando hace falta auditarlo. Ver `docs/temas.md`.
+const PALETAS = PALETTES.map((p) => p.id);
 const TEMAS = ['dark', 'light'] as const;
 
 for (const palette of PALETAS) {
@@ -369,7 +374,9 @@ for (const palette of PALETAS) {
       await expect(page.getByRole('dialog').first()).toBeVisible();
       await page.getByRole('button', { name: /^Guardar/i }).first().click();
 
-      const capsula = page.locator('.ach-toast');
+      // La del LOGRO: desde que el aviso de la app comparte carril y clase base, `.ach-toast` a secas devuelve dos
+      // (el guardado que dispara el logro saca también su «Correcto») y el localizador deja de ser único.
+      const capsula = page.locator('.ach-toast:not(.is-notice)');
       await expect(capsula, `sin cápsula en ${palette}/${theme}`).toBeVisible();
       // El ratón encima para que no se vaya a mitad de la auditoría: axe tarda más de lo que vive el aviso.
       await capsula.hover();
@@ -402,7 +409,11 @@ for (const palette of PALETAS) {
 
       const { violations } = await new AxeBuilder({ page })
         .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-        .include('.ach-toast')
+        /* SOLO LA CÁPSULA DEL LOGRO, que es lo que este test mide. Auditar el carril entero parecía mejor —es lo
+           que se ve—, pero mete en la auditoría el aviso de la app, que vive unos segundos y se apaga a mitad de
+           axe: el resultado dependía de quién llegara antes. La cápsula del logro no se va porque el test le deja
+           el ratón encima. El contraste del aviso lo cubren los 96 recorridos de `a11y.test.ts`. */
+        .include('.ach-toast:not(.is-notice)')
         .analyze();
       const fallos = violations.map(
         (v) => `${v.id} (${v.impact}) ×${v.nodes.length}: ${JSON.stringify(v.nodes[0]?.any?.[0]?.data)}`,
@@ -429,7 +440,9 @@ for (const palette of PALETAS) {
  *     tres medallas y un texto que no desborda.
  */
 test.describe('logros · bibliotecas grandes y avalanchas', () => {
-  const toast = (page: Page) => page.locator('.ach-toast');
+  // El aviso de la app comparte carril y clase base (`.ach-toast.is-notice`), así que la cápsula del LOGRO se
+  // pide excluyéndolo: si no, al guardar un juego habría dos y el `toHaveCount(1)` no diría lo que dice.
+  const toast = (page: Page) => page.locator('.ach-toast:not(.is-notice)');
 
   /** Una biblioteca de 120 juegos con de todo: la que provoca la avalancha al importarse. */
   function bibliotecaGorda() {
@@ -463,7 +476,7 @@ test.describe('logros · bibliotecas grandes y avalanchas', () => {
     // Tiempo de sobra para que la evaluación (que entra por `import()` dinámico) haya corrido y pintado.
     await page.waitForTimeout(2500);
     await expect(toast(page)).toHaveCount(0);
-    await expect(page.locator('.status-banner')).toHaveCount(0);
+    await expect(page.locator('.ach-toast.is-notice')).toHaveCount(0);
 
     // Y no es que el evaluador no haya corrido: los logros están, solo que sin anunciarse.
     await page.getByRole('button', { name: /^Estadísticas/ }).first().click();
@@ -581,7 +594,9 @@ test.describe('logros · bibliotecas grandes y avalanchas', () => {
     // movimiento sigue viendo su logro.
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await sembrarBiblioteca(page, { alBorde: 'uno' });
-    await page.addInitScript(() => document.documentElement.setAttribute('data-effects', 'off'));
+    // Se apaga como lo apaga la aplicación: RETIRANDO el atributo (`toggleRootFlag`), no poniéndolo a "off".
+    // Con el valor "off" —que el DOM real nunca tiene— este test daba por bueno un apagado que no ocurría.
+    await page.addInitScript(() => document.documentElement.removeAttribute('data-effects'));
     await page.goto('/en-curso');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await page.getByRole('button', { name: /El que cruza el umbral/ }).first().click();
@@ -604,7 +619,9 @@ test.describe('logros · bibliotecas grandes y avalanchas', () => {
  * el segundo rótulo del hito, el carril compartido con el consentimiento, y lo que pasa al pulsar la cápsula.
  */
 test.describe('logros · las esquinas del aviso', () => {
-  const toast = (page: Page) => page.locator('.ach-toast');
+  // El aviso de la app comparte carril y clase base (`.ach-toast.is-notice`), así que la cápsula del LOGRO se
+  // pide excluyéndolo: si no, al guardar un juego habría dos y el `toHaveCount(1)` no diría lo que dice.
+  const toast = (page: Page) => page.locator('.ach-toast:not(.is-notice)');
 
   async function completar(page: Page, cerrados: number): Promise<void> {
     await page.goto('/en-curso');
@@ -709,7 +726,9 @@ test.describe('logros · las esquinas del aviso', () => {
  * camino por el que aparecen logros sin haber hecho nada aquí: la sincronización con otro dispositivo.
  */
 test.describe('logros · lo que te esperaba al volver', () => {
-  const toast = (page: Page) => page.locator('.ach-toast');
+  // El aviso de la app comparte carril y clase base (`.ach-toast.is-notice`), así que la cápsula del LOGRO se
+  // pide excluyéndolo: si no, al guardar un juego habría dos y el `toHaveCount(1)` no diría lo que dice.
+  const toast = (page: Page) => page.locator('.ach-toast:not(.is-notice)');
 
   test('con marca de agua previa, al abrir se cuenta lo que hay de nuevo', async ({ page }) => {
     // La marca que dejaría la versión anterior: tres logros reconocidos. Todo lo demás que la biblioteca de 300
@@ -732,7 +751,7 @@ test.describe('logros · lo que te esperaba al volver', () => {
     await expect(capsula.locator('.ach-toast-desc')).toHaveText('Salen de lo que ya tenías en tus listas');
     await expect(capsula.locator('.ach-medal')).toHaveCount(3);
     // Y el banner lo anuncia, como cualquier otro aviso.
-    await expect(page.locator('.status-banner')).toContainText(/logros conseguidos/);
+    await expect(page.locator('.ach-toast.is-notice')).toContainText(/logros conseguidos/);
   });
 
   test('y no se repite: al recargar ya no queda nada nuevo que contar', async ({ page }) => {
@@ -753,6 +772,6 @@ test.describe('logros · lo que te esperaba al volver', () => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await page.waitForTimeout(2500);
     await expect(toast(page)).toHaveCount(0);
-    await expect(page.locator('.status-banner')).toHaveCount(0);
+    await expect(page.locator('.ach-toast.is-notice')).toHaveCount(0);
   });
 });

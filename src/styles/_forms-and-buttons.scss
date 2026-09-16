@@ -2,20 +2,147 @@
 .toolbar {
   display: flex; flex-direction: column; gap: .75rem;
   background: var(--surface); padding: 1rem;
-  border-radius: var(--radius-md); border: 1px solid var(--border);
-  box-shadow: var(--shadow); flex: 0 0 auto;
+  border-radius: var(--radius-md); border: 1px solid var(--hair);
+  box-shadow: var(--e2), var(--edge); flex: 0 0 auto;
   position: relative;
 }
 .toolbar-top { display: flex; align-items: center; gap: .6rem; width: 100%; }
+
+/* F5 — CONMUTADOR DE FORMA (lista / cuadros). Grupo segmentado: dos botones pegados dentro de una misma caja,
+   que es como se lee «esto son dos maneras de lo mismo» y no «dos acciones sueltas». El activo se rellena con
+   el velo del acento; el otro se queda en tinta atenuada, sin borde propio que compita con el del grupo.
+   Vive en la cabecera del listado (`.list-head`, ver `_table.scss`), al lado de lo que cambia; estuvo en la
+   caja de filtros y allí se leía como un filtro más. */
+.shape-switch {
+  display: flex;
+  flex: 0 0 auto;
+  gap: .15rem;
+  padding: .15rem;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-pill);
+  background: var(--bg);
+  box-shadow: var(--sunk);
+}
+.shape-switch-btn {
+  width: 1.95rem;
+  height: 1.95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-dim);
+  border-radius: var(--radius-pill);
+  transition: background .18s ease, color .18s ease;
+}
+.shape-switch-btn:hover { color: var(--text); background: var(--overlay-hover); }
+.shape-switch-btn.is-on {
+  background: var(--steam-soft);
+  color: var(--fg-link);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--steam) 40%, transparent);
+}
+.shape-switch-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+/* TAMAÑO DE LOS CUADROS: un deslizador en CUÑA, la figura de un control de volumen. Fina a la izquierda
+   (cuadros pequeños, caben más) y gruesa a la derecha (grandes, caben menos): se entiende sin rótulo, y de paso
+   dibuja lo que hace en vez de limitarse a marcar una posición.
+
+   CÓMO ESTÁ HECHA. La cuña son DOS capas recortadas con el mismo `clip-path` sobre la cápsula: el canal
+   apagado (`::before`, a todo lo ancho) y el relleno del acento (`::after`, tan ancho como diga la posición).
+   El `<input type="range">` va encima, con su carril en transparente: se ve la cuña, pero quien manda sigue
+   siendo un control nativo con su teclado y su arrastre.
+   El relleno sale de `--grid-size-pos` (0..2), que pone el componente. Aquí solo se convierte en porcentaje, y
+   por eso no hay ningún número de pasos que mantener a la par con el JavaScript salvo ese divisor. */
+.grid-size {
+  --grid-size-pasos: 2;
+  --grid-size-cuna: polygon(0 58%, 100% 31%, 100% 69%, 0 66%);
+
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: .3rem .55rem;
+  border-radius: var(--radius-pill);
+}
+.grid-size::before,
+.grid-size::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: .65rem;
+  height: .7rem;
+  transform: translateY(-50%);
+  clip-path: var(--grid-size-cuna);
+  pointer-events: none;
+}
+/* El canal: la cuña entera, a media tinta. */
+.grid-size::before {
+  right: .55rem;
+  background: color-mix(in srgb, var(--text-dim) 26%, transparent);
+}
+/* Y el relleno, hasta donde esté la manecilla. El ancho se mide sobre el carril ÚTIL, que es el que recorre el
+   centro de la manecilla: de ahí el medio disco que se descuenta a cada lado. */
+.grid-size::after {
+  width: calc((100% - 1.1rem - .7rem) * var(--grid-size-pos, 0) / var(--grid-size-pasos) + .35rem);
+  /* El acento rebajado: es un control de ajuste fino que se usa de vez en cuando, no una señal que tenga que
+     llamar desde el otro lado de la pantalla. A plena tinta competía con la pestaña activa. */
+  background: color-mix(in srgb, var(--fg-link) 62%, transparent);
+}
+
+.grid-size-range {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  z-index: 1;
+  width: 4.4rem;
+  height: 1rem;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.grid-size-range:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 4px; border-radius: var(--radius-pill); }
+
+/* El carril nativo desaparece: lo que se ve es la cuña de debajo. Se declaran los dos juegos de seudoelementos
+   (WebKit y Gecko) por separado porque no se pueden juntar en un mismo selector: un navegador que no entiende
+   uno descarta la regla entera. */
+.grid-size-range::-webkit-slider-runnable-track { height: .7rem; background: transparent; }
+.grid-size-range::-moz-range-track { height: .7rem; background: transparent; }
+
+/* LA MANECILLA: un disco pequeño de la superficie con su filete, como el resto de las piezas de la barra. Sin
+   aro de acento: la cuña ya dice dónde está, y dos señales para lo mismo era lo que hacía ruido. */
+@mixin grid-size-manecilla {
+  width: .7rem;
+  height: .7rem;
+  border: 1px solid color-mix(in srgb, var(--fg-link) 55%, transparent);
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(var(--shadow-rgb), .28);
+  cursor: pointer;
+}
+.grid-size-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  /* WebKit centra la manecilla respecto al BORDE SUPERIOR del carril, no respecto a su centro. */
+  margin-top: 0;
+  @include grid-size-manecilla;
+}
+.grid-size-range::-moz-range-thumb { @include grid-size-manecilla; }
+.shape-switch-btn .ui-icon { width: var(--ico-md); height: var(--ico-md); }
 .search-wrap { position: relative; flex: 1 1 auto; min-width: 0; width: 100%; }
+/* LO QUE SE RELLENA SE HUNDE. El campo pide `--sunk` y el botón `--e2`: la misma caja con la luz al revés,
+   que es lo que dice de un vistazo dónde se escribe y dónde se pulsa. Antes los dos eran una caja plana con
+   un borde y solo se distinguían por el texto que llevaban dentro. */
 .input-base {
   background: var(--bg); border: 1px solid var(--border); color: var(--text);
   border-radius: var(--radius-pill); padding: .55rem 1rem; min-height: 42px;
+  box-shadow: var(--sunk);
   outline: none; transition: border-color .2s, box-shadow .2s; min-width: 0;
 }
-.input-base:focus { border-color: var(--focus-ring); box-shadow: 0 0 0 3px rgba(var(--steam-rgb),.12); }
+/* En foco el hueco SIGUE ahí: el anillo se suma, no lo sustituye — si no, el campo se aplana justo al usarlo. */
+.input-base:focus { border-color: var(--focus-ring); box-shadow: var(--sunk), var(--ring-accent-soft); }
 /* Filtro de juegos del perfil social: campo compacto (tras .input-base para ajustar tamaño). */
-.hub-game-filter { width: 100%; min-height: 36px; padding: .4rem .85rem; font-size: .88rem; }
+.hub-game-filter { width: 100%; min-height: 36px; padding: .4rem .85rem; font-size: var(--fs-sm); }
 .toolbar .search-input { width: 100%; padding-right: 2.7rem; }
 .search-clear {
   position: absolute; right: .7rem; top: 50%; transform: translateY(-50%);
@@ -27,12 +154,12 @@
 
 /* Dialog */
 .alert-dialog {
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius-lg);
   background: var(--surface);
   color: var(--text);
   padding: 0;
-  box-shadow: var(--shadow);
+  box-shadow: var(--e4), var(--edge);
   /* El techo del ancho se mide contra el viewport y sustituye al del <dialog> nativo (`100% - 6px - 2em`), que
      en pantalla estrecha deja la caja más angosta de lo pedido y estira el texto en una columna larguísima. */
   width: fit-content;
@@ -76,7 +203,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   min-height: 0;
 }
 .dialog-title {
-  font-size: 1.1rem;
+  font-size: var(--fs-xl);
   font-weight: 600;
 }
 .dialog-actions {
@@ -105,12 +232,12 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   }
   .share-dialog-consent {
     padding: 0.65rem 0.75rem;
-    font-size: 0.86rem;
+    font-size: var(--fs-sm);
     gap: 0.4rem;
   }
   .share-dialog-note,
   .share-dialog-accept {
-    font-size: 0.86rem;
+    font-size: var(--fs-sm);
   }
 }
 .share-dialog-game {
@@ -124,7 +251,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   padding: 0.75rem 0.9rem;
   border-radius: var(--radius, 8px);
   background: var(--surface-2, rgba(127, 127, 127, 0.12));
-  font-size: 0.92rem;
+  font-size: var(--fs-md);
   line-height: 1.45;
 
   p {
@@ -136,14 +263,14 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 }
 .share-dialog-note {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   opacity: 0.85;
 }
 .share-dialog-accept {
   display: flex;
   align-items: flex-start;
   gap: 0.55rem;
-  font-size: 0.92rem;
+  font-size: var(--fs-md);
   cursor: pointer;
 
   input {
@@ -153,7 +280,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 }
 .share-dialog-error {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   color: var(--danger, #d33);
 }
 /* Caja del enlace publicado, con el botón de copiar DENTRO y al final: el gesto vive donde está el dato.
@@ -170,8 +297,8 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 .share-dialog-url-text {
   flex: 1 1 auto;
   min-width: 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
   overflow-wrap: anywhere;
 }
 .share-dialog-copy {
@@ -196,7 +323,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 }
 /* Distintivo junto al botón de compartir, en el detalle de tu reseña. */
 .share-expiry {
-  font-size: 0.82rem;
+  font-size: var(--fs-xs);
   opacity: 0.8;
   align-self: center;
 }
@@ -214,7 +341,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 .settings-shares-empty,
 .settings-shares-error {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: var(--fs-md);
 }
 .settings-shares-error {
   color: var(--danger, #d33);
@@ -250,7 +377,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  font-size: 0.92rem;
+  font-size: var(--fs-md);
 }
 .settings-shares-item-actions {
   display: flex;
@@ -271,49 +398,6 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   }
 }
 
-/* Name with stars */
-.name-with-stars {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
-  min-width: 0;
-}
-.name-with-stars strong {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-}
-.name-text {
-  display: block;
-  min-width: 0;
-  white-space: nowrap;
-  --marquee-distance: 70%;
-}
-.name-text.overflow {
-  animation: marquee 15s ease-in-out infinite;
-}
-@keyframes marquee {
-  0%, 10% {
-    transform: translateX(0);
-  }
-  45%, 55% {
-    transform: translateX(calc(-1 * var(--marquee-distance)));
-  }
-  90%, 100% {
-    transform: translateX(0);
-  }
-}
-.stars-right {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  flex: 0 0 auto;
-  white-space: nowrap;
-  min-width: max-content;
-}
 .toolbar .toolbar select.input-base,
 .filters-row select.input-base {
   flex: 1 1 auto; cursor: pointer; padding-right: 1rem;
@@ -344,6 +428,11 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   border-color: color-mix(in srgb, var(--steam) 40%, var(--border));
 }
 .btn:active { transform: perspective(460px) rotateX(8deg) translateY(0); }
+/* Un ENLACE con pinta de botón sigue siendo un enlace, y trae de serie el subrayado del navegador: dentro de una
+   pastilla se lee como un fallo de estilo. Quien decide que algo parezca un botón es la clase, no la etiqueta.
+   (La etiqueta sí importa para lo demás: `/perfil/resenas/:id` se abre en otra pestaña y se copia porque es un
+   enlace de verdad, no un botón que navega por su cuenta.) */
+a.btn, a.btn:hover { text-decoration: none; }
 
 /* Acción principal sólida (CTA fuerte): conserva el relleno azul, con relieve e inclinación. */
 /* El degradado arranca UN PASO por debajo del acento puro (antes salía de `--steam` a pelo). Con el texto
@@ -353,12 +442,20 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
    El relieve se conserva: sigue habiendo la misma caída de luz de arriba abajo, solo que un paso más honda.
    Las paletas cuyo skin repinta este botón (Cámara de pruebas, Sin futuro, Solo hay guerra, Mar de estrellas)
    no se ven afectadas: ya lo resolvían con relleno plano y texto oscuro. */
-.btn-steam {
+/* DOS NOMBRES, UN SOLO BOTÓN PRINCIPAL. `.btn-primary` se usaba en ocho sitios de la app —«Añadir juego» del
+   estado vacío, el «Aceptar» de compartir, el alta del hub— y NO TENÍA REGLA en ninguna hoja base: solo existía
+   dentro del skin de Mar de estrellas. En las otras cinco paletas esos ocho botones salían como cristal neutro,
+   idénticos a un secundario, así que la acción principal de varias pantallas no se distinguía de la de al lado.
+   El nombre se queda (lo dice mejor que `.btn-steam`, que es herencia de cuando el acento era el azul de Steam)
+   y los dos comparten declaración aquí y en los cinco skins. */
+.btn-steam,
+.btn-primary {
   background: linear-gradient(180deg, color-mix(in srgb, var(--steam) 77%, #000), color-mix(in srgb, var(--steam) 55%, #000)); color: var(--on-accent);
   border-color: color-mix(in srgb, var(--steam) 70%, #000);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 8px 18px rgba(var(--steam-rgb),.18);
 }
-.btn-steam:hover { background: linear-gradient(180deg, color-mix(in srgb, var(--steam) 77%, #000), color-mix(in srgb, var(--steam) 63%, #000)); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 16px 26px rgba(var(--steam-rgb),.22); }
+.btn-steam:hover,
+.btn-primary:hover { background: linear-gradient(180deg, color-mix(in srgb, var(--steam) 77%, #000), color-mix(in srgb, var(--steam) 63%, #000)); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 16px 26px rgba(var(--steam-rgb),.22); }
 
 /* Acento azul de la app (texto/icono/borde) sobre el cristal: navegación principal y toggles activos. */
 .btn-accent, .btn.is-active, .btn-toggle.active, .btn-toggle-deck.active {
@@ -369,13 +466,23 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 /* Neutro */
 .btn-secondary { color: var(--text); }
 
+/* Los botones de «Plata y acero» (steam) ya NO viven aquí: esa paleta pasó a tener skin propio
+   (`themes/steam.scss`), que es donde se forjan sus hojas de acero. */
+
 /* Roles: el color va en texto + borde; la superficie es el mismo cristal (sin rellenos planos). */
-.btn-danger { color: var(--fg-red); border-color: color-mix(in srgb, var(--danger) 42%, transparent); }
-.btn-danger:hover { border-color: color-mix(in srgb, var(--danger) 58%, transparent); }
+
+/* MENOS EL DESTRUCTIVO, QUE ES MACIZO. Los cinco skins ya lo rellenaban cada uno por su cuenta, así que la
+   paleta Clásico era la única de las seis donde borrar era un botón de contorno como cualquier otro rol. Y no
+   es un rol como los demás: `.btn-abandoned` se queda en contorno a propósito —es alternable, se deshace—
+   mientras que este no se deshace. `--danger-fill` es el relleno con tinta encima. */
+.btn-danger {
+  background: var(--danger-fill); color: #fff;
+  border-color: color-mix(in srgb, var(--danger) 55%, #000);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 8px 18px rgba(var(--danger-rgb),.16);
+}
+.btn-danger:hover { border-color: color-mix(in srgb, var(--danger) 70%, #000); }
 .btn-complete { color: var(--fg-green-soft); border-color: color-mix(in srgb, var(--success) 42%, transparent); }
 .btn-complete:hover { border-color: color-mix(in srgb, var(--success) 58%, transparent); }
-.btn-inprogress { color: var(--fg-amber-soft); border-color: color-mix(in srgb, var(--warn) 42%, transparent); }
-.btn-inprogress:hover { border-color: color-mix(in srgb, var(--warn) 58%, transparent); }
 .btn-abandoned { color: var(--fg-red-pink); border-color: color-mix(in srgb, var(--danger) 38%, transparent); }
 .btn-abandoned:hover { border-color: color-mix(in srgb, var(--danger) 52%, transparent); }
 
@@ -393,10 +500,6 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   border-color: color-mix(in srgb, var(--warn) 80%, transparent);
   background: color-mix(in srgb, var(--warn) 26%, transparent);
 }
-.btn-recommend { color: var(--fg-green-soft); border-color: color-mix(in srgb, var(--success) 42%, transparent); }
-.btn-recommend:hover { border-color: color-mix(in srgb, var(--success) 58%, transparent); }
-.btn-recommend-active { color: var(--fg-red-soft); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
-.btn-recommend-active:hover { border-color: color-mix(in srgb, var(--danger) 60%, transparent); }
 .btn-toggle { color: var(--text-muted); }
 .btn-toggle span { white-space: nowrap; }
 
@@ -412,30 +515,8 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   background: var(--steam-soft);
   border-color: var(--steam-soft);
 }
-.theme-toggle-btn .ui-icon { width: 1.15rem; height: 1.15rem; transition: transform .25s; }
+.theme-toggle-btn .ui-icon { width: var(--ico-lg); height: var(--ico-lg); transition: transform .25s; }
 .theme-toggle-btn:hover .ui-icon { transform: rotate(12deg) scale(1.08); }
-
-/* F1 — selector de paleta (header): pastilla compacta con icono + <select> nativo (accesible y robusto). */
-.palette-select {
-  display: inline-flex; align-items: center; gap: .35rem;
-  height: 38px; padding: 0 .55rem;
-  color: var(--text-muted);
-  background: var(--surface-soft);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  transition: color .2s, background .2s, border-color .2s;
-}
-.palette-select:hover,
-.palette-select:focus-within { color: var(--fg-link); background: var(--steam-soft); border-color: var(--steam-soft); }
-.palette-select-icon { display: inline-flex; flex: 0 0 auto; }
-.palette-select-field {
-  border: 0; background: transparent; color: var(--text);
-  font-weight: 600; font-size: .82rem; margin: 0; padding: 0;
-  cursor: pointer; outline: none; max-width: 9rem;
-}
-.palette-select-field:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; border-radius: 4px; }
-/* El desplegable nativo pinta las opciones con colores del sistema; forzamos legibilidad en ambos temas. */
-.palette-select-field option { background: var(--surface); color: var(--text); }
 .btn-toggle-deck.active { background: rgba(var(--steam-rgb),.15); color: var(--fg-sky); border-color: rgba(var(--steam-rgb),.4); }
 .btn-icon {
   width: 42px; height: 42px; border-radius: 50%; background: transparent;
@@ -443,7 +524,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   display: inline-flex; align-items: center; justify-content: center;
   transition: all .25s;
 }
-.btn-icon:hover { color: var(--fg-link); background: var(--steam-soft); border-color: rgba(var(--steam-rgb),.25); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(var(--steam-rgb),.15); }
+.btn-icon:hover { color: var(--fg-link); background: var(--steam-soft); border-color: rgba(var(--steam-rgb),.25); transform: translateY(-2px); box-shadow: var(--glow-accent); }
 .btn-icon:active { transform: scale(.95); }
 /* Ghost: se mantiene plano y transparente (sin cristal ni inclinación 3D). */
 .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
@@ -465,7 +546,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   border: 1px solid var(--border);
   border-radius: var(--radius-md, .6rem);
 }
-.noscript-notice h1 { margin: 0 0 .5rem; font-size: 1.25rem; }
+.noscript-notice h1 { margin: 0 0 .5rem; font-size: var(--fs-xl); }
 .noscript-notice p { margin: 0; }
 
 /* A11y-4 — Enlace "saltar al contenido": invisible hasta que recibe el foco, y entonces aparece arriba a la
@@ -493,17 +574,14 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 @media (prefers-reduced-motion: reduce) {
   .skip-link { transition: none; }
 }
-.filter-field-hidden-label, .form-toggle-label { visibility:hidden; }
-.compact-name-cell { display:flex; align-items:center; justify-content:space-between; gap:.6rem; width:100%; }
-.compact-name-text { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.compact-score { flex:0 0 auto; }
+.filter-field-hidden-label { visibility:hidden; }
 
 /* TagInput suggestion dropdown for Firefox fallback */
 .tag-suggestions {
   margin: 0; padding: .25rem 0; list-style: none;
   background: var(--surface-elevated); border: 1px solid var(--border);
   border-radius: 6px; min-width: 160px; max-width: 320px;
-  box-shadow: 0 6px 18px rgba(0,0,0,.12); overflow: hidden;
+  box-shadow: var(--e2); overflow: hidden;
 }
 .tag-suggestions li {
   padding: .6rem .8rem; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -528,11 +606,13 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   box-sizing: border-box;
   flex: none;
   width: 1.2rem;
-  height: 1.2rem;
+  height: 1rem;
   margin: 0;
   border: 1.5px solid var(--border);
   border-radius: 0.4rem;
   background: var(--surface);
+  /* Vacío es un hueco; marcado es una pieza maciza de acento, así que la sombra interior se retira abajo. */
+  box-shadow: var(--sunk);
   cursor: pointer;
   display: inline-grid;
   place-content: center;
@@ -553,6 +633,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 :where(input[type='checkbox']:checked) {
   background: var(--steam);
   border-color: var(--steam);
+  box-shadow: var(--edge);
 }
 
 :where(input[type='checkbox']:checked)::after {
@@ -590,7 +671,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   /* El icono va con `--on-accent`, que es justo el token para "texto encima de un relleno de acento", y no con
      un blanco fijo: sobre el amarillo de Sin futuro o el oro de Mar de estrellas se quedaba en ~1,2:1. */
   color: var(--on-accent);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--e2);
   display: grid;
   place-content: center;
   cursor: pointer;
@@ -640,7 +721,6 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   height: 1.35rem;
   pointer-events: none;
 }
-
 
 
 /* Aviso dentro del diálogo de compartir: el nombre con el que se firmará no lo eligió su dueño.
