@@ -383,14 +383,17 @@ export function claveCache(nombre: string, plataformas: readonly string[], ampli
 }
 
 /**
- * El id de carátula de un juego, de la caché si está y de IGDB si no. Guarda TAMBIÉN los fallos (como cadena
- * vacía): sin eso, cada errata de la biblioteca vuelve a preguntar en cada visita.
+ * EL EMPAREJAMIENTO, EN DOS PIEZAS Y NO EN UNA. `leerCaratulaCacheada` es lo que ya se sabe —gratis— y
+ * `emparejarYGuardar` es lo que cuesta: preguntarle a IGDB y apuntar la respuesta. Están separadas porque el
+ * endpoint tiene que hacer algo ENTRE las dos (comprobar el cupo de la IP, ver `functions/cover.ts`), y con una
+ * sola función que hiciera ambas cosas acababa leyendo la misma clave de KV dos veces por cada juego nuevo:
+ * una para saber si había que gastar cupo y otra dentro de la resolución. `resolverCaratula` las junta para
+ * quien no necesita meterse en medio (el gemelo de desarrollo de `vite.config.ts`).
  */
+
 /**
  * Lo que ya está en la caché, sin preguntar a nadie: el id, `null` si consta que no tiene carátula, y
- * `undefined` si de este juego no se sabe nada todavía. Se expone aparte de `resolverCaratula` para que el
- * endpoint pueda distinguir «servir de caché» (gratis) de «hay que consultar IGDB» (lo que cuesta y lo que hay
- * que racionar).
+ * `undefined` si de este juego no se sabe nada todavía.
  */
 export async function leerCaratulaCacheada(
   env: EntornoIgdb,
@@ -403,18 +406,33 @@ export async function leerCaratulaCacheada(
   return cacheado === '' ? null : cacheado;
 }
 
+/**
+ * Pregunta a IGDB —SIN mirar antes la caché, porque quien llama ya lo ha hecho— y guarda la respuesta. Apunta
+ * TAMBIÉN los fallos (como cadena vacía): sin eso, cada errata de la biblioteca vuelve a preguntar en cada
+ * visita de cada dispositivo.
+ */
+export async function emparejarYGuardar(
+  env: EntornoIgdb,
+  nombre: string,
+  plataformas: readonly string[],
+  ampliado = false,
+): Promise<string | null> {
+  const { coverId, indeciso } = await emparejar(env, nombre, plataformas, ampliado);
+  if (!coverId && indeciso) return null; // no se ha podido preguntar: ni se cachea ni se da por definitivo
+  await env.COVERS?.put(claveCache(nombre, plataformas, ampliado), coverId ?? '', {
+    expirationTtl: coverId ? HIT_TTL : MISS_TTL,
+  });
+  return coverId;
+}
+
+/** Las dos piezas juntas: de la caché si está, y de IGDB si no. Para quien no necesita nada en medio. */
 export async function resolverCaratula(
   env: EntornoIgdb,
   nombre: string,
   plataformas: readonly string[],
   ampliado = false,
 ): Promise<string | null> {
-  const clave = claveCache(nombre, plataformas, ampliado);
-  const cacheado = await env.COVERS?.get(clave);
-  if (cacheado !== null && cacheado !== undefined) return cacheado === '' ? null : cacheado;
-
-  const { coverId, indeciso } = await emparejar(env, nombre, plataformas, ampliado);
-  if (!coverId && indeciso) return null; // no se ha podido preguntar: ni se cachea ni se da por definitivo
-  await env.COVERS?.put(clave, coverId ?? '', { expirationTtl: coverId ? HIT_TTL : MISS_TTL });
-  return coverId;
+  const cacheado = await leerCaratulaCacheada(env, nombre, plataformas, ampliado);
+  if (cacheado !== undefined) return cacheado;
+  return emparejarYGuardar(env, nombre, plataformas, ampliado);
 }

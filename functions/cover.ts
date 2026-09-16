@@ -16,7 +16,7 @@
 //
 // POR QUÉ EL NOMBRE VA EN LA CADENA DE CONSULTA Y NO EN LA RUTA: hay juegos con barra en el título
 // («Half Life / Black Mesa»), y una barra codificada dentro de una ruta la normalizan los intermediarios.
-import { leerCaratulaCacheada, resolverCaratula, type EntornoIgdb } from './_lib/igdbCover';
+import { emparejarYGuardar, leerCaratulaCacheada, type EntornoIgdb } from './_lib/igdbCover';
 
 const IMAGENES = 'https://images.igdb.com/igdb/image/upload';
 /**
@@ -71,10 +71,30 @@ const CACHE_FALLO = 'no-store';
  * que navegar por una biblioteca ya llena nunca topa. 500 da de sobra para llenar una biblioteca grande de una
  * sentada (la de referencia tiene 302) y deja margen para volver a intentarlo.
  *
- * Es un tope BLANDO: KV no tiene incremento atómico, así que dos peticiones simultáneas pueden leer el mismo
- * valor y contar una sola vez. Sirve para acotar el abuso, no como frontera de seguridad.
+ * Es un tope BLANDO, y conviene saber POR QUÉ no puede ser otra cosa sobre KV:
+ *   · No hay incremento atómico. Dos peticiones simultáneas leen el mismo valor y cuentan una sola vez.
+ *   · Las lecturas se sirven de la caché del punto de presencia durante AL MENOS 60 s (ese es el mínimo que
+ *     admite `cacheTtl`), así que durante una ráfaga el contador que se lee viene con retraso. Con el llenado
+ *     inicial, que va a ~6 juegos por segundo, eso son unos cientos de resoluciones de margen por encima del
+ *     tope antes de que la cuenta se entere. Por eso el número va holgado: acota el abuso sostenido —que es
+ *     para lo que existe—, no la ráfaga exacta.
+ * Quien necesite una frontera de verdad necesita otro sustrato (un Durable Object), no un número más pequeño.
  */
 const MAX_RESOLUCIONES_HORA = 500;
+
+/**
+ * DE CUÁNTAS EN CUÁNTAS SE APUNTA EL GASTO, y por qué no de una en una.
+ *
+ * Escribir en cada resolución ponía hasta SEIS escrituras por segundo sobre la misma clave de KV durante todo
+ * el llenado inicial —KV admite del orden de una por segundo y clave—, y gastaba una escritura del presupuesto
+ * diario por cada juego: ~300 por biblioteca llenada, más las del propio emparejamiento.
+ *
+ * Así que se cuenta por lotes: solo una de cada diez resoluciones escribe, y cuando lo hace suma diez. El
+ * contador mide lo mismo en promedio y las escrituras bajan a la décima parte. Al ser un tope blando que ya
+ * vive con el retraso de la caché de KV (ver arriba), esta imprecisión no cambia nada de lo que el cupo puede
+ * prometer: el abuso sostenido sigue topando a las 500, que es lo que importa.
+ */
+const LOTE_CUPO = 10;
 
 /** Cupo gastado por una IP en la hora en curso; devuelve `false` cuando ya no queda. */
 async function quedaCupo(env: Env, request: Request): Promise<boolean> {
@@ -83,7 +103,11 @@ async function quedaCupo(env: Env, request: Request): Promise<boolean> {
   const clave = `igdb:cupo:v1:${ip}:${hora}`;
   const usado = Number(await env.COVERS?.get(clave)) || 0;
   if (usado >= MAX_RESOLUCIONES_HORA) return false;
-  await env.COVERS?.put(clave, String(usado + 1), { expirationTtl: 3600 });
+  // El azar es lo que reparte el coste: cada resolución tiene una probabilidad de 1/LOTE de apuntar el lote
+  // entero. Sin él haría falta un contador compartido entre peticiones, que es justo lo que KV no da.
+  if (Math.random() < 1 / LOTE_CUPO) {
+    await env.COVERS?.put(clave, String(usado + LOTE_CUPO), { expirationTtl: 3600 });
+  }
   return true;
 }
 
@@ -127,7 +151,9 @@ export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise
   const listaPlataformas = plataformas.split(',').map((p) => p.trim()).filter(Boolean);
 
   /* Primero la caché, y solo si no hay nada se gasta cupo: lo que se raciona es CONSULTAR a IGDB, no servir lo
-     ya sabido. Así una biblioteca ya llena se navega sin tocar el contador. */
+     ya sabido. Así una biblioteca ya llena se navega sin tocar el contador.
+     La lectura se hace AQUÍ y la resolución llama a `emparejarYGuardar`, que ya no vuelve a mirar la caché: con
+     la función que hacía las dos cosas, cada juego nuevo leía dos veces la misma clave de KV. */
   let coverId = await leerCaratulaCacheada(env, nombre, listaPlataformas, ampliado);
   if (coverId === undefined) {
     if (!(await quedaCupo(env, request))) {
@@ -138,7 +164,7 @@ export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise
         headers: { 'Cache-Control': 'no-store', 'Retry-After': String(restan) },
       });
     }
-    coverId = await resolverCaratula(env, nombre, listaPlataformas, ampliado);
+    coverId = await emparejarYGuardar(env, nombre, listaPlataformas, ampliado);
   }
 
   if (!coverId) {
