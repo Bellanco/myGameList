@@ -7,7 +7,7 @@ import {
   recordarQueNoTiene,
   tocaReintentar,
 } from '../../core/utils/coverMemory';
-import { evaluarTopesDeImagenes } from '../../core/utils/coverLimits';
+import { evaluarTopesDeImagenes, pedirAlmacenamientoDuradero } from '../../core/utils/coverLimits';
 import { claveDeJuego, guardarHechos, leerHechos } from '../../core/utils/coverDone';
 import { pedirCupoDeCaratulasLibre } from '../../model/repository/coverQuotaRepository';
 import { useCovers } from './useCovers';
@@ -76,6 +76,11 @@ export function useCoverBackfill(data: TabData): void {
       if (ampliado) {
         void pedirCupoDeCaratulasLibre();
       }
+      /* Y QUE NO SE LO LLEVE EL NAVEGADOR. Se pide aquí, con las carátulas ya encendidas, y no en el arranque
+         de todo el mundo: es cuando hay de verdad algo que proteger —trescientas imágenes por biblioteca— y
+         cuando quien lo decide ya ha dicho que quiere descargarlas. Lo que conteste no cambia nada de lo que
+         viene después; si dice que no, todo sigue igual que hasta ahora. */
+      void pedirAlmacenamientoDuradero();
       await evaluarTopesDeImagenes(ampliado);
 
       const hechos = leerHechos();
