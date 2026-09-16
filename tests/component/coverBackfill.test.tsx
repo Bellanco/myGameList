@@ -27,6 +27,7 @@ vi.mock('../../src/model/repository/coverQuotaRepository', () => ({
 import { useCoverBackfill } from '../../src/view/hooks/useCoverBackfill';
 import { coverUrl } from '../../src/core/utils/coverUrl';
 import { reiniciarMemoriaDeCaratulas, sabemosQueNoTiene } from '../../src/core/utils/coverMemory';
+import { claveDeJuego, guardarHechos } from '../../src/core/utils/coverDone';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
 const juego = (id: number, name: string, platforms: string[] = ['Steam']): GameItem =>
@@ -126,6 +127,33 @@ describe('llenado de carátulas', () => {
     renderHook(() => useCoverBackfill(datos)); // como volver a entrar en el listado
     await new Promise((listo) => setTimeout(listo, 600));
     expect(fetchSimulado).not.toHaveBeenCalled();
+  });
+
+  /* EL «NO TIENE» VUELVE A LA COLA cuando cumple su semana, aunque el juego esté dado por hecho. Es lo que
+     cierra el círculo con la caché negativa del servidor, que caduca a la vez: sin esto, un juego sin carátula
+     se quedaba sin ella PARA SIEMPRE en ese navegador aunque IGDB estrenase su ficha al día siguiente. */
+  it('vuelve a preguntar por un juego sin carátula cuando su marca cumple la semana', async () => {
+    localStorage.setItem('mis-listas-covers', 'on');
+    const datos = biblioteca([juego(1, 'Max Paine 3'), juego(2, 'Portal')]);
+    const url = coverUrl('Max Paine 3', ['Steam']);
+    // Como si otra sesión lo hubiera preguntado hace ocho días y hubiera dado por recorrida la biblioteca.
+    localStorage.setItem('mis-listas-covers-none', JSON.stringify({ [url]: Date.now() - 8 * 24 * 3600 * 1000 }));
+    const hechos = new Set([
+      claveDeJuego('Max Paine 3', ['Steam'], false),
+      claveDeJuego('Portal', ['Steam'], false),
+    ]);
+    guardarHechos(hechos);
+    reiniciarMemoriaDeCaratulas();
+
+    // Y esta vez sí la tiene: la ficha ya existe en IGDB.
+    fetchSimulado.mockImplementation(async () => new Response(null, { status: 204 }));
+    renderHook(() => useCoverBackfill(datos));
+
+    // Solo se repregunta ESE, no la biblioteca entera: Portal sigue dado por hecho.
+    await waitFor(() => expect(fetchSimulado).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    expect(String(fetchSimulado.mock.calls[0][0])).toContain('Max+Paine');
+    // Y al aparecer la carátula, la marca se borra: a partir de aquí el listado la pinta.
+    await waitFor(() => expect(sabemosQueNoTiene(url)).toBe(false));
   });
 
   /* Lo apuntado con el formato anterior —la URL entera de cada juego, dentro de un JSON— se traduce al leerlo.
