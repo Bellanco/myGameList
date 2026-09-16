@@ -3,6 +3,7 @@ import { TAB_IDS, type TabData } from '../../model/types/game';
 import { coverUrl } from '../../core/utils/coverUrl';
 import { olvidarQueNoTiene, recordarQueNoTiene } from '../../core/utils/coverMemory';
 import { useCovers } from './useCovers';
+import { useIsAdmin } from './useIsAdmin';
 
 /**
  * EL LLENADO INICIAL DE LAS CARÁTULAS. Recorre la biblioteca entera pidiendo el emparejamiento de cada juego, a
@@ -48,6 +49,15 @@ function guardarHechos(hechos: Set<string>): void {
 
 export function useCoverBackfill(data: TabData): void {
   const { covers } = useCovers();
+  /* EL MISMO MODO QUE PIDE EL LISTADO, y no el normal a secas. El modo ampliado (`x=1`) vive en un espacio de
+     claves aparte —el de KV en el servidor y el de la memoria de «este no tiene» en el navegador—, así que un
+     recorrido hecho en modo normal no le sirve de nada a quien luego pinta el mosaico en modo ampliado: ni
+     calienta las claves que va a pedir, ni sus «no» los reconoce `coverSrc`, que pregunta CON el modo puesto.
+     Con las dos preguntas desalineadas, la cuenta de administración pagaba el recorrido entero para nada y
+     además repetía en cada visita los 404 de los juegos sin carátula, que es justo lo que esto evita.
+     Que se resuelva tarde (la sesión llega después del primer pintado) solo afecta a esa cuenta: para todos los
+     demás es `false` desde el principio y el efecto no se relanza. */
+  const ampliado = useIsAdmin();
   /* Los datos por referencia y NO como dependencia del efecto: `data` cambia con cada edición, y ponerlo en las
      dependencias reiniciaría el recorrido cada vez que tocas un juego. Los añadidos de esta sesión los resuelve
      la carga perezosa al pintarse, y el recorrido los recoge en la siguiente visita. */
@@ -66,13 +76,14 @@ export function useCoverBackfill(data: TabData): void {
       for (const tab of TAB_IDS) {
         for (const juego of datosRef.current[tab] ?? []) {
           if (!juego?.name) continue;
-          const url = coverUrl(juego.name, juego.platforms ?? []);
+          const url = coverUrl(juego.name, juego.platforms ?? [], ampliado);
           if (!hechos.has(url)) pendientes.push(url);
         }
       }
       if (!pendientes.length) return;
 
       let nuevos = 0;
+      let guardados = 0;
       for (const url of pendientes) {
         if (cancelado) break;
         try {
@@ -90,8 +101,13 @@ export function useCoverBackfill(data: TabData): void {
           if (cancelado) break;
           // Un fallo de red NO se apunta: que se reintente en la próxima visita.
         }
-        // Se guarda cada poco y no al final: si cierras la pestaña a medias, lo andado no se pierde.
-        if (nuevos % 25 === 0) guardarHechos(hechos);
+        /* Se guarda cada poco y no al final: si cierras la pestaña a medias, lo andado no se pierde. Y se mide
+           contra lo YA guardado, no con un resto: `nuevos` no avanza cuando la petición falla, así que un
+           `% 25` volvía a serializar la lista entera en cada fallo seguido —y con la red caída, en todos. */
+        if (nuevos - guardados >= 25) {
+          guardarHechos(hechos);
+          guardados = nuevos;
+        }
         await new Promise((sigue) => setTimeout(sigue, PAUSA_MS));
       }
       guardarHechos(hechos);
@@ -100,17 +116,22 @@ export function useCoverBackfill(data: TabData): void {
     /* En cuanto el navegador tenga un rato libre, no al montar: el listado tiene que pintarse primero, y esto
        compite con las propias carátulas que la pantalla está pidiendo. Mismo criterio que el arranque de Firebase. */
     const arrancar = () => { void recorrer(); };
-    const ocioso = typeof window.requestIdleCallback === 'function'
+    /* Qué API se usó, para cancelar con la que toca. Los identificadores de `requestIdleCallback` y de
+       `setTimeout` son dos numeraciones INDEPENDIENTES, así que llamar a `clearTimeout` con un id de idle —como
+       se hacía— puede cancelar el temporizador que otra parte de la app tuviera con ese mismo número. */
+    const conIdle = typeof window.requestIdleCallback === 'function';
+    const ocioso = conIdle
       ? window.requestIdleCallback(arrancar, { timeout: 4000 })
       : window.setTimeout(arrancar, 2000);
 
     return () => {
       cancelado = true;
       abortar.abort();
-      if (typeof window.cancelIdleCallback === 'function' && typeof ocioso === 'number') {
-        window.cancelIdleCallback(ocioso);
+      if (conIdle) {
+        window.cancelIdleCallback?.(ocioso);
+      } else {
+        window.clearTimeout(ocioso);
       }
-      window.clearTimeout(ocioso as number);
     };
-  }, [covers]);
+  }, [covers, ampliado]);
 }
