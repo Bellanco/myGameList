@@ -5,8 +5,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [1.3.0] - Sin publicar
 
-> Todavía no lanzada. Lo que hay aquí vive en `feat/formas-listado` y será la versión que se suba a producción
-> cuando se decida; la fecha se pone al poner el tag.
+> Todavía no lanzada. Lo que hay aquí vive en `develop` y será la versión que se suba a producción cuando se
+> decida; la fecha se pone al poner el tag.
 
 ### Added
 - **El listado deja de parecer una hoja de cálculo, y ahora tiene dos formas.** Se elige desde la cabecera del
@@ -55,6 +55,29 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   un nombre ocupa dos líneas. Las etiquetas van pegadas al nombre y no empujadas al pie, que es lo que abría un
   boquete justo en mitad de lo que se lee.
 
+- **Las carátulas del servicio tienen un tope diario, y se ve cuánto queda.** Hasta ahora lo único que frenaba
+  el gasto era un cupo por IP, que protege de un abusador pero no del recurso que de verdad escasea: las
+  escrituras de KV, que son 1.000 al día **para toda la cuenta** y las comparten las carátulas con los enlaces de
+  reseñas. Ahora hay un segundo tope, global y diario (700 juegos nuevos), y el panel de administración enseña
+  cuánto se lleva gastado del día — el gráfico de Cloudflare da el total de la cuenta sin separar quién lo gasta,
+  que es justo lo que hay que saber para decidir. Al toparlo, el llenado en segundo plano para y lo retoma en la
+  visita siguiente.
+- **El proxy de carátulas deja de resolver para otras webs.** Una carátula ya emparejada se le sirve a quien
+  sea —no cuesta ni una consulta ni una escritura—, pero el trabajo caro, que es emparejar un título nuevo, solo
+  se hace desde esta web. Se distingue por `Sec-Fetch-Site`, que lo pone el navegador y la página no puede tocar.
+- **El modo ampliado de las carátulas exige el sello del rango.** Es un segundo juego de emparejamientos por los
+  mismos juegos, con sus consultas y sus escrituras, y mientras dependió solo de un parámetro en la URL
+  cualquiera que leyera el código —que es público— podía duplicar el gasto escribiendo cinco caracteres. Sin
+  sello se ignora en vez de rechazarse, para que a quien le caduque no se quede sin carátulas.
+- **En el hub social, las carátulas ajenas son de momento solo para mithril.** Tu biblioteca la resuelve una vez
+  el llenado en segundo plano; la de otra persona es un catálogo entero de juegos que no tienes, y se multiplica
+  por cada perfil que abras. Los demás ven la misma lista sin imágenes, que es la vista que ya existe con la
+  preferencia apagada. Cuando se abra a todos, vuelve a mandar el interruptor de cada uno.
+- **Se pide almacenamiento persistente.** Sin él, el navegador puede tirar lo guardado entero —no solo las
+  imágenes: también el armazón, los chunks y la biblioteca para verla sin red— cuando le aprieta el disco, y
+  Safari borra los datos de un sitio que no se visita en siete días. Se pide con las carátulas encendidas, que es
+  cuando hay algo que proteger; un «no» no cambia nada.
+
 ### Changed
 - **El orden ya no se pulsa en las cabeceras**, que era justo lo que hacía que aquello pareciera una tabla de
   cálculo. Ahora son palabras a la vista en la cabecera del listado: la activa se tiñe con el acento y lleva una
@@ -83,7 +106,34 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   y el servidor de Vite no las ejecuta, así que devolvía el HTML de la aplicación y el `<img>` se quedaba en
   blanco, sin un solo error. Ahora el servidor de desarrollo la sirve con el mismo emparejador que producción.
 
+- **Un juego sin carátula ya no se queda así para siempre.** Su «no» se revisa a los noventa días —cuatro
+  preguntas al año por juego, no cincuenta— y guardar la ficha de ese juego adelanta la revisión, con un mínimo
+  de un día entre gestos para que ordenar la biblioteca una tarde no dispare una ráfaga. La tercera vía es la de
+  siempre y la más rápida: **corregir el título**, porque el nombre va dentro de la pregunta.
+- **No poder escribir en KV dejaba sin carátula a quien ya la tenía resuelta.** Cuando la cuenta agota su
+  presupuesto diario de escrituras, el `put` falla; y como esa excepción subía hasta la Function, `/cover`
+  contestaba un 500 con la imagen a un paso. Ahora guardar es el mejor esfuerzo y nunca una condición para
+  responder: lo peor que pasa es volver a preguntarlo mañana.
+- **El llenado en segundo plano daba por hecho lo que ni siquiera llegó a preguntarse.** Un 429 del cupo o un
+  501 de un entorno sin credenciales quedaban apuntados como «este juego ya está mirado», así que quien
+  importara una biblioteca de más de 500 juegos perdía el precalentamiento de todo lo que vino después de topar.
+  Es la misma confusión que el servidor tiene prohibida desde hace tiempo: un fallo de infraestructura no puede
+  escribirse como si fuera un dato.
+
 ### Performance
+- **El emparejamiento acertado deja de caducar.** Duraba un mes, y un mes era justo el ciclo del desperdicio: la
+  biblioteca entera se volvía a resolver contra IGDB cada treinta días —unas trescientas consultas y otras
+  tantas escrituras por persona— para llegar a la misma respuesta, porque la ficha de un juego no se mueve. Para
+  rectificar está la versión de la clave, que los invalida a todos a la vez y cuando se decida.
+- **La carátula guardada dura más y se refresca sola.** El service worker revalida a los noventa días en vez de
+  a los siete (eran ~300 peticiones semanales por dispositivo para recibir los mismos bytes) y el navegador
+  conserva la copia un año con `stale-while-revalidate`, que la sigue pintando al instante mientras pide la
+  nueva por detrás. No se alarga el `max-age`, que congelaría de verdad una errata corregida.
+- **La biblioteca de otra persona reaprovecha las carátulas que ya tienes.** La URL lleva las plataformas
+  dentro, así que tu Hollow Knight en Steam y el suyo en Switch eran dos descargas, dos sitios en la caché y
+  —cuando las plataformas no normalizan igual— dos emparejamientos en el servidor por el mismo juego. Ahora, si
+  de ese título ya hay carátula en este navegador, se pide con las plataformas que funcionaron y la sirve la
+  caché sin salir a la red.
 - **La franja del renglón pide la resolución que le toca.** Se compararon las portadas a 1080p y a 720p ya
   recortadas y con su velo encima: a 151 px de alto no se distinguen. La grande queda para el rango mithril y
   el resto usa la media, que pesa la mitad: recorrer una biblioteca de trescientos juegos pasa de unos 45 MB a
@@ -102,6 +152,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - Que el listado sigue teniendo una sola columna, que es lo que hace imposible el reparto de ancho que dejaba el
   nombre a un carácter por línea.
 - Que `publicConfig` admite la forma, el tamaño y las carátulas, y rechaza lo que no sea un valor conocido.
+- Lo que cuesta cada respuesta de `/cover`: que servir lo ya sabido no gasta cupo ni escribe, que el tope diario
+  del servicio corta aunque la IP tenga de sobra, que el sello del rango levanta los dos topes y que una
+  carátula ya emparejada se sirve incluso desde otra web, pero un juego nuevo no.
+- Los tres caminos de vuelta de un juego sin carátula —el plazo de noventa días, la edición pasado un día y el
+  título corregido—, que son los que impiden que un «no» se vuelva permanente sin convertirse en una fuga.
+- Que el interruptor de las carátulas es un interruptor y no un borrado: apagado no pide una sola imagen, lo
+  aprendido sobrevive y al encenderlo otra vez se piden exactamente las mismas URL, que es lo que hace que las
+  sirva la caché en vez de la red.
 
 ## [1.2.6] - 2026-09-12
 
