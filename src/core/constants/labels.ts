@@ -151,6 +151,10 @@ export const APPEARANCE_UI = {
   effectsAria: 'Efectos visuales animados de los temas',
   effectsOn: 'Activados',
   effectsOff: 'Desactivados',
+  coversLabel: 'Carátulas de los juegos',
+  coversAria: 'Descargar las carátulas de los juegos',
+  coversOn: 'Activadas',
+  coversOff: 'Desactivadas',
 } as const;
 
 /**
@@ -355,6 +359,23 @@ export const UI_MESSAGES = {
        «Buscar» a secas del placeholder no aclara. */
     searchLabel: 'Buscar en la lista por nombre de juego',
     clearSearch: 'Limpiar búsqueda',
+    /* F5 — forma del listado. El grupo se anuncia como lo que es (dos opciones excluyentes) y cada botón dice
+       a QUÉ se cambia, no cómo se está viendo: es lo que espera quien lo pulsa. */
+    shapeAria: 'Forma del listado',
+    shapeList: 'Ver lista',
+    shapeGrid: 'Ver tarjetas',
+    /* Recuento de la barra del listado. Dice lo que se está viendo AHORA —con los filtros puestos—, no el total
+       de la lista: es el pie de la decisión que se acaba de tomar en los filtros de arriba. */
+    listCount: (count: number) => `${count} ${count === 1 ? 'juego' : 'juegos'}`,
+    /* Tamaño de las tarjetas. Es un deslizador de tres posiciones, así que además del nombre del control hace
+       falta el de la POSICIÓN: un `<input type="range">` se anuncia con su número («2 de 3»), que aquí no dice
+       nada, y `aria-valuetext` es lo que lo sustituye por la palabra. */
+    gridSizeAria: 'Tamaño de las tarjetas',
+    gridSizeName: (size: 'sm' | 'md' | 'lg') => ({ sm: 'Pequeños', md: 'Normales', lg: 'Grandes' })[size],
+    /* F5 — el ORDEN, que en las formas nuevas ya no lo llevan las cabeceras de columna. Dice en palabras lo que
+       la cabecera decía con una flechita. */
+    sortLabel: 'Ordenar',
+    sortDirection: (asc: boolean) => (asc ? 'De menor a mayor. Pulsa para invertir' : 'De mayor a menor. Pulsa para invertir'),
     toggleFilters: (open: boolean) => (open ? 'Ocultar filtros' : 'Mostrar filtros'),
     steamDeck: 'Steam Deck',
     removeFilter: (label: string) => `Quitar filtro ${label}`,
@@ -407,6 +428,10 @@ export const UI_MESSAGES = {
     replayability: 'Rejugabilidad',
     retry: 'Dar otra oportunidad',
     review: 'Análisis',
+    /* El análisis ya no se vuelca en el detalle: se va a leer a su pantalla. El texto dice a DÓNDE lleva, no
+       qué hay dentro, porque quien lo pulsa ya sabe que escribió uno. */
+    reviewLink: 'Ver análisis',
+    reviewLinkAria: (name: string) => `Ver análisis de ${name}`,
   },
 } as const;
 

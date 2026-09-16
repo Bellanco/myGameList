@@ -3,6 +3,106 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows the git tags.
 
+## [1.3.0] - Sin publicar
+
+> Todavía no lanzada. Lo que hay aquí vive en `feat/formas-listado` y será la versión que se suba a producción
+> cuando se decida; la fecha se pone al poner el tag.
+
+### Added
+- **El listado deja de parecer una hoja de cálculo, y ahora tiene dos formas.** Se elige desde la cabecera del
+  propio listado: **lista** —un renglón por juego— o **tarjetas** —un mosaico por el que pasear—. La forma se
+  recuerda y viaja con la cuenta, así que el móvil y el ordenador enseñan lo mismo.
+- **El renglón, en tres pisos y con columnas invisibles.** Arriba el nombre con la nota y la insignia pegadas al
+  canto derecho; debajo, año, plataformas y géneros, cada uno en su ranura; y debajo, en dos recuadros hundidos,
+  los puntos fuertes y los débiles, sangrados por la misma columna del año —lo bueno arranca justo donde
+  arranca la plataforma— para que las dos filas se lean como una sola rejilla. Las ranuras tienen ancho fijo, así que el
+  género de una fila cae justo debajo del de la siguiente **sin que haya que dibujar una sola línea ni una
+  cabecera**: se recupera la lectura en vertical que se perdió al quitar las columnas, que era el motivo por el
+  que los datos parecían puestos a lo loco. Medido sobre la biblioteca de referencia, las filas miden exactamente
+  lo mismo y cada ranura —las cinco— empieza siempre en el mismo píxel.
+- **Los chips se adaptan al sitio que hay.** Cuántas plataformas y cuántos géneros se ven antes del «+N» ya no
+  es un número fijo: se **mide el texto** de ESE juego con la letra y el relleno que ese tema le da al chip, y
+  se pintan los que caben en ESA caja. Así una tarjeta grande enseña cuatro plataformas donde una pequeña enseña
+  una, y dos juegos de la misma fila pueden enseñar distinto número si uno tiene los nombres más cortos. Lo
+  mismo en los puntos fuertes y débiles del renglón. El «+N» va anclado al canto de su ranura, así que nunca se cae fuera, y lo que aun así se
+  sale se **desvanece** en el último centímetro en vez de partirse a media letra. Y el desvanecido sustituye al
+  recorte que había antes, que cortaba por los cuatro cantos: en «Inserte moneda» y «Ladrones de corazones» los
+  chips llevan sombra dura por fuera de su caja y la ranura se la cortaba a ras, arriba y abajo.
+- **Las tarjetas enseñan siempre lo mismo y en el mismo sitio:** una plataforma, un género, la nota flotando
+  sobre el canto de la carátula y la insignia sobre el de abajo, y al pie un medidor que cruza la caja con el
+  tono rojo→verde de la nota. Antes cada caja enseñaba lo que tenía —dos chips o cuatro, con año o sin él— y esa
+  desigualdad se leía como descuido.
+- **Un deslizador para el tamaño de las tarjetas**, en forma de cuña como un control de volumen: tres pasos que
+  a 1440 px dan 8, 6 o 5 columnas, y en un teléfono 3, 2 o 1. También viaja con la cuenta.
+- **La carátula entra, no aparece.** Mientras se espera no pasa nada —se ve la portada de casa, quieta—, y el
+  gesto ocurre al llegar la imagen, para que no se plante de golpe. Lo pone cada tema: fundido con un punto de
+  acercamiento en la mayoría, la imagen rearmándose a franjas descolocadas en «Sin futuro» y «Grimdark», y un
+  encendido a parpadeos de tubo fluorescente en «Cámara de pruebas».
+- **La carátula también viste el renglón**, recortada en una franja que lo cruza de lado a lado y con un velo de
+  la superficie del tema encima para que el texto no pierda contraste.
+- **Sin carátulas, la tarjeta es una pieza de su mundo.** Con la preferencia apagada —que es como viene la
+  aplicación— el mosaico eran ocho veces la misma caja con distinto color, y una biblioteca entera se leía
+  monótona. Ahora cada tema le da forma propia: un panel con juntas y vértices biselados en «Cámara de
+  pruebas» —cuatro cantoneras en L, las piezas de esquina del Cubo de Compañía—, el mueble con su marquesina de
+  bombillas en «Inserte moneda», una ventana del HUD achaflanada en
+  «Sin futuro», la cartela del códice con cantoneras de oro en «Solo hay guerra», la viñeta de contorno grueso y
+  sombra dura en «Ladrones de corazones», la caja de diálogo pixelada en «Sol y luna», una placa de acero con
+  veta de damasco inscrita en un pliego de pergamino rasgado en «Plata y acero» y el lingote con su filo
+  templado en «Forja y temple».
+- **Y las tarjetas sin carátula respiran.** La caja crece (el paso de en medio pasa de 205 a 250 px, de 6
+  columnas a 5 en una pantalla de 1440), sube el relleno y el hueco entre cajas, y **todas miden exactamente lo
+  mismo**: el alto va declarado, así que fila y columna casan con cualquier título en vez de escalonarse cuando
+  un nombre ocupa dos líneas. Las etiquetas van pegadas al nombre y no empujadas al pie, que es lo que abría un
+  boquete justo en mitad de lo que se lee.
+
+### Changed
+- **El orden ya no se pulsa en las cabeceras**, que era justo lo que hacía que aquello pareciera una tabla de
+  cálculo. Ahora son palabras a la vista en la cabecera del listado: la activa se tiñe con el acento y lleva una
+  punta que dice el sentido, y volver a pulsarla lo invierte.
+- **El recuento, el orden y la forma son una sola pieza**, con la misma superficie y el mismo canto que las
+  filas. El conmutador de forma estaba metido en la caja de filtros, donde se leía como un filtro más.
+- **La plataforma cambia de color en cinco paletas.** Es una categoría más del renglón y compartía sitio con
+  otras cuatro que ya tienen su familia con significado —rojo los puntos débiles, verde los fuertes, ámbar el
+  año, gris el «+N»—; en «Plata y acero», «Cámara de pruebas» y «Ladrones de corazones» era gris, y en
+  «Grimdark», verde. Pasa a la familia fría, con el tono que le toca a cada una dentro de su propia identidad.
+- **El análisis ya no se vuelca en el detalle del juego**: hay un enlace que lleva a su pantalla
+  (`/perfil/resenas/:id`), donde se lee con su ancho de lectura, su medallón y sus análisis sugeridos. Volcado
+  ocupaba el detalle entero —hay reseñas de veinte mil caracteres— y empujaba fuera de la vista el resto de los
+  datos, que es justo lo que se abre el detalle para ver: el detalle pasa de unos 600 px a 245. Y el botón de
+  volver de esa pantalla **devuelve al listado del que se vino**, no al listado de reseñas.
+- **El mosaico funciona en el teléfono.** Elegir «tarjetas» en un móvil revertía a renglones sin avisar.
+- Las mayúsculas del listado obedecen a la preferencia de apariencia, como el resto de los rótulos.
+
+### Fixed
+- **La forma del listado y las carátulas no se sincronizaban, y de paso tumbaban las demás preferencias.** La
+  lista de claves admitidas en `publicConfig` (`firestore.rules`) no incluía `listShape` ni `covers`, que el
+  cliente lleva escribiendo desde que existen. Una lista de claves que no cuadra **rechaza la escritura entera**,
+  así que a quien hubiera tocado la forma del listado le dejaban de viajar también la paleta y el tema. Mismo
+  caso que le pasó a `effects` en su día.
+- **Las carátulas no se veían en desarrollo** y no había forma de saber por qué: `/cover` es una Pages Function
+  y el servidor de Vite no las ejecuta, así que devolvía el HTML de la aplicación y el `<img>` se quedaba en
+  blanco, sin un solo error. Ahora el servidor de desarrollo la sirve con el mismo emparejador que producción.
+
+### Performance
+- **La franja del renglón pide la resolución que le toca.** Se compararon las portadas a 1080p y a 720p ya
+  recortadas y con su velo encima: a 151 px de alto no se distinguen. La grande queda para el rango mithril y
+  el resto usa la media, que pesa la mitad: recorrer una biblioteca de trescientos juegos pasa de unos 45 MB a
+  unos 24.
+- **Fuera la tabla de escritorio, que llevaba tiempo sin poder verse.** El listado lleva siempre una de las dos
+  formas nuevas y las dos escondían la cabecera, así que se pintaban 8 celdas por fila de las que 7 eran
+  invisibles, más cinco botones de ordenar que nadie podía pulsar. En la pantalla del listado son **326 nodos
+  menos**.
+
+### Tests
+- Las tres caras de la carga de una carátula, que era un fallo invisible: de ese estado cuelga la opacidad de la
+  imagen, así que si dejara de llegar a «lista» la carátula estaría descargada, en su sitio y a cero, sin error
+  en consola ni nada que lo delatara.
+- La preferencia del tamaño de las tarjetas, incluido que un valor con forma inesperada caiga en el paso de en
+  medio: ese número entra en una división, y un valor raro no da un mosaico feo, da la lista en blanco.
+- Que el listado sigue teniendo una sola columna, que es lo que hace imposible el reparto de ancho que dejaba el
+  nombre a un carácter por línea.
+- Que `publicConfig` admite la forma, el tamaño y las carátulas, y rechaza lo que no sea un valor conocido.
+
 ## [1.2.6] - 2026-09-12
 
 ### Fixed

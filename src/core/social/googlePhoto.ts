@@ -15,7 +15,8 @@
 //
 // CÓMO SE DISTINGUEN. Por lo que devuelve el servidor, que sí es concluyente. Medido sobre tres avatares reales
 // —dos monogramas y una foto subida—, todos servidos con `access-control-allow-origin: *`, así que la app puede
-// mirarlos sin proxy ni CORS de por medio:
+// leerlos con una petición CORS sin necesidad de un proxy propio (lo que cuesta esa petición y por qué no la
+// ahorra la copia del `<img>`, en `inspect`):
 //
 //                    | monograma        | monograma        | foto real
 //   content-type     | image/png        | image/png        | image/jpeg
@@ -139,8 +140,17 @@ async function countColors(blob: Blob): Promise<number | null> {
  */
 async function inspect(url: string): Promise<boolean | null> {
   try {
-    // `force-cache` para reutilizar la respuesta que el `<img>` del avatar ya trajo: la comprobación no añade una
-    // descarga, solo lee la que hay. `no-referrer` iguala lo que hace el `<img>`.
+    /* `force-cache` pide que se aproveche lo que haya guardado, PERO no cuenta con la copia que trajo el `<img>`
+       del avatar: aquella es una petición en modo `no-cors` y esta va en `cors` (hace falta para poder leer las
+       cabeceras y los bytes), y los navegadores actuales guardan cada modo en su propia entrada. O sea que esto
+       es, en la práctica, una descarga más por cada URL distinta.
+       Se asume, y lo que la acota es la caché de veredictos de arriba: se paga UNA vez por foto y no una por
+       avatar pintado, que en un feed donde la misma persona sale en diez tarjetas es la diferencia que importa.
+       Bajar el tamaño de la imagen para abaratarla (`=s16-c` en vez de `=s96-c`) se descartó: las dos cribas
+       están calibradas sobre los 96 px —peso máximo y número de colores—, y a menos resolución una fotografía de
+       verdad se queda en pocos colores y se marcaría como genérica, que es justo el error que no se puede
+       cometer.
+       `no-referrer` iguala lo que hace el `<img>`. */
     const response = await fetch(url, { cache: 'force-cache', referrerPolicy: 'no-referrer' });
     if (!response.ok) {
       return null;

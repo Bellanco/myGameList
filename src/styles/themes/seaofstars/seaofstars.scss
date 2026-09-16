@@ -134,17 +134,12 @@
 :root[data-palette="seaofstars"] .btn-steam,
 :root[data-palette="seaofstars"] .btn.is-active,
 :root[data-palette="seaofstars"] .btn-toggle.active { background: var(--steam) !important; background-image: none !important; color: var(--on-accent) !important; border-color: var(--steam) !important; }
-:root[data-palette="seaofstars"] .btn-complete,
-:root[data-palette="seaofstars"] .btn-recommend { background: var(--success) !important; color: #06180a !important; }
-:root[data-palette="seaofstars"] .btn-inprogress { background: var(--warn) !important; color: #201200 !important; }
+:root[data-palette="seaofstars"] .btn-complete { background: var(--success) !important; color: #06180a !important; }
 /* Botones de peligro: relleno rojo un poco MÁS PROFUNDO + texto CREMA (el texto oscuro sobre el rojo no se
    distinguía). Cream sobre el rojo profundo pasa AA en oscuro y en claro. */
 :root[data-palette="seaofstars"] .btn-danger,
-:root[data-palette="seaofstars"] .btn-abandoned,
-:root[data-palette="seaofstars"] .btn-recommend-active { background: color-mix(in srgb, var(--danger) 85%, #000) !important; color: #fff7d6 !important; }
+:root[data-palette="seaofstars"] .btn-abandoned { background: color-mix(in srgb, var(--danger) 85%, #000) !important; color: #fff7d6 !important; }
 :root[data-palette="seaofstars"][data-theme="light"] .btn-complete,
-:root[data-palette="seaofstars"][data-theme="light"] .btn-recommend,
-:root[data-palette="seaofstars"][data-theme="light"] .btn-inprogress,
 :root[data-palette="seaofstars"][data-theme="light"] .btn-danger,
 :root[data-palette="seaofstars"][data-theme="light"] .btn-abandoned { color: #fff7d6 !important; }
 :root[data-palette="seaofstars"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 14px color-mix(in srgb, var(--sos-turq) 45%, transparent); }
@@ -299,7 +294,6 @@
 }
 
 :root[data-palette="seaofstars"] .year-scale-ramp { border-radius: 0; }
-:root[data-palette="seaofstars"] .year-peak { border-radius: 0; }
 
 /* Campo de estrellas tenue también bajo la serie, como en los demás lienzos de datos. */
 :root[data-palette="seaofstars"] .year-trend-plot {
@@ -315,7 +309,6 @@
 /* Nada de círculos: los puntos son píxeles. */
 :root[data-palette="seaofstars"] .timeline-dot,
 :root[data-palette="seaofstars"] .dumbbell-dot,
-:root[data-palette="seaofstars"] .ratio-dot,
 :root[data-palette="seaofstars"] .donut-key,
 :root[data-palette="seaofstars"] .dot-matrix-dots i,
 :root[data-palette="seaofstars"] .stats-legend-dot { border-radius: 0; }
@@ -526,4 +519,42 @@
     55%  { opacity: 1; filter: drop-shadow(0 0 6px rgba(255, 247, 214, .95)); }
     100% { opacity: 1; filter: none; }
   }
+}
+
+/* ── §N · LA CAJA SIN CARÁTULA = LA CAJA DE DIÁLOGO ────────────────────────────────────────────────────
+   El cuadro de texto del juego, el mismo 9-slice de los paneles (§3): borde de 2 px y anillo interior
+   separado. Dentro, el cielo estrellado en píxeles —cuatro puntos de un píxel, uno por cada color del
+   tema—, que es la firma del skin traída a la pieza sin animarla: son treinta cajas a la vez. ── */
+:root[data-palette="seaofstars"] .game-card.is-flat {
+  border: 2px solid var(--sos-line);
+  border-radius: 0;
+  background:
+    radial-gradient(1px 1px at 18% 24%, var(--sos-turq) 50%, transparent 50%),
+    radial-gradient(1px 1px at 72% 16%, var(--sos-pink) 50%, transparent 50%),
+    radial-gradient(1px 1px at 46% 62%, var(--sos-purple) 50%, transparent 50%),
+    radial-gradient(1px 1px at 88% 78%, var(--steam) 50%, transparent 50%),
+    var(--surface);
+  box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px color-mix(in srgb, var(--sos-turq) 70%, transparent);
+}
+:root[data-palette="seaofstars"] .game-card.is-flat .game-card-body { padding: 1rem 1.05rem; }
+/* EL MEDIDOR = LA BARRA DE PUNTOS DE VIDA de la caja de diálogo, y está SOMBREADA COMO UN SPRITE: tres
+   bandas planas —luz, color y sombra— en vez de un degradado, que es como tiene el volumen todo lo que se
+   dibuja píxel a píxel. El filo turquesa de arriba la separa del cuerpo sin añadir otro cerco.
+   Dentro del 9-slice, como en «Solo hay guerra»: el color no puede pisar el anillo interior. */
+:root[data-palette="seaofstars"] .game-card .game-card-meter {
+  height: 7px;
+  background: color-mix(in srgb, #000 50%, var(--surface));
+  box-shadow: inset 0 1px 0 var(--sos-turq);
+}
+/* El 9-slice solo lo tiene la caja sin lámina, y ahí el color no puede pisar su anillo interior (4 px). */
+:root[data-palette="seaofstars"] .game-card.is-flat .game-card-meter {
+  width: auto;
+  margin: 0 4px 4px;
+}
+:root[data-palette="seaofstars"] .game-card .game-card-meter::after {
+  inset: 1px auto 0 0;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, #fff 40%, hsl(var(--score-hue, 0) 58% var(--acc-l))) 0 40%,
+    hsl(var(--score-hue, 0) 58% var(--acc-l)) 40% 75%,
+    color-mix(in srgb, #000 30%, hsl(var(--score-hue, 0) 58% var(--acc-l))) 75% 100%);
 }

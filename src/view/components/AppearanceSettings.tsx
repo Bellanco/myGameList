@@ -6,6 +6,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useUppercase } from '../hooks/useUppercase';
 import { useShowSteamButton } from '../hooks/useShowSteamButton';
 import { useEffects } from '../hooks/useEffects';
+import { useCovers } from '../hooks/useCovers';
 
 const A = APPEARANCE_UI;
 
@@ -19,6 +20,7 @@ export const AppearanceSettings = memo(function AppearanceSettings() {
   const { uppercase, setUppercase } = useUppercase();
   const { showSteamButton, setShowSteamButton } = useShowSteamButton();
   const { effects, setEffects } = useEffects();
+  const { covers, setCovers } = useCovers();
 
   return (
     <div className="settings-appearance">
@@ -120,6 +122,28 @@ export const AppearanceSettings = memo(function AppearanceSettings() {
           onClick={() => { if (effects) setEffects(false); }}
         >
           <span>{A.effectsOff}</span>
+        </button>
+      </div>
+
+      {/* Carátulas. Lleva explicación y las demás no, a propósito: es la única de esta pantalla que hace que
+          salgan peticiones a la red, así que quien la enciende tiene que saber qué está encendiendo. */}
+      <p className="settings-card-sub">{A.coversLabel}</p>
+      <div className="theme-mode-row" role="group" aria-label={A.coversAria}>
+        <button
+          type="button"
+          className={`btn btn-toggle${covers ? ' active' : ''}`}
+          aria-pressed={covers}
+          onClick={() => { if (!covers) setCovers(true); }}
+        >
+          <span>{A.coversOn}</span>
+        </button>
+        <button
+          type="button"
+          className={`btn btn-toggle${!covers ? ' active' : ''}`}
+          aria-pressed={!covers}
+          onClick={() => { if (covers) setCovers(false); }}
+        >
+          <span>{A.coversOff}</span>
         </button>
       </div>
     </div>

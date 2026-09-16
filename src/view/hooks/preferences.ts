@@ -6,7 +6,7 @@
 //
 // La lógica de aplicación debe seguir siendo IDÉNTICA a la de `public/theme-init.js`, que corre antes del primer
 // render para evitar el flash de tema/paleta/caja.
-import { EFFECTS_KEY, PALETTE_KEY, STEAM_BUTTON_KEY, THEME_KEY, UPPERCASE_KEY } from '../../core/constants/storageKeys';
+import { COVERS_KEY, EFFECTS_KEY, GRID_SIZE_KEY, LIST_SHAPE_KEY, PALETTE_KEY, STEAM_BUTTON_KEY, THEME_KEY, UPPERCASE_KEY } from '../../core/constants/storageKeys';
 import { paletteBg, parsePaletteId, type PaletteId } from '../../core/constants/palettes';
 import { createPreferenceStore, hydratePreferencesFromCloud } from '../../model/repository/preferenceStore';
 import { loadPaletteSkin } from './paletteSkin';
@@ -109,6 +109,49 @@ export const effectsPreference = createPreferenceStore<boolean>({
 });
 
 /**
+ * F5 — FORMA DEL LISTADO. Dos maneras de mirar la misma biblioteca:
+ *   · `list`  — renglones: un juego por línea, con el nombre de titular y sus datos debajo. Para recorrer
+ *               mucho y buscar uno.
+ *   · `grid`  — mosaico: cajas en rejilla, con la nota de protagonista. Para pasear por la colección.
+ *
+ * Se escribe en `<html>` con `data-list-shape` porque hay CSS que cuelga de ella fuera del listado (la barra de
+ * herramientas marca el botón activo), y porque así un tema puede vestir cada forma a su manera sin que ningún
+ * componente le pase nada.
+ */
+export type ListShape = 'list' | 'grid';
+
+export const listShapePreference = createPreferenceStore<ListShape>({
+  key: LIST_SHAPE_KEY,
+  parse: (raw) => (raw === 'grid' ? 'grid' : 'list'),
+  serialize: (shape) => shape,
+  cloudField: 'listShape',
+  fromCloud: (value) => (value === 'grid' || value === 'list' ? value : null),
+  applyToDom: (shape) => document.documentElement.setAttribute('data-list-shape', shape),
+});
+
+/**
+ * TAMAÑO DE LOS CUADROS del mosaico. Tres pasos —apretado, normal, holgado— y no un deslizador continuo: lo que
+ * se elige de verdad es «me caben más» o «se ven mejor», y con tres escalones eso son dos pulsaciones en vez de
+ * apuntar a un punto de una barra.
+ *
+ * Cambia el ANCHO MÍNIMO de cuadro que usa `GameTable` para repartir columnas, así que un paso no es un salto
+ * fijo de columnas: a 1440 px salen 8, 6 y 5; en un teléfono, 3, 2 y 1.
+ *
+ * Se escribe en `<html>` con `data-grid-size` para que un tema pueda vestir cada densidad a su manera sin que
+ * ningún componente le pase nada, igual que la forma.
+ */
+export type GridSize = 'sm' | 'md' | 'lg';
+
+export const gridSizePreference = createPreferenceStore<GridSize>({
+  key: GRID_SIZE_KEY,
+  parse: (raw) => (raw === 'sm' || raw === 'lg' ? raw : 'md'),
+  serialize: (size) => size,
+  cloudField: 'gridSize',
+  fromCloud: (value) => (value === 'sm' || value === 'md' || value === 'lg' ? value : null),
+  applyToDom: (size) => document.documentElement.setAttribute('data-grid-size', size),
+});
+
+/**
  * Visibilidad del botón "Steam Deck" de la barra de filtros. Opt-in y sin efecto en el DOM: solo expone el
  * booleano que consume la Toolbar.
  */
@@ -117,6 +160,22 @@ export const steamButtonPreference = createPreferenceStore<boolean>({
   parse: (raw) => raw === 'on',
   serialize: onOff.serialize,
   cloudField: 'showSteamButton',
+  fromCloud: onOff.fromCloud,
+});
+
+/**
+ * CARÁTULAS DE LOS JUEGOS. Apagada por defecto, y eso es lo importante de esta preferencia: encenderla es lo que
+ * autoriza a que el mosaico pida imágenes, y con ellas a que el servidor consulte IGDB por los títulos de tu
+ * biblioteca. Sin encenderla, la app no pide ni una sola carátula y las cajas se quedan con su portada de casa.
+ *
+ * Por eso `parse` exige el `'on'` explícito (mismo criterio que el botón de Steam) en vez de `raw !== 'off'`:
+ * ausencia de valor es NO, nunca «supongo que sí».
+ */
+export const coversPreference = createPreferenceStore<boolean>({
+  key: COVERS_KEY,
+  parse: (raw) => raw === 'on',
+  serialize: onOff.serialize,
+  cloudField: 'covers',
   fromCloud: onOff.fromCloud,
 });
 

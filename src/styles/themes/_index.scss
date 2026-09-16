@@ -31,7 +31,14 @@
    Todas juegan con las mismas reglas, la de por defecto incluida. La lista de fichas y qué papel tiene
    cada una está en DESIGN.md §2; lo que NO puede faltar lo comprueba `tests/unit/themes.test.ts`. */
 
-/* `--text-dim` EN LOS BLOQUES OSCUROS: no lo bajes sin medir. Es el color de la pestaña INACTIVA
+/* `--chip-plat-*` NO ES LIBRE: la plataforma es una CATEGORÍA del listado y comparte renglón con otras cuatro
+   que ya tienen su familia de color con significado —rojo los puntos débiles, verde los fuertes, ámbar el año,
+   gris el «+N»—. Si la plataforma cae en cualquiera de esas familias, el renglón deja de poder leerse por
+   color. Le toca la familia FRÍA (azul, violeta, cian), y el tono concreto lo sigue poniendo cada paleta de
+   dentro de su propia identidad: el azul de la rampa en «Forja y temple», el yrden en «Plata y acero», el azul
+   de Aperture en Portal, el índigo de su rampa en Persona. Al añadir una paleta, elige el suyo con esta regla.
+
+   `--text-dim` EN LOS BLOQUES OSCUROS: no lo bajes sin medir. Es el color de la pestaña INACTIVA
    (`.tab-btn` en `_layout.scss`), es decir, texto normal sobre `--surface` en la navegación principal, así que
    le aplica el 4.5:1 de la AA. Cinco de las seis paletas de entonces se quedaban entre 4.00 y 4.28 —fallaba axe en las
    cinco, ver `tests/e2e/a11y.test.ts`—; los valores actuales rondan el 4.6 subiendo SOLO la luminosidad, con el
