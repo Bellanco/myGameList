@@ -40,16 +40,29 @@ export function sabemosQueNoTiene(url: string): boolean {
   return cargar().has(url);
 }
 
+/** Guarda la lista tal y como está en memoria. Silencioso: sin almacenamiento se sigue recordando en RAM. */
+function guardar(set: Set<string>): void {
+  try {
+    localStorage.setItem(CLAVE, JSON.stringify([...set]));
+  } catch {
+    // Almacenamiento lleno o bloqueado: se sigue con la memoria en RAM, que ya evita repetir en esta sesión.
+  }
+}
+
 /** Apunta que este juego no tiene carátula. Idempotente. */
 export function recordarQueNoTiene(url: string): void {
   const set = cargar();
   if (set.has(url)) return;
   set.add(url);
-  try {
-    localStorage.setItem(CLAVE, JSON.stringify([...set].slice(-MAX)));
-  } catch {
-    // Almacenamiento lleno o bloqueado: se sigue con la memoria en RAM, que ya evita repetir en esta sesión.
+  /* El tope se aplica a la memoria VIVA y no solo a lo que se escribe. Antes se podaba al serializar
+     (`slice(-MAX)`) dejando el conjunto en RAM entero: pasadas las MAX entradas, lo que esta sesión creía
+     recordar y lo que iba a encontrar la siguiente dejaban de ser lo mismo, y el juego que se cayó de la lista
+     volvía a pedir su carátula solo después de recargar. Los `Set` conservan el orden de inserción, así que las
+     primeras son las más viejas. */
+  if (set.size > MAX) {
+    for (const vieja of [...set].slice(0, set.size - MAX)) set.delete(vieja);
   }
+  guardar(set);
 }
 
 /**
@@ -59,11 +72,7 @@ export function recordarQueNoTiene(url: string): void {
 export function olvidarQueNoTiene(url: string): void {
   const set = cargar();
   if (!set.delete(url)) return;
-  try {
-    localStorage.setItem(CLAVE, JSON.stringify([...set]));
-  } catch {
-    // Igual que arriba.
-  }
+  guardar(set);
 }
 
 /** Solo para las pruebas: vacía la memoria en RAM para que el siguiente acceso relea el almacenamiento. */
