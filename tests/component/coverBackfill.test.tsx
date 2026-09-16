@@ -27,6 +27,7 @@ vi.mock('../../src/model/repository/coverQuotaRepository', () => ({
 import { useCoverBackfill } from '../../src/view/hooks/useCoverBackfill';
 import { coverUrl } from '../../src/core/utils/coverUrl';
 import { reiniciarMemoriaDeCaratulas, sabemosQueNoTiene } from '../../src/core/utils/coverMemory';
+import { claveDeJuego, guardarHechos, reiniciarIndiceDeCaratulas } from '../../src/core/utils/coverDone';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
 const juego = (id: number, name: string, platforms: string[] = ['Steam']): GameItem =>
@@ -42,6 +43,7 @@ beforeEach(() => {
   cupo.pedido = 0;
   localStorage.clear();
   reiniciarMemoriaDeCaratulas();
+  reiniciarIndiceDeCaratulas();
   // El hook arranca cuando el navegador está ocioso; en las pruebas, ya.
   (window as unknown as { requestIdleCallback: unknown }).requestIdleCallback = (cb: () => void) => {
     cb();
@@ -178,6 +180,32 @@ describe('llenado de carátulas', () => {
     expect(String(fetchSimulado.mock.calls[0][0])).toContain('Max+Payne');
     // Y el nombre nuevo no arrastra el «no» del viejo, que se queda donde estaba por si se deshace el cambio.
     expect(sabemosQueNoTiene(coverUrl('Max Payne 3', ['Steam']))).toBe(false);
+  });
+
+  /* A LOS NOVENTA DÍAS SE REVISA, que es lo que impide que un juego recién salido —el caso en que IGDB tarda en
+     tener ficha— se quede sin carátula para siempre en este navegador. Son cuatro preguntas al año por juego sin
+     imagen, frente a las cincuenta que costaba revisar cada semana. */
+  it('vuelve a preguntar por un juego sin carátula cuando su marca cumple los noventa días', async () => {
+    localStorage.setItem('mis-listas-covers', 'on');
+    const datos = biblioteca([juego(1, 'Max Paine 3'), juego(2, 'Portal')]);
+    const url = coverUrl('Max Paine 3', ['Steam']);
+    // Como si otra sesión lo hubiera preguntado hace tres meses y hubiera dado por recorrida la biblioteca.
+    localStorage.setItem('mis-listas-covers-none', JSON.stringify({ [url]: Date.now() - 91 * 24 * 3600 * 1000 }));
+    guardarHechos(new Set([
+      claveDeJuego('Max Paine 3', ['Steam'], false),
+      claveDeJuego('Portal', ['Steam'], false),
+    ]));
+    reiniciarMemoriaDeCaratulas();
+
+    // Y esta vez sí la tiene: la ficha ya existe en IGDB.
+    fetchSimulado.mockImplementation(async () => new Response(null, { status: 204 }));
+    renderHook(() => useCoverBackfill(datos));
+
+    // Solo se repregunta ESE, no la biblioteca entera: Portal sigue dado por hecho.
+    await waitFor(() => expect(fetchSimulado).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    expect(String(fetchSimulado.mock.calls[0][0])).toContain('Max+Paine');
+    // Y al aparecer la carátula, la marca se borra: a partir de aquí el listado la pinta.
+    await waitFor(() => expect(sabemosQueNoTiene(url)).toBe(false));
   });
 
   /* Lo apuntado con el formato anterior —la URL entera de cada juego, dentro de un JSON— se traduce al leerlo.

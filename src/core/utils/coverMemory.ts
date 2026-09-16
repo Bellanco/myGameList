@@ -24,70 +24,122 @@ const CLAVE = 'mis-listas-covers-none';
 const MAX = 1000;
 
 /**
- * UN «NO TIENE» ES DEFINITIVO EN ESTE NAVEGADOR, y esa es la decisión.
+ * CUÁNTO DURA UN «NO TIENE», y por qué noventa días y no una semana ni para siempre.
  *
- * Se probó a darle una semana de vida, para que un juego sin carátula volviera a intentarlo por su cuenta
- * cuando IGDB estrenara su ficha. Se deshizo a propósito: el reintento vuelve a preguntar por los MISMOS juegos
- * cada semana y en todos los dispositivos, y de esas preguntas casi ninguna cambia de respuesta —lo que no
- * empareja suele ser un título que IGDB no tiene, no uno que esté a punto de llegar—. Es una fuga pequeña, pero
- * constante y proporcional a los juegos sin carátula que tenga cada uno, que es justo la forma de gasto que
- * esta memoria existe para cerrar.
+ * Los dos extremos se probaron y los dos fallan por un lado distinto. Sin caducidad, un juego que hoy no tiene
+ * ficha en IGDB se queda sin carátula PARA SIEMPRE en ese navegador, aunque la estrene al mes siguiente — y eso
+ * muerde justo donde más duele, en los juegos recién salidos, que son los que más tardan en tener ficha. Con
+ * una semana, la biblioteca entera de juegos sin imagen se repregunta cincuenta veces al año y por dispositivo
+ * para que casi ninguna respuesta cambie.
  *
- * LO QUE SÍ REABRE LA PREGUNTA ES EL TÍTULO. Esta memoria se guarda por la URL de la carátula, y la URL lleva el
- * nombre dentro: corregir la errata —que es la causa real de la mayoría de los «no»— da una URL distinta, que
- * aquí no consta, y el juego se pide otra vez como si fuera nuevo. Lo mismo pasa en el servidor, donde la clave
- * es el título normalizado. O sea que la vía de vuelta existe, y es la que el usuario controla.
+ * Noventa días es la mitad buena de las dos: cuatro preguntas al año por juego sin carátula —ruido frente a lo
+ * que cuesta el resto— y la seguridad de que nada se queda clavado. Es además el mismo plazo con el que el
+ * service worker revalida las carátulas que ya tiene, así que las dos revisiones perezosas del sistema laten al
+ * mismo ritmo y no hay que recordar dos números.
+ *
+ * Y HAY UNA SEGUNDA VÍA, más rápida y en manos de quien mira: editar el juego (ver `MINIMO_TRAS_EDICION`). La
+ * tercera, la de siempre, es corregir el título: la URL lleva el nombre dentro, así que un juego reescrito no
+ * hereda el «no» del anterior.
  */
-/** Las URL de las carátulas que consta que no existen. */
-let memoria: Set<string> | null = null;
+const VIDA_MS = 90 * 24 * 60 * 60 * 1000;
 
-function cargar(): Set<string> {
+/**
+ * Y CUÁNTO TIENE QUE HABER PASADO PARA QUE EDITAR EL JUEGO REABRA LA PREGUNTA: un día.
+ *
+ * Guardar la ficha de un juego al que le falta la portada es la forma natural de decir «mira otra vez»: quien
+ * corrige el título, la plataforma o cualquier otra cosa está mirando ESE juego y se ha fijado en el hueco. Pero
+ * sin un mínimo, cada guardado sería una petición, y editar tres campos seguidos de diez juegos son treinta
+ * peticiones en un minuto. Con un día, el gesto sirve cuando de verdad significa algo y no cuando es el ir y
+ * venir de una tarde de ordenar la biblioteca.
+ */
+export const MINIMO_TRAS_EDICION = 24 * 60 * 60 * 1000;
+
+/** URL de la carátula → cuándo se supo que no la tenía. */
+let memoria: Map<string, number> | null = null;
+
+function cargar(): Map<string, number> {
   if (memoria) return memoria;
-  memoria = new Set();
+  memoria = new Map();
   try {
     const crudo = localStorage.getItem(CLAVE);
     const datos = crudo ? (JSON.parse(crudo) as unknown) : null;
     if (Array.isArray(datos)) {
-      for (const url of datos) if (typeof url === 'string') memoria.add(url);
+      /* FORMATO ANTERIOR: una lista de URL sin fecha. Se les pone la de AHORA y no una del pasado, que sería
+         más literal: lo pasado no se sabe, y darlas por caducadas de golpe haría que el primer arranque tras
+         actualizar saliera preguntando por todos los juegos sin carátula a la vez. Con la fecha de hoy, esa
+         revisión llega escalonada dentro de tres meses y sin que nadie la note. */
+      const ahora = Date.now();
+      for (const url of datos) if (typeof url === 'string') memoria.set(url, ahora);
     } else if (datos && typeof datos === 'object') {
-      /* Lo escrito por la versión que fechaba cada «no» (`{url: cuándo}`), que vivió lo justo. Se leen sus
-         claves y se vuelve a guardar en lista: la fecha ya no la mira nadie y conservarla sería arrastrar un
-         formato por si acaso. */
-      for (const url of Object.keys(datos as Record<string, unknown>)) memoria.add(url);
+      for (const [url, cuando] of Object.entries(datos as Record<string, unknown>)) {
+        if (typeof cuando === 'number') memoria.set(url, cuando);
+      }
     }
   } catch {
-    memoria = new Set(); // sin memoria se vuelve a preguntar, que es el comportamiento de antes: molesto, no roto
+    memoria = new Map(); // sin memoria se vuelve a preguntar, que es el comportamiento de antes: molesto, no roto
   }
   return memoria;
 }
 
-/** ¿Sabemos ya que este juego no tiene carátula? */
+/**
+ * ¿Sabemos ya que este juego no tiene carátula? Solo mientras ese «no» siga siendo reciente.
+ *
+ * Es una función PURA a propósito, aunque encuentre una marca cumplida: la llama el listado por cada caja y en
+ * cada repintado, así que limpiar aquí sería escribir en el almacenamiento desde el render. Lo cumplido lo
+ * recoge el recorrido de fondo, que es quien sabe qué hacer con ello.
+ */
 export function sabemosQueNoTiene(url: string): boolean {
-  return cargar().has(url);
+  const cuando = cargar().get(url);
+  return cuando !== undefined && Date.now() - cuando < VIDA_MS;
+}
+
+/**
+ * Lo contrario y más preciso: de este juego consta un «no tiene» y ya ha cumplido su plazo.
+ *
+ * `minimo` deja pedir un plazo más corto que el general, y solo lo usa el gesto de editar el juego
+ * (`MINIMO_TRAS_EDICION`): ahí quien mira ha dicho algo, y esperar tres meses sería no escucharle.
+ *
+ * Lo usa el recorrido de fondo para volver a preguntar aunque el juego esté en la lista de lo ya hecho. Sin eso,
+ * cumplir el plazo no serviría de nada: el listado pediría la imagen otra vez en CADA visita —recibiendo el
+ * mismo 404, que no cachea nadie— porque el único que aprende de la respuesta es el recorrido.
+ */
+export function tocaReintentar(url: string, minimo: number = VIDA_MS): boolean {
+  const cuando = cargar().get(url);
+  return cuando !== undefined && Date.now() - cuando >= minimo;
+}
+
+/**
+ * ¿Hay alguna marca cumplida? Se pregunta UNA vez al empezar el recorrido para no componer la URL de cada juego
+ * de la biblioteca solo por comprobarlo: casi siempre no hay ninguna y entonces no se paga nada.
+ */
+export function hayQueReintentarAlgo(): boolean {
+  const limite = Date.now() - VIDA_MS;
+  for (const cuando of cargar().values()) if (cuando <= limite) return true;
+  return false;
 }
 
 /** Guarda la memoria tal y como está. Silencioso: sin almacenamiento se sigue recordando en RAM. */
-function guardar(memoria: Set<string>): void {
+function guardar(memoria: Map<string, number>): void {
   try {
-    localStorage.setItem(CLAVE, JSON.stringify([...memoria]));
+    localStorage.setItem(CLAVE, JSON.stringify(Object.fromEntries(memoria)));
   } catch {
     // Almacenamiento lleno o bloqueado: se sigue con la memoria en RAM, que ya evita repetir en esta sesión.
   }
 }
 
-/** Apunta que este juego no tiene carátula. Idempotente. */
+/** Apunta que este juego no tiene carátula, AHORA. Repetirlo le da otro plazo completo de silencio, que es lo
+ *  correcto: se acaba de volver a preguntar y se ha vuelto a contestar que no. */
 export function recordarQueNoTiene(url: string): void {
   const memoria = cargar();
-  if (memoria.has(url)) return;
-  memoria.add(url);
+  memoria.set(url, Date.now());
   /* El tope se aplica a la memoria VIVA y no solo a lo que se escribe. Antes se podaba al serializar
      (`slice(-MAX)`) dejando el conjunto en RAM entero: pasadas las MAX entradas, lo que esta sesión creía
      recordar y lo que iba a encontrar la siguiente dejaban de ser lo mismo, y el juego que se cayó de la lista
-     volvía a pedir su carátula solo después de recargar. Los `Set` conservan el orden de inserción, así que las
+     volvía a pedir su carátula solo después de recargar. Los `Map` conservan el orden de inserción, así que las
      primeras son las más viejas. */
   // Al rango más alto no se le poda, mientras haya sitio de sobra (ver `coverLimits`).
   if (memoria.size > MAX && !topesLevantados()) {
-    for (const vieja of [...memoria].slice(0, memoria.size - MAX)) memoria.delete(vieja);
+    for (const vieja of [...memoria.keys()].slice(0, memoria.size - MAX)) memoria.delete(vieja);
   }
   guardar(memoria);
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TAB_ACTIONS, TAB_ORDER, TAB_TITLES, TAB_TOOLTIPS, VALIDATION_MESSAGES } from '../core/constants/labels';
 import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
+import { reabrirLaPregunta } from '../core/utils/coverDone';
 import { tagKey } from '../core/utils/tags';
 import { DEFAULT_SORT, nextSort, sortGames } from '../core/utils/sortGames';
 import { clampRating } from '../core/utils/normalize';
@@ -541,6 +542,11 @@ export function useGameListViewModel() {
       }
 
       persist(nextData);
+      /* GUARDAR UN JUEGO SIN PORTADA ES PEDIR QUE SE LE BUSQUE OTRA VEZ. Quien edita está mirando ese juego y se
+         ha fijado en el hueco, y muchas veces lo que acaba de corregir es justo lo que fallaba. La guarda del
+         día y el porqué de todo esto están en `reabrirLaPregunta`; aquí solo se le avisa. Si el juego ya tiene
+         carátula, o si su «no» es de hace un rato, no hace nada. */
+      reabrirLaPregunta(base.name, base.platforms);
       setFormModalOpen(false);
       setDraft(EMPTY_DRAFT);
       notify('ok', 'Juego guardado correctamente');

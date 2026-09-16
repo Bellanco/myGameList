@@ -1,7 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { TAB_IDS, type TabData } from '../../model/types/game';
 import { coverUrl } from '../../core/utils/coverUrl';
-import { olvidarQueNoTiene, recordarQueNoTiene } from '../../core/utils/coverMemory';
+import {
+  hayQueReintentarAlgo,
+  olvidarQueNoTiene,
+  recordarQueNoTiene,
+  tocaReintentar,
+} from '../../core/utils/coverMemory';
 import { evaluarTopesDeImagenes, pedirAlmacenamientoDuradero } from '../../core/utils/coverLimits';
 import { claveDeJuego, guardarHechos, leerHechos } from '../../core/utils/coverDone';
 import { pedirCupoDeCaratulasLibre } from '../../model/repository/coverQuotaRepository';
@@ -79,18 +84,27 @@ export function useCoverBackfill(data: TabData): void {
       await evaluarTopesDeImagenes(ampliado);
 
       const hechos = leerHechos();
+      /* ¿HAY ALGÚN «NO TIENE» CUMPLIDO? Se pregunta una sola vez, aquí, porque de la respuesta depende cuánto
+         trabajo cuesta el bucle de abajo: si no hay ninguno —lo normal casi siempre, con noventa días de
+         plazo— una biblioteca ya recorrida no llega a componer ni una sola URL. */
+      const reintentar = hayQueReintentarAlgo();
       /* La clave primero y la URL solo para los que faltan: una biblioteca ya recorrida no llega a componer ni
-         una sola URL, que es el caso normal a partir de la segunda visita.
-         Y LO YA HECHO NO SE REPITE, ni siquiera lo que salió sin carátula: un «no» solo se reabre cambiando el
-         título, y entonces esta misma clave —que lleva el nombre dentro— ya es otra y el juego entra aquí como
-         lo que es, uno nuevo. Ver `coverMemory` para por qué no se reintenta por tiempo. */
+         una sola URL, que es el caso normal a partir de la segunda visita. */
       const pendientes: { clave: string; url: string }[] = [];
       for (const tab of TAB_IDS) {
         for (const juego of datosRef.current[tab] ?? []) {
           if (!juego?.name) continue;
           const clave = claveDeJuego(juego.name, juego.platforms ?? [], ampliado);
-          if (hechos.has(clave)) continue;
-          pendientes.push({ clave, url: coverUrl(juego.name, juego.platforms ?? [], ampliado) });
+          const hecho = hechos.has(clave);
+          if (hecho && !reintentar) continue;
+          const url = coverUrl(juego.name, juego.platforms ?? [], ampliado);
+          /* LOS «NO TIENE» VUELVEN A LA COLA al cumplir su plazo, aunque estén dados por hechos. Son cuatro
+             preguntas al año por juego sin carátula, y son las que impiden que un juego recién salido —el caso
+             en que IGDB tarda en tener ficha— se quede sin imagen para siempre en este navegador.
+             Al editar el juego hay un atajo que salta este plazo (ver `reabrirLaPregunta`): allí se borra la
+             marca, así que aquí el juego llega como cualquier otro pendiente. */
+          if (hecho && !tocaReintentar(url)) continue;
+          pendientes.push({ clave, url });
         }
       }
       if (!pendientes.length) return;
