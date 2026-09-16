@@ -6,6 +6,7 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { onRequestGet } from '../../functions/cover';
 import { claveCache } from '../../functions/_lib/igdbCover';
+import { COVER_DAILY_BUDGET, coverDailyQuotaKey, coverExemptionKey } from '../../functions/_lib/keys';
 
 /** Remedo de KV: lo mínimo que usa el endpoint, con las llamadas a la vista para poder contarlas. */
 function kvFalso(inicial: Record<string, string> = {}) {
@@ -189,6 +190,55 @@ describe('/cover — lo que cuesta', () => {
     expect(Number(respuesta.headers.get('Retry-After'))).toBeGreaterThan(0);
     expect(respuesta.headers.get('Cache-Control')).toBe('no-store');
     expect(consultasAIgdb()).toHaveLength(0);
+  });
+
+  /* EL TOPE DEL SERVICIO ENTERO, que es distinto del de la IP y protege otra cosa: el de la IP acota a un
+     abusador contra la cuota de IGDB; este acota el gasto de ESCRITURAS de KV, que es diario y lo comparten
+     estas carátulas con los enlaces de reseñas. Sin él, unas pocas direcciones podían vaciar el presupuesto del
+     día y dejar sin publicar a todo el mundo. */
+  it('topa cuando el servicio entero ha gastado su cupo del día', async () => {
+    const kv = kvFalso({ [coverDailyQuotaKey(Date.now())]: String(COVER_DAILY_BUDGET) });
+    const respuesta = await onRequestGet({ request: peticion('n=Celeste'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(429);
+    expect(consultasAIgdb()).toHaveLength(0);
+    // Y la espera que promete es hasta que cambie el DÍA, no la hora: prometer una espera que no va a bastar es
+    // peor que decir la verdad.
+    const hastaMedianoche = 86400 - (Math.floor(Date.now() / 1000) % 86400);
+    expect(Number(respuesta.headers.get('Retry-After'))).toBeCloseTo(hastaMedianoche, -1);
+  });
+
+  it('pero con el cupo del día agotado se siguen sirviendo las carátulas ya emparejadas', async () => {
+    // Lo que se raciona es RESOLVER, igual que con el tope por IP: navegar una biblioteca llena nunca topa.
+    const kv = kvFalso({
+      [coverDailyQuotaKey(Date.now())]: String(COVER_DAILY_BUDGET),
+      [claveCache('Celeste', [])]: 'co1abc',
+    });
+    const respuesta = await onRequestGet({ request: peticion('n=Celeste'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(200);
+  });
+
+  it('y el sello del rango más alto levanta también el tope del servicio', async () => {
+    // Si no sirviera el día que el servicio llena su cupo, no serviría justo el día que hace falta.
+    const kv = kvFalso({
+      [coverDailyQuotaKey(Date.now())]: String(COVER_DAILY_BUDGET),
+      [coverExemptionKey('203.0.113.7')]: '1',
+    });
+    const respuesta = await onRequestGet({ request: peticion('n=Celeste'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(200);
+  });
+
+  it('el gasto del día también se apunta por lotes, y más grandes', async () => {
+    /* Esta clave la escriben TODAS las peticiones del servicio, no las de una IP: con lotes pequeños, dos
+       personas llenando biblioteca a la vez pasarían de una escritura por segundo sobre la misma clave, que es
+       lo que KV no admite. */
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const kv = kvFalso();
+    await onRequestGet({ request: peticion('n=Celeste'), env: entorno(kv) });
+
+    expect(kv.datos.get(coverDailyQuotaKey(Date.now()))).toBe('50');
   });
 
   it('el cupo va por IP: el tope de una no alcanza a la de al lado', async () => {

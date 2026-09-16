@@ -16,7 +16,7 @@
 //
 // POR QUÉ EL NOMBRE VA EN LA CADENA DE CONSULTA Y NO EN LA RUTA: hay juegos con barra en el título
 // («Half Life / Black Mesa»), y una barra codificada dentro de una ruta la normalizan los intermediarios.
-import { coverExemptionKey } from './_lib/keys';
+import { COVER_DAILY_BUDGET, coverDailyQuotaKey, coverExemptionKey } from './_lib/keys';
 import {
   apuntarSiSePuede,
   emparejarYGuardar,
@@ -81,6 +81,14 @@ const MAX_RESOLUCIONES_HORA = 500;
 const LOTE_CUPO = 10;
 
 /**
+ * Y de cuántas en cuántas se apunta el gasto GLOBAL. Más grandes que las del contador por IP porque este lo
+ * escriben TODAS las peticiones del servicio, no las de una dirección: con lotes de diez, el día que dos
+ * personas llenan biblioteca a la vez esta única clave recibiría más de una escritura por segundo, que es justo
+ * lo que KV no admite. Con 50, el contador del día cuesta ~14 escrituras de las 700 que vigila.
+ */
+const LOTE_GLOBAL = 50;
+
+/**
  * ¿ESTA PETICIÓN VIENE DE OTRA WEB?
  *
  * `Sec-Fetch-Site` la pone el NAVEGADOR y el JavaScript de la página no puede tocarla, así que un
@@ -99,28 +107,61 @@ function vieneDeOtroSitio(request: Request): boolean {
   return request.headers.get('Sec-Fetch-Site') === 'cross-site';
 }
 
-/** Cupo gastado por una IP en la hora en curso; devuelve `false` cuando ya no queda. */
-async function quedaCupo(env: Env, request: Request): Promise<boolean> {
+/**
+ * Qué ha decidido el cupo. El motivo importa porque cada tope se reabre en un momento distinto, y de eso
+ * depende el `Retry-After` que se le promete al cliente: el de la IP vuelve al cambiar la hora y el del
+ * servicio, al cambiar el día.
+ */
+type Veredicto = 'adelante' | 'tope-ip' | 'tope-global';
+
+/** Lo gastado en un contador de KV. `0` también cuando la clave no está, que es el primer uso del periodo. */
+async function gastado(env: Env, clave: string): Promise<number> {
+  return Number(await env.COVERS?.get(clave)) || 0;
+}
+
+/** ¿Queda cupo para resolver un juego nuevo? Mira las DOS cuentas: la de esta IP y la del servicio entero. */
+async function quedaCupo(env: Env, request: Request): Promise<Veredicto> {
   const ip = request.headers.get('CF-Connecting-IP') || 'desconocida';
   const hora = new Date().toISOString().slice(0, 13); // «2026-09-15T18»
-  const clave = `igdb:cupo:v1:${ip}:${hora}`;
-  const usado = Number(await env.COVERS?.get(clave)) || 0;
-  if (usado >= MAX_RESOLUCIONES_HORA) {
+  const claveIp = `igdb:cupo:v1:${ip}:${hora}`;
+  const claveDia = coverDailyQuotaKey(Date.now());
+
+  /* Las dos lecturas A LA VEZ y no una detrás de otra: en el caso normal —que es el de todas las peticiones
+     menos las que topan— ninguna de las dos corta, así que pagarlas en serie sería sumar las dos latencias a
+     cada juego nuevo del llenado inicial para nada. */
+  const [usadoIp, usadoDia] = await Promise.all([gastado(env, claveIp), gastado(env, claveDia)]);
+
+  const topeIp = usadoIp >= MAX_RESOLUCIONES_HORA;
+  const topeDia = usadoDia >= COVER_DAILY_BUDGET;
+  if (topeIp || topeDia) {
     /* Agotado, salvo que esta IP tenga el cupo levantado (ver `/api/cover-quota`). La comprobación va AQUÍ y no
        al principio a propósito: así la lectura de más solo la paga quien ha llegado al tope, y no las miles de
-       peticiones que nunca se acercan a él. */
-    return Boolean(await env.COVERS?.get(coverExemptionKey(ip)));
+       peticiones que nunca se acercan a él.
+       Y levanta LOS DOS topes, no solo el suyo: si el sello del rango máximo no sirviera el día que el servicio
+       llena su cupo, no serviría justo el día que hace falta. */
+    if (await env.COVERS?.get(coverExemptionKey(ip))) return 'adelante';
+    // Si topan los dos, manda el del servicio: es el que más tarda en reabrirse, y prometer una espera corta que
+    // no va a bastar es peor que decir la verdad.
+    return topeDia ? 'tope-global' : 'tope-ip';
   }
-  // El azar es lo que reparte el coste: cada resolución tiene una probabilidad de 1/LOTE de apuntar el lote
-  // entero. Sin él haría falta un contador compartido entre peticiones, que es justo lo que KV no da.
-  //
-  // Y se apunta con `apuntarSiSePuede`: si la escritura no sale —presupuesto diario agotado, sobre todo—, lo que
-  // NO puede pasar es que una carátula deje de servirse por no haber podido anotar el contador. El cupo es un
-  // tope blando que ya vive con el retraso de la caché de KV; una anotación perdida cabe de sobra en ese margen.
+
+  /* El azar es lo que reparte el coste: cada resolución tiene una probabilidad de 1/LOTE de apuntar el lote
+     entero. Sin él haría falta un contador compartido entre peticiones, que es justo lo que KV no da. Cada
+     contador tira su propio dado, porque sus lotes son de tamaños distintos.
+     Y se apunta con `apuntarSiSePuede`: si la escritura no sale —presupuesto diario agotado, sobre todo—, lo que
+     NO puede pasar es que una carátula deje de servirse por no haber podido anotar el contador. El cupo es un
+     tope blando que ya vive con el retraso de la caché de KV; una anotación perdida cabe de sobra en ese margen. */
+  const apuntes: Promise<void>[] = [];
   if (Math.random() < 1 / LOTE_CUPO) {
-    await apuntarSiSePuede(env.COVERS, clave, String(usado + LOTE_CUPO), 3600);
+    apuntes.push(apuntarSiSePuede(env.COVERS, claveIp, String(usadoIp + LOTE_CUPO), 3600));
   }
-  return true;
+  if (Math.random() < 1 / LOTE_GLOBAL) {
+    // 48 h de vida, el mismo criterio que el contador diario de compartir: cubre el día en curso con margen
+    // para cualquier desfase de reloj.
+    apuntes.push(apuntarSiSePuede(env.COVERS, claveDia, String(usadoDia + LOTE_GLOBAL), 48 * 3600));
+  }
+  await Promise.all(apuntes);
+  return 'adelante';
 }
 
 interface Env extends EntornoIgdb {}
@@ -177,10 +218,18 @@ export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise
         headers: { 'Cache-Control': 'no-store' },
       });
     }
-    if (!(await quedaCupo(env, request))) {
-      // 429 y `no-store`: es pasajero. Con `Retry-After` en segundos hasta que termine la hora en curso.
-      const restan = 3600 - (Math.floor(Date.now() / 1000) % 3600);
-      return new Response('Demasiadas carátulas nuevas seguidas; inténtalo más tarde', {
+    const veredicto = await quedaCupo(env, request);
+    if (veredicto !== 'adelante') {
+      /* 429 y `no-store`: es pasajero, y el cliente sabe qué hacer con él —el llenado inicial para el recorrido
+         y lo retoma en la visita siguiente (ver `useCoverBackfill`)—. El `Retry-After` dice la verdad de cada
+         tope: el de la IP se reabre al cambiar la hora y el del servicio, al cambiar el día UTC. */
+      const ahora = Math.floor(Date.now() / 1000);
+      const restan = veredicto === 'tope-global' ? 86400 - (ahora % 86400) : 3600 - (ahora % 3600);
+      const motivo =
+        veredicto === 'tope-global'
+          ? 'Hoy ya no se resuelven más carátulas nuevas; mañana sigue'
+          : 'Demasiadas carátulas nuevas seguidas; inténtalo más tarde';
+      return new Response(motivo, {
         status: 429,
         headers: { 'Cache-Control': 'no-store', 'Retry-After': String(restan) },
       });

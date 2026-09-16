@@ -85,6 +85,38 @@ export const banKey = (uid: string): string => `ban:${uid}`;
  */
 export const coverExemptionKey = (ip: string): string => `igdb:cupo-libre:v1:${ip}`;
 
+/**
+ * CUÁNTAS CARÁTULAS NUEVAS PUEDE RESOLVER EL SERVICIO ENTERO EN UN DÍA, y por qué este tope existe además del
+ * que ya hay por IP.
+ *
+ * No miden lo mismo ni protegen lo mismo. El de `/cover` es por IP y por HORA porque acota a un abusador
+ * concreto contra la cuota de IGDB, que se mide por segundo. Este es global y DIARIO porque lo que aquí se
+ * agota es el presupuesto de ESCRITURAS de KV: 1.000 al día en el plan gratuito, y ese techo es de la CUENTA,
+ * así que lo comparten estas carátulas y los enlaces de reseñas compartidas. Un tope tiene que medirse en la
+ * unidad del recurso que protege.
+ *
+ * Por qué 700. Resolver un juego nuevo cuesta una escritura (el emparejamiento), más las del contador: con el
+ * lote de 50 son ~14 al día, o sea ~714 en total. Quedan ~285 para compartir —unas 70 publicaciones diarias a
+ * cuatro escrituras cada una, muy por encima del uso real— y aun así caben DOS bibliotecas grandes nuevas en un
+ * mismo día, que es el caso legítimo más caro que existe (la de referencia tiene 302 juegos).
+ *
+ * Sigue siendo un tope BLANDO, por lo mismo que el de IP: KV no tiene incremento atómico y sus lecturas llegan
+ * con retraso. Acota el gasto sostenido, que es lo que vacía el presupuesto; no el segundo exacto en que corta.
+ */
+export const COVER_DAILY_BUDGET = 700;
+
+/**
+ * Contador del día para ese tope. La fecha va en UTC igual que `dailyQuotaKey`: el día del servicio no depende
+ * de dónde esté quien mira sus carátulas.
+ *
+ * Vive aquí, y no dentro de `functions/cover.ts`, porque tiene DOS lectores: quien gasta (el endpoint de las
+ * carátulas) y quien mide (`/api/cover-stats`, que lo enseña en la pantalla de administración). Una clave
+ * copiada en dos sitios es una clave que un día deja de ser la misma.
+ */
+export function coverDailyQuotaKey(now: number): string {
+  return `igdb:cupo-dia:v1:${new Date(now).toISOString().slice(0, 10)}`;
+}
+
 /** Contador diario. La fecha va en UTC a propósito: el día del servidor no depende de dónde esté el usuario. */
 export function dailyQuotaKey(uid: string, now: number): string {
   return `quota:${uid}:${new Date(now).toISOString().slice(0, 10)}`;
