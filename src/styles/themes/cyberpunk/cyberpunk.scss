@@ -707,10 +707,28 @@
     var(--surface);
 }
 :root[data-palette="cyberpunk"] .game-card.is-flat .game-card-body { padding-left: 1.15rem; }
-/* El medidor se aparta de la esquina cortada de abajo: pegado al canto, el filo de color asomaba por
-   fuera de la diagonal. */
+/* EL MEDIDOR = EL FILO DEL PANEL, y lo llena hasta sus cuatro cantos. La pieza de este tema son DOS capas
+   recortadas con la misma muesca: el trazo del HUD (`::before`, a ras) y el panel (`::after`, metido 1 px),
+   y NINGUNA de las dos recorta al contenido —la caja no lleva `clip-path`, solo sus pseudoelementos—. Por
+   eso el filo tiene que traerse la muesca puesta: si no, o se sale del recuadro o queda flotando dentro con
+   tres márgenes distintos, que es como se veía (14 px por la izquierda, 5 por la derecha, 1 por abajo).
+   Ahora ocupa EXACTAMENTE el panel: 1 px por los tres lados, el mismo que separa el panel del trazo. */
+:root[data-palette="cyberpunk"] .game-card .game-card-meter {
+  height: 7px;
+  background: color-mix(in srgb, var(--cyber-cyan) 14%, #000);
+}
+/* LA MUESCA ES DEL PANEL, así que solo la lleva la caja sin lámina, que es la que tiene ese panel recortado;
+   la de la lámina es un rectángulo y allí el filo la cruza entera.
+   CALCADA, no parecida: el vértice de abajo del panel cae a 18 px de su canto izquierdo y sube a 45°, así
+   que a la altura del filo (7 px) esa misma diagonal pasa por 11. Los dos números son la muesca del tema
+   medida a la altura de esta pieza, de modo que su corte es la PROLONGACIÓN del corte del panel. */
 :root[data-palette="cyberpunk"] .game-card.is-flat .game-card-meter {
   width: auto;
-  margin: 0 1px 1px 19px;
-  height: 5px;
+  margin: 0 1px 1px;
+  clip-path: polygon(11px 0, 100% 0, 100% 100%, 18px 100%);
+}
+:root[data-palette="cyberpunk"] .game-card .game-card-meter::after {
+  /* El sobreancho es el que se lleva la diagonal de la punta: sin él, un 100 % se quedaría corto. */
+  width: calc(var(--score-pct, 0) * 1% + 7px);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
 }

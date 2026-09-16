@@ -88,4 +88,11 @@
     var(--surface);
   box-shadow: var(--e2);
 }
-:root[data-palette="forja"] .game-card.is-flat .game-card-meter { height: 4px; opacity: .9; }
+/* SIN MEDIDOR EN LA CAJA SIN CARÁTULA. El tema de casa es el más sobrio de los ocho y su pieza ya dice la
+   nota con el aro de la cabecera; el filo de abajo era una segunda vez.
+   Y no es solo criterio: el canto de esta caja tiene 16 px de radio, cuatro veces lo que mide un filo, así
+   que ninguna de las dos formas de rematarlo funciona —a sangre se le estrechan las puntas siguiendo la
+   curva y parece mal cortado; retirado hasta donde el borde vuelve a ser recto, deja de ser un canto y se
+   queda en un subrayado suelto a media caja—. Los demás temas sí lo llevan: sus cajas tienen el canto vivo
+   o un marco recto donde un filo se apoya sin pelear con nada. */
+:root[data-palette="forja"] .game-card.is-flat .game-card-meter { display: none; }

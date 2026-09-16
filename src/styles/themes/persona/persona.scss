@@ -536,3 +536,19 @@
   font-style: italic;
   letter-spacing: .01em;
 }
+/* EL MEDIDOR = EL ROTULADOR. La nota se dice con un trazo que cierra la viñeta por abajo y que NO acaba a
+   escuadra: se corta en diagonal, como los rótulos sesgados del tema (`--sys-skew`). Es lo único que aquí
+   se inclina, y puede hacerlo porque no descuadra ninguna fila: pasa dentro de la caja.
+   FINO A PROPÓSITO: la viñeta ya lleva contorno de 3 px y sombra dura, y un trazo grueso más era un cuarto
+   cerco en la pieza. Lo que se ve son los 5 px del trazo bajo el filete de tinta que lo separa del cuerpo. */
+:root[data-palette="persona"] .game-card .game-card-meter {
+  height: 7px;
+  background: var(--surface);
+  box-shadow: inset 0 2px 0 var(--pop-line);
+}
+:root[data-palette="persona"] .game-card .game-card-meter::after {
+  inset: 2px auto 0 0;
+  /* El sobreancho es el que se lleva la diagonal: sin él, un juego al 100 % se quedaría corto por la punta. */
+  width: calc(var(--score-pct, 0) * 1% + 5px);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 7px) 100%, 0 100%);
+}

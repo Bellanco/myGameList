@@ -630,13 +630,33 @@
 }
 :root[data-palette="grimdark"] .game-card.is-flat::before { top: 5px; left: 5px; border-right: 0; border-bottom: 0; }
 :root[data-palette="grimdark"] .game-card.is-flat::after { bottom: 5px; right: 5px; border-left: 0; border-top: 0; }
+/* LAS CANTONERAS VAN POR DELANTE DEL PIE. El medidor es un hijo posicionado (z-index 1) y las cantoneras son
+   pseudoelementos del padre: sin decirlo, la de abajo a la derecha quedaba DEBAJO de la lectura y el marco
+   se veía comido justo en su esquina. No tapan nada legible: son dos escuadras de 14 px sin sucesos. */
+:root[data-palette="grimdark"] .game-card.is-flat::before,
+:root[data-palette="grimdark"] .game-card.is-flat::after { z-index: 3; }
 :root[data-palette="grimdark"] .game-card.is-flat .game-card-name {
   font-family: var(--font-display);
   letter-spacing: .02em;
 }
-/* El medidor del pie se mete DENTRO del doble filete: pegado al canto pisaba la cantonera de oro. */
+/* EL MEDIDOR = LA LECTURA DEL COGITADOR: no es una barra llena sino una fila de bloques verdes con su halo,
+   como sale una cifra en una pantalla de esta casa. Va DENTRO del doble filete (5 px, que es donde acaba el
+   oro) porque pegado al canto lo pisaba. */
+:root[data-palette="grimdark"] .game-card .game-card-meter {
+  height: 6px;
+  background: color-mix(in srgb, #000 55%, var(--surface));
+}
+/* EL ENCAJE, solo en la caja sin lámina: 6 px, porque su marco son 2 px de borde MÁS los 5 del doble filete
+   —y el filo se mide desde dentro del borde—, así que con 5 el primer bloque caía justo encima del oro,
+   pillado contra el marco. Con 6 queda 1 px de aire por los tres lados: el filete se ve entero por debajo y
+   la lectura sigue APOYADA en él, que es su sitio; con más, se despegaba. La caja con lámina no tiene ese
+   doble filete, así que allí la lectura cruza el canto entera. */
 :root[data-palette="grimdark"] .game-card.is-flat .game-card-meter {
   width: auto;
   margin: 0 6px 6px;
-  height: 4px;
+}
+:root[data-palette="grimdark"] .game-card .game-card-meter::after {
+  -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 7px);
+  mask-image: repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 7px);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, hsl(var(--score-hue, 0) 58% var(--acc-l)) 70%, transparent));
 }

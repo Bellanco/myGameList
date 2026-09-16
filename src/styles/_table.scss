@@ -1041,9 +1041,24 @@ table.is-grid {
    cuenta nada—. Anclado, el ancho que queda es el de los chips y es a ellos a quienes se les apaga el final,
    que es el orden correcto: lo que falta ya lo dice el número.
    `:has()` para no tener que marcar la ranura desde el componente: si no hay «+N», no hay relleno que reservar
-   y el chip dispone de la ranura entera. */
+   y el chip dispone de la ranura entera.
+
+   EL SELECTOR LLEVA `.game-card` Y DOBLA LA CLASE DEL CHIP A PROPÓSITO. Los ocho skins redibujan `.chip` desde
+   `:root[data-palette="…"] .chip` (0,3,0) y algunos le devuelven `position: relative` —el cartel de contrato de
+   «Papel y acero» y la caja de diálogo de «Sol y luna»—, que pesa más que el `.game-card-slot .chip-more`
+   (0,2,0) que había aquí y le quitaba el anclaje: el «+N» volvía al flujo, se montaba encima del último chip o
+   se quedaba a 42 px del canto, con el hueco reservado sin usar. Con `.game-card .game-card-slot .chip.chip-more`
+   (0,4,0) manda el anclaje y el tema sigue poniendo el resto (papel, sello, letra).
+   Y LOS MÁRGENES SE ANULAN porque en un absoluto ya no separan de nada: desplazan. El margen que esos carteles
+   se reservan para su lacre bajaba el «+N» 14,5 px por debajo de su ranura. */
 .game-card-slot:has(.chip-more) { position: relative; padding-right: 42px; }
-.game-card-slot .chip-more { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
+.game-card .game-card-slot .chip.chip-more {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+}
 
 /* LA EXCEPCIÓN: la ranura APRETADA, la que el componente marca cuando ni el primer chip cabe entero (un género
    como «Coleccionista de criaturas» pide 172 px y en la densidad pequeña la ranura tiene 157). Ahí el único que
@@ -1072,26 +1087,6 @@ table.is-grid {
    tema y solo pinta los que entran, con un margen de seguridad. El único caso que no cabe por definición —un
    solo valor más largo que la ranura entera— se marca `is-apretado` y se recorta con puntos suspensivos. */
 
-/* EL «+N» VA ANCLADO AL CANTO DE LA RANURA, y su sitio se reserva con relleno. Iba al final de la fila, como
-   un chip más, así que era EL PRIMERO en caerse fuera cuando el texto se pasaba —y un contador que no se ve no
-   cuenta nada—. Anclado, el ancho que queda es el de los chips y es a ellos a quienes se les apaga el final,
-   que es el orden correcto: lo que falta ya lo dice el número.
-   `:has()` para no tener que marcar la ranura desde el componente: si no hay «+N», no hay relleno que reservar
-   y el chip dispone de la ranura entera. */
-.game-card-slot:has(.chip-more) { position: relative; padding-right: 42px; }
-.game-card-slot .chip-more { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
-
-/* LA EXCEPCIÓN: la ranura APRETADA, la que el componente marca cuando ni el primer chip cabe entero (un género
-   como «Coleccionista de criaturas» pide 172 px y en la densidad pequeña la ranura tiene 157). Ahí el único que
-   puede ceder es el chip, porque el «+N» que no se ve no cuenta nada: se recorta con puntos suspensivos y el
-   contador se queda dentro. `inline-block` porque a un ítem flex no le llega el `text-overflow`. */
-.game-card-slot.is-apretado .chip:not(.chip-more) {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: inline-block;
-  flex: 0 1 auto;
-}
 /* Si un valor suelto es más largo que la ranura entera, se recorta con puntos suspensivos (lo marca
    `is-apretado` desde el componente, más abajo) en vez de salirse de la caja. */
 
@@ -1119,6 +1114,11 @@ table.is-grid {
   position: relative;
   z-index: 1;
   display: block;
+  /* NO ENCOGE, y esto no es una precaución: es un ítem flex de una caja de ALTO DECLARADO, así que con el
+     `flex-shrink` de serie un nombre de dos líneas —«Need for Speed: Underground»— le robaba el hueco y el
+     medidor se quedaba en 2,2 px de los 10 suyos. No desaparecía, que habría sido más fácil de ver: se
+     aplastaba, y la fila de bombillas de la recreativa pasaba a leerse como una línea de guiones. */
+  flex: none;
   height: 6px;
   width: 100%;
   background: var(--score-track);
