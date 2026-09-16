@@ -68,7 +68,6 @@
    o ese título se queda en la letra del cuerpo mientras el resto de titulares llevan la del cartel. */
 :root[data-palette="arcade"] .modal-hd,
 :root[data-palette="arcade"] .dialog-title,
-:root[data-palette="arcade"] .app-title,
 :root[data-palette="arcade"] .rl-card-name,
 :root[data-palette="arcade"] .rl-card-tag,
 :root[data-palette="arcade"] .rl-item,
@@ -103,11 +102,7 @@
   color: var(--arc-cyan-fg);
   text-shadow: 0 0 10px rgba(34, 229, 255, .45), 0 0 26px rgba(34, 229, 255, .18);
 }
-:root[data-palette="arcade"] .app-title {
-  filter: drop-shadow(0 0 12px rgba(178, 60, 255, .55));
-}
 :root[data-palette="arcade"][data-theme="light"] h2 { color: var(--fg-link); text-shadow: none; }
-:root[data-palette="arcade"][data-theme="light"] .app-title { filter: none; }
 
 /* ── §2 · Fondo: la REJILLA DEL HORIZONTE. Dos capas y ninguna imagen: el resplandor violeta del sol que se
    pone (radial, arriba) y la retícula en fuga (dos repeating-linear-gradient cruzados, con máscara). Va
@@ -243,19 +238,12 @@
   --btn-fill-b: #c2004f;
   color: #fff !important;
 }
-:root[data-palette="arcade"] .btn-complete,
-:root[data-palette="arcade"] .btn-recommend {
+:root[data-palette="arcade"] .btn-complete {
   --btn-fill-a: #6ef7c4;
   --btn-fill-b: #12a877;
   color: #06251a !important;
 }
-:root[data-palette="arcade"] .btn-inprogress {
-  --btn-fill-a: #ffd48a;
-  --btn-fill-b: #e08c00;
-  color: #2a1a00 !important;
-}
-:root[data-palette="arcade"] .btn-abandoned,
-:root[data-palette="arcade"] .btn-recommend-active {
+:root[data-palette="arcade"] .btn-abandoned {
   --btn-fill-a: #6b2745;
   --btn-fill-b: #45152b;
   color: #ffc2d0 !important;
@@ -287,8 +275,7 @@
   --btn-fill-b: #31b2c9;
   color: #04232a !important;
 }
-:root[data-palette="arcade"][data-theme="light"] .btn-abandoned,
-:root[data-palette="arcade"][data-theme="light"] .btn-recommend-active {
+:root[data-palette="arcade"][data-theme="light"] .btn-abandoned {
   --btn-fill-a: #ffd9e2;
   --btn-fill-b: #ffb3c6;
   color: #6b0026 !important;
@@ -300,8 +287,7 @@
 /* Los botones-icono (engranaje, tema, filtros, papelera del chip) son las teclas PEQUEÑAS del mismo teclado:
    cuadradas, con su filete y su sombra dura. Redondas se quedaban fuera del cartel. */
 :root[data-palette="arcade"] .btn-icon,
-:root[data-palette="arcade"] .theme-toggle-btn,
-:root[data-palette="arcade"] .palette-select {
+:root[data-palette="arcade"] .theme-toggle-btn {
   border-radius: var(--radius-sm) !important;
   border: 2px solid var(--arc-ink) !important;
   background: linear-gradient(180deg, #3b2260, #241440) !important;
@@ -310,8 +296,7 @@
   transition: transform .07s ease, box-shadow .07s ease, filter .18s;
 }
 :root[data-palette="arcade"][data-theme="light"] .btn-icon,
-:root[data-palette="arcade"][data-theme="light"] .theme-toggle-btn,
-:root[data-palette="arcade"][data-theme="light"] .palette-select {
+:root[data-palette="arcade"][data-theme="light"] .theme-toggle-btn {
   background: linear-gradient(180deg, #fff, #e6d6fa) !important;
 }
 :root[data-palette="arcade"] .btn-icon:hover,
@@ -482,9 +467,7 @@
 }
 
 /* ── §9 · Estrellas y notas: la estrella llena es una ficha de la máquina, con su punto de luz. ── */
-:root[data-palette="arcade"] .star-full,
 :root[data-palette="arcade"] .score-ring-num { filter: drop-shadow(0 0 6px rgba(255, 210, 74, .45)); }
-:root[data-palette="arcade"][data-theme="light"] .star-full,
 :root[data-palette="arcade"][data-theme="light"] .score-ring-num { filter: none; }
 
 /* ── §9b · LA NOTA 0–100 = EL MEDIDOR DE LA MÁQUINA ───────────────────────────────────────────────
@@ -733,7 +716,6 @@
    escuadra en vez de terminar en pastilla. Las cifras grandes van en la monoespaciada de marcador. ── */
 :root[data-palette="arcade"] .year-strip-col,
 :root[data-palette="arcade"] .year-scale-ramp,
-:root[data-palette="arcade"] .year-peak,
 :root[data-palette="arcade"] .shine-fill,
 :root[data-palette="arcade"] .shine-rows li,
 :root[data-palette="arcade"] .top-chip-bar,

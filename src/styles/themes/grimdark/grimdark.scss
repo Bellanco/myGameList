@@ -135,15 +135,10 @@
 :root[data-palette="grimdark"][data-theme="light"] .btn-primary,
 :root[data-palette="grimdark"][data-theme="light"] .btn.is-active,
 :root[data-palette="grimdark"][data-theme="light"] .btn-toggle.active { color: #fff !important; box-shadow: none !important; }
-:root[data-palette="grimdark"] .btn-complete,
-:root[data-palette="grimdark"] .btn-recommend { background: var(--success) !important; color: #04140a !important; border-color: color-mix(in srgb, var(--success) 55%, #000) !important; }
-:root[data-palette="grimdark"] .btn-inprogress { background: var(--warn) !important; color: #1a1200 !important; border-color: color-mix(in srgb, var(--warn) 55%, #000) !important; }
+:root[data-palette="grimdark"] .btn-complete { background: var(--success) !important; color: #04140a !important; border-color: color-mix(in srgb, var(--success) 55%, #000) !important; }
 :root[data-palette="grimdark"] .btn-danger,
-:root[data-palette="grimdark"] .btn-abandoned,
-:root[data-palette="grimdark"] .btn-recommend-active { background: var(--danger-fill) !important; color: #fff !important; border-color: color-mix(in srgb, var(--danger) 55%, #000) !important; }
-:root[data-palette="grimdark"][data-theme="light"] .btn-complete,
-:root[data-palette="grimdark"][data-theme="light"] .btn-recommend,
-:root[data-palette="grimdark"][data-theme="light"] .btn-inprogress { color: #fff !important; }
+:root[data-palette="grimdark"] .btn-abandoned { background: var(--danger-fill) !important; color: #fff !important; border-color: color-mix(in srgb, var(--danger) 55%, #000) !important; }
+:root[data-palette="grimdark"][data-theme="light"] .btn-complete { color: #fff !important; }
 :root[data-palette="grimdark"] .btn-ghost { font-family: var(--font-label); font-weight: 600; letter-spacing: .05em; }
 /* Hover: plano + glow de fósforo verde (sin el giro 3D base). */
 :root[data-palette="grimdark"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 14px rgba(67, 245, 88, .3); }
@@ -345,7 +340,6 @@
 :root[data-palette="grimdark"] .donut-legend b,
 :root[data-palette="grimdark"] .year-trend-scale,
 :root[data-palette="grimdark"] .year-axis,
-:root[data-palette="grimdark"] .year-peak { font-family: var(--font-mono); font-size: 1.08em; }
 
 /* La lectura del cuadro de mandos y los números del dial cambian de TIPOGRAFÍA, no de cuerpo: el `1.08em` de
    arriba es relativo al padre, así que aplicado a la cifra grande le borraba sus 2rem y la dejaba en un

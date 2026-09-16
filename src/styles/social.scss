@@ -191,82 +191,6 @@
   gap: .5rem;
 }
 
-.hub-feed-metrics {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: .35rem;
-}
-
-.hub-metric-card {
-  border: 1px solid rgba(var(--steam-rgb),.26);
-  border-radius: var(--radius-md);
-  background: linear-gradient(145deg, rgba(var(--steam-rgb),.14), var(--hub-grad-end));
-  padding: .35rem .4rem;
-  display: flex;
-  flex-direction: column;
-  gap: .12rem;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  min-height: 3.2rem;
-}
-
-.hub-metric-card span {
-  color: var(--hub-text-muted);
-  font-size: var(--fs-3xs);
-  letter-spacing: .01em;
-  text-transform: uppercase;
-  font-weight: 700;
-  line-height: 1.1;
-  word-break: break-word;
-  display: block;
-  width: 100%;
-}
-
-.hub-metric-card strong {
-  font-size: var(--fs-xs);
-  color: var(--hub-text);
-  line-height: 1;
-  font-weight: 800;
-}
-
-@media (min-width: 48rem) {
-  .hub-feed-metrics {
-    gap: .4rem;
-  }
-
-  .hub-metric-card {
-    padding: .5rem .5rem;
-    min-height: 3.5rem;
-  }
-
-  .hub-metric-card span {
-    font-size: var(--fs-3xs);
-  }
-
-  .hub-metric-card strong {
-    font-size: var(--fs-md);
-  }
-}
-
-@media (min-width: 80rem) {
-  .hub-feed-metrics {
-    gap: .6rem;
-  }
-
-  .hub-metric-card {
-    padding: .65rem .75rem;
-    min-height: 3.8rem;
-  }
-
-  .hub-metric-card span {
-    font-size: var(--fs-2xs);
-  }
-
-  .hub-metric-card strong {
-    font-size: var(--fs-xl);
-  }
-}
 
 .hub-profile-card {
   gap: 1.1rem;
@@ -304,9 +228,6 @@
   color: var(--hub-text-muted);
 }
 
-.hub-profile-block-wide {
-  grid-column: span 1;
-}
 
 .visibility-label {
   font-size: var(--fs-3xs);
@@ -327,47 +248,6 @@
   font-weight: 500;
 }
 
-.hub-profile-checkbox {
-  display: inline-flex;
-  align-items: center;
-  gap: .45rem;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.hub-profile-checkbox input {
-  accent-color: var(--steam);
-}
-
-.hub-hub-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: .7rem;
-  flex-wrap: wrap;
-}
-
-.hub-state-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: .28rem .62rem;
-  border-radius: var(--radius-pill);
-  border: 1px solid rgba(var(--warn-rgb),.35);
-  background: rgba(var(--warn-rgb),.12);
-  color: var(--fg-amber-soft);
-  font-size: var(--fs-2xs);
-  font-weight: 700;
-}
-
-.hub-state-pill-ok {
-  border-color: rgba(var(--success-rgb),.35);
-  background: rgba(var(--success-rgb),.12);
-  color: var(--fg-green-soft);
-}
-
-.hub-lead {
-  font-size: var(--fs-md);
-}
 
 .hub-status-grid {
   display: grid;
@@ -405,26 +285,6 @@
   font-size: var(--fs-sm);
 }
 
-.hub-hub-card-space {
-  gap: 1rem;
-}
-
-.hub-space-welcome {
-  border: 1px solid rgba(var(--steam-rgb),.25);
-  border-radius: var(--radius-sm);
-  background: linear-gradient(145deg, rgba(var(--steam-rgb),.14), var(--hub-grad-end));
-  padding: .85rem .95rem;
-}
-
-.hub-space-welcome h3 {
-  margin: 0;
-  font-size: var(--fs-lg);
-  color: var(--hub-text);
-}
-
-.hub-space-welcome p {
-  margin: .35rem 0 0;
-}
 
 .hub-hub-tags {
   display: flex;
@@ -457,17 +317,12 @@ button.hub-chip.active {
   color: var(--fg-green);
 }
 
-.hub-feed-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: .7rem;
-}
 
 /* Rejilla de PERSONAS: la comparten el directorio de perfiles y la bandeja de solicitudes.
    ─────────────────────────────────────────────────────────────────────────────
-   Sustituye al carrusel horizontal (`.hub-feed-row`, abajo), que era el contenedor equivocado para una lista
-   que se explora: escondía el contenido a la derecha, no daba ninguna pista de cuánta gente había y obligaba a
-   arrastrar con el ratón. Y sustituye también a la columna de burbujas de la bandeja, que apilaba las tres
+   Sustituyó al carrusel horizontal, que era el contenedor equivocado para una lista que se explora: escondía
+   el contenido a la derecha, no daba ninguna pista de cuánta gente había y obligaba a arrastrar con el ratón.
+   Y sustituyó también a la columna de burbujas de la bandeja, que apilaba las tres
    listas —recibidas, enviadas y amigos— a pantalla y media de distancia unas de otras.
 
    SIN TOPE DE COLUMNAS, y esto se decidió midiendo. Hubo un tope de 3 columnas (acotando el ancho del
@@ -609,30 +464,6 @@ button.hub-chip.active {
   font-weight: 600;
 }
 
-.hub-feed-row {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(17rem, 21rem);
-  gap: .75rem;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: .35rem .1rem .55rem;
-  scrollbar-width: thin;
-  cursor: grab;
-}
-
-.hub-feed-row.is-dragging {
-  cursor: grabbing;
-}
-
-.hub-feed-row::-webkit-scrollbar {
-  height: 7px;
-}
-
-.hub-feed-row::-webkit-scrollbar-thumb {
-  background: rgba(var(--steam-rgb),.36);
-  border-radius: 999px;
-}
 
 .hub-feed-toolbar {
   border: 1px solid var(--border);
@@ -657,29 +488,6 @@ button.hub-chip.active {
   font-weight: 700;
 }
 
-.hub-feed-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .45rem;
-}
-
-.hub-filter-chip {
-  border: 1px solid rgba(var(--steam-rgb),.35);
-  background: rgba(var(--steam-rgb),.1);
-  color: var(--hub-text-muted);
-  border-radius: 999px;
-  padding: .28rem .72rem;
-  font-size: var(--fs-2xs);
-  font-weight: 700;
-  font-family: inherit;
-  transition: border-color .2s ease, background .2s ease, color .2s ease;
-}
-
-.hub-filter-chip.is-active {
-  border-color: rgba(var(--success-rgb),.65);
-  background: rgba(var(--success-rgb),.2);
-  color: var(--fg-green);
-}
 
 .hub-feed-result-count {
   margin: 0;
@@ -687,14 +495,6 @@ button.hub-chip.active {
   color: var(--text-muted);
 }
 
-.hub-feed-game-subtitle {
-  display: block;
-  margin-top: .2rem;
-  color: var(--hub-text);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  letter-spacing: .02em;
-}
 
 .hub-feed-day-group {
   gap: .7rem;
@@ -756,11 +556,6 @@ button.hub-chip.active {
 .hub-avatar-img { object-fit: cover; background: var(--surface-hover); }
 
 /* F4 — el avatar del renglón de movimiento: presente para saber de quién es, sin ser el protagonista. */
-.hub-avatar-xs {
-  width: 1.45rem;
-  height: 1.45rem;
-  font-size: var(--fs-3xs);
-}
 
 /* social/profiles — hero de página de perfil: avatar grande + nombre + recuento, centrado. */
 .hub-profile-hero {
@@ -772,21 +567,11 @@ button.hub-chip.active {
   padding: .4rem 0 .2rem;
 }
 
-.hub-profile-hero-meta {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: var(--fs-xs);
-}
 
 /* Fase 3 — skeletons de carga. El FOTOGRAMA del pulso (`hub-skeleton-pulse`) ya no está aquí: se mudó a
    `_motion.scss`, que va en el arranque. Aquí se quedaba sin efecto en el único momento en que hace falta —el
    esqueleto se enseña MIENTRAS baja este chunk, así que su animación llegaba cuando ya no había nada que
    animar—. Las reglas que lo usan (`.hub-skeleton`) viven en `_layout.scss`. */
-
-.hub-feed-email {
-  color: var(--text);
-  font-weight: 700;
-}
 
 
 .hub-post-text {
@@ -1094,22 +879,6 @@ button.hub-chip.active {
   box-shadow: var(--ring-accent);
 }
 
-@container social-card (max-width: 66rem) {
-  .hub-feed-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@container social-card (max-width: 48rem) {
-  .hub-feed-metrics {
-    grid-template-columns: 1fr;
-  }
-
-  .hub-filter-chip {
-    font-size: var(--fs-2xs);
-    padding: .24rem .62rem;
-  }
-}
 
 @media (max-width:980px) {
   .hub-status-grid {
@@ -1120,9 +889,6 @@ button.hub-chip.active {
     grid-template-columns: 1fr;
   }
 
-  .hub-profile-block-wide {
-    grid-column: span 1;
-  }
 }
 
 @media (max-width:620px) {
@@ -1135,9 +901,6 @@ button.hub-chip.active {
     display: none;
   }
 
-  .hub-feed-row {
-    grid-auto-columns: minmax(14rem, 17rem);
-  }
 
   .hub-hub-gateway {
     min-height: calc(100vh - 150px);

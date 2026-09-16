@@ -153,14 +153,12 @@
    SOMBRA DE BLOQUE, en rojo rebelde en vez de blanca. El relleno rojo sigue siendo del elegido. */
 :root[data-palette="persona"] .scope-tabs > .btn-toggle:first-child:not(.active),
 :root[data-palette="persona"][data-theme="light"] .scope-tabs > .btn-toggle:first-child:not(.active) { box-shadow: 5px 5px 0 var(--steam) !important; }
-:root[data-palette="persona"] .btn-complete,
-:root[data-palette="persona"] .btn-recommend { background: var(--success) !important; color: #08130c !important; }
-:root[data-palette="persona"] .btn-inprogress { background: var(--warn) !important; color: #1a1400 !important; }
+:root[data-palette="persona"] .btn-complete { background: var(--success) !important; color: #08130c !important; }
 /* EL DESTRUCTIVO NO ES NARANJA. Salía de `--danger-fill`, que en esta paleta parte de un naranja (#ff6b3d), así
    que el botón de BORRAR se leía más suave que el de añadir —que es rojo puro— y la jerarquía quedaba del revés.
    Atlus lo dijo de P5: rojo, negro y blanco mandan y no hay sub-colores. Así que el que destruye se va al NEGRO
-   con filete y rótulo rojos, y el rojo macizo se queda para el que actúa. `.btn-abandoned` y
-   `.btn-recommend-active` siguen con su relleno: se deshacen, no destruyen. */
+   con filete y rótulo rojos, y el rojo macizo se queda para el que actúa. `.btn-abandoned` sigue con su
+   relleno: se deshace, no destruye. */
 :root[data-palette="persona"] .btn-danger {
   background: #0a0a0a !important;
   color: var(--steam-hover) !important;
@@ -172,8 +170,7 @@
   color: #ff8a94 !important;
   box-shadow: var(--btn-cast, 5px) var(--btn-cast, 5px) 0 rgba(230, 0, 18, .3) !important;
 }
-:root[data-palette="persona"] .btn-abandoned,
-:root[data-palette="persona"] .btn-recommend-active { background: var(--danger-fill) !important; color: #fff !important; }
+:root[data-palette="persona"] .btn-abandoned { background: var(--danger-fill) !important; color: #fff !important; }
 /* Botones fantasma (p. ej. "Limpiar filtros"): limpios, sin corte/sombra/sesgo. */
 :root[data-palette="persona"] .btn-ghost { font-style: italic; filter: none; clip-path: none; transform: none; }
 /* Hover: el hover base hace un giro 3D que rompe el sesgo P5; aquí se mantiene el sesgo + elevación leve. */
@@ -181,13 +178,12 @@
 :root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: skewX(-7deg); }
 
 /* ── §5b · Botones colapsados a SOLO-ICONO en móvil/tablet. El layout base oculta el label de los botones
-   de acción (`.detail-actions`/`.header-actions .btn span`, `.btn-icon-text span` → `display:none`) para
+   de acción (`.detail-actions .btn span`, `.btn-icon-text span` → `display:none`) para
    dejar cuadrados de 42px. Pero el contra-sesgo de §5 fuerza `display:inline-block` en `> *` con más
    especificidad y RESUCITA el label, desbordando y descuadrando la rejilla (se veía en /bandeja). Se
    re-oculta con `!important` en los MISMOS cortes que el layout base (`_overlays-and-responsive.scss`). ── */
 @media (max-width: 1100px) {
-  :root[data-palette="persona"] .detail-actions .btn span,
-  :root[data-palette="persona"] .header-actions .btn span { display: none !important; }
+  :root[data-palette="persona"] .detail-actions .btn span { display: none !important; }
 }
 @media (max-width: 720px) {
   :root[data-palette="persona"] .btn-icon-text span { display: none !important; }
@@ -380,8 +376,6 @@
 /* Y sus piezas se separan con la línea de tinta, no con el color de la tarjeta. */
 :root[data-palette="persona"] .year-strip-seg { box-shadow: inset 0 1.5px 0 var(--pop-line); }
 :root[data-palette="persona"] .year-scale-ramp { border-radius: 0; box-shadow: 0 0 0 1.5px var(--pop-line); }
-:root[data-palette="persona"] .year-peak { border-radius: 2px; transform: translateY(-50%) skewX(-8deg); }
-:root[data-palette="persona"] .year-peak.is-left { transform: translate(-100%, -50%) skewX(-8deg); }
 
 /* La barrita del título es un bloque sesgado, no un filete recto: el gesto del tema. */
 :root[data-palette="persona"] .stats-card h2::before {

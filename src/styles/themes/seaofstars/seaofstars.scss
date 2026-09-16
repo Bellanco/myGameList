@@ -134,17 +134,12 @@
 :root[data-palette="seaofstars"] .btn-steam,
 :root[data-palette="seaofstars"] .btn.is-active,
 :root[data-palette="seaofstars"] .btn-toggle.active { background: var(--steam) !important; background-image: none !important; color: var(--on-accent) !important; border-color: var(--steam) !important; }
-:root[data-palette="seaofstars"] .btn-complete,
-:root[data-palette="seaofstars"] .btn-recommend { background: var(--success) !important; color: #06180a !important; }
-:root[data-palette="seaofstars"] .btn-inprogress { background: var(--warn) !important; color: #201200 !important; }
+:root[data-palette="seaofstars"] .btn-complete { background: var(--success) !important; color: #06180a !important; }
 /* Botones de peligro: relleno rojo un poco MÁS PROFUNDO + texto CREMA (el texto oscuro sobre el rojo no se
    distinguía). Cream sobre el rojo profundo pasa AA en oscuro y en claro. */
 :root[data-palette="seaofstars"] .btn-danger,
-:root[data-palette="seaofstars"] .btn-abandoned,
-:root[data-palette="seaofstars"] .btn-recommend-active { background: color-mix(in srgb, var(--danger) 85%, #000) !important; color: #fff7d6 !important; }
+:root[data-palette="seaofstars"] .btn-abandoned { background: color-mix(in srgb, var(--danger) 85%, #000) !important; color: #fff7d6 !important; }
 :root[data-palette="seaofstars"][data-theme="light"] .btn-complete,
-:root[data-palette="seaofstars"][data-theme="light"] .btn-recommend,
-:root[data-palette="seaofstars"][data-theme="light"] .btn-inprogress,
 :root[data-palette="seaofstars"][data-theme="light"] .btn-danger,
 :root[data-palette="seaofstars"][data-theme="light"] .btn-abandoned { color: #fff7d6 !important; }
 :root[data-palette="seaofstars"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 14px color-mix(in srgb, var(--sos-turq) 45%, transparent); }
@@ -299,7 +294,6 @@
 }
 
 :root[data-palette="seaofstars"] .year-scale-ramp { border-radius: 0; }
-:root[data-palette="seaofstars"] .year-peak { border-radius: 0; }
 
 /* Campo de estrellas tenue también bajo la serie, como en los demás lienzos de datos. */
 :root[data-palette="seaofstars"] .year-trend-plot {
@@ -315,7 +309,6 @@
 /* Nada de círculos: los puntos son píxeles. */
 :root[data-palette="seaofstars"] .timeline-dot,
 :root[data-palette="seaofstars"] .dumbbell-dot,
-:root[data-palette="seaofstars"] .ratio-dot,
 :root[data-palette="seaofstars"] .donut-key,
 :root[data-palette="seaofstars"] .dot-matrix-dots i,
 :root[data-palette="seaofstars"] .stats-legend-dot { border-radius: 0; }

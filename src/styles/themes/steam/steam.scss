@@ -259,11 +259,8 @@
   --wt-h1: #5a3236; --wt-h2: #43262a; --wt-h3: #2a171a; --wt-h4: #4e2c30;
   --wt-rotulo: #ffb0a8;
 }
-:root[data-palette="steam"] .btn-complete,
-:root[data-palette="steam"] .btn-recommend { --wt-rotulo: var(--success); }
-:root[data-palette="steam"] .btn-inprogress { --wt-rotulo: var(--warn); }
-:root[data-palette="steam"] .btn-abandoned,
-:root[data-palette="steam"] .btn-recommend-active { --wt-rotulo: var(--fg-red); }
+:root[data-palette="steam"] .btn-complete { --wt-rotulo: var(--success); }
+:root[data-palette="steam"] .btn-abandoned { --wt-rotulo: var(--fg-red); }
 /* En claro los cuatro altos van otra vez COMO RESPALDO dentro del `var()`, no declarados: esta regla
    lleva `:not()` y pesa más que la de cada rol, así que declararlos aquí volvía a pisar al activo y al
    destructivo — el mismo fallo que ya había en la variante oscura. */
@@ -454,8 +451,7 @@
    sobre el fondo, que en claro casi no se veía. Ahora son REMACHES de la chapa —disco de acero con
    filete y canto de luz— y al pulsarlos se hunden. El FAB es el mismo remache, en grande. ── */
 :root[data-palette="steam"] .btn-icon,
-:root[data-palette="steam"] .theme-toggle-btn,
-:root[data-palette="steam"] .palette-select {
+:root[data-palette="steam"] .theme-toggle-btn {
   background: linear-gradient(180deg, #414a56, #2b323b) !important;
   border: 1px solid var(--border) !important;
   color: var(--steam) !important;
@@ -463,8 +459,7 @@
   transition: filter .18s, box-shadow .12s, transform .1s;
 }
 :root[data-palette="steam"][data-theme="light"] .btn-icon,
-:root[data-palette="steam"][data-theme="light"] .theme-toggle-btn,
-:root[data-palette="steam"][data-theme="light"] .palette-select {
+:root[data-palette="steam"][data-theme="light"] .theme-toggle-btn {
   background: linear-gradient(180deg, #fbfcfd, #ccd5de) !important;
   color: var(--steam) !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 1px 2px rgba(30,42,56,.22) !important;
@@ -598,7 +593,6 @@
    vacía es el HUECO en la chapa, hundido, no una estrella gris. Así la fila de cinco se lee como cinco
    troqueles y no como un texto. */
 :root[data-palette="steam"] .stars .f,
-:root[data-palette="steam"] .star-full,
 :root[data-palette="steam"] .star-inp button.f {
   color: var(--star-full);
   text-shadow: 0 1px 0 rgba(60,38,0,.55), 0 0 6px rgba(242,199,92,.35);
@@ -608,7 +602,6 @@
   text-shadow: 0 1px 0 rgba(255,255,255,.10), 0 -1px 0 rgba(0,0,0,.55);
 }
 :root[data-palette="steam"][data-theme="light"] .stars .f,
-:root[data-palette="steam"][data-theme="light"] .star-full,
 :root[data-palette="steam"][data-theme="light"] .star-inp button.f {
   text-shadow: 0 1px 0 rgba(255,255,255,.7), 0 -1px 0 rgba(90,58,0,.35);
 }
