@@ -85,6 +85,55 @@ La versión del **listado con forma** y de las **carátulas**.
 - Los tres caminos de vuelta de un juego sin carátula, y que el interruptor de carátulas no borra lo aprendido:
   apagado no pide nada y al encenderlo se piden las mismas URL, que sirve la caché.
 
+## [1.2.8] - 2026-09-13
+
+### Added
+- **La zona de actividad tiene suelo propio en cada tema.** El hueco del feed no existía como superficie: el
+  estado vacío flotaba sobre la tarjeta y la tarjeta se encogía hasta él. Su capa decorativa acompaña ahora a la
+  ventana en vez de estirarse con el desplazamiento infinito, que dejaba los efectos a mitad de la lista.
+- **La aplicación amortigua sus cargas y sus cambios de pantalla:** entrada suave en cada cambio de ruta,
+  esqueleto y barra de progreso donde antes no había nada mientras llegaba el chunk, armazón en el `index` para
+  que el primer instante no sea un blanco sin explicar, y las filas que entran y salen del listado se mueven en
+  vez de aparecer y desaparecer.
+- **Los cambios se suben sin esperar al siguiente ciclo.** Guardar un juego solo marcaba lo pendiente y la
+  subida esperaba al sondeo del minuto o a volver a la pestaña, así que quien editaba y cerraba se dejaba el
+  cambio en ese dispositivo. Ahora sube a los 5 s de la última edición —una ráfaga de guardados sigue siendo una
+  sola escritura— y la línea de estado distingue «sincronizado» de «queda algo por subir».
+
+### Fixed
+- **El fondo del lienzo social ocupa todo lo que se ve**, y el editor de perfil enseña la misma cara que el
+  resto del hub.
+- **La actividad y su detalle dejaban de cargar a medias.**
+- **La reciprocidad de la foto alcanza a los movimientos de lista:** quien solo aporta un monograma tampoco ve
+  ahí las caras de los demás.
+- **El total del catálogo de logros es el mismo para todo el mundo.**
+- **La curva anual de estadísticas escondía números que cabían** en pantalla estrecha.
+
+### Performance
+- **Quien nunca ha iniciado sesión ya no se descarga Firebase:** son ~65 kB comprimidos que se bajaba todo el
+  mundo, incluido quien solo usa sus listas. Se mira si hay sesión guardada antes de cargar nada, y quien la
+  inicia durante la visita se engancha sin recargar. Verificado contra el build: sin sesión, 26 scripts y ningún
+  chunk de Firebase; con ella, 33.
+- **Una copia menos en cada guardado.** Cada edición escribía tres: el espejo del store y las dos bibliotecas
+  enteras, la de `localStorage` y la de IndexedDB. Ahora las dos viajan en el mismo volcado aplazado.
+- **La configuración de sincronización deja de leerse en cada render** (eran dos `getItem` con sus dos
+  `JSON.parse` por render, y la app re-renderiza con cada tecla del buscador).
+- **Dos peticiones menos al subir y al abrir:** la escritura reutiliza el cuerpo del gist que el ciclo acaba de
+  leer —subir una edición pasa de tres peticiones a dos— y el veredicto del formato se sella, así que la
+  relectura completa deja de repetirse en la primera apertura de cada sesión.
+
+### Documentation
+- Plan para rotar los canales sociales y revocar de verdad un acceso, la arquitectura del README ajustada a lo
+  que el código hace, y por qué el identificador de un gist es la llave —y qué limita eso de la revocación.
+
+## [1.2.7] - 2026-09-12
+
+### Fixed
+- **La app ya no se recarga con un formulario a medio escribir.** La actualización automática entraba mientras
+  se estaba editando un juego y se llevaba por delante lo tecleado.
+- **La marca de cambios pendientes dejaba de bloquear la recarga** aunque ya no quedara nada que subir.
+- **El nick se recorta al límite que aceptan las reglas de amistad**, que lo rechazaban en silencio.
+
 ## [1.2.6] - 2026-09-12
 
 ### Fixed
