@@ -303,6 +303,26 @@ describe('/cover — lo que cuesta', () => {
     expect(respuesta.status).toBe(200);
   });
 
+  /* EL MODO AMPLIADO NO ES GRATIS: es un segundo juego de emparejamientos por los mismos juegos, con sus
+     consultas a IGDB y sus escrituras de KV. Mientras dependió solo del parámetro de la URL, cualquiera que
+     leyera el código —que es público— podía duplicar el gasto del servicio escribiendo cinco caracteres. */
+  it('sin el sello del rango, `x=1` se atiende como una petición normal', async () => {
+    const kv = kvFalso();
+    const respuesta = await onRequestGet({ request: peticion('n=Celeste&x=1'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(200);
+    // Lo apuntado va al espacio de siempre, no al del modo ampliado: no se ha abierto un segundo juego de claves.
+    expect(kv.datos.has(claveCache('Celeste', [], false))).toBe(true);
+    expect(kv.datos.has(claveCache('Celeste', [], true))).toBe(false);
+  });
+
+  it('con el sello puesto, `x=1` sí resuelve en su espacio aparte', async () => {
+    const kv = kvFalso({ [coverExemptionKey('203.0.113.7')]: '1' });
+    await onRequestGet({ request: peticion('n=Celeste&x=1'), env: entorno(kv) });
+
+    expect(kv.datos.has(claveCache('Celeste', [], true))).toBe(true);
+  });
+
   it('si no se ha podido preguntar, no se apunta nada en la caché negativa', async () => {
     fetchSimulado.mockImplementation(async (entrada: Request | string) => {
       const url = String(entrada instanceof Request ? entrada.url : entrada);

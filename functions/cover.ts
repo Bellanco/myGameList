@@ -114,6 +114,19 @@ function vieneDeOtroSitio(request: Request): boolean {
  */
 type Veredicto = 'adelante' | 'tope-ip' | 'tope-global';
 
+/**
+ * ¿TIENE ESTA IP EL SELLO DEL RANGO MÁS ALTO? Lo escribe `/api/cover-quota` cuando quien llama lo demuestra con
+ * su ID token y el rango leído del perfil de verdad; aquí solo se comprueba que está.
+ *
+ * Es la única prueba de rango que puede tener una petición de imagen: un `<img src>` no lleva cabeceras, y meter
+ * la sesión en la URL la volvería distinta para cada persona y tiraría las dos cachés que hacen que una carátula
+ * se descargue una sola vez para todo el mundo (ver `coverExemptionKey`).
+ */
+async function tieneSelloDeRango(env: Env, request: Request): Promise<boolean> {
+  const ip = request.headers.get('CF-Connecting-IP') || 'desconocida';
+  return Boolean(await env.COVERS?.get(coverExemptionKey(ip)));
+}
+
 /** Lo gastado en un contador de KV. `0` también cuando la clave no está, que es el primer uso del periodo. */
 async function gastado(env: Env, clave: string): Promise<number> {
   return Number(await env.COVERS?.get(clave)) || 0;
@@ -139,7 +152,7 @@ async function quedaCupo(env: Env, request: Request): Promise<Veredicto> {
        peticiones que nunca se acercan a él.
        Y levanta LOS DOS topes, no solo el suyo: si el sello del rango máximo no sirviera el día que el servicio
        llena su cupo, no serviría justo el día que hace falta. */
-    if (await env.COVERS?.get(coverExemptionKey(ip))) return 'adelante';
+    if (await tieneSelloDeRango(env, request)) return 'adelante';
     // Si topan los dos, manda el del servicio: es el que más tarda en reabrirse, y prometer una espera corta que
     // no va a bastar es peor que decir la verdad.
     return topeDia ? 'tope-global' : 'tope-ip';
@@ -190,9 +203,15 @@ export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise
      razones que se refuerzan: el service worker cachea por URL y sin `Vary` (su cabecera documenta el estropicio
      que eso causó con `/api/share/mine`), y la caché de KV es compartida. Con el distintivo en la URL, la
      respuesta ampliada vive en su propio espacio y no puede acabar servida a otra persona.
-     No es una frontera de seguridad: la URL se falsifica. Falsificarla solo te da a ti peores carátulas, y el
-     cupo por IP acota el gasto. Quien manda de verdad sigue siendo `isAdminEmail` en el cliente. */
-  const ampliado = url.searchParams.get('x') === '1';
+     PERO LA URL NO BASTA PARA CONCEDERLO. Un espacio de claves aparte es un segundo juego de emparejamientos por
+     los MISMOS juegos: sus propias consultas a IGDB y sus propias escrituras de KV. Mientras dependió solo del
+     parámetro, cualquiera que leyera el código —que es público— podía duplicar el gasto del servicio escribiendo
+     cinco caracteres. Ahora hace falta además el sello que `/api/cover-quota` escribe con el token verificado.
+     Y sin sello se IGNORA en vez de rechazarse, a propósito: el sello caduca a las doce horas y la aplicación lo
+     renueva en cada arranque, así que un 403 dejaría al administrador sin carátulas por tener la pestaña abierta
+     mucho rato. Ignorándolo pierde la lente hasta que recargue, que es justo lo que la lente vale.
+     La lectura del sello solo la pagan las peticiones que traen `x=1`, o sea las de una persona. */
+  const ampliado = url.searchParams.get('x') === '1' && (await tieneSelloDeRango(env, request));
 
   /* TAMAÑO (`s=medio` o `s=ancho`). Como `x=1`, viaja en la URL y no en una cabecera: el service worker cachea
      por URL y sin `Vary`, así que cada tamaño tiene que tener su propia clave de caché o el mosaico acabaría
