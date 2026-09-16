@@ -220,7 +220,8 @@ describe('service worker — carátulas', () => {
   // petición y una reescritura del cubo POR CARÁTULA para recibir los mismos bytes: ~300 de cada en una visita.
   it('sirve la copia guardada sin volver a pedirla', async () => {
     const sw = loadServiceWorker();
-    sw.cache.match.mockImplementation(async () => guardada(1));
+    // Un mes largo: dentro del plazo, así que ni se pregunta. Antes, a los siete días ya se revalidaba.
+    sw.cache.match.mockImplementation(async () => guardada(40));
 
     const response = await respondTo(sw, new Request(COVER));
 
@@ -229,9 +230,12 @@ describe('service worker — carátulas', () => {
     expect(sw.cache.put).not.toHaveBeenCalled();
   });
 
-  it('refresca en segundo plano la copia que ya tiene sus días, pero responde con la que hay', async () => {
+  /* NOVENTA DÍAS, no ocho. El plazo se alargó porque revalidar cada semana eran ~300 peticiones semanales por
+     dispositivo para recibir los mismos bytes: una carátula ya emparejada no cambia, y lo que sí cambia —un
+     título corregido— estrena URL y aquí no encuentra copia que servir. */
+  it('refresca en segundo plano la copia que ya tiene sus meses, pero responde con la que hay', async () => {
     const sw = loadServiceWorker({ fetchImpl: async () => new Response('jpeg nuevo', { status: 200 }) });
-    sw.cache.match.mockImplementation(async () => guardada(8));
+    sw.cache.match.mockImplementation(async () => guardada(91));
 
     const response = await respondTo(sw, new Request(COVER));
 

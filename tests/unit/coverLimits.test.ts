@@ -7,6 +7,7 @@ import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import {
   evaluarTopesDeImagenes,
   hayHolguraDeAlmacenamiento,
+  pedirAlmacenamientoDuradero,
   reiniciarTopesDeImagenes,
   topesLevantados,
 } from '../../src/core/utils/coverLimits';
@@ -61,6 +62,42 @@ describe('cuándo se levantan los topes de imágenes', () => {
 
     almacenamiento(async () => { throw new Error('bloqueado'); });
     expect(await hayHolguraDeAlmacenamiento()).toBe(false);
+  });
+
+  /* PEDIR PERSISTENCIA es lo que decide de verdad cuánto duran las carátulas: sin ella, el almacenamiento del
+     origen es desechable —Safari lo borra tras siete días sin visitas— y no hay plazo de caché que valga. No es
+     condición de nada: se pide y se sigue igual con un no. */
+  it('pide que lo guardado no se desaloje, y sobrevive a un no', async () => {
+    const persist = vi.fn(async () => true);
+    Object.defineProperty(navigator, 'storage', { configurable: true, value: { persist, persisted: async () => false } });
+    expect(await pedirAlmacenamientoDuradero()).toBe(true);
+    expect(persist).toHaveBeenCalledTimes(1);
+
+    Object.defineProperty(navigator, 'storage', {
+      configurable: true,
+      value: { persist: async () => false, persisted: async () => false },
+    });
+    expect(await pedirAlmacenamientoDuradero()).toBe(false);
+  });
+
+  it('y no vuelve a pedirla si ya está concedida', async () => {
+    // En Firefox, volver a pedirla es volver a asomarle el permiso a quien ya lo contestó.
+    const persist = vi.fn(async () => true);
+    Object.defineProperty(navigator, 'storage', { configurable: true, value: { persist, persisted: async () => true } });
+
+    expect(await pedirAlmacenamientoDuradero()).toBe(true);
+    expect(persist).not.toHaveBeenCalled();
+  });
+
+  it('sin la API, o con ella rota, no pasa nada', async () => {
+    Object.defineProperty(navigator, 'storage', { configurable: true, value: undefined });
+    expect(await pedirAlmacenamientoDuradero()).toBe(false);
+
+    Object.defineProperty(navigator, 'storage', {
+      configurable: true,
+      value: { persist: async () => { throw new Error('bloqueado'); }, persisted: async () => false },
+    });
+    expect(await pedirAlmacenamientoDuradero()).toBe(false);
   });
 
   it('se lo cuenta al service worker, que no puede mirar ni el rango ni el espacio', async () => {
