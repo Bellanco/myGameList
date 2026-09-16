@@ -3,163 +3,87 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows the git tags.
 
-## [1.3.0] - Sin publicar
+## [1.3.0] - 2026-09-16
 
-> Todavía no lanzada. Lo que hay aquí vive en `develop` y será la versión que se suba a producción cuando se
-> decida; la fecha se pone al poner el tag.
+La versión del **listado con forma** y de las **carátulas**.
 
 ### Added
-- **El listado deja de parecer una hoja de cálculo, y ahora tiene dos formas.** Se elige desde la cabecera del
-  propio listado: **lista** —un renglón por juego— o **tarjetas** —un mosaico por el que pasear—. La forma se
-  recuerda y viaja con la cuenta, así que el móvil y el ordenador enseñan lo mismo.
-- **El renglón, en tres pisos y con columnas invisibles.** Arriba el nombre con la nota y la insignia pegadas al
-  canto derecho; debajo, año, plataformas y géneros, cada uno en su ranura; y debajo, en dos recuadros hundidos,
-  los puntos fuertes y los débiles, sangrados por la misma columna del año —lo bueno arranca justo donde
-  arranca la plataforma— para que las dos filas se lean como una sola rejilla. Las ranuras tienen ancho fijo, así que el
-  género de una fila cae justo debajo del de la siguiente **sin que haya que dibujar una sola línea ni una
-  cabecera**: se recupera la lectura en vertical que se perdió al quitar las columnas, que era el motivo por el
-  que los datos parecían puestos a lo loco. Medido sobre la biblioteca de referencia, las filas miden exactamente
-  lo mismo y cada ranura —las cinco— empieza siempre en el mismo píxel.
-- **Los chips se adaptan al sitio que hay.** Cuántas plataformas y cuántos géneros se ven antes del «+N» ya no
-  es un número fijo: se **mide el texto** de ESE juego con la letra y el relleno que ese tema le da al chip, y
-  se pintan los que caben en ESA caja. Así una tarjeta grande enseña cuatro plataformas donde una pequeña enseña
-  una, y dos juegos de la misma fila pueden enseñar distinto número si uno tiene los nombres más cortos. Lo
-  mismo en los puntos fuertes y débiles del renglón. El «+N» va anclado al canto de su ranura, así que nunca se cae fuera, y lo que aun así se
-  sale se **desvanece** en el último centímetro en vez de partirse a media letra. Y el desvanecido sustituye al
-  recorte que había antes, que cortaba por los cuatro cantos: en «Inserte moneda» y «Ladrones de corazones» los
-  chips llevan sombra dura por fuera de su caja y la ranura se la cortaba a ras, arriba y abajo.
-- **Las tarjetas enseñan siempre lo mismo y en el mismo sitio:** una plataforma, un género, la nota flotando
-  sobre el canto de la carátula y la insignia sobre el de abajo, y al pie un medidor que cruza la caja con el
-  tono rojo→verde de la nota. Antes cada caja enseñaba lo que tenía —dos chips o cuatro, con año o sin él— y esa
-  desigualdad se leía como descuido.
-- **Un deslizador para el tamaño de las tarjetas**, en forma de cuña como un control de volumen: tres pasos que
-  a 1440 px dan 8, 6 o 5 columnas, y en un teléfono 3, 2 o 1. También viaja con la cuenta.
-- **La carátula entra, no aparece.** Mientras se espera no pasa nada —se ve la portada de casa, quieta—, y el
-  gesto ocurre al llegar la imagen, para que no se plante de golpe. Lo pone cada tema: fundido con un punto de
-  acercamiento en la mayoría, la imagen rearmándose a franjas descolocadas en «Sin futuro» y «Grimdark», y un
-  encendido a parpadeos de tubo fluorescente en «Cámara de pruebas».
-- **La carátula también viste el renglón**, recortada en una franja que lo cruza de lado a lado y con un velo de
-  la superficie del tema encima para que el texto no pierda contraste.
-- **Sin carátulas, la tarjeta es una pieza de su mundo.** Con la preferencia apagada —que es como viene la
-  aplicación— el mosaico eran ocho veces la misma caja con distinto color, y una biblioteca entera se leía
-  monótona. Ahora cada tema le da forma propia: un panel con juntas y vértices biselados en «Cámara de
-  pruebas» —cuatro cantoneras en L, las piezas de esquina del Cubo de Compañía—, el mueble con su marquesina de
-  bombillas en «Inserte moneda», una ventana del HUD achaflanada en
-  «Sin futuro», la cartela del códice con cantoneras de oro en «Solo hay guerra», la viñeta de contorno grueso y
-  sombra dura en «Ladrones de corazones», la caja de diálogo pixelada en «Sol y luna», una placa de acero con
-  veta de damasco inscrita en un pliego de pergamino rasgado en «Plata y acero» y el lingote con su filo
-  templado en «Forja y temple».
-- **Y las tarjetas sin carátula respiran.** La caja crece (el paso de en medio pasa de 205 a 250 px, de 6
-  columnas a 5 en una pantalla de 1440), sube el relleno y el hueco entre cajas, y **todas miden exactamente lo
-  mismo**: el alto va declarado, así que fila y columna casan con cualquier título en vez de escalonarse cuando
-  un nombre ocupa dos líneas. Las etiquetas van pegadas al nombre y no empujadas al pie, que es lo que abría un
-  boquete justo en mitad de lo que se lee.
-
-- **Las carátulas del servicio tienen un tope diario, y se ve cuánto queda.** Hasta ahora lo único que frenaba
-  el gasto era un cupo por IP, que protege de un abusador pero no del recurso que de verdad escasea: las
-  escrituras de KV, que son 1.000 al día **para toda la cuenta** y las comparten las carátulas con los enlaces de
-  reseñas. Ahora hay un segundo tope, global y diario (700 juegos nuevos), y el panel de administración enseña
-  cuánto se lleva gastado del día — el gráfico de Cloudflare da el total de la cuenta sin separar quién lo gasta,
-  que es justo lo que hay que saber para decidir. Al toparlo, el llenado en segundo plano para y lo retoma en la
-  visita siguiente.
-- **El proxy de carátulas deja de resolver para otras webs.** Una carátula ya emparejada se le sirve a quien
-  sea —no cuesta ni una consulta ni una escritura—, pero el trabajo caro, que es emparejar un título nuevo, solo
-  se hace desde esta web. Se distingue por `Sec-Fetch-Site`, que lo pone el navegador y la página no puede tocar.
-- **El modo ampliado de las carátulas exige el sello del rango.** Es un segundo juego de emparejamientos por los
-  mismos juegos, con sus consultas y sus escrituras, y mientras dependió solo de un parámetro en la URL
-  cualquiera que leyera el código —que es público— podía duplicar el gasto escribiendo cinco caracteres. Sin
-  sello se ignora en vez de rechazarse, para que a quien le caduque no se quede sin carátulas.
-- **En el hub social, las carátulas ajenas son de momento solo para mithril.** Tu biblioteca la resuelve una vez
-  el llenado en segundo plano; la de otra persona es un catálogo entero de juegos que no tienes, y se multiplica
-  por cada perfil que abras. Los demás ven la misma lista sin imágenes, que es la vista que ya existe con la
-  preferencia apagada. Cuando se abra a todos, vuelve a mandar el interruptor de cada uno.
-- **Se pide almacenamiento persistente.** Sin él, el navegador puede tirar lo guardado entero —no solo las
-  imágenes: también el armazón, los chunks y la biblioteca para verla sin red— cuando le aprieta el disco, y
-  Safari borra los datos de un sitio que no se visita en siete días. Se pide con las carátulas encendidas, que es
-  cuando hay algo que proteger; un «no» no cambia nada.
+- **Dos formas para el listado, a elegir en su cabecera:** *lista* —un renglón por juego— o *tarjetas* —un
+  mosaico—. La forma se recuerda y viaja con la cuenta, así que el móvil y el ordenador enseñan lo mismo. Con
+  ella se va la tabla de columnas, que era lo que hacía que esto pareciera una hoja de cálculo.
+- **El renglón, en tres pisos y con columnas invisibles:** nombre con nota e insignia arriba; año, plataformas
+  y géneros en ranuras de ancho fijo; puntos fuertes y débiles debajo. Cada ranura empieza siempre en el mismo
+  píxel, así que se lee en vertical sin dibujar una sola línea.
+- **Los chips se adaptan al sitio que hay.** Se mide el texto de cada juego con la letra de ese tema y se pintan
+  los que caben; el «+N» va anclado al canto y lo que se sale se desvanece en vez de partirse a media letra.
+- **Las tarjetas enseñan siempre lo mismo y en el mismo sitio:** una plataforma, un género, la nota sobre el
+  canto de la carátula, la insignia sobre el de abajo y un medidor al pie con el tono de la nota.
+- **Un deslizador para el tamaño de las tarjetas:** tres pasos, que a 1440 px dan 8, 6 o 5 columnas y en un
+  teléfono 3, 2 o 1.
+- **Carátulas de los juegos** (apagadas por defecto), en la tarjeta y recortadas en una franja en el renglón. No
+  aparecen de golpe: entran, y cómo entran lo pone cada tema.
+- **La tarjeta sin carátula tiene forma propia en cada tema:** el panel con cantoneras en L de «Cámara de
+  pruebas», el mueble con marquesina de «Inserte moneda», la cartela del códice de «Solo hay guerra», el lingote
+  templado de «Forja y temple»… Antes eran ocho veces la misma caja con distinto color.
+- **Tope diario de carátulas nuevas para todo el servicio** (700), además del que ya había por IP, y **el gasto
+  del día a la vista en el panel de administración**. Lo que se raciona son las escrituras de KV, que son 1.000
+  diarias para toda la cuenta y las comparten las carátulas con los enlaces de reseñas.
+- **Se pide almacenamiento persistente**, para que el navegador no tire lo guardado —imágenes, armazón y la
+  biblioteca para verla sin red— cuando le aprieta el disco.
 
 ### Changed
-- **El orden ya no se pulsa en las cabeceras**, que era justo lo que hacía que aquello pareciera una tabla de
-  cálculo. Ahora son palabras a la vista en la cabecera del listado: la activa se tiñe con el acento y lleva una
-  punta que dice el sentido, y volver a pulsarla lo invierte.
-- **El recuento, el orden y la forma son una sola pieza**, con la misma superficie y el mismo canto que las
-  filas. El conmutador de forma estaba metido en la caja de filtros, donde se leía como un filtro más.
-- **La plataforma cambia de color en cinco paletas.** Es una categoría más del renglón y compartía sitio con
-  otras cuatro que ya tienen su familia con significado —rojo los puntos débiles, verde los fuertes, ámbar el
-  año, gris el «+N»—; en «Plata y acero», «Cámara de pruebas» y «Ladrones de corazones» era gris, y en
-  «Grimdark», verde. Pasa a la familia fría, con el tono que le toca a cada una dentro de su propia identidad.
-- **El análisis ya no se vuelca en el detalle del juego**: hay un enlace que lleva a su pantalla
-  (`/perfil/resenas/:id`), donde se lee con su ancho de lectura, su medallón y sus análisis sugeridos. Volcado
-  ocupaba el detalle entero —hay reseñas de veinte mil caracteres— y empujaba fuera de la vista el resto de los
-  datos, que es justo lo que se abre el detalle para ver: el detalle pasa de unos 600 px a 245. Y el botón de
-  volver de esa pantalla **devuelve al listado del que se vino**, no al listado de reseñas.
-- **El mosaico funciona en el teléfono.** Elegir «tarjetas» en un móvil revertía a renglones sin avisar.
-- Las mayúsculas del listado obedecen a la preferencia de apariencia, como el resto de los rótulos.
+- **El orden se pulsa en palabras**, en la cabecera del listado: la activa se tiñe con el acento y lleva una
+  punta que dice el sentido. Recuento, orden y forma son ahora una sola pieza, con el canto de las filas.
+- **El análisis tiene pantalla propia** (`/perfil/resenas/:id`) en vez de volcarse en el detalle del juego, que
+  pasa de unos 600 px a 245. El botón de volver devuelve al listado del que se vino.
+- **La plataforma cambia de color en cinco paletas**, a la familia fría: compartía el gris o el verde de otras
+  categorías que ya tienen significado propio.
+- **El mosaico funciona en el teléfono** (elegir «tarjetas» revertía a renglones sin avisar) y las mayúsculas del
+  listado obedecen a la preferencia de apariencia.
+- **En el hub social, las carátulas ajenas son de momento solo para el rango mithril.** Tu biblioteca se resuelve
+  una vez; la de otra persona es un catálogo entero de juegos que no tienes, y se multiplica por cada perfil que
+  abras. El resto ve la misma lista sin imágenes.
 
 ### Fixed
-- **La forma del listado y las carátulas no se sincronizaban, y de paso tumbaban las demás preferencias.** La
-  lista de claves admitidas en `publicConfig` (`firestore.rules`) no incluía `listShape` ni `covers`, que el
-  cliente lleva escribiendo desde que existen. Una lista de claves que no cuadra **rechaza la escritura entera**,
-  así que a quien hubiera tocado la forma del listado le dejaban de viajar también la paleta y el tema. Mismo
-  caso que le pasó a `effects` en su día.
-- **Las carátulas no se veían en desarrollo** y no había forma de saber por qué: `/cover` es una Pages Function
-  y el servidor de Vite no las ejecuta, así que devolvía el HTML de la aplicación y el `<img>` se quedaba en
-  blanco, sin un solo error. Ahora el servidor de desarrollo la sirve con el mismo emparejador que producción.
-
-- **Un juego sin carátula ya no se queda así para siempre.** Su «no» se revisa a los noventa días —cuatro
-  preguntas al año por juego, no cincuenta— y guardar la ficha de ese juego adelanta la revisión, con un mínimo
-  de un día entre gestos para que ordenar la biblioteca una tarde no dispare una ráfaga. La tercera vía es la de
-  siempre y la más rápida: **corregir el título**, porque el nombre va dentro de la pregunta.
-- **No poder escribir en KV dejaba sin carátula a quien ya la tenía resuelta.** Cuando la cuenta agota su
-  presupuesto diario de escrituras, el `put` falla; y como esa excepción subía hasta la Function, `/cover`
-  contestaba un 500 con la imagen a un paso. Ahora guardar es el mejor esfuerzo y nunca una condición para
-  responder: lo peor que pasa es volver a preguntarlo mañana.
-- **El llenado en segundo plano daba por hecho lo que ni siquiera llegó a preguntarse.** Un 429 del cupo o un
-  501 de un entorno sin credenciales quedaban apuntados como «este juego ya está mirado», así que quien
-  importara una biblioteca de más de 500 juegos perdía el precalentamiento de todo lo que vino después de topar.
-  Es la misma confusión que el servidor tiene prohibida desde hace tiempo: un fallo de infraestructura no puede
-  escribirse como si fuera un dato.
+- **La forma del listado y las carátulas no se sincronizaban, y tumbaban las demás preferencias.** Las reglas de
+  Firestore no admitían `listShape` ni `covers` en `publicConfig`, y una clave no admitida rechaza la escritura
+  entera: a quien tocara la forma dejaban de viajarle también la paleta y el tema.
+- **Las carátulas no se veían en desarrollo**, y sin un solo error: `/cover` es una Pages Function y el servidor
+  de Vite no las ejecuta. Ahora las sirve con el mismo emparejador que producción.
+- **Un juego sin carátula ya no se queda así para siempre.** Se revisa a los noventa días, guardar su ficha
+  adelanta la revisión (con un día de margen entre gestos) y corregir el título la reabre al instante.
+- **No poder escribir en KV dejaba sin carátula a quien ya la tenía resuelta:** el fallo al guardar tumbaba la
+  respuesta entera. Guardar pasa a ser el mejor esfuerzo, nunca una condición para responder.
+- **El llenado en segundo plano daba por hecho lo que no llegó a preguntarse** (un 429 del cupo, un 501 sin
+  credenciales), así que quien importara más de 500 juegos perdía el precalentamiento de todo lo que vino
+  después.
 
 ### Performance
-- **El emparejamiento acertado deja de caducar.** Duraba un mes, y un mes era justo el ciclo del desperdicio: la
-  biblioteca entera se volvía a resolver contra IGDB cada treinta días —unas trescientas consultas y otras
-  tantas escrituras por persona— para llegar a la misma respuesta, porque la ficha de un juego no se mueve. Para
-  rectificar está la versión de la clave, que los invalida a todos a la vez y cuando se decida.
-- **La carátula guardada dura más y se refresca sola.** El service worker revalida a los noventa días en vez de
-  a los siete (eran ~300 peticiones semanales por dispositivo para recibir los mismos bytes) y el navegador
-  conserva la copia un año con `stale-while-revalidate`, que la sigue pintando al instante mientras pide la
-  nueva por detrás. No se alarga el `max-age`, que congelaría de verdad una errata corregida.
-- **La biblioteca de otra persona reaprovecha las carátulas que ya tienes.** La URL lleva las plataformas
-  dentro, así que tu Hollow Knight en Steam y el suyo en Switch eran dos descargas, dos sitios en la caché y
-  —cuando las plataformas no normalizan igual— dos emparejamientos en el servidor por el mismo juego. Ahora, si
-  de ese título ya hay carátula en este navegador, se pide con las plataformas que funcionaron y la sirve la
-  caché sin salir a la red.
-- **La franja del renglón pide la resolución que le toca.** Se compararon las portadas a 1080p y a 720p ya
-  recortadas y con su velo encima: a 151 px de alto no se distinguen. La grande queda para el rango mithril y
-  el resto usa la media, que pesa la mitad: recorrer una biblioteca de trescientos juegos pasa de unos 45 MB a
-  unos 24.
-- **Fuera la tabla de escritorio, que llevaba tiempo sin poder verse.** El listado lleva siempre una de las dos
-  formas nuevas y las dos escondían la cabecera, así que se pintaban 8 celdas por fila de las que 7 eran
-  invisibles, más cinco botones de ordenar que nadie podía pulsar. En la pantalla del listado son **326 nodos
-  menos**.
+- **El emparejamiento acertado deja de caducar.** Duraba un mes, y eso era volver a resolver la biblioteca
+  entera contra IGDB cada treinta días para llegar a la misma respuesta. Para rectificar está la versión de la
+  clave, que los invalida a todos a la vez.
+- **La carátula guardada dura más y se refresca sola:** el service worker revalida a los noventa días en vez de
+  a los siete y el navegador conserva la copia un año con `stale-while-revalidate`, pintándola al instante
+  mientras pide la nueva por detrás.
+- **Las listas ajenas reaprovechan la carátula que ya tienes** del mismo título, en vez de descargar otra por
+  tenerla en otra plataforma.
+- **La franja del renglón pide la resolución que le toca:** recorrer una biblioteca de trescientos juegos pasa
+  de unos 45 MB a unos 24. La grande queda para mithril.
+- **Fuera la tabla de escritorio**, que llevaba tiempo sin poder verse: **326 nodos menos** en la pantalla del
+  listado.
+
+### Security
+- **El proxy de carátulas no resuelve juegos nuevos para otras webs.** Una carátula ya emparejada se sirve a
+  quien sea —no cuesta nada—, pero el trabajo caro solo se hace desde aquí.
+- **El modo ampliado de carátulas exige el sello del rango**, verificado en el servidor. Mientras dependió de un
+  parámetro en la URL, cualquiera podía duplicar el gasto del servicio.
 
 ### Tests
-- Las tres caras de la carga de una carátula, que era un fallo invisible: de ese estado cuelga la opacidad de la
-  imagen, así que si dejara de llegar a «lista» la carátula estaría descargada, en su sitio y a cero, sin error
-  en consola ni nada que lo delatara.
-- La preferencia del tamaño de las tarjetas, incluido que un valor con forma inesperada caiga en el paso de en
-  medio: ese número entra en una división, y un valor raro no da un mosaico feo, da la lista en blanco.
-- Que el listado sigue teniendo una sola columna, que es lo que hace imposible el reparto de ancho que dejaba el
-  nombre a un carácter por línea.
-- Que `publicConfig` admite la forma, el tamaño y las carátulas, y rechaza lo que no sea un valor conocido.
-- Lo que cuesta cada respuesta de `/cover`: que servir lo ya sabido no gasta cupo ni escribe, que el tope diario
-  del servicio corta aunque la IP tenga de sobra, que el sello del rango levanta los dos topes y que una
-  carátula ya emparejada se sirve incluso desde otra web, pero un juego nuevo no.
-- Los tres caminos de vuelta de un juego sin carátula —el plazo de noventa días, la edición pasado un día y el
-  título corregido—, que son los que impiden que un «no» se vuelva permanente sin convertirse en una fuga.
-- Que el interruptor de las carátulas es un interruptor y no un borrado: apagado no pide una sola imagen, lo
-  aprendido sobrevive y al encenderlo otra vez se piden exactamente las mismas URL, que es lo que hace que las
-  sirva la caché en vez de la red.
+- Las tres caras de la carga de una carátula, el tamaño de las tarjetas y que `publicConfig` admite las claves
+  nuevas y rechaza lo desconocido.
+- Lo que cuesta cada respuesta de `/cover`: qué gasta cupo, qué escribe en KV, qué topa y qué se sirve igual.
+- Los tres caminos de vuelta de un juego sin carátula, y que el interruptor de carátulas no borra lo aprendido:
+  apagado no pide nada y al encenderlo se piden las mismas URL, que sirve la caché.
 
 ## [1.2.6] - 2026-09-12
 
