@@ -110,24 +110,6 @@
   :root[data-palette="cyberpunk"] .btn-danger::before,
   :root[data-palette="cyberpunk"] .btn-abandoned::before { animation: cyber-glitch-layer 17s ease-in-out infinite; }
 
-  /* CÓMO ENTRA UNA CARÁTULA en esta casa: como una señal que acaba de sintonizar. La imagen no se funde, se
-     REARMA —aparece a franjas descolocadas que se recolocan— con el mismo lenguaje que el destello de los
-     titulares y los enlaces. `steps(1, end)` es lo que lo hace glitch y no barrido: sin él, `clip-path` y
-     `transform` interpolan suave y lo que sale es un limpiaparabrisas.
-     Es un gesto de FIRMA, así que va con los efectos encendidos; apagados queda el fundido de la casa. */
-  :root[data-effects="on"][data-palette="cyberpunk"] .game-cover[data-carga="lista"] .game-cover-img,
-  :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) .game-cover[data-carga="lista"] .game-cover-img {
-    animation: cyber-cover-in 1.8s steps(1, end);
-  }
-  @keyframes cyber-cover-in {
-    0%   { opacity: 0; clip-path: inset(46% 0 46% 0); transform: translateX(-7px); }
-    14%  { opacity: 1; clip-path: inset(8% 0 62% 0);  transform: translateX(6px); }
-    30%  { opacity: 1; clip-path: inset(66% 0 4% 0);  transform: translateX(-5px); }
-    46%  { opacity: 1; clip-path: inset(26% 0 38% 0); transform: translateX(4px); }
-    62%  { opacity: 1; clip-path: inset(52% 0 12% 0); transform: translateX(-3px); }
-    78%  { opacity: 1; clip-path: inset(0 0 0 0);     transform: translateX(2px); }
-    100% { opacity: 1; clip-path: inset(0 0 0 0);     transform: none; }
-  }
 }
 
 /* ── §1b · GLITCH portado a otras firmas. Misma mecánica confinada que el cyberpunk (destello en ~2% de un ciclo

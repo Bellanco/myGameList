@@ -264,24 +264,6 @@
   :root[data-palette="portal"] .active-filter-chip,
   :root[data-palette="portal"] .hub-feed-game-chip,
   :root[data-palette="portal"] .chip { animation: portal-fluoro 17s ease-in-out infinite; }
-  /* CÓMO ENTRA UNA CARÁTULA en Aperture: como un panel que se enciende. La imagen no se funde, PARPADEA —dos
-     o tres intentos hasta que agarra— con el mismo lenguaje que el tubo fluorescente de los chips, pero sin
-     confinar al 4 % del ciclo: aquí el arranque ES lo que se cuenta, y dura lo que dura.
-     Es un gesto de FIRMA, así que va con los efectos encendidos; apagados queda el fundido de la casa. */
-  :root[data-effects="on"][data-palette="portal"] .game-cover[data-carga="lista"] .game-cover-img {
-    animation: portal-cover-in 1.8s ease-out;
-  }
-  @keyframes portal-cover-in {
-    0%   { opacity: 0;   filter: brightness(1.7); }
-    9%   { opacity: .95; filter: brightness(1.55); }
-    15%  { opacity: .12; filter: brightness(1); }
-    27%  { opacity: 1;   filter: brightness(1.35); }
-    35%  { opacity: .28; filter: brightness(1); }
-    52%  { opacity: 1;   filter: brightness(1.18); }
-    62%  { opacity: .6;  filter: brightness(1); }
-    100% { opacity: 1;   filter: none; }
-  }
-
   /* Desincroniza por posición (tubos distintos parpadean en momentos distintos). */
   :root[data-palette="portal"] .chip:nth-of-type(3n) { animation-delay: -4s; }
   :root[data-palette="portal"] .chip:nth-of-type(3n+1) { animation-delay: -10s; }
