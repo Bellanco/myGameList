@@ -80,6 +80,25 @@ const MAX_RESOLUCIONES_HORA = 500;
  */
 const LOTE_CUPO = 10;
 
+/**
+ * ¿ESTA PETICIÓN VIENE DE OTRA WEB?
+ *
+ * `Sec-Fetch-Site` la pone el NAVEGADOR y el JavaScript de la página no puede tocarla, así que un
+ * `<img src="https://…/cover?n=…">` colgado en otro sitio llega marcado como `cross-site`, y el mosaico de esta
+ * app —que siempre pide en relativo, ver `coverUrl`— llega como `same-origin`. Es la única señal fiable para
+ * distinguirlos, porque la petición de una imagen no puede llevar cabeceras propias.
+ *
+ * TODO LO DEMÁS PASA: `same-site`, `none` (pegar la URL en la barra, abrir un marcador) y la cabecera AUSENTE,
+ * que es lo que mandan los navegadores que no la implementan —Safari hasta el 16.4— y cualquier cliente que no
+ * sea un navegador. Ante la duda se deja pasar, y a propósito: esto NO es una frontera de seguridad y no puede
+ * serlo, porque `curl` escribe la cabecera que le apetezca. Lo que corta es el caso real y barato de cortar —que
+ * otro sitio cuelgue sus carátulas de aquí y nos deje pagando sus consultas a IGDB y sus escrituras de KV—, no
+ * al que se moleste en falsificarla, que para eso está el cupo por IP.
+ */
+function vieneDeOtroSitio(request: Request): boolean {
+  return request.headers.get('Sec-Fetch-Site') === 'cross-site';
+}
+
 /** Cupo gastado por una IP en la hora en curso; devuelve `false` cuando ya no queda. */
 async function quedaCupo(env: Env, request: Request): Promise<boolean> {
   const ip = request.headers.get('CF-Connecting-IP') || 'desconocida';
@@ -147,6 +166,17 @@ export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise
      la función que hacía las dos cosas, cada juego nuevo leía dos veces la misma clave de KV. */
   let coverId = await leerCaratulaCacheada(env, nombre, listaPlataformas, ampliado);
   if (coverId === undefined) {
+    /* De otra web no se RESUELVEN juegos nuevos, y la comprobación va AQUÍ y no al entrar: una carátula ya
+       emparejada se le sirve a quien sea. Servirla no cuesta ni una consulta a IGDB ni una escritura de KV —los
+       bytes los pone la caché del borde—, así que negarla rompería enlaces sin ahorrar nada. Lo que no se le
+       regala a un tercero es el trabajo caro, que es emparejar títulos que nadie ha pedido todavía.
+       Antes que el cupo para que un sitio ajeno no gaste ni la lectura del contador. */
+    if (vieneDeOtroSitio(request)) {
+      return new Response('Las carátulas nuevas solo se resuelven desde esta web', {
+        status: 403,
+        headers: { 'Cache-Control': 'no-store' },
+      });
+    }
     if (!(await quedaCupo(env, request))) {
       // 429 y `no-store`: es pasajero. Con `Retry-After` en segundos hasta que termine la hora en curso.
       const restan = 3600 - (Math.floor(Date.now() / 1000) % 3600);
