@@ -37,6 +37,20 @@ interface GameTableProps {
   onOpenInbox?: () => void;
   tabActions: TabAction[];
   readOnly?: boolean;
+  /**
+   * ¿SE PUEDEN PEDIR CARÁTULAS EN ESTA LISTA? Por defecto sí, y manda la preferencia de quien mira.
+   *
+   * Existe porque la misma tabla pinta DOS cosas que no cuestan lo mismo: tu biblioteca, cuyos títulos ya están
+   * resueltos y calentados por el recorrido de fondo, y la de otra persona, que es un catálogo entero de juegos
+   * que tú no tienes. Abrir el perfil de un amigo con trescientos juegos nuevos son trescientas resoluciones
+   * contra IGDB y trescientas escrituras de KV, y eso se multiplica por cada perfil que se visite: es el gasto
+   * más grande que puede tener el servicio y el que menos control tiene, porque no lo decide cuánta biblioteca
+   * tienes tú sino a cuánta gente miras.
+   *
+   * Con `false` la lista se pinta SIN imágenes, que es exactamente la vista que ya existe cuando la preferencia
+   * está apagada: no hay que mantener un segundo diseño para esto.
+   */
+  allowCovers?: boolean;
   /** Orden activo de la pestaña; si se pasa junto a `onSort`, las columnas ordenables son pulsables. */
   sort?: TabSort;
   onSort?: (tab: TabId, column: string) => void;
@@ -383,6 +397,7 @@ export const GameTable = memo(function GameTable({
   onOpenInbox,
   tabActions,
   readOnly = false,
+  allowCovers = true,
   sort,
   onSort,
   visibility,
@@ -462,8 +477,13 @@ export const GameTable = memo(function GameTable({
      obedece a la clase `is-cards`, que es lo que permite que la forma sea una preferencia y no un breakpoint. */
   const { shape, setShape } = useListShape();
   /* Apagada por defecto: sin encenderla, `src` va vacío, no se pide ninguna imagen y la caja se queda con su
-     portada de casa. Es la preferencia la que autoriza a que el servidor consulte los títulos en IGDB. */
-  const { covers } = useCovers();
+     portada de casa. Es la preferencia la que autoriza a que el servidor consulte los títulos en IGDB.
+     Y la preferencia solo decide DENTRO de lo que esta lista permite (ver `allowCovers`): en la biblioteca de
+     otra persona hoy no se piden carátulas salvo para el rango que las tiene desbloqueadas, porque ahí cada
+     perfil visitado es un catálogo nuevo que resolver. El día que se abra a todos, esta línea no cambia: basta
+     con que quien monta la tabla deje de restringirlo y vuelve a mandar el check. */
+  const { covers: coversPreferidas } = useCovers();
+  const covers = coversPreferidas && allowCovers;
   /* TAMAÑO DE LOS CUADROS, elegido en la cabecera del listado. Solo cambia cuántas columnas caben; el contenido
      de cada cuadro es el mismo, que es lo que evita tener tres diseños que mantener. */
   const { size: gridSize, setSize: setGridSize } = useGridSize();
