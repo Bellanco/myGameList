@@ -322,6 +322,10 @@ export const STATS_UI = {
      */
     unfinished: 'Contrato sin cerrar',
     backToStats: 'Volver a las estadísticas',
+    /* Y desde el detalle de un juego del listado, de donde también se llega. El rótulo nombra el sitio al que
+       lleva: prometer «las reseñas» y devolver al listado —o al revés— es lo que hace que nadie se fíe del
+       botón de volver. */
+    backToList: 'Volver al listado',
     // Aquí vivía `mine: 'Tus reseñas'`, que firmaba el detalle de una reseña propia. Se ha retirado con la
     // firma: en esta pantalla todas son tuyas, así que nombrarte no distinguía ninguna (ver `ReviewDetailHead`).
   },

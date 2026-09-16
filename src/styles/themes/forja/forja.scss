@@ -37,7 +37,6 @@
    o ese título se queda en la letra del cuerpo mientras el resto de titulares llevan la del rótulo. */
 :root[data-palette="forja"] .modal-hd,
 :root[data-palette="forja"] .dialog-title,
-:root[data-palette="forja"] .app-title,
 :root[data-palette="forja"] .rl-card-name,
 :root[data-palette="forja"] .rl-card-tag,
 :root[data-palette="forja"] .rl-item,
@@ -73,3 +72,27 @@
 :root[data-palette="forja"] .hub-review-medal,
 :root[data-palette="forja"] .hub-feed-date,
 :root[data-palette="forja"] .hub-review-date { font-family: var(--font-mono); }
+
+/* ── §N · LA CAJA SIN CARÁTULA = EL LINGOTE ────────────────────────────────────────────────────────────
+   El tema de casa no se disfraza de nada, así que su pieza es la más sobria de las ocho: el canto muy
+   rebajado que ya tiene (`--radius-lg`), el rescoldo del metal todavía caliente entrando por el filo de
+   abajo y el TEMPLE —el turquesa del agua— en el canto de la izquierda. Los dos estados del metal, uno a
+   cada lado, que es el reparto por papel de toda la paleta. ── */
+:root[data-palette="forja"] .game-card.is-flat {
+  border: 1px solid var(--hair);
+  border-left: 3px solid color-mix(in srgb, var(--forja-temple) 75%, transparent);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(0deg, color-mix(in srgb, var(--steam) 22%, transparent) 0, transparent 42%),
+    linear-gradient(180deg, color-mix(in srgb, var(--text) 9%, transparent) 0 1px, transparent 1px),
+    var(--surface);
+  box-shadow: var(--e2);
+}
+/* SIN MEDIDOR EN LA CAJA SIN CARÁTULA. El tema de casa es el más sobrio de los ocho y su pieza ya dice la
+   nota con el aro de la cabecera; el filo de abajo era una segunda vez.
+   Y no es solo criterio: el canto de esta caja tiene 16 px de radio, cuatro veces lo que mide un filo, así
+   que ninguna de las dos formas de rematarlo funciona —a sangre se le estrechan las puntas siguiendo la
+   curva y parece mal cortado; retirado hasta donde el borde vuelve a ser recto, deja de ser un canto y se
+   queda en un subrayado suelto a media caja—. Los demás temas sí lo llevan: sus cajas tienen el canto vivo
+   o un marco recto donde un filo se apoya sin pelear con nada. */
+:root[data-palette="forja"] .game-card.is-flat .game-card-meter { display: none; }

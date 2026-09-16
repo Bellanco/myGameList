@@ -7,7 +7,7 @@
  * chunks de JS y CSS que ese HTML referencia → pantalla en blanco. La app se anunciaba como offline-first y no
  * arrancaba offline.
  *
- * ESTRATEGIA (tres reglas, por tipo de recurso):
+ * ESTRATEGIA (cuatro reglas, por tipo de recurso):
  *  - Navegaciones (HTML) → RED PRIMERO, con el shell cacheado como respaldo. El HTML es lo único que cambia de
  *    contenido sin cambiar de URL, así que nunca se sirve de caché habiendo red (es también lo que hace el
  *    `Cache-Control: no-store` de `public/_headers`). Offline, cualquier ruta de la SPA cae en el shell, igual
@@ -15,6 +15,9 @@
  *  - `/assets/*` → CACHÉ PRIMERO. Aquí no hay riesgo de servir algo viejo: Vite les pone un hash de contenido
  *    en el nombre, así que una URL identifica un contenido para siempre y un despliegue nuevo estrena nombres.
  *    Esta es la regla que hace que la app arranque de verdad sin red.
+ *  - `/cover` → CACHÉ PRIMERO, con revalidación en segundo plano solo cuando la copia ya tiene sus días. Una
+ *    carátula no cambia salvo que se corrija el título o IGDB estrene ficha, y son ~300 por biblioteca: pedirlas
+ *    todas en cada visita era el gasto más grande del service worker (ver `COVER_REVALIDATE_AFTER_MS`).
  *  - Resto de GET del mismo origen (iconos, manifest) → CACHÉ Y REVALIDA en segundo plano.
  *
  * FUERA DE LA CACHÉ, SIEMPRE: `/api/*` (nuestras Pages Functions). Son respuestas por usuario y revocables; el
@@ -47,6 +50,48 @@ const BUILD_ID = self.__SW_BUILD_ID__ || 'dev';
 const PRECACHE_ASSETS = self.__PRECACHE_ASSETS__ || [];
 
 const CACHE_NAME = `mygamelist-${BUILD_ID}`;
+
+/**
+ * LAS CARÁTULAS VAN EN SU PROPIO CUBO, y sin el id del build en el nombre. La caché normal se tira entera en
+ * cada despliegue (ver el `activate`), y eso es lo correcto para los chunks —el build nuevo estrena nombres—
+ * pero sería absurdo para las carátulas: son de IGDB, no del build, no cambian al publicar y una biblioteca
+ * grande son ~300 imágenes y varios megas. Con el nombre atado al build, cada versión que publicaras obligaría
+ * a todo el mundo a volver a bajárselas.
+ *
+ * La `v1` del nombre es la manija para tirarlas a propósito si algún día hace falta; no la toques por publicar.
+ */
+const COVER_CACHE_NAME = 'mygamelist-covers-v1';
+
+/**
+ * CUÁNTO SE FÍA DE UNA CARÁTULA YA GUARDADA antes de volver a preguntar por ella.
+ *
+ * Las carátulas se servían con «caché y revalida», que es la regla del resto de estáticos, y ahí estaba mal: esa
+ * regla vuelve a pedir SIEMPRE, así que abrir el mosaico con la biblioteca ya llena disparaba ~300 peticiones y
+ * ~300 reescrituras del cubo para recibir trescientas veces exactamente los mismos bytes. La caché HTTP del
+ * navegador solía absorber el viaje —la respuesta trae `max-age` de un mes—, pero la reescritura no la absorbe
+ * nadie, y en cuanto esa caché desaloja una entrada el viaje sale de verdad a la red.
+ *
+ * Una carátula es lo más parecido a inmutable que hay aquí: el emparejamiento nombre → portada solo cambia si se
+ * corrige una errata del título o si IGDB estrena ficha. Eso pasa en días, no en minutos, así que se sirve de
+ * caché sin preguntar y solo se revalida —una vez, en segundo plano— la copia que ya tiene sus días encima.
+ */
+const COVER_REVALIDATE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * TOPE DE CARÁTULAS GUARDADAS. El cubo sobrevive a los despliegues a propósito (ver arriba), así que sin esto lo
+ * único que hacía era crecer: los juegos que se renombran o se borran de la lista dejan su entrada dentro para
+ * siempre, y nadie la vuelve a pedir.
+ *
+ * 800 sale de la biblioteca de referencia: 302 juegos que se piden hasta en dos tamaños (el del mosaico y el de
+ * la franja del renglón) son ~600 entradas de uso legítimo, y el resto es margen para que la poda no muerda lo
+ * que se está mirando. Cuando se pasa, se tiran las más antiguas: la Cache API devuelve las claves en el orden en
+ * que se metieron, así que `keys()` ya da el orden de sacrificio.
+ *
+ * No es una cuota de bytes porque no hace falta que lo sea: lo que se quiere evitar es el crecimiento sin fin,
+ * no apurar el almacenamiento. Si el origen llegara a su cuota, el navegador desaloja el origen ENTERO —shell y
+ * chunks incluidos—, que es justo el estropicio que este tope aleja.
+ */
+const MAX_COVERS_EN_CACHE = 800;
 
 /** Shell mínimo: la raíz (con la que se responde a cualquier ruta de la SPA offline) y el manifest. */
 const SHELL = ['/', '/manifest.json'];
@@ -122,7 +167,12 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const names = await caches.keys();
-    await Promise.all(names.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name)));
+    // El cubo de carátulas SOBREVIVE al despliegue a propósito: ver `COVER_CACHE_NAME`.
+    const conservar = new Set([CACHE_NAME, COVER_CACHE_NAME]);
+    await Promise.all(names.filter((name) => !conservar.has(name)).map((name) => caches.delete(name)));
+    // Y como el cubo de carátulas es el único que NO se tira, este es el momento de recortarlo: un despliegue es
+    // el punto fijo que un cubo perpetuo no tiene. El resto del recorte lo hace `handleCover` mientras se llena.
+    await podarCaratulas(await caches.open(COVER_CACHE_NAME)).catch(() => {});
     await self.clients.claim();
   })());
 });
@@ -207,8 +257,8 @@ async function handleImmutableAsset(request) {
 }
 
 /** Iconos, manifest y demás estáticos: se sirve la copia y se revalida en segundo plano. */
-async function handleStaleWhileRevalidate(request, event) {
-  const cache = await caches.open(CACHE_NAME);
+async function handleStaleWhileRevalidate(request, event, cacheName = CACHE_NAME) {
+  const cache = await caches.open(cacheName);
   const hit = await cache.match(request);
 
   const revalidate = fetch(request)
@@ -227,6 +277,119 @@ async function handleStaleWhileRevalidate(request, event) {
 
   try {
     return await revalidate;
+  } catch {
+    return offlineResponse();
+  }
+}
+
+/**
+ * Edad de una respuesta guardada, en milisegundos, según su cabecera `Date`. `Infinity` cuando no se puede leer:
+ * sin fecha no se puede afirmar que sea fresca, y el peor caso de equivocarse por ahí es revalidar de más —el
+ * comportamiento de antes—, mientras que el de equivocarse al revés sería no refrescar jamás.
+ */
+function edadDe(response) {
+  const fecha = Date.parse(response?.headers?.get('date') || '');
+  return Number.isFinite(fecha) ? Date.now() - fecha : Infinity;
+}
+
+/**
+ * EL TOPE, LEVANTADO. La aplicación puede pedir que no se pode (lo hace para el rango más alto, y solo mientras
+ * el navegador diga que hay sitio de sobra: ver `core/utils/coverLimits`). El worker no puede comprobar ni el
+ * rango ni el almacenamiento por su cuenta, así que se lo dicen por `postMessage`.
+ *
+ * La bandera se guarda en el propio cubo, como una entrada más, porque el worker se para y arranca cuando el
+ * navegador quiere: en una variable se habría perdido en el primer reinicio y la poda habría vuelto sin que
+ * nadie se enterara.
+ */
+const CLAVE_SIN_TOPE = '/__covers-sin-tope';
+
+async function sinTopeDeCaratulas(cache) {
+  return Boolean(await cache.match(CLAVE_SIN_TOPE));
+}
+
+self.addEventListener('message', (event) => {
+  if (event.data?.tipo !== 'covers-sin-tope') {
+    return;
+  }
+  event.waitUntil((async () => {
+    const cache = await caches.open(COVER_CACHE_NAME);
+    if (event.data.valor) {
+      await cache.put(CLAVE_SIN_TOPE, new Response('1'));
+    } else {
+      // Al volver el tope se poda en el acto: si se ha llegado aquí es porque ya no hay sitio de sobra, y
+      // esperar a la siguiente carátula nueva sería esperar justo cuando no se puede.
+      await cache.delete(CLAVE_SIN_TOPE);
+      await podarCaratulas(cache);
+    }
+  })());
+});
+
+/**
+ * Deja el cubo de carátulas por debajo de su tope, tirando las más antiguas. Se cuentan las entradas y no los
+ * bytes: `cache.keys()` es una lista de peticiones y medir el peso obligaría a abrir cada respuesta.
+ */
+async function podarCaratulas(cache) {
+  if (await sinTopeDeCaratulas(cache)) {
+    return;
+  }
+  const claves = await cache.keys();
+  if (claves.length <= MAX_COVERS_EN_CACHE) {
+    return;
+  }
+  const caratulas = claves.filter((clave) => !clave.url.endsWith(CLAVE_SIN_TOPE));
+  if (caratulas.length <= MAX_COVERS_EN_CACHE) {
+    return;
+  }
+  const sobran = caratulas.slice(0, caratulas.length - MAX_COVERS_EN_CACHE);
+  await Promise.all(sobran.map((clave) => cache.delete(clave)));
+}
+
+/**
+ * Cada cuántas carátulas NUEVAS se comprueba el tope. Contarlo en una variable del worker —que muere y renace a
+ * menudo— es a propósito: quien llena una biblioteca entera lo hace en una sola sesión larga del worker y pasa
+ * por aquí varias veces, mientras que quien solo abre la app y mira cuatro cajas no paga un recorrido de claves
+ * por cada imagen.
+ */
+const CADA_CUANTAS_SE_PODA = 50;
+let caratulasNuevas = 0;
+
+/**
+ * CARÁTULAS: CACHÉ PRIMERO, y la copia vieja se refresca sola por detrás (ver `COVER_REVALIDATE_AFTER_MS`).
+ *
+ * La diferencia con `handleStaleWhileRevalidate` es la que se ve al abrir el mosaico con la biblioteca llena:
+ * allí son trescientas peticiones y trescientas reescrituras del cubo para recibir los mismos bytes; aquí, cero.
+ */
+async function handleCover(request, event) {
+  const cache = await caches.open(COVER_CACHE_NAME);
+  const hit = await cache.match(request);
+
+  if (hit) {
+    if (edadDe(hit) >= COVER_REVALIDATE_AFTER_MS) {
+      // Una sola vez y en segundo plano: quien mira la caja se lleva la copia que ya hay, sin esperar a nada.
+      event.waitUntil((async () => {
+        try {
+          const fresca = await fetch(request);
+          if (isCacheable(fresca, request)) {
+            await cache.put(request, fresca.clone());
+          }
+        } catch {
+          // Sin red no pasa nada: la copia guardada sigue sirviendo y se reintentará en otra visita.
+        }
+      })());
+    }
+    return hit;
+  }
+
+  try {
+    const response = await fetch(request);
+    if (isCacheable(response, request)) {
+      await cache.put(request, response.clone());
+      caratulasNuevas += 1;
+      if (caratulasNuevas % CADA_CUANTAS_SE_PODA === 0) {
+        event.waitUntil(podarCaratulas(cache).catch(() => {}));
+      }
+    }
+    return response;
   } catch {
     return offlineResponse();
   }
@@ -267,6 +430,12 @@ self.addEventListener('fetch', (event) => {
 
   if (url.pathname.startsWith('/assets/')) {
     event.respondWith(handleImmutableAsset(request));
+    return;
+  }
+
+  // Carátulas: su propio cubo (para que un despliegue no se las lleve por delante) y su propia regla.
+  if (url.pathname === '/cover') {
+    event.respondWith(handleCover(request, event));
     return;
   }
 

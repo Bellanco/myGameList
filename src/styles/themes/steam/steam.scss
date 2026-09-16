@@ -259,11 +259,8 @@
   --wt-h1: #5a3236; --wt-h2: #43262a; --wt-h3: #2a171a; --wt-h4: #4e2c30;
   --wt-rotulo: #ffb0a8;
 }
-:root[data-palette="steam"] .btn-complete,
-:root[data-palette="steam"] .btn-recommend { --wt-rotulo: var(--success); }
-:root[data-palette="steam"] .btn-inprogress { --wt-rotulo: var(--warn); }
-:root[data-palette="steam"] .btn-abandoned,
-:root[data-palette="steam"] .btn-recommend-active { --wt-rotulo: var(--fg-red); }
+:root[data-palette="steam"] .btn-complete { --wt-rotulo: var(--success); }
+:root[data-palette="steam"] .btn-abandoned { --wt-rotulo: var(--fg-red); }
 /* En claro los cuatro altos van otra vez COMO RESPALDO dentro del `var()`, no declarados: esta regla
    lleva `:not()` y pesa más que la de cada rol, así que declararlos aquí volvía a pisar al activo y al
    destructivo — el mismo fallo que ya había en la variante oscura. */
@@ -450,22 +447,11 @@
 :root[data-palette="steam"] .chip-deck { --wt-tono: var(--steam); }
 :root[data-palette="steam"] .hub-feed-game-chip,
 :root[data-palette="steam"] .hub-review-game { --wt-tono: var(--wt-igni); }
-/* La misma etiqueta en la tarjeta de móvil, donde la tabla se pliega y los chips pasan a ser `.rm-*`.
-   Sin lacre: a ese tamaño el sello sería mayor que el rótulo. */
-:root[data-palette="steam"] .rm-plat,
-:root[data-palette="steam"] .rm-genre,
-:root[data-palette="steam"] .rm-strong {
-  border: 0; border-radius: 0; color: var(--wt-tinta);
-  background: linear-gradient(168deg, var(--wt-papel-a1), var(--wt-papel-a2) 70%);
-  box-shadow: 0 1px 2px rgba(0,0,0,.3);
-}
-
 /* ── §6b · Los botones-icono (cuenta, ajustes, tema, filtros) eran lo único sin cuerpo: un icono suelto
    sobre el fondo, que en claro casi no se veía. Ahora son REMACHES de la chapa —disco de acero con
    filete y canto de luz— y al pulsarlos se hunden. El FAB es el mismo remache, en grande. ── */
 :root[data-palette="steam"] .btn-icon,
-:root[data-palette="steam"] .theme-toggle-btn,
-:root[data-palette="steam"] .palette-select {
+:root[data-palette="steam"] .theme-toggle-btn {
   background: linear-gradient(180deg, #414a56, #2b323b) !important;
   border: 1px solid var(--border) !important;
   color: var(--steam) !important;
@@ -473,8 +459,7 @@
   transition: filter .18s, box-shadow .12s, transform .1s;
 }
 :root[data-palette="steam"][data-theme="light"] .btn-icon,
-:root[data-palette="steam"][data-theme="light"] .theme-toggle-btn,
-:root[data-palette="steam"][data-theme="light"] .palette-select {
+:root[data-palette="steam"][data-theme="light"] .theme-toggle-btn {
   background: linear-gradient(180deg, #fbfcfd, #ccd5de) !important;
   color: var(--steam) !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 1px 2px rgba(30,42,56,.22) !important;
@@ -608,7 +593,6 @@
    vacía es el HUECO en la chapa, hundido, no una estrella gris. Así la fila de cinco se lee como cinco
    troqueles y no como un texto. */
 :root[data-palette="steam"] .stars .f,
-:root[data-palette="steam"] .star-full,
 :root[data-palette="steam"] .star-inp button.f {
   color: var(--star-full);
   text-shadow: 0 1px 0 rgba(60,38,0,.55), 0 0 6px rgba(242,199,92,.35);
@@ -618,7 +602,6 @@
   text-shadow: 0 1px 0 rgba(255,255,255,.10), 0 -1px 0 rgba(0,0,0,.55);
 }
 :root[data-palette="steam"][data-theme="light"] .stars .f,
-:root[data-palette="steam"][data-theme="light"] .star-full,
 :root[data-palette="steam"][data-theme="light"] .star-inp button.f {
   text-shadow: 0 1px 0 rgba(255,255,255,.7), 0 -1px 0 rgba(90,58,0,.35);
 }
@@ -878,4 +861,131 @@
     0%, 80%  { background-position: var(--wt-gota-x, 27%) -17px, 0 0, 0 0; }
     100%     { background-position: var(--wt-gota-x, 27%) calc(100% + 17px), 0 0, 0 0; }
   }
+}
+
+/* ── §N · LA CAJA SIN CARÁTULA = LA PLACA INSCRITA EN LA HOJA ──────────────────────────────────────────
+   Los dos materiales del tema, cada uno en su sitio: el PAPEL solo en los cantos —un pliego rasgado que
+   asoma por los cuatro lados, el mismo lenguaje que los carteles de §6— y dentro, inscrita en él, una
+   placa RECTANGULAR de acero con veta de damasco.
+
+   POR QUÉ NO EL PLIEGO ENTERO, que es la primera forma que se probó: los chips de este tema SON carteles
+   de pergamino. Sobre un fondo de pergamino se perdían —papel sobre papel— y la caja se leía como una
+   mancha. Con el metal dentro, cada cartel vuelve a ser una pieza pegada encima, que es lo que es, y el
+   papel sigue diciendo de qué tema hablamos desde el borde.
+
+   TRES PLIEGOS QUE ROTAN (`--wt-hoja1..3`), igual que los chips: con uno solo, la rejilla repetiría la
+   misma mancha en el mismo sitio treinta veces. El roto lo pone `#wt-desgarro-pliego`, el hermano mayor
+   del filtro de los carteles (vive en el mismo sitio, `IconSprite.tsx`): el de 6,5 px rompe un cartel de
+   20 px de alto, pero repartido en el canto de una caja de 218 px sale casi recto. ── */
+:root[data-palette="steam"] .game-card.is-flat {
+  /* CUÁNTO PAPEL ASOMA, y por qué es poco. El pliego empezó en 15 px y la placa se quedaba pequeña: la nota y
+     la insignia de rejugar caían a 2 y 6 px de su canto, o sea a caballo entre el metal y el pergamino, y no
+     se leían ni en uno ni en otro. Con 9 px el papel sigue contando lo suyo —el roto se ve igual, que es lo
+     que se mira— y el acero gana los doce píxeles que le hacían falta a lo que va encima. */
+  --pliego: 9px;
+  --wt-hoja-pliego: var(--wt-hoja1);
+  position: relative;
+  isolation: isolate;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+:root[data-palette="steam"] .game-card.is-flat:nth-child(3n+2) { --wt-hoja-pliego: var(--wt-hoja2); }
+:root[data-palette="steam"] .game-card.is-flat:nth-child(3n)   { --wt-hoja-pliego: var(--wt-hoja3); }
+/* EL PLIEGO, debajo de todo. Va hacia dentro (`inset: 0`) como el cartel del nombre del juego del hub:
+   así el roto se ve entero sin salirse de la caja, que es lo que mantiene todas las cajas del mosaico
+   midiendo exactamente lo mismo. */
+:root[data-palette="steam"] .game-card.is-flat::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  filter: url(#wt-desgarro-pliego);
+  background-image: var(--wt-hoja-pliego), var(--wt-velo),
+    linear-gradient(168deg, var(--wt-papel-a1), var(--wt-papel-a2) 60%, var(--wt-papel-a3));
+  background-size: 100% 100%, 200px 200px, auto;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-blend-mode: multiply, soft-light, normal;
+  box-shadow: inset 0 0 26px rgba(120,58,14,var(--wt-tostado)), 0 3px 6px rgba(0,0,0,.45);
+}
+/* LA PLACA, encima del papel y a canto vivo: un rectángulo, sin puntas ni recortes, porque aquí lo que
+   tiene forma es el papel. El damasco son dos juegos de arcos finos con paso y centro distintos, para que
+   el dibujo no se repita a la vista. */
+:root[data-palette="steam"] .game-card.is-flat::after {
+  content: "";
+  position: absolute;
+  inset: var(--pliego);
+  z-index: -1;
+  background-image:
+    repeating-radial-gradient(ellipse 190% 38% at 42% -22%,
+      color-mix(in srgb, var(--text) 8%, transparent) 0 1px, transparent 1px 6px),
+    repeating-radial-gradient(ellipse 165% 42% at 62% 122%,
+      color-mix(in srgb, var(--text) 6%, transparent) 0 1px, transparent 1px 7px),
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--text) 12%, var(--surface)) 0%,
+      color-mix(in srgb, var(--text) 5%, var(--surface)) 55%,
+      color-mix(in srgb, var(--bg) 45%, var(--surface)) 100%);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--steam) 55%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 14%, transparent),
+    0 2px 5px rgba(18,10,4,.55);
+}
+/* El contenido vive DENTRO de la placa, así que al relleno se le suma el pliego: pegada al borde, una
+   etiqueta quedaría a caballo del roto. */
+:root[data-palette="steam"] .game-card.is-flat .game-card-body {
+  /* POR ABAJO NO LLEVA RELLENO, y esto NO es una licencia de maquetación: el pliego sumado a los cuatro
+     lados hacía que el cuerpo midiera 208,7 px dentro de una caja de 201,6 declarados, así que el pie se
+     salía por el canto y `overflow: hidden` se lo comía —el medidor de este tema no se veía NUNCA—. El
+     hueco que se le quita por abajo es exactamente el que ocupa el medidor, que ya es el filo de la placa. */
+  /* ARRIBA, EN CAMBIO, EL PLIEGO SÍ SE SUMA, y con un poco más: lo primero de la caja es la NOTA, y con la
+     escala de 0 a 100 no es una fila de estrellas de 18 px sino un aro de 34 que llena la cabecera entera.
+     Con el relleno justo —o menos, como estaba— el aro arrancaba por encima del canto del metal y se veía a
+     caballo entre la placa y el pergamino; lo mismo la insignia de rejugar. Van 10 px más que antes, que es
+     lo que hace falta para que las dos piezas se apoyen DENTRO del metal: medido, el aro queda a 9 px de su
+     canto y la insignia a 13. */
+  padding: calc(var(--pliego) + .55rem) calc(var(--pliego) + .8rem) 0;
+  /* Y LAS LÍNEAS, MÁS JUNTAS. El pliego se lleva su parte por cada lado, así que con un nombre de DOS líneas
+     —«Need for Speed: Underground»— la placa se quedaba sin hueco y el medidor se salía por debajo del
+     metal. El aire que se recorta es el de entre líneas, no el del marco, que es lo que dibuja el tema. */
+  gap: .3rem;
+}
+/* Sobre el acero se escribe con la tinta del tema —la de papel es la de los carteles—, en las versales de
+   documento. Sin subrayado: el filo de Igni bajo el título era una raya más en una pieza que ya tiene su
+   canto dibujado, y en un nombre de dos líneas lo partía por la mitad. */
+:root[data-palette="steam"] .game-card.is-flat .game-card-name {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-size: var(--fs-md);
+}
+/* La nota y la insignia, remachadas a la placa. */
+:root[data-palette="steam"] .game-card.is-flat .score-ring,
+:root[data-palette="steam"] .game-card.is-flat .game-card-badge { box-shadow: 0 1px 3px rgba(18,10,4,.55); }
+/* EL MEDIDOR = EL NIVEL DE CRISTAL de la máquina, empotrado en el filo de abajo DE LA PLACA y no en el de
+   la caja: al canto lo partiría el roto del papel. Sus márgenes son el pliego exacto, así que el tubo
+   empieza y acaba donde empieza y acaba el acero.
+   Y LA LECTURA ES METAL, no pintura: sobre el tono de la nota caen las cuatro bandas de un cilindro pulido
+   —luz arriba, sombra abajo— y el color se rebaja un 25 % contra el acero del tema (`--steam`). Con el tono
+   puro parecía una pegatina de plástico pegada a una placa remachada. */
+:root[data-palette="steam"] .game-card .game-card-meter {
+  height: 6px;
+  background: color-mix(in srgb, #000 50%, var(--surface));
+  box-shadow: inset 0 0 0 1px rgba(10, 14, 18, .85);
+}
+/* EL ENCAJE ES LO ÚNICO QUE CAMBIA ENTRE LAS DOS CAJAS. La de la lámina no tiene placa ni pliego —su canto
+   es el de la propia pieza—, así que el tubo la cruza de lado a lado; aquí se mete dentro del acero. */
+:root[data-palette="steam"] .game-card.is-flat .game-card-meter {
+  width: auto;
+  margin: 0 var(--pliego) var(--pliego);
+}
+:root[data-palette="steam"] .game-card .game-card-meter::after {
+  background:
+    linear-gradient(180deg,
+      rgba(255, 255, 255, .7) 0 17%,
+      rgba(255, 255, 255, .2) 17% 34%,
+      rgba(0, 0, 0, .1) 34% 66%,
+      rgba(0, 0, 0, .3) 66% 84%,
+      rgba(0, 0, 0, .5) 84% 100%),
+    color-mix(in srgb, hsl(var(--score-hue, 0) 58% var(--acc-l)) 70%, var(--steam));
 }

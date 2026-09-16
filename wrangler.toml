@@ -25,12 +25,24 @@ GITHUB_CLIENT_ID = "Ov23ctq0mTkYHf9zqfGB"
 FIREBASE_PROJECT_ID = "mylists-f7313"
 # Mismo criterio de administrador que `firestore.rules` (isAdmin). Se lee de aquí para no repetir el literal.
 ADMIN_EMAIL = "bellanco3@gmail.com"
+# Client ID PÚBLICO de la aplicación de Twitch con la que se consulta IGDB (carátulas). Como el de GitHub,
+# aparece en las peticiones y no es secreto. El IGDB_CLIENT_SECRET NO va aquí: se sube cifrado con
+# `npx wrangler pages secret put IGDB_CLIENT_SECRET` y, en local, vive en `.dev.vars` (ignorado por git).
+IGDB_CLIENT_ID = "mc9va4neod74eulaiqaft6dzrnwkob"
 
 # Reseñas compartidas con enlace público (ver docs/plan-compartir-resenas.md). En local se usa el namespace de
 # vista previa a propósito: así una prueba nunca escribe en los datos que están sirviendo enlaces reales.
 [[kv_namespaces]]
 binding = "SHARES"
 id = "b59825792b514cca94c77ab12463340a" # mygamelist-shares-preview
+
+# Carátulas de los juegos (ver docs). Guarda el emparejamiento nombre → id de portada de IGDB y la caché
+# negativa de los que no existen, para no repetir la búsqueda ni gastar cuota de Twitch en cada visita.
+# Mismo criterio que SHARES: en local se apunta al namespace de VISTA PREVIA, para que una prueba nunca
+# escriba en los datos que están sirviendo carátulas reales.
+[[kv_namespaces]]
+binding = "COVERS"
+id = "3b70470d32ee48d9bd247fb46a52de31" # mygamelist-covers-preview
 
 [env.preview.vars]
 GITHUB_CLIENT_ID = "Ov23ctq0mTkYHf9zqfGB"
@@ -39,10 +51,18 @@ GITHUB_CLIENT_ID = "Ov23ctq0mTkYHf9zqfGB"
 FIREBASE_PROJECT_ID = "mylists-f7313"
 # Mismo criterio de administrador que `firestore.rules` (isAdmin). Se lee de aquí para no repetir el literal.
 ADMIN_EMAIL = "bellanco3@gmail.com"
+# Client ID PÚBLICO de la aplicación de Twitch con la que se consulta IGDB (carátulas). Como el de GitHub,
+# aparece en las peticiones y no es secreto. El IGDB_CLIENT_SECRET NO va aquí: se sube cifrado con
+# `npx wrangler pages secret put IGDB_CLIENT_SECRET` y, en local, vive en `.dev.vars` (ignorado por git).
+IGDB_CLIENT_ID = "mc9va4neod74eulaiqaft6dzrnwkob"
 
 [[env.preview.kv_namespaces]]
 binding = "SHARES"
 id = "b59825792b514cca94c77ab12463340a" # mygamelist-shares-preview
+
+[[env.preview.kv_namespaces]]
+binding = "COVERS"
+id = "3b70470d32ee48d9bd247fb46a52de31" # mygamelist-covers-preview
 
 [env.production.vars]
 GITHUB_CLIENT_ID = "Ov23ctq0mTkYHf9zqfGB"
@@ -51,7 +71,15 @@ GITHUB_CLIENT_ID = "Ov23ctq0mTkYHf9zqfGB"
 FIREBASE_PROJECT_ID = "mylists-f7313"
 # Mismo criterio de administrador que `firestore.rules` (isAdmin). Se lee de aquí para no repetir el literal.
 ADMIN_EMAIL = "bellanco3@gmail.com"
+# Client ID PÚBLICO de la aplicación de Twitch con la que se consulta IGDB (carátulas). Como el de GitHub,
+# aparece en las peticiones y no es secreto. El IGDB_CLIENT_SECRET NO va aquí: se sube cifrado con
+# `npx wrangler pages secret put IGDB_CLIENT_SECRET` y, en local, vive en `.dev.vars` (ignorado por git).
+IGDB_CLIENT_ID = "mc9va4neod74eulaiqaft6dzrnwkob"
 
 [[env.production.kv_namespaces]]
 binding = "SHARES"
 id = "6b6aa270bab144dcb1430190c831fcbc" # mygamelist-shares
+
+[[env.production.kv_namespaces]]
+binding = "COVERS"
+id = "838633bc9d934e1dba4c4dcd8bf03bb1" # mygamelist-covers

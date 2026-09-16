@@ -353,6 +353,11 @@ button { -webkit-tap-highlight-color: transparent; }
 :root[data-uppercase="on"] .bottom-nav-btn,
 :root[data-uppercase="on"] thead th,
 :root[data-uppercase="on"] .flabel,
+:root[data-uppercase="on"] .list-head-count,
+:root[data-uppercase="on"] .list-sort-label,
+/* Los chips del orden son las CABECERAS DE COLUMNA de siempre dichas de otra forma, y `thead th` ya está en
+   esta lista: dejarlos fuera pondría «ORDENAR» en versales y «Año» no, en la misma línea. */
+:root[data-uppercase="on"] .list-sort-chip,
 :root[data-uppercase="on"] .row-name,
 :root[data-uppercase="on"] .chip,
 :root[data-uppercase="on"] .active-filter-chip,

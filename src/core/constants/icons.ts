@@ -2,6 +2,7 @@ import type { TabId } from '../../model/types/game';
 
 export type IconName =
   | 'plus'
+  | 'arrows-to-eye'
   | 'check'
   | 'download'
   | 'upload'
@@ -52,7 +53,9 @@ export type IconName =
   /** Nodos conectados: compartir una reseña con enlace público. */
   | 'share-nodes'
   /** Dos hojas superpuestas: copiar al portapapeles. */
-  | 'content-copy';
+  | 'content-copy'
+  | 'view-list'
+  | 'view-grid';
 
 export const TAB_ICONS: Record<TabId, IconName> = {
   c: 'trophy',
@@ -63,6 +66,7 @@ export const TAB_ICONS: Record<TabId, IconName> = {
 
 export const COMMON_ICONS = {
   plus: 'plus',
+  arrowsToEye: 'arrows-to-eye',
   close: 'close',
   logout: 'logout',
   edit: 'edit',
@@ -88,4 +92,6 @@ export const COMMON_ICONS = {
   googleRecover: 'google-recover',
   share: 'share-nodes',
   copy: 'content-copy',
+  viewList: 'view-list',
+  viewGrid: 'view-grid',
 } as const;

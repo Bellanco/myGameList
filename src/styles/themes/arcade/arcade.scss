@@ -68,7 +68,6 @@
    o ese título se queda en la letra del cuerpo mientras el resto de titulares llevan la del cartel. */
 :root[data-palette="arcade"] .modal-hd,
 :root[data-palette="arcade"] .dialog-title,
-:root[data-palette="arcade"] .app-title,
 :root[data-palette="arcade"] .rl-card-name,
 :root[data-palette="arcade"] .rl-card-tag,
 :root[data-palette="arcade"] .rl-item,
@@ -103,11 +102,7 @@
   color: var(--arc-cyan-fg);
   text-shadow: 0 0 10px rgba(34, 229, 255, .45), 0 0 26px rgba(34, 229, 255, .18);
 }
-:root[data-palette="arcade"] .app-title {
-  filter: drop-shadow(0 0 12px rgba(178, 60, 255, .55));
-}
 :root[data-palette="arcade"][data-theme="light"] h2 { color: var(--fg-link); text-shadow: none; }
-:root[data-palette="arcade"][data-theme="light"] .app-title { filter: none; }
 
 /* ── §2 · Fondo: la REJILLA DEL HORIZONTE. Dos capas y ninguna imagen: el resplandor violeta del sol que se
    pone (radial, arriba) y la retícula en fuga (dos repeating-linear-gradient cruzados, con máscara). Va
@@ -243,19 +238,12 @@
   --btn-fill-b: #c2004f;
   color: #fff !important;
 }
-:root[data-palette="arcade"] .btn-complete,
-:root[data-palette="arcade"] .btn-recommend {
+:root[data-palette="arcade"] .btn-complete {
   --btn-fill-a: #6ef7c4;
   --btn-fill-b: #12a877;
   color: #06251a !important;
 }
-:root[data-palette="arcade"] .btn-inprogress {
-  --btn-fill-a: #ffd48a;
-  --btn-fill-b: #e08c00;
-  color: #2a1a00 !important;
-}
-:root[data-palette="arcade"] .btn-abandoned,
-:root[data-palette="arcade"] .btn-recommend-active {
+:root[data-palette="arcade"] .btn-abandoned {
   --btn-fill-a: #6b2745;
   --btn-fill-b: #45152b;
   color: #ffc2d0 !important;
@@ -287,8 +275,7 @@
   --btn-fill-b: #31b2c9;
   color: #04232a !important;
 }
-:root[data-palette="arcade"][data-theme="light"] .btn-abandoned,
-:root[data-palette="arcade"][data-theme="light"] .btn-recommend-active {
+:root[data-palette="arcade"][data-theme="light"] .btn-abandoned {
   --btn-fill-a: #ffd9e2;
   --btn-fill-b: #ffb3c6;
   color: #6b0026 !important;
@@ -300,8 +287,7 @@
 /* Los botones-icono (engranaje, tema, filtros, papelera del chip) son las teclas PEQUEÑAS del mismo teclado:
    cuadradas, con su filete y su sombra dura. Redondas se quedaban fuera del cartel. */
 :root[data-palette="arcade"] .btn-icon,
-:root[data-palette="arcade"] .theme-toggle-btn,
-:root[data-palette="arcade"] .palette-select {
+:root[data-palette="arcade"] .theme-toggle-btn {
   border-radius: var(--radius-sm) !important;
   border: 2px solid var(--arc-ink) !important;
   background: linear-gradient(180deg, #3b2260, #241440) !important;
@@ -310,8 +296,7 @@
   transition: transform .07s ease, box-shadow .07s ease, filter .18s;
 }
 :root[data-palette="arcade"][data-theme="light"] .btn-icon,
-:root[data-palette="arcade"][data-theme="light"] .theme-toggle-btn,
-:root[data-palette="arcade"][data-theme="light"] .palette-select {
+:root[data-palette="arcade"][data-theme="light"] .theme-toggle-btn {
   background: linear-gradient(180deg, #fff, #e6d6fa) !important;
 }
 :root[data-palette="arcade"] .btn-icon:hover,
@@ -415,31 +400,6 @@
 :root[data-palette="arcade"][data-theme="light"] .chip-deck { background: #e2e8f6 !important; color: #3b4a68 !important; }
 :root[data-palette="arcade"][data-theme="light"] .chip-more { background: #ece3f7 !important; }
 
-/* LA MISMA PEGATINA EN LA TARJETA DE MÓVIL. Cuando la tabla se pliega en tarjetas, plataforma/género/virtud
-   dejan de ser `.chip` y pasan a ser las mini-píldoras `.rm-*` del meta: si no se nombran aquí, el teléfono
-   —que es donde más se usa la app— se queda con pastillas rectas y pierde la forma del tema. Van sin giro: en
-   una línea que no envuelve, un grado de más descuadra el renglón. */
-:root[data-palette="arcade"] .rm-plat,
-:root[data-palette="arcade"] .rm-genre,
-:root[data-palette="arcade"] .rm-strong {
-  border-radius: var(--radius-pill);
-  border: 1.5px solid var(--arc-sticker);
-  color: var(--arc-on-light);
-  box-shadow: 0 2px 0 rgba(0, 0, 0, .38);
-}
-:root[data-palette="arcade"] .rm-plat { background: linear-gradient(160deg, #d3a6ff, #b23cff); }
-:root[data-palette="arcade"] .rm-genre { background: linear-gradient(160deg, #8ff4ff, #22e5ff); }
-:root[data-palette="arcade"] .rm-strong { background: linear-gradient(160deg, #9ff8d4, #2ef0a6); }
-:root[data-palette="arcade"][data-theme="light"] .rm-plat { background: #ecdcfb; color: var(--fg-link); }
-:root[data-palette="arcade"][data-theme="light"] .rm-genre { background: #d6eef3; color: #065c6b; }
-:root[data-palette="arcade"][data-theme="light"] .rm-strong { background: #d4f0e4; color: #0a6044; }
-:root[data-palette="arcade"][data-theme="light"] .rm-plat,
-:root[data-palette="arcade"][data-theme="light"] .rm-genre,
-:root[data-palette="arcade"][data-theme="light"] .rm-strong {
-  border-color: #fff;
-  box-shadow: 0 0 0 1.5px rgba(123, 27, 208, .3), 0 2px 0 rgba(58, 24, 92, .16);
-}
-
 /* ── §7 · Campos y filtros: lo que se RELLENA se HUNDE (la regla de la casa), pero aquí el hueco es una
    RANURA de la chapa, y una ranura no tiene degradado: la sombra interior es DURA y en diagonal, la misma
    que la de fuera pero al revés. Al enfocar, el tubo de neón cian se enciende alrededor.
@@ -507,9 +467,7 @@
 }
 
 /* ── §9 · Estrellas y notas: la estrella llena es una ficha de la máquina, con su punto de luz. ── */
-:root[data-palette="arcade"] .star-full,
 :root[data-palette="arcade"] .score-ring-num { filter: drop-shadow(0 0 6px rgba(255, 210, 74, .45)); }
-:root[data-palette="arcade"][data-theme="light"] .star-full,
 :root[data-palette="arcade"][data-theme="light"] .score-ring-num { filter: none; }
 
 /* ── §9b · LA NOTA 0–100 = EL MEDIDOR DE LA MÁQUINA ───────────────────────────────────────────────
@@ -758,7 +716,6 @@
    escuadra en vez de terminar en pastilla. Las cifras grandes van en la monoespaciada de marcador. ── */
 :root[data-palette="arcade"] .year-strip-col,
 :root[data-palette="arcade"] .year-scale-ramp,
-:root[data-palette="arcade"] .year-peak,
 :root[data-palette="arcade"] .shine-fill,
 :root[data-palette="arcade"] .shine-rows li,
 :root[data-palette="arcade"] .top-chip-bar,
@@ -790,3 +747,69 @@
    (`docs/logros/receta-medalla.md`) y es la misma en las siete paletas. ── */
 :root[data-palette="arcade"] .burst { shape-rendering: crispEdges; }
 :root[data-palette="arcade"] .burst-piece { rx: 0; }
+
+/* ── §N · LA CAJA SIN CARÁTULA = EL MUEBLE DE LA RECREATIVA ────────────────────────────────────────────
+   La MARQUESINA encendida arriba —la banda de luz del cartel, con sus bombillas—, la chapa con filete de
+   tinta y sombra dura en diagonal (§3), y el medidor del pie convertido en el MARCADOR de la máquina:
+   más alto y de canto a canto. El hueco de la rejilla sin carátulas sube a .9 rem justo por esta sombra
+   (ver `_table.scss`): con el de antes caía por debajo de la caja siguiente. ── */
+:root[data-palette="arcade"] .game-card.is-flat {
+  border: 2px solid var(--arc-cyan);
+  box-shadow: 6px 6px 0 color-mix(in srgb, var(--arc-pink) 70%, transparent);
+  padding-top: 10px;
+}
+/* La marquesina: banda de luz de canto a canto con las bombillas del cartel. */
+:root[data-palette="arcade"] .game-card.is-flat::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 10px;
+  background-image:
+    radial-gradient(circle, var(--arc-gold) 1.4px, transparent 1.6px),
+    linear-gradient(90deg, color-mix(in srgb, var(--steam) 85%, transparent), color-mix(in srgb, var(--arc-cyan) 70%, transparent));
+  background-size: 16px 10px, auto;
+  background-position: 3px center, 0 0;
+  background-repeat: repeat-x, no-repeat;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--steam) 45%, transparent);
+}
+/* EL CUERPO RESPIRA MENOS QUE EN LA HOJA BASE, y es por los 10 px de la marquesina: entre ella y el filo de
+   abajo, la caja de alto declarado se quedaba sin hueco para un nombre de DOS líneas —«Need for Speed:
+   Underground»— y el que pagaba era el medidor, que se salía por el canto. Arriba no hace falta ese aire
+   porque la marquesina ya separa, y abajo el que cierra es el propio filo. */
+:root[data-palette="arcade"] .game-card.is-flat .game-card-body { padding: .45rem .95rem .5rem; }
+:root[data-palette="arcade"] .game-card.is-flat .game-card-name {
+  color: var(--arc-gold);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--arc-gold) 35%, transparent);
+}
+/* EN CLARO EL RÓTULO NO PUEDE IR ENCENDIDO. El oro de la sala a oscuras da 12,35:1 sobre su superficie,
+   pero el de la sala de día se queda en 4,39:1 sobre la suya —y este nombre mide 16,8 px, así que le
+   aplica el 4,5:1 del texto normal, no el del grande—. Se hunde el mismo tono (la regla de `--text-dim`:
+   tono y saturación intactos, luminosidad movida) hasta 6,3:1, y se apaga el halo, que ahí no ilumina
+   nada: lo que en la noche es un rótulo de neón, de día es pintura sobre chapa. */
+:root[data-palette="arcade"][data-theme="light"] .game-card.is-flat .game-card-name {
+  color: color-mix(in srgb, var(--arc-gold) 78%, #000);
+  text-shadow: none;
+}
+/* EL MEDIDOR = LA MARQUESINA, otra vez. La misma fila de bombillas que corona la caja (§N) cierra la pieza
+   por abajo, solo que aquí las que se encienden son las de la nota: de un vistazo, y sin leer una cifra, se
+   ve cuántas luces lleva encendidas cada juego.
+   SIN CARRIL: las bombillas apagadas NO se pintan. Con un carril oscuro detrás, la parte que no llega a la
+   nota se leía como una banda negra pegada al canto —una pieza más en una caja que ya tiene su marco—, y lo
+   que cuenta aquí es cuánto se enciende, no cuánto queda por encender. */
+:root[data-palette="arcade"] .game-card .game-card-meter {
+  height: 10px;
+  background: none;
+}
+:root[data-palette="arcade"] .game-card .game-card-meter::after {
+  -webkit-mask-image: radial-gradient(circle, #000 2.2px, transparent 2.6px);
+  mask-image: radial-gradient(circle, #000 2.2px, transparent 2.6px);
+  -webkit-mask-size: 9px 10px;
+  mask-size: 9px 10px;
+  /* EL PATRÓN ARRANCA EN CERO, y esos 3 px que llevaba de desplazamiento no eran inocentes: con celdas de
+     9 px y bombillas de 2,2 px de radio, la del hueco ANTERIOR quedaba centrada en −1,5 y asomaba 0,7 px por
+     el canto —la fila empezaba con media bombilla cortada—. Sin desplazamiento, la primera cae centrada en
+     su celda y la fila entra entera. */
+  -webkit-mask-position: 0 center;
+  mask-position: 0 center;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, hsl(var(--score-hue, 0) 58% var(--acc-l)) 80%, transparent));
+}

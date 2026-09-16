@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PostBody, PostText } from '../../src/view/components/socialhub/PostText';
 
@@ -33,6 +33,40 @@ describe('PostText (linkify seguro)', () => {
     expect(img).toHaveAttribute('loading', 'lazy');
     expect(img).toHaveAttribute('referrerpolicy', 'no-referrer');
     expect(container.querySelector('a')).toHaveAttribute('href', src);
+  });
+
+  /* La imagen viene de un servidor ajeno y sus medidas no se saben hasta que llega: sin reservar nada, el
+     elemento mide cero y todo lo que hay debajo salta cuando la imagen aparece. */
+  it('guarda un hueco mientras la imagen baja, y lo suelta al llegar', () => {
+    const src = 'https://raw.githubusercontent.com/u/r/main/x.png';
+    const { container } = render(<PostText text={src} />);
+    const img = container.querySelector('img')!;
+
+    expect(img.getAttribute('data-carga')).toBe('cargando');
+    fireEvent.load(img);
+    expect(img.getAttribute('data-carga')).toBe('lista');
+  });
+
+  it('si la imagen no carga se degrada al enlace de siempre', () => {
+    const src = 'https://raw.githubusercontent.com/u/r/main/roto.png';
+    const { container } = render(<PostText text={src} />);
+    fireEvent.error(container.querySelector('img')!);
+
+    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByRole('link', { name: src })).toHaveAttribute('href', src);
+  });
+
+  /* El feed recicla estas piezas al llegar publicaciones nuevas: sin reiniciar, una imagen buena heredaba el
+     fallo de la que ocupaba ese sitio antes y se quedaba en enlace. */
+  it('otra publicación en el mismo sitio vuelve a intentar su imagen', () => {
+    const roto = 'https://raw.githubusercontent.com/u/r/main/roto.png';
+    const bueno = 'https://raw.githubusercontent.com/u/r/main/bueno.png';
+    const { container, rerender } = render(<PostText text={roto} />);
+    fireEvent.error(container.querySelector('img')!);
+    expect(container.querySelector('img')).toBeNull();
+
+    rerender(<PostText text={bueno} />);
+    expect(container.querySelector('img')).toHaveAttribute('src', bueno);
   });
 
   it('incrusta vídeo para .mp4 de host de confianza', () => {

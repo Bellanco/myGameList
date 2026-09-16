@@ -13,47 +13,6 @@
 // Al añadir una regla nueva: si su selector menciona SOLO clases que no usa nadie fuera del hub, va en
 // `social.scss`; si toca alguna de las compartidas de arriba, va aquí.
 
-/* Header */
-.app-header {
-  background: linear-gradient(90deg, var(--surface) 0%, var(--surface-hover) 100%);
-  padding: 1rem 1.2rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  position: relative;
-  z-index: 100;
-  border-bottom: 1px solid rgba(var(--steam-rgb),.12);
-  flex: 0 0 auto;
-  backdrop-filter: blur(2px);
-}
-
-.header-left { display: flex; align-items: center; gap: 1rem; }
-
-.app-title { font-weight: 800; font-size: var(--fs-xl); letter-spacing: .3px; background: linear-gradient(135deg, var(--steam-hover), var(--steam)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-
-.header-subtitle {
-  display: inline-flex;
-  align-items: center;
-  padding: .34rem .8rem;
-  border-radius: var(--radius-pill);
-  border: 1px solid rgba(var(--steam-rgb),.25);
-  border-top-color: rgba(var(--steam-rgb),.45);
-  background: var(--steam-soft);
-  color: var(--fg-link);
-  font-size: var(--fs-2xs);
-  font-weight: 800;
-  letter-spacing: .035em;
-  text-transform: uppercase;
-  box-shadow: inset 0 1px 0 var(--overlay-hover), 0 6px 16px rgba(var(--steam-rgb),.14);
-}
-
-.header-actions { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
-
-.header-actions .btn { border-radius: var(--radius-pill); transition: all .25s; }
-
-.header-actions .btn:hover { transform: translateY(-2px); box-shadow: var(--glow-accent); }
-
 /* Status */
 /* EL AVISO SE QUEDA A LA VISTA MIENTRAS DURA.
    ─────────────────────────────────────────────────────────────────────────────
@@ -200,7 +159,9 @@
 
 .main-lists {
   position: relative;
-  /* Contenedor para el meta dinámico de las filas (revela categorías según el ancho). */
+  /* Contenedor del renglón: es su ancho —no el de la ventana— el que decide si las ranuras de categoría van
+     en columnas invisibles o apiladas. Se mide aquí porque el mismo renglón se pinta también dentro de una
+     tarjeta del hub social, que es bastante más estrecha que la pantalla. */
   container-type: inline-size;
   container-name: gamelist;
 }
@@ -1395,7 +1356,6 @@
 /* El logro, en el ámbar del aviso: no es ninguno de los cuatro movimientos y se distingue de un vistazo.
    Marca propia (`--sys-mark-ach`) y puntero, porque este sí abre los logros de quien lo consiguió. */
 .hub-feed-activity-item.is-achievements { --evc: var(--warn); cursor: pointer; }
-.hub-feed-activity-item.is-achievements .hub-feed-ach-medals { flex: 0 0 auto; }
 /* Un aviso no es «tuyo» ni «de otro»: es lo que pasó. Se queda centrado aunque sea propio. */
 .hub-feed-activity-item.is-move.is-own-activity,
 .hub-feed-activity-item.is-achievements.is-own-activity { align-self: center; background: color-mix(in srgb, var(--evc), transparent 88%); }
@@ -1999,14 +1959,6 @@
   cursor: not-allowed;
   transform: none;
   border-color: var(--border);
-}
-
-/* Por qué está apagado el botón, sin cuenta atrás. Va aún más tenue que la línea de acción. */
-.error-note {
-  margin: .35rem 0 0;
-  font-size: var(--fs-xs);
-  color: var(--text-dim);
-  max-width: 42ch;
 }
 
 /* La pantalla aparece de golpe tras el fallo; el fundido suaviza ese salto. */

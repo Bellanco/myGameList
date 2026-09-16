@@ -1,0 +1,29 @@
+# Secretos del runtime de Pages en LOCAL. Copia este fichero a `.dev.vars` y rellena los valores.
+# Formato dotenv: `CLAVE=valor`, sin comillas y sin espacios alrededor del `=`.
+#
+# QUIÉN LO LEE
+#  · `wrangler pages dev` lo lee él solo (es su mecanismo nativo).
+#  · `npm run dev` (Vite) NO ejecuta las Functions: los plugins de `vite.config.ts` que las emulan leen
+#    este mismo fichero, para que no haya dos sitios donde poner lo mismo.
+#
+# ESTO NO LLEGA A PRODUCCIÓN, y es la confusión que hay que evitar: `.dev.vars` está ignorado por git y
+# Cloudflare no lo ve nunca. Los secretos del desplegado se suben aparte, y por entorno:
+#     npx wrangler pages secret put <NOMBRE>                        (producción)
+#     npx wrangler pages secret put <NOMBRE> --environment preview  (vista previa)
+#
+# Aquí SOLO secretos. Lo público —client ids, project id, correo de administración— vive en `wrangler.toml`,
+# que es la fuente de verdad de la configuración (ver su cabecera).
+#
+# ⚠️ ESTE FICHERO TAMBIÉN SE SUBE: `npx wrangler pages secret bulk .dev.vars` manda a Cloudflare TODAS las
+# líneas activas, y es la forma recomendada de subirlos (con `secret put` el nombre se teclea aparte y es
+# fácil colar el valor en su lugar — ha pasado). La consecuencia: una clave con el valor VACÍO pisa el
+# secreto bueno que hubiera en Cloudflare. Por eso las que no uses van COMENTADAS, no en blanco.
+
+# Secret de la GitHub OAuth App. Lo usa `functions/api/github-oauth.ts` para canjear el código por el token
+# del usuario. Su gemelo público es GITHUB_CLIENT_ID, en `wrangler.toml`.
+# GITHUB_CLIENT_SECRET=
+
+# Secret de la aplicación de Twitch con la que se consulta IGDB (carátulas de los juegos). Su gemelo público
+# es IGDB_CLIENT_ID, en `wrangler.toml`. Se saca de https://dev.twitch.tv/console/apps y se puede revocar
+# desde ahí mismo (New Secret invalida el anterior).
+IGDB_CLIENT_SECRET=

@@ -109,6 +109,7 @@
   :root[data-palette="cyberpunk"] .btn-secondary::before,
   :root[data-palette="cyberpunk"] .btn-danger::before,
   :root[data-palette="cyberpunk"] .btn-abandoned::before { animation: cyber-glitch-layer 17s ease-in-out infinite; }
+
 }
 
 /* ── §1b · GLITCH portado a otras firmas. Misma mecánica confinada que el cyberpunk (destello en ~2% de un ciclo
@@ -216,9 +217,7 @@
 :root[data-palette="cyberpunk"] .btn-danger::before,
 :root[data-palette="cyberpunk"] .btn-danger::after,
 :root[data-palette="cyberpunk"] .btn-abandoned::before,
-:root[data-palette="cyberpunk"] .btn-abandoned::after,
-:root[data-palette="cyberpunk"] .btn-recommend-active::before,
-:root[data-palette="cyberpunk"] .btn-recommend-active::after {
+:root[data-palette="cyberpunk"] .btn-abandoned::after {
   content: '';
   position: absolute;
   clip-path: var(--hud-cut);
@@ -228,15 +227,13 @@
 :root[data-palette="cyberpunk"] .btn-secondary::before,
 :root[data-palette="cyberpunk"] .btn-toggle:not(.active)::before,
 :root[data-palette="cyberpunk"] .btn-danger::before,
-:root[data-palette="cyberpunk"] .btn-abandoned::before,
-:root[data-palette="cyberpunk"] .btn-recommend-active::before { inset: 0; z-index: -2; background: var(--hud-edge); }
+:root[data-palette="cyberpunk"] .btn-abandoned::before { inset: 0; z-index: -2; background: var(--hud-edge); }
 /* Capa de relleno, 1px más pequeña → deja asomar el borde 1px en todos los cantos (incl. la diagonal).
    `--hud-fill` permite un relleno distinto por variante (dark elevado en las cian; rojo translúcido en las danger). */
 :root[data-palette="cyberpunk"] .btn-secondary::after,
 :root[data-palette="cyberpunk"] .btn-toggle:not(.active)::after,
 :root[data-palette="cyberpunk"] .btn-danger::after,
-:root[data-palette="cyberpunk"] .btn-abandoned::after,
-:root[data-palette="cyberpunk"] .btn-recommend-active::after { inset: 1px; z-index: -1; background: var(--hud-fill, var(--surface-elevated)); }
+:root[data-palette="cyberpunk"] .btn-abandoned::after { inset: 1px; z-index: -1; background: var(--hud-fill, var(--surface-elevated)); }
 /* En claro el filete es teal más marcado para que se vea sobre fondo claro. */
 :root[data-palette="cyberpunk"][data-theme="light"] .btn-secondary,
 :root[data-palette="cyberpunk"][data-theme="light"] .btn-toggle:not(.active) { --hud-edge: rgba(0, 137, 163, .55); }
@@ -265,16 +262,13 @@
 }
 :root[data-palette="cyberpunk"] .btn-secondary.btn-accent:hover,
 :root[data-palette="cyberpunk"] .btn-secondary.is-active:hover { box-shadow: 0 0 14px rgba(0, 240, 255, .35) !important; }
-:root[data-palette="cyberpunk"] .btn-complete,
-:root[data-palette="cyberpunk"] .btn-recommend { background: var(--success) !important; color: #04140b !important; border-color: color-mix(in srgb, var(--success) 55%, #000) !important; }
-:root[data-palette="cyberpunk"] .btn-inprogress { background: var(--warn) !important; color: #1a1200 !important; border-color: color-mix(in srgb, var(--warn) 55%, #000) !important; }
+:root[data-palette="cyberpunk"] .btn-complete { background: var(--success) !important; color: #04140b !important; border-color: color-mix(in srgb, var(--success) 55%, #000) !important; }
 /* Botones de peligro (cerrar sesión, abandonar, quitar recomendación): estilo HUD del juego — rojo neón
    TRANSLÚCIDO en vez de relleno sólido. Misma técnica de doble capa que los cian (filete rojo que sigue la
    muesca), con relleno rojo tenue (opaco equivalente sobre el fondo oscuro), texto rojo neón y un halo sutil que
    se intensifica al pasar el ratón. `--danger`/`--danger-rgb` ya se adaptan a claro/oscuro. */
 :root[data-palette="cyberpunk"] .btn-danger,
-:root[data-palette="cyberpunk"] .btn-abandoned,
-:root[data-palette="cyberpunk"] .btn-recommend-active {
+:root[data-palette="cyberpunk"] .btn-abandoned {
   color: var(--danger) !important;
   background: transparent !important;
   border-color: transparent !important;
@@ -287,11 +281,8 @@
   box-shadow: 0 0 12px rgba(var(--danger-rgb), .25) !important;
 }
 :root[data-palette="cyberpunk"] .btn-danger:hover,
-:root[data-palette="cyberpunk"] .btn-abandoned:hover,
-:root[data-palette="cyberpunk"] .btn-recommend-active:hover { box-shadow: 0 0 16px rgba(var(--danger-rgb), .5) !important; }
-:root[data-palette="cyberpunk"][data-theme="light"] .btn-complete,
-:root[data-palette="cyberpunk"][data-theme="light"] .btn-recommend,
-:root[data-palette="cyberpunk"][data-theme="light"] .btn-inprogress { color: #fff !important; }
+:root[data-palette="cyberpunk"] .btn-abandoned:hover { box-shadow: 0 0 16px rgba(var(--danger-rgb), .5) !important; }
+:root[data-palette="cyberpunk"][data-theme="light"] .btn-complete { color: #fff !important; }
 :root[data-palette="cyberpunk"] .btn-ghost { font-family: var(--font-label); font-weight: 600; letter-spacing: .05em; }
 /* Hover: plano + glow neón cian (sin el giro 3D base). */
 :root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 14px rgba(0, 240, 255, .3); }
@@ -678,4 +669,66 @@
     80%  { opacity: 1;   filter: blur(.6px); transform: translateY(-1px); }
     100% { opacity: 1;   filter: none; transform: translateY(0); }
   }
+}
+
+/* ── §N · LA CAJA SIN CARÁTULA = LA VENTANA DEL HUD ────────────────────────────────────────────────────
+   El chaflán NO lo recorta la caja. `clip-path` se come el `border` y el `box-shadow` del propio elemento
+   (la regla 2 que ya documentan §5 y `steam.scss` §4b), y lo que queda es el filete sobreviviendo en los
+   cantos rectos y desapareciendo justo en la diagonal: dos rayas sueltas en vez de un contorno.
+   La forma la dan DOS CAPAS detrás del contenido —`::before` con el color del filete y `::after` con el
+   relleno 1 px más pequeño—, exactamente igual que los botones de este tema. Así el cian rodea la pieza
+   entera, diagonales incluidas. Dentro van la barra amarilla del HUD y las líneas de barrido. ── */
+:root[data-palette="cyberpunk"] .game-card.is-flat {
+  --hud-cut: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+  isolation: isolate;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  clip-path: none;
+}
+:root[data-palette="cyberpunk"] .game-card.is-flat::before,
+:root[data-palette="cyberpunk"] .game-card.is-flat::after {
+  content: "";
+  position: absolute;
+  clip-path: var(--hud-cut);
+  pointer-events: none;
+}
+:root[data-palette="cyberpunk"] .game-card.is-flat::before {
+  inset: 0;
+  z-index: -2;
+  background: color-mix(in srgb, var(--cyber-cyan) 45%, transparent);
+}
+:root[data-palette="cyberpunk"] .game-card.is-flat::after {
+  inset: 1px;
+  z-index: -1;
+  background:
+    linear-gradient(var(--cyber-yellow), var(--cyber-yellow)) 0 0 / 4px 100% no-repeat,
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--cyber-cyan) 6%, transparent) 0 1px, transparent 1px 3px),
+    var(--surface);
+}
+:root[data-palette="cyberpunk"] .game-card.is-flat .game-card-body { padding-left: 1.15rem; }
+/* EL MEDIDOR = EL FILO DEL PANEL, y lo llena hasta sus cuatro cantos. La pieza de este tema son DOS capas
+   recortadas con la misma muesca: el trazo del HUD (`::before`, a ras) y el panel (`::after`, metido 1 px),
+   y NINGUNA de las dos recorta al contenido —la caja no lleva `clip-path`, solo sus pseudoelementos—. Por
+   eso el filo tiene que traerse la muesca puesta: si no, o se sale del recuadro o queda flotando dentro con
+   tres márgenes distintos, que es como se veía (14 px por la izquierda, 5 por la derecha, 1 por abajo).
+   Ahora ocupa EXACTAMENTE el panel: 1 px por los tres lados, el mismo que separa el panel del trazo. */
+:root[data-palette="cyberpunk"] .game-card .game-card-meter {
+  height: 7px;
+  background: color-mix(in srgb, var(--cyber-cyan) 14%, #000);
+}
+/* LA MUESCA ES DEL PANEL, así que solo la lleva la caja sin lámina, que es la que tiene ese panel recortado;
+   la de la lámina es un rectángulo y allí el filo la cruza entera.
+   CALCADA, no parecida: el vértice de abajo del panel cae a 18 px de su canto izquierdo y sube a 45°, así
+   que a la altura del filo (7 px) esa misma diagonal pasa por 11. Los dos números son la muesca del tema
+   medida a la altura de esta pieza, de modo que su corte es la PROLONGACIÓN del corte del panel. */
+:root[data-palette="cyberpunk"] .game-card.is-flat .game-card-meter {
+  width: auto;
+  margin: 0 1px 1px;
+  clip-path: polygon(11px 0, 100% 0, 100% 100%, 18px 100%);
+}
+:root[data-palette="cyberpunk"] .game-card .game-card-meter::after {
+  /* El sobreancho es el que se lleva la diagonal de la punta: sin él, un 100 % se quedaría corto. */
+  width: calc(var(--score-pct, 0) * 1% + 7px);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
 }

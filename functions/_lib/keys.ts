@@ -71,6 +71,20 @@ export const userShareKey = (uid: string, token: string): string => `user:${uid}
 export const overrideKey = (uid: string): string => `quota:override:${uid}`;
 export const banKey = (uid: string): string => `ban:${uid}`;
 
+/**
+ * CUPO DE CARÁTULAS LEVANTADO para una IP. Lo escribe `/api/cover-quota` cuando quien llama demuestra, con su
+ * ID token, que su perfil es del rango más alto; lo lee `/cover` solo cuando esa IP ha agotado su cupo.
+ *
+ * Va por IP y no por usuario porque las imágenes se piden con `<img src>`, que no puede llevar cabeceras: meter
+ * una sesión en la URL la volvería distinta para cada persona y rompería la caché compartida —y la del service
+ * worker, que guarda por URL—, que es lo que hace que una carátula se descargue UNA vez para todo el mundo.
+ *
+ * La contrapartida, dicha claramente: tras una red compartida (NAT), quien salga por la misma IP hereda el cupo
+ * levantado mientras dure. Lo que se hereda es la capacidad de resolver carátulas nuevas, nada más: ni datos, ni
+ * sesión, ni acceso. Y caduca solo.
+ */
+export const coverExemptionKey = (ip: string): string => `igdb:cupo-libre:v1:${ip}`;
+
 /** Contador diario. La fecha va en UTC a propósito: el día del servidor no depende de dónde esté el usuario. */
 export function dailyQuotaKey(uid: string, now: number): string {
   return `quota:${uid}:${new Date(now).toISOString().slice(0, 10)}`;
