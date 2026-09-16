@@ -212,8 +212,11 @@ function localAnnouncementApi(): Plugin {
  * una carátula y no había forma de saber si el trabajo estaba bien hecho.
  *
  * ES EL MISMO CONTRATO: se importa el emparejador de VERDAD, con sus mismas reglas, su mismo `m=1` y su mismo
- * modo ampliado. Lo único que no tiene es el cupo por IP, que aquí no pinta nada: quien llama es la persona que
- * ha levantado el servidor en su propia máquina.
+ * modo ampliado. Lo que no tiene son los DOS racionamientos —el cupo (por IP y del servicio) y el sello de rango
+ * que en producción hace falta para que `x=1` cuente—, y no es un descuido: los dos reparten un recurso
+ * compartido entre desconocidos, y aquí quien llama es la persona que ha levantado el servidor en su propia
+ * máquina contra su propia caché en un fichero. Lo que se sirve no cambia; lo que cambia es a quién hay que
+ * racionárselo.
  *
  * LAS CREDENCIALES SALEN DE `.dev.vars` (el secreto) y de `wrangler.toml` (el client id, que es público y cuya
  * fuente de verdad es ese fichero). Sin el secreto, la ruta contesta 501 y lo dice por consola una vez: es la
