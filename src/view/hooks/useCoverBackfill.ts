@@ -2,7 +2,8 @@ import { useEffect, useRef } from 'react';
 import { TAB_IDS, type TabData } from '../../model/types/game';
 import { coverUrl } from '../../core/utils/coverUrl';
 import { olvidarQueNoTiene, recordarQueNoTiene } from '../../core/utils/coverMemory';
-import { evaluarTopesDeImagenes, topesLevantados } from '../../core/utils/coverLimits';
+import { evaluarTopesDeImagenes } from '../../core/utils/coverLimits';
+import { claveDeJuego, guardarHechos, leerHechos } from '../../core/utils/coverDone';
 import { pedirCupoDeCaratulasLibre } from '../../model/repository/coverQuotaRepository';
 import { useCovers } from './useCovers';
 import { useIsAdmin } from './useIsAdmin';
@@ -26,78 +27,14 @@ import { useIsAdmin } from './useIsAdmin';
 /**
  * Qué juegos se han intentado ya, para no repetir la biblioteca entera en cada visita.
  *
- * La `v2` de la clave es un CAMBIO DE FORMATO. Antes se guardaba la URL entera de cada juego
- * (`/cover?n=Hollow+Knight&p=Steam`) dentro de un JSON, o sea el prefijo, el escapado y las comillas repetidos
- * tres mil veces: ~180 kB que se vuelven a serializar cada pocos juegos, en el hilo principal y mientras el
- * listado se está pintando. Ahora se guarda lo único que distingue a un juego de otro y una entrada por línea,
- * que es un tercio del tamaño. Lo de la clave vieja no se tira: se convierte al leerla (ver `leerHechos`), para
- * que nadie tenga que volver a recorrer su biblioteca por un cambio de formato.
+ * La lista y su formato viven en `core/utils/coverDone`: la escribe este recorrido, pero la LEE también el
+ * listado cuando pinta la biblioteca de otra persona, para pedir cada carátula con las plataformas que ya
+ * funcionaron y reaprovechar así la que está descargada (ver allí el porqué). Tenerla en un hook de la vista
+ * obligaba a ese otro lector a montar el hook entero para consultar un dato guardado.
  */
-const HECHOS_KEY = 'mis-listas-covers-done-v2';
-const HECHOS_KEY_V1 = 'mis-listas-covers-done';
-/** Tope de la lista de hechos: por encima de esto se olvida la más antigua (una biblioteca así no existe). */
-const MAX_HECHOS = 3000;
+
 /** Espera entre juegos. ~6/s de peticiones nuestras, que por detrás son menos de 4/s contra IGDB. */
 const PAUSA_MS = 160;
-
-/**
- * Separador entre las partes de una clave: un carácter de control, que no aparece ni en el título de un
- * juego ni en el nombre de una plataforma. Así no hay dos juegos distintos que puedan escribir la misma.
- */
-const SEP = '\u0001';
-
-/**
- * Lo que identifica a un juego para este recorrido: su nombre, sus plataformas y si se pidió en modo ampliado
- * —lo mismo que distingue una URL de otra, pero sin el envoltorio que no aporta nada aquí—.
- */
-function claveDeJuego(nombre: string, plataformas: readonly string[], ampliado: boolean): string {
-  return `${nombre}${SEP}${plataformas.join(',')}${ampliado ? `${SEP}x` : ''}`;
-}
-
-/** La misma clave, a partir de una URL de `/cover`: es como se traduce lo apuntado con el formato anterior. */
-function claveDesdeUrl(url: string): string | null {
-  const consulta = url.split('?')[1];
-  if (!consulta) return null;
-  const parametros = new URLSearchParams(consulta);
-  const nombre = parametros.get('n');
-  if (!nombre) return null;
-  return claveDeJuego(nombre, parametros.get('p')?.split(',').filter(Boolean) ?? [], parametros.get('x') === '1');
-}
-
-function leerHechos(): Set<string> {
-  try {
-    const crudo = localStorage.getItem(HECHOS_KEY);
-    if (crudo !== null) return new Set(crudo.split('\n').filter(Boolean));
-
-    // Sin lista nueva: se traduce la vieja, si la hay. Recorrer trescientos juegos otra vez son cinco minutos
-    // de peticiones en segundo plano que no hacen falta solo porque haya cambiado cómo se apuntan.
-    const antigua = localStorage.getItem(HECHOS_KEY_V1);
-    if (!antigua) return new Set();
-    const urls = JSON.parse(antigua) as unknown;
-    if (!Array.isArray(urls)) return new Set();
-    return new Set(
-      urls
-        .filter((x): x is string => typeof x === 'string')
-        .map(claveDesdeUrl)
-        .filter((clave): clave is string => clave !== null),
-    );
-  } catch {
-    return new Set(); // sin memoria de lo hecho se repite el trabajo, que es molesto pero no rompe nada
-  }
-}
-
-function guardarHechos(hechos: Set<string>): void {
-  try {
-    // Al rango más alto no se le recorta la lista mientras haya sitio de sobra (ver `coverLimits`).
-    const lista = topesLevantados() ? [...hechos] : [...hechos].slice(-MAX_HECHOS);
-    localStorage.setItem(HECHOS_KEY, lista.join('\n'));
-    // La lista del formato anterior ya está traducida y guardada: quedarse con las dos sería ocupar el doble
-    // para decir lo mismo.
-    localStorage.removeItem(HECHOS_KEY_V1);
-  } catch {
-    // Almacenamiento lleno o bloqueado: se sigue sin memoria, no se interrumpe el llenado.
-  }
-}
 
 export function useCoverBackfill(data: TabData): void {
   const { covers } = useCovers();

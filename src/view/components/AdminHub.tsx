@@ -33,7 +33,7 @@ import {
   unbanUser,
   type AdminShareRow,
 } from '../../model/repository/shareAdminRepository';
-import { leerGastoDeCaratulas, type GastoDeCaratulas } from '../../model/repository/coverQuotaRepository';
+import { leerGastoDeCaratulas, type GastoDeCaratulas } from '../../model/repository/coverStatsRepository';
 import { HubAvatar } from './socialhub/HubAvatar';
 import { Icon } from './Icon';
 // La hoja del panel se importa AQUÍ y no desde `index.scss`: como el panel entra por `lazy()`, Vite emite su CSS

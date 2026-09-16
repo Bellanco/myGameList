@@ -546,7 +546,16 @@ function SocialProfileDetailScreenBase({
                        Los demás ven la MISMA lista sin imágenes, que es la vista que ya existe con la
                        preferencia apagada. Y cuando se desbloquee, se quita esta línea y vuelve a mandar el
                        check de cada uno: no hay nada más que deshacer. */
-                    allowCovers={viewerTier === ADMIN_ONLY_TIER}
+                    coverPolicy={{
+                      allowed: viewerTier === ADMIN_ONLY_TIER,
+                      /* Y las que se pidan, reaprovechando lo ya descargado: si de ese título ya hay carátula en
+                         este navegador, se pide con SUS plataformas y la sirve la caché sin salir a la red. Aquí
+                         es donde más vale, porque el mismo juego aparece con la estantería de otra persona
+                         detrás (tu Hollow Knight en Steam, el suyo en Switch) y esa diferencia bastaba para
+                         descargar dos veces la misma imagen — y para abrir un emparejamiento nuevo en el
+                         servidor cuando las plataformas no normalizan igual. */
+                      preferKnown: true,
+                    }}
                     visibility={{
                       showYears: false,
                       showReplayable: !activeProfileDetail.visibility?.hideReplayable,
