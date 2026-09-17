@@ -46,6 +46,14 @@ const root = path.join(__dirname, '..');
 // con `<use href="/sprite.svg#icon-x">`, que saca ~6 kB de JS a cambio de una petición; (2) revisar si la
 // tipografía base puede servirse con menos pesos. Subir el número otra vez es lo último, y exige volver a hacer
 // estas tres mediciones y escribir el resultado aquí.
+//
+// Y HAY UNA TERCERA, seis veces más grande que la primera, que se midió el 17-09-2026 y NO se aplicó: sacar la
+// tipografía base del precache. Son 36 kB, el 17 % del presupuesto, y no se perdería del todo —`/fonts/` cae en
+// `handleStaleWhileRevalidate`, así que entraría en caché en la primera visita que la use—. Lo que sí se pierde
+// es el primer arranque SIN RED DESPUÉS DE CADA DESPLIEGUE: `activate` borra las cachés que no son la del build
+// nuevo, así que hasta que alguien vuelva a pedirla con red, la aplicación se pinta con la tipografía del
+// sistema. Es degradación estética y no funcional, pero es recurrente —una vez por despliegue—, y por eso va
+// después de las dos de arriba y no antes, pese a soltar mucho más espacio.
 const BOOT_PAYLOAD_BUDGET_KB = 220;
 const publicDir = path.join(root, 'public');
 const requiredFiles = [

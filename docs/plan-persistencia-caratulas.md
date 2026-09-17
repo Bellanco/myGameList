@@ -162,7 +162,12 @@ desaparece del todo (eso solo lo da Firestore, hoy aplazado).
 > Cubierto por `tests/unit/durableStorage.test.ts` (8 casos).
 >
 > **Nota operativa:** tras este cambio el chunk de arranque queda en **215,1 kB** comprimidos sobre un
-> presupuesto de 220 (`scripts/ci-validate.js`). Queda poco margen para el siguiente añadido.
+> presupuesto de 220 (`scripts/ci-validate.js`). El margen estrecho no lo trajo este paso: medido contra
+> un build del commit anterior, antes eran **215,0 kB**. Este módulo aportó 0,1 kB.
+>
+> La palanca más grande que queda está anotada en el propio `ci-validate.js`: la tipografía base son
+> 36 kB precacheados, el 17 % del presupuesto, y sacarla del precache no es gratis. No hace falta
+> tocarla hoy.
 
 **Qué cambia:** `src/core/utils/coverLimits.ts`, `src/view/hooks/useCoverBackfill.ts`, `src/main.tsx`.
 
@@ -197,8 +202,19 @@ por *site engagement*. Es una apuesta barata: veinte líneas, cero UI, cero ries
 > recorrido en segundo plano que no se ve. El Paso 1 se lleva la mayor parte del beneficio por una
 > fracción del coste.
 >
-> **Criterio para reabrirlo:** si tras el Paso 1 se siguen observando recorridos completos repetidos en
-> el mismo dispositivo. Entonces esto se justifica y el diseño de abajo sigue siendo el bueno.
+> **Criterio para reabrirlo:** las **peticiones diarias a `/cover` con `m=1`** en el panel de Cloudflare.
+> Si la caché HTTP del Paso 1 hace su trabajo, esas peticiones dejan de salir del navegador y el conteo
+> baja; si no baja, los recorridos se están repitiendo y esto se justifica. El diseño de abajo sigue
+> siendo el bueno.
+>
+> **⚠️ Antes de desplegar el Paso 1 hay que tomar la lectura base de ese conteo**, o la comparación no
+> se podrá hacer después.
+>
+> *La primera redacción de este criterio —«si se siguen observando recorridos completos repetidos en el
+> mismo dispositivo»— se cambió porque no había con qué observarlo: `telemetryRepository` solo emite a
+> GA4 con la analítica aceptada (opt-in) y con Firebase inicializado, y la métrica de `/admin` cuenta
+> resoluciones NUEVAS contra IGDB, que un recorrido repetido no gasta porque el emparejamiento ya está en
+> KV. Un criterio que nadie puede evaluar no aplaza una decisión: la entierra.*
 
 **Qué cambia:** `firestore.rules`, `src/core/utils/coverMemory.ts`, `src/core/utils/coverDone.ts`,
 más un repositorio nuevo.
@@ -280,7 +296,8 @@ y sin permisos:
 |---|---|
 | Mover los bytes a IndexedDB / OPFS / Storage Buckets | Misma cuota y misma purga: el bucket es el origen, no la API. `coverMemory.ts:1` ya explica por qué la Cache Storage detrás de un `<img src>` es el sitio correcto |
 | Bajar el tope a quien no tenga persistencia | El desalojo se lleva el origen entero; guardar menos no protege, solo rinde menos |
-| Reintentar `persist()` en cada arranque en todos | En Firefox es volver a asomar el diálogo. Con la guarda de la Fase 1 deja de ser un problema |
+| Reintentar `persist()` en cada arranque en todos | En Firefox es volver a asomar el diálogo. Con la guarda del Paso 2 deja de ser un problema |
+| Saltarse `PAUSA_MS` cuando la respuesta viene de caché | Evaluado el 2026-09-17 y descartado. Ahorraría ~48 s de un bucle en segundo plano, sin red, que nadie ve; y si la heurística de «esto vino de caché» falla, el recorrido sale en ráfaga contra IGDB — el incidente que ya dejó 56 juegos sin carátula. Ganancia invisible, modo de fallo conocido y caro, en el bucle más delicado del backfill |
 | Interruptor en Ajustes condicionado al permiso | En Chromium se quedaría apagado sin que nadie haya rechazado nada |
 
 ## Anexo C — Hallazgos colaterales (fuera de este plan)
