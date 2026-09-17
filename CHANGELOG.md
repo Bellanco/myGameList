@@ -3,7 +3,9 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows the git tags.
 
-## [Unreleased]
+## [1.3.2] - 2026-09-17
+
+La versión de **arrancar con menos peso** y de que **volver funcione en cualquier aparato**.
 
 ### Changed
 - **La aplicación empieza a funcionar antes.** Todo lo que hace falta para sincronizar con GitHub —hablar con la
