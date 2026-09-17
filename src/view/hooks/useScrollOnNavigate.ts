@@ -21,34 +21,81 @@ import { useLocation, useNavigationType } from 'react-router-dom';
  * Y UNA EXCEPCIÓN DECLARADA: si la navegación trae `state.anclaje`, aquí no se toca nada. Significa que quien
  * navegó quiere ir a un sitio concreto —el logro que acabas de conseguir, por ejemplo— y es la pantalla de
  * destino la que sabe dónde está. Sin esto habría dos saltos: primero al principio y después al ancla.
+ *
+ * ────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ * DÓNDE SE APUNTA LA POSICIÓN, que es lo único difícil de todo esto y donde fallaron los dos primeros intentos.
+ * Los dos se veían razonables y los dos guardaban un CERO:
+ *
+ *  1. En la limpieza de un efecto pasivo. Corre después de los efectos de layout de la pantalla nueva, para
+ *     entonces la línea de abajo ya había subido la página y lo que se apuntaba era ese cero.
+ *  2. En la limpieza de un efecto de LAYOUT, que corre antes. Tampoco: cuando se ejecuta, React ya ha pintado la
+ *     pantalla nueva, el listado largo ya no está, el documento mide lo que la ventana y **el navegador ya ha
+ *     recortado el scroll a cero por su cuenta**. Otra vez el cero, por otro camino.
+ *
+ * Lo que funciona es no preguntarlo en el momento de navegar: un oyente de `scroll` mantiene a la vista la
+ * última posición conocida, y al cambiar de pantalla se apunta ESA para la pantalla que se deja. El recorte
+ * automático del navegador también dispara su evento de scroll, pero llega después —los eventos de scroll se
+ * despachan con el siguiente refresco, no durante la mutación del DOM—, así que para cuando ensucia el valor ya
+ * está guardado el bueno.
+ *
+ * Nada de esto se ve en jsdom, donde `scrollY` siempre vale 0: lo sujeta `tests/e2e/scroll.test.ts`, contra el
+ * build de producción.
  */
 
 /** Cuántas posiciones se recuerdan. El historial de una sesión larga no cabe en memoria, ni hace falta. */
 const MAX_POSICIONES = 50;
 
+/**
+ * Cuántos fotogramas se insiste en restaurar la posición al volver. Veinte son ~330 ms a 60 Hz: de sobra para
+ * que un listado virtualizado termine de tomar su alto, y lo bastante poco para que nadie note que la página
+ * «se resiste» si ya ha empezado a moverse por su cuenta.
+ */
+const MAX_INTENTOS = 20;
+
 export function useScrollOnNavigate(): void {
   const location = useLocation();
   const tipo = useNavigationType();
   const posiciones = useRef(new Map<string, number>());
+  /** Última posición conocida, mantenida al día por el oyente de scroll (ver la cabecera). */
+  const ultima = useRef(0);
+  /** Qué pantalla estábamos mirando: es a la que hay que apuntarle la posición cuando se cambia. */
+  const anterior = useRef<string | null>(null);
   /* La PRIMERA vez no es una navegación: es la carga. Ahí manda el navegador, que restaura por su cuenta la
      posición al recargar (`history.scrollRestoration`), y pisarlo subiría al principio a quien recarga a media
      lista sin haber pedido ir a ninguna parte. */
   const cargado = useRef(false);
 
-  /* SE GUARDA AL SALIR, no al hacer scroll: una entrada por cambio de pantalla en vez de una por cada píxel
-     desplazado. La limpieza del efecto es exactamente el instante en que esta pantalla deja de ser la actual. */
   useEffect(() => {
-    const clave = location.key;
-    // El mapa se toma AQUÍ y no en la limpieza: es un `useRef` que nunca se reasigna, pero leerlo dentro del
-    // cierre es lo que espera la regla de los hooks y ahorra tener que explicar la excepción cada vez.
-    const mapa = posiciones.current;
-    return () => {
-      mapa.set(clave, window.scrollY);
-      if (mapa.size > MAX_POSICIONES) mapa.delete(mapa.keys().next().value as string);
+    let sello = 0;
+    const alDesplazar = () => {
+      const y = window.scrollY;
+      const ahora = performance.now();
+      /* EL CERO DE LA NAVEGACIÓN NO ES UN GESTO DE NADIE, y distinguirlo es lo único que hace que volver
+         funcione. Al cambiar de pantalla, el navegador pone el scroll a cero por su cuenta y dispara su evento
+         ANTES de que corra ningún efecto de React, así que machaca la última posición justo antes de que se
+         apunte. Se reconoce porque es un SALTO: de seiscientos píxeles a cero en menos de lo que tarda un
+         fotograma. Ninguna mano hace eso —ni la rueda, ni el dedo, ni la barra—, y el «volver arriba» de la
+         casa tampoco, que va suave y pasa por todos los valores intermedios.
+         Lo que se pierde con esto es el caso de quien pulsa `Inicio` y navega en el mismo suspiro: al volver
+         se le devuelve a donde estaba antes de pulsar. A cambio, volver funciona siempre. */
+      const salto = y === 0 && ultima.current > 64 && ahora - sello < 100;
+      sello = ahora;
+      if (salto) return;
+      ultima.current = y;
     };
-  }, [location.key]);
+    window.addEventListener('scroll', alDesplazar, { passive: true });
+    return () => window.removeEventListener('scroll', alDesplazar);
+  }, []);
 
   useLayoutEffect(() => {
+    // Lo primero, apuntar dónde se quedaba la pantalla que se deja; después ya se puede mover la nueva.
+    const mapa = posiciones.current;
+    if (anterior.current && anterior.current !== location.key) {
+      mapa.set(anterior.current, ultima.current);
+      if (mapa.size > MAX_POSICIONES) mapa.delete(mapa.keys().next().value as string);
+    }
+    anterior.current = location.key;
+
     if (!cargado.current) {
       cargado.current = true;
       return undefined;
@@ -56,17 +103,37 @@ export function useScrollOnNavigate(): void {
     if ((location.state as { anclaje?: unknown } | null)?.anclaje) return undefined;
     if (tipo === 'REPLACE') return undefined;
 
-    const destino = tipo === 'POP' ? (posiciones.current.get(location.key) ?? 0) : 0;
+    const destino = tipo === 'POP' ? (mapa.get(location.key) ?? 0) : 0;
+    ultima.current = destino;
     window.scrollTo(0, destino);
-
-    /* Y UN SEGUNDO INTENTO EN EL SIGUIENTE FOTOGRAMA, solo al volver y solo si no se llegó. La pantalla a la que
-       se vuelve puede entrar por `lazy()`: en el instante del efecto todavía no tiene su altura, así que pedir
-       1.200 px de scroll a un documento que mide 800 no hace nada y el usuario aparece arriba. Con el contenido
-       ya pintado, el mismo scroll sí llega. */
     if (destino === 0) return undefined;
-    const id = window.requestAnimationFrame(() => {
-      if (Math.abs(window.scrollY - destino) > 4) window.scrollTo(0, destino);
-    });
-    return () => window.cancelAnimationFrame(id);
+
+    /* Y SE INSISTE UNOS FOTOGRAMAS, solo al volver y solo hasta llegar. La pantalla a la que se vuelve no tiene
+       todavía su altura en el instante del efecto: el listado está virtualizado y se pinta por trozos, así que
+       pedirle 600 px de scroll a un documento que aún mide lo que la ventana no hace nada —el navegador lo
+       recorta a cero— y el usuario aparece arriba.
+       Se para en cuanto se llega, al agotar los intentos, o si quien mira se pone a desplazar por su cuenta:
+       pelearle el scroll a alguien que ya está moviéndose es peor que no restaurar nada. */
+    let frame = 0;
+    let intentos = 0;
+    let cancelado = false;
+    const rendirse = () => { cancelado = true; };
+    const eventos = ['wheel', 'touchstart', 'keydown'] as const;
+    eventos.forEach((evento) => window.addEventListener(evento, rendirse, { once: true, passive: true }));
+
+    const insistir = () => {
+      if (cancelado || intentos >= MAX_INTENTOS) return;
+      intentos += 1;
+      if (Math.abs(window.scrollY - destino) <= 4) return;
+      window.scrollTo(0, destino);
+      frame = window.requestAnimationFrame(insistir);
+    };
+    frame = window.requestAnimationFrame(insistir);
+
+    return () => {
+      cancelado = true;
+      window.cancelAnimationFrame(frame);
+      eventos.forEach((evento) => window.removeEventListener(evento, rendirse));
+    };
   }, [location.key, location.state, tipo]);
 }
