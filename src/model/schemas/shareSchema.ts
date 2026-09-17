@@ -10,7 +10,7 @@
 // propósito: sería una comprobación redundante —el servidor rechaza igual— a cambio de arrastrar Zod al flujo de
 // compartir. La validación que cuenta es la del servidor, porque el cliente es manipulable.
 //
-// OJO CON EL ARRANQUE: Zod NO forma parte del bundle de arranque (ver `BOOT_PAYLOAD_BUDGET_KB` en
+// OJO CON EL ARRANQUE: Zod NO forma parte del bundle de arranque (ver `BOOT_CRITICAL_BUDGET_KB` en
 // scripts/ci-validate.js y el `loadSocialGistValidator` del canal social). Este módulo se carga BAJO DEMANDA, al
 // compartir; no importarlo de forma estática desde ningún módulo del arranque.
 import { z } from 'zod';

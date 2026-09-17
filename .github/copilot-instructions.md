@@ -187,6 +187,11 @@ npm run test:coverage  # vitest run --coverage
 npm run typecheck      # tsc --noEmit
 ```
 
+**Presupuesto de arranque:** `ci-validate` vigila DOS números (`scripts/ci-validate.js`): **crítico** —el JS y el
+CSS que bloquean el primer pintado, que es el que no debe crecer— y **total** —todo el precache, fuentes
+incluidas, que solo mide lo que cuesta quedar listo para funcionar sin red—. Si el crítico sube, difiere algo con
+`import()`; subir el tope es lo último y exige rehacer las mediciones que ese fichero documenta.
+
 **Definition of done for a change:** `npx tsc --noEmit` ✓, `npm run validate` ✓, `npm run test` ✓ (and `npm run build` for anything structural).
 
 **Y si el cambio depende del LAYOUT del navegador** (scroll, alturas, posiciones, service worker, chunks perezosos): además `npm run build` **y** `npm run test:e2e`. En jsdom no hay layout —`window.scrollY` vale siempre 0—, así que un test de componente puede pasar con la funcionalidad rota. Ocurrió con la restauración del scroll al volver atrás: verde en jsdom, rota en el navegador.

@@ -36,7 +36,7 @@ function hasLocalApp(): boolean {
 // el enlace explícito a la app) y la página se queda en lo mínimo, sin instalar nada ni contactar con terceros
 // a espaldas de quien solo venía a leer una reseña.
 // Perezosa a propósito, aunque aquí se necesite enseguida: importarla de forma estática la metería en el chunk
-// de ARRANQUE, que carga todo el mundo y tiene presupuesto vigilado (`BOOT_PAYLOAD_BUDGET_KB`). Así solo la
+// de ARRANQUE, que carga todo el mundo y tiene presupuesto vigilado (`BOOT_CRITICAL_BUDGET_KB`). Así solo la
 // descarga quien abre un enlace compartido.
 const PublicReviewScreen = lazy(() =>
   import('./view/components/PublicReviewScreen').then((module) => ({ default: module.PublicReviewScreen })),

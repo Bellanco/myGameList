@@ -1741,7 +1741,7 @@ parezca tener grosor. Encima, grano de lienzo y una luz cálida arriba / índigo
 > postiza.
 
 **El sprite va aparte y es perezoso.** `IconSprite` lo monta `App.tsx` en el arranque —48 símbolos, 26 kB de
-paths— y el presupuesto es de 215 kB comprimidos (`BOOT_PAYLOAD_BUDGET_KB` en `scripts/ci-validate.js`). Meter
+paths— y hay un presupuesto vigilado (`BOOT_CRITICAL_BUDGET_KB` en `scripts/ci-validate.js`). Meter
 ahí **otros 38 símbolos** que solo se ven en dos rutas perezosas es exactamente el error que `ci-validate` está
 puesto para cazar. Va un **`AchievementSprite` propio**, con los `id` bajo el prefijo `#ach-`, montado por la rejilla y por la
 vitrina —nunca por `App.tsx`—. (El sprite existente usa el prefijo `#icon-`, así que no hay forma de que
@@ -1754,7 +1754,7 @@ perezosos distintos**: `/perfil/logros` (que carga `stats.scss`) y la ficha del 
 Colgarlas de cualquiera de las dos hojas deja la otra pantalla **sin estilos y sin que salte ningún error** — es
 exactamente lo que ya pasó con `ProfileReviewsList` en `/perfil/resenas` y con el medallón de la nota en
 `/r/:token`. La solución tampoco es meterlas en el arranque, que tiene presupuesto vigilado
-(`BOOT_PAYLOAD_BUDGET_KB`): **hoja propia, `styles/achievements.scss`, importada desde el componente de la
+(`BOOT_CRITICAL_BUDGET_KB`): **hoja propia, `styles/achievements.scss`, importada desde el componente de la
 medalla**, igual que se hizo con `styles/reviews.scss`.
 
 **Especificidad.** Los skins de paleta escriben `:root[data-palette="x"] .foo`, que pesa **(0,3,0)**. Una regla
@@ -2109,7 +2109,7 @@ Las filas en **⚑** salieron de la revisión del 6-sep-2026 y no estaban en el 
 | Alguien propone que los logros caduquen «para que valgan» | Ya contestado con el porqué del modelo Pepper (§5.5, §0.1) |
 | **El nivel se pinta en el directorio y nace un ranking sin querer** | Las cifras solo en la ficha individual (§6.10.4), con test que lo fija. Es la regla que se rompe sola al reutilizar el componente |
 | Las medallas usan los cuatro metales y se confunden con el rango | El nivel va en intensidad del acento + numeral; los metales son de `_tiers.scss` y ahí se quedan (§8.5). En la ficha social las dos escalas conviven a dos centímetros |
-| Los 38 iconos entran en el sprite del arranque | `AchievementSprite` propio y perezoso, prefijo `#ach-`, nunca en `App.tsx` (§8.5). Lo corta `ci-validate` a 215 kB. El sprite ya está escrito (`docs/logros/achievement-sprite.svg`, 38 símbolos + el filtro `#imp`, 26 kB sin comprimir) |
+| Los 38 iconos entran en el sprite del arranque | `AchievementSprite` propio y perezoso, prefijo `#ach-`, nunca en `App.tsx` (§8.5). Lo corta `ci-validate` con el presupuesto crítico. El sprite ya está escrito (`docs/logros/achievement-sprite.svg`, 38 símbolos + el filtro `#imp`, 26 kB sin comprimir) |
 | Un cliente viejo enseña un nivel ajeno más bajo del real | Aceptado: los `id` desconocidos se ignoran, así que el error va siempre a la baja y se corrige al actualizar (§6.10.3). No se arregla publicando el número |
 | El nivel acaba desbloqueando algo | Prohibido en §6.10.4: los temas los abre un logro concreto, nunca una cifra agregada |
 | Un guiño que no se entiende deja el logro ilegible | La referencia va solo en el nombre; la condición, en llano debajo (§6.11) |

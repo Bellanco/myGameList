@@ -6,7 +6,7 @@
 // busca su icono en la librería y se pega aquí igual que estos; sólo si no existe se dibuja a mano.
 //
 // SE MONTA UNA VEZ POR PANTALLA Y NUNCA DESDE `App.tsx`. El sprite general (`IconSprite`) sí entra en el
-// arranque, y el presupuesto son 215 kB comprimidos (`BOOT_PAYLOAD_BUDGET_KB` en `scripts/ci-validate.js`):
+// arranque, y hay un presupuesto vigilado (`BOOT_CRITICAL_BUDGET_KB` en `scripts/ci-validate.js`):
 // meter ahí otros 50 símbolos que solo se ven en dos rutas perezosas es exactamente el error que esa validación
 // está puesta para cazar. Lo montan la pantalla de logros y la ficha del hub, que viven en chunks distintos, así
 // que el empaquetador lo sacará a un chunk compartido. Como son rutas distintas, nunca hay dos sprites a la vez y

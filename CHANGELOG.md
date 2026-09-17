@@ -5,6 +5,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Changed
+- **La aplicación empieza a funcionar antes.** Todo lo que hace falta para sincronizar con GitHub —hablar con la
+  API, validar lo que llega, proyectar el canal social— se descargaba al abrir la aplicación, también para quien
+  solo mira sus listas y nunca ha conectado una cuenta. Ahora se trae la primera vez que se sincroniza.
+
 ### Fixed
 - **Volver atrás recupera el sitio también en un móvil lento.** La 1.3.1 estrenó el recuerdo de la posición al
   navegar, y funcionaba… si el aparato era rápido. Para saber qué desplazamientos eran de la persona y cuáles los

@@ -82,7 +82,7 @@ const AdminHub = lazy(() => import('./view/components/AdminHub').then((module) =
 /**
  * EL AVISO DE LOGRO, perezoso, y por la misma razón que el evaluador: se monta desde el arranque —puede salir
  * encima de cualquier pantalla— pero arrastra la medalla, su hoja de estilos y el sprite de los dibujos, que no
- * caben en el presupuesto de arranque (`BOOT_PAYLOAD_BUDGET_KB` en `ci-validate`). Así el chunk llega la primera
+ * caben en el presupuesto de arranque (`BOOT_CRITICAL_BUDGET_KB` en `ci-validate`). Así el chunk llega la primera
  * vez que alguien consigue algo, que es justo cuando hace falta y ya no es el arranque.
  */
 const AchievementToast = lazy(() => import('./view/components/stats/AchievementToast').then((module) => ({ default: module.AchievementToast })));
