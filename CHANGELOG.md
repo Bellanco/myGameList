@@ -22,6 +22,11 @@ de costar lo que costaba.
   único navegador que abre un diálogo para esto, y la respuesta no cambia nada de lo que se ve, así que no
   merece interrumpir a nadie. Si su dueño lo concede por su cuenta, se respeta igual.
 
+- **La ruleta deja de viajar en el arranque.** El modal ya se descargaba aparte, pero el sorteo —el pool y su
+  ponderación— se calculaba en la pantalla principal, así que su código lo cargaba todo el mundo aunque nunca
+  abriera la ruleta. De paso, `normalizeName` se muda a donde le toca: comparar dos títulos no es cosa de
+  sortear, y por vivir ahí arrastraba la ruleta entera al arranque del listado y de la bandeja de importados.
+
 ### Fixed
 - **La vuelta de «Conectar con GitHub» ya no se completa a ciegas.** El parámetro que demuestra que el viaje lo
   empezaste tú se guardaba donde no sobrevive a un cambio de pestaña, y cuando faltaba, la conexión seguía
