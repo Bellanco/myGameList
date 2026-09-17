@@ -80,6 +80,16 @@ const root = path.join(__dirname, '..');
 // esto. Subirlo a 19.3.0 engorda su chunk de 57,5 a 65,8 kB —8,3 kB— y el arranque se va a 223,3, por encima del
 // presupuesto: `npm update` lo subió, la validación lo cazó y hubo que volver atrás. Para poder actualizar React
 // hay que hacer sitio ANTES, y el sitio está en la palanca (1) de arriba. No se quita el pin sin eso.
+// ¿Y LOS OCHO TEMAS? Se preguntan solos al mirar el CSS, así que aquí está la medida (17-09-2026) para no
+// repetirla: el CSS del arranque con los ocho pesa 26,5 kB comprimidos y con uno solo 22,3. Los siete que no
+// usas cuestan **4,2 kB**, unos 600 bytes cada uno. Son solo TOKENS DE COLOR (CAPA 2/2b), que comprimen de
+// maravilla porque repiten los mismos nombres de variable; la parte cara de un tema —letra, formas, texturas,
+// ornamento (CAPA 3)— ya se carga bajo demanda desde `view/hooks/paletteSkin.ts`.
+//
+// NO se cargan por separado, y no es pereza: esos tokens son lo que pinta el PRIMER FOTOGRAMA. Sacarlos a un
+// fichero aparte obliga a elegir entre bloquear el render hasta descargarlo o enseñar la aplicación sin color
+// un instante, y cambiar de tema pasaría a ser asíncrono. Cuatro kilobytes no pagan eso: la palanca (1) da más
+// del doble sin tocar el primer fotograma.
 const BOOT_PAYLOAD_BUDGET_KB = 220;
 const publicDir = path.join(root, 'public');
 const requiredFiles = [
