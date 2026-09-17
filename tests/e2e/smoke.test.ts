@@ -69,11 +69,22 @@ test.describe('smoke del build de producción', () => {
       if (!origen.includes('127.0.0.1')) ajenas.push(`${peticion.resourceType()} ${origen}`);
     });
 
-    await sembrarBiblioteca(page); // siembra también el consentimiento de analítica DENEGADO
+    await sembrarBiblioteca(page, { amplia: true }); // siembra también el consentimiento de analítica DENEGADO
     await page.goto('/completados');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     // Firebase arranca en `requestIdleCallback`: sin esta espera el test pasaría por no haber llegado a mirar.
     await page.waitForTimeout(4000);
+
+    /* Y NO SOLO EL LISTADO. Mirando únicamente esta pantalla, la promesa parecía cumplida mientras PERFIL y
+       LOGROS hablaban con Firestore por su cuenta: leían `appConfig/achievements` y hasta intentaban ESCRIBIR en
+       él la frontera comunitaria, sin sesión y para recibir un 403. Las reglas lo rechazaban —no había agujero—
+       pero la llamada al tercero salía igual, en cada visita. Ahora las dos pantallas preguntan antes si hay
+       sesión, y este recorrido es lo que impide que vuelva a colarse por otra pantalla. */
+    await page.goto('/perfil');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await page.waitForTimeout(2500);
+    await page.goto('/logros');
+    await page.waitForTimeout(2000);
 
     expect([...new Set(ajenas)]).toEqual([]);
     expect(await context.cookies()).toEqual([]);

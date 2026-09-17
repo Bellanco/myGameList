@@ -8,7 +8,7 @@ import type { AnnouncementIcon as IconId } from '../../core/announcement/announc
  * —de ahí el `viewBox` 0 -960 960 960— y no tiene la atadura de atribución de otras. Se copian aquí como
  * `symbol` en vez de depender de un paquete: son un `path` cada uno.
  *
- * ⚑ NO VAN EN `IconSprite`, que es el del arranque. El presupuesto son 215 kB comprimidos y lo vigila
+ * ⚑ NO VAN EN `IconSprite`, que es el del arranque. Hay un presupuesto crítico y lo vigila
  * `ci-validate`; estos ocho dibujos solo se ven en dos sitios —la cápsula del aviso y la pantalla que lo
  * redacta—, así que se montan donde se usan y el arranque no paga nada. Es el mismo reparto que el sprite de las
  * medallas.

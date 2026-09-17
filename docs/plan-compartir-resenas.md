@@ -390,7 +390,7 @@ dependencias (ni React, ni DOM, ni otros módulos), así que la Function puede i
 con `wrangler pages dev`**; si el build de Functions no lo resolviera, la alternativa es copiar las constantes
 allí con nota de sincronía, como ya se hace entre `storageKeys.ts` y `public/theme-init.js`.
 
-**Pendiente para el paso 4:** Zod está fuera del bundle de arranque a propósito (`BOOT_PAYLOAD_BUDGET_KB`), así
+**Pendiente para el paso 4:** Zod está fuera del bundle de arranque a propósito (`BOOT_CRITICAL_BUDGET_KB`), así
 que `shareSchema.ts` debe cargarse **bajo demanda**, como hace el canal social con `loadSocialGistValidator`.
 Está avisado en la cabecera del módulo.
 

@@ -2,13 +2,19 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { SYNC_MESSAGES } from '../core/constants/labels';
 import { getCurrentSocialAuthUser, getPrivateConfig, recoverGithubToken, resolveOwnProfile, resolveStableProfileId, setAnalyticsUser, setPrivateConfig, signInWithGoogle, trackAnalyticsEvent } from '../model/repository/firebaseGateway';
 import { mergeCrdt } from '../model/repository/syncRepository';
-import { clearSyncConfig, createGist, ensureSyncConfigLoaded, findGamesGistId, getRetryAfterMs, getSyncConfig, isDeferredNetworkError, readGist, saveSyncConfig, subscribeSyncConfig, whoAmI, writeGist, type GistReadResponse } from '../model/repository/gistRepository';
+/* LO SÍNCRONO, DE SU MÓDULO; LO PESADO, POR EL CARGADOR (ver `syncEngine`).
+   La configuración se lee en cada render y los errores de red los mira un manejador síncrono, así que esos dos
+   módulos —ligeros los dos— se quedan en el arranque. Lo que habla con la API de gists llega con `await` desde
+   el chunk perezoso: quien nunca ha conectado una cuenta no lo descarga. */
+import { clearSyncConfig, ensureSyncConfigLoaded, getSyncConfig, saveSyncConfig, subscribeSyncConfig } from '../model/repository/gistConfigRepository';
+import { getRetryAfterMs, isDeferredNetworkError } from '../model/repository/githubHttp';
+import { cargarMotorDeSync } from '../model/repository/syncEngine';
+import type { GistReadResponse } from '../model/repository/gistRepository';
 import { beginGithubOAuth, completeGithubOAuth, hasGithubOAuthRedirect, isGithubOAuthConfigured } from '../model/repository/githubOAuthRepository';
 import { normalizeData } from '../model/repository/localRepository';
 import { clearDirty, clearDirtyIfUnchanged, loadSyncDirtyState, subscribeSyncDirtyState, type SyncDirtyState } from '../model/repository/syncStateRepository';
 import { acquireSyncLock, canRead, getBackoffMs, getNextReadDelayMs, getSyncState, subscribeSyncState, transitionTo, canReadNow } from '../model/repository/syncMachineRepository';
 import { countRemoteChangesApplied, isWriteConflict, logSyncError, type SyncOperation } from '../model/repository/syncLogicRepository';
-import { readLegacyPlaintextToken } from '../model/migration/legacyTokenRecovery';
 import type { TabData } from '../model/types/game';
 
 export type SyncStatus = 'idle' | 'syncing' | 'ok' | 'error';
@@ -130,6 +136,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       localUpdatedAt: number,
       knownRemoteFiles?: GistReadResponse['remoteFiles'],
     ): Promise<WriteOutcome> => {
+      const { readGist, writeGist } = await cargarMotorDeSync();
       // Sello dirty al INICIAR la escritura: si una edición del usuario lo avanza mientras escribimos en red,
       // no debemos limpiar dirty (esa edición aún no está en el remoto). Ver clearDirtyIfUnchanged.
       const dirtyAtBefore = loadSyncDirtyState().dirtyAt;
@@ -207,6 +214,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
      * actualiza etag/meta/config para que el siguiente sondeo reciba 304 y no re-mergee de balde.
      */
     const pushDirtyWithMerge = useCallback(async (syncToken: string, syncGistId: string): Promise<WriteOutcome> => {
+      const { readGist } = await cargarMotorDeSync();
       const latest = await readGist(syncToken, syncGistId, null);
       const localData = getData();
       const localMeta = getMeta();
@@ -374,6 +382,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
      * avoids reads when the sync state is busy/error.
      */
     const refreshRemote = useCallback(async (force = false) => {
+      const { readGist } = await cargarMotorDeSync();
       await ensureSyncConfigLoaded(); // C4: garantiza el token descifrado en caché antes de leer el gist
       const config = getSyncConfig();
       if (!config) return;
@@ -453,6 +462,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
   const connectSyncWithCredentials = useCallback(
     async (rawToken: string, rawGistId: string) => {
+      const { createGist, readGist, whoAmI } = await cargarMotorDeSync();
       transitionTo('checking');
       setStatus('syncing');
       setLastRemoteChangesApplied(null);
@@ -491,6 +501,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   );
 
   const initializeSync = useCallback(async () => {
+    const { readGist } = await cargarMotorDeSync();
     await ensureSyncConfigLoaded(); // C4: hidrata el token cifrado antes del primer uso
     const config = getSyncConfig();
     if (!config) {
@@ -592,6 +603,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   // duplicarlo) y conecta reusando el mismo camino que el flujo manual. Se invoca desde App al detectar el retorno.
   const completeGithubLoginFromRedirect = useCallback(async () => {
     if (!hasGithubOAuthRedirect()) return;
+    const { findGamesGistId } = await cargarMotorDeSync();
     setGithubLoggingIn(true);
     setStatus('syncing');
     const lock = acquireSyncLock(); // S2: no solapar con un ciclo en vuelo
@@ -613,6 +625,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   }, [connectSyncWithCredentials, onNotice, handleSyncError]);
 
   const syncNow = useCallback(async () => {
+    const { readGist } = await cargarMotorDeSync();
     await ensureSyncConfigLoaded(); // C4
     const config = getSyncConfig();
     if (!config) {
@@ -841,6 +854,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   }, []);
 
   const recoverGistIdFromGoogle = useCallback(async () => {
+    const { readLegacyPlaintextToken } = await cargarMotorDeSync();
     setRecoveringGistId(true);
 
     try {
@@ -907,6 +921,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   }, [connectSyncWithCredentials, onNotice, handleSyncError]);
 
   const overwriteRemoteData = useCallback(async (data: TabData): Promise<boolean> => {
+    const { writeGist } = await cargarMotorDeSync();
     await ensureSyncConfigLoaded(); // C4
     const config = getSyncConfig();
     if (!config?.token || !config?.gistId) {
