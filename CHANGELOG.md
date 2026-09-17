@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows the git tags.
 
+## [Unreleased]
+
+### Fixed
+- **Volver atrás recupera el sitio también en un móvil lento.** La 1.3.1 estrenó el recuerdo de la posición al
+  navegar, y funcionaba… si el aparato era rápido. Para saber qué desplazamientos eran de la persona y cuáles los
+  hacía el navegador al cambiar de pantalla, se miraba el RELOJ; en una máquina lenta esa cuenta se desajusta y
+  volvía a dejarte al principio. Ahora no se adivina por tiempos: se mira qué gesto abrió la navegación —un clic
+  o el «atrás»— y hasta que la pantalla nueva no está montada, lo que diga el desplazamiento no se apunta.
+
 ## [1.3.1] - 2026-09-17
 
 La versión de **lo que se queda guardado** y de **no perder el sitio**. Por fuera se nota en la navegación: al
