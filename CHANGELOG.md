@@ -3,6 +3,30 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows the git tags.
 
+## [1.3.1] - 2026-09-17
+
+La versión de **lo que se queda guardado**. Por fuera no cambia nada; por dentro, lo que el navegador tira deja
+de costar lo que costaba.
+
+### Changed
+- **El recorrido de carátulas guarda en el equipo lo que aprende.** La memoria de qué juegos no tienen portada
+  vivía solo en el almacenamiento del navegador, que es lo primero que desaparece cuando el disco aprieta —o
+  cuando Safari borra los sitios que no se visitan en una semana—. Al perderse, la biblioteca entera volvía a
+  preguntar: trescientas peticiones para reaprender lo que ya se sabía. Ahora esas respuestas se guardan una
+  semana en la caché del propio equipo, así que la segunda vuelta se resuelve sin salir a la red, sin cuenta y
+  en cualquier navegador. Lo que no se guarda sigue siendo lo que no habla de un juego —un tope de cupo, una
+  caída—, que es lo que una vez dejó medio catálogo con huecos.
+- **El almacenamiento persistente se pide al arrancar, y no al encender las carátulas.** Lo que está en juego no
+  son solo las imágenes: es el armazón, las piezas de la aplicación y la biblioteca guardada para verla sin red.
+  Pedirlo desde las carátulas dejaba fuera precisamente a quien no las usa. Y a Firefox no se le pide: es el
+  único navegador que abre un diálogo para esto, y la respuesta no cambia nada de lo que se ve, así que no
+  merece interrumpir a nadie. Si su dueño lo concede por su cuenta, se respeta igual.
+
+### Fixed
+- **La vuelta de «Conectar con GitHub» ya no se completa a ciegas.** El parámetro que demuestra que el viaje lo
+  empezaste tú se guardaba donde no sobrevive a un cambio de pestaña, y cuando faltaba, la conexión seguía
+  adelante igualmente. Ahora se guarda donde sí dura, caduca a la media hora y, sin él, no se canjea nada.
+
 ## [1.3.0] - 2026-09-16
 
 La versión del **listado con forma** y de las **carátulas**.
