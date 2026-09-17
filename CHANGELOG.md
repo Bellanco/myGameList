@@ -8,7 +8,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 La versión de **lo que se queda guardado**. Por fuera no cambia nada; por dentro, lo que el navegador tira deja
 de costar lo que costaba.
 
+### Added
+- **Al conseguir un logro, el aviso lleva a esa medalla.** Antes dejaba en la pantalla de logros y a buscar entre
+  cientos de filas cuál era la que acababa de caer. Ahora la fila se trae a la vista y se resalta un momento con
+  el color de su propia dificultad. Con el movimiento reducido, el resalte no late: se queda encendido.
+
 ### Changed
+- **El scroll deja de quedarse donde estaba al cambiar de pantalla.** Entrar en Ajustes desde media lista te
+  dejaba a media página de una pantalla que ya era otra, y solo dos sitios lo corregían por su cuenta, así que
+  parecía cosa del azar. Ahora la regla es una: al **entrar** en una pantalla se sube al principio, y al
+  **volver** se recupera el sitio en el que estabas. Recargar no cambia: ahí sigue mandando el navegador.
 - **El recorrido de carátulas guarda en el equipo lo que aprende.** La memoria de qué juegos no tienen portada
   vivía solo en el almacenamiento del navegador, que es lo primero que desaparece cuando el disco aprieta —o
   cuando Safari borra los sitios que no se visitan en una semana—. Al perderse, la biblioteca entera volvía a

@@ -3,7 +3,19 @@
 > Sale de una revisión del 17-09-2026 (arranque, seguridad, rendimiento) y de un síntoma que se nota usando la
 > aplicación: al cambiar de pantalla, el scroll se queda donde estaba.
 
-## 1. El scroll al navegar  ·  **lo único que se ve**
+## 1. El scroll al navegar  ·  ✅ **HECHO** (`fcea1d2`)
+
+> Implementado en `useScrollOnNavigate`, montado en `App`. Dos cosas que aparecieron al hacerlo:
+>
+> - **La carga inicial no se toca.** La primera vez no es una navegación: ahí manda
+>   `history.scrollRestoration` del navegador, y pisarlo subía al principio a quien recarga a media lista sin
+>   haber pedido ir a ninguna parte. Lo destapó un test.
+> - **`AchievementsScreen` recibe el ancla por PROP, no leyendo la ruta.** El primer intento la ató al
+>   enrutador y rompió 44 pruebas: es una pantalla de presentación que usan también las fichas ajenas
+>   (`ProfileAchievements`) y que las pruebas montan suelta. Quien sabe de rutas es `StatsHub`, y es quien lo pasa.
+>
+> El salto al logro va con `state.anclaje`, que es además la señal por la que el hook central se aparta: sin
+> ella habría dos saltos, primero al principio y después a la medalla.
 
 ### Qué pasa hoy
 
