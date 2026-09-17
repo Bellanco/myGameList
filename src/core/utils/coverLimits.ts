@@ -49,36 +49,6 @@ export async function hayHolguraDeAlmacenamiento(): Promise<boolean> {
 }
 
 /**
- * PEDIR QUE LO GUARDADO NO SE DESALOJE, que es lo que de verdad decide cuánto duran las carátulas.
- *
- * Por largos que sean los plazos de caché, todos cuelgan de un supuesto que por defecto NO se cumple: que lo
- * guardado siga ahí. El almacenamiento de un origen es desechable mientras nadie diga lo contrario, así que el
- * navegador puede tirarlo ENTERO —no solo las imágenes: el shell, los chunks y la biblioteca guardada para
- * verla sin red— cuando le aprieta el disco. Y en Safari es peor que una posibilidad: los datos de un sitio que
- * no se visita en siete días se borran por política, de modo que quien abre la app cada dos semanas se
- * descargaba las trescientas carátulas cada vez.
- *
- * Con la persistencia concedida, esa recogida automática deja de aplicarse y lo guardado solo se va si el
- * usuario lo borra. Cada navegador la concede a su manera —Chrome decide solo, por lo instalada y usada que
- * esté la app; Firefox pregunta; Safari la da a la PWA añadida a la pantalla de inicio— y ninguno garantiza un
- * sí. Por eso esto NO es una condición de nada: se pide, se devuelve lo que haya salido y la aplicación
- * funciona igual con un no.
- *
- * Se pregunta primero si ya está concedida para no volver a pedirla en cada arranque, que en Firefox sería
- * volver a asomar el permiso a alguien que ya lo contestó.
- */
-export async function pedirAlmacenamientoDuradero(): Promise<boolean> {
-  try {
-    if (typeof navigator === 'undefined' || !navigator.storage?.persist) return false;
-    if (await navigator.storage.persisted?.()) return true;
-    return await navigator.storage.persist();
-  } catch {
-    // Contexto sin permiso, API a medias o usuario que dice que no: se sigue como siempre, con topes y podas.
-    return false;
-  }
-}
-
-/**
  * Recalcula si los topes se levantan y se lo cuenta al service worker, que tiene el suyo propio (el de la caché
  * de carátulas) y no puede mirar ni el rango ni el almacenamiento por su cuenta.
  *

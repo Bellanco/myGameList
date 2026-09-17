@@ -7,6 +7,7 @@ import { hasStoredAuthSession, initializeFirebaseServices, reportHandledError } 
 import { readPublicShareToken } from './model/repository/publicShareRepository';
 import { runMigration } from './model/repository/dataMigrationRepository';
 import { runWhenIdle } from './core/utils/idle';
+import { vigilarAlmacenamientoDuradero } from './core/utils/durableStorage';
 import { registerServiceWorker } from './core/utils/appUpdate';
 import { readAnalyticsConsent } from './model/repository/analyticsConsentRepository';
 import { isOffline } from './core/utils/network';
@@ -130,6 +131,11 @@ function bootApp(): void {
     if (hasStoredAuthSession() || readAnalyticsConsent() === 'granted') {
       void initializeFirebaseServices();
     }
+    /* QUE EL NAVEGADOR NO TIRE LO GUARDADO. Se pide aquí y no en el recorrido de las carátulas porque protege
+       el origen ENTERO —shell, chunks y biblioteca sin red—, no solo las imágenes. No enseña nada a nadie (a
+       Firefox, el único que abriría un diálogo, no se le pregunta) y nada de lo que viene después depende de la
+       respuesta: con un no, todo sigue exactamente igual. */
+    vigilarAlmacenamientoDuradero();
     // Migración local (Vía A): puebla el store `games` (v4) en idle. Es idempotente (guardada por
     // migrationVersion) y NO destructiva (appState sigue siendo la fuente de verdad), así que la app
     // funciona igual. Cualquier error queda aislado y no afecta al arranque.

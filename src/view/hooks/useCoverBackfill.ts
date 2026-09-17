@@ -7,7 +7,7 @@ import {
   recordarQueNoTiene,
   tocaReintentar,
 } from '../../core/utils/coverMemory';
-import { evaluarTopesDeImagenes, pedirAlmacenamientoDuradero } from '../../core/utils/coverLimits';
+import { evaluarTopesDeImagenes } from '../../core/utils/coverLimits';
 import { claveDeJuego, guardarHechos, leerHechos } from '../../core/utils/coverDone';
 import { pedirCupoDeCaratulasLibre } from '../../model/repository/coverQuotaRepository';
 import { useCovers } from './useCovers';
@@ -76,11 +76,10 @@ export function useCoverBackfill(data: TabData): void {
       if (ampliado) {
         void pedirCupoDeCaratulasLibre();
       }
-      /* Y QUE NO SE LO LLEVE EL NAVEGADOR. Se pide aquí, con las carátulas ya encendidas, y no en el arranque
-         de todo el mundo: es cuando hay de verdad algo que proteger —trescientas imágenes por biblioteca— y
-         cuando quien lo decide ya ha dicho que quiere descargarlas. Lo que conteste no cambia nada de lo que
-         viene después; si dice que no, todo sigue igual que hasta ahora. */
-      void pedirAlmacenamientoDuradero();
+      /* Y QUE NO SE LO LLEVE EL NAVEGADOR ya no se pide aquí: lo que está en juego es el origen entero —el
+         shell, los chunks, la biblioteca sin red—, no solo las imágenes, así que se pide en el arranque de la
+         aplicación (ver `core/utils/durableStorage`). Pedirlo desde aquí dejaba fuera a todo el que no tuviera
+         las carátulas encendidas, que es justo quien más depende de que la aplicación arranque sin red. */
       await evaluarTopesDeImagenes(ampliado);
 
       const hechos = leerHechos();
