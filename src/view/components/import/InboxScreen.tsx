@@ -3,7 +3,7 @@ import type { TabId } from '../../../model/types/game';
 import type { ImportField, ImportFieldGroup, ImportFieldPrefs, ImportedGame } from '../../../model/types/import';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { COMMON_ICONS } from '../../../core/constants/icons';
-import { normalizeName } from '../../../core/roulette/roulette';
+import { normalizeName } from '../../../core/utils/normalizeName';
 import { copyText } from '../../../core/utils/clipboard';
 import { Icon } from '../Icon';
 import { ImportFieldPrefsCard } from './ImportFieldPrefsCard';

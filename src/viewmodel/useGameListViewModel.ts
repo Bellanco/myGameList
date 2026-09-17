@@ -10,7 +10,7 @@ import { resolveReviewedAt } from '../core/utils/reviewDate';
 import { nextVersion, resolveGradedAt, stampEntry } from '../core/utils/gameStamps';
 import { mapTabDataTags, type TagCategory } from '../core/utils/tagMutations';
 import { normalizeTag, safeTrim } from '../core/security/sanitize';
-import { normalizeName } from '../core/roulette/roulette';
+import { normalizeName } from '../core/utils/normalizeName';
 import { emitMoment } from '../core/effects/moments';
 import { loadLocalState, loadLocalStateAsync, normalizeData, saveLocalState } from '../model/repository/localRepository';
 import { getGamesAsTabData, getLocalMeta, mirrorTabDataToGames } from '../model/repository/indexedDbRepository';

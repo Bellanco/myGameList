@@ -85,8 +85,8 @@
   --wt-quen: #ffc62e;
   --wt-axii: #6fdc5c;
   --wt-sangre: #8e1c14;
-  --wt-papel: #e7d3b0;
-  --wt-tinta: #281e13;
+  --wt-papel: #e3d8c0;
+  --wt-tinta: #33261a;
   --focus-ring: #ff8f4a;
   --fg-link: #ff8f4a;
   --sys-radius: var(--radius-sm); --sys-pad: .3rem .9rem;
@@ -137,20 +137,54 @@
   --wt-quen: #7d4a00;
   --wt-axii: #1c6b1f;
   --wt-sangre: #8e1c14;
-  --wt-papel: #e7d3b0;
-  --wt-tinta: #281e13;
+  --wt-papel: #e3d8c0;
+  --wt-tinta: #33261a;
   --focus-ring: #8f3608;
   --fg-link: #8f3608;
 }
-/* steam (Plata y acero) — las señales del brujo y los sitios del Continente: Igni, Aard, Golondrina,
-   Yrden, Toussaint, Quen y Skellige. Sobre el acero apagado cada género salta sin volver la tabla un
-   arcoíris; medidos todos por encima del 4,5:1 en los cuatro fondos. */
+/* steam (Plata y acero) — las señales del brujo y los sitios del Continente: Igni, Aard, las fuentes de
+   Beauclair, Yrden, la lavanda de Toussaint, Quen y el mar de Skellige.
+
+   NI VERDE NI ROJO, Y ESTA VEZ EN SERIO. La regla de `../_index.scss` —rojo los puntos débiles, verde los
+   fuertes— la rompía esta misma rampa: `--cat-3` era un verde (#8ecf7c) y `--cat-5` un rosa rojizo
+   (#ff8ba8), así que en el renglón de un juego podía haber un género verde al lado de «Jugabilidad», que
+   también lo es, y un género rosa al lado de «Curva de dificultad». Se leía como si dijeran lo mismo. Los
+   dos salen de las familias prohibidas: el verde pasa al CIAN de las fuentes y el rosa al MAGENTA de la
+   lavanda, que son colores de Toussaint y no invaden a nadie.
+
+   Y MÁS VIVOS, porque de aquí sale también el color del LACRE de cada cartel (`themes/steam/steam.scss`
+   §6) y un sello mide 13 px: a ese tamaño un tono lavado no se distingue de otro. Aard, Yrden y Quen
+   pasan a ser exactamente las señales del juego en vez de sus versiones aguadas.
+
+   Medidos todos contra las cuatro chapas, peor caso: Igni 4,65 · Aard 5,30 · fuentes 5,98 · Yrden 4,59 ·
+   lavanda 4,81 · Quen 6,69 · Skellige 4,87. Todos por encima del 4,5:1 que les toca por escribir. */
 :root[data-palette="steam"] {
-  --cat-1: #ff8f4a; --cat-2: #7fbcff; --cat-3: #8ecf7c; --cat-4: #c69ff7; --cat-5: #ff8ba8; --cat-6: #f2c75c; --cat-7: #45c3b8;
-  --cat-1-fg: #ff8f4a; --cat-2-fg: #7fbcff; --cat-3-fg: #8ecf7c; --cat-4-fg: #c69ff7; --cat-5-fg: #ff8ba8; --cat-6-fg: #f2c75c; --cat-7-fg: #45c3b8;
+  /* RELLENO (`--cat-N`) y TEXTO (`--cat-N-fg`) dejan de ser el mismo color en dos de los siete, que es
+     justo para lo que el sistema los tiene separados: al relleno le basta 3:1 y al texto le hacen falta
+     4,5:1, así que el relleno puede irse a donde el texto no llega. Aquí importa porque el relleno es lo
+     que tiñe el LACRE: el índigo de Skellige (#9aacff) se confundía con Aard y con Yrden —ΔE 0,078 y
+     0,068 en OKLab, por debajo del 0,08 que separa dos gotas de 13 px—, y bajándolo a #7b8cf5 se despega
+     de los dos (0,113 y 0,099) sin tocar el color con el que escribe. Igni se corre un punto hacia el
+     ámbar para no rozar el coral de los puntos débiles. */
+  --cat-1: #ff9a45; --cat-2: #4fc3ff; --cat-3: #2fd9cf; --cat-4: #c795ff; --cat-5: #ff85d8; --cat-6: #ffc62e; --cat-7: #7b8cf5;
+  --cat-1-fg: #ff9a45; --cat-2-fg: #4fc3ff; --cat-3-fg: #2fd9cf; --cat-4-fg: #c795ff; --cat-5-fg: #ff85d8; --cat-6-fg: #ffc62e; --cat-7-fg: #9aacff;
 }
-/* steam (Plata y acero) — los mismos siete a la luz, en su versión honda para leerse sobre el acero claro */
+/* steam (Plata y acero) — los mismos siete a la luz, en su versión honda para leerse sobre el acero claro.
+   Las mismas dos mudanzas que en oscuro: el verde (#266628) pasa a cian y el vino (#9c1f4b) a magenta, que
+   en claro es donde peor estaban —el vino y el rojo de los puntos débiles (#9e2620) eran casi el mismo—.
+   El cian tira aquí más al azul (188° en vez de 183°) para no rozar al verde de los puntos fuertes, que en
+   claro es un verde hondo, y el oro pasa a ser el Quen del tema (#7d4a00) en vez del ámbar exacto de
+   `--warn`: el año lacra en ámbar y comparte renglón con los géneros, así que ser el MISMO color no valía.
+   Peor caso contra las cuatro chapas: Igni 4,88 · Aard 4,94 · fuentes 5,55 · Yrden 4,78 · lavanda 5,26 ·
+   Quen 4,62 · Skellige 4,94. */
 :root[data-palette="steam"][data-theme="light"] {
-  --cat-1: #8f3608; --cat-2: #15538f; --cat-3: #266628; --cat-4: #5f33a3; --cat-5: #9c1f4b; --cat-6: #6f4800; --cat-7: #085a5e;
-  --cat-1-fg: #8f3608; --cat-2-fg: #15538f; --cat-3-fg: #266628; --cat-4-fg: #5f33a3; --cat-5-fg: #9c1f4b; --cat-6-fg: #6f4800; --cat-7-fg: #085a5e;
+  /* AQUÍ LOS SIETE RELLENOS SE SEPARAN DEL TEXTO, y no por capricho: en claro las siete tintas viven
+     apretadas entre L 0,30 y 0,45 —es lo que cuesta llegar a 4,5:1 sobre el acero claro— y al teñir con
+     ellas la cera salían siete sellos casi iguales: el peor par estaba en ΔE 0,026 y Aard y la plataforma
+     eran EL MISMO color. Al relleno le basta 3:1, así que sube a su versión viva y los sellos se abren
+     (peor par 0,050, y entre géneros 0,069). El texto se queda exactamente donde estaba, con sus medidas
+     intactas. Rellenos, peor caso contra las cuatro chapas: Igni 3,19 · Aard 3,79 · fuentes 3,39 ·
+     Yrden 4,02 · lavanda 3,85 · Quen 3,11 · Skellige 4,40. */
+  --cat-1: #b84e00; --cat-2: #16679f; --cat-3: #00767c; --cat-4: #7a3ac9; --cat-5: #ab2b85; --cat-6: #8f6a00; --cat-7: #3c4bc4;
+  --cat-1-fg: #8f3608; --cat-2-fg: #15538f; --cat-3-fg: #00525f; --cat-4-fg: #6a2fbd; --cat-5-fg: #8d1675; --cat-6-fg: #7d4a00; --cat-7-fg: #2f45b8;
 }

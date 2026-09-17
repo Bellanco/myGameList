@@ -177,11 +177,6 @@ export function pickWeighted(
   return candidates[candidates.length - 1];
 }
 
-/** Normaliza el nombre para comparar duplicados entre usuarios (los IDs son locales y no comparables). */
-export function normalizeName(name: string): string {
-  return String(name || '').trim().toLowerCase();
-}
-
 /**
  * Pool de la ruleta en los listados: completados con `replayable` ("rejugar") + abandonados con `retry`
  * ("merecen otra oportunidad") + todos los próximos. Deduplicado por id por seguridad.
