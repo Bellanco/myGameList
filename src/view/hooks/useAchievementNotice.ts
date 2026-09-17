@@ -36,7 +36,7 @@ import type { TabData } from '../../model/types/game';
  * escritura sube un logro Y cruza un hito, se cuenta el logro y el hito se calla.
  *
  * Y EL EVALUADOR ENTRA POR `import()` DINÁMICO, que no es un capricho: este hook lo usa `App.tsx`, que es el
- * arranque, y el catálogo con sus 64 métricas y sus textos no puede viajar ahí. El presupuesto son 215 kB
+ * arranque, y el catálogo con sus 64 métricas y sus textos no puede viajar ahí. Hay un presupuesto crítico
  * comprimidos y lo vigila `ci-validate`. Así el coste se paga la primera vez que se guarda algo, no al abrir.
  */
 

@@ -123,8 +123,8 @@ qué les falta, cuándo pueden despertar y cuál es el problema. Ver §6.8 del p
 catalogarlo, no la de nada que pasara: la definición ingenua de «Speedrun» daba 42 aciertos y los 42 eran falsos.
 
 **El sprite no se monta en el arranque.** Va en las dos rutas perezosas, nunca en `App.tsx`: el sprite que ya
-existe (`IconSprite`, 48 símbolos) pesa 26 kB sin comprimir y el presupuesto son 215 kB comprimidos
-(`BOOT_PAYLOAD_BUDGET_KB` en `scripts/ci-validate.js`, verificado).
+existe (`IconSprite`, 48 símbolos) pesa 26 kB sin comprimir y hay un presupuesto vigilado
+(`BOOT_CRITICAL_BUDGET_KB` en `scripts/ci-validate.js`, verificado).
 
 **La hoja de estilos es propia.** Ni colgada de `stats.scss` ni de `social.scss`: las medallas se pintan en dos
 chunks perezosos distintos y colgarlas de uno deja la otra pantalla sin estilos **sin que salte ningún error**.
