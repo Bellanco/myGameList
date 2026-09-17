@@ -48,17 +48,14 @@ const MAX_POSICIONES = 50;
 /**
  * HASTA CUÁNDO SE INSISTE EN RESTAURAR LA POSICIÓN AL VOLVER.
  *
- * Empezó siendo un número fijo de fotogramas —veinte, ~330 ms— y se quedaba corto en la pantalla del perfil: sus
- * bloques se pintan poco a poco, así que a los veinte fotogramas el documento todavía no llegaba a donde
- * estábamos y la restauración se quedaba a medias (500 px pedidos, 276 conseguidos). Lo delató el recorrido
- * anidado de `tests/e2e/scroll.test.ts`.
+ * Ha tenido tres formas y las dos primeras eran finas de más. Un número fijo de fotogramas (veinte, ~330 ms) se
+ * quedaba corto en la pantalla del perfil, cuyos bloques se pintan poco a poco. Mirar «si la página sigue
+ * creciendo» y rendirse cuando el alto se estabilizaba tampoco: un listado virtualizado puede tener el alto
+ * quieto un instante y crecer después, así que abandonaba antes de tiempo y fallaba una de cada quince veces.
  *
- * Así que el criterio ya no es contar fotogramas, es MIRAR SI LA PÁGINA SIGUE CRECIENDO: mientras el alto cambie,
- * es que aún se está montando y merece la pena insistir; cuando deja de cambiar unos cuantos fotogramas
- * seguidos, ya no va a crecer más y seguir sería pelearle el scroll a nadie. El tope de tiempo es la red de
- * seguridad para una pantalla que no parara nunca (una animación de alto, una lista que se rellena sola).
+ * Ahora solo hay un tope de tiempo. Insistir no cuesta nada cuando ya se ha llegado —se sale en la primera
+ * comprobación— y quien esté desplazando por su cuenta lo corta con el primer gesto.
  */
-const QUIETO_MAX = 6;
 const TOPE_MS = 1500;
 
 export function useScrollOnNavigate(): void {
@@ -67,6 +64,8 @@ export function useScrollOnNavigate(): void {
   const posiciones = useRef(new Map<string, number>());
   /** Última posición conocida, mantenida al día por el oyente de scroll (ver la cabecera). */
   const ultima = useRef(0);
+  /** ¿Hay una navegación en marcha? Mientras lo esté, el scroll que llegue no es de nadie (ver abajo). */
+  const navegando = useRef(false);
   /** Qué pantalla estábamos mirando: es a la que hay que apuntarle la posición cuando se cambia. */
   const anterior = useRef<string | null>(null);
   /* La PRIMERA vez no es una navegación: es la carga. Ahí manda el navegador, que restaura por su cuenta la
@@ -75,25 +74,35 @@ export function useScrollOnNavigate(): void {
   const cargado = useRef(false);
 
   useEffect(() => {
-    let sello = 0;
+    /* EL CERO DE LA NAVEGACIÓN NO ES UN GESTO DE NADIE, y distinguirlo es lo único que hace que volver funcione.
+       Al cambiar de pantalla el navegador pone el scroll a cero por su cuenta y dispara su evento ANTES de que
+       corra ningún efecto de React, así que machaca la última posición justo antes de que se apunte.
+       LA PRIMERA VERSIÓN LO ADIVINABA POR EL RELOJ —un salto a cero en menos de 100 ms— y era frágil por
+       diseño: en una máquina lenta ese hueco se estira, el filtro no dispara y se guarda el cero. Pasaba en
+       local y fallaba en integración continua, que es la peor clase de prueba: la que solo delata a veces.
+       Ahora no se adivina, se SABE. Toda navegación empieza por un gesto que podemos ver antes que React: un
+       clic (en captura, antes de que nadie lo procese) o el «atrás» del navegador (`popstate`). Desde ese
+       instante y hasta que la pantalla nueva esté montada, lo que diga el scroll no es de nadie y no se apunta.
+       Y como un clic puede no llevar a ninguna parte —abrir un menú, marcar una casilla—, cualquier gesto de
+       desplazamiento de verdad vuelve a abrir la puerta. */
     const alDesplazar = () => {
-      const y = window.scrollY;
-      const ahora = performance.now();
-      /* EL CERO DE LA NAVEGACIÓN NO ES UN GESTO DE NADIE, y distinguirlo es lo único que hace que volver
-         funcione. Al cambiar de pantalla, el navegador pone el scroll a cero por su cuenta y dispara su evento
-         ANTES de que corra ningún efecto de React, así que machaca la última posición justo antes de que se
-         apunte. Se reconoce porque es un SALTO: de seiscientos píxeles a cero en menos de lo que tarda un
-         fotograma. Ninguna mano hace eso —ni la rueda, ni el dedo, ni la barra—, y el «volver arriba» de la
-         casa tampoco, que va suave y pasa por todos los valores intermedios.
-         Lo que se pierde con esto es el caso de quien pulsa `Inicio` y navega en el mismo suspiro: al volver
-         se le devuelve a donde estaba antes de pulsar. A cambio, volver funciona siempre. */
-      const salto = y === 0 && ultima.current > 64 && ahora - sello < 100;
-      sello = ahora;
-      if (salto) return;
-      ultima.current = y;
+      if (!navegando.current) ultima.current = window.scrollY;
     };
+    const alNavegar = () => { navegando.current = true; };
+    const alDesplazarAMano = () => { navegando.current = false; };
+
     window.addEventListener('scroll', alDesplazar, { passive: true });
-    return () => window.removeEventListener('scroll', alDesplazar);
+    document.addEventListener('click', alNavegar, true);
+    window.addEventListener('popstate', alNavegar);
+    const gestos = ['wheel', 'touchstart', 'keydown'] as const;
+    gestos.forEach((gesto) => window.addEventListener(gesto, alDesplazarAMano, { passive: true }));
+
+    return () => {
+      window.removeEventListener('scroll', alDesplazar);
+      document.removeEventListener('click', alNavegar, true);
+      window.removeEventListener('popstate', alNavegar);
+      gestos.forEach((gesto) => window.removeEventListener(gesto, alDesplazarAMano));
+    };
   }, []);
 
   useLayoutEffect(() => {
@@ -104,6 +113,7 @@ export function useScrollOnNavigate(): void {
       if (mapa.size > MAX_POSICIONES) mapa.delete(mapa.keys().next().value as string);
     }
     anterior.current = location.key;
+    navegando.current = false;
 
     if (!cargado.current) {
       cargado.current = true;
@@ -124,8 +134,6 @@ export function useScrollOnNavigate(): void {
        Se para en cuanto se llega, al agotar los intentos, o si quien mira se pone a desplazar por su cuenta:
        pelearle el scroll a alguien que ya está moviéndose es peor que no restaurar nada. */
     let frame = 0;
-    let quieto = 0;
-    let altoAnterior = 0;
     let cancelado = false;
     const limite = performance.now() + TOPE_MS;
     const rendirse = () => { cancelado = true; };
@@ -135,12 +143,6 @@ export function useScrollOnNavigate(): void {
     const insistir = () => {
       if (cancelado || performance.now() > limite) return;
       if (Math.abs(window.scrollY - destino) <= 4) return;
-
-      const alto = document.documentElement.scrollHeight;
-      quieto = alto === altoAnterior ? quieto + 1 : 0;
-      altoAnterior = alto;
-      if (quieto >= QUIETO_MAX) return; // ya no crece: no va a llegar más lejos por esperar
-
       window.scrollTo(0, destino);
       frame = window.requestAnimationFrame(insistir);
     };
