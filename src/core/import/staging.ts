@@ -2,7 +2,7 @@
 // cualquier conector). La persistencia vive en model/repository/import/inboxRepository.ts y el
 // cableado con el estado en el view-model. Ver docs/plan-importacion-bibliotecas.md (Anexo A).
 
-import { normalizeName } from '../roulette/roulette';
+import { normalizeName } from '../utils/normalizeName';
 import { normalizeTag, safeTrim } from '../security/sanitize';
 import { uniqueCaseInsensitive } from '../utils/compare';
 import { resolveGrade } from '../utils/scoreScale';

@@ -43,7 +43,8 @@ import { useSignatureEffects } from './view/hooks/useSignatureEffects';
 import { useScreenTransition } from './view/hooks/useScreenTransition';
 import { useAppliedPalette } from './view/hooks/usePalette';
 import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository';
-import { buildListsPool, buildListsWeigher, normalizeName, type RouletteCandidate } from './core/roulette/roulette';
+import { type RouletteCandidate } from './core/roulette/roulette';
+import { normalizeName } from './core/utils/normalizeName';
 import { useImportInbox } from './viewmodel/useImportInbox';
 import { useImportFieldPrefs } from './viewmodel/useImportFieldPrefs';
 import { useMountedOnceOpen } from './view/modals/useMountedOnceOpen';
@@ -58,7 +59,7 @@ import type { ImportedGame, RawExternalGame } from './model/types/import';
 // —devuelve el módulo ya cacheado—, de modo que cuando `lazy` lo pida el trabajo estará hecho.
 const importFormModal = () => import('./view/modals/FormModal');
 const importConfirmModal = () => import('./view/modals/ConfirmModal');
-const importRouletteModal = () => import('./view/components/roulette/RouletteModal');
+const importRouletteModal = () => import('./view/components/roulette/ListsRouletteModal');
 
 const FormModal = lazy(() => importFormModal().then((module) => ({ default: module.FormModal })));
 const ConfirmModal = lazy(() => importConfirmModal().then((module) => ({ default: module.ConfirmModal })));
@@ -68,7 +69,9 @@ const SocialHub = lazy(() => import('./view/components/SocialHub').then((module)
 // descargan al entrar en la pestaña, así que no pesan en el arranque de los listados.
 const StatsHub = lazy(() => import('./view/components/stats/StatsHub').then((module) => ({ default: module.StatsHub })));
 const AccountHub = lazy(() => import('./view/components/AccountHub').then((module) => ({ default: module.AccountHub })));
-const RouletteModal = lazy(() => importRouletteModal().then((module) => ({ default: module.RouletteModal })));
+/* La ruleta de los listados va por su envoltorio, no por el modal desnudo: así el pool y la ponderación
+   se calculan DENTRO del chunk perezoso en vez de en el arranque (ver `ListsRouletteModal`). */
+const RouletteModal = lazy(() => importRouletteModal().then((module) => ({ default: module.ListsRouletteModal })));
 const PublicReviewScreen = lazy(() => import('./view/components/PublicReviewScreen').then((module) => ({ default: module.PublicReviewScreen })));
 const InboxScreen = lazy(() => import('./view/components/import/InboxScreen').then((module) => ({ default: module.InboxScreen })));
 const LegalScreen = lazy(() => import('./view/components/LegalScreen').then((module) => ({ default: module.LegalScreen })));
@@ -388,8 +391,6 @@ export default function App() {
   const tabOptions = useMemo(() => computeTabOptions(vm.data[currentTab]), [vm.data, currentTab]);
 
   const [rouletteOpen, setRouletteOpen] = useState(false);
-  const roulettePool = useMemo(() => buildListsPool(vm.data), [vm.data]);
-  const rouletteWeight = useMemo(() => buildListsWeigher(vm.data), [vm.data]);
 
   useEffect(() => {
     // Si volvemos del "Conectar con GitHub" (OAuth), completamos ese flujo; si no, arrancamos el sync normal.
@@ -1006,8 +1007,7 @@ export default function App() {
             open={rouletteOpen}
             onClose={() => setRouletteOpen(false)}
             title={UI_MESSAGES.fab.roulette}
-            candidates={roulettePool}
-            weight={rouletteWeight}
+            data={vm.data}
             tag={(candidate) => TAB_TITLES[candidate.sourceTab]}
             action={() => ({
               btnClass: 'btn-complete',

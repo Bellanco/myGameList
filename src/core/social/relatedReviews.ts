@@ -38,7 +38,7 @@
 // PURO: sin reloj, sin E/S y sin estado. Recibe los candidatos aplanados y devuelve una lista ordenada.
 import { gameTitleKey } from '../utils/gameTitleKey';
 import { sharedSagaName } from '../utils/gameSaga';
-import { normalizeName } from '../roulette/roulette';
+import { normalizeName } from '../utils/normalizeName';
 import { isPublishableTimestamp } from './moveActivity';
 
 /** Por qué se ofrece una reseña. Es también lo que rotula el chip que la acompaña. */

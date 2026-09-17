@@ -54,6 +54,28 @@ const root = path.join(__dirname, '..');
 // nuevo, así que hasta que alguien vuelva a pedirla con red, la aplicación se pinta con la tipografía del
 // sistema. Es degradación estética y no funcional, pero es recurrente —una vez por despliegue—, y por eso va
 // después de las dos de arriba y no antes, pese a soltar mucho más espacio.
+//
+// SEGUNDA MEDICIÓN (17-09-2026), esta vez atribuyendo los bytes del chunk a sus módulos con el sourcemap —que es
+// la forma de no discutir de memoria—: se decodifican los `mappings` y se suman los bytes de salida por fichero
+// de origen. Lo que salió, sin comprimir, dentro de `index-*.js`:
+//
+//     28,4 kB  IconSprite.tsx        17,5 kB  GameTable.tsx        13,4 kB  App.tsx
+//      9,8 kB  useSyncViewModel.ts    8,4 kB  useGameListViewModel  6,4 kB  gistRepository.ts
+//
+// Tres conclusiones:
+//   · `IconSprite` es el mayor con diferencia, el 15 % del chunk. Confirma con datos que la palanca (1) de
+//     arriba es la buena: sacarlo a un `.svg` externo son ~6 kB comprimidos, y subiría el margen de ~5 a ~11 kB.
+//   · La RULETA se colaba en el arranque y ya no: el modal era perezoso, pero `App` importaba `buildListsPool`
+//     y `buildListsWeigher` de forma estática para dos `useMemo`. El cálculo se mudó a `ListsRouletteModal`
+//     (envoltorio dentro del chunk perezoso). OJO, LA LECCIÓN: eso SOLO no cambió ni un byte, porque
+//     `normalizeName` vivía en el mismo módulo y la importan el listado y la importación, así que el fichero
+//     entraba entero igual. Hizo falta mudarla a `core/utils/normalizeName`. Resultado: 215,1 → 214,3 kB.
+//   · Los efectos de firma (`useSignatureEffects` 2,7 kB + `useShootingStars` 1,9) son diferibles y se
+//     DESCARTARON: el wipe al navegar se quiere listo desde el primer render, y 4,6 kB sin comprimir no pagan
+//     arriesgar la sensación de la aplicación.
+//
+// Y uno que PARECÍA una fuga y no lo es: `FeedShell` está en el arranque a propósito —es el esqueleto que se
+// pinta mientras el hub social se descarga—. Si fuera perezoso no habría nada que enseñar durante la carga.
 const BOOT_PAYLOAD_BUDGET_KB = 220;
 const publicDir = path.join(root, 'public');
 const requiredFiles = [

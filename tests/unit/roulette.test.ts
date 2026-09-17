@@ -9,13 +9,13 @@ import {
   gameWeight,
   listsWeight,
   NEUTRAL_GRADE,
-  normalizeName,
   parseSeries,
   SEQUEL_DECAY,
   pickWeighted,
   profileWeight,
   type RouletteCandidate,
 } from '../../src/core/roulette/roulette';
+import { normalizeName } from '../../src/core/utils/normalizeName';
 import type { TabId } from '../../src/model/types/game';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
