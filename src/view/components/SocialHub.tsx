@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 // La hoja del hub se importa AQUÍ y no desde `index.scss`: como el hub entra por `lazy()`, Vite emite su CSS en
 // el mismo chunk perezoso y el arranque no carga ni un byte de estilos de estas pantallas (igual que `stats.scss`).
@@ -292,24 +292,19 @@ const SocialHubInner = memo(function SocialHubInner({
     return entry?.achievementsMirror || '';
   }, [detailId, visibleSocialDirectory, isOwnProfileDetail, ownAchievementMirror]);
 
-  /**
-   * Abrir una reseña empieza por su principio.
+  /*
+   * ABRIR UNA RESEÑA EMPIEZA POR SU PRINCIPIO, y eso ya no se hace aquí.
    *
-   * El hub no rehacía el desplazamiento al cambiar de pantalla, y eso pasaba desapercibido mientras el detalle de
-   * una reseña era corto. Al añadirle el bloque de relacionadas la pantalla creció, y abrir una reseña desde el
-   * final de una lista larga —o desde ese mismo bloque, que está abajo del todo— te dejaba a media altura: en
-   * mitad del texto, o directamente en las relacionadas de la reseña nueva. Leer empieza por arriba.
+   * Aquí vivía un `window.scrollTo({ top: 0 })` atado a qué reseña estaba abierta. Tenía su razón: al crecer el
+   * detalle con el bloque de relacionadas, abrir una reseña desde el final de una lista larga te dejaba a media
+   * altura, en mitad del texto. Pero los paneles de este hub SALEN DE LA RUTA (`activePanel` viene de
+   * `routeState`), así que abrir una reseña es una navegación como cualquier otra y de eso se encarga ya
+   * `useScrollOnNavigate`: sube al entrar y devuelve el sitio al volver, que es justo lo que este parche hacía a
+   * mano para un caso y nadie hacía para los demás.
    *
-   * Solo al ENTRAR en una reseña, y por eso la dependencia es cuál está abierta: volver a la lista no dispara
-   * nada y conserva el sitio donde el lector la dejó, que es lo que se espera de un «atrás».
+   * Y quitarlo arregla algo más: era el único `scrollTo` instantáneo de la aplicación, y el hook tiene que
+   * distinguir esos saltos del cero que dispara el navegador al navegar. Un caso límite menos del que preocuparse.
    */
-  const openReviewKey = activePanel === 'detail' || activePanel === 'profile-review'
-    ? `${activePanel}:${activeDetailEvent?.gameId ?? activeProfileReview?.id ?? 0}`
-    : '';
-  useEffect(() => {
-    if (!openReviewKey) return;
-    window.scrollTo({ top: 0 });
-  }, [openReviewKey]);
 
   const toggleDetailReviews = useCallback(
     () => (profileReviewsView ? closeProfileReviews(detailId) : openProfileReviews(detailId)),

@@ -40,6 +40,37 @@ test.describe('el scroll al cambiar de pantalla', () => {
   });
 
   /**
+   * Y EN RUTAS ANIDADAS, que es donde más se nota: el listado de reseñas del perfil abre una pantalla propia
+   * (`/perfil/resenas/:id`) y se vuelve con su botón. Aquí el cambio no es solo de pestaña: se monta un chunk
+   * perezoso, así que al volver la pantalla tarda en tomar su altura — que es justo el caso para el que el hook
+   * insiste unos fotogramas en vez de rendirse al primero.
+   */
+  test('vuelve también desde una pantalla anidada, con su chunk perezoso por medio', async ({ page }) => {
+    await page.goto('/perfil');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    // El panel se pinta por bloques: sin esperar a que tenga alto, el scroll de abajo no tendría a dónde ir.
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollHeight), { timeout: 10_000 })
+      .toBeGreaterThan(1200);
+
+    await page.evaluate(() => window.scrollTo(0, 500));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(200);
+    const dondeEstaba = await page.evaluate(() => window.scrollY);
+
+    await page.getByRole('button', { name: /^Leer tu reseña de/ }).first().click();
+    await expect(page.locator('.hub-related-list')).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+
+    await page.goBack();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    /* SE COMPRUEBA LA ZONA, NO EL PÍXEL, y no es un test flojo: al pulsar, el navegador desplaza un poco la
+       página para enseñar el botón que recibe el foco, así que la posición que se deja no es exactamente la que
+       el test fijó. Lo que importa —y lo que estaba roto— es que se vuelve a donde estabas y no al principio. */
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(200);
+    expect(Math.abs((await page.evaluate(() => window.scrollY)) - dondeEstaba)).toBeLessThan(250);
+  });
+
+  /**
    * RECARGAR NO ES NAVEGAR. Ahí manda `history.scrollRestoration` del navegador, y pisarlo subiría al principio
    * a quien recarga a media lista sin haber pedido ir a ninguna parte.
    *
