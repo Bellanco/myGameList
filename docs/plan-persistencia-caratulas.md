@@ -202,19 +202,33 @@ por *site engagement*. Es una apuesta barata: veinte líneas, cero UI, cero ries
 > recorrido en segundo plano que no se ve. El Paso 1 se lleva la mayor parte del beneficio por una
 > fracción del coste.
 >
-> **Criterio para reabrirlo:** las **peticiones diarias a `/cover` con `m=1`** en el panel de Cloudflare.
-> Si la caché HTTP del Paso 1 hace su trabajo, esas peticiones dejan de salir del navegador y el conteo
-> baja; si no baja, los recorridos se están repitiendo y esto se justifica. El diseño de abajo sigue
-> siendo el bueno.
+> **Criterio para reabrirlo:** una comprobación, no una métrica. Con carátulas encendidas y el recorrido
+> ya terminado, se borran a mano estas dos claves de `localStorage` —que es exactamente lo que se lleva
+> una purga, sin tocar la caché HTTP—:
 >
-> **⚠️ Antes de desplegar el Paso 1 hay que tomar la lectura base de ese conteo**, o la comparación no
-> se podrá hacer después.
+> - `mis-listas-covers-done-v2`
+> - `mis-listas-covers-none`
 >
-> *La primera redacción de este criterio —«si se siguen observando recorridos completos repetidos en el
-> mismo dispositivo»— se cambió porque no había con qué observarlo: `telemetryRepository` solo emite a
-> GA4 con la analítica aceptada (opt-in) y con Firebase inicializado, y la métrica de `/admin` cuenta
-> resoluciones NUEVAS contra IGDB, que un recorrido repetido no gasta porque el emparejamiento ya está en
-> KV. Un criterio que nadie puede evaluar no aplaza una decisión: la entierra.*
+> Se recarga con la pestaña **Network** abierta filtrando por `cover`, y se mira la columna **Size** de
+> las peticiones con `m=1`: **`(disk cache)`** significa que el Paso 1 hace su trabajo y Firestore no
+> hace falta; un tamaño real significa que salen a la red, y entonces hay que averiguar por qué **antes**
+> de plantearse nada más.
+>
+> *Este criterio ha tenido tres redacciones, y las dos primeras fallaban por lo mismo: pedían un dato que
+> nadie podía obtener.*
+> 1. *«Recorridos completos repetidos en el mismo dispositivo» — `telemetryRepository` solo emite a GA4
+>    con la analítica aceptada (opt-in) y Firebase inicializado, y la métrica de `/admin` cuenta
+>    resoluciones NUEVAS contra IGDB, que un recorrido repetido no gasta porque el emparejamiento ya está
+>    en KV.*
+> 2. *«Peticiones diarias a `/cover` con `m=1` en el panel de Cloudflare» — esto es **Pages**, no una zona:
+>    Web Analytics mide navegaciones y las métricas de Functions no desglosan por ruta. Y ningún dataset
+>    de Cloudflare expone la query string como dimensión, así que `m=1` no es filtrable ni por GraphQL.
+>    Encima, el mosaico pide `/cover` sin `m=1` ~150 veces por visita y enterraría la señal.*
+>
+> *Si alguna vez hiciera falta la métrica continua, el camino es un contador diario en KV con el patrón
+> de lotes de `coverDailyQuotaKey`, visible en `/admin`: unas quince líneas. No se hizo porque sería
+> añadir código para decidir si se añade más código, y la comprobación de arriba responde lo mismo
+> por cero.*
 
 **Qué cambia:** `firestore.rules`, `src/core/utils/coverMemory.ts`, `src/core/utils/coverDone.ts`,
 más un repositorio nuevo.
@@ -330,8 +344,8 @@ empuja a instalar—, pero siguen siendo ciertos y conviene no perderlos:
 - [x] Safari iOS sin instalar: deniega en silencio, sin `permissions.query` (ver arriba).
 - [ ] WebKit **con la app en la pantalla de inicio / el Dock**: ¿concede?
 - [x] Safari macOS sin instalar: idéntico a iOS (deniega en silencio, sin `permissions.query`).
-- [ ] Observar si tras el Paso 1 se siguen viendo recorridos completos repetidos en el mismo dispositivo:
-      es el criterio que reabre Firestore.
+- [ ] Hacer la comprobación del criterio (borrar las dos claves y mirar `Size` en Network) la primera vez
+      que el Paso 1 esté en producción.
 - [ ] (solo si se reabre Firestore) Decidir el algoritmo del hash: nombre + plataformas + modo.
 - [ ] (solo si se reabre Firestore) Confirmar que las reglas nuevas no bloquean el documento.
 - [ ] Vigilar el presupuesto del chunk de arranque: 215,1 kB de 220.
