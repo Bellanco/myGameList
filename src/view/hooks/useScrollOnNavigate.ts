@@ -46,11 +46,20 @@ import { useLocation, useNavigationType } from 'react-router-dom';
 const MAX_POSICIONES = 50;
 
 /**
- * Cuántos fotogramas se insiste en restaurar la posición al volver. Veinte son ~330 ms a 60 Hz: de sobra para
- * que un listado virtualizado termine de tomar su alto, y lo bastante poco para que nadie note que la página
- * «se resiste» si ya ha empezado a moverse por su cuenta.
+ * HASTA CUÁNDO SE INSISTE EN RESTAURAR LA POSICIÓN AL VOLVER.
+ *
+ * Empezó siendo un número fijo de fotogramas —veinte, ~330 ms— y se quedaba corto en la pantalla del perfil: sus
+ * bloques se pintan poco a poco, así que a los veinte fotogramas el documento todavía no llegaba a donde
+ * estábamos y la restauración se quedaba a medias (500 px pedidos, 276 conseguidos). Lo delató el recorrido
+ * anidado de `tests/e2e/scroll.test.ts`.
+ *
+ * Así que el criterio ya no es contar fotogramas, es MIRAR SI LA PÁGINA SIGUE CRECIENDO: mientras el alto cambie,
+ * es que aún se está montando y merece la pena insistir; cuando deja de cambiar unos cuantos fotogramas
+ * seguidos, ya no va a crecer más y seguir sería pelearle el scroll a nadie. El tope de tiempo es la red de
+ * seguridad para una pantalla que no parara nunca (una animación de alto, una lista que se rellena sola).
  */
-const MAX_INTENTOS = 20;
+const QUIETO_MAX = 6;
+const TOPE_MS = 1500;
 
 export function useScrollOnNavigate(): void {
   const location = useLocation();
@@ -115,16 +124,23 @@ export function useScrollOnNavigate(): void {
        Se para en cuanto se llega, al agotar los intentos, o si quien mira se pone a desplazar por su cuenta:
        pelearle el scroll a alguien que ya está moviéndose es peor que no restaurar nada. */
     let frame = 0;
-    let intentos = 0;
+    let quieto = 0;
+    let altoAnterior = 0;
     let cancelado = false;
+    const limite = performance.now() + TOPE_MS;
     const rendirse = () => { cancelado = true; };
     const eventos = ['wheel', 'touchstart', 'keydown'] as const;
     eventos.forEach((evento) => window.addEventListener(evento, rendirse, { once: true, passive: true }));
 
     const insistir = () => {
-      if (cancelado || intentos >= MAX_INTENTOS) return;
-      intentos += 1;
+      if (cancelado || performance.now() > limite) return;
       if (Math.abs(window.scrollY - destino) <= 4) return;
+
+      const alto = document.documentElement.scrollHeight;
+      quieto = alto === altoAnterior ? quieto + 1 : 0;
+      altoAnterior = alto;
+      if (quieto >= QUIETO_MAX) return; // ya no crece: no va a llegar más lejos por esperar
+
       window.scrollTo(0, destino);
       frame = window.requestAnimationFrame(insistir);
     };

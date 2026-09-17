@@ -278,10 +278,19 @@ describe('SocialHub (componente, post-M3)', () => {
     });
   });
 
-  // Abrir una reseña tiene que empezar por su principio. El hub no rehacía el desplazamiento al cambiar de
-  // pantalla, y con el bloque de reseñas relacionadas al pie la pantalla creció lo bastante como para que abrir
-  // una desde el final de una lista larga te dejara a media altura, leyendo por el medio.
-  it('al abrir el detalle de una reseña sube al principio de la pantalla', async () => {
+  /*
+   * ABRIR UNA RESEÑA SIGUE EMPEZANDO POR SU PRINCIPIO, pero ya no lo hace el hub.
+   *
+   * Aquí se comprobaba su `window.scrollTo({ top: 0 })`. Se retiró: los paneles de este hub salen de la RUTA
+   * (`activePanel` viene de `routeState`), así que abrir una reseña es una navegación como cualquier otra y de
+   * eso se encarga `useScrollOnNavigate`, que además devuelve el sitio al volver — algo que este parche no hacía.
+   *
+   * Lo que se comprueba ahora es lo contrario, y a propósito: que el hub NO toca el scroll. Si alguien vuelve a
+   * meter aquí un `scrollTo`, habrá dos manos sobre lo mismo y volverá el caso límite que el hook tiene que
+   * distinguir (un salto instantáneo a cero, indistinguible del que dispara el navegador al navegar).
+   * El comportamiento de verdad lo sujeta `tests/e2e/scroll.test.ts`, que es donde hay layout.
+   */
+  it('el hub ya no mueve el scroll al abrir una reseña: de eso se encarga la navegación', async () => {
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({
       uid: 'uid-1',
       email: 'jaime@example.com',
@@ -295,8 +304,9 @@ describe('SocialHub (componente, post-M3)', () => {
     renderHub('/social/user/pseudonimo-de-ana/game/7/review');
 
     await waitFor(() => {
-      expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }));
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     });
+    expect(scrollTo).not.toHaveBeenCalled();
   });
 
   it('volver del detalle NO reposiciona: el «atrás» conserva dónde estaba el lector', async () => {
