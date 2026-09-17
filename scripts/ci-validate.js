@@ -76,6 +76,10 @@ const root = path.join(__dirname, '..');
 //
 // Y uno que PARECÍA una fuga y no lo es: `FeedShell` está en el arranque a propósito —es el esqueleto que se
 // pinta mientras el hub social se descarga—. Si fuera perezoso no habría nada que enseñar durante la carga.
+// Y UNA CONSECUENCIA PRÁCTICA (17-09-2026): **React está fijado en 19.2.8 en `package.json`, sin `^`**, y es por
+// esto. Subirlo a 19.3.0 engorda su chunk de 57,5 a 65,8 kB —8,3 kB— y el arranque se va a 223,3, por encima del
+// presupuesto: `npm update` lo subió, la validación lo cazó y hubo que volver atrás. Para poder actualizar React
+// hay que hacer sitio ANTES, y el sitio está en la palanca (1) de arriba. No se quita el pin sin eso.
 const BOOT_PAYLOAD_BUDGET_KB = 220;
 const publicDir = path.join(root, 'public');
 const requiredFiles = [
