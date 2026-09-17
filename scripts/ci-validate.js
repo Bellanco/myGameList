@@ -90,7 +90,26 @@ const root = path.join(__dirname, '..');
 // fichero aparte obliga a elegir entre bloquear el render hasta descargarlo o enseñar la aplicación sin color
 // un instante, y cambiar de tema pasaría a ser asíncrono. Cuatro kilobytes no pagan eso: la palanca (1) da más
 // del doble sin tocar el primer fotograma.
-const BOOT_PAYLOAD_BUDGET_KB = 220;
+// ══════════════════════════════════════════════════════════════════════════════════════════════════════════
+// DOS NÚMEROS Y NO UNO, desde el 17-09-2026. El de antes (220 kB para todo el precache) mezclaba dos cosas que
+// no se parecen, y eso tenía un agujero: la tipografía son 36 kB con `font-display: swap`, o sea que NO retrasa
+// el primer pintado —la página se dibuja con la letra del sistema—. Con un solo número, alguien podía sacarla
+// del precache y meter 36 kB de JavaScript en su lugar sin que saltara nada, y la aplicación arrancaría mucho
+// peor con el mismo total. Ahora eso no cuela.
+//
+//   · CRÍTICO — el JS y el CSS que hay que descargar y ejecutar ANTES de ver nada. Es el número que importa y
+//     el que no debe crecer: si sube, hay que diferir algo, no subir el tope.
+//   · TOTAL — todo el precache, fuentes incluidas. No retrasa el pintado; mide lo que cuesta dejar la
+//     aplicación lista para funcionar sin red. Puede crecer con más holgura.
+//
+// De dónde salen los topes (medido el 17-09-2026, con React 19.3 y el motor de sync ya diferido): crítico
+// 183,2 kB y total 219,2. Los topes dejan ~7 kB de margen en lo crítico —lo justo para un cambio normal, no
+// para una pieza nueva— y ~21 en el total, que es donde caben una fuente más o un icono grande sin drama.
+//
+// SUBIR EL CRÍTICO ES LO ÚLTIMO, y sigue exigiendo lo de siempre: rehacer las tres mediciones de arriba y
+// escribir aquí el resultado. Lo que hay que hacer ANTES está en la lista de palancas, por orden.
+const BOOT_CRITICAL_BUDGET_KB = 190;
+const BOOT_TOTAL_BUDGET_KB = 240;
 const publicDir = path.join(root, 'public');
 const requiredFiles = [
   path.join(root, 'index.html'),
@@ -204,19 +223,33 @@ if (fs.existsSync(builtSw)) {
     fail(`dist/service-worker.js precachea ${precached.length} assets sin JS y/o sin CSS: la app no arrancaría sin red.`);
   }
 
-  const gzipBytes = precached.reduce(
-    (total, asset) => total + zlib.gzipSync(fs.readFileSync(path.join(root, 'dist', asset))).length,
-    0,
-  );
-  const gzipKb = gzipBytes / 1024;
+  const pesos = precached.map((asset) => ({
+    asset,
+    kb: zlib.gzipSync(fs.readFileSync(path.join(root, 'dist', asset))).length / 1024,
+  }));
+  /* QUÉ BLOQUEA EL PRIMER PINTADO: el JavaScript y el CSS, sí; las FUENTES, no —van con `font-display: swap`,
+     así que la página se dibuja con la del sistema y la buena entra cuando llega—. Es toda la clasificación que
+     hace falta: en el precache no hay otra cosa. */
+  const bloquea = ({ asset }) => !/\.(woff2?|ttf|otf)$/i.test(asset);
+  const criticoKb = pesos.filter(bloquea).reduce((total, { kb }) => total + kb, 0);
+  const totalKb = pesos.reduce((total, { kb }) => total + kb, 0);
+
   console.log(
-    `Service worker: ${precached.length} assets del arranque, ${gzipKb.toFixed(1)} kB comprimidos ` +
-      `(presupuesto ${BOOT_PAYLOAD_BUDGET_KB} kB).`,
+    `Service worker: ${precached.length} assets del arranque · ` +
+      `crítico ${criticoKb.toFixed(1)}/${BOOT_CRITICAL_BUDGET_KB} kB · ` +
+      `total ${totalKb.toFixed(1)}/${BOOT_TOTAL_BUDGET_KB} kB (comprimidos).`,
   );
-  if (gzipKb > BOOT_PAYLOAD_BUDGET_KB) {
+  if (criticoKb > BOOT_CRITICAL_BUDGET_KB) {
     fail(
-      `El arranque pesa ${gzipKb.toFixed(1)} kB comprimidos y el presupuesto es ${BOOT_PAYLOAD_BUDGET_KB} kB. ` +
-        'Mira si lo que ha entrado en el grafo estático debería ser un import() diferido.',
+      `Lo que BLOQUEA el primer pintado pesa ${criticoKb.toFixed(1)} kB comprimidos y el tope es ` +
+        `${BOOT_CRITICAL_BUDGET_KB} kB. Este es el número que importa: mira si lo que ha entrado en el grafo ` +
+        'estático debería ser un import() diferido.',
+    );
+  }
+  if (totalKb > BOOT_TOTAL_BUDGET_KB) {
+    fail(
+      `El precache entero pesa ${totalKb.toFixed(1)} kB comprimidos y el tope es ${BOOT_TOTAL_BUDGET_KB} kB. ` +
+        'No retrasa el primer pintado, pero sí lo que cuesta dejar la aplicación lista para funcionar sin red.',
     );
   }
 }

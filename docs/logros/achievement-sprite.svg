@@ -11,7 +11,7 @@
 
   COMO SE USA: se monta UNA vez por pantalla, desde la rejilla de /perfil/logros
   y desde la vitrina de la ficha social, NUNCA desde App.tsx, que arranca con
-  215 kB de presupuesto (BOOT_PAYLOAD_BUDGET_KB en scripts/ci-validate.js).
+  presupuesto vigilado (BOOT_CRITICAL_BUDGET_KB en scripts/ci-validate.js).
   Ver la seccion 8.5 del plan. Luego, por cada medalla:
 
       &lt;svg class="art" viewBox="0 0 32 32" filter="url(#imp)"&gt;
