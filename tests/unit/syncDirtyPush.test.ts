@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cargarMotorDeSync } from '../../src/model/repository/syncEngine';
 import type { TabData } from '../../src/model/types/game';
 
 /**
@@ -20,6 +21,22 @@ const { readGist, writeGist } = vi.hoisted(() => ({
 }));
 
 let syncConfig: { token: string; gistId: string; etag: string | null; lastRemoteUpdatedAt: number } | null = null;
+
+/* LA CONFIGURACIÓN SE MOCKEA EN SU MÓDULO, no en la fachada: desde que el motor de sync es perezoso
+   (`syncEngine`), el view-model lee `getSyncConfig` de `gistConfigRepository` directamente — es lo único
+   que necesita de forma síncrona en cada render. */
+vi.mock('../../src/model/repository/gistConfigRepository', () => ({
+  getSyncConfig: () => syncConfig,
+  saveSyncConfig: vi.fn(),
+  clearSyncConfig: vi.fn(),
+  ensureSyncConfigLoaded: vi.fn(async () => {}),
+  subscribeSyncConfig: () => () => {},
+}));
+
+vi.mock('../../src/model/repository/githubHttp', () => ({
+  getRetryAfterMs: () => 0,
+  isDeferredNetworkError: () => false,
+}));
 
 vi.mock('../../src/model/repository/gistRepository', () => ({
   readGist,
@@ -88,7 +105,12 @@ function simularEdicion(): void {
   transitionTo('dirty');
 }
 
-beforeEach(() => {
+/* EL MOTOR DE SYNC SE PRECARGA AQUÍ, y hace falta: desde que vive en un chunk perezoso (`syncEngine`), la
+   primera llamada pasa por un `import()` que los relojes falsos de estas pruebas no resuelven —no es una espera
+   de tiempo, es una carga de módulo—. Precargarlo con el reloj de verdad deja la promesa ya resuelta, que es el
+   estado en el que está en cuanto la aplicación ha sincronizado una vez. */
+beforeEach(async () => {
+  await cargarMotorDeSync();
   localStorage.clear();
   clearDirty();
   resetSyncState();
