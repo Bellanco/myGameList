@@ -5,8 +5,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [1.3.1] - 2026-09-17
 
-La versión de **lo que se queda guardado**. Por fuera no cambia nada; por dentro, lo que el navegador tira deja
-de costar lo que costaba.
+La versión de **lo que se queda guardado** y de **no perder el sitio**. Por fuera se nota en la navegación: al
+cambiar de pantalla ya no te quedas a media página, y el aviso de un logro te lleva a la medalla. Por dentro, lo
+que el navegador tira deja de costar lo que costaba.
 
 ### Added
 - **Al conseguir un logro, el aviso lleva a esa medalla.** Antes dejaba en la pantalla de logros y a buscar entre
