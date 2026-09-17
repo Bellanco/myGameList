@@ -1,4 +1,4 @@
-import { memo, type CSSProperties } from 'react';
+import { memo, useEffect, useRef, type CSSProperties } from 'react';
 import { AchievementMedal } from './AchievementMedal';
 import { ACHIEVEMENTS_UI, ACHIEVEMENT_RARITY_LABELS } from '../../../core/constants/achievementLabels';
 import type { AchievementDef } from '../../../core/achievements/types';
@@ -37,6 +37,12 @@ export interface AchievementRowData {
    * enseñando la META, que describe el logro sin atribuírselo a nadie — la misma lección que `statsVoice`.
    */
   mine?: boolean;
+  /**
+   * ¿ES LA FILA A LA QUE SE VENÍA? Se enciende cuando se llega desde el aviso de un logro recién conseguido: la
+   * fila se trae a la vista y se resalta un momento. Sin esto, «has conseguido esto» deja a quien lo lee
+   * buscando su medalla entre cientos de filas.
+   */
+  destacado?: boolean;
 }
 
 /**
@@ -60,7 +66,19 @@ export const AchievementRow = memo(function AchievementRow({
   rarity,
   global,
   mine = true,
+  destacado = false,
 }: AchievementRowData) {
+  const fila = useRef<HTMLLIElement>(null);
+  /* El salto lo hace la FILA y no la pantalla: es quien tiene su nodo, y así no hace falta buscarla por el DOM
+     ni esperar a que la lista termine de montarse. `center` y no `start` porque una fila pegada al borde de
+     arriba se lee como el principio de la lista y no como el sitio al que se venía. */
+  useEffect(() => {
+    if (!destacado) return;
+    // Llamada opcional: `scrollIntoView` puede no estar (motores viejos, entornos de prueba) y perder el
+    // salto es un incordio; romper el render de la lista entera, no.
+    fila.current?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+  }, [destacado]);
+
   const isGlobal = Boolean(global);
   const earned = level >= 1;
   // YA NO HAY FILA TAPADA. Un logro oculto que no tienes no llega a esta fila: se filtra antes
@@ -82,7 +100,7 @@ export const AchievementRow = memo(function AchievementRow({
     ? (isPercent ? ACHIEVEMENTS_UI.progressPercent(value, next) : ACHIEVEMENTS_UI.progress(value, next))
     : ACHIEVEMENTS_UI.maxed;
 
-  const classes = ['ach-row', earned ? '' : 'is-locked', isGlobal ? 'is-global' : '', isGlobal && earned ? 'is-owned' : '']
+  const classes = ['ach-row', earned ? '' : 'is-locked', isGlobal ? 'is-global' : '', isGlobal && earned ? 'is-owned' : '', destacado ? 'is-destacado' : '']
     .filter(Boolean)
     .join(' ');
 
@@ -100,7 +118,7 @@ export const AchievementRow = memo(function AchievementRow({
     // `data-r` EN LA FILA y no solo en su rótulo: de ahí sale `--rc`, el color de la rareza con el que la hoja
     // pinta el canto templado del borde izquierdo y el progreso. La dificultad dejó de ser un adorno de la
     // esquina derecha para ser el canto de la fila, y eso lo tiene que saber la fila entera.
-    <li className={classes} data-r={def.rarity} style={fill ? ({ '--fill': fill } as CSSProperties) : undefined}>
+    <li ref={fila} className={classes} data-r={def.rarity} style={fill ? ({ '--fill': fill } as CSSProperties) : undefined}>
       {/* `list` (34 px) en LAS DOS VISTAS. La medalla manda en la altura de la fila: a 48 la lista de 334 entradas
           se estiraba a quince pantallas, y a 34 sigue teniendo dibujo, filo y píldora legibles. El tamaño se
           decide aquí y no en la hoja, para que no haya dos sitios donde cambiarlo. */}

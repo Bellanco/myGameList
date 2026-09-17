@@ -55,6 +55,27 @@ const CACHE_ACIERTO = 'public, max-age=2592000, stale-while-revalidate=31536000'
 const CACHE_FALLO = 'no-store';
 
 /**
+ * Y LA EXCEPCIÓN: EL RECORRIDO SÍ GUARDA LO QUE APRENDE. El modo «solo resolver» (`m=1`) no pinta nada —ni el
+ * 404 ni el 204 llegan a una etiqueta `<img>`, los pide `useCoverBackfill` con `fetch`—, así que aquí no se
+ * puede repetir el estropicio de arriba: lo que se guarda no tapa ninguna imagen, solo evita volver a preguntar.
+ *
+ * Y evita bastante. La memoria de «este juego no tiene» vive en `localStorage`, que es lo primero que se lleva
+ * por delante un desalojo del navegador —o la purga a los siete días de Safari—, y al perderse el recorrido
+ * entero vuelve a salir a la red: trescientas peticiones por biblioteca, otra vez. Guardadas aquí, esa segunda
+ * vuelta se resuelve en el disco del propio equipo, sin red, sin cuenta y en cualquier navegador; que es lo que
+ * ni la persistencia ni la nube pueden dar a la vez (ver `docs/plan-persistencia-caratulas.md`).
+ *
+ * SIETE DÍAS y no noventa, a propósito: es el mismo plazo con el que el servidor olvida un «no tiene»
+ * (`MISS_TTL` en `_lib/igdbCover`), así que las dos caras del sistema caducan a la vez y no hay que recordar dos
+ * números. Y es MÁS CORTO que la memoria del cliente (`VIDA_MS`, noventa días), de modo que esto nunca es lo que
+ * retrasa que un juego estrene carátula: quien manda sigue siendo el plazo de arriba.
+ *
+ * Lo que NO se guarda sigue siendo lo mismo que antes: 429, 501, 403 y 502 no hablan de este juego, hablan del
+ * servidor, y guardar eso es exactamente lo que costó media biblioteca.
+ */
+const CACHE_MAPA = 'public, max-age=604800, stale-while-revalidate=2592000';
+
+/**
  * CUÁNTOS JUEGOS NUEVOS PUEDE RESOLVER UNA MISMA IP EN UNA HORA. Sin esto, `/cover` es un proxy abierto a IGDB:
  * cualquiera puede pedirle nombres inventados y gastar la cuota de la aplicación de Twitch, las peticiones de
  * Cloudflare y llenar el KV de claves basura. No hay sesión que exigir —la app funciona sin cuenta—, así que el
@@ -268,13 +289,18 @@ export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise
   if (!coverId) {
     // 404 y no una imagen de relleno: quien pinta el hueco es el cliente, que ya tiene su portada de casa puesta
     // debajo. Devolver aquí un PNG genérico obligaría a descargarlo para tapar algo que ya está pintado.
-    return new Response('Sin carátula', { status: 404, headers: { 'Cache-Control': CACHE_FALLO } });
+    // El plazo depende de QUIÉN pregunta: el recorrido guarda lo aprendido (`CACHE_MAPA`), el mosaico no
+    // guarda nada (`CACHE_FALLO`), que es la línea que costó media biblioteca y sigue igual de intacta.
+    return new Response('Sin carátula', {
+      status: 404,
+      headers: { 'Cache-Control': soloMapa ? CACHE_MAPA : CACHE_FALLO },
+    });
   }
 
   if (soloMapa) {
-    // 204: hay carátula y ya está apuntada, pero aquí no se envía. `no-store` porque lo que importa de esta
-    // respuesta es el efecto en KV, no la respuesta en sí.
-    return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });
+    // 204: hay carátula y ya está apuntada, pero aquí no se envía. Se guarda igual que el 404 de este modo: al
+    // recorrido le vale tanto saber que un juego la tiene como que no, y un «sí la tiene» no se vuelve falso.
+    return new Response(null, { status: 204, headers: { 'Cache-Control': CACHE_MAPA } });
   }
 
   if (!esIdDeCaratula(coverId)) {

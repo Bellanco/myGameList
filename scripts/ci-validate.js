@@ -46,6 +46,50 @@ const root = path.join(__dirname, '..');
 // con `<use href="/sprite.svg#icon-x">`, que saca ~6 kB de JS a cambio de una petición; (2) revisar si la
 // tipografía base puede servirse con menos pesos. Subir el número otra vez es lo último, y exige volver a hacer
 // estas tres mediciones y escribir el resultado aquí.
+//
+// Y HAY UNA TERCERA, seis veces más grande que la primera, que se midió el 17-09-2026 y NO se aplicó: sacar la
+// tipografía base del precache. Son 36 kB, el 17 % del presupuesto, y no se perdería del todo —`/fonts/` cae en
+// `handleStaleWhileRevalidate`, así que entraría en caché en la primera visita que la use—. Lo que sí se pierde
+// es el primer arranque SIN RED DESPUÉS DE CADA DESPLIEGUE: `activate` borra las cachés que no son la del build
+// nuevo, así que hasta que alguien vuelva a pedirla con red, la aplicación se pinta con la tipografía del
+// sistema. Es degradación estética y no funcional, pero es recurrente —una vez por despliegue—, y por eso va
+// después de las dos de arriba y no antes, pese a soltar mucho más espacio.
+//
+// SEGUNDA MEDICIÓN (17-09-2026), esta vez atribuyendo los bytes del chunk a sus módulos con el sourcemap —que es
+// la forma de no discutir de memoria—: se decodifican los `mappings` y se suman los bytes de salida por fichero
+// de origen. Lo que salió, sin comprimir, dentro de `index-*.js`:
+//
+//     28,4 kB  IconSprite.tsx        17,5 kB  GameTable.tsx        13,4 kB  App.tsx
+//      9,8 kB  useSyncViewModel.ts    8,4 kB  useGameListViewModel  6,4 kB  gistRepository.ts
+//
+// Tres conclusiones:
+//   · `IconSprite` es el mayor con diferencia, el 15 % del chunk. Confirma con datos que la palanca (1) de
+//     arriba es la buena: sacarlo a un `.svg` externo son ~6 kB comprimidos, y subiría el margen de ~5 a ~11 kB.
+//   · La RULETA se colaba en el arranque y ya no: el modal era perezoso, pero `App` importaba `buildListsPool`
+//     y `buildListsWeigher` de forma estática para dos `useMemo`. El cálculo se mudó a `ListsRouletteModal`
+//     (envoltorio dentro del chunk perezoso). OJO, LA LECCIÓN: eso SOLO no cambió ni un byte, porque
+//     `normalizeName` vivía en el mismo módulo y la importan el listado y la importación, así que el fichero
+//     entraba entero igual. Hizo falta mudarla a `core/utils/normalizeName`. Resultado: 215,1 → 214,3 kB.
+//   · Los efectos de firma (`useSignatureEffects` 2,7 kB + `useShootingStars` 1,9) son diferibles y se
+//     DESCARTARON: el wipe al navegar se quiere listo desde el primer render, y 4,6 kB sin comprimir no pagan
+//     arriesgar la sensación de la aplicación.
+//
+// Y uno que PARECÍA una fuga y no lo es: `FeedShell` está en el arranque a propósito —es el esqueleto que se
+// pinta mientras el hub social se descarga—. Si fuera perezoso no habría nada que enseñar durante la carga.
+// Y UNA CONSECUENCIA PRÁCTICA (17-09-2026): **React está fijado en 19.2.8 en `package.json`, sin `^`**, y es por
+// esto. Subirlo a 19.3.0 engorda su chunk de 57,5 a 65,8 kB —8,3 kB— y el arranque se va a 223,3, por encima del
+// presupuesto: `npm update` lo subió, la validación lo cazó y hubo que volver atrás. Para poder actualizar React
+// hay que hacer sitio ANTES, y el sitio está en la palanca (1) de arriba. No se quita el pin sin eso.
+// ¿Y LOS OCHO TEMAS? Se preguntan solos al mirar el CSS, así que aquí está la medida (17-09-2026) para no
+// repetirla: el CSS del arranque con los ocho pesa 26,5 kB comprimidos y con uno solo 22,3. Los siete que no
+// usas cuestan **4,2 kB**, unos 600 bytes cada uno. Son solo TOKENS DE COLOR (CAPA 2/2b), que comprimen de
+// maravilla porque repiten los mismos nombres de variable; la parte cara de un tema —letra, formas, texturas,
+// ornamento (CAPA 3)— ya se carga bajo demanda desde `view/hooks/paletteSkin.ts`.
+//
+// NO se cargan por separado, y no es pereza: esos tokens son lo que pinta el PRIMER FOTOGRAMA. Sacarlos a un
+// fichero aparte obliga a elegir entre bloquear el render hasta descargarlo o enseñar la aplicación sin color
+// un instante, y cambiar de tema pasaría a ser asíncrono. Cuatro kilobytes no pagan eso: la palanca (1) da más
+// del doble sin tocar el primer fotograma.
 const BOOT_PAYLOAD_BUDGET_KB = 220;
 const publicDir = path.join(root, 'public');
 const requiredFiles = [

@@ -116,12 +116,37 @@ describe('/cover — lo que contesta', () => {
     expect(consultasAIgdb()).toHaveLength(0); // la caché negativa es justo para no volver a preguntar
   });
 
+  /* PERO EL RECORRIDO SÍ LO GUARDA. Su 404 no tapa ninguna imagen —nadie lo pinta—, y guardarlo es lo que hace
+     que, perdida la memoria local (un desalojo, la purga de Safari), la segunda vuelta se resuelva en el disco
+     del equipo en vez de en la red. Siete días: el mismo plazo con el que el servidor olvida un «no tiene». */
+  it('pero en el modo «solo resolver» ese mismo 404 sí se guarda, y por una semana', async () => {
+    const kv = kvFalso({ [claveCache('Jotum', [])]: '' });
+    const respuesta = await onRequestGet({ request: peticion('n=Jotum&m=1'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(404);
+    expect(respuesta.headers.get('Cache-Control')).toContain('max-age=604800');
+    expect(respuesta.headers.get('Cache-Control')).toContain('stale-while-revalidate');
+  });
+
+  /* Y LO QUE NO HABLA DE ESTE JUEGO SIGUE SIN GUARDARSE, también en este modo: un 429 es el servidor diciendo
+     «ahora no», y guardarlo una semana es exactamente lo que costó media biblioteca la vez anterior. */
+  it('el tope del cupo no se guarda ni siquiera en el modo «solo resolver»', async () => {
+    const hora = new Date().toISOString().slice(0, 13);
+    const kv = kvFalso({ [`igdb:cupo:v1:203.0.113.7:${hora}`]: '500' });
+    const respuesta = await onRequestGet({ request: peticion('n=Nuevo&m=1'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(429);
+    expect(respuesta.headers.get('Cache-Control')).toBe('no-store');
+  });
+
   it('204 sin cuerpo en el modo «solo resolver» (`m=1`), que es el del llenado inicial', async () => {
     const kv = kvFalso();
     const respuesta = await onRequestGet({ request: peticion('n=Celeste&m=1'), env: entorno(kv) });
 
     expect(respuesta.status).toBe(204);
     expect(await respuesta.text()).toBe('');
+    // Se guarda igual que el 404 de este modo: al recorrido le vale tanto un «sí» como un «no».
+    expect(respuesta.headers.get('Cache-Control')).toContain('max-age=604800');
     // Ha resuelto y lo ha apuntado, que es el efecto que se busca; lo que no ha hecho es traerse la imagen.
     expect(kv.datos.get(claveCache('Celeste', []))).toBe('co1abc');
     expect(fetchSimulado.mock.calls.some(([e]) => String(e).includes('images.igdb.com'))).toBe(false);

@@ -1057,3 +1057,30 @@ describe('el sprite de las medallas', () => {
     expect(sinDibujo, `falta el symbol de: ${sinDibujo.join(', ')}`).toEqual([]);
   });
 });
+
+/**
+ * LLEGAR AL LOGRO, no a la pantalla de los logros.
+ *
+ * La lista son cientos de filas: dejar a alguien en el principio después de decirle «has conseguido esto» le
+ * obliga a buscar lo que acaba de ganar. El id viaja desde el aviso (`openAchievements` en `App`) y baja por
+ * prop hasta la fila, que se trae a la vista y se resalta.
+ */
+describe('la medalla a la que se venía', () => {
+  it('se resalta la fila del ancla, y solo esa', () => {
+    const estados = new Map([
+      ['completados-10', { id: 'completados-10', level: 1, value: 10, next: 25, unlockedAt: dia(2311) }],
+      ['horas-10', { id: 'horas-10', level: 1, value: 10, next: 50, unlockedAt: dia(2311) }],
+    ]);
+    render(<AchievementsScreen items={listForScreen(estados)} summary={summarize([])} rarity={null} anclaje="completados-10" />);
+
+    const destacadas = document.querySelectorAll('.ach-row.is-destacado');
+    expect(destacadas).toHaveLength(1);
+    expect(within(destacadas[0] as HTMLElement).getByText('Créditos finales I')).toBeInTheDocument();
+  });
+
+  it('y sin ancla no se resalta ninguna', () => {
+    const estados = new Map([['completados-10', { id: 'completados-10', level: 1, value: 10, next: 25, unlockedAt: dia(2311) }]]);
+    render(<AchievementsScreen items={listForScreen(estados)} summary={summarize([])} rarity={null} />);
+    expect(document.querySelectorAll('.ach-row.is-destacado')).toHaveLength(0);
+  });
+});

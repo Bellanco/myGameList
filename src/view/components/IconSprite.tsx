@@ -7,11 +7,17 @@ export function IconSprite() {
           con ruido fractal desplazando el borde (`feTurbulence` + `feDisplacementMap`), de modo que ningún
           cartel se rompe igual que otro y el desgarro no se repite nunca. */}
       <defs>
+        {/* CUÁNTOS CORTES CABEN EN UN CANTO DE 70 px. A 0,055 el ruido tiene un periodo de ~18 px, o sea
+            tres ondas en un cartel de género y ninguna entera en uno de año («2012», 34 px): el papel
+            salía casi recto justo en los carteles pequeños, que son la mayoría de la tabla. A 0,095 el
+            periodo baja a ~10 px y cada cartel enseña dos o tres roturas. El desplazamiento baja a la vez
+            de 6,5 a 6 px: más cortes con la misma amplitud empieza a leerse como sierra, y lo que se busca
+            es papel roto. La quinta octava tampoco hacía falta —a este tamaño sólo añadía polvo—. */}
         <filter id="wt-desgarro">
-          <feTurbulence type="fractalNoise" baseFrequency="0.055" numOctaves="5" seed="6" result="ruido" />
-          <feDisplacementMap in="SourceGraphic" in2="ruido" scale="6.5" xChannelSelector="R" yChannelSelector="G" />
+          <feTurbulence type="fractalNoise" baseFrequency="0.095" numOctaves="4" seed="6" result="ruido" />
+          <feDisplacementMap in="SourceGraphic" in2="ruido" scale="6" xChannelSelector="R" yChannelSelector="G" />
         </filter>
-        {/* EL MISMO ROTO, PARA UNA PIEZA GRANDE. El de arriba desplaza el borde 6,5 px, que es lo que
+        {/* EL MISMO ROTO, PARA UNA PIEZA GRANDE. El de arriba desplaza el borde 6 px, que es lo que
             rompe el canto de un cartel de 20 px de alto; en el pliego de una caja del mosaico —218 px—
             ese mismo desplazamiento es el mismo roto repartido en diez veces más borde, y el papel sale
             casi recto. Este baja la frecuencia del ruido (dientes más largos) y sube el desplazamiento,

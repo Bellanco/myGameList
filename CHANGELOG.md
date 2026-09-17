@@ -3,6 +3,45 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows the git tags.
 
+## [1.3.1] - 2026-09-17
+
+La versión de **lo que se queda guardado** y de **no perder el sitio**. Por fuera se nota en la navegación: al
+cambiar de pantalla ya no te quedas a media página, y el aviso de un logro te lleva a la medalla. Por dentro, lo
+que el navegador tira deja de costar lo que costaba.
+
+### Added
+- **Al conseguir un logro, el aviso lleva a esa medalla.** Antes dejaba en la pantalla de logros y a buscar entre
+  cientos de filas cuál era la que acababa de caer. Ahora la fila se trae a la vista y se resalta un momento con
+  el color de su propia dificultad. Con el movimiento reducido, el resalte no late: se queda encendido.
+
+### Changed
+- **El scroll deja de quedarse donde estaba al cambiar de pantalla.** Entrar en Ajustes desde media lista te
+  dejaba a media página de una pantalla que ya era otra, y solo dos sitios lo corregían por su cuenta, así que
+  parecía cosa del azar. Ahora la regla es una: al **entrar** en una pantalla se sube al principio, y al
+  **volver** se recupera el sitio en el que estabas. Recargar no cambia: ahí sigue mandando el navegador.
+- **El recorrido de carátulas guarda en el equipo lo que aprende.** La memoria de qué juegos no tienen portada
+  vivía solo en el almacenamiento del navegador, que es lo primero que desaparece cuando el disco aprieta —o
+  cuando Safari borra los sitios que no se visitan en una semana—. Al perderse, la biblioteca entera volvía a
+  preguntar: trescientas peticiones para reaprender lo que ya se sabía. Ahora esas respuestas se guardan una
+  semana en la caché del propio equipo, así que la segunda vuelta se resuelve sin salir a la red, sin cuenta y
+  en cualquier navegador. Lo que no se guarda sigue siendo lo que no habla de un juego —un tope de cupo, una
+  caída—, que es lo que una vez dejó medio catálogo con huecos.
+- **El almacenamiento persistente se pide al arrancar, y no al encender las carátulas.** Lo que está en juego no
+  son solo las imágenes: es el armazón, las piezas de la aplicación y la biblioteca guardada para verla sin red.
+  Pedirlo desde las carátulas dejaba fuera precisamente a quien no las usa. Y a Firefox no se le pide: es el
+  único navegador que abre un diálogo para esto, y la respuesta no cambia nada de lo que se ve, así que no
+  merece interrumpir a nadie. Si su dueño lo concede por su cuenta, se respeta igual.
+
+- **La ruleta deja de viajar en el arranque.** El modal ya se descargaba aparte, pero el sorteo —el pool y su
+  ponderación— se calculaba en la pantalla principal, así que su código lo cargaba todo el mundo aunque nunca
+  abriera la ruleta. De paso, `normalizeName` se muda a donde le toca: comparar dos títulos no es cosa de
+  sortear, y por vivir ahí arrastraba la ruleta entera al arranque del listado y de la bandeja de importados.
+
+### Fixed
+- **La vuelta de «Conectar con GitHub» ya no se completa a ciegas.** El parámetro que demuestra que el viaje lo
+  empezaste tú se guardaba donde no sobrevive a un cambio de pestaña, y cuando faltaba, la conexión seguía
+  adelante igualmente. Ahora se guarda donde sí dura, caduca a la media hora y, sin él, no se canjea nada.
+
 ## [1.3.0] - 2026-09-16
 
 La versión del **listado con forma** y de las **carátulas**.

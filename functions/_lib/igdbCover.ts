@@ -57,7 +57,20 @@ export function esIdDeCaratula(coverId: string): boolean {
   return /^[a-z0-9_-]{1,64}$/i.test(coverId);
 }
 
-/** Dónde están los bytes de una carátula, al tamaño pedido. */
+/**
+ * Dónde están los bytes de una carátula, al tamaño pedido.
+ *
+ * Y POR QUÉ `.jpg` Y NO `.webp`, que es la sustitución que cualquiera propondría al mirar esto. IGDB sirve las
+ * dos extensiones sobre la misma ruta, así que el cambio es de una letra y no invalida nada —ni el KV, ni la
+ * caché del navegador, que van por la URL de `/cover` y no por esta—. La regla general dice que WebP ahorra
+ * entre un 25 % y un 35 %.
+ *
+ * Aquí NO. Medido el 17-09-2026 sobre cinco portadas reales en `t_cover_big`, el WebP de IGDB salió MÁS GRANDE
+ * que el JPEG en cuatro de las cinco, y un 11 % más de media (10.428→12.800, 21.044→26.848, 29.166→26.208,
+ * 21.797→28.358, 23.071→23.476). Generan esos derivados con calidad alta y sin optimizar, así que cambiarlo
+ * empeoraría lo que se descarga. Si algún día cambian de criterio, la prueba es un `curl -w '%{size_download}'`
+ * a las dos extensiones del mismo id; mientras salga esto, el JPEG se queda.
+ */
 export function urlDeImagen(coverId: string, tamano: TamanoCaratula): string {
   return `${IMAGENES}/${TAMANOS[tamano]}/${coverId}.jpg`;
 }

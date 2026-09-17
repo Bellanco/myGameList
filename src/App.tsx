@@ -21,6 +21,7 @@ import { UpdateNotice } from './view/components/UpdateNotice';
 import { BottomNavigation } from './view/components/BottomNavigation';
 import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, matchAppSection, type AppSection } from './core/constants/routes';
 import { ScrollToTop } from './view/components/ScrollToTop';
+import { useScrollOnNavigate } from './view/hooks/useScrollOnNavigate';
 import { ConsentBanner } from './view/components/ConsentBanner';
 import { SocialHubSkeleton } from './view/components/SocialHubSkeleton';
 import { ScreenSkeleton } from './view/components/ScreenSkeleton';
@@ -43,7 +44,8 @@ import { useSignatureEffects } from './view/hooks/useSignatureEffects';
 import { useScreenTransition } from './view/hooks/useScreenTransition';
 import { useAppliedPalette } from './view/hooks/usePalette';
 import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository';
-import { buildListsPool, buildListsWeigher, normalizeName, type RouletteCandidate } from './core/roulette/roulette';
+import { type RouletteCandidate } from './core/roulette/roulette';
+import { normalizeName } from './core/utils/normalizeName';
 import { useImportInbox } from './viewmodel/useImportInbox';
 import { useImportFieldPrefs } from './viewmodel/useImportFieldPrefs';
 import { useMountedOnceOpen } from './view/modals/useMountedOnceOpen';
@@ -58,7 +60,7 @@ import type { ImportedGame, RawExternalGame } from './model/types/import';
 // —devuelve el módulo ya cacheado—, de modo que cuando `lazy` lo pida el trabajo estará hecho.
 const importFormModal = () => import('./view/modals/FormModal');
 const importConfirmModal = () => import('./view/modals/ConfirmModal');
-const importRouletteModal = () => import('./view/components/roulette/RouletteModal');
+const importRouletteModal = () => import('./view/components/roulette/ListsRouletteModal');
 
 const FormModal = lazy(() => importFormModal().then((module) => ({ default: module.FormModal })));
 const ConfirmModal = lazy(() => importConfirmModal().then((module) => ({ default: module.ConfirmModal })));
@@ -68,7 +70,9 @@ const SocialHub = lazy(() => import('./view/components/SocialHub').then((module)
 // descargan al entrar en la pestaña, así que no pesan en el arranque de los listados.
 const StatsHub = lazy(() => import('./view/components/stats/StatsHub').then((module) => ({ default: module.StatsHub })));
 const AccountHub = lazy(() => import('./view/components/AccountHub').then((module) => ({ default: module.AccountHub })));
-const RouletteModal = lazy(() => importRouletteModal().then((module) => ({ default: module.RouletteModal })));
+/* La ruleta de los listados va por su envoltorio, no por el modal desnudo: así el pool y la ponderación
+   se calculan DENTRO del chunk perezoso en vez de en el arranque (ver `ListsRouletteModal`). */
+const RouletteModal = lazy(() => importRouletteModal().then((module) => ({ default: module.ListsRouletteModal })));
 const PublicReviewScreen = lazy(() => import('./view/components/PublicReviewScreen').then((module) => ({ default: module.PublicReviewScreen })));
 const InboxScreen = lazy(() => import('./view/components/import/InboxScreen').then((module) => ({ default: module.InboxScreen })));
 const LegalScreen = lazy(() => import('./view/components/LegalScreen').then((module) => ({ default: module.LegalScreen })));
@@ -201,6 +205,8 @@ export default function App() {
   useBacklogSnapshot(vm.data);
   useCoverBackfill(vm.data);
   // Estrellas fugaces aleatorias por los bordes de botones/chips (solo en la paleta "Sol y luna").
+  // El scroll al cambiar de pantalla: arriba al entrar, donde estabas al volver (ver el hook).
+  useScrollOnNavigate();
   useShootingStars();
   // Efectos de firma por interacción (wipe P5 al navegar, apertura de portal al clic, sol↔luna, boot-up 40K).
   useSignatureEffects();
@@ -234,10 +240,18 @@ export default function App() {
   // `StatusBanner` sigue recibiendo el texto porque su región viva es la que lo ANUNCIA a un lector de pantalla.
   // El evaluador entra por `import()` dinámico dentro del hook: el catálogo no puede viajar en el arranque.
   const { flash: achievementFlash, clear: clearAchievementFlash } = useAchievementNotice(vm.data, notify);
+  /* AL LOGRO, NO A LA PANTALLA DE LOS LOGROS. La lista son cientos de filas: dejar a alguien en el principio
+     después de decirle «has conseguido esto» le obliga a buscar lo que acaba de ganar. El id viaja en el
+     `state` de la navegación —`anclaje`—, que es lo que hace que `useScrollOnNavigate` no suba al principio y
+     deje que la pantalla de destino se coloque donde toca.
+     De una cápsula con varias medallas se va a la PRIMERA, que es la que preside la pila. */
   const openAchievements = useCallback(() => {
+    const destino = achievementFlash
+      ? (achievementFlash.kind === 'milestone' ? achievementFlash.def.id : achievementFlash.defs[0]?.id)
+      : undefined;
     clearAchievementFlash();
-    navigate('/logros');
-  }, [clearAchievementFlash, navigate]);
+    navigate('/logros', destino ? { state: { anclaje: destino } } : undefined);
+  }, [achievementFlash, clearAchievementFlash, navigate]);
 
   // EL AVISO DEL ADMINISTRADOR (`appConfig/announcement`): un texto y un enlace a otra web, dichos en la misma
   // cápsula del carril de abajo a la izquierda. Se decide una vez al abrir la app y se insiste como mucho N
@@ -388,8 +402,6 @@ export default function App() {
   const tabOptions = useMemo(() => computeTabOptions(vm.data[currentTab]), [vm.data, currentTab]);
 
   const [rouletteOpen, setRouletteOpen] = useState(false);
-  const roulettePool = useMemo(() => buildListsPool(vm.data), [vm.data]);
-  const rouletteWeight = useMemo(() => buildListsWeigher(vm.data), [vm.data]);
 
   useEffect(() => {
     // Si volvemos del "Conectar con GitHub" (OAuth), completamos ese flujo; si no, arrancamos el sync normal.
@@ -1006,8 +1018,7 @@ export default function App() {
             open={rouletteOpen}
             onClose={() => setRouletteOpen(false)}
             title={UI_MESSAGES.fab.roulette}
-            candidates={roulettePool}
-            weight={rouletteWeight}
+            data={vm.data}
             tag={(candidate) => TAB_TITLES[candidate.sourceTab]}
             action={() => ({
               btnClass: 'btn-complete',
