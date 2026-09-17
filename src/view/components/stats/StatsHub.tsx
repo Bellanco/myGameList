@@ -117,6 +117,9 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
   if (ENABLE_ACHIEVEMENTS && location.pathname.startsWith(ACHIEVEMENTS_ROUTE)) {
     return (
       <AchievementsScreen
+        /* A qué medalla se venía, si se llega desde el aviso de un logro (ver `openAchievements` en `App`). Se
+           lee aquí, que es quien conoce la ruta, y baja como dato. */
+        anclaje={(location.state as { anclaje?: string } | null)?.anclaje}
         items={listForScreen(achievements.byId, achievementsConfig)}
         summary={achievements.summary}
         // NADA DE OTRAS PERSONAS EN ESTA SECCIÓN, y es la regla que decide las dos ausencias de abajo: aquí no se

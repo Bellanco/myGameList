@@ -1,4 +1,4 @@
-import { memo, type ReactNode } from 'react';
+import { memo, useEffect, useState, type ReactNode } from 'react';
 import { AchievementRow } from './AchievementRow';
 import { AchievementFigures } from './AchievementFigures';
 import { AchievementSprite } from '../AchievementSprite';
@@ -60,6 +60,11 @@ interface AchievementsScreenProps {
   globalsBackLabel?: string;
   /** Cuerpo alternativo, para cuando no hay lista que pintar. */
   children?: ReactNode;
+  /**
+   * Id del logro al que se venía: se trae a la vista y se resalta un momento. Lo pone quien navega —hoy, el
+   * aviso de un logro recién conseguido— y llega por prop para no atar esta pantalla al enrutador.
+   */
+  anclaje?: string;
 }
 
 /**
@@ -90,8 +95,22 @@ export const AchievementsScreen = memo(function AchievementsScreen({
   backLabel,
   onToggleGlobals,
   globalsBackLabel = ACHIEVEMENTS_UI.ownAchievements,
+  anclaje,
   children,
 }: AchievementsScreenProps) {
+  /* A QUÉ MEDALLA SE VENÍA. Llega por PROP y no leyendo la ruta: esta pantalla la usan también las fichas de
+     otras personas (`ProfileAchievements`) y las pruebas la montan suelta, así que atarla al enrutador la
+     rompería en los dos sitios. Quien sí sabe de rutas —`StatsHub`— es quien lo pasa.
+     Se apaga solo a los pocos segundos: el resalte sirve para encontrar la fila al llegar, no para quedarse
+     encendido mientras se lee la lista. */
+  const [destacado, setDestacado] = useState(anclaje);
+  useEffect(() => {
+    setDestacado(anclaje);
+    if (!anclaje) return undefined;
+    const id = setTimeout(() => setDestacado(undefined), 4000);
+    return () => clearTimeout(id);
+  }, [anclaje]);
+
   const title = heading || (owner ? ACHIEVEMENTS_UI.titleOf(owner) : ACHIEVEMENTS_UI.title);
   // La voz la decide DE QUIÉN es la lista, igual que el título: en la de otra persona, el texto de siempre
   // —«lo que llevas hecho con tus juegos»— hablaba de los juegos de quien mira.
@@ -170,6 +189,7 @@ export const AchievementsScreen = memo(function AchievementsScreen({
                 return (
                   <AchievementRow
                     key={def.id}
+                    destacado={def.id === destacado}
                     def={def}
                     level={state.level}
                     value={state.value}
