@@ -47,12 +47,15 @@
 | Con `state.anclaje` | nada: decide la pantalla de destino |
 | Carga y recarga | nada: manda el navegador |
 
-### Lo que no se toca, y por qué
+### Los parches antiguos (revisado el 17-09-2026)
 
-Los dos parches que ya existían **se quedan**: `SocialHub.tsx:310` (sube al abrir un detalle) y
-`StatsPanel.tsx:121` (`scrollIntoView` al abrir un año). Ninguno de los dos es un cambio de RUTA —son cambios de
-estado dentro de la misma pantalla—, así que la pieza central no los ve y quitarlos rompería dos comportamientos
-que hoy funcionan bien.
+- **`SocialHub` ya no toca el scroll.** Se creía un cambio de estado y no lo era: sus paneles salen de la ruta
+  (`activePanel` viene de `routeState`), así que abrir una reseña es una navegación normal y el hook ya se
+  encarga —y además devuelve el sitio al volver, que el parche no hacía—. Quitarlo deja **una sola mano sobre el
+  scroll** y elimina el único `scrollTo` instantáneo de la aplicación, que era el caso límite que el filtro del
+  hook tenía que distinguir. El test de componente que lo protegía ahora comprueba lo contrario, para que nadie
+  lo reintroduzca.
+- **`StatsPanel.tsx:121` se queda.** Ese sí es un cambio de estado (abrir un año desde la curva), no de ruta.
 
 ---
 
