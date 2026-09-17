@@ -684,3 +684,28 @@
   white-space: nowrap;
 }
 
+
+/* LA FILA A LA QUE SE VENÍA, al llegar desde el aviso de un logro recién conseguido.
+   Se apoya en lo que la fila ya tiene —`--rc`, el color de su dificultad— en vez de traer un color nuevo: lo que
+   se señala es ESA medalla, así que la señal es la suya. Dos latidos y se apaga; el resalte sirve para encontrar
+   la fila al llegar, no para quedarse encendido mientras se lee la lista (lo apaga `AchievementsScreen` a los
+   cuatro segundos, esto solo dura lo que dura la animación). */
+.ach-row.is-destacado {
+  animation: ach-destacar 1.1s ease-out 2;
+}
+
+@keyframes ach-destacar {
+  0%   { background: color-mix(in srgb, var(--rc) 22%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--rc) 45%, transparent); }
+  100% { background: transparent; box-shadow: 0 0 0 1px transparent; }
+}
+
+/* Sin movimiento: el resalte se queda quieto y encendido mientras dure. Lo que no puede pasar es que quien tenga
+   el movimiento apagado se quede SIN la señal, porque entonces llega a una lista de cientos de filas sin saber
+   cuál es la suya. */
+@media (prefers-reduced-motion: reduce) {
+  .ach-row.is-destacado {
+    animation: none;
+    background: color-mix(in srgb, var(--rc) 16%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--rc) 40%, transparent);
+  }
+}

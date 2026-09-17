@@ -21,6 +21,7 @@ import { UpdateNotice } from './view/components/UpdateNotice';
 import { BottomNavigation } from './view/components/BottomNavigation';
 import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, matchAppSection, type AppSection } from './core/constants/routes';
 import { ScrollToTop } from './view/components/ScrollToTop';
+import { useScrollOnNavigate } from './view/hooks/useScrollOnNavigate';
 import { ConsentBanner } from './view/components/ConsentBanner';
 import { SocialHubSkeleton } from './view/components/SocialHubSkeleton';
 import { ScreenSkeleton } from './view/components/ScreenSkeleton';
@@ -204,6 +205,8 @@ export default function App() {
   useBacklogSnapshot(vm.data);
   useCoverBackfill(vm.data);
   // Estrellas fugaces aleatorias por los bordes de botones/chips (solo en la paleta "Sol y luna").
+  // El scroll al cambiar de pantalla: arriba al entrar, donde estabas al volver (ver el hook).
+  useScrollOnNavigate();
   useShootingStars();
   // Efectos de firma por interacción (wipe P5 al navegar, apertura de portal al clic, sol↔luna, boot-up 40K).
   useSignatureEffects();
@@ -237,10 +240,18 @@ export default function App() {
   // `StatusBanner` sigue recibiendo el texto porque su región viva es la que lo ANUNCIA a un lector de pantalla.
   // El evaluador entra por `import()` dinámico dentro del hook: el catálogo no puede viajar en el arranque.
   const { flash: achievementFlash, clear: clearAchievementFlash } = useAchievementNotice(vm.data, notify);
+  /* AL LOGRO, NO A LA PANTALLA DE LOS LOGROS. La lista son cientos de filas: dejar a alguien en el principio
+     después de decirle «has conseguido esto» le obliga a buscar lo que acaba de ganar. El id viaja en el
+     `state` de la navegación —`anclaje`—, que es lo que hace que `useScrollOnNavigate` no suba al principio y
+     deje que la pantalla de destino se coloque donde toca.
+     De una cápsula con varias medallas se va a la PRIMERA, que es la que preside la pila. */
   const openAchievements = useCallback(() => {
+    const destino = achievementFlash
+      ? (achievementFlash.kind === 'milestone' ? achievementFlash.def.id : achievementFlash.defs[0]?.id)
+      : undefined;
     clearAchievementFlash();
-    navigate('/logros');
-  }, [clearAchievementFlash, navigate]);
+    navigate('/logros', destino ? { state: { anclaje: destino } } : undefined);
+  }, [achievementFlash, clearAchievementFlash, navigate]);
 
   // EL AVISO DEL ADMINISTRADOR (`appConfig/announcement`): un texto y un enlace a otra web, dichos en la misma
   // cápsula del carril de abajo a la izquierda. Se decide una vez al abrir la app y se insiste como mucho N
