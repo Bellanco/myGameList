@@ -13,6 +13,11 @@ La versión de **arrancar con menos peso** y de que **volver funcione en cualqui
   solo mira sus listas y nunca ha conectado una cuenta. Ahora se trae la primera vez que se sincroniza.
 
 ### Fixed
+- **Sin cuenta, la aplicación ya no llama a Google.** Al abrir Perfil o Logros, dos pantallas preguntaban por la
+  configuración de logros del servicio —y una hasta intentaba escribir en ella— aunque no hubiera sesión. Las
+  reglas lo rechazaban siempre, así que no había nada en riesgo, pero la llamada al tercero salía igual en cada
+  visita. Ahora se pregunta antes si hay sesión, y el recorrido de la visita anónima recorre también esas dos
+  pantallas para que no vuelva a colarse por otra.
 - **Volver atrás recupera el sitio también en un móvil lento.** La 1.3.1 estrenó el recuerdo de la posición al
   navegar, y funcionaba… si el aparato era rápido. Para saber qué desplazamientos eran de la persona y cuáles los
   hacía el navegador al cambiar de pantalla, se miraba el RELOJ; en una máquina lenta esa cuenta se desajusta y

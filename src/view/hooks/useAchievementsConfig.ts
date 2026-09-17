@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { hasStoredAuthSession } from '../../model/repository/firebaseGateway';
 import { ENABLE_ACHIEVEMENTS } from '../../core/achievements/flags';
 import { NO_ACHIEVEMENTS_CONFIG, type AchievementsConfig } from '../../core/achievements/visibility';
 import { cachedAchievementsConfig } from '../../core/achievements/configCache';
@@ -32,6 +33,10 @@ export function useAchievementsConfig(): AchievementsConfig {
 
   useEffect(() => {
     if (!ENABLE_ACHIEVEMENTS) return;
+    /* Y SIN SESIÓN TAMPOCO SE LEE: `appConfig/achievements` solo lo puede leer quien está autenticado, así que
+       sin cuenta esto era otra petición a Firestore para recibir un 403. Lo que decide el panel no se aplica a
+       quien no ha iniciado sesión, y el catálogo del código ya trae todo lo que esa persona necesita. */
+    if (!hasStoredAuthSession()) return;
     let cancelled = false;
     void import('../../model/repository/achievementsConfigRepository')
       .then((module) => module.loadAchievementsConfig())

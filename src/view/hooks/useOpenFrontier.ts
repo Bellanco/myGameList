@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { hasStoredAuthSession } from '../../model/repository/firebaseGateway';
 import { ENABLE_ACHIEVEMENTS, ENABLE_ACHIEVEMENTS_PUBLISH } from '../../core/achievements/flags';
 import { frontierKey, mergeFrontiers, ownFrontier } from '../../core/achievements/frontier';
 import type { OpenFrontier } from '../../core/achievements/visibility';
@@ -28,6 +29,13 @@ const attempted = new Set<string>();
 export function useOpenFrontier(byId: ReadonlyMap<string, AchievementState>, published: OpenFrontier): void {
   useEffect(() => {
     if (!ENABLE_ACHIEVEMENTS || !ENABLE_ACHIEVEMENTS_PUBLISH) return;
+    /* SIN SESIÓN NO SE INTENTA. Escribir en `appConfig/achievements` exige estar autenticado (las reglas piden
+       `isSignedIn()`), así que quien entra sin cuenta lanzaba una petición a Firestore condenada al 403: una
+       llamada a un tercero, en cada visita a los logros, para nada. Las reglas la rechazaban —no había agujero—
+       pero la petición salía igual, y esta aplicación promete no hablar con nadie que no haga falta.
+       `hasStoredAuthSession` mira el almacenamiento local, no carga Firebase: se puede preguntar aquí sin
+       arrastrar el SDK al chunk. */
+    if (!hasStoredAuthSession()) return;
     if (byId.size === 0) return;
 
     const next = mergeFrontiers(published, ownFrontier(byId));
