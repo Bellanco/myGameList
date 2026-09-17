@@ -26,14 +26,48 @@ test.describe('el scroll al cambiar de pantalla', () => {
     // test pasaría sin probar nada.
     await page.evaluate(() => window.scrollTo(0, 600));
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(300);
+
+    // La posición se mide JUSTO ANTES de pulsar: Playwright desplaza el elemento a la vista para poder hacer
+    // clic, igual que una persona que baja hasta él, y lo que hay que restaurar es dónde quedó la página al
+    // navegar (ver el recorrido anidado, que es donde esto se nota).
+    const boton = page.getByRole('button', { name: /Lista de la vergüenza/ });
+    await boton.scrollIntoViewIfNeeded();
     const dondeEstaba = await page.evaluate(() => window.scrollY);
 
     // ENTRAR en otra pantalla: arriba del todo.
-    await page.getByRole('button', { name: /Lista de la vergüenza/ }).click();
+    await boton.click();
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Lista de la vergüenza');
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 
     // VOLVER: al sitio en el que se estaba, no al principio.
+    await page.goBack();
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Lista del completista');
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(dondeEstaba);
+  });
+
+  /**
+   * Y CON LA MÁQUINA LENTA, que es donde esto se rompió de verdad.
+   *
+   * La primera versión distinguía el cero de la navegación por el RELOJ —un salto a cero en menos de 100 ms—.
+   * En un portátil iba; en integración continua ese hueco se estira, el filtro no disparaba y se guardaba el
+   * cero. Verde en local, rojo en CI, que es la peor clase de fallo. Con la CPU frenada seis veces esto lo
+   * habría cazado antes de subirlo.
+   */
+  test('vuelve a su sitio aunque la máquina vaya lenta', async ({ page }) => {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 6 });
+
+    await page.goto('/completados');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await page.evaluate(() => window.scrollTo(0, 600));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(300);
+
+    const boton = page.getByRole('button', { name: /Lista de la vergüenza/ });
+    await boton.scrollIntoViewIfNeeded();
+    const dondeEstaba = await page.evaluate(() => window.scrollY);
+    await boton.click();
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Lista de la vergüenza');
+
     await page.goBack();
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Lista del completista');
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(dondeEstaba);
@@ -55,9 +89,16 @@ test.describe('el scroll al cambiar de pantalla', () => {
 
     await page.evaluate(() => window.scrollTo(0, 500));
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(200);
-    const dondeEstaba = await page.evaluate(() => window.scrollY);
 
-    await page.getByRole('button', { name: /^Leer tu reseña de/ }).first().click();
+    /* SE MIDE JUSTO ANTES DE PULSAR, y no antes de buscar el botón: Playwright desplaza el elemento a la vista
+       para poder hacer clic, igual que haría una persona que baja hasta él. La posición que hay que restaurar es
+       esa —donde estaba la página cuando se navegó—, no donde estaba dos segundos antes. */
+    const boton = page.getByRole('button', { name: /^Leer tu reseña de/ }).first();
+    await boton.scrollIntoViewIfNeeded();
+    const dondeEstaba = await page.evaluate(() => window.scrollY);
+    expect(dondeEstaba).toBeGreaterThan(0);
+
+    await boton.click();
     await expect(page.locator('.hub-related-list')).toBeVisible();
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 
@@ -66,8 +107,8 @@ test.describe('el scroll al cambiar de pantalla', () => {
     /* SE COMPRUEBA LA ZONA, NO EL PÍXEL, y no es un test flojo: al pulsar, el navegador desplaza un poco la
        página para enseñar el botón que recibe el foco, así que la posición que se deja no es exactamente la que
        el test fijó. Lo que importa —y lo que estaba roto— es que se vuelve a donde estabas y no al principio. */
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(200);
-    expect(Math.abs((await page.evaluate(() => window.scrollY)) - dondeEstaba)).toBeLessThan(250);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    expect(Math.abs((await page.evaluate(() => window.scrollY)) - dondeEstaba)).toBeLessThan(120);
   });
 
   /**
