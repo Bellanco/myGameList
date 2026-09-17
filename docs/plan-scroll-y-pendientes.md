@@ -3,61 +3,56 @@
 > Sale de una revisión del 17-09-2026 (arranque, seguridad, rendimiento) y de un síntoma que se nota usando la
 > aplicación: al cambiar de pantalla, el scroll se queda donde estaba.
 
-## 1. El scroll al navegar  ·  ✅ **HECHO** (`fcea1d2`)
+## 1. El scroll al navegar  ·  ✅ **HECHO** (`fcea1d2` + `26115c1`)
 
-> Implementado en `useScrollOnNavigate`, montado en `App`. Dos cosas que aparecieron al hacerlo:
+> **Lo que se entregó primero estaba a medias y en verde.** Subir al entrar funcionaba; **volver atrás no
+> restauraba nada** y los 2.228 tests de jsdom lo daban por bueno, porque allí `window.scrollY` vale siempre 0.
+> Lo destapó `tests/e2e/scroll.test.ts`, contra el build de producción.
 >
-> - **La carga inicial no se toca.** La primera vez no es una navegación: ahí manda
->   `history.scrollRestoration` del navegador, y pisarlo subía al principio a quien recarga a media lista sin
->   haber pedido ir a ninguna parte. Lo destapó un test.
-> - **`AchievementsScreen` recibe el ancla por PROP, no leyendo la ruta.** El primer intento la ató al
->   enrutador y rompió 44 pruebas: es una pantalla de presentación que usan también las fichas ajenas
->   (`ProfileAchievements`) y que las pruebas montan suelta. Quien sabe de rutas es `StatsHub`, y es quien lo pasa.
+> **Guardar la posición tuvo tres intentos, y los dos primeros guardaban un cero:**
+>
+> 1. *Limpieza de un efecto pasivo.* Corre después de los efectos de layout de la pantalla nueva: para entonces
+>    nuestro propio código ya había subido la página.
+> 2. *Limpieza de un efecto de layout*, que corre antes. Tampoco: React ya ha pintado la pantalla nueva, el
+>    documento ha encogido y el navegador ya ha recortado el scroll por su cuenta.
+> 3. *Un oyente de `scroll` que mantiene la última posición.* Casi: al hacer `pushState` **el navegador pone el
+>    scroll a cero y dispara su evento antes de que corra ningún efecto de React**, machacando el valor bueno
+>    justo antes de apuntarlo. El log lo enseñaba: `y=0 max=5468 ultima=600` — con la página todavía larga, así
+>    que no era el recorte por altura.
+>
+> **La solución** es distinguir ese cero por lo que es: un salto de cientos de píxeles a cero en menos de un
+> fotograma. Ninguna mano hace eso —ni la rueda, ni el dedo, ni el «volver arriba» de la casa, que va suave—.
+> Lo único que se pierde es quien pulsa `Inicio` y navega en el mismo suspiro: al volver se le devuelve a donde
+> estaba antes de pulsar.
+>
+> **Otras dos cosas que aparecieron y conviene no reaprender:**
+>
+> - **La carga inicial no se toca.** Ahí manda `history.scrollRestoration`, y pisarlo subiría al principio a
+>   quien recarga a media lista. Aun así, recargar tampoco conserva la posición, y **no es culpa nuestra**: el
+>   virtualizador del listado llama a `scrollTo({top: 0})` nada más montarse.
+> - **`AchievementsScreen` recibe el ancla por PROP, no leyendo la ruta.** El primer intento la ató al enrutador
+>   y rompió 44 pruebas: es una pantalla de presentación que usan también las fichas ajenas
+>   (`ProfileAchievements`) y que las pruebas montan suelta. Quien sabe de rutas es `StatsHub`.
 >
 > El salto al logro va con `state.anclaje`, que es además la señal por la que el hook central se aparta: sin
 > ella habría dos saltos, primero al principio y después a la medalla.
 
-### Qué pasa hoy
+### Lo que quedó (para no releer el hook)
 
-**No hay ningún componente que gobierne el scroll al cambiar de ruta.** `ScrollToTop` es solo el botón flotante
-de «volver arriba», y React Router no resetea la posición por su cuenta: con `pushState`, el navegador deja al
-usuario donde estaba.
+| Caso | Qué hace |
+|---|---|
+| Pulsar una opción (PUSH) | arriba del todo |
+| Volver atrás (POP) | a donde estabas, insistiendo ~20 fotogramas por si la lista aún no tiene alto |
+| `replace` | nada |
+| Con `state.anclaje` | nada: decide la pantalla de destino |
+| Carga y recarga | nada: manda el navegador |
 
-Por eso se nota inconsistente: hay exactamente **dos parches manuales**, y solo cubren su caso.
+### Lo que no se toca, y por qué
 
-| Dónde | Qué hace | Es cambio de ruta |
-|---|---|---|
-| `SocialHub.tsx:310` | `window.scrollTo({top:0})` al abrir detalle o reseña | no, es panel interno |
-| `StatsPanel.tsx:121` | `scrollIntoView` al abrir un año desde la curva | no, es cambio de periodo |
-
-Todo lo demás —cambiar de pestaña, entrar en ajustes, abrir el perfil, y el salto a `/logros` desde el aviso de
-logro (`App.tsx:242`)— te deja a media página de una pantalla que ya es otra.
-
-### La regla que propongo
-
-Una sola pieza, gobernada por el **tipo** de navegación:
-
-- **PUSH** (pulsar una opción, ir a una pantalla nueva) → **arriba del todo**.
-- **POP** (volver atrás, incluido el botón «volver» con `backTo` de `StatsHub`) → **restaurar la posición que
-  tenías**. Es lo que hace que volver no se sienta como perder el sitio.
-- **REPLACE** → no tocar nada.
-
-### Qué NO se toca
-
-Los dos parches de la tabla **se quedan**: no son cambios de ruta, son cambios de estado dentro de la misma
-pantalla, y la pieza central no los ve. Quitarlos rompería dos comportamientos que hoy están bien.
-
-### El detalle a cuidar
-
-Si alguna pantalla desplaza un contenedor interno en vez de la ventana, hay que apuntar a ese contenedor. Es el
-mismo problema que ya resuelven `FloatingControls` y `ScrollToTop` mirando el `event.target` del scroll; de ahí
-se copia el criterio.
-
-### A confirmar antes de implementar
-
-Al pulsar el aviso de un logro, ¿basta con subir arriba de `/logros`, o debe llevar **al logro concreto**
-(resaltándolo)? Lo segundo es más útil y bastante más trabajo: el aviso tendría que pasar el id y la pantalla
-hacer `scrollIntoView` sobre esa medalla.
+Los dos parches que ya existían **se quedan**: `SocialHub.tsx:310` (sube al abrir un detalle) y
+`StatsPanel.tsx:121` (`scrollIntoView` al abrir un año). Ninguno de los dos es un cambio de RUTA —son cambios de
+estado dentro de la misma pantalla—, así que la pieza central no los ve y quitarlos rompería dos comportamientos
+que hoy funcionan bien.
 
 ---
 
@@ -87,8 +82,9 @@ El desglose completo y el método de medición están en el comentario de `scrip
 
 ## 4. La versión 1.3.1  ·  **sin desplegar**
 
-Entra todo lo de esta tanda, incluida la ruleta (`e479a50`), que ya está en las notas. Cuando el scroll esté
-hecho, entra también aquí.
+Entra todo lo de esta tanda y ya está en las notas: las carátulas, la persistencia silenciosa, el `state` de
+OAuth, la ruleta fuera del arranque, el scroll y el salto al logro. El bump (`5a590ae`) quedó ANTES de esos
+últimos commits en el historial; como no se ha desplegado, no se reescribió nada: el changelog es el que manda.
 
 Recordatorio de releases anteriores: **el tag puede no subir** —el PAT no tiene scope `workflow` y la clave SSH
 es de otra cuenta—; la rama sí sube sola.
@@ -107,9 +103,14 @@ De `docs/plan-persistencia-caratulas.md`, sin cambios:
 
 ---
 
-## Orden sugerido
+## Estado y orden
 
-1. **El scroll** — es lo único que el usuario nota, y entra en la 1.3.1.
-2. **Desplegar la 1.3.1** y, acto seguido, la comprobación del criterio.
-3. **La purga** de los perfiles, desde el panel.
-4. **`IconSprite`**, cuando el margen de arranque lo pida.
+| | |
+|---|---|
+| 1. El scroll al navegar | ✅ hecho (`fcea1d2`, `26115c1`) |
+| 2. Purgar los perfiles | ⬜ pendiente — operativo, desde `/admin` |
+| 3. `IconSprite` externo | ⬜ aplazado — solo cuando el margen de arranque apriete |
+| 4. Desplegar la 1.3.1 | ⬜ pendiente |
+| 5. Comprobación del criterio de las carátulas | ⬜ pendiente — justo después de desplegar |
+
+**Orden:** desplegar la 1.3.1 → comprobar el criterio → la purga. `IconSprite` no tiene prisa.

@@ -67,7 +67,7 @@ src/
     modals/                     # FormModal, ConfirmModal, AdminModal
     hooks/                      # useDebouncedValue
   styles/                       # SCSS partials (_base, _layout, _table, _forms-and-buttons, _overlays-and-responsive, _roulette) + index.scss
-tests/{unit,integration,e2e}/   # Vitest
+tests/{unit,component,integration,e2e}/  # unit+component: Vitest/jsdom · e2e: Playwright contra el build
 scripts/ci-validate.js          # checks required files exist (run by `npm run validate`)
 ```
 
@@ -179,14 +179,19 @@ npm run build          # production build → dist/
 npm run preview        # preview built app
 npm run validate       # node scripts/ci-validate.js + html-validate index.html + eslint src tests
 npm run lint           # eslint --fix
-npm run test           # vitest run tests/unit src   (unit + colocated src tests)
-npm run test:all       # vitest run  (includes integration + e2e)
+npm run test           # vitest run tests/unit tests/component src   (lo que corre en cada commit)
+npm run test:all       # vitest run  — OJO: NO incluye e2e ni integration (vitest.config.js los EXCLUYE)
+npm run test:e2e       # playwright test — los e2e, contra el BUILD de producción (ver abajo)
 npm run test:watch     # vitest watch
 npm run test:coverage  # vitest run --coverage
 npm run typecheck      # tsc --noEmit
 ```
 
 **Definition of done for a change:** `npx tsc --noEmit` ✓, `npm run validate` ✓, `npm run test` ✓ (and `npm run build` for anything structural).
+
+**Y si el cambio depende del LAYOUT del navegador** (scroll, alturas, posiciones, service worker, chunks perezosos): además `npm run build` **y** `npm run test:e2e`. En jsdom no hay layout —`window.scrollY` vale siempre 0—, así que un test de componente puede pasar con la funcionalidad rota. Ocurrió con la restauración del scroll al volver atrás: verde en jsdom, rota en el navegador.
+
+**Depurar en un e2e:** el build de producción elimina los `console.*` (`dropConsole: true` en `vite.config.ts`), así que para instrumentar hay que usar una variable global (`window.__lo_que_sea`) y leerla con `page.evaluate`. Y recuerda **reconstruir** antes de volver a lanzar Playwright: `vite preview` sirve `dist/`, no las fuentes.
 
 CI: **`.github/workflows/ci.yml`** runs build → `tsc --noEmit` → tests → coverage → validate → `npm audit`.
 The scripts `migrate:dry` and `size` do not exist — do not run them.
