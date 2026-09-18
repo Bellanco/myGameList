@@ -123,6 +123,15 @@
 }
 
 /* Main */
+/* MIENTRAS EL AVISO ESTÁ PENDIENTE, EL CONTENIDO LE HACE SITIO. El relleno de abajo reserva la barra de
+   navegación, pero el aviso de la analítica se apoya ENCIMA de ella y mide lo suyo —143px medidos en
+   escritorio, más en un móvil estrecho donde su texto envuelve—: sin reservarlo, las últimas tarjetas de una
+   pantalla quedan debajo del aviso y no hay scroll que las saque, porque el documento cree que ya ha acabado.
+   Se descuenta lo que el aviso mide de verdad (`--consent-h`, que publica él mismo), no una cantidad a ojo. */
+:root[data-consent='pending'] .main {
+  padding-bottom: calc(6.6rem + var(--consent-h, 9.25rem));
+}
+
 .main {
   padding: 1.2rem 1.2rem 6.6rem; max-width: 1800px; margin: 0 auto;
   width: 100%; display: flex; flex-direction: column; gap: 1rem;
@@ -2317,3 +2326,43 @@
 
 /* El enlace que despliega la ayuda no se centra: nace donde empieza el texto de su tarjeta. */
 .settings-card .import-guide-link { align-self: flex-start; }
+
+/* ═══ QUÉ MIRA LA ANALÍTICA Y QUÉ NO ═════════════════════════════════════════════════════════════════
+   Dos columnas, y la de la derecha en verde: es la que importa de verdad —lo que NO sale de este dispositivo—
+   y con el mismo color que el resto de la tarjeta se leía como más de lo mismo. La marca de cada línea la pone
+   `::before` y no una viñeta: una lista de puntos decía «aquí hay cosas», no «esto sí, esto no». */
+.analytics-scope {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: .5rem 1.2rem;
+}
+
+.analytics-scope-col .settings-card-sub { margin-bottom: .3rem; }
+
+.analytics-scope-list {
+  display: grid;
+  gap: .2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.analytics-scope-list li {
+  display: flex;
+  align-items: baseline;
+  gap: .45rem;
+}
+
+.analytics-scope-list li::before {
+  content: '·';
+  color: var(--text-dim);
+  font-weight: 700;
+}
+
+.analytics-scope-col.is-never .analytics-scope-list li::before {
+  content: '×';
+  color: var(--success);
+  font-size: var(--fs-xs);
+}

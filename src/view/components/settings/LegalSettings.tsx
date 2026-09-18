@@ -39,6 +39,23 @@ export const LegalSettings = memo(function LegalSettings() {
           </p>
         </div>
         <p className="settings-card-sub">{analyticsLabels.subtitle}</p>
+
+        {/* Las dos listas van ANTES de los botones: primero se sabe qué se está decidiendo y luego se decide. */}
+        <div className="analytics-scope">
+          <div className="analytics-scope-col">
+            <p className="settings-card-sub">{analyticsLabels.collectsLabel}</p>
+            <ul className="analytics-scope-list">
+              {analyticsLabels.collects.map((line) => <li key={line}>{line}</li>)}
+            </ul>
+          </div>
+          <div className="analytics-scope-col is-never">
+            <p className="settings-card-sub">{analyticsLabels.neverLabel}</p>
+            <ul className="analytics-scope-list">
+              {analyticsLabels.never.map((line) => <li key={line}>{line}</li>)}
+            </ul>
+          </div>
+        </div>
+
         <div className="theme-mode-row" role="group" aria-label={analyticsLabels.groupAria}>
           <button
             type="button"

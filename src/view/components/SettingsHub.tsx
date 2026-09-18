@@ -5,6 +5,7 @@ import { SETTINGS_UI } from '../../core/constants/settingsLabels';
 import { FilePickerButton } from './FilePickerButton';
 import { Icon } from './Icon';
 import { PlayniteNote } from './import/PlayniteNote';
+import { ImportGuides } from './import/ImportGuides';
 
 type AdminCategoryKey = 'genres' | 'platforms' | 'strengths' | 'weaknesses';
 
@@ -92,9 +93,6 @@ export const SettingsHub = memo(function SettingsHub({
   const [showConfigHelp, setShowConfigHelp] = useState(false);
   /** «¿Qué es GitHub Gist?»: la explicación, plegada, para que el botón de conectar quede el primero. */
   const [showWhatIsGist, setShowWhatIsGist] = useState(false);
-  // El manual de Playnite llega plegado: son cinco pasos que solo hacen falta la primera vez, y esta pantalla
-  // ya es larga. La nota de arriba basta para saber qué hace la importación.
-  const [showImportSteps, setShowImportSteps] = useState(false);
   // Con OAuth disponible, el modo manual (PAT) queda plegado como opción avanzada; sin OAuth, se muestra siempre.
   const [showManual, setShowManual] = useState(false);
   const manualVisible = !githubOAuthEnabled || showManual;
@@ -163,11 +161,18 @@ export const SettingsHub = memo(function SettingsHub({
       {/* PRIMERO QUÉ HACE Y EL BOTÓN; el detalle, debajo. Antes esta tarjeta abría con cinco frases seguidas y
           el botón quedaba al final: para importar había que atravesar el muro, y quien ya sabía lo que quería
           lo atravesaba cada vez. */}
+      {/* EL ORDEN ES EL DE QUIEN NO SABE TODAVÍA: qué hace esto, qué necesitas, de dónde lo trae, cómo se hace
+          y —al final— el botón. Puesto arriba, el botón pedía elegir un fichero a quien aún no sabía qué fichero
+          era ni de dónde salía; lo que se gana leyendo primero no lo compensa un clic ahorrado. */}
       <div className="settings-card settings-card-import" style={{ gridColumn: '1 / -1' }}>
         <h2>{IMPORT_UI.title}</h2>
         <p className="settings-card-sub">{IMPORT_UI.note}</p>
 
-        <div className="settings-actions-lead">
+        <PlayniteNote />
+
+        <ImportGuides />
+
+        <div className="settings-actions-lead settings-actions-end">
           <FilePickerButton
             id="import-library-settings"
             className="btn btn-primary"
@@ -182,25 +187,7 @@ export const SettingsHub = memo(function SettingsHub({
               <span>{IMPORT_UI.viewInbox(inboxCount)}</span>
             </button>
           ) : null}
-          <button
-            type="button"
-            className="import-guide-link"
-            aria-expanded={showImportSteps}
-            onClick={() => setShowImportSteps((prev) => !prev)}
-          >
-            {IMPORT_UI.stepsTitle}
-          </button>
         </div>
-
-        {showImportSteps ? (
-          <ol className="settings-card-note import-steps">
-            {IMPORT_UI.steps.map((step, i) => (
-              <li key={i}>{step}</li>
-            ))}
-          </ol>
-        ) : null}
-
-        <PlayniteNote />
       </div>
 
       <div className="settings-card settings-card-status">

@@ -167,8 +167,21 @@ export const ANALYTICS_UI = {
   groupAria: 'Consentimiento de analítica',
   on: 'Activada',
   off: 'Desactivada',
+  /**
+   * QUÉ SE MIRA Y QUÉ NO, dicho en dos listas. La tarjeta tenía una frase y dos botones, y se quedaba a medias
+   * —medio palmo de tarjeta vacía— justo donde hace falta lo contrario: nadie decide sobre un permiso sin saber
+   * qué alcanza. Lo que sale aquí no es relleno; es la respuesta a la única pregunta que se hace al leerlo.
+   */
+  collectsLabel: 'Qué se registra',
+  collects: ['Qué pantallas se visitan', 'Errores de la aplicación', 'Navegador y tamaño de pantalla'],
+  neverLabel: 'Qué no sale nunca de aquí',
+  never: ['Tus listas y tus notas', 'Tus reseñas', 'Tu correo o tu nombre'],
   bannerTitle: 'Analítica opcional',
-  bannerBody: 'Esta app puede usar Google Analytics para medir el uso y detectar errores. Requiere guardar identificadores en tu navegador, así que solo se activa si lo aceptas. Puedes cambiarlo cuando quieras en Cuenta.',
+  /* CUATRO LÍNEAS ERAN TRES DE MÁS. El aviso se lee de pie, tapando la pantalla, y lo único que hay que saber
+     para decidir cabe en dos: qué se recoge y que se puede cambiar de idea. El detalle —qué identificadores,
+     cuánto duran— está en la política de cookies, que tiene su enlace justo debajo.
+     Y ya no manda a «Cuenta», que era una pantalla que ha dejado de existir. */
+  bannerBody: 'Estadísticas de uso anónimas para saber qué falla y qué se usa. Solo se activan si aceptas, y puedes cambiarlo cuando quieras en Ajustes › Legal.',
   bannerAccept: 'Aceptar',
   bannerReject: 'Rechazar',
   bannerMore: 'Política de cookies',
