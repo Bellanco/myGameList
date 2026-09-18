@@ -234,7 +234,6 @@ export const UI_MESSAGES = {
     lists: (tabTitle: string) => `Mis listas de juegos — ${tabTitle}`,
     social: 'Social',
     settings: 'Ajustes',
-    account: 'Cuenta',
     inbox: 'Bandeja de importados',
     admin: 'Administración',
     legal: 'Información legal',
@@ -261,7 +260,6 @@ export const UI_MESSAGES = {
     lists: 'Listados',
     social: 'Social',
     settings: 'Ajustes',
-    account: 'Cuenta',
     inbox: 'Bandeja',
     // La pestaña se llama "Estadísticas": son las de las listas propias. La ruta es `/stats` y la
     // sección `stats`. No confundir con el PERFIL SOCIAL (`/social/profile`), que es la ficha pública.

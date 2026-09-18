@@ -210,10 +210,29 @@
   line-height: 1.4;
 }
 
-/* Ajustes de cuenta: todo el cuerpo (escala + apariencia) se bloquea sin sesión de Google (atributo `inert`). */
-.settings-account-body { display: flex; flex-direction: column; gap: .8rem; }
+/* LA PORTADA DE `/ajustes`: las mismas cuatro entradas del menú, en tarjeta. Es una tarjeta que ADEMÁS es un
+   enlace, así que lo único que se añade es lo que eso pide: que no se subraye, que el título mantenga su color
+   y que responda al señalarla y al foco de teclado, donde el anillo tiene que verse sobre la tarjeta entera. */
+.settings-index-card {
+  text-decoration: none;
+  color: inherit;
+  transition: border-color .2s, box-shadow .2s, transform .2s;
+}
+.settings-index-card:hover {
+  border-color: rgba(var(--steam-rgb), .35);
+  box-shadow: var(--e2), var(--edge);
+  transform: translateY(-1px);
+}
+.settings-index-card:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+.settings-index-card h2 { color: var(--text); }
 
-.settings-account-body[inert] { opacity: .55; }
+@media (prefers-reduced-motion: reduce) {
+  .settings-index-card { transition: none; }
+}
+
 
 /* F2 — selector de escala de puntuación (estrellas / nota) en Ajustes. */
 .score-scale-choice { display: grid; gap: .6rem; }

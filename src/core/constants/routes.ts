@@ -11,7 +11,7 @@ import { matchRoutes } from 'react-router-dom';
 import { LEGAL_ROUTES } from './legal';
 
 /** Zona de la app; decide la navegación inferior, el encabezado y el cromo alrededor del contenido. */
-export type AppSection = 'lists' | 'social' | 'stats' | 'settings' | 'account' | 'inbox' | 'legal' | 'admin' | 'shared-review';
+export type AppSection = 'lists' | 'social' | 'stats' | 'settings' | 'inbox' | 'legal' | 'admin' | 'shared-review';
 
 export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = [
   { path: '/completados', section: 'lists' },
@@ -38,7 +38,6 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
   // por su cuenta cuál de los cuatro toca (ver `SETTINGS_ROUTES`), y así añadir uno no obliga a tocar esta tabla.
   { path: '/ajustes/*', section: 'settings' },
   { path: '/ajustes', section: 'settings' },
-  { path: '/cuenta', section: 'account' },
   { path: '/bandeja', section: 'inbox' },
   { path: LEGAL_ROUTES.terms, section: 'legal' },
   { path: LEGAL_ROUTES.privacy, section: 'legal' },
@@ -50,39 +49,6 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
   // el enlace rebotaría a `FALLBACK_ROUTE` — que es exactamente el fallo que documenta la nota de arriba.
   { path: '/r/:token', section: 'shared-review' },
 ];
-
-/**
- * Rutas RETIRADAS que siguen resolviendo, redirigiendo a su nombre actual. La lista de abandonados nació como
- * `/visitados` —un nombre que no decía lo que era— y renombrarla en seco habría mandado a `FALLBACK_ROUTE`
- * cualquier marcador, acceso directo o enlace compartido que ya apuntase allí. Las pinta `App` como `<Navigate>`
- * antes del catch-all; no van en `APP_ROUTES` porque ahí pintarían la pantalla en vez de redirigir.
- */
-export const LEGACY_ROUTE_REDIRECTS: ReadonlyArray<{ from: string; to: string }> = [
-  { from: '/visitados', to: '/abandonados' },
-  // El panel de estadísticas se llamó `/perfil`. El comodín NO es un adorno de simetría: `/perfil/resenas/:id`
-  // es una dirección pensada para abrirse en otra pestaña y copiarse (ver el enlace del detalle en `GameTable`),
-  // así que la redirección tiene que conservar LO QUE VENGA DETRÁS o un enlace ya guardado acabaría en
-  // `FALLBACK_ROUTE`, que es justo el fallo que documenta la nota de arriba. Las entradas con `/*` las pinta
-  // `App` con un redirector que arrastra la cola, la búsqueda y el ancla; va ANTES que la entrada sin comodín
-  // porque react-router se queda con la primera que case.
-  { from: '/perfil/*', to: '/stats' },
-  { from: '/perfil', to: '/stats' },
-];
-
-/**
- * ¿Cubre esta entrada retirada el `pathname` dado? Las que acaban en `/*` cubren también todo lo que cuelgue,
- * que es lo que hace que `/perfil/resenas/7` se reconozca como ruta conocida y no como dirección inventada.
- */
-function coversLegacy(from: string, pathname: string): boolean {
-  if (!from.endsWith('/*')) return from === pathname;
-  const base = from.slice(0, -2);
-  return pathname === base || pathname.startsWith(`${base}/`);
-}
-
-/** Destino de una entrada retirada, con lo que colgaba del nombre viejo pegado detrás. */
-export function legacyRedirectTarget(to: string, tail: string): string {
-  return tail ? `${to}/${tail}` : to;
-}
 
 /**
  * LOS CUATRO GRUPOS DE AJUSTES, que son los cuatro puntos del menú de la pestaña. Uno por asunto y cada uno en
@@ -101,6 +67,52 @@ export const SETTINGS_ROUTES = {
 } as const;
 
 export type SettingsGroup = keyof typeof SETTINGS_ROUTES;
+
+/**
+ * Rutas RETIRADAS que siguen resolviendo, redirigiendo a su nombre actual. La lista de abandonados nació como
+ * `/visitados` —un nombre que no decía lo que era— y renombrarla en seco habría mandado a `FALLBACK_ROUTE`
+ * cualquier marcador, acceso directo o enlace compartido que ya apuntase allí. Las pinta `App` como `<Navigate>`
+ * antes del catch-all; no van en `APP_ROUTES` porque ahí pintarían la pantalla en vez de redirigir.
+ */
+export const LEGACY_ROUTE_REDIRECTS: ReadonlyArray<{ from: string; to: string }> = [
+  { from: '/visitados', to: '/abandonados' },
+  // El panel de estadísticas se llamó `/perfil`. El comodín NO es un adorno de simetría: `/perfil/resenas/:id`
+  // es una dirección pensada para abrirse en otra pestaña y copiarse (ver el enlace del detalle en `GameTable`),
+  // así que la redirección tiene que conservar LO QUE VENGA DETRÁS o un enlace ya guardado acabaría en
+  // `FALLBACK_ROUTE`, que es justo el fallo que documenta la nota de arriba. Las entradas con `/*` las pinta
+  // `App` con un redirector que arrastra la cola, la búsqueda y el ancla; va ANTES que la entrada sin comodín
+  // porque react-router se queda con la primera que case.
+  { from: '/perfil/*', to: '/stats' },
+  { from: '/perfil', to: '/stats' },
+  // «Cuenta» fue una pantalla y una pestaña; su contenido —la escala de nota, la apariencia, los enlaces que
+  // has publicado— vive ahora en el grupo de personalización, así que el nombre viejo lleva allí.
+  { from: '/cuenta', to: SETTINGS_ROUTES.personalization },
+];
+
+/**
+ * ¿Cubre esta entrada retirada el `pathname` dado? Las que acaban en `/*` cubren también todo lo que cuelgue,
+ * que es lo que hace que `/perfil/resenas/7` se reconozca como ruta conocida y no como dirección inventada.
+ */
+function coversLegacy(from: string, pathname: string): boolean {
+  if (!from.endsWith('/*')) return from === pathname;
+  const base = from.slice(0, -2);
+  return pathname === base || pathname.startsWith(`${base}/`);
+}
+
+/** Destino de una entrada retirada, con lo que colgaba del nombre viejo pegado detrás. */
+export function legacyRedirectTarget(to: string, tail: string): string {
+  return tail ? `${to}/${tail}` : to;
+}
+
+
+/**
+ * ¿Qué grupo de ajustes corresponde a este camino? `null` = la portada de Ajustes (`/ajustes` a secas), que
+ * pinta el índice; es lo que ven quien guardó el enlace de antes y quien navega con teclado sin abrir el menú.
+ */
+export function matchSettingsGroup(pathname: string): SettingsGroup | null {
+  const entry = Object.entries(SETTINGS_ROUTES).find(([, path]) => path === pathname);
+  return entry ? (entry[0] as SettingsGroup) : null;
+}
 
 /** Ruta a la que rebota cualquier cosa no listada arriba. */
 export const FALLBACK_ROUTE = '/completados';
