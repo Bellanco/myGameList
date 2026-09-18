@@ -21,6 +21,26 @@ pantalla de escritorio, y en las cuatro va primero lo que se viene a hacer y des
   un párrafo y no la encontraba nadie.
 
 ### Changed
+- **Ajustes baja de cuatro grupos a tres, y el menú dice cuál importa.** «Integración» y «Legal» gastaban dos de
+  los cuatro puntos para lo mismo —tus datos: por dónde entran y salen, qué se registra de ellos y cómo se
+  borran—, así que comparten pantalla: **Datos**. Primero la importación, la sincronización y las copias; debajo,
+  la analítica, los documentos y el borrado de la cuenta. «Personalización» pasa a llamarse **Diseño**, que es lo
+  que hay dentro y cabe en una palabra. Y en el menú cada punto es menor que el anterior, por lo a menudo que se
+  entra en él: Diseño, Filtros y Datos. Los enlaces guardados a los nombres viejos siguen funcionando.
+- **El espacio social se abre en dos pasos, y los dos se dan ahí mismo.** Conectar GitHub era el primero de tres
+  y el único que no se podía dar en Social: el botón te llevaba a Integración y, una vez conectado, tenías que
+  acordarte de volver. Ahora «Conectar con GitHub» está en la propia pantalla y es exactamente el mismo botón que
+  «Continuar con Google»: autorizas, entras y ya está, sin tokens, sin gists y sin cambiar de pantalla. Y si
+  conectas desde ahí, vuelves ahí: hasta ahora la vuelta de GitHub te dejaba en Ajustes. Quien prefiera pegar su
+  propio token lo sigue teniendo en Integración, que es donde se explica.
+- **La pantalla de entrada, rehecha sobre esos dos pasos.** El tercero —«crear el espacio social»— nunca lo dio
+  nadie: se crea solo al entrar, así que ya no se anuncia como trabajo tuyo. En lugar de un rótulo, una barra de
+  progreso y tres fichas diciendo lo mismo tres veces, hay dos peldaños: cada uno con su nombre, una frase que
+  explica para qué es y —dentro— el botón que lo resuelve. El que toca está iluminado y el ya dado lleva su visto.
+  El estado técnico sigue debajo, entero y desplegado, que es lo que se mira cuando algo no cuadra — y ya solo
+  nombra el espacio social cuando puede decir algo de él: antes de entrar con Google no existe todavía, así que
+  anunciarlo como «No enlazado» era inventar un tercer pendiente. Y detrás de todo, un lienzo con el calor de la
+  fragua y unas rayas finas de tubo, teñidos con el acento de cada paleta: la pantalla ya no empieza en negro.
 - **Ajustes baja a la barra, y se abre en cuatro grupos.** La barra pasa a tener cuatro pestañas —Listados,
   Social, Estadísticas y Ajustes—, y la última no lleva a una pantalla: despliega cuatro accesos sobre ella
   misma. **Personalización** (paleta, tema, escala de nota y los enlaces que has publicado), **Integración**
