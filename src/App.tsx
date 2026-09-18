@@ -19,7 +19,7 @@ import { useAchievementNotice } from './view/hooks/useAchievementNotice';
 import { useAnnouncement } from './view/hooks/useAnnouncement';
 import { UpdateNotice } from './view/components/UpdateNotice';
 import { BottomNavigation } from './view/components/BottomNavigation';
-import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, SETTINGS_ROUTES, matchAppSection, matchSettingsGroup, type AppSection, type SettingsGroup } from './core/constants/routes';
+import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, SETTINGS_ROUTES, isKnownRoute, matchAppSection, matchSettingsGroup, type AppSection, type SettingsGroup } from './core/constants/routes';
 import { LegacyTailRedirect } from './view/components/LegacyTailRedirect';
 import { SettingsMenu } from './view/components/SettingsMenu';
 import { ScrollToTop } from './view/components/ScrollToTop';
@@ -31,6 +31,7 @@ import { useGameListViewModel, type GameDraft } from './viewmodel/useGameListVie
 import { useToolbarFilters } from './viewmodel/useToolbarFilters';
 import { computeTabOptions, countActiveFilters } from './viewmodel/toolbarFilters';
 import { useSyncViewModel } from './viewmodel/useSyncViewModel';
+import { GithubConnectionProvider, type GithubConnection } from './viewmodel/sync/githubConnection';
 import { resolveSyncBadge } from './viewmodel/syncBadge';
 import { useScoreScaleSession } from './view/hooks/useScoreScaleSession';
 import { useSocialProfileSession } from './view/hooks/useSocialProfileSession';
@@ -45,7 +46,7 @@ import { useBacklogSnapshot } from './view/hooks/useBacklogSnapshot';
 import { useSignatureEffects } from './view/hooks/useSignatureEffects';
 import { useScreenTransition } from './view/hooks/useScreenTransition';
 import { useAppliedPalette } from './view/hooks/usePalette';
-import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository';
+import { hasGithubOAuthRedirect, takeGithubOAuthOrigin } from './model/repository/githubOAuthRepository';
 import { type RouletteCandidate } from './core/roulette/roulette';
 import { normalizeName } from './core/utils/normalizeName';
 import { useImportInbox } from './viewmodel/useImportInbox';
@@ -423,7 +424,21 @@ export default function App() {
   useEffect(() => {
     // Si volvemos del "Conectar con GitHub" (OAuth), completamos ese flujo; si no, arrancamos el sync normal.
     if (hasGithubOAuthRedirect()) {
-      void syncVm.completeGithubLoginFromRedirect();
+      /* Y SE VUELVE POR DONDE SE VINO. GitHub nos deja siempre en `/ajustes` —su callback registrado—, pero la
+         conexión se puede empezar desde la pasarela del hub social, y allí es donde estaba quien la empezó.
+         Se lee ANTES de completar (es de un solo uso) y se navega pase lo que pase con el canje: si falla, el
+         aviso se lee mejor en la pantalla del botón que se pulsó.
+         Solo caminos DECLARADOS de la aplicación: lo apuntado sale de `window.location`, pero validarlo es lo
+         que impide que un valor manipulado en el almacenamiento decida a dónde va la aplicación. */
+      const origen = takeGithubOAuthOrigin();
+      const destino = origen.startsWith('/') && !origen.startsWith('//') && isKnownRoute(origen.split(/[?#]/)[0])
+        ? origen
+        : '';
+      void syncVm.completeGithubLoginFromRedirect().finally(() => {
+        if (destino && destino !== `${window.location.pathname}${window.location.search}`) {
+          navigate(destino, { replace: true });
+        }
+      });
     } else {
       syncVm.initializeSync();
     }
@@ -761,6 +776,54 @@ export default function App() {
   }), []);
 
   const syncBadgeText = resolveSyncBadge(syncVm.status, syncVm.pendingUpload);
+
+  /**
+   * LA CONEXIÓN CON GITHUB, ofrecida a TODO el árbol (ver `githubConnection`).
+   *
+   * El viewmodel de sincronización es uno solo y vive aquí, atado a los datos de la aplicación; la tarjeta que
+   * conecta, en cambio, la piden dos pantallas de chunks distintos —Integración y la pasarela del hub social—.
+   * Por contexto y no por props: el hub está detrás de un `lazy()` y de un `memo`, y bajarle trece props para
+   * una tarjeta que casi nunca pinta era arrastrar la sincronización entera por media aplicación.
+   *
+   * Memoizado porque el proveedor reparte identidad: un objeto nuevo en cada render de `App` re-renderiza a
+   * todos sus consumidores.
+   */
+  const githubConnection = useMemo<GithubConnection>(() => ({
+    statusText: syncBadgeText,
+    hasConfig: syncVm.hasConfig,
+    connectedGistId: syncVm.connectedGistId || syncVm.currentConfig?.gistId || '',
+    token: syncVm.token,
+    gistId: syncVm.gistId,
+    errorMessage: syncVm.statusMessage,
+    recoveringGistId: syncVm.recoveringGistId,
+    oauthEnabled: syncVm.githubOAuthEnabled,
+    oauthLoggingIn: syncVm.githubLoggingIn,
+    onOAuthLogin: syncVm.beginGithubLogin,
+    onTokenChange: syncVm.setToken,
+    onGistIdChange: syncVm.setGistId,
+    onConnect: syncVm.connectSync,
+    onDisconnect: syncVm.disconnectSync,
+    onCopyGistId: handleCopyGistId,
+    onRecoverGistId: handleRecoverGistId,
+  }), [
+    handleCopyGistId,
+    handleRecoverGistId,
+    syncBadgeText,
+    syncVm.beginGithubLogin,
+    syncVm.connectSync,
+    syncVm.connectedGistId,
+    syncVm.currentConfig?.gistId,
+    syncVm.disconnectSync,
+    syncVm.gistId,
+    syncVm.githubLoggingIn,
+    syncVm.githubOAuthEnabled,
+    syncVm.hasConfig,
+    syncVm.recoveringGistId,
+    syncVm.setGistId,
+    syncVm.setToken,
+    syncVm.statusMessage,
+    syncVm.token,
+  ]);
 
   /**
    * Pantalla de cada sección. Las cuatro rutas de listados comparten elemento a propósito: la pestaña activa se
@@ -1101,6 +1164,6 @@ export default function App() {
         ))}
       </datalist>
 
-    </>
+    </GithubConnectionProvider>
   );
 }
