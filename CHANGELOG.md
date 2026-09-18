@@ -3,6 +3,35 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows the git tags.
 
+## [1.3.3] - 2026-09-18
+
+La versión de **encontrar los ajustes**. Estaban repartidos entre dos botones flotantes de la esquina superior
+derecha —la zona a la que peor llega el pulgar— que además se escondían al bajar por una lista, así que media
+aplicación desaparecía a mitad de página. Ahora Ajustes es una pestaña más de la barra de abajo y lo que hay
+dentro está separado por asuntos, sin la pantalla interminable de antes.
+
+### Changed
+- **Ajustes baja a la barra, y se abre en cuatro grupos.** La barra pasa a tener cuatro pestañas —Listados,
+  Social, Estadísticas y Ajustes—, y la última no lleva a una pantalla: despliega cuatro accesos sobre ella
+  misma. **Personalización** (paleta, tema, escala de nota y los enlaces que has publicado), **Integración**
+  (GitHub, importación de la biblioteca y copias), **Filtros** (los géneros, plataformas, virtudes y defectos
+  con los que clasificas) y **Legal**. Cada uno tiene su dirección, así que se puede guardar y compartir, y
+  ninguna pantalla pide ya cuatro pantallazos de scroll. Arriba a la derecha solo queda el cambio de tema: lo
+  que se esconde mientras lees ya no se lleva por delante ningún destino.
+- **El panel de estadísticas se muda de `/perfil` a `/stats`.** Aquel nombre venía de cuando la pestaña se
+  llamaba «Perfil» y se confundía con el perfil social, que es otra cosa. Los enlaces antiguos siguen
+  funcionando, incluidos los de una reseña concreta: `/perfil/resenas/7` lleva ahora a `/stats/resenas/7` sin
+  perder nada por el camino.
+- **La pantalla «Cuenta» se disuelve.** Lo que tenía dentro se reparte donde se busca: la escala de nota y tus
+  enlaces publicados, en Personalización; el borrado de la cuenta, en Legal, junto a la analítica y a los
+  documentos, que son las tres cosas que la ley te reconoce sobre tus datos.
+
+### Fixed
+- **La apariencia ya no se bloquea sin cuenta de Google.** Paleta, claro/oscuro, mayúsculas, efectos, carátulas
+  y el botón de Steam Deck vivían dentro de la tarjeta de la escala de nota y se apagaban con ella cuando no
+  había sesión. Ninguna de esas preferencias necesita cuenta —se guardan en este dispositivo y solo se copian a
+  la nube si hay sesión—, así que el bloqueo no protegía nada: apagaba media pantalla y nada más.
+
 ## [1.3.2] - 2026-09-17
 
 La versión de **arrancar con menos peso** y de que **volver funcione en cualquier aparato**.
