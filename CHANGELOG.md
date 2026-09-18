@@ -75,6 +75,19 @@ pantalla de escritorio, y en las cuatro va primero lo que se viene a hacer y des
   programa que no existe para tu aparato.
 
 ### Fixed
+- **La barra de abajo ya no se queda muda por culpa de la tipografía.** Para saber si los nombres caben, la barra
+  los mide — y la primera medida cae con la letra de reserva del sistema, que no mide igual en un Mac que en
+  Linux. Si con esa no cabían, la barra bajaba a solo iconos y **ahí se quedaba para siempre**: cuando llegaba la
+  letra de la aplicación ya no podía rescatarse, porque en ese modo no hay nombre a la vista que medir. El mismo
+  móvil de 390 px salía con nombres en un sitio y mudo en otro. Ahora, cuando cambia lo que mide el texto, la
+  barra vuelve a medirlo todo desde el principio.
+- **Y los cuatro nombres vuelven a caber en un iPhone SE (375 px).** La cuenta que decide el escalón no medía el
+  nombre apilado, lo estimaba a partir del de una línea con un factor escrito a mano — y ese factor se apoyaba en
+  un cuerpo de letra que el CSS había cambiado para pantallas estrechas, así que se quedaba un 8 % corto: la
+  palabra «cabía» pegada al borde de su pastilla. Ahora se mide de verdad, y la barra recupera en móvil los
+  cuatro píxeles por columna que le faltaban: un poco menos de aire a los lados, un poco menos de hueco entre
+  pastillas y sin espaciado entre letras en el nombre apilado, que a ese tamaño no se aprecia. El nombre pasa de
+  8 a 12 px de holgura en un iPhone SE y de 13 a 16 en un móvil de 390 px.
 - **La apariencia ya no se apaga con la escala de nota.** Paleta, claro/oscuro, mayúsculas, efectos, carátulas y
   el botón de Steam Deck vivían DENTRO de la tarjeta de la escala, que sí pide cuenta de Google, y se bloqueaban
   con ella. Son preferencias de este dispositivo y no dependen de ninguna cuenta, así que ese bloqueo no
@@ -98,6 +111,9 @@ pantalla de escritorio, y en las cuatro va primero lo que se viene a hacer y des
   intermitente por contención de la máquina. Queda el de cobertura, que informa igual.
 - **El navegador de las pruebas de extremo a extremo se cachea** por versión de `@playwright/test`, en vez de
   descargar Chromium entero en cada build.
+- **Un iPhone SE entre los anchos que vigila la barra de abajo** (375 px). Es el más estrecho en el que la barra
+  promete los cuatro nombres y el que decide la cuenta por los pelos, así que es el primero que se cae si alguien
+  recorta su sitio o ensancha un rótulo — y el de 390 px podría seguir en verde mientras eso pasa.
 - **Que ningún icono salga hueco, comprobado sobre el build.** El juego de iconos está partido en dos por peso,
   y un dibujo en la mitad equivocada no da ningún error: se pinta un hueco y nadie se entera. Dos pruebas nuevas
   lo cierran — una cuadra el catálogo con los dos sprites, y la otra recorre las pantallas de la aplicación

@@ -1405,6 +1405,29 @@
     font-size: var(--fs-xs);
   }
 
+  /* TRES PELLIZCOS DE SITIO PARA LA BARRA, y los tres existen por la misma cuenta.
+     Con cuatro pestañas en un móvil, «Estadísticas» apilada pide ~79px y la columna medía 78 en un iPhone SE
+     (375px) y 81,8 en el ancho más común (390px): cabía por dos o tres píxeles o no cabía, y cuando no cabe la
+     barra se queda MUDA —solo iconos—. Antes parecía caber porque la cuenta de `BottomNavigation` estimaba el
+     rótulo apilado un 8 % más estrecho de lo que es (ver el hueco que dejó `STACK_FONT_RATIO`); ahora se mide,
+     y sin estos tres pellizcos la palabra se quedaba fuera de su pastilla en medio móvil.
+     Los tres suman ~4,5px por columna, que es lo que convierte «cabe por los pelos» en «cabe». Solo en pantalla
+     estrecha: en escritorio no hacen falta y la barra sigue igual. */
+  .bottom-nav {
+    padding-left: .7rem;
+    padding-right: .7rem;
+  }
+
+  .bottom-nav-inner {
+    gap: .3rem;
+  }
+
+  /* El espaciado entre letras es un acabado para el cuerpo de una línea; en el rótulo apilado —11,7px— no se
+     aprecia y cuesta 1,4px justo donde no hay ninguno de sobra. */
+  .bottom-nav.is-stacked .bottom-nav-btn {
+    letter-spacing: 0;
+  }
+
   .hub-hub-card {
     width: min(100%, 100%);
     /* El `padding: 1.1rem` que había aquí se ha retirado: lo sustituye el `clamp()` de la regla base, que cubre

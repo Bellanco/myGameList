@@ -49,6 +49,7 @@ lista de mejoras de segundo orden. Ninguno es una emergencia.
 | 9 | Documentación | Baja | README con versiones caducadas; `package.json` en 1.3.2 con el CHANGELOG ya en 1.3.3 |
 | 10 | Código muerto | Baja | 127 `export` sin consumidor externo; solo 2 son código inalcanzable · **+2 símbolos de icono sin ninguna referencia** (`uncharted`, `keyboard-arrow-up`, 1,6 kB) · **✅ borrados (fase 5)** |
 | 11 | Documentación | Baja | ~~«Diseño» sin cuenta de Google~~ · **✅ es así a propósito**; lo que estaba mal era la entrada de la 1.3.3, corregida |
+| 12 | Rendimiento visual | **Media** | ~~La barra inferior se quedaba muda según la máquina~~ · **✅ arreglado** — un pestillo de un solo sentido y una constante desincronizada del CSS; lo cazó CI |
 
 ---
 
@@ -294,6 +295,67 @@ NO cambia dicho en voz alta.
 
 **Consecuencia para las pruebas:** el recorrido de iconos cubre listados, hub social, estadísticas, Filtros y
 Datos; los iconos de Diseño los cubre el recorrido de accesibilidad, que sí abre sesión.
+
+### 12 · La barra inferior se quedaba muda según la máquina · **Media** · ✅ ARREGLADO
+
+**Lo cazó la integración continua**, que es Linux, en un recorrido que en local pasaba: `bottomNav.test.ts`, «en
+un móvil normal caben las cuatro CON su nombre a la vista» → la barra salía en `is-icons` a 390 px. Y no era un
+fallo de la prueba: eran **dos** fallos del componente que se tapaban entre ellos.
+
+**1) Un pestillo de un solo sentido.** `BottomNavigation` decide el escalón midiendo, y las medidas solo se
+pueden tomar donde el rótulo está a la vista. El código solo las tomaba estando en `row`:
+
+```js
+if (layoutRef.current === 'row') { …mide lo que necesita… }
+const next = column >= row ? 'row' : column >= stack ? 'stack' : 'icon';
+```
+
+La primera medida cae con la tipografía de RESERVA del sistema —y la de Linux es más ancha que la de macOS—, así
+que en CI bajaba a `icon`. Había un rescate previsto (`document.fonts.ready.then(measure)`), pero **no podía
+funcionar**: al volver a medir ya no estaba en `row`, así que reusaba los números malos y volvía a decidir lo
+mismo. En `icon` el rótulo está fuera de pantalla y no hay nada que medir. Resultado: barra muda en un móvil
+normal, en unas máquinas y no en otras. Trazado en el navegador: `row(rótulo 78, reserva) → stack(69) → 79 >
+76,8 → icon`, y tras la fuente buena, otra vez `icon` con los mismos números.
+
+**2) Una constante desincronizada del CSS.** `STACK_FONT_RATIO = 0.73 / 0.86` estimaba el ancho del rótulo
+apilado multiplicando el de una línea por `--fs-2xs / --fs-sm`. Pero en pantalla estrecha
+(`@media (max-width:620px)`) el rótulo de una línea **no es `--fs-sm`, es `--fs-xs`**, así que la estimación se
+quedaba un 8 % corta. El propio comentario de la constante advertía «si allí cambia el cuerpo, aquí cambia el
+número» — y no cambió. Efecto medido: a 370 px la barra decía «cabe» y el rótulo se quedaba con 8 px de aire,
+por debajo de los 10 que el componente promete.
+
+**El arreglo, en tres piezas:**
+1. **La constante desaparece.** El escalón apilado ya no se estima: se mide **en dos pasadas** — en `row` se mide
+   el ancho de una línea; si no cabe, se pasa a `stack` y se vuelve a medir en el siguiente fotograma, cuando el
+   rótulo ya está apilado y con su cuerpo real. No puede oscilar (la columna mide igual en los tres escalones,
+   así que cada pasada solo puede bajar) y termina siempre. Y no queda ningún número que mantener a mano en
+   sintonía con la hoja de estilos, que es lo que falló.
+2. **`remeasure()`**: cuando cambia lo que MIDE el texto —la tipografía que llega, el ajuste de mayúsculas— se
+   vuelve al escalón de arriba y se mide desde ahí, en vez de re-decidir con medidas viejas. Eso es el pestillo.
+3. **Sitio de verdad para el rótulo en móvil** (`@media (max-width:620px)`): aire de la barra 0,9 → 0,7 rem,
+   hueco entre pastillas 0,4 → 0,3 rem y sin `letter-spacing` en el rótulo apilado, que a 11,7 px no se aprecia.
+   Suman ~4,5 px por columna. Hacía falta porque con la cuenta honesta un iPhone SE (375 px) **perdía** los
+   rótulos: la columna medía 78 px y la palabra pedía 79.
+
+**Medido, barriendo anchos sobre el build:**
+
+| Ancho | Antes | Ahora |
+|---|---|---|
+| 375 px (iPhone SE) | apilado, 8 px de aire (promesa: 10) | **apilado, 12 px** |
+| 390 px (el más común) | apilado, 13 px de aire y **2,8 px** de margen en la decisión | **apilado, 16 px y ~6 px de margen** |
+| 280 px (el suelo) | solo iconos, sin desbordar | igual |
+| 620 px+ | una línea | igual |
+
+El margen de 390 px es lo que hacía que CI y local discreparan: con 2,8 px, cualquier diferencia de renderizado
+decide. Con 6 px, no.
+
+**Guarda nueva:** `bottomNav.test.ts` añade el caso de **375 px**, que es el que la cuenta decide por los pelos
+—y por tanto el primero que se cae si alguien recorta el sitio de la barra— mientras el de 390 podría seguir en
+verde.
+
+**Lo que esto NO cubre:** entre 360 y 374 px la barra se queda en iconos (antes también, o con el rótulo pegado
+al borde). 360 dp es un ancho común en Android: se queda a 0,5 px de caber, y forzarlo pediría recortar más el
+aire de la barra o acortar «Estadísticas». Es una decisión de diseño, no un fallo.
 
 ## Lo que se comprobó y está bien
 

@@ -75,6 +75,24 @@ test.describe('la barra inferior con cuatro pestañas', () => {
     }
   });
 
+  /**
+   * 375px ES EL OTRO ANCHO QUE HAY QUE VIGILAR: el del iPhone SE, y el más estrecho en el que la barra sigue
+   * prometiendo los cuatro nombres. Va aparte del de 390 porque es el que decide la cuenta por los pelos —la
+   * columna mide ~80px y «Estadísticas» apilada pide ~78—, así que es el primero que se cae si alguien recorta
+   * el sitio de la barra en pantalla estrecha o ensancha el rótulo. Si este se pone en rojo, la barra se ha
+   * quedado muda en medio parque de móviles y el de 390 puede seguir en verde.
+   */
+  test('en un iPhone SE (375 px) los cuatro nombres siguen a la vista', async ({ page }) => {
+    await abrir(page, 375);
+    const m = await medir(page);
+    expect(m.desborde).toBe(0);
+    expect(m.modo).not.toContain('is-icons');
+    for (const b of m.botones) {
+      expect(b.rotuloVisible, b.nombre).toBe(true);
+      expect(b.aire, `${b.nombre} va pegado al borde de su pastilla`).toBeGreaterThanOrEqual(10);
+    }
+  });
+
   test('en 280 px sigue entrando entera, con sus dianas y sus nombres', async ({ page }) => {
     await abrir(page, 280);
     const m = await medir(page);
