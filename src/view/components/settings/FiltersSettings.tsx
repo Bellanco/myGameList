@@ -3,6 +3,10 @@ import { COMMON_ICONS } from '../../../core/constants/icons';
 import { UI_MESSAGES, VALIDATION_MESSAGES } from '../../../core/constants/labels';
 import { SETTINGS_UI } from '../../../core/constants/settingsLabels';
 import { Icon } from '../Icon';
+// La hoja de las pantallas de Ajustes viaja en los chunks perezosos que la usan y no en el bundle base (mismo
+// patrón que `stats.scss` y `social.scss`). Se importa desde CADA pantalla que la necesita: si se importara solo
+// desde una, entrar por otra ruta la dejaría sin estilo.
+import '../../../styles/settings.scss';
 
 type AdminCategoryKey = 'genres' | 'platforms' | 'strengths' | 'weaknesses';
 
