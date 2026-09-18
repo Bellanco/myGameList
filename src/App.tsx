@@ -75,6 +75,7 @@ const StatsHub = lazy(() => import('./view/components/stats/StatsHub').then((mod
 // maquetación solo se descargan al entrar, no en el arranque de los listados.
 const PersonalizationSettings = lazy(() => import('./view/components/settings/PersonalizationSettings').then((module) => ({ default: module.PersonalizationSettings })));
 const LegalSettings = lazy(() => import('./view/components/settings/LegalSettings').then((module) => ({ default: module.LegalSettings })));
+const FiltersSettings = lazy(() => import('./view/components/settings/FiltersSettings').then((module) => ({ default: module.FiltersSettings })));
 
 /* La ruleta de los listados va por su envoltorio, no por el modal desnudo: así el pool y la ponderación
    se calculan DENTRO del chunk perezoso en vez de en el arranque (ver `ListsRouletteModal`). */
@@ -880,6 +881,8 @@ export default function App() {
           <PersonalizationSettings scoreScaleUid={scoreScaleUid} hasSocialProfile={hasSocialProfile} />
         ) : settingsGroup === 'legal' ? (
           <LegalSettings />
+        ) : settingsGroup === 'filters' ? (
+          <FiltersSettings lookups={vm.lookups} onEditTag={handleEditTag} onDeleteTag={handleDeleteTag} />
         ) : settingsGroup === null ? (
           /* `/ajustes` A SECAS NO ES UNA PANTALLA: no hay nada que enseñar en una portada que solo repetiría el
              menú que acaba de usarse para llegar. Se entra directamente al primero de los grupos que existe
@@ -888,7 +891,6 @@ export default function App() {
           <Navigate to={SETTINGS_ROUTES.integration} replace />
         ) : (
         <SettingsHub
-          group={settingsGroup}
           syncStatus={syncBadgeText}
           hasSyncConfig={syncVm.hasConfig}
           connectedGistId={syncVm.connectedGistId || syncVm.currentConfig?.gistId || ''}
@@ -908,9 +910,6 @@ export default function App() {
           onRecoverGistId={handleRecoverGistId}
           onExport={exportData}
           onImport={importData}
-          lookups={vm.lookups}
-          onEditTag={handleEditTag}
-          onDeleteTag={handleDeleteTag}
           onImportLibrary={handleImportLibraryExporter}
           inboxCount={inboxCount}
           onOpenInbox={openInbox}
