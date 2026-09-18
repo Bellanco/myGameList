@@ -41,18 +41,36 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: TypeScript check
-        run: npx tsc --noEmit
+      # LOS DOS PROYECTOS, y por eso es `npm run typecheck` y no `tsc --noEmit` a secas: `tsconfig.json` solo
+      # incluye `src` y `tests` (y excluye `tests/integration`), así que la verja NO miraba `functions/` —el
+      # borde que guarda el `client_secret` de OAuth, verifica los ID token de Firebase y aplica las cuotas—.
+      # El script encadena `tsc --noEmit && tsc -p tsconfig.functions.json`.
+      - name: TypeScript check (src/tests + functions)
+        run: npm run typecheck
 
-      - name: Run unit tests
-        run: npm run test -- --reporter=verbose
-
+      # UNA SOLA PASADA DE LA SUITE. Antes había dos pasos (`npm run test` y `npm run test:coverage`) que
+      # ejecutaban los MISMOS casos: se pagaba el doble de tiempo y se doblaba la exposición a un fallo
+      # intermitente por contención. La cobertura ya reporta igual y lleva `reportOnFailure: true`.
       - name: Run tests with coverage
-        run: npm run test:coverage
+        run: npm run test:coverage -- --reporter=verbose
 
       - name: Run Firestore rules tests (emulator)
         run: npm run test:rules
 
+      # El navegador se cachea por VERSIÓN de @playwright/test: al actualizar el paquete, la clave cambia y se
+      # descarga el que le toca. Sin esto se bajaba Chromium entero en cada build.
+      - name: Resolve Playwright version
+        id: playwright-version
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browser
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
+
+      # `--with-deps` se mantiene aunque el navegador venga de la caché: las dependencias de sistema se
+      # instalan con apt y ésas no se cachean. Si el binario ya está, Playwright se salta la descarga.
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 

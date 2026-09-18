@@ -36,20 +36,20 @@ lista de mejoras de segundo orden. Ninguno es una emergencia.
 
 | # | Eje | Severidad | Hallazgo |
 |---|---|---|---|
-| 1 | Seguridad / CI | **Alta** | CI no comprueba los tipos de `functions/` ni de `tests/integration` |
+| 1 | Seguridad / CI | **Alta** | ~~CI no comprueba los tipos de `functions/` ni de `tests/integration`~~ · **✅ hecho (fase 1)** |
 | 2 | Rendimiento | **Media** | El árbol social entero se repinta con cualquier cambio: 109 claves en un hook y 17 componentes sin `memo` |
 | 3 | Escalabilidad | **Media** | La válvula de desborde del gist (`ENABLE_GAMES_OVERFLOW_GISTS`) está apagada y sus pruebas se saltan solas en CI |
 | 4 | Pruebas | **Media** | La suite es inestable bajo carga: 5 casos fallaron en una ejecución y pasaron en la siguiente sin tocar nada |
 | 5 | Modularidad | Media | `useSocialViewModel` (2453 líneas, 94 hooks, 109 claves) y `App.tsx` (1155 líneas, 52 hooks) |
 | 6 | Rendimiento | Baja | El chunk de arranque lleva cifrado, OAuth y avisos que no hacen falta para pintar la lista, con el presupuesto al 96 % |
-| 7 | CI | Baja | Los 2266 casos se ejecutan dos veces por build |
+| 7 | CI | Baja | ~~Los 2266 casos se ejecutan dos veces por build~~ · **✅ hecho (fase 1)** |
 | 8 | Cobertura | Baja | 79,4 % de líneas y 70,3 % de ramas, con los huecos justo en el camino de sync |
 | 9 | Documentación | Baja | README con versiones caducadas; `package.json` en 1.3.2 con el CHANGELOG ya en 1.3.3 |
 | 10 | Código muerto | Baja | 127 `export` sin consumidor externo; solo 2 son código inalcanzable |
 
 ---
 
-### 1 · CI no comprueba los tipos de `functions/` ni de `tests/integration` · **Alta**
+### 1 · CI no comprueba los tipos de `functions/` ni de `tests/integration` · **Alta** · ✅ HECHO
 
 `tsconfig.json` incluye solo `src/**` y `tests/**`, y **excluye `tests/integration`**. El paso de CI es
 `npx tsc --noEmit`, así que la verja **no mira `functions/`**: los 2152 líneas del borde —canje de OAuth con el
@@ -60,7 +60,10 @@ en producción sin comprobación de tipos. El script `npm run typecheck` sí hac
 Hoy los dos proyectos están en verde, así que no hay daño: el problema es que **nada lo garantiza mañana**, y el
 código que queda fuera es precisamente el que tiene el secreto y valida la identidad.
 
-**Arreglo:** en `.github/workflows/ci.yml`, cambiar `npx tsc --noEmit` por `npm run typecheck`. Una línea.
+**Arreglo aplicado** (fase 1): en `.github/workflows/ci.yml` el paso pasa a ser `npm run typecheck`, que
+encadena `tsc --noEmit && tsc -p tsconfig.functions.json`. Los dos proyectos verificados en verde.
+`tests/integration` sigue fuera del `tsconfig` principal, pero ya no queda sin mirar: lo compila el emulador
+en `npm run test:rules`, que sí corre en CI.
 
 ### 2 · El árbol social se repinta entero · **Media**
 
@@ -148,12 +151,15 @@ modales) debería quitar del camino crítico del orden de 15–20 KB gzip sin ca
 deploy. Está decidido y escrito en `vite.config.ts`: el código es GPL y público, los mapas no revelan nada que
 no esté en el repositorio, y sirven para leer los stacks de telemetría.
 
-### 7 · CI ejecuta la suite dos veces · Baja
+### 7 · CI ejecuta la suite dos veces · Baja · ✅ HECHO
 
 `Run unit tests` (`npm run test -- --reporter=verbose`) y `Run tests with coverage` (`npm run test:coverage`)
-corren **los mismos 2266 casos**. Se duplica el tiempo y se duplica la exposición al hallazgo 4. Dejar solo el
-paso con cobertura (que reporta igual, y ya tiene `reportOnFailure: true`) ahorra la mitad. Tampoco hay caché
-del navegador de Playwright, que se reinstala en cada build.
+corrían **los mismos casos**. Se duplicaba el tiempo y la exposición al hallazgo 4.
+
+**Arreglo aplicado** (fase 1): queda un solo paso, `npm run test:coverage -- --reporter=verbose` (reporta igual y
+ya tenía `reportOnFailure: true`), y el navegador de Playwright se cachea con `actions/cache@v6` por versión de
+`@playwright/test` en vez de descargar Chromium en cada build. Verificado: 195 ficheros, 2265 casos en verde y
+2 saltados, con el paso de tipos de los dos proyectos delante.
 
 ### 8 · Cobertura: los huecos están en el camino de sync · Baja
 
@@ -236,15 +242,16 @@ Para no repetir el trabajo en la próxima pasada:
 
 ## Plan
 
-### Fase 1 — La verja (una tarde)
+### Fase 1 — La verja · ✅ COMPLETADA (18-09-2026)
 
-1. `.github/workflows/ci.yml`: `npx tsc --noEmit` → `npm run typecheck`. *(Hallazgo 1)*
-2. Quitar el paso `Run unit tests` y dejar solo `Run tests with coverage`. *(Hallazgo 7)*
-3. Cachear el navegador de Playwright (`~/.cache/ms-playwright`) por versión de `@playwright/test`. *(7)*
-4. Subir `package.json` a `1.3.3`. *(Hallazgo 9)*
+1. ✅ `.github/workflows/ci.yml`: `npx tsc --noEmit` → `npm run typecheck`. *(Hallazgo 1)*
+2. ✅ Quitado el paso `Run unit tests`; queda `npm run test:coverage -- --reporter=verbose`. *(Hallazgo 7)*
+3. ✅ `actions/cache@v6` sobre `~/.cache/ms-playwright`, con clave por versión de `@playwright/test`. *(7)*
+4. ⏸️ Subir `package.json` a `1.3.3`: **lo hace el mantenedor al desplegar**, no el plan. *(Hallazgo 9)*
 
-**Criterio de aceptación:** CI en verde, con `tsc -p tsconfig.functions.json` visible en el log y un paso de
-tests menos. Tiempo total del workflow por debajo del actual.
+**Criterio de aceptación — cumplido.** Con los comandos exactos del workflow: `npm run typecheck` en verde (los
+dos proyectos), `npm run test:coverage -- --reporter=verbose` en verde (195 ficheros, 2265 casos, 2 saltados),
+`npm run validate` con 0 errores, y el YAML parseado: 17 pasos, uno menos de tests y dos nuevos de caché.
 
 ### Fase 2 — Estabilidad de las pruebas (una tarde)
 

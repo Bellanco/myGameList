@@ -83,6 +83,19 @@ pantalla de escritorio, y en las cuatro va primero lo que se viene a hacer y des
   y el contenido no le reservaba sitio, así que las últimas tarjetas quedaban debajo y no había forma de bajar
   hasta ellas: la página creía que ya había terminado. Ahora el contenido se aparta lo que el aviso mide.
 
+### Security
+- **La verja de CI ya comprueba los tipos del borde.** `tsconfig.json` solo incluye `src` y `tests`, así que
+  `tsc --noEmit` no miraba `functions/`: el código que guarda el `client_secret` de OAuth, verifica los ID token
+  de Firebase y aplica las cuotas del servicio entraba en producción sin comprobación de tipos. El paso pasa a
+  ser `npm run typecheck`, que encadena los dos proyectos.
+
+### Tests
+- **La suite se ejecuta una vez por build, no dos.** Había dos pasos —uno normal y otro con cobertura— corriendo
+  los mismos 2266 casos: se pagaba el doble de tiempo y se doblaba la probabilidad de tropezar con un fallo
+  intermitente por contención de la máquina. Queda el de cobertura, que informa igual.
+- **El navegador de las pruebas de extremo a extremo se cachea** por versión de `@playwright/test`, en vez de
+  descargar Chromium entero en cada build.
+
 ### Performance
 - **La aplicación arranca con menos peso otra vez.** Las reglas de estilo de las pantallas de ajustes —26 kB—
   viajaban en el arranque para pintar unas pantallas en las que se entra una vez al mes. Ahora se descargan al
