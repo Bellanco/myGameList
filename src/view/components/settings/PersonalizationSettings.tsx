@@ -4,6 +4,10 @@ import { SharedReviewsCard } from '../SharedReviewsCard';
 import { ThemePicker } from '../appearance/ThemePicker';
 import { AppearanceToggles } from '../appearance/AppearanceToggles';
 import { ScoreScaleCard } from './ScoreScaleCard';
+// La hoja de las pantallas de Ajustes viaja en los chunks perezosos que la usan y no en el bundle base (mismo
+// patrón que `stats.scss` y `social.scss`). Se importa desde CADA pantalla que la necesita: si se importara solo
+// desde una, entrar por otra ruta la dejaría sin estilo.
+import '../../../styles/settings.scss';
 
 interface PersonalizationSettingsProps {
   scoreScaleUid: string | null; // uid de Google (para gatear/guardar la escala); null → candado

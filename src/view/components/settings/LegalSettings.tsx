@@ -7,6 +7,10 @@ import { LEGAL_DOCUMENTS } from '../../../core/constants/legalContent';
 import { Icon } from '../Icon';
 import { useAnalyticsConsent } from '../../hooks/useAnalyticsConsent';
 import { DangerZone } from '../DangerZone';
+// La hoja de las pantallas de Ajustes viaja en los chunks perezosos que la usan y no en el bundle base (mismo
+// patrón que `stats.scss` y `social.scss`). Se importa desde CADA pantalla que la necesita: si se importara solo
+// desde una, entrar por otra ruta la dejaría sin estilo.
+import '../../../styles/settings.scss';
 
 /**
  * «Legal» — el pie del menú de Ajustes: lo que se consulta una vez al año, pero que tiene que seguir estando a

@@ -5,6 +5,10 @@ import { SETTINGS_UI } from '../../core/constants/settingsLabels';
 import { LEGAL_CONTACT_EMAIL, LEGAL_ROUTES, type LegalDocId } from '../../core/constants/legal';
 import { LEGAL_DOCUMENTS } from '../../core/constants/legalContent';
 import { Icon } from './Icon';
+// La hoja de las pantallas de Ajustes viaja en los chunks perezosos que la usan y no en el bundle base (mismo
+// patrón que `stats.scss` y `social.scss`). Se importa desde CADA pantalla que la necesita: si se importara solo
+// desde una, entrar por otra ruta la dejaría sin estilo.
+import '../../styles/settings.scss';
 
 interface LegalScreenProps {
   docId: LegalDocId;

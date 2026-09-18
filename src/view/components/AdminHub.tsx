@@ -40,6 +40,10 @@ import { Icon } from './Icon';
 // en el mismo chunk perezoso y el arranque no carga ni un byte de estilos de esta pantalla (igual que `stats.scss`).
 import '../../styles/admin.scss';
 import { copyText } from '../../core/utils/clipboard';
+// La hoja de las pantallas de Ajustes viaja en los chunks perezosos que la usan y no en el bundle base (mismo
+// patrón que `stats.scss` y `social.scss`). Se importa desde CADA pantalla que la necesita: si se importara solo
+// desde una, entrar por otra ruta la dejaría sin estilo.
+import '../../styles/settings.scss';
 
 const A = ADMIN_PANEL_UI;
 

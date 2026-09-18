@@ -596,7 +596,7 @@ const SocialHubInner = memo(function SocialHubInner({
           <div className="hub-gateway-consent">
             <strong>{LEGAL_CONSENT_UI.title}</strong>
             <p>{LEGAL_CONSENT_UI.body}</p>
-            <div className="settings-legal-links">
+            <div className="hub-legal-links">
               <Link to={LEGAL_ROUTES.terms}>{LEGAL_CONSENT_UI.termsLink}</Link>
               <Link to={LEGAL_ROUTES.privacy}>{LEGAL_CONSENT_UI.privacyLink}</Link>
             </div>

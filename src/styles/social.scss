@@ -960,3 +960,14 @@ button.hub-chip.active {
     display: none;
   }
 }
+
+/* La PUERTA LEGAL del hub: los dos enlaces que hay que aceptar antes de entrar. Tenía prestada una clase de la
+   pantalla de Ajustes (`.settings-legal-links`), y cuando aquella hoja salió del bundle base para viajar con sus
+   chunks, esta puerta se quedaba sin estilo: el hub es otro chunk y no la carga. Una clase propia de tres líneas
+   sale más barata que traerse veintiocho kilobytes de reglas ajenas por dos enlaces. */
+.hub-legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem 1rem;
+  font-size: var(--fs-sm);
+}
