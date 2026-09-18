@@ -161,8 +161,26 @@ Doce pasos, razón ≈1,08 en la zona de interfaz. Multiplicados por `--font-sca
 - **Rejilla de 4**: `--sp-1` 4px … `--sp-8` 64px. Huecos con `gap`, nunca márgenes que se cancelen.
 - Contenedor de lectura ≤ 1140 px; la tabla puede desbordar en su propio contenedor con `overflow-x`.
 - Gutter lateral mínimo de 16 px a cualquier ancho.
-- La app es **headerless**: no hay barra superior fija, sino controles flotantes y navegación inferior.
+- La app es **headerless**: no hay barra superior fija, sino navegación inferior y un control flotante.
   *(Propuesta: cabecera de pantalla con rótulo, título y cifras — hoy las pantallas empiezan en frío.)*
+
+### 5.1 · Navegación
+
+Cuatro pestañas abajo —**Listados · Social · Estadísticas · Ajustes**— y arriba a la derecha, solo el cambio de
+tema. Esa separación es la regla: **abajo lo que LLEVA a algún sitio, arriba lo que CAMBIA algo en el sitio**.
+Importa porque los flotantes se esconden al bajar, y un destino que desaparece a mitad de página deja media
+aplicación sin salida; un control que se aparta mientras lees, no.
+
+La cuarta pestaña no navega: despliega un `popover` con los cuatro grupos de ajustes —Personalización,
+Integración, Filtros y, como pie, Legal—. Cuatro rótulos con un punto de luz delante, **sin panel, sin caja y
+sin velo**. El contraste no lo pone una superficie sino el apagado de todo lo demás: mientras el menú está
+abierto, el contenido, los avisos y los controles flotantes bajan al **30 %** y los dos botones de acción
+desaparecen (nacen en la misma esquina de la que sale el menú). Medido sobre el peor fondo posible —una carátula
+blanca en tema oscuro, una negra en claro—, el rótulo queda en 6,4:1 y 6,6:1 en el peor píxel de su trazo.
+
+La sombra de los rótulos (`--glow-text`, CAPA 1, derivada de `--bg`) **remata pero no sostiene**: medida sola
+sobre blanco no pasa de 2:1 por muchas capas que se le añadan, porque en las puntas del trazo el halo se
+difumina en todas direcciones. Y nada de esto lo ve axe, así que se mide a mano.
 
 ---
 

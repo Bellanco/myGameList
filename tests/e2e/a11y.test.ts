@@ -98,11 +98,34 @@ async function listaConDetalleAbierto(page: Page): Promise<void> {
 
 /** Ajustes: notas de tarjeta, cajas de ayuda y enlaces teñidos con el acento, todo junto. */
 async function pantallaDeAjustes(page: Page): Promise<void> {
-  await page.goto('/ajustes');
+  // «Integración» y no la portada de `/ajustes`: es la pantalla con formularios, botones de acción y la guía de
+  // importación —donde vivían los enlaces con el acento a pelo—. La portada son cuatro enlaces y poco más.
+  await page.goto('/ajustes/integracion');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  // La guía de importación va plegada: es justo donde vivían los enlaces con el acento a pelo.
   const guia = page.locator('.import-guide-link').first();
   if (await guia.count()) await guia.click();
+  await animacionesDeEntradaTerminadas(page);
+}
+
+/**
+ * EL MENÚ DE LA PESTAÑA, DESPLEGADO. Es la pantalla más rara de auditar de toda la aplicación: cuatro rótulos
+ * flotando sin panel ni fondo propio, sobre un contenido que baja al 30 %. Lo que axe puede decir aquí —que los
+ * enlaces tengan nombre, que el disparador anuncie su estado, que el foco se vea— es justo lo que no se puede
+ * comprobar a ojo; lo que NO ve —el `text-shadow` y el contraste real sobre lo que quede debajo— se mide aparte
+ * (ver la nota de `SettingsMenu`).
+ */
+async function menuDeAjustesAbierto(page: Page): Promise<void> {
+  await page.goto('/completados');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await page.getByRole('button', { name: 'Ajustes' }).click();
+  await expect(page.locator('.settings-menu')).toBeVisible();
+  await animacionesDeEntradaTerminadas(page);
+}
+
+/** «Legal»: el interruptor de la analítica, los tres documentos y el borrado de la cuenta con su confirmación. */
+async function pantallaLegal(page: Page): Promise<void> {
+  await page.goto('/ajustes/legal');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await animacionesDeEntradaTerminadas(page);
 }
 
@@ -287,6 +310,8 @@ const PANTALLAS = [
   { nombre: 'lista', amplia: false, abrir: listaConDetalleAbierto },
   { nombre: 'panel', amplia: true, abrir: panelDeEstadisticas },
   { nombre: 'ajustes', amplia: false, abrir: pantallaDeAjustes },
+  { nombre: 'menú de ajustes', amplia: false, abrir: menuDeAjustesAbierto },
+  { nombre: 'ajustes · legal', amplia: false, abrir: pantallaLegal },
   { nombre: 'hub social', amplia: false, abrir: puertaDelHubSocial },
   { nombre: 'ruleta', amplia: false, abrir: ruletaAbierta },
   { nombre: 'logros', amplia: true, abrir: listadoDeLogros },

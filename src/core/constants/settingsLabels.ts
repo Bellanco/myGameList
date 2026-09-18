@@ -21,7 +21,7 @@ export const SETTINGS_UI = {
     },
     integration: {
       title: 'Integración',
-      hint: 'Sincronización con GitHub, importación de la biblioteca, copias y borrado.',
+      hint: 'Sincronización con GitHub, importación de la biblioteca y copias de seguridad.',
     },
     filters: {
       title: 'Filtros',
@@ -29,7 +29,7 @@ export const SETTINGS_UI = {
     },
     legal: {
       title: 'Legal',
-      hint: 'Analítica opcional, condiciones de uso, privacidad y cookies.',
+      hint: 'Analítica opcional, condiciones de uso, cookies y borrado de la cuenta.',
     },
   },
   account: {

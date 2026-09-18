@@ -10,6 +10,6 @@ export async function irAAjustes(page: Page, grupo = 'Integración'): Promise<vo
   await page.getByRole('button', { name: /^Ajustes/ }).first().click();
   const menu = page.locator('.settings-menu');
   await expect(menu).toBeVisible();
-  await menu.getByRole('menuitem', { name: grupo }).click();
+  await menu.getByRole('link', { name: grupo }).click();
   await expect(menu).toBeHidden();
 }

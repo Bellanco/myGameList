@@ -93,7 +93,8 @@ test.describe('la barra inferior con cuatro pestañas', () => {
     // demás es que el destino queda marcado, y eso se comprueba al llegar (ver `settingsMenu.test.ts`).
     await abrir(page, 390);
     const pestana = page.getByRole('button', { name: 'Ajustes' });
-    await expect(pestana).toHaveAttribute('aria-haspopup', 'menu');
+    // `true` y no `menu`: lo que despliega es un `<nav>` de enlaces, no un menú ARIA con teclado de flechas.
+    await expect(pestana).toHaveAttribute('aria-haspopup', 'true');
     await pestana.click();
     await expect(page.locator('.settings-menu')).toBeVisible();
     await expect(pestana).toHaveAttribute('aria-expanded', 'true');

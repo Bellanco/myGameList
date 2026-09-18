@@ -10,6 +10,9 @@
 // Vive en `tests/e2e/settingsMenu.test.ts`. De ahí el `hidden: true` de las consultas: sin `showPopover`, el
 // menú está cerrado y sus opciones no se exponen en el árbol de accesibilidad. Lo que se mira aquí es QUÉ se
 // pinta, no si se ve.
+//
+// Y son ENLACES, no opciones de un menú ARIA: llevan a cuatro direcciones, así que se abren en otra pestaña y
+// se copian como cualquier enlace. Un `role="menu"` habría prometido un teclado de flechas que no existe.
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -25,14 +28,14 @@ const pintar = (hasSocialProfile: boolean) =>
 describe('los puntos del menú de Ajustes', () => {
   it('con espacio social están los cuatro', () => {
     pintar(true);
-    expect(screen.getAllByRole('menuitem', { hidden: true }).map((b) => b.textContent)).toEqual([
+    expect(screen.getAllByRole('link', { hidden: true }).map((b) => b.textContent)).toEqual([
       'Personalización', 'Integración', 'Filtros', 'Legal',
     ]);
   });
 
   it('sin espacio social, Personalización no se pinta y el resto sigue', () => {
     pintar(false);
-    expect(screen.getAllByRole('menuitem', { hidden: true }).map((b) => b.textContent)).toEqual([
+    expect(screen.getAllByRole('link', { hidden: true }).map((b) => b.textContent)).toEqual([
       'Integración', 'Filtros', 'Legal',
     ]);
   });
@@ -40,7 +43,7 @@ describe('los puntos del menú de Ajustes', () => {
   it('Legal se pinta como pie, no como un punto más', () => {
     // Se consulta una vez al año pero tiene que seguir estando a un toque: se le baja el rango, no el acceso.
     pintar(true);
-    expect(screen.getByRole('menuitem', { name: 'Legal', hidden: true }).className).toContain('is-foot');
-    expect(screen.getByRole('menuitem', { name: 'Integración', hidden: true }).className).not.toContain('is-foot');
+    expect(screen.getByRole('link', { name: 'Legal', hidden: true }).className).toContain('is-foot');
+    expect(screen.getByRole('link', { name: 'Integración', hidden: true }).className).not.toContain('is-foot');
   });
 });

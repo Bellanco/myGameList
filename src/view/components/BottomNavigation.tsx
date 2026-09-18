@@ -203,7 +203,9 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
             className={`bottom-nav-btn ${currentSection === item.key ? 'active' : ''}`.trim()}
             aria-current={currentSection === item.key ? 'page' : undefined}
             popoverTarget={abreMenu ? SETTINGS_MENU_ID : undefined}
-            aria-haspopup={abreMenu ? 'menu' : undefined}
+            // `true` y no `menu`: lo que se despliega es un `<nav>` de enlaces, no un menú ARIA con su
+            // teclado de flechas. Anunciar «menú» sin dar ese teclado deja a quien lo oye pulsando flechas.
+            aria-haspopup={abreMenu ? true : undefined}
             aria-expanded={abreMenu ? settingsMenuOpen : undefined}
             onClick={abreMenu ? undefined : () => onSectionChange(item.key)}
           >
