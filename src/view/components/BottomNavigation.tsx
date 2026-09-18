@@ -34,13 +34,17 @@ const NAV_ITEMS: Array<{ key: AppSection; label: string; icon: IconName }> = [
  */
 const BTN_AIR = 10;
 
-/**
- * Cuánto encoge el rótulo al APILARSE: `--fs-2xs` sobre `--fs-sm` (ver `_layout.scss`). No es un adorno de
- * estilo, es parte de la cuenta: con cuatro pestañas, «Estadísticas» a cuerpo de una línea pide más de lo que
- * mide su columna en un móvil de 390px, y sin este factor la barra saltaba el escalón intermedio y se quedaba
- * en solo-icono —muda— en el ancho más común de todos. Si allí cambia el cuerpo, aquí cambia el número.
+/*
+ * AQUÍ VIVÍA `STACK_FONT_RATIO`, y su desaparición es la mitad del arreglo.
+ *
+ * Estimaba lo que mide el rótulo apilado multiplicando lo que mide en una línea por `--fs-2xs / --fs-sm`. El
+ * problema no era la idea, era que ese número tiene que seguir a mano un cuerpo de letra que vive en el CSS — y
+ * dejó de seguirlo: en pantalla estrecha (`max-width:620px`) el rótulo en línea no es `--fs-sm` sino `--fs-xs`,
+ * así que la estimación se quedaba un 8 % corta y el escalón se decidía con un número que no era el real.
+ *
+ * Ahora no se estima: se mide en dos pasadas (ver `measure`). Cuesta un fotograma cuando hay que bajar de
+ * escalón y a cambio no hay ninguna constante que mantener en sintonía con la hoja de estilos.
  */
-const STACK_FONT_RATIO = 0.73 / 0.86;
 
 /**
  * Cómo se dibuja cada botón según el sitio que haya, de más a menos: `row` es el de siempre (icono y rótulo en
@@ -77,46 +81,87 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
   useLayoutEffect(() => {
     const container = innerRef.current;
     if (!container) return;
+    const aplicar = (next: NavLayout) => {
+      layoutRef.current = next;
+      setLayout(next);
+    };
+
+    /**
+     * EL ESCALÓN SE MIDE EN DOS PASADAS, y cada una mide lo que de verdad se va a pintar.
+     *
+     * Un rótulo solo se puede medir cuando está a la vista y con su cuerpo de letra definitivo, y cada escalón
+     * lo pinta distinto. Así que:
+     *   · en `row` se mide el ancho de una línea (icono + hueco + rótulo). Si cabe, ahí se queda.
+     *   · si no cabe, se PASA a `stack` y se vuelve a medir en el siguiente fotograma: ahora el rótulo está
+     *     apilado y con su cuerpo reducido, así que su ancho es el de verdad y no una estimación.
+     *   · si tampoco cabe apilado, `icon`.
+     *
+     * NO PUEDE OSCILAR: la columna mide igual en los tres escalones (rejilla de fracciones iguales), así que
+     * cada pasada solo puede bajar. Y termina siempre: `row` → `stack` → (`stack` | `icon`).
+     *
+     * EN `icon` NO SE MIDE, y no es un olvido: ahí el rótulo está fuera de la pantalla (`sr-only`) y su ancho no
+     * dice nada. Se re-decide con lo último medido, que es lo que permite volver a subir de escalón al ensanchar
+     * la ventana.
+     */
     const measure = () => {
       const buttons = Array.from(container.querySelectorAll<HTMLElement>('.bottom-nav-btn'));
       const column = buttons[0]?.getBoundingClientRect().width ?? 0;
       // Sin medidas reales (jsdom, o la barra aún sin pintar) se deja como está: mejor el diseño completo que
       // uno recortado por unos ceros.
       if (!column) return;
+      const anchoDelRotulo = () => Math.max(...buttons.map((button) => button.querySelector<HTMLElement>('span')?.scrollWidth ?? 0));
+
       if (layoutRef.current === 'row') {
-        const widths = buttons.map((button) => {
+        needsRef.current.row = Math.max(...buttons.map((button) => {
           const icon = button.querySelector<SVGElement>('.bottom-nav-icon');
           const label = button.querySelector<HTMLElement>('span');
           const gap = parseFloat(getComputedStyle(button).columnGap) || 0;
-          const text = label?.scrollWidth ?? 0;
-          return {
-            row: (icon?.getBoundingClientRect().width ?? 0) + gap + text + BTN_AIR,
-            stack: text * STACK_FONT_RATIO + BTN_AIR,
-          };
-        });
-        needsRef.current = {
-          row: Math.max(...widths.map((width) => width.row)),
-          stack: Math.max(...widths.map((width) => width.stack)),
-        };
+          return (icon?.getBoundingClientRect().width ?? 0) + gap + (label?.scrollWidth ?? 0) + BTN_AIR;
+        }));
+        if (column >= needsRef.current.row) {
+          aplicar('row');
+          return;
+        }
+        aplicar('stack'); // segunda pasada: con el rótulo ya apilado, su ancho se mide en vez de estimarse
+        requestAnimationFrame(measure);
+        return;
       }
+
+      if (layoutRef.current === 'stack') {
+        needsRef.current.stack = anchoDelRotulo() + BTN_AIR;
+        aplicar(column >= needsRef.current.stack ? 'stack' : 'icon');
+        return;
+      }
+
       const { row, stack } = needsRef.current;
-      const next: NavLayout = column >= row ? 'row' : column >= stack ? 'stack' : 'icon';
-      layoutRef.current = next;
-      setLayout(next);
+      aplicar(column >= row ? 'row' : column >= stack ? 'stack' : 'icon');
+    };
+
+    /**
+     * VOLVER A MEDIRLO TODO, y esto es la otra mitad del arreglo.
+     *
+     * Las medidas solo se pueden tomar con el rótulo a la vista, así que cuando lo que cambia es CUÁNTO MIDE EL
+     * TEXTO —la tipografía que acaba de llegar, el ajuste de mayúsculas— no basta con volver a decidir: hay que
+     * volver al escalón de arriba y medir desde ahí.
+     *
+     * Sin esto había un pestillo de un solo sentido: si la primera medida caía con la tipografía de reserva —más
+     * ancha en unos sistemas que en otros— y bajaba a `icon`, la llegada de la fuente buena ya no podía
+     * rescatarla, porque en `icon` no hay rótulo que medir. El síntoma era una barra MUDA en un móvil normal, en
+     * unas máquinas y no en otras. Se cazó en la integración continua, donde la fuente de reserva es más ancha.
+     */
+    const remeasure = () => {
+      aplicar('row');
+      requestAnimationFrame(measure);
     };
     measure();
     window.addEventListener('resize', measure);
-    // La primera medida cae con la tipografía de reserva, que es MÁS ESTRECHA que la de la app: sin esto, la
-    // barra se quedaba en una línea creyendo que cabía y, al entrar la fuente buena, el rótulo largo pasaba a
-    // rozar el borde de su pastilla. `fonts` no existe en todos los entornos (jsdom), de ahí la guarda.
-    document.fonts?.ready.then(measure).catch(() => undefined);
+    // La primera medida cae con la tipografía de RESERVA, que no mide igual que la de la app —ni igual en todos
+    // los sistemas—, así que cuando llega la buena hay que medir otra vez desde arriba (`remeasure`, no
+    // `measure`). `fonts` no existe en todos los entornos (jsdom), de ahí la guarda.
+    document.fonts?.ready.then(remeasure).catch(() => undefined);
     // El ajuste de MAYÚSCULAS ensancha los rótulos sin que la ventana se mueva, así que el `resize` no se entera.
     // Se vuelve a `row` antes de medir porque la medida buena solo puede tomarse con el rótulo en su sitio.
-    const settings = new MutationObserver(() => {
-      layoutRef.current = 'row';
-      setLayout('row');
-      requestAnimationFrame(measure);
-    });
+    const settings = new MutationObserver(remeasure);
     settings.observe(document.documentElement, { attributes: true, attributeFilter: ['data-uppercase'] });
     return () => {
       window.removeEventListener('resize', measure);
