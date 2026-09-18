@@ -7,21 +7,36 @@ import { SETTINGS_MENU_ID } from '../../core/constants/uiConfig';
 const MENU = UI_MESSAGES.settingsMenu;
 
 interface SettingsMenuProps {
-  /** ¿Hay espacio social? Sin él, Personalización no tiene nada que enseñar y no se pinta. */
+  /** ¿Hay espacio social? Sin él, «Diseño» no tiene nada que enseñar y no se pinta. */
   hasSocialProfile: boolean;
   /** Avisa a `App` de que el menú se ha abierto o cerrado: de eso depende que el contenido se atenúe. */
   onToggle: (open: boolean) => void;
 }
 
-/** Los cuatro puntos, en orden de lectura. `Legal` va aparte: es el pie, no una opción más. */
-const PUNTOS: ReadonlyArray<{ group: SettingsGroup; label: string }> = [
-  { group: 'personalization', label: MENU.personalization },
-  { group: 'integration', label: MENU.integration },
-  { group: 'filters', label: MENU.filters },
+/**
+ * LOS PUNTOS DEL MENÚ, EN ORDEN DE LECTURA Y CON SU RANGO.
+ *
+ * El orden y el tamaño no son decoración: son la frecuencia con la que se entra en cada sitio, y por eso cada
+ * punto es MENOR que el anterior. Arriba y en grande, la apariencia, que es lo que se cambia por gusto y a
+ * menudo; en medio, las etiquetas con las que clasificas, que se retocan de vez en cuando; y abajo del todo
+ * «Datos», que se toca al empezar (conectar la sincronización, importar), cuando algo va mal (las copias) o
+ * una vez al año (la analítica, los documentos, el borrado).
+ *
+ * ERAN CUATRO PUNTOS. «Integración» y «Legal» ocupaban dos para lo mismo —tus datos—, así que comparten
+ * pantalla; lo legal no pierde acceso por eso: sigue a un toque de aquí, que es lo que promete el aviso de
+ * cookies cuando dice que puedes cambiar de idea.
+ *
+ * El rango va EN EL DATO y no en la posición: sin espacio social, «Personalización» no se pinta, y con el rango
+ * contado por índice el segundo punto heredaría un tamaño que no le toca.
+ */
+const PUNTOS: ReadonlyArray<{ group: SettingsGroup; label: string; rank?: 'second' | 'third' }> = [
+  { group: 'design', label: MENU.design },
+  { group: 'filters', label: MENU.filters, rank: 'second' },
+  { group: 'data', label: MENU.data, rank: 'third' },
 ];
 
 /**
- * EL MENÚ DE LA PESTAÑA DE AJUSTES — cuatro puntos y nada más.
+ * EL MENÚ DE LA PESTAÑA DE AJUSTES — tres puntos y nada más, cada uno menor que el anterior (ver `PUNTOS`).
  *
  * No hay panel, ni velo, ni caja: solo los rótulos flotando sobre la pantalla, con un punto de luz delante.
  * Quien sostiene el contraste no es una superficie sino el CONTENIDO DE DEBAJO, que baja al 30 % mientras el
@@ -99,7 +114,7 @@ export const SettingsMenu = memo(function SettingsMenu({ hasSocialProfile, onTog
     cerrar();
   }, [cerrar]);
 
-  const puntos = hasSocialProfile ? PUNTOS : PUNTOS.filter((p) => p.group !== 'personalization');
+  const puntos = hasSocialProfile ? PUNTOS : PUNTOS.filter((p) => p.group !== 'design');
 
   return (
     <nav
@@ -109,12 +124,12 @@ export const SettingsMenu = memo(function SettingsMenu({ hasSocialProfile, onTog
       className="settings-menu"
       aria-label={MENU.ariaLabel}
     >
-      {puntos.map(({ group, label }) => (
+      {puntos.map(({ group, label, rank }) => (
         <Link
           key={group}
           to={SETTINGS_ROUTES[group]}
           replace
-          className={`settings-menu-point ${pathname === SETTINGS_ROUTES[group] ? 'is-current' : ''}`.trim()}
+          className={`settings-menu-point ${rank ? `is-${rank}` : ''} ${pathname === SETTINGS_ROUTES[group] ? 'is-current' : ''}`.replace(/\s+/g, ' ').trim()}
           aria-current={pathname === SETTINGS_ROUTES[group] ? 'page' : undefined}
           onClick={alElegir}
         >
@@ -122,18 +137,6 @@ export const SettingsMenu = memo(function SettingsMenu({ hasSocialProfile, onTog
           {label}
         </Link>
       ))}
-      {/* Legal es el PIE del menú: se consulta una vez al año, pero tiene que seguir estando a un toque —retirar
-          el consentimiento de la analítica debe costar lo mismo que darlo—. Se le baja el rango, no el acceso. */}
-      <Link
-        to={SETTINGS_ROUTES.legal}
-        replace
-        className={`settings-menu-point is-foot ${pathname === SETTINGS_ROUTES.legal ? 'is-current' : ''}`.trim()}
-        aria-current={pathname === SETTINGS_ROUTES.legal ? 'page' : undefined}
-        onClick={alElegir}
-      >
-        <span className="settings-menu-dot" aria-hidden="true" />
-        {MENU.legal}
-      </Link>
     </nav>
   );
 });

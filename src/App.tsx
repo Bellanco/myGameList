@@ -72,7 +72,7 @@ const SocialHub = lazy(() => import('./view/components/SocialHub').then((module)
 // Panel "Perfil" (estadísticas). Perezoso como el resto de hubs: su código y su hoja de estilos solo se
 // descargan al entrar en la pestaña, así que no pesan en el arranque de los listados.
 const StatsHub = lazy(() => import('./view/components/stats/StatsHub').then((module) => ({ default: module.StatsHub })));
-// Las cuatro pantallas de Ajustes. Perezosas como el resto de hubs: sus textos (`settingsLabels`, 11 kB) y su
+// Las tres pantallas de Ajustes. Perezosas como el resto de hubs: sus textos (`settingsLabels`, 11 kB) y su
 // maquetación solo se descargan al entrar, no en el arranque de los listados.
 const PersonalizationSettings = lazy(() => import('./view/components/settings/PersonalizationSettings').then((module) => ({ default: module.PersonalizationSettings })));
 const LegalSettings = lazy(() => import('./view/components/settings/LegalSettings').then((module) => ({ default: module.LegalSettings })));
@@ -127,8 +127,8 @@ function getCurrentTab(pathname: string): TabId {
 function getPageHeading(section: AppSection, currentTab: TabId, settingsGroup: SettingsGroup | null): string {
   const H = UI_MESSAGES.pageHeading;
   if (section === 'lists') return H.lists(TAB_TITLES[currentTab]);
-  // Las cuatro pantallas de Ajustes comparten sección, así que un solo «Ajustes» dejaría a un lector de
-  // pantalla sin saber en cuál de las cuatro ha entrado. El encabezado dice el grupo.
+  // Las tres pantallas de Ajustes comparten sección, así que un solo «Ajustes» dejaría a un lector de pantalla
+  // sin saber en cuál de las tres ha entrado. El encabezado dice el grupo.
   if (section === 'settings' && settingsGroup) return `${H.settings} · ${UI_MESSAGES.settingsMenu[settingsGroup]}`;
   return H[section];
 }
@@ -223,7 +223,7 @@ export default function App() {
   useSignatureEffects();
 
   /**
-   * LA PUERTA DE «PERSONALIZACIÓN» TAMBIÉN EN LA RUTA, y no solo en el menú. Ahí dentro está lo que se guarda en
+   * LA PUERTA DE «DISEÑO» TAMBIÉN EN LA RUTA, y no solo en el menú. Ahí dentro está lo que se guarda en
    * la nube de quien tiene espacio social —la escala de nota, los enlaces publicados—, así que sin él no hay
    * nada que enseñar; el punto no se pinta, pero la dirección se puede teclear, y un camino declarado que pinta
    * una pantalla vacía es peor que uno que no existe. Se manda a la portada de Ajustes, que sí es suya.
@@ -231,11 +231,11 @@ export default function App() {
    * Se espera a `authReady` para no expulsar a quien sí tiene sesión mientras se resuelve al arrancar.
    */
   useEffect(() => {
-    if (authReady && !hasSocialProfile && location.pathname === SETTINGS_ROUTES.personalization) {
-      navigate(SETTINGS_ROUTES.integration, { replace: true });
+    if (authReady && !hasSocialProfile && location.pathname === SETTINGS_ROUTES.design) {
+      navigate(SETTINGS_ROUTES.data, { replace: true });
     }
   }, [authReady, hasSocialProfile, location.pathname, navigate]);
-  /** Cuál de los cuatro grupos de Ajustes pide el camino; `null` es la portada. */
+  /** Cuál de los tres grupos de Ajustes pide el camino; `null` es la portada. */
   const settingsGroup = matchSettingsGroup(location.pathname);
   const { filters, setFilter, toggleFilterValue, clearFilter, clearAllFilters } = useToolbarFilters();
   const {
@@ -319,7 +319,7 @@ export default function App() {
   // memoizarse por muchas envolturas que se le pusieran.
   const openInbox = useCallback(() => navigateFromHere('/bandeja'), [navigateFromHere]);
   const backFromInbox = useCallback(() => navigate(importReturnTo), [navigate, importReturnTo]);
-  const goToSettings = useCallback(() => navigate(SETTINGS_ROUTES.integration), [navigate]);
+  const goToSettings = useCallback(() => navigate(SETTINGS_ROUTES.data), [navigate]);
 
   // Inserta en la bandeja el resultado de un parser y avisa; navega a la bandeja si hubo algo.
   const importGames = useCallback(
@@ -933,50 +933,38 @@ export default function App() {
       </Suspense>
     ),
     /**
-     * Las CUATRO pantallas de Ajustes salen de la misma sección: la que toca la decide el camino (ver
+     * Las TRES pantallas de Ajustes salen de la misma sección: la que toca la decide el camino (ver
      * `matchSettingsGroup`), igual que hacen el hub social y el panel con las suyas. Sin grupo en el camino
-     * —`/ajustes` a secas— se pinta el índice.
+     * —`/ajustes` a secas— se entra en «Datos».
      */
     settings: (
 
       <Suspense fallback={<ScreenSkeleton />}>
-        {settingsGroup === 'personalization' ? (
+        {settingsGroup === 'design' ? (
           <PersonalizationSettings scoreScaleUid={scoreScaleUid} hasSocialProfile={hasSocialProfile} />
-        ) : settingsGroup === 'legal' ? (
-          <LegalSettings />
         ) : settingsGroup === 'filters' ? (
           <FiltersSettings lookups={vm.lookups} onEditTag={handleEditTag} onDeleteTag={handleDeleteTag} />
         ) : settingsGroup === null ? (
           /* `/ajustes` A SECAS NO ES UNA PANTALLA: no hay nada que enseñar en una portada que solo repetiría el
-             menú que acaba de usarse para llegar. Se entra directamente al primero de los grupos que existe
-             para todo el mundo —Integración—, y así la dirección vieja, los enlaces guardados y el atajo de la
-             bandeja siguen llevando a algún sitio útil en vez de a un índice de paso. */
-          <Navigate to={SETTINGS_ROUTES.integration} replace />
+             menú que acaba de usarse para llegar. Se entra directamente al grupo que existe para todo el mundo
+             y del que cuelgan los enlaces de siempre —Datos—, en vez de a un índice de paso. */
+          <Navigate to={SETTINGS_ROUTES.data} replace />
         ) : (
-        <SettingsHub
-          syncStatus={syncBadgeText}
-          hasSyncConfig={syncVm.hasConfig}
-          connectedGistId={syncVm.connectedGistId || syncVm.currentConfig?.gistId || ''}
-          token={syncVm.token}
-          gistId={syncVm.gistId}
-          syncError={syncVm.statusMessage}
-          recoveringGistId={syncVm.recoveringGistId}
-          githubOAuthEnabled={syncVm.githubOAuthEnabled}
-          githubLoggingIn={syncVm.githubLoggingIn}
-          onGithubLogin={syncVm.beginGithubLogin}
-          onTokenChange={syncVm.setToken}
-          onGistIdChange={syncVm.setGistId}
-          onConnectSync={syncVm.connectSync}
-          onSyncNow={syncVm.syncNow}
-          onDisconnectSync={syncVm.disconnectSync}
-          onCopyGistId={handleCopyGistId}
-          onRecoverGistId={handleRecoverGistId}
-          onExport={exportData}
-          onImport={importData}
-          onImportLibrary={handleImportLibraryExporter}
-          inboxCount={inboxCount}
-          onOpenInbox={openInbox}
-        />
+        /* «DATOS» SON DOS MITADES EN UNA PANTALLA, y en este orden: primero por dónde entran y salen tus listas
+           —importar, sincronizar, las copias— y debajo lo que se registra de ellas, los documentos y el borrado
+           de la cuenta. Eran dos grupos del menú, y las dos cosas que menos se tocan gastaban dos de sus cuatro
+           puntos. Siguen siendo dos componentes y dos regiones con su nombre: lo que se ha unido es la pantalla,
+           no lo que hay dentro. */
+        <>
+          <SettingsHub
+            onExport={exportData}
+            onImport={importData}
+            onImportLibrary={handleImportLibraryExporter}
+            inboxCount={inboxCount}
+            onOpenInbox={openInbox}
+          />
+          <LegalSettings />
+        </>
         )}
       </Suspense>
     ),
