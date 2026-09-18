@@ -37,7 +37,7 @@ lista de mejoras de segundo orden. Ninguno es una emergencia.
 | # | Eje | Severidad | Hallazgo |
 |---|---|---|---|
 | 1 | Seguridad / CI | **Alta** | ~~CI no comprueba los tipos de `functions/` ni de `tests/integration`~~ · **✅ hecho (fase 1)** |
-| 2 | Rendimiento | **Media** | El árbol social entero se repinta con cualquier cambio: 109 claves en un hook y 17 componentes sin `memo` |
+| 2 | Rendimiento | **Media** | ~~El árbol social se repinta con cualquier cambio~~ · **✅ hecho (fase 3)** — la causa real era el borrador del compositor, no la falta de `memo` |
 | 3 | Escalabilidad | **Media** | ~~La válvula de desborde del gist está apagada y sus pruebas se saltan solas~~ · **✅ hecho (fase 2)** — y al encenderlas, una fallaba |
 | 4 | Pruebas | **Media** | ~~La suite es inestable bajo carga~~ · **✅ hecho (fase 2)** — el reloj que agotaba era el de Testing Library, no el de vitest |
 | 5 | Modularidad | Media | `useSocialViewModel` (2453 líneas, 94 hooks, 109 claves) y `App.tsx` (1155 líneas, 52 hooks) |
@@ -65,23 +65,46 @@ encadena `tsc --noEmit && tsc -p tsconfig.functions.json`. Los dos proyectos ver
 `tests/integration` sigue fuera del `tsconfig` principal, pero ya no queda sin mirar: lo compila el emulador
 en `npm run test:rules`, que sí corre en CI.
 
-### 2 · El árbol social se repinta entero · **Media**
+### 2 · El árbol social se repinta entero · **Media** · ✅ HECHO
 
-Dos cosas que se suman:
+**PRIMERO, UNA CORRECCIÓN DE ESTE INFORME.** La primera pasada decía que «de los 17 componentes de
+`socialhub/`, ninguno está envuelto en `memo`». Estaba mal: el recuento venía de un listado truncado. La cuenta
+real es **21 ficheros, de los cuales 7 ya estaban memoizados** —y entre ellos los tres que más pesan:
+`SocialFeedScreen`, `SocialProfilesScreen` y `SocialProfileDetailScreen`, más `PostText`, `RelatedReviews`,
+`ProfileAchievements` y `ProfileReviewsList`—. El árbol social **no** se repintaba por falta de `memo` en las
+pantallas.
 
-- `useSocialViewModel` devuelve un objeto con **109 claves**, y tiene **un único consumidor**: `SocialHub.tsx`
-  (755 líneas), que las desestructura todas. Cualquier `setState` de los 94 hooks del view-model re-renderiza
-  ese componente completo.
-- De los **17 componentes de `src/view/components/socialhub/`, ninguno está envuelto en `memo`**. El contraste
-  está en el mismo repositorio: `src/view/components/stats/` los tiene memoizados casi todos.
+**Lo que sí pasaba, medido.** Con 30 publicaciones en el feed y 5 pulsaciones en el compositor:
 
-Así que escribir en el compositor, abrir una ficha o que llegue una lectura de gist arrastra el repintado de
-feed, perfiles, solicitudes y detalle. No es un fallo visible en un equipo de sobremesa con pocos amigos; lo
-será en móvil con el directorio lleno.
+| Componente | Renders antes | Renders después |
+|---|---|---|
+| `HubAvatar` (uno por fila, más el propio) | **155** | **0** |
+| `PostBody` (cuerpo de cada publicación) | **150** | **0** |
+| `FeedShell` (armazón del feed) | 5 | **0** |
 
-**Arreglo:** envolver en `memo` los componentes de pantalla de `socialhub/` (barato y sin riesgo) y, después,
-partir el valor de retorno del hook en piezas por dominio (feed, amistades, perfil, compositor) para que cada
-pantalla se suscriba solo a la suya.
+La causa no era la memoización sino **dónde vivía el borrador**: `composePostText` era estado de
+`useSocialCompose` → `useSocialViewModel` → `SocialHub` → `SocialFeedScreen`, así que cada tecla recorría esa
+cadena y rehacía la lista entera. Y el coste crece con el tamaño del feed: con 200 publicaciones son 200
+tarjetas por pulsación.
+
+**Arreglo aplicado** (fase 3):
+1. **`FeedComposer`** (`src/view/components/socialhub/FeedComposer.tsx`): el borrador es estado LOCAL suyo, con
+   su autocrecimiento y su contador. Sale de ahí solo al publicar.
+2. **`handlePublishPost(text)` devuelve un booleano.** Antes vaciaba el cuadro él mismo
+   (`setComposePostText('')`); ahora lo vacía el compositor **solo si salió**, que es lo que mantiene la promesa
+   del aviso de sin-red: «el texto sigue aquí».
+3. `composePostText`/`setComposePostText` **salen de la superficie del ViewModel**: 109 → 107 claves.
+4. `memo` en `HubAvatar` (155 → 0 medido) y en `HubStatus` (dos cadenas, lo pintan las cinco pantallas).
+
+**Lo que NO se memoiza, y por qué** —para que nadie lo «arregle» luego sin medirlo—:
+`HubUserCard`, `HubScreen`, `HubUserSection` y `FeedShell` reciben `children` o un `renderItem` en línea, así que
+`memo` no descartaría nunca; `FriendshipButton` recibe flechas nuevas por fila
+(`onAddOrAccept={() => onAddOrAcceptFriend(entry.uid)}`), lo mismo; y las pantallas restantes se montan **de una
+en una** (`activePanel`), así que memoizarlas no evita ningún repintado.
+
+**Cobertura de lo que se movió:** `tests/component/FeedComposer.test.tsx` (6 casos) recoge lo que comprobaba el
+hook sobre el estado del cuadro —se vacía al publicar, NO se vacía si no salió— más el contador por rango, el
+tope del campo y Ctrl+Enter. `tests/unit/socialCompose.test.ts` pasa a comprobar el contrato del booleano.
 
 ### 3 · La válvula de desborde del gist está apagada · **Media** · ✅ HECHO
 
@@ -311,13 +334,22 @@ dos proyectos), `npm run test:coverage -- --reporter=verbose` en verde (195 fich
 **Criterio de aceptación — cumplido.** Tres ejecuciones completas seguidas sin un solo fallo (26,17 / 26,09 /
 26,10 s) y `gistOverflow.test.ts` ejecutándose de verdad —no saltado, y ya no en vacío— en su propio job.
 
-### Fase 3 — Repintado del espacio social (uno o dos días)
+### Fase 3 — Repintado del espacio social · ✅ COMPLETADA (18-09-2026)
 
-8. `memo` en los 17 componentes de `socialhub/`, igualando lo que ya hace `stats/`. *(Hallazgo 2)*
-9. Verificar la mejora con una medición reproducible (Playwright + sesión sembrada) y apuntarla aquí.
+8. ✅ Medido primero: el problema no era `memo` en las pantallas (7 de 21 ya lo tenían, incluidas las tres
+   gordas) sino el borrador del compositor viajando por todo el hub. *(Hallazgo 2)*
+9. ✅ `FeedComposer` con estado local + `memo` en `HubAvatar` y `HubStatus`, con la medición antes/después en la
+   tabla de arriba.
 
-**Criterio de aceptación:** los tests de componente del hub social siguen en verde y el número de repintados por
-pulsación en el compositor baja de forma medible.
+**Criterio de aceptación — cumplido.** 0 repintados de avatares, cuerpos de publicación y armazón del feed por
+pulsación (antes 155 / 150 / 5), suite completa en verde (196 ficheros, 2271 casos), cobertura de líneas 79,44 %
+(sube desde 79,38 %) y el recorrido end-to-end —incluidas las 16 combinaciones de tema y paleta con axe— sin
+regresiones.
+
+**Método de medición, para repetirlo:** un fichero de prueba temporal que renderiza `SocialFeedScreen` con 30
+publicaciones y envuelve `HubAvatar`/`PostBody`/`FeedShell` con `vi.mock` en un contador; se dispara `change`
+sobre el `textarea` cinco veces y se cuenta. El contador va **por fuera** del componente real, así que lo que
+mide es lo que el padre le pide pintar.
 
 ### Fase 4 — Partir el view-model social (una semana, a trozos)
 

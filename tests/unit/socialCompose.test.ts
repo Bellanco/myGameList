@@ -4,6 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // El compositor de publicaciones NO tenía ninguna prueba: los tests del hub no llegaban a `handlePublishPost`,
 // así que su comportamiento (límite por rango, refresco del feed, avisos) solo estaba descrito en comentarios.
 // Al salir del ViewModel a su propio hook se puede ejercitar aislado, que es buena parte de la razón de moverlo.
+//
+// EL TEXTO YA NO ES ESTADO DE ESTE HOOK: lo guarda `FeedComposer` para que escribir no repinte el feed, y llega
+// como argumento al publicar. Así que lo que aquí se comprueba es el CONTRATO que sustituyó a aquel estado: el
+// booleano de vuelta, que es lo que decide si el cuadro se vacía. `true` = publicado (vacía), `false` = no salió
+// (el texto se queda). Quien comprueba que el cuadro se vacía de verdad es `FeedComposer.test.tsx`.
 
 const publishPost = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock('../../src/model/repository/socialPublishRepository', () => ({ publishPost }));
@@ -24,15 +29,16 @@ beforeEach(() => {
 });
 
 describe('compositor de publicaciones', () => {
-  it('publica con el límite del rango, vacía el cuadro y refresca el feed', async () => {
+  it('publica con el límite del rango, dice que salió y refresca el feed', async () => {
     const { result, onPublished, setFeedback } = setup('silver');
 
-    act(() => { result.current.setComposePostText('  Hola feed  '); });
-    await act(async () => { await result.current.handlePublishPost(); });
+    let salio: boolean | undefined;
+    await act(async () => { salio = await result.current.handlePublishPost('  Hola feed  '); });
 
     // El texto va recortado; el máximo es el del rango, no un valor fijo.
     expect(publishPost).toHaveBeenCalledWith({ text: 'Hola feed', maxLength: PROFILE_TIER_POST_MAX_LENGTH.silver });
-    expect(result.current.composePostText).toBe('');
+    // `true` es la señal con la que el compositor vacía su cuadro.
+    expect(salio).toBe(true);
     // El refresco va DESPUÉS de publicar: si no, el post recién escrito no saldría en el feed.
     expect(onPublished).toHaveBeenCalledOnce();
     expect(setFeedback).toHaveBeenCalledWith('ok', SOCIAL_UI.status.postPublished);
@@ -41,10 +47,12 @@ describe('compositor de publicaciones', () => {
   it('bronce no publica, y lo hace EN SILENCIO', async () => {
     const { result, setFeedback } = setup('bronze');
 
-    act(() => { result.current.setComposePostText('Intento publicar'); });
-    await act(async () => { await result.current.handlePublishPost(); });
+    let salio: boolean | undefined;
+    await act(async () => { salio = await result.current.handlePublishPost('Intento publicar'); });
 
     expect(publishPost).not.toHaveBeenCalled();
+    // Y el cuadro NO se vacía: no se ha publicado nada.
+    expect(salio).toBe(false);
     // Sin aviso a propósito: a quien no tiene el rango no se le recuerda lo que no puede hacer.
     expect(setFeedback).not.toHaveBeenCalled();
   });
@@ -52,22 +60,23 @@ describe('compositor de publicaciones', () => {
   it('un texto en blanco no publica', async () => {
     const { result } = setup('gold');
 
-    act(() => { result.current.setComposePostText('   \n  '); });
-    await act(async () => { await result.current.handlePublishPost(); });
+    let salio: boolean | undefined;
+    await act(async () => { salio = await result.current.handlePublishPost('   \n  '); });
 
     expect(publishPost).not.toHaveBeenCalled();
+    expect(salio).toBe(false);
   });
 
   it('si la publicación falla, avisa y deja el texto para reintentar', async () => {
     publishPost.mockRejectedValueOnce(new Error('gist 403'));
     const { result, onPublished, setFeedback } = setup('gold');
 
-    act(() => { result.current.setComposePostText('Se va a caer'); });
-    await act(async () => { await result.current.handlePublishPost(); });
+    let salio: boolean | undefined;
+    await act(async () => { salio = await result.current.handlePublishPost('Se va a caer'); });
 
     expect(setFeedback).toHaveBeenCalledWith('err', 'gist 403');
-    // Perder lo escrito por un 403 sería lo peor que podría pasar aquí.
-    expect(result.current.composePostText).toBe('Se va a caer');
+    // Perder lo escrito por un 403 sería lo peor que podría pasar aquí, y `false` es lo que lo impide.
+    expect(salio).toBe(false);
     expect(onPublished).not.toHaveBeenCalled();
     await waitFor(() => expect(result.current.publishingPost).toBe(false));
   });
@@ -77,13 +86,11 @@ describe('compositor de publicaciones', () => {
     publishPost.mockImplementationOnce(() => new Promise<void>((resolve) => { release = resolve; }));
     const { result } = setup('silver');
 
-    act(() => { result.current.setComposePostText('Doble clic'); });
-
-    let first: Promise<void>;
-    act(() => { first = result.current.handlePublishPost(); });
+    let first: Promise<boolean>;
+    act(() => { first = result.current.handlePublishPost('Doble clic'); });
     await waitFor(() => expect(result.current.publishingPost).toBe(true));
 
-    await act(async () => { await result.current.handlePublishPost(); });
+    await act(async () => { expect(await result.current.handlePublishPost('Doble clic')).toBe(false); });
     expect(publishPost).toHaveBeenCalledOnce();
 
     await act(async () => { release(); await first; });

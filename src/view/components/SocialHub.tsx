@@ -88,8 +88,6 @@ const SocialHubInner = memo(function SocialHubInner({
     ownPublishablePhoto,
     profileSearch,
     setProfileSearch,
-    composePostText,
-    setComposePostText,
     publishingPost,
     handlePublishPost,
     canPublishPosts,
@@ -574,8 +572,6 @@ const SocialHubInner = memo(function SocialHubInner({
         openActivityDetail={openActivityDetail}
         openMoveReview={openMoveReview}
         handleActivityItemKeyDown={handleActivityItemKeyDown}
-        composePostText={composePostText}
-        setComposePostText={setComposePostText}
         publishingPost={publishingPost}
         handlePublishPost={handlePublishPost}
         canPublishPosts={canPublishPosts}
