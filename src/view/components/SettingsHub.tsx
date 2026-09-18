@@ -462,7 +462,10 @@ export const SettingsHub = memo(function SettingsHub({
           ))}
         </div>
 
-        <div className="fg">
+        {/* EN REJILLA Y NO EN FILAS DE LADO A LADO. Cada etiqueta es un nombre corto, y una fila por etiqueta
+            gastaba el ancho entero para dos palabras: ocho géneros ya pedían scroll, y aquí acaban llegando
+            cuarenta. En fichas caben tres o cuatro por línea y se ven todas de una vez. */}
+        <div className="admin-grid">
           {activeCategory.values.length ? (
             activeCategory.values.map((tag) => {
               const isEditing = editingTag?.key === activeCategory.key && editingTag?.value === tag;
@@ -501,22 +504,30 @@ export const SettingsHub = memo(function SettingsHub({
                   ) : (
                     <>
                       <span className="admin-item-name">{tag}</span>
+                      {/* LAS ACCIONES, SIN RÓTULO PERO CON SU BOTÓN. Repetidas en cada ficha con su palabra —y
+                          una de ellas en rojo a plena intensidad— eran lo primero que se veía de la pantalla,
+                          cuando lo que se viene a mirar son los nombres. Lo que se quita es el TEXTO, no el
+                          botón: siguen siendo el secundario y el de peligro de siempre, así que conservan la
+                          forma que les da cada tema y su color. El rótulo va en el `aria-label` con el nombre
+                          de la etiqueta, que es lo que distingue un «Eliminar» de los otros siete. */}
                       <div className="row-actions">
                         <button
-                          className="btn btn-secondary btn-icon-text admin-action-btn"
+                          className="btn btn-secondary btn-icon-text admin-action-btn is-compact"
                           type="button"
+                          aria-label={`${UI_MESSAGES.admin.editBtn}: ${tag}`}
+                          title={UI_MESSAGES.admin.editBtn}
                           onClick={() => startEdit(activeCategory.key, tag)}
                         >
-                          <Icon name={COMMON_ICONS.edit} />
-                          <span>{UI_MESSAGES.admin.editBtn}</span>
+                          <Icon name={COMMON_ICONS.edit} className="ui-icon" />
                         </button>
                         <button
-                          className="btn btn-danger btn-icon-text admin-action-btn"
+                          className="btn btn-danger btn-icon-text admin-action-btn is-compact"
                           type="button"
+                          aria-label={`${UI_MESSAGES.admin.deleteBtn}: ${tag}`}
+                          title={UI_MESSAGES.admin.deleteBtn}
                           onClick={() => onDeleteTag(activeCategory.key, tag)}
                         >
-                          <Icon name={COMMON_ICONS.trash} />
-                          <span>{UI_MESSAGES.admin.deleteBtn}</span>
+                          <Icon name={COMMON_ICONS.trash} className="ui-icon" />
                         </button>
                       </div>
                     </>

@@ -741,3 +741,31 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     height: auto;
   }
 }
+
+/* ═══ LAS ETIQUETAS DE «FILTROS», EN REJILLA ═════════════════════════════════════════════════════════
+   Eran una fila por etiqueta, de lado a lado: el ancho entero para dos palabras y dos botones grandes al
+   fondo, con ocho géneros ya pidiendo scroll. Y estas listas crecen —llegan a cuarenta valores— así que el
+   problema empeora solo. En fichas caben tres o cuatro por línea, el nombre manda y las acciones se apartan.
+   `auto-fill` y no `auto-fit`: con dos etiquetas sueltas no queremos dos fichas gigantes repartiéndose la
+   pantalla, sino dos fichas normales y el resto de la línea vacía. */
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: .5rem;
+}
+
+/* La ficha en edición se lleva la línea entera: dentro hay un campo de texto y dos botones con su rótulo, y
+   comprimido en una columna de quince ems no cabe nada de eso. */
+.admin-item.editing { grid-column: 1 / -1; }
+
+/* LA ACCIÓN, CUADRADA Y SIN RÓTULO, en todos los anchos. Esta forma ya existía —era lo que hacía la pantalla
+   por debajo de 620px— y lo único que cambia es que ahora vale también en escritorio: con las etiquetas en
+   fichas de quince ems, dos botones con su palabra no caben sin comerse el nombre. Siguen siendo `btn` de
+   verdad, con la forma que les da cada tema y su color (secundario y peligro); el icono mide lo que mide en
+   toda la aplicación (`--ico-md` de `.ui-icon`). */
+.admin-action-btn.is-compact {
+  min-width: 40px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+}
