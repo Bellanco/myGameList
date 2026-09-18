@@ -1,21 +1,22 @@
-import { APPEARANCE_UI } from '../../core/constants/labels';
-import { memo, type CSSProperties } from 'react';
-import { PALETTES } from '../../core/constants/palettes';
-import { usePalette } from '../hooks/usePalette';
-import { useTheme } from '../hooks/useTheme';
-import { useUppercase } from '../hooks/useUppercase';
-import { useShowSteamButton } from '../hooks/useShowSteamButton';
-import { useEffects } from '../hooks/useEffects';
-import { useCovers } from '../hooks/useCovers';
+import { memo } from 'react';
+import { APPEARANCE_UI } from '../../../core/constants/labels';
+import { useTheme } from '../../hooks/useTheme';
+import { useUppercase } from '../../hooks/useUppercase';
+import { useShowSteamButton } from '../../hooks/useShowSteamButton';
+import { useEffects } from '../../hooks/useEffects';
+import { useCovers } from '../../hooks/useCovers';
 
 const A = APPEARANCE_UI;
 
 /**
- * F1 — Selector de apariencia dentro de "Ajustes de cuenta": paleta (tema) + modo claro/oscuro.
- * Funciona siempre en local (no requiere sesión); si hay cuenta, se sincroniza vía Firestore.
+ * LAS CINCO PREFERENCIAS DE DOS RESPUESTAS: claro u oscuro, versales o no, el botón de Steam Deck, los efectos
+ * y las carátulas. Todas viven en este dispositivo (`localStorage`) y solo se copian a la nube si hay sesión,
+ * así que ninguna depende de tener cuenta.
+ *
+ * Cada una va en su caja: puestas en fila, cinco rótulos con su par de botones se leían como una tira de diez
+ * botones sueltos y no se veía dónde acababa una opción y empezaba la siguiente.
  */
-export const AppearanceSettings = memo(function AppearanceSettings({ only }: { only?: 'theme' | 'toggles' }) {
-  const { palette, setPalette } = usePalette();
+export const AppearanceToggles = memo(function AppearanceToggles() {
   const { theme, toggle } = useTheme();
   const { uppercase, setUppercase } = useUppercase();
   const { showSteamButton, setShowSteamButton } = useShowSteamButton();
@@ -23,37 +24,6 @@ export const AppearanceSettings = memo(function AppearanceSettings({ only }: { o
   const { covers, setCovers } = useCovers();
 
   return (
-    <div className="settings-appearance">
-      {only !== 'toggles' ? (
-      <>
-      {/* EL RÓTULO SOLO CUANDO ACOMPAÑA. En «Personalización» el selector tiene tarjeta propia y el encabezado
-          de la tarjeta ya dice «Temas»: repetirlo debajo es una línea de ruido. Donde el selector convive con
-          otras cosas, el rótulo hace falta para saber qué es esta rejilla de ocho opciones. */}
-      {only !== 'theme' ? <p className="settings-card-sub">{A.paletteLabel}</p> : null}
-      <div className="score-scale-choice" role="radiogroup" aria-label={A.paletteAria}>
-        {PALETTES.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            role="radio"
-            aria-checked={palette === p.id}
-            className={`score-scale-opt${palette === p.id ? ' on' : ''}`}
-            style={{ '--sw-accent': p.accent, '--sw-accent2': p.accent2 ?? p.accent, '--sw-dark': p.bg.dark, '--sw-light': p.bg.light } as CSSProperties}
-            onClick={() => setPalette(p.id)}
-          >
-            <span className="score-scale-dot" aria-hidden="true" />
-            <span className="score-scale-txt"><b>{p.label}</b></span>
-            <span className="score-scale-sample" aria-hidden="true">
-              <span className="palette-swatch" aria-hidden="true" />
-            </span>
-          </button>
-        ))}
-      </div>
-
-      </>
-      ) : null}
-
-      {only !== 'theme' ? (
       <div className="appearance-grid">
       <div className="appearance-field">
       <p className="settings-card-sub">{A.modeLabel}</p>
@@ -171,7 +141,5 @@ export const AppearanceSettings = memo(function AppearanceSettings({ only }: { o
       </div>
       </div>
       </div>
-      ) : null}
-    </div>
   );
 });
