@@ -231,12 +231,16 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
   font-size: var(--fs-lg);
   font-weight: 500;
   text-shadow: var(--glow-text);
+  /* SIN SUBRAYAR, ni en reposo ni al señalar: son enlaces por lo que hacen —llevan a una dirección, se abren en
+     otra pestaña, se copian—, no por cómo se ven. Aquí el subrayado sobraría: el punto de luz ya dice que la
+     línea es pulsable, y con cuatro rótulos flotando sin fondo, cuatro rayas añaden ruido donde hay que leer. */
+  text-decoration: none;
   cursor: pointer;
   border-radius: var(--radius-pill);
   transition: color .18s ease, transform .18s ease;
 }
 
-.settings-menu-point:hover { color: var(--fg-link); transform: translateX(-2px); }
+.settings-menu-point:hover { color: var(--fg-link); text-decoration: none; transform: translateX(-2px); }
 
 /* El punto es la única pieza con color propio: crece al señalar y se queda crecido en el grupo abierto. */
 .settings-menu-dot {
