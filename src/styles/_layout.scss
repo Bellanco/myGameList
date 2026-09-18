@@ -701,6 +701,16 @@
   gap: .1rem;
 }
 
+/* Y EL RÓTULO BAJA UN PASO AL APILARSE, como en cualquier barra inferior: es lo que hace que «Estadísticas»
+   quepa con CUATRO pestañas en un móvil de 390px. Con el cuerpo de una línea (`--fs-sm`) la palabra pide más
+   de lo que mide su columna y la barra se rendía al modo solo-icono, dejando la navegación entera muda justo
+   en el ancho más común. `BottomNavigation` CUENTA con esta reducción (ver `STACK_FONT_RATIO`): la medida que
+   decide el escalón tiene que usar el cuerpo con el que el rótulo se va a pintar, no otro. Si aquí cambia el
+   tamaño, allí cambia el número — y al revés, tocar uno solo deja el rótulo saliéndose de su pastilla. */
+.bottom-nav.is-stacked .bottom-nav-btn span {
+  font-size: var(--fs-2xs);
+}
+
 /* SOLO ICONO: sin texto que mirar, el icono crece para seguir siendo una diana clara de un vistazo. */
 .bottom-nav.is-icons .bottom-nav-icon {
   width: 1.5rem;
