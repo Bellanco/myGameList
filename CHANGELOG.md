@@ -103,6 +103,10 @@ pantalla de escritorio, y en las cuatro va primero lo que se viene a hacer y des
   Ahora el texto es ruido incompresible con semilla fija, el reparto se ejercita (un gist de desborde con 7000
   juegos, tres con 12000) y la segunda prueba afirma su premisa en vez de darla por buena. Un job aparte de CI
   enciende el interruptor y corre esa batería en cada `push`.
+- **Las reglas de privacidad de los listados ajenos, afirmadas una por una.** De quién se lee el gist de
+  listados (solo de amistades), con qué recorte se guarda (el de su dueño, aplicado al guardar y no al pintar) y
+  qué pasa cuando no se puede leer. Vivían dentro del ViewModel del hub y solo se ejercitaban de refilón, al
+  abrir la pantalla entera; ahora son ocho pruebas sobre la pieza que las aplica.
 - **Los `findBy*` esperan 3 segundos en vez de 1.** El reloj que agotaba no era el de vitest sino el de Testing
   Library, y con 195 ficheros montando su propio entorno en paralelo una máquina con carga tarda más de un
   segundo en resolver una búsqueda que no tiene nada de malo: la suite fallaba cinco casos de 2265 y la
