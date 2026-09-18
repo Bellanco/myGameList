@@ -309,14 +309,14 @@ export const UI_MESSAGES = {
          qué pasa con los duplicados— y había que leerlas enteras para saber si esto te servía. Ahora la
          primera va sola arriba y el resto se reparte en lo que cada cosa es: una condición, una lista de
          tiendas que se lee de un vistazo y una nota al pie. */
-      note: 'Trae de una vez los juegos que ya tienes en tus tiendas, sin añadirlos a mano. Llegan a la bandeja de importados para que decidas cuáles te quedas.',
-      requires: 'Necesitas Playnite (solo Windows) y su extensión gratuita «Playnite Library Exporter», que crea el archivo con tu biblioteca.',
-      storesLabel: 'De dónde los trae',
-      stores: ['Steam', 'GOG', 'Epic', 'EA', 'Ubisoft', 'Amazon', 'Battle.net'],
-      /* Las dos consolas van aparte porque llevan condición: en Playnite hay que instalarles su complemento.
-         El de PlayStation además tiene guía propia, y por eso su chip es pulsable. */
-      consolesLabel: 'Y las consolas, con su complemento en Playnite',
-      mergeNote: 'Si un juego está en varias tiendas, sus plataformas se combinan en una sola entrada.',
+      /* TRES FRASES Y SE ACABÓ. Aquí se viene a traer la biblioteca, no a estudiar cómo funciona: basta con
+         saber qué hace, de dónde lo saca y qué hace falta para ello. Lo demás —los pasos, el detalle de las
+         consolas, qué pasa con un juego repetido— está en las dos guías de abajo, que es donde se busca cuando
+         de verdad hace falta. Las tiendas van dentro de la frase y no en fichas sueltas: son siete nombres, se
+         leen igual de rápido y no fingen ser botones. */
+      note: 'Trae de una vez los juegos que ya tienes en tus tiendas, sin añadirlos a mano: llegan a la bandeja para que elijas cuáles te quedas.',
+      sources: 'Funciona con Steam, GOG, Epic, EA, Ubisoft, Amazon y Battle.net, y también con PlayStation y Xbox si les instalas su complemento en Playnite.',
+      requires: 'Necesitas Playnite (solo Windows) y su extensión gratuita «Playnite Library Exporter».',
       stepsTitle: 'Cómo traer tu biblioteca, paso a paso',
       steps: [
         'En tu PC con Windows, abre Playnite (si no la tienes, descárgala e instálala desde playnite.link).',
