@@ -498,6 +498,32 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
   font-size: var(--fs-md); padding:.2rem; line-height:1; }
 .token-toggle .ui-icon { width: var(--ico-lg); height: var(--ico-lg); }
 .token-toggle:hover { color:var(--text); }
+/* EL SEMÁFORO DE UN ESTADO. Un punto y el texto: sin caja, sin fondo y sin gritar, pero con color propio —el
+   mismo verde y el mismo rojo que ya usan los semáforos de la aplicación— y a la altura del título, que es
+   donde se busca. El punto lleva su halo para que se vea también en las paletas más apagadas.
+   EN EL BUNDLE BASE, y no en `settings.scss`, por el mismo motivo que `.sync-status-msg`: lo comparten tres
+   chunks distintos —Integración, el documento legal y la tarjeta de conexión del hub social—. */
+.sync-state {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+
+.sync-state-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.sync-state.is-on { color: var(--success); }
+.sync-state.is-off { color: var(--text-dim); }
+
 .sync-status-msg { font-size: var(--fs-xs); padding:.55rem .85rem; border-radius:var(--radius-sm); border:1px solid transparent; display:none; }
 .sync-status-msg.ok   { background:rgba(var(--success-rgb),.1); border-color:rgba(var(--success-rgb),.25); color:var(--fg-green-soft); display:block; }
 .sync-status-msg.err  { background:rgba(var(--danger-rgb),.1);   border-color:rgba(var(--danger-rgb),.25);  color:var(--fg-red); display:block; }
