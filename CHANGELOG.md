@@ -109,6 +109,12 @@ pantalla de escritorio, y en las cuatro va primero lo que se viene a hacer y des
   ejecución siguiente pasaba entera sin tocar una línea.
 
 ### Performance
+- **Escribir una publicación ya no repinta el feed entero.** El texto en curso era estado del hub, así que cada
+  tecla atravesaba el hook, el ViewModel y el hub hasta rehacer la lista de actividad completa: sus tarjetas, sus
+  cuerpos de texto y un avatar por fila. Ahora el borrador se queda en el propio cuadro y solo sale de ahí al
+  publicar, que es el único momento en que alguien más lo necesita. Medido con 30 publicaciones en pantalla y 5
+  pulsaciones: de 155 repintados de avatar y 150 de cuerpo de publicación, a **cero**. Y crecía con el tamaño del
+  feed, así que quien más lo notará es quien tiene más que leer.
 - **La aplicación arranca con menos peso otra vez.** Las reglas de estilo de las pantallas de ajustes —26 kB—
   viajaban en el arranque para pintar unas pantallas en las que se entra una vez al mes. Ahora se descargan al
   entrar en ellas, como ya hacían las del panel de estadísticas y las del hub social. Son 10 kB menos de estilos

@@ -1886,8 +1886,6 @@ export function useSocialViewModel(options?: {
   // `hydrateSocialDirectory` para refrescar el feed tras publicar; el orden de los hooks es estable entre renders,
   // que es lo único que React exige.
   const {
-    composePostText,
-    setComposePostText,
     publishingPost,
     handlePublishPost,
     canPublishPosts: canPublish,
@@ -2362,13 +2360,11 @@ export function useSocialViewModel(options?: {
     ownPublishablePhoto,
     profileSearch,
     setProfileSearch,
-    composePostText,
     // Rango propio y lo que implica al publicar: si puede, cuánto, y si hay contador que enseñar.
     ownTier,
     canPublishPosts: canPublish,
     postMaxLength,
     showPostCounter,
-    setComposePostText,
     publishingPost,
     handlePublishPost,
     feedItems,
