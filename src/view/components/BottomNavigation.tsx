@@ -14,12 +14,15 @@ interface BottomNavigationProps {
   onSectionChange: (section: AppSection) => void;
 }
 
-// Ajustes y Cuenta ya no viven aquí: son botones flotantes (ver FloatingControls). La barra inferior
-// queda con las secciones "de contenido": los listados, el hub social y las estadísticas propias.
+// LAS CUATRO ZONAS DE LA APLICACIÓN, en un solo plano. Ajustes vuelve aquí desde el botón flotante en el que
+// estuvo: arriba a la derecha era la esquina peor alcanzable con el pulgar, tenía la misma forma que el cambio
+// de tema —que no lleva a ninguna parte— y se escondía al hacer scroll, así que media aplicación desaparecía a
+// mitad de página. Cuenta no es una cuarta pestaña sino contenido de Ajustes (ver el menú de la pestaña).
 const NAV_ITEMS: Array<{ key: AppSection; label: string; icon: IconName }> = [
   { key: 'lists', label: UI_MESSAGES.nav.lists, icon: 'bottom-lists' },
   { key: 'social', label: UI_MESSAGES.nav.social, icon: 'bottom-hub' },
   { key: 'stats', label: UI_MESSAGES.nav.stats, icon: 'bottom-stats' },
+  { key: 'settings', label: UI_MESSAGES.nav.settings, icon: 'bottom-settings' },
 ];
 
 /**
@@ -27,6 +30,14 @@ const NAV_ITEMS: Array<{ key: AppSection; label: string; icon: IconName }> = [
  * la barra se lee apretada, aunque técnicamente «quepa».
  */
 const BTN_AIR = 10;
+
+/**
+ * Cuánto encoge el rótulo al APILARSE: `--fs-2xs` sobre `--fs-sm` (ver `_layout.scss`). No es un adorno de
+ * estilo, es parte de la cuenta: con cuatro pestañas, «Estadísticas» a cuerpo de una línea pide más de lo que
+ * mide su columna en un móvil de 390px, y sin este factor la barra saltaba el escalón intermedio y se quedaba
+ * en solo-icono —muda— en el ancho más común de todos. Si allí cambia el cuerpo, aquí cambia el número.
+ */
+const STACK_FONT_RATIO = 0.73 / 0.86;
 
 /**
  * Cómo se dibuja cada botón según el sitio que haya, de más a menos: `row` es el de siempre (icono y rótulo en
@@ -75,7 +86,10 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
           const label = button.querySelector<HTMLElement>('span');
           const gap = parseFloat(getComputedStyle(button).columnGap) || 0;
           const text = label?.scrollWidth ?? 0;
-          return { row: (icon?.getBoundingClientRect().width ?? 0) + gap + text + BTN_AIR, stack: text + BTN_AIR };
+          return {
+            row: (icon?.getBoundingClientRect().width ?? 0) + gap + text + BTN_AIR,
+            stack: text * STACK_FONT_RATIO + BTN_AIR,
+          };
         });
         needsRef.current = {
           row: Math.max(...widths.map((width) => width.row)),
@@ -108,7 +122,8 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
   }, []);
 
   // Pastilla deslizante: mide el botón de la sección activa y coloca `.bottom-nav-ind` tras él. En las
-  // secciones flotantes (Ajustes/Cuenta) no hay botón activo aquí: la pastilla se oculta (indicator = null).
+  // secciones que no tienen pestaña (Cuenta, Bandeja, los documentos legales) no hay botón activo aquí: la
+  // pastilla se oculta (indicator = null).
   useLayoutEffect(() => {
     const container = innerRef.current;
     const active = container?.querySelector<HTMLElement>('.bottom-nav-btn.active');

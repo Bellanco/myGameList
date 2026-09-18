@@ -16,10 +16,15 @@ interface FloatingControlsProps {
 
 /**
  * Controles flotantes en la esquina superior derecha (diseño "headerless": sin barra ni título).
- * Alberga, con el mismo diseño y comportamiento que el cambio de tema, los accesos a Cuenta y Ajustes
- * (antes pestañas de la barra inferior) además del interruptor claro/oscuro.
- * El botón de Cuenta solo se muestra con sesión de Google, apareciendo y desapareciendo de forma suave.
- * Todo el grupo se oculta al hacer scroll y reaparece al volver arriba, para no estorbar la lectura.
+ *
+ * AJUSTES YA NO ESTÁ AQUÍ: tiene pestaña propia en la barra inferior. Aquí vivía como un botón con la misma
+ * forma que el cambio de tema, de modo que nada distinguía lo que CAMBIA algo en el sitio de lo que LLEVA a
+ * otra pantalla, y encima el grupo entero se esconde al hacer scroll: una sección de la aplicación que
+ * desaparecía a mitad de página.
+ *
+ * Queda Cuenta —de forma transitoria, hasta que el menú de la pestaña la recoja— y el interruptor claro/oscuro,
+ * que sí es un control y puede esconderse sin que se pierda ningún destino. El botón de Cuenta solo se muestra
+ * con perfil social, apareciendo y desapareciendo de forma suave.
  */
 /** Lo que hay desplazado ahora mismo, mire quien mire: el documento o un contenedor anidado. */
 function scrollTopOf(target: EventTarget | null): number {
@@ -86,16 +91,6 @@ export const FloatingControls = memo(function FloatingControls({ activeSection, 
         onClick={() => onSectionChange('account')}
       >
         <Icon name="bottom-account" className="ui-icon" />
-      </button>
-      <button
-        type="button"
-        className={`btn-icon theme-toggle-btn floating-nav-btn ${activeSection === 'settings' ? 'is-active' : ''}`.trim()}
-        aria-label={NAV.settings}
-        title={NAV.settings}
-        aria-current={activeSection === 'settings' ? 'page' : undefined}
-        onClick={() => onSectionChange('settings')}
-      >
-        <Icon name="bottom-settings" className="ui-icon" />
       </button>
       <ThemeToggle />
     </div>
