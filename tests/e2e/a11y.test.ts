@@ -124,7 +124,7 @@ async function ruletaAbierta(page: Page): Promise<void> {
 
 /** Deja el panel de estadísticas pintado con todos sus bloques a la vista. */
 async function panelDeEstadisticas(page: Page): Promise<void> {
-  await page.goto('/perfil');
+  await page.goto('/stats');
   // Las tarjetas se destapan al llegar a ellas; para auditarlas hay que tenerlas todas montadas.
   await expect(page.locator('.stats-hub')).toBeVisible();
   await page.evaluate(() => {

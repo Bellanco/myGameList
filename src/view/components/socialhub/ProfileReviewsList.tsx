@@ -5,7 +5,7 @@ import { useScoreScale } from '../../hooks/useScoreScale';
 import { resolveGrade, reviewAccent } from '../../../core/utils/scoreScale';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 // La hoja de la RESEÑA se importa AQUÍ y no desde `social.scss`: esta lista la pintan el hub social y también
-// tus reseñas del panel (`/perfil/resenas`), donde el chunk del hub no se carga. Ver `styles/reviews.scss`.
+// tus reseñas del panel (`/stats/resenas`), donde el chunk del hub no se carga. Ver `styles/reviews.scss`.
 import '../../../styles/reviews.scss';
 
 /** Lote inicial; se amplía por scroll infinito para no pintar cien reseñas de golpe. */

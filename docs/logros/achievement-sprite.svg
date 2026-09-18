@@ -9,7 +9,7 @@
   desplazamientos por turbulencia, desenfoque y relieve de empaste con luz
   rasante.
 
-  COMO SE USA: se monta UNA vez por pantalla, desde la rejilla de /perfil/logros
+  COMO SE USA: se monta UNA vez por pantalla, desde la rejilla de /logros
   y desde la vitrina de la ficha social, NUNCA desde App.tsx, que arranca con
   presupuesto vigilado (BOOT_CRITICAL_BUDGET_KB en scripts/ci-validate.js).
   Ver la seccion 8.5 del plan. Luego, por cada medalla:

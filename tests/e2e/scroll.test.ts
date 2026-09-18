@@ -75,12 +75,12 @@ test.describe('el scroll al cambiar de pantalla', () => {
 
   /**
    * Y EN RUTAS ANIDADAS, que es donde más se nota: el listado de reseñas del perfil abre una pantalla propia
-   * (`/perfil/resenas/:id`) y se vuelve con su botón. Aquí el cambio no es solo de pestaña: se monta un chunk
+   * (`/stats/resenas/:id`) y se vuelve con su botón. Aquí el cambio no es solo de pestaña: se monta un chunk
    * perezoso, así que al volver la pantalla tarda en tomar su altura — que es justo el caso para el que el hook
    * insiste unos fotogramas en vez de rendirse al primero.
    */
   test('vuelve también desde una pantalla anidada, con su chunk perezoso por medio', async ({ page }) => {
-    await page.goto('/perfil');
+    await page.goto('/stats');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     // El panel se pinta por bloques: sin esperar a que tenga alto, el scroll de abajo no tendría a dónde ir.
     await expect

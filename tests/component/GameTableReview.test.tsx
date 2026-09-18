@@ -2,7 +2,7 @@
 //
 // Volcado ocupaba el detalle entero —hay reseñas de veinte mil caracteres, ver el CHANGELOG de la 1.2.6— y
 // empujaba fuera de la vista todo lo demás, que es justo lo que se abre el detalle para ver. Ahora hay un
-// enlace a `/perfil/resenas/:id`.
+// enlace a `/stats/resenas/:id`.
 //
 // Y ES UN ENLACE, no un botón, por tres cosas que un botón no da: abrir en otra pestaña, copiar la dirección y
 // volver con el botón de atrás. El precio es que `GameTable` pasa a necesitar un Router, y ese precio se paga
@@ -55,7 +55,7 @@ describe('GameTable — el análisis, en el detalle', () => {
     abrir();
     const enlace = screen.getByRole('link', { name: /Ver análisis de Rise of Nations/i });
 
-    expect(enlace).toHaveAttribute('href', '/perfil/resenas/7');
+    expect(enlace).toHaveAttribute('href', '/stats/resenas/7');
     // Lo que NO puede pasar: que el texto siga ahí ocupando el detalle.
     expect(screen.queryByText(/Con dos párrafos/)).toBeNull();
   });
@@ -87,7 +87,7 @@ describe('GameTable — el análisis, en el detalle', () => {
               />
             }
           />
-          <Route path="/perfil/resenas/:id" element={<Sonda />} />
+          <Route path="/stats/resenas/:id" element={<Sonda />} />
         </Routes>
       </MemoryRouter>,
     );

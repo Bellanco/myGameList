@@ -22,7 +22,7 @@ import { sembrarBiblioteca } from './seed';
  */
 
 async function abrirUnaResenaConSugerencias(page: Page) {
-  await page.goto('/perfil');
+  await page.goto('/stats');
   await page.getByRole('button', { name: /^Leer tu reseña de/ }).first().click();
   await expect(page.locator('.hub-related-list')).toBeVisible();
   // La rejilla necesita más de una columna para que el fallo del sangrado tenga dónde verse.

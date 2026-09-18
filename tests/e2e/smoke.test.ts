@@ -80,7 +80,7 @@ test.describe('smoke del build de producción', () => {
        él la frontera comunitaria, sin sesión y para recibir un 403. Las reglas lo rechazaban —no había agujero—
        pero la llamada al tercero salía igual, en cada visita. Ahora las dos pantallas preguntan antes si hay
        sesión, y este recorrido es lo que impide que vuelva a colarse por otra pantalla. */
-    await page.goto('/perfil');
+    await page.goto('/stats');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await page.waitForTimeout(2500);
     await page.goto('/logros');
