@@ -2,7 +2,7 @@
 //
 // DESTINO: src/styles/achievements.scss — HOJA PROPIA, importada desde el
 // componente de la medalla y NUNCA colgada de stats.scss ni de social.scss.
-// Las medallas se pintan en dos chunks perezosos distintos (/perfil/logros y
+// Las medallas se pintan en dos chunks perezosos distintos (/logros y
 // la ficha del hub); colgarlas de cualquiera de los dos deja la otra pantalla
 // sin estilos y SIN QUE SALTE NINGÚN ERROR. Es el fallo mudo del §12.
 //
@@ -154,7 +154,7 @@
 
 // ── Coste de pintado · el fallback plano ─────────────────────────────────
 // El acabado es un filtro con DOS turbulencias, un desenfoque y un relieve iluminado, y se rasteriza POR
-// ELEMENTO: en la vitrina de una ficha son cinco, pero en la rejilla de /perfil/logros son 38 a la vez. Está
+// ELEMENTO: en la vitrina de una ficha son cinco, pero en la rejilla de /logros son 38 a la vez. Está
 // medido en escritorio y no en un móvil de gama baja (plan §8.5), así que la salida está puesta antes de
 // necesitarla: quien apaga los efectos —o pide menos movimiento— se lleva el cuadro plano, que se lee igual de
 // bien. Es el mismo interruptor que ya gobierna el destello del desbloqueo (§7.4), no uno nuevo.

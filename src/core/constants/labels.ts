@@ -263,7 +263,7 @@ export const UI_MESSAGES = {
     settings: 'Ajustes',
     account: 'Cuenta',
     inbox: 'Bandeja',
-    // La pestaña se llama "Estadísticas": son las de las listas propias. La ruta sigue siendo `/perfil` y la
+    // La pestaña se llama "Estadísticas": son las de las listas propias. La ruta es `/stats` y la
     // sección `stats`. No confundir con el PERFIL SOCIAL (`/social/profile`), que es la ficha pública.
     stats: 'Estadísticas',
   },

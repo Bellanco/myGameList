@@ -22,17 +22,17 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
   // hub con `matchSocialRoute`. Declararlas aquí una a una era la causa de la clase de fallo descrita arriba:
   // añadir una pantalla social obligaba a tocar este fichero o la ruta quedaba inaccesible.
   { path: '/social/*', section: 'social' },
-  // Panel de estadísticas. La ruta se llamó `/perfil` cuando la pestaña tenía ese nombre; la sección es `stats`
-  // para no confundirla con el PERFIL SOCIAL, que es la ficha pública y vive en `/social/profile`.
+  // Panel de estadísticas. Se llamó `/perfil` porque así se llamaba la pestaña, y ese nombre chocaba con el
+  // PERFIL SOCIAL —la ficha pública, que vive en `/social/profile`—: la sección ya era `stats` para deshacer el
+  // equívoco, y ahora también lo es la dirección. El nombre viejo sigue resolviendo, ver `LEGACY_ROUTE_REDIRECTS`.
   // Comodín: el panel resuelve por su cuenta la sub-ruta de tus reseñas (listado y detalle), igual que hace el
   // hub social con las suyas.
-  { path: '/perfil/*', section: 'stats' },
-  { path: '/perfil', section: 'stats' },
-  // Los LOGROS son de primer nivel y no una sub-ruta del panel, a diferencia de `/perfil/resenas`. Cuesta esta
-  // línea, y a cambio es una dirección que se dice en voz alta. El comodín `/perfil/*` habría salido gratis, pero
-  // deja la pantalla escondida detrás del nombre de otra cosa: el panel se llama «Perfil» por herencia de cuando
-  // la pestaña se llamaba así, y meter los logros ahí dentro los ata a esa herencia para siempre. La sección
-  // sigue siendo `stats` porque el cromo es el mismo y lo resuelve `StatsHub`.
+  { path: '/stats/*', section: 'stats' },
+  { path: '/stats', section: 'stats' },
+  // Los LOGROS son de primer nivel y no una sub-ruta del panel, a diferencia de `/stats/resenas`. Cuesta esta
+  // línea, y a cambio es una dirección que se dice en voz alta: el comodín `/stats/*` habría salido gratis, pero
+  // deja la pantalla escondida detrás del nombre de otra cosa. La sección sigue siendo `stats` porque el cromo
+  // es el mismo y lo resuelve `StatsHub`.
   { path: '/logros', section: 'stats' },
   { path: '/ajustes', section: 'settings' },
   { path: '/cuenta', section: 'account' },
@@ -56,7 +56,30 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
  */
 export const LEGACY_ROUTE_REDIRECTS: ReadonlyArray<{ from: string; to: string }> = [
   { from: '/visitados', to: '/abandonados' },
+  // El panel de estadísticas se llamó `/perfil`. El comodín NO es un adorno de simetría: `/perfil/resenas/:id`
+  // es una dirección pensada para abrirse en otra pestaña y copiarse (ver el enlace del detalle en `GameTable`),
+  // así que la redirección tiene que conservar LO QUE VENGA DETRÁS o un enlace ya guardado acabaría en
+  // `FALLBACK_ROUTE`, que es justo el fallo que documenta la nota de arriba. Las entradas con `/*` las pinta
+  // `App` con un redirector que arrastra la cola, la búsqueda y el ancla; va ANTES que la entrada sin comodín
+  // porque react-router se queda con la primera que case.
+  { from: '/perfil/*', to: '/stats' },
+  { from: '/perfil', to: '/stats' },
 ];
+
+/**
+ * ¿Cubre esta entrada retirada el `pathname` dado? Las que acaban en `/*` cubren también todo lo que cuelgue,
+ * que es lo que hace que `/perfil/resenas/7` se reconozca como ruta conocida y no como dirección inventada.
+ */
+function coversLegacy(from: string, pathname: string): boolean {
+  if (!from.endsWith('/*')) return from === pathname;
+  const base = from.slice(0, -2);
+  return pathname === base || pathname.startsWith(`${base}/`);
+}
+
+/** Destino de una entrada retirada, con lo que colgaba del nombre viejo pegado detrás. */
+export function legacyRedirectTarget(to: string, tail: string): string {
+  return tail ? `${to}/${tail}` : to;
+}
 
 /** Ruta a la que rebota cualquier cosa no listada arriba. */
 export const FALLBACK_ROUTE = '/completados';
@@ -67,7 +90,7 @@ export const FALLBACK_ROUTE = '/completados';
  * viene del historial del navegador.
  */
 export function isKnownRoute(pathname: string): boolean {
-  if (LEGACY_ROUTE_REDIRECTS.some(({ from }) => from === pathname)) return true;
+  if (LEGACY_ROUTE_REDIRECTS.some(({ from }) => coversLegacy(from, pathname))) return true;
   return !!matchRoutes(APP_ROUTES as Array<{ path: string; section: AppSection }>, pathname)?.length;
 }
 

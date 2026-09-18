@@ -20,6 +20,7 @@ import { useAnnouncement } from './view/hooks/useAnnouncement';
 import { UpdateNotice } from './view/components/UpdateNotice';
 import { BottomNavigation } from './view/components/BottomNavigation';
 import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, matchAppSection, type AppSection } from './core/constants/routes';
+import { LegacyTailRedirect } from './view/components/LegacyTailRedirect';
 import { ScrollToTop } from './view/components/ScrollToTop';
 import { useScrollOnNavigate } from './view/hooks/useScrollOnNavigate';
 import { ConsentBanner } from './view/components/ConsentBanner';
@@ -564,7 +565,7 @@ export default function App() {
     }
 
     if (section === 'stats') {
-      navigate('/perfil');
+      navigate('/stats');
       return;
     }
 
@@ -954,7 +955,11 @@ export default function App() {
           {/* Nombres retirados: redirigen al actual en vez de caer en el catch-all. Van DESPUÉS de la tabla
               (no hay solape, pero el orden deja claro cuál manda) y ANTES del rebote a `FALLBACK_ROUTE`. */}
           {LEGACY_ROUTE_REDIRECTS.map(({ from, to }) => (
-            <Route key={from} path={from} element={<Navigate to={to} replace />} />
+            <Route
+              key={from}
+              path={from}
+              element={from.endsWith('/*') ? <LegacyTailRedirect to={to} /> : <Navigate to={to} replace />}
+            />
           ))}
           <Route path="*" element={<Navigate to={FALLBACK_ROUTE} replace />} />
         </Routes>

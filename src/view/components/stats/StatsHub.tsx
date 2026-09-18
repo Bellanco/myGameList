@@ -26,23 +26,23 @@ import '../../../styles/stats.scss';
  * las habría dejado detrás de su asistente de configuración para quien no tenga espacio social montado, y una
  * reseña propia no depende de eso.
  */
-const PANEL_ROUTE = '/perfil';
-const REVIEWS_ROUTE = '/perfil/resenas';
+const PANEL_ROUTE = '/stats';
+const REVIEWS_ROUTE = '/stats/resenas';
 /**
- * Los LOGROS son de primer nivel: `/logros`, no `/perfil/logros`. Está declarada en `core/constants/routes` con
+ * Los LOGROS son de primer nivel: `/logros`, no `/stats/logros`. Está declarada en `core/constants/routes` con
  * `section: 'stats'`, así que el cromo es el mismo y la resuelve este hub, igual que las reseñas.
  */
 const ACHIEVEMENTS_ROUTE = '/logros';
-const reviewRoute = (gameId: number) => `/perfil/resenas/${gameId}`;
+const reviewRoute = (gameId: number) => `${REVIEWS_ROUTE}/${gameId}`;
 
 /** Id del juego cuya reseña se abre, leído de la ruta; 0 = el listado. */
 function reviewIdFrom(pathname: string): number {
-  const match = /^\/perfil\/resenas\/(\d+)$/.exec(pathname);
+  const match = /^\/stats\/resenas\/(\d+)$/.exec(pathname);
   return match ? Number(match[1]) : 0;
 }
 
 /**
- * Panel "Perfil": la biblioteca en números, con una vista general y una pestaña por año.
+ * Panel de estadísticas: la biblioteca en números, con una vista general y una pestaña por año.
  *
  * Todo lo que se ve aquí es DERIVADO de las listas que ya están en memoria (ver `core/stats/computeStats`), es
  * decir, del gist de juegos que la app ya tiene cargado: ni una consulta de red, ni un gist nuevo, ni una
