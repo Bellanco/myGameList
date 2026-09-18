@@ -292,7 +292,18 @@ export const UI_MESSAGES = {
     back: 'Volver',
     integrations: {
       title: 'Integraciones',
-      note: 'Importa todos los juegos que ya tienes en tus tiendas, sin añadirlos a mano. Funciona con la app Playnite (solo Windows) y su extensión gratuita «Playnite Library Exporter», que crea un archivo con tu biblioteca. Los juegos llegan primero a la bandeja de importados para que tú decidas cuáles quedarte. Engloba las tiendas de PC (Steam, GOG, Epic, EA, Ubisoft, Amazon y Battle.net) y también las consolas de PlayStation y Xbox si en Playnite instalas sus complementos de biblioteca. Si un juego está en varias tiendas, se combinan sus plataformas en una sola entrada.',
+      /* CINCO FRASES SEGUIDAS ERAN UN MURO. Decían cosas distintas —qué hace, qué necesitas, de dónde trae,
+         qué pasa con los duplicados— y había que leerlas enteras para saber si esto te servía. Ahora la
+         primera va sola arriba y el resto se reparte en lo que cada cosa es: una condición, una lista de
+         tiendas que se lee de un vistazo y una nota al pie. */
+      note: 'Trae de una vez los juegos que ya tienes en tus tiendas, sin añadirlos a mano. Llegan a la bandeja de importados para que decidas cuáles te quedas.',
+      requires: 'Necesitas Playnite (solo Windows) y su extensión gratuita «Playnite Library Exporter», que crea el archivo con tu biblioteca.',
+      storesLabel: 'De dónde los trae',
+      stores: ['Steam', 'GOG', 'Epic', 'EA', 'Ubisoft', 'Amazon', 'Battle.net'],
+      /* Las dos consolas van aparte porque llevan condición: en Playnite hay que instalarles su complemento.
+         El de PlayStation además tiene guía propia, y por eso su chip es pulsable. */
+      consolesLabel: 'Y las consolas, con su complemento en Playnite',
+      mergeNote: 'Si un juego está en varias tiendas, sus plataformas se combinan en una sola entrada.',
       stepsTitle: 'Cómo traer tu biblioteca, paso a paso',
       steps: [
         'En tu PC con Windows, abre Playnite (si no la tienes, descárgala e instálala desde playnite.link).',

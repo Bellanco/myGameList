@@ -90,6 +90,8 @@ export const SettingsHub = memo(function SettingsHub({
 }: SettingsHubProps) {
   const [showToken, setShowToken] = useState(false);
   const [showConfigHelp, setShowConfigHelp] = useState(false);
+  /** «¿Qué es GitHub Gist?»: la explicación, plegada, para que el botón de conectar quede el primero. */
+  const [showWhatIsGist, setShowWhatIsGist] = useState(false);
   // El manual de Playnite llega plegado: son cinco pasos que solo hacen falta la primera vez, y esta pantalla
   // ya es larga. La nota de arriba basta para saber qué hace la importación.
   const [showImportSteps, setShowImportSteps] = useState(false);
@@ -158,35 +160,14 @@ export const SettingsHub = memo(function SettingsHub({
       <>
       {/* Importación de la biblioteca. Vivía en una pantalla aparte (`/integraciones`) a la que esta tarjeta solo
           sabía navegar; ahora la acción está donde se busca, con su manual al lado. */}
-      <div className="settings-card" style={{ gridColumn: '1 / -1' }}>
-        <div className="settings-card-head">
-          <h2>{IMPORT_UI.title}</h2>
-          <PlayniteNote />
-        </div>
-        <div className="settings-backup-info">
-          <button
-            type="button"
-            className="import-guide-link"
-            aria-expanded={showImportSteps}
-            onClick={() => setShowImportSteps((prev) => !prev)}
-          >
-            {IMPORT_UI.stepsTitle}
-          </button>
-          {showImportSteps ? (
-            <ol className="settings-card-note import-steps">
-              {IMPORT_UI.steps.map((step, i) => (
-                <li key={i}>{step}</li>
-              ))}
-            </ol>
-          ) : null}
-        </div>
-        <div className="settings-backup-actions import-integrations-actions">
-          {inboxCount > 0 ? (
-            <button type="button" className="btn btn-secondary btn-accent" onClick={onOpenInbox}>
-              <Icon name={COMMON_ICONS.download} />
-              <span>{IMPORT_UI.viewInbox(inboxCount)}</span>
-            </button>
-          ) : null}
+      {/* PRIMERO QUÉ HACE Y EL BOTÓN; el detalle, debajo. Antes esta tarjeta abría con cinco frases seguidas y
+          el botón quedaba al final: para importar había que atravesar el muro, y quien ya sabía lo que quería
+          lo atravesaba cada vez. */}
+      <div className="settings-card settings-card-import" style={{ gridColumn: '1 / -1' }}>
+        <h2>{IMPORT_UI.title}</h2>
+        <p className="settings-card-sub">{IMPORT_UI.note}</p>
+
+        <div className="settings-actions-lead">
           <FilePickerButton
             id="import-library-settings"
             className="btn btn-primary"
@@ -195,14 +176,44 @@ export const SettingsHub = memo(function SettingsHub({
             accept=".json,application/json"
             onPick={onImportLibrary}
           />
+          {inboxCount > 0 ? (
+            <button type="button" className="btn btn-secondary btn-accent" onClick={onOpenInbox}>
+              <Icon name={COMMON_ICONS.download} />
+              <span>{IMPORT_UI.viewInbox(inboxCount)}</span>
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="import-guide-link"
+            aria-expanded={showImportSteps}
+            onClick={() => setShowImportSteps((prev) => !prev)}
+          >
+            {IMPORT_UI.stepsTitle}
+          </button>
         </div>
+
+        {showImportSteps ? (
+          <ol className="settings-card-note import-steps">
+            {IMPORT_UI.steps.map((step, i) => (
+              <li key={i}>{step}</li>
+            ))}
+          </ol>
+        ) : null}
+
+        <PlayniteNote />
       </div>
 
       <div className="settings-card settings-card-status">
-        <h2>{SETTINGS_UI.sync.title}</h2>
-        <p>
-          {SETTINGS_UI.sync.status}: <strong>{syncStatus}</strong>
-        </p>
+        <div className="settings-card-head settings-card-head-row">
+          <h2>{SETTINGS_UI.sync.title}</h2>
+          {/* EL ESTADO, CON FORMA DE ESTADO. Era una línea de texto corrida —«Estado actual: No sincronizado»—
+              perdida entre dos párrafos de ayuda, y es lo primero que se viene a mirar a esta pantalla. */}
+          <p className={`sync-state ${hasSyncConfig ? 'is-on' : 'is-off'}`}>
+            <span className="sync-state-dot" aria-hidden="true" />
+            <span className="sr-only">{SETTINGS_UI.sync.status}: </span>
+            {syncStatus}
+          </p>
+        </div>
         {hasSyncConfig && configuredGistId ? (
           <div className="sync-help">
             {SETTINGS_UI.sync.gistConnectedPrefix}: {configuredGistId}
@@ -221,30 +232,23 @@ export const SettingsHub = memo(function SettingsHub({
 
         {!hasSyncConfig && (
           <>
-            <div className="sync-help">
-              <strong>{SETTINGS_UI.sync.helpGithubTitle}</strong>
-              <br />
-              {SETTINGS_UI.sync.helpGithubBody}
-            </div>
-
+            {/* EL BOTÓN PRIMERO. Aquí se llega a conectar, y antes había que bajar por dos cajas de ayuda —qué
+                es un Gist, cómo funciona la conexión— para encontrarlo. La explicación sigue estando, debajo y
+                plegada: quien la necesita la abre una vez y quien no, no la vuelve a ver. */}
             {githubOAuthEnabled && (
               <>
-                <div className="sync-help">{SETTINGS_UI.sync.oauthHelpBody}</div>
-                <div className="settings-actions">
+                <div className="settings-actions-lead">
                   <button
                     className="btn btn-steam btn-connect"
                     type="button"
                     onClick={onGithubLogin}
                     disabled={githubLoggingIn}
-                    style={{ marginRight: 'auto' }}
                   >
                     <Icon name="cloud-sync" />
                     <span className="btn-label">
                       {githubLoggingIn ? SETTINGS_UI.sync.oauthConnectingBtn : SETTINGS_UI.sync.oauthConnectBtn}
                     </span>
                   </button>
-                </div>
-                <div className="sync-help-actions">
                   <button
                     className="sync-help-toggle"
                     type="button"
@@ -254,7 +258,32 @@ export const SettingsHub = memo(function SettingsHub({
                     {showManual ? SETTINGS_UI.sync.manualToggleHide : SETTINGS_UI.sync.manualToggleShow}
                   </button>
                 </div>
+                <button
+                  type="button"
+                  className="import-guide-link"
+                  aria-expanded={showWhatIsGist}
+                  onClick={() => setShowWhatIsGist((prev) => !prev)}
+                >
+                  {SETTINGS_UI.sync.helpGithubTitle}
+                </button>
+                {showWhatIsGist ? (
+                  <div className="sync-help">
+                    {SETTINGS_UI.sync.helpGithubBody}
+                    <br />
+                    {SETTINGS_UI.sync.oauthHelpBody}
+                  </div>
+                ) : null}
               </>
+            )}
+
+            {/* Sin OAuth disponible no hay atajo que ofrecer, así que la explicación va a la vista: el modo
+                manual es el único camino y hay que saber qué se está montando. */}
+            {!githubOAuthEnabled && (
+              <div className="sync-help">
+                <strong>{SETTINGS_UI.sync.helpGithubTitle}</strong>
+                <br />
+                {SETTINGS_UI.sync.helpGithubBody}
+              </div>
             )}
 
             {manualVisible && (
@@ -374,15 +403,10 @@ export const SettingsHub = memo(function SettingsHub({
       </div>
 
       <div className="settings-card settings-card-backup">
-        <div className="settings-card-head">
-          <h2>{SETTINGS_UI.backup.title}</h2>
-          <p className="settings-card-note">{SETTINGS_UI.backup.note}</p>
-        </div>
+        <h2>{SETTINGS_UI.backup.title}</h2>
+        <p className="settings-card-sub">{SETTINGS_UI.backup.description}</p>
 
         <div className="settings-backup-row">
-          <div className="settings-backup-info">
-            <p>{SETTINGS_UI.backup.description}</p>
-          </div>
 
           <div className="settings-backup-actions">
             <button className="btn btn-secondary" type="button" onClick={onExport}>
@@ -414,9 +438,13 @@ export const SettingsHub = memo(function SettingsHub({
           </span>
         </label>
 
-        <div className="settings-backup-warning">
-          {SETTINGS_UI.backup.overwriteHint}
-        </div>
+        {/* El aviso solo cuando el interruptor está puesto: enseñarlo siempre gasta sitio y asusta a quien
+            solo venía a exportar. Cuando se enciende, es exactamente lo que hay que leer. */}
+        {overwriteImport ? (
+          <div className="settings-backup-warning">
+            {SETTINGS_UI.backup.overwriteHint}
+          </div>
+        ) : null}
       </div>
 
       </>

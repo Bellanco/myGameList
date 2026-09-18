@@ -143,3 +143,63 @@
 .settings-backup-actions.import-integrations-actions {
   margin-top: 0.9rem;
 }
+
+/* ═══ DE DÓNDE SALEN LOS JUEGOS · los nombres de las tiendas, como fichas ═════════════════════════════
+   Eran una frase dentro de un párrafo de cinco («Engloba las tiendas de PC (Steam, GOG, Epic…)»), y la única
+   pregunta que se hace aquí —¿está la mía?— obligaba a leerlo entero. En ficha se contesta de un vistazo.
+   No son pulsables salvo PlayStation, que despliega su guía: de ahí que solo esa lleve subrayado y cursor. */
+.import-stores { display: flex; flex-direction: column; gap: .35rem; }
+
+.import-store-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin: 0 0 .5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.import-store-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: .25rem .6rem;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-pill);
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* El de PlayStation ADEMÁS abre sus pasos: se marca como lo que es —algo que se pulsa— en vez de esconder el
+   despliegue detrás de una palabra en mitad de un texto, que es donde estaba antes y donde no lo veía nadie. */
+button.import-store-chip.is-guide {
+  cursor: pointer;
+  color: var(--fg-link);
+  border-color: rgba(var(--steam-rgb), .35);
+  font: inherit;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  transition: background .16s, border-color .16s;
+}
+
+button.import-store-chip.is-guide:hover { background: var(--steam-soft); }
+
+button.import-store-chip.is-guide:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+button.import-store-chip.is-guide[aria-expanded='true'] {
+  background: var(--steam-soft);
+  border-color: rgba(var(--steam-rgb), .5);
+}
+
+.import-requires { margin-bottom: .2rem; }
+
+/* SIN `opacity` PARA ATENUAR TEXTO. Se le puso un .85 para que esta nota final pesara menos y la auditoría lo
+   cazó al instante: `--text-muted` viene calibrado por cada paleta para pasar el 4,5:1 justo, así que rebajarlo
+   un 15 % lo tira por debajo —3,96:1 en «Cámara de pruebas», «Bajo un cielo de estrellas» y «Solo hay guerra»,
+   las tres en claro—. Si algo tiene que pesar menos, se elige un token más tenue, no se le baja la opacidad. */
+.import-merge { margin-top: .2rem; }
