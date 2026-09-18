@@ -75,10 +75,13 @@ pantalla de escritorio, y en las cuatro va primero lo que se viene a hacer y des
   programa que no existe para tu aparato.
 
 ### Fixed
-- **La apariencia ya no se bloquea sin cuenta de Google.** Paleta, claro/oscuro, mayúsculas, efectos, carátulas
-  y el botón de Steam Deck vivían dentro de la tarjeta de la escala de nota y se apagaban con ella cuando no
-  había sesión. Ninguna de esas preferencias necesita cuenta —se guardan en este dispositivo y solo se copian a
-  la nube si hay sesión—, así que el bloqueo no protegía nada: apagaba media pantalla y nada más.
+- **La apariencia ya no se apaga con la escala de nota.** Paleta, claro/oscuro, mayúsculas, efectos, carátulas y
+  el botón de Steam Deck vivían DENTRO de la tarjeta de la escala, que sí pide cuenta de Google, y se bloqueaban
+  con ella. Son preferencias de este dispositivo y no dependen de ninguna cuenta, así que ese bloqueo no
+  protegía nada: apagaba media tarjeta y nada más. Ahora tienen su propio sitio y responden siempre.
+  Ojo con lo que esto NO cambia: **la pantalla de Diseño sigue pidiendo cuenta de Google para abrirse** —el menú
+  no la ofrece sin ella y su dirección redirige—, porque comparte sitio con la escala de nota y con tus enlaces
+  publicados, que son cosas de la cuenta. Sin cuenta, el cambio de tema sigue estando arriba a la derecha.
 - **El aviso de la analítica ya no se come el final de la pantalla.** Se apoya encima de la barra de navegación
   y el contenido no le reservaba sitio, así que las últimas tarjetas quedaban debajo y no había forma de bajar
   hasta ellas: la página creía que ya había terminado. Ahora el contenido se aparta lo que el aviso mide.
@@ -95,6 +98,10 @@ pantalla de escritorio, y en las cuatro va primero lo que se viene a hacer y des
   intermitente por contención de la máquina. Queda el de cobertura, que informa igual.
 - **El navegador de las pruebas de extremo a extremo se cachea** por versión de `@playwright/test`, en vez de
   descargar Chromium entero en cada build.
+- **Que ningún icono salga hueco, comprobado sobre el build.** El juego de iconos está partido en dos por peso,
+  y un dibujo en la mitad equivocada no da ningún error: se pinta un hueco y nadie se entera. Dos pruebas nuevas
+  lo cierran — una cuadra el catálogo con los dos sprites, y la otra recorre las pantallas de la aplicación
+  compilada preguntando por cada dibujo si su símbolo existe.
 - **La válvula de desborde del gist vuelve a probarse, y ahora de verdad.** Esas pruebas se saltan solas cuando
   su interruptor está apagado —que es su estado en producción—, así que nadie las miraba: al encenderlas, una
   fallaba y la otra pasaba en vacío. El motivo no estaba en el reparto sino en el material de la prueba, que se
@@ -119,6 +126,11 @@ pantalla de escritorio, y en las cuatro va primero lo que se viene a hacer y des
   publicar, que es el único momento en que alguien más lo necesita. Medido con 30 publicaciones en pantalla y 5
   pulsaciones: de 155 repintados de avatar y 150 de cuerpo de publicación, a **cero**. Y crecía con el tamaño del
   feed, así que quien más lo notará es quien tiene más que leer.
+- **Los dibujos que no se ven al abrir ya no se descargan al abrir.** El juego de iconos viajaba entero en el
+  arranque, y de sus 51 dibujos la primera pantalla usa 36. De los otros quince, dos no los usaba nadie y se han
+  ido; los trece que quedan —ajustes, espacio social, estadísticas, panel y los modales— llegan aparte, en cuanto
+  el navegador tiene un hueco libre. Son **3,2 kB menos** en cada primera visita —el arranque baja de 182,2 a
+  179,1 kB— y el margen del presupuesto casi se dobla.
 - **El trabajo de «Conectar con GitHub» deja de viajar en el arranque.** Montar la autorización y canjear el
   código solo hace falta al pulsar el botón o al volver de GitHub, así que ahora se descarga en ese momento; en
   el arranque se quedan solo las tres comprobaciones baratas que la aplicación hace siempre. Son 0,6 kB menos en

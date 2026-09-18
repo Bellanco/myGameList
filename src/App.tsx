@@ -96,6 +96,16 @@ const AdminHub = lazy(() => import('./view/components/AdminHub').then((module) =
 const AchievementToast = lazy(() => import('./view/components/stats/AchievementToast').then((module) => ({ default: module.AchievementToast })));
 
 /**
+ * EL RESTO DEL SPRITE DE ICONOS (ver `IconSpriteRest`): los 15 símbolos que ninguna pieza del arranque dibuja.
+ *
+ * Perezoso Y montado en idle, que son dos cosas distintas y las dos hacen falta: `lazy()` lo saca del chunk de
+ * arranque, y esperar a que el navegador esté ocioso evita que su descarga compita con el primer pintado. Quien
+ * los necesita son pantallas a las que hay que navegar —o modales que hay que abrir—, así que para cuando se
+ * piden llevan rato en el documento.
+ */
+const IconSpriteRest = lazy(() => import('./view/components/IconSpriteRest').then((module) => ({ default: module.IconSpriteRest })));
+
+/**
  * EL AVISO DEL ADMINISTRADOR, perezoso por lo mismo: comparte carril y forma con el de logro, se monta desde el
  * arranque y casi nunca hay ninguno que enseñar. El documento que lo enciende lo lee `useAnnouncement` cuando el
  * navegador está ocioso, así que ni el chunk ni la petición compiten con el primer pintado.
@@ -769,10 +779,13 @@ export default function App() {
   // Precarga en idle, ya pintada la pantalla: cuando el usuario abra un modal su módulo estará en caché y no
   // habrá que esperar a la red (el `fallback` de Suspense es `null`, así que una espera se vería como un clic
   // que no hace nada).
+  // El resto del sprite de iconos sigue la misma puerta: fuera del arranque y dentro en cuanto haya hueco.
+  const [spriteRestoListo, setSpriteRestoListo] = useState(false);
   useEffect(() => runWhenIdle(() => {
     void importFormModal();
     void importConfirmModal();
     void importRouletteModal();
+    setSpriteRestoListo(true);
   }), []);
 
   const syncBadgeText = resolveSyncBadge(syncVm.status, syncVm.pendingUpload);
@@ -976,6 +989,11 @@ export default function App() {
        distintos del `<Routes>`. */
     <GithubConnectionProvider value={githubConnection}>
       <IconSprite />
+      {spriteRestoListo ? (
+        <Suspense fallback={null}>
+          <IconSpriteRest />
+        </Suspense>
+      ) : null}
       {/* A11y-4: primer elemento enfocable de la página. Sin él, llegar al contenido con teclado obligaba a pasar
           por los controles flotantes y la barra de pestañas en cada carga. Solo se ve al recibir el foco. */}
       <a className="skip-link" href="#contenido">{UI_MESSAGES.skipToContent}</a>
