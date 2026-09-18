@@ -350,6 +350,52 @@
    dimensionaba por contenido y quedaban de tamaños distintos). */
 .theme-mode-row .btn { flex: 1 1 0; min-width: 0; justify-content: center; }
 
+/* LA FILA DE LA ACCIÓN PRINCIPAL, arriba de su tarjeta: el botón que se ha venido a pulsar, sus acompañantes
+   y el enlace que despliega el detalle. Se alinean por la base para que el enlace no baile respecto a los
+   botones, y envuelve en cuanto no caben, que en un móvil es siempre. */
+.settings-actions-lead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .6rem .9rem;
+  margin: .2rem 0 .1rem;
+}
+
+/* EL ESTADO DE LA SINCRONIZACIÓN. Un punto y el texto: sin caja, sin fondo y sin gritar, pero con color
+   propio —el mismo verde y el mismo rojo que ya usan los semáforos de la aplicación— y a la altura del título,
+   que es donde se busca. El punto lleva su halo para que se vea también en las paletas más apagadas. */
+.settings-card-head.settings-card-head-row {
+  display: flex;
+  /* Explícito: `.settings-card-head` apila en columna, y sin decir lo contrario aquí el estado caía debajo del
+     título en vez de ponerse a su altura, que es lo único que esta variante cambia. */
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .3rem .8rem;
+}
+
+.sync-state {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+
+.sync-state-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.sync-state.is-on { color: var(--success); }
+.sync-state.is-off { color: var(--text-dim); }
+
 .settings-actions {
   display: flex;
   flex-wrap: wrap;
@@ -555,7 +601,7 @@
     grid-column: span 7;
   }
 
-  .settings-hub:not(.settings-personalization) .settings-card:not(.settings-card-status):not(.settings-card-admin):not(.settings-card-score) {
+  .settings-hub:not(.settings-personalization) .settings-card:not(.settings-card-status):not(.settings-card-admin):not(.settings-card-score):not(.settings-card-danger) {
     grid-column: span 5;
   }
 
@@ -606,7 +652,7 @@
     grid-column: span 6;
   }
 
-  .settings-hub:not(.settings-personalization) .settings-card:not(.settings-card-status):not(.settings-card-admin):not(.settings-card-score) {
+  .settings-hub:not(.settings-personalization) .settings-card:not(.settings-card-status):not(.settings-card-admin):not(.settings-card-score):not(.settings-card-danger) {
     grid-column: span 6;
   }
 }
@@ -2212,3 +2258,62 @@
   border-color: rgba(var(--steam-rgb),.42);
   box-shadow: var(--ring-accent);
 }
+/* ═══ LOS TRES DOCUMENTOS LEGALES, EN FILAS ══════════════════════════════════════════════════════════
+   Estaban en una línea corrida que envolvía por donde le tocaba —dos títulos arriba, uno abajo— y ninguno
+   tenía forma de destino: eran texto subrayado entre texto. En fila, cada uno es una diana entera con su
+   flecha, se cuentan de un vistazo y se pulsan sin apuntar. */
+.settings-legal-links {
+  display: grid;
+  gap: .3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings-legal-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .8rem;
+  min-height: 44px;
+  padding: .5rem .75rem;
+  border: 1px solid var(--hair);
+  border-radius: 9px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  text-decoration: none;
+  transition: background .16s, border-color .16s;
+}
+
+.settings-legal-link:hover {
+  background: var(--overlay-hover);
+  border-color: rgba(var(--steam-rgb), .35);
+  text-decoration: none;
+}
+
+.settings-legal-link:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.settings-legal-link .ui-icon {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+  color: var(--text-dim);
+}
+
+/* La zona de riesgo cierra la pantalla a lo ancho: es la última parada y no comparte fila con nadie, así que
+   tampoco tiene por qué dejar medio escritorio en blanco a su derecha. Va excluida de la regla genérica de
+   arriba —esa lista de `:not()` es justo donde se dice «esta se reparte sola»— porque con tres exclusiones
+   encadenadas ganaba a cualquier regla nueva por muy concreta que fuera.
+   Y las dos de arriba no se estiran hasta la altura de la más alta: una tarjeta de tres líneas con un palmo
+   de vacío debajo parece rota. */
+@media (min-width: 48rem) {
+  .settings-card-danger { grid-column: span 12; }
+  .settings-hub .settings-card { align-self: start; }
+}
+
+/* El enlace que despliega la ayuda no se centra: nace donde empieza el texto de su tarjeta. */
+.settings-card .import-guide-link { align-self: flex-start; }

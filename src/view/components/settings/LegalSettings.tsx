@@ -4,6 +4,7 @@ import { ANALYTICS_UI } from '../../../core/constants/labels';
 import { SETTINGS_UI } from '../../../core/constants/settingsLabels';
 import { LEGAL_ROUTES } from '../../../core/constants/legal';
 import { LEGAL_DOCUMENTS } from '../../../core/constants/legalContent';
+import { Icon } from '../Icon';
 import { useAnalyticsConsent } from '../../hooks/useAnalyticsConsent';
 import { DangerZone } from '../DangerZone';
 
@@ -27,7 +28,16 @@ export const LegalSettings = memo(function LegalSettings() {
   return (
     <section className="settings-hub" aria-label={SETTINGS_UI.groups.legal.title}>
       <div className="settings-card">
-        <h2>{analyticsLabels.title}</h2>
+        <div className="settings-card-head settings-card-head-row">
+          <h2>{analyticsLabels.title}</h2>
+          {/* El estado con la misma marca que la sincronización: un punto y su palabra. Aquí importa doble —es
+              un consentimiento— y con dos botones a medio camino entre sí no se ve cuál está puesto sin mirar
+              fino cuál lleva el acento. */}
+          <p className={`sync-state ${consent === 'granted' ? 'is-on' : 'is-off'}`}>
+            <span className="sync-state-dot" aria-hidden="true" />
+            {consent === 'granted' ? analyticsLabels.on : analyticsLabels.off}
+          </p>
+        </div>
         <p className="settings-card-sub">{analyticsLabels.subtitle}</p>
         <div className="theme-mode-row" role="group" aria-label={analyticsLabels.groupAria}>
           <button
@@ -49,14 +59,26 @@ export const LegalSettings = memo(function LegalSettings() {
         </div>
       </div>
 
+      {/* LOS TRES DOCUMENTOS, EN FILAS. Iban seguidos en una línea que envolvía por donde le tocaba: dos
+          títulos arriba, uno abajo y ninguno con forma de destino. Como filas se cuentan de un vistazo, cada
+          una es una diana entera y la flecha dice que llevan a otra pantalla. */}
       <div className="settings-card">
         <h2>{SETTINGS_UI.legal.title}</h2>
         <p className="settings-card-sub">{SETTINGS_UI.legal.subtitle}</p>
-        <div className="settings-legal-links">
-          <Link to={LEGAL_ROUTES.terms}>{LEGAL_DOCUMENTS.terms.title}</Link>
-          <Link to={LEGAL_ROUTES.privacy}>{LEGAL_DOCUMENTS.privacy.title}</Link>
-          <Link to={LEGAL_ROUTES.cookies}>{LEGAL_DOCUMENTS.cookies.title}</Link>
-        </div>
+        <ul className="settings-legal-links">
+          {[
+            { to: LEGAL_ROUTES.terms, label: LEGAL_DOCUMENTS.terms.title },
+            { to: LEGAL_ROUTES.privacy, label: LEGAL_DOCUMENTS.privacy.title },
+            { to: LEGAL_ROUTES.cookies, label: LEGAL_DOCUMENTS.cookies.title },
+          ].map(({ to, label }) => (
+            <li key={to}>
+              <Link to={to} className="settings-legal-link">
+                <span>{label}</span>
+                <Icon name="angle-right" className="ui-icon" />
+              </Link>
+            </li>
+          ))}
+        </ul>
       </div>
 
       <DangerZone />
