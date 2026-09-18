@@ -38,6 +38,10 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
 function serviceWorkerPrecache(): Plugin {
   const BUILD_ID_TOKEN = 'self.__SW_BUILD_ID__';
   const ASSETS_TOKEN = 'self.__PRECACHE_ASSETS__';
+  // El MISMO identificador, también dentro del documento (`<meta name="app-build">`). Es lo que permite a
+  // `core/utils/appUpdate` comparar la versión que ejecuta la página con la que sirve el service worker en vez
+  // de suponer que un relevo de controlador significa que la página está vieja (ver `index.html`).
+  const DOC_BUILD_TOKEN = '__BUILD_ID__';
   let precachePaths: string[] = [];
   let criticalFontPaths: string[] = [];
 
@@ -111,6 +115,21 @@ function serviceWorkerPrecache(): Plugin {
         .replace(ASSETS_TOKEN, JSON.stringify(precache));
 
       writeFileSync(swUrl, patched);
+
+      // Y EL MISMO IDENTIFICADOR EN EL DOCUMENTO. Se hace aquí, sobre `dist/index.html` ya emitido, y no con un
+      // `define`: el `buildId` sale del listado de assets del arranque, que no existe hasta que el bundle está
+      // escrito. Tocar el HTML no mueve ningún hash —no lleva ninguno en el nombre y se sirve con `no-store`—,
+      // así que esto no puede hacer que dos builds distintos compartan el nombre de un chunk.
+      const indexUrl = new URL('./dist/index.html', import.meta.url);
+      const html = readFileSync(indexUrl, 'utf-8');
+      if (!html.includes(DOC_BUILD_TOKEN)) {
+        throw new Error(
+          `[service-worker-precache] No se ha encontrado el marcador ${DOC_BUILD_TOKEN} en dist/index.html. ` +
+            'Sin él, la app no puede saber si el service worker nuevo trae una versión distinta de la que ya ' +
+            'está ejecutando, y volvería a anunciar una actualización en cada despliegue (ver core/utils/appUpdate).',
+        );
+      }
+      writeFileSync(indexUrl, html.replace(DOC_BUILD_TOKEN, buildId));
     },
   };
 }

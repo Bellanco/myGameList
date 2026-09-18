@@ -249,9 +249,12 @@
 }
 
 
+/* Tres columnas cuando hay tres fichas y dos cuando hay dos: en la pasarela, el espacio social solo se dice
+   cuando ya puede decir algo (ver `SocialHub`), y con un número fijo de columnas la rejilla dejaba un hueco
+   vacío en su sitio —que es justo la ausencia que se quería quitar—. */
 .hub-status-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
   gap: .7rem;
 }
 
@@ -283,38 +286,6 @@
 .hub-status-card strong {
   color: var(--text);
   font-size: var(--fs-sm);
-}
-
-
-.hub-hub-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .5rem;
-  margin-top: .8rem;
-}
-
-.hub-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: .28rem .62rem;
-  border-radius: var(--radius-pill);
-  background: rgba(var(--steam-rgb),.1);
-  border: 1px solid rgba(var(--steam-rgb),.28);
-  color: var(--fg-link);
-  font-size: var(--fs-2xs);
-  font-weight: 700;
-}
-
-button.hub-chip {
-  cursor: pointer;
-  font-family: inherit;
-  transition: background .2s ease, border-color .2s ease, color .2s ease;
-}
-
-button.hub-chip.active {
-  background: rgba(var(--success-rgb),.2);
-  border-color: rgba(var(--success-rgb),.55);
-  color: var(--fg-green);
 }
 
 
@@ -643,68 +614,66 @@ button.hub-chip.active {
 
 /* Social gateway login-like */
 .hub-hub-gateway {
+  position: relative;
   min-height: calc(100vh - 190px);
   align-items: center;
 }
 
+/* ═══ EL LIENZO DE LA ENTRADA ═══════════════════════════════════════════════════════════════════════
+   Aquí se entra sin haber elegido nada, así que esta pantalla se ve casi siempre con el tema de casa —la
+   fragua— y, hasta ahora, con un negro liso alrededor de la tarjeta.
+   Dos capas y ninguna con color propio: el RESCOLDO abajo (el calor que sube del suelo de la fragua, que en el
+   resto de paletas es simplemente su acento) y unas RAYAS finas de tubo de rayos catódicos, que es el guiño de
+   los ochenta sin irse a la retícula en perspectiva —esa se mira, y aquí lo que hay que mirar son dos botones—.
+   Todo sale de `--steam-rgb`, así que cada paleta tiñe el suyo y ninguna necesita una regla aparte.
+   La máscara vacía el centro: la textura vive en los bordes y NO pasa por detrás de la tarjeta, que es
+   traslúcida, para que no le reste ni un punto de claridad al texto. */
+.hub-hub-gateway::before {
+  content: '';
+  position: absolute;
+  /* SE SALE DE SU CAJA A PROPÓSITO. La sección mide `100vh - 190px` y vive dentro de un `<main>` que reserva
+     1,2 rem arriba y 6,6 rem abajo para la barra de navegación (ver `.main` en `_layout.scss`): ceñido a la
+     sección, el lienzo terminaba en una línea recta a media pantalla y debajo volvía el negro liso. Se sangra
+     esa reserva —y el lateral de `.main.main-social`, que es el mismo `clamp()`— para que llegue a los cuatro
+     bordes. No mueve nada: está fuera de flujo, sin eventos, y `main` no recorta (`overflow: visible`).
+     No se usa `position: fixed`, que sería lo obvio: la entrada de pantalla pone un `transform` en el `<main>`
+     durante 200 ms y eso lo convierte en el bloque contenedor de sus fijos (lo documenta `_motion.scss`), así
+     que el lienzo daría un salto justo al aparecer. */
+  inset: -1.2rem calc(-1 * clamp(.5rem, .1rem + 1.6vw, 1.2rem)) -6.6rem;
+  pointer-events: none;
+  background:
+    radial-gradient(130% 48% at 50% 100%, rgba(var(--steam-rgb),.12) 0%, rgba(var(--steam-rgb),0) 72%),
+    repeating-linear-gradient(0deg, rgba(var(--steam-rgb),.05) 0 1px, rgba(var(--steam-rgb),0) 1px 6px);
+  /* El hueco de la máscara sigue a la tarjeta, que con la sangría queda un poco por encima del centro. */
+  -webkit-mask-image: radial-gradient(72% 56% at 50% 46%, transparent 32%, #000 92%);
+  mask-image: radial-gradient(72% 56% at 50% 46%, transparent 32%, #000 92%);
+}
+
+/* La tarjeta y lo que cuelgue de la sección, por encima del lienzo (mismo recurso que `.main-lists > *`). */
+.hub-hub-gateway > * {
+  position: relative;
+}
+
+/* LA ENTRADA ES UNA COLUMNA DE LECTURA, no un panel de pared a pared.
+   Con el ancho completo del hub, la tarjeta era un lienzo enorme con el título pegado al borde izquierdo, los
+   pasos centrados en medio y un vacío a los lados: tres alineaciones distintas en una pantalla de dos frases.
+   Acotada, todo cae en la misma columna —título, entradilla, pasos y estado— y el alto lo manda el contenido en
+   vez de un mínimo de 760 px pensado para cuando aquí había tres pasos, un rótulo y una barra de progreso. */
 .hub-hub-gateway-card {
-  min-height: min(78vh, 760px);
+  max-width: 44rem;
+  min-height: min(52vh, 520px);
   justify-content: center;
-  gap: .9rem;
+  gap: 1rem;
 }
 
+/* Sin cota propia: la columna de la tarjeta ya fija la medida de lectura, y encima de ella el `56ch` de antes
+   —pensado para cuando la tarjeta ocupaba el ancho del hub— partía la entradilla dos palabras antes de tiempo. */
 .hub-gateway-lead {
-  max-width: 56ch;
-}
-
-.hub-gateway-step-caption {
-  margin: -.15rem 0 .1rem;
-  font-size: var(--fs-xs);
-  color: var(--hub-text-muted);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-}
-
-.hub-gateway-progress {
-  width: 100%;
-  max-width: 36rem;
-  align-self: center;
-  display: flex;
-  flex-direction: column;
-  gap: .32rem;
-}
-
-.hub-gateway-progress small {
-  color: var(--text-muted);
-  font-size: var(--fs-2xs);
-  font-weight: 700;
-  letter-spacing: .02em;
-}
-
-.hub-gateway-progress-track {
-  width: 100%;
-  height: .52rem;
-  border-radius: 999px;
-  border: 1px solid rgba(var(--steam-rgb),.3);
-  background: var(--hub-card-bg);
-  overflow: hidden;
-}
-
-.hub-gateway-progress-fill {
-  display: block;
-  height: 100%;
-  width: 0;
-  background: linear-gradient(90deg, rgba(var(--steam-rgb),.82), rgba(var(--success-rgb),.88));
-  border-radius: 999px;
-  box-shadow: var(--glow-accent-halo);
-  transition: width .42s ease-out;
+  margin: 0;
 }
 
 .hub-gateway-actions {
   width: 100%;
-  max-width: 36rem;
-  align-self: center;
   display: flex;
   flex-direction: column;
   gap: .7rem;
@@ -764,77 +733,116 @@ button.hub-chip.active {
   content: '▾';
 }
 
-.hub-gateway-steps {
+/* ═══ LOS DOS PASOS DE LA ENTRADA ═══════════════════════════════════════════════════════════════════
+   Una escalera de dos peldaños, no una rejilla de fichas: cada paso ocupa su fila, dice lo suyo y lleva DENTRO
+   el botón que lo resuelve. Antes eran tres fichas estrechas con dos palabras cada una —y el botón lejos, sin
+   decir a cuál pertenecía—, más un rótulo y una barra que repetían por tercera vez lo mismo.
+
+   La geometría es la misma para los dos peldaños —misma caja, misma marca, misma sangría— y lo único que cambia
+   es el color y la altura: eso es lo que dice por dónde vas sin que la lista entera grite (DESIGN.md §8). */
+.hub-gateway-path {
   width: 100%;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: .55rem;
-}
-
-.hub-gateway-step {
-  border: 1px solid var(--border);
-  border-radius: .8rem;
-  padding: .62rem .66rem;
-  background: var(--hub-card-bg);
   display: flex;
-  align-items: center;
-  gap: .6rem;
-  min-height: 3.35rem;
+  flex-direction: column;
+  gap: .7rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.hub-gateway-step.is-current {
-  border-color: rgba(var(--steam-rgb),.55);
-  background: rgba(var(--steam-rgb),.12);
+.hub-gateway-stage {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: .9rem;
+  padding: .9rem 1rem;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-md);
+  background: var(--hub-card-bg);
+  text-align: left;
 }
 
-.hub-gateway-step.is-done {
-  border-color: rgba(var(--success-rgb),.55);
-  background: rgba(var(--success-rgb),.14);
+/* EL QUE TOCA: el único con altura. Se levanta del fondo y se tiñe del acento, que es lo que hace que el ojo
+   caiga aquí y no reparta la atención entre los dos. */
+.hub-gateway-stage.is-current {
+  border-color: color-mix(in srgb, var(--steam) 50%, transparent);
+  background: color-mix(in srgb, var(--steam) 10%, var(--hub-card-bg));
+  box-shadow: var(--e2), var(--edge);
 }
 
-.hub-gateway-step-badge {
-  width: 1.45rem;
-  height: 1.45rem;
+/* EL YA DADO: en verde y a ras de suelo. Aquí no queda nada que hacer, así que no compite con el que sí. */
+.hub-gateway-stage.is-done {
+  border-color: color-mix(in srgb, var(--success) 45%, transparent);
+  background: color-mix(in srgb, var(--success) 10%, var(--hub-card-bg));
+}
+
+/* EL QUE AÚN NO TOCA: se lee, pero atenuado. Al mismo peso que el actual pedía dos cosas a la vez; tapado,
+   escondería cuánto queda. */
+.hub-gateway-stage:not(.is-current):not(.is-done) .hub-gateway-stage-title,
+.hub-gateway-stage:not(.is-current):not(.is-done) .hub-gateway-stage-note {
+  color: var(--text-muted);
+}
+
+/* LA MARCA: el número mientras el paso está por dar, el visto en cuanto está dado. */
+.hub-gateway-stage-mark {
+  width: 2.1rem;
+  height: 2.1rem;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--fs-3xs);
-  font-weight: 900;
-  border: 1px solid var(--border);
-  color: var(--hub-text);
-  background: var(--overlay-hover);
   flex: 0 0 auto;
+  font-size: var(--fs-md);
+  font-weight: 900;
+  line-height: 1;
+  border: 1px solid var(--border);
+  background: var(--overlay-hover);
+  color: var(--hub-text);
 }
 
-.hub-gateway-step.is-done .hub-gateway-step-badge {
-  color: #fff;
+.hub-gateway-stage-mark .ui-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.hub-gateway-stage.is-current .hub-gateway-stage-mark {
+  border-color: color-mix(in srgb, var(--steam) 55%, transparent);
+  background: var(--steam);
+  color: var(--on-accent);
+  box-shadow: var(--glow-accent-soft);
+}
+
+.hub-gateway-stage.is-done .hub-gateway-stage-mark {
+  border-color: color-mix(in srgb, var(--success) 55%, transparent);
   background: var(--success);
-  border-color: rgba(var(--success-rgb),.55);
+  color: var(--on-accent);
 }
 
-.hub-gateway-step-copy {
+.hub-gateway-stage-body {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  line-height: 1.1;
-  gap: .2rem;
+  gap: .3rem;
 }
 
-.hub-gateway-step-copy strong {
+.hub-gateway-stage-title {
+  margin: 0;
   color: var(--text);
-  font-size: var(--fs-xs);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: var(--fs-md);
+  font-weight: 800;
+  line-height: 1.25;
 }
 
-.hub-gateway-step-copy small {
+.hub-gateway-stage-note {
+  margin: 0;
   color: var(--text-muted);
-  font-size: var(--fs-2xs);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+
+/* El botón del paso respira respecto a su texto: es la acción, no un renglón más. */
+.hub-gateway-stage .hub-gateway-btn,
+.hub-gateway-stage .sync-card-simple {
+  margin-top: .35rem;
 }
 
 /* Activity feed day grouping */
@@ -933,30 +941,37 @@ button.hub-chip.active {
     font-size: var(--fs-lg);
   }
 
-  .hub-gateway-progress {
-    max-width: 100%;
+  /* En móvil la escalera aprieta un punto: cada peldaño ya trae su botón dentro, así que el alto lo manda la
+     acción y no la caja. */
+  .hub-gateway-path {
+    gap: .55rem;
   }
 
-  .hub-gateway-steps {
-    grid-template-columns: 1fr;
-    gap: .45rem;
-  }
-
-  .hub-gateway-step {
-    min-height: 3rem;
+  .hub-gateway-stage {
+    padding: .8rem .85rem;
+    gap: .7rem;
   }
 }
 
 @media (min-width:48rem) {
-  .hub-gateway-actions {
-    max-width: 38rem;
-  }
-
   .hub-gateway-details {
     padding-top: .6rem;
   }
 
+  /* En escritorio el estado se enseña ya desplegado y sin su tirador: hay sitio de sobra y es lo que se viene a
+     mirar cuando algo no cuadra. En móvil sí se pliega, que ahí cada línea cuesta una pantalla. */
   .hub-gateway-details > summary {
     display: none;
   }
+}
+
+/* La PUERTA LEGAL del hub: los dos enlaces que hay que aceptar antes de entrar. Tenía prestada una clase de la
+   pantalla de Ajustes (`.settings-legal-links`), y cuando aquella hoja salió del bundle base para viajar con sus
+   chunks, esta puerta se quedaba sin estilo: el hub es otro chunk y no la carga. Una clase propia de tres líneas
+   sale más barata que traerse veintiocho kilobytes de reglas ajenas por dos enlaces. */
+.hub-legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem 1rem;
+  font-size: var(--fs-sm);
 }

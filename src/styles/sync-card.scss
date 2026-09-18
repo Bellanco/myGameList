@@ -1,0 +1,176 @@
+// ═══ LA TARJETA DE CONEXIÓN CON GITHUB ══════════════════════════════════════════════════════════════
+//
+// Lo que pinta `GithubSyncCard`: el semáforo de la sincronización, el botón de OAuth, el modo manual (token +
+// gist) y sus ayudas. Nada más.
+//
+// VIVE EN SU PROPIA HOJA, y no dentro de `settings.scss`, porque la tarjeta la pintan DOS CHUNKS PEREZOSOS
+// distintos: la pantalla de Integración (`settings.scss`) y la pasarela del hub social (`social.scss`). Una regla
+// metida en la hoja de una de las dos pantallas deja a la otra sin estilo —es el fallo que documenta la cabecera
+// de `settings.scss`—, así que la importa el propio componente: Vite la emite donde haga falta y quien no pinta
+// la tarjeta no se la descarga.
+//
+// Lo que NO está aquí y la tarjeta usa: `.fg`, `.finput`, `.token-row`, `.token-toggle`, `.sync-status-msg` y
+// `.sync-state` viven en el bundle base (`_overlays-and-responsive.scss`), que lo trae todo el mundo.
+
+/* LA TARJETA POR SU CUENTA — solo la variante «pasarela». En Ajustes el armazón lo pone `.settings-card`, que
+   viaja en la hoja de esa pantalla; en el hub social no hay tal cosa, así que se dibuja sola.
+   Y se dibuja como lo que es ALLÍ: un panel DENTRO de la tarjeta del hub, con el mismo papel que la casilla de
+   condiciones (`.hub-gateway-consent`) —superficie tenue y filete, sin elevación—, no una tarjeta flotando
+   sobre otra. */
+.sync-card {
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+  width: 100%;
+  padding: .85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  text-align: left;
+}
+
+/* EL BOTÓN SOLO, en la pasarela. Sin caja alrededor, porque la pasarela ya pone la suya: el paso 1 tiene que
+   verse EXACTAMENTE igual que el paso 2 —el botón de Google—, y una tarjeta alrededor de uno solo de los dos
+   rompe esa simetría antes de leer nada. El envoltorio existe para que el aviso de error caiga debajo del
+   botón y no a su lado. */
+.sync-card-simple {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: .5rem;
+  width: 100%;
+}
+
+.sync-card h3 {
+  margin: 0;
+  font-size: var(--fs-lg);
+}
+
+/* EL TÍTULO Y EL ESTADO, A LA MISMA ALTURA. Alineados por la base para que el punto del semáforo no baile
+   respecto al título, y envolviendo en cuanto no caben. */
+.sync-card-head {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .3rem .8rem;
+}
+
+/* LA FILA DE LA ACCIÓN PRINCIPAL: el botón que se ha venido a pulsar y el enlace que despliega el detalle.
+   Es la misma idea que `.settings-actions-lead`, y está repetida a propósito: aquella vive en la hoja de
+   Ajustes, que en el hub social no se carga. */
+.sync-card-lead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .6rem .9rem;
+  margin: .2rem 0 .1rem;
+}
+
+.sync-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+}
+
+/* Conectar y «Recuperar de Google», uno en cada extremo. En pantalla estrecha los botones se quedan con el
+   icono: los dos rótulos juntos no caben y partirlos en dos líneas rompe la fila. */
+.sync-card-actions-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+
+  .btn-label {
+    display: inline;
+  }
+}
+
+@media (max-width: 480px) {
+  .sync-card-actions-row .btn-label {
+    display: none;
+  }
+}
+
+/* La palabra que despliega la ayuda: es un `<button>` pero tiene que leerse como un enlace dentro del texto,
+   así que se le quita todo el aspecto de botón y hereda la tipografía de alrededor. No se centra: nace donde
+   empieza el texto de su tarjeta. */
+.sync-card-link {
+  align-self: flex-start;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--fg-link);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── Ayudas y campos (venían de `settings.scss`, sin tocar una declaración) ─────────────────────────── */
+
+.sync-help {
+  font-size: var(--fs-xs); color:var(--text-muted); line-height:1.6;
+  background:var(--surface-elevated); border-radius:var(--radius-sm);
+  padding:.8rem 1rem; border:1px solid var(--border);
+}
+.sync-help a { color:var(--fg-link); text-decoration:none; }
+.sync-help a:hover { text-decoration:underline; }
+.sync-help ol { padding-left:1.2rem; }
+.sync-help li { margin-top:.28rem; }
+.sync-help code { background:var(--surface-elevated); border-radius:3px; padding:.05rem .35rem; font-family:monospace; font-size:.85em; }
+.sync-help-actions { margin-top:.45rem; }
+.sync-help-toggle {
+  appearance: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--overlay-hover);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  line-height: 1;
+  padding: .34rem .62rem;
+  transition: color .2s, border-color .2s, background .2s;
+}
+.sync-help-toggle:hover {
+  color: var(--text);
+  border-color: rgba(var(--steam-rgb),.35);
+  background: rgba(var(--steam-rgb),.09);
+}
+.sync-gist-row {
+  position: relative;
+  display: flex;
+  width: 100%;
+}
+.sync-gist-row .finput {
+  padding-right: 5.1rem;
+  width: 100%;
+}
+.sync-gist-action {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color .2s, background .2s, border-color .2s;
+}
+.sync-gist-action .ui-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+.sync-gist-action:hover {
+  color: var(--text);
+  background: var(--overlay-hover);
+  border-color: var(--border);
+}
+.sync-gist-action:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}

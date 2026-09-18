@@ -167,8 +167,21 @@ export const ANALYTICS_UI = {
   groupAria: 'Consentimiento de analítica',
   on: 'Activada',
   off: 'Desactivada',
+  /**
+   * QUÉ SE MIRA Y QUÉ NO, dicho en dos listas. La tarjeta tenía una frase y dos botones, y se quedaba a medias
+   * —medio palmo de tarjeta vacía— justo donde hace falta lo contrario: nadie decide sobre un permiso sin saber
+   * qué alcanza. Lo que sale aquí no es relleno; es la respuesta a la única pregunta que se hace al leerlo.
+   */
+  collectsLabel: 'Qué se registra',
+  collects: ['Qué pantallas se visitan', 'Errores de la aplicación', 'Navegador y tamaño de pantalla'],
+  neverLabel: 'Qué no sale nunca de aquí',
+  never: ['Tus listas y tus notas', 'Tus reseñas', 'Tu correo o tu nombre'],
   bannerTitle: 'Analítica opcional',
-  bannerBody: 'Esta app puede usar Google Analytics para medir el uso y detectar errores. Requiere guardar identificadores en tu navegador, así que solo se activa si lo aceptas. Puedes cambiarlo cuando quieras en Cuenta.',
+  /* CUATRO LÍNEAS ERAN TRES DE MÁS. El aviso se lee de pie, tapando la pantalla, y lo único que hay que saber
+     para decidir cabe en dos: qué se recoge y que se puede cambiar de idea. El detalle —qué identificadores,
+     cuánto duran— está en la política de cookies, que tiene su enlace justo debajo.
+     Y ya no manda a «Cuenta», que era una pantalla que ha dejado de existir. */
+  bannerBody: 'Estadísticas de uso anónimas para saber qué falla y qué se usa. Solo se activan si aceptas, y puedes cambiarlo cuando quieras en Ajustes › Legal.',
   bannerAccept: 'Aceptar',
   bannerReject: 'Rechazar',
   bannerMore: 'Política de cookies',
@@ -234,7 +247,6 @@ export const UI_MESSAGES = {
     lists: (tabTitle: string) => `Mis listas de juegos — ${tabTitle}`,
     social: 'Social',
     settings: 'Ajustes',
-    account: 'Cuenta',
     inbox: 'Bandeja de importados',
     admin: 'Administración',
     legal: 'Información legal',
@@ -261,11 +273,24 @@ export const UI_MESSAGES = {
     lists: 'Listados',
     social: 'Social',
     settings: 'Ajustes',
-    account: 'Cuenta',
     inbox: 'Bandeja',
-    // La pestaña se llama "Estadísticas": son las de las listas propias. La ruta sigue siendo `/perfil` y la
+    // La pestaña se llama "Estadísticas": son las de las listas propias. La ruta es `/stats` y la
     // sección `stats`. No confundir con el PERFIL SOCIAL (`/social/profile`), que es la ficha pública.
     stats: 'Estadísticas',
+  },
+  /**
+   * EL MENÚ DE LA PESTAÑA DE AJUSTES. Vive en `labels.ts` y no en `settingsLabels.ts` —donde estaría por
+   * tema— porque la barra inferior viaja en el arranque y aquellos 11 kB solo los paga quien abre una pantalla
+   * de ajustes. Son cuatro palabras: no merecen arrastrar el resto.
+   */
+  settingsMenu: {
+    ariaLabel: 'Ajustes',
+    open: 'Abrir ajustes',
+    design: 'Diseño',
+    filters: 'Filtros',
+    /* «Datos» reúne lo que antes eran «Integración» y «Legal»: por dónde entran y salen tus listas, qué se
+       registra de ellas y cómo se borra todo. */
+    data: 'Datos',
   },
   // Aviso de versión nueva. Solo aparece cuando NO se ha podido recargar sola (ver `useAppUpdate`), así que el
   // texto asume que el usuario está delante y a medio hacer algo: dice qué pasa y deja la decisión en su mano.
@@ -281,14 +306,37 @@ export const UI_MESSAGES = {
     back: 'Volver',
     integrations: {
       title: 'Integraciones',
-      note: 'Importa todos los juegos que ya tienes en tus tiendas, sin añadirlos a mano. Funciona con la app Playnite (solo Windows) y su extensión gratuita «Playnite Library Exporter», que crea un archivo con tu biblioteca. Los juegos llegan primero a la bandeja de importados para que tú decidas cuáles quedarte. Engloba las tiendas de PC (Steam, GOG, Epic, EA, Ubisoft, Amazon y Battle.net) y también las consolas de PlayStation y Xbox si en Playnite instalas sus complementos de biblioteca. Si un juego está en varias tiendas, se combinan sus plataformas en una sola entrada.',
+      /* CINCO FRASES SEGUIDAS ERAN UN MURO. Decían cosas distintas —qué hace, qué necesitas, de dónde trae,
+         qué pasa con los duplicados— y había que leerlas enteras para saber si esto te servía. Ahora la
+         primera va sola arriba y el resto se reparte en lo que cada cosa es: una condición, una lista de
+         tiendas que se lee de un vistazo y una nota al pie. */
+      /* TRES FRASES Y SE ACABÓ. Aquí se viene a traer la biblioteca, no a estudiar cómo funciona: basta con
+         saber qué hace, de dónde lo saca y qué hace falta para ello. Lo demás —los pasos, el detalle de las
+         consolas, qué pasa con un juego repetido— está en las dos guías de abajo, que es donde se busca cuando
+         de verdad hace falta. Las tiendas van dentro de la frase y no en fichas sueltas: son siete nombres, se
+         leen igual de rápido y no fingen ser botones. */
+      note: 'Trae de una vez los juegos que ya tienes en tus tiendas, sin añadirlos a mano: llegan a la bandeja para que elijas cuáles te quedas.',
+      sources: 'Funciona con Steam, GOG, Epic, EA, Ubisoft, Amazon y Battle.net, y también con PlayStation y Xbox si les instalas su complemento en Playnite.',
+      requires: 'Necesitas Playnite (solo Windows) y su extensión gratuita «Playnite Library Exporter».',
       stepsTitle: 'Cómo traer tu biblioteca, paso a paso',
+      /* UN PASO, UNA COSA. Estas instrucciones las sigue alguien con Playnite abierta en la otra pantalla, y
+         cada paréntesis, cada «cuando termine» y cada frase con dos acciones dentro obliga a releer para saber
+         qué toca hacer ahora. Se cuentan como se dictan en voz alta: haz esto, ahora esto. */
+      /* La invitación a descargar Playnite va SUELTA y no dentro del primer paso: solo se enseña en un
+         navegador de Windows, que es el único sitio donde se puede instalar (ver `isWindows`). En el resto
+         —el móvil incluido— el paso se queda en «abre Playnite» y nadie persigue un programa que no existe
+         para su sistema. */
+      downloadHint: 'Si no la tienes, descárgala en',
+      downloadLabel: 'playnite.link',
+      downloadUrl: 'https://playnite.link',
       steps: [
-        'En tu PC con Windows, abre Playnite (si no la tienes, descárgala e instálala desde playnite.link).',
-        'Dentro de Playnite, ve al menú principal (arriba a la izquierda) → «Complementos» → «Explorar complementos» y entra en la pestaña «Genérica».',
-        'Busca «Playnite Library Exporter», pulsa «Instalar» y, cuando termine, cierra y vuelve a abrir Playnite.',
-        'Abre de nuevo el menú principal → «Playnite Library Exporter» → «Export» y confirma. Deja el formato JSON (el que viene por defecto): se guardará un único archivo con extensión «.json».',
-        'Vuelve aquí, pulsa «Importar de Playnite», elige ese archivo «.json» y tus juegos aparecerán en la bandeja de importados.',
+        'Abre Playnite en tu PC con Windows.',
+        'Arriba a la izquierda, entra en «Complementos» → «Explorar complementos» y abre la pestaña «Genérica».',
+        'Busca «Playnite Library Exporter» y pulsa «Instalar».',
+        'Cierra Playnite y vuelve a abrirla.',
+        'Entra otra vez en «Complementos» → «Playnite Library Exporter» → «Export» y confirma. Deja el formato JSON, que es el que viene puesto.',
+        'Se guardará un archivo «.json». Vuelve aquí, pulsa «Importar de Playnite» y elígelo.',
+        'Tus juegos aparecerán en la bandeja de importados, donde eliges cuáles te quedas.',
       ],
       importBtn: 'Importar de Playnite',
       importAria: 'Seleccionar el archivo JSON exportado por Playnite Library Exporter',
@@ -299,10 +347,11 @@ export const UI_MESSAGES = {
           title: 'Añadir tus juegos de PlayStation',
           steps: [
             'Abre Playnite en tu PC con Windows.',
-            'Ve al menú principal (arriba a la izquierda) → «Complementos» → «Explorar complementos» y entra en la pestaña «Bibliotecas».',
-            'Busca el complemento «PlayStation library integration» (hecho por la comunidad, de Xenor), pulsa «Instalar» y, al terminar, cierra y vuelve a abrir Playnite.',
-            'Vuelve al menú principal → «Complementos» → ajustes de «PlayStation library integration» e inicia sesión con tu cuenta de PlayStation, siguiendo los pasos que te muestre.',
-            'Tus juegos de PlayStation aparecerán en Playnite. Ahora solo tienes que exportarlos con «Playnite Library Exporter» (los pasos de más arriba) e importar el archivo aquí.',
+            'Arriba a la izquierda, entra en «Complementos» → «Explorar complementos» y abre la pestaña «Bibliotecas».',
+            'Busca «PlayStation library integration», de Xenor, y pulsa «Instalar».',
+            'Cierra Playnite y vuelve a abrirla.',
+            'Entra en «Complementos» → ajustes de «PlayStation library integration» e inicia sesión con tu cuenta de PlayStation.',
+            'Tus juegos de PlayStation ya están en Playnite. Ahora tráelos aquí con los pasos de la otra guía.',
           ],
         },
       },

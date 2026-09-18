@@ -1,19 +1,4 @@
-// Botones de acción en línea para settings
-.settings-actions-row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 0.5rem;
-  .btn-label {
-    display: inline;
-  }
-}
 
-@media (max-width: 480px) {
-  .settings-actions-row .btn-label {
-    display: none;
-  }
-}
 /* Modals */
 /* SIN BORDE, SOLO ALTURA. A `--e4` sobre el velo del fondo, el marco de 1 px no añade nada: lo que separa el
    modal de la pantalla es la sombra. Los cinco skins siguen poniendo el suyo —el filete cian del HUD, el marco
@@ -48,11 +33,12 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
   from { opacity: 0; transform: translateY(20px) scale(.97); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-@keyframes modalBackdropIn { from { opacity: 0; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) {
+@keyframes modalBackdropIn { from { opacity: 0; } to { opacity: 1; } }@media (prefers-reduced-motion: reduce) {
+
   dialog.modal-dialog[open] .modal,
   dialog.modal-dialog[open]::backdrop { animation: none; }
 }
+
 
 /* Form */
 .fg    { display: flex; flex-direction: column; gap: .42rem; min-width: 0; }
@@ -97,33 +83,22 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
      desplaza dentro de sí misma, con los botones siempre a la vista. */
   max-height: 34vh; overflow-y: auto; overscroll-behavior: contain;
   animation: slideInDown .25s ease-out;
+}@media (prefers-reduced-motion: reduce) {
+ .form-error-summary { animation: none; }
 }
-@media (prefers-reduced-motion: reduce) { .form-error-summary { animation: none; } }
+
 /* La cabecera va en el color de texto normal, no en rojo: a 12,5 px en negrita el rojo del tema claro se queda
    en 3,9:1 de contraste (AA pide 4,5:1). El rojo lo ponen el filete lateral y el fondo, que no llevan texto. */
 .form-error-summary strong { color: var(--text); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .4px; }
 .form-error-summary ul { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: .22rem; }
 .form-error-summary li { color: var(--text); }
-
-/* Admin */
-.admin-tabs { display: flex; flex-wrap: wrap; gap: .5rem; border-bottom: 1px solid var(--border); margin-bottom: .8rem; padding-bottom: .6rem; }
-.admin-tabs .admin-tab { font-size: var(--fs-sm); padding: .5rem .85rem; border-radius: var(--radius-sm); color: var(--text-muted); transition: all .25s; }
-.admin-tabs .admin-tab:hover { background: rgba(var(--steam-rgb),.08); color: var(--text); }
-.admin-tabs .admin-tab.active { background: rgba(var(--steam-rgb),.15); color: var(--fg-link); border-bottom: none; }
 .admin-warning { display: none; padding: .85rem 1rem; border-radius: var(--radius-sm); font-size: var(--fs-sm); border-left: 3px solid transparent; animation: slideInDown .3s ease-out; }
 .admin-warning.show { display: block; }
 .admin-warning.ok   { background: rgba(var(--success-rgb),.12); border-left-color: var(--success); color: var(--fg-green); }
 .admin-warning.warn { background: rgba(var(--warn-rgb),.12);  border-left-color: var(--warn);  color: var(--fg-amber-soft); }
 .admin-warning.err  { background: rgba(var(--danger-rgb),.12);   border-left-color: var(--danger);   color: var(--fg-red); }
-.admin-item { display: flex; justify-content: space-between; align-items: center; gap: .75rem; background: var(--bg); padding: 1rem 1.1rem; border-radius: var(--radius-md); border: 1px solid var(--border); transition: all .25s; animation: slideIn .25s ease-out; }
-.admin-item:hover { border-color: rgba(var(--steam-rgb),.25); background: var(--surface-elevated); box-shadow: var(--glow-accent-soft); }
-.admin-item .row-actions { display: flex; gap: .45rem; flex-wrap: nowrap; align-items: center; justify-content: flex-end; flex: 0 0 auto; }
-.admin-item.editing { border-color: rgba(var(--steam-rgb),.45); box-shadow: var(--ring-accent-soft), inset 0 0 0 1px rgba(var(--steam-rgb),.2); background: rgba(var(--steam-rgb),.06); }
-.admin-item.editing { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
-.admin-item-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .btn-icon-text { gap: .4rem; }
 .btn-icon-text span { display: inline; }
-.admin-action-btn { min-height: 40px; }
 
 /* Status line */
 
@@ -167,44 +142,176 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   box-shadow: var(--e2);
+}@media (prefers-reduced-motion: reduce) {
+
+  .floating-controls { transition: none; }
 }
 
-/* Botones flotantes de navegación (Cuenta / Ajustes): mismo diseño que el cambio de tema; solo cambia
-   el icono. En la sección activa se resaltan con el acento (como el estado hover). */
-.floating-controls .floating-nav-btn.is-active {
-  color: var(--fg-link);
-  background: var(--steam-soft);
-  border-color: rgba(var(--steam-rgb),.35);
-}
-/* A diferencia del sol/luna, el engranaje y el icono de cuenta no deben GIRAR al hover (queda extraño):
-   solo un leve crecimiento como realimentación. */
-.floating-controls .floating-nav-btn:hover .ui-icon { transform: scale(1.08); }
 
-/* Cuenta aparece/desaparece según haya PERFIL SOCIAL COMPLETO. Efecto de fundido PURO (solo opacidad): no se anima
-   el ancho para que no parezca que entra/sale deslizándose de lado. Como el contenedor está anclado a la derecha y
-   Cuenta es el primer botón, colapsar su ancho no desplaza al resto; ese colapso se hace instantáneo al aparecer y
-   retardado (tras el fundido) al ocultar, de modo que el hueco se gestiona sin movimiento horizontal visible. */
-.floating-controls .floating-nav-account {
-  overflow: hidden;
-  /* Aparecer: el hueco se abre al instante y el botón GANA opacidad. */
-  transition: opacity .35s ease;
-}
-.floating-controls .floating-nav-account.is-gone {
-  width: 0;
+/* ═══ EL MENÚ DE LA PESTAÑA DE AJUSTES · cuatro puntos y nada debajo ═══════════════════════════════════
+   No hay panel, ni velo, ni caja: los rótulos flotan sobre la pantalla con un punto de luz delante, y lo que
+   hay detrás se sigue viendo entero. Quien sostiene el contraste es `.main.is-dimmed` —el contenido baja al
+   30 % mientras esto está abierto—, no una superficie; la sombra del texto (`--glow-text`) remata.
+
+   Es un `popover`, así que hay que DESHACER lo que el navegador le pone por defecto: borde, relleno, fondo,
+   `inset: 0` y el `margin: auto` que lo centraría en la pantalla. */
+.settings-menu {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  border: 0;
   padding: 0;
-  margin-right: -.5rem;
-  border-width: 0;
+  background: none;
+  overflow: visible;
+  color: var(--text);
+  /* Se apoya sobre la barra midiéndola, no adivinándola: `--bottom-nav-h` lo publica `BottomNavigation` y
+     crece con ella (rótulo apilado, franja del gesto inferior). El valor de reserva es su alto en escritorio,
+     por si el menú se pinta antes de que la barra se haya medido. */
+  bottom: calc(var(--bottom-nav-h, 4.6rem) + .55rem);
+  /* ALINEADO CON LA COLUMNA DE SU PESTAÑA: la barra se centra a 760px, así que su borde derecho cae en
+     `50% - 380px`, y dentro queda el relleno de la pastilla (.4rem). En una pantalla estrecha manda el margen
+     lateral de la barra (.9rem) más ese mismo relleno. */
+  right: max(1.3rem, calc(50% - 380px + .4rem));
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .1rem;
+}
+
+/* EL `display` VA AQUÍ Y NO ARRIBA, y no es una manía de orden: un `popover` cerrado lo esconde el navegador con
+   un `display: none` de su hoja de agente, y cualquier `display` declarado por el autor GANA a esa regla. Con
+   `display: flex` en la regla de base, el menú se quedaba pintado en pantalla todo el rato —los tres rótulos
+   flotando sobre los listados—, y `:popover-open` seguía diciendo que no, que estaba cerrado. */
+.settings-menu:popover-open {
+  display: flex;
+}
+
+/* Y SE APARTA DEL AVISO DE CONSENTIMIENTO, que se apoya sobre la barra mientras no se ha decidido. El menú
+   vive en la capa superior, así que técnicamente gana; pero ganar aquí significa escribir los rótulos ENCIMA
+   del texto del aviso, que es peor que perder. Se sube lo que el aviso mide —`--consent-h`, publicada por él
+   mismo—, igual que ya hace el carril de las cápsulas y por el mismo motivo: nadie duplica la medida de nadie. */
+:root[data-consent='pending'] .settings-menu {
+  bottom: calc(var(--bottom-nav-h, 4.6rem) + var(--consent-h, 9.25rem) + .55rem);
+}
+
+.settings-menu-point {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  min-height: 44px;
+  padding: .3rem .35rem .3rem .7rem;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  /* EL TAMAÑO ES EL RANGO, y este es el primer peldaño: el titular de sección. Los otros dos bajan desde aquí
+     (ver `.is-second` y `.is-third`). */
+  font-size: var(--fs-xl);
+  font-weight: 500;
+  text-shadow: var(--glow-text);
+  /* SIN SUBRAYAR, ni en reposo ni al señalar: son enlaces por lo que hacen —llevan a una dirección, se abren en
+     otra pestaña, se copian—, no por cómo se ven. Aquí el subrayado sobraría: el punto de luz ya dice que la
+     línea es pulsable, y con cuatro rótulos flotando sin fondo, cuatro rayas añaden ruido donde hay que leer. */
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: var(--radius-pill);
+  transition: color .18s ease, transform .18s ease;
+}
+
+.settings-menu-point:hover { color: var(--fg-link); text-decoration: none; transform: translateX(-2px); }
+
+/* El punto es la única pieza con color propio: crece al señalar y se queda crecido en el grupo abierto. */
+.settings-menu-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--fg-link);
+  box-shadow: 0 0 8px rgba(var(--steam-rgb),.9), 0 0 3px color-mix(in srgb, var(--bg), transparent 10%);
+  transition: transform .18s ease;
+}
+
+.settings-menu-point:hover .settings-menu-dot,
+.settings-menu-point.is-current .settings-menu-dot { transform: scale(1.35); }
+
+/* SIN BORDES NI FONDOS, el anillo de foco es lo ÚNICO que dice dónde está el teclado. No se hereda de ningún
+   sitio porque estos botones no son `.btn`: va escrito aquí a propósito. */
+.settings-menu-point:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+/* LOS DOS ESCALONES DE ABAJO. Cada punto baja un peldaño de verdad de la escala tipográfica —1,20 · 0,93 ·
+   0,79 rem— porque con rótulos flotando sin caja el tamaño es lo ÚNICO que dice el rango: medio peldaño se lee
+   como una irregularidad, no como una jerarquía.
+
+   Lo que baja es el TAMAÑO y, en el último, el tono; nunca por debajo de `--text-muted`: el contraste de estos
+   rótulos lo sostiene el contenido atenuado de debajo —medido para `--text`, ver la nota del componente—, así
+   que apagarlos más sería abrir un caso que nadie ha medido.
+
+   Y se les baja el rango, no el acceso: la zona pulsable sigue siendo la misma (`min-height: 44px`), que
+   retirar el consentimiento de la analítica tiene que costar lo mismo que darlo. */
+.settings-menu-point.is-second {
+  font-size: var(--fs-md);
+  margin-top: .15rem;
+}
+.settings-menu-point.is-second .settings-menu-dot { width: 6px; height: 6px; opacity: .9; }
+
+.settings-menu-point.is-third {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  margin-top: .1rem;
+}
+.settings-menu-point.is-third .settings-menu-dot { width: 4px; height: 4px; opacity: .75; }
+
+/* LO DE DEBAJO SE APAGA, no se tapa. Es lo que da el contraste de los rótulos sin poner ninguna capa encima:
+   medido con una carátula blanca detrás en tema oscuro, 6,4:1 en el peor píxel del trazo (y 6,6:1 con una
+   negra en claro).
+
+   SE APAGA TODO LO QUE NO ES EL MENÚ: el contenido, los dos botones de acción de los listados, el carril de
+   los avisos y los controles flotantes. Dejar encendida una sola de esas piezas se nota —un botón de acción a
+   plena luz junto a unos rótulos a media asta parece un error de pintado, no una decisión—. La única que sigue
+   encendida es la BARRA: es donde está el dedo y lo que explica de dónde ha salido el menú.
+   Y lo apagado tampoco se toca: con el `popover` abierto, un toque fuera lo cierra, pero el mismo toque seguiría
+   llegando al botón que hubiera debajo. `pointer-events: none` evita que cerrar el menú abra un formulario. */
+.main,
+.fab,
+.fab-roulette,
+.ach-toast-stack,
+.floating-controls { transition: opacity .22s ease; }
+
+body.settings-menu-open .main,
+body.settings-menu-open .ach-toast-stack,
+/* El AVISO DE CONSENTIMIENTO también: es lo único que quedaba encendido, y encima es lo más alto de la pila
+   (z-index 130), así que con todo lo demás a media asta cantaba el doble. Que deje de recibir toques importa
+   aquí más que en ningún otro sitio: el mismo toque que cierra el menú habría podido pulsar «Aceptar», y un
+   consentimiento no se da sin querer. Sigue en su sitio, intacto, en cuanto el menú se cierra. */
+body.settings-menu-open .consent-banner,
+/* `:not(.is-hidden)` para no resucitar al 30 % unos controles que el scroll acababa de esconder: allí la regla
+   es `opacity: 0` y esta la ganaría por especificidad. */
+body.settings-menu-open .floating-controls:not(.is-hidden) {
+  opacity: .30;
+  pointer-events: none;
+}
+
+/* LOS DOS BOTONES DE ACCIÓN SE VAN DEL TODO, y no a media luz como el resto. No es una excepción caprichosa:
+   nacen en la misma esquina de la que sale el menú, así que a un 30 % seguían dibujándose DETRÁS de los
+   rótulos —el círculo del «+» justo sobre «Legal»—, y dos cosas superpuestas se leen peor que una tapada.
+   Además ya no se pueden pulsar, y enseñar apagado lo que no se puede usar solo invita a intentarlo. */
+body.settings-menu-open .fab,
+body.settings-menu-open .fab-roulette {
   opacity: 0;
   pointer-events: none;
-  /* Ocultar: primero PIERDE opacidad y solo DESPUÉS colapsa el hueco, para que el fundido no se corte de golpe. */
-  transition: opacity .35s ease, width 0s .35s, margin 0s .35s, padding 0s .35s, border-width 0s .35s;
+}@media (prefers-reduced-motion: reduce) {
+
+  .main,
+  .fab,
+  .fab-roulette,
+  .ach-toast-stack,
+  .floating-controls,
+  .settings-menu-point,
+  .settings-menu-dot { transition: none; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .floating-controls,
-  .floating-controls .floating-nav-account,
-  .floating-controls .floating-nav-account.is-gone { transition: none; }
-}
 
 /* Sin barra superior: Social y Ajustes dejan hueco arriba para los controles flotantes. */
 .main-social,
@@ -265,11 +372,8 @@ body.compact-filters .filter-field-toggle { align-self: end; }
 body.compact-filters .filter-field-toggle .flabel { visibility:hidden; }
 body.compact-filters .filters-row.open .btn-toggle,
 body.compact-filters .filters-row.open .filter-field { width: 100%; }
-body.compact-filters .filters-row.open .btn-toggle { justify-content: center; align-self: stretch; min-height: 42px; }
+body.compact-filters .filters-row.open .btn-toggle { justify-content: center; align-self: stretch; min-height: 42px; }@media (min-width:721px) and (max-width:1100px) {
 
-
-/* --- BLOQUE CORREGIDO PARA TABLETS (Xiaomi Pad 7 - 721px a 1100px) --- */
-@media (min-width:721px) and (max-width:1100px) {
   body {
     height: auto;
     min-height: 100vh;
@@ -347,11 +451,9 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
   .detail-weak {
     display: flex !important;
   }
-
 }
-
-/* Responsive Móvil Estricto */
 @media (max-width:720px) {
+
   body { 
     height: auto;
     min-height: 100vh;
@@ -400,51 +502,11 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
   
   .btn-icon-text span { display: none; }
   .btn-icon-text { padding: .55rem; min-width: 42px; }
-
-  .admin-item { align-items: center; }
-  .admin-item.editing { grid-template-columns: minmax(0, 1fr) auto; }
-  .admin-item .row-actions .admin-action-btn span { display: none; }
-  .admin-item .row-actions .admin-action-btn {
-    min-width: 40px;
-    width: 40px;
-    height: 40px;
-    padding: 0;
-  }
 }
+
 
 @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes slideInDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
-
-/* Sync modal */
-.sync-help {
-  font-size: var(--fs-xs); color:var(--text-muted); line-height:1.6;
-  background:var(--surface-elevated); border-radius:var(--radius-sm);
-  padding:.8rem 1rem; border:1px solid var(--border);
-}
-.sync-help a { color:var(--fg-link); text-decoration:none; }
-.sync-help a:hover { text-decoration:underline; }
-.sync-help ol { padding-left:1.2rem; }
-.sync-help li { margin-top:.28rem; }
-.sync-help code { background:var(--surface-elevated); border-radius:3px; padding:.05rem .35rem; font-family:monospace; font-size:.85em; }
-.sync-help-actions { margin-top:.45rem; }
-.sync-help-toggle {
-  appearance: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  background: var(--overlay-hover);
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: var(--fs-2xs);
-  font-weight: 700;
-  line-height: 1;
-  padding: .34rem .62rem;
-  transition: color .2s, border-color .2s, background .2s;
-}
-.sync-help-toggle:hover {
-  color: var(--text);
-  border-color: rgba(var(--steam-rgb),.35);
-  background: rgba(var(--steam-rgb),.09);
-}
 .token-row { position:relative; display:flex; }
 .token-row .finput { padding-right:2.8rem; flex:1; }
 .token-toggle { position:absolute; right:.55rem; top:50%; transform:translateY(-50%);
@@ -452,41 +514,32 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
   font-size: var(--fs-md); padding:.2rem; line-height:1; }
 .token-toggle .ui-icon { width: var(--ico-lg); height: var(--ico-lg); }
 .token-toggle:hover { color:var(--text); }
-.sync-gist-row {
-  position: relative;
-  display: flex;
-  width: 100%;
-}
-.sync-gist-row .finput {
-  padding-right: 5.1rem;
-  width: 100%;
-}
-.sync-gist-action {
-  width: 2rem;
-  height: 2rem;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-muted);
+/* EL SEMÁFORO DE UN ESTADO. Un punto y el texto: sin caja, sin fondo y sin gritar, pero con color propio —el
+   mismo verde y el mismo rojo que ya usan los semáforos de la aplicación— y a la altura del título, que es
+   donde se busca. El punto lleva su halo para que se vea también en las paletas más apagadas.
+   EN EL BUNDLE BASE, y no en `settings.scss`, por el mismo motivo que `.sync-status-msg`: lo comparten tres
+   chunks distintos —Integración, el documento legal y la tarjeta de conexión del hub social—. */
+.sync-state {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: color .2s, background .2s, border-color .2s;
+  gap: .45rem;
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 700;
 }
-.sync-gist-action .ui-icon {
-  width: 1.15rem;
-  height: 1.15rem;
+
+.sync-state-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
 }
-.sync-gist-action:hover {
-  color: var(--text);
-  background: var(--overlay-hover);
-  border-color: var(--border);
-}
-.sync-gist-action:disabled {
-  opacity: .5;
-  cursor: not-allowed;
-}
+
+.sync-state.is-on { color: var(--success); }
+.sync-state.is-off { color: var(--text-dim); }
+
 .sync-status-msg { font-size: var(--fs-xs); padding:.55rem .85rem; border-radius:var(--radius-sm); border:1px solid transparent; display:none; }
 .sync-status-msg.ok   { background:rgba(var(--success-rgb),.1); border-color:rgba(var(--success-rgb),.25); color:var(--fg-green-soft); display:block; }
 .sync-status-msg.err  { background:rgba(var(--danger-rgb),.1);   border-color:rgba(var(--danger-rgb),.25);  color:var(--fg-red); display:block; }
@@ -507,17 +560,16 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
 
 /* El estado "resolviéndose" de una tarjeta de persona vive con la tarjeta (`.hub-user-card.is-busy`, en
    `social.scss`); aquí queda solo el giro, que comparten ese spinner y el del botón de publicar. */
-@keyframes hubSpin { to { transform: rotate(360deg); } }
+@keyframes hubSpin { to { transform: rotate(360deg); } }@media (prefers-reduced-motion: reduce) {
 
-@media (prefers-reduced-motion: reduce) {
   .sync-status-msg.ok, .sync-status-msg.err, .sync-status-msg.warn { animation: none; }
   .fab { transition: none; }
   .fab:hover, .fab:active { transform: none; filter: none; }
   .tag-inp-wrap > .chip, .active-filter-chip { animation: none; }
   /* El spinner sigue girando (indica progreso), pero la tarjeta no se anima de más. */
 }
-
 @media (min-width:721px) and (max-width:1400px) {
+
   body.compact-filters .filters-row.open {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -531,8 +583,8 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
     align-self: end;
   }
 }
-
 @media (max-width:720px) {
+
   body.compact-filters .filters-row.open {
     grid-template-columns: 1fr;
   }
@@ -541,6 +593,7 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
     width: 100%;
   }
 }
+
 
 /* === Clases de utilidad (inline styles migrados desde HTML) === */
 .svg-sprite   { position: absolute; width: 0; height: 0; overflow: hidden; }
@@ -599,11 +652,8 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
 /* === Suprimir spinner en inputs numéricos de texto === */
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+input[type=number] { -moz-appearance: textfield; appearance: textfield; }@media (min-width:1101px) and (max-width:1400px) {
 
-/* === MEDIA QUERY: 1100px - 1400px === */
-/* Página completa scrolleable */
-@media (min-width:1101px) and (max-width:1400px) {
   body {
     height: auto;
     min-height: 100dvh;

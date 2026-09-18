@@ -15,6 +15,7 @@ import { PostBody } from './PostText';
 import { HubAvatar } from './HubAvatar';
 import { HubOfflineNotice } from './HubOfflineNotice';
 import { FeedShell } from './FeedShell';
+import { FeedComposer } from './FeedComposer';
 import { AchievementSprite } from '../AchievementSprite';
 
 /**
@@ -65,8 +66,6 @@ function SocialFeedScreenBase({
   openActivityDetail,
   openMoveReview,
   handleActivityItemKeyDown,
-  composePostText,
-  setComposePostText,
   publishingPost,
   handlePublishPost,
   canPublishPosts,
@@ -105,10 +104,9 @@ function SocialFeedScreenBase({
    */
   openMoveReview: (actorProfileId: string, gameId: number) => void;
   handleActivityItemKeyDown: (event: React.KeyboardEvent<HTMLElement>, entry: SocialActivityFeedItem) => void;
-  composePostText: string;
-  setComposePostText: (v: string) => void;
   publishingPost: boolean;
-  handlePublishPost: () => void;
+  /** Publica el texto y dice si salió: el compositor vacía su cuadro solo cuando es `true`. */
+  handlePublishPost: (text: string) => Promise<boolean>;
   /** Rango de quien mira: bronce no publica. */
   canPublishPosts: boolean;
   postMaxLength: number;
@@ -126,30 +124,6 @@ function SocialFeedScreenBase({
   // montaje y no cambia en cada repintado (esta pantalla re-renderiza con cualquier cambio del hub).
   const [lienzoFx] = React.useState(() => Math.floor(Math.random() * LIENZO_FX_VARIANTS));
   const feedSentinelRef = React.useRef<HTMLButtonElement>(null);
-  const composerRef = React.useRef<HTMLTextAreaElement>(null);
-
-  // Autocrecimiento del compositor: parte de una línea (el tamaño del campo de antes) y se estira con el
-  // contenido, tanto al saltar de línea con Enter como al desbordar por ancho. Se hace midiendo `scrollHeight`
-  // con la altura reseteada; el tope lo pone el CSS (`max-height`), que a partir de ahí saca su propio scroll.
-  React.useLayoutEffect(() => {
-    const el = composerRef.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight}px`;
-  }, [composePostText, canPublishPosts]);
-
-  // Contador de la publicación: mismas bandas que el de la reseña (aviso al 90 %, error al 100 %), para que el
-  // usuario reconozca el patrón sin aprenderlo dos veces.
-  const postProgress = showPostCounter
-    ? Math.min(100, Math.round((composePostText.length / postMaxLength) * 100))
-    : 0;
-  const postProgressClass = postProgress >= 100 ? 'has-error' : postProgress >= 90 ? 'has-warning' : '';
-  const postLiveMessage =
-    postProgress >= 100
-      ? SOCIAL_UI.feed.postCharLimitReached
-      : postProgress >= 90
-        ? SOCIAL_UI.feed.postCharNearLimit
-        : '';
 
   // Cuántos elementos hay pintados ahora mismo. Es lo ÚNICO que debe rearmar el observador de abajo: cuando el lote
   // crece y el centinela sigue en pantalla, hace falta una observación nueva para que vuelva a dispararse (el
@@ -202,55 +176,13 @@ function SocialFeedScreenBase({
       actions={{ pendingIncomingCount, onOpenProfiles, onOpenRequests, onSignOut: handleSignOut }}
       notice={offline ? <HubOfflineNotice hasCachedData={offlineHasCachedData} /> : null}
       composer={canPublishPosts ? (
-        <div className="fg">
-          <span className="flabel">{SOCIAL_UI.feed.postsTitle}</span>
-          <div className="hub-post-composer">
-            <label className="sr-only" htmlFor="hub-post-text">{SOCIAL_UI.feed.postComposerLabel}</label>
-            <textarea
-              id="hub-post-text"
-              ref={composerRef}
-              className="ftextarea hub-post-input"
-              // Arranca con la altura de una línea (como el campo de antes) y crece sola con el contenido.
-              rows={1}
-              value={composePostText}
-              placeholder={SOCIAL_UI.feed.postPlaceholder}
-              // Mithril no lleva tope: sin `maxLength`, el navegador no corta al escribir.
-              maxLength={showPostCounter ? postMaxLength : undefined}
-              onChange={(event) => setComposePostText(event.target.value.slice(0, postMaxLength))}
-              onKeyDown={(event) => {
-                // Enter ya NO publica: ahora hace lo que se espera en un campo de varias líneas, saltar de
-                // línea. Con textos de hasta 10.000 caracteres, publicar al pulsar Enter sería soltar el post
-                // a medio escribir. Se publica con el botón, o con Ctrl/⌘+Enter para quien va por teclado.
-                if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-                  event.preventDefault();
-                  if (!publishingPost && composePostText.trim()) handlePublishPost();
-                }
-              }}
-            />
-            <button
-              className="btn btn-steam hub-post-publish"
-              type="button"
-              disabled={publishingPost || !composePostText.trim()}
-              onClick={handlePublishPost}
-              aria-label={publishingPost ? SOCIAL_UI.feed.postPublishing : SOCIAL_UI.feed.postPublish}
-              title={publishingPost ? SOCIAL_UI.feed.postPublishing : SOCIAL_UI.feed.postPublish}
-            >
-              {publishingPost ? <span className="hub-spinner" aria-hidden="true" /> : <Icon name="angle-right" />}
-            </button>
-          </div>
-          {/* Mismo patrón que el contador de la reseña (FormModal): conteo visible SIN aria-live y una región
-              viva aparte que solo lleva texto en los umbrales, para no anunciar en cada pulsación. */}
-          {showPostCounter ? (
-            <div className="field-footer">
-              <small className={`tag-hint ${postProgressClass}`.trim()}>
-                {SOCIAL_UI.feed.postCharCount(composePostText.length, postMaxLength)}
-              </small>
-              <span className="sr-only" role="status" aria-live="polite">
-                {postLiveMessage}
-              </span>
-            </div>
-          ) : null}
-        </div>
+        <FeedComposer
+          SOCIAL_UI={SOCIAL_UI}
+          publishing={publishingPost}
+          postMaxLength={postMaxLength}
+          showPostCounter={showPostCounter}
+          onPublish={handlePublishPost}
+        />
       ) : null}
     >
       <div className="fg">

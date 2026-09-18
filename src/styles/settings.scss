@@ -1,0 +1,664 @@
+// ═══ LAS PANTALLAS DE AJUSTES ═══════════════════════════════════════════════════════════════════════
+//
+// Todo lo que pintan los cuatro grupos de Ajustes —tarjetas, selector de tema, interruptores, escala de nota,
+// editor de etiquetas, estado de la sincronización, documentos legales— y nada más.
+//
+// VIVE FUERA DEL BUNDLE BASE, como `stats.scss`, `social.scss`, `admin.scss` e `import.scss`: eran 26 kB de
+// reglas viajando en el arranque para pintar unas pantallas en las que se entra una vez al mes. La importan
+// los componentes que las usan, así que Vite las emite en sus chunks perezosos y solo se descargan al entrar.
+//
+// QUÉ SE QUEDÓ EN EL BUNDLE BASE, y por qué:
+//   · `.settings-menu*` — el menú de la pestaña se monta con la aplicación, no con una pantalla de ajustes;
+//   · `.admin-warning` — lo comparte el panel de administración, que es otro chunk;
+//   · `.sync-status-msg` — lo comparte el hub social, ídem;
+//   · `.sync-state` — el semáforo con su punto, que pintan esta pantalla, el documento legal y la tarjeta
+//     de conexión con GitHub (`sync-card.scss`), que el hub social monta en su pasarela.
+// Una regla que use una pantalla de OTRO chunk no puede venirse aquí: se quedaría sin estilo al entrar por su
+// lado, que es exactamente lo que le pasó a `social.scss` en su día.
+//
+// El orden interno es el mismo que tenían en `_layout.scss` y `_overlays-and-responsive.scss`, y en ese orden
+// se pegan: mover reglas de sitio puede cambiar quién gana un empate de especificidad, así que no se reordena.
+
+/* ── De `_layout.scss` ─────────────────────────────────────────────────────── */
+
+
+
+.settings-hub {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+/* BORDE POR PAPEL (DESIGN.md §8). La tarjeta ya se sostiene con su plano, así que el borde baja a filete: está
+   para decir dónde acaba, no para dibujarla. El marco entero se lo quedan las piezas sin elevación. */
+.settings-card {
+  grid-column: span 12;
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-md);
+  box-shadow: var(--e1), var(--edge);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+}
+
+.settings-card h2 {
+  font-size: var(--fs-lg);
+}
+
+.settings-card p {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+}
+
+
+
+/* F2 — selector de escala de puntuación (estrellas / nota) en Ajustes. */
+.score-scale-choice { display: grid; gap: .6rem; }@media (max-width: 30rem) {
+
+  .settings-appearance .score-scale-opt { padding: .5rem .7rem; gap: .6rem; }
+  .settings-appearance .palette-swatch { width: 2.6rem; height: 1.6rem; }
+  .settings-appearance .score-scale-choice { gap: .45rem; }
+  .appearance-grid { gap: .7rem 1rem; }
+}
+
+
+/* EL SELECTOR DE TEMA SE REPARTE POR SÍ SOLO: son ocho opciones y en una columna se comían media pantalla.
+   `auto-fit` da cuatro columnas en una tarjeta ancha, dos en una media y una en el móvil, sin un solo
+   `@media`. El mínimo lo fija el nombre más largo («Ladrones de corazones») con su previsualización al lado. */
+.settings-appearance .score-scale-choice {
+  grid-template-columns: repeat(auto-fit, minmax(15.5rem, 1fr));
+}
+
+.score-scale-choice.is-locked { opacity: .6; }
+
+.score-scale-opt {
+  display: flex; align-items: center; gap: .8rem;
+  padding: .7rem .85rem;
+  min-width: 0;
+  background: var(--surface-soft); border: 1px solid var(--border); border-radius: 9px;
+  cursor: pointer; text-align: left; color: var(--text); font: inherit;
+  transition: background .16s, border-color .16s;
+}
+
+.score-scale-opt:hover:not(:disabled) { background: var(--surface-hover); }
+
+.score-scale-opt:disabled { cursor: not-allowed; }
+
+.score-scale-opt.on { border-color: var(--fg-sky); }
+
+.score-scale-opt:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+.score-scale-dot {
+  width: 17px; height: 17px; border-radius: 50%; border: 2px solid var(--text-dim);
+  flex: 0 0 auto; display: grid; place-items: center;
+}
+
+.score-scale-opt.on .score-scale-dot { border-color: var(--fg-sky); }
+
+.score-scale-opt.on .score-scale-dot::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--fg-sky); }
+
+.score-scale-txt { flex: 1 1 auto; display: grid; gap: .1rem; }
+
+.score-scale-txt b { font-size: var(--fs-md); font-weight: 600; }
+
+.score-scale-txt span { color: var(--text-muted); font-size: var(--fs-xs); }
+
+.score-scale-sample { flex: 0 0 auto; display: inline-flex; align-items: center; }
+
+.score-scale-locked { display: flex; align-items: center; gap: .35rem; color: var(--text-dim); font-size: var(--fs-xs); }
+
+.score-scale-locked .ui-icon { width: 1em; height: 1em; flex: 0 0 auto; }
+
+/* F1 — selector de apariencia: el tema arriba, a lo ancho, y debajo las cinco preguntas de dos respuestas.
+   Ya no cuelga de "Ajustes de cuenta" —tiene tarjeta propia en «Personalización»—, así que pierde el filete
+   superior que la separaba de la escala de nota. */
+.settings-appearance { display: flex; flex-direction: column; gap: 1rem; }
+
+.settings-appearance .settings-card-sub { margin: 0 0 .5rem; }
+
+/* LAS CINCO BINARIAS, EN REJILLA. Apiladas una debajo de otra estiraban la tarjeta a 778px en escritorio —con
+   media pantalla vacía al lado— y a más de mil en un móvil. `auto-fit` reparte según el sitio que haya: tres
+   columnas en una tarjeta ancha, dos en una media, una en el móvil. El mínimo de 13rem es lo que mide el par de
+   botones más largo («Activadas»/«Desactivadas») CON el relleno de los dos botones y el de la caja que los
+   agrupa. Con menos, la columna encoge los botones por debajo de su texto —llevan `flex: 1 1 0` y
+   `min-width: 0`, así que se dejan estrechar— y el rótulo acaba rozando el canto de su caja. */
+.appearance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16.5rem, 1fr));
+  gap: .9rem 1.1rem;
+}
+
+/* CADA OPCIÓN, EN SU CAJA. Puestas en fila, cinco rótulos con su par de botones debajo se leían como una tira
+   de diez botones sueltos: no se veía dónde acababa «Modo» y empezaba «Texto», que es justo lo que un control
+   binario no puede permitirse. La caja no dibuja nada nuevo —es el mismo fondo hundido y el mismo filete que
+   usan las opciones de la escala de nota— y lo que hace es agrupar: el rótulo y sus dos botones quedan dentro
+   de un mismo recinto, más cerca entre ellos que del vecino. */
+.appearance-field {
+  min-width: 0;
+  background: var(--surface-soft);
+  border: 1px solid var(--hair);
+  border-radius: 9px;
+  padding: .6rem .7rem .7rem;
+}
+.appearance-field .settings-card-sub { margin-bottom: .45rem; }
+
+/* Cada opción de tema es una MINI-PREVISUALIZACIÓN: tarjeta con el fondo oscuro del tema, una barra de
+   acento arriba y una esquina con el fondo claro → previsualiza los tres colores de un vistazo. Los colores
+   llegan por variables (`--sw-*`) fijadas en el botón de la opción. */
+.palette-swatch {
+  position: relative;
+  width: 3.1rem;
+  height: 1.95rem;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--sw-dark, var(--surface-elevated));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16);
+  transition: transform .16s ease;
+}
+
+.palette-swatch::before { /* barra de acento superior: acento + color secundario si el tema es dual (p. ej. azul+naranja) */
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 6px;
+  background: linear-gradient(90deg, var(--sw-accent, var(--steam)) 0 60%, var(--sw-accent2, var(--sw-accent, var(--steam))) 60% 100%);
+}
+
+.palette-swatch::after { /* esquina inferior derecha con el fondo claro del tema */
+  content: ''; position: absolute; right: 0; bottom: 0; width: 46%; height: 62%;
+  background: var(--sw-light, #fff); clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+.score-scale-opt:hover:not(:disabled) .palette-swatch { transform: translateY(-1px) scale(1.04); }
+
+/* En el selector de TEMA, la opción activa se resalta con el ACENTO DEL PROPIO TEMA (no el azul genérico),
+   para que cada identidad "pegue" con su color. Ámbito acotado a Ajustes de apariencia. */
+.settings-appearance .score-scale-opt.on { border-color: var(--sw-accent); box-shadow: 0 0 0 1px var(--sw-accent), 0 6px 18px color-mix(in srgb, var(--sw-accent) 22%, transparent); }
+
+.settings-appearance .score-scale-opt.on .score-scale-dot { border-color: var(--sw-accent); }
+
+.settings-appearance .score-scale-opt.on .score-scale-dot::after { background: var(--sw-accent); }
+
+/* El anillo NO sigue a `--sw-accent`: esa variable es el color de la MUESTRA de cada paleta del selector, así
+   que el foco heredaba un color arbitrario (el oro de Mar de estrellas sobre su propio turquesa, por ejemplo) y
+   podía quedar invisible. El resto de la tarjeta sí se viste con la muestra. */
+.settings-appearance .score-scale-opt:focus-visible { outline-color: var(--focus-ring); }
+
+.theme-mode-row { display: flex; gap: .5rem; }
+
+/* `flex: 1 1 0` → ambos botones ocupan la misma mitad aunque el texto sea más largo (antes `auto` los
+   dimensionaba por contenido y quedaban de tamaños distintos). */
+.theme-mode-row .btn { flex: 1 1 0; min-width: 0; justify-content: center; }
+
+/* LA FILA DE LA ACCIÓN PRINCIPAL, arriba de su tarjeta: el botón que se ha venido a pulsar, sus acompañantes
+   y el enlace que despliega el detalle. Se alinean por la base para que el enlace no baile respecto a los
+   botones, y envuelve en cuanto no caben, que en un móvil es siempre. */
+.settings-actions-lead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .6rem .9rem;
+  margin: .2rem 0 .1rem;
+}
+
+/* EL TÍTULO CON SU ESTADO AL LADO (la conformidad legal, y antes también la sincronización): el semáforo se
+   pone a la altura del título, que es donde se busca, en vez de caer debajo. El semáforo en sí —`.sync-state`—
+   vive en el bundle base: lo comparten esta pantalla y la tarjeta de conexión del hub social. */
+.settings-card-head.settings-card-head-row {
+  display: flex;
+  /* Explícito: `.settings-card-head` apila en columna, y sin decir lo contrario aquí el estado caía debajo del
+     título en vez de ponerse a su altura, que es lo único que esta variante cambia. */
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .3rem .8rem;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+}
+
+.settings-import-label {
+  cursor: pointer;
+  /* Ancla el input recortado, que va en posición absoluta (ver `.input-hidden`). Sin esto se colgaría del
+     primer ancestro posicionado, que puede estar en cualquier parte de la página. */
+  position: relative;
+}
+
+/* El foco lo recibe el input, que está recortado y no se ve: si la etiqueta no pinta el anillo, quien navega con
+   teclado llega al control sin ninguna señal de que está ahí. `:focus-within` y no `:focus-visible` porque el
+   elemento enfocado es el hijo, no la etiqueta. */
+.settings-import-label:focus-within {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.settings-card-backup {
+  gap: 1rem;
+  border-top: 2px solid rgba(var(--success-rgb),.35);
+}
+
+.settings-card-head {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+
+.settings-card-note {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.settings-backup-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.settings-backup-info p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.settings-backup-warning {
+  border: 1px solid rgba(var(--steam-rgb),.18);
+  background: rgba(var(--steam-rgb),.08);
+  border-radius: var(--radius-sm);
+  padding: .85rem 1rem;
+  color: var(--text);
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+}
+
+.settings-backup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .65rem;
+}
+
+.settings-backup-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: .85rem;
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 700;
+  background: transparent;
+  border: none;
+  padding: 0;
+  transition: color .2s ease;
+}
+
+.settings-backup-toggle:hover {
+  color: var(--fg-link);
+}
+
+.settings-backup-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.settings-backup-toggle-track {
+  width: 52px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--overlay-hover);
+  border: 1px solid var(--border);
+  /* La pista es el CARRIL —un hueco— y el mando, la pieza que va encima con su `--e2`: los dos juntos son lo
+     que hace que un interruptor se lea como algo que se desliza y no como dos rectángulos superpuestos. */
+  box-shadow: var(--sunk);
+  position: relative;
+  transition: background .2s ease, border-color .2s ease;
+  flex-shrink: 0;
+}
+
+.settings-backup-toggle-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--e2);
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform .2s ease, background .2s ease;
+}
+
+.settings-backup-toggle input:checked + .settings-backup-toggle-track {
+  background: rgba(var(--steam-rgb),.2);
+  border-color: rgba(var(--steam-rgb),.35);
+}
+
+.settings-backup-toggle input:checked + .settings-backup-toggle-track .settings-backup-toggle-thumb {
+  transform: translateX(24px);
+  background: #ffffff;
+}
+
+.settings-backup-toggle-label {
+  font-size: var(--fs-md);
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.settings-card-status {
+  border-top: 2px solid rgba(var(--steam-rgb),.35);
+}
+
+.settings-card-admin {
+  border-top: 2px solid rgba(var(--success-rgb),.35);
+}
+
+.settings-admin-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .5rem;
+  margin-bottom: .75rem;
+}
+
+/* Pestañas de categoría del administrador de filtros. Su aspecto vivía en `social.scss` —el chunk perezoso del
+   hub—, así que en Ajustes solo se pintaban si antes se había abierto el hub social: sin esa hoja el botón
+   activo era indistinguible del resto. Van aquí, con su rejilla, porque la pantalla no es perezosa. */
+.settings-admin-tab {
+  border: 1px solid var(--border);
+  background: var(--hub-card-bg);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  padding: .45rem .6rem;
+  font-weight: 700;
+  font-size: var(--fs-xs);
+  text-align: center;
+  transition: all .2s ease;
+}
+
+.settings-admin-tab:hover {
+  border-color: rgba(var(--steam-rgb),.35);
+  color: var(--text);
+}
+
+.settings-admin-tab:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* La pestaña pulsada no se fía de un solo indicio: tinte de acento, borde de acento a plena intensidad, texto sin
+   atenuar y una barra fina abajo. Cada paleta la viste con su propio `--steam`, y la barra la mantiene legible
+   incluso donde el tinte translúcido se pierde sobre el fondo del tema. */
+.settings-admin-tab.active {
+  background: rgba(var(--steam-rgb),.18);
+  border-color: rgba(var(--steam-rgb),.75);
+  color: var(--text);
+  box-shadow: inset 0 -2px 0 0 var(--steam);
+}
+
+.settings-admin-tab.active:hover {
+  border-color: rgba(var(--steam-rgb),.9);
+  color: var(--text);
+}
+
+.settings-admin-empty {
+  color: var(--text-muted);
+}@media (min-width: 48rem) {
+
+  .settings-admin-tabs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (min-width: 48rem) {
+
+  .settings-hub:not(.settings-personalization) .settings-card-status {
+    grid-column: span 7;
+  }
+
+  .settings-hub:not(.settings-personalization) .settings-card:not(.settings-card-status):not(.settings-card-admin):not(.settings-card-score):not(.settings-card-danger) {
+    grid-column: span 5;
+  }
+
+  .settings-hub:not(.settings-personalization) .settings-card-admin,
+  .settings-hub:not(.settings-personalization) .settings-card-score {
+    grid-column: span 12;
+  }
+
+  /* F2: en ancho, las dos opciones de escala van en paralelo para llenar la tarjeta a lo ancho. */
+  .score-scale-choice {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+
+/* «PERSONALIZACIÓN»: TRES BLOQUES A LO ANCHO, NO DOS COLUMNAS DE TARJETAS.
+   ─────────────────────────────────────────────────────────────────────────────
+   Partir la pantalla en columnas parecía la forma de aprovechar el escritorio y era lo contrario: la tarjeta
+   del tema se quedaba en una columna estrecha, donde sus opciones vuelven a apilarse de una en una, y crecía
+   más de lo que se ahorraba. Lo que reparte aquí es el CONTENIDO —el selector de tema y los interruptores se
+   estiran a lo ancho hasta llenar el bloque—, así que el ancho se aprovecha entero sin tarjetas a medias.
+   Las reglas de arriba, escritas para la pantalla de Ajustes de entonces, se acotaron para no imponer aquí un
+   reparto pensado para otra cosa. */
+/* EL CORTE ESTÁ EN 64rem Y NO EN 48rem, que es donde parte el resto de Ajustes. Entre medias —una tableta en
+   vertical— dos columnas salen a unos 420px cada una, y ahí la tarjeta de apariencia vuelve a apilar sus campos
+   en una sola fila por campo: acaba MÁS ALTA repartida que entera. Por debajo del corte se queda a lo ancho y
+   es su rejilla interna la que reparte, que a ese ancho ya da tres columnas.
+
+   `8 / span 5` en una sola declaración: escribir el principio aparte (`grid-column-start`) DESPUÉS del atajo
+   deja el final en `auto` y la tarjeta se queda en una columna de doce, 58px de ancho. */
+/* Y POR DEBAJO DEL CORTE, A LO ANCHO. Hace falta decirlo porque al final de esta hoja hay una regla vieja que
+   pone `span 6` a toda tarjeta por debajo de 980px: escrita para la pantalla de Ajustes de entonces, aquí parte
+   la apariencia en una columna de 360px y la estira a 1048px de alto, con la tarjeta de al lado estirada a la
+   misma altura por acompañarla. */
+.settings-personalization .settings-card { grid-column: span 12; }@media (min-width: 48rem) {
+
+  .settings-card-score .score-scale-choice {
+    grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  }
+}
+@media (min-width: 80rem) {
+
+  .settings-hub:not(.settings-personalization) .settings-card-status {
+    grid-column: span 6;
+  }
+
+  .settings-hub:not(.settings-personalization) .settings-card:not(.settings-card-status):not(.settings-card-admin):not(.settings-card-score):not(.settings-card-danger) {
+    grid-column: span 6;
+  }
+}
+
+
+/* L4 — enlaces a los documentos legales en Ajustes de cuenta. */
+.settings-legal-links { display: flex; flex-wrap: wrap; gap: .35rem 1rem; font-size: var(--fs-sm); }
+
+/* L3 — zona de riesgo (borrado de cuenta): se marca en rojo para que no se confunda con el resto de ajustes. */
+.settings-card-danger { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); }
+
+.settings-card-danger h2 { color: var(--danger); }
+
+.settings-danger-confirm { display: grid; gap: .3rem; margin: .6rem 0; font-size: var(--fs-sm); text-align: left; }
+
+.settings-danger-confirm input {
+  width: 100%;
+  padding: .45rem .6rem;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font: inherit;
+}
+
+.settings-danger-feedback { font-size: var(--fs-sm); }
+
+.settings-danger-feedback.ok { color: var(--fg-sky); }
+
+.settings-danger-feedback.warn { color: var(--text-muted); }
+
+.settings-danger-feedback.err { color: var(--danger); }@media (max-width:980px) {
+
+  .settings-card {
+    grid-column: span 6;
+  }
+}
+@media (max-width:620px) {
+
+  .settings-card {
+    grid-column: span 12;
+  }
+}
+
+/* ═══ LOS TRES DOCUMENTOS LEGALES, EN FILAS ══════════════════════════════════════════════════════════
+   Estaban en una línea corrida que envolvía por donde le tocaba —dos títulos arriba, uno abajo— y ninguno
+   tenía forma de destino: eran texto subrayado entre texto. En fila, cada uno es una diana entera con su
+   flecha, se cuentan de un vistazo y se pulsan sin apuntar. */
+.settings-legal-links {
+  display: grid;
+  gap: .3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  /* Crece con su tarjeta y reparte el aire entre las filas: si la vecina es más alta, el sobrante se va a los
+     huecos en vez de quedarse como un vacío al final. */
+  flex: 1;
+  align-content: space-between;
+}
+
+.settings-legal-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .8rem;
+  min-height: 44px;
+  padding: .5rem .75rem;
+  border: 1px solid var(--hair);
+  border-radius: 9px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  text-decoration: none;
+  transition: background .16s, border-color .16s;
+}
+
+.settings-legal-link:hover {
+  background: var(--overlay-hover);
+  border-color: rgba(var(--steam-rgb), .35);
+  text-decoration: none;
+}
+
+.settings-legal-link:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.settings-legal-link .ui-icon {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+  color: var(--text-dim);
+}@media (min-width: 48rem) {
+
+  .settings-card-danger { grid-column: span 12; }
+  /* Y las que comparten fila miden lo mismo (el `stretch` de la rejilla, sin tocar): dos tarjetas vecinas de
+     altura distinta dejan un escalón entre ellas que se lee como un fallo de pintado. El sobrante se reparte
+     DENTRO de la que va más holgada —ver `.settings-legal-links`— en vez de amontonarse al final. */
+  .settings-personalization .settings-card:not(.settings-card-appearance) { align-self: start; }
+}
+
+
+/* ═══ QUÉ MIRA LA ANALÍTICA Y QUÉ NO ═════════════════════════════════════════════════════════════════
+   Dos columnas, y la de la derecha en verde: es la que importa de verdad —lo que NO sale de este dispositivo—
+   y con el mismo color que el resto de la tarjeta se leía como más de lo mismo. La marca de cada línea la pone
+   `::before` y no una viñeta: una lista de puntos decía «aquí hay cosas», no «esto sí, esto no». */
+.analytics-scope {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: .5rem 1.2rem;
+}
+
+.analytics-scope-col .settings-card-sub { margin-bottom: .3rem; }
+
+.analytics-scope-list {
+  display: grid;
+  gap: .2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.analytics-scope-list li {
+  display: flex;
+  align-items: baseline;
+  gap: .45rem;
+}
+
+.analytics-scope-list li::before {
+  content: '·';
+  color: var(--text-dim);
+  font-weight: 700;
+}
+
+.analytics-scope-col.is-never .analytics-scope-list li::before {
+  content: '×';
+  color: var(--success);
+  font-size: var(--fs-xs);
+}
+/* ── De `_overlays-and-responsive.scss` ────────────────────────────────────── */
+
+
+/* Admin */
+.admin-tabs { display: flex; flex-wrap: wrap; gap: .5rem; border-bottom: 1px solid var(--border); margin-bottom: .8rem; padding-bottom: .6rem; }
+.admin-tabs .admin-tab { font-size: var(--fs-sm); padding: .5rem .85rem; border-radius: var(--radius-sm); color: var(--text-muted); transition: all .25s; }
+.admin-tabs .admin-tab:hover { background: rgba(var(--steam-rgb),.08); color: var(--text); }
+.admin-tabs .admin-tab.active { background: rgba(var(--steam-rgb),.15); color: var(--fg-link); border-bottom: none; }
+.admin-item { display: flex; justify-content: space-between; align-items: center; gap: .75rem; background: var(--bg); padding: 1rem 1.1rem; border-radius: var(--radius-md); border: 1px solid var(--border); transition: all .25s; animation: slideIn .25s ease-out; }
+.admin-item:hover { border-color: rgba(var(--steam-rgb),.25); background: var(--surface-elevated); box-shadow: var(--glow-accent-soft); }
+.admin-item .row-actions { display: flex; gap: .45rem; flex-wrap: nowrap; align-items: center; justify-content: flex-end; flex: 0 0 auto; }
+.admin-item.editing { border-color: rgba(var(--steam-rgb),.45); box-shadow: var(--ring-accent-soft), inset 0 0 0 1px rgba(var(--steam-rgb),.2); background: rgba(var(--steam-rgb),.06); }
+.admin-item.editing { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+.admin-item-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-action-btn { min-height: 40px; }@media (max-width:720px) {
+
+
+  .admin-item { align-items: center; }
+  .admin-item.editing { grid-template-columns: minmax(0, 1fr) auto; }
+  .admin-item .row-actions .admin-action-btn span { display: none; }
+  .admin-item .row-actions .admin-action-btn {
+    min-width: 40px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+  }
+}
+
+
+
+
+/* ═══ LAS ETIQUETAS DE «FILTROS», EN REJILLA ═════════════════════════════════════════════════════════
+   Eran una fila por etiqueta, de lado a lado: el ancho entero para dos palabras y dos botones grandes al
+   fondo, con ocho géneros ya pidiendo scroll. Y estas listas crecen —llegan a cuarenta valores— así que el
+   problema empeora solo. En fichas caben tres o cuatro por línea, el nombre manda y las acciones se apartan.
+   `auto-fill` y no `auto-fit`: con dos etiquetas sueltas no queremos dos fichas gigantes repartiéndose la
+   pantalla, sino dos fichas normales y el resto de la línea vacía. */
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: .5rem;
+}
+
+/* La ficha en edición se lleva la línea entera: dentro hay un campo de texto y dos botones con su rótulo, y
+   comprimido en una columna de quince ems no cabe nada de eso. */
+.admin-item.editing { grid-column: 1 / -1; }
+
+/* LA ACCIÓN, CUADRADA Y SIN RÓTULO, en todos los anchos. Esta forma ya existía —era lo que hacía la pantalla
+   por debajo de 620px— y lo único que cambia es que ahora vale también en escritorio: con las etiquetas en
+   fichas de quince ems, dos botones con su palabra no caben sin comerse el nombre. Siguen siendo `btn` de
+   verdad, con la forma que les da cada tema y su color (secundario y peligro); el icono mide lo que mide en
+   toda la aplicación (`--ico-md` de `.ui-icon`). */
+.admin-action-btn.is-compact {
+  min-width: 40px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+}

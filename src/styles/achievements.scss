@@ -2,7 +2,7 @@
 //
 // DESTINO: src/styles/achievements.scss — HOJA PROPIA, importada desde el
 // componente de la medalla y NUNCA colgada de stats.scss ni de social.scss.
-// Las medallas se pintan en dos chunks perezosos distintos (/perfil/logros y
+// Las medallas se pintan en dos chunks perezosos distintos (/logros y
 // la ficha del hub); colgarlas de cualquiera de los dos deja la otra pantalla
 // sin estilos y SIN QUE SALTE NINGÚN ERROR. Es el fallo mudo del §12.
 //
@@ -240,7 +240,7 @@
 
 // ── Coste de pintado · el fallback plano ─────────────────────────────────
 // El acabado ya no es un filtro rasterizado por elemento —eso se fue con los cuadros al óleo—, pero sigue
-// habiendo tres pasadas del trazo, un grano y un `drop-shadow` por medalla, y en la rejilla de /perfil/logros
+// habiendo tres pasadas del trazo, un grano y un `drop-shadow` por medalla, y en la rejilla de /logros
 // son más de cien a la vez. Quien apaga los efectos se lleva el disco liso: una sola pasada de oro sobre la
 // penumbra, que se lee igual de bien. Es el mismo interruptor que ya gobierna el destello del desbloqueo (§7.4),
 // no uno nuevo.

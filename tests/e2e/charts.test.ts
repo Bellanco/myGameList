@@ -42,7 +42,7 @@ function solapes(fila: Rotulo[]): string[] {
 
 /** Deja la curva anual pintada y quieta: las tarjetas del panel se destapan al llegar a ellas. */
 async function graficaAnual(page: Page): Promise<void> {
-  await page.goto('/perfil');
+  await page.goto('/stats');
   await expect(page.locator('.stats-hub')).toBeVisible();
   // Destapadas a mano: mientras la tarjeta espera su turno, sus animaciones están EN PAUSA, y una animación
   // pausada no termina nunca —la espera de abajo se quedaría ahí—.

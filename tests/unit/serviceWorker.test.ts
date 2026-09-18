@@ -83,7 +83,12 @@ function loadServiceWorker(options: { fetchImpl?: (request: Request) => Promise<
     __PRECACHE_ASSETS__: ['/assets/app.js'],
     location: { origin: ORIGIN },
     registration: { unregister: vi.fn(async () => true) },
-    clients: { claim: vi.fn(async () => {}), matchAll: vi.fn(async () => []) },
+    // `matchAll` tipado: el worker anuncia su versión a los clientes al activarse, y un mock que devuelva
+    // `never[]` no deja que un test le ponga ninguno dentro.
+    clients: {
+      claim: vi.fn(async () => {}),
+      matchAll: vi.fn(async (): Promise<{ postMessage: (data: unknown) => void }[]> => []),
+    },
     skipWaiting: vi.fn(async () => {}),
     addEventListener: (type: string, handler: (event: Record<string, unknown>) => void) => handlers.set(type, handler),
     caches: { open: vi.fn(async () => cache), keys: vi.fn(async () => ['mygamelist-test']), delete: vi.fn(async () => true) },
@@ -139,6 +144,31 @@ describe('service worker — instalación', () => {
 
     expect(order.at(-1)).toBe('skipWaiting');
     expect(order).toContain('add');
+  });
+});
+
+describe('service worker — qué versión sirve', () => {
+  // El documento lleva el mismo identificador en `<meta name="app-build">`, y de compararlos depende que la
+  // primera apertura tras un despliegue NO anuncie una actualización que ya está puesta (ver `appUpdate`).
+  it('se lo dice a quien pregunta, y solo a quien pregunta', () => {
+    const sw = loadServiceWorker();
+    const source = { postMessage: vi.fn() };
+
+    sw.handlers.get('message')?.({ data: { tipo: 'build-id' }, source, waitUntil: () => {} });
+
+    expect(source.postMessage).toHaveBeenCalledWith({ tipo: 'build', buildId: 'test' });
+  });
+
+  it('lo anuncia al activarse, para la pestaña cuyo relevo lo provocó otra', async () => {
+    const sw = loadServiceWorker();
+    const cliente = { postMessage: vi.fn() };
+    sw.self.clients.matchAll.mockImplementation(async () => [cliente]);
+
+    let activated: Promise<unknown> = Promise.resolve();
+    sw.handlers.get('activate')?.({ waitUntil: (value: Promise<unknown>) => { activated = value; } });
+    await activated;
+
+    expect(cliente.postMessage).toHaveBeenCalledWith({ tipo: 'build', buildId: 'test' });
   });
 });
 

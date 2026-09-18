@@ -181,6 +181,38 @@ function sinEdicion(texto: string): string {
   return texto.replace(EDICIONES, ' ').replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * Palabra con la que acaba la cola de una edición. `EDICIONES` no vale tal cual porque lo que hay delante de
+ * «Edition» puede ser cualquier cosa —*Sunset*, *Royal*, *Day One*— y no hay lista que lo cubra: lo que sí es
+ * fijo es el sustantivo que la cierra.
+ */
+const FIN_DE_EDICION = /\b(edition|version|cut|collection|trilogy|bundle|pack|remaster|remastered|goty|hd)$/;
+
+/**
+ * EL TÍTULO SIN LA EDICIÓN QUE LE PUSO SU DUEÑO, o `null` si no lleva ninguna. Y por qué hace falta, si
+ * `sinEdicion` ya existía: porque esa quita la edición del nombre DE IGDB («Control» ↔ «Control: Ultimate
+ * Edition») y nunca del que se escribe en la lista, y el caso de verdad es el contrario. *Sea of Stars: Sunset
+ * Edition* está en la estantería de mucha gente y NO existe como ficha en IGDB —solo está *Sea of Stars*, con
+ * 141 votos y su carátula—, así que el juego bueno estaba entre los candidatos y se caía con un 0,63 contra un
+ * umbral de 0,85: hueco, sin error y sin forma de verlo.
+ *
+ * Se corta por el ÚLTIMO separador y no palabra a palabra: el nombre es «<juego>: <edición>» y el separador es
+ * justo lo que dice dónde acaba uno y empieza la otra. Contando palabras hacia atrás no hay número que acierte
+ * —«Sunset Edition» son dos y «Game of the Year Edition» cinco—, y pasarse recorta el juego.
+ *
+ * Y LO QUE SE SIRVE ES EL ARTE DEL JUEGO BASE, NO EL DE LA EDICIÓN, a sabiendas. La Sunset Edition tiene su
+ * propia portada y aquí sale la del juego a secas, así que esto roza el criterio del `UMBRAL` —mejor un hueco
+ * que una carátula equivocada—. Se acepta porque no es una equivocación de juego: es la misma obra con otro
+ * envoltorio, es lo ÚNICO que IGDB tiene de ella, y es exactamente el trato que la regla de arriba lleva
+ * haciendo desde el principio en el sentido contrario. Decidido así el 18-09-2026, mirando las dos portadas.
+ */
+export function baseSinEdicion(nombre: string): string | null {
+  const corte = Math.max(nombre.lastIndexOf(': '), nombre.lastIndexOf(' - '), nombre.lastIndexOf(' – '));
+  if (corte <= 0) return null;
+  if (!FIN_DE_EDICION.test(normalizarTitulo(nombre.slice(corte)))) return null;
+  return normalizarTitulo(nombre.slice(0, corte)) || null;
+}
+
 function bigramas(texto: string): Set<string> {
   const set = new Set<string>();
   for (let i = 0; i < texto.length - 1; i += 1) set.add(texto.slice(i, i + 2));
@@ -306,7 +338,7 @@ export interface FichaIgdb {
  */
 export function puntuarFicha(buscado: string, ficha: FichaIgdb): number {
   const objetivo = normalizarTitulo(buscado);
-  return puntuarContra(objetivo, bigramas(objetivo), ficha);
+  return puntuarContra(objetivo, bigramas(objetivo), ficha, baseSinEdicion(buscado));
 }
 
 /**
@@ -314,7 +346,13 @@ export function puntuarFicha(buscado: string, ficha: FichaIgdb): number {
  * compara decenas de fichas contra un único título: normalizarlo una vez por ficha —como hacía— era rehacer el
  * mismo trabajo ochenta veces por juego, en el camino que encima va contra el tope de consultas de IGDB.
  */
-function puntuarContra(objetivo: string, bigramasObjetivo: Set<string>, ficha: FichaIgdb): number {
+function puntuarContra(
+  objetivo: string,
+  bigramasObjetivo: Set<string>,
+  ficha: FichaIgdb,
+  /** El mismo título sin su cola de edición, ya normalizado. Ver `baseSinEdicion`. */
+  baseObjetivo: string | null = null,
+): number {
   const candidatos = [ficha.name, ...(ficha.alternative_names ?? []).map((alias) => alias.name)].filter(
     (nombre): nombre is string => Boolean(nombre),
   );
@@ -324,6 +362,10 @@ function puntuarContra(objetivo: string, bigramasObjetivo: Set<string>, ficha: F
     let valor: number;
     if (otro === objetivo) valor = 1;
     else if (sinEdicion(otro) === objetivo) valor = 0.97;
+    // Y lo mismo por el otro lado: la edición la escribió el dueño y en IGDB solo está el juego. Mismo 0,97 que
+    // el caso de arriba porque es el mismo acierto leído al revés, y siempre por debajo del 1 de una ficha que
+    // se llame igual: si la edición existe en IGDB, gana la edición.
+    else if (baseObjetivo && (otro === baseObjetivo || sinEdicion(otro) === baseObjetivo)) valor = 0.97;
     // «Sekiro» ↔ «Sekiro: Shadows Die Twice» sí; «Nioh» ↔ «Nioh 2» NO. Lo que viene detrás decide: si es una
     // cifra, es una secuela y son dos juegos distintos. Es la misma regla que gobierna `gameTitleKey`: los
     // números no se tocan nunca.
@@ -510,6 +552,7 @@ export async function emparejar(
      hasta cuatro consultas de veinte fichas, y cada ficha con sus nombres alternativos. */
   const objetivo = normalizarTitulo(nombre);
   const bigramasObjetivo = bigramas(objetivo);
+  const baseObjetivo = baseSinEdicion(nombre);
   let campeona: number[] | null = null;
   let elegida: FichaIgdb | null = null;
 
@@ -523,7 +566,7 @@ export async function emparejar(
     for (const ficha of fichas) {
       const grado = gradoDeTipo(ficha.game_type, ampliado);
       if (grado === null) continue;
-      const nota = puntuarContra(objetivo, bigramasObjetivo, ficha);
+      const nota = puntuarContra(objetivo, bigramasObjetivo, ficha, baseObjetivo);
       if (nota < 0.6) continue;
       const abreviaturas = (ficha.platforms ?? []).map((p) => p.abbreviation).filter(Boolean) as string[];
       const casa = quiero.size > 0 && abreviaturas.some((abbr) => quiero.has(abbr));

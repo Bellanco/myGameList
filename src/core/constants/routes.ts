@@ -11,7 +11,7 @@ import { matchRoutes } from 'react-router-dom';
 import { LEGAL_ROUTES } from './legal';
 
 /** Zona de la app; decide la navegación inferior, el encabezado y el cromo alrededor del contenido. */
-export type AppSection = 'lists' | 'social' | 'stats' | 'settings' | 'account' | 'inbox' | 'legal' | 'admin' | 'shared-review';
+export type AppSection = 'lists' | 'social' | 'stats' | 'settings' | 'inbox' | 'legal' | 'admin' | 'shared-review';
 
 export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = [
   { path: '/completados', section: 'lists' },
@@ -22,20 +22,22 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
   // hub con `matchSocialRoute`. Declararlas aquí una a una era la causa de la clase de fallo descrita arriba:
   // añadir una pantalla social obligaba a tocar este fichero o la ruta quedaba inaccesible.
   { path: '/social/*', section: 'social' },
-  // Panel de estadísticas. La ruta se llamó `/perfil` cuando la pestaña tenía ese nombre; la sección es `stats`
-  // para no confundirla con el PERFIL SOCIAL, que es la ficha pública y vive en `/social/profile`.
+  // Panel de estadísticas. Se llamó `/perfil` porque así se llamaba la pestaña, y ese nombre chocaba con el
+  // PERFIL SOCIAL —la ficha pública, que vive en `/social/profile`—: la sección ya era `stats` para deshacer el
+  // equívoco, y ahora también lo es la dirección. El nombre viejo sigue resolviendo, ver `LEGACY_ROUTE_REDIRECTS`.
   // Comodín: el panel resuelve por su cuenta la sub-ruta de tus reseñas (listado y detalle), igual que hace el
   // hub social con las suyas.
-  { path: '/perfil/*', section: 'stats' },
-  { path: '/perfil', section: 'stats' },
-  // Los LOGROS son de primer nivel y no una sub-ruta del panel, a diferencia de `/perfil/resenas`. Cuesta esta
-  // línea, y a cambio es una dirección que se dice en voz alta. El comodín `/perfil/*` habría salido gratis, pero
-  // deja la pantalla escondida detrás del nombre de otra cosa: el panel se llama «Perfil» por herencia de cuando
-  // la pestaña se llamaba así, y meter los logros ahí dentro los ata a esa herencia para siempre. La sección
-  // sigue siendo `stats` porque el cromo es el mismo y lo resuelve `StatsHub`.
+  { path: '/stats/*', section: 'stats' },
+  { path: '/stats', section: 'stats' },
+  // Los LOGROS son de primer nivel y no una sub-ruta del panel, a diferencia de `/stats/resenas`. Cuesta esta
+  // línea, y a cambio es una dirección que se dice en voz alta: el comodín `/stats/*` habría salido gratis, pero
+  // deja la pantalla escondida detrás del nombre de otra cosa. La sección sigue siendo `stats` porque el cromo
+  // es el mismo y lo resuelve `StatsHub`.
   { path: '/logros', section: 'stats' },
+  // Ajustes y sus tres grupos. Comodín por el mismo motivo que en social y en el panel: la pantalla resuelve
+  // por su cuenta cuál de los tres toca (ver `SETTINGS_ROUTES`), y así añadir uno no obliga a tocar esta tabla.
+  { path: '/ajustes/*', section: 'settings' },
   { path: '/ajustes', section: 'settings' },
-  { path: '/cuenta', section: 'account' },
   { path: '/bandeja', section: 'inbox' },
   { path: LEGAL_ROUTES.terms, section: 'legal' },
   { path: LEGAL_ROUTES.privacy, section: 'legal' },
@@ -49,6 +51,29 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
 ];
 
 /**
+ * LOS TRES GRUPOS DE AJUSTES, que son los tres puntos del menú de la pestaña. Uno por asunto y cada uno en su
+ * dirección, para poder enlazarlos.
+ *
+ * FUERON CUATRO. «Integración» y «Legal» se juntaron en `data` porque las dos iban de lo mismo —tus datos: por
+ * dónde entran y salen, qué se registra de ellos y cómo se borran— y porque eran las dos que menos se pisan:
+ * dos puntos del menú para lo que se toca al empezar y una vez al año. Sus dos direcciones siguen resolviendo
+ * (ver `LEGACY_ROUTE_REDIRECTS`), que de ellas cuelgan enlaces guardados y el atajo de la bandeja.
+ *
+ * `design` es el único con puerta: reúne lo que se guarda en la nube de quien tiene espacio social (escala de
+ * nota, enlaces publicados) junto a la apariencia, así que sin ese espacio no hay nada que enseñar. Se llamó
+ * «Personalización», que es una palabra larga para lo que hay dentro —el tema, la paleta, cómo se ve todo—; el
+ * nombre viejo sigue resolviendo. Los otros dos no dependen de ninguna cuenta —la sincronización usa GitHub, no
+ * Google— y por eso están siempre, también para quien usa la aplicación en local.
+ */
+export const SETTINGS_ROUTES = {
+  design: '/ajustes/diseno',
+  filters: '/ajustes/filtros',
+  data: '/ajustes/datos',
+} as const;
+
+export type SettingsGroup = keyof typeof SETTINGS_ROUTES;
+
+/**
  * Rutas RETIRADAS que siguen resolviendo, redirigiendo a su nombre actual. La lista de abandonados nació como
  * `/visitados` —un nombre que no decía lo que era— y renombrarla en seco habría mandado a `FALLBACK_ROUTE`
  * cualquier marcador, acceso directo o enlace compartido que ya apuntase allí. Las pinta `App` como `<Navigate>`
@@ -56,7 +81,49 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
  */
 export const LEGACY_ROUTE_REDIRECTS: ReadonlyArray<{ from: string; to: string }> = [
   { from: '/visitados', to: '/abandonados' },
+  // El panel de estadísticas se llamó `/perfil`. El comodín NO es un adorno de simetría: `/perfil/resenas/:id`
+  // es una dirección pensada para abrirse en otra pestaña y copiarse (ver el enlace del detalle en `GameTable`),
+  // así que la redirección tiene que conservar LO QUE VENGA DETRÁS o un enlace ya guardado acabaría en
+  // `FALLBACK_ROUTE`, que es justo el fallo que documenta la nota de arriba. Las entradas con `/*` las pinta
+  // `App` con un redirector que arrastra la cola, la búsqueda y el ancla; va ANTES que la entrada sin comodín
+  // porque react-router se queda con la primera que case.
+  { from: '/perfil/*', to: '/stats' },
+  { from: '/perfil', to: '/stats' },
+  // «Cuenta» fue una pantalla y una pestaña; su contenido —la escala de nota, la apariencia, los enlaces que
+  // has publicado— vive ahora en el grupo de personalización, así que el nombre viejo lleva allí.
+  { from: '/cuenta', to: SETTINGS_ROUTES.design },
+  // «Personalización» se llama ahora «Diseño», y su dirección lo dice.
+  { from: '/ajustes/personalizacion', to: SETTINGS_ROUTES.design },
+  // «Integración» y «Legal» eran dos grupos y ahora son uno («Datos»). De los dos nombres viejos cuelgan enlaces
+  // guardados, el atajo de la bandeja y la vuelta del OAuth de GitHub, así que siguen llevando a donde estaban.
+  { from: '/ajustes/integracion', to: SETTINGS_ROUTES.data },
+  { from: '/ajustes/legal', to: SETTINGS_ROUTES.data },
 ];
+
+/**
+ * ¿Cubre esta entrada retirada el `pathname` dado? Las que acaban en `/*` cubren también todo lo que cuelgue,
+ * que es lo que hace que `/perfil/resenas/7` se reconozca como ruta conocida y no como dirección inventada.
+ */
+function coversLegacy(from: string, pathname: string): boolean {
+  if (!from.endsWith('/*')) return from === pathname;
+  const base = from.slice(0, -2);
+  return pathname === base || pathname.startsWith(`${base}/`);
+}
+
+/** Destino de una entrada retirada, con lo que colgaba del nombre viejo pegado detrás. */
+export function legacyRedirectTarget(to: string, tail: string): string {
+  return tail ? `${to}/${tail}` : to;
+}
+
+
+/**
+ * ¿Qué grupo de ajustes corresponde a este camino? `null` = la portada de Ajustes (`/ajustes` a secas), que
+ * pinta el índice; es lo que ven quien guardó el enlace de antes y quien navega con teclado sin abrir el menú.
+ */
+export function matchSettingsGroup(pathname: string): SettingsGroup | null {
+  const entry = Object.entries(SETTINGS_ROUTES).find(([, path]) => path === pathname);
+  return entry ? (entry[0] as SettingsGroup) : null;
+}
 
 /** Ruta a la que rebota cualquier cosa no listada arriba. */
 export const FALLBACK_ROUTE = '/completados';
@@ -67,7 +134,7 @@ export const FALLBACK_ROUTE = '/completados';
  * viene del historial del navegador.
  */
 export function isKnownRoute(pathname: string): boolean {
-  if (LEGACY_ROUTE_REDIRECTS.some(({ from }) => from === pathname)) return true;
+  if (LEGACY_ROUTE_REDIRECTS.some(({ from }) => coversLegacy(from, pathname))) return true;
   return !!matchRoutes(APP_ROUTES as Array<{ path: string; section: AppSection }>, pathname)?.length;
 }
 

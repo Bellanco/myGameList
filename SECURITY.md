@@ -130,6 +130,29 @@ WebCrypto nativo (AES-GCM 256). Hay **dos** mecanismos con garantías **distinta
 - **Sincronización CRDT** (merge por marcas de tiempo + tombstones) para minimizar pérdida de datos.
 - **Service Worker** que solo cachea GET same-origin y excluye APIs externas (GitHub/Firebase).
 
+## Qué comprueba la verja automática, y qué se le escapa
+
+Las medidas de arriba están vivas porque algo las vigila en cada `push`. Esto es lo que vigila y lo que no,
+medido el 18-09-2026 (ver [`docs/revision-general-2026-09.md`](docs/revision-general-2026-09.md)):
+
+| Comprobación | En CI | Alcance real |
+|---|---|---|
+| Tests de `firestore.rules` con emulador | sí | `tests/integration/firestore.rules.test.ts` |
+| Auditoría de privacidad | sí | `npm run audit:privacy` — que no salga dato privado por canal público |
+| `npm audit --omit=dev` | sí, bloqueante | dependencias de producción: **0 vulnerabilidades** |
+| `npm audit` completo | sí, informativo | 8 moderadas, todas en la cadena de `firebase-tools` (solo desarrollo) |
+| ESLint | sí | `src`, `tests` y **`functions`** |
+| Smoke e2e + axe | sí | incluye que usar las listas no contacte con ningún servidor ajeno |
+| Tipos de `src`/`tests` | sí | `npx tsc --noEmit` |
+| **Tipos de `functions/`** | **NO** | `tsconfig.json` no incluye `functions/`, y el paso de CI no ejecuta `tsconfig.functions.json` |
+| **Tipos de `tests/integration`** | **NO** | excluidos en `tsconfig.json` |
+
+**El hueco importa** porque `functions/` es el código que tiene el `client_secret` de OAuth, verifica los ID
+token de Firebase (`_lib/firebaseAuth.ts`) y aplica las cuotas del servicio: lo que menos conviene que entre en
+producción sin comprobar. `npm run typecheck` **sí** hace los dos proyectos; lo que falta es que CI lo use en
+lugar de `npx tsc --noEmit`. Mientras no esté arreglado, pásalo a mano antes de desplegar cualquier cambio del
+borde.
+
 ## Recomendaciones para el usuario
 
 1. Usa siempre **HTTPS**.

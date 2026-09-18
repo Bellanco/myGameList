@@ -181,8 +181,24 @@ self.addEventListener('activate', (event) => {
     // el punto fijo que un cubo perpetuo no tiene. El resto del recorte lo hace `handleCover` mientras se llena.
     await podarCaratulas(await caches.open(COVER_CACHE_NAME)).catch(() => {});
     await self.clients.claim();
+    // Y SE DICE QUIÉN ES. Tomar el control no significa que las páginas abiertas estén viejas: la primera visita
+    // después de un despliegue trae YA el documento nuevo (el HTML va con `no-store` y la navegación es
+    // red-primero) y aun así ve cambiar de controlador. Quien decide si eso es una actualización de verdad es
+    // `core/utils/appUpdate`, comparando este identificador con el que el documento lleva en
+    // `<meta name="app-build">`; aquí solo se le da el dato, sin esperar a que pregunte.
+    await anunciarBuild();
   })());
 });
+
+/** El identificador de esta versión, a todos los clientes (también a los que aún no controla). */
+async function anunciarBuild() {
+  try {
+    const clientes = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
+    clientes.forEach((cliente) => cliente.postMessage({ tipo: 'build', buildId: BUILD_ID }));
+  } catch {
+    // Best-effort: si no se puede, la página pregunta por su cuenta al cambiar de controlador.
+  }
+}
 
 /**
  * Cuánto se espera a la red en una navegación antes de tirar del shell cacheado.
@@ -315,6 +331,14 @@ async function sinTopeDeCaratulas(cache) {
 }
 
 self.addEventListener('message', (event) => {
+  // LA PREGUNTA DEL DOCUMENTO: «¿qué versión sirves?». Se responde a quien la hace y no a todos, porque llega
+  // cuando una página concreta acaba de ver cambiar su controlador y necesita saber si el relevo la deja vieja
+  // (ver `core/utils/appUpdate`). Un solo manejador de `message` para los dos asuntos: el navegador admite
+  // varios, pero tenerlos juntos deja a la vista todo lo que se puede pedir desde la app.
+  if (event.data?.tipo === 'build-id') {
+    event.source?.postMessage({ tipo: 'build', buildId: BUILD_ID });
+    return;
+  }
   if (event.data?.tipo !== 'covers-sin-tope') {
     return;
   }

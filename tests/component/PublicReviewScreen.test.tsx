@@ -2,7 +2,7 @@
 //
 // Lo que se comprueba aquí, por orden de importancia:
 //  1. Que lleva el MISMO encabezado que el detalle de un análisis dentro de la aplicación. Iba sin él, y por eso
-//     la pantalla no se parecía a `/perfil/resenas/:id` aunque pintara lo mismo debajo.
+//     la pantalla no se parecía a `/stats/resenas/:id` aunque pintara lo mismo debajo.
 //  2. Que los análisis sugeridos del pie llegan en su PROPIA petición y no retrasan la reseña.
 //  3. Que cada sugerencia es un ENLACE a `/r/{token}`: en modo artículo no hay enrutador al que pedirle una
 //     navegación, y además cada una es otra página del sitio (tiene que poder abrirse en otra pestaña).
