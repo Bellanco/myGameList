@@ -49,18 +49,25 @@ const BTN_AIR = 10;
 /**
  * Cómo se dibuja cada botón según el sitio que haya, de más a menos: `row` es el de siempre (icono y rótulo en
  * una línea), `stack` pone el icono ENCIMA del rótulo —el gesto clásico de una barra inferior, y lo que hace que
- * el nombre siga viéndose en un móvil estrecho, porque deja de pagar el ancho del icono— y `icon` renuncia al
- * rótulo a la vista cuando ni así cabe.
+ * el nombre siga viéndose en un móvil estrecho, porque deja de pagar el ancho del icono—, `tight` es ese mismo
+ * apilado con el rótulo un punto más pequeño (`--fs-3xs`) e `icon` renuncia al rótulo a la vista.
+ *
+ * `tight` EXISTE PARA NO QUEDARSE MUDA POR DOS PÍXELES. Entre `stack` e `icon` había un salto brutal —de cuatro
+ * nombres a ninguno— que se decidía por un margen de 1,9 px en un iPhone SE: bastaba con que el texto midiera un
+ * pelo más (otra máquina, otra tipografía de reserva, una barra de desplazamiento que se come 15 px de ancho) para
+ * que la navegación entera se quedara sin palabras. Ahora, antes de rendirse, encoge el rótulo: cubre la franja
+ * de 360-374 px —360 dp es un ancho común en Android— que hasta ahora se quedaba en iconos.
  */
-type NavLayout = 'row' | 'stack' | 'icon';
+type NavLayout = 'row' | 'stack' | 'tight' | 'icon';
 
 /**
  * Navegacion inferior principal al estilo BottomNavigationView.
  *
  * En una pantalla estrecha los rótulos no caben en una línea y el más largo se salía de su pastilla
- * —«Estadísticas» tocando el borde de la barra—. La barra baja entonces un escalón: primero apila icono y
- * nombre, y solo si tampoco hay sitio se queda en ICONO, con el nombre en el DOM para el lector de pantalla.
- * Así se ve entera, con sus dianas de 48 px, desde un móvil de 280 px hasta un escritorio.
+ * —«Estadísticas» tocando el borde de la barra—. La barra baja entonces de escalón: primero apila icono y
+ * nombre, luego aprieta el cuerpo del nombre, y solo si ni así hay sitio se queda en ICONO, con el nombre en el
+ * DOM para el lector de pantalla. Así se ve entera, con sus dianas de 48 px, desde un móvil de 280 px hasta un
+ * escritorio.
  */
 export const BottomNavigation = memo(function BottomNavigation({ currentSection, onSectionChange, settingsMenuOpen }: BottomNavigationProps) {
   const innerRef = useRef<HTMLDivElement>(null);
@@ -69,15 +76,15 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
   const [layout, setLayout] = useState<NavLayout>('row');
   /** Espejo de `layout` para leerlo dentro del medidor sin re-suscribir el `resize` en cada cambio. */
   const layoutRef = useRef<NavLayout>('row');
-  /** Lo que pide el botón más ancho: en una línea (`row`) y solo con su rótulo (`stack`). */
-  const needsRef = useRef({ row: 0, stack: 0 });
+  /** Lo que pide el botón más ancho en cada escalón con el rótulo a la vista. */
+  const needsRef = useRef({ row: 0, stack: 0, tight: 0 });
   const items = NAV_ITEMS;
 
   // ¿Caben los rótulos? Se MIDE en lugar de fijar un ancho de corte: lo que ocupa el texto cambia con el idioma,
   // con el ajuste de MAYÚSCULAS de los ajustes y con el cuerpo de letra del navegador, y un punto de corte a ojo
-  // no ve nada de eso. Solo se mide en `row`, que es como se pinta el primer render y donde el rótulo está a la
-  // vista; luego se compara contra esa medida, así que la decisión no puede oscilar —la columna mide igual en
-  // los tres modos (rejilla de fracciones iguales) y el rótulo no cambia de cuerpo al apilarse—.
+  // no ve nada de eso. Cada escalón se mide en el escalón que ya está PINTADO, que es el único sitio donde el
+  // rótulo tiene su cuerpo de verdad; la columna, en cambio, mide igual en todos (rejilla de fracciones iguales),
+  // así que la decisión no puede oscilar.
   useLayoutEffect(() => {
     const container = innerRef.current;
     if (!container) return;
@@ -87,21 +94,39 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
     };
 
     /**
-     * EL ESCALÓN SE MIDE EN DOS PASADAS, y cada una mide lo que de verdad se va a pintar.
+     * El escalón que de verdad está PINTADO, leído de las clases de la barra.
+     *
+     * `aplicar` solo PIDE el cambio; el repintado llega cuando React lo entrega. Si la medida se tomara antes de
+     * eso, el rótulo se mediría con el cuerpo del escalón anterior —un 8 % más ancho entre `row` y `stack`— y la
+     * barra bajaría un escalón de más, que es justamente la avería que se quiere evitar.
+     */
+    const pintado = (): NavLayout | null => {
+      const nav = navRef.current;
+      if (!nav) return null;
+      if (nav.classList.contains('is-icons')) return 'icon';
+      if (nav.classList.contains('is-tight')) return 'tight';
+      if (nav.classList.contains('is-stacked')) return 'stack';
+      return 'row';
+    };
+
+    /**
+     * EL ESCALÓN SE MIDE BAJANDO UN PELDAÑO POR FOTOGRAMA, y cada medida se toma sobre lo que ya está pintado.
      *
      * Un rótulo solo se puede medir cuando está a la vista y con su cuerpo de letra definitivo, y cada escalón
      * lo pinta distinto. Así que:
      *   · en `row` se mide el ancho de una línea (icono + hueco + rótulo). Si cabe, ahí se queda.
-     *   · si no cabe, se PASA a `stack` y se vuelve a medir en el siguiente fotograma: ahora el rótulo está
-     *     apilado y con su cuerpo reducido, así que su ancho es el de verdad y no una estimación.
-     *   · si tampoco cabe apilado, `icon`.
+     *   · si no cabe, se PASA a `stack` y se vuelve a medir cuando esté pintado: ahora el rótulo está apilado y
+     *     con su cuerpo reducido, así que su ancho es el de verdad y no una estimación.
+     *   · si tampoco cabe apilado, se prueba `tight` —el mismo apilado con el rótulo un punto más pequeño— antes
+     *     de renunciar al nombre.
+     *   · y solo si ni así cabe, `icon`.
      *
-     * NO PUEDE OSCILAR: la columna mide igual en los tres escalones (rejilla de fracciones iguales), así que
-     * cada pasada solo puede bajar. Y termina siempre: `row` → `stack` → (`stack` | `icon`).
+     * NO PUEDE OSCILAR: la columna mide igual en los cuatro escalones (rejilla de fracciones iguales), así que
+     * cada pasada solo puede bajar. Y termina siempre: `row` → `stack` → `tight` → `icon`.
      *
      * EN `icon` NO SE MIDE, y no es un olvido: ahí el rótulo está fuera de la pantalla (`sr-only`) y su ancho no
-     * dice nada. Se re-decide con lo último medido, que es lo que permite volver a subir de escalón al ensanchar
-     * la ventana.
+     * dice nada. Se re-decide con lo último medido —y si eso permite subir de escalón, se vuelve a medir ya con
+     * el rótulo a la vista—, que es lo que deja volver arriba al ensanchar la ventana.
      */
     const measure = () => {
       const buttons = Array.from(container.querySelectorAll<HTMLElement>('.bottom-nav-btn'));
@@ -110,6 +135,13 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
       // uno recortado por unos ceros.
       if (!column) return;
       const anchoDelRotulo = () => Math.max(...buttons.map((button) => button.querySelector<HTMLElement>('span')?.scrollWidth ?? 0));
+      // Lo pedido todavía no está en pantalla: se espera al repintado en vez de medir el escalón anterior.
+      const actual = pintado();
+      if (!actual) return;
+      if (actual !== layoutRef.current) {
+        requestAnimationFrame(measure);
+        return;
+      }
 
       if (layoutRef.current === 'row') {
         needsRef.current.row = Math.max(...buttons.map((button) => {
@@ -122,19 +154,34 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
           aplicar('row');
           return;
         }
-        aplicar('stack'); // segunda pasada: con el rótulo ya apilado, su ancho se mide en vez de estimarse
+        aplicar('stack'); // siguiente pasada: con el rótulo ya apilado, su ancho se mide en vez de estimarse
         requestAnimationFrame(measure);
         return;
       }
 
       if (layoutRef.current === 'stack') {
         needsRef.current.stack = anchoDelRotulo() + BTN_AIR;
-        aplicar(column >= needsRef.current.stack ? 'stack' : 'icon');
+        if (column >= needsRef.current.stack) {
+          aplicar('stack');
+          return;
+        }
+        aplicar('tight'); // aún queda un peldaño con nombre antes de quedarse en iconos
+        requestAnimationFrame(measure);
         return;
       }
 
-      const { row, stack } = needsRef.current;
-      aplicar(column >= row ? 'row' : column >= stack ? 'stack' : 'icon');
+      if (layoutRef.current === 'tight') {
+        needsRef.current.tight = anchoDelRotulo() + BTN_AIR;
+        aplicar(column >= needsRef.current.tight ? 'tight' : 'icon');
+        return;
+      }
+
+      const { row, stack, tight } = needsRef.current;
+      const siguiente: NavLayout = column >= row ? 'row' : column >= stack ? 'stack' : column >= tight ? 'tight' : 'icon';
+      aplicar(siguiente);
+      // Al SUBIR de escalón se vuelve a medir con el rótulo ya a la vista: los números guardados pueden ser de
+      // otra tipografía (la de reserva, más ancha) y desde `icon` no se ha podido comprobar ninguno.
+      if (siguiente !== 'icon') requestAnimationFrame(measure);
     };
 
     /**
@@ -224,7 +271,9 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
   return (
     <nav
       ref={navRef}
-      className={`bottom-nav${layout === 'stack' ? ' is-stacked' : ''}${layout === 'icon' ? ' is-icons' : ''}`}
+      // `tight` es un `stack` con el rótulo más pequeño, así que lleva las DOS clases: todo lo que dibuja el
+      // apilado (la columna, el hueco de .1rem, el letter-spacing a cero) vale igual y no se duplica en el CSS.
+      className={`bottom-nav${layout === 'stack' || layout === 'tight' ? ' is-stacked' : ''}${layout === 'tight' ? ' is-tight' : ''}${layout === 'icon' ? ' is-icons' : ''}`}
       aria-label={UI_MESSAGES.nav.ariaLabel}
     >
       <div className="bottom-nav-inner" ref={innerRef}>
