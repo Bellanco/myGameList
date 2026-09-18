@@ -46,7 +46,7 @@ import { useBacklogSnapshot } from './view/hooks/useBacklogSnapshot';
 import { useSignatureEffects } from './view/hooks/useSignatureEffects';
 import { useScreenTransition } from './view/hooks/useScreenTransition';
 import { useAppliedPalette } from './view/hooks/usePalette';
-import { hasGithubOAuthRedirect, takeGithubOAuthOrigin } from './model/repository/githubOAuthRepository';
+import { hasGithubOAuthRedirect, takeGithubOAuthOrigin } from './model/repository/githubOAuthChecks';
 import { type RouletteCandidate } from './core/roulette/roulette';
 import { normalizeName } from './core/utils/normalizeName';
 import { useImportInbox } from './viewmodel/useImportInbox';
