@@ -8,7 +8,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 La versión de **encontrar los ajustes**. Estaban repartidos entre dos botones flotantes de la esquina superior
 derecha —la zona a la que peor llega el pulgar— que además se escondían al bajar por una lista, así que media
 aplicación desaparecía a mitad de página. Ahora Ajustes es una pestaña más de la barra de abajo y lo que hay
-dentro está separado por asuntos, sin la pantalla interminable de antes.
+dentro está separado por asuntos, sin la pantalla interminable de antes: cada grupo entra de una vez en una
+pantalla de escritorio, y en las cuatro va primero lo que se viene a hacer y después la explicación.
+
+### Added
+- **La pantalla de Legal dice qué se registra y qué no.** El interruptor de la analítica tenía una frase y dos
+  botones, y nadie decide sobre un permiso sin saber qué alcanza. Ahora, antes de los botones, hay dos listas:
+  lo que se registra —qué pantallas se visitan, errores, navegador— y lo que no sale nunca de tu dispositivo:
+  tus listas, tus notas, tus reseñas, tu correo y tu nombre.
+- **Dos guías desplegables en la importación.** Cómo traer tu biblioteca paso a paso y cómo añadir tus juegos
+  de PlayStation, con la misma forma y su flecha. La segunda existía, pero colgaba de una palabra en mitad de
+  un párrafo y no la encontraba nadie.
 
 ### Changed
 - **Ajustes baja a la barra, y se abre en cuatro grupos.** La barra pasa a tener cuatro pestañas —Listados,
@@ -25,12 +35,33 @@ dentro está separado por asuntos, sin la pantalla interminable de antes.
 - **La pantalla «Cuenta» se disuelve.** Lo que tenía dentro se reparte donde se busca: la escala de nota y tus
   enlaces publicados, en Personalización; el borrado de la cuenta, en Legal, junto a la analítica y a los
   documentos, que son las tres cosas que la ley te reconoce sobre tus datos.
+- **Cada pantalla de ajustes, ordenada para hacer y no para leer.** En Integración va primero qué hace, luego
+  qué necesitas y de dónde trae los juegos, y el botón de importar cierra; el estado de la sincronización es un
+  punto de color a la altura del título en vez de una línea perdida entre dos párrafos de ayuda, y el aviso de
+  sobrescribir solo aparece cuando enciendes esa opción. En Personalización, el tema arriba a lo ancho, debajo
+  las preferencias y al final lo que has publicado, con cada interruptor en su caja para saber dónde acaba uno
+  y empieza el siguiente. Y en Filtros, tus etiquetas pasan de una fila entera cada una a fichas: cuatro por
+  línea, sin scroll.
+- **`/ajustes` entra directamente en Integración.** Una portada que repite el menú que acabas de usar para
+  llegar es un paso de más. Los enlaces guardados y el atajo de la bandeja siguen funcionando.
+- **Textos más cortos donde solo estorbaban.** La tarjeta de importación pasa de cinco frases a tres, y el
+  aviso de la analítica de cuatro líneas a dos. Ese aviso, además, ya no te manda a «Cuenta», que es una
+  pantalla que ha dejado de existir.
 
 ### Fixed
 - **La apariencia ya no se bloquea sin cuenta de Google.** Paleta, claro/oscuro, mayúsculas, efectos, carátulas
   y el botón de Steam Deck vivían dentro de la tarjeta de la escala de nota y se apagaban con ella cuando no
   había sesión. Ninguna de esas preferencias necesita cuenta —se guardan en este dispositivo y solo se copian a
   la nube si hay sesión—, así que el bloqueo no protegía nada: apagaba media pantalla y nada más.
+- **El aviso de la analítica ya no se come el final de la pantalla.** Se apoya encima de la barra de navegación
+  y el contenido no le reservaba sitio, así que las últimas tarjetas quedaban debajo y no había forma de bajar
+  hasta ellas: la página creía que ya había terminado. Ahora el contenido se aparta lo que el aviso mide.
+
+### Performance
+- **La aplicación arranca con menos peso otra vez.** Las reglas de estilo de las pantallas de ajustes —26 kB—
+  viajaban en el arranque para pintar unas pantallas en las que se entra una vez al mes. Ahora se descargan al
+  entrar en ellas, como ya hacían las del panel de estadísticas y las del hub social. Son 10 kB menos de estilos
+  en cada primera visita.
 
 ## [1.3.2] - 2026-09-17
 
