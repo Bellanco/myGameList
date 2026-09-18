@@ -37,11 +37,9 @@ export type IconName =
   | 'bottom-hub'
   | 'bottom-stats'
   | 'logout'
-  | 'keyboard-arrow-up'
   | 'sync-copy'
   | 'google-recover'
   | 'dice-d20'
-  | 'uncharted'
   | 'chevron-down'
   | 'chevron-up'
   | 'signature'
@@ -86,7 +84,6 @@ export const COMMON_ICONS = {
   repeat: 'repeat',
   undo: 'undo',
   arrowBack: 'arrow-back',
-  keyboardArrowUp: 'keyboard-arrow-up',
   syncCopy: 'sync-copy',
   googleRecover: 'google-recover',
   share: 'share-nodes',

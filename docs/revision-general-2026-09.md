@@ -20,6 +20,8 @@
 | Código muerto | script propio: todo `export` de `src/**` sin ninguna aparición del identificador en otro fichero de `src`, `tests`, `functions` o `scripts` |
 | Dependencias | `npm audit --omit=dev` y `npm audit` |
 | Presupuesto de arranque | `npm run validate` (lo mide `scripts/ci-validate.js` sobre el precache del service worker) |
+| Composición del chunk de entrada | script propio: decodifica los `mappings` del sourcemap y atribuye bytes GENERADOS (no de fuente) a cada módulo |
+| Iconos que alcanza el arranque | script propio: grafo de arranque = entrada + `modulepreload` de `dist/index.html` → fuentes de sus sourcemaps → referencias a iconos en sus tres formas (literal, `COMMON_ICONS.*`, `href="#icon-…"`), excluyendo los ficheros que solo DECLARAN el catálogo |
 
 ## Veredicto
 
@@ -45,7 +47,8 @@ lista de mejoras de segundo orden. Ninguno es una emergencia.
 | 7 | CI | Baja | ~~Los 2266 casos se ejecutan dos veces por build~~ · **✅ hecho (fase 1)** |
 | 8 | Cobertura | Baja | 79,4 % de líneas y 70,3 % de ramas, con los huecos justo en el camino de sync |
 | 9 | Documentación | Baja | README con versiones caducadas; `package.json` en 1.3.2 con el CHANGELOG ya en 1.3.3 |
-| 10 | Código muerto | Baja | 127 `export` sin consumidor externo; solo 2 son código inalcanzable |
+| 10 | Código muerto | Baja | 127 `export` sin consumidor externo; solo 2 son código inalcanzable · **+2 símbolos de icono sin ninguna referencia** (`uncharted`, `keyboard-arrow-up`, 1,6 kB) · **✅ borrados (fase 5)** |
+| 11 | Documentación | Baja | ~~«Diseño» sin cuenta de Google~~ · **✅ es así a propósito**; lo que estaba mal era la entrada de la 1.3.3, corregida |
 
 ---
 
@@ -275,6 +278,23 @@ Los dos inalcanzables están en `src/model/repository/`, que es **zona de stagin
 exports a propósito esperando a la fase que los usa, y hay falsos positivos conocidos de knip. **No se borra
 nada de `model/repository` ni de `model/types` sin preguntar.**
 
+### 11 · «Diseño» pide cuenta de Google para abrirse · ✅ ES ASÍ A PROPÓSITO (confirmado por el mantenedor)
+
+Salió al escribir el recorrido de iconos, que no podía llegar a esa pantalla: el menú **esconde el grupo
+«Diseño»** sin perfil social (`SettingsMenu.tsx:117`, `PUNTOS.filter((p) => p.group !== 'design')`) y
+`App.tsx:244` **redirige fuera** de `/ajustes/diseño` en ese caso.
+
+**Es deliberado**, y el motivo está en lo que comparte pantalla: la escala de nota y los enlaces publicados son
+cosas de la cuenta. Sin ella, el cambio de tema sigue accesible arriba a la derecha.
+
+**Lo que sí estaba mal era el CHANGELOG**, no el código: la 1.3.3 anunciaba que «la apariencia ya no se bloquea
+sin cuenta de Google», y lo que aquel arreglo hizo fue sacar los interruptores de dentro de la tarjeta de la
+escala —que los apagaba con ella— sin tocar la puerta de la pantalla. Corregido en esa misma entrada, con lo que
+NO cambia dicho en voz alta.
+
+**Consecuencia para las pruebas:** el recorrido de iconos cubre listados, hub social, estadísticas, Filtros y
+Datos; los iconos de Diseño los cubre el recorrido de accesibilidad, que sí abre sesión.
+
 ## Lo que se comprobó y está bien
 
 Para no repetir el trabajo en la próxima pasada:
@@ -404,16 +424,57 @@ decía el plan. Lo hecho y lo descartado, con ese dato delante:
     cambio de ~0,35 kB gzip. Mal cambio; se queda como está.
 14. ⏸️ **Cobertura de los tres ficheros de sync**: sin empezar. Sigue en 74,3 / 67,4 / 69,6 % de ramas.
 
-**LA PRÓXIMA PALANCA DE VERDAD ES `IconSprite`** (28,4 kB minificados, el mayor del arranque): el sprite de
-iconos va en línea dentro del chunk de entrada. Las dos vías son servirlo como fichero `.svg` cacheable —con la
-salvedad conocida de `currentColor` en referencias externas— o partirlo entre los iconos que necesita la primera
-pantalla y el resto. **No se toca en esta pasada**: los iconos se referencian por constantes
-(`COMMON_ICONS.*`), no por literales, así que saber cuáles hacen falta en el arranque exige su propia medición y
-no un `grep`. Está fuera de lo que este plan aprobó.
+15. ✅ **`IconSprite` partido en dos** (era la palanca de verdad: 28,4 kB minificados, el mayor del arranque).
 
-**Criterio de aceptación:** cumplido a medias — el arranque baja (182,8 → 182,2 kB críticos) sin perder
-funcionalidad, pero la bajada es del 0,3 %, no la que el plan prometía. Los tres ficheros de sync siguen por
-debajo del 80 % de ramas.
+**La medición primero, que es la mitad del trabajo.** El grafo de arranque se lee **del build**: el script de
+entrada de `dist/index.html` más sus `modulepreload`, y de cada chunk, las fuentes que declara su sourcemap — 13
+chunks, 141 ficheros de `src/`. Sobre esas fuentes se buscan las referencias a iconos en sus tres formas
+(literal del catálogo, alias `COMMON_ICONS.*` y `href="#icon-…"` a pelo, que es como pintan la silueta `HubAvatar`
+y el dado de la ruleta `App`). El script está en la sección «Cómo se midió».
+
+| Grupo | Símbolos | Marcado |
+|---|---|---|
+| Los dibuja el **arranque** | 36 | 17,9 kB |
+| **Solo pantallas perezosas** | 13 | 6,4 kB |
+| **Sin ninguna referencia** (`uncharted`, `keyboard-arrow-up`) | 2 | 1,6 kB · **borrados** |
+
+Dos trampas que la medición evitó y un `grep` no habría:
+- **El catálogo se cuenta a sí mismo.** `core/constants/icons.ts` está en el arranque y lleva los 51 nombres en
+  su unión de tipos, así que la primera pasada decía «los 51 los usa el arranque». Los ficheros que DECLARAN no
+  cuentan como uso.
+- **El aviso del administrador puede pintar iconos del sprite general** (`ANNOUNCEMENT_ICONS`: `bell`, `star`,
+  `rocket`, `trophy`, `dice-d20`, `checkered-flag`, `share-nodes`, `signature`), y su cápsula sale a los pocos
+  segundos del arranque. Quedan cubiertos sin hacer nada porque `announcement.ts` vive en el arranque y su
+  allowlist cuenta como referencia — pero de haberlos movido, un aviso habría salido con el disco vacío.
+
+**Lo implementado.** Los dos símbolos sin referencia **se borraron** —del sprite y del catálogo `IconName`, con
+su alias de `COMMON_ICONS`—, así que el reparto final es 36 en el arranque y 13 en `IconSpriteRest`, montado **una sola vez desde `App` y en idle**
+(`lazy()` lo saca del chunk; el idle evita que su descarga compita con el primer pintado). NO se sigue el patrón
+de `AchievementSprite` —que lo monta cada pantalla, con relevo por orden de llegada— y la razón es a quién sirve
+cada uno: aquel lo piden cinco pantallas que nunca coinciden; estos 15 los necesitan una decena de sitios
+repartidos, incluidos modales que se abren encima de cualquier pantalla. Un solo montaje no se puede olvidar.
+
+**Medido después:** `IconSprite` pasa de **28 369 a 19 895 bytes minificados** (−30 %) y el chunk de entrada de
+180,3 a **172,1 kB** (gzip 61,3 → **58,0**). El crítico del presupuesto: **182,2 → 179,1 kB**, con la holgura
+subiendo de 7,8 a **10,9 kB**. El chunk nuevo pesa 8,6 kB (3,5 gzip) y llega en idle, fuera del precache.
+
+**Y la red que hace esto mantenible**, porque el reparto es invisible en el código (`<Icon name="gear" />` se
+escribe igual esté donde esté) y un icono en la mitad equivocada **no da ningún error: pinta un hueco**:
+- `tests/unit/iconSprite.test.ts`: cada nombre del catálogo está declarado **exactamente una vez** entre los dos
+  sprites, ninguno sobra, y los filtros del `<defs>` siguen en el del arranque (los referencia el CSS).
+- `tests/e2e/iconos.test.ts`: sobre el build, recorre listados → hub social → estadísticas → dos grupos de
+  ajustes y comprueba que **ningún `<use>` de la página apunta a un símbolo ausente**. Empieza por el arranque a
+  propósito: es el instante en que el sprite perezoso puede no haber llegado, y por tanto cuando un icono mal
+  colocado saldría hueco.
+
+**La tercera vía (`.svg` externo) sigue descartada** para esta pasada: quitaría los 28 kB de golpe, pero la CSP
+tiene `default-src 'none'` y un `<use>` externo se pide como documento —se quedaría sin iconos en producción
+funcionando bien en local—, el CSS del documento no estiliza el contenido clonado, y habría que meterlo en el
+precache. Es un cambio para probar en un despliegue de vista previa, no a ciegas.
+
+**Criterio de aceptación:** el arranque baja de 182,8 a **179,1 kB** críticos (−2 %) sin perder funcionalidad, y
+la holgura del presupuesto casi se dobla. Los tres ficheros de sync siguen por debajo del 80 % de ramas (punto
+14, sin empezar).
 
 ## Lo que NO se hace
 
