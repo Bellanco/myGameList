@@ -10,7 +10,9 @@
 // QUÉ SE QUEDÓ EN EL BUNDLE BASE, y por qué:
 //   · `.settings-menu*` — el menú de la pestaña se monta con la aplicación, no con una pantalla de ajustes;
 //   · `.admin-warning` — lo comparte el panel de administración, que es otro chunk;
-//   · `.sync-status-msg` — lo comparte el hub social, ídem.
+//   · `.sync-status-msg` — lo comparte el hub social, ídem;
+//   · `.sync-state` — el semáforo con su punto, que pintan esta pantalla, el documento legal y la tarjeta
+//     de conexión con GitHub (`sync-card.scss`), que el hub social monta en su pasarela.
 // Una regla que use una pantalla de OTRO chunk no puede venirse aquí: se quedaría sin estilo al entrar por su
 // lado, que es exactamente lo que le pasó a `social.scss` en su día.
 //
@@ -199,9 +201,9 @@
   margin: .2rem 0 .1rem;
 }
 
-/* EL ESTADO DE LA SINCRONIZACIÓN. Un punto y el texto: sin caja, sin fondo y sin gritar, pero con color
-   propio —el mismo verde y el mismo rojo que ya usan los semáforos de la aplicación— y a la altura del título,
-   que es donde se busca. El punto lleva su halo para que se vea también en las paletas más apagadas. */
+/* EL TÍTULO CON SU ESTADO AL LADO (la conformidad legal, y antes también la sincronización): el semáforo se
+   pone a la altura del título, que es donde se busca, en vez de caer debajo. El semáforo en sí —`.sync-state`—
+   vive en el bundle base: lo comparten esta pantalla y la tarjeta de conexión del hub social. */
 .settings-card-head.settings-card-head-row {
   display: flex;
   /* Explícito: `.settings-card-head` apila en columna, y sin decir lo contrario aquí el estado caía debajo del
@@ -212,27 +214,6 @@
   justify-content: space-between;
   gap: .3rem .8rem;
 }
-
-.sync-state {
-  display: inline-flex;
-  align-items: center;
-  gap: .45rem;
-  margin: 0;
-  font-size: var(--fs-sm);
-  font-weight: 700;
-}
-
-.sync-state-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex: none;
-  background: currentColor;
-  box-shadow: 0 0 8px currentColor;
-}
-
-.sync-state.is-on { color: var(--success); }
-.sync-state.is-off { color: var(--text-dim); }
 
 .settings-actions {
   display: flex;
@@ -584,9 +565,6 @@
 }
 
 
-/* El enlace que despliega la ayuda no se centra: nace donde empieza el texto de su tarjeta. */
-.settings-card .import-guide-link { align-self: flex-start; }
-
 /* ═══ QUÉ MIRA LA ANALÍTICA Y QUÉ NO ═════════════════════════════════════════════════════════════════
    Dos columnas, y la de la derecha en verde: es la que importa de verdad —lo que NO sale de este dispositivo—
    y con el mismo color que el resto de la tarjeta se leía como más de lo mismo. La marca de cada línea la pone
@@ -628,22 +606,6 @@
 }
 /* ── De `_overlays-and-responsive.scss` ────────────────────────────────────── */
 
-// Botones de acción en línea para settings
-.settings-actions-row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 0.5rem;
-  .btn-label {
-    display: inline;
-  }
-}@media (max-width: 480px) {
-
-  .settings-actions-row .btn-label {
-    display: none;
-  }
-}
-
 
 /* Admin */
 .admin-tabs { display: flex; flex-wrap: wrap; gap: .5rem; border-bottom: 1px solid var(--border); margin-bottom: .8rem; padding-bottom: .6rem; }
@@ -671,71 +633,7 @@
 }
 
 
-/* Sync modal */
-.sync-help {
-  font-size: var(--fs-xs); color:var(--text-muted); line-height:1.6;
-  background:var(--surface-elevated); border-radius:var(--radius-sm);
-  padding:.8rem 1rem; border:1px solid var(--border);
-}
-.sync-help a { color:var(--fg-link); text-decoration:none; }
-.sync-help a:hover { text-decoration:underline; }
-.sync-help ol { padding-left:1.2rem; }
-.sync-help li { margin-top:.28rem; }
-.sync-help code { background:var(--surface-elevated); border-radius:3px; padding:.05rem .35rem; font-family:monospace; font-size:.85em; }
-.sync-help-actions { margin-top:.45rem; }
-.sync-help-toggle {
-  appearance: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  background: var(--overlay-hover);
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: var(--fs-2xs);
-  font-weight: 700;
-  line-height: 1;
-  padding: .34rem .62rem;
-  transition: color .2s, border-color .2s, background .2s;
-}
-.sync-help-toggle:hover {
-  color: var(--text);
-  border-color: rgba(var(--steam-rgb),.35);
-  background: rgba(var(--steam-rgb),.09);
-}
-.sync-gist-row {
-  position: relative;
-  display: flex;
-  width: 100%;
-}
-.sync-gist-row .finput {
-  padding-right: 5.1rem;
-  width: 100%;
-}
-.sync-gist-action {
-  width: 2rem;
-  height: 2rem;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-muted);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: color .2s, background .2s, border-color .2s;
-}
-.sync-gist-action .ui-icon {
-  width: 1.15rem;
-  height: 1.15rem;
-}
-.sync-gist-action:hover {
-  color: var(--text);
-  background: var(--overlay-hover);
-  border-color: var(--border);
-}
-.sync-gist-action:disabled {
-  opacity: .5;
-  cursor: not-allowed;
-}
+
 
 /* ═══ LAS ETIQUETAS DE «FILTROS», EN REJILLA ═════════════════════════════════════════════════════════
    Eran una fila por etiqueta, de lado a lado: el ancho entero para dos palabras y dos botones grandes al

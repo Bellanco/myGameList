@@ -34,8 +34,8 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
   // deja la pantalla escondida detrás del nombre de otra cosa. La sección sigue siendo `stats` porque el cromo
   // es el mismo y lo resuelve `StatsHub`.
   { path: '/logros', section: 'stats' },
-  // Ajustes y sus cuatro grupos. Comodín por el mismo motivo que en social y en el panel: la pantalla resuelve
-  // por su cuenta cuál de los cuatro toca (ver `SETTINGS_ROUTES`), y así añadir uno no obliga a tocar esta tabla.
+  // Ajustes y sus tres grupos. Comodín por el mismo motivo que en social y en el panel: la pantalla resuelve
+  // por su cuenta cuál de los tres toca (ver `SETTINGS_ROUTES`), y así añadir uno no obliga a tocar esta tabla.
   { path: '/ajustes/*', section: 'settings' },
   { path: '/ajustes', section: 'settings' },
   { path: '/bandeja', section: 'inbox' },
@@ -51,19 +51,24 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
 ];
 
 /**
- * LOS CUATRO GRUPOS DE AJUSTES, que son los cuatro puntos del menú de la pestaña. Uno por asunto y cada uno en
- * su dirección, para que la pantalla quepa sin scroll y se pueda enlazar.
+ * LOS TRES GRUPOS DE AJUSTES, que son los tres puntos del menú de la pestaña. Uno por asunto y cada uno en su
+ * dirección, para poder enlazarlos.
  *
- * `personalization` es el único con puerta: reúne lo que se guarda en la nube de quien tiene espacio social
- * (escala de nota, enlaces publicados) junto a la apariencia, así que sin ese espacio no hay nada que enseñar.
- * Los otros tres no dependen de ninguna cuenta —la sincronización usa GitHub, no Google— y por eso están
- * siempre, también para quien usa la aplicación en local.
+ * FUERON CUATRO. «Integración» y «Legal» se juntaron en `data` porque las dos iban de lo mismo —tus datos: por
+ * dónde entran y salen, qué se registra de ellos y cómo se borran— y porque eran las dos que menos se pisan:
+ * dos puntos del menú para lo que se toca al empezar y una vez al año. Sus dos direcciones siguen resolviendo
+ * (ver `LEGACY_ROUTE_REDIRECTS`), que de ellas cuelgan enlaces guardados y el atajo de la bandeja.
+ *
+ * `design` es el único con puerta: reúne lo que se guarda en la nube de quien tiene espacio social (escala de
+ * nota, enlaces publicados) junto a la apariencia, así que sin ese espacio no hay nada que enseñar. Se llamó
+ * «Personalización», que es una palabra larga para lo que hay dentro —el tema, la paleta, cómo se ve todo—; el
+ * nombre viejo sigue resolviendo. Los otros dos no dependen de ninguna cuenta —la sincronización usa GitHub, no
+ * Google— y por eso están siempre, también para quien usa la aplicación en local.
  */
 export const SETTINGS_ROUTES = {
-  personalization: '/ajustes/personalizacion',
-  integration: '/ajustes/integracion',
+  design: '/ajustes/diseno',
   filters: '/ajustes/filtros',
-  legal: '/ajustes/legal',
+  data: '/ajustes/datos',
 } as const;
 
 export type SettingsGroup = keyof typeof SETTINGS_ROUTES;
@@ -86,7 +91,13 @@ export const LEGACY_ROUTE_REDIRECTS: ReadonlyArray<{ from: string; to: string }>
   { from: '/perfil', to: '/stats' },
   // «Cuenta» fue una pantalla y una pestaña; su contenido —la escala de nota, la apariencia, los enlaces que
   // has publicado— vive ahora en el grupo de personalización, así que el nombre viejo lleva allí.
-  { from: '/cuenta', to: SETTINGS_ROUTES.personalization },
+  { from: '/cuenta', to: SETTINGS_ROUTES.design },
+  // «Personalización» se llama ahora «Diseño», y su dirección lo dice.
+  { from: '/ajustes/personalizacion', to: SETTINGS_ROUTES.design },
+  // «Integración» y «Legal» eran dos grupos y ahora son uno («Datos»). De los dos nombres viejos cuelgan enlaces
+  // guardados, el atajo de la bandeja y la vuelta del OAuth de GitHub, así que siguen llevando a donde estaban.
+  { from: '/ajustes/integracion', to: SETTINGS_ROUTES.data },
+  { from: '/ajustes/legal', to: SETTINGS_ROUTES.data },
 ];
 
 /**

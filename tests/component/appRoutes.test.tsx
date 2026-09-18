@@ -66,8 +66,13 @@ describe('rutas de la app', () => {
     // cualquier marcador o acceso directo ya guardado, que es la razón de que la redirección exista.
     expect(LEGACY_ROUTE_REDIRECTS).toContainEqual({ from: '/visitados', to: '/abandonados' });
     expect(LEGACY_ROUTE_REDIRECTS).toContainEqual({ from: '/perfil', to: '/stats' });
-    // «Cuenta» fue pantalla y pestaña; su contenido vive ahora en el grupo de personalización.
-    expect(LEGACY_ROUTE_REDIRECTS).toContainEqual({ from: '/cuenta', to: '/ajustes/personalizacion' });
+    // «Cuenta» fue pantalla y pestaña; su contenido vive ahora en el grupo de diseño.
+    expect(LEGACY_ROUTE_REDIRECTS).toContainEqual({ from: '/cuenta', to: '/ajustes/diseno' });
+    // Y los tres grupos que se han renombrado o fusionado siguen resolviendo por su nombre viejo: de ellos
+    // cuelgan enlaces guardados, el atajo de la bandeja y la vuelta del OAuth de GitHub.
+    expect(LEGACY_ROUTE_REDIRECTS).toContainEqual({ from: '/ajustes/personalizacion', to: '/ajustes/diseno' });
+    expect(LEGACY_ROUTE_REDIRECTS).toContainEqual({ from: '/ajustes/integracion', to: '/ajustes/datos' });
+    expect(LEGACY_ROUTE_REDIRECTS).toContainEqual({ from: '/ajustes/legal', to: '/ajustes/datos' });
     // El destino de cada redirección tiene que RESOLVER; si no, el salto acaba en el catch-all y el nombre
     // viejo, que existía para no perder a nadie, pierde a todo el mundo. Se pregunta con el matcher y no
     // buscando el camino en la tabla: hay destinos que cubre un comodín (`/ajustes/*`) y ahí la comparación
