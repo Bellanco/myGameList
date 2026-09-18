@@ -47,6 +47,22 @@ describe('puntuar una ficha contra el título buscado', () => {
     expect(puntuarFicha('Control', { name: 'Control: Ultimate Edition' })).toBeGreaterThanOrEqual(0.95);
   });
 
+  // Y al revés, que es el caso que se caía: la edición la escribe el dueño de la lista y en IGDB solo está el
+  // juego. «Sea of Stars: Sunset Edition» no existe como ficha —solo «Sea of Stars», 141 votos y con carátula—,
+  // y se quedaba en 0,63 contra un umbral de 0,85.
+  it('reconoce la misma obra cuando la edición la trae el título buscado (Sea of Stars: Sunset Edition)', () => {
+    expect(puntuarFicha('Sea of Stars: Sunset Edition', { name: 'Sea of Stars' })).toBeGreaterThanOrEqual(0.95);
+    expect(puntuarFicha('Dandara: Trials of Fear Edition', { name: 'Dandara' })).toBeGreaterThanOrEqual(0.95);
+    expect(puntuarFicha('The Witcher 3: Wild Hunt - Complete Edition', { name: 'The Witcher 3: Wild Hunt' })).toBeGreaterThanOrEqual(0.95);
+  });
+
+  // Pero el recorte solo vale para una cola de EDICIÓN: un subtítulo cualquiera sigue siendo otro juego, y una
+  // expansión con nombre propio no puede colarse como si fuera el juego base.
+  it('no recorta un subtítulo que no es una edición', () => {
+    expect(puntuarFicha('Sea of Stars: Throes of the Watchmaker', { name: 'Sea of Stars' })).toBeLessThan(0.85);
+    expect(puntuarFicha('Metal Gear Solid V: The Phantom Pain', { name: 'Metal Gear Solid' })).toBeLessThan(0.85);
+  });
+
   it('reconoce el subtítulo (Sekiro ↔ Sekiro: Shadows Die Twice)', () => {
     expect(puntuarFicha('Sekiro', { name: 'Sekiro: Shadows Die Twice' })).toBeGreaterThanOrEqual(0.85);
   });
