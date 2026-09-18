@@ -318,12 +318,17 @@ export const UI_MESSAGES = {
       sources: 'Funciona con Steam, GOG, Epic, EA, Ubisoft, Amazon y Battle.net, y también con PlayStation y Xbox si les instalas su complemento en Playnite.',
       requires: 'Necesitas Playnite (solo Windows) y su extensión gratuita «Playnite Library Exporter».',
       stepsTitle: 'Cómo traer tu biblioteca, paso a paso',
+      /* UN PASO, UNA COSA. Estas instrucciones las sigue alguien con Playnite abierta en la otra pantalla, y
+         cada paréntesis, cada «cuando termine» y cada frase con dos acciones dentro obliga a releer para saber
+         qué toca hacer ahora. Se cuentan como se dictan en voz alta: haz esto, ahora esto. */
       steps: [
-        'En tu PC con Windows, abre Playnite (si no la tienes, descárgala e instálala desde playnite.link).',
-        'Dentro de Playnite, ve al menú principal (arriba a la izquierda) → «Complementos» → «Explorar complementos» y entra en la pestaña «Genérica».',
-        'Busca «Playnite Library Exporter», pulsa «Instalar» y, cuando termine, cierra y vuelve a abrir Playnite.',
-        'Abre de nuevo el menú principal → «Playnite Library Exporter» → «Export» y confirma. Deja el formato JSON (el que viene por defecto): se guardará un único archivo con extensión «.json».',
-        'Vuelve aquí, pulsa «Importar de Playnite», elige ese archivo «.json» y tus juegos aparecerán en la bandeja de importados.',
+        'Abre Playnite en tu PC con Windows. Si no la tienes, descárgala en playnite.link.',
+        'Arriba a la izquierda, entra en «Complementos» → «Explorar complementos» y abre la pestaña «Genérica».',
+        'Busca «Playnite Library Exporter» y pulsa «Instalar».',
+        'Cierra Playnite y vuelve a abrirla.',
+        'Entra otra vez en «Complementos» → «Playnite Library Exporter» → «Export» y confirma. Deja el formato JSON, que es el que viene puesto.',
+        'Se guardará un archivo «.json». Vuelve aquí, pulsa «Importar de Playnite» y elígelo.',
+        'Tus juegos aparecerán en la bandeja de importados, donde eliges cuáles te quedas.',
       ],
       importBtn: 'Importar de Playnite',
       importAria: 'Seleccionar el archivo JSON exportado por Playnite Library Exporter',
@@ -334,10 +339,11 @@ export const UI_MESSAGES = {
           title: 'Añadir tus juegos de PlayStation',
           steps: [
             'Abre Playnite en tu PC con Windows.',
-            'Ve al menú principal (arriba a la izquierda) → «Complementos» → «Explorar complementos» y entra en la pestaña «Bibliotecas».',
-            'Busca el complemento «PlayStation library integration» (hecho por la comunidad, de Xenor), pulsa «Instalar» y, al terminar, cierra y vuelve a abrir Playnite.',
-            'Vuelve al menú principal → «Complementos» → ajustes de «PlayStation library integration» e inicia sesión con tu cuenta de PlayStation, siguiendo los pasos que te muestre.',
-            'Tus juegos de PlayStation aparecerán en Playnite. Ahora solo tienes que exportarlos con «Playnite Library Exporter» (los pasos de más arriba) e importar el archivo aquí.',
+            'Arriba a la izquierda, entra en «Complementos» → «Explorar complementos» y abre la pestaña «Bibliotecas».',
+            'Busca «PlayStation library integration», de Xenor, y pulsa «Instalar».',
+            'Cierra Playnite y vuelve a abrirla.',
+            'Entra en «Complementos» → ajustes de «PlayStation library integration» e inicia sesión con tu cuenta de PlayStation.',
+            'Tus juegos de PlayStation ya están en Playnite. Ahora tráelos aquí con los pasos de la otra guía.',
           ],
         },
       },
