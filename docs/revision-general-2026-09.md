@@ -380,9 +380,42 @@ sigue siendo iconos, sin desbordar y con sus dianas de 48 px.
 
 **Guarda nueva:** `bottomNav.test.ts` añade el caso de **365 px**, que es el que ejercita el peldaño apretado.
 
-**Lo que esto NO cubre:** por debajo de ~348 px la barra sigue quedándose en iconos, que es el suelo de 280 px
-prometido y comprobado. Y no se ha medido cuánto mide «Estadísticas» en el Linux del CI: si allí el texto pide
-algún píxel más, ahora lo absorbe el peldaño apretado en vez de dejar la barra muda.
+**TERCERA PASADA: el CI volvió a hablar, y esta vez dijo cuál era el otro factor.** Con el ancho ya compensado,
+**390 px pasó** y siguieron en rojo **375 y 365**. Ese patrón tiene una sola lectura, y se comprueba con la
+aritmética de la columna: si el texto midiera un **9 % más** que en macOS (apilado 69 → 75 px, apretado 65 → 71),
+sale exactamente eso — 390 aguanta apretando el rótulo y 375/365 se quedan en iconos. Un 9 % no es redondeo: o es
+**otra letra** (la de reserva) o es el motor de letra de Linux, que con el ajuste de contornos redondea el avance
+de cada glifo y en una palabra de doce letras eso se acumula.
+
+Las dos se atienden, porque desde aquí no se puede saber cuál de las dos era:
+
+1. **`document.fonts.ready` NO ES UNA SUSCRIPCIÓN, ES UNA FOTO.** Resuelve con las cargas que hubiera EN MARCHA
+   al preguntar, y el navegador no pide el `woff2` hasta que encuentra el primer texto que lo necesita: en una
+   máquina cargada contesta «ya está» con la letra de reserva todavía puesta. El rescate se daba por hecho y no
+   volvía a mirar. Ahora el componente escucha además **`loadingdone`**, que sí se dispara cada vez que termina
+   una tanda de cargas — y de paso coge las tipografías que trae un tema al cambiar de paleta.
+2. **El peldaño apretado estrena su propio reparto** (`.bottom-nav.is-tight`): menos aire a los lados, menos
+   hueco entre pastillas y menos relleno interior, **~4,6 px más por columna**. Eso hace que la columna ya NO
+   mida igual en todos los escalones; el medidor cuenta con ello —cada pasada mide rótulo **y** columna del
+   escalón que está PINTADO, y al subir de escalón vuelve a medir para confirmar—.
+
+**Y la prueba deja de medir a ciegas:** pide la cara que necesita con `document.fonts.load(…)` antes de mirar
+nada —esperar a secas dependía de que otro la hubiera pedido ya— y cada aserción de «no puede quedarse muda»
+lleva pegado el porqué: ancho útil, columna, rótulo más ancho, familia aplicada y si DM Sans estaba disponible.
+Si esto vuelve a ponerse rojo en otra máquina, el log dirá cuál de las dos causas fue.
+
+**Medido sobre el build, barriendo anchos con la letra normal y con el texto ensanchado un 9 % a propósito:**
+
+| Ancho | Letra normal | Texto +9 % |
+|---|---|---|
+| 390 px | apilado, 15,6 px de aire | apilado, 12,6 |
+| 375 px | apilado, 11,9 | **apretado, 18,5** |
+| 365 px | apretado, 19,0 | **apretado, 16,0** |
+| 350-360 px | apretado, 15-18 | apretado, 12-15 |
+| 340 px | apretado, 12,7 | iconos (suelo) |
+
+**Lo que esto NO cubre:** por debajo de ~348 px con la letra normal —o de ~345 con una un 9 % más ancha— la barra
+sigue quedándose en iconos, que es el suelo de 280 px prometido y comprobado.
 
 ## Lo que se comprobó y está bien
 
