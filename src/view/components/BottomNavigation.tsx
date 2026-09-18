@@ -81,10 +81,10 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
   const items = NAV_ITEMS;
 
   // ¿Caben los rótulos? Se MIDE en lugar de fijar un ancho de corte: lo que ocupa el texto cambia con el idioma,
-  // con el ajuste de MAYÚSCULAS de los ajustes y con el cuerpo de letra del navegador, y un punto de corte a ojo
-  // no ve nada de eso. Cada escalón se mide en el escalón que ya está PINTADO, que es el único sitio donde el
-  // rótulo tiene su cuerpo de verdad; la columna, en cambio, mide igual en todos (rejilla de fracciones iguales),
-  // así que la decisión no puede oscilar.
+  // con el ajuste de MAYÚSCULAS de los ajustes, con el cuerpo de letra del navegador y hasta con el motor de
+  // letra del sistema, y un punto de corte a ojo no ve nada de eso. Cada medida se toma en el escalón que ya
+  // está PINTADO —rótulo y columna a la vez—, que es el único sitio donde las dos cosas valen lo que van a
+  // valer.
   useLayoutEffect(() => {
     const container = innerRef.current;
     if (!container) return;
@@ -121,8 +121,11 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
      *     de renunciar al nombre.
      *   · y solo si ni así cabe, `icon`.
      *
-     * NO PUEDE OSCILAR: la columna mide igual en los cuatro escalones (rejilla de fracciones iguales), así que
-     * cada pasada solo puede bajar. Y termina siempre: `row` → `stack` → `tight` → `icon`.
+     * NO PUEDE OSCILAR, y ahora hace falta decir por qué con cuidado: la columna ya NO mide igual en todos los
+     * escalones —`tight` recorta el aire de la barra y el hueco entre pastillas para ganar ~4,6px por columna—,
+     * así que cada pasada mide la columna DEL ESCALÓN QUE ESTÁ PINTADO y la compara con lo que ese mismo escalón
+     * necesita. Bajar solo puede bajar (cada peldaño pide menos que el anterior y ofrece igual o más sitio), y
+     * termina siempre: `row` → `stack` → `tight` → `icon`.
      *
      * EN `icon` NO SE MIDE, y no es un olvido: ahí el rótulo está fuera de la pantalla (`sr-only`) y su ancho no
      * dice nada. Se re-decide con lo último medido —y si eso permite subir de escalón, se vuelve a medir ya con
@@ -179,8 +182,9 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
       const { row, stack, tight } = needsRef.current;
       const siguiente: NavLayout = column >= row ? 'row' : column >= stack ? 'stack' : column >= tight ? 'tight' : 'icon';
       aplicar(siguiente);
-      // Al SUBIR de escalón se vuelve a medir con el rótulo ya a la vista: los números guardados pueden ser de
-      // otra tipografía (la de reserva, más ancha) y desde `icon` no se ha podido comprobar ninguno.
+      // Al SUBIR de escalón se vuelve a medir con el rótulo ya a la vista, y esto no es un lujo: los números
+      // guardados pueden ser de otra tipografía (la de reserva, más ancha), y la columna de aquí no es la que
+      // tendrá el escalón al que se sube —`tight` estrena la suya—. La pasada siguiente lo confirma o lo baja.
       if (siguiente !== 'icon') requestAnimationFrame(measure);
     };
 
@@ -195,6 +199,9 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
      * ancha en unos sistemas que en otros— y bajaba a `icon`, la llegada de la fuente buena ya no podía
      * rescatarla, porque en `icon` no hay rótulo que medir. El síntoma era una barra MUDA en un móvil normal, en
      * unas máquinas y no en otras. Se cazó en la integración continua, donde la fuente de reserva es más ancha.
+     *
+     * Y hay que llamarlo cada vez que TERMINE de cargarse una tipografía, no solo la primera vez: ver el
+     * `loadingdone` de más abajo.
      */
     const remeasure = () => {
       aplicar('row');
@@ -202,16 +209,27 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
     };
     measure();
     window.addEventListener('resize', measure);
-    // La primera medida cae con la tipografía de RESERVA, que no mide igual que la de la app —ni igual en todos
-    // los sistemas—, así que cuando llega la buena hay que medir otra vez desde arriba (`remeasure`, no
-    // `measure`). `fonts` no existe en todos los entornos (jsdom), de ahí la guarda.
+    /*
+     * CUANDO LLEGA LA TIPOGRAFÍA DE LA APP SE VUELVE A MEDIR — y hay que escucharlo de dos maneras, porque
+     * `document.fonts.ready` NO ES UNA SUSCRIPCIÓN, ES UNA FOTO: resuelve con las cargas que hubiera EN MARCHA
+     * en ese momento, así que si se pregunta antes de que el navegador haya pedido el woff2 —y lo pide cuando
+     * encuentra el primer texto que lo necesita— contesta «ya está» con la letra de reserva todavía puesta. El
+     * rescate se daba entonces por hecho y no volvía a mirar: la barra se quedaba con las medidas de la letra
+     * de reserva, un 9 % más anchas, y por tanto muda en anchos donde con la letra buena cabe de sobra.
+     *
+     * `loadingdone` sí se dispara cada vez que TERMINA una tanda de cargas, así que coge la fuente base llegue
+     * cuando llegue y también las que trae un tema al cambiar de paleta. `ready` se mantiene para el caso de que
+     * la carga ya estuviera hecha antes de montar. Ninguno de los dos existe en jsdom, de ahí las guardas.
+     */
     document.fonts?.ready.then(remeasure).catch(() => undefined);
+    document.fonts?.addEventListener?.('loadingdone', remeasure);
     // El ajuste de MAYÚSCULAS ensancha los rótulos sin que la ventana se mueva, así que el `resize` no se entera.
     // Se vuelve a `row` antes de medir porque la medida buena solo puede tomarse con el rótulo en su sitio.
     const settings = new MutationObserver(remeasure);
     settings.observe(document.documentElement, { attributes: true, attributeFilter: ['data-uppercase'] });
     return () => {
       window.removeEventListener('resize', measure);
+      document.fonts?.removeEventListener?.('loadingdone', remeasure);
       settings.disconnect();
     };
   }, []);

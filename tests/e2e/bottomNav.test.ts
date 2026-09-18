@@ -39,10 +39,31 @@ async function abrir(page: Page, ancho: number): Promise<void> {
     await page.setViewportSize({ width: ancho + barraDeDesplazamiento, height: 720 });
     await expect.poll(() => page.evaluate(() => document.documentElement.clientWidth)).toBe(ancho);
   }
-  // La medida se toma con la tipografía del tema ya cargada: con la de reserva, más estrecha, la barra cree que
-  // cabe en una línea y decide de más (es la razón del `document.fonts.ready` del componente).
+  /*
+   * Y SE MIDE CON LA LETRA DE LA APP PUESTA, que no es lo mismo que esperar a `document.fonts.ready`.
+   *
+   * `ready` resuelve con las cargas que hubiera EN MARCHA al preguntar, y el navegador no pide el woff2 hasta
+   * que encuentra el primer texto que lo necesita: en una máquina cargada (CI) contesta «ya está» con la letra
+   * de reserva todavía puesta. Y la de reserva de Linux mide un 9 % más que DM Sans —«Estadísticas» apilada
+   * pasa de 69 a ~75px—, que es justo la diferencia entre que la barra tenga nombres o se quede muda. Así que
+   * lo que se espera es que la FAMILIA esté disponible para ese texto.
+   */
+  // `load()` y no solo esperar: PIDE la cara que hace falta y resuelve cuando está puesta. Esperar a secas
+  // dependería de que algo más la hubiera pedido ya.
+  await page.evaluate(() => document.fonts.load('700 12px "DM Sans"', 'Estadísticas').catch(() => []));
+  await expect
+    .poll(() => page.evaluate(() => document.fonts.check('700 12px "DM Sans"', 'Estadísticas')), {
+      message: 'la tipografía de la app no llegó a cargarse; con la de reserva la barra se mide un 9 % más ancha',
+      timeout: 15_000,
+    })
+    .toBe(true);
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(150);
+}
+
+/** Por qué salió lo que salió: sin esto, un rojo en otra máquina solo dice «is-icons» y no se puede perseguir. */
+function porQue(m: Awaited<ReturnType<typeof medir>>): string {
+  return `ancho útil ${m.ancho}px · columna ${m.columna}px · rótulo más ancho ${m.rotuloMax}px · ${m.letra} · DM Sans disponible: ${m.letraDeLaApp}`;
 }
 
 async function medir(page: Page) {
@@ -57,6 +78,15 @@ async function medir(page: Page) {
       // desplazamiento donde ésta ocupa sitio (Linux), y ahí sobrarían 15px que no existen.
       ancho: document.documentElement.clientWidth,
       modo: nav.className,
+      // LO QUE HACE FALTA PARA ENTENDER UN ROJO EN OTRA MÁQUINA: con qué anchos y con qué letra se decidió.
+      columna: Math.round(botones[0]?.getBoundingClientRect().width ?? 0),
+      rotuloMax: Math.max(...botones.map((b) => b.querySelector('span')?.scrollWidth ?? 0)),
+      letra: (() => {
+        const rotulo = botones[0]?.querySelector('span');
+        const estilo = rotulo ? getComputedStyle(rotulo) : null;
+        return estilo ? `${estilo.fontFamily} a ${estilo.fontSize}` : 'sin rótulo';
+      })(),
+      letraDeLaApp: document.fonts.check('700 12px "DM Sans"', 'Estadísticas'),
       botones: botones.map((b) => {
         const rotulo = b.querySelector('span');
         return {
@@ -87,10 +117,10 @@ test.describe('la barra inferior con cuatro pestañas', () => {
     expect(m.botones.map((b) => b.nombre)).toEqual(['Listados', 'Social', 'Estadísticas', 'Ajustes']);
     expect(m.desborde).toBe(0);
     expect(m.derecha).toBeLessThanOrEqual(m.ancho);
-    expect(m.modo).not.toContain('is-icons');
+    expect(m.modo, porQue(m)).not.toContain('is-icons');
     for (const b of m.botones) {
       expect(b.alto, b.nombre).toBeGreaterThanOrEqual(48);
-      expect(b.rotuloVisible, b.nombre).toBe(true);
+      expect(b.rotuloVisible, `${b.nombre} · ${porQue(m)}`).toBe(true);
       expect(b.aire, `${b.nombre} va pegado al borde de su pastilla`).toBeGreaterThanOrEqual(10);
     }
   });
@@ -106,9 +136,9 @@ test.describe('la barra inferior con cuatro pestañas', () => {
     await abrir(page, 375);
     const m = await medir(page);
     expect(m.desborde).toBe(0);
-    expect(m.modo).not.toContain('is-icons');
+    expect(m.modo, porQue(m)).not.toContain('is-icons');
     for (const b of m.botones) {
-      expect(b.rotuloVisible, b.nombre).toBe(true);
+      expect(b.rotuloVisible, `${b.nombre} · ${porQue(m)}`).toBe(true);
       expect(b.aire, `${b.nombre} va pegado al borde de su pastilla`).toBeGreaterThanOrEqual(10);
     }
   });
@@ -128,10 +158,10 @@ test.describe('la barra inferior con cuatro pestañas', () => {
     const m = await medir(page);
     expect(m.desborde).toBe(0);
     expect(m.derecha).toBeLessThanOrEqual(m.ancho);
-    expect(m.modo).not.toContain('is-icons');
+    expect(m.modo, porQue(m)).not.toContain('is-icons');
     for (const b of m.botones) {
       expect(b.alto, b.nombre).toBeGreaterThanOrEqual(48);
-      expect(b.rotuloVisible, b.nombre).toBe(true);
+      expect(b.rotuloVisible, `${b.nombre} · ${porQue(m)}`).toBe(true);
       expect(b.aire, `${b.nombre} va pegado al borde de su pastilla`).toBeGreaterThanOrEqual(10);
     }
   });

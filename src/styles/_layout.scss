@@ -1436,6 +1436,23 @@
     letter-spacing: 0;
   }
 
+  /* Y EN EL PELDAÑO APRETADO, el reparto cede lo que le queda: menos aire a los lados de la barra, menos hueco
+     entre pastillas y menos relleno interior. Suman ~4,6px por columna, que es lo que separa «con nombres» de
+     «muda» cuando el texto mide más de lo previsto —otra máquina, otro motor de letra: en el Linux de CI el
+     mismo rótulo pide hasta un 9 % más que en macOS—. Solo aquí: mientras el nombre quepa a su tamaño normal,
+     la barra se ve exactamente igual que siempre.
+     OJO: esto hace que la columna NO mida igual en todos los escalones, y el medidor cuenta con ello —cada
+     pasada mide la columna del escalón que está PINTADO, y al subir de escalón vuelve a medir—. */
+  .bottom-nav.is-tight {
+    padding-left: .45rem;
+    padding-right: .45rem;
+  }
+
+  .bottom-nav.is-tight .bottom-nav-inner {
+    gap: .15rem;
+    padding: .3rem;
+  }
+
   .hub-hub-card {
     width: min(100%, 100%);
     /* El `padding: 1.1rem` que había aquí se ha retirado: lo sustituye el `clamp()` de la regla base, que cubre
