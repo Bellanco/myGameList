@@ -9,7 +9,7 @@ import type { AchievementDef } from '../../../core/achievements/types';
 // LA HOJA SE IMPORTA AQUÍ, y es la decisión que evita un fallo mudo. Las medallas se pintan en DOS chunks
 // perezosos distintos —el panel con `/logros` y la ficha del hub social—, así que colgar sus estilos de
 // `stats.scss` o de `social.scss` deja la otra pantalla sin estilos SIN QUE SALTE NINGÚN ERROR. Es exactamente lo
-// que ya pasó con `ProfileReviewsList` en `/perfil/resenas` y con el medallón de la nota en `/r/:token`. Atada al
+// que ya pasó con `ProfileReviewsList` en `/stats/resenas` y con el medallón de la nota en `/r/:token`. Atada al
 // componente, Vite la emite en cada chunk que de verdad pinta una medalla. Ver `styles/reviews.scss`.
 import '../../../styles/achievements.scss';
 

@@ -1,4 +1,4 @@
-// «Forja y temple» (forja) — El TEMA DE CASA: el taller. No imita a ningún juego, que es justo su papel — es el que ve quien
+// «Forja y temple» (forja) — El TEMA DE CASA: la fragua. No imita a ningún juego, que es justo su papel — es el que ve quien
 // abre la aplicación sin haber elegido nada. Metal al rojo que RELLENA y turquesa de temple que SEÑALA.
 //
 // Su color y su skin: `src/styles/themes/forja/`. Su sitio en el selector: el orden de `THEMES` en
@@ -12,9 +12,9 @@ export const forja = {
   accent2: '#2fd6c0',
   bg: { dark: '#0f1315', light: '#dee7e9' },
   voice: {
-    /* en el taller, la pieza que se rompe es la que se sacó del fuego a destiempo. */
+    /* en la fragua, la pieza que se rompe es la que se sacó del fuego a destiempo. */
     appError: 'La pieza se ha roto en el yunque.',
-    /* sin aire no hay fuego, y sin fuego el taller sigue ahí pero no se puede trabajar. */
+    /* sin aire no hay fuego, y sin fuego la fragua sigue ahí pero no se puede trabajar. */
     appOffline: 'La fragua se ha quedado sin aire.',
   },
 } as const satisfies ThemeDefinition;

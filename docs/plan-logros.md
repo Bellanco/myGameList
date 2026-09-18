@@ -1,7 +1,7 @@
 # Plan: logros
 
 > Objetivo: reconocer lo que el usuario ya hace con su biblioteca —y empujar con tacto lo que mejora sus propios
-> datos— con una vitrina que se vea en su panel (`/perfil`) y en la ficha de un amigo
+> datos— con una vitrina que se vea en su panel (`/stats`) y en la ficha de un amigo
 > (`/social/profiles/:profileId`), **sin un evento nuevo en el gist de juegos**, sin backend que valide nada y con
 > contenido que siga dando de sí durante años sin tener que inventar logros nuevos cada temporada.
 
@@ -25,7 +25,7 @@
 
 | Decisión | Valor |
 |---|---|
-| Superficies | `/perfil` (los tuyos) y `/social/profiles/:profileId` (los de una amistad). **Nada en `/r/:token`** |
+| Superficies | `/stats` (los tuyos) y `/social/profiles/:profileId` (los de una amistad). **Nada en `/r/:token`** |
 | Fuente de verdad | **Derivación pura** de la biblioteca, como `computeStats`. Ni cola de eventos, ni campo nuevo en `GameItem` |
 | Canal hacia los demás | **Firestore**, en `profiles/{uid}.achievements`, empaquetado en una cadena con tope duro |
 | Qué NO da ese canal | Verificación del hecho de fondo (§4). Da propiedad, forma y tamaño; no da prueba |
@@ -45,7 +45,7 @@
 | Puntos del nivel | Por **rareza**, escala suave 5 / 10 / 25 / 60 por nivel alcanzado (§6.10.2) |
 | Nombres | **Con guiño a juegos concretos**, los seis temas incluidos; la descripción siempre dice la condición (§6.11) |
 | Medalla | **Cuadrada, esquinas redondeadas**, icono propio por logro en sprite perezoso (§8.5) |
-| Superficies, en detalle | Apartado en `/perfil` bajo «Lo mejor de tu biblioteca» · tira **solo-imagen** bajo el nombre en la ficha · listado estilo Steam en `/logros` (§8.1, §8.1b, §8.2) |
+| Superficies, en detalle | Apartado en `/stats` bajo «Lo mejor de tu biblioteca» · tira **solo-imagen** bajo el nombre en la ficha · listado estilo Steam en `/logros` (§8.1, §8.1b, §8.2) |
 | El feed | Una entrada **por persona y día**, con todos sus logros dentro; sin filtro de rareza (§8.4) |
 | El momento | El desbloqueo se dice **cuando ocurre**, en la región viva que ya existe (§7.4) |
 
@@ -169,7 +169,7 @@ Tres hechos del código que mandan sobre todo lo que sigue:
 
 ## 3. Qué se ve y dónde
 
-**En `/perfil`** — es tu panel, así que aquí se ve todo: los conseguidos, los que están a medias con su barra de
+**En `/stats`** — es tu panel, así que aquí se ve todo: los conseguidos, los que están a medias con su barra de
 progreso, y los que ni han empezado. Es la pantalla que da el «siguiente paso».
 
 **En `/social/profiles/:profileId`** — es la ficha de otra persona, así que aquí se ve **solo lo conseguido**,
@@ -1376,7 +1376,7 @@ Todo lo anterior describe cómo se **encuentra** un logro al abrir el panel. Fal
 sostiene un sistema de logros: **el momento en que salta**. En Steam la medalla aparece encima de lo que estabas
 haciendo, justo cuando lo hiciste, y esa coincidencia es toda la carga emocional del mecanismo. Un sistema
 derivado la pierde con una facilidad alarmante: marcas un juego como terminado, la app guarda, y el logro número
-150 aparece callado tres días después cuando se te ocurre entrar en `/perfil`. Técnicamente correcto y
+150 aparece callado tres días después cuando se te ocurre entrar en `/stats`. Técnicamente correcto y
 emocionalmente nulo.
 
 **La regla: se reevalúa después de cada escritura de la biblioteca, y si un nivel ha subido EN ESA escritura, se
@@ -1384,7 +1384,7 @@ dice ahí mismo.** No hace falta inventar nada para decirlo: el aviso va por el 
 —`StatusBanner`, que ya tiene su región viva siempre montada y su `role="status"` de cortesía— con el texto
 «Logro conseguido: Créditos finales IV». Un aviso más de los que ya existen, no una capa nueva.
 
-Cuatro condiciones para que no se vuelva molesto:
+Cinco condiciones para que no se vuelva molesto:
 
 - **Solo lo que sube en ESTA escritura**, comparando contra el estado inmediatamente anterior. Nunca el arrastre
   de retroactividad del §7.3: quien importa una biblioteca entera no recibe veinte avisos, recibe la tira de
@@ -1395,6 +1395,20 @@ Cuatro condiciones para que no se vuelva molesto:
   pantalla ni se pone delante del formulario que el usuario estaba rellenando.
 - **El destello, detrás de `data-effects` y de `prefers-reduced-motion`** (§8.5). Sin efectos, el aviso sigue
   saliendo: lo decorativo es el brillo, no la noticia.
+- **Lo que ya se ha contado no se cuenta otra vez**, venga de donde venga. Y eso lo recuerda una clave propia
+  (`ACHIEVEMENTS_TOLD_KEY`), **no la marca de agua**: son dos preguntas distintas —«¿lo tenías?» y «¿ya te lo
+  anuncié?»— y la marca la escriben además el hub y el panel, así que compartir almacén las confundía.
+
+> ⚑ **El fallo que costó esta quinta condición.** «Nuevo» se decidía comparando solo contra la foto en memoria de
+> la evaluación anterior, y esa foto envejece sin que nadie la toque: **el catálogo crece a mitad de sesión**,
+> cuando llega `appConfig/achievements` y `applyExtraSteps()` lo reconstruye con los umbrales del panel (§6.4bis).
+> A partir de ahí, la siguiente escritura de la biblioteca veía esos escalones por primera vez y los anunciaba
+> como desbloqueos recién hechos —con su celebración— aunque fueran de hace meses; y como la foto se toma de nuevo
+> en cada arranque con el catálogo del código, **volvía a pasar en cada sesión**. De ahí salen las otras dos
+> guardas: dos fotos de catálogos distintos (`catalogEpoch`) no son comparables y lo que apareció en medio se
+> cuenta como ampliación, sin celebración; y una foto tomada con la biblioteca **vacía** tampoco lo es, porque los
+> juegos pueden llegar de IndexedDB un momento después y ese salto no lo ha hecho nadie (salía un «87 %
+> completado» en cada arranque que se hidratara así). Fijado en `tests/unit/achievementsNotice.test.ts`.
 
 > Coste: la reevaluación completa tras cada guardado. Son unos pocos milisegundos sobre 2.000 juegos (§7.2) y ya
 > se memoiza, así que no hace falta ni diferirlo. Si algún día molestara, el arreglo es evaluar solo los logros de
@@ -1461,7 +1475,7 @@ son dos definiciones que había que fijar:
 
 ## 8. Interfaz
 
-### 8.1 `/perfil` — un apartado propio, debajo de «Lo mejor de tu biblioteca»
+### 8.1 `/stats` — un apartado propio, debajo de «Lo mejor de tu biblioteca»
 
 ⚑ **No es una cifra destacada en la cabecera: es una tarjeta más del panel**, con su `<h2>` y su subtítulo, como
 las demás. Va **inmediatamente después del bloque `top`** —«Lo mejor de tu biblioteca»— y antes de `years`. El
@@ -1490,7 +1504,7 @@ propia y la importa el componente (§8.5).
 
 ⚑ **Ruta de primer nivel, `/logros`**, y no una sub-ruta del panel. Cuesta **una línea** en `APP_ROUTES`
 (`core/constants/routes.ts`) con `section: 'stats'`, y a cambio es una dirección que se dice en voz alta y se
-comparte. El comodín `/perfil/*` habría salido gratis, pero deja la pantalla escondida detrás del nombre de otra
+comparte. El comodín `/stats/*` habría salido gratis, pero deja la pantalla escondida detrás del nombre de otra
 cosa: el panel se llama «Perfil» por herencia de cuando la pestaña se llamaba así, y meter los logros ahí dentro
 los ata a esa herencia para siempre.
 
@@ -1687,7 +1701,7 @@ Las medallas van igual: un token `--medal` por nivel, una forma base sobria, y q
 `themes/*.scss` si tiene algo que decir. Acabado sobre el diseño base, no un lenguaje visual paralelo.
 
 **La forma: cuadrado de esquinas redondeadas, y la imagen A SANGRE.** El cuadrado gana por una razón que no es de
-gusto: la rejilla de `/perfil/logros` tiene casi cuarenta celdas y la fila de la ficha social comparte espacio con
+gusto: la rejilla de `/logros` tiene casi cuarenta celdas y la fila de la ficha social comparte espacio con
 el avatar y la muesca de rango. Un cuadrado teselado se alinea solo; un escudo o una copa —la forma de PSN— deja
 huecos irregulares y obliga a inventar una caja invisible alrededor de cada uno. **Y no hay marco**: la imagen
 ocupa el cuadrado entero, con apenas un 4 % de redondeo.
@@ -1750,9 +1764,9 @@ chunk compartido: es lo correcto y no hay que forzarlo. Y como son rutas distint
 a la vez y no hay colisión de `id` que temer.
 
 **Trampa de chunk, y es de las que muerden en silencio.** Las medallas se pintan en **dos pantallas de dos chunks
-perezosos distintos**: `/perfil/logros` (que carga `stats.scss`) y la ficha del hub social (`social.scss`).
+perezosos distintos**: `/logros` (que carga `stats.scss`) y la ficha del hub social (`social.scss`).
 Colgarlas de cualquiera de las dos hojas deja la otra pantalla **sin estilos y sin que salte ningún error** — es
-exactamente lo que ya pasó con `ProfileReviewsList` en `/perfil/resenas` y con el medallón de la nota en
+exactamente lo que ya pasó con `ProfileReviewsList` en `/stats/resenas` y con el medallón de la nota en
 `/r/:token`. La solución tampoco es meterlas en el arranque, que tiene presupuesto vigilado
 (`BOOT_CRITICAL_BUDGET_KB`): **hoja propia, `styles/achievements.scss`, importada desde el componente de la
 medalla**, igual que se hizo con `styles/reviews.scss`.
@@ -1763,7 +1777,7 @@ otros cinco. Al medir, mirar el color calculado **en las seis paletas**, no solo
 
 **Las dos cifras.** ⚑ Hoy solo se pinta el **porcentaje**: el nivel de perfil se calcula pero no se enseña
 (§10bis). Se pinta como texto, no como medalla: es una cifra, no un logro, y darle forma de medalla haría creer
-que se puede conseguir. En `/perfil` van con su barra hacia el siguiente
+que se puede conseguir. En `/stats` van con su barra hacia el siguiente
 nivel (con `aria-valuenow`/`aria-valuemin`/`aria-valuemax`, que es una barra de progreso de verdad); en la ficha
 ajena van sin barra, porque el progreso de otra persona hacia algo que no tiene no es asunto de nadie (§3).
 
@@ -1780,7 +1794,7 @@ numeral grande convierte cada medalla en una etiqueta.
 ⚑ **Y el coste de pintado, que no estaba medido y es el único riesgo abierto de F2.** El acabado es un
 `filter: url(#imp)` con `feTurbulence` × 2, `feGaussianBlur` y `feDiffuseLighting`, más dos capas con
 `mix-blend-mode` (`overlay` y `soft-light`) — por medalla. En la vitrina de una ficha son cinco o seis y no hay
-nada que discutir; en la rejilla de `/perfil/logros` son **38 a la vez**, y un filtro con turbulencia se
+nada que discutir; en la rejilla de `/logros` son **38 a la vez**, y un filtro con turbulencia se
 rasteriza por elemento y no se comparte entre instancias por mucho que el `<filter>` esté declarado una sola vez.
 No se sabe si janquea porque no se ha medido en un móvil de gama baja. **Antes de cerrar F2: medir la rejilla
 completa con el perfil de rendimiento.** Si molesta, el arreglo ya está inventado en esta casa y es el mismo que
@@ -1789,7 +1803,7 @@ perfectamente sin empaste, y quien apaga los efectos ya está pidiendo justo eso
 acabado para todos por un problema que quizá no exista.
 
 **Bloqueado.** El logro que no se tiene es **la misma forma, desaturada** —no un hueco, no un candado que sea el
-único indicio—, y esto solo pasa en `/perfil`: en la ficha ajena no hay bloqueados que pintar (§3). La
+único indicio—, y esto solo pasa en `/stats`: en la ficha ajena no hay bloqueados que pintar (§3). La
 desaturación no puede ser la única señal (es color puro, y el punto ciego del párrafo de accesibilidad): el
 estado va también en el texto de la tarjeta y en el nombre accesible. El **oculto** (§6.7) es un caso aparte:
 misma forma, sin icono, con «?» y el texto «se revela al conseguirlo» — nunca una pista de cuál es.
@@ -2164,7 +2178,7 @@ Las filas en **⚑** salieron de la revisión del 6-sep-2026 y no estaban en el 
    cuando se vea si el catálogo ya cubre esa función. Chollómetro tiene insignias que reflejan *cómo estás ahora*
    y que se pierden («difíciles de mantener»), y aquí hay un hueco natural: «biblioteca al día», «sin fichas a
    medias». Chocan de frente con la marca de agua (§5.5), así que **si algún día entran, es con las tres
-   condiciones que los hacen inofensivos**: no se publican nunca, viven solo en `/perfil`, y no cuentan en la
+   condiciones que los hacen inofensivos**: no se publican nunca, viven solo en `/stats`, y no cuentan en la
    fracción (§6.3.1) — es decir, no son logros, son un termómetro con forma de medalla.
 
 9. ~~**¿Se enseña el nivel a quien todavía no es amistad?**~~ **Resuelta: no, y la regla ya existía.** La ficha

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, isKnownRoute, matchAppSection } from '../../src/core/constants/routes';
+import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, isKnownRoute, legacyRedirectTarget, matchAppSection } from '../../src/core/constants/routes';
 import { LEGAL_ROUTES } from '../../src/core/constants/legal';
 import { SOCIAL_ROUTES } from '../../src/viewmodel/social/socialRoutes';
 
@@ -43,10 +43,12 @@ describe('rutas de la app', () => {
     }
   });
 
-  it('/perfil es el panel de estadísticas, no el perfil social', () => {
-    // La pestaña inferior se llama "Perfil" y la ficha pública vive en `/social/profile`: son dos pantallas
-    // distintas y ninguna debe robarle la ruta a la otra.
-    expect(matchAppSection('/perfil')).toBe('stats');
+  it('/stats es el panel de estadísticas, no el perfil social', () => {
+    // El panel se llamó `/perfil` y la ficha pública vive en `/social/profile`: son dos pantallas distintas y
+    // ninguna debe robarle la ruta a la otra. El renombrado a `/stats` es lo que deshace el equívoco.
+    expect(matchAppSection('/stats')).toBe('stats');
+    expect(matchAppSection('/stats/resenas')).toBe('stats');
+    expect(matchAppSection('/stats/resenas/7')).toBe('stats');
     expect(matchAppSection(SOCIAL_ROUTES.profileEdit)).toBe('social');
   });
 
@@ -63,9 +65,22 @@ describe('rutas de la app', () => {
     // `/visitados` era el nombre de la lista de abandonados. Renombrarla en seco habría mandado al rebote
     // cualquier marcador o acceso directo ya guardado, que es la razón de que la redirección exista.
     expect(LEGACY_ROUTE_REDIRECTS).toContainEqual({ from: '/visitados', to: '/abandonados' });
-    // El destino de cada redirección tiene que ser una ruta declarada; si no, el salto acaba en el catch-all.
+    expect(LEGACY_ROUTE_REDIRECTS).toContainEqual({ from: '/perfil', to: '/stats' });
+    // «Cuenta» fue pantalla y pestaña; su contenido vive ahora en el grupo de diseño.
+    expect(LEGACY_ROUTE_REDIRECTS).toContainEqual({ from: '/cuenta', to: '/ajustes/diseno' });
+    // Y los tres grupos que se han renombrado o fusionado siguen resolviendo por su nombre viejo: de ellos
+    // cuelgan enlaces guardados, el atajo de la bandeja y la vuelta del OAuth de GitHub.
+    expect(LEGACY_ROUTE_REDIRECTS).toContainEqual({ from: '/ajustes/personalizacion', to: '/ajustes/diseno' });
+    expect(LEGACY_ROUTE_REDIRECTS).toContainEqual({ from: '/ajustes/integracion', to: '/ajustes/datos' });
+    expect(LEGACY_ROUTE_REDIRECTS).toContainEqual({ from: '/ajustes/legal', to: '/ajustes/datos' });
+    // El destino de cada redirección tiene que RESOLVER; si no, el salto acaba en el catch-all y el nombre
+    // viejo, que existía para no perder a nadie, pierde a todo el mundo. Se pregunta con el matcher y no
+    // buscando el camino en la tabla: hay destinos que cubre un comodín (`/ajustes/*`) y ahí la comparación
+    // exacta diría que no existen.
     for (const { from, to } of LEGACY_ROUTE_REDIRECTS) {
-      expect(APP_ROUTES.some((route) => route.path === to), to).toBe(true);
+      expect(isKnownRoute(to), to).toBe(true);
+      // Y el nombre RETIRADO no puede seguir declarado como pantalla: si lo estuviera, ganaría él y la
+      // redirección no se alcanzaría nunca.
       expect(APP_ROUTES.some((route) => route.path === from), from).toBe(false);
     }
   });
@@ -81,5 +96,20 @@ describe('rutas de la app', () => {
     // Un nombre retirado SIGUE resolviendo (redirige), así que el "Volver" puede fiarse de él.
     expect(isKnownRoute('/visitados')).toBe(true);
     expect(isKnownRoute('/no-existe')).toBe(false);
+  });
+
+  it('el nombre retirado del panel sigue reconociéndose CON su cola', () => {
+    // `/perfil/resenas/:id` se abre en otra pestaña y se copia, así que un enlace guardado con el nombre viejo
+    // tiene que seguir siendo una ruta conocida; si no, el "Volver" lo trataría como dirección inventada.
+    expect(isKnownRoute('/perfil')).toBe(true);
+    expect(isKnownRoute('/perfil/resenas')).toBe(true);
+    expect(isKnownRoute('/perfil/resenas/7')).toBe(true);
+    // El comodín no puede tragarse un nombre que solo EMPIECE igual.
+    expect(isKnownRoute('/perfiles')).toBe(false);
+  });
+
+  it('la redirección con comodín conserva lo que colgaba del nombre viejo', () => {
+    expect(legacyRedirectTarget('/stats', 'resenas/7')).toBe('/stats/resenas/7');
+    expect(legacyRedirectTarget('/stats', '')).toBe('/stats');
   });
 });

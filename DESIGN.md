@@ -62,7 +62,7 @@ Cada tema define los mismos tokens; el resto del sistema se deriva. **Nunca uses
 
 | id | Nombre | Acento oscuro | Fondo oscuro | Mundo |
 |---|---|---|---|---|
-| `forja` | **Forja y temple** (por defecto) | `#ff7a3c` metal al rojo | `#0f1315` | El taller. El único sin mundo detrás: es el que ve quien no ha elegido nada. Naranja que **rellena** y turquesa de temple (`#2fd6c0`) que **escribe y señala** |
+| `forja` | **Forja y temple** (por defecto) | `#ff7a3c` metal al rojo | `#0f1315` | La fragua. El único sin mundo detrás: es el que ve quien no ha elegido nada. Naranja que **rellena** y turquesa de temple (`#2fd6c0`) que **escribe y señala** |
 | `arcade` | Inserte moneda | `#b23cff` | `#150a24` | Sala de recreativos de los ochenta: violeta de neón, cian de tubo y rosa de pegatina |
 | `steam` | Clásico | `#d9a13a` latón | `#15100b` | Cuero, papel, cobre y latón, con la **pátina** (`#4ab396`) de segundo acento. El único sin juego detrás |
 | `persona` | Ladrones de corazones | `#ff1f3d` | `#0d0d0d` | Persona 5: rojo, negro, blanco y oro de calendario |
@@ -161,8 +161,26 @@ Doce pasos, razón ≈1,08 en la zona de interfaz. Multiplicados por `--font-sca
 - **Rejilla de 4**: `--sp-1` 4px … `--sp-8` 64px. Huecos con `gap`, nunca márgenes que se cancelen.
 - Contenedor de lectura ≤ 1140 px; la tabla puede desbordar en su propio contenedor con `overflow-x`.
 - Gutter lateral mínimo de 16 px a cualquier ancho.
-- La app es **headerless**: no hay barra superior fija, sino controles flotantes y navegación inferior.
+- La app es **headerless**: no hay barra superior fija, sino navegación inferior y un control flotante.
   *(Propuesta: cabecera de pantalla con rótulo, título y cifras — hoy las pantallas empiezan en frío.)*
+
+### 5.1 · Navegación
+
+Cuatro pestañas abajo —**Listados · Social · Estadísticas · Ajustes**— y arriba a la derecha, solo el cambio de
+tema. Esa separación es la regla: **abajo lo que LLEVA a algún sitio, arriba lo que CAMBIA algo en el sitio**.
+Importa porque los flotantes se esconden al bajar, y un destino que desaparece a mitad de página deja media
+aplicación sin salida; un control que se aparta mientras lees, no.
+
+La cuarta pestaña no navega: despliega un `popover` con los cuatro grupos de ajustes —Personalización,
+Integración, Filtros y, como pie, Legal—. Cuatro rótulos con un punto de luz delante, **sin panel, sin caja y
+sin velo**. El contraste no lo pone una superficie sino el apagado de todo lo demás: mientras el menú está
+abierto, el contenido, los avisos y los controles flotantes bajan al **30 %** y los dos botones de acción
+desaparecen (nacen en la misma esquina de la que sale el menú). Medido sobre el peor fondo posible —una carátula
+blanca en tema oscuro, una negra en claro—, el rótulo queda en 6,4:1 y 6,6:1 en el peor píxel de su trazo.
+
+La sombra de los rótulos (`--glow-text`, CAPA 1, derivada de `--bg`) **remata pero no sostiene**: medida sola
+sobre blanco no pasa de 2:1 por muchas capas que se le añadan, porque en las puntas del trazo el halo se
+difumina en todas direcciones. Y nada de esto lo ve axe, así que se mide a mano.
 
 ---
 

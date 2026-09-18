@@ -41,10 +41,8 @@ function renderFeed(over: { offline?: boolean; offlineHasCachedData?: boolean; i
       openActivityDetail={() => {}}
       openMoveReview={() => {}}
       handleActivityItemKeyDown={() => {}}
-      composePostText=""
-      setComposePostText={() => {}}
       publishingPost={false}
-      handlePublishPost={() => {}}
+      handlePublishPost={async () => true}
       canPublishPosts={false}
       postMaxLength={1000}
       showPostCounter

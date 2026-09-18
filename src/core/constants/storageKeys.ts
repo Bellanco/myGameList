@@ -89,6 +89,19 @@ export const SHARE_CONSENT_KEY = 'mis-listas-share-consent';
 // catálogo se recalcula entero en el primer render — que es exactamente lo que hace la retroactividad (§7.3).
 export const ACHIEVEMENTS_PEAK_KEY = 'mis-listas-achievements-peak-2';
 
+// Logros — LO QUE YA SE TE HA CONTADO. Mismo formato que la marca de agua y, a propósito, OTRA clave.
+//
+// Son dos preguntas distintas y compartir almacén las confundía: la marca de agua responde «¿lo tenías?» y la
+// escriben los DOS evaluadores (`useAchievements` en el hub y en el panel, `useAchievementNotice` al arrancar),
+// mientras que esta responde «¿ya te lo anuncié?» y la escribe solo el aviso. Con una sola clave, cualquiera de
+// los dos podía dar por contado un logro que nadie había anunciado —o al revés, dejar sin memoria a un escalón
+// que sí se anunció—, y de ahí salían las medallas viejas repitiéndose sesión tras sesión.
+//
+// SE SIEMBRA DESDE LA MARCA DE AGUA la primera vez que se lee: lo que ya estaba conseguido antes de que esta
+// clave existiera se da por contado, que es justo lo que evita soltarle el historial entero de golpe a quien
+// lleva meses usando la app.
+export const ACHIEVEMENTS_TOLD_KEY = 'mis-listas-achievements-told';
+
 // Logros — el ÚLTIMO ESPEJO PUBLICADO en este dispositivo, para no reescribir en Firestore una cadena idéntica.
 //
 // Es una caché de escritura, no un dato: si se pierde (navegador limpio, otro dispositivo) lo único que pasa es

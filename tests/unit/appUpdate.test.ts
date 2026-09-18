@@ -10,30 +10,55 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 type Listener = (event?: unknown) => void;
 
 let controllerListeners: Listener[] = [];
+let messageListeners: Listener[] = [];
 let updateMock: ReturnType<typeof vi.fn>;
 let registerMock: ReturnType<typeof vi.fn>;
 let unregisterMock: ReturnType<typeof vi.fn>;
+let postMessageMock: ReturnType<typeof vi.fn>;
 
-function installServiceWorkerMock(options: { controlled: boolean }): void {
+/**
+ * @param workerBuild qué contesta el worker cuando le preguntan por su versión. Sin esto no contesta nada, que
+ * es el caso de un worker anterior a esta comprobación.
+ */
+function installServiceWorkerMock(options: { controlled: boolean; workerBuild?: string }): void {
   controllerListeners = [];
+  messageListeners = [];
   updateMock = vi.fn().mockResolvedValue(undefined);
   unregisterMock = vi.fn().mockResolvedValue(true);
   registerMock = vi.fn().mockResolvedValue({ update: updateMock });
+  // La respuesta viaja entre dos hilos, así que llega en otro turno: se emula con un temporizador de cero.
+  postMessageMock = vi.fn(() => {
+    if (options.workerBuild === undefined) return;
+    setTimeout(() => {
+      messageListeners.forEach((listener) => listener({ data: { tipo: 'build', buildId: options.workerBuild } }));
+    }, 0);
+  });
 
   Object.defineProperty(navigator, 'serviceWorker', {
     configurable: true,
     value: {
-      controller: options.controlled ? {} : null,
+      controller: options.controlled ? { postMessage: postMessageMock } : null,
       register: registerMock,
       getRegistrations: vi.fn().mockResolvedValue([{ unregister: unregisterMock }]),
       addEventListener: (type: string, listener: Listener) => {
         if (type === 'controllerchange') {
           controllerListeners.push(listener);
         }
+        if (type === 'message') {
+          messageListeners.push(listener);
+        }
       },
       removeEventListener: () => {},
     },
   });
+}
+
+/** La versión que el documento declara en `<meta name="app-build">`, como la deja el build. */
+function setDocumentBuild(buildId: string): void {
+  const meta = document.createElement('meta');
+  meta.setAttribute('name', 'app-build');
+  meta.setAttribute('content', buildId);
+  document.head.appendChild(meta);
 }
 
 /** Simula que un service worker nuevo toma el control de esta página. */
@@ -58,6 +83,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
+  document.head.querySelectorAll('meta[name="app-build"]').forEach((meta) => meta.remove());
 });
 
 describe('detección de versión nueva', () => {
@@ -72,6 +98,7 @@ describe('detección de versión nueva', () => {
   });
 
   it('avisa cuando un service worker nuevo releva al que ya controlaba la página', async () => {
+    // Sin `<meta name="app-build">` no hay con qué comparar y se avisa igual, que es el lado seguro.
     installServiceWorkerMock({ controlled: true });
     const { registerServiceWorker, APP_UPDATE_EVENT } = await loadModule();
     const listener = vi.fn();
@@ -80,6 +107,65 @@ describe('detección de versión nueva', () => {
     registerServiceWorker();
     fireControllerChange();
 
+    expect(listener).toHaveBeenCalledTimes(1);
+    window.removeEventListener(APP_UPDATE_EVENT, listener);
+  });
+
+  // ⚑ EL FALSO POSITIVO DE CADA DESPLIEGUE. La primera visita tras publicar la sirve todavía el worker anterior,
+  // pero red-primero y con el HTML en `no-store`: el documento ya es el nuevo. Un instante después el worker
+  // nuevo se instala, hace `skipWaiting()` + `clients.claim()` y releva — y eso NO deja vieja a esta página.
+  it('NO avisa si el worker que releva sirve la misma versión que esta página ya ejecuta', async () => {
+    setDocumentBuild('abc123');
+    installServiceWorkerMock({ controlled: true, workerBuild: 'abc123' });
+    const { registerServiceWorker, APP_UPDATE_EVENT } = await loadModule();
+    const listener = vi.fn();
+    window.addEventListener(APP_UPDATE_EVENT, listener);
+
+    registerServiceWorker();
+    fireControllerChange();
+
+    expect(postMessageMock).toHaveBeenCalledWith({ tipo: 'build-id' });
+    vi.advanceTimersByTime(0); // llega la respuesta
+    expect(listener).not.toHaveBeenCalled();
+
+    // Y el plazo de gracia se ha desarmado: no sale un aviso tardío tres segundos después.
+    vi.advanceTimersByTime(10_000);
+    expect(listener).not.toHaveBeenCalled();
+    window.removeEventListener(APP_UPDATE_EVENT, listener);
+  });
+
+  it('avisa en cuanto el worker dice que sirve otra versión, sin esperar al plazo', async () => {
+    setDocumentBuild('abc123');
+    installServiceWorkerMock({ controlled: true, workerBuild: 'def456' });
+    const { registerServiceWorker, APP_UPDATE_EVENT } = await loadModule();
+    const listener = vi.fn();
+    window.addEventListener(APP_UPDATE_EVENT, listener);
+
+    registerServiceWorker();
+    fireControllerChange();
+    expect(listener).not.toHaveBeenCalled(); // todavía no se sabe
+
+    vi.advanceTimersByTime(0);
+    expect(listener).toHaveBeenCalledTimes(1);
+    window.removeEventListener(APP_UPDATE_EVENT, listener);
+  });
+
+  it('un worker que no contesta no deja a nadie sin enterarse: el aviso sale al agotarse el plazo', async () => {
+    setDocumentBuild('abc123');
+    installServiceWorkerMock({ controlled: true }); // sin `workerBuild`: no responde
+    const { registerServiceWorker, APP_UPDATE_EVENT } = await loadModule();
+    const listener = vi.fn();
+    window.addEventListener(APP_UPDATE_EVENT, listener);
+
+    registerServiceWorker();
+    fireControllerChange();
+    expect(listener).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(3000);
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    // Una sola vez: el plazo no se queda repitiendo.
+    vi.advanceTimersByTime(10_000);
     expect(listener).toHaveBeenCalledTimes(1);
     window.removeEventListener(APP_UPDATE_EVENT, listener);
   });

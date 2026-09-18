@@ -19,7 +19,9 @@ import { useAchievementNotice } from './view/hooks/useAchievementNotice';
 import { useAnnouncement } from './view/hooks/useAnnouncement';
 import { UpdateNotice } from './view/components/UpdateNotice';
 import { BottomNavigation } from './view/components/BottomNavigation';
-import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, matchAppSection, type AppSection } from './core/constants/routes';
+import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, SETTINGS_ROUTES, isKnownRoute, matchAppSection, matchSettingsGroup, type AppSection, type SettingsGroup } from './core/constants/routes';
+import { LegacyTailRedirect } from './view/components/LegacyTailRedirect';
+import { SettingsMenu } from './view/components/SettingsMenu';
 import { ScrollToTop } from './view/components/ScrollToTop';
 import { useScrollOnNavigate } from './view/hooks/useScrollOnNavigate';
 import { ConsentBanner } from './view/components/ConsentBanner';
@@ -29,6 +31,7 @@ import { useGameListViewModel, type GameDraft } from './viewmodel/useGameListVie
 import { useToolbarFilters } from './viewmodel/useToolbarFilters';
 import { computeTabOptions, countActiveFilters } from './viewmodel/toolbarFilters';
 import { useSyncViewModel } from './viewmodel/useSyncViewModel';
+import { GithubConnectionProvider, type GithubConnection } from './viewmodel/sync/githubConnection';
 import { resolveSyncBadge } from './viewmodel/syncBadge';
 import { useScoreScaleSession } from './view/hooks/useScoreScaleSession';
 import { useSocialProfileSession } from './view/hooks/useSocialProfileSession';
@@ -43,7 +46,7 @@ import { useBacklogSnapshot } from './view/hooks/useBacklogSnapshot';
 import { useSignatureEffects } from './view/hooks/useSignatureEffects';
 import { useScreenTransition } from './view/hooks/useScreenTransition';
 import { useAppliedPalette } from './view/hooks/usePalette';
-import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository';
+import { hasGithubOAuthRedirect, takeGithubOAuthOrigin } from './model/repository/githubOAuthChecks';
 import { type RouletteCandidate } from './core/roulette/roulette';
 import { normalizeName } from './core/utils/normalizeName';
 import { useImportInbox } from './viewmodel/useImportInbox';
@@ -69,7 +72,12 @@ const SocialHub = lazy(() => import('./view/components/SocialHub').then((module)
 // Panel "Perfil" (estadísticas). Perezoso como el resto de hubs: su código y su hoja de estilos solo se
 // descargan al entrar en la pestaña, así que no pesan en el arranque de los listados.
 const StatsHub = lazy(() => import('./view/components/stats/StatsHub').then((module) => ({ default: module.StatsHub })));
-const AccountHub = lazy(() => import('./view/components/AccountHub').then((module) => ({ default: module.AccountHub })));
+// Las tres pantallas de Ajustes. Perezosas como el resto de hubs: sus textos (`settingsLabels`, 11 kB) y su
+// maquetación solo se descargan al entrar, no en el arranque de los listados.
+const PersonalizationSettings = lazy(() => import('./view/components/settings/PersonalizationSettings').then((module) => ({ default: module.PersonalizationSettings })));
+const LegalSettings = lazy(() => import('./view/components/settings/LegalSettings').then((module) => ({ default: module.LegalSettings })));
+const FiltersSettings = lazy(() => import('./view/components/settings/FiltersSettings').then((module) => ({ default: module.FiltersSettings })));
+
 /* La ruleta de los listados va por su envoltorio, no por el modal desnudo: así el pool y la ponderación
    se calculan DENTRO del chunk perezoso en vez de en el arranque (ver `ListsRouletteModal`). */
 const RouletteModal = lazy(() => importRouletteModal().then((module) => ({ default: module.ListsRouletteModal })));
@@ -86,6 +94,16 @@ const AdminHub = lazy(() => import('./view/components/AdminHub').then((module) =
  * vez que alguien consigue algo, que es justo cuando hace falta y ya no es el arranque.
  */
 const AchievementToast = lazy(() => import('./view/components/stats/AchievementToast').then((module) => ({ default: module.AchievementToast })));
+
+/**
+ * EL RESTO DEL SPRITE DE ICONOS (ver `IconSpriteRest`): los 15 símbolos que ninguna pieza del arranque dibuja.
+ *
+ * Perezoso Y montado en idle, que son dos cosas distintas y las dos hacen falta: `lazy()` lo saca del chunk de
+ * arranque, y esperar a que el navegador esté ocioso evita que su descarga compita con el primer pintado. Quien
+ * los necesita son pantallas a las que hay que navegar —o modales que hay que abrir—, así que para cuando se
+ * piden llevan rato en el documento.
+ */
+const IconSpriteRest = lazy(() => import('./view/components/IconSpriteRest').then((module) => ({ default: module.IconSpriteRest })));
 
 /**
  * EL AVISO DEL ADMINISTRADOR, perezoso por lo mismo: comparte carril y forma con el de logro, se monta desde el
@@ -116,9 +134,12 @@ function getCurrentTab(pathname: string): TabId {
  * propósito): no cambia nada de lo que se ve y le da a un lector de pantalla el encabezado que ninguna pantalla
  * tenía. En los listados incluye la pestaña activa, que es lo que de verdad distingue una vista de otra.
  */
-function getPageHeading(section: AppSection, currentTab: TabId): string {
+function getPageHeading(section: AppSection, currentTab: TabId, settingsGroup: SettingsGroup | null): string {
   const H = UI_MESSAGES.pageHeading;
   if (section === 'lists') return H.lists(TAB_TITLES[currentTab]);
+  // Las tres pantallas de Ajustes comparten sección, así que un solo «Ajustes» dejaría a un lector de pantalla
+  // sin saber en cuál de las tres ha entrado. El encabezado dice el grupo.
+  if (section === 'settings' && settingsGroup) return `${H.settings} · ${UI_MESSAGES.settingsMenu[settingsGroup]}`;
   return H[section];
 }
 
@@ -211,14 +232,21 @@ export default function App() {
   // Efectos de firma por interacción (wipe P5 al navegar, apertura de portal al clic, sol↔luna, boot-up 40K).
   useSignatureEffects();
 
-  // La pantalla "Cuenta" solo existe con sesión de Google (todos sus ajustes la requieren). Si se llega a
-  // `/cuenta` sin sesión (URL directa) o se cierra sesión estando allí, se redirige a la lista. Se espera a
-  // `authReady` para no expulsar a un usuario logueado durante la resolución inicial de la sesión.
+  /**
+   * LA PUERTA DE «DISEÑO» TAMBIÉN EN LA RUTA, y no solo en el menú. Ahí dentro está lo que se guarda en
+   * la nube de quien tiene espacio social —la escala de nota, los enlaces publicados—, así que sin él no hay
+   * nada que enseñar; el punto no se pinta, pero la dirección se puede teclear, y un camino declarado que pinta
+   * una pantalla vacía es peor que uno que no existe. Se manda a la portada de Ajustes, que sí es suya.
+   *
+   * Se espera a `authReady` para no expulsar a quien sí tiene sesión mientras se resuelve al arrancar.
+   */
   useEffect(() => {
-    if (authReady && !scoreScaleUid && activeSection === 'account') {
-      navigate('/completados', { replace: true });
+    if (authReady && !hasSocialProfile && location.pathname === SETTINGS_ROUTES.design) {
+      navigate(SETTINGS_ROUTES.data, { replace: true });
     }
-  }, [authReady, scoreScaleUid, activeSection, navigate]);
+  }, [authReady, hasSocialProfile, location.pathname, navigate]);
+  /** Cuál de los tres grupos de Ajustes pide el camino; `null` es la portada. */
+  const settingsGroup = matchSettingsGroup(location.pathname);
   const { filters, setFilter, toggleFilterValue, clearFilter, clearAllFilters } = useToolbarFilters();
   const {
     setExpandedId,
@@ -301,7 +329,7 @@ export default function App() {
   // memoizarse por muchas envolturas que se le pusieran.
   const openInbox = useCallback(() => navigateFromHere('/bandeja'), [navigateFromHere]);
   const backFromInbox = useCallback(() => navigate(importReturnTo), [navigate, importReturnTo]);
-  const goToSettings = useCallback(() => navigate('/ajustes'), [navigate]);
+  const goToSettings = useCallback(() => navigate(SETTINGS_ROUTES.data), [navigate]);
 
   // Inserta en la bandeja el resultado de un parser y avisa; navega a la bandeja si hubo algo.
   const importGames = useCallback(
@@ -406,7 +434,21 @@ export default function App() {
   useEffect(() => {
     // Si volvemos del "Conectar con GitHub" (OAuth), completamos ese flujo; si no, arrancamos el sync normal.
     if (hasGithubOAuthRedirect()) {
-      void syncVm.completeGithubLoginFromRedirect();
+      /* Y SE VUELVE POR DONDE SE VINO. GitHub nos deja siempre en `/ajustes` —su callback registrado—, pero la
+         conexión se puede empezar desde la pasarela del hub social, y allí es donde estaba quien la empezó.
+         Se lee ANTES de completar (es de un solo uso) y se navega pase lo que pase con el canje: si falla, el
+         aviso se lee mejor en la pantalla del botón que se pulsó.
+         Solo caminos DECLARADOS de la aplicación: lo apuntado sale de `window.location`, pero validarlo es lo
+         que impide que un valor manipulado en el almacenamiento decida a dónde va la aplicación. */
+      const origen = takeGithubOAuthOrigin();
+      const destino = origen.startsWith('/') && !origen.startsWith('//') && isKnownRoute(origen.split(/[?#]/)[0])
+        ? origen
+        : '';
+      void syncVm.completeGithubLoginFromRedirect().finally(() => {
+        if (destino && destino !== `${window.location.pathname}${window.location.search}`) {
+          navigate(destino, { replace: true });
+        }
+      });
     } else {
       syncVm.initializeSync();
     }
@@ -564,12 +606,7 @@ export default function App() {
     }
 
     if (section === 'stats') {
-      navigate('/perfil');
-      return;
-    }
-
-    if (section === 'account') {
-      navigate('/cuenta');
+      navigate('/stats');
       return;
     }
 
@@ -580,6 +617,26 @@ export default function App() {
 
     navigate('/ajustes');
   }, [navigate, setExpandedId]);
+
+  /**
+   * ¿Está desplegado el menú de Ajustes? Lo abre y lo cierra el navegador (es un `popover`); esto es solo el eco,
+   * y hace dos cosas: anunciarlo en el botón de la barra (`aria-expanded`) y APAGAR EL CONTENIDO mientras dura.
+   * Lo segundo no es decoración: el menú no tiene panel ni velo, así que el contraste de sus rótulos sale de que
+   * lo de debajo baje al 30 %.
+   */
+  const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
+
+  /**
+   * SE APAGA TODO MENOS LA BARRA, y por eso la marca va en el `<body>` y no en cada pieza: lo que hay que
+   * atenuar —el contenido, los dos botones de acción, el carril de los avisos y los controles flotantes— son
+   * hermanos repartidos por el árbol, y marcarlos uno a uno obligaría a pasar el estado a cuatro sitios que no
+   * tienen nada que ver entre sí. La barra inferior se queda encendida a propósito: es donde está el dedo y lo
+   * que dice de dónde ha salido el menú.
+   */
+  useEffect(() => {
+    document.body.classList.toggle('settings-menu-open', settingsMenuOpen);
+    return () => document.body.classList.remove('settings-menu-open');
+  }, [settingsMenuOpen]);
 
   const handleAddGame = useCallback(() => {
     openNewGame(currentTab);
@@ -722,13 +779,64 @@ export default function App() {
   // Precarga en idle, ya pintada la pantalla: cuando el usuario abra un modal su módulo estará en caché y no
   // habrá que esperar a la red (el `fallback` de Suspense es `null`, así que una espera se vería como un clic
   // que no hace nada).
+  // El resto del sprite de iconos sigue la misma puerta: fuera del arranque y dentro en cuanto haya hueco.
+  const [spriteRestoListo, setSpriteRestoListo] = useState(false);
   useEffect(() => runWhenIdle(() => {
     void importFormModal();
     void importConfirmModal();
     void importRouletteModal();
+    setSpriteRestoListo(true);
   }), []);
 
   const syncBadgeText = resolveSyncBadge(syncVm.status, syncVm.pendingUpload);
+
+  /**
+   * LA CONEXIÓN CON GITHUB, ofrecida a TODO el árbol (ver `githubConnection`).
+   *
+   * El viewmodel de sincronización es uno solo y vive aquí, atado a los datos de la aplicación; la tarjeta que
+   * conecta, en cambio, la piden dos pantallas de chunks distintos —Integración y la pasarela del hub social—.
+   * Por contexto y no por props: el hub está detrás de un `lazy()` y de un `memo`, y bajarle trece props para
+   * una tarjeta que casi nunca pinta era arrastrar la sincronización entera por media aplicación.
+   *
+   * Memoizado porque el proveedor reparte identidad: un objeto nuevo en cada render de `App` re-renderiza a
+   * todos sus consumidores.
+   */
+  const githubConnection = useMemo<GithubConnection>(() => ({
+    statusText: syncBadgeText,
+    hasConfig: syncVm.hasConfig,
+    connectedGistId: syncVm.connectedGistId || syncVm.currentConfig?.gistId || '',
+    token: syncVm.token,
+    gistId: syncVm.gistId,
+    errorMessage: syncVm.statusMessage,
+    recoveringGistId: syncVm.recoveringGistId,
+    oauthEnabled: syncVm.githubOAuthEnabled,
+    oauthLoggingIn: syncVm.githubLoggingIn,
+    onOAuthLogin: syncVm.beginGithubLogin,
+    onTokenChange: syncVm.setToken,
+    onGistIdChange: syncVm.setGistId,
+    onConnect: syncVm.connectSync,
+    onDisconnect: syncVm.disconnectSync,
+    onCopyGistId: handleCopyGistId,
+    onRecoverGistId: handleRecoverGistId,
+  }), [
+    handleCopyGistId,
+    handleRecoverGistId,
+    syncBadgeText,
+    syncVm.beginGithubLogin,
+    syncVm.connectSync,
+    syncVm.connectedGistId,
+    syncVm.currentConfig?.gistId,
+    syncVm.disconnectSync,
+    syncVm.gistId,
+    syncVm.githubLoggingIn,
+    syncVm.githubOAuthEnabled,
+    syncVm.hasConfig,
+    syncVm.recoveringGistId,
+    syncVm.setGistId,
+    syncVm.setToken,
+    syncVm.statusMessage,
+    syncVm.token,
+  ]);
 
   /**
    * Pantalla de cada sección. Las cuatro rutas de listados comparten elemento a propósito: la pestaña activa se
@@ -798,12 +906,6 @@ export default function App() {
         <StatsHub games={vm.data} />
       </Suspense>
     ),
-    account: (
-
-      <Suspense fallback={<ScreenSkeleton />}>
-        {scoreScaleUid ? <AccountHub scoreScaleUid={scoreScaleUid} hasSocialProfile={hasSocialProfile} /> : null}
-      </Suspense>
-    ),
     admin: (
 
       <Suspense fallback={<ScreenSkeleton />}>
@@ -843,51 +945,59 @@ export default function App() {
         />
       </Suspense>
     ),
+    /**
+     * Las TRES pantallas de Ajustes salen de la misma sección: la que toca la decide el camino (ver
+     * `matchSettingsGroup`), igual que hacen el hub social y el panel con las suyas. Sin grupo en el camino
+     * —`/ajustes` a secas— se entra en «Datos».
+     */
     settings: (
 
       <Suspense fallback={<ScreenSkeleton />}>
-        <SettingsHub
-          syncStatus={syncBadgeText}
-          hasSyncConfig={syncVm.hasConfig}
-          connectedGistId={syncVm.connectedGistId || syncVm.currentConfig?.gistId || ''}
-          token={syncVm.token}
-          gistId={syncVm.gistId}
-          syncError={syncVm.statusMessage}
-          recoveringGistId={syncVm.recoveringGistId}
-          githubOAuthEnabled={syncVm.githubOAuthEnabled}
-          githubLoggingIn={syncVm.githubLoggingIn}
-          onGithubLogin={syncVm.beginGithubLogin}
-          onTokenChange={syncVm.setToken}
-          onGistIdChange={syncVm.setGistId}
-          onConnectSync={syncVm.connectSync}
-          onSyncNow={syncVm.syncNow}
-          onDisconnectSync={syncVm.disconnectSync}
-          onCopyGistId={handleCopyGistId}
-          onRecoverGistId={handleRecoverGistId}
-          onExport={exportData}
-          onImport={importData}
-          lookups={vm.lookups}
-          onEditTag={handleEditTag}
-          onDeleteTag={handleDeleteTag}
-          onImportLibrary={handleImportLibraryExporter}
-          inboxCount={inboxCount}
-          onOpenInbox={openInbox}
-        />
+        {settingsGroup === 'design' ? (
+          <PersonalizationSettings scoreScaleUid={scoreScaleUid} hasSocialProfile={hasSocialProfile} />
+        ) : settingsGroup === 'filters' ? (
+          <FiltersSettings lookups={vm.lookups} onEditTag={handleEditTag} onDeleteTag={handleDeleteTag} />
+        ) : settingsGroup === null ? (
+          /* `/ajustes` A SECAS NO ES UNA PANTALLA: no hay nada que enseñar en una portada que solo repetiría el
+             menú que acaba de usarse para llegar. Se entra directamente al grupo que existe para todo el mundo
+             y del que cuelgan los enlaces de siempre —Datos—, en vez de a un índice de paso. */
+          <Navigate to={SETTINGS_ROUTES.data} replace />
+        ) : (
+        /* «DATOS» SON DOS MITADES EN UNA PANTALLA, y en este orden: primero por dónde entran y salen tus listas
+           —importar, sincronizar, las copias— y debajo lo que se registra de ellas, los documentos y el borrado
+           de la cuenta. Eran dos grupos del menú, y las dos cosas que menos se tocan gastaban dos de sus cuatro
+           puntos. Siguen siendo dos componentes y dos regiones con su nombre: lo que se ha unido es la pantalla,
+           no lo que hay dentro. */
+        <>
+          <SettingsHub
+            onExport={exportData}
+            onImport={importData}
+            onImportLibrary={handleImportLibraryExporter}
+            inboxCount={inboxCount}
+            onOpenInbox={openInbox}
+          />
+          <LegalSettings />
+        </>
+        )}
       </Suspense>
     ),
   };
 
   return (
-    <>
+    /* La conexión con GitHub, a disposición de cualquier pantalla que quiera OFRECERLA (hoy Integración y la
+       pasarela del hub social). Envuelve el árbol entero porque las dos llegan por `lazy()` y cuelgan de sitios
+       distintos del `<Routes>`. */
+    <GithubConnectionProvider value={githubConnection}>
       <IconSprite />
+      {spriteRestoListo ? (
+        <Suspense fallback={null}>
+          <IconSpriteRest />
+        </Suspense>
+      ) : null}
       {/* A11y-4: primer elemento enfocable de la página. Sin él, llegar al contenido con teclado obligaba a pasar
           por los controles flotantes y la barra de pestañas en cada carga. Solo se ve al recibir el foco. */}
       <a className="skip-link" href="#contenido">{UI_MESSAGES.skipToContent}</a>
-      <FloatingControls
-        activeSection={activeSection}
-        onSectionChange={handleSectionChange}
-        showAccount={hasSocialProfile}
-      />
+      <FloatingControls activeSection={activeSection} />
       {activeSection === 'lists' ? <TabBar currentTab={currentTab} tabCounts={vm.tabCounts} onTabChange={handleTabChange} /> : null}
       {/* ═══ EL CARRIL DE LOS AVISOS · abajo a la izquierda, sobre la barra inferior ═══════════════════════
           UN SOLO CARRIL PARA LAS TRES CÁPSULAS, y se monta AQUÍ y no dentro de cada una. Antes lo traía cada
@@ -938,7 +1048,7 @@ export default function App() {
                 : 'main-settings'
         }`.trim()}
       >
-        <h1 className="sr-only">{getPageHeading(activeSection, currentTab)}</h1>
+        <h1 className="sr-only">{getPageHeading(activeSection, currentTab, settingsGroup)}</h1>
         <Routes>
           {APP_ROUTES.map(({ path, section }) => (
             <Route key={path} path={path} element={sectionScreens[section]} />
@@ -954,7 +1064,11 @@ export default function App() {
           {/* Nombres retirados: redirigen al actual en vez de caer en el catch-all. Van DESPUÉS de la tabla
               (no hay solape, pero el orden deja claro cuál manda) y ANTES del rebote a `FALLBACK_ROUTE`. */}
           {LEGACY_ROUTE_REDIRECTS.map(({ from, to }) => (
-            <Route key={from} path={from} element={<Navigate to={to} replace />} />
+            <Route
+              key={from}
+              path={from}
+              element={from.endsWith('/*') ? <LegacyTailRedirect to={to} /> : <Navigate to={to} replace />}
+            />
           ))}
           <Route path="*" element={<Navigate to={FALLBACK_ROUTE} replace />} />
         </Routes>
@@ -987,7 +1101,14 @@ export default function App() {
         </>
       ) : null}
 
-      <BottomNavigation currentSection={activeSection} onSectionChange={handleSectionChange} />
+      {/* El menú va FUERA del `main` a propósito: es el `main` el que se apaga cuando aquel se abre, y un hijo
+          heredaría el apagado. Por lo mismo está fuera la barra inferior. */}
+      <SettingsMenu hasSocialProfile={hasSocialProfile} onToggle={setSettingsMenuOpen} />
+      <BottomNavigation
+        currentSection={activeSection}
+        onSectionChange={handleSectionChange}
+        settingsMenuOpen={settingsMenuOpen}
+      />
       <ConsentBanner />
       <ScrollToTop />
 
@@ -1052,6 +1173,6 @@ export default function App() {
         ))}
       </datalist>
 
-    </>
+    </GithubConnectionProvider>
   );
 }

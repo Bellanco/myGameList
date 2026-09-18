@@ -64,26 +64,25 @@ export const SOCIAL_UI = {
   },
   gateway: {
     actionsAria: 'Acciones principales social',
-    progressAria: 'Progreso de configuración social',
-    stepsAria: 'Pasos de configuración social',
+    stepsAria: 'Pasos para entrar al espacio social',
     stateAria: 'Estado de configuración social',
-    flowAria: 'Flujo social',
-    lead: 'Configura tu espacio social en tres pasos: conecta GitHub, valida con Google y crea tu espacio social.',
-    stepCaption: (current: number, total: number) => `Paso actual: ${current} de ${total}`,
-    progress: (value: number) => `${value}% completado`,
+    lead: 'Mira lo que juegan tus amigos y que ellos vean lo tuyo. Son dos pasos.',
+    /** Lo que se dice de un paso ya dado. Va en la marca, que es lo que se mira para saber por dónde vas. */
+    stageDone: 'Hecho',
     connectSync: 'Ir a Sincronización',
-    signIn: 'Continuar con Google',
-    signingIn: 'Validando identidad...',
-    resolveProfile: 'Comprobando perfil social...',
+    signIn: 'Entrar con Google',
+    signingIn: 'Entrando...',
+    resolveProfile: 'Comprobando tu espacio...',
     createGist: 'Crear espacio social',
-    creatingGist: 'Creando espacio social...',
+    creatingGist: 'Preparando tu espacio...',
     enterSocial: 'Entrar a la actividad',
     signOut: 'Cerrar sesión',
-    syncRequired: 'Activa primero la sincronización principal con GitHub para habilitar el espacio social.',
-    signInRequired: 'Tu sincronización principal está activa. Continúa con Google para validar tu perfil social.',
-    gistRequired: 'Se ha verificado Firestore. Si no existe gist social asociado, crea un espacio social nuevo.',
-    gistReadySignIn: 'Ya tienes gist social enlazado. Inicia sesión con Google para acceder a la actividad.',
-    gistMissing: 'Aún no hay gist social enlazado.',
+    /* Los DOS ESTADOS PARTICULARES del segundo paso, que sustituyen a su explicación cuando toca. El resto de
+       avisos sueltos que había aquí —uno por combinación de requisitos— decían con otras palabras lo que ya dice
+       el paso: se fueron con el rediseño. */
+    gistRequired: 'Falta preparar tu espacio. Si no termina solo, créalo aquí.',
+    gistReadySignIn: 'Ya tienes espacio. Entra y vuelves a tu actividad.',
+    gistMissing: 'Tu espacio ya no está enlazado; vuelve a crearlo desde aquí.',
     detailsSummary: 'Ver estado técnico',
     stateSync: 'Sincronización',
     stateGist: 'Espacio social',
@@ -94,7 +93,6 @@ export const SOCIAL_UI = {
     stateNotLinked: 'No enlazado',
     stateActive: 'Activa',
     stateNotStarted: 'No iniciada',
-    flow: ['1. GitHub', '2. Google', '3. Espacio social', '4. Actividad'],
   },
   feed: {
     // Las que también pinta el ESQUELETO (que va en el arranque) salen de `SOCIAL_SHELL`: una sola fuente, o el
@@ -415,10 +413,28 @@ export const SOCIAL_UI = {
     friendRemoved: 'Amistad eliminada.',
     friendActionFailed: 'No se pudo completar la acción. Inténtalo de nuevo.',
   },
+  /**
+   * LOS DOS PASOS DEL ALTA, que son los dos botones: autorizar en GitHub y entrar con Google.
+   *
+   * Eran TRES, y el tercero —«Espacio social · Crear»— no lo daba nadie: se crea solo en cuanto hay sesión (ver
+   * el efecto de auto-creación en `useSocialViewModel`). Anunciarlo como un paso propio ponía trabajo donde no lo
+   * hay y convertía dos gestos en una lista de tres. Sigue contando para el progreso: el paso de Google no está
+   * hecho hasta que el espacio existe (ver `resolveGateway`).
+   */
+  /* UNA LÍNEA POR PASO, y la más corta que diga la verdad. Quien llega aquí no sabe qué es un gist ni por qué
+     hacen falta dos cuentas: cada frase de más es una pregunta de más antes de pulsar. Lo que explica el porqué
+     con detalle está en Integración, que es donde se va a buscarlo. */
   steps: [
-    { id: 'sync', title: 'GitHub', subtitle: 'Conectar' },
-    { id: 'google', title: 'Google', subtitle: 'Validar' },
-    { id: 'gist', title: 'Espacio social', subtitle: 'Crear' },
+    {
+      id: 'sync',
+      title: 'Conecta tu GitHub',
+      subtitle: 'Tus listas se guardan en tu propia cuenta.',
+    },
+    {
+      id: 'google',
+      title: 'Entra con Google',
+      subtitle: 'Al entrar se crea tu espacio social.',
+    },
   ],
 } as const;
 

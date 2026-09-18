@@ -5,6 +5,10 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./tests/setup.ts'],
+    // Por encima del `asyncUtilTimeout` de Testing Library (3 s, en `tests/setup.ts`) para que, cuando un
+    // `findBy*` no encuentre su elemento, el error sea el suyo —que nombra lo que falta— y no un «test timed
+    // out» de vitest, que no dice dónde mirar. El valor por defecto (5 s) los dejaba demasiado juntos.
+    testTimeout: 10_000,
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx', 'src/**/*.test.ts', 'src/**/*.test.tsx'],
     // `tests/emulacion` fuera: es el emulador del espacio social, que IMPRIME en vez de afirmar (ver
     // `vitest.emulacion.config.js` y `npm run emulate:social`). Lo que de él hay que vigilar en cada commit es su

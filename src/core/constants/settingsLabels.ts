@@ -8,6 +8,36 @@
 // la aplicación, y traerlo aquí devolvería estos 11 kB al chunk de entrada por catorce líneas.
 export const SETTINGS_UI = {
   title: 'Ajustes',
+  /**
+   * LOS CUATRO GRUPOS. Cada título rotula su pantalla y le da nombre accesible a su sección. Los rótulos del
+   * MENÚ viven aparte, en `labels.ts`: ese fichero viaja en el arranque con la barra y estos no.
+   */
+  groups: {
+    /** El selector de tema, que es lo que cambia la pantalla entera. */
+    themes: 'Temas',
+    /**
+     * Lo que antes se llamaba «Ajustes de cuenta»: aquel nombre venía de cuando la pantalla entera era «Cuenta»
+     * y ya no dice nada —la mitad de lo que hay dentro no depende de ninguna sesión—. Son preferencias: cómo se
+     * puntúa y los cinco interruptores de la interfaz.
+     */
+    preferences: 'Preferencias',
+    design: {
+      title: 'Diseño',
+    },
+    filters: {
+      title: 'Filtros',
+    },
+    /**
+     * Las DOS MITADES de «Datos». Siguen teniendo nombre propio aunque compartan pantalla: son el `aria-label`
+     * de cada región, y es lo que permite saltar de una a otra sin verlas.
+     */
+    integration: {
+      title: 'Integración',
+    },
+    legal: {
+      title: 'Legal',
+    },
+  },
   account: {
     title: 'Ajustes de cuenta',
   },
@@ -39,7 +69,6 @@ export const SETTINGS_UI = {
   },
   scoreScale: {
     title: 'Puntuación',
-    subtitle: 'Cómo se muestran las notas de tus juegos.',
     groupAria: 'Escala de puntuación',
     starsLabel: 'Estrellas',
     starsHint: 'Escala clásica de 0 a 5',

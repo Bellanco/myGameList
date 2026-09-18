@@ -1,5 +1,8 @@
-// F3 — compositor de publicaciones del hub: el texto en curso, el estado de envío y los límites que impone el
-// rango del perfil.
+// F3 — compositor de publicaciones del hub: el estado de envío y los límites que impone el rango del perfil.
+//
+// EL TEXTO EN CURSO YA NO VIVE AQUÍ. Vivía, y cada pulsación en el cuadro atravesaba el hook, el ViewModel y el
+// hub hasta repintar la pantalla del feed completa —lista, tarjetas y un avatar por fila—. Ahora el borrador es
+// estado local de `FeedComposer` y llega como argumento al publicar, que es el único momento en que hace falta.
 //
 // Tercera pieza que sale de `useSocialViewModel`, y otro dominio cerrado: su única atadura con el resto del hub
 // es que, al publicar, hay que refrescar el feed — de ahí `onPublished`, en vez de que el hook conozca la
@@ -13,10 +16,14 @@ import { isNetworkFailure, isOffline } from '../../core/utils/network';
 type Feedback = (kind: 'ok' | 'warn' | 'err', message: string, duration?: 'short' | 'long') => void;
 
 export interface SocialCompose {
-  composePostText: string;
-  setComposePostText: (text: string) => void;
   publishingPost: boolean;
-  handlePublishPost: () => Promise<void>;
+  /**
+   * Publica el texto y dice SI SALIÓ. El booleano existe porque quien vacía el cuadro es el compositor
+   * (`FeedComposer`, que se queda el borrador para que escribir no repinte el feed), y hay un caso en el que NO
+   * debe vaciarlo: sin red la publicación no sale y el texto tiene que seguir ahí, que es lo que promete el
+   * aviso. `false` = no se publicó (sin red, veto de rango, error o cuadro vacío).
+   */
+  handlePublishPost: (text: string) => Promise<boolean>;
   /** ¿El rango permite publicar? Bronce no: la pantalla ni siquiera muestra el compositor. */
   canPublishPosts: boolean;
   postMaxLength: number;
@@ -31,49 +38,47 @@ export function useSocialCompose(options: {
   setFeedback: Feedback;
 }): SocialCompose {
   const { ownTier, onPublished, setFeedback } = options;
-  const [composePostText, setComposePostText] = useState('');
   const [publishingPost, setPublishingPost] = useState(false);
 
-  const handlePublishPost = useCallback(async () => {
-    const text = composePostText.trim();
+  const handlePublishPost = useCallback(async (raw: string): Promise<boolean> => {
+    const text = raw.trim();
     if (!text || publishingPost) {
-      return;
+      return false;
     }
 
     // Bronce no publica. La pantalla ni siquiera muestra el compositor; esta comprobación es la red por si se
     // llega aquí de otra forma (estado a medio actualizar, atajo de teclado). En SILENCIO y a propósito: quien no
     // tiene el rango no ve nada al respecto, tampoco un aviso que le recuerde lo que no puede hacer.
     if (!canPublishPosts(ownTier)) {
-      return;
+      return false;
     }
 
     // Sin red no se intenta: publicar es una escritura en el gist social, así que lo único que se conseguiría es
     // esperar al timeout para acabar en el mismo aviso. El texto se queda intacto en el compositor.
     if (isOffline()) {
       setFeedback('warn', SOCIAL_UI.status.postPublishOffline, 'long');
-      return;
+      return false;
     }
 
     try {
       setPublishingPost(true);
       await publishPost({ text, maxLength: PROFILE_TIER_POST_MAX_LENGTH[ownTier] });
-      setComposePostText('');
       await onPublished();
       setFeedback('ok', SOCIAL_UI.status.postPublished);
+      return true;
     } catch (error) {
       if (isNetworkFailure(error)) {
         setFeedback('warn', SOCIAL_UI.status.postPublishOffline, 'long');
       } else {
         setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.postPublishFailed);
       }
+      return false;
     } finally {
       setPublishingPost(false);
     }
-  }, [composePostText, ownTier, publishingPost, onPublished, setFeedback]);
+  }, [ownTier, publishingPost, onPublished, setFeedback]);
 
   return {
-    composePostText,
-    setComposePostText,
     publishingPost,
     handlePublishPost,
     canPublishPosts: canPublishPosts(ownTier),

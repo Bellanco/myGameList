@@ -7,6 +7,7 @@ import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { LEGAL_CONSENT_UI, LEGAL_ROUTES } from '../../core/constants/legal';
 import type { GameItem, TabData } from '../../model/types/game';
 import { useSocialViewModel } from '../../viewmodel/useSocialViewModel';
+import { useGithubConnection } from '../../viewmodel/sync/githubConnection';
 import { matchSocialRoute } from '../../viewmodel/social/socialRoutes';
 import { ENABLE_ACHIEVEMENTS } from '../../core/achievements/flags';
 import { Icon } from './Icon';
@@ -27,6 +28,7 @@ import { HubStatus } from './socialhub/HubStatus';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { SocialErrorBoundary } from './socialhub/SocialErrorBoundary';
 import { HubOfflineNotice } from './socialhub/HubOfflineNotice';
+import { GithubSyncCard } from './sync/GithubSyncCard';
 import { libraryStart } from '../../core/achievements/metrics';
 
 /**
@@ -86,8 +88,6 @@ const SocialHubInner = memo(function SocialHubInner({
     ownPublishablePhoto,
     profileSearch,
     setProfileSearch,
-    composePostText,
-    setComposePostText,
     publishingPost,
     handlePublishPost,
     canPublishPosts,
@@ -104,7 +104,6 @@ const SocialHubInner = memo(function SocialHubInner({
     acceptLegalConsent,
     gatewaySteps,
     currentStep,
-    gatewayProgress,
     completedGames,
     socialDisplayName,
     filteredSocialDirectory,
@@ -198,6 +197,21 @@ const SocialHubInner = memo(function SocialHubInner({
     // feed de verdad por su camino y no por el panel.
     return backTo.startsWith('/social') ? SOCIAL_UI.feed.backToFeed : SOCIAL_UI.feed.backGeneric;
   }, [backTo]);
+  /**
+   * EL PRIMER PASO SE DA AQUÍ, no en otra pantalla. La conexión con GitHub es la misma que ofrece Integración
+   * —el componente y el viewmodel son los mismos, ver `GithubSyncCard`—, así que la pasarela ya no manda a
+   * Ajustes a quien viene a montar su espacio social y luego no sabe volver.
+   *
+   * DOS CONDICIONES, y las dos por el mismo motivo: que el paso 1 se vea tan sencillo como el 2.
+   *  - Sin proveedor (`null`): el hub se monta suelto en las pruebas de componente y no puede exigir el árbol
+   *    entero de `App`.
+   *  - Sin OAuth en el build: lo único que quedaría por ofrecer aquí es pegar un token a mano, que es
+   *    exactamente lo que esta pantalla no debe pedir.
+   * En ambos casos el paso 1 vuelve a ser el botón de siempre, que lleva a Integración: allí sí se explica.
+   */
+  const githubConnection = useGithubConnection();
+  const showSyncCard = !hasMainSync && Boolean(githubConnection?.oauthEnabled);
+
   const goToProfileEdit = useCallback(() => navigate('/social/profile'), [navigate]);
   const goToProfiles = useCallback(() => navigate('/social/profiles'), [navigate]);
   const goToRequests = useCallback(() => navigate('/social/requests'), [navigate]);
@@ -558,8 +572,6 @@ const SocialHubInner = memo(function SocialHubInner({
         openActivityDetail={openActivityDetail}
         openMoveReview={openMoveReview}
         handleActivityItemKeyDown={handleActivityItemKeyDown}
-        composePostText={composePostText}
-        setComposePostText={setComposePostText}
         publishingPost={publishingPost}
         handlePublishPost={handlePublishPost}
         canPublishPosts={canPublishPosts}
@@ -574,6 +586,56 @@ const SocialHubInner = memo(function SocialHubInner({
     );
   }
 
+  /**
+   * LO QUE DICE CADA PASO, en el orden de `gatewaySteps`.
+   *
+   * Lo normal es la explicación del propio paso; el segundo tiene DOS situaciones que piden otra cosa, y las dos
+   * son estados reales en los que se ha quedado gente: entrar con Google y que el espacio social no llegue a
+   * crearse, y volver a una instalación nueva cuando el espacio ya existía. Antes se decían en párrafos sueltos
+   * al pie de la pantalla, lejos del paso al que se referían.
+   */
+  const stageNotes = gatewaySteps.map((step) => {
+    if (step.id !== 'google') return step.subtitle;
+    if (hasSocialSession && !hasSocialGist) return SOCIAL_UI.gateway.gistRequired;
+    if (!hasSocialSession && hasSocialGist) return SOCIAL_UI.gateway.gistReadySignIn;
+    return step.subtitle;
+  });
+
+  /**
+   * LA ACCIÓN DE CADA PASO, dentro de su paso.
+   *
+   * Solo hay una a la vez —la del paso que toca—, y es la misma que antes vivía suelta en una fila aparte: el
+   * primero conecta GitHub (la tarjeta compartida con Integración, o su botón de respaldo hacia Ajustes si este
+   * build no trae OAuth) y el segundo entra con Google y, si hace falta, reintenta la creación del espacio.
+   * `primaryGatewayCta` ya resuelve cuál toca; aquí solo se decide bajo qué paso cuelga.
+   */
+  const ctaStageIndex = hasMainSync ? 1 : 0;
+  const stageActions = gatewaySteps.map((_step, index) => {
+    if (index === 0 && showSyncCard && githubConnection) {
+      return (
+        <GithubSyncCard
+          key="github"
+          connection={githubConnection}
+          variant="gateway"
+          ctaClassName="btn btn-primary hub-gateway-btn hub-gateway-btn-primary"
+        />
+      );
+    }
+    if (index !== ctaStageIndex || !primaryGatewayCta) return null;
+    return (
+      <button
+        key="cta"
+        className="btn btn-primary hub-gateway-btn hub-gateway-btn-primary"
+        type="button"
+        onClick={primaryGatewayCta.action}
+        disabled={primaryGatewayCta.disabled}
+      >
+        <Icon name={primaryGatewayCta.icon} />
+        <span>{primaryGatewayCta.label}</span>
+      </button>
+    );
+  });
+
   return (
     <section className="hub-hub hub-hub-gateway" aria-label={SOCIAL_UI.screenAria}>
       <div className="hub-hub-card hub-hub-gateway-card">
@@ -584,11 +646,9 @@ const SocialHubInner = memo(function SocialHubInner({
         <p className="hub-gateway-lead">
           {SOCIAL_UI.gateway.lead}
         </p>
-        {/* La pasarela son tres pasos que TODOS necesitan red (Google, Firestore, GitHub): sin conexión no se puede
-            completar ninguno, así que se dice antes de que el usuario pulse y espere a un timeout. */}
+        {/* Los dos pasos necesitan red (Google, Firestore, GitHub): sin conexión no se puede dar ninguno, así que
+            se dice antes de que el usuario pulse y espere a un timeout. */}
         {offline ? <HubOfflineNotice hasCachedData={false} /> : null}
-
-        <p className="hub-gateway-step-caption">{SOCIAL_UI.gateway.stepCaption(currentStep, gatewaySteps.length)}</p>
 
         {/* L4 — puerta de aceptación: con sesión iniciada y sin conformidad vigente, no se entra ni se crea el
             espacio social hasta marcarla. No afecta a las listas propias ni a la sincronización. */}
@@ -596,7 +656,7 @@ const SocialHubInner = memo(function SocialHubInner({
           <div className="hub-gateway-consent">
             <strong>{LEGAL_CONSENT_UI.title}</strong>
             <p>{LEGAL_CONSENT_UI.body}</p>
-            <div className="settings-legal-links">
+            <div className="hub-legal-links">
               <Link to={LEGAL_ROUTES.terms}>{LEGAL_CONSENT_UI.termsLink}</Link>
               <Link to={LEGAL_ROUTES.privacy}>{LEGAL_CONSENT_UI.privacyLink}</Link>
             </div>
@@ -612,76 +672,54 @@ const SocialHubInner = memo(function SocialHubInner({
           </div>
         ) : null}
 
-        <div className="hub-gateway-actions" aria-label={SOCIAL_UI.gateway.actionsAria}>
-          {primaryGatewayCta ? (
-            <button
-              className="btn btn-primary hub-gateway-btn hub-gateway-btn-primary"
-              type="button"
-              onClick={primaryGatewayCta.action}
-              disabled={primaryGatewayCta.disabled}
-            >
-              <Icon name={primaryGatewayCta.icon} />
-              <span>{primaryGatewayCta.label}</span>
-            </button>
-          ) : null}
-
-          {hasSocialSession ? (
-            <button className="btn btn-danger hub-gateway-btn" type="button" onClick={handleSignOut}>
-              <Icon name="logout" />
-              <span>{SOCIAL_UI.gateway.signOut}</span>
-            </button>
-          ) : null}
-        </div>
-
-        {/* El nombre accesible va en el elemento con `role="progressbar"`, no en el contenedor: un `aria-label`
-            sobre un `<div>` sin rol no lo expone ninguna API de accesibilidad, así que la barra se anunciaba sin
-            nombre (violación `aria-progressbar-name` de axe, en las doce combinaciones de tema y paleta). */}
-        <div className="hub-gateway-progress">
-          <div
-            className="hub-gateway-progress-track"
-            role="progressbar"
-            aria-label={SOCIAL_UI.gateway.progressAria}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={gatewayProgress}
-          >
-            <span className="hub-gateway-progress-fill" style={{ width: `${gatewayProgress}%` }} />
-          </div>
-          <small>{SOCIAL_UI.gateway.progress(gatewayProgress)}</small>
-        </div>
-
-        <div className="hub-gateway-steps" aria-label={SOCIAL_UI.gateway.stepsAria}>
+        {/* ═══ LOS DOS PASOS, Y LA ACCIÓN DENTRO DE SU PASO ═══════════════════════════════════════════════
+            Antes esto eran cuatro piezas diciendo lo mismo: un rótulo («paso 1 de 3»), una barra de progreso,
+            tres fichas con el nombre de cada paso y —lejos de todas ellas— un botón suelto que no decía a cuál
+            pertenecía. Con dos pasos eso no se sostiene: la lista ES el progreso, y cada paso lleva su propio
+            botón, así que no hay que emparejar nada con la vista.
+            `<ol>` y no `<div>`: son pasos en orden, y así se leen también sin ver la pantalla. */}
+        <ol className="hub-gateway-path" aria-label={SOCIAL_UI.gateway.stepsAria}>
           {gatewaySteps.map((step, index) => {
             const stepNumber = index + 1;
             const isCurrent = stepNumber === currentStep && !step.done;
             return (
-              <article
+              <li
                 key={step.id}
-                className={`hub-gateway-step ${step.done ? 'is-done' : ''} ${isCurrent ? 'is-current' : ''}`.trim()}
+                className={`hub-gateway-stage ${step.done ? 'is-done' : ''} ${isCurrent ? 'is-current' : ''}`.trim()}
               >
-                <span className="hub-gateway-step-badge" aria-hidden="true">{step.done ? 'OK' : stepNumber}</span>
-                <div className="hub-gateway-step-copy">
-                  <strong>{step.title}</strong>
-                  <small>{step.subtitle}</small>
+                <span className="hub-gateway-stage-mark">
+                  {step.done ? (
+                    <>
+                      <Icon name="check" />
+                      <span className="sr-only">{SOCIAL_UI.gateway.stageDone}</span>
+                    </>
+                  ) : (
+                    stepNumber
+                  )}
+                </span>
+                <div className="hub-gateway-stage-body">
+                  <h3 className="hub-gateway-stage-title">{step.title}</h3>
+                  <p className="hub-gateway-stage-note">{stageNotes[index]}</p>
+                  {stageActions[index]}
                 </div>
-              </article>
+              </li>
             );
           })}
-        </div>
+        </ol>
 
-        {!hasMainSync ? (
-          <p>{SOCIAL_UI.gateway.syncRequired}</p>
-        ) : null}
-        {hasMainSync && !hasSocialSession ? (
-          <p>{SOCIAL_UI.gateway.signInRequired}</p>
-        ) : null}
-        {hasMainSync && hasSocialSession && !hasSocialGist ? (
-          <p>{SOCIAL_UI.gateway.gistRequired}</p>
-        ) : null}
-        {hasSocialGist && !hasSocialSession ? (
-          <p>{SOCIAL_UI.gateway.gistReadySignIn}</p>
+        {hasSocialSession ? (
+          <div className="hub-gateway-actions" aria-label={SOCIAL_UI.gateway.actionsAria}>
+            <button className="btn btn-danger hub-gateway-btn" type="button" onClick={handleSignOut}>
+              <Icon name="logout" />
+              <span>{SOCIAL_UI.gateway.signOut}</span>
+            </button>
+          </div>
         ) : null}
 
+        {/* EL ESTADO POR DENTRO. No es letra pequeña ni un apéndice: es lo que se mira cuando algo no cuadra —los
+            TRES requisitos de verdad, uno de ellos el espacio social, que no es un paso pero sí una condición—,
+            así que se queda con el peso que tenía y abierto. Lo que ha cambiado es que ahora dice la verdad: el
+            flujo de abajo anunciaba cuatro etapas de un alta que son dos. */}
         <details className="hub-gateway-details" open>
           <summary>{SOCIAL_UI.gateway.detailsSummary}</summary>
           <div className="hub-status-grid" aria-label={SOCIAL_UI.gateway.stateAria}>
@@ -689,24 +727,24 @@ const SocialHubInner = memo(function SocialHubInner({
               <span className="hub-status-label">{SOCIAL_UI.gateway.stateSync}</span>
               <strong>{hasMainSync ? SOCIAL_UI.gateway.stateConnected : SOCIAL_UI.gateway.stateNotConnected}</strong>
             </article>
-            <article className={`hub-status-card ${hasSocialGist ? 'is-ok' : 'is-pending'}`}>
-              <span className="hub-status-label">{SOCIAL_UI.gateway.stateGist}</span>
-              <strong>{hasSocialGist ? SOCIAL_UI.gateway.stateLinked : SOCIAL_UI.gateway.stateNotLinked}</strong>
-            </article>
+            {/* EL ESPACIO SOCIAL, SOLO CUANDO PUEDE DECIR ALGO. No se crea hasta que hay sesión de Google —lo
+                hace solo, ver el efecto de auto-creación—, así que antes de ese paso «No enlazado» no es un
+                estado: es lo único que podía poner, y colado entre los otros dos parecía un tercer pendiente en
+                una pantalla que promete dos pasos. Con sesión ya iniciada sí informa, y es además la ÚNICA señal
+                de que el espacio no llegó a prepararse, que es el caso con el que se viene aquí a mirar. */}
+            {hasSocialSession || hasSocialGist ? (
+              <article className={`hub-status-card ${hasSocialGist ? 'is-ok' : 'is-pending'}`}>
+                <span className="hub-status-label">{SOCIAL_UI.gateway.stateGist}</span>
+                <strong>{hasSocialGist ? SOCIAL_UI.gateway.stateLinked : SOCIAL_UI.gateway.stateNotLinked}</strong>
+              </article>
+            ) : null}
             <article className={`hub-status-card ${hasSocialSession ? 'is-ok' : 'is-pending'}`}>
               <span className="hub-status-label">{SOCIAL_UI.gateway.stateSession}</span>
               <strong>{hasSocialSession ? (authUser?.displayName || authUser?.email || SOCIAL_UI.gateway.stateActive) : SOCIAL_UI.gateway.stateNotStarted}</strong>
             </article>
           </div>
-
-          <div className="hub-hub-tags" aria-label={SOCIAL_UI.gateway.flowAria}>
-            {SOCIAL_UI.gateway.flow.map((flowStep) => (
-              <span key={flowStep} className="hub-chip">{flowStep}</span>
-            ))}
-          </div>
         </details>
 
-        {!hasSocialGist ? <p>{SOCIAL_UI.gateway.gistMissing}</p> : null}
         <HubStatus status={status} statusKind={statusKind} />
       </div>
     </section>

@@ -10,6 +10,10 @@ import { ImportFieldPrefsCard } from './ImportFieldPrefsCard';
 import { ImportInboxTable } from './ImportInboxTable';
 import '../../../styles/import.scss';
 
+// Las tarjetas de esta pantalla son las de Ajustes, y su hoja ya no viaja en el bundle base: hay que pedirla
+// desde aquí o la bandeja se pinta sin ellas (mismo motivo que en las cuatro pantallas de Ajustes).
+import '../../../styles/settings.scss';
+
 const M = UI_MESSAGES.import.inbox;
 const PAGE = 40; // scroll infinito: se renderizan de PAGE en PAGE
 

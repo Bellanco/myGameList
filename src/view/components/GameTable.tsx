@@ -1282,7 +1282,7 @@ export const GameTable = memo(function GameTable({
                         {/* EL ANÁLISIS NO SE VUELCA AQUÍ: se va a leer a su pantalla. Volcado ocupaba el detalle
                             entero —hay reseñas de veinte mil caracteres— y empujaba fuera de la vista todo lo
                             demás, que es lo que se abre el detalle para ver. El enlace lleva a
-                            `/perfil/resenas/:id`, donde ya se lee con su ancho de lectura y su medallón.
+                            `/stats/resenas/:id`, donde ya se lee con su ancho de lectura y su medallón.
                             Es un ENLACE y no un botón porque es navegación: así se puede abrir en otra pestaña,
                             copiar la dirección o volver con el botón de atrás. Y ocupa una celda de la rejilla
                             del detalle, no la fila entera (`is-wide`), que es de donde sale el sitio. */}
@@ -1292,7 +1292,7 @@ export const GameTable = memo(function GameTable({
                             <div>
                               <Link
                                 className="btn btn-secondary"
-                                to={`/perfil/resenas/${game.id}`}
+                                to={`/stats/resenas/${game.id}`}
                                 /* DE DÓNDE SE VIENE, para que el botón de volver de aquella pantalla devuelva
                                    AQUÍ y no al listado de reseñas, que es de donde se llega normalmente. El
                                    panel ya usaba este mismo estado para distinguir sus dos orígenes; esta es la

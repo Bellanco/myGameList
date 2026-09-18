@@ -66,19 +66,6 @@
   font-weight: 600;
 }
 
-/* La palabra del texto que despliega la guía: es un `<button>` pero tiene que leerse como un enlace dentro del
-   párrafo, así que se le quita todo el aspecto de botón y hereda la tipografía del texto que lo rodea. */
-.import-guide-link {
-  background: none;
-  border: 0;
-  font: inherit;
-  font-weight: 600;
-  color: var(--fg-link);
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
 /* Barra de herramientas de la bandeja: acciones sobre el conjunto de la bandeja. */
 .import-toolbar {
   display: flex;
@@ -142,4 +129,63 @@
    fila ya lo pone `.settings-backup-actions` (`_layout.scss`), que antes se redeclaraba inline. */
 .settings-backup-actions.import-integrations-actions {
   margin-top: 0.9rem;
+}
+
+/* ═══ LAS GUÍAS · dos filas iguales que se abren ══════════════════════════════════════════════════════
+   Antes eran un enlace subrayado y una palabra pulsable dentro de un párrafo: la misma cosa con dos caras, y
+   ninguna decía que detrás hubiera pasos. Ahora comparten forma con las filas de los documentos legales —una
+   diana entera, su flecha a la derecha— y la flecha gira al abrirse, que es lo que distingue «esto despliega»
+   de «esto te lleva a otro sitio». */
+.import-guides { display: grid; gap: .35rem; margin: .2rem 0; }
+
+.import-guide-block {
+  border: 1px solid var(--hair);
+  border-radius: 9px;
+  background: var(--surface-soft);
+  overflow: hidden;
+}
+
+.import-guide-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .8rem;
+  width: 100%;
+  min-height: 44px;
+  padding: .5rem .75rem;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: background .16s;
+}
+
+.import-guide-row:hover { background: var(--overlay-hover); }
+
+.import-guide-row:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.import-guide-caret {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+  color: var(--text-dim);
+  transition: transform .2s ease;
+}
+
+.import-guide-block.is-open .import-guide-caret { transform: rotate(180deg); }
+
+.import-guide-block .import-steps { margin: 0; padding: 0 1rem .8rem 2.1rem; }
+
+/* La acción cierra la tarjeta, así que se separa de lo que viene leyéndose. */
+.settings-actions-end { margin-top: .4rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .import-guide-caret { transition: none; }
 }

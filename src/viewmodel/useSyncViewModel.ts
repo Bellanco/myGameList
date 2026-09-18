@@ -10,7 +10,15 @@ import { clearSyncConfig, ensureSyncConfigLoaded, getSyncConfig, saveSyncConfig,
 import { getRetryAfterMs, isDeferredNetworkError } from '../model/repository/githubHttp';
 import { cargarMotorDeSync } from '../model/repository/syncEngine';
 import type { GistReadResponse } from '../model/repository/gistRepository';
-import { beginGithubOAuth, completeGithubOAuth, hasGithubOAuthRedirect, isGithubOAuthConfigured } from '../model/repository/githubOAuthRepository';
+import { hasGithubOAuthRedirect, isGithubOAuthConfigured } from '../model/repository/githubOAuthChecks';
+
+/**
+ * EL TRABAJO DE OAUTH, POR `import()`. Igual que `cargarMotorDeSync`: montar la autorización y canjear el
+ * `code` solo hace falta al pulsar el botón o al volver de GitHub, así que no tiene por qué viajar en el chunk
+ * de arranque de todo el mundo. Las tres comprobaciones baratas (si está configurado, si venimos de un retorno,
+ * de dónde salimos) siguen siendo estáticas: las hace la aplicación siempre.
+ */
+const cargarTrabajoOAuth = () => import('../model/repository/githubOAuthRepository');
 import { normalizeData } from '../model/repository/localRepository';
 import { clearDirty, clearDirtyIfUnchanged, loadSyncDirtyState, subscribeSyncDirtyState, type SyncDirtyState } from '../model/repository/syncStateRepository';
 import { acquireSyncLock, canRead, getBackoffMs, getNextReadDelayMs, getSyncState, subscribeSyncState, transitionTo, canReadNow } from '../model/repository/syncMachineRepository';
@@ -589,9 +597,10 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   }, [connectSyncWithCredentials, gistId, onNotice, token, handleSyncError]);
 
   // Paso 0 — "Conectar con GitHub" (OAuth). Redirige a GitHub; el usuario autoriza y vuelve a /ajustes con un `code`.
-  const beginGithubLogin = useCallback(() => {
+  const beginGithubLogin = useCallback(async () => {
     try {
       setGithubLoggingIn(true);
+      const { beginGithubOAuth } = await cargarTrabajoOAuth();
       beginGithubOAuth(); // navega fuera de la app; no vuelve de esta función
     } catch (error) {
       setGithubLoggingIn(false);
@@ -603,7 +612,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   // duplicarlo) y conecta reusando el mismo camino que el flujo manual. Se invoca desde App al detectar el retorno.
   const completeGithubLoginFromRedirect = useCallback(async () => {
     if (!hasGithubOAuthRedirect()) return;
-    const { findGamesGistId } = await cargarMotorDeSync();
+    const [{ findGamesGistId }, { completeGithubOAuth }] = await Promise.all([cargarMotorDeSync(), cargarTrabajoOAuth()]);
     setGithubLoggingIn(true);
     setStatus('syncing');
     const lock = acquireSyncLock(); // S2: no solapar con un ciclo en vuelo

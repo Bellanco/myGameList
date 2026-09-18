@@ -430,7 +430,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 .btn:active { transform: perspective(460px) rotateX(8deg) translateY(0); }
 /* Un ENLACE con pinta de botón sigue siendo un enlace, y trae de serie el subrayado del navegador: dentro de una
    pastilla se lee como un fallo de estilo. Quien decide que algo parezca un botón es la clase, no la etiqueta.
-   (La etiqueta sí importa para lo demás: `/perfil/resenas/:id` se abre en otra pestaña y se copia porque es un
+   (La etiqueta sí importa para lo demás: `/stats/resenas/:id` se abre en otra pestaña y se copia porque es un
    enlace de verdad, no un botón que navega por su cuenta.) */
 a.btn, a.btn:hover { text-decoration: none; }
 

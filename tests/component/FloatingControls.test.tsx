@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
+import { act, render } from '@testing-library/react';
 import { FloatingControls } from '../../src/view/components/FloatingControls';
 
 /**
@@ -7,13 +7,15 @@ import { FloatingControls } from '../../src/view/components/FloatingControls';
  * la lectura. Lo que no puede pasar es que el escondite sobreviva al cambio de pantalla.
  *
  * Se ocultan con `pointer-events: none`, así que mientras dure ese estado el clic se lo come lo que haya debajo
- * —el `main`— y no hay manera de llegar a Ajustes ni al cambio de tema. El CI lo cazó de la forma más cara
- * posible: veinticinco segundos de reintentos de Playwright contra un botón que estaba «visible» y no recibía el
- * clic.
+ * —el `main`— y no hay manera de llegar a lo que quede aquí arriba. El CI lo cazó de la forma más cara posible:
+ * veinticinco segundos de reintentos de Playwright contra un botón que estaba «visible» y no recibía el clic.
+ *
+ * Ajustes ya no está en este grupo —tiene pestaña propia—, así que lo que el escondite se llevaba por delante
+ * es menos grave que antes; el fallo que cazó el CI, en cambio, sigue estando a una regresión de distancia.
  */
 describe('los controles flotantes al cambiar de sección', () => {
   const pintar = (section: 'lists' | 'stats' | 'social' | 'settings' = 'lists') =>
-    render(<FloatingControls activeSection={section} onSectionChange={vi.fn()} showAccount={false} />);
+    render(<FloatingControls activeSection={section} />);
 
   /** El scroll no se puede mover de verdad en jsdom: se finge la posición y se avisa como haría el navegador. */
   /** El componente decide dentro de un `requestAnimationFrame`: se le deja pasar un latido de reloj. */
@@ -27,7 +29,9 @@ describe('los controles flotantes al cambiar de sección', () => {
     });
   };
 
-  const grupo = () => screen.getByLabelText('Ajustes').closest('.floating-controls') as HTMLElement;
+  // Se busca por la CLASE y no por el rótulo de un botón: lo que hay dentro del grupo cambia con el rediseño
+  // (Ajustes ya se fue, Cuenta se irá), y el test es sobre el grupo, no sobre quién lo habita.
+  const grupo = () => document.querySelector('.floating-controls') as HTMLElement;
 
   it('se esconden al bajar', async () => {
     pintar();
@@ -45,7 +49,7 @@ describe('los controles flotantes al cambiar de sección', () => {
     // el componente tiene que volver a mirarla por su cuenta.
     Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
     await act(async () => {
-      rerender(<FloatingControls activeSection="stats" onSectionChange={vi.fn()} showAccount={false} />);
+      rerender(<FloatingControls activeSection="stats" />);
       await unLatido();
     });
 
@@ -57,7 +61,7 @@ describe('los controles flotantes al cambiar de sección', () => {
     await desplazarA(200);
 
     await act(async () => {
-      rerender(<FloatingControls activeSection="social" onSectionChange={vi.fn()} showAccount={false} />);
+      rerender(<FloatingControls activeSection="social" />);
       await unLatido();
     });
 

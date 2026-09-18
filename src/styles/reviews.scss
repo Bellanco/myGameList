@@ -3,7 +3,7 @@
 //
 // POR QUÉ ESTA HOJA EXISTE Y NO ES PARTE DE `social.scss`. Estas reglas vivían allí, y `social.scss` lo importa
 // SOLO `SocialHub.tsx`, que entra por `lazy()`. Pero el marcado que pintan no es exclusivo del hub: lo usan
-// también tus reseñas del panel de estadísticas (`/perfil/resenas`, que reutiliza `ProfileReviewsList` y el
+// también tus reseñas del panel de estadísticas (`/stats/resenas`, que reutiliza `ProfileReviewsList` y el
 // detalle del hub) y la pantalla pública de un enlace compartido (`/r/:token`, que se monta en modo artículo,
 // SIN hub y sin enrutador). En esas dos pantallas la hoja no se descargaba nunca, y el resultado era visible:
 // el medallón de la nota se quedaba en un número suelto a lo ancho de la tarjeta.

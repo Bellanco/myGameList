@@ -76,11 +76,11 @@
   background: var(--tab-bar); border-radius: 2px; transition: height .2s;
 }
 
-.tab-btn:focus-visible { outline: none; box-shadow: inset 0 -2px 0 var(--focus-ring); border-radius: 6px; }
+.tab-btn:focus-visible { outline: none; box-shadow: inset 0 -2px 0 var(--focus-ring); border-radius: 6px; }@media (hover:hover) {
 
-@media (hover:hover) {
  .tab-btn:hover { color: var(--text-muted); }
 }
+
 
 .tab-btn.active { color: var(--tab-active); font-weight: 700; }
 
@@ -107,22 +107,30 @@
   animation: fadeIn .2s ease-in; pointer-events: none;
 }
 
-@keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(-5px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(-5px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }@media (max-width:1024px) {
 
-/* Tablet y móvil: las etiquetas largas de las pestañas se recortan; pasamos a iconos. */
-@media (max-width:1024px) {
   .tab-btn { padding: .8rem .7rem; font-size: var(--fs-sm); }
 
   .tab-btn .tab-text-full { display: none; }
 
   .count-badge { font-size: var(--fs-2xs); }
 }
-
 @media (max-width:720px) {
+
   thead { display: none; }
 }
 
+
 /* Main */
+/* MIENTRAS EL AVISO ESTÁ PENDIENTE, EL CONTENIDO LE HACE SITIO. El relleno de abajo reserva la barra de
+   navegación, pero el aviso de la analítica se apoya ENCIMA de ella y mide lo suyo —143px medidos en
+   escritorio, más en un móvil estrecho donde su texto envuelve—: sin reservarlo, las últimas tarjetas de una
+   pantalla quedan debajo del aviso y no hay scroll que las saque, porque el documento cree que ya ha acabado.
+   Se descuenta lo que el aviso mide de verdad (`--consent-h`, que publica él mismo), no una cantidad a ojo. */
+:root[data-consent='pending'] .main {
+  padding-bottom: calc(6.6rem + var(--consent-h, 9.25rem));
+}
+
 .main {
   padding: 1.2rem 1.2rem 6.6rem; max-width: 1800px; margin: 0 auto;
   width: 100%; display: flex; flex-direction: column; gap: 1rem;
@@ -180,362 +188,6 @@
   position: relative;
 }
 
-.settings-hub {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 1rem;
-}
-
-/* BORDE POR PAPEL (DESIGN.md §8). La tarjeta ya se sostiene con su plano, así que el borde baja a filete: está
-   para decir dónde acaba, no para dibujarla. El marco entero se lo quedan las piezas sin elevación. */
-.settings-card {
-  grid-column: span 12;
-  background: var(--surface);
-  border: 1px solid var(--hair);
-  border-radius: var(--radius-md);
-  box-shadow: var(--e1), var(--edge);
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: .8rem;
-}
-
-.settings-card h2 {
-  font-size: var(--fs-lg);
-}
-
-.settings-card p {
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-  line-height: 1.4;
-}
-
-/* Ajustes de cuenta: todo el cuerpo (escala + apariencia) se bloquea sin sesión de Google (atributo `inert`). */
-.settings-account-body { display: flex; flex-direction: column; gap: .8rem; }
-
-.settings-account-body[inert] { opacity: .55; }
-
-/* F2 — selector de escala de puntuación (estrellas / nota) en Ajustes. */
-.score-scale-choice { display: grid; gap: .6rem; }
-
-.score-scale-choice.is-locked { opacity: .6; }
-
-.score-scale-opt {
-  display: flex; align-items: center; gap: .8rem;
-  padding: .7rem .85rem;
-  background: var(--surface-soft); border: 1px solid var(--border); border-radius: 9px;
-  cursor: pointer; text-align: left; color: var(--text); font: inherit;
-  transition: background .16s, border-color .16s;
-}
-
-.score-scale-opt:hover:not(:disabled) { background: var(--surface-hover); }
-
-.score-scale-opt:disabled { cursor: not-allowed; }
-
-.score-scale-opt.on { border-color: var(--fg-sky); }
-
-.score-scale-opt:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-
-.score-scale-dot {
-  width: 17px; height: 17px; border-radius: 50%; border: 2px solid var(--text-dim);
-  flex: 0 0 auto; display: grid; place-items: center;
-}
-
-.score-scale-opt.on .score-scale-dot { border-color: var(--fg-sky); }
-
-.score-scale-opt.on .score-scale-dot::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--fg-sky); }
-
-.score-scale-txt { flex: 1 1 auto; display: grid; gap: .1rem; }
-
-.score-scale-txt b { font-size: var(--fs-md); font-weight: 600; }
-
-.score-scale-txt span { color: var(--text-muted); font-size: var(--fs-xs); }
-
-.score-scale-sample { flex: 0 0 auto; display: inline-flex; align-items: center; }
-
-.score-scale-locked { display: flex; align-items: center; gap: .35rem; color: var(--text-dim); font-size: var(--fs-xs); }
-
-.score-scale-locked .ui-icon { width: 1em; height: 1em; flex: 0 0 auto; }
-
-/* F1 — selector de apariencia (tema/paleta + claro/oscuro) dentro de "Ajustes de cuenta". */
-.settings-appearance { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
-
-.settings-appearance .settings-card-sub { margin: 0 0 .5rem; }
-
-.settings-appearance .settings-card-sub + .settings-card-sub,
-.settings-appearance .theme-mode-row + .settings-card-sub { margin-top: 1rem; }
-
-/* Cada opción de tema es una MINI-PREVISUALIZACIÓN: tarjeta con el fondo oscuro del tema, una barra de
-   acento arriba y una esquina con el fondo claro → previsualiza los tres colores de un vistazo. Los colores
-   llegan por variables (`--sw-*`) fijadas en el botón de la opción. */
-.palette-swatch {
-  position: relative;
-  width: 3.1rem;
-  height: 1.95rem;
-  border-radius: 6px;
-  overflow: hidden;
-  background: var(--sw-dark, var(--surface-elevated));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16);
-  transition: transform .16s ease;
-}
-
-.palette-swatch::before { /* barra de acento superior: acento + color secundario si el tema es dual (p. ej. azul+naranja) */
-  content: ''; position: absolute; inset: 0 0 auto 0; height: 6px;
-  background: linear-gradient(90deg, var(--sw-accent, var(--steam)) 0 60%, var(--sw-accent2, var(--sw-accent, var(--steam))) 60% 100%);
-}
-
-.palette-swatch::after { /* esquina inferior derecha con el fondo claro del tema */
-  content: ''; position: absolute; right: 0; bottom: 0; width: 46%; height: 62%;
-  background: var(--sw-light, #fff); clip-path: polygon(100% 0, 100% 100%, 0 100%);
-}
-
-.score-scale-opt:hover:not(:disabled) .palette-swatch { transform: translateY(-1px) scale(1.04); }
-
-/* En el selector de TEMA, la opción activa se resalta con el ACENTO DEL PROPIO TEMA (no el azul genérico),
-   para que cada identidad "pegue" con su color. Ámbito acotado a Ajustes de apariencia. */
-.settings-appearance .score-scale-opt.on { border-color: var(--sw-accent); box-shadow: 0 0 0 1px var(--sw-accent), 0 6px 18px color-mix(in srgb, var(--sw-accent) 22%, transparent); }
-
-.settings-appearance .score-scale-opt.on .score-scale-dot { border-color: var(--sw-accent); }
-
-.settings-appearance .score-scale-opt.on .score-scale-dot::after { background: var(--sw-accent); }
-
-/* El anillo NO sigue a `--sw-accent`: esa variable es el color de la MUESTRA de cada paleta del selector, así
-   que el foco heredaba un color arbitrario (el oro de Mar de estrellas sobre su propio turquesa, por ejemplo) y
-   podía quedar invisible. El resto de la tarjeta sí se viste con la muestra. */
-.settings-appearance .score-scale-opt:focus-visible { outline-color: var(--focus-ring); }
-
-.theme-mode-row { display: flex; gap: .5rem; }
-
-/* `flex: 1 1 0` → ambos botones ocupan la misma mitad aunque el texto sea más largo (antes `auto` los
-   dimensionaba por contenido y quedaban de tamaños distintos). */
-.theme-mode-row .btn { flex: 1 1 0; min-width: 0; justify-content: center; }
-
-.settings-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .6rem;
-}
-
-.settings-import-label {
-  cursor: pointer;
-  /* Ancla el input recortado, que va en posición absoluta (ver `.input-hidden`). Sin esto se colgaría del
-     primer ancestro posicionado, que puede estar en cualquier parte de la página. */
-  position: relative;
-}
-
-/* El foco lo recibe el input, que está recortado y no se ve: si la etiqueta no pinta el anillo, quien navega con
-   teclado llega al control sin ninguna señal de que está ahí. `:focus-within` y no `:focus-visible` porque el
-   elemento enfocado es el hijo, no la etiqueta. */
-.settings-import-label:focus-within {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
-.settings-card-backup {
-  gap: 1rem;
-  border-top: 2px solid rgba(var(--success-rgb),.35);
-}
-
-.settings-card-head {
-  display: flex;
-  flex-direction: column;
-  gap: .35rem;
-}
-
-.settings-card-note {
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-}
-
-.settings-backup-row {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-}
-
-.settings-backup-info p {
-  margin: 0;
-  color: var(--text-muted);
-}
-
-.settings-backup-warning {
-  border: 1px solid rgba(var(--steam-rgb),.18);
-  background: rgba(var(--steam-rgb),.08);
-  border-radius: var(--radius-sm);
-  padding: .85rem 1rem;
-  color: var(--text);
-  font-size: var(--fs-sm);
-  line-height: 1.4;
-}
-
-.settings-backup-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: .65rem;
-}
-
-.settings-backup-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: .85rem;
-  cursor: pointer;
-  color: var(--text);
-  font-weight: 700;
-  background: transparent;
-  border: none;
-  padding: 0;
-  transition: color .2s ease;
-}
-
-.settings-backup-toggle:hover {
-  color: var(--fg-link);
-}
-
-.settings-backup-toggle input {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.settings-backup-toggle-track {
-  width: 52px;
-  height: 28px;
-  border-radius: 999px;
-  background: var(--overlay-hover);
-  border: 1px solid var(--border);
-  /* La pista es el CARRIL —un hueco— y el mando, la pieza que va encima con su `--e2`: los dos juntos son lo
-     que hace que un interruptor se lea como algo que se desliza y no como dos rectángulos superpuestos. */
-  box-shadow: var(--sunk);
-  position: relative;
-  transition: background .2s ease, border-color .2s ease;
-  flex-shrink: 0;
-}
-
-.settings-backup-toggle-thumb {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--surface);
-  box-shadow: var(--e2);
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  transition: transform .2s ease, background .2s ease;
-}
-
-.settings-backup-toggle input:checked + .settings-backup-toggle-track {
-  background: rgba(var(--steam-rgb),.2);
-  border-color: rgba(var(--steam-rgb),.35);
-}
-
-.settings-backup-toggle input:checked + .settings-backup-toggle-track .settings-backup-toggle-thumb {
-  transform: translateX(24px);
-  background: #ffffff;
-}
-
-.settings-backup-toggle-label {
-  font-size: var(--fs-md);
-  color: var(--text);
-  line-height: 1.4;
-}
-
-.settings-card-status {
-  border-top: 2px solid rgba(var(--steam-rgb),.35);
-}
-
-.settings-card-admin {
-  border-top: 2px solid rgba(var(--success-rgb),.35);
-}
-
-.settings-admin-tabs {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: .5rem;
-  margin-bottom: .75rem;
-}
-
-/* Pestañas de categoría del administrador de filtros. Su aspecto vivía en `social.scss` —el chunk perezoso del
-   hub—, así que en Ajustes solo se pintaban si antes se había abierto el hub social: sin esa hoja el botón
-   activo era indistinguible del resto. Van aquí, con su rejilla, porque la pantalla no es perezosa. */
-.settings-admin-tab {
-  border: 1px solid var(--border);
-  background: var(--hub-card-bg);
-  color: var(--text-muted);
-  border-radius: var(--radius-sm);
-  padding: .45rem .6rem;
-  font-weight: 700;
-  font-size: var(--fs-xs);
-  text-align: center;
-  transition: all .2s ease;
-}
-
-.settings-admin-tab:hover {
-  border-color: rgba(var(--steam-rgb),.35);
-  color: var(--text);
-}
-
-.settings-admin-tab:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
-/* La pestaña pulsada no se fía de un solo indicio: tinte de acento, borde de acento a plena intensidad, texto sin
-   atenuar y una barra fina abajo. Cada paleta la viste con su propio `--steam`, y la barra la mantiene legible
-   incluso donde el tinte translúcido se pierde sobre el fondo del tema. */
-.settings-admin-tab.active {
-  background: rgba(var(--steam-rgb),.18);
-  border-color: rgba(var(--steam-rgb),.75);
-  color: var(--text);
-  box-shadow: inset 0 -2px 0 0 var(--steam);
-}
-
-.settings-admin-tab.active:hover {
-  border-color: rgba(var(--steam-rgb),.9);
-  color: var(--text);
-}
-
-.settings-admin-empty {
-  color: var(--text-muted);
-}
-
-@media (min-width: 48rem) {
-  .settings-admin-tabs {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 48rem) {
-  .settings-card-status {
-    grid-column: span 7;
-  }
-
-  .settings-card:not(.settings-card-status):not(.settings-card-admin):not(.settings-card-score) {
-    grid-column: span 5;
-  }
-
-  .settings-card-admin,
-  .settings-card-score {
-    grid-column: span 12;
-  }
-
-  /* F2: en ancho, las dos opciones de escala van en paralelo para llenar la tarjeta a lo ancho. */
-  .score-scale-choice {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-@media (min-width: 80rem) {
-  .settings-card-status {
-    grid-column: span 6;
-  }
-
-  .settings-card:not(.settings-card-status):not(.settings-card-admin):not(.settings-card-score) {
-    grid-column: span 6;
-  }
-}
-
 /* L4 — documentos legales. Tarjetas propias en vez de reutilizar las de Ajustes: el hub de ajustes reparte sus
    tarjetas en dos columnas en pantallas anchas y eso desordenaría el articulado, que debe leerse de arriba abajo.
    Ancho de lectura acotado. */
@@ -564,37 +216,9 @@
 
 .legal-card p { color: var(--text-muted); font-size: var(--fs-sm); line-height: 1.5; }
 
-/* L4 — enlaces a los documentos legales en Ajustes de cuenta. */
-.settings-legal-links { display: flex; flex-wrap: wrap; gap: .35rem 1rem; font-size: var(--fs-sm); }
-
 .legal-list { display: grid; gap: .35rem; padding-left: 1.1rem; color: var(--text-muted); font-size: var(--fs-sm); line-height: 1.4; }
 
 .legal-list li { list-style: disc; }
-
-/* L3 — zona de riesgo (borrado de cuenta): se marca en rojo para que no se confunda con el resto de ajustes. */
-.settings-card-danger { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); }
-
-.settings-card-danger h2 { color: var(--danger); }
-
-.settings-danger-confirm { display: grid; gap: .3rem; margin: .6rem 0; font-size: var(--fs-sm); text-align: left; }
-
-.settings-danger-confirm input {
-  width: 100%;
-  padding: .45rem .6rem;
-  background: var(--surface-soft);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  font: inherit;
-}
-
-.settings-danger-feedback { font-size: var(--fs-sm); }
-
-.settings-danger-feedback.ok { color: var(--fg-sky); }
-
-.settings-danger-feedback.warn { color: var(--text-muted); }
-
-.settings-danger-feedback.err { color: var(--danger); }
 
 /* L2 — aviso de consentimiento de la analítica. Se apoya SOBRE la barra inferior (z-index mayor y desplazado por
    encima de su altura) para no taparla: la app sigue siendo usable con el aviso en pantalla, que es justo lo que
@@ -701,6 +325,24 @@
   gap: .1rem;
 }
 
+/* Y EL RÓTULO BAJA UN PASO AL APILARSE, como en cualquier barra inferior: es lo que hace que «Estadísticas»
+   quepa con CUATRO pestañas en un móvil de 390px. Con el cuerpo de una línea (`--fs-sm`) la palabra pide más
+   de lo que mide su columna y la barra se rendía al modo solo-icono, dejando la navegación entera muda justo
+   en el ancho más común. Ya no hay ninguna constante que mantener en sintonía con este número:
+   `BottomNavigation` MIDE el rótulo una vez apilado, así que tocar el cuerpo aquí no obliga a tocar nada allí. */
+.bottom-nav.is-stacked .bottom-nav-btn span {
+  font-size: var(--fs-2xs);
+}
+
+/* UN PELDAÑO MÁS ANTES DE QUEDARSE MUDA. Cuando el nombre apilado tampoco cabe, encogerlo un punto da ~5px por
+   columna: lo justo para que en la franja de 360-374px —360 dp es un ancho corriente en Android, y también lo
+   que queda de un móvil de 375 cuando el navegador dedica 15px a una barra de desplazamiento de las que ocupan
+   sitio— la navegación siga teniendo palabras en vez de cuatro dibujos. Lo aplica `BottomNavigation` midiendo,
+   igual que el apilado; aquí solo se dibuja. */
+.bottom-nav.is-tight .bottom-nav-btn span {
+  font-size: var(--fs-3xs);
+}
+
 /* SOLO ICONO: sin texto que mirar, el icono crece para seguir siendo una diana clara de un vistazo. */
 .bottom-nav.is-icons .bottom-nav-icon {
   width: 1.5rem;
@@ -734,13 +376,13 @@
   flex-direction: column;
   gap: .85rem;
   border-top: 2px solid rgba(var(--steam-rgb),.3);
-}
+}@media (min-width: 62rem) {
 
-@media (min-width: 62rem) {
   .hub-hub-card {
     width: min(92vw, 100%);
   }
 }
+
 
 .hub-screen-card {
   gap: 1rem;
@@ -1004,9 +646,8 @@
 @keyframes friendChipPop { 0% { opacity: 0; transform: scale(.6); } 60% { transform: scale(1.12); } 100% { opacity: 1; transform: scale(1); } }
 
 /* Estado vacío del feed (sin amigos): entra con fade (reutiliza emptyIn de _table). */
-.hub-feed-empty { animation: emptyIn .5s ease both; }
+.hub-feed-empty { animation: emptyIn .5s ease both; }@media (prefers-reduced-motion: reduce) {
 
-@media (prefers-reduced-motion: reduce) {
   .hub-feed-activity-item,
   .hub-requests-count.is-active,
   .hub-friend-chip,
@@ -1016,6 +657,7 @@
 
   .bottom-nav-btn.active .bottom-nav-icon { transform: none; }
 }
+
 
 .hub-friend-chip {
   display: inline-flex;
@@ -1125,11 +767,11 @@
 .visibility-check input:checked + .visibility-toggle-track .visibility-toggle-thumb {
   transform: translate(13px, -50%);
   background: #eef2f6;
-}
+}@media (prefers-reduced-motion: reduce) {
 
-@media (prefers-reduced-motion: reduce) {
   .visibility-toggle-track, .visibility-toggle-thumb { transition: none; }
 }
+
 
 .hub-hub-title-wrap {
   display: flex;
@@ -1373,18 +1015,8 @@
 .hub-feed-activity-item.is-own-activity {
   align-self: flex-end;
   background: var(--steam-soft);
-}
+}@media (min-width: 700px) {
 
-/* ── EL AVATAR, FUERA DE LA BURBUJA ────────────────────────────────────────────────────────────────────
-   En un chat la foto acompaña al mensaje; no forma parte de él. Dentro de la tarjeta se comía una línea
-   entera de la cabecera y empujaba el nombre y el juego hacia abajo. Ahora cuelga del canto inferior —a la
-   izquierda si el mensaje es de otro, a la derecha si es tuyo—, que es donde la ponen todos los chats, y la
-   burbuja se sangra para dejarle ese hueco: sin el sangrado se saldría del lienzo, porque la burbuja arranca
-   pegada al borde.
-
-   Solo a partir de 700 px. Por debajo no sobra ancho para regalar cincuenta píxeles a un lado, así que la
-   foto se queda dentro, en la cabecera, como estaba. */
-@media (min-width: 700px) {
   /* EL SANGRADO VA CON EL AVATAR, y por eso lo pide con `:has()` en vez de mirar la clase de la tarjeta.
      `.is-review` no significa «esto está en el feed»: la MISMA tarjeta se reutiliza en la lista de reseñas de
      un perfil y en la rejilla de «Análisis relacionados», donde no hay ninguna foto colgando. Allí el sangrado
@@ -1414,6 +1046,7 @@
     right: -3.2rem;
   }
 }
+
 
 /* El realce de "esto se puede pulsar" queda para lo que de verdad abre algo: ni las publicaciones ni los
    movimientos de lista llevan a ninguna parte. */
@@ -1617,7 +1250,7 @@
   /* El `fill` hay que decirlo aquí: `<Icon>` SUSTITUYE la clase, así que estos iconos no llevan `ui-icon` y no
      heredan su `fill: currentColor`. Con los símbolos que traen `fill="currentColor"` en su propio trazado
      (`bottom-hub`) no se notaba, pero los que no lo traen —`signature`, el de las reseñas— se pintaban con el
-     relleno por defecto del navegador, es decir, NEGROS: así se veía el icono de `/perfil/resenas` y el del
+     relleno por defecto del navegador, es decir, NEGROS: así se veía el icono de `/stats/resenas` y el del
      detalle de cualquier análisis, mientras el título de al lado sí salía azul. */
   fill: currentColor;
   flex: 0 0 auto;
@@ -1756,20 +1389,14 @@
   .hub-screen-actions .btn {
     width: 100%;
   }
-}
+}@media (min-width:1957px) {
 
-/* El editor de perfil va siempre a una columna: los bloques comparten la MISMA anchura. */
-
-@media (min-width:1957px) {
   .main {
     max-width: 92vw;
   }
 }
-
 @media (max-width:980px) {
-  .settings-card {
-    grid-column: span 6;
-  }
+
 
   .hub-hub-card {
     width: min(100%, 100%);
@@ -1779,14 +1406,51 @@
     grid-template-columns: 1fr;
   }
 }
-
 @media (max-width:620px) {
-  .settings-card {
-    grid-column: span 12;
-  }
+
 
   .bottom-nav-btn span {
     font-size: var(--fs-xs);
+  }
+
+  /* TRES PELLIZCOS DE SITIO PARA LA BARRA, y los tres existen por la misma cuenta.
+     Con cuatro pestañas en un móvil, «Estadísticas» apilada pide ~79px y la columna medía 78 en un iPhone SE
+     (375px) y 81,8 en el ancho más común (390px): cabía por dos o tres píxeles o no cabía, y cuando no cabe la
+     barra se queda MUDA —solo iconos—. Antes parecía caber porque la cuenta de `BottomNavigation` estimaba el
+     rótulo apilado un 8 % más estrecho de lo que es (ver el hueco que dejó `STACK_FONT_RATIO`); ahora se mide,
+     y sin estos tres pellizcos la palabra se quedaba fuera de su pastilla en medio móvil.
+     Los tres suman ~4,5px por columna, que es lo que convierte «cabe por los pelos» en «cabe». Solo en pantalla
+     estrecha: en escritorio no hacen falta y la barra sigue igual. */
+  .bottom-nav {
+    padding-left: .7rem;
+    padding-right: .7rem;
+  }
+
+  .bottom-nav-inner {
+    gap: .3rem;
+  }
+
+  /* El espaciado entre letras es un acabado para el cuerpo de una línea; en el rótulo apilado —11,7px— no se
+     aprecia y cuesta 1,4px justo donde no hay ninguno de sobra. */
+  .bottom-nav.is-stacked .bottom-nav-btn {
+    letter-spacing: 0;
+  }
+
+  /* Y EN EL PELDAÑO APRETADO, el reparto cede lo que le queda: menos aire a los lados de la barra, menos hueco
+     entre pastillas y menos relleno interior. Suman ~4,6px por columna, que es lo que separa «con nombres» de
+     «muda» cuando el texto mide más de lo previsto —otra máquina, otro motor de letra: en el Linux de CI el
+     mismo rótulo pide hasta un 9 % más que en macOS—. Solo aquí: mientras el nombre quepa a su tamaño normal,
+     la barra se ve exactamente igual que siempre.
+     OJO: esto hace que la columna NO mida igual en todos los escalones, y el medidor cuenta con ello —cada
+     pasada mide la columna del escalón que está PINTADO, y al subir de escalón vuelve a medir—. */
+  .bottom-nav.is-tight {
+    padding-left: .45rem;
+    padding-right: .45rem;
+  }
+
+  .bottom-nav.is-tight .bottom-nav-inner {
+    gap: .15rem;
+    padding: .3rem;
   }
 
   .hub-hub-card {
@@ -1841,6 +1505,7 @@
     height: 1rem;
   }
 }
+
 
 /* ── Pantallas de error ────────────────────────────────────────────────────────────────────────────
    Las dos (boundary RAÍZ y del hub social) comparten armazón: `.error-card` sobre `.hub-hub-card`.
@@ -1969,11 +1634,11 @@
 @keyframes errorIn {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: none; }
-}
+}@media (prefers-reduced-motion: reduce) {
 
-@media (prefers-reduced-motion: reduce) {
   .error-plain { animation: none; }
 }
+
 
 /* Las partes del armazón que todavía NO funcionan (la fila de botones y el compositor mientras carga el hub).
    Solo opacidad: ocupan exactamente el mismo sitio que cuando se encienden, así que al llegar la pantalla real no

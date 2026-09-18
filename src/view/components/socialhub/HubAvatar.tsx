@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { useGenericPhoto } from '../../hooks/useGenericPhoto';
 
 /**
@@ -19,7 +19,7 @@ import { useGenericPhoto } from '../../hooks/useGenericPhoto';
  * no puede sostener; quien identifica es el nombre, que va al lado. El tono lo pone ahora la PALETA activa
  * (`--deco-avatar-*`), no la persona.
  */
-export function HubAvatar({
+export const HubAvatar = memo(function HubAvatar({
   photoURL,
   sizeClass = '',
 }: {
@@ -66,4 +66,4 @@ export function HubAvatar({
       </svg>
     </span>
   );
-}
+});

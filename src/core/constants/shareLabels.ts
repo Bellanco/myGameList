@@ -48,7 +48,6 @@ export const SHARE_UI = {
   revoking: 'Retirando…',
   renewed: 'Enlace actualizado con la reseña de ahora.',
   screenTitle: 'Reseñas compartidas',
-  screenSubtitle: 'Enlaces públicos que has creado. Caducan solos; puedes retirarlos antes.',
   screenEmpty: 'No has compartido ninguna reseña todavía.',
   counter: (active: number, max: number) => `${active} de ${max} ${max === 1 ? 'enlace activo' : 'enlaces activos'}`,
   expiresIn: (days: number) => (days <= 0 ? 'Caduca hoy' : `Caduca en ${days} ${days === 1 ? 'día' : 'días'}`),

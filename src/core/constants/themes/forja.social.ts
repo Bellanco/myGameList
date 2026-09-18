@@ -7,8 +7,8 @@
 import type { ThemeSocialVoice } from './theme';
 
 export const forjaSocial = {
-  /* el taller con el fuego encendido y ningún yunque sonando. */
-  error: 'No hay nadie en el taller.',
-  /* el taller no ha cerrado; lo que no llega es el recado de quién anda dentro. */
-  offline: 'El taller está lejos: no llega el recado.',
+  /* la fragua con el fuego encendido y ningún yunque sonando. */
+  error: 'No hay nadie en la fragua.',
+  /* la fragua no ha cerrado; lo que no llega es el recado de quién anda dentro. */
+  offline: 'La fragua está lejos: no llega el recado.',
 } as const satisfies ThemeSocialVoice;

@@ -3,6 +3,160 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows the git tags.
 
+## [1.3.3] - 2026-09-18
+
+La versión de **encontrar los ajustes**. Estaban repartidos entre dos botones flotantes de la esquina superior
+derecha —la zona a la que peor llega el pulgar— que además se escondían al bajar por una lista, así que media
+aplicación desaparecía a mitad de página. Ahora Ajustes es una pestaña más de la barra de abajo y lo que hay
+dentro está separado por asuntos, sin la pantalla interminable de antes: cada grupo entra de una vez en una
+pantalla de escritorio, y en las cuatro va primero lo que se viene a hacer y después la explicación.
+
+### Added
+- **La pantalla de Legal dice qué se registra y qué no.** El interruptor de la analítica tenía una frase y dos
+  botones, y nadie decide sobre un permiso sin saber qué alcanza. Ahora, antes de los botones, hay dos listas:
+  lo que se registra —qué pantallas se visitan, errores, navegador— y lo que no sale nunca de tu dispositivo:
+  tus listas, tus notas, tus reseñas, tu correo y tu nombre.
+- **Dos guías desplegables en la importación.** Cómo traer tu biblioteca paso a paso y cómo añadir tus juegos
+  de PlayStation, con la misma forma y su flecha. La segunda existía, pero colgaba de una palabra en mitad de
+  un párrafo y no la encontraba nadie.
+
+### Changed
+- **Ajustes baja de cuatro grupos a tres, y el menú dice cuál importa.** «Integración» y «Legal» gastaban dos de
+  los cuatro puntos para lo mismo —tus datos: por dónde entran y salen, qué se registra de ellos y cómo se
+  borran—, así que comparten pantalla: **Datos**. Primero la importación, la sincronización y las copias; debajo,
+  la analítica, los documentos y el borrado de la cuenta. «Personalización» pasa a llamarse **Diseño**, que es lo
+  que hay dentro y cabe en una palabra. Y en el menú cada punto es menor que el anterior, por lo a menudo que se
+  entra en él: Diseño, Filtros y Datos. Los enlaces guardados a los nombres viejos siguen funcionando.
+- **El espacio social se abre en dos pasos, y los dos se dan ahí mismo.** Conectar GitHub era el primero de tres
+  y el único que no se podía dar en Social: el botón te llevaba a Integración y, una vez conectado, tenías que
+  acordarte de volver. Ahora «Conectar con GitHub» está en la propia pantalla y es exactamente el mismo botón que
+  «Continuar con Google»: autorizas, entras y ya está, sin tokens, sin gists y sin cambiar de pantalla. Y si
+  conectas desde ahí, vuelves ahí: hasta ahora la vuelta de GitHub te dejaba en Ajustes. Quien prefiera pegar su
+  propio token lo sigue teniendo en Integración, que es donde se explica.
+- **La pantalla de entrada, rehecha sobre esos dos pasos.** El tercero —«crear el espacio social»— nunca lo dio
+  nadie: se crea solo al entrar, así que ya no se anuncia como trabajo tuyo. En lugar de un rótulo, una barra de
+  progreso y tres fichas diciendo lo mismo tres veces, hay dos peldaños: cada uno con su nombre, una frase que
+  explica para qué es y —dentro— el botón que lo resuelve. El que toca está iluminado y el ya dado lleva su visto.
+  El estado técnico sigue debajo, entero y desplegado, que es lo que se mira cuando algo no cuadra — y ya solo
+  nombra el espacio social cuando puede decir algo de él: antes de entrar con Google no existe todavía, así que
+  anunciarlo como «No enlazado» era inventar un tercer pendiente. Y detrás de todo, un lienzo con el calor de la
+  fragua y unas rayas finas de tubo, teñidos con el acento de cada paleta: la pantalla ya no empieza en negro.
+- **Ajustes baja a la barra, y se abre en cuatro grupos.** La barra pasa a tener cuatro pestañas —Listados,
+  Social, Estadísticas y Ajustes—, y la última no lleva a una pantalla: despliega cuatro accesos sobre ella
+  misma. **Personalización** (paleta, tema, escala de nota y los enlaces que has publicado), **Integración**
+  (GitHub, importación de la biblioteca y copias), **Filtros** (los géneros, plataformas, virtudes y defectos
+  con los que clasificas) y **Legal**. Cada uno tiene su dirección, así que se puede guardar y compartir, y
+  ninguna pantalla pide ya cuatro pantallazos de scroll. Arriba a la derecha solo queda el cambio de tema: lo
+  que se esconde mientras lees ya no se lleva por delante ningún destino.
+- **El panel de estadísticas se muda de `/perfil` a `/stats`.** Aquel nombre venía de cuando la pestaña se
+  llamaba «Perfil» y se confundía con el perfil social, que es otra cosa. Los enlaces antiguos siguen
+  funcionando, incluidos los de una reseña concreta: `/perfil/resenas/7` lleva ahora a `/stats/resenas/7` sin
+  perder nada por el camino.
+- **La pantalla «Cuenta» se disuelve.** Lo que tenía dentro se reparte donde se busca: la escala de nota y tus
+  enlaces publicados, en Personalización; el borrado de la cuenta, en Legal, junto a la analítica y a los
+  documentos, que son las tres cosas que la ley te reconoce sobre tus datos.
+- **Cada pantalla de ajustes, ordenada para hacer y no para leer.** En Integración va primero qué hace, luego
+  qué necesitas y de dónde trae los juegos, y el botón de importar cierra; el estado de la sincronización es un
+  punto de color a la altura del título en vez de una línea perdida entre dos párrafos de ayuda, y el aviso de
+  sobrescribir solo aparece cuando enciendes esa opción. En Personalización, el tema arriba a lo ancho, debajo
+  las preferencias y al final lo que has publicado, con cada interruptor en su caja para saber dónde acaba uno
+  y empieza el siguiente. Y en Filtros, tus etiquetas pasan de una fila entera cada una a fichas: cuatro por
+  línea, sin scroll.
+- **`/ajustes` entra directamente en Integración.** Una portada que repite el menú que acabas de usar para
+  llegar es un paso de más. Los enlaces guardados y el atajo de la bandeja siguen funcionando.
+- **Textos más cortos donde solo estorbaban.** La tarjeta de importación pasa de cinco frases a tres, y el
+  aviso de la analítica de cuatro líneas a dos. Ese aviso, además, ya no te manda a «Cuenta», que es una
+  pantalla que ha dejado de existir.
+- **Las guías de importación, paso a paso de verdad.** Cada línea es ahora UNA acción: instalar el complemento
+  y reiniciar Playnite dejan de ir en la misma frase, y los paréntesis con condiciones salen de en medio. Se
+  siguen con Playnite abierta en la otra pantalla, así que ninguna obliga a releerse para saber qué toca.
+- **El enlace para descargar Playnite solo se ofrece en Windows**, que es el único sistema donde se puede
+  instalar. Desde un móvil, un Mac o Linux, ese paso se queda en «abre Playnite» y no te manda a por un
+  programa que no existe para tu aparato.
+
+### Fixed
+- **La barra de abajo ya no se queda muda por culpa de la tipografía.** Para saber si los nombres caben, la barra
+  los mide — y la primera medida cae con la letra de reserva del sistema, que no mide igual en un Mac que en
+  Linux. Si con esa no cabían, la barra bajaba a solo iconos y **ahí se quedaba para siempre**: cuando llegaba la
+  letra de la aplicación ya no podía rescatarse, porque en ese modo no hay nombre a la vista que medir. El mismo
+  móvil de 390 px salía con nombres en un sitio y mudo en otro. Ahora, cuando cambia lo que mide el texto, la
+  barra vuelve a medirlo todo desde el principio.
+- **Y los cuatro nombres vuelven a caber en un iPhone SE (375 px).** La cuenta que decide el escalón no medía el
+  nombre apilado, lo estimaba a partir del de una línea con un factor escrito a mano — y ese factor se apoyaba en
+  un cuerpo de letra que el CSS había cambiado para pantallas estrechas, así que se quedaba un 8 % corto: la
+  palabra «cabía» pegada al borde de su pastilla. Ahora se mide de verdad, y la barra recupera en móvil los
+  cuatro píxeles por columna que le faltaban: un poco menos de aire a los lados, un poco menos de hueco entre
+  pastillas y sin espaciado entre letras en el nombre apilado, que a ese tamaño no se aprecia. El nombre pasa de
+  8 a 12 px de holgura en un iPhone SE y de 13 a 16 en un móvil de 390 px.
+- **La apariencia ya no se apaga con la escala de nota.** Paleta, claro/oscuro, mayúsculas, efectos, carátulas y
+  el botón de Steam Deck vivían DENTRO de la tarjeta de la escala, que sí pide cuenta de Google, y se bloqueaban
+  con ella. Son preferencias de este dispositivo y no dependen de ninguna cuenta, así que ese bloqueo no
+  protegía nada: apagaba media tarjeta y nada más. Ahora tienen su propio sitio y responden siempre.
+  Ojo con lo que esto NO cambia: **la pantalla de Diseño sigue pidiendo cuenta de Google para abrirse** —el menú
+  no la ofrece sin ella y su dirección redirige—, porque comparte sitio con la escala de nota y con tus enlaces
+  publicados, que son cosas de la cuenta. Sin cuenta, el cambio de tema sigue estando arriba a la derecha.
+- **El aviso de la analítica ya no se come el final de la pantalla.** Se apoya encima de la barra de navegación
+  y el contenido no le reservaba sitio, así que las últimas tarjetas quedaban debajo y no había forma de bajar
+  hasta ellas: la página creía que ya había terminado. Ahora el contenido se aparta lo que el aviso mide.
+
+### Security
+- **La verja de CI ya comprueba los tipos del borde.** `tsconfig.json` solo incluye `src` y `tests`, así que
+  `tsc --noEmit` no miraba `functions/`: el código que guarda el `client_secret` de OAuth, verifica los ID token
+  de Firebase y aplica las cuotas del servicio entraba en producción sin comprobación de tipos. El paso pasa a
+  ser `npm run typecheck`, que encadena los dos proyectos.
+
+### Tests
+- **La suite se ejecuta una vez por build, no dos.** Había dos pasos —uno normal y otro con cobertura— corriendo
+  los mismos 2266 casos: se pagaba el doble de tiempo y se doblaba la probabilidad de tropezar con un fallo
+  intermitente por contención de la máquina. Queda el de cobertura, que informa igual.
+- **El navegador de las pruebas de extremo a extremo se cachea** por versión de `@playwright/test`, en vez de
+  descargar Chromium entero en cada build.
+- **Un iPhone SE entre los anchos que vigila la barra de abajo** (375 px). Es el más estrecho en el que la barra
+  promete los cuatro nombres y el que decide la cuenta por los pelos, así que es el primero que se cae si alguien
+  recorta su sitio o ensancha un rótulo — y el de 390 px podría seguir en verde mientras eso pasa.
+- **Que ningún icono salga hueco, comprobado sobre el build.** El juego de iconos está partido en dos por peso,
+  y un dibujo en la mitad equivocada no da ningún error: se pinta un hueco y nadie se entera. Dos pruebas nuevas
+  lo cierran — una cuadra el catálogo con los dos sprites, y la otra recorre las pantallas de la aplicación
+  compilada preguntando por cada dibujo si su símbolo existe.
+- **La válvula de desborde del gist vuelve a probarse, y ahora de verdad.** Esas pruebas se saltan solas cuando
+  su interruptor está apagado —que es su estado en producción—, así que nadie las miraba: al encenderlas, una
+  fallaba y la otra pasaba en vacío. El motivo no estaba en el reparto sino en el material de la prueba, que se
+  escribió antes de que la compresión entrara en juego: rellenaba las reseñas con la misma letra repetida, y
+  6,82 MB de una letra se comprimen hasta caber en un solo fichero, así que no había excedente que repartir.
+  Ahora el texto es ruido incompresible con semilla fija, el reparto se ejercita (un gist de desborde con 7000
+  juegos, tres con 12000) y la segunda prueba afirma su premisa en vez de darla por buena. Un job aparte de CI
+  enciende el interruptor y corre esa batería en cada `push`.
+- **Las reglas de privacidad de los listados ajenos, afirmadas una por una.** De quién se lee el gist de
+  listados (solo de amistades), con qué recorte se guarda (el de su dueño, aplicado al guardar y no al pintar) y
+  qué pasa cuando no se puede leer. Vivían dentro del ViewModel del hub y solo se ejercitaban de refilón, al
+  abrir la pantalla entera; ahora son ocho pruebas sobre la pieza que las aplica.
+- **Los `findBy*` esperan 3 segundos en vez de 1.** El reloj que agotaba no era el de vitest sino el de Testing
+  Library, y con 195 ficheros montando su propio entorno en paralelo una máquina con carga tarda más de un
+  segundo en resolver una búsqueda que no tiene nada de malo: la suite fallaba cinco casos de 2265 y la
+  ejecución siguiente pasaba entera sin tocar una línea.
+
+### Performance
+- **Escribir una publicación ya no repinta el feed entero.** El texto en curso era estado del hub, así que cada
+  tecla atravesaba el hook, el ViewModel y el hub hasta rehacer la lista de actividad completa: sus tarjetas, sus
+  cuerpos de texto y un avatar por fila. Ahora el borrador se queda en el propio cuadro y solo sale de ahí al
+  publicar, que es el único momento en que alguien más lo necesita. Medido con 30 publicaciones en pantalla y 5
+  pulsaciones: de 155 repintados de avatar y 150 de cuerpo de publicación, a **cero**. Y crecía con el tamaño del
+  feed, así que quien más lo notará es quien tiene más que leer.
+- **Los dibujos que no se ven al abrir ya no se descargan al abrir.** El juego de iconos viajaba entero en el
+  arranque, y de sus 51 dibujos la primera pantalla usa 36. De los otros quince, dos no los usaba nadie y se han
+  ido; los trece que quedan —ajustes, espacio social, estadísticas, panel y los modales— llegan aparte, en cuanto
+  el navegador tiene un hueco libre. Son **3,2 kB menos** en cada primera visita —el arranque baja de 182,2 a
+  179,1 kB— y el margen del presupuesto casi se dobla.
+- **El trabajo de «Conectar con GitHub» deja de viajar en el arranque.** Montar la autorización y canjear el
+  código solo hace falta al pulsar el botón o al volver de GitHub, así que ahora se descarga en ese momento; en
+  el arranque se quedan solo las tres comprobaciones baratas que la aplicación hace siempre. Son 0,6 kB menos en
+  cada primera visita, y sobre todo margen para lo que venga: el presupuesto de arranque estaba al 96 % de su
+  tope.
+- **La aplicación arranca con menos peso otra vez.** Las reglas de estilo de las pantallas de ajustes —26 kB—
+  viajaban en el arranque para pintar unas pantallas en las que se entra una vez al mes. Ahora se descargan al
+  entrar en ellas, como ya hacían las del panel de estadísticas y las del hub social. Son 10 kB menos de estilos
+  en cada primera visita.
+
 ## [1.3.2] - 2026-09-17
 
 La versión de **arrancar con menos peso** y de que **volver funcione en cualquier aparato**.

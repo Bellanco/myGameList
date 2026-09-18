@@ -23,7 +23,7 @@ import { PALETTES } from '../../src/core/constants/palettes';
  *  - AJUSTES, que es donde vive la mayor densidad de texto secundario del proyecto: notas de tarjeta, cajas de
  *    ayuda sobre superficie elevada y los enlaces teñidos con el acento. Cinco de las seis paletas tenían aquí
  *    algún contraste por debajo del 4,5:1 cuando esta pantalla no se auditaba.
- *  - La PUERTA DE ENTRADA del hub social, que es la única pantalla con una barra de progreso: le faltaba el
+ *  - La PUERTA DE ENTRADA del hub social, que tuvo la única barra de progreso de la aplicación: le faltaba el
  *    nombre accesible en las doce combinaciones, y no lo veía nadie porque el hub no se auditaba.
  *  - La RULETA, que es un modal y trae su propio juego de color (marco, pistas, ficha del resultado).
  *
@@ -96,20 +96,42 @@ async function listaConDetalleAbierto(page: Page): Promise<void> {
   await animacionesDeEntradaTerminadas(page);
 }
 
-/** Ajustes: notas de tarjeta, cajas de ayuda y enlaces teñidos con el acento, todo junto. */
+/**
+ * «Datos»: la pantalla más cargada de Ajustes y la que reúne todo lo que aquí se puede romper —notas de tarjeta,
+ * cajas de ayuda, formularios, botones de acción, el interruptor de la analítica, los tres documentos y el
+ * borrado de la cuenta con su confirmación—. Eran dos pantallas, «Integración» y «Legal», y se auditaban por
+ * separado; desde que comparten dirección, un solo recorrido las cubre a las dos.
+ */
 async function pantallaDeAjustes(page: Page): Promise<void> {
-  await page.goto('/ajustes');
+  await page.goto('/ajustes/datos');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  // La guía de importación va plegada: es justo donde vivían los enlaces con el acento a pelo.
-  const guia = page.locator('.import-guide-link').first();
-  if (await guia.count()) await guia.click();
+  // Con las dos guías ABIERTAS: dentro hay listas numeradas y enlaces, que es donde el contraste se rompe sin
+  // que nadie lo vea —están plegadas casi siempre—.
+  for (const guia of await page.locator('.import-guide-row').all()) await guia.click();
   await animacionesDeEntradaTerminadas(page);
 }
 
-/** Puerta de entrada del hub social (sin sesión): pasos, barra de progreso y avisos. */
+/**
+ * EL MENÚ DE LA PESTAÑA, DESPLEGADO. Es la pantalla más rara de auditar de toda la aplicación: tres rótulos
+ * flotando sin panel ni fondo propio, sobre un contenido que baja al 30 %. Lo que axe puede decir aquí —que los
+ * enlaces tengan nombre, que el disparador anuncie su estado, que el foco se vea— es justo lo que no se puede
+ * comprobar a ojo; lo que NO ve —el `text-shadow` y el contraste real sobre lo que quede debajo— se mide aparte
+ * (ver la nota de `SettingsMenu`).
+ */
+async function menuDeAjustesAbierto(page: Page): Promise<void> {
+  await page.goto('/completados');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await page.getByRole('button', { name: 'Ajustes' }).click();
+  await expect(page.locator('.settings-menu')).toBeVisible();
+  await animacionesDeEntradaTerminadas(page);
+}
+
+/** Puerta de entrada del hub social (sin sesión): los dos pasos, sus botones, el estado y los avisos. */
 async function puertaDelHubSocial(page: Page): Promise<void> {
   await page.goto('/social');
-  await expect(page.locator('.hub-gateway-progress-track')).toBeVisible();
+  // Se espera al ÚLTIMO de los dos peldaños: con el primero a la vista la lista todavía puede estar pintándose.
+  // (Antes se esperaba a la barra de progreso, que se fue con el rediseño a dos pasos: la lista ES el progreso.)
+  await expect(page.locator('.hub-gateway-stage').nth(1)).toBeVisible();
   await animacionesDeEntradaTerminadas(page);
 }
 
@@ -124,7 +146,7 @@ async function ruletaAbierta(page: Page): Promise<void> {
 
 /** Deja el panel de estadísticas pintado con todos sus bloques a la vista. */
 async function panelDeEstadisticas(page: Page): Promise<void> {
-  await page.goto('/perfil');
+  await page.goto('/stats');
   // Las tarjetas se destapan al llegar a ellas; para auditarlas hay que tenerlas todas montadas.
   await expect(page.locator('.stats-hub')).toBeVisible();
   await page.evaluate(() => {
@@ -287,6 +309,7 @@ const PANTALLAS = [
   { nombre: 'lista', amplia: false, abrir: listaConDetalleAbierto },
   { nombre: 'panel', amplia: true, abrir: panelDeEstadisticas },
   { nombre: 'ajustes', amplia: false, abrir: pantallaDeAjustes },
+  { nombre: 'menú de ajustes', amplia: false, abrir: menuDeAjustesAbierto },
   { nombre: 'hub social', amplia: false, abrir: puertaDelHubSocial },
   { nombre: 'ruleta', amplia: false, abrir: ruletaAbierta },
   { nombre: 'logros', amplia: true, abrir: listadoDeLogros },

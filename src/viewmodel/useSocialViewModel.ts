@@ -5,9 +5,7 @@ import { writeCanPublishHint } from '../model/repository/socialShellHint';
 import { localWeekKey } from '../core/utils/dateTime';
 import { createSocialGist, getSocialSyncConfig, readPublicSocialGistById, readSocialGist, remapSocialActorIds, saveSocialSyncConfig, type SocialSharedGame, deleteGist, ensureSecretSocialGist, socialGistHasContent, writeSocialGist } from '../model/repository/socialGistRepository';
 import { reconcileReviewActivity } from '../model/repository/socialActivityReconcile';
-import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
 import { getCachedSocialProfile, getLocalMeta, patchLocalMeta, putCachedSocialProfile, type CachedSocialProfileData } from '../model/repository/indexedDbRepository';
-import { applyProfileVisibility } from '../core/utils/profileVisibility';
 import { PUBLIC_NAME_MAX_LENGTH, safeTrim } from '../core/security/sanitize';
 import { isNetworkFailure, isOffline } from '../core/utils/network';
 import { useOnlineStatus } from '../view/hooks/useOnlineStatus';
@@ -21,7 +19,7 @@ import {
   DEFAULT_PROFILE_TIER,
   type ProfileTier,
 } from '../core/constants/tiers';
-import { TAB_IDS, type GameItem, type SyncConfig, type TabData, type TabId } from '../model/types/game';
+import { TAB_IDS, type GameItem, type SyncConfig, type TabData } from '../model/types/game';
 import {
   clearAnalyticsUser,
   ensureProfileByEmail,
@@ -64,6 +62,7 @@ const EMPTY_LIBRARY = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 };
 import { useSocialCompose } from './social/useSocialCompose';
 import { useSocialLegalConsent } from './social/useSocialLegalConsent';
 import { DEFAULT_SOCIAL_VISIBILITY, normalizeVisibility, useSocialProfileForm } from './social/useSocialProfileForm';
+import { useForeignProfileGames } from './social/useForeignProfileGames';
 import { useSocialFeed } from './social/socialFeed';
 import { useRelatedReviews } from './social/useRelatedReviews';
 import type { RelatedReviewAnchor } from '../core/social/relatedReviews';
@@ -267,21 +266,8 @@ export function useSocialViewModel(options?: {
    */
   // Directorio CRUDO, tal y como lo deja la hidratación (y como se cachea en IndexedDB). Lo que consume la pantalla
   // es `socialDirectory`, unas líneas más abajo: el mismo directorio con la política de fotos ya aplicada.
-  // Listas completas de OTROS perfiles, cargadas bajo demanda (al abrir reseña/perfil) y filtradas por su
-  // visibilidad. Clave = id del perfil del directorio. Alimenta getGameItemById y selectedProfileDetail.
-  const [foreignGamesByProfile, setForeignGamesByProfile] = useState<Record<string, Record<TabId, GameItem[]>>>({});
-  const [loadingForeignProfile, setLoadingForeignProfile] = useState(false);
-  /**
-   * Perfiles cuyo gist de listados se INTENTÓ bajar y no se pudo (sin red, gist borrado, token sin permiso).
-   *
-   * Hace falta para distinguir «todavía no ha llegado» de «no va a llegar», que es lo que decide si el detalle de
-   * una reseña enseña un esqueleto o el adelanto de 160 caracteres. Sin esto, un fallo dejaba la pantalla en
-   * esqueleto para siempre, esperando algo que ya no venía.
-   *
-   * NO bloquea el reintento: quien decide si se vuelve a pedir es `foreignGamesByProfile`, que sigue sin la
-   * entrada. Volver a abrir la reseña lo intenta otra vez, que es lo que ya hacía.
-   */
-  const [foreignProfileFailed, setForeignProfileFailed] = useState<Record<string, true>>({});
+  // Los listados de OTRAS personas viven en `useForeignProfileGames` (se invoca más abajo, cuando ya están
+  // resueltos el directorio y la relación de amistad que necesita para decidir si puede pedirlos).
   // Cooldown visible del botón "Actualizar": se deshabilita durante FORCED_REFRESH_MIN_MS tras un refresco forzado.
 
 
@@ -545,7 +531,7 @@ export function useSocialViewModel(options?: {
   }, [hasReadyAccess, showSocialSpace, navigate]);
 
   // Pasarela (pasos, paso actual y progreso): derivación pura en `social/socialGateway`.
-  const { steps: gatewaySteps, currentStep, progress: gatewayProgress } = useMemo(
+  const { steps: gatewaySteps, currentStep } = useMemo(
     () => resolveGateway({ hasMainSync, hasSocialSession, hasSocialGist }),
     [hasMainSync, hasSocialSession, hasSocialGist],
   );
@@ -941,6 +927,54 @@ export function useSocialViewModel(options?: {
     );
   }, [profileSearch, visibleSocialDirectory]);
 
+  const activeDetailEvent = useMemo(() => {
+    if (activePanel !== 'detail' || !detailActorUid || detailGameId <= 0 || !detailEventType) {
+      return null;
+    }
+
+    let best: SocialActivityFeedItem | null = null;
+    for (const entry of socialDirectory) {
+      // `|| []`: una entrada de caché antigua/malformada podría no traer `activity`.
+      for (const activityEntry of entry.activity || []) {
+        if (
+          activityEntry.actorProfileId === detailActorUid &&
+          activityEntry.gameId === detailGameId &&
+          activityEntry.type === detailEventType &&
+          (!best || activityEntry.updatedAt > best.updatedAt)
+        ) {
+          best = activityEntry;
+        }
+      }
+    }
+    return best;
+  }, [activePanel, socialDirectory, detailActorUid, detailEventType, detailGameId]);
+
+  // LOS LISTADOS DE OTRAS PERSONAS (`useForeignProfileGames`). Va AQUÍ, y el orden no es casual: necesita saber
+  // qué perfil hay abierto —el de la ficha o el del evento del detalle— y lo alimentan tres de los que vienen
+  // debajo (`selectedProfileDetail`, `detailReviewLoading`, `relatedReviews`), así que `activeDetailEvent` se
+  // resuelve justo encima en vez de más abajo, donde estaba.
+  const {
+    foreignGames,
+    foreignProfileFailed,
+    loadingForeignProfile,
+    getGameItemById,
+    refreshProfileDetail,
+  } = useForeignProfileGames({
+    activePanel,
+    profileDetailId,
+    detailProfileId: activeDetailEvent?.profileId || '',
+    ownUid: authUser?.uid,
+    ownProfileId,
+    directory: socialDirectory,
+    relationshipWith,
+    localGames: localState,
+    ownTier,
+    defaultVisibility: defaultSocialVisibility,
+    fallbackToken: mainSyncConfig?.token || null,
+    setFeedback,
+    reportFailure,
+  });
+
   const selectedProfileDetail = useMemo(() => {
     // La vista de perfil, la de reseñas y el detalle de una reseña comparten el mismo perfil seleccionado.
     if ((activePanel !== 'profile-detail' && activePanel !== 'profile-review') || !profileDetailId) {
@@ -963,7 +997,7 @@ export function useSocialViewModel(options?: {
     if (!isOwn) {
       // Perfiles ajenos: si ya bajamos su lista completa (gist de listados, filtrada por su visibilidad) la
       // mostramos; mientras llega (o si no hay token/datos) se queda index-only y el componente muestra el vacío.
-      const foreign = foreignGamesByProfile[entry.id];
+      const foreign = foreignGames[entry.id];
       if (foreign) return { ...entry, sharedLists: foreign };
       return entry;
     }
@@ -977,7 +1011,7 @@ export function useSocialViewModel(options?: {
         p: localState.p,
       },
     };
-  }, [activePanel, authUser, foreignGamesByProfile, localState, ownProfileId, profileDetailId, socialDirectory]);
+  }, [activePanel, authUser, foreignGames, localState, ownProfileId, profileDetailId, socialDirectory]);
 
   // Reseña abierta a pantalla completa desde la lista de reseñas del perfil (/social/profiles/:id/game/:gameId/review).
   // Se busca el juego por id en los listados del perfil seleccionado (datos completos para el propio/amigos; los
@@ -1209,27 +1243,6 @@ export function useSocialViewModel(options?: {
     friendUidSet,
   );
 
-  const activeDetailEvent = useMemo(() => {
-    if (activePanel !== 'detail' || !detailActorUid || detailGameId <= 0 || !detailEventType) {
-      return null;
-    }
-
-    let best: SocialActivityFeedItem | null = null;
-    for (const entry of socialDirectory) {
-      // `|| []`: una entrada de caché antigua/malformada podría no traer `activity`.
-      for (const activityEntry of entry.activity || []) {
-        if (
-          activityEntry.actorProfileId === detailActorUid &&
-          activityEntry.gameId === detailGameId &&
-          activityEntry.type === detailEventType &&
-          (!best || activityEntry.updatedAt > best.updatedAt)
-        ) {
-          best = activityEntry;
-        }
-      }
-    }
-    return best;
-  }, [activePanel, socialDirectory, detailActorUid, detailEventType, detailGameId]);
 
   /**
    * ¿EL EVENTO DEL DETALLE TODAVÍA PUEDE APARECER?
@@ -1269,7 +1282,7 @@ export function useSocialViewModel(options?: {
     // Reseña propia: el texto sale de los listados locales, que ya están.
     if (isOwnProfileIdentity(profileId, authUser?.uid, ownProfileId)) return false;
     // Ya bajado. Aunque el juego no aparezca (su dueño esconde esa lista), no hay nada más que esperar.
-    if (foreignGamesByProfile[profileId]) return false;
+    if (foreignGames[profileId]) return false;
     // Se intentó y no se pudo: a partir de aquí, el adelanto es lo que hay.
     if (foreignProfileFailed[profileId]) return false;
     const entry = socialDirectory.find((item) => item.id === profileId);
@@ -1278,36 +1291,9 @@ export function useSocialViewModel(options?: {
     return true;
   }, [
     activePanel, activeDetailEvent, authUser?.uid, ownProfileId,
-    foreignGamesByProfile, foreignProfileFailed, socialDirectory, relationshipWith,
+    foreignGames, foreignProfileFailed, socialDirectory, relationshipWith,
   ]);
 
-  /**
-   * Obtiene un GameItem para un evento del feed. Para perfiles ajenos usa su lista bajada
-   * (`foreignGamesByProfile`, filtrada por su visibilidad); para el propio, fallback local.
-   */
-  const getGameItemById = useCallback((profileId: string, gameId: number) => {
-    // P1: propiedad por identidad (uid/profileId), no por email.
-    const isOwn = isOwnProfileIdentity(profileId, authUser?.uid, ownProfileId);
-    if (!isOwn) {
-      // Eventos AJENOS: la reseña completa (review/strengths/weaknesses/categorías) sale de la lista bajada de SU
-      // gist de listados, ya filtrada por su visibilidad (las pestañas ocultas quedan vacías → no se revela el
-      // juego). Si aún no ha llegado, devolvemos null y el detalle muestra el snippet del evento.
-      const foreign = foreignGamesByProfile[profileId];
-      if (foreign) {
-        const match = [...foreign.c, ...foreign.v, ...foreign.e, ...foreign.p].find((game) => game.id === gameId);
-        if (match) return match;
-      }
-      return null;
-    }
-
-    const allGames = [
-      ...localState.c,
-      ...localState.v,
-      ...localState.e,
-      ...localState.p,
-    ];
-    return allGames.find((game) => game.id === gameId) || null;
-  }, [authUser, foreignGamesByProfile, localState, ownProfileId]);
 
   // NOTA (retirado a propósito): aquí vivía un efecto que, al abrir el detalle de una reseña PROPIA cuyo juego
   // no aparecía en los listados, la despublicaba del gist social por considerarla huérfana. Decidía con
@@ -1443,7 +1429,7 @@ export function useSocialViewModel(options?: {
     anchor: activeReviewAnchor,
     directory: socialDirectory,
     localGames: localState,
-    foreignGames: foreignGamesByProfile,
+    foreignGames: foreignGames,
     isOwnProfile: isOwnProfileEntry,
     ownDisplayName: socialDisplayName,
   });
@@ -1471,47 +1457,6 @@ export function useSocialViewModel(options?: {
     void navigate(target, { state: { backTo: location.pathname } });
   }, [location.pathname, navigate]);
 
-  // Bloque 3/4 — al abrir el detalle de una reseña o un perfil AJENO, baja su lista completa de juegos (cache-first
-  // 24h en IndexedDB; sin red si está fresca) y la guarda filtrada por su visibilidad. El perfil propio no se baja
-  // (ya tiene datos locales). Sin token o ante fallo de red se queda index-only (snippet del evento).
-  useEffect(() => {
-    if (activePanel !== 'detail' && activePanel !== 'profile-detail' && activePanel !== 'profile-review') return;
-    const targetProfileId = (activePanel === 'profile-detail' || activePanel === 'profile-review') ? profileDetailId : activeDetailEvent?.profileId || '';
-    if (!targetProfileId) return;
-    if (isOwnProfileIdentity(targetProfileId, authUser?.uid, ownProfileId)) return;
-    if (foreignGamesByProfile[targetProfileId]) return;
-    const entry = socialDirectory.find((item) => item.id === targetProfileId);
-    if (!entry || !entry.gamesGistId) return;
-    // Amistad: solo se baja el gist de listados COMPLETO de un amigo. Para no-amigos no se lee nada (ahorro de
-    // llamadas + coherente con "perfil no-amigo = solo nombre y foto"); el detalle muestra el CTA de "Añadir amigo".
-    if (relationshipWith(entry.uid) !== 'friends') return;
-
-    let cancelled = false;
-    const token = getSocialSyncConfig()?.token || mainSyncConfig?.token || null;
-    setLoadingForeignProfile(true);
-    loadForeignProfileGames({ profileId: targetProfileId, gamesGistId: entry.gamesGistId, token })
-      .then((games) => {
-        if (cancelled || !games) return;
-        // El rango de QUIEN MIRA entra en el filtro: la cuenta de administración ve las listas y las marcas que
-        // el dueño esconde, pero no sus horas (ver `applyProfileVisibility`).
-        const visible = applyProfileVisibility(games, entry.visibility || defaultSocialVisibility, ownTier);
-        setForeignGamesByProfile((prev) => ({ ...prev, [targetProfileId]: visible }));
-      })
-      .catch(() => {
-        /* fallback index-only: el detalle/perfil muestra snippet/vacío sin romper la pantalla. Se APUNTA el
-           perfil para que el detalle deje de esperar y enseñe el adelanto, que a partir de aquí es la verdad. */
-        if (!cancelled) setForeignProfileFailed((prev) => (prev[targetProfileId] ? prev : { ...prev, [targetProfileId]: true }));
-      })
-      .finally(() => {
-        // Flag de UI (no datos rancios): debe bajar SIEMPRE, aunque el efecto se haya cancelado al navegar; si no,
-        // un perfil abierto luego desde caché (return temprano) dejaría el botón "Actualizar listados" colgado.
-        setLoadingForeignProfile(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activePanel, activeDetailEvent, authUser, defaultSocialVisibility, foreignGamesByProfile, mainSyncConfig?.token, ownProfileId, ownTier, profileDetailId, relationshipWith, socialDirectory]);
 
   // Amigo inactivo (su gist social no se leyó al hidratar el directorio, para no ocupar el feed ni gastar la
   // llamada): al ABRIR su perfil sí se lee, para que su hero no salga a medias (nombre/visibilidad/foto).
@@ -1544,29 +1489,6 @@ export function useSocialViewModel(options?: {
     };
   }, [activePanel, defaultSocialVisibility, mainSyncConfig?.token, profileDetailId, socialDirectory, patchDirectoryEntries]);
 
-  // Bloque 4 — refresco manual del perfil abierto: invalida la caché de IndexedDB y relee del gist de listados.
-  const refreshProfileDetail = useCallback(async () => {
-    const profileId = profileDetailId;
-    const entry = socialDirectory.find((item) => item.id === profileId);
-    if (!entry || !entry.gamesGistId || isOwnProfileIdentity(profileId, authUser?.uid, ownProfileId)) return;
-    if (relationshipWith(entry.uid) !== 'friends') return; // solo se refrescan listados de amigos.
-    try {
-      setLoadingForeignProfile(true);
-      await invalidateProfileGames(profileId);
-      const token = getSocialSyncConfig()?.token || mainSyncConfig?.token || null;
-      const games = await loadForeignProfileGames({ profileId, gamesGistId: entry.gamesGistId, token, forceRefresh: true });
-      if (games) {
-        const visible = applyProfileVisibility(games, entry.visibility || defaultSocialVisibility, ownTier);
-        setForeignGamesByProfile((prev) => ({ ...prev, [profileId]: visible }));
-      } else {
-        setFeedback('warn', SOCIAL_UI.status.profileGamesRefreshFailed);
-      }
-    } catch (error) {
-      reportFailure(error, SOCIAL_UI.status.profileGamesRefreshFailed, 'warn');
-    } finally {
-      setLoadingForeignProfile(false);
-    }
-  }, [authUser, defaultSocialVisibility, mainSyncConfig?.token, ownProfileId, ownTier, profileDetailId, relationshipWith, reportFailure, setFeedback, socialDirectory]);
 
   const handleActivityItemKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLElement>, entry: SocialActivityFeedItem) => {
@@ -1886,8 +1808,6 @@ export function useSocialViewModel(options?: {
   // `hydrateSocialDirectory` para refrescar el feed tras publicar; el orden de los hooks es estable entre renders,
   // que es lo único que React exige.
   const {
-    composePostText,
-    setComposePostText,
     publishingPost,
     handlePublishPost,
     canPublishPosts: canPublish,
@@ -2362,13 +2282,11 @@ export function useSocialViewModel(options?: {
     ownPublishablePhoto,
     profileSearch,
     setProfileSearch,
-    composePostText,
     // Rango propio y lo que implica al publicar: si puede, cuánto, y si hay contador que enseñar.
     ownTier,
     canPublishPosts: canPublish,
     postMaxLength,
     showPostCounter,
-    setComposePostText,
     publishingPost,
     handlePublishPost,
     feedItems,
@@ -2382,7 +2300,6 @@ export function useSocialViewModel(options?: {
     hasSocialSession,
     gatewaySteps,
     currentStep,
-    gatewayProgress,
     completedGames,
     socialDisplayName,
     filteredSocialDirectory,

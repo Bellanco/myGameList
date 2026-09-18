@@ -48,10 +48,8 @@ function renderFeed(items: SocialFeedItem[] = []) {
       openActivityDetail={() => {}}
       openMoveReview={() => {}}
       handleActivityItemKeyDown={() => {}}
-      composePostText=""
-      setComposePostText={() => {}}
       publishingPost={false}
-      handlePublishPost={() => {}}
+      handlePublishPost={async () => true}
       canPublishPosts={false}
       postMaxLength={1000}
       showPostCounter
