@@ -545,7 +545,7 @@ export function useSocialViewModel(options?: {
   }, [hasReadyAccess, showSocialSpace, navigate]);
 
   // Pasarela (pasos, paso actual y progreso): derivación pura en `social/socialGateway`.
-  const { steps: gatewaySteps, currentStep, progress: gatewayProgress } = useMemo(
+  const { steps: gatewaySteps, currentStep } = useMemo(
     () => resolveGateway({ hasMainSync, hasSocialSession, hasSocialGist }),
     [hasMainSync, hasSocialSession, hasSocialGist],
   );
@@ -2382,7 +2382,6 @@ export function useSocialViewModel(options?: {
     hasSocialSession,
     gatewaySteps,
     currentStep,
-    gatewayProgress,
     completedGames,
     socialDisplayName,
     filteredSocialDirectory,
