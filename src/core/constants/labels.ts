@@ -321,8 +321,15 @@ export const UI_MESSAGES = {
       /* UN PASO, UNA COSA. Estas instrucciones las sigue alguien con Playnite abierta en la otra pantalla, y
          cada paréntesis, cada «cuando termine» y cada frase con dos acciones dentro obliga a releer para saber
          qué toca hacer ahora. Se cuentan como se dictan en voz alta: haz esto, ahora esto. */
+      /* La invitación a descargar Playnite va SUELTA y no dentro del primer paso: solo se enseña en un
+         navegador de Windows, que es el único sitio donde se puede instalar (ver `isWindows`). En el resto
+         —el móvil incluido— el paso se queda en «abre Playnite» y nadie persigue un programa que no existe
+         para su sistema. */
+      downloadHint: 'Si no la tienes, descárgala en',
+      downloadLabel: 'playnite.link',
+      downloadUrl: 'https://playnite.link',
       steps: [
-        'Abre Playnite en tu PC con Windows. Si no la tienes, descárgala en playnite.link.',
+        'Abre Playnite en tu PC con Windows.',
         'Arriba a la izquierda, entra en «Complementos» → «Explorar complementos» y abre la pestaña «Genérica».',
         'Busca «Playnite Library Exporter» y pulsa «Instalar».',
         'Cierra Playnite y vuelve a abrirla.',

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
+import { isWindows } from '../../../core/utils/platform';
 import { Icon } from '../Icon';
 // La hoja del flujo de importación se importa AQUÍ y no desde `index.scss`: la pantalla que la usa es perezosa,
 // así que su CSS viaja en ese chunk y no pesa en el arranque.
@@ -13,7 +14,7 @@ const M = UI_MESSAGES.import.integrations;
  * pulsable escondida en mitad de un párrafo: dos formas distintas para la misma cosa, y ninguna decía que
  * detrás había pasos. Como filas iguales, con su flecha, se ve de un vistazo que hay dos guías y que se abren.
  */
-function Guia({ title, steps }: { title: string; steps: readonly string[] }) {
+function Guia({ title, steps }: { title: string; steps: readonly ReactNode[] }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -39,9 +40,26 @@ function Guia({ title, steps }: { title: string; steps: readonly string[] }) {
 }
 
 export function ImportGuides() {
+  /**
+   * El primer paso lleva el enlace de descarga PEGADO, y solo en Windows: es donde único se puede instalar
+   * Playnite. Se calcula una vez —el sistema no cambia a mitad de visita— y lo que decide es qué se enseña,
+   * nunca qué se puede hacer.
+   */
+  const pasos = useMemo<readonly ReactNode[]>(() => {
+    if (!isWindows()) return M.steps;
+    const [primero, ...resto] = M.steps;
+    return [
+      <>
+        {primero}{' '}{M.downloadHint}{' '}
+        <a href={M.downloadUrl} target="_blank" rel="noopener noreferrer">{M.downloadLabel}</a>.
+      </>,
+      ...resto,
+    ];
+  }, []);
+
   return (
     <div className="import-guides">
-      <Guia title={M.stepsTitle} steps={M.steps} />
+      <Guia title={M.stepsTitle} steps={pasos} />
       <Guia title={M.consoles.psn.title} steps={M.consoles.psn.steps} />
     </div>
   );
