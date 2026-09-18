@@ -1384,7 +1384,7 @@ dice ahí mismo.** No hace falta inventar nada para decirlo: el aviso va por el 
 —`StatusBanner`, que ya tiene su región viva siempre montada y su `role="status"` de cortesía— con el texto
 «Logro conseguido: Créditos finales IV». Un aviso más de los que ya existen, no una capa nueva.
 
-Cuatro condiciones para que no se vuelva molesto:
+Cinco condiciones para que no se vuelva molesto:
 
 - **Solo lo que sube en ESTA escritura**, comparando contra el estado inmediatamente anterior. Nunca el arrastre
   de retroactividad del §7.3: quien importa una biblioteca entera no recibe veinte avisos, recibe la tira de
@@ -1395,6 +1395,20 @@ Cuatro condiciones para que no se vuelva molesto:
   pantalla ni se pone delante del formulario que el usuario estaba rellenando.
 - **El destello, detrás de `data-effects` y de `prefers-reduced-motion`** (§8.5). Sin efectos, el aviso sigue
   saliendo: lo decorativo es el brillo, no la noticia.
+- **Lo que ya se ha contado no se cuenta otra vez**, venga de donde venga. Y eso lo recuerda una clave propia
+  (`ACHIEVEMENTS_TOLD_KEY`), **no la marca de agua**: son dos preguntas distintas —«¿lo tenías?» y «¿ya te lo
+  anuncié?»— y la marca la escriben además el hub y el panel, así que compartir almacén las confundía.
+
+> ⚑ **El fallo que costó esta quinta condición.** «Nuevo» se decidía comparando solo contra la foto en memoria de
+> la evaluación anterior, y esa foto envejece sin que nadie la toque: **el catálogo crece a mitad de sesión**,
+> cuando llega `appConfig/achievements` y `applyExtraSteps()` lo reconstruye con los umbrales del panel (§6.4bis).
+> A partir de ahí, la siguiente escritura de la biblioteca veía esos escalones por primera vez y los anunciaba
+> como desbloqueos recién hechos —con su celebración— aunque fueran de hace meses; y como la foto se toma de nuevo
+> en cada arranque con el catálogo del código, **volvía a pasar en cada sesión**. De ahí salen las otras dos
+> guardas: dos fotos de catálogos distintos (`catalogEpoch`) no son comparables y lo que apareció en medio se
+> cuenta como ampliación, sin celebración; y una foto tomada con la biblioteca **vacía** tampoco lo es, porque los
+> juegos pueden llegar de IndexedDB un momento después y ese salto no lo ha hecho nadie (salía un «87 %
+> completado» en cada arranque que se hidratara así). Fijado en `tests/unit/achievementsNotice.test.ts`.
 
 > Coste: la reevaluación completa tras cada guardado. Son unos pocos milisegundos sobre 2.000 juegos (§7.2) y ya
 > se memoiza, así que no hace falta ni diferirlo. Si algún día molestara, el arreglo es evaluar solo los logros de
