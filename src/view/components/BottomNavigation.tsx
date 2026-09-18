@@ -1,6 +1,7 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { IconName } from '../../core/constants/icons';
 import { UI_MESSAGES } from '../../core/constants/labels';
+import { SETTINGS_MENU_ID } from '../../core/constants/uiConfig';
 import { Icon } from './Icon';
 
 // 'legal' NO está en NAV_ITEMS a propósito: los documentos legales se alcanzan por enlace (aviso de cookies,
@@ -12,6 +13,8 @@ export type { AppSection };
 interface BottomNavigationProps {
   currentSection: AppSection;
   onSectionChange: (section: AppSection) => void;
+  /** ¿Está desplegado el menú de Ajustes? Solo para anunciarlo; de abrirlo y cerrarlo se encarga el navegador. */
+  settingsMenuOpen: boolean;
 }
 
 // LAS CUATRO ZONAS DE LA APLICACIÓN, en un solo plano. Ajustes vuelve aquí desde el botón flotante en el que
@@ -55,7 +58,7 @@ type NavLayout = 'row' | 'stack' | 'icon';
  * nombre, y solo si tampoco hay sitio se queda en ICONO, con el nombre en el DOM para el lector de pantalla.
  * Así se ve entera, con sus dianas de 48 px, desde un móvil de 280 px hasta un escritorio.
  */
-export const BottomNavigation = memo(function BottomNavigation({ currentSection, onSectionChange }: BottomNavigationProps) {
+export const BottomNavigation = memo(function BottomNavigation({ currentSection, onSectionChange, settingsMenuOpen }: BottomNavigationProps) {
   const innerRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
@@ -187,20 +190,30 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
             style={{ transform: `translateX(${indicator.left}px)`, width: `${indicator.width}px` }}
           />
         ) : null}
-        {items.map((item) => (
+        {items.map((item) => {
+          // AJUSTES NO NAVEGA: despliega el menú de sus cuatro grupos. Se gobierna con `popovertarget` en vez de
+          // con un `onClick` propio porque así lo resuelve el navegador, incluido el caso peliagudo —volver a
+          // pulsar el botón estando abierto—: con un manejador a mano, el cierre por pulsar-fuera se adelanta al
+          // clic y el menú se reabre al instante.
+          const abreMenu = item.key === 'settings';
+          return (
           <button
             key={item.key}
             type="button"
             className={`bottom-nav-btn ${currentSection === item.key ? 'active' : ''}`.trim()}
             aria-current={currentSection === item.key ? 'page' : undefined}
-            onClick={() => onSectionChange(item.key)}
+            popoverTarget={abreMenu ? SETTINGS_MENU_ID : undefined}
+            aria-haspopup={abreMenu ? 'menu' : undefined}
+            aria-expanded={abreMenu ? settingsMenuOpen : undefined}
+            onClick={abreMenu ? undefined : () => onSectionChange(item.key)}
           >
             <Icon name={item.icon} className="bottom-nav-icon" />
             {/* En modo icono el nombre no se borra: se oculta A LA VISTA. Es lo único que da nombre al botón,
                 así que quitarlo del DOM dejaría tres dianas mudas para un lector de pantalla. */}
             <span className={layout === 'icon' ? 'sr-only' : undefined}>{item.label}</span>
           </button>
-        ))}
+          );
+        })}
       </div>
     </nav>
   );

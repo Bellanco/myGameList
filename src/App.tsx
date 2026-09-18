@@ -21,6 +21,7 @@ import { UpdateNotice } from './view/components/UpdateNotice';
 import { BottomNavigation } from './view/components/BottomNavigation';
 import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, matchAppSection, type AppSection } from './core/constants/routes';
 import { LegacyTailRedirect } from './view/components/LegacyTailRedirect';
+import { SettingsMenu } from './view/components/SettingsMenu';
 import { ScrollToTop } from './view/components/ScrollToTop';
 import { useScrollOnNavigate } from './view/hooks/useScrollOnNavigate';
 import { ConsentBanner } from './view/components/ConsentBanner';
@@ -582,6 +583,26 @@ export default function App() {
     navigate('/ajustes');
   }, [navigate, setExpandedId]);
 
+  /**
+   * ¿Está desplegado el menú de Ajustes? Lo abre y lo cierra el navegador (es un `popover`); esto es solo el eco,
+   * y hace dos cosas: anunciarlo en el botón de la barra (`aria-expanded`) y APAGAR EL CONTENIDO mientras dura.
+   * Lo segundo no es decoración: el menú no tiene panel ni velo, así que el contraste de sus rótulos sale de que
+   * lo de debajo baje al 30 %.
+   */
+  const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
+
+  /**
+   * SE APAGA TODO MENOS LA BARRA, y por eso la marca va en el `<body>` y no en cada pieza: lo que hay que
+   * atenuar —el contenido, los dos botones de acción, el carril de los avisos y los controles flotantes— son
+   * hermanos repartidos por el árbol, y marcarlos uno a uno obligaría a pasar el estado a cuatro sitios que no
+   * tienen nada que ver entre sí. La barra inferior se queda encendida a propósito: es donde está el dedo y lo
+   * que dice de dónde ha salido el menú.
+   */
+  useEffect(() => {
+    document.body.classList.toggle('settings-menu-open', settingsMenuOpen);
+    return () => document.body.classList.remove('settings-menu-open');
+  }, [settingsMenuOpen]);
+
   const handleAddGame = useCallback(() => {
     openNewGame(currentTab);
   }, [currentTab, openNewGame]);
@@ -992,7 +1013,14 @@ export default function App() {
         </>
       ) : null}
 
-      <BottomNavigation currentSection={activeSection} onSectionChange={handleSectionChange} />
+      {/* El menú va FUERA del `main` a propósito: es el `main` el que se apaga cuando aquel se abre, y un hijo
+          heredaría el apagado. Por lo mismo está fuera la barra inferior. */}
+      <SettingsMenu hasSocialProfile={hasSocialProfile} onToggle={setSettingsMenuOpen} />
+      <BottomNavigation
+        currentSection={activeSection}
+        onSectionChange={handleSectionChange}
+        settingsMenuOpen={settingsMenuOpen}
+      />
       <ConsentBanner />
       <ScrollToTop />
 

@@ -267,6 +267,19 @@ export const UI_MESSAGES = {
     // sección `stats`. No confundir con el PERFIL SOCIAL (`/social/profile`), que es la ficha pública.
     stats: 'Estadísticas',
   },
+  /**
+   * EL MENÚ DE LA PESTAÑA DE AJUSTES. Vive en `labels.ts` y no en `settingsLabels.ts` —donde estaría por
+   * tema— porque la barra inferior viaja en el arranque y aquellos 11 kB solo los paga quien abre una pantalla
+   * de ajustes. Son cuatro palabras: no merecen arrastrar el resto.
+   */
+  settingsMenu: {
+    ariaLabel: 'Ajustes',
+    open: 'Abrir ajustes',
+    personalization: 'Personalización',
+    integration: 'Integración',
+    filters: 'Filtros',
+    legal: 'Legal',
+  },
   // Aviso de versión nueva. Solo aparece cuando NO se ha podido recargar sola (ver `useAppUpdate`), así que el
   // texto asume que el usuario está delante y a medio hacer algo: dice qué pasa y deja la decisión en su mano.
   update: {

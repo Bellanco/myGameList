@@ -88,10 +88,16 @@ test.describe('la barra inferior con cuatro pestañas', () => {
     await expect(barra(page)).toHaveClass(/is-stacked|is-icons/);
   });
 
-  test('la pestaña de Ajustes lleva a su pantalla y se queda marcada', async ({ page }) => {
+  test('la pestaña de Ajustes despliega su menú en vez de navegar', async ({ page }) => {
+    // Es la única pestaña que no lleva a una pantalla: abre los cuatro grupos. Lo que sí comparte con las
+    // demás es que el destino queda marcado, y eso se comprueba al llegar (ver `settingsMenu.test.ts`).
     await abrir(page, 390);
-    await page.getByRole('button', { name: 'Ajustes' }).click();
-    await expect(page).toHaveURL(/\/ajustes$/);
-    await expect(page.getByRole('button', { name: 'Ajustes' })).toHaveAttribute('aria-current', 'page');
+    const pestana = page.getByRole('button', { name: 'Ajustes' });
+    await expect(pestana).toHaveAttribute('aria-haspopup', 'menu');
+    await pestana.click();
+    await expect(page.locator('.settings-menu')).toBeVisible();
+    await expect(pestana).toHaveAttribute('aria-expanded', 'true');
+    // Abrir un menú no es navegar: la dirección no se mueve.
+    await expect(page).toHaveURL(/\/completados$/);
   });
 });
