@@ -17,35 +17,45 @@ describe('pasarela del hub social', () => {
     const view = resolveGateway(state());
 
     expect(view.currentStep).toBe(1);
-    expect(view.progress).toBe(0);
-    expect(view.steps.map((s) => s.done)).toEqual([false, false, false]);
+    expect(view.steps.map((s) => s.done)).toEqual([false, false]);
   });
 
-  it('avanza paso a paso conforme se completan los requisitos', () => {
+  /**
+   * DOS PASOS, NI UNO MÁS. El tercero de antes —«crear el espacio social»— no lo daba nadie: se crea solo en
+   * cuanto hay sesión, así que anunciarlo ponía trabajo donde no lo hay.
+   */
+  it('son dos pasos: GitHub y Google', () => {
+    expect(resolveGateway(state()).steps).toHaveLength(2);
     expect(resolveGateway(state({ hasMainSync: true })).currentStep).toBe(2);
-    expect(resolveGateway(state({ hasMainSync: true, hasSocialSession: true })).currentStep).toBe(3);
   });
 
   it('se queda en el último paso con todo hecho, sin pasar a uno que no existe', () => {
     const view = resolveGateway(state({ hasMainSync: true, hasSocialSession: true, hasSocialGist: true }));
 
-    expect(view.currentStep).toBe(3);
-    expect(view.steps).toHaveLength(3);
-    expect(view.progress).toBe(100);
+    expect(view.currentStep).toBe(2);
+    expect(view.steps.every((s) => s.done)).toBe(true);
+  });
+
+  /**
+   * EL ESPACIO SOCIAL CUENTA DONDE DE VERDAD ESTÁ: dentro del paso de Google. Entrar sin espacio donde publicar
+   * no es haber terminado, y darlo por hecho pondría la barra al 100 % con el alta a medias.
+   */
+  it('el paso de Google no está hecho hasta que existe el espacio social', () => {
+    const sinEspacio = resolveGateway(state({ hasMainSync: true, hasSocialSession: true }));
+
+    expect(sinEspacio.steps.map((s) => s.done)).toEqual([true, false]);
+
+    const conEspacio = resolveGateway(state({ hasMainSync: true, hasSocialSession: true, hasSocialGist: true }));
+    expect(conEspacio.steps.map((s) => s.done)).toEqual([true, true]);
   });
 
   it('marca cada paso por SU propio requisito, no en cadena', () => {
     // Alguien puede tener sesión de Google sin haber conectado GitHub: son requisitos independientes, y la
     // pantalla tiene que enseñar cuál falta de verdad en vez de fingir que van en orden.
-    const view = resolveGateway(state({ hasSocialSession: true }));
+    const view = resolveGateway(state({ hasSocialSession: true, hasSocialGist: true }));
 
-    expect(view.steps.map((s) => s.done)).toEqual([false, true, false]);
+    expect(view.steps.map((s) => s.done)).toEqual([false, true]);
     expect(view.currentStep).toBe(1);
-  });
-
-  it('el progreso cuenta los pasos hechos, estén donde estén', () => {
-    expect(resolveGateway(state({ hasSocialSession: true })).progress).toBe(33);
-    expect(resolveGateway(state({ hasMainSync: true, hasSocialGist: true })).progress).toBe(67);
   });
 
   it('conserva los textos de cada paso', () => {
