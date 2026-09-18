@@ -6,7 +6,8 @@ import { sembrarBiblioteca } from './seed';
  *
  * Ajustes vuelve a la barra desde el botón flotante en el que estuvo, y pasar de tres columnas a cuatro estrecha
  * cada una un 25 %: es justo el cambio que puede sacar un rótulo de su pastilla. `BottomNavigation` lo resuelve
- * MIDIENDO —baja a icono sobre rótulo y, si tampoco cabe, a icono solo—, y esa medida depende de la tipografía
+ * MIDIENDO —apila el icono sobre el rótulo, luego aprieta el cuerpo del rótulo y solo al final se queda en
+ * icono solo—, y esa medida depende de la tipografía
  * real y del ancho real, dos cosas que en jsdom valen cero: un test de componente daría verde con la barra rota.
  *
  * 280 px es el suelo que promete el componente, y el peor caso posible: el rótulo más largo («Estadísticas») en
@@ -16,11 +17,28 @@ import { sembrarBiblioteca } from './seed';
 
 const barra = (page: Page) => page.locator('.bottom-nav');
 
+/**
+ * ABRE LA PANTALLA CON UN ANCHO DE CONTENIDO EXACTO, no con un viewport de ese tamaño. No es lo mismo, y la
+ * diferencia costó dos rojos en integración continua con todo en verde en local:
+ *
+ * en macOS la barra de desplazamiento FLOTA sobre el contenido y no ocupa nada, pero en el Linux del CI es de
+ * las clásicas y se come ~15px de ancho. Un viewport de 390px daba allí 375px de sitio real, y el caso del
+ * iPhone SE medía en realidad 360 — un ancho en el que la barra nunca prometió los cuatro nombres—. El test
+ * decía una cosa y comprobaba otra.
+ *
+ * Así que el viewport se ENSANCHA lo que se lleve la barra de desplazamiento, para que `documentElement`
+ * termine midiendo justo los px del título del caso en cualquier máquina.
+ */
 async function abrir(page: Page, ancho: number): Promise<void> {
   await page.setViewportSize({ width: ancho, height: 720 });
   await sembrarBiblioteca(page, { theme: 'dark' });
   await page.goto('/completados');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  const barraDeDesplazamiento = await page.evaluate(() => window.innerWidth - document.documentElement.clientWidth);
+  if (barraDeDesplazamiento > 0) {
+    await page.setViewportSize({ width: ancho + barraDeDesplazamiento, height: 720 });
+    await expect.poll(() => page.evaluate(() => document.documentElement.clientWidth)).toBe(ancho);
+  }
   // La medida se toma con la tipografía del tema ya cargada: con la de reserva, más estrecha, la barra cree que
   // cabe en una línea y decide de más (es la razón del `document.fonts.ready` del componente).
   await page.evaluate(() => document.fonts.ready);
@@ -35,7 +53,9 @@ async function medir(page: Page) {
     return {
       desborde: inner.scrollWidth - inner.clientWidth,
       derecha: Math.round(inner.getBoundingClientRect().right),
-      ancho: window.innerWidth,
+      // El ancho ÚTIL, que es contra el que la barra tiene que caber: `innerWidth` incluye la barra de
+      // desplazamiento donde ésta ocupa sitio (Linux), y ahí sobrarían 15px que no existen.
+      ancho: document.documentElement.clientWidth,
       modo: nav.className,
       botones: botones.map((b) => {
         const rotulo = b.querySelector('span');
@@ -88,6 +108,29 @@ test.describe('la barra inferior con cuatro pestañas', () => {
     expect(m.desborde).toBe(0);
     expect(m.modo).not.toContain('is-icons');
     for (const b of m.botones) {
+      expect(b.rotuloVisible, b.nombre).toBe(true);
+      expect(b.aire, `${b.nombre} va pegado al borde de su pastilla`).toBeGreaterThanOrEqual(10);
+    }
+  });
+
+  /**
+   * 365 px CAE EN LA FRANJA DE EMERGENCIA, la que va de 360 a 374: ahí el rótulo apilado a su cuerpo normal ya
+   * no cabe y la barra bajaba directamente a solo-iconos, que es un salto brutal —de cuatro nombres a ninguno—
+   * decidido por dos píxeles. `BottomNavigation` aprieta ahora el cuerpo del rótulo un punto antes de rendirse
+   * (escalón `tight`), y esto lo vigila. 360 dp es un ancho corriente en Android, así que no es un caso de
+   * laboratorio: es media gama media.
+   *
+   * No se exige la clase `is-tight`, sino LA PROMESA: que los cuatro sigan teniendo nombre a la vista. Si un día
+   * cabe sin apretar, mejor, y el caso sigue valiendo.
+   */
+  test('en 365 px la barra apreta el nombre antes que quedarse en iconos', async ({ page }) => {
+    await abrir(page, 365);
+    const m = await medir(page);
+    expect(m.desborde).toBe(0);
+    expect(m.derecha).toBeLessThanOrEqual(m.ancho);
+    expect(m.modo).not.toContain('is-icons');
+    for (const b of m.botones) {
+      expect(b.alto, b.nombre).toBeGreaterThanOrEqual(48);
       expect(b.rotuloVisible, b.nombre).toBe(true);
       expect(b.aire, `${b.nombre} va pegado al borde de su pastilla`).toBeGreaterThanOrEqual(10);
     }

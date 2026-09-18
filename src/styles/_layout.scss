@@ -328,11 +328,19 @@
 /* Y EL RÓTULO BAJA UN PASO AL APILARSE, como en cualquier barra inferior: es lo que hace que «Estadísticas»
    quepa con CUATRO pestañas en un móvil de 390px. Con el cuerpo de una línea (`--fs-sm`) la palabra pide más
    de lo que mide su columna y la barra se rendía al modo solo-icono, dejando la navegación entera muda justo
-   en el ancho más común. `BottomNavigation` CUENTA con esta reducción (ver `STACK_FONT_RATIO`): la medida que
-   decide el escalón tiene que usar el cuerpo con el que el rótulo se va a pintar, no otro. Si aquí cambia el
-   tamaño, allí cambia el número — y al revés, tocar uno solo deja el rótulo saliéndose de su pastilla. */
+   en el ancho más común. Ya no hay ninguna constante que mantener en sintonía con este número:
+   `BottomNavigation` MIDE el rótulo una vez apilado, así que tocar el cuerpo aquí no obliga a tocar nada allí. */
 .bottom-nav.is-stacked .bottom-nav-btn span {
   font-size: var(--fs-2xs);
+}
+
+/* UN PELDAÑO MÁS ANTES DE QUEDARSE MUDA. Cuando el nombre apilado tampoco cabe, encogerlo un punto da ~5px por
+   columna: lo justo para que en la franja de 360-374px —360 dp es un ancho corriente en Android, y también lo
+   que queda de un móvil de 375 cuando el navegador dedica 15px a una barra de desplazamiento de las que ocupan
+   sitio— la navegación siga teniendo palabras en vez de cuatro dibujos. Lo aplica `BottomNavigation` midiendo,
+   igual que el apilado; aquí solo se dibuja. */
+.bottom-nav.is-tight .bottom-nav-btn span {
+  font-size: var(--fs-3xs);
 }
 
 /* SOLO ICONO: sin texto que mirar, el icono crece para seguir siendo una diana clara de un vistazo. */
