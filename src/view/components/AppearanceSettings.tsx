@@ -14,7 +14,7 @@ const A = APPEARANCE_UI;
  * F1 — Selector de apariencia dentro de "Ajustes de cuenta": paleta (tema) + modo claro/oscuro.
  * Funciona siempre en local (no requiere sesión); si hay cuenta, se sincroniza vía Firestore.
  */
-export const AppearanceSettings = memo(function AppearanceSettings() {
+export const AppearanceSettings = memo(function AppearanceSettings({ only }: { only?: 'theme' | 'toggles' }) {
   const { palette, setPalette } = usePalette();
   const { theme, toggle } = useTheme();
   const { uppercase, setUppercase } = useUppercase();
@@ -24,7 +24,12 @@ export const AppearanceSettings = memo(function AppearanceSettings() {
 
   return (
     <div className="settings-appearance">
-      <p className="settings-card-sub">{A.paletteLabel}</p>
+      {only !== 'toggles' ? (
+      <>
+      {/* EL RÓTULO SOLO CUANDO ACOMPAÑA. En «Personalización» el selector tiene tarjeta propia y el encabezado
+          de la tarjeta ya dice «Temas»: repetirlo debajo es una línea de ruido. Donde el selector convive con
+          otras cosas, el rótulo hace falta para saber qué es esta rejilla de ocho opciones. */}
+      {only !== 'theme' ? <p className="settings-card-sub">{A.paletteLabel}</p> : null}
       <div className="score-scale-choice" role="radiogroup" aria-label={A.paletteAria}>
         {PALETTES.map((p) => (
           <button
@@ -45,6 +50,12 @@ export const AppearanceSettings = memo(function AppearanceSettings() {
         ))}
       </div>
 
+      </>
+      ) : null}
+
+      {only !== 'theme' ? (
+      <div className="appearance-grid">
+      <div className="appearance-field">
       <p className="settings-card-sub">{A.modeLabel}</p>
       <div className="theme-mode-row" role="group" aria-label={A.groupAria}>
         <button
@@ -65,6 +76,9 @@ export const AppearanceSettings = memo(function AppearanceSettings() {
         </button>
       </div>
 
+      </div>
+
+      <div className="appearance-field">
       <p className="settings-card-sub">{A.caseLabel}</p>
       <div className="theme-mode-row" role="group" aria-label={A.caseAria}>
         <button
@@ -85,6 +99,9 @@ export const AppearanceSettings = memo(function AppearanceSettings() {
         </button>
       </div>
 
+      </div>
+
+      <div className="appearance-field">
       <p className="settings-card-sub">{A.steamLabel}</p>
       <div className="theme-mode-row" role="group" aria-label={A.steamAria}>
         <button
@@ -105,6 +122,9 @@ export const AppearanceSettings = memo(function AppearanceSettings() {
         </button>
       </div>
 
+      </div>
+
+      <div className="appearance-field">
       <p className="settings-card-sub">{A.effectsLabel}</p>
       <div className="theme-mode-row" role="group" aria-label={A.effectsAria}>
         <button
@@ -125,8 +145,11 @@ export const AppearanceSettings = memo(function AppearanceSettings() {
         </button>
       </div>
 
+      </div>
+
       {/* Carátulas. Lleva explicación y las demás no, a propósito: es la única de esta pantalla que hace que
           salgan peticiones a la red, así que quien la enciende tiene que saber qué está encendiendo. */}
+      <div className="appearance-field">
       <p className="settings-card-sub">{A.coversLabel}</p>
       <div className="theme-mode-row" role="group" aria-label={A.coversAria}>
         <button
@@ -146,6 +169,9 @@ export const AppearanceSettings = memo(function AppearanceSettings() {
           <span>{A.coversOff}</span>
         </button>
       </div>
+      </div>
+      </div>
+      ) : null}
     </div>
   );
 });

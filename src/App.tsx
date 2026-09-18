@@ -75,7 +75,7 @@ const StatsHub = lazy(() => import('./view/components/stats/StatsHub').then((mod
 // maquetación solo se descargan al entrar, no en el arranque de los listados.
 const PersonalizationSettings = lazy(() => import('./view/components/settings/PersonalizationSettings').then((module) => ({ default: module.PersonalizationSettings })));
 const LegalSettings = lazy(() => import('./view/components/settings/LegalSettings').then((module) => ({ default: module.LegalSettings })));
-const SettingsIndex = lazy(() => import('./view/components/settings/SettingsIndex').then((module) => ({ default: module.SettingsIndex })));
+
 /* La ruleta de los listados va por su envoltorio, no por el modal desnudo: así el pool y la ponderación
    se calculan DENTRO del chunk perezoso en vez de en el arranque (ver `ListsRouletteModal`). */
 const RouletteModal = lazy(() => importRouletteModal().then((module) => ({ default: module.ListsRouletteModal })));
@@ -230,7 +230,7 @@ export default function App() {
    */
   useEffect(() => {
     if (authReady && !hasSocialProfile && location.pathname === SETTINGS_ROUTES.personalization) {
-      navigate('/ajustes', { replace: true });
+      navigate(SETTINGS_ROUTES.integration, { replace: true });
     }
   }, [authReady, hasSocialProfile, location.pathname, navigate]);
   /** Cuál de los cuatro grupos de Ajustes pide el camino; `null` es la portada. */
@@ -317,7 +317,7 @@ export default function App() {
   // memoizarse por muchas envolturas que se le pusieran.
   const openInbox = useCallback(() => navigateFromHere('/bandeja'), [navigateFromHere]);
   const backFromInbox = useCallback(() => navigate(importReturnTo), [navigate, importReturnTo]);
-  const goToSettings = useCallback(() => navigate('/ajustes'), [navigate]);
+  const goToSettings = useCallback(() => navigate(SETTINGS_ROUTES.integration), [navigate]);
 
   // Inserta en la bandeja el resultado de un parser y avisa; navega a la bandeja si hubo algo.
   const importGames = useCallback(
@@ -881,7 +881,11 @@ export default function App() {
         ) : settingsGroup === 'legal' ? (
           <LegalSettings />
         ) : settingsGroup === null ? (
-          <SettingsIndex hasSocialProfile={hasSocialProfile} />
+          /* `/ajustes` A SECAS NO ES UNA PANTALLA: no hay nada que enseñar en una portada que solo repetiría el
+             menú que acaba de usarse para llegar. Se entra directamente al primero de los grupos que existe
+             para todo el mundo —Integración—, y así la dirección vieja, los enlaces guardados y el atajo de la
+             bandeja siguen llevando a algún sitio útil en vez de a un índice de paso. */
+          <Navigate to={SETTINGS_ROUTES.integration} replace />
         ) : (
         <SettingsHub
           group={settingsGroup}

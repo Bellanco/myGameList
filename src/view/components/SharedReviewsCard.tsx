@@ -64,7 +64,6 @@ export const SharedReviewsCard = memo(function SharedReviewsCard({ enabled }: { 
     <div className="settings-card settings-card-shares">
       <div className="settings-card-head">
         <h2>{SHARE_UI.screenTitle}</h2>
-        <p className="settings-card-note">{SHARE_UI.screenSubtitle}</p>
       </div>
 
       {vm.ban ? (
