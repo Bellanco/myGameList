@@ -4,7 +4,7 @@
    Las reglas del sistema (qué token hay que definir y qué contraste le toca) están en `../_index.scss`. */
 
 /* ── forja · «Forja y temple» (el tema de casa) ──────────────────────────────────────────────────────
-   El taller: grafito de tinta fría —el yunque y la ceniza— y encima los dos estados del metal. No imita a
+   La fragua: grafito de tinta fría —el yunque y la ceniza— y encima los dos estados del metal. No imita a
    ningún juego, que es justo su papel: es el que ve quien abre la aplicación sin haber elegido nada, así que
    tiene que ser SOBRIO de fondo y VIVO de color, y no disfrazarse de nada.
 
@@ -93,7 +93,7 @@
   --chip-plat-border: rgba(18,85,154,.30);
   --hub-text: #101718;
   --hub-text-muted: #3f4c50;
-  /* El tono con el que se tiñen sombras y veladuras: la pizarra azulada del taller, no un marrón. */
+  /* El tono con el que se tiñen sombras y veladuras: la pizarra azulada de la fragua, no un marrón. */
   --tint-rgb: 24,44,50;
   /* A la luz el relleno de forja es óxido profundo y encima manda el blanco (6,13:1). */
   --on-accent: #fff;
@@ -102,7 +102,7 @@
   --focus-ring: var(--forja-temple);
   --fg-link: var(--forja-temple);
 }
-/* forja (Forja y temple) — los siete del taller: metal al rojo, temple, latón, acero azulado, cobre rosado,
+/* forja (Forja y temple) — los siete de la fragua: metal al rojo, temple, latón, acero azulado, cobre rosado,
    verdín de bronce y lila de temple frío. Peor relleno 4,25:1 y peor texto 4,55:1 en los cuatro fondos, muy
    por encima del 3:1 que le toca a un relleno: la tabla coge color sin volverse un arcoíris. */
 :root[data-palette="forja"] {

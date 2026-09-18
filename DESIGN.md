@@ -62,7 +62,7 @@ Cada tema define los mismos tokens; el resto del sistema se deriva. **Nunca uses
 
 | id | Nombre | Acento oscuro | Fondo oscuro | Mundo |
 |---|---|---|---|---|
-| `forja` | **Forja y temple** (por defecto) | `#ff7a3c` metal al rojo | `#0f1315` | El taller. El único sin mundo detrás: es el que ve quien no ha elegido nada. Naranja que **rellena** y turquesa de temple (`#2fd6c0`) que **escribe y señala** |
+| `forja` | **Forja y temple** (por defecto) | `#ff7a3c` metal al rojo | `#0f1315` | La fragua. El único sin mundo detrás: es el que ve quien no ha elegido nada. Naranja que **rellena** y turquesa de temple (`#2fd6c0`) que **escribe y señala** |
 | `arcade` | Inserte moneda | `#b23cff` | `#150a24` | Sala de recreativos de los ochenta: violeta de neón, cian de tubo y rosa de pegatina |
 | `steam` | Clásico | `#d9a13a` latón | `#15100b` | Cuero, papel, cobre y latón, con la **pátina** (`#4ab396`) de segundo acento. El único sin juego detrás |
 | `persona` | Ladrones de corazones | `#ff1f3d` | `#0d0d0d` | Persona 5: rojo, negro, blanco y oro de calendario |
