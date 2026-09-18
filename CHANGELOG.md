@@ -47,6 +47,12 @@ pantalla de escritorio, y en las cuatro va primero lo que se viene a hacer y des
 - **Textos más cortos donde solo estorbaban.** La tarjeta de importación pasa de cinco frases a tres, y el
   aviso de la analítica de cuatro líneas a dos. Ese aviso, además, ya no te manda a «Cuenta», que es una
   pantalla que ha dejado de existir.
+- **Las guías de importación, paso a paso de verdad.** Cada línea es ahora UNA acción: instalar el complemento
+  y reiniciar Playnite dejan de ir en la misma frase, y los paréntesis con condiciones salen de en medio. Se
+  siguen con Playnite abierta en la otra pantalla, así que ninguna obliga a releerse para saber qué toca.
+- **El enlace para descargar Playnite solo se ofrece en Windows**, que es el único sistema donde se puede
+  instalar. Desde un móvil, un Mac o Linux, ese paso se queda en «abre Playnite» y no te manda a por un
+  programa que no existe para tu aparato.
 
 ### Fixed
 - **La apariencia ya no se bloquea sin cuenta de Google.** Paleta, claro/oscuro, mayúsculas, efectos, carátulas
