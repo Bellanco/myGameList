@@ -34,6 +34,9 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
   // deja la pantalla escondida detrás del nombre de otra cosa. La sección sigue siendo `stats` porque el cromo
   // es el mismo y lo resuelve `StatsHub`.
   { path: '/logros', section: 'stats' },
+  // Ajustes y sus cuatro grupos. Comodín por el mismo motivo que en social y en el panel: la pantalla resuelve
+  // por su cuenta cuál de los cuatro toca (ver `SETTINGS_ROUTES`), y así añadir uno no obliga a tocar esta tabla.
+  { path: '/ajustes/*', section: 'settings' },
   { path: '/ajustes', section: 'settings' },
   { path: '/cuenta', section: 'account' },
   { path: '/bandeja', section: 'inbox' },
@@ -80,6 +83,24 @@ function coversLegacy(from: string, pathname: string): boolean {
 export function legacyRedirectTarget(to: string, tail: string): string {
   return tail ? `${to}/${tail}` : to;
 }
+
+/**
+ * LOS CUATRO GRUPOS DE AJUSTES, que son los cuatro puntos del menú de la pestaña. Uno por asunto y cada uno en
+ * su dirección, para que la pantalla quepa sin scroll y se pueda enlazar.
+ *
+ * `personalization` es el único con puerta: reúne lo que se guarda en la nube de quien tiene espacio social
+ * (escala de nota, enlaces publicados) junto a la apariencia, así que sin ese espacio no hay nada que enseñar.
+ * Los otros tres no dependen de ninguna cuenta —la sincronización usa GitHub, no Google— y por eso están
+ * siempre, también para quien usa la aplicación en local.
+ */
+export const SETTINGS_ROUTES = {
+  personalization: '/ajustes/personalizacion',
+  integration: '/ajustes/integracion',
+  filters: '/ajustes/filtros',
+  legal: '/ajustes/legal',
+} as const;
+
+export type SettingsGroup = keyof typeof SETTINGS_ROUTES;
 
 /** Ruta a la que rebota cualquier cosa no listada arriba. */
 export const FALLBACK_ROUTE = '/completados';

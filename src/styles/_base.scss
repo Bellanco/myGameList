@@ -167,6 +167,19 @@
   --detail-row-bg: rgba(0,0,0,.22);
   --surface-glass: color-mix(in srgb, var(--surface), transparent 4%);
 
+  /* EL «ILUMINADO» DE UN TEXTO QUE FLOTA SOBRE EL CONTENIDO, sin panel debajo (lo usa el menú de la pestaña de
+     Ajustes). Dos capas: un CONTORNO corto y casi opaco, que es el que despega la letra de lo que haya detrás,
+     y un halo ancho y flojo que lo funde para que no se lea como un borde.
+     Se deriva de `--bg`, así que es UNA declaración para las ocho paletas y los dos temas: en oscuro la sombra
+     es oscura y no se ve sobre el fondo de la aplicación; en claro es clara y hace lo propio. Solo asoma donde
+     hace falta, que es sobre una carátula del color contrario.
+     NO SOSTIENE EL CONTRASTE POR SÍ SOLA —medida sobre blanco puro no pasa de 2:1 por muchas capas que se le
+     añadan, porque en las puntas del trazo el halo se difumina en todas direcciones—: de eso se encarga que el
+     contenido baje al 30 % mientras el menú está abierto (ver `.main.is-dimmed`). Esto remata. */
+  --glow-text:
+    0 0 2px color-mix(in srgb, var(--bg), transparent 8%),
+    0 0 9px color-mix(in srgb, var(--bg), transparent 45%);
+
   /* Acentos de texto sobre fondos translúcidos (chips/badges de estado). En oscuro son
      luminosos; --fg-sky sigue al acento de la paleta. */
   --fg-amber: #fcd34d;

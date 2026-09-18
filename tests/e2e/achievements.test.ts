@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { sembrarBiblioteca } from './seed';
+import { irAAjustes } from './nav';
 import { ACHIEVEMENTS_BY_ID } from '../../src/core/achievements/catalog';
 import { PALETTES } from '../../src/core/constants/palettes';
 
@@ -293,15 +294,10 @@ test.describe('logros · el aviso del instante', () => {
       ['listados', () => page.getByRole('button', { name: /^Listados/ }).first().click()],
       ['estadísticas', () => page.getByRole('button', { name: /^Estadísticas/ }).first().click()],
       ['social', () => page.getByRole('button', { name: /^Social/ }).first().click()],
-      // AJUSTES VIVE EN LOS CONTROLES FLOTANTES, y ese grupo se esconde al bajar —con `pointer-events: none`— para
-      // no estorbar la lectura. Así que se sube arriba antes de pulsarlo, que es lo que haría cualquiera: sin
-      // esto, el clic se lo come lo que haya debajo y Playwright reintenta contra un botón «visible» hasta
-      // agotar el tiempo (le pasó al CI: «main intercepts pointer events», veinticinco segundos).
-      ['ajustes', async () => {
-        await page.evaluate(() => window.scrollTo(0, 0));
-        await expect(page.locator('.floating-controls')).not.toHaveClass(/is-hidden/);
-        await page.getByRole('button', { name: /^Ajustes/ }).first().click();
-      }],
+      // AJUSTES YA NO NAVEGA AL PULSARLA: es la pestaña que despliega los cuatro grupos, así que llegar a una
+      // pantalla de ajustes son dos toques. (Antes vivía en los controles flotantes, que se esconden al bajar
+      // con `pointer-events: none`, y había que subir arriba primero; eso es justo lo que el cambio se lleva.)
+      ['ajustes', () => irAAjustes(page)],
     ];
     for (const [nombre, ir] of secciones) {
       await ir();
@@ -487,7 +483,7 @@ test.describe('logros · bibliotecas grandes y avalanchas', () => {
 
   /** Mete un JSON por el input de importación de Ajustes, como haría cualquiera con su copia de seguridad. */
   async function importar(page: Page, datos: unknown): Promise<void> {
-    await page.getByRole('button', { name: /^Ajustes/ }).first().click();
+    await irAAjustes(page);
     const input = page.locator('input[type="file"][accept=".json"]').first();
     await expect(input).toHaveCount(1);
     /* El fichero se fabrica EN EL NAVEGADOR y no con `setInputFiles`: escribirlo en disco necesita `node:fs` y

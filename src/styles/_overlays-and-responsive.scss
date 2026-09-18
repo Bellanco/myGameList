@@ -206,6 +206,151 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
   .floating-controls .floating-nav-account.is-gone { transition: none; }
 }
 
+/* ═══ EL MENÚ DE LA PESTAÑA DE AJUSTES · cuatro puntos y nada debajo ═══════════════════════════════════
+   No hay panel, ni velo, ni caja: los rótulos flotan sobre la pantalla con un punto de luz delante, y lo que
+   hay detrás se sigue viendo entero. Quien sostiene el contraste es `.main.is-dimmed` —el contenido baja al
+   30 % mientras esto está abierto—, no una superficie; la sombra del texto (`--glow-text`) remata.
+
+   Es un `popover`, así que hay que DESHACER lo que el navegador le pone por defecto: borde, relleno, fondo,
+   `inset: 0` y el `margin: auto` que lo centraría en la pantalla. */
+.settings-menu {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: none;
+  overflow: visible;
+  color: var(--text);
+  /* Se apoya sobre la barra midiéndola, no adivinándola: `--bottom-nav-h` lo publica `BottomNavigation` y
+     crece con ella (rótulo apilado, franja del gesto inferior). El valor de reserva es su alto en escritorio,
+     por si el menú se pinta antes de que la barra se haya medido. */
+  bottom: calc(var(--bottom-nav-h, 4.6rem) + .55rem);
+  /* ALINEADO CON LA COLUMNA DE SU PESTAÑA: la barra se centra a 760px, así que su borde derecho cae en
+     `50% - 380px`, y dentro queda el relleno de la pastilla (.4rem). En una pantalla estrecha manda el margen
+     lateral de la barra (.9rem) más ese mismo relleno. */
+  right: max(1.3rem, calc(50% - 380px + .4rem));
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .1rem;
+}
+
+/* EL `display` VA AQUÍ Y NO ARRIBA, y no es una manía de orden: un `popover` cerrado lo esconde el navegador con
+   un `display: none` de su hoja de agente, y cualquier `display` declarado por el autor GANA a esa regla. Con
+   `display: flex` en la regla de base, el menú se quedaba pintado en pantalla todo el rato —los tres rótulos
+   flotando sobre los listados—, y `:popover-open` seguía diciendo que no, que estaba cerrado. */
+.settings-menu:popover-open {
+  display: flex;
+}
+
+/* Y SE APARTA DEL AVISO DE CONSENTIMIENTO, que se apoya sobre la barra mientras no se ha decidido. El menú
+   vive en la capa superior, así que técnicamente gana; pero ganar aquí significa escribir los rótulos ENCIMA
+   del texto del aviso, que es peor que perder. Se sube lo que el aviso mide —`--consent-h`, publicada por él
+   mismo—, igual que ya hace el carril de las cápsulas y por el mismo motivo: nadie duplica la medida de nadie. */
+:root[data-consent='pending'] .settings-menu {
+  bottom: calc(var(--bottom-nav-h, 4.6rem) + var(--consent-h, 9.25rem) + .55rem);
+}
+
+.settings-menu-point {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  min-height: 44px;
+  padding: .3rem .35rem .3rem .7rem;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-lg);
+  font-weight: 500;
+  text-shadow: var(--glow-text);
+  cursor: pointer;
+  border-radius: var(--radius-pill);
+  transition: color .18s ease, transform .18s ease;
+}
+
+.settings-menu-point:hover { color: var(--fg-link); transform: translateX(-2px); }
+
+/* El punto es la única pieza con color propio: crece al señalar y se queda crecido en el grupo abierto. */
+.settings-menu-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--fg-link);
+  box-shadow: 0 0 8px rgba(var(--steam-rgb),.9), 0 0 3px color-mix(in srgb, var(--bg), transparent 10%);
+  transition: transform .18s ease;
+}
+
+.settings-menu-point:hover .settings-menu-dot,
+.settings-menu-point.is-current .settings-menu-dot { transform: scale(1.35); }
+
+/* SIN BORDES NI FONDOS, el anillo de foco es lo ÚNICO que dice dónde está el teclado. No se hereda de ningún
+   sitio porque estos botones no son `.btn`: va escrito aquí a propósito. */
+.settings-menu-point:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+/* Legal es el pie: mismo lenguaje, medio tono más bajo. Sigue estando a un toque —retirar el consentimiento
+   de la analítica tiene que costar lo mismo que darlo— pero no compite con lo que se usa a diario. */
+.settings-menu-point.is-foot {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  margin-top: .35rem;
+}
+.settings-menu-point.is-foot .settings-menu-dot { width: 5px; height: 5px; opacity: .75; }
+
+/* LO DE DEBAJO SE APAGA, no se tapa. Es lo que da el contraste de los rótulos sin poner ninguna capa encima:
+   medido con una carátula blanca detrás en tema oscuro, 6,4:1 en el peor píxel del trazo (y 6,6:1 con una
+   negra en claro).
+
+   SE APAGA TODO LO QUE NO ES EL MENÚ: el contenido, los dos botones de acción de los listados, el carril de
+   los avisos y los controles flotantes. Dejar encendida una sola de esas piezas se nota —un botón de acción a
+   plena luz junto a unos rótulos a media asta parece un error de pintado, no una decisión—. La única que sigue
+   encendida es la BARRA: es donde está el dedo y lo que explica de dónde ha salido el menú.
+   Y lo apagado tampoco se toca: con el `popover` abierto, un toque fuera lo cierra, pero el mismo toque seguiría
+   llegando al botón que hubiera debajo. `pointer-events: none` evita que cerrar el menú abra un formulario. */
+.main,
+.fab,
+.fab-roulette,
+.ach-toast-stack,
+.floating-controls { transition: opacity .22s ease; }
+
+body.settings-menu-open .main,
+body.settings-menu-open .ach-toast-stack,
+/* El AVISO DE CONSENTIMIENTO también: es lo único que quedaba encendido, y encima es lo más alto de la pila
+   (z-index 130), así que con todo lo demás a media asta cantaba el doble. Que deje de recibir toques importa
+   aquí más que en ningún otro sitio: el mismo toque que cierra el menú habría podido pulsar «Aceptar», y un
+   consentimiento no se da sin querer. Sigue en su sitio, intacto, en cuanto el menú se cierra. */
+body.settings-menu-open .consent-banner,
+/* `:not(.is-hidden)` para no resucitar al 30 % unos controles que el scroll acababa de esconder: allí la regla
+   es `opacity: 0` y esta la ganaría por especificidad. */
+body.settings-menu-open .floating-controls:not(.is-hidden) {
+  opacity: .30;
+  pointer-events: none;
+}
+
+/* LOS DOS BOTONES DE ACCIÓN SE VAN DEL TODO, y no a media luz como el resto. No es una excepción caprichosa:
+   nacen en la misma esquina de la que sale el menú, así que a un 30 % seguían dibujándose DETRÁS de los
+   rótulos —el círculo del «+» justo sobre «Legal»—, y dos cosas superpuestas se leen peor que una tapada.
+   Además ya no se pueden pulsar, y enseñar apagado lo que no se puede usar solo invita a intentarlo. */
+body.settings-menu-open .fab,
+body.settings-menu-open .fab-roulette {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main,
+  .fab,
+  .fab-roulette,
+  .ach-toast-stack,
+  .floating-controls,
+  .settings-menu-point,
+  .settings-menu-dot { transition: none; }
+}
+
 /* Sin barra superior: Social y Ajustes dejan hueco arriba para los controles flotantes. */
 .main-social,
 .main-settings { padding-top: 3.4rem; }

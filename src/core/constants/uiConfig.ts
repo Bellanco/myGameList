@@ -1,3 +1,10 @@
+/**
+ * Id del menú de la pestaña de Ajustes. Lo comparten el `popovertarget` del botón de la barra y el propio menú,
+ * que viven en componentes distintos: el navegador los empareja por este identificador, así que tiene que ser
+ * uno solo y no dos cadenas iguales por casualidad.
+ */
+export const SETTINGS_MENU_ID = 'menu-ajustes';
+
 export const HOURS_RANGES = [
   { key: '0-5', label: 'Menos de 5 horas', shortLabel: 'Menos de 5h', check: (h: number) => h > 0 && h <= 5 },
   { key: '5-10', label: 'De 5 a 10 horas', shortLabel: '5 - 10h', check: (h: number) => h > 5 && h <= 10 },
