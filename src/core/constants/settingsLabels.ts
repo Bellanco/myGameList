@@ -21,14 +21,18 @@ export const SETTINGS_UI = {
      * puntúa y los cinco interruptores de la interfaz.
      */
     preferences: 'Preferencias',
-    personalization: {
-      title: 'Personalización',
-    },
-    integration: {
-      title: 'Integración',
+    design: {
+      title: 'Diseño',
     },
     filters: {
       title: 'Filtros',
+    },
+    /**
+     * Las DOS MITADES de «Datos». Siguen teniendo nombre propio aunque compartan pantalla: son el `aria-label`
+     * de cada región, y es lo que permite saltar de una a otra sin verlas.
+     */
+    integration: {
+      title: 'Integración',
     },
     legal: {
       title: 'Legal',

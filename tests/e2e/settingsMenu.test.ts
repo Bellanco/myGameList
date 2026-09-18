@@ -61,10 +61,10 @@ test.describe('el menú de la pestaña de Ajustes', () => {
     // 0.3 es la cifra medida: con una carátula blanca detrás deja el rótulo en 6,4:1, por encima del 4,5 que
     // pide el texto normal. Si alguien la sube, el contraste se va por debajo sin que ningún test de a11y chille.
     await esperarOpacidad(page, 0.3);
-    // Sin espacio social no hay nada que personalizar: ese punto no se pinta.
-    await expect(page.getByRole('link', { name: 'Personalización' })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Integración' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Legal' })).toBeVisible();
+    // Sin espacio social no hay nada que enseñar en «Diseño»: ese punto no se pinta.
+    await expect(page.getByRole('link', { name: 'Diseño' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Filtros' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Datos' })).toBeVisible();
   });
 
   test('Esc lo cierra y devuelve la luz al contenido', async ({ page }) => {
@@ -84,14 +84,14 @@ test.describe('el menú de la pestaña de Ajustes', () => {
 
   test('elegir un grupo lleva a su pantalla y SE QUEDA ahí', async ({ page }) => {
     await abrir(page);
-    await page.getByRole('link', { name: 'Integración' }).click();
-    await expect(page).toHaveURL(/\/ajustes\/integracion$/);
+    await page.getByRole('link', { name: 'Datos' }).click();
+    await expect(page).toHaveURL(/\/ajustes\/datos$/);
     await expect(menu(page)).toBeHidden();
     // Y NO VUELVE SOLA: cerrar el menú consume la entrada de historial que se empujó al abrirlo, y con una
     // navegación normal ese retroceso corría contra ella y deshacía el salto —se abría el grupo y la pantalla
     // se volvía a los listados una fracción de segundo después—. Se elige el grupo REEMPLAZANDO esa entrada.
     await page.waitForTimeout(400);
-    await expect(page).toHaveURL(/\/ajustes\/integracion$/);
+    await expect(page).toHaveURL(/\/ajustes\/datos$/);
     // Y el atrás lleva a donde se estaba, no a un paso intermedio invisible.
     await page.goBack();
     await expect(page).toHaveURL(/\/completados$/);
@@ -136,8 +136,8 @@ test.describe('el menú de la pestaña de Ajustes', () => {
     // entra directamente al grupo que existe para todo el mundo.
     await sembrarBiblioteca(page, { theme: 'dark' });
     await page.goto('/ajustes');
-    await expect(page).toHaveURL(/\/ajustes\/integracion$/);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Integración/);
+    await expect(page).toHaveURL(/\/ajustes\/datos$/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Datos/);
   });
 
   test('no se sube encima del aviso de consentimiento', async ({ page }) => {

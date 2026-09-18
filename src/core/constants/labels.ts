@@ -286,10 +286,11 @@ export const UI_MESSAGES = {
   settingsMenu: {
     ariaLabel: 'Ajustes',
     open: 'Abrir ajustes',
-    personalization: 'Personalización',
-    integration: 'Integración',
+    design: 'Diseño',
     filters: 'Filtros',
-    legal: 'Legal',
+    /* «Datos» reúne lo que antes eran «Integración» y «Legal»: por dónde entran y salen tus listas, qué se
+       registra de ellas y cómo se borra todo. */
+    data: 'Datos',
   },
   // Aviso de versión nueva. Solo aparece cuando NO se ha podido recargar sola (ver `useAppUpdate`), así que el
   // texto asume que el usuario está delante y a medio hacer algo: dice qué pasa y deja la decisión en su mano.
