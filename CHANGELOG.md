@@ -95,6 +95,18 @@ pantalla de escritorio, y en las cuatro va primero lo que se viene a hacer y des
   intermitente por contención de la máquina. Queda el de cobertura, que informa igual.
 - **El navegador de las pruebas de extremo a extremo se cachea** por versión de `@playwright/test`, en vez de
   descargar Chromium entero en cada build.
+- **La válvula de desborde del gist vuelve a probarse, y ahora de verdad.** Esas pruebas se saltan solas cuando
+  su interruptor está apagado —que es su estado en producción—, así que nadie las miraba: al encenderlas, una
+  fallaba y la otra pasaba en vacío. El motivo no estaba en el reparto sino en el material de la prueba, que se
+  escribió antes de que la compresión entrara en juego: rellenaba las reseñas con la misma letra repetida, y
+  6,82 MB de una letra se comprimen hasta caber en un solo fichero, así que no había excedente que repartir.
+  Ahora el texto es ruido incompresible con semilla fija, el reparto se ejercita (un gist de desborde con 7000
+  juegos, tres con 12000) y la segunda prueba afirma su premisa en vez de darla por buena. Un job aparte de CI
+  enciende el interruptor y corre esa batería en cada `push`.
+- **Los `findBy*` esperan 3 segundos en vez de 1.** El reloj que agotaba no era el de vitest sino el de Testing
+  Library, y con 195 ficheros montando su propio entorno en paralelo una máquina con carga tarda más de un
+  segundo en resolver una búsqueda que no tiene nada de malo: la suite fallaba cinco casos de 2265 y la
+  ejecución siguiente pasaba entera sin tocar una línea.
 
 ### Performance
 - **La aplicación arranca con menos peso otra vez.** Las reglas de estilo de las pantallas de ajustes —26 kB—

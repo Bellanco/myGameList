@@ -99,3 +99,43 @@ jobs:
       - name: Security audit (dependencias de desarrollo, informativo)
         run: npm audit --audit-level=moderate
         continue-on-error: true
+
+  # ── LA VÁLVULA DE DESBORDE DEL GIST, CON EL FLAG ENCENDIDO ────────────────────────────────────────────────
+  #
+  # `ENABLE_GAMES_OVERFLOW_GISTS` es una CONSTANTE en el código a propósito (ver su comentario en
+  # `gistRepository.ts`: apagarla tiene que ser una línea revisable en el diff, no una variable de entorno que
+  # nadie ve). La consecuencia es que sus pruebas se saltan solas —`describe.skipIf`— y el camino que reparte los
+  # chunks en gists de overflow no se ejecutaba NUNCA en CI.
+  #
+  # Que no se pruebe importa por la FORMA DEL FALLO: al rebasar el tope, la escritura del gist aborta entera y lo
+  # único que ve su dueño es que sus listas dejaron de actualizarse, sin error. Es la misma avería que costó un
+  # mes de sincronización con una reseña de 21.265 caracteres.
+  #
+  # Este job enciende el flag sobre una copia desechable del repositorio y corre solo esa batería. Va aparte para
+  # no alargar el job principal y para que su fallo señale a una sola cosa.
+  overflow-flag:
+    name: Gist overflow valve (flag on)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # El `grep` no es adorno: si alguien reformatea esa línea, el `perl` no casa, el flag se queda apagado y la
+      # batería se saltaría en silencio — el job pasaría en verde sin haber probado nada. Así falla y se ve.
+      - name: Turn ENABLE_GAMES_OVERFLOW_GISTS on
+        run: |
+          perl -pi -e 's/^export const ENABLE_GAMES_OVERFLOW_GISTS = false;/export const ENABLE_GAMES_OVERFLOW_GISTS = true;/' src/model/repository/gistRepository.ts
+          grep -qx 'export const ENABLE_GAMES_OVERFLOW_GISTS = true;' src/model/repository/gistRepository.ts
+
+      - name: Run the gated phase B tests
+        run: npx vitest run tests/unit/gistOverflow.test.ts --reporter=verbose
