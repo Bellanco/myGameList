@@ -102,8 +102,9 @@ async function pantallaDeAjustes(page: Page): Promise<void> {
   // importación —donde vivían los enlaces con el acento a pelo—. La portada son cuatro enlaces y poco más.
   await page.goto('/ajustes/integracion');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  const guia = page.locator('.import-guide-link').first();
-  if (await guia.count()) await guia.click();
+  // Con las dos guías ABIERTAS: dentro hay listas numeradas y enlaces, que es donde el contraste se rompe sin
+  // que nadie lo vea —están plegadas casi siempre—.
+  for (const guia of await page.locator('.import-guide-row').all()) await guia.click();
   await animacionesDeEntradaTerminadas(page);
 }
 
