@@ -8,6 +8,30 @@
 // la aplicación, y traerlo aquí devolvería estos 11 kB al chunk de entrada por catorce líneas.
 export const SETTINGS_UI = {
   title: 'Ajustes',
+  /**
+   * LOS CUATRO GRUPOS, con la frase que dice qué hay dentro. La usa el índice de `/ajustes` —la portada, para
+   * quien llega por un enlace guardado o navegando con teclado— y el encabezado de cada pantalla. Los rótulos
+   * cortos del MENÚ viven en `labels.ts`: ese viaja en el arranque con la barra, y estas frases no.
+   */
+  groups: {
+    appearance: 'Apariencia',
+    personalization: {
+      title: 'Personalización',
+      hint: 'Paleta, tema, escala de nota y los enlaces que has publicado.',
+    },
+    integration: {
+      title: 'Integración',
+      hint: 'Sincronización con GitHub, importación de la biblioteca, copias y borrado.',
+    },
+    filters: {
+      title: 'Filtros',
+      hint: 'Los géneros, plataformas, virtudes y defectos con los que clasificas.',
+    },
+    legal: {
+      title: 'Legal',
+      hint: 'Analítica opcional, condiciones de uso, privacidad y cookies.',
+    },
+  },
   account: {
     title: 'Ajustes de cuenta',
   },

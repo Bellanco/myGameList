@@ -5,6 +5,7 @@ import { SETTINGS_UI } from '../../core/constants/settingsLabels';
 import { FilePickerButton } from './FilePickerButton';
 import { Icon } from './Icon';
 import { PlayniteNote } from './import/PlayniteNote';
+import { DangerZone } from './DangerZone';
 
 type AdminCategoryKey = 'genres' | 'platforms' | 'strengths' | 'weaknesses';
 
@@ -43,10 +44,22 @@ interface SettingsHubProps {
   /** Nº de juegos esperando en la bandeja (el acceso solo se ofrece si hay alguno). */
   inboxCount: number;
   onOpenInbox: () => void;
+  /**
+   * Cuál de los dos grupos que salen de aquí se pinta. `integration` es todo lo que entra y sale de la
+   * aplicación —GitHub, Playnite, copias— y termina en la zona de riesgo, que es la última puerta de esa misma
+   * fila: haces copia y, si quieres, borras. `filters` es otra cosa: no es un ajuste sino la gestión de las
+   * etiquetas con las que clasificas, y por eso tiene pantalla propia en vez de alargar la anterior.
+   */
+  group: 'integration' | 'filters';
 }
 
 /**
- * Hub de ajustes con acciones de mantenimiento y sincronizacion.
+ * Las dos pantallas de ajustes que salen de aquí: «Integración» y «Filtros».
+ *
+ * Comparten componente porque comparten estado y props —los mismos veinticinco cables que bajan de `App`— y
+ * partirlo en dos obligaría a duplicar esa tubería entera para ganar nada. Lo que sí cambió es que ya no es
+ * UNA pantalla con todo apilado: aquella pedía cuatro pantallazos de scroll, y el catálogo de etiquetas, que
+ * vive al final, no lo encontraba nadie.
  */
 export const SettingsHub = memo(function SettingsHub({
   syncStatus,
@@ -74,6 +87,7 @@ export const SettingsHub = memo(function SettingsHub({
   onImportLibrary,
   inboxCount,
   onOpenInbox,
+  group,
 }: SettingsHubProps) {
   const [showToken, setShowToken] = useState(false);
   const [showConfigHelp, setShowConfigHelp] = useState(false);
@@ -140,7 +154,9 @@ export const SettingsHub = memo(function SettingsHub({
   };
 
   return (
-    <section className="settings-hub" aria-label={SETTINGS_UI.title}>
+    <section className="settings-hub" aria-label={SETTINGS_UI.groups[group].title}>
+      {group === 'integration' ? (
+      <>
       {/* Importación de la biblioteca. Vivía en una pantalla aparte (`/integraciones`) a la que esta tarjeta solo
           sabía navegar; ahora la acción está donde se busca, con su manual al lado. */}
       <div className="settings-card" style={{ gridColumn: '1 / -1' }}>
@@ -404,6 +420,15 @@ export const SettingsHub = memo(function SettingsHub({
         </div>
       </div>
 
+      {/* LA ZONA DE RIESGO CIERRA «INTEGRACIÓN», y no está aquí por descarte: es la última parada de la fila de
+          los datos —conectar, importar, respaldar, borrar—, y llega justo después de la copia de seguridad, que
+          es lo que hay que hacer antes. En un grupo llamado «Legal» habría quedado escondida detrás de un
+          nombre que nadie asocia con borrar nada. */}
+      <DangerZone />
+      </>
+      ) : null}
+
+      {group === 'filters' ? (
       <div className="settings-card settings-card-admin">
         <h2>{SETTINGS_UI.admin.title}</h2>
         <p>{SETTINGS_UI.admin.description}</p>
@@ -495,6 +520,7 @@ export const SettingsHub = memo(function SettingsHub({
           )}
         </div>
       </div>
+      ) : null}
     </section>
   );
 });

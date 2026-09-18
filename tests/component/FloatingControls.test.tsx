@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { act, render } from '@testing-library/react';
 import { FloatingControls } from '../../src/view/components/FloatingControls';
 
@@ -15,7 +15,7 @@ import { FloatingControls } from '../../src/view/components/FloatingControls';
  */
 describe('los controles flotantes al cambiar de sección', () => {
   const pintar = (section: 'lists' | 'stats' | 'social' | 'settings' = 'lists') =>
-    render(<FloatingControls activeSection={section} onSectionChange={vi.fn()} showAccount={false} />);
+    render(<FloatingControls activeSection={section} />);
 
   /** El scroll no se puede mover de verdad en jsdom: se finge la posición y se avisa como haría el navegador. */
   /** El componente decide dentro de un `requestAnimationFrame`: se le deja pasar un latido de reloj. */
@@ -49,7 +49,7 @@ describe('los controles flotantes al cambiar de sección', () => {
     // el componente tiene que volver a mirarla por su cuenta.
     Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
     await act(async () => {
-      rerender(<FloatingControls activeSection="stats" onSectionChange={vi.fn()} showAccount={false} />);
+      rerender(<FloatingControls activeSection="stats" />);
       await unLatido();
     });
 
@@ -61,7 +61,7 @@ describe('los controles flotantes al cambiar de sección', () => {
     await desplazarA(200);
 
     await act(async () => {
-      rerender(<FloatingControls activeSection="social" onSectionChange={vi.fn()} showAccount={false} />);
+      rerender(<FloatingControls activeSection="social" />);
       await unLatido();
     });
 

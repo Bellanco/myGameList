@@ -66,9 +66,16 @@ describe('rutas de la app', () => {
     // cualquier marcador o acceso directo ya guardado, que es la razón de que la redirección exista.
     expect(LEGACY_ROUTE_REDIRECTS).toContainEqual({ from: '/visitados', to: '/abandonados' });
     expect(LEGACY_ROUTE_REDIRECTS).toContainEqual({ from: '/perfil', to: '/stats' });
-    // El destino de cada redirección tiene que ser una ruta declarada; si no, el salto acaba en el catch-all.
+    // «Cuenta» fue pantalla y pestaña; su contenido vive ahora en el grupo de personalización.
+    expect(LEGACY_ROUTE_REDIRECTS).toContainEqual({ from: '/cuenta', to: '/ajustes/personalizacion' });
+    // El destino de cada redirección tiene que RESOLVER; si no, el salto acaba en el catch-all y el nombre
+    // viejo, que existía para no perder a nadie, pierde a todo el mundo. Se pregunta con el matcher y no
+    // buscando el camino en la tabla: hay destinos que cubre un comodín (`/ajustes/*`) y ahí la comparación
+    // exacta diría que no existen.
     for (const { from, to } of LEGACY_ROUTE_REDIRECTS) {
-      expect(APP_ROUTES.some((route) => route.path === to), to).toBe(true);
+      expect(isKnownRoute(to), to).toBe(true);
+      // Y el nombre RETIRADO no puede seguir declarado como pantalla: si lo estuviera, ganaría él y la
+      // redirección no se alcanzaría nunca.
       expect(APP_ROUTES.some((route) => route.path === from), from).toBe(false);
     }
   });

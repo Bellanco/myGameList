@@ -19,7 +19,7 @@ import { useAchievementNotice } from './view/hooks/useAchievementNotice';
 import { useAnnouncement } from './view/hooks/useAnnouncement';
 import { UpdateNotice } from './view/components/UpdateNotice';
 import { BottomNavigation } from './view/components/BottomNavigation';
-import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, matchAppSection, type AppSection } from './core/constants/routes';
+import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, SETTINGS_ROUTES, matchAppSection, matchSettingsGroup, type AppSection, type SettingsGroup } from './core/constants/routes';
 import { LegacyTailRedirect } from './view/components/LegacyTailRedirect';
 import { SettingsMenu } from './view/components/SettingsMenu';
 import { ScrollToTop } from './view/components/ScrollToTop';
@@ -71,7 +71,11 @@ const SocialHub = lazy(() => import('./view/components/SocialHub').then((module)
 // Panel "Perfil" (estadísticas). Perezoso como el resto de hubs: su código y su hoja de estilos solo se
 // descargan al entrar en la pestaña, así que no pesan en el arranque de los listados.
 const StatsHub = lazy(() => import('./view/components/stats/StatsHub').then((module) => ({ default: module.StatsHub })));
-const AccountHub = lazy(() => import('./view/components/AccountHub').then((module) => ({ default: module.AccountHub })));
+// Las cuatro pantallas de Ajustes. Perezosas como el resto de hubs: sus textos (`settingsLabels`, 11 kB) y su
+// maquetación solo se descargan al entrar, no en el arranque de los listados.
+const PersonalizationSettings = lazy(() => import('./view/components/settings/PersonalizationSettings').then((module) => ({ default: module.PersonalizationSettings })));
+const LegalSettings = lazy(() => import('./view/components/settings/LegalSettings').then((module) => ({ default: module.LegalSettings })));
+const SettingsIndex = lazy(() => import('./view/components/settings/SettingsIndex').then((module) => ({ default: module.SettingsIndex })));
 /* La ruleta de los listados va por su envoltorio, no por el modal desnudo: así el pool y la ponderación
    se calculan DENTRO del chunk perezoso en vez de en el arranque (ver `ListsRouletteModal`). */
 const RouletteModal = lazy(() => importRouletteModal().then((module) => ({ default: module.ListsRouletteModal })));
@@ -118,9 +122,12 @@ function getCurrentTab(pathname: string): TabId {
  * propósito): no cambia nada de lo que se ve y le da a un lector de pantalla el encabezado que ninguna pantalla
  * tenía. En los listados incluye la pestaña activa, que es lo que de verdad distingue una vista de otra.
  */
-function getPageHeading(section: AppSection, currentTab: TabId): string {
+function getPageHeading(section: AppSection, currentTab: TabId, settingsGroup: SettingsGroup | null): string {
   const H = UI_MESSAGES.pageHeading;
   if (section === 'lists') return H.lists(TAB_TITLES[currentTab]);
+  // Las cuatro pantallas de Ajustes comparten sección, así que un solo «Ajustes» dejaría a un lector de
+  // pantalla sin saber en cuál de las cuatro ha entrado. El encabezado dice el grupo.
+  if (section === 'settings' && settingsGroup) return `${H.settings} · ${UI_MESSAGES.settingsMenu[settingsGroup]}`;
   return H[section];
 }
 
@@ -213,14 +220,21 @@ export default function App() {
   // Efectos de firma por interacción (wipe P5 al navegar, apertura de portal al clic, sol↔luna, boot-up 40K).
   useSignatureEffects();
 
-  // La pantalla "Cuenta" solo existe con sesión de Google (todos sus ajustes la requieren). Si se llega a
-  // `/cuenta` sin sesión (URL directa) o se cierra sesión estando allí, se redirige a la lista. Se espera a
-  // `authReady` para no expulsar a un usuario logueado durante la resolución inicial de la sesión.
+  /**
+   * LA PUERTA DE «PERSONALIZACIÓN» TAMBIÉN EN LA RUTA, y no solo en el menú. Ahí dentro está lo que se guarda en
+   * la nube de quien tiene espacio social —la escala de nota, los enlaces publicados—, así que sin él no hay
+   * nada que enseñar; el punto no se pinta, pero la dirección se puede teclear, y un camino declarado que pinta
+   * una pantalla vacía es peor que uno que no existe. Se manda a la portada de Ajustes, que sí es suya.
+   *
+   * Se espera a `authReady` para no expulsar a quien sí tiene sesión mientras se resuelve al arrancar.
+   */
   useEffect(() => {
-    if (authReady && !scoreScaleUid && activeSection === 'account') {
-      navigate('/completados', { replace: true });
+    if (authReady && !hasSocialProfile && location.pathname === SETTINGS_ROUTES.personalization) {
+      navigate('/ajustes', { replace: true });
     }
-  }, [authReady, scoreScaleUid, activeSection, navigate]);
+  }, [authReady, hasSocialProfile, location.pathname, navigate]);
+  /** Cuál de los cuatro grupos de Ajustes pide el camino; `null` es la portada. */
+  const settingsGroup = matchSettingsGroup(location.pathname);
   const { filters, setFilter, toggleFilterValue, clearFilter, clearAllFilters } = useToolbarFilters();
   const {
     setExpandedId,
@@ -570,11 +584,6 @@ export default function App() {
       return;
     }
 
-    if (section === 'account') {
-      navigate('/cuenta');
-      return;
-    }
-
     if (section === 'inbox') {
       navigate('/bandeja');
       return;
@@ -820,12 +829,6 @@ export default function App() {
         <StatsHub games={vm.data} />
       </Suspense>
     ),
-    account: (
-
-      <Suspense fallback={<ScreenSkeleton />}>
-        {scoreScaleUid ? <AccountHub scoreScaleUid={scoreScaleUid} hasSocialProfile={hasSocialProfile} /> : null}
-      </Suspense>
-    ),
     admin: (
 
       <Suspense fallback={<ScreenSkeleton />}>
@@ -865,10 +868,23 @@ export default function App() {
         />
       </Suspense>
     ),
+    /**
+     * Las CUATRO pantallas de Ajustes salen de la misma sección: la que toca la decide el camino (ver
+     * `matchSettingsGroup`), igual que hacen el hub social y el panel con las suyas. Sin grupo en el camino
+     * —`/ajustes` a secas— se pinta el índice.
+     */
     settings: (
 
       <Suspense fallback={<ScreenSkeleton />}>
+        {settingsGroup === 'personalization' ? (
+          <PersonalizationSettings scoreScaleUid={scoreScaleUid} hasSocialProfile={hasSocialProfile} />
+        ) : settingsGroup === 'legal' ? (
+          <LegalSettings />
+        ) : settingsGroup === null ? (
+          <SettingsIndex hasSocialProfile={hasSocialProfile} />
+        ) : (
         <SettingsHub
+          group={settingsGroup}
           syncStatus={syncBadgeText}
           hasSyncConfig={syncVm.hasConfig}
           connectedGistId={syncVm.connectedGistId || syncVm.currentConfig?.gistId || ''}
@@ -895,6 +911,7 @@ export default function App() {
           inboxCount={inboxCount}
           onOpenInbox={openInbox}
         />
+        )}
       </Suspense>
     ),
   };
@@ -905,11 +922,7 @@ export default function App() {
       {/* A11y-4: primer elemento enfocable de la página. Sin él, llegar al contenido con teclado obligaba a pasar
           por los controles flotantes y la barra de pestañas en cada carga. Solo se ve al recibir el foco. */}
       <a className="skip-link" href="#contenido">{UI_MESSAGES.skipToContent}</a>
-      <FloatingControls
-        activeSection={activeSection}
-        onSectionChange={handleSectionChange}
-        showAccount={hasSocialProfile}
-      />
+      <FloatingControls activeSection={activeSection} />
       {activeSection === 'lists' ? <TabBar currentTab={currentTab} tabCounts={vm.tabCounts} onTabChange={handleTabChange} /> : null}
       {/* ═══ EL CARRIL DE LOS AVISOS · abajo a la izquierda, sobre la barra inferior ═══════════════════════
           UN SOLO CARRIL PARA LAS TRES CÁPSULAS, y se monta AQUÍ y no dentro de cada una. Antes lo traía cada
@@ -960,7 +973,7 @@ export default function App() {
                 : 'main-settings'
         }`.trim()}
       >
-        <h1 className="sr-only">{getPageHeading(activeSection, currentTab)}</h1>
+        <h1 className="sr-only">{getPageHeading(activeSection, currentTab, settingsGroup)}</h1>
         <Routes>
           {APP_ROUTES.map(({ path, section }) => (
             <Route key={path} path={path} element={sectionScreens[section]} />
