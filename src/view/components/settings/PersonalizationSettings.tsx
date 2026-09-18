@@ -31,7 +31,7 @@ interface PersonalizationSettingsProps {
  */
 export const PersonalizationSettings = memo(function PersonalizationSettings({ scoreScaleUid, hasSocialProfile }: PersonalizationSettingsProps) {
   return (
-    <section className="settings-hub settings-personalization" aria-label={SETTINGS_UI.groups.personalization.title}>
+    <section className="settings-hub settings-personalization" aria-label={SETTINGS_UI.groups.design.title}>
       <div className="settings-card settings-card-themes">
         <h2>{SETTINGS_UI.groups.themes}</h2>
         <div className="settings-appearance">

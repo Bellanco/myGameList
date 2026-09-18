@@ -66,19 +66,6 @@
   font-weight: 600;
 }
 
-/* La palabra del texto que despliega la guía: es un `<button>` pero tiene que leerse como un enlace dentro del
-   párrafo, así que se le quita todo el aspecto de botón y hereda la tipografía del texto que lo rodea. */
-.import-guide-link {
-  background: none;
-  border: 0;
-  font: inherit;
-  font-weight: 600;
-  color: var(--fg-link);
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
 /* Barra de herramientas de la bandeja: acciones sobre el conjunto de la bandeja. */
 .import-toolbar {
   display: flex;

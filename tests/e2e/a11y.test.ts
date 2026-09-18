@@ -96,11 +96,14 @@ async function listaConDetalleAbierto(page: Page): Promise<void> {
   await animacionesDeEntradaTerminadas(page);
 }
 
-/** Ajustes: notas de tarjeta, cajas de ayuda y enlaces teñidos con el acento, todo junto. */
+/**
+ * «Datos»: la pantalla más cargada de Ajustes y la que reúne todo lo que aquí se puede romper —notas de tarjeta,
+ * cajas de ayuda, formularios, botones de acción, el interruptor de la analítica, los tres documentos y el
+ * borrado de la cuenta con su confirmación—. Eran dos pantallas, «Integración» y «Legal», y se auditaban por
+ * separado; desde que comparten dirección, un solo recorrido las cubre a las dos.
+ */
 async function pantallaDeAjustes(page: Page): Promise<void> {
-  // «Integración» y no la portada de `/ajustes`: es la pantalla con formularios, botones de acción y la guía de
-  // importación —donde vivían los enlaces con el acento a pelo—. La portada son cuatro enlaces y poco más.
-  await page.goto('/ajustes/integracion');
+  await page.goto('/ajustes/datos');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   // Con las dos guías ABIERTAS: dentro hay listas numeradas y enlaces, que es donde el contraste se rompe sin
   // que nadie lo vea —están plegadas casi siempre—.
@@ -109,7 +112,7 @@ async function pantallaDeAjustes(page: Page): Promise<void> {
 }
 
 /**
- * EL MENÚ DE LA PESTAÑA, DESPLEGADO. Es la pantalla más rara de auditar de toda la aplicación: cuatro rótulos
+ * EL MENÚ DE LA PESTAÑA, DESPLEGADO. Es la pantalla más rara de auditar de toda la aplicación: tres rótulos
  * flotando sin panel ni fondo propio, sobre un contenido que baja al 30 %. Lo que axe puede decir aquí —que los
  * enlaces tengan nombre, que el disparador anuncie su estado, que el foco se vea— es justo lo que no se puede
  * comprobar a ojo; lo que NO ve —el `text-shadow` y el contraste real sobre lo que quede debajo— se mide aparte
@@ -123,17 +126,12 @@ async function menuDeAjustesAbierto(page: Page): Promise<void> {
   await animacionesDeEntradaTerminadas(page);
 }
 
-/** «Legal»: el interruptor de la analítica, los tres documentos y el borrado de la cuenta con su confirmación. */
-async function pantallaLegal(page: Page): Promise<void> {
-  await page.goto('/ajustes/legal');
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  await animacionesDeEntradaTerminadas(page);
-}
-
-/** Puerta de entrada del hub social (sin sesión): pasos, barra de progreso y avisos. */
+/** Puerta de entrada del hub social (sin sesión): los dos pasos, sus botones, el estado y los avisos. */
 async function puertaDelHubSocial(page: Page): Promise<void> {
   await page.goto('/social');
-  await expect(page.locator('.hub-gateway-progress-track')).toBeVisible();
+  // Se espera al ÚLTIMO de los dos peldaños: con el primero a la vista la lista todavía puede estar pintándose.
+  // (Antes se esperaba a la barra de progreso, que se fue con el rediseño a dos pasos: la lista ES el progreso.)
+  await expect(page.locator('.hub-gateway-stage').nth(1)).toBeVisible();
   await animacionesDeEntradaTerminadas(page);
 }
 
@@ -312,7 +310,6 @@ const PANTALLAS = [
   { nombre: 'panel', amplia: true, abrir: panelDeEstadisticas },
   { nombre: 'ajustes', amplia: false, abrir: pantallaDeAjustes },
   { nombre: 'menú de ajustes', amplia: false, abrir: menuDeAjustesAbierto },
-  { nombre: 'ajustes · legal', amplia: false, abrir: pantallaLegal },
   { nombre: 'hub social', amplia: false, abrir: puertaDelHubSocial },
   { nombre: 'ruleta', amplia: false, abrir: ruletaAbierta },
   { nombre: 'logros', amplia: true, abrir: listadoDeLogros },
