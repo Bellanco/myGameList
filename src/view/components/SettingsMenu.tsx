@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { UI_MESSAGES } from '../../core/constants/labels';
 import { SETTINGS_ROUTES, type SettingsGroup } from '../../core/constants/routes';
 import { SETTINGS_MENU_ID } from '../../core/constants/uiConfig';
@@ -33,9 +33,13 @@ const PUNTOS: ReadonlyArray<{ group: SettingsGroup; label: string }> = [
  * abierto no se podría tocar «Listados» directamente. Un menú no debe secuestrar la pantalla. A cambio, el
  * navegador se encarga del cierre al pulsar fuera, del Esc y de la capa superior; y el botón que lo abre lo
  * gobierna con `popovertarget`, que resuelve solo el caso peliagudo de volver a pulsarlo estando abierto.
+ *
+ * Y SON ENLACES DENTRO DE UN `<nav>`, no botones dentro de un `role="menu"`. Un menú ARIA promete un teclado
+ * que hay que escribir —flechas, Inicio, Fin, tabulador que cierra— y anunciarlo sin dárselo es peor que no
+ * anunciarlo: quien lo oye pulsa flechas y no pasa nada. Esto es navegación, lleva a cuatro direcciones, así
+ * que enlaces: se abren en otra pestaña, se copian, se recorren con el tabulador de siempre.
  */
 export const SettingsMenu = memo(function SettingsMenu({ hasSocialProfile, onToggle }: SettingsMenuProps) {
-  const navigate = useNavigate();
   const { pathname } = useLocation();
   const ref = useRef<HTMLDivElement>(null);
   /** ¿La entrada de historial de ESTE menú sigue siendo la de arriba? Evita retroceder de más al cerrar. */
@@ -84,54 +88,52 @@ export const SettingsMenu = memo(function SettingsMenu({ hasSocialProfile, onTog
   }, [cerrar, onToggle]);
 
   /**
-   * ELEGIR UN GRUPO SUSTITUYE la entrada del menú en vez de retroceder por ella, y esto no es un matiz: cerrar
-   * hace `history.back()` para consumir lo que se empujó al abrir, así que con un `navigate` normal las dos
-   * cosas corren a la vez y el retroceso DESHACÍA la navegación —se abría el grupo y la pantalla volvía sola a
-   * los listados—. Con `replace`, la entrada del menú pasa a ser la del grupo: no hay nada que consumir (de ahí
-   * el `ownsHistory = false` antes de cerrar) y el botón de atrás lleva a donde se estaba, que es lo suyo.
+   * ELEGIR UN GRUPO SUSTITUYE la entrada del menú en vez de retroceder por ella (`<Link replace>`), y esto no es
+   * un matiz: cerrar hace `history.back()` para consumir lo que se empujó al abrir, así que con una navegación
+   * normal las dos cosas corren a la vez y el retroceso DESHACÍA el salto —se abría el grupo y la pantalla
+   * volvía sola a los listados—. Con `replace`, la entrada del menú pasa a ser la del grupo: no queda nada que
+   * consumir, de ahí el `ownsHistory = false`, y el botón de atrás lleva a donde se estaba.
    */
-  const ir = useCallback((group: SettingsGroup) => {
+  const alElegir = useCallback(() => {
     ownsHistoryRef.current = false;
     cerrar();
-    navigate(SETTINGS_ROUTES[group], { replace: true });
-  }, [cerrar, navigate]);
+  }, [cerrar]);
 
   const puntos = hasSocialProfile ? PUNTOS : PUNTOS.filter((p) => p.group !== 'personalization');
 
   return (
-    <div
+    <nav
       ref={ref}
       id={SETTINGS_MENU_ID}
       popover="auto"
       className="settings-menu"
-      role="menu"
       aria-label={MENU.ariaLabel}
     >
       {puntos.map(({ group, label }) => (
-        <button
+        <Link
           key={group}
-          type="button"
-          role="menuitem"
+          to={SETTINGS_ROUTES[group]}
+          replace
           className={`settings-menu-point ${pathname === SETTINGS_ROUTES[group] ? 'is-current' : ''}`.trim()}
           aria-current={pathname === SETTINGS_ROUTES[group] ? 'page' : undefined}
-          onClick={() => ir(group)}
+          onClick={alElegir}
         >
           <span className="settings-menu-dot" aria-hidden="true" />
           {label}
-        </button>
+        </Link>
       ))}
       {/* Legal es el PIE del menú: se consulta una vez al año, pero tiene que seguir estando a un toque —retirar
           el consentimiento de la analítica debe costar lo mismo que darlo—. Se le baja el rango, no el acceso. */}
-      <button
-        type="button"
-        role="menuitem"
+      <Link
+        to={SETTINGS_ROUTES.legal}
+        replace
         className={`settings-menu-point is-foot ${pathname === SETTINGS_ROUTES.legal ? 'is-current' : ''}`.trim()}
         aria-current={pathname === SETTINGS_ROUTES.legal ? 'page' : undefined}
-        onClick={() => ir('legal')}
+        onClick={alElegir}
       >
         <span className="settings-menu-dot" aria-hidden="true" />
         {MENU.legal}
-      </button>
-    </div>
+      </Link>
+    </nav>
   );
 });

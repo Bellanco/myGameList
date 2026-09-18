@@ -41,8 +41,8 @@ describe('la pantalla de Personalización', () => {
   });
 
   it('no arrastra lo que se fue a otros grupos', () => {
-    // La analítica y los documentos legales viven en «Legal»; el borrado, al final de «Integración». Que no
-    // vuelvan a colarse aquí es lo que mantiene cada pantalla en un solo asunto y sin scroll.
+    // La analítica, los documentos y el borrado de la cuenta viven en «Legal»: son las tres cosas que la ley
+    // te reconoce sobre tus datos. Que no vuelvan a colarse aquí es lo que mantiene cada pantalla en un asunto.
     pintar('uid-1');
     expect(screen.queryByRole('heading', { name: /Analítica/i })).toBeNull();
     expect(screen.queryByRole('heading', { name: /Zona de riesgo/i })).toBeNull();

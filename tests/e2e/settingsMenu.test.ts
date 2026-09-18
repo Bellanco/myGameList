@@ -62,9 +62,9 @@ test.describe('el menú de la pestaña de Ajustes', () => {
     // pide el texto normal. Si alguien la sube, el contraste se va por debajo sin que ningún test de a11y chille.
     await esperarOpacidad(page, 0.3);
     // Sin espacio social no hay nada que personalizar: ese punto no se pinta.
-    await expect(page.getByRole('menuitem', { name: 'Personalización' })).toHaveCount(0);
-    await expect(page.getByRole('menuitem', { name: 'Integración' })).toBeVisible();
-    await expect(page.getByRole('menuitem', { name: 'Legal' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Personalización' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Integración' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Legal' })).toBeVisible();
   });
 
   test('Esc lo cierra y devuelve la luz al contenido', async ({ page }) => {
@@ -84,7 +84,7 @@ test.describe('el menú de la pestaña de Ajustes', () => {
 
   test('elegir un grupo lleva a su pantalla y SE QUEDA ahí', async ({ page }) => {
     await abrir(page);
-    await page.getByRole('menuitem', { name: 'Integración' }).click();
+    await page.getByRole('link', { name: 'Integración' }).click();
     await expect(page).toHaveURL(/\/ajustes\/integracion$/);
     await expect(menu(page)).toBeHidden();
     // Y NO VUELVE SOLA: cerrar el menú consume la entrada de historial que se empujó al abrirlo, y con una

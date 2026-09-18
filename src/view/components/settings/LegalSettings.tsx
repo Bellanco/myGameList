@@ -5,6 +5,7 @@ import { SETTINGS_UI } from '../../../core/constants/settingsLabels';
 import { LEGAL_ROUTES } from '../../../core/constants/legal';
 import { LEGAL_DOCUMENTS } from '../../../core/constants/legalContent';
 import { useAnalyticsConsent } from '../../hooks/useAnalyticsConsent';
+import { DangerZone } from '../DangerZone';
 
 /**
  * «Legal» — el pie del menú de Ajustes: lo que se consulta una vez al año, pero que tiene que seguir estando a
@@ -14,6 +15,10 @@ import { useAnalyticsConsent } from '../../hooks/useAnalyticsConsent';
  * el aviso de cookies, y retirar un consentimiento debe costar lo mismo que darlo: esconderlo detrás de una
  * sesión sería romper esa promesa. Lo mismo con los tres documentos, que deben poder leerse desde la aplicación
  * y no solo desde el aviso.
+ *
+ * Y AQUÍ CIERRA EL BORRADO DE LA CUENTA. Es donde se busca: las tres cosas de esta pantalla son las que la ley
+ * te reconoce sobre tus datos —saber qué se recoge, dejar de darlo y hacer que desaparezca—, y la última es la
+ * más seria de las tres, así que va al final y detrás de su propia confirmación.
  */
 export const LegalSettings = memo(function LegalSettings() {
   const { consent, setConsent } = useAnalyticsConsent();
@@ -53,6 +58,8 @@ export const LegalSettings = memo(function LegalSettings() {
           <Link to={LEGAL_ROUTES.cookies}>{LEGAL_DOCUMENTS.cookies.title}</Link>
         </div>
       </div>
+
+      <DangerZone />
     </section>
   );
 });

@@ -5,7 +5,6 @@ import { SETTINGS_UI } from '../../core/constants/settingsLabels';
 import { FilePickerButton } from './FilePickerButton';
 import { Icon } from './Icon';
 import { PlayniteNote } from './import/PlayniteNote';
-import { DangerZone } from './DangerZone';
 
 type AdminCategoryKey = 'genres' | 'platforms' | 'strengths' | 'weaknesses';
 
@@ -420,11 +419,6 @@ export const SettingsHub = memo(function SettingsHub({
         </div>
       </div>
 
-      {/* LA ZONA DE RIESGO CIERRA «INTEGRACIÓN», y no está aquí por descarte: es la última parada de la fila de
-          los datos —conectar, importar, respaldar, borrar—, y llega justo después de la copia de seguridad, que
-          es lo que hay que hacer antes. En un grupo llamado «Legal» habría quedado escondida detrás de un
-          nombre que nadie asocia con borrar nada. */}
-      <DangerZone />
       </>
       ) : null}
 

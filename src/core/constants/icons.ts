@@ -35,7 +35,6 @@ export type IconName =
   | 'bottom-lists'
   | 'bottom-settings'
   | 'bottom-hub'
-  | 'bottom-account'
   | 'bottom-stats'
   | 'logout'
   | 'keyboard-arrow-up'
