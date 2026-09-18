@@ -49,7 +49,7 @@ lista de mejoras de segundo orden. Ninguno es una emergencia.
 | 9 | Documentación | Baja | README con versiones caducadas; `package.json` en 1.3.2 con el CHANGELOG ya en 1.3.3 |
 | 10 | Código muerto | Baja | 127 `export` sin consumidor externo; solo 2 son código inalcanzable · **+2 símbolos de icono sin ninguna referencia** (`uncharted`, `keyboard-arrow-up`, 1,6 kB) · **✅ borrados (fase 5)** |
 | 11 | Documentación | Baja | ~~«Diseño» sin cuenta de Google~~ · **✅ es así a propósito**; lo que estaba mal era la entrada de la 1.3.3, corregida |
-| 12 | Rendimiento visual | **Media** | ~~La barra inferior se quedaba muda según la máquina~~ · **✅ arreglado** — un pestillo de un solo sentido y una constante desincronizada del CSS; lo cazó CI |
+| 12 | Rendimiento visual | **Media** | ~~La barra inferior se quedaba muda según la máquina~~ · **✅ arreglado** — un pestillo de un solo sentido y una constante desincronizada del CSS; lo cazó CI · **2.ª pasada:** la barra de desplazamiento de Linux se comía 15 px y el salto a iconos se decidía por dos; peldaño intermedio |
 
 ---
 
@@ -353,9 +353,36 @@ decide. Con 6 px, no.
 —y por tanto el primero que se cae si alguien recorta el sitio de la barra— mientras el de 390 podría seguir en
 verde.
 
-**Lo que esto NO cubre:** entre 360 y 374 px la barra se queda en iconos (antes también, o con el rótulo pegado
-al borde). 360 dp es un ancho común en Android: se queda a 0,5 px de caber, y forzarlo pediría recortar más el
-aire de la barra o acortar «Estadísticas». Es una decisión de diseño, no un fallo.
+**SEGUNDA PASADA (mismo día): seguía en rojo en CI, y por una razón que no era la tipografía.** Los dos casos
+—390 px y 375 px— volvieron a salir `is-icons` con todo verde en local. Lo que no se había visto: **en el Linux
+del CI la barra de desplazamiento es de las que ocupan sitio y se come ~15 px de ancho**; en macOS flota sobre el
+contenido y no cuesta nada. Así que allí el caso de 390 medía en realidad 375, y el del iPhone SE medía 360 —un
+ancho en el que la barra no prometía los cuatro nombres—. Medido sobre el build: la columna sale de
+`(ancho − 51,6) / 4`, y «Estadísticas» apilada pide 79 px → a 375 caben por 1,9 px y a 360 faltan 1,9.
+
+Dos arreglos, uno en la prueba y otro en el producto:
+
+1. **La prueba mide lo que dice.** `abrir()` ensancha el viewport lo que se lleve la barra de desplazamiento,
+   de modo que `documentElement.clientWidth` sea exactamente los px del título del caso en cualquier máquina; y
+   la comprobación de que la barra no sobresale usa ese ancho útil, no `innerWidth`.
+2. **Un peldaño más antes de quedarse muda** (`tight`): si el rótulo apilado no cabe, se encoge un punto
+   (`--fs-2xs` → `--fs-3xs`, ~5 px por columna) y solo si ni así entra se va a iconos. El salto de cuatro
+   nombres a ninguno dejaba de decidirse por dos píxeles, que es lo que hacía que el mismo ancho saliera distinto
+   en dos máquinas.
+
+Además, el medidor ya no se fía de `layoutRef` para saber en qué escalón está midiendo: **lee las clases que la
+barra tiene PINTADAS**. `aplicar()` solo pide el cambio a React; si la medida se tomaba antes del repintado, el
+rótulo se medía con el cuerpo del escalón anterior —un 8 % más ancho— y la barra bajaba un escalón de más.
+
+**Barrido sobre el build, después:** con nombre a la vista desde **348 px** (antes, 375); 355 → apretado con
+11,9 px de aire; 365 → apretado, 14,4; 370-400 → apilado normal, 10,6-18,1; 620+ → una línea. Por debajo de 348
+sigue siendo iconos, sin desbordar y con sus dianas de 48 px.
+
+**Guarda nueva:** `bottomNav.test.ts` añade el caso de **365 px**, que es el que ejercita el peldaño apretado.
+
+**Lo que esto NO cubre:** por debajo de ~348 px la barra sigue quedándose en iconos, que es el suelo de 280 px
+prometido y comprobado. Y no se ha medido cuánto mide «Estadísticas» en el Linux del CI: si allí el texto pide
+algún píxel más, ahora lo absorbe el peldaño apretado en vez de dejar la barra muda.
 
 ## Lo que se comprobó y está bien
 
