@@ -5,7 +5,7 @@
 // tarjeta—, así que quien empieza en `/social` acabaría en otra pantalla con su alta a medias y sin camino de
 // vuelta. Se apunta el camino de salida al salir y se consume al volver.
 import { describe, it, expect, beforeEach } from 'vitest';
-import { takeGithubOAuthOrigin } from '../../src/model/repository/githubOAuthRepository';
+import { takeGithubOAuthOrigin } from '../../src/model/repository/githubOAuthChecks';
 
 const CLAVE = 'mis-listas-github-oauth-origin';
 

@@ -4,30 +4,19 @@
 //
 // Gated: si no hay VITE_GITHUB_CLIENT_ID en el build, `isGithubOAuthConfigured()` es false y la UI no muestra el
 // botón → solo queda el flujo manual de PAT (nada cambia para quien no configure la OAuth App).
+//
+// AQUÍ ESTÁ EL TRABAJO, NO LAS COMPROBACIONES. Las tres preguntas baratas que la aplicación hace SIEMPRE —si hay
+// OAuth App, si venimos de un retorno, de qué pantalla salió el viaje— viven en `githubOAuthChecks`, que es lo
+// único que necesita el arranque. Lo de este fichero solo hace falta al pulsar el botón o al volver de GitHub, y
+// por eso quien lo usa lo carga con `import()`: así deja de pesar en el chunk inicial de todo el mundo.
+
+import { ORIGIN_STORAGE_KEY, STATE_TTL_MS, isGithubOAuthConfigured } from './githubOAuthChecks';
 
 const GITHUB_CLIENT_ID = String(import.meta.env.VITE_GITHUB_CLIENT_ID || '').trim();
 const GITHUB_AUTHORIZE_URL = 'https://github.com/login/oauth/authorize';
 const OAUTH_EXCHANGE_ENDPOINT = '/api/github-oauth';
 const OAUTH_SCOPE = 'gist';
 const STATE_STORAGE_KEY = 'mis-listas-github-oauth-state';
-/**
- * DE DÓNDE SALIÓ EL VIAJE. El `redirect_uri` es fijo —`/ajustes`, que es el callback registrado en la OAuth App
- * de GitHub y no se puede improvisar—, así que quien empieza a conectar desde el hub social volvería a otra
- * pantalla y tendría que buscar el camino de vuelta a mano. Se apunta el camino de salida y se vuelve a él.
- */
-const ORIGIN_STORAGE_KEY = 'mis-listas-github-oauth-origin';
-/**
- * CUÁNTO VALE UN `state`. Es el hueco entre pulsar «Conectar con GitHub» y volver autorizado: lo normal son
- * segundos, pero quien no tenga sesión abierta en GitHub pasa antes por su login y su segundo factor. Media hora
- * cubre eso de sobra y sigue acotando la ventana en la que un `code` ajeno podría colarse.
- */
-const STATE_TTL_MS = 30 * 60 * 1000;
-
-/** El scope `gist` da acceso de lectura/escritura a los gists del usuario (crear, listar y actualizar). */
-export function isGithubOAuthConfigured(): boolean {
-  return GITHUB_CLIENT_ID.length > 0;
-}
-
 /** El camino actual de la aplicación, tal cual, para volver a él cuando GitHub nos devuelva a `/ajustes`. */
 function currentAppPath(): string {
   return `${window.location.pathname}${window.location.search}${window.location.hash}`;
@@ -85,12 +74,6 @@ export function beginGithubOAuth(): void {
     allow_signup: 'true',
   });
   window.location.assign(`${GITHUB_AUTHORIZE_URL}?${params.toString()}`);
-}
-
-/** ¿La URL actual es un retorno de GitHub con `code` + `state`? */
-export function hasGithubOAuthRedirect(): boolean {
-  const params = new URLSearchParams(window.location.search);
-  return params.has('code') && params.has('state');
 }
 
 /** Quita `code`/`state`/`error` de la URL sin recargar, para que un refresco no reintente el intercambio. */
@@ -167,24 +150,4 @@ export async function completeGithubOAuth(): Promise<string> {
     throw new Error(data?.error || 'No se pudo obtener el token de GitHub');
   }
   return data.token;
-}
-
-/**
- * El camino desde el que se inició la conexión, UNA SOLA VEZ (se borra al leerlo). Cadena vacía si no hay nada
- * apuntado, si caducó o si el almacenamiento no está disponible: entonces se sigue donde nos deje GitHub.
- *
- * La caducidad es la misma que la del `state` por el mismo motivo: un origen colgado de un intento abandonado
- * mandaría a quien conecte la semana que viene a la pantalla de la semana pasada.
- */
-export function takeGithubOAuthOrigin(): string {
-  try {
-    const crudo = localStorage.getItem(ORIGIN_STORAGE_KEY);
-    localStorage.removeItem(ORIGIN_STORAGE_KEY);
-    if (!crudo) return '';
-    const guardado = JSON.parse(crudo) as { v?: unknown; t?: unknown };
-    const vigente = typeof guardado.t === 'number' && Date.now() - guardado.t < STATE_TTL_MS;
-    return vigente && typeof guardado.v === 'string' ? guardado.v : '';
-  } catch {
-    return '';
-  }
 }

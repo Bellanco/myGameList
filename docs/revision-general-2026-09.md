@@ -40,8 +40,8 @@ lista de mejoras de segundo orden. Ninguno es una emergencia.
 | 2 | Rendimiento | **Media** | ~~El árbol social se repinta con cualquier cambio~~ · **✅ hecho (fase 3)** — la causa real era el borrador del compositor, no la falta de `memo` |
 | 3 | Escalabilidad | **Media** | ~~La válvula de desborde del gist está apagada y sus pruebas se saltan solas~~ · **✅ hecho (fase 2)** — y al encenderlas, una fallaba |
 | 4 | Pruebas | **Media** | ~~La suite es inestable bajo carga~~ · **✅ hecho (fase 2)** — el reloj que agotaba era el de Testing Library, no el de vitest |
-| 5 | Modularidad | Media | `useSocialViewModel` (2453 líneas, 94 hooks, 109 claves) y `App.tsx` (1155 líneas, 52 hooks) |
-| 6 | Rendimiento | Baja | El chunk de arranque lleva cifrado, OAuth y avisos que no hacen falta para pintar la lista, con el presupuesto al 96 % |
+| 5 | Modularidad | Media | `useSocialViewModel` **2370 líneas** (desde 2453), 90 hooks · **2 dominios extraídos (fases 3 y 4)**, resto pendiente |
+| 6 | Rendimiento | Baja | ~~El arranque lleva peso que no necesita~~ · **⚠️ parcial (fase 5)**: OAuth fuera; el peso real está en `IconSprite`, no donde decía este informe |
 | 7 | CI | Baja | ~~Los 2266 casos se ejecutan dos veces por build~~ · **✅ hecho (fase 1)** |
 | 8 | Cobertura | Baja | 79,4 % de líneas y 70,3 % de ramas, con los huecos justo en el camino de sync |
 | 9 | Documentación | Baja | README con versiones caducadas; `package.json` en 1.3.2 con el CHANGELOG ya en 1.3.3 |
@@ -351,27 +351,69 @@ publicaciones y envuelve `HubAvatar`/`PostBody`/`FeedShell` con `vi.mock` en un 
 sobre el `textarea` cinco veces y se cuenta. El contador va **por fuera** del componente real, así que lo que
 mide es lo que el padre le pide pintar.
 
-### Fase 4 — Partir el view-model social (una semana, a trozos)
+### Fase 4 — Partir el view-model social · ⏸️ DOS DOMINIOS HECHOS, en pausa para revisión
 
-10. Sacar de `useSocialViewModel` un dominio por pasada, empezando por el compositor (el que ya tiene su
-    fichero, `social/useSocialCompose.ts`) y siguiendo por amistades y perfil. Cada pasada deja el hook con
-    menos claves y su propio fichero de pruebas, partiendo `SocialHub.test.tsx` en el mismo movimiento.
-    *(Hallazgos 5 y 4)*
-11. Con el hook partido, `App.tsx`: los hooks de sesión (`use*Session`) a `viewmodel/`, como ya reconoce el
-    README que corresponde.
+10. **Dominios extraídos** (uno por pasada, con su fichero de pruebas propio):
+    - ✅ **El compositor** (fase 3): `FeedComposer` se queda el borrador; el hook baja a `publishingPost` + el
+      contrato del booleano. `tests/component/FeedComposer.test.tsx`, 6 casos.
+    - ✅ **Los listados ajenos** (fase 4): `social/useForeignProfileGames.ts` (173 líneas) con la caché por
+      perfil, el efecto que la llena, el refresco manual y `getGameItemById`.
+      `tests/unit/foreignProfileGamesHook.test.ts`, 8 casos, que afirman las tres reglas de privacidad
+      —solo de amistades, recorte al guardar, un fallo se apunta— que antes solo se ejercitaban de refilón.
+    - ⏸️ **Pendientes**, en este orden por tamaño y frontera: el **detalle de una actividad**
+      (`activeDetailEvent`, las dos esperas, los tres abridores y el ancla de relacionadas, ~190 líneas
+      interconectadas con `selectedProfileDetail`), la **vitrina de logros** (espejo propio + publicación) y la
+      **ficha de un perfil ajeno**.
+11. ⏸️ `App.tsx`: los hooks de sesión (`use*Session`) a `viewmodel/`. Sin empezar.
 
-**Criterio de aceptación:** ningún fichero de `src/viewmodel/` por encima de 800 líneas; `SocialHub.tsx`
-recibiendo piezas, no 109 claves.
+**Estado medido:** `useSocialViewModel` pasa de **2453 a 2370 líneas** y de 94 a 90 hooks. Las 106 claves de su
+superficie apenas bajan (eran 109) porque lo extraído sigue **reexportándose** hacia las pantallas: el hook es
+hoy, en buena parte, una FACHADA sobre diez hooks de dominio. Adelgazar la fachada es el trabajo del punto 11,
+no el de sacar dominios.
 
-### Fase 5 — Arranque y cobertura (a conveniencia)
+**Criterio de aceptación (sin cumplir todavía):** ningún fichero de `src/viewmodel/` por encima de 800 líneas y
+`SocialHub.tsx` recibiendo piezas en vez de 106 claves.
 
-12. Chunk perezoso en `idle` para cifrado + OAuth + avisos. Medir antes y después con el mismo método de este
-    documento. *(Hallazgo 6)*
-13. Subir a ≥80 % de ramas `useSyncViewModel`, `gistRepository` y `socialGistRepository`, empezando por los
-    caminos de error (404, 304, conflicto, cuota) que son donde han estado los incidentes. *(Hallazgo 8)*
+### Fase 5 — Arranque y cobertura · ⚠️ PARCIAL, y con una corrección de este informe
 
-**Criterio de aceptación:** el arranque baja de 161,7 KB gzip de JS sin perder funcionalidad; los tres ficheros
-de sync por encima del 80 % de ramas.
+**LA ESTIMACIÓN DE ESTA FASE ESTABA MAL, y el error se ve en la tabla del hallazgo 6: contaba BYTES DE FUENTE,
+comentarios incluidos.** Medido sobre el bundle minificado —decodificando los `mappings` del sourcemap del chunk
+de entrada para atribuir bytes generados a cada fuente—, el reparto real es otro:
+
+| Fuente en el chunk de arranque | Bytes MINIFICADOS | % del chunk (177,8 kB) |
+|---|---|---|
+| `view/components/IconSprite.tsx` | **28 369** | 16 % |
+| `view/components/GameTable.tsx` | 17 904 | 10 % |
+| `App.tsx` | 14 837 | 8 % |
+| `viewmodel/useSyncViewModel.ts` | 10 342 | 6 % |
+| `core/security/crypto.ts` | 2 594 | 1,5 % |
+| `model/repository/githubOAuthRepository.ts` | 2 528 | 1,4 % |
+| `view/hooks/useAnnouncement.ts` + `core/announcement/announcement.ts` | 3 223 | 1,8 % |
+
+Es decir: los candidatos de esta fase sumaban **~5,7 kB minificados (~2 kB gzip)**, no los 15–20 kB gzip que
+decía el plan. Lo hecho y lo descartado, con ese dato delante:
+
+12. ✅ **OAuth partido en dos.** `model/repository/githubOAuthChecks.ts` se queda las tres preguntas baratas que
+    la app hace SIEMPRE (¿hay OAuth App?, ¿venimos de un retorno?, ¿de qué pantalla salimos?) y el trabajo
+    —montar la autorización, generar y verificar el `state`, canjear el `code`— entra por `import()` en
+    `useSyncViewModel`, con el mismo patrón que `cargarMotorDeSync`. **Medido: crítico 182,8 → 182,2 kB**
+    comprimidos; la holgura del presupuesto pasa de 7,2 a 7,8 kB.
+13. ❌ **Los avisos NO se sacan, y por qué.** Su política se llama desde un inicializador de `useState`
+    (`parseSeen`, al montar), así que no puede ser dinámica sin mover el hook entero detrás de un componente
+    perezoso — y eso **costaría una petición extra en el caso normal** (no hay aviso que enseñar casi nunca) a
+    cambio de ~0,35 kB gzip. Mal cambio; se queda como está.
+14. ⏸️ **Cobertura de los tres ficheros de sync**: sin empezar. Sigue en 74,3 / 67,4 / 69,6 % de ramas.
+
+**LA PRÓXIMA PALANCA DE VERDAD ES `IconSprite`** (28,4 kB minificados, el mayor del arranque): el sprite de
+iconos va en línea dentro del chunk de entrada. Las dos vías son servirlo como fichero `.svg` cacheable —con la
+salvedad conocida de `currentColor` en referencias externas— o partirlo entre los iconos que necesita la primera
+pantalla y el resto. **No se toca en esta pasada**: los iconos se referencian por constantes
+(`COMMON_ICONS.*`), no por literales, así que saber cuáles hacen falta en el arranque exige su propia medición y
+no un `grep`. Está fuera de lo que este plan aprobó.
+
+**Criterio de aceptación:** cumplido a medias — el arranque baja (182,8 → 182,2 kB críticos) sin perder
+funcionalidad, pero la bajada es del 0,3 %, no la que el plan prometía. Los tres ficheros de sync siguen por
+debajo del 80 % de ramas.
 
 ## Lo que NO se hace
 

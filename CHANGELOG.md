@@ -119,6 +119,11 @@ pantalla de escritorio, y en las cuatro va primero lo que se viene a hacer y des
   publicar, que es el único momento en que alguien más lo necesita. Medido con 30 publicaciones en pantalla y 5
   pulsaciones: de 155 repintados de avatar y 150 de cuerpo de publicación, a **cero**. Y crecía con el tamaño del
   feed, así que quien más lo notará es quien tiene más que leer.
+- **El trabajo de «Conectar con GitHub» deja de viajar en el arranque.** Montar la autorización y canjear el
+  código solo hace falta al pulsar el botón o al volver de GitHub, así que ahora se descarga en ese momento; en
+  el arranque se quedan solo las tres comprobaciones baratas que la aplicación hace siempre. Son 0,6 kB menos en
+  cada primera visita, y sobre todo margen para lo que venga: el presupuesto de arranque estaba al 96 % de su
+  tope.
 - **La aplicación arranca con menos peso otra vez.** Las reglas de estilo de las pantallas de ajustes —26 kB—
   viajaban en el arranque para pintar unas pantallas en las que se entra una vez al mes. Ahora se descargan al
   entrar en ellas, como ya hacían las del panel de estadísticas y las del hub social. Son 10 kB menos de estilos
