@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ENABLE_ACHIEVEMENTS } from '../../core/achievements/flags';
 import { emitMoment } from '../../core/effects/moments';
 import type { AchievementFlash } from '../components/stats/AchievementToast';
+import type { AchievementDef } from '../../core/achievements/types';
 import type { StatusNotice } from '../../model/types/game';
 import type { TabData } from '../../model/types/game';
 
@@ -27,8 +28,28 @@ import type { TabData } from '../../model/types/game';
  *  - **Uno por escritura.** Si una edición sube tres logros, es UNA tarjeta con tres medallas.
  *  - **Nunca bloquea.** Ni modal, ni foco robado, ni botón de cerrar: se va sola a los cinco segundos.
  *  - **La primera evaluación del dispositivo siembra y calla**… salvo lo que haya caído desde la última vez:
- *    ver el bloque de `if (!before)`, que es donde se separa «primera vez aquí» de «he vuelto y hay logros
+ *    ver el bloque de `if (!antes)`, que es donde se separa «primera vez aquí» de «he vuelto y hay logros
  *    nuevos». La avalancha de una ampliación se cuenta en UNA cápsula, no en docenas de avisos.
+ *
+ * Y UNA QUINTA, QUE ES LA QUE FALTABA: **lo que ya se ha contado no se vuelve a contar NUNCA**, venga de donde
+ * venga. Eso lo recuerda `ACHIEVEMENTS_TOLD_KEY`, y no la marca de agua.
+ *
+ * ⚑ EL FALLO QUE CIERRA (medallas viejas repitiéndose). «Nuevo» se decidía comparando SOLO con la foto en
+ * memoria de la evaluación anterior, tratando como recién conseguido todo escalón que no estuviera en ella
+ * (`?? 0`). Y la foto envejece sin que nadie la toque, porque **el catálogo crece a mitad de sesión**: al abrir
+ * el hub o `/logros` llega `appConfig/achievements` y `applyExtraSteps()` lo reconstruye con los umbrales del
+ * panel (§6.4bis). A partir de ahí, la siguiente escritura de la biblioteca veía esos escalones por primera vez
+ * en `states` y los anunciaba como desbloqueos —con su medalla y su `achievement-unlocked`— aunque fueran de
+ * hace meses y la marca de agua los conociera de sobra. Y como la foto se toma otra vez en cada arranque con el
+ * catálogo del código, **volvía a pasar en cada sesión**.
+ *
+ * Ahora la comparación tiene tres guardas y ninguna depende de que la foto esté al día:
+ *  - lo que ya figura en `ACHIEVEMENTS_TOLD_KEY` no se anuncia, y punto;
+ *  - dos fotos de CATÁLOGOS distintos (`catalogEpoch`) no son comparables: lo que apareció en medio se cuenta
+ *    como ampliación (una cápsula `catalog`, sin celebración) y no como desbloqueo;
+ *  - una foto tomada con la biblioteca VACÍA tampoco lo es: cuando los juegos llegan de IndexedDB un momento
+ *    después, el progreso salta de 0 a lo que sea y eso no lo ha hecho nadie. Antes salía un «87 % completado»
+ *    en cada arranque que se hidratara así.
  *
  * LOS HITOS (§7.4bis). Además del desbloqueo, se avisa al CRUZAR la mitad y la recta final de una escalera en
  * marcha. Se cruzan, no se «están»: hace falta que el porcentaje anterior estuviera por debajo, y esa comparación
@@ -50,13 +71,53 @@ interface Foto {
   ratio: number;
 }
 
+/**
+ * La foto ENTERA de una evaluación: los escalones y las dos cosas que dicen si la siguiente se puede comparar
+ * con ella. Sin ellas, dos evaluaciones hechas sobre catálogos —o sobre bibliotecas— distintas se restan como si
+ * fueran la misma, y la diferencia se lee como mérito recién hecho.
+ */
+interface Toma {
+  escalones: Map<string, Foto>;
+  /** `catalogEpoch()`: sube cada vez que el catálogo se reconstruye con los umbrales del panel. */
+  epoca: number;
+  /** Juegos en la biblioteca. Distingue «acaban de llegar» de «he guardado uno». */
+  juegos: number;
+}
+
+/** Lo que hay que enseñar: la cápsula y el texto que el banner le dice a un lector de pantalla. */
+interface Aviso {
+  flash: AchievementFlash;
+  texto: string;
+}
+
+function leer(clave: string): string {
+  try {
+    return localStorage.getItem(clave) || '';
+  } catch {
+    // Sin persistencia: la memoria vale para la sesión en curso y no se recordará.
+    return '';
+  }
+}
+
+function guardar(clave: string, valor: string): void {
+  try {
+    localStorage.setItem(clave, valor);
+  } catch {
+    // ídem
+  }
+}
+
+function tamañoDe(games: TabData): number {
+  return games.c.length + games.v.length + games.e.length + games.p.length;
+}
+
 export function useAchievementNotice(
   games: TabData,
   notify: (kind: StatusNotice['kind'], message: string) => void,
 ): { flash: AchievementFlash | null; clear: () => void } {
   // La foto anterior, para saber qué ha subido EN ESTA escritura. Un `ref` y no un estado: compararse consigo
   // mismo no debe provocar un render más.
-  const previous = useRef<Map<string, Foto> | null>(null);
+  const previous = useRef<Toma | null>(null);
   const [flash, setFlash] = useState<AchievementFlash | null>(null);
 
   useEffect(() => {
@@ -72,12 +133,16 @@ export function useAchievementNotice(
     ]).then(([evaluate, signals, labels, catalog, keys]) => {
       if (cancelled) return;
 
-      let peak = '';
-      try {
-        peak = localStorage.getItem(keys.ACHIEVEMENTS_PEAK_KEY) || '';
-      } catch {
-        // Sin persistencia: la marca de agua vale para la sesión en curso.
-      }
+      const peak = leer(keys.ACHIEVEMENTS_PEAK_KEY);
+      /**
+       * LO YA CONTADO, que NO es la marca de agua (ver `ACHIEVEMENTS_TOLD_KEY`). La marca dice qué tienes y la
+       * escriben también el hub y el panel; esta dice qué se te ha anunciado y la escribe solo este hook.
+       *
+       * Se siembra de la marca de agua mientras no exista: lo conseguido antes de que esta clave naciera se da
+       * por contado, que es lo que evita soltarle el historial entero a quien lleva meses usando la app.
+       */
+      const contadoRaw = leer(keys.ACHIEVEMENTS_TOLD_KEY) || peak;
+      const contado = evaluate.parsePeak(contadoRaw);
 
       const states = evaluate.evaluateAchievements(
         {
@@ -91,100 +156,134 @@ export function useAchievementNotice(
         peak,
       );
 
-      const foto = new Map<string, Foto>(states.map((state) => [
-        state.id,
-        // El progreso solo tiene sentido hacia lo que AÚN NO TIENES: `next` es el umbral que falta, y en un
-        // escalón ya conseguido es `null`. Una escalera descendente no tiene «porcentaje de camino» —el valor
-        // baja hacia el umbral— así que se queda en 0 y no genera hitos.
-        { level: state.level, ratio: state.next && state.next > 0 ? state.value / state.next : 0 },
-      ]));
-      const before = previous.current;
-      previous.current = foto;
+      const toma: Toma = {
+        escalones: new Map<string, Foto>(states.map((state) => [
+          state.id,
+          // El progreso solo tiene sentido hacia lo que AÚN NO TIENES: `next` es el umbral que falta, y en un
+          // escalón ya conseguido es `null`. Una escalera descendente no tiene «porcentaje de camino» —el valor
+          // baja hacia el umbral— así que se queda en 0 y no genera hitos.
+          { level: state.level, ratio: state.next && state.next > 0 ? state.value / state.next : 0 },
+        ])),
+        epoca: catalog.catalogEpoch(),
+        juegos: tamañoDe(games),
+      };
+      const antes = previous.current;
+      previous.current = toma;
 
       // La marca de agua se guarda siempre que sube y nunca baja.
       const grown = evaluate.nextPeak(states, peak);
-      if (grown !== peak) {
-        try {
-          localStorage.setItem(keys.ACHIEVEMENTS_PEAK_KEY, grown);
-        } catch {
-          // ídem
-        }
-      }
+      if (grown !== peak) guardar(keys.ACHIEVEMENTS_PEAK_KEY, grown);
 
-      /**
-       * SEMBRAR Y CALLAR… SALVO LO QUE HAYA CAÍDO DESDE LA ÚLTIMA VEZ.
-       *
-       * Sin foto previa no hay «cambio», hay una foto inicial, y por eso la primera evaluación de la sesión no
-       * anuncia lo que ya estaba. Pero eso trataba igual dos cosas muy distintas:
-       *
-       *  - **la primera vez en este aparato** —no hay marca de agua— donde de verdad no hay noticia que dar;
-       *  - y **volver a abrir la app y encontrarse logros nuevos**, que sí la hay. Pasa al desplegar una
-       *    ampliación del catálogo (noventa y ocho escalones nuevos concedidos de golpe a quien ya tenía
-       *    biblioteca) y pasa también al sincronizar: lo que se cerró en el móvil se concede aquí al abrir.
-       *
-       * La MARCA DE AGUA distingue los dos casos sin guardar nada nuevo: si existe, este aparato ya había
-       * evaluado, y lo que ahora está conseguido y NO figura en ella es exactamente lo que ha caído desde
-       * entonces. Se anuncia una vez —la marca se guarda a continuación— y nunca se repite.
-       *
-       * Los «primeros pasos» quedan fuera: no se publican, no puntúan y su sitio es el de arranque, no un
-       * resumen de lo que te esperaba.
-       */
-      if (!before) {
-        if (!peak) return;
-        const conocidos = evaluate.parsePeak(peak);
-        const estreno = states
-          .filter((state) => state.level >= 1 && !conocidos.has(state.id))
-          .map((state) => catalog.ACHIEVEMENTS_BY_ID.get(state.id))
-          .filter((def) => Boolean(def) && def?.family !== 'onboarding')
-          .map((def) => def!);
-        if (estreno.length === 0) return;
-        setFlash({ kind: 'catalog', defs: estreno });
-        notify('ok', estreno.length === 1
-          ? labels.ACHIEVEMENTS_UI.unlockedOne(estreno[0].labels.name)
-          : labels.ACHIEVEMENTS_UI.unlockedMany(estreno.length));
-        return;
-      }
+      /** Lo conseguido que todavía no se ha anunciado. Los «primeros pasos» no entran: su sitio es el arranque. */
+      const sinContar = (): AchievementDef[] => states
+        .filter((state) => state.level >= 1 && !contado.has(state.id))
+        .map((state) => catalog.ACHIEVEMENTS_BY_ID.get(state.id))
+        .filter((def): def is AchievementDef => Boolean(def) && def?.family !== 'onboarding');
 
-      const risen = states.filter((state) => state.level > (before.get(state.id)?.level ?? 0));
-
-      if (risen.length > 0) {
-        const defs = risen
-          .map((state) => catalog.ACHIEVEMENTS_BY_ID.get(state.id))
-          .filter((def): def is NonNullable<typeof def> => Boolean(def));
-        if (defs.length === 0) return;
-        setFlash({ kind: 'unlock', defs });
-        // El momento que puede celebrar cada tema (ver `core/effects/moments`). Solo el DESBLOQUEO: el sembrado
-        // de una ampliación del catálogo y los hitos a mitad de escalera no son un logro conseguido ahora.
-        emitMoment('achievement-unlocked');
+      const capsula = (defs: readonly AchievementDef[], kind: 'unlock' | 'catalog'): Aviso => ({
+        flash: { kind, defs },
         // El texto sigue yendo al banner: es su región viva la que lo anuncia (A11y-4). El nombre YA trae su
         // grado desde el catálogo, así que componerlo otra vez lo diría dos veces.
-        notify('ok', defs.length === 1
+        texto: defs.length === 1
           ? labels.ACHIEVEMENTS_UI.unlockedOne(defs[0].labels.name)
-          : labels.ACHIEVEMENTS_UI.unlockedMany(defs.length));
-        return;
-      }
+          : labels.ACHIEVEMENTS_UI.unlockedMany(defs.length),
+      });
 
-      // EL HITO, y solo si se CRUZA en esta escritura. De los que se cruzan a la vez gana el más avanzado: es el
-      // que está más cerca de convertirse en medalla, y anunciar dos hitos de golpe en una sola cápsula no dice
-      // nada («vas por la mitad de dos cosas»).
-      let mejor: { id: string; ratio: number; umbral: number } | null = null;
-      for (const state of states) {
-        if (state.level >= 1 || !state.next || state.next <= 0) continue;
-        const antes = before.get(state.id);
-        if (!antes || antes.level >= 1) continue;
-        const ratio = state.value / state.next;
-        for (const umbral of MILESTONES) {
-          if (antes.ratio < umbral && ratio >= umbral && (!mejor || ratio > mejor.ratio)) {
-            mejor = { id: state.id, ratio, umbral };
+      function decidir(): Aviso | null {
+        /**
+         * SEMBRAR Y CALLAR… SALVO LO QUE HAYA CAÍDO DESDE LA ÚLTIMA VEZ.
+         *
+         * Sin foto previa no hay «cambio», hay una foto inicial, y por eso la primera evaluación de la sesión no
+         * anuncia lo que ya estaba. Pero eso trataba igual dos cosas muy distintas:
+         *
+         *  - **la primera vez en este aparato** —no hay nada contado— donde de verdad no hay noticia que dar;
+         *  - y **volver a abrir la app y encontrarse logros nuevos**, que sí la hay. Pasa al desplegar una
+         *    ampliación del catálogo (noventa y ocho escalones nuevos concedidos de golpe a quien ya tenía
+         *    biblioteca) y pasa también al sincronizar: lo que se cerró en el móvil se concede aquí al abrir.
+         */
+        if (!antes) {
+          if (!contadoRaw) return null;
+          const estreno = sinContar();
+          return estreno.length > 0 ? capsula(estreno, 'catalog') : null;
+        }
+
+        /**
+         * LA BIBLIOTECA ACABA DE LLEGAR, que no es lo mismo que haber hecho algo. El estado de arranque sale de
+         * `localStorage` de forma síncrona, pero `loadLocalStateAsync` puede hidratar desde IndexedDB un momento
+         * después, y entonces la foto de referencia se tomó con cero juegos: todo lo que la biblioteca sostiene
+         * aparece «recién subido» y las escaleras a medias cruzan sus hitos de golpe.
+         *
+         * De cero a UN juego sí se anuncia: ese es el primer juego de verdad de alguien, y el que enciende los
+         * primeros pasos. Lo que se descarta es el salto en bloque, que además es el de una importación — y esa,
+         * por la misma regla de siempre, no reparte veinte avisos.
+         */
+        if (antes.juegos === 0 && toma.juegos > 1) return null;
+
+        /**
+         * EL CATÁLOGO HA CRECIDO ENTRE LAS DOS FOTOS. No son comparables: los escalones que el panel acaba de
+         * añadir no estaban en la anterior y restarlos diría que se han conseguido ahora. Lo que de verdad es
+         * nuevo —lo que nadie ha contado todavía— se cuenta como ampliación, en una sola cápsula y sin
+         * celebración; el resto se calla.
+         */
+        if (antes.epoca !== toma.epoca) {
+          const estreno = sinContar();
+          return estreno.length > 0 ? capsula(estreno, 'catalog') : null;
+        }
+
+        // LO QUE SUBE EN ESTA ESCRITURA. `contado` es el cinturón de seguridad: un escalón ya anunciado no vuelve
+        // a serlo aunque la foto anterior no lo tuviera por el motivo que sea.
+        const risen = states.filter((state) =>
+          state.level > (antes.escalones.get(state.id)?.level ?? 0) && !contado.has(state.id));
+
+        if (risen.length > 0) {
+          const defs = risen
+            .map((state) => catalog.ACHIEVEMENTS_BY_ID.get(state.id))
+            .filter((def): def is AchievementDef => Boolean(def));
+          return defs.length > 0 ? capsula(defs, 'unlock') : null;
+        }
+
+        // EL HITO, y solo si se CRUZA en esta escritura. De los que se cruzan a la vez gana el más avanzado: es el
+        // que está más cerca de convertirse en medalla, y anunciar dos hitos de golpe en una sola cápsula no dice
+        // nada («vas por la mitad de dos cosas»).
+        let mejor: { id: string; ratio: number; umbral: number } | null = null;
+        for (const state of states) {
+          if (state.level >= 1 || !state.next || state.next <= 0) continue;
+          const previo = antes.escalones.get(state.id);
+          if (!previo || previo.level >= 1) continue;
+          const ratio = state.value / state.next;
+          for (const umbral of MILESTONES) {
+            if (previo.ratio < umbral && ratio >= umbral && (!mejor || ratio > mejor.ratio)) {
+              mejor = { id: state.id, ratio, umbral };
+            }
           }
         }
+        if (!mejor) return null;
+        const def = catalog.ACHIEVEMENTS_BY_ID.get(mejor.id);
+        const state = states.find((item) => item.id === mejor.id);
+        if (!def || !state || !state.next) return null;
+        return {
+          flash: { kind: 'milestone', def, value: state.value, step: state.next },
+          texto: labels.ACHIEVEMENTS_UI.milestoneAria(def.labels.name, Math.round(mejor.ratio * 100)),
+        };
       }
-      if (!mejor) return;
-      const def = catalog.ACHIEVEMENTS_BY_ID.get(mejor.id);
-      const state = states.find((item) => item.id === mejor.id);
-      if (!def || !state || !state.next) return;
-      setFlash({ kind: 'milestone', def, value: state.value, step: state.next });
-      notify('ok', labels.ACHIEVEMENTS_UI.milestoneAria(def.labels.name, Math.round(mejor.ratio * 100)));
+
+      const aviso = decidir();
+
+      /**
+       * Y SE APUNTA LO CONTADO, se haya anunciado o no. Las dos mitades son necesarias: lo que se acaba de
+       * enseñar no puede repetirse, y lo que se ha callado a propósito —la siembra, la biblioteca que llega, la
+       * retroactividad de una ampliación— tampoco puede salir tres minutos después como si fuera nuevo. Un solo
+       * sitio, al final, para que ningún camino de salida se lo deje.
+       */
+      const siguiente = evaluate.nextPeak(states, contadoRaw);
+      if (siguiente !== contadoRaw) guardar(keys.ACHIEVEMENTS_TOLD_KEY, siguiente);
+
+      if (!aviso) return;
+      setFlash(aviso.flash);
+      // El momento que puede celebrar cada tema (ver `core/effects/moments`). Solo el DESBLOQUEO: el sembrado
+      // de una ampliación del catálogo y los hitos a mitad de escalera no son un logro conseguido ahora.
+      if (aviso.flash.kind === 'unlock') emitMoment('achievement-unlocked');
+      notify('ok', aviso.texto);
     });
 
     return () => {

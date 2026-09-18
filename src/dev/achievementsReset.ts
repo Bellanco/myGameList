@@ -8,6 +8,9 @@
  *   · LA MARCA DE AGUA (`ACHIEVEMENTS_PEAK_KEY`). Por diseño **nunca baja**: es lo que impide que un logro se
  *     retire cuando borras cinco duplicados o corriges unos años mal puestos (§5.5). Muy bien para un usuario de
  *     verdad y muy incómodo para uno de pruebas, que acumula sesión tras sesión lo que ya no le corresponde.
+ *   · LO YA CONTADO (`ACHIEVEMENTS_TOLD_KEY`), que es lo que impide que una medalla vieja vuelva a saltar. Se
+ *     borra con la marca porque responde a otra pregunta y las dos tienen que caer juntas: con una sola borrada,
+ *     o se repite todo el historial o no se anuncia nada.
  *   · EL SELLO DE LA RULETA (`ROULETTE_USED_KEY`), que es el único dato del catálogo que se registra en vez de
  *     derivarse: la ruleta es una función pura y sin él no habría forma de saber que se usó.
  *
@@ -17,9 +20,9 @@
  * CÓMO SE USA, desde la consola del navegador:
  *
  *     logros.marca()     → qué guarda la marca de agua ahora mismo
- *     logros.olvidar()   → borra marca y sello, y recarga: el aparato vuelve a estar recién instalado
+ *     logros.olvidar()   → borra marca, contados y sello, y recarga: el aparato vuelve a estar recién instalado
  */
-import { ACHIEVEMENTS_PEAK_KEY, ROULETTE_USED_KEY } from '../core/constants/storageKeys';
+import { ACHIEVEMENTS_PEAK_KEY, ACHIEVEMENTS_TOLD_KEY, ROULETTE_USED_KEY } from '../core/constants/storageKeys';
 
 declare global {
   interface Window {
@@ -39,6 +42,10 @@ export function installAchievementReset(): void {
     olvidar: () => {
       try {
         localStorage.removeItem(ACHIEVEMENTS_PEAK_KEY);
+        // Y LO YA CONTADO (`ACHIEVEMENTS_TOLD_KEY`), que es la otra memoria que sobrevive a todo: sin borrarla,
+        // el aparato volvería a estar recién instalado para los logros pero seguiría creyendo que ya te los
+        // anunció, así que no saldría ni una cápsula.
+        localStorage.removeItem(ACHIEVEMENTS_TOLD_KEY);
         localStorage.removeItem(ROULETTE_USED_KEY);
       } catch {
         return 'Sin almacenamiento: no hay nada que olvidar.';
@@ -46,7 +53,7 @@ export function installAchievementReset(): void {
       // Se recarga porque la marca se lee al evaluar, y evaluar pasa en el render: sin recargar, la pantalla
       // sigue enseñando lo de antes y parece que el borrado no ha hecho nada.
       setTimeout(() => location.reload(), 0);
-      return 'Marca de agua y sello de la ruleta borrados. Recargando…';
+      return 'Marca de agua, avisos contados y sello de la ruleta borrados. Recargando…';
     },
   };
   // eslint-disable-next-line no-console
