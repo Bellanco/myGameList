@@ -23,7 +23,7 @@ import { PALETTES } from '../../src/core/constants/palettes';
  *  - AJUSTES, que es donde vive la mayor densidad de texto secundario del proyecto: notas de tarjeta, cajas de
  *    ayuda sobre superficie elevada y los enlaces teñidos con el acento. Cinco de las seis paletas tenían aquí
  *    algún contraste por debajo del 4,5:1 cuando esta pantalla no se auditaba.
- *  - La PUERTA DE ENTRADA del hub social, que es la única pantalla con una barra de progreso: le faltaba el
+ *  - La PUERTA DE ENTRADA del hub social, que tuvo la única barra de progreso de la aplicación: le faltaba el
  *    nombre accesible en las doce combinaciones, y no lo veía nadie porque el hub no se auditaba.
  *  - La RULETA, que es un modal y trae su propio juego de color (marco, pistas, ficha del resultado).
  *

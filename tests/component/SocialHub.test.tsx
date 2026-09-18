@@ -133,15 +133,24 @@ vi.mock('../../src/core/achievements/flags', () => ({
 }));
 
 import { SocialHub } from '../../src/view/components/SocialHub';
+import { GithubConnectionProvider, type GithubConnection } from '../../src/viewmodel/sync/githubConnection';
+import { SETTINGS_UI } from '../../src/core/constants/settingsLabels';
 import { SHARE_UI } from '../../src/core/constants/shareLabels';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { LEGAL_CONSENT_UI, LEGAL_VERSION } from '../../src/core/constants/legal';
 import { DEFAULT_PALETTE } from '../../src/core/constants/palettes';
 
-function renderHub(initialPath = '/social', games?: unknown) {
+/**
+ * `conexionGithub` = lo que `App` reparte por contexto para que la pasarela pueda conectar sin salir de social.
+ * `null` (por defecto) es el hub montado SUELTO, sin ese árbol: la pasarela debe seguir funcionando con su botón
+ * de siempre, que es lo que hace que este fichero no tenga que montar la aplicación entera.
+ */
+function renderHub(initialPath = '/social', games?: unknown, conexionGithub: GithubConnection | null = null) {
   return render(
     <MemoryRouter initialEntries={[initialPath]}>
-      <SocialHub games={games as never} />
+      <GithubConnectionProvider value={conexionGithub}>
+        <SocialHub games={games as never} />
+      </GithubConnectionProvider>
     </MemoryRouter>,
   );
 }
@@ -249,14 +258,14 @@ describe('SocialHub (componente, post-M3)', () => {
     firebaseMocks.getPublicConfig.mockResolvedValue({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
   });
 
-  it('sin sesión muestra el gateway (barra de progreso de configuración)', async () => {
+  it('sin sesión muestra el gateway (la lista de pasos para entrar)', async () => {
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue(null);
 
     renderHub();
 
-    // El gateway tiene un role="progressbar" que NO existe en el espacio social autenticado.
-    const progress = await screen.findByRole('progressbar');
-    expect(progress).toBeInTheDocument();
+    // La pasarela tiene la lista de sus pasos, que NO existe en el espacio social autenticado. (Antes se
+    // reconocía por su barra de progreso, que se fue con el rediseño a dos pasos: la lista ES el progreso.)
+    expect(await screen.findByRole('list', { name: SOCIAL_UI.gateway.stepsAria })).toBeInTheDocument();
     expect(firebaseMocks.getCurrentSocialAuthUser).toHaveBeenCalled();
   });
 
@@ -274,7 +283,7 @@ describe('SocialHub (componente, post-M3)', () => {
     // Tras resolver los efectos, se abandona el gateway (ya no hay progressbar de configuración).
     await waitFor(() => {
       expect(firebaseMocks.getCurrentSocialAuthUser).toHaveBeenCalled();
-      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+      expect(screen.queryByRole('list', { name: SOCIAL_UI.gateway.stepsAria })).not.toBeInTheDocument();
     });
   });
 
@@ -304,7 +313,7 @@ describe('SocialHub (componente, post-M3)', () => {
     renderHub('/social/user/pseudonimo-de-ana/game/7/review');
 
     await waitFor(() => {
-      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+      expect(screen.queryByRole('list', { name: SOCIAL_UI.gateway.stepsAria })).not.toBeInTheDocument();
     });
     expect(scrollTo).not.toHaveBeenCalled();
   });
@@ -323,7 +332,7 @@ describe('SocialHub (componente, post-M3)', () => {
     renderHub('/social');
 
     await waitFor(() => {
-      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+      expect(screen.queryByRole('list', { name: SOCIAL_UI.gateway.stepsAria })).not.toBeInTheDocument();
     });
     expect(scrollTo).not.toHaveBeenCalled();
   });
@@ -392,8 +401,8 @@ describe('SocialHub (componente, post-M3)', () => {
     renderHub();
 
     expect(await screen.findByText(LEGAL_CONSENT_UI.checkbox)).toBeInTheDocument();
-    // Se queda en el gateway (la barra de progreso solo existe ahí).
-    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    // Se queda en el gateway (la lista de pasos solo existe ahí).
+    expect(screen.getByRole('list', { name: SOCIAL_UI.gateway.stepsAria })).toBeInTheDocument();
   });
 
   it('una versión de condiciones antigua vuelve a pedir la aceptación', async () => {
@@ -421,7 +430,7 @@ describe('SocialHub (componente, post-M3)', () => {
         consent: { version: LEGAL_VERSION, agreedAt: expect.any(Number) },
       });
     });
-    await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('list', { name: SOCIAL_UI.gateway.stepsAria })).not.toBeInTheDocument());
   });
 
   it('con sesión válida NO parpadea el gateway mientras se comprueba el consentimiento', async () => {
@@ -439,13 +448,13 @@ describe('SocialHub (componente, post-M3)', () => {
     // ni gateway (progressbar) ni botón de cerrar sesión al alcance del dedo.
     await waitFor(() => expect(firebaseMocks.getPublicConfig).toHaveBeenCalledWith('uid-1'));
     expect(screen.getByText(SOCIAL_UI.loading)).toBeInTheDocument();
-    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: SOCIAL_UI.gateway.stepsAria })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: SOCIAL_UI.gateway.signOut })).not.toBeInTheDocument();
 
     // Al responder con el consentimiento vigente se entra al espacio social sin haber pasado por el gateway.
     resolveConsent({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
     await waitFor(() => expect(screen.queryByText(SOCIAL_UI.loading)).not.toBeInTheDocument());
-    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: SOCIAL_UI.gateway.stepsAria })).not.toBeInTheDocument();
   });
 
   it('feed: NO enseña el vacío "no tienes amigos" mientras las amistades siguen en vuelo', async () => {
@@ -628,7 +637,7 @@ describe('SocialHub (componente, post-M3)', () => {
 
     renderHub();
 
-    await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('list', { name: SOCIAL_UI.gateway.stepsAria })).not.toBeInTheDocument());
   });
 
   // El auto-heal del DIRECTORIO se retiró: mantenía `profiles.social.gistId`, que ha dejado de publicarse.
@@ -1996,5 +2005,99 @@ describe('SocialHub — los logros de otras personas', () => {
     // sin espejo que pintar: ni una medalla. (En tu propia ficha la lista es el catálogo, así que la escalera
     // entera está ahí: lo que se comprueba es que hay medallas, no cuántas.)
     expect(await screen.findAllByRole('img', { name: /^Créditos finales/ })).not.toHaveLength(0);
+  });
+});
+
+/**
+ * EL PRIMER PASO DE LA PASARELA, DENTRO DE SOCIAL.
+ *
+ * Conectar GitHub era lo único de los tres pasos que no se podía hacer aquí: el botón llevaba a Ajustes y, una vez
+ * allí, no había camino de vuelta —quien venía a darse de alta en social terminaba en otra pantalla, conectaba y
+ * tenía que acordarse de volver—. Ahora la pasarela monta la MISMA tarjeta que Integración.
+ */
+describe('SocialHub — el alta social conecta GitHub sin salir de la pantalla', () => {
+  const conexion = (overrides: Partial<GithubConnection> = {}): GithubConnection => ({
+    statusText: 'No sincronizado',
+    hasConfig: false,
+    connectedGistId: '',
+    token: '',
+    gistId: '',
+    errorMessage: '',
+    recoveringGistId: false,
+    oauthEnabled: true,
+    oauthLoggingIn: false,
+    onOAuthLogin: vi.fn(),
+    onTokenChange: vi.fn(),
+    onGistIdChange: vi.fn(),
+    onConnect: vi.fn(),
+    onDisconnect: vi.fn(),
+    onCopyGistId: vi.fn(),
+    onRecoverGistId: vi.fn(),
+    ...overrides,
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    // Sin sincronización principal: es el paso 1 y el único estado en el que la tarjeta tiene algo que ofrecer.
+    gistMocks.getSyncConfig.mockReturnValue(null);
+    gistMocks.getSocialSyncConfig.mockReturnValue(null);
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue(null);
+  });
+
+  it('el paso 1 es el botón de GitHub, igual que el de Google, y no el que llevaba a Ajustes', async () => {
+    const conn = conexion();
+    const { container } = renderHub('/social', undefined, conn);
+
+    await screen.findByText(SETTINGS_UI.sync.oauthConnectBtn);
+    const boton = screen.getByRole('button', { name: SETTINGS_UI.sync.oauthConnectBtn });
+    expect(screen.queryByText(SOCIAL_UI.gateway.connectSync)).not.toBeInTheDocument();
+
+    // EL MISMO BOTÓN QUE EL DEL PASO 2 Y DENTRO DE SU PASO: mismas clases, y colgando del peldaño que toca en
+    // vez de suelto en una fila aparte. Es lo que hace que el alta se lea como dos gestos iguales.
+    expect(boton).toHaveClass('hub-gateway-btn-primary');
+    expect(container.querySelector('.hub-gateway-stage.is-current')?.contains(boton)).toBe(true);
+    // Y nada de lo que asusta antes de pulsar: ni campo «Token», ni semáforo, ni la puerta al modo manual.
+    expect(screen.queryByLabelText(SETTINGS_UI.sync.tokenLabel)).not.toBeInTheDocument();
+    expect(screen.queryByText(SETTINGS_UI.sync.manualToggleShow)).not.toBeInTheDocument();
+    expect(container.querySelector('.sync-state')).toBeNull();
+
+    fireEvent.click(boton);
+    expect(conn.onOAuthLogin).toHaveBeenCalled();
+  });
+
+  /**
+   * SIN OAUTH EN EL BUILD, EL BOTÓN DE SIEMPRE. Lo único que quedaría por ofrecer aquí es pegar un token a mano,
+   * que es justo lo que esta pantalla no debe pedir: se vuelve al camino a Integración, que es donde ese modo se
+   * explica con su ayuda al lado.
+   */
+  it('sin OAuth en el build, el paso 1 vuelve a llevar a Ajustes', async () => {
+    renderHub('/social', undefined, conexion({ oauthEnabled: false }));
+
+    expect(await screen.findByText(SOCIAL_UI.gateway.connectSync)).toBeInTheDocument();
+    expect(screen.queryByText(SETTINGS_UI.sync.oauthConnectBtn)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(SETTINGS_UI.sync.tokenLabel)).not.toBeInTheDocument();
+  });
+
+  // Con la sincronización ya conectada el paso 1 está hecho: la tarjeta desaparece y manda el paso 2 (Google).
+  it('con la sincronización ya conectada, la tarjeta deja sitio al paso de Google', async () => {
+    gistMocks.getSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'games', etag: null, lastRemoteUpdatedAt: 0 } as never);
+
+    renderHub('/social', undefined, conexion({ hasConfig: true, connectedGistId: 'games' }));
+
+    expect(await screen.findByText(SOCIAL_UI.gateway.signIn)).toBeInTheDocument();
+    expect(screen.queryByText(SETTINGS_UI.sync.oauthConnectBtn)).not.toBeInTheDocument();
+  });
+
+  /**
+   * SIN LA CONEXIÓN A MANO, EL CAMINO DE ANTES. El hub se monta también fuera del árbol de `App` (estas mismas
+   * pruebas), y ahí no hay conexión que ofrecer: el paso 1 vuelve a ser el botón que lleva a Ajustes en vez de
+   * quedarse sin ninguna acción, que es lo que dejaría la pantalla en un callejón sin salida.
+   */
+  it('sin conexión disponible conserva el botón que lleva a Ajustes', async () => {
+    renderHub('/social');
+
+    expect(await screen.findByText(SOCIAL_UI.gateway.connectSync)).toBeInTheDocument();
+    expect(screen.queryByText(SETTINGS_UI.sync.oauthConnectBtn)).not.toBeInTheDocument();
   });
 });
