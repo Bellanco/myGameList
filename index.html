@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0f1315">
+    <!-- QUÉ VERSIÓN EJECUTA ESTE DOCUMENTO. Lo sustituye el plugin `service-worker-precache` de
+         `vite.config.ts` por el mismo identificador que lleva dentro el service worker, y sirve para una sola
+         cosa: que `core/utils/appUpdate` sepa distinguir «hay una versión nueva y tú tienes la vieja» de «el
+         worker nuevo acaba de relevar al viejo, pero tú ya cargaste esta misma versión». Sin esto, la primera
+         apertura después de cada despliegue anunciaba una actualización que el usuario ya tenía puesta. En
+         desarrollo se queda el token sin sustituir, que se lee como «no se sabe». -->
+    <meta name="app-build" content="__BUILD_ID__">
     <!-- F1: aplica el tema/paleta guardados ANTES del primer render (evita el flash). Inline para
          ahorrar una petición bloqueante en la ruta crítica. Al no ser 'self' externo, la CSP lo
          admite por hash SHA-256: si tocas este bloque, recalcula el hash en `public/_headers`

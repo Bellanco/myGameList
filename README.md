@@ -179,6 +179,11 @@ Ajustes en el dashboard de Cloudflare Pages:
 - **Arranca sin red**: cargar, cortar la conexión y recargar — la app debe pintar las listas (no un rectángulo
   en blanco). Ojo: en `localhost` el service worker se desregistra a propósito; hay que probarlo en el dominio
   desplegado o con `preview` sobre `127.0.0.1`.
+- **La primera apertura no pide actualizar.** Abrir el dominio recién desplegado en una pestaña nueva: no debe
+  salir el aviso de versión nueva. Ese documento ya ES la versión recién publicada (el HTML va con `no-store`),
+  aunque durante unos segundos lo sirva todavía el service worker anterior. Lo distingue el identificador de
+  build que comparten `<meta name="app-build">` y `service-worker.js`; si vuelve a salir, lo primero que hay que
+  mirar es si el plugin `service-worker-precache` los ha dejado con el mismo valor.
 - **Tipografías del propio origen**: ninguna petición a `fonts.googleapis.com` ni `fonts.gstatic.com`, ni con la
   paleta por defecto ni activando un tema.
 - Login social y lectura/escritura de Gist OK.
