@@ -30,6 +30,36 @@ function makeData(n: number, reviewLen = 900): TabData {
   return { c, v: [], e: [], p: [], deleted: [], updatedAt: 1 };
 }
 
+/**
+ * EL MISMO DATASET, PERO INCOMPRESIBLE — y esto no es un detalle de montaje, es lo único que hace que las
+ * pruebas de ESCRITURA de abajo comprueben algo.
+ *
+ * `makeData` rellena las reseñas con la letra `x` repetida. Vale para las pruebas de LECTURA, que trabajan sobre
+ * `buildGamesFiles` y miden JSON PLANO. Pero la escritura pasa por `buildGamesFilesForStorage`, que desde que
+ * `ENABLE_GAMES_COMPRESSION` está activo mide el tamaño REAL almacenado: 6,82 MB de la misma letra se comprimen
+ * hasta caber en UN fichero, así que no había excedente, no se creaba ningún gist de desborde y la prueba de
+ * reutilización pasaba en vacío (`0 === 0`). Medido: con `x` salen 0 gists de overflow y 1 fichero en el PATCH;
+ * con ruido, 1 gist y 5 ficheros (ancla + los 4 chunks que se queda el principal).
+ *
+ * El ruido es DETERMINISTA (congruencial lineal con semilla fija): la misma entrada en cada ejecución, que es
+ * lo que permite afirmar cuántos gists se crean sin que el número baile.
+ */
+function makeIncompressibleData(n: number, reviewLen = 900): TabData {
+  let seed = 42;
+  const random = (): number => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+  const alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ';
+  const c: GameItem[] = [];
+  for (let i = 1; i <= n; i += 1) {
+    let review = '';
+    for (let j = 0; j < reviewLen; j += 1) review += alphabet[Math.floor(random() * alphabet.length)];
+    c.push({ ...makeGame(i, 0), review });
+  }
+  return { c, v: [], e: [], p: [], deleted: [], updatedAt: 1 };
+}
+
 function totalGames(data: TabData): number {
   return data.c.length + data.v.length + data.e.length + data.p.length;
 }
@@ -150,7 +180,9 @@ describe.skipIf(!ENABLE_GAMES_OVERFLOW_GISTS)('Fase B — escritura con gists de
 
   it('reparte el excedente en ≥1 gist de overflow y el round-trip reconstruye todo sin pérdida', async () => {
     const { posts } = stubMultiGistStore();
-    const data = makeData(7000); // suficientes chunks para superar el presupuesto del gist principal
+    // Incompresible a propósito: ver `makeIncompressibleData`. Con reseñas de una letra repetida no hay
+    // excedente que repartir y esta prueba pasaba sin ejercitar el reparto.
+    const data = makeIncompressibleData(7000); // suficientes chunks para superar el presupuesto del gist principal
 
     await writeGist(TOKEN, MAIN_ID, data);
     expect(posts.length).toBeGreaterThanOrEqual(1); // se creó al menos un gist de overflow
@@ -161,10 +193,13 @@ describe.skipIf(!ENABLE_GAMES_OVERFLOW_GISTS)('Fase B — escritura con gists de
 
   it('reutiliza el gist de overflow existente en una segunda escritura (no crea uno nuevo)', async () => {
     const { posts } = stubMultiGistStore();
-    const data = makeData(7000);
+    const data = makeIncompressibleData(7000);
 
     await writeGist(TOKEN, MAIN_ID, data);
     const afterFirst = posts.length;
+    // LA PREMISA, AFIRMADA: sin un gist de overflow en la primera escritura, «no crea uno nuevo» se cumple
+    // trivialmente y la prueba no dice nada. Es exactamente lo que pasaba con el dataset anterior.
+    expect(afterFirst).toBeGreaterThanOrEqual(1);
     await writeGist(TOKEN, MAIN_ID, { ...data, updatedAt: 2 });
     expect(posts.length).toBe(afterFirst); // sin nuevos POST: reutiliza el del manifiesto
   });

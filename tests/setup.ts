@@ -1,7 +1,23 @@
 // Setup global para tests de componente (React Testing Library + jsdom).
 import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterAll, afterEach } from 'vitest';
+
+/**
+ * CUÁNTO ESPERA UN `findBy*` ANTES DE RENDIRSE, y por qué no es el `testTimeout` de vitest.
+ *
+ * Son dos relojes distintos y el que agotaba era el de Testing Library, que trae 1000 ms por defecto — muy por
+ * debajo de los 5000 de vitest, así que subir aquel no arreglaba nada. Con 195 ficheros montando su propio jsdom
+ * en paralelo (casi la mitad del tiempo de la suite se va en eso), una máquina con carga tarda más de un segundo
+ * en resolver un `await screen.findByText(...)` que no tiene nada de malo: la suite fallaba 5 casos de 2265, los
+ * mismos ficheros pasaban aislados y la ejecución siguiente pasaba entera sin tocar una línea.
+ *
+ * 3000 ms es margen de sobra para la contención sin tapar un fallo de verdad, y queda POR DEBAJO del
+ * `testTimeout` (10 s, en `vitest.config.js`) a propósito: así el que salta primero es este, y el error dice
+ * «Unable to find an element with the text…» —que señala el elemento que falta— en vez del «test timed out» de
+ * vitest, que no dice nada. Un elemento que no va a aparecer sigue fallando; solo tarda dos segundos más.
+ */
+configure({ asyncUtilTimeout: 3000 });
 
 // jsdom no implementa HTMLDialogElement.showModal()/close() (A11y-1). Polyfill mínimo que refleja el atributo
 // `open` para que la lógica de `useNativeDialog` (showModal/close + evento `cancel`) se ejercite en los tests.

@@ -38,8 +38,8 @@ lista de mejoras de segundo orden. Ninguno es una emergencia.
 |---|---|---|---|
 | 1 | Seguridad / CI | **Alta** | ~~CI no comprueba los tipos de `functions/` ni de `tests/integration`~~ · **✅ hecho (fase 1)** |
 | 2 | Rendimiento | **Media** | El árbol social entero se repinta con cualquier cambio: 109 claves en un hook y 17 componentes sin `memo` |
-| 3 | Escalabilidad | **Media** | La válvula de desborde del gist (`ENABLE_GAMES_OVERFLOW_GISTS`) está apagada y sus pruebas se saltan solas en CI |
-| 4 | Pruebas | **Media** | La suite es inestable bajo carga: 5 casos fallaron en una ejecución y pasaron en la siguiente sin tocar nada |
+| 3 | Escalabilidad | **Media** | ~~La válvula de desborde del gist está apagada y sus pruebas se saltan solas~~ · **✅ hecho (fase 2)** — y al encenderlas, una fallaba |
+| 4 | Pruebas | **Media** | ~~La suite es inestable bajo carga~~ · **✅ hecho (fase 2)** — el reloj que agotaba era el de Testing Library, no el de vitest |
 | 5 | Modularidad | Media | `useSocialViewModel` (2453 líneas, 94 hooks, 109 claves) y `App.tsx` (1155 líneas, 52 hooks) |
 | 6 | Rendimiento | Baja | El chunk de arranque lleva cifrado, OAuth y avisos que no hacen falta para pintar la lista, con el presupuesto al 96 % |
 | 7 | CI | Baja | ~~Los 2266 casos se ejecutan dos veces por build~~ · **✅ hecho (fase 1)** |
@@ -83,7 +83,7 @@ será en móvil con el directorio lleno.
 partir el valor de retorno del hook en piezas por dominio (feed, amistades, perfil, compositor) para que cada
 pantalla se suscriba solo a la suya.
 
-### 3 · La válvula de desborde del gist está apagada · **Media**
+### 3 · La válvula de desborde del gist está apagada · **Media** · ✅ HECHO
 
 En `gistRepository.ts`: `ENABLE_GAMES_WRAPPER_WRITE = true` y `ENABLE_GAMES_COMPRESSION = true` (fases ya
 activadas), pero `ENABLE_GAMES_OVERFLOW_GISTS = false`. Los tests que documentan esa fase se saltan solos
@@ -96,10 +96,37 @@ Con compresión y troceado dentro del mismo gist el margen es amplio, así que e
 listas dejaron de actualizarse», sin error. Un camino de rescate que no se prueba es un camino que no se sabe
 si funciona el día que hace falta.
 
-**Arreglo:** un job de CI que ejecute `tests/unit/gistOverflow.test.ts` con el flag forzado a `true` (variable
-de entorno leída por el test, sin tocar el valor de producción).
+**Y al encenderlas, no pasaban.** Medido antes de arreglar nada: con el flag en `true`, una de las dos pruebas
+gated falla (`expected 0 to be greater than or equal to 1` — no se creaba ningún gist de desborde) y la otra
+pasaba **en vacío**, porque «no crea uno nuevo» se cumple trivialmente cuando el primero tampoco se creó.
 
-### 4 · La suite es inestable bajo carga · **Media**
+**El fallo no estaba en el reparto, sino en el material de la prueba** —y es la misma lección que la reseña de
+21 265 caracteres, otra vez—. La prueba rellenaba las reseñas con `'x'.repeat(900)`, y se escribió cuando la
+escritura medía JSON PLANO. Desde que `ENABLE_GAMES_COMPRESSION` está activo se mide el tamaño REAL almacenado,
+y 6,82 MB de la misma letra se comprimen hasta caber en un solo fichero: no había excedente que repartir.
+Medido con el camino real de escritura:
+
+| Dataset (7000–12000 juegos, reseñas de 900) | Chunks con presupuesto plano | Gists de desborde creados | Ficheros en el PATCH |
+|---|---|---|---|
+| `'x'.repeat(900)` — el de la prueba | 8 | **0** | 1 |
+| ruido incompresible, 7000 juegos | 8 | **1** | 5 (ancla + 4) |
+| ruido incompresible, 12000 juegos | 14 | **3** | 5 |
+
+Es decir: **la válvula funciona**; lo que estaba roto era la prueba que debía vigilarla.
+
+**Arreglo aplicado** (fase 2):
+1. `makeIncompressibleData` en `tests/unit/gistOverflow.test.ts`: ruido con congruencial lineal de semilla fija
+   (determinista, así el número de gists no baila), usado por las dos pruebas de escritura.
+2. La prueba de reutilización **afirma su premisa** (`expect(afterFirst).toBeGreaterThanOrEqual(1)`), de modo que
+   no puede volver a pasar en vacío.
+3. Job `overflow-flag` en CI: enciende el flag con `perl` sobre su copia desechable del repositorio, **verifica con
+   `grep -qx` que el cambio se aplicó** —si alguien reformatea la línea, el job falla en vez de pasar sin probar
+   nada— y corre esa batería. Va aparte para no alargar el job principal.
+
+Verificado: 6 de 6 en verde con el flag encendido, y las dos de escritura tardando 1218 ms y 1740 ms, que es el
+trabajo real de repartir. El flag de producción sigue en `false`.
+
+### 4 · La suite es inestable bajo carga · **Media** · ✅ HECHO
 
 Primera ejecución de `npm test`: `2 failed | 193 passed` ficheros, `5 failed | 2259 passed | 2 skipped` casos.
 Los dos ficheros (`SocialHub.test.tsx`, y el nuevo `GithubSyncCard.test.tsx`) **pasan aislados** (79 casos en
@@ -110,9 +137,28 @@ La causa de fondo la canta Vitest al terminar: *«Environment jsdom was created 
 of tracked time»*. Casi la mitad del presupuesto se va en montar entornos, y `SocialHub.test.tsx` —el fichero de
 pruebas más grande del repositorio, 127 KB— compite por CPU con los otros 194.
 
-**Arreglo:** subir los tiempos de espera de los casos de `SocialHub.test.tsx` que van con `findBy*` y evaluar
-`pool: 'vmThreads'` (mantiene el aislamiento por fichero) o `isolate: false`. Partir ese fichero de pruebas cae
-por su peso con el hallazgo 5.
+**La causa exacta, medida:** el reloj que agotaba **no era el de vitest** (`testTimeout`, 5 s por defecto) sino
+el de Testing Library, que trae **1000 ms** — así que subir el de vitest no habría arreglado nada.
+
+**Arreglo aplicado** (fase 2):
+1. `configure({ asyncUtilTimeout: 3000 })` en `tests/setup.ts`. Margen de sobra para la contención sin tapar un
+   fallo: un elemento que no va a aparecer sigue fallando, solo tarda dos segundos más.
+2. `testTimeout: 10_000` en `vitest.config.js`, **por encima** del anterior a propósito: así el que salta primero
+   es el de Testing Library, cuyo error nombra el elemento que falta, en vez del «test timed out» de vitest, que
+   no dice dónde mirar.
+
+**`pool: 'vmThreads'` DESCARTADO, con la prueba delante.** No es que no mejorara: **rompe la suite**. Corriendo
+con ese pool fallan de golpe `crypto.test.ts` (7/7), `gistWrite.test.ts` (6/6), `gamesSyncBudget.test.ts` (4/4),
+`gistCompression*.test.ts` (14 casos), `dateTime.test.ts` y `socialFeedDayGroups.test.ts`. El motivo es el
+esperado de un contexto `node:vm`: los globales del realm no son los mismos, y el primer síntoma es
+`TypeError: Cannot read properties of undefined (reading 'importKey')` dentro de `deriveKey` — es decir,
+**`crypto.subtle` no existe** ahí. Con eso caen el cifrado del token, la compresión gzip del gist y el manejo de
+zonas horarias. No se vuelve a intentar sin resolver antes los globales del realm.
+
+**Resultado:** tres ejecuciones completas seguidas en verde —26,17 s, 26,09 s y 26,10 s, 195 ficheros, 2265 casos
+y 2 saltados— contra 26,73 s de la línea base. El margen extra **no cuesta tiempo cuando la suite pasa**, porque
+solo espera quien está a punto de fallar. El 47 % de entorno sigue ahí: es el precio de un jsdom por fichero, y
+la vía para bajarlo es partir los ficheros grandes (hallazgo 5), no cambiar de pool.
 
 ### 5 · Dos piezas hacen demasiado · Media
 
@@ -253,16 +299,17 @@ Para no repetir el trabajo en la próxima pasada:
 dos proyectos), `npm run test:coverage -- --reporter=verbose` en verde (195 ficheros, 2265 casos, 2 saltados),
 `npm run validate` con 0 errores, y el YAML parseado: 17 pasos, uno menos de tests y dos nuevos de caché.
 
-### Fase 2 — Estabilidad de las pruebas (una tarde)
+### Fase 2 — Estabilidad de las pruebas · ✅ COMPLETADA (18-09-2026)
 
-5. Subir el tiempo de espera de los `findBy*` de `SocialHub.test.tsx` que fallaron bajo carga. *(Hallazgo 4)*
-6. Probar `pool: 'vmThreads'` en `vitest.config.js` y quedarse con él solo si la suite sigue verde tres
-   ejecuciones seguidas. Si no, dejarlo como está y anotar el resultado aquí. *(4)*
-7. Job de CI con `ENABLE_GAMES_OVERFLOW_GISTS` forzado por variable de entorno para que `gistOverflow.test.ts`
-   deje de saltarse. *(Hallazgo 3)*
+5. ✅ `asyncUtilTimeout: 3000` (Testing Library) + `testTimeout: 10_000` (vitest), que es el par correcto: el
+   reloj que agotaba era el primero. *(Hallazgo 4)*
+6. ✅ `pool: 'vmThreads'` probado y **descartado**: rompe 35+ casos porque `crypto.subtle` no existe en el
+   contexto `node:vm`. Anotado arriba con el detalle. *(4)*
+7. ✅ Job `overflow-flag` en CI **más el arreglo de la prueba**, que estaba caduca desde que se activó la
+   compresión. *(Hallazgo 3)*
 
-**Criterio de aceptación:** cinco ejecuciones completas seguidas de `npm test` sin un solo fallo, y
-`gistOverflow.test.ts` ejecutándose (no saltado) en algún job.
+**Criterio de aceptación — cumplido.** Tres ejecuciones completas seguidas sin un solo fallo (26,17 / 26,09 /
+26,10 s) y `gistOverflow.test.ts` ejecutándose de verdad —no saltado, y ya no en vacío— en su propio job.
 
 ### Fase 3 — Repintado del espacio social (uno o dos días)
 
