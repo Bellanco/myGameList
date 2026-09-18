@@ -210,38 +210,34 @@
   line-height: 1.4;
 }
 
-/* LA PORTADA DE `/ajustes`: las mismas cuatro entradas del menú, en tarjeta. Es una tarjeta que ADEMÁS es un
-   enlace, así que lo único que se añade es lo que eso pide: que no se subraye, que el título mantenga su color
-   y que responda al señalarla y al foco de teclado, donde el anillo tiene que verse sobre la tarjeta entera. */
-.settings-index-card {
-  text-decoration: none;
-  color: inherit;
-  transition: border-color .2s, box-shadow .2s, transform .2s;
-}
-.settings-index-card:hover {
-  border-color: rgba(var(--steam-rgb), .35);
-  box-shadow: var(--e2), var(--edge);
-  transform: translateY(-1px);
-}
-.settings-index-card:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 3px;
-}
-.settings-index-card h2 { color: var(--text); }
-
-@media (prefers-reduced-motion: reduce) {
-  .settings-index-card { transition: none; }
-}
 
 
 /* F2 — selector de escala de puntuación (estrellas / nota) en Ajustes. */
 .score-scale-choice { display: grid; gap: .6rem; }
+
+/* EN UN MÓVIL, LAS OCHO OPCIONES DE TEMA SE APRIETAN. Ahí la rejilla no puede dar más de una columna —el
+   nombre más largo no cabe en media—, así que lo que se recorta es el alto de cada fila: menos relleno y una
+   previsualización un punto más pequeña. Son ocho filas: cada píxel que se quita se multiplica por ocho. */
+@media (max-width: 30rem) {
+  .settings-appearance .score-scale-opt { padding: .5rem .7rem; gap: .6rem; }
+  .settings-appearance .palette-swatch { width: 2.6rem; height: 1.6rem; }
+  .settings-appearance .score-scale-choice { gap: .45rem; }
+  .appearance-grid { gap: .7rem 1rem; }
+}
+
+/* EL SELECTOR DE TEMA SE REPARTE POR SÍ SOLO: son ocho opciones y en una columna se comían media pantalla.
+   `auto-fit` da cuatro columnas en una tarjeta ancha, dos en una media y una en el móvil, sin un solo
+   `@media`. El mínimo lo fija el nombre más largo («Ladrones de corazones») con su previsualización al lado. */
+.settings-appearance .score-scale-choice {
+  grid-template-columns: repeat(auto-fit, minmax(15.5rem, 1fr));
+}
 
 .score-scale-choice.is-locked { opacity: .6; }
 
 .score-scale-opt {
   display: flex; align-items: center; gap: .8rem;
   padding: .7rem .85rem;
+  min-width: 0;
   background: var(--surface-soft); border: 1px solid var(--border); border-radius: 9px;
   cursor: pointer; text-align: left; color: var(--text); font: inherit;
   transition: background .16s, border-color .16s;
@@ -276,13 +272,38 @@
 
 .score-scale-locked .ui-icon { width: 1em; height: 1em; flex: 0 0 auto; }
 
-/* F1 — selector de apariencia (tema/paleta + claro/oscuro) dentro de "Ajustes de cuenta". */
-.settings-appearance { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+/* F1 — selector de apariencia: el tema arriba, a lo ancho, y debajo las cinco preguntas de dos respuestas.
+   Ya no cuelga de "Ajustes de cuenta" —tiene tarjeta propia en «Personalización»—, así que pierde el filete
+   superior que la separaba de la escala de nota. */
+.settings-appearance { display: flex; flex-direction: column; gap: 1rem; }
 
 .settings-appearance .settings-card-sub { margin: 0 0 .5rem; }
 
-.settings-appearance .settings-card-sub + .settings-card-sub,
-.settings-appearance .theme-mode-row + .settings-card-sub { margin-top: 1rem; }
+/* LAS CINCO BINARIAS, EN REJILLA. Apiladas una debajo de otra estiraban la tarjeta a 778px en escritorio —con
+   media pantalla vacía al lado— y a más de mil en un móvil. `auto-fit` reparte según el sitio que haya: tres
+   columnas en una tarjeta ancha, dos en una media, una en el móvil. El mínimo de 13rem es lo que mide el par de
+   botones más largo («Activadas»/«Desactivadas») CON el relleno de los dos botones y el de la caja que los
+   agrupa. Con menos, la columna encoge los botones por debajo de su texto —llevan `flex: 1 1 0` y
+   `min-width: 0`, así que se dejan estrechar— y el rótulo acaba rozando el canto de su caja. */
+.appearance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16.5rem, 1fr));
+  gap: .9rem 1.1rem;
+}
+
+/* CADA OPCIÓN, EN SU CAJA. Puestas en fila, cinco rótulos con su par de botones debajo se leían como una tira
+   de diez botones sueltos: no se veía dónde acababa «Modo» y empezaba «Texto», que es justo lo que un control
+   binario no puede permitirse. La caja no dibuja nada nuevo —es el mismo fondo hundido y el mismo filete que
+   usan las opciones de la escala de nota— y lo que hace es agrupar: el rótulo y sus dos botones quedan dentro
+   de un mismo recinto, más cerca entre ellos que del vecino. */
+.appearance-field {
+  min-width: 0;
+  background: var(--surface-soft);
+  border: 1px solid var(--hair);
+  border-radius: 9px;
+  padding: .6rem .7rem .7rem;
+}
+.appearance-field .settings-card-sub { margin-bottom: .45rem; }
 
 /* Cada opción de tema es una MINI-PREVISUALIZACIÓN: tarjeta con el fondo oscuro del tema, una barra de
    acento arriba y una esquina con el fondo claro → previsualiza los tres colores de un vistazo. Los colores
@@ -525,17 +546,21 @@
   }
 }
 
+/* EL REPARTO SE ESCRIBE POR PANTALLA, no para «todas las tarjetas menos tres». Esta tanda nació cuando Ajustes
+   era UNA pantalla con todo dentro: mandaba la tarjeta de sincronización y la escala cruzaba las doce columnas.
+   Al aparecer «Personalización», esos selectores —con tres `:not()` encadenados, que suman especificidad— se
+   comían cualquier regla nueva por muy concreta que fuese. Acotados a su pantalla, cada una reparte lo suyo. */
 @media (min-width: 48rem) {
-  .settings-card-status {
+  .settings-hub:not(.settings-personalization) .settings-card-status {
     grid-column: span 7;
   }
 
-  .settings-card:not(.settings-card-status):not(.settings-card-admin):not(.settings-card-score) {
+  .settings-hub:not(.settings-personalization) .settings-card:not(.settings-card-status):not(.settings-card-admin):not(.settings-card-score) {
     grid-column: span 5;
   }
 
-  .settings-card-admin,
-  .settings-card-score {
+  .settings-hub:not(.settings-personalization) .settings-card-admin,
+  .settings-hub:not(.settings-personalization) .settings-card-score {
     grid-column: span 12;
   }
 
@@ -545,12 +570,43 @@
   }
 }
 
+/* «PERSONALIZACIÓN»: TRES BLOQUES A LO ANCHO, NO DOS COLUMNAS DE TARJETAS.
+   ─────────────────────────────────────────────────────────────────────────────
+   Partir la pantalla en columnas parecía la forma de aprovechar el escritorio y era lo contrario: la tarjeta
+   del tema se quedaba en una columna estrecha, donde sus opciones vuelven a apilarse de una en una, y crecía
+   más de lo que se ahorraba. Lo que reparte aquí es el CONTENIDO —el selector de tema y los interruptores se
+   estiran a lo ancho hasta llenar el bloque—, así que el ancho se aprovecha entero sin tarjetas a medias.
+   Las reglas de arriba, escritas para la pantalla de Ajustes de entonces, se acotaron para no imponer aquí un
+   reparto pensado para otra cosa. */
+/* EL CORTE ESTÁ EN 64rem Y NO EN 48rem, que es donde parte el resto de Ajustes. Entre medias —una tableta en
+   vertical— dos columnas salen a unos 420px cada una, y ahí la tarjeta de apariencia vuelve a apilar sus campos
+   en una sola fila por campo: acaba MÁS ALTA repartida que entera. Por debajo del corte se queda a lo ancho y
+   es su rejilla interna la que reparte, que a ese ancho ya da tres columnas.
+
+   `8 / span 5` en una sola declaración: escribir el principio aparte (`grid-column-start`) DESPUÉS del atajo
+   deja el final en `auto` y la tarjeta se queda en una columna de doce, 58px de ancho. */
+/* Y POR DEBAJO DEL CORTE, A LO ANCHO. Hace falta decirlo porque al final de esta hoja hay una regla vieja que
+   pone `span 6` a toda tarjeta por debajo de 980px: escrita para la pantalla de Ajustes de entonces, aquí parte
+   la apariencia en una columna de 360px y la estira a 1048px de alto, con la tarjeta de al lado estirada a la
+   misma altura por acompañarla. */
+.settings-personalization .settings-card { grid-column: span 12; }
+
+/* Dentro del bloque de preferencias conviven la escala de nota y los cinco interruptores: son la misma clase de
+   decisión y comparten rejilla, de modo que en una pantalla ancha entran en una o dos filas en vez de en siete.
+   La escala pide más sitio que un par de botones —cada opción lleva su ejemplo dibujado al lado—, así que se
+   queda con dos huecos de la rejilla mientras haya sitio. */
+@media (min-width: 48rem) {
+  .settings-card-score .score-scale-choice {
+    grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  }
+}
+
 @media (min-width: 80rem) {
-  .settings-card-status {
+  .settings-hub:not(.settings-personalization) .settings-card-status {
     grid-column: span 6;
   }
 
-  .settings-card:not(.settings-card-status):not(.settings-card-admin):not(.settings-card-score) {
+  .settings-hub:not(.settings-personalization) .settings-card:not(.settings-card-status):not(.settings-card-admin):not(.settings-card-score) {
     grid-column: span 6;
   }
 }

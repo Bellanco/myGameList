@@ -20,6 +20,12 @@ interface PersonalizationSettingsProps {
  * «Personalización» — el primero de los cuatro grupos de Ajustes: cómo se ve la aplicación, cómo se puntúa y
  * qué has publicado.
  *
+ * TRES BLOQUES A LO ANCHO, en el orden en que se tocan: el TEMA arriba —es lo que cambia la pantalla entera y
+ * lo único que pide sitio de verdad—, debajo las preferencias sueltas (cómo se puntúa y los cinco
+ * interruptores) y al final lo que has publicado. Nada de dos columnas de tarjetas: partir la pantalla dejaba
+ * la apariencia en una columna estrecha —donde vuelve a apilarse— con medio escritorio vacío al lado. Lo que
+ * reparte aquí es el CONTENIDO de cada bloque, que se estira a lo ancho hasta llenarlo.
+ *
  * LA APARIENCIA TIENE TARJETA PROPIA, y no es un detalle de maquetación. Antes vivía DENTRO de la tarjeta de la
  * escala de nota, bajo su `inert`: quien no tenía sesión de Google se quedaba sin paleta, sin modo claro, sin
  * mayúsculas y sin carátulas, aunque ninguna de esas preferencias necesite cuenta —viven en `localStorage` y
@@ -33,15 +39,14 @@ export const PersonalizationSettings = memo(function PersonalizationSettings({ s
   const scoreScaleLabels = SETTINGS_UI.scoreScale;
 
   return (
-    <section className="settings-hub" aria-label={SETTINGS_UI.groups.personalization.title}>
-      <div className="settings-card">
-        <h2>{SETTINGS_UI.groups.appearance}</h2>
-        <AppearanceSettings />
+    <section className="settings-hub settings-personalization" aria-label={SETTINGS_UI.groups.personalization.title}>
+      <div className="settings-card settings-card-themes">
+        <h2>{SETTINGS_UI.groups.themes}</h2>
+        <AppearanceSettings only="theme" />
       </div>
 
       <div className="settings-card settings-card-score">
-        <h2>{SETTINGS_UI.account.title}</h2>
-        <p className="settings-card-sub">{scoreScaleLabels.subtitle}</p>
+        <h2>{SETTINGS_UI.groups.preferences}</h2>
         {!scoreScaleUid ? (
           <p className="score-scale-locked">
             <Icon name={COMMON_ICONS.lock} />
@@ -73,6 +78,11 @@ export const PersonalizationSettings = memo(function PersonalizationSettings({ s
             );
           })}
         </div>
+
+        {/* Los cinco interruptores comparten tarjeta con la escala: son la misma clase de decisión —una
+            preferencia de dos respuestas— y juntos llenan a lo ancho lo que por separado eran dos tarjetas a
+            medias. */}
+        <AppearanceSettings only="toggles" />
       </div>
 
       {/* Los enlaces públicos van aquí y no en «Integración»: no son una preferencia ni un canal de datos, son

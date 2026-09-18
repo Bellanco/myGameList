@@ -130,6 +130,16 @@ test.describe('el menú de la pestaña de Ajustes', () => {
     await esperarOpacidad(page, 1);
   });
 
+  test('`/ajustes` a secas entra en el primer grupo, no en una portada', async ({ page }) => {
+    // La dirección existía antes de que Ajustes se partiera en cuatro, así que sigue habiendo enlaces y
+    // marcadores apuntando ahí. Un índice que solo repite el menú que acabas de usar es un paso de más: se
+    // entra directamente al grupo que existe para todo el mundo.
+    await sembrarBiblioteca(page, { theme: 'dark' });
+    await page.goto('/ajustes');
+    await expect(page).toHaveURL(/\/ajustes\/integracion$/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Integración/);
+  });
+
   test('no se sube encima del aviso de consentimiento', async ({ page }) => {
     // El aviso se apoya sobre la barra mientras no se ha decidido, y el menú vive en la capa superior: sin
     // apartarse, sus rótulos se escribirían sobre el texto del aviso. Se aparta midiendo, no adivinando.

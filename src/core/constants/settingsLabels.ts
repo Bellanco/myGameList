@@ -9,27 +9,29 @@
 export const SETTINGS_UI = {
   title: 'Ajustes',
   /**
-   * LOS CUATRO GRUPOS, con la frase que dice qué hay dentro. La usa el índice de `/ajustes` —la portada, para
-   * quien llega por un enlace guardado o navegando con teclado— y el encabezado de cada pantalla. Los rótulos
-   * cortos del MENÚ viven en `labels.ts`: ese viaja en el arranque con la barra, y estas frases no.
+   * LOS CUATRO GRUPOS. Cada título rotula su pantalla y le da nombre accesible a su sección. Los rótulos del
+   * MENÚ viven aparte, en `labels.ts`: ese fichero viaja en el arranque con la barra y estos no.
    */
   groups: {
-    appearance: 'Apariencia',
+    /** El selector de tema, que es lo que cambia la pantalla entera. */
+    themes: 'Temas',
+    /**
+     * Lo que antes se llamaba «Ajustes de cuenta»: aquel nombre venía de cuando la pantalla entera era «Cuenta»
+     * y ya no dice nada —la mitad de lo que hay dentro no depende de ninguna sesión—. Son preferencias: cómo se
+     * puntúa y los cinco interruptores de la interfaz.
+     */
+    preferences: 'Preferencias',
     personalization: {
       title: 'Personalización',
-      hint: 'Paleta, tema, escala de nota y los enlaces que has publicado.',
     },
     integration: {
       title: 'Integración',
-      hint: 'Sincronización con GitHub, importación de la biblioteca y copias de seguridad.',
     },
     filters: {
       title: 'Filtros',
-      hint: 'Los géneros, plataformas, virtudes y defectos con los que clasificas.',
     },
     legal: {
       title: 'Legal',
-      hint: 'Analítica opcional, condiciones de uso, cookies y borrado de la cuenta.',
     },
   },
   account: {
@@ -63,7 +65,6 @@ export const SETTINGS_UI = {
   },
   scoreScale: {
     title: 'Puntuación',
-    subtitle: 'Cómo se muestran las notas de tus juegos.',
     groupAria: 'Escala de puntuación',
     starsLabel: 'Estrellas',
     starsHint: 'Escala clásica de 0 a 5',
