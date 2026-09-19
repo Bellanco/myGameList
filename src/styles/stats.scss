@@ -248,7 +248,12 @@
 
 /* ---- "Más años": el resto del historial, en un desplegable ---------------------------------------------- */
 
-.scope-more { position: relative; }
+/* SIN `position: relative`, y esto es justo lo que evita el desplazamiento horizontal: el desplegable se
+   posiciona contra la BARRA (`.scope-tabs`, que sí es relativa) y no contra su botón. Anclado al botón, el
+   panel crecía hacia la derecha desde donde estuviera —y el botón está al final de la fila—, así que en una
+   ventana ancha se salía 71 px por el canto y la página estrenaba barra de desplazamiento al abrirlo (medido
+   a 1280 px; 23 px a 768). Contra la barra, su borde derecho es el de la barra y no hay por dónde salirse. */
+.scope-more { position: static; }
 
 .scope-more-btn {
   display: inline-flex;
@@ -268,8 +273,15 @@
 .scope-more-panel {
   position: absolute;
   z-index: 30;
+  /* El 100% es ahora el ALTO DE LA BARRA, así que el panel cuelga de ella entera y no de su botón: con la
+     barra envuelta en dos líneas, cuelga de la segunda, que es donde el botón está. */
   top: calc(100% + .35rem);
-  left: 0;
+  /* Alineado por la derecha —que es donde vive el botón, siempre el último de la fila— y nunca más ancho que
+     la barra: `max-content` le deja pedir lo que necesita y `100%` le pone el techo. */
+  right: 0;
+  left: auto;
+  width: max-content;
+  max-width: 100%;
   display: grid;
   grid-template-columns: repeat(4, minmax(3.6rem, 1fr));
   gap: .3rem;
@@ -281,9 +293,10 @@
   animation: fade-in .16s ease-out both;
 }
 
-/* Pegado al borde derecho cuando el botón está a la derecha del todo (pantallas estrechas). */
+/* En pantalla estrecha, tres columnas: con cuatro, el mínimo de la rejilla (4 × 3,6 rem más los huecos) pasa
+   del ancho de la barra y el panel volvería a empujar. El anclado a la derecha ya lo pone la regla de arriba. */
 @media (max-width: 34rem) {
-  .scope-more-panel { left: auto; right: 0; grid-template-columns: repeat(3, minmax(3.6rem, 1fr)); }
+  .scope-more-panel { grid-template-columns: repeat(3, minmax(3.6rem, 1fr)); }
 }
 
 /* ---- Cifras destacadas ------------------------------------------------------------------------------- */
