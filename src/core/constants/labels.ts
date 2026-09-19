@@ -177,11 +177,16 @@ export const ANALYTICS_UI = {
   neverLabel: 'Qué no sale nunca de aquí',
   never: ['Tus listas y tus notas', 'Tus reseñas', 'Tu correo o tu nombre'],
   bannerTitle: 'Analítica opcional',
-  /* CUATRO LÍNEAS ERAN TRES DE MÁS. El aviso se lee de pie, tapando la pantalla, y lo único que hay que saber
-     para decidir cabe en dos: qué se recoge y que se puede cambiar de idea. El detalle —qué identificadores,
-     cuánto duran— está en la política de cookies, que tiene su enlace justo debajo.
-     Y ya no manda a «Cuenta», que era una pantalla que ha dejado de existir. */
-  bannerBody: 'Estadísticas de uso anónimas para saber qué falla y qué se usa. Solo se activan si aceptas, y puedes cambiarlo cuando quieras en Ajustes › Legal.',
+  /* CUATRO LÍNEAS ERAN TRES DE MÁS, y tres seguían siendo una de más: el aviso se lee de pie, tapando la
+     pantalla, y lo único que hay que saber para decidir cabe en dos —qué se recoge y que se puede cambiar de
+     idea—. El detalle —qué identificadores, cuánto duran— está en la política de cookies, que tiene su enlace
+     justo debajo. Y ya no manda a «Cuenta», que era una pantalla que ha dejado de existir.
+
+     SOBRABA «Solo se activan si aceptas»: lo dicen ya los dos botones, que es donde se mira antes de decidir, y
+     costaba una línea entera de aviso —de ella depende el alto que publica `--consent-h`, y de ese alto, lo que
+     se aparta todo lo que se apoya sobre la barra—. El hecho no cambia: sin decisión guardada no se inicializa
+     Analytics (ver `ConsentBanner`), y la promesa por escrito sigue en la política de cookies. */
+  bannerBody: 'Estadísticas de uso anónimas para saber qué falla y qué se usa. Puedes cambiarlo cuando quieras en Ajustes › Legal.',
   bannerAccept: 'Aceptar',
   bannerReject: 'Rechazar',
   bannerMore: 'Política de cookies',
