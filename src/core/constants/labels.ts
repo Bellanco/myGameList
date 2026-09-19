@@ -193,6 +193,24 @@ export const ANALYTICS_UI = {
   bannerAria: 'Consentimiento de analítica',
 } as const;
 
+/**
+ * INVITACIÓN A INSTALAR. Se ofrece una vez y se puede decir que no una vez.
+ *
+ * El cuerpo dice lo que se GANA, no lo que se hace: «añadir a la pantalla de inicio» es el gesto, y el gesto no
+ * convence a nadie. Lo que convence es que se abra sin la barra del navegador y que arranque sin conexión —las
+ * dos cosas que esta app ya sabe hacer y que, sin instalar, no se llegan a ver nunca.
+ *
+ * NO se menciona que ocupe poco ni que «no es una descarga»: es cierto, pero defenderse de una objeción que
+ * nadie ha puesto la planta en la cabeza de quien lee.
+ */
+export const INSTALL_UI = {
+  bannerAria: 'Instalar la aplicación',
+  bannerTitle: 'Ten Mis Listas a mano',
+  bannerBody: 'Añádela a tu pantalla de inicio: se abre sin la barra del navegador y arranca aunque no haya conexión.',
+  bannerAccept: 'Añadir',
+  bannerReject: 'Ahora no',
+} as const;
+
 export const UI_MESSAGES = {
   admin: {
     noTags: 'No hay etiquetas',

@@ -25,6 +25,7 @@
     "test:rules": "node scripts/run-rules-tests.mjs",
     "emulate:social": "vitest run --config vitest.emulacion.config.js",
     "test:e2e": "playwright test",
+    "screenshots": "playwright test -c scripts/screenshots.config.ts",
     "emulators": "firebase emulators:start --only firestore"
   },
   "engines": {

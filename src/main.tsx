@@ -10,6 +10,7 @@ import { runWhenIdle } from './core/utils/idle';
 import { vigilarAlmacenamientoDuradero } from './core/utils/durableStorage';
 import { registerServiceWorker } from './core/utils/appUpdate';
 import { readAnalyticsConsent } from './model/repository/analyticsConsentRepository';
+import { listenForInstallPrompt } from './model/repository/installPromptRepository';
 import { isOffline } from './core/utils/network';
 import { SOCIAL_GIST_CFG_KEY, STORAGE_KEY } from './core/constants/storageKeys';
 import './styles/index.scss';
@@ -58,6 +59,12 @@ if (publicShareToken && !hasLocalApp()) {
 }
 
 function bootApp(): void {
+
+  // LA OFERTA DE INSTALAR SE ATRAPA ANTES DE PINTAR. Chromium dispara `beforeinstallprompt` muy pronto y una
+  // sola vez: si el listener llegara con el componente que enseña el aviso, la oferta ya se habría perdido y la
+  // invitación no saldría nunca. No va en el modo artículo a propósito — a quien solo viene a leer una reseña
+  // compartida no se le ofrece instalar nada.
+  listenForInstallPrompt();
 
   // Red de seguridad global para errores que NO pasan por un error boundary de React (código async, promesas
   // rechazadas sin catch, event handlers). Best-effort: reporta a la telemetría sin bloquear ni relanzar.

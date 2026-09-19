@@ -25,6 +25,7 @@ import { SettingsMenu } from './view/components/SettingsMenu';
 import { ScrollToTop } from './view/components/ScrollToTop';
 import { useScrollOnNavigate } from './view/hooks/useScrollOnNavigate';
 import { ConsentBanner } from './view/components/ConsentBanner';
+import { InstallBanner } from './view/components/InstallBanner';
 import { SocialHubSkeleton } from './view/components/SocialHubSkeleton';
 import { ScreenSkeleton } from './view/components/ScreenSkeleton';
 import { useGameListViewModel, type GameDraft } from './viewmodel/useGameListViewModel';
@@ -1114,6 +1115,9 @@ export default function App() {
         socialStatus={socialStatus}
       />
       <ConsentBanner />
+      {/* Los dos comparten carril y no coinciden nunca: la invitación espera a que el consentimiento se decida
+          (ver `InstallBanner`). Van seguidos para que se lea aquí que el hueco es el mismo. */}
+      <InstallBanner />
       <ScrollToTop />
 
       <Suspense fallback={null}>

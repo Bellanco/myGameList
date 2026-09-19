@@ -87,6 +87,7 @@ el directorio, lo que no significa que el código esté mal, sino que **la regla
 | `npm run test:coverage` | Cobertura |
 | `npm run test:rules` | Tests de reglas de Firestore (emulador; necesita un JDK 21 o superior) |
 | `npm run test:e2e` | Smoke end-to-end (Playwright) contra el build de producción |
+| `npm run screenshots` | Regenera las capturas del manifest en `public/screenshots/` (necesita `npm run build` antes) |
 | `npm run typecheck` | Tipos de los DOS proyectos: `src`/`tests` y `functions` (`tsconfig.functions.json`) |
 | `npm run validate` | Validación CI + HTML + ESLint |
 | `npm run lint` | Autocorrecciones ESLint |
@@ -142,6 +143,11 @@ App estática pura (React + Vite). Configuración en el repo:
 - **`public/_headers`** — CSP para GitHub API + Firebase; `index.html` sin cache;
   `/assets/*` con cache inmutable (assets con hash); `service-worker.js` con revalidación.
 - **`public/_redirects`** — `/* /index.html 200` (fallback SPA para React Router).
+- **`public/manifest.json`** — instalación como app: nombre, atajos a las pantallas y las `screenshots` que
+  enseña Chrome en Android en su diálogo de instalación. Las medidas declaradas ahí y el tamaño real de los PNG
+  son un PAR: si una captura cambia de tamaño y el manifest no, el navegador la descarta sin decir nada. Se
+  regeneran con `npm run screenshots` (ver `scripts/screenshots.spec.ts`), nunca a mano y nunca con datos
+  reales: esas imágenes las sirve cualquiera que abra la app.
 - **`public/service-worker.js`** — solo cachea GET same-origin y respuestas válidas; excluye APIs
   externas (GitHub/Firebase) para no cachear datos sensibles. Los marcadores
   `self.__SW_BUILD_ID__` / `self.__PRECACHE_ASSETS__` los sustituye en el build el plugin
@@ -186,6 +192,9 @@ Ajustes en el dashboard de Cloudflare Pages:
   mirar es si el plugin `service-worker-precache` los ha dejado con el mismo valor.
 - **Tipografías del propio origen**: ninguna petición a `fonts.googleapis.com` ni `fonts.gstatic.com`, ni con la
   paleta por defecto ni activando un tema.
+- **Se instala con su nombre.** En el diálogo de instalación de Chrome tiene que poner «Mis Listas» (no
+  «GameList») y salir las capturas; una vez instalada, el icono abre sin barra del navegador y sus atajos
+  (pulsación larga en el icono) llevan a En curso, Completados, Social y Estadísticas.
 - Login social y lectura/escritura de Gist OK.
 
 ## Documentación

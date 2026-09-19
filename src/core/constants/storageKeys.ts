@@ -64,6 +64,11 @@ export const FEED_MOVE_TABS_KEY = 'mis-listas-feed-move-tabs';
 // almacenar identificadores lo da quien usa este navegador, así que no se sincroniza a Firestore.
 export const ANALYTICS_CONSENT_KEY = 'mis-listas-analytics-consent';
 
+// Invitación a instalar la app en la pantalla de inicio. Valor: 'off' = ya se dijo «ahora no» (o ya se instaló)
+// y no se vuelve a ofrecer en este navegador; ausente = se ofrecerá cuando el navegador dé la oportunidad.
+// Es de dispositivo por naturaleza: instalar es algo que se hace en ESTE aparato, no en la cuenta.
+export const INSTALL_HINT_KEY = 'mis-listas-install-hint';
+
 // Import — preferencia "qué datos traer" (plataformas/géneros/horas/nota) por grupo: juegos nuevos y juegos que
 // ya están en tus listas. JSON con la forma de `ImportFieldPrefs`. Local, no se sincroniza (como la bandeja).
 export const IMPORT_FIELDS_KEY = 'mis-listas-import-fields';

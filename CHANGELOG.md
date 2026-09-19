@@ -3,6 +3,31 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows the git tags.
 
+## [Unreleased]
+
+La versión de **poder instalarla**. La aplicación ya sabía funcionar como una app —arranca sin red, tiene su
+barra inferior y su icono—, pero nadie llegaba a instalarla salvo quien conociera el menú del navegador, y sin
+instalar no se ve ninguna de las dos cosas: ni la pantalla completa, ni los atajos.
+
+### Added
+- **Invitación a instalar la aplicación**, una sola vez y con su «ahora no». Sale en el mismo sitio y con la
+  misma forma que el aviso de cookies, y nunca a la vez que él: primero se decide sobre la analítica, después
+  se sugiere instalar. Solo aparece donde el navegador ofrece instalar de verdad; en Safari de iOS, que solo
+  admite hacerlo a mano desde el menú de compartir, no hay nada que ofrecer y no se enseña nada.
+- **Capturas en el diálogo de instalación.** Chrome en Android enseña el listado y el panel de estadísticas
+  antes de instalar, en vez de un icono suelto. Se generan con `npm run screenshots` sobre una biblioteca de
+  muestra: esas imágenes son públicas y no llevan los datos de nadie.
+- **Atajos en el icono de la aplicación**: En curso, Completados, Social y Estadísticas. Había uno, apuntaba a
+  una dirección que la aplicación dejó de entender hace versiones (`/?tab=c`) y no llevaba a ninguna parte.
+
+### Fixed
+- **La aplicación instalada se llama «Mis Listas»**, y no «GameList». El nombre bajo el icono de la pantalla de
+  inicio y el texto del diálogo de instalación seguían en inglés, en una aplicación que está entera en español.
+- **El área segura del móvil vuelve a existir.** La barra inferior, el aviso de cookies, el botón flotante y la
+  ruleta ya reservaban sitio para la muesca y para la barra de gestos con `env(safe-area-inset-*)`, pero sin
+  `viewport-fit=cover` en el `viewport` esas medidas valen SIEMPRE cero: la protección estaba escrita y
+  desconectada. Con ella, además, la página llega al borde del cristal en vez de quedarse en una franja.
+
 ## [1.3.3] - 2026-09-18
 
 La versión de **encontrar los ajustes**. Estaban repartidos entre dos botones flotantes de la esquina superior

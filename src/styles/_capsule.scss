@@ -45,6 +45,15 @@
   bottom: calc(var(--bottom-nav-h, 4.6rem) + var(--consent-h, 9.25rem) + 1.1rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* Y LO MISMO CON LA INVITACIÓN A INSTALAR, que ocupa el mismo sitio y la misma forma (comparte la clase
+   `.consent-banner`). Son dos reglas y no un selector con los dos atributos porque cada aviso publica SU
+   medida: la invitación tiene una línea de texto menos y un enlace menos, así que mide menos. No pueden
+   coincidir en pantalla —la invitación espera a que el consentimiento se decida, ver `InstallBanner`—, de modo
+   que no hay que sumar las dos alturas en ningún caso. */
+:root[data-install='offered'] .ach-toast-stack {
+  bottom: calc(var(--bottom-nav-h, 4.6rem) + var(--install-h, 7.5rem) + 1.1rem + env(safe-area-inset-bottom, 0px));
+}
+
 /* LA CÁPSULA · el borde de la izquierda es OTRO CÍRCULO EXTERIOR de la medalla, no un radio elegido a ojo: el
    relleno es el mismo por los cuatro lados (`--pad`), la medalla manda la altura y el radio es la mitad de esa
    altura. Así el filo del disco y el borde de la tarjeta quedan concéntricos.
