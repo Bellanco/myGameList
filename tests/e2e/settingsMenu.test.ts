@@ -156,11 +156,20 @@ test.describe('el menú de la pestaña de Ajustes', () => {
     await expect(menu(page)).toBeVisible();
 
     // Pegado a la barra: el hueco es el de siempre (.55rem), no la altura de un aviso de por medio.
-    const cajaMenu = await menu(page).boundingBox();
-    const cajaBarra = await page.locator('.bottom-nav').boundingBox();
-    const hueco = cajaBarra!.y - (cajaMenu!.y + cajaMenu!.height);
-    expect(hueco, 'el menú se ha despegado de la barra').toBeGreaterThanOrEqual(0);
-    expect(hueco, 'el menú flota lejos de la pestaña que lo abre').toBeLessThan(24);
+    //
+    // SE MIDE CON `poll` Y NO DE UNA VEZ. El menú se apoya en `--bottom-nav-h`, que publica la barra con un
+    // `ResizeObserver`: mientras la tipografía de la app termina de llegar, la barra cambia de escalón y el
+    // valor se reescribe. Una lectura suelta cae a veces en ese hueco —en una máquina cargada, con los cinco
+    // trabajadores a la vez— y mide el sitio que el menú ocupaba hace un fotograma.
+    const huecoConLaBarra = async () => {
+      const cajaMenu = await menu(page).boundingBox();
+      const cajaBarra = await page.locator('.bottom-nav').boundingBox();
+      return cajaBarra!.y - (cajaMenu!.y + cajaMenu!.height);
+    };
+    await expect
+      .poll(huecoConLaBarra, { message: 'el menú no se ha pegado a la barra' })
+      .toBeLessThan(24);
+    expect(await huecoConLaBarra(), 'el menú se ha despegado de la barra').toBeGreaterThanOrEqual(0);
 
     // Y EL AVISO SE VA DEL TODO mientras dure el menú: es lo que ocupa el sitio del que el menú sale y lo más
     // alto de la pila (z-index 130). `visibility` además de la opacidad, o sus dos botones seguirían en el
