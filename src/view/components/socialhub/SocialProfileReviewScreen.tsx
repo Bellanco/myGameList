@@ -1,9 +1,11 @@
+import type { CSSProperties } from 'react';
 import { ReviewDetailBody } from '../ReviewDetailBody';
 import { ReviewDetailHead, type ReviewAuthor } from '../ReviewDetailHead';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import { HubScreen } from './HubScreen';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
+import { useReviewCover } from './useReviewCover';
 // Ver `ProfileReviewsList`: esta pantalla la reutiliza el panel de estadísticas para TUS reseñas, y allí no se
 // carga el chunk del hub.
 import '../../../styles/reviews.scss';
@@ -38,6 +40,7 @@ export function SocialProfileReviewScreen({
   statusKind,
   actions = null,
   related = null,
+  coversAllowed = false,
 }: {
   SOCIAL_UI: SocialUiLabels;
   review: ProfileReview | null;
@@ -66,7 +69,13 @@ export function SocialProfileReviewScreen({
    * social del que tirar y no debe haberlo (funciona sin tenerlo montado).
    */
   related?: React.ReactNode;
+  /**
+   * ¿Se puede pedir la carátula del juego para el fondo de la cabecera? Por defecto no; lo enciende quien monta
+   * la pantalla (ver `useReviewCover`): en TUS reseñas manda tu preferencia y en las de otra persona, mithril.
+   */
+  coversAllowed?: boolean;
 }) {
+  const coverOf = useReviewCover(coversAllowed);
   /** Fila de acciones bajo el encabezado. El encabezado en sí lo pone `HubScreen`. */
   const actionsRow = (
     <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.detailActionsAria}>
@@ -97,11 +106,18 @@ export function SocialProfileReviewScreen({
 
   const reviewDate = new Date(review.ts || 0);
   const hasValidDate = review.ts > 0 && !Number.isNaN(reviewDate.getTime());
+  /* EL FONDO SOLO LLEGA HASTA LA CABECERA, y el corte es la razón de que esto sea una clase y no un estilo de la
+     tarjeta entera: el texto de una reseña puede ser de veinte líneas y es donde de verdad se lee. La imagen
+     ambienta el titular —juego, nota y firma— y se corta antes del cuerpo (ver `reviews.scss`). */
+  const cover = coverOf(review.name, review.platforms);
 
   return (
     <HubScreen {...shell}>
       {actionsRow}
-        <article className="hub-feed-card hub-feed-card-detail">
+        <article
+          className={`hub-feed-card hub-feed-card-detail${cover ? ' has-cover' : ''}`}
+          style={cover ? ({ '--row-cover': `url("${cover}")` } as CSSProperties) : undefined}
+        >
           <ReviewDetailHead
             gameName={review.name}
             author={author}
