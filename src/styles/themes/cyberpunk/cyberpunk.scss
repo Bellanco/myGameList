@@ -732,3 +732,31 @@
   width: calc(var(--score-pct, 0) * 1% + 7px);
   clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
 }
+
+/* ── LOS CONTROLES DE VISTA, EN UNA PIEZA · LA PLACA DE CHIP ──────────────────────────────────────────
+   Un componente que se inserta: muescas a los dos lados, cuerpo de silicio y la PISTA DE CONTACTO amarilla
+   como canto de abajo. La óptica Kiroshi no dibuja cápsulas: dibuja hardware.
+
+   EL ROMBO del deslizador y el relleno angular del botón son la misma figura del HUD —nada redondo en esta
+   paleta—, y el contacto se lee de un vistazo: lo que está activo tiene el ácido; lo que no, se apaga. */
+:root[data-palette="cyberpunk"] .view-controls {
+  gap: 0;
+  padding: .3rem .8rem;
+  border-radius: 0;
+  background: linear-gradient(180deg, #131313, #0b0b0b);
+  clip-path: polygon(0 0, 100% 0, 100% 34%, calc(100% - 4px) 42%, calc(100% - 4px) 58%, 100% 66%, 100% 100%, 0 100%, 0 66%, 4px 58%, 4px 42%, 0 34%);
+  border-bottom: 2px solid var(--steam);
+}
+:root[data-palette="cyberpunk"] .view-controls:not(:has(.grid-size)) { padding-inline: .5rem; }
+:root[data-palette="cyberpunk"] .view-controls .shape-switch { border: 0; background: none; box-shadow: none; padding: 0 0 0 .55rem; }
+:root[data-palette="cyberpunk"] .view-controls .grid-size::before { background: #2a2a2a; }
+:root[data-palette="cyberpunk"] .view-controls .grid-size::after { background: linear-gradient(90deg, #00e5ff, var(--steam)); }
+:root[data-palette="cyberpunk"] .view-controls .grid-size-range::-webkit-slider-thumb { border-radius: 0; transform: rotate(45deg); background: var(--steam); border: 0; }
+:root[data-palette="cyberpunk"] .view-controls .grid-size-range::-moz-range-thumb { border-radius: 0; background: var(--steam); border: 0; }
+:root[data-palette="cyberpunk"] .view-controls .shape-switch-btn { border-radius: 0; color: rgba(var(--steam-rgb), .5); }
+:root[data-palette="cyberpunk"] .view-controls .shape-switch-btn.is-on {
+  background: var(--steam);
+  color: #0b0b0b;
+  box-shadow: none;
+  clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+}

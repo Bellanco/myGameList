@@ -13,6 +13,17 @@
    el velo del acento; el otro se queda en tinta atenuada, sin borde propio que compita con el del grupo.
    Vive en la cabecera del listado (`.list-head`, ver `_table.scss`), al lado de lo que cambia; estuvo en la
    caja de filtros y allí se leía como un filtro más. */
+/* LOS DOS CONTROLES DE VISTA, EN UNA PIEZA. Aquí solo se ponen uno al lado del otro con su aire: el CUERPO
+   —la caja que los une— lo pone cada tema en su CAPA 3, porque es ahí donde esto deja de ser «un deslizador y
+   dos botones» y pasa a ser la placa de latón del cogitador o el cartel de contrato del brujo.
+   En la vista de lista no hay deslizador y la pieza se queda solo con el conmutador; los temas que dibujan caja
+   lo aprietan con `:has()` para no reservar el hueco de algo que no está. */
+.view-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+}
+
 .shape-switch {
   display: flex;
   flex: 0 0 auto;

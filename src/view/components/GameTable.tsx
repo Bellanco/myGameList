@@ -851,6 +851,14 @@ export const GameTable = memo(function GameTable({
               Es un `<input type="range">` de verdad y no una barra dibujada: trae gratis el teclado (flechas,
               inicio/fin), el arrastre con el dedo y el papel de deslizador para un lector de pantalla. Lo único
               que hay que añadirle es `aria-valuetext`, porque «2 de 3» no dice nada y «Normales» sí. */}
+          {/* LOS DOS CONTROLES DE VISTA, EN UNA PIEZA. Deciden lo mismo —cómo se mira la colección— y se usan
+              seguidos: primero la forma, y si son cuadros, cuánto miden. Sueltos se leían como dos ajustes sin
+              relación, y cada tema los dejaba en el acabado de la casa aunque el resto de la barra fuera suya.
+              El envoltorio es lo que permite que CADA SKIN los dibuje como una sola pieza de su mundo: la placa
+              de latón del cogitador, el cartel de contrato, el frontal de la recreativa.
+              Sin deslizador —en la vista de lista— la pieza se queda solo con el conmutador, y las cajas de los
+              temas lo contemplan: se aprietan con `:has()` en vez de dejar el hueco de algo que no está. */}
+          <div className="view-controls">
           {shape === 'grid' ? (
             /* `--grid-size-pos` es la posición actual (0..2) en el DOM: de ella salen el relleno de la cuña y
                nada más. Va en línea porque es un DATO de este momento, no una decisión de diseño. */
@@ -891,6 +899,7 @@ export const GameTable = memo(function GameTable({
                 <Icon name={icono} />
               </button>
             ))}
+          </div>
           </div>
         </div>
       ) : null}
