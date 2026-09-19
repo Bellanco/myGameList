@@ -34,6 +34,9 @@
 :root[data-palette="cyberpunk"] .btn,
 :root[data-palette="cyberpunk"] .hub-seg-btn,
 :root[data-palette="cyberpunk"] thead th,
+/* `.detail-label` va pegada a `.flabel` porque es el mismo papel —rótulo corto de interfaz— y
+   estaban separadas: una en la letra del tema y la otra en la de la casa, en la misma pantalla. */
+:root[data-palette="cyberpunk"] .detail-label,
 :root[data-palette="cyberpunk"] .flabel,
 :root[data-palette="cyberpunk"] .row-name,
 :root[data-palette="cyberpunk"] .hub-name-link,
@@ -771,4 +774,42 @@
   --stats-cap: butt;
   --stats-join: miter;
   --stats-num: var(--font-mono);
+}
+
+/* ── §16 · LAS PESTAÑAS DE ESCRITORIO: marco HUD, como la barra de abajo —filete cian y la barra amarilla
+   a la izquierda—, con la activa en amarillo neón. El contador no se enmarca: en esta interfaz el amarillo
+   ya es la marca de «esto es lo que importa». ── */
+:root[data-palette="cyberpunk"] .tabs {
+  border-bottom: 1px solid var(--cyber-cyan);
+  border-left: 3px solid var(--cyber-yellow);
+}
+/* EL AMARILLO DE TEXTO VA POR `--cyber-yellow-fg`, no por el ácido puro: en claro este es el mismo amarillo
+   sobre un gris claro y se queda en 1,26:1. La barra de la izquierda sí conserva el ácido —es relleno, como en
+   la barra de abajo—; lo que se LEE y el subrayado que señala usan el tono hondo. */
+:root[data-palette="cyberpunk"] .tab-btn.active { color: var(--cyber-yellow-fg); }
+:root[data-palette="cyberpunk"] .tab-underline {
+  height: 2px;
+  border-radius: 0;
+  background: var(--cyber-yellow-fg);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--cyber-yellow) 60%, transparent);
+}
+:root[data-palette="cyberpunk"] .count-badge {
+  font-family: var(--font-mono);
+  color: var(--cyber-yellow-fg);
+}
+
+/* ── §17 · LA TARJETA DE PERSONA DEL DIRECTORIO. El §3 dobla ocho paneles y este no estaba en la lista, así
+   que la ficha de alguien era la única caja redondeada de la pantalla. Aquí es la ficha de un contacto en el
+   HUD: recta, filete cian y su barra amarilla. ── */
+:root[data-palette="cyberpunk"] .hub-user-card {
+  border: 1px solid rgba(0, 240, 255, .35);
+  border-left: 3px solid var(--cyber-yellow);
+  border-radius: 0;
+  box-shadow: 0 0 18px rgba(0, 240, 255, .06);
+}
+
+/* ── §18 · LAS ESTRELLAS: neón, como todo lo que está encendido aquí. ── */
+:root[data-palette="cyberpunk"] .stars .f,
+:root[data-palette="cyberpunk"] .star-inp button.f {
+  text-shadow: 0 0 10px color-mix(in srgb, var(--star-full) 60%, transparent);
 }

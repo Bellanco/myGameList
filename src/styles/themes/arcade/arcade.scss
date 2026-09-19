@@ -873,3 +873,34 @@
   --stats-render: crispEdges;
   --stats-num: var(--font-mono);
 }
+
+/* ── §20 · AVATAR SIN FOTO: trazo GRUESO y de remate recto, la silueta serigrafiada del lateral del mueble
+   —no un icono de interfaz—. Los otros cinco temas ya decían el suyo por ficha; este se había quedado con el
+   de la casa. ── */
+:root[data-palette="arcade"] {
+  --deco-avatar-stroke: 2.6;
+  --deco-avatar-cap: butt;
+}
+
+/* ── §21 · LAS ESTRELLAS: el color lo pone la paleta, pero la MATERIA no la ponía nadie. La llena es una
+   ficha de la máquina, con la tinta debajo, igual que la pegatina y la tecla. ── */
+:root[data-palette="arcade"] .stars .f,
+:root[data-palette="arcade"] .star-inp button.f { text-shadow: 2px 2px 0 var(--arc-ink); }
+
+/* ── §22 · LA FIRMA · GAME CLEAR ───────────────────────────────────────────────────────────────────────
+   Era el único mundo sin efecto propio: los otros seis tienen su lacre, su portal, su astro, su barrido o su
+   arranque de cogitador. El gesto que le toca a una recreativa no es un destello más —es CANTAR lo que
+   acabas de hacer—, así que al cerrar un juego cae la marquesina con la bandera a cuadros. La pieza es la
+   misma `.fx-seal` de `_effects.scss`, que ya tenía tres caras; esta es la cuarta, y el TS que la dispara
+   está en `useSignatureEffects`. ── */
+:root[data-palette="arcade"] .fx-seal {
+  width: auto;
+  height: auto;
+  padding: .85rem 1.5rem;
+  border-radius: 0;
+  color: #2a1a00;
+  background: linear-gradient(180deg, #ffd24a, #f0a81e);
+  border: 3px solid var(--arc-ink);
+  box-shadow: 6px 6px 0 var(--arc-ink);
+}
+:root[data-palette="arcade"] .fx-seal-label { font-size: 15px; letter-spacing: .12em; }

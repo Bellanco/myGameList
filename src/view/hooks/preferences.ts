@@ -66,8 +66,8 @@ export const themePreference = createPreferenceStore<ThemePreference>({
 });
 
 /**
- * Paleta de color. La paleta por defecto ("steam") vive en `:root` sin atributo; el resto fijan `data-palette` y
- * cargan su skin (CAPA 3) bajo demanda — los colores ya están en base, así que no hay flash.
+ * Paleta de color. TODAS fijan `data-palette` —incluida la de por defecto, que ya lo trae escrito del anti-flash
+ * de `index.html`— y cargan su skin (CAPA 3) bajo demanda: los colores ya están en base, así que no hay flash.
  */
 export const palettePreference = createPreferenceStore<PaletteId>({
   key: PALETTE_KEY,

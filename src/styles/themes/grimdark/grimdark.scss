@@ -70,6 +70,9 @@
 :root[data-palette="grimdark"][data-theme="light"] .rl-card-name { color: #8a2a20; text-shadow: none; }
 :root[data-palette="grimdark"] .btn,
 :root[data-palette="grimdark"] .hub-seg-btn,
+/* `.detail-label` va pegada a `.flabel` porque es el mismo papel —rótulo corto de interfaz— y
+   estaban separadas: una en la letra del tema y la otra en la de la casa, en la misma pantalla. */
+:root[data-palette="grimdark"] .detail-label,
 :root[data-palette="grimdark"] .flabel,
 :root[data-palette="grimdark"] .row-name,
 :root[data-palette="grimdark"] .hub-name-link,
@@ -768,3 +771,38 @@
   --stats-join: miter;
   --stats-num: var(--font-mono);
 }
+
+/* ── §16 · LAS PESTAÑAS DE ESCRITORIO: moldura de oro abajo y la activa encendida en fósforo verde, que es
+   como este tema dice «aquí estás» desde la barra del teléfono. El contador se queda sin marco: la lectura
+   de cogitador no se enmarca, se enciende. ── */
+:root[data-palette="grimdark"] .tabs { border-bottom: 1px solid var(--grim-gold); }
+:root[data-palette="grimdark"] .tab-btn.active {
+  color: var(--grim-green);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--grim-green) 45%, transparent);
+}
+:root[data-palette="grimdark"][data-theme="light"] .tab-btn.active { text-shadow: none; }
+:root[data-palette="grimdark"] .tab-underline {
+  height: 2px;
+  border-radius: 0;
+  background: var(--grim-green);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--grim-green) 40%, transparent);
+}
+:root[data-palette="grimdark"] .count-badge { font-family: var(--font-mono); }
+
+/* ── §17 · LA TARJETA DE PERSONA DEL DIRECTORIO: la ficha de un hermano de batalla lleva la misma moldura
+   de oro que los paneles del §3, de los que se había quedado fuera. ── */
+:root[data-palette="grimdark"] .hub-user-card {
+  border: 1px solid var(--grim-gold);
+  border-radius: 0;
+  box-shadow:
+    inset 0 0 0 3px var(--surface),
+    inset 0 0 0 4px rgba(224, 169, 43, .4);
+}
+
+/* ── §18 · LAS ESTRELLAS: el oro imperial con el resplandor del tubo detrás; en claro no hay tubo. ── */
+:root[data-palette="grimdark"] .stars .f,
+:root[data-palette="grimdark"] .star-inp button.f {
+  text-shadow: 0 0 8px color-mix(in srgb, var(--grim-gold) 50%, transparent);
+}
+:root[data-palette="grimdark"][data-theme="light"] .stars .f,
+:root[data-palette="grimdark"][data-theme="light"] .star-inp button.f { text-shadow: none; }
