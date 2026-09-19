@@ -813,3 +813,48 @@
   mask-position: 0 center;
   filter: drop-shadow(0 0 5px color-mix(in srgb, hsl(var(--score-hue, 0) 58% var(--acc-l)) 80%, transparent));
 }
+
+/* ── LOS CONTROLES DE VISTA, EN UNA PIEZA · EL FRONTAL DE LA MÁQUINA ──────────────────────────────────
+   Las tres cosas de siempre y ninguna más: relleno macizo, filete de TINTA de 2 px y sombra DURA en
+   diagonal. Nada translúcido y nada difuminado, que es la regla que sostiene el tema entero.
+
+   Y LA TECLA SE VA A DONDE ESTABA SU SOMBRA. No baja, no se oscurece: se DESPLAZA los 2 px de la sombra y la
+   sombra desaparece — el mismo gesto que la tecla de consola del resto del skin, que es lo que hace que una
+   pieza plana parezca que se hunde sin una sola sombra difusa. */
+:root[data-palette="arcade"] .view-controls {
+  gap: 0;
+  padding: .25rem .6rem;
+  border: 2px solid #17091f;
+  border-radius: 4px;
+  background: #2a1140;
+  box-shadow: 3px 3px 0 #17091f;
+}
+:root[data-palette="arcade"] .view-controls:not(:has(.grid-size)) { padding-inline: .4rem; }
+:root[data-palette="arcade"] .view-controls .shape-switch { border: 0; background: none; box-shadow: none; padding: 0 0 0 .5rem; gap: .3rem; }
+:root[data-palette="arcade"] .view-controls .shape-switch-btn {
+  border-radius: 3px;
+  border: 2px solid #17091f;
+  background: #3d1a5c;
+  color: #c9a9e8;
+  box-shadow: 2px 2px 0 #17091f;
+}
+:root[data-palette="arcade"] .view-controls .shape-switch-btn.is-on {
+  background: var(--steam);
+  color: #17091f;
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+/* El carril es tinta y el relleno, tubo de neón cian: lo que manda, brilla. */
+:root[data-palette="arcade"] .view-controls .grid-size::before { background: #17091f; }
+:root[data-palette="arcade"] .view-controls .grid-size::after { background: #2ef0e0; box-shadow: 0 0 8px #2ef0e0; }
+:root[data-palette="arcade"] .view-controls .grid-size-range::-webkit-slider-thumb {
+  border-radius: 2px;
+  background: #2ef0e0;
+  border: 2px solid #17091f;
+  box-shadow: 2px 2px 0 #17091f;
+}
+:root[data-palette="arcade"] .view-controls .grid-size-range::-moz-range-thumb {
+  border-radius: 2px;
+  background: #2ef0e0;
+  border: 2px solid #17091f;
+}

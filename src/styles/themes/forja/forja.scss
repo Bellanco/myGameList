@@ -96,3 +96,36 @@
    queda en un subrayado suelto a media caja—. Los demás temas sí lo llevan: sus cajas tienen el canto vivo
    o un marco recto donde un filo se apoya sin pelear con nada. */
 :root[data-palette="forja"] .game-card.is-flat .game-card-meter { display: none; }
+
+/* ── §N · LOS CONTROLES DE VISTA (tamaño de los cuadros + forma), EN UNA PIEZA ──────────────────────────
+   LA PLACA DEL BANCO DE TRABAJO. Este tema no se disfraza —su carácter es el color y la letra—, así que la
+   pieza no estrena forma: es la caja de la casa con el CANTO DE ABAJO marcado en temple, como una herramienta
+   apoyada en el banco. Lo justo para que se lea como una sola cosa y no como dos ajustes sueltos.
+
+   EL CONMUTADOR PIERDE SU CÁPSULA porque el cuerpo ya lo pone la placa: dos cajas concéntricas para tres
+   controles era el ruido que había antes. Y el encendido pasa al TEMPLE (`--fg-link`) en vez del relleno de
+   forja: en este tema el naranja es lo que se rellena —acción principal, pestaña activa— y el turquesa lo que
+   señala; esto señala. */
+:root[data-palette="forja"] .view-controls {
+  gap: 0;
+  padding: .25rem .55rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-bottom-color: color-mix(in srgb, var(--fg-link) 45%, var(--border));
+}
+/* Sin deslizador (vista de lista) la placa se aprieta: reservar el hueco de algo que no está deja la pieza
+   descentrada respecto a sus vecinas de la barra. */
+:root[data-palette="forja"] .view-controls:not(:has(.grid-size)) { padding-inline: .3rem; }
+:root[data-palette="forja"] .view-controls .shape-switch {
+  border: 0;
+  background: none;
+  box-shadow: none;
+  padding: 0 0 0 .5rem;
+}
+:root[data-palette="forja"] .view-controls .shape-switch-btn.is-on {
+  background: color-mix(in srgb, var(--fg-link) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg-link) 38%, transparent);
+  color: var(--fg-link);
+}

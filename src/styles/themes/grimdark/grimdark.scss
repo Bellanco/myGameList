@@ -660,3 +660,99 @@
   mask-image: repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 7px);
   filter: drop-shadow(0 0 3px color-mix(in srgb, hsl(var(--score-hue, 0) 58% var(--acc-l)) 70%, transparent));
 }
+
+/* ── LOS CONTROLES DE VISTA, EN UNA PIEZA · LA PLACA ATORNILLADA DEL COGITADOR ────────────────────────
+   Latón macizo con sus dos remaches arriba, y encima el VISOR: una ventana hundida de vidrio negro donde el
+   fósforo dibuja la lectura. Es la máquina imperial entera en 30 px de alto — chapa por fuera, tubo por
+   dentro— y por eso no hay una sola esquina redonda ni un solo degradado suave.
+
+   EL VISOR ES LO QUE ARREGLA EL DESLIZADOR. Antes era una tira de segmentos verdes sueltos sobre la placa:
+   dos materiales peleando en la misma pieza, el fósforo flotando sobre el latón sin nada que lo contuviera.
+   Ahora el verde vive DENTRO de su ventana —marco hundido, cristal negro, scanlines encima— y el latón se
+   queda fuera, que es como está hecha la máquina de verdad: la pantalla es un hueco en la chapa.
+
+   Y EL CURSOR NO ES UNA MANECILLA, es la barra de un terminal: un rectángulo de latón con su filo claro, del
+   alto del visor, que es lo que en un cogitador marca la posición. */
+:root[data-palette="grimdark"] .view-controls {
+  position: relative;
+  gap: 0;
+  padding: .3rem .85rem;
+  border-radius: 0;
+  background: linear-gradient(180deg, #3a2f18, #241d0f);
+  box-shadow: inset 0 1px 0 rgba(255, 215, 130, .25), inset 0 0 0 1px rgba(184, 149, 82, .5);
+}
+/* Los dos remaches de la chapa. Van en los pseudos de la PIEZA y no en un elemento: no son contenido. */
+:root[data-palette="grimdark"] .view-controls::before,
+:root[data-palette="grimdark"] .view-controls::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(255, 215, 130, .55);
+}
+:root[data-palette="grimdark"] .view-controls::before { left: 4px; }
+:root[data-palette="grimdark"] .view-controls::after { right: 4px; }
+:root[data-palette="grimdark"] .view-controls:not(:has(.grid-size)) { padding-inline: .5rem; }
+:root[data-palette="grimdark"] .view-controls .shape-switch { border: 0; background: none; box-shadow: none; padding: 0 0 0 .6rem; }
+
+/* EL VISOR: la ventana hundida en la chapa. El cristal es negro verdoso y el marco, el canto del hueco. */
+:root[data-palette="grimdark"] .view-controls .grid-size {
+  padding: 0 .3rem;
+  background: #050a06;
+  box-shadow: inset 0 0 0 1px rgba(184, 149, 82, .45), inset 0 2px 4px rgba(0, 0, 0, .9);
+}
+/* La lectura: barra continua de fósforo con su halo, no segmentos sueltos. Lo que falta por recorrer se queda
+   en el verde apagado del tubo en reposo. */
+:root[data-palette="grimdark"] .view-controls .grid-size::before {
+  clip-path: none;
+  height: .5rem;
+  border-radius: 0;
+  background: rgba(88, 221, 107, .14);
+}
+/* AL MÍNIMO, EL VISOR SE APAGA DEL TODO. La fórmula de la casa le suma medio disco de manecilla al relleno
+   (`+ .35rem`) para que la cuña llegue al centro del pomo: en una cápsula eso no se ve, pero dentro de una
+   ventana negra deja una mota de fósforo encendida en el primer peldaño, como un píxel muerto del tubo.
+   Aquí el ancho es el carril entero y lo que cambia es la ESCALA: a posición 0, `scaleX(0)` no pinta nada —ni
+   el halo, que es lo que seguiría delatando a una caja de ancho cero—. Y la escala se lee igual de bien que
+   el ancho porque el relleno es liso: no hay dibujo que deformar. */
+:root[data-palette="grimdark"] .view-controls .grid-size::after {
+  clip-path: none;
+  height: .5rem;
+  border-radius: 0;
+  width: calc(100% - 1.2rem);
+  transform: translateY(-50%) scaleX(calc(var(--grid-size-pos, 0) / var(--grid-size-pasos)));
+  transform-origin: left center;
+  background: linear-gradient(180deg, #7bea8a, var(--success) 55%, #2f9c46);
+  box-shadow: 0 0 6px rgba(88, 221, 107, .75);
+}
+/* Las scanlines del tubo, encima de la lectura y sin comerse el arrastre. */
+:root[data-palette="grimdark"] .view-controls .grid-size .grid-size-range { position: relative; z-index: 2; }
+:root[data-palette="grimdark"] .view-controls .grid-size {
+  background-image: repeating-linear-gradient(180deg, rgba(0, 0, 0, .45) 0 1px, transparent 1px 3px);
+  background-color: #050a06;
+}
+/* EL CURSOR de latón: del alto del visor, con el filo iluminado por la izquierda. */
+:root[data-palette="grimdark"] .view-controls .grid-size-range::-webkit-slider-thumb {
+  width: .28rem;
+  height: 1rem;
+  border-radius: 0;
+  background: linear-gradient(90deg, #ffd782, #b89552 60%, #6d5729);
+  border: 0;
+  box-shadow: 0 0 4px rgba(255, 215, 130, .6);
+}
+:root[data-palette="grimdark"] .view-controls .grid-size-range::-moz-range-thumb {
+  width: .28rem;
+  height: 1rem;
+  border-radius: 0;
+  background: linear-gradient(90deg, #ffd782, #b89552 60%, #6d5729);
+  border: 0;
+}
+/* La forma elegida se graba en el latón: relleno macizo y el icono en el color de la chapa. */
+:root[data-palette="grimdark"] .view-controls .shape-switch-btn { border-radius: 0; color: rgba(255, 215, 130, .45); }
+:root[data-palette="grimdark"] .view-controls .shape-switch-btn.is-on {
+  background: linear-gradient(180deg, #ffd782, #c9a55f);
+  color: #241d0f;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, .35);
+}

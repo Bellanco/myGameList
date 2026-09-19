@@ -552,3 +552,43 @@
   width: calc(var(--score-pct, 0) * 1% + 5px);
   clip-path: polygon(0 0, 100% 0, calc(100% - 7px) 100%, 0 100%);
 }
+
+/* ── LOS CONTROLES DE VISTA, EN UNA PIEZA · EL BOCADILLO DEL ATRACO ──────────────────────────────────
+   La misma gramática que los botones del tema: la pieza va SESGADA, con filete de tinta grueso y sombra dura
+   desplazada — el recorte de cómic.
+
+   EL PAPEL LO PONE EL TEMA, no un blanco fijo. Estuvo en `#f2f2f2` a secas y en el modo oscuro era lo único
+   blanco de la pantalla: un rótulo recortado de otra revista, pegado en una página negra. Con `--surface` la
+   pieza es del color de las demás en cada modo y el rojo sigue siendo lo único que grita.
+
+   Y LA SOMBRA ES ROJA EN LOS DOS MODOS. La de los botones es blanca en oscuro y tinta en claro, que es la
+   regla de la casa para que se vea sobre su fondo; copiada tal cual aquí, en claro se perdía —blanco sobre
+   blanco— y la pieza se quedaba sin el desplazamiento que la hace de cómic. El acento resuelve los dos casos a
+   la vez, que es la salida que el propio tema documenta en sus reglas aprendidas: una sombra de color se ve en
+   ambos fondos y ahorra el override doble. Y aquí encaja mejor que en ningún sitio: la pieza ya es roja por
+   dentro (el relleno del deslizador, la forma elegida), así que la sombra no mete un color nuevo.
+
+   SOLO SE CONTRA-SESGA EL CONTENIDO, nunca su `display`: el deslizador y los botones tienen que seguir
+   midiendo lo que miden, y un `skew` heredado los deja en diagonal (la misma nota que los botones). */
+:root[data-palette="persona"] .view-controls {
+  gap: 0;
+  transform: skewX(-7deg);
+  padding: .22rem .6rem;
+  border: 2.5px solid #0a0a0a;
+  border-radius: 0;
+  background: var(--surface);
+  box-shadow: 4px 4px 0 var(--steam);
+}
+:root[data-palette="persona"][data-theme="light"] .view-controls { border-color: #151011; }
+:root[data-palette="persona"] .view-controls > * { transform: skewX(7deg); }
+:root[data-palette="persona"] .view-controls:not(:has(.grid-size)) { padding-inline: .35rem; }
+:root[data-palette="persona"] .view-controls .shape-switch { border: 0; background: none; box-shadow: none; padding: 0 0 0 .45rem; }
+/* El icono en la tinta del modo —claro sobre papel negro, negro sobre papel blanco— y la forma elegida en
+   rojo pleno con el dibujo en blanco: el rojo del tema es oscuro en los dos modos, así que el blanco aguanta. */
+:root[data-palette="persona"] .view-controls .shape-switch-btn { color: var(--text); border-radius: 0; }
+:root[data-palette="persona"] .view-controls .shape-switch-btn.is-on { background: var(--steam); color: #fff; box-shadow: none; }
+:root[data-palette="persona"] .view-controls .grid-size::before { background: color-mix(in srgb, var(--text) 25%, transparent); }
+:root[data-palette="persona"] .view-controls .grid-size::after { background: var(--steam); }
+/* La manecilla, un bloque macizo de tinta: negro sobre el papel claro, blanco sobre el oscuro. */
+:root[data-palette="persona"] .view-controls .grid-size-range::-webkit-slider-thumb { border-radius: 0; background: var(--text); border: 0; }
+:root[data-palette="persona"] .view-controls .grid-size-range::-moz-range-thumb { border-radius: 0; background: var(--text); border: 0; }

@@ -1022,3 +1022,55 @@
       rgba(0, 0, 0, .5) 84% 100%),
     color-mix(in srgb, hsl(var(--score-hue, 0) 58% var(--acc-l)) 70%, var(--steam));
 }
+
+/* ── LOS CONTROLES DE VISTA, EN UNA PIEZA · LA BANDA DE ACERO CON SU LACRE ─────────────────────────────
+   Los tres materiales del tema reparten el trabajo como en todo lo demás: el ACERO es el cuerpo (la banda,
+   con su veta y la luz entrando por arriba), el REMACHE es lo que se agarra (la manecilla del deslizador) y
+   el LACRE —la gota de cera que sella un contrato— es lo que dice cuál de las dos formas está en vigor.
+
+   EL LACRE Y NO UN RELLENO: rellenar el botón activo lo convertía en una pastilla de color, que es el acabado
+   de la casa y no el de este tablón. El sello va en la esquina, como en los chips-cartel, y deja el icono
+   entero a la vista. */
+:root[data-palette="steam"] .view-controls {
+  gap: 0;
+  padding: .25rem .6rem;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  /* Veta de cepillado fina, no la turbulencia de los paneles: a este tamaño aquella se lee como suciedad. */
+  background-image:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.05) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 88%, #fff 12%), var(--surface));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 1px 2px rgba(0,0,0,.35);
+}
+:root[data-palette="steam"] .view-controls:not(:has(.grid-size)) { padding-inline: .35rem; }
+:root[data-palette="steam"] .view-controls .shape-switch { border: 0; background: none; box-shadow: none; padding: 0 0 0 .5rem; }
+/* EL REMACHE: un disco de acero torneado, con la luz arriba a la izquierda como el resto de las piezas. */
+:root[data-palette="steam"] .view-controls .grid-size-range::-webkit-slider-thumb {
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #d9dee4, #6f7780);
+  border: 1px solid #454b52;
+}
+:root[data-palette="steam"] .view-controls .grid-size-range::-moz-range-thumb {
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #d9dee4, #6f7780);
+  border: 1px solid #454b52;
+}
+:root[data-palette="steam"] .view-controls .shape-switch-btn { border-radius: 0; }
+:root[data-palette="steam"] .view-controls .shape-switch-btn.is-on {
+  background: none;
+  box-shadow: none;
+  position: relative;
+  color: var(--fg-link);
+}
+/* La gota de cera, en el mismo rojo del lacre de los carteles de contrato. */
+:root[data-palette="steam"] .view-controls .shape-switch-btn.is-on::after {
+  content: '';
+  position: absolute;
+  top: -.1rem;
+  right: -.1rem;
+  width: .5rem;
+  height: .5rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #c0392b, #7a1f14);
+  box-shadow: 0 1px 1px rgba(0,0,0,.5);
+}
