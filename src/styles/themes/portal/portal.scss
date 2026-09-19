@@ -874,3 +874,16 @@
 /* El icono se sostiene sobre el centro claro de la boca con una sombra dura mínima: sin ella perdía el filo. */
 :root[data-palette="portal"] .view-controls .shape-switch-btn.is-on .ui-icon,
 :root[data-palette="portal"] .view-controls .shape-switch-btn.is-on svg { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .55)); }
+
+/* ── §16 · LA FICHA DE GRÁFICA ─────────────────────────────────────────────────────────────────────────
+   La placa de Aperture es LIMPIA, no angulosa: conserva un canto pequeño y uniforme en todo lo que es pieza,
+   y corta a escuadra solo lo que es SEÑAL —la línea de una serie, el vértice del radar—, que es como está
+   rotulada esta sala. Cifras en la terminal de GLaDOS. ── */
+:root[data-palette="portal"] .stats-hub {
+  --stats-radius: 3px;
+  --stats-bar: 1px;
+  --stats-pill: 2px;
+  --stats-cap: butt;
+  --stats-join: miter;
+  --stats-num: var(--font-mono);
+}

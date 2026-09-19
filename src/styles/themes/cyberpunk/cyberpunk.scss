@@ -760,3 +760,15 @@
   box-shadow: none;
   clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
 }
+
+/* ── §15 · LA FICHA DE GRÁFICA: el HUD es recto y el punto de una serie es un cuadrado de retícula, no un
+   lunar. Cifras en la monoespaciada de terminal, como las fechas del feed. ── */
+:root[data-palette="cyberpunk"] .stats-hub {
+  --stats-radius: 0;
+  --stats-bar: 0;
+  --stats-pill: 0;
+  --stats-dot: 0;
+  --stats-cap: butt;
+  --stats-join: miter;
+  --stats-num: var(--font-mono);
+}

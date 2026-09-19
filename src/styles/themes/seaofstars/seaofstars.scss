@@ -591,3 +591,17 @@
   color: #ffd75e;
   filter: drop-shadow(0 0 5px rgba(255, 215, 94, .8));
 }
+
+/* ── §17 · LA FICHA DE GRÁFICA ─────────────────────────────────────────────────────────────────────────
+   Pixel-art: ni una curva suavizada en todo el panel. El `crispEdges` es aquí lo importante —sin él, el mapa
+   de calor y la serie de géneros eran las dos únicas piezas con antialias de la pantalla—. ── */
+:root[data-palette="seaofstars"] .stats-hub {
+  --stats-radius: 0;
+  --stats-bar: 0;
+  --stats-pill: 0;
+  --stats-dot: 0;
+  --stats-cap: butt;
+  --stats-join: miter;
+  --stats-render: crispEdges;
+  --stats-num: var(--font-body);
+}

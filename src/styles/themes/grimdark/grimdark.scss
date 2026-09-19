@@ -756,3 +756,15 @@
   color: #241d0f;
   box-shadow: inset 0 -1px 0 rgba(0, 0, 0, .35);
 }
+
+/* ── §15 · LA FICHA DE GRÁFICA: esquinas rectas (gótico) y cifras de cogitador, la lectura de terminal que
+   ya usan la fecha del feed y la cabecera de la tabla. ── */
+:root[data-palette="grimdark"] .stats-hub {
+  --stats-radius: 0;
+  --stats-bar: 0;
+  --stats-pill: 0;
+  --stats-dot: 0;
+  --stats-cap: butt;
+  --stats-join: miter;
+  --stats-num: var(--font-mono);
+}

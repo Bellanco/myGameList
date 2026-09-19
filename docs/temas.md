@@ -69,8 +69,29 @@ el que pinta el primer fotograma y no puede llegar tarde.
 | un color, un fondo, la rampa de géneros | `themes/<id>/_colors.scss` (y el `bg` de la ficha + `index.html` si cambia `--bg`) |
 | la letra | `themes/<id>/<id>.scss` (`--font-*`), y `vendor-fonts.mjs` si es una familia nueva |
 | la forma: radios, filetes, texturas, ornamento | `themes/<id>/<id>.scss` |
+| la forma de **las gráficas del panel** | la ficha `--stats-*` en `themes/<id>/<id>.scss` (ver abajo) |
 | el nombre visible o la muestra del selector | `constants/themes/<id>.ts` |
 | lo que dice al fallar o al quedarse sin red | `constants/themes/<id>.ts` (app) o `<id>.social.ts` (hub) |
+
+**La ficha de gráfica.** Las veinte gráficas del panel de estadísticas NO se doblan enumerándolas: `stats.scss`
+declara siete palancas con los valores de la casa y cada tema las rellena en un bloque `.stats-hub`, que alcanza
+a todas a la vez —las de hoy y la que se añada mañana—:
+
+| Palanca | Qué decide | Casa |
+|---|---|---|
+| `--stats-radius` | el canto de una pieza (baldosa, escalón, carril) | `8px` |
+| `--stats-bar` | el canto de una barra o de su pista | `2px` |
+| `--stats-pill` | lo que en la casa es una píldora (carril del top, eje) | `--radius-pill` |
+| `--stats-dot` | el punto de una serie: lunar o píxel | `50%` |
+| `--stats-cap` | el remate de una línea de serie | `round` |
+| `--stats-join` | su vértice, y el de los polígonos del radar | `round` |
+| `--stats-render` | `crispEdges` donde el tema no admite curva suavizada | `auto` |
+| `--stats-num` | la familia de las **cifras** de gráfica | `inherit` |
+
+Lo que NO entra ahí es el color: ese viaja por `--stats-c/v/e/p` y la rampa `--cat-N`. Y `--stats-num` es para el
+DATO suelto: una frase con una cifra dentro (`.week-heat-stats dd`) se queda fuera, o en una mono ancha salta de
+línea. El enjambre tiene además su propia ficha `--bee-*`, con marco, velo y trama, por si el tema quiere ir más
+lejos en esa gráfica.
 
 Nada de esto obliga a tocar otro tema: cada bloque está aislado en su `[data-palette]`. Lo que **sí** es común
 —las medidas de CAPA 0 y las derivaciones de CAPA 1— vive en `src/styles/_base.scss` y cambiarlo los cambia todos.

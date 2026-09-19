@@ -1074,3 +1074,18 @@
   background: radial-gradient(circle at 35% 30%, #c0392b, #7a1f14);
   box-shadow: 0 1px 1px rgba(0,0,0,.5);
 }
+
+/* ── §14 · LA FICHA DE GRÁFICA ─────────────────────────────────────────────────────────────────────────
+   Este era el tema peor cubierto del panel: once gráficas con el acabado de la casa, porque el §12 las
+   enumeraba una a una. Con las siete palancas de `stats.scss` se dice de una vez: las barras son chapa
+   —canto vivo y remate a escuadra— y las cifras van en la mono.
+   LOS PUNTOS SE QUEDAN REDONDOS, y es la diferencia con «Inserte moneda»: aquí un punto es un REMACHE, y un
+   remache cuadrado no existe. Por eso `--stats-dot` no se toca. ── */
+:root[data-palette="steam"] .stats-hub {
+  --stats-radius: var(--radius-sm);
+  --stats-bar: 0;
+  --stats-pill: 0;
+  --stats-cap: butt;
+  --stats-join: miter;
+  --stats-num: var(--font-mono);
+}

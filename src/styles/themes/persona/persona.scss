@@ -603,3 +603,16 @@
 /* La manecilla, un bloque macizo de tinta: negro sobre el papel claro, blanco sobre el oscuro. */
 :root[data-palette="persona"] .view-controls .grid-size-range::-webkit-slider-thumb { border-radius: 0; background: var(--text); border: 0; }
 :root[data-palette="persona"] .view-controls .grid-size-range::-moz-range-thumb { border-radius: 0; background: var(--text); border: 0; }
+
+/* ── §15 · LA FICHA DE GRÁFICA ─────────────────────────────────────────────────────────────────────────
+   El cómic no tiene esquinas blandas: todo corta recto. El PUNTO sí se queda redondo —es el lunar del
+   semitono, la trama de la que está hecho este tema— y las cifras toman la Arial Black, como la nota del
+   aro y la medalla. ── */
+:root[data-palette="persona"] .stats-hub {
+  --stats-radius: 0;
+  --stats-bar: 0;
+  --stats-pill: 0;
+  --stats-cap: butt;
+  --stats-join: miter;
+  --stats-num: var(--font-display);
+}
