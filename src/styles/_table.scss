@@ -353,7 +353,10 @@ table.meta-score.meta-grade .row-score { min-width: 2.9rem; }
    sin género salía cuatro píxeles más bajo que los de al lado, que en una lista larga se nota como un temblor.
    Y ninguna ranura crece a dos líneas: en una lista de trescientos renglones, uno más alto que el resto se ve
    antes que un nombre recortado. Lo que no cabe ya lo cuenta el «+N». */
-.row-cat { display: inline-flex; align-items: center; min-width: 0; min-height: var(--chip-slot-h); }
+/* EL HUECO ENTRE EL GRUPO Y EL «+N» es el MISMO que hay entre dos chips (`.chips` usa .4rem, y es el que el
+   componente reserva en su cuenta como `CHIP_GAP_PX`). No hacía falta mientras el contador iba empujado al
+   canto por un grupo estirado; ahora que va detrás del último chip, sin este hueco los dos se tocaban. */
+.row-cat { display: inline-flex; align-items: center; gap: .4rem; min-width: 0; min-height: var(--chip-slot-h); }
 .row-cat .chips { flex-wrap: nowrap; }
 /* LOS CHIPS DE UNA RANURA NO SE ENCOGEN. Dejarles encoger (`min-width: 0`) reparte la estrechez entre todos, y
    lo que se ve entonces es «P…» junto a «PlayStation…»: hasta «PC», que cabe en cualquier sitio, salía
@@ -363,11 +366,25 @@ table.meta-score.meta-grade .row-score { min-width: 2.9rem; }
    en vez de partirse a media letra —que es lo que parecía un fallo de pintado—. */
 .row-cat .chip { flex: 0 0 auto; }
 .row-cat .chips {
-  /* Estirado hasta el canto de la ranura, para que el «+N» no se monte sobre el último chip. Aquí tampoco hay
-     máscara ni `overflow`: lo que cabe lo decide la cuenta (ver la nota de `.game-card-slot`). */
-  flex: 1 1 auto;
+  /* EL GRUPO MIDE LO QUE MIDEN SUS CHIPS, para que el «+N» quede pegado al último y no en el canto del renglón.
+     Estuvo estirado hasta ahí (`flex: 1 1 auto`) para que el contador no se le montara encima al último chip;
+     el efecto era el mismo que en la caja —«RPG» a un lado del renglón y «+1» al otro—, y se arregla igual:
+     el grupo no se estira y quien no se encoge nunca es el contador.
+     Aquí tampoco hay máscara ni `overflow`: lo que cabe lo decide la cuenta (ver la nota de `.game-card-slot`). */
+  flex: 0 1 auto;
   min-width: 0;
 }
+/* Y EL MISMO ÚLTIMO RECURSO que en la caja: donde hay «+N», si la cuenta se queda corta por unos píxeles cede
+   el chip —puntos suspensivos— y no el número, que es el que dice que ahí falta algo. Sin «+N» no se aplica:
+   los chips de una ranura no se encogen (la nota de aquí arriba). */
+.row-cat:has(.chip-more) .chips .chip {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  flex: 0 1 auto;
+}
+.row-cat .chip.chip-more { flex: 0 0 auto; }
 /* Si un valor suelto es más largo que su ranura —«Coleccionista de criaturas» en la columna del género de una
    pantalla de 1024— se recorta con puntos suspensivos en vez de invadir la ranura vecina. Solo entonces: lo
    marca el componente (`is-apretado`), porque es el que sabe si el texto entra o no. */
@@ -1036,29 +1053,20 @@ table.is-grid {
    es quien de verdad sabe cuánto sitio hay, y del resto avisa el «+N».
    Lo que aun así se salga se apaga en el último centímetro en vez de partirse a media letra. */
 .game-card-slot .chip { flex: 0 0 auto; }
-/* EL «+N» VA ANCLADO AL CANTO DE LA RANURA, y su sitio se reserva con relleno. Iba al final de la fila, como
-   un chip más, así que era EL PRIMERO en caerse fuera cuando el texto se pasaba —y un contador que no se ve no
-   cuenta nada—. Anclado, el ancho que queda es el de los chips y es a ellos a quienes se les apaga el final,
-   que es el orden correcto: lo que falta ya lo dice el número.
-   `:has()` para no tener que marcar la ranura desde el componente: si no hay «+N», no hay relleno que reservar
-   y el chip dispone de la ranura entera.
+/* EL «+N» VA DETRÁS DE SU CHIP, pegado a él, como se lee una enumeración: «Estrategia, y uno más». Es un
+   contador de lo que acaba de decirse, no una etiqueta de la caja.
 
-   EL SELECTOR LLEVA `.game-card` Y DOBLA LA CLASE DEL CHIP A PROPÓSITO. Los ocho skins redibujan `.chip` desde
-   `:root[data-palette="…"] .chip` (0,3,0) y algunos le devuelven `position: relative` —el cartel de contrato de
-   «Papel y acero» y la caja de diálogo de «Sol y luna»—, que pesa más que el `.game-card-slot .chip-more`
-   (0,2,0) que había aquí y le quitaba el anclaje: el «+N» volvía al flujo, se montaba encima del último chip o
-   se quedaba a 42 px del canto, con el hueco reservado sin usar. Con `.game-card .game-card-slot .chip.chip-more`
-   (0,4,0) manda el anclaje y el tema sigue poniendo el resto (papel, sello, letra).
-   Y LOS MÁRGENES SE ANULAN porque en un absoluto ya no separan de nada: desplazan. El margen que esos carteles
-   se reservan para su lacre bajaba el «+N» 14,5 px por debajo de su ranura. */
-.game-card-slot:has(.chip-more) { position: relative; padding-right: 42px; }
-.game-card .game-card-slot .chip.chip-more {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  margin: 0;
-}
+   ASÍ NO ERA. Estuvo ANCLADO al canto derecho de la ranura, con 42 px de relleno reservados, para que fuera lo
+   último en caerse cuando el texto se pasaba. Resolvía eso y traía algo peor a cambio: con un chip corto —«GOG»,
+   «RPG»— el número quedaba a medio palmo de él, al otro extremo de la caja, y ahí ya no se lee como «uno más
+   de estos» sino como un dato suelto que no se sabe de qué habla. Se veía en una rejilla entera de cajas: una
+   columna de «+1» alineados por la derecha sin nada que los sujetara.
+
+   Y EL CONTADOR NO SE CAE IGUALMENTE, que era lo que el anclaje protegía. Quien reserva su sitio es la CUENTA:
+   `chipsQueCaben` guarda un hueco de `CHIP_PX_MAS_N` antes de pintar un chip que deje valores fuera. Y si aun
+   así se quedara corta —una letra más ancha de lo medido, un skin con más relleno—, el que cede es el chip, no
+   el número: ver la regla de encogimiento de aquí abajo. */
+.game-card-slot .chip.chip-more { flex: 0 0 auto; }
 
 /* LA EXCEPCIÓN: la ranura APRETADA, la que el componente marca cuando ni el primer chip cabe entero (un género
    como «Coleccionista de criaturas» pide 172 px y en la densidad pequeña la ranura tiene 157). Ahí el único que
@@ -1072,10 +1080,24 @@ table.is-grid {
   flex: 0 1 auto;
 }
 .game-card-slot .chips {
-  /* El grupo se estira hasta el canto de la ranura: así el «+N», que va anclado a la derecha, no se le monta
-     encima al último chip. */
-  flex: 1 1 auto;
+  /* EL GRUPO MIDE LO QUE MIDEN SUS CHIPS, ni un píxel más: es lo que deja al «+N» pegado a ellos. Estuvo
+     estirado hasta el canto (`flex: 1 1 auto`) mientras el contador iba anclado allí, y si se deja estirado con
+     el contador ya en el flujo, el grupo lo empuja al canto y vuelve el mismo problema por otra puerta. */
+  flex: 0 1 auto;
   min-width: 0;
+}
+
+/* EL ÚLTIMO RECURSO, solo donde hay «+N»: si la cuenta se queda corta por unos píxeles, el chip se recorta con
+   puntos suspensivos y el contador se queda dentro. Al revés —chip entero y número fuera— se pierde justo lo
+   que hay que saber: que ahí falta algo. No se aplica sin «+N» porque entonces no hay nada que proteger, y los
+   chips de una ranura no se encogen: repartir la estrechez entre todos deja «P…» junto a «PlayStation…».
+   `inline-block` porque a un ítem flex no le llega el `text-overflow`, igual que en la ranura apretada. */
+.game-card-slot:has(.chip-more) .chips .chip {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  flex: 0 1 auto;
 }
 /* NI MÁSCARA NI `overflow`: NADA RECORTA AQUÍ. Hubo las dos cosas y las dos se vieron:
    · el `overflow: hidden` corta por los CUATRO cantos, y a las pegatinas de «Inserte moneda» y a las viñetas
