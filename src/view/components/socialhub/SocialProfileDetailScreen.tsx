@@ -484,6 +484,11 @@ function SocialProfileDetailScreenBase({
                   SOCIAL_UI={SOCIAL_UI}
                   reviews={reviews}
                   onOpenReview={onOpenReview}
+                  /* MISMA REGLA QUE SU TABLA DE JUEGOS, unas líneas más abajo: las carátulas de lo que hay en la
+                     estantería de otra persona son el gasto que menos se puede acotar del servicio, así que la
+                     franja se le concede al rango que paga los privilegios. Encima manda la preferencia de quien
+                     mira, que viene apagada de fábrica (ver `useReviewCover`). */
+                  coversAllowed={viewerTier === ADMIN_ONLY_TIER}
                 />
               </div>
             </div>

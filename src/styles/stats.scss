@@ -15,7 +15,23 @@
 .stats-hub { max-width: 100%; }
 
 .stats-hub {
-  --stats-radius: 8px;
+  /* ══ LA FICHA DE LA GRÁFICA · las siete palancas con las que un tema dobla TODAS sus gráficas ══════════
+     Nace del mismo sitio que la ficha del enjambre (`--bee-*`, más abajo): hasta ahora cada skin doblaba las
+     gráficas ENUMERÁNDOLAS —«el lomo del año, el carril del brillo, la barra del top»—, y la cuenta no
+     cuadraba nunca. Tres gráficas no las había tocado nadie (la evolución del gusto, la constancia semanal y
+     los rasgos de una reseña), a «Plata y acero» le faltaban once y la que se añadiera mañana nacía con el
+     acabado de la casa en los ocho temas.
+     Aquí el tema dice UNA VEZ cómo son sus barras, sus puntos y sus líneas, y lo dice para todas. Los valores
+     de abajo son los de la casa, así que sin tocar nada no cambia un píxel.
+     Lo que NO entra: el color. Ese ya viaja por `--stats-c/v/e/p` y la rampa, que es otra cosa. */
+  --stats-radius: 8px;      /* la caja de una pieza de gráfica (baldosa, escalón, carril) */
+  --stats-bar: 2px;         /* el canto de una BARRA o de su pista */
+  --stats-pill: var(--radius-pill); /* lo que en la casa es una píldora: carril del top, eje del reparto */
+  --stats-dot: 50%;         /* el PUNTO de una serie: lunar en la casa, píxel donde no hay curvas */
+  --stats-cap: round;       /* el remate de una línea de serie */
+  --stats-join: round;      /* su vértice, y el de los polígonos del radar */
+  --stats-render: auto;     /* `crispEdges` donde el tema no admite curva suavizada */
+  --stats-num: inherit;     /* la familia de las CIFRAS de gráfica: dato, no texto corrido */
 
   /* COLOR SEMÁNTICO por lista: el mismo en todo el panel, para que leyenda, tarta, área y línea de tiempo
      digan lo mismo sin releer la leyenda. Sale de tokens de PALETA (no de los `--fg-*`, que son constantes de
@@ -232,7 +248,12 @@
 
 /* ---- "Más años": el resto del historial, en un desplegable ---------------------------------------------- */
 
-.scope-more { position: relative; }
+/* SIN `position: relative`, y esto es justo lo que evita el desplazamiento horizontal: el desplegable se
+   posiciona contra la BARRA (`.scope-tabs`, que sí es relativa) y no contra su botón. Anclado al botón, el
+   panel crecía hacia la derecha desde donde estuviera —y el botón está al final de la fila—, así que en una
+   ventana ancha se salía 71 px por el canto y la página estrenaba barra de desplazamiento al abrirlo (medido
+   a 1280 px; 23 px a 768). Contra la barra, su borde derecho es el de la barra y no hay por dónde salirse. */
+.scope-more { position: static; }
 
 .scope-more-btn {
   display: inline-flex;
@@ -252,8 +273,15 @@
 .scope-more-panel {
   position: absolute;
   z-index: 30;
+  /* El 100% es ahora el ALTO DE LA BARRA, así que el panel cuelga de ella entera y no de su botón: con la
+     barra envuelta en dos líneas, cuelga de la segunda, que es donde el botón está. */
   top: calc(100% + .35rem);
-  left: 0;
+  /* Alineado por la derecha —que es donde vive el botón, siempre el último de la fila— y nunca más ancho que
+     la barra: `max-content` le deja pedir lo que necesita y `100%` le pone el techo. */
+  right: 0;
+  left: auto;
+  width: max-content;
+  max-width: 100%;
   display: grid;
   grid-template-columns: repeat(4, minmax(3.6rem, 1fr));
   gap: .3rem;
@@ -265,9 +293,10 @@
   animation: fade-in .16s ease-out both;
 }
 
-/* Pegado al borde derecho cuando el botón está a la derecha del todo (pantallas estrechas). */
+/* En pantalla estrecha, tres columnas: con cuatro, el mínimo de la rejilla (4 × 3,6 rem más los huecos) pasa
+   del ancho de la barra y el panel volvería a empujar. El anclado a la derecha ya lo pone la regla de arriba. */
 @media (max-width: 34rem) {
-  .scope-more-panel { left: auto; right: 0; grid-template-columns: repeat(3, minmax(3.6rem, 1fr)); }
+  .scope-more-panel { grid-template-columns: repeat(3, minmax(3.6rem, 1fr)); }
 }
 
 /* ---- Cifras destacadas ------------------------------------------------------------------------------- */
@@ -375,7 +404,7 @@
   /* Al pie de la tarjeta, igual que la banda: en una misma fila, dos tarjetas con pistas de distinto número de
      líneas dejaban sus barras a alturas distintas y la fila se leía torcida. */
   margin-top: auto;
-  border-radius: 2px;
+  border-radius: var(--stats-bar);
   background: var(--score-track);
   overflow: hidden;
 }
@@ -389,7 +418,7 @@
   /* Un pelo más alta que la barra de progreso: tiene que caber una marca dentro sin que tape la banda. */
   height: 5px;
   margin-top: auto;
-  border-radius: 999px;
+  border-radius: var(--stats-pill);
   background: var(--surface-hover);
   overflow: hidden;
 }
@@ -399,7 +428,7 @@
   inset-block: 0;
   left: var(--from, 0%);
   width: calc(var(--to, 100%) - var(--from, 0%));
-  border-radius: 999px;
+  border-radius: var(--stats-pill);
   background: var(--steam);
 }
 
@@ -419,7 +448,7 @@
   display: block;
   width: var(--pct, 0%);
   height: 100%;
-  border-radius: 2px;
+  border-radius: var(--stats-bar);
   background: var(--steam);
   transform-origin: left center;
   animation: grow-right .7s cubic-bezier(.22, 1, .36, 1) both;
@@ -601,8 +630,8 @@
   fill: none;
   stroke: var(--steam);
   stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  stroke-linecap: var(--stats-cap);
+  stroke-linejoin: var(--stats-join);
   vector-effect: non-scaling-stroke;
 }
 
@@ -617,7 +646,7 @@
   width: .45rem;
   height: .45rem;
   margin: -.225rem 0 0 -.225rem;
-  border-radius: 50%;
+  border-radius: var(--stats-dot);
   background: var(--steam);
   box-shadow: 0 0 0 2px var(--surface);
   animation: pop-in .45s cubic-bezier(.34, 1.36, .64, 1) both;
@@ -636,7 +665,7 @@
   content: "";
   position: absolute;
   inset: -10px;
-  border-radius: 50%;
+  border-radius: var(--stats-dot);
 }
 
 .year-node.is-link:hover {
@@ -747,7 +776,7 @@
   flex-direction: column;
   /* CUADRADA: es una barra de un gráfico de barras, un año al lado de otro. Con la cápsula redondeada parecía
      un indicador suelto y no una serie. */
-  border-radius: 2px;
+  border-radius: var(--stats-bar);
   overflow: hidden;
   background: var(--score-track);
   transform-origin: bottom center;
@@ -804,7 +833,7 @@
 .year-scale-ramp {
   width: 4.5rem;
   height: .6rem;
-  border-radius: 2px;
+  border-radius: var(--stats-bar);
   background: linear-gradient(90deg,
     var(--grade-1) 0 20%,
     var(--grade-2) 20% 40%,
@@ -846,7 +875,7 @@
 .stats-legend-dot {
   width: .6rem;
   height: .6rem;
-  border-radius: 3px;
+  border-radius: var(--stats-bar);
   flex: 0 0 auto;
 }
 
@@ -911,8 +940,8 @@
 .backlog-line {
   fill: none;
   stroke-width: 2;
-  stroke-linejoin: round;
-  stroke-linecap: round;
+  stroke-linejoin: var(--stats-join);
+  stroke-linecap: var(--stats-cap);
 }
 
 .backlog-line.is-c { stroke: var(--stats-c); }
@@ -946,7 +975,7 @@
   width: .5rem;
   height: .5rem;
   margin: -.25rem 0 0 -.25rem;
-  border-radius: 50%;
+  border-radius: var(--stats-dot);
   border: 2px solid var(--surface);
   animation: pop-in .4s cubic-bezier(.34, 1.36, .64, 1) both;
   animation-delay: .6s;
@@ -1199,7 +1228,7 @@
   content: "";
   position: absolute;
   inset: -8px;
-  border-radius: 50%;
+  border-radius: var(--stats-dot);
 }
 
 /* El punto es una CAJA transparente y el color vive en su `::before`. Suena rebuscado, pero es lo que permite
@@ -1390,7 +1419,7 @@
   top: 50%;
   height: 3px;
   margin-top: -1.5px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--stats-pill);
   background: linear-gradient(90deg, var(--stats-v), var(--stats-c));
   transform-origin: left center;
   animation: grow-right .6s cubic-bezier(.22, 1, .36, 1) both;
@@ -1403,7 +1432,7 @@
   width: .85rem;
   height: .85rem;
   margin: -.425rem 0 0 -.425rem;
-  border-radius: 50%;
+  border-radius: var(--stats-dot);
   border: 2px solid var(--surface);
   animation: pop-in .45s cubic-bezier(.34, 1.36, .64, 1) both;
   animation-delay: calc(var(--i, 0) * 70ms + 120ms);
@@ -1451,7 +1480,7 @@
   align-items: baseline;
   gap: .35rem;
   padding: calc(.2rem + var(--weight) * .16rem) calc(.5rem + var(--weight) * .3rem);
-  border-radius: var(--radius-pill);
+  border-radius: var(--stats-pill);
   font-size: calc(.74rem + var(--weight) * .34rem);
   line-height: 1.2;
   background: color-mix(in srgb, var(--steam) calc(14% + var(--weight) * 26%), transparent);
@@ -1541,7 +1570,7 @@
   right: 0;
   top: 50%;
   height: 2px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--stats-pill);
   background: linear-gradient(90deg, color-mix(in srgb, var(--steam) 25%, transparent), var(--steam));
   transform-origin: left center;
   animation: grow-right .8s cubic-bezier(.22, 1, .36, 1) both;
@@ -1571,7 +1600,7 @@
   width: .55rem;
   height: .55rem;
   margin: -.275rem 0 0 -.275rem;
-  border-radius: 50%;
+  border-radius: var(--stats-dot);
   background: var(--steam);
   opacity: .75;
   animation: pop-in .4s cubic-bezier(.34, 1.36, .64, 1) both;
@@ -1667,7 +1696,7 @@
 .genre-radar-shape {
   stroke: var(--chart-from);
   stroke-width: 2;
-  stroke-linejoin: round;
+  stroke-linejoin: var(--stats-join);
   /* La figura crece desde el centro girando un poco: es el gesto que pedía "que se cargue con efecto". */
   transform-origin: center;
   animation: radar-bloom .9s cubic-bezier(.34, 1.36, .64, 1) both;
@@ -2198,7 +2227,7 @@
   position: relative;
   height: 3px;
   margin-top: .1rem;
-  border-radius: var(--radius-pill);
+  border-radius: var(--stats-pill);
   background: var(--score-track);
   overflow: hidden;
 }
@@ -2208,7 +2237,7 @@
 .top-chip-bar i {
   display: block;
   height: 100%;
-  border-radius: var(--radius-pill);
+  border-radius: var(--stats-pill);
   background: hsl(var(--dot-hue, 135) 58% var(--acc-l));
   transform-origin: left center;
   animation: grow-right .5s cubic-bezier(.22, 1, .36, 1) both;
@@ -2582,7 +2611,7 @@
   font-size: var(--fs-2xs);
   font-weight: 700;
   padding: .05rem .3rem;
-  border-radius: var(--radius-pill);
+  border-radius: var(--stats-pill);
 }
 
 /* El verde y el rojo puros sobre su propia pastilla se quedan en 3:1 en el tema claro, y esto es una cifra de
@@ -2688,7 +2717,7 @@
 .dot-matrix-dots i {
   width: .55rem;
   height: .55rem;
-  border-radius: 50%;
+  border-radius: var(--stats-dot);
   background: color-mix(in oklch, var(--chart-to) clamp(0%, var(--i, 0) * 18%, 100%), var(--chart-from));
   animation: pop-in .35s cubic-bezier(.34, 1.36, .64, 1) both;
   animation-delay: calc(var(--i, 0) * 60ms + var(--d, 0) * 18ms);
@@ -2831,7 +2860,7 @@
   position: relative;
   width: 100%;
   height: 10px;
-  border-radius: 3px;
+  border-radius: var(--stats-bar);
   background: var(--surface-soft);
   /* Pista = carril hundido (ver `--sunk`). Se le da a esta y no a las de 3-4 px del panel: en una barra fina,
      una sombra interior de dos píxeles se come la pista entera y lo único que se ve es suciedad. */
@@ -2843,7 +2872,7 @@
   top: 0;
   bottom: 0;
   width: var(--pct, 0%);
-  border-radius: 3px;
+  border-radius: var(--stats-bar);
   transform-origin: inherit;
   animation: grow-right .6s cubic-bezier(.22, 1, .36, 1) both;
   animation-delay: calc(var(--i, 0) * 50ms);
@@ -3107,8 +3136,8 @@
   fill: none;
   stroke: color-mix(in oklch, var(--chart-to) clamp(0%, var(--i, 0) / max(calc(var(--n, 2) - 1), 1) * 100%, 100%), var(--chart-from));
   stroke-width: 2.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  stroke-linecap: var(--stats-cap);
+  stroke-linejoin: var(--stats-join);
   transition: stroke-width .15s;
 }
 /* Tramo que cruza la banda de descartados: discontinuo y más fino. Recto y sólido se leía como un puesto
@@ -3167,7 +3196,11 @@
    El nivel se ve DOS veces, en la altura de la barra y en su color: quien no distinga bien los tonos sigue
    leyendo el ritmo por la silueta. Ese doble código es lo que la rejilla de cuadros no daba.
    ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
-.week-heat { display: flex; flex-direction: column; gap: .6rem; }
+/* `margin-block: auto` y no una altura: esta tarjeta va emparejada («media anchura») y toma la altura de su
+   vecina de fila, que es más alta —unos 180 px de más—. El mapa se quedaba pegado al subtítulo con todo el
+   hueco debajo, como si le faltara algo. Con los dos márgenes en `auto` el bloque se centra en el sobrante
+   cuando lo hay y no hace nada cuando no; el título y el subtítulo se quedan arriba, que es donde se leen. */
+.week-heat { display: flex; flex-direction: column; gap: .6rem; margin-block: auto; }
 .week-heat-canvas { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
 /* Sin tope de ancho: el mapa se queda con TODO el que le da su tarjeta. Con el antiguo `max-width` de 26rem, las
    celdas se quedaban en un cuadradito arrinconado a la izquierda mientras media tarjeta quedaba en blanco; la
@@ -3203,7 +3236,7 @@
 .week-heat-key.is-l4 { background: var(--steam); fill: var(--steam); }
 
 .week-heat-scale { display: flex; align-items: center; gap: .3rem; font-size: var(--fs-2xs); color: var(--text-muted); }
-.week-heat-key { width: .8rem; height: .8rem; border-radius: 3px; display: inline-block; }
+.week-heat-key { width: .8rem; height: .8rem; border-radius: var(--stats-bar); display: inline-block; }
 .week-heat-scale span:last-child { margin-left: .2rem; }
 .week-heat-scale span:first-child { margin-right: .2rem; }
 
@@ -3223,3 +3256,61 @@
 .week-heat-stats dd { color: var(--cc); }
 .week-heat-stats dt { font-size: var(--fs-2xs); color: var(--text-muted); }
 .week-heat-stats dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+
+/* ══ LO QUE LA FICHA DE GRÁFICA ALCANZA DE UNA VEZ ═══════════════════════════════════════════════════════
+   Las tres reglas de abajo son el resto de la ficha declarada arriba, y van al FINAL de la hoja a propósito:
+   así pisan lo que cada bloque dejó dicho por su cuenta sin tener que repetir su especificidad. Con los
+   valores de la casa no cambian nada — `auto`, `inherit` y el radio que ya tenía cada pieza. ══════════ */
+
+/* EL TRAZO DE LOS LIENZOS. Un tema de píxel o de canto vivo no puede permitirse la curva suavizada del
+   navegador: la misma razón por la que el enjambre ya tenía su `--bee-render`. Va en el lienzo y no en cada
+   forma para que alcance también a lo que se dibuje dentro mañana. */
+.year-trend-canvas svg,
+.backlog-svg,
+.week-heat-svg,
+.genre-bump-svg,
+.genre-radar-svg,
+.polar-rose,
+.burst-svg,
+.gauge-fig,
+.gauge-sub-fig,
+.donut-share-fig { shape-rendering: var(--stats-render); }
+
+/* LA BARRA DEL MAPA DE CALOR es un `<rect>` y su canto venía del atributo `rx` del marcado. Desde aquí lo
+   decide el tema, como el de cualquier otra barra del panel. */
+.week-heat-bar { rx: var(--stats-bar); }
+
+/* LAS CIFRAS DE UNA GRÁFICA SON UN DATO, no texto corrido, y cada tema tiene una letra para decirlo —la mono
+   de la casa, la del cartel, la del cogitador—. Hasta ahora cada skin enumeraba las suyas y la lista nunca
+   coincidía entre temas: la cifra del dumbbell iba en mono en dos temas y en la del cuerpo en cinco. */
+.stat-tile-value,
+.gauge-number,
+.gauge-hero,
+.gauge-sub-num,
+.shine-value,
+.shine-count,
+.dumbbell-num,
+.dumbbell-rate,
+.burst-num,
+.dot-matrix-num,
+.tag-ranking-num,
+.tag-ranking-pos,
+.tag-chip-num,
+.timeline-year,
+.podium-ghost,
+.year-value,
+.year-axis span,
+.year-trend-scale span,
+.backlog-xtick,
+.backlog-ytick,
+.beeswarm-axis,
+.beeswarm-list-count,
+.polar-label-num,
+.genre-bump-year,
+.donut-share-center { font-family: var(--stats-num, inherit); }
+
+/* LO QUE NO ENTRA AQUÍ, y por qué: `.week-heat-stats dd` («52 de las últimas 52») y `.timeline-since`
+   («esperando desde marzo de 2021») son FRASES con una cifra dentro, no cifras. Puestas en una mono ancha
+   saltan de línea y desnivelan las tres cajas de la constancia —medido en «Inserte moneda»—. La ficha es
+   para el DATO suelto. */

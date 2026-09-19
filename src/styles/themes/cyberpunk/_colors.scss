@@ -44,6 +44,10 @@
   /* El cian tiene dos papeles en el skin: RELLENO/filete HUD y TEXTO (enlaces del hub, pistas de la ruleta,
      los `//` de las fechas). En oscuro el mismo valor sirve para los dos; en claro no, y por eso se separan. */
   --cyber-cyan-fg: var(--cyber-cyan);
+  /* Y lo mismo con el AMARILLO, por la misma razón: como relleno y como filete se usa el ácido puro, pero como
+     TEXTO —la pestaña activa, su contador— en claro es ilegible (1,26:1 sobre `--surface`, lo caza axe). En
+     oscuro los dos valores coinciden: 13,18:1 en el peor de las cuatro superficies. */
+  --cyber-yellow-fg: var(--cyber-yellow);
   --sys-radius: 0; --sys-pad: .3rem .85rem;
 }
 :root[data-palette="cyberpunk"][data-theme="light"] {
@@ -80,6 +84,10 @@
      hondo y cumple sobre los tres fondos (4,52:1 en el peor). Los rellenos y filetes siguen con el cian de
      arriba, que es donde se ve el neón. */
   --cyber-cyan-fg: #00757f;
+  /* El amarillo de TEXTO en claro. Es el mismo valor que `--cat-1-fg` de esta paleta, que ya resolvió este
+     problema para el chip de género: 4,69:1 en el peor caso de las cuatro superficies (sobre `--surface-hover`;
+     5,64 sobre `--surface`). El ácido de arriba sigue siendo el del relleno y el filete. */
+  --cyber-yellow-fg: #785f00;
 }
 /* cyberpunk — amarillo ácido, cian, teal, azul de marca, rojo Arasaka, magenta y plata de HUD */
 :root[data-palette="cyberpunk"] {

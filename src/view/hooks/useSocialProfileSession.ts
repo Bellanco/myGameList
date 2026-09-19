@@ -11,9 +11,19 @@ function localSocialGistId(): string {
 type ProfileIdentity = { name: string };
 
 /**
+ * EL ESTADO DE LO SOCIAL EN TRES VALORES, y el tercero es el que importa: `pending`.
+ *
+ * El booleano de siempre no distingue «no hay perfil» de «todavía no lo sé», y para gatear una puerta da igual
+ * —ante la duda, cerrada—. Para ENCENDER UN AVISO no da igual: la resolución pasa por la sesión de Google y por
+ * una lectura de IndexedDB, así que en cada arranque hay un tramo en el que la respuesta honesta es «aún no lo
+ * sé». Pintar ahí el aviso rojo sería acusar de apagado lo que está encendido, una vez por visita.
+ */
+export type SocialProfileStatus = 'pending' | 'active' | 'inactive';
+
+/**
  * Indica si el usuario tiene un PERFIL SOCIAL **completo** (no solo sesión + gist): exige sesión de Google, un gist
  * social enlazado Y que el perfil sea válido con la MISMA regla que `useSocialViewModel` (nombre + al menos un juego
- * completado). El botón flotante de Cuenta se gatea con esto: si el usuario se queda sin completados, el perfil deja
+ * completado). Devuelve además `pending` mientras no se sabe (ver `SocialProfileStatus`). El botón flotante de Cuenta se gatea con esto: si el usuario se queda sin completados, el perfil deja
  * de estar completo y el botón desaparece para no poder navegar a `/cuenta` hasta arreglarlo.
  *
  * `completedGameIds` son los ids de la pestaña de completados. La completitud se recalcula cuando cambian (p. ej. al
@@ -25,9 +35,10 @@ type ProfileIdentity = { name: string };
  * incompletitud sin red, así que se mantiene el comportamiento previo (mostrar el botón); el editor del hub social
  * corrige en la primera visita.
  */
-export function useSocialProfileSession(completedGameIds: ReadonlySet<number>): boolean {
+export function useSocialProfileStatus(completedGameIds: ReadonlySet<number>): SocialProfileStatus {
   const { pathname } = useLocation();
-  const [gistId, setGistId] = useState('');
+  // `undefined` = la sesión aún no ha contestado; `''` = contestó que no hay canal social; un id = lo hay.
+  const [gistId, setGistId] = useState<string | undefined>(undefined);
   // `undefined` = aún sin leer (no mostramos el botón todavía para evitar un parpadeo mostrar→ocultar en perfiles
   // incompletos); `null` = leído pero sin registro (dispositivo donde nunca se abrió Social); objeto = identidad real.
   const [identity, setIdentity] = useState<ProfileIdentity | null | undefined>(undefined);
@@ -96,12 +107,22 @@ export function useSocialProfileSession(completedGameIds: ReadonlySet<number>): 
     };
   }, [gistId, socialPathname]);
 
-  return useMemo(() => {
-    if (!gistId) return false;
+  return useMemo<SocialProfileStatus>(() => {
+    // La sesión todavía no ha contestado: ni sí ni no.
+    if (gistId === undefined) return 'pending';
+    if (!gistId) return 'inactive';
     // Aún leyendo la identidad: mantener el botón oculto hasta saberlo (evita el parpadeo en perfiles incompletos).
-    if (identity === undefined) return false;
+    if (identity === undefined) return 'pending';
     // Leído sin registro (nunca se abrió Social en este dispositivo): no se puede probar incompletitud sin red.
-    if (identity === null) return true;
-    return Boolean(identity.name.trim()) && completedGameIds.size > 0;
+    if (identity === null) return 'active';
+    return Boolean(identity.name.trim()) && completedGameIds.size > 0 ? 'active' : 'inactive';
   }, [gistId, identity, completedGameIds]);
+}
+
+/**
+ * El MISMO gate de siempre, en booleano, para quien solo necesita abrir o cerrar una puerta: mientras no se sabe,
+ * cerrada. Quien vaya a DIBUJAR el estado debe usar `useSocialProfileStatus` y tratar `pending` aparte.
+ */
+export function useSocialProfileSession(completedGameIds: ReadonlySet<number>): boolean {
+  return useSocialProfileStatus(completedGameIds) === 'active';
 }

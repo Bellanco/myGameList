@@ -248,6 +248,29 @@ function genreKeys(genres: readonly string[] | undefined): Set<string> {
   return keys;
 }
 
+/**
+ * Acotación con la que algunas reseñas se abren —«(Reseña escrita el 10 de octubre del 2024)»— y que en este
+ * bloque sobra: la tarjeta enseña un adelanto de tres renglones, y gastar el primero en decir cuándo se escribió
+ * la reseña deja sin sitio al texto justo donde tiene que convencer de abrirla. La fecha no se pierde: sigue en
+ * la reseña, que es donde se lee entera, y la tarjeta ya se ordena por ella.
+ *
+ * SOLO AL PRINCIPIO Y SOLO SI HABLA DE HABERLA ESCRITO. Un paréntesis inicial cualquiera —«(sin spoilers)»— es
+ * parte de lo que la reseña quiere decir y se queda donde está.
+ */
+const WRITING_NOTE = /^\s*\([^)]*escrit[^)]*\)\s*/i;
+
+/**
+ * El candidato sin esa acotación de cabecera. Se aplica ANTES de `isOfferable` porque quitarla puede dejar el
+ * texto vacío —una «reseña» que solo era la nota de la fecha—, y entonces no hay nada que ofrecer.
+ *
+ * Devuelve el MISMO objeto cuando no hay nada que quitar, que es el caso de la inmensa mayoría.
+ */
+function withoutWritingNote(candidate: RelatedReviewCandidate): RelatedReviewCandidate {
+  const snippet = String(candidate.snippet || '');
+  const clean = snippet.replace(WRITING_NOTE, '');
+  return clean === snippet ? candidate : { ...candidate, snippet: clean };
+}
+
 /** ¿Es un candidato que valga la pena ofrecer? Con nombre, con texto y con una fecha que `Date` sepa pintar. */
 function isOfferable(candidate: RelatedReviewCandidate): boolean {
   return Boolean(
@@ -279,7 +302,8 @@ function compareDuplicates(a: RelatedReviewCandidate, b: RelatedReviewCandidate)
 function dedupeCandidates(candidates: readonly RelatedReviewCandidate[]): RelatedReviewCandidate[] {
   const best = new Map<string, RelatedReviewCandidate>();
 
-  for (const candidate of candidates) {
+  for (const raw of candidates) {
+    const candidate = withoutWritingNote(raw);
     if (!isOfferable(candidate)) {
       continue;
     }

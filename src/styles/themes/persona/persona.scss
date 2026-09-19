@@ -49,7 +49,24 @@
    duras de cómic. Fuente de la identidad de color: CAPA 2 en `_base.scss`.
    ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
 
-/* ── §1 · Tipografía: Arial Black en cursiva y versalitas para titulares, etiquetas y nombres. ── */
+/* PAPELES DE LETRA de este tema. CAPA 0 (`_base.scss`) declara los cuatro papeles y todas las hojas
+   los usan por ficha; aquí es donde este tema decide qué familia va en cada uno. Cambiar la letra del
+   tema es cambiar ESTE bloque, no buscar `font-family` por el fichero.
+   `--font-label` va TAMBIÉN a la Arial Black: es lo que leen por ficha el chip del orden del listado, el
+   contador de la cabecera y el sello de rango, y sin él esas tres piezas eran las únicas de la pantalla
+   que seguían en la letra de la casa. Sin cursiva: la pide cada regla que la quiera, porque `--font-*`
+   solo transporta la FAMILIA. */
+:root[data-palette="persona"] {
+  --font-display: 'Arial Black', 'Arial Narrow', Impact, system-ui, sans-serif;
+  --font-label: var(--font-display);
+}
+
+/* ── §1 · Tipografía: Arial Black en cursiva y versalitas para titulares, etiquetas y nombres.
+   OJO AL PUNTO Y COMA DE ESTA LISTA: estuvo cosida al bloque de arriba por una coma —la lista entera
+   acababa en `,` y enganchaba con `:root[data-palette="persona"] { --font-display: … }`—, así que los
+   diecisiete selectores se quedaron SIN `font-family` y solo declaraban la variable. Titulares, botones,
+   cabeceras de tabla y nombres cayeron a DM Sans y el tema perdió su letra. Si vuelves a tocar el bloque
+   de papeles, déjalo SEPARADO de esta lista. ── */
 :root[data-palette="persona"] h2,
 :root[data-palette="persona"] h3,
 :root[data-palette="persona"] h4,
@@ -61,18 +78,15 @@
 :root[data-palette="persona"] .btn,
 :root[data-palette="persona"] .hub-seg-btn,
 :root[data-palette="persona"] thead th,
+/* `.detail-label` va pegada a `.flabel` porque es el mismo papel —rótulo corto de interfaz— y
+   estaban separadas: una en la letra del tema y la otra en la de la casa, en la misma pantalla. */
+:root[data-palette="persona"] .detail-label,
 :root[data-palette="persona"] .flabel,
 :root[data-palette="persona"] .row-name,
 :root[data-palette="persona"] .hub-name-link,
 :root[data-palette="persona"] .hub-detail-profile-link,
 :root[data-palette="persona"] .hub-feed-game-chip,
 :root[data-palette="persona"] .hub-review-game,
-/* PAPELES DE LETRA de este tema. CAPA 0 (`_base.scss`) declara los cuatro papeles y todas las hojas
-   los usan por ficha; aquí es donde este tema decide qué familia va en cada uno. Cambiar la letra del
-   tema es cambiar ESTE bloque, no buscar `font-family` por el fichero. */
-:root[data-palette="persona"] {
-  --font-display: 'Arial Black', 'Arial Narrow', Impact, system-ui, sans-serif;
-}
 :root[data-palette="persona"] .score-ring-num,
 :root[data-palette="persona"] .score-dial-num,
 :root[data-palette="persona"] .hub-review-medal,
@@ -551,4 +565,86 @@
   /* El sobreancho es el que se lleva la diagonal: sin él, un juego al 100 % se quedaría corto por la punta. */
   width: calc(var(--score-pct, 0) * 1% + 5px);
   clip-path: polygon(0 0, 100% 0, calc(100% - 7px) 100%, 0 100%);
+}
+
+/* ── LOS CONTROLES DE VISTA, EN UNA PIEZA · EL BOCADILLO DEL ATRACO ──────────────────────────────────
+   La misma gramática que los botones del tema: la pieza va SESGADA, con filete de tinta grueso y sombra dura
+   desplazada — el recorte de cómic.
+
+   EL PAPEL LO PONE EL TEMA, no un blanco fijo. Estuvo en `#f2f2f2` a secas y en el modo oscuro era lo único
+   blanco de la pantalla: un rótulo recortado de otra revista, pegado en una página negra. Con `--surface` la
+   pieza es del color de las demás en cada modo y el rojo sigue siendo lo único que grita.
+
+   Y LA SOMBRA ES ROJA EN LOS DOS MODOS. La de los botones es blanca en oscuro y tinta en claro, que es la
+   regla de la casa para que se vea sobre su fondo; copiada tal cual aquí, en claro se perdía —blanco sobre
+   blanco— y la pieza se quedaba sin el desplazamiento que la hace de cómic. El acento resuelve los dos casos a
+   la vez, que es la salida que el propio tema documenta en sus reglas aprendidas: una sombra de color se ve en
+   ambos fondos y ahorra el override doble. Y aquí encaja mejor que en ningún sitio: la pieza ya es roja por
+   dentro (el relleno del deslizador, la forma elegida), así que la sombra no mete un color nuevo.
+
+   SOLO SE CONTRA-SESGA EL CONTENIDO, nunca su `display`: el deslizador y los botones tienen que seguir
+   midiendo lo que miden, y un `skew` heredado los deja en diagonal (la misma nota que los botones). */
+:root[data-palette="persona"] .view-controls {
+  gap: 0;
+  transform: skewX(-7deg);
+  padding: .22rem .6rem;
+  border: 2.5px solid #0a0a0a;
+  border-radius: 0;
+  background: var(--surface);
+  box-shadow: 4px 4px 0 var(--steam);
+}
+:root[data-palette="persona"][data-theme="light"] .view-controls { border-color: #151011; }
+:root[data-palette="persona"] .view-controls > * { transform: skewX(7deg); }
+:root[data-palette="persona"] .view-controls:not(:has(.grid-size)) { padding-inline: .35rem; }
+:root[data-palette="persona"] .view-controls .shape-switch { border: 0; background: none; box-shadow: none; padding: 0 0 0 .45rem; }
+/* El icono en la tinta del modo —claro sobre papel negro, negro sobre papel blanco— y la forma elegida en
+   rojo pleno con el dibujo en blanco: el rojo del tema es oscuro en los dos modos, así que el blanco aguanta. */
+:root[data-palette="persona"] .view-controls .shape-switch-btn { color: var(--text); border-radius: 0; }
+:root[data-palette="persona"] .view-controls .shape-switch-btn.is-on { background: var(--steam); color: #fff; box-shadow: none; }
+:root[data-palette="persona"] .view-controls .grid-size::before { background: color-mix(in srgb, var(--text) 25%, transparent); }
+:root[data-palette="persona"] .view-controls .grid-size::after { background: var(--steam); }
+/* La manecilla, un bloque macizo de tinta: negro sobre el papel claro, blanco sobre el oscuro. */
+:root[data-palette="persona"] .view-controls .grid-size-range::-webkit-slider-thumb { border-radius: 0; background: var(--text); border: 0; }
+:root[data-palette="persona"] .view-controls .grid-size-range::-moz-range-thumb { border-radius: 0; background: var(--text); border: 0; }
+
+/* ── §15 · LA FICHA DE GRÁFICA ─────────────────────────────────────────────────────────────────────────
+   El cómic no tiene esquinas blandas: todo corta recto. El PUNTO sí se queda redondo —es el lunar del
+   semitono, la trama de la que está hecho este tema— y las cifras toman la Arial Black, como la nota del
+   aro y la medalla. ── */
+:root[data-palette="persona"] .stats-hub {
+  --stats-radius: 0;
+  --stats-bar: 0;
+  --stats-pill: 0;
+  --stats-cap: butt;
+  --stats-join: miter;
+  --stats-num: var(--font-display);
+}
+
+/* ── §16 · LAS PESTAÑAS DE ESCRITORIO ──────────────────────────────────────────────────────────────────
+   La barra de abajo era un sticker de cómic y la de arriba seguía siendo la de la casa: el mismo papel
+   dicho en dos idiomas. El rótulo activo se enciende en rojo y el subrayado deslizante se engorda con su
+   sombra de tinta, que es como este tema subraya.
+   EL CONTADOR NO SE INSCRIBE EN NINGUNA CAJA: dos recuadros seguidos —el de la cifra dentro del de la
+   pestaña— era una pieza de más. Cambia de color y de letra, y con eso se lee. ── */
+:root[data-palette="persona"] .tabs { border-bottom: 2px solid var(--pop-line); }
+:root[data-palette="persona"] .tab-btn.active { color: var(--steam); }
+:root[data-palette="persona"] .tab-underline {
+  height: 4px;
+  border-radius: 0;
+  background: var(--steam);
+  box-shadow: 0 2px 0 var(--pop-line);
+}
+:root[data-palette="persona"] .count-badge {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--steam);
+}
+
+/* ── §17 · LAS ESTRELLAS: la llena también es un sticker, con su sombra de bloque.
+   SUAVE, Y NO A LA PRIMERA: con los 2 px de tinta de los paneles, en oscuro la sombra es BLANCA
+   (`--pop-line` se invierte) y cinco estrellas con un bloque blanco detrás se llevaban la mirada de toda la
+   fila. Un píxel y medio tono: sigue siendo el relieve del cómic, pero deja de gritar. ── */
+:root[data-palette="persona"] .stars .f,
+:root[data-palette="persona"] .star-inp button.f {
+  text-shadow: 1px 1px 0 color-mix(in srgb, var(--pop-line) 45%, transparent);
 }
