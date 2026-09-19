@@ -232,6 +232,9 @@ function chipsQueCaben(
      es texto. */
   return caben > 0 ? { n: caben, apretado: false } : { n: 1, apretado: true };
 }
+/** Los cuatro escalones del orden, de más a menos sitio. Ver el medidor de `GameTable`. */
+type SortLayout = 'completo' | 'sin-rotulo' | 'apretado' | 'dos-lineas';
+
 const GRID_GAP_PX = 10;
 /* El mismo hueco, para la rejilla SIN carátulas: allí el `gap` sube a .9 rem (ver `_table.scss`), y esta
    cuenta tiene que usar el de verdad. Con los 10 px del otro, en los anchos justos salía una columna de
@@ -802,6 +805,109 @@ export const GameTable = memo(function GameTable({
   const sortableColumns = tableHeaders
     .map((header) => ({ header, key: SORT_COLUMN[header] }))
     .filter((c): c is { header: string; key: string } => Boolean(c.key));
+  /**
+   * EL ORDEN, SIN CARRIL QUE ARRASTRAR. Las cinco columnas no caben en un teléfono y hasta ahora sobraba
+   * desplazándolas de lado: en la práctica eso esconde opciones —nadie arrastra una fila que no parece
+   * arrastrable— y deja «Puntuación» partida por el canto, que se lee como un fallo de pintado.
+   *
+   * ASÍ QUE SE CEDE POR ORDEN DE IMPORTANCIA, como hace la barra inferior con sus rótulos:
+   *   · primero se va la palabra «Ordenar», que es la única que no es una opción: el grupo ya se anuncia con
+   *     ese mismo nombre (`aria-label`), así que quien lo oye no pierde nada y quien lo ve tampoco —cinco
+   *     columnas en fila, con una en el color del acento, se leen como un orden sin que nadie lo diga—;
+   *   · si aún no caben, los chips bajan un punto de cuerpo;
+   *   · y si tampoco —de 360 px para abajo no hay manera—, se PARTEN EN DOS LÍNEAS. Es la única salida que
+   *     sigue enseñándolas todas; cuesta un renglón de alto en las pantallas más estrechas y a cambio no
+   *     esconde ninguna opción detrás de un arrastre que nadie adivina.
+   *
+   * SE MIDE, NO SE ESTIMA, y por el mismo motivo que allí: lo que ocupan cinco palabras cambia con el idioma,
+   * con la letra del tema y con el ajuste de mayúsculas. Cada pasada mide lo que HAY PINTADO y solo decide el
+   * escalón siguiente; los anchos que hacen falta para volver a subir se guardan cuando se han podido medir de
+   * verdad, que es la única forma de que el escalón no sea un pestillo de un solo sentido.
+   */
+  const sortRef = useRef<HTMLDivElement>(null);
+  const [sortLayout, setSortLayout] = useState<SortLayout>('completo');
+  const sortLayoutRef = useRef<SortLayout>('completo');
+  /** Lo que pide cada escalón cuando se ha podido medir con sus piezas a la vista y en una sola línea. */
+  const sortNeedsRef = useRef({ rotulo: 0, chips: 0, apretado: 0 });
+
+  useLayoutEffect(() => {
+    const nodo = sortRef.current;
+    if (!nodo) return;
+
+    const aplicar = (siguiente: SortLayout) => {
+      sortLayoutRef.current = siguiente;
+      setSortLayout(siguiente);
+    };
+
+    const medir = () => {
+      const carril = nodo.querySelector<HTMLElement>('.list-sort-chips');
+      if (!carril) return;
+      // Sin medidas reales (jsdom, o aún sin pintar) se deja como está: mejor entero que recortado a ciegas.
+      const disponible = nodo.clientWidth;
+      if (!disponible) return;
+
+      // El escalón que de verdad está pintado, leído de las clases: `aplicar` solo PIDE el cambio.
+      const pintado: SortLayout = nodo.classList.contains('is-en-dos-lineas')
+        ? 'dos-lineas'
+        : nodo.classList.contains('is-apretado')
+          ? 'apretado'
+          : nodo.classList.contains('is-sin-rotulo') ? 'sin-rotulo' : 'completo';
+      if (pintado !== sortLayoutRef.current) {
+        requestAnimationFrame(medir);
+        return;
+      }
+
+      const rotulo = nodo.querySelector<HTMLElement>('.list-sort-label');
+      const hueco = parseFloat(getComputedStyle(nodo).columnGap) || 0;
+      if (pintado === 'completo' && rotulo) sortNeedsRef.current.rotulo = rotulo.offsetWidth + hueco;
+      // Los anchos solo valen medidos EN UNA LÍNEA: en `dos-lineas` el carril envuelve y su `scrollWidth` ya
+      // no dice lo que pide el contenido, sino lo que mide la caja.
+      if (pintado === 'completo' || pintado === 'sin-rotulo') sortNeedsRef.current.chips = carril.scrollWidth;
+      if (pintado === 'apretado') sortNeedsRef.current.apretado = carril.scrollWidth;
+
+      const desborda = carril.scrollWidth > carril.clientWidth + 1;
+      if (desborda) {
+        if (pintado === 'completo') { aplicar('sin-rotulo'); requestAnimationFrame(medir); return; }
+        if (pintado === 'sin-rotulo') { aplicar('apretado'); requestAnimationFrame(medir); return; }
+        if (pintado === 'apretado') { aplicar('dos-lineas'); requestAnimationFrame(medir); return; }
+        return; // ya está partido en dos líneas: no queda nada que ceder.
+      }
+
+      // Y SE PUEDE VOLVER A SUBIR al ensanchar la ventana, con el ancho guardado del escalón de arriba.
+      const sobra = carril.clientWidth - carril.scrollWidth;
+      if (pintado === 'dos-lineas') {
+        if (sortNeedsRef.current.apretado && carril.clientWidth >= sortNeedsRef.current.apretado) {
+          aplicar('apretado');
+          requestAnimationFrame(medir);
+        }
+        return;
+      }
+      if (pintado === 'apretado' && sortNeedsRef.current.chips && carril.clientWidth >= sortNeedsRef.current.chips) {
+        aplicar('sin-rotulo');
+        requestAnimationFrame(medir);
+        return;
+      }
+      if (pintado === 'sin-rotulo' && sobra >= sortNeedsRef.current.rotulo) {
+        aplicar('completo');
+        requestAnimationFrame(medir);
+      }
+    };
+
+    medir();
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(() => medir()) : null;
+    if (observer) observer.observe(nodo);
+    else window.addEventListener('resize', medir);
+    // La letra del tema llega tarde y cambia lo que miden las palabras: cuando llega, se vuelve a decidir.
+    const alCargarLaLetra = () => { aplicar('completo'); requestAnimationFrame(medir); };
+    document.fonts?.addEventListener?.('loadingdone', alCargarLaLetra);
+
+    return () => {
+      if (observer) observer.disconnect();
+      else window.removeEventListener('resize', medir);
+      document.fonts?.removeEventListener?.('loadingdone', alCargarLaLetra);
+    };
+  }, [sortableColumns.length]);
+
   const showSortBar = Boolean(onSort) && sortableColumns.length > 0 && (cards || shape === 'grid');
 
   return (
@@ -820,7 +926,14 @@ export const GameTable = memo(function GameTable({
               qué estaba ordenada la lista. Ahora las opciones están A LA VISTA, en las mismas píldoras que ya
               usa todo lo demás; la activa se rellena con el acento y lleva la punta que dice el sentido, y
               volver a pulsarla lo invierte. */}
-          <div className="list-sort" role="group" aria-label={UI_MESSAGES.toolbar.sortLabel}>
+          <div
+            className={`list-sort${sortLayout !== 'completo' ? ' is-sin-rotulo' : ''}${sortLayout === 'apretado' || sortLayout === 'dos-lineas' ? ' is-apretado' : ''}${sortLayout === 'dos-lineas' ? ' is-en-dos-lineas' : ''}`}
+            role="group"
+            aria-label={UI_MESSAGES.toolbar.sortLabel}
+            ref={sortRef}
+          >
+            {/* El rótulo no se borra: se aparta de la vista. Sigue en el DOM para poder MEDIRLO cuando haya
+                sitio otra vez —si se quitara, no habría con qué decidir volver a enseñarlo—. */}
             <span className="list-sort-label" aria-hidden="true">{UI_MESSAGES.toolbar.sortLabel}</span>
             <div className="list-sort-chips">
             {sortableColumns.map(({ header, key }) => {

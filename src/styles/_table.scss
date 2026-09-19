@@ -643,13 +643,14 @@ table.is-cards tbody tr.main-row.has-cover > td:first-child::after {
      (`data-uppercase`, ver `_base.scss`), como el resto de los rótulos de interfaz. */
   color: var(--text-muted);
 }
-/* El orden se come el hueco libre y empuja la forma al canto derecho. */
+/* El orden se come el hueco libre y empuja los controles de vista al canto derecho.
+   EL `margin-left: auto` VA EN LA PIEZA, no en sus partes. Cuando el deslizador y el conmutador eran dos
+   hermanos sueltos, el empujón se le daba a cada uno; ahora viven dentro de `.view-controls` y esas reglas
+   apuntaban a hijos que ya no cuelgan de esta barra: el empujón no se aplicaba —los controles se quedaban
+   pegados al recuento, a media barra— y, peor, dentro de la propia pieza el `auto` del deslizador le abría un
+   hueco a su izquierda que rompía la caja de cada tema. */
 .list-head .list-sort { flex: 1 1 auto; min-width: 0; }
-.list-head .grid-size { margin-left: auto; }
-/* Con el control de tamaño puesto, es ÉL quien se pega al hueco libre y la forma le sigue: van juntos, y entre
-   ellos solo el aire que los separa como dos grupos. */
-.list-head .shape-switch { margin-left: auto; }
-.list-head .grid-size + .shape-switch { margin-left: .55rem; }
+.list-head .view-controls { margin-left: auto; }
 
 /* EN ESTRECHO, EN DOS PISOS. Las tres cosas en fila no caben en un teléfono y la barra se partía en tres
    renglones con el recuento colgando de su filete. Arriba lo que se lee (cuántos hay) y lo que se elige de un
@@ -657,7 +658,7 @@ table.is-cards tbody tr.main-row.has-cover > td:first-child::after {
 @container gamelist (max-width: 46rem) {
   .list-head { row-gap: .5rem; padding: .5rem .55rem; }
   .list-head-count { border-right: 0; padding-right: 0; }
-  .list-head .grid-size { margin-left: auto; }
+  .list-head .view-controls { margin-left: auto; }
   .list-head .list-sort { flex: 1 0 100%; order: 3; }
 }
 
@@ -675,9 +676,37 @@ table.is-cards tbody tr.main-row.has-cover > td:first-child::after {
   letter-spacing: .08em;
   color: var(--text-dim);
 }
+/* LOS DOS ESCALONES DEL ORDEN, que decide `GameTable` midiendo; aquí solo se dibujan.
+   · `is-sin-rotulo` aparta de la vista la palabra «Ordenar» —la única que no es una opción—. No se borra del
+     DOM: hay que poder medirla para saber cuándo cabe otra vez, y el lector de pantalla ya recibe ese mismo
+     nombre por el `aria-label` del grupo.
+   · `is-apretado` baja además un punto el cuerpo de los chips y les quita aire. Es el último recurso antes
+     de volver al carril desplazable, que es lo que esto viene a evitar. */
+.list-sort.is-sin-rotulo .list-sort-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+.list-sort.is-apretado .list-sort-chip { font-size: var(--fs-3xs); }
+.list-sort.is-apretado .list-sort-chips { gap: .25rem; }
+/* ÚLTIMO ESCALÓN: en dos líneas y sin carril. Por debajo de 360px no hay cuerpo de letra que las meta en una
+   fila, y entre partirlas o esconder la mitad detrás de un arrastre, se parten: cuesta un renglón y no cuesta
+   ninguna opción. `overflow: visible` es lo que de verdad retira el desplazamiento. */
+.list-sort.is-en-dos-lineas .list-sort-chips {
+  flex-wrap: wrap;
+  overflow: visible;
+  row-gap: .3rem;
+}
+
 /* Se desplazan de lado en vez de envolver: en un teléfono, cinco columnas en dos líneas empujarían la lista
    media pantalla hacia abajo. La barra se esconde (el carril sí se puede arrastrar) porque el conjunto ya se
-   lee como una fila de pestañas y una barra debajo lo convertiría en un cajón. */
+   lee como una fila de pestañas y una barra debajo lo convertiría en un cajón. Con los escalones de arriba,
+   ese arrastre es ya la ÚLTIMA red: primero se cede el rótulo y el cuerpo de la letra. */
 .list-sort-chips {
   display: flex;
   align-items: center;
