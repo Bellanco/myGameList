@@ -106,9 +106,13 @@ function median(games: GameRef[]): number {
 export const Beeswarm = memo(function Beeswarm({ games, scale }: BeeswarmProps) {
   const L = useStatsLabels().grades;
   const focus = useChartFocus();
-  // Qué listas entran. Se guarda la lista OCULTA y no la visible: así "ninguna oculta" es el estado inicial y
-  // el gráfico nunca puede quedarse sin puntos, que es la regla del filtro.
-  const [hiddenList, setHiddenList] = useState<TabId | null>(null);
+  /* Qué listas entran. Se guarda la lista OCULTA y no la visible, y así el gráfico nunca puede quedarse sin
+     puntos: la única encendida no se puede apagar (ver `listButton`).
+     ARRANCA CON LOS ABANDONADOS FUERA. Un reparto de notas es lo que te ha PARECIDO lo que has jugado, y un
+     abandonado casi nunca se puntúa por lo mismo que un terminado: entra con la nota del momento en que lo
+     dejaste, así que arrastra la mediana hacia abajo y ensucia justo la lectura que esta tarjeta viene a dar.
+     Siguen a un toque de distancia —el botón está ahí, apagado—, que es distinto de no poder verlos. */
+  const [hiddenList, setHiddenList] = useState<TabId | null>('v');
   if (games.length === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }

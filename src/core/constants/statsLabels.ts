@@ -60,7 +60,7 @@ export const STATS_UI = {
   grades: {
     title: 'Distribución de notas',
     // The Witcher III: Geralt siempre acaba eligiendo el mal menor, que es lo que hace una escala de notas.
-    // Entran los completados y también los abandonados que puntuaste.
+    // Entran los completados; los abandonados que puntuaste se suman con su botón (ver `Beeswarm`).
     subtitle: 'Entre el mal menor y la obra maestra: ahí se reparten tus notas.',
     empty: 'Todavía no has puntuado ningún juego.',
     starsLabel: (stars: number) => `${stars} ${stars === 1 ? 'estrella' : 'estrellas'}`,
