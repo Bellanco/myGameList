@@ -718,8 +718,7 @@
 :root[data-palette="arcade"] .year-scale-ramp,
 :root[data-palette="arcade"] .shine-fill,
 :root[data-palette="arcade"] .shine-rows li,
-:root[data-palette="arcade"] .top-chip-bar,
-:root[data-palette="arcade"] .dot-matrix-dots rect { border-radius: 0; }
+:root[data-palette="arcade"] .top-chip-bar { border-radius: 0; }
 :root[data-palette="arcade"] .donut-seg,
 :root[data-palette="arcade"] .gauge-seg,
 :root[data-palette="arcade"] .gauge-sub-seg,
@@ -857,4 +856,20 @@
   border-radius: 2px;
   background: #2ef0e0;
   border: 2px solid #17091f;
+}
+
+/* ── §19 · LA FICHA DE GRÁFICA ─────────────────────────────────────────────────────────────────────────
+   El §17 doblaba las gráficas ENUMERÁNDOLAS, y la cuenta nunca cuadró: la evolución del gusto, la constancia
+   semanal y los rasgos de una reseña seguían curvas y suaves en un tema que no admite ni una cosa ni la otra.
+   `stats.scss` declara ahora siete palancas y aquí se rellenan de una vez: nada redondo, nada suavizado, la
+   barra es un bloque de píxeles, el punto es un píxel y la línea corta a escuadra. ── */
+:root[data-palette="arcade"] .stats-hub {
+  --stats-radius: 0;
+  --stats-bar: 0;
+  --stats-pill: 0;
+  --stats-dot: 0;
+  --stats-cap: butt;
+  --stats-join: miter;
+  --stats-render: crispEdges;
+  --stats-num: var(--font-mono);
 }
