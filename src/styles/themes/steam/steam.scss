@@ -37,19 +37,28 @@
   --wt-lacre: 13px;
 }
 
-/* ── §1 · Tipografía: EB Garamond para el cuerpo y los rótulos —es letra de documento, no de interfaz—,
-   Cinzel para las cabeceras y las cifras en IBM Plex Mono.
+/* ── §1 · Tipografía: Lora para el cuerpo y los rótulos —es letra de documento, no de interfaz: trazo de
+   pluma, serifas de gota y el contraste de algo escrito a mano—, Cinzel para las cabeceras y las cifras en
+   IBM Plex Mono.
+   POR QUÉ NO ES UN GARAMOND. Aquí estuvo EB Garamond, que es la letra que pide un contrato, pero tiene la
+   ALTURA DE X en 0,405 em contra los 0,504 de DM Sans —la base de las demás paletas—: al mismo `font-size`
+   se leía como si fuera dos puntos más pequeña, y el medio píxel que compensaba en `body` no llegaba ni de
+   lejos (habría hecho falta subir de 16 a 19,9 px). Lora se queda en 0,50 em y, medida en la misma línea,
+   ocupa lo MISMO de ancho que DM Sans: la tabla no se recoloca al cambiar de paleta. Cinzel no entra en
+   esto —es capital romana y su altura de mayúscula ya coincide con la de DM Sans—, así que sigue igual.
+   Medido con `document.fonts` + `measureText` a 100 px en Chromium (Lora 50,0 · EB Garamond 40,5 · DM Sans
+   50,4; anchura de un título real: 1918 · 1637 · 1890).
    LA CAJA NO LA PONE EL TEMA: las versales son la preferencia «Texto» de /cuenta (`data-uppercase`), que
    ya las aplica a botones, pestañas, chips, cabeceras y ruleta en las siete paletas. Lo que sí pone el
    tema es el TRACKING, que Cinzel pide aire vaya en caja alta o baja. (Aparte, la hoja base manda versales
    siempre en `thead th`, `.flabel` y `.detail-label`: eso es de la casa y este tema no lo toca.) ── */
 :root[data-palette="steam"] {
-  --font-body: 'EB Garamond', Georgia, serif;
-  --font-label: 'EB Garamond', Georgia, serif;
+  --font-body: 'Lora', Georgia, serif;
+  --font-label: 'Lora', Georgia, serif;
   --font-display: 'Cinzel', Georgia, serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
-:root[data-palette="steam"] body { font-family: var(--font-body); font-size: calc(1em + .5px); }
+:root[data-palette="steam"] body { font-family: var(--font-body); }
 :root[data-palette="steam"] h2,
 :root[data-palette="steam"] h3,
 :root[data-palette="steam"] thead th { font-family: var(--font-display); letter-spacing: .14em; }
