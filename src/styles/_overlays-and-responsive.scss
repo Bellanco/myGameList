@@ -240,9 +240,11 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
   outline-offset: 3px;
 }
 
-/* LOS DOS ESCALONES DE ABAJO. Cada punto baja un peldaño de verdad de la escala tipográfica —1,20 · 0,93 ·
-   0,79 rem— porque con rótulos flotando sin caja el tamaño es lo ÚNICO que dice el rango: medio peldaño se lee
-   como una irregularidad, no como una jerarquía.
+/* LOS DOS ESCALONES DE ABAJO. Cada punto baja un peldaño de la escala tipográfica —1,20 · 1,00 · 0,86 rem—,
+   y son peldaños REALES de la escala, no medidas sueltas: con rótulos flotando sin caja el tamaño es lo ÚNICO
+   que dice el rango, y una medida inventada entre dos peldaños se lee como una irregularidad. La caída era más
+   brusca (1,20 · 0,93 · 0,79) y el tercer rótulo quedaba en letra de pie de foto; el escalón se ha suavizado
+   —dos bajadas parejas, del 17 % y del 14 %— para que la jerarquía se note sin que «Datos» parezca una nota.
 
    Lo que baja es el TAMAÑO y, en el último, el tono; nunca por debajo de `--text-muted`: el contraste de estos
    rótulos lo sostiene el contenido atenuado de debajo —medido para `--text`, ver la nota del componente—, así
@@ -251,17 +253,17 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
    Y se les baja el rango, no el acceso: la zona pulsable sigue siendo la misma (`min-height: 44px`), que
    retirar el consentimiento de la analítica tiene que costar lo mismo que darlo. */
 .settings-menu-point.is-second {
-  font-size: var(--fs-md);
+  font-size: var(--fs-lg);
   margin-top: .15rem;
 }
 .settings-menu-point.is-second .settings-menu-dot { width: 6px; height: 6px; opacity: .9; }
 
 .settings-menu-point.is-third {
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   margin-top: .1rem;
 }
-.settings-menu-point.is-third .settings-menu-dot { width: 4px; height: 4px; opacity: .75; }
+.settings-menu-point.is-third .settings-menu-dot { width: 5px; height: 5px; opacity: .8; }
 
 /* LO DE DEBAJO SE APAGA, no se tapa. Es lo que da el contraste de los rótulos sin poner ninguna capa encima:
    medido con una carátula blanca detrás en tema oscuro, 6,4:1 en el peor píxel del trazo (y 6,6:1 con una
