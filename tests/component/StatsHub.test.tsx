@@ -127,16 +127,21 @@ describe('StatsHub', () => {
     const grupo = screen.getByRole('group', { name: L.grades.lists.aria });
     const completados = within(grupo).getByRole('button', { name: new RegExp(L.grades.lists.completed) });
     const abandonados = within(grupo).getByRole('button', { name: new RegExp(L.grades.lists.abandoned) });
-    expect(dots()).toHaveLength(3);
-
-    await user.click(abandonados);
+    // DE ENTRADA, SOLO LOS COMPLETADOS: la nota de un abandonado es la del momento en que lo dejaste y
+    // arrastra la mediana. El botón está a la vista, apagado, para sumarlos cuando se quiera.
     expect(dots()).toHaveLength(2);
+    expect(abandonados).toHaveAttribute('aria-pressed', 'false');
     // Con una sola lista encendida, esa ya no se puede apagar: el gráfico nunca se queda sin puntos.
     expect(completados).toBeDisabled();
 
     await user.click(abandonados);
     expect(dots()).toHaveLength(3);
     expect(completados).toBeEnabled();
+
+    // Y se puede mirar solo lo abandonado, que es la otra mitad del filtro.
+    await user.click(completados);
+    expect(dots()).toHaveLength(1);
+    expect(abandonados).toBeDisabled();
   });
 
   it('describe el cuadro de completados con su reparto', () => {
