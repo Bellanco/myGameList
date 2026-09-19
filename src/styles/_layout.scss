@@ -349,6 +349,88 @@
   height: 1.5rem;
 }
 
+/* ═══ EL PILOTO DE LA PESTAÑA SOCIAL ═══════════════════════════════════════════════════════════════════
+   Un punto al final de «Social», levantado como un exponente. Dice si el perfil social funciona, y los dos
+   estados NO pesan lo mismo a propósito:
+
+   · VERDE = todo en orden, y lo normal no se anuncia. Va pequeño y a media luz: quien lo busca lo encuentra,
+     quien no, no lo ve. Un verde vivo en una barra que se mira cien veces al día se convierte en ruido en dos
+     días, y el día que se ponga rojo ya nadie mira ahí.
+   · ROJO = hay algo que hacer. Va un punto más grande, a plena luz, con halo y con un latido lento. Sin aviso,
+     lo social «no trae nada» y se asume vacío en vez de apagado: nadie echa de menos lo que no sabe que existe.
+
+   EL TAMAÑO VA EN PÍXELES y no en `em` porque el rótulo cambia de cuerpo tres veces al estrecharse la pantalla
+   (`--fs-sm`, `--fs-2xs`, `--fs-3xs`) y el punto no debe encogerse con él: por debajo de 5px deja de leerse como
+   un piloto y pasa a parecer suciedad en la pantalla. */
+.bottom-nav-pip {
+  display: inline-block;
+  border-radius: 50%;
+  flex: none;
+  margin-left: .48em;
+  /* Levantado como exponente. En `em` sí —igual que la separación—: son lo único que debe seguir al cuerpo del
+     rótulo, para que el punto guarde la misma distancia con la palabra cuando la barra aprieta el texto.
+     PEGADO SE LEÍA COMO UNA ERRATA, no como un piloto: con .22em y medio cuerpo de altura, el punto tocaba la
+     «l» y parecía parte de la palabra. Separado y más alto se lee como lo que es, un exponente.
+     Y HAY QUE CONTAR CON EL HALO, no solo con el punto: cuando el rojo destella, el resplandor se va a 16px y
+     el anillo a 5. Con el punto más cerca de la palabra, ese fulgor caía sobre la «l» y emborronaba el final
+     del rótulo dos veces cada seis segundos. El aire de aquí es el sitio que necesita el centelleo. */
+  vertical-align: .95em;
+}
+
+.bottom-nav-pip.is-active {
+  width: 5px;
+  height: 5px;
+  background: var(--success);
+  opacity: .55;
+}
+
+.bottom-nav-pip.is-inactive {
+  width: 7px;
+  height: 7px;
+  background: var(--danger);
+  /* El halo lo sostiene todo en las paletas apagadas, donde `--danger` no destaca por sí solo. El anillo
+     exterior separa el punto del fondo de la pastilla; el resplandor es el que se ve de reojo. */
+  box-shadow: 0 0 0 2px rgba(var(--danger-rgb),.2), 0 0 7px rgba(var(--danger-rgb),.85);
+  animation: navPipAviso 6s ease-in-out infinite;
+}
+
+/* UN DESTELLO DE VEZ EN CUANDO, no un latido constante.
+   Late todo el rato lo que se mira todo el rato, y eso tiene dos finales malos: o distrae mientras se usa la
+   aplicación, o —peor— se vuelve parte del decorado y deja de contar nada. Así que el punto pasa CINCO SEXTOS
+   del ciclo quieto, con su halo de reposo, y al final del ciclo da dos destellos seguidos.
+   DOS Y NO UNO: un brillo aislado en la periferia de la vista se confunde con un reflejo de la pantalla; dos
+   seguidos se leen como una señal. Y lo que crece es el HALO, nunca la caja del punto: el tamaño del piloto
+   entra en las cuentas de ancho de la barra, y una medida que cambia sesenta veces por segundo no es una
+   medida. */
+@keyframes navPipAviso {
+  0%, 68%, 100% {
+    box-shadow: 0 0 0 2px rgba(var(--danger-rgb),.2), 0 0 7px rgba(var(--danger-rgb),.85);
+    filter: none;
+  }
+  76% {
+    box-shadow: 0 0 0 5px rgba(var(--danger-rgb),.3), 0 0 16px rgba(var(--danger-rgb),1);
+    filter: brightness(1.35);
+  }
+  83% {
+    box-shadow: 0 0 0 2px rgba(var(--danger-rgb),.2), 0 0 7px rgba(var(--danger-rgb),.85);
+    filter: none;
+  }
+  90% {
+    box-shadow: 0 0 0 4px rgba(var(--danger-rgb),.28), 0 0 13px rgba(var(--danger-rgb),1);
+    filter: brightness(1.25);
+  }
+}
+
+/* EN MODO ICONO, la insignia en la esquina del dibujo: es el único escalón sin rótulo al que agarrarse. El
+   botón ya es `position: relative`, así que se cuelga de él. */
+.bottom-nav-pip-badge {
+  position: absolute;
+  top: 8px;
+  right: 50%;
+  margin: 0 -1.05rem 0 0;
+  vertical-align: baseline;
+}
+
 .hub-hub {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -656,6 +738,10 @@
   .tab-underline, .bottom-nav-ind { transition: none; }
 
   .bottom-nav-btn.active .bottom-nav-icon { transform: none; }
+
+  /* El piloto rojo se queda QUIETO pero no apagado: sin los destellos sigue teniendo el halo, el tamaño y el
+     color, que es donde está el aviso. Quitarle la animación no puede costarle el mensaje. */
+  .bottom-nav-pip.is-inactive { animation: none; }
 }
 
 
