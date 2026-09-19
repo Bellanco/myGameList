@@ -49,7 +49,24 @@
    duras de cómic. Fuente de la identidad de color: CAPA 2 en `_base.scss`.
    ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
 
-/* ── §1 · Tipografía: Arial Black en cursiva y versalitas para titulares, etiquetas y nombres. ── */
+/* PAPELES DE LETRA de este tema. CAPA 0 (`_base.scss`) declara los cuatro papeles y todas las hojas
+   los usan por ficha; aquí es donde este tema decide qué familia va en cada uno. Cambiar la letra del
+   tema es cambiar ESTE bloque, no buscar `font-family` por el fichero.
+   `--font-label` va TAMBIÉN a la Arial Black: es lo que leen por ficha el chip del orden del listado, el
+   contador de la cabecera y el sello de rango, y sin él esas tres piezas eran las únicas de la pantalla
+   que seguían en la letra de la casa. Sin cursiva: la pide cada regla que la quiera, porque `--font-*`
+   solo transporta la FAMILIA. */
+:root[data-palette="persona"] {
+  --font-display: 'Arial Black', 'Arial Narrow', Impact, system-ui, sans-serif;
+  --font-label: var(--font-display);
+}
+
+/* ── §1 · Tipografía: Arial Black en cursiva y versalitas para titulares, etiquetas y nombres.
+   OJO AL PUNTO Y COMA DE ESTA LISTA: estuvo cosida al bloque de arriba por una coma —la lista entera
+   acababa en `,` y enganchaba con `:root[data-palette="persona"] { --font-display: … }`—, así que los
+   diecisiete selectores se quedaron SIN `font-family` y solo declaraban la variable. Titulares, botones,
+   cabeceras de tabla y nombres cayeron a DM Sans y el tema perdió su letra. Si vuelves a tocar el bloque
+   de papeles, déjalo SEPARADO de esta lista. ── */
 :root[data-palette="persona"] h2,
 :root[data-palette="persona"] h3,
 :root[data-palette="persona"] h4,
@@ -67,12 +84,6 @@
 :root[data-palette="persona"] .hub-detail-profile-link,
 :root[data-palette="persona"] .hub-feed-game-chip,
 :root[data-palette="persona"] .hub-review-game,
-/* PAPELES DE LETRA de este tema. CAPA 0 (`_base.scss`) declara los cuatro papeles y todas las hojas
-   los usan por ficha; aquí es donde este tema decide qué familia va en cada uno. Cambiar la letra del
-   tema es cambiar ESTE bloque, no buscar `font-family` por el fichero. */
-:root[data-palette="persona"] {
-  --font-display: 'Arial Black', 'Arial Narrow', Impact, system-ui, sans-serif;
-}
 :root[data-palette="persona"] .score-ring-num,
 :root[data-palette="persona"] .score-dial-num,
 :root[data-palette="persona"] .hub-review-medal,
