@@ -282,6 +282,12 @@ export const UI_MESSAGES = {
     // La pestaña se llama "Estadísticas": son las de las listas propias. La ruta es `/stats` y la
     // sección `stats`. No confundir con el PERFIL SOCIAL (`/social/profile`), que es la ficha pública.
     stats: 'Estadísticas',
+    /* EL PILOTO DE LA PESTAÑA SOCIAL, dicho para quien no ve el color. Va en el `aria-label` del botón y NO como
+       texto dentro de él: el rótulo visible es la única palabra que la barra puede permitirse —mide cada píxel
+       para decidir si los nombres caben—, y un texto de apoyo ahí dentro se mediría como parte del rótulo.
+       Empieza por «Social» a propósito: es el nombre por el que se busca la pestaña. */
+    socialOn: 'Social, perfil activo',
+    socialOff: 'Social, sin activar',
   },
   /**
    * EL MENÚ DE LA PESTAÑA DE AJUSTES. Vive en `labels.ts` y no en `settingsLabels.ts` —donde estaría por

@@ -34,7 +34,7 @@ import { useSyncViewModel } from './viewmodel/useSyncViewModel';
 import { GithubConnectionProvider, type GithubConnection } from './viewmodel/sync/githubConnection';
 import { resolveSyncBadge } from './viewmodel/syncBadge';
 import { useScoreScaleSession } from './view/hooks/useScoreScaleSession';
-import { useSocialProfileSession } from './view/hooks/useSocialProfileSession';
+import { useSocialProfileStatus } from './view/hooks/useSocialProfileSession';
 import { useAppearanceSession } from './view/hooks/useAppearanceSession';
 import { useUppercase } from './view/hooks/useUppercase';
 import { useEffects } from './view/hooks/useEffects';
@@ -204,7 +204,10 @@ export default function App() {
     () => new Set(vm.data.c.filter((game) => game.id > 0 && game.name).map((game) => game.id)),
     [vm.data.c],
   );
-  const hasSocialProfile = useSocialProfileSession(completedGameIds);
+  // El estado de lo social se pide UNA vez en tres valores: el gate de siempre («¿hay perfil completo?») sale de
+  // él, y el piloto de la barra necesita además distinguir el tramo en el que todavía no se sabe.
+  const socialStatus = useSocialProfileStatus(completedGameIds);
+  const hasSocialProfile = socialStatus === 'active';
   // F1: enlaza la sesión con la apariencia (paleta + claro/oscuro) → hidrata/replica en Firestore.
   useAppearanceSession();
   // Al iniciar sesión, migra y limpia los restos legacy del perfil público (email / id del gist de juegos /
@@ -1108,6 +1111,7 @@ export default function App() {
         currentSection={activeSection}
         onSectionChange={handleSectionChange}
         settingsMenuOpen={settingsMenuOpen}
+        socialStatus={socialStatus}
       />
       <ConsentBanner />
       <ScrollToTop />

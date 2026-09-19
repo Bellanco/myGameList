@@ -179,6 +179,47 @@ test.describe('la barra inferior con cuatro pestañas', () => {
     await expect(barra(page)).toHaveClass(/is-stacked|is-icons/);
   });
 
+  /**
+   * EL PILOTO DE LA PESTAÑA SOCIAL. Sin sesión de Google no hay perfil social, así que en este recorrido el
+   * estado es siempre el de «sin activar»: es el que tiene que verse, y el que no puede romper la barra.
+   *
+   * Lo que se vigila, por orden de gravedad: que el punto NO entre en el rótulo —el ancho del rótulo es lo que
+   * decide si los cuatro nombres caben, y un texto de apoyo ahí dentro los dejaría mudos en un móvil—, que el
+   * estado se diga con palabras para quien no ve el color, y que el aviso no se pierda en el único escalón que
+   * se queda sin rótulo.
+   */
+  test('la pestaña social enciende su piloto sin tocar el nombre de nadie', async ({ page }) => {
+    await abrir(page, 390);
+    const social = page.locator('.bottom-nav-btn', { hasText: 'Social' });
+    const piloto = social.locator('.bottom-nav-pip');
+    await expect(piloto).toHaveClass(/is-inactive/);
+
+    // EL NOMBRE VISIBLE SIGUE SIENDO UNA PALABRA. El estado va en el `aria-label`, no en el texto: `textContent`
+    // es lo que mide la barra para decidir el escalón, y ahí no puede colarse nada.
+    expect((await social.textContent())?.trim()).toBe('Social');
+    await expect(social).toHaveAttribute('aria-label', /^Social/);
+    await expect(social).toHaveAttribute('aria-label', /sin activar/);
+
+    // Y NO SE ANUNCIA DOS VECES: el punto es decoración: lo que se lee es el `aria-label` del botón.
+    await expect(piloto).toHaveAttribute('aria-hidden', 'true');
+
+    // EN MODO ICONO EL AVISO NO SE VA CON EL RÓTULO. Ahí el nombre está fuera de la pantalla —y con él, el punto
+    // que lo acompaña—, así que la insignia se planta en la esquina del icono. Es el escalón en el que la barra
+    // se queda sin palabras: perder aquí el aviso sería perderlo del todo.
+    await abrir(page, 280);
+    await expect(barra(page)).toHaveClass(/is-icons/);
+    const insignia = page.locator('.bottom-nav-pip-badge');
+    await expect(insignia).toHaveClass(/is-inactive/);
+    const [cajaInsignia, cajaIcono] = await Promise.all([
+      insignia.boundingBox(),
+      page.locator('.bottom-nav-btn', { hasText: 'Social' }).locator('.bottom-nav-icon').boundingBox(),
+    ]);
+    // Colgada del icono social: dentro de su ancho y por encima de su mitad.
+    expect(cajaInsignia!.x).toBeGreaterThan(cajaIcono!.x);
+    expect(cajaInsignia!.x).toBeLessThanOrEqual(cajaIcono!.x + cajaIcono!.width);
+    expect(cajaInsignia!.y).toBeLessThan(cajaIcono!.y + cajaIcono!.height / 2);
+  });
+
   test('la pestaña de Ajustes despliega su menú en vez de navegar', async ({ page }) => {
     // Es la única pestaña que no lleva a una pantalla: abre los cuatro grupos. Lo que sí comparte con las
     // demás es que el destino queda marcado, y eso se comprueba al llegar (ver `settingsMenu.test.ts`).
