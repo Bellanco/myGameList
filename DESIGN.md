@@ -27,8 +27,13 @@ description: |
 
 - **Densidad alta.** Es una herramienta de gestión: bibliotecas de 200+ juegos, tabla virtualizada. El aire
   se gasta entre bloques, no dentro de las filas.
-- **Sin imágenes.** No hay carátulas (`coverUrl` existe en la importación pero nunca llega a la vista). El
-  color del **género** hace de arte de portada: es lo que llena la pantalla y lo que se reconoce de un vistazo.
+- **Tipográfica de partida, con imagen opcional.** El color del **género** hace de arte de portada —es lo que
+  llena la pantalla sin pedirle nada a nadie— y sobre eso, quien encienda las carátulas (apagadas de fábrica: es
+  ese interruptor el que autoriza a preguntar por títulos a IGDB) las ve en la ranura del mosaico, en la franja
+  recortada del renglón y de fondo de una reseña, siempre con el velo del tema delante. Sin imagen no queda
+  hueco: debajo está siempre la portada de casa. En lo ajeno —la estantería y las reseñas de otra persona— va
+  además con el rango, hoy mithril, porque resolver un catálogo que no es el tuyo es el gasto que menos se puede
+  acotar del servicio.
 - **La identidad la pone el tema, no la aplicación.** Los componentes son neutros; el carácter entra por
   CAPA 2 (color) y CAPA 3 (letra, radios, texturas, ornamento).
 - **Oscuro por defecto**, claro de primera clase. Las dieciséis combinaciones (8 temas × 2 modos) se auditan con

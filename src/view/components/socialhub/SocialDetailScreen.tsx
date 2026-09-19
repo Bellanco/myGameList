@@ -1,4 +1,5 @@
-﻿import { ReviewDetailBody } from '../ReviewDetailBody';
+﻿import type { CSSProperties } from 'react';
+import { ReviewDetailBody } from '../ReviewDetailBody';
 import { ReviewDetailHead } from '../ReviewDetailHead';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import type { GameItem } from '../../../model/types/game';
@@ -7,6 +8,7 @@ import { HubScreen } from './HubScreen';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
 import { ShareReviewButton } from '../stats/ShareReviewButton';
+import { useReviewCover } from './useReviewCover';
 
 /**
  * El cuerpo del detalle MIENTRAS lo que va a ocupar su sitio todavía viene de camino.
@@ -49,6 +51,7 @@ export function SocialDetailScreen({
   reviewLoading = false,
   related = null,
   backLabel,
+  coversAllowed = false,
 }: {
   SOCIAL_UI: SocialUiLabels;
   /**
@@ -61,6 +64,13 @@ export function SocialDetailScreen({
     'gameId' | 'gameName' | 'grade' | 'photoURL' | 'profileDisplayName' | 'profileId' | 'rating' | 'snippet' | 'updatedAt'
   > | null;
   getGameItemById: (profileId: string, id: number) => GameItem | null;
+  /**
+   * ¿Se puede pedir la carátula del juego para el fondo? Por defecto no; lo enciende el hub con la misma regla
+   * que el resto de las reseñas ajenas (ver `useReviewCover`). Esta pantalla es el detalle de una reseña leída
+   * DESDE EL FEED, y la del perfil es `SocialProfileReviewScreen`: son dos caminos a lo mismo, así que lo que se
+   * cambie en una hay que cambiarlo en la otra hasta que se unifiquen.
+   */
+  coversAllowed?: boolean;
   onOpenProfileDetail: (id: string) => void;
   onBack: () => void;
   status: string;
@@ -94,6 +104,7 @@ export function SocialDetailScreen({
    */
   backLabel?: string;
 }) {
+  const coverOf = useReviewCover(coversAllowed);
   if (!activeDetailEvent) {
     /**
      * SIN EVENTO HAY DOS SITUACIONES DISTINTAS Y ANTES SE CONTABAN IGUAL.
@@ -160,6 +171,9 @@ export function SocialDetailScreen({
   const analyzedAtLabel = hasValidUpdatedAt
     ? SOCIAL_UI.feed.analyzedAt(updatedAtDate)
     : SOCIAL_UI.feed.analyzedRecently;
+  // Las plataformas solo están si de ese perfil tenemos listados; sin ellas la carátula se pide igual por
+  // nombre, que es lo que hace el bloque de relacionadas.
+  const cover = coverOf(activeDetailEvent.gameName, gameItem?.platforms);
   return (
     <HubScreen
       ariaLabel={SOCIAL_UI.feed.sectionAria}
@@ -176,7 +190,10 @@ export function SocialDetailScreen({
             </div>
           ) : null}
         </div>
-        <article className="hub-feed-card hub-feed-card-detail">
+        <article
+          className={`hub-feed-card hub-feed-card-detail${cover ? ' has-cover' : ''}`}
+          style={cover ? ({ '--row-cover': `url("${cover}")` } as CSSProperties) : undefined}
+        >
           {/* Aquí la firma SÍ lleva avatar y enlace: se llega desde el feed, donde lo que se sigue es a la
               persona, y su perfil está a un clic. Ver `ReviewDetailHead`. */}
           <ReviewDetailHead
