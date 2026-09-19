@@ -271,6 +271,12 @@
   position: relative; display: block; padding: 0; border: 0; background: none;
   cursor: pointer; line-height: 0; border-radius: 4px;
 }
+/* `display: none` Y NO `visibility: hidden`, que es lo que estaba: un absoluto invisible SIGUE contando para el
+   desplazamiento del documento, y este va centrado sobre su medalla y en `nowrap`, así que el de la primera
+   medalla de una fila asomaba por la izquierda y el de la última por la derecha. En un teléfono eso eran 10 px
+   de barra horizontal en TODO el panel de estadísticas, sin haber tocado nada —y en táctil el rótulo no llega a
+   verse nunca, porque no hay `:hover`—. Oculto de verdad, no ocupa ni empuja.
+   El fundido se conserva donde el navegador sabe animar una propiedad discreta; donde no, aparece sin más. */
 .ach-strip-tip {
   position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%);
   background: var(--surface-elevated, var(--surface)); color: var(--text);
@@ -278,10 +284,16 @@
   font-size: var(--fs-2xs); line-height: 1.3; white-space: nowrap;
   padding: 4px 8px; border-radius: var(--radius-sm);
   box-shadow: var(--e3); pointer-events: none; z-index: 3;
-  opacity: 0; visibility: hidden; transition: opacity .12s ease;
+  display: none;
+  opacity: 1;
+  transition: opacity .12s ease, display .12s allow-discrete;
 }
 .ach-strip-btn:hover .ach-strip-tip,
-.ach-strip-btn:focus-visible .ach-strip-tip { opacity: 1; visibility: visible; }
+.ach-strip-btn:focus-visible .ach-strip-tip { display: block; }
+@starting-style {
+  .ach-strip-btn:hover .ach-strip-tip,
+  .ach-strip-btn:focus-visible .ach-strip-tip { opacity: 0; }
+}
 @media (prefers-reduced-motion: reduce) { .ach-strip-tip { transition: none; } }
 // EL «+N» ES UNA MEDALLA MÁS, no una nota al margen. Mismo disco, mismo tamaño y mismo sitio en la fila: lo que
 // cuenta son medallas, así que tiene que pesar lo mismo que ellas o la fila se descuadra al final. Sin aura y

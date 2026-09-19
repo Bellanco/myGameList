@@ -33,6 +33,9 @@
 :root[data-palette="portal"] .btn,
 :root[data-palette="portal"] .hub-seg-btn,
 :root[data-palette="portal"] thead th,
+/* `.detail-label` va pegada a `.flabel` porque es el mismo papel —rótulo corto de interfaz— y
+   estaban separadas: una en la letra del tema y la otra en la de la casa, en la misma pantalla. */
+:root[data-palette="portal"] .detail-label,
 :root[data-palette="portal"] .flabel,
 :root[data-palette="portal"] .row-name,
 :root[data-palette="portal"] .hub-name-link,
@@ -745,4 +748,166 @@
 }
 :root[data-palette="portal"] .game-card .game-card-meter::after {
   box-shadow: 0 0 8px color-mix(in srgb, hsl(var(--score-hue, 0) 58% var(--acc-l)) 55%, transparent);
+}
+
+/* ── LOS CONTROLES DE VISTA, EN UNA PIEZA · EL CAÑÓN DE PORTALES ─────────────────────────────────────
+   La banda es el panel del suelo de la cámara: plano, oscuro, sin redondear y SIN FILO DE AVISO arriba. Tenía
+   una línea naranja de 2 px y sobraba: con el conmutador ya encendido en naranja, la línea repetía el mismo
+   color a dos centímetros y partía la pieza en dos por arriba.
+
+   EL DISPARO. El deslizador se construye como el visor del cogitador —una ventana hundida con la lectura
+   dentro—, pero aquí la lectura es LISA: un cañón se lee por el haz que sale de él, y un haz no tiene textura
+   ni segmentos. El carril es el tubo apagado; el relleno, el haz cargado, que va de azul profundo al blanco
+   del núcleo justo detrás de la boca; y la manecilla es el PROYECTIL, un punto naranja con su halo, el otro
+   extremo del portal.
+
+   COMO EN EL COGITADOR, la escala y no el ancho: a posición 0 el tubo se apaga entero (`scaleX(0)` no pinta ni
+   halo), en vez de dejar el resto de haz encendido que deja la fórmula de la casa.
+
+   Y EL CONMUTADOR ES CUADRADO. El óvalo dibujaba la boca del portal, pero en una barra de herramientas leía
+   como dos pastillas: aquí todo lo demás —las cajas, los paneles, los chips— tiene el canto recto de Aperture,
+   y dos elipses eran la única forma blanda de la pantalla. Cuadrado, el color sigue diciendo cuál está abierto
+   y la pieza entera se lee como un instrumento. */
+:root[data-palette="portal"] .view-controls {
+  gap: 0;
+  padding: .3rem .7rem;
+  border-radius: 0;
+  background: #1d2226;
+}
+:root[data-palette="portal"] .view-controls:not(:has(.grid-size)) { padding-inline: .45rem; }
+:root[data-palette="portal"] .view-controls .shape-switch { border: 0; background: none; box-shadow: none; padding: 0 0 0 .6rem; gap: .35rem; }
+
+/* EL TUBO: ventana hundida en el panel, con el canto de luz arriba como el resto de las piezas de la cámara. */
+:root[data-palette="portal"] .view-controls .grid-size {
+  padding: 0 .35rem;
+  border-radius: 0;
+  background: #0f1418;
+  box-shadow: inset 0 0 0 1px rgba(244, 241, 232, .1), inset 0 2px 4px rgba(0, 0, 0, .7);
+}
+:root[data-palette="portal"] .view-controls .grid-size::before {
+  clip-path: none;
+  height: .34rem;
+  border-radius: 0;
+  background: rgba(244, 241, 232, .12);
+}
+/* EL HAZ CRECE DE ANCHO, no de escala, y la diferencia se ve: al escalar, el degradado se comprime con la
+   caja y a media carga el tramo oscuro se comía el haz entero —un disparo apagado—. Con el ancho, el núcleo
+   claro se queda SIEMPRE pegado a la boca, que es lo que hace que se lea como un tiro y no como un progreso.
+   Y el halo va en `filter`, no en `box-shadow`: a ancho cero una sombra de caja seguiría pintando una raya
+   luminosa en el arranque del tubo, y el filtro sobre una caja vacía no pinta nada. */
+:root[data-palette="portal"] .view-controls .grid-size::after {
+  clip-path: none;
+  height: .34rem;
+  border-radius: 0;
+  width: calc((100% - 1.3rem) * var(--grid-size-pos, 0) / var(--grid-size-pasos));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--steam) 35%, transparent), var(--steam) 55%, #eaf9ff 100%);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--steam) 70%, transparent));
+  box-shadow: none;
+}
+/* EL PROYECTIL: pequeño, redondo y naranja, el único punto blando de la pieza porque es lo que se agarra. */
+:root[data-palette="portal"] .view-controls .grid-size-range::-webkit-slider-thumb {
+  width: .6rem;
+  height: .6rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #ffe3c0, var(--portal-orange, #f5821f) 70%);
+  border: 0;
+  box-shadow: 0 0 5px rgba(245, 130, 31, .65);
+}
+:root[data-palette="portal"] .view-controls .grid-size-range::-moz-range-thumb {
+  width: .6rem;
+  height: .6rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #ffe3c0, var(--portal-orange, #f5821f) 70%);
+  border: 0;
+  box-shadow: 0 0 5px rgba(245, 130, 31, .65);
+}
+
+/* EN CLARO, EL PROYECTIL SE VA AL TEJA. Este tema cambia de época al cambiar de modo —claro es la Aperture
+   ANTIGUA, y allí el azul clínico no existe: el acento (`--steam`) es ámbar—, así que el haz y el proyectil
+   salían los dos del mismo naranja y el tiro se perdía dentro de su propio rastro. El rojo teja de la torreta
+   es de esa misma época y es lo único que contrasta con el ámbar sin traer un color de fuera. */
+:root[data-palette="portal"][data-theme="light"] .view-controls .grid-size-range::-webkit-slider-thumb {
+  background: radial-gradient(circle at 40% 35%, #f0b49a, var(--portal-turret) 70%);
+  box-shadow: 0 0 5px color-mix(in srgb, var(--portal-turret) 60%, transparent);
+}
+:root[data-palette="portal"][data-theme="light"] .view-controls .grid-size-range::-moz-range-thumb {
+  background: radial-gradient(circle at 40% 35%, #f0b49a, var(--portal-turret) 70%);
+  box-shadow: 0 0 5px color-mix(in srgb, var(--portal-turret) 60%, transparent);
+}
+
+/* LOS DOS EMISORES · UNA MANCHA DE LUZ CUADRADA, SIN UN SOLO BORDE ───────────────────────────────────
+   Ni filete en el apagado ni aro en el encendido: un portal no tiene marco, tiene boca. Lo que se enciende es
+   el HUECO, y la luz se apaga hacia los cantos en vez de terminar en una línea — por eso el color va en un
+   degradado radial que llega a transparente antes del borde, y no en un relleno plano recortado.
+
+   EL DEGRADADO Y NO UNA MÁSCARA: una `mask` sobre el botón difuminaría también el icono, que es lo único que
+   aquí tiene que quedar nítido. Con el desvanecido en el fondo, el dibujo se queda entero encima.
+
+   AZUL A LA IZQUIERDA Y NARANJA A LA DERECHA SIEMPRE: son los dos extremos de la firma del tema —los mismos
+   que los dos FAB—, y no se intercambian según cuál esté abierto. */
+:root[data-palette="portal"] .view-controls .shape-switch-btn {
+  width: 1.95rem;
+  height: 1.95rem;
+  border-radius: 2px;
+  background: none;
+  box-shadow: none;
+  color: color-mix(in srgb, var(--text) 45%, transparent);
+}
+:root[data-palette="portal"] .view-controls .shape-switch-btn:hover { background: none; color: var(--text); }
+:root[data-palette="portal"] .view-controls .shape-switch-btn.is-on { color: #fff; box-shadow: none; }
+/* LA MANCHA ES CUADRADA, no un disco: el desvanecido se hace con dos degradados LINEALES cruzados —uno por
+   eje— en vez de con uno radial. Un radial muere en una circunferencia y la pieza se leía redonda dentro de un
+   botón cuadrado; cruzando los dos ejes, el color llena el cuadrado y se apaga contra los cuatro cantos.
+   `background-blend-mode: multiply` es lo que hace que los dos se apaguen a la vez en las esquinas, que es
+   donde se juntan los dos desvanecidos. */
+:root[data-palette="portal"] .view-controls .shape-switch-btn.is-on {
+  background-blend-mode: multiply;
+  background-size: 100% 100%;
+}
+:root[data-palette="portal"] .view-controls .shape-switch-btn:first-child.is-on {
+  background-image:
+    linear-gradient(90deg, transparent 0%, var(--steam) 26%, color-mix(in srgb, var(--steam) 92%, #fff) 50%, var(--steam) 74%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, var(--steam) 26%, var(--steam) 74%, transparent 100%);
+}
+:root[data-palette="portal"] .view-controls .shape-switch-btn:last-child.is-on {
+  background-image:
+    linear-gradient(90deg, transparent 0%, var(--portal-orange, #f5821f) 26%, color-mix(in srgb, var(--portal-orange, #f5821f) 92%, #fff) 50%, var(--portal-orange, #f5821f) 74%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, var(--portal-orange, #f5821f) 26%, var(--portal-orange, #f5821f) 74%, transparent 100%);
+}
+/* El icono se sostiene sobre el centro claro de la boca con una sombra dura mínima: sin ella perdía el filo. */
+:root[data-palette="portal"] .view-controls .shape-switch-btn.is-on .ui-icon,
+:root[data-palette="portal"] .view-controls .shape-switch-btn.is-on svg { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .55)); }
+
+/* ── §16 · LA FICHA DE GRÁFICA ─────────────────────────────────────────────────────────────────────────
+   La placa de Aperture es LIMPIA, no angulosa: conserva un canto pequeño y uniforme en todo lo que es pieza,
+   y corta a escuadra solo lo que es SEÑAL —la línea de una serie, el vértice del radar—, que es como está
+   rotulada esta sala. Cifras en la terminal de GLaDOS. ── */
+:root[data-palette="portal"] .stats-hub {
+  --stats-radius: 3px;
+  --stats-bar: 1px;
+  --stats-pill: 2px;
+  --stats-cap: butt;
+  --stats-join: miter;
+  --stats-num: var(--font-mono);
+}
+
+/* ── §17 · LAS PESTAÑAS DE ESCRITORIO: la franja lleva el gel naranja arriba, igual que las placas del §3,
+   y la pestaña activa enciende el portal azul debajo. El contador se queda sin caja —la placa ya es una—:
+   solo la monoespaciada de la terminal. ── */
+:root[data-palette="portal"] .tabs {
+  border-top: 2px solid var(--portal-orange);
+  border-bottom: 1px solid color-mix(in srgb, var(--steam) 35%, var(--border));
+}
+:root[data-palette="portal"] .tab-underline {
+  height: 2px;
+  border-radius: 0;
+  background: var(--steam);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--steam) 55%, transparent);
+}
+:root[data-palette="portal"] .count-badge { font-family: var(--font-mono); }
+
+/* ── §18 · LAS ESTRELLAS: señalética, así que sin relieve; la llena enciende su piloto y ya. ── */
+:root[data-palette="portal"] .stars .f,
+:root[data-palette="portal"] .star-inp button.f {
+  text-shadow: 0 0 8px color-mix(in srgb, var(--star-full) 45%, transparent);
 }

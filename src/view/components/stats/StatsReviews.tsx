@@ -32,6 +32,8 @@ function collectReviews(games: TabData): Array<ReviewEntry & { game: GameItem; e
         // curso o pendiente), y eso cambia cómo se lee la nota: la lista lo avisa.
         unfinished: tab !== 'c',
         reviewText,
+        // Para la carátula de fondo: desempatan entre juegos con el mismo nombre (ver `useReviewCover`).
+        platforms: game.platforms || [],
         ts: Number(game._ts) || 0,
         game,
         effectiveGrade,
@@ -154,6 +156,9 @@ export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, 
         // «Tus reseñas», que ni siquiera era un nombre y repetía lo que ya dice el encabezado de la pantalla.
         onBack={onBackToList}
         backLabel={backLabel}
+        /* TUS reseñas, tus juegos: aquí no hay política que aplicar más allá de tu propio interruptor de
+           carátulas (ver `useReviewCover`). La lista de abajo y las sugerencias van con el mismo criterio. */
+        coversAllowed
         status=""
         statusKind=""
         // El botón de compartir solo aparece aquí, sobre TUS reseñas. La misma pantalla se usa en el hub social
@@ -169,6 +174,7 @@ export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, 
             title={SOCIAL_UI.feed.suggestedTitle}
             openAria={(entry) => SOCIAL_UI.feed.suggestedOpenAria(entry.gameName)}
             onOpen={(entry) => onOpenReview(entry.gameId)}
+            coversAllowed
           />
         }
       />
@@ -203,6 +209,7 @@ export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, 
                 emptyLabel={L.screenEmpty}
                 unfinishedLabel={L.unfinished}
                 showDate={false}
+                coversAllowed
               />
             </div>
           </div>

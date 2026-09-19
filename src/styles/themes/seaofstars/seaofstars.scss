@@ -36,6 +36,9 @@
 :root[data-palette="seaofstars"] .btn,
 :root[data-palette="seaofstars"] .hub-seg-btn,
 :root[data-palette="seaofstars"] thead th,
+/* `.detail-label` va pegada a `.flabel` porque es el mismo papel —rótulo corto de interfaz— y
+   estaban separadas: una en la letra del tema y la otra en la de la casa, en la misma pantalla. */
+:root[data-palette="seaofstars"] .detail-label,
 :root[data-palette="seaofstars"] .flabel,
 :root[data-palette="seaofstars"] .row-name,
 :root[data-palette="seaofstars"] .hub-name-link,
@@ -557,4 +560,70 @@
     color-mix(in srgb, #fff 40%, hsl(var(--score-hue, 0) 58% var(--acc-l))) 0 40%,
     hsl(var(--score-hue, 0) 58% var(--acc-l)) 40% 75%,
     color-mix(in srgb, #000 30%, hsl(var(--score-hue, 0) 58% var(--acc-l))) 75% 100%);
+}
+
+/* ── LOS CONTROLES DE VISTA, EN UNA PIEZA · EL MARCO DE LA NOCHE ──────────────────────────────────────
+   Un recuadro de dos filetes como los del menú del juego, sin una sola esquina redondeada: en pixel-art el
+   radio no existe, se dibuja con los píxeles que haya. Dentro, la barra del tamaño avanza en ESCALONES —dos
+   tonos de turquesa alternos, como el agua de los sprites— y la manecilla es un bloque dorado.
+
+   EL SOL DEL SOLSTICIO marca la forma elegida: el icono activo se enciende en oro con su halo y el otro se
+   queda en azul de noche. Rellenar el botón habría tapado el dibujo, que aquí es lo único que se lee. */
+:root[data-palette="seaofstars"] .view-controls {
+  gap: 0;
+  padding: .3rem .75rem;
+  border-radius: 0;
+  background: #10182f;
+  box-shadow: inset 0 0 0 2px #2b3c6b;
+}
+:root[data-palette="seaofstars"] .view-controls:not(:has(.grid-size)) { padding-inline: .45rem; }
+:root[data-palette="seaofstars"] .view-controls .shape-switch { border: 0; background: none; box-shadow: none; padding: 0 0 0 .55rem; }
+:root[data-palette="seaofstars"] .view-controls .grid-size::before { clip-path: none; height: .5rem; border-radius: 0; background: #0e1733; }
+:root[data-palette="seaofstars"] .view-controls .grid-size::after {
+  clip-path: none;
+  height: .5rem;
+  border-radius: 0;
+  background: repeating-linear-gradient(90deg, var(--sos-turq, #4fd1c5) 0 .35rem, #3aa89e .35rem .5rem);
+}
+:root[data-palette="seaofstars"] .view-controls .grid-size-range::-webkit-slider-thumb { width: .6rem; height: .9rem; border-radius: 0; background: #ffd75e; border: 2px solid #0e1733; }
+:root[data-palette="seaofstars"] .view-controls .grid-size-range::-moz-range-thumb { width: .6rem; height: .9rem; border-radius: 0; background: #ffd75e; border: 2px solid #0e1733; }
+:root[data-palette="seaofstars"] .view-controls .shape-switch-btn { border-radius: 0; color: #6d82b5; }
+:root[data-palette="seaofstars"] .view-controls .shape-switch-btn.is-on {
+  background: none;
+  box-shadow: none;
+  color: #ffd75e;
+  filter: drop-shadow(0 0 5px rgba(255, 215, 94, .8));
+}
+
+/* ── §17 · LA FICHA DE GRÁFICA ─────────────────────────────────────────────────────────────────────────
+   Pixel-art: ni una curva suavizada en todo el panel. El `crispEdges` es aquí lo importante —sin él, el mapa
+   de calor y la serie de géneros eran las dos únicas piezas con antialias de la pantalla—. ── */
+:root[data-palette="seaofstars"] .stats-hub {
+  --stats-radius: 0;
+  --stats-bar: 0;
+  --stats-pill: 0;
+  --stats-dot: 0;
+  --stats-cap: butt;
+  --stats-join: miter;
+  --stats-render: crispEdges;
+  --stats-num: var(--font-body);
+}
+
+/* ── §18 · LAS PESTAÑAS DE ESCRITORIO: la franja es el borde de una caja de diálogo y el indicador, un
+   bloque de oro. Nada de píldoras ni de degradados: aquí la interfaz se dibuja con la rejilla. El contador
+   no se mete en una caja —las cajas de este mundo son las de diálogo—: se queda en la letra de píxel. ── */
+:root[data-palette="seaofstars"] .tabs { border-bottom: 2px solid var(--sos-line); }
+:root[data-palette="seaofstars"] .tab-underline {
+  height: 3px;
+  border-radius: 0;
+  background: var(--fg-link);
+}
+:root[data-palette="seaofstars"] .count-badge { font-family: var(--font-body); }
+
+/* ── §19 · LAS ESTRELLAS: sombra pixelada, la misma idea que el titular del §1 —un solo desplazamiento
+   nítido, sin difuminar—. A medio tono y un píxel: a dos píxeles y turquesa pleno, la sombra pesaba más que
+   la estrella y la fila se leía como una hilera de manchas. ── */
+:root[data-palette="seaofstars"] .stars .f,
+:root[data-palette="seaofstars"] .star-inp button.f {
+  text-shadow: 1px 1px 0 color-mix(in srgb, var(--sos-turq) 50%, transparent);
 }

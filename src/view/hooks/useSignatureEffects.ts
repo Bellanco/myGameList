@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { MOMENT_EVENT, type MomentDetail } from '../../core/effects/moments';
+import { DEFAULT_PALETTE } from '../../core/constants/palettes';
 
 /**
  * Efectos de FIRMA disparados por interacción (los ambientales/hover viven en CSS bajo `data-effects="on"`).
@@ -11,6 +12,7 @@ import { MOMENT_EVENT, type MomentDetail } from '../../core/effects/moments';
  *  - Cámara de pruebas (portal): APERTURA DE PORTAL (anillo azul→naranja) desde el punto del clic en un botón.
  *  - Sol y luna (seaofstars): astro SOL↔LUNA que cruza al alternar claro/oscuro.
  *  - Solo hay guerra (grimdark): BOOT-UP de fósforo (destello verde) al activar la paleta (encender el cogitador).
+ *  - Inserte moneda (arcade): GAME CLEAR, la bandera a cuadros del mueble al cerrar un juego.
  *
  * Y LOS QUE RESPONDEN A LO QUE PASA EN LA APLICACIÓN, no a lo que pasa en el DOM (ver `core/effects/moments`):
  *  - CERRAR UN JUEGO → un SELLO que cae en el centro: lacre de biblioteca (Clásico), «objetivo cumplido» ladeado
@@ -28,9 +30,11 @@ export function useSignatureEffects(): void {
     fxRef.current = (palette: string): boolean =>
       !reduce.matches &&
       root.getAttribute('data-effects') === 'on' &&
-      // La paleta por defecto NO escribe el atributo (`preferences.ts` lo retira), así que sin este `??` un
-      // efecto de Clásico no se dispara nunca: la comparación era contra `null`.
-      (root.getAttribute('data-palette') ?? 'steam') === palette;
+      // El respaldo es la paleta POR DEFECTO, no una cualquiera: el atributo lo escriben el anti-flash de
+      // `index.html` y `preferences.ts`, así que solo falta si a alguien se le va la mano con el `<html>`. Aquí
+      // decía `'steam'`, de cuando esa era la de por defecto y además no escribía atributo: con el cambio a
+      // «Forja y temple» eso habría dado los efectos de otro tema a quien no ha elegido ninguno.
+      (root.getAttribute('data-palette') ?? DEFAULT_PALETTE) === palette;
   }, []);
 
   const spawn = (el: HTMLElement): void => {
@@ -143,10 +147,13 @@ export function useSignatureEffects(): void {
       const { moment } = (e as CustomEvent<MomentDetail>).detail;
 
       if (moment === 'game-closed') {
-        // El lacre de la biblioteca, el sello del ladrón y el laurel imperial son el mismo gesto con tres caras.
+        // El lacre de la biblioteca, el sello del ladrón, el laurel imperial y la bandera a cuadros son el
+        // mismo gesto con CUATRO caras. La de «Inserte moneda» es la última en llegar: era el único mundo sin
+        // efecto propio, y el suyo no podía ser un destello más —una recreativa CANTA lo que acabas de hacer—.
         if (fxRef.current('steam')) spawn(seal('signature'));
         else if (fxRef.current('persona')) spawn(seal('check', 'OBJETIVO CUMPLIDO'));
         else if (fxRef.current('grimdark')) spawn(seal('star-olive-branches', 'DEBER CUMPLIDO'));
+        else if (fxRef.current('arcade')) spawn(seal('checkered-flag', 'GAME CLEAR'));
         return;
       }
 

@@ -718,8 +718,7 @@
 :root[data-palette="arcade"] .year-scale-ramp,
 :root[data-palette="arcade"] .shine-fill,
 :root[data-palette="arcade"] .shine-rows li,
-:root[data-palette="arcade"] .top-chip-bar,
-:root[data-palette="arcade"] .dot-matrix-dots rect { border-radius: 0; }
+:root[data-palette="arcade"] .top-chip-bar { border-radius: 0; }
 :root[data-palette="arcade"] .donut-seg,
 :root[data-palette="arcade"] .gauge-seg,
 :root[data-palette="arcade"] .gauge-sub-seg,
@@ -813,3 +812,95 @@
   mask-position: 0 center;
   filter: drop-shadow(0 0 5px color-mix(in srgb, hsl(var(--score-hue, 0) 58% var(--acc-l)) 80%, transparent));
 }
+
+/* ── LOS CONTROLES DE VISTA, EN UNA PIEZA · EL FRONTAL DE LA MÁQUINA ──────────────────────────────────
+   Las tres cosas de siempre y ninguna más: relleno macizo, filete de TINTA de 2 px y sombra DURA en
+   diagonal. Nada translúcido y nada difuminado, que es la regla que sostiene el tema entero.
+
+   Y LA TECLA SE VA A DONDE ESTABA SU SOMBRA. No baja, no se oscurece: se DESPLAZA los 2 px de la sombra y la
+   sombra desaparece — el mismo gesto que la tecla de consola del resto del skin, que es lo que hace que una
+   pieza plana parezca que se hunde sin una sola sombra difusa. */
+:root[data-palette="arcade"] .view-controls {
+  gap: 0;
+  padding: .25rem .6rem;
+  border: 2px solid #17091f;
+  border-radius: 4px;
+  background: #2a1140;
+  box-shadow: 3px 3px 0 #17091f;
+}
+:root[data-palette="arcade"] .view-controls:not(:has(.grid-size)) { padding-inline: .4rem; }
+:root[data-palette="arcade"] .view-controls .shape-switch { border: 0; background: none; box-shadow: none; padding: 0 0 0 .5rem; gap: .3rem; }
+:root[data-palette="arcade"] .view-controls .shape-switch-btn {
+  border-radius: 3px;
+  border: 2px solid #17091f;
+  background: #3d1a5c;
+  color: #c9a9e8;
+  box-shadow: 2px 2px 0 #17091f;
+}
+:root[data-palette="arcade"] .view-controls .shape-switch-btn.is-on {
+  background: var(--steam);
+  color: #17091f;
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+/* El carril es tinta y el relleno, tubo de neón cian: lo que manda, brilla. */
+:root[data-palette="arcade"] .view-controls .grid-size::before { background: #17091f; }
+:root[data-palette="arcade"] .view-controls .grid-size::after { background: #2ef0e0; box-shadow: 0 0 8px #2ef0e0; }
+:root[data-palette="arcade"] .view-controls .grid-size-range::-webkit-slider-thumb {
+  border-radius: 2px;
+  background: #2ef0e0;
+  border: 2px solid #17091f;
+  box-shadow: 2px 2px 0 #17091f;
+}
+:root[data-palette="arcade"] .view-controls .grid-size-range::-moz-range-thumb {
+  border-radius: 2px;
+  background: #2ef0e0;
+  border: 2px solid #17091f;
+}
+
+/* ── §19 · LA FICHA DE GRÁFICA ─────────────────────────────────────────────────────────────────────────
+   El §17 doblaba las gráficas ENUMERÁNDOLAS, y la cuenta nunca cuadró: la evolución del gusto, la constancia
+   semanal y los rasgos de una reseña seguían curvas y suaves en un tema que no admite ni una cosa ni la otra.
+   `stats.scss` declara ahora siete palancas y aquí se rellenan de una vez: nada redondo, nada suavizado, la
+   barra es un bloque de píxeles, el punto es un píxel y la línea corta a escuadra. ── */
+:root[data-palette="arcade"] .stats-hub {
+  --stats-radius: 0;
+  --stats-bar: 0;
+  --stats-pill: 0;
+  --stats-dot: 0;
+  --stats-cap: butt;
+  --stats-join: miter;
+  --stats-render: crispEdges;
+  --stats-num: var(--font-mono);
+}
+
+/* ── §20 · AVATAR SIN FOTO: trazo GRUESO y de remate recto, la silueta serigrafiada del lateral del mueble
+   —no un icono de interfaz—. Los otros cinco temas ya decían el suyo por ficha; este se había quedado con el
+   de la casa. ── */
+:root[data-palette="arcade"] {
+  --deco-avatar-stroke: 2.6;
+  --deco-avatar-cap: butt;
+}
+
+/* ── §21 · LAS ESTRELLAS: el color lo pone la paleta, pero la MATERIA no la ponía nadie. La llena es una
+   ficha de la máquina, con la tinta debajo, igual que la pegatina y la tecla. ── */
+:root[data-palette="arcade"] .stars .f,
+:root[data-palette="arcade"] .star-inp button.f { text-shadow: 2px 2px 0 var(--arc-ink); }
+
+/* ── §22 · LA FIRMA · GAME CLEAR ───────────────────────────────────────────────────────────────────────
+   Era el único mundo sin efecto propio: los otros seis tienen su lacre, su portal, su astro, su barrido o su
+   arranque de cogitador. El gesto que le toca a una recreativa no es un destello más —es CANTAR lo que
+   acabas de hacer—, así que al cerrar un juego cae la marquesina con la bandera a cuadros. La pieza es la
+   misma `.fx-seal` de `_effects.scss`, que ya tenía tres caras; esta es la cuarta, y el TS que la dispara
+   está en `useSignatureEffects`. ── */
+:root[data-palette="arcade"] .fx-seal {
+  width: auto;
+  height: auto;
+  padding: .85rem 1.5rem;
+  border-radius: 0;
+  color: #2a1a00;
+  background: linear-gradient(180deg, #ffd24a, #f0a81e);
+  border: 3px solid var(--arc-ink);
+  box-shadow: 6px 6px 0 var(--arc-ink);
+}
+:root[data-palette="arcade"] .fx-seal-label { font-size: 15px; letter-spacing: .12em; }

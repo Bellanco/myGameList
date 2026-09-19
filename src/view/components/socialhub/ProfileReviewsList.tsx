@@ -3,6 +3,7 @@ import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
 import { useScoreScale } from '../../hooks/useScoreScale';
 import { resolveGrade, reviewAccent } from '../../../core/utils/scoreScale';
+import { useReviewCover } from './useReviewCover';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 // La hoja de la RESEÑA se importa AQUÍ y no desde `social.scss`: esta lista la pintan el hub social y también
 // tus reseñas del panel (`/stats/resenas`), donde el chunk del hub no se carga. Ver `styles/reviews.scss`.
@@ -21,6 +22,11 @@ export interface ReviewEntry {
   ts: number;
   /** Reseña de un juego SIN pasar (abandonado, en curso o pendiente); la lista lo avisa con `unfinishedLabel`. */
   unfinished?: boolean;
+  /**
+   * Plataformas del juego, solo para pedir su carátula: son el desempate entre homónimos (hay dos «Hook», y lo
+   * que dice cuál es el tuyo es que tú tienes el de Mega Drive). Ausentes, la carátula se pide igual por nombre.
+   */
+  platforms?: readonly string[];
 }
 
 interface ProfileReviewsListProps {
@@ -39,6 +45,14 @@ interface ProfileReviewsListProps {
    * reseñas del panel no: ahí el sello de tiempo es el de la ficha, no el de cuándo escribiste, así que sobra.
    */
   showDate?: boolean;
+  /**
+   * ¿Se pueden pedir carátulas aquí? Es la POLÍTICA del sitio, no la preferencia de nadie: en tus reseñas es que
+   * sí y manda solo tu interruptor; en el perfil de otra persona lo decide quien monta la pantalla, y hoy es
+   * mithril (ver `useReviewCover`). Con `false` la lista se pinta sin fondo, que es la vista de siempre.
+   *
+   * POR DEFECTO, NO: esto acaba en una petición al servidor y de ahí a IGDB, así que quien la quiera la pide.
+   */
+  coversAllowed?: boolean;
 }
 
 /**
@@ -55,8 +69,10 @@ export const ProfileReviewsList = memo(function ProfileReviewsList({
   emptyLabel,
   unfinishedLabel,
   showDate = true,
+  coversAllowed = false,
 }: ProfileReviewsListProps) {
   const scoreScale = useScoreScale();
+  const coverOf = useReviewCover(coversAllowed);
   const [query, setQuery] = useState('');
   const [visibleCount, setVisibleCount] = useState(REVIEW_PAGE_SIZE);
   const sentinelRef = useRef<HTMLButtonElement>(null);
@@ -119,12 +135,19 @@ export const ProfileReviewsList = memo(function ProfileReviewsList({
             const hasValidDate = review.ts > 0 && !Number.isNaN(itemDate.getTime());
             // Color por nota: 1=rojo, 2=amarillo; 3/4/5 bien separados en tono y en luminosidad.
             const accent = reviewAccent(rating);
+            // La franja de la carátula, cuando toca: el estilo la pasa por ficha, igual que el renglón del
+            // listado, y la clase es lo único que enciende las capas de la hoja.
+            const cover = coverOf(review.gameName, review.platforms);
+            const style: CSSProperties = {
+              ...(hasRating ? { '--rev-hue': String(accent.hue), '--rev-ladj': `${accent.lightnessAdjust}%` } : {}),
+              ...(cover ? { '--row-cover': `url("${cover}")` } : {}),
+            } as CSSProperties;
             return (
               <article
                 key={review.id}
-                className={`hub-feed-card hub-feed-activity-item is-review hub-review-entry ${hasRating ? '' : 'is-noscore'}`.trim()}
+                className={`hub-feed-card hub-feed-activity-item is-review hub-review-entry ${hasRating ? '' : 'is-noscore'} ${cover ? 'has-cover' : ''}`.replace(/\s+/g, ' ').trim()}
                 role="listitem"
-                style={hasRating ? ({ '--rev-hue': String(accent.hue), '--rev-ladj': `${accent.lightnessAdjust}%` } as CSSProperties) : undefined}
+                style={hasRating || cover ? style : undefined}
               >
                 {/* Tarjeta pulsable: abre el detalle de la reseña (todo el análisis) con vuelta a esta lista. */}
                 <button

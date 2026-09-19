@@ -1,6 +1,7 @@
 import { memo, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { resolveGrade, reviewAccent } from '../../../core/utils/scoreScale';
 import { useScoreScale } from '../../hooks/useScoreScale';
+import { useReviewCover } from './useReviewCover';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import type { RelatedReview } from '../../../core/social/relatedReviews';
 // Ver `ProfileReviewsList`: este bloque lo pinta también la pantalla pública de un enlace compartido, que se
@@ -74,6 +75,7 @@ export const RelatedReviews = memo(function RelatedReviews({
   title,
   openAria,
   hrefFor,
+  coversAllowed = false,
 }: {
   SOCIAL_UI: SocialUiLabels;
   items: RelatedReview[];
@@ -92,8 +94,15 @@ export const RelatedReviews = memo(function RelatedReviews({
    * enrutador, y un `onClick` que navegue no tendría a quién pedírselo.
    */
   hrefFor?: (entry: RelatedReview) => string;
+  /**
+   * ¿Se pueden pedir carátulas aquí? Igual que en la lista de reseñas: por defecto NO, y lo enciende quien
+   * monta el bloque. La página pública no lo pasa a propósito — ahí llega gente sin sesión ni preferencia, y
+   * cada visita se convertiría en una tanda de resoluciones contra IGDB que nadie ha pedido.
+   */
+  coversAllowed?: boolean;
 }) {
   const scoreScale = useScoreScale();
+  const coverOf = useReviewCover(coversAllowed);
   const listRef = useRef<HTMLDivElement>(null);
   const columns = useGridColumns(listRef);
 
@@ -128,6 +137,10 @@ export const RelatedReviews = memo(function RelatedReviews({
           // Igual que en la lista de reseñas: sin nota, medallón con interrogación y sin color de acento.
           const hasRating = rating > 0;
           const accent = reviewAccent(rating);
+          /* La franja de la carátula, cuando toca. Aquí se pide SOLO POR NOMBRE: el candidato no lleva las
+             plataformas del juego —no las necesita para nada más— y son únicamente el desempate entre
+             homónimos, así que lo peor que puede pasar es la portada del otro «Hook». */
+          const cover = coverOf(entry.gameName);
           // Todas las reseñas se firman con el nombre de quien las escribió, las propias incluidas: en una lista
           // donde el resto son personas con nombre, un «Tú» era la única firma que no lo parecía. Que una sea
           // tuya se dice con el color de la firma (`is-own`), no cambiándola por un pronombre.
@@ -136,9 +149,12 @@ export const RelatedReviews = memo(function RelatedReviews({
           return (
             <article
               key={entry.key}
-              className={`hub-feed-card hub-feed-activity-item is-review hub-review-entry hub-related-entry ${hasRating ? '' : 'is-noscore'}`.trim()}
+              className={`hub-feed-card hub-feed-activity-item is-review hub-review-entry hub-related-entry ${hasRating ? '' : 'is-noscore'} ${cover ? 'has-cover' : ''}`.replace(/\s+/g, ' ').trim()}
               role="listitem"
-              style={hasRating ? ({ '--rev-hue': String(accent.hue), '--rev-ladj': `${accent.lightnessAdjust}%` } as CSSProperties) : undefined}
+              style={hasRating || cover ? ({
+                ...(hasRating ? { '--rev-hue': String(accent.hue), '--rev-ladj': `${accent.lightnessAdjust}%` } : {}),
+                ...(cover ? { '--row-cover': `url("${cover}")` } : {}),
+              } as CSSProperties) : undefined}
             >
               {/* Toda la tarjeta es pulsable; el control cubre la superficie y se queda con el foco y el
                   rótulo. Enlace o botón según a dónde lleve: ver `hrefFor`. */}

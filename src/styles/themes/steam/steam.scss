@@ -37,19 +37,28 @@
   --wt-lacre: 13px;
 }
 
-/* ── §1 · Tipografía: EB Garamond para el cuerpo y los rótulos —es letra de documento, no de interfaz—,
-   Cinzel para las cabeceras y las cifras en IBM Plex Mono.
+/* ── §1 · Tipografía: Lora para el cuerpo y los rótulos —es letra de documento, no de interfaz: trazo de
+   pluma, serifas de gota y el contraste de algo escrito a mano—, Cinzel para las cabeceras y las cifras en
+   IBM Plex Mono.
+   POR QUÉ NO ES UN GARAMOND. Aquí estuvo EB Garamond, que es la letra que pide un contrato, pero tiene la
+   ALTURA DE X en 0,405 em contra los 0,504 de DM Sans —la base de las demás paletas—: al mismo `font-size`
+   se leía como si fuera dos puntos más pequeña, y el medio píxel que compensaba en `body` no llegaba ni de
+   lejos (habría hecho falta subir de 16 a 19,9 px). Lora se queda en 0,50 em y, medida en la misma línea,
+   ocupa lo MISMO de ancho que DM Sans: la tabla no se recoloca al cambiar de paleta. Cinzel no entra en
+   esto —es capital romana y su altura de mayúscula ya coincide con la de DM Sans—, así que sigue igual.
+   Medido con `document.fonts` + `measureText` a 100 px en Chromium (Lora 50,0 · EB Garamond 40,5 · DM Sans
+   50,4; anchura de un título real: 1918 · 1637 · 1890).
    LA CAJA NO LA PONE EL TEMA: las versales son la preferencia «Texto» de /cuenta (`data-uppercase`), que
    ya las aplica a botones, pestañas, chips, cabeceras y ruleta en las siete paletas. Lo que sí pone el
    tema es el TRACKING, que Cinzel pide aire vaya en caja alta o baja. (Aparte, la hoja base manda versales
    siempre en `thead th`, `.flabel` y `.detail-label`: eso es de la casa y este tema no lo toca.) ── */
 :root[data-palette="steam"] {
-  --font-body: 'EB Garamond', Georgia, serif;
-  --font-label: 'EB Garamond', Georgia, serif;
+  --font-body: 'Lora', Georgia, serif;
+  --font-label: 'Lora', Georgia, serif;
   --font-display: 'Cinzel', Georgia, serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
-:root[data-palette="steam"] body { font-family: var(--font-body); font-size: calc(1em + .5px); }
+:root[data-palette="steam"] body { font-family: var(--font-body); }
 :root[data-palette="steam"] h2,
 :root[data-palette="steam"] h3,
 :root[data-palette="steam"] thead th { font-family: var(--font-display); letter-spacing: .14em; }
@@ -1012,4 +1021,78 @@
       rgba(0, 0, 0, .3) 66% 84%,
       rgba(0, 0, 0, .5) 84% 100%),
     color-mix(in srgb, hsl(var(--score-hue, 0) 58% var(--acc-l)) 70%, var(--steam));
+}
+
+/* ── LOS CONTROLES DE VISTA, EN UNA PIEZA · LA BANDA DE ACERO CON SU LACRE ─────────────────────────────
+   Los tres materiales del tema reparten el trabajo como en todo lo demás: el ACERO es el cuerpo (la banda,
+   con su veta y la luz entrando por arriba), el REMACHE es lo que se agarra (la manecilla del deslizador) y
+   el LACRE —la gota de cera que sella un contrato— es lo que dice cuál de las dos formas está en vigor.
+
+   EL LACRE Y NO UN RELLENO: rellenar el botón activo lo convertía en una pastilla de color, que es el acabado
+   de la casa y no el de este tablón. El sello va en la esquina, como en los chips-cartel, y deja el icono
+   entero a la vista. */
+:root[data-palette="steam"] .view-controls {
+  gap: 0;
+  padding: .25rem .6rem;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  /* Veta de cepillado fina, no la turbulencia de los paneles: a este tamaño aquella se lee como suciedad. */
+  background-image:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.05) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 88%, #fff 12%), var(--surface));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 1px 2px rgba(0,0,0,.35);
+}
+:root[data-palette="steam"] .view-controls:not(:has(.grid-size)) { padding-inline: .35rem; }
+:root[data-palette="steam"] .view-controls .shape-switch { border: 0; background: none; box-shadow: none; padding: 0 0 0 .5rem; }
+/* EL REMACHE: un disco de acero torneado, con la luz arriba a la izquierda como el resto de las piezas. */
+:root[data-palette="steam"] .view-controls .grid-size-range::-webkit-slider-thumb {
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #d9dee4, #6f7780);
+  border: 1px solid #454b52;
+}
+:root[data-palette="steam"] .view-controls .grid-size-range::-moz-range-thumb {
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #d9dee4, #6f7780);
+  border: 1px solid #454b52;
+}
+:root[data-palette="steam"] .view-controls .shape-switch-btn { border-radius: 0; }
+:root[data-palette="steam"] .view-controls .shape-switch-btn.is-on {
+  background: none;
+  box-shadow: none;
+  position: relative;
+  color: var(--fg-link);
+}
+/* La gota de cera, en el mismo rojo del lacre de los carteles de contrato. */
+:root[data-palette="steam"] .view-controls .shape-switch-btn.is-on::after {
+  content: '';
+  position: absolute;
+  top: -.1rem;
+  right: -.1rem;
+  width: .5rem;
+  height: .5rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #c0392b, #7a1f14);
+  box-shadow: 0 1px 1px rgba(0,0,0,.5);
+}
+
+/* ── §14 · LA FICHA DE GRÁFICA ─────────────────────────────────────────────────────────────────────────
+   Este era el tema peor cubierto del panel: once gráficas con el acabado de la casa, porque el §12 las
+   enumeraba una a una. Con las siete palancas de `stats.scss` se dice de una vez: las barras son chapa
+   —canto vivo y remate a escuadra— y las cifras van en la mono.
+   LOS PUNTOS SE QUEDAN REDONDOS, y es la diferencia con «Inserte moneda»: aquí un punto es un REMACHE, y un
+   remache cuadrado no existe. Por eso `--stats-dot` no se toca. ── */
+:root[data-palette="steam"] .stats-hub {
+  --stats-radius: var(--radius-sm);
+  --stats-bar: 0;
+  --stats-pill: 0;
+  --stats-cap: butt;
+  --stats-join: miter;
+  --stats-num: var(--font-mono);
+}
+
+/* ── §15 · AVATAR SIN FOTO: el trazo de un grabado en placa —fino y de remate cortado—, no la línea redonda
+   de un icono. ── */
+:root[data-palette="steam"] {
+  --deco-avatar-stroke: 1.6;
+  --deco-avatar-cap: butt;
 }

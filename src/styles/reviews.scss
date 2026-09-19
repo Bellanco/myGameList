@@ -168,7 +168,21 @@
   border-width: 1px;
 }
 
-.hub-related-entry .hub-review-entry-head { gap: .1rem; }
+/* RANURA FIJA PARA LA CABECERA, del alto de DOS renglones de título más la firma.
+   Sin ella, el bloque se descuadra en cuanto un título ocupa dos líneas: esa tarjeta empuja su medallón y su
+   texto hacia abajo, y las de al lado —con el título de una línea— arrancan el adelanto a otra altura, así que
+   la fila se lee como cuatro tarjetas mal alineadas en vez de como una fila. Reservando el hueco de dos
+   renglones SIEMPRE, el medallón y la primera línea de texto caen a la misma altura en todas.
+   El título corto no se queda arriba dejando el hueco debajo: `justify-content: center` centra el par
+   título + firma dentro de la ranura, que es donde el medallón (centrado en su fila) lo está esperando.
+   La cuenta es la de lo que va dentro —2 × 1.25 de interlineado del título, el hueco y el renglón de la
+   firma—, de ahí que la firma declare su `line-height` en vez de heredarlo: el número tiene que ser el
+   mismo en los dos sitios o la ranura deja de cuadrar con lo que contiene. */
+.hub-related-entry .hub-review-entry-head {
+  gap: .1rem;
+  justify-content: center;
+  min-height: calc(2.5 * var(--fs-sm) + .1rem + 1.3 * var(--fs-2xs));
+}
 
 /* EN EL EPÍLOGO EL TÍTULO ES UN TÍTULO, NO UN CARTEL. `.hub-review-game` se estira a todo el ancho de su
    cabecera (`align-self: stretch`, arriba), que es lo que se quiere en una tarjeta ancha —el título manda—; pero
@@ -201,6 +215,8 @@
 .hub-related-author {
   display: block;
   font-size: var(--fs-2xs);
+  /* Declarado, no heredado: entra en la cuenta de la ranura de la cabecera (ver arriba). */
+  line-height: 1.3;
   font-weight: 600;
   color: var(--hub-text-muted);
   overflow: hidden;
@@ -333,3 +349,103 @@
 }
 
 
+
+/* ══ LA CARÁTULA DE FONDO ════════════════════════════════════════════════════════════════════════════════════
+   El mismo gesto que el renglón del listado de juegos (`_table.scss`, «LA CARÁTULA EN EL RENGLÓN»): la portada
+   se escala hasta llenar la pieza y lo que sobra —que es casi todo: es una imagen vertical en una caja
+   apaisada— se recorta por arriba y por abajo. Encima cae el velo de la superficie del tema, casi opaco por la
+   izquierda —donde están la nota y el título— y abriéndose hacia la derecha.
+
+   UNA SOLA CAPA, CON DOS FONDOS. La tarjeta de la lista ya gasta su `::before` en la barra lateral de la nota,
+   así que el velo y la imagen viajan juntos en el mismo `background-image` del `::after` en vez de pedir dos
+   pseudos. El orden importa: el velo va PRIMERO, que en CSS es lo de encima.
+
+   El velo NO es un gris genérico, es `--surface`: la franja se tiñe con la paleta puesta y no canta en ninguna
+   de las ocho. Y tiene que ser `--surface` y no `--hub-card-bg`, que es el fondo real de estas tarjetas: ese es
+   SEMITRANSPARENTE a propósito (un 55 % del fondo en oscuro), así que un velo hecho con él dejaba pasar la
+   portada entera y el texto de la reseña quedaba escrito encima del dibujo. Y va por detrás del contenido (`z-index: -1`) dentro del contexto que abre `isolation`, que es
+   lo que impide que se cuele por debajo del fondo de la propia tarjeta. ══════════════════════════════════ */
+.hub-review-entry.has-cover,
+.hub-feed-card-detail.has-cover {
+  isolation: isolate;
+  position: relative;
+}
+
+.hub-review-entry.has-cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background-image:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--surface) var(--cover-veil-a, 95%), transparent) 0%,
+      color-mix(in srgb, var(--surface) var(--cover-veil-b, 88%), transparent) 55%,
+      color-mix(in srgb, var(--surface) var(--cover-veil-c, 70%), transparent) 100%
+    ),
+    var(--row-cover);
+  background-repeat: no-repeat, no-repeat;
+  background-size: cover, cover;
+  /* Un poco por encima del centro: en una portada, el tercio superior es donde suelen estar la cara y el
+     logotipo, y el inferior, los créditos y las marcas de tienda. */
+  background-position: center, center 35%;
+}
+
+/* EN EL EPÍLOGO, EL VELO CIERRA MÁS. Las relacionadas son tarjetas de 17 rem donde el texto ocupa el ancho
+   entero —no hay mitad derecha libre como en la lista—, y además van tres o cuatro seguidas: con el velo de la
+   lista, la fila se leía como un muestrario de portadas y no como un epílogo. El dibujo se queda en ambiente. */
+.hub-related-list .hub-review-entry.has-cover {
+  --cover-veil-a: 97%;
+  --cover-veil-b: 93%;
+  --cover-veil-c: 85%;
+}
+
+/* EN EL DETALLE, LA TARJETA ENTERA. Empezó siendo una banda de 12 rem detrás de la cabecera y se quedaba corta:
+   una portada recortada a un dedo de alto no es una portada, es una textura. Ocupando la tarjeta, la imagen
+   entra CASI ENTERA —es 3:4 y la tarjeta del detalle es alta— y el juego se reconoce de un vistazo, que es de lo
+   que iba esto.
+
+   MANDA EL TEXTO, Y NO ES UN EMPATE. La portada está de fondo, o sea que su trabajo es que se reconozca el
+   juego de un vistazo; el de la reseña es leerse. Cuando los dos se estorban gana la lectura, así que el velo
+   va alto: a partir del tercio superior tapa casi del todo y solo arriba —titular, fecha y nota, cuatro
+   palabras— se le deja sitio al dibujo. Estuvo más abierto y sobre una portada clara las minúsculas de las
+   líneas largas se perdían; ahora el contorno del dibujo se sigue reconociendo y el texto no depende de qué
+   juego sea. Medido sobre las portadas más claras, que son el peor caso. */
+.hub-feed-card-detail.has-cover::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background-image:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-elevated) var(--cover-veil-a, 78%), transparent) 0%,
+      color-mix(in srgb, var(--surface-elevated) var(--cover-veil-b, 95%), transparent) 30%,
+      color-mix(in srgb, var(--surface-elevated) var(--cover-veil-c, 98%), transparent) 100%
+    ),
+    var(--row-cover);
+  background-repeat: no-repeat, no-repeat;
+  background-size: cover, cover;
+  /* Desde arriba: en una portada, el tercio superior es donde están la cara y el logotipo, y encajando la
+     imagen por ahí se ve el dibujo entero en vez de su cintura. */
+  background-position: center, center top;
+}
+
+/* En el teléfono la capa cierra más, por lo mismo que en el renglón: allí el texto ocupa la tarjeta entera y no
+   queda mitad libre donde enseñar el dibujo. */
+@media (max-width: 34rem) {
+  .hub-review-entry.has-cover {
+    --cover-veil-a: 97%;
+    --cover-veil-b: 94%;
+    --cover-veil-c: 86%;
+  }
+  /* En el teléfono la tarjeta es estrecha y el texto la ocupa entera: el velo cierra un punto más arriba, donde
+     la reseña empieza antes. */
+  .hub-feed-card-detail.has-cover {
+    --cover-veil-a: 85%;
+    --cover-veil-b: 97%;
+    --cover-veil-c: 99%;
+  }
+}

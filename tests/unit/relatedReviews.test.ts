@@ -493,3 +493,26 @@ describe('rankRelatedReviews — sin señal de autor (página pública)', () => 
     expect(ranked).toHaveLength(6);
   });
 });
+
+describe('rankRelatedReviews — la acotación de fecha no entra en la tarjeta', () => {
+  it('quita el «(Reseña escrita el …)» con el que empieza el texto', () => {
+    const ranked = rankRelatedReviews(anchor(), [candidate({
+      key: 'a',
+      snippet: '(Reseña escrita el 10 de octubre del 2024)\n\nYakuza: Like a Dragon me ha encantado.',
+    })]);
+
+    expect(ranked[0].snippet).toBe('Yakuza: Like a Dragon me ha encantado.');
+  });
+
+  it('respeta un paréntesis inicial que no habla de cuándo se escribió', () => {
+    const ranked = rankRelatedReviews(anchor(), [candidate({ key: 'a', snippet: '(Sin spoilers) Un mundo enorme.' })]);
+
+    expect(ranked[0].snippet).toBe('(Sin spoilers) Un mundo enorme.');
+  });
+
+  it('descarta la reseña que solo era esa acotación: sin texto no hay nada que ofrecer', () => {
+    const ranked = rankRelatedReviews(anchor(), [candidate({ key: 'a', snippet: '(Escrita el 3 de marzo)' })]);
+
+    expect(ranked).toHaveLength(0);
+  });
+});

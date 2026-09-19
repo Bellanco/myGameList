@@ -1,5 +1,6 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { IconName } from '../../core/constants/icons';
+import type { SocialProfileStatus } from '../hooks/useSocialProfileSession';
 import { UI_MESSAGES } from '../../core/constants/labels';
 import { SETTINGS_MENU_ID } from '../../core/constants/uiConfig';
 import { Icon } from './Icon';
@@ -15,6 +16,11 @@ interface BottomNavigationProps {
   onSectionChange: (section: AppSection) => void;
   /** ¿Está desplegado el menú de Ajustes? Solo para anunciarlo; de abrirlo y cerrarlo se encarga el navegador. */
   settingsMenuOpen: boolean;
+  /**
+   * ¿Funciona lo social? Enciende el piloto de su pestaña. `pending` no pinta nada: mientras se resuelve la
+   * sesión, un aviso rojo acusaría de apagado lo que está encendido (ver `useSocialProfileStatus`).
+   */
+  socialStatus: SocialProfileStatus;
 }
 
 // LAS CUATRO ZONAS DE LA APLICACIÓN, en un solo plano. Ajustes vuelve aquí desde el botón flotante en el que
@@ -69,7 +75,7 @@ type NavLayout = 'row' | 'stack' | 'tight' | 'icon';
  * DOM para el lector de pantalla. Así se ve entera, con sus dianas de 48 px, desde un móvil de 280 px hasta un
  * escritorio.
  */
-export const BottomNavigation = memo(function BottomNavigation({ currentSection, onSectionChange, settingsMenuOpen }: BottomNavigationProps) {
+export const BottomNavigation = memo(function BottomNavigation({ currentSection, onSectionChange, settingsMenuOpen, socialStatus }: BottomNavigationProps) {
   const innerRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
@@ -308,11 +314,27 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
           // pulsar el botón estando abierto—: con un manejador a mano, el cierre por pulsar-fuera se adelanta al
           // clic y el menú se reabre al instante.
           const abreMenu = item.key === 'settings';
+          /**
+           * EL PILOTO DE LO SOCIAL — un punto al final de la palabra, levantado como un exponente.
+           *
+           * Verde APAGADO cuando funciona: es la situación normal, y lo normal no se anuncia. Rojo ENCENDIDO
+           * cuando no, porque ahí sí hay algo que hacer —conectar el perfil— y sin aviso nadie lo echa de menos:
+           * lo social simplemente «no trae nada» y se asume que está vacío.
+           *
+           * Mientras el estado es `pending` no se pinta NADA, ni siquiera apagado: no hay hueco que reservar
+           * —el punto va al final del rótulo y no mueve el icono— y un parpadeo rojo al arrancar cada visita
+           * enseñaría a no hacerle caso, que es la única forma de estropear un aviso.
+           */
+          const piloto = item.key === 'social' && socialStatus !== 'pending' ? socialStatus : null;
           return (
           <button
             key={item.key}
             type="button"
             className={`bottom-nav-btn ${currentSection === item.key ? 'active' : ''}`.trim()}
+            // EL ESTADO, PARA QUIEN NO VE EL COLOR. Va en el `aria-label` y no en un texto de apoyo dentro del
+            // botón porque el rótulo se MIDE para decidir si los nombres caben: un `sr-only` ahí dentro entraría
+            // en esa cuenta. Empieza por «Social», así que la pestaña se sigue encontrando por su nombre.
+            aria-label={piloto ? (piloto === 'active' ? UI_MESSAGES.nav.socialOn : UI_MESSAGES.nav.socialOff) : undefined}
             aria-current={currentSection === item.key ? 'page' : undefined}
             popoverTarget={abreMenu ? SETTINGS_MENU_ID : undefined}
             // `true` y no `menu`: lo que se despliega es un `<nav>` de enlaces, no un menú ARIA con su
@@ -324,7 +346,18 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
             <Icon name={item.icon} className="bottom-nav-icon" />
             {/* En modo icono el nombre no se borra: se oculta A LA VISTA. Es lo único que da nombre al botón,
                 así que quitarlo del DOM dejaría tres dianas mudas para un lector de pantalla. */}
-            <span className={layout === 'icon' ? 'sr-only' : undefined}>{item.label}</span>
+            <span className={layout === 'icon' ? 'sr-only' : undefined}>
+              {item.label}
+              {/* DENTRO del rótulo, no al lado: así el punto viaja con la palabra —se apila con ella, encoge con
+                  ella— y queda pegado a su final, que es donde se lee como un exponente y no como un adorno
+                  suelto en la pastilla. */}
+              {piloto ? <span className={`bottom-nav-pip is-${piloto}`} aria-hidden="true" /> : null}
+            </span>
+            {/* Y EN MODO ICONO EL PILOTO NO SE VA CON EL RÓTULO. Ahí el rótulo está fuera de la pantalla, así que
+                el punto de arriba se va con él; este otro se planta en la esquina del icono, como la insignia de
+                cualquier aplicación. Es el único caso en el que la barra se queda sin palabras, y justo entonces
+                el aviso es lo único que queda. */}
+            {piloto && layout === 'icon' ? <span className={`bottom-nav-pip bottom-nav-pip-badge is-${piloto}`} aria-hidden="true" /> : null}
           </button>
           );
         })}

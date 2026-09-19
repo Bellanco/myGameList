@@ -177,11 +177,16 @@ export const ANALYTICS_UI = {
   neverLabel: 'Qué no sale nunca de aquí',
   never: ['Tus listas y tus notas', 'Tus reseñas', 'Tu correo o tu nombre'],
   bannerTitle: 'Analítica opcional',
-  /* CUATRO LÍNEAS ERAN TRES DE MÁS. El aviso se lee de pie, tapando la pantalla, y lo único que hay que saber
-     para decidir cabe en dos: qué se recoge y que se puede cambiar de idea. El detalle —qué identificadores,
-     cuánto duran— está en la política de cookies, que tiene su enlace justo debajo.
-     Y ya no manda a «Cuenta», que era una pantalla que ha dejado de existir. */
-  bannerBody: 'Estadísticas de uso anónimas para saber qué falla y qué se usa. Solo se activan si aceptas, y puedes cambiarlo cuando quieras en Ajustes › Legal.',
+  /* CUATRO LÍNEAS ERAN TRES DE MÁS, y tres seguían siendo una de más: el aviso se lee de pie, tapando la
+     pantalla, y lo único que hay que saber para decidir cabe en dos —qué se recoge y que se puede cambiar de
+     idea—. El detalle —qué identificadores, cuánto duran— está en la política de cookies, que tiene su enlace
+     justo debajo. Y ya no manda a «Cuenta», que era una pantalla que ha dejado de existir.
+
+     SOBRABA «Solo se activan si aceptas»: lo dicen ya los dos botones, que es donde se mira antes de decidir, y
+     costaba una línea entera de aviso —de ella depende el alto que publica `--consent-h`, y de ese alto, lo que
+     se aparta todo lo que se apoya sobre la barra—. El hecho no cambia: sin decisión guardada no se inicializa
+     Analytics (ver `ConsentBanner`), y la promesa por escrito sigue en la política de cookies. */
+  bannerBody: 'Estadísticas de uso anónimas para saber qué falla y qué se usa. Puedes cambiarlo cuando quieras en Ajustes › Legal.',
   bannerAccept: 'Aceptar',
   bannerReject: 'Rechazar',
   bannerMore: 'Política de cookies',
@@ -277,6 +282,12 @@ export const UI_MESSAGES = {
     // La pestaña se llama "Estadísticas": son las de las listas propias. La ruta es `/stats` y la
     // sección `stats`. No confundir con el PERFIL SOCIAL (`/social/profile`), que es la ficha pública.
     stats: 'Estadísticas',
+    /* EL PILOTO DE LA PESTAÑA SOCIAL, dicho para quien no ve el color. Va en el `aria-label` del botón y NO como
+       texto dentro de él: el rótulo visible es la única palabra que la barra puede permitirse —mide cada píxel
+       para decidir si los nombres caben—, y un texto de apoyo ahí dentro se mediría como parte del rótulo.
+       Empieza por «Social» a propósito: es el nombre por el que se busca la pestaña. */
+    socialOn: 'Social, perfil activo',
+    socialOff: 'Social, sin activar',
   },
   /**
    * EL MENÚ DE LA PESTAÑA DE AJUSTES. Vive en `labels.ts` y no en `settingsLabels.ts` —donde estaría por
