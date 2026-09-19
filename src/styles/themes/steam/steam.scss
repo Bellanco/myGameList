@@ -1089,3 +1089,10 @@
   --stats-join: miter;
   --stats-num: var(--font-mono);
 }
+
+/* ── §15 · AVATAR SIN FOTO: el trazo de un grabado en placa —fino y de remate cortado—, no la línea redonda
+   de un icono. ── */
+:root[data-palette="steam"] {
+  --deco-avatar-stroke: 1.6;
+  --deco-avatar-cap: butt;
+}

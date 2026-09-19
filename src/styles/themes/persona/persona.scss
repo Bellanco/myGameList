@@ -78,6 +78,9 @@
 :root[data-palette="persona"] .btn,
 :root[data-palette="persona"] .hub-seg-btn,
 :root[data-palette="persona"] thead th,
+/* `.detail-label` va pegada a `.flabel` porque es el mismo papel —rótulo corto de interfaz— y
+   estaban separadas: una en la letra del tema y la otra en la de la casa, en la misma pantalla. */
+:root[data-palette="persona"] .detail-label,
 :root[data-palette="persona"] .flabel,
 :root[data-palette="persona"] .row-name,
 :root[data-palette="persona"] .hub-name-link,
@@ -615,4 +618,33 @@
   --stats-cap: butt;
   --stats-join: miter;
   --stats-num: var(--font-display);
+}
+
+/* ── §16 · LAS PESTAÑAS DE ESCRITORIO ──────────────────────────────────────────────────────────────────
+   La barra de abajo era un sticker de cómic y la de arriba seguía siendo la de la casa: el mismo papel
+   dicho en dos idiomas. El rótulo activo se enciende en rojo y el subrayado deslizante se engorda con su
+   sombra de tinta, que es como este tema subraya.
+   EL CONTADOR NO SE INSCRIBE EN NINGUNA CAJA: dos recuadros seguidos —el de la cifra dentro del de la
+   pestaña— era una pieza de más. Cambia de color y de letra, y con eso se lee. ── */
+:root[data-palette="persona"] .tabs { border-bottom: 2px solid var(--pop-line); }
+:root[data-palette="persona"] .tab-btn.active { color: var(--steam); }
+:root[data-palette="persona"] .tab-underline {
+  height: 4px;
+  border-radius: 0;
+  background: var(--steam);
+  box-shadow: 0 2px 0 var(--pop-line);
+}
+:root[data-palette="persona"] .count-badge {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--steam);
+}
+
+/* ── §17 · LAS ESTRELLAS: la llena también es un sticker, con su sombra de bloque.
+   SUAVE, Y NO A LA PRIMERA: con los 2 px de tinta de los paneles, en oscuro la sombra es BLANCA
+   (`--pop-line` se invierte) y cinco estrellas con un bloque blanco detrás se llevaban la mirada de toda la
+   fila. Un píxel y medio tono: sigue siendo el relieve del cómic, pero deja de gritar. ── */
+:root[data-palette="persona"] .stars .f,
+:root[data-palette="persona"] .star-inp button.f {
+  text-shadow: 1px 1px 0 color-mix(in srgb, var(--pop-line) 45%, transparent);
 }
