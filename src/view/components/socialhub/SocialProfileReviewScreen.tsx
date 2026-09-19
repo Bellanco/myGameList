@@ -1,14 +1,6 @@
-import type { CSSProperties } from 'react';
-import { ReviewDetailBody } from '../ReviewDetailBody';
-import { ReviewDetailHead, type ReviewAuthor } from '../ReviewDetailHead';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
-import { HubScreen } from './HubScreen';
-import { HubStatus } from './HubStatus';
-import { HubBackButton } from './HubBackButton';
-import { useReviewCover } from './useReviewCover';
-// Ver `ProfileReviewsList`: esta pantalla la reutiliza el panel de estadísticas para TUS reseñas, y allí no se
-// carga el chunk del hub.
-import '../../../styles/reviews.scss';
+import type { ReviewAuthor } from '../ReviewDetailHead';
+import { ReviewScreen } from './ReviewScreen';
 
 /** Reseña de un juego abierta a pantalla completa desde la lista de reseñas de un perfil. */
 export type ProfileReview = {
@@ -27,8 +19,12 @@ export type ProfileReview = {
 };
 
 /**
- * Detalle de una reseña del perfil: nota, texto COMPLETO y metadatos (plataformas, géneros, puntos fuertes/débiles).
- * El botón de "volver" regresa a la lista de reseñas del perfil (no a la vista general del perfil).
+ * La reseña tal y como vive en el LISTADO de un perfil: `/social/profiles/:profileId/game/:gameId/review`, y
+ * también tus propias reseñas del panel de estadísticas, que reutilizan esta ruta con el comodín `me`.
+ *
+ * Es un ADAPTADOR: lo único suyo es de dónde salen los datos —las listas compartidas de ese perfil, ya
+ * hidratadas— y cómo se nombra la pantalla. Lo que se pinta lo pone `ReviewScreen`, la misma vista que usa el
+ * detalle del feed; allí está escrito por qué hay dos caminos y una sola pantalla.
  */
 export function SocialProfileReviewScreen({
   SOCIAL_UI,
@@ -55,11 +51,8 @@ export function SocialProfileReviewScreen({
   status: string;
   statusKind: string;
   /**
-   * Acciones propias de quien usa esta pantalla, a la derecha del botón de volver.
-   *
-   * Existe para el botón de COMPARTIR, que solo tiene sentido sobre una reseña PROPIA: esta pantalla la reutilizan
-   * el hub social (donde la reseña es de otra persona y no hay nada que compartir) y el panel de estadísticas
-   * (donde es tuya). En vez de meter aquí un `esMía`, cada sitio pasa lo que le corresponde.
+   * Botones de la derecha, bajo el encabezado. Hoy es uno: compartir la reseña con un enlace público, que solo
+   * tiene sentido sobre las TUYAS —el panel de estadísticas lo pasa y el hub social no—.
    */
   actions?: React.ReactNode;
   /**
@@ -69,71 +62,39 @@ export function SocialProfileReviewScreen({
    * social del que tirar y no debe haberlo (funciona sin tenerlo montado).
    */
   related?: React.ReactNode;
-  /**
-   * ¿Se puede pedir la carátula del juego para el fondo de la cabecera? Por defecto no; lo enciende quien monta
-   * la pantalla (ver `useReviewCover`): en TUS reseñas manda tu preferencia y en las de otra persona, mithril.
-   */
+  /** ¿Se puede pedir la carátula del juego para el fondo? Lo decide quien monta (ver `useReviewCover`). */
   coversAllowed?: boolean;
 }) {
-  const coverOf = useReviewCover(coversAllowed);
-  /** Fila de acciones bajo el encabezado. El encabezado en sí lo pone `HubScreen`. */
-  const actionsRow = (
-    <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.detailActionsAria}>
-      <div className="hub-screen-actions-left">
-        <HubBackButton onBack={onBack} label={backLabel || SOCIAL_UI.feed.reviewsBackToList} />
-      </div>
-      {actions ? <div className="hub-screen-actions-right">{actions}</div> : null}
-    </div>
-  );
-
-  /** Props comunes de la cáscara: las dos salidas de esta pantalla pintan el mismo encabezado. */
-  const shell = {
-    ariaLabel: SOCIAL_UI.feed.sectionAria,
-    title: SOCIAL_UI.feed.reviewDetailTitle,
-    subtitle: SOCIAL_UI.feed.reviewDetailSubtitle,
-    icon: 'signature' as const,
-  };
-
-  if (!review) {
-    return (
-      <HubScreen {...shell}>
-        {actionsRow}
-        <p>{SOCIAL_UI.feed.detailMissing}</p>
-        <HubStatus status={status} statusKind={statusKind} />
-      </HubScreen>
-    );
-  }
-
-  const reviewDate = new Date(review.ts || 0);
-  const hasValidDate = review.ts > 0 && !Number.isNaN(reviewDate.getTime());
-  /* EL FONDO SOLO LLEGA HASTA LA CABECERA, y el corte es la razón de que esto sea una clase y no un estilo de la
-     tarjeta entera: el texto de una reseña puede ser de veinte líneas y es donde de verdad se lee. La imagen
-     ambienta el titular —juego, nota y firma— y se corta antes del cuerpo (ver `reviews.scss`). */
-  const cover = coverOf(review.name, review.platforms);
+  const reviewDate = review ? new Date(review.ts || 0) : null;
+  const hasValidDate = Boolean(review && review.ts > 0 && reviewDate && !Number.isNaN(reviewDate.getTime()));
 
   return (
-    <HubScreen {...shell}>
-      {actionsRow}
-        <article
-          className={`hub-feed-card hub-feed-card-detail${cover ? ' has-cover' : ''}`}
-          style={cover ? ({ '--row-cover': `url("${cover}")` } as CSSProperties) : undefined}
-        >
-          <ReviewDetailHead
-            gameName={review.name}
-            author={author}
-            dateLabel={hasValidDate ? SOCIAL_UI.feed.analyzedAt(reviewDate) : ''}
-            score={{ score: review.score, grade: review.grade }}
-          />
-          <ReviewDetailBody
-            review={review.review}
-            platforms={review.platforms}
-            genres={review.genres}
-            strengths={review.strengths}
-            weaknesses={review.weaknesses}
-          />
-        </article>
-      {related}
-      <HubStatus status={status} statusKind={statusKind} />
-    </HubScreen>
+    <ReviewScreen
+      SOCIAL_UI={SOCIAL_UI}
+      title={SOCIAL_UI.feed.reviewDetailTitle}
+      subtitle={SOCIAL_UI.feed.reviewDetailSubtitle}
+      icon="signature"
+      content={review ? {
+        gameName: review.name,
+        reviewText: review.review,
+        score: review.score,
+        grade: review.grade,
+        platforms: review.platforms,
+        genres: review.genres,
+        strengths: review.strengths,
+        weaknesses: review.weaknesses,
+      } : null}
+      author={author}
+      dateLabel={hasValidDate && reviewDate ? SOCIAL_UI.feed.analyzedAt(reviewDate) : ''}
+      onBack={onBack}
+      backLabel={backLabel || SOCIAL_UI.feed.reviewsBackToList}
+      status={status}
+      statusKind={statusKind}
+      actions={actions}
+      related={related}
+      coversAllowed={coversAllowed}
+      // Aquí no se espera a nadie: o la reseña está en las listas que ya tenemos, o no está.
+      missingLabel={SOCIAL_UI.feed.detailMissing}
+    />
   );
 }
