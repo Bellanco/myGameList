@@ -185,13 +185,13 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
   display: flex;
 }
 
-/* Y SE APARTA DEL AVISO DE CONSENTIMIENTO, que se apoya sobre la barra mientras no se ha decidido. El menú
-   vive en la capa superior, así que técnicamente gana; pero ganar aquí significa escribir los rótulos ENCIMA
-   del texto del aviso, que es peor que perder. Se sube lo que el aviso mide —`--consent-h`, publicada por él
-   mismo—, igual que ya hace el carril de las cápsulas y por el mismo motivo: nadie duplica la medida de nadie. */
-:root[data-consent='pending'] .settings-menu {
-  bottom: calc(var(--bottom-nav-h, 4.6rem) + var(--consent-h, 9.25rem) + .55rem);
-}
+/* Y NO SE APARTA DEL AVISO DE CONSENTIMIENTO: el que se aparta es el aviso (más abajo).
+   ASÍ NO ERA. El menú se subía lo que midiera el aviso (`--consent-h`) para no escribir sus rótulos encima,
+   y el remedio se veía peor que la enfermedad: con el aviso en pantalla, «Filtros» y «Datos» aparecían a media
+   altura, despegados de la pestaña que acaba de abrirlos y flotando sobre el contenido. Un menú tiene que salir
+   de donde está el dedo; si sale de otro sitio, no se lee como el menú de esa pestaña.
+   Ahora el ancla es siempre la misma —la barra— y el conflicto se resuelve donde toca: el aviso no se atenúa,
+   se va, que con el menú abierto ya estaba inerte y nadie iba a leerlo. */
 
 .settings-menu-point {
   display: flex;
@@ -281,13 +281,10 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
 .ach-toast-stack,
 .floating-controls { transition: opacity .22s ease; }
 
+.consent-banner { transition: opacity .22s ease, visibility .22s ease; }
+
 body.settings-menu-open .main,
 body.settings-menu-open .ach-toast-stack,
-/* El AVISO DE CONSENTIMIENTO también: es lo único que quedaba encendido, y encima es lo más alto de la pila
-   (z-index 130), así que con todo lo demás a media asta cantaba el doble. Que deje de recibir toques importa
-   aquí más que en ningún otro sitio: el mismo toque que cierra el menú habría podido pulsar «Aceptar», y un
-   consentimiento no se da sin querer. Sigue en su sitio, intacto, en cuanto el menú se cierra. */
-body.settings-menu-open .consent-banner,
 /* `:not(.is-hidden)` para no resucitar al 30 % unos controles que el scroll acababa de esconder: allí la regla
    es `opacity: 0` y esta la ganaría por especificidad. */
 body.settings-menu-open .floating-controls:not(.is-hidden) {
@@ -303,6 +300,22 @@ body.settings-menu-open .fab,
 body.settings-menu-open .fab-roulette {
   opacity: 0;
   pointer-events: none;
+}
+
+/* Y EL AVISO DE CONSENTIMIENTO TAMBIÉN SE VA, por lo mismo llevado al extremo: no está en la esquina del menú,
+   está DEBAJO de él —es lo que ocupa el sitio del que el menú sale—, y es lo más alto de la pila (z-index 130).
+   A media asta obligaba a elegir entre dos cosas malas: subir el menú a media pantalla o escribir los rótulos
+   sobre un rectángulo. Se va, y el menú recupera su ancla en la barra.
+   NO SE PIERDE NADA: el aviso no admitía toques con el menú abierto —el mismo toque que lo cierra habría podido
+   pulsar «Aceptar», y un consentimiento no se da sin querer—, y vuelve entero al cerrar. Mientras no se decide
+   no se envía telemetría, con el aviso en pantalla o sin él.
+   `visibility` ADEMÁS DE `opacity`, y esto no es adorno: al 0 % los dos botones seguirían en el tabulador, así
+   que se podría «Aceptar» con el teclado sin ver lo que se acepta. Se transiciona para que no dé un salto seco
+   —`visibility` salta al final, que es justo lo que hace falta—. */
+body.settings-menu-open .consent-banner {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }@media (prefers-reduced-motion: reduce) {
 
   .main,
@@ -310,6 +323,7 @@ body.settings-menu-open .fab-roulette {
   .fab-roulette,
   .ach-toast-stack,
   .floating-controls,
+  .consent-banner,
   .settings-menu-point,
   .settings-menu-dot { transition: none; }
 }

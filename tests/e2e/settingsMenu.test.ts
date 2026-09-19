@@ -140,9 +140,11 @@ test.describe('el menú de la pestaña de Ajustes', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Datos/);
   });
 
-  test('no se sube encima del aviso de consentimiento', async ({ page }) => {
-    // El aviso se apoya sobre la barra mientras no se ha decidido, y el menú vive en la capa superior: sin
-    // apartarse, sus rótulos se escribirían sobre el texto del aviso. Se aparta midiendo, no adivinando.
+  test('con el aviso de consentimiento en pantalla, el menú sigue saliendo de su pestaña', async ({ page }) => {
+    // EL MENÚ SE ANCLA A LA BARRA, SIEMPRE. Antes se subía lo que midiera el aviso para no escribir encima de
+    // su texto, y el resultado era un menú a media altura, despegado de la pestaña que acababa de abrirlo: un
+    // menú que no sale de donde está el dedo no se lee como el menú de esa pestaña. Ahora el que se aparta es
+    // el aviso, que con el menú abierto ya estaba inerte.
     //
     // NO se usa `sembrarBiblioteca` aquí: siempre deja el consentimiento decidido —para que el aviso no estorbe
     // en el resto de recorridos— y es justo lo que este caso necesita que NO pase.
@@ -152,12 +154,25 @@ test.describe('el menú de la pestaña de Ajustes', () => {
     await expect(aviso).toBeVisible();
     await pestana(page).click();
     await expect(menu(page)).toBeVisible();
+
+    // Pegado a la barra: el hueco es el de siempre (.55rem), no la altura de un aviso de por medio.
     const cajaMenu = await menu(page).boundingBox();
-    const cajaAviso = await aviso.boundingBox();
-    expect(cajaMenu!.y + cajaMenu!.height).toBeLessThanOrEqual(cajaAviso!.y);
-    // Y se apaga como todo lo demás: era lo único que quedaba encendido, y es lo más alto de la pila. Que no
-    // reciba toques importa: el mismo toque que cierra el menú no puede aceptar la analítica por accidente.
-    await expect.poll(async () => Number(await aviso.evaluate((n) => getComputedStyle(n).opacity))).toBeCloseTo(0.3, 2);
+    const cajaBarra = await page.locator('.bottom-nav').boundingBox();
+    const hueco = cajaBarra!.y - (cajaMenu!.y + cajaMenu!.height);
+    expect(hueco, 'el menú se ha despegado de la barra').toBeGreaterThanOrEqual(0);
+    expect(hueco, 'el menú flota lejos de la pestaña que lo abre').toBeLessThan(24);
+
+    // Y EL AVISO SE VA DEL TODO mientras dure el menú: es lo que ocupa el sitio del que el menú sale y lo más
+    // alto de la pila (z-index 130). `visibility` además de la opacidad, o sus dos botones seguirían en el
+    // tabulador: se podría «Aceptar» con el teclado sin ver lo que se acepta.
+    await expect.poll(async () => Number(await aviso.evaluate((n) => getComputedStyle(n).opacity))).toBeCloseTo(0, 2);
+    expect(await aviso.evaluate((n) => getComputedStyle(n).visibility)).toBe('hidden');
     expect(await aviso.evaluate((n) => getComputedStyle(n).pointerEvents)).toBe('none');
+
+    // VUELVE ENTERO AL CERRAR: no se ha decidido nada, así que el aviso tiene que seguir ahí para decidirlo.
+    await page.keyboard.press('Escape');
+    await expect(menu(page)).toBeHidden();
+    await expect.poll(async () => Number(await aviso.evaluate((n) => getComputedStyle(n).opacity))).toBeCloseTo(1, 2);
+    await expect(aviso).toBeVisible();
   });
 });
