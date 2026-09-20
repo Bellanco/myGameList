@@ -2,7 +2,13 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- `viewport-fit=cover` NO ES COSMÉTICA: sin ella el contenido se queda dentro del área segura y los
+         `env(safe-area-inset-*)` que ya usan la barra inferior, el aviso de consentimiento, el botón flotante y
+         la ruleta valen SIEMPRE cero. Es decir, la protección estaba escrita y desconectada. Con `cover` la
+         página llega al borde del cristal —que es lo que hace que una app instalada no parezca una web dentro
+         de un marco— y esos `env()` empiezan a devolver lo que mide la muesca o la barra de gestos, que es lo
+         que las reglas ya esperaban. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#0f1315">
     <!-- QUÉ VERSIÓN EJECUTA ESTE DOCUMENTO. Lo sustituye el plugin `service-worker-precache` de
          `vite.config.ts` por el mismo identificador que lleva dentro el service worker, y sirve para una sola

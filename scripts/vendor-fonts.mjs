@@ -33,7 +33,10 @@ const FONT_DIR = join(ROOT, 'public', 'fonts');
 const SCSS_BASE_DIR = join(ROOT, 'src', 'styles', 'fonts');
 const THEMES_DIR = join(ROOT, 'src', 'styles', 'themes');
 const SLUG_BASE = 'dm-sans';
-const hojaDe = (slug) => (slug === SLUG_BASE
+// Un juego de fuentes que NO es de un tema va con la base, en `styles/fonts/`: es el caso de Comic Neue, que la
+// usa la lámina del trofeo y no la tipografía de ninguna paleta. Meterla en `themes/` crearía una carpeta de tema
+// que no existe, y el índice de temas la recogería como si lo fuera.
+const hojaDe = (slug, suelta = false) => (slug === SLUG_BASE || suelta
   ? { dir: SCSS_BASE_DIR, file: `_${slug}.scss`, rel: `src/styles/fonts/_${slug}.scss` }
   : { dir: join(THEMES_DIR, slug), file: '_fonts.scss', rel: `src/styles/themes/${slug}/_fonts.scss` });
 
@@ -49,13 +52,25 @@ const KEEP_SUBSETS = new Set(['latin', 'latin-ext']);
  */
 const SHEETS = [
   {
+    slug: 'comic-neue',
+    // NO es la tipografía de ningún tema: es la del título impreso en las láminas del podio, para que el nombre
+    // del premiado parezca parte del mismo cartel. Quien tenga Comic Sans MS instalada verá esa; el resto, esta.
+    // Se carga solo donde se dibuja el trofeo (ver `styles/premios.scss`), nunca en el arranque.
+    suelta: true,
+    comment: 'Tipografía del cartel de los premios. Solo la usa la lámina del trofeo (carga diferida).',
+    families: ['Comic+Neue:ital,wght@1,700'],
+  },
+  {
     slug: 'dm-sans',
     comment: 'Tipografía base de TODAS las paletas. Es la única que entra en la ruta crítica.',
     families: ['DM+Sans:wght@400;500;600;700;800'],
   },
   {
     slug: 'forja',
-    comment: 'Skin de la paleta forja «Forja y temple», la de POR DEFECTO. Saira la comparte con portal e IBM Plex Mono con steam.',
+    comment:
+      'Skin de la paleta forja «Forja y temple», la de POR DEFECTO: a diferencia de los demás skins, esta hoja NO se\n'
+      + '// carga bajo demanda —entra en el bundle base por `styles/index.scss`— porque es la letra del primer fotograma.\n'
+      + '// Saira la comparte con portal e IBM Plex Mono con steam: el .woff2 es el mismo fichero, servido una sola vez.',
     families: ['Saira:wght@400;500;600', 'IBM+Plex+Mono:wght@500'],
   },
   {
@@ -189,7 +204,7 @@ async function buildSheet(sheet) {
 }`)
     .join('\n');
 
-  const destino = hojaDe(sheet.slug);
+  const destino = hojaDe(sheet.slug, sheet.suelta);
   await mkdir(destino.dir, { recursive: true });
   await writeFile(join(destino.dir, destino.file), `${header}${body}\n`);
   console.log(`  → ${destino.rel} (${emitted.length} @font-face)`);

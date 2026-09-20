@@ -3,6 +3,82 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows the git tags.
 
+## [Unreleased]
+
+## [1.4.0] - 2026-09-20
+
+La versión de **poder instalarla** y de que **la porra sea de esta casa**. La aplicación ya sabía funcionar como
+una app —arranca sin red, tiene su barra inferior y su icono—, pero nadie llegaba a instalarla salvo quien
+conociera el menú del navegador, y sin instalar no se ve ninguna de las dos cosas: ni la pantalla completa, ni
+los atajos. Y la porra deja de ser una sección traída de otro sitio: se vota con las cajas de la biblioteca, se
+gobierna entera desde el panel —incluido el logro de cada edición, que se enciende y se apaga— y sus resultados
+se leen empezando por quien ganó.
+
+### Added
+- **Invitación a instalar la aplicación**, una sola vez y con su «ahora no». Sale en el mismo sitio y con la
+  misma forma que el aviso de cookies, y nunca a la vez que él: primero se decide sobre la analítica, después
+  se sugiere instalar. Solo aparece donde el navegador ofrece instalar de verdad; en Safari de iOS, que solo
+  admite hacerlo a mano desde el menú de compartir, no hay nada que ofrecer y no se enseña nada.
+- **Capturas en el diálogo de instalación.** Chrome en Android enseña el listado y el panel de estadísticas
+  antes de instalar, en vez de un icono suelto. Se generan con `npm run screenshots` sobre una biblioteca de
+  muestra: esas imágenes son públicas y no llevan los datos de nadie.
+- **Atajos en el icono de la aplicación**: En curso, Completados, Social y Estadísticas. Había uno, apuntaba a
+  una dirección que la aplicación dejó de entender hace versiones (`/?tab=c`) y no llevaba a ninguna parte.
+- **Los premios se votan con las cajas de la biblioteca.** Cada nominado se ve con la misma ranura, la misma
+  carátula y la misma preferencia de imágenes que el mosaico: encendida, portadas; apagada, la tarjeta con el
+  nombre y ni una petición. La categoría entera cabe en la pantalla —el progreso arriba, la rejilla repartiéndose
+  el alto y anterior, siguiente y finalizar siempre a la vista— y la revisión pasa a ser un índice en el que cada
+  categoría lleva a su paso.
+- **Oportunidades según la cuenta.** Enviar la papeleta y corregirla gastan oportunidades: una sin cuenta social,
+  y 5, 10, 15 o 20 según el rango. Mirar lo votado no cuesta ninguna: hay una pantalla propia para repasar las
+  elecciones, y reenviar sin haber cambiado nada no escribe nada.
+- **Identificarse desde la propia sección.** Quien llega sin sesión entra con Google ahí mismo, en el sitio donde
+  el resto ve el botón de votar. Los resultados publicados se siguen viendo sin cuenta.
+- **Compartir la porra y ver los premios.** Un botón que abre la hoja del sistema en el móvil y copia el enlace en
+  el escritorio, y una galería que recorre las láminas de los premiados con su descarga dentro.
+- **El panel de retos se rehace.** Las cinco pestañas en una barra, el ciclo de la edición con su estado actual y
+  su fecha de cierre, los ganadores marcados con botones en vez de un desplegable, y la papeleta de alguien se
+  puede retirar desde la clasificación provisional.
+- **El logro de una edición se enciende y se apaga desde el histórico.** Un icono de trofeo al final de cada
+  fila: encendido, sus premiados lucen la medalla en el perfil; apagado, se les retira a todos. Y se puede
+  deshacer con la misma pulsada, que es lo que costaba: al publicar una edición se retiran los votos, así que
+  hasta ahora no quedaba en ninguna parte a quién se le había dado el trofeo. Ahora cada edición lo deja
+  apuntado donde solo lo ve quien administra.
+
+### Changed
+- **La pantalla de resultados empieza por el podio.** Abría con las veintiséis categorías y una lista donde
+  quien había ganado la porra pesaba lo mismo que el decimotercero. Ahora lo primero son los tres primeros
+  puestos, en grande y con su metal —los empatados comparten escalón, que es lo que significa quedar segundos
+  los dos—, la clasificación sigue desde el cuarto sin repetir a nadie, y la categoría que más puntuaba sale
+  como titular de los ganadores. De paso se ha quitado ruido: los rótulos de categoría dejan de ir en
+  mayúsculas, «puntos» ya no se repite en cada renglón y los botones de trofeo pasan a ser un icono.
+- **La forma del listado y el tamaño de los cuadros vuelven a ser de cada aparato.** Viajaban con la cuenta,
+  como el tema y la paleta, y eran la única preferencia a la que seguirte le sienta mal: en un teléfono caben
+  dos cuadros y en un monitor ocho, así que elegir mosaico en el sofá te reordenaba el listado del escritorio.
+  Ahora cada dispositivo recuerda el suyo, y quien quiera mosaico en el móvil y renglones en el ordenador lo
+  tiene. El tema y la paleta siguen viajando: esos son la misma decisión en cualquier pantalla.
+
+### Fixed
+- **Borrar una edición del histórico ya se lleva su logro.** Se borraba el archivo y la medalla se quedaba
+  puesta en el perfil de sus premiados, enlazando a una edición de la que no quedaba nada.
+- **Dos textos de los resultados se leen en todas las paletas.** El rótulo de cada categoría se quedaba entre
+  3,6:1 y 4,3:1 sobre los temas oscuros —y son veintiséis repeticiones—, y el recuento de participaciones, en
+  4,49:1 sobre una de las paletas claras: a una centésima del mínimo, que es la clase de fallo que solo aparece
+  midiendo.
+- **La entrada a los premios se ofrece a todo el mundo, no solo a quien ya tenía sesión.** La marca de si la
+  sección se enseña se leía de Firestore, y eso no se puede pedir sin cuenta sin romper la promesa de no
+  contactar con terceros; así que solo se refrescaba con sesión guardada y el resto se quedaba con «no enseñar
+  nada» para siempre. Ahora se sirve desde el propio dominio, como el aviso a los usuarios, y lo que viaja son
+  las fechas: la entrada aparece al abrir la votación y se retira sola al cerrarse.
+- **El distintivo de «votación abierta» se lee en las ocho paletas.** El acento plano con texto blanco se quedaba
+  en 4,18:1 —por debajo del mínimo para su tamaño— en tres de las doce combinaciones auditadas.
+- **La aplicación instalada se llama «Mis Listas»**, y no «GameList». El nombre bajo el icono de la pantalla de
+  inicio y el texto del diálogo de instalación seguían en inglés, en una aplicación que está entera en español.
+- **El área segura del móvil vuelve a existir.** La barra inferior, el aviso de cookies, el botón flotante y la
+  ruleta ya reservaban sitio para la muesca y para la barra de gestos con `env(safe-area-inset-*)`, pero sin
+  `viewport-fit=cover` en el `viewport` esas medidas valen SIEMPRE cero: la protección estaba escrita y
+  desconectada. Con ella, además, la página llega al borde del cristal en vez de quedarse en una franja.
+
 ## [1.3.3] - 2026-09-18
 
 La versión de **encontrar los ajustes**. Estaban repartidos entre dos botones flotantes de la esquina superior

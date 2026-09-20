@@ -209,6 +209,14 @@ interface SeedOptions {
    */
   amplia?: boolean;
   /**
+   * Biblioteca propia CON LA FORMA de la amplia, en lugar de `JUEGOS_AMPLIOS`. Solo tiene efecto con `amplia`.
+   *
+   * La usan las capturas del manifest (`scripts/screenshots.spec.ts`), que necesitan el mismo volumen pero no
+   * pueden enseñar «Juego de prueba 7» treinta y seis veces: esas imágenes son el escaparate del diálogo de
+   * instalación. Los recorridos de prueba NO la pasan —sus cuentas dependen de la biblioteca fija de aquí—.
+   */
+  biblioteca?: readonly JuegoAmplio[];
+  /**
    * Siembra la biblioteca de LOGROS (`JUEGOS_LOGROS`): la única que alcanza los umbrales altos del catálogo.
    * Manda sobre `amplia` si se pasan las dos.
    */
@@ -326,7 +334,7 @@ export async function sembrarBiblioteca(page: Page, options: SeedOptions = {}): 
       ajustes();
     },
     {
-      juegos: JUEGOS, amplios: JUEGOS_AMPLIOS, deLogros: JUEGOS_LOGROS, deCurva: JUEGOS_CURVA,
+      juegos: JUEGOS, amplios: options.biblioteca ?? JUEGOS_AMPLIOS, deLogros: JUEGOS_LOGROS, deCurva: JUEGOS_CURVA,
       amplia: Boolean(options.amplia), logros: Boolean(options.logros), curva: Boolean(options.curva),
       borde: options.alBorde ? juegosAlBorde(options.alBorde) : null,
       marca: options.marcaPrevia ?? null,

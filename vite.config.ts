@@ -6,6 +6,9 @@ import react from '@vitejs/plugin-react';
 // El MISMO saneado que usan el cliente y la Pages Function: el servidor de desarrollo no puede ser más
 // permisivo que producción, o se prueba con textos que en la web real se recortan.
 import { sanitizeAnnouncement } from './src/core/announcement/announcement';
+// Y el MISMO saneado de la foto del calendario de la porra, por lo mismo: el servidor de desarrollo no puede
+// guardar algo que la Pages Function rechazaría.
+import { sanitizePremiosSnapshot } from './src/core/premios/visibilitySnapshot';
 
 // El MISMO emparejador que usa la Pages Function, no una copia: si el servidor de desarrollo resolviera las
 // carátulas con otras reglas, probar en local no demostraría nada sobre producción.
@@ -223,6 +226,77 @@ function localAnnouncementApi(): Plugin {
 }
 
 /**
+ * `/api/premios` EN EL SERVIDOR DE DESARROLLO. Solo en `serve`: ni una línea de esto entra en el build.
+ *
+ * POR QUÉ HACE FALTA, y es la misma historia que el aviso: la foto del calendario de la porra —lo que decide si
+ * la entrada se ofrece en el menú de Ajustes— la sirve una Pages Function (`functions/api/premios.ts`), y las
+ * Pages Functions las ejecuta Cloudflare, no Vite. Con `npm run dev` esa ruta devolvía el `index.html` del SPA,
+ * así que en local la entrada no aparecía nunca y el panel no podía publicarla.
+ *
+ * ES EL MISMO CONTRATO: los dos métodos y el mismo saneado, importado del núcleo. Lo único que no tiene es la
+ * comprobación de administrador, porque aquí no hay tokens que verificar y quien llama es quien ha levantado el
+ * servidor en su propia máquina.
+ *
+ * VIVE EN UN FICHERO IGNORADO (`.premios.local.json`), como el aviso: sobrevive al reinicio y se borra a mano.
+ */
+function localPremiosApi(): Plugin {
+  const FILE = new URL('./.premios.local.json', import.meta.url);
+  const ROUTE = '/api/premios';
+
+  const send = (res: ServerResponse, status: number, body: unknown): void => {
+    res.statusCode = status;
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    // Sin caché, al contrario que en producción: en local se quiere ver el cambio al recargar, no en cinco
+    // minutos.
+    res.setHeader('Cache-Control', 'no-store');
+    res.end(JSON.stringify(body));
+  };
+
+  return {
+    name: 'local-premios-api',
+    apply: 'serve',
+
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (!req.url || req.url.split('?')[0] !== ROUTE) {
+          next();
+          return;
+        }
+
+        if (req.method === 'GET') {
+          let stored: unknown = null;
+          try {
+            stored = JSON.parse(readFileSync(FILE, 'utf-8'));
+          } catch {
+            // Sin edición publicada en este entorno, que es el estado normal de una máquina recién clonada.
+          }
+          send(res, 200, sanitizePremiosSnapshot(stored));
+          return;
+        }
+
+        if (req.method !== 'PUT') {
+          send(res, 405, { error: 'Método no permitido' });
+          return;
+        }
+
+        const chunks: Buffer[] = [];
+        req.on('data', (chunk: Buffer) => chunks.push(chunk));
+        req.on('end', () => {
+          let clean;
+          try {
+            clean = sanitizePremiosSnapshot(JSON.parse(Buffer.concat(chunks).toString('utf-8')));
+          } catch {
+            clean = sanitizePremiosSnapshot(null);
+          }
+          writeFileSync(FILE, `${JSON.stringify(clean, null, 2)}\n`);
+          send(res, 200, clean);
+        });
+      });
+    },
+  };
+}
+
+/**
  * `/cover` EN EL SERVIDOR DE DESARROLLO. Solo en `serve`: ni una línea entra en el build.
  *
  * POR QUÉ HACE FALTA, y es la misma historia que el aviso: las carátulas las sirve una Pages Function
@@ -401,6 +475,7 @@ export default defineConfig({
     react(),
     serviceWorkerPrecache(),
     localAnnouncementApi(),
+    localPremiosApi(),
     localCoverApi(),
   ],
   server: {

@@ -265,6 +265,28 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
 }
 .settings-menu-point.is-third .settings-menu-dot { width: 5px; height: 5px; opacity: .8; }
 
+/* LOS PREMIOS, EN ÁMBAR. Es el único punto de este menú que lleva FUERA de Ajustes, y el color es lo que lo dice
+   sin una palabra de más. Se usa `--warn` —el ámbar semántico de cada tema— y no un amarillo fijo: así cambia de
+   piel con el tema como todo lo demás y mantiene el contraste que ese token ya tiene medido para texto.
+
+   El tamaño es el de «Filtros» a propósito (ver `PUNTO_PREMIOS`): la escalera de este menú solo tiene tres
+   peldaños medidos, y aquí lo que distingue es el color, no el cuerpo de letra. */
+.settings-menu-point.is-premios {
+  /* EL ÁMBAR, PERO LEGIBLE. `--warn` a pelo no llega: es un color pensado para avisos con su propio fondo, y
+     como TEXTO suelto sobre las paletas claras se quedaba en 2,67:1 donde hacen falta 4,5 (medido con axe en
+     portal/light; con 62% se quedaba en 4,36). Mezclarlo con el color de texto lo oscurece lo justo sin perder el tinte, y funciona en los
+     dos modos: en oscuro el texto es claro, así que la mezcla ACLARA en vez de oscurecer. El punto de luz se
+     queda con el ámbar puro, que es gráfico y solo le exige 3:1. */
+  color: color-mix(in srgb, var(--warn) 54%, var(--text));
+}
+.settings-menu-point.is-premios .settings-menu-dot {
+  background: var(--warn);
+  opacity: 1;
+  /* El halo también en ámbar: el de los demás puntos sale del acento, y dejarlo azul alrededor de un punto
+     amarillo se lee como un error de pintado. */
+  box-shadow: 0 0 8px rgba(var(--warn-rgb), .9), 0 0 3px color-mix(in srgb, var(--bg), transparent 10%);
+}
+
 /* LO DE DEBAJO SE APAGA, no se tapa. Es lo que da el contraste de los rótulos sin poner ninguna capa encima:
    medido con una carátula blanca detrás en tema oscuro, 6,4:1 en el peor píxel del trazo (y 6,6:1 con una
    negra en claro).

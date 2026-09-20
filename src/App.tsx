@@ -25,6 +25,7 @@ import { SettingsMenu } from './view/components/SettingsMenu';
 import { ScrollToTop } from './view/components/ScrollToTop';
 import { useScrollOnNavigate } from './view/hooks/useScrollOnNavigate';
 import { ConsentBanner } from './view/components/ConsentBanner';
+import { InstallBanner } from './view/components/InstallBanner';
 import { SocialHubSkeleton } from './view/components/SocialHubSkeleton';
 import { ScreenSkeleton } from './view/components/ScreenSkeleton';
 import { useGameListViewModel, type GameDraft } from './viewmodel/useGameListViewModel';
@@ -69,6 +70,7 @@ const FormModal = lazy(() => importFormModal().then((module) => ({ default: modu
 const ConfirmModal = lazy(() => importConfirmModal().then((module) => ({ default: module.ConfirmModal })));
 const SettingsHub = lazy(() => import('./view/components/SettingsHub').then((module) => ({ default: module.SettingsHub })));
 const SocialHub = lazy(() => import('./view/components/SocialHub').then((module) => ({ default: module.SocialHub })));
+const PremiosHub = lazy(() => import('./view/components/premios/PremiosHub').then((module) => ({ default: module.PremiosHub })));
 // Panel "Perfil" (estadísticas). Perezoso como el resto de hubs: su código y su hoja de estilos solo se
 // descargan al entrar en la pestaña, así que no pesan en el arranque de los listados.
 const StatsHub = lazy(() => import('./view/components/stats/StatsHub').then((module) => ({ default: module.StatsHub })));
@@ -909,6 +911,14 @@ export default function App() {
         <StatsHub games={vm.data} />
       </Suspense>
     ),
+    // LA PORRA. Ya no recibe la biblioteca: la cruzaba con los nominados para decir en cada tarjeta en qué lista
+    // tenías ese juego, y esa marca se retiró (ver `NomineeCard`).
+    premios: (
+
+      <Suspense fallback={<ScreenSkeleton />}>
+        <PremiosHub />
+      </Suspense>
+    ),
     admin: (
 
       <Suspense fallback={<ScreenSkeleton />}>
@@ -1114,6 +1124,9 @@ export default function App() {
         socialStatus={socialStatus}
       />
       <ConsentBanner />
+      {/* Los dos comparten carril y no coinciden nunca: la invitación espera a que el consentimiento se decida
+          (ver `InstallBanner`). Van seguidos para que se lea aquí que el hueco es el mismo. */}
+      <InstallBanner />
       <ScrollToTop />
 
       <Suspense fallback={null}>

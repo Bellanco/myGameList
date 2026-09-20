@@ -175,7 +175,19 @@ test.describe('el menú de la pestaña de Ajustes', () => {
     // alto de la pila (z-index 130). `visibility` además de la opacidad, o sus dos botones seguirían en el
     // tabulador: se podría «Aceptar» con el teclado sin ver lo que se acepta.
     await expect.poll(async () => Number(await aviso.evaluate((n) => getComputedStyle(n).opacity))).toBeCloseTo(0, 2);
-    expect(await aviso.evaluate((n) => getComputedStyle(n).visibility)).toBe('hidden');
+    /* LA `visibility` TAMBIÉN SE ESPERA, y no es una precaución de más: es discreta, así que la transición la
+       mantiene en `visible` hasta el FINAL y salta de golpe al terminar —que es exactamente para lo que está
+       ahí, ver la regla en `_overlays-and-responsive.scss`—. La opacidad, en cambio, cruza el umbral de este
+       `poll` un poco antes de ese final. Medido en esta misma pantalla: la opacidad baja de 0,005 a los 227 ms
+       y la visibility salta a los 260, o sea DOS FOTOGRAMAS en los que lo de arriba ya se cumple y esto
+       todavía no. Una lectura suelta aquí cae dentro de esa ventana en cuanto la máquina va cargada, y eso es
+       lo que tumbaba este caso en CI sin que hubiera nada roto. */
+    await expect
+      .poll(async () => aviso.evaluate((n) => getComputedStyle(n).visibility), {
+        message: 'el aviso no se ha quitado del tabulador',
+      })
+      .toBe('hidden');
+    // `pointer-events` no se transiciona: en cuanto la clase está puesta, el aviso ya es inerte.
     expect(await aviso.evaluate((n) => getComputedStyle(n).pointerEvents)).toBe('none');
 
     // VUELVE ENTERO AL CERRAR: no se ha decidido nada, así que el aviso tiene que seguir ahí para decidirlo.

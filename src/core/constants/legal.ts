@@ -53,7 +53,10 @@
 // declarado y aceptado, así que reabrir la aceptación por publicar menos sería ruido. El texto sí se corrige, que
 // es la obligación que queda. El cupo de avisos por persona y día tampoco se menciona: recorta lo que TÚ ves en tu
 // actividad, no lo que se publica de ti (mismo criterio que el filtro del perfil).
-export const LEGAL_VERSION = '2026-09-07';
+// 2026-09-20: los premios. Tres tratamientos nuevos con efectos hacia fuera —archivo de la edición público con su
+// enlace, cuenta mínima creada al votar y trofeo concedido en el perfil—, así que todo el mundo vuelve a pasar por
+// la puerta. Ver `legalContent.ts`, que lo explica en su sitio.
+export const LEGAL_VERSION = '2026-09-20';
 
 // Correo de CONTACTO publicado en los documentos. A propósito distinto del de la cuenta de administración de
 // `firestore.rules` (`isAdmin`): son la misma persona, pero separar buzones evita mezclar avisos legales y

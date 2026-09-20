@@ -31,8 +31,20 @@ Más dos condiciones que salieron sobre la marcha:
 ## 2. Lo que está hecho
 
 **La preferencia.** `listShapePreference` (`view/hooks/preferences.ts`) con su clave local
-(`LIST_SHAPE_KEY`), su campo en la nube (`FirestorePublicConfig.listShape`) y su hook (`useListShape`).
-Escribe `data-list-shape` en `<html>`. Valores: `list` (por defecto) y `grid`.
+(`LIST_SHAPE_KEY`) y su hook (`useListShape`). Escribe `data-list-shape` en `<html>`. Valores: `list` (por
+defecto) y `grid`.
+
+**Y VIVE SOLO EN ESTE APARATO** (20-09-2026). Tuvo campo en la nube (`FirestorePublicConfig.listShape`) y se
+sincronizaba con el resto de la apariencia; se quitó junto con el tamaño de los cuadros porque era la única
+preferencia a la que seguirte le sienta mal: en un teléfono caben dos cuadros y en un monitor ocho, así que
+quien pasea por la colección en el sofá y busca un título concreto en el escritorio quiere una forma en cada
+sitio, y sincronizarla convertía cada elección en un cambio a distancia en el otro aparato. El tema y la paleta
+sí siguen viajando: esos son la misma decisión en cualquier pantalla.
+
+Los dos campos **siguen en la allowlist de `firestore.rules`** aunque ya no se escriban, y no es un descuido:
+la regla valida el documento RESULTANTE de un merge, así que quitarlos denegaría la escritura entera de las
+preferencias a quien los tenga guardados de antes (es el mismo fallo de §«la allowlist», con el signo
+cambiado).
 
 **La forma la decide UN sitio.** Antes el colapso a tarjeta lo decidían dos: `GameTable` (para estimar la
 altura de fila) y una media query de `≤1100px` en `_table.scss` + `_overlays-and-responsive.scss` (para

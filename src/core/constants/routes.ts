@@ -11,7 +11,7 @@ import { matchRoutes } from 'react-router-dom';
 import { LEGAL_ROUTES } from './legal';
 
 /** Zona de la app; decide la navegación inferior, el encabezado y el cromo alrededor del contenido. */
-export type AppSection = 'lists' | 'social' | 'stats' | 'settings' | 'inbox' | 'legal' | 'admin' | 'shared-review';
+export type AppSection = 'lists' | 'social' | 'stats' | 'settings' | 'inbox' | 'legal' | 'admin' | 'shared-review' | 'premios';
 
 export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = [
   { path: '/completados', section: 'lists' },
@@ -42,6 +42,15 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
   { path: LEGAL_ROUTES.terms, section: 'legal' },
   { path: LEGAL_ROUTES.privacy, section: 'legal' },
   { path: LEGAL_ROUTES.cookies, section: 'legal' },
+  // LA PORRA DE PREMIOS. Comodín, por el mismo motivo que social y el panel: las sub-rutas (votar paso a paso,
+  // revisar, resultados de una edición) las resuelve la propia sección con `matchPremiosRoute`, y declararlas
+  // aquí una a una obligaría a tocar este fichero cada vez que se añade una pantalla.
+  //
+  // La ruta responde SIEMPRE, haya o no edición abierta: el punto en la navegación es estacional (lo decide el
+  // calendario y el interruptor del administrador), pero un enlace compartido tiene que seguir funcionando en
+  // enero. Ver `docs/plan-unificar-premios.md` §6.2.
+  { path: '/premios/*', section: 'premios' },
+  { path: '/premios', section: 'premios' },
   // Ruta OCULTA (sin enlace en la navegación); quien decide el acceso son las reglas de Firestore, no esta tabla.
   { path: '/admin', section: 'admin' },
   // Reseña compartida con enlace público. Quien NO tiene la app en este navegador ni llega aquí: `main.tsx` monta

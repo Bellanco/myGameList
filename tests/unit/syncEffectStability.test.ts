@@ -66,6 +66,9 @@ vi.mock('../../src/model/repository/gistRepository', () => ({
 
 // Dependencias importadas por el hook pero ajenas a lo que se ejercita aquí.
 vi.mock('../../src/model/repository/firebaseGateway', () => ({
+  // El cromo pregunta si hay sesión guardada para decidir si refresca la entrada de premios
+  // (`usePremiosVisible`). Sin esto, montar la aplicación en un test revienta con «No export is defined».
+  hasStoredAuthSession: () => false,
   getCurrentSocialAuthUser: vi.fn(),
   getPrivateConfig: vi.fn(),
   recoverGithubToken: vi.fn(),

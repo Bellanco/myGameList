@@ -48,6 +48,9 @@ vi.mock('../../src/model/repository/import/inboxRepository', () => ({
 }));
 
 vi.mock('../../src/model/repository/firebaseGateway', () => ({
+  // El cromo pregunta si hay sesión guardada para decidir si refresca la entrada de premios
+  // (`usePremiosVisible`). Sin esto, montar la aplicación en un test revienta con «No export is defined».
+  hasStoredAuthSession: () => false,
   initializeFirebaseServices: vi.fn(async () => null),
   reportHandledError: vi.fn(async () => {}),
   trackAnalyticsEvent: vi.fn(async () => {}),

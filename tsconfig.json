@@ -24,8 +24,10 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx"],
-  // `tests/e2e` ya entra: con `@playwright/test` instalado tiene tipos y su smoke no usa APIs de Node.
+  "include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx", "scripts/**/*.ts"],
+  // `tests/e2e` ya entra: con `@playwright/test` instalado tiene tipos y su smoke no usa APIs de Node. Los
+  // `.ts` de `scripts/` (las capturas del manifest) también: son Playwright igual que aquéllos, y un generador
+  // de imágenes que nadie comprueba se queda roto en silencio hasta el día que hace falta regenerarlas.
   // `tests/integration` sigue fuera: `adminTags.test.ts` necesita Playwright con la forma vieja y el test de
   // reglas usa `node:fs`, que exigiría `@types/node` (y con él cambiar los tipos globales de todo el proyecto).
   "exclude": ["node_modules", "dist", "tests/integration"]

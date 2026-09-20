@@ -153,6 +153,23 @@ producción sin comprobar. `npm run typecheck` **sí** hace los dos proyectos; l
 lugar de `npx tsc --noEmit`. Mientras no esté arreglado, pásalo a mano antes de desplegar cualquier cambio del
 borde.
 
+## Rol de administrador
+
+El panel (`/admin`) y todas las ramas `isAdmin()` de `firestore.rules` se conceden por el **custom claim** `admin`
+del ID token, no por un correo incrustado en las reglas. El claim lo firma Firebase y el cliente no puede
+inventárselo; el nombre del claim vive en dos sitios a propósito —`firestore.rules` y
+`src/core/security/admin.ts`— y `tests/integration/firestore.rules.test.ts` los ata para que no diverjan.
+
+- **Conceder o retirar**: `node scripts/set-admin-claim.mjs --email <correo>` (con `GOOGLE_APPLICATION_CREDENTIALS`
+  apuntando a una clave de servicio, que no se commitea). `--revoke` lo retira y `--check` lo consulta.
+- **El claim tarda en llegar**: viaja dentro del ID token, que Firebase cachea hasta una hora. La app fuerza el
+  refresco al abrir el panel, así que en la práctica basta con recargar `/admin`; en otros sitios puede hacer falta
+  volver a iniciar sesión.
+- **Retirarlo no es inmediato** por lo mismo: el token que la persona ya tenga sigue siendo válido hasta que
+  caduque. Para cortar en el acto hay que revocar sus refresh tokens (`revokeRefreshTokens`).
+- **Orden al desplegar un cambio de criterio**: primero el claim, después las reglas. Al revés, el panel se queda
+  sin nadie dentro.
+
 ## Recomendaciones para el usuario
 
 1. Usa siempre **HTTPS**.
@@ -162,10 +179,6 @@ borde.
 
 ## Mejoras futuras (no implementadas)
 
-- **Rol de administrador por *custom claim*** en vez del correo incrustado en `firestore.rules`. Es
-  igual de seguro (el claim lo firma Firebase), no publica el correo del administrador en un repositorio
-  público y permite rotarlo sin desplegar reglas. Pendiente porque exige provisionar el claim con el Admin
-  SDK antes del cambio: hacerlo al revés deja el panel inaccesible.
 - **Cerrar `gistId` y `gamesGistId` en la allowlist del mapa `social`.** Ya es posible: el saneado del arranque
   rescata los DOS ids a `privateConfig` (owner-only) y los purga del documento público en la misma escritura, así
   que el documento que el cutover deja a medias se limpia solo la próxima vez que su dueño entra. Antes de

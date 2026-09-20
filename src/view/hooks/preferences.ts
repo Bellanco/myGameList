@@ -117,6 +117,12 @@ export const effectsPreference = createPreferenceStore<boolean>({
  * Se escribe en `<html>` con `data-list-shape` porque hay CSS que cuelga de ella fuera del listado (la barra de
  * herramientas marca el botón activo), y porque así un tema puede vestir cada forma a su manera sin que ningún
  * componente le pase nada.
+ *
+ * ES DE ESTE APARATO Y NO DE LA CUENTA (decisión del 20-09-2026). Se sincronizaba con el resto de la apariencia,
+ * y eso la convertía en la única preferencia que EMPEORA al seguirte: en el móvil caben dos cuadros y en el
+ * monitor ocho, así que quien pasea por la colección en el sofá y busca un título concreto en el escritorio
+ * quiere una forma en cada sitio — y con la sincronización puesta, elegir en uno reordenaba el otro. El tema y
+ * la paleta sí viajan: esos son la misma decisión en cualquier pantalla.
  */
 export type ListShape = 'list' | 'grid';
 
@@ -124,8 +130,6 @@ export const listShapePreference = createPreferenceStore<ListShape>({
   key: LIST_SHAPE_KEY,
   parse: (raw) => (raw === 'grid' ? 'grid' : 'list'),
   serialize: (shape) => shape,
-  cloudField: 'listShape',
-  fromCloud: (value) => (value === 'grid' || value === 'list' ? value : null),
   applyToDom: (shape) => document.documentElement.setAttribute('data-list-shape', shape),
 });
 
@@ -139,6 +143,9 @@ export const listShapePreference = createPreferenceStore<ListShape>({
  *
  * Se escribe en `<html>` con `data-grid-size` para que un tema pueda vestir cada densidad a su manera sin que
  * ningún componente le pase nada, igual que la forma.
+ *
+ * Y COMO LA FORMA, ES DE ESTE APARATO: cuántos cuadros caben bien depende de la pantalla que se tenga delante,
+ * no de quién mira. Ver `listShapePreference`.
  */
 export type GridSize = 'sm' | 'md' | 'lg';
 
@@ -146,8 +153,6 @@ export const gridSizePreference = createPreferenceStore<GridSize>({
   key: GRID_SIZE_KEY,
   parse: (raw) => (raw === 'sm' || raw === 'lg' ? raw : 'md'),
   serialize: (size) => size,
-  cloudField: 'gridSize',
-  fromCloud: (value) => (value === 'sm' || value === 'md' || value === 'lg' ? value : null),
   applyToDom: (size) => document.documentElement.setAttribute('data-grid-size', size),
 });
 

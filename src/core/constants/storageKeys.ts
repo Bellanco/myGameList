@@ -29,16 +29,18 @@ export const UPPERCASE_KEY = 'mis-listas-uppercase';
 // (no necesita anti-flash: solo condiciona un botón de la toolbar, no la pintura inicial del tema).
 export const STEAM_BUTTON_KEY = 'mis-listas-steam-button';
 
-// F5 — FORMA del listado: 'list' (renglones) o 'grid' (mosaico de cajas). Es de presentación pura y se
-// sincroniza por cuenta (publicConfig.listShape), como el resto de la apariencia. No la lee `theme-init.js`: la
-// forma la decide React al montar el listado, y antes de eso no hay ninguna fila que pintar.
+// F5 — FORMA del listado: 'list' (renglones) o 'grid' (mosaico de cajas). SOLO EN ESTE APARATO: se sincronizó
+// por cuenta hasta el 20-09-2026, y era la única preferencia a la que seguirte le sentaba mal —en el móvil se
+// pasea por la colección en mosaico y en el monitor se busca un título en renglones—, así que elegir en uno
+// reordenaba el otro. No la lee `theme-init.js`: la forma la decide React al montar el listado, y antes de eso
+// no hay ninguna fila que pintar.
 export const LIST_SHAPE_KEY = 'mis-listas-list-shape';
 /** Carátulas de los juegos. Ausente = APAGADA: nadie descarga nada sin haberlo pedido. */
 export const COVERS_KEY = 'mis-listas-covers';
 
 // TAMAÑO de los cuadros del mosaico: 'sm' | 'md' (por defecto) | 'lg'. Cuánto ocupa cada cuadro es cuestión de
-// gusto y de pantalla —caben 8 o 5 por fila en el mismo monitor—, así que lo elige quien mira. Se sincroniza
-// por cuenta (publicConfig.gridSize), como el resto de la apariencia.
+// gusto y de PANTALLA —ocho por fila en un monitor, dos en un teléfono—, así que vive en este aparato y no en
+// la cuenta (20-09-2026, con la forma del listado: ver LIST_SHAPE_KEY).
 export const GRID_SIZE_KEY = 'mis-listas-grid-size';
 
 // F1 — efectos visuales ANIMADOS de los temas (barridos, glitch, parpadeo CRT, deriva de texturas, estrellas
@@ -63,6 +65,11 @@ export const FEED_MOVE_TABS_KEY = 'mis-listas-feed-move-tabs';
 // muestra el banner). Es una preferencia POR DISPOSITIVO/NAVEGADOR, no por cuenta: el consentimiento para
 // almacenar identificadores lo da quien usa este navegador, así que no se sincroniza a Firestore.
 export const ANALYTICS_CONSENT_KEY = 'mis-listas-analytics-consent';
+
+// Invitación a instalar la app en la pantalla de inicio. Valor: 'off' = ya se dijo «ahora no» (o ya se instaló)
+// y no se vuelve a ofrecer en este navegador; ausente = se ofrecerá cuando el navegador dé la oportunidad.
+// Es de dispositivo por naturaleza: instalar es algo que se hace en ESTE aparato, no en la cuenta.
+export const INSTALL_HINT_KEY = 'mis-listas-install-hint';
 
 // Import — preferencia "qué datos traer" (plataformas/géneros/horas/nota) por grupo: juegos nuevos y juegos que
 // ya están en tus listas. JSON con la forma de `ImportFieldPrefs`. Local, no se sincroniza (como la bandeja).
@@ -117,6 +124,24 @@ export const achievementsPublishedKey = (uid: string): string => `mis-listas-ach
 // persiste ni un byte—, así que sin esto no hay forma de saber que alguien la probó. No sube y no se publica
 // (los «primeros pasos» nunca lo hacen).
 export const ROULETTE_USED_KEY = 'mis-listas-roulette-used';
+
+// Borrador de la papeleta de premios: lo votado hasta ahora, para no perderlo al recargar o al salir a mirar algo
+// a las listas. Se borra al enviar.
+//
+// PREFIJADA COMO TODAS LAS DEMÁS. La aplicación de origen guardaba esto en `votingProgress`, a secas, igual que
+// guardaba el tema en `appTheme` y el idioma en `appLanguage`: tres claves genéricas que aquí habrían convivido
+// con las de la casa —y `appTheme` habría sido una SEGUNDA fuente de tema, compitiendo con la de `theme-init.js`.
+export const PREMIOS_DRAFT_KEY = 'mis-listas-premios-borrador';
+
+/**
+ * ¿Se ofrece la sección de premios? Lo que se guarda aquí es la ÚLTIMA RESPUESTA conocida, para poder pintar la
+ * entrada —el punto de Ajustes, el botón del hub— sin esperar a la red y, sobre todo, SIN CARGAR FIREBASE.
+ *
+ * Es la diferencia entre una entrada estacional y meter el SDK (172 kB) en el arranque de todo el mundo, incluido
+ * quien no vota nunca. El dato se refresca en segundo plano cuando ya hay sesión, que es cuando el SDK se carga
+ * de todas formas. Ver `usePremiosVisible`.
+ */
+export const PREMIOS_VISIBLE_KEY = 'mis-listas-premios-visible';
 
 // Logros — LOS CONTADORES QUE NO SALEN DE LA BIBLIOTECA (amistades, semanas con publicación, alta del perfil y
 // si hay sincronización), recordados del último paso por el hub.

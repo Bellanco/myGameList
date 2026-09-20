@@ -14,6 +14,7 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, setPersistence, browserLocalPersistence, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore/lite';
+import type { PalmaresEntry } from '../types/premios';
 import type { ProfileTier } from '../../core/constants/tiers';
 import { readAnalyticsConsent } from './analyticsConsentRepository';
 
@@ -76,11 +77,18 @@ export interface SocialProfileReference {
    * aparato con la biblioteca a medio sincronizar le borraría medallas a la vitrina (ver `mergeForPublish`).
    */
   achievementsMirror?: string;
+  /** Ediciones de la porra ganadas. Viene en el MISMO documento que el espejo, así que no cuesta una lectura. */
+  palmares?: PalmaresEntry[];
 }
 
 export interface SocialDirectoryEntry {
   id: string;
   uid: string; // uid de Firebase del perfil — necesario para relaciones de amistad (id del doc canónico) y robusto ante el cutover uid→profileId
+  /**
+   * Pseudónimo público. Es el ÚNICO puente con el archivo de una edición publicada, que no lleva uid porque es
+   * de lectura abierta: sin él, la clasificación no puede poner cara ni enlace a ninguna fila.
+   */
+  profileId?: string;
   displayName: string;
   photoURL: string;
   socialGistId: string;
@@ -107,6 +115,13 @@ export interface SocialDirectoryEntry {
    * olvidar copiarlo es un error de compilación y no una vitrina en blanco.
    */
   achievementsMirror: string;
+  /**
+   * El PALMARÉS: las ediciones de la porra que ha ganado, para la vitrina de su ficha.
+   *
+   * Opcional, a diferencia del espejo: casi nadie lo tendrá —solo hay cinco puestos por edición— y declararlo
+   * requerido obligaría a escribir `palmares: []` en cada sitio que construye una entrada para decir «nada».
+   */
+  palmares?: PalmaresEntry[];
 }
 
 export interface GameRecommendation {

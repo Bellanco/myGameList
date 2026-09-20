@@ -68,3 +68,40 @@ describe('los puntos del menú de Ajustes', () => {
     expect(screen.getByRole('link', { name: 'Datos', hidden: true }).className).toContain('is-third');
   });
 });
+
+/**
+ * EL PUNTO DE PREMIOS. No es un grupo de ajustes: lleva a otra sección, solo se pinta cuando hay algo que ver y
+ * va en ámbar para decirlo sin palabras. Lo que se fija aquí es que aparezca EN SU SITIO —detrás de «Diseño»— y
+ * que desaparezca fuera de temporada; el color lo audita `tests/e2e/a11y.test.ts` en las dieciséis combinaciones.
+ */
+describe('el punto de Premios', () => {
+  it('no se pinta cuando no hay nada que ver', () => {
+    localStorage.setItem('mis-listas-premios-visible', 'off');
+    pintar(true);
+    expect(screen.queryByRole('link', { name: 'Premios', hidden: true })).not.toBeInTheDocument();
+  });
+
+  it('se pinta detrás de «Diseño» cuando hay edición o resultados', () => {
+    localStorage.setItem('mis-listas-premios-visible', 'on');
+    pintar(true);
+
+    const rotulos = screen
+      .getAllByRole('link', { hidden: true })
+      .map((enlace) => enlace.textContent?.trim());
+    expect(rotulos).toEqual(['Diseño', 'Premios', 'Filtros', 'Datos']);
+  });
+
+  it('lleva a la sección, no a un grupo de ajustes', () => {
+    localStorage.setItem('mis-listas-premios-visible', 'on');
+    pintar(true);
+    expect(screen.getByRole('link', { name: 'Premios', hidden: true })).toHaveAttribute('href', '/premios');
+  });
+
+  // Sin espacio social «Diseño» no se pinta, y Premios no puede quedarse esperando a un punto que no existe.
+  it('sin espacio social sigue apareciendo, el primero', () => {
+    localStorage.setItem('mis-listas-premios-visible', 'on');
+    pintar(false);
+    const rotulos = screen.getAllByRole('link', { hidden: true }).map((e) => e.textContent?.trim());
+    expect(rotulos).toEqual(['Premios', 'Filtros', 'Datos']);
+  });
+});
