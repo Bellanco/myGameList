@@ -258,6 +258,15 @@ export const PREMIOS_UI = {
       publishAction: 'Publicar en el histórico',
       // Publicar es irreversible y destructivo: retira las papeletas y vacía los nominados.
       publishWarn: 'Al publicar se archiva la clasificación, se retiran las papeletas y se vacían los nominados. No se puede deshacer.',
+      /**
+       * SIN GANADORES NO HAY PUNTOS. La clasificación se calcula cruzando cada voto con el ganador de su
+       * categoría: publicar sin marcar ninguno archiva una edición con todo el mundo a cero, y como al publicar
+       * se retiran las papeletas, ya no hay con qué recalcularla. Es el único error de esta pantalla que no se
+       * puede arreglar después.
+       */
+      publishNoWinners: 'No has marcado ningún ganador. Si publicas ahora, la clasificación se archiva con todo el mundo a cero y las papeletas ya no estarán para rehacerla.',
+      publishSomeWinners: (marcados: number, total: number) =>
+        `Vas a publicar con ${marcados} de ${total} categorías con ganador; las demás no darán puntos.`,
       closesAt: (fecha: string) => `Se cierra el ${fecha}`,
       leftovers: (cuantas: number) => `Se retiraron ${cuantas} papeleta(s) sueltas de una edición anterior.`,
       opened: (nombre: string) => `Edición «${nombre}» abierta.`,

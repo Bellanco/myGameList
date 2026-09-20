@@ -11,6 +11,7 @@ import { getSeasonLabel } from '../../../core/premios/seasonId';
 import { SEASON_STAGE, getSeasonStage, validateClosingDay } from '../../../core/premios/votingSchedule';
 import { shouldOfferPremios } from '../../../core/premios/visibility';
 import { loadAndSortCategories } from '../../../model/repository/premios/premiosCategoriesRepository';
+import { fetchWinners } from '../../../model/repository/premios/premiosWinnersRepository';
 import {
   closeSeasonNow,
   fetchVotingConfig,
@@ -42,6 +43,8 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
   const [tab, setTab] = useState<'season' | 'categories' | 'winners' | 'ballots' | 'history'>('season');
   const [config, setConfig] = useState<PremiosVotingConfig | null>(null);
   const [categories, setCategories] = useState<PremiosCategory[]>([]);
+  /** Cuántas categorías tienen ganador marcado: es lo que decide si publicar tiene sentido. */
+  const [marcados, setMarcados] = useState(0);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -59,6 +62,9 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
     ]);
     setConfig(nextConfig);
     setCategories(nextCategories);
+    // Los ganadores se leen aquí y no solo en su pestaña: de ellos depende el aviso de publicar, que es la
+    // acción irreversible de esta pantalla.
+    setMarcados(Object.keys(await fetchWinners(nextCategories).catch(() => ({}))).length);
   }, []);
 
   useEffect(() => {
@@ -66,6 +72,11 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
   }, [recargar]);
 
   const stage = useMemo(() => getSeasonStage(config), [config]);
+  /** Las que pueden tener ganador: una categoría sin nominados no puntúa y al publicar se omite. */
+  const votables = useMemo(
+    () => categories.filter((category) => (category.options?.length || 0) > 0).length,
+    [categories],
+  );
 
   /** Envoltorio común: marca ocupado, traduce el fallo y recarga, que es lo que cambia lo que se ve. */
   const ejecutar = useCallback(
@@ -333,6 +344,13 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
 
             {stage === SEASON_STAGE.PENDING ? (
               <div className="premios-admin__form">
+                {/* LO PRIMERO, SI FALTAN GANADORES: sin ellos la clasificación se archiva a cero, y al publicar
+                    se retiran las papeletas, así que después ya no hay con qué rehacerla. */}
+                {marcados === 0 ? (
+                  <p className="premios-admin__warn">{L.season.publishNoWinners}</p>
+                ) : marcados < votables ? (
+                  <p className="premios-admin__warn">{L.season.publishSomeWinners(marcados, votables)}</p>
+                ) : null}
                 <p className="premios-admin__warn">{L.season.publishWarn}</p>
                 <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void publicar()}>
                   {L.season.publishAction}
