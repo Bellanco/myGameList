@@ -119,10 +119,18 @@ async function pantallaDeAjustes(page: Page): Promise<void> {
  * (ver la nota de `SettingsMenu`).
  */
 async function menuDeAjustesAbierto(page: Page): Promise<void> {
-  await page.goto('/completados');
   // EL PUNTO DE PREMIOS, ENCENDIDO A PROPÓSITO: es el único rótulo de este menú que no usa el color de texto de
   // siempre —va en el ámbar del tema— y el contraste de un amarillo sobre fondo claro es justo lo que se rompe
   // sin que nadie se entere. Fuera de temporada no se pinta, así que sin esto la auditoría nunca lo vería.
+  //
+  // SE ENCIENDE RESPONDIENDO POR LA API, que es de donde sale la decisión de verdad (`usePremiosVisible`): la
+  // caché de este navegador solo decide el PRIMER pintado, y en cuanto `/api/premios` contesta manda ella. Con
+  // la caché a secas el punto aparecía y se iba solo —`vite preview` no sirve la función, así que la respuesta
+  // es la foto vacía—, y la auditoría cazaba el rótulo o no según lo que tardara el fetch.
+  await page.route('**/api/premios', (route) =>
+    route.fulfill({ json: { visible: true, updatedAt: new Date().toISOString() } }),
+  );
+  await page.goto('/completados');
   await page.evaluate(() => localStorage.setItem('mis-listas-premios-visible', 'on'));
   await page.reload();
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
