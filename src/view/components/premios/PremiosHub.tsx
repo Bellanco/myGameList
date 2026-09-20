@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { ballotIsUnchanged } from '../../../core/premios/ballotEdits';
+import { votesToSelections } from '../../../model/repository/premios/premiosBallotRepository';
 import { ensureLightAccount } from '../../../model/repository/lightAccountRepository';
 import { signInWithGoogle, subscribeSocialAuth } from '../../../model/repository/firebaseGateway';
 import type { SocialAuthUser } from '../../../model/repository/firebaseClient';
@@ -104,11 +105,7 @@ export function PremiosHub() {
         // inercia no debería gastar una de las veces que le quedan: no hay nada que guardar, así que no se
         // escribe. Las reglas no pueden distinguirlo —para ellas es una escritura más—, de modo que tiene que
         // decidirse aquí, antes de enviarla.
-        const selecciones: Record<string, string> = {};
-        Object.entries(voting.votes).forEach(([categoria, voto]) => {
-          if (voto?.id) selecciones[categoria] = voto.id;
-        });
-        if (ballotIsUnchanged(edition.ballot, selecciones, displayName)) {
+        if (ballotIsUnchanged(edition.ballot, votesToSelections(voting.votes), displayName)) {
           setSinCambios(true);
           setJustSubmitted(true);
           navigate(PREMIOS_ROUTES.sent);
@@ -187,6 +184,25 @@ export function PremiosHub() {
         <PremiosIdentificate signingIn={signingIn} error={signInError} onSignIn={() => void handleSignIn()} />
       ) : fueraDePlazo ? (
         <PremiosCerrada scheduled={edition.stage === 'none' && !hasResults} hasResults={hasResults} />
+      ) : route.panel === 'papeleta' && !edition.ballot ? (
+        // Pedir la papeleta sin haber votado —una dirección escrita a mano— enseñaba una rejilla entera de
+        // «sin votar» como si fuera lo elegido. La portada dice lo que de verdad hay.
+        <PremiosPortada
+          config={edition.config}
+          votingOpen={edition.votingOpen}
+          hasResults={hasResults}
+          hasBallot={false}
+          canEdit={false}
+          votedCount={voting.votedCount}
+          total={edition.categories.length}
+          signedIn={Boolean(user)}
+          signingIn={signingIn}
+          signInError={signInError}
+          onSignIn={() => void handleSignIn()}
+          opportunities={edition.opportunities}
+          remainingOpportunities={edition.remainingOpportunities}
+          hasSocialAccount={voter.hasSocialAccount}
+        />
       ) : route.panel === 'papeleta' || sinCorrecciones ? (
         // LA PAPELETA, EN MODO LECTURA. Se llega de dos maneras y las dos acaban aquí: pidiéndola a propósito
         // («ver lo que voté», sin gastar nada) o porque ya no quedan oportunidades. El cartel que había antes

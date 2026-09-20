@@ -903,8 +903,14 @@ el principio rector sin discutir de gustos.
 4. **El presupuesto de arranque no se mueve**: ningún módulo de la porra entra en el grafo crítico
    (`scripts/ci-validate.js`), igual que no entra el hub social.
 5. **La barra inferior sigue teniendo cuatro pestañas** y su test de anchos sigue en verde.
-6. **En la pantalla de votar, un juego que está en tu biblioteca se reconoce** (§6.5). Es la comprobación de que las
-   dos mitades se hablan, y la que ninguna capa de estilo puede fingir.
+6. **Los nominados se ven con la caja de la biblioteca**: la misma ranura de `GameCover`, la misma carátula
+   servida por `/cover` y la misma preferencia de imágenes que el mosaico — encendida, portadas; apagada, ninguna
+   petición. Es la comprobación de que las dos mitades se hablan, y la que ninguna capa de estilo puede fingir.
+
+   *(Revisado el 20-09-2026.)* Este punto pedía antes que en la tarjeta se reconociera **tu** juego —«lo
+   terminaste, tu nota»—; esa marca se retiró (§6.5) y con ella se fue el único consumidor de
+   `core/premios/library`. El criterio se sustituye por el cruce que **sí** está en pie, que además es el que se
+   ve en cada categoría. Si algún día vuelve la marca personal, este punto recupera su forma original.
 7. **Un solo despliegue, un solo proyecto de Firebase, un solo fichero de reglas**, y el dominio viejo redirige.
 8. **Alguien que no sepa nada de esto no distingue** `/premios` del resto de la aplicación: mismo encabezado, misma
    letra, mismos botones, mismos mensajes de error y de falta de conexión, misma forma de volver atrás.

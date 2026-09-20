@@ -56,18 +56,13 @@ export const PREMIOS_UI = {
 
   votar: {
     sectionAria: 'Votación',
-    categoryOf: (actual: number, total: number) => `Categoría ${actual} de ${total}`,
     chooseOne: 'Elige tu favorito',
     chosen: 'Tu elección',
     previous: 'Anterior',
     next: 'Siguiente',
-    skip: 'Saltar',
-    review: 'Revisar',
     // EL PIE DE LA VOTACIÓN, como en la porra de origen: avanzar y retroceder en una fila, y debajo la salida
     // hacia la revisión, que está siempre disponible — se puede enviar con categorías sin votar.
     finish: 'Finalizar',
-    // La barra de progreso: cuánto llevas recorrido de la papeleta, y aparte cuántas has votado de verdad.
-    progressAria: 'Progreso de la votación',
     progressCount: (actual: number, total: number) => `${actual} / ${total}`,
     progressPercent: (pct: number) => `${pct} %`,
     votedMark: 'Votada',
@@ -181,7 +176,6 @@ export const PREMIOS_UI = {
     yourAwardHint: (puesto: number) => `Has quedado ${puesto}.º en esta edición.`,
     positionAria: (puesto: number) => `Puesto ${puesto}`,
     points: (puntos: number) => (puntos === 1 ? '1 punto' : `${puntos} puntos`),
-    rank: (puesto: number) => `${puesto}.º`,
     yourRow: 'Tu posición',
     /** Deshace el paso: a la portada, al histórico del panel o a donde se estuviera. */
     back: 'Volver',
@@ -213,9 +207,6 @@ export const PREMIOS_UI = {
 
     season: {
       title: 'La edición',
-      stageNone: 'No hay ninguna edición en marcha.',
-      stageOpen: 'Se está votando.',
-      stagePending: 'Cerrada y pendiente de publicar.',
 
       // ═══ LOS ESTADOS, ENUMERADOS ═══════════════════════════════════════════════════════════════════════
       // El ciclo entero a la vista con el actual marcado, en vez de una sola frase suelta: de un vistazo se ve

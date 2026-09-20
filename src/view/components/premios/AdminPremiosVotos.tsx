@@ -32,20 +32,17 @@ export function AdminPremiosVotos({ categories }: { categories: PremiosCategory[
 
   useEffect(() => {
     let vivo = true;
-    void (async () => {
-      try {
-        const [live, winners] = await Promise.all([readLiveEdition(), fetchWinners(categories)]);
-        if (!vivo) return;
-        setBallots(live.ballots);
-        setLeaderboard(computeLeaderboard(live.ballots, live.categories, winners));
-      } finally {
+    void cargar()
+      .catch(() => {
+        // Sin papeletas legibles la pantalla se queda vacía y lo dice; no hay nada que reintentar aquí.
+      })
+      .finally(() => {
         if (vivo) setCargando(false);
-      }
-    })();
+      });
     return () => {
       vivo = false;
     };
-  }, [categories]);
+  }, [cargar]);
 
   /**
    * RETIRAR LA PAPELETA DE ALGUIEN. Se pregunta antes por su nombre y no se puede deshacer: el voto no está

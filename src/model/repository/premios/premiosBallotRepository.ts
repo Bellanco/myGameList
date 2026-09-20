@@ -49,6 +49,24 @@ export interface BuildBallotParams {
  *
  * Es una función PURA y se exporta aparte para poder probarla sin tocar Firestore.
  */
+/**
+ * Las SELECCIONES tal y como se guardan: `categoría → optionId`, nunca el nombre del nominado.
+ *
+ * Se exporta porque hay dos sitios que necesitan exactamente este mapa y tienen que coincidir: el que lo escribe
+ * (`buildBallot`) y el que compara lo elegido con lo ya guardado para no gastar una oportunidad de más
+ * (`ballotIsUnchanged`, desde el hub). Cuando se construía a mano en los dos, cualquier matiz —una categoría sin
+ * voto, un `id` vacío— podía hacer que uno viera un cambio donde el otro no veía ninguno.
+ */
+export function votesToSelections(
+  userVotes: Record<string, { id?: string } | null | undefined> | null | undefined,
+): Record<string, string> {
+  const selections: Record<string, string> = {};
+  Object.entries(userVotes || {}).forEach(([categoryId, vote]) => {
+    if (vote?.id) selections[categoryId] = vote.id;
+  });
+  return selections;
+}
+
 export function buildBallot({
   author,
   userVotes,
@@ -56,10 +74,7 @@ export function buildBallot({
   season,
   existingBallot = null,
 }: BuildBallotParams): PremiosBallot {
-  const selections: Record<string, string> = {};
-  Object.entries(userVotes || {}).forEach(([categoryId, vote]) => {
-    if (vote?.id) selections[categoryId] = vote.id;
-  });
+  const selections = votesToSelections(userVotes);
 
   const now = new Date().toISOString();
   const elegido = safeTrim(displayName, BALLOT_NAME_MAX_LENGTH);

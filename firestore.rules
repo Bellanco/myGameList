@@ -617,12 +617,16 @@ service cloud.firestore {
      * UNA SOLA LECTURA, y solo en las CORRECCIONES: el primer envío vale lo mismo para todo el mundo, así que la
      * regla de `create` no pasa por aquí y el momento de más carga del año no paga ninguna lectura extra.
      *
+     * `get()` Y NO `exists()` + `get()`, que es lo que había: eran dos lecturas facturables por cada corrección
+     * para responder a una sola pregunta. `get()` devuelve null cuando el documento no existe, y el ternario no
+     * llega a mirar `.data` en ese caso.
+     *
      * Quien vota sin perfil —o con uno que no se puede leer— se trata como el cupo mínimo, que es lo mismo que
      * hace el cliente: degradar es seguro, promocionar no.
      */
     function premiosVoterProfile(userId) {
-      let ref = /databases/$(database)/documents/profiles/$(userId);
-      return exists(ref) ? get(ref).data : {};
+      let perfil = get(/databases/$(database)/documents/profiles/$(userId));
+      return perfil == null ? {} : perfil.data;
     }
 
     /**

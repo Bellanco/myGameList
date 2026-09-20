@@ -195,7 +195,11 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
                     <button
                       type="button"
                       className="btn premios-results__trophy"
-                      onClick={() => setGaleria(premiados.findIndex((p) => p.profileId === entry.profileId))}
+                      // POR IDENTIDAD, no por pseudónimo: quien vota sin perfil se archiva con `profileId: ''`
+                      // (ver `scoring`), así que buscando por ese campo dos premiados sin pseudónimo casaban
+                      // entre sí y pulsar en el segundo abría la lámina del primero. `premiados` es un filtrado
+                      // de `leaderboard`, de modo que son el mismo objeto.
+                      onClick={() => setGaleria(premiados.indexOf(entry))}
                     >
                       {propia ? L.trophy : L.see}
                     </button>
