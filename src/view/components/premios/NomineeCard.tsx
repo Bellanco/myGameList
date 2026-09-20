@@ -1,7 +1,6 @@
 import { memo } from 'react';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { coverUrl } from '../../../core/utils/coverUrl';
-import type { LibraryMatch } from '../../../core/premios/library';
 import type { PremiosOption } from '../../../model/types/premios';
 import { GameCover } from '../GameCover';
 
@@ -24,23 +23,20 @@ const L = PREMIOS_UI.votar;
  * flotante: en una tarjeta estrecha ese icono se montaba sobre la primera línea del nombre. El estado va además
  * en `aria-pressed`, que es lo que oye quien no ve el color.
  *
- * DEBAJO DEL NOMBRE, LO QUE TÚ SABES DE ESE JUEGO: si lo tienes en la biblioteca, en qué lista y con qué nota.
- * Es el cruce de `core/premios/library`, y es opcional por naturaleza — la mayoría de nominados no estarán en tu
- * biblioteca, y ahí la tarjeta no enseña nada.
+ * LA TARJETA NO DICE LO QUE TÚ SABES DE ESE JUEGO. Llevó debajo del nombre en qué lista lo tenías y con qué nota
+ * —el cruce de `core/premios/library`— y se retiró el 20-09-2026: en una rejilla de cinco portadas, esa línea
+ * sobraba en la mayoría de tarjetas (casi ningún nominado está en tu biblioteca) y le robaba sitio al título
+ * justo cuando la rejilla va justa de alto.
  */
 export interface NomineeCardProps {
   option: PremiosOption;
   selected: boolean;
-  /** Lo que se sabe de este juego en la biblioteca de quien vota. */
-  match: LibraryMatch | null;
-  /** Nota ya formateada según la escala que tenga elegida (0–5 o 0–100). */
-  gradeLabel: string;
   /** ¿Se piden carátulas? Es la preferencia de la app, resuelta por la pantalla. */
   covers: boolean;
   onChoose: (option: PremiosOption) => void;
 }
 
-function NomineeCardBase({ option, selected, match, gradeLabel, covers, onChoose }: NomineeCardProps) {
+function NomineeCardBase({ option, selected, covers, onChoose }: NomineeCardProps) {
   // SIN PLATAFORMAS: aquí no hay más dato que el nombre del nominado, que es lo que el administrador escribió.
   // El emparejador de `/cover` resuelve por título igual que en la biblioteca de otra persona.
   const src = covers ? coverUrl(option.name) : null;
@@ -62,12 +58,6 @@ function NomineeCardBase({ option, selected, match, gradeLabel, covers, onChoose
 
       <span className="premios-nominee__body">
         <span className="premios-nominee__name">{option.name}</span>
-        {match ? (
-          <span className="premios-nominee__mine">
-            {L.inYourLibrary[match.tab]}
-            {gradeLabel ? <span className="premios-nominee__grade">{L.yourGrade(gradeLabel)}</span> : null}
-          </span>
-        ) : null}
       </span>
     </button>
   );

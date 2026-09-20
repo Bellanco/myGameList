@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { getCategoryTitle, getOptionId, tField } from '../../../core/premios/localize';
-import { findInLibrary, type LibraryMatch } from '../../../core/premios/library';
 import { getGridColumns } from '../../../core/premios/gridDensity';
 import { PREMIOS_ROUTES, votePath } from '../../../viewmodel/premios/premiosRoutes';
 import type { PremiosCategory, PremiosOption } from '../../../model/types/premios';
@@ -72,9 +71,6 @@ export interface PremiosVoteScreenProps {
   /** Paso pedido en la dirección, 1..n. */
   paso: number;
   votes: PremiosVotes;
-  libraryIndex: Map<string, LibraryMatch>;
-  /** Formatea una nota 0–100 según la escala elegida por quien mira. */
-  formatGrade: (grade: number | null) => string;
   onChoose: (categoryId: string, option: PremiosOption) => void;
 }
 
@@ -97,8 +93,6 @@ export function PremiosVoteScreen({
   categories,
   paso,
   votes,
-  libraryIndex,
-  formatGrade,
   onChoose,
 }: PremiosVoteScreenProps) {
   const navigate = useNavigate();
@@ -194,14 +188,11 @@ export function PremiosVoteScreen({
         style={columnas ? ({ '--premios-cols': columnas } as React.CSSProperties) : undefined}
       >
         {nominados.map((option) => {
-          const match = findInLibrary(libraryIndex, option.name);
           return (
             <NomineeCard
               key={option.id}
               option={option}
               selected={elegido?.id === option.id}
-              match={match}
-              gradeLabel={match ? formatGrade(match.grade) : ''}
               covers={covers}
               onChoose={(chosen) => {
                 onChoose(category.id, chosen);

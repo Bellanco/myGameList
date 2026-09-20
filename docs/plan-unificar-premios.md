@@ -668,16 +668,24 @@ Cuatro cruces, ordenados por lo que aportan frente a lo que cuestan:
 
 | Cruce | Qué se ve | Dónde |
 |---|---|---|
-| **El nominado, contra tu biblioteca** | En la tarjeta de votación: si lo tienes, en qué lista está y qué nota le pusiste. Votar deja de ser a ciegas | `PremiosVoteScreen` + `normalizeName` |
+| ~~**El nominado, contra tu biblioteca**~~ | ~~En la tarjeta de votación: si lo tienes, en qué lista está y qué nota le pusiste~~ · **RETIRADO el 20-09-2026** (ver abajo) | — |
 | **Tu voto, contra tu nota** | Al cerrarse la edición: en qué coincidiste contigo mismo y en qué no | Panel de estadísticas |
 | **La edición, en el feed** | «Fulano ha votado» mientras el plazo está abierto (sin revelar el voto) y «Fulano ganó la edición» al publicar | Canal social, actividad derivada |
 | **Añadir un nominado a Próximos** | Desde la propia pantalla de resultados, un juego que no tenías | Acción de la biblioteca, ya existente |
 
-Ninguno de los cuatro publica un dato nuevo: todos se derivan de lo que ya hay a un lado y a otro. Y el primero es
-el que más cambia la sensación de estar en la misma aplicación, porque ocurre **dentro** de la pantalla de votar.
+Ninguno publica un dato nuevo: todos se derivan de lo que ya hay a un lado y a otro.
+
+**EL PRIMERO SE IMPLEMENTÓ Y SE RETIRÓ**, y conviene que quede escrito por qué, porque contradice la regla 4 del
+principio rector. La tarjeta de nominado llevó debajo del nombre «Lo terminaste · Tu nota: 88». Con la maqueta
+nueva —cinco portadas repartiéndose el alto de la pantalla— esa línea aparecía en una tarjeta de cada diez (casi
+ningún nominado está en tu biblioteca) y le quitaba sitio al título justo cuando la rejilla va más justa. Se quitó
+el 20-09-2026 a petición del usuario. **El cruce sigue escrito** (`core/premios/library`, con sus pruebas) y la
+pieza que lo hace posible —`normalizeName`— no se ha tocado: si vuelve, será en un sitio donde se lea de verdad
+(el resumen de la papeleta, o el panel de estadísticas al cerrarse la edición). Mientras tanto, la porra habla con
+la biblioteca por los otros tres cruces, que siguen pendientes.
 
 *(Decisión pendiente al implementar)*: si el cruce por nombre falla —los títulos de los nominados los escribe el
-administrador a mano—, la tarjeta no enseña nada y no molesta. No se intenta adivinar ni se pide a IGDB.
+administrador a mano—, no se enseña nada y no molesta. No se intenta adivinar ni se pide a IGDB.
 
 ### 6.6 La voz y los estados son los de la casa
 

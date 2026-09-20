@@ -340,18 +340,6 @@
   overflow: hidden;
 }
 
-/* Lo que TÚ sabes de ese juego: la marca de que está en tu biblioteca. */
-.premios-nominee__mine {
-  display: flex;
-  gap: .4rem;
-  justify-content: center;
-  flex-wrap: wrap;
-  color: var(--text-dim);
-  font-size: var(--fs-2xs);
-}
-
-.premios-nominee__grade { color: var(--star-full); font-family: var(--font-mono); }
-
 /* ─── El pie de la votación ───────────────────────────────────────────────────────────────────────────── */
 
 .premios-vote__nav { display: grid; gap: .45rem; }

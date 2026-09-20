@@ -4,9 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { PremiosVoteScreen } from '../../src/view/components/premios/PremiosVoteScreen';
 import { PREMIOS_UI } from '../../src/core/constants/premiosLabels';
-import { buildLibraryIndex } from '../../src/core/premios/library';
 import type { PremiosCategory } from '../../src/model/types/premios';
-import type { GameItem, TabData } from '../../src/model/types/game';
 
 /**
  * LA PANTALLA DE VOTAR, que es por donde pasa todo el mundo.
@@ -38,18 +36,6 @@ const categories = [
   categoria('arte', 'Mejor dirección de arte', ['Sea of Stars', 'Hollow Knight']),
 ];
 
-const juego = (name: string, extra: Partial<GameItem> = {}): GameItem =>
-  ({ id: 1, _ts: 0, name, platforms: [], genres: [], steamDeck: false, review: '', ...extra }) as GameItem;
-
-const libraryIndex = buildLibraryIndex({
-  c: [juego('Elden Ring', { grade: 92 })],
-  v: [],
-  e: [juego('Balatro')],
-  p: [],
-  deleted: [],
-  updatedAt: 0,
-} as unknown as TabData);
-
 /**
  * Espía de la dirección actual.
  *
@@ -64,14 +50,7 @@ function Donde() {
 function renderPantalla(paso = 1, onChoose = vi.fn()) {
   render(
     <MemoryRouter initialEntries={[`/premios/votar/${paso}`]}>
-      <PremiosVoteScreen
-        categories={categories}
-        paso={paso}
-        votes={{}}
-        libraryIndex={libraryIndex}
-        formatGrade={(grade) => (grade === null ? '' : String(grade))}
-        onChoose={onChoose}
-      />
+      <PremiosVoteScreen categories={categories} paso={paso} votes={{}} onChoose={onChoose} />
       <Donde />
     </MemoryRouter>,
   );
@@ -86,20 +65,6 @@ describe('PremiosVoteScreen', () => {
     expect(screen.getByText(PREMIOS_UI.votar.progressCount(1, 2))).toBeInTheDocument();
     expect(screen.getByText(PREMIOS_UI.votar.progressPercent(50))).toBeInTheDocument();
     expect(screen.getByRole('button', { name: PREMIOS_UI.votar.nomineeAria('Hades II') })).toBeInTheDocument();
-  });
-
-  // EL CRUCE CON LA BIBLIOTECA: es lo que hace que la sección sea parte de la app y no un inquilino.
-  it('marca los nominados que ya están en tu biblioteca, con su nota', () => {
-    renderPantalla(1);
-    expect(screen.getByText(PREMIOS_UI.votar.inYourLibrary.c)).toBeInTheDocument();
-    expect(screen.getByText(PREMIOS_UI.votar.yourGrade('92'))).toBeInTheDocument();
-    // Un juego en curso sin puntuar sale marcado, pero sin nota inventada.
-    expect(screen.getByText(PREMIOS_UI.votar.inYourLibrary.e)).toBeInTheDocument();
-  });
-
-  it('no marca nada de lo que no tienes', () => {
-    renderPantalla(2);
-    expect(screen.queryByText(PREMIOS_UI.votar.inYourLibrary.c)).not.toBeInTheDocument();
   });
 
   it('elegir avisa con el id del nominado y avanza al paso siguiente', async () => {
@@ -143,8 +108,6 @@ describe('PremiosVoteScreen', () => {
           categories={categories}
           paso={1}
           votes={{ goty: { id: 'goty_option_0', name: 'Elden Ring' } }}
-          libraryIndex={libraryIndex}
-          formatGrade={() => ''}
           onChoose={vi.fn()}
         />
       </MemoryRouter>,

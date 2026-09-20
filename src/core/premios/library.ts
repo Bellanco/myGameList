@@ -4,6 +4,12 @@
  * Es lo que hace que esta sección sea parte de la aplicación y no un inquilino con los mismos colores: los
  * nominados son juegos, y aquí sabemos cuáles tienes, en qué lista y con qué nota. Votar deja de ser a ciegas.
  *
+ * ⚠️ HOY NO LO USA NADIE, y es a propósito: la marca que lo enseñaba —«Lo terminaste · Tu nota: 88», debajo del
+ * nombre en la tarjeta de votar— se retiró el 20-09-2026, porque en una rejilla de portadas salía en una tarjeta
+ * de cada diez y le robaba alto al título (ver `docs/plan-unificar-premios.md` §6.5). El módulo se queda entero,
+ * con sus pruebas, para el sitio donde el cruce sí se lea: el resumen de la papeleta o el panel de estadísticas
+ * al cerrarse la edición. Si se decide que no vuelve, esto y su test se van juntos.
+ *
  * SE CRUZA POR NOMBRE NORMALIZADO, que es lo único comparable: los identificadores de la biblioteca son locales
  * de cada persona y los de los nominados los escribe el administrador a mano. `core/utils/normalizeName` existe
  * exactamente para esto y ya se usa para lo mismo en el listado, en la bandeja y en lo social.

@@ -1,20 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
-import { buildLibraryIndex } from '../../../core/premios/library';
 import { ensureLightAccount } from '../../../model/repository/lightAccountRepository';
 import { signInWithGoogle, subscribeSocialAuth } from '../../../model/repository/firebaseGateway';
 import type { SocialAuthUser } from '../../../model/repository/firebaseClient';
-import type { TabData } from '../../../model/types/game';
 import { matchPremiosRoute, panelNeedsSession, PREMIOS_ROUTES } from '../../../viewmodel/premios/premiosRoutes';
 import { usePremiosEdition } from '../../../viewmodel/premios/usePremiosEdition';
 import { usePremiosProfiles } from '../../../viewmodel/premios/usePremiosFaces';
 import { usePremiosResult } from '../../../viewmodel/premios/usePremiosResult';
 import { usePremiosVoter } from '../../../viewmodel/premios/usePremiosVoter';
 import { usePremiosVoting } from '../../../viewmodel/premios/usePremiosVoting';
-import { starsFromGrade } from '../../../core/utils/scoreScale';
 import { usePalette } from '../../hooks/usePalette';
-import { useScoreScale } from '../../hooks/useScoreScale';
 import { PremiosCerrada, PremiosEnviada, PremiosIdentificate, PremiosYaVotaste } from './PremiosEstado';
 import { PremiosPortada } from './PremiosPortada';
 import { PremiosResultsScreen } from './PremiosResultsScreen';
@@ -25,33 +21,23 @@ import '../../../styles/premios.scss';
 /**
  * La sección de premios: decide qué pantalla toca y sostiene el estado de la votación.
  *
- * TRES COSAS QUE VIENEN DE FUERA y no se rehacen aquí, que es lo que distingue integrar de injertar: la SESIÓN es
- * la de la aplicación (no hay un segundo «entrar con Google»), la ESCALA DE PUNTUACIÓN es la que cada cual tenga
- * elegida, y la BIBLIOTECA se recibe por props para poder cruzar los nominados con tus juegos.
+ * LO QUE VIENE DE FUERA y no se rehace aquí, que es lo que distingue integrar de injertar: la SESIÓN es la de la
+ * aplicación (no hay un segundo «entrar con Google»), el TEMA pone la voz de los titulares y las CARÁTULAS salen
+ * de la misma preferencia que el resto de la app.
+ *
+ * YA NO RECIBE LA BIBLIOTECA. La recibió para cruzar los nominados con tus juegos y pintar en cada tarjeta en
+ * qué lista lo tenías; esa marca se retiró el 20-09-2026 (ver `NomineeCard`), y con ella la única razón por la
+ * que esta sección necesitaba la biblioteca entera. El cruce sigue escrito en `core/premios/library` por si
+ * vuelve a otro sitio.
  *
  * El chunk entero es perezoso —lo monta `App` con `lazy`—, así que nada de esto entra en el arranque de quien
  * nunca abre la sección.
  */
-export interface PremiosHubProps {
-  /** La biblioteca, para el cruce de `core/premios/library`. */
-  games: TabData;
-}
-
-export function PremiosHub({ games }: PremiosHubProps) {
+export function PremiosHub() {
   const location = useLocation();
   const navigate = useNavigate();
-  // La escala es la que tenga elegida quien mira: la misma nota se enseña como estrellas o como cifra, igual que
-  // en el resto de la aplicación. Quien no haya puntuado el juego no ve ninguna.
-  const scale = useScoreScale();
   // La frase del titular la pone el TEMA, como en el hub social.
   const { palette } = usePalette();
-  const formatGrade = useCallback(
-    (grade: number | null) => {
-      if (grade === null) return '';
-      return scale === 'grade' ? String(Math.round(grade)) : '★'.repeat(starsFromGrade(grade));
-    },
-    [scale],
-  );
 
   const [user, setUser] = useState<SocialAuthUser | null>(null);
   const [error, setError] = useState('');
@@ -86,8 +72,6 @@ export function PremiosHub({ games }: PremiosHubProps) {
     // Solo al llegar la papeleta: recalcularlo en cada cambio de votos borraría lo que se acaba de elegir.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [edition.ballot, edition.categories]);
-
-  const libraryIndex = useMemo(() => buildLibraryIndex(games), [games]);
 
   /**
    * ENTRAR, sin salir de la sección.
@@ -200,8 +184,6 @@ export function PremiosHub({ games }: PremiosHubProps) {
           categories={edition.categories}
           paso={route.paso}
           votes={voting.votes}
-          libraryIndex={libraryIndex}
-          formatGrade={formatGrade}
           onChoose={voting.choose}
         />
       ) : route.panel === 'revisar' ? (

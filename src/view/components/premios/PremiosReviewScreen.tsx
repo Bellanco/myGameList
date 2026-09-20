@@ -35,9 +35,14 @@ export interface PremiosReviewScreenProps {
  * había que leerla entera para encontrar la que querías cambiar, y el nombre del juego votado quedaba en un
  * texto suelto a la derecha. En rejilla se reconoce por la portada, que es como se reconoce un juego.
  *
- * SE PUEDE ENVIAR CON CATEGORÍAS SIN VOTAR, a propósito. Obligar a votarlas todas suena razonable hasta que
- * alguien no tiene opinión sobre «Mejor juego de esports» y abandona la papeleta entera. Lo que falta se dice,
- * con su atajo para ir a la primera, y ya decide quien vota.
+ * LA PAPELETA SE ENVÍA COMPLETA. Hubo una versión que dejaba enviarla con categorías sin votar —el argumento
+ * era no perder a quien no tiene opinión sobre «Mejor juego de esports»—, y se revirtió el 20-09-2026: una
+ * papeleta a medias compite en la misma clasificación que las enteras, así que lo que parecía una comodidad era
+ * una ventaja para quien votaba solo lo fácil. Mientras falte una, el botón no se ofrece; lo que falta se dice,
+ * con su atajo para ir a la primera.
+ *
+ * ESTO LO APLICA EL CLIENTE, no las reglas: en `firestore.rules` una papeleta vale con una sola selección. Es
+ * una regla de producto, como el cupo de oportunidades, y quien manipule su copia puede saltársela.
  */
 export function PremiosReviewScreen({
   categories,
@@ -84,7 +89,9 @@ export function PremiosReviewScreen({
 
         {pendientes > 0 ? (
           <p className="premios-review__pending">
-            {L.pending(pendientes)}
+            <span>
+              {L.pending(pendientes)}. {L.mustComplete}
+            </span>
             <Link className="premios-review__jump" to={destinoSeguir}>
               {L.firstPending}
             </Link>
@@ -110,7 +117,7 @@ export function PremiosReviewScreen({
           <button
             type="button"
             className="btn btn-primary"
-            disabled={submitting || name.trim().length === 0 || votadas === 0}
+            disabled={submitting || name.trim().length === 0 || votadas === 0 || pendientes > 0}
             onClick={() => onSubmit(name.trim())}
           >
             {submitting ? L.submitting : L.submit}

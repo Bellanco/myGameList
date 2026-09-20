@@ -72,15 +72,6 @@ export const PREMIOS_UI = {
     progressPercent: (pct: number) => `${pct} %`,
     votedMark: 'Votada',
     pendingMark: 'Sin votar',
-    // Lo que se pinta en la tarjeta de un nominado que YA está en tu biblioteca. Es el cruce que hace que esta
-    // sección sea parte de la app y no un inquilino (ver docs/plan-unificar-premios.md §6.5).
-    inYourLibrary: {
-      c: 'Lo terminaste',
-      v: 'Lo dejaste',
-      e: 'Lo estás jugando',
-      p: 'Lo tienes pendiente',
-    } as Record<string, string>,
-    yourGrade: (nota: string) => `Tu nota: ${nota}`,
     nomineeAria: (nombre: string) => `Votar por ${nombre}`,
     nomineeChosenAria: (nombre: string) => `${nombre}, tu elección actual`,
   },
@@ -96,6 +87,8 @@ export const PREMIOS_UI = {
     notVoted: 'Sin votar',
     pending: (cuantas: number) =>
       cuantas === 1 ? 'Queda 1 categoría por votar' : `Quedan ${cuantas} categorías por votar`,
+    /** La papeleta se envía COMPLETA: mientras falte una, el botón no se ofrece y aquí se dice por qué. */
+    mustComplete: 'Hay que votarlas todas para poder enviarla.',
     submit: 'Enviar papeleta',
     submitting: 'Enviando…',
     back: 'Volver a votar',

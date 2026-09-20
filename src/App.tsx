@@ -911,12 +911,12 @@ export default function App() {
         <StatsHub games={vm.data} />
       </Suspense>
     ),
-    // LA PORRA. Recibe la biblioteca porque cruza los nominados con tus juegos (ver `core/premios/library`), que
-    // es lo que hace que la sección sea parte de la aplicación y no un inquilino con los mismos colores.
+    // LA PORRA. Ya no recibe la biblioteca: la cruzaba con los nominados para decir en cada tarjeta en qué lista
+    // tenías ese juego, y esa marca se retiró (ver `NomineeCard`).
     premios: (
 
       <Suspense fallback={<ScreenSkeleton />}>
-        <PremiosHub games={vm.data} />
+        <PremiosHub />
       </Suspense>
     ),
     admin: (
