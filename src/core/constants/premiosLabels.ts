@@ -273,16 +273,8 @@ export const PREMIOS_UI = {
       visibleOn: 'Visible',
       visibleOff: 'Oculta',
       visibilitySaved: 'Guardado dónde se ve la sección.',
-      /** Hasta cuándo tiene sentido dejarla puesta, para poder programarlo. */
-      visibleUntilVoting: (fecha: string) => `Mientras se vota: puedes ocultarla a partir del ${fecha}.`,
-      visibleUntilResults: (fecha: string) =>
-        `Con los resultados publicados: pierden interés hacia el ${fecha}, y ahí ya se puede ocultar.`,
-      visibleNoReason: 'No hay edición ni resultados recientes: ahora mismo no hay nada que enseñar.',
-      /** Y lo que de verdad se encuentra quien entre en la sección en este momento. */
-      showsVoting: 'Quien entre verá la puerta para identificarse y votar.',
-      showsClosed: 'Quien entre verá que la votación está cerrada y que faltan los resultados.',
-      showsResults: (nombre: string) => `Quien entre verá los resultados de «${nombre}».`,
-      showsNothing: 'Quien entre verá que no hay ninguna edición en marcha.',
+      /** DÓNDE aparece, que es lo único que este bloque tiene que responder. */
+      visibilityHint: 'Visible, la sección aparece en el menú de Ajustes y en el espacio social. Oculta, solo se llega con el enlace.',
     },
 
     // Marcar quién ganó cada categoría. Vive en un documento que solo lee el administrador: hasta que se publica

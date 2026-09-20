@@ -9,7 +9,7 @@ import { AdminPremiosVotos } from './AdminPremiosVotos';
 import { todayInVotingZone, toVotingZoneDay } from '../../../core/premios/closingDate';
 import { getSeasonLabel } from '../../../core/premios/seasonId';
 import { SEASON_STAGE, getSeasonStage, validateClosingDay } from '../../../core/premios/votingSchedule';
-import { RESULTS_FRESH_MS, shouldOfferPremios } from '../../../core/premios/visibility';
+import { shouldOfferPremios } from '../../../core/premios/visibility';
 import { loadAndSortCategories } from '../../../model/repository/premios/premiosCategoriesRepository';
 import { fetchWinners } from '../../../model/repository/premios/premiosWinnersRepository';
 import {
@@ -104,32 +104,6 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
 
   /** ¿Se está ofreciendo la entrada ahora mismo? Con la MISMA función que lo decide en Ajustes y en lo social. */
   const seOfrece = useMemo(() => shouldOfferPremios(config), [config]);
-
-  /**
-   * HASTA CUÁNDO tiene sentido dejarla a la vista, con la fecha en la mano:
-   *  · votando → el día del cierre;
-   *  · con resultados publicados → un mes desde que se publicaron, que es cuando dejan de ser noticia.
-   */
-  const hastaCuando = useMemo(() => {
-    if (stage === SEASON_STAGE.OPEN && config?.closesAt) {
-      return L.season.visibleUntilVoting(toVotingZoneDay(config.closesAt));
-    }
-    const publicado = Date.parse(String(config?.updatedAt || ''));
-    if (config?.lastPublishedId && !Number.isNaN(publicado)) {
-      return L.season.visibleUntilResults(
-        toVotingZoneDay(new Date(publicado + RESULTS_FRESH_MS).toISOString()),
-      );
-    }
-    return L.season.visibleNoReason;
-  }, [config, stage]);
-
-  /** Y QUÉ SE ENCUENTRA quien entre: la puerta de votar, el aviso de cerrada o la última edición. */
-  const queSeVe = useMemo(() => {
-    if (stage === SEASON_STAGE.OPEN) return L.season.showsVoting;
-    if (stage === SEASON_STAGE.PENDING) return L.season.showsClosed;
-    if (config?.lastPublishedId) return L.season.showsResults(config.lastPublishedId);
-    return L.season.showsNothing;
-  }, [config, stage]);
 
   /** Envoltorio común: marca ocupado, traduce el fallo y recarga, que es lo que cambia lo que se ve. */
   const ejecutar = useCallback(
@@ -385,15 +359,10 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
                 ))}
               </div>
 
-              {/* HASTA CUÁNDO tiene sentido dejarla puesta, con su fecha, para poder programar el cambio. */}
-              <p className="premios-admin__muted">{hastaCuando}</p>
-
-              {/* Y QUÉ SE ENCUENTRA quien entre ahora mismo, que es lo que de verdad se está enseñando. */}
-              <p className="premios-admin__stage">{queSeVe}</p>
-
-              {config?.lastPublishedId ? (
-                <p className="premios-admin__muted">{L.season.lastPublished(config.lastPublishedId)}</p>
-              ) : null}
+              {/* DÓNDE aparece, y nada más. Aquí hubo también hasta cuándo convenía dejarla y qué se encontraría
+                  quien entrase: son cosas que ya se leen en el ciclo de arriba, y repetidas debajo del
+                  interruptor lo que hacían era tapar la única pregunta que este bloque responde. */}
+              <p className="premios-admin__muted">{L.season.visibilityHint}</p>
             </div>
 
             {stage === SEASON_STAGE.PENDING ? (

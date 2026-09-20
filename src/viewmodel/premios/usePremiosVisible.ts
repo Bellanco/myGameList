@@ -20,6 +20,10 @@
  */
 import { useEffect, useState } from 'react';
 import { PREMIOS_VISIBLE_KEY } from '../../core/constants/storageKeys';
+import {
+  PREMIOS_VISIBILITY_CHANNEL,
+  PREMIOS_VISIBILITY_EVENT,
+} from '../../core/premios/visibilitySnapshot';
 
 function leerCache(): boolean {
   try {
@@ -39,6 +43,29 @@ function guardarCache(visible: boolean): void {
 
 export function usePremiosVisible(): boolean {
   const [visible, setVisible] = useState(leerCache);
+  /** Fuerza una relectura cuando el panel publica una foto nueva. */
+  const [sello, setSello] = useState(0);
+
+  // EL PANEL PUBLICA Y ESTO SE ENTERA, en esta pestaña y en las demás. Sin esto, quien tuviera la app abierta
+  // cuando el administrador abre la edición no veía aparecer la entrada hasta recargar: la respuesta está
+  // cacheada a propósito, y una caché sin invalidación es una caché que miente.
+  useEffect(() => {
+    const refrescar = () => setSello((n) => n + 1);
+    window.addEventListener(PREMIOS_VISIBILITY_EVENT, refrescar);
+
+    let canal: BroadcastChannel | null = null;
+    try {
+      canal = new BroadcastChannel(PREMIOS_VISIBILITY_CHANNEL);
+      canal.onmessage = refrescar;
+    } catch {
+      // Sin canal, cada pestaña se entera al recargar.
+    }
+
+    return () => {
+      window.removeEventListener(PREMIOS_VISIBILITY_EVENT, refrescar);
+      canal?.close();
+    };
+  }, []);
 
   useEffect(() => {
     let vivo = true;
@@ -50,7 +77,8 @@ export function usePremiosVisible(): boolean {
       import('../../core/premios/visibility'),
     ])
       .then(async ([repo, regla]) => {
-        const foto = await repo.loadPremiosSnapshot();
+        // Con `sello` por delante se pide de nuevo saltando la caché: es la vuelta que da el aviso del panel.
+        const foto = await repo.loadPremiosSnapshot(sello > 0);
         // La foto trae las fechas; la respuesta la da la regla con la hora de AHORA, que es lo que hace que la
         // entrada se retire sola al cerrarse la edición.
         const siguiente = regla.shouldOfferPremios(foto);
@@ -64,7 +92,7 @@ export function usePremiosVisible(): boolean {
     return () => {
       vivo = false;
     };
-  }, []);
+  }, [sello]);
 
   return visible;
 }

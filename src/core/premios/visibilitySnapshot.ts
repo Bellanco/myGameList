@@ -96,3 +96,14 @@ export function samePremiosSnapshot(
     && a.updatedAt === b.updatedAt
   );
 }
+
+/**
+ * EL AVISO DE QUE LA FOTO HA CAMBIADO, para que el menú de Ajustes no se quede con la de hace un minuto.
+ *
+ * Hace falta porque la respuesta se cachea —en memoria durante la sesión y en este navegador entre visitas— y
+ * quien la publica es el PANEL: sin avisar, quien abría la app antes de que el administrador tocara la edición
+ * no veía aparecer la entrada hasta recargar la página. Es el mismo problema y la misma solución que el aviso a
+ * los usuarios: un evento para esta pestaña y un canal para las demás.
+ */
+export const PREMIOS_VISIBILITY_EVENT = 'premios-visibility-changed';
+export const PREMIOS_VISIBILITY_CHANNEL = 'premios-visibility';

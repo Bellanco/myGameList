@@ -11,6 +11,8 @@
 // no se ofrece nada. Al ESCRIBIR sí lanza, porque ahí hay un administrador esperando saber si se guardó.
 import {
   EMPTY_PREMIOS_SNAPSHOT,
+  PREMIOS_VISIBILITY_CHANNEL,
+  PREMIOS_VISIBILITY_EVENT,
   sanitizePremiosSnapshot,
   type PremiosVisibilitySnapshot,
 } from '../../core/premios/visibilitySnapshot';
@@ -94,5 +96,24 @@ export async function savePremiosSnapshot(
   }
 
   cached = sanitizePremiosSnapshot(body);
+
+  // Y SE AVISA. El menú de Ajustes ya había preguntado —y guardado la respuesta— antes de que el panel publicara
+  // esto, así que sin el aviso la entrada no aparecía hasta recargar la página.
+  try {
+    window.dispatchEvent(new CustomEvent(PREMIOS_VISIBILITY_EVENT));
+  } catch {
+    // Fuera del navegador no hay a quién avisar.
+  }
+
+  // A las DEMÁS pestañas, que tienen su propia caché en memoria. Best-effort: si el canal no existe, se enteran
+  // al recargar.
+  try {
+    const canal = new BroadcastChannel(PREMIOS_VISIBILITY_CHANNEL);
+    canal.postMessage(cached);
+    canal.close();
+  } catch {
+    // Sin BroadcastChannel (navegador viejo, contexto restringido) no pasa nada.
+  }
+
   return cached;
 }
