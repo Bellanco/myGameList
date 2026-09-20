@@ -295,10 +295,15 @@
   grid-template-rows: 1fr;
   align-content: center;
   padding: .9rem .7rem;
-  /* Sin portada que llenar, una tarjeta de 400 px de alto con tres palabras dentro es un cartel vacío: se acota
-     y se centra en su celda, que es lo que hacía la porra de origen con sus tarjetas panorámicas. */
-  max-height: 13rem;
-  align-self: center;
+}
+
+/* SIN PORTADAS, LA REJILLA NO REPARTE EL ALTO: una tarjeta de tres palabras estirada a 400 px es un cartel
+   vacío, y cinco de ellas dejaban la pantalla llena de huecos. Las filas se acotan y el bloque entero se centra
+   en el sitio que haya, que es lo que hacía la porra de origen con sus tarjetas panorámicas.
+   `:has` y no una clase en la rejilla: quien sabe si la tarjeta lleva portada es la tarjeta. */
+.premios-vote.is-fitted .premios-vote__grid:has(.premios-nominee.is-flat) {
+  grid-auto-rows: minmax(4.5rem, 9rem);
+  align-content: center;
 }
 
 .premios-nominee.is-flat .premios-nominee__body { align-content: center; height: 100%; padding: 0; }
@@ -686,6 +691,51 @@
 }
 
 .premios-admin__cat-head select.input { width: auto; min-width: 12rem; }
+
+/* LOS NOMINADOS COMO BOTONES, para marcar el ganador de una pulsada. Son las tarjetas de votar en pequeño: aquí
+   no hay que elegir con gusto, hay que apuntar un resultado que ya se sabe, así que lo que importa es verlos
+   todos a la vez y que el marcado cante. */
+.premios-admin__picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .3rem;
+  margin-top: .35rem;
+}
+
+.premios-admin__pick {
+  font-family: var(--font-label);
+  font-size: var(--fs-2xs);
+  line-height: 1.2;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: .25rem .6rem;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.premios-admin__pick:hover { background: var(--surface-hover); color: var(--text); }
+
+.premios-admin__pick:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* El ganador marcado: el acento del tema, como la tarjeta elegida de la votación. */
+.premios-admin__pick.is-winner {
+  color: var(--on-accent);
+  background: var(--steam);
+  border-color: color-mix(in srgb, var(--steam) 70%, #000);
+  box-shadow: var(--glow-accent);
+}
+
+/* «Sin ganador» cuando lo está: se marca en hueco, para que se distinga de un ganador de verdad. */
+.premios-admin__pick.is-none {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--steam) 45%, transparent);
+  border-style: dashed;
+}
 
 /* ─── Resultados: los ganadores a un lado y la puntuación al otro ─────────────────────────────────────── */
 

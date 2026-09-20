@@ -35,13 +35,18 @@ const ejecutar = async (accion: () => Promise<string>) => {
 describe('AdminPremiosGanadores', () => {
   it('solo ofrece las categorías que tienen nominados', async () => {
     render(<AdminPremiosGanadores categories={categories} busy={false} ejecutar={ejecutar} />);
-    expect(await screen.findByLabelText('Juego del año')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Mejor arte')).not.toBeInTheDocument();
+    expect(await screen.findByRole('group', { name: 'Juego del año' })).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Mejor arte' })).not.toBeInTheDocument();
   });
 
-  it('parte de los ganadores ya marcados', async () => {
+  // LOS NOMINADOS ESTÁN TODOS A LA VISTA, que es la razón de haber cambiado el desplegable por botones: con
+  // veintiséis categorías, abrir uno a uno para leer cinco nombres era el trabajo entero.
+  it('enseña todos los nominados como botones, con el marcado hundido', async () => {
     render(<AdminPremiosGanadores categories={categories} busy={false} ejecutar={ejecutar} />);
-    await waitFor(() => expect(screen.getByLabelText('Juego del año')).toHaveValue('goty_option_1'));
+
+    const elegido = await screen.findByRole('button', { name: 'Hades II' });
+    await waitFor(() => expect(elegido).toHaveAttribute('aria-pressed', 'true'));
+    expect(screen.getByRole('button', { name: 'Elden Ring' })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByText(L.count(1, 1))).toBeInTheDocument();
   });
 
@@ -49,8 +54,7 @@ describe('AdminPremiosGanadores', () => {
     render(<AdminPremiosGanadores categories={categories} busy={false} ejecutar={ejecutar} />);
     saveWinnersMock.mockClear();
 
-    await waitFor(() => expect(screen.getByLabelText('Juego del año')).toBeInTheDocument());
-    await userEvent.selectOptions(screen.getByLabelText('Juego del año'), 'goty_option_0');
+    await userEvent.click(await screen.findByRole('button', { name: 'Elden Ring' }));
     await userEvent.click(screen.getByRole('button', { name: L.save }));
 
     expect(saveWinnersMock).toHaveBeenCalledWith(categories, { goty: 'goty_option_0' });
@@ -60,8 +64,21 @@ describe('AdminPremiosGanadores', () => {
     render(<AdminPremiosGanadores categories={categories} busy={false} ejecutar={ejecutar} />);
     saveWinnersMock.mockClear();
 
-    await waitFor(() => expect(screen.getByLabelText('Juego del año')).toBeInTheDocument());
-    await userEvent.selectOptions(screen.getByLabelText('Juego del año'), '');
+    await userEvent.click(await screen.findByRole('button', { name: L.pick }));
+    await userEvent.click(screen.getByRole('button', { name: L.save }));
+
+    expect(saveWinnersMock).toHaveBeenCalledWith(categories, {});
+  });
+
+  // Volver a pulsar el que ya estaba marcado lo quita: es el gesto que se espera de un botón que se queda
+  // hundido, y la única forma de corregir sin ir a buscar «Sin ganador».
+  it('volver a pulsar el ganador lo desmarca', async () => {
+    render(<AdminPremiosGanadores categories={categories} busy={false} ejecutar={ejecutar} />);
+    saveWinnersMock.mockClear();
+
+    const elegido = await screen.findByRole('button', { name: 'Hades II' });
+    await waitFor(() => expect(elegido).toHaveAttribute('aria-pressed', 'true'));
+    await userEvent.click(elegido);
     await userEvent.click(screen.getByRole('button', { name: L.save }));
 
     expect(saveWinnersMock).toHaveBeenCalledWith(categories, {});

@@ -15,6 +15,12 @@ const L = PREMIOS_UI.admin.winners;
  *
  * Se guardan TODOS DE UNA VEZ: era una escritura por categoría, y con veintiséis eso son veintiséis viajes y la
  * posibilidad de quedarse a medias.
+ *
+ * SE MARCAN CON BOTONES, NO CON UN DESPLEGABLE. Con veintiséis categorías de cinco nominados, el desplegable
+ * obligaba a abrir, leer y elegir a ciegas —los nominados solo se veían de uno en uno, y para comparar dos había
+ * que abrirlo dos veces—. En botones están TODOS a la vista: se marca de una pulsada y se ve de un vistazo qué
+ * queda por marcar. Son los mismos de la pantalla de votar, más pequeños, porque aquí no hay que elegir con
+ * gusto sino apuntar un resultado que ya se sabe.
  */
 export interface AdminPremiosGanadoresProps {
   categories: PremiosCategory[];
@@ -74,29 +80,51 @@ export function AdminPremiosGanadores({ categories, busy, ejecutar }: AdminPremi
                 <li key={category.id} className="premios-admin__cat">
                   <div className="premios-admin__cat-head">
                     <strong>{titulo}</strong>
-                    <select
-                      className="input"
-                      aria-label={titulo}
-                      value={winners[category.id] || ''}
-                      onChange={(event) =>
+                  </div>
+
+                  {/* `role="group"` y `aria-pressed` y no un grupo de radios: marcar un ganador se deshace
+                      volviendo a pulsarlo, y un radio no se puede desmarcar. El botón «Sin ganador» hace lo
+                      mismo y está siempre, para quien navegue con el teclado de izquierda a derecha. */}
+                  <div className="premios-admin__picks" role="group" aria-label={titulo}>
+                    <button
+                      type="button"
+                      className={`premios-admin__pick${winners[category.id] ? '' : ' is-none'}`}
+                      aria-pressed={!winners[category.id]}
+                      onClick={() =>
                         setWinners((prev) => {
                           const next = { ...prev };
-                          if (event.target.value) next[category.id] = event.target.value;
-                          else delete next[category.id];
+                          delete next[category.id];
                           return next;
                         })
                       }
                     >
-                      <option value="">{L.pick}</option>
-                      {(category.options || []).map((option, index) => {
-                        const id = getOptionId(option, category.id, index);
-                        return (
-                          <option key={id} value={id}>
-                            {tField(option)}
-                          </option>
-                        );
-                      })}
-                    </select>
+                      {L.pick}
+                    </button>
+
+                    {(category.options || []).map((option, index) => {
+                      const id = getOptionId(option, category.id, index);
+                      const elegido = winners[category.id] === id;
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          className={`premios-admin__pick${elegido ? ' is-winner' : ''}`}
+                          aria-pressed={elegido}
+                          onClick={() =>
+                            setWinners((prev) => {
+                              const next = { ...prev };
+                              // Volver a pulsar el que ya estaba marcado lo quita: es el gesto que se espera de
+                              // un botón que se queda hundido.
+                              if (elegido) delete next[category.id];
+                              else next[category.id] = id;
+                              return next;
+                            })
+                          }
+                        >
+                          {tField(option)}
+                        </button>
+                      );
+                    })}
                   </div>
                 </li>
               );
