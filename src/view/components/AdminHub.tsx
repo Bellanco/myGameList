@@ -1,6 +1,9 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { ADMIN_ACHIEVEMENTS_UI, ADMIN_ANNOUNCEMENT_UI, ADMIN_PANEL_UI } from '../../core/constants/adminLabels';
+// SOLO EL RÓTULO, escrito aquí a propósito: importar `PREMIOS_UI` traería todos los textos de la porra al
+// chunk del panel, y este botón necesita exactamente una palabra.
+const PREMIOS_ADMIN_OPEN = 'Premios';
 import type { Announcement } from '../../core/announcement/announcement';
 import type { HiddenOverrides, OpenFrontier } from '../../core/achievements/visibility';
 import type { ExtraSteps } from '../../core/achievements/types';
@@ -60,6 +63,11 @@ const AdminAchievements = lazy(() =>
  */
 const AdminAnnouncement = lazy(() =>
   import('./AdminAnnouncement').then((module) => ({ default: module.AdminAnnouncement })));
+
+// LA PORRA, como una vista más de este panel: no hay un segundo `/admin` ni una segunda guarda de acceso. Su
+// chunk es aparte, así que quien entra al censo no se descarga el panel de la edición.
+const AdminPremios = lazy(() =>
+  import('./premios/AdminPremios').then((module) => ({ default: module.AdminPremios })));
 
 const DATE_FORMAT = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
 /** Para fechas de alta: el día basta y ocupa la mitad. */
@@ -172,7 +180,7 @@ export const AdminHub = memo(function AdminHub() {
   const vm = useAdminViewModel();
   // Dos vistas y no dos rutas: `/admin` es una ruta oculta que ya cuelga de la guarda de `isAdmin()`, y partirla
   // en dos obligaría a repetir esa guarda y a inventar un «volver» que no lleva a ninguna sección de la app.
-  const [view, setView] = useState<'users' | 'achievements' | 'announcement'>('users');
+  const [view, setView] = useState<'users' | 'achievements' | 'announcement' | 'premios'>('users');
   // La configuración de ocultación de logros: se lee al entrar en su vista y se reescribe al pulsar. Vive aquí
   // —y no en la pantalla— porque es este componente el que ya habla con Firestore.
   const [hiddenAchievements, setHiddenAchievements] = useState<HiddenOverrides>({});
@@ -416,6 +424,14 @@ export const AdminHub = memo(function AdminHub() {
     );
   }
 
+  if (view === 'premios') {
+    return (
+      <Suspense fallback={null}>
+        <AdminPremios onBack={() => setView('users')} />
+      </Suspense>
+    );
+  }
+
   const totals = vm.census?.totals;
 
   // Tarjeta contenedora propia y NO `.settings-hub`/`.settings-card`: ese hub reparte sus tarjetas en una rejilla
@@ -435,6 +451,9 @@ export const AdminHub = memo(function AdminHub() {
           </button>
           <button type="button" className="btn btn-secondary" onClick={() => setView('announcement')}>
             {ADMIN_ANNOUNCEMENT_UI.open}
+          </button>
+          <button type="button" className="btn btn-secondary" onClick={() => setView('premios')}>
+            {PREMIOS_ADMIN_OPEN}
           </button>
         </p>
 

@@ -117,6 +117,52 @@ export const PREMIOS_UI = {
     avatarAria: (nombre: string) => `Perfil de ${nombre}`,
   },
 
+  // EL PANEL. Vive dentro del de administración de la app, como una vista más: no hay un segundo `/admin`.
+  admin: {
+    open: 'Premios',
+    sectionAria: 'Administración de premios',
+    title: 'Premios',
+    back: 'Volver al panel',
+    tabs: { season: 'Temporada', categories: 'Categorías' },
+
+    season: {
+      title: 'La edición',
+      stageNone: 'No hay ninguna edición en marcha.',
+      stageOpen: 'Se está votando.',
+      stagePending: 'Cerrada y pendiente de publicar.',
+      nameLabel: 'Nombre de la edición',
+      namePlaceholder: 'El reto del jugador 2026',
+      nameHint: 'De aquí sale el identificador del archivo. Sin nombre se usa el año.',
+      closesLabel: 'Último día para votar',
+      closesHint: 'Se cierra a las 23:59 de ese día, hora peninsular.',
+      openAction: 'Abrir votación',
+      closeAction: 'Cerrar ahora',
+      publishAction: 'Publicar en el histórico',
+      // Publicar es irreversible y destructivo: retira las papeletas y vacía los nominados.
+      publishWarn: 'Al publicar se archiva la clasificación, se retiran las papeletas y se vacían los nominados. No se puede deshacer.',
+      closesAt: (fecha: string) => `Se cierra el ${fecha}`,
+      leftovers: (cuantas: number) => `Se retiraron ${cuantas} papeleta(s) sueltas de una edición anterior.`,
+      opened: (nombre: string) => `Edición «${nombre}» abierta.`,
+      closed: 'Votación cerrada.',
+      published: (nombre: string, votos: number) => `«${nombre}» publicada con ${votos} papeleta(s).`,
+      errorDay: 'Hace falta un día de cierre que no esté en el pasado.',
+    },
+
+    categories: {
+      title: 'Categorías y nominados',
+      hint: 'Los nominados se ponen cada edición; las categorías se quedan de un año para otro.',
+      nominees: (cuantos: number) => (cuantos === 1 ? '1 nominado' : `${cuantos} nominados`),
+      edit: 'Editar nominados',
+      nomineesLabel: 'Un nominado por línea',
+      save: 'Guardar',
+      saving: 'Guardando…',
+      cancel: 'Cancelar',
+      saved: (titulo: string) => `Nominados de «${titulo}» guardados.`,
+      weight: (peso: number) => `Peso ${peso}`,
+      empty: 'Todavía no hay categorías.',
+    },
+  },
+
   errores: {
     load: 'No se han podido cargar los premios.',
     submit: 'No se ha podido enviar la papeleta. Inténtalo de nuevo.',

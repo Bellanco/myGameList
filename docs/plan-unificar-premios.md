@@ -694,6 +694,7 @@ la portada de la app metería el SDK de Firebase en el grafo de arranque —172 
 quien no vota nunca—, así que cuando se haga hay que resolverlo por otra vía (la función de avisos ya sirve
 desde KV, sin Firebase).
 | **F4** · Panel | Las seis pestañas dentro del `AdminHub` | e2e de admin rehecho: abrir edición, publicar, archivar | 15 % |
+| | **En curso.** Hecho: la porra como una VISTA MÁS de `AdminHub` (sin segundo `/admin` ni segunda guarda), con las dos pestañas que desbloquean tener una edición: **Temporada** (abrir, cerrar, publicar) y **Categorías** (nominados, conservando el id de los que ya existían). Queda: censo de votos, ganadores e histórico | | |
 | **F5** · Social | Cuenta ligera, avatares en la clasificación, palmarés en el perfil, trofeo por rango, los tres cruces restantes de §6.5 (feed, estadísticas, añadir a Próximos), `LEGAL_VERSION` | Tests de reglas de `palmares`; comprobación manual de las cuatro puertas de la foto | 10 % |
 | **F6** · Retirada | Redirección permanente del sitio viejo, repositorio archivado, un solo proyecto de Pages | El enlace antiguo lleva a `/premios` | Pequeño |
 
