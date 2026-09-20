@@ -81,6 +81,23 @@ export async function fetchSeasonResult(seasonId: string): Promise<PremiosSeason
   }
 }
 
+/**
+ * Las ediciones archivadas, de la más reciente a la más antigua.
+ *
+ * Es una lectura de ADMINISTRADOR: lista la colección entera, y las reglas solo dejan leer en abierto los
+ * archivos que tienen el sello de cierre. Al público no le hace falta —llega a una edición por su id, que es lo
+ * que apunta la configuración— y una consulta que tropiece con un documento prohibido falla entera.
+ *
+ * Se ordena en el cliente: son unas pocas ediciones al año y pedir orden al servidor exigiría un índice.
+ */
+export async function listSeasonResults(): Promise<Array<PremiosSeasonResult & { id: string }>> {
+  const { firestore } = await requireServices();
+  const snapshot = await getDocs(collection(firestore, RESULTS_COLLECTION));
+  return snapshot.docs
+    .map((d) => ({ id: d.id, ...(d.data() as PremiosSeasonResult) }))
+    .sort((a, b) => (b.season || 0) - (a.season || 0) || b.id.localeCompare(a.id));
+}
+
 export interface LiveEdition {
   ballots: PremiosBallot[];
   categories: PremiosCategory[];

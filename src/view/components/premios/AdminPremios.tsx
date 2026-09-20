@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { AdminPremiosCategorias } from './AdminPremiosCategorias';
+import { AdminPremiosGanadores } from './AdminPremiosGanadores';
+import { AdminPremiosHistorico } from './AdminPremiosHistorico';
+import { AdminPremiosVotos } from './AdminPremiosVotos';
 import { todayInVotingZone, toVotingZoneDay } from '../../../core/premios/closingDate';
 import { getSeasonLabel } from '../../../core/premios/seasonId';
 import { SEASON_STAGE, getSeasonStage, validateClosingDay } from '../../../core/premios/votingSchedule';
@@ -31,7 +34,7 @@ export interface AdminPremiosProps {
 }
 
 export function AdminPremios({ onBack }: AdminPremiosProps) {
-  const [tab, setTab] = useState<'season' | 'categories'>('season');
+  const [tab, setTab] = useState<'season' | 'categories' | 'winners' | 'ballots' | 'history'>('season');
   const [config, setConfig] = useState<PremiosVotingConfig | null>(null);
   const [categories, setCategories] = useState<PremiosCategory[]>([]);
   const [busy, setBusy] = useState(false);
@@ -125,6 +128,27 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
           >
             {L.tabs.categories}
           </button>
+          <button
+            type="button"
+            className={`btn${tab === 'winners' ? ' btn-primary' : ''}`}
+            onClick={() => setTab('winners')}
+          >
+            {L.winners.title}
+          </button>
+          <button
+            type="button"
+            className={`btn${tab === 'ballots' ? ' btn-primary' : ''}`}
+            onClick={() => setTab('ballots')}
+          >
+            {L.ballots.title}
+          </button>
+          <button
+            type="button"
+            className={`btn${tab === 'history' ? ' btn-primary' : ''}`}
+            onClick={() => setTab('history')}
+          >
+            {L.history.title}
+          </button>
         </p>
 
         {notice ? <p className="premios-admin__notice">{notice}</p> : null}
@@ -198,8 +222,16 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
               </div>
             ) : null}
           </div>
-        ) : (
+        ) : tab === 'categories' ? (
           <AdminPremiosCategorias categories={categories} busy={busy} ejecutar={ejecutar} />
+        ) : tab === 'winners' ? (
+          <AdminPremiosGanadores categories={categories} busy={busy} ejecutar={ejecutar} />
+        ) : tab === 'ballots' ? (
+          // Se remonta con cada entrada a la pestaña —clave por pestaña— para que las papeletas sean las de
+          // ahora y no las de cuando se abrió el panel.
+          <AdminPremiosVotos key="ballots" categories={categories} />
+        ) : (
+          <AdminPremiosHistorico busy={busy} ejecutar={ejecutar} />
         )}
       </div>
     </section>

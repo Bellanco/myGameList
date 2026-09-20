@@ -148,6 +148,52 @@ export const PREMIOS_UI = {
       errorDay: 'Hace falta un día de cierre que no esté en el pasado.',
     },
 
+    // Marcar quién ganó cada categoría. Vive en un documento que solo lee el administrador: hasta que se publica
+    // la edición, esto no lo ve nadie más.
+    winners: {
+      title: 'Ganadores',
+      hint: 'Se guardan donde no los ve nadie hasta publicar la edición.',
+      pick: 'Sin ganador',
+      save: 'Guardar ganadores',
+      saved: (cuantos: number) => `${cuantos} ganador(es) guardado(s).`,
+      skipped: (cuantas: number) => `${cuantas} categoría(s) sin nominados se han omitido.`,
+      migrated: (cuantas: number) => `${cuantas} categoría(s) dejan de exponer su ganador.`,
+      empty: 'No hay categorías con nominados: ponlos antes de marcar ganadores.',
+      count: (marcados: number, total: number) => `${marcados} de ${total} categorías con ganador`,
+    },
+
+    // El censo de papeletas de la edición en curso.
+    ballots: {
+      title: 'Votos',
+      hint: 'Las papeletas de esta edición. Se retiran al publicarla.',
+      total: (cuantas: number) => (cuantas === 1 ? '1 papeleta' : `${cuantas} papeletas`),
+      none: 'Todavía no ha votado nadie.',
+      voted: (cuantas: number, total: number) => `${cuantas}/${total} categorías`,
+      edits: (cuantas: number) => (cuantas === 0 ? 'sin correcciones' : `${cuantas} corrección(es)`),
+      sentAt: 'Enviada',
+      // La clasificación PROVISIONAL, con los ganadores marcados hasta ahora: es lo que se va a publicar.
+      preview: 'Clasificación provisional',
+      previewHint: 'Con los ganadores marcados ahora mismo. Es lo que se publicará.',
+    },
+
+    // Las ediciones ya publicadas.
+    history: {
+      title: 'Histórico',
+      hint: 'Ediciones publicadas. De un archivo solo se puede cambiar el nombre.',
+      empty: 'Todavía no se ha publicado ninguna edición.',
+      ballots: (cuantas: number) => `${cuantas} papeleta(s)`,
+      rename: 'Renombrar',
+      renamed: (nombre: string) => `Renombrada a «${nombre}».`,
+      remove: 'Borrar del histórico',
+      // Borrar un archivo es irreversible: los votos de esa edición se retiraron al publicarla.
+      removeConfirm: (nombre: string) =>
+        `¿Borrar «${nombre}» del histórico? Es lo único que queda de esa edición y no se puede recuperar.`,
+      removed: (nombre: string) => `«${nombre}» borrada del histórico.`,
+      repointed: (nombre: string) => `La pantalla pública pasa a enseñar «${nombre}».`,
+      repointedEmpty: 'Ya no queda ninguna edición publicada que enseñar.',
+      open: 'Ver resultados',
+    },
+
     categories: {
       title: 'Categorías y nominados',
       hint: 'Los nominados se ponen cada edición; las categorías se quedan de un año para otro.',

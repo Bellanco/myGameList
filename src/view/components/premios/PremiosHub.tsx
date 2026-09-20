@@ -8,11 +8,13 @@ import type { SocialAuthUser } from '../../../model/repository/firebaseClient';
 import type { TabData } from '../../../model/types/game';
 import { matchPremiosRoute, PREMIOS_ROUTES } from '../../../viewmodel/premios/premiosRoutes';
 import { usePremiosEdition } from '../../../viewmodel/premios/usePremiosEdition';
+import { usePremiosResult } from '../../../viewmodel/premios/usePremiosResult';
 import { usePremiosVoting } from '../../../viewmodel/premios/usePremiosVoting';
 import { starsFromGrade } from '../../../core/utils/scoreScale';
 import { useScoreScale } from '../../hooks/useScoreScale';
 import { PremiosCerrada, PremiosEnviada, PremiosYaVotaste } from './PremiosEstado';
 import { PremiosPortada } from './PremiosPortada';
+import { PremiosResultsScreen } from './PremiosResultsScreen';
 import { PremiosReviewScreen } from './PremiosReviewScreen';
 import { PremiosVoteScreen } from './PremiosVoteScreen';
 import '../../../styles/premios.scss';
@@ -78,6 +80,8 @@ export function PremiosHub({ games }: PremiosHubProps) {
   const edition = usePremiosEdition(user?.uid || '');
   const voting = usePremiosVoting(edition.categories);
   const route = matchPremiosRoute(location.pathname);
+  // El archivo se pide SOLO cuando se está mirando: es una lectura más, y la portada no lo necesita.
+  const archivo = usePremiosResult(route.panel === 'resultados' ? route.seasonId : '', route.panel === 'resultados' ? edition.config : null);
 
   // Corregir un voto arranca de lo ya enviado, no de cero.
   useEffect(() => {
@@ -147,6 +151,14 @@ export function PremiosHub({ games }: PremiosHubProps) {
         <PremiosCerrada scheduled={edition.stage === 'none' && !hasResults} hasResults={hasResults} />
       ) : sinCorrecciones ? (
         <PremiosYaVotaste hasResults={hasResults} />
+      ) : route.panel === 'resultados' ? (
+        archivo.loading ? null : (
+          <PremiosResultsScreen
+            result={archivo.result}
+            leaderboard={archivo.leaderboard}
+            ownProfileId={profileId}
+          />
+        )
       ) : route.panel === 'enviada' ? (
         <PremiosEnviada remainingEdits={edition.remainingEdits} hasResults={hasResults} />
       ) : route.panel === 'votar' ? (
