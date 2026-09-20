@@ -313,11 +313,18 @@ const SocialHubInner = memo(function SocialHubInner({
    * Sale del MISMO sitio que el espejo de logros —el documento del directorio, ya descargado—, así que la
    * vitrina no cuesta ni una petición. Se enseña como un logro especial porque eso es lo que es para quien lo
    * mira; lo que no hace es entrar en el catálogo, que solo contiene lo que se deriva de la biblioteca.
+   *
+   * Y sale del PERFIL ABIERTO, no de una búsqueda en el directorio visible. Buscándolo ahí, TU PROPIA ficha se
+   * quedaba siempre sin vitrina: ese directorio te excluye por identidad —es lo que impide que aparezcas en tu
+   * lista de gente—, así que quien había ganado una edición no se la veía al entrar en su perfil aunque sí la
+   * viera en el de otro. Es el mismo tropiezo que ya tuvo el espejo de logros. Por el camino se arregla otro:
+   * el detalle se puede abrir por el alias `me`, que no es el id de ninguna entrada, y `selectedProfileDetail`
+   * ya lo resuelve contra el directorio ENTERO.
    */
-  const detailPalmares = useMemo(() => {
-    const entry = visibleSocialDirectory.find((candidate) => candidate.id === detailId);
-    return entry?.palmares || [];
-  }, [detailId, visibleSocialDirectory]);
+  const detailPalmares = useMemo(
+    () => selectedProfileDetail?.palmares || [],
+    [selectedProfileDetail],
+  );
 
   /*
    * ABRIR UNA RESEÑA EMPIEZA POR SU PRINCIPIO, y eso ya no se hace aquí.

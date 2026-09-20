@@ -286,6 +286,13 @@ export const PREMIOS_UI = {
     // Se dice «en» y no «ganó»: un empate a primer puesto es de dos, y «ganó» sonaría a que fue el único.
     entry: (rank: number, edicion: string) => `${rank}.º en ${edicion}`,
     medalAria: (rank: number, edicion: string) => `Trofeo: ${rank}.º puesto en ${edicion}`,
+    /**
+     * EL TROFEO ES UN ENLACE al archivo de esa edición, y hay que decir a dónde lleva: con el rótulo suelto, un
+     * lector de pantalla anunciaba «enlace, Trofeo: 1.º puesto en…» y no había forma de saber que al pulsar se
+     * sale del perfil. Puesto en el enlace, sustituye a lo que digan la medalla y el rótulo de dentro, que si no
+     * se leerían los dos seguidos.
+     */
+    entryAria: (rank: number, edicion: string) => `${rank}.º en ${edicion}: ver los resultados`,
     rarity: 'Excepcional',
     empty: 'Todavía no ha ganado ninguna edición.',
   },

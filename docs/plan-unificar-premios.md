@@ -303,6 +303,16 @@ Vive en `profiles/{uid}.palmares` (array, tope 50 entradas). Tres decisiones:
   temple del filo. No abre una dirección visual nueva. La lámina descargable de GA se conserva aparte, como
   «póster», que es otra cosa y se comparte distinto.
 
+Y dos más que salieron al usarlo:
+
+- **La vitrina se ve en la ficha PROPIA igual que en la ajena.** Salía de buscar el perfil abierto en el directorio
+  ya filtrado, que excluye por identidad a quien mira: quien había ganado una edición se la veía a los demás y no a
+  sí mismo. Se resuelve contra el perfil abierto (`selectedProfileDetail`), que se busca en el directorio entero y
+  entiende además el alias `me`. Es el mismo tropiezo que ya tuvo el espejo de logros.
+- **Cada trofeo enlaza al resumen de los votos de su edición** (`/premios/resultados/:seasonId`), que es donde está
+  lo que la medalla resume. Misma dirección que reparte el botón de compartir, y sin sesión (§4.2): el archivo se
+  ve igual desde el perfil que desde un enlace recibido.
+
 ### 2.4 `premiosConfig/voting.visible` — la sección estacional
 
 Un booleano que decide si la porra se ofrece en la navegación. Lo escribe el panel. La regla de presentación:

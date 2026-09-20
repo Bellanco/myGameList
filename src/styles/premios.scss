@@ -399,7 +399,28 @@
   padding: 0;
 }
 
-.premios-palmares__item { display: grid; gap: .25rem; justify-items: center; max-width: 7rem; }
+.premios-palmares__item { display: grid; max-width: 7rem; }
+
+/* EL TROFEO ENTERO ES EL ENLACE —medalla y rótulo—, no solo el texto: a 48 px la medalla es lo que se ve y lo
+   que se intenta pulsar, y un enlace de una línea de 10 px sería un blanco imposible en el móvil. Hereda el
+   color en vez de teñirse de enlace: la vitrina se lee como vitrina y es el subrayado del rótulo al pasar lo
+   que dice que se puede pulsar. */
+.premios-palmares__link {
+  display: grid;
+  gap: .25rem;
+  justify-items: center;
+  color: inherit;
+  text-decoration: none;
+}
+
+.premios-palmares__link:hover .premios-palmares__caption,
+.premios-palmares__link:focus-visible .premios-palmares__caption { text-decoration: underline; }
+
+.premios-palmares__link:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
 
 .premios-palmares__caption {
   color: var(--text-muted);
