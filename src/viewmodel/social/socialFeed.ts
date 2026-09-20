@@ -8,6 +8,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { localDayKey, startOfLocalDay } from '../../core/utils/dateTime';
 import { normalizeTimestamp as toSafeTimestamp } from '../../core/utils/normalize';
 import type { SocialActivityEntry, SocialMoveEntry, SocialPostEntry } from '../../model/repository/socialGistRepository';
+import type { PalmaresEntry } from '../../model/types/premios';
 import { useFeedMoveTabs } from '../../view/hooks/useFeedMoveTabs';
 import { achievementFeedEntries, type AchievementFeedEntry } from '../../core/achievements/feed';
 import { ENABLE_ACHIEVEMENTS } from '../../core/achievements/flags';
@@ -353,6 +354,15 @@ export type SocialDirectoryEntry = {
    * reconstrucciones lo dejaban fuera y nadie veía los logros de nadie más.
    */
   achievementsMirror: string;
+  /**
+   * EL PALMARÉS: las ediciones de la porra ganadas, para la vitrina de la ficha.
+   *
+   * Opcional, a diferencia del espejo, y a propósito: casi nadie lo tiene —cinco puestos por edición— así que
+   * obligar a escribir una lista vacía en cada reconstrucción solo añadiría ruido. Lo que sí vale aquí es la
+   * advertencia de arriba: este tipo sombrea al del repositorio, así que una reconstrucción que se lo olvide
+   * deja la vitrina en blanco sin que nada avise.
+   */
+  palmares?: PalmaresEntry[];
   activity: SocialActivityFeedItem[];
   posts: SocialPostFeedItem[];
   /** F4 — mensajes de lista del perfil, ya enriquecidos con su identidad. */

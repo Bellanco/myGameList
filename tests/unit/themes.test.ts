@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_PALETTE, THEMES, type PaletteId } from '../../src/core/constants/palettes';
 import { socialVoiceByPalette } from '../../src/core/constants/themes/social';
+import { premiosVoiceByPalette } from '../../src/core/constants/themes/premios';
 
 /**
  * EL CONTRATO DE UN TEMA, comprobado.
@@ -105,7 +106,7 @@ describe('temas · la ficha en TypeScript', () => {
   it('no hay fichas huérfanas: cada fichero de `constants/themes` es de un tema del registro', () => {
     const sueltos = Object.keys(FICHEROS_TS)
       .map((r) => (r.split('/').at(-1) as string).replace(/\.ts$/, ''))
-      .filter((n) => !['theme', 'social'].includes(n))
+      .filter((n) => !['theme', 'social', 'premios'].includes(n))
       .map((n) => n.replace(/\.social$/, ''));
     expect([...new Set(sueltos)].sort()).toEqual([...IDS].sort());
   });
@@ -115,6 +116,18 @@ describe('temas · la ficha en TypeScript', () => {
     for (const frase of [tema.voice.appError, tema.voice.appOffline]) expect(frase.trim().length).toBeGreaterThan(8);
     for (const clave of ['error', 'offline'] as const) {
       expect(socialVoiceByPalette(clave)[id].trim().length, `voz social ${clave} de ${id}`).toBeGreaterThan(8);
+      // La misma exigencia para la sección de premios: un tema nuevo que se quede sin frase saldría mudo justo
+      // cuando algo se ha caído, que es cuando más se nota.
+      expect(premiosVoiceByPalette(clave)[id].trim().length, `voz de premios ${clave} de ${id}`).toBeGreaterThan(8);
+    }
+  });
+
+  // El mismo criterio que con las frases de la app: copiar y pegar la de otro tema sin cambiar el guiño deja dos
+  // mundos hablando igual, que es justo lo que estas voces existen para evitar.
+  it('ningún tema repite la frase de premios de otro', () => {
+    for (const clave of ['error', 'offline'] as const) {
+      const frases = IDS.map((id) => premiosVoiceByPalette(clave)[id]);
+      expect(new Set(frases).size, `voces de premios repetidas en «${clave}»`).toBe(frases.length);
     }
   });
 

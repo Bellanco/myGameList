@@ -120,9 +120,15 @@ async function pantallaDeAjustes(page: Page): Promise<void> {
  */
 async function menuDeAjustesAbierto(page: Page): Promise<void> {
   await page.goto('/completados');
+  // EL PUNTO DE PREMIOS, ENCENDIDO A PROPÓSITO: es el único rótulo de este menú que no usa el color de texto de
+  // siempre —va en el ámbar del tema— y el contraste de un amarillo sobre fondo claro es justo lo que se rompe
+  // sin que nadie se entere. Fuera de temporada no se pinta, así que sin esto la auditoría nunca lo vería.
+  await page.evaluate(() => localStorage.setItem('mis-listas-premios-visible', 'on'));
+  await page.reload();
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await page.getByRole('button', { name: 'Ajustes' }).click();
   await expect(page.locator('.settings-menu')).toBeVisible();
+  await expect(page.locator('.settings-menu-point.is-premios')).toBeVisible();
   await animacionesDeEntradaTerminadas(page);
 }
 
@@ -132,6 +138,20 @@ async function puertaDelHubSocial(page: Page): Promise<void> {
   // Se espera al ÚLTIMO de los dos peldaños: con el primero a la vista la lista todavía puede estar pintándose.
   // (Antes se esperaba a la barra de progreso, que se fue con el rediseño a dos pasos: la lista ES el progreso.)
   await expect(page.locator('.hub-gateway-stage').nth(1)).toBeVisible();
+  await animacionesDeEntradaTerminadas(page);
+}
+
+/**
+ * La portada de los premios, SIN SESIÓN, que es lo que ve cualquiera que llegue por un enlace.
+ *
+ * Es lo único de la sección que se puede auditar sin datos: votar exige sesión y una edición abierta, y montar
+ * las dos cosas aquí convertiría un recorrido de contraste en un test de integración con Firestore. Lo que sí
+ * cubre —y es lo que importa para el color— son los dos textos atenuados, el distintivo de estado y los botones
+ * sobre el acento, que son los papeles nuevos que trae la sección.
+ */
+async function portadaDePremios(page: Page): Promise<void> {
+  await page.goto('/premios');
+  await expect(page.locator('.premios-portada__title')).toBeVisible();
   await animacionesDeEntradaTerminadas(page);
 }
 
@@ -313,6 +333,7 @@ const PANTALLAS = [
   { nombre: 'hub social', amplia: false, abrir: puertaDelHubSocial },
   { nombre: 'ruleta', amplia: false, abrir: ruletaAbierta },
   { nombre: 'logros', amplia: true, abrir: listadoDeLogros },
+  { nombre: 'premios', amplia: false, abrir: portadaDePremios },
 ] as const;
 
 for (const palette of PALETAS) {

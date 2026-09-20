@@ -1,4 +1,7 @@
-import { memo, useCallback, useEffect, useRef } from 'react';
+import { memo, useCallback, useEffect, useRef, useMemo } from 'react';
+import { usePremiosVisible } from '../../viewmodel/premios/usePremiosVisible';
+/** La sección de premios. Literal y no importado de `premiosRoutes`, que vive en el chunk de esa sección. */
+const PREMIOS_HOME = '/premios';
 import { Link, useLocation } from 'react-router-dom';
 import { UI_MESSAGES } from '../../core/constants/labels';
 import { SETTINGS_ROUTES, type SettingsGroup } from '../../core/constants/routes';
@@ -34,6 +37,24 @@ const PUNTOS: ReadonlyArray<{ group: SettingsGroup; label: string; rank?: 'secon
   { group: 'filters', label: MENU.filters, rank: 'second' },
   { group: 'data', label: MENU.data, rank: 'third' },
 ];
+
+/**
+ * LOS PREMIOS, que no son un grupo de ajustes sino un salto a otra sección —de ahí que no estén en `PUNTOS`, que
+ * indexa `SETTINGS_ROUTES`—.
+ *
+ * VA EN ÁMBAR, con el color de aviso de cada tema y no con el acento: es lo único de este menú que lleva fuera de
+ * Ajustes, y el color es lo que lo dice sin necesidad de explicarlo. Cambia de piel con el tema como todo lo
+ * demás; un amarillo fijo se habría salido del sistema y no habría pasado el contraste en las paletas claras.
+ *
+ * AL NIVEL DE «Filtros» y sin mover a los otros dos. La escalera de este menú tiene tres peldaños medidos
+ * (1,20 · 1,00 · 0,86) y el propio componente avisa de que bajar más el tono «sería abrir un caso que nadie ha
+ * medido»: un cuarto escalón dejaría a «Datos» en letra de pie de foto, que es de donde se venía. Repetir tamaño
+ * es más barato que inventarse un peldaño, y aquí el que distingue es el color.
+ *
+ * SOLO SE PINTA CUANDO HAY ALGO QUE VER (ver `usePremiosVisible`): votación abierta, resultados recientes, o
+ * porque lo diga el interruptor del panel. Fuera de temporada, este menú vuelve a tener tres puntos.
+ */
+const PUNTO_PREMIOS = { to: PREMIOS_HOME, label: MENU.premios, rank: 'second' as const };
 
 /**
  * EL MENÚ DE LA PESTAÑA DE AJUSTES — tres puntos y nada más, cada uno menor que el anterior (ver `PUNTOS`).
@@ -114,7 +135,27 @@ export const SettingsMenu = memo(function SettingsMenu({ hasSocialProfile, onTog
     cerrar();
   }, [cerrar]);
 
-  const puntos = hasSocialProfile ? PUNTOS : PUNTOS.filter((p) => p.group !== 'design');
+  const ofrecePremios = usePremiosVisible();
+
+  /**
+   * Los puntos del menú, EN ORDEN. Premios va detrás de Diseño —no al final—, que es donde se decidió que
+   * estuviera: es lo segundo que se ofrece cuando hay edición, no una nota al pie.
+   *
+   * Se compone una sola lista en vez de pintar el de premios aparte: con dos bloques, su posición dependía del
+   * orden del marcado y acababa siempre al final sin que nada lo dijera.
+   */
+  const puntos = useMemo(() => {
+    const base = hasSocialProfile ? PUNTOS : PUNTOS.filter((p) => p.group !== 'design');
+    const lista: Array<{ key: string; to: string; label: string; rank?: string; premios?: boolean }> = base.map(
+      (punto) => ({ key: punto.group, to: SETTINGS_ROUTES[punto.group], label: punto.label, rank: punto.rank }),
+    );
+    if (!ofrecePremios) return lista;
+
+    const tras = lista.findIndex((punto) => punto.key === 'design');
+    const entrada = { key: 'premios', to: PUNTO_PREMIOS.to, label: PUNTO_PREMIOS.label, rank: PUNTO_PREMIOS.rank, premios: true };
+    lista.splice(tras + 1, 0, entrada);
+    return lista;
+  }, [hasSocialProfile, ofrecePremios]);
 
   return (
     <nav
@@ -124,19 +165,22 @@ export const SettingsMenu = memo(function SettingsMenu({ hasSocialProfile, onTog
       className="settings-menu"
       aria-label={MENU.ariaLabel}
     >
-      {puntos.map(({ group, label, rank }) => (
-        <Link
-          key={group}
-          to={SETTINGS_ROUTES[group]}
-          replace
-          className={`settings-menu-point ${rank ? `is-${rank}` : ''} ${pathname === SETTINGS_ROUTES[group] ? 'is-current' : ''}`.replace(/\s+/g, ' ').trim()}
-          aria-current={pathname === SETTINGS_ROUTES[group] ? 'page' : undefined}
-          onClick={alElegir}
-        >
-          <span className="settings-menu-dot" aria-hidden="true" />
-          {label}
-        </Link>
-      ))}
+      {puntos.map(({ key, to, label, rank, premios }) => {
+        const actual = premios ? pathname.startsWith(to) : pathname === to;
+        return (
+          <Link
+            key={key}
+            to={to}
+            replace
+            className={`settings-menu-point ${rank ? `is-${rank}` : ''} ${premios ? 'is-premios' : ''} ${actual ? 'is-current' : ''}`.replace(/\s+/g, ' ').trim()}
+            aria-current={actual ? 'page' : undefined}
+            onClick={alElegir}
+          >
+            <span className="settings-menu-dot" aria-hidden="true" />
+            {label}
+          </Link>
+        );
+      })}
     </nav>
   );
 });

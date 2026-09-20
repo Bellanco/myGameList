@@ -275,6 +275,7 @@ export const UI_MESSAGES = {
     legal: 'Información legal',
     stats: 'Estadísticas de mis listas',
     'shared-review': 'Reseña compartida',
+    premios: 'Premios',
   },
   skipToContent: 'Saltar al contenido',
   // Lo que se ANUNCIA mientras baja el chunk de una pantalla. El esqueleto que se ve es decorativo
@@ -316,6 +317,9 @@ export const UI_MESSAGES = {
     ariaLabel: 'Ajustes',
     open: 'Abrir ajustes',
     design: 'Diseño',
+    // La porra de premios. No es un grupo de ajustes: es un salto a otra sección, y por eso va en ámbar (ver
+    // `SettingsMenu`). Solo se pinta cuando hay algo que ver.
+    premios: 'Premios',
     filters: 'Filtros',
     /* «Datos» reúne lo que antes eran «Integración» y «Legal»: por dónde entran y salen tus listas, qué se
        registra de ellas y cómo se borra todo. */

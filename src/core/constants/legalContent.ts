@@ -98,10 +98,15 @@ const PRIVACY: LegalDocument = {
   id: 'privacy',
   title: 'Política de privacidad',
   // Fecha PROPIA del documento y no `LEGAL_VERSION`, que es lo que `legal.ts` distingue: al declarar las
-  // carátulas (2026-09-15) se añade un tratamiento NUEVO pero OPT-IN y apagado por defecto, que no envía ningún
+  // carátulas (2026-09-15) se añadió un tratamiento NUEVO pero OPT-IN y apagado por defecto, que no envía ningún
   // dato personal —solo el título del juego, y desde el servidor—. Revisar el texto sí; obligar a todo el mundo
   // a volver a aceptar por algo que no ha empezado a ocurrir todavía, no.
-  updated: '2026-09-15',
+  //
+  // CON LOS PREMIOS (2026-09-20) sí se sube `LEGAL_VERSION`, y por tres cosas que no son opt-in ni invisibles:
+  // el archivo de una edición publicada es de LECTURA PÚBLICA con su enlace, votar crea una cuenta mínima aunque
+  // no se tuviera perfil, y quien queda entre los cinco primeros recibe un trofeo en su perfil que él no puede
+  // retirar. Son tratamientos nuevos con efectos hacia fuera: toca volver a pedir la aceptación.
+  updated: '2026-09-20',
   intro:
     'Esta política explica qué datos trata la app, con qué base y cómo ejercer tus derechos. Está escrita sobre lo que el código hace hoy, no sobre lo que podría hacer.',
   sections: [
@@ -117,6 +122,9 @@ const PRIVACY: LegalDocument = {
         'En Firestore, si activas lo social: tu identificador de usuario, el nick que elijas —y si no eliges ninguno, el nombre de tu cuenta de Google—, tu foto de perfil de Google (puedes quitarla), tus amistades, el rango de tu perfil, la fecha de alta, la marca de tu última actividad, tus preferencias de la app y tus logros conseguidos —la lista de medallas con el día de cada una y la marca de cuándo se publicó por última vez—. El identificador de tu Gist social ya NO se publica ahí: vive en el documento privado que solo tú lees, y denormalizado en tus documentos de amistad.',
         'En Firestore, en un documento privado que solo tú puedes leer: los identificadores de tus Gists y tu token de GitHub cifrado.',
         'En Cloudflare, si compartes una reseña con enlace público: una copia de esa reseña (juego, nota, texto, metadatos, tu nick y las fechas) mientras el enlace siga vivo. Caduca sola y se borra al retirarla o al eliminar tu cuenta. No lleva tu correo, tu identificador ni los de tus Gists.',
+        'En Firestore, si votas en los premios: tu papeleta —lo que has votado en cada categoría, el nombre que elijas para la clasificación, el nombre de tu cuenta de Google, la fecha del envío y cuántas veces la has corregido—. La lees tú y quien administra el servicio, nadie más, y se RETIRA al publicarse la edición: de ella solo sobrevive la clasificación. No lleva tu correo electrónico.',
+        'En Firestore, si votas sin tener perfil social: se crea uno mínimo con tu nombre, tu foto de Google y un pseudónimo. No aparece en el directorio, no publica nada y existe para que tu fila de la clasificación pueda llevar a algún sitio el día que completes tu perfil.',
+        'En Firestore, si quedas entre los cinco primeros puestos de una edición: el trofeo —la edición, su nombre, tu puesto y la fecha— se guarda en tu perfil y se enseña en él como un logro. Lo concede quien administra el servicio al publicar la edición; tú no puedes ponértelo ni quitártelo.',
         'Si aceptas la analítica: eventos de uso y errores en Google Analytics, con un identificador aleatorio.',
       ],
       paragraphs: [
@@ -137,6 +145,7 @@ const PRIVACY: LegalDocument = {
         'GitHub: alojamiento de tus Gists, en tu propia cuenta.',
         'Cloudflare: alojamiento y entrega de la web.',
         'IGDB (Twitch), solo si activas las carátulas: recibe el TÍTULO del juego para buscar su portada. La petición la hace el servidor de esta app, no tu navegador, así que IGDB no ve tu dirección IP ni nada que te identifique: solo un nombre de juego, sin saber de quién es la lista ni cuántas más hay. Lo buscado se guarda en una caché compartida por todos los usuarios, de modo que un título ya consultado no se vuelve a preguntar.',
+        'CUALQUIERA CON EL ENLACE, si se publica una edición de los premios en la que votaste: el archivo de esa edición es de lectura pública y contiene el nombre que elegiste, tus puntos y tu puesto, junto a los de los demás participantes. NO contiene tu identificador de usuario, ni tu correo, ni tu foto: solo tu nombre elegido y un pseudónimo con el que la pantalla reconoce tu propia fila. Es permanente mientras la edición siga publicada.',
         'Otros usuarios con sesión iniciada: tu nick, tu foto, tu rango, cuándo estuviste activo por última vez, tus logros y tu actividad social, en los términos descritos arriba. Con los logros conviene distinguir dos cosas: la vitrina de medallas solo se PINTA en las fichas de tus amistades, pero el dato viaja en tu perfil, y tu perfil lo puede leer cualquier usuario con sesión, tenga o no amistad contigo. Lo primero es una decisión de presentación; lo que te protege es lo segundo, y es lo que aquí se declara.',
         'Cualquier persona que conozca el identificador de tu Gist social. Ese Gist ya NO es público: la app lo crea (y migra los antiguos) como Gist no listado, así que no aparece en tu perfil de GitHub ni en los buscadores. Pero «no listado» no es «privado»: quien tenga el identificador puede leerlo sin necesidad de sesión en esta app. La app solo lo comparte con tus amistades.',
         'CUALQUIERA, si compartes una reseña con enlace público: esa reseña concreta queda accesible en internet para quien tenga el enlace, sin necesidad de cuenta, hasta que caduque o la retires. Es siempre una acción tuya, reseña a reseña.',

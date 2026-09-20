@@ -8,8 +8,15 @@ import {
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
-import { ADMIN_EMAIL } from '../../src/core/security/admin';
+import { ADMIN_CLAIM } from '../../src/core/security/admin';
+import {
+  PREMIOS_OPPORTUNITIES_BY_TIER,
+  PREMIOS_OPPORTUNITIES_WITHOUT_SOCIAL,
+  getMaxBallotEdits,
+} from '../../src/core/premios/ballotEdits';
+import { BALLOT_NAME_MAX_LENGTH } from '../../src/core/premios/limits';
 import { PUBLIC_NAME_MAX_LENGTH } from '../../src/core/security/sanitize';
+import { PROFILE_ALLOWED_KEYS, SOCIAL_ALLOWED_KEYS } from '../../scripts/lib/profile-rules-predicates.mjs';
 
 // Test de integración: requiere el emulador de Firestore. Ejecutar con `npm run test:rules`.
 // Valida las reglas REALES desplegables (perfiles, privateConfig/userMap solo-dueño, admin, catch-all).
@@ -28,9 +35,12 @@ describe('firestore.rules', () => {
   afterEach(async () => { await env.clearFirestore(); });
   afterAll(async () => { await env.cleanup(); });
 
-  const ADMIN = { sub: 'admin-uid', email: 'bellanco3@gmail.com', email_verified: true };
+  // QUIEN MANDA ES EL CLAIM, no el correo: el token del administrador se construye con el MISMO nombre de claim
+  // que usa el cliente (`ADMIN_CLAIM`), así que si alguien lo renombra en un sitio y no en el otro, estos tests
+  // dejan de pasar. Es el par duplicado de `firestore.rules` ↔ `src/core/security/admin.ts`.
+  const ADMIN = { sub: 'admin-uid', claims: { [ADMIN_CLAIM]: true } as Record<string, unknown> };
   const ownerDb = (uid: string) => env.authenticatedContext(uid).firestore();
-  const adminDb = () => env.authenticatedContext(ADMIN.sub, { email: ADMIN.email, email_verified: true }).firestore();
+  const adminDb = () => env.authenticatedContext(ADMIN.sub, ADMIN.claims).firestore();
   const anonDb = () => env.unauthenticatedContext().firestore();
 
   async function seed(path: string, id: string, data: Record<string, unknown>) {
@@ -113,6 +123,30 @@ describe('firestore.rules', () => {
   });
 
   describe('profiles', () => {
+    /**
+     * EL PAR DUPLICADO CON EL AUDITOR PREVIO AL DESPLIEGUE (`scripts/audit-profile-rules.mjs`).
+     *
+     * Ese script contesta a «¿hay perfiles reales que estas reglas rechazarían?», y para eso lleva su propia
+     * copia de las allowlists. Se quedó sin `achievements` ni `palmares` cuando las reglas los admitieron, y
+     * pasó lo que tenía que pasar: la auditoría delataba como rotos ocho perfiles válidos. Un auditor que avisa
+     * de más se acaba ignorando, que es justo lo contrario de para lo que existe.
+     *
+     * Se compara la lista, no el texto: el orden lo pone quien edite las reglas y no significa nada.
+     */
+    it('las allowlists del perfil son las mismas en las reglas y en el auditor', () => {
+      const lista = (funcion: string) =>
+        rulesSource
+          .split(funcion)[1]
+          .split('hasOnly([')[1]
+          .split('])')[0]
+          .match(/"([^"]+)"/g)!
+          .map((clave) => clave.replaceAll('"', ''))
+          .sort();
+
+      expect(lista('function profileWriteIsValid()')).toEqual([...PROFILE_ALLOWED_KEYS].sort());
+      expect(lista('function profileSocialIsSane()')).toEqual([...SOCIAL_ALLOWED_KEYS].sort());
+    });
+
     /**
      * EL ESPEJO DE LOGROS (F3). Lo escribe su dueño y lo lee cualquier autenticado, así que lo que hay que fijar
      * es el tamaño y la forma: esa cadena se la descarga entera el directorio social de todo el mundo, y sin tope
@@ -441,8 +475,28 @@ describe('firestore.rules', () => {
   // Panel de administración (`/admin`): estas reglas son la ÚNICA barrera real del panel — el gate del cliente
   // solo esconde la interfaz. Cada operación que ofrece el panel tiene aquí su contraparte permitida/denegada.
   describe('panel de administración', () => {
-    it('el correo del panel y el de las reglas son el mismo (si cambia uno, hay que cambiar el otro)', () => {
-      expect(ADMIN_EMAIL).toBe(ADMIN.email);
+    // EL PAR DUPLICADO, comprobado contra las reglas de verdad y no por igualdad de constantes: se escribe en un
+    // documento que SOLO el administrador puede tocar (`appConfig/achievements`) con tres tokens distintos.
+    it('manda el claim del módulo del cliente, y solo ese', async () => {
+      // 1. El claim bueno abre.
+      await assertSucceeds(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { hidden: {} }));
+
+      // 2. Un claim con OTRO NOMBRE no abre, aunque valga `true`. Es lo que cazaría un renombrado a medias.
+      const otroNombre = env.authenticatedContext('uid-otro-claim', { administrador: true }).firestore();
+      await assertFails(setDoc(doc(otroNombre, 'appConfig', 'achievements'), { hidden: {} }));
+
+      // 3. El valor tiene que ser el booleano `true`: la cadena "true" no vale. Las reglas comparan estricto y
+      //    `hasAdminClaim` también; si una de las dos se relajara, este caso lo diría.
+      const comoTexto = env.authenticatedContext('uid-claim-texto', { [ADMIN_CLAIM]: 'true' }).firestore();
+      await assertFails(setDoc(doc(comoTexto, 'appConfig', 'achievements'), { hidden: {} }));
+    });
+
+    // Lo que el cambio de criterio RETIRA, dicho con un test: tener el correo de quien manda ya no concede nada.
+    it('un token con el correo del antiguo administrador, sin claim, no manda', async () => {
+      const soloCorreo = env
+        .authenticatedContext('uid-solo-correo', { email: 'bellanco3@gmail.com', email_verified: true })
+        .firestore();
+      await assertFails(setDoc(doc(soloCorreo, 'appConfig', 'achievements'), { hidden: {} }));
     });
 
     it('el admin lista TODOS los perfiles, incluidos los que tienen el social desactivado; un usuario normal no', async () => {
@@ -1165,6 +1219,356 @@ describe('firestore.rules', () => {
       await assertFails(deleteDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements')));
     });
   });
+
+
+  // ==========================================================================================================
+  // LA PORRA DE PREMIOS
+  // ==========================================================================================================
+  //
+  // Lo que se comprueba aquí es lo que NO puede quedar en manos del navegador: el plazo, el contador de
+  // correcciones y que los ganadores no se lean antes de publicarlos.
+  describe('premios', () => {
+    const AHORA = Date.now();
+    const DIA = 24 * 3600_000;
+
+    /** Papeleta válida mínima, con lo que se quiera cambiar. */
+    const papeleta = (uid: string, extra: Record<string, unknown> = {}) => ({
+      userId: uid,
+      userNickname: 'Ana',
+      userDisplayName: 'Ana',
+      selections: { cat1: 'cat1_option_0' },
+      season: 2026,
+      submittedAt: '2026-06-01T10:00:00.000Z',
+      updatedAt: '2026-06-01T10:00:00.000Z',
+      editCount: 0,
+      isActive: true,
+      ...extra,
+    });
+
+    /**
+     * Deja el perfil de quien vota, que es lo que fija su cupo de correcciones.
+     *
+     * Sin canal (`social.enabled`) es una CUENTA LIGERA: la que deja el propio voto, con una sola oportunidad.
+     */
+    async function conPerfil(uid: string, { social = true, tier = 'bronze' } = {}) {
+      await seed('profiles', uid, {
+        uid,
+        profileId: `p-${uid}`,
+        displayName: 'Ana',
+        tier,
+        social: social ? { enabled: true, gistId: 'g1' } : {},
+      });
+    }
+
+    /** Deja una edición abierta (o cerrada) en el calendario. */
+    async function conCalendario(abierta: boolean) {
+      await seed('premiosConfig', 'voting', {
+        isOpen: true,
+        season: 2026,
+        closesAtMillis: abierta ? AHORA + DIA : AHORA - DIA,
+      });
+    }
+
+    describe('los dos pares duplicados con el cliente', () => {
+      it('las oportunidades por rango son las mismas aquí y en el cliente', () => {
+        const T = PREMIOS_OPPORTUNITIES_BY_TIER;
+        expect(rulesSource).toContain(
+          `? ${PREMIOS_OPPORTUNITIES_WITHOUT_SOCIAL}\n` +
+            `        : (tier == 'mithril' ? ${T.mithril} : (tier == 'gold' ? ${T.gold} ` +
+            `: (tier == 'silver' ? ${T.silver} : ${T.bronze})));`,
+        );
+      });
+
+      it('el tope del nombre es el mismo aquí y en el cliente', () => {
+        expect(rulesSource).toContain(`d.userDisplayName.size() <= ${BALLOT_NAME_MAX_LENGTH}`);
+        expect(rulesSource).toContain(`d.userNickname.size() <= ${BALLOT_NAME_MAX_LENGTH}`);
+      });
+    });
+
+    describe('papeletas', () => {
+      it('se vota dentro de plazo y solo la propia', async () => {
+        await conCalendario(true);
+        await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a')));
+        // La de otra persona, ni escribirla ni leerla.
+        await assertFails(setDoc(doc(ownerDb('uid-b'), 'premiosBallots', 'uid-a'), papeleta('uid-a')));
+        await assertFails(getDoc(doc(ownerDb('uid-b'), 'premiosBallots', 'uid-a')));
+      });
+
+      // ES LA COMPROBACIÓN QUE HACE QUE EL CALENDARIO EXISTA: sin ella, cualquiera vota desde la consola con el
+      // plazo cerrado.
+      it('fuera de plazo no se vota, aunque el interruptor diga que está abierta', async () => {
+        await conCalendario(false);
+        await assertFails(setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a')));
+      });
+
+      it('el primer envío tiene que arrancar el contador a cero', async () => {
+        await conCalendario(true);
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { editCount: 1 })),
+        );
+      });
+
+      // Si bastara con «no pasar de cinco», un cliente hostil reenviaría siempre editCount: 1 y corregiría sin fin.
+      it('el contador avanza de uno en uno y no pasa del tope', async () => {
+        await conCalendario(true);
+        await conPerfil('uid-a');
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a', { editCount: 2 }));
+
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { editCount: 1 })),
+        );
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { editCount: 5 })),
+        );
+        await assertSucceeds(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { editCount: 3 })),
+        );
+      });
+
+      it('agotado el cupo ya no se corrige', async () => {
+        const tope = getMaxBallotEdits({ hasSocialAccount: true, tier: 'bronze' });
+        await conCalendario(true);
+        await conPerfil('uid-a');
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a', { editCount: tope }));
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { editCount: tope + 1 })),
+        );
+      });
+
+      // ═══ EL CUPO LO PONE LA CUENTA ═════════════════════════════════════════════════════════════════════
+      // Es lo que distingue este bloque del anterior: el mismo `editCount` entrante se acepta o se rechaza
+      // según el perfil de quien lo escribe, y el perfil no lo puede falsear su dueño (el `tier` lo asigna el
+      // administrador, ver `profileTierNotSelfAssigned`).
+
+      it('quien vota sin cuenta social no corrige: su papeleta queda como está', async () => {
+        await conCalendario(true);
+        await conPerfil('uid-a', { social: false });
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a', { editCount: 0 }));
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { editCount: 1 })),
+        );
+      });
+
+      // El rango de una cuenta ligera no cuenta: sin canal no hay cupo que repartir.
+      it('el rango no salva a quien no tiene canal', async () => {
+        await conCalendario(true);
+        await conPerfil('uid-a', { social: false, tier: 'mithril' });
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a', { editCount: 0 }));
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { editCount: 1 })),
+        );
+      });
+
+      it('sin perfil ninguno tampoco se corrige', async () => {
+        await conCalendario(true);
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a', { editCount: 0 }));
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { editCount: 1 })),
+        );
+      });
+
+      it('el rango alarga el cupo: donde bronce se queda, oro sigue', async () => {
+        const topeBronce = getMaxBallotEdits({ hasSocialAccount: true, tier: 'bronze' });
+        await conCalendario(true);
+
+        await conPerfil('uid-a');
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a', { editCount: topeBronce }));
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { editCount: topeBronce + 1 })),
+        );
+
+        await conPerfil('uid-b', { tier: 'gold' });
+        await seed('premiosBallots', 'uid-b', papeleta('uid-b', { editCount: topeBronce }));
+        await assertSucceeds(
+          setDoc(doc(ownerDb('uid-b'), 'premiosBallots', 'uid-b'), papeleta('uid-b', { editCount: topeBronce + 1 })),
+        );
+
+        // Y oro también tiene su final.
+        const topeOro = getMaxBallotEdits({ hasSocialAccount: true, tier: 'gold' });
+        await seed('premiosBallots', 'uid-b', papeleta('uid-b', { editCount: topeOro }));
+        await assertFails(
+          setDoc(doc(ownerDb('uid-b'), 'premiosBallots', 'uid-b'), papeleta('uid-b', { editCount: topeOro + 1 })),
+        );
+      });
+
+      // El primer envío NO lee el perfil, y eso es lo que evita pagar una lectura en el momento de más carga del
+      // año: todo el mundo envía, con cuenta social o sin ella.
+      it('el primer envío no depende del perfil', async () => {
+        await conCalendario(true);
+        await assertSucceeds(setDoc(doc(ownerDb('uid-c'), 'premiosBallots', 'uid-c'), papeleta('uid-c')));
+      });
+
+      it('la fecha del primer envío es inmutable', async () => {
+        await conCalendario(true);
+        await conPerfil('uid-a');
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a', { editCount: 0 }));
+        await assertFails(
+          setDoc(
+            doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'),
+            papeleta('uid-a', { editCount: 1, submittedAt: '2020-01-01T00:00:00.000Z' }),
+          ),
+        );
+      });
+
+      it('rechaza campos fuera de la lista, incluido el correo', async () => {
+        await conCalendario(true);
+        await assertFails(
+          setDoc(
+            doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'),
+            papeleta('uid-a', { userEmail: 'ana@example.com' }),
+          ),
+        );
+      });
+
+      it('el pseudónimo es opcional, pero si está tiene que ser texto acotado', async () => {
+        await conCalendario(true);
+        await assertSucceeds(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { profileId: 'p-ana' })),
+        );
+        await assertFails(
+          setDoc(doc(ownerDb('uid-b'), 'premiosBallots', 'uid-b'), papeleta('uid-b', { profileId: 42 })),
+        );
+      });
+
+      it('acota el nombre, las selecciones y su contenido', async () => {
+        await conCalendario(true);
+        const largo = 'N'.repeat(BALLOT_NAME_MAX_LENGTH + 1);
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { userDisplayName: largo })),
+        );
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { userDisplayName: '' })),
+        );
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { selections: {} })),
+        );
+        await assertFails(
+          setDoc(
+            doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'),
+            papeleta('uid-a', { selections: { cat1: 'x'.repeat(4000) } }),
+          ),
+        );
+      });
+
+      it('solo el administrador retira papeletas', async () => {
+        await conCalendario(true);
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a'));
+        await assertFails(deleteDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a')));
+        await assertSucceeds(deleteDoc(doc(adminDb(), 'premiosBallots', 'uid-a')));
+      });
+    });
+
+    describe('categorías, calendario y ganadores', () => {
+      it('las categorías se leen con sesión y solo las escribe el administrador', async () => {
+        await seed('premiosCategories', 'cat1', { title: { es: 'Juego del año' }, options: [] });
+        await assertSucceeds(getDoc(doc(ownerDb('uid-a'), 'premiosCategories', 'cat1')));
+        await assertFails(getDoc(doc(anonDb(), 'premiosCategories', 'cat1')));
+        await assertFails(setDoc(doc(ownerDb('uid-a'), 'premiosCategories', 'cat1'), { title: { es: 'x' } }));
+        await assertSucceeds(setDoc(doc(adminDb(), 'premiosCategories', 'cat1'), { title: { es: 'x' } }));
+      });
+
+      // El calendario tiene que poder leerse SIN sesión: la app decide con él si ofrece siquiera la sección.
+      it('el calendario es de lectura pública y de escritura del administrador', async () => {
+        await conCalendario(true);
+        await assertSucceeds(getDoc(doc(anonDb(), 'premiosConfig', 'voting')));
+        await assertFails(setDoc(doc(ownerDb('uid-a'), 'premiosConfig', 'voting'), { isOpen: false }));
+        await assertSucceeds(setDoc(doc(adminDb(), 'premiosConfig', 'voting'), { isOpen: false }));
+      });
+
+      it('el resto del calendario queda cerrado', async () => {
+        await seed('premiosConfig', 'otro', { x: 1 });
+        await assertFails(getDoc(doc(anonDb(), 'premiosConfig', 'otro')));
+        await assertFails(getDoc(doc(ownerDb('uid-a'), 'premiosConfig', 'otro')));
+        await assertSucceeds(getDoc(doc(adminDb(), 'premiosConfig', 'otro')));
+      });
+
+      // ES EL AGUJERO QUE CERRÓ SACAR AL GANADOR DE LA CATEGORÍA: aquí nadie mira hasta que se publica.
+      it('los ganadores sin publicar no los ve nadie más que el administrador', async () => {
+        await seed('premiosAdmin', 'winners', { winners: { cat1: 'cat1_option_0' } });
+        await assertFails(getDoc(doc(anonDb(), 'premiosAdmin', 'winners')));
+        await assertFails(getDoc(doc(ownerDb('uid-a'), 'premiosAdmin', 'winners')));
+        await assertSucceeds(getDoc(doc(adminDb(), 'premiosAdmin', 'winners')));
+      });
+    });
+
+    describe('ediciones archivadas', () => {
+      it('una edición publicada la lee cualquiera, también sin sesión', async () => {
+        await seed('premiosResults', 'porra-2026', {
+          season: 2026,
+          name: 'El reto del jugador 2026',
+          leaderboard: [{ rank: 1, profileId: 'p-ana', nickname: 'Ana', points: 3 }],
+          closedAt: new Date().toISOString(),
+        });
+
+        await assertSucceeds(getDoc(doc(anonDb(), 'premiosResults', 'porra-2026')));
+        await assertSucceeds(getDoc(doc(ownerDb('uid-a'), 'premiosResults', 'porra-2026')));
+      });
+
+      // El sello lo pone el servidor AL ARCHIVAR: es lo que distingue una edición publicada de un documento a
+      // medio escribir. Sin esta condición, cualquier cosa que apareciera en la colección sería pública.
+      it('un archivo sin el sello de cierre no lo lee nadie', async () => {
+        await seed('premiosResults', 'a-medias', { season: 2026, leaderboard: [] });
+        await assertFails(getDoc(doc(anonDb(), 'premiosResults', 'a-medias')));
+        await assertFails(getDoc(doc(ownerDb('uid-a'), 'premiosResults', 'a-medias')));
+        await assertSucceeds(getDoc(doc(adminDb(), 'premiosResults', 'a-medias')));
+      });
+
+      it('solo el administrador archiva, renombra y borra', async () => {
+        await assertFails(setDoc(doc(ownerDb('uid-a'), 'premiosResults', 'x'), { season: 2026 }));
+        await assertSucceeds(setDoc(doc(adminDb(), 'premiosResults', 'x'), { season: 2026 }));
+      });
+    });
+  });
+
+
+    // EL PALMARÉS: los trofeos de la porra, que se enseñan en el perfil como un logro especial. Los concede el
+    // administrador al publicar una edición; que el dueño no pueda ponérselos es lo único que separa un trofeo de
+    // un adorno que cualquiera se escribe.
+    describe('palmarés', () => {
+      const trofeo = [{ seasonId: 'reto-2026', seasonName: 'El reto 2026', rank: 1, awardedAt: 1 }];
+
+      it('el administrador concede un trofeo', async () => {
+        await seed('profiles', 'uid-a', { uid: 'uid-a' });
+        await assertSucceeds(setDoc(doc(adminDb(), 'profiles', 'uid-a'), { palmares: trofeo }, { merge: true }));
+      });
+
+      it('el dueño NO puede ponérselo', async () => {
+        await seed('profiles', 'uid-a', { uid: 'uid-a' });
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a', palmares: trofeo }),
+        );
+      });
+
+      it('el dueño tampoco puede cambiarlo ni quitárselo', async () => {
+        await seed('profiles', 'uid-a', { uid: 'uid-a', palmares: trofeo });
+
+        // Ascenderse a primero cambiando el puesto: denegado.
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+            uid: 'uid-a',
+            palmares: [{ ...trofeo[0], rank: 1, seasonName: 'Otra' }],
+          }),
+        );
+        // Y borrarlo tampoco, que es la otra cara: el trofeo no es suyo para retirarlo.
+        await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a' }));
+      });
+
+      it('el dueño sigue pudiendo guardar su perfil sin tocar el trofeo', async () => {
+        // Es la comprobación que evita el efecto colateral: una regla mal escrita aquí congelaría el perfil
+        // entero de quien haya ganado algo, y su dueño no podría ni cambiarse el nombre.
+        await seed('profiles', 'uid-a', { uid: 'uid-a', displayName: 'Ana', palmares: trofeo });
+        await assertSucceeds(
+          setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { displayName: 'Ana María' }, { merge: true }),
+        );
+      });
+
+      // El administrador también RETIRA: si una edición se publicó mal y se borra del histórico, su trofeo tiene
+      // que poder irse con ella.
+      it('el administrador puede retirar un trofeo', async () => {
+        await seed('profiles', 'uid-a', { uid: 'uid-a', palmares: trofeo });
+        await assertSucceeds(setDoc(doc(adminDb(), 'profiles', 'uid-a'), { palmares: [] }, { merge: true }));
+      });
+    });
 
   describe('catch-all', () => {
     it('deniega cualquier otra colección', async () => {

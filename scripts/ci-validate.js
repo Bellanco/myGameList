@@ -165,6 +165,20 @@ if (!fs.existsSync(preloadedFont)) {
   );
 }
 
+// EL ARTE DEL PODIO. La lámina se carga por su URL al abrir el trofeo, así que si un fichero desaparece —una
+// limpieza de `public/`, un despliegue a medias— el canvas se queda en blanco y nadie se entera hasta que alguien
+// gana algo. Los nombres los fija `core/premios/awards.ts`, que es la fuente: aquí solo se comprueba que están y
+// que pesan lo que pesa un JPEG de verdad, no un marcador de posición.
+const awardsDir = path.join(publicDir, 'awards');
+for (let rank = 1; rank <= 5; rank += 1) {
+  const lamina = path.join(awardsDir, `rank-${rank}.jpg`);
+  if (!fs.existsSync(lamina)) {
+    fail(`Falta public/awards/rank-${rank}.jpg: el trofeo de ese puesto se quedaría en blanco.`);
+  } else if (fs.statSync(lamina).size < 10_000) {
+    fail(`public/awards/rank-${rank}.jpg pesa menos de 10 kB: parece truncado o un marcador de posición.`);
+  }
+}
+
 const googleFontRefs = [];
 const walkStyles = (dir) => {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

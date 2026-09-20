@@ -1,0 +1,1263 @@
+// Estilos EXCLUSIVOS de la sección de premios. Viajan con su chunk, no en el arranque.
+//
+// Mismo criterio que `social.scss`: la sección entra por `lazy()`, así que su CSS tampoco puede ir en el bundle
+// base — quien no vota nunca no se descarga esto.
+//
+// NI UN HEX Y NI UN TAMAÑO LITERAL. Todo sale de los tokens, que es lo que hace que la porra cambie de piel con
+// los ocho temas y pase la auditoría de contraste en los dos modos. Si aquí aparece un color escrito a mano, esta
+// pantalla será la única de la aplicación que no responda al tema elegido.
+
+// La tipografía del CARTEL del podio, servida desde el propio origen. Se declara aquí y no en el arranque: solo
+// hace falta cuando alguien abre su trofeo, y quien nunca gana nada no tiene por qué descargarla.
+@use '../styles/fonts/comic-neue';
+
+.premios-hub {
+  display: grid;
+  gap: var(--space-lg, 1.25rem);
+  padding-block: var(--space-md, 1rem);
+}
+
+/* ─── Portada: el cartel de la edición ────────────────────────────────────────────────────────────────── */
+
+/* ES UN CARTEL, no una pantalla de aviso. La porra se juega unas semanas al año y esta es su puerta: tiene que
+   decir de un vistazo que hay algo en marcha. El relieve lo ponen el degradado del acento y la sombra, los dos
+   sacados de tokens, así que cada tema lo cuenta a su manera. */
+/* LA SECCIÓN ES EL SITIO; el cartel es la caja de dentro. Separarlos es lo que permite que el cartel conserve su
+   tamaño y se quede CENTRADO en lo que queda de pantalla: con el fondo puesto en la sección, darle el alto de la
+   ventana lo estiraba de arriba abajo con el texto flotando en medio. El hueco lo da `--premios-hueco`, el mismo
+   que reparte la votación, así que las dos pantallas de la sección se plantan igual. */
+.premios-portada { display: grid; justify-items: center; }
+
+.premios-portada.is-fitted {
+  min-height: var(--premios-hueco);
+  align-content: center;
+}
+
+.premios-portada__card {
+  display: grid;
+  gap: .6rem;
+  justify-items: center;
+  align-content: start;
+  text-align: center;
+  width: min(100%, 46rem);
+  padding: 2rem 1.2rem;
+  background:
+    radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--steam) 14%, transparent), transparent 62%),
+    var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--e2);
+}
+
+.premios-portada__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-4xl);
+  line-height: 1.05;
+  color: var(--text);
+  margin: 0;
+  /* Un titular de cartel: apretado y con el aire justo, para que un nombre de edición largo no se rompa en tres
+     líneas en un móvil. */
+  letter-spacing: -.01em;
+  text-wrap: balance;
+}
+
+.premios-portada__lead { color: var(--text-muted); font-size: var(--fs-md); margin: 0; max-width: 34rem; }
+
+.premios-portada__state {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  margin: .2rem 0 0;
+}
+
+.premios-portada__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  font-family: var(--font-label);
+  font-size: var(--fs-2xs);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--on-accent);
+  /* EL ACENTO OSCURECIDO, la misma mezcla que `.btn-primary`, y no el acento a pelo: con el plano, el blanco de
+     `--on-accent` se quedaba en 4,18:1 sobre el ámbar de arcade, el rojo de persona y el naranja de portal —por
+     debajo del 4,5:1 que pide un texto de 11,7 px—, y la auditoría de axe lo cazaba en tres de las doce
+     combinaciones. Esta mezcla ya está auditada en todas ellas, porque es la de los botones principales. */
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--steam) 77%, #000),
+    color-mix(in srgb, var(--steam) 55%, #000)
+  );
+  border-radius: var(--radius-pill);
+  padding: .25rem .7rem;
+  box-shadow: var(--glow-accent);
+}
+
+/* El punto de «está abierta»: late despacio, y se queda quieto para quien pide menos movimiento. */
+.premios-portada__badge::before {
+  content: '';
+  width: .4rem;
+  height: .4rem;
+  border-radius: var(--radius-pill);
+  background: currentcolor;
+  animation: premiosLatido 2.4s ease-in-out infinite;
+}
+
+@keyframes premiosLatido {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .premios-portada__badge::before { animation: none; }
+}
+
+.premios-portada__actions { display: flex; gap: .6rem; flex-wrap: wrap; justify-content: center; margin-top: .6rem; }
+
+.premios-portada__empty {
+  display: grid;
+  gap: .25rem;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  margin: .6rem 0 0;
+}
+
+.premios-portada__empty span { color: var(--text-dim); font-size: var(--fs-xs); }
+
+/* El borrador en marcha: cuántas llevas, con la misma barra del flujo de votación. */
+.premios-portada__progress {
+  display: grid;
+  gap: .25rem;
+  justify-items: center;
+  width: min(100%, 22rem);
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  margin: 0;
+}
+
+.premios-portada__progress .premios-progress__track { width: 100%; }
+
+.premios-portada__foot { color: var(--text-dim); font-size: var(--fs-xs); margin: .4rem 0 0; }
+
+/* El cupo de oportunidades y la puerta de sesión: pie de la portada, con el mismo peso que «un voto por
+   persona». El error del inicio de sesión sí levanta la voz, porque es lo único accionable de la pantalla. */
+.premios-portada__quota { color: var(--text-muted); font-size: var(--fs-xs); margin: 0; max-width: 34rem; }
+.premios-portada__quota span { display: block; color: var(--text-dim); }
+.premios-portada__signin-error { color: var(--danger); font-size: var(--fs-sm); margin: 0; }
+
+/* ─── La cabecera del flujo: dónde vas y cuánto llevas ────────────────────────────────────────────────── */
+
+/* Va en las dos pantallas del flujo (votación y revisión) y es lo que la porra tenía y aquí faltaba: el
+   recorrido a la vista. La barra no es decoración — con veintisiete categorías, saber que vas por el 11 % es lo
+   que decide si sigues ahora o lo dejas para luego. */
+.premios-progress { display: grid; gap: .35rem; }
+
+.premios-progress__row {
+  display: flex;
+  gap: .6rem;
+  align-items: baseline;
+  font-size: var(--fs-2xs);
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+}
+
+.premios-progress__count { letter-spacing: .04em; }
+.premios-progress__pct { margin-left: auto; color: var(--fg-link); font-weight: 700; }
+
+/* La marca de ESTA categoría: votada o no. Es el único dato de la fila que no habla del recorrido. */
+.premios-progress__mark {
+  font-family: var(--font-label);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--warn);
+}
+
+.premios-progress__mark.is-voted { color: var(--success); }
+
+.premios-progress__track {
+  display: block;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--border) 60%, transparent);
+  overflow: hidden;
+}
+
+/* El relleno lleva el acento del tema en degradado, que es lo que le da el aire de gala del original sin traer
+   ni un color escrito a mano. */
+.premios-progress__bar {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--steam) 65%, transparent),
+    var(--steam),
+    color-mix(in srgb, var(--steam) 65%, transparent)
+  );
+  box-shadow: var(--glow-accent-soft);
+  transition: width .45s var(--ease, ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .premios-progress__bar { transition: none; }
+}
+
+.premios-progress__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  line-height: 1.15;
+  color: var(--text);
+  margin: 0;
+}
+
+.premios-progress__sub { color: var(--text-muted); font-size: var(--fs-sm); margin: 0; }
+
+/* ─── Votación ────────────────────────────────────────────────────────────────────────────────────────── */
+
+/* TRES FRANJAS: progreso, rejilla y navegación. La de en medio es la única que da y toma alto, que es lo que
+   permite que la categoría entera quepa sin desplazarse. */
+.premios-vote {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: .8rem;
+}
+
+/* ═══ EL ALTO DE LA PANTALLA DE VOTAR ═══════════════════════════════════════════════════════════════════
+   De la posición de la sección (`--premios-top`, lo único que mide el componente) hasta el fondo del viewport,
+   descontando lo que el armazón tiene reservado abajo: la barra de navegación y, si está, el aviso de la
+   analítica. Las dos publican su alto real (`--bottom-nav-h`, `--consent-h`) con su propio observador, así que
+   apilar la barra o aceptar el aviso recoloca esto sin JavaScript de por medio.
+
+   `100dvh` y no `100vh`: en un móvil, la barra del navegador entra y sale, y `vh` se queda con la ventana
+   grande — justo el caso en el que aparecía desplazamiento.
+
+   `max(…)` es el suelo, y está BAJO a propósito (12rem): con uno alto, un móvil apaisado —375 px de alto, de los
+   que la mitad se los llevan cabecera y barra— caía por debajo del suelo y reaparecía el desplazamiento, que es
+   justo lo que esta pantalla viene a evitar. Por debajo de eso la rejilla ya no da para nada y se prefiere dejar
+   crecer la página. */
+.premios-vote.is-fitted,
+.premios-portada.is-fitted {
+  --premios-consent: 0px;
+  --premios-hueco: max(
+    12rem,
+    calc(
+      100dvh - var(--premios-top, 0px) - var(--bottom-nav-h, 4.6rem) - var(--premios-consent) -
+        env(safe-area-inset-bottom, 0px) - .8rem
+    )
+  );
+}
+
+/* Mientras el aviso de la analítica está pendiente ocupa su sitio encima de la barra, y hay que dejárselo. */
+:root[data-consent='pending'] .premios-vote.is-fitted,
+:root[data-consent='pending'] .premios-portada.is-fitted { --premios-consent: var(--consent-h, 9.25rem); }
+
+/* La votación TOMA ese hueco y lo reparte; la portada solo lo usa para centrarse dentro. */
+.premios-vote.is-fitted { height: var(--premios-hueco); }
+
+/* Y LO QUE HAY DEBAJO DE LA SECCIÓN SE VA, o el documento seguiría siendo más alto que la ventana por culpa de
+   un relleno que ya no reserva nada: el hueco de la barra lo acaba de descontar la cuenta de arriba. Son los
+   dos rellenos que quedan por debajo — el del contenedor de la aplicación y el de la propia sección. */
+.main:has(.premios-vote.is-fitted),
+.main:has(.premios-portada.is-fitted) { padding-bottom: 0; }
+.premios-hub:has(.premios-vote.is-fitted),
+.premios-hub:has(.premios-portada.is-fitted) { padding-block-end: 0; }
+
+.premios-vote__grid {
+  display: grid;
+  // El reparto lo decide `core/premios/gridDensity` midiendo el contenedor, y llega en `--premios-cols`: es lo
+  // que evita la fila huérfana (6 nominados con sitio para 5 se reparten 3+3, no 5+1), algo que `auto-fit` no
+  // sabe hacer. El `auto-fit` se queda de respaldo para el primer render, antes de que haya medida.
+  grid-template-columns: repeat(var(--premios-cols), 1fr);
+  gap: .7rem;
+  min-height: 0;
+  align-content: start;
+}
+
+.premios-vote__grid:not([style*='--premios-cols']) {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+}
+
+/* Con alto repartido las filas son iguales y suman exactamente lo que hay: es lo que garantiza que no aparezca
+   desplazamiento, y lo que hace que las tarjetas se encojan en vez de salirse. */
+/* Con alto repartido las filas son iguales y suman exactamente lo que hay. El MÍNIMO de fila es lo que impide
+   que en un móvil tumbado —cabecera y pie se comen casi todo— las tarjetas queden en siete píxeles: por debajo
+   de ahí la rejilla deja de repartir y se desplaza ELLA, con la cabecera y la navegación quietas en su sitio.
+   Que lo que se desplace sea la rejilla y no la página es justo la diferencia: el pie con «Finalizar» nunca se
+   va de la pantalla. */
+.premios-vote.is-fitted .premios-vote__grid {
+  grid-auto-rows: minmax(4.5rem, 1fr);
+  align-content: stretch;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ─── El nominado: la misma caja que un juego de la biblioteca ────────────────────────────────────────── */
+
+.premios-nominee {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: .4rem;
+  min-height: 0;
+  /* SIN RELLENO PROPIO: la carátula va A SANGRE, como en el mosaico de la biblioteca, y es el cuerpo el que
+     lleva su aire. Un marco alrededor de la portada la convierte en una ilustración pegada; sin él, la tarjeta
+     ES la portada. */
+  padding: 0;
+  text-align: center;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  // La franja inferior es la marca de selección: crece con `is-selected` en vez de aparecer un icono flotante,
+  // que en una tarjeta estrecha se montaba sobre la primera línea del nombre.
+  border-bottom: 3px solid transparent;
+  border-radius: var(--radius-md);
+  box-shadow: var(--e1);
+  cursor: pointer;
+  overflow: hidden;
+  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+
+/* LA RANURA ES LA DEL MOSAICO (`GameCover`), con su portada de casa debajo y su carátula encima. El hueco que
+   la contiene es quien pone el límite: la portada conserva su 3:4 y se CENTRA dentro de él, así que cuando la
+   rejilla reparte poco alto la caja se encoge en vez de desbordar su celda y comerse la fila de abajo.
+   `max-height` y no solo `height`: con proporción fija, el alto máximo es lo único que acota de verdad. */
+.premios-nominee__slot {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.premios-nominee__slot {
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.premios-nominee__slot .game-cover {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  /* Sin radio propio: la recorta la tarjeta, igual que en el mosaico. */
+  border-radius: 0;
+}
+
+/* CON EL ALTO REPARTIDO MANDA EL HUECO, no la proporción: la ranura llena su celda y la carátula se recorta
+   (`object-fit: cover`, que ya trae `GameCover`). Conservar el 3:4 aquí dejaba la portada centrada entre dos
+   bandas vacías —una estampa pegada en medio de la tarjeta— justo en las pantallas donde menos sitio hay. */
+.premios-vote.is-fitted .premios-nominee__slot .game-cover {
+  height: 100%;
+  aspect-ratio: auto;
+}
+
+/* SIN IMÁGENES, LA CAJA BÁSICA: el nombre manda y ocupa el centro, sin ranura vacía que llenar. Es la tarjeta
+   que ve quien tiene las carátulas apagadas, y tiene que sostenerse sola. */
+.premios-nominee.is-flat {
+  grid-template-rows: 1fr;
+  align-content: center;
+  padding: .9rem .7rem;
+}
+
+/* SIN PORTADAS, LA REJILLA NO REPARTE EL ALTO: una tarjeta de tres palabras estirada a 400 px es un cartel
+   vacío, y cinco de ellas dejaban la pantalla llena de huecos. Las filas se acotan y el bloque entero se centra
+   en el sitio que haya, que es lo que hacía la porra de origen con sus tarjetas panorámicas.
+   `:has` y no una clase en la rejilla: quien sabe si la tarjeta lleva portada es la tarjeta. */
+.premios-vote.is-fitted .premios-vote__grid:has(.premios-nominee.is-flat) {
+  grid-auto-rows: minmax(4.5rem, 9rem);
+  align-content: center;
+}
+
+.premios-nominee.is-flat .premios-nominee__body { align-content: center; height: 100%; padding: 0; }
+
+.premios-nominee.is-flat .premios-nominee__name {
+  font-size: var(--fs-md);
+  -webkit-line-clamp: 3;
+}
+
+.premios-nominee:hover { background: var(--surface-hover); transform: translateY(-1px); }
+
+.premios-nominee:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.premios-nominee.is-selected {
+  border-color: var(--steam);
+  border-bottom-color: var(--steam);
+  background: var(--surface-elevated);
+  box-shadow: var(--ring-accent), var(--glow-accent);
+}
+
+.premios-nominee__body { display: grid; gap: .15rem; min-height: 0; padding: .45rem .5rem .55rem; }
+
+.premios-nominee__name {
+  font-family: var(--font-label);
+  font-size: var(--fs-sm);
+  line-height: 1.2;
+  /* DOS LÍNEAS, NI MÁS NI MENOS: se recorta el título que no quepa y se reserva el hueco del que sobra. Sin la
+     reserva, «Elden Ring: Shadow of the Erdtree» ocupaba dos líneas y su vecino una, así que sus portadas
+     acababan a distinta altura dentro de la misma fila. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.4em;
+}
+
+/* Salvo en la tarjeta sin portada, donde el nombre ES la tarjeta y puede ocupar lo que necesite. */
+.premios-nominee.is-flat .premios-nominee__name { min-height: 0; -webkit-line-clamp: 3; }
+
+/* ═══ CUANDO NO HAY SITIO PARA UNA PORTADA, NO SE PINTA UNA FRANJA ══════════════════════════════════════
+   Con cinco nominados en un teléfono, la rejilla reparte el alto y a cada ranura le quedaban treinta píxeles:
+   eso ya no es una carátula, es una raya de color que además le quita al título el aire que necesita. Por
+   debajo del umbral la tarjeta se queda con el nombre, que es lo único que ahí se lee.
+
+   Lo decide la PROPIA TARJETA con una consulta de contenedor, y no una media query de ventana: lo que importa
+   no es el tamaño de la pantalla sino el que le ha tocado a esta tarjeta, que depende también de cuántos
+   nominados haya. Donde no haya soporte, se queda la franja: es el comportamiento de antes, no una avería. */
+.premios-nominee { container-type: size; }
+
+/* Primero se aprieta el TEXTO, que es lo prescindible: una línea y menos aire, para que la portada conserve
+   todo el alto que se pueda. En un teléfono con cinco nominados, esto es la diferencia entre una franja de
+   treinta píxeles y una portada de sesenta. */
+@container (max-height: 160px) {
+  .premios-nominee__body { padding: .3rem .4rem .35rem; }
+  .premios-nominee__name { min-height: 0; -webkit-line-clamp: 1; font-size: var(--fs-2xs); }
+}
+
+/* Y solo cuando ni con esas queda hueco para una imagen, la tarjeta se queda con el nombre: a esa altura la
+   ranura no enseña una carátula, enseña una raya de color. */
+@container (max-height: 74px) {
+  .premios-nominee__slot { display: none; }
+  .premios-nominee__body { align-content: center; height: 100%; }
+  .premios-nominee__name { -webkit-line-clamp: 3; font-size: var(--fs-sm); }
+}
+
+/* ─── El pie de la votación ───────────────────────────────────────────────────────────────────────────── */
+
+.premios-vote__nav { display: grid; gap: .45rem; }
+
+.premios-vote__steps { display: grid; grid-template-columns: 1fr 1fr; gap: .45rem; }
+
+/* FINALIZAR SIEMPRE A LA VISTA y con peso propio, debajo de los dos de avance: es la salida del flujo, no un
+   paso más, y quien la busca no debería tener que recorrer las categorías que le faltan para encontrarla. */
+.premios-vote__finish {
+  width: 100%;
+  border-color: color-mix(in srgb, var(--success) 45%, var(--border));
+  color: var(--success);
+}
+
+.premios-vote__finish:hover {
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+}
+
+/* ─── Revisión: la papeleta entera como índice ────────────────────────────────────────────────────────── */
+
+.premios-review { display: grid; gap: 1rem; }
+
+.premios-review__submit {
+  display: grid;
+  gap: .4rem;
+  justify-items: start;
+  padding: .9rem;
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-md);
+  box-shadow: var(--e1);
+}
+
+.premios-review__submit .input { width: min(100%, 28rem); }
+.premios-review__label { font-family: var(--font-label); font-size: var(--fs-sm); }
+.premios-review__hint,
+.premios-review__edits { color: var(--text-dim); font-size: var(--fs-xs); margin: 0; }
+.premios-review__error { color: var(--danger); font-size: var(--fs-sm); margin: 0; }
+
+/* La clasificación provisional del panel necesita que el nombre empuje al resto: el botón de retirar va al
+   final de la fila, no pegado al nombre. */
+.premios-admin__board-name { flex: 1; }
+
+.premios-review__pending {
+  display: flex;
+  gap: .5rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+  color: var(--warn);
+  font-size: var(--fs-sm);
+  margin: 0;
+}
+
+.premios-review__jump { color: var(--fg-link); }
+
+.premios-review__actions { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .3rem; }
+
+/* UN BOTÓN QUE NO SE PUEDE PULSAR TIENE QUE PARECERLO. La hoja base no viste `:disabled` —no hay regla global en
+   toda la aplicación—, así que «Enviar papeleta» con la papeleta a medias y «Anterior» en la primera categoría
+   se veían exactamente igual que los demás: se pulsaban y no pasaba nada, que es como se lee una avería. */
+.premios-review__actions .btn:disabled,
+.premios-vote__nav .btn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Cada categoría, una tarjeta con su portada: se reconoce la papeleta por las carátulas, que es como se
+   reconoce un juego. Las mismas medidas que las cajas del mosaico. */
+.premios-review__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: .7rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* TODAS LAS TARJETAS MIDEN LO MISMO. El título de una categoría ocupa una línea o dos, y el del juego votado
+   otro tanto, así que cada tarjeta acababa con su propia altura y las portadas quedaban a distinta altura dentro
+   de la misma fila: la rejilla se leía como una pared mal alicatada. El elemento de lista se estira, la tarjeta
+   lo llena, y el cuerpo reserva SIEMPRE el sitio de sus cuatro líneas —dos de categoría y dos de juego—, esté
+   lleno o no. */
+.premios-review__grid > li { display: grid; }
+
+.premios-review__card {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--e1);
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+
+.premios-review__card:hover { background: var(--surface-hover); transform: translateY(-1px); }
+
+.premios-review__card:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Sin votar: la tarjeta se queda en penumbra y con el borde discontinuo, que es lo que la lee como hueco por
+   rellenar en vez de como una elección más. */
+.premios-review__card.is-empty {
+  border-style: dashed;
+  opacity: .75;
+}
+
+.premios-review__slot { display: block; min-height: 0; }
+
+/* El hueco de una categoría sin votar: la misma ranura, vacía y en penumbra. Mantiene alineada la rejilla —una
+   tarjeta más baja entre portadas se lee como un fallo— sin repetir el nombre de la categoría. */
+.premios-review__slot.is-empty {
+  aspect-ratio: 3 / 4;
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--border) 22%, transparent) 0 6px,
+    transparent 6px 12px
+  );
+}
+.premios-review__slot .game-cover { width: 100%; border-radius: 0; }
+
+.premios-review__card-body {
+  display: grid;
+  grid-template-rows: auto auto;
+  align-content: start;
+  gap: .1rem;
+  padding: .45rem .55rem .55rem;
+}
+
+/* Dos líneas RESERVADAS para cada cosa: se recorta lo que no quepa y se guarda el hueco de lo que falte, que es
+   lo que mantiene alineadas las portadas de una fila con las de la siguiente. */
+.premios-review__cat,
+.premios-review__pick {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.2;
+  min-height: 2.4em;
+}
+
+.premios-review__cat {
+  font-size: var(--fs-2xs);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-dim);
+}
+
+.premios-review__pick {
+  font-family: var(--font-label);
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+
+.premios-review__card.is-empty .premios-review__pick { color: var(--text-dim); font-style: italic; }
+
+/* ─── Compartir: el mismo botón en la portada y en los resultados ─────────────────────────────────────── */
+
+.premios-compartir { display: grid; gap: .3rem; justify-items: center; margin-top: .4rem; }
+
+/* El icono y el rótulo, en la misma línea y con el aire del resto de botones con icono de la casa. */
+.premios-compartir__btn { display: inline-flex; align-items: center; gap: .45rem; }
+
+/* Vacío la mayor parte del tiempo: se reserva su hueco para que el aviso de «copiado» no empuje la pantalla. */
+.premios-compartir__status {
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  margin: 0;
+  min-height: 1.1em;
+}
+
+/* ─── Salidas del flujo: enviada, cerrada, sin correcciones ───────────────────────────────────────────── */
+
+.premios-estado {
+  display: grid;
+  gap: .5rem;
+  justify-items: center;
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.premios-estado h2 {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  color: var(--text);
+  margin: 0;
+}
+
+.premios-estado p { color: var(--text-muted); font-size: var(--fs-sm); margin: 0; }
+.premios-estado__muted { color: var(--text-dim); font-size: var(--fs-xs); }
+.premios-estado__error { color: var(--danger); font-size: var(--fs-sm); margin: 0; }
+.premios-estado__actions { display: flex; gap: .6rem; flex-wrap: wrap; justify-content: center; margin-top: .8rem; }
+
+/* ─── La confirmación: lo único que hay que entender es que el voto entró ─────────────────────────────── */
+
+.premios-enviada {
+  display: grid;
+  gap: .6rem;
+  justify-items: center;
+  text-align: center;
+  padding: 1.6rem 1rem;
+}
+
+/* Un disco con la marca dentro, del tamaño de un titular. Es lo que sustituye al párrafo mudo que había: la
+   confirmación se ve antes de leerla. */
+.premios-enviada__check {
+  display: grid;
+  place-items: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: var(--radius-pill);
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--success) 40%, transparent), var(--e2);
+}
+
+.premios-enviada__check-icon { width: 2rem; height: 2rem; }
+
+.premios-enviada__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-3xl);
+  line-height: 1.1;
+  margin: 0;
+}
+
+.premios-enviada__thanks {
+  font-family: var(--font-label);
+  font-size: var(--fs-lg, 1.05rem);
+  /* `--fg-link` y no `--steam`: es el token del ACENTO EN TEXTO, el que está medido contra la superficie en las
+     doce combinaciones. El otro es el del relleno, y como color de letra se queda corto en varias paletas. */
+  color: var(--fg-link);
+  margin: 0;
+}
+
+.premios-enviada__lead { color: var(--text-muted); font-size: var(--fs-sm); margin: 0; }
+
+/* Las tres garantías, en fila cuando hay sitio y apiladas cuando no. */
+.premios-enviada__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: .6rem;
+  width: min(100%, 52rem);
+  list-style: none;
+  margin: .6rem 0 0;
+  padding: 0;
+}
+
+.premios-enviada__card {
+  display: grid;
+  gap: .4rem;
+  justify-items: center;
+  padding: .9rem .7rem;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-md);
+  box-shadow: var(--e1);
+}
+
+.premios-enviada__card .ui-icon { width: 1.4rem; height: 1.4rem; color: var(--steam); }
+
+/* El detalle de lo que pasa ahora: cuántas oportunidades quedan y cuándo se sabrá el resultado. */
+.premios-enviada__confirm {
+  display: grid;
+  gap: .3rem;
+  width: min(100%, 52rem);
+  padding: .9rem;
+  text-align: left;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--success) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--success) 32%, transparent);
+  border-radius: var(--radius-md);
+}
+
+.premios-enviada__confirm-title {
+  font-family: var(--font-label);
+  font-size: var(--fs-2xs);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--success);
+  margin: 0;
+}
+
+.premios-enviada__confirm p { margin: 0; }
+
+/* ─── El panel (vive dentro del de administración) ────────────────────────────────────────────────────── */
+
+/* ─── Las pestañas del panel ──────────────────────────────────────────────────────────────────────────── */
+
+/* UNA BARRA, NO SEIS BOTONES SUELTOS. Lo que se navega va junto y con la misma forma, y la activa se marca con
+   el filete de acento de las pestañas de la casa, no tiñendo el botón entero de primario —que es el color de
+   «pulsa aquí», y aquí no hay nada que ejecutar—. El botón de salir vive arriba, fuera de esta barra. */
+.premios-admin__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .15rem;
+  margin: .2rem 0 .8rem;
+  border-bottom: 1px solid var(--hair);
+}
+
+.premios-admin__tab {
+  font-family: var(--font-label);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  padding: .5rem .8rem;
+  cursor: pointer;
+  transition: color .15s ease, background .15s ease, border-color .15s ease;
+}
+
+.premios-admin__tab:hover { color: var(--text); background: var(--surface-hover); }
+
+.premios-admin__tab:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.premios-admin__tab.is-current {
+  color: var(--text);
+  border-bottom-color: var(--steam);
+  background: color-mix(in srgb, var(--steam) 8%, transparent);
+}
+
+.premios-admin__block { display: grid; gap: .6rem; margin-top: 1rem; }
+.premios-admin__block h3 { font-family: var(--font-label); font-size: var(--fs-lg, 1.05rem); margin: 0; }
+
+.premios-admin__stage { font-family: var(--font-mono); color: var(--text); font-size: var(--fs-sm); margin: 0; }
+
+/* ─── El ciclo de la edición: los tres estados y en cuál está ─────────────────────────────────────────── */
+
+.premios-admin__stages {
+  display: grid;
+  gap: .3rem;
+  list-style: none;
+  margin: .2rem 0;
+  padding: 0;
+  counter-reset: paso;
+}
+
+.premios-admin__stage-step {
+  display: grid;
+  gap: .1rem;
+  padding: .45rem .6rem .45rem 2rem;
+  position: relative;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-dim);
+}
+
+/* El número del paso, en su disco, como el puesto de la clasificación. */
+.premios-admin__stage-step::before {
+  counter-increment: paso;
+  content: counter(paso);
+  position: absolute;
+  left: .5rem;
+  top: .5rem;
+  display: grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-3xs);
+  border-radius: var(--radius-pill);
+  border: 1px solid currentcolor;
+}
+
+/* EL ACTUAL SE VE DESDE LA PUERTA: es el único dato que se busca al abrir esta pestaña. */
+.premios-admin__stage-step.is-current {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--steam) 55%, transparent);
+  background: color-mix(in srgb, var(--steam) 10%, var(--surface));
+  box-shadow: inset 2px 0 0 var(--steam);
+}
+
+.premios-admin__stage-name {
+  font-family: var(--font-label);
+  font-size: var(--fs-sm);
+  display: flex;
+  gap: .5rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.premios-admin__stage-now {
+  font-size: var(--fs-3xs);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--fg-link);
+}
+
+.premios-admin__stage-hint { font-size: var(--fs-xs); color: var(--text-dim); }
+.premios-admin__muted { color: var(--text-dim); font-size: var(--fs-xs); margin: 0; }
+
+.premios-admin__notice { color: var(--success); font-size: var(--fs-sm); margin: .4rem 0 0; }
+.premios-admin__error { color: var(--danger); font-size: var(--fs-sm); margin: .4rem 0 0; }
+
+/* Publicar retira papeletas y vacía nominados: el aviso se lee antes de llegar al botón. */
+.premios-admin__warn {
+  color: var(--warn);
+  font-size: var(--fs-sm);
+  background: rgba(var(--warn-rgb), .08);
+  border: 1px solid rgba(var(--warn-rgb), .35);
+  border-radius: var(--radius-md);
+  padding: .6rem .75rem;
+  margin: 0;
+}
+
+.premios-admin__form { display: grid; gap: .35rem; justify-items: start; margin-top: .5rem; }
+
+/* ─── El formulario de una categoría: una ficha, no una pila de campos ────────────────────────────────── */
+
+.premios-admin__form-card {
+  justify-items: stretch;
+  gap: .6rem;
+  padding: .9rem;
+  background: var(--surface-elevated);
+  border: 1px solid var(--hair);
+  border-left: 3px solid var(--steam);
+  border-radius: var(--radius-md);
+  box-shadow: var(--e1);
+}
+
+.premios-admin__form-head {
+  font-family: var(--font-label);
+  font-size: var(--fs-md);
+  padding-bottom: .4rem;
+  border-bottom: 1px solid var(--hair);
+}
+
+/* Los dos títulos van en pareja: son el mismo dato en dos idiomas y a lo ancho caben de sobra. */
+.premios-admin__form-row {
+  display: grid;
+  gap: .6rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.premios-admin__field { display: grid; gap: .25rem; }
+.premios-admin__field label { font-family: var(--font-label); font-size: var(--fs-sm); }
+.premios-admin__field .input { width: 100%; }
+
+/* Los nominados, numerados: el número dice de qué puesto de la lista se está hablando, que es lo que nombra su
+   marcador de posición y su botón de quitar. */
+.premios-admin__nominees {
+  display: grid;
+  gap: .35rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: nominado;
+}
+
+.premios-admin__nominees > li::before {
+  counter-increment: nominado;
+  content: counter(nominado);
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--text-dim);
+  min-width: 1.1rem;
+  text-align: right;
+}
+
+.premios-admin__add { justify-self: start; display: inline-flex; align-items: center; gap: .35rem; }
+
+.premios-admin__form-actions .btn { display: inline-flex; align-items: center; gap: .35rem; }
+.premios-admin__form label { font-family: var(--font-label); font-size: var(--fs-sm); }
+.premios-admin__form .input { width: min(100%, 28rem); }
+.premios-admin__form textarea.input { font-family: var(--font-mono); font-size: var(--fs-sm); }
+
+.premios-admin__cats { display: grid; gap: .3rem; list-style: none; margin: .5rem 0 0; padding: 0; }
+
+.premios-admin__cat { border-bottom: 1px solid var(--hair); padding: .5rem .2rem; }
+
+.premios-admin__cat-head {
+  display: flex;
+  gap: .8rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  font-size: var(--fs-sm);
+}
+
+.premios-admin__label { font-family: var(--font-label); font-size: var(--fs-sm); margin-top: .4rem; }
+
+/* Qué edición hay, y el botón de corregirla al lado. Una línea en vez de los cuatro párrafos que había. */
+.premios-admin__season-bar {
+  display: flex;
+  gap: .6rem;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: .5rem .7rem;
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm);
+}
+
+.premios-admin__season-bar .btn { display: inline-flex; align-items: center; gap: .35rem; }
+
+.premios-admin__weights { display: flex; gap: .35rem; }
+
+/* Un campo por nominado, con su botón de quitar al lado. */
+.premios-admin__nominee {
+  display: flex;
+  gap: .4rem;
+  align-items: center;
+  width: 100%;
+}
+
+.premios-admin__nominee .input { flex: 1; }
+
+.premios-admin__form-actions { display: flex; gap: .5rem; margin-top: .6rem; }
+
+.premios-admin__cat-actions { display: flex; gap: .35rem; flex-wrap: wrap; align-items: center; }
+
+/* Los botones de esta fila llevan icono y rótulo juntos; los de mover, solo el icono (su nombre va en el
+   `aria-label`, que es lo que se oye y lo que sale en el `title`). */
+.premios-admin__cat-actions .btn { display: inline-flex; align-items: center; gap: .35rem; }
+.premios-admin__icon-btn { padding-inline: .55rem; }
+
+/* Clasificación provisional del panel. */
+.premios-admin__board { display: grid; gap: .25rem; list-style: none; margin: .4rem 0 0; padding: 0; }
+
+.premios-admin__board li {
+  display: flex;
+  gap: .6rem;
+  align-items: baseline;
+  font-size: var(--fs-sm);
+  padding: .3rem .2rem;
+  border-bottom: 1px solid var(--hair);
+}
+
+.premios-admin__rank {
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  min-width: 1.5rem;
+}
+
+.premios-admin__cat-head select.input { width: auto; min-width: 12rem; }
+
+/* LOS NOMINADOS COMO BOTONES, para marcar el ganador de una pulsada. Son las tarjetas de votar en pequeño: aquí
+   no hay que elegir con gusto, hay que apuntar un resultado que ya se sabe, así que lo que importa es verlos
+   todos a la vez y que el marcado cante. */
+.premios-admin__picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .3rem;
+  margin-top: .35rem;
+}
+
+.premios-admin__pick {
+  font-family: var(--font-label);
+  font-size: var(--fs-2xs);
+  line-height: 1.2;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: .25rem .6rem;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.premios-admin__pick:hover { background: var(--surface-hover); color: var(--text); }
+
+.premios-admin__pick:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* El ganador marcado: el acento del tema, como la tarjeta elegida de la votación. */
+.premios-admin__pick.is-winner {
+  color: var(--on-accent);
+  background: var(--steam);
+  border-color: color-mix(in srgb, var(--steam) 70%, #000);
+  box-shadow: var(--glow-accent);
+}
+
+/* «Sin ganador» cuando lo está: se marca en hueco, para que se distinga de un ganador de verdad. */
+.premios-admin__pick.is-none {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--steam) 45%, transparent);
+  border-style: dashed;
+}
+
+/* ─── Resultados: los ganadores a un lado y la puntuación al otro ─────────────────────────────────────── */
+
+.premios-results { display: grid; gap: 1rem; }
+
+.premios-results__head { display: grid; gap: .25rem; justify-items: center; text-align: center; }
+
+.premios-results__head h2 {
+  font-family: var(--font-display);
+  font-size: var(--fs-3xl);
+  line-height: 1.1;
+  margin: 0;
+}
+
+.premios-results__count { font-family: var(--font-mono); color: var(--text-dim); font-size: var(--fs-xs); margin: 0; }
+
+/* EL PREMIO PROPIO, cruzando las dos columnas: si te ha tocado, es lo primero que has venido a ver. */
+.premios-results__own {
+  display: flex;
+  gap: .8rem;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: .9rem;
+  background: color-mix(in srgb, var(--steam) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--steam) 35%, transparent);
+  border-radius: var(--radius-md);
+  box-shadow: var(--glow-accent-soft);
+}
+
+.premios-results__own h3 { font-family: var(--font-display); font-size: var(--fs-xl); margin: 0; }
+.premios-results__own p { color: var(--text-muted); font-size: var(--fs-sm); margin: .1rem 0 0; }
+
+/* DOS COLUMNAS cuando hay sitio, y no antes: por debajo de esta anchura una de las dos quedaría en una tira de
+   texto envuelto. Apiladas, los ganadores van primero, que es el orden con el que se cuenta una edición. */
+.premios-results__cols { display: grid; gap: 1rem; }
+
+@media (min-width: 60rem) {
+  .premios-results__cols {
+    grid-template-columns: 3fr 2fr;
+    align-items: start;
+  }
+
+  /* La clasificación se queda a la vista mientras se recorren las categorías, que es justo lo que se quiere
+     comparar. */
+  .premios-results__panel--board { position: sticky; top: 1rem; }
+}
+
+.premios-results__panel {
+  display: grid;
+  gap: .6rem;
+  align-content: start;
+  padding: .9rem;
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-md);
+  box-shadow: var(--e1);
+  min-width: 0;
+}
+
+.premios-results__panel-head {
+  display: flex;
+  gap: .8rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.premios-results__panel-head h3 {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  margin: 0;
+}
+
+.premios-results__panel-count { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-dim); }
+
+.premios-results__muted { color: var(--text-dim); font-size: var(--fs-sm); margin: 0; }
+
+/* Cada categoría, una ficha: el rótulo pequeño arriba y el ganador con el acento del tema debajo. En una lista
+   de renglones, veintisiete ganadores se leían como un listado de datos; en fichas, como un palmarés. */
+.premios-results__winners {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: .5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.premios-results__winner-card {
+  display: grid;
+  gap: .15rem;
+  padding: .6rem .7rem;
+  background: var(--surface-elevated);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm);
+  min-width: 0;
+}
+
+.premios-results__cat {
+  font-size: var(--fs-2xs);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-dim);
+}
+
+.premios-results__winner { color: var(--fg-link); font-size: var(--fs-md); line-height: 1.2; }
+
+.premios-results__board { display: grid; gap: .25rem; list-style: none; margin: 0; padding: 0; }
+
+.premios-results__row {
+  display: flex;
+  gap: .6rem;
+  align-items: center;
+  padding: .4rem .5rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+}
+
+/* Los cinco primeros PUESTOS (no posiciones) llevan marca: es lo que reparte los trofeos. */
+.premios-results__row.is-award { background: var(--surface-elevated); }
+
+/* La fila propia se reconoce por el pseudónimo, que es lo único que el archivo publica de cada persona. */
+.premios-results__row.is-own {
+  background: color-mix(in srgb, var(--steam) 12%, transparent);
+  box-shadow: inset 2px 0 0 var(--steam);
+}
+
+/* EL PUESTO, EN UN DISCO. Los tres primeros toman su metal de las clases de rango (`tier-gold` y compañía), que
+   es de donde sale el color de los metales en toda la aplicación; del cuarto en adelante se queda atenuado. */
+.premios-results__rank {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  color: var(--tier, var(--text-dim));
+  border: 1px solid color-mix(in srgb, var(--tier, var(--border)) 45%, transparent);
+  background: color-mix(in srgb, var(--tier, var(--surface)) 12%, transparent);
+  border-radius: var(--radius-pill);
+}
+
+.premios-results__name { flex: 1; color: var(--text); min-width: 0; overflow-wrap: anywhere; }
+.premios-results__points { font-family: var(--font-mono); color: var(--text-muted); }
+
+/* ─── El palmarés: los trofeos, con forma de logro, en la ficha del perfil ────────────────────────────── */
+
+.premios-palmares {
+  display: grid;
+  gap: .4rem;
+  margin-top: .8rem;
+}
+
+.premios-palmares__title {
+  font-family: var(--font-label);
+  font-size: var(--fs-2xs);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 0;
+}
+
+.premios-palmares__list {
+  display: flex;
+  gap: .9rem;
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.premios-palmares__item { display: grid; max-width: 7rem; }
+
+/* EL TROFEO ENTERO ES EL ENLACE —medalla y rótulo—, no solo el texto: a 48 px la medalla es lo que se ve y lo
+   que se intenta pulsar, y un enlace de una línea de 10 px sería un blanco imposible en el móvil. Hereda el
+   color en vez de teñirse de enlace: la vitrina se lee como vitrina y es el subrayado del rótulo al pasar lo
+   que dice que se puede pulsar. */
+.premios-palmares__link {
+  display: grid;
+  gap: .25rem;
+  justify-items: center;
+  color: inherit;
+  text-decoration: none;
+}
+
+.premios-palmares__link:hover .premios-palmares__caption,
+.premios-palmares__link:focus-visible .premios-palmares__caption { text-decoration: underline; }
+
+.premios-palmares__link:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.premios-palmares__caption {
+  color: var(--text-muted);
+  font-size: var(--fs-2xs);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.premios-results__link { color: var(--fg-link); text-decoration: none; }
+.premios-results__link:hover { text-decoration: underline; }
+
+/* ─── La lámina del podio ─────────────────────────────────────────────────────────────────────────────── */
+
+.premios-award {
+  width: min(92vw, 60rem);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.premios-award::backdrop { background: rgba(0, 0, 0, .6); }
+
+/* El canvas se dibuja a resolución NATIVA y se escala aquí: lo que se descarga sirve para imprimir. */
+.premios-award__canvas { display: block; width: 100%; height: auto; }
+
+.premios-award__actions {
+  display: flex;
+  gap: .6rem;
+  justify-content: flex-end;
+  padding: .7rem;
+}
+
+.premios-results__trophy { padding: .15rem .5rem; font-size: var(--fs-2xs); }

@@ -45,6 +45,7 @@ export type IconName =
   | 'signature'
   | 'grav'
   | 'bell'
+  | 'chess-king'
   /** Silueta de persona a TRAZO: el avatar de quien no muestra foto. Ver `HubAvatar`. */
   | 'person'
   /** Nodos conectados: compartir una reseña con enlace público. */

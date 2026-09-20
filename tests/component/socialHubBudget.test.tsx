@@ -13,6 +13,7 @@
  * Los números están justificados uno a uno abajo.
  */
 import 'fake-indexeddb/auto';
+import { LEGAL_VERSION } from '../../src/core/constants/legal';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, act, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -52,7 +53,10 @@ const firebaseMocks = vi.hoisted(() => ({
     id: 'uid-yo', profileId: 'uid-yo', email: '', displayName: 'Yo', photoURL: '',
     socialGistId: 'gist-yo', gamesGistId: 'juegos-yo', githubToken: '', socialEnabled: true, tier: 'bronce',
   } as never)),
-  getPublicConfig: vi.fn(async (): Promise<unknown> => ({ consent: { version: '2026-09-07', agreedAt: Date.now() } })),
+  // La versión sale de la CONSTANTE y no de una cadena a mano: escrita a mano, cada subida de `LEGAL_VERSION`
+  // dejaba la puerta legal cerrada en el test y este fichero fallaba entero con cuatro errores que no tienen nada
+  // que ver con lo que mide —el presupuesto de lecturas de gist—.
+  getPublicConfig: vi.fn(async (): Promise<unknown> => ({ consent: { version: LEGAL_VERSION, agreedAt: Date.now() } })),
   setPublicConfig: vi.fn(async () => {}),
   getPrivateConfig: vi.fn(async (): Promise<unknown> => ({ socialGistId: 'gist-yo', gamesGistId: 'juegos-yo' })),
   setPrivateConfig: vi.fn(async () => {}),

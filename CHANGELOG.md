@@ -5,7 +5,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
-La versión de **poder instalarla**. La aplicación ya sabía funcionar como una app —arranca sin red, tiene su
+## [1.4.0] - 2026-09-20
+
+La versión de **poder instalarla** y de que **la porra sea de esta casa**. La aplicación ya sabía funcionar como una app —arranca sin red, tiene su
 barra inferior y su icono—, pero nadie llegaba a instalarla salvo quien conociera el menú del navegador, y sin
 instalar no se ve ninguna de las dos cosas: ni la pantalla completa, ni los atajos.
 
@@ -20,7 +22,31 @@ instalar no se ve ninguna de las dos cosas: ni la pantalla completa, ni los ataj
 - **Atajos en el icono de la aplicación**: En curso, Completados, Social y Estadísticas. Había uno, apuntaba a
   una dirección que la aplicación dejó de entender hace versiones (`/?tab=c`) y no llevaba a ninguna parte.
 
+### Added
+- **Los premios se votan con las cajas de la biblioteca.** Cada nominado se ve con la misma ranura, la misma
+  carátula y la misma preferencia de imágenes que el mosaico: encendida, portadas; apagada, la tarjeta con el
+  nombre y ni una petición. La categoría entera cabe en la pantalla —el progreso arriba, la rejilla repartiéndose
+  el alto y anterior, siguiente y finalizar siempre a la vista— y la revisión pasa a ser un índice en el que cada
+  categoría lleva a su paso.
+- **Oportunidades según la cuenta.** Enviar la papeleta y corregirla gastan oportunidades: una sin cuenta social,
+  y 5, 10, 15 o 20 según el rango. Mirar lo votado no cuesta ninguna: hay una pantalla propia para repasar las
+  elecciones, y reenviar sin haber cambiado nada no escribe nada.
+- **Identificarse desde la propia sección.** Quien llega sin sesión entra con Google ahí mismo, en el sitio donde
+  el resto ve el botón de votar. Los resultados publicados se siguen viendo sin cuenta.
+- **Compartir la porra y ver los premios.** Un botón que abre la hoja del sistema en el móvil y copia el enlace en
+  el escritorio, y una galería que recorre las láminas de los premiados con su descarga dentro.
+- **El panel de retos se rehace.** Las cinco pestañas en una barra, el ciclo de la edición con su estado actual y
+  su fecha de cierre, los ganadores marcados con botones en vez de un desplegable, y la papeleta de alguien se
+  puede retirar desde la clasificación provisional.
+
 ### Fixed
+- **La entrada a los premios se ofrece a todo el mundo, no solo a quien ya tenía sesión.** La marca de si la
+  sección se enseña se leía de Firestore, y eso no se puede pedir sin cuenta sin romper la promesa de no
+  contactar con terceros; así que solo se refrescaba con sesión guardada y el resto se quedaba con «no enseñar
+  nada» para siempre. Ahora se sirve desde el propio dominio, como el aviso a los usuarios, y lo que viaja son
+  las fechas: la entrada aparece al abrir la votación y se retira sola al cerrarse.
+- **El distintivo de «votación abierta» se lee en las ocho paletas.** El acento plano con texto blanco se quedaba
+  en 4,18:1 —por debajo del mínimo para su tamaño— en tres de las doce combinaciones auditadas.
 - **La aplicación instalada se llama «Mis Listas»**, y no «GameList». El nombre bajo el icono de la pantalla de
   inicio y el texto del diálogo de instalación seguían en inglés, en una aplicación que está entera en español.
 - **El área segura del móvil vuelve a existir.** La barra inferior, el aviso de cookies, el botón flotante y la

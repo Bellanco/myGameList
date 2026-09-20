@@ -11,7 +11,10 @@ const listMyShares = vi.hoisted(() =>
   vi.fn(async () => ({ shares: [], quota: { maxActive: 5, ttlDays: 7 }, ban: null, nick: 'Me', tier: 'bronze' })),
 );
 
-vi.mock('../../src/model/repository/firebaseGateway', () => ({ getCurrentSocialAuthUser }));
+vi.mock('../../src/model/repository/firebaseGateway', () => ({
+  // El cromo pregunta si hay sesión guardada para decidir si refresca la entrada de premios
+  // (`usePremiosVisible`). Sin esto, montar la aplicación en un test revienta con «No export is defined».
+  hasStoredAuthSession: () => false, getCurrentSocialAuthUser }));
 vi.mock('../../src/model/repository/gistConfigRepository', () => ({ getSocialSyncConfig }));
 vi.mock('../../src/model/repository/shareRepository', () => ({
   listMyShares,

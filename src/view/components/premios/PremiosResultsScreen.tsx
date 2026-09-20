@@ -1,0 +1,226 @@
+import { lazy, Suspense, useMemo, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
+import { hasAward } from '../../../core/premios/awards';
+import { getOptionLabel, tField } from '../../../core/premios/localize';
+import { PREMIOS_ROUTES, resultsPath } from '../../../viewmodel/premios/premiosRoutes';
+import type { PremiosArchivedEntry, PremiosSeasonResult } from '../../../model/types/premios';
+import { PremiosCompartir } from './PremiosCompartir';
+import { HubBackButton } from '../socialhub/HubBackButton';
+
+// La lámina va aparte y perezosa: son 240 kB de arte y una tipografía que solo necesita quien ha ganado algo.
+const AwardDialog = lazy(() => import('./AwardDialog').then((m) => ({ default: m.AwardDialog })));
+
+const L = PREMIOS_UI.resultados;
+
+/**
+ * El metal de los tres primeros puestos. Son las MISMAS clases que visten los rangos del perfil
+ * (`_tiers.scss`), así que el oro de un primer puesto y el de una cuenta de oro son el mismo oro, y cada tema
+ * puede matizarlos en un solo sitio. Del cuarto en adelante, sin metal: el disco se queda en el color del texto
+ * atenuado.
+ */
+const METAL = ['tier-gold', 'tier-silver', 'tier-bronze'] as const;
+
+export interface PremiosResultsScreenProps {
+  result: PremiosSeasonResult | null;
+  leaderboard: PremiosArchivedEntry[];
+  /** Pseudónimo de quien mira, para reconocer su fila. Vacío si no tiene perfil o no hay sesión. */
+  ownProfileId: string;
+  /** Pseudónimo → uid, para los que tienen perfil social: su fila lleva a su ficha. */
+  profiles?: Map<string, string>;
+}
+
+/**
+ * Ganadores y clasificación de una edición publicada.
+ *
+ * DOS COLUMNAS EN PANTALLA ANCHA, como en la porra de origen: los GANADORES por categoría a un lado y la
+ * PUNTUACIÓN al otro. Apilados obligaban a recorrer veintisiete categorías antes de llegar a la clasificación,
+ * que es justo lo que la mayoría viene a mirar. Por debajo de la anchura de dos columnas se apilan, ganadores
+ * primero, que es el orden con el que se cuenta una edición.
+ *
+ * ES LA ÚNICA PANTALLA PÚBLICA de la sección: se abre con el enlace, sin cuenta. Por eso el archivo del que se
+ * alimenta no lleva identificadores reales ni fotos (ver `docs/plan-unificar-premios.md` §4.1) y aquí la fila
+ * propia se reconoce por el PSEUDÓNIMO, que es un dato público que no dice quién eres fuera de esta app.
+ *
+ * Los cinco primeros PUESTOS van marcados. Puesto, no posición: con dos primeros, quien les sigue es segundo, así
+ * que puede haber más de cinco personas marcadas y nunca más de cinco puestos distintos.
+ */
+export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profiles }: PremiosResultsScreenProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Por qué premiado se abre la galería; `null` = cerrada. La lámina solo se ofrece CON SESIÓN: en la página
+  // pública va la medalla.
+  const [galeria, setGaleria] = useState<number | null>(null);
+
+  /** Los premiados de la edición, en orden: es lo que recorre la galería. */
+  const premiados = useMemo(() => leaderboard.filter((entry) => hasAward(entry.rank)), [leaderboard]);
+
+  /**
+   * VOLVER A DONDE SE VINO. Aquí se llega desde tres sitios —la portada de la sección, el histórico del panel y
+   * un enlace compartido—, así que el botón deshace el paso en vez de llevar siempre al mismo destino. Solo
+   * cuando esta es la PRIMERA pantalla de la visita (un enlace abierto en frío, sin historia detrás) se cae a
+   * la portada, que es lo único que tiene sentido ofrecer ahí.
+   */
+  const volver = () => {
+    if (location.key && location.key !== 'default') navigate(-1);
+    else navigate(PREMIOS_ROUTES.home);
+  };
+
+  // La fila propia, si quien mira está en esta clasificación y se llevó algo. Va arriba del todo: si te ha
+  // tocado, es lo primero que has venido a ver.
+  const propio = useMemo(
+    () => (ownProfileId ? premiados.findIndex((entry) => entry.profileId === ownProfileId) : -1),
+    [premiados, ownProfileId],
+  );
+
+  if (!result) {
+    return (
+      <section className="premios-estado" aria-label={L.sectionAria}>
+        <h2>{L.title}</h2>
+        <p>{L.empty}</p>
+      </section>
+    );
+  }
+
+  const ganadores = (result.categoriesSnapshot || []).filter((category) => category.winner);
+
+  return (
+    <section className="premios-results" aria-label={L.sectionAria}>
+      <div className="premios-results__back">
+        <HubBackButton onBack={volver} label={L.back} />
+      </div>
+
+      <header className="premios-results__head">
+        <h2>{result.name || L.title}</h2>
+        <p className="premios-results__count">{L.ballots(result.totalBallots || 0)}</p>
+        {/* El enlace que se comparte es el de ESTA edición, con su identificador, y no el de «la última
+            publicada»: quien lo abra dentro de un año tiene que ver los resultados de los que se le hablaba.
+            Se ven sin cuenta, así que llega a cualquiera. */}
+        <PremiosCompartir
+          path={resultsPath(result.seasonId)}
+          title={PREMIOS_UI.compartir.resultsTitle(result.name || result.seasonId)}
+          text={PREMIOS_UI.compartir.resultsText}
+        />
+      </header>
+
+      {/* EL PREMIO PROPIO, a lo ancho de las dos columnas. No se incrusta la lámina: son 240 kB de arte y una
+          tipografía, y se descargan al abrirla, no al llegar. Lo que va aquí es el aviso de que te toca. */}
+      {propio >= 0 ? (
+        <div className="premios-results__own">
+          <div>
+            <h3>{L.yourAward}</h3>
+            <p>{L.yourAwardHint(premiados[propio].rank)}</p>
+          </div>
+          <button type="button" className="btn btn-primary" onClick={() => setGaleria(propio)}>
+            {L.trophy}
+          </button>
+        </div>
+      ) : null}
+
+      <div className="premios-results__cols">
+        <section className="premios-results__panel" aria-label={L.winners}>
+          <div className="premios-results__panel-head">
+            <h3>{L.winners}</h3>
+            <span className="premios-results__panel-count">{L.winnersCount(ganadores.length)}</span>
+          </div>
+
+          {ganadores.length === 0 ? (
+            <p className="premios-results__muted">{L.noWinners}</p>
+          ) : (
+            <ul className="premios-results__winners">
+              {ganadores.map((category) => (
+                <li key={category.id} className="premios-results__winner-card">
+                  <span className="premios-results__cat">{tField(category.title)}</span>
+                  <strong className="premios-results__winner">
+                    {getOptionLabel(
+                      { id: category.id, title: category.title, options: category.options },
+                      category.winner || '',
+                    )}
+                  </strong>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="premios-results__panel premios-results__panel--board" aria-label={L.leaderboard}>
+          <div className="premios-results__panel-head">
+            <h3>{L.leaderboard}</h3>
+            <span className="premios-results__panel-count">{L.participants(leaderboard.length)}</span>
+          </div>
+
+          {/* TODOS LOS PREMIOS DE UNA, sin ir fila por fila: abre la galería por el primer puesto y desde dentro
+              se pasa de uno a otro. Solo con sesión, como las láminas. */}
+          {ownProfileId && premiados.length > 0 ? (
+            <button type="button" className="btn premios-results__see-all" onClick={() => setGaleria(0)}>
+              {L.seeAll}
+            </button>
+          ) : null}
+
+          <ol className="premios-results__board">
+            {leaderboard.map((entry, index) => {
+              const propia = Boolean(ownProfileId) && entry.profileId === ownProfileId;
+              return (
+                <li
+                  key={`${entry.profileId || entry.nickname}-${index}`}
+                  className={`premios-results__row${propia ? ' is-own' : ''}${hasAward(entry.rank) ? ' is-award' : ''}`}
+                  aria-label={propia ? L.yourRow : undefined}
+                >
+                  {/* EL PUESTO SE DICE SIEMPRE EN TEXTO, aunque se vea como disco: el color del disco lo pone el
+                      puesto, y quien no ve el color necesita oírlo igual. */}
+                  <span className={`premios-results__rank ${METAL[entry.rank - 1] || ''}`}>
+                    <span className="sr-only">{L.positionAria(entry.rank)}</span>
+                    <span aria-hidden="true">{entry.rank}</span>
+                  </span>
+
+                  {/* La fila lleva a su perfil cuando esa persona tiene uno visible. Es lo que convierte la
+                      clasificación en un sitio por el que seguir tirando, y no una lista que se lee y se cierra. */}
+                  {profiles?.get(entry.profileId) ? (
+                    <Link
+                      className="premios-results__name premios-results__link"
+                      to={`/social/profiles/${encodeURIComponent(profiles.get(entry.profileId) as string)}`}
+                      aria-label={L.avatarAria(entry.nickname)}
+                    >
+                      {entry.nickname}
+                    </Link>
+                  ) : (
+                    <span className="premios-results__name">{entry.nickname}</span>
+                  )}
+
+                  <span className="premios-results__points">{L.points(entry.points)}</span>
+
+                  {/* El trofeo, solo para quien tiene sesión: el arte no se enseña en abierto (ver `AwardDialog`). */}
+                  {hasAward(entry.rank) && ownProfileId ? (
+                    <button
+                      type="button"
+                      className="btn premios-results__trophy"
+                      // POR IDENTIDAD, no por pseudónimo: quien vota sin perfil se archiva con `profileId: ''`
+                      // (ver `scoring`), así que buscando por ese campo dos premiados sin pseudónimo casaban
+                      // entre sí y pulsar en el segundo abría la lámina del primero. `premiados` es un filtrado
+                      // de `leaderboard`, de modo que son el mismo objeto.
+                      onClick={() => setGaleria(premiados.indexOf(entry))}
+                    >
+                      {propia ? L.trophy : L.see}
+                    </button>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      </div>
+
+      {galeria !== null ? (
+        <Suspense fallback={null}>
+          <AwardDialog
+            entries={premiados}
+            inicial={galeria}
+            seasonName={result.name || result.seasonId}
+            onClose={() => setGaleria(null)}
+          />
+        </Suspense>
+      ) : null}
+    </section>
+  );
+}

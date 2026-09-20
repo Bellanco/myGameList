@@ -138,6 +138,7 @@ import { SETTINGS_UI } from '../../src/core/constants/settingsLabels';
 import { SHARE_UI } from '../../src/core/constants/shareLabels';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { LEGAL_CONSENT_UI, LEGAL_VERSION } from '../../src/core/constants/legal';
+import { PREMIOS_UI } from '../../src/core/constants/premiosLabels';
 import { DEFAULT_PALETTE } from '../../src/core/constants/palettes';
 
 /**
@@ -2005,6 +2006,79 @@ describe('SocialHub — los logros de otras personas', () => {
     // sin espejo que pintar: ni una medalla. (En tu propia ficha la lista es el catálogo, así que la escalera
     // entera está ahí: lo que se comprueba es que hay medallas, no cuántas.)
     expect(await screen.findAllByRole('img', { name: /^Créditos finales/ })).not.toHaveLength(0);
+  });
+});
+
+/**
+ * EL PALMARÉS EN LA FICHA — Y EN LA PROPIA.
+ *
+ * La vitrina de las ediciones ganadas salía de buscar el perfil abierto en el directorio VISIBLE, que excluye por
+ * identidad a quien mira: en la ficha de una amistad se veía y en la tuya no, con la edición ganada igual de
+ * publicada. Es el mismo tropiezo que ya tuvo el espejo de logros, así que se prueban las dos fichas juntas.
+ */
+describe('SocialHub — el palmarés de la ficha', () => {
+  const EDICION = { seasonId: '2025', seasonName: 'Premios 2025', awardedAt: Date.parse('2026-01-07T10:00:00.000Z') };
+  const miPalmares = [{ ...EDICION, rank: 1 }];
+  const suPalmares = [{ ...EDICION, rank: 2 }];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    firebaseMocks.getPublicConfig.mockResolvedValue({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
+    firebaseMocks.resolveOwnProfile.mockResolvedValue(null);
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    });
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        recommendations: [], activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+    // Los dos perfiles con palmarés: el propio y el de una amistad. Llega en el MISMO documento del directorio
+    // que el espejo de logros (`profiles/{uid}.palmares`), así que la vitrina no cuesta una lectura aparte.
+    firebaseMocks.listSocialDirectory.mockResolvedValue([
+      {
+        id: 'me', uid: 'me', displayName: 'Me', photoURL: '', socialGistId: 'my-social', gamesGistId: '',
+        updatedAt: Date.now(), tier: 'bronce', achievementsMirror: '', palmares: miPalmares,
+      },
+      {
+        id: 'friendUid', uid: 'friendUid', displayName: 'Ada', photoURL: '', socialGistId: 'ada-social',
+        gamesGistId: '', updatedAt: Date.now(), tier: 'bronce', achievementsMirror: '', palmares: suPalmares,
+      },
+    ]);
+    const adaView = { docId: 'friendUid__me', otherUid: 'friendUid', otherName: 'Ada', otherPhoto: '', otherSocialGistId: 'ada-social', otherGamesGistId: '', state: 'friends', createdAt: 0, updatedAt: 1 };
+    firebaseMocks.getMyFriendships.mockResolvedValue({
+      friends: [adaView], incoming: [], outgoing: [], byOtherUid: { friendUid: adaView },
+    });
+    gistMocks.readPublicSocialGistById.mockResolvedValue({
+      profile: { name: 'Ada', visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true } },
+      activity: [], posts: [], updatedAt: 10,
+    });
+  });
+
+  it('tu propia ficha enseña tu palmarés', async () => {
+    renderHub('/social/profiles/me');
+
+    expect(await screen.findByText(PREMIOS_UI.palmares.entry(1, EDICION.seasonName))).toBeInTheDocument();
+  });
+
+  it('la ficha de una amistad enseña el suyo', async () => {
+    renderHub('/social/profiles/friendUid');
+
+    expect(await screen.findByText(PREMIOS_UI.palmares.entry(2, EDICION.seasonName))).toBeInTheDocument();
+  });
+
+  /* Y EL TROFEO LLEVA AL RESUMEN DE LOS VOTOS de esa edición: es donde está lo que la medalla resume. */
+  it('cada trofeo enlaza al archivo de su edición', async () => {
+    renderHub('/social/profiles/me');
+
+    const enlace = await screen.findByRole('link', { name: PREMIOS_UI.palmares.entryAria(1, EDICION.seasonName) });
+    expect(enlace).toHaveAttribute('href', `/premios/resultados/${EDICION.seasonId}`);
   });
 });
 
