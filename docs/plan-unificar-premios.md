@@ -495,6 +495,24 @@ resolución del archivo que uno se lleva (y, si se quiere, la marca):
 reglas **no tienen que leer el perfil** en cada escritura de voto. Ni lectura facturable extra en el momento de más
 carga del año, ni un nuevo par de límites duplicados cliente/reglas que mantener sincronizado.
 
+### 5.1bis Dos trofeos: la lámina en privado, la medalla en público
+
+Decidido el 20-09-2026, al mirar el arte real. Las cinco láminas son **collages ilustrados con material de
+terceros** (una ola de Hokusai, personajes de Cuphead, Sea of Stars y Cyberpunk) rotulados «Ganador Game Awards»
+en Comic Sans. Eso choca con tres cosas ya escritas: que esta app no enseña ni una imagen de juego
+(`DESIGN.md`), que las páginas públicas no llevan arte ajeno (`plan-compartir-resenas.md`), y que los resultados
+van a ser públicos con enlace (§4.2).
+
+| Dónde | Qué se ve |
+|---|---|
+| Pantalla de resultados **con sesión** y descarga del premiado | La **lámina** de siempre, intacta |
+| Página **pública** de resultados y vitrina del perfil | La **medalla** tipográfica, con los tokens del tema y la receta de `docs/logros/receta-medalla.md` |
+
+Dos consecuencias para quien implemente: las láminas **no pueden servirse desde `public/`** tal cual —eso es una
+URL abierta—, sino tras una comprobación de sesión (la Pages Function ya sabe verificar un ID token); y hay que
+**rerotularlas** desde los ficheros fuente, porque «Game Awards» es el nombre de un certamen real y el evento se
+llama **«El reto del jugador»** (la sección se titula «Premios» y cada edición lleva su año).
+
 ### 5.2 Lo que no se hace
 
 - **Voto ponderado por rango.** Rompe la equidad de la porra, que es justo lo que la hace divertida.
@@ -643,7 +661,7 @@ Cada fase termina con algo comprobable y con la suite en verde. Se para al final
 |---|---|---|---|
 | **F0** · Preparación | Claim de admin asignado; `isAdmin()` por claim en las reglas de esta app + sus tests; rama `feature/unificar-premios` desde `develop` | `npm run test:rules` en verde y `/admin` accesible tras re-loguear | 5 % |
 | **F1** · Lógica | `core/premios/` y `model/repository/premios*` en TypeScript, con los tests de `utils` y servicios portados | `npm run typecheck` + `npm test`; scoring y plazo cubiertos | 25 % |
-| | **En curso.** Hecho: tipos (`model/types/premios.ts`) y 7 módulos —`localize`, `options`, `seasonId`, `scoring`, `closingDate`, `votingSchedule`, `ballotEdits`— con 99 pruebas. Queda: `awards`, `awardCanvas`, `gridDensity`, los cuatro repositorios y los hooks | | |
+| | **En curso.** Hecho: los tipos (`model/types/premios.ts`) y los **diez módulos de cálculo** de `core/premios/`, con 143 pruebas. Queda: los cuatro repositorios y los hooks | | |
 | **F2** · Datos y reglas | Colecciones prefijadas, reglas nuevas, índices, script de copia de `categories` | Tests de reglas nuevos (voto fuera de plazo, `editCount`, ganador en categoría) + copia verificada contra el emulador | 10 % |
 | **F3** · Interfaz | `/premios` como chunk perezoso con su error boundary: votar, revisar, enviar, resultados. Cromo, avisos, esqueleto y voz por paleta de la casa (§6.6); el nominado ya se cruza con tu biblioteca (§6.5) | e2e de votación y resultados rehechos; axe en las doce combinaciones; presupuesto de arranque intacto | 35 % |
 | **F4** · Panel | Las seis pestañas dentro del `AdminHub` | e2e de admin rehecho: abrir edición, publicar, archivar | 15 % |
