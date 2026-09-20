@@ -17,11 +17,28 @@
 import type { PremiosVotingConfig } from '../../model/types/premios';
 import { SEASON_STAGE, getSeasonStage } from './votingSchedule';
 
+/**
+ * De dónde salen las fechas para decidirlo.
+ *
+ * Son dos fuentes y la regla tiene que ser LA MISMA para las dos: el calendario completo, que lee el panel desde
+ * Firestore, y la foto que se sirve desde el propio dominio para el menú de Ajustes
+ * (`core/premios/visibilitySnapshot`). Por eso el parámetro no es el tipo del calendario sino lo que ambas
+ * fuentes tienen en común.
+ */
+export type PremiosVisibilitySource = Pick<PremiosVotingConfig, 'season' | 'seasonId'> & {
+  visible?: boolean | null;
+  isOpen?: boolean | null;
+  opensAtMillis?: number | null;
+  closesAtMillis?: number | null;
+  lastPublishedId?: string | null;
+  updatedAt?: string | null;
+};
+
 /** Cuánto se considera «reciente» un resultado publicado. Un mes: lo que dura la conversación sobre una edición. */
 export const RESULTS_FRESH_MS = 30 * 24 * 60 * 60 * 1000;
 
 export function shouldOfferPremios(
-  config: PremiosVotingConfig | null | undefined,
+  config: PremiosVisibilitySource | null | undefined,
   now: number = Date.now(),
 ): boolean {
   if (!config) return false;
@@ -32,7 +49,14 @@ export function shouldOfferPremios(
   // cuenta como «abierta» para el flujo de votación —es el estado «aún no se ha configurado nada»— pero aquí eso
   // significaría ofrecer la sección sin que exista ninguna edición. Lo que distingue «hay edición» de «no la
   // hay» es la fecha de cierre, que es justo lo que mira la etapa.
-  if (getSeasonStage(config, now) === SEASON_STAGE.OPEN) return true;
+  // Las dos fuentes escriben los ausentes de distinta manera —el calendario los deja sin campo y la foto los
+  // pone a `null`—, así que se normaliza antes de preguntarle a la etapa, que es la que sabe de fechas.
+  const calendario = {
+    isOpen: config.isOpen ?? undefined,
+    opensAtMillis: config.opensAtMillis ?? null,
+    closesAtMillis: config.closesAtMillis ?? null,
+  };
+  if (getSeasonStage(calendario, now) === SEASON_STAGE.OPEN) return true;
 
   // Resultados recientes. Se mide con `updatedAt`, que es lo último que se escribió en el calendario: publicar
   // una edición lo toca, así que sirve de fecha de publicación. Es aproximado a propósito —cualquier cambio del

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { HubBackButton } from '../socialhub/HubBackButton';
 import { Icon } from '../Icon';
@@ -9,9 +9,15 @@ import { AdminPremiosVotos } from './AdminPremiosVotos';
 import { todayInVotingZone, toVotingZoneDay } from '../../../core/premios/closingDate';
 import { getSeasonLabel } from '../../../core/premios/seasonId';
 import { SEASON_STAGE, getSeasonStage, validateClosingDay } from '../../../core/premios/votingSchedule';
-import { shouldOfferPremios } from '../../../core/premios/visibility';
+import { RESULTS_FRESH_MS, shouldOfferPremios } from '../../../core/premios/visibility';
 import { loadAndSortCategories } from '../../../model/repository/premios/premiosCategoriesRepository';
 import { fetchWinners } from '../../../model/repository/premios/premiosWinnersRepository';
+import {
+  loadPremiosSnapshot,
+  savePremiosSnapshot,
+  snapshotFromConfig,
+} from '../../../model/repository/premiosVisibilityRepository';
+import { samePremiosSnapshot, type PremiosVisibilitySnapshot } from '../../../core/premios/visibilitySnapshot';
 import {
   closeSeasonNow,
   fetchVotingConfig,
@@ -45,6 +51,13 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
   const [categories, setCategories] = useState<PremiosCategory[]>([]);
   /** Cuántas categorías tienen ganador marcado: es lo que decide si publicar tiene sentido. */
   const [marcados, setMarcados] = useState(0);
+  /**
+   * LA FOTO QUE ESTÁ PUBLICADA en `/api/premios`, para no reescribir KV en cada apertura del panel.
+   *
+   * El menú de Ajustes de TODO EL MUNDO lee esa foto y no Firestore (ver `premiosVisibilityRepository`), así que
+   * cada cambio del calendario tiene que republicarla o la entrada se quedaría diciendo lo de ayer.
+   */
+  const publicado = useRef<PremiosVisibilitySnapshot | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -65,6 +78,17 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
     // Los ganadores se leen aquí y no solo en su pestaña: de ellos depende el aviso de publicar, que es la
     // acción irreversible de esta pantalla.
     setMarcados(Object.keys(await fetchWinners(nextCategories).catch(() => ({}))).length);
+
+    // Y SE REPUBLICA LA FOTO si ha cambiado algo del calendario. Es lo que hace que la entrada aparezca o se
+    // retire para quien no ha iniciado sesión, que es casi todo el mundo. Si falla no se interrumpe nada: el
+    // panel ya ha guardado lo suyo en Firestore y esto se reintenta al siguiente cambio.
+    const foto = snapshotFromConfig(nextConfig);
+    if (publicado.current === null) {
+      publicado.current = await loadPremiosSnapshot(true).catch(() => null);
+    }
+    if (!samePremiosSnapshot(foto, publicado.current)) {
+      publicado.current = await savePremiosSnapshot(foto).catch(() => publicado.current);
+    }
   }, []);
 
   useEffect(() => {
@@ -77,6 +101,35 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
     () => categories.filter((category) => (category.options?.length || 0) > 0).length,
     [categories],
   );
+
+  /** ¿Se está ofreciendo la entrada ahora mismo? Con la MISMA función que lo decide en Ajustes y en lo social. */
+  const seOfrece = useMemo(() => shouldOfferPremios(config), [config]);
+
+  /**
+   * HASTA CUÁNDO tiene sentido dejarla a la vista, con la fecha en la mano:
+   *  · votando → el día del cierre;
+   *  · con resultados publicados → un mes desde que se publicaron, que es cuando dejan de ser noticia.
+   */
+  const hastaCuando = useMemo(() => {
+    if (stage === SEASON_STAGE.OPEN && config?.closesAt) {
+      return L.season.visibleUntilVoting(toVotingZoneDay(config.closesAt));
+    }
+    const publicado = Date.parse(String(config?.updatedAt || ''));
+    if (config?.lastPublishedId && !Number.isNaN(publicado)) {
+      return L.season.visibleUntilResults(
+        toVotingZoneDay(new Date(publicado + RESULTS_FRESH_MS).toISOString()),
+      );
+    }
+    return L.season.visibleNoReason;
+  }, [config, stage]);
+
+  /** Y QUÉ SE ENCUENTRA quien entre: la puerta de votar, el aviso de cerrada o la última edición. */
+  const queSeVe = useMemo(() => {
+    if (stage === SEASON_STAGE.OPEN) return L.season.showsVoting;
+    if (stage === SEASON_STAGE.PENDING) return L.season.showsClosed;
+    if (config?.lastPublishedId) return L.season.showsResults(config.lastPublishedId);
+    return L.season.showsNothing;
+  }, [config, stage]);
 
   /** Envoltorio común: marca ocupado, traduce el fallo y recarga, que es lo que cambia lo que se ve. */
   const ejecutar = useCallback(
@@ -305,17 +358,20 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
                 enseñarla son dos gestos del mismo momento, y esconderla, el de después. */}
             <div className="premios-admin__form">
               <span className="premios-admin__label">{L.season.visibility}</span>
+              {/* DOS ESTADOS, no tres: se dice sí o no. El tercero era «según el calendario» y se leía como una
+                  opción cuando era la ausencia de decisión — con él puesto, nadie sabía mirando el panel si la
+                  entrada estaba o no. Lo que el calendario aportaba (cuándo deja de tener sentido enseñarla) se
+                  dice ahora con su fecha, debajo. */}
               <div className="premios-admin__weights" role="group" aria-label={L.season.visibility}>
                 {([
-                  [null, L.season.visibleAuto],
                   [true, L.season.visibleOn],
                   [false, L.season.visibleOff],
-                ] as Array<[boolean | null, string]>).map(([valor, rotulo]) => (
+                ] as Array<[boolean, string]>).map(([valor, rotulo]) => (
                   <button
                     key={rotulo}
                     type="button"
-                    className={`btn${(config?.visible ?? null) === valor ? ' btn-primary' : ''}`}
-                    aria-pressed={(config?.visible ?? null) === valor}
+                    className={`btn${seOfrece === valor ? ' btn-primary' : ''}`}
+                    aria-pressed={seOfrece === valor}
                     disabled={busy}
                     onClick={() =>
                       void ejecutar(async () => {
@@ -328,18 +384,16 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
                   </button>
                 ))}
               </div>
-              <p className="premios-admin__muted">{L.season.visibilityHint}</p>
-              {/* Lo que de verdad está pasando ahora mismo con esas tres opciones, resuelto con la MISMA función
-                  que lo decide en Ajustes y en el espacio social: aquí no se puede decir una cosa y hacerse
-                  otra. Con la última publicada al lado, que es el otro dato de una línea. */}
-              <p className="premios-admin__stage">
-                {[
-                  shouldOfferPremios(config) ? L.season.offeredYes : L.season.offeredNo,
-                  config?.lastPublishedId ? L.season.lastPublished(config.lastPublishedId) : '',
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </p>
+
+              {/* HASTA CUÁNDO tiene sentido dejarla puesta, con su fecha, para poder programar el cambio. */}
+              <p className="premios-admin__muted">{hastaCuando}</p>
+
+              {/* Y QUÉ SE ENCUENTRA quien entre ahora mismo, que es lo que de verdad se está enseñando. */}
+              <p className="premios-admin__stage">{queSeVe}</p>
+
+              {config?.lastPublishedId ? (
+                <p className="premios-admin__muted">{L.season.lastPublished(config.lastPublishedId)}</p>
+              ) : null}
             </div>
 
             {stage === SEASON_STAGE.PENDING ? (

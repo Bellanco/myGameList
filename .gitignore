@@ -77,6 +77,7 @@ firebase-adminsdk-*.json
 # Aviso a los usuarios publicado en LOCAL (lo escribe el plugin `local-announcement-api` de vite.config.ts al
 # guardar desde `/admin` con `npm run dev`). Son datos de prueba de una sola máquina.
 /.announcement.local.json
+/.premios.local.json
 
 # Caché de carátulas en LOCAL (el remedo de KV del plugin `local-cover-api`): qué juego empareja con qué portada
 # de IGDB. Se regenera sola y se limpia borrando el fichero.

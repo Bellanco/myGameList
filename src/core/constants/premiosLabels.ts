@@ -264,13 +264,25 @@ export const PREMIOS_UI = {
       closed: 'Votación cerrada.',
       published: (nombre: string, votos: number) => `«${nombre}» publicada con ${votos} papeleta(s).`,
       errorDay: 'Hace falta un día de cierre que no esté en el pasado.',
-      // El interruptor que decide si la sección se ofrece en Ajustes y en el espacio social.
+      // ═══ EL INTERRUPTOR DE LA ENTRADA ═════════════════════════════════════════════════════════════════
+      // Dos estados y no tres. El tercero era «según el calendario» y se leía como una opción cuando en realidad
+      // era la ausencia de decisión: nadie sabía, mirando el panel, si la entrada estaba puesta o no. Ahora se
+      // dice sí o no, y debajo va la información con la que se decide — hasta cuándo tiene sentido enseñarla y
+      // qué se encuentra quien entre.
       visibility: 'Dónde se ve',
-      visibilityHint: 'Con «Según el calendario» aparece sola mientras haya votación o resultados recientes, y se retira un mes después de publicar el resultado.',
-      visibleAuto: 'Según el calendario',
-      visibleOn: 'Siempre a la vista',
+      visibleOn: 'Visible',
       visibleOff: 'Oculta',
       visibilitySaved: 'Guardado dónde se ve la sección.',
+      /** Hasta cuándo tiene sentido dejarla puesta, para poder programarlo. */
+      visibleUntilVoting: (fecha: string) => `Mientras se vota: puedes ocultarla a partir del ${fecha}.`,
+      visibleUntilResults: (fecha: string) =>
+        `Con los resultados publicados: pierden interés hacia el ${fecha}, y ahí ya se puede ocultar.`,
+      visibleNoReason: 'No hay edición ni resultados recientes: ahora mismo no hay nada que enseñar.',
+      /** Y lo que de verdad se encuentra quien entre en la sección en este momento. */
+      showsVoting: 'Quien entre verá la puerta para identificarse y votar.',
+      showsClosed: 'Quien entre verá que la votación está cerrada y que faltan los resultados.',
+      showsResults: (nombre: string) => `Quien entre verá los resultados de «${nombre}».`,
+      showsNothing: 'Quien entre verá que no hay ninguna edición en marcha.',
     },
 
     // Marcar quién ganó cada categoría. Vive en un documento que solo lee el administrador: hasta que se publica
