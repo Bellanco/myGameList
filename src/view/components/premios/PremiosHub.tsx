@@ -189,7 +189,12 @@ export function PremiosHub({ games }: PremiosHubProps) {
           />
         )
       ) : route.panel === 'enviada' ? (
-        <PremiosEnviada remainingOpportunities={edition.remainingOpportunities} hasResults={hasResults} />
+        <PremiosEnviada
+          displayName={edition.ballot?.userDisplayName || user?.displayName || ''}
+          remainingOpportunities={edition.remainingOpportunities}
+          canEdit={edition.canEdit}
+          hasResults={hasResults}
+        />
       ) : route.panel === 'votar' ? (
         <PremiosVoteScreen
           categories={edition.categories}

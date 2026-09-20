@@ -115,6 +115,29 @@ describe('reparto con los tamaños reales de una edición', () => {
   });
 });
 
+// LA CAJA CON PORTADA ES OTRA CAJA, y por eso el reparto cambia con la preferencia de imágenes: con carátula es
+// la pieza del mosaico de la biblioteca —estrecha y alta, calibrada en ~205 px— y sin ella una tarjeta de texto,
+// que a ese ancho serían tres palabras en un sello.
+describe('getGridColumns con carátulas', () => {
+  it('con portada caben más columnas que sin ella', () => {
+    const conPortada = getGridColumns({ width: 1280, optionCount: 5, isMobile: false, isLandscape: true, withCovers: true });
+    const sinPortada = getGridColumns({ width: 1280, optionCount: 5, isMobile: false, isLandscape: true });
+    expect(conPortada).toBe(5);
+    expect(sinPortada).toBeLessThan(conPortada);
+  });
+
+  it('en un teléfono se queda en dos columnas, como el mosaico', () => {
+    expect(getGridColumns({ width: 358, optionCount: 5, isMobile: true, isLandscape: false, withCovers: true })).toBe(2);
+  });
+
+  // La regla de la fila huérfana sigue mandando por encima de la densidad: siete nominados con sitio para seis
+  // columnas se reparten 4+3, no 6+1. (Seis con sitio para seis van en una sola fila: menos filas gana.)
+  it('sigue evitando la fila huérfana', () => {
+    expect(getGridColumns({ width: 1280, optionCount: 7, isMobile: false, isLandscape: true, withCovers: true })).toBe(4);
+    expect(getGridColumns({ width: 1280, optionCount: 6, isMobile: false, isLandscape: true, withCovers: true })).toBe(6);
+  });
+});
+
 describe('estimateCardWidth', () => {
   it('reparte el ancho disponible entre las columnas', () => {
     expect(estimateCardWidth({ width: 1280, columns: 4 })).toBe(312);

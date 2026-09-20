@@ -622,14 +622,25 @@ casa que aplican desde la primera línea: **ningún hex en un componente**, **ni
 
 Tres puntos concretos de cuidado:
 
-- **`gridDensity`** decide cuántas columnas de nominados caben, y está calibrado contra medidas de Tailwind
-  (`estimateCardWidth`, el gap en píxeles, `MIN_CARD_HEIGHT_PX`). Hay que **volver a calibrarlo** con la tipografía
-  y el espaciado de esta app, y su test (172 líneas) es la red que dice si se ha roto el reparto sin fila huérfana.
-- **`AutoSizeText`** busca el mayor cuerpo de letra que quepa. Aquí la escala tipográfica es fija y multiplicada por
-  `--font-scale`: hay que decidir si el ajuste se hace **entre pasos de la escala** en vez de en píxeles libres.
-- **La tarjeta de nominado es puramente tipográfica** y marca la selección con una franja de acento en el borde
-  inferior, más borde y halo, no con un icono flotante. Eso encaja de serie con el lenguaje de la casa; conviene
-  conservarlo tal cual y no reinventarlo.
+- **`gridDensity`** decide cuántas columnas de nominados caben. **Recalibrado el 20-09-2026**, y no con un número
+  nuevo sino con una bifurcación: la caja del nominado ya no es siempre tipográfica, así que el reparto depende de
+  si lleva **carátula** (`withCovers`). Con portada es la pieza del mosaico de la biblioteca —~205 px, la
+  calibración de `GRID_CARD_MIN_PX` de `GameTable`— y sin ella la tarjeta ancha de texto que traía la porra. La
+  regla de la fila huérfana (`balanceColumns`) manda por encima de las dos.
+- **`AutoSizeText`** busca el mayor cuerpo de letra que quepa. No se ha portado: el nombre del nominado se acota a
+  dos líneas con la escala de la casa (`-webkit-line-clamp`), que es lo que hace el resto de la aplicación. Si
+  alguna vez hace falta el ajuste fino, que sea **entre pasos de la escala** y no en píxeles libres.
+- **La tarjeta de nominado** marca la selección con una franja de acento en el borde inferior, más borde y halo, no
+  con un icono flotante. Eso encaja de serie con el lenguaje de la casa; conviene conservarlo tal cual.
+
+**La maqueta de la porra se trajo el 20-09-2026** (la estructura, no la piel): cabecera con contador, porcentaje y
+barra de progreso; rejilla que **reparte el alto disponible** para que la categoría quepa sin desplazarse
+(`useAltoDisponible` mide el hueco real hasta el fondo de la ventana, descontando el relleno del contenedor); pie
+fijo con anterior / siguiente y **finalizar siempre disponible**; revisión como **índice en rejilla** con una
+tarjeta por categoría que lleva a ella; confirmación con su marca, sus tres garantías y el cupo restante; y
+resultados a **dos columnas** (ganadores | puntuación) con los tres primeros puestos vestidos con los metales de
+`_tiers.scss`. El color, la letra y las sombras los siguen poniendo los ocho temas: no entró ni un hex ni una
+tipografía nueva.
 
 ### 6.4 La lámina del trofeo
 

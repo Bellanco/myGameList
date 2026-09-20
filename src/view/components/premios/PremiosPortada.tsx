@@ -101,8 +101,18 @@ export function PremiosPortada({
         </p>
       ) : null}
 
+      {/* EL BORRADOR EN MARCHA, con la misma barra que el flujo de votación: «12 / 27» solo dice un número, y la
+          barra dice si vas por la mitad o por el final. Solo aparece cuando hay algo empezado. */}
       {votingOpen && total > 0 ? (
-        <p className="premios-portada__progress">{`${votedCount} / ${total}`}</p>
+        <p className="premios-portada__progress">
+          <span>{`${votedCount} / ${total}`}</span>
+          <span className="premios-progress__track" aria-hidden="true">
+            <span
+              className="premios-progress__bar"
+              style={{ width: `${Math.round((votedCount / total) * 100)}%` }}
+            />
+          </span>
+        </p>
       ) : null}
 
       {votingOpen ? (

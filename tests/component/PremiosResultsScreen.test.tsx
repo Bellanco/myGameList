@@ -47,7 +47,8 @@ describe('PremiosResultsScreen', () => {
     render(<PremiosResultsScreen result={archivo} leaderboard={archivo.leaderboard} ownProfileId="" />);
     expect(screen.getByText('Ana')).toBeInTheDocument();
     expect(screen.getByText(L.points(6))).toBeInTheDocument();
-    expect(screen.getByText(L.rank(1))).toBeInTheDocument();
+    // El puesto se ve como disco con su cifra, y se OYE con su rótulo: quien no ve el color necesita el texto.
+    expect(screen.getByText(L.positionAria(1))).toBeInTheDocument();
   });
 
   // EL ARCHIVO NO LLEVA IDENTIFICADORES REALES: la fila propia se reconoce por el pseudónimo, que es público y

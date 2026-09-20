@@ -63,6 +63,15 @@ export const PREMIOS_UI = {
     next: 'Siguiente',
     skip: 'Saltar',
     review: 'Revisar',
+    // EL PIE DE LA VOTACIÓN, como en la porra de origen: avanzar y retroceder en una fila, y debajo la salida
+    // hacia la revisión, que está siempre disponible — se puede enviar con categorías sin votar.
+    finish: 'Finalizar',
+    // La barra de progreso: cuánto llevas recorrido de la papeleta, y aparte cuántas has votado de verdad.
+    progressAria: 'Progreso de la votación',
+    progressCount: (actual: number, total: number) => `${actual} / ${total}`,
+    progressPercent: (pct: number) => `${pct} %`,
+    votedMark: 'Votada',
+    pendingMark: 'Sin votar',
     // Lo que se pinta en la tarjeta de un nominado que YA está en tu biblioteca. Es el cruce que hace que esta
     // sección sea parte de la app y no un inquilino (ver docs/plan-unificar-premios.md §6.5).
     inYourLibrary: {
@@ -90,6 +99,12 @@ export const PREMIOS_UI = {
     submit: 'Enviar papeleta',
     submitting: 'Enviando…',
     back: 'Volver a votar',
+    // La rejilla con TODA la papeleta: cada tarjeta lleva a su categoría, votada o no. Es lo que convierte la
+    // revisión en un índice y no en una lista para leer.
+    allVotes: 'Toda tu papeleta',
+    goToCategory: (categoria: string) => `Ir a ${categoria}`,
+    editVotes: 'Seguir votando',
+    firstPending: 'Ir a la primera sin votar',
     /** Recibe las que quedarán DESPUÉS de enviar esta, que es lo que se está a punto de gastar. */
     editsLeft: (tras: number) =>
       tras === 1 ? 'Te quedará 1 oportunidad más' : `Te quedarán ${tras} oportunidades más`,
@@ -100,6 +115,16 @@ export const PREMIOS_UI = {
     sectionAria: 'Papeleta enviada',
     title: 'Papeleta enviada',
     body: 'Tu voto ha quedado registrado.',
+    // LAS TRES COSAS QUE SE DICEN AL CONFIRMAR, cada una en su ficha, como en la porra de origen: qué pasa con
+    // tu voto, qué pasa con el de los demás y cuándo se sabrá el resultado.
+    thanks: (nombre: string) => `Gracias, ${nombre}`,
+    cards: {
+      privacy: 'Tu papeleta solo la ves tú y quien administra.',
+      oneVote: 'Un voto por persona, con tu cuenta.',
+      results: 'Los resultados se publican al cerrar la edición.',
+    },
+    confirmTitle: 'Confirmación',
+    edit: 'Corregir mi voto',
     resultsSoon: 'Los resultados se publicarán al cerrarse la edición.',
     editHint: (quedan: number) =>
       quedan === 0
@@ -148,6 +173,16 @@ export const PREMIOS_UI = {
     title: 'Resultados',
     winners: 'Ganadores',
     leaderboard: 'Clasificación',
+    // Las dos mitades de la pantalla, cada una con su rótulo de cuántas cosas trae.
+    winnersCount: (cuantas: number) => (cuantas === 1 ? '1 categoría' : `${cuantas} categorías`),
+    /** Propio y no el del panel: «14 papeleta(s)» es una cadena de administración, no de una pantalla pública. */
+    ballots: (cuantas: number) => (cuantas === 1 ? '1 papeleta' : `${cuantas} papeletas`),
+    participants: (cuantos: number) => (cuantos === 1 ? '1 participante' : `${cuantos} participantes`),
+    noWinners: 'Esta edición se publicó sin ganadores marcados.',
+    /** El premio propio, arriba del todo y ya dibujado: si te ha tocado, es lo primero que vienes a ver. */
+    yourAward: 'Tu premio',
+    yourAwardHint: (puesto: number) => `Has quedado ${puesto}.º en esta edición.`,
+    positionAria: (puesto: number) => `Puesto ${puesto}`,
     points: (puntos: number) => (puntos === 1 ? '1 punto' : `${puntos} puntos`),
     rank: (puesto: number) => `${puesto}.º`,
     yourRow: 'Tu posición',

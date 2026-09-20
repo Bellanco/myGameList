@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
-import { PREMIOS_ROUTES } from '../../../viewmodel/premios/premiosRoutes';
+import { PREMIOS_ROUTES, votePath } from '../../../viewmodel/premios/premiosRoutes';
+import { Icon } from '../Icon';
 
 /**
  * Las pantallas de SALIDA del flujo de votación.
@@ -11,20 +12,60 @@ import { PREMIOS_ROUTES } from '../../../viewmodel/premios/premiosRoutes';
  */
 
 export function PremiosEnviada({
+  displayName,
   remainingOpportunities,
+  canEdit,
   hasResults,
 }: {
+  /** El nombre con el que ha votado: es a quien se da las gracias. */
+  displayName: string;
   remainingOpportunities: number;
+  /** ¿Puede volver a entrar a corregirla? */
+  canEdit: boolean;
   hasResults: boolean;
 }) {
   const L = PREMIOS_UI.enviada;
   return (
-    <section className="premios-estado" aria-label={L.sectionAria}>
-      <h2>{L.title}</h2>
-      <p>{L.body}</p>
-      <p className="premios-estado__muted">{L.editHint(remainingOpportunities)}</p>
-      <p className="premios-estado__muted">{L.resultsSoon}</p>
+    <section className="premios-enviada" aria-label={L.sectionAria}>
+      {/* UNA MARCA DE CONFIRMACIÓN, grande y sola. Lo que hay que entender de un vistazo es que el voto entró; el
+          resto de la pantalla es el detalle para quien se quede a leerlo. */}
+      <span className="premios-enviada__check" aria-hidden="true">
+        <Icon name="check" className="premios-enviada__check-icon" />
+      </span>
+
+      <h2 className="premios-enviada__title">{L.title}</h2>
+      {displayName ? <p className="premios-enviada__thanks">{L.thanks(displayName)}</p> : null}
+      <p className="premios-enviada__lead">{L.body}</p>
+
+      {/* LAS TRES GARANTÍAS, cada una en su ficha: qué pasa con tu papeleta, qué pasa con la de los demás y
+          cuándo se sabrá. Es lo que la porra de origen decía aquí, y es donde se lee — no en la portada. */}
+      <ul className="premios-enviada__cards">
+        <li className="premios-enviada__card">
+          <Icon name="lock" />
+          <span>{L.cards.privacy}</span>
+        </li>
+        <li className="premios-enviada__card">
+          <Icon name="person" />
+          <span>{L.cards.oneVote}</span>
+        </li>
+        <li className="premios-enviada__card">
+          <Icon name="trophy" />
+          <span>{L.cards.results}</span>
+        </li>
+      </ul>
+
+      <div className="premios-enviada__confirm">
+        <p className="premios-enviada__confirm-title">{L.confirmTitle}</p>
+        <p>{L.editHint(remainingOpportunities)}</p>
+        <p className="premios-estado__muted">{L.resultsSoon}</p>
+      </div>
+
       <div className="premios-estado__actions">
+        {canEdit ? (
+          <Link className="btn btn-primary" to={votePath(1)}>
+            {L.edit}
+          </Link>
+        ) : null}
         {hasResults ? (
           <Link className="btn" to={PREMIOS_ROUTES.results}>
             {L.toResults}
