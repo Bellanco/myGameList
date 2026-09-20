@@ -424,13 +424,23 @@ Lo que se añade es lo mínimo para pintar una cara:
 
 ```ts
 interface LeaderboardEntry {
-  displayName: string;   // el que la persona eligió al votar
+  nickname: string;   // el nombre que la persona eligió al votar
   points: number;
-  rank: number;          // puesto denso
-  profileId: string;     // pseudónimo público del perfil — NO el uid
-  photoURL?: string;     // denormalizada en el momento de publicar
+  rank: number;       // puesto denso
+  profileId: string;  // pseudónimo público del perfil — NO el uid
 }
 ```
+
+**LA FOTO NO SE PUBLICA, y esto corrige lo que decía este documento.** La idea era denormalizarla al archivar,
+hasta que al implementarlo se vio el precio: el archivo es **público y permanente**, así que congelar ahí la URL
+de la foto de cada participante deja datos personales en un documento abierto —y quitar la foto de la cuenta ya no
+la retiraría de ahí—. Decidido el 20-09-2026: el archivo lleva solo nombre y pseudónimo, y **la cara se resuelve
+al PINTAR**, desde el directorio social que la sesión ya se descarga, aplicando la reciprocidad de verdad (que es
+dinámica: depende de si quien mira enseña la suya hoy). Sin sesión, iniciales.
+
+**Tampoco se guarda el correo en la papeleta**, que es lo que hacía la aplicación de origen: los correos se
+purgaron de Firestore y las reglas los prohíben en el perfil, así que no vuelven por esta puerta. El panel
+identifica a cualquiera por su uid, su pseudónimo y el nombre que eligió.
 
 **Un solo pseudónimo, el que ya usa esta app.** GA calculaba una huella propia del uid (`pseudonym.js`, FNV-1a)
 solo para reconocer tu fila. Aquí no hace falta: votar crea cuenta ligera (§2.2), toda cuenta tiene `profileId`
@@ -661,7 +671,13 @@ Cada fase termina con algo comprobable y con la suite en verde. Se para al final
 |---|---|---|---|
 | **F0** · Preparación | Claim de admin asignado; `isAdmin()` por claim en las reglas de esta app + sus tests; rama `feature/unificar-premios` desde `develop` | `npm run test:rules` en verde y `/admin` accesible tras re-loguear | 5 % |
 | **F1** · Lógica | `core/premios/` y `model/repository/premios*` en TypeScript, con los tests de `utils` y servicios portados | `npm run typecheck` + `npm test`; scoring y plazo cubiertos | 25 % |
-| | **En curso.** Hecho: los tipos (`model/types/premios.ts`) y los **diez módulos de cálculo** de `core/premios/`, con 143 pruebas. Queda: los cuatro repositorios y los hooks | | |
+| | **Hecha, salvo los hooks.** Los tipos, los **diez módulos de cálculo** de `core/premios/` y los **cuatro repositorios** de `model/repository/premios/`, con 189 pruebas. Los hooks pasan a F3 a propósito: ver la nota de abajo | | |
+
+**Por qué los hooks se van a F3.** El plan los metía aquí, pero al llegar se ve que no son lógica: son el cableado
+entre un repositorio y una pantalla que todavía no existe. `useVotingFlow` hay que reescribirlo entero (los pasos
+pasan a ser rutas, §6.1) y los demás son finos —leen, guardan y exponen estado—, así que su forma la decide la
+pantalla. Portarlos ahora significaría escribirlos dos veces. Lo que sí estaba en F1 y era el grueso —el cálculo y
+las escrituras— está hecho y probado sin depender de nada visual.
 | **F2** · Datos y reglas | Colecciones prefijadas, reglas nuevas, índices, script de copia de `categories` | Tests de reglas nuevos (voto fuera de plazo, `editCount`, ganador en categoría) + copia verificada contra el emulador | 10 % |
 | **F3** · Interfaz | `/premios` como chunk perezoso con su error boundary: votar, revisar, enviar, resultados. Cromo, avisos, esqueleto y voz por paleta de la casa (§6.6); el nominado ya se cruza con tu biblioteca (§6.5) | e2e de votación y resultados rehechos; axe en las doce combinaciones; presupuesto de arranque intacto | 35 % |
 | **F4** · Panel | Las seis pestañas dentro del `AdminHub` | e2e de admin rehecho: abrir edición, publicar, archivar | 15 % |

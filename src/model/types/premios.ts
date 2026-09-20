@@ -122,3 +122,37 @@ export interface PremiosVotingConfig {
    */
   visible?: boolean;
 }
+
+/** Una categoría congelada dentro de un archivo publicado. */
+export interface PremiosCategorySnapshot {
+  id: string;
+  title: PremiosTitle | string;
+  winner: string | null;
+  weight: number;
+  options: PremiosOptionLike[];
+}
+
+/**
+ * Una fila de la clasificación YA ARCHIVADA.
+ *
+ * No lleva `userId`, y es lo que distingue este tipo del de la clasificación en vivo: el archivo es de lectura
+ * pública, así que no puede publicar el identificador real de ninguna cuenta. Tampoco lleva foto — la cara se
+ * resuelve al pintar, con la reciprocidad del hub, que es dinámica (decisión del 20-09-2026).
+ */
+export interface PremiosArchivedEntry {
+  rank: number;
+  profileId: string;
+  nickname: string;
+  points: number;
+}
+
+/** Una edición archivada: lo único que queda de ella cuando se publica. */
+export interface PremiosSeasonResult {
+  season: number;
+  seasonId: string;
+  name: string;
+  winners: PremiosWinnersMap;
+  categoriesSnapshot: PremiosCategorySnapshot[];
+  leaderboard: PremiosArchivedEntry[];
+  totalBallots: number;
+}
