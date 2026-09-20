@@ -84,6 +84,11 @@ export interface SocialProfileReference {
 export interface SocialDirectoryEntry {
   id: string;
   uid: string; // uid de Firebase del perfil — necesario para relaciones de amistad (id del doc canónico) y robusto ante el cutover uid→profileId
+  /**
+   * Pseudónimo público. Es el ÚNICO puente con el archivo de una edición publicada, que no lleva uid porque es
+   * de lectura abierta: sin él, la clasificación no puede poner cara ni enlace a ninguna fila.
+   */
+  profileId?: string;
   displayName: string;
   photoURL: string;
   socialGistId: string;

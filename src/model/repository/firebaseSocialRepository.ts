@@ -404,6 +404,7 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
       .map((entry) => {
         const data = entry.data() as {
           uid?: string;
+          profileId?: string;
           displayName?: string;
           photoURL?: string;
           tier?: string;
@@ -419,6 +420,9 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
           uid: String(data.uid || entry.id),
           displayName: String(data.displayName || ''),
           photoURL: String(data.photoURL || ''),
+          // Del mismo documento, sin coste: es lo que permite reconocer a alguien desde el archivo de una
+          // edición publicada, donde no hay uid.
+          profileId: String(data.profileId || ''),
           socialGistId: String(data.social?.gistId || ''),
           // LEGACY: se mantiene la lectura mientras queden perfiles sin purgar; en los nuevos llega vacío y el gist
           // de juegos de un AMIGO se resuelve desde su doc de amistad (denormalizado). El email de otros usuarios ya

@@ -9,6 +9,7 @@ import type { SocialAuthUser } from '../../../model/repository/firebaseClient';
 import type { TabData } from '../../../model/types/game';
 import { matchPremiosRoute, PREMIOS_ROUTES } from '../../../viewmodel/premios/premiosRoutes';
 import { usePremiosEdition } from '../../../viewmodel/premios/usePremiosEdition';
+import { usePremiosProfiles } from '../../../viewmodel/premios/usePremiosFaces';
 import { usePremiosResult } from '../../../viewmodel/premios/usePremiosResult';
 import { usePremiosVoting } from '../../../viewmodel/premios/usePremiosVoting';
 import { starsFromGrade } from '../../../core/utils/scoreScale';
@@ -83,6 +84,9 @@ export function PremiosHub({ games }: PremiosHubProps) {
   const route = matchPremiosRoute(location.pathname);
   // El archivo se pide SOLO cuando se está mirando: es una lectura más, y la portada no lo necesita.
   const archivo = usePremiosResult(route.panel === 'resultados' ? route.seasonId : '', route.panel === 'resultados' ? edition.config : null);
+  // Quién de la clasificación tiene perfil al que enlazar. Cacheado por el repositorio: llegar aquí desde la app
+  // no cuesta ninguna lectura.
+  const perfiles = usePremiosProfiles(archivo.leaderboard, user?.uid || '');
 
   // Corregir un voto arranca de lo ya enviado, no de cero.
   useEffect(() => {
@@ -165,6 +169,7 @@ export function PremiosHub({ games }: PremiosHubProps) {
             result={archivo.result}
             leaderboard={archivo.leaderboard}
             ownProfileId={profileId}
+            profiles={perfiles}
           />
         )
       ) : route.panel === 'enviada' ? (

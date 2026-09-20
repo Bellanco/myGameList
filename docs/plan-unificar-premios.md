@@ -696,6 +696,19 @@ desde KV, sin Firebase).
 | **F4** · Panel | Las seis pestañas dentro del `AdminHub` | e2e de admin rehecho: abrir edición, publicar, archivar | 15 % |
 | | ✅ **HECHA.** La porra como una VISTA MÁS de `AdminHub` (sin segundo `/admin` ni segunda guarda), con sus **cinco pestañas**: Temporada (abrir, cerrar, publicar), Categorías (crear, editar, ordenar, eliminar; los nominados son un campo cada uno y conservan su id), Ganadores, Votos (censo + clasificación provisional) e Histórico (renombrar y borrar, con reapunte de la pantalla pública) | | |
 | **F5** · Social | Cuenta ligera, avatares en la clasificación, palmarés en el perfil, trofeo por rango, los tres cruces restantes de §6.5 (feed, estadísticas, añadir a Próximos), `LEGAL_VERSION` | Tests de reglas de `palmares`; comprobación manual de las cuatro puertas de la foto | 10 % |
+| | **Casi hecha.** Cuenta ligera al votar, palmarés concedido al publicar y enseñado como logro en la ficha del perfil (con sus 5 pruebas de reglas), la fila de la clasificación enlaza al perfil, y `LEGAL_VERSION` subida a `2026-09-20` con los tres tratamientos nuevos declarados. **Las caras en la clasificación quedan fuera**, con motivo medido: ver abajo | | |
+
+**Por qué la clasificación no enseña fotos (20-09-2026).** La decisión era aplicar las cuatro puertas del hub, y
+una de ellas no se puede evaluar desde esta sección: la RECIPROCIDAD necesita saber si quien mira publica su
+propia foto, y ese interruptor (`visibility.showPhoto`) vive **dentro del gist social**. Resolverlo aquí obligaría
+a cargar el canal de GitHub solo para decidir si se pinta un círculo — y en una URL pública compartida no hay
+sesión que lo cargue.
+
+Lo que NO vale es asumir que quien tiene foto la publica: quien la ha escondido a propósito vería las de los demás
+sin enseñar la suya, que es justo el trato que la regla deshace. Las dos salidas, por si se retoma: replicar ese
+interruptor en `publicConfig/{uid}` —owner-only, ya sincroniza preferencias y se lee con una consulta— o pasar el
+espectador ya resuelto cuando se llegue desde el hub. Mientras tanto, iniciales para todo el mundo y **la fila
+enlaza al perfil**, que era la mitad del valor de la idea.
 | **F6** · Retirada | Redirección permanente del sitio viejo, repositorio archivado, un solo proyecto de Pages | El enlace antiguo lleva a `/premios` | Pequeño |
 
 **Orden recomendado:** F0 → F1 → F2 → F3 → F4 → F5 → F6. Datos y reglas **antes** que la interfaz: es donde

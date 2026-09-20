@@ -381,3 +381,6 @@
   text-align: center;
   line-height: 1.2;
 }
+
+.premios-results__link { color: var(--fg-link); text-decoration: none; }
+.premios-results__link:hover { text-decoration: underline; }

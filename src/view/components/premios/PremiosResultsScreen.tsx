@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { hasAward } from '../../../core/premios/awards';
 import { getOptionLabel, tField } from '../../../core/premios/localize';
@@ -10,6 +11,8 @@ export interface PremiosResultsScreenProps {
   leaderboard: PremiosArchivedEntry[];
   /** Pseudónimo de quien mira, para reconocer su fila. Vacío si no tiene perfil o no hay sesión. */
   ownProfileId: string;
+  /** Pseudónimo → uid, para los que tienen perfil social: su fila lleva a su ficha. */
+  profiles?: Map<string, string>;
 }
 
 /**
@@ -22,7 +25,7 @@ export interface PremiosResultsScreenProps {
  * Los cinco primeros PUESTOS van marcados. Puesto, no posición: con dos primeros, quien les sigue es segundo, así
  * que puede haber más de cinco personas marcadas y nunca más de cinco puestos distintos.
  */
-export function PremiosResultsScreen({ result, leaderboard, ownProfileId }: PremiosResultsScreenProps) {
+export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profiles }: PremiosResultsScreenProps) {
   if (!result) {
     return (
       <section className="premios-estado" aria-label={L.sectionAria}>
@@ -71,7 +74,19 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId }: Prem
               aria-label={propia ? L.yourRow : undefined}
             >
               <span className="premios-results__rank">{L.rank(entry.rank)}</span>
-              <span className="premios-results__name">{entry.nickname}</span>
+              {/* La fila lleva a su perfil cuando esa persona tiene uno visible. Es lo que convierte la
+                  clasificación en un sitio por el que seguir tirando, y no una lista que se lee y se cierra. */}
+              {profiles?.get(entry.profileId) ? (
+                <Link
+                  className="premios-results__name premios-results__link"
+                  to={`/social/profiles/${encodeURIComponent(profiles.get(entry.profileId) as string)}`}
+                  aria-label={L.avatarAria(entry.nickname)}
+                >
+                  {entry.nickname}
+                </Link>
+              ) : (
+                <span className="premios-results__name">{entry.nickname}</span>
+              )}
               <span className="premios-results__points">{L.points(entry.points)}</span>
             </li>
           );
