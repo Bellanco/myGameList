@@ -53,6 +53,14 @@ export function usePremiosVisible(): boolean {
     const refrescar = () => setSello((n) => n + 1);
     window.addEventListener(PREMIOS_VISIBILITY_EVENT, refrescar);
 
+    // Y AL VOLVER A LA APP, que es como se entera quien la tenía abierta en otra pestaña o en otro aparato: el
+    // administrador abre la edición desde el móvil y aquí la entrada aparece al volver, sin recargar. Solo al
+    // volver a primer plano, no en cada pulsación: la respuesta se sirve cacheada cinco minutos.
+    const alVolver = () => {
+      if (document.visibilityState === 'visible') refrescar();
+    };
+    document.addEventListener('visibilitychange', alVolver);
+
     let canal: BroadcastChannel | null = null;
     try {
       canal = new BroadcastChannel(PREMIOS_VISIBILITY_CHANNEL);
@@ -63,6 +71,7 @@ export function usePremiosVisible(): boolean {
 
     return () => {
       window.removeEventListener(PREMIOS_VISIBILITY_EVENT, refrescar);
+      document.removeEventListener('visibilitychange', alVolver);
       canal?.close();
     };
   }, []);
