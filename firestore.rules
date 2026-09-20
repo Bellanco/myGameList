@@ -328,6 +328,11 @@ service cloud.firestore {
       // `hasOnly` que no cuadra rechaza la escritura ENTERA, así que en cuanto alguien cambiaba la forma del
       // listado dejaban de sincronizarse también su paleta y su tema. Añadirlas solo ABRE lo que se admite:
       // ningún documento que hoy se guarda deja de guardarse por esto.
+      //
+      // `listShape` y `gridSize` SE QUEDAN AQUÍ AUNQUE EL CLIENTE YA NO LAS ESCRIBA (20-09-2026: pasaron a ser
+      // preferencias de cada aparato). Quitarlas sería el mismo fallo del párrafo de arriba con el signo
+      // cambiado: se valida el documento RESULTANTE, así que a quien las tenga guardadas de antes se le
+      // denegaría la escritura entera de sus preferencias la próxima vez que cambiara de paleta.
       return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale", "palette", "theme", "uppercase", "showSteamButton", "effects", "consent", "feedMoveTabs", "listShape", "covers", "gridSize"])
         && (!("scoreScale" in request.resource.data)
             || request.resource.data.scoreScale in ["stars", "grade"])

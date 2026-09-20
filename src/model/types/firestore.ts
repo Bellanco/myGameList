@@ -158,9 +158,16 @@ export interface FirestorePublicConfig {
   showSteamButton?: boolean;
   /** F1 — efectos visuales animados de los temas (por defecto true; false los desactiva). */
   effects?: boolean;
-  /** F5 — forma del listado: 'list' (renglones) o 'grid' (mosaico). Por defecto, renglones. */
+  /**
+   * @deprecated YA NO SE ESCRIBEN (20-09-2026). La forma del listado y el tamaño de sus cuadros pasaron a ser
+   * preferencias DE CADA APARATO (ver `listShapePreference`): la misma cuenta quiere mosaico en el móvil y
+   * renglones en el monitor. Siguen declarados porque hay documentos en producción que los traen, y por eso
+   * `publicConfigWriteIsValid()` tiene que seguir admitiéndolos en su allowlist: en un `update` por merge se
+   * valida el documento RESULTANTE, así que quitarlos de la regla denegaría la escritura entera —paleta y tema
+   * incluidos— a quien ya los tenga guardados.
+   */
   listShape?: 'list' | 'grid';
-  /** F5 — tamaño de los cuadros del mosaico: 'sm' | 'md' (por defecto) | 'lg'. */
+  /** @deprecated Ver `listShape`: ya no se escribe. */
   gridSize?: 'sm' | 'md' | 'lg';
   /**
    * Carátulas de los juegos. Por defecto AUSENTE, que se lee como apagada: descargar imágenes implica que el

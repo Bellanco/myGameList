@@ -38,20 +38,25 @@ describe('preferencia del tamaño de los cuadros', () => {
     }
   });
 
-  it('adopta el paso que llega de la nube', async () => {
+  /**
+   * ES DE ESTE APARATO, y eso es lo que estas dos pruebas protegen (20-09-2026).
+   *
+   * Se sincronizaba con el resto de la apariencia, y era la única preferencia a la que seguirte le sentaba mal:
+   * en un teléfono caben dos cuadros y en un monitor ocho, así que elegir en uno reordenaba el otro. Lo que se
+   * comprueba no es que no haya código de nube —eso se borra sin querer— sino que un documento de cuenta con
+   * estos campos NO cambia lo que hay elegido en esta máquina.
+   */
+  it('lo que llegue de la nube NO pisa lo elegido aquí', async () => {
     gridSizePreference.set('md');
     getPublicConfig.mockResolvedValueOnce({ gridSize: 'sm' });
     await hydratePreferencesFromCloud('uid-a');
-    expect(gridSizePreference.get()).toBe('sm');
+    expect(gridSizePreference.get()).toBe('md');
   });
 
-  it('pero un valor con forma inesperada se IGNORA, no pisa lo que esta máquina tenía elegido', async () => {
-    // `fromCloud` devuelve `null` para «ignóralo», que es distinto de devolver el valor por defecto: entre
-    // «no me han dicho nada» y «me han dicho una tontería» la respuesta es la misma —quedarse como estaba— y
-    // nunca reescribir la elección de quien está delante.
-    gridSizePreference.set('lg');
-    getPublicConfig.mockResolvedValueOnce({ gridSize: 'xl' });
+  it('ni siquiera cuando esta máquina no tiene nada elegido', async () => {
+    // Un documento con el campo de antes de la decisión: se ignora igual, y aquí manda el paso de en medio.
+    getPublicConfig.mockResolvedValueOnce({ gridSize: 'lg' });
     await hydratePreferencesFromCloud('uid-a');
-    expect(gridSizePreference.get()).toBe('lg');
+    expect(gridSizePreference.get()).toBe('md');
   });
 });

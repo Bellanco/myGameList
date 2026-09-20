@@ -29,16 +29,18 @@ export const UPPERCASE_KEY = 'mis-listas-uppercase';
 // (no necesita anti-flash: solo condiciona un botón de la toolbar, no la pintura inicial del tema).
 export const STEAM_BUTTON_KEY = 'mis-listas-steam-button';
 
-// F5 — FORMA del listado: 'list' (renglones) o 'grid' (mosaico de cajas). Es de presentación pura y se
-// sincroniza por cuenta (publicConfig.listShape), como el resto de la apariencia. No la lee `theme-init.js`: la
-// forma la decide React al montar el listado, y antes de eso no hay ninguna fila que pintar.
+// F5 — FORMA del listado: 'list' (renglones) o 'grid' (mosaico de cajas). SOLO EN ESTE APARATO: se sincronizó
+// por cuenta hasta el 20-09-2026, y era la única preferencia a la que seguirte le sentaba mal —en el móvil se
+// pasea por la colección en mosaico y en el monitor se busca un título en renglones—, así que elegir en uno
+// reordenaba el otro. No la lee `theme-init.js`: la forma la decide React al montar el listado, y antes de eso
+// no hay ninguna fila que pintar.
 export const LIST_SHAPE_KEY = 'mis-listas-list-shape';
 /** Carátulas de los juegos. Ausente = APAGADA: nadie descarga nada sin haberlo pedido. */
 export const COVERS_KEY = 'mis-listas-covers';
 
 // TAMAÑO de los cuadros del mosaico: 'sm' | 'md' (por defecto) | 'lg'. Cuánto ocupa cada cuadro es cuestión de
-// gusto y de pantalla —caben 8 o 5 por fila en el mismo monitor—, así que lo elige quien mira. Se sincroniza
-// por cuenta (publicConfig.gridSize), como el resto de la apariencia.
+// gusto y de PANTALLA —ocho por fila en un monitor, dos en un teléfono—, así que vive en este aparato y no en
+// la cuenta (20-09-2026, con la forma del listado: ver LIST_SHAPE_KEY).
 export const GRID_SIZE_KEY = 'mis-listas-grid-size';
 
 // F1 — efectos visuales ANIMADOS de los temas (barridos, glitch, parpadeo CRT, deriva de texturas, estrellas
