@@ -8,7 +8,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const getPublicConfig = vi.fn();
-const setPublicConfig = vi.fn(async () => {});
+// Con los argumentos declarados: el doble se llama con `(uid, patch)` desde el almacén, y sin ellos en la firma
+// `tsc` rechaza el reenvío (TS2556).
+const setPublicConfig = vi.fn(async (..._args: unknown[]) => {});
 vi.mock('../../src/model/repository/firebaseRepository', () => ({
   getPublicConfig: (...args: unknown[]) => getPublicConfig(...args),
   setPublicConfig: (...args: unknown[]) => setPublicConfig(...args),
