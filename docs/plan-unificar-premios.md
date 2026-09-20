@@ -643,6 +643,7 @@ Cada fase termina con algo comprobable y con la suite en verde. Se para al final
 |---|---|---|---|
 | **F0** · Preparación | Claim de admin asignado; `isAdmin()` por claim en las reglas de esta app + sus tests; rama `feature/unificar-premios` desde `develop` | `npm run test:rules` en verde y `/admin` accesible tras re-loguear | 5 % |
 | **F1** · Lógica | `core/premios/` y `model/repository/premios*` en TypeScript, con los tests de `utils` y servicios portados | `npm run typecheck` + `npm test`; scoring y plazo cubiertos | 25 % |
+| | **En curso.** Hecho: tipos (`model/types/premios.ts`) y 7 módulos —`localize`, `options`, `seasonId`, `scoring`, `closingDate`, `votingSchedule`, `ballotEdits`— con 99 pruebas. Queda: `awards`, `awardCanvas`, `gridDensity`, los cuatro repositorios y los hooks | | |
 | **F2** · Datos y reglas | Colecciones prefijadas, reglas nuevas, índices, script de copia de `categories` | Tests de reglas nuevos (voto fuera de plazo, `editCount`, ganador en categoría) + copia verificada contra el emulador | 10 % |
 | **F3** · Interfaz | `/premios` como chunk perezoso con su error boundary: votar, revisar, enviar, resultados. Cromo, avisos, esqueleto y voz por paleta de la casa (§6.6); el nominado ya se cruza con tu biblioteca (§6.5) | e2e de votación y resultados rehechos; axe en las doce combinaciones; presupuesto de arranque intacto | 35 % |
 | **F4** · Panel | Las seis pestañas dentro del `AdminHub` | e2e de admin rehecho: abrir edición, publicar, archivar | 15 % |
@@ -668,6 +669,10 @@ Se rehacen contra la interfaz nueva los de componentes y los cinco de Playwright
 `admin`, `a11y`), que miran una maqueta que deja de existir.
 
 Se añaden, porque son casos que hoy no cubre nadie:
+
+- **El par duplicado del tope de correcciones** (`MAX_BALLOT_EDITS` ↔ `maxBallotEdits()` de las reglas). Va en
+  `tests/integration/firestore.rules.test.ts`, que es donde ya viven los otros pares y el único sitio que lee las
+  reglas de verdad; en un test unitario no cabe, porque bajo Vitest `import.meta.url` no es una URL `file:`.
 
 - **La cuenta ligera**: que se crea sin `tier` y sin `social.enabled`, y que asciende sin perder `createdAt`.
 - **El palmarés**: que el dueño no puede escribírselo (regla), y que la vitrina aguanta un valor corrupto.
