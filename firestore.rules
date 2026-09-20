@@ -10,11 +10,26 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    /**
+     * QUIÉN MANDA: el custom claim `admin` del token, no un correo.
+     *
+     * Antes esto comparaba `request.auth.token.email` con una dirección escrita aquí mismo. Funcionaba —el correo
+     * lo pone Google, no el cliente— pero ataba el permiso a una cuenta concreta publicada en el repositorio, no
+     * dejaba sitio a un segundo administrador y obligaba a desplegar reglas para cambiar de cuenta.
+     *
+     * El claim lo emite el servidor con el Admin SDK (`scripts/set-admin-claim.mjs`), viaja firmado dentro del ID
+     * token y el cliente no puede inventárselo. Ya no hace falta exigir `email_verified`: eso protegía contra una
+     * cuenta con el correo del administrador sin verificar, y sin correo de por medio el caso desaparece.
+     *
+     * COMPARACIÓN ESTRICTA contra `true`, igual que `hasAdminClaim` en `src/core/security/admin.ts`: el nombre del
+     * claim es un PAR DUPLICADO entre este fichero y aquel módulo, y `tests/integration/firestore.rules.test.ts`
+     * los ata para que no puedan divergir en silencio.
+     *
+     * ⚠️ ORDEN DE DESPLIEGUE: el claim se asigna ANTES de desplegar estas reglas, y hay que volver a iniciar
+     * sesión para que el token lo traiga. Al revés, el panel se queda sin nadie dentro.
+     */
     function isAdmin() {
-      return isSignedIn()
-        && request.auth.token.email != null
-        && request.auth.token.email_verified == true
-        && request.auth.token.email == "bellanco3@gmail.com";
+      return isSignedIn() && request.auth.token.admin == true;
     }
 
     function isOwner(userId) {

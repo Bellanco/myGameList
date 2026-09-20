@@ -3,7 +3,6 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ADMIN_PANEL_UI, ADMIN_SHARES_UI } from '../../src/core/constants/adminLabels';
-import { ADMIN_EMAIL } from '../../src/core/security/admin';
 import {
   PROFILE_TIER_LABELS,
   PROFILE_TIER_SHARE_MAX_ACTIVE,
@@ -15,11 +14,18 @@ import type { AdminAnomaly } from '../../src/model/types/firestore';
 // no Firestore (eso lo cubre tests/unit/adminRepository.test.ts y las reglas en tests/integration).
 let emitAuth: (user: { uid: string; email: string; displayName: string; photoURL: string } | null) => void = () => {};
 
+// EL CLAIM, NO EL CORREO. La puerta del panel pregunta por el custom claim `admin` del token (ver
+// `src/core/security/admin.ts`), así que lo que el test controla es la RESPUESTA A ESA PREGUNTA, no qué cuenta
+// inicia sesión. `readAdminClaimMock` recibe el `forceRefresh`, y eso permite montar el caso que de verdad
+// importa: el claim que solo aparece al refrescar el token.
+const readAdminClaimMock = vi.fn<(forceRefresh?: boolean) => Promise<boolean>>(async () => false);
+
 vi.mock('../../src/model/repository/firebaseGateway', () => ({
   subscribeSocialAuth: (callback: (user: unknown) => void) => {
     emitAuth = callback as typeof emitAuth;
     return () => {};
   },
+  readAdminClaim: (forceRefresh?: boolean) => readAdminClaimMock(forceRefresh),
 }));
 
 const loadAdminCensusMock = vi.fn<(...args: unknown[]) => unknown>();
@@ -144,8 +150,16 @@ function renderHub() {
   );
 }
 
-function signIn(email: string) {
-  emitAuth({ uid: 'uid-admin', email, displayName: '', photoURL: '' });
+/** Sesión CON el claim de administrador. El correo ya no decide nada; se deja por realismo del objeto. */
+function signInAsAdmin() {
+  readAdminClaimMock.mockResolvedValue(true);
+  emitAuth({ uid: 'uid-admin', email: 'quien.manda@example.com', displayName: '', photoURL: '' });
+}
+
+/** Sesión SIN el claim: una cuenta cualquiera que ha encontrado la ruta oculta. */
+function signInAsVisitor() {
+  readAdminClaimMock.mockResolvedValue(false);
+  emitAuth({ uid: 'uid-visita', email: 'otra.persona@example.com', displayName: '', photoURL: '' });
 }
 
 describe('AdminHub — puerta de acceso', () => {
@@ -156,6 +170,8 @@ describe('AdminHub — puerta de acceso', () => {
     purgeLegacyProfileFieldsMock.mockClear();
     deleteUserProfileMock.mockClear();
     setUserTierMock.mockClear();
+    readAdminClaimMock.mockReset();
+    readAdminClaimMock.mockResolvedValue(false);
   });
 
   it('mientras la sesión se resuelve no decide nada (ni panel ni expulsión)', () => {
@@ -166,7 +182,7 @@ describe('AdminHub — puerta de acceso', () => {
 
   it('expulsa a quien no es el administrador y NO consulta Firestore', async () => {
     renderHub();
-    signIn('otra.persona@example.com');
+    signInAsVisitor();
 
     expect(await screen.findByText('LISTAS')).toBeInTheDocument();
     expect(loadAdminCensusMock).not.toHaveBeenCalled();
@@ -180,16 +196,25 @@ describe('AdminHub — puerta de acceso', () => {
 
   it('con la cuenta de administrador carga el censo', async () => {
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
 
     expect(await screen.findByText('Ada')).toBeInTheDocument();
     expect(loadAdminCensusMock).toHaveBeenCalledTimes(1);
   });
 
-  it('el correo del administrador se compara sin distinguir mayúsculas', async () => {
+  // EL CASO QUE SUSTITUYE AL DEL CORREO EN MAYÚSCULAS, y que no existía: un claim recién asignado no aparece en el
+  // ID token cacheado (Firebase lo guarda hasta una hora). Si la puerta se conformara con la primera lectura,
+  // quien acabara de recibir el permiso vería la portada hasta volver a entrar. La segunda lectura va forzando el
+  // refresco, y es la que tiene que abrir.
+  it('entra cuando el claim solo aparece al refrescar el token', async () => {
+    readAdminClaimMock.mockReset();
+    readAdminClaimMock.mockImplementation(async (forceRefresh?: boolean) => forceRefresh === true);
     renderHub();
-    signIn(ADMIN_EMAIL.toUpperCase());
+    emitAuth({ uid: 'uid-admin', email: 'quien.manda@example.com', displayName: '', photoURL: '' });
+
     expect(await screen.findByText('Ada')).toBeInTheDocument();
+    expect(readAdminClaimMock).toHaveBeenCalledWith(undefined);
+    expect(readAdminClaimMock).toHaveBeenCalledWith(true);
   });
 });
 
@@ -213,7 +238,7 @@ describe('AdminHub — moderación', () => {
       census([user({ id: 'doc-legacy', uid: 'uid-a', idMatchesUid: false, anomalies: ['foreign-doc-id'] })]),
     );
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     expect(screen.getByText(ADMIN_PANEL_UI.cutover.targetCanonical)).toBeInTheDocument();
@@ -235,7 +260,7 @@ describe('AdminHub — moderación', () => {
       census([user({ id: 'doc-huerfano', uid: 'doc-huerfano', idMatchesUid: false, anomalies: ['foreign-doc-id'] })]),
     );
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     const blocked = screen.getByRole('button', { name: new RegExp(ADMIN_PANEL_UI.cutover.btn) });
@@ -247,7 +272,7 @@ describe('AdminHub — moderación', () => {
 
   it('ninguna acción se ejecuta sin pasar por la confirmación', async () => {
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.disableBtn }));
@@ -259,7 +284,7 @@ describe('AdminHub — moderación', () => {
 
   it('cancelar la confirmación deja al usuario intacto', async () => {
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.deleteBtn }));
@@ -272,7 +297,7 @@ describe('AdminHub — moderación', () => {
       census([user(), user({ id: 'uid-b', uid: 'uid-b', displayName: 'Bob', legacy: { email: true, gamesGistId: false, token: true } })]),
     );
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Bob');
 
     expect(screen.getByRole('button', { name: ADMIN_PANEL_UI.legacyPurgeAria(ADMIN_PANEL_UI.legacyToken, 'Bob') })).toBeEnabled();
@@ -289,7 +314,7 @@ describe('AdminHub — moderación', () => {
       census([user({ legacy: { email: true, gamesGistId: true, token: true } })]),
     );
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     await userEvent.click(
@@ -305,7 +330,7 @@ describe('AdminHub — moderación', () => {
       census([user({ id: 'perfil-legacy', idMatchesUid: false, legacy: { email: true, gamesGistId: false, token: false } })]),
     );
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     // El nombre accesible lleva el motivo: un botón deshabilitado y mudo no explica nada a un lector de pantalla.
@@ -318,7 +343,7 @@ describe('AdminHub — moderación', () => {
   it('un borrado incompleto se avisa en vez de darse por bueno', async () => {
     deleteUserProfileMock.mockResolvedValue({ ok: false, failures: ['amistades: 1 de 2 no se pudieron borrar'] });
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.deleteBtn }));
@@ -330,7 +355,7 @@ describe('AdminHub — moderación', () => {
   it('a quien no tiene nombre en su perfil se le identifica por el que guardaron sus amistades', async () => {
     loadAdminCensusMock.mockResolvedValue(census([user({ displayName: '', knownAs: 'Ada la del gist' })]));
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
 
     expect(await screen.findByText('Ada la del gist', { exact: false })).toBeInTheDocument();
     expect(screen.getByText(`· ${ADMIN_PANEL_UI.knownAsHint}`)).toBeInTheDocument();
@@ -342,7 +367,7 @@ describe('AdminHub — moderación', () => {
   it('sin nombre por ningún lado, el identificador sigue siendo copiable aunque no se vea', async () => {
     loadAdminCensusMock.mockResolvedValue(census([user({ displayName: '', knownAs: '' })]));
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
 
     expect(await screen.findByText(ADMIN_PANEL_UI.noName, { exact: false })).toBeInTheDocument();
     expect(screen.queryByText('uid-a')).not.toBeInTheDocument();
@@ -354,7 +379,7 @@ describe('AdminHub — moderación', () => {
 
   it('cambiar el rango es directo, sin modal: es reversible y no destruye nada', async () => {
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     await userEvent.selectOptions(screen.getByRole('combobox', { name: ADMIN_PANEL_UI.tier.selectAria('Ada') }), 'gold');
@@ -368,7 +393,7 @@ describe('AdminHub — moderación', () => {
       census([user(), user({ id: 'uid-admin', uid: 'uid-admin', displayName: 'Jefe' })]),
     );
     renderHub();
-    signIn(ADMIN_EMAIL); // la sesión de `signIn` es uid-admin
+    signInAsAdmin(); // la sesión de `signIn` es uid-admin
     await screen.findByText('Jefe');
 
     const ajena = screen.getByRole('combobox', { name: ADMIN_PANEL_UI.tier.selectAria('Ada') });
@@ -380,7 +405,7 @@ describe('AdminHub — moderación', () => {
 
   it('el ViewModel rechaza Mithril sobre otra cuenta aunque se fuerce el `select`', async () => {
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     // Saltándose la opción deshabilitada: la reserva no puede depender solo de lo que pinte la tabla.
@@ -397,7 +422,7 @@ describe('AdminHub — moderación', () => {
       census([user({ anomalies: ['gist-drift', 'inactive'], friendSocialGistIds: ['gs-viejo'] })]),
     );
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     const grave = screen.getByText(ADMIN_PANEL_UI.anomalies['gist-drift'].label);
@@ -419,7 +444,7 @@ describe('AdminHub — moderación', () => {
       ]),
     );
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     // "token en claro" sale UNA vez, y es el botón que lo purga (no una píldora informativa gemela).
@@ -435,7 +460,7 @@ describe('AdminHub — moderación', () => {
       census([user({ socialGistId: 'gs-nuevo', friendSocialGistIds: ['gs-viejo', 'gs-otro'], anomalies: ['gist-drift'] })]),
     );
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     // Los ids no se pintan: no hay nada que se pueda hacer con ellos desde aquí. Lo que se dice es DÓNDE está la
@@ -455,7 +480,7 @@ describe('AdminHub — moderación', () => {
   it('sin deriva no se muestra el bloque de gists', async () => {
     loadAdminCensusMock.mockResolvedValue(census([user()]));
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     expect(screen.queryByRole('group', { name: ADMIN_PANEL_UI.gist.driftTitle })).not.toBeInTheDocument();
@@ -464,7 +489,7 @@ describe('AdminHub — moderación', () => {
   it('un perfil sin señales no muestra la lista de señales', async () => {
     loadAdminCensusMock.mockResolvedValue(census([user()]));
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     expect(screen.queryByRole('list', { name: ADMIN_PANEL_UI.anomalies.aria })).not.toBeInTheDocument();
@@ -473,7 +498,7 @@ describe('AdminHub — moderación', () => {
   it('muestra la fecha de alta sellada cuando existe', async () => {
     loadAdminCensusMock.mockResolvedValue(census([user({ createdAt: 1_690_000_000_000 })]));
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     expect(screen.getByText(ADMIN_PANEL_UI.field.createdAt)).toBeInTheDocument();
@@ -485,7 +510,7 @@ describe('AdminHub — moderación', () => {
       census([user({ createdAt: 0, estimatedFirstSeenAt: 1_688_000_000_000 })]),
     );
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     // Se etiqueta como estimada y se marca con `~`: no puede confundirse con un dato sellado.
@@ -496,7 +521,7 @@ describe('AdminHub — moderación', () => {
   it('sin alta ni amistades lo admite en vez de inventar una fecha', async () => {
     loadAdminCensusMock.mockResolvedValue(census([user({ createdAt: 0, estimatedFirstSeenAt: 0 })]));
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     expect(screen.getByText(ADMIN_PANEL_UI.field.createdAtUnknown)).toBeInTheDocument();
@@ -508,7 +533,7 @@ describe('AdminHub — moderación', () => {
   it('el gist del perfil solo aparece si de verdad lo arrastra, y el de sus amistades siempre', async () => {
     loadAdminCensusMock.mockResolvedValue(census([user({ socialGistId: '', friendSocialGistIds: ['gs-vivo'] })]));
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     expect(screen.queryByText(ADMIN_PANEL_UI.field.socialGist)).not.toBeInTheDocument();
@@ -521,7 +546,7 @@ describe('AdminHub — moderación', () => {
   it('un perfil que aún publica el id legacy lo dice, sin enseñarlo', async () => {
     loadAdminCensusMock.mockResolvedValue(census([user({ socialGistId: 'gs-legacy' })]));
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     expect(screen.getByText(ADMIN_PANEL_UI.field.socialGist)).toBeInTheDocument();
@@ -534,7 +559,7 @@ describe('AdminHub — moderación', () => {
   it('enseña los dos nombres cuando no coinciden, y ninguno cuando están de acuerdo', async () => {
     loadAdminCensusMock.mockResolvedValue(census([user({ friendKnownNames: ['Ada Vieja'], anomalies: ['friend-name-mismatch'] })]));
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findAllByText('Ada');
 
     expect(screen.getByText(ADMIN_PANEL_UI.field.profileNameSource)).toBeInTheDocument();
@@ -558,7 +583,7 @@ describe('AdminHub — moderación', () => {
       census([user({ displayName: '', knownAs: 'Ada la del gist', friendKnownNames: ['Ada la del gist'] })]),
     );
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada la del gist');
 
     const search = screen.getByRole('textbox', { name: ADMIN_PANEL_UI.searchLabel });
@@ -576,7 +601,7 @@ describe('AdminHub — moderación', () => {
   it('un fallo de permisos al cargar se muestra tal cual, sin tabla vacía silenciosa', async () => {
     loadAdminCensusMock.mockRejectedValue(new Error('Sin permisos de administrador para listar los perfiles.'));
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
 
     expect(await screen.findByText(/Sin permisos de administrador/)).toBeInTheDocument();
     // Y NO se afirma además que no haya usuarios: la lista está vacía porque falló la lectura, no porque el
@@ -603,7 +628,7 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
       census([user({ friendKnownNames: ['Ada Vieja'], anomalies: ['friend-name-mismatch'] })]),
     );
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findAllByText('Ada');
 
     await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.healIdentity.btn }));
@@ -622,7 +647,7 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
       census([user({ photoURL: 'https://f/nueva.png', friendKnownPhotos: ['https://f/vieja.png'] })]),
     );
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     expect(screen.getByText(ADMIN_PANEL_UI.field.friendPhotoStale)).toBeInTheDocument();
@@ -639,7 +664,7 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
       census([user({ photoURL: 'https://f/nueva.png', friendKnownPhotos: ['https://f/vieja.png'] })]),
     );
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.healIdentity.btn }));
@@ -651,7 +676,7 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
   it('con la identidad al día no se ofrece propagar nada', async () => {
     loadAdminCensusMock.mockResolvedValue(census([user({ friendKnownNames: ['Ada'], friendKnownPhotos: [''] })]));
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     expect(screen.queryByRole('button', { name: ADMIN_PANEL_UI.healIdentity.btn })).not.toBeInTheDocument();
@@ -664,7 +689,7 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
       census([user({ stalePendingOut: 2, fossilPendingOut: 0, anomalies: ['stale-pending-out'] })]),
     );
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     expect(screen.getByText(ADMIN_PANEL_UI.field.stalePendingDetail(2, 0))).toBeInTheDocument();
@@ -676,7 +701,7 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
       census([user({ stalePendingOut: 3, fossilPendingOut: 3, anomalies: ['stale-pending-out'] })]),
     );
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.fossil.btn(3) }));
@@ -693,7 +718,7 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
       census([user({ id: 'doc-legacy', uid: 'uid-a', idMatchesUid: false, canonicalTwinFound: true, anomalies: ['foreign-doc-id'] })]),
     );
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     expect(screen.getByText(ADMIN_PANEL_UI.cutover.outcomeMerge)).toBeInTheDocument();
@@ -712,7 +737,7 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
       census([user({ displayName: 'Ada', friendKnownNames: ['Ada Vieja'], anomalies: ['friend-name-mismatch'] })]),
     );
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findAllByText('Ada');
 
     expect(screen.getByRole('button', { name: ADMIN_PANEL_UI.chooseName.btnAria('Ada', 'Ada') })).toBeInTheDocument();
@@ -724,7 +749,7 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
       census([user({ displayName: 'Ada', photoURL: 'https://f/a.png', friendKnownNames: ['Ada Nueva'], anomalies: ['friend-name-mismatch'] })]),
     );
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findAllByText('Ada');
 
     // Se elige el de las amistades, que es el caso reportado: el perfil se quedó con el viejo.
@@ -740,7 +765,7 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
   it('con los nombres de acuerdo no se ofrece elegir', async () => {
     loadAdminCensusMock.mockResolvedValue(census([user({ friendKnownNames: ['Ada'] })]));
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     expect(screen.queryByText(ADMIN_PANEL_UI.chooseName.title)).not.toBeInTheDocument();
@@ -749,7 +774,7 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
   it('dice el estado del canal de listas, y que no tenerlo no es un fallo', async () => {
     loadAdminCensusMock.mockResolvedValue(census([user({ friendGamesGistIds: ['gj-1'] })]));
     const { unmount } = renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     expect(screen.getByText(ADMIN_PANEL_UI.field.friendGamesGists)).toBeInTheDocument();
@@ -760,7 +785,7 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
     unmount();
     loadAdminCensusMock.mockResolvedValue(census([user({ friendGamesGistIds: [] })]));
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
     expect(screen.getByText(ADMIN_PANEL_UI.field.listsNone)).toBeInTheDocument();
   });
@@ -771,7 +796,7 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
     it('publica foto: activada', async () => {
       loadAdminCensusMock.mockResolvedValue(census([user({ hasPhoto: true, photoURL: 'https://x/y.png' })]));
       renderHub();
-      signIn(ADMIN_EMAIL);
+      signInAsAdmin();
       await screen.findByText('Ada');
 
       expect(screen.getByText(ADMIN_PANEL_UI.field.photoOn)).toBeInTheDocument();
@@ -782,7 +807,7 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
         census([user({ hasPhoto: false, photoURL: '', friendKnownPhotos: ['https://x/vieja.png'] })]),
       );
       renderHub();
-      signIn(ADMIN_EMAIL);
+      signInAsAdmin();
       await screen.findByText('Ada');
 
       expect(screen.getByText(ADMIN_PANEL_UI.field.photoHidden)).toBeInTheDocument();
@@ -794,7 +819,7 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
         census([user({ hasPhoto: false, photoURL: '', friendKnownPhotos: [], friends: 2 })]),
       );
       renderHub();
-      signIn(ADMIN_EMAIL);
+      signInAsAdmin();
       await screen.findByText('Ada');
 
       expect(screen.getByText(ADMIN_PANEL_UI.field.photoOff)).toBeInTheDocument();
@@ -809,7 +834,7 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
         })]),
       );
       renderHub();
-      signIn(ADMIN_EMAIL);
+      signInAsAdmin();
       await screen.findByText('Ada');
 
       expect(screen.getByText(ADMIN_PANEL_UI.field.photoUnknown)).toBeInTheDocument();
@@ -837,7 +862,7 @@ describe('AdminHub — cuota de enlaces compartidos', () => {
    */
   async function abrirEnlaces(maxActive: number = PROFILE_TIER_SHARE_MAX_ACTIVE.bronze) {
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
     await userEvent.click(await screen.findByRole('button', { name: ADMIN_SHARES_UI.toggle(0, maxActive) }));
   }
@@ -931,7 +956,7 @@ describe('AdminHub — resumen y filtros', () => {
       shares: [share(), share({ token: 't2' })], bans: [], overrides: {}, cursor: null, complete: true,
     });
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     expect(
@@ -946,7 +971,7 @@ describe('AdminHub — resumen y filtros', () => {
       bans: [], overrides: {}, cursor: null, complete: true,
     });
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     expect(await screen.findByText(ADMIN_SHARES_UI.full)).toBeInTheDocument();
@@ -957,7 +982,7 @@ describe('AdminHub — resumen y filtros', () => {
       shares: [share(), share({ token: 't2' })], bans: ['uid-a'], overrides: {}, cursor: null, complete: true,
     });
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     const enlaces = await screen.findByText(ADMIN_PANEL_UI.totals.activeShares);
@@ -970,7 +995,7 @@ describe('AdminHub — resumen y filtros', () => {
   it('si el censo de enlaces falla, sus dos totales no se pintan', async () => {
     listAllSharesMock.mockRejectedValue(new Error('sin red'));
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     expect(screen.queryByText(ADMIN_PANEL_UI.totals.activeShares)).not.toBeInTheDocument();
@@ -984,7 +1009,7 @@ describe('AdminHub — resumen y filtros', () => {
       shares: [share()], bans: [], overrides: {}, cursor: 'c1', complete: false,
     });
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     const parcial = await screen.findByText(ADMIN_PANEL_UI.totals.partialCount(1));
@@ -996,7 +1021,7 @@ describe('AdminHub — resumen y filtros', () => {
       census([user(), user({ id: 'uid-b', uid: 'uid-b', displayName: 'Bob', anomalies: ['inactive'] })]),
     );
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     await userEvent.click(screen.getByLabelText(ADMIN_PANEL_UI.onlyFlaggedLabel));
@@ -1009,7 +1034,7 @@ describe('AdminHub — resumen y filtros', () => {
   it('sin ninguna señal, el filtro lo dice con sus palabras', async () => {
     loadAdminCensusMock.mockResolvedValue(census([user()]));
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     await userEvent.click(screen.getByLabelText(ADMIN_PANEL_UI.onlyFlaggedLabel));
@@ -1022,7 +1047,7 @@ describe('AdminHub — resumen y filtros', () => {
       census([user(), user({ id: 'uid-b', uid: 'uid-b', displayName: 'Bob', anomalies: ['inactive'] })]),
     );
     renderHub();
-    signIn(ADMIN_EMAIL);
+    signInAsAdmin();
     await screen.findByText('Ada');
 
     await userEvent.click(screen.getByLabelText(ADMIN_PANEL_UI.onlyFlaggedLabel));

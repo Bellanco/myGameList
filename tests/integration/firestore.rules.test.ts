@@ -8,7 +8,7 @@ import {
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
-import { ADMIN_EMAIL } from '../../src/core/security/admin';
+import { ADMIN_CLAIM } from '../../src/core/security/admin';
 import { PUBLIC_NAME_MAX_LENGTH } from '../../src/core/security/sanitize';
 
 // Test de integración: requiere el emulador de Firestore. Ejecutar con `npm run test:rules`.
@@ -28,9 +28,12 @@ describe('firestore.rules', () => {
   afterEach(async () => { await env.clearFirestore(); });
   afterAll(async () => { await env.cleanup(); });
 
-  const ADMIN = { sub: 'admin-uid', email: 'bellanco3@gmail.com', email_verified: true };
+  // QUIEN MANDA ES EL CLAIM, no el correo: el token del administrador se construye con el MISMO nombre de claim
+  // que usa el cliente (`ADMIN_CLAIM`), así que si alguien lo renombra en un sitio y no en el otro, estos tests
+  // dejan de pasar. Es el par duplicado de `firestore.rules` ↔ `src/core/security/admin.ts`.
+  const ADMIN = { sub: 'admin-uid', claims: { [ADMIN_CLAIM]: true } as Record<string, unknown> };
   const ownerDb = (uid: string) => env.authenticatedContext(uid).firestore();
-  const adminDb = () => env.authenticatedContext(ADMIN.sub, { email: ADMIN.email, email_verified: true }).firestore();
+  const adminDb = () => env.authenticatedContext(ADMIN.sub, ADMIN.claims).firestore();
   const anonDb = () => env.unauthenticatedContext().firestore();
 
   async function seed(path: string, id: string, data: Record<string, unknown>) {
@@ -441,8 +444,28 @@ describe('firestore.rules', () => {
   // Panel de administración (`/admin`): estas reglas son la ÚNICA barrera real del panel — el gate del cliente
   // solo esconde la interfaz. Cada operación que ofrece el panel tiene aquí su contraparte permitida/denegada.
   describe('panel de administración', () => {
-    it('el correo del panel y el de las reglas son el mismo (si cambia uno, hay que cambiar el otro)', () => {
-      expect(ADMIN_EMAIL).toBe(ADMIN.email);
+    // EL PAR DUPLICADO, comprobado contra las reglas de verdad y no por igualdad de constantes: se escribe en un
+    // documento que SOLO el administrador puede tocar (`appConfig/achievements`) con tres tokens distintos.
+    it('manda el claim del módulo del cliente, y solo ese', async () => {
+      // 1. El claim bueno abre.
+      await assertSucceeds(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { hidden: {} }));
+
+      // 2. Un claim con OTRO NOMBRE no abre, aunque valga `true`. Es lo que cazaría un renombrado a medias.
+      const otroNombre = env.authenticatedContext('uid-otro-claim', { administrador: true }).firestore();
+      await assertFails(setDoc(doc(otroNombre, 'appConfig', 'achievements'), { hidden: {} }));
+
+      // 3. El valor tiene que ser el booleano `true`: la cadena "true" no vale. Las reglas comparan estricto y
+      //    `hasAdminClaim` también; si una de las dos se relajara, este caso lo diría.
+      const comoTexto = env.authenticatedContext('uid-claim-texto', { [ADMIN_CLAIM]: 'true' }).firestore();
+      await assertFails(setDoc(doc(comoTexto, 'appConfig', 'achievements'), { hidden: {} }));
+    });
+
+    // Lo que el cambio de criterio RETIRA, dicho con un test: tener el correo de quien manda ya no concede nada.
+    it('un token con el correo del antiguo administrador, sin claim, no manda', async () => {
+      const soloCorreo = env
+        .authenticatedContext('uid-solo-correo', { email: 'bellanco3@gmail.com', email_verified: true })
+        .firestore();
+      await assertFails(setDoc(doc(soloCorreo, 'appConfig', 'achievements'), { hidden: {} }));
     });
 
     it('el admin lista TODOS los perfiles, incluidos los que tienen el social desactivado; un usuario normal no', async () => {

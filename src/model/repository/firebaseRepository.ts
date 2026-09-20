@@ -38,7 +38,7 @@ export type {
   SocialDirectoryEntry,
 } from './firebaseClient';
 export { reportHandledError, trackAnalyticsEvent, setAnalyticsUser, clearAnalyticsUser } from './telemetryRepository';
-export { getCurrentSocialAuthUser, onSocialAuthChanged, signInWithGoogle, signOutSocialUser } from './firebaseAuthRepository';
+export { getCurrentSocialAuthUser, onSocialAuthChanged, readAdminClaim, signInWithGoogle, signOutSocialUser } from './firebaseAuthRepository';
 // C5: el índice público (upsertProfileIndex/upsertFeedCard) y las recomendaciones quedaron sin consumidores y
 // con reglas admin-only (rotas en cliente). Código muerto eliminado; la migración a índice pseudónimo por
 // profileId (con guarda recursiva de campos privados) queda registrada como tarea gated en CODE-REVIEW-IMPROVEMENTS.md.

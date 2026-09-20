@@ -143,6 +143,18 @@ export async function getCurrentSocialAuthUser(): Promise<SocialAuthUser | null>
   return m.getCurrentSocialAuthUser();
 }
 
+/**
+ * ¿La sesión actual manda? (custom claim `admin`). Ver `firebaseAuthRepository.readAdminClaim`.
+ *
+ * Pasa por la fachada perezosa como el resto, así que CARGA EL SDK: llámese solo cuando ya se sabe que hay
+ * sesión —en cuyo caso la fachada ya está cargada— o desde una pantalla que de todas formas lo necesita (el
+ * panel). Preguntarlo a un visitante sin sesión traería 172 kB para que la respuesta sea `false`.
+ */
+export async function readAdminClaim(forceRefresh = false): Promise<boolean> {
+  const m = await loadFacade();
+  return m.readAdminClaim(forceRefresh);
+}
+
 export async function signInWithGoogle(): Promise<SocialAuthUser> {
   const m = await loadFacade();
   return m.signInWithGoogle();

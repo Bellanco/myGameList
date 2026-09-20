@@ -3,14 +3,13 @@
 //
 // El gate de aquí es de interfaz: quien no sea el admin ve la puerta cerrada en vez de una tabla vacía y un
 // reguero de errores. Quien se la salte tocando el bundle se choca igual con `isAdmin()` en las reglas, que es
-// donde está la seguridad de verdad (ver src/core/security/admin.ts).
+// donde está la seguridad de verdad: las dos comprueban el MISMO custom claim (ver src/core/security/admin.ts).
 //
 // El repositorio se importa de forma estática y no por la fachada perezosa (`firebaseGateway`): este módulo solo
 // lo carga `AdminHub`, que ya es un chunk `lazy`, así que el SDK no entra en el grafo del arranque.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ADMIN_PANEL_UI } from '../core/constants/adminLabels';
-import { isAdminEmail } from '../core/security/admin';
-import { subscribeSocialAuth } from '../model/repository/firebaseGateway';
+import { readAdminClaim, subscribeSocialAuth } from '../model/repository/firebaseGateway';
 import { ADMIN_ONLY_TIER, PROFILE_TIER_LABELS, type ProfileTier } from '../core/constants/tiers';
 import {
   deleteUserProfile,
@@ -75,11 +74,35 @@ export function useAdminViewModel() {
 
   // La primera emisión llega cuando la sesión persistida ya se ha restaurado (o se ha confirmado que no hay):
   // hasta entonces `access` sigue en 'checking' y la pantalla no decide nada.
+  //
+  // LEER EL CLAIM ES ASÍNCRONO, y eso obliga a dos cuidados que con el correo no hacían falta:
+  //
+  //  1. VOLVER A 'checking' EN CADA CAMBIO DE SESIÓN, no solo al arrancar. Entre que llega el usuario y responde
+  //     la lectura del token hay renders con sesión presente y acceso aún sin resolver; si esos renders dijeran
+  //     'denied', quien inicia sesión estando ya en /admin vería la puerta cerrada y se iría a la portada aunque
+  //     mande. Solo entraría quien recargase la página con la sesión ya hecha.
+  //  2. DESCARTAR RESPUESTAS VIEJAS. Dos emisiones seguidas (cerrar y abrir sesión) lanzan dos lecturas, y la
+  //     primera puede contestar después: la marca de generación deja pasar solo a la última.
+  //
+  // El REINTENTO FORZANDO el refresco del token es lo que evita el «me has hecho administrador y no entro»: el ID
+  // token vive cacheado hasta una hora, así que un claim recién asignado no aparece hasta renovarlo. Se paga solo
+  // cuando la primera lectura dice que no, es decir, casi siempre a quien no manda y husmea una ruta oculta.
   useEffect(() => {
+    let generacion = 0;
     return subscribeSocialAuth((user) => {
       if (!mountedRef.current) return;
+      const mia = ++generacion;
       setOwnUid(String(user?.uid || ''));
-      setAccess(isAdminEmail(user?.email) ? 'granted' : 'denied');
+      if (!user) {
+        setAccess('denied');
+        return;
+      }
+      setAccess('checking');
+      void (async () => {
+        const manda = (await readAdminClaim()) || (await readAdminClaim(true));
+        if (!mountedRef.current || mia !== generacion) return;
+        setAccess(manda ? 'granted' : 'denied');
+      })();
     });
   }, []);
 

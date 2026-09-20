@@ -11,6 +11,7 @@ import {
 // Va aquí y no en `firebaseClient` porque el criterio es "hay sesión", no "hay servicios": el arranque en idle
 // construye servicios para todo el mundo, y ahí NO debe cargarse reCAPTCHA.
 import { ensureAppCheck } from './appCheckRepository';
+import { hasAdminClaim } from '../../core/security/admin';
 
 function toSocialAuthUser(user: { uid: string; displayName: string | null; email: string | null; photoURL: string | null }): SocialAuthUser {
   return {
@@ -59,6 +60,43 @@ export async function getCurrentSocialAuthUser(): Promise<SocialAuthUser | null>
   }
 
   return toSocialAuthUser(services.auth.currentUser);
+}
+
+/**
+ * ¿La sesión actual trae el claim de administrador?
+ *
+ * Es lo que sustituye a comparar correos: el claim lo emite el servidor (`scripts/set-admin-claim.mjs`) y viaja
+ * firmado en el ID token. Aquí solo se LEE, para decidir si la interfaz ofrece el panel; la barrera está en
+ * `firestore.rules`.
+ *
+ * `forceRefresh` existe por el token cacheado: Firebase guarda el ID token hasta una hora, así que un claim
+ * recién asignado NO aparece hasta que el token se renueva o el usuario vuelve a entrar. Quien pregunta de
+ * pasada (`useIsAdmin`) lee el token que haya, que es gratis; quien de verdad va al panel reintenta forzando, y
+ * así el administrador recién nombrado entra sin tener que cerrar sesión (ver `useAdminViewModel`).
+ *
+ * Nunca lanza: sin sesión, sin servicios o con la red caída responde `false`, que es el valor seguro —esconder
+ * el panel a quien manda es un incordio; ofrecérselo a quien no, un reguero de `permission-denied`—.
+ */
+export async function readAdminClaim(forceRefresh = false): Promise<boolean> {
+  const services = await initializeFirebaseServices();
+  if (!services) {
+    return false;
+  }
+
+  // Misma espera que en `getCurrentSocialAuthUser`: la sesión persistida se restaura de forma asíncrona y sin
+  // esto `currentUser` es null en la primera llamada tras recargar.
+  await services.auth.authStateReady();
+  const user = services.auth.currentUser;
+  if (!user) {
+    return false;
+  }
+
+  try {
+    const token = await user.getIdTokenResult(forceRefresh);
+    return hasAdminClaim(token.claims as Record<string, unknown>);
+  } catch {
+    return false;
+  }
 }
 
 /**
