@@ -136,7 +136,8 @@ export function PremiosReviewScreen({
       </div>
       )}
 
-      <h3 className="premios-review__all">{L.allVotes}</h3>
+      {/* SIN RÓTULO: la rejilla de categorías con lo elegido en cada una no necesita que le pongan nombre, y el
+          que tenía («Toda tu papeleta») repetía lo que el título de la pantalla ya dice. */}
       <ol className="premios-review__grid">
         {categories.map((category, index) => {
           const vote = votes[category.id];

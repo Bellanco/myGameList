@@ -37,13 +37,13 @@ export const PREMIOS_UI = {
     // ya con el botón de votar. Mandar antes a otra pantalla sería pedir dos pasos para uno.
     signIn: 'Identifícate para votar',
     signingIn: 'Entrando…',
-    signInHint: 'La papeleta va asociada a tu cuenta de Google. Los resultados publicados se ven sin entrar.',
+    signInHint: 'Tus elecciones van asociadas a tu cuenta de Google. Los resultados publicados se ven sin entrar.',
     signInFailed: 'No se ha podido entrar. Inténtalo de nuevo.',
     // EL CUPO, dicho en la portada y no al final: es lo que decide cómo se vota —de una tacada o corrigiendo
     // sobre la marcha— y enterarse después de enviar llega tarde.
     opportunities: (cuantas: number) =>
       cuantas === 1
-        ? 'Tienes una oportunidad: la papeleta que envíes queda como esté.'
+        ? 'Tienes una oportunidad: lo que envíes queda como esté.'
         : `Tienes ${cuantas} oportunidades: el envío y ${cuantas - 1} correcciones.`,
     opportunitiesLeft: (quedan: number) =>
       quedan === 1 ? 'Te queda 1 oportunidad' : `Te quedan ${quedan} oportunidades`,
@@ -77,7 +77,7 @@ export const PREMIOS_UI = {
   },
 
   revisar: {
-    sectionAria: 'Revisión de la papeleta',
+    sectionAria: 'Revisión de tus elecciones',
     title: 'Revisa tus elecciones',
     subtitle: 'Puedes cambiar cualquier voto antes de enviarla.',
     /** La misma pantalla cuando solo se mira: ni se revisa nada ni se va a enviar, así que no se dice. */
@@ -91,12 +91,9 @@ export const PREMIOS_UI = {
       cuantas === 1 ? 'Queda 1 categoría por votar' : `Quedan ${cuantas} categorías por votar`,
     /** La papeleta se envía COMPLETA: mientras falte una, el botón no se ofrece y aquí se dice por qué. */
     mustComplete: 'Hay que votarlas todas para poder enviarla.',
-    submit: 'Enviar papeleta',
+    submit: 'Enviar mis elecciones',
     submitting: 'Enviando…',
     back: 'Volver a votar',
-    // La rejilla con TODA la papeleta: cada tarjeta lleva a su categoría, votada o no. Es lo que convierte la
-    // revisión en un índice y no en una lista para leer.
-    allVotes: 'Toda tu papeleta',
     goToCategory: (categoria: string) => `Ir a ${categoria}`,
     editVotes: 'Seguir votando',
     firstPending: 'Ir a la primera sin votar',
@@ -107,8 +104,8 @@ export const PREMIOS_UI = {
   },
 
   enviada: {
-    sectionAria: 'Papeleta enviada',
-    title: 'Papeleta enviada',
+    sectionAria: 'Elecciones enviadas',
+    title: 'Elecciones enviadas',
     body: 'Tu voto ha quedado registrado.',
     // LAS TRES COSAS QUE SE DICEN AL CONFIRMAR, cada una en su ficha, como en la porra de origen: qué pasa con
     // tu voto, qué pasa con el de los demás y cuándo se sabrá el resultado.
@@ -120,13 +117,13 @@ export const PREMIOS_UI = {
       results: 'Los resultados se publican al cerrar la edición.',
     },
     /** Lo último que se lee: esto se juega cada temporada y la gracia está en volver. */
-    comeBack: 'La porra se juega cada temporada: vuelve cuando se abra la siguiente.',
+    comeBack: 'El reto se juega cada temporada: vuelve cuando se abra el siguiente.',
     confirmTitle: 'Confirmación',
     edit: 'Corregir mi voto',
     /** Repasar lo votado sin tocar nada ni gastar oportunidad: la misma papeleta, en modo lectura. */
     see: 'Ver mis votos',
     /** Cuando se reenvía sin tocar nada: se dice que no ha costado, porque el contador no se ha movido. */
-    unchanged: 'No habías cambiado nada, así que tu papeleta se queda como estaba y no te ha costado ninguna oportunidad.',
+    unchanged: 'No habías cambiado nada, así que tus elecciones se quedan como estaban y no te ha costado ninguna oportunidad.',
     resultsSoon: 'Los resultados se publicarán al cerrarse la edición.',
     editHint: (quedan: number) =>
       quedan === 0
@@ -159,7 +156,7 @@ export const PREMIOS_UI = {
     failed: 'No se ha podido copiar. El enlace es el de la barra del navegador.',
     /** Lo que se manda al invitar a votar. Lleva el nombre de la edición, que es lo que la sitúa en el año. */
     inviteTitle: (edicion: string) => `Vota en ${edicion}`,
-    inviteText: 'Echa tu porra: elige quién crees que gana cada categoría.',
+    inviteText: 'Acepta el reto: elige quién crees que gana cada categoría.',
     resultsTitle: (edicion: string) => `Resultados de ${edicion}`,
     resultsText: 'Mira quién ha ganado y cómo ha quedado la clasificación.',
   },
@@ -171,8 +168,12 @@ export const PREMIOS_UI = {
     leaderboard: 'Clasificación',
     // Las dos mitades de la pantalla, cada una con su rótulo de cuántas cosas trae.
     winnersCount: (cuantas: number) => (cuantas === 1 ? '1 categoría' : `${cuantas} categorías`),
-    /** Propio y no el del panel: «14 papeleta(s)» es una cadena de administración, no de una pantalla pública. */
-    ballots: (cuantas: number) => (cuantas === 1 ? '1 papeleta' : `${cuantas} papeletas`),
+    /**
+     * Propio y no el del panel: «14 papeleta(s)» es una cadena de administración, no de una pantalla pública. Y
+     * en lo público ya no se dice «papeleta» —se habla de lo que cada cual elige—, así que aquí se cuenta gente
+     * que participó, que además es lo que se quiere saber mirando unos resultados.
+     */
+    ballots: (cuantas: number) => (cuantas === 1 ? '1 participación' : `${cuantas} participaciones`),
     participants: (cuantos: number) => (cuantos === 1 ? '1 participante' : `${cuantos} participantes`),
     noWinners: 'Esta edición se publicó sin ganadores marcados.',
     /** El premio propio, arriba del todo y ya dibujado: si te ha tocado, es lo primero que vienes a ver. */
@@ -201,12 +202,12 @@ export const PREMIOS_UI = {
   // EL PANEL. Vive dentro del de administración de la app, como una vista más: no hay un segundo `/admin`.
   admin: {
     /** Rótulo del grupo de pestañas del panel, para quien navega sin ver. */
-    tabsAria: 'Secciones del panel de porras',
+    tabsAria: 'Secciones del panel de retos',
     // PORRAS dentro del panel, «Premios» de cara al público: quien administra habla de la porra, y el nombre
     // corto distingue de un vistazo esta pantalla de la sección que ve todo el mundo.
-    open: 'Porras',
-    sectionAria: 'Administración de porras',
-    title: 'Porras',
+    open: 'Retos',
+    sectionAria: 'Administración de retos',
+    title: 'Retos',
     back: 'Volver al panel',
     tabs: { season: 'Temporada', categories: 'Categorías' },
 
@@ -384,13 +385,13 @@ export const PREMIOS_UI = {
     // SIN CONEXIÓN no es lo mismo que un error: la votación sigue en pie y sus listas también; lo único que no
     // llega es el estado de la edición. Por eso se dice aparte y sin dramatismo.
     offline: 'Sin conexión: no se puede saber cómo va la edición.',
-    submit: 'No se ha podido enviar la papeleta. Inténtalo de nuevo.',
+    submit: 'No se han podido enviar tus elecciones. Inténtalo de nuevo.',
     closed: 'La votación se ha cerrado mientras votabas.',
     needsSession: 'Entra con tu cuenta de Google para votar.',
     /** La misma sesión de la app: el botón llama al inicio de sesión de casa, no hay una segunda puerta. */
     needsSessionTitle: 'Identifícate para votar',
     needsSessionAria: 'Identificarse para votar',
-    needsSessionHint: 'Un voto por persona: la papeleta va asociada a tu cuenta de Google.',
+    needsSessionHint: 'Un voto por persona: tus elecciones van asociadas a tu cuenta de Google.',
     retry: 'Reintentar',
   },
 } as const;

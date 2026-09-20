@@ -3,8 +3,8 @@ import { Navigate } from 'react-router-dom';
 import { ADMIN_ACHIEVEMENTS_UI, ADMIN_ANNOUNCEMENT_UI, ADMIN_PANEL_UI } from '../../core/constants/adminLabels';
 // SOLO EL RÓTULO, escrito aquí a propósito: importar `PREMIOS_UI` traería todos los textos de la porra al
 // chunk del panel, y este botón necesita exactamente una palabra.
-/** En el panel se llama PORRAS: es como se habla de ellas, y deja «Premios» para la sección que ve el público. */
-const PREMIOS_ADMIN_OPEN = 'Porras';
+/** En el panel se llama RETOS —la edición es «El reto del jugador»—, y deja «Premios» para la sección pública. */
+const PREMIOS_ADMIN_OPEN = 'Retos';
 import type { Announcement } from '../../core/announcement/announcement';
 import type { HiddenOverrides, OpenFrontier } from '../../core/achievements/visibility';
 import type { ExtraSteps } from '../../core/achievements/types';
