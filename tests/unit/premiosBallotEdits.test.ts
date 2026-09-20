@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   PREMIOS_OPPORTUNITIES_BY_TIER,
+  ballotIsUnchanged,
   PREMIOS_OPPORTUNITIES_WITHOUT_SOCIAL,
   canEditBallot,
   getMaxBallotEdits,
@@ -114,5 +115,38 @@ describe('canEditBallot', () => {
     expect(canEditBallot(papeleta({ editCount: 0 }), { ...openConfig, isOpen: false }, social('gold'), NOW)).toBe(
       false,
     );
+  });
+});
+
+// MIRAR NO CUESTA UNA OPORTUNIDAD: quien entra a repasar su papeleta, no toca nada y pulsa enviar por inercia no
+// gasta una de las veces que le quedan. Las reglas no pueden distinguirlo, así que lo decide esto.
+describe('ballotIsUnchanged', () => {
+  const guardada = papeleta({
+    selections: { goty: 'goty_option_1', arte: 'arte_option_0' },
+    userDisplayName: 'Ana',
+  });
+
+  it('reconoce la papeleta idéntica, con el mismo nombre', () => {
+    expect(ballotIsUnchanged(guardada, { goty: 'goty_option_1', arte: 'arte_option_0' }, 'Ana')).toBe(true);
+    // El orden de las claves no es un cambio.
+    expect(ballotIsUnchanged(guardada, { arte: 'arte_option_0', goty: 'goty_option_1' }, 'Ana')).toBe(true);
+    // Ni los espacios de alrededor del nombre.
+    expect(ballotIsUnchanged(guardada, { goty: 'goty_option_1', arte: 'arte_option_0' }, '  Ana ')).toBe(true);
+  });
+
+  it('un voto distinto, uno de más o uno de menos SÍ son cambios', () => {
+    expect(ballotIsUnchanged(guardada, { goty: 'goty_option_2', arte: 'arte_option_0' }, 'Ana')).toBe(false);
+    expect(ballotIsUnchanged(guardada, { goty: 'goty_option_1' }, 'Ana')).toBe(false);
+    expect(
+      ballotIsUnchanged(guardada, { goty: 'goty_option_1', arte: 'arte_option_0', otra: 'otra_option_0' }, 'Ana'),
+    ).toBe(false);
+  });
+
+  it('cambiar el nombre de la clasificación es un cambio', () => {
+    expect(ballotIsUnchanged(guardada, { goty: 'goty_option_1', arte: 'arte_option_0' }, 'Anita')).toBe(false);
+  });
+
+  it('sin papeleta previa no hay nada que comparar: es un envío', () => {
+    expect(ballotIsUnchanged(null, { goty: 'goty_option_1' }, 'Ana')).toBe(false);
   });
 });

@@ -465,6 +465,13 @@
 .premios-review__edits { color: var(--text-dim); font-size: var(--fs-xs); margin: 0; }
 .premios-review__error { color: var(--danger); font-size: var(--fs-sm); margin: 0; }
 
+/* Sin oportunidades: el aviso sustituye al formulario de envío, en el mismo sitio. */
+.premios-review__closed { color: var(--text-muted); font-size: var(--fs-sm); margin: 0; }
+
+/* La clasificación provisional del panel necesita que el nombre empuje al resto: el botón de retirar va al
+   final de la fila, no pegado al nombre. */
+.premios-admin__board-name { flex: 1; }
+
 .premios-review__pending {
   display: flex;
   gap: .5rem;
@@ -725,6 +732,45 @@
 
 /* ─── El panel (vive dentro del de administración) ────────────────────────────────────────────────────── */
 
+/* ─── Las pestañas del panel ──────────────────────────────────────────────────────────────────────────── */
+
+/* UNA BARRA, NO SEIS BOTONES SUELTOS. Lo que se navega va junto y con la misma forma, y la activa se marca con
+   el filete de acento de las pestañas de la casa, no tiñendo el botón entero de primario —que es el color de
+   «pulsa aquí», y aquí no hay nada que ejecutar—. El botón de salir vive arriba, fuera de esta barra. */
+.premios-admin__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .15rem;
+  margin: .2rem 0 .8rem;
+  border-bottom: 1px solid var(--hair);
+}
+
+.premios-admin__tab {
+  font-family: var(--font-label);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  padding: .5rem .8rem;
+  cursor: pointer;
+  transition: color .15s ease, background .15s ease, border-color .15s ease;
+}
+
+.premios-admin__tab:hover { color: var(--text); background: var(--surface-hover); }
+
+.premios-admin__tab:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.premios-admin__tab.is-current {
+  color: var(--text);
+  border-bottom-color: var(--steam);
+  background: color-mix(in srgb, var(--steam) 8%, transparent);
+}
+
 .premios-admin__block { display: grid; gap: .6rem; margin-top: 1rem; }
 .premios-admin__block h3 { font-family: var(--font-label); font-size: var(--fs-lg, 1.05rem); margin: 0; }
 
@@ -811,6 +857,62 @@
 }
 
 .premios-admin__form { display: grid; gap: .35rem; justify-items: start; margin-top: .5rem; }
+
+/* ─── El formulario de una categoría: una ficha, no una pila de campos ────────────────────────────────── */
+
+.premios-admin__form-card {
+  justify-items: stretch;
+  gap: .6rem;
+  padding: .9rem;
+  background: var(--surface-elevated);
+  border: 1px solid var(--hair);
+  border-left: 3px solid var(--steam);
+  border-radius: var(--radius-md);
+  box-shadow: var(--e1);
+}
+
+.premios-admin__form-head {
+  font-family: var(--font-label);
+  font-size: var(--fs-md);
+  padding-bottom: .4rem;
+  border-bottom: 1px solid var(--hair);
+}
+
+/* Los dos títulos van en pareja: son el mismo dato en dos idiomas y a lo ancho caben de sobra. */
+.premios-admin__form-row {
+  display: grid;
+  gap: .6rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.premios-admin__field { display: grid; gap: .25rem; }
+.premios-admin__field label { font-family: var(--font-label); font-size: var(--fs-sm); }
+.premios-admin__field .input { width: 100%; }
+
+/* Los nominados, numerados: el número dice de qué puesto de la lista se está hablando, que es lo que nombra su
+   marcador de posición y su botón de quitar. */
+.premios-admin__nominees {
+  display: grid;
+  gap: .35rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: nominado;
+}
+
+.premios-admin__nominees > li::before {
+  counter-increment: nominado;
+  content: counter(nominado);
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--text-dim);
+  min-width: 1.1rem;
+  text-align: right;
+}
+
+.premios-admin__add { justify-self: start; display: inline-flex; align-items: center; gap: .35rem; }
+
+.premios-admin__form-actions .btn { display: inline-flex; align-items: center; gap: .35rem; }
 .premios-admin__form label { font-family: var(--font-label); font-size: var(--fs-sm); }
 .premios-admin__form .input { width: min(100%, 28rem); }
 .premios-admin__form textarea.input { font-family: var(--font-mono); font-size: var(--fs-sm); }
@@ -830,6 +932,21 @@
 
 .premios-admin__label { font-family: var(--font-label); font-size: var(--fs-sm); margin-top: .4rem; }
 
+/* Qué edición hay, y el botón de corregirla al lado. Una línea en vez de los cuatro párrafos que había. */
+.premios-admin__season-bar {
+  display: flex;
+  gap: .6rem;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: .5rem .7rem;
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm);
+}
+
+.premios-admin__season-bar .btn { display: inline-flex; align-items: center; gap: .35rem; }
+
 .premios-admin__weights { display: flex; gap: .35rem; }
 
 /* Un campo por nominado, con su botón de quitar al lado. */
@@ -837,14 +954,19 @@
   display: flex;
   gap: .4rem;
   align-items: center;
-  width: min(100%, 28rem);
+  width: 100%;
 }
 
 .premios-admin__nominee .input { flex: 1; }
 
 .premios-admin__form-actions { display: flex; gap: .5rem; margin-top: .6rem; }
 
-.premios-admin__cat-actions { display: flex; gap: .35rem; flex-wrap: wrap; }
+.premios-admin__cat-actions { display: flex; gap: .35rem; flex-wrap: wrap; align-items: center; }
+
+/* Los botones de esta fila llevan icono y rótulo juntos; los de mover, solo el icono (su nombre va en el
+   `aria-label`, que es lo que se oye y lo que sale en el `title`). */
+.premios-admin__cat-actions .btn { display: inline-flex; align-items: center; gap: .35rem; }
+.premios-admin__icon-btn { padding-inline: .55rem; }
 
 /* Clasificación provisional del panel. */
 .premios-admin__board { display: grid; gap: .25rem; list-style: none; margin: .4rem 0 0; padding: 0; }

@@ -101,6 +101,14 @@ export function PremiosPortada({
             dice «ver los resultados» al lado del de votar se lee como si fueran los de esta — que todavía no
             existen. Vuelve en cuanto se cierra el plazo. El enlace directo sigue funcionando para quien lo
             tenga. */}
+        {/* REPASAR LO VOTADO, sin pasar por el formulario de envío: lleva a la papeleta en modo lectura. Solo a
+            quien tiene cuenta social, que es quien puede volver sobre ella; con una sola oportunidad la papeleta
+            ya está cerrada al enviarla. */}
+        {hasBallot && hasSocialAccount ? (
+          <Link className="btn" to={PREMIOS_ROUTES.ballot}>
+            {PREMIOS_UI.enviada.see}
+          </Link>
+        ) : null}
         {hasResults && !votingOpen ? (
           <Link className="btn" to={PREMIOS_ROUTES.results}>
             {L.seeResults}

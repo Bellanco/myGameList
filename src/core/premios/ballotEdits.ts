@@ -109,3 +109,30 @@ export function canEditBallot(
   if (getRemainingOpportunities(ballot, standing) <= 0) return false;
   return isVotingOpenNow(votingConfig, now);
 }
+
+/**
+ * ¿La papeleta que se va a enviar es EXACTAMENTE la que ya está guardada?
+ *
+ * Mirar lo que uno votó no puede costar una oportunidad. Se entra a la papeleta a repasarla, se llega al final y
+ * se pulsa enviar por inercia: sin esto, esa visita gastaba una de las oportunidades igual que una corrección de
+ * verdad — y las reglas no pueden distinguirlo, porque para ellas es una escritura como cualquier otra.
+ *
+ * Se comparan las SELECCIONES (por `optionId`, que es como se guardan) y el NOMBRE con el que sale en la
+ * clasificación, que es lo otro que se puede cambiar desde la revisión. Todo lo demás del documento —fechas,
+ * contador— lo pone el envío, así que no es lo que hay que comparar.
+ */
+export function ballotIsUnchanged(
+  ballot: PremiosBallot | null | undefined,
+  selections: Record<string, string>,
+  displayName: string,
+): boolean {
+  if (!ballot) return false;
+
+  const previas = ballot.selections || {};
+  const clavesPrevias = Object.keys(previas);
+  const clavesNuevas = Object.keys(selections);
+  if (clavesPrevias.length !== clavesNuevas.length) return false;
+  if (clavesNuevas.some((categoria) => previas[categoria] !== selections[categoria])) return false;
+
+  return (ballot.userDisplayName || '').trim() === displayName.trim();
+}

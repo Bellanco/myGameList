@@ -78,8 +78,10 @@ export const PREMIOS_UI = {
 
   revisar: {
     sectionAria: 'Revisión de la papeleta',
-    title: 'Revisa tu papeleta',
+    title: 'Revisa tus elecciones',
     subtitle: 'Puedes cambiar cualquier voto antes de enviarla.',
+    /** La misma pantalla cuando solo se mira: ni se revisa nada ni se va a enviar, así que no se dice. */
+    readTitle: 'Tus elecciones',
     nameLabel: 'Nombre para la clasificación',
     namePlaceholder: 'Escribe tu nombre o apodo',
     nameHint: 'Es el que verá el resto en la clasificación.',
@@ -111,13 +113,20 @@ export const PREMIOS_UI = {
     // LAS TRES COSAS QUE SE DICEN AL CONFIRMAR, cada una en su ficha, como en la porra de origen: qué pasa con
     // tu voto, qué pasa con el de los demás y cuándo se sabrá el resultado.
     thanks: (nombre: string) => `Gracias, ${nombre}`,
+    // DOS FICHAS, no tres. La tercera decía «tu papeleta solo la ves tú y quien administra»: es cierto, pero es
+    // una nota de privacidad en la pantalla de la celebración, y ahí lo que hay que decir es lo que pasa ahora.
     cards: {
-      privacy: 'Tu papeleta solo la ves tú y quien administra.',
       oneVote: 'Un voto por persona, con tu cuenta.',
       results: 'Los resultados se publican al cerrar la edición.',
     },
+    /** Lo último que se lee: esto se juega cada temporada y la gracia está en volver. */
+    comeBack: 'La porra se juega cada temporada: vuelve cuando se abra la siguiente.',
     confirmTitle: 'Confirmación',
     edit: 'Corregir mi voto',
+    /** Repasar lo votado sin tocar nada ni gastar oportunidad: la misma papeleta, en modo lectura. */
+    see: 'Ver mis votos',
+    /** Cuando se reenvía sin tocar nada: se dice que no ha costado, porque el contador no se ha movido. */
+    unchanged: 'No habías cambiado nada, así que tu papeleta se queda como estaba y no te ha costado ninguna oportunidad.',
     resultsSoon: 'Los resultados se publicarán al cerrarse la edición.',
     editHint: (quedan: number) =>
       quedan === 0
@@ -141,18 +150,12 @@ export const PREMIOS_UI = {
     toHome: 'Volver a Premios',
   },
 
-  yaVotaste: {
-    title: 'Tu papeleta ya está enviada',
-    body: 'Has gastado todas tus oportunidades, así que queda tal y como está.',
-    review: 'Ver lo que voté',
-  },
-
   // COMPARTIR: un botón, dos aparatos. En móvil y tablet se abre la hoja del sistema; en el escritorio que no la
   // tiene, se copia el enlace. El rótulo dice lo que va a pasar en cada caso, que no es lo mismo.
   compartir: {
     button: 'Compartir con tus amigos',
     copy: 'Copiar el enlace para tus amigos',
-    copied: 'Enlace copiado: ya lo puedes pegar donde quieras.',
+    copied: '¡Enlace copiado! Reta a tus amigos para ver quién es el mejor.',
     failed: 'No se ha podido copiar. El enlace es el de la barra del navegador.',
     /** Lo que se manda al invitar a votar. Lleva el nombre de la edición, que es lo que la sitúa en el año. */
     inviteTitle: (edicion: string) => `Vota en ${edicion}`,
@@ -179,8 +182,16 @@ export const PREMIOS_UI = {
     points: (puntos: number) => (puntos === 1 ? '1 punto' : `${puntos} puntos`),
     rank: (puesto: number) => `${puesto}.º`,
     yourRow: 'Tu posición',
+    /** Deshace el paso: a la portada, al histórico del panel o a donde se estuviera. */
+    back: 'Volver',
     trophy: 'Ver mi trofeo',
-    download: 'Descargar',
+    download: 'Descargar la lámina',
+    // LA GALERÍA: desde la clasificación se MIRA, y quien quiera el archivo lo pide dentro.
+    see: 'Ver el trofeo',
+    seeAll: 'Ver los premios',
+    awardOf: (actual: number, total: number) => `${actual} de ${total}`,
+    awardPrev: 'Anterior',
+    awardNext: 'Siguiente',
     empty: 'Esta edición todavía no tiene resultados publicados.',
     // La clasificación enseña la cara de una amistad y la inicial del resto: es la misma regla de reciprocidad
     // del espacio social, aplicada aquí (ver §4.1 del plan).
@@ -189,9 +200,13 @@ export const PREMIOS_UI = {
 
   // EL PANEL. Vive dentro del de administración de la app, como una vista más: no hay un segundo `/admin`.
   admin: {
-    open: 'Premios',
-    sectionAria: 'Administración de premios',
-    title: 'Premios',
+    /** Rótulo del grupo de pestañas del panel, para quien navega sin ver. */
+    tabsAria: 'Secciones del panel de porras',
+    // PORRAS dentro del panel, «Premios» de cara al público: quien administra habla de la porra, y el nombre
+    // corto distingue de un vistazo esta pantalla de la sección que ve todo el mundo.
+    open: 'Porras',
+    sectionAria: 'Administración de porras',
+    title: 'Porras',
     back: 'Volver al panel',
     tabs: { season: 'Temporada', categories: 'Categorías' },
 
@@ -219,16 +234,19 @@ export const PREMIOS_UI = {
         {
           id: 'pending' as const,
           label: 'Cerrada, sin publicar',
-          hint: 'Ya no se vota. Toca marcar ganadores y publicarla en el histórico.',
+          // El fin del ciclo se cuenta AQUÍ, en el paso que lo provoca, en vez de en una frase suelta debajo.
+          hint: 'Toca marcar ganadores y publicarla: al hacerlo pasa al histórico y se vuelve a «Sin edición».',
         },
       ],
-      /** Lo que pasa al publicar, que es lo que cierra el ciclo y no es un estado en sí. */
-      stagesCycle: 'Al publicar, la clasificación pasa al histórico y la edición vuelve a «Sin edición».',
       stageCurrent: 'Estado actual',
-      lastPublished: (id: string) => `Última publicada: ${id}`,
-      // Lo que de verdad decide si la entrada aparece en Ajustes y en el espacio social, resuelto ahora mismo.
-      offeredYes: 'Ahora mismo la sección SE OFRECE en Ajustes y en el espacio social.',
-      offeredNo: 'Ahora mismo la sección NO se ofrece: solo se llega con el enlace.',
+      /** El pie del bloque: las dos notas de una línea, juntas y atenuadas. */
+      offeredYes: 'Se ofrece en Ajustes y en el espacio social',
+      offeredNo: 'No se ofrece: solo se llega con el enlace',
+      lastPublished: (id: string) => `última publicada: ${id}`,
+      // Corregir la edición en marcha sin cerrarla: una errata en el nombre o un día de cierre mal puesto.
+      edit: 'Editar la edición',
+      editSave: 'Guardar cambios',
+      edited: 'Edición actualizada.',
       nameLabel: 'Nombre de la edición',
       namePlaceholder: 'El reto del jugador 2026',
       nameHint: 'De aquí sale el identificador del archivo. Sin nombre se usa el año.',
@@ -280,6 +298,10 @@ export const PREMIOS_UI = {
       // La clasificación PROVISIONAL, con los ganadores marcados hasta ahora: es lo que se va a publicar.
       preview: 'Clasificación provisional',
       previewHint: 'Con los ganadores marcados ahora mismo. Es lo que se publicará.',
+      // Retirar la papeleta de alguien: para las pruebas y para lo que haya que quitar a mano. No se deshace.
+      remove: (nombre: string) => `Retirar la papeleta de ${nombre}`,
+      removeConfirm: (nombre: string) =>
+        `¿Retirar la papeleta de ${nombre}? Su voto se pierde y la clasificación se recalcula sin él. No se puede deshacer.`,
     },
 
     // Las ediciones ya publicadas.

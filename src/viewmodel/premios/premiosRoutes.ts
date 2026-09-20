@@ -10,7 +10,7 @@
 import { matchPath } from 'react-router-dom';
 
 /** Panel visible de la sección. `portada` es el estado por defecto y el de `/premios` a secas. */
-export type PremiosPanel = 'portada' | 'votar' | 'revisar' | 'enviada' | 'resultados';
+export type PremiosPanel = 'portada' | 'votar' | 'revisar' | 'enviada' | 'resultados' | 'papeleta';
 
 export const PREMIOS_ROUTES = {
   home: '/premios',
@@ -18,6 +18,14 @@ export const PREMIOS_ROUTES = {
   review: '/premios/revisar',
   /** Confirmación de envío. Tiene dirección propia para que recargar no la haga desaparecer. */
   sent: '/premios/enviada',
+  /**
+   * LA PAPELETA, EN MODO LECTURA: lo que votaste, sin el nombre ni el botón de enviar.
+   *
+   * Tiene dirección propia y no es un estado de `revisar` porque son dos intenciones distintas —repasar y
+   * enviar— y porque así se puede volver a ella desde la confirmación sin pasar por el formulario, que es justo
+   * lo que hacía que mirar costara una oportunidad.
+   */
+  ballot: '/premios/papeleta',
   results: '/premios/resultados',
   /** Una edición concreta del histórico. Es la dirección que se comparte. */
   resultsSeason: '/premios/resultados/:seasonId',
@@ -60,6 +68,10 @@ export function matchPremiosRoute(pathname: string): PremiosRouteState {
     return { ...EMPTY, panel: 'enviada' };
   }
 
+  if (matchPath(PREMIOS_ROUTES.ballot, pathname)) {
+    return { ...EMPTY, panel: 'papeleta' };
+  }
+
   const season = matchPath(PREMIOS_ROUTES.resultsSeason, pathname);
   if (season) {
     return { ...EMPTY, panel: 'resultados', seasonId: decode(season.params.seasonId) };
@@ -85,14 +97,14 @@ export function resultsPath(seasonId?: string): string {
 /**
  * ¿Este panel exige sesión iniciada?
  *
- * SOLO VOTAR Y REVISAR. La portada y los resultados se ven SIN CUENTA a propósito: el calendario es de lectura
- * pública y el archivo de una edición publicada también, porque quien recibe el enlace tiene que poder ver quién
- * ganó (ver `docs/plan-unificar-premios.md` §4.2).
+ * VOTAR, REVISAR Y VER LA PAPELETA. La portada y los resultados se ven SIN CUENTA a propósito: el calendario es
+ * de lectura pública y el archivo de una edición publicada también, porque quien recibe el enlace tiene que poder
+ * ver quién ganó (ver `docs/plan-unificar-premios.md` §4.2). La papeleta, en cambio, es de su dueño.
  *
  * Vive aquí, como función pura, porque la primera versión lo resolvía con un `panel !== 'portada'` escrito en el
  * componente y eso dejaba los RESULTADOS pidiendo sesión — justo la pantalla que se comparte por enlace. Con la
  * regla fuera de la vista se puede probar sin montar el hub entero.
  */
 export function panelNeedsSession(panel: PremiosPanel): boolean {
-  return panel === 'votar' || panel === 'revisar';
+  return panel === 'votar' || panel === 'revisar' || panel === 'papeleta';
 }

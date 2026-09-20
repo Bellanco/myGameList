@@ -1,11 +1,12 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { hasAward } from '../../../core/premios/awards';
 import { getOptionLabel, tField } from '../../../core/premios/localize';
-import { resultsPath } from '../../../viewmodel/premios/premiosRoutes';
+import { PREMIOS_ROUTES, resultsPath } from '../../../viewmodel/premios/premiosRoutes';
 import type { PremiosArchivedEntry, PremiosSeasonResult } from '../../../model/types/premios';
 import { PremiosCompartir } from './PremiosCompartir';
+import { HubBackButton } from '../socialhub/HubBackButton';
 
 // La lámina va aparte y perezosa: son 240 kB de arte y una tipografía que solo necesita quien ha ganado algo.
 const AwardDialog = lazy(() => import('./AwardDialog').then((m) => ({ default: m.AwardDialog })));
@@ -45,17 +46,32 @@ export interface PremiosResultsScreenProps {
  * que puede haber más de cinco personas marcadas y nunca más de cinco puestos distintos.
  */
 export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profiles }: PremiosResultsScreenProps) {
-  // Qué trofeo se está mirando. La lámina solo se ofrece CON SESIÓN: en la página pública va la medalla.
-  const [trofeo, setTrofeo] = useState<PremiosArchivedEntry | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Por qué premiado se abre la galería; `null` = cerrada. La lámina solo se ofrece CON SESIÓN: en la página
+  // pública va la medalla.
+  const [galeria, setGaleria] = useState<number | null>(null);
+
+  /** Los premiados de la edición, en orden: es lo que recorre la galería. */
+  const premiados = useMemo(() => leaderboard.filter((entry) => hasAward(entry.rank)), [leaderboard]);
+
+  /**
+   * VOLVER A DONDE SE VINO. Aquí se llega desde tres sitios —la portada de la sección, el histórico del panel y
+   * un enlace compartido—, así que el botón deshace el paso en vez de llevar siempre al mismo destino. Solo
+   * cuando esta es la PRIMERA pantalla de la visita (un enlace abierto en frío, sin historia detrás) se cae a
+   * la portada, que es lo único que tiene sentido ofrecer ahí.
+   */
+  const volver = () => {
+    if (location.key && location.key !== 'default') navigate(-1);
+    else navigate(PREMIOS_ROUTES.home);
+  };
 
   // La fila propia, si quien mira está en esta clasificación y se llevó algo. Va arriba del todo: si te ha
   // tocado, es lo primero que has venido a ver.
   const propio = useMemo(
-    () =>
-      ownProfileId
-        ? leaderboard.find((entry) => entry.profileId === ownProfileId && hasAward(entry.rank)) || null
-        : null,
-    [leaderboard, ownProfileId],
+    () => (ownProfileId ? premiados.findIndex((entry) => entry.profileId === ownProfileId) : -1),
+    [premiados, ownProfileId],
   );
 
   if (!result) {
@@ -71,6 +87,10 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
 
   return (
     <section className="premios-results" aria-label={L.sectionAria}>
+      <div className="premios-results__back">
+        <HubBackButton onBack={volver} label={L.back} />
+      </div>
+
       <header className="premios-results__head">
         <h2>{result.name || L.title}</h2>
         <p className="premios-results__count">{L.ballots(result.totalBallots || 0)}</p>
@@ -86,13 +106,13 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
 
       {/* EL PREMIO PROPIO, a lo ancho de las dos columnas. No se incrusta la lámina: son 240 kB de arte y una
           tipografía, y se descargan al abrirla, no al llegar. Lo que va aquí es el aviso de que te toca. */}
-      {propio ? (
+      {propio >= 0 ? (
         <div className="premios-results__own">
           <div>
             <h3>{L.yourAward}</h3>
-            <p>{L.yourAwardHint(propio.rank)}</p>
+            <p>{L.yourAwardHint(premiados[propio].rank)}</p>
           </div>
-          <button type="button" className="btn btn-primary" onClick={() => setTrofeo(propio)}>
+          <button type="button" className="btn btn-primary" onClick={() => setGaleria(propio)}>
             {L.trophy}
           </button>
         </div>
@@ -130,6 +150,14 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
             <span className="premios-results__panel-count">{L.participants(leaderboard.length)}</span>
           </div>
 
+          {/* TODOS LOS PREMIOS DE UNA, sin ir fila por fila: abre la galería por el primer puesto y desde dentro
+              se pasa de uno a otro. Solo con sesión, como las láminas. */}
+          {ownProfileId && premiados.length > 0 ? (
+            <button type="button" className="btn premios-results__see-all" onClick={() => setGaleria(0)}>
+              {L.seeAll}
+            </button>
+          ) : null}
+
           <ol className="premios-results__board">
             {leaderboard.map((entry, index) => {
               const propia = Boolean(ownProfileId) && entry.profileId === ownProfileId;
@@ -164,8 +192,12 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
 
                   {/* El trofeo, solo para quien tiene sesión: el arte no se enseña en abierto (ver `AwardDialog`). */}
                   {hasAward(entry.rank) && ownProfileId ? (
-                    <button type="button" className="btn premios-results__trophy" onClick={() => setTrofeo(entry)}>
-                      {propia ? L.trophy : L.download}
+                    <button
+                      type="button"
+                      className="btn premios-results__trophy"
+                      onClick={() => setGaleria(premiados.findIndex((p) => p.profileId === entry.profileId))}
+                    >
+                      {propia ? L.trophy : L.see}
                     </button>
                   ) : null}
                 </li>
@@ -175,13 +207,13 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
         </section>
       </div>
 
-      {trofeo ? (
+      {galeria !== null ? (
         <Suspense fallback={null}>
           <AwardDialog
-            rank={trofeo.rank}
-            name={trofeo.nickname}
+            entries={premiados}
+            inicial={galeria}
             seasonName={result.name || result.seasonId}
-            onClose={() => setTrofeo(null)}
+            onClose={() => setGaleria(null)}
           />
         </Suspense>
       ) : null}

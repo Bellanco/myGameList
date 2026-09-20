@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { computeLeaderboard } from '../../../core/premios/scoring';
+import { deleteBallot } from '../../../model/repository/premios/premiosBallotRepository';
 import { fetchWinners } from '../../../model/repository/premios/premiosWinnersRepository';
+import { Icon } from '../Icon';
 import { readLiveEdition } from '../../../model/repository/premios/premiosSeasonRepository';
 import type { PremiosBallot, PremiosCategory, PremiosLeaderboardEntry } from '../../../model/types/premios';
 
@@ -20,6 +22,13 @@ export function AdminPremiosVotos({ categories }: { categories: PremiosCategory[
   const [ballots, setBallots] = useState<PremiosBallot[]>([]);
   const [leaderboard, setLeaderboard] = useState<PremiosLeaderboardEntry[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [borrando, setBorrando] = useState('');
+
+  const cargar = useCallback(async () => {
+    const [live, winners] = await Promise.all([readLiveEdition(), fetchWinners(categories)]);
+    setBallots(live.ballots);
+    setLeaderboard(computeLeaderboard(live.ballots, live.categories, winners));
+  }, [categories]);
 
   useEffect(() => {
     let vivo = true;
@@ -37,6 +46,25 @@ export function AdminPremiosVotos({ categories }: { categories: PremiosCategory[
       vivo = false;
     };
   }, [categories]);
+
+  /**
+   * RETIRAR LA PAPELETA DE ALGUIEN. Se pregunta antes por su nombre y no se puede deshacer: el voto no está
+   * guardado en ningún otro sitio. Al terminar se vuelve a leer la edición, porque lo que cambia no es solo esa
+   * fila — la clasificación entera se recalcula sin ella.
+   */
+  const retirar = useCallback(
+    async (entry: PremiosLeaderboardEntry) => {
+      if (!window.confirm(L.removeConfirm(entry.nickname))) return;
+      setBorrando(entry.userId);
+      try {
+        await deleteBallot(entry.userId);
+        await cargar();
+      } finally {
+        setBorrando('');
+      }
+    },
+    [cargar],
+  );
 
   const total = categories.filter((category) => (category.options?.length || 0) > 0).length;
 
@@ -70,8 +98,18 @@ export function AdminPremiosVotos({ categories }: { categories: PremiosCategory[
             {leaderboard.map((entry) => (
               <li key={entry.userId}>
                 <span className="premios-admin__rank">{entry.rank}</span>
-                <span>{entry.nickname}</span>
+                <span className="premios-admin__board-name">{entry.nickname}</span>
                 <span className="premios-admin__muted">{PREMIOS_UI.resultados.points(entry.points)}</span>
+                <button
+                  type="button"
+                  className="btn btn-danger premios-admin__icon-btn"
+                  aria-label={L.remove(entry.nickname)}
+                  title={L.remove(entry.nickname)}
+                  disabled={borrando === entry.userId}
+                  onClick={() => void retirar(entry)}
+                >
+                  <Icon name="trash" />
+                </button>
               </li>
             ))}
           </ol>

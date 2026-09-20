@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
+import { ballotIsUnchanged } from '../../../core/premios/ballotEdits';
 import { ensureLightAccount } from '../../../model/repository/lightAccountRepository';
 import { signInWithGoogle, subscribeSocialAuth } from '../../../model/repository/firebaseGateway';
 import type { SocialAuthUser } from '../../../model/repository/firebaseClient';
@@ -11,7 +12,7 @@ import { usePremiosResult } from '../../../viewmodel/premios/usePremiosResult';
 import { usePremiosVoter } from '../../../viewmodel/premios/usePremiosVoter';
 import { usePremiosVoting } from '../../../viewmodel/premios/usePremiosVoting';
 import { usePalette } from '../../hooks/usePalette';
-import { PremiosCerrada, PremiosEnviada, PremiosIdentificate, PremiosYaVotaste } from './PremiosEstado';
+import { PremiosCerrada, PremiosEnviada, PremiosIdentificate } from './PremiosEstado';
 import { PremiosPortada } from './PremiosPortada';
 import { PremiosResultsScreen } from './PremiosResultsScreen';
 import { PremiosReviewScreen } from './PremiosReviewScreen';
@@ -44,6 +45,8 @@ export function PremiosHub() {
   const [signingIn, setSigningIn] = useState(false);
   const [signInError, setSignInError] = useState('');
   const [justSubmitted, setJustSubmitted] = useState(false);
+  /** Se reenvió una papeleta idéntica: no se escribió nada, así que la confirmación lo dice. */
+  const [sinCambios, setSinCambios] = useState(false);
 
   useEffect(() => subscribeSocialAuth(setUser), []);
 
@@ -97,6 +100,22 @@ export function PremiosHub() {
     async (displayName: string) => {
       setError('');
       try {
+        // MIRAR NO CUESTA UNA OPORTUNIDAD. Quien entra a repasar su papeleta, no toca nada y pulsa enviar por
+        // inercia no debería gastar una de las veces que le quedan: no hay nada que guardar, así que no se
+        // escribe. Las reglas no pueden distinguirlo —para ellas es una escritura más—, de modo que tiene que
+        // decidirse aquí, antes de enviarla.
+        const selecciones: Record<string, string> = {};
+        Object.entries(voting.votes).forEach(([categoria, voto]) => {
+          if (voto?.id) selecciones[categoria] = voto.id;
+        });
+        if (ballotIsUnchanged(edition.ballot, selecciones, displayName)) {
+          setSinCambios(true);
+          setJustSubmitted(true);
+          navigate(PREMIOS_ROUTES.sent);
+          return;
+        }
+        setSinCambios(false);
+
         // VOTAR DEJA CUENTA. Quien llega por primera vez no tiene perfil —crearlo exige GitHub, y eso aquí sería
         // un muro— así que se le crea una CUENTA LIGERA: nombre, foto y pseudónimo, sin canal y sin salir en el
         // directorio. Es lo que permitirá que su fila de la clasificación enlace a algún sitio el día que
@@ -168,8 +187,21 @@ export function PremiosHub() {
         <PremiosIdentificate signingIn={signingIn} error={signInError} onSignIn={() => void handleSignIn()} />
       ) : fueraDePlazo ? (
         <PremiosCerrada scheduled={edition.stage === 'none' && !hasResults} hasResults={hasResults} />
-      ) : sinCorrecciones ? (
-        <PremiosYaVotaste hasResults={hasResults} />
+      ) : route.panel === 'papeleta' || sinCorrecciones ? (
+        // LA PAPELETA, EN MODO LECTURA. Se llega de dos maneras y las dos acaban aquí: pidiéndola a propósito
+        // («ver lo que voté», sin gastar nada) o porque ya no quedan oportunidades. El cartel que había antes
+        // para el segundo caso decía «ya has votado» y se guardaba para sí lo único que se venía a ver.
+        <PremiosReviewScreen
+          categories={edition.categories}
+          votes={voting.votes}
+          defaultName={edition.ballot?.userDisplayName || ''}
+          remainingOpportunities={edition.remainingOpportunities}
+          isEdit
+          submitting={false}
+          error=""
+          onSubmit={() => {}}
+          readOnly
+        />
       ) : route.panel === 'resultados' ? (
         archivo.loading ? null : (
           <PremiosResultsScreen
@@ -185,6 +217,8 @@ export function PremiosHub() {
           remainingOpportunities={edition.remainingOpportunities}
           canEdit={edition.canEdit}
           hasResults={hasResults}
+          unchanged={sinCambios}
+          hasSocialAccount={voter.hasSocialAccount}
         />
       ) : route.panel === 'votar' ? (
         <PremiosVoteScreen

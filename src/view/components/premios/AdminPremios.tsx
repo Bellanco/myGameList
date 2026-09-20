@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
+import { HubBackButton } from '../socialhub/HubBackButton';
+import { Icon } from '../Icon';
 import { AdminPremiosCategorias } from './AdminPremiosCategorias';
 import { AdminPremiosGanadores } from './AdminPremiosGanadores';
 import { AdminPremiosHistorico } from './AdminPremiosHistorico';
@@ -15,6 +17,7 @@ import {
   openSeason,
   publishAndArchiveSeason,
   setPremiosVisible,
+  updateLiveSeason,
 } from '../../../model/repository/premios/premiosSeasonRepository';
 import type { PremiosCategory, PremiosVotingConfig } from '../../../model/types/premios';
 import '../../../styles/premios.scss';
@@ -43,9 +46,10 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
 
-  // Formulario de apertura.
+  // Formulario de apertura, que sirve también para corregir la edición en marcha.
   const [name, setName] = useState('');
   const [closesDay, setClosesDay] = useState('');
+  const [editando, setEditando] = useState(false);
 
 
   const recargar = useCallback(async () => {
@@ -107,51 +111,44 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
     });
 
 
+  /**
+   * LAS CINCO PESTAÑAS, EN EL ORDEN EN QUE SE TOCAN: se abre la edición, se ponen los nominados, se marcan los
+   * ganadores, se mira quién ha votado y al final se publica y queda en el histórico. Antes eran seis botones
+   * sueltos en la misma fila que el de volver, sin distinguir lo que NAVEGA de lo que SALE, y en un móvil
+   * quedaban en dos líneas de cajas iguales donde no se sabía cuál estaba activa.
+   */
+  const pestanas = [
+    ['season', L.tabs.season],
+    ['categories', L.tabs.categories],
+    ['winners', L.winners.title],
+    ['ballots', L.ballots.title],
+    ['history', L.history.title],
+  ] as const;
+
   return (
     <section className="admin-hub premios-admin" aria-label={L.sectionAria}>
+      {/* EL VOLVER, ARRIBA Y SOLO, como en el resto de pantallas del panel (`AdminAnnouncement`,
+          `AdminAchievements`): mismo componente, mismo sitio y misma flecha. */}
+      <div className="admin-ann-bar">
+        <HubBackButton onBack={onBack} label={L.back} />
+      </div>
+
       <div className="admin-card">
         <h2>{L.title}</h2>
 
-        <p className="admin-card-actions">
-          <button type="button" className="btn btn-secondary" onClick={onBack}>
-            {L.back}
-          </button>
-          <button
-            type="button"
-            className={`btn${tab === 'season' ? ' btn-primary' : ''}`}
-            onClick={() => setTab('season')}
-          >
-            {L.tabs.season}
-          </button>
-          <button
-            type="button"
-            className={`btn${tab === 'categories' ? ' btn-primary' : ''}`}
-            onClick={() => setTab('categories')}
-          >
-            {L.tabs.categories}
-          </button>
-          <button
-            type="button"
-            className={`btn${tab === 'winners' ? ' btn-primary' : ''}`}
-            onClick={() => setTab('winners')}
-          >
-            {L.winners.title}
-          </button>
-          <button
-            type="button"
-            className={`btn${tab === 'ballots' ? ' btn-primary' : ''}`}
-            onClick={() => setTab('ballots')}
-          >
-            {L.ballots.title}
-          </button>
-          <button
-            type="button"
-            className={`btn${tab === 'history' ? ' btn-primary' : ''}`}
-            onClick={() => setTab('history')}
-          >
-            {L.history.title}
-          </button>
-        </p>
+        <nav className="premios-admin__tabs" aria-label={L.tabsAria}>
+          {pestanas.map(([id, rotulo]) => (
+            <button
+              key={id}
+              type="button"
+              className={`premios-admin__tab${tab === id ? ' is-current' : ''}`}
+              aria-current={tab === id ? 'page' : undefined}
+              onClick={() => setTab(id)}
+            >
+              {rotulo}
+            </button>
+          ))}
+        </nav>
 
         {notice ? <p className="premios-admin__notice">{notice}</p> : null}
         {error ? (
@@ -169,6 +166,12 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
             <ol className="premios-admin__stages" aria-label={L.season.stagesTitle}>
               {L.season.stages.map((momento) => {
                 const actual = momento.id === stage;
+                // EL PASO ABIERTO DICE LA FECHA DE VERDAD, no la regla general: con una edición en marcha, lo
+                // que hace falta saber es cuándo se cierra ESTA, no a qué hora cierran todas.
+                const detalle =
+                  actual && momento.id === SEASON_STAGE.OPEN && config?.closesAt
+                    ? L.season.closesAt(toVotingZoneDay(config.closesAt))
+                    : momento.hint;
                 return (
                   <li
                     key={momento.id}
@@ -179,30 +182,76 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
                       {momento.label}
                       {actual ? <span className="premios-admin__stage-now">{L.season.stageCurrent}</span> : null}
                     </span>
-                    <span className="premios-admin__stage-hint">{momento.hint}</span>
+                    <span className="premios-admin__stage-hint">{detalle}</span>
                   </li>
                 );
               })}
             </ol>
-            <p className="premios-admin__muted">{L.season.stagesCycle}</p>
 
-            {/* Y LO QUE SALE DE TODO ESO: si la entrada se está ofreciendo ahora mismo. Es la misma función que
-                lo decide en Ajustes y en el espacio social, así que aquí no se puede decir una cosa y hacerse
-                otra. */}
-            <p className="premios-admin__stage">
-              {shouldOfferPremios(config) ? L.season.offeredYes : L.season.offeredNo}
-            </p>
-
-            {config?.lastPublishedId ? (
-              <p className="premios-admin__muted">{L.season.lastPublished(config.lastPublishedId)}</p>
+            {/* EL RESUMEN, EN UNA LÍNEA Y CON SU ACCIÓN AL LADO: qué edición hay y cómo se llama. Antes esto
+                eran cuatro párrafos sueltos —lo que pasa al publicar, si se ofrece, la última publicada y el
+                nombre con su fecha— que había que leer enteros para sacar dos datos. */}
+            {stage !== SEASON_STAGE.NONE ? (
+              <div className="premios-admin__season-bar">
+                <strong>{getSeasonLabel({ name: config?.seasonName, season: config?.season })}</strong>
+                {stage === SEASON_STAGE.OPEN ? (
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={busy}
+                    onClick={() => {
+                      if (!editando) {
+                        setName(config?.seasonName || '');
+                        setClosesDay(config?.closesAt ? toVotingZoneDay(config.closesAt) : '');
+                      }
+                      setEditando((abierto) => !abierto);
+                    }}
+                  >
+                    <Icon name={editando ? 'close' : 'edit'} />
+                    <span>{editando ? L.categories.cancel : L.season.edit}</span>
+                  </button>
+                ) : null}
+              </div>
             ) : null}
 
-            {config?.closesAt && stage !== SEASON_STAGE.NONE ? (
-              <p className="premios-admin__muted">
-                {`${getSeasonLabel({ name: config.seasonName, season: config.season })} · ${L.season.closesAt(
-                  toVotingZoneDay(config.closesAt),
-                )}`}
-              </p>
+            {/* Corregir lo que hay: el mismo formulario que abre una edición, con los valores puestos. Cambia el
+                nombre visible y el día de cierre; el identificador del archivo NO se toca (ver el repositorio). */}
+            {editando && stage === SEASON_STAGE.OPEN ? (
+              <div className="premios-admin__form">
+                <label htmlFor="premios-season-edit-name">{L.season.nameLabel}</label>
+                <input
+                  id="premios-season-edit-name"
+                  className="input"
+                  type="text"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
+                <label htmlFor="premios-season-edit-closes">{L.season.closesLabel}</label>
+                <input
+                  id="premios-season-edit-closes"
+                  className="input"
+                  type="date"
+                  value={closesDay}
+                  min={todayInVotingZone()}
+                  onChange={(event) => setClosesDay(event.target.value)}
+                />
+                <p className="premios-admin__muted">{L.season.closesHint}</p>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={busy}
+                  onClick={() =>
+                    void ejecutar(async () => {
+                      if (validateClosingDay(closesDay, todayInVotingZone())) throw new Error(L.season.errorDay);
+                      await updateLiveSeason({ name, closesDay });
+                      setEditando(false);
+                      return L.season.edited;
+                    })
+                  }
+                >
+                  {L.season.editSave}
+                </button>
+              </div>
             ) : null}
 
             {stage === SEASON_STAGE.NONE ? (
@@ -269,6 +318,17 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
                 ))}
               </div>
               <p className="premios-admin__muted">{L.season.visibilityHint}</p>
+              {/* Lo que de verdad está pasando ahora mismo con esas tres opciones, resuelto con la MISMA función
+                  que lo decide en Ajustes y en el espacio social: aquí no se puede decir una cosa y hacerse
+                  otra. Con la última publicada al lado, que es el otro dato de una línea. */}
+              <p className="premios-admin__stage">
+                {[
+                  shouldOfferPremios(config) ? L.season.offeredYes : L.season.offeredNo,
+                  config?.lastPublishedId ? L.season.lastPublished(config.lastPublishedId) : '',
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </p>
             </div>
 
             {stage === SEASON_STAGE.PENDING ? (

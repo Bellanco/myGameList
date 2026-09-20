@@ -207,6 +207,24 @@
 }
 
 /* Pie de la ficha: restos legacy a la izquierda, acciones a la derecha; apilado si no cabe. */
+/* ─── El menú del panel: las pantallas que no son el censo ────────────────────────────────────────────── */
+
+/* Va en su propia tarjeta, arriba del todo y antes del censo: son los DESTINOS del panel, no acciones sobre lo
+   que hay debajo. Con el rótulo pequeño en versales para que pese menos que el título de la pantalla a la que
+   pertenece cada botón. */
+.admin-menu { display: grid; gap: .5rem; }
+
+.admin-menu h2 {
+  font-family: var(--font-label);
+  font-size: var(--fs-2xs);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-dim);
+  margin: 0;
+}
+
+.admin-menu-links { display: flex; flex-wrap: wrap; gap: .5rem; }
+
 .admin-card-actions {
   display: flex;
   flex-wrap: wrap;

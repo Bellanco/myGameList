@@ -3,7 +3,8 @@ import { Navigate } from 'react-router-dom';
 import { ADMIN_ACHIEVEMENTS_UI, ADMIN_ANNOUNCEMENT_UI, ADMIN_PANEL_UI } from '../../core/constants/adminLabels';
 // SOLO EL RÓTULO, escrito aquí a propósito: importar `PREMIOS_UI` traería todos los textos de la porra al
 // chunk del panel, y este botón necesita exactamente una palabra.
-const PREMIOS_ADMIN_OPEN = 'Premios';
+/** En el panel se llama PORRAS: es como se habla de ellas, y deja «Premios» para la sección que ve el público. */
+const PREMIOS_ADMIN_OPEN = 'Porras';
 import type { Announcement } from '../../core/announcement/announcement';
 import type { HiddenOverrides, OpenFrontier } from '../../core/achievements/visibility';
 import type { ExtraSteps } from '../../core/achievements/types';
@@ -439,13 +440,13 @@ export const AdminHub = memo(function AdminHub() {
   // la rejilla de fichas de usuario.
   return (
     <section className="admin-hub" aria-label={A.sectionAria}>
-      <div className="admin-card">
-        <h2>{A.title}</h2>
-        <p className="admin-card-sub">{A.subtitle}</p>
-        <p className="admin-card-note">{A.scopeNote}</p>
-        <p className="admin-card-note">{A.legacyNote}</p>
-
-        <p className="admin-card-actions">
+      {/* ═══ LAS OTRAS PANTALLAS DEL PANEL, EN SU PROPIA TARJETA ═══════════════════════════════════════════
+          Eran tres botones metidos entre las notas del censo y la tabla de totales, con la misma forma que los
+          botones de acción de una ficha de usuario: no se leían como «ir a otra pantalla» sino como «hacer algo
+          aquí». Sacados a su tarjeta, con su rótulo, son lo que son — el menú del panel. */}
+      <nav className="admin-card admin-menu" aria-label={A.menuAria}>
+        <h2>{A.menuTitle}</h2>
+        <div className="admin-menu-links">
           <button type="button" className="btn btn-secondary" onClick={() => setView('achievements')}>
             {ADMIN_ACHIEVEMENTS_UI.open}
           </button>
@@ -455,7 +456,14 @@ export const AdminHub = memo(function AdminHub() {
           <button type="button" className="btn btn-secondary" onClick={() => setView('premios')}>
             {PREMIOS_ADMIN_OPEN}
           </button>
-        </p>
+        </div>
+      </nav>
+
+      <div className="admin-card">
+        <h2>{A.title}</h2>
+        <p className="admin-card-sub">{A.subtitle}</p>
+        <p className="admin-card-note">{A.scopeNote}</p>
+        <p className="admin-card-note">{A.legacyNote}</p>
 
         {totals ? (
           <dl className="admin-totals" aria-label={A.totals.aria}>

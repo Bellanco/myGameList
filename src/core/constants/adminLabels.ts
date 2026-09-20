@@ -10,6 +10,9 @@ import type { AdminAnomaly } from '../../model/types/firestore';
 // administración de ETIQUETAS de la propia biblioteca.
 export const ADMIN_PANEL_UI = {
   sectionAria: 'Panel de administración',
+  /** El menú del panel: las pantallas que no son el censo. */
+  menuTitle: 'Panel de administración',
+  menuAria: 'Pantallas del panel',
   title: 'Administración',
   subtitle: 'Censo de usuarios con perfil social y acciones de moderación.',
   checking: 'Comprobando permisos...',
@@ -648,8 +651,10 @@ export const ADMIN_ACHIEVEMENTS_UI = {
  * escribe esperando otra cosa.
  */
 export const ADMIN_ANNOUNCEMENT_UI = {
-  open: 'Aviso a los usuarios',
-  title: 'Aviso a los usuarios',
+  // NOTIFICACIONES en el panel, aunque por dentro siga siendo el aviso de la aplicación: es el nombre con el que
+  // se busca esta pantalla. El texto de abajo sigue aclarando que no es una notificación del móvil.
+  open: 'Notificaciones',
+  title: 'Notificaciones',
   /**
    * UNA LÍNEA, Y LA ÚNICA QUE HACE FALTA. Aquí hubo un párrafo y cinco notas —qué se ve, quién lo ve, cómo se
    * insiste, cuánto tarda— y sobraban: la pantalla la usa quien hizo la función, y lo demás lo dicen los propios

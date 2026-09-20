@@ -25,18 +25,23 @@ const completa = {
   arte: { id: 'arte_option_1', name: 'Otro' },
 };
 
-function pintar(votes: Record<string, { id: string; name: string }>, onSubmit = vi.fn()) {
+function pintar(
+  votes: Record<string, { id: string; name: string }>,
+  onSubmit = vi.fn(),
+  readOnly = false,
+) {
   render(
     <MemoryRouter>
       <PremiosReviewScreen
         categories={categories}
         votes={votes}
         defaultName="Ana"
-        remainingOpportunities={5}
+        remainingOpportunities={readOnly ? 0 : 5}
         isEdit={false}
         submitting={false}
         error=""
         onSubmit={onSubmit}
+        readOnly={readOnly}
       />
     </MemoryRouter>,
   );
@@ -85,5 +90,26 @@ describe('PremiosReviewScreen', () => {
   it('el atajo de lo que falta lleva a la primera sin votar', () => {
     pintar({ goty: completa.goty });
     expect(screen.getByRole('link', { name: L.firstPending })).toHaveAttribute('href', '/premios/votar/2');
+  });
+
+  // SIN OPORTUNIDADES SE MIRA, NO SE ENVÍA: antes, a quien se le acababan se le enseñaba un cartel que se
+  // guardaba para sí lo único que se venía a ver.
+  describe('solo mirar', () => {
+    it('enseña la papeleta sin el nombre ni el botón de enviar', () => {
+      pintar(completa, vi.fn(), true);
+
+      expect(screen.getByText('Uno')).toBeInTheDocument();
+      expect(screen.queryByLabelText(L.nameLabel)).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: L.submit })).not.toBeInTheDocument();
+      // Y NO SE AFIRMA NADA sobre las oportunidades ni se promete poder cambiar: aquí se llega con el cupo
+      // agotado y también con él intacto. El título lo dice y ya: son tus elecciones.
+      expect(screen.getByRole('heading', { name: L.readTitle })).toBeInTheDocument();
+      expect(screen.queryByText(L.subtitle)).not.toBeInTheDocument();
+    });
+
+    it('las categorías dejan de llevar a la votación: no hay nada que cambiar', () => {
+      pintar(completa, vi.fn(), true);
+      expect(screen.queryByRole('link', { name: L.goToCategory('Juego del año') })).not.toBeInTheDocument();
+    });
   });
 });

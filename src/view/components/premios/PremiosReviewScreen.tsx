@@ -24,6 +24,12 @@ export interface PremiosReviewScreenProps {
   submitting: boolean;
   error: string;
   onSubmit: (displayName: string) => void;
+  /**
+   * SOLO MIRAR. Sin oportunidades no se puede reenviar, pero sí ver lo que se votó: la pantalla se queda con la
+   * papeleta y pierde lo que no lleva a ninguna parte —el nombre y el botón de enviar—. Antes, a quien se le
+   * acababan las oportunidades se le enseñaba un cartel diciendo que ya había votado, sin decirle QUÉ.
+   */
+  readOnly?: boolean;
 }
 
 /**
@@ -53,6 +59,7 @@ export function PremiosReviewScreen({
   submitting,
   error,
   onSubmit,
+  readOnly = false,
 }: PremiosReviewScreenProps) {
   const [name, setName] = useState(defaultName);
   const { covers } = useCovers();
@@ -65,13 +72,16 @@ export function PremiosReviewScreen({
 
   return (
     <section className="premios-review" aria-label={L.sectionAria}>
+      {/* EN MODO LECTURA NO SE PROMETE LO QUE NO HAY: ni «revisa» —no se va a enviar nada— ni «puedes cambiar
+          cualquier voto antes de enviarla», que ahí sencillamente no se cumple. */}
       <PremiosProgress
-        title={L.title}
-        subtitle={L.subtitle}
+        title={readOnly ? L.readTitle : L.title}
+        subtitle={readOnly ? undefined : L.subtitle}
         current={votadas}
         total={categories.length}
       />
 
+      {readOnly ? null : (
       <div className="premios-review__submit">
         <label className="premios-review__label" htmlFor="premios-name">
           {L.nameLabel}
@@ -124,6 +134,7 @@ export function PremiosReviewScreen({
           </button>
         </div>
       </div>
+      )}
 
       <h3 className="premios-review__all">{L.allVotes}</h3>
       <ol className="premios-review__grid">
@@ -132,11 +143,17 @@ export function PremiosReviewScreen({
           const titulo = getCategoryTitle(category);
           return (
             <li key={category.id}>
-              <Link
-                className={`premios-review__card${vote ? '' : ' is-empty'}${covers ? '' : ' is-flat'}`}
-                to={votePath(index + 1)}
-                aria-label={L.goToCategory(titulo)}
-              >
+              {(() => {
+                const clase = `premios-review__card${vote ? '' : ' is-empty'}${covers ? '' : ' is-flat'}`;
+                const Caja = readOnly
+                  ? ({ children }: { children: React.ReactNode }) => <div className={clase}>{children}</div>
+                  : ({ children }: { children: React.ReactNode }) => (
+                    <Link className={clase} to={votePath(index + 1)} aria-label={L.goToCategory(titulo)}>
+                      {children}
+                    </Link>
+                  );
+                return (
+                  <Caja>
                 {/* La misma caja que en la votación, y con la misma regla: con las imágenes encendidas se ve la
                     portada de lo votado —que es como se reconoce un juego de un vistazo—, y apagadas la tarjeta
                     se queda en sus dos líneas de texto. Sin voto el hueco se queda VACÍO, sin la portada de casa
@@ -152,11 +169,13 @@ export function PremiosReviewScreen({
                     ) : null}
                   </span>
                 ) : null}
-                <span className="premios-review__card-body">
-                  <span className="premios-review__cat">{titulo}</span>
-                  <span className="premios-review__pick">{vote ? vote.name : L.notVoted}</span>
-                </span>
-              </Link>
+                    <span className="premios-review__card-body">
+                      <span className="premios-review__cat">{titulo}</span>
+                      <span className="premios-review__pick">{vote ? vote.name : L.notVoted}</span>
+                    </span>
+                  </Caja>
+                );
+              })()}
             </li>
           );
         })}

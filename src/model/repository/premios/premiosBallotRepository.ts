@@ -15,7 +15,7 @@
  *
  * El esquema que se escribe aquí lo valida también el servidor. Si cambia un campo, cambian las reglas.
  */
-import { doc, getDoc, setDoc } from 'firebase/firestore/lite';
+import { deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore/lite';
 import { safeTrim } from '../../../core/security/sanitize';
 import { BALLOT_NAME_MAX_LENGTH } from '../../../core/premios/limits';
 import type { PremiosBallot, PremiosOption } from '../../types/premios';
@@ -121,4 +121,18 @@ export async function fetchUserBallot(uid: string): Promise<PremiosBallot | null
   } catch {
     return null;
   }
+}
+
+/**
+ * Retira la papeleta de una persona. SOLO ADMINISTRACIÓN.
+ *
+ * Existe para lo que de verdad pasa mientras se prepara una edición: alguien vota de prueba, o una papeleta hay
+ * que quitarla a mano. Las reglas ya lo reservan a quien modera (`allow delete: if isAdmin()`), así que esto no
+ * abre ninguna puerta nueva — solo pone el botón donde se ve el efecto, que es la clasificación provisional.
+ *
+ * NO SE PUEDE DESHACER: el voto no se guarda en ningún otro sitio. Quien lo pulse tiene que confirmarlo antes.
+ */
+export async function deleteBallot(uid: string): Promise<void> {
+  const { firestore } = await requireServices();
+  await deleteDoc(doc(firestore, BALLOTS_COLLECTION, uid));
 }

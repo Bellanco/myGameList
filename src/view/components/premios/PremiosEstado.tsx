@@ -16,6 +16,8 @@ export function PremiosEnviada({
   remainingOpportunities,
   canEdit,
   hasResults,
+  unchanged = false,
+  hasSocialAccount = false,
 }: {
   /** El nombre con el que ha votado: es a quien se da las gracias. */
   displayName: string;
@@ -23,6 +25,17 @@ export function PremiosEnviada({
   /** ¿Puede volver a entrar a corregirla? */
   canEdit: boolean;
   hasResults: boolean;
+  /** Se llegó reenviando una papeleta idéntica: no se ha escrito nada y no ha costado oportunidad. */
+  unchanged?: boolean;
+  /**
+   * ¿Tiene cuenta social?
+   *
+   * DECIDE SI ESTA PANTALLA TIENE SALIDAS. Con cuenta social se puede repasar la papeleta, corregirla y volver a
+   * la sección: hay algo que seguir haciendo. Sin ella, su papeleta ya está cerrada —una sola oportunidad— y
+   * ofrecerle «corregir» o «vuelve la próxima temporada» es ofrecerle lo que no tiene; se queda la confirmación
+   * y la barra de la aplicación, que es la que invita a mirar el resto.
+   */
+  hasSocialAccount?: boolean;
 }) {
   const L = PREMIOS_UI.enviada;
   return (
@@ -41,10 +54,6 @@ export function PremiosEnviada({
           cuándo se sabrá. Es lo que la porra de origen decía aquí, y es donde se lee — no en la portada. */}
       <ul className="premios-enviada__cards">
         <li className="premios-enviada__card">
-          <Icon name="lock" />
-          <span>{L.cards.privacy}</span>
-        </li>
-        <li className="premios-enviada__card">
           <Icon name="person" />
           <span>{L.cards.oneVote}</span>
         </li>
@@ -56,25 +65,39 @@ export function PremiosEnviada({
 
       <div className="premios-enviada__confirm">
         <p className="premios-enviada__confirm-title">{L.confirmTitle}</p>
+        {/* Si se ha llegado aquí reenviando una papeleta sin tocar, lo primero es decir que no ha costado nada:
+            es justo lo que quien la ha reenviado por inercia teme haber gastado. */}
+        {unchanged ? <p>{L.unchanged}</p> : null}
         <p>{L.editHint(remainingOpportunities)}</p>
         <p className="premios-estado__muted">{L.resultsSoon}</p>
       </div>
 
-      <div className="premios-estado__actions">
-        {canEdit ? (
-          <Link className="btn btn-primary" to={votePath(1)}>
-            {L.edit}
-          </Link>
-        ) : null}
-        {hasResults ? (
-          <Link className="btn" to={PREMIOS_ROUTES.results}>
-            {L.toResults}
-          </Link>
-        ) : null}
-        <Link className="btn" to={PREMIOS_ROUTES.home}>
-          {PREMIOS_UI.cerrada.toHome}
-        </Link>
-      </div>
+      {hasSocialAccount ? (
+        <>
+          <div className="premios-estado__actions">
+            {canEdit ? (
+              <Link className="btn btn-primary" to={votePath(1)}>
+                {L.edit}
+              </Link>
+            ) : null}
+            {/* REPASAR NO CUESTA NADA, y por eso está aquí y no dentro del flujo de envío: lleva a la papeleta
+                en modo lectura, sin nombre ni botón de enviar. */}
+            <Link className="btn" to={PREMIOS_ROUTES.ballot}>
+              {L.see}
+            </Link>
+            {hasResults ? (
+              <Link className="btn" to={PREMIOS_ROUTES.results}>
+                {L.toResults}
+              </Link>
+            ) : null}
+            <Link className="btn" to={PREMIOS_ROUTES.home}>
+              {PREMIOS_UI.cerrada.toHome}
+            </Link>
+          </div>
+
+          <p className="premios-estado__muted">{L.comeBack}</p>
+        </>
+      ) : null}
     </section>
   );
 }
@@ -113,26 +136,6 @@ export function PremiosCerrada({
   );
 }
 
-/** Ya votó y no le quedan correcciones: se le enseña lo que votó, no un formulario que no puede enviar. */
-export function PremiosYaVotaste({ hasResults }: { hasResults: boolean }) {
-  const L = PREMIOS_UI.yaVotaste;
-  return (
-    <section className="premios-estado" aria-label={PREMIOS_UI.enviada.sectionAria}>
-      <h2>{L.title}</h2>
-      <p>{L.body}</p>
-      <div className="premios-estado__actions">
-        {hasResults ? (
-          <Link className="btn" to={PREMIOS_ROUTES.results}>
-            {PREMIOS_UI.cerrada.toResults}
-          </Link>
-        ) : null}
-        <Link className="btn" to={PREMIOS_ROUTES.home}>
-          {PREMIOS_UI.cerrada.toHome}
-        </Link>
-      </div>
-    </section>
-  );
-}
 
 /**
  * LA PUERTA: llegar a votar sin sesión.
@@ -173,6 +176,7 @@ export function PremiosIdentificate({
           {PREMIOS_UI.cerrada.toHome}
         </Link>
       </div>
+
     </section>
   );
 }

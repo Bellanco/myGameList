@@ -316,6 +316,44 @@ export async function openSeason({ name, closesDay, season }: OpenSeasonParams):
 }
 
 /**
+ * Corrige la edición EN MARCHA: su nombre y su día de cierre.
+ *
+ * Es lo que faltaba para no tener que cerrar y volver a abrir por una errata en el nombre o por un día mal
+ * puesto — y cerrar y reabrir no es equivalente: `openSeason` RETIRA las papeletas, así que arreglar una errata
+ * costaba los votos ya emitidos.
+ *
+ * NO TOCA EL IDENTIFICADOR. El `seasonId` sale del nombre y es la clave con la que se archivará la edición; si
+ * cambiara a mitad de votación, lo publicado no casaría con lo que se está votando. El nombre visible sí cambia,
+ * que es lo que se lee en la portada y lo que se quería corregir.
+ *
+ * Adelantar el día de cierre a uno ya pasado NO se permite: eso es cerrar la votación, y para eso está su botón,
+ * que además deja el ciclo en su sitio.
+ */
+export async function updateLiveSeason({ name, closesDay }: { name: string; closesDay: string }): Promise<{
+  name: string;
+  closesAt: string;
+}> {
+  const nombre = (name || '').trim();
+  const { closesAt, closesAtMillis } = buildScheduleFields({ closesDay });
+  if (closesAtMillis === null || closesAt === null) {
+    throw new Error('La edición necesita una fecha de cierre');
+  }
+
+  await setDoc(
+    await votingDocRef(),
+    {
+      ...(nombre ? { seasonName: nombre } : {}),
+      closesAt,
+      closesAtMillis,
+      updatedAt: new Date().toISOString(),
+    },
+    { merge: true },
+  );
+
+  return { name: nombre, closesAt };
+}
+
+/**
  * Adelanta el cierre. No borra la fecha: la edición sigue existiendo y pasa a «pendiente de publicar».
  */
 export async function closeSeasonNow(): Promise<void> {

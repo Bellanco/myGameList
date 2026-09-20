@@ -23,17 +23,36 @@ const L = PREMIOS_UI.resultados;
  * el paso; si algún día hiciera falta privacidad de verdad, el camino es servirlos desde KV tras comprobar el
  * token, como se hace con las reseñas compartidas.
  */
-export interface AwardDialogProps {
+/** Un premiado de la galería: el puesto y el nombre que va escrito en la lámina. */
+export interface AwardEntry {
   rank: number;
-  name: string;
+  nickname: string;
+}
+
+export interface AwardDialogProps {
+  /** Los premiados de la edición, en orden de puesto. La galería recorre esta lista. */
+  entries: AwardEntry[];
+  /** Por cuál se abre. */
+  inicial: number;
   seasonName: string;
   onClose: () => void;
 }
 
-export function AwardDialog({ rank, name, seasonName, onClose }: AwardDialogProps) {
+/**
+ * ES UNA GALERÍA, no una lámina suelta. Abierta por cualquiera de los premiados, se pasa de uno a otro con sus
+ * flechas: ver los cinco no obliga a cerrar, buscar la fila siguiente y volver a abrir. La descarga vive DENTRO,
+ * en la lámina que se esté mirando, que es lo que separa «ver» de «llevarse»: desde la clasificación se mira, y
+ * el que quiera el archivo lo pide aquí.
+ */
+export function AwardDialog({ entries, inicial, seasonName, onClose }: AwardDialogProps) {
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [listo, setListo] = useState(false);
+  const [indice, setIndice] = useState(() => Math.min(Math.max(inicial, 0), Math.max(entries.length - 1, 0)));
+
+  const actual = entries[indice];
+  const rank = actual?.rank ?? 0;
+  const name = actual?.nickname ?? '';
 
   useEffect(() => {
     dialogRef.current?.showModal();
@@ -41,6 +60,7 @@ export function AwardDialog({ rank, name, seasonName, onClose }: AwardDialogProp
 
   useEffect(() => {
     let vivo = true;
+    setListo(false);
     void drawAward(canvasRef.current, { rank, name })
       .then(() => {
         if (vivo) setListo(true);
@@ -60,7 +80,7 @@ export function AwardDialog({ rank, name, seasonName, onClose }: AwardDialogProp
     void downloadCanvas(canvasRef.current, `${limpio || 'premios'}-${rank}.jpg`);
   }, [rank, seasonName]);
 
-  if (!getAward(rank)) return null;
+  if (!actual || !getAward(rank)) return null;
 
   return (
     <dialog ref={dialogRef} className="premios-award" onClose={onClose}>
@@ -70,7 +90,37 @@ export function AwardDialog({ rank, name, seasonName, onClose }: AwardDialogProp
         role="img"
         aria-label={PREMIOS_UI.palmares.medalAria(rank, seasonName)}
       />
+
+      {/* Quién es el de la lámina que se está mirando, y por dónde va la galería. El canvas lo lleva dibujado,
+          pero dibujado no es legible para quien no ve la pantalla. */}
+      <p className="premios-award__who">
+        <strong>{PREMIOS_UI.palmares.entry(rank, name)}</strong>
+        {entries.length > 1 ? (
+          <span className="premios-admin__muted">{L.awardOf(indice + 1, entries.length)}</span>
+        ) : null}
+      </p>
+
       <div className="premios-award__actions">
+        {entries.length > 1 ? (
+          <>
+            <button
+              type="button"
+              className="btn"
+              disabled={indice === 0}
+              onClick={() => setIndice((i) => Math.max(0, i - 1))}
+            >
+              {L.awardPrev}
+            </button>
+            <button
+              type="button"
+              className="btn"
+              disabled={indice === entries.length - 1}
+              onClick={() => setIndice((i) => Math.min(entries.length - 1, i + 1))}
+            >
+              {L.awardNext}
+            </button>
+          </>
+        ) : null}
         <button type="button" className="btn btn-primary" disabled={!listo} onClick={descargar}>
           {L.download}
         </button>
