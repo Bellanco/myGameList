@@ -14,7 +14,8 @@ export interface PremiosReviewScreenProps {
   votes: PremiosVotes;
   /** Nombre propuesto: el que ya usó, o el de su cuenta. */
   defaultName: string;
-  remainingEdits: number;
+  /** Oportunidades que le quedan, esta incluida. */
+  remainingOpportunities: number;
   isEdit: boolean;
   submitting: boolean;
   error: string;
@@ -33,7 +34,7 @@ export function PremiosReviewScreen({
   categories,
   votes,
   defaultName,
-  remainingEdits,
+  remainingOpportunities,
   isEdit,
   submitting,
   error,
@@ -83,7 +84,7 @@ export function PremiosReviewScreen({
 
         {isEdit ? (
           <p className="premios-review__edits">
-            {remainingEdits > 1 ? L.editsLeft(remainingEdits) : L.noEditsLeft}
+            {remainingOpportunities > 1 ? L.editsLeft(remainingOpportunities - 1) : L.noEditsLeft}
           </p>
         ) : null}
 

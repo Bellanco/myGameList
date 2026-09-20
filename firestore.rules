@@ -612,13 +612,43 @@ service cloud.firestore {
     }
 
     /**
-     * Correcciones permitidas DESPUÉS del envío inicial.
+     * El perfil de quien vota, o un mapa vacío si todavía no tiene.
      *
-     * PAR DUPLICADO con `MAX_BALLOT_EDITS` de `src/core/premios/ballotEdits.ts`, que es el que decide si la
-     * interfaz ofrece el botón. Aquí es donde se impone. `tests/integration/firestore.rules.test.ts` los ata.
+     * UNA SOLA LECTURA, y solo en las CORRECCIONES: el primer envío vale lo mismo para todo el mundo, así que la
+     * regla de `create` no pasa por aquí y el momento de más carga del año no paga ninguna lectura extra.
+     *
+     * Quien vota sin perfil —o con uno que no se puede leer— se trata como el cupo mínimo, que es lo mismo que
+     * hace el cliente: degradar es seguro, promocionar no.
      */
-    function premiosMaxBallotEdits() {
-      return 5;
+    function premiosVoterProfile(userId) {
+      let ref = /databases/$(database)/documents/profiles/$(userId);
+      return exists(ref) ? get(ref).data : {};
+    }
+
+    /**
+     * OPORTUNIDADES de una papeleta: el envío inicial y las correcciones que se le permiten después.
+     *
+     * PAR DUPLICADO con `PREMIOS_OPPORTUNITIES_BY_TIER` y `PREMIOS_OPPORTUNITIES_WITHOUT_SOCIAL` de
+     * `src/core/premios/ballotEdits.ts`, que son los que deciden si la interfaz ofrece el botón. Aquí es donde se
+     * imponen. `tests/integration/firestore.rules.test.ts` los ata.
+     *
+     * TENER CUENTA SOCIAL es tener canal (`social.enabled`); la cuenta ligera que se crea al votar no lo es. Ese
+     * campo lo escribe su propio dueño, así que quien manipule su cliente puede marcárselo y pasar de 1 a 5:
+     * queda en que se cuela en el cupo de bronce —y se delata como perfil roto en el hub de todos, por la señal
+     * `enabled-without-gist`—. El `tier`, que es lo que abre 10, 15 y 20, NO puede autoasignárselo: lo impide
+     * `profileTierNotSelfAssigned()`.
+     */
+    function premiosOpportunities(userId) {
+      let profile = premiosVoterProfile(userId);
+      let tier = profile.get('tier', 'bronze');
+      return profile.get(['social', 'enabled'], false) != true
+        ? 1
+        : (tier == 'mithril' ? 20 : (tier == 'gold' ? 15 : (tier == 'silver' ? 10 : 5)));
+    }
+
+    /** Correcciones permitidas DESPUÉS del envío inicial: una oportunidad menos, la que gastó al enviar. */
+    function premiosMaxBallotEdits(userId) {
+      return premiosOpportunities(userId) - 1;
     }
 
     /** Tope de categorías que puede traer una papeleta. No es el número real: es una cota sensata. */
@@ -688,7 +718,7 @@ service cloud.firestore {
     /**
      * Corrección de una papeleta ya emitida.
      *
-     * EL CONTADOR TIENE QUE AVANZAR EXACTAMENTE DE UNO EN UNO. Si bastara con «no pasar de cinco», un cliente
+     * EL CONTADOR TIENE QUE AVANZAR EXACTAMENTE DE UNO EN UNO. Si bastara con «no pasar del tope», un cliente
      * hostil reenviaría siempre `editCount: 1` y corregiría sin fin. Y lo que identifica la papeleta —dueño,
      * temporada y fecha del primer envío— no puede cambiar por el camino.
      */
@@ -697,7 +727,7 @@ service cloud.firestore {
       let next = request.resource.data;
       return premiosBallotIsValid(userId)
         && next.editCount == prev.get('editCount', 0) + 1
-        && next.editCount <= premiosMaxBallotEdits()
+        && next.editCount <= premiosMaxBallotEdits(userId)
         && next.userId == prev.userId
         && next.season == prev.season
         && next.submittedAt == prev.submittedAt;

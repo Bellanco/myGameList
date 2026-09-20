@@ -10,7 +10,12 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getSeasonStage, isVotingOpenNow, type SeasonStage } from '../../core/premios/votingSchedule';
-import { canEditBallot, getRemainingEdits } from '../../core/premios/ballotEdits';
+import {
+  canEditBallot,
+  getOpportunities,
+  getRemainingOpportunities,
+  type PremiosVoterStanding,
+} from '../../core/premios/ballotEdits';
 import { loadAndSortCategories } from '../../model/repository/premios/premiosCategoriesRepository';
 import { fetchUserBallot } from '../../model/repository/premios/premiosBallotRepository';
 import { fetchVotingConfig } from '../../model/repository/premios/premiosSeasonRepository';
@@ -29,11 +34,18 @@ export interface PremiosEdition {
   votingOpen: boolean;
   /** ¿Puede corregir su voto ahora mismo? */
   canEdit: boolean;
-  remainingEdits: number;
+  /** Oportunidades que le quedan: veces que todavía puede enviar la papeleta. */
+  remainingOpportunities: number;
+  /** Oportunidades totales de esta cuenta, el envío incluido. Es lo que da su rango. */
+  opportunities: number;
   reload: () => Promise<void>;
 }
 
-export function usePremiosEdition(uid: string): PremiosEdition {
+/**
+ * @param standing Lo que se sabe de quien vota (`usePremiosVoter`): decide su cupo de oportunidades. Sin él —sin
+ *   sesión, o mientras se lee su perfil— se asume el mínimo, que es lo que degrada sin prometer de más.
+ */
+export function usePremiosEdition(uid: string, standing: PremiosVoterStanding | null): PremiosEdition {
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [config, setConfig] = useState<PremiosVotingConfig | null>(null);
@@ -85,9 +97,10 @@ export function usePremiosEdition(uid: string): PremiosEdition {
       ballot,
       stage,
       votingOpen,
-      canEdit: canEditBallot(ballot, config),
-      remainingEdits: getRemainingEdits(ballot),
+      canEdit: canEditBallot(ballot, config, standing),
+      remainingOpportunities: getRemainingOpportunities(ballot, standing),
+      opportunities: getOpportunities(standing),
       reload,
     };
-  }, [ballot, categories, config, failed, loading, reload]);
+  }, [ballot, categories, config, failed, loading, reload, standing]);
 }

@@ -9,7 +9,11 @@ import {
 } from '@firebase/rules-unit-testing';
 import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { ADMIN_CLAIM } from '../../src/core/security/admin';
-import { MAX_BALLOT_EDITS } from '../../src/core/premios/ballotEdits';
+import {
+  PREMIOS_OPPORTUNITIES_BY_TIER,
+  PREMIOS_OPPORTUNITIES_WITHOUT_SOCIAL,
+  getMaxBallotEdits,
+} from '../../src/core/premios/ballotEdits';
 import { BALLOT_NAME_MAX_LENGTH } from '../../src/core/premios/limits';
 import { PUBLIC_NAME_MAX_LENGTH } from '../../src/core/security/sanitize';
 
@@ -1216,6 +1220,21 @@ describe('firestore.rules', () => {
       ...extra,
     });
 
+    /**
+     * Deja el perfil de quien vota, que es lo que fija su cupo de correcciones.
+     *
+     * Sin canal (`social.enabled`) es una CUENTA LIGERA: la que deja el propio voto, con una sola oportunidad.
+     */
+    async function conPerfil(uid: string, { social = true, tier = 'bronze' } = {}) {
+      await seed('profiles', uid, {
+        uid,
+        profileId: `p-${uid}`,
+        displayName: 'Ana',
+        tier,
+        social: social ? { enabled: true, gistId: 'g1' } : {},
+      });
+    }
+
     /** Deja una edición abierta (o cerrada) en el calendario. */
     async function conCalendario(abierta: boolean) {
       await seed('premiosConfig', 'voting', {
@@ -1226,8 +1245,13 @@ describe('firestore.rules', () => {
     }
 
     describe('los dos pares duplicados con el cliente', () => {
-      it('el tope de correcciones es el mismo aquí y en el cliente', () => {
-        expect(rulesSource).toContain(`function premiosMaxBallotEdits() {\n      return ${MAX_BALLOT_EDITS};`);
+      it('las oportunidades por rango son las mismas aquí y en el cliente', () => {
+        const T = PREMIOS_OPPORTUNITIES_BY_TIER;
+        expect(rulesSource).toContain(
+          `? ${PREMIOS_OPPORTUNITIES_WITHOUT_SOCIAL}\n` +
+            `        : (tier == 'mithril' ? ${T.mithril} : (tier == 'gold' ? ${T.gold} ` +
+            `: (tier == 'silver' ? ${T.silver} : ${T.bronze})));`,
+        );
       });
 
       it('el tope del nombre es el mismo aquí y en el cliente', () => {
@@ -1262,6 +1286,7 @@ describe('firestore.rules', () => {
       // Si bastara con «no pasar de cinco», un cliente hostil reenviaría siempre editCount: 1 y corregiría sin fin.
       it('el contador avanza de uno en uno y no pasa del tope', async () => {
         await conCalendario(true);
+        await conPerfil('uid-a');
         await seed('premiosBallots', 'uid-a', papeleta('uid-a', { editCount: 2 }));
 
         await assertFails(
@@ -1276,18 +1301,81 @@ describe('firestore.rules', () => {
       });
 
       it('agotado el cupo ya no se corrige', async () => {
+        const tope = getMaxBallotEdits({ hasSocialAccount: true, tier: 'bronze' });
         await conCalendario(true);
-        await seed('premiosBallots', 'uid-a', papeleta('uid-a', { editCount: MAX_BALLOT_EDITS }));
+        await conPerfil('uid-a');
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a', { editCount: tope }));
         await assertFails(
-          setDoc(
-            doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'),
-            papeleta('uid-a', { editCount: MAX_BALLOT_EDITS + 1 }),
-          ),
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { editCount: tope + 1 })),
         );
+      });
+
+      // ═══ EL CUPO LO PONE LA CUENTA ═════════════════════════════════════════════════════════════════════
+      // Es lo que distingue este bloque del anterior: el mismo `editCount` entrante se acepta o se rechaza
+      // según el perfil de quien lo escribe, y el perfil no lo puede falsear su dueño (el `tier` lo asigna el
+      // administrador, ver `profileTierNotSelfAssigned`).
+
+      it('quien vota sin cuenta social no corrige: su papeleta queda como está', async () => {
+        await conCalendario(true);
+        await conPerfil('uid-a', { social: false });
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a', { editCount: 0 }));
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { editCount: 1 })),
+        );
+      });
+
+      // El rango de una cuenta ligera no cuenta: sin canal no hay cupo que repartir.
+      it('el rango no salva a quien no tiene canal', async () => {
+        await conCalendario(true);
+        await conPerfil('uid-a', { social: false, tier: 'mithril' });
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a', { editCount: 0 }));
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { editCount: 1 })),
+        );
+      });
+
+      it('sin perfil ninguno tampoco se corrige', async () => {
+        await conCalendario(true);
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a', { editCount: 0 }));
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { editCount: 1 })),
+        );
+      });
+
+      it('el rango alarga el cupo: donde bronce se queda, oro sigue', async () => {
+        const topeBronce = getMaxBallotEdits({ hasSocialAccount: true, tier: 'bronze' });
+        await conCalendario(true);
+
+        await conPerfil('uid-a');
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a', { editCount: topeBronce }));
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { editCount: topeBronce + 1 })),
+        );
+
+        await conPerfil('uid-b', { tier: 'gold' });
+        await seed('premiosBallots', 'uid-b', papeleta('uid-b', { editCount: topeBronce }));
+        await assertSucceeds(
+          setDoc(doc(ownerDb('uid-b'), 'premiosBallots', 'uid-b'), papeleta('uid-b', { editCount: topeBronce + 1 })),
+        );
+
+        // Y oro también tiene su final.
+        const topeOro = getMaxBallotEdits({ hasSocialAccount: true, tier: 'gold' });
+        await seed('premiosBallots', 'uid-b', papeleta('uid-b', { editCount: topeOro }));
+        await assertFails(
+          setDoc(doc(ownerDb('uid-b'), 'premiosBallots', 'uid-b'), papeleta('uid-b', { editCount: topeOro + 1 })),
+        );
+      });
+
+      // El primer envío NO lee el perfil, y eso es lo que evita pagar una lectura en el momento de más carga del
+      // año: todo el mundo envía, con cuenta social o sin ella.
+      it('el primer envío no depende del perfil', async () => {
+        await conCalendario(true);
+        await assertSucceeds(setDoc(doc(ownerDb('uid-c'), 'premiosBallots', 'uid-c'), papeleta('uid-c')));
       });
 
       it('la fecha del primer envío es inmutable', async () => {
         await conCalendario(true);
+        await conPerfil('uid-a');
         await seed('premiosBallots', 'uid-a', papeleta('uid-a', { editCount: 0 }));
         await assertFails(
           setDoc(

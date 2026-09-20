@@ -79,6 +79,12 @@
 
 .premios-portada__foot { color: var(--text-dim); font-size: var(--fs-xs); margin: .4rem 0 0; }
 
+/* El cupo de oportunidades y la puerta de sesión: pie de la portada, con el mismo peso que «un voto por
+   persona». El error del inicio de sesión sí levanta la voz, porque es lo único accionable de la pantalla. */
+.premios-portada__quota { color: var(--text-muted); font-size: var(--fs-xs); margin: 0; }
+.premios-portada__quota span { display: block; color: var(--text-dim); }
+.premios-portada__signin-error { color: var(--danger); font-size: var(--fs-sm); margin: 0; }
+
 /* ─── Votación ────────────────────────────────────────────────────────────────────────────────────────── */
 
 .premios-vote { display: grid; gap: 1rem; }
@@ -205,6 +211,21 @@
 
 .premios-error { color: var(--text-muted); font-size: var(--fs-sm); }
 
+/* ─── Compartir: el mismo botón en la portada y en los resultados ─────────────────────────────────────── */
+
+.premios-compartir { display: grid; gap: .3rem; justify-items: center; margin-top: .4rem; }
+
+/* El icono y el rótulo, en la misma línea y con el aire del resto de botones con icono de la casa. */
+.premios-compartir__btn { display: inline-flex; align-items: center; gap: .45rem; }
+
+/* Vacío la mayor parte del tiempo: se reserva su hueco para que el aviso de «copiado» no empuje la pantalla. */
+.premios-compartir__status {
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  margin: 0;
+  min-height: 1.1em;
+}
+
 /* ─── Salidas del flujo: enviada, cerrada, sin correcciones ───────────────────────────────────────────── */
 
 .premios-estado {
@@ -224,6 +245,7 @@
 
 .premios-estado p { color: var(--text-muted); font-size: var(--fs-sm); margin: 0; }
 .premios-estado__muted { color: var(--text-dim); font-size: var(--fs-xs); }
+.premios-estado__error { color: var(--danger); font-size: var(--fs-sm); margin: 0; }
 .premios-estado__actions { display: flex; gap: .6rem; flex-wrap: wrap; justify-content: center; margin-top: .8rem; }
 
 /* ─── El panel (vive dentro del de administración) ────────────────────────────────────────────────────── */

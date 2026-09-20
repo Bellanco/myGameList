@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { hasAward } from '../../../core/premios/awards';
 import { getOptionLabel, tField } from '../../../core/premios/localize';
+import { resultsPath } from '../../../viewmodel/premios/premiosRoutes';
 import type { PremiosArchivedEntry, PremiosSeasonResult } from '../../../model/types/premios';
+import { PremiosCompartir } from './PremiosCompartir';
 
 // La lámina va aparte y perezosa: son 240 kB de arte y una tipografía que solo necesita quien ha ganado algo.
 const AwardDialog = lazy(() => import('./AwardDialog').then((m) => ({ default: m.AwardDialog })));
@@ -49,6 +51,14 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
       <header className="premios-results__head">
         <h2>{result.name || L.title}</h2>
         <p className="premios-results__count">{PREMIOS_UI.admin.history.ballots(result.totalBallots || 0)}</p>
+        {/* El enlace que se comparte es el de ESTA edición, con su identificador, y no el de «la última
+            publicada»: quien lo abra dentro de un año tiene que ver los resultados de los que se le hablaba.
+            Se ven sin cuenta, así que llega a cualquiera. */}
+        <PremiosCompartir
+          path={resultsPath(result.seasonId)}
+          title={PREMIOS_UI.compartir.resultsTitle(result.name || result.seasonId)}
+          text={PREMIOS_UI.compartir.resultsText}
+        />
       </header>
 
       {ganadores.length > 0 ? (

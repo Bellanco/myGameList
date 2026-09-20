@@ -33,6 +33,22 @@ export const PREMIOS_UI = {
     resume: 'Seguir votando',
     edit: 'Corregir mi voto',
     seeResults: 'Ver los resultados',
+    // SIN SESIÓN. El botón no lleva a ninguna parte: entra con Google ahí mismo y deja la portada como estaba,
+    // ya con el botón de votar. Mandar antes a otra pantalla sería pedir dos pasos para uno.
+    signIn: 'Identifícate para votar',
+    signingIn: 'Entrando…',
+    signInHint: 'La papeleta va asociada a tu cuenta de Google. Los resultados publicados se ven sin entrar.',
+    signInFailed: 'No se ha podido entrar. Inténtalo de nuevo.',
+    // EL CUPO, dicho en la portada y no al final: es lo que decide cómo se vota —de una tacada o corrigiendo
+    // sobre la marcha— y enterarse después de enviar llega tarde.
+    opportunities: (cuantas: number) =>
+      cuantas === 1
+        ? 'Tienes una oportunidad: la papeleta que envíes queda como esté.'
+        : `Tienes ${cuantas} oportunidades: el envío y ${cuantas - 1} correcciones.`,
+    opportunitiesLeft: (quedan: number) =>
+      quedan === 1 ? 'Te queda 1 oportunidad' : `Te quedan ${quedan} oportunidades`,
+    /** Solo a quien vota con cuenta ligera: es la única diferencia práctica que le hace tener perfil. */
+    moreWithSocial: 'Con cuenta social tendrías entre 5 y 20, según tu rango.',
     // Sin edición abierta ni resultados: es enero y aquí no hay nada. Se dice sin dramatismo.
     empty: 'Ahora mismo no hay ninguna edición en marcha.',
     emptyHint: 'Cuando se abra la siguiente, aparecerá aquí.',
@@ -74,9 +90,10 @@ export const PREMIOS_UI = {
     submit: 'Enviar papeleta',
     submitting: 'Enviando…',
     back: 'Volver a votar',
-    editsLeft: (quedan: number) =>
-      quedan === 1 ? 'Podrás corregirla 1 vez más' : `Podrás corregirla ${quedan} veces más`,
-    noEditsLeft: 'Esta es tu última corrección',
+    /** Recibe las que quedarán DESPUÉS de enviar esta, que es lo que se está a punto de gastar. */
+    editsLeft: (tras: number) =>
+      tras === 1 ? 'Te quedará 1 oportunidad más' : `Te quedarán ${tras} oportunidades más`,
+    noEditsLeft: 'Esta es tu última oportunidad',
   },
 
   enviada: {
@@ -85,7 +102,11 @@ export const PREMIOS_UI = {
     body: 'Tu voto ha quedado registrado.',
     resultsSoon: 'Los resultados se publicarán al cerrarse la edición.',
     editHint: (quedan: number) =>
-      quedan > 0 ? 'Puedes corregirla mientras la votación siga abierta.' : 'Ya no quedan correcciones.',
+      quedan === 0
+        ? 'Has gastado todas tus oportunidades: queda tal y como está.'
+        : quedan === 1
+          ? 'Te queda 1 oportunidad para corregirla mientras la votación siga abierta.'
+          : `Te quedan ${quedan} oportunidades para corregirla mientras la votación siga abierta.`,
     toResults: 'Ver los resultados',
     toLists: 'Volver a mis listas',
   },
@@ -104,8 +125,22 @@ export const PREMIOS_UI = {
 
   yaVotaste: {
     title: 'Tu papeleta ya está enviada',
-    body: 'Has gastado todas las correcciones, así que queda tal y como está.',
+    body: 'Has gastado todas tus oportunidades, así que queda tal y como está.',
     review: 'Ver lo que voté',
+  },
+
+  // COMPARTIR: un botón, dos aparatos. En móvil y tablet se abre la hoja del sistema; en el escritorio que no la
+  // tiene, se copia el enlace. El rótulo dice lo que va a pasar en cada caso, que no es lo mismo.
+  compartir: {
+    button: 'Compartir con tus amigos',
+    copy: 'Copiar el enlace para tus amigos',
+    copied: 'Enlace copiado: ya lo puedes pegar donde quieras.',
+    failed: 'No se ha podido copiar. El enlace es el de la barra del navegador.',
+    /** Lo que se manda al invitar a votar. Lleva el nombre de la edición, que es lo que la sitúa en el año. */
+    inviteTitle: (edicion: string) => `Vota en ${edicion}`,
+    inviteText: 'Echa tu porra: elige quién crees que gana cada categoría.',
+    resultsTitle: (edicion: string) => `Resultados de ${edicion}`,
+    resultsText: 'Mira quién ha ganado y cómo ha quedado la clasificación.',
   },
 
   resultados: {
@@ -266,6 +301,10 @@ export const PREMIOS_UI = {
     submit: 'No se ha podido enviar la papeleta. Inténtalo de nuevo.',
     closed: 'La votación se ha cerrado mientras votabas.',
     needsSession: 'Entra con tu cuenta de Google para votar.',
+    /** La misma sesión de la app: el botón llama al inicio de sesión de casa, no hay una segunda puerta. */
+    needsSessionTitle: 'Identifícate para votar',
+    needsSessionAria: 'Identificarse para votar',
+    needsSessionHint: 'Un voto por persona: la papeleta va asociada a tu cuenta de Google.',
     retry: 'Reintentar',
   },
 } as const;

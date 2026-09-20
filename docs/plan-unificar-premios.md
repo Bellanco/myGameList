@@ -64,7 +64,7 @@ unificación no está terminada mientras alguna falle.
 | 6 | Identidad al votar | **Cuenta ligera sin GitHub** (`profiles/{uid}` sin canal social) |
 | 7 | Resultados | **Públicos con enlace, sin indexar** (como `/r/{token}`) |
 | 8 | Avatares en la clasificación | Sí, **con las reglas de reciprocidad del hub social** |
-| 9 | Qué desbloquea el rango | **Solo la calidad de la lámina del trofeo**. El voto trata a todos igual |
+| 9 | Qué desbloquea el rango | La lámina del trofeo **y las oportunidades de envío**: 5/10/15/20 por rango, y **1 sin cuenta social**. El voto sigue valiendo lo mismo para todos (§5.1) |
 | 10 | Trofeo | **Palmarés aparte** (`profiles/{uid}.palmares`), escrito solo por el admin |
 | 11 | Quién ve el palmarés | Todo el que pueda ver ese perfil, igual que las medallas |
 | 12 | Capa visual | **Reescritura a SCSS** con los 8 temas y los tokens de la casa |
@@ -129,7 +129,7 @@ las 10.259 líneas de GA, **~1.400 no llegan nunca**: son la infraestructura que
 | `utils/seasonId.js` (57) | `core/premios/seasonId.ts` | Slug de la edición y sus respaldos |
 | `utils/options.js` (52) | `core/premios/options.ts` | `buildStableOptions`: ids de nominado estables. **Intocable** |
 | `utils/localize.js` (148) | `core/premios/localize.ts` | `tField`, `getOptionLabel`, `resolveOptionId`. Se queda aunque hoy solo haya español (§7) |
-| `utils/ballotEdits.js` (49) | `core/premios/ballotEdits.ts` | Tope de modificaciones. Sigue siendo 5 para todos (§5.1) |
+| `utils/ballotEdits.js` (49) | `core/premios/ballotEdits.ts` | Oportunidades de envío. Las reparte el rango (§5.1) |
 | `utils/pseudonym.js` (65) | — *(revisar)* | Huella FNV-1a del uid para reconocer tu fila. **Esta app ya tiene un pseudónimo público**: el `profileId` del perfil. Si el archivo lo lleva (§4.1), este módulo sobra entero |
 | `utils/gridDensity.js` (177) | `core/premios/gridDensity.ts` | **Hay que recalibrar** al cambiar de Tailwind a SCSS (§6.3) |
 | `utils/gradients.js` (66) | — | Se descarta: el color lo pone el tema |
@@ -495,8 +495,8 @@ segundo registro de aceptación.
 
 ### 5.1 Qué desbloquea el rango
 
-**Solo la calidad de la lámina descargable.** En pantalla el trofeo se ve igual para todos; lo que cambia es la
-resolución del archivo que uno se lleva (y, si se quiere, la marca):
+**La calidad de la lámina descargable y las oportunidades de envío.** En pantalla el trofeo se ve igual para
+todos; lo que cambia es la resolución del archivo que uno se lleva (y, si se quiere, la marca):
 
 | Rango | Lámina |
 |---|---|
@@ -505,9 +505,31 @@ resolución del archivo que uno se lleva (y, si se quiere, la marca):
 | oro | 2000 px (el tamaño nativo del arte de hoy) |
 | mithril | 2000 px |
 
-**Lo que esto ahorra, y no es poco:** las modificaciones del voto siguen siendo **5 para todo el mundo**, así que las
-reglas **no tienen que leer el perfil** en cada escritura de voto. Ni lectura facturable extra en el momento de más
-carga del año, ni un nuevo par de límites duplicados cliente/reglas que mantener sincronizado.
+**Las OPORTUNIDADES** (revisado el 20-09-2026; antes eran 5 para todo el mundo). Una oportunidad es un envío de
+la papeleta: la primera es la que se gasta al enviarla y cada corrección gasta otra.
+
+| Quién | Oportunidades |
+|---|---|
+| sin cuenta social (la cuenta ligera del voto) | 1 |
+| bronce | 5 |
+| plata | 10 |
+| oro | 15 |
+| mithril | 20 |
+
+**Tener cuenta social es tener canal** (`social.enabled`). La cuenta ligera que se crea al votar tiene perfil y
+no tiene canal, así que se queda en una: envía y su papeleta queda como esté, que es lo que hacía todo el mundo
+cuando el voto era inmutable.
+
+**Lo que esto cuesta**, y es el precio de haber cambiado la decisión: las reglas **leen el perfil** para resolver
+el cupo. Se paga **solo en las correcciones** —el primer envío vale igual para todos y no pasa por ahí—, que es
+justo el momento de más carga del año, así que la avalancha de papeletas sigue sin pagar ninguna lectura extra. Y
+son **dos** pares duplicados cliente/reglas más (`PREMIOS_OPPORTUNITIES_BY_TIER` y
+`PREMIOS_OPPORTUNITIES_WITHOUT_SOCIAL`), atados por `tests/integration/firestore.rules.test.ts`.
+
+**Lo que el usuario NO puede darse a sí mismo:** el `tier`, que es lo que abre 10, 15 y 20, lo asigna el
+administrador y `profileTierNotSelfAssigned()` lo impide. El `social.enabled` sí lo escribe su dueño, así que
+quien manipule su cliente puede colarse en el cupo de bronce (de 1 a 5) — y aparecer como perfil roto en el hub
+de todos, por la señal `enabled-without-gist`. Se asume: no hay nada que robar más allá de cuatro correcciones.
 
 ### 5.1bis Dos trofeos: la lámina en privado, la medalla en público
 
@@ -529,7 +551,9 @@ llama **«El reto del jugador»** (la sección se titula «Premios» y cada edic
 
 ### 5.2 Lo que no se hace
 
-- **Voto ponderado por rango.** Rompe la equidad de la porra, que es justo lo que la hace divertida.
+- **Voto ponderado por rango.** Rompe la equidad de la porra, que es justo lo que la hace divertida. El rango
+  reparte cuántas veces puedes *rehacer* tu papeleta (§5.1), no cuánto vale: un acierto de mithril y uno de
+  bronce suman los mismos puntos.
 - **El trofeo como logro del catálogo.** Ver §2.3.
 - **Un segundo sistema de niveles.** El rango ya existe y lo asignas tú; la porra lo consume, no lo produce.
 
@@ -745,7 +769,8 @@ Se rehacen contra la interfaz nueva los de componentes y los cinco de Playwright
 
 Se añaden, porque son casos que hoy no cubre nadie:
 
-- **El par duplicado del tope de correcciones** (`MAX_BALLOT_EDITS` ↔ `maxBallotEdits()` de las reglas). Va en
+- **Los pares duplicados del cupo de oportunidades** (`PREMIOS_OPPORTUNITIES_BY_TIER` y
+  `PREMIOS_OPPORTUNITIES_WITHOUT_SOCIAL` ↔ `premiosOpportunities()` de las reglas). Van en
   `tests/integration/firestore.rules.test.ts`, que es donde ya viven los otros pares y el único sitio que lee las
   reglas de verdad; en un test unitario no cabe, porque bajo Vitest `import.meta.url` no es una URL `file:`.
 

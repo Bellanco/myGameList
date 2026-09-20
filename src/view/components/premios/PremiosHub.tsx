@@ -2,20 +2,20 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { buildLibraryIndex } from '../../../core/premios/library';
-import { getOwnProfileRef } from '../../../model/repository/firebaseSocialRepository';
 import { ensureLightAccount } from '../../../model/repository/lightAccountRepository';
-import { subscribeSocialAuth } from '../../../model/repository/firebaseGateway';
+import { signInWithGoogle, subscribeSocialAuth } from '../../../model/repository/firebaseGateway';
 import type { SocialAuthUser } from '../../../model/repository/firebaseClient';
 import type { TabData } from '../../../model/types/game';
 import { matchPremiosRoute, panelNeedsSession, PREMIOS_ROUTES } from '../../../viewmodel/premios/premiosRoutes';
 import { usePremiosEdition } from '../../../viewmodel/premios/usePremiosEdition';
 import { usePremiosProfiles } from '../../../viewmodel/premios/usePremiosFaces';
 import { usePremiosResult } from '../../../viewmodel/premios/usePremiosResult';
+import { usePremiosVoter } from '../../../viewmodel/premios/usePremiosVoter';
 import { usePremiosVoting } from '../../../viewmodel/premios/usePremiosVoting';
 import { starsFromGrade } from '../../../core/utils/scoreScale';
 import { usePalette } from '../../hooks/usePalette';
 import { useScoreScale } from '../../hooks/useScoreScale';
-import { PremiosCerrada, PremiosEnviada, PremiosYaVotaste } from './PremiosEstado';
+import { PremiosCerrada, PremiosEnviada, PremiosIdentificate, PremiosYaVotaste } from './PremiosEstado';
 import { PremiosPortada } from './PremiosPortada';
 import { PremiosResultsScreen } from './PremiosResultsScreen';
 import { PremiosReviewScreen } from './PremiosReviewScreen';
@@ -54,35 +54,22 @@ export function PremiosHub({ games }: PremiosHubProps) {
   );
 
   const [user, setUser] = useState<SocialAuthUser | null>(null);
-  const [profileId, setProfileId] = useState('');
   const [error, setError] = useState('');
+  const [signingIn, setSigningIn] = useState(false);
+  const [signInError, setSignInError] = useState('');
   const [justSubmitted, setJustSubmitted] = useState(false);
 
   useEffect(() => subscribeSocialAuth(setUser), []);
 
-  // El pseudónimo del perfil, si esta cuenta ya tiene uno. No es obligatorio para votar —quien llega por primera
-  // vez todavía no lo tiene— pero es lo único que permitirá a su fila de la clasificación enlazar a su perfil.
-  useEffect(() => {
-    let vivo = true;
-    if (!user?.uid) {
-      setProfileId('');
-      return () => {
-        vivo = false;
-      };
-    }
-    void getOwnProfileRef(user.uid)
-      .then((ref) => {
-        if (vivo) setProfileId(ref?.profileId || '');
-      })
-      .catch(() => {
-        // Sin perfil se vota igual: el pseudónimo es opcional en la papeleta y en las reglas.
-      });
-    return () => {
-      vivo = false;
-    };
-  }, [user?.uid]);
+  /**
+   * QUIÉN VOTA: su pseudónimo —lo único que permite a su fila de la clasificación enlazar a su perfil, y que no
+   * es obligatorio para votar— y su cupo de oportunidades, que sale de su rango y de si tiene canal social.
+   */
+  const voter = usePremiosVoter(user?.uid || '');
+  const [profileId, setProfileId] = useState('');
+  useEffect(() => setProfileId(voter.profileId), [voter.profileId]);
 
-  const edition = usePremiosEdition(user?.uid || '');
+  const edition = usePremiosEdition(user?.uid || '', voter);
   const voting = usePremiosVoting(edition.categories);
   const route = matchPremiosRoute(location.pathname);
   // El archivo se pide SOLO cuando se está mirando: es una lectura más, y la portada no lo necesita.
@@ -101,6 +88,26 @@ export function PremiosHub({ games }: PremiosHubProps) {
   }, [edition.ballot, edition.categories]);
 
   const libraryIndex = useMemo(() => buildLibraryIndex(games), [games]);
+
+  /**
+   * ENTRAR, sin salir de la sección.
+   *
+   * Es el inicio de sesión de la aplicación (`signInWithGoogle` del gateway), no uno propio de la porra: la
+   * sesión es una sola (`docs/plan-unificar-premios.md` §1.5). Al resolverse, `subscribeSocialAuth` actualiza al
+   * usuario y la pantalla que estaba pidiendo sesión pasa sola a la que toca.
+   */
+  const handleSignIn = useCallback(async () => {
+    setSignInError('');
+    setSigningIn(true);
+    try {
+      await signInWithGoogle();
+    } catch {
+      // Cerrar la ventana de Google es el caso normal, no una avería: se dice lo mismo y se puede reintentar.
+      setSignInError(PREMIOS_UI.portada.signInFailed);
+    } finally {
+      setSigningIn(false);
+    }
+  }, []);
 
   const handleSubmit = useCallback(
     async (displayName: string) => {
@@ -130,7 +137,10 @@ export function PremiosHub({ games }: PremiosHubProps) {
     [edition, navigate, profileId, user, voting],
   );
 
-  if (edition.loading) {
+  // SE ESPERA TAMBIÉN AL PERFIL, y no es cosmético: el cupo sale de él, así que decidir antes de tenerlo le
+  // enseñaría «ya has gastado tus oportunidades» a quien tiene diecinueve, durante el parpadeo que tarda la
+  // lectura. Sin sesión no hay perfil que esperar.
+  if (edition.loading || voter.loading) {
     return <div className="premios-hub" aria-busy="true" aria-label={PREMIOS_UI.sectionAria} />;
   }
 
@@ -164,9 +174,7 @@ export function PremiosHub({ games }: PremiosHubProps) {
   return (
     <div className="premios-hub">
       {necesitaSesion ? (
-        <section className="premios-hub premios-estado" aria-label={PREMIOS_UI.sectionAria}>
-          <p>{PREMIOS_UI.errores.needsSession}</p>
-        </section>
+        <PremiosIdentificate signingIn={signingIn} error={signInError} onSignIn={() => void handleSignIn()} />
       ) : fueraDePlazo ? (
         <PremiosCerrada scheduled={edition.stage === 'none' && !hasResults} hasResults={hasResults} />
       ) : sinCorrecciones ? (
@@ -181,7 +189,7 @@ export function PremiosHub({ games }: PremiosHubProps) {
           />
         )
       ) : route.panel === 'enviada' ? (
-        <PremiosEnviada remainingEdits={edition.remainingEdits} hasResults={hasResults} />
+        <PremiosEnviada remainingOpportunities={edition.remainingOpportunities} hasResults={hasResults} />
       ) : route.panel === 'votar' ? (
         <PremiosVoteScreen
           categories={edition.categories}
@@ -196,7 +204,7 @@ export function PremiosHub({ games }: PremiosHubProps) {
           categories={edition.categories}
           votes={voting.votes}
           defaultName={edition.ballot?.userDisplayName || user?.displayName || ''}
-          remainingEdits={edition.remainingEdits}
+          remainingOpportunities={edition.remainingOpportunities}
           isEdit={Boolean(edition.ballot)}
           submitting={voting.submitting}
           error={error}
@@ -211,6 +219,13 @@ export function PremiosHub({ games }: PremiosHubProps) {
           canEdit={edition.canEdit}
           votedCount={voting.votedCount}
           total={edition.categories.length}
+          signedIn={Boolean(user)}
+          signingIn={signingIn}
+          signInError={signInError}
+          onSignIn={() => void handleSignIn()}
+          opportunities={edition.opportunities}
+          remainingOpportunities={edition.remainingOpportunities}
+          hasSocialAccount={voter.hasSocialAccount}
         />
       )}
     </div>
