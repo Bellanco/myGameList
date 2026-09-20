@@ -11,6 +11,7 @@ import { usePremiosEdition } from '../../../viewmodel/premios/usePremiosEdition'
 import { usePremiosVoting } from '../../../viewmodel/premios/usePremiosVoting';
 import { starsFromGrade } from '../../../core/utils/scoreScale';
 import { useScoreScale } from '../../hooks/useScoreScale';
+import { PremiosCerrada, PremiosEnviada, PremiosYaVotaste } from './PremiosEstado';
 import { PremiosPortada } from './PremiosPortada';
 import { PremiosReviewScreen } from './PremiosReviewScreen';
 import { PremiosVoteScreen } from './PremiosVoteScreen';
@@ -101,7 +102,7 @@ export function PremiosHub({ games }: PremiosHubProps) {
         });
         setJustSubmitted(true);
         await edition.reload();
-        navigate(PREMIOS_ROUTES.home);
+        navigate(PREMIOS_ROUTES.sent);
       } catch {
         // El borrador sigue guardado, así que reintentar no pierde nada.
         setError(edition.votingOpen ? PREMIOS_UI.errores.submit : PREMIOS_UI.errores.closed);
@@ -127,6 +128,14 @@ export function PremiosHub({ games }: PremiosHubProps) {
 
   // Sin sesión solo se puede ver la portada: las categorías y la papeleta las deniegan las reglas, con razón.
   const necesitaSesion = !user && route.panel !== 'portada';
+  const enFlujo = route.panel === 'votar' || route.panel === 'revisar';
+  const hasResults = Boolean(edition.config?.lastPublishedId);
+
+  // LAS DOS PUERTAS POR LAS QUE NO SE PUEDE SEGUIR, comprobadas antes de pintar el formulario: llegar con el
+  // plazo cerrado y volver sin correcciones. Enseñar la papeleta en cualquiera de los dos casos sería ofrecer un
+  // botón que las reglas van a rechazar.
+  const fueraDePlazo = enFlujo && !edition.votingOpen;
+  const sinCorrecciones = enFlujo && Boolean(edition.ballot) && !edition.canEdit && edition.votingOpen;
 
   return (
     <div className="premios-hub">
@@ -134,6 +143,12 @@ export function PremiosHub({ games }: PremiosHubProps) {
         <section className="premios-hub" aria-label={PREMIOS_UI.sectionAria}>
           <p className="premios-error">{PREMIOS_UI.errores.needsSession}</p>
         </section>
+      ) : fueraDePlazo ? (
+        <PremiosCerrada scheduled={edition.stage === 'none' && !hasResults} hasResults={hasResults} />
+      ) : sinCorrecciones ? (
+        <PremiosYaVotaste hasResults={hasResults} />
+      ) : route.panel === 'enviada' ? (
+        <PremiosEnviada remainingEdits={edition.remainingEdits} hasResults={hasResults} />
       ) : route.panel === 'votar' ? (
         <PremiosVoteScreen
           categories={edition.categories}
@@ -158,7 +173,7 @@ export function PremiosHub({ games }: PremiosHubProps) {
         <PremiosPortada
           config={edition.config}
           votingOpen={edition.votingOpen}
-          hasResults={Boolean(edition.config?.lastPublishedId)}
+          hasResults={hasResults}
           hasBallot={Boolean(edition.ballot) || justSubmitted}
           canEdit={edition.canEdit}
           votedCount={voting.votedCount}

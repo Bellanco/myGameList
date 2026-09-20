@@ -135,6 +135,20 @@ async function puertaDelHubSocial(page: Page): Promise<void> {
   await animacionesDeEntradaTerminadas(page);
 }
 
+/**
+ * La portada de los premios, SIN SESIÓN, que es lo que ve cualquiera que llegue por un enlace.
+ *
+ * Es lo único de la sección que se puede auditar sin datos: votar exige sesión y una edición abierta, y montar
+ * las dos cosas aquí convertiría un recorrido de contraste en un test de integración con Firestore. Lo que sí
+ * cubre —y es lo que importa para el color— son los dos textos atenuados, el distintivo de estado y los botones
+ * sobre el acento, que son los papeles nuevos que trae la sección.
+ */
+async function portadaDePremios(page: Page): Promise<void> {
+  await page.goto('/premios');
+  await expect(page.locator('.premios-portada__title')).toBeVisible();
+  await animacionesDeEntradaTerminadas(page);
+}
+
 /** La ruleta abierta, que es un modal con su propio juego de color. */
 async function ruletaAbierta(page: Page): Promise<void> {
   await page.goto('/completados');
@@ -313,6 +327,7 @@ const PANTALLAS = [
   { nombre: 'hub social', amplia: false, abrir: puertaDelHubSocial },
   { nombre: 'ruleta', amplia: false, abrir: ruletaAbierta },
   { nombre: 'logros', amplia: true, abrir: listadoDeLogros },
+  { nombre: 'premios', amplia: false, abrir: portadaDePremios },
 ] as const;
 
 for (const palette of PALETAS) {

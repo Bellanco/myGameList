@@ -83,6 +83,24 @@ export const PREMIOS_UI = {
     toLists: 'Volver a mis listas',
   },
 
+  // LAS DOS PUERTAS DE SALIDA del flujo, que antes no tenían pantalla y acababan en la portada sin explicar nada:
+  // llegar cuando el plazo ya se ha cerrado, y volver a entrar habiendo agotado las correcciones.
+  cerrada: {
+    sectionAria: 'Votación cerrada',
+    title: 'La votación está cerrada',
+    body: 'Esta edición ya no admite votos.',
+    bodyPending: 'Los resultados se publicarán en cuanto estén listos.',
+    scheduled: 'La votación todavía no ha empezado.',
+    toResults: 'Ver los resultados',
+    toHome: 'Volver a Premios',
+  },
+
+  yaVotaste: {
+    title: 'Tu papeleta ya está enviada',
+    body: 'Has gastado todas las correcciones, así que queda tal y como está.',
+    review: 'Ver lo que voté',
+  },
+
   resultados: {
     sectionAria: 'Resultados',
     title: 'Resultados',

@@ -10,12 +10,14 @@
 import { matchPath } from 'react-router-dom';
 
 /** Panel visible de la sección. `portada` es el estado por defecto y el de `/premios` a secas. */
-export type PremiosPanel = 'portada' | 'votar' | 'revisar' | 'resultados';
+export type PremiosPanel = 'portada' | 'votar' | 'revisar' | 'enviada' | 'resultados';
 
 export const PREMIOS_ROUTES = {
   home: '/premios',
   vote: '/premios/votar/:paso',
   review: '/premios/revisar',
+  /** Confirmación de envío. Tiene dirección propia para que recargar no la haga desaparecer. */
+  sent: '/premios/enviada',
   results: '/premios/resultados',
   /** Una edición concreta del histórico. Es la dirección que se comparte. */
   resultsSeason: '/premios/resultados/:seasonId',
@@ -52,6 +54,10 @@ export function matchPremiosRoute(pathname: string): PremiosRouteState {
 
   if (matchPath(PREMIOS_ROUTES.review, pathname)) {
     return { ...EMPTY, panel: 'revisar' };
+  }
+
+  if (matchPath(PREMIOS_ROUTES.sent, pathname)) {
+    return { ...EMPTY, panel: 'enviada' };
   }
 
   const season = matchPath(PREMIOS_ROUTES.resultsSeason, pathname);

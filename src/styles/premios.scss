@@ -101,8 +101,15 @@
 // `core/premios/gridDensity`, que es lo que hay que RECALIBRAR contra esta maqueta (su calibración viene de otra).
 .premios-vote__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  // El reparto lo decide `core/premios/gridDensity` midiendo el contenedor, y llega en `--premios-cols`: es lo
+  // que evita la fila huérfana (6 nominados con sitio para 5 se reparten 3+3, no 5+1), algo que `auto-fit` no
+  // sabe hacer. El `auto-fit` se queda de respaldo para el primer render, antes de que haya medida.
+  grid-template-columns: repeat(var(--premios-cols), 1fr);
   gap: .6rem;
+}
+
+.premios-vote__grid:not([style*='--premios-cols']) {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
 }
 
 .premios-nominee {
@@ -193,3 +200,24 @@
 .premios-review__error { color: var(--danger); font-size: var(--fs-sm); margin: 0; }
 
 .premios-error { color: var(--text-muted); font-size: var(--fs-sm); }
+
+/* ─── Salidas del flujo: enviada, cerrada, sin correcciones ───────────────────────────────────────────── */
+
+.premios-estado {
+  display: grid;
+  gap: .5rem;
+  justify-items: center;
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.premios-estado h2 {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  color: var(--text);
+  margin: 0;
+}
+
+.premios-estado p { color: var(--text-muted); font-size: var(--fs-sm); margin: 0; }
+.premios-estado__muted { color: var(--text-dim); font-size: var(--fs-xs); }
+.premios-estado__actions { display: flex; gap: .6rem; flex-wrap: wrap; justify-content: center; margin-top: .8rem; }

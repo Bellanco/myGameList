@@ -6,7 +6,7 @@ const juego = (name: string, extra: Partial<GameItem> = {}): GameItem =>
   ({ id: 1, _ts: 0, name, platforms: [], genres: [], steamDeck: false, review: '', ...extra }) as GameItem;
 
 const biblioteca = (parcial: Partial<TabData>): TabData =>
-  ({ c: [], v: [], e: [], p: [], ...parcial }) as TabData;
+  ({ c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0, ...parcial }) as unknown as TabData;
 
 describe('buildLibraryIndex / findInLibrary', () => {
   it('encuentra un juego en la lista donde está, con su nota', () => {

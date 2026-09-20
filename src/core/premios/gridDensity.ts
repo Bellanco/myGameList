@@ -30,7 +30,14 @@ const SIDE_PADDING_PX = 32;
 export const MIN_CARD_HEIGHT_PX = 62;
 
 export interface GridContext {
-  /** Ancho disponible en píxeles. */
+  /**
+   * Ancho REAL DISPONIBLE, en píxeles: el del contenedor de la rejilla, no el de la ventana.
+   *
+   * La aplicación de origen pasaba aquí el viewport y luego le restaba un margen a ojo. Medir el contenedor es
+   * lo que hace el resto de esta app (`GameTable`, `BottomNavigation`) y es más fiel: descuenta los márgenes
+   * reales y la barra de desplazamiento, que en Linux se come unos quince píxeles y ya ha hecho fallar
+   * comprobaciones de ancho en integración continua.
+   */
   width: number;
   optionCount: number;
   isMobile: boolean;
@@ -124,7 +131,9 @@ export function balanceColumns(maxColumns: number, optionCount: number): number 
  * dentro de eso, el reparto más equilibrado.
  */
 export function getGridColumns({ width, optionCount, isMobile, isLandscape }: GridContext): number {
-  const safeWidth = Math.max(320, (width || 320) - 24);
+  // Sin restar ningún margen: `width` YA es el hueco disponible (ver `GridContext`). El `- 24` que había aquí
+  // descontaba dos veces el mismo espacio y estrechaba las tarjetas sin motivo.
+  const safeWidth = Math.max(320, width || 320);
   const density = densityFor({ width: width || 320, optionCount, isMobile, isLandscape });
 
   const columnsByWidth = Math.max(1, Math.floor(safeWidth / density.minCardWidthPx));

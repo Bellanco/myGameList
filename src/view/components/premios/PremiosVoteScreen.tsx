@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { getCategoryTitle, getOptionId, tField } from '../../../core/premios/localize';
 import { findInLibrary, type LibraryMatch } from '../../../core/premios/library';
+import { getGridColumns } from '../../../core/premios/gridDensity';
 import { PREMIOS_ROUTES, votePath } from '../../../viewmodel/premios/premiosRoutes';
 import type { PremiosCategory, PremiosOption } from '../../../model/types/premios';
 import type { PremiosVotes } from '../../../viewmodel/premios/usePremiosVoting';
@@ -40,6 +41,23 @@ export function PremiosVoteScreen({
   onChoose,
 }: PremiosVoteScreenProps) {
   const navigate = useNavigate();
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const [ancho, setAncho] = useState(0);
+
+  // SE MIDE EL CONTENEDOR, NO LA VENTANA, que es como mide el resto de esta app (ver `GameTable`,
+  // `BottomNavigation`). Importa más de lo que parece: el ancho útil no es el del viewport —hay márgenes, y en
+  // Linux la barra de desplazamiento se come unos quince píxeles—, así que calibrar contra la ventana da
+  // repartos que en la máquina de al lado no salen. El módulo de densidad recibe por tanto ANCHO REAL DISPONIBLE.
+  useEffect(() => {
+    const node = gridRef.current;
+    if (!node) return;
+    const medir = () => setAncho(node.getBoundingClientRect().width);
+    medir();
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(medir) : null;
+    observer?.observe(node);
+    return () => observer?.disconnect();
+  }, []);
+
   const total = categories.length;
   const indice = Math.min(Math.max(paso, 1), total) - 1;
   const category = categories[indice];
@@ -52,6 +70,18 @@ export function PremiosVoteScreen({
       })),
     [category],
   );
+
+  const columnas = useMemo(() => {
+    if (!ancho) return 0; // primer render: aún no hay medida, así que no se decide nada
+    return getGridColumns({
+      width: ancho,
+      optionCount: nominados.length || 1,
+      // Con el ancho del CONTENEDOR, «móvil» deja de ser un tipo de aparato y pasa a ser lo que de verdad importa
+      // aquí: que la columna es estrecha. Un móvil apaisado y una ventana pequeña en un monitor reparten igual.
+      isMobile: ancho < 640,
+      isLandscape: typeof window !== 'undefined' && window.innerWidth > window.innerHeight,
+    });
+  }, [ancho, nominados.length]);
 
   if (!category) return null;
 
@@ -66,7 +96,15 @@ export function PremiosVoteScreen({
         <p className="premios-vote__hint">{elegido ? `${L.chosen}: ${elegido.name}` : L.chooseOne}</p>
       </header>
 
-      <div className="premios-vote__grid" role="group" aria-label={getCategoryTitle(category)}>
+      <div
+        ref={gridRef}
+        className="premios-vote__grid"
+        role="group"
+        aria-label={getCategoryTitle(category)}
+        // Hasta que hay medida manda el `auto-fit` de la hoja; con ella, el reparto calculado —que es el que
+        // evita la fila huérfana, ver `balanceColumns`.
+        style={columnas ? ({ '--premios-cols': columnas } as React.CSSProperties) : undefined}
+      >
         {nominados.map((option) => {
           const match = findInLibrary(libraryIndex, option.name);
           return (

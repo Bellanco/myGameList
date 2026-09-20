@@ -683,8 +683,16 @@ pasan a ser rutas, §6.1) y los demás son finos —leen, guardan y exponen esta
 pantalla. Portarlos ahora significaría escribirlos dos veces. Lo que sí estaba en F1 y era el grueso —el cálculo y
 las escrituras— está hecho y probado sin depender de nada visual.
 | **F2** · Datos y reglas | Colecciones prefijadas, reglas nuevas, índices, script de copia de `categories` | Tests de reglas nuevos (voto fuera de plazo, `editCount`, ganador en categoría) + copia verificada contra el emulador | 10 % |
-| | **Hecha, salvo ejecutar la copia.** Reglas de las cinco colecciones escritas, con 19 pruebas nuevas (110 en total) y **desplegadas** en `mylists-f7313`. Índices: ninguno necesario (§3.4). `scripts/migrate-premios-categories.mjs` listo y simulado: **26 categorías** esperando una clave de servicio para escribirse | | |
+| | ✅ **HECHA.** Reglas de las cinco colecciones, con 19 pruebas nuevas (110 en total), **desplegadas** en `mylists-f7313`. Índices: ninguno necesario (§3.4). **26 categorías migradas** a `premiosCategories` el 20-09-2026, con su título bilingüe, su peso y su orden; sin nominados, que los pone cada edición | | |
 | **F3** · Interfaz | `/premios` como chunk perezoso con su error boundary: votar, revisar, enviar, resultados. Cromo, avisos, esqueleto y voz por paleta de la casa (§6.6); el nominado ya se cruza con tu biblioteca (§6.5) | e2e de votación y resultados rehechos; axe en las doce combinaciones; presupuesto de arranque intacto | 35 % |
+| | **En curso.** Hecho: portada, votación con el paso en la URL, revisión, envío, las tres salidas del flujo, el cruce con la biblioteca, la rejilla conectada midiendo el contenedor, hoja propia con tokens, **axe en las 16 combinaciones** y pruebas de componente. Queda: resultados y trofeo, la voz por paleta de los errores y la entrada estacional (ver abajo) | | |
+
+**La entrada estacional se va a F4, y no por olvido.** El plan la pone aquí (§6.2: aviso en portada, punto en el
+hub, entrada en Ajustes), pero **hoy no hay ninguna edición que anunciar**: abrir una exige el panel, que es
+justo lo que trae F4. Un aviso que nunca puede aparecer no se puede ni probar. Además, leer el calendario desde
+la portada de la app metería el SDK de Firebase en el grafo de arranque —172 kB para todo el mundo, incluido
+quien no vota nunca—, así que cuando se haga hay que resolverlo por otra vía (la función de avisos ya sirve
+desde KV, sin Firebase).
 | **F4** · Panel | Las seis pestañas dentro del `AdminHub` | e2e de admin rehecho: abrir edición, publicar, archivar | 15 % |
 | **F5** · Social | Cuenta ligera, avatares en la clasificación, palmarés en el perfil, trofeo por rango, los tres cruces restantes de §6.5 (feed, estadísticas, añadir a Próximos), `LEGAL_VERSION` | Tests de reglas de `palmares`; comprobación manual de las cuatro puertas de la foto | 10 % |
 | **F6** · Retirada | Redirección permanente del sitio viejo, repositorio archivado, un solo proyecto de Pages | El enlace antiguo lleva a `/premios` | Pequeño |
