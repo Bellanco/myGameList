@@ -131,6 +131,16 @@ export const ROULETTE_USED_KEY = 'mis-listas-roulette-used';
 // con las de la casa —y `appTheme` habría sido una SEGUNDA fuente de tema, compitiendo con la de `theme-init.js`.
 export const PREMIOS_DRAFT_KEY = 'mis-listas-premios-borrador';
 
+/**
+ * ¿Se ofrece la sección de premios? Lo que se guarda aquí es la ÚLTIMA RESPUESTA conocida, para poder pintar la
+ * entrada —el punto de Ajustes, el botón del hub— sin esperar a la red y, sobre todo, SIN CARGAR FIREBASE.
+ *
+ * Es la diferencia entre una entrada estacional y meter el SDK (172 kB) en el arranque de todo el mundo, incluido
+ * quien no vota nunca. El dato se refresca en segundo plano cuando ya hay sesión, que es cuando el SDK se carga
+ * de todas formas. Ver `usePremiosVisible`.
+ */
+export const PREMIOS_VISIBLE_KEY = 'mis-listas-premios-visible';
+
 // Logros — LOS CONTADORES QUE NO SALEN DE LA BIBLIOTECA (amistades, semanas con publicación, alta del perfil y
 // si hay sincronización), recordados del último paso por el hub.
 //

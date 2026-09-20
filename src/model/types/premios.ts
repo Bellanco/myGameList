@@ -118,9 +118,11 @@ export interface PremiosVotingConfig {
   lastPublishedId?: string;
   /**
    * ¿Se ofrece la sección en la navegación? Lo decide el administrador; ausente = se ofrece si hay edición
-   * abierta o resultados recientes (ver `docs/plan-unificar-premios.md` §2.4).
+   * abierta o resultados recientes (ver `core/premios/visibility`).
    */
   visible?: boolean;
+  /** Última escritura del calendario. Publicar una edición la toca, así que hace de fecha de publicación. */
+  updatedAt?: string;
 }
 
 /** Una categoría congelada dentro de un archivo publicado. */

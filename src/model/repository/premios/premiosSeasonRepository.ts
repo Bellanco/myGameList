@@ -11,6 +11,7 @@
 import {
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -177,6 +178,25 @@ export async function setVotingOpen(isOpen: boolean, extra: { season?: number } 
     },
     { merge: true },
   );
+}
+
+/**
+ * ENSEÑA U OCULTA la sección en el resto de la aplicación: el punto de Ajustes y el botón del espacio social.
+ *
+ * Es una decisión de producto, no un estado derivado: `null` devuelve el mando al calendario —a la vista mientras
+ * haya votación o resultados recientes—, y `true`/`false` lo fuerzan. Ver `core/premios/visibility`.
+ */
+export async function setPremiosVisible(visible: boolean | null): Promise<void> {
+  const { firestore } = await requireServices();
+  await setDoc(
+    await votingDocRef(),
+    {
+      visible: visible === null ? deleteField() : visible,
+      updatedAt: new Date().toISOString(),
+    },
+    { merge: true },
+  );
+  void firestore;
 }
 
 /**

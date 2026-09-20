@@ -694,7 +694,14 @@ que quien adivine su URL puede abrirlas en blanco; no se enlazan en ninguna part
 de verdad**: si algún día hace falta, el camino es servirlas desde KV tras comprobar el token, como ya se hace con
 las reseñas compartidas. La medalla tipográfica (`PalmaresMedal`) sigue siendo lo único que se enseña en abierto.
 
-**La entrada estacional se va a F4, y no por olvido.** El plan la pone aquí (§6.2: aviso en portada, punto en el
+**La entrada estacional, hecha el 20-09-2026.** Dos accesos, los dos gobernados por `core/premios/visibility` y
+por el interruptor «Dónde se ve» del panel: un punto **en ámbar** en el menú de Ajustes, detrás de «Diseño», y un
+botón con el rey de ajedrez junto a las solicitudes del espacio social. Se leen sin cargar Firebase: la respuesta
+se guarda en este navegador y solo se refresca cuando ya hay sesión (ver `usePremiosVisible`), así que el arranque
+sube 0,4 kB y no 172. El ámbar es `--warn` **mezclado con el color de texto al 54 %**: a pelo se quedaba en 2,67:1
+sobre las paletas claras, y axe lo comprueba ahora en las dieciséis combinaciones.
+
+**Lo que decía antes este documento, y por qué ya no aplica.** El plan la pone aquí (§6.2: aviso en portada, punto en el
 hub, entrada en Ajustes), pero **hoy no hay ninguna edición que anunciar**: abrir una exige el panel, que es
 justo lo que trae F4. Un aviso que nunca puede aparecer no se puede ni probar. Además, leer el calendario desde
 la portada de la app metería el SDK de Firebase en el grafo de arranque —172 kB para todo el mundo, incluido

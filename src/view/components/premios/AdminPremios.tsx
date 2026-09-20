@@ -13,6 +13,7 @@ import {
   fetchVotingConfig,
   openSeason,
   publishAndArchiveSeason,
+  setPremiosVisible,
 } from '../../../model/repository/premios/premiosSeasonRepository';
 import type { PremiosCategory, PremiosVotingConfig } from '../../../model/types/premios';
 import '../../../styles/premios.scss';
@@ -212,6 +213,36 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
                 {L.season.closeAction}
               </button>
             ) : null}
+
+            {/* DÓNDE SE VE LA SECCIÓN. Va con la temporada porque es la misma decisión: abrir una edición y
+                enseñarla son dos gestos del mismo momento, y esconderla, el de después. */}
+            <div className="premios-admin__form">
+              <span className="premios-admin__label">{L.season.visibility}</span>
+              <div className="premios-admin__weights" role="group" aria-label={L.season.visibility}>
+                {([
+                  [null, L.season.visibleAuto],
+                  [true, L.season.visibleOn],
+                  [false, L.season.visibleOff],
+                ] as Array<[boolean | null, string]>).map(([valor, rotulo]) => (
+                  <button
+                    key={rotulo}
+                    type="button"
+                    className={`btn${(config?.visible ?? null) === valor ? ' btn-primary' : ''}`}
+                    aria-pressed={(config?.visible ?? null) === valor}
+                    disabled={busy}
+                    onClick={() =>
+                      void ejecutar(async () => {
+                        await setPremiosVisible(valor);
+                        return L.season.visibilitySaved;
+                      })
+                    }
+                  >
+                    {rotulo}
+                  </button>
+                ))}
+              </div>
+              <p className="premios-admin__muted">{L.season.visibilityHint}</p>
+            </div>
 
             {stage === SEASON_STAGE.PENDING ? (
               <div className="premios-admin__form">

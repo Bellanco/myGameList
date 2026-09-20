@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import { usePremiosVisible } from '../../../viewmodel/premios/usePremiosVisible';
 import { SOCIAL_SHELL } from '../../../core/constants/socialShell';
 import { Icon } from '../Icon';
 
@@ -62,6 +64,7 @@ export function FeedShell({
   children: ReactNode;
 }) {
   const F = SOCIAL_SHELL.feed;
+  const ofrecePremios = usePremiosVisible();
   const inert = !actions;
 
   return (
@@ -112,6 +115,16 @@ export function FeedShell({
                 </span>
               ) : null}
             </button>
+            {/* LA PORRA DE PREMIOS, al lado de las solicitudes: aquí es donde está la gente, y es el sitio del que
+                se acuerda quien ya vino el año pasado. Solo se pinta cuando hay algo que ver —votación abierta,
+                resultados recientes o porque lo diga el interruptor del panel— y el resto del año desaparece sin
+                dejar un botón que no lleva a ninguna parte (ver `usePremiosVisible`). */}
+            {ofrecePremios ? (
+              <Link className="btn btn-secondary hub-premios-btn" to="/premios" title={F.openPremios}>
+                <Icon name="chess-king" />
+                <span className="sr-only">{F.openPremios}</span>
+              </Link>
+            ) : null}
           </div>
           <div className="hub-screen-actions-right">
             <button className="btn btn-danger" type="button" disabled={inert} onClick={actions?.onSignOut}>

@@ -153,6 +153,13 @@ export const PREMIOS_UI = {
       closed: 'Votación cerrada.',
       published: (nombre: string, votos: number) => `«${nombre}» publicada con ${votos} papeleta(s).`,
       errorDay: 'Hace falta un día de cierre que no esté en el pasado.',
+      // El interruptor que decide si la sección se ofrece en Ajustes y en el espacio social.
+      visibility: 'Dónde se ve',
+      visibilityHint: 'Con «Según el calendario» aparece sola mientras haya votación o resultados recientes, y se retira al mes.',
+      visibleAuto: 'Según el calendario',
+      visibleOn: 'Siempre a la vista',
+      visibleOff: 'Oculta',
+      visibilitySaved: 'Guardado dónde se ve la sección.',
     },
 
     // Marcar quién ganó cada categoría. Vive en un documento que solo lee el administrador: hasta que se publica

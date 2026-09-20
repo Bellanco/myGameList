@@ -120,9 +120,15 @@ async function pantallaDeAjustes(page: Page): Promise<void> {
  */
 async function menuDeAjustesAbierto(page: Page): Promise<void> {
   await page.goto('/completados');
+  // EL PUNTO DE PREMIOS, ENCENDIDO A PROPÓSITO: es el único rótulo de este menú que no usa el color de texto de
+  // siempre —va en el ámbar del tema— y el contraste de un amarillo sobre fondo claro es justo lo que se rompe
+  // sin que nadie se entere. Fuera de temporada no se pinta, así que sin esto la auditoría nunca lo vería.
+  await page.evaluate(() => localStorage.setItem('mis-listas-premios-visible', 'on'));
+  await page.reload();
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await page.getByRole('button', { name: 'Ajustes' }).click();
   await expect(page.locator('.settings-menu')).toBeVisible();
+  await expect(page.locator('.settings-menu-point.is-premios')).toBeVisible();
   await animacionesDeEntradaTerminadas(page);
 }
 
