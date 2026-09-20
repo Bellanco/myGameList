@@ -1,8 +1,12 @@
+import { lazy, Suspense, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { hasAward } from '../../../core/premios/awards';
 import { getOptionLabel, tField } from '../../../core/premios/localize';
 import type { PremiosArchivedEntry, PremiosSeasonResult } from '../../../model/types/premios';
+
+// La lámina va aparte y perezosa: son 240 kB de arte y una tipografía que solo necesita quien ha ganado algo.
+const AwardDialog = lazy(() => import('./AwardDialog').then((m) => ({ default: m.AwardDialog })));
 
 const L = PREMIOS_UI.resultados;
 
@@ -26,6 +30,9 @@ export interface PremiosResultsScreenProps {
  * que puede haber más de cinco personas marcadas y nunca más de cinco puestos distintos.
  */
 export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profiles }: PremiosResultsScreenProps) {
+  // Qué trofeo se está mirando. La lámina solo se ofrece CON SESIÓN: en la página pública va la medalla.
+  const [trofeo, setTrofeo] = useState<PremiosArchivedEntry | null>(null);
+
   if (!result) {
     return (
       <section className="premios-estado" aria-label={L.sectionAria}>
@@ -88,10 +95,27 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
                 <span className="premios-results__name">{entry.nickname}</span>
               )}
               <span className="premios-results__points">{L.points(entry.points)}</span>
+              {/* El trofeo, solo para quien tiene sesión: el arte no se enseña en abierto (ver `AwardDialog`). */}
+              {hasAward(entry.rank) && ownProfileId ? (
+                <button type="button" className="btn premios-results__trophy" onClick={() => setTrofeo(entry)}>
+                  {propia ? L.trophy : L.download}
+                </button>
+              ) : null}
             </li>
           );
         })}
       </ol>
+
+      {trofeo ? (
+        <Suspense fallback={null}>
+          <AwardDialog
+            rank={trofeo.rank}
+            name={trofeo.nickname}
+            seasonName={result.name || result.seasonId}
+            onClose={() => setTrofeo(null)}
+          />
+        </Suspense>
+      ) : null}
     </section>
   );
 }

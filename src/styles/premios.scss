@@ -7,6 +7,10 @@
 // los ocho temas y pase la auditoría de contraste en los dos modos. Si aquí aparece un color escrito a mano, esta
 // pantalla será la única de la aplicación que no responda al tema elegido.
 
+// La tipografía del CARTEL del podio, servida desde el propio origen. Se declara aquí y no en el arranque: solo
+// hace falta cuando alguien abre su trofeo, y quien nunca gana nada no tiene por qué descargarla.
+@use '../styles/fonts/comic-neue';
+
 .premios-hub {
   display: grid;
   gap: var(--space-lg, 1.25rem);
@@ -384,3 +388,28 @@
 
 .premios-results__link { color: var(--fg-link); text-decoration: none; }
 .premios-results__link:hover { text-decoration: underline; }
+
+/* ─── La lámina del podio ─────────────────────────────────────────────────────────────────────────────── */
+
+.premios-award {
+  width: min(92vw, 60rem);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.premios-award::backdrop { background: rgba(0, 0, 0, .6); }
+
+/* El canvas se dibuja a resolución NATIVA y se escala aquí: lo que se descarga sirve para imprimir. */
+.premios-award__canvas { display: block; width: 100%; height: auto; }
+
+.premios-award__actions {
+  display: flex;
+  gap: .6rem;
+  justify-content: flex-end;
+  padding: .7rem;
+}
+
+.premios-results__trophy { padding: .15rem .5rem; font-size: var(--fs-2xs); }

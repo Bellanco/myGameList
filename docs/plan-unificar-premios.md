@@ -685,7 +685,14 @@ las escrituras— está hecho y probado sin depender de nada visual.
 | **F2** · Datos y reglas | Colecciones prefijadas, reglas nuevas, índices, script de copia de `categories` | Tests de reglas nuevos (voto fuera de plazo, `editCount`, ganador en categoría) + copia verificada contra el emulador | 10 % |
 | | ✅ **HECHA.** Reglas de las cinco colecciones, con 19 pruebas nuevas (110 en total), **desplegadas** en `mylists-f7313`. Índices: ninguno necesario (§3.4). **26 categorías migradas** a `premiosCategories` el 20-09-2026, con su título bilingüe, su peso y su orden; sin nominados, que los pone cada edición | | |
 | **F3** · Interfaz | `/premios` como chunk perezoso con su error boundary: votar, revisar, enviar, resultados. Cromo, avisos, esqueleto y voz por paleta de la casa (§6.6); el nominado ya se cruza con tu biblioteca (§6.5) | e2e de votación y resultados rehechos; axe en las doce combinaciones; presupuesto de arranque intacto | 35 % |
-| | **Casi hecha.** Portada, votación con el paso en la URL, revisión, envío, las tres salidas del flujo, el cruce con la biblioteca, la rejilla conectada midiendo el contenedor, **resultados** (ganadores, clasificación y tu fila por pseudónimo), hoja propia con tokens, **axe en las 16 combinaciones** y pruebas de componente. Queda: **el trofeo** (láminas servidas tras comprobar sesión, Comic Neue vendorizada, medalla tipográfica para el público) y la voz por paleta de los errores | | |
+| | ✅ **HECHA.** Portada, votación con el paso en la URL, revisión, envío, las tres salidas del flujo, el cruce con la biblioteca, la rejilla midiendo el contenedor, **resultados** (ganadores, clasificación, fila propia por pseudónimo y enlace al perfil), **el trofeo** (arte traído, Comic Neue vendorizada, diálogo con canvas y descarga), hoja propia con tokens, **axe en las 16 combinaciones** y pruebas de componente. Pendiente menor: la voz por paleta de los mensajes de error | | |
+
+**Dónde vive el arte del podio, dicho sin adornos.** Las cinco láminas están en `public/awards/` (1,2 MB), tal y
+como venían, **con su rótulo original**: se trajeron sin rerotular por decisión del 20-09-2026. La consecuencia es
+que quien adivine su URL puede abrirlas en blanco; no se enlazan en ninguna parte pública, el dominio va con
+`noindex` y `robots.txt` cierra el paso, y el botón del trofeo solo se ofrece con sesión. **Eso NO es privacidad
+de verdad**: si algún día hace falta, el camino es servirlas desde KV tras comprobar el token, como ya se hace con
+las reseñas compartidas. La medalla tipográfica (`PalmaresMedal`) sigue siendo lo único que se enseña en abierto.
 
 **La entrada estacional se va a F4, y no por olvido.** El plan la pone aquí (§6.2: aviso en portada, punto en el
 hub, entrada en Ajustes), pero **hoy no hay ninguna edición que anunciar**: abrir una exige el panel, que es
