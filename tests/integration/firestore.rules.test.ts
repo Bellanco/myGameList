@@ -9,6 +9,8 @@ import {
 } from '@firebase/rules-unit-testing';
 import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { ADMIN_CLAIM } from '../../src/core/security/admin';
+import { MAX_BALLOT_EDITS } from '../../src/core/premios/ballotEdits';
+import { BALLOT_NAME_MAX_LENGTH } from '../../src/core/premios/limits';
 import { PUBLIC_NAME_MAX_LENGTH } from '../../src/core/security/sanitize';
 
 // Test de integración: requiere el emulador de Firestore. Ejecutar con `npm run test:rules`.
@@ -1186,6 +1188,222 @@ describe('firestore.rules', () => {
 
       // Y borrar el documento sigue siendo cosa del admin: la apertura se adelanta, no se retira.
       await assertFails(deleteDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements')));
+    });
+  });
+
+
+  // ==========================================================================================================
+  // LA PORRA DE PREMIOS
+  // ==========================================================================================================
+  //
+  // Lo que se comprueba aquí es lo que NO puede quedar en manos del navegador: el plazo, el contador de
+  // correcciones y que los ganadores no se lean antes de publicarlos.
+  describe('premios', () => {
+    const AHORA = Date.now();
+    const DIA = 24 * 3600_000;
+
+    /** Papeleta válida mínima, con lo que se quiera cambiar. */
+    const papeleta = (uid: string, extra: Record<string, unknown> = {}) => ({
+      userId: uid,
+      userNickname: 'Ana',
+      userDisplayName: 'Ana',
+      selections: { cat1: 'cat1_option_0' },
+      season: 2026,
+      submittedAt: '2026-06-01T10:00:00.000Z',
+      updatedAt: '2026-06-01T10:00:00.000Z',
+      editCount: 0,
+      isActive: true,
+      ...extra,
+    });
+
+    /** Deja una edición abierta (o cerrada) en el calendario. */
+    async function conCalendario(abierta: boolean) {
+      await seed('premiosConfig', 'voting', {
+        isOpen: true,
+        season: 2026,
+        closesAtMillis: abierta ? AHORA + DIA : AHORA - DIA,
+      });
+    }
+
+    describe('los dos pares duplicados con el cliente', () => {
+      it('el tope de correcciones es el mismo aquí y en el cliente', () => {
+        expect(rulesSource).toContain(`function premiosMaxBallotEdits() {\n      return ${MAX_BALLOT_EDITS};`);
+      });
+
+      it('el tope del nombre es el mismo aquí y en el cliente', () => {
+        expect(rulesSource).toContain(`d.userDisplayName.size() <= ${BALLOT_NAME_MAX_LENGTH}`);
+        expect(rulesSource).toContain(`d.userNickname.size() <= ${BALLOT_NAME_MAX_LENGTH}`);
+      });
+    });
+
+    describe('papeletas', () => {
+      it('se vota dentro de plazo y solo la propia', async () => {
+        await conCalendario(true);
+        await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a')));
+        // La de otra persona, ni escribirla ni leerla.
+        await assertFails(setDoc(doc(ownerDb('uid-b'), 'premiosBallots', 'uid-a'), papeleta('uid-a')));
+        await assertFails(getDoc(doc(ownerDb('uid-b'), 'premiosBallots', 'uid-a')));
+      });
+
+      // ES LA COMPROBACIÓN QUE HACE QUE EL CALENDARIO EXISTA: sin ella, cualquiera vota desde la consola con el
+      // plazo cerrado.
+      it('fuera de plazo no se vota, aunque el interruptor diga que está abierta', async () => {
+        await conCalendario(false);
+        await assertFails(setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a')));
+      });
+
+      it('el primer envío tiene que arrancar el contador a cero', async () => {
+        await conCalendario(true);
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { editCount: 1 })),
+        );
+      });
+
+      // Si bastara con «no pasar de cinco», un cliente hostil reenviaría siempre editCount: 1 y corregiría sin fin.
+      it('el contador avanza de uno en uno y no pasa del tope', async () => {
+        await conCalendario(true);
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a', { editCount: 2 }));
+
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { editCount: 1 })),
+        );
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { editCount: 5 })),
+        );
+        await assertSucceeds(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { editCount: 3 })),
+        );
+      });
+
+      it('agotado el cupo ya no se corrige', async () => {
+        await conCalendario(true);
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a', { editCount: MAX_BALLOT_EDITS }));
+        await assertFails(
+          setDoc(
+            doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'),
+            papeleta('uid-a', { editCount: MAX_BALLOT_EDITS + 1 }),
+          ),
+        );
+      });
+
+      it('la fecha del primer envío es inmutable', async () => {
+        await conCalendario(true);
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a', { editCount: 0 }));
+        await assertFails(
+          setDoc(
+            doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'),
+            papeleta('uid-a', { editCount: 1, submittedAt: '2020-01-01T00:00:00.000Z' }),
+          ),
+        );
+      });
+
+      it('rechaza campos fuera de la lista, incluido el correo', async () => {
+        await conCalendario(true);
+        await assertFails(
+          setDoc(
+            doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'),
+            papeleta('uid-a', { userEmail: 'ana@example.com' }),
+          ),
+        );
+      });
+
+      it('el pseudónimo es opcional, pero si está tiene que ser texto acotado', async () => {
+        await conCalendario(true);
+        await assertSucceeds(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { profileId: 'p-ana' })),
+        );
+        await assertFails(
+          setDoc(doc(ownerDb('uid-b'), 'premiosBallots', 'uid-b'), papeleta('uid-b', { profileId: 42 })),
+        );
+      });
+
+      it('acota el nombre, las selecciones y su contenido', async () => {
+        await conCalendario(true);
+        const largo = 'N'.repeat(BALLOT_NAME_MAX_LENGTH + 1);
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { userDisplayName: largo })),
+        );
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { userDisplayName: '' })),
+        );
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { selections: {} })),
+        );
+        await assertFails(
+          setDoc(
+            doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'),
+            papeleta('uid-a', { selections: { cat1: 'x'.repeat(4000) } }),
+          ),
+        );
+      });
+
+      it('solo el administrador retira papeletas', async () => {
+        await conCalendario(true);
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a'));
+        await assertFails(deleteDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a')));
+        await assertSucceeds(deleteDoc(doc(adminDb(), 'premiosBallots', 'uid-a')));
+      });
+    });
+
+    describe('categorías, calendario y ganadores', () => {
+      it('las categorías se leen con sesión y solo las escribe el administrador', async () => {
+        await seed('premiosCategories', 'cat1', { title: { es: 'Juego del año' }, options: [] });
+        await assertSucceeds(getDoc(doc(ownerDb('uid-a'), 'premiosCategories', 'cat1')));
+        await assertFails(getDoc(doc(anonDb(), 'premiosCategories', 'cat1')));
+        await assertFails(setDoc(doc(ownerDb('uid-a'), 'premiosCategories', 'cat1'), { title: { es: 'x' } }));
+        await assertSucceeds(setDoc(doc(adminDb(), 'premiosCategories', 'cat1'), { title: { es: 'x' } }));
+      });
+
+      // El calendario tiene que poder leerse SIN sesión: la app decide con él si ofrece siquiera la sección.
+      it('el calendario es de lectura pública y de escritura del administrador', async () => {
+        await conCalendario(true);
+        await assertSucceeds(getDoc(doc(anonDb(), 'premiosConfig', 'voting')));
+        await assertFails(setDoc(doc(ownerDb('uid-a'), 'premiosConfig', 'voting'), { isOpen: false }));
+        await assertSucceeds(setDoc(doc(adminDb(), 'premiosConfig', 'voting'), { isOpen: false }));
+      });
+
+      it('el resto del calendario queda cerrado', async () => {
+        await seed('premiosConfig', 'otro', { x: 1 });
+        await assertFails(getDoc(doc(anonDb(), 'premiosConfig', 'otro')));
+        await assertFails(getDoc(doc(ownerDb('uid-a'), 'premiosConfig', 'otro')));
+        await assertSucceeds(getDoc(doc(adminDb(), 'premiosConfig', 'otro')));
+      });
+
+      // ES EL AGUJERO QUE CERRÓ SACAR AL GANADOR DE LA CATEGORÍA: aquí nadie mira hasta que se publica.
+      it('los ganadores sin publicar no los ve nadie más que el administrador', async () => {
+        await seed('premiosAdmin', 'winners', { winners: { cat1: 'cat1_option_0' } });
+        await assertFails(getDoc(doc(anonDb(), 'premiosAdmin', 'winners')));
+        await assertFails(getDoc(doc(ownerDb('uid-a'), 'premiosAdmin', 'winners')));
+        await assertSucceeds(getDoc(doc(adminDb(), 'premiosAdmin', 'winners')));
+      });
+    });
+
+    describe('ediciones archivadas', () => {
+      it('una edición publicada la lee cualquiera, también sin sesión', async () => {
+        await seed('premiosResults', 'porra-2026', {
+          season: 2026,
+          name: 'El reto del jugador 2026',
+          leaderboard: [{ rank: 1, profileId: 'p-ana', nickname: 'Ana', points: 3 }],
+          closedAt: new Date().toISOString(),
+        });
+
+        await assertSucceeds(getDoc(doc(anonDb(), 'premiosResults', 'porra-2026')));
+        await assertSucceeds(getDoc(doc(ownerDb('uid-a'), 'premiosResults', 'porra-2026')));
+      });
+
+      // El sello lo pone el servidor AL ARCHIVAR: es lo que distingue una edición publicada de un documento a
+      // medio escribir. Sin esta condición, cualquier cosa que apareciera en la colección sería pública.
+      it('un archivo sin el sello de cierre no lo lee nadie', async () => {
+        await seed('premiosResults', 'a-medias', { season: 2026, leaderboard: [] });
+        await assertFails(getDoc(doc(anonDb(), 'premiosResults', 'a-medias')));
+        await assertFails(getDoc(doc(ownerDb('uid-a'), 'premiosResults', 'a-medias')));
+        await assertSucceeds(getDoc(doc(adminDb(), 'premiosResults', 'a-medias')));
+      });
+
+      it('solo el administrador archiva, renombra y borra', async () => {
+        await assertFails(setDoc(doc(ownerDb('uid-a'), 'premiosResults', 'x'), { season: 2026 }));
+        await assertSucceeds(setDoc(doc(adminDb(), 'premiosResults', 'x'), { season: 2026 }));
+      });
     });
   });
 

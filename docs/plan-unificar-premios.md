@@ -404,11 +404,15 @@ Lo que **no** puede relajarse al portarlas, porque es lo que sostiene la porra:
 Y **ningún cambio** para la cuenta ligera: un documento sin `social` y sin `tier` ya pasa las reglas de hoy. Lo que
 cambia es quién lo crea y cuándo.
 
-### 3.4 Índices
+### 3.4 Índices — medido: no hace falta ninguno
 
-`firestore.indexes.json` tiene hoy uno solo (`profiles(social.enabled, updatedAt desc)`). GA no lleva fichero de
-índices, pero el panel consulta votos y archivos; hay que **ejecutar el panel contra el emulador y recoger los
-índices que Firestore pida** antes de desplegar, no después: si falta uno, la consulta falla en producción.
+Comprobado el 20-09-2026 sobre los repositorios ya portados: las cinco lecturas de la porra son de COLECCIÓN
+ENTERA, sin un solo `where` ni `orderBy`. El orden se calcula en el cliente (`sortCategoriesByOrder`,
+`assignDenseRanks`, y el histórico ordena en memoria), así que `firestore.indexes.json` se queda como está.
+
+**Cuándo dejaría de ser cierto:** en cuanto una pantalla del panel pida un `orderBy` sobre el servidor —por
+ejemplo, listar el histórico ordenado por fecha—, Firestore exigirá un índice. Si falta, la consulta falla en
+producción y no en desarrollo, así que conviene añadirlo en el mismo cambio que introduzca la consulta.
 
 ---
 
@@ -679,6 +683,7 @@ pasan a ser rutas, §6.1) y los demás son finos —leen, guardan y exponen esta
 pantalla. Portarlos ahora significaría escribirlos dos veces. Lo que sí estaba en F1 y era el grueso —el cálculo y
 las escrituras— está hecho y probado sin depender de nada visual.
 | **F2** · Datos y reglas | Colecciones prefijadas, reglas nuevas, índices, script de copia de `categories` | Tests de reglas nuevos (voto fuera de plazo, `editCount`, ganador en categoría) + copia verificada contra el emulador | 10 % |
+| | **Hecha, salvo ejecutar la copia.** Reglas de las cinco colecciones escritas, con 19 pruebas nuevas (110 en total) y **desplegadas** en `mylists-f7313`. Índices: ninguno necesario (§3.4). `scripts/migrate-premios-categories.mjs` listo y simulado: **26 categorías** esperando una clave de servicio para escribirse | | |
 | **F3** · Interfaz | `/premios` como chunk perezoso con su error boundary: votar, revisar, enviar, resultados. Cromo, avisos, esqueleto y voz por paleta de la casa (§6.6); el nominado ya se cruza con tu biblioteca (§6.5) | e2e de votación y resultados rehechos; axe en las doce combinaciones; presupuesto de arranque intacto | 35 % |
 | **F4** · Panel | Las seis pestañas dentro del `AdminHub` | e2e de admin rehecho: abrir edición, publicar, archivar | 15 % |
 | **F5** · Social | Cuenta ligera, avatares en la clasificación, palmarés en el perfil, trofeo por rango, los tres cruces restantes de §6.5 (feed, estadísticas, añadir a Próximos), `LEGAL_VERSION` | Tests de reglas de `palmares`; comprobación manual de las cuatro puertas de la foto | 10 % |
