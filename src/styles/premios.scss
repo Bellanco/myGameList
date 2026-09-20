@@ -261,3 +261,21 @@
   justify-content: space-between;
   font-size: var(--fs-sm);
 }
+
+.premios-admin__label { font-family: var(--font-label); font-size: var(--fs-sm); margin-top: .4rem; }
+
+.premios-admin__weights { display: flex; gap: .35rem; }
+
+/* Un campo por nominado, con su botón de quitar al lado. */
+.premios-admin__nominee {
+  display: flex;
+  gap: .4rem;
+  align-items: center;
+  width: min(100%, 28rem);
+}
+
+.premios-admin__nominee .input { flex: 1; }
+
+.premios-admin__form-actions { display: flex; gap: .5rem; margin-top: .6rem; }
+
+.premios-admin__cat-actions { display: flex; gap: .35rem; flex-wrap: wrap; }
