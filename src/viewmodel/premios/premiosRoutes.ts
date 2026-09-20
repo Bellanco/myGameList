@@ -81,3 +81,18 @@ export function votePath(paso: number): string {
 export function resultsPath(seasonId?: string): string {
   return seasonId ? `/premios/resultados/${encodeURIComponent(seasonId)}` : PREMIOS_ROUTES.results;
 }
+
+/**
+ * ¿Este panel exige sesión iniciada?
+ *
+ * SOLO VOTAR Y REVISAR. La portada y los resultados se ven SIN CUENTA a propósito: el calendario es de lectura
+ * pública y el archivo de una edición publicada también, porque quien recibe el enlace tiene que poder ver quién
+ * ganó (ver `docs/plan-unificar-premios.md` §4.2).
+ *
+ * Vive aquí, como función pura, porque la primera versión lo resolvía con un `panel !== 'portada'` escrito en el
+ * componente y eso dejaba los RESULTADOS pidiendo sesión — justo la pantalla que se comparte por enlace. Con la
+ * regla fuera de la vista se puede probar sin montar el hub entero.
+ */
+export function panelNeedsSession(panel: PremiosPanel): boolean {
+  return panel === 'votar' || panel === 'revisar';
+}

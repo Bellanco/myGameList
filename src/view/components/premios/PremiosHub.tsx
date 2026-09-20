@@ -7,7 +7,7 @@ import { ensureLightAccount } from '../../../model/repository/lightAccountReposi
 import { subscribeSocialAuth } from '../../../model/repository/firebaseGateway';
 import type { SocialAuthUser } from '../../../model/repository/firebaseClient';
 import type { TabData } from '../../../model/types/game';
-import { matchPremiosRoute, PREMIOS_ROUTES } from '../../../viewmodel/premios/premiosRoutes';
+import { matchPremiosRoute, panelNeedsSession, PREMIOS_ROUTES } from '../../../viewmodel/premios/premiosRoutes';
 import { usePremiosEdition } from '../../../viewmodel/premios/usePremiosEdition';
 import { usePremiosProfiles } from '../../../viewmodel/premios/usePremiosFaces';
 import { usePremiosResult } from '../../../viewmodel/premios/usePremiosResult';
@@ -151,9 +151,8 @@ export function PremiosHub({ games }: PremiosHubProps) {
     );
   }
 
-  // Sin sesión solo se puede ver la portada: las categorías y la papeleta las deniegan las reglas, con razón.
-  const necesitaSesion = !user && route.panel !== 'portada';
-  const enFlujo = route.panel === 'votar' || route.panel === 'revisar';
+  const enFlujo = panelNeedsSession(route.panel);
+  const necesitaSesion = !user && enFlujo;
   const hasResults = Boolean(edition.config?.lastPublishedId);
 
   // LAS DOS PUERTAS POR LAS QUE NO SE PUEDE SEGUIR, comprobadas antes de pintar el formulario: llegar con el

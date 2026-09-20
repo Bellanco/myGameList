@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { matchPremiosRoute, resultsPath, votePath } from '../../src/viewmodel/premios/premiosRoutes';
+import {
+  matchPremiosRoute,
+  panelNeedsSession,
+  resultsPath,
+  votePath,
+} from '../../src/viewmodel/premios/premiosRoutes';
 
 describe('matchPremiosRoute', () => {
   it('la raíz es la portada', () => {
@@ -45,5 +50,23 @@ describe('constructores de dirección', () => {
     expect(votePath(0)).toBe('/premios/votar/1');
     expect(matchPremiosRoute(resultsPath('porra-2026')).seasonId).toBe('porra-2026');
     expect(resultsPath()).toBe('/premios/resultados');
+  });
+});
+
+// REGRESIÓN: la primera versión exigía sesión en todo lo que no fuera la portada, y eso dejaba los RESULTADOS
+// —la pantalla que se comparte por enlace— pidiendo una cuenta que el visitante no tiene por qué tener.
+describe('qué exige sesión', () => {
+  it('votar y revisar sí', () => {
+    expect(panelNeedsSession('votar')).toBe(true);
+    expect(panelNeedsSession('revisar')).toBe(true);
+  });
+
+  it('la portada y los resultados NO', () => {
+    expect(panelNeedsSession('portada')).toBe(false);
+    expect(panelNeedsSession('resultados')).toBe(false);
+  });
+
+  it('la confirmación de envío tampoco: quien acaba de votar ya la tenía', () => {
+    expect(panelNeedsSession('enviada')).toBe(false);
   });
 });
