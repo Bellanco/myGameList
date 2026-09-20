@@ -22,9 +22,11 @@ import {
 } from 'firebase/firestore/lite';
 import { buildScheduleFields } from '../../../core/premios/closingDate';
 import { hasTitle } from '../../../core/premios/localize';
+import { hasAward } from '../../../core/premios/awards';
 import { computeLeaderboard } from '../../../core/premios/scoring';
 import { getSeasonId, getSeasonLabel, toSeasonId } from '../../../core/premios/seasonId';
 import type {
+  PalmaresEntry,
   PremiosBallot,
   PremiosCategory,
   PremiosSeasonResult,
@@ -368,6 +370,52 @@ export function buildSeasonSnapshot({
 }
 
 /**
+ * CONCEDE el trofeo a los cinco primeros PUESTOS de una edición recién publicada.
+ *
+ * Puestos y no posiciones: los empatados comparten puesto, así que puede haber más de cinco premiados y nunca
+ * más de cinco trofeos distintos (ver `assignDenseRanks`).
+ *
+ * SE ESCRIBE EN EL PERFIL DE CADA UNO, que es donde se enseña — el trofeo es un logro especial de su perfil, no
+ * un adorno de la pantalla de resultados. Solo puede hacerlo el administrador: la regla
+ * `profilePalmaresNotSelfAssigned` impide que nadie se lo ponga a sí mismo.
+ *
+ * ES IDEMPOTENTE: se lee el palmarés que ya hubiera y se sustituye la entrada de ESTA edición, así que volver a
+ * publicar —o republicar tras corregir algo— no duplica trofeos.
+ *
+ * NO LANZA: si un perfil no se deja escribir (no existe porque esa cuenta se borró, o las reglas cambian), el
+ * resto de trofeos se concede igual. La edición ya está archivada; quedarse sin un trofeo es un incordio, perder
+ * la publicación por eso sería mucho peor.
+ */
+async function grantPalmares(
+  ganadores: Array<{ uid: string; rank: number }>,
+  seasonId: string,
+  seasonName: string,
+): Promise<number> {
+  const { firestore } = await requireServices();
+  const awardedAt = Date.now();
+  let concedidos = 0;
+
+  for (const { uid, rank } of ganadores) {
+    try {
+      const ref = doc(firestore, 'profiles', uid);
+      const snapshot = await getDoc(ref);
+      if (!snapshot.exists()) continue;
+
+      const previo = (snapshot.data()?.palmares || []) as PalmaresEntry[];
+      const sinEsta = Array.isArray(previo) ? previo.filter((entry) => entry?.seasonId !== seasonId) : [];
+      const palmares = [...sinEsta, { seasonId, seasonName, rank, awardedAt }];
+
+      await setDoc(ref, { palmares, updatedAt: awardedAt }, { merge: true });
+      concedidos += 1;
+    } catch {
+      // Un trofeo que no se pudo conceder no puede tumbar la publicación.
+    }
+  }
+
+  return concedidos;
+}
+
+/**
  * PUBLICA la edición: la archiva, la hace visible y deja el panel listo para la siguiente. Es el último paso y el
  * único destructivo. En orden:
  *
@@ -392,7 +440,14 @@ export async function publishAndArchiveSeason({
   winners?: PremiosWinnersMap;
   seasonId?: string;
   seasonName?: string;
-}): Promise<{ seasonId: string; name: string; totalBallots: number; deleted: number; cleared: number }> {
+}): Promise<{
+  seasonId: string;
+  name: string;
+  totalBallots: number;
+  deleted: number;
+  cleared: number;
+  awarded: number;
+}> {
   const { firestore } = await requireServices();
 
   // 0. La foto real de la edición, recién leída.
@@ -406,6 +461,13 @@ export async function publishAndArchiveSeason({
     ...snapshot,
     closedAt: serverTimestamp(),
   });
+
+  // 2bis. CONCEDER LOS TROFEOS, y antes de retirar las papeletas: el uid de cada premiado sale de ellas, y el
+  //       archivo publicado ya no lo lleva (no puede: es público).
+  const premiados = computeLeaderboard(ballots, categories, resolved)
+    .filter((entry) => hasAward(entry.rank) && entry.userId)
+    .map((entry) => ({ uid: entry.userId, rank: entry.rank }));
+  const awarded = await grantPalmares(premiados, snapshot.seasonId, snapshot.name);
 
   // 3. Retirar exactamente las papeletas que acaban de entrar en el archivo.
   const deleted = await discardDocsInBatches(ballotDocs);
@@ -458,5 +520,6 @@ export async function publishAndArchiveSeason({
     totalBallots: snapshot.totalBallots,
     deleted,
     cleared,
+    awarded,
   };
 }

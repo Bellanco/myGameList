@@ -20,6 +20,7 @@ const state: {
   premiosBallots: Registro[];
   premiosCategories: Registro[];
   premiosResults: Registro[];
+  profiles: Registro[];
   config: Record<string, unknown> | null;
   sets: Array<{ path: string; data: Record<string, unknown> }>;
   updates: Array<{ path: string; data: Record<string, unknown> }>;
@@ -29,6 +30,7 @@ const state: {
   premiosBallots: [],
   premiosCategories: [],
   premiosResults: [],
+  profiles: [],
   config: null,
   sets: [],
   updates: [],
@@ -50,11 +52,19 @@ vi.mock('firebase/firestore/lite', () => ({
       data: () => entry.data,
     })),
   }),
-  getDoc: async (ref: { path: string }) => ({
-    exists: () => ref.path === 'premiosConfig/voting' && state.config !== null,
-    data: () => state.config,
-    ref,
-  }),
+  getDoc: async (ref: { path: string }) => {
+    // Los perfiles salen de su propia lista: la concesión de trofeos los lee uno a uno.
+    if (ref.path.startsWith('profiles/')) {
+      const id = ref.path.split('/')[1];
+      const perfil = state.profiles.find((p) => p.id === id);
+      return { exists: () => Boolean(perfil), data: () => perfil?.data, ref };
+    }
+    return {
+      exists: () => ref.path === 'premiosConfig/voting' && state.config !== null,
+      data: () => state.config,
+      ref,
+    };
+  },
   setDoc: async (ref: { path: string }, data: Record<string, unknown>) => {
     state.sets.push({ path: ref.path, data });
     if (ref.path === 'premiosConfig/voting') state.config = { ...(state.config || {}), ...data };
@@ -123,6 +133,7 @@ const lastResultsWrite = () => state.sets.filter((s) => s.path.startsWith('premi
 const lastConfigWrite = () => state.sets.filter((s) => s.path === 'premiosConfig/voting').pop();
 
 beforeEach(() => {
+  state.profiles = [];
   state.premiosBallots = [];
   state.premiosCategories = [];
   state.premiosResults = [];
@@ -208,6 +219,72 @@ describe('publishAndArchiveSeason', () => {
     expect(state.updates.some((u) => u.path === 'premiosCategories/cat1')).toBe(true);
   });
 });
+
+  // EL TROFEO SE CONCEDE AL PUBLICAR, y va al PERFIL de cada premiado: es un logro especial suyo, no un adorno de
+  // la pantalla de resultados. El archivo publicado no puede llevar el uid, así que esto tiene que ocurrir antes
+  // de retirar las papeletas, que es de donde sale.
+  describe('trofeos del palmarés', () => {
+    it('concede el trofeo a los cinco primeros puestos, en su perfil', async () => {
+      state.premiosCategories = [category('cat1')];
+      state.premiosBallots = [
+        ballot('uid-1', 'Ana', 'cat1_option_0'),
+        ballot('uid-2', 'Bea', 'cat1_option_1'),
+      ];
+      state.profiles = [
+        { id: 'uid-1', data: { uid: 'uid-1' } },
+        { id: 'uid-2', data: { uid: 'uid-2' } },
+      ];
+
+      const result = await publishAndArchiveSeason({ season: 2026, seasonId: 'test', seasonName: 'Test' });
+
+      expect(result.awarded).toBe(2);
+      const trofeo = state.sets.find((s) => s.path === 'profiles/uid-1');
+      const palmares = trofeo?.data.palmares as Array<Record<string, unknown>>;
+      expect(palmares[0]).toMatchObject({ seasonId: 'test', seasonName: 'Test', rank: 1 });
+    });
+
+    it('sustituye el trofeo de esa misma edición en vez de duplicarlo', async () => {
+      state.premiosCategories = [category('cat1')];
+      state.premiosBallots = [ballot('uid-1', 'Ana', 'cat1_option_0')];
+      state.profiles = [
+        {
+          id: 'uid-1',
+          data: {
+            uid: 'uid-1',
+            palmares: [
+              { seasonId: 'test', seasonName: 'Antiguo', rank: 4, awardedAt: 1 },
+              { seasonId: 'otra', seasonName: 'Otra', rank: 2, awardedAt: 1 },
+            ],
+          },
+        },
+      ];
+
+      await publishAndArchiveSeason({ season: 2026, seasonId: 'test', seasonName: 'Test' });
+
+      const palmares = state.sets.find((s) => s.path === 'profiles/uid-1')?.data.palmares as Array<{
+        seasonId: string;
+        rank: number;
+      }>;
+      expect(palmares).toHaveLength(2);
+      expect(palmares.find((e) => e.seasonId === 'test')).toMatchObject({ rank: 1 });
+      expect(palmares.find((e) => e.seasonId === 'otra')).toMatchObject({ rank: 2 });
+    });
+
+    it('un perfil que ya no existe no impide publicar ni premiar al resto', async () => {
+      state.premiosCategories = [category('cat1')];
+      state.premiosBallots = [
+        ballot('uid-1', 'Ana', 'cat1_option_0'),
+        ballot('uid-2', 'Bea', 'cat1_option_1'),
+      ];
+      // Solo queda el perfil de la segunda.
+      state.profiles = [{ id: 'uid-2', data: { uid: 'uid-2' } }];
+
+      const result = await publishAndArchiveSeason({ season: 2026, seasonId: 'test' });
+
+      expect(result.awarded).toBe(1);
+      expect(result.totalBallots).toBe(2);
+    });
+  });
 
 describe('openSeason', () => {
   // Solo se abre una edición cuando no hay ninguna en marcha, así que lo que quede es un resto: contaminaría la

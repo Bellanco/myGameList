@@ -231,6 +231,16 @@ export const PREMIOS_UI = {
     },
   },
 
+  // EL PALMARÉS: las ediciones ganadas, enseñadas como logros en el perfil.
+  palmares: {
+    title: 'Palmarés',
+    // Se dice «en» y no «ganó»: un empate a primer puesto es de dos, y «ganó» sonaría a que fue el único.
+    entry: (rank: number, edicion: string) => `${rank}.º en ${edicion}`,
+    medalAria: (rank: number, edicion: string) => `Trofeo: ${rank}.º puesto en ${edicion}`,
+    rarity: 'Excepcional',
+    empty: 'Todavía no ha ganado ninguna edición.',
+  },
+
   errores: {
     load: 'No se han podido cargar los premios.',
     submit: 'No se ha podido enviar la papeleta. Inténtalo de nuevo.',

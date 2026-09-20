@@ -346,3 +346,38 @@
 .premios-results__rank { font-family: var(--font-mono); color: var(--text-dim); min-width: 2.2rem; }
 .premios-results__name { flex: 1; color: var(--text); }
 .premios-results__points { font-family: var(--font-mono); color: var(--text-muted); }
+
+/* ─── El palmarés: los trofeos, con forma de logro, en la ficha del perfil ────────────────────────────── */
+
+.premios-palmares {
+  display: grid;
+  gap: .4rem;
+  margin-top: .8rem;
+}
+
+.premios-palmares__title {
+  font-family: var(--font-label);
+  font-size: var(--fs-2xs);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 0;
+}
+
+.premios-palmares__list {
+  display: flex;
+  gap: .9rem;
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.premios-palmares__item { display: grid; gap: .25rem; justify-items: center; max-width: 7rem; }
+
+.premios-palmares__caption {
+  color: var(--text-muted);
+  font-size: var(--fs-2xs);
+  text-align: center;
+  line-height: 1.2;
+}

@@ -307,6 +307,18 @@ const SocialHubInner = memo(function SocialHubInner({
     return entry?.achievementsMirror || '';
   }, [detailId, visibleSocialDirectory, isOwnProfileDetail, ownAchievementMirror]);
 
+  /**
+   * EL PALMARÉS del perfil abierto: las ediciones de la porra que ha ganado.
+   *
+   * Sale del MISMO sitio que el espejo de logros —el documento del directorio, ya descargado—, así que la
+   * vitrina no cuesta ni una petición. Se enseña como un logro especial porque eso es lo que es para quien lo
+   * mira; lo que no hace es entrar en el catálogo, que solo contiene lo que se deriva de la biblioteca.
+   */
+  const detailPalmares = useMemo(() => {
+    const entry = visibleSocialDirectory.find((candidate) => candidate.id === detailId);
+    return entry?.palmares || [];
+  }, [detailId, visibleSocialDirectory]);
+
   /*
    * ABRIR UNA RESEÑA EMPIEZA POR SU PRINCIPIO, y eso ya no se hace aquí.
    *
@@ -466,6 +478,7 @@ const SocialHubInner = memo(function SocialHubInner({
           onBack={goToSocial}
           showReviews={profileReviewsView}
           achievementsMirror={detailMirror}
+          palmares={detailPalmares}
           onOpenAchievements={openDetailAchievements}
           onToggleReviews={toggleDetailReviews}
           onOpenReview={openDetailReview}

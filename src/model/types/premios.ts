@@ -156,3 +156,25 @@ export interface PremiosSeasonResult {
   leaderboard: PremiosArchivedEntry[];
   totalBallots: number;
 }
+
+/**
+ * UNA EDICIÓN GANADA. Vive en `profiles/{uid}.palmares` y lo escribe SOLO el administrador al publicar.
+ *
+ * POR QUÉ NO ES UN LOGRO DEL CATÁLOGO, aunque se enseñe como uno: el catálogo es derivación pura de la
+ * biblioteca —la misma biblioteca produce siempre los mismos logros, se calcule cuando se calcule— y su espejo
+ * publicado es un mapa de bits cuyo orden está congelado. Ganar una porra no se deriva de nada: es un hecho
+ * externo que alguien concede. Meterlo en el catálogo rompería el contrato de todos los espejos ya publicados.
+ *
+ * Así que va por su carril, y se PINTA como una medalla (ver `PalmaresMedal`): misma forma, mismo disco en
+ * penumbra, mismo lenguaje. Para quien lo mira es un logro más —uno especial, en su perfil—; para el código es
+ * un dato concedido que no contamina lo que se deriva.
+ */
+export interface PalmaresEntry {
+  /** Clave del archivo de esa edición. */
+  seasonId: string;
+  /** Nombre visible, congelado en el momento de conceder: el archivo puede renombrarse después. */
+  seasonName: string;
+  /** Puesto DENSO, 1..5. Los empatados comparten puesto. */
+  rank: number;
+  awardedAt: number;
+}

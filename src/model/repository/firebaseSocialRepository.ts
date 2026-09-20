@@ -9,6 +9,7 @@
 // documento que cualquier usuario autenticado puede leer. `findSocialProfileByEmail` se conserva SOLO como
 // fallback para perfiles legacy cuyo id de documento no es el uid.
 import { collection, doc, getDoc, getDocs, limit, orderBy, query, where } from 'firebase/firestore/lite';
+import type { PalmaresEntry } from '../types/premios';
 import { DEFAULT_PROFILE_TIER, normalizeTier, type ProfileTier } from '../../core/constants/tiers';
 import {
   initializeFirebaseServices,
@@ -153,6 +154,9 @@ function mapProfileReference(id: string, data: Record<string, unknown>): SocialP
     tier: normalizeTier(data.tier),
     createdAt: profileCreatedAtMillis(data.createdAt),
     achievementsMirror: String((data.achievements as { list?: unknown } | undefined)?.list || ''),
+    // Lectura DEFENSIVA, como el espejo: lo escribe el administrador, pero un documento con cualquier cosa en
+    // este campo no puede tumbar el perfil — se queda sin vitrina y ya.
+    palmares: Array.isArray(data.palmares) ? (data.palmares as PalmaresEntry[]) : undefined,
   };
 }
 
@@ -406,6 +410,7 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
           social?: { gistId?: string; gamesGistId?: string; enabled?: boolean };
           updatedAt?: { toMillis?: () => number } | number;
           achievements?: { list?: unknown };
+          palmares?: unknown;
         };
 
         return {
@@ -427,6 +432,7 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
           // local— y sin él la vitrina de una amistad y el porcentaje comparado se quedaban en blanco para
           // siempre, aunque el espejo estuviera publicado (lo estaba: la escritura nunca fue el problema).
           achievementsMirror: String(data.achievements?.list || ''),
+          palmares: Array.isArray(data.palmares) ? (data.palmares as PalmaresEntry[]) : undefined,
         };
       })
       // NO se exige `socialGistId`. Antes se filtraba por él, y eso ata el directorio a que ese id se publique en
@@ -476,6 +482,7 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
         updatedAt: entry.updatedAt,
         tier: entry.tier,
         achievementsMirror: entry.achievementsMirror,
+        palmares: entry.palmares,
       }));
 
     saveSocialDirectoryCache(normalizedLimit, entries);

@@ -51,9 +51,10 @@ service cloud.firestore {
         // (`scripts/purge-profile-pii.js`); esto cierra la puerta para que no pueda volver por una regresión.
         && request.resource.data.keys().hasOnly([
           "schemaVersion", "uid", "profileId", "displayName", "photoURL", "social", "updatedAt", "tier",
-          "createdAt", "achievements"
+          "createdAt", "achievements", "palmares"
         ])
         && profileTierNotSelfAssigned()
+        && profilePalmaresNotSelfAssigned()
         && profileCreatedAtIsImmutable()
         && profileFieldsAreSane();
     }
@@ -95,7 +96,29 @@ service cloud.firestore {
             || request.resource.data.updatedAt is number || request.resource.data.updatedAt is timestamp)
         && (!("createdAt" in request.resource.data)
             || request.resource.data.createdAt is number || request.resource.data.createdAt is timestamp)
-        && (!("achievements" in request.resource.data) || profileAchievementsAreSane());
+        && (!("achievements" in request.resource.data) || profileAchievementsAreSane())
+        && (!("palmares" in request.resource.data) || profilePalmaresIsSane());
+    }
+
+    /**
+     * EL PALMARÉS (`profiles/{uid}.palmares`): las ediciones que esa persona ha ganado.
+     *
+     * Una lista de objetos `{ seasonId, seasonName, rank, awardedAt }`. Aquí solo se acota que sea lista y que no
+     * crezca sin techo: Firestore no sabe recorrer una lista para validar cada entrada, igual que pasa con el
+     * mapa de bits de los logros. No hace falta más — lo escribe únicamente el administrador, y quien lo lee es
+     * un parser defensivo que ante cualquier cosa rara pinta una vitrina vacía en vez de lanzar.
+     *
+     * El tope es generoso a propósito: cincuenta ediciones ganadas son más de las que nadie va a jugar, y lo que
+     * se evita con el número es que el campo se pueda usar como almacén.
+     *
+     * ⚠️ NO ALCANZA AL ADMINISTRADOR, y conviene saberlo: su rama de `allow create, update` cortocircuita ANTES
+     * de `profileWriteIsValid()`, así que esta validación solo se evalúa en escrituras del dueño — que es
+     * justamente quien no puede tocar este campo. Hoy, por tanto, no llega a aplicarse nunca; está escrita para
+     * el día en que el propietario pueda tocar su palmarés (por ejemplo, para ocultarlo) y para que ese día el
+     * tope ya esté puesto.
+     */
+    function profilePalmaresIsSane() {
+      return request.resource.data.palmares is list && request.resource.data.palmares.size() <= 50;
     }
 
     /**
@@ -196,6 +219,22 @@ service cloud.firestore {
       return (resource == null || !("tier" in resource.data))
         ? !("tier" in request.resource.data)
         : ("tier" in request.resource.data && request.resource.data.tier == resource.data.tier);
+    }
+
+    /**
+     * EL PALMARÉS NO SE LO PONE UNO MISMO.
+     *
+     * Ganar una edición de la porra es un hecho que CONCEDE el administrador al publicarla, no algo que se derive
+     * de la biblioteca como los logros. Sin esta regla, cualquiera podría escribirse un primer puesto en su propio
+     * documento — que lo lee todo el directorio.
+     *
+     * Misma forma que `profileTierNotSelfAssigned`: en la rama del dueño, el campo tiene que quedarse exactamente
+     * como estaba (o seguir sin estar). El administrador se salta esta validación entera por su rama.
+     */
+    function profilePalmaresNotSelfAssigned() {
+      return (resource == null || !("palmares" in resource.data))
+        ? !("palmares" in request.resource.data)
+        : ("palmares" in request.resource.data && request.resource.data.palmares == resource.data.palmares);
     }
 
     function privateConfigWriteIsValid() {

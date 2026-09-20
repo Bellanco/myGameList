@@ -1407,6 +1407,56 @@ describe('firestore.rules', () => {
     });
   });
 
+
+    // EL PALMARÉS: los trofeos de la porra, que se enseñan en el perfil como un logro especial. Los concede el
+    // administrador al publicar una edición; que el dueño no pueda ponérselos es lo único que separa un trofeo de
+    // un adorno que cualquiera se escribe.
+    describe('palmarés', () => {
+      const trofeo = [{ seasonId: 'reto-2026', seasonName: 'El reto 2026', rank: 1, awardedAt: 1 }];
+
+      it('el administrador concede un trofeo', async () => {
+        await seed('profiles', 'uid-a', { uid: 'uid-a' });
+        await assertSucceeds(setDoc(doc(adminDb(), 'profiles', 'uid-a'), { palmares: trofeo }, { merge: true }));
+      });
+
+      it('el dueño NO puede ponérselo', async () => {
+        await seed('profiles', 'uid-a', { uid: 'uid-a' });
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a', palmares: trofeo }),
+        );
+      });
+
+      it('el dueño tampoco puede cambiarlo ni quitárselo', async () => {
+        await seed('profiles', 'uid-a', { uid: 'uid-a', palmares: trofeo });
+
+        // Ascenderse a primero cambiando el puesto: denegado.
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+            uid: 'uid-a',
+            palmares: [{ ...trofeo[0], rank: 1, seasonName: 'Otra' }],
+          }),
+        );
+        // Y borrarlo tampoco, que es la otra cara: el trofeo no es suyo para retirarlo.
+        await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a' }));
+      });
+
+      it('el dueño sigue pudiendo guardar su perfil sin tocar el trofeo', async () => {
+        // Es la comprobación que evita el efecto colateral: una regla mal escrita aquí congelaría el perfil
+        // entero de quien haya ganado algo, y su dueño no podría ni cambiarse el nombre.
+        await seed('profiles', 'uid-a', { uid: 'uid-a', displayName: 'Ana', palmares: trofeo });
+        await assertSucceeds(
+          setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { displayName: 'Ana María' }, { merge: true }),
+        );
+      });
+
+      // El administrador también RETIRA: si una edición se publicó mal y se borra del histórico, su trofeo tiene
+      // que poder irse con ella.
+      it('el administrador puede retirar un trofeo', async () => {
+        await seed('profiles', 'uid-a', { uid: 'uid-a', palmares: trofeo });
+        await assertSucceeds(setDoc(doc(adminDb(), 'profiles', 'uid-a'), { palmares: [] }, { merge: true }));
+      });
+    });
+
   describe('catch-all', () => {
     it('deniega cualquier otra colección', async () => {
       await assertFails(getDoc(doc(ownerDb('uid-a'), 'whatever', 'x')));

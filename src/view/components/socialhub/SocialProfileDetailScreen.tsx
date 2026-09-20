@@ -15,6 +15,9 @@ import { buildProfilePool, profileWeight } from '../../../core/roulette/roulette
 import { FriendshipButton } from './FriendshipButton';
 import { ProfileReviewsList } from './ProfileReviewsList';
 import { ProfileAchievementStrip } from './ProfileAchievements';
+// La vitrina del palmarés: perezosa, porque casi nadie la tiene y su medalla arrastra la hoja de los logros.
+const PalmaresStrip = lazy(() => import('../premios/PalmaresStrip').then((m) => ({ default: m.PalmaresStrip })));
+import type { PalmaresEntry } from '../../../model/types/premios';
 import { ENABLE_ACHIEVEMENTS } from '../../../core/achievements/flags';
 /**
  * Las estadísticas de un amigo, PEREZOSAS. Con el import estático, `FriendStats` arrastraba al chunk del hub
@@ -160,6 +163,7 @@ function SocialProfileDetailScreenBase({
   onBack,
   showReviews,
   achievementsMirror,
+  palmares,
   onOpenAchievements,
   onToggleReviews,
   onOpenReview,
@@ -191,6 +195,8 @@ function SocialProfileDetailScreenBase({
    * y entonces no se pinta nada — ni marco vacío ni «no tiene logros».
    */
   achievementsMirror?: string;
+  /** Ediciones de la porra ganadas. Se enseñan como un logro especial, delante de la tira. */
+  palmares?: PalmaresEntry[];
   /** Abrir el listado de logros de este perfil. Es una PANTALLA aparte, no una vista dentro de la ficha. */
   onOpenAchievements?: () => void;
   onToggleReviews: () => void;
@@ -467,6 +473,14 @@ function SocialProfileDetailScreenBase({
                 para un no-amigo no se pinta. */}
             {ENABLE_ACHIEVEMENTS && canSeeFullProfile && achievementsMirror ? (
               <ProfileAchievementStrip mirror={achievementsMirror} onOpen={onOpenAchievements || (() => {})} />
+            ) : null}
+            {/* EL PALMARÉS VA DELANTE de la tira de logros, y separado: es lo más raro que puede tener un perfil
+                —cinco puestos por edición— y mezclado entre medallas del catálogo se perdería. Detrás de la misma
+                puerta que el resto de la ficha: para un no-amigo no se pinta. */}
+            {canSeeFullProfile && palmares && palmares.length > 0 ? (
+              <Suspense fallback={null}>
+                <PalmaresStrip entries={palmares} />
+              </Suspense>
             ) : null}
           </div>
           {!canSeeFullProfile ? (

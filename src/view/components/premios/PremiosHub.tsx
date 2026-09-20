@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { buildLibraryIndex } from '../../../core/premios/library';
 import { getOwnProfileRef } from '../../../model/repository/firebaseSocialRepository';
+import { ensureLightAccount } from '../../../model/repository/lightAccountRepository';
 import { subscribeSocialAuth } from '../../../model/repository/firebaseGateway';
 import type { SocialAuthUser } from '../../../model/repository/firebaseClient';
 import type { TabData } from '../../../model/types/game';
@@ -98,8 +99,15 @@ export function PremiosHub({ games }: PremiosHubProps) {
     async (displayName: string) => {
       setError('');
       try {
+        // VOTAR DEJA CUENTA. Quien llega por primera vez no tiene perfil —crearlo exige GitHub, y eso aquí sería
+        // un muro— así que se le crea una CUENTA LIGERA: nombre, foto y pseudónimo, sin canal y sin salir en el
+        // directorio. Es lo que permitirá que su fila de la clasificación enlace a algún sitio el día que
+        // complete su perfil. Si falla, se vota igual: el pseudónimo es opcional.
+        const pseudonimo = profileId || (await ensureLightAccount(user, displayName));
+        if (pseudonimo && pseudonimo !== profileId) setProfileId(pseudonimo);
+
         await voting.submit({
-          author: { uid: user?.uid || '', displayName: user?.displayName, profileId },
+          author: { uid: user?.uid || '', displayName: user?.displayName, profileId: pseudonimo },
           displayName,
           season: Number(edition.config?.season) || new Date().getFullYear(),
           existing: edition.ballot,
