@@ -27,7 +27,6 @@ import { hasAward } from '../../../core/premios/awards';
 import { computeLeaderboard } from '../../../core/premios/scoring';
 import { getSeasonId, getSeasonLabel, toSeasonId } from '../../../core/premios/seasonId';
 import type {
-  PalmaresEntry,
   PremiosBallot,
   PremiosCategory,
   PremiosSeasonResult,
@@ -42,6 +41,13 @@ import {
   RESULTS_COLLECTION,
   requireServices,
 } from './premiosShared';
+import {
+  forgetPalmaresRecord,
+  grantPalmares,
+  revokePalmares,
+  savePalmaresRecord,
+  type PalmaresRecipient,
+} from './premiosPalmaresRepository';
 import { clearLegacyWinnerField, clearWinners, fetchWinners } from './premiosWinnersRepository';
 
 /** Tope de operaciones por lote que admite Firestore. */
@@ -222,15 +228,28 @@ export async function renameSeasonResult(seasonId: string, name: string): Promis
  * NO BASTA CON BORRAR EL DOCUMENTO. Si era la última publicada, la configuración seguiría apuntándola y la
  * pantalla pública se quedaría pidiendo un archivo que ya no existe. Se reapunta a la edición más reciente que
  * quede —para que el público vuelva a ver la anterior y no un hueco— y, si no queda ninguna, se deja vacío.
+ *
+ * Y SE LLEVA POR DELANTE SUS TROFEOS. El trofeo vive en el perfil de cada premiado y enlaza al archivo de la
+ * edición: borrar solo el archivo dejaba la medalla puesta en los perfiles apuntando a una edición que ya no
+ * existe —un logro por una porra de la que no queda nada y un enlace a ninguna parte—. Se retira de los perfiles
+ * y se olvida el registro: borrar del histórico es borrar la edición entera.
  */
 export async function deleteSeasonResult(seasonId: string): Promise<{
   seasonId: string;
   lastPublishedId: string;
   wasPublished: boolean;
+  revoked: number;
 }> {
   const id = String(seasonId);
   const { firestore } = await requireServices();
   const votingDoc = await votingDocRef();
+
+  // Antes de borrar el archivo: si esto fallara a mitad, es mejor quedarse con el archivo y sin trofeos —se
+  // vuelve a encender el interruptor— que con trofeos colgando de una edición que ya no existe.
+  const retirados = await revokePalmares(id).catch(() => [] as PalmaresRecipient[]);
+  await forgetPalmaresRecord(id).catch(() => {
+    // Un registro huérfano no molesta a nadie: solo lo lee el histórico, y esa edición ya no sale en él.
+  });
 
   await deleteDoc(doc(firestore, RESULTS_COLLECTION, id));
 
@@ -250,7 +269,7 @@ export async function deleteSeasonResult(seasonId: string): Promise<{
     await setDoc(votingDoc, { lastPublishedId, updatedAt: new Date().toISOString() }, { merge: true });
   }
 
-  return { seasonId: id, lastPublishedId, wasPublished };
+  return { seasonId: id, lastPublishedId, wasPublished, revoked: retirados.length };
 }
 
 export interface OpenSeasonParams {
@@ -428,52 +447,6 @@ export function buildSeasonSnapshot({
 }
 
 /**
- * CONCEDE el trofeo a los cinco primeros PUESTOS de una edición recién publicada.
- *
- * Puestos y no posiciones: los empatados comparten puesto, así que puede haber más de cinco premiados y nunca
- * más de cinco trofeos distintos (ver `assignDenseRanks`).
- *
- * SE ESCRIBE EN EL PERFIL DE CADA UNO, que es donde se enseña — el trofeo es un logro especial de su perfil, no
- * un adorno de la pantalla de resultados. Solo puede hacerlo el administrador: la regla
- * `profilePalmaresNotSelfAssigned` impide que nadie se lo ponga a sí mismo.
- *
- * ES IDEMPOTENTE: se lee el palmarés que ya hubiera y se sustituye la entrada de ESTA edición, así que volver a
- * publicar —o republicar tras corregir algo— no duplica trofeos.
- *
- * NO LANZA: si un perfil no se deja escribir (no existe porque esa cuenta se borró, o las reglas cambian), el
- * resto de trofeos se concede igual. La edición ya está archivada; quedarse sin un trofeo es un incordio, perder
- * la publicación por eso sería mucho peor.
- */
-async function grantPalmares(
-  ganadores: Array<{ uid: string; rank: number }>,
-  seasonId: string,
-  seasonName: string,
-): Promise<number> {
-  const { firestore } = await requireServices();
-  const awardedAt = Date.now();
-  let concedidos = 0;
-
-  for (const { uid, rank } of ganadores) {
-    try {
-      const ref = doc(firestore, 'profiles', uid);
-      const snapshot = await getDoc(ref);
-      if (!snapshot.exists()) continue;
-
-      const previo = (snapshot.data()?.palmares || []) as PalmaresEntry[];
-      const sinEsta = Array.isArray(previo) ? previo.filter((entry) => entry?.seasonId !== seasonId) : [];
-      const palmares = [...sinEsta, { seasonId, seasonName, rank, awardedAt }];
-
-      await setDoc(ref, { palmares, updatedAt: awardedAt }, { merge: true });
-      concedidos += 1;
-    } catch {
-      // Un trofeo que no se pudo conceder no puede tumbar la publicación.
-    }
-  }
-
-  return concedidos;
-}
-
-/**
  * PUBLICA la edición: la archiva, la hace visible y deja el panel listo para la siguiente. Es el último paso y el
  * único destructivo. En orden:
  *
@@ -522,10 +495,20 @@ export async function publishAndArchiveSeason({
 
   // 2bis. CONCEDER LOS TROFEOS, y antes de retirar las papeletas: el uid de cada premiado sale de ellas, y el
   //       archivo publicado ya no lo lleva (no puede: es público).
-  const premiados = computeLeaderboard(ballots, categories, resolved)
+  //
+  //       LA CUENTA ES LA CLAVE, no el nombre: `userId` es el uid con el que se votó, así que quien cambie de
+  //       nick después —o lo cambiara entre votar y publicar— recibe su trofeo igual, en su perfil de siempre.
+  const premiados: PalmaresRecipient[] = computeLeaderboard(ballots, categories, resolved)
     .filter((entry) => hasAward(entry.rank) && entry.userId)
     .map((entry) => ({ uid: entry.userId, rank: entry.rank }));
   const awarded = await grantPalmares(premiados, snapshot.seasonId, snapshot.name);
+
+  //       Y SE APUNTA A QUIÉN SE LE DIO, en la colección que solo lee el administrador. Es lo que hace
+  //       reversible el trofeo desde el histórico: aquí se retiran las papeletas, así que después de esta línea
+  //       ya no queda ningún otro sitio donde figure el uid de los premiados.
+  await savePalmaresRecord(snapshot.seasonId, true, premiados).catch(() => {
+    // Mismo criterio que los trofeos: la edición ya está archivada y esto no puede tumbar la publicación.
+  });
 
   // 3. Retirar exactamente las papeletas que acaban de entrar en el archivo.
   const deleted = await discardDocsInBatches(ballotDocs);

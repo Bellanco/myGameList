@@ -28,6 +28,20 @@ export const ADMIN_COLLECTION = 'premiosAdmin';
 export const ADMIN_WINNERS_DOC = 'winners';
 
 /**
+ * Prefijo del registro de trofeos de cada edición: `premiosAdmin/palmares-<seasonId>`.
+ *
+ * Guarda A QUIÉN se le concedió el trofeo, que es el dato que el archivo publicado NO puede llevar —es público—
+ * y que las papeletas dejan de tener —se retiran al publicar—. Sin él, quitar el logro de una edición sería
+ * irreversible: no habría forma de saber a quién devolvérselo.
+ */
+export const ADMIN_PALMARES_PREFIX = 'palmares-';
+
+/** El documento de registro de una edición. */
+export function palmaresDocId(seasonId: string): string {
+  return `${ADMIN_PALMARES_PREFIX}${seasonId}`;
+}
+
+/**
  * Servicios de Firebase, o error si no hay configuración.
  *
  * Mismo ayudante que usa el panel de administración: sin esto, cada función tendría que decidir por su cuenta qué

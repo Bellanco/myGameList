@@ -303,7 +303,7 @@ Vive en `profiles/{uid}.palmares` (array, tope 50 entradas). Tres decisiones:
   temple del filo. No abre una dirección visual nueva. La lámina descargable de GA se conserva aparte, como
   «póster», que es otra cosa y se comparte distinto.
 
-Y dos más que salieron al usarlo:
+Y tres más que salieron al usarlo:
 
 - **La vitrina se ve en la ficha PROPIA igual que en la ajena.** Salía de buscar el perfil abierto en el directorio
   ya filtrado, que excluye por identidad a quien mira: quien había ganado una edición se la veía a los demás y no a
@@ -312,6 +312,16 @@ Y dos más que salieron al usarlo:
 - **Cada trofeo enlaza al resumen de los votos de su edición** (`/premios/resultados/:seasonId`), que es donde está
   lo que la medalla resume. Misma dirección que reparte el botón de compartir, y sin sesión (§4.2): el archivo se
   ve igual desde el perfil que desde un enlace recibido.
+- **El trofeo lo decide el panel, edición por edición, y se va con ella** (20-09-2026). Publicar sigue
+  concediéndolo, pero el histórico lleva un interruptor —un icono de trofeo al final de cada fila— que lo retira
+  de los perfiles y lo devuelve, y **borrar una edición del histórico retira el suyo**: la medalla enlaza al
+  archivo, así que dejarla puesta sobre una edición borrada era un logro por una porra de la que no queda nada.
+  Para que sea reversible hace falta saber a quién se le dio, y eso ya no está en ninguna parte cuando se pulsa
+  —el archivo publicado no puede llevar uid (§4.1) y las papeletas se retiran al publicar—: cada edición deja un
+  registro en `premiosAdmin/palmares-{seasonId}` con la lista de premiados, en la colección que solo lee el
+  administrador. Retirar barre además los perfiles, que es lo que permite apagar también las ediciones
+  publicadas antes de que esto existiera, sin registro (se enseñan encendidas, que es lo que hay en los
+  perfiles).
 
 ### 2.4 `premiosConfig/voting.visible` — la sección estacional
 

@@ -967,6 +967,31 @@
 .premios-admin__cat-actions .btn { display: inline-flex; align-items: center; gap: .35rem; }
 .premios-admin__icon-btn { padding-inline: .55rem; }
 
+/* EL INTERRUPTOR DEL LOGRO, al final de la fila del histórico. Dos estados y ningún rótulo, así que la
+   diferencia tiene que cantar sin leer nada: apagado es un trofeo en hueco y atenuado; encendido, el acento del
+   tema con su aura, el mismo lenguaje que el nominado marcado como ganador.
+
+   El color no puede ser la única señal (WCAG 1.4.1): el estado va también en `aria-pressed` —que es lo que lee
+   el lector de pantalla— y en el `title`, que dice lo que pasará al pulsarlo. */
+.premios-admin__award {
+  color: var(--text-muted);
+  opacity: .7;
+  transition: color .15s ease, background .15s ease, opacity .15s ease;
+}
+
+.premios-admin__award:hover:not(:disabled) { opacity: 1; }
+
+.premios-admin__award.is-on {
+  color: var(--on-accent);
+  background: var(--steam);
+  border-color: color-mix(in srgb, var(--steam) 70%, #000);
+  box-shadow: var(--glow-accent);
+  opacity: 1;
+}
+
+/* El trofeo hereda el color del botón en los dos estados: es un icono de trazo. */
+.premios-admin__award .ui-icon { color: currentcolor; }
+
 /* Clasificación provisional del panel. */
 .premios-admin__board { display: grid; gap: .25rem; list-style: none; margin: .4rem 0 0; padding: 0; }
 

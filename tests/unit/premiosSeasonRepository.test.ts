@@ -331,7 +331,9 @@ describe('deleteSeasonResult', () => {
 
     const result = await deleteSeasonResult('test');
 
-    expect(state.deletes).toEqual(['premiosResults/test']);
+    // El archivo y, con él, el registro privado de a quién se le concedió el trofeo: borrar del histórico borra
+    // la edición entera (el logro de los perfiles lo cubre `premiosPalmaresRepository.test`).
+    expect(state.deletes).toEqual(['premiosAdmin/palmares-test', 'premiosResults/test']);
     expect(result.wasPublished).toBe(false);
   });
 

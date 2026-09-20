@@ -1489,6 +1489,26 @@ describe('firestore.rules', () => {
         await assertFails(getDoc(doc(ownerDb('uid-a'), 'premiosAdmin', 'winners')));
         await assertSucceeds(getDoc(doc(adminDb(), 'premiosAdmin', 'winners')));
       });
+
+      // EL REGISTRO DE PREMIADOS ES LO ÚNICO QUE ATA UN TROFEO A UNA CUENTA después de publicar: el archivo
+      // público no lleva uid y las papeletas ya no existen. Si se pudiera leer desde fuera, el uid saldría por
+      // aquí — y con él, el interruptor del histórico dejaría de ser una decisión solo del panel.
+      it('el registro de premiados de una edición solo lo toca el administrador', async () => {
+        await seed('premiosAdmin', 'palmares-porra-2026', {
+          seasonId: 'porra-2026',
+          granted: true,
+          recipients: [{ uid: 'uid-a', rank: 1 }],
+        });
+        await assertFails(getDoc(doc(anonDb(), 'premiosAdmin', 'palmares-porra-2026')));
+        await assertFails(getDoc(doc(ownerDb('uid-a'), 'premiosAdmin', 'palmares-porra-2026')));
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'premiosAdmin', 'palmares-porra-2026'), { granted: false }),
+        );
+        await assertSucceeds(getDoc(doc(adminDb(), 'premiosAdmin', 'palmares-porra-2026')));
+        await assertSucceeds(
+          setDoc(doc(adminDb(), 'premiosAdmin', 'palmares-porra-2026'), { granted: false }, { merge: true }),
+        );
+      });
     });
 
     describe('ediciones archivadas', () => {

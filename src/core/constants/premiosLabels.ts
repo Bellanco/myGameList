@@ -322,9 +322,22 @@ export const PREMIOS_UI = {
       removeConfirm: (nombre: string) =>
         `¿Borrar «${nombre}» del histórico? Es lo único que queda de esa edición y no se puede recuperar.`,
       removed: (nombre: string) => `«${nombre}» borrada del histórico.`,
+      // Borrar una edición retira también su trofeo de los perfiles: el logro enlaza al archivo, y sin archivo
+      // sería una medalla por una porra de la que no queda nada.
+      removedAwards: (cuantos: number) =>
+        cuantos === 1 ? 'Se ha retirado su logro de 1 perfil.' : `Se ha retirado su logro de ${cuantos} perfiles.`,
       repointed: (nombre: string) => `La pantalla pública pasa a enseñar «${nombre}».`,
       repointedEmpty: 'Ya no queda ninguna edición publicada que enseñar.',
       open: 'Ver resultados',
+      // EL INTERRUPTOR DEL LOGRO. Un solo icono con dos estados: lo que se lee en el `aria-label` y en el `title`
+      // es LO QUE PASA AL PULSARLO, no el estado —el estado ya lo dice `aria-pressed` y lo canta el color—.
+      awardOn: (nombre: string) => `Quitar el logro de «${nombre}» a sus premiados`,
+      awardOff: (nombre: string) => `Dar el logro de «${nombre}» a sus premiados`,
+      awardGranted: (cuantos: number) =>
+        cuantos === 1 ? 'Logro concedido en 1 perfil.' : `Logro concedido en ${cuantos} perfiles.`,
+      awardRevoked: (cuantos: number) =>
+        cuantos === 1 ? 'Logro retirado de 1 perfil.' : `Logro retirado de ${cuantos} perfiles.`,
+      awardNone: 'Esa edición no tiene a nadie con trofeo.',
     },
 
     categories: {
