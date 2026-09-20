@@ -206,10 +206,38 @@
   gap: .8rem;
 }
 
-/* El alto lo mide la pantalla y llega en `--premios-alto` (ver `useAltoDisponible`). Cuando no cabe ni
-   encogiendo —una ventana diminuta— la clase no se pone y esto vuelve a crecer hacia abajo como cualquier
-   página. */
-.premios-vote.is-fitted { height: var(--premios-alto); }
+/* ═══ EL ALTO DE LA PANTALLA DE VOTAR ═══════════════════════════════════════════════════════════════════
+   De la posición de la sección (`--premios-top`, lo único que mide el componente) hasta el fondo del viewport,
+   descontando lo que el armazón tiene reservado abajo: la barra de navegación y, si está, el aviso de la
+   analítica. Las dos publican su alto real (`--bottom-nav-h`, `--consent-h`) con su propio observador, así que
+   apilar la barra o aceptar el aviso recoloca esto sin JavaScript de por medio.
+
+   `100dvh` y no `100vh`: en un móvil, la barra del navegador entra y sale, y `vh` se queda con la ventana
+   grande — justo el caso en el que aparecía desplazamiento.
+
+   `max(…)` es el suelo, y está BAJO a propósito (12rem): con uno alto, un móvil apaisado —375 px de alto, de los
+   que la mitad se los llevan cabecera y barra— caía por debajo del suelo y reaparecía el desplazamiento, que es
+   justo lo que esta pantalla viene a evitar. Por debajo de eso la rejilla ya no da para nada y se prefiere dejar
+   crecer la página. */
+.premios-vote.is-fitted {
+  --premios-consent: 0px;
+  height: max(
+    12rem,
+    calc(
+      100dvh - var(--premios-top, 0px) - var(--bottom-nav-h, 4.6rem) - var(--premios-consent) -
+        env(safe-area-inset-bottom, 0px) - .8rem
+    )
+  );
+}
+
+/* Mientras el aviso de la analítica está pendiente ocupa su sitio encima de la barra, y hay que dejárselo. */
+:root[data-consent='pending'] .premios-vote.is-fitted { --premios-consent: var(--consent-h, 9.25rem); }
+
+/* Y LO QUE HAY DEBAJO DE LA SECCIÓN SE VA, o el documento seguiría siendo más alto que la ventana por culpa de
+   un relleno que ya no reserva nada: el hueco de la barra lo acaba de descontar la cuenta de arriba. Son los
+   dos rellenos que quedan por debajo — el del contenedor de la aplicación y el de la propia sección. */
+.main:has(.premios-vote.is-fitted) { padding-bottom: 0; }
+.premios-hub:has(.premios-vote.is-fitted) { padding-block-end: 0; }
 
 .premios-vote__grid {
   display: grid;
@@ -228,10 +256,16 @@
 
 /* Con alto repartido las filas son iguales y suman exactamente lo que hay: es lo que garantiza que no aparezca
    desplazamiento, y lo que hace que las tarjetas se encojan en vez de salirse. */
+/* Con alto repartido las filas son iguales y suman exactamente lo que hay. El MÍNIMO de fila es lo que impide
+   que en un móvil tumbado —cabecera y pie se comen casi todo— las tarjetas queden en siete píxeles: por debajo
+   de ahí la rejilla deja de repartir y se desplaza ELLA, con la cabecera y la navegación quietas en su sitio.
+   Que lo que se desplace sea la rejilla y no la página es justo la diferencia: el pie con «Finalizar» nunca se
+   va de la pantalla. */
 .premios-vote.is-fitted .premios-vote__grid {
-  grid-auto-rows: minmax(0, 1fr);
+  grid-auto-rows: minmax(4.5rem, 1fr);
   align-content: stretch;
-  overflow: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* ─── El nominado: la misma caja que un juego de la biblioteca ────────────────────────────────────────── */
@@ -333,11 +367,43 @@
   font-family: var(--font-label);
   font-size: var(--fs-sm);
   line-height: 1.2;
-  /* Dos líneas como mucho: un título largo no puede robarle alto a la portada cuando la rejilla va justa. */
+  /* DOS LÍNEAS, NI MÁS NI MENOS: se recorta el título que no quepa y se reserva el hueco del que sobra. Sin la
+     reserva, «Elden Ring: Shadow of the Erdtree» ocupaba dos líneas y su vecino una, así que sus portadas
+     acababan a distinta altura dentro de la misma fila. */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  min-height: 2.4em;
+}
+
+/* Salvo en la tarjeta sin portada, donde el nombre ES la tarjeta y puede ocupar lo que necesite. */
+.premios-nominee.is-flat .premios-nominee__name { min-height: 0; -webkit-line-clamp: 3; }
+
+/* ═══ CUANDO NO HAY SITIO PARA UNA PORTADA, NO SE PINTA UNA FRANJA ══════════════════════════════════════
+   Con cinco nominados en un teléfono, la rejilla reparte el alto y a cada ranura le quedaban treinta píxeles:
+   eso ya no es una carátula, es una raya de color que además le quita al título el aire que necesita. Por
+   debajo del umbral la tarjeta se queda con el nombre, que es lo único que ahí se lee.
+
+   Lo decide la PROPIA TARJETA con una consulta de contenedor, y no una media query de ventana: lo que importa
+   no es el tamaño de la pantalla sino el que le ha tocado a esta tarjeta, que depende también de cuántos
+   nominados haya. Donde no haya soporte, se queda la franja: es el comportamiento de antes, no una avería. */
+.premios-nominee { container-type: size; }
+
+/* Primero se aprieta el TEXTO, que es lo prescindible: una línea y menos aire, para que la portada conserve
+   todo el alto que se pueda. En un teléfono con cinco nominados, esto es la diferencia entre una franja de
+   treinta píxeles y una portada de sesenta. */
+@container (max-height: 160px) {
+  .premios-nominee__body { padding: .3rem .4rem .35rem; }
+  .premios-nominee__name { min-height: 0; -webkit-line-clamp: 1; font-size: var(--fs-2xs); }
+}
+
+/* Y solo cuando ni con esas queda hueco para una imagen, la tarjeta se queda con el nombre: a esa altura la
+   ranura no enseña una carátula, enseña una raya de color. */
+@container (max-height: 74px) {
+  .premios-nominee__slot { display: none; }
+  .premios-nominee__body { align-content: center; height: 100%; }
+  .premios-nominee__name { -webkit-line-clamp: 3; font-size: var(--fs-sm); }
 }
 
 /* ─── El pie de la votación ───────────────────────────────────────────────────────────────────────────── */
@@ -393,6 +459,16 @@
 
 .premios-review__actions { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .3rem; }
 
+/* UN BOTÓN QUE NO SE PUEDE PULSAR TIENE QUE PARECERLO. La hoja base no viste `:disabled` —no hay regla global en
+   toda la aplicación—, así que «Enviar papeleta» con la papeleta a medias y «Anterior» en la primera categoría
+   se veían exactamente igual que los demás: se pulsaban y no pasaba nada, que es como se lee una avería. */
+.premios-review__actions .btn:disabled,
+.premios-vote__nav .btn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 .premios-review__all {
   font-family: var(--font-label);
   font-size: var(--fs-lg, 1.05rem);
@@ -410,10 +486,19 @@
   padding: 0;
 }
 
+/* TODAS LAS TARJETAS MIDEN LO MISMO. El título de una categoría ocupa una línea o dos, y el del juego votado
+   otro tanto, así que cada tarjeta acababa con su propia altura y las portadas quedaban a distinta altura dentro
+   de la misma fila: la rejilla se leía como una pared mal alicatada. El elemento de lista se estira, la tarjeta
+   lo llena, y el cuerpo reserva SIEMPRE el sitio de sus cuatro líneas —dos de categoría y dos de juego—, esté
+   lleno o no. */
+.premios-review__grid > li { display: grid; }
+
 .premios-review__card {
   display: grid;
+  grid-template-rows: auto 1fr;
   gap: 0;
   padding: 0;
+  height: 100%;
   overflow: hidden;
   color: inherit;
   text-decoration: none;
@@ -452,21 +537,37 @@
 }
 .premios-review__slot .game-cover { width: 100%; border-radius: 0; }
 
-.premios-review__card-body { display: grid; gap: .1rem; padding: .45rem .55rem .55rem; }
+.premios-review__card-body {
+  display: grid;
+  grid-template-rows: auto auto;
+  align-content: start;
+  gap: .1rem;
+  padding: .45rem .55rem .55rem;
+}
+
+/* Dos líneas RESERVADAS para cada cosa: se recorta lo que no quepa y se guarda el hueco de lo que falte, que es
+   lo que mantiene alineadas las portadas de una fila con las de la siguiente. */
+.premios-review__cat,
+.premios-review__pick {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.2;
+  min-height: 2.4em;
+}
 
 .premios-review__cat {
   font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: .05em;
   color: var(--text-dim);
-  line-height: 1.2;
 }
 
 .premios-review__pick {
   font-family: var(--font-label);
   font-size: var(--fs-sm);
   color: var(--text);
-  line-height: 1.2;
 }
 
 .premios-review__card.is-empty .premios-review__pick { color: var(--text-dim); font-style: italic; }

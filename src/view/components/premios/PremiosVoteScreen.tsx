@@ -18,52 +18,47 @@ const L = PREMIOS_UI.votar;
  */
 const FEEDBACK_MS = 140;
 
-/** Por debajo de esto no merece la pena repartir el alto: la papeleta pasa a desplazarse como cualquier página. */
-const ALTO_MINIMO_PX = 340;
-
 /**
- * EL ALTO QUE LE QUEDA A LA VOTACIÓN hasta el fondo de la ventana.
+ * DÓNDE EMPIEZA LA VOTACIÓN dentro de la página, en píxeles.
  *
- * Es lo que permite que la categoría entera quepa de un vistazo, que es como se votaba en la porra de origen:
- * la rejilla reparte ese alto entre sus filas y las tarjetas se encogen hasta caber, en vez de crecer hacia
- * abajo y obligar a desplazarse para ver el último nominado.
+ * Es lo único que hay que medir para que la categoría entera quepa sin desplazarse: el alto lo termina de
+ * calcular la hoja de estilos con `100dvh` menos esta posición y menos lo que ocupa el armazón. Y el armazón ya
+ * publica sus medidas —`--bottom-nav-h` la barra inferior y `--consent-h` el aviso de la analítica, las dos con
+ * su propio `ResizeObserver`—, así que cuando la barra se apila o el aviso aparece, el hueco se recalcula solo
+ * sin que este componente se entere de nada.
  *
- * SE MIDE, NO SE ESTIMA. Encima de la sección hay una cabecera que cambia de alto, y debajo un relleno que
- * reserva la barra de navegación y que CRECE cuando está pendiente el aviso de la analítica (`--consent-h`).
- * Cualquier número escrito a mano aquí saldría mal en la mitad de las pantallas; restando el relleno real del
- * contenedor, la página no genera desplazamiento y la barra fija sigue teniendo su hueco.
+ * Hubo una versión que calculaba el alto entero aquí y restaba el relleno del contenedor. Fallaba por abajo: ese
+ * relleno no es lo único que hay debajo (la sección tiene el suyo), así que sobraban unos píxeles y aparecía una
+ * barra de desplazamiento por muy poco — lo peor de los dos mundos, porque la pantalla ya estaba comprimida para
+ * evitarla.
  */
-function useAltoDisponible(ref: React.RefObject<HTMLElement | null>): number | null {
-  const [alto, setAlto] = useState<number | null>(null);
+function usePosicionSuperior(ref: React.RefObject<HTMLElement | null>): number | null {
+  const [top, setTop] = useState<number | null>(null);
 
   useEffect(() => {
     const node = ref.current;
     if (!node || typeof window === 'undefined') return;
 
     const medir = () => {
-      const arriba = node.getBoundingClientRect().top + window.scrollY;
-      const main = node.closest('.main');
-      const reservado = main ? Number.parseFloat(getComputedStyle(main).paddingBottom) || 0 : 0;
-      const libre = window.innerHeight - arriba - reservado;
-      setAlto(libre >= ALTO_MINIMO_PX ? Math.floor(libre) : null);
+      // Posición en el DOCUMENTO: con la sección ajustada no hay desplazamiento, así que coincide con la del
+      // viewport, pero sumarlo la deja bien también en el primer render de una página que llegue desplazada.
+      setTop(Math.round(node.getBoundingClientRect().top + window.scrollY));
     };
 
     medir();
+    // Una vuelta después: la primera medida cae antes de que la tipografía asiente la cabecera.
+    const raf = requestAnimationFrame(medir);
     window.addEventListener('resize', medir);
-    // El armazón cambia de alto sin que cambie la ventana: el aviso de consentimiento aparece y desaparece, y la
-    // barra inferior se apila en pantallas estrechas.
-    const observer =
-      typeof ResizeObserver === 'function' ? new ResizeObserver(() => medir()) : null;
-    const main = node.closest('.main');
-    if (main) observer?.observe(main);
+    window.visualViewport?.addEventListener('resize', medir);
 
     return () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener('resize', medir);
-      observer?.disconnect();
+      window.visualViewport?.removeEventListener('resize', medir);
     };
   }, [ref]);
 
-  return alto;
+  return top;
 }
 
 export interface PremiosVoteScreenProps {
@@ -100,7 +95,7 @@ export function PremiosVoteScreen({
   const gridRef = useRef<HTMLDivElement | null>(null);
   const [ancho, setAncho] = useState(0);
   const { covers } = useCovers();
-  const alto = useAltoDisponible(sectionRef);
+  const top = usePosicionSuperior(sectionRef);
 
   // SE MIDE EL CONTENEDOR, NO LA VENTANA, que es como mide el resto de esta app (ver `GameTable`,
   // `BottomNavigation`). Importa más de lo que parece: el ancho útil no es el del viewport —hay márgenes, y en
@@ -166,9 +161,9 @@ export function PremiosVoteScreen({
   return (
     <section
       ref={sectionRef}
-      className={`premios-vote${alto ? ' is-fitted' : ''}`}
+      className={`premios-vote${top === null ? '' : ' is-fitted'}`}
       aria-label={L.sectionAria}
-      style={alto ? ({ '--premios-alto': `${alto}px` } as React.CSSProperties) : undefined}
+      style={top === null ? undefined : ({ '--premios-top': `${top}px` } as React.CSSProperties)}
     >
       <PremiosProgress
         title={getCategoryTitle(category)}
