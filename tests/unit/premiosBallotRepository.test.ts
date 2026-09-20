@@ -5,7 +5,7 @@ import type { PremiosOption } from '../../src/model/types/premios';
 vi.mock('../../src/model/repository/firebaseClient', () => ({
   initializeFirebaseServices: async () => ({ firestore: {}, auth: {}, app: {}, analytics: null }),
 }));
-vi.mock('firebase/firestore', () => ({ doc: vi.fn(), setDoc: vi.fn(), getDoc: vi.fn() }));
+vi.mock('firebase/firestore/lite', () => ({ doc: vi.fn(), setDoc: vi.fn(), getDoc: vi.fn() }));
 
 const author = { uid: 'uid-1', displayName: 'Diego', profileId: 'p-diego' };
 

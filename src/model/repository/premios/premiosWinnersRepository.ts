@@ -9,7 +9,7 @@
  * era que cualquiera podía leer los ganadores en cuanto se marcaban, mucho antes del anuncio. El único canal
  * público de los ganadores es el archivo publicado.
  */
-import { deleteDoc, deleteField, doc, getDoc, setDoc, writeBatch } from 'firebase/firestore';
+import { deleteDoc, deleteField, doc, getDoc, setDoc, writeBatch } from 'firebase/firestore/lite';
 import type { PremiosCategory, PremiosWinnersMap } from '../../types/premios';
 import {
   ADMIN_COLLECTION,

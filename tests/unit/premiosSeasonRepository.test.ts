@@ -40,7 +40,7 @@ vi.mock('../../src/model/repository/firebaseClient', () => ({
   initializeFirebaseServices: async () => ({ firestore: {}, auth: {}, app: {}, analytics: null }),
 }));
 
-vi.mock('firebase/firestore', () => ({
+vi.mock('firebase/firestore/lite', () => ({
   doc: (_db: unknown, collectionName: string, id: string) => ({ path: `${collectionName}/${id}`, id }),
   collection: (_db: unknown, name: string) => ({ name }),
   getDocs: async (ref: { name: keyof typeof state }) => ({

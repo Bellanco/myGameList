@@ -19,7 +19,7 @@ import {
   updateDoc,
   writeBatch,
   type QueryDocumentSnapshot,
-} from 'firebase/firestore';
+} from 'firebase/firestore/lite';
 import { buildScheduleFields } from '../../../core/premios/closingDate';
 import { hasTitle } from '../../../core/premios/localize';
 import { computeLeaderboard } from '../../../core/premios/scoring';
@@ -28,6 +28,7 @@ import type {
   PremiosBallot,
   PremiosCategory,
   PremiosSeasonResult,
+  PremiosVotingConfig,
   PremiosWinnersMap,
 } from '../../types/premios';
 import {
@@ -46,6 +47,38 @@ const BATCH_LIMIT = 500;
 async function votingDocRef() {
   const { firestore } = await requireServices();
   return doc(firestore, CONFIG_COLLECTION, CONFIG_VOTING_DOC);
+}
+
+/**
+ * El calendario de la edición, o `null` si todavía no hay ninguno.
+ *
+ * Es la ÚNICA lectura de la porra que funciona SIN SESIÓN, y tiene que serlo: con ella se decide si la sección
+ * se ofrece siquiera, y eso se decide antes de que nadie inicie sesión. No contiene nada sensible —fechas, el
+ * nombre de la edición y el id del último archivo publicado—.
+ *
+ * Ante un error devuelve `null`, que el resto interpreta como «no hay edición»: un fallo de red no puede dejar
+ * la app sin saber qué pintar.
+ */
+export async function fetchVotingConfig(): Promise<PremiosVotingConfig | null> {
+  try {
+    const { firestore } = await requireServices();
+    const snapshot = await getDoc(doc(firestore, CONFIG_COLLECTION, CONFIG_VOTING_DOC));
+    return snapshot.exists() ? (snapshot.data() as PremiosVotingConfig) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Una edición archivada por su id. `null` si no existe o si todavía no se ha publicado. */
+export async function fetchSeasonResult(seasonId: string): Promise<PremiosSeasonResult | null> {
+  if (!seasonId) return null;
+  try {
+    const { firestore } = await requireServices();
+    const snapshot = await getDoc(doc(firestore, RESULTS_COLLECTION, seasonId));
+    return snapshot.exists() ? (snapshot.data() as PremiosSeasonResult) : null;
+  } catch {
+    return null;
+  }
 }
 
 export interface LiveEdition {

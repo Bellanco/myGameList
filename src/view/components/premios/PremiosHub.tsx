@@ -1,0 +1,170 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
+import { buildLibraryIndex } from '../../../core/premios/library';
+import { getOwnProfileRef } from '../../../model/repository/firebaseSocialRepository';
+import { subscribeSocialAuth } from '../../../model/repository/firebaseGateway';
+import type { SocialAuthUser } from '../../../model/repository/firebaseClient';
+import type { TabData } from '../../../model/types/game';
+import { matchPremiosRoute, PREMIOS_ROUTES } from '../../../viewmodel/premios/premiosRoutes';
+import { usePremiosEdition } from '../../../viewmodel/premios/usePremiosEdition';
+import { usePremiosVoting } from '../../../viewmodel/premios/usePremiosVoting';
+import { starsFromGrade } from '../../../core/utils/scoreScale';
+import { useScoreScale } from '../../hooks/useScoreScale';
+import { PremiosPortada } from './PremiosPortada';
+import { PremiosReviewScreen } from './PremiosReviewScreen';
+import { PremiosVoteScreen } from './PremiosVoteScreen';
+import '../../../styles/premios.scss';
+
+/**
+ * La sección de premios: decide qué pantalla toca y sostiene el estado de la votación.
+ *
+ * TRES COSAS QUE VIENEN DE FUERA y no se rehacen aquí, que es lo que distingue integrar de injertar: la SESIÓN es
+ * la de la aplicación (no hay un segundo «entrar con Google»), la ESCALA DE PUNTUACIÓN es la que cada cual tenga
+ * elegida, y la BIBLIOTECA se recibe por props para poder cruzar los nominados con tus juegos.
+ *
+ * El chunk entero es perezoso —lo monta `App` con `lazy`—, así que nada de esto entra en el arranque de quien
+ * nunca abre la sección.
+ */
+export interface PremiosHubProps {
+  /** La biblioteca, para el cruce de `core/premios/library`. */
+  games: TabData;
+}
+
+export function PremiosHub({ games }: PremiosHubProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  // La escala es la que tenga elegida quien mira: la misma nota se enseña como estrellas o como cifra, igual que
+  // en el resto de la aplicación. Quien no haya puntuado el juego no ve ninguna.
+  const scale = useScoreScale();
+  const formatGrade = useCallback(
+    (grade: number | null) => {
+      if (grade === null) return '';
+      return scale === 'grade' ? String(Math.round(grade)) : '★'.repeat(starsFromGrade(grade));
+    },
+    [scale],
+  );
+
+  const [user, setUser] = useState<SocialAuthUser | null>(null);
+  const [profileId, setProfileId] = useState('');
+  const [error, setError] = useState('');
+  const [justSubmitted, setJustSubmitted] = useState(false);
+
+  useEffect(() => subscribeSocialAuth(setUser), []);
+
+  // El pseudónimo del perfil, si esta cuenta ya tiene uno. No es obligatorio para votar —quien llega por primera
+  // vez todavía no lo tiene— pero es lo único que permitirá a su fila de la clasificación enlazar a su perfil.
+  useEffect(() => {
+    let vivo = true;
+    if (!user?.uid) {
+      setProfileId('');
+      return () => {
+        vivo = false;
+      };
+    }
+    void getOwnProfileRef(user.uid)
+      .then((ref) => {
+        if (vivo) setProfileId(ref?.profileId || '');
+      })
+      .catch(() => {
+        // Sin perfil se vota igual: el pseudónimo es opcional en la papeleta y en las reglas.
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [user?.uid]);
+
+  const edition = usePremiosEdition(user?.uid || '');
+  const voting = usePremiosVoting(edition.categories);
+  const route = matchPremiosRoute(location.pathname);
+
+  // Corregir un voto arranca de lo ya enviado, no de cero.
+  useEffect(() => {
+    if (edition.ballot && edition.categories.length > 0 && voting.votedCount === 0) {
+      voting.restoreFrom(edition.ballot, edition.categories);
+    }
+    // Solo al llegar la papeleta: recalcularlo en cada cambio de votos borraría lo que se acaba de elegir.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [edition.ballot, edition.categories]);
+
+  const libraryIndex = useMemo(() => buildLibraryIndex(games), [games]);
+
+  const handleSubmit = useCallback(
+    async (displayName: string) => {
+      setError('');
+      try {
+        await voting.submit({
+          author: { uid: user?.uid || '', displayName: user?.displayName, profileId },
+          displayName,
+          season: Number(edition.config?.season) || new Date().getFullYear(),
+          existing: edition.ballot,
+        });
+        setJustSubmitted(true);
+        await edition.reload();
+        navigate(PREMIOS_ROUTES.home);
+      } catch {
+        // El borrador sigue guardado, así que reintentar no pierde nada.
+        setError(edition.votingOpen ? PREMIOS_UI.errores.submit : PREMIOS_UI.errores.closed);
+      }
+    },
+    [edition, navigate, profileId, user, voting],
+  );
+
+  if (edition.loading) {
+    return <div className="premios-hub" aria-busy="true" aria-label={PREMIOS_UI.sectionAria} />;
+  }
+
+  if (edition.failed) {
+    return (
+      <section className="premios-hub" aria-label={PREMIOS_UI.sectionAria}>
+        <p className="premios-error">{PREMIOS_UI.errores.load}</p>
+        <button type="button" className="btn" onClick={() => void edition.reload()}>
+          {PREMIOS_UI.errores.retry}
+        </button>
+      </section>
+    );
+  }
+
+  // Sin sesión solo se puede ver la portada: las categorías y la papeleta las deniegan las reglas, con razón.
+  const necesitaSesion = !user && route.panel !== 'portada';
+
+  return (
+    <div className="premios-hub">
+      {necesitaSesion ? (
+        <section className="premios-hub" aria-label={PREMIOS_UI.sectionAria}>
+          <p className="premios-error">{PREMIOS_UI.errores.needsSession}</p>
+        </section>
+      ) : route.panel === 'votar' ? (
+        <PremiosVoteScreen
+          categories={edition.categories}
+          paso={route.paso}
+          votes={voting.votes}
+          libraryIndex={libraryIndex}
+          formatGrade={formatGrade}
+          onChoose={voting.choose}
+        />
+      ) : route.panel === 'revisar' ? (
+        <PremiosReviewScreen
+          categories={edition.categories}
+          votes={voting.votes}
+          defaultName={edition.ballot?.userDisplayName || user?.displayName || ''}
+          remainingEdits={edition.remainingEdits}
+          isEdit={Boolean(edition.ballot)}
+          submitting={voting.submitting}
+          error={error}
+          onSubmit={(name) => void handleSubmit(name)}
+        />
+      ) : (
+        <PremiosPortada
+          config={edition.config}
+          votingOpen={edition.votingOpen}
+          hasResults={Boolean(edition.config?.lastPublishedId)}
+          hasBallot={Boolean(edition.ballot) || justSubmitted}
+          canEdit={edition.canEdit}
+          votedCount={voting.votedCount}
+          total={edition.categories.length}
+        />
+      )}
+    </div>
+  );
+}

@@ -123,6 +123,14 @@ export const achievementsPublishedKey = (uid: string): string => `mis-listas-ach
 // (los «primeros pasos» nunca lo hacen).
 export const ROULETTE_USED_KEY = 'mis-listas-roulette-used';
 
+// Borrador de la papeleta de premios: lo votado hasta ahora, para no perderlo al recargar o al salir a mirar algo
+// a las listas. Se borra al enviar.
+//
+// PREFIJADA COMO TODAS LAS DEMÁS. La aplicación de origen guardaba esto en `votingProgress`, a secas, igual que
+// guardaba el tema en `appTheme` y el idioma en `appLanguage`: tres claves genéricas que aquí habrían convivido
+// con las de la casa —y `appTheme` habría sido una SEGUNDA fuente de tema, compitiendo con la de `theme-init.js`.
+export const PREMIOS_DRAFT_KEY = 'mis-listas-premios-borrador';
+
 // Logros — LOS CONTADORES QUE NO SALEN DE LA BIBLIOTECA (amistades, semanas con publicación, alta del perfil y
 // si hay sincronización), recordados del último paso por el hub.
 //

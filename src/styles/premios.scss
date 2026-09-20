@@ -1,0 +1,195 @@
+// Estilos EXCLUSIVOS de la sección de premios. Viajan con su chunk, no en el arranque.
+//
+// Mismo criterio que `social.scss`: la sección entra por `lazy()`, así que su CSS tampoco puede ir en el bundle
+// base — quien no vota nunca no se descarga esto.
+//
+// NI UN HEX Y NI UN TAMAÑO LITERAL. Todo sale de los tokens, que es lo que hace que la porra cambie de piel con
+// los ocho temas y pase la auditoría de contraste en los dos modos. Si aquí aparece un color escrito a mano, esta
+// pantalla será la única de la aplicación que no responda al tema elegido.
+
+.premios-hub {
+  display: grid;
+  gap: var(--space-lg, 1.25rem);
+  padding-block: var(--space-md, 1rem);
+}
+
+/* ─── Portada ─────────────────────────────────────────────────────────────────────────────────────────── */
+
+.premios-portada {
+  display: grid;
+  gap: .6rem;
+  justify-items: center;
+  text-align: center;
+  padding: 1.5rem 1rem;
+}
+
+.premios-portada__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-3xl);
+  color: var(--text);
+  margin: 0;
+}
+
+.premios-portada__lead { color: var(--text-muted); font-size: var(--fs-sm); margin: 0; }
+
+.premios-portada__state {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  margin: .2rem 0 0;
+}
+
+.premios-portada__badge {
+  font-family: var(--font-label);
+  font-size: var(--fs-2xs);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--on-accent);
+  background: var(--steam);
+  border-radius: var(--radius-sm);
+  padding: .2rem .5rem;
+}
+
+.premios-portada__actions { display: flex; gap: .6rem; flex-wrap: wrap; justify-content: center; margin-top: .6rem; }
+
+.premios-portada__empty {
+  display: grid;
+  gap: .25rem;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  margin: .6rem 0 0;
+}
+
+.premios-portada__empty span { color: var(--text-dim); font-size: var(--fs-xs); }
+
+.premios-portada__progress {
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  margin: 0;
+}
+
+.premios-portada__foot { color: var(--text-dim); font-size: var(--fs-xs); margin: .4rem 0 0; }
+
+/* ─── Votación ────────────────────────────────────────────────────────────────────────────────────────── */
+
+.premios-vote { display: grid; gap: 1rem; }
+
+.premios-vote__head { display: grid; gap: .3rem; text-align: center; }
+
+.premios-vote__step {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  margin: 0;
+}
+
+.premios-vote__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  color: var(--text);
+  margin: 0;
+}
+
+.premios-vote__hint { color: var(--text-muted); font-size: var(--fs-sm); margin: 0; }
+
+// La rejilla se adapta sola con `auto-fit`: el reparto fino —cuántas columnas y sin fila huérfana— lo calcula
+// `core/premios/gridDensity`, que es lo que hay que RECALIBRAR contra esta maqueta (su calibración viene de otra).
+.premios-vote__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: .6rem;
+}
+
+.premios-nominee {
+  display: grid;
+  gap: .35rem;
+  align-content: center;
+  min-height: 4.5rem;
+  padding: .8rem;
+  text-align: center;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  // La franja inferior es la marca de selección: crece con `is-selected` en vez de aparecer un icono flotante,
+  // que en una tarjeta estrecha se montaba sobre la primera línea del nombre.
+  border-bottom: 3px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+
+.premios-nominee:hover { background: var(--surface-hover); }
+
+.premios-nominee:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.premios-nominee.is-selected {
+  border-color: var(--steam);
+  border-bottom-color: var(--steam);
+  background: var(--surface-elevated);
+  box-shadow: 0 0 0 1px rgba(var(--steam-rgb), .35);
+}
+
+.premios-nominee__name {
+  font-family: var(--font-label);
+  font-size: var(--fs-sm);
+  line-height: 1.25;
+}
+
+/* Lo que TÚ sabes de ese juego: la marca de que está en tu biblioteca. */
+.premios-nominee__mine {
+  display: flex;
+  gap: .4rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  color: var(--text-dim);
+  font-size: var(--fs-2xs);
+}
+
+.premios-nominee__grade { color: var(--star-full); font-family: var(--font-mono); }
+
+.premios-vote__nav { display: flex; gap: .6rem; justify-content: space-between; }
+
+/* ─── Revisión ────────────────────────────────────────────────────────────────────────────────────────── */
+
+.premios-review { display: grid; gap: 1rem; }
+
+.premios-review__head { display: grid; gap: .3rem; text-align: center; }
+.premios-review__head h2 { font-family: var(--font-display); font-size: var(--fs-2xl); margin: 0; }
+.premios-review__head p { color: var(--text-muted); font-size: var(--fs-sm); margin: 0; }
+.premios-review__count { font-family: var(--font-mono); color: var(--text); }
+.premios-review__pending { color: var(--warn); }
+
+.premios-review__list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+
+.premios-review__row {
+  display: flex;
+  gap: .8rem;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: .55rem .2rem;
+  border-bottom: 1px solid var(--hair);
+  font-size: var(--fs-sm);
+}
+
+.premios-review__row.is-empty .premios-review__pick { color: var(--text-dim); font-style: italic; }
+
+.premios-review__cat { color: var(--fg-link); text-decoration: none; }
+.premios-review__cat:hover { text-decoration: underline; }
+
+.premios-review__pick { color: var(--text); text-align: right; }
+
+.premios-review__submit { display: grid; gap: .4rem; justify-items: start; }
+.premios-review__label { font-family: var(--font-label); font-size: var(--fs-sm); }
+.premios-review__hint,
+.premios-review__edits { color: var(--text-dim); font-size: var(--fs-xs); margin: 0; }
+.premios-review__error { color: var(--danger); font-size: var(--fs-sm); margin: 0; }
+
+.premios-error { color: var(--text-muted); font-size: var(--fs-sm); }

@@ -15,7 +15,7 @@
  *
  * El esquema que se escribe aquí lo valida también el servidor. Si cambia un campo, cambian las reglas.
  */
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore/lite';
 import { safeTrim } from '../../../core/security/sanitize';
 import { BALLOT_NAME_MAX_LENGTH } from '../../../core/premios/limits';
 import type { PremiosBallot, PremiosOption } from '../../types/premios';

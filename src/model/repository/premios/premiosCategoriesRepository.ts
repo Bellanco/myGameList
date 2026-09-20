@@ -4,7 +4,7 @@
  * La colección es de lectura para cualquiera con sesión —hace falta para poder votar— y de escritura solo para el
  * administrador. Por eso el ganador NO vive aquí: ver `premiosWinnersRepository`.
  */
-import { collection, deleteDoc, doc, getDocs, setDoc, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs, setDoc, writeBatch } from 'firebase/firestore/lite';
 import { hasTitle, tField } from '../../../core/premios/localize';
 import { buildStableOptions, generateUUID, type PremiosOptionForm } from '../../../core/premios/options';
 import type { PremiosCategory } from '../../types/premios';

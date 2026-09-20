@@ -275,6 +275,7 @@ export const UI_MESSAGES = {
     legal: 'Información legal',
     stats: 'Estadísticas de mis listas',
     'shared-review': 'Reseña compartida',
+    premios: 'Premios',
   },
   skipToContent: 'Saltar al contenido',
   // Lo que se ANUNCIA mientras baja el chunk de una pantalla. El esqueleto que se ve es decorativo
