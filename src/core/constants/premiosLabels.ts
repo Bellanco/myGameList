@@ -1,3 +1,4 @@
+import { premiosVoiceByPalette } from './themes/premios';
 // Textos de la sección de PREMIOS, en su propio módulo.
 //
 // MISMA DISCIPLINA QUE EN LO SOCIAL, y por el mismo motivo: si un módulo del ARRANQUE necesita una cadena de
@@ -8,6 +9,12 @@
 // Vienen de la aplicación de origen, con dos ajustes: el castellano es el de esta casa («escribe», no
 // «ingresa»), y el nombre del evento es «El reto del jugador» (decisión del 20-09-2026), nunca «Game Awards»,
 // que es una marca ajena.
+
+// Lo que se dice cuando algo se cae, con la voz de cada tema (ver `themes/premios.ts`). Se resuelve por paleta
+// en el componente, igual que en el hub social: el mundo del tema lo cuenta, y debajo va, atenuado, lo que de
+// verdad hay que saber.
+const PREMIOS_ERROR_LEAD = premiosVoiceByPalette('error');
+const PREMIOS_OFFLINE_LEAD = premiosVoiceByPalette('offline');
 
 export const PREMIOS_UI = {
   /** Nombre del evento. La sección se llama «Premios»; la edición, esto más su año. */
@@ -242,7 +249,13 @@ export const PREMIOS_UI = {
   },
 
   errores: {
+    /** El titular lo pone el TEMA; debajo va, atenuado, lo que de verdad ha pasado. */
+    leadByPalette: PREMIOS_ERROR_LEAD,
+    offlineByPalette: PREMIOS_OFFLINE_LEAD,
     load: 'No se han podido cargar los premios.',
+    // SIN CONEXIÓN no es lo mismo que un error: la votación sigue en pie y sus listas también; lo único que no
+    // llega es el estado de la edición. Por eso se dice aparte y sin dramatismo.
+    offline: 'Sin conexión: no se puede saber cómo va la edición.',
     submit: 'No se ha podido enviar la papeleta. Inténtalo de nuevo.',
     closed: 'La votación se ha cerrado mientras votabas.',
     needsSession: 'Entra con tu cuenta de Google para votar.',

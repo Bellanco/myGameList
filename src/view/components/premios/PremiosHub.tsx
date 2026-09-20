@@ -13,6 +13,7 @@ import { usePremiosProfiles } from '../../../viewmodel/premios/usePremiosFaces';
 import { usePremiosResult } from '../../../viewmodel/premios/usePremiosResult';
 import { usePremiosVoting } from '../../../viewmodel/premios/usePremiosVoting';
 import { starsFromGrade } from '../../../core/utils/scoreScale';
+import { usePalette } from '../../hooks/usePalette';
 import { useScoreScale } from '../../hooks/useScoreScale';
 import { PremiosCerrada, PremiosEnviada, PremiosYaVotaste } from './PremiosEstado';
 import { PremiosPortada } from './PremiosPortada';
@@ -42,6 +43,8 @@ export function PremiosHub({ games }: PremiosHubProps) {
   // La escala es la que tenga elegida quien mira: la misma nota se enseña como estrellas o como cifra, igual que
   // en el resto de la aplicación. Quien no haya puntuado el juego no ve ninguna.
   const scale = useScoreScale();
+  // La frase del titular la pone el TEMA, como en el hub social.
+  const { palette } = usePalette();
   const formatGrade = useCallback(
     (grade: number | null) => {
       if (grade === null) return '';
@@ -132,12 +135,18 @@ export function PremiosHub({ games }: PremiosHubProps) {
   }
 
   if (edition.failed) {
+    // SIN CONEXIÓN NO ES UN ERROR, y se dice distinto: la votación sigue en pie y lo único que no llega es el
+    // estado de la edición. Es la misma distinción que hace el hub social, y con el mismo criterio.
+    const sinRed = typeof navigator !== 'undefined' && navigator.onLine === false;
     return (
-      <section className="premios-hub" aria-label={PREMIOS_UI.sectionAria}>
-        <p className="premios-error">{PREMIOS_UI.errores.load}</p>
-        <button type="button" className="btn" onClick={() => void edition.reload()}>
-          {PREMIOS_UI.errores.retry}
-        </button>
+      <section className="premios-hub premios-estado" aria-label={PREMIOS_UI.sectionAria}>
+        <h2>{(sinRed ? PREMIOS_UI.errores.offlineByPalette : PREMIOS_UI.errores.leadByPalette)[palette]}</h2>
+        <p className="premios-estado__muted">{sinRed ? PREMIOS_UI.errores.offline : PREMIOS_UI.errores.load}</p>
+        <div className="premios-estado__actions">
+          <button type="button" className="btn" onClick={() => void edition.reload()}>
+            {PREMIOS_UI.errores.retry}
+          </button>
+        </div>
       </section>
     );
   }
@@ -156,8 +165,8 @@ export function PremiosHub({ games }: PremiosHubProps) {
   return (
     <div className="premios-hub">
       {necesitaSesion ? (
-        <section className="premios-hub" aria-label={PREMIOS_UI.sectionAria}>
-          <p className="premios-error">{PREMIOS_UI.errores.needsSession}</p>
+        <section className="premios-hub premios-estado" aria-label={PREMIOS_UI.sectionAria}>
+          <p>{PREMIOS_UI.errores.needsSession}</p>
         </section>
       ) : fueraDePlazo ? (
         <PremiosCerrada scheduled={edition.stage === 'none' && !hasResults} hasResults={hasResults} />
