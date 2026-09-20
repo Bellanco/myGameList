@@ -16,6 +16,7 @@ import {
 } from '../../src/core/premios/ballotEdits';
 import { BALLOT_NAME_MAX_LENGTH } from '../../src/core/premios/limits';
 import { PUBLIC_NAME_MAX_LENGTH } from '../../src/core/security/sanitize';
+import { PROFILE_ALLOWED_KEYS, SOCIAL_ALLOWED_KEYS } from '../../scripts/lib/profile-rules-predicates.mjs';
 
 // Test de integración: requiere el emulador de Firestore. Ejecutar con `npm run test:rules`.
 // Valida las reglas REALES desplegables (perfiles, privateConfig/userMap solo-dueño, admin, catch-all).
@@ -122,6 +123,30 @@ describe('firestore.rules', () => {
   });
 
   describe('profiles', () => {
+    /**
+     * EL PAR DUPLICADO CON EL AUDITOR PREVIO AL DESPLIEGUE (`scripts/audit-profile-rules.mjs`).
+     *
+     * Ese script contesta a «¿hay perfiles reales que estas reglas rechazarían?», y para eso lleva su propia
+     * copia de las allowlists. Se quedó sin `achievements` ni `palmares` cuando las reglas los admitieron, y
+     * pasó lo que tenía que pasar: la auditoría delataba como rotos ocho perfiles válidos. Un auditor que avisa
+     * de más se acaba ignorando, que es justo lo contrario de para lo que existe.
+     *
+     * Se compara la lista, no el texto: el orden lo pone quien edite las reglas y no significa nada.
+     */
+    it('las allowlists del perfil son las mismas en las reglas y en el auditor', () => {
+      const lista = (funcion: string) =>
+        rulesSource
+          .split(funcion)[1]
+          .split('hasOnly([')[1]
+          .split('])')[0]
+          .match(/"([^"]+)"/g)!
+          .map((clave) => clave.replaceAll('"', ''))
+          .sort();
+
+      expect(lista('function profileWriteIsValid()')).toEqual([...PROFILE_ALLOWED_KEYS].sort());
+      expect(lista('function profileSocialIsSane()')).toEqual([...SOCIAL_ALLOWED_KEYS].sort());
+    });
+
     /**
      * EL ESPEJO DE LOGROS (F3). Lo escribe su dueño y lo lee cualquier autenticado, así que lo que hay que fijar
      * es el tamaño y la forma: esa cadena se la descarga entera el directorio social de todo el mundo, y sin tope

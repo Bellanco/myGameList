@@ -20,13 +20,21 @@ export const LIMITS = {
   gistId: 128,
 };
 
-/** Claves admitidas en `profiles` (allowlist `hasOnly` de `profileWriteIsValid`). SIN `email` desde L1. */
-const PROFILE_ALLOWED_KEYS = [
+/**
+ * Claves admitidas en `profiles` (allowlist `hasOnly` de `profileWriteIsValid`). SIN `email` desde L1.
+ *
+ * SE EXPORTA para que el test de reglas la compare con la lista real de `firestore.rules`. Estuvo sin
+ * `achievements` ni `palmares` después de que las reglas los admitieran, y la auditoría delataba como rotos
+ * ocho perfiles perfectamente válidos: un auditor desfasado no avisa de menos, avisa de más, y eso acaba en que
+ * se despliega ignorándolo.
+ */
+export const PROFILE_ALLOWED_KEYS = [
   'schemaVersion', 'uid', 'profileId', 'displayName', 'photoURL', 'social', 'updatedAt', 'tier', 'createdAt',
+  'achievements', 'palmares',
 ];
 
 /** Subclaves admitidas en `social` (allowlist `hasOnly` de `profileSocialIsSane`). `githubToken` NO está. */
-const SOCIAL_ALLOWED_KEYS = ['enabled', 'etag', 'gistId', 'gamesGistId'];
+export const SOCIAL_ALLOWED_KEYS = ['enabled', 'etag', 'gistId', 'gamesGistId'];
 
 const isTimestampLike = (v) => Boolean(v) && typeof v === 'object' && typeof v.toMillis === 'function';
 const isNumberOrTimestamp = (v) => typeof v === 'number' || isTimestampLike(v);
