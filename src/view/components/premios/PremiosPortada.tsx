@@ -1,9 +1,11 @@
+import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { daysUntil } from '../../../core/premios/votingSchedule';
 import { getSeasonLabel } from '../../../core/premios/seasonId';
 import { PREMIOS_ROUTES, votePath } from '../../../viewmodel/premios/premiosRoutes';
 import { PremiosCompartir } from './PremiosCompartir';
+import { usePosicionSuperior } from './usePosicionSuperior';
 import type { PremiosVotingConfig } from '../../../model/types/premios';
 
 const L = PREMIOS_UI.portada;
@@ -55,8 +57,22 @@ export function PremiosPortada({
   const dias = daysUntil(config?.closesAtMillis ?? null);
   const nombre = getSeasonLabel({ name: config?.seasonName, season: config?.season }) || PREMIOS_UI.eventName;
 
+  // EL CARTEL SE CENTRA EN LO QUE QUEDA DE PANTALLA. Pegado al techo, con media pantalla vacía debajo, la
+  // portada se leía como el principio de algo que no llega; centrado, es un cartel.
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const top = usePosicionSuperior(sectionRef);
+
   return (
-    <section className="premios-portada" aria-label={PREMIOS_UI.sectionAria}>
+    <section
+      ref={sectionRef}
+      className={`premios-portada${top === null ? '' : ' is-fitted'}`}
+      aria-label={PREMIOS_UI.sectionAria}
+      style={top === null ? undefined : ({ '--premios-top': `${top}px` } as React.CSSProperties)}
+    >
+      {/* EL CARTEL VA EN SU PROPIA CAJA y la sección es solo el sitio donde se centra. Con el fondo puesto en la
+          sección, al darle el alto de la pantalla el cartel se estiraba de arriba abajo con el texto flotando en
+          medio; separados, el cartel mide lo que mide y se queda en el centro. */}
+      <div className="premios-portada__card">
       <h2 className="premios-portada__title">{nombre}</h2>
       <p className="premios-portada__lead">{L.lead}</p>
 
@@ -81,7 +97,11 @@ export function PremiosPortada({
             {signingIn ? L.signingIn : L.signIn}
           </button>
         ) : null}
-        {hasResults ? (
+        {/* LOS RESULTADOS NO SE OFRECEN MIENTRAS SE VOTA: lo único publicado es de otra edición, y un botón que
+            dice «ver los resultados» al lado del de votar se lee como si fueran los de esta — que todavía no
+            existen. Vuelve en cuanto se cierra el plazo. El enlace directo sigue funcionando para quien lo
+            tenga. */}
+        {hasResults && !votingOpen ? (
           <Link className="btn" to={PREMIOS_ROUTES.results}>
             {L.seeResults}
           </Link>
@@ -139,7 +159,8 @@ export function PremiosPortada({
         />
       ) : null}
 
-      <p className="premios-portada__foot">{L.oneVote}</p>
+        <p className="premios-portada__foot">{L.oneVote}</p>
+      </div>
     </section>
   );
 }

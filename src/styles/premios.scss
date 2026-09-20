@@ -22,11 +22,24 @@
 /* ES UN CARTEL, no una pantalla de aviso. La porra se juega unas semanas al año y esta es su puerta: tiene que
    decir de un vistazo que hay algo en marcha. El relieve lo ponen el degradado del acento y la sombra, los dos
    sacados de tokens, así que cada tema lo cuenta a su manera. */
-.premios-portada {
+/* LA SECCIÓN ES EL SITIO; el cartel es la caja de dentro. Separarlos es lo que permite que el cartel conserve su
+   tamaño y se quede CENTRADO en lo que queda de pantalla: con el fondo puesto en la sección, darle el alto de la
+   ventana lo estiraba de arriba abajo con el texto flotando en medio. El hueco lo da `--premios-hueco`, el mismo
+   que reparte la votación, así que las dos pantallas de la sección se plantan igual. */
+.premios-portada { display: grid; justify-items: center; }
+
+.premios-portada.is-fitted {
+  min-height: var(--premios-hueco);
+  align-content: center;
+}
+
+.premios-portada__card {
   display: grid;
   gap: .6rem;
   justify-items: center;
+  align-content: start;
   text-align: center;
+  width: min(100%, 46rem);
   padding: 2rem 1.2rem;
   background:
     radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--steam) 14%, transparent), transparent 62%),
@@ -219,9 +232,10 @@
    que la mitad se los llevan cabecera y barra— caía por debajo del suelo y reaparecía el desplazamiento, que es
    justo lo que esta pantalla viene a evitar. Por debajo de eso la rejilla ya no da para nada y se prefiere dejar
    crecer la página. */
-.premios-vote.is-fitted {
+.premios-vote.is-fitted,
+.premios-portada.is-fitted {
   --premios-consent: 0px;
-  height: max(
+  --premios-hueco: max(
     12rem,
     calc(
       100dvh - var(--premios-top, 0px) - var(--bottom-nav-h, 4.6rem) - var(--premios-consent) -
@@ -231,13 +245,19 @@
 }
 
 /* Mientras el aviso de la analítica está pendiente ocupa su sitio encima de la barra, y hay que dejárselo. */
-:root[data-consent='pending'] .premios-vote.is-fitted { --premios-consent: var(--consent-h, 9.25rem); }
+:root[data-consent='pending'] .premios-vote.is-fitted,
+:root[data-consent='pending'] .premios-portada.is-fitted { --premios-consent: var(--consent-h, 9.25rem); }
+
+/* La votación TOMA ese hueco y lo reparte; la portada solo lo usa para centrarse dentro. */
+.premios-vote.is-fitted { height: var(--premios-hueco); }
 
 /* Y LO QUE HAY DEBAJO DE LA SECCIÓN SE VA, o el documento seguiría siendo más alto que la ventana por culpa de
    un relleno que ya no reserva nada: el hueco de la barra lo acaba de descontar la cuenta de arriba. Son los
    dos rellenos que quedan por debajo — el del contenedor de la aplicación y el de la propia sección. */
-.main:has(.premios-vote.is-fitted) { padding-bottom: 0; }
-.premios-hub:has(.premios-vote.is-fitted) { padding-block-end: 0; }
+.main:has(.premios-vote.is-fitted),
+.main:has(.premios-portada.is-fitted) { padding-bottom: 0; }
+.premios-hub:has(.premios-vote.is-fitted),
+.premios-hub:has(.premios-portada.is-fitted) { padding-block-end: 0; }
 
 .premios-vote__grid {
   display: grid;
@@ -709,6 +729,71 @@
 .premios-admin__block h3 { font-family: var(--font-label); font-size: var(--fs-lg, 1.05rem); margin: 0; }
 
 .premios-admin__stage { font-family: var(--font-mono); color: var(--text); font-size: var(--fs-sm); margin: 0; }
+
+/* ─── El ciclo de la edición: los tres estados y en cuál está ─────────────────────────────────────────── */
+
+.premios-admin__stages {
+  display: grid;
+  gap: .3rem;
+  list-style: none;
+  margin: .2rem 0;
+  padding: 0;
+  counter-reset: paso;
+}
+
+.premios-admin__stage-step {
+  display: grid;
+  gap: .1rem;
+  padding: .45rem .6rem .45rem 2rem;
+  position: relative;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-dim);
+}
+
+/* El número del paso, en su disco, como el puesto de la clasificación. */
+.premios-admin__stage-step::before {
+  counter-increment: paso;
+  content: counter(paso);
+  position: absolute;
+  left: .5rem;
+  top: .5rem;
+  display: grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-3xs);
+  border-radius: var(--radius-pill);
+  border: 1px solid currentcolor;
+}
+
+/* EL ACTUAL SE VE DESDE LA PUERTA: es el único dato que se busca al abrir esta pestaña. */
+.premios-admin__stage-step.is-current {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--steam) 55%, transparent);
+  background: color-mix(in srgb, var(--steam) 10%, var(--surface));
+  box-shadow: inset 2px 0 0 var(--steam);
+}
+
+.premios-admin__stage-name {
+  font-family: var(--font-label);
+  font-size: var(--fs-sm);
+  display: flex;
+  gap: .5rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.premios-admin__stage-now {
+  font-size: var(--fs-3xs);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--steam);
+}
+
+.premios-admin__stage-hint { font-size: var(--fs-xs); color: var(--text-dim); }
 .premios-admin__muted { color: var(--text-dim); font-size: var(--fs-xs); margin: 0; }
 
 .premios-admin__notice { color: var(--success); font-size: var(--fs-sm); margin: .4rem 0 0; }

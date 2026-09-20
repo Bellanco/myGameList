@@ -200,6 +200,35 @@ export const PREMIOS_UI = {
       stageNone: 'No hay ninguna edición en marcha.',
       stageOpen: 'Se está votando.',
       stagePending: 'Cerrada y pendiente de publicar.',
+
+      // ═══ LOS ESTADOS, ENUMERADOS ═══════════════════════════════════════════════════════════════════════
+      // El ciclo entero a la vista con el actual marcado, en vez de una sola frase suelta: de un vistazo se ve
+      // dónde está la edición, qué viene después y por qué la sección se ofrece o no.
+      stagesTitle: 'El ciclo de la edición',
+      stages: [
+        {
+          id: 'none' as const,
+          label: 'Sin edición',
+          hint: 'No hay votación en marcha. Se abre poniéndole nombre y día de cierre.',
+        },
+        {
+          id: 'open' as const,
+          label: 'Votación abierta',
+          hint: 'Se vota hasta las 23:59 del día de cierre. Se puede cerrar antes a mano.',
+        },
+        {
+          id: 'pending' as const,
+          label: 'Cerrada, sin publicar',
+          hint: 'Ya no se vota. Toca marcar ganadores y publicarla en el histórico.',
+        },
+      ],
+      /** Lo que pasa al publicar, que es lo que cierra el ciclo y no es un estado en sí. */
+      stagesCycle: 'Al publicar, la clasificación pasa al histórico y la edición vuelve a «Sin edición».',
+      stageCurrent: 'Estado actual',
+      lastPublished: (id: string) => `Última publicada: ${id}`,
+      // Lo que de verdad decide si la entrada aparece en Ajustes y en el espacio social, resuelto ahora mismo.
+      offeredYes: 'Ahora mismo la sección SE OFRECE en Ajustes y en el espacio social.',
+      offeredNo: 'Ahora mismo la sección NO se ofrece: solo se llega con el enlace.',
       nameLabel: 'Nombre de la edición',
       namePlaceholder: 'El reto del jugador 2026',
       nameHint: 'De aquí sale el identificador del archivo. Sin nombre se usa el año.',
@@ -218,7 +247,7 @@ export const PREMIOS_UI = {
       errorDay: 'Hace falta un día de cierre que no esté en el pasado.',
       // El interruptor que decide si la sección se ofrece en Ajustes y en el espacio social.
       visibility: 'Dónde se ve',
-      visibilityHint: 'Con «Según el calendario» aparece sola mientras haya votación o resultados recientes, y se retira al mes.',
+      visibilityHint: 'Con «Según el calendario» aparece sola mientras haya votación o resultados recientes, y se retira un mes después de publicar el resultado.',
       visibleAuto: 'Según el calendario',
       visibleOn: 'Siempre a la vista',
       visibleOff: 'Oculta',

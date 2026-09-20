@@ -61,8 +61,15 @@ describe('PremiosPortada — la puerta de la sección', () => {
 
   // Los resultados publicados se ven SIN cuenta: es lo que hace que el enlace compartido sirva para algo.
   it('sin sesión se siguen pudiendo ver los resultados publicados', () => {
-    pintar({ signedIn: false, hasResults: true });
+    pintar({ signedIn: false, votingOpen: false, hasResults: true });
     expect(screen.getByRole('link', { name: L.seeResults })).toBeInTheDocument();
+  });
+
+  // Y NO se ofrecen mientras se vota: lo publicado es de la edición anterior, y ahí se leería como si fueran
+  // los resultados de la que se está votando.
+  it('con la votación abierta no ofrece los resultados de la edición anterior', () => {
+    pintar({ hasResults: true });
+    expect(screen.queryByRole('link', { name: L.seeResults })).not.toBeInTheDocument();
   });
 
   it('dice el cupo de oportunidades de esta cuenta', () => {

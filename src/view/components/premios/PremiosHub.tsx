@@ -147,7 +147,14 @@ export function PremiosHub() {
 
   const enFlujo = panelNeedsSession(route.panel);
   const necesitaSesion = !user && enFlujo;
-  const hasResults = Boolean(edition.config?.lastPublishedId);
+  /**
+   * ¿Se ofrece ir a los resultados?
+   *
+   * Hay archivo publicado Y no se está votando. Mientras el plazo está abierto, lo publicado es de la edición
+   * ANTERIOR, y ofrecerlo junto al botón de votar se lee como «los resultados de esto», que aún no existen.
+   * `/premios/resultados` sigue respondiendo: esto decide qué se ofrece, no a dónde se puede llegar.
+   */
+  const hasResults = Boolean(edition.config?.lastPublishedId) && !edition.votingOpen;
 
   // LAS DOS PUERTAS POR LAS QUE NO SE PUEDE SEGUIR, comprobadas antes de pintar el formulario: llegar con el
   // plazo cerrado y volver sin correcciones. Enseñar la papeleta en cualquiera de los dos casos sería ofrecer un

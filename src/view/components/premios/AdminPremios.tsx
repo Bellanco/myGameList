@@ -7,6 +7,7 @@ import { AdminPremiosVotos } from './AdminPremiosVotos';
 import { todayInVotingZone, toVotingZoneDay } from '../../../core/premios/closingDate';
 import { getSeasonLabel } from '../../../core/premios/seasonId';
 import { SEASON_STAGE, getSeasonStage, validateClosingDay } from '../../../core/premios/votingSchedule';
+import { shouldOfferPremios } from '../../../core/premios/visibility';
 import { loadAndSortCategories } from '../../../model/repository/premios/premiosCategoriesRepository';
 import {
   closeSeasonNow,
@@ -162,13 +163,39 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
         {tab === 'season' ? (
           <div className="premios-admin__block">
             <h3>{L.season.title}</h3>
+            {/* EL CICLO ENTERO, con el actual marcado. Antes esto era una frase suelta («Se está votando»), que
+                dice dónde estás pero no qué hay ni qué viene después — y con tres estados, un interruptor de
+                visibilidad que depende de ellos y un histórico de por medio, esa frase se quedaba corta. */}
+            <ol className="premios-admin__stages" aria-label={L.season.stagesTitle}>
+              {L.season.stages.map((momento) => {
+                const actual = momento.id === stage;
+                return (
+                  <li
+                    key={momento.id}
+                    className={`premios-admin__stage-step${actual ? ' is-current' : ''}`}
+                    aria-current={actual ? 'step' : undefined}
+                  >
+                    <span className="premios-admin__stage-name">
+                      {momento.label}
+                      {actual ? <span className="premios-admin__stage-now">{L.season.stageCurrent}</span> : null}
+                    </span>
+                    <span className="premios-admin__stage-hint">{momento.hint}</span>
+                  </li>
+                );
+              })}
+            </ol>
+            <p className="premios-admin__muted">{L.season.stagesCycle}</p>
+
+            {/* Y LO QUE SALE DE TODO ESO: si la entrada se está ofreciendo ahora mismo. Es la misma función que
+                lo decide en Ajustes y en el espacio social, así que aquí no se puede decir una cosa y hacerse
+                otra. */}
             <p className="premios-admin__stage">
-              {stage === SEASON_STAGE.OPEN
-                ? L.season.stageOpen
-                : stage === SEASON_STAGE.PENDING
-                  ? L.season.stagePending
-                  : L.season.stageNone}
+              {shouldOfferPremios(config) ? L.season.offeredYes : L.season.offeredNo}
             </p>
+
+            {config?.lastPublishedId ? (
+              <p className="premios-admin__muted">{L.season.lastPublished(config.lastPublishedId)}</p>
+            ) : null}
 
             {config?.closesAt && stage !== SEASON_STAGE.NONE ? (
               <p className="premios-admin__muted">
