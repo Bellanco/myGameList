@@ -64,16 +64,97 @@ describe('PremiosResultsScreen', () => {
     expect(screen.getByText(L.positionAria(1))).toBeInTheDocument();
   });
 
-  // EL ARCHIVO NO LLEVA IDENTIFICADORES REALES: la fila propia se reconoce por el pseudónimo, que es público y
-  // no dice quién eres fuera de esta app.
-  it('reconoce tu fila por el pseudónimo', () => {
+  // EL ARCHIVO NO LLEVA IDENTIFICADORES REALES: lo propio se reconoce por el pseudónimo, que es público y no
+  // dice quién eres fuera de esta app.
+  it('reconoce lo tuyo por el pseudónimo', () => {
     const { container } = render(
       <MemoryRouter>
         <PremiosResultsScreen result={archivo} leaderboard={archivo.leaderboard} ownProfileId="p-beto" />
       </MemoryRouter>,
     );
-    const propia = container.querySelector('.premios-results__row.is-own');
-    expect(propia?.textContent).toContain('Beto');
+    const propio = container.querySelector('.premios-results__step.is-own');
+    expect(propio?.textContent).toContain('Beto');
+  });
+
+  // EL PODIO es lo que se viene a mirar, y va antes que las veintiséis categorías.
+  it('sube los tres primeros puestos al podio y empieza la lista en el cuarto', () => {
+    const catorce = Array.from({ length: 14 }, (_, i) => ({
+      rank: i + 1,
+      profileId: `p-${i}`,
+      nickname: `Persona ${i + 1}`,
+      points: 20 - i,
+    }));
+    const { container } = render(
+      <MemoryRouter>
+        <PremiosResultsScreen result={{ ...archivo, leaderboard: catorce }} leaderboard={catorce} ownProfileId="" />
+      </MemoryRouter>,
+    );
+
+    const escalones = [...container.querySelectorAll('.premios-results__step')];
+    expect(escalones).toHaveLength(3);
+    expect(escalones[0].textContent).toContain('Persona 1');
+
+    // Y NO SE REPITE A NADIE: quien está en el podio no vuelve a salir en la lista.
+    const filas = [...container.querySelectorAll('.premios-results__row')];
+    expect(filas).toHaveLength(11);
+    expect(filas[0].textContent).toContain('Persona 4');
+    expect(screen.getAllByText('Persona 1')).toHaveLength(1);
+  });
+
+  // Un empate es un solo PUESTO: los dos comparten escalón en vez de aparecer en dos.
+  it('junta a los empatados en el mismo escalón', () => {
+    const empatados = [
+      { rank: 1, profileId: 'p-ana', nickname: 'Ana', points: 6 },
+      { rank: 1, profileId: 'p-beto', nickname: 'Beto', points: 6 },
+      { rank: 2, profileId: 'p-cris', nickname: 'Cris', points: 4 },
+    ];
+    const { container } = render(
+      <MemoryRouter>
+        <PremiosResultsScreen result={{ ...archivo, leaderboard: empatados }} leaderboard={empatados} ownProfileId="" />
+      </MemoryRouter>,
+    );
+
+    const escalones = [...container.querySelectorAll('.premios-results__step')];
+    expect(escalones).toHaveLength(2);
+    expect(escalones[0].textContent).toContain('Ana');
+    expect(escalones[0].textContent).toContain('Beto');
+    expect(escalones[0].textContent).toContain(L.tie);
+  });
+
+  // Con todo el mundo en el podio no hay clasificación que enseñar: un panel repitiéndolo sería un eco.
+  it('no pinta la clasificación si nadie se queda fuera del podio', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <PremiosResultsScreen result={archivo} leaderboard={archivo.leaderboard} ownProfileId="" />
+      </MemoryRouter>,
+    );
+    expect(container.querySelector('.premios-results__board')).toBeNull();
+  });
+
+  // EL TITULAR sale del PESO archivado, no del nombre de la categoría: el rótulo se escribe a mano cada año.
+  it('destaca la categoría que más pesaba', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <PremiosResultsScreen result={archivo} leaderboard={archivo.leaderboard} ownProfileId="" />
+      </MemoryRouter>,
+    );
+    const titular = container.querySelector('.premios-results__headline');
+    expect(titular?.textContent).toContain('Juego del año');
+    expect(titular?.textContent).toContain('Elden Ring');
+  });
+
+  it('sin una categoría que pese más que las otras no destaca ninguna', () => {
+    const iguales = {
+      ...archivo,
+      categoriesSnapshot: archivo.categoriesSnapshot.map((c) => ({ ...c, weight: 1 })),
+    };
+    const { container } = render(
+      <MemoryRouter>
+        <PremiosResultsScreen result={iguales} leaderboard={iguales.leaderboard} ownProfileId="" />
+      </MemoryRouter>,
+    );
+    expect(container.querySelector('.premios-results__headline')).toBeNull();
+    expect(container.querySelector('.premios-results__winner-card')?.textContent).toContain('Elden Ring');
   });
 
   it('sin pseudónimo no marca ninguna fila como propia', () => {

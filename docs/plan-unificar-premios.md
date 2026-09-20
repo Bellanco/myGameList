@@ -750,6 +750,18 @@ las escrituras— está hecho y probado sin depender de nada visual.
 | **F3** · Interfaz | `/premios` como chunk perezoso con su error boundary: votar, revisar, enviar, resultados. Cromo, avisos, esqueleto y voz por paleta de la casa (§6.6); el nominado ya se cruza con tu biblioteca (§6.5) | e2e de votación y resultados rehechos; axe en las doce combinaciones; presupuesto de arranque intacto | 35 % |
 | | ✅ **HECHA.** Portada, votación con el paso en la URL, revisión, envío, las tres salidas del flujo, el cruce con la biblioteca, la rejilla midiendo el contenedor, **resultados** (ganadores, clasificación, fila propia por pseudónimo y enlace al perfil), **el trofeo** (arte traído, Comic Neue vendorizada, diálogo con canvas y descarga), hoja propia con tokens, **la voz de cada tema** en los mensajes de error y de falta de conexión, **axe en las 16 combinaciones** y pruebas de componente | | |
 
+**La pantalla de resultados, rehecha por dentro (20-09-2026).** Abría con veintiséis fichas de categoría y una
+lista de catorce renglones iguales, donde quien había ganado la porra pesaba lo mismo que el decimotercero.
+Ahora empieza por el **podio** —un escalón por PUESTO, con los empatados juntos, y el metal de las clases de
+rango de la casa—, la clasificación sigue **desde el cuarto** sin repetir a nadie, la categoría de más peso sale
+como **titular** del panel de ganadores (se elige por el `weight` archivado, no por su nombre) y el aviso de «tu
+premio» solo aparece si no estás en el podio. De paso se fueron tres ruidos: las versalitas de los veintiséis
+rótulos de categoría, la palabra «puntos» repetida en cada renglón y los cinco botones de trofeo con texto, hoy
+un icono. Auditada con axe en ocho combinaciones de paleta y tema × tres estados de sesión, y con dos fallos de
+contraste corregidos que venían de antes (`--text-dim` sobre superficie elevada: 3,6:1 en los temas oscuros).
+**No la cubre el axe del CI**, porque la auditoría de `tests/e2e/a11y.test.ts` necesita una edición publicada y
+en el build de pruebas no hay ninguna.
+
 **Dónde vive el arte del podio, dicho sin adornos.** Las cinco láminas están en `public/awards/` (1,2 MB), tal y
 como venían, **con su rótulo original**: se trajeron sin rerotular por decisión del 20-09-2026. La consecuencia es
 que quien adivine su URL puede abrirlas en blanco; no se enlazan en ninguna parte pública, el dominio va con

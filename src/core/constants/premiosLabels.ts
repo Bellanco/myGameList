@@ -175,8 +175,21 @@ export const PREMIOS_UI = {
     yourAward: 'Tu premio',
     yourAwardHint: (puesto: number) => `Has quedado ${puesto}.º en esta edición.`,
     positionAria: (puesto: number) => `Puesto ${puesto}`,
-    points: (puntos: number) => (puntos === 1 ? '1 punto' : `${puntos} puntos`),
+    // Con coma decimal: media categoría vale 0,5 y «14.5 puntos» se lee como un dato de máquina.
+    points: (puntos: number) =>
+      puntos === 1 ? '1 punto' : `${puntos.toLocaleString('es-ES', { maximumFractionDigits: 2 })} puntos`,
+    /**
+     * El número solo, para la clasificación. Repetir «puntos» en cada renglón engorda catorce veces la misma
+     * palabra y empuja los nombres; la unidad la dice la cabecera de la columna y el rótulo accesible de la
+     * fila, que sigue leyendo «16 puntos».
+     */
+    pointsShort: (puntos: number) => puntos.toLocaleString('es-ES', { maximumFractionDigits: 2 }),
+    pointsUnit: 'puntos',
     yourRow: 'Tu posición',
+    /** EL PODIO: los tres primeros puestos, que es lo que se viene a mirar. */
+    podium: 'Podio',
+    /** Un puesto compartido: los empatados van juntos en la misma tarjeta. */
+    tie: 'Empate',
     /** Deshace el paso: a la portada, al histórico del panel o a donde se estuviera. */
     back: 'Volver',
     trophy: 'Ver mi trofeo',
