@@ -5,6 +5,42 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-09-22
+
+La versión de **dejar la porra gobernable**. La 1.4.0 trajo la sección entera; esta afina el ciclo de una
+edición —abrirla, cerrarla y publicarla— y arregla lo que enseñaba de más o de menos en cada momento: la portada
+ya no invita a votar a quien no puede, la lámina deja de ser un modal y, fuera de temporada, entrar en Premios
+lleva derecho a lo único que hay que ver.
+
+### Added
+- **Abrir una edición pregunta con el diálogo de la casa**, y exige nombre y día de cierre: una edición sin
+  fecha no se cierra sola y una sin nombre no se distingue de la del año pasado. Si hay categorías a medias
+  —sin nominados— se avisa antes de seguir, en vez de descubrirlo votando.
+- **La lámina del premiado vive junto a la clasificación**, no en un modal: abre por la tuya y cambia al pulsar
+  el trofeo de otro.
+
+### Changed
+- **Sin edición en marcha, Premios son los resultados.** La portada no tenía nada que contar —«ahora mismo no
+  hay ninguna edición» y un botón hacia lo único publicado—, así que `/premios` lleva directo al último archivo.
+  El enlace a una edición concreta sigue funcionando igual.
+- **Un solo criterio de qué se puede archivar y qué ganador vale**, compartido por el panel y por lo que se
+  publica: publicar se niega si falta algún ganador, en vez de archivar una edición a medias.
+- **Con la edición cerrada se ven los votos propios**, no los resultados de la anterior, y la portada dice que
+  se está esperando a que se publiquen.
+- **El panel, más cómodo de usar**: botones de ganador de 44 px, la papeleta de cada votante a la vista y
+  «Nueva categoría» al final de la lista. Abrir una edición la deja visible en la navegación y publicarla
+  devuelve la entrada al calendario.
+- **Un botón deshabilitado se ve deshabilitado** en toda la aplicación, y no solo en algunas pantallas.
+
+### Fixed
+- **Sin oportunidades no se invita a votar.** Con la papeleta enviada y el cupo agotado, la portada seguía
+  ofreciendo «empezar a votar»: llevaba al formulario y las reglas rechazaban el envío al final. Ahora quien ya
+  votó y no puede corregir ve lo único que le queda por hacer —mirar lo que votó—, y mirar no gasta oportunidad.
+- **El 0 de las horas es la casilla vacía, no un dato.** Las estadísticas y los logros ya lo entendían así, pero
+  el resto de la aplicación no: el detalle de un juego enseñaba «0 h jugadas» donde no había nada apuntado, el
+  formulario guardaba ese cero y la importación lo traía como si fuera una medida. Ahora un cero es un hueco en
+  todas partes, y un dato importado puede rellenarlo.
+
 ## [1.4.0] - 2026-09-20
 
 La versión de **poder instalarla** y de que **la porra sea de esta casa**. La aplicación ya sabía funcionar como
