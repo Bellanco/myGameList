@@ -33,7 +33,8 @@ Dependencias principales (versiones declaradas en `package.json`):
 Tooling: `vite` ^8.0.11, `@vitejs/plugin-react` ^6.0.1, `typescript` ^6.0.3, `vitest` ^5.0.0,
 `eslint` ^9.39.4, `sass` ^1.99.0.
 
-Node.js **≥ 22.16.0** (`engines` en `package.json`).
+Node.js **≥ 22.22.0** (`engines` en `package.json`). El mínimo lo marca `html-validate`, que exige
+`^22.22.0 || >= 24.8.0`: con un Node 22 anterior, `npm install` avisa con `EBADENGINE` en cada instalación.
 
 ## Arquitectura MVVM
 
@@ -162,7 +163,7 @@ App estática pura (React + Vite). Configuración en el repo:
 Ajustes en el dashboard de Cloudflare Pages:
 
 - **Framework preset**: React (Vite) · **Build command**: `npm run build` · **Output**: `dist`
-- **Node.js** ≥ 22.16.0 (detectado de `engines`, sin `.nvmrc`)
+- **Node.js** ≥ 22.22.0 (detectado de `engines`, sin `.nvmrc`)
 - Variables `VITE_FIREBASE_*` en Production y Preview · Auto-deploy activado
 
 ### Antes de desplegar
