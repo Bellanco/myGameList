@@ -33,10 +33,12 @@ Dependencias principales (versiones declaradas en `package.json`):
 Tooling: `vite` ^8.0.11, `@vitejs/plugin-react` ^6.0.1, `typescript` ^6.0.3, `vitest` ^5.0.0,
 `eslint` ^9.39.4, `sass` ^1.99.0.
 
-Node.js **≥ 22.22.0** (`engines` en `package.json`) es el MÍNIMO soportado; ese suelo lo marca `html-validate`,
-que exige `^22.22.0 || >= 24.8.0` (con un Node 22 anterior, `npm install` avisa con `EBADENGINE`). **El desarrollo
-y CI van en Node 24.x**, que es la LTS activa: es la versión sobre la que se ejecuta la suite antes de publicar.
-La rama 22 sigue valiendo mientras esté en mantenimiento, pero no es la que se prueba.
+Node.js **≥ 24.8.0** (`engines` en `package.json`), que es la LTS activa. El suelo exacto lo marca
+`html-validate`, que exige `^22.22.0 || >= 24.8.0`. La rama 22 sigue en mantenimiento y el código funciona en
+ella, pero ya no es la que se prueba: CI y el despliegue van en 24.x.
+
+**La versión vive en `.nvmrc`** (`24`), y no es decorativo: es el fichero que leen a la vez `nvm use` en local y
+el sistema de build de Cloudflare Pages. `engines` NO sirve para eso — ver abajo.
 
 ## Arquitectura MVVM
 
@@ -165,7 +167,10 @@ App estática pura (React + Vite). Configuración en el repo:
 Ajustes en el dashboard de Cloudflare Pages:
 
 - **Framework preset**: React (Vite) · **Build command**: `npm run build` · **Output**: `dist`
-- **Node.js** ≥ 22.22.0 (detectado de `engines`, sin `.nvmrc`)
+- **Node.js**: lo decide `.nvmrc` (`24`). ⚠️ El sistema de build v3 de Pages **NO lee el campo `engines` de
+  `package.json`** —lo dice su documentación—, así que sin `.nvmrc` construiría con su versión por defecto, que
+  hoy es **22.16.0**. Las otras dos formas de fijarlo son la variable `NODE_VERSION` del panel y `.node-version`;
+  se eligió `.nvmrc` porque además sirve en local
 - Variables `VITE_FIREBASE_*` en Production y Preview · Auto-deploy activado
 
 ### Antes de desplegar
