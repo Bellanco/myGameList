@@ -33,8 +33,10 @@ Dependencias principales (versiones declaradas en `package.json`):
 Tooling: `vite` ^8.0.11, `@vitejs/plugin-react` ^6.0.1, `typescript` ^6.0.3, `vitest` ^5.0.0,
 `eslint` ^9.39.4, `sass` ^1.99.0.
 
-Node.js **≥ 22.22.0** (`engines` en `package.json`). El mínimo lo marca `html-validate`, que exige
-`^22.22.0 || >= 24.8.0`: con un Node 22 anterior, `npm install` avisa con `EBADENGINE` en cada instalación.
+Node.js **≥ 22.22.0** (`engines` en `package.json`) es el MÍNIMO soportado; ese suelo lo marca `html-validate`,
+que exige `^22.22.0 || >= 24.8.0` (con un Node 22 anterior, `npm install` avisa con `EBADENGINE`). **El desarrollo
+y CI van en Node 24.x**, que es la LTS activa: es la versión sobre la que se ejecuta la suite antes de publicar.
+La rama 22 sigue valiendo mientras esté en mantenimiento, pero no es la que se prueba.
 
 ## Arquitectura MVVM
 
