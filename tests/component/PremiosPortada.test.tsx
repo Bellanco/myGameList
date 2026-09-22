@@ -77,14 +77,32 @@ describe('PremiosPortada — la puerta de la sección', () => {
    * volver sobre ella (cuenta social). Cerrado el plazo no hay nada que corregir ni oportunidad que gastar, y es
    * lo último que queda de su voto antes de que la publicación lo retire: se le ofrece a todo el que votó.
    */
-  it('con el plazo cerrado ofrece ver los votos aunque no haya cuenta social', () => {
+  it('a quien votó le ofrece ver sus votos, tenga cuenta social o no', () => {
     pintar({ votingOpen: false, hasBallot: true, hasSocialAccount: false });
+    expect(screen.getByRole('link', { name: PREMIOS_UI.enviada.see })).toBeInTheDocument();
+
+    pintar({ hasBallot: true, hasSocialAccount: false });
+    expect(screen.getAllByRole('link', { name: PREMIOS_UI.enviada.see })).toHaveLength(2);
+  });
+
+  /**
+   * SIN OPORTUNIDADES NO SE INVITA A VOTAR. Con la papeleta enviada y el cupo agotado —el caso de quien vota con
+   * cuenta ligera, que tiene una sola— este botón seguía ahí diciendo «empezar a votar»: llevaba al formulario y
+   * al enviar lo rechazaban las reglas.
+   */
+  it('con la papeleta enviada y sin cupo no ofrece votar', () => {
+    pintar({ hasBallot: true, canEdit: false, hasSocialAccount: false, remainingOpportunities: 0 });
+
+    expect(screen.queryByRole('link', { name: L.start })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: L.resume })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: L.edit })).not.toBeInTheDocument();
+    // Lo único que puede hacer: mirar lo que votó.
     expect(screen.getByRole('link', { name: PREMIOS_UI.enviada.see })).toBeInTheDocument();
   });
 
-  it('mientras se vota, sin cuenta social no se ofrece', () => {
-    pintar({ hasBallot: true, hasSocialAccount: false });
-    expect(screen.queryByRole('link', { name: PREMIOS_UI.enviada.see })).not.toBeInTheDocument();
+  it('con cupo por gastar sí ofrece corregir', () => {
+    pintar({ hasBallot: true, canEdit: true, remainingOpportunities: 2 });
+    expect(screen.getByRole('link', { name: L.edit })).toBeInTheDocument();
   });
 
   /**

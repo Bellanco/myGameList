@@ -129,8 +129,11 @@ export const PREMIOS_UI = {
     /** Lo último que se lee: esto se juega cada temporada y la gracia está en volver. */
     comeBack: 'El reto se juega cada temporada: vuelve cuando se abra el siguiente.',
     confirmTitle: 'Confirmación',
-    edit: 'Corregir mi voto',
-    /** Repasar lo votado sin tocar nada ni gastar oportunidad: la misma papeleta, en modo lectura. */
+    /**
+     * Repasar lo votado sin tocar nada ni gastar oportunidad: la misma papeleta, en modo lectura. Lo usan la
+     * portada y la pantalla de «votación cerrada»; esta se quedó con una sola salida, la puerta de la sección,
+     * porque todo lo demás ya lo ofrece la portada según lo que se pueda hacer en cada momento.
+     */
     see: 'Ver mis votos',
     /** Cuando se reenvía sin tocar nada: se dice que no ha costado, porque el contador no se ha movido. */
     unchanged: 'No habías cambiado nada, así que tus elecciones se quedan como estaban y no te ha costado ninguna oportunidad.',
@@ -141,8 +144,6 @@ export const PREMIOS_UI = {
         : quedan === 1
           ? 'Te queda 1 oportunidad para corregirla mientras la votación siga abierta.'
           : `Te quedan ${quedan} oportunidades para corregirla mientras la votación siga abierta.`,
-    toResults: 'Ver los resultados',
-    toLists: 'Volver a mis listas',
   },
 
   // LAS DOS PUERTAS DE SALIDA del flujo, que antes no tenían pantalla y acababan en la portada sin explicar nada:

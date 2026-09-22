@@ -98,9 +98,12 @@ export function PremiosPortada({
         {/* CON SESIÓN SE VOTA, SIN ELLA SE ENTRA, y en el mismo sitio: quien no ha entrado ve el botón de
             identificarse donde el resto ve el de votar, y al volver de Google se encuentra la portada como
             estaba, ya con su papeleta. Los RESULTADOS no dependen de esto: se ven sin cuenta. */}
-        {votingOpen && signedIn ? (
+        {/* SIN OPORTUNIDADES NO SE INVITA A VOTAR. Con la papeleta enviada y el cupo agotado, este botón seguía
+            ahí diciendo «empezar a votar»: llevaba al formulario y al enviar lo rechazaban las reglas. Quien ya
+            votó y no puede corregir solo tiene una cosa que hacer aquí, y es mirar lo que votó. */}
+        {votingOpen && signedIn && (!hasBallot || canEdit) ? (
           <Link className="btn btn-primary" to={votePath(1)}>
-            {hasBallot && canEdit ? L.edit : votedCount > 0 ? L.resume : L.start}
+            {hasBallot ? L.edit : votedCount > 0 ? L.resume : L.start}
           </Link>
         ) : null}
         {votingOpen && !signedIn ? (
@@ -112,13 +115,11 @@ export function PremiosPortada({
             dice «ver los resultados» al lado del de votar se lee como si fueran los de esta — que todavía no
             existen. Vuelve en cuanto se cierra el plazo. El enlace directo sigue funcionando para quien lo
             tenga. */}
-        {/* REPASAR LO VOTADO, sin pasar por el formulario de envío: lleva a la papeleta en modo lectura. Mientras
-            se vota, solo a quien tiene cuenta social, que es quien puede volver sobre ella; con una sola
-            oportunidad la papeleta ya está cerrada al enviarla.
-            CERRADO EL PLAZO SE LE OFRECE A TODO EL QUE VOTÓ: ya no hay nada que corregir ni oportunidad que
-            gastar, así que la única razón para esconderlo era la que ha dejado de existir — y es lo último que
-            queda de su papeleta antes de que la publicación la retire. */}
-        {hasBallot && (hasSocialAccount || !votingOpen) ? (
+        {/* REPASAR LO VOTADO, sin pasar por el formulario de envío: lleva a la papeleta en modo lectura. A TODO
+            EL QUE VOTÓ, y no solo a quien tiene cuenta social como al principio: mirar no gasta oportunidad
+            —la pantalla no lleva ni nombre ni botón de enviar—, y para quien votó con cuenta ligera es lo único
+            que puede hacer aquí, además de lo último que queda de su papeleta antes de que se publique. */}
+        {hasBallot ? (
           <Link className="btn" to={PREMIOS_ROUTES.ballot}>
             {PREMIOS_UI.enviada.see}
           </Link>

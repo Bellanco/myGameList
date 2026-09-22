@@ -252,10 +252,7 @@ export function PremiosHub() {
         <PremiosEnviada
           displayName={edition.ballot?.userDisplayName || user?.displayName || ''}
           remainingOpportunities={edition.remainingOpportunities}
-          canEdit={edition.canEdit}
-          hasResults={hasResults}
           unchanged={sinCambios}
-          hasSocialAccount={voter.hasSocialAccount}
         />
       ) : route.panel === 'votar' ? (
         <PremiosVoteScreen
