@@ -7,8 +7,8 @@
  * solicitud recibida— sustituyendo SOLO las tres costuras de red, y CUENTA lo que hace: lecturas de gist por
  * identificador, consultas a Firestore, aciertos de caché, cadenas de arranque y renders.
  *
- * NO AFIRMA NADA A PROPÓSITO: imprime. Por eso vive fuera de la suite (ver `vitest.emulacion.config.js`, y la
- * exclusión en `vitest.config.js`). Lo que sí se vigila en cada commit es el PRESUPUESTO que este emulador
+ * NO AFIRMA NADA A PROPÓSITO: imprime. Por eso vive fuera de la suite (ver `vitest.emulacion.config.mjs`, y la
+ * exclusión en `vitest.config.mjs`). Lo que sí se vigila en cada commit es el PRESUPUESTO que este emulador
  * descubrió: `tests/component/socialHubBudget.test.tsx`.
  *
  * CÓMO LEER LA SALIDA:
