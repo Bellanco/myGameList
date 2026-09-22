@@ -7,9 +7,14 @@ import { AdminPremiosGanadores } from './AdminPremiosGanadores';
 import { AdminPremiosHistorico } from './AdminPremiosHistorico';
 import { AdminPremiosVotos } from './AdminPremiosVotos';
 import { todayInVotingZone, toVotingZoneDay } from '../../../core/premios/closingDate';
+import { getCategoryTitle } from '../../../core/premios/localize';
 import { getSeasonLabel } from '../../../core/premios/seasonId';
 import { SEASON_STAGE, getSeasonStage, validateClosingDay } from '../../../core/premios/votingSchedule';
-import { archivableCategories, categoriesMissingWinner } from '../../../core/premios/archivable';
+import {
+  archivableCategories,
+  categoriesMissingWinner,
+  isArchivableCategory,
+} from '../../../core/premios/archivable';
 import { shouldOfferPremios } from '../../../core/premios/visibility';
 import { loadAndSortCategories } from '../../../model/repository/premios/premiosCategoriesRepository';
 import { fetchWinners } from '../../../model/repository/premios/premiosWinnersRepository';
@@ -59,6 +64,8 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
    * cada cambio del calendario tiene que republicarla o la entrada se quedaría diciendo lo de ayer.
    */
   const publicado = useRef<PremiosVisibilitySnapshot | null>(null);
+  /** ¿Ha terminado ya la primera lectura? Sin esto, el bloqueo de abrir saltaría con la pantalla aún vacía. */
+  const [cargado, setCargado] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -79,6 +86,7 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
     // Los ganadores se leen aquí y no solo en su pestaña: de ellos depende que se pueda publicar, que es la
     // acción irreversible de esta pantalla.
     setWinners(await fetchWinners(nextCategories).catch(() => ({})));
+    setCargado(true);
 
     // Y SE REPUBLICA LA FOTO si ha cambiado algo del calendario. Es lo que hace que la entrada aparezca o se
     // retire para quien no ha iniciado sesión, que es casi todo el mundo. Si falla no se interrumpe nada: el
@@ -117,6 +125,30 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
     [categories, winners],
   );
 
+  /**
+   * LAS QUE ESTÁN A MEDIAS: existen como categoría —tienen título o nominados— pero no llegan a votables. Con una
+   * así, quien entre a votar se encuentra una categoría sin nada que elegir y no puede completar la papeleta, que
+   * se envía entera. Los placeholders no cuentan: son el documento vacío que queda al borrar la última, no una
+   * categoría a medio hacer.
+   */
+  const incompletas = useMemo(
+    () => categories.filter((category) => !category.isPlaceholder && !isArchivableCategory(category)),
+    [categories],
+  );
+
+  const nombresIncompletos = useMemo(
+    () => incompletas.map((category) => getCategoryTitle(category) || L.categories.newTitle),
+    [incompletas],
+  );
+
+  /**
+   * SE ABRE CON UNA CATEGORÍA LISTA, AUNQUE OTRAS SE QUEDEN A MEDIAS. Las categorías se conservan de un año para
+   * otro y no todas se reparten siempre, así que una sin nominados es muchas veces una decisión, no un olvido:
+   * se avisa (arriba, y otra vez al pulsar) y decide quien administra. Lo que no tiene sentido es abrir sin
+   * NINGUNA: sería una votación sin nada que votar, y eso sí se impide.
+   */
+  const puedeAbrir = cargado && votables > 0;
+
   /** ¿Se está ofreciendo la entrada ahora mismo? Con la MISMA función que lo decide en Ajustes y en lo social. */
   const seOfrece = useMemo(() => shouldOfferPremios(config), [config]);
 
@@ -138,14 +170,19 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
     [recargar],
   );
 
-  const abrir = () =>
-    ejecutar(async () => {
+  const abrir = () => {
+    // EL ÚLTIMO AVISO, con el dedo ya en el botón: abrir retira las papeletas sueltas y arranca el plazo, así que
+    // la lista de lo que se queda fuera se repite aquí y no solo encima del formulario.
+    if (nombresIncompletos.length > 0 && !window.confirm(L.season.openConfirm(nombresIncompletos))) return;
+
+    return ejecutar(async () => {
       const hoy = todayInVotingZone();
       if (validateClosingDay(closesDay, hoy)) throw new Error(L.season.errorDay);
       const result = await openSeason({ name, closesDay, season: new Date().getFullYear() });
       const aviso = L.season.opened(result.name || String(new Date().getFullYear()));
       return result.leftovers > 0 ? `${aviso} ${L.season.leftovers(result.leftovers)}` : aviso;
     });
+  };
 
   const cerrar = () =>
     ejecutar(async () => {
@@ -331,7 +368,24 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
                 />
                 <p className="premios-admin__muted">{L.season.closesHint}</p>
 
-                <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void abrir()}>
+                {/* LO QUE FALTA PARA PODER ABRIR, con nombre y apellidos. Una categoría sin nominados no se puede
+                    votar ni se archiva: abrir con ella dentro es empezar una edición rota, y el aviso genérico
+                    («faltan categorías») obligaba a repasar veintiséis a mano para dar con la que era. */}
+                {cargado && votables === 0 ? (
+                  <p className="premios-admin__warn" id="premios-open-blocked">
+                    {L.season.openNoCategories}
+                  </p>
+                ) : nombresIncompletos.length > 0 ? (
+                  <p className="premios-admin__warn">{L.season.openIncomplete(nombresIncompletos)}</p>
+                ) : null}
+
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={busy || !puedeAbrir}
+                  aria-describedby={cargado && !puedeAbrir ? 'premios-open-blocked' : undefined}
+                  onClick={() => void abrir()}
+                >
                   {L.season.openAction}
                 </button>
               </div>

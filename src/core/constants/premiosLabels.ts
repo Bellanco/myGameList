@@ -16,6 +16,13 @@ import { premiosVoiceByPalette } from './themes/premios';
 const PREMIOS_ERROR_LEAD = premiosVoiceByPalette('error');
 const PREMIOS_OFFLINE_LEAD = premiosVoiceByPalette('offline');
 
+/** Una lista de nombres que no se coma la pantalla: con veintiséis categorías, las cuatro primeras y un recuento. */
+function listaCorta(nombres: string[], tope = 4): string {
+  return nombres.length > tope
+    ? `${nombres.slice(0, tope).join(', ')} y ${nombres.length - tope} más`
+    : nombres.join(', ');
+}
+
 export const PREMIOS_UI = {
   /** Nombre del evento. La sección se llama «Premios»; la edición, esto más su año. */
   eventName: 'El reto del jugador',
@@ -266,6 +273,23 @@ export const PREMIOS_UI = {
       closesLabel: 'Último día para votar',
       closesHint: 'Se cierra a las 23:59 de ese día, hora peninsular.',
       openAction: 'Abrir votación',
+      /**
+       * UNA CATEGORÍA A MEDIAS NO IMPIDE ABRIR, PERO SE DICE CUÁL ES. Puede que esa no se use esta edición —las
+       * categorías se quedan de un año para otro y no todas se reparten siempre—, así que se avisa y se deja
+       * decidir. Lo que no se puede votar es lo que no tiene nominados: quien entre no la verá siquiera.
+       * Se nombran: con veintiséis, «falta una» es un acertijo.
+       */
+      openIncomplete: (nombres: string[]) =>
+        nombres.length === 1
+          ? `«${nombres[0]}» está sin completar y no se podrá votar. Si esta edición no la reparte, no pasa nada.`
+          : `${nombres.length} categorías están sin completar y no se podrán votar (${listaCorta(nombres)}). Si esta edición no las reparte, no pasa nada.`,
+      /** El último aviso, con el dedo ya en el botón: es la pregunta, así que va en corto. */
+      openConfirm: (nombres: string[]) =>
+        nombres.length === 1
+          ? `«${nombres[0]}» está sin completar y no se podrá votar. ¿Abrir la votación de todos modos?`
+          : `Hay ${nombres.length} categorías sin completar que no se podrán votar (${listaCorta(nombres)}). ¿Abrir la votación de todos modos?`,
+      /** Esto SÍ impide abrir: sin una sola categoría con nominados no hay nada que votar. */
+      openNoCategories: 'No hay ninguna categoría con nominados: ponlos en «Categorías» antes de abrir la votación.',
       closeAction: 'Cerrar ahora',
       // PUBLICAR, y se dice entero: lo que el gesto hace es sacar los resultados a la luz. «Publicar en el
       // histórico» contaba el efecto secundario —dónde acaba la edición— y dejaba lo principal en la sombra.
