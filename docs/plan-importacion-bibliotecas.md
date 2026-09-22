@@ -140,7 +140,8 @@ import (`platforms` / `genres` / `hours` / `grade`) en **dos grupos independient
 - **`existingGames`** — al **actualizar** uno que ya está en c/v/e/p (`mergeImportedIntoGame`): las
   plataformas y los géneros se **suman** a los que ya tiene (nunca se quita nada) y las horas / la
   nota solo se rellenan **si están vacías** (la nota del usuario manda sobre la del origen). Por
-  defecto, todo menos la nota.
+  defecto, todo menos la nota. En las horas, un **0 guardado cuenta como vacío**: es la casilla sin
+  rellenar, no «cero horas jugadas» (`normalizeHours`).
 
 El **nombre** siempre viaja (sin él no hay juego). Un campo desactivado se **omite** del parche, así
 al combinar (`{...game, ...patch}`) el valor del juego queda intacto. Lógica pura en

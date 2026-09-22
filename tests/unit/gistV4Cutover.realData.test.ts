@@ -71,7 +71,9 @@ function canon(g: GameItem) {
     retry: !!g.retry,
     review: g.review ?? '',
     score: g.score ?? undefined,
-    hours: g.hours ?? undefined,
+    // El 0 es el hueco, no un dato: la escritura lo normaliza a `null` (ver `normalizeHours`), así que un
+    // juego que lo llevara guardado vuelve como «sin horas». Es la limpieza buscada, no una pérdida.
+    hours: g.hours || undefined,
   };
 }
 

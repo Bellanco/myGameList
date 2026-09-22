@@ -4,6 +4,7 @@ import { COMMON_ICONS } from '../../core/constants/icons';
 import type { GameItem, TabId } from '../../model/types/game';
 import type { GameDraft } from '../../viewmodel/useGameListViewModel';
 import { mergeTags, splitTagInput } from '../../core/utils/tags';
+import { normalizeHours } from '../../core/utils/normalize';
 import { Icon } from '../components/Icon';
 import { StarPicker } from '../components/StarPicker';
 import { ScoreDial } from '../components/ScoreDial';
@@ -92,20 +93,24 @@ function isValidYearValue(value: string): boolean {
 }
 
 /**
- * Lee el campo de horas. Devuelve `null` si está vacío (sin dato) y `invalid` si lo escrito no es un número
- * utilizable. La coma decimal vale ("12,5"), y el signo menos no puede llegar hasta aquí: el `onChange` lo filtra.
+ * Lee el campo de horas. Devuelve `null` si está vacío o si es 0 —un cero es la casilla sin rellenar, no «cero
+ * horas jugadas»— e `invalid` si lo escrito no es un número utilizable. La coma decimal vale ("12,5"), y el
+ * signo menos no puede llegar hasta aquí: el `onChange` lo filtra.
+ *
+ * Escribir un 0 NO es un error: el campo lo acepta mientras se teclea ("0,5" empieza por ahí) y simplemente no
+ * guarda nada mientras el número no pase de cero.
  */
 function parseHours(text: string): { invalid: boolean; value: number | null } {
   const trimmed = text.trim();
   if (!trimmed) return { invalid: false, value: null };
   const parsed = Number(trimmed.replace(',', '.'));
   if (!Number.isFinite(parsed) || parsed < 0) return { invalid: true, value: null };
-  return { invalid: false, value: parsed };
+  return { invalid: false, value: normalizeHours(parsed) };
 }
 
-/** Texto del campo de horas a partir del borrador (vacío cuando no hay dato). */
+/** Texto del campo de horas a partir del borrador (vacío cuando no hay dato, y el 0 no lo es). */
 function hoursToText(hours: number | null | undefined): string {
-  return typeof hours === 'number' && Number.isFinite(hours) && hours >= 0 ? String(hours) : '';
+  return normalizeHours(hours) === null ? '' : String(hours);
 }
 
 export function FormModal({ open, draft: initialDraft, currentTab, lookups, findDuplicate, onClose, onSave }: FormModalProps) {

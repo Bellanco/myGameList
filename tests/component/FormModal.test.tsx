@@ -421,3 +421,50 @@ describe('FormModal — native dialog (A11y-1)', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
+
+// Horas: un 0 es la casilla sin rellenar, no «lo jugué cero horas». Ni se guarda ni se pinta de vuelta.
+describe('FormModal — el 0 en horas es el hueco', () => {
+  function renderHours(over: Partial<GameDraft> = {}) {
+    const onSave = vi.fn();
+    render(
+      <FormModal
+        open
+        draft={makeDraft({ id: 1, name: 'Halo', genres: ['RPG'], platforms: ['PC'], score: 5, years: [2024], ...over })}
+        currentTab="c"
+        lookups={NO_LOOKUPS}
+        findDuplicate={() => null}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+    return { onSave, hoursInput: screen.getByPlaceholderText('Ej: 120') as HTMLInputElement };
+  }
+
+  it('guarda null cuando se escribe un 0', async () => {
+    const user = userEvent.setup();
+    const { onSave, hoursInput } = renderHours();
+
+    await user.type(hoursInput, '0');
+    await user.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0][0].hours).toBeNull();
+  });
+
+  // El 0 no es un error de escritura: hay que poder teclearlo para llegar a "0,5".
+  it('deja escribir decimales que empiezan por cero', async () => {
+    const user = userEvent.setup();
+    const { onSave, hoursInput } = renderHours();
+
+    await user.type(hoursInput, '0,5');
+    await user.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    expect(onSave.mock.calls[0][0].hours).toBe(0.5);
+  });
+
+  it('pinta vacío el campo de un juego que llevaba un 0 guardado', () => {
+    const { hoursInput } = renderHours({ hours: 0 });
+
+    expect(hoursInput.value).toBe('');
+  });
+});

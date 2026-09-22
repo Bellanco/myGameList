@@ -14,7 +14,7 @@ const OTRO_DIA = Date.parse('2026-07-26T09:00:00.000Z');
 function game(input: Partial<GameItem> & { id: number; name: string }): GameItem {
   return {
     platforms: ['PC'], genres: ['Acción'], steamDeck: false, review: '', score: 0, years: [],
-    strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0,
+    strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: null,
     _ts: OTRO_DIA,
     ...input,
   } as GameItem;

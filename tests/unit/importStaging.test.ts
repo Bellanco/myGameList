@@ -194,7 +194,7 @@ describe('mergeImportedIntoGame — enriquecer un juego existente', () => {
   it('rellena horas solo si el existente no tiene', () => {
     expect(mergeImportedIntoGame(base({ hours: null }), item({ hours: 5 })).hours).toBe(5);
     expect(mergeImportedIntoGame(base({ hours: 12 }), item({ hours: 5 })).hours).toBe(12); // ya tiene → no se toca
-    expect(mergeImportedIntoGame(base({ hours: 0 }), item({ hours: 5 })).hours).toBe(0); // 0 es información
+    expect(mergeImportedIntoGame(base({ hours: 0 }), item({ hours: 5 })).hours).toBe(5); // 0 es el hueco, no un dato
   });
 });
 
