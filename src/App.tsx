@@ -54,7 +54,6 @@ import { useImportInbox } from './viewmodel/useImportInbox';
 import { useImportFieldPrefs } from './viewmodel/useImportFieldPrefs';
 import { useMountedOnceOpen } from './view/modals/useMountedOnceOpen';
 import { runWhenIdle } from './core/utils/idle';
-import { parseLibraryExporter } from './core/import/libraryExporter';
 import { carryStamps } from './core/utils/gameStamps';
 import { importedToPartialGame, mergeImportedIntoGame } from './core/import/staging';
 import type { ImportedGame, RawExternalGame } from './model/types/import';
@@ -363,6 +362,11 @@ export default function App() {
         notify('err', UI_MESSAGES.import.integrations.parseError);
         return;
       }
+      // El parser entra POR `import()` y no por la cabecera: con su módulo de apoyo (`playniteShared`) son
+      // ~1,8 kB que solo hacen falta cuando alguien elige un fichero, y el presupuesto de arranque va justo
+      // (`BOOT_CRITICAL_BUDGET_KB` en `scripts/ci-validate.js`). Este manejador ya era asíncrono —lee el
+      // fichero—, así que esperar al módulo no añade ninguna espera perceptible.
+      const { parseLibraryExporter } = await import('./core/import/libraryExporter');
       importGames(parseLibraryExporter(json));
     },
     [importGames, notify],
