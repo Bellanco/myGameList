@@ -26,7 +26,7 @@ import {
   setPremiosVisible,
   updateLiveSeason,
 } from '../../../model/repository/premios/premiosSeasonRepository';
-import type { PremiosCategory, PremiosVotingConfig } from '../../../model/types/premios';
+import type { PremiosCategory, PremiosVotingConfig, PremiosWinnersMap } from '../../../model/types/premios';
 import '../../../styles/premios.scss';
 
 const L = PREMIOS_UI.admin;
@@ -49,7 +49,7 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
   const [tab, setTab] = useState<'season' | 'categories' | 'winners' | 'ballots' | 'history'>('season');
   const [config, setConfig] = useState<PremiosVotingConfig | null>(null);
   const [categories, setCategories] = useState<PremiosCategory[]>([]);
-  /** Cuántas categorías tienen ganador marcado: es lo que decide si publicar tiene sentido. */
+  /** Cuántas categorías con nominados tienen ganador marcado: es lo que deja publicar o no. */
   const [marcados, setMarcados] = useState(0);
   /**
    * LA FOTO QUE ESTÁ PUBLICADA en `/api/premios`, para no reescribir KV en cada apertura del panel.
@@ -75,9 +75,13 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
     ]);
     setConfig(nextConfig);
     setCategories(nextCategories);
-    // Los ganadores se leen aquí y no solo en su pestaña: de ellos depende el aviso de publicar, que es la
-    // acción irreversible de esta pantalla.
-    setMarcados(Object.keys(await fetchWinners(nextCategories).catch(() => ({}))).length);
+    // Los ganadores se leen aquí y no solo en su pestaña: de ellos depende que se pueda publicar, que es la
+    // acción irreversible de esta pantalla. Se cuentan CONTRA LAS CATEGORÍAS CON NOMINADOS, que son las únicas
+    // que pueden tener ganador: un ganador suelto de una categoría que se quedó sin nominados no vale por una.
+    const ganadores: PremiosWinnersMap = await fetchWinners(nextCategories).catch(() => ({}));
+    setMarcados(
+      nextCategories.filter((category) => (category.options?.length || 0) > 0 && ganadores[category.id]).length,
+    );
 
     // Y SE REPUBLICA LA FOTO si ha cambiado algo del calendario. Es lo que hace que la entrada aparezca o se
     // retire para quien no ha iniciado sesión, que es casi todo el mundo. Si falla no se interrumpe nada: el
@@ -101,6 +105,13 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
     () => categories.filter((category) => (category.options?.length || 0) > 0).length,
     [categories],
   );
+
+  /**
+   * LAS QUE FALTAN POR MARCAR. Mientras quede una, no se publica: la clasificación sale de cruzar cada voto con
+   * el ganador de su categoría, así que una categoría con nominados y sin ganador archiva esos votos sin puntos
+   * — y al publicar se retiran las papeletas, con lo que ya no hay con qué rehacerla.
+   */
+  const faltanGanadores = Math.max(votables - marcados, 0);
 
   /** ¿Se está ofreciendo la entrada ahora mismo? Con la MISMA función que lo decide en Ajustes y en lo social. */
   const seOfrece = useMemo(() => shouldOfferPremios(config), [config]);
@@ -367,15 +378,30 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
 
             {stage === SEASON_STAGE.PENDING ? (
               <div className="premios-admin__form">
-                {/* LO PRIMERO, SI FALTAN GANADORES: sin ellos la clasificación se archiva a cero, y al publicar
-                    se retiran las papeletas, así que después ya no hay con qué rehacerla. */}
-                {marcados === 0 ? (
-                  <p className="premios-admin__warn">{L.season.publishNoWinners}</p>
-                ) : marcados < votables ? (
-                  <p className="premios-admin__warn">{L.season.publishSomeWinners(marcados, votables)}</p>
-                ) : null}
-                <p className="premios-admin__warn">{L.season.publishWarn}</p>
-                <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void publicar()}>
+                {/* SI FALTAN GANADORES, NO SE PUBLICA: se dice cuántos faltan y el botón queda inerte. Esto era
+                    un aviso que se podía ignorar de un clic, y era el único error de la pantalla sin arreglo
+                    posible — al publicar se retiran las papeletas, así que la clasificación ya no se rehace. */}
+                {faltanGanadores > 0 ? (
+                  <p className="premios-admin__warn" id="premios-publish-blocked">
+                    {L.season.publishBlocked(faltanGanadores, votables)}
+                  </p>
+                ) : (
+                  <>
+                    {votables === 0 ? (
+                      <p className="premios-admin__warn">{L.season.publishNoCategories}</p>
+                    ) : null}
+                    {/* Lo irreversible solo se cuenta cuando se puede hacer: encima de un botón apagado sería
+                        ruido delante del motivo por el que está apagado. */}
+                    <p className="premios-admin__warn">{L.season.publishWarn}</p>
+                  </>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={busy || faltanGanadores > 0}
+                  aria-describedby={faltanGanadores > 0 ? 'premios-publish-blocked' : undefined}
+                  onClick={() => void publicar()}
+                >
                   {L.season.publishAction}
                 </button>
               </div>

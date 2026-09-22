@@ -34,7 +34,7 @@ export type VotingState = (typeof VOTING_STATE)[keyof typeof VOTING_STATE];
  *
  *   NONE    → no hay edición en marcha       → «Abrir votación»
  *   OPEN    → se está votando                → «Cerrar ahora»
- *   PENDING → cerrada y sin publicar         → «Publicar en el histórico»
+ *   PENDING → cerrada y sin publicar         → «Publicar los resultados»
  *
  * Publicar archiva la edición y la deja sin fecha de cierre, así que el ciclo vuelve solo a NONE.
  */

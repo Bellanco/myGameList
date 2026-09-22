@@ -240,7 +240,7 @@ export const PREMIOS_UI = {
           id: 'pending' as const,
           label: 'Cerrada, sin publicar',
           // El fin del ciclo se cuenta AQUÍ, en el paso que lo provoca, en vez de en una frase suelta debajo.
-          hint: 'Toca marcar ganadores y publicarla: al hacerlo pasa al histórico y se vuelve a «Sin edición».',
+          hint: 'Hay que marcar el ganador de cada categoría con nominados para poder publicar: al hacerlo pasa al histórico y se vuelve a «Sin edición».',
         },
       ],
       stageCurrent: 'Estado actual',
@@ -259,18 +259,26 @@ export const PREMIOS_UI = {
       closesHint: 'Se cierra a las 23:59 de ese día, hora peninsular.',
       openAction: 'Abrir votación',
       closeAction: 'Cerrar ahora',
-      publishAction: 'Publicar en el histórico',
+      // PUBLICAR, y se dice entero: lo que el gesto hace es sacar los resultados a la luz. «Publicar en el
+      // histórico» contaba el efecto secundario —dónde acaba la edición— y dejaba lo principal en la sombra.
+      publishAction: 'Publicar los resultados',
       // Publicar es irreversible y destructivo: retira las papeletas y vacía los nominados.
       publishWarn: 'Al publicar se archiva la clasificación, se retiran las papeletas y se vacían los nominados. No se puede deshacer.',
       /**
-       * SIN GANADORES NO HAY PUNTOS. La clasificación se calcula cruzando cada voto con el ganador de su
-       * categoría: publicar sin marcar ninguno archiva una edición con todo el mundo a cero, y como al publicar
-       * se retiran las papeletas, ya no hay con qué recalcularla. Es el único error de esta pantalla que no se
-       * puede arreglar después.
+       * SIN TODOS LOS GANADORES NO SE PUBLICA. La clasificación se calcula cruzando cada voto con el ganador de
+       * su categoría: una categoría con nominados y sin ganador no da puntos a nadie, y como al publicar se
+       * retiran las papeletas, después ya no hay con qué recalcularla. Era el único error de esta pantalla que
+       * no se podía arreglar, así que ahora no se deja cometer: el botón no está hasta marcarlos todos.
        */
-      publishNoWinners: 'No has marcado ningún ganador. Si publicas ahora, la clasificación se archiva con todo el mundo a cero y las papeletas ya no estarán para rehacerla.',
-      publishSomeWinners: (marcados: number, total: number) =>
-        `Vas a publicar con ${marcados} de ${total} categorías con ganador; las demás no darán puntos.`,
+      publishBlocked: (faltan: number, total: number) =>
+        faltan === 1
+          ? `Falta 1 categoría de ${total} por marcar ganador. No se puede publicar hasta marcarlos todos.`
+          : `Faltan ${faltan} categorías de ${total} por marcar ganador. No se puede publicar hasta marcarlos todos.`,
+      /**
+       * El caso raro: una edición sin una sola categoría con nominados. No hay nada que puntuar, pero tampoco
+       * ganador que falte, así que se avisa y se deja publicar.
+       */
+      publishNoCategories: 'No hay ninguna categoría con nominados: se archivaría una edición sin resultados.',
       closesAt: (fecha: string) => `Se cierra el ${fecha}`,
       leftovers: (cuantas: number) => `Se retiraron ${cuantas} papeleta(s) sueltas de una edición anterior.`,
       opened: (nombre: string) => `Edición «${nombre}» abierta.`,
