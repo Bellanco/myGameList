@@ -12,7 +12,7 @@ import { PALETTES } from '../../src/core/constants/palettes';
  * interactuado. Con ocho paletas propias × dos temas, el contraste es justo lo que se rompe sin que nadie se
  * entere —basta con retocar un token de color en `_base.scss`—.
  *
- * Se auditan las DOCE combinaciones sobre cinco pantallas:
+ * Se auditan las DIECISÉIS combinaciones —ocho paletas × dos temas— sobre nueve pantallas:
  *
  *  - La LISTA con una fila desplegada, que es la que más superficie de color tiene: chips de plataforma y género,
  *    notas, insignias, botones de acción y las cajas del detalle.
@@ -26,13 +26,20 @@ import { PALETTES } from '../../src/core/constants/palettes';
  *  - La PUERTA DE ENTRADA del hub social, que tuvo la única barra de progreso de la aplicación: le faltaba el
  *    nombre accesible en las doce combinaciones, y no lo veía nadie porque el hub no se auditaba.
  *  - La RULETA, que es un modal y trae su propio juego de color (marco, pistas, ficha del resultado).
+ *  - El MENÚ de la pestaña de ajustes, tres rótulos flotando sin panel propio sobre el contenido atenuado.
+ *  - El LISTADO DE LOGROS, la pantalla con más color propio de la aplicación (auras de rareza, numerales,
+ *    relieve) y la única donde los cuatro colores de rareza se usan COMO TEXTO.
+ *  - Las dos pantallas de PREMIOS, que se sirven con un Firestore de mentira para que el recorrido no dependa
+ *    de qué edición haya hoy en producción (ver `sirveFirestore`): la PORTADA con la votación abierta —textos
+ *    atenuados, distintivo de estado, barra del borrador y botones sobre el acento— y los RESULTADOS
+ *    publicados, que son la puerta grande de la sección y traen los tres metales del podio.
  *
  * Y, aparte del recorrido de axe, una comprobación del ANILLO DE FOCO: axe NO evalúa contraste no textual, así
  * que el `outline` podía ser invisible —el oro de Mar de estrellas sobre su propio turquesa daba 1,05:1— y los
  * veinticuatro recorridos seguían en verde. Ver `--focus-ring` en `_base.scss`.
  *
  * El fichero va aparte del smoke a propósito: aquel se declara "deliberadamente corto" porque un smoke lento se
- * acaba ignorando, y esto son más de sesenta recorridos.
+ * acaba ignorando, y esto son ciento setenta y seis recorridos.
  */
 
 // Las paletas SE LEEN DEL REGISTRO, no se listan aquí: una lista a mano se queda corta en cuanto alguien añade
@@ -150,16 +157,147 @@ async function puertaDelHubSocial(page: Page): Promise<void> {
 }
 
 /**
- * La portada de los premios, SIN SESIÓN, que es lo que ve cualquiera que llegue por un enlace.
+ * FIRESTORE, SERVIDO DESDE AQUÍ.
  *
- * Es lo único de la sección que se puede auditar sin datos: votar exige sesión y una edición abierta, y montar
- * las dos cosas aquí convertiría un recorrido de contraste en un test de integración con Firestore. Lo que sí
- * cubre —y es lo que importa para el color— son los dos textos atenuados, el distintivo de estado y los botones
- * sobre el acento, que son los papeles nuevos que trae la sección.
+ * La sección de premios lee su calendario —y el archivo publicado— de Firestore REAL y SIN SESIÓN: la
+ * configuración de la edición es la única lectura pública de la porra (ver `fetchVotingConfig`). Auditar contra
+ * ese servidor hace que el recorrido enseñe una pantalla distinta según el mes: con una edición abierta se pinta
+ * la portada, y sin ninguna en marcha `/premios` salta a los resultados publicados (ver el `Navigate` de
+ * `PremiosHub`). Eso es lo que dejó esta auditoría con dieciséis casos en rojo al publicarse la edición de 2025
+ * —el título de la portada ya no existía en esa dirección—, y ni uno de los dieciséis hablaba de color.
+ *
+ * Se responde al `batchGet` del SDK con los documentos que se le den, en el formato REST de Firestore: `found`
+ * con los campos tipados, o `missing` para lo que no se sirva. Lo que no sea un `batchGet` —las consultas que
+ * resuelven los perfiles de la clasificación— se contesta vacío: sin sesión tampoco llegarían a ninguna parte.
+ *
+ * Así cada recorrido FIJA el estado que quiere auditar, y de paso audita los que en producción duran semanas
+ * sueltas: una votación abierta no está abierta casi nunca.
+ */
+const campoTexto = (value: string) => ({ stringValue: value });
+const campoEntero = (value: number) => ({ integerValue: String(value) });
+const campoDecimal = (value: number) => ({ doubleValue: value });
+const campoBool = (value: boolean) => ({ booleanValue: value });
+const campoMapa = (fields: Record<string, unknown>) => ({ mapValue: { fields } });
+const campoLista = (values: unknown[]) => ({ arrayValue: { values } });
+
+type DocumentosDePrueba = Record<string, Record<string, unknown>>;
+
+async function sirveFirestore(page: Page, documentos: DocumentosDePrueba): Promise<void> {
+  await page.route('**/firestore.googleapis.com/**', async (route) => {
+    const cuerpo = route.request().postDataJSON() as { documents?: string[] } | null;
+    const readTime = new Date().toISOString();
+    const salida = (cuerpo?.documents || []).map((name) => {
+      // El nombre llega completo (`projects/…/documents/premiosConfig/voting`); la clave es lo que va detrás.
+      const ruta = name.split('/documents/')[1] || '';
+      const fields = documentos[ruta];
+      return fields ? { found: { name, fields, createTime: readTime, updateTime: readTime }, readTime } : { missing: name, readTime };
+    });
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(salida) });
+  });
+}
+
+/** Una edición ABIERTA, con su cierre a una semana vista: es el estado que más pinta la portada. */
+function edicionAbierta(): DocumentosDePrueba {
+  const cierre = Date.now() + 7 * 24 * 60 * 60 * 1000;
+  return {
+    'premiosConfig/voting': {
+      isOpen: campoBool(true),
+      season: campoEntero(2026),
+      seasonId: campoTexto('2026'),
+      seasonName: campoTexto('Premios de prueba 2026'),
+      closesAt: campoTexto(new Date(cierre).toISOString()),
+      closesAtMillis: campoEntero(cierre),
+      visible: campoBool(true),
+    },
+  };
+}
+
+/**
+ * Una edición YA PUBLICADA: sin plazo abierto y con archivo. Es lo que ve hoy cualquiera que entre en la
+ * sección, porque la portada sin edición en marcha manda derecha a los resultados.
+ *
+ * El archivo va con lo que hace falta para que la pantalla enseñe TODO lo suyo: un empate en el primer puesto
+ * —dos nombres en un escalón y el rótulo de empate—, los tres metales del podio, filas por debajo del podio y
+ * un par de categorías con ganador.
+ */
+function edicionPublicada(): DocumentosDePrueba {
+  const filaDeClasificacion = (rank: number, profileId: string, nickname: string, points: number) =>
+    campoMapa({ rank: campoEntero(rank), profileId: campoTexto(profileId), nickname: campoTexto(nickname), points: campoDecimal(points) });
+  const categoriaArchivada = (id: string, es: string, en: string, winner: string, opciones: string[]) =>
+    campoMapa({
+      id: campoTexto(id),
+      title: campoMapa({ es: campoTexto(es), en: campoTexto(en) }),
+      winner: campoTexto(winner),
+      weight: campoEntero(1),
+      options: campoLista(opciones.map((name) => campoMapa({ id: campoTexto(name.toLowerCase()), name: campoTexto(name) }))),
+    });
+
+  return {
+    'premiosConfig/voting': {
+      isOpen: campoBool(false),
+      season: campoEntero(2025),
+      seasonId: campoTexto('2025'),
+      seasonName: campoTexto('Premios de prueba 2025'),
+      lastPublishedId: campoTexto('2025'),
+      visible: campoBool(true),
+    },
+    'premiosResults/2025': {
+      season: campoEntero(2025),
+      seasonId: campoTexto('2025'),
+      name: campoTexto('Premios de prueba 2025'),
+      totalBallots: campoEntero(14),
+      winners: campoMapa({ juego: campoTexto('hollow knight'), direccion: campoTexto('celeste') }),
+      categoriesSnapshot: campoLista([
+        categoriaArchivada('juego', 'Juego del año', 'Game of the year', 'hollow knight', ['Hollow Knight', 'Celeste']),
+        categoriaArchivada('direccion', 'Mejor dirección', 'Best direction', 'celeste', ['Celeste', 'Hades']),
+      ]),
+      leaderboard: campoLista([
+        filaDeClasificacion(1, 'perfil-uno', 'Primera', 16),
+        filaDeClasificacion(1, 'perfil-dos', 'Segunda', 16),
+        filaDeClasificacion(2, 'perfil-tres', 'Tercera', 14.5),
+        filaDeClasificacion(3, 'perfil-cuatro', 'Cuarta', 12),
+        filaDeClasificacion(4, 'perfil-cinco', 'Quinta', 9),
+      ]),
+    },
+  };
+}
+
+/**
+ * La portada de los premios, SIN SESIÓN y CON LA VOTACIÓN ABIERTA, que es lo que ve cualquiera que llegue por un
+ * enlace mientras hay algo en marcha.
+ *
+ * Es lo único de la sección que se puede auditar sin datos propios: votar exige sesión, y montarla aquí
+ * convertiría un recorrido de contraste en un test de integración con Firestore. Lo que sí cubre —y es lo que
+ * importa para el color— son los dos textos atenuados, el distintivo de estado, la barra del borrador y los
+ * botones sobre el acento, que son los papeles nuevos que trae la sección.
  */
 async function portadaDePremios(page: Page): Promise<void> {
+  await sirveFirestore(page, edicionAbierta());
   await page.goto('/premios');
   await expect(page.locator('.premios-portada__title')).toBeVisible();
+  // EL DISTINTIVO, COMPROBADO Y NO SUPUESTO: si el remedo de Firestore dejara de valer, la portada seguiría
+  // pintándose —en su estado vacío, sin distintivo, sin botón y sin cupo— y esta auditoría pasaría auditando
+  // media pantalla. Con esto, un remedo roto se ve como lo que es.
+  await expect(page.locator('.premios-portada__badge')).toBeVisible();
+  await animacionesDeEntradaTerminadas(page);
+}
+
+/**
+ * LOS RESULTADOS PUBLICADOS, que son la puerta grande de la sección: fuera de temporada `/premios` lleva aquí
+ * solo, así que es la pantalla de premios que ve casi todo el año quien entra.
+ *
+ * Trae color PROPIO que no hay en ninguna otra parte —los tres metales del podio, el disco del trofeo, el
+ * distintivo de la fila propia— y una densidad de texto atenuado (puntos, empates, recuentos) que es justo lo
+ * que se rompe al retocar un token. Se llega por `/premios` a propósito, y no por la dirección del archivo: así
+ * el recorrido comprueba de paso que la portada sigue mandando aquí cuando no hay edición en marcha.
+ */
+async function resultadosDePremios(page: Page): Promise<void> {
+  await sirveFirestore(page, edicionPublicada());
+  await page.goto('/premios');
+  await expect(page.locator('.premios-results__podium')).toBeVisible();
+  // Los tres escalones del podio y el empate del primero: es el archivo servido arriba, y comprobarlo aquí
+  // impide auditar un podio a medias si el remedo dejara de responder.
+  await expect(page.locator('.premios-results__step')).toHaveCount(3);
   await animacionesDeEntradaTerminadas(page);
 }
 
@@ -342,6 +480,7 @@ const PANTALLAS = [
   { nombre: 'ruleta', amplia: false, abrir: ruletaAbierta },
   { nombre: 'logros', amplia: true, abrir: listadoDeLogros },
   { nombre: 'premios', amplia: false, abrir: portadaDePremios },
+  { nombre: 'premios · resultados', amplia: false, abrir: resultadosDePremios },
 ] as const;
 
 for (const palette of PALETAS) {
