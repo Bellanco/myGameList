@@ -5,6 +5,7 @@
 import { normalizeName } from '../utils/normalizeName';
 import { normalizeTag, safeTrim } from '../security/sanitize';
 import { uniqueCaseInsensitive } from '../utils/compare';
+import { normalizeHours } from '../utils/normalize';
 import { resolveGrade } from '../utils/scoreScale';
 import { DEFAULT_IMPORT_FIELD_PREFS } from './fieldPrefs';
 import type { GameItem } from '../../model/types/game';
@@ -82,7 +83,7 @@ export function addGamesToInbox(
       existing.genres = uniqueCaseInsensitive([...existing.genres, ...genres]);
       if (!existing.sources.includes(source)) existing.sources = [...existing.sources, source];
       if (externalId) existing.externalIds = { ...existing.externalIds, [source]: externalId };
-      const rawHours = raw.hours ?? null;
+      const rawHours = normalizeHours(raw.hours);
       const rawGrade = raw.grade ?? null;
       if ((existing.hours ?? null) === null && rawHours !== null) existing.hours = rawHours;
       if ((existing.grade ?? null) === null && rawGrade !== null) existing.grade = rawGrade;
@@ -101,7 +102,7 @@ export function addGamesToInbox(
       sources: [source],
       externalIds: externalId ? { [source]: externalId } : undefined,
       coverUrl: raw.coverUrl || undefined,
-      hours: raw.hours ?? null,
+      hours: normalizeHours(raw.hours),
       suggestedTab: raw.suggestedTab,
       grade: raw.grade ?? null,
       existsInLists: existsInLists || undefined,
@@ -141,7 +142,8 @@ export function removeFromInbox(inbox: ImportInbox, id: number, now: number): Im
 
 /**
  * Fusión para ENRIQUECER un juego que YA existe en las listas con lo aportado por el importado: une
- * géneros y plataformas (sin duplicar) y rellena las horas si el existente no tenía. NO toca el nombre.
+ * géneros y plataformas (sin duplicar) y rellena las horas si el existente no tenía —un 0 guardado es
+ * «no tenía», así que también se rellena. NO toca el nombre.
  * Devuelve solo los campos a actualizar (para combinar con el juego existente y abrir el formulario).
  *
  * `fields` (preferencia global "qué datos traer") decide qué campos entran: los desactivados se OMITEN del
@@ -156,7 +158,7 @@ export function mergeImportedIntoGame(
   const patch: Partial<GameItem> = {};
   if (fields.genres) patch.genres = uniqueCaseInsensitive([...(existing.genres || []), ...item.genres]);
   if (fields.platforms) patch.platforms = uniqueCaseInsensitive([...(existing.platforms || []), ...item.platforms]);
-  if (fields.hours) patch.hours = (existing.hours ?? null) === null ? (item.hours ?? null) : existing.hours;
+  if (fields.hours) patch.hours = normalizeHours(existing.hours) ?? normalizeHours(item.hours);
   if (fields.grade && typeof item.grade === 'number' && resolveGrade(existing) === 0) patch.grade = item.grade;
   return patch;
 }
@@ -177,7 +179,7 @@ export function importedToPartialGame(
   const partial: Partial<GameItem> = { name: item.name };
   if (fields.genres) partial.genres = [...item.genres];
   if (fields.platforms) partial.platforms = [...item.platforms];
-  if (fields.hours) partial.hours = item.hours ?? null;
+  if (fields.hours) partial.hours = normalizeHours(item.hours);
   if (fields.grade && typeof item.grade === 'number') partial.grade = item.grade;
   return partial;
 }

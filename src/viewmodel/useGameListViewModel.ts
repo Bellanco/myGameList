@@ -4,7 +4,7 @@ import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
 import { reabrirLaPregunta } from '../core/utils/coverDone';
 import { tagKey } from '../core/utils/tags';
 import { DEFAULT_SORT, nextSort, sortGames } from '../core/utils/sortGames';
-import { clampRating } from '../core/utils/normalize';
+import { clampRating, normalizeHours } from '../core/utils/normalize';
 import { clampGrade, gradeFromStars, resolveStars, starsFromGrade } from '../core/utils/scoreScale';
 import { resolveReviewedAt } from '../core/utils/reviewDate';
 import { nextVersion, resolveGradedAt, stampEntry } from '../core/utils/gameStamps';
@@ -83,9 +83,9 @@ function toNormalizedDraft(game?: Partial<GameItem>): GameDraft {
     genres: game?.genres || [],
     platforms: game?.platforms || [],
     review: game?.review || '',
-    // `null` para cualquier valor que no sea un número de horas usable (ausente, NaN heredado, negativo): el
-    // campo del formulario se pinta vacío en vez de con un "NaN" que además viajaría al guardar.
-    hours: Number.isFinite(Number(game?.hours)) && Number(game?.hours) >= 0 ? Number(game?.hours) : null,
+    // `null` para cualquier valor que no sea un número de horas usable (ausente, NaN heredado, negativo o 0):
+    // el campo del formulario se pinta vacío en vez de con un "NaN" que además viajaría al guardar.
+    hours: normalizeHours(game?.hours),
     scored: Boolean(game?.scored),
   };
 }
@@ -486,13 +486,9 @@ export function useGameListViewModel() {
         replayable: nextDraft.replayable,
         retry: nextDraft.retry,
         // Horas: el formulario ya impide teclear un negativo, pero por aquí también entran los importados y los
-        // datos antiguos. Lo que no sea un número finito y >= 0 se guarda como "sin dato" (null), no como 0: un
-        // cero es una afirmación ("lo jugué 0 horas") y falsearía las medias de las estadísticas.
-        hours: (() => {
-          if (nextDraft.hours === null) return null;
-          const parsedHours = Number(nextDraft.hours);
-          return Number.isFinite(parsedHours) && parsedHours >= 0 ? parsedHours : null;
-        })(),
+        // datos antiguos. Lo que no sea un número finito y > 0 se guarda como "sin dato" (null), incluido el 0:
+        // un cero no es una afirmación ("lo jugué 0 horas"), es la casilla sin rellenar.
+        hours: normalizeHours(nextDraft.hours),
         listedAt: existing ? (existing.listedAt ?? existing._ts ?? now) : now,
         // Fecha de la RESEÑA: se estrena solo cuando cambia el texto. Editar la nota, mover de lista o importar
         // datos no la mueven (a diferencia de `_ts`, que es el reloj del merge). Es la que publica el canal

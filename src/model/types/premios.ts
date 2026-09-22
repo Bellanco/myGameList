@@ -50,6 +50,11 @@ export interface PremiosCategory {
   orderIndex?: number;
   isActive?: boolean;
   /**
+   * El documento VACÍO que queda al borrar la última categoría con título: una colección sin documentos deja de
+   * existir en Firestore. No se vota, no se archiva y no puede tener ganador (ver `core/premios/archivable`).
+   */
+  isPlaceholder?: boolean;
+  /**
    * Ganador EMBEBIDO. Solo en archivos históricos y datos sin migrar: hoy los ganadores viven en
    * `premiosAdmin/winners`, porque la colección de categorías es de lectura abierta —hace falta para votar— y un
    * ganador aquí sería un ganador publicado antes de tiempo.

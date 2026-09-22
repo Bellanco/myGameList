@@ -1357,7 +1357,9 @@ export const GameTable = memo(function GameTable({
                             <div>{renderTags(yearsDesc(game.years), 'chip-generic')}</div>
                           </div>
                         )}
-                        {(currentTab === 'c' || currentTab === 'v') && showHours && game.hours !== null && (
+                        {/* 0 horas es un hueco, no un dato: se oculta igual que cuando no hay horas anotadas (mismo
+                            criterio que `hoursOf` en core/achievements/metrics.ts). */}
+                        {(currentTab === 'c' || currentTab === 'v') && showHours && (game.hours ?? 0) > 0 && (
                           <div className="detail-box">
                             <span className="detail-label">{UI_MESSAGES.detail.playtime}</span>
                             <div>{UI_MESSAGES.detail.hoursSuffix(String(game.hours).replace('.', ','))}</div>

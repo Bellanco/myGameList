@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { ballotIsUnchanged } from '../../../core/premios/ballotEdits';
 import { votesToSelections } from '../../../model/repository/premios/premiosBallotRepository';
 import { ensureLightAccount } from '../../../model/repository/lightAccountRepository';
 import { signInWithGoogle, subscribeSocialAuth } from '../../../model/repository/firebaseGateway';
 import type { SocialAuthUser } from '../../../model/repository/firebaseClient';
+import { areResultsOffered, SEASON_STAGE } from '../../../core/premios/votingSchedule';
 import { matchPremiosRoute, panelNeedsSession, PREMIOS_ROUTES } from '../../../viewmodel/premios/premiosRoutes';
 import { usePremiosEdition } from '../../../viewmodel/premios/usePremiosEdition';
 import { usePremiosProfiles } from '../../../viewmodel/premios/usePremiosFaces';
@@ -163,19 +164,35 @@ export function PremiosHub() {
 
   const enFlujo = panelNeedsSession(route.panel);
   const necesitaSesion = !user && enFlujo;
+  /** ¿Se ofrece ir a los resultados? Solo si no hay edición en marcha; el porqué, en `areResultsOffered`. */
+  const hasResults = areResultsOffered(edition.config);
+
   /**
-   * ¿Se ofrece ir a los resultados?
+   * SIN EDICIÓN EN MARCHA, LA SECCIÓN SON LOS RESULTADOS. La portada no tenía nada que contar —«ahora mismo no
+   * hay ninguna edición» y un botón para ir a lo único que hay— así que se va directa al último archivo
+   * publicado. Se reemplaza la entrada en el historial en vez de apilarla: volver tiene que salir de la sección,
+   * no rebotar aquí.
    *
-   * Hay archivo publicado Y no se está votando. Mientras el plazo está abierto, lo publicado es de la edición
-   * ANTERIOR, y ofrecerlo junto al botón de votar se lee como «los resultados de esto», que aún no existen.
-   * `/premios/resultados` sigue respondiendo: esto decide qué se ofrece, no a dónde se puede llegar.
+   * Salvo cuando se llega desde los propios resultados: el «volver» de esa pantalla aterriza aquí a propósito y
+   * devolverlo de un salto sería dejarlo encerrado (ver `PremiosResultsScreen.volver`).
    */
-  const hasResults = Boolean(edition.config?.lastPublishedId) && !edition.votingOpen;
+  const vueltaDeResultados = Boolean((location.state as { fromResults?: boolean } | null)?.fromResults);
+  if (route.panel === 'portada' && hasResults && !vueltaDeResultados) {
+    return <Navigate to={PREMIOS_ROUTES.results} replace />;
+  }
+
+  /**
+   * REPASAR LO VOTADO NO CADUCA. La papeleta es suya, ya está enviada y las reglas la dejan leer sin mirar el
+   * plazo (`premiosBallots`: `allow read: if isOwner(...)`), así que cerrar la votación cierra VOTAR y CORREGIR,
+   * no mirar. Antes, quien entraba con la edición cerrada se topaba con el cartel de «la votación está cerrada»
+   * y sus votos se quedaban dentro, hasta que la publicación los borraba para siempre.
+   */
+  const puedeRepasar = route.panel === 'papeleta' && Boolean(edition.ballot);
 
   // LAS DOS PUERTAS POR LAS QUE NO SE PUEDE SEGUIR, comprobadas antes de pintar el formulario: llegar con el
   // plazo cerrado y volver sin correcciones. Enseñar la papeleta en cualquiera de los dos casos sería ofrecer un
   // botón que las reglas van a rechazar.
-  const fueraDePlazo = enFlujo && !edition.votingOpen;
+  const fueraDePlazo = enFlujo && !edition.votingOpen && !puedeRepasar;
   const sinCorrecciones = enFlujo && Boolean(edition.ballot) && !edition.canEdit && edition.votingOpen;
 
   return (
@@ -183,7 +200,11 @@ export function PremiosHub() {
       {necesitaSesion ? (
         <PremiosIdentificate signingIn={signingIn} error={signInError} onSignIn={() => void handleSignIn()} />
       ) : fueraDePlazo ? (
-        <PremiosCerrada scheduled={edition.stage === 'none' && !hasResults} hasResults={hasResults} />
+        <PremiosCerrada
+          scheduled={edition.stage === SEASON_STAGE.NONE && !hasResults}
+          hasResults={hasResults}
+          hasBallot={Boolean(edition.ballot)}
+        />
       ) : route.panel === 'papeleta' && !edition.ballot ? (
         // Pedir la papeleta sin haber votado —una dirección escrita a mano— enseñaba una rejilla entera de
         // «sin votar» como si fuera lo elegido. La portada dice lo que de verdad hay.
@@ -231,10 +252,7 @@ export function PremiosHub() {
         <PremiosEnviada
           displayName={edition.ballot?.userDisplayName || user?.displayName || ''}
           remainingOpportunities={edition.remainingOpportunities}
-          canEdit={edition.canEdit}
-          hasResults={hasResults}
           unchanged={sinCambios}
-          hasSocialAccount={voter.hasSocialAccount}
         />
       ) : route.panel === 'votar' ? (
         <PremiosVoteScreen

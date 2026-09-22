@@ -10,6 +10,7 @@
  * público de los ganadores es el archivo publicado.
  */
 import { deleteDoc, deleteField, doc, getDoc, setDoc, writeBatch } from 'firebase/firestore/lite';
+import { resolveWinnerId } from '../../../core/premios/archivable';
 import type { PremiosCategory, PremiosWinnersMap } from '../../types/premios';
 import {
   ADMIN_COLLECTION,
@@ -67,9 +68,11 @@ export async function saveWinners(
   const writable = (categories || []).filter((category) => category?.id && category.options?.length > 0);
   const skipped = (categories || []).length - writable.length;
 
+  // Y SE CAEN LOS GANADORES HUÉRFANOS: se marcó uno y después se le quitó ese nominado a la categoría. El id
+  // seguía en el mapa, así que la categoría pasaba por marcada cuando en el recuento no puntúa a nadie.
   const clean: PremiosWinnersMap = {};
   writable.forEach((category) => {
-    const optionId = winners?.[category.id];
+    const optionId = resolveWinnerId(category, winners?.[category.id]);
     if (optionId) clean[category.id] = optionId;
   });
 

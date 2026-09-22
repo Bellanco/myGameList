@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
-import { daysUntil } from '../../../core/premios/votingSchedule';
+import { daysUntil, getSeasonStage, SEASON_STAGE } from '../../../core/premios/votingSchedule';
 import { getSeasonLabel } from '../../../core/premios/seasonId';
 import { PREMIOS_ROUTES, votePath } from '../../../viewmodel/premios/premiosRoutes';
 import { PremiosCompartir } from './PremiosCompartir';
@@ -57,6 +57,13 @@ export function PremiosPortada({
   const dias = daysUntil(config?.closesAtMillis ?? null);
   const nombre = getSeasonLabel({ name: config?.seasonName, season: config?.season }) || PREMIOS_UI.eventName;
 
+  /**
+   * CERRADA Y ESPERANDO EL RESULTADO. Es un estado propio y no «aquí no hay nada»: hay una edición, ya votada, y
+   * lo que se está haciendo es aguardar a que se publique. La portada lo contaba con el cartel de enero —«ahora
+   * mismo no hay ninguna edición en marcha»— justo debajo del botón de ver los votos que acababas de emitir.
+   */
+  const esperando = getSeasonStage(config) === SEASON_STAGE.PENDING;
+
   // EL CARTEL SE CENTRA EN LO QUE QUEDA DE PANTALLA. Pegado al techo, con media pantalla vacía debajo, la
   // portada se leía como el principio de algo que no llega; centrado, es un cartel.
   const sectionRef = useRef<HTMLElement | null>(null);
@@ -74,12 +81,16 @@ export function PremiosPortada({
           medio; separados, el cartel mide lo que mide y se queda en el centro. */}
       <div className="premios-portada__card">
       <h2 className="premios-portada__title">{nombre}</h2>
-      <p className="premios-portada__lead">{L.lead}</p>
+      <p className="premios-portada__lead">{esperando ? L.leadAwaiting : L.lead}</p>
 
       {votingOpen ? (
         <p className="premios-portada__state">
           <span className="premios-portada__badge">{L.openNow}</span>
           {dias !== null ? <span>{dias === 0 ? L.lastDay : L.daysLeft(dias)}</span> : null}
+        </p>
+      ) : esperando ? (
+        <p className="premios-portada__state">
+          <span className="premios-portada__badge is-waiting">{L.closed}</span>
         </p>
       ) : null}
 
@@ -87,9 +98,12 @@ export function PremiosPortada({
         {/* CON SESIÓN SE VOTA, SIN ELLA SE ENTRA, y en el mismo sitio: quien no ha entrado ve el botón de
             identificarse donde el resto ve el de votar, y al volver de Google se encuentra la portada como
             estaba, ya con su papeleta. Los RESULTADOS no dependen de esto: se ven sin cuenta. */}
-        {votingOpen && signedIn ? (
+        {/* SIN OPORTUNIDADES NO SE INVITA A VOTAR. Con la papeleta enviada y el cupo agotado, este botón seguía
+            ahí diciendo «empezar a votar»: llevaba al formulario y al enviar lo rechazaban las reglas. Quien ya
+            votó y no puede corregir solo tiene una cosa que hacer aquí, y es mirar lo que votó. */}
+        {votingOpen && signedIn && (!hasBallot || canEdit) ? (
           <Link className="btn btn-primary" to={votePath(1)}>
-            {hasBallot && canEdit ? L.edit : votedCount > 0 ? L.resume : L.start}
+            {hasBallot ? L.edit : votedCount > 0 ? L.resume : L.start}
           </Link>
         ) : null}
         {votingOpen && !signedIn ? (
@@ -101,10 +115,11 @@ export function PremiosPortada({
             dice «ver los resultados» al lado del de votar se lee como si fueran los de esta — que todavía no
             existen. Vuelve en cuanto se cierra el plazo. El enlace directo sigue funcionando para quien lo
             tenga. */}
-        {/* REPASAR LO VOTADO, sin pasar por el formulario de envío: lleva a la papeleta en modo lectura. Solo a
-            quien tiene cuenta social, que es quien puede volver sobre ella; con una sola oportunidad la papeleta
-            ya está cerrada al enviarla. */}
-        {hasBallot && hasSocialAccount ? (
+        {/* REPASAR LO VOTADO, sin pasar por el formulario de envío: lleva a la papeleta en modo lectura. A TODO
+            EL QUE VOTÓ, y no solo a quien tiene cuenta social como al principio: mirar no gasta oportunidad
+            —la pantalla no lleva ni nombre ni botón de enviar—, y para quien votó con cuenta ligera es lo único
+            que puede hacer aquí, además de lo último que queda de su papeleta antes de que se publique. */}
+        {hasBallot ? (
           <Link className="btn" to={PREMIOS_ROUTES.ballot}>
             {PREMIOS_UI.enviada.see}
           </Link>
@@ -124,8 +139,8 @@ export function PremiosPortada({
 
       {!votingOpen && !hasResults ? (
         <p className="premios-portada__empty">
-          {L.empty}
-          <span>{L.emptyHint}</span>
+          {esperando ? L.awaiting : L.empty}
+          {esperando ? null : <span>{L.emptyHint}</span>}
         </p>
       ) : null}
 

@@ -12,7 +12,7 @@ const VIEJO = Date.parse('2026-05-13T07:19:00.000Z');
 function game(input: Partial<GameItem> & { id: number; name: string }): GameItem {
   return {
     platforms: [], genres: [], steamDeck: false, review: '', score: 0, years: [],
-    strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0,
+    strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: null,
     _ts: VIEJO,
     ...input,
   } as GameItem;

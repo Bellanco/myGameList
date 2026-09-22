@@ -21,8 +21,8 @@ import {
   writeBatch,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore/lite';
+import { archivableCategories, categoriesMissingWinner } from '../../../core/premios/archivable';
 import { buildScheduleFields } from '../../../core/premios/closingDate';
-import { hasTitle } from '../../../core/premios/localize';
 import { hasAward } from '../../../core/premios/awards';
 import { computeLeaderboard } from '../../../core/premios/scoring';
 import { getSeasonId, getSeasonLabel, toSeasonId } from '../../../core/premios/seasonId';
@@ -133,15 +133,14 @@ export async function readLiveEdition(): Promise<LiveEdition> {
   ]);
 
   const ballots = ballotsSnap.docs.map((d) => ({ userId: d.id, ...d.data() })) as PremiosBallot[];
-  const allCategories = categoriesSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as Array<
-    PremiosCategory & { isPlaceholder?: boolean }
-  >;
+  const allCategories = categoriesSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as PremiosCategory[];
 
   // Para el archivo solo cuentan las categorías votables: un placeholder sin título ni nominados solo añadiría
-  // filas vacías al histórico.
-  const categories = allCategories
-    .filter((cat) => !cat.isPlaceholder && hasTitle(cat) && (cat.options?.length || 0) > 0)
-    .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+  // filas vacías al histórico. El criterio es el de `archivable`, compartido con el panel: si el panel exigiera
+  // ganador a una categoría que aquí no entra, no habría forma de publicar.
+  const categories = archivableCategories(allCategories).sort(
+    (a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0),
+  );
 
   return { ballots, categories, ballotDocs: ballotsSnap.docs, categoryDocs: categoriesSnap.docs };
 }
@@ -288,6 +287,10 @@ export interface OpenSeasonParams {
  * LA MESA SE LIMPIA ANTES DE EMPEZAR. Solo se abre cuando no hay edición en marcha, así que cualquier papeleta
  * que siga ahí es un resto de la anterior —una publicación a medias, una prueba hecha a mano— y contaminaría la
  * nueva: entraría tal cual en el siguiente archivo, y además su dueño no podría votar por el bloqueo de re-voto.
+ *
+ * Y LA DEJA A LA VISTA. Abrir una edición y enseñarla son el mismo gesto: al recoger la anterior el interruptor
+ * se queda en «Oculta», y sin esto la votación nueva arrancaba escondida —abierta, contando días y sin que nadie
+ * la viera en Ajustes ni en el espacio social— hasta que alguien se acordaba de volver a encenderlo.
  */
 export async function openSeason({ name, closesDay, season }: OpenSeasonParams): Promise<{
   seasonId: string;
@@ -317,6 +320,7 @@ export async function openSeason({ name, closesDay, season }: OpenSeasonParams):
     await votingDocRef(),
     {
       isOpen: true,
+      visible: true,
       season: year,
       seasonId: id,
       seasonName: nombre,
@@ -486,6 +490,19 @@ export async function publishAndArchiveSeason({
 
   // 1 y 2. Construir y guardar el archivo.
   const resolved = winners || (await fetchWinners(categories));
+
+  // 1bis. SIN TODOS LOS GANADORES NO SE PUBLICA, y se comprueba AQUÍ además de en el panel: el botón mira la
+  //       foto que cargó la pantalla, y esta comprobación mira el dato —el mismo motivo por el que existe
+  //       `readLiveEdition`—. Cubre la pestaña abierta desde ayer y al segundo administrador que acaba de
+  //       cambiar los nominados. Una categoría sin ganador archiva sus votos sin puntos, y al publicar se
+  //       retiran las papeletas: después ya no hay con qué rehacer la clasificación.
+  const sinGanador = categoriesMissingWinner(categories, resolved);
+  if (sinGanador.length > 0) {
+    throw new Error(
+      `No se puede publicar: ${sinGanador.length} categoría(s) con nominados y sin ganador marcado.`,
+    );
+  }
+
   const snapshot = buildSeasonSnapshot({ season, categories, ballots, winners: resolved, seasonId, seasonName });
 
   await setDoc(doc(firestore, RESULTS_COLLECTION, snapshot.seasonId), {
@@ -535,11 +552,15 @@ export async function publishAndArchiveSeason({
   }
   if (opsInBatch > 0) await batch.commit();
 
-  // 5. Cerrar el ciclo.
+  // 5. Cerrar el ciclo. Y DEVOLVER LA ENTRADA AL CALENDARIO: abrir la edición la puso a la vista a mano, y ese
+  //    «sí» explícito la habría dejado en el menú para siempre. Sin el campo manda el calendario, que enseña los
+  //    resultados recién publicados y retira la entrada al cabo de un mes (ver `core/premios/visibility`). Quien
+  //    quiera recogerla antes —o dejarla puesta— sigue teniendo el interruptor del panel.
   await setDoc(
     await votingDocRef(),
     {
       isOpen: false,
+      visible: deleteField(),
       season: season + 1,
       seasonId: '',
       seasonName: '',

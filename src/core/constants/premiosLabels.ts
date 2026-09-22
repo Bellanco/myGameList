@@ -16,6 +16,13 @@ import { premiosVoiceByPalette } from './themes/premios';
 const PREMIOS_ERROR_LEAD = premiosVoiceByPalette('error');
 const PREMIOS_OFFLINE_LEAD = premiosVoiceByPalette('offline');
 
+/** Una lista de nombres que no se coma la pantalla: con veintiséis categorías, las cuatro primeras y un recuento. */
+function listaCorta(nombres: string[], tope = 4): string {
+  return nombres.length > tope
+    ? `${nombres.slice(0, tope).join(', ')} y ${nombres.length - tope} más`
+    : nombres.join(', ');
+}
+
 export const PREMIOS_UI = {
   /** Nombre del evento. La sección se llama «Premios»; la edición, esto más su año. */
   eventName: 'El reto del jugador',
@@ -52,6 +59,14 @@ export const PREMIOS_UI = {
     // Sin edición abierta ni resultados: es enero y aquí no hay nada. Se dice sin dramatismo.
     empty: 'Ahora mismo no hay ninguna edición en marcha.',
     emptyHint: 'Cuando se abra la siguiente, aparecerá aquí.',
+    // CERRADA Y CONTANDO, que NO es «aquí no hay nada»: hay una edición, ya votada, y lo que se está haciendo es
+    // esperar el resultado. Decirle a quien acaba de votar que no hay ninguna edición en marcha le deja pensando
+    // que su papeleta se ha perdido.
+    // Una línea y no dos: cuándo se publican los resultados no se sabe, así que prometerlo «en cuanto estén
+    // listos» no añadía nada que no dijera ya «ha terminado».
+    awaiting: 'La votación ha terminado.',
+    /** Y el titular tampoco puede seguir invitando a competir: eso ya ha pasado. */
+    leadAwaiting: 'La suerte está echada; falta saber cómo ha quedado.',
   },
 
   votar: {
@@ -114,8 +129,11 @@ export const PREMIOS_UI = {
     /** Lo último que se lee: esto se juega cada temporada y la gracia está en volver. */
     comeBack: 'El reto se juega cada temporada: vuelve cuando se abra el siguiente.',
     confirmTitle: 'Confirmación',
-    edit: 'Corregir mi voto',
-    /** Repasar lo votado sin tocar nada ni gastar oportunidad: la misma papeleta, en modo lectura. */
+    /**
+     * Repasar lo votado sin tocar nada ni gastar oportunidad: la misma papeleta, en modo lectura. Lo usan la
+     * portada y la pantalla de «votación cerrada»; esta se quedó con una sola salida, la puerta de la sección,
+     * porque todo lo demás ya lo ofrece la portada según lo que se pueda hacer en cada momento.
+     */
     see: 'Ver mis votos',
     /** Cuando se reenvía sin tocar nada: se dice que no ha costado, porque el contador no se ha movido. */
     unchanged: 'No habías cambiado nada, así que tus elecciones se quedan como estaban y no te ha costado ninguna oportunidad.',
@@ -126,8 +144,6 @@ export const PREMIOS_UI = {
         : quedan === 1
           ? 'Te queda 1 oportunidad para corregirla mientras la votación siga abierta.'
           : `Te quedan ${quedan} oportunidades para corregirla mientras la votación siga abierta.`,
-    toResults: 'Ver los resultados',
-    toLists: 'Volver a mis listas',
   },
 
   // LAS DOS PUERTAS DE SALIDA del flujo, que antes no tenían pantalla y acababan en la portada sin explicar nada:
@@ -152,8 +168,6 @@ export const PREMIOS_UI = {
     /** Lo que se manda al invitar a votar. Lleva el nombre de la edición, que es lo que la sitúa en el año. */
     inviteTitle: (edicion: string) => `Vota en ${edicion}`,
     inviteText: 'Acepta el reto: elige quién crees que gana cada categoría.',
-    resultsTitle: (edicion: string) => `Resultados de ${edicion}`,
-    resultsText: 'Mira quién ha ganado y cómo ha quedado la clasificación.',
   },
 
   resultados: {
@@ -197,9 +211,6 @@ export const PREMIOS_UI = {
     // LA GALERÍA: desde la clasificación se MIRA, y quien quiera el archivo lo pide dentro.
     see: 'Ver el trofeo',
     seeAll: 'Ver los premios',
-    awardOf: (actual: number, total: number) => `${actual} de ${total}`,
-    awardPrev: 'Anterior',
-    awardNext: 'Siguiente',
     empty: 'Esta edición todavía no tiene resultados publicados.',
     // La clasificación enseña la cara de una amistad y la inicial del resto: es la misma regla de reciprocidad
     // del espacio social, aplicada aquí (ver §4.1 del plan).
@@ -240,7 +251,7 @@ export const PREMIOS_UI = {
           id: 'pending' as const,
           label: 'Cerrada, sin publicar',
           // El fin del ciclo se cuenta AQUÍ, en el paso que lo provoca, en vez de en una frase suelta debajo.
-          hint: 'Toca marcar ganadores y publicarla: al hacerlo pasa al histórico y se vuelve a «Sin edición».',
+          hint: 'Hay que marcar el ganador de cada categoría con nominados para poder publicar: al hacerlo pasa al histórico y se vuelve a «Sin edición».',
         },
       ],
       stageCurrent: 'Estado actual',
@@ -254,26 +265,51 @@ export const PREMIOS_UI = {
       edited: 'Edición actualizada.',
       nameLabel: 'Nombre de la edición',
       namePlaceholder: 'El reto del jugador 2026',
-      nameHint: 'De aquí sale el identificador del archivo. Sin nombre se usa el año.',
+      nameHint: 'Hace falta: de aquí sale el identificador con el que se archiva la edición.',
       closesLabel: 'Último día para votar',
       closesHint: 'Se cierra a las 23:59 de ese día, hora peninsular.',
       openAction: 'Abrir votación',
+      /**
+       * UNA CATEGORÍA A MEDIAS NO IMPIDE ABRIR, PERO SE DICE CUÁL ES. Puede que esa no se use esta edición —las
+       * categorías se quedan de un año para otro y no todas se reparten siempre—, así que se avisa y se deja
+       * decidir. Lo que no se puede votar es lo que no tiene nominados: quien entre no la verá siquiera.
+       * Se nombran: con veintiséis, «falta una» es un acertijo.
+       */
+      openIncomplete: (nombres: string[]) =>
+        nombres.length === 1
+          ? `«${nombres[0]}» está sin completar y no se podrá votar. Si esta edición no la reparte, no pasa nada.`
+          : `${nombres.length} categorías están sin completar y no se podrán votar (${listaCorta(nombres)}). Si esta edición no las reparte, no pasa nada.`,
+      /**
+       * El último aviso, con el dedo ya en el botón. Es la PREGUNTA y nada más: el detalle —cuáles son y por qué
+       * da igual— lo cuenta el mismo texto que ya está encima del botón, debajo de ella.
+       */
+      openConfirmTitle: '¿Abrir la votación de todos modos?',
+      /** Esto SÍ impide abrir: sin una sola categoría con nominados no hay nada que votar. */
+      openNoCategories: 'No hay ninguna categoría con nominados: ponlos en «Categorías» antes de abrir la votación.',
       closeAction: 'Cerrar ahora',
-      publishAction: 'Publicar en el histórico',
+      // PUBLICAR, y se dice entero: lo que el gesto hace es sacar los resultados a la luz. «Publicar en el
+      // histórico» contaba el efecto secundario —dónde acaba la edición— y dejaba lo principal en la sombra.
+      publishAction: 'Publicar los resultados',
       // Publicar es irreversible y destructivo: retira las papeletas y vacía los nominados.
       publishWarn: 'Al publicar se archiva la clasificación, se retiran las papeletas y se vacían los nominados. No se puede deshacer.',
       /**
-       * SIN GANADORES NO HAY PUNTOS. La clasificación se calcula cruzando cada voto con el ganador de su
-       * categoría: publicar sin marcar ninguno archiva una edición con todo el mundo a cero, y como al publicar
-       * se retiran las papeletas, ya no hay con qué recalcularla. Es el único error de esta pantalla que no se
-       * puede arreglar después.
+       * SIN TODOS LOS GANADORES NO SE PUBLICA. La clasificación se calcula cruzando cada voto con el ganador de
+       * su categoría: una categoría con nominados y sin ganador no da puntos a nadie, y como al publicar se
+       * retiran las papeletas, después ya no hay con qué recalcularla. Era el único error de esta pantalla que
+       * no se podía arreglar, así que ahora no se deja cometer: el botón no está hasta marcarlos todos.
        */
-      publishNoWinners: 'No has marcado ningún ganador. Si publicas ahora, la clasificación se archiva con todo el mundo a cero y las papeletas ya no estarán para rehacerla.',
-      publishSomeWinners: (marcados: number, total: number) =>
-        `Vas a publicar con ${marcados} de ${total} categorías con ganador; las demás no darán puntos.`,
+      publishBlocked: (faltan: number, total: number) =>
+        faltan === 1
+          ? `Falta 1 categoría de ${total} por marcar ganador. No se puede publicar hasta marcarlos todos.`
+          : `Faltan ${faltan} categorías de ${total} por marcar ganador. No se puede publicar hasta marcarlos todos.`,
+      /**
+       * El caso raro: una edición sin una sola categoría con nominados. No hay nada que puntuar, pero tampoco
+       * ganador que falte, así que se avisa y se deja publicar.
+       */
+      publishNoCategories: 'No hay ninguna categoría con nominados: se archivaría una edición sin resultados.',
       closesAt: (fecha: string) => `Se cierra el ${fecha}`,
       leftovers: (cuantas: number) => `Se retiraron ${cuantas} papeleta(s) sueltas de una edición anterior.`,
-      opened: (nombre: string) => `Edición «${nombre}» abierta.`,
+      opened: (nombre: string) => `Edición «${nombre}» abierta y a la vista.`,
       closed: 'Votación cerrada.',
       published: (nombre: string, votos: number) => `«${nombre}» publicada con ${votos} papeleta(s).`,
       errorDay: 'Hace falta un día de cierre que no esté en el pasado.',
@@ -287,7 +323,8 @@ export const PREMIOS_UI = {
       visibleOff: 'Oculta',
       visibilitySaved: 'Guardado dónde se ve la sección.',
       /** DÓNDE aparece, que es lo único que este bloque tiene que responder. */
-      visibilityHint: 'Visible, la sección aparece en el menú de Ajustes y en el espacio social. Oculta, solo se llega con el enlace.',
+      visibilityHint:
+        'Visible, la sección aparece en el menú de Ajustes y en el espacio social. Oculta, solo se llega con el enlace. Al abrir una edición se pone en «Visible» sola.',
     },
 
     // Marcar quién ganó cada categoría. Vive en un documento que solo lee el administrador: hasta que se publica
@@ -313,6 +350,13 @@ export const PREMIOS_UI = {
       voted: (cuantas: number, total: number) => `${cuantas}/${total} categorías`,
       edits: (cuantas: number) => (cuantas === 0 ? 'sin correcciones' : `${cuantas} corrección(es)`),
       sentAt: 'Enviada',
+      // QUÉ VOTÓ CADA UNO, y no solo cuántas marcó. Va plegado: con veintiséis categorías por votante, abierto
+      // de serie sepultaría la lista de papeletas y la clasificación que viene debajo.
+      open: 'Ver la papeleta',
+      /** Las categorías que esa persona dejó en blanco: explican el «3/5» de la cabecera. */
+      notVoted: 'Sin votar',
+      /** Coincide con el ganador marcado ahora mismo, que es lo que le dará puntos al publicar. */
+      hit: 'Acierta el ganador marcado',
       // La clasificación PROVISIONAL, con los ganadores marcados hasta ahora: es lo que se va a publicar.
       preview: 'Clasificación provisional',
       previewHint: 'Con los ganadores marcados ahora mismo. Es lo que se publicará.',

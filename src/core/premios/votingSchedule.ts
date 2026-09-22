@@ -34,7 +34,7 @@ export type VotingState = (typeof VOTING_STATE)[keyof typeof VOTING_STATE];
  *
  *   NONE    → no hay edición en marcha       → «Abrir votación»
  *   OPEN    → se está votando                → «Cerrar ahora»
- *   PENDING → cerrada y sin publicar         → «Publicar en el histórico»
+ *   PENDING → cerrada y sin publicar         → «Publicar los resultados»
  *
  * Publicar archiva la edición y la deja sin fecha de cierre, así que el ciclo vuelve solo a NONE.
  */
@@ -94,6 +94,24 @@ export function getSeasonStage(
  */
 export function areResultsPublished(config: PremiosVotingConfig | null | undefined): boolean {
   return Boolean(config?.lastPublishedId);
+}
+
+/**
+ * ¿Se OFRECEN los resultados, con un botón que los llame así?
+ *
+ * Hay archivo publicado Y NO HAY EDICIÓN EN MARCHA. Mientras la hay —votándose o cerrada y pendiente de
+ * publicar— lo archivado es de la edición ANTERIOR, y un botón que dice «ver los resultados» se lee como «los de
+ * esto»: enseñaba los del año pasado a quien acababa de votar esta. Los dos casos son el mismo, y lo que los
+ * junta es la fecha de cierre, que es lo que distingue «hay edición» de «no la hay».
+ *
+ * Decide qué se OFRECE, no a dónde se puede llegar: `/premios/resultados` sigue respondiendo siempre, porque un
+ * enlace compartido en enero tiene que funcionar.
+ */
+export function areResultsOffered(
+  config: PremiosVotingConfig | null | undefined,
+  now: number = Date.now(),
+): boolean {
+  return areResultsPublished(config) && getSeasonStage(config, now) === SEASON_STAGE.NONE;
 }
 
 /** Días completos que faltan para un instante, redondeando hacia arriba. `null` si no hay fecha. */

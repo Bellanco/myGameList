@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
-import { PREMIOS_ROUTES, votePath } from '../../../viewmodel/premios/premiosRoutes';
+import { PREMIOS_ROUTES } from '../../../viewmodel/premios/premiosRoutes';
 import { Icon } from '../Icon';
 
 /**
@@ -14,28 +14,13 @@ import { Icon } from '../Icon';
 export function PremiosEnviada({
   displayName,
   remainingOpportunities,
-  canEdit,
-  hasResults,
   unchanged = false,
-  hasSocialAccount = false,
 }: {
   /** El nombre con el que ha votado: es a quien se da las gracias. */
   displayName: string;
   remainingOpportunities: number;
-  /** ¿Puede volver a entrar a corregirla? */
-  canEdit: boolean;
-  hasResults: boolean;
   /** Se llegó reenviando una papeleta idéntica: no se ha escrito nada y no ha costado oportunidad. */
   unchanged?: boolean;
-  /**
-   * ¿Tiene cuenta social?
-   *
-   * DECIDE SI ESTA PANTALLA TIENE SALIDAS. Con cuenta social se puede repasar la papeleta, corregirla y volver a
-   * la sección: hay algo que seguir haciendo. Sin ella, su papeleta ya está cerrada —una sola oportunidad— y
-   * ofrecerle «corregir» o «vuelve la próxima temporada» es ofrecerle lo que no tiene; se queda la confirmación
-   * y la barra de la aplicación, que es la que invita a mirar el resto.
-   */
-  hasSocialAccount?: boolean;
 }) {
   const L = PREMIOS_UI.enviada;
   return (
@@ -72,32 +57,17 @@ export function PremiosEnviada({
         <p className="premios-estado__muted">{L.resultsSoon}</p>
       </div>
 
-      {hasSocialAccount ? (
-        <>
-          <div className="premios-estado__actions">
-            {canEdit ? (
-              <Link className="btn btn-primary" to={votePath(1)}>
-                {L.edit}
-              </Link>
-            ) : null}
-            {/* REPASAR NO CUESTA NADA, y por eso está aquí y no dentro del flujo de envío: lleva a la papeleta
-                en modo lectura, sin nombre ni botón de enviar. */}
-            <Link className="btn" to={PREMIOS_ROUTES.ballot}>
-              {L.see}
-            </Link>
-            {hasResults ? (
-              <Link className="btn" to={PREMIOS_ROUTES.results}>
-                {L.toResults}
-              </Link>
-            ) : null}
-            <Link className="btn" to={PREMIOS_ROUTES.home}>
-              {PREMIOS_UI.cerrada.toHome}
-            </Link>
-          </div>
+      {/* UNA SOLA SALIDA, Y ES LA PUERTA. Aquí hubo cuatro botones —corregir, ver los votos, los resultados y
+          volver—, que son los mismos que ofrece la portada de la sección según lo que se pueda hacer en cada
+          momento: repetirlos en la pantalla de la celebración era mantener dos sitios con las mismas reglas, y
+          uno de ellos se quedaba atrás (el de corregir salía sin mirar si quedaban oportunidades). */}
+      <div className="premios-estado__actions">
+        <Link className="btn btn-primary" to={PREMIOS_ROUTES.home}>
+          {PREMIOS_UI.cerrada.toHome}
+        </Link>
+      </div>
 
-          <p className="premios-estado__muted">{L.comeBack}</p>
-        </>
-      ) : null}
+      <p className="premios-estado__muted">{L.comeBack}</p>
     </section>
   );
 }
@@ -112,9 +82,12 @@ export function PremiosEnviada({
 export function PremiosCerrada({
   scheduled,
   hasResults,
+  hasBallot = false,
 }: {
   scheduled: boolean;
   hasResults: boolean;
+  /** ¿Votó esta cuenta? Su papeleta se puede mirar aunque el plazo esté cerrado. */
+  hasBallot?: boolean;
 }) {
   const L = PREMIOS_UI.cerrada;
   return (
@@ -126,6 +99,13 @@ export function PremiosCerrada({
         {hasResults ? (
           <Link className="btn btn-primary" to={PREMIOS_ROUTES.results}>
             {L.toResults}
+          </Link>
+        ) : null}
+        {/* LO SUYO SIGUE AHÍ. Cerrar la votación cierra votar y corregir, no mirar: quien llegue tarde al menos
+            se lleva lo que votó, que es lo que viene a buscar mientras espera los resultados. */}
+        {hasBallot && !scheduled ? (
+          <Link className={`btn${hasResults ? '' : ' btn-primary'}`} to={PREMIOS_ROUTES.ballot}>
+            {PREMIOS_UI.enviada.see}
           </Link>
         ) : null}
         <Link className="btn" to={PREMIOS_ROUTES.home}>

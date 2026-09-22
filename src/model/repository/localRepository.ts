@@ -3,7 +3,7 @@ import { LEGACY_STORAGE_KEYS, localStateNeedsUpgrade } from '../migration/legacy
 import { migrateData } from './migrateRepository';
 import { loadIndexedDbState, saveIndexedDbState } from './indexedDbRepository';
 import { TAB_IDS, type GameItem, type StoragePayload, type TabData, type TabId } from '../types/game';
-import { clampRating } from '../../core/utils/normalize';
+import { clampRating, normalizeHours } from '../../core/utils/normalize';
 import { clampGrade } from '../../core/utils/scoreScale';
 import { runWhenIdle } from '../../core/utils/idle';
 
@@ -144,12 +144,8 @@ function normalizeGame(
     score: clampRating(game.score),
     // F2: nota fina 0–100 (aditivo). Se preserva si viene; ausente → los lectores caen al `score` 0–5.
     grade: typeof game.grade === 'number' ? clampGrade(game.grade) : undefined,
-    hours: (() => {
-      const raw = (game as Record<string, unknown>).hours;
-      if (raw === null || raw === undefined || raw === '') return null;
-      const n = Number(raw);
-      return Number.isFinite(n) && n >= 0 ? n : null;
-    })(),
+    // El 0 entra como hueco: los juegos viejos que lo llevaran guardado se leen ya como «sin horas».
+    hours: normalizeHours((game as Record<string, unknown>).hours),
     // Vergüenza: puntuación activada (opt-in). Se conserva solo si es true; ausente/false no se serializa.
     scored: game.scored ? true : undefined,
     listedAt,
