@@ -52,6 +52,14 @@ export const PREMIOS_UI = {
     // Sin edición abierta ni resultados: es enero y aquí no hay nada. Se dice sin dramatismo.
     empty: 'Ahora mismo no hay ninguna edición en marcha.',
     emptyHint: 'Cuando se abra la siguiente, aparecerá aquí.',
+    // CERRADA Y CONTANDO, que NO es «aquí no hay nada»: hay una edición, ya votada, y lo que se está haciendo es
+    // esperar el resultado. Decirle a quien acaba de votar que no hay ninguna edición en marcha le deja pensando
+    // que su papeleta se ha perdido.
+    // Una línea y no dos: cuándo se publican los resultados no se sabe, así que prometerlo «en cuanto estén
+    // listos» no añadía nada que no dijera ya «ha terminado».
+    awaiting: 'La votación ha terminado.',
+    /** Y el titular tampoco puede seguir invitando a competir: eso ya ha pasado. */
+    leadAwaiting: 'La suerte está echada; falta saber cómo ha quedado.',
   },
 
   votar: {
@@ -281,7 +289,7 @@ export const PREMIOS_UI = {
       publishNoCategories: 'No hay ninguna categoría con nominados: se archivaría una edición sin resultados.',
       closesAt: (fecha: string) => `Se cierra el ${fecha}`,
       leftovers: (cuantas: number) => `Se retiraron ${cuantas} papeleta(s) sueltas de una edición anterior.`,
-      opened: (nombre: string) => `Edición «${nombre}» abierta.`,
+      opened: (nombre: string) => `Edición «${nombre}» abierta y a la vista.`,
       closed: 'Votación cerrada.',
       published: (nombre: string, votos: number) => `«${nombre}» publicada con ${votos} papeleta(s).`,
       errorDay: 'Hace falta un día de cierre que no esté en el pasado.',
@@ -295,7 +303,8 @@ export const PREMIOS_UI = {
       visibleOff: 'Oculta',
       visibilitySaved: 'Guardado dónde se ve la sección.',
       /** DÓNDE aparece, que es lo único que este bloque tiene que responder. */
-      visibilityHint: 'Visible, la sección aparece en el menú de Ajustes y en el espacio social. Oculta, solo se llega con el enlace.',
+      visibilityHint:
+        'Visible, la sección aparece en el menú de Ajustes y en el espacio social. Oculta, solo se llega con el enlace. Al abrir una edición se pone en «Visible» sola.',
     },
 
     // Marcar quién ganó cada categoría. Vive en un documento que solo lee el administrador: hasta que se publica
@@ -321,6 +330,13 @@ export const PREMIOS_UI = {
       voted: (cuantas: number, total: number) => `${cuantas}/${total} categorías`,
       edits: (cuantas: number) => (cuantas === 0 ? 'sin correcciones' : `${cuantas} corrección(es)`),
       sentAt: 'Enviada',
+      // QUÉ VOTÓ CADA UNO, y no solo cuántas marcó. Va plegado: con veintiséis categorías por votante, abierto
+      // de serie sepultaría la lista de papeletas y la clasificación que viene debajo.
+      open: 'Ver la papeleta',
+      /** Las categorías que esa persona dejó en blanco: explican el «3/5» de la cabecera. */
+      notVoted: 'Sin votar',
+      /** Coincide con el ganador marcado ahora mismo, que es lo que le dará puntos al publicar. */
+      hit: 'Acierta el ganador marcado',
       // La clasificación PROVISIONAL, con los ganadores marcados hasta ahora: es lo que se va a publicar.
       preview: 'Clasificación provisional',
       previewHint: 'Con los ganadores marcados ahora mismo. Es lo que se publicará.',

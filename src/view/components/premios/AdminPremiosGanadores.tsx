@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
+import { archivableCategories, getValidWinnerId } from '../../../core/premios/archivable';
 import { getCategoryTitle, getOptionId, tField } from '../../../core/premios/localize';
 import { fetchWinners, saveWinners } from '../../../model/repository/premios/premiosWinnersRepository';
 import type { PremiosCategory, PremiosWinnersMap } from '../../../model/types/premios';
@@ -31,11 +32,9 @@ export interface AdminPremiosGanadoresProps {
 export function AdminPremiosGanadores({ categories, busy, ejecutar }: AdminPremiosGanadoresProps) {
   const [winners, setWinners] = useState<PremiosWinnersMap>({});
 
-  // Las que no tienen nominados no pueden tener ganador, así que ni se ofrecen.
-  const votables = useMemo(
-    () => categories.filter((category) => (category.options?.length || 0) > 0),
-    [categories],
-  );
+  // Las que no se van a archivar no pueden tener ganador, así que ni se ofrecen. MISMO criterio que el del
+  // bloque de publicar (`archivable`): lo que aquí se puede marcar es exactamente lo que allí se exige.
+  const votables = useMemo(() => archivableCategories(categories), [categories]);
 
   useEffect(() => {
     let vivo = true;
@@ -51,7 +50,9 @@ export function AdminPremiosGanadores({ categories, busy, ejecutar }: AdminPremi
     };
   }, [categories]);
 
-  const marcados = votables.filter((category) => winners[category.id]).length;
+  // Un ganador cuyo nominado ya no exista no cuenta: se le quitaron los nominados a la categoría después de
+  // marcarlo y el id se quedó en el mapa. La cuenta tiene que decir lo mismo que el bloque de publicar.
+  const marcados = votables.filter((category) => getValidWinnerId(category, winners)).length;
 
   const guardar = () =>
     ejecutar(async () => {
@@ -76,6 +77,7 @@ export function AdminPremiosGanadores({ categories, busy, ejecutar }: AdminPremi
           <ul className="premios-admin__cats">
             {votables.map((category) => {
               const titulo = getCategoryTitle(category);
+              const ganador = getValidWinnerId(category, winners);
               return (
                 <li key={category.id} className="premios-admin__cat">
                   <div className="premios-admin__cat-head">
@@ -88,8 +90,8 @@ export function AdminPremiosGanadores({ categories, busy, ejecutar }: AdminPremi
                   <div className="premios-admin__picks" role="group" aria-label={titulo}>
                     <button
                       type="button"
-                      className={`premios-admin__pick${winners[category.id] ? '' : ' is-none'}`}
-                      aria-pressed={!winners[category.id]}
+                      className={`premios-admin__pick${ganador ? '' : ' is-none'}`}
+                      aria-pressed={!ganador}
                       onClick={() =>
                         setWinners((prev) => {
                           const next = { ...prev };
@@ -103,7 +105,7 @@ export function AdminPremiosGanadores({ categories, busy, ejecutar }: AdminPremi
 
                     {(category.options || []).map((option, index) => {
                       const id = getOptionId(option, category.id, index);
-                      const elegido = winners[category.id] === id;
+                      const elegido = ganador === id;
                       return (
                         <button
                           key={id}

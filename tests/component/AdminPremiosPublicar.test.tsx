@@ -110,6 +110,16 @@ describe('AdminPremios · publicar', () => {
     await waitFor(() => expect(publishMock).toHaveBeenCalledTimes(1));
   });
 
+  // EL GANADOR HUÉRFANO: marcado y después borrado de los nominados. La clave seguía en el mapa y la categoría
+  // pasaba por marcada, cuando al publicar no le da puntos a nadie.
+  it('un ganador cuyo nominado ya no existe no cuenta como marcado', async () => {
+    ganadores.valor = { goty: 'goty_option_9', arte: 'arte_option_0' };
+    const boton = await pintar();
+
+    await waitFor(() => expect(screen.getByText(L.publishBlocked(1, 2))).toBeInTheDocument());
+    expect(boton).toBeDisabled();
+  });
+
   it('sin ningún ganador dice cuántos faltan y no publica', async () => {
     const boton = await pintar();
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   SEASON_STAGE,
   VOTING_STATE,
+  areResultsOffered,
   areResultsPublished,
   daysUntil,
   getSeasonStage,
@@ -80,6 +81,33 @@ describe('areResultsPublished', () => {
   // Las ediciones creadas con el modelo de tres fechas conservan `resultsAt`; no puede resucitar como criterio.
   it('una fecha de resultados heredada no publica nada por sí sola', () => {
     expect(areResultsPublished(config({ resultsAtMillis: NOW - DAY }))).toBe(false);
+  });
+});
+
+/**
+ * OFRECER LOS RESULTADOS NO ES LO MISMO QUE TENERLOS. El fallo que esto fija: con la edición cerrada y aún sin
+ * publicar, la pantalla ofrecía «ver los resultados» y llevaba a los de la edición ANTERIOR, que quien acababa
+ * de votar leía como los suyos.
+ */
+describe('areResultsOffered', () => {
+  const publicado = { lastPublishedId: 'porra-2025' };
+
+  it('se ofrecen cuando hay archivo y ninguna edición en marcha', () => {
+    expect(areResultsOffered(config(publicado), NOW)).toBe(true);
+  });
+
+  it('no se ofrecen mientras se vota', () => {
+    expect(areResultsOffered(config({ ...publicado, closesAtMillis: NOW + DAY }), NOW)).toBe(false);
+  });
+
+  it('tampoco con la edición cerrada y sin publicar: lo archivado es de la anterior', () => {
+    expect(areResultsOffered(config({ ...publicado, closesAtMillis: NOW - DAY }), NOW)).toBe(false);
+    // Y el cierre a mano es el mismo caso: la fecha sigue puesta, la edición sigue ahí.
+    expect(areResultsOffered(config({ ...publicado, isOpen: false, closesAtMillis: NOW + DAY }), NOW)).toBe(false);
+  });
+
+  it('sin archivo no hay nada que ofrecer', () => {
+    expect(areResultsOffered(config(), NOW)).toBe(false);
   });
 });
 

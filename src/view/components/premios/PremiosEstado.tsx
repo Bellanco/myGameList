@@ -112,9 +112,12 @@ export function PremiosEnviada({
 export function PremiosCerrada({
   scheduled,
   hasResults,
+  hasBallot = false,
 }: {
   scheduled: boolean;
   hasResults: boolean;
+  /** ¿Votó esta cuenta? Su papeleta se puede mirar aunque el plazo esté cerrado. */
+  hasBallot?: boolean;
 }) {
   const L = PREMIOS_UI.cerrada;
   return (
@@ -126,6 +129,13 @@ export function PremiosCerrada({
         {hasResults ? (
           <Link className="btn btn-primary" to={PREMIOS_ROUTES.results}>
             {L.toResults}
+          </Link>
+        ) : null}
+        {/* LO SUYO SIGUE AHÍ. Cerrar la votación cierra votar y corregir, no mirar: quien llegue tarde al menos
+            se lleva lo que votó, que es lo que viene a buscar mientras espera los resultados. */}
+        {hasBallot && !scheduled ? (
+          <Link className={`btn${hasResults ? '' : ' btn-primary'}`} to={PREMIOS_ROUTES.ballot}>
+            {PREMIOS_UI.enviada.see}
           </Link>
         ) : null}
         <Link className="btn" to={PREMIOS_ROUTES.home}>

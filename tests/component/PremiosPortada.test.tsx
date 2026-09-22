@@ -72,6 +72,49 @@ describe('PremiosPortada — la puerta de la sección', () => {
     expect(screen.queryByRole('link', { name: L.seeResults })).not.toBeInTheDocument();
   });
 
+  /**
+   * REPASAR LO VOTADO CUANDO YA NO SE PUEDE VOTAR. Mientras se vota, la papeleta solo se le ofrece a quien puede
+   * volver sobre ella (cuenta social). Cerrado el plazo no hay nada que corregir ni oportunidad que gastar, y es
+   * lo último que queda de su voto antes de que la publicación lo retire: se le ofrece a todo el que votó.
+   */
+  it('con el plazo cerrado ofrece ver los votos aunque no haya cuenta social', () => {
+    pintar({ votingOpen: false, hasBallot: true, hasSocialAccount: false });
+    expect(screen.getByRole('link', { name: PREMIOS_UI.enviada.see })).toBeInTheDocument();
+  });
+
+  it('mientras se vota, sin cuenta social no se ofrece', () => {
+    pintar({ hasBallot: true, hasSocialAccount: false });
+    expect(screen.queryByRole('link', { name: PREMIOS_UI.enviada.see })).not.toBeInTheDocument();
+  });
+
+  /**
+   * ESPERAR NO ES QUE NO HAYA NADA. Con la edición cerrada y sin publicar, la portada soltaba el cartel de enero
+   * —«ahora mismo no hay ninguna edición en marcha»— justo debajo del botón de ver los votos recién emitidos.
+   */
+  it('con la edición cerrada y sin publicar dice que se esperan los resultados', () => {
+    pintar({
+      votingOpen: false,
+      config: { ...config, isOpen: false, closesAtMillis: Date.now() - 86_400_000 },
+    });
+
+    expect(screen.getByText(L.awaiting)).toBeInTheDocument();
+    expect(screen.queryByText(L.empty)).not.toBeInTheDocument();
+    // La coletilla de «cuando se abra la siguiente» es del cartel de enero, no de esto.
+    expect(screen.queryByText(L.emptyHint)).not.toBeInTheDocument();
+    expect(screen.getByText(L.closed)).toBeInTheDocument();
+    // Y el titular deja de invitar a competir: eso ya ha pasado.
+    expect(screen.getByText(L.leadAwaiting)).toBeInTheDocument();
+    expect(screen.queryByText(L.lead)).not.toBeInTheDocument();
+  });
+
+  it('sin ninguna edición sí dice que no hay nada en marcha', () => {
+    pintar({ votingOpen: false, config: { ...config, isOpen: false, closesAtMillis: null } });
+
+    expect(screen.getByText(L.empty)).toBeInTheDocument();
+    expect(screen.queryByText(L.awaiting)).not.toBeInTheDocument();
+    expect(screen.queryByText(L.closed)).not.toBeInTheDocument();
+  });
+
   it('dice el cupo de oportunidades de esta cuenta', () => {
     pintar({ opportunities: 15 });
     expect(screen.getByText(L.opportunities(15))).toBeInTheDocument();

@@ -97,6 +97,21 @@
   box-shadow: var(--glow-accent);
 }
 
+/* EL MISMO DISTINTIVO, APAGADO, para la edición cerrada que espera resultados. Con el acento —el del botón
+   principal— la anunciaría como si todavía se pudiera votar, que es justo lo contrario de lo que dice. */
+.premios-portada__badge.is-waiting {
+  color: var(--text);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+/* Y SIN LATIDO: el punto que late dice «esto está pasando ahora». Aquí ya no pasa nada, se espera. */
+.premios-portada__badge.is-waiting::before {
+  animation: none;
+  background: var(--text-muted);
+}
+
 /* El punto de «está abierta»: late despacio, y se queda quieto para quien pide menos movimiento. */
 .premios-portada__badge::before {
   content: '';
@@ -929,6 +944,16 @@
   font-size: var(--fs-sm);
 }
 
+/* LA SALIDA DE LA LISTA: crear una categoría nueva, al final y separada por una línea. Arriba quedaba a un
+   píxel de las acciones de la primera fila, y lo que se abría por error era un formulario vacío. */
+.premios-admin__new {
+  margin-top: 1.4rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--hair);
+}
+
+.premios-admin__new > .btn { display: inline-flex; align-items: center; gap: .35rem; }
+
 .premios-admin__label { font-family: var(--font-label); font-size: var(--fs-sm); margin-top: .4rem; }
 
 /* Qué edición hay, y el botón de corregirla al lado. Una línea en vez de los cuatro párrafos que había. */
@@ -1012,25 +1037,32 @@
 
 .premios-admin__cat-head select.input { width: auto; min-width: 12rem; }
 
-/* LOS NOMINADOS COMO BOTONES, para marcar el ganador de una pulsada. Son las tarjetas de votar en pequeño: aquí
+/* LOS NOMINADOS COMO BOTONES, para marcar el ganador de una pulsada. Son las tarjetas de votar sin adornos: aquí
    no hay que elegir con gusto, hay que apuntar un resultado que ya se sabe, así que lo que importa es verlos
-   todos a la vez y que el marcado cante. */
+   todos a la vez, leerlos sin esfuerzo y que el marcado cante. */
 .premios-admin__picks {
   display: flex;
   flex-wrap: wrap;
-  gap: .3rem;
-  margin-top: .35rem;
+  gap: .45rem;
+  margin-top: .45rem;
 }
 
+/* GRANDES A PROPÓSITO. Nacieron del tamaño de un chip (`--fs-2xs` y 4px de alto de relleno) y con veintiséis
+   categorías de cinco nominados eso son ciento treinta blancos diminutos: el nombre costaba de leer y el dedo
+   fallaba la pulsada. Con el cuerpo de tarjeta y 44px de alto —el mínimo cómodo para un dedo— se leen y se
+   aciertan, y siguen cabiendo varios por línea. */
 .premios-admin__pick {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
   font-family: var(--font-label);
-  font-size: var(--fs-2xs);
-  line-height: 1.2;
+  font-size: var(--fs-md);
+  line-height: 1.25;
   color: var(--text-muted);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
-  padding: .25rem .6rem;
+  padding: .45rem 1rem;
   cursor: pointer;
   transition: background .15s ease, border-color .15s ease, color .15s ease;
 }
@@ -1056,6 +1088,45 @@
   border-color: color-mix(in srgb, var(--steam) 45%, transparent);
   border-style: dashed;
 }
+
+/* LA PAPELETA DE CADA VOTANTE, plegada bajo su nombre. Es `<details>` y no un estado de React por lo de siempre:
+   catorce papeletas abiertas a la vez no las quiere nadie, y plegar y desplegar lo hace el navegador gratis. */
+.premios-admin__ballot > summary {
+  cursor: pointer;
+  color: var(--fg-link);
+  font-family: var(--font-label);
+  font-size: var(--fs-sm);
+  padding: .3rem 0;
+}
+
+.premios-admin__ballot > summary:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.premios-admin__ballot-list { display: grid; gap: .1rem; list-style: none; margin: .2rem 0 .4rem; padding: 0; }
+
+.premios-admin__ballot-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  align-items: baseline;
+  font-size: var(--fs-sm);
+  padding: .3rem .2rem;
+  border-bottom: 1px dashed var(--hair);
+}
+
+/* DOS COLUMNAS, no dos extremos: la categoría ocupa un ancho fijo y el voto va justo detrás. Estirando la
+   categoría hasta empujar el voto al borde derecho, en el panel ancho quedaban a medio palmo el uno del otro y
+   había que recorrer la fila entera para saber qué votó. */
+.premios-admin__ballot-cat { flex: 0 0 auto; min-width: 12rem; color: var(--text-dim); }
+.premios-admin__ballot-pick { flex: 1 1 auto; font-family: var(--font-label); color: var(--text); }
+.premios-admin__ballot-pick.is-empty { color: var(--text-muted); font-style: italic; }
+
+/* EL ACIERTO NO ES SOLO COLOR: lleva su marca. El color se le escapa a quien no lo distingue, y esta pantalla
+   se mira para comprobar, que es justo cuando confundir un acierto con un fallo cuesta caro. */
+.premios-admin__ballot-list li.is-hit .premios-admin__ballot-pick { color: var(--success); }
+.premios-admin__ballot-hit { display: inline-flex; align-items: center; color: var(--success); }
 
 /* ─── Resultados: los ganadores a un lado y la puntuación al otro ─────────────────────────────────────── */
 

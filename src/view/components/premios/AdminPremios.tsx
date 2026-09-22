@@ -9,6 +9,7 @@ import { AdminPremiosVotos } from './AdminPremiosVotos';
 import { todayInVotingZone, toVotingZoneDay } from '../../../core/premios/closingDate';
 import { getSeasonLabel } from '../../../core/premios/seasonId';
 import { SEASON_STAGE, getSeasonStage, validateClosingDay } from '../../../core/premios/votingSchedule';
+import { archivableCategories, categoriesMissingWinner } from '../../../core/premios/archivable';
 import { shouldOfferPremios } from '../../../core/premios/visibility';
 import { loadAndSortCategories } from '../../../model/repository/premios/premiosCategoriesRepository';
 import { fetchWinners } from '../../../model/repository/premios/premiosWinnersRepository';
@@ -49,8 +50,8 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
   const [tab, setTab] = useState<'season' | 'categories' | 'winners' | 'ballots' | 'history'>('season');
   const [config, setConfig] = useState<PremiosVotingConfig | null>(null);
   const [categories, setCategories] = useState<PremiosCategory[]>([]);
-  /** Cuántas categorías con nominados tienen ganador marcado: es lo que deja publicar o no. */
-  const [marcados, setMarcados] = useState(0);
+  /** Los ganadores marcados hasta ahora: son los que deciden si se puede publicar. */
+  const [winners, setWinners] = useState<PremiosWinnersMap>({});
   /**
    * LA FOTO QUE ESTÁ PUBLICADA en `/api/premios`, para no reescribir KV en cada apertura del panel.
    *
@@ -76,12 +77,8 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
     setConfig(nextConfig);
     setCategories(nextCategories);
     // Los ganadores se leen aquí y no solo en su pestaña: de ellos depende que se pueda publicar, que es la
-    // acción irreversible de esta pantalla. Se cuentan CONTRA LAS CATEGORÍAS CON NOMINADOS, que son las únicas
-    // que pueden tener ganador: un ganador suelto de una categoría que se quedó sin nominados no vale por una.
-    const ganadores: PremiosWinnersMap = await fetchWinners(nextCategories).catch(() => ({}));
-    setMarcados(
-      nextCategories.filter((category) => (category.options?.length || 0) > 0 && ganadores[category.id]).length,
-    );
+    // acción irreversible de esta pantalla.
+    setWinners(await fetchWinners(nextCategories).catch(() => ({})));
 
     // Y SE REPUBLICA LA FOTO si ha cambiado algo del calendario. Es lo que hace que la entrada aparezca o se
     // retire para quien no ha iniciado sesión, que es casi todo el mundo. Si falla no se interrumpe nada: el
@@ -100,18 +97,25 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
   }, [recargar]);
 
   const stage = useMemo(() => getSeasonStage(config), [config]);
-  /** Las que pueden tener ganador: una categoría sin nominados no puntúa y al publicar se omite. */
-  const votables = useMemo(
-    () => categories.filter((category) => (category.options?.length || 0) > 0).length,
-    [categories],
-  );
+  /**
+   * Las que van a archivarse, que son las únicas que pueden tener ganador. El criterio es el de `archivable`,
+   * el mismo que aplica `readLiveEdition` al publicar: si aquí se contara alguna que allí se descarta —una sin
+   * título, un placeholder con nominados— se pediría un ganador que no serviría para nada y no habría forma de
+   * publicar nunca.
+   */
+  const votables = useMemo(() => archivableCategories(categories).length, [categories]);
 
   /**
    * LAS QUE FALTAN POR MARCAR. Mientras quede una, no se publica: la clasificación sale de cruzar cada voto con
    * el ganador de su categoría, así que una categoría con nominados y sin ganador archiva esos votos sin puntos
    * — y al publicar se retiran las papeletas, con lo que ya no hay con qué rehacerla.
+   *
+   * Un ganador cuyo nominado ya no exista NO cuenta: ver `categoriesMissingWinner`.
    */
-  const faltanGanadores = Math.max(votables - marcados, 0);
+  const faltanGanadores = useMemo(
+    () => categoriesMissingWinner(categories, winners).length,
+    [categories, winners],
+  );
 
   /** ¿Se está ofreciendo la entrada ahora mismo? Con la MISMA función que lo decide en Ajustes y en lo social. */
   const seOfrece = useMemo(() => shouldOfferPremios(config), [config]);

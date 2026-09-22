@@ -86,6 +86,7 @@ vi.mock('firebase/firestore/lite', () => ({
     commit: async () => {},
   }),
   serverTimestamp: () => '__serverTimestamp__',
+  deleteField: () => '__deleteField__',
 }));
 
 // Los ganadores tienen sus propias pruebas; aquí solo importa que la publicación los pida y los retire.
@@ -145,6 +146,39 @@ beforeEach(() => {
 });
 
 describe('publishAndArchiveSeason', () => {
+  /**
+   * LA GUARDIA SE COMPRUEBA CONTRA EL DATO, no contra la pantalla. El botón del panel ya está apagado mientras
+   * falte un ganador, pero mira la foto que cargó al abrirse: con una pestaña de ayer, o con un segundo
+   * administrador tocando los nominados, ese botón puede estar encendido cuando ya no debería.
+   */
+  it('se niega a publicar si una categoría del archivo no tiene ganador', async () => {
+    state.premiosCategories = [category('cat1'), category('cat2')];
+    state.premiosBallots = [ballot('uid-1', 'Ana', 'cat1_option_0')];
+
+    await expect(publishAndArchiveSeason({ season: 2026, seasonId: 'test' })).rejects.toThrow(
+      /sin ganador/i,
+    );
+
+    // Y NO DEJA NADA A MEDIAS: ni archivo, ni papeletas retiradas, ni ganadores borrados.
+    expect(lastResultsWrite()).toBeUndefined();
+    expect(state.deletes).toHaveLength(0);
+    expect(state.clearedWinners).toBe(0);
+  });
+
+  // Una categoría sin nominados no puede tener ganador: exigírselo dejaría la edición sin publicar para siempre.
+  it('no exige ganador a lo que no entra en el archivo', async () => {
+    state.premiosCategories = [
+      category('cat1'),
+      { id: 'vacia', data: { title: { es: 'Sin nominados' }, options: [], weight: 1, orderIndex: 1 } },
+      { id: 'placeholder', data: { title: { es: '' }, options: [], isPlaceholder: true } },
+    ];
+    state.premiosBallots = [ballot('uid-1', 'Ana', 'cat1_option_0')];
+
+    await expect(publishAndArchiveSeason({ season: 2026, seasonId: 'test' })).resolves.toMatchObject({
+      totalBallots: 1,
+    });
+  });
+
   it('archiva las papeletas que hay en Firestore al publicar', async () => {
     state.premiosCategories = [category('cat1')];
     state.premiosBallots = [ballot('uid-1', 'Ana', 'cat1_option_0')];
@@ -195,6 +229,22 @@ describe('publishAndArchiveSeason', () => {
     expect(entry.photoURL).toBeUndefined();
     expect(entry.profileId).toBe('p-ana');
     expect(entry.nickname).toBe('Ana');
+  });
+
+  /**
+   * LA ENTRADA VUELVE AL CALENDARIO. Abrir la edición la pone a la vista escribiendo un «sí» explícito, y ese sí
+   * manda sobre todo lo demás: sin borrarlo, la sección se quedaría en el menú de Ajustes para siempre, incluso
+   * un año después de la última edición. Sin el campo, el calendario enseña los resultados recién publicados y
+   * retira la entrada al mes.
+   */
+  it('devuelve la visibilidad al calendario al publicar', async () => {
+    state.premiosCategories = [category('cat1')];
+    state.premiosBallots = [ballot('uid-1', 'Ana', 'cat1_option_0')];
+    state.config = { visible: true };
+
+    await publishAndArchiveSeason({ season: 2026, seasonId: 'test' });
+
+    expect(lastConfigWrite()?.data.visible).toBe('__deleteField__');
   });
 
   it('deja la configuración sin edición y apuntando al archivo publicado', async () => {
@@ -315,6 +365,16 @@ describe('openSeason', () => {
     expect(config?.data.isOpen).toBe(true);
     expect(config?.data.closesAt).toBeTruthy();
     expect(typeof config?.data.closesAtMillis).toBe('number');
+  });
+
+  // ABRIR ES ENSEÑAR. Al recoger la edición anterior el interruptor se queda en «Oculta», y la votación nueva
+  // arrancaba escondida: abierta, contando días y sin entrada en Ajustes ni en el espacio social.
+  it('deja la sección a la vista aunque se hubiera recogido la anterior', async () => {
+    state.config = { visible: false, lastPublishedId: 'test' };
+
+    await openSeason({ name: 'Nuevo test', closesDay: '2026-12-31', season: 2026 });
+
+    expect(lastConfigWrite()?.data.visible).toBe(true);
   });
 
   it('se niega a abrir sin fecha de cierre', async () => {

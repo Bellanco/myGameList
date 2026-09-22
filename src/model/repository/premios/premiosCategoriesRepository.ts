@@ -5,6 +5,7 @@
  * administrador. Por eso el ganador NO vive aquí: ver `premiosWinnersRepository`.
  */
 import { collection, deleteDoc, doc, getDocs, setDoc, writeBatch } from 'firebase/firestore/lite';
+import { isArchivableCategory } from '../../../core/premios/archivable';
 import { hasTitle, tField } from '../../../core/premios/localize';
 import { buildStableOptions, generateUUID, type PremiosOptionForm } from '../../../core/premios/options';
 import type { PremiosCategory } from '../../types/premios';
@@ -74,11 +75,7 @@ export async function loadAndSortCategories(
 
     const filtered = allDocs.filter((category) => !safeToDelete.includes(category.id));
 
-    const valid = includeInvalid
-      ? filtered
-      : filtered.filter(
-          (category) => !category.isPlaceholder && hasTitle(category) && (category.options?.length || 0) > 0,
-        );
+    const valid = includeInvalid ? filtered : filtered.filter(isArchivableCategory);
 
     return sortCategoriesByOrder(valid);
   } catch {
@@ -143,6 +140,10 @@ export async function saveCategory({
       // Espejo plano de los ids, por compatibilidad con lecturas antiguas.
       optionIds: builtOptions.map((option) => option.id),
       weight,
+      // DEJA DE SER EL DOCUMENTO VACÍO. Borrar la última categoría con título convierte su documento en un
+      // placeholder; si después se reutiliza para escribir una categoría de verdad, la marca se quedaba puesta y
+      // la categoría no se archivaba ni se podía votar —pero sí pedía ganador en el panel—.
+      isPlaceholder: false,
       updatedAt: now,
       ...(isNew ? { orderIndex, createdAt: now, isActive: true } : {}),
     },

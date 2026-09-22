@@ -255,12 +255,6 @@ export function AdminPremiosCategorias({ categories, busy, ejecutar }: AdminPrem
       <h3>{L.title}</h3>
       <p className="premios-admin__muted">{L.hint}</p>
 
-      <button type="button" className="btn" disabled={busy} onClick={() => abrir(null)}>
-        {L.create}
-      </button>
-
-      {editando === 'nueva' ? formulario : null}
-
       {ordenadas.length === 0 ? <p>{L.empty}</p> : null}
 
       <ul className="premios-admin__cats">
@@ -325,6 +319,24 @@ export function AdminPremiosCategorias({ categories, busy, ejecutar }: AdminPrem
           );
         })}
       </ul>
+
+      {/* NUEVA CATEGORÍA, AL FINAL Y APARTADA. Estaba arriba, pegada a la fila de acciones de la primera
+          categoría —subir, bajar, editar, eliminar—, y se pulsaba sin querer al ir a cualquiera de ellas:
+          aparecía un formulario vacío en medio de la pantalla y había que cancelarlo. Aquí abajo, con la lista
+          entera y una línea de por medio, hay que ir a buscarla.
+
+          Y MIENTRAS SE CREA, EL BOTÓN NO ESTÁ: en su sitio va el formulario, que es lo que ese botón acaba de
+          abrir. Dejarlo al lado invitaba a pulsarlo otra vez y a perder lo escrito. */}
+      <div className="premios-admin__new">
+        {editando === 'nueva' ? (
+          formulario
+        ) : (
+          <button type="button" className="btn" disabled={busy} onClick={() => abrir(null)}>
+            <Icon name="plus" />
+            <span>{L.create}</span>
+          </button>
+        )}
+      </div>
     </div>
   );
 }
