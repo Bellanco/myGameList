@@ -15,54 +15,13 @@
 // EL DEGRADADO `#ach-lux` vive aquí y no en la hoja porque un `stroke` sólo puede referenciar un gradiente que
 // esté en el documento. Es el que convierte un icono de línea en metal iluminado: marfil arriba a la izquierda,
 // oro en el medio, pardo casi negro en la esquina que queda a la sombra.
-import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
+import { crearRelevoDeSprite } from './spriteRelay';
 
-/**
- * UN SOLO SPRITE EN EL DOCUMENTO, aunque lo pidan varias pantallas a la vez.
- *
- * Antes no hacía falta: el sprite lo montaban cinco sitios que no coinciden nunca en pantalla (la pantalla de
- * logros, la tarjeta del panel, la ficha del hub, el feed y el panel de administración). El AVISO DE LOGRO lo
- * cambia: puede salir encima de CUALQUIERA de ellas, así que dos `<symbol id="ach-completados">` en el mismo
- * documento pasó de imposible a lo normal — y eso es HTML inválido, con el navegador quedándose con el primero.
- *
- * QUIÉN LO PINTA: el PRIMERO que se monta, y al irse pasa el relevo al siguiente que siga montado. Se lleva con
- * una lista por orden de llegada y no con un «dueño o nada», que era la primera versión y tenía un hueco: al
- * soltarlo, todos los demás se creían con derecho a pintar a la vez —tres sprites montados y dos pintando en
- * cuanto el aviso se cerraba—. Con la lista solo hay un primero, siempre.
- *
- * El alta va en `useLayoutEffect` a propósito: corre ANTES de que el navegador pinte, así que el relevo no deja
- * ni un fotograma sin dibujos ni dos juegos de `<symbol>` a la vista.
- */
-const oyentes = new Set<() => void>();
-const montados: symbol[] = [];
-
-function avisar(): void {
-  for (const oyente of oyentes) oyente();
-}
-
-function suscribir(oyente: () => void): () => void {
-  oyentes.add(oyente);
-  return () => {
-    oyentes.delete(oyente);
-  };
-}
+/** Un solo sprite de medallas en el documento, aunque lo pidan varias pantallas a la vez (ver `spriteRelay`). */
+const useSoyElQuePinta = crearRelevoDeSprite('ach-sprite');
 
 export function AchievementSprite() {
-  const token = useRef<symbol>(undefined as unknown as symbol);
-  if (!token.current) token.current = Symbol('ach-sprite');
-  const mio = token.current;
-
-  const pinta = useSyncExternalStore(suscribir, () => montados[0] === mio, () => true);
-
-  useLayoutEffect(() => {
-    montados.push(mio);
-    avisar();
-    return () => {
-      const donde = montados.indexOf(mio);
-      if (donde >= 0) montados.splice(donde, 1);
-      avisar();
-    };
-  }, [mio]);
+  const pinta = useSoyElQuePinta();
 
   if (!pinta) return null;
 
