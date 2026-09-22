@@ -2044,7 +2044,7 @@ las animaciones quietas.
 
 **F3 · El espejo** — empaquetado, escritura a rebufo tras
 `ENABLE_ACHIEVEMENTS_PUBLISH`, reglas, opt-out en `publicConfig` ⚑ **con sus cuatro piezas (§8.3)**, señal y purga
-en `/admin`, textos legales y `LEGAL_VERSION`. Tests de reglas (`vitest.rules.config.js`): el dueño escribe lo
+en `/admin`, textos legales y `LEGAL_VERSION`. Tests de reglas (`vitest.rules.config.mjs`): el dueño escribe lo
 suyo; otro usuario no; un blob de más de 1 kB se deniega; una clave inventada dentro de `achievements` se
 deniega; un perfil sin el campo sigue pudiendo escribirse; ⚑ `publicConfig` acepta `showAchievements: false` y
 rechaza `showAchievements: "no"`.

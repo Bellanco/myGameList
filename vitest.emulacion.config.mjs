@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config';
 
 // Config dedicada al EMULADOR del espacio social (`tests/emulacion/`). Se usa vía `npm run emulate:social`.
 //
-// Va aparte —y `vitest.config.js` excluye esa carpeta— por dos motivos. Uno, el emulador no afirma nada: imprime
+// Va aparte —y `vitest.config.mjs` excluye esa carpeta— por dos motivos. Uno, el emulador no afirma nada: imprime
 // lo que el hub hace (lecturas de gist, consultas de Firestore, aciertos de caché, renders) para poder mirarlo, y
 // un fichero que solo imprime no tiene sitio en una suite que se lee por rojo o verde. Y dos, su salida es
 // deliberadamente ruidosa: mezclada con 1.800 tests no la leería nadie.

@@ -11,7 +11,7 @@ export default defineConfig({
     testTimeout: 10_000,
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx', 'src/**/*.test.ts', 'src/**/*.test.tsx'],
     // `tests/emulacion` fuera: es el emulador del espacio social, que IMPRIME en vez de afirmar (ver
-    // `vitest.emulacion.config.js` y `npm run emulate:social`). Lo que de él hay que vigilar en cada commit es su
+    // `vitest.emulacion.config.mjs` y `npm run emulate:social`). Lo que de él hay que vigilar en cada commit es su
     // presupuesto de llamadas, y eso vive como test normal en `tests/component/socialHubBudget.test.tsx`.
     exclude: ['node_modules', 'public/**', 'tests/e2e/**', 'tests/integration/**', 'tests/emulacion/**'],
     coverage: {

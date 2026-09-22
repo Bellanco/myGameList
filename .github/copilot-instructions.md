@@ -180,7 +180,7 @@ npm run preview        # preview built app
 npm run validate       # node scripts/ci-validate.js + html-validate index.html + eslint src tests
 npm run lint           # eslint --fix
 npm run test           # vitest run tests/unit tests/component src   (lo que corre en cada commit)
-npm run test:all       # vitest run  — OJO: NO incluye e2e ni integration (vitest.config.js los EXCLUYE)
+npm run test:all       # vitest run  — OJO: NO incluye e2e ni integration (vitest.config.mjs los EXCLUYE)
 npm run test:e2e       # playwright test — los e2e, contra el BUILD de producción (ver abajo)
 npm run test:watch     # vitest watch
 npm run test:coverage  # vitest run --coverage
