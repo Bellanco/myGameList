@@ -172,7 +172,7 @@ las 10.259 líneas de GA, **~1.400 no llegan nunca**: son la infraestructura que
 | `GameCard.jsx` (205) | `NomineeCard.tsx` | Tarjeta de nominado. 100 % tipográfica: encaja de serie con el sistema |
 | `ReviewScreen.jsx` (228) | `PremiosReviewScreen.tsx` | Revisión antes de enviar |
 | `ResultsScreen.jsx` (207) | `PremiosResultsScreen.tsx` | Ganadores + clasificación + trofeos. Aquí entran los avatares (§4.1) |
-| `AwardCard.jsx` (106), `AwardDialog.jsx` (72) | `AwardCard.tsx`, `AwardDialog.tsx` | `<dialog>` nativo y canvas con `role="img"`. Se conserva el enfoque |
+| `AwardCard.jsx` (106), `AwardDialog.jsx` (72) | `AwardPanel.tsx` | Canvas con `role="img"`. El `<dialog>` se retiró (22-09-2026): la lámina vive en la página, encima de los ganadores, y cambia al pulsar cualquier trofeo |
 | `SuccessScreen.jsx` (130), `AlreadyVotedScreen.jsx` (96), `DeadlineScreen.jsx` (132), `LoginScreen.jsx` (151) | idem con prefijo | Cuatro pantallas de estado. `LoginScreen` se funde con la puerta de GL |
 | `AutoSizeText.jsx` (121) | `AutoSizeText.tsx` | Ajuste del cuerpo de letra al hueco. **Revisar contra la escala tipográfica** (§6.3) |
 | `AdminPanel.jsx` (235) + `admin/*` (1.092) | `view/components/admin/premios/` | Seis pestañas que pasan a ser una sección del `AdminHub` |

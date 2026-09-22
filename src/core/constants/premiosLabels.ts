@@ -167,8 +167,6 @@ export const PREMIOS_UI = {
     /** Lo que se manda al invitar a votar. Lleva el nombre de la edición, que es lo que la sitúa en el año. */
     inviteTitle: (edicion: string) => `Vota en ${edicion}`,
     inviteText: 'Acepta el reto: elige quién crees que gana cada categoría.',
-    resultsTitle: (edicion: string) => `Resultados de ${edicion}`,
-    resultsText: 'Mira quién ha ganado y cómo ha quedado la clasificación.',
   },
 
   resultados: {
@@ -212,9 +210,6 @@ export const PREMIOS_UI = {
     // LA GALERÍA: desde la clasificación se MIRA, y quien quiera el archivo lo pide dentro.
     see: 'Ver el trofeo',
     seeAll: 'Ver los premios',
-    awardOf: (actual: number, total: number) => `${actual} de ${total}`,
-    awardPrev: 'Anterior',
-    awardNext: 'Siguiente',
     empty: 'Esta edición todavía no tiene resultados publicados.',
     // La clasificación enseña la cara de una amistad y la inicial del resto: es la misma regla de reciprocidad
     // del espacio social, aplicada aquí (ver §4.1 del plan).
@@ -269,7 +264,7 @@ export const PREMIOS_UI = {
       edited: 'Edición actualizada.',
       nameLabel: 'Nombre de la edición',
       namePlaceholder: 'El reto del jugador 2026',
-      nameHint: 'De aquí sale el identificador del archivo. Sin nombre se usa el año.',
+      nameHint: 'Hace falta: de aquí sale el identificador con el que se archiva la edición.',
       closesLabel: 'Último día para votar',
       closesHint: 'Se cierra a las 23:59 de ese día, hora peninsular.',
       openAction: 'Abrir votación',
@@ -283,11 +278,11 @@ export const PREMIOS_UI = {
         nombres.length === 1
           ? `«${nombres[0]}» está sin completar y no se podrá votar. Si esta edición no la reparte, no pasa nada.`
           : `${nombres.length} categorías están sin completar y no se podrán votar (${listaCorta(nombres)}). Si esta edición no las reparte, no pasa nada.`,
-      /** El último aviso, con el dedo ya en el botón: es la pregunta, así que va en corto. */
-      openConfirm: (nombres: string[]) =>
-        nombres.length === 1
-          ? `«${nombres[0]}» está sin completar y no se podrá votar. ¿Abrir la votación de todos modos?`
-          : `Hay ${nombres.length} categorías sin completar que no se podrán votar (${listaCorta(nombres)}). ¿Abrir la votación de todos modos?`,
+      /**
+       * El último aviso, con el dedo ya en el botón. Es la PREGUNTA y nada más: el detalle —cuáles son y por qué
+       * da igual— lo cuenta el mismo texto que ya está encima del botón, debajo de ella.
+       */
+      openConfirmTitle: '¿Abrir la votación de todos modos?',
       /** Esto SÍ impide abrir: sin una sola categoría con nominados no hay nada que votar. */
       openNoCategories: 'No hay ninguna categoría con nominados: ponlos en «Categorías» antes de abrir la votación.',
       closeAction: 'Cerrar ahora',

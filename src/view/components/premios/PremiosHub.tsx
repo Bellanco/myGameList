@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { ballotIsUnchanged } from '../../../core/premios/ballotEdits';
 import { votesToSelections } from '../../../model/repository/premios/premiosBallotRepository';
@@ -166,6 +166,20 @@ export function PremiosHub() {
   const necesitaSesion = !user && enFlujo;
   /** ¿Se ofrece ir a los resultados? Solo si no hay edición en marcha; el porqué, en `areResultsOffered`. */
   const hasResults = areResultsOffered(edition.config);
+
+  /**
+   * SIN EDICIÓN EN MARCHA, LA SECCIÓN SON LOS RESULTADOS. La portada no tenía nada que contar —«ahora mismo no
+   * hay ninguna edición» y un botón para ir a lo único que hay— así que se va directa al último archivo
+   * publicado. Se reemplaza la entrada en el historial en vez de apilarla: volver tiene que salir de la sección,
+   * no rebotar aquí.
+   *
+   * Salvo cuando se llega desde los propios resultados: el «volver» de esa pantalla aterriza aquí a propósito y
+   * devolverlo de un salto sería dejarlo encerrado (ver `PremiosResultsScreen.volver`).
+   */
+  const vueltaDeResultados = Boolean((location.state as { fromResults?: boolean } | null)?.fromResults);
+  if (route.panel === 'portada' && hasResults && !vueltaDeResultados) {
+    return <Navigate to={PREMIOS_ROUTES.results} replace />;
+  }
 
   /**
    * REPASAR LO VOTADO NO CADUCA. La papeleta es suya, ya está enviada y las reglas la dejan leer sin mirar el

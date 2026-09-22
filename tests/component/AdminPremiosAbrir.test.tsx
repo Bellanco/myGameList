@@ -1,8 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AdminPremios } from '../../src/view/components/premios/AdminPremios';
 import { PREMIOS_UI } from '../../src/core/constants/premiosLabels';
+import { DIALOG_MESSAGES } from '../../src/core/constants/labels';
 import type { PremiosCategory } from '../../src/model/types/premios';
 
 const L = PREMIOS_UI.admin.season;
@@ -56,10 +57,12 @@ vi.mock('../../src/model/repository/premiosVisibilityRepository', () => ({
 /** Una semana por delante: abrir exige un día de cierre que no esté en el pasado. */
 const DIA_DE_CIERRE = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
 
-async function pintar() {
+/** La edición no se abre sin nombre ni sin día de cierre, así que el formulario va relleno salvo que se diga. */
+async function pintar({ nombre = 'El reto del jugador 2026', dia = DIA_DE_CIERRE } = {}) {
   render(<AdminPremios onBack={() => {}} />);
   const boton = await screen.findByRole('button', { name: L.openAction });
-  fireEvent.change(screen.getByLabelText(L.closesLabel), { target: { value: DIA_DE_CIERRE } });
+  if (nombre) fireEvent.change(screen.getByLabelText(L.nameLabel), { target: { value: nombre } });
+  if (dia) fireEvent.change(screen.getByLabelText(L.closesLabel), { target: { value: dia } });
   return boton;
 }
 
@@ -76,17 +79,21 @@ describe('AdminPremios · abrir la votación', () => {
     await waitFor(() => expect(screen.getByText(L.openIncomplete(['Mejor arte']))).toBeInTheDocument());
     await waitFor(() => expect(boton).toBeEnabled());
 
-    // Se puede arrepentir, y entonces no se abre nada.
-    const confirmar = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    // LA PREGUNTA ES DE LA CASA, no el `confirm()` del navegador: un `<dialog>` con su foco y su Esc.
     await userEvent.click(boton);
-    expect(confirmar).toHaveBeenCalledWith(L.openConfirm(['Mejor arte']));
+    const dialogo = await screen.findByRole('dialog', { name: L.openConfirmTitle });
+    expect(within(dialogo).getByText(L.openIncomplete(['Mejor arte']))).toBeInTheDocument();
+
+    // Se puede arrepentir, y entonces no se abre nada.
+    await userEvent.click(within(dialogo).getByRole('button', { name: DIALOG_MESSAGES.cancel }));
     expect(openMock).not.toHaveBeenCalled();
 
     // O abrir de todos modos: esa categoría puede que no se reparta esta edición.
-    confirmar.mockReturnValue(true);
     await userEvent.click(boton);
+    await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: L.openAction }),
+    );
     await waitFor(() => expect(openMock).toHaveBeenCalledTimes(1));
-    confirmar.mockRestore();
   });
 
   it('con todas completas abre sin preguntar', async () => {
@@ -96,11 +103,25 @@ describe('AdminPremios · abrir la votación', () => {
     await waitFor(() => expect(boton).toBeEnabled());
     expect(screen.queryByText(L.openNoCategories)).not.toBeInTheDocument();
 
-    const confirmar = vi.spyOn(window, 'confirm').mockReturnValue(true);
     await userEvent.click(boton);
     await waitFor(() => expect(openMock).toHaveBeenCalledTimes(1));
-    expect(confirmar).not.toHaveBeenCalled();
-    confirmar.mockRestore();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  /**
+   * NI SIN NOMBRE NI SIN DÍA DE CIERRE. El nombre era opcional —sin él se usaba el año— y con eso el
+   * identificador del archivo salía a suerte: dos ediciones del mismo año chocaban.
+   */
+  it('no se abre sin nombre', async () => {
+    categorias.valor = [completa];
+    const boton = await pintar({ nombre: '' });
+    await waitFor(() => expect(boton).toBeDisabled());
+  });
+
+  it('no se abre sin día de cierre', async () => {
+    categorias.valor = [completa];
+    const boton = await pintar({ dia: '' });
+    await waitFor(() => expect(boton).toBeDisabled());
   });
 
   it('sin ninguna categoría con nominados tampoco se abre', async () => {

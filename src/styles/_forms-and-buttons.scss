@@ -217,6 +217,18 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   font-size: var(--fs-xl);
   font-weight: 600;
 }
+/* LO QUE HAY QUE LEER ANTES DE DECIDIR, debajo de la pregunta y en cuerpo de lectura. El título es grande y en
+   negrita: una explicación de tres líneas ahí arriba deja de ser una pregunta. */
+.dialog-body {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+/* Con cuerpo, el marco de 320 px se queda en una columna de dos palabras por línea. */
+.alert-dialog:has(.dialog-body) { max-width: min(30rem, calc(100vw - 1.5rem)); }
+
 .dialog-actions {
   display: flex;
   gap: 0.75rem;
@@ -439,6 +451,26 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   border-color: color-mix(in srgb, var(--steam) 40%, var(--border));
 }
 .btn:active { transform: perspective(460px) rotateX(8deg) translateY(0); }
+
+/* UN BOTÓN QUE NO SE PUEDE PULSAR TIENE QUE PARECERLO, y en TODA la aplicación. No había regla base: un
+   `disabled` se veía igual que uno vivo —mismo relieve, mismo acento, mismo respingo al pasar por encima—, así
+   que se pulsaba y no pasaba nada, que es como se lee una avería. Lo arreglaban a mano tres hojas sueltas (la
+   papeleta, la ruleta, el panel), cada una con su número.
+   El `:hover` también se apaga: un botón muerto que se levanta al acercarse vuelve a prometer lo que no hace. */
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: .45;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.btn:disabled:hover,
+.btn[aria-disabled='true']:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: color-mix(in srgb, var(--steam) 16%, var(--border));
+}
 /* Un ENLACE con pinta de botón sigue siendo un enlace, y trae de serie el subrayado del navegador: dentro de una
    pastilla se lee como un fallo de estilo. Quien decide que algo parezca un botón es la clase, no la etiqueta.
    (La etiqueta sí importa para lo demás: `/stats/resenas/:id` se abre en otra pestaña y se copia porque es un

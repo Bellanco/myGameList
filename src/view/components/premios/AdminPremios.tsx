@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
+import { ConfirmModal } from '../../modals/ConfirmModal';
 import { HubBackButton } from '../socialhub/HubBackButton';
 import { Icon } from '../Icon';
 import { AdminPremiosCategorias } from './AdminPremiosCategorias';
@@ -66,6 +67,8 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
   const publicado = useRef<PremiosVisibilitySnapshot | null>(null);
   /** ¿Ha terminado ya la primera lectura? Sin esto, el bloqueo de abrir saltaría con la pantalla aún vacía. */
   const [cargado, setCargado] = useState(false);
+  /** ¿Se está preguntando si abrir con categorías a medias? */
+  const [pidiendoAbrir, setPidiendoAbrir] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -147,7 +150,16 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
    * se avisa (arriba, y otra vez al pulsar) y decide quien administra. Lo que no tiene sentido es abrir sin
    * NINGUNA: sería una votación sin nada que votar, y eso sí se impide.
    */
-  const puedeAbrir = cargado && votables > 0;
+  /**
+   * LO QUE HACE FALTA PARA ABRIR: nombre, día de cierre y al menos una categoría lista.
+   *
+   * El nombre ya no es opcional. Lo era —sin él se usaba el año— y con eso el identificador del archivo salía a
+   * suerte: dos ediciones del mismo año chocaban, y en el histórico quedaba «2026» sin decir de qué. Que falte
+   * se ve solo, con los dos campos vacíos justo encima del botón apagado, así que no lleva aviso.
+   *
+   * Las categorías a medias NO cuentan aquí: esas avisan y dejan seguir (`pedirAbrir`).
+   */
+  const puedeAbrir = cargado && votables > 0 && Boolean(name.trim()) && Boolean(closesDay);
 
   /** ¿Se está ofreciendo la entrada ahora mismo? Con la MISMA función que lo decide en Ajustes y en lo social. */
   const seOfrece = useMemo(() => shouldOfferPremios(config), [config]);
@@ -170,18 +182,23 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
     [recargar],
   );
 
-  const abrir = () => {
-    // EL ÚLTIMO AVISO, con el dedo ya en el botón: abrir retira las papeletas sueltas y arranca el plazo, así que
-    // la lista de lo que se queda fuera se repite aquí y no solo encima del formulario.
-    if (nombresIncompletos.length > 0 && !window.confirm(L.season.openConfirm(nombresIncompletos))) return;
-
-    return ejecutar(async () => {
+  const abrir = () =>
+    ejecutar(async () => {
       const hoy = todayInVotingZone();
       if (validateClosingDay(closesDay, hoy)) throw new Error(L.season.errorDay);
       const result = await openSeason({ name, closesDay, season: new Date().getFullYear() });
       const aviso = L.season.opened(result.name || String(new Date().getFullYear()));
       return result.leftovers > 0 ? `${aviso} ${L.season.leftovers(result.leftovers)}` : aviso;
     });
+
+  /**
+   * EL ÚLTIMO AVISO, con el dedo ya en el botón: abrir retira las papeletas sueltas y arranca el plazo. Va en el
+   * diálogo de la casa (`<dialog>` nativo, con su foco atrapado y su Esc) y no en el `confirm()` del navegador,
+   * que se pinta fuera de la aplicación, con la dirección del sitio de cabecera y sin una sola de sus formas.
+   */
+  const pedirAbrir = () => {
+    if (nombresIncompletos.length > 0) setPidiendoAbrir(true);
+    else void abrir();
   };
 
   const cerrar = () =>
@@ -384,7 +401,7 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
                   className="btn btn-primary"
                   disabled={busy || !puedeAbrir}
                   aria-describedby={cargado && !puedeAbrir ? 'premios-open-blocked' : undefined}
-                  onClick={() => void abrir()}
+                  onClick={pedirAbrir}
                 >
                   {L.season.openAction}
                 </button>
@@ -477,6 +494,19 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
           <AdminPremiosHistorico busy={busy} ejecutar={ejecutar} />
         )}
       </div>
+
+      <ConfirmModal
+        open={pidiendoAbrir}
+        title={L.season.openConfirmTitle}
+        body={L.season.openIncomplete(nombresIncompletos)}
+        confirmLabel={L.season.openAction}
+        tone="primary"
+        onCancel={() => setPidiendoAbrir(false)}
+        onConfirm={() => {
+          setPidiendoAbrir(false);
+          void abrir();
+        }}
+      />
     </section>
   );
 }

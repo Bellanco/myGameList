@@ -506,16 +506,6 @@
 
 .premios-review__actions { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .3rem; }
 
-/* UN BOTÓN QUE NO SE PUEDE PULSAR TIENE QUE PARECERLO. La hoja base no viste `:disabled` —no hay regla global en
-   toda la aplicación—, así que «Enviar papeleta» con la papeleta a medias y «Anterior» en la primera categoría
-   se veían exactamente igual que los demás: se pulsaban y no pasaba nada, que es como se lee una avería. */
-.premios-review__actions .btn:disabled,
-.premios-vote__nav .btn:disabled {
-  opacity: .45;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
 /* Cada categoría, una tarjeta con su portada: se reconoce la papeleta por las carátulas, que es como se
    reconoce un juego. Las mismas medidas que las cajas del mosaico. */
 .premios-review__grid {
@@ -1291,19 +1281,44 @@
    texto envuelto. Apiladas, los ganadores van primero, que es el orden con el que se cuenta una edición. */
 .premios-results__cols { display: grid; gap: 1rem; }
 
+/* APILADO, PRIMERO EL LISTADO ENTERO Y DESPUÉS LOS VOTOS. Los ganadores caían entre el podio y el resto de la
+   clasificación y la partían en dos: se leían los tres primeros, veintiséis categorías y, al final del todo, del
+   cuarto en adelante. El orden va aquí y no en el marcado porque en pantalla ancha son columnas y no hay nada
+   que partir. */
+.premios-results__cols > .premios-results__panel { order: 3; }
+.premios-results__cols > .premios-award { order: 2; }
+.premios-results__cols > .premios-results__panel--board { order: 1; }
+
 @media (min-width: 60rem) {
   .premios-results__cols {
     grid-template-columns: 3fr 2fr;
     align-items: start;
   }
 
+  /* En dos columnas mandan las columnas: el orden de apilado no pinta nada. */
+  .premios-results__cols > .premios-results__panel,
+  .premios-results__cols > .premios-award,
+  .premios-results__cols > .premios-results__panel--board { order: 0; }
+
+  /* LA LÁMINA Y EL LISTADO, A LA MISMA ALTURA Y DEBAJO DEL PODIO: la lámina a la izquierda, donde empiezan los
+     ganadores, y la clasificación a su derecha. Los ganadores caen solos en la casilla de debajo de la lámina,
+     que es la única que queda libre. */
+  .premios-results__cols > .premios-award { grid-column: 1; grid-row: 1; }
+  .premios-results__cols > .premios-results__panel--board { grid-column: 2; grid-row: 1; }
+
+  /* Con lámina hay dos filas a la izquierda, y la clasificación acompaña a las dos: si se quedara en la
+     primera, su altura empujaría a los ganadores hasta el final de la lista. Sin lámina no hay segunda fila que
+     abarcar, y pedirla dejaría un hueco muerto debajo. */
+  .premios-results__cols:has(> .premios-award) > .premios-results__panel--board { grid-row: 1 / span 2; }
+
   /* La clasificación se queda a la vista mientras se recorren las categorías, que es justo lo que se quiere
      comparar. */
   .premios-results__panel--board { position: sticky; top: 1rem; }
 
   /* Sin nadie fuera del podio no hay segundo panel, y los ganadores ocupan las dos columnas en vez de quedarse
-     en una tira con la mitad de la pantalla en blanco. */
-  .premios-results__panel:only-child { grid-column: 1 / -1; }
+     en una tira con la mitad de la pantalla en blanco. Lo dice una clase y no `:only-child`: la lámina también
+     vive en esta rejilla, así que los ganadores pueden no ser el único hijo y seguir estando solos. */
+  .premios-results__panel--wide { grid-column: 1 / -1; }
 }
 
 .premios-results__panel {
@@ -1488,26 +1503,32 @@
 
 /* ─── La lámina del podio ─────────────────────────────────────────────────────────────────────────────── */
 
+/* UNA PIEZA MÁS DE LA PÁGINA, no un modal: vive encima de los ganadores y a lo ancho de las dos columnas. De
+   `<dialog>` se ha quedado sin el fondo oscuro y sin el botón de cerrar — se retira volviendo a pulsar el mismo
+   trofeo—, y el recorte del radio, que antes se lo daba el propio diálogo. */
 .premios-award {
-  width: min(92vw, 60rem);
-  padding: 0;
+  overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--text);
 }
 
-.premios-award::backdrop { background: rgba(0, 0, 0, .6); }
 
 /* El canvas se dibuja a resolución NATIVA y se escala aquí: lo que se descarga sirve para imprimir. */
 .premios-award__canvas { display: block; width: 100%; height: auto; }
 
+/* Quién es y cómo llevárselo, en la misma línea y a los lados; en pantalla estrecha se apilan por su cuenta. */
 .premios-award__actions {
   display: flex;
   gap: .6rem;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   padding: .7rem;
 }
+
+.premios-award__who { margin: 0; font-size: var(--fs-sm); }
 
 /* El trofeo de una fila: icono y nada más. Cinco botones con rótulo en cinco renglones seguidos tapaban los
    nombres; su nombre va en el `aria-label` y en el `title`, como los botones de icono del panel. */
