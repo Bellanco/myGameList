@@ -46,6 +46,7 @@ import { buildFriendshipViews } from './social/friendshipViews';
 import { useSocialDirectory } from './social/useSocialDirectory';
 import { resolveGateway } from './social/socialGateway';
 import { useSocialFriendships } from './social/useSocialFriendships';
+import { useSocialNavigation } from './social/useSocialNavigation';
 import { useSocialStartupTasks } from './social/useSocialStartupTasks';
 import { loadLocalState } from '../model/repository/localRepository';
 import { matchSocialRoute, OWN_PROFILE_ALIAS } from './social/socialRoutes';
@@ -1302,51 +1303,23 @@ export function useSocialViewModel(options?: {
   // de forma permanente. La limpieza de huérfanas la hace ahora `reconcileReviewActivity`, que compara la lista
   // completa de una vez y nunca retira una entrada más nueva que el reloj de los listados locales.
 
-  const openActivityDetail = useCallback((entry: SocialActivityFeedItem) => {
-    void navigate(`/social/user/${encodeURIComponent(entry.actorProfileId)}/game/${entry.gameId}/${entry.type}`);
-  }, [navigate]);
-
   /**
-   * F4 — abre el análisis del autor sobre ese juego desde el nombre del juego de un movimiento. Misma ruta que
-   * `openActivityDetail`, con el tipo fijo a `review`: es el único destino que un movimiento puede tener (no hay
-   * pantalla de «movimiento», y no la necesita).
-   *
-   * `actorProfileId` es el pseudónimo que lleva la entrada de actividad DEL GIST, y el nombre del parámetro lo
-   * dice a propósito: `activeDetailEvent` resuelve el detalle comparando con ese campo, así que pasar aquí el id
-   * de la entrada del directorio —que para una amistad es su uid de Firebase— abría una pantalla vacía.
+   * A DÓNDE LLEVA CADA GESTO: `social/useSocialNavigation`, que construye las direcciones con `SOCIAL_ROUTES` en
+   * vez de repetir aquí las plantillas que ese módulo ya declara para leerlas. Se desestructura —y no se usa
+   * `nav.loquesea`— porque estas funciones viajan por props a pantallas memoizadas y así conservan su identidad.
    */
-  const openMoveReview = useCallback((actorProfileId: string, gameId: number) => {
-    void navigate(`/social/user/${encodeURIComponent(actorProfileId)}/game/${gameId}/review`);
-  }, [navigate]);
-
-  const openProfileDetail = useCallback((profileId: string) => {
-    // Cualquier perfil del directorio se puede abrir (para no-amigos: hero + "Añadir amigo").
-    void navigate(`/social/profiles/${encodeURIComponent(profileId)}`);
-  }, [navigate]);
-
-  // Reseñas del perfil: alternar entre la vista del perfil (/social/profiles/:id) y la de reseñas
-  // (.../reviews), y abrir el detalle a pantalla completa de una reseña (.../game/:gameId/review).
-  const openProfileReviews = useCallback((profileId: string) => {
-    void navigate(`/social/profiles/${encodeURIComponent(profileId)}/reviews`);
-  }, [navigate]);
-  const closeProfileReviews = useCallback((profileId: string) => {
-    void navigate(`/social/profiles/${encodeURIComponent(profileId)}`);
-  }, [navigate]);
-  const openProfileReviewDetail = useCallback((profileId: string, gameId: number) => {
-    void navigate(`/social/profiles/${encodeURIComponent(profileId)}/game/${gameId}/review`);
-  }, [navigate]);
-
-  // Logros de ese perfil: mismo par abrir/cerrar que las reseñas, y por el mismo motivo —es una vista del mismo
-  // perfil, no otra pantalla—, así que el botón de atrás del navegador se comporta igual en las dos.
-  const openProfileAchievements = useCallback((profileId: string) => {
-    void navigate(`/social/profiles/${encodeURIComponent(profileId)}/logros`);
-  }, [navigate]);
-  const closeProfileAchievements = useCallback((profileId: string) => {
-    void navigate(`/social/profiles/${encodeURIComponent(profileId)}`);
-  }, [navigate]);
-  const openProfileGlobals = useCallback((profileId: string) => {
-    void navigate(`/social/profiles/${encodeURIComponent(profileId)}/globales`);
-  }, [navigate]);
+  const {
+    openActivityDetail,
+    openMoveReview,
+    openProfileDetail,
+    openProfileReviews,
+    closeProfileReviews,
+    openProfileReviewDetail,
+    openProfileAchievements,
+    closeProfileAchievements,
+    openProfileGlobals,
+    openRelatedReview,
+  } = useSocialNavigation(navigate, location.pathname);
 
   // Abre el DETALLE del perfil propio (vista pública con sus listados), no el editor. Si aún no existe entrada
   // propia en el directorio, cae al editor para que el usuario complete su perfil.
@@ -1444,18 +1417,6 @@ export function useSocialViewModel(options?: {
    *    actividad porque una reseña propia puede no estar publicada, y entonces no hay entrada que abrir; el
    *    perfil propio, en cambio, repuebla sus listados desde los locales y las encuentra todas.
    */
-  const openRelatedReview = useCallback((entry: { isOwn: boolean; authorId: string; gameId: number }) => {
-    const target = entry.isOwn
-      ? `/social/profiles/${OWN_PROFILE_ALIAS}/game/${entry.gameId}/review`
-      : `/social/user/${encodeURIComponent(entry.authorId)}/game/${entry.gameId}/review`;
-    // De dónde se viene, para que el botón de volver lleve AHÍ y no al sitio por defecto de la pantalla que se
-    // abre. Sin esto, saltar a un análisis propio ofrecía «volver a las reseñas» —la lista de tus reseñas— a
-    // quien venía del feed y no había pasado por esa lista en su vida.
-    //
-    // Se usa `backTo`, que es el mecanismo que el hub YA tiene para esto (lo estrenó el panel de estadísticas al
-    // enlazar tus reseñas), en vez de inventar un segundo canal para decir lo mismo.
-    void navigate(target, { state: { backTo: location.pathname } });
-  }, [location.pathname, navigate]);
 
 
   // Amigo inactivo (su gist social no se leyó al hidratar el directorio, para no ocupar el feed ni gastar la
