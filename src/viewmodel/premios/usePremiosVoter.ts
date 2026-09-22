@@ -13,7 +13,7 @@
  */
 import { useEffect, useState } from 'react';
 import { DEFAULT_PROFILE_TIER } from '../../core/constants/tiers';
-import type { PremiosVoterStanding } from '../../core/premios/ballotEdits';
+import { NO_SOCIAL_STANDING, type PremiosVoterStanding } from '../../core/premios/ballotEdits';
 import { getOwnProfileRef } from '../../model/repository/firebaseSocialRepository';
 
 export interface PremiosVoter extends PremiosVoterStanding {
@@ -23,10 +23,14 @@ export interface PremiosVoter extends PremiosVoterStanding {
   loading: boolean;
 }
 
+/**
+ * El cupo mínimo SALE DE `NO_SOCIAL_STANDING`, no se vuelve a escribir aquí: esa constante es el espejo de lo
+ * que imponen las reglas (`premiosOpportunities` en `firestore.rules`), y una segunda copia del valor por
+ * defecto es exactamente la que se queda atrás el día que el cupo cambie.
+ */
 const SIN_PERFIL: PremiosVoter = {
+  ...NO_SOCIAL_STANDING,
   profileId: '',
-  hasSocialAccount: false,
-  tier: DEFAULT_PROFILE_TIER,
   loading: false,
 };
 

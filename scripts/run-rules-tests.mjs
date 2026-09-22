@@ -80,7 +80,7 @@ if (!existsSync(firebase)) {
 
 const { status } = spawnSync(
   firebase,
-  ['emulators:exec', '--only', 'firestore', 'vitest run --config vitest.rules.config.js'],
+  ['emulators:exec', '--only', 'firestore', 'vitest run --config vitest.rules.config.mjs'],
   { stdio: 'inherit', env: entorno, cwd: raiz }
 );
 process.exit(status ?? 1);

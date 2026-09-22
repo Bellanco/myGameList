@@ -1,5 +1,6 @@
-import { memo, useLayoutEffect, useRef, useSyncExternalStore } from 'react';
+import { memo } from 'react';
 import type { AnnouncementIcon as IconId } from '../../core/announcement/announcement';
+import { crearRelevoDeSprite } from './spriteRelay';
 
 /**
  * Sprite de los ICONOS DEL AVISO: el dibujo que ocupa el sitio de la medalla en la cápsula.
@@ -19,38 +20,13 @@ import type { AnnouncementIcon as IconId } from '../../core/announcement/announc
  *
  * UN SOLO SPRITE EN EL DOCUMENTO, aunque lo pidan a la vez la pantalla del panel y la cápsula que salta encima:
  * dos `<symbol>` con el mismo `id` son HTML inválido y el navegador se queda con el primero. Lo pinta el primero
- * que se monta y al irse pasa el relevo, igual que en `AchievementSprite` (ahí está el porqué largo).
+ * que se monta y al irse pasa el relevo: el mecanismo —y el porqué largo— está en `spriteRelay`, que es el mismo
+ * que usan las medallas con su propio registro.
  */
-const oyentes = new Set<() => void>();
-const montados: symbol[] = [];
-
-function avisar(): void {
-  for (const oyente of oyentes) oyente();
-}
-
-function suscribir(oyente: () => void): () => void {
-  oyentes.add(oyente);
-  return () => {
-    oyentes.delete(oyente);
-  };
-}
+const useSoyElQuePinta = crearRelevoDeSprite('ann-sprite');
 
 export function AnnouncementSprite() {
-  const token = useRef<symbol>(undefined as unknown as symbol);
-  if (!token.current) token.current = Symbol('ann-sprite');
-  const mio = token.current;
-
-  const pinta = useSyncExternalStore(suscribir, () => montados[0] === mio, () => true);
-
-  useLayoutEffect(() => {
-    montados.push(mio);
-    avisar();
-    return () => {
-      const donde = montados.indexOf(mio);
-      if (donde >= 0) montados.splice(donde, 1);
-      avisar();
-    };
-  }, [mio]);
+  const pinta = useSoyElQuePinta();
 
   if (!pinta) return null;
 

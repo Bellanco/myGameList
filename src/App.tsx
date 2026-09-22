@@ -44,7 +44,6 @@ import { useReturnTo } from './view/hooks/useReturnTo';
 import { useLegacyProfileHeal } from './view/hooks/useLegacyProfileHeal';
 import { useShootingStars } from './view/hooks/useShootingStars';
 import { useBacklogSnapshot } from './view/hooks/useBacklogSnapshot';
-import { useSignatureEffects } from './view/hooks/useSignatureEffects';
 import { useScreenTransition } from './view/hooks/useScreenTransition';
 import { useAppliedPalette } from './view/hooks/usePalette';
 import { hasGithubOAuthRedirect, takeGithubOAuthOrigin } from './model/repository/githubOAuthChecks';
@@ -54,7 +53,6 @@ import { useImportInbox } from './viewmodel/useImportInbox';
 import { useImportFieldPrefs } from './viewmodel/useImportFieldPrefs';
 import { useMountedOnceOpen } from './view/modals/useMountedOnceOpen';
 import { runWhenIdle } from './core/utils/idle';
-import { parseLibraryExporter } from './core/import/libraryExporter';
 import { carryStamps } from './core/utils/gameStamps';
 import { importedToPartialGame, mergeImportedIntoGame } from './core/import/staging';
 import type { ImportedGame, RawExternalGame } from './model/types/import';
@@ -113,6 +111,13 @@ const IconSpriteRest = lazy(() => import('./view/components/IconSpriteRest').the
  * navegador está ocioso, así que ni el chunk ni la petición compiten con el primer pintado.
  */
 const AnnouncementToast = lazy(() => import('./view/components/AnnouncementToast').then((module) => ({ default: module.AnnouncementToast })));
+
+/**
+ * LOS EFECTOS DE FIRMA (ver `SignatureEffects`), por la misma puerta que el resto del sprite: fuera del chunk de
+ * arranque y montados en cuanto hay hueco. Responden a interacciones —un clic, cerrar un juego, cambiar de
+ * tema—, así que llegar unos milisegundos después de pintar no se nota.
+ */
+const SignatureEffects = lazy(() => import('./view/components/SignatureEffects').then((module) => ({ default: module.SignatureEffects })));
 
 /**
  * LA PANTALLA DEL AVISO EN LOCAL (`/dev/aviso`), SOLO EN DESARROLLO. En producción `import.meta.env.DEV` es
@@ -234,8 +239,6 @@ export default function App() {
   // El scroll al cambiar de pantalla: arriba al entrar, donde estabas al volver (ver el hook).
   useScrollOnNavigate();
   useShootingStars();
-  // Efectos de firma por interacción (wipe P5 al navegar, apertura de portal al clic, sol↔luna, boot-up 40K).
-  useSignatureEffects();
 
   /**
    * LA PUERTA DE «DISEÑO» TAMBIÉN EN LA RUTA, y no solo en el menú. Ahí dentro está lo que se guarda en
@@ -363,6 +366,11 @@ export default function App() {
         notify('err', UI_MESSAGES.import.integrations.parseError);
         return;
       }
+      // El parser entra POR `import()` y no por la cabecera: con su módulo de apoyo (`playniteShared`) son
+      // ~1,8 kB que solo hacen falta cuando alguien elige un fichero, y el presupuesto de arranque va justo
+      // (`BOOT_CRITICAL_BUDGET_KB` en `scripts/ci-validate.js`). Este manejador ya era asíncrono —lee el
+      // fichero—, así que esperar al módulo no añade ninguna espera perceptible.
+      const { parseLibraryExporter } = await import('./core/import/libraryExporter');
       importGames(parseLibraryExporter(json));
     },
     [importGames, notify],
@@ -1005,6 +1013,9 @@ export default function App() {
       {spriteRestoListo ? (
         <Suspense fallback={null}>
           <IconSpriteRest />
+          {/* Efectos de firma por interacción (wipe P5 al navegar, apertura de portal al clic, sol↔luna,
+              boot-up 40K). No pinta nada: solo escucha. */}
+          <SignatureEffects />
         </Suspense>
       ) : null}
       {/* A11y-4: primer elemento enfocable de la página. Sin él, llegar al contenido con teclado obligaba a pasar

@@ -35,6 +35,7 @@ import type {
 } from '../../types/premios';
 import {
   BALLOTS_COLLECTION,
+  BATCH_LIMIT,
   CATEGORIES_COLLECTION,
   CONFIG_COLLECTION,
   CONFIG_VOTING_DOC,
@@ -49,9 +50,6 @@ import {
   type PalmaresRecipient,
 } from './premiosPalmaresRepository';
 import { clearLegacyWinnerField, clearWinners, fetchWinners } from './premiosWinnersRepository';
-
-/** Tope de operaciones por lote que admite Firestore. */
-const BATCH_LIMIT = 500;
 
 async function votingDocRef() {
   const { firestore } = await requireServices();

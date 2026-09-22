@@ -5,6 +5,54 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-09-22
+
+La versión de **quitar peso y atar cabos**. Por fuera casi no se ve: arranca algo más ligera y el campo de
+etiquetas ya no deja un temporizador suelto al cerrarse. Por dentro, lo que se ha hecho es que las cosas que
+estaban escritas dos veces —una ruta, un cupo, un tope de lote, el relevo de un sprite— pasen a estar escritas
+una, que es lo que impide que dos copias de la misma regla dejen de decir lo mismo sin que nadie se entere.
+
+### Performance
+- **El arranque lleva 1,2 kB menos** (de 181,8 a 180,6 kB comprimidos, sobre un presupuesto de 190). Salen del
+  camino crítico el lector de bibliotecas de Playnite —que solo hace falta al elegir un fichero— y los efectos de
+  firma de los temas, que responden a un clic o a cerrar un juego y por tanto nunca al primer pintado. Ninguno de
+  los dos cambia lo que hacen: cambia cuándo llegan.
+- **Retirar los trofeos de una edición va por lotes.** Esa operación recorre la colección de perfiles entera, así
+  que el número de escrituras crece con la gente registrada y antes era una ida y vuelta por cada una. Si un lote
+  se cae se reintenta perfil a perfil, para conservar lo que ya hacía: que uno que no se deja escribir no se lleve
+  por delante a los demás.
+
+### Changed
+- **Los destinos del espacio social se construyen con la tabla de rutas** que ya existía para leerlas, en vez de
+  repetir cada dirección a mano. Eran dos copias de cada ruta —la que se lee y la que se escribe— sin nada que
+  impidiera que divergieran.
+- **El cupo mínimo de oportunidades de la porra sale de una sola constante**, la misma que es espejo de lo que
+  imponen las reglas de Firestore. Estaba escrito otra vez en el hook que lo lee.
+- **La forma vieja del gist de juegos se pregunta a un solo detector.** La condición que decide si un gist hay que
+  reescribirlo vivía copiada dentro de quien la usa, con el nombre que la documentaba sin que nadie lo llamara.
+- **Un solo relevo de sprite** para las medallas y los iconos del aviso, que compartían 35 líneas copiadas del
+  mecanismo que decide cuál de los montados pinta.
+- **El tope de operaciones por lote de Firestore** deja de estar escrito a mano en cada repositorio que lotea.
+
+### Fixed
+- **El cierre aplazado de las sugerencias de etiquetas se cancela al desmontar.** Al salir del campo, la lista de
+  sugerencias se cerraba con 200 ms de retraso para dejar pulsar una; si el formulario se cerraba dentro de esa
+  ventana, el temporizador seguía vivo y tocaba un componente que ya no estaba.
+
+### Tests
+- **El camino del 304 cubre ahora sus dos formas de fallar**: que GitHub responda con el límite de peticiones
+  agotado y que la red se caiga. Las dos siguen adelante sin romper la sincronización, y ninguna sella el
+  veredicto del formato, así que la sesión siguiente vuelve a intentar la migración.
+- **El alta sin gist tiene prueba propia**: es el primer paso de todo el que empieza a sincronizar y no lo
+  ejercitaba nada. Comprueba que se crea el gist, que la configuración se guarda antes de escribir y que lo que
+  sube es la biblioteca del aparato.
+- **El detector de auto-upgrade del gist tiene prueba directa**, incluido lo que NO debe tocar: un ancla que ya
+  está en el formato actual, que de marcarse dispararía una reescritura por cada lectura.
+- Pruebas nuevas también para los destinos del hub (incluida la codificación del pseudónimo, que hecha dos veces
+  abriría la pantalla de nadie) y para el reparto en lotes de los trofeos.
+- El doble de Firestore de las pruebas de premios **acumula las operaciones del lote y las aplica al `commit`**,
+  como el de verdad: sin eso no se podía comprobar qué pasa cuando un lote se rechaza.
+
 ## [1.4.1] - 2026-09-22
 
 La versión de **dejar la porra gobernable**. La 1.4.0 trajo la sección entera; esta afina el ciclo de una

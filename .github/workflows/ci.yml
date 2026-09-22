@@ -9,7 +9,7 @@ on:
     types: [ published ]
 
 env:
-  NODE_VERSION: '22'
+  NODE_VERSION: '24'
 
 jobs:
   test-and-validate:

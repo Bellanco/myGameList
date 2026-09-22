@@ -13,7 +13,7 @@ import { afterAll, afterEach } from 'vitest';
  * mismos ficheros pasaban aislados y la ejecución siguiente pasaba entera sin tocar una línea.
  *
  * 3000 ms es margen de sobra para la contención sin tapar un fallo de verdad, y queda POR DEBAJO del
- * `testTimeout` (10 s, en `vitest.config.js`) a propósito: así el que salta primero es este, y el error dice
+ * `testTimeout` (10 s, en `vitest.config.mjs`) a propósito: así el que salta primero es este, y el error dice
  * «Unable to find an element with the text…» —que señala el elemento que falta— en vez del «test timed out» de
  * vitest, que no dice nada. Un elemento que no va a aparecer sigue fallando; solo tarda dos segundos más.
  */

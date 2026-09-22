@@ -4,7 +4,14 @@ import { assertGistSizeWithinLimit, buildGamesFiles, buildGamesMainFile, distrib
 import { remapSocialActorIds, upsertReviewActivity } from '../../src/model/repository/socialGistRepository';
 import { assertValidSocialGist } from '../../src/model/schemas/socialGistSchema';
 import { migrateData } from '../../src/model/repository/migrateRepository';
-import { assembleChunkedGames, gamesGistNeedsRewrite, unwrapGamesFile } from '../../src/model/migration/legacyGamesFormat';
+import {
+  assembleChunkedGames,
+  gamesGistNeedsRewrite,
+  gamesGistNeedsUpgradeToWrapper,
+  isGamesMainWrapper,
+  isLegacyFlatTabData,
+  unwrapGamesFile,
+} from '../../src/model/migration/legacyGamesFormat';
 import { pickLegacyActorId, pickLegacyFromId, socialGistNeedsRewrite } from '../../src/model/migration/legacySocialFormat';
 import { localStateNeedsUpgrade } from '../../src/model/migration/legacyLocalStorage';
 import { LOCAL_SCHEMA_VERSION } from '../../src/core/constants/storageKeys';
@@ -452,5 +459,77 @@ describe('F8/E4: chunking multi-fichero del gist de juegos (gated, round-trip)',
     const assembled = assembleChunkedGames(anchorFile, { 'myGames.json': { content: JSON.stringify(anchorFile) } });
     const round = unwrapGamesFile(assembled) as TabData;
     expect(round.c.map((g) => g.id)).toEqual([1]);
+  });
+});
+
+/**
+ * EL DETECTOR QUE DECIDE LOS AUTO-UPGRADES del gist de juegos, probado de frente.
+ *
+ * `gamesGistWasLegacy` lo consulta en cada lectura, así que de lo que diga depende que el gist de alguien se
+ * reescriba o se deje en paz. Hasta ahora solo se ejercitaba de refilón, a través del camino del 304.
+ *
+ * Las dos formas del «sí» son distintas y conviene no confundirlas: lo VIEJO PLANO (`c/v/e/p`) hay que envolverlo
+ * en v4, y un envoltorio v3 hay que re-encodearlo. Un ancla que ya es v4 se queda como está: si esto devolviera
+ * `true` por error, cada lectura dispararía una reescritura del gist entero sin nada que cambiar.
+ */
+describe('gamesGistNeedsUpgradeToWrapper', () => {
+  it('lo viejo plano hay que envolverlo', () => {
+    expect(gamesGistNeedsUpgradeToWrapper({ c: [], v: [], e: [], p: [] })).toBe(true);
+    // Basta con una de las cuatro pestañas: un gist de alguien que solo tiene juegos en curso es válido.
+    expect(gamesGistNeedsUpgradeToWrapper({ e: [makeGame()] })).toBe(true);
+  });
+
+  it('un envoltorio anterior a la v4 hay que re-encodearlo', () => {
+    expect(gamesGistNeedsUpgradeToWrapper({ schemaVersion: 3, games: {} })).toBe(true);
+    expect(gamesGistNeedsUpgradeToWrapper({ schemaVersion: 0, games: {} })).toBe(true);
+  });
+
+  /**
+   * UN ENVOLTORIO SIN `schemaVersion` NO SE TOCA, y conviene que quede dicho porque no es evidente: la
+   * comparación es `Number(undefined) < 4`, o sea `NaN < 4`, que es falso.
+   *
+   * Es el lado seguro de los dos —no reescribir nunca hace daño; reescribir de más toca el gist de alguien sin
+   * motivo— y además es un caso que la aplicación no puede producir: `buildGamesMainFile` siempre sella la
+   * versión. Si algún día hubiera que recoger anclas sin sellar, este es el sitio donde cambiarlo.
+   */
+  it('un envoltorio sin versión se deja como está', () => {
+    expect(gamesGistNeedsUpgradeToWrapper({ fileType: 'games-main', games: {} })).toBe(false);
+    expect(buildGamesMainFile({ c: [], v: [], e: [], p: [], deleted: [], updatedAt: 1 }).schemaVersion).toBeGreaterThanOrEqual(4);
+  });
+
+  it('un ancla que ya es v4 se queda como está', () => {
+    expect(gamesGistNeedsUpgradeToWrapper({ schemaVersion: 4, games: {} })).toBe(false);
+    expect(gamesGistNeedsUpgradeToWrapper(buildGamesMainFile({ c: [makeGame()], v: [], e: [], p: [], deleted: [], updatedAt: 1 }))).toBe(false);
+  });
+
+  it('lo que no es un objeto no es nada: no dispara reescrituras', () => {
+    for (const nada of [null, undefined, 0, '', 'texto', true]) {
+      expect(gamesGistNeedsUpgradeToWrapper(nada)).toBe(false);
+    }
+    // Un objeto sin pestañas ni envoltorio tampoco: no se sabe qué es, y ante la duda no se toca.
+    expect(gamesGistNeedsUpgradeToWrapper({ updatedAt: 1, deleted: [] })).toBe(false);
+  });
+
+  /**
+   * LA CONDICIÓN DE «ESTO ES LO VIEJO PLANO» TIENE UN SOLO SITIO. Estuvo escrita dos veces —aquí y en
+   * `isLegacyFlatTabData`, que documentaba el concepto sin que nadie la llamara—, así que podían dejar de
+   * significar lo mismo sin que nada lo notara. Esto ata las dos definiciones mientras ambas existan.
+   */
+  it('fuera del envoltorio, dice exactamente lo mismo que `isLegacyFlatTabData`', () => {
+    const casos: unknown[] = [
+      null, undefined, 0, 'x', [], {},
+      { c: [], v: [], e: [], p: [] },
+      { c: [makeGame()] },
+      { v: [] }, { e: [] }, { p: [] },
+      { updatedAt: 1, deleted: [] },
+      { schemaVersion: 4, games: {}, c: [] },
+    ];
+    for (const caso of casos) {
+      if (isGamesMainWrapper(caso)) continue; // ahí mandan las versiones, no la forma plana
+      expect([JSON.stringify(caso), isLegacyFlatTabData(caso)]).toEqual([
+        JSON.stringify(caso),
+        gamesGistNeedsUpgradeToWrapper(caso),
+      ]);
+    }
   });
 });

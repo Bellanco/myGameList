@@ -101,4 +101,54 @@ describe('readGist — upgrade proactivo en 304', () => {
     expect(read.wasLegacy).toBeUndefined();
     expect(fetchMock).toHaveBeenCalledTimes(2); // relectura de verificación única
   });
+
+  /**
+   * LAS DOS FORMAS DE QUE LA RELECTURA SE CAIGA, y las dos tienen la misma respuesta: seguir como si el 304
+   * hubiera sido un 304 normal.
+   *
+   * Es la decisión importante de este camino. La relectura existe para poder MIGRAR un gist viejo, pero es un
+   * extra: si falla, lo que no se puede hacer es tumbar el sync de esa sesión —el usuario no ha pedido migrar
+   * nada, ha abierto la aplicación—. Se reintenta en la siguiente sesión, porque el veredicto solo se sella
+   * cuando se ha podido ver el contenido.
+   */
+  it('si la relectura responde un error, el 304 se respeta y el sync sigue', async () => {
+    const gistId = 'dddd4444';
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit = {}) => {
+      const headers = (init.headers || {}) as Record<string, string>;
+      if ('If-None-Match' in headers) {
+        return new Response(null, { status: 304, headers: { etag: 'W/"etag-1"' } });
+      }
+      // La relectura se topa con el límite de peticiones de GitHub, que es lo que de verdad pasa cuando pasa.
+      return new Response('rate limited', { status: 403 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const read = await readGist(TOKEN, gistId, 'W/"etag-1"');
+
+    expect(read.notModified).toBe(true);
+    expect(read.wasLegacy).toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // Y NO se ha sellado nada: al no haber visto el contenido, la próxima sesión vuelve a intentar la relectura.
+    const segunda = await readGist(TOKEN, gistId, 'W/"etag-1"');
+    expect(segunda.notModified).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it('si la relectura ni siquiera sale (la red se cae), tampoco rompe el sync', async () => {
+    const gistId = 'eeee5555';
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit = {}) => {
+      const headers = (init.headers || {}) as Record<string, string>;
+      if ('If-None-Match' in headers) {
+        return new Response(null, { status: 304, headers: { etag: 'W/"etag-1"' } });
+      }
+      throw new TypeError('Failed to fetch');
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const read = await readGist(TOKEN, gistId, 'W/"etag-1"');
+
+    expect(read.notModified).toBe(true);
+    expect(read.wasLegacy).toBeUndefined();
+  });
 });

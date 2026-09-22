@@ -11,7 +11,7 @@ applyTo: "tests/**"
   - `tests/integration/`, `tests/emulacion/` — **excluidos** de la configuración de Vitest; se lanzan aparte.
   - `tests/e2e/` — **Playwright**, no Vitest, y contra el **build de producción** servido por `vite preview`.
 - `npm run test` = `vitest run tests/unit tests/component src` (lo de cada commit).
-  `npm run test:all` = `vitest run` y **NO incluye e2e ni integration**: `vitest.config.js` los excluye. Decir
+  `npm run test:all` = `vitest run` y **NO incluye e2e ni integration**: `vitest.config.mjs` los excluye. Decir
   «he pasado los e2e» tras un `test:all` es falso.
   `npm run test:e2e` = `playwright test`. **Reconstruye antes** (`npm run build`): sirve `dist/`, no las fuentes.
 - Use the global `describe/it/expect/vi` (no imports needed thanks to `globals: true`).

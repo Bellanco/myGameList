@@ -29,6 +29,9 @@ const state: Record<string, Registro[]> = {
   premiosConfig: [],
 };
 
+/** Cuántos `commit` de lote deben fallar (para probar el respaldo documento a documento). */
+let lotesQueFallan = 0;
+
 const bucket = (name: string): Registro[] => (state[name] ||= []);
 
 function leer(collectionName: string, id: string): Registro | undefined {
@@ -82,14 +85,28 @@ vi.mock('firebase/firestore/lite', () => ({
   },
   updateDoc: async (ref: { collectionName: string; id: string }, data: Record<string, unknown>) =>
     escribir(ref.collectionName, ref.id, data, true),
-  writeBatch: () => ({
-    delete: (ref: { collectionName: string; id: string }) => {
-      state[ref.collectionName] = bucket(ref.collectionName).filter((entry) => entry.id !== ref.id);
-    },
-    update: (ref: { collectionName: string; id: string }, data: Record<string, unknown>) =>
-      escribir(ref.collectionName, ref.id, data, true),
-    commit: async () => {},
-  }),
+  writeBatch: () => {
+    // Las operaciones se ACUMULAN y solo se aplican al `commit`, como en Firestore: un lote es todo o nada, y sin
+    // eso no se puede comprobar qué pasa cuando uno se cae.
+    const pendientes: Array<() => void> = [];
+    return {
+      delete: (ref: { collectionName: string; id: string }) => {
+        pendientes.push(() => {
+          state[ref.collectionName] = bucket(ref.collectionName).filter((entry) => entry.id !== ref.id);
+        });
+      },
+      update: (ref: { collectionName: string; id: string }, data: Record<string, unknown>) => {
+        pendientes.push(() => escribir(ref.collectionName, ref.id, data, true));
+      },
+      commit: async () => {
+        if (lotesQueFallan > 0) {
+          lotesQueFallan -= 1;
+          throw new Error('lote rechazado');
+        }
+        for (const operacion of pendientes) operacion();
+      },
+    };
+  },
   deleteField: () => '__deleteField__',
   serverTimestamp: () => '__serverTimestamp__',
 }));
@@ -145,6 +162,7 @@ const palmaresDe = (uid: string) =>
 
 beforeEach(() => {
   for (const key of Object.keys(state)) state[key] = [];
+  lotesQueFallan = 0;
 });
 
 describe('el interruptor del logro de una edición', () => {
@@ -315,5 +333,43 @@ describe('el nick no decide nada', () => {
 
     expect(concedidos).toBe(1);
     expect(palmaresDe('uid-2')[0]).toMatchObject({ rank: 2 });
+  });
+});
+
+describe('retirar el trofeo a mucha gente', () => {
+  /** `n` perfiles con el trofeo de la edición `test` puesto. */
+  const sembrarPremiados = (n: number) => {
+    state.profiles = Array.from({ length: n }, (_, i) => ({
+      id: `uid-${i}`,
+      data: {
+        uid: `uid-${i}`,
+        palmares: [{ seasonId: 'test', seasonName: 'Test', rank: (i % 5) + 1, awardedAt: 1 }],
+      },
+    }));
+  };
+
+  it('no se deja a nadie aunque haya más premiados que el tope de un lote', async () => {
+    // 1200 perfiles = tres lotes de 500, 500 y 200. El barrido recorre la colección ENTERA, así que este número
+    // crece con la gente registrada, no con los premiados de la edición: es justo el caso que el loteado cubre.
+    sembrarPremiados(1200);
+
+    const retirados = await revokePalmares('test');
+
+    expect(retirados).toHaveLength(1200);
+    expect(palmaresDe('uid-0')).toEqual([]);
+    expect(palmaresDe('uid-777')).toEqual([]);
+    expect(palmaresDe('uid-1199')).toEqual([]);
+  });
+
+  it('si un lote se cae, los trofeos de ese lote se retiran uno a uno', async () => {
+    sembrarPremiados(3);
+    lotesQueFallan = 1; // el único lote de esta tanda
+
+    const retirados = await revokePalmares('test');
+
+    // El respaldo conserva lo que hacía la versión de un `setDoc` por perfil: que uno falle no se lleva al resto.
+    expect(retirados).toHaveLength(3);
+    expect(palmaresDe('uid-0')).toEqual([]);
+    expect(palmaresDe('uid-2')).toEqual([]);
   });
 });

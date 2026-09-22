@@ -42,6 +42,8 @@ const writeGistMock = vi.fn(async (_t: string, _g: string, _payload: TabData) =>
   return { etag: 'etag-written', updatedAt: 5_000 };
 });
 const saveSyncConfigMock = vi.fn();
+/** Alta de un gist nuevo: es lo que ocurre cuando alguien conecta sin tener ninguno. */
+const createGistMock = vi.fn(async () => ({ gistId: 'gist-nuevo', etag: 'etag-nuevo' }));
 
 /* LA CONFIGURACIÓN SE MOCKEA EN SU MÓDULO, no en la fachada: desde que el motor de sync es perezoso
    (`syncEngine`), el view-model lee `getSyncConfig` de `gistConfigRepository` directamente — es lo único
@@ -72,7 +74,7 @@ vi.mock('../../src/model/repository/gistRepository', () => ({
   // Aviso de cambios en la configuración: el view-model se suscribe para no leer localStorage en cada render.
   subscribeSyncConfig: () => () => {},
   clearSyncConfig: vi.fn(),
-  createGist: vi.fn(),
+  createGist: () => createGistMock(),
   findGamesGistId: vi.fn(async () => ''),
   whoAmI: vi.fn(async () => {}),
   getRetryAfterMs: () => 0,
@@ -191,6 +193,43 @@ describe('conexión inicial contra un gist existente', () => {
     // Sin esto, el siguiente mergeCrdt compara contra un `lastRemoteUpdatedAt` de 0 y un etag nulo.
     expect(local.meta.lastRemoteUpdatedAt).toBe(3_000);
     expect(local.meta.etag).not.toBeNull();
+
+    unmount();
+  });
+
+  /**
+   * CONECTAR SIN GIST es el alta: no hay nada remoto que leer ni con qué fusionar, así que la biblioteca local
+   * se sube tal cual al gist recién creado. Es el primer paso de todo el que empieza a sincronizar, y hasta
+   * ahora no lo ejercitaba ninguna prueba.
+   */
+  it('sin gist, crea uno y sube lo que hay en el aparato', async () => {
+    remoteSnapshot = emptyTabData();
+
+    const { deps, result, unmount } = mountWithLocalState({
+      data: { ...emptyTabData(), e: [makeGame({ id: 1, _ts: 1_000 })] },
+      meta: { updatedAt: 1_000, etag: null, lastRemoteUpdatedAt: 0 },
+    });
+
+    await act(async () => {
+      result.current.setToken('ghp_tokentokentokentoken');
+      result.current.setGistId('   '); // lo que deja un campo vacío: espacios
+    });
+    await act(async () => {
+      await result.current.connectSync();
+    });
+
+    expect(createGistMock).toHaveBeenCalledTimes(1);
+    // La configuración se guarda ANTES de escribir: si la subida falla, el gist creado no queda huérfano y el
+    // siguiente intento reaprovecha el mismo en vez de crear otro.
+    expect(saveSyncConfigMock).toHaveBeenCalledWith(
+      expect.objectContaining({ gistId: 'gist-nuevo', token: 'ghp_tokentokentokentoken' }),
+    );
+    // Y lo que se sube es la biblioteca local, no un listado vacío.
+    const [, gistEscrito, subido] = writeGistMock.mock.calls.at(-1) || [];
+    expect(gistEscrito).toBe('gist-nuevo');
+    expect((subido as TabData).e).toHaveLength(1);
+    // Y se dice que ha ido bien: sin aviso, el alta parece que no ha hecho nada.
+    expect(deps.onNotice).toHaveBeenCalledWith('ok', expect.any(String));
 
     unmount();
   });

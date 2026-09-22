@@ -15,12 +15,10 @@ import type { PremiosCategory, PremiosWinnersMap } from '../../types/premios';
 import {
   ADMIN_COLLECTION,
   ADMIN_WINNERS_DOC,
+  BATCH_LIMIT,
   CATEGORIES_COLLECTION,
   requireServices,
 } from './premiosShared';
-
-/** Tope de operaciones por lote que admite Firestore. */
-const BATCH_LIMIT = 500;
 
 /**
  * Ganadores de la edición en curso.

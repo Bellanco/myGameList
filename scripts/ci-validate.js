@@ -123,7 +123,7 @@ const requiredFiles = [
   path.join(root, 'CHANGELOG.md'),
   path.join(root, 'tsconfig.json'),
   path.join(root, 'vite.config.ts'),
-  path.join(root, 'vitest.config.js'),
+  path.join(root, 'vitest.config.mjs'),
 ];
 
 const fail = (message) => {

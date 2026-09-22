@@ -170,7 +170,7 @@ el de Testing Library, que trae **1000 ms** — así que subir el de vitest no h
 **Arreglo aplicado** (fase 2):
 1. `configure({ asyncUtilTimeout: 3000 })` en `tests/setup.ts`. Margen de sobra para la contención sin tapar un
    fallo: un elemento que no va a aparecer sigue fallando, solo tarda dos segundos más.
-2. `testTimeout: 10_000` en `vitest.config.js`, **por encima** del anterior a propósito: así el que salta primero
+2. `testTimeout: 10_000` en `vitest.config.mjs`, **por encima** del anterior a propósito: así el que salta primero
    es el de Testing Library, cuyo error nombra el elemento que falta, en vez del «test timed out» de vitest, que
    no dice dónde mirar.
 

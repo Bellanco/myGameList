@@ -307,8 +307,16 @@ describe('service worker — carátulas', () => {
 
     // 900 guardadas, tope de 800: se van las 100 más viejas, que son las primeras que devuelve `keys()`.
     expect(sw.cache.delete).toHaveBeenCalledTimes(100);
-    expect(sw.cache.delete).toHaveBeenCalledWith(claves[0]);
-    expect(sw.cache.delete).not.toHaveBeenCalledWith(claves[899]);
+
+    /**
+     * SE COMPARAN LAS DIRECCIONES, no los objetos `Request`, y no es un capricho: desde Node 24 dos `Request`
+     * con url distinta son INDISTINGUIBLES para el comparador de vitest (ninguno tiene propiedades propias, y lo
+     * que antes los separaba dejó de estar a la vista). Con `toHaveBeenCalledWith(claves[0])` la comprobación
+     * pasaba sin comprobar nada y la negativa fallaba siempre, aunque el worker podara exactamente lo correcto.
+     */
+    const borradas = sw.cache.delete.mock.calls.map(([clave]) => String((clave as Request)?.url ?? clave));
+    expect(borradas).toContain(claves[0].url);
+    expect(borradas).not.toContain(claves[899].url);
   });
 
   /* La aplicación puede pedir que no se pode (lo hace para el rango más alto, y solo mientras el navegador diga

@@ -42,6 +42,14 @@ export function palmaresDocId(seasonId: string): string {
 }
 
 /**
+ * Tope de operaciones por lote que admite Firestore.
+ *
+ * Estaba escrito a mano en cada repositorio que lotea. Es un límite del servicio, no una preferencia: si se
+ * cambia (o si Firestore lo cambia), tiene que cambiar en todos a la vez.
+ */
+export const BATCH_LIMIT = 500;
+
+/**
  * Servicios de Firebase, o error si no hay configuración.
  *
  * Mismo ayudante que usa el panel de administración: sin esto, cada función tendría que decidir por su cuenta qué
