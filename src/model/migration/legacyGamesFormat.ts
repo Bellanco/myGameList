@@ -170,6 +170,8 @@ export function gamesGistNeedsUpgradeToWrapper(parsed: unknown): boolean {
   if (isGamesMainWrapper(parsed)) {
     return Number((parsed as Record<string, unknown>).schemaVersion) < 4;
   }
-  const o = parsed as Record<string, unknown>;
-  return 'c' in o || 'v' in o || 'e' in o || 'p' in o;
+  // La condición de «esto es lo viejo plano» tiene nombre desde la fase 1 de la migración: se pregunta, no se
+  // vuelve a escribir. Estaba copiada aquí, así que el detector que de verdad decide los auto-upgrades y el que
+  // documenta el concepto podían dejar de significar lo mismo sin que nada lo notara.
+  return isLegacyFlatTabData(parsed);
 }
