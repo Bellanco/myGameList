@@ -15,9 +15,9 @@
  * LA CLAVE ES LA CUENTA, NUNCA EL NOMBRE. Todo lo de aquí va por `uid`: el nick que se vea en la clasificación es
  * el rótulo que esa persona tenía al votar, y puede cambiar mañana sin que el trofeo se mueva de sitio.
  */
-import { collection, deleteDoc, doc, getDoc, getDocs, setDoc } from 'firebase/firestore/lite';
+import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, writeBatch } from 'firebase/firestore/lite';
 import type { PalmaresEntry } from '../../types/premios';
-import { ADMIN_COLLECTION, palmaresDocId, requireServices } from './premiosShared';
+import { ADMIN_COLLECTION, BATCH_LIMIT, palmaresDocId, requireServices } from './premiosShared';
 
 /** Quién se llevó trofeo en una edición y en qué puesto. Solo existe en la colección de administración. */
 export interface PalmaresRecipient {
@@ -171,21 +171,52 @@ export async function grantPalmares(
 export async function revokePalmares(seasonId: string): Promise<PalmaresRecipient[]> {
   const { firestore } = await requireServices();
   const snapshot = await getDocs(collection(firestore, 'profiles'));
-  const retirados: PalmaresRecipient[] = [];
 
-  for (const document of snapshot.docs) {
+  // Primero se decide a quién hay que tocar, y solo después se escribe: así las escrituras se pueden agrupar.
+  const pendientes = snapshot.docs.flatMap((document) => {
     const previo = (document.data()?.palmares || []) as PalmaresEntry[];
-    if (!Array.isArray(previo) || previo.length === 0) continue;
+    if (!Array.isArray(previo) || previo.length === 0) return [];
 
     const mio = previo.find((entry) => entry?.seasonId === seasonId);
-    if (!mio) continue;
+    if (!mio) return [];
 
-    const palmares = previo.filter((entry) => entry?.seasonId !== seasonId);
+    return [
+      {
+        ref: document.ref,
+        palmares: previo.filter((entry) => entry?.seasonId !== seasonId),
+        premiado: { uid: document.id, rank: Number(mio.rank) || 0 } as PalmaresRecipient,
+      },
+    ];
+  });
+
+  const retirados: PalmaresRecipient[] = [];
+
+  // EN LOTES, y no un `setDoc` por perfil: esto barre la colección entera, así que el número de escrituras crece
+  // con la gente registrada y encadenarlas era una ida y vuelta por cada una. Facturan igual —Firestore cobra por
+  // documento—, pero se tarda lo que tarda un lote en vez de lo que tardan N.
+  for (let i = 0; i < pendientes.length; i += BATCH_LIMIT) {
+    const lote = pendientes.slice(i, i + BATCH_LIMIT);
     try {
-      await setDoc(document.ref, { palmares, updatedAt: Date.now() }, { merge: true });
-      retirados.push({ uid: document.id, rank: Number(mio.rank) || 0 });
+      const batch = writeBatch(firestore);
+      for (const { ref, palmares } of lote) {
+        // `update` y no `set`: estos documentos vienen de listar la colección, así que existen. Si alguno se
+        // hubiera borrado entre la lectura y ahora, que falle es lo correcto — no hay que resucitar un perfil.
+        batch.update(ref, { palmares, updatedAt: Date.now() });
+      }
+      await batch.commit();
+      retirados.push(...lote.map((entrada) => entrada.premiado));
     } catch {
-      // Mismo criterio que al conceder: un perfil que no se deja escribir no puede tumbar la operación entera.
+      // UN LOTE ES TODO O NADA, y aquí eso sería un cambio de comportamiento: antes, un perfil que no se dejaba
+      // escribir se saltaba y los demás seguían. Si el lote se cae, se reintenta documento a documento para
+      // conservar esa tolerancia — un trofeo que no se pudo retirar no puede llevarse por delante los otros 499.
+      for (const { ref, palmares, premiado } of lote) {
+        try {
+          await setDoc(ref, { palmares, updatedAt: Date.now() }, { merge: true });
+          retirados.push(premiado);
+        } catch {
+          /* ese perfil se queda como está; el resto no paga por él. */
+        }
+      }
     }
   }
 
