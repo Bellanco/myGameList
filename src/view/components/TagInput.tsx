@@ -65,9 +65,20 @@ export function TagInput({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  /** El cierre aplazado de las sugerencias (ver el `onBlur`), para poder cancelarlo si el campo se va antes. */
+  const blurTimerRef = useRef<number | null>(null);
   const generatedId = useId();
   const fieldId = inputId || `tag-input-${generatedId}`;
   const messageId = `${fieldId}-msg`;
+
+  // Si el campo se va antes de que venza el retraso del `onBlur` —cerrar el modal con el foco puesto aquí—, el
+  // temporizador se queda vivo y acaba tocando el estado de un componente que ya no está.
+  useEffect(
+    () => () => {
+      if (blurTimerRef.current !== null) window.clearTimeout(blurTimerRef.current);
+    },
+    [],
+  );
 
   // Sincronizar opciones internas priorizando la prop directa sobre el DOM scraping
   useEffect(() => {
@@ -204,7 +215,11 @@ export function TagInput({
             onFocus={() => updateFilter(pendingValue)}
             onBlur={() => {
               // Mantener un retraso prudente para permitir clicks físicos antes de desmontar
-              setTimeout(() => setShowSuggestions(false), 200);
+              if (blurTimerRef.current !== null) window.clearTimeout(blurTimerRef.current);
+              blurTimerRef.current = window.setTimeout(() => {
+                blurTimerRef.current = null;
+                setShowSuggestions(false);
+              }, 200);
             }}
           />
 
