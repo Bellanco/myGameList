@@ -4,6 +4,7 @@ import { SharedReviewsCard } from '../SharedReviewsCard';
 import { ThemePicker } from '../appearance/ThemePicker';
 import { AppearanceToggles } from '../appearance/AppearanceToggles';
 import { ScoreScaleCard } from './ScoreScaleCard';
+import type { TabData } from '../../../model/types/game';
 // La hoja de las pantallas de Ajustes viaja en los chunks perezosos que la usan y no en el bundle base (mismo
 // patrón que `stats.scss` y `social.scss`). Se importa desde CADA pantalla que la necesita: si se importara solo
 // desde una, entrar por otra ruta la dejaría sin estilo.
@@ -13,6 +14,8 @@ interface PersonalizationSettingsProps {
   scoreScaleUid: string | null; // uid de Google (para gatear/guardar la escala); null → candado
   /** ¿Tiene espacio social? De ahí salen el nick y el rango, así que sin él no hay enlaces que gestionar. */
   hasSocialProfile: boolean;
+  /** Tus listas: de ahí sale el texto de ahora cuando se renueva un enlace. */
+  games: TabData;
 }
 
 /**
@@ -29,7 +32,7 @@ interface PersonalizationSettingsProps {
  * interruptores, la escala, los enlaces publicados—, así que aquí no hay ni un `useState`. A esta pantalla solo
  * se llega con espacio social (la puerta la ponen el menú y `App`).
  */
-export const PersonalizationSettings = memo(function PersonalizationSettings({ scoreScaleUid, hasSocialProfile }: PersonalizationSettingsProps) {
+export const PersonalizationSettings = memo(function PersonalizationSettings({ scoreScaleUid, hasSocialProfile, games }: PersonalizationSettingsProps) {
   return (
     <section className="settings-hub settings-personalization" aria-label={SETTINGS_UI.groups.design.title}>
       <div className="settings-card settings-card-themes">
@@ -52,7 +55,7 @@ export const PersonalizationSettings = memo(function PersonalizationSettings({ s
 
       {/* Los enlaces públicos van aquí y no en «Integración»: no son una preferencia ni un canal de datos, son
           contenido tuyo publicado en internet, y se gestionan al lado de lo que decides mostrar. */}
-      <SharedReviewsCard enabled={hasSocialProfile} />
+      <SharedReviewsCard enabled={hasSocialProfile} games={games} />
     </section>
   );
 });

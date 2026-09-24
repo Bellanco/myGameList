@@ -9,6 +9,29 @@ import { getSocialSyncConfig } from '../model/repository/gistConfigRepository';
 import { listMyShares, publishShare, removeShare, type PublishedShare, type ShareError } from '../model/repository/shareRepository';
 import type { ShareBan, SharedReviewIndexEntry } from '../model/types/share';
 import type { ShareQuota } from '../core/constants/tiers';
+import type { GameItem } from '../model/types/game';
+
+/**
+ * Lo que se publica de una reseña, sacado del juego tal y como está AHORA en la biblioteca.
+ *
+ * Vive aquí y no en cada botón porque hay dos sitios que publican —el detalle de la reseña y la lista de
+ * Ajustes, que renueva— y si cada uno montase el suyo, renovar desde un lado acabaría publicando menos campos
+ * que desde el otro.
+ */
+export function shareDraftOf(game: GameItem, reviewText: string): Parameters<typeof publishShare>[0] {
+  return {
+    gameId: game.id,
+    gameName: String(game.name || '').trim(),
+    grade: typeof game.grade === 'number' ? game.grade : null,
+    rating: typeof game.score === 'number' ? game.score : null,
+    review: reviewText,
+    platforms: game.platforms || [],
+    genres: game.genres || [],
+    strengths: game.strengths || [],
+    weaknesses: game.weaknesses || [],
+    reviewedAt: Number(game.reviewedAt) || Number(game._ts) || 0,
+  };
+}
 
 export interface ShareViewModel {
   shares: SharedReviewIndexEntry[];
