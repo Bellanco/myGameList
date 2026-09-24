@@ -81,8 +81,8 @@ describe('SocialProfileDetailScreen — carátulas ajenas', () => {
     sharedLists: { c: [game(1, 'Halo')], v: [], e: [], p: [] },
   };
 
-  function pintaPerfil(viewerTier?: typeof ADMIN_ONLY_TIER) {
-    localStorage.setItem('mis-listas-covers', 'on'); // el check, encendido: lo que decide aquí es el rango
+  function pintaPerfil(viewerTier?: typeof ADMIN_ONLY_TIER, check = true) {
+    if (check) localStorage.setItem('mis-listas-covers', 'on'); // apagado es el estado de fábrica
     localStorage.setItem('mis-listas-list-shape', 'grid');
     return render(
       <SocialProfileDetailScreen
@@ -108,19 +108,27 @@ describe('SocialProfileDetailScreen — carátulas ajenas', () => {
     localStorage.clear();
   });
 
-  it('no las pide con el rango de partida, aunque el check esté encendido', () => {
+  /* PARA TODOS, PERO SIN RESOLVER NADA. La biblioteca de otra persona se pide con `c=1`: se ve lo que el servidor
+     ya tiene y lo que falte no se pregunta a IGDB, que es lo que escribiría en KV. */
+  it('las pide con el rango de partida, con la marca de «solo caché»', () => {
     const { container } = pintaPerfil();
+
+    expect(container.querySelector('.game-cover-img')?.getAttribute('src')).toContain('c=1');
+  });
+
+  it('y con mithril, igual: la regla no depende del rango', () => {
+    const { container } = pintaPerfil(ADMIN_ONLY_TIER);
+
+    expect(container.querySelector('.game-cover-img')?.getAttribute('src')).toContain('c=1');
+  });
+
+  it('con el check apagado no pide ninguna', () => {
+    const { container } = pintaPerfil(undefined, false);
 
     expect(container.querySelector('.game-cover-img')).toBeNull();
     // Y la lista sigue estando: lo que cambia es que se pinta sin imágenes. (El nombre sale más de una vez en el
     // mosaico —el título de la caja y el rótulo para lectores de pantalla—, así que se cuentan todas.)
     expect(screen.getAllByText('Halo').length).toBeGreaterThan(0);
-  });
-
-  it('y sí con mithril, que es a quien se le ha desbloqueado', () => {
-    const { container } = pintaPerfil(ADMIN_ONLY_TIER);
-
-    expect(container.querySelector('.game-cover-img')).not.toBeNull();
   });
 });
 

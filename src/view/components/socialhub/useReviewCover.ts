@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { coverUrl } from '../../../core/utils/coverUrl';
 import { sabemosQueNoTiene } from '../../../core/utils/coverMemory';
+import { plataformasYaPedidas } from '../../../core/utils/coverDone';
 import { useCovers } from '../../hooks/useCovers';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
 
@@ -15,30 +16,38 @@ import { useIsAdmin } from '../../hooks/useIsAdmin';
  * QUÉ DECIDE QUE HAYA IMAGEN, en este orden:
  *  1. La PREFERENCIA de quien mira, que viene apagada de fábrica: encenderla es lo que autoriza a que el
  *     servidor pregunte por títulos a IGDB, y sin ella aquí no sale ni una petición.
- *  2. `allowed`, que es la política del sitio donde se pinta. En TUS reseñas es que sí y manda solo tu
- *     preferencia. En las de otra persona lo pone quien monta la pantalla, y hoy es mithril: resolver el
- *     catálogo de alguien que no eres tú es el gasto que menos se puede acotar del servicio, así que se concede
- *     al rango que paga los privilegios. Es la MISMA regla que ya siguen su tabla de juegos
- *     (`SocialProfileDetailScreen`) y la franja ancha del renglón (`GameTable`).
+ *  2. `acceso`, que es la política del sitio donde se pinta (`CoverAccess`). En TUS reseñas es `true` y manda
+ *     solo tu preferencia. En el hub social es `'solo-cache'`: se ve lo que el servidor ya tenga resuelto y lo
+ *     que falte se queda sin imagen, porque resolver el catálogo de otra persona es lo que escribe en KV y ese
+ *     presupuesto es el de los enlaces compartidos. Es la MISMA regla que sigue su tabla de juegos
+ *     (`cachedOnly` en `SocialProfileDetailScreen`).
  *  3. Que de ese título no conste ya que no tiene carátula (`sabemosQueNoTiene`), para no volver a preguntar.
  *
  * El tamaño es el `ancho` del renglón por lo mismo que allí: la franja es apaisada y recorta una banda de una
  * imagen vertical, así que la pequeña llega estirada casi seis veces y lo que queda es una mancha.
  */
-export function useReviewCover(allowed = true): (name: string, platforms?: readonly string[]) => string | null {
+/** `true` = pedir como siempre; `'solo-cache'` = solo lo ya resuelto, sin preguntar a IGDB; `false` = nada. */
+export type CoverAccess = boolean | 'solo-cache';
+
+export function useReviewCover(acceso: CoverAccess = true): (name: string, platforms?: readonly string[]) => string | null {
   const { covers } = useCovers();
   // El modo ampliado (DLC, packs y mods) tiene su propio espacio de caché: se pide con la misma clave con la que
   // ese navegador ya haya pedido esta carátula en el listado, o la respuesta no se reaprovecha.
   const ampliado = useIsAdmin();
-  const permitido = covers && allowed;
+  const permitido = covers && acceso !== false;
+  const soloCache = acceso === 'solo-cache';
 
   return useCallback((name: string, platforms: readonly string[] = []) => {
     if (!permitido) return null;
     const limpio = String(name || '').trim();
     if (!limpio) return null;
+    /* En lo ajeno, un título que tu biblioteca ya resolvió se pide con SUS plataformas y sin la marca, igual que
+       en la tabla (ver `portadaDe` en `GameTable`): está resuelto seguro y así sale de la caché del navegador. */
+    const conocidas = soloCache && !ampliado ? plataformasYaPedidas(limpio) : null;
+    const plataformas = conocidas ?? platforms;
     // Se pregunta con la URL NORMAL —que es la que guarda el registro de fallos— y se pide la ancha: si de este
     // título no hay carátula, tampoco la habrá en otro tamaño.
-    if (sabemosQueNoTiene(coverUrl(limpio, platforms, ampliado))) return null;
-    return coverUrl(limpio, platforms, ampliado, 'ancho');
-  }, [permitido, ampliado]);
+    if (sabemosQueNoTiene(coverUrl(limpio, plataformas, ampliado))) return null;
+    return coverUrl(limpio, plataformas, ampliado, 'ancho', soloCache && !conocidas);
+  }, [permitido, soloCache, ampliado]);
 }

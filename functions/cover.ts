@@ -248,6 +248,15 @@ export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise
      pintando la imagen grande —o al revés— según cuál se pidiera primero. */
   const tamano: TamanoCaratula = tamanoPedido(url.searchParams.get('s'));
 
+  /* MODO «SOLO CACHÉ» (`c=1`): se sirve lo que ya esté emparejado y lo que falte NO se resuelve. Es el de las
+     carátulas de lo ajeno en el hub social. Resolver es lo único que escribe en KV —el emparejamiento y los
+     contadores del cupo—, y ese presupuesto de escrituras es de la CUENTA: lo comparten las carátulas y los
+     enlaces de reseñas compartidas. Así, mirar perfiles ajenos no gasta ni una escritura, por muchos que se
+     abran; se ve lo que ya resolvió alguien, que en la práctica es casi todo (la biblioteca de cada amigo con
+     las carátulas encendidas la resuelve su propio llenado inicial).
+     El parámetro solo RESTRINGE, así que no hace falta comprobar quién lo manda: quitarlo es pedir como siempre. */
+  const soloCache = url.searchParams.get('c') === '1';
+
   const listaPlataformas = plataformas.split(',').map((p) => p.trim()).filter(Boolean);
 
   /* Primero la caché, y solo si no hay nada se gasta cupo: lo que se raciona es CONSULTAR a IGDB, no servir lo
@@ -255,6 +264,15 @@ export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise
      La lectura se hace AQUÍ y la resolución llama a `emparejarYGuardar`, que ya no vuelve a mirar la caché: con
      la función que hacía las dos cosas, cada juego nuevo leía dos veces la misma clave de KV. */
   let coverId = await leerCaratulaCacheada(env, nombre, listaPlataformas, ampliado);
+  if (coverId === undefined && soloCache) {
+    /* «Aún sin resolver», que NO es «no tiene»: por eso `no-store` y una cabecera que lo distingue. Un 404
+       guardado taparía la carátula el día que la resuelva su dueño. Va antes que el cupo para no gastar ni la
+       lectura de sus contadores. */
+    return new Response('Carátula aún sin resolver', {
+      status: 404,
+      headers: { 'Cache-Control': CACHE_FALLO, 'X-Cover': 'sin-resolver' },
+    });
+  }
   if (coverId === undefined) {
     /* De otra web no se RESUELVEN juegos nuevos, y la comprobación va AQUÍ y no al entrar: una carátula ya
        emparejada se le sirve a quien sea. Servirla no cuesta ni una consulta a IGDB ni una escritura de KV —los

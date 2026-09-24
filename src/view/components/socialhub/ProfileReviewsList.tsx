@@ -3,7 +3,7 @@ import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
 import { useScoreScale } from '../../hooks/useScoreScale';
 import { resolveGrade, reviewAccent } from '../../../core/utils/scoreScale';
-import { useReviewCover } from './useReviewCover';
+import { useReviewCover, type CoverAccess } from './useReviewCover';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 // La hoja de la RESEÑA se importa AQUÍ y no desde `social.scss`: esta lista la pintan el hub social y también
 // tus reseñas del panel (`/stats/resenas`), donde el chunk del hub no se carga. Ver `styles/reviews.scss`.
@@ -47,12 +47,12 @@ interface ProfileReviewsListProps {
   showDate?: boolean;
   /**
    * ¿Se pueden pedir carátulas aquí? Es la POLÍTICA del sitio, no la preferencia de nadie: en tus reseñas es que
-   * sí y manda solo tu interruptor; en el perfil de otra persona lo decide quien monta la pantalla, y hoy es
-   * mithril (ver `useReviewCover`). Con `false` la lista se pinta sin fondo, que es la vista de siempre.
+   * sí y manda solo tu interruptor; en el perfil de otra persona es `'solo-cache'`, que enseña lo ya resuelto sin
+   * resolver nada (ver `useReviewCover`). Con `false` la lista se pinta sin fondo, que es la vista de siempre.
    *
    * POR DEFECTO, NO: esto acaba en una petición al servidor y de ahí a IGDB, así que quien la quiera la pide.
    */
-  coversAllowed?: boolean;
+  coversAllowed?: CoverAccess;
 }
 
 /**

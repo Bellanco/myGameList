@@ -1,7 +1,7 @@
 import { memo, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { resolveGrade, reviewAccent } from '../../../core/utils/scoreScale';
 import { useScoreScale } from '../../hooks/useScoreScale';
-import { useReviewCover } from './useReviewCover';
+import { useReviewCover, type CoverAccess } from './useReviewCover';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import type { RelatedReview } from '../../../core/social/relatedReviews';
 // Ver `ProfileReviewsList`: este bloque lo pinta también la pantalla pública de un enlace compartido, que se
@@ -99,7 +99,7 @@ export const RelatedReviews = memo(function RelatedReviews({
    * monta el bloque. La página pública no lo pasa a propósito — ahí llega gente sin sesión ni preferencia, y
    * cada visita se convertiría en una tanda de resoluciones contra IGDB que nadie ha pedido.
    */
-  coversAllowed?: boolean;
+  coversAllowed?: CoverAccess;
 }) {
   const scoreScale = useScoreScale();
   const coverOf = useReviewCover(coversAllowed);

@@ -18,7 +18,6 @@ import { SocialDetailScreen } from './socialhub/SocialDetailScreen';
 import { SocialProfileDetailScreen } from './socialhub/SocialProfileDetailScreen';
 import { ProfileAchievementsScreen, ProfileGlobalAchievements } from './socialhub/ProfileAchievements';
 import { ACHIEVEMENTS_UI } from '../../core/constants/achievementLabels';
-import { ADMIN_ONLY_TIER } from '../../core/constants/tiers';
 import { SocialProfileReviewScreen } from './socialhub/SocialProfileReviewScreen';
 import { RelatedReviews } from './socialhub/RelatedReviews';
 import { SocialProfilesScreen } from './socialhub/SocialProfilesScreen';
@@ -422,13 +421,13 @@ const SocialHubInner = memo(function SocialHubInner({
           backLabel={backToLabel || undefined}
           /* La misma regla que la reseña leída desde el perfil, unas líneas más abajo: son el mismo detalle por
              dos caminos, y la franja tiene que salir en los dos. */
-          coversAllowed={ownTier === ADMIN_ONLY_TIER}
+          coversAllowed="solo-cache"
           related={(
             <RelatedReviews
               SOCIAL_UI={SOCIAL_UI}
               items={relatedReviews}
               onOpen={openRelatedReview}
-              coversAllowed={ownTier === ADMIN_ONLY_TIER}
+              coversAllowed="solo-cache"
             />
           )}
         />
@@ -533,15 +532,15 @@ const SocialHubInner = memo(function SocialHubInner({
             ownReviewGame && ownReviewText ? <ShareReviewButton game={ownReviewGame} reviewText={ownReviewText} /> : null
           }
           /* La franja de la carátula, con la misma regla que la tabla de juegos y la lista de reseñas de un
-             perfil: la estantería de otra persona se resuelve contra IGDB una vez por título, así que va para
-             mithril, y encima manda la preferencia de quien mira (ver `useReviewCover`). */
-          coversAllowed={ownTier === ADMIN_ONLY_TIER}
+             perfil: de la estantería de otra persona solo lo ya resuelto, sin gastar escrituras de KV, y encima
+             manda la preferencia de quien mira (ver `useReviewCover`). */
+          coversAllowed="solo-cache"
           related={(
             <RelatedReviews
               SOCIAL_UI={SOCIAL_UI}
               items={relatedReviews}
               onOpen={openRelatedReview}
-              coversAllowed={ownTier === ADMIN_ONLY_TIER}
+              coversAllowed="solo-cache"
             />
           )}
         />

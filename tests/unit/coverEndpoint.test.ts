@@ -407,3 +407,54 @@ describe('/cover — lo que cuesta', () => {
     expect(kv.datos.has(claveCache('Celeste', []))).toBe(false);
   });
 });
+
+/* EL MODO «SOLO CACHÉ» (`c=1`), el de las carátulas de lo ajeno en el hub social. Lo que fija es que mirar la
+   estantería de otra persona NO escribe en KV: ese presupuesto es de la cuenta entera y lo necesitan los enlaces
+   compartidos. Se ve lo ya resuelto y nada más. */
+describe('/cover — solo caché', () => {
+  it('sirve lo ya emparejado igual que siempre', async () => {
+    const kv = kvFalso({ [claveCache('Celeste', ['Steam'])]: 'co1abc' });
+    const respuesta = await onRequestGet({ request: peticion('n=Celeste&p=Steam&c=1'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(200);
+    expect(kv.put).not.toHaveBeenCalled();
+  });
+
+  it('un juego sin resolver no se resuelve: ni IGDB, ni escrituras, ni lectura del cupo', async () => {
+    const kv = kvFalso();
+    const respuesta = await onRequestGet({ request: peticion('n=Celeste&c=1'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(404);
+    expect(consultasAIgdb()).toHaveLength(0);
+    expect(kv.put).not.toHaveBeenCalled();
+    // Solo se ha leído la clave del emparejamiento: los contadores del cupo ni se tocan.
+    expect(kv.get.mock.calls.map(([clave]) => clave)).toEqual([claveCache('Celeste', [])]);
+  });
+
+  it('y ese «aún sin resolver» se distingue del «no tiene» y no se guarda en ninguna caché', async () => {
+    const kv = kvFalso();
+    const respuesta = await onRequestGet({ request: peticion('n=Celeste&c=1'), env: entorno(kv) });
+
+    // Guardarlo taparía la carátula el día que la resuelva su dueño.
+    expect(respuesta.headers.get('Cache-Control')).toBe('no-store');
+    expect(respuesta.headers.get('X-Cover')).toBe('sin-resolver');
+  });
+
+  it('el «no tiene» ya sabido se contesta como siempre', async () => {
+    const kv = kvFalso({ [claveCache('Jotum', [])]: '' });
+    const respuesta = await onRequestGet({ request: peticion('n=Jotum&c=1'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(404);
+    expect(respuesta.headers.get('X-Cover')).toBeNull();
+  });
+
+  it('con el cupo del día agotado sigue sirviendo lo ya emparejado', async () => {
+    const kv = kvFalso({
+      [coverDailyQuotaKey(Date.now())]: String(COVER_DAILY_BUDGET),
+      [claveCache('Celeste', [])]: 'co1abc',
+    });
+    const respuesta = await onRequestGet({ request: peticion('n=Celeste&c=1'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(200);
+  });
+});

@@ -48,7 +48,7 @@ interface GameTableProps {
    * que tú no tienes. Abrir el perfil de un amigo con trescientos juegos nuevos son trescientas resoluciones
    * contra IGDB y trescientas escrituras de KV, y eso se multiplica por cada perfil que se visite: es el gasto
    * más grande que puede tener el servicio y el que menos control tiene, porque no lo decide cuánta biblioteca
-   * tienes tú sino a cuánta gente miras.
+   * tienes tú sino a cuánta gente miras. Por eso lo ajeno se pide con `cachedOnly`, que no resuelve nada.
    */
   coverPolicy?: {
     /**
@@ -64,6 +64,14 @@ interface GameTableProps {
      * aparece con otra estantería detrás.
      */
     preferKnown?: boolean;
+    /**
+     * Pedir SOLO lo que el servidor ya tenga resuelto (`c=1`, ver `functions/cover.ts`): lo que falte se queda sin
+     * imagen en vez de preguntarse a IGDB. Es lo que hace que mirar la biblioteca de otra persona no gaste
+     * escrituras de KV, que es el presupuesto que necesitan los enlaces compartidos.
+     * Con `preferKnown`, un título que este navegador ya resolvió se pide con su URL de siempre y sin la marca:
+     * está resuelto seguro, y así lo sirve la caché del navegador en vez de descargarse otra vez con otra URL.
+     */
+    cachedOnly?: boolean;
   };
   /** Orden activo de la pestaña; si se pasa junto a `onSort`, las columnas ordenables son pulsables. */
   sort?: TabSort;
@@ -265,14 +273,33 @@ function coverBase(
   return sabemosQueNoTiene(url) ? null : url;
 }
 
+/** Cómo se pide la carátula de un juego en esta lista: la política de `coverPolicy`, ya traducida. */
+interface PedidoDePortada {
+  preferirConocidas: boolean;
+  soloCache: boolean;
+}
+
 /**
- * CON QUÉ PLATAFORMAS SE PIDE LA CARÁTULA DE ESTE JUEGO. Las suyas, salvo que la lista pida reaprovechar lo ya
- * descargado y de ese título conste una combinación anterior: entonces se usa aquella, porque es la que tiene
- * URL en la caché del navegador (ver `coverDone`). Se resuelve UNA vez por juego y sirve para todos los tamaños.
+ * CON QUÉ PLATAFORMAS SE PIDE LA CARÁTULA DE ESTE JUEGO, y si con la marca de «solo caché». Las suyas, salvo que
+ * la lista pida reaprovechar lo ya descargado y de ese título conste una combinación anterior: entonces se usa
+ * aquella, porque es la que tiene URL en la caché del navegador (ver `coverDone`). Se resuelve UNA vez por juego
+ * y sirve para todos los tamaños.
+ *
+ * Un título conocido se pide además SIN `c=1` aunque la lista lo pida: lo resolvió el recorrido de tu propia
+ * biblioteca, así que el servidor lo tiene y no hay nada que gastar, y la marca solo cambiaría la URL y obligaría
+ * a descargar otra vez la misma imagen. Salvo en modo ampliado, que vive en otro espacio de claves y del que el
+ * índice de conocidos no dice nada.
  */
-function plataformasDeLaPortada(game: GameItem, preferirConocidas: boolean): readonly string[] {
-  if (!preferirConocidas) return game.platforms;
-  return plataformasYaPedidas(game.name) ?? game.platforms;
+function portadaDe(
+  game: GameItem,
+  ampliado: boolean,
+  pedido: PedidoDePortada,
+): { plataformas: readonly string[]; soloCache: boolean } {
+  const conocidas = pedido.preferirConocidas ? plataformasYaPedidas(game.name) : null;
+  return {
+    plataformas: conocidas ?? game.platforms,
+    soloCache: pedido.soloCache && !(conocidas && !ampliado),
+  };
 }
 
 /**
@@ -289,12 +316,16 @@ function coverDeCaja(
   covers: boolean,
   game: GameItem,
   ampliado: boolean,
-  preferirConocidas: boolean,
+  pedido: PedidoDePortada,
 ): { src: string | null; src2x: string | null } {
-  const plataformas = plataformasDeLaPortada(game, preferirConocidas);
-  const src = coverBase(covers, game, ampliado, plataformas);
-  if (!src) return { src: null, src2x: null };
-  return { src, src2x: coverUrl(game.name, plataformas, ampliado, 'medio') };
+  const { plataformas, soloCache } = portadaDe(game, ampliado, pedido);
+  const base = coverBase(covers, game, ampliado, plataformas);
+  if (!base) return { src: null, src2x: null };
+  return {
+    // La normal sale ya compuesta de la memoria de «no tiene», que se guarda sin la marca: solo se rehace con ella.
+    src: soloCache ? coverUrl(game.name, plataformas, ampliado, 'normal', true) : base,
+    src2x: coverUrl(game.name, plataformas, ampliado, 'medio', soloCache),
+  };
 }
 
 /** La del renglón: una sola, del tamaño con que se recorta la franja que cruza la fila. */
@@ -303,11 +334,11 @@ function coverDeRenglon(
   game: GameItem,
   ampliado: boolean,
   grande: boolean,
-  preferirConocidas: boolean,
+  pedido: PedidoDePortada,
 ): string | null {
-  const plataformas = plataformasDeLaPortada(game, preferirConocidas);
+  const { plataformas, soloCache } = portadaDe(game, ampliado, pedido);
   if (!coverBase(covers, game, ampliado, plataformas)) return null;
-  return coverUrl(game.name, plataformas, ampliado, grande ? 'ancho' : 'medio');
+  return coverUrl(game.name, plataformas, ampliado, grande ? 'ancho' : 'medio', soloCache);
 }
 
 function renderTags(values: string[], className: string, maxVisible?: number, tone = false) {
@@ -529,7 +560,10 @@ export const GameTable = memo(function GameTable({
      con que quien monta la tabla deje de restringirlo y vuelve a mandar el check. */
   const { covers: coversPreferidas } = useCovers();
   const covers = coversPreferidas && (coverPolicy?.allowed ?? true);
-  const preferirConocidas = coverPolicy?.preferKnown ?? false;
+  const pedidoDePortada: PedidoDePortada = {
+    preferirConocidas: coverPolicy?.preferKnown ?? false,
+    soloCache: coverPolicy?.cachedOnly ?? false,
+  };
   /* TAMAÑO DE LOS CUADROS, elegido en la cabecera del listado. Solo cambia cuántas columnas caben; el contenido
      de cada cuadro es el mismo, que es lo que evita tener tres diseños que mantener. */
   const { size: gridSize, setSize: setGridSize } = useGridSize();
@@ -1144,7 +1178,7 @@ export const GameTable = memo(function GameTable({
                                     no tenga imagen enseña su portada de casa. */}
                                 {covers ? (
                                   <div className="game-card-art">
-                                    <GameCover name={game.name} {...coverDeCaja(covers, game, coversAmpliadas, preferirConocidas)} />
+                                    <GameCover name={game.name} {...coverDeCaja(covers, game, coversAmpliadas, pedidoDePortada)} />
                                     {/* La nota, flotando sobre el canto de la carátula: en el mosaico es lo
                                         primero que se busca, y ahí está siempre en el mismo punto de cada caja
                                         en vez de bailar según lo que ocupe el nombre. */}
@@ -1212,7 +1246,7 @@ export const GameTable = memo(function GameTable({
                      no como `<img>` porque aquí no se mira: no necesita alt, ni hueco reservado, ni participar
                      en la medición de la fila. Sin preferencia de carátulas encendida —o sin imagen para ese
                      juego— la pieza se queda en su superficie plana, que es la maqueta §2. */
-                  const rowCover = coverDeRenglon(covers, game, coversAmpliadas, franjaGrande, preferirConocidas);
+                  const rowCover = coverDeRenglon(covers, game, coversAmpliadas, franjaGrande, pedidoDePortada);
                   /* El lado malo del renglón: en la vergüenza son los MOTIVOS de dejarlo, no los defectos. */
                   const malos = (currentTab === 'v' ? game.reasons : game.weaknesses) || [];
                   /* Cuántos chips enseña ESTE juego en cada ranura, medidos con el ancho de su columna. */

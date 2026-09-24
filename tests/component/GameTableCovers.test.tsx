@@ -90,9 +90,8 @@ describe('qué carátulas pide el listado', () => {
     expect(fila?.style.getPropertyValue('--row-cover')).toBe('');
   });
 
-  /* LA LISTA PUEDE NEGAR LAS CARÁTULAS AUNQUE EL CHECK ESTÉ ENCENDIDO, y es lo que sostiene que la biblioteca
-     de otra persona no se resuelva hoy salvo para el rango que las tiene desbloqueadas: tu biblioteca la calienta
-     el recorrido de fondo una vez, pero cada perfil que abres es un catálogo entero de juegos que no tienes. */
+  /* LA LISTA PUEDE NEGAR LAS CARÁTULAS AUNQUE EL CHECK ESTÉ ENCENDIDO: la política del sitio va por encima de
+     la preferencia, y con `false` la lista vuelve a la vista de siempre. */
   it('la lista puede negar las carátulas aunque la preferencia esté encendida', () => {
     const { container } = pinta('grid', [juego(1, 'Celeste')], 'c', false);
 
@@ -154,6 +153,65 @@ describe('qué carátulas pide el listado', () => {
     expect(container.querySelector('.game-cover-img')?.getAttribute('src')).toBe(
       coverUrl('Celeste', ['Nintendo Switch']),
     );
+  });
+
+  /* SOLO LO YA RESUELTO (`cachedOnly`), que es como se pinta la biblioteca de otra persona: la marca `c=1` hace que
+     el servidor no resuelva lo que falte, y así mirar perfiles ajenos no gasta escrituras de KV. */
+  function pintaAjena(forma: 'grid' | 'list', juegos: GameItem[]) {
+    localStorage.setItem('mis-listas-covers', 'on');
+    localStorage.setItem('mis-listas-list-shape', forma);
+    return render(
+      <GameTable
+        games={juegos}
+        currentTab="c"
+        expandedId={null}
+        onExpandedChange={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onMigrate={vi.fn()}
+        tabActions={[]}
+        coverPolicy={{ cachedOnly: true, preferKnown: true }}
+      />,
+    );
+  }
+
+  it('lo ajeno se pide con la marca de «solo caché», en todos los tamaños', () => {
+    const ajeno = { ...juego(1, 'Celeste'), platforms: ['Nintendo Switch'] } as GameItem;
+    const { container } = pintaAjena('grid', [ajeno]);
+    const img = container.querySelector('.game-cover-img');
+
+    const normal = coverUrl('Celeste', ['Nintendo Switch'], false, 'normal', true);
+    const medio = coverUrl('Celeste', ['Nintendo Switch'], false, 'medio', true);
+    expect(normal).toContain('c=1');
+    expect(img?.getAttribute('src')).toBe(normal);
+    expect(img?.getAttribute('srcset')).toBe(`${normal} 1x, ${medio} 2x`);
+  });
+
+  it('y la franja del renglón, también', () => {
+    const { container } = pintaAjena('list', [juego(1, 'Celeste')]);
+    const fila = container.querySelector<HTMLElement>('tr.main-row');
+
+    expect(fila?.style.getPropertyValue('--row-cover')).toBe(
+      `url("${coverUrl('Celeste', ['Steam'], false, 'medio', true)}")`,
+    );
+  });
+
+  it('pero un título que tu biblioteca ya resolvió se pide con su URL de siempre, sin la marca', () => {
+    // Está resuelto seguro, y con la marca la URL sería otra: otra descarga de la misma imagen.
+    const hechos = leerHechos();
+    hechos.add(claveDeJuego('Celeste', ['Steam'], false));
+    guardarHechos(hechos);
+    const ajeno = { ...juego(1, 'Celeste'), platforms: ['Nintendo Switch'] } as GameItem;
+    const { container } = pintaAjena('grid', [ajeno]);
+
+    expect(container.querySelector('.game-cover-img')?.getAttribute('src')).toBe(coverUrl('Celeste', ['Steam']));
+  });
+
+  it('y del que ya se sabe que no tiene no se pide nada, con marca o sin ella', () => {
+    recordarQueNoTiene(coverUrl('Jotum', ['Steam']));
+    const { container } = pintaAjena('grid', [juego(1, 'Jotum')]);
+
+    expect(container.querySelector('.game-cover-img')).toBeNull();
   });
 
   /* EL INTERRUPTOR ES UN INTERRUPTOR, NO UN BORRADO. Apagarlo deja de pedir imágenes; volver a encenderlo pide

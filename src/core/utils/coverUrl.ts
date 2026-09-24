@@ -20,6 +20,12 @@ export function coverUrl(
    * `ancho`  (~762×1080) la pide el renglón de la lista, que recorta una franja a lo ancho de la fila entera.
    */
   tamano: 'normal' | 'medio' | 'ancho' = 'normal',
+  /**
+   * `c=1`: servir SOLO lo que ya esté resuelto, sin preguntarle a IGDB por lo que falte. Es como se piden las
+   * carátulas de lo ajeno en el hub social: resolver un título es lo que escribe en KV, y ese presupuesto es de
+   * la cuenta entera y lo necesitan los enlaces compartidos (ver `functions/cover.ts`).
+   */
+  soloCache = false,
 ): string {
   const parametros = new URLSearchParams({ n: name });
   const plataformas = platforms.filter(Boolean).join(',');
@@ -29,5 +35,6 @@ export function coverUrl(
      pasa lo mismo: el service worker cachea por URL y sin `Vary`, así que cada tamaño necesita su clave. */
   if (ampliado) parametros.set('x', '1');
   if (tamano !== 'normal') parametros.set('s', tamano);
+  if (soloCache) parametros.set('c', '1');
   return `/cover?${parametros.toString()}`;
 }

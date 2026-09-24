@@ -3,6 +3,7 @@ import type { GameItem } from '../../../model/types/game';
 import type { SocialActivityFeedItem } from '../../../viewmodel/useSocialViewModel';
 import { ShareReviewButton } from '../stats/ShareReviewButton';
 import { ReviewScreen } from './ReviewScreen';
+import type { CoverAccess } from './useReviewCover';
 
 /**
  * La reseña tal y como llega por el FEED: `/social/user/:actorProfileId/game/:gameId/review`.
@@ -63,7 +64,7 @@ export function SocialDetailScreen({
   related?: React.ReactNode;
   backLabel?: string;
   /** ¿Se puede pedir la carátula del juego para el fondo? Ver `useReviewCover`. */
-  coversAllowed?: boolean;
+  coversAllowed?: CoverAccess;
 }) {
   const gameItem = activeDetailEvent ? getGameItemById(activeDetailEvent.profileId, activeDetailEvent.gameId) : null;
   // Reseña COMPLETA para juegos propios (gameItem.review); para eventos ajenos cae al snippet (≤160) del evento.

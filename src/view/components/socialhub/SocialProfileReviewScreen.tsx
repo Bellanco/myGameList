@@ -1,6 +1,7 @@
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import type { ReviewAuthor } from '../ReviewDetailHead';
 import { ReviewScreen } from './ReviewScreen';
+import type { CoverAccess } from './useReviewCover';
 
 /** Reseña de un juego abierta a pantalla completa desde la lista de reseñas de un perfil. */
 export type ProfileReview = {
@@ -63,7 +64,7 @@ export function SocialProfileReviewScreen({
    */
   related?: React.ReactNode;
   /** ¿Se puede pedir la carátula del juego para el fondo? Lo decide quien monta (ver `useReviewCover`). */
-  coversAllowed?: boolean;
+  coversAllowed?: CoverAccess;
 }) {
   const reviewDate = review ? new Date(review.ts || 0) : null;
   const hasValidDate = Boolean(review && review.ts > 0 && reviewDate && !Number.isNaN(reviewDate.getTime()));
