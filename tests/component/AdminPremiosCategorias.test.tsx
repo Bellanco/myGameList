@@ -11,6 +11,12 @@ const saveCategoryMock = vi.fn(async () => ({ docId: 'cat-1', isNew: false }));
 const deleteCategoryMock = vi.fn(async () => ({ kept: false }));
 const reorderMock = vi.fn(async () => ({ reordered: 2 }));
 
+const resolverMock = vi.fn(async (_nombres: readonly string[]) => ({ conCaratula: 2, sinCaratula: 0, fallidas: 0 }));
+
+vi.mock('../../src/model/repository/premios/premiosCoversRepository', () => ({
+  resolverCaratulasDeNominados: (nombres: readonly string[]) => resolverMock(nombres),
+}));
+
 vi.mock('../../src/model/repository/premios/premiosCategoriesRepository', () => ({
   saveCategory: (...args: unknown[]) => saveCategoryMock(...(args as [])),
   deleteCategory: (...args: unknown[]) => deleteCategoryMock(...(args as [])),
@@ -58,6 +64,16 @@ describe('AdminPremiosCategorias', () => {
     expect(saveCategoryMock).toHaveBeenCalledTimes(1);
     const [params] = saveCategoryMock.mock.calls[0] as unknown as [{ options: Array<{ id: string | null }> }];
     expect(params.options.map((o) => o.id)).toEqual(['cat-1_option_a', 'cat-1_option_b']);
+  });
+
+  // La votación solo enseña carátulas ya resueltas, así que guardar resuelve las de sus nominados.
+  it('al guardar resuelve las carátulas de sus nominados', async () => {
+    pintar();
+    resolverMock.mockClear();
+    await userEvent.click(screen.getAllByRole('button', { name: L.edit })[0]);
+    await userEvent.click(screen.getByRole('button', { name: L.save }));
+
+    expect(resolverMock).toHaveBeenCalledWith(['Elden Ring', 'Hades II']);
   });
 
   it('cada nominado es un campo propio, y se pueden añadir y quitar', async () => {

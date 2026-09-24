@@ -9,15 +9,12 @@ const L = PREMIOS_UI.votar;
 /**
  * Un nominado, con la misma CAJA que un juego de la biblioteca.
  *
- * DOS CAJAS, y la decide quien la monta. La pantalla de votar pide hoy SIEMPRE la de carátula, con el check de
- * imágenes encendido o no (ver `PremiosVoteScreen`); la básica se conserva porque es la forma de la tarjeta sin
- * imagen:
- *
- *   · CARÁTULAS ENCENDIDAS → se reutiliza `GameCover`, no se imita: la misma ranura 3:4 del mosaico, con la
- *     misma portada de casa debajo mientras la imagen llega y el mismo gesto de entrada. Un nominado y un juego
- *     tuyo se ven entonces como lo que son: la misma cosa.
- *   · APAGADAS → la caja BÁSICA: el nombre, grande y centrado, sin ranura. No se pinta la portada de casa con el
- *     título dentro porque el nombre ya va debajo, y las dos juntas lo dicen dos veces en la misma tarjeta.
+ * SIEMPRE CON CARÁTULA, y se reutiliza `GameCover`, no se imita: la misma ranura 3:4 del mosaico, con la misma
+ * portada de casa debajo mientras la imagen llega y el mismo gesto de entrada. Un nominado y un juego tuyo se ven
+ * entonces como lo que son: la misma cosa. No depende del check de imágenes (decidido el 24-09-2026): los
+ * nominados son los mismos para todos y se resuelven una vez, al abrir la edición o guardar la categoría desde
+ * admin (ver `resolverCaratulasDeNominados`). Por eso aquí se piden con `c=1`: solo lo ya resuelto, sin
+ * resolver nada mientras la gente vota.
  *
  * LA SELECCIÓN SE MARCA CON UNA FRANJA DE ACENTO EN EL BORDE INFERIOR, más borde y halo, y no con un icono
  * flotante: en una tarjeta estrecha ese icono se montaba sobre la primera línea del nombre. El estado va además
@@ -31,30 +28,26 @@ const L = PREMIOS_UI.votar;
 export interface NomineeCardProps {
   option: PremiosOption;
   selected: boolean;
-  /** ¿Se piden carátulas? Lo resuelve la pantalla. */
-  covers: boolean;
   onChoose: (option: PremiosOption) => void;
 }
 
-function NomineeCardBase({ option, selected, covers, onChoose }: NomineeCardProps) {
-  // SIN PLATAFORMAS: aquí no hay más dato que el nombre del nominado, que es lo que el administrador escribió.
-  // El emparejador de `/cover` resuelve por título igual que en la biblioteca de otra persona.
-  const src = covers ? coverUrl(option.name) : null;
-  const src2x = covers ? coverUrl(option.name, [], false, 'medio') : null;
+function NomineeCardBase({ option, selected, onChoose }: NomineeCardProps) {
+  // SIN PLATAFORMAS: aquí no hay más dato que el nombre del nominado, que es lo que el administrador escribió, y
+  // es con lo que lo resolvió el panel.
+  const src = coverUrl(option.name, [], false, 'normal', true);
+  const src2x = coverUrl(option.name, [], false, 'medio', true);
 
   return (
     <button
       type="button"
-      className={`premios-nominee${selected ? ' is-selected' : ''}${covers ? '' : ' is-flat'}`}
+      className={`premios-nominee${selected ? ' is-selected' : ''}`}
       aria-pressed={selected}
       aria-label={selected ? L.nomineeChosenAria(option.name) : L.nomineeAria(option.name)}
       onClick={() => onChoose(option)}
     >
-      {covers ? (
-        <span className="premios-nominee__slot">
-          <GameCover name={option.name} src={src} src2x={src2x} />
-        </span>
-      ) : null}
+      <span className="premios-nominee__slot">
+        <GameCover name={option.name} src={src} src2x={src2x} />
+      </span>
 
       <span className="premios-nominee__body">
         <span className="premios-nominee__name">{option.name}</span>

@@ -61,10 +61,6 @@ export function PremiosReviewScreen({
   readOnly = false,
 }: PremiosReviewScreenProps) {
   const [name, setName] = useState(defaultName);
-  /* CARÁTULAS SIEMPRE, igual que en la pantalla de votar, con el check de imágenes encendido o no. Lo que ese check protege en tus listas es que el
-     servidor pregunte por TUS títulos; aquí los nominados los escribe el administrador y son los mismos para
-     todos, así que se resuelven una vez por edición y no por votante. Decidido el 24-09-2026. */
-  const covers = true;
 
   const votadas = categories.filter((category) => Boolean(votes[category.id])).length;
   const pendientes = categories.length - votadas;
@@ -147,7 +143,7 @@ export function PremiosReviewScreen({
           return (
             <li key={category.id}>
               {(() => {
-                const clase = `premios-review__card${vote ? '' : ' is-empty'}${covers ? '' : ' is-flat'}`;
+                const clase = `premios-review__card${vote ? '' : ' is-empty'}`;
                 const Caja = readOnly
                   ? ({ children }: { children: React.ReactNode }) => <div className={clase}>{children}</div>
                   : ({ children }: { children: React.ReactNode }) => (
@@ -157,21 +153,19 @@ export function PremiosReviewScreen({
                   );
                 return (
                   <Caja>
-                {/* La misma caja que en la votación, y con la misma regla: con las imágenes encendidas se ve la
-                    portada de lo votado —que es como se reconoce un juego de un vistazo—, y apagadas la tarjeta
-                    se queda en sus dos líneas de texto. Sin voto el hueco se queda VACÍO, sin la portada de casa
-                    del nombre de la categoría: ese nombre ya va debajo, y las dos juntas lo decían dos veces. */}
-                {covers ? (
-                  <span className={`premios-review__slot${vote ? '' : ' is-empty'}`}>
-                    {vote ? (
-                      <GameCover
-                        name={vote.name}
-                        src={coverUrl(vote.name)}
-                        src2x={coverUrl(vote.name, [], false, 'medio')}
-                      />
-                    ) : null}
-                  </span>
-                ) : null}
+                {/* La misma caja que en la votación, con la portada de lo votado —que es como se reconoce un
+                    juego de un vistazo— y pedida igual, solo de lo ya resuelto (ver `NomineeCard`). Sin voto el
+                    hueco se queda VACÍO, sin la portada de casa del nombre de la categoría: ese nombre ya va
+                    debajo, y las dos juntas lo decían dos veces. */}
+                <span className={`premios-review__slot${vote ? '' : ' is-empty'}`}>
+                  {vote ? (
+                    <GameCover
+                      name={vote.name}
+                      src={coverUrl(vote.name, [], false, 'normal', true)}
+                      src2x={coverUrl(vote.name, [], false, 'medio', true)}
+                    />
+                  ) : null}
+                </span>
                     <span className="premios-review__card-body">
                       <span className="premios-review__cat">{titulo}</span>
                       <span className="premios-review__pick">{vote ? vote.name : L.notVoted}</span>

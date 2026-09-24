@@ -8,6 +8,7 @@ import {
   reorderCategories,
   saveCategory,
 } from '../../../model/repository/premios/premiosCategoriesRepository';
+import { resolverCaratulasDeNominados } from '../../../model/repository/premios/premiosCoversRepository';
 import type { PremiosCategory } from '../../../model/types/premios';
 
 const L = PREMIOS_UI.admin.categories;
@@ -105,7 +106,12 @@ export function AdminPremiosCategorias({ categories, busy, ejecutar }: AdminPrem
       });
 
       setEditando(null);
-      return esNueva ? L.created(borrador.titleEs) : L.saved(borrador.titleEs);
+      // Las carátulas de sus nominados, ya: la votación solo enseña lo resuelto (ver `resolverCaratulasDeNominados`).
+      const caratulas = await resolverCaratulasDeNominados(options.map((option) => option.value));
+      const aviso = esNueva ? L.created(borrador.titleEs) : L.saved(borrador.titleEs);
+      return options.length
+        ? `${aviso} ${PREMIOS_UI.admin.covers.summary(caratulas.conCaratula, caratulas.sinCaratula, caratulas.fallidas)}`
+        : aviso;
     });
 
   const eliminar = (category: PremiosCategory) => {

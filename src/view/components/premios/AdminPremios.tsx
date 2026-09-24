@@ -8,7 +8,7 @@ import { AdminPremiosGanadores } from './AdminPremiosGanadores';
 import { AdminPremiosHistorico } from './AdminPremiosHistorico';
 import { AdminPremiosVotos } from './AdminPremiosVotos';
 import { todayInVotingZone, toVotingZoneDay } from '../../../core/premios/closingDate';
-import { getCategoryTitle } from '../../../core/premios/localize';
+import { getCategoryTitle, tField } from '../../../core/premios/localize';
 import { getSeasonLabel } from '../../../core/premios/seasonId';
 import { SEASON_STAGE, getSeasonStage, validateClosingDay } from '../../../core/premios/votingSchedule';
 import {
@@ -19,6 +19,7 @@ import {
 import { shouldOfferPremios } from '../../../core/premios/visibility';
 import { loadAndSortCategories } from '../../../model/repository/premios/premiosCategoriesRepository';
 import { fetchWinners } from '../../../model/repository/premios/premiosWinnersRepository';
+import { resolverCaratulasDeNominados } from '../../../model/repository/premios/premiosCoversRepository';
 import {
   loadPremiosSnapshot,
   savePremiosSnapshot,
@@ -188,7 +189,15 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
       if (validateClosingDay(closesDay, hoy)) throw new Error(L.season.errorDay);
       const result = await openSeason({ name, closesDay, season: new Date().getFullYear() });
       const aviso = L.season.opened(result.name || String(new Date().getFullYear()));
-      return result.leftovers > 0 ? `${aviso} ${L.season.leftovers(result.leftovers)}` : aviso;
+      /* LAS CARÁTULAS DE TODOS LOS NOMINADOS, antes de que entre nadie: la votación solo enseña lo ya resuelto
+         (ver `resolverCaratulasDeNominados`). Las que ya lo estaban —las guardadas al editar cada categoría—
+         salen de la caché, así que repetirlas aquí no gasta nada y cubre las categorías de ediciones anteriores. */
+      const nombres = archivableCategories(categories).flatMap((category) => (category.options || []).map((option) => tField(option)));
+      const caratulas = await resolverCaratulasDeNominados(nombres);
+      const partes = [aviso];
+      if (result.leftovers > 0) partes.push(L.season.leftovers(result.leftovers));
+      if (nombres.length) partes.push(L.covers.summary(caratulas.conCaratula, caratulas.sinCaratula, caratulas.fallidas));
+      return partes.join(' ');
     });
 
   /**

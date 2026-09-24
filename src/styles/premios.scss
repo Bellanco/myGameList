@@ -366,30 +366,6 @@
   aspect-ratio: auto;
 }
 
-/* SIN IMÁGENES, LA CAJA BÁSICA: el nombre manda y ocupa el centro, sin ranura vacía que llenar. Es la tarjeta
-   que ve quien tiene las carátulas apagadas, y tiene que sostenerse sola. */
-.premios-nominee.is-flat {
-  grid-template-rows: 1fr;
-  align-content: center;
-  padding: .9rem .7rem;
-}
-
-/* SIN PORTADAS, LA REJILLA NO REPARTE EL ALTO: una tarjeta de tres palabras estirada a 400 px es un cartel
-   vacío, y cinco de ellas dejaban la pantalla llena de huecos. Las filas se acotan y el bloque entero se centra
-   en el sitio que haya, que es lo que hacía la porra de origen con sus tarjetas panorámicas.
-   `:has` y no una clase en la rejilla: quien sabe si la tarjeta lleva portada es la tarjeta. */
-.premios-vote.is-fitted .premios-vote__grid:has(.premios-nominee.is-flat) {
-  grid-auto-rows: minmax(4.5rem, 9rem);
-  align-content: center;
-}
-
-.premios-nominee.is-flat .premios-nominee__body { align-content: center; height: 100%; padding: 0; }
-
-.premios-nominee.is-flat .premios-nominee__name {
-  font-size: var(--fs-md);
-  -webkit-line-clamp: 3;
-}
-
 .premios-nominee:hover { background: var(--surface-hover); transform: translateY(-1px); }
 
 .premios-nominee:focus-visible {
@@ -419,9 +395,6 @@
   overflow: hidden;
   min-height: 2.4em;
 }
-
-/* Salvo en la tarjeta sin portada, donde el nombre ES la tarjeta y puede ocupar lo que necesite. */
-.premios-nominee.is-flat .premios-nominee__name { min-height: 0; -webkit-line-clamp: 3; }
 
 /* ═══ CUANDO NO HAY SITIO PARA UNA PORTADA, NO SE PINTA UNA FRANJA ══════════════════════════════════════
    Con cinco nominados en un teléfono, la rejilla reparte el alto y a cada ranura le quedaban treinta píxeles:

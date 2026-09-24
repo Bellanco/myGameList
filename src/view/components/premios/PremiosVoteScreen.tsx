@@ -51,10 +51,6 @@ export function PremiosVoteScreen({
   const sectionRef = useRef<HTMLElement | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
   const [ancho, setAncho] = useState(0);
-  /* CARÁTULAS SIEMPRE, con el check de imágenes encendido o no. Lo que ese check protege en tus listas es que el
-     servidor pregunte por TUS títulos; aquí los nominados los escribe el administrador y son los mismos para
-     todos, así que se resuelven una vez por edición y no por votante. Decidido el 24-09-2026. */
-  const covers = true;
   const top = usePosicionSuperior(sectionRef);
 
   // SE MIDE EL CONTENEDOR, NO LA VENTANA, que es como mide el resto de esta app (ver `GameTable`,
@@ -98,11 +94,8 @@ export function PremiosVoteScreen({
       // aquí: que la columna es estrecha. Un móvil apaisado y una ventana pequeña en un monitor reparten igual.
       isMobile: ancho < 640,
       isLandscape: typeof window !== 'undefined' && window.innerWidth > window.innerHeight,
-      // La caja cambia de forma con la preferencia de imágenes, y con ella el reparto: estrecha y alta con
-      // portada, ancha y baja cuando solo hay un título.
-      withCovers: covers,
     });
-  }, [ancho, covers, nominados.length]);
+  }, [ancho, nominados.length]);
 
   const irA = useCallback(
     (destino: string) => {
@@ -148,7 +141,6 @@ export function PremiosVoteScreen({
               key={option.id}
               option={option}
               selected={elegido?.id === option.id}
-              covers={covers}
               onChoose={(chosen) => {
                 onChoose(category.id, chosen);
                 // Elegir avanza, con una pausa para que dé tiempo a ver la marca. Los botones del pie siguen

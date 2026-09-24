@@ -84,13 +84,15 @@ describe('PremiosVoteScreen', () => {
 
   // El reparto lo decide `gridDensity` midiendo el contenedor. Las tarjetas llevan siempre carátula —estrechas y
   // altas—, así que con 5 nominados y 1280 px de hueco caben los cinco en una sola fila.
-  /* CARÁTULAS PARA TODOS, con el check de imágenes apagado —que es el de fábrica—. Los nominados son los mismos
-     para cada votante, así que se resuelven una vez por edición y no por persona (decidido el 24-09-2026). */
-  it('enseña la carátula de cada nominado aunque el check de imágenes esté apagado', () => {
+  /* CARÁTULAS PARA TODOS, con el check de imágenes apagado —que es el de fábrica—, y SOLO LO YA RESUELTO (`c=1`):
+     las resuelve el panel al abrir la edición o guardar la categoría, así que votar no consulta IGDB ni escribe
+     en KV por mucha gente que entre (decidido el 24-09-2026). */
+  it('enseña la carátula de cada nominado aunque el check de imágenes esté apagado, pidiendo solo lo resuelto', () => {
     localStorage.removeItem('mis-listas-covers');
     renderPantalla(1);
-    expect(document.querySelectorAll('.premios-nominee .game-cover-img').length).toBeGreaterThan(0);
-    expect(document.querySelector('.premios-nominee.is-flat')).toBeNull();
+    const imagenes = [...document.querySelectorAll('.premios-nominee .game-cover-img')];
+    expect(imagenes.length).toBeGreaterThan(0);
+    for (const img of imagenes) expect(img.getAttribute('src')).toContain('c=1');
   });
 
   it('reparte las columnas según el hueco medido, no con auto-fit', () => {

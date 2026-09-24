@@ -48,6 +48,12 @@ vi.mock('../../src/model/repository/premios/premiosWinnersRepository', () => ({
   saveWinners: async () => ({ saved: 0, skipped: 0, migrated: 0 }),
 }));
 
+const resolverMock = vi.fn(async (_nombres: readonly string[]) => ({ conCaratula: 2, sinCaratula: 0, fallidas: 0 }));
+
+vi.mock('../../src/model/repository/premios/premiosCoversRepository', () => ({
+  resolverCaratulasDeNominados: (nombres: readonly string[]) => resolverMock(nombres),
+}));
+
 vi.mock('../../src/model/repository/premiosVisibilityRepository', () => ({
   loadPremiosSnapshot: async () => null,
   savePremiosSnapshot: async (foto: unknown) => foto,
@@ -70,6 +76,7 @@ describe('AdminPremios · abrir la votación', () => {
   beforeEach(() => {
     categorias.valor = [];
     openMock.mockClear();
+    resolverMock.mockClear();
   });
 
   it('avisa de la categoría sin completar por su nombre y pregunta antes de abrir', async () => {
@@ -106,6 +113,19 @@ describe('AdminPremios · abrir la votación', () => {
     await userEvent.click(boton);
     await waitFor(() => expect(openMock).toHaveBeenCalledTimes(1));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  // LA VOTACIÓN SOLO ENSEÑA CARÁTULAS YA RESUELTAS (`c=1`), así que abrir resuelve las de todos los nominados
+  // antes de que entre nadie, y el resumen va en el aviso.
+  it('al abrir resuelve las carátulas de todos los nominados y lo cuenta', async () => {
+    categorias.valor = [completa, placeholder];
+    const boton = await pintar();
+    await waitFor(() => expect(boton).toBeEnabled());
+
+    await userEvent.click(boton);
+    await waitFor(() => expect(resolverMock).toHaveBeenCalledWith(['Elden Ring', 'Hades II']));
+    const resumen = PREMIOS_UI.admin.covers.summary(2, 0, 0);
+    expect(await screen.findByText((texto) => texto.includes(resumen))).toBeInTheDocument();
   });
 
   /**
