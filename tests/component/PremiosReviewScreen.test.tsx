@@ -98,7 +98,8 @@ describe('PremiosReviewScreen', () => {
     it('enseña la papeleta sin el nombre ni el botón de enviar', () => {
       pintar(completa, vi.fn(), true);
 
-      expect(screen.getByText('Uno')).toBeInTheDocument();
+      // Con el selector: el nombre sale también en la portada de casa de la carátula.
+      expect(screen.getByText('Uno', { selector: '.premios-review__pick' })).toBeInTheDocument();
       expect(screen.queryByLabelText(L.nameLabel)).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: L.submit })).not.toBeInTheDocument();
       // Y NO SE AFIRMA NADA sobre las oportunidades ni se promete poder cambiar: aquí se llega con el cupo

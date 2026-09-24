@@ -6,7 +6,6 @@ import { getGridColumns } from '../../../core/premios/gridDensity';
 import { PREMIOS_ROUTES, votePath } from '../../../viewmodel/premios/premiosRoutes';
 import type { PremiosCategory, PremiosOption } from '../../../model/types/premios';
 import type { PremiosVotes } from '../../../viewmodel/premios/usePremiosVoting';
-import { useCovers } from '../../hooks/useCovers';
 import { NomineeCard } from './NomineeCard';
 import { usePosicionSuperior } from './usePosicionSuperior';
 import { PremiosProgress } from './PremiosProgress';
@@ -52,7 +51,10 @@ export function PremiosVoteScreen({
   const sectionRef = useRef<HTMLElement | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
   const [ancho, setAncho] = useState(0);
-  const { covers } = useCovers();
+  /* CARÁTULAS SIEMPRE, con el check de imágenes encendido o no. Lo que ese check protege en tus listas es que el
+     servidor pregunte por TUS títulos; aquí los nominados los escribe el administrador y son los mismos para
+     todos, así que se resuelven una vez por edición y no por votante. Decidido el 24-09-2026. */
+  const covers = true;
   const top = usePosicionSuperior(sectionRef);
 
   // SE MIDE EL CONTENEDOR, NO LA VENTANA, que es como mide el resto de esta app (ver `GameTable`,

@@ -7,7 +7,6 @@ import { coverUrl } from '../../../core/utils/coverUrl';
 import { votePath } from '../../../viewmodel/premios/premiosRoutes';
 import type { PremiosCategory } from '../../../model/types/premios';
 import type { PremiosVotes } from '../../../viewmodel/premios/usePremiosVoting';
-import { useCovers } from '../../hooks/useCovers';
 import { GameCover } from '../GameCover';
 import { PremiosProgress } from './PremiosProgress';
 
@@ -62,7 +61,10 @@ export function PremiosReviewScreen({
   readOnly = false,
 }: PremiosReviewScreenProps) {
   const [name, setName] = useState(defaultName);
-  const { covers } = useCovers();
+  /* CARÁTULAS SIEMPRE, igual que en la pantalla de votar, con el check de imágenes encendido o no. Lo que ese check protege en tus listas es que el
+     servidor pregunte por TUS títulos; aquí los nominados los escribe el administrador y son los mismos para
+     todos, así que se resuelven una vez por edición y no por votante. Decidido el 24-09-2026. */
+  const covers = true;
 
   const votadas = categories.filter((category) => Boolean(votes[category.id])).length;
   const pendientes = categories.length - votadas;

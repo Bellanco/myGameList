@@ -9,15 +9,15 @@ const L = PREMIOS_UI.votar;
 /**
  * Un nominado, con la misma CAJA que un juego de la biblioteca.
  *
- * DOS CAJAS, y las decide la preferencia de imágenes de la aplicación (`useCovers`), no una propia de la porra:
+ * DOS CAJAS, y la decide quien la monta. La pantalla de votar pide hoy SIEMPRE la de carátula, con el check de
+ * imágenes encendido o no (ver `PremiosVoteScreen`); la básica se conserva porque es la forma de la tarjeta sin
+ * imagen:
  *
  *   · CARÁTULAS ENCENDIDAS → se reutiliza `GameCover`, no se imita: la misma ranura 3:4 del mosaico, con la
  *     misma portada de casa debajo mientras la imagen llega y el mismo gesto de entrada. Un nominado y un juego
  *     tuyo se ven entonces como lo que son: la misma cosa.
  *   · APAGADAS → la caja BÁSICA: el nombre, grande y centrado, sin ranura. No se pinta la portada de casa con el
  *     título dentro porque el nombre ya va debajo, y las dos juntas lo dicen dos veces en la misma tarjeta.
- *     Quien tiene las imágenes apagadas no pide ni una petición aquí tampoco, que es lo que esa preferencia
- *     promete.
  *
  * LA SELECCIÓN SE MARCA CON UNA FRANJA DE ACENTO EN EL BORDE INFERIOR, más borde y halo, y no con un icono
  * flotante: en una tarjeta estrecha ese icono se montaba sobre la primera línea del nombre. El estado va además
@@ -31,7 +31,7 @@ const L = PREMIOS_UI.votar;
 export interface NomineeCardProps {
   option: PremiosOption;
   selected: boolean;
-  /** ¿Se piden carátulas? Es la preferencia de la app, resuelta por la pantalla. */
+  /** ¿Se piden carátulas? Lo resuelve la pantalla. */
   covers: boolean;
   onChoose: (option: PremiosOption) => void;
 }
