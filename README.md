@@ -98,6 +98,7 @@ el directorio, lo que no significa que el código esté mal, sino que **la regla
 | `npm run lint` | Autocorrecciones ESLint |
 | `npm run audit:privacy` | Auditoría de privacidad |
 | `npm run audit:rules` | Auditoría (solo lectura) de los datos de producción contra `firestore.rules` |
+| `npm run audit:deploy` | Comprueba que el HTML que sirve el dominio desplegado no carga nada de otro origen (acepta una URL) |
 
 ## Configuración de Firebase
 
@@ -190,6 +191,9 @@ Ajustes en el dashboard de Cloudflare Pages:
 
 - Recargar una ruta interna (`/social`, `/ajustes`) sin 404.
 - `/assets/*` y `/fonts/*` con cache inmutable en Network; sin bloqueos CSP en Console.
+- **`npm run audit:deploy`** en verde. Mira el HTML tal y como lo sirve el dominio, que es lo único que ve lo que
+  inyecta el borde: el smoke de «sin terceros» corre contra `vite preview` y no puede verlo. Así estuvo cargándose
+  en cada visita el beacon de Cloudflare Web Analytics (ver el comentario de la CSP en `public/_headers`).
 - **Arranca sin red**: cargar, cortar la conexión y recargar — la app debe pintar las listas (no un rectángulo
   en blanco). Ojo: en `localhost` el service worker se desregistra a propósito; hay que probarlo en el dominio
   desplegado o con `preview` sobre `127.0.0.1`.

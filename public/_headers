@@ -1,5 +1,5 @@
 /*
-  Content-Security-Policy: default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'sha256-PrbBgbqo0b8so2nlNw45VTeUmgyPJdo6Fu+e1nr1qn0=' https://static.cloudflareinsights.com https://www.googletagmanager.com https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.googleusercontent.com https://*.githubusercontent.com https://*.steamusercontent.com https://steamuserimages-a.akamaihd.net https://*.steamstatic.com https://*.playstation.net https://*.xboxlive.com; media-src 'self' https://*.githubusercontent.com https://*.steamusercontent.com https://steamuserimages-a.akamaihd.net https://*.steamstatic.com https://*.playstation.net https://*.xboxlive.com; connect-src 'self' https://www.google.com https://lh3.googleusercontent.com https://api.github.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://firebase.googleapis.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.google-analytics.com; frame-src https://accounts.google.com https://*.firebaseapp.com https://www.google.com; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'sha256-PrbBgbqo0b8so2nlNw45VTeUmgyPJdo6Fu+e1nr1qn0=' https://www.googletagmanager.com https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.googleusercontent.com https://*.githubusercontent.com https://*.steamusercontent.com https://steamuserimages-a.akamaihd.net https://*.steamstatic.com https://*.playstation.net https://*.xboxlive.com; media-src 'self' https://*.githubusercontent.com https://*.steamusercontent.com https://steamuserimages-a.akamaihd.net https://*.steamstatic.com https://*.playstation.net https://*.xboxlive.com; connect-src 'self' https://www.google.com https://lh3.googleusercontent.com https://api.github.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://firebase.googleapis.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.google-analytics.com; frame-src https://accounts.google.com https://*.firebaseapp.com https://www.google.com; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests
   Strict-Transport-Security: max-age=15552000
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
@@ -18,6 +18,16 @@
 # `firebaseappcheck.googleapis.com`— y en producción salieron cuatro violaciones de CSP seguidas.
 # Se pueden borrar las tres a la vez el día que se retire App Check (ver `model/repository/appCheckRepository`).
 # Ojo: NO implican ninguna petición por sí solas. reCAPTCHA solo se carga cuando hay sesión de Google iniciada.
+
+# SIN `static.cloudflareinsights.com` en `script-src`, A PROPÓSITO (25-09-2026). Es el beacon de Cloudflare Web
+# Analytics, que Pages INYECTA en el HTML al desplegar cuando esa métrica está activada en el panel (pestaña
+# Metrics del proyecto): no está en el código y ningún test local lo ve. Estuvo permitido aquí desde mayo, pero su
+# envío (`cloudflareinsights.com/cdn-cgi/rum`) nunca lo estuvo en `connect-src`, así que cada visita descargaba
+# un script de un dominio ajeno para no medir nada — y la política promete que usar tus listas no contacta con
+# ningún servidor ajeno. Web Analytics se apagó en el panel; que no esté aquí es el candado: si alguien lo vuelve a
+# activar, el navegador no llega a pedir el script (queda una violación de CSP en consola, no una petición).
+# Las métricas de tráfico del alojamiento que menciona la política son las de Pages, del lado del servidor.
+# Para comprobar lo que de verdad sirve el dominio: `npm run audit:deploy` (checklist post-deploy del README).
 
 # `lh3.googleusercontent.com` en `connect-src` (además de en `img-src`): el avatar de Google no solo se PINTA, se
 # LEE. `core/social/googlePhoto` descarga la imagen con `fetch` y la mira con canvas para distinguir una foto de

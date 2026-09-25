@@ -163,8 +163,9 @@ cargadores de terceros solo se ejercitan con sesión en un despliegue. Por eso h
    `src/core/security/trustedTypes.ts` con:
    - una política `app` que solo admite `/service-worker.js` como script URL;
    - una política `default` que solo deja pasar `TrustedScriptURL` cuyo origen esté en el `script-src` actual
-     (`www.google.com`, `www.gstatic.com`, `apis.google.com`, `www.googletagmanager.com`,
-     `static.cloudflareinsights.com`) y **rechaza todo `TrustedHTML` y `TrustedScript`**.
+     (`www.google.com`, `www.gstatic.com`, `apis.google.com`, `www.googletagmanager.com`; el beacon de
+     Cloudflare, `static.cloudflareinsights.com`, salió de la CSP el 25-09-2026) y **rechaza todo `TrustedHTML` y
+     `TrustedScript`**.
    - Se registra en `main.tsx` antes que nada, con comprobación de soporte (`window.trustedTypes`): Firefox y
      Safari antiguos no lo tienen, y la cabecera tampoco les afecta.
 4. **Exigir** cuando el endpoint lleve una semana sin informes nuevos: mover la directiva a la CSP real y
