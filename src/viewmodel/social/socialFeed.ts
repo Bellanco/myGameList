@@ -155,19 +155,24 @@ function capMovesPerAuthorDay(moves: SocialMoveFeedItem[]): SocialMoveFeedItem[]
     });
 }
 
-// Los meses los pone `Intl` y no una lista escrita a mano: es la misma frase («5 de septiembre») y sale del
-// idioma de la app, no de doce palabras en español.
-const FEED_DAY_FORMAT = new Intl.DateTimeFormat(APP_LOCALE, { day: 'numeric', month: 'long' });
+const FEED_DAY_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long' };
 
 /**
  * Formatea la fecha como "D de MMMM". Pura y sin capturas → a nivel de módulo
  * para que no se recree en cada render (evita invalidar el useMemo del feed).
  *
- * Lee la fecha con los getters LOCALES, así que el día que recibe tiene que venir también en local: por eso el
- * agrupado usa `localDayKey`/`startOfLocalDay` y no `toISOString()`.
+ * Los meses los pone `Intl` y no una lista escrita a mano: es la misma frase («5 de septiembre») y sale del idioma
+ * de la app, no de doce palabras en español.
+ *
+ * EL FORMATEADOR SE CREA EN CADA LLAMADA, y no una vez en el módulo, a propósito. Un `Intl.DateTimeFormat` fija la
+ * zona horaria al construirse, mientras que el agrupado (`localDayKey`/`startOfLocalDay`) lee la zona VIGENTE con
+ * los getters locales de `Date`. Con el formateador de módulo, si la zona cambia con la app abierta —un viaje, o el
+ * `vi.stubEnv('TZ', …)` de las pruebas en un CI que corre en UTC—, el grupo se calculaba en la zona nueva y su
+ * título en la vieja: «11 de agosto» encima de los movimientos del 12. Se llama una vez por día del feed, así que
+ * crearlo no cuesta nada que se note.
  */
 function formatDayHeader(date: Date): string {
-  return FEED_DAY_FORMAT.format(date);
+  return new Intl.DateTimeFormat(APP_LOCALE, FEED_DAY_FORMAT_OPTIONS).format(date);
 }
 
 /**
