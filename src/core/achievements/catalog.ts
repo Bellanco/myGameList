@@ -1468,6 +1468,18 @@ export function catalogEpoch(): number {
 }
 
 /**
+ * Los umbrales de una escalera con los añadidos puestos EN SU SITIO. El grado y el romano salen de la POSICIÓN, así
+ * que un umbral intermedio tiene que entrar donde le toca para que «Créditos finales III» siga queriendo decir el
+ * tercer escalón. Y en el sentido de la escalera: ordenar siempre de menor a mayor le daba la vuelta a la
+ * descendente (`estanteria-cero`), cuyo primer escalón es el de 50 y no el de 1. Lo comparten el catálogo y la
+ * vista previa del panel, para que las dos no puedan contar escaleras distintas.
+ */
+export function ladderStepsWith(ladder: AchievementLadder, añadidos: readonly number[]): number[] {
+  const steps = [...ladder.steps, ...añadidos];
+  return ladder.descending ? steps.sort((a, b) => b - a) : steps.sort((a, b) => a - b);
+}
+
+/**
  * LOS ESCALONES EXTRA DE CADA ESCALERA, decididos en el panel: clave de escalera → umbrales.
  *
  * Es el único tipo de ampliación que puede llegar sin desplegar (ver arriba). Va en `types.ts` porque lo
@@ -1481,9 +1493,7 @@ export function applyExtraSteps(extra: ExtraSteps = {}): void {
       .filter((step) => Number.isInteger(step) && step > 0 && !ladder.steps.includes(step))
       .filter((step, index, all) => all.indexOf(step) === index);
     if (añadidos.length === 0) return expandLadder(ladder);
-    // Ordenados: el grado y el romano salen de la POSICIÓN, así que un umbral intermedio tiene que entrar en su
-    // sitio para que «Créditos finales III» siga queriendo decir el tercer escalón.
-    return expandLadder({ ...ladder, steps: [...ladder.steps, ...añadidos].sort((a, b) => a - b) });
+    return expandLadder({ ...ladder, steps: ladderStepsWith(ladder, añadidos) });
   });
 
   achievements.length = 0;
