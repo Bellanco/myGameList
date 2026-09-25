@@ -17,7 +17,7 @@
 ## Plan
 
 1. **Sync y pérdida de datos:** A1, A2, M-githubHttp, M-legacyGamesFormat. · ✅ hecho (25-09-2026)
-2. **Social:** A3–A7, M-socialGist ilegible, M-profileHeal.
+2. **Social:** A3–A7, M-socialGist ilegible, M-profileHeal. · ✅ hecho (25-09-2026)
 3. **Borde y admin:** A8, A10, A11, M-achievementsConfig, M-AdminPremios.
 4. **Privacidad:** A12, M-accountDeletion.
 5. **Formularios y accesibilidad:** A9, M-StarPicker, M-feed con teclado.
@@ -31,11 +31,11 @@ Cada arreglo de los grupos 1 y 2 va con un test que reproduce el fallo antes de 
 |---|---|---|---|
 | A1 ✔ | ✅ | `src/core/utils/tagMutations.ts:37` | Renombrar/borrar una etiqueta sube el `_ts` de **todos** los juegos, aunque no la lleven. Con LWW por juego (`mergeCrdt`), una edición sin subir de otro dispositivo pierde. Sellar solo los que cambian. |
 | A2 ✔ | ✅ | `src/model/repository/gistConfigRepository.ts:134-157` | Cada `saveSyncConfig` (tras cada ciclo) escribe la config sin `encToken` y recifra en segundo plano. Cerrar en ese hueco, o que el cifrado falle (`.catch(() => {})`), deja el disco sin token. Conservar el `encToken` previo si el token no cambia. |
-| A3 ✔ | | `src/view/components/socialhub/SocialProfileDetailScreen.tsx:641` | «Añadir a próximos» desde la ruleta de un amigo copia **su reseña y su nota** (`buildProfilePool`) a tus listas y a tu gist (`addGameToProximos` las copia). |
-| A4 | | `src/model/repository/firebaseRepository.ts:498-515` (y `:205-221`) | `ensureProfileByEmail` cachea 60 s el perfil propio sin `achievementsMirror`/`palmares`/`createdAt`. Abrir el hub en ese plazo publica la vitrina como reemplazo (`mergeForPublish('')`) y se pierden medallas de otros dispositivos. |
-| A5 ✔ | | `src/model/repository/firebaseSocialRepository.ts:478-490` | El último `.map` de `listSocialDirectory` descarta `profileId`; `usePremiosProfiles` cruza por él y la clasificación de premios no enlaza nunca (desde 770507b). |
-| A6 ✔ | | `src/viewmodel/useSocialViewModel.ts:375-382` | Si el gist social de `privateConfig` da 404, se sale antes de `setAuthUser`: parece sin sesión, no arranca el auto-crear y al reentrar se crea otro gist vacío. Tampoco mira `cancelled` tras el `await`. |
-| A7 | | `src/viewmodel/useSocialViewModel.ts:734`, `:755` | La migración a canal secreto borra el gist viejo aunque el `setPrivateConfig` haya fallado (`.catch(() => {})`); el puntero queda en un gist inexistente. |
+| A3 ✔ | ✅ e174d69 | `src/view/components/socialhub/SocialProfileDetailScreen.tsx:641` | «Añadir a próximos» desde la ruleta de un amigo copia **su reseña y su nota** (`buildProfilePool`) a tus listas y a tu gist (`addGameToProximos` las copia). |
+| A4 | ✅ 3af553c | `src/model/repository/firebaseRepository.ts:498-515` (y `:205-221`) | `ensureProfileByEmail` cachea 60 s el perfil propio sin `achievementsMirror`/`palmares`/`createdAt`. Abrir el hub en ese plazo publica la vitrina como reemplazo (`mergeForPublish('')`) y se pierden medallas de otros dispositivos. |
+| A5 ✔ | ✅ 510cd42 | `src/model/repository/firebaseSocialRepository.ts:478-490` | El último `.map` de `listSocialDirectory` descarta `profileId`; `usePremiosProfiles` cruza por él y la clasificación de premios no enlaza nunca (desde 770507b). |
+| A6 ✔ | ✅ 813df47 | `src/viewmodel/useSocialViewModel.ts:375-382` | Si el gist social de `privateConfig` da 404, se sale antes de `setAuthUser`: parece sin sesión, no arranca el auto-crear y al reentrar se crea otro gist vacío. Tampoco mira `cancelled` tras el `await`. |
+| A7 | ✅ 3c0ee57 | `src/viewmodel/useSocialViewModel.ts:734`, `:755` | La migración a canal secreto borra el gist viejo aunque el `setPrivateConfig` haya fallado (`.catch(() => {})`); el puntero queda en un gist inexistente. |
 | A8 ✔ | | `functions/cover.ts:316-327`, `functions/_lib/igdbCover.ts:643` | «No se pudo preguntar a IGDB» (429, token) devuelve `null` igual que «no hay carátula» → `404` con `CACHE_MAPA` (7 días) y el cliente lo aparca 90. Responder 503 + `no-store`. Mismo fallo en `localCoverApi`. |
 | A9 | | `src/view/modals/FormModal.tsx:306-339` | `runSave` vacía lo pendiente de los campos de etiquetas y, si la validación falla, sale sin `setLocalDraft(nextDraft)`: lo escrito sin Enter se pierde. |
 | A10 ✔ | | `src/core/achievements/catalog.ts:1486` | `applyExtraSteps` ordena siempre ascendente e invierte la escalera descendente `estanteria-cero`. `AdminAchievements.tsx:366/403` repite el sort. |
@@ -53,8 +53,8 @@ Cada arreglo de los grupos 1 y 2 va con un test que reproduce el fallo antes de 
 | | `src/model/repository/indexedDbRepository.ts:396-400`, `:453-456` | El `oncomplete` del espejo rearma el índice aunque se invalidara en vuelo (solo migración v3). Contador de generación. |
 | | `src/viewmodel/useSyncViewModel.ts:116-124`, `:163` | Un fallo de escritura suma dos veces al backoff y pisa `pendingAction: 'write'`; `retryPendingWrite` casi muerto y sin re-merge. |
 | | `src/model/repository/achievementsConfigRepository.ts:182-186` | `setDoc(..., { merge: true })` no borra la clave quitada de `extraSteps`: el escalón vuelve. Usar `deleteField()` o `updateDoc`. |
-| | `src/model/repository/firebaseProfileHealRepository.ts:165`, `:284` | Un fallo leyendo `privateConfig` se trata como vacío y se sobrescribe con ids/token legacy. |
-| | `src/model/repository/socialGistRepository.ts:1063-1102` | Gist ilegible → se devuelve vacío y se cachea con su ETag; `openSocialWrite`/`reconcileReviewActivity` reescriben el canal. |
+| ✅ bf35c74 | `src/model/repository/firebaseProfileHealRepository.ts:165`, `:284` | Un fallo leyendo `privateConfig` se trata como vacío y se sobrescribe con ids/token legacy. |
+| ✅ 313da37 | `src/model/repository/socialGistRepository.ts:1063-1102` | Gist ilegible → se devuelve vacío y se cachea con su ETag; `openSocialWrite`/`reconcileReviewActivity` reescriben el canal. Arreglado con él `assembleChunkedSocial`, que saltaba chunks ausentes o corruptos (ahora aborta en la lectura del canal propio; las de solo mirar siguen con lo disponible). |
 | | `src/model/repository/premios/premiosSeasonRepository.ts:301`, `:506` | Dos ediciones con el mismo nombre o año dan el mismo id; la segunda pisa el archivo de la primera. |
 | | `src/model/repository/premios/premiosPalmaresRepository.ts:223`, `:254` | `grant`/`revokePalmares` escriben `updatedAt` en el perfil y falsean «última vez visto». |
 | | `src/model/repository/accountDeletionRepository.ts:151-157` | Tras borrar la cuenta quedan ~12 claves locales (votos, `achievementsPublishedKey(uid)`…) pese a que el comentario promete lo contrario. |
