@@ -449,6 +449,21 @@ describe('F8/E4: chunking multi-fichero del gist de juegos (gated, round-trip)',
     expect(round.deleted.map((d) => d.id)).toContain(999);
   });
 
+  it('un chunk del mismo gist ausente o corrupto aborta la lectura en vez de devolverla a medias', () => {
+    const data: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 100 };
+    for (let i = 1; i <= 40; i += 1) data.c.push(makeGame({ id: i, name: `C${i}`, review: 'x'.repeat(500) }));
+    const { anchorFile, chunkFiles } = buildGamesFiles(data, 5);
+    const [firstChunk, ...rest] = Object.keys(chunkFiles);
+    expect(firstChunk).toBeDefined();
+
+    const files: Record<string, { content: string }> = { 'myGames.json': { content: JSON.stringify(anchorFile) } };
+    for (const name of rest) files[name] = { content: JSON.stringify(chunkFiles[name]) };
+    expect(() => assembleChunkedGames(anchorFile, files)).toThrow(/ausente/);
+
+    files[firstChunk] = { content: '{"games": {' };
+    expect(() => assembleChunkedGames(anchorFile, files)).toThrow(/corrupto/);
+  });
+
   it('con pocos juegos solo hay chunk main (sin ficheros de overflow) y el round-trip funciona', () => {
     const data: TabData = { c: [makeGame({ id: 1 })], v: [], e: [], p: [], deleted: [], updatedAt: 1 };
     const { anchorFile, chunkFiles } = buildGamesFiles(data); // umbral por defecto
