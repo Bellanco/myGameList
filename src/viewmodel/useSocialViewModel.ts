@@ -36,6 +36,7 @@ import {
   type FriendshipSelfInfo,
   type SocialAuthUser,
 } from '../model/repository/firebaseRepository';
+import { APP_LOCALE } from '../core/constants/locale';
 // Reexportados: las pantallas del hub y los tests los importan de aquí desde antes de que el ViewModel se
 // partiera, y cambiarles el import no aportaría nada.
 export { isOwnProfileIdentity } from './social/socialIdentity';
@@ -886,7 +887,7 @@ export function useSocialViewModel(options?: {
 
     return [...map.entries()]
       .map(([id, name]) => ({ id, name }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+      .sort((a, b) => a.name.localeCompare(b.name, APP_LOCALE));
   }, [liveLists]);
 
   // Requisito de alta: un perfil solo puede existir si el usuario tiene al menos un juego COMPLETADO. Es la única

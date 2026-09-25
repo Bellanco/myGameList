@@ -1,6 +1,6 @@
 # Idioma — la aplicación en español e inglés
 
-Estado: **plan, sin empezar** (2026-09-25). Recoge lo medido en el código ese día y las decisiones tomadas con el
+Estado: **F0 hecha** (2026-09-25; ver §4.1), el resto sin empezar. Recoge lo medido en el código ese día y las decisiones tomadas con el
 propietario (§6). Si una cifra no cuadra con el código, manda el código: corrígela aquí.
 
 ---
@@ -122,6 +122,36 @@ Cada fase termina con la suite en verde y algo comprobable. Se para al final de 
 antes de dar la fase por cerrada, sobre todo el tono de las voces de tema y los logros.
 
 ---
+
+### 4.1 F0, hecha (2026-09-25)
+
+- **Orden de la tabla por ID.** `GameTable` ya no ordena por la palabra de la cabecera: las columnas tienen ID
+  (`name`, `year`, `platforms`…) y el rótulo sale de `UI_MESSAGES.table.columns`. Lo fija
+  `tests/component/GameTableSort.test.tsx` (qué clave manda cada chip).
+- **Un solo locale.** `core/constants/locale.ts` (`APP_LOCALE`). Sustituye las 31 apariciones de `'es-ES'` y los 5
+  `localeCompare(…, 'es')`, da locale a los dos `toLocaleString()` que no lo tenían y a dos `localeCompare` sobre
+  nombres visibles. `sortEs` pasa a `compareText`. Los meses a mano del feed (`socialFeed.ts`) salen de `Intl`.
+  `grep "'es-ES'" src` solo encuentra `locale.ts`.
+- **Textos sueltos a sus módulos**, unos 80 visibles (el recuento de ≈96 de §2.1 incluía falsos positivos):
+  avisos de juego, importación y sync, chips de filtros, cabeceras y medallas de la tabla, estado del banner,
+  «Usuario» del hub, el botón de la ruleta, «Retos» del panel, la semana de la racha y el «Ver todos los logros».
+  Dos módulos nuevos:
+  - `rouletteLabels.ts`, porque el modal es perezoso.
+  - `scoreLabels.ts`, porque si el aro y las estrellas importan `labels.ts`, el empaquetador lo saca entero del
+    chunk de entrada.
+- **Tests y Playwright en español**: `tests/setup.ts` fija `navigator.language`, y `playwright.config.ts` y
+  `scripts/screenshots.config.ts` fijan `locale: 'es-ES'`.
+- **Peso medido** contra el build anterior (JS del arranque, gzip): **+677 B**. El crítico pasa de 181,1 a 181,8 kB
+  sobre 190. No son textos nuevos: son dos chunks compartidos pequeños (`locale`, `scoreLabels`) que el empaquetador
+  separa del de entrada.
+- **Se quedan donde están, a propósito:**
+  - `'Anónimo'` de `core/premios/scoring.ts`: es el nombre que se congela en la clasificación, así que es dato y
+    no interfaz.
+  - Los `console.warn` en español: no los ve nadie.
+  - Los errores de repositorio y de las Functions: son F3.
+  - Los textos que ya viven en módulos de constantes que no se llaman `*Labels` (`uiConfig.ts` con los tramos de
+    horas, `tiers.ts` con los rangos, `themes/*` con las voces): F1 y F2 les dan su diccionario inglés igual que a
+    los demás.
 
 ## 5. Cómo se prueba el inglés
 

@@ -3,6 +3,7 @@ import type { IconName } from './icons';
 import { voiceByPalette } from './palettes';
 import { TAB_IDS, type TabId } from '../../model/types/game';
 import type { ImportField } from '../../model/types/import';
+import { APP_LOCALE } from './locale';
 
 export interface TabAction {
   target: TabId;
@@ -125,6 +126,9 @@ export const SYNC_MESSAGES = {
   recoverMissingInProfile: 'No se encontró gamesGistId en tu perfil de Google/Firestore',
   recoverMissingTokenInProfile: 'No se encontró el token en tu perfil de Google/Firestore',
   recoverError: 'No se pudo recuperar el Gist ID desde Google',
+  mergeSynced: (changes: number) => `Fusión sincronizada correctamente: ${changes} cambios remotos aplicados`,
+  connectSynced: (changes: number) => `Sincronización configurada: ${changes} cambios remotos aplicados`,
+  initialSynced: (changes: number) => `Sincronización inicial completada: ${changes} cambios remotos aplicados`,
 } as const;
 
 /**
@@ -212,6 +216,29 @@ export const INSTALL_UI = {
 } as const;
 
 export const UI_MESSAGES = {
+  /** Lo que la app cuenta al guardar, borrar o mover un juego (el banner de estado de la página). */
+  games: {
+    fieldsRequired: 'Revisa los campos obligatorios antes de guardar.',
+    completedYearRequired: 'Debes añadir al menos un año para completados.',
+    saved: 'Juego guardado correctamente',
+    deleted: 'Juego eliminado',
+    deleteConfirm: (name: string) => `¿Eliminar "${name}"?`,
+    tagDeleted: 'Etiqueta eliminada',
+    noName: 'El juego no tiene nombre.',
+    alreadyInLists: (name: string) => `"${name}" ya está en tus listas.`,
+    addedToProximos: (name: string) => `"${name}" añadido a próximos`,
+    alreadyCurrent: (name: string) => `"${name}" ya está en curso`,
+    reviewPublishDeferred: 'Juego guardado; la actividad social de reseña se actualizará al abrir el hub social.',
+  },
+  /** El botón de la tarjeta de la ruleta: qué se hace con el juego que ha salido. */
+  rouletteActions: {
+    toCurrent: 'Pasa a "En curso"',
+    toCurrentDone: '✓ En curso',
+    toProximos: 'Añadir a próximos',
+    toProximosDone: '✓ Añadido a próximos',
+  },
+  /** El rótulo de la cápsula de estado, según la clase de aviso. */
+  statusKind: { ok: 'Correcto', warn: 'Aviso', err: 'Error' },
   admin: {
     noTags: 'No hay etiquetas',
     editPlaceholder: 'Escribe el nuevo valor',
@@ -250,7 +277,7 @@ export const UI_MESSAGES = {
     steamDeck: 'Steam Deck',
     reviewLabel: 'Análisis',
     reviewPlaceholder: 'Ej: Historia sólida, combate excelente y gran ambientación.',
-    charCount: (count: number, max: number) => `${count.toLocaleString()} / ${max.toLocaleString()} caracteres`,
+    charCount: (count: number, max: number) => `${count.toLocaleString(APP_LOCALE)} / ${max.toLocaleString(APP_LOCALE)} caracteres`,
     // A11y-3: mensajes de umbral para lectores de pantalla (texto constante por banda → se anuncian una vez al
     // cruzar el umbral, no en cada pulsación). El conteo numérico se deja como texto visible SIN aria-live.
     charNearLimit: 'Te acercas al límite de caracteres del análisis.',
@@ -337,6 +364,11 @@ export const UI_MESSAGES = {
   },
   import: {
     back: 'Volver',
+    // Importar un JSON de copia desde Ajustes.
+    fileDone: 'Datos importados correctamente',
+    fileDoneOverwritten: 'Datos importados y Gist sobrescrito correctamente',
+    fileDoneLocalOnly: 'Datos importados localmente, pero no hay Gist configurado para sobrescribir.',
+    fileInvalid: 'Archivo JSON no válido',
     integrations: {
       title: 'Integraciones',
       /* CINCO FRASES SEGUIDAS ERAN UN MURO. Decían cosas distintas —qué hace, qué necesitas, de dónde trae,
@@ -470,6 +502,13 @@ export const UI_MESSAGES = {
     scoreOrMore: (value: number) => `${value} o más`,
     hours: 'Horas',
     anyDuration: 'Cualquier duración',
+    // Los chips de los filtros activos: qué filtro y con qué valor.
+    chipSearch: (value: string) => `Buscar: ${value}`,
+    chipGenre: (value: string) => `Género: ${value}`,
+    chipPlatform: (value: string) => `Plataforma: ${value}`,
+    chipScore: (value: number | string) => `Puntuación: ${value}+`,
+    chipHours: (value: string) => `Horas: ${value}`,
+    clearFilters: 'Limpiar filtros',
   },
   starPicker: {
     groupAria: 'Seleccionar puntuación',
@@ -495,6 +534,22 @@ export const UI_MESSAGES = {
     replayHeaderTip: 'Indica si el juego es rejugable',
     retryHeaderTip: 'Indica si merece otra oportunidad',
     sortHeaderTip: (column: string) => `Ordenar por ${column.toLowerCase()}`,
+    // Los datos que enseña cada lista, por su ID de columna (ver `getTableHeaders` en `GameTable`). De aquí salen
+    // los chips de ordenar; el ID, y no el rótulo, es lo que decide si una columna se puede ordenar.
+    columns: {
+      name: 'Juego',
+      year: 'Año',
+      platforms: 'Plataformas',
+      genres: 'Géneros',
+      strengths: 'Puntos fuertes',
+      weaknesses: 'Puntos débiles',
+      score: 'Puntuación',
+      interest: 'Interés',
+      replay: 'Rejugar',
+      retry: 'Dar otra oportunidad',
+    },
+    replayBadge: (value: boolean) => `Rejugar: ${value ? 'Sí' : 'No'}`,
+    retryBadge: (value: boolean) => `Dar otra oportunidad: ${value ? 'Sí' : 'No'}`,
   },
   detail: {
     platforms: 'Plataformas',

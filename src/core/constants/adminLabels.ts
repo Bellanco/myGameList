@@ -5,6 +5,7 @@
 // una sola persona viajaban en el arranque de todo el mundo. `AdminHub` y `AdminUserShares` son perezosos, así
 // que aquí solo se descargan cuando alguien abre `/admin`.
 import type { AdminAnomaly } from '../../model/types/firestore';
+import { APP_LOCALE } from './locale';
 
 // Panel de administración (`/admin`, ruta oculta). Nada que ver con `SETTINGS_UI.admin`, que es la
 // administración de ETIQUETAS de la propia biblioteca.
@@ -15,6 +16,8 @@ export const ADMIN_PANEL_UI = {
   menuAria: 'Pantallas del panel',
   title: 'Administración',
   subtitle: 'Censo de usuarios con perfil social y acciones de moderación.',
+  /** En el panel la porra se llama RETOS —la edición es «El reto del jugador»—, y deja «Premios» para la sección pública. */
+  premiosOpen: 'Retos',
   checking: 'Comprobando permisos...',
   loading: 'Cargando usuarios...',
   refresh: 'Actualizar',
@@ -354,7 +357,7 @@ export const ADMIN_SHARES_UI = {
   bannedBadge: 'Vetado para compartir',
   empty: 'No tiene enlaces activos.',
   open: 'Ver la página',
-  expires: (date: Date) => `caduca el ${new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' }).format(date)}`,
+  expires: (date: Date) => `caduca el ${new Intl.DateTimeFormat(APP_LOCALE, { dateStyle: 'medium' }).format(date)}`,
   remove: 'Retirar enlace',
   reasonLabel: 'Motivo del veto (lo verá el usuario)',
   purgeLabel: 'Retirar también sus enlaces activos',

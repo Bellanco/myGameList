@@ -12,6 +12,7 @@
 import type { TabId } from '../../model/types/game';
 import { socialVoiceByPalette } from './themes/social';
 import { SOCIAL_SHELL } from './socialShell';
+import { APP_LOCALE } from './locale';
 
 // Igual que `APP_ERROR_LEAD`, pero para el hub social: lo que ha caído es la parte de GENTE (amistades, feed,
 // reseñas compartidas), así que cada tema lo cuenta con su forma de quedarse sin compañía o sin comunicación.
@@ -122,7 +123,7 @@ export const SOCIAL_UI = {
     postPublish: SOCIAL_SHELL.feed.postPublish,
     postPublishing: 'Publicando...',
     // Cupo por rango. El contador replica el de las reseñas (conteo visible + aviso solo en los umbrales).
-    postCharCount: (count: number, max: number) => `${count.toLocaleString()} / ${max.toLocaleString()} caracteres`,
+    postCharCount: (count: number, max: number) => `${count.toLocaleString(APP_LOCALE)} / ${max.toLocaleString(APP_LOCALE)} caracteres`,
     postCharNearLimit: 'Te acercas al límite de caracteres de la publicación.',
     postCharLimitReached: 'Has alcanzado el límite de caracteres de la publicación.',
     postSharedFileHint: 'Pega la URL directa de la imagen (clic derecho → «Copiar la URL de la imagen») para verla incrustada.',
@@ -131,7 +132,7 @@ export const SOCIAL_UI = {
     postExpand: 'Ver más',
     postCollapse: 'Ver menos',
     postedAt: (date: Date) =>
-      `Publicado el ${date.toLocaleDateString('es-ES', { day: '2-digit' })} de ${date.toLocaleDateString('es-ES', { month: 'long' })} a las ${date.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' })}`,
+      `Publicado el ${date.toLocaleDateString(APP_LOCALE, { day: '2-digit' })} de ${date.toLocaleDateString(APP_LOCALE, { month: 'long' })} a las ${date.toLocaleTimeString(APP_LOCALE, { hour: 'numeric', minute: '2-digit' })}`,
     loading: 'Cargando actividad...',
     empty: 'No hay perfiles visibles todavía o faltan permisos de lectura en Firestore.',
     activityEmpty: 'Aún no hay actividad de análisis para mostrar.',
@@ -142,7 +143,7 @@ export const SOCIAL_UI = {
     analyzedRecently: 'Analizado recientemente',
     feedLoadMore: 'Mostrar más',
     analyzedAt: (date: Date) =>
-      `Analizado el ${date.toLocaleDateString('es-ES', { day: '2-digit' })} de ${date.toLocaleDateString('es-ES', { month: 'long' })} a las ${date.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' })}`,
+      `Analizado el ${date.toLocaleDateString(APP_LOCALE, { day: '2-digit' })} de ${date.toLocaleDateString(APP_LOCALE, { month: 'long' })} a las ${date.toLocaleTimeString(APP_LOCALE, { hour: 'numeric', minute: '2-digit' })}`,
     // F4 — movimientos de lista. La tarjeta es UNA LÍNEA: nombre, verbo, juego y hora. No lleva nota ni texto, así
     // que la frase ES la tarjeta, y por eso el verbo va en minúscula: se lee seguido del nombre («Ada finalizó…»),
     // no como un titular. En pasado, porque cuenta algo que ya pasó.
@@ -158,9 +159,9 @@ export const SOCIAL_UI = {
     } as Record<TabId, string>,
     // Solo la HORA en la tarjeta: el día ya lo dice la cabecera del grupo, y repetirlo era la línea que más peso
     // le daba a un mensaje que debe pesar poco. La fecha completa sigue disponible al pasar el ratón.
-    movedAtHour: (date: Date) => date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+    movedAtHour: (date: Date) => date.toLocaleTimeString(APP_LOCALE, { hour: '2-digit', minute: '2-digit' }),
     movedAt: (date: Date) =>
-      `El ${date.toLocaleDateString('es-ES', { day: '2-digit' })} de ${date.toLocaleDateString('es-ES', { month: 'long' })} a las ${date.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' })}`,
+      `El ${date.toLocaleDateString(APP_LOCALE, { day: '2-digit' })} de ${date.toLocaleDateString(APP_LOCALE, { month: 'long' })} a las ${date.toLocaleTimeString(APP_LOCALE, { hour: 'numeric', minute: '2-digit' })}`,
     moveRecently: 'Hace poco',
     // El nombre del juego abre el detalle de la reseña de su autor cuando existe; si no, es texto y no se ofrece
     // el gesto. El aria-label lo dice con todas las letras porque el color y el subrayado no llegan a un lector.

@@ -57,6 +57,7 @@ import { localMonthKey } from '../utils/dateTime';
 import { romanLevel } from '../constants/achievementLabels';
 import type { AchievementDef, AchievementLadder, AchievementMeasure, ExtraSteps } from './types';
 import type { GameItem } from '../../model/types/game';
+import { APP_LOCALE } from '../constants/locale';
 
 /** Un año en milisegundos, para «esperó más de un año en Próximos». */
 const YEAR_MS = 365 * 24 * 60 * 60 * 1000;
@@ -110,7 +111,7 @@ function ordinalTime(step: number): string {
 
 /** Miles con separador, para que «10000 horas» no se lea de un tirón. Locale fijo: la app habla en español. */
 function thousands(value: number): string {
-  return value.toLocaleString('es-ES');
+  return value.toLocaleString(APP_LOCALE);
 }
 
 /** Nota mínima de dispersión para que «Nota del crítico» cuente: por debajo, no hay criterio, hay una sola nota. */

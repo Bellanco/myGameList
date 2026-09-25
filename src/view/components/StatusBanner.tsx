@@ -1,12 +1,13 @@
 import { memo } from 'react';
 import { Notice } from './Notice';
+import { UI_MESSAGES } from '../../core/constants/labels';
 
 interface StatusBannerProps {
   notice: { kind: 'ok' | 'warn' | 'err'; message: string } | null;
   remoteChangesApplied?: number | null;
 }
 
-const KIND_LABEL = { ok: 'Correcto', warn: 'Aviso', err: 'Error' } as const;
+const KIND_LABEL = UI_MESSAGES.statusKind;
 
 /**
  * Avisos de la app ("Juego guardado", errores de sync…).

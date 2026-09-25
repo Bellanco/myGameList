@@ -10,6 +10,7 @@ import { visibleIds, withoutHidden } from '../../../core/achievements/visibility
 import { compareEarned, listForScreen } from '../../../viewmodel/useAchievements';
 import { useAchievementsConfig } from '../../hooks/useAchievementsConfig';
 import type { AchievementItem, AchievementState } from '../../../core/achievements/types';
+import { APP_LOCALE } from '../../../core/constants/locale';
 
 /**
  * LA TIRA DE LA FICHA: debajo del nombre, y ahí **solo la imagen**.
@@ -291,7 +292,7 @@ export const ProfileGlobalAchievements = memo(function ProfileGlobalAchievements
       .sort((a, b) => (b.holders - a.holders)
         || (a.def.ladder === b.def.ladder
           ? a.def.grade - b.def.grade
-          : a.def.labels.name.localeCompare(b.def.labels.name, 'es')))
+          : a.def.labels.name.localeCompare(b.def.labels.name, APP_LOCALE)))
       .map(({ def, state }) => ({ def, state }));
 
     return { entries: withoutHidden(items, hiddenAchievements), rarity: measured, summary };

@@ -21,6 +21,8 @@ export default defineConfig({
   reporter: 'list',
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
+    // Las capturas del manifest son de la app en español (ver `playwright.config.ts`).
+    locale: 'es-ES',
   },
   webServer: {
     command: `npx vite preview --host 127.0.0.1 --port ${PORT} --outDir dist`,

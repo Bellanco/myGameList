@@ -416,7 +416,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         // Ciclo automático: solo se habla si de verdad ha llegado algo (ver el contrato de avisos en
         // `tests/unit/syncConnectRace.test.ts`).
         if (remoteChanges > 0) {
-          onNotice('ok', `Fusión sincronizada correctamente: ${remoteChanges} cambios remotos aplicados`);
+          onNotice('ok', SYNC_MESSAGES.mergeSynced(remoteChanges));
         }
       } catch (error) {
         // refreshRemote registra en telemetría como 'syncNow' (histórico); se conserva para no alterar métricas.
@@ -499,7 +499,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
       setConnectedGistId(cleanGistId);
       if (remoteChanges > 0) {
-        onNotice('ok', `Sincronización configurada: ${remoteChanges} cambios remotos aplicados`);
+        onNotice('ok', SYNC_MESSAGES.connectSynced(remoteChanges));
       }
       setStatus('ok');
       setToken('');
@@ -538,7 +538,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       setStatus('ok');
       // Arranque automático: solo se habla si ha llegado algo.
       if (remoteChanges > 0) {
-        onNotice('ok', `Sincronización inicial completada: ${remoteChanges} cambios remotos aplicados`);
+        onNotice('ok', SYNC_MESSAGES.initialSynced(remoteChanges));
       }
     } catch (error) {
       // Arranque automático: sin toast (notify:false), solo estado 'error' + telemetría.
@@ -666,7 +666,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       setStatus('ok');
       // Acción explícita del usuario: confirma SIEMPRE, también con cero cambios. A diferencia de los ciclos
       // automáticos, aquí callar se leería como que el botón no ha hecho nada.
-      onNotice('ok', `Fusión sincronizada correctamente: ${remoteChanges} cambios remotos aplicados`);
+      onNotice('ok', SYNC_MESSAGES.mergeSynced(remoteChanges));
     } catch (error) {
       handleSyncError(error, { fallback: SYNC_MESSAGES.syncError, logName: 'syncNow' });
     } finally {

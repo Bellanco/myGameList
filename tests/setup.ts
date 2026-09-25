@@ -19,6 +19,16 @@ import { afterAll, afterEach } from 'vitest';
  */
 configure({ asyncUtilTimeout: 3000 });
 
+/*
+ * EL NAVEGADOR DE LOS TESTS HABLA ESPAÑOL. jsdom trae `navigator.language = 'en-US'`, y la suite comprueba textos
+ * en español: el día que el idioma por defecto siga al del navegador (`docs/plan-idioma.md`), sin esto cada test
+ * que monte la app la vería en inglés. Quien quiera probar el inglés lo pide en su propio test.
+ */
+if (typeof navigator !== 'undefined') {
+  Object.defineProperty(navigator, 'language', { configurable: true, get: () => 'es-ES' });
+  Object.defineProperty(navigator, 'languages', { configurable: true, get: () => ['es-ES', 'es'] });
+}
+
 // jsdom no implementa HTMLDialogElement.showModal()/close() (A11y-1). Polyfill mínimo que refleja el atributo
 // `open` para que la lógica de `useNativeDialog` (showModal/close + evento `cancel`) se ejercite en los tests.
 if (typeof HTMLDialogElement !== 'undefined') {

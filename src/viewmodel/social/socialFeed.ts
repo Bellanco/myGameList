@@ -15,6 +15,7 @@ import { ENABLE_ACHIEVEMENTS } from '../../core/achievements/flags';
 import type { ProfileTier } from '../../core/constants/tiers';
 import type { GameItem, TabId } from '../../model/types/game';
 import type { SocialProfileVisibility, SocialSharedGame } from '../../model/repository/socialGistRepository';
+import { APP_LOCALE } from '../../core/constants/locale';
 
 /**
  * Identidad del autor con la que se enriquece cada elemento al hidratar el directorio.
@@ -154,20 +155,19 @@ function capMovesPerAuthorDay(moves: SocialMoveFeedItem[]): SocialMoveFeedItem[]
     });
 }
 
-const FEED_DAY_MONTH_NAMES = [
-  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
-] as const;
+// Los meses los pone `Intl` y no una lista escrita a mano: es la misma frase («5 de septiembre») y sale del
+// idioma de la app, no de doce palabras en español.
+const FEED_DAY_FORMAT = new Intl.DateTimeFormat(APP_LOCALE, { day: 'numeric', month: 'long' });
 
 /**
- * Formatea la fecha como "DD de MMM". Pura y sin capturas → a nivel de módulo
+ * Formatea la fecha como "D de MMMM". Pura y sin capturas → a nivel de módulo
  * para que no se recree en cada render (evita invalidar el useMemo del feed).
  *
  * Lee la fecha con los getters LOCALES, así que el día que recibe tiene que venir también en local: por eso el
  * agrupado usa `localDayKey`/`startOfLocalDay` y no `toISOString()`.
  */
 function formatDayHeader(date: Date): string {
-  return `${date.getDate()} de ${FEED_DAY_MONTH_NAMES[date.getMonth()]}`;
+  return FEED_DAY_FORMAT.format(date);
 }
 
 /**

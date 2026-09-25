@@ -207,6 +207,8 @@ export const STATS_UI = {
     empty: 'En cuanto muevas juegos entre listas o escribas reseñas, aquí aparecerá tu ritmo.',
     /** Por qué la unidad es la semana y no el día. */
     why: 'Por semanas, no por días: una lista de juegos no se toca a diario, y un calendario diario sería casi todo huecos.',
+    /** Nombre de una semana por su lunes («sem. del 12 may»). */
+    weekOf: (monday: string) => `sem. del ${monday}`,
     weekAria: (week: string, total: number) =>
       total === 0 ? `${week}: sin actividad` : `${week}: ${total} ${total === 1 ? 'apunte' : 'apuntes'}`,
     chartAria: 'Semanas con actividad',

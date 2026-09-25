@@ -556,16 +556,16 @@ export default function App() {
       if (overwrite) {
         const overwritten = await syncVm.overwriteRemoteData(normalizedData);
         if (overwritten) {
-          notify('ok', 'Datos importados y Gist sobrescrito correctamente');
+          notify('ok', UI_MESSAGES.import.fileDoneOverwritten);
           return;
         }
-        notify('warn', 'Datos importados localmente, pero no hay Gist configurado para sobrescribir.');
+        notify('warn', UI_MESSAGES.import.fileDoneLocalOnly);
         return;
       }
 
-      notify('ok', 'Datos importados correctamente');
+      notify('ok', UI_MESSAGES.import.fileDone);
     } catch {
-      notify('err', 'Archivo JSON no válido');
+      notify('err', UI_MESSAGES.import.fileInvalid);
     }
   }, [notify, persist, syncVm, vm.data]);
 
@@ -718,7 +718,7 @@ export default function App() {
     void applyReviewPublication({
       id: savedId,
       publication: publicacion,
-      onDeferred: () => notify('warn', 'Juego guardado; la actividad social de reseña se actualizará al abrir el hub social.'),
+      onDeferred: () => notify('warn', UI_MESSAGES.games.reviewPublishDeferred),
     });
   }, [editingTab, inboxRemoveItem, notify, saveDraft]);
 
@@ -1172,8 +1172,8 @@ export default function App() {
             action={() => ({
               btnClass: 'btn-complete',
               icon: 'play',
-              label: 'Pasa a "En curso"',
-              doneLabel: '✓ En curso',
+              label: UI_MESSAGES.rouletteActions.toCurrent,
+              doneLabel: UI_MESSAGES.rouletteActions.toCurrentDone,
               onAct: handleRouletteToCurrent,
             })}
           />

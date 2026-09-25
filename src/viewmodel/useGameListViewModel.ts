@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { TAB_ACTIONS, TAB_ORDER, TAB_TITLES, TAB_TOOLTIPS, VALIDATION_MESSAGES } from '../core/constants/labels';
-import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
+import { TAB_ACTIONS, TAB_ORDER, TAB_TITLES, TAB_TOOLTIPS, UI_MESSAGES, VALIDATION_MESSAGES } from '../core/constants/labels';
+import { compareText, uniqueCaseInsensitive } from '../core/utils/compare';
 import { reabrirLaPregunta } from '../core/utils/coverDone';
 import { tagKey } from '../core/utils/tags';
 import { DEFAULT_SORT, nextSort, sortGames } from '../core/utils/sortGames';
@@ -308,10 +308,10 @@ export function useGameListViewModel() {
     }
 
     return {
-      genres: [...genres].sort(sortEs),
-      platforms: [...platforms].sort(sortEs),
-      strengths: [...strengths].sort(sortEs),
-      weaknesses: [...weaknesses].sort(sortEs),
+      genres: [...genres].sort(compareText),
+      platforms: [...platforms].sort(compareText),
+      strengths: [...strengths].sort(compareText),
+      weaknesses: [...weaknesses].sort(compareText),
     };
   }, [data.c, data.v, data.e, data.p]);
 
@@ -508,12 +508,12 @@ export function useGameListViewModel() {
       base.gradedAt = resolveGradedAt({ grade: base.grade, previousGrade: previous?.grade, previousGradedAt: previous?.gradedAt, now });
 
       if (!base.name || !base.genres.length || !base.platforms.length) {
-        notify('warn', 'Revisa los campos obligatorios antes de guardar.');
+        notify('warn', UI_MESSAGES.games.fieldsRequired);
         return null;
       }
 
       if (tab === 'c' && !base.years?.length) {
-        notify('warn', 'Debes añadir al menos un año para completados.');
+        notify('warn', UI_MESSAGES.games.completedYearRequired);
         return null;
       }
 
@@ -545,7 +545,7 @@ export function useGameListViewModel() {
       reabrirLaPregunta(base.name, base.platforms);
       setFormModalOpen(false);
       setDraft(EMPTY_DRAFT);
-      notify('ok', 'Juego guardado correctamente');
+      notify('ok', UI_MESSAGES.games.saved);
       void trackAnalyticsEvent('game_saved', { tab, is_edit: Boolean(existing), has_review: Boolean(base.review) });
       /* Los dos momentos que cada tema celebra a su manera (ver `core/effects/moments`). CERRAR un juego es
          llegar a la lista del completista desde fuera: guardar uno que YA estaba ahí es una edición, no un
@@ -563,7 +563,7 @@ export function useGameListViewModel() {
       if (!game) return;
 
       setConfirmState({
-        title: `¿Eliminar "${game.name}"?`,
+        title: UI_MESSAGES.games.deleteConfirm(game.name),
         subjectId: id,
         action: () => {
           const nextData: TabData = {
@@ -574,7 +574,7 @@ export function useGameListViewModel() {
           };
           persist(nextData);
           setExpandedId(null);
-          notify('ok', 'Juego eliminado');
+          notify('ok', UI_MESSAGES.games.deleted);
         },
       });
     },
@@ -586,7 +586,7 @@ export function useGameListViewModel() {
       const keep = (entry: string) => tagKey(entry) !== tagKey(value);
       const nextData = mapTabDataTags(data, tabKey, (values) => values.filter(keep), Date.now());
       persist(nextData);
-      notify('ok', 'Etiqueta eliminada');
+      notify('ok', UI_MESSAGES.games.tagDeleted);
     },
     [data, notify, persist],
   );
@@ -660,11 +660,11 @@ export function useGameListViewModel() {
     (game: Partial<GameItem>): 'added' | 'duplicate' | 'invalid' => {
       const name = safeTrim(game.name || '', 120);
       if (!name) {
-        notify('warn', 'El juego no tiene nombre.');
+        notify('warn', UI_MESSAGES.games.noName);
         return 'invalid';
       }
       if (hasGameInLists(name)) {
-        notify('warn', `"${name}" ya está en tus listas.`);
+        notify('warn', UI_MESSAGES.games.alreadyInLists(name));
         return 'duplicate';
       }
 
@@ -686,7 +686,7 @@ export function useGameListViewModel() {
         enteredAt: { p: now },
       };
       persist({ ...data, p: [...data.p, newGame] });
-      notify('ok', `"${name}" añadido a próximos`);
+      notify('ok', UI_MESSAGES.games.addedToProximos(name));
       return 'added';
     },
     [data, hasGameInLists, persist, notify],
@@ -702,7 +702,7 @@ export function useGameListViewModel() {
         const game = data[tab].find((item) => normalizeName(item.name) === norm);
         if (!game) continue;
         if (tab === 'e') {
-          notify('ok', `"${game.name}" ya está en curso`);
+          notify('ok', UI_MESSAGES.games.alreadyCurrent(game.name));
           return;
         }
         moveGameToTab(tab, game.id, 'e');

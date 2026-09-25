@@ -16,6 +16,7 @@ import {
 } from '../core/achievements/visibility';
 import type { AchievementDef, AchievementItem, AchievementState, AchievementSummary } from '../core/achievements/types';
 import type { TabData } from '../model/types/game';
+import { APP_LOCALE } from '../core/constants/locale';
 
 export interface AchievementsViewModel {
   states: readonly AchievementState[];
@@ -163,7 +164,7 @@ function dayOf(ts: number): number {
 export function compareEarned(a: AchievementItem, b: AchievementItem): number {
   return dayOf(b.state.unlockedAt) - dayOf(a.state.unlockedAt)
     || RARITY_POINTS[b.def.rarity] - RARITY_POINTS[a.def.rarity]
-    || a.def.labels.name.localeCompare(b.def.labels.name, 'es');
+    || a.def.labels.name.localeCompare(b.def.labels.name, APP_LOCALE);
 }
 
 export function listForScreen(
@@ -204,7 +205,7 @@ export function listForScreen(
       // falta, por lo cerca que está de caer —así lo que está a punto queda arriba, que es la información útil
       // de esa mitad— y a igualdad, por nombre.
       if (aEarned) return compareEarned(a, b);
-      return progressOf(b) - progressOf(a) || a.def.labels.name.localeCompare(b.def.labels.name, 'es');
+      return progressOf(b) - progressOf(a) || a.def.labels.name.localeCompare(b.def.labels.name, APP_LOCALE);
     });
 }
 

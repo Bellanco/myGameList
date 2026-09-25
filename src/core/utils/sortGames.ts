@@ -1,5 +1,5 @@
 import type { GameItem, TabId, TabSort } from '../../model/types/game';
-import { sortEs } from './compare';
+import { compareText } from './compare';
 import { resolveGrade } from './scoreScale';
 
 /**
@@ -59,7 +59,7 @@ export function sortGames(games: GameItem[], sort: TabSort, tab: TabId): GameIte
     if (typeof va === 'number' && typeof vb === 'number') {
       cmp = sort.asc ? va - vb : vb - va;
     } else {
-      cmp = sort.asc ? sortEs(String(va || ''), String(vb || '')) : sortEs(String(vb || ''), String(va || ''));
+      cmp = sort.asc ? compareText(String(va || ''), String(vb || '')) : compareText(String(vb || ''), String(va || ''));
     }
 
     if (cmp === 0 && tieBreak) return b.tie - a.tie; // completista: llegada más reciente primero

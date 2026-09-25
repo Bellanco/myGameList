@@ -1,5 +1,6 @@
 import { memo, useCallback, useRef, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
 import { GRADE_MAX, clampGrade, hueFromGrade } from '../../core/utils/scoreScale';
+import { SCORE_UI } from '../../core/constants/scoreLabels';
 
 /**
  * Selector de nota (0–100) como aro: arrastra sobre el círculo (o teclado) y se rellena hasta la nota elegida,
@@ -76,7 +77,7 @@ export const ScoreDial = memo(function ScoreDial({
       style={style}
       role="slider"
       tabIndex={0}
-      aria-label="Nota del juego (0 a 100)"
+      aria-label={SCORE_UI.dialAria}
       aria-valuemin={0}
       aria-valuemax={GRADE_MAX}
       aria-valuenow={current}

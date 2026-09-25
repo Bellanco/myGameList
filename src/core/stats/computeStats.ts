@@ -9,7 +9,7 @@
 // nuevos en `GameItem`, no se escribe en el gist, no se proyecta al canal social y no se consulta la red.
 import { localMonthKey, localWeekKey, mondayOfWeekKey } from '../utils/dateTime';
 import { SCORE_BUCKET_FLOORS, STARS_MAX, GRADE_MAX, resolveGrade, starsFromGrade } from '../utils/scoreScale';
-import { sortEs } from '../utils/compare';
+import { compareText } from '../utils/compare';
 import { TAB_IDS, type GameItem, type TabData, type TabId } from '../../model/types/game';
 import type {
   ActivitySummary,
@@ -191,7 +191,7 @@ function toRef(game: GameItem, list: TabId): GameRef {
  * es el voto más sincero que existe, y entre dos notas iguales coloca arriba al que de verdad te atrapó.
  */
 function byRank(a: GameRef, b: GameRef): number {
-  return b.grade - a.grade || b.replays - a.replays || b.hours - a.hours || sortEs(a.name, b.name);
+  return b.grade - a.grade || b.replays - a.replays || b.hours - a.hours || compareText(a.name, b.name);
 }
 
 /**
@@ -243,7 +243,7 @@ function topSummary(games: GameRef[], limit = STATS_TOP_SIZE): TopSummary {
     byGenre: [...perGenre.entries()]
       .filter(([, entry]) => entry.games >= GENRE_GRADE_MIN)
       .map(([tag, entry]) => ({ tag, games: entry.games, avgGrade: entry.sum / entry.games }))
-      .sort((a, b) => b.avgGrade - a.avgGrade || b.games - a.games || sortEs(a.tag, b.tag)),
+      .sort((a, b) => b.avgGrade - a.avgGrade || b.games - a.games || compareText(a.tag, b.tag)),
     sample: ranked.length,
     avgGrade: gradeSum / ranked.length,
     // Media SOLO sobre los que tienen horas: contar como cero a los que no las anotaron hundiría el dato.
@@ -269,7 +269,7 @@ function addTag(target: Map<string, TagBucket>, tag: string, hours: number): voi
 
 /** De más a menos juegos; a igualdad, más horas; a igualdad, alfabético (para que el orden sea estable). */
 function byWeight(a: TagBucket, b: TagBucket): number {
-  return b.games - a.games || b.hours - a.hours || sortEs(a.tag, b.tag);
+  return b.games - a.games || b.hours - a.hours || compareText(a.tag, b.tag);
 }
 
 function sortedTags(source: Map<string, TagBucket>): TagBucket[] {
@@ -343,7 +343,7 @@ function affinityOf(games: GameRef[], fallback: number): GenreAffinity[] {
       avgGrade: entry.scored ? entry.gradeSum / entry.scored : 0,
       weight: entry.weight,
     }))
-    .sort((a, b) => b.weight - a.weight || b.games - a.games || sortEs(a.tag, b.tag));
+    .sort((a, b) => b.weight - a.weight || b.games - a.games || compareText(a.tag, b.tag));
 }
 
 /**
@@ -380,7 +380,7 @@ function genreRanksOf(perYear: Map<number, Map<string, number>>, window = GENRE_
     for (const [tag, count] of row) totals.set(tag, (totals.get(tag) || 0) + count);
   }
   const top = [...totals.entries()]
-    .sort((a, b) => b[1] - a[1] || sortEs(a[0], b[0]))
+    .sort((a, b) => b[1] - a[1] || compareText(a[0], b[0]))
     .slice(0, GENRE_RANK_SIZE)
     .map(([tag]) => tag);
 
@@ -393,7 +393,7 @@ function genreRanksOf(perYear: Map<number, Map<string, number>>, window = GENRE_
     });
     // A igualdad de juegos, el alfabeto: sin desempate estable, dos géneros empatados se intercambiarían el
     // puesto de un año a otro y el gráfico enseñaría un cruce donde no ha pasado nada.
-    counted.sort((a, b) => b.games - a.games || sortEs(a.tag, b.tag));
+    counted.sort((a, b) => b.games - a.games || compareText(a.tag, b.tag));
     counted.forEach((entry, index) => {
       series.get(entry.tag)?.points.push({ year, rank: index + 1, games: entry.games });
     });
@@ -810,7 +810,7 @@ export function computeStats(data: TabData): StatsSummary {
   if (noYear) years.push(noYear);
 
   const decided = counts.c + counts.v;
-  const byRecent = (a: GameRef, b: GameRef) => b.at - a.at || sortEs(a.name, b.name);
+  const byRecent = (a: GameRef, b: GameRef) => b.at - a.at || compareText(a.name, b.name);
 
   const shame: ShameSummary = {
     total: counts.v,
@@ -831,7 +831,7 @@ export function computeStats(data: TabData): StatsSummary {
       }))
       // Con uno o dos juegos, un 100% de abandono no dice nada: se pide un mínimo de recorrido.
       .filter((entry) => entry.decided >= ABANDON_RATE_MIN && entry.abandoned > 0)
-      .sort((a, b) => b.percent - a.percent || b.decided - a.decided || sortEs(a.tag, b.tag))
+      .sort((a, b) => b.percent - a.percent || b.decided - a.decided || compareText(a.tag, b.tag))
       .slice(0, STATS_SHORTLIST),
   };
 
@@ -846,8 +846,8 @@ export function computeStats(data: TabData): StatsSummary {
     deck: wishDeck,
     recent: wishGames.slice().sort(byRecent).slice(0, STATS_SHORTLIST),
     // Los que llevan más tiempo esperando: el dato que de verdad describe un backlog.
-    oldest: wishGames.slice().sort((a, b) => a.at - b.at || sortEs(a.name, b.name)).slice(0, STATS_SHORTLIST),
-    games: wishGames.slice().sort((a, b) => a.at - b.at || sortEs(a.name, b.name)),
+    oldest: wishGames.slice().sort((a, b) => a.at - b.at || compareText(a.name, b.name)).slice(0, STATS_SHORTLIST),
+    games: wishGames.slice().sort((a, b) => a.at - b.at || compareText(a.name, b.name)),
   };
 
   // Media de la biblioteca: es la referencia con la que pesan los juegos sin nota en la afinidad por género.
@@ -870,7 +870,7 @@ export function computeStats(data: TabData): StatsSummary {
     },
     years,
     byYear: [...yearSummaries.values()].sort((a, b) => b.year - a.year).map((acc) => closeYear(acc, libraryAvg)),
-    arrivals: [...arrivals.values()].sort((a, b) => sortEs(a.m, b.m)),
+    arrivals: [...arrivals.values()].sort((a, b) => compareText(a.m, b.m)),
     grades,
     genres: sortedTags(genres),
     genreAffinity: affinityOf(playedGames, libraryAvg),
@@ -898,7 +898,7 @@ export function computeStats(data: TabData): StatsSummary {
       byGenre: [...replayGenres.entries()]
         .filter(([, entry]) => entry.games >= REPLAY_GENRE_MIN && entry.back > 0)
         .map(([tag, entry]) => ({ tag, games: entry.games, back: entry.back, percent: (entry.back / entry.games) * 100 }))
-        .sort((a, b) => b.percent - a.percent || b.games - a.games || sortEs(a.tag, b.tag))
+        .sort((a, b) => b.percent - a.percent || b.games - a.games || compareText(a.tag, b.tag))
         .slice(0, STATS_SHORTLIST),
       // De más vueltas a menos; a igualdad, el ranking de siempre (nota, horas, alfabeto).
       most: replayedGames.sort((a, b) => b.replays - a.replays || byRank(a, b)).slice(0, STATS_SHORTLIST),

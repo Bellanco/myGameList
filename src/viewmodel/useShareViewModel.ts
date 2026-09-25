@@ -10,6 +10,7 @@ import { listMyShares, publishShare, removeShare, type PublishedShare, type Shar
 import type { ShareBan, SharedReviewIndexEntry } from '../model/types/share';
 import type { ShareQuota } from '../core/constants/tiers';
 import type { GameItem } from '../model/types/game';
+import { SHARE_UI } from '../core/constants/shareLabels';
 
 /**
  * Lo que se publica de una reseña, sacado del juego tal y como está AHORA en la biblioteca.
@@ -93,7 +94,7 @@ export function useShareViewModel(): ShareViewModel {
 
   const fail = useCallback((problem: unknown) => {
     const shareProblem = problem as ShareError;
-    setError(shareProblem?.message || 'No se ha podido completar la operación');
+    setError(shareProblem?.message || SHARE_UI.genericError);
     setErrorDetails(shareProblem?.details || {});
   }, []);
 

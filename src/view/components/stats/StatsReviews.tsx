@@ -11,6 +11,7 @@ import { rankRelatedReviews, type RelatedReviewCandidate } from '../../../core/s
 import { gameTitleKey } from '../../../core/utils/gameTitleKey';
 import { resolveGrade, starsFromGrade } from '../../../core/utils/scoreScale';
 import { TAB_IDS, type GameItem, type TabData } from '../../../model/types/game';
+import { APP_LOCALE } from '../../../core/constants/locale';
 
 const L = STATS_UI.reviews;
 
@@ -47,7 +48,7 @@ function collectReviews(games: TabData): Array<ReviewEntry & { game: GameItem; e
   // solo tiene `score` 0–5 y su `grade` viene a null. Ordenar por el campo crudo mandaba esas reseñas al fondo
   // aunque el medallón las pintara con un 100, así que dos juegos con la misma nota acababan en extremos
   // opuestos de la lista.
-  return items.sort((a, b) => b.effectiveGrade - a.effectiveGrade || a.gameName.localeCompare(b.gameName, 'es'));
+  return items.sort((a, b) => b.effectiveGrade - a.effectiveGrade || a.gameName.localeCompare(b.gameName, APP_LOCALE));
 }
 
 interface StatsReviewsProps {

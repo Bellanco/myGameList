@@ -2,6 +2,7 @@ import { memo, type CSSProperties } from 'react';
 import { AchievementMedal } from './AchievementMedal';
 import { Icon } from '../Icon';
 import { ACHIEVEMENTS_BY_ID } from '../../../core/achievements/catalog';
+import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 
 export interface StripItem {
   id: string;
@@ -64,7 +65,7 @@ export const AchievementStrip = memo(function AchievementStrip({
   onOpen,
   interactive = true,
   onSeeAll,
-  seeAllLabel = 'Ver todos los logros',
+  seeAllLabel = ACHIEVEMENTS_UI.seeAll,
 }: AchievementStripProps) {
   const shown = typeof limit === 'number' ? items.slice(0, limit) : items;
   if (shown.length === 0) return null;

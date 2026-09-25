@@ -1,10 +1,10 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { ADMIN_ACHIEVEMENTS_UI, ADMIN_ANNOUNCEMENT_UI, ADMIN_PANEL_UI } from '../../core/constants/adminLabels';
-// SOLO EL RÓTULO, escrito aquí a propósito: importar `PREMIOS_UI` traería todos los textos de la porra al
+import { APP_LOCALE } from '../../core/constants/locale';
+// SOLO EL RÓTULO, y desde los textos del panel: importar `PREMIOS_UI` traería todos los textos de la porra al
 // chunk del panel, y este botón necesita exactamente una palabra.
-/** En el panel se llama RETOS —la edición es «El reto del jugador»—, y deja «Premios» para la sección pública. */
-const PREMIOS_ADMIN_OPEN = 'Retos';
+const PREMIOS_ADMIN_OPEN = ADMIN_PANEL_UI.premiosOpen;
 import type { Announcement } from '../../core/announcement/announcement';
 import type { HiddenOverrides, OpenFrontier } from '../../core/achievements/visibility';
 import type { ExtraSteps } from '../../core/achievements/types';
@@ -70,9 +70,9 @@ const AdminAnnouncement = lazy(() =>
 const AdminPremios = lazy(() =>
   import('./premios/AdminPremios').then((module) => ({ default: module.AdminPremios })));
 
-const DATE_FORMAT = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+const DATE_FORMAT = new Intl.DateTimeFormat(APP_LOCALE, { dateStyle: 'medium', timeStyle: 'short' });
 /** Para fechas de alta: el día basta y ocupa la mitad. */
-const DAY_FORMAT = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' });
+const DAY_FORMAT = new Intl.DateTimeFormat(APP_LOCALE, { dateStyle: 'medium' });
 
 /**
  * Señales que el pie de la ficha ya representa como botón de purga. No se pintan además como píldora informativa:

@@ -13,6 +13,8 @@ import { useScoreScale } from '../../hooks/useScoreScale';
 // en el mismo chunk perezoso. El botón lanzador se queda en `_roulette.scss`, que sí va en el arranque: lo pinta
 // `App` desde el primer render.
 import '../../../styles/roulette-modal.scss';
+import { ROULETTE_UI } from '../../../core/constants/rouletteLabels';
+import { SCORE_UI } from '../../../core/constants/scoreLabels';
 
 /** Acción inferior de la tarjeta-resultado, resuelta para el juego elegido. */
 export interface RouletteResolvedAction {
@@ -245,7 +247,7 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
 
   const winnerGame = winner?.game ?? null;
   const resolvedAction = winnerGame && action ? action(winnerGame) : null;
-  const tagText = winner && tag ? tag(winner) : 'Tu próximo juego';
+  const tagText = winner && tag ? tag(winner) : ROULETTE_UI.defaultTag;
 
   const handleAct = useCallback(() => {
     if (!winner || acted) return;
@@ -255,7 +257,7 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
     setActed(true);
   }, [winner, action, acted]);
 
-  const hintText = phase === 'spinning' ? 'Girando…' : phase === 'result' ? 'Pulsa para volver a girar' : 'Pulsa para girar';
+  const hintText = phase === 'spinning' ? ROULETTE_UI.hintSpinning : phase === 'result' ? ROULETTE_UI.hintAgain : ROULETTE_UI.hintIdle;
 
   return (
     <dialog
@@ -270,12 +272,12 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
         <div className={`modal rl-modal ${reviewOpen ? 'is-review' : ''}`.trim()}>
           <div className="modal-hd">
             {reviewOpen ? (
-              <button className="btn-icon" type="button" onClick={() => setReviewOpen(false)} aria-label="Atrás" title="Atrás">
+              <button className="btn-icon" type="button" onClick={() => setReviewOpen(false)} aria-label={ROULETTE_UI.back} title={ROULETTE_UI.back}>
                 <Icon name="arrow-back" />
               </button>
             ) : null}
             <div className="modal-title">{title}</div>
-            <button className="btn-icon" type="button" onClick={onClose} aria-label="Cerrar" title="Cerrar">
+            <button className="btn-icon" type="button" onClick={onClose} aria-label={ROULETTE_UI.close} title={ROULETTE_UI.close}>
               <Icon name="close" />
             </button>
           </div>
@@ -287,7 +289,7 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
           ) : (
           <div className="modal-body rl-body">
             {!n ? (
-              <p className="rl-empty">No hay juegos elegibles para sortear.</p>
+              <p className="rl-empty">{ROULETTE_UI.empty}</p>
             ) : (
               <>
                 <div className="rl-stage-col">
@@ -296,7 +298,7 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
                     className="rl-drum"
                     type="button"
                     onClick={spin}
-                    aria-label="Girar la ruleta"
+                    aria-label={ROULETTE_UI.spinAria}
                     aria-busy={phase === 'spinning'}
                   >
                     <div className="rl-view">
@@ -317,14 +319,14 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
                     <div className="rl-card">
                       <div className="rl-card-tag">{tagText}</div>
                       <h3 className="rl-card-name">{winnerGame.name}</h3>
-                      <div className="rl-card-stars" aria-label={resolveGrade(winnerGame) > 0 ? (scoreScale === 'grade' ? `Nota ${resolveGrade(winnerGame)} de 100` : `Puntuación ${resolveStars(winnerGame)} de ${STARS_MAX}`) : 'Sin puntuar'}>
+                      <div className="rl-card-stars" aria-label={resolveGrade(winnerGame) > 0 ? (scoreScale === 'grade' ? SCORE_UI.gradeAria(resolveGrade(winnerGame)) : SCORE_UI.starsOfAria(resolveStars(winnerGame), STARS_MAX)) : SCORE_UI.unscored}>
                         {resolveGrade(winnerGame) > 0 ? (
                           <>
                             <ScoreDisplay game={winnerGame} />
                             {scoreScale === 'stars' ? <small>{resolveStars(winnerGame)}/{STARS_MAX}</small> : null}
                           </>
                         ) : (
-                          <small>Sin puntuar</small>
+                          <small>{SCORE_UI.unscored}</small>
                         )}
                       </div>
                       {winnerGame.platforms.length || winnerGame.genres.length ? (
@@ -346,7 +348,7 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
                           type="button"
                           className="rl-card-snip rl-card-snip-btn"
                           onClick={() => setReviewOpen(true)}
-                          aria-label="Ver la reseña completa"
+                          aria-label={ROULETTE_UI.openReviewAria}
                         >
                           {winnerGame.review}
                         </button>
@@ -369,12 +371,12 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
                       className={`rl-ghost ${phase === 'spinning' ? 'is-spinning' : ''}`.trim()}
                       onClick={spin}
                       disabled={phase === 'spinning'}
-                      aria-label="Girar la ruleta"
+                      aria-label={ROULETTE_UI.spinAria}
                       style={phase === 'spinning' ? ({ '--dice-dur': diceSpin.dur, '--dice-dir': diceSpin.dir } as CSSProperties) : undefined}
                     >
                       <Icon name="dice-d20" className="ui-icon rl-ghost-icon" />
                       <span className="rl-ghost-text">
-                        {phase === 'spinning' ? 'Eligiendo…' : 'Tu próximo juego aparecerá aquí'}
+                        {phase === 'spinning' ? ROULETTE_UI.picking : ROULETTE_UI.placeholder}
                       </span>
                     </button>
                   )}
