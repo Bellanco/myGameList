@@ -32,11 +32,18 @@ compartidos.
   reciclaba la tabla al hacer scroll.
 - **Escribir tu nombre en el repaso de la papeleta ya no vuelve a montar las carátulas.** Cada tecla las
   reiniciaba y repetía sus peticiones, porque la caja de cada categoría era un componente nuevo en cada render.
+- **Las sugerencias de tus propias reseñas reaprovechan la carátula del listado.** Llegan sin plataformas, así
+  que se pedían con otra URL: otra descarga de la misma imagen y otra resolución contra IGDB.
+- **Bajar por la lista en Persona, Portal y Steam ya no enseña el fondo.** La deriva del fondo animaba el
+  `background-position` del `body` y repintaba la página entera en cada fotograma; ahora va en una capa propia
+  que mueve la GPU. En Steam dejan de gotear los carteles agrupados de la tabla.
 
 ### Fixed
 - **La verificación de sesión no se cae si KV no deja escribir.** Con el cupo diario de escrituras agotado, no
   poder guardar las claves públicas de Google hacía fallar todas las peticiones autenticadas hasta el día
   siguiente, aunque las claves ya se hubieran descargado bien.
+- **Pedir las claves públicas de Google tiene un tope de 3 s.** Con la caché de KV vacía y el endpoint colgado,
+  cada petición con sesión esperaba a esa descarga, también la comprobación de App Check en modo `monitor`.
 - **Un título escrito distinto que el tuyo ya no se resuelve al mirarlo en una lista ajena.** «Marvel's X» en la
   biblioteca de otra persona contra tu «Marvels X» se daba por conocido y se pedía sin `c=1`, pero con una clave
   que el servidor no tenía: consulta a IGDB y escritura de KV por mirar. Ahora se pide con tu nombre, que es el
