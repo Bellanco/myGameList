@@ -37,10 +37,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   «Solo hay guerra»: las estrellas no llegaban a 3:1 y el atenuado bajaba de 4,5:1 sobre alguna superficie.
 - **Quitar los efectos los quita del todo:** en «Sin futuro» los chips seguían con su glitch y en «Cámara de
   pruebas» los botones seguían titilando.
-- **Los controles de vista en modo claro:** «Inserte moneda» y «Sol y luna» enseñaban su placa de noche sobre el
-  fondo de día, y en «Cámara de pruebas» y «Sin futuro» el icono apagado casi no se veía sobre su consola.
+- **Los controles de vista en modo claro:** «Inserte moneda», «Sol y luna», «Sin futuro», «Cámara de pruebas» y
+  «Solo hay guerra» tenían la pieza escrita en su color de noche y en claro seguía siendo una placa oscura, con el
+  icono apagado casi invisible encima. Ahora cada una tiene su gemela de día con los materiales de ese modo.
 - **Los filetes de «Sin futuro» en claro**, que se quedaban en 1,1:1: el borde de los campos no se veía.
 - **La muestra de «Cámara de pruebas» en el selector** enseñaba otro azul y otro naranja que los del tema.
+- **«Ladrones de corazones» sin conexión en premios** hablaba del «Mundo de las Almas», que no es de Persona 5: ahora
+  baja a Mementos, como la app entra al Metaverso.
 
 ## [1.4.4] - 2026-09-25
 

@@ -858,12 +858,27 @@
   color: color-mix(in srgb, var(--text) 45%, transparent);
 }
 :root[data-palette="portal"] .view-controls .shape-switch-btn:hover { background: none; color: var(--text); }
-/* LA CONSOLA ES OSCURA EN LAS DOS ÉPOCAS (#1d2226), pero el icono apagado salía de `--text`, que en la Aperture
-   antigua es tinta de pergamino: marrón al 45 % sobre la consola, 1,16:1, y el emisor apagado desaparecía (y el
-   hover lo dejaba igual de oscuro). En claro el icono lleva la tinta de la consola, el mismo hueso que en oscuro:
-   3,86:1 apagado, por encima del 3:1 de un icono de control. */
-:root[data-palette="portal"][data-theme="light"] .view-controls .shape-switch-btn:not(.is-on) { color: rgba(232, 239, 244, .45); }
-:root[data-palette="portal"][data-theme="light"] .view-controls .shape-switch-btn:not(.is-on):hover { color: #e8eff4; }
+/* EN LA APERTURE ANTIGUA LA CONSOLA ES DE SU ÉPOCA. Estaba escrita en el gris de la instalación moderna a mano
+   (#1d2226, tubo #0f1418), así que en claro seguía siendo una consola negra sobre el pergamino —la única pieza
+   moderna de la pantalla—, y el icono apagado, que sí seguía a `--text`, era tinta marrón sobre ese negro:
+   1,16:1. A la luz la pieza es un panel de pergamino con su filete, el tubo una ranura hundida en él y el haz
+   termina en el ámbar claro en vez de en el blanco azulado del gel. El icono apagado va en la tinta atenuada del
+   papel, que sobre el panel da 4,97:1. */
+:root[data-palette="portal"][data-theme="light"] .view-controls {
+  background: var(--surface-hover);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+:root[data-palette="portal"][data-theme="light"] .view-controls .grid-size {
+  background: var(--bg);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 18%, transparent), inset 0 2px 3px color-mix(in srgb, var(--text) 22%, transparent);
+}
+:root[data-palette="portal"][data-theme="light"] .view-controls .grid-size::before { background: color-mix(in srgb, var(--text) 14%, transparent); }
+:root[data-palette="portal"][data-theme="light"] .view-controls .grid-size::after {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--steam) 35%, transparent), var(--steam) 55%, color-mix(in srgb, var(--steam) 55%, #fff) 100%);
+  filter: none;
+}
+:root[data-palette="portal"][data-theme="light"] .view-controls .shape-switch-btn:not(.is-on) { color: var(--text-muted); }
+:root[data-palette="portal"][data-theme="light"] .view-controls .shape-switch-btn:not(.is-on):hover { color: var(--text); }
 :root[data-palette="portal"] .view-controls .shape-switch-btn.is-on { color: #fff; box-shadow: none; }
 /* LA MANCHA ES CUADRADA, no un disco: el desvanecido se hace con dos degradados LINEALES cruzados —uno por
    eje— en vez de con uno radial. Un radial muere en una circunferencia y la pieza se leía redonda dentro de un

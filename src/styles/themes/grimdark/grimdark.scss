@@ -804,6 +804,27 @@
   box-shadow: inset 0 -1px 0 rgba(0, 0, 0, .35);
 }
 
+/* EN EL CÓDICE CLARO NO HAY CRT, y la placa lo decía igual en los dos modos: latón oscuro (#3a2f18) con su visor de
+   vidrio negro y scanlines, escrito a mano, sobre el pergamino. A la luz la pieza es la del resto de este modo: una
+   hoja de pergamino con la moldura de oro y sus dos remaches, y la lectura se ENTINTA en vez de encenderse —verde
+   del códice, macizo, sin halo ni tubo—, que es como este tema ya trata el claro en sus titulares y pestañas. El
+   apagado va en el oro hondo (4,1:1 sobre la hoja) y el activo, en la chapa de latón con su tinta encima. */
+:root[data-palette="grimdark"][data-theme="light"] .view-controls {
+  background: var(--surface-elevated);
+  box-shadow: inset 0 0 0 1px var(--grim-gold);
+}
+:root[data-palette="grimdark"][data-theme="light"] .view-controls::before,
+:root[data-palette="grimdark"][data-theme="light"] .view-controls::after { background: var(--grim-gold); }
+:root[data-palette="grimdark"][data-theme="light"] .view-controls .grid-size {
+  background-image: none;
+  background-color: var(--surface-hover);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+:root[data-palette="grimdark"][data-theme="light"] .view-controls .grid-size::before { background: color-mix(in srgb, var(--grim-green) 14%, transparent); }
+:root[data-palette="grimdark"][data-theme="light"] .view-controls .grid-size::after { background: var(--grim-green); box-shadow: none; }
+:root[data-palette="grimdark"][data-theme="light"] .view-controls .grid-size-range::-webkit-slider-thumb { box-shadow: none; }
+:root[data-palette="grimdark"][data-theme="light"] .view-controls .shape-switch-btn:not(.is-on) { color: var(--grim-gold); }
+
 /* ── §15 · LA FICHA DE GRÁFICA: esquinas rectas (gótico) y cifras de cogitador, la lectura de terminal que
    ya usan la fecha del feed y la cabecera de la tabla. ── */
 :root[data-palette="grimdark"] .stats-hub {
