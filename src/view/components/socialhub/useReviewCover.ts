@@ -42,9 +42,13 @@ export function useReviewCover(acceso: CoverAccess = true): (name: string, platf
     const limpio = String(name || '').trim();
     if (!limpio) return null;
     /* En lo ajeno, un título que tu biblioteca ya resolvió se pide como lo pediste tú y sin la marca, igual que
-       en la tabla: está resuelto seguro y así sale de la caché del navegador (ver `peticionDeCaratula`). */
+       en la tabla: está resuelto seguro y así sale de la caché del navegador (ver `peticionDeCaratula`).
+       Y también en lo PROPIO cuando no llegan plataformas, que es lo que pasa en las sugerencias (las relacionadas
+       no las llevan). Pedida solo por nombre, la URL no era la del listado: otra descarga de la misma imagen, un
+       «no tiene» que la memoria no reconocía y, como la clave del servidor lleva las plataformas
+       (`claveCache`), otra resolución contra IGDB por un juego que ya estaba emparejado. */
     const { nombre, plataformas, soloCache: marca } = peticionDeCaratula(limpio, platforms, ampliado, {
-      preferirConocidas: soloCache && !ampliado,
+      preferirConocidas: !ampliado && (soloCache || platforms.length === 0),
       soloCache,
     });
     // Se pregunta con la URL NORMAL —que es la que guarda el registro de fallos— y se pide la ancha: si de este

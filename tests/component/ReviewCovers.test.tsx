@@ -161,4 +161,36 @@ describe('la carátula de fondo de una reseña', () => {
       expect(urlDeLaFranja(container, selector)).toBe(coverUrl(titulo, ['Steam'], false, 'ancho'));
     });
   }
+
+  // Las sugerencias de TUS reseñas no llevan plataformas. Pedidas solo por nombre eran otra URL que la del
+  // listado —otra descarga— y otra clave en el servidor, que resolvía de nuevo contra IGDB un juego ya emparejado.
+  describe('en lo propio, sin plataformas', () => {
+    it('las relacionadas reaprovechan la URL con la que tu biblioteca ya resolvió el título', () => {
+      localStorage.setItem('mis-listas-covers', 'on');
+      const hechos = leerHechos();
+      hechos.add(claveDeJuego(RELACIONADA.gameName, ['Steam'], false));
+      guardarHechos(hechos);
+      const { container } = render(PIEZAS[2].pinta(true));
+      expect(urlDeLaFranja(container, PIEZAS[2].selector)).toBe(coverUrl(RELACIONADA.gameName, ['Steam'], false, 'ancho'));
+    });
+
+    it('y reconocen el «no tiene» que se apuntó con esas plataformas', () => {
+      localStorage.setItem('mis-listas-covers', 'on');
+      const hechos = leerHechos();
+      hechos.add(claveDeJuego(RELACIONADA.gameName, ['Steam'], false));
+      guardarHechos(hechos);
+      localStorage.setItem('mis-listas-covers-none', JSON.stringify({ [coverUrl(RELACIONADA.gameName, ['Steam'])]: Date.now() }));
+      const { container } = render(PIEZAS[2].pinta(true));
+      expect(conCaratula(container, PIEZAS[2].selector)).toBe(false);
+    });
+
+    it('con plataformas propias no se toca: ya son las del listado', () => {
+      localStorage.setItem('mis-listas-covers', 'on');
+      const hechos = leerHechos();
+      hechos.add(claveDeJuego(RESENA.gameName, ['Switch'], false));
+      guardarHechos(hechos);
+      const { container } = render(PIEZAS[0].pinta(true));
+      expect(urlDeLaFranja(container, PIEZAS[0].selector)).toBe(coverUrl(RESENA.gameName, ['PC'], false, 'ancho'));
+    });
+  });
 });
