@@ -5,6 +5,43 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.4.4] - 2026-09-25
+
+La versión de **las carátulas de lo ajeno**. Los perfiles de otras personas, sus reseñas y los premios pasan a
+enseñar carátulas a todo el mundo, y lo hacen sin gastar: se piden solo de lo que el servidor ya tiene resuelto,
+así que mirar lo de otros no consulta a IGDB ni escribe en KV, que es el presupuesto que necesitan los enlaces
+compartidos.
+
+### Added
+- **Renovar un enlace compartido desde Ajustes**, sin tener que ir a la reseña: se alarga el mismo enlace, no se
+  crea otro.
+- **Carátulas en el perfil de otra persona, sus reseñas y las relacionadas para todos**, no solo para el rango
+  más alto. Van con `c=1`: `/cover` sirve lo ya emparejado y lo que falte se queda sin imagen.
+- **Carátulas de los nominados de los premios para todos**, en la votación y en el repaso. Las resuelve el panel
+  de administración al abrir la edición y al guardar una categoría; quien vota solo lee lo ya resuelto. Se retira
+  la tarjeta sin imagen, que ya no tenía a quién servir.
+
+### Security
+- **App Check se verifica también en el borde**, en las Functions que piden sesión, en modo `monitor`: registra
+  pero no rechaza. Es lo que dará el dato para pasar a `enforce`. La verificación de JWT que comparte con el ID
+  token de Auth vive ahora en un solo sitio (`functions/_lib/jwt.ts`).
+
+### Performance
+- **El «aún sin resolver» de una carátula ajena lo guarda el navegador una hora.** Con `no-store`, un perfil con
+  cien títulos pendientes eran cien peticiones y cien lecturas de KV por visita, y otra vez en cada fila que
+  reciclaba la tabla al hacer scroll.
+- **Escribir tu nombre en el repaso de la papeleta ya no vuelve a montar las carátulas.** Cada tecla las
+  reiniciaba y repetía sus peticiones, porque la caja de cada categoría era un componente nuevo en cada render.
+
+### Fixed
+- **La verificación de sesión no se cae si KV no deja escribir.** Con el cupo diario de escrituras agotado, no
+  poder guardar las claves públicas de Google hacía fallar todas las peticiones autenticadas hasta el día
+  siguiente, aunque las claves ya se hubieran descargado bien.
+- **Un título escrito distinto que el tuyo ya no se resuelve al mirarlo en una lista ajena.** «Marvel's X» en la
+  biblioteca de otra persona contra tu «Marvels X» se daba por conocido y se pedía sin `c=1`, pero con una clave
+  que el servidor no tenía: consulta a IGDB y escritura de KV por mirar. Ahora se pide con tu nombre, que es el
+  que está resuelto.
+
 ## [1.4.2] - 2026-09-22
 
 La versión de **quitar peso y atar cabos**. Por fuera casi no se ve: arranca algo más ligera y el campo de
