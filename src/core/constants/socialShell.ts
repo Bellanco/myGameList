@@ -23,8 +23,6 @@ export const SOCIAL_SHELL = {
     openProfiles: 'Ver perfiles',
     openOwnProfile: 'Ver mi perfil',
     openRequests: 'Solicitudes',
-    // La porra de premios. El botón es solo icono, así que este texto ES su nombre accesible, no un adorno.
-    openPremios: 'Premios',
     openRequestsAria: (count: number) =>
       count > 0 ? `Solicitudes de amistad, ${count} pendiente${count === 1 ? '' : 's'}` : 'Solicitudes de amistad',
     signOut: 'Cerrar sesión',
