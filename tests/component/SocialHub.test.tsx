@@ -716,6 +716,24 @@ describe('SocialHub (componente, post-M3)', () => {
     expect(gistMocks.socialGistHasContent).toHaveBeenCalledWith('ghp_x', 'gs-secreto', 3);
   });
 
+  // Repuntar es la condición del borrado, no un trámite: si `privateConfig` o las amistades se quedan con el id
+  // viejo, borrarlo deja a ese puntero —y a los demás dispositivos o a los amigos que lo leen— en un gist que ya no
+  // existe. Antes los dos fallos se tragaban y el borrado seguía adelante.
+  it.each([
+    ['privateConfig', () => firebaseMocks.setPrivateConfig.mockRejectedValueOnce(new Error('unavailable'))],
+    ['las amistades', () => firebaseMocks.healOwnFriendshipIdentity.mockRejectedValueOnce(new Error('unavailable'))],
+  ])('NO retira el canal antiguo si no se pudo repuntar %s', async (_donde, fallar) => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'gs-publico', etag: null, lastRemoteUpdatedAt: 0 });
+    gistMocks.ensureSecretSocialGist.mockResolvedValue({ gistId: 'gs-secreto', etag: null, migrated: true, supersededGistIds: ['gs-publico'], keptPublicGistIds: [], copiedEntries: 3 });
+    fallar();
+
+    renderHub();
+
+    await waitFor(() => expect(screen.getByText(SOCIAL_UI.status.socialGistMigratedKept)).toBeInTheDocument());
+    expect(gistMocks.deleteGist).not.toHaveBeenCalled();
+  });
+
   it('retira TODOS los públicos superados, no solo el de la sesión', async () => {
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
     gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'gs-vacio', etag: null, lastRemoteUpdatedAt: 0 });

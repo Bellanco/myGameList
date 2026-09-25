@@ -736,7 +736,11 @@ export function useSocialViewModel(options?: {
           // saneado de amistades corriera por su cuenta (rearmando su ref) mientras el borrado seguía adelante:
           // si el borrado ganaba la carrera, un amigo que hidratara en ese hueco leía un gist ya inexistente y se
           // quedaba sin su actividad —cacheada 30 minutos— hasta la siguiente rehidratación.
-          await setPrivateConfig(owner.uid, { socialGistId: result.gistId }).catch(() => {});
+          //
+          // Y si alguna NO se pudo repuntar, no se borra: el fallo cae en el `catch` de abajo, que conserva los dos
+          // gists y avisa, igual que cuando el clon no convence. Tragárselo y seguir dejaba ese puntero —el de tus
+          // otros dispositivos o el de tus amigos— en un gist que ya no existe; así apunta a uno que sigue vivo.
+          await setPrivateConfig(owner.uid, { socialGistId: result.gistId });
           // `force`: aquí la garantía manda sobre el ahorro. Lo que viene después BORRA el gist antiguo, así que
           // un saneado que se saltara por huella dejaría a los amigos apuntando a un id que va a desaparecer.
           await healOwnFriendshipIdentity(owner.uid, {
@@ -744,7 +748,7 @@ export function useSocialViewModel(options?: {
             photo: ownPublishablePhoto,
             socialGistId: result.gistId,
             gamesGistId: mainSyncConfig?.gistId || '',
-          }, { force: true }).catch(() => {});
+          }, { force: true });
           // Ya está repuntado. Antes había que decírselo al efecto de saneado poniéndole su `ref` a mano; ahora
           // no hace falta: el saneado con `force` deja escrita la huella nueva, así que la tarea de arranque la
           // encuentra al día y no repite nada.
