@@ -70,7 +70,7 @@ const SHEETS = [
     comment:
       'Skin de la paleta forja «Forja y temple», la de POR DEFECTO: a diferencia de los demás skins, esta hoja NO se\n'
       + '// carga bajo demanda —entra en el bundle base por `styles/index.scss`— porque es la letra del primer fotograma.\n'
-      + '// Saira la comparte con portal e IBM Plex Mono con steam: el .woff2 es el mismo fichero, servido una sola vez.',
+      + '// Saira la comparte con portal e IBM Plex Mono con witcher: el .woff2 es el mismo fichero, servido una sola vez.',
     families: ['Saira:wght@400;500;600', 'IBM+Plex+Mono:wght@500'],
   },
   {
@@ -89,8 +89,8 @@ const SHEETS = [
     families: ['Oswald:wght@400;500;600;700', 'Saira:wght@400;500;600', 'Share+Tech+Mono'],
   },
   {
-    slug: 'steam',
-    comment: 'Skin de la paleta steam «Plata y acero» (carga diferida).',
+    slug: 'witcher',
+    comment: 'Skin de la paleta witcher «Plata y acero» (carga diferida).',
     families: ['Lora:wght@400;500;600', 'Cinzel:wght@600;700', 'IBM+Plex+Mono:wght@500'],
   },
   {

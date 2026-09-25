@@ -15,7 +15,7 @@ export function useAppliedPalette(): void {
   useEffect(() => { palettePreference.apply(); }, []);
 }
 
-/** Selector de paleta de color. Default = paleta por defecto ("steam"). */
+/** Selector de paleta de color. Default = `DEFAULT_PALETTE` (hoy «Forja y temple»). */
 export function usePalette(): { palette: PaletteId; setPalette: (next: PaletteId) => void } {
   const palette = usePreference(palettePreference);
 

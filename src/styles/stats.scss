@@ -1079,8 +1079,8 @@
 }
 
 /* MANDOS DEL ACABADO. El enjambre se dibuja UNA vez y cada paleta lo afina desde aquí: canto, trama, forma del
-   punto, tinta de la mediana, tipografía del eje. Los valores de este bloque son los de la paleta por defecto
-   (steam), que hace de base neutra; los skins solo redefinen su columna en `styles/themes/*.scss` y NINGUNA
+   punto, tinta de la mediana, tipografía del eje. Los valores de este bloque son los de la CASA, que hacen de
+   base neutra; los skins solo redefinen su columna en `styles/themes/*.scss` y NINGUNA
    regla de este archivo lleva el nombre de un tema.
 
    Lo que NO se parametriza: el color de la nota. Un 4★ tiene que verse igual aquí que en la ficha del juego,

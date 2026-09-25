@@ -53,7 +53,6 @@ Cada tema define los mismos tokens; el resto del sistema se deriva. **Nunca uses
 | `--border` | Borde nominal; para separar filas usa `--hair` (el mismo al 60 %) |
 | `--text` `--text-muted` `--text-dim` | Texto principal, secundario y atenuado (**AA 4,5:1 sobre `--surface`**) |
 | `--steam` `--steam-hover` `--steam-rgb` | Acento de identidad. `--steam-rgb` existe para componer `rgba()` |
-| `--patina` `--patina-rgb` | *(solo Clásico)* segundo acento. El latón **rellena** (acción principal, pestaña activa); la pátina **escribe y señala** (enlaces, anillo de foco, botón de acento) |
 | `--on-accent` | Texto **encima** del acento. Blanco por defecto; tinta oscura si el acento es claro |
 | `--focus-ring` | Anillo de foco. 3:1 contra las **cuatro** superficies (1.4.11). No siempre es `--steam` |
 | `--fg-link` | Acento **como texto**: 4,5:1. No siempre es `--steam-hover` |
@@ -69,7 +68,7 @@ Cada tema define los mismos tokens; el resto del sistema se deriva. **Nunca uses
 |---|---|---|---|---|
 | `forja` | **Forja y temple** (por defecto) | `#ff7a3c` metal al rojo | `#0f1315` | La fragua. El único sin mundo detrás: es el que ve quien no ha elegido nada. Naranja que **rellena** y turquesa de temple (`#2fd6c0`) que **escribe y señala** |
 | `arcade` | Inserte moneda | `#b23cff` | `#150a24` | Sala de recreativos de los ochenta: violeta de neón, cian de tubo y rosa de pegatina |
-| `steam` | Clásico | `#d9a13a` latón | `#15100b` | Cuero, papel, cobre y latón, con la **pátina** (`#4ab396`) de segundo acento. El único sin juego detrás |
+| `witcher` | Plata y acero | `#c6ced8` plata | `#141922` | The Witcher: acero templado; la plata **rellena** y el fuego de Igni (`#ff8f4a`) **escribe y señala**. Las cinco señales van en la rampa. Hasta la 1.4.4 su id era `steam` (ver `LEGACY_PALETTE_IDS`) |
 | `persona` | Ladrones de corazones | `#ff1f3d` | `#0d0d0d` | Persona 5: rojo, negro, blanco y oro de calendario |
 | `portal` | Cámara de pruebas | `#29b6f6` | `#12171b` | Aperture moderna en oscuro; la antigua (pergamino) en claro |
 | `cyberpunk` | Sin futuro | `#fcee0a` | `#08090d` | HUD de Night City: amarillo, cian, magenta |
@@ -99,12 +98,12 @@ grimdark   #e0a92b  #d8cfae  #e63b3b   (oro latón · hueso de pergamino · rojo
 
 ### Papeles (CAPA 0, reasignados por cada tema)
 
-| Ficha | Papel | Forja y temple | Clásico | Cámara de pruebas | Sin futuro | Solo hay guerra | Sol y luna |
+| Ficha | Papel | Forja y temple | Plata y acero | Cámara de pruebas | Sin futuro | Solo hay guerra | Sol y luna |
 |---|---|---|---|---|---|---|---|
-| `--font-body` | Cuerpo | DM Sans | DM Sans | Saira | Rajdhani | Chakra Petch | Pixelify Sans |
+| `--font-body` | Cuerpo | DM Sans | Lora | Saira | Rajdhani | Chakra Petch | Pixelify Sans |
 | `--font-label` | Rótulos de interfaz | **Saira** | = cuerpo | **Oswald** | Rajdhani | Chakra Petch | = cuerpo |
-| `--font-display` | Titulares | Saira | = cuerpo | Oswald | Rajdhani | **UnifrakturCook** | = cuerpo |
-| `--font-mono` | Cifras y fechas | **IBM Plex Mono** | system mono | Share Tech Mono | Share Tech Mono | **VT323** | SoS Digits |
+| `--font-display` | Titulares | Saira | **Cinzel** | Oswald | Rajdhani | **UnifrakturCook** | = cuerpo |
+| `--font-mono` | Cifras y fechas | **IBM Plex Mono** | IBM Plex Mono | Share Tech Mono | Share Tech Mono | **VT323** | SoS Digits |
 
 *Ladrones de corazones* no carga webfont: su display es `'Arial Black', Impact`.
 
@@ -221,7 +220,7 @@ están — y sus bordes tampoco, que ahí el marco de oro o el filete cian **son
 
 ## 7 · Formas
 
-- Radios **por tema**, no globales: `--radius-sm/md/lg/pill`. Clásico 8/12/22; Cámara de pruebas 3/6/10;
+- Radios **por tema**, no globales: `--radius-sm/md/lg/pill`. Plata y acero 2/3/4; Cámara de pruebas 3/6/10;
   Ladrones de corazones 3/4/8; Sin futuro y Sol y luna 0/0/2; Solo hay guerra 0/2/3.
 - Un radio de 0 es una decisión, no un olvido: en esos temas la esquina viva **es** la identidad.
 - Pastillas (`--radius-pill`) para chips, botones de filtro y segmentados en todos los temas.

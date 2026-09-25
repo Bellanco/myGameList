@@ -11,7 +11,7 @@ import type { PaletteId } from '../../core/constants/palettes';
 // mover keyframes entre archivos y el riesgo de romper animaciones).
 const SKIN_LOADERS: Partial<Record<PaletteId, () => Promise<unknown>>> = {
   arcade: () => import('../../styles/themes/arcade/arcade.scss'),
-  steam: () => import('../../styles/themes/steam/steam.scss'),
+  witcher: () => import('../../styles/themes/witcher/witcher.scss'),
   persona: () => import('../../styles/themes/persona/persona.scss'),
   portal: () => import('../../styles/themes/portal/portal.scss'),
   cyberpunk: () => import('../../styles/themes/cyberpunk/cyberpunk.scss'),

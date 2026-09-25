@@ -676,7 +676,7 @@
 
 /* ── §N · LA CAJA SIN CARÁTULA = LA VENTANA DEL HUD ────────────────────────────────────────────────────
    El chaflán NO lo recorta la caja. `clip-path` se come el `border` y el `box-shadow` del propio elemento
-   (la regla 2 que ya documentan §5 y `steam.scss` §4b), y lo que queda es el filete sobreviviendo en los
+   (la regla 2 que ya documentan §5 y `witcher.scss` §4b), y lo que queda es el filete sobreviviendo en los
    cantos rectos y desapareciendo justo en la diagonal: dos rayas sueltas en vez de un contorno.
    La forma la dan DOS CAPAS detrás del contenido —`::before` con el color del filete y `::after` con el
    relleno 1 px más pequeño—, exactamente igual que los botones de este tema. Así el cian rodea la pieza

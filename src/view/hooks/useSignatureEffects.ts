@@ -150,14 +150,14 @@ export function useSignatureEffects(): void {
         // El lacre de la biblioteca, el sello del ladrón, el laurel imperial y la bandera a cuadros son el
         // mismo gesto con CUATRO caras. La de «Inserte moneda» es la última en llegar: era el único mundo sin
         // efecto propio, y el suyo no podía ser un destello más —una recreativa CANTA lo que acabas de hacer—.
-        if (fxRef.current('steam')) spawn(seal('signature'));
+        if (fxRef.current('witcher')) spawn(seal('signature'));
         else if (fxRef.current('persona')) spawn(seal('check', 'OBJETIVO CUMPLIDO'));
         else if (fxRef.current('grimdark')) spawn(seal('star-olive-branches', 'DEBER CUMPLIDO'));
         else if (fxRef.current('arcade')) spawn(seal('checkered-flag', 'GAME CLEAR'));
         return;
       }
 
-      if (moment === 'library-saved' && fxRef.current('steam')) {
+      if (moment === 'library-saved' && fxRef.current('witcher')) {
         // El filete de latón vive bajo las pestañas: el barrido va justo ahí, no por el borde de la ventana.
         const sweep = over('fx-brass-sweep', '.tabs');
         if (sweep) spawn(sweep);

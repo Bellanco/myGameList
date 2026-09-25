@@ -5,6 +5,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Changed
+- **«Plata y acero» pasa a llamarse `witcher` por dentro**, que es lo que es desde que dejó de ser el tema de
+  cuero y latón: carpeta, skin, ficha y `data-palette`. Quien lo tenía guardado como `steam` —en el dispositivo o
+  en la nube— sigue viéndolo igual: el anti-flash y `parsePaletteId` traducen el id viejo.
+
 ## [1.4.4] - 2026-09-25
 
 La versión de **las carátulas de lo ajeno**. Los perfiles de otras personas, sus reseñas y los premios pasan a

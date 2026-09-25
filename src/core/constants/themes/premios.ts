@@ -31,7 +31,7 @@ const PREMIOS_VOICES: Record<PaletteId, ThemePremiosVoice> = {
     offline: 'Se ha ido la corriente del salón.',
   },
   /* El gabinete de cuero y latón: el acta del escrutinio no está sobre la mesa. */
-  steam: {
+  witcher: {
     error: 'El acta no está sobre la mesa.',
     offline: 'El correo con el recuento no ha llegado.',
   },

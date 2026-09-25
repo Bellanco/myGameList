@@ -485,13 +485,16 @@
       }
 
       // ── Controles de la maqueta ──────────────────────────────────────────
-      const PALETAS = ['steam', 'persona', 'portal', 'cyberpunk', 'grimdark', 'seaofstars'];
+      const PALETAS = ['forja', 'arcade', 'witcher', 'persona', 'portal', 'cyberpunk', 'seaofstars', 'grimdark'];
       let paleta = 0;
 
       // Los skins de CAPA 3 (tipografías, formas, texturas) se cargan bajo demanda, igual que hace
       // `paletteSkin.ts` en la app: así el aviso se ve con la fuente y el acabado de verdad de cada paleta.
       const SKINS = {
-        /* Espejo de SKIN_LOADERS (view/hooks/paletteSkin.ts); un tema nuevo hay que añadirlo también aquí. */
+        /* Espejo de SKIN_LOADERS (view/hooks/paletteSkin.ts); un tema nuevo hay que añadirlo también aquí.
+           `forja` no está porque es la de por defecto: su skin viaja con `styles/index.scss`. */
+        arcade: () => import('/src/styles/themes/arcade/arcade.scss'),
+        witcher: () => import('/src/styles/themes/witcher/witcher.scss'),
         persona: () => import('/src/styles/themes/persona/persona.scss'),
         portal: () => import('/src/styles/themes/portal/portal.scss'),
         cyberpunk: () => import('/src/styles/themes/cyberpunk/cyberpunk.scss'),
@@ -519,8 +522,7 @@
           paleta = (paleta + 1) % PALETAS.length;
           const p = PALETAS[paleta];
           if (SKINS[p]) await SKINS[p]();
-          if (p === 'steam') document.documentElement.removeAttribute('data-palette');
-          else document.documentElement.setAttribute('data-palette', p);
+          document.documentElement.setAttribute('data-palette', p);
           log.textContent = `Paleta: ${p} (con su skin de CAPA 3 cargado). Radio propio del tema: ${getComputedStyle(document.documentElement).getPropertyValue('--radius-md')}.`;
           if (vivo) desbloqueo(['creditos']);
         },

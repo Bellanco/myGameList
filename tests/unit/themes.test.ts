@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PALETTE, THEMES, type PaletteId } from '../../src/core/constants/palettes';
+import { DEFAULT_PALETTE, THEMES, parsePaletteId, type PaletteId } from '../../src/core/constants/palettes';
 import { socialVoiceByPalette } from '../../src/core/constants/themes/social';
 import { premiosVoiceByPalette } from '../../src/core/constants/themes/premios';
 
@@ -194,5 +194,20 @@ describe('temas · el de por defecto', () => {
   it('el `theme-color` del <head> es su fondo oscuro (lo que se ve antes de ejecutar nada)', () => {
     const meta = ANTI_FLASH.match(/<meta name="theme-color" content="(#\w+)">/);
     expect(meta?.[1]).toBe(THEMES.find((t) => t.id === DEFAULT_PALETTE)!.bg.dark);
+  });
+});
+
+describe('temas · un id renombrado sigue llevando a su tema', () => {
+  // «Plata y acero» se llamaba `steam`. Ese valor sigue en el localStorage y en la preferencia de la nube de quien
+  // lo eligió: si deja de reconocerse, esa persona cambia de tema sin haberlo pedido.
+  it('`steam` se lee como `witcher`, en el TypeScript y en el anti-flash', () => {
+    expect(parsePaletteId('steam')).toBe('witcher');
+    expect(ANTI_FLASH).toMatch(/if \(palette === 'steam'\) \{\s*palette = 'witcher';/);
+  });
+
+  it('lo que no es un tema cae al de por defecto, aunque sea una clave de Object', () => {
+    for (const raro of ['constructor', 'toString', '__proto__', '', 'STEAM']) {
+      expect(parsePaletteId(raro), raro).toBe(DEFAULT_PALETTE);
+    }
   });
 });
