@@ -240,3 +240,19 @@ describe('directorio social — el rango no se puede falsear desde el documento'
     expect(entries[0].tier).toBe('silver');
   });
 });
+
+describe('directorio social — pseudónimo público', () => {
+  beforeEach(() => {
+    invalidateSocialDirectoryCache();
+  });
+
+  // Es el único puente con el archivo de una edición de premios publicada (que no lleva uid): se perdía en la
+  // proyección final y la clasificación no enlazaba ninguna fila con su perfil.
+  it('trae el `profileId` de cada perfil', async () => {
+    getDocsMock.mockResolvedValueOnce(snapshot([profileDoc('ada', ts(1_000), { profileId: 'pid-ada' })]));
+
+    const [entry] = await listSocialDirectory(50);
+
+    expect(entry.profileId).toBe('pid-ada');
+  });
+});

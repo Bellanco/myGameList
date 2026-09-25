@@ -489,6 +489,7 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
         uid: entry.uid,
         displayName: entry.displayName,
         photoURL: entry.photoURL,
+        profileId: entry.profileId,
         socialGistId: entry.socialGistId,
         gamesGistId: entry.gamesGistId,
         updatedAt: entry.updatedAt,
