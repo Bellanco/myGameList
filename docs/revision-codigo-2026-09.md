@@ -36,11 +36,11 @@ Cada arreglo de los grupos 1 y 2 va con un test que reproduce el fallo antes de 
 | A5 ✔ | ✅ 510cd42 | `src/model/repository/firebaseSocialRepository.ts:478-490` | El último `.map` de `listSocialDirectory` descarta `profileId`; `usePremiosProfiles` cruza por él y la clasificación de premios no enlaza nunca (desde 770507b). |
 | A6 ✔ | ✅ 813df47 | `src/viewmodel/useSocialViewModel.ts:375-382` | Si el gist social de `privateConfig` da 404, se sale antes de `setAuthUser`: parece sin sesión, no arranca el auto-crear y al reentrar se crea otro gist vacío. Tampoco mira `cancelled` tras el `await`. |
 | A7 | ✅ 3c0ee57 | `src/viewmodel/useSocialViewModel.ts:734`, `:755` | La migración a canal secreto borra el gist viejo aunque el `setPrivateConfig` haya fallado (`.catch(() => {})`); el puntero queda en un gist inexistente. |
-| A8 ✔ | | `functions/cover.ts:316-327`, `functions/_lib/igdbCover.ts:643` | «No se pudo preguntar a IGDB» (429, token) devuelve `null` igual que «no hay carátula» → `404` con `CACHE_MAPA` (7 días) y el cliente lo aparca 90. Responder 503 + `no-store`. Mismo fallo en `localCoverApi`. |
-| A9 | | `src/view/modals/FormModal.tsx:306-339` | `runSave` vacía lo pendiente de los campos de etiquetas y, si la validación falla, sale sin `setLocalDraft(nextDraft)`: lo escrito sin Enter se pierde. |
-| A10 ✔ | | `src/core/achievements/catalog.ts:1486` | `applyExtraSteps` ordena siempre ascendente e invierte la escalera descendente `estanteria-cero`. `AdminAchievements.tsx:366/403` repite el sort. |
-| A11 | | `src/view/components/AdminHub.tsx:238-252`, `:416-424`; `AdminAnnouncement.tsx:103` | El formulario del aviso copia `current` en `useState` cuando aún es `null`; «Guardar» crea campaña nueva y se reenseña a todos. |
-| A12 ✔ | | `src/view/components/DangerZone.tsx:43-48` | Con borrado de cuenta parcial, el aviso `deletedPartial` no se ve: se navega fuera y se desmonta. |
+| A8 ✔ | ✅ 7ea04bc | `functions/cover.ts:316-327`, `functions/_lib/igdbCover.ts:643` | «No se pudo preguntar a IGDB» (429, token) devuelve `null` igual que «no hay carátula» → `404` con `CACHE_MAPA` (7 días) y el cliente lo aparca 90. Responder 503 + `no-store`. Mismo fallo en `localCoverApi`. |
+| A9 | ✅ 8571af2 | `src/view/modals/FormModal.tsx:306-339` | `runSave` vacía lo pendiente de los campos de etiquetas y, si la validación falla, sale sin `setLocalDraft(nextDraft)`: lo escrito sin Enter se pierde. |
+| A10 ✔ | ✅ 424da52 | `src/core/achievements/catalog.ts:1486` | `applyExtraSteps` ordena siempre ascendente e invierte la escalera descendente `estanteria-cero`. `AdminAchievements.tsx:366/403` repite el sort. |
+| A11 | ✅ 63899e1 | `src/view/components/AdminHub.tsx:238-252`, `:416-424`; `AdminAnnouncement.tsx:103` | El formulario del aviso copia `current` en `useState` cuando aún es `null`; «Guardar» crea campaña nueva y se reenseña a todos. |
+| A12 ✔ | ✅ e8608b85 | `src/view/components/DangerZone.tsx:43-48` | Con borrado de cuenta parcial, el aviso `deletedPartial` no se ve: se navega fuera y se desmonta. |
 
 ## Media
 
