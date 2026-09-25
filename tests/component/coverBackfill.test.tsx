@@ -321,6 +321,20 @@ describe('llenado de carátulas', () => {
     expect(localStorage.getItem('mis-listas-covers-done-v2') ?? '').not.toContain('Celeste');
   });
 
+  /* El 503 es IGDB sin contestar (su tope, el token): ni «no tiene» —antes llegaba como un 404 y se aparcaba el
+     juego noventa días— ni un fallo de este título, así que el siguiente se encontraría lo mismo. Se para. */
+  it('no aparca ni sigue recorriendo cuando el servidor no puede preguntar a IGDB', async () => {
+    localStorage.setItem('mis-listas-covers', 'on');
+    fetchSimulado.mockImplementation(async () => new Response(null, { status: 503 }));
+    renderHook(() => useCoverBackfill(biblioteca([juego(1, 'Celeste'), juego(2, 'Portal')])));
+
+    await waitFor(() => expect(fetchSimulado).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    await new Promise((listo) => setTimeout(listo, 600));
+    expect(fetchSimulado).toHaveBeenCalledTimes(1);
+    expect(sabemosQueNoTiene(coverUrl('Celeste', ['Steam']))).toBe(false);
+    expect(localStorage.getItem('mis-listas-covers-done-v2') ?? '').not.toContain('Celeste');
+  });
+
   /* Lo mismo con una avería: un 500 no dice nada del juego. Pero este NO para el recorrido — puede ser de un
      título concreto, y los demás merecen su intento. */
   it('tampoco da por hecho lo que falló en el servidor', async () => {

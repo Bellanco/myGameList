@@ -122,14 +122,14 @@ export function useCoverBackfill(data: TabData): void {
                        esos juegos vuelven a pedir su imagen en cada visita para recibir el mismo 404.
                · 2xx — «sí tiene», y el 204 hace además el camino de vuelta, para que un título recién corregido
                        estrene carátula sin arrastrar el «no» de antes.
-               · EL RESTO (429 del cupo, 403, 500, 501 sin credenciales) NO DICE NADA DE ESTE JUEGO: dice que no
-                 se ha podido preguntar. Los dos que hablan del servidor entero paran además el recorrido. Se apuntaba igual, y esa es la misma confusión que el servidor tiene
+               · EL RESTO (429 del cupo, 403, 500, 501 sin credenciales, 503 sin IGDB) NO DICE NADA DE ESTE JUEGO: dice que no
+                 se ha podido preguntar. Los tres que hablan del servidor entero paran además el recorrido. Se apuntaba igual, y esa es la misma confusión que el servidor tiene
                  prohibida —ver el comentario de `consultar` en `_lib/igdbCover.ts`: un fallo de infraestructura
                  nunca puede escribirse como si fuera un dato—. Quien importe una biblioteca de más de 500 juegos
                  topa el cupo a los dos minutos, y el resto del recorrido quedaba marcado como hecho para siempre
                  en ese navegador: esos juegos ya no los calienta nadie y acaban resolviéndose en ráfaga al
                  pintar el mosaico, que es exactamente el escenario que este recorrido existe para evitar. */
-          if (respuesta.status === 429 || respuesta.status === 501) {
+          if (respuesta.status === 429 || respuesta.status === 501 || respuesta.status === 503) {
             noHayNadaQueHacer = true;
           } else if (respuesta.status === 404) {
             recordarQueNoTiene(url);
@@ -144,13 +144,15 @@ export function useCoverBackfill(data: TabData): void {
           if (cancelado) break;
           // Un fallo de red NO se apunta: que se reintente en la próxima visita.
         }
-        /* Y ahí se PARA, no se sigue. Son las dos respuestas que hablan del servidor y no de este juego, así
+        /* Y ahí se PARA, no se sigue. Son las respuestas que hablan del servidor y no de este juego, así
            que lo que queda de recorrido recibiría exactamente la misma: cientos de peticiones que no resuelven
            nada y que encima llegan cuando el servidor ya está diciendo que no.
              · 429 — se acabó el cupo. Vuelve al cambiar la hora, o el día si el tope es el del servicio entero.
              · 501 — este entorno no tiene credenciales de IGDB (desarrollo sin `.dev.vars`, sobre todo). No es
                      que falte una carátula: es que aquí no hay carátulas, y recorrer la biblioteca entera de
                      una en una con su pausa es gasto puro.
+             · 503 — el servidor no ha podido preguntar a IGDB (su tope, su token): el siguiente juego se
+                     encontraría lo mismo.
            Lo andado queda guardado al salir del bucle y la próxima visita sigue por donde iba. */
         if (noHayNadaQueHacer) break;
         /* Se guarda cada poco y no al final: si cierras la pestaña a medias, lo andado no se pierde. Y se mide

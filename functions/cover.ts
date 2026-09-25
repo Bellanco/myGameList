@@ -314,6 +314,15 @@ export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise
       });
     }
     coverId = await emparejarYGuardar(env, nombre, listaPlataformas, ampliado);
+    if (coverId === undefined) {
+      /* No se ha podido preguntar a IGDB (429, token rechazado): no es un dato sobre este juego. 503 y `no-store`,
+         nunca el 404 de abajo, que en el modo del recorrido se guarda una semana en el borde y el cliente lo
+         aparca 90 días —una caída de un rato se convertía en meses sin carátula—. */
+      return new Response('No se ha podido consultar IGDB; inténtalo más tarde', {
+        status: 503,
+        headers: { 'Cache-Control': 'no-store', 'Retry-After': '300' },
+      });
+    }
   }
 
   if (!coverId) {

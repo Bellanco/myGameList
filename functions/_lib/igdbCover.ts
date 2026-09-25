@@ -611,6 +611,10 @@ export function claveCache(nombre: string, plataformas: readonly string[], ampli
  * sola función que hiciera ambas cosas acababa leyendo la misma clave de KV dos veces por cada juego nuevo:
  * una para saber si había que gastar cupo y otra dentro de la resolución. `resolverCaratula` las junta para
  * quien no necesita meterse en medio (el gemelo de desarrollo de `vite.config.ts`).
+ *
+ * Las tres comparten el mismo significado de la respuesta: el id es «la tiene», `null` es «consta que no la tiene»
+ * y `undefined` es «no se sabe» —sin apuntar en la caché, o sin haber podido preguntar a IGDB (429, token)—.
+ * Mezclar los dos últimos convertía una caída de IGDB en un «no tiene» guardado una semana en el borde.
  */
 
 /**
@@ -638,9 +642,9 @@ export async function emparejarYGuardar(
   nombre: string,
   plataformas: readonly string[],
   ampliado = false,
-): Promise<string | null> {
+): Promise<string | null | undefined> {
   const { coverId, indeciso } = await emparejar(env, nombre, plataformas, ampliado);
-  if (!coverId && indeciso) return null; // no se ha podido preguntar: ni se cachea ni se da por definitivo
+  if (!coverId && indeciso) return undefined; // no se ha podido preguntar: ni se cachea ni se da por definitivo
   /* El emparejamiento se devuelve se haya podido guardar o no: ya está resuelto y la carátula se puede servir.
      El ACIERTO se guarda sin caducidad y el FALLO por una semana: son dos cosas distintas y el porqué está
      arriba, en `TOKEN_TTL_MAX` y `MISS_TTL`. Esta línea es la que hace que un juego sin carátula vuelva a
@@ -660,7 +664,7 @@ export async function resolverCaratula(
   nombre: string,
   plataformas: readonly string[],
   ampliado = false,
-): Promise<string | null> {
+): Promise<string | null | undefined> {
   const cacheado = await leerCaratulaCacheada(env, nombre, plataformas, ampliado);
   if (cacheado !== undefined) return cacheado;
   return emparejarYGuardar(env, nombre, plataformas, ampliado);

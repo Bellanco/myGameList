@@ -438,6 +438,13 @@ function localCoverApi(): Plugin {
               return;
             }
             const coverId = soloCache ? cacheada : await resolverCaratula(env, nombre, plataformas, ampliado);
+            // Mismo contrato que producción: no haber podido preguntar a IGDB es 503, no «no tiene».
+            if (coverId === undefined) {
+              res.statusCode = 503;
+              res.setHeader('Cache-Control', 'no-store');
+              res.end('No se ha podido consultar IGDB; inténtalo más tarde');
+              return;
+            }
             if (!coverId) {
               res.statusCode = 404;
               res.setHeader('Cache-Control', 'no-store');
