@@ -614,6 +614,22 @@ precache. Es un cambio para probar en un despliegue de vista previa, no a ciegas
     `router` (14,5 kB, 38 %). El CSS de entrada solo usa el 21 % al pintar, pero casi todo lo demás es `:hover`,
     anchos y modo claro; las paletas inactivas son ~4–6 kB gzip, y sacarlas arriesga el primer fotograma.
 
+17. ⏳ **Brotli del build en vez del de Cloudflare** (25-09-2026, pendiente de verificar en vista previa). Pages
+    comprime al vuelo con un brotli de nivel bajo: en producción el chunk de React viaja con 67 745 bytes en `br`
+    frente a 67 361 en `gzip`. Recomprimidos con calidad 11, los 15 ficheros del arranque de producción pasan de
+    185,0 kB (gzip-9) a **158,7 kB** (−14 %), sin tocar la aplicación. El plugin `brotliAssets` (`vite.config.ts`)
+    deja un `.br` junto a cada `.js`/`.css`, y la Function de `/assets/*` que ya existía (`functions/_lib/
+    brotliAsset.ts`) lo sirve con `encodeBody: 'manual'` a quien acepta brotli; en cualquier otro caso sigue el
+    camino de antes, con el 404 de los chunks viejos. No añade invocaciones: cada `/assets/*` ya pasaba por esa
+    Function. `npm run validate` sigue midiendo el tope en gzip (el peor caso) y ahora imprime además el crítico
+    en brotli (**155,6 kB** frente a 181,8) y falla si a algún asset del arranque le falta su `.br`.
+
+    **Lo que NO se pudo probar en local:** `wrangler pages dev` sirve el `.br` con `Accept-Encoding: br`, pero con
+    la lista de un navegador (`gzip, deflate, br, zstd`) lo RECOMPRIME a gzip, porque elige por orden. El borde
+    real prefiere `br` sea cual sea el orden (comprobado contra producción), así que la prueba que vale es la de un
+    despliegue de vista previa: el chunk de entrada tiene que llegar con los bytes de su `.br`, no con los ~62 kB
+    del brotli de Cloudflare.
+
 **Criterio de aceptación:** el arranque baja de 182,8 a **179,1 kB** críticos (−2 %) sin perder funcionalidad, y
 la holgura del presupuesto casi se dobla. Los tres ficheros de sync siguen por debajo del 80 % de ramas (punto
 14, sin empezar).

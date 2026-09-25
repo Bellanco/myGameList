@@ -248,10 +248,26 @@ if (fs.existsSync(builtSw)) {
   const criticoKb = pesos.filter(bloquea).reduce((total, { kb }) => total + kb, 0);
   const totalKb = pesos.reduce((total, { kb }) => total + kb, 0);
 
+  /* LO QUE VIAJA DE VERDAD: el `.br` que deja el plugin `brotliAssets` y sirve `functions/_lib/brotliAsset.ts`.
+     Los topes siguen midiéndose en gzip a propósito —es el peor caso (un navegador sin brotli) y así no se mueven
+     las cifras históricas de arriba—, pero si falta un `.br` del arranque la ganancia se pierde sin que nada falle
+     a la vista: la Function vuelve al asset normal en silencio. Por eso aquí sí rompe. */
+  const sinBrotli = precached.filter((asset) => /\.(js|css)$/.test(asset) && !fs.existsSync(path.join(root, 'dist', `${asset}.br`)));
+  if (sinBrotli.length > 0) {
+    fail(
+      `Estos assets del arranque no tienen su .br al lado: ${sinBrotli.join(', ')}. ` +
+        'Los genera el plugin `brotliAssets` de vite.config.ts; sin ellos el arranque viaja con la compresión de Cloudflare.',
+    );
+  }
+  const criticoBrKb = precached
+    .filter((asset) => /\.(js|css)$/.test(asset))
+    .reduce((total, asset) => total + fs.statSync(path.join(root, 'dist', `${asset}.br`)).size / 1024, 0);
+
   console.log(
     `Service worker: ${precached.length} assets del arranque · ` +
       `crítico ${criticoKb.toFixed(1)}/${BOOT_CRITICAL_BUDGET_KB} kB · ` +
-      `total ${totalKb.toFixed(1)}/${BOOT_TOTAL_BUDGET_KB} kB (comprimidos).`,
+      `total ${totalKb.toFixed(1)}/${BOOT_TOTAL_BUDGET_KB} kB (comprimidos) · ` +
+      `crítico en brotli ${criticoBrKb.toFixed(1)} kB (lo que se sirve).`,
   );
   if (criticoKb > BOOT_CRITICAL_BUDGET_KB) {
     fail(
