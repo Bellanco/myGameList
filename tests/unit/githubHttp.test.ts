@@ -106,6 +106,19 @@ describe('githubFetch', () => {
     expect(init.method).toBe('GET');
   });
 
+  it('un 304 real (con `body` como stream vacío, como lo dan los navegadores) pasa sin reconstruirse', async () => {
+    vi.stubGlobal('navigator', { onLine: true });
+    // Firefox, Chromium y WebKit entregan el 304 de un `If-None-Match` con `body` como ReadableStream vacío, no
+    // `null`. Reconstruirlo con `new Response(stream, { status: 304 })` lanza un TypeError en los tres.
+    const notModified = responseWith(304, { etag: '"e1"' });
+    Object.defineProperty(notModified, 'body', { value: new ReadableStream() });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(notModified));
+
+    const res = await githubFetch('https://api.github.com/gists/g1', { headers: { 'If-None-Match': '"e1"' } });
+    expect(res.status).toBe(304);
+    expect(res.headers.get('etag')).toBe('"e1"');
+  });
+
   it('el plazo cubre también el cuerpo: un json() colgado a mitad se rechaza como timeout diferible', async () => {
     vi.stubGlobal('navigator', { onLine: true });
     // Como el fetch real: llegan las cabeceras y el cuerpo no termina nunca; abortar la señal lo rompe.
