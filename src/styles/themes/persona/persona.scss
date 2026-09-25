@@ -508,6 +508,17 @@
   92%, 100% { background-position: 260% 0; }
 }
 
+/* ══ MOMENTOS · EL SELLO DEL LADRÓN al cerrar un juego: la cara de este tema del sello común de
+   `_effects.scss`. Sin disco: tarjeta ladeada con contorno negro y sombra de bloque, la tarjeta de visita de los
+   Ladrones. La guarda de efectos la pone el hook, que no crea el sello si no toca. ══ */
+:root[data-palette="persona"] .fx-seal {
+  width: auto; height: auto; padding: .9rem 1.6rem; border-radius: 0;
+  color: #f4f2f5; background: #ff1f3d;
+  border: 3px solid #0a0a0a;
+  box-shadow: 8px 8px 0 rgba(10,10,10,.9);
+}
+:root[data-palette="persona"] .fx-seal-label { font-size: 15px; }
+
 /* ══ MOMENTOS · EL CORTE DE TIJERA: la fila eliminada se recorta como una pieza de collage ══════════════════
    El listado ya marca `.is-leaving` cuando un juego se va (ver `_motion.scss`), así que no hace falta ningún
    disparador nuevo. Lo que cambia es CÓMO se va: en vez de deslizarse, la fila se corta en diagonal con un

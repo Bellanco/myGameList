@@ -19,6 +19,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 ### Performance
 - **«Solo hay guerra» ya no descarga el skin de «Sin futuro»** (5,1 kB comprimidos y una petición): su glitch
   vivía allí para reutilizar dos keyframes, y ahora es suyo.
+- **Los sellos de cerrar un juego viajan con su tema**: las caras de «Plata y acero», «Ladrones de corazones» y
+  «Solo hay guerra» salen del bundle base, como ya estaba la de «Inserte moneda». En `_effects.scss` queda solo
+  la pieza común.
 
 ### Fixed
 - **La marca de la casilla se ve en todos los temas.** Era blanca fija sobre el acento y se quedaba entre 1,2 y

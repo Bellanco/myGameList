@@ -922,8 +922,8 @@
    Era el único mundo sin efecto propio: los otros seis tienen su lacre, su portal, su astro, su barrido o su
    arranque de cogitador. El gesto que le toca a una recreativa no es un destello más —es CANTAR lo que
    acabas de hacer—, así que al cerrar un juego cae la marquesina con la bandera a cuadros. La pieza es la
-   misma `.fx-seal` de `_effects.scss`, que ya tenía tres caras; esta es la cuarta, y el TS que la dispara
-   está en `useSignatureEffects`. ── */
+   misma `.fx-seal` de `_effects.scss`; aquí va solo su cara, como en los otros tres temas que la usan, y el TS
+   que la dispara está en `useSignatureEffects`. ── */
 :root[data-palette="arcade"] .fx-seal {
   width: auto;
   height: auto;

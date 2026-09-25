@@ -297,6 +297,15 @@
 /* Preferencia de efectos OFF: detén el PARPADEO CRT (la textura de scanlines/vignette se conserva). */
 :root:not([data-effects="on"])[data-palette="grimdark"] body::before { animation: none !important; }
 
+/* ══ MOMENTOS · LACRE IMPERIAL al cerrar un juego: la cara de este tema del sello común de `_effects.scss`. Oro
+   sobre verde de cogitador, con la corona de laurel que pone el hook. La guarda de efectos la pone él. ══ */
+:root[data-palette="grimdark"] .fx-seal {
+  color: #e0a92b; border-radius: 2px;
+  background: linear-gradient(160deg, #14281c, #060b08);
+  border: 2px solid #e0a92b;
+  box-shadow: inset 0 0 0 3px rgba(224,169,43,.18), 0 0 26px -6px rgba(67,245,88,.5);
+}
+
 /* ── §12 · Panel "Perfil": lectura de cogitador. La rampa de los repartos va del FÓSFORO VERDE al ORO
    imperial, los datos brillan como un tubo de rayos catódicos y las cifras se leen en VT323, igual que el
    resto de lecturas de terminal. Las tarjetas ya traen la moldura dorada de §3. ── */
