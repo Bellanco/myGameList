@@ -12,8 +12,9 @@ export const witcher = {
   accent2: '#ff8f4a',
   bg: { dark: '#141922', light: '#d8e0e7' },
   voice: {
-    /* La voz del tema por defecto de antes: un fallo que «no estaba en las pruebas». */
-    appError: 'Esto no estaba en las pruebas.',
-    appOffline: 'No hay conexión con el servidor.',
+    /* The Witcher: el medallón del brujo vibra cuando hay algo malo cerca. */
+    appError: 'El medallón vibra: algo va mal.',
+    /* The Witcher: Sardinilla, la yegua de Geralt, que aparece donde no debe y se pierde donde menos conviene. */
+    appOffline: 'Sardinilla no encuentra el camino.',
   },
 } as const satisfies ThemeDefinition;

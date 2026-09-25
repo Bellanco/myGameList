@@ -7,8 +7,8 @@
 import type { ThemeSocialVoice } from './theme';
 
 export const witcherSocial = {
-  /* Las salas de espera del multijugador, que es lo más social que tiene un cliente de juegos. */
-  error: 'La sala se ha quedado vacía.',
-  /* Un cliente de juegos sin conexión no entra a la sala: se queda intentando conectar con el servidor. */
-  offline: 'No hay conexión con el servidor.',
+  /* The Witcher 3: lo más social del Continente es una partida de gwent en la taberna. */
+  error: 'No queda nadie en la mesa de gwent.',
+  /* Las noticias viajan por mensajero; sin él, la taberna no se entera de nada. */
+  offline: 'Ningún mensajero llega a la taberna.',
 } as const satisfies ThemeSocialVoice;

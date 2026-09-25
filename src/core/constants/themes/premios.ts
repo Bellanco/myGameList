@@ -30,10 +30,10 @@ const PREMIOS_VOICES: Record<PaletteId, ThemePremiosVoice> = {
     error: 'La máquina se ha tragado la moneda.',
     offline: 'Se ha ido la corriente del salón.',
   },
-  /* El gabinete de cuero y latón: el acta del escrutinio no está sobre la mesa. */
+  /* El Continente: los encargos se clavan en el tablón del pueblo, y el recado viaja a caballo. */
   witcher: {
-    error: 'El acta no está sobre la mesa.',
-    offline: 'El correo con el recuento no ha llegado.',
+    error: 'El tablón de contratos está vacío.',
+    offline: 'El recuento viene a lomos de Sardinilla, y no llega.',
   },
   /* Ladrones de corazones: el palacio donde se guarda el recuento no responde. */
   persona: {

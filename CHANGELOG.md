@@ -11,6 +11,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   en la nube— sigue viéndolo igual: el anti-flash y `parsePaletteId` traducen el id viejo.
 - **Al guardar en «Plata y acero», la luz corre por el filo de plata**, no por un filete de latón: el barrido
   dorado era herencia del tema de cuero que fue. Además deja el bundle base y viaja con su skin.
+- **«Plata y acero» habla como The Witcher** cuando algo falla: el medallón que vibra, Sardinilla que no encuentra
+  el camino, la mesa de gwent vacía y el tablón de contratos. Las frases de antes eran de los temas que fue.
 
 ### Fixed
 - **La marca de la casilla se ve en todos los temas.** Era blanca fija sobre el acento y se quedaba entre 1,2 y
