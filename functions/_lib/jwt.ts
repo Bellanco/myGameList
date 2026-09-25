@@ -86,7 +86,13 @@ export async function loadJwks(kv: KVNamespace, url: string, cacheKey: string, t
     // todo el TTL aunque el endpoint se recuperase al minuto siguiente.
     throw new Error('Las claves públicas de Google llegaron vacías');
   }
-  await kv.put(cacheKey, JSON.stringify({ keys }), { expirationTtl: ttlSeconds });
+  try {
+    await kv.put(cacheKey, JSON.stringify({ keys }), { expirationTtl: ttlSeconds });
+  } catch {
+    // Cupo diario de escrituras agotado, o dos peticiones renovando la misma clave en el mismo segundo (429 de
+    // KV). Las claves ya están aquí y son buenas: se verifica con ellas. Dejar que esto lanzara tumbaba TODAS las
+    // peticiones autenticadas hasta el día siguiente, porque sin caché cada una volvía a intentar escribir.
+  }
   return keys;
 }
 

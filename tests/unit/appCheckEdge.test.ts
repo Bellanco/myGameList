@@ -145,6 +145,18 @@ describe('token de App Check', () => {
     await verifyAppCheckToken(token, PROJECT_NUMBER, APP_ID, kv);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
+
+  // Cupo de escrituras de KV agotado (lo comparten carátulas y enlaces) o 429 por dos renovaciones a la vez.
+  it('verifica igual si no puede guardar las claves en KV', async () => {
+    const kv: KVNamespace = {
+      ...memoryKv(),
+      put: async () => {
+        throw new Error('KV put() limit exceeded for the day.');
+      },
+    };
+    await expect(verifyAppCheckToken(await sign(appCheckHeader, appCheckPayload()), PROJECT_NUMBER, APP_ID, kv))
+      .resolves.toBeUndefined();
+  });
 });
 
 describe('interruptor APPCHECK_EDGE_MODE', () => {
