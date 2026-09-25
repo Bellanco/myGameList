@@ -118,24 +118,8 @@
   box-shadow: inset 0 0 0 3px rgba(224,169,43,.18), 0 0 26px -6px rgba(67,245,88,.5);
 }
 
-/* ── Clásico · EL FILETE DE LATÓN SE ILUMINA al guardar, de izquierda a derecha. Va colocado sobre la barra de
-      pestañas (el hook lo mide), que es donde ese filete existe de verdad. ── */
-.fx-brass-sweep {
-  position: fixed; z-index: 9996; pointer-events: none;
-  overflow: hidden;
-}
-.fx-brass-sweep::after {
-  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
-  background: linear-gradient(90deg, transparent, rgba(236,196,92,.35) 28%, #ecc45c 46%, #fff3d0 50%, #ecc45c 54%, rgba(236,196,92,.35) 72%, transparent);
-  box-shadow: 0 0 14px rgba(236,196,92,.55);
-  transform: translateX(-100%);
-  animation: fx-brass-run .9s ease-out;
-}
-@keyframes fx-brass-run {
-  0%   { transform: translateX(-100%); opacity: 0; }
-  18%  { opacity: 1; }
-  100% { transform: translateX(100%); opacity: 0; }
-}
+/* El destello de «Plata y acero» al guardar la biblioteca (`.fx-silver-sweep`) vive en su skin, §13c: solo se
+   dispara con ese tema puesto, así que no tiene por qué viajar en el bundle de todo el mundo. */
 
 /* ── Sin futuro · BARRIDO DE ESCÁNER al aplicar un filtro: la lista se relee, como un HUD que vuelve a mirar. ── */
 .fx-scan {

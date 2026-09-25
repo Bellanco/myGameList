@@ -786,9 +786,10 @@
 :root[data-palette="witcher"] .gauge-number,
 :root[data-palette="witcher"] .shine-value { font-family: var(--font-mono); }
 
-/* ── §13 · Firma del tema (bajo `data-effects`): el lacre que se estampa al guardar (`.fx-seal`, en
+/* ── §13 · Firma del tema (bajo `data-effects`): el lacre que se estampa al cerrar un juego (`.fx-seal`, en
    `_effects.scss`), el filo de la hoja que destella al pasar por la acción principal, la luz que se
-   pasea por el acero (§13a) y la sangre fresca que resbala por los carteles (§13b). ── */
+   pasea por el acero (§13a), la sangre fresca que resbala por los carteles (§13b) y el destello que
+   recorre el filete de las pestañas al guardar (§13c). ── */
 @media (prefers-reduced-motion: no-preference) {
   /* EL DESTELLO VIVE AHORA DENTRO DE LA CHAPA (§5), no en una capa propia: desde que la forma la dan los
      dos pseudos de §4b, el `::after` ES el acero del botón, y el `translateX` que movía el destello se
@@ -896,6 +897,31 @@
     /* Quieta y fuera del cartel cuatro quintas partes del ciclo; luego cae. */
     0%, 80%  { background-position: var(--wt-gota-x, 27%) -17px, 0 0, 0 0; }
     100%     { background-position: var(--wt-gota-x, 27%) calc(100% + 17px), 0 0, 0 0; }
+  }
+
+  /* ══ §13c · AL GUARDAR, LA LUZ CORRE POR EL FILO ═══════════════════════════════════════════════════
+     Es el gesto de pasar el pulgar por una hoja recién afilada: un destello FRÍO que recorre el filete de
+     acero bajo las pestañas, de izquierda a derecha. Antes era un barrido de latón dorado (#ecc45c), herencia
+     del tema de cuero que este fue, y el oro no es de ningún material de «Plata y acero».
+     Lo pone `useSignatureEffects` en un `<span>` que mide y coloca sobre `.tabs`; aquí solo se pinta. Va con
+     las fichas del tema, no con literales: en oscuro es plata clara con el núcleo blanco; en claro, el acero
+     hondo de `--steam` con el mismo núcleo, que es como se ve la luz sobre metal oscuro en un fondo claro. */
+  :root[data-palette="witcher"] .fx-silver-sweep {
+    position: fixed; z-index: 9996; pointer-events: none;
+    overflow: hidden;
+  }
+  :root[data-palette="witcher"] .fx-silver-sweep::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+    background: linear-gradient(90deg, transparent, rgba(var(--steam-rgb),.35) 28%, var(--steam) 45%, #fff 50%,
+      var(--steam) 55%, rgba(var(--steam-rgb),.35) 72%, transparent);
+    box-shadow: 0 0 12px rgba(var(--steam-rgb),.5);
+    transform: translateX(-100%);
+    animation: wt-filo-destello .9s ease-out;
+  }
+  @keyframes wt-filo-destello {
+    0%   { transform: translateX(-100%); opacity: 0; }
+    18%  { opacity: 1; }
+    100% { transform: translateX(100%); opacity: 0; }
   }
 }
 

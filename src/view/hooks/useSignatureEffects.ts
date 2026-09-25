@@ -15,9 +15,10 @@ import { DEFAULT_PALETTE } from '../../core/constants/palettes';
  *  - Inserte moneda (arcade): GAME CLEAR, la bandera a cuadros del mueble al cerrar un juego.
  *
  * Y LOS QUE RESPONDEN A LO QUE PASA EN LA APLICACIÓN, no a lo que pasa en el DOM (ver `core/effects/moments`):
- *  - CERRAR UN JUEGO → un SELLO que cae en el centro: lacre de biblioteca (Clásico), «objetivo cumplido» ladeado
- *    (Ladrones de corazones) y lacre con laurel imperial (Solo hay guerra). Tres temas pedían el mismo gesto.
- *  - GUARDAR → el filete de latón de la cabecera se ilumina de izquierda a derecha (Clásico).
+ *  - CERRAR UN JUEGO → un SELLO que cae en el centro: lacre de contrato (Plata y acero), «objetivo cumplido»
+ *    ladeado (Ladrones de corazones), lacre con laurel imperial (Solo hay guerra) y bandera a cuadros (Inserte
+ *    moneda). Cuatro temas pedían el mismo gesto.
+ *  - GUARDAR → la luz corre por el filete de acero bajo las pestañas, de izquierda a derecha (Plata y acero).
  *  - FILTRAR → barrido de escáner sobre la lista (Sin futuro).
  *  - LOGRO DESBLOQUEADO → estrella fugaz que cruza (Sol y luna).
  */
@@ -158,8 +159,8 @@ export function useSignatureEffects(): void {
       }
 
       if (moment === 'library-saved' && fxRef.current('witcher')) {
-        // El filete de latón vive bajo las pestañas: el barrido va justo ahí, no por el borde de la ventana.
-        const sweep = over('fx-brass-sweep', '.tabs');
+        // El filete de acero vive bajo las pestañas: el destello va justo ahí, no por el borde de la ventana.
+        const sweep = over('fx-silver-sweep', '.tabs');
         if (sweep) spawn(sweep);
         return;
       }
