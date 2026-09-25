@@ -991,6 +991,34 @@ async function createSocialGistWithData(token: string, data: SocialGistData, isP
   return { gistId: body.id, etag: response.headers.get('etag') };
 }
 
+type SocialGistBody = { files?: Record<string, { content?: string; truncated?: boolean } | undefined> };
+
+/**
+ * Del cuerpo de la API al canal normalizado, y a la caché. Un gist SIN el fichero es un canal vacío de verdad (recién
+ * creado o sin estrenar); uno con el fichero pero ILEGIBLE —JSON roto, recortado por GitHub pasado 1 MB, un chunk que
+ * falta— LANZA y no se cachea. Antes se devolvía vacío y se guardaba con su ETag: el siguiente `openSocialWrite` o
+ * `reconcileReviewActivity` partía de ese vacío y reescribía el canal entero, borrando lo que no se había podido leer.
+ */
+function parseSocialGistBody(gistId: string, body: SocialGistBody, etag: string | null): { data: SocialGistData; etag: string | null; wasLegacy?: boolean } {
+  const file = body.files?.[SOCIAL_GIST_FILENAME];
+  if (!file) {
+    const empty = getEmptySocialGistData();
+    saveSocialGistCache(gistId, empty, etag);
+    return { data: empty, etag };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(file.content || '');
+  } catch {
+    throw new Error(`Gist social ${gistId} ilegible${file.truncated ? ' (recortado por GitHub)' : ''}: se aborta para no perder datos`);
+  }
+  // A6: si el ancla referencia chunks de overflow de `sharedLists` (mismo gist), se fusionan antes de normalizar.
+  const normalized = normalizeSocialGistData(assembleChunkedSocial(parsed, body.files, { strict: true }));
+  saveSocialGistCache(gistId, normalized, etag);
+  return { data: normalized, etag, wasLegacy: socialGistNeedsRewrite(parsed) };
+}
+
 export async function readSocialGist(token: string, gistId: string, etag: string | null = null): Promise<{ data: SocialGistData; etag: string | null; notModified?: boolean; wasLegacy?: boolean }> {
   if (!isValidGithubToken(token)) {
     throw new Error('Formato de token inválido');
@@ -1046,61 +1074,16 @@ export async function readSocialGist(token: string, gistId: string, etag: string
       if (!freshResp.ok) {
         throw await buildGithubError(freshResp, 'Read social gist fallback failed');
       }
-      const freshBody = (await freshResp.json()) as { files?: Record<string, { content: string }> };
-      const rawFresh = freshBody.files?.[SOCIAL_GIST_FILENAME]?.content;
-      const responseEtagFresh = freshResp.headers.get('etag');
-      if (!rawFresh) {
-        const empty = getEmptySocialGistData();
-        saveSocialGistCache(gistId, empty, responseEtagFresh);
-        return { data: empty, etag: responseEtagFresh };
-      }
-
-      try {
-        const parsedFresh = JSON.parse(rawFresh);
-        const normalizedFresh = normalizeSocialGistData(assembleChunkedSocial(parsedFresh, freshBody.files));
-        saveSocialGistCache(gistId, normalizedFresh, responseEtagFresh);
-        return { data: normalizedFresh, etag: responseEtagFresh, wasLegacy: socialGistNeedsRewrite(parsedFresh) };
-      } catch {
-        const empty = getEmptySocialGistData();
-        saveSocialGistCache(gistId, empty, responseEtagFresh);
-        return { data: empty, etag: responseEtagFresh };
-      }
+      const freshBody = (await freshResp.json()) as SocialGistBody;
+      return parseSocialGistBody(gistId, freshBody, freshResp.headers.get('etag'));
     }
 
     if (!response.ok) {
       throw await buildGithubError(response, 'Read social gist failed');
     }
 
-    const body = (await response.json()) as { files?: Record<string, { content: string }> };
-    const raw = body.files?.[SOCIAL_GIST_FILENAME]?.content;
-    const responseEtag = response.headers.get('etag');
-    if (!raw) {
-      const empty = getEmptySocialGistData();
-      saveSocialGistCache(gistId, empty, responseEtag);
-      return {
-        data: empty,
-        etag: responseEtag,
-      };
-    }
-
-    try {
-      const parsed = JSON.parse(raw);
-      // A6: si el ancla referencia chunks de overflow de `sharedLists` (mismo gist), se fusionan antes de normalizar.
-      const normalized = normalizeSocialGistData(assembleChunkedSocial(parsed, body.files));
-      saveSocialGistCache(gistId, normalized, responseEtag);
-      return {
-        data: normalized,
-        etag: responseEtag,
-        wasLegacy: socialGistNeedsRewrite(parsed),
-      };
-    } catch {
-      const empty = getEmptySocialGistData();
-      saveSocialGistCache(gistId, empty, responseEtag);
-      return {
-        data: empty,
-        etag: responseEtag,
-      };
-    }
+    const body = (await response.json()) as SocialGistBody;
+    return parseSocialGistBody(gistId, body, response.headers.get('etag'));
   })();
 
   socialGistInFlightByKey.set(requestKey, request);
@@ -1516,8 +1499,9 @@ export async function ensureSecretSocialGist(token: string, gistId: string): Pro
   }
 
   const payload = await readSocialGist(token, sourceGistId, null);
-  // Segunda red de seguridad: si el origen viene vacío pero el fichero NO lo estaba, algo se perdió al leer
-  // (truncado, parseo fallido). Clonar un vacío sobre un canal con contenido sería destruirlo de facto.
+  // Segunda red de seguridad: si el origen viene vacío pero el fichero NO lo estaba, algo se perdió al leer. (Un JSON
+  // roto o recortado ya no llega aquí: `readSocialGist` lanza.) Clonar un vacío sobre un canal con contenido sería
+  // destruirlo de facto.
   const sourceIsEmpty = (payload.data.activity?.length || 0) === 0 && (payload.data.posts?.length || 0) === 0;
   if (sourceIsEmpty && sourceSize > EMPTY_PAYLOAD_MAX_BYTES) {
     return { ...unchanged, tooLarge: true };

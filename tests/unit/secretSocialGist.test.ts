@@ -149,13 +149,9 @@ describe('ensureSecretSocialGist', () => {
     expect(created).toBeNull();
   });
 
-  it('NO migra si el origen se lee vacío pero el fichero no lo estaba', async () => {
-    // Segunda red: el tamaño está por debajo del umbral, pero la lectura no devuelve nada. Algo falló al
-    // parsear, y clonar ese vacío sobre un canal con contenido sería destruirlo de facto.
-    // Id PROPIO de este test: `readSocialGist` cachea por gist, y reutilizar el de los demás casos serviría el
-    // payload bueno ya cacheado en vez del roto que se quiere simular.
-    const OTRO_ID = '1234567890abcdef1234567890abcdef';
-    listResponse = [ownGist(OTRO_ID, true, 50_000)];
+  /** Cuenta con un canal público de `sizeBytes` cuyo fichero ancla llega con `content`. */
+  function stubCanal(gistId: string, sizeBytes: number, content: string) {
+    listResponse = [ownGist(gistId, true, sizeBytes)];
     vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
       if (String(url).endsWith('/gists?per_page=100')) {
         return new Response(JSON.stringify(listResponse), { status: 200, headers: { 'content-type': 'application/json' } });
@@ -164,13 +160,31 @@ describe('ensureSecretSocialGist', () => {
         created = { public: true };
         return new Response(JSON.stringify({ id: NUEVO_ID }), { status: 201 });
       }
-      // Contenido ilegible → la capa de lectura degrada a payload vacío.
-      return new Response(JSON.stringify({ files: { [SOCIAL_FILE]: { content: '{"roto' } } }), { status: 200 });
+      return new Response(JSON.stringify({ files: { [SOCIAL_FILE]: { content } } }), { status: 200 });
     }));
+  }
+
+  it('NO migra si el origen se lee vacío pero el fichero no lo estaba', async () => {
+    // Segunda red: el tamaño está por debajo del umbral, pero la lectura no devuelve nada. Algo se perdió por el
+    // camino, y clonar ese vacío sobre un canal con contenido sería destruirlo de facto.
+    // Id PROPIO de este test: `readSocialGist` cachea por gist, y reutilizar el de los demás casos serviría el
+    // payload bueno ya cacheado en vez del vacío que se quiere simular.
+    const OTRO_ID = '1234567890abcdef1234567890abcdef';
+    stubCanal(OTRO_ID, 50_000, JSON.stringify({ profile: { name: 'Ada' }, activity: [], posts: [], updatedAt: 1 }));
 
     const result = await ensureSecretSocialGist(TOKEN, OTRO_ID);
 
     expect(result).toMatchObject({ migrated: false, tooLarge: true });
+    expect(created).toBeNull();
+  });
+
+  it('NO migra si el origen es ilegible: la lectura lanza antes de clonar', async () => {
+    // Antes la lectura degradaba el JSON roto a un canal vacío y solo esta función, por el tamaño, lo frenaba. Ahora
+    // `readSocialGist` lanza, y el hub deja la migración para la próxima sesión sin tocar nada.
+    const OTRO_ID = '234567890abcdef1234567890abcdef1';
+    stubCanal(OTRO_ID, 50_000, '{"roto');
+
+    await expect(ensureSecretSocialGist(TOKEN, OTRO_ID)).rejects.toThrow(/ilegible/);
     expect(created).toBeNull();
   });
 
