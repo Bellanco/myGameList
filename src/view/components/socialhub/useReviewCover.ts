@@ -5,6 +5,9 @@ import { peticionDeCaratula } from '../../../core/utils/coverDone';
 import { useCovers } from '../../hooks/useCovers';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
 
+/** `true` = pedir como siempre; `'solo-cache'` = solo lo ya resuelto, sin preguntar a IGDB; `false` = nada. */
+export type CoverAccess = boolean | 'solo-cache';
+
 /**
  * LA CARÁTULA DE FONDO DE UNA RESEÑA. Devuelve la URL con la que se pinta la franja recortada que cruza la
  * tarjeta —el mismo gesto que el renglón del listado de juegos (`_table.scss`, «LA CARÁTULA EN EL RENGLÓN»)— o
@@ -26,9 +29,6 @@ import { useIsAdmin } from '../../hooks/useIsAdmin';
  * El tamaño es el `ancho` del renglón por lo mismo que allí: la franja es apaisada y recorta una banda de una
  * imagen vertical, así que la pequeña llega estirada casi seis veces y lo que queda es una mancha.
  */
-/** `true` = pedir como siempre; `'solo-cache'` = solo lo ya resuelto, sin preguntar a IGDB; `false` = nada. */
-export type CoverAccess = boolean | 'solo-cache';
-
 export function useReviewCover(acceso: CoverAccess = true): (name: string, platforms?: readonly string[]) => string | null {
   const { covers } = useCovers();
   // El modo ampliado (DLC, packs y mods) tiene su propio espacio de caché: se pide con la misma clave con la que
