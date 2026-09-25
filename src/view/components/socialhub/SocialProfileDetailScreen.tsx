@@ -498,11 +498,10 @@ function SocialProfileDetailScreenBase({
                   SOCIAL_UI={SOCIAL_UI}
                   reviews={reviews}
                   onOpenReview={onOpenReview}
-                  /* MISMA REGLA QUE SU TABLA DE JUEGOS, unas líneas más abajo: las carátulas de lo que hay en la
-                     estantería de otra persona son el gasto que menos se puede acotar del servicio, así que la
-                     franja se le concede al rango que paga los privilegios. Encima manda la preferencia de quien
-                     mira, que viene apagada de fábrica (ver `useReviewCover`). */
-                  coversAllowed={viewerTier === ADMIN_ONLY_TIER}
+                  /* MISMA REGLA QUE SU TABLA DE JUEGOS, unas líneas más abajo: de la estantería de otra persona
+                     se enseña lo que el servidor ya tenga resuelto, sin resolver nada. Encima manda la
+                     preferencia de quien mira, que viene apagada de fábrica (ver `useReviewCover`). */
+                  coversAllowed="solo-cache"
                 />
               </div>
             </div>
@@ -556,17 +555,16 @@ function SocialProfileDetailScreenBase({
                     sort={sortByTab[currentTab]}
                     onSort={handleSort}
                     readOnly
-                    /* LAS CARÁTULAS AJENAS, SOLO PARA MITHRIL —de momento—. Tu biblioteca la calienta el
+                    /* LAS CARÁTULAS AJENAS, PARA TODOS Y SIN RESOLVER NADA. Tu biblioteca la calienta el
                        recorrido de fondo una vez y ya está resuelta; la de otra persona es un catálogo entero de
-                       juegos que tú no tienes, y se multiplica por cada perfil que abras. Es el gasto que menos
-                       se puede acotar del servicio, así que hasta que haya números para decidir (ver el contador
-                       del día en el panel) se le concede al rango que paga los privilegios, como la franja ancha
-                       del renglón.
-                       Los demás ven la MISMA lista sin imágenes, que es la vista que ya existe con la
-                       preferencia apagada. Y cuando se desbloquee, se quita esta línea y vuelve a mandar el
-                       check de cada uno: no hay nada más que deshacer. */
+                       juegos que tú no tienes, y se multiplica por cada perfil que abras. Resolverlo gastaría
+                       escrituras de KV, que son de la cuenta entera y las necesitan los enlaces compartidos, así
+                       que aquí solo se enseña lo que el servidor YA tiene (`c=1`, ver `functions/cover.ts`): en
+                       la práctica casi todo, porque cada amigo con las carátulas encendidas resuelve su propia
+                       biblioteca. Lo que falte sale sin imagen, igual que con la preferencia apagada.
+                       Encima de esto sigue mandando el check de cada uno. */
                     coverPolicy={{
-                      allowed: viewerTier === ADMIN_ONLY_TIER,
+                      cachedOnly: true,
                       /* Y las que se pidan, reaprovechando lo ya descargado: si de ese título ya hay carátula en
                          este navegador, se pide con SUS plataformas y la sirve la caché sin salir a la red. Aquí
                          es donde más vale, porque el mismo juego aparece con la estantería de otra persona

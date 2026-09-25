@@ -229,6 +229,19 @@ export const PREMIOS_UI = {
     back: 'Volver al panel',
     tabs: { season: 'Temporada', categories: 'Categorías' },
 
+    /**
+     * El resumen de resolver las carátulas de los nominados, que se añade al aviso de abrir la edición o de
+     * guardar una categoría. Las fallidas son las que importan: esas no las verá nadie hasta reintentarlo.
+     */
+    covers: {
+      summary: (con: number, sin: number, fallidas: number) => {
+        const partes = [`Carátulas: ${con} lista(s)`];
+        if (sin) partes.push(`${sin} sin carátula en IGDB`);
+        if (fallidas) partes.push(`${fallidas} sin poder resolver (vuelve a guardar la categoría para reintentarlo)`);
+        return `${partes.join(', ')}.`;
+      },
+    },
+
     season: {
       title: 'La edición',
 

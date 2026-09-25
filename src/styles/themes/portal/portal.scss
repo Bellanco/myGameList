@@ -50,8 +50,15 @@
 :root[data-palette="portal"] .hub-feed-date,
 :root[data-palette="portal"] .hub-review-date { font-family: var(--font-mono); }
 
-/* ── §2 · Fondo: rejilla tenue de paneles de sala de pruebas (juntas azuladas). ── */
-:root[data-palette="portal"] body {
+/* ── §2 · Fondo: rejilla tenue de paneles de sala de pruebas (juntas azuladas).
+
+   EN UNA CAPA FIJA PROPIA Y NO EN EL FONDO DEL `body`, por la deriva de los efectos (ver EFECTOS, abajo):
+   animar el `background-position` del `body` repinta la página entera en cada fotograma. Medido (build,
+   300 juegos, 1440 px): 8,5 s de rasterizado al bajar en renglones contra 2,8 s de Forja, y el compositor
+   enseñaba el fondo en vez de las filas. En su capa, la deriva es un `transform` que no repinta. Sobra por
+   arriba y por la izquierda una celda (lo que recorre la deriva), para que no se vea el borde. ── */
+:root[data-palette="portal"] body::before {
+  content: ''; position: fixed; inset: -46px 0 0 -46px; pointer-events: none; z-index: -1;
   background-image:
     linear-gradient(rgba(41, 182, 246, .05) 1px, transparent 1px),
     linear-gradient(90deg, rgba(41, 182, 246, .05) 1px, transparent 1px);
@@ -293,10 +300,10 @@
 }
 
 /* ══ EFECTOS · deriva lenta de las juntas de panel de la sala de pruebas. Solo con `data-effects="on"`
-   y reduced-motion. Recorrido de 46px (una celda) sin costura; dos capas de rejilla → dos posiciones. ══ */
+   y reduced-motion. Recorrido de 46px (una celda) sin costura: se mueve la capa entera, así que las dos rejillas van juntas. ══ */
 @media (prefers-reduced-motion: no-preference) {
-  :root[data-effects="on"][data-palette="portal"] body { animation: portal-seam-drift 34s linear infinite; }
-  @keyframes portal-seam-drift { to { background-position: 46px 46px, 46px 46px; } }
+  :root[data-effects="on"][data-palette="portal"] body::before { animation: portal-seam-drift 34s linear infinite; }
+  @keyframes portal-seam-drift { to { transform: translate3d(46px, 46px, 0); } }
 }
 
 /* ══ Preferencia de efectos OFF: detiene el parpadeo FLUORESCENTE de chips y cabeceras de día (portal-fluoro).

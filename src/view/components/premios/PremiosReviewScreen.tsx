@@ -7,7 +7,6 @@ import { coverUrl } from '../../../core/utils/coverUrl';
 import { votePath } from '../../../viewmodel/premios/premiosRoutes';
 import type { PremiosCategory } from '../../../model/types/premios';
 import type { PremiosVotes } from '../../../viewmodel/premios/usePremiosVoting';
-import { useCovers } from '../../hooks/useCovers';
 import { GameCover } from '../GameCover';
 import { PremiosProgress } from './PremiosProgress';
 
@@ -62,7 +61,6 @@ export function PremiosReviewScreen({
   readOnly = false,
 }: PremiosReviewScreenProps) {
   const [name, setName] = useState(defaultName);
-  const { covers } = useCovers();
 
   const votadas = categories.filter((category) => Boolean(votes[category.id])).length;
   const pendientes = categories.length - votadas;
@@ -142,41 +140,40 @@ export function PremiosReviewScreen({
         {categories.map((category, index) => {
           const vote = votes[category.id];
           const titulo = getCategoryTitle(category);
+          const clase = `premios-review__card${vote ? '' : ' is-empty'}`;
+          const contenido = (
+            <>
+              {/* La misma caja que en la votación, con la portada de lo votado —que es como se reconoce un juego
+                  de un vistazo— y pedida igual, solo de lo ya resuelto (ver `NomineeCard`). Sin voto el hueco se
+                  queda VACÍO, sin la portada de casa del nombre de la categoría: ese nombre ya va debajo, y las
+                  dos juntas lo decían dos veces. */}
+              <span className={`premios-review__slot${vote ? '' : ' is-empty'}`}>
+                {vote ? (
+                  <GameCover
+                    name={vote.name}
+                    src={coverUrl(vote.name, [], false, 'normal', true)}
+                    src2x={coverUrl(vote.name, [], false, 'medio', true)}
+                  />
+                ) : null}
+              </span>
+              <span className="premios-review__card-body">
+                <span className="premios-review__cat">{titulo}</span>
+                <span className="premios-review__pick">{vote ? vote.name : L.notVoted}</span>
+              </span>
+            </>
+          );
           return (
             <li key={category.id}>
-              {(() => {
-                const clase = `premios-review__card${vote ? '' : ' is-empty'}${covers ? '' : ' is-flat'}`;
-                const Caja = readOnly
-                  ? ({ children }: { children: React.ReactNode }) => <div className={clase}>{children}</div>
-                  : ({ children }: { children: React.ReactNode }) => (
-                    <Link className={clase} to={votePath(index + 1)} aria-label={L.goToCategory(titulo)}>
-                      {children}
-                    </Link>
-                  );
-                return (
-                  <Caja>
-                {/* La misma caja que en la votación, y con la misma regla: con las imágenes encendidas se ve la
-                    portada de lo votado —que es como se reconoce un juego de un vistazo—, y apagadas la tarjeta
-                    se queda en sus dos líneas de texto. Sin voto el hueco se queda VACÍO, sin la portada de casa
-                    del nombre de la categoría: ese nombre ya va debajo, y las dos juntas lo decían dos veces. */}
-                {covers ? (
-                  <span className={`premios-review__slot${vote ? '' : ' is-empty'}`}>
-                    {vote ? (
-                      <GameCover
-                        name={vote.name}
-                        src={coverUrl(vote.name)}
-                        src2x={coverUrl(vote.name, [], false, 'medio')}
-                      />
-                    ) : null}
-                  </span>
-                ) : null}
-                    <span className="premios-review__card-body">
-                      <span className="premios-review__cat">{titulo}</span>
-                      <span className="premios-review__pick">{vote ? vote.name : L.notVoted}</span>
-                    </span>
-                  </Caja>
-                );
-              })()}
+              {/* La caja se elige AQUÍ, en el marcado, y no con un componente definido dentro del `map`: ese
+                  componente era un tipo nuevo en cada render, y React desmontaba y volvía a montar todo lo de
+                  dentro. Cada tecla en el nombre reiniciaba las carátulas y repetía sus peticiones. */}
+              {readOnly ? (
+                <div className={clase}>{contenido}</div>
+              ) : (
+                <Link className={clase} to={votePath(index + 1)} aria-label={L.goToCategory(titulo)}>
+                  {contenido}
+                </Link>
+              )}
             </li>
           );
         })}

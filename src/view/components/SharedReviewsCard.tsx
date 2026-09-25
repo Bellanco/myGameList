@@ -1,15 +1,33 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SHARE_UI } from '../../core/constants/shareLabels';
 import { copyText } from '../../core/utils/clipboard';
 import { Icon } from './Icon';
 import { ConfirmModal } from '../modals/ConfirmModal';
-import { useShareViewModel } from '../../viewmodel/useShareViewModel';
+import { shareDraftOf, useShareViewModel } from '../../viewmodel/useShareViewModel';
+import { TAB_IDS, type GameItem, type TabData } from '../../model/types/game';
 
 const DAY_FORMAT = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' });
 
 /** Días que le quedan a un enlace, redondeando hacia arriba: mientras quede algo del día, "caduca en 1 día". */
 function daysLeft(expiresAt: number): number {
   return Math.ceil((expiresAt - Date.now()) / 86_400_000);
+}
+
+/**
+ * Tus reseñas con texto, por juego, tal y como están ahora en la biblioteca. Es lo que se republica al renovar:
+ * un enlace cuyo juego ya no está, o cuya reseña se ha vaciado, no tiene con qué rehacerse.
+ */
+function reviewsById(games: TabData): Map<number, { game: GameItem; reviewText: string }> {
+  const index = new Map<number, { game: GameItem; reviewText: string }>();
+  for (const tab of TAB_IDS) {
+    for (const game of games[tab] || []) {
+      const reviewText = String(game.review || '').trim();
+      if (reviewText && game?.name?.trim()) {
+        index.set(game.id, { game, reviewText });
+      }
+    }
+  }
+  return index;
 }
 
 /**
@@ -20,9 +38,17 @@ function daysLeft(expiresAt: number): number {
  *
  * Retirar pide confirmación y se llama "Dejar de compartir", nunca "Borrar": deja el enlace inaccesible, pero no
  * recoge las copias que ya circulen. Prometer un borrado sería mentir.
+ *
+ * Renovar es lo mismo que en el detalle de la reseña: rehace el MISMO enlace con el texto de ahora y le devuelve
+ * su duración completa, sin gastar cuota. Solo se ofrece si la reseña sigue en la biblioteca.
  */
-export const SharedReviewsCard = memo(function SharedReviewsCard({ enabled }: { enabled: boolean }) {
+export const SharedReviewsCard = memo(function SharedReviewsCard({ enabled, games }: { enabled: boolean; games: TabData }) {
   const vm = useShareViewModel();
+  const reviews = useMemo(() => reviewsById(games), [games]);
+  const [renewingToken, setRenewingToken] = useState<string | null>(null);
+  // Mismo acuse pasajero que el de copiar: dice que ha funcionado y se retira solo.
+  const [renewedToken, setRenewedToken] = useState<string | null>(null);
+  const renewedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [pending, setPending] = useState<{ token: string; gameName: string } | null>(null);
   // Token cuyo enlace se acaba de copiar: el botón lo dice y se retira solo. Es un acuse de un gesto, no un
   // estado de la pantalla, y dejarlo fijo hace dudar de a qué enlace se refiere tras el segundo clic.
@@ -31,7 +57,24 @@ export const SharedReviewsCard = memo(function SharedReviewsCard({ enabled }: { 
 
   useEffect(() => () => {
     if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    if (renewedTimerRef.current) clearTimeout(renewedTimerRef.current);
   }, []);
+
+  const renew = useCallback(async (token: string, gameId: number) => {
+    const source = reviews.get(gameId);
+    if (!source) {
+      return;
+    }
+    setRenewingToken(token);
+    setRenewedToken(null);
+    const published = await vm.share(shareDraftOf(source.game, source.reviewText));
+    setRenewingToken(null);
+    if (published) {
+      setRenewedToken(published.token);
+      if (renewedTimerRef.current) clearTimeout(renewedTimerRef.current);
+      renewedTimerRef.current = setTimeout(() => setRenewedToken(null), 4000);
+    }
+  }, [reviews, vm]);
 
   /**
    * Antes esto era `void navigator.clipboard?.writeText(...)` a pelo. Dos fallos en una línea: sin `catch`, el
@@ -88,6 +131,9 @@ export const SharedReviewsCard = memo(function SharedReviewsCard({ enabled }: { 
                 <span>
                   {DAY_FORMAT.format(new Date(entry.createdAt))} · {SHARE_UI.expiresIn(daysLeft(entry.expiresAt))}
                 </span>
+                {renewedToken === entry.token ? (
+                  <span className="settings-shares-item-note" role="status">{SHARE_UI.renewed}</span>
+                ) : null}
               </div>
               <div className="settings-shares-item-actions">
                 <button
@@ -98,10 +144,21 @@ export const SharedReviewsCard = memo(function SharedReviewsCard({ enabled }: { 
                   <Icon name="sync-copy" />
                   <span>{copiedToken === entry.token ? SHARE_UI.copied : SHARE_UI.copyLink}</span>
                 </button>
+                {reviews.has(entry.gameId) ? (
+                  <button
+                    className="btn btn-secondary"
+                    type="button"
+                    disabled={renewingToken !== null || vm.busyToken === entry.token}
+                    onClick={() => void renew(entry.token, entry.gameId)}
+                  >
+                    <Icon name="refresh" />
+                    <span>{renewingToken === entry.token ? SHARE_UI.renewing : SHARE_UI.renew}</span>
+                  </button>
+                ) : null}
                 <button
                   className="btn btn-danger"
                   type="button"
-                  disabled={vm.busyToken === entry.token}
+                  disabled={vm.busyToken === entry.token || renewingToken === entry.token}
                   onClick={() => setPending({ token: entry.token, gameName: entry.gameName })}
                 >
                   {vm.busyToken === entry.token ? SHARE_UI.revoking : SHARE_UI.revoke}

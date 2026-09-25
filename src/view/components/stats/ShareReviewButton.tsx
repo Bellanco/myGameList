@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useState } from 'react';
 import { SHARE_UI } from '../../../core/constants/shareLabels';
 import { Icon } from '../Icon';
 import { ShareReviewModal } from '../../modals/ShareReviewModal';
-import { useShareViewModel } from '../../../viewmodel/useShareViewModel';
+import { shareDraftOf, useShareViewModel } from '../../../viewmodel/useShareViewModel';
 import type { GameItem } from '../../../model/types/game';
 
 /**
@@ -48,18 +48,7 @@ export const ShareReviewButton = memo(function ShareReviewButton({ game, reviewT
   const daysLeft = existing ? Math.ceil((existing.expiresAt - Date.now()) / 86_400_000) : 0;
 
   const confirm = useCallback(async () => {
-    const published = await vm.share({
-      gameId: game.id,
-      gameName: String(game.name || '').trim(),
-      grade: typeof game.grade === 'number' ? game.grade : null,
-      rating: typeof game.score === 'number' ? game.score : null,
-      review: reviewText,
-      platforms: game.platforms || [],
-      genres: game.genres || [],
-      strengths: game.strengths || [],
-      weaknesses: game.weaknesses || [],
-      reviewedAt: Number(game.reviewedAt) || Number(game._ts) || 0,
-    });
+    const published = await vm.share(shareDraftOf(game, reviewText));
     if (published) {
       setPublishedUrl(published.url);
       setRenewed(published.renewed);

@@ -82,12 +82,23 @@ describe('PremiosVoteScreen', () => {
     await waitFor(() => expect(screen.getByTestId('ruta')).toHaveTextContent('/premios/revisar'));
   });
 
-  // El reparto lo decide `gridDensity` midiendo el contenedor: con 5 nominados y 1280 px de hueco toca 3+2, que
-  // es lo que evita dejar una tarjeta sola en la última fila.
+  // El reparto lo decide `gridDensity` midiendo el contenedor. Las tarjetas llevan siempre carátula —estrechas y
+  // altas—, así que con 5 nominados y 1280 px de hueco caben los cinco en una sola fila.
+  /* CARÁTULAS PARA TODOS, con el check de imágenes apagado —que es el de fábrica—, y SOLO LO YA RESUELTO (`c=1`):
+     las resuelve el panel al abrir la edición o guardar la categoría, así que votar no consulta IGDB ni escribe
+     en KV por mucha gente que entre (decidido el 24-09-2026). */
+  it('enseña la carátula de cada nominado aunque el check de imágenes esté apagado, pidiendo solo lo resuelto', () => {
+    localStorage.removeItem('mis-listas-covers');
+    renderPantalla(1);
+    const imagenes = [...document.querySelectorAll('.premios-nominee .game-cover-img')];
+    expect(imagenes.length).toBeGreaterThan(0);
+    for (const img of imagenes) expect(img.getAttribute('src')).toContain('c=1');
+  });
+
   it('reparte las columnas según el hueco medido, no con auto-fit', () => {
     renderPantalla(1);
     const grid = document.querySelector('.premios-vote__grid') as HTMLElement;
-    expect(grid.style.getPropertyValue('--premios-cols')).toBe('3');
+    expect(grid.style.getPropertyValue('--premios-cols')).toBe('5');
   });
 
   // EL PIE DE LA VOTACIÓN: anterior, siguiente y finalizar, siempre a la vista. «Finalizar» no espera a la

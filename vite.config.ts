@@ -14,6 +14,7 @@ import { sanitizePremiosSnapshot } from './src/core/premios/visibilitySnapshot';
 // carátulas con otras reglas, probar en local no demostraría nada sobre producción.
 import {
   esIdDeCaratula,
+  leerCaratulaCacheada,
   MAX_NOMBRE,
   resolverCaratula,
   tamanoPedido,
@@ -423,10 +424,20 @@ function localCoverApi(): Plugin {
         const soloMapa = url.searchParams.get('m') === '1';
         const ampliado = url.searchParams.get('x') === '1';
         const tamano = tamanoPedido(url.searchParams.get('s'));
+        // `c=1`: solo lo ya resuelto, igual que en producción (ver `functions/cover.ts`).
+        const soloCache = url.searchParams.get('c') === '1';
 
         void (async () => {
           try {
-            const coverId = await resolverCaratula(env, nombre, plataformas, ampliado);
+            const cacheada = soloCache ? await leerCaratulaCacheada(env, nombre, plataformas, ampliado) : null;
+            if (soloCache && cacheada === undefined) {
+              res.statusCode = 404;
+              res.setHeader('Cache-Control', 'private, max-age=3600');
+              res.setHeader('X-Cover', 'sin-resolver');
+              res.end('Carátula aún sin resolver');
+              return;
+            }
+            const coverId = soloCache ? cacheada : await resolverCaratula(env, nombre, plataformas, ampliado);
             if (!coverId) {
               res.statusCode = 404;
               res.setHeader('Cache-Control', 'no-store');

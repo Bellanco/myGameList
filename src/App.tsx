@@ -975,7 +975,7 @@ export default function App() {
 
       <Suspense fallback={<ScreenSkeleton />}>
         {settingsGroup === 'design' ? (
-          <PersonalizationSettings scoreScaleUid={scoreScaleUid} hasSocialProfile={hasSocialProfile} />
+          <PersonalizationSettings scoreScaleUid={scoreScaleUid} hasSocialProfile={hasSocialProfile} games={vm.data} />
         ) : settingsGroup === 'filters' ? (
           <FiltersSettings lookups={vm.lookups} onEditTag={handleEditTag} onDeleteTag={handleDeleteTag} />
         ) : settingsGroup === null ? (

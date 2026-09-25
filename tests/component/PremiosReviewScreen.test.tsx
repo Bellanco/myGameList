@@ -73,6 +73,33 @@ describe('PremiosReviewScreen', () => {
     expect(screen.getByRole('button', { name: L.submit })).toBeDisabled();
   });
 
+  /* Escribir el nombre NO vuelve a montar las carátulas. Con la caja definida como componente dentro del render,
+     cada tecla desmontaba la imagen, reiniciaba su carga y volvía a pedir los 404 que nadie cachea. */
+  it('escribir el nombre no vuelve a montar las carátulas de lo votado', async () => {
+    const { container } = render(
+      <MemoryRouter>
+        <PremiosReviewScreen
+          categories={categories}
+          votes={completa}
+          defaultName="Ana"
+          remainingOpportunities={5}
+          isEdit={false}
+          submitting={false}
+          error=""
+          onSubmit={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+    const antes = container.querySelector('.premios-review__slot img');
+    expect(antes).not.toBeNull();
+    // Y se piden solo de lo ya resuelto, como en la votación.
+    expect(antes?.getAttribute('src')).toContain('c=1');
+
+    await userEvent.type(screen.getByLabelText(L.nameLabel), 'bel');
+
+    expect(container.querySelector('.premios-review__slot img')).toBe(antes);
+  });
+
   // La rejilla es un índice: cada tarjeta lleva a su categoría, votada o no.
   it('cada categoría lleva a su paso de la votación', () => {
     pintar({ goty: completa.goty });
@@ -98,7 +125,8 @@ describe('PremiosReviewScreen', () => {
     it('enseña la papeleta sin el nombre ni el botón de enviar', () => {
       pintar(completa, vi.fn(), true);
 
-      expect(screen.getByText('Uno')).toBeInTheDocument();
+      // Con el selector: el nombre sale también en la portada de casa de la carátula.
+      expect(screen.getByText('Uno', { selector: '.premios-review__pick' })).toBeInTheDocument();
       expect(screen.queryByLabelText(L.nameLabel)).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: L.submit })).not.toBeInTheDocument();
       // Y NO SE AFIRMA NADA sobre las oportunidades ni se promete poder cambiar: aquí se llega con el cupo

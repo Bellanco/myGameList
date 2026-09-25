@@ -632,11 +632,11 @@ casa que aplican desde la primera línea: **ningún hex en un componente**, **ni
 
 Tres puntos concretos de cuidado:
 
-- **`gridDensity`** decide cuántas columnas de nominados caben. **Recalibrado el 20-09-2026**, y no con un número
-  nuevo sino con una bifurcación: la caja del nominado ya no es siempre tipográfica, así que el reparto depende de
-  si lleva **carátula** (`withCovers`). Con portada es la pieza del mosaico de la biblioteca —~205 px, la
-  calibración de `GRID_CARD_MIN_PX` de `GameTable`— y sin ella la tarjeta ancha de texto que traía la porra. La
-  regla de la fila huérfana (`balanceColumns`) manda por encima de las dos.
+- **`gridDensity`** decide cuántas columnas de nominados caben. **Recalibrado el 20-09-2026** con una bifurcación
+  según si la caja llevaba **carátula** (`withCovers`), y **simplificado el 24-09-2026**: la tarjeta lleva siempre
+  portada y la de solo texto se retiró, así que queda una sola calibración, la de la pieza del mosaico de la
+  biblioteca —~205 px, la de `GRID_CARD_MIN_PX` de `GameTable`—. La regla de la fila huérfana
+  (`balanceColumns`) manda por encima.
 - **`AutoSizeText`** busca el mayor cuerpo de letra que quepa. No se ha portado: el nombre del nominado se acota a
   dos líneas con la escala de la casa (`-webkit-line-clamp`), que es lo que hace el resto de la aplicación. Si
   alguna vez hace falta el ajuste fino, que sea **entre pasos de la escala** y no en píxeles libres.
@@ -925,9 +925,13 @@ el principio rector sin discutir de gustos.
 4. **El presupuesto de arranque no se mueve**: ningún módulo de la porra entra en el grafo crítico
    (`scripts/ci-validate.js`), igual que no entra el hub social.
 5. **La barra inferior sigue teniendo cuatro pestañas** y su test de anchos sigue en verde.
-6. **Los nominados se ven con la caja de la biblioteca**: la misma ranura de `GameCover`, la misma carátula
-   servida por `/cover` y la misma preferencia de imágenes que el mosaico — encendida, portadas; apagada, ninguna
-   petición. Es la comprobación de que las dos mitades se hablan, y la que ninguna capa de estilo puede fingir.
+6. **Los nominados se ven con la caja de la biblioteca**: la misma ranura de `GameCover` y la misma carátula
+   servida por `/cover`. Es la comprobación de que las dos mitades se hablan, y la que ninguna capa de estilo puede
+   fingir.
+
+   *(Revisado el 24-09-2026.)* Ya **no** depende de la preferencia de imágenes: los nominados salen con carátula
+   para todo el mundo. Se piden con `c=1` —solo lo ya resuelto— y las resuelve el panel al abrir la edición y al
+   guardar cada categoría (`resolverCaratulasDeNominados`), así que votar no consulta IGDB ni escribe en KV.
 
    *(Revisado el 20-09-2026.)* Este punto pedía antes que en la tarjeta se reconociera **tu** juego —«lo
    terminaste, tu nota»—; esa marca se retiró (§6.5) y con ella se fue el único consumidor de

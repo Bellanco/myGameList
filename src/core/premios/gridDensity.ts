@@ -8,10 +8,8 @@
  * LOS DATOS REALES MANDAN: las categorías tienen entre 4 y 6 nominados (la mayoría 5), con nombres de hasta unos
  * 46 caracteres. El reparto está afinado para 4-7, que es el caso normal, sin dejar de funcionar fuera de ahí.
  *
- * ⚠️ ESTA CALIBRACIÓN ESTÁ MEDIDA CONTRA OTRA MAQUETA. Los números vienen de la aplicación de origen, que usaba
- * utilidades de Tailwind: otros márgenes, otro interlineado y otra tipografía. Al rehacer la pantalla con el
- * sistema de esta casa (F3 del plan) hay que VOLVER A MEDIR los anchos mínimos y los topes de columnas — lo que
- * no cambia es la forma de repartir, que es lo que estas pruebas protegen.
+ * Los anchos mínimos salen del mosaico de la biblioteca (ver `densityFor`); lo que protegen las pruebas es la
+ * forma de repartir, sobre todo que no quede una tarjeta sola en la última fila.
  */
 
 /**
@@ -42,15 +40,6 @@ export interface GridContext {
   optionCount: number;
   isMobile: boolean;
   isLandscape: boolean;
-  /**
-   * ¿Las tarjetas llevan CARÁTULA?
-   *
-   * Cambia la caja entera, no un detalle: con portada 3:4 la tarjeta es estrecha y alta —la misma pieza del
-   * mosaico de la biblioteca, que se calibró en 205 px— y con muchas columnas se lee como una estantería. Sin
-   * portada solo hay un título centrado, y a 205 px eso son tarjetas diminutas con tres palabras dentro: ahí la
-   * tarjeta quiere ancho, que es la calibración que traía la porra de origen.
-   */
-  withCovers?: boolean;
 }
 
 interface Density {
@@ -59,13 +48,16 @@ interface Density {
 }
 
 /**
- * Densidad de la tarjeta CON CARÁTULA: la misma caja que el mosaico de la biblioteca.
+ * Ancho mínimo de tarjeta y tope de columnas para cada situación.
  *
- * Los anchos son los de `GRID_CARD_MIN_PX` de `GameTable` (150 / 205 / 268 según la perilla), tomando el paso
- * de en medio: es la medida con la que una portada 3:4 se lee como portada y el título cabe debajo en dos
- * líneas. Aquí no hay perilla, así que se escala con el hueco disponible.
+ * LA TARJETA LLEVA SIEMPRE CARÁTULA (ver `NomineeCard`), así que es la misma caja que el mosaico de la
+ * biblioteca: estrecha y alta, con portada 3:4. Los anchos son los de `GRID_CARD_MIN_PX` de `GameTable`
+ * (150 / 205 / 268 según la perilla), tomando el paso de en medio: es la medida con la que una portada 3:4 se lee
+ * como portada y el título cabe debajo en dos líneas. Aquí no hay perilla, así que se escala con el hueco
+ * disponible. La calibración de la tarjeta sin portada, que traía la porra de origen, se retiró con esa tarjeta
+ * el 24-09-2026.
  */
-function coverDensityFor({ width, isMobile, isLandscape }: GridContext): Density {
+function densityFor({ width, isMobile, isLandscape }: GridContext): Density {
   if (isMobile && !isLandscape) {
     // Dos columnas en un teléfono, igual que el mosaico: con tres, la portada baja de 110 px y deja de serlo.
     return width <= 360 ? { minCardWidthPx: 145, maxColumns: 2 } : { minCardWidthPx: 155, maxColumns: 3 };
@@ -75,54 +67,6 @@ function coverDensityFor({ width, isMobile, isLandscape }: GridContext): Density
   if (width < 1280) return { minCardWidthPx: 195, maxColumns: 5 };
   if (width < 1600) return { minCardWidthPx: 205, maxColumns: 6 };
   return { minCardWidthPx: 215, maxColumns: 7 };
-}
-
-/** Ancho mínimo de tarjeta y tope de columnas para cada situación. */
-function densityFor({ width, optionCount, isMobile, isLandscape, withCovers }: GridContext): Density {
-  if (withCovers) return coverDensityFor({ width, optionCount, isMobile, isLandscape });
-
-  const isMobilePortrait = isMobile && !isLandscape;
-
-  if (isMobilePortrait) {
-    // Hasta 430 px se mantienen dos columnas para evitar el salto brusco de 5 nominados en dos columnas y 6 en
-    // tres, que en un móvil de tamaño medio se nota mucho.
-    if (width <= 360) return { minCardWidthPx: 130, maxColumns: 2 };
-    if (width <= 430) return { minCardWidthPx: 150, maxColumns: 2 };
-    // Móviles grandes: la tercera columna solo compensa con muchos nominados; con 4 o 5 las tarjetas quedarían
-    // más estrechas que el propio texto.
-    if (optionCount >= 6) return { minCardWidthPx: 160, maxColumns: 3 };
-    return { minCardWidthPx: 180, maxColumns: 2 };
-  }
-
-  if (isMobile && isLandscape) {
-    // Apaisado lo escaso es el ALTO: más columnas para que quepan sin scroll.
-    if (optionCount <= 4) return { minCardWidthPx: 165, maxColumns: 4 };
-    if (optionCount <= 6) return { minCardWidthPx: 180, maxColumns: 3 };
-    return { minCardWidthPx: 165, maxColumns: 4 };
-  }
-
-  // Tablet vertical. Dos columnas dejaban tarjetas larguísimas y tres filas con scroll con 6 nominados. La cuarta
-  // columna se abre solo a partir de 7, donde tres dejarían una tarjeta sola en la última fila (3+3+1).
-  if (width < 900) {
-    return optionCount >= 7
-      ? { minCardWidthPx: 175, maxColumns: 4 }
-      : { minCardWidthPx: 205, maxColumns: 3 };
-  }
-
-  // Portátiles pequeños y tablets apaisadas.
-  if (width < 1280) {
-    return optionCount >= 7
-      ? { minCardWidthPx: 210, maxColumns: 4 }
-      : { minCardWidthPx: 230, maxColumns: 3 };
-  }
-
-  // Portátiles y monitores normales.
-  if (width < 1600) return { minCardWidthPx: 240, maxColumns: 4 };
-
-  // Monitores grandes: caben cinco o seis en una sola fila, que es lo ideal para una categoría de ese tamaño.
-  if (width < 2000) return { minCardWidthPx: 250, maxColumns: 6 };
-
-  return { minCardWidthPx: 280, maxColumns: 7 };
 }
 
 /**
@@ -160,11 +104,11 @@ export function balanceColumns(maxColumns: number, optionCount: number): number 
  * Nunca más columnas que nominados, ni más de las que caben por ancho, ni más que el tope de la calibración; y
  * dentro de eso, el reparto más equilibrado.
  */
-export function getGridColumns({ width, optionCount, isMobile, isLandscape, withCovers }: GridContext): number {
+export function getGridColumns({ width, optionCount, isMobile, isLandscape }: GridContext): number {
   // Sin restar ningún margen: `width` YA es el hueco disponible (ver `GridContext`). El `- 24` que había aquí
   // descontaba dos veces el mismo espacio y estrechaba las tarjetas sin motivo.
   const safeWidth = Math.max(320, width || 320);
-  const density = densityFor({ width: width || 320, optionCount, isMobile, isLandscape, withCovers });
+  const density = densityFor({ width: width || 320, optionCount, isMobile, isLandscape });
 
   const columnsByWidth = Math.max(1, Math.floor(safeWidth / density.minCardWidthPx));
   const fitting = Math.min(density.maxColumns, columnsByWidth);

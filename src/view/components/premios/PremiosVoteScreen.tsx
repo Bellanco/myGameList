@@ -6,7 +6,6 @@ import { getGridColumns } from '../../../core/premios/gridDensity';
 import { PREMIOS_ROUTES, votePath } from '../../../viewmodel/premios/premiosRoutes';
 import type { PremiosCategory, PremiosOption } from '../../../model/types/premios';
 import type { PremiosVotes } from '../../../viewmodel/premios/usePremiosVoting';
-import { useCovers } from '../../hooks/useCovers';
 import { NomineeCard } from './NomineeCard';
 import { usePosicionSuperior } from './usePosicionSuperior';
 import { PremiosProgress } from './PremiosProgress';
@@ -52,7 +51,6 @@ export function PremiosVoteScreen({
   const sectionRef = useRef<HTMLElement | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
   const [ancho, setAncho] = useState(0);
-  const { covers } = useCovers();
   const top = usePosicionSuperior(sectionRef);
 
   // SE MIDE EL CONTENEDOR, NO LA VENTANA, que es como mide el resto de esta app (ver `GameTable`,
@@ -96,11 +94,8 @@ export function PremiosVoteScreen({
       // aquí: que la columna es estrecha. Un móvil apaisado y una ventana pequeña en un monitor reparten igual.
       isMobile: ancho < 640,
       isLandscape: typeof window !== 'undefined' && window.innerWidth > window.innerHeight,
-      // La caja cambia de forma con la preferencia de imágenes, y con ella el reparto: estrecha y alta con
-      // portada, ancha y baja cuando solo hay un título.
-      withCovers: covers,
     });
-  }, [ancho, covers, nominados.length]);
+  }, [ancho, nominados.length]);
 
   const irA = useCallback(
     (destino: string) => {
@@ -146,7 +141,6 @@ export function PremiosVoteScreen({
               key={option.id}
               option={option}
               selected={elegido?.id === option.id}
-              covers={covers}
               onChoose={(chosen) => {
                 onChoose(category.id, chosen);
                 // Elegir avanza, con una pausa para que dé tiempo a ver la marca. Los botones del pie siguen

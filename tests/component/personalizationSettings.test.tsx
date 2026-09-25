@@ -16,7 +16,11 @@ import { PersonalizationSettings } from '../../src/view/components/settings/Pers
 const pintar = (scoreScaleUid: string | null, hasSocialProfile = true) =>
   render(
     <MemoryRouter>
-      <PersonalizationSettings scoreScaleUid={scoreScaleUid} hasSocialProfile={hasSocialProfile} />
+      <PersonalizationSettings
+        scoreScaleUid={scoreScaleUid}
+        hasSocialProfile={hasSocialProfile}
+        games={{ c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 }}
+      />
     </MemoryRouter>,
   );
 

@@ -402,8 +402,12 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   gap: 0.15rem;
   font-size: var(--fs-md);
 }
+.settings-shares-item-note {
+  color: var(--text-muted);
+}
 .settings-shares-item-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 

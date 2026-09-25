@@ -6,7 +6,7 @@ import type { IconName } from '../../../core/constants/icons';
 import { HubScreen } from './HubScreen';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
-import { useReviewCover } from './useReviewCover';
+import { useReviewCover, type CoverAccess } from './useReviewCover';
 // Ver `ProfileReviewsList`: esta pantalla la reutiliza el panel de estadísticas para TUS reseñas, y allí no se
 // carga el chunk del hub.
 import '../../../styles/reviews.scss';
@@ -86,7 +86,7 @@ export function ReviewScreen({
   /** Bloque de relacionadas al pie, que monta quien tiene con qué relacionarla. */
   related?: ReactNode;
   /** ¿Se puede pedir la carátula del juego para el fondo? Ver `useReviewCover`. */
-  coversAllowed?: boolean;
+  coversAllowed?: CoverAccess;
   /** La reseña entera viene de camino: se espera con su forma en vez de decir que no existe. */
   screenLoading?: boolean;
   /** El texto completo viene de camino, pero la cabecera ya se puede pintar. */

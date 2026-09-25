@@ -23,6 +23,12 @@ GITHUB_CLIENT_ID = "Ov23ctq0mTkYHf9zqfGB"
 # Identificador del proyecto de Firebase (público: es el mismo que VITE_FIREBASE_PROJECT_ID del build). Con él se
 # valida la audiencia y el emisor del ID token, así que SIN ESTO los endpoints de compartir responden 500.
 FIREBASE_PROJECT_ID = "mylists-f7313"
+# App Check en el borde (functions/_lib/appCheck.ts). El NÚMERO de proyecto y el App ID son públicos (van en el
+# bundle, dentro de VITE_FIREBASE_APP_ID = 1:<número>:web:…). El modo es off | monitor | enforce; si se vacía
+# VITE_RECAPTCHA_SITE_KEY para apagar App Check en el cliente, esto tiene que pasar a "off" en el mismo despliegue.
+FIREBASE_PROJECT_NUMBER = "721023375695"
+FIREBASE_APP_ID = "1:721023375695:web:da7ab55e6d8afc73470d3a"
+APPCHECK_EDGE_MODE = "monitor"
 # Mismo criterio de administrador que `firestore.rules` (isAdmin). Se lee de aquí para no repetir el literal.
 ADMIN_EMAIL = "bellanco3@gmail.com"
 # Client ID PÚBLICO de la aplicación de Twitch con la que se consulta IGDB (carátulas). Como el de GitHub,
@@ -49,6 +55,10 @@ GITHUB_CLIENT_ID = "Ov23ctq0mTkYHf9zqfGB"
 # Identificador del proyecto de Firebase (público: es el mismo que VITE_FIREBASE_PROJECT_ID del build). Con él se
 # valida la audiencia y el emisor del ID token, así que SIN ESTO los endpoints de compartir responden 500.
 FIREBASE_PROJECT_ID = "mylists-f7313"
+# App Check en el borde: ver el bloque de nivel superior.
+FIREBASE_PROJECT_NUMBER = "721023375695"
+FIREBASE_APP_ID = "1:721023375695:web:da7ab55e6d8afc73470d3a"
+APPCHECK_EDGE_MODE = "monitor"
 # Mismo criterio de administrador que `firestore.rules` (isAdmin). Se lee de aquí para no repetir el literal.
 ADMIN_EMAIL = "bellanco3@gmail.com"
 # Client ID PÚBLICO de la aplicación de Twitch con la que se consulta IGDB (carátulas). Como el de GitHub,
@@ -69,6 +79,10 @@ GITHUB_CLIENT_ID = "Ov23ctq0mTkYHf9zqfGB"
 # Identificador del proyecto de Firebase (público: es el mismo que VITE_FIREBASE_PROJECT_ID del build). Con él se
 # valida la audiencia y el emisor del ID token, así que SIN ESTO los endpoints de compartir responden 500.
 FIREBASE_PROJECT_ID = "mylists-f7313"
+# App Check en el borde: ver el bloque de nivel superior.
+FIREBASE_PROJECT_NUMBER = "721023375695"
+FIREBASE_APP_ID = "1:721023375695:web:da7ab55e6d8afc73470d3a"
+APPCHECK_EDGE_MODE = "monitor"
 # Mismo criterio de administrador que `firestore.rules` (isAdmin). Se lee de aquí para no repetir el literal.
 ADMIN_EMAIL = "bellanco3@gmail.com"
 # Client ID PÚBLICO de la aplicación de Twitch con la que se consulta IGDB (carátulas). Como el de GitHub,
