@@ -431,12 +431,13 @@ describe('/cover — solo caché', () => {
     expect(kv.get.mock.calls.map(([clave]) => clave)).toEqual([claveCache('Celeste', [])]);
   });
 
-  it('y ese «aún sin resolver» se distingue del «no tiene» y no se guarda en ninguna caché', async () => {
+  it('y ese «aún sin resolver» se distingue del «no tiene» y solo lo guarda el navegador, una hora', async () => {
     const kv = kvFalso();
     const respuesta = await onRequestGet({ request: peticion('n=Celeste&c=1'), env: entorno(kv) });
 
-    // Guardarlo taparía la carátula el día que la resuelva su dueño.
-    expect(respuesta.headers.get('Cache-Control')).toBe('no-store');
+    // Guardarlo más taparía la carátula el día que la resuelva su dueño; no guardarlo nada repetía la petición
+    // en cada visita y en cada fila que recicla la tabla.
+    expect(respuesta.headers.get('Cache-Control')).toBe('private, max-age=3600');
     expect(respuesta.headers.get('X-Cover')).toBe('sin-resolver');
   });
 

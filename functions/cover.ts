@@ -55,6 +55,18 @@ const CACHE_ACIERTO = 'public, max-age=2592000, stale-while-revalidate=31536000'
 const CACHE_FALLO = 'no-store';
 
 /**
+ * «AÚN SIN RESOLVER» (`c=1`, lo ajeno) SÍ se guarda, pero poco y solo en el navegador. Es la excepción a lo de
+ * arriba, y por una razón de coste: esa respuesta sale en cada visita a un perfil ajeno por cada título que su
+ * dueño aún no ha resuelto, y la tabla virtualizada la vuelve a pedir cada vez que recicla una fila. Con
+ * `no-store`, cien títulos pendientes eran cien invocaciones y cien lecturas de KV por visita y por scroll.
+ *
+ * Lo que puede tapar es poco y por poco tiempo: la carátula que el dueño resuelva en esa hora se verá en la
+ * siguiente, no al momento. Y no toca a nadie más: `private` la deja fuera de cualquier caché compartida, y la
+ * URL lleva `c=1`, así que ni el propio recorrido de quien mira (que pide sin la marca) se la encuentra.
+ */
+const CACHE_SIN_RESOLVER = 'private, max-age=3600';
+
+/**
  * Y LA EXCEPCIÓN: EL RECORRIDO SÍ GUARDA LO QUE APRENDE. El modo «solo resolver» (`m=1`) no pinta nada —ni el
  * 404 ni el 204 llegan a una etiqueta `<img>`, los pide `useCoverBackfill` con `fetch`—, así que aquí no se
  * puede repetir el estropicio de arriba: lo que se guarda no tapa ninguna imagen, solo evita volver a preguntar.
@@ -265,12 +277,12 @@ export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise
      la función que hacía las dos cosas, cada juego nuevo leía dos veces la misma clave de KV. */
   let coverId = await leerCaratulaCacheada(env, nombre, listaPlataformas, ampliado);
   if (coverId === undefined && soloCache) {
-    /* «Aún sin resolver», que NO es «no tiene»: por eso `no-store` y una cabecera que lo distingue. Un 404
-       guardado taparía la carátula el día que la resuelva su dueño. Va antes que el cupo para no gastar ni la
-       lectura de sus contadores. */
+    /* «Aún sin resolver», que NO es «no tiene»: por eso una cabecera que lo distingue y una caché de una hora
+       y no de siete días (ver `CACHE_SIN_RESOLVER`). Va antes que el cupo para no gastar ni la lectura de sus
+       contadores. */
     return new Response('Carátula aún sin resolver', {
       status: 404,
-      headers: { 'Cache-Control': CACHE_FALLO, 'X-Cover': 'sin-resolver' },
+      headers: { 'Cache-Control': CACHE_SIN_RESOLVER, 'X-Cover': 'sin-resolver' },
     });
   }
   if (coverId === undefined) {

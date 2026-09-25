@@ -432,7 +432,7 @@ function localCoverApi(): Plugin {
             const cacheada = soloCache ? await leerCaratulaCacheada(env, nombre, plataformas, ampliado) : null;
             if (soloCache && cacheada === undefined) {
               res.statusCode = 404;
-              res.setHeader('Cache-Control', 'no-store');
+              res.setHeader('Cache-Control', 'private, max-age=3600');
               res.setHeader('X-Cover', 'sin-resolver');
               res.end('Carátula aún sin resolver');
               return;
