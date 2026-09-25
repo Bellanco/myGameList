@@ -109,6 +109,14 @@ export function peekOwnProfileTier(uid: string): ProfileTier {
   return ownProfileCacheByUid.get(uid.trim())?.value?.tier || DEFAULT_PROFILE_TIER;
 }
 
+/**
+ * Perfil propio cacheado y aún vigente, sin red. Lo usan los guardados que no leen el documento antes de escribirlo
+ * para saber si pueden arrastrar a la caché lo que ellos no tocan (ver `ensureProfileByEmail`).
+ */
+export function peekOwnProfileCache(uid: string): SocialProfileReference | null {
+  return readOwnProfileCache(uid.trim()) ?? null;
+}
+
 /** Refresca la caché del perfil propio tras escribirlo (misma función que cumplía `saveProfileByEmailCache`). */
 export function saveOwnProfileCache(uid: string, value: SocialProfileReference | null): void {
   ownProfileCacheByUid.set(uid, {

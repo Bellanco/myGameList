@@ -20,6 +20,7 @@ import {
   getOwnProfileRef,
   invalidateOwnProfileCache,
   invalidateSocialDirectoryCache,
+  peekOwnProfileCache,
   peekOwnProfileTier,
   saveOwnProfileCache,
   invalidateProfileByEmailCache,
@@ -202,6 +203,14 @@ export async function upsertProfileSocialReferences(input: {
 
   await batch.commit();
 
+  // Este guardado no lee el documento, así que la vitrina, el palmarés y la fecha de alta solo se conocen si ya
+  // estaban en caché. Sin ellos no se cachea nada: una copia sin vitrina haría publicar la de este dispositivo como
+  // reemplazo (ver `ensureProfileByEmail`), y la siguiente lectura cuesta un `getDoc`.
+  const known = peekOwnProfileCache(input.user.uid);
+  if (!known) {
+    invalidateOwnProfileCache(input.user.uid);
+    return;
+  }
   saveOwnProfileCache(input.user.uid, {
     id: input.user.uid,
     profileId,
@@ -218,6 +227,9 @@ export async function upsertProfileSocialReferences(input: {
     tier: peekOwnProfileTier(input.user.uid),
     githubToken: String(input.githubToken || ''), // audit-allow: caché en MEMORIA (no Firestore); el token va cifrado a privateConfig
     socialEnabled: true,
+    createdAt: known.createdAt,
+    achievementsMirror: known.achievementsMirror,
+    palmares: known.palmares,
   });
 }
 
@@ -511,6 +523,12 @@ export async function ensureProfileByEmail(input: {
     tier: existing?.tier ?? DEFAULT_PROFILE_TIER,
     githubToken,
     socialEnabled: true,
+    // Lo que este guardado no escribe se arrastra del perfil leído. Perderlo en la caché no es inocuo: con la vitrina
+    // vacía, el publicador de logros sube la de este dispositivo como REEMPLAZO y se lleva las medallas ganadas en
+    // otros (ver `mergeForPublish`). El canónico que nace de un documento ajeno no tiene nada de esto todavía.
+    ...(existing && !isForeignDoc
+      ? { createdAt: existing.createdAt, achievementsMirror: existing.achievementsMirror, palmares: existing.palmares }
+      : {}),
   };
   saveOwnProfileCache(input.user.uid, written);
   // Si el perfil venía de un documento con otro id, la referencia cacheada por correo apunta al huérfano y ya no
