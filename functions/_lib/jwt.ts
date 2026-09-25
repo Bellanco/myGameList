@@ -69,13 +69,17 @@ export function decodeRs256Jwt(token: string): DecodedJwt {
   return { header, payload, parts: [parts[0], parts[1], parts[2]] };
 }
 
+const JWKS_FETCH_TIMEOUT_MS = 3000;
+
 /** Claves públicas de Google, cacheadas en KV para no pedirlas en cada petición. */
 export async function loadJwks(kv: KVNamespace, url: string, cacheKey: string, ttlSeconds: number): Promise<Jwk[]> {
   const cached = await kv.get(cacheKey, 'json');
   if (cached && Array.isArray((cached as { keys?: Jwk[] }).keys)) {
     return (cached as { keys: Jwk[] }).keys;
   }
-  const response = await fetch(url);
+  // Con tope: esto va en el camino de cada petición con sesión, y un endpoint de Google colgado sin caché en KV
+  // las dejaría esperando a todas. Mejor un fallo rápido, que App Check en `monitor` ya se traga.
+  const response = await fetch(url, { signal: AbortSignal.timeout(JWKS_FETCH_TIMEOUT_MS) });
   if (!response.ok) {
     throw new Error('No se pudieron leer las claves públicas de Google');
   }
