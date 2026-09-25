@@ -22,6 +22,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - **Los sellos de cerrar un juego viajan con su tema**: las caras de «Plata y acero», «Ladrones de corazones» y
   «Solo hay guerra» salen del bundle base, como ya estaba la de «Inserte moneda». En `_effects.scss` queda solo
   la pieza común.
+- **Las cifras de «Sol y luna» pesan 0,8 kB en vez de 11,4**: Silkscreen iba incrustada entera en base64 dentro
+  del skin para usar diez dígitos. Ahora la trae `vendor-fonts.mjs` recortada a 0-9 y el chunk del tema baja de
+  13,8 a 4,6 kB comprimidos. El script aprende a recortar una familia (`text`) y a regenerar una sola hoja
+  (`--solo=<slug>`), y la licencia de `public/fonts/` lista por fin todas las familias.
 
 ### Fixed
 - **La marca de la casilla se ve en todos los temas.** Era blanca fija sobre el acento y se quedaba entre 1,2 y
