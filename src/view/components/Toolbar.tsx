@@ -74,19 +74,19 @@ export const Toolbar = memo(function Toolbar({
 
   const activeItems = useMemo(() => {
     const items: Array<{ id: string; label: string; onRemove: () => void }> = [];
-    if (filters.search.trim()) items.push({ id: 'search', label: `Buscar: ${filters.search.trim()}`, onRemove: () => onClearFilter('search') });
-    filters.genres.forEach((value) => items.push({ id: `genre:${value}`, label: `Género: ${value}`, onRemove: () => onToggleValue('genres', value) }));
+    if (filters.search.trim()) items.push({ id: 'search', label: UI_MESSAGES.toolbar.chipSearch(filters.search.trim()), onRemove: () => onClearFilter('search') });
+    filters.genres.forEach((value) => items.push({ id: `genre:${value}`, label: UI_MESSAGES.toolbar.chipGenre(value), onRemove: () => onToggleValue('genres', value) }));
     filters.platforms.forEach((value) =>
-      items.push({ id: `platform:${value}`, label: `Plataforma: ${value}`, onRemove: () => onToggleValue('platforms', value) }),
+      items.push({ id: `platform:${value}`, label: UI_MESSAGES.toolbar.chipPlatform(value), onRemove: () => onToggleValue('platforms', value) }),
     );
     if (filters.score) {
       // El umbral se guarda en estrellas (1–5); en modo nota se muestra el suelo de su tramo (5★=90, 4★=70, …).
       const shown = scoreScale === 'grade' ? gradeFloorForStars(Number(filters.score)) : filters.score;
-      items.push({ id: 'score', label: `Puntuación: ${shown}+`, onRemove: () => onClearFilter('score') });
+      items.push({ id: 'score', label: UI_MESSAGES.toolbar.chipScore(shown), onRemove: () => onClearFilter('score') });
     }
     if (filters.hours) {
       const range = HOURS_RANGES.find((entry) => entry.key === filters.hours);
-      items.push({ id: 'hours', label: `Horas: ${range?.label || filters.hours}`, onRemove: () => onClearFilter('hours') });
+      items.push({ id: 'hours', label: UI_MESSAGES.toolbar.chipHours(range?.label || filters.hours), onRemove: () => onClearFilter('hours') });
     }
     if (filters.only && config) items.push({ id: 'only', label: config.label, onRemove: () => onClearFilter('only') });
     if (filters.deck) items.push({ id: 'deck', label: 'Steam Deck', onRemove: () => onClearFilter('deck') });
@@ -259,7 +259,7 @@ export const Toolbar = memo(function Toolbar({
             </span>
           ))}
           <button type="button" className="btn btn-ghost" onClick={onClearAll}>
-            Limpiar filtros
+            {UI_MESSAGES.toolbar.clearFilters}
           </button>
         </div>
       ) : null}

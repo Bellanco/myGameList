@@ -77,7 +77,7 @@ export const palettePreference = createPreferenceStore<PaletteId>({
   fromCloud: (value) => (typeof value === 'string' ? parsePaletteId(value) : null),
   applyToDom: (palette) => {
     // `loadPaletteSkin` es no-op para las que no tienen skin bajo demanda (la de por defecto, que lo trae en el
-    // bundle base, y Clásico, que no tiene), así que no hace falta preguntar por cuál es cuál.
+    // bundle base), así que no hace falta preguntar por cuál es cuál.
     loadPaletteSkin(palette);
     document.documentElement.setAttribute('data-palette', palette);
     applyThemeColor(themePreference.get());

@@ -25,7 +25,7 @@
     <script>(function () {
   var BG = {
     forja: { dark: '#0f1315', light: '#dee7e9' },
-    steam: { dark: '#141922', light: '#d8e0e7' },
+    witcher: { dark: '#141922', light: '#d8e0e7' },
     persona: { dark: '#0d0d0d', light: '#f4f1ee' },
     portal: { dark: '#12171b', light: '#e7dabd' },
     cyberpunk: { dark: '#08090d', light: '#e7eaee' },
@@ -42,6 +42,9 @@
       document.documentElement.setAttribute('data-theme', 'light');
     }
     var palette = localStorage.getItem('mis-listas-palette');
+    if (palette === 'steam') {
+      palette = 'witcher';
+    }
     if (!BG[palette]) {
       palette = 'forja';
     }

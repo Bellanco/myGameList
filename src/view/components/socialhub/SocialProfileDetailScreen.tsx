@@ -15,6 +15,7 @@ import { buildProfilePool, profileWeight } from '../../../core/roulette/roulette
 import { FriendshipButton } from './FriendshipButton';
 import { ProfileReviewsList } from './ProfileReviewsList';
 import { ProfileAchievementStrip } from './ProfileAchievements';
+import { UI_MESSAGES } from '../../../core/constants/labels';
 // La vitrina del palmarés: perezosa, porque casi nadie la tiene y su medalla arrastra la hoja de los logros.
 const PalmaresStrip = lazy(() => import('../premios/PalmaresStrip').then((m) => ({ default: m.PalmaresStrip })));
 import type { PalmaresEntry } from '../../../model/types/premios';
@@ -625,8 +626,8 @@ function SocialProfileDetailScreenBase({
                   ? {
                       btnClass: 'btn-complete',
                       icon: 'play',
-                      label: 'Pasa a "En curso"',
-                      doneLabel: '✓ En curso',
+                      label: UI_MESSAGES.rouletteActions.toCurrent,
+                      doneLabel: UI_MESSAGES.rouletteActions.toCurrentDone,
                       onAct: (candidate) => {
                         moveGameToCurrentByName?.(candidate.game.name);
                         setRouletteOpen(false);
@@ -635,8 +636,8 @@ function SocialProfileDetailScreenBase({
                   : {
                       btnClass: 'btn-accent',
                       icon: 'plus',
-                      label: 'Añadir a próximos',
-                      doneLabel: '✓ Añadido a próximos',
+                      label: UI_MESSAGES.rouletteActions.toProximos,
+                      doneLabel: UI_MESSAGES.rouletteActions.toProximosDone,
                       onAct: (candidate) => {
                         onAddToProximos(candidate.game);
                         setRouletteOpen(false);

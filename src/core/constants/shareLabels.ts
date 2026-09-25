@@ -13,6 +13,8 @@
  */
 export const SHARE_UI = {
   action: 'Compartir',
+  // Cuando el fallo no trae mensaje propio.
+  genericError: 'No se ha podido completar la operación',
   actionAria: 'Compartir esta reseña con un enlace público',
   shared: 'Compartida',
   dialogTitle: 'Compartir esta reseña',

@@ -17,7 +17,16 @@
  * `unicode-range` de cada bloque se conserva tal cual lo publica Google, así que el navegador sigue decidiendo
  * si necesita bajar `latin-ext` (para un carácter raro) o no.
  *
- * LICENCIA: todas son OFL (SIL Open Font License), que permite redistribuirlas. Ver `public/fonts/LICENSE.md`.
+ * UNA FAMILIA RECORTADA A UNOS CARACTERES: en vez de la cadena de la API, un objeto `{ family, text, as, weight,
+ * sizeAdjust }`. Google devuelve solo esos glifos (`&text=`) con su `unicode-range`, y la cara se declara con el
+ * nombre de `as`, que es lo que la separa de la familia entera: así «Sol y luna» pone los DIEZ DÍGITOS en
+ * Silkscreen y el resto del texto en Pixelify Sans, bajando 2 kB en vez de la fuente completa.
+ *
+ * `--solo=<slug>` regenera UNA hoja y deja las demás como estén: volver a pedirlas todas puede traer versiones
+ * nuevas de otras fuentes que nadie ha pedido cambiar.
+ *
+ * LICENCIA: todas son OFL (SIL Open Font License), que permite redistribuirlas. Ver `public/fonts/LICENSE.md`,
+ * que este script escribe con la lista de familias de `SHEETS`.
  */
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -70,7 +79,7 @@ const SHEETS = [
     comment:
       'Skin de la paleta forja «Forja y temple», la de POR DEFECTO: a diferencia de los demás skins, esta hoja NO se\n'
       + '// carga bajo demanda —entra en el bundle base por `styles/index.scss`— porque es la letra del primer fotograma.\n'
-      + '// Saira la comparte con portal e IBM Plex Mono con steam: el .woff2 es el mismo fichero, servido una sola vez.',
+      + '// Saira la comparte con portal e IBM Plex Mono con witcher: el .woff2 es el mismo fichero, servido una sola vez.',
     families: ['Saira:wght@400;500;600', 'IBM+Plex+Mono:wght@500'],
   },
   {
@@ -89,8 +98,8 @@ const SHEETS = [
     families: ['Oswald:wght@400;500;600;700', 'Saira:wght@400;500;600', 'Share+Tech+Mono'],
   },
   {
-    slug: 'steam',
-    comment: 'Skin de la paleta steam «Plata y acero» (carga diferida).',
+    slug: 'witcher',
+    comment: 'Skin de la paleta witcher «Plata y acero» (carga diferida).',
     families: ['Lora:wght@400;500;600', 'Cinzel:wght@600;700', 'IBM+Plex+Mono:wght@500'],
   },
   {
@@ -100,8 +109,13 @@ const SHEETS = [
   },
   {
     slug: 'seaofstars',
-    comment: 'Skin de la paleta seaofstars (carga diferida).',
-    families: ['Pixelify+Sans:wght@400;500;600;700'],
+    comment: 'Skin de la paleta seaofstars (carga diferida). Los dígitos, en Silkscreen recortada a 0-9.',
+    families: [
+      'Pixelify+Sans:wght@400;500;600;700',
+      // Los mejores dígitos de píxel, SOLO para las cifras: el skin pone 'SoS Digits' delante de Pixelify Sans y el
+      // `unicode-range` hace el resto. El rango de pesos entero es para que el navegador no la engorde en negrita.
+      { family: 'Silkscreen', text: '0123456789', as: 'SoS Digits', weight: '100 900', sizeAdjust: '110%' },
+    ],
   },
 ];
 
@@ -149,11 +163,36 @@ function parseGoogleCss(css) {
 
 const slugify = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
+/** Una familia recortada a `text` (ver la cabecera). Google responde con UN bloque sin comentario de subconjunto. */
+async function fetchTextSubset({ family, text, as, weight, sizeAdjust }) {
+  const url = `https://fonts.googleapis.com/css2?family=${family.replace(/ /g, '+')}&text=${encodeURIComponent(text)}&display=swap`;
+  const response = await fetch(url, { headers: { 'User-Agent': UA } });
+  if (!response.ok) throw new Error(`No se pudo pedir el CSS de ${family} (${text}): ${response.status}`);
+  const body = (await response.text()).match(/@font-face\s*\{([^}]+)\}/)?.[1] ?? '';
+  const remote = body.match(/url\(([^)]+)\)/)?.[1];
+  const range = body.match(/unicode-range:\s*([^;]+);/)?.[1]?.trim();
+  if (!remote || !range) throw new Error(`Respuesta inesperada de Google para ${family} (${text}).`);
+  return {
+    family: as,
+    subset: 'text',
+    style: 'normal',
+    weight,
+    sizeAdjust,
+    localPath: await fetchFont(remote, slugify(as), 'text'),
+    range,
+    source: `${family}, solo «${text}»`,
+  };
+}
+
 async function buildSheet(sheet) {
   console.log(`\n${sheet.slug}:`);
   const emitted = [];
 
   for (const family of sheet.families) {
+    if (typeof family === 'object') {
+      emitted.push(await fetchTextSubset(family));
+      continue;
+    }
     const url = `https://fonts.googleapis.com/css2?family=${family}&display=swap`;
     const response = await fetch(url, { headers: { 'User-Agent': UA } });
     if (!response.ok) throw new Error(`No se pudo pedir el CSS de ${family}: ${response.status}`);
@@ -193,12 +232,12 @@ async function buildSheet(sheet) {
 `;
   const body = emitted
     .map((face) => `
-/* ${face.subset} */
+/* ${face.source ?? face.subset} */
 @font-face {
   font-family: '${face.family}';
   font-style: ${face.style};
   font-weight: ${face.weight};
-  font-display: swap;
+  font-display: swap;${face.sizeAdjust ? `\n  size-adjust: ${face.sizeAdjust};` : ''}
   src: url('${face.localPath}') format('woff2');
   unicode-range: ${face.range};
 }`)
@@ -212,10 +251,20 @@ async function buildSheet(sheet) {
 
 await mkdir(FONT_DIR, { recursive: true });
 await mkdir(SCSS_BASE_DIR, { recursive: true });
-for (const sheet of SHEETS) await buildSheet(sheet);
+const solo = process.argv.find((arg) => arg.startsWith('--solo='))?.slice('--solo='.length);
+if (solo && !SHEETS.some((sheet) => sheet.slug === solo)) throw new Error(`No hay ninguna hoja «${solo}» en SHEETS.`);
+for (const sheet of SHEETS) if (!solo || sheet.slug === solo) await buildSheet(sheet);
 
 const total = [...downloaded.values()].length;
 console.log(`\n${total} ficheros de fuente en public/fonts/.`);
+
+/** Los nombres de familia de TODAS las hojas, sin repetir: la lista de la licencia no puede escribirse a mano,
+ *  que es como se quedó sin Comic Neue ni Silkscreen. */
+function familyNames() {
+  const names = SHEETS.flatMap((sheet) => sheet.families)
+    .map((family) => (typeof family === 'object' ? family.family : family.split(':')[0].replace(/\+/g, ' ')));
+  return [...new Set(names)];
+}
 
 // Recordatorio de licencia junto a los ficheros, que es donde alguien lo buscará.
 await writeFile(
@@ -225,8 +274,7 @@ await writeFile(
 Todas las fuentes de este directorio se distribuyen bajo la **SIL Open Font License 1.1** (OFL), que permite
 redistribuirlas junto a la aplicación. Se descargaron de Google Fonts con \`scripts/vendor-fonts.mjs\`.
 
-Familias: DM Sans, Rajdhani, Share Tech Mono, Chakra Petch, UnifrakturCook, VT323, Oswald, Saira, Pixelify Sans,
-Orbitron, Exo 2, Lora, Cinzel, IBM Plex Mono.
+Familias: ${familyNames().join(', ')}.
 
 El texto completo de la OFL y la autoría de cada familia están en su ficha de
 [Google Fonts](https://fonts.google.com/) y en el repositorio de cada proyecto.

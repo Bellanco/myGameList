@@ -5,6 +5,7 @@ import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 import { RARITY_POINTS } from '../../../core/achievements/types';
 import { usePageVisible } from '../../hooks/usePageVisible';
 import type { AchievementDef } from '../../../core/achievements/types';
+import { APP_LOCALE } from '../../../core/constants/locale';
 
 /**
  * EL AVISO DEL INSTANTE, la tarjeta. Ver docs/plan-logros.md §7.4 y la maqueta `docs/logros/demo-toast.html`.
@@ -96,7 +97,7 @@ export function AchievementToast({ flash, onDone, onOpen }: AchievementToastProp
   const conseguido = flash.kind !== 'milestone';
   const defs = conseguido
     ? [...flash.defs].sort((a, b) =>
-      RARITY_POINTS[b.rarity] - RARITY_POINTS[a.rarity] || a.labels.name.localeCompare(b.labels.name))
+      RARITY_POINTS[b.rarity] - RARITY_POINTS[a.rarity] || a.labels.name.localeCompare(b.labels.name, APP_LOCALE))
     : [flash.def];
   const first = defs[0];
   if (!first) return null;

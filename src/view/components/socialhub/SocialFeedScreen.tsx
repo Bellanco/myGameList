@@ -250,7 +250,7 @@ function SocialFeedScreenBase({
                     // la cadena de tipos porque no comparte NADA con las demás —no tiene gist, ni juego, ni
                     // texto—, así que estrecharla aquí deja el resto del bloque leyéndose igual que antes.
                     if (entry.kind === 'achievements') {
-                      const quien = entry.authorName || 'Usuario';
+                      const quien = entry.authorName || SOCIAL_UI.requests.unknownUser;
                       const nombres = entry.items
                         .map((item) => item.def.labels.name)
                         .join(', ');
@@ -356,7 +356,7 @@ function SocialFeedScreenBase({
                             <div className="hub-feed-card-head-text">
                               <h3>
                                 <button className="hub-name-link" type="button" onClick={() => openProfileDetail(entry.profileId)}>
-                                  {entry.profileDisplayName || entry.authorName || 'Usuario'}
+                                  {entry.profileDisplayName || entry.authorName || SOCIAL_UI.requests.unknownUser}
                                 </button>
                               </h3>
                             </div>
@@ -382,7 +382,7 @@ function SocialFeedScreenBase({
                     // renglón. El día no se repite: lo dice la cabecera del grupo, y la fecha entera está en el
                     // `title`.
                     if (entry.kind === 'move') {
-                      const nombreAutor = entry.profileDisplayName || 'Usuario';
+                      const nombreAutor = entry.profileDisplayName || SOCIAL_UI.requests.unknownUser;
                       const fechaCompleta = hasValidDate ? SOCIAL_UI.feed.movedAt(itemDate) : SOCIAL_UI.feed.moveRecently;
                       return (
                         <article

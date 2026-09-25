@@ -20,7 +20,7 @@
 
    Se separa de «Sin futuro» —el otro tema de neón— por temperatura y por forma: aquel es amarillo
    ácido sobre negro azulado con marcos de HUD; este es violeta saturado sobre malva, con serigrafía
-   y óvalos. Identidad de color: CAPA 2 en `_base.scss`. ═══════════════════════════════════════════ */
+   y óvalos. Identidad de color: CAPA 2 en `_colors.scss`. ═══════════════════════════════════════════ */
 
 /* ── §0 · Las dos fichas del relieve. `--arc-ink` es la TINTA: el filete y la sombra dura salen de ella, así
    que el grosor del trazo del tema entero se toca aquí y no en cuarenta reglas. En claro la tinta no puede ser
@@ -857,6 +857,37 @@
   background: #2ef0e0;
   border: 2px solid #17091f;
 }
+/* A LA LUZ, LA MISMA TECLA EN LA MÁQUINA CLARA. La pieza estaba escrita con la tinta de noche a mano (#17091f,
+   #2a1140), así que era lo único oscuro del tema claro: una placa violeta sobre lavanda. Aquí sigue a la ficha
+   `--arc-ink`, como la caja de búsqueda y los botones de al lado: relleno claro, filete y sombra dura de tinta,
+   y el neón del carril pasa al cian hondo, que es el que se lee de día. */
+:root[data-palette="arcade"][data-theme="light"] .view-controls {
+  border-color: var(--arc-ink);
+  background: var(--surface);
+  box-shadow: 3px 3px 0 var(--arc-ink);
+}
+:root[data-palette="arcade"][data-theme="light"] .view-controls .shape-switch-btn {
+  border-color: var(--arc-ink);
+  background: var(--surface-hover);
+  color: var(--text-muted);
+  box-shadow: 2px 2px 0 var(--arc-ink);
+}
+:root[data-palette="arcade"][data-theme="light"] .view-controls .shape-switch-btn.is-on {
+  background: var(--steam);
+  color: var(--on-accent);
+  box-shadow: none;
+}
+:root[data-palette="arcade"][data-theme="light"] .view-controls .grid-size::before { background: var(--arc-ink); }
+:root[data-palette="arcade"][data-theme="light"] .view-controls .grid-size::after { background: var(--arc-cyan); box-shadow: none; }
+:root[data-palette="arcade"][data-theme="light"] .view-controls .grid-size-range::-webkit-slider-thumb {
+  background: var(--arc-cyan);
+  border-color: var(--arc-ink);
+  box-shadow: 2px 2px 0 var(--arc-ink);
+}
+:root[data-palette="arcade"][data-theme="light"] .view-controls .grid-size-range::-moz-range-thumb {
+  background: var(--arc-cyan);
+  border-color: var(--arc-ink);
+}
 
 /* ── §19 · LA FICHA DE GRÁFICA ─────────────────────────────────────────────────────────────────────────
    El §17 doblaba las gráficas ENUMERÁNDOLAS, y la cuenta nunca cuadró: la evolución del gusto, la constancia
@@ -891,8 +922,8 @@
    Era el único mundo sin efecto propio: los otros seis tienen su lacre, su portal, su astro, su barrido o su
    arranque de cogitador. El gesto que le toca a una recreativa no es un destello más —es CANTAR lo que
    acabas de hacer—, así que al cerrar un juego cae la marquesina con la bandera a cuadros. La pieza es la
-   misma `.fx-seal` de `_effects.scss`, que ya tenía tres caras; esta es la cuarta, y el TS que la dispara
-   está en `useSignatureEffects`. ── */
+   misma `.fx-seal` de `_effects.scss`; aquí va solo su cara, como en los otros tres temas que la usan, y el TS
+   que la dispara está en `useSignatureEffects`. ── */
 :root[data-palette="arcade"] .fx-seal {
   width: auto;
   height: auto;

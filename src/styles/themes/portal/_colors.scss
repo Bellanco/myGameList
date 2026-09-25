@@ -59,7 +59,9 @@
   --border: #c7b184;
   --text: #392a18;
   --text-muted: #6e5a3e;
-  --text-dim: #746349;
+  /* Atenuado: texto, así que 4,5:1 contra las CUATRO superficies, no solo contra `--surface`. #746349 bajaba a
+     4,18 en la peor; un paso más hondo, mismo tono: 4,59. */
+  --text-dim: #6d5d45;
   --steam: #b46a1a;
   --steam-hover: #99590f;
   --steam-rgb: 180,106,26;
@@ -71,7 +73,9 @@
   --danger: #b23b1f;
   --danger-rgb: 178,59,31;
   --star-empty: #cdb78c;
-  --star-full: #c87f1c;
+  /* La estrella llena es GRÁFICO y le toca 3:1 contra las cuatro superficies: #c87f1c se quedaba en 2,33. Mismo
+     tono, más hondo: 3,11 en el peor caso. */
+  --star-full: #aa6c18;
   --chip-plat-fg: #145f9b;
   --chip-plat-bg: rgba(20,95,155,.12);
   --chip-plat-border: rgba(20,95,155,.30);
@@ -81,6 +85,8 @@
   /* En la Aperture antigua el acento es naranja quemado: ahí manda el blanco, como en la señalética de la
      época y como ya hacen los botones de esta paleta en claro. */
   --on-accent: #fff;
+  /* Sobre el naranja a pelo ese blanco se queda en 4,19:1; el relleno plano baja un 6 % (#a96418) y da 4,64:1. */
+  --accent-fill: color-mix(in srgb, var(--steam) 94%, #000);
   --portal-orange: #c25a12;
   --portal-cube: #b04a78;
   --portal-turret: #b23b1f; /* torreta en tono óxido para la zona antigua */

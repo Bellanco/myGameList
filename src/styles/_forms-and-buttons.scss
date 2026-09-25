@@ -513,8 +513,8 @@ a.btn, a.btn:hover { text-decoration: none; }
 /* Neutro */
 .btn-secondary { color: var(--text); }
 
-/* Los botones de «Plata y acero» (steam) ya NO viven aquí: esa paleta pasó a tener skin propio
-   (`themes/steam.scss`), que es donde se forjan sus hojas de acero. */
+/* Los botones de «Plata y acero» (witcher) ya NO viven aquí: esa paleta pasó a tener skin propio
+   (`themes/witcher/witcher.scss`), que es donde se forjan sus hojas de acero. */
 
 /* Roles: el color va en texto + borde; la superficie es el mismo cristal (sin rellenos planos). */
 
@@ -671,7 +671,10 @@ a.btn, a.btn:hover { text-decoration: none; }
   width: 0.34rem;
   height: 0.6rem;
   margin-top: -2px;
-  border: solid #fff;
+  /* La marca es la tinta de encima del acento, no un blanco fijo: en blanco se quedaba en 1,2–2,6:1 en seis de
+     las ocho paletas (Forja 2,59, Sin futuro 1,21), por debajo del 3:1 que pide un indicador de estado. Con
+     `--on-accent` el peor caso es Ladrones de corazones en oscuro, 3,81:1. */
+  border: solid var(--on-accent);
   border-width: 0 2px 2px 0;
   transform: rotate(45deg) scale(0);
   transition: transform 0.12s ease;

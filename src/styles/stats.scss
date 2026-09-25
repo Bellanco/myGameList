@@ -53,8 +53,9 @@
      LOS DOS EXTREMOS TIENEN QUE ESTAR LEJOS. Estaban en `--steam` y `--warn`, que en varios temas son vecinos
      —en el Clásico, latón y cobre—: la rampa entera caía dentro del mismo ámbar y el panel se leía de un solo
      color, que es justo lo que esta rampa viene a evitar. Ahora va del primer tono de la rampa categórica al
-     cuarto (CAPA 2b), que en cada tema son colores de su mundo pero de familias distintas: latón → añil en el
-     Clásico, rojo → turquesa de datos en Ladrones de corazones, amarillo → azul de marca en Sin futuro. */
+     cuarto (CAPA 2b), que en cada tema son colores de su mundo pero de familias distintas: naranja de metal →
+     azul en Forja y temple, rojo → turquesa de datos en Ladrones de corazones, amarillo → azul de marca en Sin
+     futuro. */
   --chart-from: var(--cat-1);
   --chart-to: var(--cat-4);
 
@@ -703,7 +704,7 @@
   margin-top: -.65rem;
   padding: .1rem .45rem;
   border-radius: var(--radius-pill);
-  background: var(--steam);
+  background: var(--accent-fill);
   color: var(--on-accent);
   font-weight: 700;
 }
@@ -1079,8 +1080,8 @@
 }
 
 /* MANDOS DEL ACABADO. El enjambre se dibuja UNA vez y cada paleta lo afina desde aquí: canto, trama, forma del
-   punto, tinta de la mediana, tipografía del eje. Los valores de este bloque son los de la paleta por defecto
-   (steam), que hace de base neutra; los skins solo redefinen su columna en `styles/themes/*.scss` y NINGUNA
+   punto, tinta de la mediana, tipografía del eje. Los valores de este bloque son los de la CASA, que hacen de
+   base neutra; los skins solo redefinen su columna en `styles/themes/*.scss` y NINGUNA
    regla de este archivo lleva el nombre de un tema.
 
    Lo que NO se parametriza: el color de la nota. Un 4★ tiene que verse igual aquí que en la ficha del juego,

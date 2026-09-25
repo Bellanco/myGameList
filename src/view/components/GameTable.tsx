@@ -354,15 +354,18 @@ function yearsDesc(years?: number[]) {
 
 const IMPORT_UI = UI_MESSAGES.import.integrations;
 
-// Columnas ordenables: etiqueta de cabecera → clave de orden que entiende `sortGames`/`sortBy`.
-// El resto de cabeceras (Puntos fuertes/débiles, Rejugar…) no son ordenables.
-const SORT_COLUMN: Record<string, string> = {
-  Juego: 'name',
-  Año: 'years',
-  Plataformas: 'platforms',
-  Géneros: 'genres',
-  Puntuación: 'score',
-  Interés: 'score',
+type TableColumn = keyof typeof UI_MESSAGES.table.columns;
+
+// Columnas ordenables: columna → clave de orden que entiende `sortGames`/`sortBy`. El resto (Puntos
+// fuertes/débiles, Rejugar…) no son ordenables. Va por el ID de la columna y NO por su rótulo: la clave era la
+// palabra en español («Juego», «Año»…), así que cambiar un rótulo dejaba la columna sin ordenar sin que fallara nada.
+const SORT_COLUMN: Partial<Record<TableColumn, string>> = {
+  name: 'name',
+  year: 'years',
+  platforms: 'platforms',
+  genres: 'genres',
+  score: 'score',
+  interest: 'score',
 };
 
 // `role="img"` NO es decorativo aquí, es lo que hace que la insignia se anuncie. Un `<span>` sin rol es
@@ -372,7 +375,7 @@ const SORT_COLUMN: Record<string, string> = {
 // el linter no puede verlo porque depende del rol que resulta al pintar, no del JSX.
 function renderBooleanBadge(type: 'replayable' | 'retry', value: boolean) {
   if (type === 'replayable') {
-    const label = value ? 'Rejugar: Sí' : 'Rejugar: No';
+    const label = UI_MESSAGES.table.replayBadge(value);
     return (
       <span className={value ? 'badge-rejugar-activo' : 'badge-rejugar-inactivo'} role="img" aria-label={label} title={label}>
         <Icon name={value ? COMMON_ICONS.starOliveBranches : COMMON_ICONS.lock} />
@@ -380,7 +383,7 @@ function renderBooleanBadge(type: 'replayable' | 'retry', value: boolean) {
     );
   }
 
-  const label = value ? 'Dar otra oportunidad: Sí' : 'Dar otra oportunidad: No';
+  const label = UI_MESSAGES.table.retryBadge(value);
   return (
     <span className={value ? 'badge-opp-activo' : 'badge-opp-inactivo'} role="img" aria-label={label} title={label}>
       <Icon name={value ? COMMON_ICONS.refresh : COMMON_ICONS.lock} />
@@ -483,32 +486,32 @@ export const GameTable = memo(function GameTable({
      fuente de la que salen los chips de ordenar. Se conserva la lista COMPLETA, con los datos que no se pueden
      ordenar («Puntos fuertes», «Rejugar»…), porque el filtro por `SORT_COLUMN` de más abajo es quien decide, y
      tenerlos aquí documenta qué enseña cada pestaña. */
-  const getTableHeaders = (): string[] => {
+  const getTableHeaders = (): TableColumn[] => {
     if (currentTab === 'c') {
       return [
-        'Juego',
-        ...(showYears ? ['Año'] : []),
-        'Plataformas',
-        'Géneros',
-        'Puntos fuertes',
-        'Puntos débiles',
-        'Puntuación',
-        ...(showReplayable ? ['Rejugar'] : []),
+        'name',
+        ...(showYears ? ['year' as const] : []),
+        'platforms',
+        'genres',
+        'strengths',
+        'weaknesses',
+        'score',
+        ...(showReplayable ? ['replay' as const] : []),
       ];
     }
     if (currentTab === 'v') {
       return [
-        'Juego',
-        'Plataformas',
-        'Géneros',
-        'Puntos fuertes',
-        'Puntos débiles',
-        ...(showShameScore ? ['Puntuación'] : []),
-        ...(showRetry ? ['Dar otra oportunidad'] : []),
+        'name',
+        'platforms',
+        'genres',
+        'strengths',
+        'weaknesses',
+        ...(showShameScore ? ['score' as const] : []),
+        ...(showRetry ? ['retry' as const] : []),
       ];
     }
-    if (currentTab === 'e') return ['Juego', 'Plataformas', 'Géneros', 'Puntos fuertes', 'Puntos débiles'];
-    return ['Juego', 'Plataformas', 'Géneros', 'Interés'];
+    if (currentTab === 'e') return ['name', 'platforms', 'genres', 'strengths', 'weaknesses'];
+    return ['name', 'platforms', 'genres', 'interest'];
   };
 
   const supportsReview = (tab: TabId) => tab !== 'p';
@@ -813,7 +816,7 @@ export const GameTable = memo(function GameTable({
      que las hacía parecer una hoja de cálculo—, así que el orden se dice con palabras: qué columna y en qué
      sentido. Se pinta solo si esta lista se puede ordenar (el listado del hub social llega sin `onSort`). */
   const sortableColumns = tableHeaders
-    .map((header) => ({ header, key: SORT_COLUMN[header] }))
+    .map((column): { header: string; key: string | undefined } => ({ header: UI_MESSAGES.table.columns[column], key: SORT_COLUMN[column] }))
     .filter((c): c is { header: string; key: string } => Boolean(c.key));
   /**
    * EL ORDEN, SIN CARRIL QUE ARRASTRAR. Las cinco columnas no caben en un teléfono y hasta ahora sobraba

@@ -1,6 +1,6 @@
 import { FILTER_BOOL } from '../core/constants/labels';
 import { HOURS_RANGES } from '../core/constants/uiConfig';
-import { sortEs } from '../core/utils/compare';
+import { compareText } from '../core/utils/compare';
 import { resolveStars } from '../core/utils/scoreScale';
 import type { GameItem, TabId, ToolbarFilters } from '../model/types/game';
 
@@ -113,8 +113,8 @@ export function computeTabOptions(games: GameItem[]): TabOptions {
   }
 
   return {
-    genres: [...genres].sort(sortEs),
-    platforms: [...platforms].sort(sortEs),
+    genres: [...genres].sort(compareText),
+    platforms: [...platforms].sort(compareText),
     scores: SCORE_LEVELS.filter((level) => level <= maxScore),
     hours: HOURS_RANGES.filter((range) => hours.has(range.key)).map((range) => range.key),
   };

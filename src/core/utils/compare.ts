@@ -1,7 +1,9 @@
+import { APP_LOCALE } from '../constants/locale';
 import { tagKey } from './tags';
 
-export function sortEs(a: string | number, b: string | number): number {
-  return String(a).localeCompare(String(b), 'es');
+/** Orden alfabético de textos visibles (etiquetas, nombres de juego), con las reglas del idioma de la app. */
+export function compareText(a: string | number, b: string | number): number {
+  return String(a).localeCompare(String(b), APP_LOCALE);
 }
 
 /**

@@ -107,16 +107,24 @@ export function assembleChunkedGames(parsed: unknown, files: Record<string, { co
   );
   if (overflow.length === 0) return parsed;
 
+  // Un chunk ausente o corrupto ABORTA la lectura, igual que en los gists de overflow (`mergeOverflowGistChunks`).
+  // Antes se saltaba y se devolvía lo que hubiera: la salvaguarda de `unwrapGamesFile` solo salta si no se ubica
+  // NINGÚN juego, así que la lectura parcial pasaba por buena, y la siguiente escritura reconstruía los chunks
+  // sin esos juegos y borraba el fichero malo. Abortar deja la sync en backoff con el gist intacto.
   const mergedGames: Record<string, unknown> = { ...(anchor.games || {}) };
   for (const ref of overflow) {
-    const content = files[gamesChunkFilename(String(ref.chunkId))]?.content;
-    if (!content) continue; // chunk ausente: se conserva lo disponible (la salvaguarda anti-pérdida de unwrap actuará si todo falla)
-    try {
-      const chunkParsed = JSON.parse(content) as { games?: Record<string, unknown> };
-      Object.assign(mergedGames, chunkParsed.games || {});
-    } catch {
-      // chunk corrupto: se ignora ese chunk
+    const chunkId = String(ref.chunkId);
+    const content = files[gamesChunkFilename(chunkId)]?.content;
+    if (!content) {
+      throw new Error(`Chunk ${chunkId} ausente en el gist (lectura incompleta; se aborta para no perder datos)`);
     }
+    let chunkParsed: { games?: Record<string, unknown> };
+    try {
+      chunkParsed = JSON.parse(content) as { games?: Record<string, unknown> };
+    } catch {
+      throw new Error(`Chunk ${chunkId} corrupto en el gist (se aborta para no perder datos)`);
+    }
+    Object.assign(mergedGames, chunkParsed.games || {});
   }
   return { ...anchor, games: mergedGames };
 }

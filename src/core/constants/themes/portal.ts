@@ -8,8 +8,8 @@ import type { ThemeDefinition } from './theme';
 export const portal = {
   id: 'portal',
   label: 'Cámara de pruebas',
-  accent: '#0091d6',
-  accent2: '#f57a00',
+  accent: '#29b6f6',
+  accent2: '#ff9e1b',
   bg: { dark: '#12171b', light: '#e7dabd' },
   voice: {
     // Portal: «sigues vivo» es con lo que GLaDOS cierra las pruebas, así que aquí le toca a la página no

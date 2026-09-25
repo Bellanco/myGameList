@@ -25,6 +25,11 @@
   --danger-rgb: 255,107,61;
   --star-empty: #3a2f39;
   --star-full: #ffcf33;
+  /* El rótulo va en BLANCO sobre el rojo, que es el cartel de los Ladrones. Hasta ahora se heredaba de
+     `_base.scss` sin decirlo, y sobre el rojo puro se quedaba en 3,81:1: el relleno plano baja un 11 %
+     (#e31c36), donde da 4,68:1 y sigue leyéndose como el mismo rojo. */
+  --on-accent: #fff;
+  --accent-fill: color-mix(in srgb, var(--steam) 89%, #000);
   /* PLATAFORMA · la categoría no puede compartir familia de color con las otras: el rojo es de los puntos
      débiles, el verde de los fuertes, el ámbar del año y el gris del «+N». Le toca la familia fría, y el tono
      sale de la identidad de este tema. */
@@ -49,7 +54,9 @@
   --border: #ded5cc;
   --text: #120e0e;
   --text-muted: #5f5550;
-  --text-dim: #766d67;
+  /* Atenuado: texto, así que 4,5:1 contra las CUATRO superficies, no solo contra `--surface`. #766d67 bajaba a
+     4,12 en la peor; un paso más hondo, mismo tono: 4,56. */
+  --text-dim: #6f6661;
   --steam: #e60012;
   --steam-hover: #b3000e;
   --steam-rgb: 230,0,18;
@@ -61,7 +68,12 @@
   --danger: #d43a00;
   --danger-rgb: 212,58,0;
   --star-empty: #ded5cc;
-  --star-full: #c79200;
+  /* La estrella llena es GRÁFICO y le toca 3:1 contra las cuatro superficies: #c79200 se quedaba en 2,27. Mismo
+     tono, más hondo: 3,12 en el peor caso. */
+  --star-full: #a77b00;
+  /* A la luz el rojo es #e60012 y el blanco ya da 4,80:1 encima: relleno a pelo. */
+  --on-accent: #fff;
+  --accent-fill: var(--steam);
   --chip-plat-fg: #2f3ea8;
   --chip-plat-bg: rgba(47,62,168,.10);
   --chip-plat-border: rgba(47,62,168,.30);

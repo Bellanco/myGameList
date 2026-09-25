@@ -7,6 +7,7 @@ import type { RelatedReview } from '../../../core/social/relatedReviews';
 // Ver `ProfileReviewsList`: este bloque lo pinta también la pantalla pública de un enlace compartido, que se
 // monta SIN el hub.
 import '../../../styles/reviews.scss';
+import { SCORE_UI } from '../../../core/constants/scoreLabels';
 
 /**
  * Filas que se pintan como mucho. El ancho decide cuántas tarjetas caben en cada una, así que esto es lo que
@@ -173,7 +174,7 @@ export const RelatedReviews = memo(function RelatedReviews({
                   ? (scoreScale === 'grade'
                     ? Math.round(resolveGrade({ grade: entry.grade, score: rating }))
                     : Math.round(rating))
-                  : '¿?'}
+                  : SCORE_UI.noScoreSymbol}
               </span>
               {/* Título y firma apilados: en una columna estrecha no caben en el mismo renglón, y el nombre del
                   juego es lo que se busca, así que se queda con la línea entera. */}

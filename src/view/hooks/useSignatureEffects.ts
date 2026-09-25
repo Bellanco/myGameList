@@ -15,9 +15,10 @@ import { DEFAULT_PALETTE } from '../../core/constants/palettes';
  *  - Inserte moneda (arcade): GAME CLEAR, la bandera a cuadros del mueble al cerrar un juego.
  *
  * Y LOS QUE RESPONDEN A LO QUE PASA EN LA APLICACIÓN, no a lo que pasa en el DOM (ver `core/effects/moments`):
- *  - CERRAR UN JUEGO → un SELLO que cae en el centro: lacre de biblioteca (Clásico), «objetivo cumplido» ladeado
- *    (Ladrones de corazones) y lacre con laurel imperial (Solo hay guerra). Tres temas pedían el mismo gesto.
- *  - GUARDAR → el filete de latón de la cabecera se ilumina de izquierda a derecha (Clásico).
+ *  - CERRAR UN JUEGO → un SELLO que cae en el centro: lacre de contrato (Plata y acero), «objetivo cumplido»
+ *    ladeado (Ladrones de corazones), lacre con laurel imperial (Solo hay guerra) y bandera a cuadros (Inserte
+ *    moneda). Cuatro temas pedían el mismo gesto.
+ *  - GUARDAR → la luz corre por el filete de acero bajo las pestañas, de izquierda a derecha (Plata y acero).
  *  - FILTRAR → barrido de escáner sobre la lista (Sin futuro).
  *  - LOGRO DESBLOQUEADO → estrella fugaz que cruza (Sol y luna).
  */
@@ -150,16 +151,16 @@ export function useSignatureEffects(): void {
         // El lacre de la biblioteca, el sello del ladrón, el laurel imperial y la bandera a cuadros son el
         // mismo gesto con CUATRO caras. La de «Inserte moneda» es la última en llegar: era el único mundo sin
         // efecto propio, y el suyo no podía ser un destello más —una recreativa CANTA lo que acabas de hacer—.
-        if (fxRef.current('steam')) spawn(seal('signature'));
+        if (fxRef.current('witcher')) spawn(seal('signature'));
         else if (fxRef.current('persona')) spawn(seal('check', 'OBJETIVO CUMPLIDO'));
         else if (fxRef.current('grimdark')) spawn(seal('star-olive-branches', 'DEBER CUMPLIDO'));
         else if (fxRef.current('arcade')) spawn(seal('checkered-flag', 'GAME CLEAR'));
         return;
       }
 
-      if (moment === 'library-saved' && fxRef.current('steam')) {
-        // El filete de latón vive bajo las pestañas: el barrido va justo ahí, no por el borde de la ventana.
-        const sweep = over('fx-brass-sweep', '.tabs');
+      if (moment === 'library-saved' && fxRef.current('witcher')) {
+        // El filete de acero vive bajo las pestañas: el destello va justo ahí, no por el borde de la ventana.
+        const sweep = over('fx-silver-sweep', '.tabs');
         if (sweep) spawn(sweep);
         return;
       }

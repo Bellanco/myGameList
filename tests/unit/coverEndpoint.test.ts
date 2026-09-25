@@ -401,9 +401,14 @@ describe('/cover — lo que cuesta', () => {
     });
 
     const kv = kvFalso();
-    const respuesta = await onRequestGet({ request: peticion('n=Celeste'), env: entorno(kv) });
+    // En los dos modos, y sobre todo en el del recorrido (`m=1`): ahí un 404 se guarda una semana en el borde y el
+    // cliente aparca el juego 90 días, así que «no se ha podido preguntar» acababa escrito como «no tiene».
+    for (const consulta of ['n=Celeste', 'n=Celeste&m=1']) {
+      const respuesta = await onRequestGet({ request: peticion(consulta), env: entorno(kv) });
 
-    expect(respuesta.status).toBe(404); // para el cliente es «ahora no hay», y por eso va con `no-store`
+      expect(respuesta.status).toBe(503);
+      expect(respuesta.headers.get('Cache-Control')).toBe('no-store');
+    }
     expect(kv.datos.has(claveCache('Celeste', []))).toBe(false);
   });
 });

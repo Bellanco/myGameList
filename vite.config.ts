@@ -1,6 +1,9 @@
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { readFile, writeFile } from 'node:fs/promises';
 import type { ServerResponse } from 'node:http';
+import { promisify } from 'node:util';
+import { brotliCompress, constants as zlibConstants } from 'node:zlib';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 // El MISMO saneado que usan el cliente y la Pages Function: el servidor de desarrollo no puede ser más
@@ -23,6 +26,7 @@ import {
 } from './functions/_lib/igdbCover';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version?: string };
+const brotli = promisify(brotliCompress);
 
 /**
  * Inyecta en `service-worker.js` la lista REAL de assets del arranque y un identificador de build.
@@ -134,6 +138,46 @@ function serviceWorkerPrecache(): Plugin {
         );
       }
       writeFileSync(indexUrl, html.replace(DOC_BUILD_TOKEN, buildId));
+    },
+  };
+}
+
+/**
+ * Deja un `<fichero>.br` (brotli, calidad 11) al lado de cada `.js` y `.css` del build.
+ *
+ * Los sirve la Function de `/assets/*` (`functions/_lib/brotliAsset.ts`) a quien acepta brotli. Hace falta porque
+ * Cloudflare Pages comprime al vuelo con un nivel bajo que apenas mejora al gzip; hecho aquí, una vez por build, el
+ * arranque baja un 14 % por la red sin cambiar una línea de la aplicación.
+ *
+ * TODOS los `.js` y `.css`, también los perezosos y aunque el `.br` salga más grande en algún fichero diminuto: si
+ * faltara uno, la Function lo pediría, recibiría el shell del `_redirects` y tendría que volver por el camino
+ * normal —una ida y vuelta de más por cada fichero sin pareja—.
+ *
+ * En `writeBundle` porque es cuando los ficheros ya están escritos, y DESPUÉS de que `serviceWorkerPrecache` haya
+ * leído el bundle: los `.br` no están en él, así que no entran en el precache. El service worker guarda la
+ * respuesta ya descomprimida, que es lo que le da el navegador.
+ */
+function brotliAssets(): Plugin {
+  return {
+    name: 'brotli-assets',
+    apply: 'build',
+
+    async writeBundle(options, bundle) {
+      const dir = options.dir || 'dist';
+      const ficheros = Object.keys(bundle).filter((name) => /\.(js|css)$/.test(name));
+      await Promise.all(
+        ficheros.map(async (name) => {
+          const origen = await readFile(`${dir}/${name}`);
+          const comprimido = await brotli(origen, {
+            params: {
+              [zlibConstants.BROTLI_PARAM_MODE]: zlibConstants.BROTLI_MODE_TEXT,
+              [zlibConstants.BROTLI_PARAM_QUALITY]: zlibConstants.BROTLI_MAX_QUALITY,
+              [zlibConstants.BROTLI_PARAM_SIZE_HINT]: origen.length,
+            },
+          });
+          await writeFile(`${dir}/${name}.br`, comprimido);
+        }),
+      );
     },
   };
 }
@@ -438,6 +482,13 @@ function localCoverApi(): Plugin {
               return;
             }
             const coverId = soloCache ? cacheada : await resolverCaratula(env, nombre, plataformas, ampliado);
+            // Mismo contrato que producción: no haber podido preguntar a IGDB es 503, no «no tiene».
+            if (coverId === undefined) {
+              res.statusCode = 503;
+              res.setHeader('Cache-Control', 'no-store');
+              res.end('No se ha podido consultar IGDB; inténtalo más tarde');
+              return;
+            }
             if (!coverId) {
               res.statusCode = 404;
               res.setHeader('Cache-Control', 'no-store');
@@ -485,6 +536,7 @@ export default defineConfig({
   plugins: [
     react(),
     serviceWorkerPrecache(),
+    brotliAssets(),
     localAnnouncementApi(),
     localPremiosApi(),
     localCoverApi(),

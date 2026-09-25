@@ -70,6 +70,11 @@ export type LegacyHealDeferralStep =
   | 'sin-firebase'
   /** Falló la lectura del perfil propio. */
   | 'lectura-perfil'
+  /**
+   * Falló la lectura de `privateConfig`. No se da por vacía: se sembrarían encima los ids y el token del perfil
+   * público, pisando lo que la configuración privada ya tuviera.
+   */
+  | 'lectura-config-privada'
   /** Falló el respaldo CIFRADO del token en claro: no se purga nada (perdería el token). */
   | 'respaldo-token'
   /** Falló sembrar el id del gist de juegos en `privateConfig`. */
@@ -162,7 +167,8 @@ async function startIdentityCutover(
   }
 
   // ---- 1) RESCATAR a `privateConfig` lo que solo vive en el documento huérfano. ----
-  const privateConfig = await getPrivateConfig(uid).catch(() => null);
+  // Sin `catch`: si no se puede leer, no se sabe qué hay y rescatar a ciegas pisaría lo que ya tuviera. Se aplaza.
+  const privateConfig = await getPrivateConfig(uid);
   const legacyToken = String(legacy.githubToken || '').trim(); // audit-allow: LECTURA del token legacy del huérfano para cifrarlo en privateConfig antes de dejar de usar ese documento
   let backedUpToken = false;
   let seededGamesGistId = false;
@@ -281,7 +287,9 @@ export async function healOwnLegacyProfile(uid: string, email = '', sessionName 
     }
 
     // ---- 1) PRESERVAR. Si algo de esto falla, se sale sin escribir en el documento público. ----
-    const privateConfig = await getPrivateConfig(uid).catch(() => null);
+    // La lectura tampoco se traga: un fallo no es una configuración vacía (ver `lectura-config-privada`).
+    step = 'lectura-config-privada';
+    const privateConfig = await getPrivateConfig(uid);
     let backedUpToken = false;
 
     if (legacyToken && !privateConfig?.encryptedGithubToken) {

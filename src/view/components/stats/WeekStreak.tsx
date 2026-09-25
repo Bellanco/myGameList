@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { useStatsLabels } from './statsVoice';
 import { useChartFocus } from './useChartFocus';
 import { ChartDetail, ChartDetailHint } from './ChartDetail';
-import { localWeekKey, mondayOfWeekKey } from '../../../core/utils/dateTime';
+import { createLocalDateFormat, localWeekKey, mondayOfWeekKey } from '../../../core/utils/dateTime';
 import type { ActivitySummary, WeekActivity } from '../../../core/stats/types';
 
 /** Semanas que se enseñan: un año redondo, en UNA sola fila. */
@@ -26,8 +26,8 @@ const BRACKET = 22;
 /** Cuántos niveles de intensidad. Cuatro se distinguen de un vistazo; con más, la rampa se vuelve un degradado. */
 const LEVELS = 4;
 
-const MONTH = new Intl.DateTimeFormat('es-ES', { month: 'short' });
-const DAY_MONTH = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short' });
+const MONTH = createLocalDateFormat({ month: 'short' });
+const DAY_MONTH = createLocalDateFormat({ day: 'numeric', month: 'short' });
 
 /**
  * Las claves de las 52 semanas que ocupa el mapa: el último año redondo, terminando SIEMPRE en la semana en
@@ -51,9 +51,9 @@ function windowWeeks(): string[] {
 }
 
 /** Rótulo de una celda: la semana por su lunes ("12 may"), que es más legible que su número ISO. */
-function weekLabel(key: string): string {
+function weekLabel(key: string, weekOf: (monday: string) => string): string {
   const monday = mondayOfWeekKey(key);
-  return Number.isNaN(monday.getTime()) ? key : `sem. del ${DAY_MONTH.format(monday).replace('.', '')}`;
+  return Number.isNaN(monday.getTime()) ? key : weekOf(DAY_MONTH.format(monday).replace('.', ''));
 }
 
 /**
@@ -113,8 +113,8 @@ export const WeekStreak = memo(function WeekStreak({ activity }: { activity: Act
   })();
   const detailOf = (week: WeekActivity) =>
     week.total === 0
-      ? L.weekAria(weekLabel(week.w), 0)
-      : `${weekLabel(week.w)}: ${L.detail(week.moves, week.reviews)}`;
+      ? L.weekAria(weekLabel(week.w, L.weekOf), 0)
+      : `${weekLabel(week.w, L.weekOf)}: ${L.detail(week.moves, week.reviews)}`;
 
   const width = PAD * 2 + WEEKS * (BAR + GAP);
   const height = BRACKET + PLOT + AXIS;

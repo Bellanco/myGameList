@@ -12,11 +12,11 @@
        desgarrado, manchas de sangre y su lacre de cera arriba, en el color del asunto—.
 
    Lo que en otros temas es un velo de color, aquí es un material. Identidad de color: CAPA 2 en
-   `_base.scss`; los siete tonos del género (Igni, Aard, Golondrina, Yrden, Toussaint, Quen, Skellige)
+   `_colors.scss`; los siete tonos del género (Igni, Aard, Golondrina, Yrden, Toussaint, Quen, Skellige)
    viven en CAPA 2b y son los que tiñen el lacre y el lomo de cada fila. ═══════════════════════════ */
 
 /* ── §0 · Los materiales, en fichas ── */
-:root[data-palette="steam"] {
+:root[data-palette="witcher"] {
   --wt-veta: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27300%27%3E%3Cfilter%20id%3D%27m%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.85%200.012%27%20numOctaves%3D%273%27%20stitchTiles%3D%27stitch%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27100%25%27%20height%3D%27100%25%27%20filter%3D%27url%28%23m%29%27%2F%3E%3C%2Fsvg%3E");
   /* LA FIBRA DEL PAPEL. El velo de grano de arriba dice «ruido», no «papel»: es plano y se lee igual
      sobre metal que sobre pergamino. Esto es RELIEVE —turbulencia anisótropa pasada por luz difusa—, que
@@ -52,22 +52,28 @@
    ya las aplica a botones, pestañas, chips, cabeceras y ruleta en las siete paletas. Lo que sí pone el
    tema es el TRACKING, que Cinzel pide aire vaya en caja alta o baja. (Aparte, la hoja base manda versales
    siempre en `thead th`, `.flabel` y `.detail-label`: eso es de la casa y este tema no lo toca.) ── */
-:root[data-palette="steam"] {
+:root[data-palette="witcher"] {
   --font-body: 'Lora', Georgia, serif;
   --font-label: 'Lora', Georgia, serif;
   --font-display: 'Cinzel', Georgia, serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
-:root[data-palette="steam"] body { font-family: var(--font-body); }
-:root[data-palette="steam"] h2,
-:root[data-palette="steam"] h3,
-:root[data-palette="steam"] thead th { font-family: var(--font-display); letter-spacing: .14em; }
-:root[data-palette="steam"] .score-ring-num,
-:root[data-palette="steam"] .score-dial-num,
-:root[data-palette="steam"] .count-badge,
-:root[data-palette="steam"] .hub-feed-date,
-:root[data-palette="steam"] .hub-review-date,
-:root[data-palette="steam"] .hub-review-medal { font-family: var(--font-mono); }
+:root[data-palette="witcher"] body { font-family: var(--font-body); }
+:root[data-palette="witcher"] h2,
+:root[data-palette="witcher"] h3,
+/* Los títulos de modal y de diálogo son `div`, no `h2`: sin nombrarlos se quedaban en Lora mientras los demás
+   siete temas los pasan a su letra de titular. `.modal-hd` va aparte porque el modal de alta pone el rótulo
+   suelto, sin `.modal-title` dentro (la misma nota que en `forja.scss`). */
+:root[data-palette="witcher"] .modal-title,
+:root[data-palette="witcher"] .modal-hd,
+:root[data-palette="witcher"] .dialog-title,
+:root[data-palette="witcher"] thead th { font-family: var(--font-display); letter-spacing: .14em; }
+:root[data-palette="witcher"] .score-ring-num,
+:root[data-palette="witcher"] .score-dial-num,
+:root[data-palette="witcher"] .count-badge,
+:root[data-palette="witcher"] .hub-feed-date,
+:root[data-palette="witcher"] .hub-review-date,
+:root[data-palette="witcher"] .hub-review-medal { font-family: var(--font-mono); }
 
 /* ── §1b · LOS NOMBRES DE PERSONA NO SE ESCRIBEN EN CAPITALES ROMANAS ─────────────────────────────────
    Cinzel es una capital romana: sus «minúsculas» son versalitas, así que CUALQUIER `h3` con esta letra sale
@@ -84,17 +90,17 @@
 
    CON EL INTERRUPTOR ENCENDIDO vuelven a Cinzel con su tracking: si alguien pide versales, que las lleve con
    la letra del tema y no con una mayúscula cualquiera. El `text-transform` lo sigue poniendo la hoja base. ── */
-:root[data-palette="steam"] .hub-user-card-name,
-:root[data-palette="steam"] .hub-profile-hero-name,
-:root[data-palette="steam"] .hub-feed-card-head-text > h3:not(.hub-review-detail-game),
-:root[data-palette="steam"] .hub-detail-profile-link {
+:root[data-palette="witcher"] .hub-user-card-name,
+:root[data-palette="witcher"] .hub-profile-hero-name,
+:root[data-palette="witcher"] .hub-feed-card-head-text > h3:not(.hub-review-detail-game),
+:root[data-palette="witcher"] .hub-detail-profile-link {
   font-family: var(--font-label);
   letter-spacing: .01em;
 }
-:root[data-palette="steam"][data-uppercase="on"] .hub-user-card-name,
-:root[data-palette="steam"][data-uppercase="on"] .hub-profile-hero-name,
-:root[data-palette="steam"][data-uppercase="on"] .hub-feed-card-head-text > h3:not(.hub-review-detail-game),
-:root[data-palette="steam"][data-uppercase="on"] .hub-detail-profile-link {
+:root[data-palette="witcher"][data-uppercase="on"] .hub-user-card-name,
+:root[data-palette="witcher"][data-uppercase="on"] .hub-profile-hero-name,
+:root[data-palette="witcher"][data-uppercase="on"] .hub-feed-card-head-text > h3:not(.hub-review-detail-game),
+:root[data-palette="witcher"][data-uppercase="on"] .hub-detail-profile-link {
   font-family: var(--font-display);
   letter-spacing: .14em;
 }
@@ -102,49 +108,62 @@
 /* ── §2 · El acero: veta de cepillado en capa propia. El ruido va ANISÓTROPO (la lattice estirada en un
    eje), que es lo que produce la veta; un `repeating-linear-gradient` de 1 px no es metal, es una
    persiana. En `overlay` y a media opacidad para que no ensucie el texto. ── */
-:root[data-palette="steam"] body {
+:root[data-palette="witcher"] body {
   background-image:
     linear-gradient(180deg, rgba(255,255,255,.05), transparent 24%),
     radial-gradient(120% 70% at 50% -10%, rgba(198,206,216,.10), transparent 60%);
   background-attachment: fixed;
 }
-:root[data-palette="steam"] body::before {
+:root[data-palette="witcher"] body::before {
   content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
   background-image: var(--wt-veta); background-size: 300px 300px;
   mix-blend-mode: overlay; opacity: .38;
 }
-:root[data-palette="steam"][data-theme="light"] body::before { opacity: .22; }
+:root[data-palette="witcher"][data-theme="light"] body::before { opacity: .22; }
 
 /* ── §3 · Paneles: chapa con canto de luz arriba y filete de acero. ── */
-:root[data-palette="steam"] .toolbar,
-:root[data-palette="steam"] .table-wrap,
-:root[data-palette="steam"] .settings-card,
-:root[data-palette="steam"] .stats-card,
-:root[data-palette="steam"] .hub-feed-card,
-:root[data-palette="steam"] .hub-hub-card,
-:root[data-palette="steam"] .modal,
-:root[data-palette="steam"] .alert-dialog {
+:root[data-palette="witcher"] .toolbar,
+:root[data-palette="witcher"] .table-wrap,
+:root[data-palette="witcher"] .settings-card,
+:root[data-palette="witcher"] .stats-card,
+:root[data-palette="witcher"] .hub-feed-card,
+:root[data-palette="witcher"] .hub-hub-card,
+:root[data-palette="witcher"] .modal,
+:root[data-palette="witcher"] .alert-dialog {
   border: 1px solid var(--border) !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.10), var(--e2) !important;
 }
 
+/* EL AVISO (logro, aviso de estado y anuncio) · una PLACA DE ACERO: el filete del metal (`--wt-filete`, el de §4b)
+   con su canto de luz arriba, como los paneles, y el radio del tema en vez de la cápsula de la casa —una pastilla
+   no es de ningún material de aquí—. La rareza la siguen diciendo el anillo fino y el halo de `--glow`. */
+:root[data-palette="witcher"] .ach-toast {
+  border: 1px solid var(--wt-filete);
+  border-radius: var(--radius-md);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .10),
+    0 0 0 1px rgba(var(--glow), .5),
+    0 0 20px -2px rgba(var(--glow), .38),
+    var(--shadow);
+}
+
 /* ── §4 · Tabla: la cabecera es el encabezado del contrato —versales de Cinzel y doble filete— y cada
    fila lleva el lomo del color de su género. ── */
-:root[data-palette="steam"] thead th {
+:root[data-palette="witcher"] thead th {
   background: linear-gradient(180deg, var(--surface-elevated), var(--surface));
   color: var(--steam);
   border-bottom: 3px double var(--border);
 }
-:root[data-palette="steam"] .main-row > td:first-child { border-left: 3px solid transparent; }
-:root[data-palette="steam"] .main-row:hover > td:first-child { border-left-color: color-mix(in srgb, var(--steam) 55%, transparent); }
-:root[data-palette="steam"] .main-row.open > td:first-child { border-left-color: var(--wt-igni); }
+:root[data-palette="witcher"] .main-row > td:first-child { border-left: 3px solid transparent; }
+:root[data-palette="witcher"] .main-row:hover > td:first-child { border-left-color: color-mix(in srgb, var(--steam) 55%, transparent); }
+:root[data-palette="witcher"] .main-row.open > td:first-child { border-left-color: var(--wt-igni); }
 
 /* El color del filete, en la raíz y no en la regla de §5: esa lleva `:not()` y pesaría más que la de
    cualquier rol, así que un botón que quisiera otro filo no podría pedirlo (es la misma trampa que ya
    documentan los cuatro altos, unas líneas más abajo). Desde la raíz se hereda, y heredar siempre pierde
    contra una declaración propia. Lo usan la hoja larga (§5) y el remache (§5b). */
-:root[data-palette="steam"] { --wt-filete: rgba(198,206,216,.70); }
-:root[data-palette="steam"][data-theme="light"] { --wt-filete: rgba(71,82,95,.55); }
+:root[data-palette="witcher"] { --wt-filete: rgba(198,206,216,.70); }
+:root[data-palette="witcher"][data-theme="light"] { --wt-filete: rgba(71,82,95,.55); }
 
 /* ── §4b · LA PIEZA DE CHAPA: cómo se troquela CUALQUIER cosa de este tema ────────────────────────────
    Todo lo que aquí va recortado en ángulo —la hoja de los botones, el remache, la barra inferior, su
@@ -195,7 +214,7 @@
 /* ── §5 · Botones = HOJA DE ACERO. La pieza se recorta en punta por los dos lados —una hoja vista de
    canto— y la acanaladura de luz la cruza por el centro: el degradado cambia de claro a oscuro justo
    en el 50 %, que es lo que lee el ojo como filo. Sin `border`: el contorno lo da el recorte (§4b). ── */
-:root[data-palette="steam"] .btn:not(.btn-icon):not(.btn-ghost) {
+:root[data-palette="witcher"] .btn:not(.btn-icon):not(.btn-ghost) {
   @include pieza-de-chapa;
   /* `.btn` es `position: static` en la hoja base, así que hasta ahora la acanaladura —un `::before`
      absoluto— NO se colocaba sobre el botón: se iba al ancestro posicionado más cercano y pintaba una
@@ -224,7 +243,7 @@
    encima y —solo en la acción principal y con los efectos encendidos (§13)— el destello que la recorre.
    El destello va como CAPA DE FONDO y se mueve con `background-position`, no con `transform`: esta capa
    es ahora la chapa del botón, y moverla se llevaría de paseo el acero. */
-:root[data-palette="steam"] .btn:not(.btn-icon):not(.btn-ghost)::after {
+:root[data-palette="witcher"] .btn:not(.btn-icon):not(.btn-ghost)::after {
   background-image:
     var(--wt-brillo, none),
     /* Canto de luz en el borde de arriba; solo lo enciende el activo. */
@@ -240,19 +259,19 @@
   background-position: var(--wt-brillo-x, -120%) 0, 0 0, 0 50%, 0 0;
   background-repeat: no-repeat;
 }
-:root[data-palette="steam"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: none; filter: brightness(1.14); }
-:root[data-palette="steam"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(1px); }
+:root[data-palette="witcher"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: none; filter: brightness(1.14); }
+:root[data-palette="witcher"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(1px); }
 /* La acción principal es la hoja PULIDA: mismo filo, plata en vez de acero pavonado. */
-:root[data-palette="steam"] .btn-steam,
-:root[data-palette="steam"] .btn-primary {
+:root[data-palette="witcher"] .btn-steam,
+:root[data-palette="witcher"] .btn-primary {
   --wt-h1: #e9eff6; --wt-h2: #c3cdd9; --wt-h3: #8e9baa; --wt-h4: #dde4ec;
   --wt-rotulo: var(--on-accent);
 }
 /* Lo que señala toma el fuego de Igni en el rótulo, sobre la misma hoja. */
-:root[data-palette="steam"] .btn-accent,
-:root[data-palette="steam"] .btn.is-active,
-:root[data-palette="steam"] .btn-toggle.active,
-:root[data-palette="steam"] .btn-toggle-deck.active {
+:root[data-palette="witcher"] .btn-accent,
+:root[data-palette="witcher"] .btn.is-active,
+:root[data-palette="witcher"] .btn-toggle.active,
+:root[data-palette="witcher"] .btn-toggle-deck.active {
   /* EL ACTIVO SE INVIERTE, también en oscuro: pasa a acero PULIDO con tinta encima. Un botón hundido y
      más oscuro que el panel no se veía (1,13:1 contra el fondo) y todo el trabajo lo hacía el color del
      rótulo; invertir la luminancia se lee de un vistazo y sin distinguir colores. El filo de Igni se
@@ -267,29 +286,29 @@
   --wt-canto: linear-gradient(rgba(255,255,255,.6), rgba(255,255,255,.6));
 }
 /* El destructivo es la hoja al rojo: brasa dentro del acero, no relleno plano. */
-:root[data-palette="steam"] .btn-danger {
+:root[data-palette="witcher"] .btn-danger {
   --wt-h1: #5a3236; --wt-h2: #43262a; --wt-h3: #2a171a; --wt-h4: #4e2c30;
   --wt-rotulo: #ffb0a8;
 }
-:root[data-palette="steam"] .btn-complete { --wt-rotulo: var(--success); }
-:root[data-palette="steam"] .btn-abandoned { --wt-rotulo: var(--fg-red); }
+:root[data-palette="witcher"] .btn-complete { --wt-rotulo: var(--success); }
+:root[data-palette="witcher"] .btn-abandoned { --wt-rotulo: var(--fg-red); }
 /* En claro los cuatro altos van otra vez COMO RESPALDO dentro del `var()`, no declarados: esta regla
    lleva `:not()` y pesa más que la de cada rol, así que declararlos aquí volvía a pisar al activo y al
    destructivo — el mismo fallo que ya había en la variante oscura. */
-:root[data-palette="steam"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost) {
+:root[data-palette="witcher"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost) {
   --wt-acero: linear-gradient(180deg,
     var(--wt-h1, #f7f9fb) 0%, var(--wt-h2, #dde3e9) 42%, var(--wt-h3, #b7c1cb) 52%, var(--wt-h4, #eaeef2) 100%);
   color: var(--wt-rotulo, var(--text)) !important;
 }
-:root[data-palette="steam"][data-theme="light"] .btn-steam,
-:root[data-palette="steam"][data-theme="light"] .btn-primary {
+:root[data-palette="witcher"][data-theme="light"] .btn-steam,
+:root[data-palette="witcher"][data-theme="light"] .btn-primary {
   --wt-h1: #67727f; --wt-h2: #4c5764; --wt-h3: #333c47; --wt-h4: #5d6875;
   --wt-rotulo: #fff;
 }
-:root[data-palette="steam"][data-theme="light"] .btn-accent,
-:root[data-palette="steam"][data-theme="light"] .btn.is-active,
-:root[data-palette="steam"][data-theme="light"] .btn-toggle.active,
-:root[data-palette="steam"][data-theme="light"] .btn-toggle-deck.active {
+:root[data-palette="witcher"][data-theme="light"] .btn-accent,
+:root[data-palette="witcher"][data-theme="light"] .btn.is-active,
+:root[data-palette="witcher"][data-theme="light"] .btn-toggle.active,
+:root[data-palette="witcher"][data-theme="light"] .btn-toggle-deck.active {
   /* EN CLARO, EL ACTIVO SE INVIERTE. Una chapa clara con la tinta encendida se distinguía poco de la
      chapa clara de al lado; invertir el par (acero hondo + rótulo claro) es la señal que se lee de
      lejos, y además sube el contraste del propio control contra su fondo, que es lo que pide la 1.4.11
@@ -300,7 +319,7 @@
   --pz-grosor: 1.5px;
   --wt-canto: linear-gradient(rgba(255,255,255,.16), rgba(255,255,255,.16));
 }
-:root[data-palette="steam"][data-theme="light"] .btn-danger {
+:root[data-palette="witcher"][data-theme="light"] .btn-danger {
   --wt-h1: #f5d9d6; --wt-h2: #e8bcb8; --wt-h3: #cf9691; --wt-h4: #f0cecb;
   --wt-rotulo: #7e1c16;
 }
@@ -317,8 +336,8 @@
    y el mismo corte en ángulo que la hoja, a la escala que le toca. Lo demás —las dos capas, el filete que
    rodea la pieza entera y el contador de solicitudes, que vuelve a verse porque el botón ya no recorta—
    lo pone §4b, que es de donde salen todas las piezas troqueladas de este tema. ── */
-:root[data-palette="steam"] .btn:not(.btn-icon):not(.btn-ghost).hub-requests-btn,
-:root[data-palette="steam"] .btn:not(.btn-icon):not(.btn-ghost).hub-post-publish {
+:root[data-palette="witcher"] .btn:not(.btn-icon):not(.btn-ghost).hub-requests-btn,
+:root[data-palette="witcher"] .btn:not(.btn-icon):not(.btn-ghost).hub-post-publish {
   padding-inline: 0;
   --pz-corte: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px),
     calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
@@ -330,7 +349,7 @@
    `_layout.scss`): allí TODOS son de solo icono, así que todos son remaches. Si no, la campana sería la
    única pieza rematada de la fila. */
 @media (max-width: 620px) {
-  :root[data-palette="steam"] .hub-screen-actions .btn:not(.btn-icon):not(.btn-ghost) {
+  :root[data-palette="witcher"] .hub-screen-actions .btn:not(.btn-icon):not(.btn-ghost) {
     padding-inline: 0;
     --pz-corte: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px),
       calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
@@ -342,7 +361,7 @@
 /* ── §5c · LAS CINCO SEÑALES, REPARTIDAS ──────────────────────────────────────────────────────────────
    El tema tenía dos metales y un fuego, y con eso pintaba TODO: el resultado era que una pantalla llena de
    sucesos distintos se leía del mismo gris. Las otras cuatro señales del brujo entran aquí (los colores, en
-   `_base.scss`, CAPA 2) y cada una se ata a UN suceso de la aplicación, que resulta que también son cinco:
+   `_colors.scss`, CAPA 2) y cada una se ata a UN suceso de la aplicación, que resulta que también son cinco:
 
      · AARD, el empujón          → «comenzó» / en curso      (antes iba en plata, o sea, en gris)
      · AXII, el encantamiento    → «finalizó» / completado
@@ -356,16 +375,16 @@
    LO QUE TIÑEN Y LO QUE NO. Filete, velo, punto de leyenda, trazo y lacre —cosas NO textuales, 3:1—. Ningún
    texto cambia de color, así que ninguna de las medidas auditadas se mueve. Y NO tocan los botones: la hoja
    de acero de §5 es la identidad del tema y se queda como está. ── */
-:root[data-palette="steam"] .hub-feed-activity-item.is-move[data-tab="e"] { --evc: var(--wt-aard); }
-:root[data-palette="steam"] .hub-feed-activity-item.is-move[data-tab="c"] { --evc: var(--wt-axii); }
-:root[data-palette="steam"] .hub-feed-activity-item.is-move[data-tab="v"] { --evc: var(--wt-igni); }
-:root[data-palette="steam"] .hub-feed-activity-item.is-move[data-tab="p"] { --evc: var(--wt-yrden); }
-:root[data-palette="steam"] .hub-feed-activity-item.is-achievements { --evc: var(--wt-quen); }
+:root[data-palette="witcher"] .hub-feed-activity-item.is-move[data-tab="e"] { --evc: var(--wt-aard); }
+:root[data-palette="witcher"] .hub-feed-activity-item.is-move[data-tab="c"] { --evc: var(--wt-axii); }
+:root[data-palette="witcher"] .hub-feed-activity-item.is-move[data-tab="v"] { --evc: var(--wt-igni); }
+:root[data-palette="witcher"] .hub-feed-activity-item.is-move[data-tab="p"] { --evc: var(--wt-yrden); }
+:root[data-palette="witcher"] .hub-feed-activity-item.is-achievements { --evc: var(--wt-quen); }
 
 /* El panel de estadísticas habla con los mismos cinco: leyenda, aro, área y línea de tiempo. Y la rampa
    secuencial de los repartos por etiqueta pasa a ir de FUEGO A HIELO —Igni → Aard—, que es la dualidad de
    este tema y separa sus dos extremos más que el naranja→púrpura que traía por defecto. */
-:root[data-palette="steam"] .stats-hub {
+:root[data-palette="witcher"] .stats-hub {
   --stats-e: var(--wt-aard);
   --stats-c: var(--wt-axii);
   --stats-v: var(--wt-igni);
@@ -381,12 +400,12 @@
    El color del género NO tiñe el papel: tiñe LA CERA, que lleva un resto de siena porque la cera nunca es
    del color puro del tinte —pero sólo un resto: a 13 px el sello es lo único con color de todo el cartel,
    así que si se apaga, deja de decir de qué habla—. ── */
-:root[data-palette="steam"] .chip,
-:root[data-palette="steam"] .hub-friend-chip,
-:root[data-palette="steam"] .rl-chip,
-:root[data-palette="steam"] .active-filter-chip,
-:root[data-palette="steam"] .hub-feed-game-chip,
-:root[data-palette="steam"] .hub-review-game {
+:root[data-palette="witcher"] .chip,
+:root[data-palette="witcher"] .hub-friend-chip,
+:root[data-palette="witcher"] .rl-chip,
+:root[data-palette="witcher"] .active-filter-chip,
+:root[data-palette="witcher"] .hub-feed-game-chip,
+:root[data-palette="witcher"] .hub-review-game {
   position: relative; z-index: 0; display: inline-block; vertical-align: middle;
   /* LA TINTA NO ES NEGRA, ES PARDA, y no carga tanto: la ferrogálica de un contrato va en un peso medio y
      sangra un pelo en la fibra (de ahí la sombra de medio píxel), no en negrita sobre papel liso. El cuerpo
@@ -408,12 +427,12 @@
 }
 /* EL PAPEL, detrás. El canto lo rompe un filtro de turbulencia: cada cartel se desgarra distinto y no
    se repite nunca (el filtro vive en el sprite de iconos, ver `IconSprite.tsx`). */
-:root[data-palette="steam"] .chip::before,
-:root[data-palette="steam"] .hub-friend-chip::before,
-:root[data-palette="steam"] .rl-chip::before,
-:root[data-palette="steam"] .active-filter-chip::before,
-:root[data-palette="steam"] .hub-feed-game-chip::before,
-:root[data-palette="steam"] .hub-review-game::before {
+:root[data-palette="witcher"] .chip::before,
+:root[data-palette="witcher"] .hub-friend-chip::before,
+:root[data-palette="witcher"] .rl-chip::before,
+:root[data-palette="witcher"] .active-filter-chip::before,
+:root[data-palette="witcher"] .hub-feed-game-chip::before,
+:root[data-palette="witcher"] .hub-review-game::before {
   content: ''; position: absolute; z-index: -1;
   inset: calc(-1 * var(--wt-asomo));
   filter: url(#wt-desgarro);
@@ -425,12 +444,12 @@
   box-shadow: inset 0 0 14px rgba(120,58,14,var(--wt-tostado)), 0 3px 5px rgba(0,0,0,.45);
 }
 /* EL LACRE, a caballo del canto de arriba. */
-:root[data-palette="steam"] .chip::after,
-:root[data-palette="steam"] .hub-friend-chip::after,
-:root[data-palette="steam"] .rl-chip::after,
-:root[data-palette="steam"] .active-filter-chip::after,
-:root[data-palette="steam"] .hub-feed-game-chip::after,
-:root[data-palette="steam"] .hub-review-game::after {
+:root[data-palette="witcher"] .chip::after,
+:root[data-palette="witcher"] .hub-friend-chip::after,
+:root[data-palette="witcher"] .rl-chip::after,
+:root[data-palette="witcher"] .active-filter-chip::after,
+:root[data-palette="witcher"] .hub-feed-game-chip::after,
+:root[data-palette="witcher"] .hub-review-game::after {
   content: ''; position: absolute; z-index: 2;
   width: var(--wt-lacre); height: var(--wt-lacre);
   top: calc(-1 * var(--wt-asomo) - var(--wt-lacre) / 2); left: 6px;
@@ -453,107 +472,107 @@
 }
 /* El lacre cambia de lado en cada cartel, y las manchas rotan entre tres hojas: si no, la tabla
    entera repetiría la misma mancha y el mismo sello en el mismo sitio. */
-:root[data-palette="steam"] .chips .chip:nth-child(even)::after { left: auto; right: 6px; transform: rotate(6deg); }
-:root[data-palette="steam"] .chips .chip:nth-child(3n+1) { --wt-hoja: var(--wt-hoja1); }
-:root[data-palette="steam"] .chips .chip:nth-child(3n+2) { --wt-hoja: var(--wt-hoja2); }
-:root[data-palette="steam"] .chips .chip:nth-child(3n) { --wt-hoja: var(--wt-hoja3); }
+:root[data-palette="witcher"] .chips .chip:nth-child(even)::after { left: auto; right: 6px; transform: rotate(6deg); }
+:root[data-palette="witcher"] .chips .chip:nth-child(3n+1) { --wt-hoja: var(--wt-hoja1); }
+:root[data-palette="witcher"] .chips .chip:nth-child(3n+2) { --wt-hoja: var(--wt-hoja2); }
+:root[data-palette="witcher"] .chips .chip:nth-child(3n) { --wt-hoja: var(--wt-hoja3); }
 /* El tono de la cera por variante: el género toma el de su categoría; el resto, el suyo de siempre. */
-:root[data-palette="steam"] .chip-genre,
-:root[data-palette="steam"] .rl-chip { --wt-tono: var(--cat, var(--steam)); }
-:root[data-palette="steam"] .chip-generic { --wt-tono: var(--warn); }
+:root[data-palette="witcher"] .chip-genre,
+:root[data-palette="witcher"] .rl-chip { --wt-tono: var(--cat, var(--steam)); }
+:root[data-palette="witcher"] .chip-generic { --wt-tono: var(--warn); }
 /* Los puntos FUERTES lacran con AXII, que es el verde de las señales, y no con el `--success` de la casa:
    ese verde está calibrado para escribir sobre las chapas y sale apagado en una gota de 13 px. Los DÉBILES
    se quedan en `--danger`, que ya es un coral vivo —el tema no tiene señal roja, y el vino de Sansretour
    es demasiado hondo para un sello tan pequeño—. */
-:root[data-palette="steam"] .chip-pf { --wt-tono: var(--wt-axii); }
-:root[data-palette="steam"] .chip-pd { --wt-tono: var(--danger); }
+:root[data-palette="witcher"] .chip-pf { --wt-tono: var(--wt-axii); }
+:root[data-palette="witcher"] .chip-pd { --wt-tono: var(--danger); }
 /* Los cuatro carteles de LISTA lacran con la señal de su suceso, la misma que llevan en el feed y en las
    estadísticas (§5c): el sello es lo único con color de un cartel de pergamino, así que es donde entra. */
-:root[data-palette="steam"] .chip-list-c { --wt-tono: var(--wt-axii); }
-:root[data-palette="steam"] .chip-list-v { --wt-tono: var(--wt-igni); }
-:root[data-palette="steam"] .chip-list-e { --wt-tono: var(--wt-aard); }
-:root[data-palette="steam"] .chip-list-p { --wt-tono: var(--wt-yrden); }
+:root[data-palette="witcher"] .chip-list-c { --wt-tono: var(--wt-axii); }
+:root[data-palette="witcher"] .chip-list-v { --wt-tono: var(--wt-igni); }
+:root[data-palette="witcher"] .chip-list-e { --wt-tono: var(--wt-aard); }
+:root[data-palette="witcher"] .chip-list-p { --wt-tono: var(--wt-yrden); }
 /* La PLATAFORMA lacra en su familia fría (`--chip-plat-fg`, ver CAPA 2), no en la plata del tema: la plata
    sobre papel crema es casi el mismo valor que el papel, y el sello desaparecía. Es además la familia que el
    sistema le reserva para no chocar con el rojo, el verde y el ámbar de sus vecinos de renglón. */
-:root[data-palette="steam"] .chip-plat,
-:root[data-palette="steam"] .chip-deck { --wt-tono: var(--chip-plat-fg); }
-:root[data-palette="steam"] .hub-feed-game-chip,
-:root[data-palette="steam"] .hub-review-game { --wt-tono: var(--wt-igni); }
+:root[data-palette="witcher"] .chip-plat,
+:root[data-palette="witcher"] .chip-deck { --wt-tono: var(--chip-plat-fg); }
+:root[data-palette="witcher"] .hub-feed-game-chip,
+:root[data-palette="witcher"] .hub-review-game { --wt-tono: var(--wt-igni); }
 /* ── §6b · Los botones-icono (cuenta, ajustes, tema, filtros) eran lo único sin cuerpo: un icono suelto
    sobre el fondo, que en claro casi no se veía. Ahora son REMACHES de la chapa —disco de acero con
    filete y canto de luz— y al pulsarlos se hunden. El FAB es el mismo remache, en grande. ── */
-:root[data-palette="steam"] .btn-icon,
-:root[data-palette="steam"] .theme-toggle-btn {
+:root[data-palette="witcher"] .btn-icon,
+:root[data-palette="witcher"] .theme-toggle-btn {
   background: linear-gradient(180deg, #414a56, #2b323b) !important;
   border: 1px solid var(--border) !important;
   color: var(--steam) !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 1px 2px rgba(0,0,0,.45) !important;
   transition: filter .18s, box-shadow .12s, transform .1s;
 }
-:root[data-palette="steam"][data-theme="light"] .btn-icon,
-:root[data-palette="steam"][data-theme="light"] .theme-toggle-btn {
+:root[data-palette="witcher"][data-theme="light"] .btn-icon,
+:root[data-palette="witcher"][data-theme="light"] .theme-toggle-btn {
   background: linear-gradient(180deg, #fbfcfd, #ccd5de) !important;
   color: var(--steam) !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 1px 2px rgba(30,42,56,.22) !important;
 }
-:root[data-palette="steam"] .btn-icon:hover,
-:root[data-palette="steam"] .theme-toggle-btn:hover {
+:root[data-palette="witcher"] .btn-icon:hover,
+:root[data-palette="witcher"] .theme-toggle-btn:hover {
   color: var(--wt-igni) !important;
   border-color: color-mix(in srgb, var(--wt-igni) 60%, var(--border)) !important;
   filter: brightness(1.12);
   transform: none;
 }
-:root[data-palette="steam"] .btn-icon:active,
-:root[data-palette="steam"] .theme-toggle-btn:active {
+:root[data-palette="witcher"] .btn-icon:active,
+:root[data-palette="witcher"] .theme-toggle-btn:active {
   transform: translateY(1px);
   box-shadow: inset 0 2px 4px rgba(0,0,0,.5) !important;
 }
-:root[data-palette="steam"] .fab,
-:root[data-palette="steam"] .fab-roulette {
+:root[data-palette="witcher"] .fab,
+:root[data-palette="witcher"] .fab-roulette {
   border: 1px solid var(--border);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 4px 10px rgba(0,0,0,.45);
 }
-:root[data-palette="steam"] .fab:active,
-:root[data-palette="steam"] .fab-roulette:active { box-shadow: inset 0 2px 5px rgba(0,0,0,.55); }
+:root[data-palette="witcher"] .fab:active,
+:root[data-palette="witcher"] .fab-roulette:active { box-shadow: inset 0 2px 5px rgba(0,0,0,.55); }
 
 /* ── §7 · Campos: ranura en la chapa. Lo que se rellena sigue hundido, pero aquí el hueco es de metal:
    sombra interior dura y, al enfocar, el filo de Igni. ── */
-:root[data-palette="steam"] .input-base,
-:root[data-palette="steam"] .finput,
-:root[data-palette="steam"] .ftextarea,
-:root[data-palette="steam"] .search-input {
+:root[data-palette="witcher"] .input-base,
+:root[data-palette="witcher"] .finput,
+:root[data-palette="witcher"] .ftextarea,
+:root[data-palette="witcher"] .search-input {
   border-radius: var(--radius-sm) !important;
   background: color-mix(in srgb, var(--bg) 82%, #000) !important;
   box-shadow: inset 0 2px 4px rgba(0,0,0,.45), inset 0 -1px 0 rgba(255,255,255,.07) !important;
 }
-:root[data-palette="steam"][data-theme="light"] .input-base,
-:root[data-palette="steam"][data-theme="light"] .finput,
-:root[data-palette="steam"][data-theme="light"] .ftextarea,
-:root[data-palette="steam"][data-theme="light"] .search-input {
+:root[data-palette="witcher"][data-theme="light"] .input-base,
+:root[data-palette="witcher"][data-theme="light"] .finput,
+:root[data-palette="witcher"][data-theme="light"] .ftextarea,
+:root[data-palette="witcher"][data-theme="light"] .search-input {
   background: #fff !important;
   box-shadow: inset 0 2px 4px rgba(30,42,56,.14) !important;
 }
-:root[data-palette="steam"] .input-base:focus,
-:root[data-palette="steam"] .finput:focus,
-:root[data-palette="steam"] .ftextarea:focus,
-:root[data-palette="steam"] .search-input:focus {
+:root[data-palette="witcher"] .input-base:focus,
+:root[data-palette="witcher"] .finput:focus,
+:root[data-palette="witcher"] .ftextarea:focus,
+:root[data-palette="witcher"] .search-input:focus {
   border-color: var(--wt-igni) !important;
   box-shadow: inset 0 2px 4px rgba(0,0,0,.45), 0 0 0 2px rgba(255,143,74,.35) !important;
 }
-:root[data-palette="steam"] .flabel,
-:root[data-palette="steam"] .detail-label { font-family: var(--font-display); letter-spacing: .12em; color: var(--steam); }
+:root[data-palette="witcher"] .flabel,
+:root[data-palette="witcher"] .detail-label { font-family: var(--font-display); letter-spacing: .12em; color: var(--steam); }
 
 /* ── §8 · Pestañas e insignias. ── */
-:root[data-palette="steam"] .tab-btn.active { color: var(--tab-active); }
-:root[data-palette="steam"] .badge-rejugar-activo,
-:root[data-palette="steam"] .badge-opp-activo {
+:root[data-palette="witcher"] .tab-btn.active { color: var(--tab-active); }
+:root[data-palette="witcher"] .badge-rejugar-activo,
+:root[data-palette="witcher"] .badge-opp-activo {
   background: linear-gradient(180deg, #e9eff6, #b6c1cd) !important;
   color: var(--on-accent) !important; border: 0 !important;
   box-shadow: 0 1px 2px rgba(0,0,0,.4) !important;
 }
-:root[data-palette="steam"] .badge-rejugar-inactivo,
-:root[data-palette="steam"] .badge-opp-inactivo {
+:root[data-palette="witcher"] .badge-rejugar-inactivo,
+:root[data-palette="witcher"] .badge-opp-inactivo {
   background: linear-gradient(180deg, #39414b, #262d36) !important;
   color: var(--text-dim) !important; border: 0 !important; box-shadow: none !important;
 }
@@ -564,7 +583,7 @@
 /* AFILADA COMO LOS BOTONES: la barra se recorta en punta por los dos lados, igual que una hoja, y por lo
    mismo que ellos la forma la dan las dos capas de §4b — con el filete por dentro, sus dos puntas se
    quedaban sin canto. El canto de luz de arriba viaja como capa de la chapa. */
-:root[data-palette="steam"] .bottom-nav-inner {
+:root[data-palette="witcher"] .bottom-nav-inner {
   @include pieza-de-chapa;
   --pz-corte: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%);
   --pz-filete: rgba(198,206,216,.35);
@@ -574,92 +593,92 @@
   -webkit-backdrop-filter: none; backdrop-filter: none;
   padding-inline: 1.1rem;
 }
-:root[data-palette="steam"][data-theme="light"] .bottom-nav-inner {
+:root[data-palette="witcher"][data-theme="light"] .bottom-nav-inner {
   --pz-filete: rgba(71,82,95,.4);
   --wt-canto-nav: rgba(255,255,255,.9);
 }
-:root[data-palette="steam"] .bottom-nav-btn { border-radius: var(--radius-sm); }
-:root[data-palette="steam"] .bottom-nav-btn.active { color: var(--on-accent); }
+:root[data-palette="witcher"] .bottom-nav-btn { border-radius: var(--radius-sm); }
+:root[data-palette="witcher"] .bottom-nav-btn.active { color: var(--on-accent); }
 /* La sección activa es la placa pulida con el filo de Igni. Es `position: absolute`, así que ya posiciona
    sus capas; el filo de Igni pasa a ser el filete de la pieza y recorre también las dos puntas. */
-:root[data-palette="steam"] .bottom-nav-ind {
+:root[data-palette="witcher"] .bottom-nav-ind {
   @include pieza-de-chapa;
   --pz-corte: polygon(9px 0, calc(100% - 9px) 0, 100% 50%, calc(100% - 9px) 100%, 9px 100%, 0 50%);
   --pz-chapa: linear-gradient(180deg, #e2e8ef 0%, #c3ccd7 46%, #92a0af 54%, #d6dee6 100%);
   --pz-filete: rgba(255,143,74,.75);
   --pz-grosor: 1.5px;
 }
-:root[data-palette="steam"][data-theme="light"] .bottom-nav-ind {
+:root[data-palette="witcher"][data-theme="light"] .bottom-nav-ind {
   --pz-chapa: linear-gradient(180deg, #566270 0%, #434d5a 46%, #333c47 54%, #4d5765 100%);
   --pz-filete: rgba(143,54,8,.6);
 }
-:root[data-palette="steam"][data-theme="light"] .bottom-nav-btn.active { color: #fff; }
+:root[data-palette="witcher"][data-theme="light"] .bottom-nav-btn.active { color: #fff; }
 
 /* ── §9 · La puntuación, que era lo más plano del tema ─────────────────────────────────────────────
    LA NOTA ES UN MEDALLÓN TROQUELADO: el arco de color sigue diciendo la nota (lo pinta la hoja base con
    un `conic-gradient`), pero ahora se apoya en metal — disco de acero con su canto de luz, filo oscuro
    por fuera y la cifra GRABADA, con sombra arriba y luz abajo, que es como se lee un número golpeado en
    una chapa. ── */
-:root[data-palette="steam"] .score-ring,
-:root[data-palette="steam"] .score-dial {
+:root[data-palette="witcher"] .score-ring,
+:root[data-palette="witcher"] .score-dial {
   box-shadow: 0 0 0 1px rgba(10,14,18,.85), inset 0 1px 0 rgba(255,255,255,.25), 0 2px 4px rgba(0,0,0,.45);
 }
-:root[data-palette="steam"] .score-ring::after {
+:root[data-palette="witcher"] .score-ring::after {
   background: radial-gradient(circle at 36% 30%, #414a56, #262d36 72%) !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 0 0 1px rgba(10,14,18,.7);
 }
-:root[data-palette="steam"][data-theme="light"] .score-ring::after {
+:root[data-palette="witcher"][data-theme="light"] .score-ring::after {
   background: radial-gradient(circle at 36% 30%, #fbfcfd, #d7dee5 72%) !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 0 1px rgba(71,82,95,.3);
 }
-:root[data-palette="steam"] .score-ring-num,
-:root[data-palette="steam"] .score-dial-num {
+:root[data-palette="witcher"] .score-ring-num,
+:root[data-palette="witcher"] .score-dial-num {
   font-weight: 500;
   letter-spacing: .02em;
   text-shadow: 0 -1px 0 rgba(0,0,0,.75), 0 1px 0 rgba(255,255,255,.22);
 }
-:root[data-palette="steam"][data-theme="light"] .score-ring-num,
-:root[data-palette="steam"][data-theme="light"] .score-dial-num {
+:root[data-palette="witcher"][data-theme="light"] .score-ring-num,
+:root[data-palette="witcher"][data-theme="light"] .score-dial-num {
   text-shadow: 0 1px 0 rgba(255,255,255,.9), 0 -1px 0 rgba(30,42,56,.3);
 }
 /* LAS ESTRELLAS, TROQUELADAS: la llena es una pieza de oro con su filo oscuro y su punto de luz; la
    vacía es el HUECO en la chapa, hundido, no una estrella gris. Así la fila de cinco se lee como cinco
    troqueles y no como un texto. */
-:root[data-palette="steam"] .stars .f,
-:root[data-palette="steam"] .star-inp button.f {
+:root[data-palette="witcher"] .stars .f,
+:root[data-palette="witcher"] .star-inp button.f {
   color: var(--star-full);
   text-shadow: 0 1px 0 rgba(60,38,0,.55), 0 0 6px rgba(242,199,92,.35);
 }
-:root[data-palette="steam"] .stars,
-:root[data-palette="steam"] .star-inp button:not(.f) {
+:root[data-palette="witcher"] .stars,
+:root[data-palette="witcher"] .star-inp button:not(.f) {
   text-shadow: 0 1px 0 rgba(255,255,255,.10), 0 -1px 0 rgba(0,0,0,.55);
 }
-:root[data-palette="steam"][data-theme="light"] .stars .f,
-:root[data-palette="steam"][data-theme="light"] .star-inp button.f {
+:root[data-palette="witcher"][data-theme="light"] .stars .f,
+:root[data-palette="witcher"][data-theme="light"] .star-inp button.f {
   text-shadow: 0 1px 0 rgba(255,255,255,.7), 0 -1px 0 rgba(90,58,0,.35);
 }
-:root[data-palette="steam"][data-theme="light"] .stars,
-:root[data-palette="steam"][data-theme="light"] .star-inp button:not(.f) {
+:root[data-palette="witcher"][data-theme="light"] .stars,
+:root[data-palette="witcher"][data-theme="light"] .star-inp button:not(.f) {
   text-shadow: 0 1px 0 rgba(255,255,255,.9), 0 -1px 0 rgba(30,42,56,.25);
 }
 
 /* ── §10 · Ruleta: tambor de chapa y visor con el filo de Igni. ── */
-:root[data-palette="steam"] .rl-drum {
+:root[data-palette="witcher"] .rl-drum {
   border: 1px solid var(--border); border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--bg) 85%, #000);
   box-shadow: inset 0 2px 6px rgba(0,0,0,.5);
 }
-:root[data-palette="steam"] .rl-frame {
+:root[data-palette="witcher"] .rl-frame {
   border: 2px solid var(--wt-igni); border-radius: var(--radius-sm);
   box-shadow: 0 0 12px rgba(255,143,74,.35), inset 0 0 8px rgba(255,143,74,.18);
 }
-:root[data-palette="steam"] .rl-card,
-:root[data-palette="steam"] .rl-ghost { border: 1px solid var(--border); border-radius: var(--radius-sm); }
-:root[data-palette="steam"] .rl-hint,
-:root[data-palette="steam"] .rl-card-tag { color: var(--fg-link); letter-spacing: .1em; }
+:root[data-palette="witcher"] .rl-card,
+:root[data-palette="witcher"] .rl-ghost { border: 1px solid var(--border); border-radius: var(--radius-sm); }
+:root[data-palette="witcher"] .rl-hint,
+:root[data-palette="witcher"] .rl-card-tag { color: var(--fg-link); letter-spacing: .1em; }
 
 /* ── §11 · Hub social. ── */
-:root[data-palette="steam"] .hub-seg { border: 1px solid var(--border); border-radius: var(--radius-sm); }
+:root[data-palette="witcher"] .hub-seg { border: 1px solid var(--border); border-radius: var(--radius-sm); }
 /* LOS NOMBRES DEL HUB NO VAN EN IGNI. El fuego es la señal de lo que se pulsa y de lo que está activo;
    usarlo también para cada nombre del feed llenaba la columna de naranja y le quitaba fuerza justo donde
    sí hace falta. Los nombres van en PLATA BRUÑIDA, el otro metal del tema.
@@ -669,19 +688,19 @@
    move-who`, 700), que es una segunda señal no cromática; el filete se reserva para el paso del ratón,
    donde además se enciende en Igni. El borde se queda declarado en transparente para que al pasar por
    encima no se mueva el renglón. */
-:root[data-palette="steam"] .hub-name-link,
-:root[data-palette="steam"] .hub-detail-profile-link,
-:root[data-palette="steam"] .hub-feed-card h3:not(.hub-feed-game-chip) {
+:root[data-palette="witcher"] .hub-name-link,
+:root[data-palette="witcher"] .hub-detail-profile-link,
+:root[data-palette="witcher"] .hub-feed-card h3:not(.hub-feed-game-chip) {
   color: var(--steam-hover);
   border-bottom: 1px solid transparent;
 }
-:root[data-palette="steam"] .hub-name-link:hover,
-:root[data-palette="steam"] .hub-detail-profile-link:hover {
+:root[data-palette="witcher"] .hub-name-link:hover,
+:root[data-palette="witcher"] .hub-detail-profile-link:hover {
   color: var(--wt-igni);
   border-bottom-color: color-mix(in srgb, var(--wt-igni) 70%, transparent);
 }
-:root[data-palette="steam"] .hub-feed-activity-item,
-:root[data-palette="steam"] .hub-user-card { border-radius: var(--radius-sm); }
+:root[data-palette="witcher"] .hub-feed-activity-item,
+:root[data-palette="witcher"] .hub-user-card { border-radius: var(--radius-sm); }
 /* LA CABECERA DE DÍA es la CINTA que separa una jornada de otra: chapa estrecha con los extremos en
    punta —el mismo corte de la hoja—, versales de Cinzel grabadas (sombra arriba, luz abajo) y dos muescas
    a los lados. No es una pastilla más: es lo único que ordena el feed en el tiempo. */
@@ -691,7 +710,7 @@
    placa PAVONADA sobre el panel claro, con la fecha grabada en la tinta contraria: 4,09–6,92:1 contra la
    tarjeta en oscuro y 4,37–7,51:1 en claro, con el rótulo por encima de 4,6:1 en los dos.
    Es `position: sticky`, así que ya posiciona sus capas por su cuenta (§4b no toca `position`). */
-:root[data-palette="steam"] .hub-feed-day-header {
+:root[data-palette="witcher"] .hub-feed-day-header {
   @include pieza-de-chapa;
   font-family: var(--font-display);
   letter-spacing: .18em;
@@ -705,21 +724,21 @@
    temas—. La tinta va aquí, sobre el rótulo, y GRABADA: luz por abajo y sombra por arriba en la placa
    clara, y al revés en la oscura. Mide 5,08–8,60:1 en oscuro y 4,62–7,94:1 en claro contra su propia
    placa, contando las cuatro bandas del degradado y no solo la media. */
-:root[data-palette="steam"] .hub-feed-day-header h4 {
+:root[data-palette="witcher"] .hub-feed-day-header h4 {
   color: #12151a;
   text-shadow: 0 1px 0 rgba(255,255,255,.5), 0 -1px 0 rgba(0,0,0,.22);
 }
-:root[data-palette="steam"][data-theme="light"] .hub-feed-day-header {
+:root[data-palette="witcher"][data-theme="light"] .hub-feed-day-header {
   --pz-chapa: linear-gradient(180deg, #6b7684 0%, #5a6471 46%, #48525e 54%, #626d7a 100%);
   --pz-filete: rgba(255,255,255,.45);
 }
-:root[data-palette="steam"][data-theme="light"] .hub-feed-day-header h4 {
+:root[data-palette="witcher"][data-theme="light"] .hub-feed-day-header h4 {
   color: #fff;
   text-shadow: 0 -1px 0 rgba(0,0,0,.55), 0 1px 0 rgba(255,255,255,.14);
 }
 /* EL LIENZO DE LA ACTIVIDAD: la fragua. Un rescoldo naranja entrando por abajo a la izquierda y el
    reflejo frío del acero arriba a la derecha. */
-:root[data-palette="steam"] .hub-feed-lienzo {
+:root[data-palette="witcher"] .hub-feed-lienzo {
   --lz-img: radial-gradient(closest-side, rgba(255,143,74,.16), transparent 72%);
   --lz-size: 70% 90%; --lz-pos: 4% 96%; --lz-rep: no-repeat;
   --lz-img2: radial-gradient(closest-side, rgba(198,206,216,.13), transparent 70%);
@@ -730,27 +749,27 @@
    con puntos suspensivos, y eso se comía el papel de atrás y el lacre. Aquí el pliego va HACIA DENTRO
    (`inset: 0`), de modo que el desgarro se ve igual sin salirse de la caja, y se retira el lacre: a
    ese tamaño taparía el rótulo. */
-:root[data-palette="steam"] .hub-feed-game-chip,
-:root[data-palette="steam"] .hub-review-game {
+:root[data-palette="witcher"] .hub-feed-game-chip,
+:root[data-palette="witcher"] .hub-review-game {
   padding: .12rem .55rem !important;
   background-image: none !important;
   background-color: transparent !important;
   box-shadow: none !important;
 }
-:root[data-palette="steam"] .hub-feed-game-chip::before,
-:root[data-palette="steam"] .hub-review-game::before {
+:root[data-palette="witcher"] .hub-feed-game-chip::before,
+:root[data-palette="witcher"] .hub-review-game::before {
   inset: 0;
   background-image: var(--wt-hoja1), var(--wt-fibra),
     linear-gradient(168deg, var(--wt-papel-a1), var(--wt-papel-a2) 60%, var(--wt-papel-a3));
 }
-:root[data-palette="steam"] .hub-feed-game-chip::after,
-:root[data-palette="steam"] .hub-review-game::after { content: none; }
+:root[data-palette="witcher"] .hub-feed-game-chip::after,
+:root[data-palette="witcher"] .hub-review-game::after { content: none; }
 
 /* LOS AVISOS DEL FEED —«empezó/terminó/dejó» y los logros— se quedaban con la píldora translúcida de
    la casa, que en un tema de metal no dice nada. El movimiento es una PLACA atornillada a la chapa, con
    su filete del color del evento; el logro, la misma placa con el filo dorado. */
-:root[data-palette="steam"] .hub-feed-activity-item.is-move,
-:root[data-palette="steam"] .hub-feed-activity-item.is-achievements {
+:root[data-palette="witcher"] .hub-feed-activity-item.is-move,
+:root[data-palette="witcher"] .hub-feed-activity-item.is-achievements {
   /* EL FILETE Y EL VELO, SUBIDOS. Estaban al 45 % de transparencia y al 8 % de mezcla: el color del suceso
      existía en la hoja pero no llegaba al ojo, y el feed entero se leía del mismo gris. Ver §5c. */
   border: 1px solid color-mix(in srgb, var(--evc), transparent 22%) !important;
@@ -760,14 +779,14 @@
     color-mix(in srgb, var(--surface) 86%, var(--evc))) !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 1px 2px rgba(0,0,0,.35) !important;
 }
-:root[data-palette="steam"] .hub-feed-activity-item.is-achievements {
+:root[data-palette="witcher"] .hub-feed-activity-item.is-achievements {
   /* El segundo filo del logro sale de Quen y no de un ámbar suelto: es la misma señal que pinta la placa. */
   box-shadow: inset 0 1px 0 rgba(255,255,255,.14), inset 0 0 0 1px color-mix(in srgb, var(--evc), transparent 55%), 0 1px 3px rgba(0,0,0,.4) !important;
 }
 /* En CLARO el velo cunde menos —sobre una chapa clara, un 14 % de color casi no se ve— así que sube al 22 %.
    Sigue siendo velo: el texto de encima no se tiñe y conserva sus contrastes medidos. */
-:root[data-palette="steam"][data-theme="light"] .hub-feed-activity-item.is-move,
-:root[data-palette="steam"][data-theme="light"] .hub-feed-activity-item.is-achievements {
+:root[data-palette="witcher"][data-theme="light"] .hub-feed-activity-item.is-move,
+:root[data-palette="witcher"][data-theme="light"] .hub-feed-activity-item.is-achievements {
   background: linear-gradient(180deg,
     color-mix(in srgb, var(--surface-elevated) 78%, var(--evc)),
     color-mix(in srgb, var(--surface) 78%, var(--evc))) !important;
@@ -775,34 +794,34 @@
 }
 
 /* ── §12 · Panel de estadísticas: barras a canto vivo y cifras de mono. ── */
-:root[data-palette="steam"] .year-strip-col,
-:root[data-palette="steam"] .year-scale-ramp,
-:root[data-palette="steam"] .shine-fill,
-:root[data-palette="steam"] .top-chip-bar { border-radius: 0; }
-:root[data-palette="steam"] .donut-seg,
-:root[data-palette="steam"] .gauge-seg,
-:root[data-palette="steam"] .year-line { stroke-linecap: butt; }
-:root[data-palette="steam"] .stat-tile-value,
-:root[data-palette="steam"] .gauge-number,
-:root[data-palette="steam"] .shine-value { font-family: var(--font-mono); }
+:root[data-palette="witcher"] .year-strip-col,
+:root[data-palette="witcher"] .year-scale-ramp,
+:root[data-palette="witcher"] .shine-fill,
+:root[data-palette="witcher"] .top-chip-bar { border-radius: 0; }
+:root[data-palette="witcher"] .donut-seg,
+:root[data-palette="witcher"] .gauge-seg,
+:root[data-palette="witcher"] .year-line { stroke-linecap: butt; }
+:root[data-palette="witcher"] .stat-tile-value,
+:root[data-palette="witcher"] .gauge-number,
+:root[data-palette="witcher"] .shine-value { font-family: var(--font-mono); }
 
-/* ── §13 · Firma del tema (bajo `data-effects`): el lacre que se estampa al guardar (`.fx-seal`, en
-   `_effects.scss`), el filo de la hoja que destella al pasar por la acción principal, la luz que se
-   pasea por el acero (§13a) y la sangre fresca que resbala por los carteles (§13b). ── */
+/* ── §13 · Firma del tema (bajo `data-effects`): el lacre que se estampa al cerrar un juego (§13d), el filo de la hoja que destella al pasar por la acción principal, la luz que se
+   pasea por el acero (§13a), la sangre fresca que resbala por los carteles (§13b) y el destello que
+   recorre el filete de las pestañas al guardar (§13c). ── */
 @media (prefers-reduced-motion: no-preference) {
   /* EL DESTELLO VIVE AHORA DENTRO DE LA CHAPA (§5), no en una capa propia: desde que la forma la dan los
      dos pseudos de §4b, el `::after` ES el acero del botón, y el `translateX` que movía el destello se
      llevaba de paseo la chapa entera. Va como primera capa de ese mismo fondo y se desplaza con
      `background-position`, que mueve la capa y deja las de debajo quietas. El recorte ya no hace falta:
      la capa está dentro de la pieza troquelada, así que el destello no puede salirse de la hoja. */
-  :root[data-effects="on"][data-palette="steam"] .btn-steam,
-  :root[data-effects="on"][data-palette="steam"] .btn-primary {
+  :root[data-effects="on"][data-palette="witcher"] .btn-steam,
+  :root[data-effects="on"][data-palette="witcher"] .btn-primary {
     --wt-brillo: linear-gradient(115deg, transparent 42%, rgba(255,255,255,.55) 50%, transparent 58%);
   }
-  :root[data-effects="on"][data-palette="steam"] .btn-steam::after,
-  :root[data-effects="on"][data-palette="steam"] .btn-primary::after { transition: background-position .55s ease; }
-  :root[data-effects="on"][data-palette="steam"] .btn-steam:hover,
-  :root[data-effects="on"][data-palette="steam"] .btn-primary:hover { --wt-brillo-x: 220%; }
+  :root[data-effects="on"][data-palette="witcher"] .btn-steam::after,
+  :root[data-effects="on"][data-palette="witcher"] .btn-primary::after { transition: background-position .55s ease; }
+  :root[data-effects="on"][data-palette="witcher"] .btn-steam:hover,
+  :root[data-effects="on"][data-palette="witcher"] .btn-primary:hover { --wt-brillo-x: 220%; }
 
   /* ══ §13a · LA LUZ SE PASEA POR EL ACERO ═══════════════════════════════════════════════════════════
      El tema tenía la veta del cepillado, que es estática, y un destello que solo salía al pasar el ratón
@@ -830,7 +849,7 @@
      EN CLARO NO PUEDE SER BLANCA: sobre una chapa que ya está casi en blanco no queda sitio para un
      reflejo más claro, así que lo que pasa es la SOMBRA del reflejo —una banda de gris azulado—, que es
      como se ve moverse la luz sobre metal pulido claro. ══ */
-  :root[data-effects="on"][data-palette="steam"] body::after {
+  :root[data-effects="on"][data-palette="witcher"] body::after {
     content: '';
     position: fixed;
     /* Más ancha que la ventana por los dos lados: así entra y sale fuera de cuadro y no se ve aparecer. */
@@ -842,7 +861,7 @@
       rgba(255,255,255,.04) 54%, transparent 60%);
     animation: wt-luz-acero 17s ease-in-out infinite;
   }
-  :root[data-effects="on"][data-palette="steam"][data-theme="light"] body::after {
+  :root[data-effects="on"][data-palette="witcher"][data-theme="light"] body::after {
     background: linear-gradient(102deg,
       transparent 40%, rgba(86,104,124,.05) 46%, rgba(86,104,124,.12) 50%,
       rgba(86,104,124,.05) 54%, transparent 60%);
@@ -863,8 +882,11 @@
      un elemento más. Se mezcla en `multiply`, que es lo que hace la sangre sobre el papel: lo tiñe, no
      lo tapa.
 
-     SOLO GOTEAN LOS CARTELES SUELTOS —el de la ruleta, los filtros activos, el del juego en el feed y el
-     de la reseña—, que son uno o dos en pantalla. Los que van en grupo (`.chips`: géneros y plataformas
+     SOLO GOTEAN LOS CARTELES SUELTOS —el de la ruleta y los filtros activos—, que son uno o dos en pantalla.
+     El del juego en el feed y el de la reseña en las listas del perfil gotearon hasta que se midió el feed:
+     cada entrada lleva el suyo y se pagina de 25 en 25 hasta 300 sin virtualizar, así que no eran «uno o
+     dos». Con una sola página, 6,2 s de rasterizado al hacer scroll contra 0,3 s sin gotas (300 entradas:
+     8,1 s contra 3,2). Los que van en grupo (`.chips`: géneros y plataformas
      de la tabla, del detalle y de la bandeja de importación) no gotean NUNCA, ni en renglones ni en el
      mosaico. Hubo un «uno de cada tres» con `:nth-child(3n+1)`, pero se cuenta dentro de cada grupo, y con
      grupos de uno a tres chips el primero goteaba siempre: dos gotas por fila o por caja. Y
@@ -872,10 +894,8 @@
      turbulencia de su papel, que es lo más caro del tema. Medido al bajar (build, 300 juegos, 1440 px):
      7,0 s de rasterizado en el mosaico y 8,5 s en renglones, contra 0,6 y 2,8 s de Forja, y el compositor
      enseñaba el fondo donde tenía que haber carátulas y filas. Sin las gotas de la tabla, 1,8 y 3,3 s. ══ */
-  :root[data-effects="on"][data-palette="steam"] .rl-chip,
-  :root[data-effects="on"][data-palette="steam"] .active-filter-chip,
-  :root[data-effects="on"][data-palette="steam"] .hub-feed-game-chip,
-  :root[data-effects="on"][data-palette="steam"] .hub-review-game {
+  :root[data-effects="on"][data-palette="witcher"] .rl-chip,
+  :root[data-effects="on"][data-palette="witcher"] .active-filter-chip {
     /* LA GOTA: la cuenta abajo y el reguero difuminado por encima, 3,5 px de ancho. Va en un rojo más vivo
        y más opaco que las manchas que el pliego ya trae secas (`--wt-hoja1..3`, pardo y carmín apagado):
        si fuera del mismo tono se confundía con ellas y no se leía como algo que está pasando ahora. */
@@ -890,13 +910,49 @@
     animation: wt-gotear 13s linear infinite;
   }
   /* Cada cartel gotea por un sitio distinto y en otro momento: si no, sangran todos a la vez. */
-  :root[data-effects="on"][data-palette="steam"] .rl-chip:nth-of-type(2n) { --wt-gota-x: 61%; animation-delay: -7s; }
-  :root[data-effects="on"][data-palette="steam"] .active-filter-chip:nth-of-type(2n) { --wt-gota-x: 72%; animation-delay: -9s; }
+  :root[data-effects="on"][data-palette="witcher"] .rl-chip:nth-of-type(2n) { --wt-gota-x: 61%; animation-delay: -7s; }
+  :root[data-effects="on"][data-palette="witcher"] .active-filter-chip:nth-of-type(2n) { --wt-gota-x: 72%; animation-delay: -9s; }
   @keyframes wt-gotear {
     /* Quieta y fuera del cartel cuatro quintas partes del ciclo; luego cae. */
     0%, 80%  { background-position: var(--wt-gota-x, 27%) -17px, 0 0, 0 0; }
     100%     { background-position: var(--wt-gota-x, 27%) calc(100% + 17px), 0 0, 0 0; }
   }
+
+  /* ══ §13c · AL GUARDAR, LA LUZ CORRE POR EL FILO ═══════════════════════════════════════════════════
+     Es el gesto de pasar el pulgar por una hoja recién afilada: un destello FRÍO que recorre el filete de
+     acero bajo las pestañas, de izquierda a derecha. Antes era un barrido de latón dorado (#ecc45c), herencia
+     del tema de cuero que este fue, y el oro no es de ningún material de «Plata y acero».
+     Lo pone `useSignatureEffects` en un `<span>` que mide y coloca sobre `.tabs`; aquí solo se pinta. Va con
+     las fichas del tema, no con literales: en oscuro es plata clara con el núcleo blanco; en claro, el acero
+     hondo de `--steam` con el mismo núcleo, que es como se ve la luz sobre metal oscuro en un fondo claro. */
+  :root[data-palette="witcher"] .fx-silver-sweep {
+    position: fixed; z-index: 9996; pointer-events: none;
+    overflow: hidden;
+  }
+  :root[data-palette="witcher"] .fx-silver-sweep::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+    background: linear-gradient(90deg, transparent, rgba(var(--steam-rgb),.35) 28%, var(--steam) 45%, #fff 50%,
+      var(--steam) 55%, rgba(var(--steam-rgb),.35) 72%, transparent);
+    box-shadow: 0 0 12px rgba(var(--steam-rgb),.5);
+    transform: translateX(-100%);
+    animation: wt-filo-destello .9s ease-out;
+  }
+  @keyframes wt-filo-destello {
+    0%   { transform: translateX(-100%); opacity: 0; }
+    18%  { opacity: 1; }
+    100% { transform: translateX(100%); opacity: 0; }
+  }
+}
+
+/* ── §13d · EL LACRE: la cara de este tema del sello que cae al cerrar un juego (la pieza —golpe, tamaño,
+   icono— es común y vive en `_effects.scss`). La misma gota de cera del contrato —sangre seca— pero con el
+   filo de PLATA, que es el metal del tema. No va bajo `data-effects` ni `reduced-motion` porque ya los mira el
+   hook antes de crear el sello: si no se cumplen, el elemento no existe. ── */
+:root[data-palette="witcher"] .fx-seal {
+  color: #f0e2c4;
+  background: radial-gradient(circle at 36% 30%, #a6241b, #7a1610 62%, #55100c);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.22), inset 0 -6px 14px rgba(0,0,0,.45), 0 14px 30px rgba(0,0,0,.45);
+  border: 2px solid #c6ced8;
 }
 
 /* ── §N · LA CAJA SIN CARÁTULA = LA PLACA INSCRITA EN LA HOJA ──────────────────────────────────────────
@@ -913,7 +969,7 @@
    misma mancha en el mismo sitio treinta veces. El roto lo pone `#wt-desgarro-pliego`, el hermano mayor
    del filtro de los carteles (vive en el mismo sitio, `IconSprite.tsx`): el de 6 px rompe un cartel de
    20 px de alto, pero repartido en el canto de una caja de 218 px sale casi recto. ── */
-:root[data-palette="steam"] .game-card.is-flat {
+:root[data-palette="witcher"] .game-card.is-flat {
   /* CUÁNTO PAPEL ASOMA, y por qué es poco. El pliego empezó en 15 px y la placa se quedaba pequeña: la nota y
      la insignia de rejugar caían a 2 y 6 px de su canto, o sea a caballo entre el metal y el pergamino, y no
      se leían ni en uno ni en otro. Con 9 px el papel sigue contando lo suyo —el roto se ve igual, que es lo
@@ -927,12 +983,12 @@
   box-shadow: none;
   border-radius: 0;
 }
-:root[data-palette="steam"] .game-card.is-flat:nth-child(3n+2) { --wt-hoja-pliego: var(--wt-hoja2); }
-:root[data-palette="steam"] .game-card.is-flat:nth-child(3n)   { --wt-hoja-pliego: var(--wt-hoja3); }
+:root[data-palette="witcher"] .game-card.is-flat:nth-child(3n+2) { --wt-hoja-pliego: var(--wt-hoja2); }
+:root[data-palette="witcher"] .game-card.is-flat:nth-child(3n)   { --wt-hoja-pliego: var(--wt-hoja3); }
 /* EL PLIEGO, debajo de todo. Va hacia dentro (`inset: 0`) como el cartel del nombre del juego del hub:
    así el roto se ve entero sin salirse de la caja, que es lo que mantiene todas las cajas del mosaico
    midiendo exactamente lo mismo. */
-:root[data-palette="steam"] .game-card.is-flat::before {
+:root[data-palette="witcher"] .game-card.is-flat::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -948,7 +1004,7 @@
 /* LA PLACA, encima del papel y a canto vivo: un rectángulo, sin puntas ni recortes, porque aquí lo que
    tiene forma es el papel. El damasco son dos juegos de arcos finos con paso y centro distintos, para que
    el dibujo no se repita a la vista. */
-:root[data-palette="steam"] .game-card.is-flat::after {
+:root[data-palette="witcher"] .game-card.is-flat::after {
   content: "";
   position: absolute;
   inset: var(--pliego);
@@ -969,7 +1025,7 @@
 }
 /* El contenido vive DENTRO de la placa, así que al relleno se le suma el pliego: pegada al borde, una
    etiqueta quedaría a caballo del roto. */
-:root[data-palette="steam"] .game-card.is-flat .game-card-body {
+:root[data-palette="witcher"] .game-card.is-flat .game-card-body {
   /* POR ABAJO NO LLEVA RELLENO, y esto NO es una licencia de maquetación: el pliego sumado a los cuatro
      lados hacía que el cuerpo midiera 208,7 px dentro de una caja de 201,6 declarados, así que el pie se
      salía por el canto y `overflow: hidden` se lo comía —el medidor de este tema no se veía NUNCA—. El
@@ -989,33 +1045,33 @@
 /* Sobre el acero se escribe con la tinta del tema —la de papel es la de los carteles—, en las versales de
    documento. Sin subrayado: el filo de Igni bajo el título era una raya más en una pieza que ya tiene su
    canto dibujado, y en un nombre de dos líneas lo partía por la mitad. */
-:root[data-palette="steam"] .game-card.is-flat .game-card-name {
+:root[data-palette="witcher"] .game-card.is-flat .game-card-name {
   font-family: var(--font-display);
   text-transform: uppercase;
   letter-spacing: .06em;
   font-size: var(--fs-md);
 }
 /* La nota y la insignia, remachadas a la placa. */
-:root[data-palette="steam"] .game-card.is-flat .score-ring,
-:root[data-palette="steam"] .game-card.is-flat .game-card-badge { box-shadow: 0 1px 3px rgba(18,10,4,.55); }
+:root[data-palette="witcher"] .game-card.is-flat .score-ring,
+:root[data-palette="witcher"] .game-card.is-flat .game-card-badge { box-shadow: 0 1px 3px rgba(18,10,4,.55); }
 /* EL MEDIDOR = EL NIVEL DE CRISTAL de la máquina, empotrado en el filo de abajo DE LA PLACA y no en el de
    la caja: al canto lo partiría el roto del papel. Sus márgenes son el pliego exacto, así que el tubo
    empieza y acaba donde empieza y acaba el acero.
    Y LA LECTURA ES METAL, no pintura: sobre el tono de la nota caen las cuatro bandas de un cilindro pulido
    —luz arriba, sombra abajo— y el color se rebaja un 25 % contra el acero del tema (`--steam`). Con el tono
    puro parecía una pegatina de plástico pegada a una placa remachada. */
-:root[data-palette="steam"] .game-card .game-card-meter {
+:root[data-palette="witcher"] .game-card .game-card-meter {
   height: 6px;
   background: color-mix(in srgb, #000 50%, var(--surface));
   box-shadow: inset 0 0 0 1px rgba(10, 14, 18, .85);
 }
 /* EL ENCAJE ES LO ÚNICO QUE CAMBIA ENTRE LAS DOS CAJAS. La de la lámina no tiene placa ni pliego —su canto
    es el de la propia pieza—, así que el tubo la cruza de lado a lado; aquí se mete dentro del acero. */
-:root[data-palette="steam"] .game-card.is-flat .game-card-meter {
+:root[data-palette="witcher"] .game-card.is-flat .game-card-meter {
   width: auto;
   margin: 0 var(--pliego) var(--pliego);
 }
-:root[data-palette="steam"] .game-card .game-card-meter::after {
+:root[data-palette="witcher"] .game-card .game-card-meter::after {
   background:
     linear-gradient(180deg,
       rgba(255, 255, 255, .7) 0 17%,
@@ -1034,7 +1090,7 @@
    EL LACRE Y NO UN RELLENO: rellenar el botón activo lo convertía en una pastilla de color, que es el acabado
    de la casa y no el de este tablón. El sello va en la esquina, como en los chips-cartel, y deja el icono
    entero a la vista. */
-:root[data-palette="steam"] .view-controls {
+:root[data-palette="witcher"] .view-controls {
   gap: 0;
   padding: .25rem .6rem;
   border-radius: 2px;
@@ -1045,28 +1101,28 @@
     linear-gradient(180deg, color-mix(in srgb, var(--surface) 88%, #fff 12%), var(--surface));
   box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 1px 2px rgba(0,0,0,.35);
 }
-:root[data-palette="steam"] .view-controls:not(:has(.grid-size)) { padding-inline: .35rem; }
-:root[data-palette="steam"] .view-controls .shape-switch { border: 0; background: none; box-shadow: none; padding: 0 0 0 .5rem; }
+:root[data-palette="witcher"] .view-controls:not(:has(.grid-size)) { padding-inline: .35rem; }
+:root[data-palette="witcher"] .view-controls .shape-switch { border: 0; background: none; box-shadow: none; padding: 0 0 0 .5rem; }
 /* EL REMACHE: un disco de acero torneado, con la luz arriba a la izquierda como el resto de las piezas. */
-:root[data-palette="steam"] .view-controls .grid-size-range::-webkit-slider-thumb {
+:root[data-palette="witcher"] .view-controls .grid-size-range::-webkit-slider-thumb {
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #d9dee4, #6f7780);
   border: 1px solid #454b52;
 }
-:root[data-palette="steam"] .view-controls .grid-size-range::-moz-range-thumb {
+:root[data-palette="witcher"] .view-controls .grid-size-range::-moz-range-thumb {
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #d9dee4, #6f7780);
   border: 1px solid #454b52;
 }
-:root[data-palette="steam"] .view-controls .shape-switch-btn { border-radius: 0; }
-:root[data-palette="steam"] .view-controls .shape-switch-btn.is-on {
+:root[data-palette="witcher"] .view-controls .shape-switch-btn { border-radius: 0; }
+:root[data-palette="witcher"] .view-controls .shape-switch-btn.is-on {
   background: none;
   box-shadow: none;
   position: relative;
   color: var(--fg-link);
 }
 /* La gota de cera, en el mismo rojo del lacre de los carteles de contrato. */
-:root[data-palette="steam"] .view-controls .shape-switch-btn.is-on::after {
+:root[data-palette="witcher"] .view-controls .shape-switch-btn.is-on::after {
   content: '';
   position: absolute;
   top: -.1rem;
@@ -1084,7 +1140,7 @@
    —canto vivo y remate a escuadra— y las cifras van en la mono.
    LOS PUNTOS SE QUEDAN REDONDOS, y es la diferencia con «Inserte moneda»: aquí un punto es un REMACHE, y un
    remache cuadrado no existe. Por eso `--stats-dot` no se toca. ── */
-:root[data-palette="steam"] .stats-hub {
+:root[data-palette="witcher"] .stats-hub {
   --stats-radius: var(--radius-sm);
   --stats-bar: 0;
   --stats-pill: 0;
@@ -1092,10 +1148,28 @@
   --stats-join: miter;
   --stats-num: var(--font-mono);
 }
+/* EL ENJAMBRE, EN LA MISMA CHAPA. Era la única gráfica del panel con el lienzo de la casa —esquina de píldora,
+   velo del acento—, y en este tema se leía como una pieza de otro. Aquí es una placa: canto del radio del tema,
+   el filete de acero de §4b como moldura y un segundo filete hundido, que es como se remacha una chapa a otra.
+   Los puntos siguen redondos por la razón de arriba (remaches), con su aro de acero; la MEDIANA es la marca
+   que hay que encontrar, así que va en Igni, que en este tema es lo que señala. El chip de la lista, a escuadra. */
+:root[data-palette="witcher"] .stats-hub {
+  --bee-radius: var(--radius-sm);
+  --bee-edge: 0%;
+  --bee-frame:
+    inset 0 0 0 1px var(--wt-filete),
+    inset 0 0 0 4px transparent,
+    inset 0 0 0 5px color-mix(in srgb, var(--wt-filete) 40%, transparent);
+  --bee-veil: color-mix(in srgb, var(--steam) 5%, transparent);
+  --bee-dot-ring: 0 0 0 1px color-mix(in srgb, var(--steam) 45%, transparent);
+  --bee-median-ink: var(--wt-igni);
+  --bee-chip-radius: var(--radius-sm);
+  --bee-axis-font: var(--font-mono);
+}
 
 /* ── §15 · AVATAR SIN FOTO: el trazo de un grabado en placa —fino y de remate cortado—, no la línea redonda
    de un icono. ── */
-:root[data-palette="steam"] {
+:root[data-palette="witcher"] {
   --deco-avatar-stroke: 1.6;
   --deco-avatar-cap: butt;
 }

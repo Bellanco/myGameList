@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { clampRating } from '../../core/utils/normalize';
+import { SCORE_UI } from '../../core/constants/scoreLabels';
 
 /**
  * Muestra una puntuación (0-5) como estrellas llenas (★) y vacías (☆).
@@ -14,7 +15,7 @@ export const StarRating = memo(function StarRating({ value }: { value: number })
   const emptyStars = 5 - n;
 
   return (
-    <span className="stars" role="img" aria-label={n > 0 ? `${n} de 5 estrellas` : 'Sin puntuar'}>
+    <span className="stars" role="img" aria-label={n > 0 ? SCORE_UI.starsAria(n) : SCORE_UI.unscored}>
       {Array.from({ length: fullStars }).map((_, i) => (
         <span key={`full-${i}`} className="f">
           ★

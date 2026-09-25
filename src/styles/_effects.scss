@@ -69,8 +69,11 @@
    aquí, y los emite `core/effects/moments`. Mismas reglas: los inyecta el hook solo con su paleta activa,
    `data-effects="on"` y sin `prefers-reduced-motion`, así que tampoco necesitan guarda propia. */
 
-/* ── EL SELLO · tres temas pedían el mismo gesto al cerrar un juego, así que es UNA pieza con tres caras.
-      Cae de arriba, golpea y se va: un sello se estampa, no aparece. El color y la forma los pone la paleta. ── */
+/* ── EL SELLO · cuatro temas piden el mismo gesto al cerrar un juego, así que es UNA pieza con cuatro caras.
+      Cae de arriba, golpea y se va: un sello se estampa, no aparece. Aquí vive solo la PIEZA —el golpe, el
+      tamaño, el icono y el rótulo—; cada CARA (color, forma, contorno) está en el skin de su tema, que es lo
+      único que la ve: el lacre en «Plata y acero», el sello del ladrón en «Ladrones de corazones», el lacre
+      imperial en «Solo hay guerra» y la marquesina en «Inserte moneda». ── */
 .fx-seal {
   position: fixed; z-index: 9997; pointer-events: none;
   left: 50%; top: 42%;
@@ -92,50 +95,8 @@
   100% { opacity: 0; transform: translate(-50%, -50%) scale(1.06) rotate(-7deg); }
 }
 
-/* «Plata y acero» · LACRE: la misma gota de cera del contrato —sangre seca— pero con el filo de PLATA,
-   que es el metal del tema. Es la firma del tema: el sello que se estampa al guardar. */
-:root[data-palette="steam"] .fx-seal {
-  color: #f0e2c4;
-  background: radial-gradient(circle at 36% 30%, #a6241b, #7a1610 62%, #55100c);
-  box-shadow: inset 0 2px 0 rgba(255,255,255,.22), inset 0 -6px 14px rgba(0,0,0,.45), 0 14px 30px rgba(0,0,0,.45);
-  border: 2px solid #c6ced8;
-}
-
-/* Ladrones de corazones · el SELLO DEL LADRÓN: sin disco, tarjeta ladeada con contorno negro y sombra de bloque. */
-:root[data-palette="persona"] .fx-seal {
-  width: auto; height: auto; padding: .9rem 1.6rem; border-radius: 0;
-  color: #f4f2f5; background: #ff1f3d;
-  border: 3px solid #0a0a0a;
-  box-shadow: 8px 8px 0 rgba(10,10,10,.9);
-}
-:root[data-palette="persona"] .fx-seal-label { font-size: 15px; }
-
-/* Solo hay guerra · LACRE IMPERIAL: oro sobre verde de cogitador, con la corona de laurel. */
-:root[data-palette="grimdark"] .fx-seal {
-  color: #e0a92b; border-radius: 2px;
-  background: linear-gradient(160deg, #14281c, #060b08);
-  border: 2px solid #e0a92b;
-  box-shadow: inset 0 0 0 3px rgba(224,169,43,.18), 0 0 26px -6px rgba(67,245,88,.5);
-}
-
-/* ── Clásico · EL FILETE DE LATÓN SE ILUMINA al guardar, de izquierda a derecha. Va colocado sobre la barra de
-      pestañas (el hook lo mide), que es donde ese filete existe de verdad. ── */
-.fx-brass-sweep {
-  position: fixed; z-index: 9996; pointer-events: none;
-  overflow: hidden;
-}
-.fx-brass-sweep::after {
-  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
-  background: linear-gradient(90deg, transparent, rgba(236,196,92,.35) 28%, #ecc45c 46%, #fff3d0 50%, #ecc45c 54%, rgba(236,196,92,.35) 72%, transparent);
-  box-shadow: 0 0 14px rgba(236,196,92,.55);
-  transform: translateX(-100%);
-  animation: fx-brass-run .9s ease-out;
-}
-@keyframes fx-brass-run {
-  0%   { transform: translateX(-100%); opacity: 0; }
-  18%  { opacity: 1; }
-  100% { transform: translateX(100%); opacity: 0; }
-}
+/* El destello de «Plata y acero» al guardar la biblioteca (`.fx-silver-sweep`) vive en su skin, §13c: solo se
+   dispara con ese tema puesto, así que no tiene por qué viajar en el bundle de todo el mundo. */
 
 /* ── Sin futuro · BARRIDO DE ESCÁNER al aplicar un filtro: la lista se relee, como un HUD que vuelve a mirar. ── */
 .fx-scan {

@@ -1,10 +1,12 @@
+import { APP_LOCALE } from '../../../core/constants/locale';
+import { createLocalDateFormat } from '../../../core/utils/dateTime';
 // Formateo de números del panel. Se instancian los `Intl.NumberFormat` UNA vez a nivel de módulo: crearlos en
 // cada render es de lo más caro que hay en `Intl`, y aquí se llaman una vez por barra.
-const INTEGER = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0 });
-const ONE_DECIMAL = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 1 });
+const INTEGER = new Intl.NumberFormat(APP_LOCALE, { maximumFractionDigits: 0 });
+const ONE_DECIMAL = new Intl.NumberFormat(APP_LOCALE, { maximumFractionDigits: 1 });
 // Con decimal SIEMPRE: una media de 3,986 formateada "a lo sumo un decimal" sale "4" y se lee como un valor
 // exacto. La media casi nunca lo es, así que el "4,0" es más honesto que el "4".
-const AVERAGE = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const AVERAGE = new Intl.NumberFormat(APP_LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 /** Entero con separador de millares (1234 → "1.234"). */
 export function formatCount(value: number): string {
@@ -25,8 +27,8 @@ export function formatDecimal(value: number): string {
   return AVERAGE.format(Number.isFinite(value) ? value : 0);
 }
 
-const MONTH_SHORT = new Intl.DateTimeFormat('es-ES', { month: 'short' });
-const MONTH_YEAR = new Intl.DateTimeFormat('es-ES', { month: 'short', year: 'numeric' });
+const MONTH_SHORT = createLocalDateFormat({ month: 'short' });
+const MONTH_YEAR = createLocalDateFormat({ month: 'short', year: 'numeric' });
 
 /** Etiqueta corta de un mes `AAAA-MM` para el eje del gráfico ("ene 24"). */
 export function formatMonthLabel(key: string): string {
@@ -42,7 +44,7 @@ export function formatMonthYear(ms: number): string {
   return MONTH_YEAR.format(new Date(ms)).replace('.', '');
 }
 
-const DAY_MONTH = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short' });
+const DAY_MONTH = createLocalDateFormat({ day: 'numeric', month: 'short' });
 
 /** Rótulo de una marca del eje temporal, según su granularidad: "3 mar", "mar 25" o "2025". */
 export function formatTick(at: number, unit: 'day' | 'month' | 'year'): string {

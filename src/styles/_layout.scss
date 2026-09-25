@@ -555,7 +555,7 @@
 
    QUÉ APORTA CADA COSA. El `min-height` es la mitad del remedio: sin él, la trama más bonita sigue midiendo dos
    renglones. La textura es la otra mitad, y NO se decide aquí: aquí solo se declaran las variables y sus valores
-   por defecto (que son los del tema Clásico, más abajo); cada paleta las redefine en su `themes/*.scss`.
+   por defecto (los de la casa, más abajo); cada paleta las redefine en su `themes/*.scss`.
 
    POR QUÉ VARIABLES Y NO SELECTORES DE TEMA. Este fichero viaja en el arranque y los skins llegan por chunk
    (ver `paletteSkin.ts`), así que el orden de inyección entre ambos no es fiable. Al declarar aquí solo valores
@@ -671,7 +671,7 @@
    Son anónimas a propósito: qué es cada una lo decide cada `themes/*.scss`. Ver `SocialFeedScreen`. */
 .hub-feed-lienzo-fx > i { display: none; }
 
-/* El lienzo de «Plata y acero» se pinta en su skin (`themes/steam.scss`), como el de las otras paletas. */
+/* El lienzo de «Plata y acero» se pinta en su skin (`themes/witcher/witcher.scss`), como el de las otras paletas. */
 
 .hub-identity-hero .hub-avatar { flex: 0 0 auto; width: 2.5rem; height: 2.5rem; font-size: var(--fs-lg); }
 
@@ -1034,7 +1034,7 @@
    conservan su ancho; el aviso se sale de esa columna a propósito, y es eso lo que lo distingue de un mensaje
    sin necesidad de gritar.
 
-   La FORMA la pone cada tema (`--sys-*`, CAPA 2, junto a los radios): píldora en el Clásico, rótulo sesgado en
+   La FORMA la pone cada tema (`--sys-*`, CAPA 2, junto a los radios): píldora en la casa, rótulo sesgado en
    Ladrones de corazones, etiqueta de señalética en Cámara de pruebas, línea de registro en Sin futuro, renglón de
    códice en Solo hay guerra y cartel de píxel en Sol y luna.
 

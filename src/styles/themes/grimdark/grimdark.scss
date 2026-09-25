@@ -7,7 +7,7 @@
    TEMA · Solo hay guerra (Warhammer 40.000) — GRIMDARK GÓTICO IMPERIAL: la app como una PANTALLA DE
    COGITADOR (terminal de fósforo VERDE sobre negro) enmarcada en ORO latón gótico. Tipografía blackletter
    (UnifrakturCook) para las cartelas, industrial (Chakra Petch) para el cuerpo y CRT (VT323) para las
-   lecturas de terminal. Rojo sangre = aviso. Identidad de color: CAPA 2 en `_base.scss`.
+   lecturas de terminal. Rojo sangre = aviso. Identidad de color: CAPA 2 en `_colors.scss`.
    ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
 
 /* ── FIRMA · Pantalla de cogitador: SCANLINES verdes en el fondo + BRILLO DE TUBO (vignette verde) fijo sobre
@@ -114,6 +114,20 @@
 :root[data-palette="grimdark"][data-theme="light"] .hub-hub-card,
 :root[data-palette="grimdark"][data-theme="light"] .modal,
 :root[data-palette="grimdark"][data-theme="light"] .alert-dialog { box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px rgba(154, 111, 20, .5), 0 6px 16px rgba(40, 40, 30, .14) !important; }
+
+/* EL AVISO (logro, aviso de estado y anuncio) · la PLACA DEL COGITADOR, como los paneles: moldura de oro a canto
+   vivo y un segundo filete de oro por dentro, separado por un hueco de la propia chapa. La rareza, fuera, en el
+   anillo fino y el halo de `--glow`. El oro sale de `--grim-gold`, que ya se oscurece solo en el códice claro. */
+:root[data-palette="grimdark"] .ach-toast {
+  border: 1px solid var(--grim-gold);
+  border-radius: 0;
+  box-shadow:
+    inset 0 0 0 3px var(--surface-elevated),
+    inset 0 0 0 4px color-mix(in srgb, var(--grim-gold) 40%, transparent),
+    0 0 0 1px rgba(var(--glow), .5),
+    0 0 20px -2px rgba(var(--glow), .38),
+    var(--shadow);
+}
 
 /* ── §4 · Tabla: cabecera = LECTURA DE COGITADOR (VT323 verde, filete verde inferior). ── */
 :root[data-palette="grimdark"] thead th { background: transparent; color: var(--grim-green); border-bottom: 1px solid rgba(67, 245, 88, .4); font-size: var(--fs-md); }
@@ -259,8 +273,52 @@
   @keyframes grim-phosphor-scan { 0% { transform: translateY(-120%); } 100% { transform: translateY(400%); } }
 }
 
+/* ══ EFECTOS · GLITCH DE VOX: corrupción de pict con aberración VERDE/ORO del cogitador. Solo en OSCURO —en el
+   códice claro no hay CRT— y con `data-effects="on"`. Misma mecánica que el glitch de «Sin futuro» (destello en
+   ~2 % de un ciclo largo, el resto quieto), y hasta ahora vivía en el skin de ese tema reutilizando sus keyframes:
+   quien elegía este tema descargaba también la hoja entera de cyberpunk (5,1 kB comprimidos, una petición más)
+   para usar dos keyframes de cinco líneas. Ahora son suyos (`grim-glitch-slice`, `grim-glitch-jitter`), con el
+   mismo recorrido. La sombra verde IDLE del h2 (0 0 9px …) se ancla en los fotogramas apagados para no pisar el
+   glow base. ══ */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes grim-glitch-text {
+    0%, 95.4%, 97.4%, 100% { transform: none; clip-path: inset(-3px); text-shadow: 0 0 9px rgba(67, 245, 88, .45); }
+    95.6% { transform: translate(-2px, 1px); clip-path: inset(8% 0 58% 0); text-shadow: -2px 0 rgba(224, 169, 43, .9), 2px 0 rgba(67, 245, 88, .85), 0 0 9px rgba(67, 245, 88, .45); }
+    96.1% { transform: translate(2px, -1px); clip-path: inset(62% 0 10% 0); text-shadow: 2px 0 rgba(224, 169, 43, .85), -2px 0 rgba(67, 245, 88, .8), 0 0 9px rgba(67, 245, 88, .45); }
+    96.6% { transform: translate(-1px, 0); clip-path: inset(34% 0 34% 0); text-shadow: -1px 0 rgba(224, 169, 43, .8), 1px 0 rgba(67, 245, 88, .75), 0 0 9px rgba(67, 245, 88, .45); }
+  }
+  @keyframes grim-glitch-slice {
+    0%, 95.4%, 97.4%, 100% { transform: none; clip-path: inset(0 0 0 0); }
+    95.6% { transform: translate(-2px, 0); clip-path: inset(10% 0 60% 0); }
+    96.1% { transform: translate(2px, 0); clip-path: inset(64% 0 8% 0); }
+    96.6% { transform: translate(-1px, 0); clip-path: inset(36% 0 36% 0); }
+  }
+  @keyframes grim-glitch-jitter {
+    0%, 94.6%, 96.2%, 100% { transform: translate(0, 0); }
+    94.8% { transform: translate(-2px, 1px); }
+    95.3% { transform: translate(2px, -1px); }
+    95.8% { transform: translate(-1px, 0); }
+  }
+  :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) h2 { animation: grim-glitch-text 12s ease-in-out infinite; }
+  :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) .hub-name-link,
+  :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) .hub-detail-profile-link { animation: grim-glitch-slice 14s ease-in-out infinite; }
+  :root[data-palette="grimdark"]:not([data-theme="light"]) .hub-name-link:nth-of-type(2n) { animation-delay: -5s; }
+  :root[data-palette="grimdark"]:not([data-theme="light"]) .hub-name-link:nth-of-type(3n) { animation-delay: -8.5s; }
+  :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) .fab { animation: grim-glitch-jitter 16s ease-in-out infinite; }
+  :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) .fab-roulette { animation: grim-glitch-jitter 16s ease-in-out infinite; animation-delay: -6s; }
+}
+
 /* Preferencia de efectos OFF: detén el PARPADEO CRT (la textura de scanlines/vignette se conserva). */
 :root:not([data-effects="on"])[data-palette="grimdark"] body::before { animation: none !important; }
+
+/* ══ MOMENTOS · LACRE IMPERIAL al cerrar un juego: la cara de este tema del sello común de `_effects.scss`. Oro
+   sobre verde de cogitador, con la corona de laurel que pone el hook. La guarda de efectos la pone él. ══ */
+:root[data-palette="grimdark"] .fx-seal {
+  color: #e0a92b; border-radius: 2px;
+  background: linear-gradient(160deg, #14281c, #060b08);
+  border: 2px solid #e0a92b;
+  box-shadow: inset 0 0 0 3px rgba(224,169,43,.18), 0 0 26px -6px rgba(67,245,88,.5);
+}
 
 /* ── §12 · Panel "Perfil": lectura de cogitador. La rampa de los repartos va del FÓSFORO VERDE al ORO
    imperial, los datos brillan como un tubo de rayos catódicos y las cifras se leen en VT323, igual que el
@@ -759,6 +817,27 @@
   color: #241d0f;
   box-shadow: inset 0 -1px 0 rgba(0, 0, 0, .35);
 }
+
+/* EN EL CÓDICE CLARO NO HAY CRT, y la placa lo decía igual en los dos modos: latón oscuro (#3a2f18) con su visor de
+   vidrio negro y scanlines, escrito a mano, sobre el pergamino. A la luz la pieza es la del resto de este modo: una
+   hoja de pergamino con la moldura de oro y sus dos remaches, y la lectura se ENTINTA en vez de encenderse —verde
+   del códice, macizo, sin halo ni tubo—, que es como este tema ya trata el claro en sus titulares y pestañas. El
+   apagado va en el oro hondo (4,1:1 sobre la hoja) y el activo, en la chapa de latón con su tinta encima. */
+:root[data-palette="grimdark"][data-theme="light"] .view-controls {
+  background: var(--surface-elevated);
+  box-shadow: inset 0 0 0 1px var(--grim-gold);
+}
+:root[data-palette="grimdark"][data-theme="light"] .view-controls::before,
+:root[data-palette="grimdark"][data-theme="light"] .view-controls::after { background: var(--grim-gold); }
+:root[data-palette="grimdark"][data-theme="light"] .view-controls .grid-size {
+  background-image: none;
+  background-color: var(--surface-hover);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+:root[data-palette="grimdark"][data-theme="light"] .view-controls .grid-size::before { background: color-mix(in srgb, var(--grim-green) 14%, transparent); }
+:root[data-palette="grimdark"][data-theme="light"] .view-controls .grid-size::after { background: var(--grim-green); box-shadow: none; }
+:root[data-palette="grimdark"][data-theme="light"] .view-controls .grid-size-range::-webkit-slider-thumb { box-shadow: none; }
+:root[data-palette="grimdark"][data-theme="light"] .view-controls .shape-switch-btn:not(.is-on) { color: var(--grim-gold); }
 
 /* ── §15 · LA FICHA DE GRÁFICA: esquinas rectas (gótico) y cifras de cogitador, la lectura de terminal que
    ya usan la fecha del feed y la cabecera de la tabla. ── */

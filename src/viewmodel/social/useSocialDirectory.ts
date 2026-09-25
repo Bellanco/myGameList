@@ -252,7 +252,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
         .map((friend) => ({
           id: friend.otherUid,
           uid: friend.otherUid,
-          displayName: friend.otherName || 'Usuario',
+          displayName: friend.otherName || SOCIAL_UI.requests.unknownUser,
           photoURL: friend.otherPhoto || '',
           socialGistId: friend.otherSocialGistId,
           gamesGistId: friend.otherGamesGistId,
@@ -324,7 +324,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
             return {
               id: entry.id,
               uid: entry.uid,
-              displayName: entry.displayName || 'Usuario',
+              displayName: entry.displayName || SOCIAL_UI.requests.unknownUser,
               // El id EFECTIVO (el del doc de amistad), no el del directorio: este último ya no se publica, y
               // dejarlo vacío rompía la hidratación bajo demanda del perfil de un amigo inactivo, que se salta
               // cuando no hay gist al que ir.
@@ -392,7 +392,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
             // de las tres pasadas, con el mismo encadenado de respaldos escrito tres veces).
             const author = {
               profileId: entry.id,
-              profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
+              profileDisplayName: socialData.profile.name || entry.displayName || SOCIAL_UI.requests.unknownUser,
               socialGistId: resolvedSocialGistId,
               photoURL: resolvedPhoto,
             };
@@ -425,7 +425,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
             return {
               id: entry.id,
               uid: entry.uid,
-              displayName: socialData.profile.name || entry.displayName || 'Usuario',
+              displayName: socialData.profile.name || entry.displayName || SOCIAL_UI.requests.unknownUser,
               socialGistId: resolvedSocialGistId,
               gamesGistId: effectiveGamesGistId,
               photoURL: resolvedPhoto,
@@ -458,7 +458,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
             return {
               id: entry.id,
               uid: entry.uid,
-              displayName: entry.displayName || 'Usuario',
+              displayName: entry.displayName || SOCIAL_UI.requests.unknownUser,
               socialGistId: effectiveSocialGistId,
               gamesGistId: effectiveGamesGistId,
               // Gist ilegible: usamos la foto del directorio de Firestore (best-effort) para no perderla.

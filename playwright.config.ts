@@ -26,6 +26,10 @@ export default defineConfig({
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
     trace: 'retain-on-failure',
+    /* EN ESPAÑOL, fijado. El Chrome de Playwright arranca en `en-US`, y los e2e comprueban textos en español: el día
+       que el idioma por defecto siga al del navegador (`docs/plan-idioma.md`), sin esto la suite entera
+       cambiaría de idioma. El inglés se prueba aparte, pidiéndolo. */
+    locale: 'es-ES',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {

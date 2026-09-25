@@ -181,7 +181,7 @@ las 10.259 líneas de GA, **~1.400 no llegan nunca**: son la infraestructura que
 | `ui/`, `form/`, `layouts/` (~490) | — | Se descartan a favor de los equivalentes de GL. Lo que no exista, se crea en su sitio |
 | `context/AppContext.jsx` (51) | — | GL ya tiene tema y preferencias |
 | `data/i18n/es.js` (335) | `core/constants/premiosLabels.ts` | Un módulo de textos más, como `socialLabels` |
-| `data/i18n/en.js` (335) | Se conserva sin usar | Entra en juego en el plan de i18n (§7) |
+| `data/i18n/en.js` (335) | **No se trajo** | Ni en el árbol ni en el historial (comprobado el 2026-09-25, ver `plan-idioma.md`) |
 
 **Recuento del trabajo**: ~3.900 líneas se portan con tipos (lógica), ~4.900 se reescriben (interfaz), ~1.400 se
 descartan por duplicadas. La reescritura visual es **la mitad larga del esfuerzo**.
@@ -724,7 +724,8 @@ se conserva todo lo que costaría recuperar**:
 - Los **títulos de categoría siguen guardándose bilingües** (`{ es, en }`), como hoy en GA. La interfaz pinta
   español; el dato no se pierde. Si se guardara plano, volver a bilingüe sería una migración de datos.
 - Se portan `localize.ts` (`tField`, `getOptionLabel`, `resolveOptionId`) y su tolerancia a los formatos antiguos.
-- `data/i18n/en.js` se conserva en el repositorio como material del plan siguiente.
+- ~~`data/i18n/en.js` se conserva en el repositorio como material del plan siguiente.~~ No llegó a traerse: no está
+  en el árbol ni en el historial (comprobado el 2026-09-25). El plan del idioma es `plan-idioma.md`.
 - Los textos nuevos van a **un módulo propio** (`premiosLabels.ts`), nunca dispersos en los componentes: es la misma
   disciplina que permitió sacar los 8 kB de textos sociales del arranque de todo el mundo.
 

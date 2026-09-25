@@ -5,6 +5,110 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.4.5] - 2026-09-25
+
+La versión de **la revisión de código y de un arranque más ligero**. Se cierran los doce hallazgos altos de la
+revisión de septiembre (pérdidas o corrupción de datos en la sincronización, el canal social, los premios y el
+panel), el arranque viaja un 14 % más ligero por la red con el brotli del build, y deja de cargarse el script de
+analítica de Cloudflare que el borde inyectaba sin que estuviera en el código.
+
+### Changed
+- **«Plata y acero» pasa a llamarse `witcher` por dentro**, que es lo que es desde que dejó de ser el tema de
+  cuero y latón: carpeta, skin, ficha y `data-palette`. Quien lo tenía guardado como `steam` —en el dispositivo o
+  en la nube— sigue viéndolo igual: el anti-flash y `parsePaletteId` traducen el id viejo.
+- **Al guardar en «Plata y acero», la luz corre por el filo de plata**, no por un filete de latón: el barrido
+  dorado era herencia del tema de cuero que fue. Además deja el bundle base y viaja con su skin.
+- **«Plata y acero» habla como The Witcher** cuando algo falla: el medallón que vibra, Sardinilla que no encuentra
+  el camino, la mesa de gwent vacía y el tablón de contratos. Las frases de antes eran de los temas que fue.
+- **Los títulos de modales y el enjambre del panel, con la piel de «Plata y acero»**: Cinzel en los títulos y la
+  gráfica de enjambre en placa de acero, con la mediana en Igni.
+- **El aviso (logro, aviso de estado y anuncio) con la piel de cuatro temas más**: la tarjeta de sticker de
+  «Ladrones de corazones», la caja de diálogo de «Sol y luna», la placa de oro de «Solo hay guerra» y la placa de
+  acero de «Plata y acero», cada una con el filete de sus paneles. La medalla y el halo de rareza no cambian.
+- **El feed social ya no lleva el botón de premios.**
+- **Un solo idioma de formato para fechas, números y orden alfabético** (`APP_LOCALE`), en vez de un `'es-ES'`
+  escrito a mano en cada sitio. Las columnas del listado se ordenan por su identificador y no por su rótulo en
+  español, y los textos sueltos de la interfaz pasan a los módulos de etiquetas: es el primer paso del plan de
+  idioma (`docs/plan-idioma.md`).
+
+### Performance
+- **«Solo hay guerra» ya no descarga el skin de «Sin futuro»** (5,1 kB comprimidos y una petición): su glitch
+  vivía allí para reutilizar dos keyframes, y ahora es suyo.
+- **Los sellos de cerrar un juego viajan con su tema**: las caras de «Plata y acero», «Ladrones de corazones» y
+  «Solo hay guerra» salen del bundle base, como ya estaba la de «Inserte moneda». En `_effects.scss` queda solo
+  la pieza común.
+- **Las cifras de «Sol y luna» pesan 0,8 kB en vez de 11,4**: Silkscreen iba incrustada entera en base64 dentro
+  del skin para usar diez dígitos. Ahora la trae `vendor-fonts.mjs` recortada a 0-9 y el chunk del tema baja de
+  13,8 a 4,6 kB comprimidos. El script aprende a recortar una familia (`text`) y a regenerar una sola hoja
+  (`--solo=<slug>`), y la licencia de `public/fonts/` lista por fin todas las familias.
+- **El feed de «Plata y acero» deja de gotear**: cada entrada traía su cartel con la gota animada, y con una sola
+  página (25) el scroll costaba 6,2 s de rasterizado, contra 0,3 s sin ella. La sangre fresca se queda en la ruleta
+  y en los filtros activos, que sí son uno o dos en pantalla.
+- **El arranque viaja un 14 % más ligero por la red** sin cambiar una línea de la aplicación: el build deja un
+  `.br` (brotli, calidad 11) junto a cada `.js` y `.css`, y la Function de `/assets/*` lo sirve a quien acepta
+  brotli, en vez del brotli de nivel bajo que Cloudflare hace al vuelo y que apenas mejoraba al gzip. El camino
+  crítico pasa de 181,8 a 155,7 kB por la red; el chunk de React, de 67,7 a 58,0. `npm run validate` imprime la
+  cifra en brotli y falla si a algún asset del arranque le falta su `.br`.
+
+### Fixed
+- **La marca de la casilla se ve en todos los temas.** Era blanca fija sobre el acento y se quedaba entre 1,2 y
+  2,6:1 en seis de las ocho paletas, el tema por defecto incluido; ahora es la tinta del tema (`--on-accent`).
+- **Texto sobre el acento a 4,5:1 en todas las paletas**, con una ficha nueva, `--accent-fill`: la píldora del
+  récord, la etapa en curso del hub y lo marcado en premios no llegaban en «Inserte moneda» y «Ladrones de
+  corazones» en oscuro ni en «Cámara de pruebas» en claro.
+- **Estrellas y texto atenuado en modo claro** en «Ladrones de corazones», «Cámara de pruebas», «Sin futuro» y
+  «Solo hay guerra»: las estrellas no llegaban a 3:1 y el atenuado bajaba de 4,5:1 sobre alguna superficie.
+- **Quitar los efectos los quita del todo:** en «Sin futuro» los chips seguían con su glitch y en «Cámara de
+  pruebas» los botones seguían titilando.
+- **Los controles de vista en modo claro:** «Inserte moneda», «Sol y luna», «Sin futuro», «Cámara de pruebas» y
+  «Solo hay guerra» tenían la pieza escrita en su color de noche y en claro seguía siendo una placa oscura, con el
+  icono apagado casi invisible encima. Ahora cada una tiene su gemela de día con los materiales de ese modo.
+- **Los filetes de «Sin futuro» en claro**, que se quedaban en 1,1:1: el borde de los campos no se veía.
+- **La muestra de «Cámara de pruebas» en el selector** enseñaba otro azul y otro naranja que los del tema.
+- **«Ladrones de corazones» sin conexión en premios** hablaba del «Mundo de las Almas», que no es de Persona 5: ahora
+  baja a Mementos, como la app entra al Metaverso.
+- **Renombrar o borrar una etiqueta ya no pisa las ediciones de otro dispositivo**: sellaba como modificados todos
+  los juegos, también los que no la llevaban, y en la fusión por juego ganaban a lo que otro aparato no había
+  subido aún. Ahora solo se sellan los que cambian.
+- **Guardar la configuración de la sincronización no deja el disco sin token** ni un instante: tras cada ciclo se
+  reescribía sin el token cifrado y se recifraba en segundo plano, y cerrar en ese hueco desconectaba la sync.
+- **Un trozo del gist que falta o llega corrupto aborta la lectura** en vez de saltarse en silencio, que hacía que
+  la siguiente escritura borrase esos juegos. Lo mismo en el canal social: un gist ilegible ya no se toma por vacío
+  y se reescribe.
+- **La lectura de GitHub tiene tope también mientras llega el cuerpo**, no solo las cabeceras: una red colgada
+  dejaba el cerrojo de la sincronización tomado.
+- **«Añadir a próximos» desde la ruleta de un amigo ya no copia su reseña ni su nota** a tus listas y a tu gist.
+- **Guardar el perfil no borra la vitrina de logros ni el palmarés**: abrir el hub justo después publicaba el perfil
+  sin ellos desde una caché incompleta.
+- **La clasificación de los premios vuelve a enlazar con los perfiles**: el directorio social perdía el pseudónimo
+  por el que se cruzan.
+- **Si tu gist social ya no existe, la sesión sigue abierta** y se crea el canal nuevo, en vez de parecer que no
+  habías iniciado sesión y crear otro vacío al volver.
+- **La migración a canal secreto no borra el gist viejo si no ha podido apuntar al nuevo**, y el saneado del perfil
+  espera cuando no puede leer la configuración privada en vez de tratarla como vacía.
+- **«No se ha podido preguntar a IGDB» ya no se guarda como «no tiene carátula»**: `/cover` responde 503 sin
+  caché y el juego se vuelve a pedir, en vez de quedarse sin imagen 90 días.
+- **Las etiquetas escritas sin pulsar Intro no se pierden** si otra validación impide guardar el juego.
+- **Una escalera de logros descendente conserva su orden** al añadirle escalones desde el panel.
+- **El formulario del aviso espera a tener el aviso publicado** antes de dejar editarlo: guardar creaba una campaña
+  nueva y se volvía a enseñar a todo el mundo.
+- **Un borrado de cuenta incompleto se dice en pantalla** en vez de navegar fuera y perder el aviso.
+- **Las fechas siguen la zona horaria vigente**: los formateadores se creaban una vez al cargar y se quedaban con
+  la zona de ese momento, así que con la app abierta mientras cambia la zona (un viaje) el feed agrupaba en la nueva
+  y titulaba en la vieja, y «11 de agosto» encabezaba lo del 12. Pasa lo mismo, ya arreglado, en las fechas de
+  estadísticas, del panel de administración y de los enlaces compartidos. Es lo que rompía la integración continua,
+  que corre en UTC.
+- **Los números van en formato español aunque el navegador esté en inglés** («1.000» y no «1,000»): dos cifras se
+  formateaban con el idioma del navegador.
+
+### Security
+- **Fuera el beacon de Cloudflare Web Analytics.** Pages lo inyectaba en el HTML al desplegar y la CSP dejaba
+  cargar su script desde `static.cloudflareinsights.com` pero bloqueaba su envío: cada visita contactaba con un
+  dominio ajeno para no medir nada, y la política promete que usar tus listas no contacta con ningún servidor
+  ajeno. Se apagó en el panel y el origen sale de `script-src`, de modo que reactivarlo no vuelve a cargarlo.
+  `npm run audit:deploy` comprueba el HTML que sirve el dominio de verdad, que es lo único que ve lo que añade el
+  borde (el smoke corre en local); va al checklist post-deploy.
+
 ## [1.4.4] - 2026-09-25
 
 La versión de **las carátulas de lo ajeno**. Los perfiles de otras personas, sus reseñas y los premios pasan a

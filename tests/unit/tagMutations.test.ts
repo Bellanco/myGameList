@@ -56,12 +56,33 @@ describe('tagFieldForTab — mapeo categoría→campo por pestaña', () => {
 });
 
 describe('mapTabDataTags', () => {
-  it('marca _ts y updatedAt = ts en todos los juegos/pestañas', () => {
+  it('marca _ts y updatedAt = ts en los juegos que cambian', () => {
     const out = mapTabDataTags(data(), 'genres', drop('RPG'), TS);
     expect(out.updatedAt).toBe(TS);
     for (const tab of ['c', 'v', 'e', 'p'] as const) {
       expect(out[tab].every((g) => g._ts === TS)).toBe(true);
     }
+  });
+
+  it('NO sella ni copia los juegos cuya etiqueta no cambia (LWW: no pisar ediciones de otro dispositivo)', () => {
+    const input = data();
+    input.c.push(game(5, { genres: ['Plataformas'] }));
+    const out = mapTabDataTags(input, 'genres', drop('RPG'), TS);
+    expect(out.c[0]._ts).toBe(TS);
+    expect(out.c[1]).toBe(input.c[1]);
+    expect(out.c[1]._ts).toBe(1);
+  });
+
+  it('las pestañas sin el campo quedan intactas, sin sello', () => {
+    const input = data();
+    const out = mapTabDataTags(input, 'strengths', drop('Historia'), TS);
+    expect(out.p[0]).toBe(input.p[0]);
+  });
+
+  it('un renombrado a sí mismo no sella nada', () => {
+    const input = data();
+    const out = mapTabDataTags(input, 'genres', (values) => values.map((v) => v), TS);
+    for (const tab of ['c', 'v', 'e', 'p'] as const) expect(out[tab][0]).toBe(input[tab][0]);
   });
 
   it('genres: filtra el género en todas las pestañas, sin tocar otros campos', () => {

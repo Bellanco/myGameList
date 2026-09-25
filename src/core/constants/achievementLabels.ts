@@ -27,6 +27,7 @@ export const ACHIEVEMENTS_UI = {
   backToPanel: 'Volver al panel',
   backToProfile: 'Volver al perfil',
   cardAction: 'Ver todos tus logros',
+  seeAll: 'Ver todos los logros',
 
   /** Las dos cifras (§6.10). El denominador dice «del catálogo actual» con esas palabras, y no es un adorno. */
   count: (earned: number, total: number) => `${earned}/${total}`,

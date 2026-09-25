@@ -5,8 +5,9 @@ import { Icon } from './Icon';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { shareDraftOf, useShareViewModel } from '../../viewmodel/useShareViewModel';
 import { TAB_IDS, type GameItem, type TabData } from '../../model/types/game';
+import { createLocalDateFormat } from '../../core/utils/dateTime';
 
-const DAY_FORMAT = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' });
+const DAY_FORMAT = createLocalDateFormat({ dateStyle: 'medium' });
 
 /** Días que le quedan a un enlace, redondeando hacia arriba: mientras quede algo del día, "caduca en 1 día". */
 function daysLeft(expiresAt: number): number {

@@ -806,7 +806,7 @@
 
 .hub-gateway-stage.is-current .hub-gateway-stage-mark {
   border-color: color-mix(in srgb, var(--steam) 55%, transparent);
-  background: var(--steam);
+  background: var(--accent-fill);
   color: var(--on-accent);
   box-shadow: var(--glow-accent-soft);
 }

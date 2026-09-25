@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { SCORE_UI } from '../../core/constants/scoreLabels';
 
 /**
  * Medallón "sin puntuación" (¿?) para la actividad social: reseñas de juegos sin nota (p. ej. la lista de la
@@ -9,8 +10,8 @@ export const NoScoreMedal = memo(function NoScoreMedal(): React.JSX.Element {
   // A11y-4: `role="img"`, como en ScoreRing — sin rol, el aria-label de un span puede ignorarse y se anunciaría
   // el "¿?" literal.
   return (
-    <span className="score-ring is-noscore" role="img" aria-label="Sin puntuar">
-      <span className="score-ring-num">¿?</span>
+    <span className="score-ring is-noscore" role="img" aria-label={SCORE_UI.unscored}>
+      <span className="score-ring-num">{SCORE_UI.noScoreSymbol}</span>
     </span>
   );
 });

@@ -1,5 +1,6 @@
 import { memo, type CSSProperties } from 'react';
 import { clampGrade, hueFromGrade } from '../../core/utils/scoreScale';
+import { SCORE_UI } from '../../core/constants/scoreLabels';
 
 /**
  * Muestra una nota (0–100) como aro que se rellena según la puntuación, coloreado de rojo a verde. Solo display.
@@ -15,7 +16,7 @@ export const ScoreRing = memo(function ScoreRing({ grade }: { grade: number }): 
       className={`score-ring${g <= 0 ? ' is-blank' : ''}`}
       style={style}
       role="img"
-      aria-label={g > 0 ? `Nota ${g} de 100` : 'Sin puntuar'}
+      aria-label={g > 0 ? SCORE_UI.gradeAria(g) : SCORE_UI.unscored}
     >
       <span className="score-ring-num">{g > 0 ? g : '–'}</span>
     </span>

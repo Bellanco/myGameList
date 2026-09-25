@@ -32,9 +32,9 @@
 // para que la forma esté escrita UNA vez; el CSS se emite en los dos chunks, que son unas décimas de kB, y a
 // cambio no hay dos definiciones del mismo carril envejeciendo por separado.
 //
-// Las clases conservan el prefijo `ach-` A PROPÓSITO, aunque ya no sean solo de logros: los tres skins de paleta
-// (`themes/cyberpunk.scss`, `themes/portal.scss`) cuelgan de `.ach-toast` para cuadrarla en su propio lenguaje, y
-// renombrarla obligaría a tocar el chaflán de dos capas de Cyberpunk, que está afinado a mano.
+// Las clases conservan el prefijo `ach-` A PROPÓSITO, aunque ya no sean solo de logros: siete de los ocho skins
+// (todos menos el de Forja, que se queda con la cápsula de la casa) cuelgan de `.ach-toast` para cuadrarla en su
+// propio lenguaje, y renombrarla obligaría a tocarlos todos, el chaflán de dos capas de Cyberpunk incluido.
 //
 // Lo que SÍ se queda en esta hoja es lo que solo sabe un logro: los cuatro tonos de rareza del halo, las medallas
 // solapadas y la barra del hito. Están al final del fichero.

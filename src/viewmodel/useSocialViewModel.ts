@@ -36,6 +36,7 @@ import {
   type FriendshipSelfInfo,
   type SocialAuthUser,
 } from '../model/repository/firebaseRepository';
+import { APP_LOCALE } from '../core/constants/locale';
 // Reexportados: las pantallas del hub y los tests los importan de aquí desde antes de que el ViewModel se
 // partiera, y cambiarles el import no aportaría nada.
 export { isOwnProfileIdentity } from './social/socialIdentity';
@@ -369,34 +370,39 @@ export function useSocialViewModel(options?: {
           const gistId = privateGistId || (profile?.socialEnabled ? profile.socialGistId.trim() : '');
 
           if (gistId) {
+            let gistExists = true;
             try {
               await readSocialGist(mainConfig.token, gistId, null);
             } catch (error) {
-              if (isNotFoundGistError(error)) {
-                resolvedGistId = '';
-                setSocialCfgGistId('');
-                setSocialCfgEtag(null);
-                lockProfileEditor();
-                setLoading(false);
-                return;
+              if (!isNotFoundGistError(error)) {
+                throw error;
               }
-
-              throw error;
+              gistExists = false;
+            }
+            if (cancelled) {
+              return;
             }
 
-            saveSocialSyncConfig({
-              token: mainConfig.token,
-              gistId,
-              etag: null,
-              lastRemoteUpdatedAt: 0,
-            });
-            // SIEMBRA: si el id vino del perfil público (perfil anterior a que `privateConfig` se poblara), se
-            // copia a su sitio. Sin esto, retirar el campo del perfil público dejaría a esas cuentas sin ninguna
-            // forma de recuperar su canal. Best-effort: no puede romper la apertura del hub.
-            if (!privateGistId) {
-              void setPrivateConfig(currentUser.uid, { socialGistId: gistId }).catch(() => {});
+            if (!gistExists) {
+              // El canal apuntado ya no existe. Se sigue SIN gist pero CON la sesión: salir aquí antes de fijarla
+              // dejaba el hub como si no hubiera Google, el auto-crear no arrancaba y la pasarela volvía a pedir un
+              // inicio de sesión que ya estaba hecho.
+              lockProfileEditor();
+            } else {
+              saveSocialSyncConfig({
+                token: mainConfig.token,
+                gistId,
+                etag: null,
+                lastRemoteUpdatedAt: 0,
+              });
+              // SIEMBRA: si el id vino del perfil público (perfil anterior a que `privateConfig` se poblara), se
+              // copia a su sitio. Sin esto, retirar el campo del perfil público dejaría a esas cuentas sin ninguna
+              // forma de recuperar su canal. Best-effort: no puede romper la apertura del hub.
+              if (!privateGistId) {
+                void setPrivateConfig(currentUser.uid, { socialGistId: gistId }).catch(() => {});
+              }
+              resolvedGistId = gistId;
             }
-            resolvedGistId = gistId;
           }
         } catch {
           // Keep gateway usable even if Firestore is unavailable.
@@ -731,7 +737,11 @@ export function useSocialViewModel(options?: {
           // saneado de amistades corriera por su cuenta (rearmando su ref) mientras el borrado seguía adelante:
           // si el borrado ganaba la carrera, un amigo que hidratara en ese hueco leía un gist ya inexistente y se
           // quedaba sin su actividad —cacheada 30 minutos— hasta la siguiente rehidratación.
-          await setPrivateConfig(owner.uid, { socialGistId: result.gistId }).catch(() => {});
+          //
+          // Y si alguna NO se pudo repuntar, no se borra: el fallo cae en el `catch` de abajo, que conserva los dos
+          // gists y avisa, igual que cuando el clon no convence. Tragárselo y seguir dejaba ese puntero —el de tus
+          // otros dispositivos o el de tus amigos— en un gist que ya no existe; así apunta a uno que sigue vivo.
+          await setPrivateConfig(owner.uid, { socialGistId: result.gistId });
           // `force`: aquí la garantía manda sobre el ahorro. Lo que viene después BORRA el gist antiguo, así que
           // un saneado que se saltara por huella dejaría a los amigos apuntando a un id que va a desaparecer.
           await healOwnFriendshipIdentity(owner.uid, {
@@ -739,7 +749,7 @@ export function useSocialViewModel(options?: {
             photo: ownPublishablePhoto,
             socialGistId: result.gistId,
             gamesGistId: mainSyncConfig?.gistId || '',
-          }, { force: true }).catch(() => {});
+          }, { force: true });
           // Ya está repuntado. Antes había que decírselo al efecto de saneado poniéndole su `ref` a mano; ahora
           // no hace falta: el saneado con `force` deja escrita la huella nueva, así que la tarea de arranque la
           // encuentra al día y no repite nada.
@@ -877,7 +887,7 @@ export function useSocialViewModel(options?: {
 
     return [...map.entries()]
       .map(([id, name]) => ({ id, name }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+      .sort((a, b) => a.name.localeCompare(b.name, APP_LOCALE));
   }, [liveLists]);
 
   // Requisito de alta: un perfil solo puede existir si el usuario tiene al menos un juego COMPLETADO. Es la única

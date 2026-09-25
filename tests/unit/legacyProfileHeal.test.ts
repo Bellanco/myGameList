@@ -181,6 +181,21 @@ describe('healOwnLegacyProfile', () => {
     expect(setPrivateConfigMock).toHaveBeenCalledWith('uid-a', { gamesGistId: 'gg', socialGistId: 'gs' });
   });
 
+  // No poder LEER `privateConfig` no es lo mismo que que esté vacío. Tratarlo igual hacía sembrar encima los ids y
+  // el token legacy del perfil público —un canal que puede ser el viejo— sobre lo que la configuración privada
+  // ya tuviera, y además purgarlos del documento público con el saneado dado por bueno.
+  it('si no se puede leer `privateConfig`, no siembra ni purga nada', async () => {
+    getOwnProfileRefMock.mockResolvedValue(profile({ socialGistId: 'gs-viejo', gamesGistId: 'gg-viejo', githubToken: 'ghp_legacy' }));
+    getPrivateConfigMock.mockRejectedValue(new Error('unavailable'));
+
+    const healResult = await healOwnLegacyProfile('uid-a');
+
+    expect(healResult).toMatchObject({ status: 'deferred', deferredAt: 'lectura-config-privada', detail: 'unavailable' });
+    expect(setPrivateConfigMock).not.toHaveBeenCalled();
+    expect(backupGithubTokenMock).not.toHaveBeenCalled();
+    expect(updateDocMock).not.toHaveBeenCalled();
+  });
+
   it('no pisa el id del canal social que ya tenga la configuración privada', async () => {
     getOwnProfileRefMock.mockResolvedValue(profile({ socialGistId: 'gs-viejo' }));
     getPrivateConfigMock.mockResolvedValue({ socialGistId: 'gs-bueno' });
@@ -417,6 +432,19 @@ describe('healOwnLegacyProfile', () => {
       expect(healResult.status).toBe('migrated');
       expect(findSocialProfileByEmailMock).not.toHaveBeenCalled();
       expect(canonicalWrite()).toMatchObject({ uid: 'uid-a', displayName: 'Ada' });
+    });
+
+    it('si no se puede leer `privateConfig`, NO rescata ni crea el documento canónico', async () => {
+      getOwnProfileRefMock.mockResolvedValue(null);
+      findSocialProfileByEmailMock.mockResolvedValue(legacy());
+      getPrivateConfigMock.mockRejectedValue(new Error('unavailable'));
+
+      const healResult = await healOwnLegacyProfile('uid-a', 'yo@example.com');
+
+      expect(healResult).toMatchObject({ status: 'deferred', deferredAt: 'cutover-identidad' });
+      expect(setPrivateConfigMock).not.toHaveBeenCalled();
+      expect(backupGithubTokenMock).not.toHaveBeenCalled();
+      expect(setDocMock).not.toHaveBeenCalled();
     });
 
     it('si el rescate del token falla, NO crea el documento canónico y lo dice', async () => {

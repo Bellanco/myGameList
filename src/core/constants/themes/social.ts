@@ -8,7 +8,7 @@
 import type { PaletteId } from '../palettes';
 import { forjaSocial } from './forja.social';
 import { arcadeSocial } from './arcade.social';
-import { steamSocial } from './steam.social';
+import { witcherSocial } from './witcher.social';
 import { personaSocial } from './persona.social';
 import { portalSocial } from './portal.social';
 import { cyberpunkSocial } from './cyberpunk.social';
@@ -19,7 +19,7 @@ import type { ThemeSocialVoice } from './theme';
 const SOCIAL_VOICES: Record<PaletteId, ThemeSocialVoice> = {
   forja: forjaSocial,
   arcade: arcadeSocial,
-  steam: steamSocial,
+  witcher: witcherSocial,
   persona: personaSocial,
   portal: portalSocial,
   cyberpunk: cyberpunkSocial,

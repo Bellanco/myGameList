@@ -1,7 +1,7 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import { ADMIN_ACHIEVEMENTS_UI } from '../../core/constants/adminLabels';
 import { ACHIEVEMENT_RARITY_LABELS } from '../../core/constants/achievementLabels';
-import { ACHIEVEMENTS_BY_LADDER, LADDERS, LADDERS_BY_KEY, SCORING_ACHIEVEMENTS, expandLadder } from '../../core/achievements/catalog';
+import { ACHIEVEMENTS_BY_LADDER, LADDERS, LADDERS_BY_KEY, SCORING_ACHIEVEMENTS, expandLadder, ladderStepsWith } from '../../core/achievements/catalog';
 import { MIRROR_ORDER, measureRarity } from '../../core/achievements/pack';
 import { RARITY_POINTS } from '../../core/achievements/types';
 import { copyText } from '../../core/utils/clipboard';
@@ -362,8 +362,8 @@ export const AdminAchievements = memo(function AdminAchievements({
     if (!ladder) return null;
     const nuevos = añadidosFuera(ladder);
     if (nuevos.length === 0) return null;
-    // Y SE RECOLOCA: la lista se ordena, así que da igual por dónde entren los umbrales nuevos.
-    const steps = [...ladder.steps, ...nuevos].sort((a, b) => a - b);
+    // Y SE RECOLOCA: la lista se ordena (en el sentido de la escalera), así que da igual por dónde entren.
+    const steps = ladderStepsWith(ladder, nuevos);
     const total = SCORING_ACHIEVEMENTS.length;
     const points = SCORING_ACHIEVEMENTS.reduce((sum, def) => sum + RARITY_POINTS[def.rarity], 0);
     // Los escalones nuevos puntúan salvo que su escalera esté retirada o sea de primeros pasos.
@@ -371,9 +371,9 @@ export const AdminAchievements = memo(function AdminAchievements({
     const bits = MIRROR_ORDER.length;
     const publishes = ladder.family !== 'onboarding';
     const cuantos = nuevos.length;
-    // El primero que se renumera: el que hoy ocupa la posición del pendiente MÁS BAJO. Alargando por arriba no
-    // se renumera nadie y el aviso no sale.
-    const renamed = (ACHIEVEMENTS_BY_LADDER.get(ladder.key) || [])[steps.indexOf(nuevos[0])];
+    // El primero que se renumera: el que hoy ocupa la posición del pendiente que entra ANTES en la escalera.
+    // Alargando por el final no se renumera nadie y el aviso no sale.
+    const renamed = (ACHIEVEMENTS_BY_LADDER.get(ladder.key) || [])[Math.min(...nuevos.map((step) => steps.indexOf(step)))];
     return {
       ids: nuevos.map((step) => `'${ladder.key}-${step}',`).join(' '),
       steps: steps.join(', '),
@@ -400,7 +400,7 @@ export const AdminAchievements = memo(function AdminAchievements({
       const nuevos = añadidosFuera(ladder);
       if (nuevos.length === 0) continue;
       const antes = new Map((ACHIEVEMENTS_BY_LADDER.get(key) || []).map((def) => [def.id, def.labels.name]));
-      const steps = [...ladder.steps, ...nuevos].sort((a, b) => a - b);
+      const steps = ladderStepsWith(ladder, nuevos);
       byLadder.set(key, expandLadder({ ...ladder, steps }).map((def) => {
         const previo = antes.get(def.id) || '';
         return {

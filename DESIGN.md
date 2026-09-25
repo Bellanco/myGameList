@@ -53,8 +53,8 @@ Cada tema define los mismos tokens; el resto del sistema se deriva. **Nunca uses
 | `--border` | Borde nominal; para separar filas usa `--hair` (el mismo al 60 %) |
 | `--text` `--text-muted` `--text-dim` | Texto principal, secundario y atenuado (**AA 4,5:1 sobre `--surface`**) |
 | `--steam` `--steam-hover` `--steam-rgb` | Acento de identidad. `--steam-rgb` existe para componer `rgba()` |
-| `--patina` `--patina-rgb` | *(solo Clásico)* segundo acento. El latón **rellena** (acción principal, pestaña activa); la pátina **escribe y señala** (enlaces, anillo de foco, botón de acento) |
 | `--on-accent` | Texto **encima** del acento. Blanco por defecto; tinta oscura si el acento es claro |
+| `--accent-fill` | Relleno **plano** que lleva `--on-accent` encima (píldoras, marcas). Es `--steam` salvo donde así no llega a 4,5:1: ahí la paleta lo oscurece lo justo |
 | `--focus-ring` | Anillo de foco. 3:1 contra las **cuatro** superficies (1.4.11). No siempre es `--steam` |
 | `--fg-link` | Acento **como texto**: 4,5:1. No siempre es `--steam-hover` |
 | `--success` `--warn` `--danger` (+ `-rgb`) | Semánticos. `--danger-fill` es el relleno con blanco encima |
@@ -69,29 +69,20 @@ Cada tema define los mismos tokens; el resto del sistema se deriva. **Nunca uses
 |---|---|---|---|---|
 | `forja` | **Forja y temple** (por defecto) | `#ff7a3c` metal al rojo | `#0f1315` | La fragua. El único sin mundo detrás: es el que ve quien no ha elegido nada. Naranja que **rellena** y turquesa de temple (`#2fd6c0`) que **escribe y señala** |
 | `arcade` | Inserte moneda | `#b23cff` | `#150a24` | Sala de recreativos de los ochenta: violeta de neón, cian de tubo y rosa de pegatina |
-| `steam` | Clásico | `#d9a13a` latón | `#15100b` | Cuero, papel, cobre y latón, con la **pátina** (`#4ab396`) de segundo acento. El único sin juego detrás |
+| `witcher` | Plata y acero | `#c6ced8` plata | `#141922` | The Witcher: acero templado; la plata **rellena** y el fuego de Igni (`#ff8f4a`) **escribe y señala**. Las cinco señales van en la rampa. Hasta la 1.4.4 su id era `steam` (ver `LEGACY_PALETTE_IDS`) |
 | `persona` | Ladrones de corazones | `#ff1f3d` | `#0d0d0d` | Persona 5: rojo, negro, blanco y oro de calendario |
 | `portal` | Cámara de pruebas | `#29b6f6` | `#12171b` | Aperture moderna en oscuro; la antigua (pergamino) en claro |
 | `cyberpunk` | Sin futuro | `#fcee0a` | `#08090d` | HUD de Night City: amarillo, cian, magenta |
 | `seaofstars` | Sol y luna | `#f5c13e` | `#0e0c24` | Oro de Zale (sol) y azul de Valere (luna) |
 | `grimdark` | Solo hay guerra | `#43f558` | `#060b08` | Cogitador verde, oro latón, hueso y rojo |
 
-### Tonos expresivos — *propuesta, aún no en el código*
+### Rampa categórica (CAPA 2b)
 
-Tres colores más por tema (`--acc-2` `--acc-3` `--acc-4`), sacados de su propio mundo, para que el color deje
-de ser monócromo. Se reparten por **papel**, no por adorno: género, tipo de evento, series de gráfica.
-
-```
-steam      #e2903f  #ecc45c  #57b6ab   (cobre · latón · verdín de pátina)
-persona    #f2e852  #4a5bd6  #f4f2f5   (oro de calendario · azul Terciopelo · hueso)
-portal     #ff9e1b  #ff6fb0  #cfe4ee   (naranja de portal · rosa del Cubo · blanco de gel)
-cyberpunk  #00f0ff  #ff2a6d  #2b7bff   (cian · magenta · azul de marca)
-seaofstars #6fb6ff  #a472e8  #2bb3c4   (azul de luna · púrpura de capa · turquesa de mar)
-grimdark   #e0a92b  #d8cfae  #e63b3b   (oro latón · hueso de pergamino · rojo sangre)
-```
-
-**Color categórico**: los ocho géneros se pintan con `--steam`, `--acc-2/3/4`, `--success`, `--warn`,
-`--danger` y `--star-full`. Un género tiene el mismo papel en toda la app y cambia de piel con el tema.
+Siete tonos por tema (`--cat-1` … `--cat-7`), sacados de su propio mundo, para lo que **no** es semántico: el
+género de un juego, la serie de una gráfica, el tipo de evento del feed. Cada tono tiene dos papeles: `--cat-N`
+es el **relleno** (3:1) y `--cat-N-fg` el **texto** (4,5:1); cuando el relleno ya cumple como texto, coinciden.
+`categoryTone()` convierte un nombre en un número estable del 1 al 7, así que ningún componente sabe qué color
+le toca a cada género. Las reglas y de dónde sale cada rampa están en la cabecera de `styles/themes/_index.scss`.
 
 ---
 
@@ -99,12 +90,12 @@ grimdark   #e0a92b  #d8cfae  #e63b3b   (oro latón · hueso de pergamino · rojo
 
 ### Papeles (CAPA 0, reasignados por cada tema)
 
-| Ficha | Papel | Forja y temple | Clásico | Cámara de pruebas | Sin futuro | Solo hay guerra | Sol y luna |
-|---|---|---|---|---|---|---|---|
-| `--font-body` | Cuerpo | DM Sans | DM Sans | Saira | Rajdhani | Chakra Petch | Pixelify Sans |
-| `--font-label` | Rótulos de interfaz | **Saira** | = cuerpo | **Oswald** | Rajdhani | Chakra Petch | = cuerpo |
-| `--font-display` | Titulares | Saira | = cuerpo | Oswald | Rajdhani | **UnifrakturCook** | = cuerpo |
-| `--font-mono` | Cifras y fechas | **IBM Plex Mono** | system mono | Share Tech Mono | Share Tech Mono | **VT323** | SoS Digits |
+| Ficha | Papel | Forja y temple | Inserte moneda | Plata y acero | Cámara de pruebas | Sin futuro | Solo hay guerra | Sol y luna |
+|---|---|---|---|---|---|---|---|---|
+| `--font-body` | Cuerpo | DM Sans | Exo 2 | Lora | Saira | Rajdhani | Chakra Petch | Pixelify Sans |
+| `--font-label` | Rótulos de interfaz | **Saira** | **Orbitron** | = cuerpo | **Oswald** | Rajdhani | Chakra Petch | = cuerpo |
+| `--font-display` | Titulares | Saira | Orbitron | **Cinzel** | Oswald | Rajdhani | **UnifrakturCook** | = cuerpo |
+| `--font-mono` | Cifras y fechas | **IBM Plex Mono** | Share Tech Mono | IBM Plex Mono | Share Tech Mono | Share Tech Mono | **VT323** | SoS Digits |
 
 *Ladrones de corazones* no carga webfont: su display es `'Arial Black', Impact`.
 
@@ -146,7 +137,9 @@ Doce pasos, razón ≈1,08 en la zona de interfaz. Multiplicados por `--font-sca
   rótulo / nombre / descripción, radio = media altura, anillo y halo de color, barrido bajo `data-effects`. Tres
   inquilinos: el **logro** (disco = medalla, halo = rareza), el **aviso del administrador** (disco = icono, halo =
   acento) y el **aviso de la app** (disco = icono del tono, halo = tono). Los skins de paleta cuelgan de
-  `.ach-toast`, así que la forma de cada tema sale sola.
+  `.ach-toast`, así que la forma de cada tema sale sola: siete de ocho la cuadran en su lenguaje (el filete o el
+  marco de sus paneles) y Forja se queda con la cápsula de la casa. La medalla y el anillo + halo de `--glow` no
+  los toca ningún tema: son los que dicen la rareza y, en el aviso, su tono.
 - **Aviso** (`.ach-toast.is-notice`): **uno solo** para los cuatro sitios que avisan (estado, versión nueva, sin
   conexión del hub, requisito del perfil). Los dos primeros viven en el **carril flotante** de abajo a la
   izquierda (`.ach-toast-stack`, que monta `App` una vez para las tres cápsulas); los del hub van `is-compact`
@@ -221,8 +214,9 @@ están — y sus bordes tampoco, que ahí el marco de oro o el filete cian **son
 
 ## 7 · Formas
 
-- Radios **por tema**, no globales: `--radius-sm/md/lg/pill`. Clásico 8/12/22; Cámara de pruebas 3/6/10;
-  Ladrones de corazones 3/4/8; Sin futuro y Sol y luna 0/0/2; Solo hay guerra 0/2/3.
+- Radios **por tema**, no globales: `--radius-sm/md/lg/pill`. La casa (CAPA 0) 8/12/22; Forja y temple 6/10/16;
+  Inserte moneda y Plata y acero 2/3/4; Cámara de pruebas 3/6/10; Ladrones de corazones 3/4/8; Sin futuro y Sol y
+  luna 0/0/2; Solo hay guerra 0/2/3.
 - Un radio de 0 es una decisión, no un olvido: en esos temas la esquina viva **es** la identidad.
 - Pastillas (`--radius-pill`) para chips, botones de filtro y segmentados en todos los temas.
 

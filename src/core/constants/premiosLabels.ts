@@ -1,4 +1,5 @@
 import { premiosVoiceByPalette } from './themes/premios';
+import { APP_LOCALE } from './locale';
 // Textos de la sección de PREMIOS, en su propio módulo.
 //
 // MISMA DISCIPLINA QUE EN LO SOCIAL, y por el mismo motivo: si un módulo del ARRANQUE necesita una cadena de
@@ -191,13 +192,13 @@ export const PREMIOS_UI = {
     positionAria: (puesto: number) => `Puesto ${puesto}`,
     // Con coma decimal: media categoría vale 0,5 y «14.5 puntos» se lee como un dato de máquina.
     points: (puntos: number) =>
-      puntos === 1 ? '1 punto' : `${puntos.toLocaleString('es-ES', { maximumFractionDigits: 2 })} puntos`,
+      puntos === 1 ? '1 punto' : `${puntos.toLocaleString(APP_LOCALE, { maximumFractionDigits: 2 })} puntos`,
     /**
      * El número solo, para la clasificación. Repetir «puntos» en cada renglón engorda catorce veces la misma
      * palabra y empuja los nombres; la unidad la dice la cabecera de la columna y el rótulo accesible de la
      * fila, que sigue leyendo «16 puntos».
      */
-    pointsShort: (puntos: number) => puntos.toLocaleString('es-ES', { maximumFractionDigits: 2 }),
+    pointsShort: (puntos: number) => puntos.toLocaleString(APP_LOCALE, { maximumFractionDigits: 2 }),
     pointsUnit: 'puntos',
     yourRow: 'Tu posición',
     /** EL PODIO: los tres primeros puestos, que es lo que se viene a mirar. */

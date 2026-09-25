@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, onTestFinished } from 'vitest';
 import { act, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { SecretSocialGistResult } from '../../src/model/repository/socialGistRepository';
@@ -621,6 +621,25 @@ describe('SocialHub (componente, post-M3)', () => {
       expect(firebaseMocks.setPrivateConfig).toHaveBeenCalledWith('uid-1', { socialGistId: 'gs-publico' });
     });
 
+    // El canal al que apunta `privateConfig` ya no existe (borrado a mano, otra cuenta de GitHub). Antes se salía
+    // de la hidratación ANTES de fijar la sesión: el hub parecía sin Google, el auto-crear no arrancaba y el
+    // usuario acababa en la pasarela pidiéndole un inicio de sesión que ya tenía.
+    it('si el gist de `privateConfig` da 404, conserva la sesión y crea un canal nuevo', async () => {
+      firebaseMocks.getPrivateConfig.mockResolvedValue({ socialGistId: 'gs-borrado' });
+      const leerDeVerdad = gistMocks.readSocialGist.getMockImplementation()!;
+      gistMocks.readSocialGist.mockImplementation(async (...args: unknown[]) => {
+        if (args[1] === 'gs-borrado') throw new Error('GitHub 404: Not Found');
+        return leerDeVerdad();
+      });
+      // `clearAllMocks` no restaura implementaciones: sin esto, el 404 se quedaría para el resto del fichero.
+      onTestFinished(() => { gistMocks.readSocialGist.mockImplementation(leerDeVerdad); });
+
+      renderHub();
+
+      await waitFor(() => expect(gistMocks.createSocialGist).toHaveBeenCalledWith('ghp_x'));
+      expect(firebaseMocks.signInWithGoogle).not.toHaveBeenCalled();
+    });
+
     it('con el id ya en `privateConfig` no lo reescribe', async () => {
       firebaseMocks.getPrivateConfig.mockResolvedValue({ socialGistId: 'gs-privado' });
 
@@ -695,6 +714,24 @@ describe('SocialHub (componente, post-M3)', () => {
     await waitFor(() => expect(gistMocks.deleteGist).toHaveBeenCalledWith('ghp_x', 'gs-publico'));
     // Se verificó el CLON (no el original) contra el número de entradas copiadas.
     expect(gistMocks.socialGistHasContent).toHaveBeenCalledWith('ghp_x', 'gs-secreto', 3);
+  });
+
+  // Repuntar es la condición del borrado, no un trámite: si `privateConfig` o las amistades se quedan con el id
+  // viejo, borrarlo deja a ese puntero —y a los demás dispositivos o a los amigos que lo leen— en un gist que ya no
+  // existe. Antes los dos fallos se tragaban y el borrado seguía adelante.
+  it.each([
+    ['privateConfig', () => firebaseMocks.setPrivateConfig.mockRejectedValueOnce(new Error('unavailable'))],
+    ['las amistades', () => firebaseMocks.healOwnFriendshipIdentity.mockRejectedValueOnce(new Error('unavailable'))],
+  ])('NO retira el canal antiguo si no se pudo repuntar %s', async (_donde, fallar) => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'gs-publico', etag: null, lastRemoteUpdatedAt: 0 });
+    gistMocks.ensureSecretSocialGist.mockResolvedValue({ gistId: 'gs-secreto', etag: null, migrated: true, supersededGistIds: ['gs-publico'], keptPublicGistIds: [], copiedEntries: 3 });
+    fallar();
+
+    renderHub();
+
+    await waitFor(() => expect(screen.getByText(SOCIAL_UI.status.socialGistMigratedKept)).toBeInTheDocument());
+    expect(gistMocks.deleteGist).not.toHaveBeenCalled();
   });
 
   it('retira TODOS los públicos superados, no solo el de la sesión', async () => {

@@ -307,6 +307,17 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
       setPendingValue(key, '');
     }
 
+    // Si algo de abajo para el guardado, lo que se acaba de sacar de los campos tiene que quedarse como etiqueta:
+    // el campo ya se ha vaciado, y tirar `nextDraft` sin más lo hacía desaparecer de los dos sitios. Solo las
+    // etiquetas: el resto de `nextDraft` (la nota a 0 de Vergüenza, las horas) es cosa del guardado.
+    const keepTypedTags = () => {
+      setLocalDraft((current) => {
+        const kept = { ...current };
+        for (const key of tagKeys) (kept[key] as unknown) = nextDraft[key];
+        return kept;
+      });
+    };
+
     const hours = parseHours(hoursText);
     if (hours.invalid) errors.hours = VALIDATION_MESSAGES.hoursInvalid;
     else nextDraft.hours = hours.value;
@@ -317,6 +328,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
     if (duplicateOnSave) {
       const message = VALIDATION_MESSAGES.duplicateName(duplicateOnSave.game.name, TAB_TOOLTIPS[duplicateOnSave.tab]);
       setFieldErrors({ name: message });
+      keepTypedTags();
       showSummary();
       focusFirstError({ name: message });
       return;
@@ -333,6 +345,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
 
     setFieldErrors(errors);
     if (FIELD_ORDER.some((key) => errors[key])) {
+      keepTypedTags();
       showSummary();
       focusFirstError(errors);
       return;

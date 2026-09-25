@@ -19,6 +19,8 @@
  */
 import { ANNOUNCEMENT_SEEN_KEY } from '../core/constants/storageKeys';
 import { NO_SEEN, parseSeen } from '../core/announcement/announcement';
+import { APP_LOCALE } from '../core/constants/locale';
+import { createLocalDateFormat } from '../core/utils/dateTime';
 
 declare global {
   interface Window {
@@ -30,7 +32,7 @@ declare global {
   }
 }
 
-const RELOJ = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+const RELOJ = createLocalDateFormat({ dateStyle: 'medium', timeStyle: 'short' });
 
 export function installAnnouncementTools(): void {
   window.aviso = {
@@ -39,7 +41,7 @@ export function installAnnouncementTools(): void {
       return {
         campaña: seen.id || '(ninguna)',
         veces: seen.shown,
-        última: seen.lastAt ? new Date(seen.lastAt).toLocaleString('es-ES') : '(nunca)',
+        última: seen.lastAt ? new Date(seen.lastAt).toLocaleString(APP_LOCALE) : '(nunca)',
         pulsado: seen.clicked,
       };
     },

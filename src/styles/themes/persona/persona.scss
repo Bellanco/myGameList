@@ -1,12 +1,13 @@
 /* F1 — CAPA 3 · DIRECCIÓN DE ARTE POR TEMA (skins fuertes sobre los componentes reales).
    Cada tema debe leerse como un mundo distinto, no como el mismo recoloreado. Solo se activan con
-   `[data-palette="…"]`; el tema por defecto ("Clásico", sin atributo) no se toca. Va el ÚLTIMO en
-   `index.scss` para ganar en cascada a los partials de componentes.
+   `[data-palette="…"]`, y cada skin es un chunk perezoso que carga `paletteSkin.ts` al elegir su tema (salvo el
+   del tema por defecto, que va en `styles/index.scss`): entra DESPUÉS de la hoja base, y por eso gana en
+   cascada a los partials de componentes a igual especificidad.
 
-   MODULAR: esta capa es OPCIONAL. Un tema nuevo funciona solo con sus colores (CAPA 2 en `_base.scss`).
-   Para darle carácter propio, añade aquí un bloque `:root[data-palette="<id>"] …` con su tipografía,
-   formas, sombras y texturas — nada de otros temas se ve afectado. Receta de 4 pasos completa en
-   `src/core/constants/palettes.ts`.
+   MODULAR: esta capa es OPCIONAL. Un tema nuevo funciona solo con sus colores (CAPA 2, en su
+   `themes/<id>/_colors.scss`). Para darle carácter propio, su `themes/<id>/<id>.scss` lleva un bloque
+   `:root[data-palette="<id>"] …` con su tipografía, formas, sombras y texturas — nada de otros temas se ve
+   afectado. La receta completa, en `docs/temas.md`. Estas reglas nacieron aquí y valen para todos.
 
    ─────────────────────────────────────────────────────────────────────────────────────────────────
    REGLAS APRENDIDAS — léelas antes de añadir un tema para no repetir los errores que ya costaron tiempo:
@@ -30,7 +31,7 @@
       `.fab`/`.fab-roulette`, `.chip`/`.rl-chip`) para que un cambio las afecte a todas y no se olvide ninguna.
    8. CLASES CONDICIONALES DEL TSX: si el skin necesita estilar un estado inactivo (p. ej. el toggle de
       Steam Deck), la clase base debe estar SIEMPRE presente en el marcado, no solo cuando está activo.
-   9. `!important` CON CRITERIO: el skin ya gana por ir el último en `index.scss`, pero los `shorthand`
+   9. `!important` CON CRITERIO: el skin ya gana por cargarse después de la hoja base, pero los `shorthand`
       (border, box-shadow, background) de los partials a veces obligan a usarlo. Solo donde haga falta.
    10. CONTRASTE: al rellenar variantes de color (éxito/aviso/peligro) fija también el color de texto para
       mantener legibilidad AA (p. ej. texto oscuro sobre relleno claro).
@@ -46,7 +47,7 @@
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════
    TEMA · Ladrones de corazones (Persona 5) — POP-ART: negro + rojo, cursiva, semitono, cortes y sombras
-   duras de cómic. Fuente de la identidad de color: CAPA 2 en `_base.scss`.
+   duras de cómic. Fuente de la identidad de color: CAPA 2 en `_colors.scss`.
    ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
 
 /* PAPELES DE LETRA de este tema. CAPA 0 (`_base.scss`) declara los cuatro papeles y todas las hojas
@@ -125,6 +126,25 @@
 :root[data-palette="persona"] .hub-hub-card,
 :root[data-palette="persona"] .modal,
 :root[data-palette="persona"] .alert-dialog { border: 3px solid var(--pop-line) !important; box-shadow: 7px 7px 0 rgba(255, 78, 100, .5) !important; border-radius: 6px !important; }
+
+/* EL AVISO (logro, aviso de estado y anuncio: la misma `.ach-toast`) · la TARJETA DE VISITA de los Ladrones, el
+   mismo sticker que los paneles: contorno de tinta de 3 px, canto de 6 px y sombra dura roja. La medalla no se toca
+   (`docs/logros/receta-medalla.md`), y la rareza sigue diciéndola el anillo fino y el halo de `--glow`, que en el
+   aviso de estado es su tono: verde, ámbar o rojo. */
+:root[data-palette="persona"] .ach-toast {
+  border: 3px solid var(--pop-line);
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 1px rgba(var(--glow), .6),
+    0 0 20px -2px rgba(var(--glow), .38),
+    7px 7px 0 rgba(255, 78, 100, .5);
+}
+:root[data-palette="persona"][data-theme="light"] .ach-toast {
+  box-shadow:
+    0 0 0 1px rgba(var(--glow), .6),
+    0 0 20px -2px rgba(var(--glow), .38),
+    7px 7px 0 rgba(230, 0, 18, .22);
+}
 
 /* Muesca de rango: el contorno de tinta es de 3px por los cuatro lados. */
 :root[data-palette="persona"] .hub-user-card { --tier-notch-top: 3px; --tier-notch-right: 3px; }
@@ -506,6 +526,17 @@
   0%, 72% { background-position: -140% 0; }
   92%, 100% { background-position: 260% 0; }
 }
+
+/* ══ MOMENTOS · EL SELLO DEL LADRÓN al cerrar un juego: la cara de este tema del sello común de
+   `_effects.scss`. Sin disco: tarjeta ladeada con contorno negro y sombra de bloque, la tarjeta de visita de los
+   Ladrones. La guarda de efectos la pone el hook, que no crea el sello si no toca. ══ */
+:root[data-palette="persona"] .fx-seal {
+  width: auto; height: auto; padding: .9rem 1.6rem; border-radius: 0;
+  color: #f4f2f5; background: #ff1f3d;
+  border: 3px solid #0a0a0a;
+  box-shadow: 8px 8px 0 rgba(10,10,10,.9);
+}
+:root[data-palette="persona"] .fx-seal-label { font-size: 15px; }
 
 /* ══ MOMENTOS · EL CORTE DE TIJERA: la fila eliminada se recorta como una pieza de collage ══════════════════
    El listado ya marca `.is-leaving` cuando un juego se va (ver `_motion.scss`), así que no hace falta ningún

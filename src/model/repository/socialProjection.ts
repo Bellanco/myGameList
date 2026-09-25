@@ -411,10 +411,16 @@ export function buildSocialFiles<T extends { profile: { sharedLists?: SocialShar
  * A6 (lectura multi-fichero): si `parsed` es un ancla social con `chunkIndex` que referencia overflow en el MISMO
  * gist (`gistId == null`), fusiona en `profile.sharedLists` (por pestaña) las listas de cada fichero de overflow
  * presente en la respuesta. Para gist social plano (sin `chunkIndex`/overflow) devuelve `parsed` SIN cambios.
+ *
+ * `strict`: un chunk ausente o corrupto LANZA en vez de saltarse. Lo pide la lectura del canal PROPIO, que es de
+ * donde parten sus escrituras: unas listas a medias se darían por buenas y se publicarían así, como pasaba en el
+ * gist de juegos (`assembleChunkedGames`). Las lecturas de solo mirar —el gist de un amigo, una revisión antigua—
+ * se quedan con lo disponible: mejor unas listas incompletas que un perfil en blanco.
  */
 export function assembleChunkedSocial(
   parsed: unknown,
   files: Record<string, { content?: string } | undefined> | undefined,
+  { strict = false }: { strict?: boolean } = {},
 ): unknown {
   if (!parsed || typeof parsed !== 'object' || !files) return parsed;
   const anchor = parsed as {
@@ -432,16 +438,22 @@ export function assembleChunkedSocial(
     if (Array.isArray(list)) merged[tab] = [...list];
   }
   for (const ref of overflow) {
-    const content = files[socialChunkFilename(String(ref.chunkId))]?.content;
-    if (!content) continue; // chunk ausente: se conserva lo disponible
+    const chunkId = String(ref.chunkId);
+    const content = files[socialChunkFilename(chunkId)]?.content;
+    if (!content) {
+      if (strict) throw new Error(`Chunk social ${chunkId} ausente en el gist (lectura incompleta; se aborta para no perder datos)`);
+      continue; // solo lectura: se conserva lo disponible
+    }
+    let chunk: { sharedLists?: Record<string, unknown[]> };
     try {
-      const chunk = JSON.parse(content) as { sharedLists?: Record<string, unknown[]> };
-      for (const tab of TAB_IDS) {
-        const list = chunk.sharedLists?.[tab];
-        if (Array.isArray(list)) (merged[tab] ||= []).push(...list);
-      }
+      chunk = JSON.parse(content) as { sharedLists?: Record<string, unknown[]> };
     } catch {
-      // chunk corrupto: se ignora
+      if (strict) throw new Error(`Chunk social ${chunkId} corrupto en el gist (se aborta para no perder datos)`);
+      continue; // solo lectura: el chunk corrupto se ignora
+    }
+    for (const tab of TAB_IDS) {
+      const list = chunk.sharedLists?.[tab];
+      if (Array.isArray(list)) (merged[tab] ||= []).push(...list);
     }
   }
   return { ...anchor, profile: { ...(anchor.profile || {}), sharedLists: merged } };

@@ -39,6 +39,8 @@
   /* El relleno del acento NO va a pelo en este tema: el skin pinta la acción principal con el violeta un paso
      más hondo (#8f2be8 → #6d16b4), donde el blanco da 5,71:1. Sobre el violeta puro se quedaría en 4,21:1. */
   --on-accent: #fff;
+  /* Y por lo mismo el relleno PLANO (la píldora del récord, lo marcado en premios) baja un 5 %: #a939f2, 4,61:1. */
+  --accent-fill: color-mix(in srgb, var(--steam) 95%, #000);
   /* ESQUINA VIVA, que es la mitad de la identidad: el botón es una tecla de máquina recreativa, con bisel y
      canto, no una pastilla. Los chips se salen de esta regla a propósito (son pegatinas ovaladas) y piden
      `--radius-pill`, que no depende de la paleta. */
@@ -90,6 +92,8 @@
   --hub-text-muted: #5b3d85;
   --tint-rgb: 58,24,92;
   --on-accent: #fff;
+  /* A la luz el violeta ya es hondo (7,22:1 con el blanco): el relleno plano vuelve a ser el acento a pelo. */
+  --accent-fill: var(--steam);
   /* A LA LUZ EL CIAN NO SIRVE: como tinta sobre lavanda se queda en 1,8:1 y como anillo, invisible. Los dos
      papeles vuelven al violeta profundo (5,95:1 de tinta; 5,90:1 de anillo), y el cian se queda solo donde es
      GRÁFICO —el filo de las pegatinas y la rejilla—, un punto más hondo para que se vea sobre papel. */

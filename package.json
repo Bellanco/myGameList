@@ -1,6 +1,6 @@
 {
   "name": "mygamelist",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "description": "Application for managing video game lists with GitHub Gist synchronization",
   "private": true,
   "license": "GPL-3.0-or-later",
@@ -20,6 +20,7 @@
     "build:share-card": "node scripts/build-share-card.mjs",
     "audit:privacy": "node scripts/audit-privacy.js",
     "audit:rules": "node scripts/audit-profile-rules.mjs",
+    "audit:deploy": "node scripts/audit-deploy.mjs",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.functions.json",
     "typecheck:functions": "tsc -p tsconfig.functions.json",
     "test:rules": "node scripts/run-rules-tests.mjs",

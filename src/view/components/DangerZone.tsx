@@ -40,10 +40,16 @@ export const DangerZone = memo(function DangerZone() {
       const result = await deleteOwnAccount(String(user?.uid || ''));
       setOpen(false);
       setWord('');
-      setFeedback(result.remoteComplete ? { kind: 'ok', text: D.deletedOk } : { kind: 'warn', text: D.deletedPartial });
       if (!result.remoteComplete) {
+        // SE QUEDA AQUÍ. El borrado a medias es lo único de este resultado que el usuario tiene que saber —quedan
+        // datos suyos fuera y le toca reclamarlos—, y el aviso vive en esta pantalla: navegar la desmontaba en el
+        // mismo instante y el mensaje no llegaba a verse. La sesión y los datos locales ya no están (se retiran
+        // siempre), así que no hay nada que hacer aquí salvo leerlo.
         console.warn('[cuenta] borrado incompleto:', result.failures);
+        setFeedback({ kind: 'warn', text: D.deletedPartial });
+        return;
       }
+      setFeedback({ kind: 'ok', text: D.deletedOk });
       // Fuera de la cuenta: sin sesión ni datos locales, esta pantalla ya no aplica.
       navigate('/completados', { replace: true });
     } catch (error) {

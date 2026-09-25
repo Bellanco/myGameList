@@ -8,6 +8,8 @@ import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 // La hoja de la RESEÑA se importa AQUÍ y no desde `social.scss`: esta lista la pintan el hub social y también
 // tus reseñas del panel (`/stats/resenas`), donde el chunk del hub no se carga. Ver `styles/reviews.scss`.
 import '../../../styles/reviews.scss';
+import { APP_LOCALE } from '../../../core/constants/locale';
+import { SCORE_UI } from '../../../core/constants/scoreLabels';
 
 /** Lote inicial; se amplía por scroll infinito para no pintar cien reseñas de golpe. */
 const REVIEW_PAGE_SIZE = 8;
@@ -157,7 +159,7 @@ export const ProfileReviewsList = memo(function ProfileReviewsList({
                   onClick={() => onOpenReview(review.id)}
                 />
                 <span className="hub-review-medal" aria-hidden="true">
-                  {hasRating ? (scoreScale === 'grade' ? Math.round(resolveGrade({ grade: review.grade, score: rating })) : Math.round(rating)) : '¿?'}
+                  {hasRating ? (scoreScale === 'grade' ? Math.round(resolveGrade({ grade: review.grade, score: rating })) : Math.round(rating)) : SCORE_UI.noScoreSymbol}
                 </span>
                 <header className="hub-review-entry-head">
                   {review.gameName ? <h4 className="hub-review-game">{review.gameName}</h4> : null}
@@ -165,7 +167,7 @@ export const ProfileReviewsList = memo(function ProfileReviewsList({
                     {hasRating && scoreScale !== 'grade' ? <StarRating value={rating} /> : null}
                     {showDate && hasValidDate ? (
                       <span className="hub-review-date">
-                        {itemDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        {itemDate.toLocaleDateString(APP_LOCALE, { day: 'numeric', month: 'long', year: 'numeric' })}
                       </span>
                     ) : null}
                     {/* Sin fecha, ese hueco lo ocupa el estado del juego: solo se dice cuando NO te lo has pasado

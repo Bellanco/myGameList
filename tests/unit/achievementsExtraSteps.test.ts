@@ -152,3 +152,18 @@ describe('y viaja en el espejo por su id, sin tocar ni un bit', () => {
     expect(parseMirror(list, NOW).map((item) => item.id)).toEqual(['completados-50']);
   });
 });
+
+describe('escalones extra en una escalera DESCENDENTE', () => {
+  afterEach(() => {
+    applyExtraSteps();
+  });
+
+  // «Exterminatus» va de 50 a 1 (menos es mejor). Ordenar siempre de menor a mayor le daba la vuelta entera al
+  // añadir un umbral: el grado I pasaba a ser «deja Próximos en 1» y el V, en 50.
+  it('conserva el orden de mayor a menor y mete el umbral nuevo en su sitio', () => {
+    applyExtraSteps({ 'estanteria-cero': [15] });
+
+    const steps = (ACHIEVEMENTS_BY_LADDER.get('estanteria-cero') || []).map((def) => def.step);
+    expect(steps).toEqual([50, 25, 15, 10, 5, 1]);
+  });
+});

@@ -1,24 +1,20 @@
 import type { PaletteId } from '../../core/constants/palettes';
 
-// Carga bajo demanda de los skins de tema (CAPA 3, `src/styles/themes/*.scss`), sacados del bundle
-// base (auditoría #4). Los COLORES y el layout de cada paleta viven en `_base.scss` (CAPA 2, en el
+// Carga bajo demanda de los skins de tema (CAPA 3, `src/styles/themes/<id>/<id>.scss`), sacados del bundle
+// base (auditoría #4). Los COLORES de cada paleta viven en su `themes/<id>/_colors.scss` (CAPA 2, en el
 // bundle base), así que en el primer paint las paletas ya se ven con sus colores correctos; el skin
-// (tipografía/formas/sombras/texturas) entra un instante después al activarse la paleta. Ni la paleta
+// (tipografía/formas/sombras/texturas) entra un instante después al activarse la paleta. La paleta
 // por defecto no descarga nada: su skin va en el bundle base.
 //
-// Acoplamiento conocido: 7 reglas de grimdark viven en la sección de cyberpunk y reutilizan sus
-// @keyframes de glitch. Por eso, al activar grimdark cargamos también el skin de cyberpunk (evita
-// mover keyframes entre archivos y el riesgo de romper animaciones).
+// Un tema, una hoja: grimdark cargaba también la de cyberpunk porque su glitch vivía allí y reutilizaba dos
+// keyframes. Ya es suyo (ver el glitch de vox en `grimdark.scss`), así que ningún tema arrastra el skin de otro.
 const SKIN_LOADERS: Partial<Record<PaletteId, () => Promise<unknown>>> = {
   arcade: () => import('../../styles/themes/arcade/arcade.scss'),
-  steam: () => import('../../styles/themes/steam/steam.scss'),
+  witcher: () => import('../../styles/themes/witcher/witcher.scss'),
   persona: () => import('../../styles/themes/persona/persona.scss'),
   portal: () => import('../../styles/themes/portal/portal.scss'),
   cyberpunk: () => import('../../styles/themes/cyberpunk/cyberpunk.scss'),
-  grimdark: () => Promise.all([
-    import('../../styles/themes/grimdark/grimdark.scss'),
-    import('../../styles/themes/cyberpunk/cyberpunk.scss'),
-  ]),
+  grimdark: () => import('../../styles/themes/grimdark/grimdark.scss'),
   seaofstars: () => import('../../styles/themes/seaofstars/seaofstars.scss'),
   // `forja` NO está aquí a propósito: es la paleta POR DEFECTO y su skin viaja en el bundle base
   // (`styles/index.scss`), porque es la que pinta el primer fotograma. `arcade` sí entra aquí desde que

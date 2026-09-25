@@ -1,10 +1,10 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { ADMIN_ACHIEVEMENTS_UI, ADMIN_ANNOUNCEMENT_UI, ADMIN_PANEL_UI } from '../../core/constants/adminLabels';
-// SOLO EL RÓTULO, escrito aquí a propósito: importar `PREMIOS_UI` traería todos los textos de la porra al
+import { createLocalDateFormat } from '../../core/utils/dateTime';
+// SOLO EL RÓTULO, y desde los textos del panel: importar `PREMIOS_UI` traería todos los textos de la porra al
 // chunk del panel, y este botón necesita exactamente una palabra.
-/** En el panel se llama RETOS —la edición es «El reto del jugador»—, y deja «Premios» para la sección pública. */
-const PREMIOS_ADMIN_OPEN = 'Retos';
+const PREMIOS_ADMIN_OPEN = ADMIN_PANEL_UI.premiosOpen;
 import type { Announcement } from '../../core/announcement/announcement';
 import type { HiddenOverrides, OpenFrontier } from '../../core/achievements/visibility';
 import type { ExtraSteps } from '../../core/achievements/types';
@@ -70,9 +70,9 @@ const AdminAnnouncement = lazy(() =>
 const AdminPremios = lazy(() =>
   import('./premios/AdminPremios').then((module) => ({ default: module.AdminPremios })));
 
-const DATE_FORMAT = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+const DATE_FORMAT = createLocalDateFormat({ dateStyle: 'medium', timeStyle: 'short' });
 /** Para fechas de alta: el día basta y ocupa la mitad. */
-const DAY_FORMAT = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' });
+const DAY_FORMAT = createLocalDateFormat({ dateStyle: 'medium' });
 
 /**
  * Señales que el pie de la ficha ya representa como botón de purga. No se pintan además como píldora informativa:
@@ -193,7 +193,8 @@ export const AdminHub = memo(function AdminHub() {
   const [extraSteps, setExtraSteps] = useState<ExtraSteps>({});
   // El aviso a los usuarios que hay publicado ahora mismo. Se lee al entrar en su vista, saltándose la caché del
   // dispositivo: aquí se está a punto de reescribirlo, y ver una versión de hace horas sería un fallo.
-  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  // `undefined` = aún sin leer: el formulario espera (ver `AdminAnnouncement`).
+  const [announcement, setAnnouncement] = useState<Announcement | null | undefined>(undefined);
   const [pending, setPending] = useState<PendingAction>(null);
   // Los enlaces de TODOS se piden una vez y se agrupan por usuario: el panel pinta decenas de fichas y una
   // petición por ficha sería absurda para un dato que cabe en una sola respuesta.
@@ -238,6 +239,8 @@ export const AdminHub = memo(function AdminHub() {
   useEffect(() => {
     if (view !== 'announcement') return;
     let cancelled = false;
+    // Cada entrada vuelve a leer, y hasta entonces no hay formulario: no se edita sobre la foto de la visita anterior.
+    setAnnouncement(undefined);
     void import('../../model/repository/announcementRepository')
       .then((module) => module.loadAnnouncement(true))
       .then((value) => {
@@ -245,6 +248,7 @@ export const AdminHub = memo(function AdminHub() {
       })
       .catch(() => {
         // Sin documento (o sin red) la pantalla abre en blanco, que es lo que hay: un aviso por escribir.
+        if (!cancelled) setAnnouncement(null);
       });
     return () => {
       cancelled = true;

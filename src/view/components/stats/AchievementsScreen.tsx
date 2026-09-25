@@ -7,11 +7,12 @@ import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 import { Icon } from '../Icon';
 import type { RarityMeasure } from '../../../core/achievements/pack';
 import type { AchievementItem, AchievementSummary } from '../../../core/achievements/types';
+import { APP_LOCALE } from '../../../core/constants/locale';
 
 /** Fecha corta y legible. Sin hora: el día basta, y el minuto diría a qué horas usas la app (§5.3). */
 export function formatUnlockDate(ms: number): string {
   if (!ms || ms <= 0) return '';
-  return new Date(ms).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(ms).toLocaleDateString(APP_LOCALE, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 interface AchievementsScreenProps {

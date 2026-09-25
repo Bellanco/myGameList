@@ -142,6 +142,10 @@
   /* Color del texto sobre rellenos de acento (botón primario, logo). Blanco por defecto;
      una paleta con acento claro lo sobrescribe (p. ej. amarillo → texto casi negro). */
   --on-accent: #fff;
+  /* El RELLENO PLANO que lleva `--on-accent` encima —la píldora del récord, la etapa en curso, lo marcado en
+     premios—, con 4,5:1 entre los dos. Es el acento a pelo, y la paleta en la que así no llega lo oscurece lo
+     justo en su `_colors.scss`. Los botones principales no lo usan: llevan su propio degradado oscurecido. */
+  --accent-fill: var(--steam);
 
   /* A11Y — El acento NO sirve para todo. Se separan tres papeles que antes compartían `--steam`:
        · RELLENO (`--steam`): el color de identidad, sin restricción de contraste.
@@ -384,5 +388,5 @@ button { -webkit-tap-highlight-color: transparent; }
 :root[data-uppercase="on"] .rl-item,
 :root[data-uppercase="on"] .rl-hint { text-transform: uppercase; }
 
-/* Los efectos de firma de «Plata y acero» viven en su skin (`themes/steam.scss`), con el resto de su
+/* Los efectos de firma de «Plata y acero» viven en su skin (`themes/witcher/witcher.scss`), con el resto de su
    dirección de arte. Aquí solo quedan los tokens. */

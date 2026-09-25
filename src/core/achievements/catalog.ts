@@ -57,6 +57,7 @@ import { localMonthKey } from '../utils/dateTime';
 import { romanLevel } from '../constants/achievementLabels';
 import type { AchievementDef, AchievementLadder, AchievementMeasure, ExtraSteps } from './types';
 import type { GameItem } from '../../model/types/game';
+import { APP_LOCALE } from '../constants/locale';
 
 /** Un año en milisegundos, para «esperó más de un año en Próximos». */
 const YEAR_MS = 365 * 24 * 60 * 60 * 1000;
@@ -110,7 +111,7 @@ function ordinalTime(step: number): string {
 
 /** Miles con separador, para que «10000 horas» no se lea de un tirón. Locale fijo: la app habla en español. */
 function thousands(value: number): string {
-  return value.toLocaleString('es-ES');
+  return value.toLocaleString(APP_LOCALE);
 }
 
 /** Nota mínima de dispersión para que «Nota del crítico» cuente: por debajo, no hay criterio, hay una sola nota. */
@@ -1468,6 +1469,18 @@ export function catalogEpoch(): number {
 }
 
 /**
+ * Los umbrales de una escalera con los añadidos puestos EN SU SITIO. El grado y el romano salen de la POSICIÓN, así
+ * que un umbral intermedio tiene que entrar donde le toca para que «Créditos finales III» siga queriendo decir el
+ * tercer escalón. Y en el sentido de la escalera: ordenar siempre de menor a mayor le daba la vuelta a la
+ * descendente (`estanteria-cero`), cuyo primer escalón es el de 50 y no el de 1. Lo comparten el catálogo y la
+ * vista previa del panel, para que las dos no puedan contar escaleras distintas.
+ */
+export function ladderStepsWith(ladder: AchievementLadder, añadidos: readonly number[]): number[] {
+  const steps = [...ladder.steps, ...añadidos];
+  return ladder.descending ? steps.sort((a, b) => b - a) : steps.sort((a, b) => a - b);
+}
+
+/**
  * LOS ESCALONES EXTRA DE CADA ESCALERA, decididos en el panel: clave de escalera → umbrales.
  *
  * Es el único tipo de ampliación que puede llegar sin desplegar (ver arriba). Va en `types.ts` porque lo
@@ -1481,9 +1494,7 @@ export function applyExtraSteps(extra: ExtraSteps = {}): void {
       .filter((step) => Number.isInteger(step) && step > 0 && !ladder.steps.includes(step))
       .filter((step, index, all) => all.indexOf(step) === index);
     if (añadidos.length === 0) return expandLadder(ladder);
-    // Ordenados: el grado y el romano salen de la POSICIÓN, así que un umbral intermedio tiene que entrar en su
-    // sitio para que «Créditos finales III» siga queriendo decir el tercer escalón.
-    return expandLadder({ ...ladder, steps: [...ladder.steps, ...añadidos].sort((a, b) => a - b) });
+    return expandLadder({ ...ladder, steps: ladderStepsWith(ladder, añadidos) });
   });
 
   achievements.length = 0;

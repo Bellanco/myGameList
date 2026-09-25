@@ -5,7 +5,7 @@
 // de mover porque no hace E/S ni toca la sincronización — todo lo que produce sale del directorio ya hidratado
 // más su propio contador de paginación.
 import { useCallback, useMemo, useState } from 'react';
-import { localDayKey, startOfLocalDay } from '../../core/utils/dateTime';
+import { createLocalDateFormat, localDayKey, startOfLocalDay } from '../../core/utils/dateTime';
 import { normalizeTimestamp as toSafeTimestamp } from '../../core/utils/normalize';
 import type { SocialActivityEntry, SocialMoveEntry, SocialPostEntry } from '../../model/repository/socialGistRepository';
 import type { PalmaresEntry } from '../../model/types/premios';
@@ -154,20 +154,20 @@ function capMovesPerAuthorDay(moves: SocialMoveFeedItem[]): SocialMoveFeedItem[]
     });
 }
 
-const FEED_DAY_MONTH_NAMES = [
-  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
-] as const;
+// Sigue la zona horaria vigente, igual que el agrupado por día (`localDayKey`/`startOfLocalDay`): con un
+// `Intl.DateTimeFormat` fijo del módulo, un cambio de zona con la app abierta ponía «11 de agosto» encima de lo del
+// 12. El porqué completo, en `createLocalDateFormat`.
+const FEED_DAY_FORMAT = createLocalDateFormat({ day: 'numeric', month: 'long' });
 
 /**
- * Formatea la fecha como "DD de MMM". Pura y sin capturas → a nivel de módulo
+ * Formatea la fecha como "D de MMMM". Pura y sin capturas → a nivel de módulo
  * para que no se recree en cada render (evita invalidar el useMemo del feed).
  *
- * Lee la fecha con los getters LOCALES, así que el día que recibe tiene que venir también en local: por eso el
- * agrupado usa `localDayKey`/`startOfLocalDay` y no `toISOString()`.
+ * Los meses los pone `Intl` y no una lista escrita a mano: es la misma frase («5 de septiembre») y sale del idioma
+ * de la app, no de doce palabras en español.
  */
 function formatDayHeader(date: Date): string {
-  return `${date.getDate()} de ${FEED_DAY_MONTH_NAMES[date.getMonth()]}`;
+  return FEED_DAY_FORMAT.format(date);
 }
 
 /**

@@ -7,7 +7,7 @@
    TEMA · Sin futuro (Cyberpunk 2077) — HUD de Night City: amarillo ácido + cian + magenta sobre
    negro, marcos angulares, scanlines y GLITCH de aberración cromática (RGB split, la óptica Kiroshi). La
    tipografía real del juego es Rajdhani; las fechas van en monoespaciada tipo terminal. No se fuerza la
-   caja (la controla el interruptor global). Identidad de color: CAPA 2 en `_base.scss`. ═══════════════ */
+   caja (la controla el interruptor global). Identidad de color: CAPA 2 en `_colors.scss`. ═══════════════ */
 
 /* ── §1 · Tipografía: Rajdhani (fuente real del HUD) para todo; Share Tech Mono (terminal) para fechas y
    números de puntuación. Los momentos hero (título de sección, resultado de ruleta) llevan el GLITCH de
@@ -115,28 +115,6 @@
 
 }
 
-/* ── §1b · GLITCH portado a otras firmas. Misma mecánica confinada que el cyberpunk (destello en ~2% de un ciclo
-   largo, resto quieto) y reutilizando los keyframes COLORLESS de slice/jitter; solo cambia la aberración de texto
-   (temática por paleta) y la intensidad. Todo bajo `prefers-reduced-motion: no-preference`. ── */
-@media (prefers-reduced-motion: no-preference) {
-  /* W40K (grimdark): corrupción de vox/pict con aberración VERDE/ORO del cogitador. Solo en OSCURO —en el códice
-     claro no hay CRT—. La sombra verde IDLE del h2 (0 0 9px …) se ancla en los fotogramas apagados para no pisar
-     el glow base. */
-  @keyframes grim-glitch-text {
-    0%, 95.4%, 97.4%, 100% { transform: none; clip-path: inset(-3px); text-shadow: 0 0 9px rgba(67, 245, 88, .45); }
-    95.6% { transform: translate(-2px, 1px); clip-path: inset(8% 0 58% 0); text-shadow: -2px 0 rgba(224, 169, 43, .9), 2px 0 rgba(67, 245, 88, .85), 0 0 9px rgba(67, 245, 88, .45); }
-    96.1% { transform: translate(2px, -1px); clip-path: inset(62% 0 10% 0); text-shadow: 2px 0 rgba(224, 169, 43, .85), -2px 0 rgba(67, 245, 88, .8), 0 0 9px rgba(67, 245, 88, .45); }
-    96.6% { transform: translate(-1px, 0); clip-path: inset(34% 0 34% 0); text-shadow: -1px 0 rgba(224, 169, 43, .8), 1px 0 rgba(67, 245, 88, .75), 0 0 9px rgba(67, 245, 88, .45); }
-  }
-  :root[data-palette="grimdark"]:not([data-theme="light"]) h2 { animation: grim-glitch-text 12s ease-in-out infinite; }
-  :root[data-palette="grimdark"]:not([data-theme="light"]) .hub-name-link,
-  :root[data-palette="grimdark"]:not([data-theme="light"]) .hub-detail-profile-link { animation: cyber-glitch-slice 14s ease-in-out infinite; }
-  :root[data-palette="grimdark"]:not([data-theme="light"]) .hub-name-link:nth-of-type(2n) { animation-delay: -5s; }
-  :root[data-palette="grimdark"]:not([data-theme="light"]) .hub-name-link:nth-of-type(3n) { animation-delay: -8.5s; }
-  :root[data-palette="grimdark"]:not([data-theme="light"]) .fab { animation: cyber-glitch-jitter 16s ease-in-out infinite; }
-  :root[data-palette="grimdark"]:not([data-theme="light"]) .fab-roulette { animation: cyber-glitch-jitter 16s ease-in-out infinite; animation-delay: -6s; }
-}
-
 /* ── §2 · Fondo: scanlines CRT muy tenues (líneas horizontales cian). ── */
 :root[data-palette="cyberpunk"] body {
   background-image: repeating-linear-gradient(0deg, rgba(0, 240, 255, .035) 0 1px, transparent 1px 3px);
@@ -154,7 +132,7 @@
 :root[data-palette="cyberpunk"] .hub-feed-card,
 :root[data-palette="cyberpunk"] .hub-hub-card,
 :root[data-palette="cyberpunk"] .modal,
-:root[data-palette="cyberpunk"] .alert-dialog { border: 1px solid rgba(0, 240, 255, .35) !important; border-left: 3px solid var(--cyber-yellow) !important; border-radius: 0 !important; box-shadow: 0 0 18px rgba(0, 240, 255, .06), inset 0 0 0 1px rgba(0, 240, 255, .05) !important; }
+:root[data-palette="cyberpunk"] .alert-dialog { border: 1px solid var(--cyber-edge) !important; border-left: 3px solid var(--cyber-yellow) !important; border-radius: 0 !important; box-shadow: 0 0 18px rgba(0, 240, 255, .06), inset 0 0 0 1px rgba(0, 240, 255, .05) !important; }
 
 /* UNA SOLA BARRA AMARILLA POR BLOQUE, y esto es lo que la hace una marca. La regla de arriba se la da a cada
    panel, y en las pantallas donde los paneles se ANIDAN —el detalle de un perfil social es el peor caso: la
@@ -167,7 +145,7 @@
    Suma (0,3,1) contra los (0,2,1) de la regla de §3, así que gana sin `!important` extra. */
 :root[data-palette="cyberpunk"] :is(.toolbar, .table-wrap, .settings-card, .stats-card, .hub-feed-card, .hub-hub-card, .modal, .alert-dialog)
   :is(.toolbar, .table-wrap, .settings-card, .stats-card, .hub-feed-card, .hub-hub-card, .modal, .alert-dialog) {
-  border-left: 1px solid rgba(0, 240, 255, .35) !important;
+  border-left: 1px solid var(--cyber-edge) !important;
 }
 
 /* LA FILA SEÑALADA SE MARCA EN CIAN, NO EN AMARILLO. El realce de la fila (`_table.scss`) es un filete de 3 px
@@ -185,7 +163,7 @@
 }
 
 /* ── §4 · Tabla: cabecera HUD (Rajdhani, etiqueta amarilla, filete cian inferior). ── */
-:root[data-palette="cyberpunk"] thead th { background: transparent; letter-spacing: .06em; border-bottom: 1px solid rgba(0, 240, 255, .4); }
+:root[data-palette="cyberpunk"] thead th { background: transparent; letter-spacing: .06em; border-bottom: 1px solid var(--cyber-edge-field); }
 
 /* ── §5 · Botones HUD: angulares (esquina cortada con clip-path — planos, sin borde/sombra recortable).
    Acento = relleno AMARILLO con texto negro (firma de Cyberpunk), en ambos temas. Semánticos rellenos;
@@ -210,7 +188,7 @@
   clip-path: none !important;
   position: relative;
   isolation: isolate;
-  --hud-edge: rgba(0, 240, 255, .35);
+  --hud-edge: var(--cyber-edge);
   --hud-cut: polygon(0 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%);
 }
 :root[data-palette="cyberpunk"] .btn-secondary::before,
@@ -332,7 +310,9 @@
   box-shadow: none;
 }
 /* Glitch ambiental de los chips: MUY sutil (solo aberración RGB por text-shadow, sin `transform` para no pisar el
-   lift del hover), en ciclo largo (~21 s) y ESCALONADO por posición para que no destellen todos a la vez. */
+   lift del hover), en ciclo largo (~21 s) y ESCALONADO por posición para que no destellen todos a la vez. Cuelga
+   de `data-effects="on"`: la lista de «efectos OFF» de más abajo nombraba el chip del juego pero no `.chip`, y
+   con los efectos quitados todos los chips del listado seguían destellando. */
 @media (prefers-reduced-motion: no-preference) {
   @keyframes cyber-glitch-chip {
     /* Anclado a `text-shadow: none` fuera del destello (los chips no tienen sombra base), para que la aberración
@@ -342,8 +322,8 @@
     96.7% { text-shadow: 1.5px 0 rgba(255, 42, 109, .8), -1.5px 0 rgba(0, 240, 255, .8); }
     97.2% { text-shadow: -1px 0 rgba(255, 42, 109, .7), 1px 0 rgba(0, 240, 255, .7); }
   }
-  :root[data-palette="cyberpunk"] .chip,
-  :root[data-palette="cyberpunk"] .hub-feed-game-chip { animation: cyber-glitch-chip 21s ease-in-out infinite; }
+  :root[data-effects="on"][data-palette="cyberpunk"] .chip,
+  :root[data-effects="on"][data-palette="cyberpunk"] .hub-feed-game-chip { animation: cyber-glitch-chip 21s ease-in-out infinite; }
   :root[data-palette="cyberpunk"] .chip:nth-child(5n)   { animation-delay: -4s; }
   :root[data-palette="cyberpunk"] .chip:nth-child(5n+1) { animation-delay: -9s; }
   :root[data-palette="cyberpunk"] .chip:nth-child(5n+2) { animation-delay: -13s; }
@@ -363,17 +343,17 @@
 :root[data-palette="cyberpunk"] .hub-friend-chip { border-radius: 0; }
 
 /* ── §7 · Segmentos y campos: HUD — recto, filete cian, foco amarillo (lo da --steam en base). ── */
-:root[data-palette="cyberpunk"] .hub-seg { border: 1px solid rgba(0, 240, 255, .4); border-radius: 0; }
+:root[data-palette="cyberpunk"] .hub-seg { border: 1px solid var(--cyber-edge-field); border-radius: 0; }
 :root[data-palette="cyberpunk"] .input-base,
 :root[data-palette="cyberpunk"] .finput,
 :root[data-palette="cyberpunk"] .ftextarea,
-:root[data-palette="cyberpunk"] .search-input { border: 1px solid rgba(0, 240, 255, .4) !important; border-radius: 0 !important; }
+:root[data-palette="cyberpunk"] .search-input { border: 1px solid var(--cyber-edge-field) !important; border-radius: 0 !important; }
 
 /* ── §8 · Insignias: activa = amarillo neón con halo; inactiva = superficie con filete cian. ── */
 :root[data-palette="cyberpunk"] .badge-rejugar-activo,
 :root[data-palette="cyberpunk"] .badge-opp-activo { background: var(--cyber-yellow) !important; color: #08090d !important; border: 1px solid var(--cyber-yellow) !important; box-shadow: 0 0 8px rgba(252, 238, 10, .45) !important; }
 :root[data-palette="cyberpunk"] .badge-rejugar-inactivo,
-:root[data-palette="cyberpunk"] .badge-opp-inactivo { background: var(--surface-elevated) !important; color: var(--text-muted) !important; border: 1px solid rgba(0, 240, 255, .35) !important; box-shadow: none !important; }
+:root[data-palette="cyberpunk"] .badge-opp-inactivo { background: var(--surface-elevated) !important; color: var(--text-muted) !important; border: 1px solid var(--cyber-edge) !important; box-shadow: none !important; }
 
 /* ── §9 · Puntuación 0–100: sin aro/borde añadido (el arco de color ya es la nota). Número en
    monoespaciada (§1). ── */
@@ -403,11 +383,11 @@
 
 /* ── §11 · Ruleta = escáner HUD. Tambor/tarjetas = paneles rectos; el visor de selección es un marco
    AMARILLO/CIAN luminoso (objetivo de escaneo); nombres en Rajdhani (§1). ── */
-:root[data-palette="cyberpunk"] .rl-drum { border: 1px solid rgba(0, 240, 255, .35); border-radius: 0; background: var(--surface); box-shadow: inset 0 0 26px rgba(0, 0, 0, .5); }
+:root[data-palette="cyberpunk"] .rl-drum { border: 1px solid var(--cyber-edge); border-radius: 0; background: var(--surface); box-shadow: inset 0 0 26px rgba(0, 0, 0, .5); }
 :root[data-palette="cyberpunk"] .rl-frame { border: 2px solid var(--cyber-yellow); border-radius: 0; box-shadow: 0 0 14px rgba(252, 238, 10, .5), inset 0 0 10px rgba(0, 240, 255, .18); }
 :root[data-palette="cyberpunk"] .rl-hint { color: var(--cyber-cyan-fg); letter-spacing: .12em; }
 :root[data-palette="cyberpunk"] .rl-ghost,
-:root[data-palette="cyberpunk"] .rl-card { border: 1px solid rgba(0, 240, 255, .35); border-left: 3px solid var(--cyber-yellow); border-radius: 0; box-shadow: 0 0 16px rgba(0, 240, 255, .06); }
+:root[data-palette="cyberpunk"] .rl-card { border: 1px solid var(--cyber-edge); border-left: 3px solid var(--cyber-yellow); border-radius: 0; box-shadow: 0 0 16px rgba(0, 240, 255, .06); }
 :root[data-palette="cyberpunk"] .rl-card-tag { color: var(--fg-link); }
 
 /* ── §12 · FAB neón: añadir "+" = AMARILLO; ruleta = CIAN. Discos con halo (redondos por naturaleza). ── */
@@ -417,7 +397,7 @@
 :root[data-palette="cyberpunk"] .fab-roulette:hover { filter: none; box-shadow: 0 0 22px rgba(0, 240, 255, .85); }
 
 /* ── §13 · Barra de navegación inferior: HUD — filete cian + barra amarilla lateral, esquinas rectas. ── */
-:root[data-palette="cyberpunk"] .bottom-nav-inner { border: 1px solid rgba(0, 240, 255, .35); border-left: 3px solid var(--cyber-yellow); border-radius: 0; background: var(--surface); }
+:root[data-palette="cyberpunk"] .bottom-nav-inner { border: 1px solid var(--cyber-edge); border-left: 3px solid var(--cyber-yellow); border-radius: 0; background: var(--surface); }
 :root[data-palette="cyberpunk"] .bottom-nav-ind { border-radius: 0; }
 
 /* ══ EFECTOS · subrayado/halo neón en enlaces al hover (se suma al glitch de firma). Solo `data-effects="on"`. ══ */
@@ -427,8 +407,8 @@
 }
 
 /* ══ Preferencia de efectos OFF: silencia las ANIMACIONES de firma (glitch de aberración) sin tocar la
-   textura estática (scanlines, marcos HUD, glows), que es identidad del tema. Cubre cyberpunk y el glitch
-   portado a grimdark (que vive en este archivo). Aditivo: no edita las reglas de glitch existentes. ══ */
+   textura estática (scanlines, marcos HUD, glows), que es identidad del tema. Aditivo: no edita las reglas de
+   glitch existentes. El glitch de grimdark ya no vive aquí: está en su skin, colgado de `data-effects`. ══ */
 :root:not([data-effects="on"])[data-palette="cyberpunk"] h2,
 :root:not([data-effects="on"])[data-palette="cyberpunk"] .hub-name-link,
 :root:not([data-effects="on"])[data-palette="cyberpunk"] .hub-detail-profile-link,
@@ -436,13 +416,7 @@
 :root:not([data-effects="on"])[data-palette="cyberpunk"] .fab-roulette,
 :root:not([data-effects="on"])[data-palette="cyberpunk"] .btn-secondary::before,
 :root:not([data-effects="on"])[data-palette="cyberpunk"] .btn-danger::before,
-:root:not([data-effects="on"])[data-palette="cyberpunk"] .btn-abandoned::before,
-:root:not([data-effects="on"])[data-palette="cyberpunk"] .hub-feed-game-chip,
-:root:not([data-effects="on"])[data-palette="grimdark"] h2,
-:root:not([data-effects="on"])[data-palette="grimdark"] .hub-name-link,
-:root:not([data-effects="on"])[data-palette="grimdark"] .hub-detail-profile-link,
-:root:not([data-effects="on"])[data-palette="grimdark"] .fab,
-:root:not([data-effects="on"])[data-palette="grimdark"] .fab-roulette { animation: none !important; }
+:root:not([data-effects="on"])[data-palette="cyberpunk"] .btn-abandoned::before { animation: none !important; }
 
 
 /* ── §13 · Panel "Perfil": HUD de Night City. La rampa de los repartos va del CIAN al MAGENTA y pasa por los
@@ -565,7 +539,7 @@
    movimiento es una línea de log: se le quita el amarillo y se queda con el cian tenue del resto del marco, sin
    el halo. ── */
 :root[data-palette="cyberpunk"] .hub-feed-activity-item.is-move {
-  border-left-color: rgba(0, 240, 255, .35) !important;
+  border-left-color: var(--cyber-edge) !important;
   box-shadow: none !important;
 }
 /* La hora, en la monoespaciada de la paleta y con el mismo prefijo de dato que usan sus fechas. */
@@ -676,7 +650,7 @@
 
 /* ── §N · LA CAJA SIN CARÁTULA = LA VENTANA DEL HUD ────────────────────────────────────────────────────
    El chaflán NO lo recorta la caja. `clip-path` se come el `border` y el `box-shadow` del propio elemento
-   (la regla 2 que ya documentan §5 y `steam.scss` §4b), y lo que queda es el filete sobreviviendo en los
+   (la regla 2 que ya documentan §5 y `witcher.scss` §4b), y lo que queda es el filete sobreviviendo en los
    cantos rectos y desapareciendo justo en la diagonal: dos rayas sueltas en vez de un contorno.
    La forma la dan DOS CAPAS detrás del contenido —`::before` con el color del filete y `::after` con el
    relleno 1 px más pequeño—, exactamente igual que los botones de este tema. Así el cian rodea la pieza
@@ -757,6 +731,20 @@
 :root[data-palette="cyberpunk"] .view-controls .grid-size-range::-webkit-slider-thumb { border-radius: 0; transform: rotate(45deg); background: var(--steam); border: 0; }
 :root[data-palette="cyberpunk"] .view-controls .grid-size-range::-moz-range-thumb { border-radius: 0; background: var(--steam); border: 0; }
 :root[data-palette="cyberpunk"] .view-controls .shape-switch-btn { border-radius: 0; color: rgba(var(--steam-rgb), .5); }
+/* A LA LUZ, LA MISMA PLACA EN SILICIO CLARO. Estaba escrita en negro a mano (#131313 → #0b0b0b, carril #2a2a2a),
+   así que en claro seguía siendo un chip negro sobre la interfaz blanca, lo único oscuro de la pantalla. Aquí la
+   pieza es la misma —muescas, pista de contacto AMARILLA abajo, rombo y relleno angular— sobre las superficies
+   del tema, con el filete HUD de los campos (`--cyber-edge-field`) como canto. El apagado va en el cian hondo del
+   acento (3,15:1 en el extremo hondo de la placa, 4:1 arriba) y el activo, relleno de cian con la tinta negra
+   encima (4,8:1). */
+:root[data-palette="cyberpunk"][data-theme="light"] .view-controls {
+  background: linear-gradient(180deg, var(--surface-elevated), var(--surface-hover));
+  box-shadow: inset 0 0 0 1px var(--cyber-edge-field);
+  border-bottom-color: var(--cyber-yellow);
+}
+:root[data-palette="cyberpunk"][data-theme="light"] .view-controls .grid-size::before { background: var(--border); }
+:root[data-palette="cyberpunk"][data-theme="light"] .view-controls .grid-size::after { background: linear-gradient(90deg, var(--cyber-cyan), var(--steam)); }
+:root[data-palette="cyberpunk"][data-theme="light"] .view-controls .shape-switch-btn:not(.is-on) { color: var(--steam); }
 :root[data-palette="cyberpunk"] .view-controls .shape-switch-btn.is-on {
   background: var(--steam);
   color: #0b0b0b;
@@ -802,7 +790,7 @@
    que la ficha de alguien era la única caja redondeada de la pantalla. Aquí es la ficha de un contacto en el
    HUD: recta, filete cian y su barra amarilla. ── */
 :root[data-palette="cyberpunk"] .hub-user-card {
-  border: 1px solid rgba(0, 240, 255, .35);
+  border: 1px solid var(--cyber-edge);
   border-left: 3px solid var(--cyber-yellow);
   border-radius: 0;
   box-shadow: 0 0 18px rgba(0, 240, 255, .06);

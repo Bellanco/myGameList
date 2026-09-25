@@ -24,8 +24,8 @@
 // React monte, y las esperas de chunk ocurren justo cuando su hoja todavía no ha llegado.
 @use './motion';
 // Los skins de tema (CAPA 3, `themes/*.scss`) NO se agrupan aquí: se cargan bajo demanda por paleta desde
-// `paletteSkin.ts` (los colores/layout de cada paleta viven en `_base.scss`, CAPA 2, que sí va en el bundle
-// base). Ver `src/view/hooks/paletteSkin.ts`.
+// `paletteSkin.ts` (los colores de cada paleta viven en `themes/<id>/_colors.scss`, CAPA 2, que entran por
+// `themes/_index.scss` y sí van en el bundle base). Ver `src/view/hooks/paletteSkin.ts`.
 //
 // LA EXCEPCIÓN ES LA PALETA POR DEFECTO, que sí lo trae: es la que pinta el PRIMER FOTOGRAMA de quien abre la
 // app sin haber elegido nada, y un skin que llega un instante después es un cambio de letra y de forma a la

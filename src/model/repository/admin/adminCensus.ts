@@ -14,6 +14,7 @@ import { normalizeTier, type ProfileTier } from '../../../core/constants/tiers';
 import { FIRESTORE_SCHEMA_VERSION } from '../../../core/constants/schema';
 import type { AdminAnomaly } from '../../types/firestore';
 import { INACTIVITY_MS, PLACEHOLDER_ID, STALE_PENDING_MS, FOSSIL_PENDING_MS, requireServices, toAdminError, toMillis } from './adminShared';
+import { APP_LOCALE } from '../../../core/constants/locale';
 
 /**
  * Tope de perfiles que se traen de una vez. No hay paginación a propósito (el censo cabe de sobra); si algún día
@@ -492,7 +493,7 @@ export async function loadAdminCensus(limitCount = ADMIN_PROFILES_LIMIT): Promis
       anomalies: detectAnomalies(row, friendships.byUid.get(row.uid)?.socialGistIds || new Set(), now),
     }))
     // Más recientes primero; los que no traen `updatedAt` caen al final (pero SALEN).
-    .sort((a, b) => b.updatedAt - a.updatedAt || a.displayName.localeCompare(b.displayName));
+    .sort((a, b) => b.updatedAt - a.updatedAt || a.displayName.localeCompare(b.displayName, APP_LOCALE));
 
   return {
     users,
