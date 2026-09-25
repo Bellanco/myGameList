@@ -2,9 +2,8 @@ import { memo } from 'react';
 import { useStatsLabels } from './statsVoice';
 import { useChartFocus } from './useChartFocus';
 import { ChartDetail, ChartDetailHint } from './ChartDetail';
-import { localWeekKey, mondayOfWeekKey } from '../../../core/utils/dateTime';
+import { createLocalDateFormat, localWeekKey, mondayOfWeekKey } from '../../../core/utils/dateTime';
 import type { ActivitySummary, WeekActivity } from '../../../core/stats/types';
-import { APP_LOCALE } from '../../../core/constants/locale';
 
 /** Semanas que se enseñan: un año redondo, en UNA sola fila. */
 const WEEKS = 52;
@@ -27,8 +26,8 @@ const BRACKET = 22;
 /** Cuántos niveles de intensidad. Cuatro se distinguen de un vistazo; con más, la rampa se vuelve un degradado. */
 const LEVELS = 4;
 
-const MONTH = new Intl.DateTimeFormat(APP_LOCALE, { month: 'short' });
-const DAY_MONTH = new Intl.DateTimeFormat(APP_LOCALE, { day: 'numeric', month: 'short' });
+const MONTH = createLocalDateFormat({ month: 'short' });
+const DAY_MONTH = createLocalDateFormat({ day: 'numeric', month: 'short' });
 
 /**
  * Las claves de las 52 semanas que ocupa el mapa: el último año redondo, terminando SIEMPRE en la semana en

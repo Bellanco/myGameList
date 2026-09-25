@@ -8,9 +8,9 @@ import {
   type ShareQuota,
 } from '../../core/constants/tiers';
 import type { AdminShareRow } from '../../model/repository/shareAdminRepository';
-import { APP_LOCALE } from '../../core/constants/locale';
+import { createLocalDateFormat } from '../../core/utils/dateTime';
 
-const DAY_FORMAT = new Intl.DateTimeFormat(APP_LOCALE, { dateStyle: 'medium' });
+const DAY_FORMAT = createLocalDateFormat({ dateStyle: 'medium' });
 
 export interface ShareActionRequest {
   title: string;

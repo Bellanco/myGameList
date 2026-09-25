@@ -15,6 +15,8 @@
 // calendario") y en `computeStats.monthOf`; el feed social era la única excepción. Aquí se hace la cuenta una vez
 // para que no vuelva a divergir según el archivo.
 
+import { APP_LOCALE } from '../constants/locale';
+
 const pad2 = (value: number): string => String(value).padStart(2, '0');
 
 /** `AAAA-MM-DD` sobre el que se validan las claves de día que entran como texto (fecha ancla del AdminHub). */
@@ -133,4 +135,39 @@ export function mondayOfWeekKey(key: string): Date {
   const monday = new Date(jan4);
   monday.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (week - 1) * 7);
   return monday;
+}
+
+/** Lo único que usan de un formateador de fechas quienes pintan una. */
+export interface LocalDateFormat {
+  format(date: Date): string;
+}
+
+/**
+ * Un formateador de fechas en el idioma de la app que sigue la zona horaria VIGENTE.
+ *
+ * Un `Intl.DateTimeFormat` fija la zona al construirse, y los que se creaban una vez al cargar el módulo se quedaban
+ * con la de ese momento. Mientras tanto, el agrupado por día (`localDayKey`, `startOfLocalDay`) lee la zona vigente
+ * con los getters locales de `Date`. Si la zona cambia con la app abierta —un viaje, o el `vi.stubEnv('TZ', …)` de
+ * las pruebas en un CI que corre en UTC—, el grupo se calculaba en la zona nueva y su texto en la vieja: fue lo que
+ * puso «11 de agosto» encima de los movimientos del 12 en el feed social.
+ *
+ * NO SE CREA EN CADA LLAMADA, que sería lo sencillo: cuesta ~22 µs frente a ~0,9 µs de reutilizarlo, y hay quien
+ * formatea en bucle (el censo del panel, dos fechas por perfil; las 53 semanas de la constancia; los ejes de las
+ * gráficas). Se reutiliza mientras no cambie el desfase de la zona respecto a UTC y se rehace cuando cambia, que es
+ * lo que delata un cambio de zona; mirarlo cuesta ~0,01 µs. Rehacerlo también al cambiar de horario de verano es
+ * inofensivo. Dos zonas con el mismo desfase dan el mismo texto para cualquier fecha cercana.
+ */
+export function createLocalDateFormat(options: Intl.DateTimeFormatOptions): LocalDateFormat {
+  let offset = Number.NaN;
+  let formatter: Intl.DateTimeFormat | null = null;
+  return {
+    format(date: Date): string {
+      const current = new Date().getTimezoneOffset();
+      if (formatter === null || current !== offset) {
+        formatter = new Intl.DateTimeFormat(APP_LOCALE, options);
+        offset = current;
+      }
+      return formatter.format(date);
+    },
+  };
 }

@@ -5,7 +5,7 @@
 // de mover porque no hace E/S ni toca la sincronización — todo lo que produce sale del directorio ya hidratado
 // más su propio contador de paginación.
 import { useCallback, useMemo, useState } from 'react';
-import { localDayKey, startOfLocalDay } from '../../core/utils/dateTime';
+import { createLocalDateFormat, localDayKey, startOfLocalDay } from '../../core/utils/dateTime';
 import { normalizeTimestamp as toSafeTimestamp } from '../../core/utils/normalize';
 import type { SocialActivityEntry, SocialMoveEntry, SocialPostEntry } from '../../model/repository/socialGistRepository';
 import type { PalmaresEntry } from '../../model/types/premios';
@@ -15,7 +15,6 @@ import { ENABLE_ACHIEVEMENTS } from '../../core/achievements/flags';
 import type { ProfileTier } from '../../core/constants/tiers';
 import type { GameItem, TabId } from '../../model/types/game';
 import type { SocialProfileVisibility, SocialSharedGame } from '../../model/repository/socialGistRepository';
-import { APP_LOCALE } from '../../core/constants/locale';
 
 /**
  * Identidad del autor con la que se enriquece cada elemento al hidratar el directorio.
@@ -155,7 +154,10 @@ function capMovesPerAuthorDay(moves: SocialMoveFeedItem[]): SocialMoveFeedItem[]
     });
 }
 
-const FEED_DAY_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long' };
+// Sigue la zona horaria vigente, igual que el agrupado por día (`localDayKey`/`startOfLocalDay`): con un
+// `Intl.DateTimeFormat` fijo del módulo, un cambio de zona con la app abierta ponía «11 de agosto» encima de lo del
+// 12. El porqué completo, en `createLocalDateFormat`.
+const FEED_DAY_FORMAT = createLocalDateFormat({ day: 'numeric', month: 'long' });
 
 /**
  * Formatea la fecha como "D de MMMM". Pura y sin capturas → a nivel de módulo
@@ -163,16 +165,9 @@ const FEED_DAY_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = { day: 'numeric', mo
  *
  * Los meses los pone `Intl` y no una lista escrita a mano: es la misma frase («5 de septiembre») y sale del idioma
  * de la app, no de doce palabras en español.
- *
- * EL FORMATEADOR SE CREA EN CADA LLAMADA, y no una vez en el módulo, a propósito. Un `Intl.DateTimeFormat` fija la
- * zona horaria al construirse, mientras que el agrupado (`localDayKey`/`startOfLocalDay`) lee la zona VIGENTE con
- * los getters locales de `Date`. Con el formateador de módulo, si la zona cambia con la app abierta —un viaje, o el
- * `vi.stubEnv('TZ', …)` de las pruebas en un CI que corre en UTC—, el grupo se calculaba en la zona nueva y su
- * título en la vieja: «11 de agosto» encima de los movimientos del 12. Se llama una vez por día del feed, así que
- * crearlo no cuesta nada que se note.
  */
 function formatDayHeader(date: Date): string {
-  return new Intl.DateTimeFormat(APP_LOCALE, FEED_DAY_FORMAT_OPTIONS).format(date);
+  return FEED_DAY_FORMAT.format(date);
 }
 
 /**

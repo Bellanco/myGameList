@@ -20,11 +20,11 @@ import { HubBackButton } from './socialhub/HubBackButton';
 // ancho, las ayudas pegadas al rótulo siguiente y los botones debajo de la barra. Vite la emite en cada chunk
 // que de verdad pinta esta pantalla.
 import '../../styles/admin.scss';
-import { APP_LOCALE } from '../../core/constants/locale';
+import { createLocalDateFormat } from '../../core/utils/dateTime';
 
 const A = ADMIN_ANNOUNCEMENT_UI;
 
-const DATE_FORMAT = new Intl.DateTimeFormat(APP_LOCALE, { dateStyle: 'medium', timeStyle: 'short' });
+const DATE_FORMAT = createLocalDateFormat({ dateStyle: 'medium', timeStyle: 'short' });
 
 /**
  * LA PANTALLA DONDE SE ESCRIBE EL AVISO (`/admin` → «Aviso a los usuarios»).
