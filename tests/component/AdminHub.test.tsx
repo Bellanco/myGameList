@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { ADMIN_PANEL_UI, ADMIN_SHARES_UI } from '../../src/core/constants/adminLabels';
+import { ADMIN_ANNOUNCEMENT_UI, ADMIN_PANEL_UI, ADMIN_SHARES_UI } from '../../src/core/constants/adminLabels';
 import {
   PROFILE_TIER_LABELS,
   PROFILE_TIER_SHARE_MAX_ACTIVE,
@@ -87,6 +87,14 @@ vi.mock('../../src/model/repository/shareAdminRepository', () => ({
 // jsdom no trae portapapeles: el botón de copiar el uid lo necesita para poder comprobarse.
 const writeTextMock = vi.fn(async () => {});
 Object.defineProperty(navigator, 'clipboard', { value: { writeText: writeTextMock }, configurable: true });
+
+// El aviso publicado se lee de `/api/announcement`. Aquí se controla CUÁNDO llega, que es de lo que va el caso.
+const loadAnnouncementMock = vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => null);
+const saveAnnouncementMock = vi.fn(async (next: unknown) => next);
+vi.mock('../../src/model/repository/announcementRepository', () => ({
+  loadAnnouncement: (...args: unknown[]) => loadAnnouncementMock(...args),
+  saveAnnouncement: (next: unknown) => saveAnnouncementMock(next),
+}));
 
 import { AdminHub } from '../../src/view/components/AdminHub';
 
@@ -1058,5 +1066,38 @@ describe('AdminHub — resumen y filtros', () => {
 
     // Ada no tiene señales y Bob no es Zoe: no queda nadie, pero por la búsqueda, no por el filtro.
     expect(screen.getByText(ADMIN_PANEL_UI.emptyFiltered)).toBeInTheDocument();
+  });
+});
+
+describe('AdminHub — el aviso publicado', () => {
+  beforeEach(() => {
+    loadAdminCensusMock.mockReset();
+    loadAdminCensusMock.mockResolvedValue(census([user()]));
+    readAdminClaimMock.mockReset();
+    saveAnnouncementMock.mockClear();
+  });
+
+  // El formulario copiaba el aviso en su estado AL MONTARSE, cuando la lectura aún no había vuelto: se quedaba en
+  // blanco, y «Guardar cambios» sobre lo que se escribiera ahí estrenaba campaña —se le volvía a enseñar a todos—
+  // en vez de corregir la publicada.
+  it('no abre el formulario hasta tener el aviso, y guardar corrige la campaña publicada', async () => {
+    let entregar: (value: unknown) => void = () => {};
+    loadAnnouncementMock.mockImplementation(() => new Promise((resolve) => { entregar = resolve; }));
+    const publicado = {
+      id: 'campana-1', kicker: 'Ya puedes votar', title: 'Premios 2026', body: '', url: 'https://example.com/premios',
+      icon: 'votar', active: true, repeats: 3, intervalHours: 24, updatedAt: 1,
+    };
+    renderHub();
+    signInAsAdmin();
+    await userEvent.click(await screen.findByRole('button', { name: ADMIN_ANNOUNCEMENT_UI.open }));
+
+    // La pantalla ya está montada (dice que está leyendo), y el formulario todavía no.
+    expect(await screen.findByText(ADMIN_ANNOUNCEMENT_UI.loading)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: ADMIN_ANNOUNCEMENT_UI.save })).toBeNull();
+    entregar(publicado);
+
+    await userEvent.click(await screen.findByRole('button', { name: ADMIN_ANNOUNCEMENT_UI.save }));
+    await waitFor(() => expect(saveAnnouncementMock).toHaveBeenCalledTimes(1));
+    expect(saveAnnouncementMock.mock.calls[0][0]).toMatchObject({ id: 'campana-1', title: 'Premios 2026' });
   });
 });

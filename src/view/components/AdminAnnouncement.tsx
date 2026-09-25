@@ -45,8 +45,8 @@ const DATE_FORMAT = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', time
  */
 
 interface AdminAnnouncementProps {
-  /** El aviso que hay ahora mismo en Firestore, o `null` si no hay ninguno. */
-  current: Announcement | null;
+  /** El aviso que hay ahora mismo en Firestore, `null` si no hay ninguno y `undefined` mientras se lee. */
+  current: Announcement | null | undefined;
   /** Guarda y devuelve lo que de verdad ha quedado escrito. Si falla, LANZA: esta pantalla lo dice. */
   onSave: (next: Announcement) => Promise<Announcement>;
   onBack: () => void;
@@ -99,7 +99,30 @@ function Field({ label, help, count, max, children }: {
   );
 }
 
-export function AdminAnnouncement({ current, onSave, onBack }: AdminAnnouncementProps) {
+/**
+ * EL FORMULARIO NO SE ABRE HASTA TENER EL AVISO. Copia `current` en su estado al montarse, así que abierto antes de
+ * que llegara la lectura arrancaba en blanco, sin `id`, y «Guardar cambios» estrenaba campaña: el aviso le volvía a
+ * salir a todo el mundo en vez de corregirse. Esperar aquí es lo que deja que `draftFrom` vea el publicado.
+ */
+export function AdminAnnouncement(props: AdminAnnouncementProps) {
+  const { current, onBack } = props;
+  if (current === undefined) {
+    return (
+      <section className="admin-hub admin-ann" aria-label={A.sectionAria}>
+        <div className="admin-ann-bar">
+          <HubBackButton onBack={onBack} label={A.back} />
+        </div>
+        <div className="admin-card">
+          <h2>{A.title}</h2>
+          <p className="admin-card-sub" role="status">{A.loading}</p>
+        </div>
+      </section>
+    );
+  }
+  return <AnnouncementEditor {...props} current={current} />;
+}
+
+function AnnouncementEditor({ current, onSave, onBack }: AdminAnnouncementProps & { current: Announcement | null }) {
   const [draft, setDraft] = useState(() => draftFrom(current));
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);

@@ -193,7 +193,8 @@ export const AdminHub = memo(function AdminHub() {
   const [extraSteps, setExtraSteps] = useState<ExtraSteps>({});
   // El aviso a los usuarios que hay publicado ahora mismo. Se lee al entrar en su vista, saltándose la caché del
   // dispositivo: aquí se está a punto de reescribirlo, y ver una versión de hace horas sería un fallo.
-  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  // `undefined` = aún sin leer: el formulario espera (ver `AdminAnnouncement`).
+  const [announcement, setAnnouncement] = useState<Announcement | null | undefined>(undefined);
   const [pending, setPending] = useState<PendingAction>(null);
   // Los enlaces de TODOS se piden una vez y se agrupan por usuario: el panel pinta decenas de fichas y una
   // petición por ficha sería absurda para un dato que cabe en una sola respuesta.
@@ -238,6 +239,8 @@ export const AdminHub = memo(function AdminHub() {
   useEffect(() => {
     if (view !== 'announcement') return;
     let cancelled = false;
+    // Cada entrada vuelve a leer, y hasta entonces no hay formulario: no se edita sobre la foto de la visita anterior.
+    setAnnouncement(undefined);
     void import('../../model/repository/announcementRepository')
       .then((module) => module.loadAnnouncement(true))
       .then((value) => {
@@ -245,6 +248,7 @@ export const AdminHub = memo(function AdminHub() {
       })
       .catch(() => {
         // Sin documento (o sin red) la pantalla abre en blanco, que es lo que hay: un aviso por escribir.
+        if (!cancelled) setAnnouncement(null);
       });
     return () => {
       cancelled = true;

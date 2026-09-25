@@ -736,6 +736,8 @@ export const ADMIN_ANNOUNCEMENT_UI = {
   currentOn: 'Encendido',
   currentOff: 'Apagado',
   currentNone: 'Sin publicar todavía.',
+  /** Mientras llega el publicado: el formulario no se abre antes, o arrancaría en blanco (ver `AdminAnnouncement`). */
+  loading: 'Leyendo el aviso publicado…',
   currentSaved: (date: string) => `guardado el ${date}`,
   currentId: (id: string) => `campaña ${id}`,
   /** El mismo conteo que el de las reseñas, para que se lea igual en los dos sitios. */
