@@ -93,9 +93,11 @@ analítica de Cloudflare que el borde inyectaba sin que estuviera en el código.
 - **El formulario del aviso espera a tener el aviso publicado** antes de dejar editarlo: guardar creaba una campaña
   nueva y se volvía a enseñar a todo el mundo.
 - **Un borrado de cuenta incompleto se dice en pantalla** en vez de navegar fuera y perder el aviso.
-- **Los títulos de cada día del feed salen en la zona horaria vigente**: con la app abierta mientras cambia la zona
-  (un viaje), el grupo se calculaba en la nueva y su título en la vieja, y «11 de agosto» encabezaba lo del 12. Es
-  lo que rompía la integración continua, que corre en UTC.
+- **Las fechas siguen la zona horaria vigente**: los formateadores se creaban una vez al cargar y se quedaban con
+  la zona de ese momento, así que con la app abierta mientras cambia la zona (un viaje) el feed agrupaba en la nueva
+  y titulaba en la vieja, y «11 de agosto» encabezaba lo del 12. Pasa lo mismo, ya arreglado, en las fechas de
+  estadísticas, del panel de administración y de los enlaces compartidos. Es lo que rompía la integración continua,
+  que corre en UTC.
 - **Los números van en formato español aunque el navegador esté en inglés** («1.000» y no «1,000»): dos cifras se
   formateaban con el idioma del navegador.
 

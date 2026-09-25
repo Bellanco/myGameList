@@ -1,7 +1,7 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { ADMIN_ACHIEVEMENTS_UI, ADMIN_ANNOUNCEMENT_UI, ADMIN_PANEL_UI } from '../../core/constants/adminLabels';
-import { APP_LOCALE } from '../../core/constants/locale';
+import { createLocalDateFormat } from '../../core/utils/dateTime';
 // SOLO EL RÓTULO, y desde los textos del panel: importar `PREMIOS_UI` traería todos los textos de la porra al
 // chunk del panel, y este botón necesita exactamente una palabra.
 const PREMIOS_ADMIN_OPEN = ADMIN_PANEL_UI.premiosOpen;
@@ -70,9 +70,9 @@ const AdminAnnouncement = lazy(() =>
 const AdminPremios = lazy(() =>
   import('./premios/AdminPremios').then((module) => ({ default: module.AdminPremios })));
 
-const DATE_FORMAT = new Intl.DateTimeFormat(APP_LOCALE, { dateStyle: 'medium', timeStyle: 'short' });
+const DATE_FORMAT = createLocalDateFormat({ dateStyle: 'medium', timeStyle: 'short' });
 /** Para fechas de alta: el día basta y ocupa la mitad. */
-const DAY_FORMAT = new Intl.DateTimeFormat(APP_LOCALE, { dateStyle: 'medium' });
+const DAY_FORMAT = createLocalDateFormat({ dateStyle: 'medium' });
 
 /**
  * Señales que el pie de la ficha ya representa como botón de purga. No se pintan además como píldora informativa:

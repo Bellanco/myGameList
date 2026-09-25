@@ -2,7 +2,7 @@
 // que fallan si alguien vuelve a calcular días con `toISOString()`: en UTC, un instante de las 22:06Z pertenece
 // al día 11 pase lo que pase, y aquí tiene que pertenecer al 12 en Madrid y al 11 en Los Ángeles.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { localDayKey, localMonthKey, localWeekKey, mondayOfWeekKey, noonOfLocalDay, startOfLocalDay } from '../../src/core/utils/dateTime';
+import { createLocalDateFormat, localDayKey, localMonthKey, localWeekKey, mondayOfWeekKey, noonOfLocalDay, startOfLocalDay } from '../../src/core/utils/dateTime';
 
 /** Ejecuta el cuerpo con la zona indicada. Node revalida la caché de husos al reasignar `TZ`. */
 function enZona<T>(timeZone: string, body: () => T): T {
@@ -138,6 +138,41 @@ describe('mondayOfWeekKey', () => {
   it('devuelve una fecha inválida si la clave no tiene la forma esperada', () => {
     for (const bad of ['', '2026', '2026-W', '2026-W5', 'basura']) {
       expect(Number.isNaN(mondayOfWeekKey(bad).getTime())).toBe(true);
+    }
+  });
+});
+
+describe('createLocalDateFormat', () => {
+  // 22:30Z del 11: el día 12 en Madrid y el 11 en UTC.
+  const INSTANTE = new Date(Date.parse('2026-08-11T22:30:00.000Z'));
+
+  it('sigue a la zona vigente aunque cambie después de crearlo', () => {
+    // Se crea en UTC y se usa en Madrid: es justo lo que hacía un formateador de módulo en el CI.
+    const dia = enZona('UTC', () => createLocalDateFormat({ day: 'numeric', month: 'long' }));
+    expect(enZona('UTC', () => dia.format(INSTANTE))).toBe('11 de agosto');
+    expect(enZona('Europe/Madrid', () => dia.format(INSTANTE))).toBe('12 de agosto');
+    expect(enZona('America/Los_Angeles', () => dia.format(INSTANTE))).toBe('11 de agosto');
+  });
+
+  it('dice lo mismo que el agrupado por día, en cualquier zona', () => {
+    const dia = createLocalDateFormat({ day: 'numeric' });
+    for (const zona of ['UTC', 'Europe/Madrid', 'Pacific/Kiritimati', 'America/Los_Angeles']) {
+      enZona(zona, () => {
+        expect(dia.format(INSTANTE)).toBe(String(Number(localDayKey(INSTANTE).slice(8))));
+      });
+    }
+  });
+
+  it('reutiliza el formateador mientras la zona no cambia', () => {
+    const espia = vi.spyOn(Intl, 'DateTimeFormat');
+    try {
+      enZona('Europe/Madrid', () => {
+        const dia = createLocalDateFormat({ day: 'numeric', month: 'short' });
+        for (let i = 0; i < 50; i++) dia.format(INSTANTE);
+      });
+      expect(espia).toHaveBeenCalledTimes(1);
+    } finally {
+      espia.mockRestore();
     }
   });
 });

@@ -20,6 +20,7 @@
 import { ANNOUNCEMENT_SEEN_KEY } from '../core/constants/storageKeys';
 import { NO_SEEN, parseSeen } from '../core/announcement/announcement';
 import { APP_LOCALE } from '../core/constants/locale';
+import { createLocalDateFormat } from '../core/utils/dateTime';
 
 declare global {
   interface Window {
@@ -31,7 +32,7 @@ declare global {
   }
 }
 
-const RELOJ = new Intl.DateTimeFormat(APP_LOCALE, { dateStyle: 'medium', timeStyle: 'short' });
+const RELOJ = createLocalDateFormat({ dateStyle: 'medium', timeStyle: 'short' });
 
 export function installAnnouncementTools(): void {
   window.aviso = {
