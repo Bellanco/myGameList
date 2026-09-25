@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, onTestFinished } from 'vitest';
 import { act, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { SecretSocialGistResult } from '../../src/model/repository/socialGistRepository';
@@ -619,6 +619,25 @@ describe('SocialHub (componente, post-M3)', () => {
       await waitFor(() => expect(firebaseMocks.setPrivateConfig).toHaveBeenCalled());
       // Sin esta siembra, retirar el campo del perfil público dejaría a esa cuenta sin forma de recuperarlo.
       expect(firebaseMocks.setPrivateConfig).toHaveBeenCalledWith('uid-1', { socialGistId: 'gs-publico' });
+    });
+
+    // El canal al que apunta `privateConfig` ya no existe (borrado a mano, otra cuenta de GitHub). Antes se salía
+    // de la hidratación ANTES de fijar la sesión: el hub parecía sin Google, el auto-crear no arrancaba y el
+    // usuario acababa en la pasarela pidiéndole un inicio de sesión que ya tenía.
+    it('si el gist de `privateConfig` da 404, conserva la sesión y crea un canal nuevo', async () => {
+      firebaseMocks.getPrivateConfig.mockResolvedValue({ socialGistId: 'gs-borrado' });
+      const leerDeVerdad = gistMocks.readSocialGist.getMockImplementation()!;
+      gistMocks.readSocialGist.mockImplementation(async (...args: unknown[]) => {
+        if (args[1] === 'gs-borrado') throw new Error('GitHub 404: Not Found');
+        return leerDeVerdad();
+      });
+      // `clearAllMocks` no restaura implementaciones: sin esto, el 404 se quedaría para el resto del fichero.
+      onTestFinished(() => { gistMocks.readSocialGist.mockImplementation(leerDeVerdad); });
+
+      renderHub();
+
+      await waitFor(() => expect(gistMocks.createSocialGist).toHaveBeenCalledWith('ghp_x'));
+      expect(firebaseMocks.signInWithGoogle).not.toHaveBeenCalled();
     });
 
     it('con el id ya en `privateConfig` no lo reescribe', async () => {

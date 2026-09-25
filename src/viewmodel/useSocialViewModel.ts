@@ -369,34 +369,39 @@ export function useSocialViewModel(options?: {
           const gistId = privateGistId || (profile?.socialEnabled ? profile.socialGistId.trim() : '');
 
           if (gistId) {
+            let gistExists = true;
             try {
               await readSocialGist(mainConfig.token, gistId, null);
             } catch (error) {
-              if (isNotFoundGistError(error)) {
-                resolvedGistId = '';
-                setSocialCfgGistId('');
-                setSocialCfgEtag(null);
-                lockProfileEditor();
-                setLoading(false);
-                return;
+              if (!isNotFoundGistError(error)) {
+                throw error;
               }
-
-              throw error;
+              gistExists = false;
+            }
+            if (cancelled) {
+              return;
             }
 
-            saveSocialSyncConfig({
-              token: mainConfig.token,
-              gistId,
-              etag: null,
-              lastRemoteUpdatedAt: 0,
-            });
-            // SIEMBRA: si el id vino del perfil público (perfil anterior a que `privateConfig` se poblara), se
-            // copia a su sitio. Sin esto, retirar el campo del perfil público dejaría a esas cuentas sin ninguna
-            // forma de recuperar su canal. Best-effort: no puede romper la apertura del hub.
-            if (!privateGistId) {
-              void setPrivateConfig(currentUser.uid, { socialGistId: gistId }).catch(() => {});
+            if (!gistExists) {
+              // El canal apuntado ya no existe. Se sigue SIN gist pero CON la sesión: salir aquí antes de fijarla
+              // dejaba el hub como si no hubiera Google, el auto-crear no arrancaba y la pasarela volvía a pedir un
+              // inicio de sesión que ya estaba hecho.
+              lockProfileEditor();
+            } else {
+              saveSocialSyncConfig({
+                token: mainConfig.token,
+                gistId,
+                etag: null,
+                lastRemoteUpdatedAt: 0,
+              });
+              // SIEMBRA: si el id vino del perfil público (perfil anterior a que `privateConfig` se poblara), se
+              // copia a su sitio. Sin esto, retirar el campo del perfil público dejaría a esas cuentas sin ninguna
+              // forma de recuperar su canal. Best-effort: no puede romper la apertura del hub.
+              if (!privateGistId) {
+                void setPrivateConfig(currentUser.uid, { socialGistId: gistId }).catch(() => {});
+              }
+              resolvedGistId = gistId;
             }
-            resolvedGistId = gistId;
           }
         } catch {
           // Keep gateway usable even if Firestore is unavailable.
