@@ -105,4 +105,45 @@ describe('githubFetch', () => {
     expect(init.signal).toBeInstanceOf(AbortSignal);
     expect(init.method).toBe('GET');
   });
+
+  it('el plazo cubre también el cuerpo: un json() colgado a mitad se rechaza como timeout diferible', async () => {
+    vi.stubGlobal('navigator', { onLine: true });
+    // Como el fetch real: llegan las cabeceras y el cuerpo no termina nunca; abortar la señal lo rompe.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init: RequestInit) => {
+        const body = new ReadableStream<Uint8Array>({
+          start(stream) {
+            stream.enqueue(new TextEncoder().encode('{"files":'));
+            init.signal?.addEventListener('abort', () => stream.error(new DOMException('aborted', 'AbortError')));
+          },
+        });
+        return new Response(body, { status: 200, headers: { etag: '"e1"' } });
+      }),
+    );
+
+    const res = await githubFetch('https://api.github.com/x', {}, 30);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('etag')).toBe('"e1"');
+    const error = await res.json().catch((e: unknown) => e);
+    expect(isDeferredNetworkError(error)).toBe(true);
+    expect((error as NetworkDeferredError).reason).toBe('timeout');
+  });
+
+  it('un cuerpo que llega entero se lee normal y el plazo ya no aborta después', async () => {
+    vi.stubGlobal('navigator', { onLine: true });
+    let signal: AbortSignal | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init: RequestInit) => {
+        signal = init.signal ?? undefined;
+        return new Response(JSON.stringify({ id: 'g1' }), { status: 200 });
+      }),
+    );
+
+    const res = await githubFetch('https://api.github.com/x', {}, 30);
+    await expect(res.json()).resolves.toEqual({ id: 'g1' });
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(signal?.aborted).toBe(false);
+  });
 });

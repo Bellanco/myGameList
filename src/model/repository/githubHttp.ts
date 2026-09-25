@@ -40,9 +40,60 @@ export function getRetryAfterMs(error: unknown): number {
   return 0;
 }
 
+/** Reescribe un fallo de red o de timeout a `NetworkDeferredError`; el resto se devuelve tal cual. */
+function toDeferred(error: unknown, timedOut: boolean): unknown {
+  if (error instanceof NetworkDeferredError) return error;
+  if (timedOut || (error instanceof DOMException && error.name === 'AbortError')) {
+    return new NetworkDeferredError('timeout', error);
+  }
+  // Un fetch que falla por red (DNS, conexión rechazada, offline en mitad de vuelo) lanza TypeError.
+  if (error instanceof TypeError) return new NetworkDeferredError('network', error);
+  return error;
+}
+
 /**
- * `fetch` con AbortController + timeout. Offline (`navigator.onLine === false`), fallo de transporte (`TypeError`)
- * y timeout (`AbortError`) se reescriben a `NetworkDeferredError`. El status HTTP NO se interpreta aquí.
+ * Devuelve la respuesta con el cuerpo bajo el MISMO plazo que las cabeceras.
+ *
+ * `fetch` resuelve en cuanto llegan las cabeceras, y todos los llamadores hacen después `response.json()`. Si el
+ * temporizador se limpiase ahí, una red que se cuelga a mitad de descargar un gist grande dejaría ese `json()`
+ * esperando para siempre, con la máquina de sync en `checking`/`writing` y el cerrojo tomado: justo lo que esta
+ * capa existe para evitar. Así, el plazo corre hasta que se termina de leer el cuerpo (o se cancela), y un corte
+ * en mitad se rechaza como `NetworkDeferredError`, igual que si hubiese pasado antes de las cabeceras.
+ */
+function guardBody(response: Response, timer: ReturnType<typeof setTimeout>, timedOut: () => boolean): Response {
+  // Sin cuerpo (304, 204, o un doble de prueba): no hay nada más que esperar.
+  if (!(response.body instanceof ReadableStream)) {
+    clearTimeout(timer);
+    return response;
+  }
+  const reader = response.body.getReader();
+  const body = new ReadableStream<Uint8Array>({
+    async pull(stream) {
+      try {
+        const { done, value } = await reader.read();
+        if (done) {
+          clearTimeout(timer);
+          stream.close();
+        } else {
+          stream.enqueue(value);
+        }
+      } catch (error) {
+        clearTimeout(timer);
+        stream.error(toDeferred(error, timedOut()));
+      }
+    },
+    cancel(reason) {
+      clearTimeout(timer);
+      return reader.cancel(reason);
+    },
+  });
+  return new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers });
+}
+
+/**
+ * `fetch` con AbortController + timeout, que cubre también la lectura del cuerpo (ver `guardBody`). Offline
+ * (`navigator.onLine === false`), fallo de transporte (`TypeError`) y timeout (`AbortError`) se reescriben a
+ * `NetworkDeferredError`. El status HTTP NO se interpreta aquí.
  */
 export async function githubFetch(
   url: string,
@@ -53,21 +104,19 @@ export async function githubFetch(
     throw new NetworkDeferredError('offline');
   }
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  let response: Response;
   try {
-    return await fetch(url, { ...init, signal: controller.signal });
+    response = await fetch(url, { ...init, signal: controller.signal });
   } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new NetworkDeferredError('timeout', error);
-    }
-    // Un fetch que falla por red (DNS, conexión rechazada, offline en mitad de vuelo) lanza TypeError.
-    if (error instanceof TypeError) {
-      throw new NetworkDeferredError('network', error);
-    }
-    throw error;
-  } finally {
     clearTimeout(timer);
+    throw toDeferred(error, timedOut);
   }
+  return guardBody(response, timer, () => timedOut);
 }
 
 /**
