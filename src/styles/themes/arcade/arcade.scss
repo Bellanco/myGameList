@@ -201,6 +201,12 @@
   transform: none;
   transition: transform .07s ease, box-shadow .07s ease, filter .18s;
 }
+/* Por debajo de 620 px la fila de acciones colapsa a botones de 44 px de solo icono con `font-size: 0` (ver
+   `_layout.scss`). El `font-size` de la tecla de arriba pesa más que esa regla y devolvía el rótulo: «Ver
+   perfiles» salía en texto y «Cerrar sesión» se desbordaba del botón. Aquí se repite el colapso con su peso. */
+@media (max-width: 620px) {
+  :root[data-palette="arcade"] .hub-screen-actions .btn:not(.btn-ghost) { font-size: 0; }
+}
 :root[data-palette="arcade"] .btn:not(.btn-ghost):hover {
   transform: translate(-1px, -1px);
   filter: brightness(1.1);

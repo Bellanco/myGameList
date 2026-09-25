@@ -11,6 +11,9 @@
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 
+/** Status que por especificación no llevan cuerpo: `new Response(cuerpo, { status })` los rechaza con uno. */
+const NULL_BODY_STATUSES = new Set([101, 103, 204, 205, 304]);
+
 /** Error de red DIFERIBLE: offline, fallo de transporte o timeout. No es un error HTTP del servidor. */
 export class NetworkDeferredError extends Error {
   readonly deferred = true as const;
@@ -61,8 +64,10 @@ function toDeferred(error: unknown, timedOut: boolean): unknown {
  * en mitad se rechaza como `NetworkDeferredError`, igual que si hubiese pasado antes de las cabeceras.
  */
 function guardBody(response: Response, timer: ReturnType<typeof setTimeout>, timedOut: () => boolean): Response {
-  // Sin cuerpo (304, 204, o un doble de prueba): no hay nada más que esperar.
-  if (!(response.body instanceof ReadableStream)) {
+  // Sin cuerpo (304, 204, o un doble de prueba): no hay nada más que esperar. El status se mira aparte porque los
+  // navegadores entregan el 304 de un `If-None-Match` con `body` como stream VACÍO, no `null`, y reconstruirlo
+  // con `new Response(stream, { status: 304 })` lanza un TypeError: cada revalidación de un gist fallaba así.
+  if (NULL_BODY_STATUSES.has(response.status) || !(response.body instanceof ReadableStream)) {
     clearTimeout(timer);
     return response;
   }
