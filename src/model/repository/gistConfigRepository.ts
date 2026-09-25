@@ -133,6 +133,7 @@ function notifyConfigChanged(key: string): void {
 
 function writeChannelConfig(key: string, config: SyncConfig): void {
   const state = tokenStates[key];
+  const previousToken = state.loaded ? state.token : null;
   state.token = config.token || null;
   state.loaded = true;
   const base: StoredGistConfig = {
@@ -140,7 +141,17 @@ function writeChannelConfig(key: string, config: SyncConfig): void {
     etag: config.etag,
     lastRemoteUpdatedAt: config.lastRemoteUpdatedAt,
   };
-  // Persiste ya lo no sensible (sin token en claro); cifra el token en segundo plano.
+  // MISMO TOKEN, se conserva el blob que ya hay. Esta función no se llama solo al conectar: cada ciclo de sync
+  // la usa para apuntar la etag nueva. Reescribir siempre sin `encToken` y recifrar después dejaba el disco sin
+  // token durante el cifrado —cerrar la pestaña en ese hueco desconectaba la sync al volver— y para siempre si
+  // el cifrado fallaba. El blob solo depende del token, así que vale tal cual.
+  const kept = readStored(key)?.encToken;
+  if (config.token && config.token === previousToken && kept) {
+    writeStored(key, { ...base, encToken: kept });
+    notifyConfigChanged(key);
+    return;
+  }
+  // Token nuevo: persiste ya lo no sensible (sin token en claro) y cifra el token en segundo plano.
   writeStored(key, base);
   notifyConfigChanged(key);
   if (config.token) {

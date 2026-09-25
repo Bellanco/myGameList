@@ -68,6 +68,39 @@ describe('gistConfigRepository (C4) — token cifrado en reposo', () => {
     expect(mod.getSyncConfig()?.token).toBe('ghp_legacy'); // sigue accesible descifrado
   });
 
+  it('guardar la etag nueva con el MISMO token no deja el disco sin token ni un instante', async () => {
+    const mod = await freshModule();
+    mod.saveSyncConfig({ token: 'ghp_estable', gistId: 'gid', etag: 'e1', lastRemoteUpdatedAt: 1 });
+    await esperarTokenCifrado();
+
+    // Lo que hace cada ciclo de sync: la misma config con la etag nueva.
+    mod.saveSyncConfig({ token: 'ghp_estable', gistId: 'gid', etag: 'e2', lastRemoteUpdatedAt: 2 });
+    // Síncrono, sin esperar al cifrado: si la pestaña se cerrase aquí, el token tiene que seguir en disco.
+    const raw = localStorage.getItem(GIST_CFG_KEY) || '';
+    expect(raw).toContain('encToken');
+    expect(raw).toContain('e2');
+
+    const next = await freshModule();
+    await next.ensureSyncConfigLoaded();
+    expect(next.getSyncConfig()?.token).toBe('ghp_estable');
+  });
+
+  it('un token NUEVO se vuelve a cifrar (no se reutiliza el blob del anterior)', async () => {
+    const mod = await freshModule();
+    mod.saveSyncConfig({ token: 'ghp_viejo', gistId: 'gid', etag: null, lastRemoteUpdatedAt: 0 });
+    const antes = JSON.parse(await esperarTokenCifrado()).encToken;
+
+    mod.saveSyncConfig({ token: 'ghp_nuevo', gistId: 'gid', etag: null, lastRemoteUpdatedAt: 0 });
+    await vi.waitFor(() => {
+      const actual = JSON.parse(localStorage.getItem(GIST_CFG_KEY) || '{}').encToken;
+      if (!actual || actual === antes) throw new Error('aún sin recifrar');
+    }, { timeout: 5000, interval: 10 });
+
+    const next = await freshModule();
+    await next.ensureSyncConfigLoaded();
+    expect(next.getSyncConfig()?.token).toBe('ghp_nuevo');
+  });
+
   it('clearSyncConfig borra el registro', async () => {
     const mod = await freshModule();
     mod.saveSyncConfig({ token: 't', gistId: 'g', etag: null, lastRemoteUpdatedAt: 0 });
