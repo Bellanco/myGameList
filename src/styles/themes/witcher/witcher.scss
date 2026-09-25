@@ -134,6 +134,19 @@
   box-shadow: inset 0 1px 0 rgba(255,255,255,.10), var(--e2) !important;
 }
 
+/* EL AVISO (logro, aviso de estado y anuncio) · una PLACA DE ACERO: el filete del metal (`--wt-filete`, el de §4b)
+   con su canto de luz arriba, como los paneles, y el radio del tema en vez de la cápsula de la casa —una pastilla
+   no es de ningún material de aquí—. La rareza la siguen diciendo el anillo fino y el halo de `--glow`. */
+:root[data-palette="witcher"] .ach-toast {
+  border: 1px solid var(--wt-filete);
+  border-radius: var(--radius-md);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .10),
+    0 0 0 1px rgba(var(--glow), .5),
+    0 0 20px -2px rgba(var(--glow), .38),
+    var(--shadow);
+}
+
 /* ── §4 · Tabla: la cabecera es el encabezado del contrato —versales de Cinzel y doble filete— y cada
    fila lleva el lomo del color de su género. ── */
 :root[data-palette="witcher"] thead th {

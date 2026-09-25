@@ -137,7 +137,9 @@ Doce pasos, razón ≈1,08 en la zona de interfaz. Multiplicados por `--font-sca
   rótulo / nombre / descripción, radio = media altura, anillo y halo de color, barrido bajo `data-effects`. Tres
   inquilinos: el **logro** (disco = medalla, halo = rareza), el **aviso del administrador** (disco = icono, halo =
   acento) y el **aviso de la app** (disco = icono del tono, halo = tono). Los skins de paleta cuelgan de
-  `.ach-toast`, así que la forma de cada tema sale sola.
+  `.ach-toast`, así que la forma de cada tema sale sola: siete de ocho la cuadran en su lenguaje (el filete o el
+  marco de sus paneles) y Forja se queda con la cápsula de la casa. La medalla y el anillo + halo de `--glow` no
+  los toca ningún tema: son los que dicen la rareza y, en el aviso, su tono.
 - **Aviso** (`.ach-toast.is-notice`): **uno solo** para los cuatro sitios que avisan (estado, versión nueva, sin
   conexión del hub, requisito del perfil). Los dos primeros viven en el **carril flotante** de abajo a la
   izquierda (`.ach-toast-stack`, que monta `App` una vez para las tres cápsulas); los del hub van `is-compact`

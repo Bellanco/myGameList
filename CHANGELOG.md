@@ -15,6 +15,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   el camino, la mesa de gwent vacía y el tablón de contratos. Las frases de antes eran de los temas que fue.
 - **Los títulos de modales y el enjambre del panel, con la piel de «Plata y acero»**: Cinzel en los títulos y la
   gráfica de enjambre en placa de acero, con la mediana en Igni.
+- **El aviso (logro, aviso de estado y anuncio) con la piel de cuatro temas más**: la tarjeta de sticker de
+  «Ladrones de corazones», la caja de diálogo de «Sol y luna», la placa de oro de «Solo hay guerra» y la placa de
+  acero de «Plata y acero», cada una con el filete de sus paneles. La medalla y el halo de rareza no cambian.
 
 ### Performance
 - **«Solo hay guerra» ya no descarga el skin de «Sin futuro»** (5,1 kB comprimidos y una petición): su glitch

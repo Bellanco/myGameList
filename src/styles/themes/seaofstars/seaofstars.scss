@@ -125,6 +125,20 @@
 :root[data-palette="seaofstars"] .modal,
 :root[data-palette="seaofstars"] .alert-dialog { border: 2px solid var(--border) !important; border-radius: 0 !important; box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px color-mix(in srgb, var(--sos-turq) 55%, var(--border)) !important; }
 
+/* EL AVISO (logro, aviso de estado y anuncio) · la CAJA DE DIÁLOGO del juego, el mismo marco de 16 bits que los
+   paneles: filete de 2 px, hueco del color de fondo y un segundo filete turquesa, todo a canto vivo. La rareza va
+   por FUERA de ese marco, en un anillo de 1 px y su halo de `--glow`: dentro no cabe sin tapar el dibujo del marco. */
+:root[data-palette="seaofstars"] .ach-toast {
+  border: 2px solid var(--border);
+  border-radius: 0;
+  box-shadow:
+    0 0 0 3px var(--bg),
+    0 0 0 5px color-mix(in srgb, var(--sos-turq) 55%, var(--border)),
+    0 0 0 6px rgba(var(--glow), .6),
+    0 0 20px 2px rgba(var(--glow), .34),
+    var(--shadow);
+}
+
 /* Muesca de rango: el marco pixelado es de 2px. */
 :root[data-palette="seaofstars"] .hub-user-card { --tier-notch-top: 2px; --tier-notch-right: 2px; }
 

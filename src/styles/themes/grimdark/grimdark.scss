@@ -115,6 +115,20 @@
 :root[data-palette="grimdark"][data-theme="light"] .modal,
 :root[data-palette="grimdark"][data-theme="light"] .alert-dialog { box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px rgba(154, 111, 20, .5), 0 6px 16px rgba(40, 40, 30, .14) !important; }
 
+/* EL AVISO (logro, aviso de estado y anuncio) · la PLACA DEL COGITADOR, como los paneles: moldura de oro a canto
+   vivo y un segundo filete de oro por dentro, separado por un hueco de la propia chapa. La rareza, fuera, en el
+   anillo fino y el halo de `--glow`. El oro sale de `--grim-gold`, que ya se oscurece solo en el códice claro. */
+:root[data-palette="grimdark"] .ach-toast {
+  border: 1px solid var(--grim-gold);
+  border-radius: 0;
+  box-shadow:
+    inset 0 0 0 3px var(--surface-elevated),
+    inset 0 0 0 4px color-mix(in srgb, var(--grim-gold) 40%, transparent),
+    0 0 0 1px rgba(var(--glow), .5),
+    0 0 20px -2px rgba(var(--glow), .38),
+    var(--shadow);
+}
+
 /* ── §4 · Tabla: cabecera = LECTURA DE COGITADOR (VT323 verde, filete verde inferior). ── */
 :root[data-palette="grimdark"] thead th { background: transparent; color: var(--grim-green); border-bottom: 1px solid rgba(67, 245, 88, .4); font-size: var(--fs-md); }
 :root[data-palette="grimdark"][data-theme="light"] thead th { color: var(--fg-link); border-bottom-color: rgba(21, 122, 55, .45); }

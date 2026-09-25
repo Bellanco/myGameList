@@ -127,6 +127,25 @@
 :root[data-palette="persona"] .modal,
 :root[data-palette="persona"] .alert-dialog { border: 3px solid var(--pop-line) !important; box-shadow: 7px 7px 0 rgba(255, 78, 100, .5) !important; border-radius: 6px !important; }
 
+/* EL AVISO (logro, aviso de estado y anuncio: la misma `.ach-toast`) · la TARJETA DE VISITA de los Ladrones, el
+   mismo sticker que los paneles: contorno de tinta de 3 px, canto de 6 px y sombra dura roja. La medalla no se toca
+   (`docs/logros/receta-medalla.md`), y la rareza sigue diciéndola el anillo fino y el halo de `--glow`, que en el
+   aviso de estado es su tono: verde, ámbar o rojo. */
+:root[data-palette="persona"] .ach-toast {
+  border: 3px solid var(--pop-line);
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 1px rgba(var(--glow), .6),
+    0 0 20px -2px rgba(var(--glow), .38),
+    7px 7px 0 rgba(255, 78, 100, .5);
+}
+:root[data-palette="persona"][data-theme="light"] .ach-toast {
+  box-shadow:
+    0 0 0 1px rgba(var(--glow), .6),
+    0 0 20px -2px rgba(var(--glow), .38),
+    7px 7px 0 rgba(230, 0, 18, .22);
+}
+
 /* Muesca de rango: el contorno de tinta es de 3px por los cuatro lados. */
 :root[data-palette="persona"] .hub-user-card { --tier-notch-top: 3px; --tier-notch-right: 3px; }
 :root[data-palette="persona"][data-theme="light"] .toolbar,
