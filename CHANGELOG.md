@@ -26,6 +26,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   del skin para usar diez dígitos. Ahora la trae `vendor-fonts.mjs` recortada a 0-9 y el chunk del tema baja de
   13,8 a 4,6 kB comprimidos. El script aprende a recortar una familia (`text`) y a regenerar una sola hoja
   (`--solo=<slug>`), y la licencia de `public/fonts/` lista por fin todas las familias.
+- **El feed de «Plata y acero» deja de gotear**: cada entrada traía su cartel con la gota animada, y con una sola
+  página (25) el scroll costaba 6,2 s de rasterizado, contra 0,3 s sin ella. La sangre fresca se queda en la ruleta
+  y en los filtros activos, que sí son uno o dos en pantalla.
 
 ### Fixed
 - **La marca de la casilla se ve en todos los temas.** Era blanca fija sobre el acento y se quedaba entre 1,2 y

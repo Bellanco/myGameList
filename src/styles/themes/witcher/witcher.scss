@@ -869,8 +869,11 @@
      un elemento más. Se mezcla en `multiply`, que es lo que hace la sangre sobre el papel: lo tiñe, no
      lo tapa.
 
-     SOLO GOTEAN LOS CARTELES SUELTOS —el de la ruleta, los filtros activos, el del juego en el feed y el
-     de la reseña—, que son uno o dos en pantalla. Los que van en grupo (`.chips`: géneros y plataformas
+     SOLO GOTEAN LOS CARTELES SUELTOS —el de la ruleta y los filtros activos—, que son uno o dos en pantalla.
+     El del juego en el feed y el de la reseña en las listas del perfil gotearon hasta que se midió el feed:
+     cada entrada lleva el suyo y se pagina de 25 en 25 hasta 300 sin virtualizar, así que no eran «uno o
+     dos». Con una sola página, 6,2 s de rasterizado al hacer scroll contra 0,3 s sin gotas (300 entradas:
+     8,1 s contra 3,2). Los que van en grupo (`.chips`: géneros y plataformas
      de la tabla, del detalle y de la bandeja de importación) no gotean NUNCA, ni en renglones ni en el
      mosaico. Hubo un «uno de cada tres» con `:nth-child(3n+1)`, pero se cuenta dentro de cada grupo, y con
      grupos de uno a tres chips el primero goteaba siempre: dos gotas por fila o por caja. Y
@@ -879,9 +882,7 @@
      7,0 s de rasterizado en el mosaico y 8,5 s en renglones, contra 0,6 y 2,8 s de Forja, y el compositor
      enseñaba el fondo donde tenía que haber carátulas y filas. Sin las gotas de la tabla, 1,8 y 3,3 s. ══ */
   :root[data-effects="on"][data-palette="witcher"] .rl-chip,
-  :root[data-effects="on"][data-palette="witcher"] .active-filter-chip,
-  :root[data-effects="on"][data-palette="witcher"] .hub-feed-game-chip,
-  :root[data-effects="on"][data-palette="witcher"] .hub-review-game {
+  :root[data-effects="on"][data-palette="witcher"] .active-filter-chip {
     /* LA GOTA: la cuenta abajo y el reguero difuminado por encima, 3,5 px de ancho. Va en un rojo más vivo
        y más opaco que las manchas que el pliego ya trae secas (`--wt-hoja1..3`, pardo y carmín apagado):
        si fuera del mismo tono se confundía con ellas y no se leía como algo que está pasando ahora. */
