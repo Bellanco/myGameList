@@ -2,6 +2,7 @@
 //
 // Devuelve una `Response` cuando algo impide seguir, en vez de lanzar. Así cada endpoint es un `if` de una línea
 // y no hay forma de olvidarse un `catch` y acabar sirviendo una petición sin verificar.
+import { gateAppCheck } from './appCheck';
 import { bearerToken, isAdmin, verifyIdToken, type AuthUser } from './firebaseAuth';
 import { fail } from './http';
 import type { Env } from './keys';
@@ -27,18 +28,27 @@ export async function requireUser(request: Request, env: Env): Promise<CallerCon
     return fail(401, 'Falta la sesión');
   }
 
+  let user: AuthUser;
   try {
-    const user = await verifyIdToken(token, projectId, env.SHARES);
-    return {
-      user,
-      appCheckToken: request.headers.get('X-Firebase-AppCheck'),
-      projectId,
-      isAdmin: isAdmin(user, env.ADMIN_EMAIL),
-    };
+    user = await verifyIdToken(token, projectId, env.SHARES);
   } catch {
     // Sin detalle a propósito: a quien trae un token inválido no se le explica en qué comprobación ha fallado.
     return fail(401, 'Sesión no válida');
   }
+
+  // Después de la sesión y no antes: sin sesión la respuesta es la de siempre, y así el log de App Check solo
+  // cuenta peticiones de gente que ha iniciado sesión, que son las únicas que el cliente atestigua.
+  const rejected = await gateAppCheck(request, env);
+  if (rejected) {
+    return rejected;
+  }
+
+  return {
+    user,
+    appCheckToken: request.headers.get('X-Firebase-AppCheck'),
+    projectId,
+    isAdmin: isAdmin(user, env.ADMIN_EMAIL),
+  };
 }
 
 /** Igual que `requireUser`, pero además exige ser el administrador. */

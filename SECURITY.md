@@ -116,6 +116,9 @@ WebCrypto nativo (AES-GCM 256). Hay **dos** mecanismos con garantías **distinta
   el build (`VITE_RECAPTCHA_SITE_KEY`); **que la atestación sea EXIGIDA es un ajuste de la consola de
   Firebase**, no del repositorio, y hasta activarlo ahí App Check informa pero no bloquea. Se apaga por
   completo vaciando la variable, sin tocar código.
+  Las Pages Functions verifican además el token ellas mismas (`functions/_lib/appCheck.ts`), según
+  `APPCHECK_EDGE_MODE` en `wrangler.toml`: `off`, `monitor` (solo registra) o `enforce` (401 sin token válido).
+  Al apagar App Check en el cliente hay que poner ese modo en `off` en el mismo despliegue.
 - **Analítica con consentimiento previo**: Google Analytics no se inicializa mientras el usuario no lo
   acepte, y la decisión es revocable desde Cuenta.
 - **Borrado de cuenta** desde la app: elimina perfil, amistades y configuración remota, y limpia
