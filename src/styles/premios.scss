@@ -971,7 +971,7 @@
 
 .premios-admin__award.is-on {
   color: var(--on-accent);
-  background: var(--steam);
+  background: var(--accent-fill);
   border-color: color-mix(in srgb, var(--steam) 70%, #000);
   box-shadow: var(--glow-accent);
   opacity: 1;
@@ -1040,7 +1040,7 @@
 /* El ganador marcado: el acento del tema, como la tarjeta elegida de la votación. */
 .premios-admin__pick.is-winner {
   color: var(--on-accent);
-  background: var(--steam);
+  background: var(--accent-fill);
   border-color: color-mix(in srgb, var(--steam) 70%, #000);
   box-shadow: var(--glow-accent);
 }

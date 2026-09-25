@@ -57,7 +57,9 @@
   --border: #c3b48c;
   --text: #1b1e1a;
   --text-muted: #565b4e;
-  --text-dim: #63675c;
+  /* Atenuado: texto, así que 4,5:1 contra las CUATRO superficies, no solo contra `--surface`. #63675c bajaba a
+     3,85 en la peor; un paso más hondo, mismo tono: 4,62. */
+  --text-dim: #575b51;
   --steam: #136b30;
   --steam-hover: #0d5324;
   --steam-rgb: 19,107,48;
@@ -69,7 +71,9 @@
   --danger: #b3261e;
   --danger-rgb: 179,38,30;
   --star-empty: #c9c1ab;
-  --star-full: #a3771a;
+  /* La estrella llena es GRÁFICO y le toca 3:1 contra las cuatro superficies: #a3771a se quedaba en 2,68. Mismo
+     tono, más hondo: 3,10 en el peor caso. */
+  --star-full: #966d18;
   --chip-plat-fg: #463483;
   --chip-plat-bg: rgba(70,52,131,.10);
   --chip-plat-border: rgba(70,52,131,.28);

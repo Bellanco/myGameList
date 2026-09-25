@@ -58,7 +58,7 @@ el que pinta el primer fotograma y no puede llegar tarde.
    `scripts/vendor-fonts.mjs` y ejecútalo: deja el `.woff2` en `public/fonts/` y escribe
    `src/styles/themes/<id>/_fonts.scss`. Tu skin lo usa con `@use './fonts';`.
 8. **Audítalo.** `npm test` (contrato) y `npx playwright test tests/e2e/a11y.test.ts` (axe recorre las paletas
-   del registro, así que el tema nuevo entra solo en la auditoría: dos temas × claro y oscuro × cinco pantallas).
+   del registro, así que el tema nuevo entra solo en la auditoría: cada paleta × claro y oscuro × cada pantalla).
 
 ---
 
@@ -106,7 +106,8 @@ superficies del propio tema. Conviene medir antes con una cuenta rápida en vez 
 
 - texto, atenuado y **pestaña inactiva** (`--text-dim`, que es texto normal sobre `--surface`): ≥ 4,5:1
 - `--fg-link` ≥ 4,5:1 · `--focus-ring` ≥ 3:1 · `--cat-N` ≥ 3:1 · `--cat-N-fg` ≥ 4,5:1
-- `--on-accent` sobre el relleno del acento: ≥ 4,5:1
+- `--on-accent` sobre el relleno del acento: ≥ 4,5:1. Si sobre el acento a pelo no llega, oscurece `--accent-fill`
+  en ese modo (no toques `--steam`, que es la identidad)
 - entre superficies vecinas conviene ≥ 1,15:1, o una tarjeta sobre el fondo solo existe por su sombra
 
 Y deja escrito en el fichero el peor caso de cada uno, como hacen los demás: el siguiente que lo toque no tiene

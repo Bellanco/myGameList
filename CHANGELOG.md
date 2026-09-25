@@ -10,6 +10,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   cuero y latón: carpeta, skin, ficha y `data-palette`. Quien lo tenía guardado como `steam` —en el dispositivo o
   en la nube— sigue viéndolo igual: el anti-flash y `parsePaletteId` traducen el id viejo.
 
+### Fixed
+- **La marca de la casilla se ve en todos los temas.** Era blanca fija sobre el acento y se quedaba entre 1,2 y
+  2,6:1 en seis de las ocho paletas, el tema por defecto incluido; ahora es la tinta del tema (`--on-accent`).
+- **Texto sobre el acento a 4,5:1 en todas las paletas**, con una ficha nueva, `--accent-fill`: la píldora del
+  récord, la etapa en curso del hub y lo marcado en premios no llegaban en «Inserte moneda» y «Ladrones de
+  corazones» en oscuro ni en «Cámara de pruebas» en claro.
+- **Estrellas y texto atenuado en modo claro** en «Ladrones de corazones», «Cámara de pruebas», «Sin futuro» y
+  «Solo hay guerra»: las estrellas no llegaban a 3:1 y el atenuado bajaba de 4,5:1 sobre alguna superficie.
+- **Quitar los efectos los quita del todo:** en «Sin futuro» los chips seguían con su glitch y en «Cámara de
+  pruebas» los botones seguían titilando.
+
 ## [1.4.4] - 2026-09-25
 
 La versión de **las carátulas de lo ajeno**. Los perfiles de otras personas, sus reseñas y los premios pasan a

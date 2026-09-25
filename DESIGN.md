@@ -54,6 +54,7 @@ Cada tema define los mismos tokens; el resto del sistema se deriva. **Nunca uses
 | `--text` `--text-muted` `--text-dim` | Texto principal, secundario y atenuado (**AA 4,5:1 sobre `--surface`**) |
 | `--steam` `--steam-hover` `--steam-rgb` | Acento de identidad. `--steam-rgb` existe para componer `rgba()` |
 | `--on-accent` | Texto **encima** del acento. Blanco por defecto; tinta oscura si el acento es claro |
+| `--accent-fill` | Relleno **plano** que lleva `--on-accent` encima (píldoras, marcas). Es `--steam` salvo donde así no llega a 4,5:1: ahí la paleta lo oscurece lo justo |
 | `--focus-ring` | Anillo de foco. 3:1 contra las **cuatro** superficies (1.4.11). No siempre es `--steam` |
 | `--fg-link` | Acento **como texto**: 4,5:1. No siempre es `--steam-hover` |
 | `--success` `--warn` `--danger` (+ `-rgb`) | Semánticos. `--danger-fill` es el relleno con blanco encima |
