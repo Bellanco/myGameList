@@ -4,7 +4,7 @@ import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
 import { reabrirLaPregunta } from '../core/utils/coverDone';
 import { tagKey } from '../core/utils/tags';
 import { DEFAULT_SORT, nextSort, sortGames } from '../core/utils/sortGames';
-import { clampRating, normalizeHours } from '../core/utils/normalize';
+import { normalizeHours } from '../core/utils/normalize';
 import { clampGrade, gradeFromStars, resolveStars, starsFromGrade } from '../core/utils/scoreScale';
 import { resolveReviewedAt } from '../core/utils/reviewDate';
 import { nextVersion, resolveGradedAt, stampEntry } from '../core/utils/gameStamps';
@@ -677,8 +677,10 @@ export function useGameListViewModel() {
         platforms: uniqueCaseInsensitive((game.platforms || []).map(normalizeTag).filter(Boolean)),
         genres: uniqueCaseInsensitive((game.genres || []).map(normalizeTag).filter(Boolean)),
         steamDeck: Boolean(game.steamDeck),
-        review: safeTrim(game.review || '', 25000),
-        score: clampRating(game.score),
+        // La reseña y la nota son de la otra persona (la ruleta las trae para la tarjeta): aquí no se copian, o
+        // entrarían en tus listas y en tu gist como si las hubieras escrito tú.
+        review: '',
+        score: 0,
         listedAt: now,
         // Alta directa desde el perfil de otra persona: entra en próximos ahora, y de ahí arranca su historia.
         enteredAt: { p: now },
