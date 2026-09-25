@@ -863,11 +863,15 @@
      un elemento más. Se mezcla en `multiply`, que es lo que hace la sangre sobre el papel: lo tiñe, no
      lo tapa.
 
-     SOLO GOTEA UNO DE CADA TRES cuando van en grupo (`.chips`, los géneros y las plataformas de la
-     tabla). Con la tabla llena son decenas de carteles a la vez: que gotearan todos sería a la vez un
-     gasto tonto de pintado y una pared de rojo. Los que van sueltos —el del juego en el feed, el de la
-     reseña, los filtros activos— gotean siempre, porque son uno o dos en pantalla. ══ */
-  :root[data-effects="on"][data-palette="steam"] .chips .chip:nth-child(3n+1),
+     SOLO GOTEAN LOS CARTELES SUELTOS —el de la ruleta, los filtros activos, el del juego en el feed y el
+     de la reseña—, que son uno o dos en pantalla. Los que van en grupo (`.chips`: géneros y plataformas
+     de la tabla, del detalle y de la bandeja de importación) no gotean NUNCA, ni en renglones ni en el
+     mosaico. Hubo un «uno de cada tres» con `:nth-child(3n+1)`, pero se cuenta dentro de cada grupo, y con
+     grupos de uno a tres chips el primero goteaba siempre: dos gotas por fila o por caja. Y
+     `background-position` no lo compone la GPU: cada fotograma repinta el cartel y, con él, el roto de
+     turbulencia de su papel, que es lo más caro del tema. Medido al bajar (build, 300 juegos, 1440 px):
+     7,0 s de rasterizado en el mosaico y 8,5 s en renglones, contra 0,6 y 2,8 s de Forja, y el compositor
+     enseñaba el fondo donde tenía que haber carátulas y filas. Sin las gotas de la tabla, 1,8 y 3,3 s. ══ */
   :root[data-effects="on"][data-palette="steam"] .rl-chip,
   :root[data-effects="on"][data-palette="steam"] .active-filter-chip,
   :root[data-effects="on"][data-palette="steam"] .hub-feed-game-chip,
@@ -885,8 +889,7 @@
     background-blend-mode: multiply, soft-light, normal !important;
     animation: wt-gotear 13s linear infinite;
   }
-  /* Cada cartel gotea por un sitio distinto y en otro momento: si no, la fila entera sangra a la vez. */
-  :root[data-effects="on"][data-palette="steam"] .chips .chip:nth-child(6n+1) { --wt-gota-x: 68%; animation-delay: -4.5s; }
+  /* Cada cartel gotea por un sitio distinto y en otro momento: si no, sangran todos a la vez. */
   :root[data-effects="on"][data-palette="steam"] .rl-chip:nth-of-type(2n) { --wt-gota-x: 61%; animation-delay: -7s; }
   :root[data-effects="on"][data-palette="steam"] .active-filter-chip:nth-of-type(2n) { --wt-gota-x: 72%; animation-delay: -9s; }
   @keyframes wt-gotear {
