@@ -5,6 +5,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.4.5] - 2026-09-25
+
+La versión de **la revisión de código y de un arranque más ligero**. Se cierran los doce hallazgos altos de la
+revisión de septiembre (pérdidas o corrupción de datos en la sincronización, el canal social, los premios y el
+panel), el arranque viaja un 14 % más ligero por la red con el brotli del build, y deja de cargarse el script de
+analítica de Cloudflare que el borde inyectaba sin que estuviera en el código.
+
 ### Changed
 - **«Plata y acero» pasa a llamarse `witcher` por dentro**, que es lo que es desde que dejó de ser el tema de
   cuero y latón: carpeta, skin, ficha y `data-palette`. Quien lo tenía guardado como `steam` —en el dispositivo o
@@ -18,6 +25,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - **El aviso (logro, aviso de estado y anuncio) con la piel de cuatro temas más**: la tarjeta de sticker de
   «Ladrones de corazones», la caja de diálogo de «Sol y luna», la placa de oro de «Solo hay guerra» y la placa de
   acero de «Plata y acero», cada una con el filete de sus paneles. La medalla y el halo de rareza no cambian.
+- **El feed social ya no lleva el botón de premios.**
+- **Un solo idioma de formato para fechas, números y orden alfabético** (`APP_LOCALE`), en vez de un `'es-ES'`
+  escrito a mano en cada sitio. Las columnas del listado se ordenan por su identificador y no por su rótulo en
+  español, y los textos sueltos de la interfaz pasan a los módulos de etiquetas: es el primer paso del plan de
+  idioma (`docs/plan-idioma.md`).
 
 ### Performance
 - **«Solo hay guerra» ya no descarga el skin de «Sin futuro»** (5,1 kB comprimidos y una petición): su glitch
@@ -32,6 +44,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - **El feed de «Plata y acero» deja de gotear**: cada entrada traía su cartel con la gota animada, y con una sola
   página (25) el scroll costaba 6,2 s de rasterizado, contra 0,3 s sin ella. La sangre fresca se queda en la ruleta
   y en los filtros activos, que sí son uno o dos en pantalla.
+- **El arranque viaja un 14 % más ligero por la red** sin cambiar una línea de la aplicación: el build deja un
+  `.br` (brotli, calidad 11) junto a cada `.js` y `.css`, y la Function de `/assets/*` lo sirve a quien acepta
+  brotli, en vez del brotli de nivel bajo que Cloudflare hace al vuelo y que apenas mejoraba al gzip. El camino
+  crítico pasa de 181,8 a 155,7 kB por la red; el chunk de React, de 67,7 a 58,0. `npm run validate` imprime la
+  cifra en brotli y falla si a algún asset del arranque le falta su `.br`.
 
 ### Fixed
 - **La marca de la casilla se ve en todos los temas.** Era blanca fija sobre el acento y se quedaba entre 1,2 y
@@ -50,6 +67,45 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - **La muestra de «Cámara de pruebas» en el selector** enseñaba otro azul y otro naranja que los del tema.
 - **«Ladrones de corazones» sin conexión en premios** hablaba del «Mundo de las Almas», que no es de Persona 5: ahora
   baja a Mementos, como la app entra al Metaverso.
+- **Renombrar o borrar una etiqueta ya no pisa las ediciones de otro dispositivo**: sellaba como modificados todos
+  los juegos, también los que no la llevaban, y en la fusión por juego ganaban a lo que otro aparato no había
+  subido aún. Ahora solo se sellan los que cambian.
+- **Guardar la configuración de la sincronización no deja el disco sin token** ni un instante: tras cada ciclo se
+  reescribía sin el token cifrado y se recifraba en segundo plano, y cerrar en ese hueco desconectaba la sync.
+- **Un trozo del gist que falta o llega corrupto aborta la lectura** en vez de saltarse en silencio, que hacía que
+  la siguiente escritura borrase esos juegos. Lo mismo en el canal social: un gist ilegible ya no se toma por vacío
+  y se reescribe.
+- **La lectura de GitHub tiene tope también mientras llega el cuerpo**, no solo las cabeceras: una red colgada
+  dejaba el cerrojo de la sincronización tomado.
+- **«Añadir a próximos» desde la ruleta de un amigo ya no copia su reseña ni su nota** a tus listas y a tu gist.
+- **Guardar el perfil no borra la vitrina de logros ni el palmarés**: abrir el hub justo después publicaba el perfil
+  sin ellos desde una caché incompleta.
+- **La clasificación de los premios vuelve a enlazar con los perfiles**: el directorio social perdía el pseudónimo
+  por el que se cruzan.
+- **Si tu gist social ya no existe, la sesión sigue abierta** y se crea el canal nuevo, en vez de parecer que no
+  habías iniciado sesión y crear otro vacío al volver.
+- **La migración a canal secreto no borra el gist viejo si no ha podido apuntar al nuevo**, y el saneado del perfil
+  espera cuando no puede leer la configuración privada en vez de tratarla como vacía.
+- **«No se ha podido preguntar a IGDB» ya no se guarda como «no tiene carátula»**: `/cover` responde 503 sin
+  caché y el juego se vuelve a pedir, en vez de quedarse sin imagen 90 días.
+- **Las etiquetas escritas sin pulsar Intro no se pierden** si otra validación impide guardar el juego.
+- **Una escalera de logros descendente conserva su orden** al añadirle escalones desde el panel.
+- **El formulario del aviso espera a tener el aviso publicado** antes de dejar editarlo: guardar creaba una campaña
+  nueva y se volvía a enseñar a todo el mundo.
+- **Un borrado de cuenta incompleto se dice en pantalla** en vez de navegar fuera y perder el aviso.
+- **Los títulos de cada día del feed salen en la zona horaria vigente**: con la app abierta mientras cambia la zona
+  (un viaje), el grupo se calculaba en la nueva y su título en la vieja, y «11 de agosto» encabezaba lo del 12. Es
+  lo que rompía la integración continua, que corre en UTC.
+- **Los números van en formato español aunque el navegador esté en inglés** («1.000» y no «1,000»): dos cifras se
+  formateaban con el idioma del navegador.
+
+### Security
+- **Fuera el beacon de Cloudflare Web Analytics.** Pages lo inyectaba en el HTML al desplegar y la CSP dejaba
+  cargar su script desde `static.cloudflareinsights.com` pero bloqueaba su envío: cada visita contactaba con un
+  dominio ajeno para no medir nada, y la política promete que usar tus listas no contacta con ningún servidor
+  ajeno. Se apagó en el panel y el origen sale de `script-src`, de modo que reactivarlo no vuelve a cargarlo.
+  `npm run audit:deploy` comprueba el HTML que sirve el dominio de verdad, que es lo único que ve lo que añade el
+  borde (el smoke corre en local); va al checklist post-deploy.
 
 ## [1.4.4] - 2026-09-25
 
