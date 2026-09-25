@@ -594,6 +594,26 @@ tiene `default-src 'none'` y un `<use>` externo se pide como documento —se que
 funcionando bien en local—, el CSS del documento no estiliza el contenido clonado, y habría que meterlo en el
 precache. Es un cambio para probar en un despliegue de vista previa, no a ciegas.
 
+16. ❌ **Los módulos del chunk de entrada que no se ejecutan al arrancar se quedan donde están** (25-09-2026).
+    Medido con la cobertura de Chromium (Playwright contra `vite preview`, biblioteca sembrada, tras el primer
+    pintado y el idle): crítico **181,1 kB**, y en el chunk de entrada seis módulos no ejecutan ni un byte al
+    pintar la lista —`FeedShell`, `SocialHubSkeleton`, `syncRepository`, `core/import/staging`, `githubHttp`,
+    `crypto`, ~11 kB minificados—. Cinco están ahí A PROPÓSITO y con su porqué escrito: el esqueleto social es el
+    `fallback` del `Suspense` (y arrastra `FeedShell`); `mergeCrdt` e `isDeferredNetworkError`/`getRetryAfterMs`
+    los usan caminos síncronos del ciclo de sync (cabecera de `syncEngine.ts`); y `staging` lo mantiene
+    `useImportInbox` al montar. Queda `crypto`: por `import()` desde `gistConfigRepository` baja el crítico a
+    **180,3 kB** (−0,9 kB gzip), pero **abre un hueco en Chromium**. El service worker solo precachea el grafo
+    estático y estrena caché en cada despliegue, así que el primer arranque sin red tras publicar no tiene el
+    chunk; y **Chromium cachea el `import()` fallido** —el segundo intento ni sale a la red— mientras que Firefox
+    y WebKit lo reintentan (medido en los tres con `page.route` abortando la primera petición). Resultado: al
+    volver la red en esa misma sesión, el token seguiría sin descifrar y el hub social pediría «conecta la
+    sincronización» estando conectado. Taparlo exige precachear el chunk y enseñar a `ci-validate.js` a no
+    contarlo como crítico: demasiada maquinaria para un 0,5 % del arranque.
+
+    **Lo que sí mueve la aguja está en las dependencias**: `react` (67,3 kB gzip, 35 % ejecutado al pintar) y
+    `router` (14,5 kB, 38 %). El CSS de entrada solo usa el 21 % al pintar, pero casi todo lo demás es `:hover`,
+    anchos y modo claro; las paletas inactivas son ~4–6 kB gzip, y sacarlas arriesga el primer fotograma.
+
 **Criterio de aceptación:** el arranque baja de 182,8 a **179,1 kB** críticos (−2 %) sin perder funcionalidad, y
 la holgura del presupuesto casi se dobla. Los tres ficheros de sync siguen por debajo del 80 % de ramas (punto
 14, sin empezar).
