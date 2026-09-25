@@ -235,6 +235,22 @@ describe('FormModal — etiquetas', () => {
     expect(onSave.mock.calls[0][0].genres).toEqual(['Aventura']);
   });
 
+  // `runSave` vacía el campo al pasar lo escrito al borrador; si luego la validación paraba el guardado, ese
+  // borrador se tiraba y lo escrito desaparecía: ni en el campo ni como etiqueta.
+  it('lo escrito sin Enter no se pierde si otra validación para el guardado', async () => {
+    const user = userEvent.setup();
+    const { onSave, genres } = renderTags(NO_LOOKUPS, { name: '' });
+
+    await user.type(genres, 'Aventura');
+    await user.click(screen.getByRole('button', { name: 'Guardar' }));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByText('Aventura')).toBeTruthy();
+
+    await user.type(screen.getByPlaceholderText('Ej: The Witcher 3'), 'Halo');
+    await user.click(screen.getByRole('button', { name: 'Guardar' }));
+    expect(onSave.mock.calls[0][0].genres).toEqual(['Aventura']);
+  });
+
   it('un año mal escrito no entra y explica qué se espera', async () => {
     const user = userEvent.setup();
     const { onSave } = renderTags();
