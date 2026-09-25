@@ -614,7 +614,7 @@ precache. Es un cambio para probar en un despliegue de vista previa, no a ciegas
     `router` (14,5 kB, 38 %). El CSS de entrada solo usa el 21 % al pintar, pero casi todo lo demás es `:hover`,
     anchos y modo claro; las paletas inactivas son ~4–6 kB gzip, y sacarlas arriesga el primer fotograma.
 
-17. ⏳ **Brotli del build en vez del de Cloudflare** (25-09-2026, pendiente de verificar en vista previa). Pages
+17. ✅ **Brotli del build en vez del de Cloudflare** (25-09-2026, verificado en vista previa). Pages
     comprime al vuelo con un brotli de nivel bajo: en producción el chunk de React viaja con 67 745 bytes en `br`
     frente a 67 361 en `gzip`. Recomprimidos con calidad 11, los 15 ficheros del arranque de producción pasan de
     185,0 kB (gzip-9) a **158,7 kB** (−14 %), sin tocar la aplicación. El plugin `brotliAssets` (`vite.config.ts`)
@@ -624,11 +624,17 @@ precache. Es un cambio para probar en un despliegue de vista previa, no a ciegas
     Function. `npm run validate` sigue midiendo el tope en gzip (el peor caso) y ahora imprime además el crítico
     en brotli (**155,6 kB** frente a 181,8) y falla si a algún asset del arranque le falta su `.br`.
 
-    **Lo que NO se pudo probar en local:** `wrangler pages dev` sirve el `.br` con `Accept-Encoding: br`, pero con
+    **Lo que NO se puede probar en local:** `wrangler pages dev` sirve el `.br` con `Accept-Encoding: br`, pero con
     la lista de un navegador (`gzip, deflate, br, zstd`) lo RECOMPRIME a gzip, porque elige por orden. El borde
-    real prefiere `br` sea cual sea el orden (comprobado contra producción), así que la prueba que vale es la de un
-    despliegue de vista previa: el chunk de entrada tiene que llegar con los bytes de su `.br`, no con los ~62 kB
-    del brotli de Cloudflare.
+    real prefiere `br` sea cual sea el orden, así que la prueba que vale es la de un despliegue de vista previa.
+
+    **Verificado en la vista previa** (`5eed50cc.mygamelist.pages.dev`): con el `Accept-Encoding` de Chrome, Firefox
+    y Safari llegan los bytes exactos del `.br` (entrada 54 549, CSS 21 530, React 58 016; en producción React
+    viajaba con 67 745), y sin brotli sigue saliendo gzip. Las cabeceras son idénticas a las de la respuesta gzip
+    salvo `Content-Encoding` (el `immutable`, la CSP y `nosniff` llegan copiados), un chunk inexistente sigue dando
+    404 con `no-store`, y la app arranca en los tres motores con los cinco ficheros grandes del arranque en
+    **150,3 kB frente a 176,2** de producción. El arranque sin red no se prueba en vista previa —la app desregistra
+    ahí el service worker a propósito (`appUpdate.ts`)—, pero no cambia: producción ya servía `br` y arranca sin red.
 
 **Criterio de aceptación:** el arranque baja de 182,8 a **179,1 kB** críticos (−2 %) sin perder funcionalidad, y
 la holgura del presupuesto casi se dobla. Los tres ficheros de sync siguen por debajo del 80 % de ramas (punto
