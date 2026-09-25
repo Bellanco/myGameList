@@ -8,6 +8,7 @@ import {
   claveDeJuego,
   guardarHechos,
   leerHechos,
+  peticionDeCaratula,
   plataformasYaPedidas,
   reabrirLaPregunta,
   reiniciarIndiceDeCaratulas,
@@ -88,6 +89,56 @@ describe('carátulas ya resueltas', () => {
     reiniciarIndiceDeCaratulas(); // como volver a abrir la aplicación: solo queda lo escrito
 
     expect(plataformasYaPedidas('Hollow Knight')).toEqual(['Steam']);
+  });
+});
+
+/* CÓMO SE PIDE LA CARÁTULA DE UN JUEGO AJENO. Sin la marca `c=1` el servidor resuelve lo que no tiene, y eso es
+   una consulta a IGDB y una escritura de KV; por eso la marca solo se quita cuando la URL es EXACTAMENTE una que
+   ya resolvió tu recorrido, nombre incluido. */
+describe('la petición de una carátula ajena', () => {
+  const ajena = { preferirConocidas: true, soloCache: true };
+
+  it('un título que no consta se pide con lo suyo y solo de lo ya resuelto', () => {
+    expect(peticionDeCaratula('Celeste', ['Switch'], false, ajena)).toEqual({
+      nombre: 'Celeste',
+      plataformas: ['Switch'],
+      soloCache: true,
+    });
+  });
+
+  it('uno que ya resolviste se pide como lo pediste tú, y entonces sin la marca', () => {
+    apunta('Hollow Knight', ['Steam']);
+
+    expect(peticionDeCaratula('Hollow Knight', ['Switch'], false, ajena)).toEqual({
+      nombre: 'Hollow Knight',
+      plataformas: ['Steam'],
+      soloCache: false,
+    });
+  });
+
+  /* `gameTitleKey` borra el apóstrofe; la clave del servidor lo pasa a espacio. Con el nombre ajeno y sin la
+     marca, «Marvel's» era una clave que el servidor no tenía y la resolvía: el gasto que `c=1` evita. */
+  it('con el título escrito de otra manera, la URL lleva TU nombre, que es el que el servidor tiene', () => {
+    apunta('Marvels Spider-Man', ['PC']);
+
+    expect(peticionDeCaratula("Marvel's Spider-Man", ['PS4'], false, ajena)).toEqual({
+      nombre: 'Marvels Spider-Man',
+      plataformas: ['PC'],
+      soloCache: false,
+    });
+  });
+
+  it('en modo ampliado conserva la marca: ese espacio de claves no lo ha recorrido nadie aquí', () => {
+    apunta('Hollow Knight', ['Steam']);
+
+    expect(peticionDeCaratula('Hollow Knight', ['Switch'], true, ajena).soloCache).toBe(true);
+  });
+
+  it('sin `preferirConocidas` no se mira el índice', () => {
+    apunta('Hollow Knight', ['Steam']);
+
+    expect(peticionDeCaratula('Hollow Knight', ['Switch'], false, { preferirConocidas: false, soloCache: true }))
+      .toEqual({ nombre: 'Hollow Knight', plataformas: ['Switch'], soloCache: true });
   });
 });
 

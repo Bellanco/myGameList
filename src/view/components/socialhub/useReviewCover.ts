@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { coverUrl } from '../../../core/utils/coverUrl';
 import { sabemosQueNoTiene } from '../../../core/utils/coverMemory';
-import { plataformasYaPedidas } from '../../../core/utils/coverDone';
+import { peticionDeCaratula } from '../../../core/utils/coverDone';
 import { useCovers } from '../../hooks/useCovers';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
 
@@ -41,13 +41,15 @@ export function useReviewCover(acceso: CoverAccess = true): (name: string, platf
     if (!permitido) return null;
     const limpio = String(name || '').trim();
     if (!limpio) return null;
-    /* En lo ajeno, un título que tu biblioteca ya resolvió se pide con SUS plataformas y sin la marca, igual que
-       en la tabla (ver `portadaDe` en `GameTable`): está resuelto seguro y así sale de la caché del navegador. */
-    const conocidas = soloCache && !ampliado ? plataformasYaPedidas(limpio) : null;
-    const plataformas = conocidas ?? platforms;
+    /* En lo ajeno, un título que tu biblioteca ya resolvió se pide como lo pediste tú y sin la marca, igual que
+       en la tabla: está resuelto seguro y así sale de la caché del navegador (ver `peticionDeCaratula`). */
+    const { nombre, plataformas, soloCache: marca } = peticionDeCaratula(limpio, platforms, ampliado, {
+      preferirConocidas: soloCache && !ampliado,
+      soloCache,
+    });
     // Se pregunta con la URL NORMAL —que es la que guarda el registro de fallos— y se pide la ancha: si de este
     // título no hay carátula, tampoco la habrá en otro tamaño.
-    if (sabemosQueNoTiene(coverUrl(limpio, plataformas, ampliado))) return null;
-    return coverUrl(limpio, plataformas, ampliado, 'ancho', soloCache && !conocidas);
+    if (sabemosQueNoTiene(coverUrl(nombre, plataformas, ampliado))) return null;
+    return coverUrl(nombre, plataformas, ampliado, 'ancho', marca);
   }, [permitido, soloCache, ampliado]);
 }

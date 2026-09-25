@@ -111,10 +111,16 @@ export function guardarHechos(hechos: Set<string>): void {
  * `null` = todavía no se ha construido. Se construye la primera vez que alguien pregunta —una lista ajena, en la
  * práctica—, así que quien nunca abre el hub social no lo paga nunca.
  */
-let indice: Map<string, string[]> | null = null;
+let indice: Map<string, PortadaPedida> | null = null;
 
-function construirIndice(): Map<string, string[]> {
-  const mapa = new Map<string, string[]>();
+/** Cómo se pidió un título que ya se resolvió aquí: el nombre TAL CUAL se escribió y sus plataformas. */
+export interface PortadaPedida {
+  nombre: string;
+  plataformas: string[];
+}
+
+function construirIndice(): Map<string, PortadaPedida> {
+  const mapa = new Map<string, PortadaPedida>();
   for (const apunte of leerHechos()) {
     const [nombre, plataformas, ampliado] = apunte.split(SEP);
     // El modo ampliado vive en otro espacio de claves y da PEORES emparejamientos: no sirve de alias para nadie.
@@ -122,7 +128,9 @@ function construirIndice(): Map<string, string[]> {
     const clave = gameTitleKey(nombre);
     // Se queda la PRIMERA combinación vista de cada título. Cuál gana da igual mientras sea estable: lo que
     // importa es que todas las listas pidan la misma URL, no cuál de ellas.
-    if (clave && !mapa.has(clave)) mapa.set(clave, plataformas ? plataformas.split(',').filter(Boolean) : []);
+    if (clave && !mapa.has(clave)) {
+      mapa.set(clave, { nombre, plataformas: plataformas ? plataformas.split(',').filter(Boolean) : [] });
+    }
   }
   return mapa;
 }
@@ -134,10 +142,48 @@ function construirIndice(): Map<string, string[]> {
  * carátula que ya está descargada en vez de abrir una segunda por el mismo juego.
  */
 export function plataformasYaPedidas(nombre: string): string[] | null {
+  return portadaYaPedida(nombre)?.plataformas ?? null;
+}
+
+/** Lo mismo, con el nombre con el que se pidió: es el que, junto a esas plataformas, da la URL ya resuelta. */
+export function portadaYaPedida(nombre: string): PortadaPedida | null {
   const clave = gameTitleKey(nombre || '');
   if (!clave) return null;
   indice ??= construirIndice();
   return indice.get(clave) ?? null;
+}
+
+/** Cómo pedir la carátula de un juego: con qué nombre, con qué plataformas y si con la marca de «solo caché». */
+export interface PeticionDeCaratula {
+  nombre: string;
+  plataformas: readonly string[];
+  soloCache: boolean;
+}
+
+/**
+ * LA CARÁTULA DE UN JUEGO AJENO, pedida con lo que ya funcionó aquí. Si la lista quiere reaprovechar lo ya
+ * descargado (`preferirConocidas`) y de ese título consta una petición anterior, se repite AQUELLA —su nombre y
+ * sus plataformas—, que es la URL que el navegador tiene guardada.
+ *
+ * Y entonces se pide sin `c=1` aunque la lista lo pida: esa URL la resolvió el recorrido de tu propia biblioteca,
+ * así que el servidor la tiene y no hay nada que gastar. Salvo en modo ampliado, que vive en otro espacio de
+ * claves y del que este índice no dice nada.
+ *
+ * EL NOMBRE TAMBIÉN SE CAMBIA, no solo las plataformas, y es lo que hace segura la regla anterior. El índice
+ * agrupa con `gameTitleKey`, que borra el apóstrofe y quita el «The» inicial; la clave del servidor sale de
+ * `normalizarTitulo` (`functions/_lib/igdbCover.ts`), que hace otras cosas. Con el nombre ajeno, «Marvel's X»
+ * contra tu «Marvels X» era una clave que el servidor no tenía, y sin la marca se resolvía: consulta a IGDB y
+ * escritura de KV por mirar una lista ajena, que es justo lo que `c=1` existe para impedir.
+ */
+export function peticionDeCaratula(
+  nombre: string,
+  plataformas: readonly string[],
+  ampliado: boolean,
+  { preferirConocidas, soloCache }: { preferirConocidas: boolean; soloCache: boolean },
+): PeticionDeCaratula {
+  const conocida = preferirConocidas ? portadaYaPedida(nombre) : null;
+  if (!conocida) return { nombre, plataformas, soloCache };
+  return { nombre: conocida.nombre, plataformas: conocida.plataformas, soloCache: soloCache && ampliado };
 }
 
 /** Solo para las pruebas: olvida el índice derivado para que el siguiente acceso relea el almacenamiento. */

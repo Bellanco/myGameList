@@ -9,7 +9,7 @@ import { FilePickerButton } from './FilePickerButton';
 import { GameCover } from './GameCover';
 import { coverUrl } from '../../core/utils/coverUrl';
 import { sabemosQueNoTiene } from '../../core/utils/coverMemory';
-import { plataformasYaPedidas } from '../../core/utils/coverDone';
+import { peticionDeCaratula, type PeticionDeCaratula } from '../../core/utils/coverDone';
 import type { GameItem, TabId, TabSort } from '../../model/types/game';
 import type { TabAction } from '../../viewmodel/useGameListViewModel';
 import { hueFromGrade, resolveGrade } from '../../core/utils/scoreScale';
@@ -262,14 +262,9 @@ const GRID_GAP_FLAT_PX = 14;
  * Se pregunta SIEMPRE por la normal aunque luego se pida otro tamaño: la memoria se guarda por URL y el «no» de
  * un juego no depende de a qué resolución se le pida (si la normal dio 404, la ancha también lo dará).
  */
-function coverBase(
-  covers: boolean,
-  game: GameItem,
-  ampliado: boolean,
-  plataformas: readonly string[],
-): string | null {
+function coverBase(covers: boolean, peticion: PeticionDeCaratula, ampliado: boolean): string | null {
   if (!covers) return null;
-  const url = coverUrl(game.name, plataformas, ampliado);
+  const url = coverUrl(peticion.nombre, peticion.plataformas, ampliado);
   return sabemosQueNoTiene(url) ? null : url;
 }
 
@@ -277,29 +272,6 @@ function coverBase(
 interface PedidoDePortada {
   preferirConocidas: boolean;
   soloCache: boolean;
-}
-
-/**
- * CON QUÉ PLATAFORMAS SE PIDE LA CARÁTULA DE ESTE JUEGO, y si con la marca de «solo caché». Las suyas, salvo que
- * la lista pida reaprovechar lo ya descargado y de ese título conste una combinación anterior: entonces se usa
- * aquella, porque es la que tiene URL en la caché del navegador (ver `coverDone`). Se resuelve UNA vez por juego
- * y sirve para todos los tamaños.
- *
- * Un título conocido se pide además SIN `c=1` aunque la lista lo pida: lo resolvió el recorrido de tu propia
- * biblioteca, así que el servidor lo tiene y no hay nada que gastar, y la marca solo cambiaría la URL y obligaría
- * a descargar otra vez la misma imagen. Salvo en modo ampliado, que vive en otro espacio de claves y del que el
- * índice de conocidos no dice nada.
- */
-function portadaDe(
-  game: GameItem,
-  ampliado: boolean,
-  pedido: PedidoDePortada,
-): { plataformas: readonly string[]; soloCache: boolean } {
-  const conocidas = pedido.preferirConocidas ? plataformasYaPedidas(game.name) : null;
-  return {
-    plataformas: conocidas ?? game.platforms,
-    soloCache: pedido.soloCache && !(conocidas && !ampliado),
-  };
 }
 
 /**
@@ -311,6 +283,9 @@ function portadaDe(
  * por render; con las ~150 cajas que la rejilla mantiene montadas, son seiscientas en cada repintado del
  * listado. Aquí la normal se construye una vez y sirve para las dos cosas, y la de densidad doble ni se llega a
  * componer cuando ya se sabe que ese juego no tiene carátula.
+ *
+ * Con qué nombre, plataformas y marca se pide lo decide `peticionDeCaratula` (ver `coverDone`), una vez por juego
+ * y para todos los tamaños.
  */
 function coverDeCaja(
   covers: boolean,
@@ -318,13 +293,14 @@ function coverDeCaja(
   ampliado: boolean,
   pedido: PedidoDePortada,
 ): { src: string | null; src2x: string | null } {
-  const { plataformas, soloCache } = portadaDe(game, ampliado, pedido);
-  const base = coverBase(covers, game, ampliado, plataformas);
+  const peticion = peticionDeCaratula(game.name, game.platforms, ampliado, pedido);
+  const base = coverBase(covers, peticion, ampliado);
   if (!base) return { src: null, src2x: null };
+  const { nombre, plataformas, soloCache } = peticion;
   return {
     // La normal sale ya compuesta de la memoria de «no tiene», que se guarda sin la marca: solo se rehace con ella.
-    src: soloCache ? coverUrl(game.name, plataformas, ampliado, 'normal', true) : base,
-    src2x: coverUrl(game.name, plataformas, ampliado, 'medio', soloCache),
+    src: soloCache ? coverUrl(nombre, plataformas, ampliado, 'normal', true) : base,
+    src2x: coverUrl(nombre, plataformas, ampliado, 'medio', soloCache),
   };
 }
 
@@ -336,9 +312,9 @@ function coverDeRenglon(
   grande: boolean,
   pedido: PedidoDePortada,
 ): string | null {
-  const { plataformas, soloCache } = portadaDe(game, ampliado, pedido);
-  if (!coverBase(covers, game, ampliado, plataformas)) return null;
-  return coverUrl(game.name, plataformas, ampliado, grande ? 'ancho' : 'medio', soloCache);
+  const peticion = peticionDeCaratula(game.name, game.platforms, ampliado, pedido);
+  if (!coverBase(covers, peticion, ampliado)) return null;
+  return coverUrl(peticion.nombre, peticion.plataformas, ampliado, grande ? 'ancho' : 'medio', peticion.soloCache);
 }
 
 function renderTags(values: string[], className: string, maxVisible?: number, tone = false) {
