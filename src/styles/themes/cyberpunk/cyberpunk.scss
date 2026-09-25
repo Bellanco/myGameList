@@ -332,7 +332,9 @@
   box-shadow: none;
 }
 /* Glitch ambiental de los chips: MUY sutil (solo aberración RGB por text-shadow, sin `transform` para no pisar el
-   lift del hover), en ciclo largo (~21 s) y ESCALONADO por posición para que no destellen todos a la vez. */
+   lift del hover), en ciclo largo (~21 s) y ESCALONADO por posición para que no destellen todos a la vez. Cuelga
+   de `data-effects="on"`: la lista de «efectos OFF» de más abajo nombraba el chip del juego pero no `.chip`, y
+   con los efectos quitados todos los chips del listado seguían destellando. */
 @media (prefers-reduced-motion: no-preference) {
   @keyframes cyber-glitch-chip {
     /* Anclado a `text-shadow: none` fuera del destello (los chips no tienen sombra base), para que la aberración
@@ -342,8 +344,8 @@
     96.7% { text-shadow: 1.5px 0 rgba(255, 42, 109, .8), -1.5px 0 rgba(0, 240, 255, .8); }
     97.2% { text-shadow: -1px 0 rgba(255, 42, 109, .7), 1px 0 rgba(0, 240, 255, .7); }
   }
-  :root[data-palette="cyberpunk"] .chip,
-  :root[data-palette="cyberpunk"] .hub-feed-game-chip { animation: cyber-glitch-chip 21s ease-in-out infinite; }
+  :root[data-effects="on"][data-palette="cyberpunk"] .chip,
+  :root[data-effects="on"][data-palette="cyberpunk"] .hub-feed-game-chip { animation: cyber-glitch-chip 21s ease-in-out infinite; }
   :root[data-palette="cyberpunk"] .chip:nth-child(5n)   { animation-delay: -4s; }
   :root[data-palette="cyberpunk"] .chip:nth-child(5n+1) { animation-delay: -9s; }
   :root[data-palette="cyberpunk"] .chip:nth-child(5n+2) { animation-delay: -13s; }
@@ -437,7 +439,6 @@
 :root:not([data-effects="on"])[data-palette="cyberpunk"] .btn-secondary::before,
 :root:not([data-effects="on"])[data-palette="cyberpunk"] .btn-danger::before,
 :root:not([data-effects="on"])[data-palette="cyberpunk"] .btn-abandoned::before,
-:root:not([data-effects="on"])[data-palette="cyberpunk"] .hub-feed-game-chip,
 :root:not([data-effects="on"])[data-palette="grimdark"] h2,
 :root:not([data-effects="on"])[data-palette="grimdark"] .hub-name-link,
 :root:not([data-effects="on"])[data-palette="grimdark"] .hub-detail-profile-link,

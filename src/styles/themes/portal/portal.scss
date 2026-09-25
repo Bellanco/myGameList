@@ -260,7 +260,9 @@
 /* ── §15 · Efecto FLUORESCENTE (firma Portal): botones y chips titilan como un tubo fluorescente al arrancar —el
    parpadeo típico de las pantallas de carga de Aperture— y luego quedan estables. El destello se confina al inicio
    de un ciclo largo y se DESINCRONIZA por posición (nth) para que parezcan tubos distintos, no un bloque. Se aplica
-   en ambas zonas (antigua/moderna); respeta reduced-motion. ── */
+   en ambas zonas (antigua/moderna); respeta reduced-motion y cuelga de `data-effects="on"`. Antes iba siempre y
+   una lista aparte lo apagaba, pero la lista solo nombraba chips y carteles: con los efectos quitados, los
+   botones seguían titilando. ── */
 @media (prefers-reduced-motion: no-preference) {
   @keyframes portal-fluoro {
     0%, 4%, 100% { filter: brightness(1); }
@@ -269,11 +271,11 @@
     2.1% { filter: brightness(1.08); }
     3% { filter: brightness(.9); }
   }
-  :root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost),
-  :root[data-palette="portal"] .hub-seg-btn,
-  :root[data-palette="portal"] .active-filter-chip,
-  :root[data-palette="portal"] .hub-feed-game-chip,
-  :root[data-palette="portal"] .chip { animation: portal-fluoro 17s ease-in-out infinite; }
+  :root[data-effects="on"][data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost),
+  :root[data-effects="on"][data-palette="portal"] .hub-seg-btn,
+  :root[data-effects="on"][data-palette="portal"] .active-filter-chip,
+  :root[data-effects="on"][data-palette="portal"] .hub-feed-game-chip,
+  :root[data-effects="on"][data-palette="portal"] .chip { animation: portal-fluoro 17s ease-in-out infinite; }
   /* Desincroniza por posición (tubos distintos parpadean en momentos distintos). */
   :root[data-palette="portal"] .chip:nth-of-type(3n) { animation-delay: -4s; }
   :root[data-palette="portal"] .chip:nth-of-type(3n+1) { animation-delay: -10s; }
@@ -294,7 +296,7 @@
     3.7% { filter: brightness(1.18); }
     4.6% { filter: brightness(.9); }
   }
-  :root[data-palette="portal"] .hub-feed-day-header { animation: portal-fluoro-strong 10s ease-in-out infinite; }
+  :root[data-effects="on"][data-palette="portal"] .hub-feed-day-header { animation: portal-fluoro-strong 10s ease-in-out infinite; }
   :root[data-palette="portal"] .hub-feed-day-header:nth-of-type(2n) { animation-delay: -3.3s; }
   :root[data-palette="portal"] .hub-feed-day-header:nth-of-type(3n) { animation-delay: -6.6s; }
 }
@@ -305,11 +307,6 @@
   :root[data-effects="on"][data-palette="portal"] body::before { animation: portal-seam-drift 34s linear infinite; }
   @keyframes portal-seam-drift { to { transform: translate3d(46px, 46px, 0); } }
 }
-
-/* ══ Preferencia de efectos OFF: detiene el parpadeo FLUORESCENTE de chips y cabeceras de día (portal-fluoro).
-   La identidad estática de Portal (rejilla, placas de pared, barra naranja) se conserva. ══ */
-:root:not([data-effects="on"])[data-palette="portal"] .chip,
-:root:not([data-effects="on"])[data-palette="portal"] .hub-feed-day-header { animation: none !important; }
 
 /* ── §12 · Panel "Perfil": cámara de pruebas. La rampa de los repartos recorre los DOS PORTALES —azul a
    naranja—, que es la firma del tema; los números van en la monoespaciada de terminal de GLaDOS, y los
