@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_PALETTE, THEMES, parsePaletteId, type PaletteId } from '../../src/core/constants/palettes';
 import { socialVoiceByPalette } from '../../src/core/constants/themes/social';
 import { premiosVoiceByPalette } from '../../src/core/constants/themes/premios';
+import type { ThemeDefinition } from '../../src/core/constants/themes/theme';
 
 /**
  * EL CONTRATO DE UN TEMA, comprobado.
@@ -156,8 +157,7 @@ describe('temas · el skin y quién lo carga', () => {
 
   it.each(IDS)('el skin de «%s» lo carga quien le toca, y solo él', (id) => {
     const tiene = existe(skinDe(id));
-    // `() =>` a secas y no `() => import(`: grimdark carga DOS hojas con un `Promise.all` (reutiliza los
-    // keyframes de cyberpunk, ver la nota de `paletteSkin.ts`) y también cuenta como declarado.
+    // `() =>` a secas y no `() => import(`: basta con que el cargador exista, sea cual sea su forma.
     const enLoaders = new RegExp(`\\b${id}: \\(\\) =>`).test(PALETTE_SKIN);
     const enArranque = ENTRADA_SCSS.includes(`@use './themes/${id}/${id}'`);
     if (!tiene) {
@@ -178,6 +178,22 @@ describe('temas · el skin y quién lo carga', () => {
     if (!existe(`${DIR_ESTILOS}${id}/_fonts.scss`)) return;
     expect(leer(skinDe(id)), `el skin de ${id} no usa su _fonts.scss`).toContain("@use './fonts'");
     expect(VENDOR_FONTS, `falta la entrada slug: '${id}' en scripts/vendor-fonts.mjs`).toContain(`slug: '${id}'`);
+  });
+});
+
+describe('temas · la muestra del selector es el color del tema', () => {
+  // La muestra es lo único que se ve de un tema ANTES de elegirlo. «Cámara de pruebas» enseñó durante meses un
+  // azul y un naranja más hondos que los suyos (#0091d6/#f57a00 frente a #29b6f6/#ff9e1b) sin que nada saltara.
+  it.each(IDS)('«%s»: `accent` es su --steam oscuro', (id) => {
+    const { oscuro } = bloques(colorDe(id), id);
+    const tema = THEMES.find((t) => t.id === id)!;
+    expect(oscuro.match(/--steam:\s*(#\w+);/)?.[1].toLowerCase()).toBe(tema.accent.toLowerCase());
+  });
+
+  it.each(IDS)('«%s»: `accent2`, si lo tiene, es un color de su bloque oscuro', (id) => {
+    const tema: ThemeDefinition = THEMES.find((t) => t.id === id)!;
+    if (!tema.accent2) return;
+    expect(bloques(colorDe(id), id).oscuro.toLowerCase()).toContain(tema.accent2.toLowerCase());
   });
 });
 

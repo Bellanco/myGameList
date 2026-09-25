@@ -61,6 +61,12 @@
 :root[data-palette="witcher"] body { font-family: var(--font-body); }
 :root[data-palette="witcher"] h2,
 :root[data-palette="witcher"] h3,
+/* Los títulos de modal y de diálogo son `div`, no `h2`: sin nombrarlos se quedaban en Lora mientras los demás
+   siete temas los pasan a su letra de titular. `.modal-hd` va aparte porque el modal de alta pone el rótulo
+   suelto, sin `.modal-title` dentro (la misma nota que en `forja.scss`). */
+:root[data-palette="witcher"] .modal-title,
+:root[data-palette="witcher"] .modal-hd,
+:root[data-palette="witcher"] .dialog-title,
 :root[data-palette="witcher"] thead th { font-family: var(--font-display); letter-spacing: .14em; }
 :root[data-palette="witcher"] .score-ring-num,
 :root[data-palette="witcher"] .score-dial-num,
@@ -1117,6 +1123,24 @@
   --stats-cap: butt;
   --stats-join: miter;
   --stats-num: var(--font-mono);
+}
+/* EL ENJAMBRE, EN LA MISMA CHAPA. Era la única gráfica del panel con el lienzo de la casa —esquina de píldora,
+   velo del acento—, y en este tema se leía como una pieza de otro. Aquí es una placa: canto del radio del tema,
+   el filete de acero de §4b como moldura y un segundo filete hundido, que es como se remacha una chapa a otra.
+   Los puntos siguen redondos por la razón de arriba (remaches), con su aro de acero; la MEDIANA es la marca
+   que hay que encontrar, así que va en Igni, que en este tema es lo que señala. El chip de la lista, a escuadra. */
+:root[data-palette="witcher"] .stats-hub {
+  --bee-radius: var(--radius-sm);
+  --bee-edge: 0%;
+  --bee-frame:
+    inset 0 0 0 1px var(--wt-filete),
+    inset 0 0 0 4px transparent,
+    inset 0 0 0 5px color-mix(in srgb, var(--wt-filete) 40%, transparent);
+  --bee-veil: color-mix(in srgb, var(--steam) 5%, transparent);
+  --bee-dot-ring: 0 0 0 1px color-mix(in srgb, var(--steam) 45%, transparent);
+  --bee-median-ink: var(--wt-igni);
+  --bee-chip-radius: var(--radius-sm);
+  --bee-axis-font: var(--font-mono);
 }
 
 /* ── §15 · AVATAR SIN FOTO: el trazo de un grabado en placa —fino y de remate cortado—, no la línea redonda

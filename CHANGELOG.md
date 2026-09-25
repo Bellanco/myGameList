@@ -13,6 +13,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   dorado era herencia del tema de cuero que fue. Además deja el bundle base y viaja con su skin.
 - **«Plata y acero» habla como The Witcher** cuando algo falla: el medallón que vibra, Sardinilla que no encuentra
   el camino, la mesa de gwent vacía y el tablón de contratos. Las frases de antes eran de los temas que fue.
+- **Los títulos de modales y el enjambre del panel, con la piel de «Plata y acero»**: Cinzel en los títulos y la
+  gráfica de enjambre en placa de acero, con la mediana en Igni.
+
+### Performance
+- **«Solo hay guerra» ya no descarga el skin de «Sin futuro»** (5,1 kB comprimidos y una petición): su glitch
+  vivía allí para reutilizar dos keyframes, y ahora es suyo.
 
 ### Fixed
 - **La marca de la casilla se ve en todos los temas.** Era blanca fija sobre el acento y se quedaba entre 1,2 y
@@ -24,6 +30,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   «Solo hay guerra»: las estrellas no llegaban a 3:1 y el atenuado bajaba de 4,5:1 sobre alguna superficie.
 - **Quitar los efectos los quita del todo:** en «Sin futuro» los chips seguían con su glitch y en «Cámara de
   pruebas» los botones seguían titilando.
+- **Los controles de vista en modo claro:** «Inserte moneda» y «Sol y luna» enseñaban su placa de noche sobre el
+  fondo de día, y en «Cámara de pruebas» y «Sin futuro» el icono apagado casi no se veía sobre su consola.
+- **Los filetes de «Sin futuro» en claro**, que se quedaban en 1,1:1: el borde de los campos no se veía.
+- **La muestra de «Cámara de pruebas» en el selector** enseñaba otro azul y otro naranja que los del tema.
 
 ## [1.4.4] - 2026-09-25
 

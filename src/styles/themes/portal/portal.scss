@@ -858,6 +858,12 @@
   color: color-mix(in srgb, var(--text) 45%, transparent);
 }
 :root[data-palette="portal"] .view-controls .shape-switch-btn:hover { background: none; color: var(--text); }
+/* LA CONSOLA ES OSCURA EN LAS DOS ÉPOCAS (#1d2226), pero el icono apagado salía de `--text`, que en la Aperture
+   antigua es tinta de pergamino: marrón al 45 % sobre la consola, 1,16:1, y el emisor apagado desaparecía (y el
+   hover lo dejaba igual de oscuro). En claro el icono lleva la tinta de la consola, el mismo hueso que en oscuro:
+   3,86:1 apagado, por encima del 3:1 de un icono de control. */
+:root[data-palette="portal"][data-theme="light"] .view-controls .shape-switch-btn:not(.is-on) { color: rgba(232, 239, 244, .45); }
+:root[data-palette="portal"][data-theme="light"] .view-controls .shape-switch-btn:not(.is-on):hover { color: #e8eff4; }
 :root[data-palette="portal"] .view-controls .shape-switch-btn.is-on { color: #fff; box-shadow: none; }
 /* LA MANCHA ES CUADRADA, no un disco: el desvanecido se hace con dos degradados LINEALES cruzados —uno por
    eje— en vez de con uno radial. Un radial muere en una circunferencia y la pieza se leía redonda dentro de un

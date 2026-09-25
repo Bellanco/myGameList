@@ -7,7 +7,7 @@
    TEMA · Solo hay guerra (Warhammer 40.000) — GRIMDARK GÓTICO IMPERIAL: la app como una PANTALLA DE
    COGITADOR (terminal de fósforo VERDE sobre negro) enmarcada en ORO latón gótico. Tipografía blackletter
    (UnifrakturCook) para las cartelas, industrial (Chakra Petch) para el cuerpo y CRT (VT323) para las
-   lecturas de terminal. Rojo sangre = aviso. Identidad de color: CAPA 2 en `_base.scss`.
+   lecturas de terminal. Rojo sangre = aviso. Identidad de color: CAPA 2 en `_colors.scss`.
    ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
 
 /* ── FIRMA · Pantalla de cogitador: SCANLINES verdes en el fondo + BRILLO DE TUBO (vignette verde) fijo sobre
@@ -257,6 +257,41 @@
     animation: grim-phosphor-scan 7s linear infinite;
   }
   @keyframes grim-phosphor-scan { 0% { transform: translateY(-120%); } 100% { transform: translateY(400%); } }
+}
+
+/* ══ EFECTOS · GLITCH DE VOX: corrupción de pict con aberración VERDE/ORO del cogitador. Solo en OSCURO —en el
+   códice claro no hay CRT— y con `data-effects="on"`. Misma mecánica que el glitch de «Sin futuro» (destello en
+   ~2 % de un ciclo largo, el resto quieto), y hasta ahora vivía en el skin de ese tema reutilizando sus keyframes:
+   quien elegía este tema descargaba también la hoja entera de cyberpunk (5,1 kB comprimidos, una petición más)
+   para usar dos keyframes de cinco líneas. Ahora son suyos (`grim-glitch-slice`, `grim-glitch-jitter`), con el
+   mismo recorrido. La sombra verde IDLE del h2 (0 0 9px …) se ancla en los fotogramas apagados para no pisar el
+   glow base. ══ */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes grim-glitch-text {
+    0%, 95.4%, 97.4%, 100% { transform: none; clip-path: inset(-3px); text-shadow: 0 0 9px rgba(67, 245, 88, .45); }
+    95.6% { transform: translate(-2px, 1px); clip-path: inset(8% 0 58% 0); text-shadow: -2px 0 rgba(224, 169, 43, .9), 2px 0 rgba(67, 245, 88, .85), 0 0 9px rgba(67, 245, 88, .45); }
+    96.1% { transform: translate(2px, -1px); clip-path: inset(62% 0 10% 0); text-shadow: 2px 0 rgba(224, 169, 43, .85), -2px 0 rgba(67, 245, 88, .8), 0 0 9px rgba(67, 245, 88, .45); }
+    96.6% { transform: translate(-1px, 0); clip-path: inset(34% 0 34% 0); text-shadow: -1px 0 rgba(224, 169, 43, .8), 1px 0 rgba(67, 245, 88, .75), 0 0 9px rgba(67, 245, 88, .45); }
+  }
+  @keyframes grim-glitch-slice {
+    0%, 95.4%, 97.4%, 100% { transform: none; clip-path: inset(0 0 0 0); }
+    95.6% { transform: translate(-2px, 0); clip-path: inset(10% 0 60% 0); }
+    96.1% { transform: translate(2px, 0); clip-path: inset(64% 0 8% 0); }
+    96.6% { transform: translate(-1px, 0); clip-path: inset(36% 0 36% 0); }
+  }
+  @keyframes grim-glitch-jitter {
+    0%, 94.6%, 96.2%, 100% { transform: translate(0, 0); }
+    94.8% { transform: translate(-2px, 1px); }
+    95.3% { transform: translate(2px, -1px); }
+    95.8% { transform: translate(-1px, 0); }
+  }
+  :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) h2 { animation: grim-glitch-text 12s ease-in-out infinite; }
+  :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) .hub-name-link,
+  :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) .hub-detail-profile-link { animation: grim-glitch-slice 14s ease-in-out infinite; }
+  :root[data-palette="grimdark"]:not([data-theme="light"]) .hub-name-link:nth-of-type(2n) { animation-delay: -5s; }
+  :root[data-palette="grimdark"]:not([data-theme="light"]) .hub-name-link:nth-of-type(3n) { animation-delay: -8.5s; }
+  :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) .fab { animation: grim-glitch-jitter 16s ease-in-out infinite; }
+  :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) .fab-roulette { animation: grim-glitch-jitter 16s ease-in-out infinite; animation-delay: -6s; }
 }
 
 /* Preferencia de efectos OFF: detén el PARPADEO CRT (la textura de scanlines/vignette se conserva). */

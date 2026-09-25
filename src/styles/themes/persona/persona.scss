@@ -1,12 +1,13 @@
 /* F1 — CAPA 3 · DIRECCIÓN DE ARTE POR TEMA (skins fuertes sobre los componentes reales).
    Cada tema debe leerse como un mundo distinto, no como el mismo recoloreado. Solo se activan con
-   `[data-palette="…"]`; el tema por defecto ("Clásico", sin atributo) no se toca. Va el ÚLTIMO en
-   `index.scss` para ganar en cascada a los partials de componentes.
+   `[data-palette="…"]`, y cada skin es un chunk perezoso que carga `paletteSkin.ts` al elegir su tema (salvo el
+   del tema por defecto, que va en `styles/index.scss`): entra DESPUÉS de la hoja base, y por eso gana en
+   cascada a los partials de componentes a igual especificidad.
 
-   MODULAR: esta capa es OPCIONAL. Un tema nuevo funciona solo con sus colores (CAPA 2 en `_base.scss`).
-   Para darle carácter propio, añade aquí un bloque `:root[data-palette="<id>"] …` con su tipografía,
-   formas, sombras y texturas — nada de otros temas se ve afectado. Receta de 4 pasos completa en
-   `src/core/constants/palettes.ts`.
+   MODULAR: esta capa es OPCIONAL. Un tema nuevo funciona solo con sus colores (CAPA 2, en su
+   `themes/<id>/_colors.scss`). Para darle carácter propio, su `themes/<id>/<id>.scss` lleva un bloque
+   `:root[data-palette="<id>"] …` con su tipografía, formas, sombras y texturas — nada de otros temas se ve
+   afectado. La receta completa, en `docs/temas.md`. Estas reglas nacieron aquí y valen para todos.
 
    ─────────────────────────────────────────────────────────────────────────────────────────────────
    REGLAS APRENDIDAS — léelas antes de añadir un tema para no repetir los errores que ya costaron tiempo:
@@ -30,7 +31,7 @@
       `.fab`/`.fab-roulette`, `.chip`/`.rl-chip`) para que un cambio las afecte a todas y no se olvide ninguna.
    8. CLASES CONDICIONALES DEL TSX: si el skin necesita estilar un estado inactivo (p. ej. el toggle de
       Steam Deck), la clase base debe estar SIEMPRE presente en el marcado, no solo cuando está activo.
-   9. `!important` CON CRITERIO: el skin ya gana por ir el último en `index.scss`, pero los `shorthand`
+   9. `!important` CON CRITERIO: el skin ya gana por cargarse después de la hoja base, pero los `shorthand`
       (border, box-shadow, background) de los partials a veces obligan a usarlo. Solo donde haga falta.
    10. CONTRASTE: al rellenar variantes de color (éxito/aviso/peligro) fija también el color de texto para
       mantener legibilidad AA (p. ej. texto oscuro sobre relleno claro).
@@ -46,7 +47,7 @@
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════
    TEMA · Ladrones de corazones (Persona 5) — POP-ART: negro + rojo, cursiva, semitono, cortes y sombras
-   duras de cómic. Fuente de la identidad de color: CAPA 2 en `_base.scss`.
+   duras de cómic. Fuente de la identidad de color: CAPA 2 en `_colors.scss`.
    ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
 
 /* PAPELES DE LETRA de este tema. CAPA 0 (`_base.scss`) declara los cuatro papeles y todas las hojas

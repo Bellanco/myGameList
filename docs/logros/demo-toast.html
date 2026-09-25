@@ -498,11 +498,7 @@
         persona: () => import('/src/styles/themes/persona/persona.scss'),
         portal: () => import('/src/styles/themes/portal/portal.scss'),
         cyberpunk: () => import('/src/styles/themes/cyberpunk/cyberpunk.scss'),
-        // Siete reglas de grimdark viven en la sección de cyberpunk y reutilizan sus keyframes.
-        grimdark: () => Promise.all([
-          import('/src/styles/themes/grimdark/grimdark.scss'),
-          import('/src/styles/themes/cyberpunk/cyberpunk.scss'),
-        ]),
+        grimdark: () => import('/src/styles/themes/grimdark/grimdark.scss'),
         seaofstars: () => import('/src/styles/themes/seaofstars/seaofstars.scss'),
       };
 

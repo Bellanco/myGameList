@@ -10,7 +10,7 @@
    pixelado, agua turquesa y luz DORADA del Solsticio (sol + luna). TODA la tipografía en píxel (Pixelify Sans para las letras · Silkscreen para los números)
    —body incluido, como el resto de skins ponen su fuente en el body— para que la app entera se lea temada.
    Marcos "9-slice" de caja de diálogo, esquinas rectas y brillo de sol/agua. La caja la controla el interruptor global (`data-uppercase`).
-   Identidad de color: CAPA 2 en `_base.scss`. `--sos-turq/purple/pink/green` y `--sos-line` son extra. ═══════ */
+   Identidad de color: CAPA 2 en `_colors.scss`. `--sos-turq/purple/pink/green` y `--sos-line` son extra. ═══════ */
 
 /* ── §1 · Tipografía pixel en TODO el texto (el `body` incluido, como el resto de skins fijan su fuente en el
    body → reseñas, notas y demás quedan temadas por herencia): LETRAS en Pixelify Sans (la fuente que quedaba perfecta para el texto)
@@ -161,7 +161,7 @@
    es el tono sino el peso del contorno: aquel lleva un filete translúcido (`rgba(…,.35)`) y este uno macizo,
    igual que en el resto de temas.
    EL ORO QUE SÍ ES TINTA es `--tab-active`, no `--steam`. En el tema CLARO el sol se queda en 1,05:1 sobre los
-   turquesas de esta paleta —lo dice su propio bloque en `_base.scss`, que por eso desvió `--fg-link` a un teal
+   turquesas de esta paleta —lo dice su propio bloque en `_colors.scss`, que por eso desvió `--fg-link` a un teal
    profundo—, así que como texto sería ilegible y como filete, invisible. `--tab-active` es justo el oro que
    cada tema deja legible: el sol en oscuro y un ámbar hondo (#7a5000) en claro. */
 :root[data-palette="seaofstars"] .hub-feed-game-chip {
@@ -593,6 +593,26 @@
   box-shadow: none;
   color: #ffd75e;
   filter: drop-shadow(0 0 5px rgba(255, 215, 94, .8));
+}
+/* DE DÍA, EL MARCO ES DE AGUA. El recuadro de noche (#10182f) se quedaba igual sobre el turquesa del día y era la
+   única pieza nocturna de la pantalla. A la luz pasa a la superficie del propio tema con el doble filete en su
+   turquesa, y el sol cambia de gesto: sobre cielo claro un halo dorado no se ve, así que el elegido se enciende
+   como la insignia de nota del listado —bloque de oro con el dibujo en tinta encima (9,1:1)—. */
+:root[data-palette="seaofstars"][data-theme="light"] .view-controls {
+  background: var(--surface-elevated);
+  box-shadow: inset 0 0 0 2px var(--sos-turq);
+}
+:root[data-palette="seaofstars"][data-theme="light"] .view-controls .grid-size::before { background: var(--surface-hover); }
+:root[data-palette="seaofstars"][data-theme="light"] .view-controls .grid-size::after {
+  background: repeating-linear-gradient(90deg, var(--sos-turq) 0 .35rem, #0b8a9b .35rem .5rem);
+}
+:root[data-palette="seaofstars"][data-theme="light"] .view-controls .grid-size-range::-webkit-slider-thumb { border-color: var(--text); }
+:root[data-palette="seaofstars"][data-theme="light"] .view-controls .grid-size-range::-moz-range-thumb { border-color: var(--text); }
+:root[data-palette="seaofstars"][data-theme="light"] .view-controls .shape-switch-btn { color: var(--text-muted); }
+:root[data-palette="seaofstars"][data-theme="light"] .view-controls .shape-switch-btn.is-on {
+  background: var(--steam);
+  color: var(--on-accent);
+  filter: none;
 }
 
 /* ── §17 · LA FICHA DE GRÁFICA ─────────────────────────────────────────────────────────────────────────
