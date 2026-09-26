@@ -244,6 +244,9 @@ están — y sus bordes tampoco, que ahí el marco de oro o el filete cian **son
 - Apaga los efectos con `:root:not([data-effects="on"])`. El valor `off` **no existe**: al desactivarlos el
   atributo se retira, así que `[data-effects="off"]` no casa nunca y la regla no llega a aplicarse.
 - Siembra +120 juegos antes de juzgar la tabla: virtualizada y con tres juegos no enseña sus fallos.
+- **Una caja por nivel.** Lo que va dentro de una tarjeta se asienta en ella —filete, fila, sangría— en vez de
+  abrir otra caja con su borde y su fondo. Y el color de un dato, una vez: si lo dice la medalla, no lo repite
+  una barra lateral.
 
 **Don't**
 - No escribas un `font-size`, una sombra o una familia literales.

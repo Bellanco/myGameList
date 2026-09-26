@@ -435,11 +435,9 @@
 }
 
 
+/* El buscador del directorio y de solicitudes, SIN CAJA alrededor: el campo ya tiene la suya, y la tarjeta de
+   pantalla es la de fuera. Queda el campo y el recuento. */
 .hub-feed-toolbar {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--hub-card-bg);
-  padding: .78rem;
   display: grid;
   gap: .6rem;
 }
