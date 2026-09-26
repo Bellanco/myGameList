@@ -159,6 +159,7 @@ export function ReviewScreen({
             genres={content.genres}
             strengths={content.strengths}
             weaknesses={content.weaknesses}
+            score={{ score: content.score, grade: content.grade }}
           />
         )}
         {/* Lo que está pasando, para quien no ve el esqueleto. */}

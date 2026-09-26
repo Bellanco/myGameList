@@ -1405,6 +1405,8 @@
   flex-direction: column;
   gap: .9rem;
   min-width: 0;
+  /* Aire bajo la última línea: con solo el relleno de la tarjeta (.8rem), el borde quedaba pegado al texto. */
+  padding-bottom: .6rem;
 }
 
 .hub-detail-body .hub-feed-review-text {
@@ -1467,6 +1469,11 @@
     top: 1rem;
     align-self: flex-start;
   }
+}
+
+/* La nota encabeza la columna de metadatos (ver `ReviewDetailBody`), alineada a la izquierda con los rótulos. */
+.hub-detail-score {
+  display: flex;
 }
 
 .hub-metadata-section {

@@ -1,7 +1,8 @@
-import { resolveGrade, type ScoredLike } from '../../core/utils/scoreScale';
+import { resolveStars, type ScoredLike } from '../../core/utils/scoreScale';
+import { useScoreScale } from '../hooks/useScoreScale';
 import { HubAvatar } from './socialhub/HubAvatar';
-import { NoScoreMedal } from './NoScoreMedal';
-import { ScoreDisplay } from './ScoreDisplay';
+import { scoreInMetadata } from './ReviewDetailBody';
+import { StarRating } from './StarRating';
 // Las cuatro pantallas que montan esta cabecera no comparten chunk: dos van en el del hub social, una en el del
 // panel de estadísticas y otra en el de la página pública. Ver `styles/reviews.scss`.
 import '../../styles/reviews.scss';
@@ -32,7 +33,10 @@ export interface ReviewDetailHeadProps {
    * sabe: el detalle del feed dice «analizado hace poco» y las demás no dicen nada. Vacío: no se pinta.
    */
   dateLabel?: string;
-  /** Puntuación, en la escala que tenga elegida quien mira. Sin nota, medallón de interrogación. */
+  /**
+   * Puntuación, en la escala que tenga elegida quien mira. Aquí solo se pintan las ESTRELLAS: el aro y el
+   * medallón «¿?» los pinta `ReviewDetailBody`, que recibe la misma puntuación.
+   */
   score: ScoredLike;
 }
 
@@ -54,10 +58,13 @@ export interface ReviewDetailHeadProps {
  *    misma, así que la firma no distingue nada y lo único que queda por decir es de qué juego se habla. Antes
  *    esa pantalla pintaba un chip con «Tus reseñas», que no es ni siquiera un nombre.
  *
+ * LA NOTA NO VA AQUÍ salvo en estrellas: el aro 0–100 y el medallón «¿?» encabezan la columna de metadatos
+ * (ver `ReviewDetailBody`). Las estrellas se quedan bajo la fecha.
+ *
  * NO INCLUYE el cuerpo (texto y metadatos): eso es `ReviewDetailBody`, y las dos se montan juntas.
  */
 export function ReviewDetailHead({ gameName, author, dateLabel, score }: ReviewDetailHeadProps) {
-  const hasScore = resolveGrade(score) > 0;
+  const scale = useScoreScale();
   // El avatar cuelga de poder visitar el perfil, no de tener foto: sin `onOpen` no se pinta ninguno, tampoco la
   // silueta. En la página pública eso importa dos veces, porque la silueta sale del sprite de iconos y allí no
   // hay sprite que valga (se monta sin la aplicación).
@@ -99,7 +106,7 @@ export function ReviewDetailHead({ gameName, author, dateLabel, score }: ReviewD
         </div>
       </header>
       {dateLabel ? <p className="hub-feed-date">{dateLabel}</p> : null}
-      {hasScore ? <ScoreDisplay game={score} /> : <NoScoreMedal />}
+      {scoreInMetadata(score, scale) ? null : <StarRating value={resolveStars(score)} />}
     </>
   );
 }

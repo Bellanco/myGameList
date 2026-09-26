@@ -207,6 +207,7 @@ export const PublicReviewScreen = memo(function PublicReviewScreen({ token, stan
             genres={review.genres}
             strengths={review.strengths}
             weaknesses={review.weaknesses}
+            score={{ score: review.rating ?? 0, grade: review.grade }}
           />
         </article>
 
