@@ -75,15 +75,14 @@
 
 /* ── §N · LA CAJA SIN CARÁTULA = EL LINGOTE ────────────────────────────────────────────────────────────
    El tema de casa no se disfraza de nada, así que su pieza es la más sobria de las ocho: el canto muy
-   rebajado que ya tiene (`--radius-lg`), el rescoldo del metal todavía caliente entrando por el filo de
-   abajo y el TEMPLE —el turquesa del agua— en el canto de la izquierda. Los dos estados del metal, uno a
-   cada lado, que es el reparto por papel de toda la paleta. ── */
+   rebajado que ya tiene (`--radius-lg`) y el rescoldo del metal todavía caliente entrando por el filo de
+   abajo, que toma el color del GÉNERO del juego (`--card-tone`, el primero): es lo que convierte la parrilla en
+   colección. Sin línea a la izquierda: tuvo un canto de temple de 3 px y se quedó en el filete de la caja. ── */
 :root[data-palette="forja"] .game-card.is-flat {
   border: 1px solid var(--hair);
-  border-left: 3px solid color-mix(in srgb, var(--forja-temple) 75%, transparent);
   border-radius: var(--radius-lg);
   background:
-    linear-gradient(0deg, color-mix(in srgb, var(--steam) 22%, transparent) 0, transparent 42%),
+    linear-gradient(0deg, color-mix(in srgb, var(--card-tone, var(--steam)) 20%, transparent) 0, transparent 42%),
     linear-gradient(180deg, color-mix(in srgb, var(--text) 9%, transparent) 0 1px, transparent 1px),
     var(--surface);
   box-shadow: var(--e2);
@@ -136,3 +135,12 @@
    Este tema no cambia de forma (es su regla, arriba), así que solo toma la MONO para las cifras: la misma
    que ya numera el aro de la nota y la fecha del feed. Una cifra de gráfica es un dato, no texto corrido. ── */
 :root[data-palette="forja"] .stats-hub { --stats-num: var(--font-mono); }
+
+/* ── §N · LOS BOTONES DE ACCIÓN, A 15 PX ────────────────────────────────────────────────────────────────
+   Respeta la regla del skin: no añade textura, solo canto. No es uno de los radios del tema (6/10/16), por eso
+   va con ficha propia y no como literal suelto. Se quedan como están los círculos (`.btn-icon`, `.fab`, la
+   flecha de la ficha) y los segmentados, que DESIGN.md §7 quiere en píldora en todos los temas. ── */
+:root[data-palette="forja"] { --forja-btn-radius: 15px; }
+:root[data-palette="forja"] :is(.btn, .hub-gateway-btn):not(.btn-icon, .fab, .btn-toggle, .hub-seg-btn, .stat-tile-go) {
+  border-radius: var(--forja-btn-radius);
+}

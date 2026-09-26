@@ -130,7 +130,8 @@ Doce pasos, razón ≈1,08 en la zona de interfaz. Multiplicados por `--font-sca
 - **Tarjeta**: superficie + `--hair` + `--e2` + `--edge`. *(Propuesta: degradado corto y textura del tema al 2 %.)*
 - **Chip**: píldora, `--fs-3xs`, `--font-label`. Neutro para plataforma; teñido con el color de su categoría
   para género y estado.
-- **Fila de tabla**: sin caja. La separa `--hair`; el color entra por un **lomo de 3 px** a la izquierda.
+- **Fila de tabla**: cada fila es una pieza (superficie + `--hair` + el canto del tema) con aire entre una y otra.
+  **Sin lomo de color** a la izquierda, en ningún tema ni en la caja del mosaico: el color lo llevan los chips.
 - **Anillo de nota**: `conic-gradient` con la rampa roja→verde (`--acc-l` fija la luminosidad por tema).
 - **Medalla**: disco en penumbra con dibujo de Lucide en oro; receta en `docs/logros/receta-medalla.md`.
 - **Cápsula** (`.ach-toast`, `_capsule.scss`): la pieza con la que la app dice algo. Disco a la izquierda +
@@ -224,6 +225,8 @@ están — y sus bordes tampoco, que ahí el marco de oro o el filete cian **son
   luna 0/0/2; Solo hay guerra 0/2/3.
 - Un radio de 0 es una decisión, no un olvido: en esos temas la esquina viva **es** la identidad.
 - Pastillas (`--radius-pill`) para chips, botones de filtro y segmentados en todos los temas.
+- Botones de acción: el radio del tema, salvo Forja, que los lleva a **15 px** (`--forja-btn-radius`, fuera de su
+  escala 6/10/16). Los círculos (`.btn-icon`, `.fab`) y los segmentados no cambian.
 
 ---
 

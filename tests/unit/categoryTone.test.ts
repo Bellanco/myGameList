@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { CATEGORY_TONES, categoryTone, categoryToneStyle } from '../../src/core/constants/categoryTone';
+import { CATEGORY_TONES, categoryTone, categoryToneStyle, categoryToneVar } from '../../src/core/constants/categoryTone';
 
 /**
  * El reparto de la rampa categórica. Lo que se protege aquí no es "qué número sale" —ese puede cambiar el día
@@ -42,5 +42,10 @@ describe('categoryTone', () => {
     const style = categoryToneStyle('RPG');
     const tono = categoryTone('RPG');
     expect(style).toEqual({ '--cat': `var(--cat-${tono})`, '--cat-fg': `var(--cat-${tono}-fg)` });
+  });
+
+  it('da solo el relleno para teñir una pieza sin tocar sus chips, con el mismo tono', () => {
+    expect(categoryToneVar('RPG')).toBe(`var(--cat-${categoryTone('RPG')})`);
+    expect(categoryToneVar('Acción')).toBe(categoryToneVar('accion'));
   });
 });
