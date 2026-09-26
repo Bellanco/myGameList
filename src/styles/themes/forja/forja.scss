@@ -162,6 +162,11 @@
 }
 :root[data-palette="forja"] .bottom-nav-inner { border-radius: calc(var(--forja-btn-radius) + .4rem); }
 :root[data-palette="forja"] .hub-seg { border-radius: calc(var(--forja-btn-radius) + 4px); }
+/* Y LOS CAMPOS QUE IBAN EN PÍLDORA (`.input-base`: el buscador del listado, los desplegables de filtro y el
+   filtro por título del perfil), con el mismo canto: un buscador en cápsula junto a botones de 15 px volvía a
+   decir «interfaz genérica». Los campos de formulario (`.finput`, `.ftextarea`) ya llevan el radio pequeño del
+   tema y no cambian. */
+:root[data-palette="forja"] .input-base { border-radius: var(--forja-btn-radius); }
 
 /* ── §N · LA CABECERA DE PANTALLA ─────────────────────────────────────────────────────────────────────
    Este tema la enciende (`ScreenHeader` es neutra y en la base no se ve): rótulo en versales con el punto del

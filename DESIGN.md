@@ -230,7 +230,8 @@ están — y sus bordes tampoco, que ahí el marco de oro o el filete cian **son
 - **Forja no usa píldoras en lo que se pulsa**: botones de acción, filtros y alcances, segmentados, la barra de
   navegación y los indicadores que se deslizan bajo el botón activo llevan **15 px** (`--forja-btn-radius`, fuera
   de su escala 6/10/16); sus contenedores suman el relleno para que las esquinas sean concéntricas. Los círculos
-  (`.btn-icon`, `.fab`) siguen redondos y los chips, en pastilla.
+  (`.btn-icon`, `.fab`) siguen redondos y los chips, en pastilla. Los campos que en la casa van en cápsula
+  (`.input-base`: buscador, desplegables de filtro) también van a 15 px.
 
 ---
 
