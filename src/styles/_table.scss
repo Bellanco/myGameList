@@ -1289,11 +1289,18 @@ tbody tr.detail-row.open .detail-content { animation: detailReveal .22s ease-out
   display: flex; flex-direction: column; align-items: center; gap: .9rem;
   padding: 3.4rem 2rem; text-align: center; color: var(--text-muted);
 }
+/* El icono en la tinta de enlace y el título en la letra de titulares: el vacío es una invitación, no un aviso
+   apagado. El texto es el de siempre, sin línea secundaria (ver DESIGN.md §4, «Estados vacíos»). */
 .table-empty-icon {
-  width: 3rem; height: 3rem; opacity: .4;
+  width: 3.4rem; height: 3.4rem; opacity: .85;
+  color: var(--fg-link);
   fill: currentColor; stroke: currentColor;
 }
-.table-empty-title { margin: 0; font-size: var(--fs-md); font-weight: 600; }
+.table-empty-title {
+  margin: 0;
+  font-family: var(--font-display); font-size: var(--fs-xl); font-weight: 600;
+  color: var(--text);
+}
 /* Los dos CTA caben en línea en escritorio; en móvil se apilan antes que encogerse hasta ser ilegibles. */
 .table-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: .6rem; }
 /* Estado vacío con vida: entra con un fade suave y el icono "respira" en vez de quedarse inerte. */

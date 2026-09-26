@@ -152,7 +152,8 @@ Doce pasos, razón ≈1,08 en la zona de interfaz. Multiplicados por `--font-sca
   que le tocan según el ancho de su rejilla (4 / 3 / 2 / 1 por fila) y cuántas hay, y la última fila se reparte el
   ancho. Con número impar en dos columnas, la ancha es la primera. Si caben todas a ≥ 9,5 rem, van en una fila.
   El tono de cada ficha va en la cifra y en el velo, sin filete lateral.
-- **Estados vacíos**: icono grande del sprite + título + una acción. Nunca un párrafo gris suelto.
+- **Estados vacíos**: icono grande del sprite en la tinta de enlace (`--fg-link`) + título en la letra de titulares
+  (`--font-display`) + una acción. Nunca un párrafo gris suelto.
 - **Iconos**: sprite propio de 49 símbolos (`IconSprite`), `<Icon name="…" />`. Tamaño por ficha
   (`--ico-xs`…`--ico-2xl`), color por papel — no siempre `currentColor`.
 

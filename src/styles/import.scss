@@ -136,14 +136,16 @@
    ninguna decía que detrás hubiera pasos. Ahora comparten forma con las filas de los documentos legales —una
    diana entera, su flecha a la derecha— y la flecha gira al abrirse, que es lo que distingue «esto despliega»
    de «esto te lleva a otro sitio». */
-.import-guides { display: grid; gap: .35rem; margin: .2rem 0; }
+/* EN FILAS, sin caja por guía: un filete encima de cada una y otro de cierre debajo de la última. El caret y el
+   velo del hover bastan para leer que se despliega. */
+.import-guides { display: grid; margin: .2rem 0; }
 
 .import-guide-block {
-  border: 1px solid var(--hair);
-  border-radius: 9px;
-  background: var(--surface-soft);
+  border-top: 1px solid var(--hair);
   overflow: hidden;
 }
+
+.import-guide-block:last-child { border-bottom: 1px solid var(--hair); }
 
 .import-guide-row {
   display: flex;
