@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f1315">
+    <title>Maqueta · hub social</title>
+    <!-- MAQUETA DESECHABLE, como `docs/logros/demo-globales.html`. Monta las pantallas REALES del hub social
+         (feed, directorio, ficha, reseña y bandeja) con datos inventados, para verlas sin sesión de Google ni
+         amigos. No entra en el build. Parámetros:
+           ?pantalla=feed|amigos|perfil|resena|resena-perfil|solicitudes   (por defecto, feed)
+           &vista=resenas            (solo con pantalla=perfil: la vista de reseñas en vez de las listas)
+           &gl-palette=<id>          (forja, arcade, witcher, persona, portal, cyberpunk, seaofstars, grimdark)
+           &gl-theme=dark|light      (por defecto, dark)
+           &gl-effects=off           (apaga los efectos animados de los temas; la app los trae encendidos)
+         El bloque de abajo hace lo mismo que el anti-flash de `index.html`, pero leyendo la URL en vez de
+         `localStorage`, y sin escribir nada: la maqueta no toca las preferencias guardadas. -->
+    <script>(function () {
+  var BG = {
+    forja: { dark: '#0f1315', light: '#dee7e9' },
+    witcher: { dark: '#141922', light: '#d8e0e7' },
+    persona: { dark: '#0d0d0d', light: '#f4f1ee' },
+    portal: { dark: '#12171b', light: '#e7dabd' },
+    cyberpunk: { dark: '#08090d', light: '#e7eaee' },
+    grimdark: { dark: '#060b08', light: '#e7ddc3' },
+    seaofstars: { dark: '#0e0c24', light: '#a6e9ec' },
+    arcade: { dark: '#150a24', light: '#eee2fb' }
+  };
+  var params = new URLSearchParams(window.location.search);
+  var root = document.documentElement;
+  var theme = params.get('gl-theme') === 'light' ? 'light' : 'dark';
+  if (theme === 'light') {
+    root.setAttribute('data-theme', 'light');
+  }
+  var palette = params.get('gl-palette');
+  if (palette === 'steam') {
+    palette = 'witcher';
+  }
+  if (!BG[palette]) {
+    palette = 'forja';
+  }
+  root.setAttribute('data-palette', palette);
+  // Lo que la app deja escrito al montar sus preferencias con los valores de fábrica (efectos encendidos, listado
+  // en renglones, cuadros medianos): hay CSS que cuelga de estos atributos.
+  if (params.get('gl-effects') !== 'off') {
+    root.setAttribute('data-effects', 'on');
+  }
+  root.setAttribute('data-list-shape', 'list');
+  root.setAttribute('data-grid-size', 'md');
+  var meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) {
+    meta.setAttribute('content', BG[palette][theme]);
+  }
+})();</script>
+    <script type="module" src="/docs/maquetas/social.tsx"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
