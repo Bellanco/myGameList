@@ -53,12 +53,14 @@ const PALETTE_IDS = new Set<string>(THEMES.map((t) => t.id));
  * Ids que un tema tuvo ANTES de renombrarse. Siguen guardados en el localStorage y en la preferencia de la
  * nube de quien ya los eligió, y sin esta tabla esa gente caería al tema por defecto sin haberlo pedido. Un
  * `Map` y no un objeto: con un literal, `'constructor'` o `'toString'` devolverían algo. El anti-flash de
- * `index.html` repite la tabla, porque corre antes que el bundle.
+ * `index.html` corre antes que el bundle, así que una entrada que lleve a otro tema que no sea el de por defecto
+ * hay que repetirla allí; las que llevan al de por defecto no, porque un id desconocido ya cae en él.
  */
 const LEGACY_PALETTE_IDS: ReadonlyMap<string, PaletteId> = new Map([
-  // «Plata y acero» nació como `steam` —el gabinete de cuero y latón— y se quedó con el id al volverse The
-  // Witcher, que es lo que es desde entonces.
-  ['steam', witcher.id],
+  // `steam` fue «Clásico», el tema POR DEFECTO hasta el 14-09-2026, así que lo tiene guardado mucha gente que
+  // nunca eligió nada: lleva al de por defecto de hoy, no a The Witcher (que heredó el id solo once días). Quien
+  // quisiera «Plata y acero» lo vuelve a elegir.
+  ['steam', DEFAULT_PALETTE],
 ]);
 
 /** Valida un valor arbitrario (p. ej. de localStorage) y cae a la paleta por defecto si no es válido. */

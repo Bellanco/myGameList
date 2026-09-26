@@ -125,6 +125,23 @@ ficha suelta, un `@use` que ya no apunta a nada.
 contra el registro y cae al tema por defecto, así que no se rompe nada — simplemente cambian de tema sin haberlo
 pedido. Si el tema era popular, mejor dejarlo.
 
+**Renombrar un id** es lo mismo, más una línea en `LEGACY_PALETTE_IDS` (`constants/palettes.ts`) que diga a dónde
+lleva el viejo. Piensa quién lo tiene guardado y no solo qué tema era: `steam` fue el id del tema de casa y luego
+el de «Plata y acero», así que lo guarda sobre todo gente que no eligió nada, y lleva al de por defecto.
+
+---
+
+## 5 bis. Quién ve los temas
+
+Los temas son de quien tiene **espacio social** (el mismo gate que la pantalla «Diseño», donde está el selector).
+Sin él se pinta el de por defecto, pase lo que pase con lo guardado: `useAppliedPalette` apunta en este aparato
+la marca `mis-listas-palette-locked` y el anti-flash la lee antes del primer fotograma. La elección guardada, en
+local y en la nube, no se toca, y vuelve si vuelve el social. Quien lea «qué tema se ve» debe usar
+`appliedPalette()` o `usePalette()`; `palettePreference.get()` es solo lo elegido.
+
+En los e2e no hay sesión, así que `sembrarBiblioteca({ palette })` ignora esa marca para que cada recorrido pruebe
+su paleta; la puerta la prueba `themes-social.test.ts` con `sinSocial`.
+
 ---
 
 ## 6. Cambiar cuál es el tema por defecto

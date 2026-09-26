@@ -42,8 +42,8 @@
       document.documentElement.setAttribute('data-theme', 'light');
     }
     var palette = localStorage.getItem('mis-listas-palette');
-    if (palette === 'steam') {
-      palette = 'witcher';
+    if (localStorage.getItem('mis-listas-palette-locked') === 'on') {
+      palette = null;
     }
     if (!BG[palette]) {
       palette = 'forja';

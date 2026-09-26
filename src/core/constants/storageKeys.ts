@@ -17,6 +17,13 @@ export const THEME_KEY = 'mis-listas-theme';
 // mantener el literal de la clave en sincronía con ese fichero.
 export const PALETTE_KEY = 'mis-listas-palette';
 
+// F1 — la paleta se queda en la de por defecto: 'on' (bloqueada) | ausente u 'off' (se pinta la elegida). Los
+// temas son de quien tiene espacio social, y el estado social no se sabe hasta que contestan la sesión e
+// IndexedDB; esta marca apunta la última respuesta para que el anti-flash acierte antes de saberlo. No borra la
+// elección: si vuelve el social, vuelve su tema. Solo de este aparato. Lo lee también el anti-flash de
+// `index.html`; mantener el literal en sincronía.
+export const PALETTE_LOCK_KEY = 'mis-listas-palette-locked';
+
 // F1 — preferencia de CAJA del texto de interfaz (titulares, etiquetas, botones, nombres, chips…).
 // Valores: 'on' (todo en mayúsculas) | 'off' (caja normal del tema, por defecto). Se aplica vía
 // `data-uppercase="on"` en <html> y se sincroniza por cuenta. Lo lee también `public/theme-init.js`

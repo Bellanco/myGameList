@@ -223,7 +223,7 @@ export default function App() {
   useLegacyProfileHeal();
   // F1: aplica la paleta app-wide y reacciona a la hidratación de cuenta, para que el tema sincronizado se
   // aplique al iniciar sesión (no solo al abrir Ajustes, donde vive el selector `usePalette`).
-  useAppliedPalette();
+  useAppliedPalette(socialStatus);
   // F1: aplica la preferencia de caja (mayúsculas) al <html> app-wide y reacciona a la hidratación.
   useUppercase();
   // F1: aplica la preferencia de efectos visuales (data-effects) al <html> app-wide y reacciona a la hidratación.

@@ -67,9 +67,9 @@ Cada tema define los mismos tokens; el resto del sistema se deriva. **Nunca uses
 
 | id | Nombre | Acento oscuro | Fondo oscuro | Mundo |
 |---|---|---|---|---|
-| `forja` | **Forja y temple** (por defecto) | `#ff7a3c` metal al rojo | `#0f1315` | La fragua. El único sin mundo detrás: es el que ve quien no ha elegido nada. Naranja que **rellena** y turquesa de temple (`#2fd6c0`) que **escribe y señala** |
+| `forja` | **Forja y temple** (por defecto) | `#ff7a3c` metal al rojo | `#0f1315` | La fragua. El único sin mundo detrás: es el que ve quien no ha elegido nada, y el ÚNICO que ve quien no tiene espacio social (los demás son de la cuenta; ver `paletteLockPreference`). Naranja que **rellena** y turquesa de temple (`#2fd6c0`) que **escribe y señala** |
 | `arcade` | Inserte moneda | `#b23cff` | `#150a24` | Sala de recreativos de los ochenta: violeta de neón, cian de tubo y rosa de pegatina |
-| `witcher` | Plata y acero | `#c6ced8` plata | `#141922` | The Witcher: acero templado; la plata **rellena** y el fuego de Igni (`#ff8f4a`) **escribe y señala**. Las cinco señales van en la rampa. Hasta la 1.4.4 su id era `steam` (ver `LEGACY_PALETTE_IDS`) |
+| `witcher` | Plata y acero | `#c6ced8` plata | `#141922` | The Witcher: acero templado; la plata **rellena** y el fuego de Igni (`#ff8f4a`) **escribe y señala**. Las cinco señales van en la rampa. Hasta la 1.4.4 su id era `steam`, pero un `steam` guardado ya no lleva aquí: era el id de «Clásico», el de por defecto hasta el 14-09-2026, y lleva al de por defecto de hoy (ver `LEGACY_PALETTE_IDS`) |
 | `persona` | Ladrones de corazones | `#ff1f3d` | `#0d0d0d` | Persona 5: rojo, negro, blanco y oro de calendario |
 | `portal` | Cámara de pruebas | `#29b6f6` | `#12171b` | Aperture moderna en oscuro; la antigua (pergamino) en claro |
 | `cyberpunk` | Sin futuro | `#fcee0a` | `#08090d` | HUD de Night City: amarillo, cian, magenta |
