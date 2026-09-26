@@ -148,6 +148,10 @@ Doce pasos, razón ≈1,08 en la zona de interfaz. Multiplicados por `--font-sca
 - **Sello de rango** (`.tier-seal`): el rango del perfil dicho con color **y palabra**. Píldora con disco del
   metal, deliberadamente distinta de la medalla, con la que convive en el hero del perfil. El color solo (muesca
   de la tarjeta del directorio, borde del selector de admin) vale para comparar en rejilla, no para informar.
+- **Cifras del panel** (`.stats-tiles`): la rejilla sale **siempre completa**. Doce pistas; cada ficha ocupa las
+  que le tocan según el ancho de su rejilla (4 / 3 / 2 / 1 por fila) y cuántas hay, y la última fila se reparte el
+  ancho. Con número impar en dos columnas, la ancha es la primera. Si caben todas a ≥ 9,5 rem, van en una fila.
+  El tono de cada ficha va en la cifra y en el velo, sin filete lateral.
 - **Estados vacíos**: icono grande del sprite + título + una acción. Nunca un párrafo gris suelto.
 - **Iconos**: sprite propio de 49 símbolos (`IconSprite`), `<Icon name="…" />`. Tamaño por ficha
   (`--ico-xs`…`--ico-2xl`), color por papel — no siempre `currentColor`.

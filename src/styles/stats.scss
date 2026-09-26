@@ -304,13 +304,56 @@
 
 .stats-tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: .7rem;
+  container-type: inline-size;
 }
 
-/* Cada cifra, su color (`--cc`, un tono de la rampa categórica que pasa el componente). El color entra en el
-   filete lateral, en un velo del fondo y en la propia cifra —nunca en el rótulo ni en la pista, que son los que
-   cargan el contraste—. Sin tono, la tarjeta se queda exactamente como estaba. */
+/* LA REJILLA SIEMPRE COMPLETA. Doce pistas fijas y cada ficha dice cuántas ocupa según el ancho de SU rejilla
+   —no el de la ventana: así vale igual en el panel propio y en el perfil de un amigo, que es más estrecho— y
+   cuántas fichas hay, que dependen de los datos (hasta 8 en el resumen, 1–5 en un año). La última fila se reparte
+   el ancho: nunca queda una ficha sola más estrecha que las de arriba. En dos columnas y con número impar, la
+   ancha es la PRIMERA, «Juegos», que es la cifra que abre el panel. Antes era `auto-fit` y a 1280 px salía 7 + 1,
+   con «Reseñas» sola en su fila. Lo comprueba `tests/e2e/statsTiles.test.ts`. */
+.stats-tiles > .stat-tile { grid-column: span 12; }
+
+@container (17rem <= width < 30rem) {
+  .stats-tiles > .stat-tile { grid-column: span 6; }
+  .stats-tiles:has(> :nth-child(odd):last-child) > :first-child { grid-column: span 12; }
+}
+
+@container (30rem <= width < 40rem) {
+  .stats-tiles > .stat-tile { grid-column: span 4; }
+  .stats-tiles:has(> :nth-child(3n+2):last-child) > :nth-last-child(-n+2) { grid-column: span 6; }
+  .stats-tiles:has(> :nth-child(3n+1):last-child) > :nth-last-child(-n+4) { grid-column: span 6; }
+  .stats-tiles:has(> :nth-child(1):last-child) > .stat-tile { grid-column: span 12; }
+}
+
+@container (width >= 40rem) {
+  .stats-tiles > .stat-tile { grid-column: span 3; }
+  .stats-tiles:has(> :nth-child(1):last-child) > .stat-tile { grid-column: span 12; }
+  .stats-tiles:has(> :nth-child(2):last-child) > .stat-tile { grid-column: span 6; }
+  .stats-tiles:has(> :nth-child(3):last-child) > .stat-tile,
+  .stats-tiles:has(> :nth-child(5):last-child) > .stat-tile,
+  .stats-tiles:has(> :nth-child(6):last-child) > .stat-tile,
+  .stats-tiles:has(> :nth-child(7):last-child) > :nth-child(n+5) { grid-column: span 4; }
+  .stats-tiles:has(> :nth-child(5):last-child) > :nth-child(n+4) { grid-column: span 6; }
+}
+
+/* Y EN UNA REJILLA ANCHA, TODAS EN UNA FILA: cuando las ocho caben a ≥ 9,5 rem (8 × 9,5 + 7 huecos ≈ 81 rem) no
+   hay fila que completar. Sin esto, a 1512 px o en 4K el panel pasaba de una fila de ocho a 4 · 4 con fichas de
+   hasta 856 px. La rejilla no puede consultarse a sí misma, así que la pregunta la hace su tarjeta. */
+.stats-card:has(> .stats-tiles) { container: stats-tiles-box / inline-size; }
+
+@container stats-tiles-box (width >= 83rem) {
+  .stats-tiles { display: flex; }
+  .stats-tiles > .stat-tile { flex: 1 1 0; }
+}
+
+/* Cada cifra, su color (`--cc`, un tono de la rampa categórica que pasa el componente). El color entra en un
+   velo del fondo y en la propia cifra —nunca en el rótulo ni en la pista, que son los que cargan el contraste—.
+   Tuvo además un filete lateral de 3 px: el mismo tono dicho tres veces, y se quitó (plan de acabado visual, A).
+   Sin tono, la tarjeta se queda exactamente como estaba. */
 .stat-tile {
   --cc: var(--steam);
   --cc-fg: var(--fg-link);
@@ -319,18 +362,11 @@
   display: flex;
   flex-direction: column;
   gap: .15rem;
-  padding: .75rem .85rem .75rem 1rem;
+  padding: .75rem .85rem;
   border: 1px solid var(--border);
   border-radius: var(--stats-radius);
   background: linear-gradient(160deg, color-mix(in srgb, var(--cc), transparent 92%), var(--surface-soft) 68%);
   min-width: 0;
-}
-.stat-tile::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
-  background: var(--cc);
 }
 .stat-tile-value { color: var(--cc-fg, var(--cc)); }
 
