@@ -170,7 +170,7 @@
 
 /* ── §N · LA CABECERA DE PANTALLA ─────────────────────────────────────────────────────────────────────
    Este tema la enciende (`ScreenHeader` es neutra y en la base no se ve): rótulo en versales con el punto del
-   acento, título en la letra de titulares y hasta tres cifras en la mono. Va en el flujo —se va al bajar, no es
+   acento y título en la letra de titulares. Va en el flujo —se va al bajar, no es
    fija— y en el teléfono es donde más se nota: allí las pestañas son solo iconos y nada decía en qué lista estás.
    En las listas va en la banda de las pestañas; en el panel y en Ajustes, como primer hijo de `main`. ── */
 :root[data-palette="forja"] .screen-header {
@@ -191,7 +191,7 @@
 @media (min-width: 1957px) {
   :root[data-palette="forja"] .screen-header.is-band .screen-header-inner { max-width: 92vw; }
 }
-/* Mientras el contenido llega cerca del borde, las cifras libran el botón de tema flotante. */
+/* Mientras el contenido llega cerca del borde, el título libra el botón de tema flotante. */
 @media (max-width: 1940px) {
   :root[data-palette="forja"] .screen-header.is-band .screen-header-inner { padding-right: calc(42px + 14px + .9rem); }
 }
@@ -233,18 +233,5 @@
   font-weight: 600;
   line-height: 1.08;
   letter-spacing: .01em;
-  color: var(--text);
-}
-:root[data-palette="forja"] .screen-header-figures {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .25rem 1.1rem;
-  padding-bottom: .3rem;
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-}
-:root[data-palette="forja"] .screen-header-figure b {
-  font-weight: 600;
   color: var(--text);
 }

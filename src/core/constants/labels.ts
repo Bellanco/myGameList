@@ -304,15 +304,11 @@ export const UI_MESSAGES = {
     'shared-review': 'Reseña compartida',
     premios: 'Premios',
   },
-  // La CABECERA DE PANTALLA (`ScreenHeader`): rótulo y unidades de sus cifras. Es decorativa —va `aria-hidden` y
-  // solo la pinta el tema que la enciende—, así que el encabezado accesible sigue siendo `pageHeading`.
+  // El RÓTULO de la cabecera de pantalla (`ScreenHeader`). Es decorativa —va `aria-hidden` y solo la pinta el tema
+  // que la enciende—, así que el encabezado accesible sigue siendo `pageHeading`.
   screenHeader: {
     lists: 'Biblioteca',
     settings: 'Ajustes',
-    games: (count: number) => (count === 1 ? 'juego' : 'juegos'),
-    hours: 'h',
-    outOf100: '/100',
-    outOf5: '/5',
   },
   skipToContent: 'Saltar al contenido',
   // Lo que se ANUNCIA mientras baja el chunk de una pantalla. El esqueleto que se ve es decorativo

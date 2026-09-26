@@ -128,6 +128,9 @@ respetan: ninguna añade textura, solo tono, jerarquía y canto.
 
 ### E · Cabecera de pantalla
 
+> **27-09-2026: sin cifras.** Se quitaron del tema (y con ellas `listHeaderFigures` y su formateo en `App`): la
+> cabecera es rótulo y título. Lo de abajo sobre las cifras queda como registro.
+
 **Qué es:**
 - Rótulo en versales (`--font-label`, con el punto del acento).
 - Título en `--font-display` a `--fs-3xl`.
@@ -274,7 +277,8 @@ Se revisó sobre una maqueta con los componentes reales y datos inventados (`doc
 - Virtualización con la cabecera encima, Completados con 149 juegos a 1280 y 390 px: la pantalla queda cubierta de
   filas en cualquier punto del desplazamiento y el mayor hueco es el de 8 px entre filas.
 - Peso del arranque (build de la rama contra su padre, `index-*.js` en gzip): **+0,78 kB** de JS y **+0,25 kB** de
-  CSS, todo de E (componente, cifras y formateo en `App`).
+  CSS, todo de E (componente, cifras y formateo en `App`). Sin las cifras (27-09): **+0,16 kB** de JS (65,01 →
+  65,17) y **+0,31 kB** de CSS contando también el canto de 15 px de Forja.
 
 ---
 
@@ -290,3 +294,5 @@ Se revisó sobre una maqueta con los componentes reales y datos inventados (`doc
 7. **(27-09) H, a toda la botonería:** en Forja no queda ninguna píldora en lo que se pulsa —filtros, alcances,
    segmentados, la barra de navegación y sus indicadores también a 15 px—, porque la píldora hacía el tema
    genérico. Siguen redondos los círculos y en pastilla los chips.
+8. **(27-09) E, sin cifras:** la cabecera se queda en rótulo y título; las cifras repetían la pestaña y el panel
+   y se quitaron, con el código que las calculaba.
