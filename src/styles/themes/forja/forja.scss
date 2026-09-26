@@ -144,3 +144,84 @@
 :root[data-palette="forja"] :is(.btn, .hub-gateway-btn):not(.btn-icon, .fab, .btn-toggle, .hub-seg-btn, .stat-tile-go) {
   border-radius: var(--forja-btn-radius);
 }
+
+/* ── §N · LA CABECERA DE PANTALLA ─────────────────────────────────────────────────────────────────────
+   Este tema la enciende (`ScreenHeader` es neutra y en la base no se ve): rótulo en versales con el punto del
+   acento, título en la letra de titulares y hasta tres cifras en la mono. Va en el flujo —se va al bajar, no es
+   fija— y en el teléfono es donde más se nota: allí las pestañas son solo iconos y nada decía en qué lista estás.
+   En las listas va en la banda de las pestañas; en el panel y en Ajustes, como primer hijo de `main`. ── */
+:root[data-palette="forja"] .screen-header {
+  display: block;
+  padding-right: calc(42px + 14px);
+}
+:root[data-palette="forja"] .screen-header.is-band {
+  background: var(--surface);
+  padding: 1.25rem 0 .35rem;
+}
+/* El interior sigue la MISMA medida que `main` (1800 px, y 92vw desde 1957 px) para que el rótulo caiga sobre el
+   borde del contenido en cualquier ancho, 4K incluido. */
+:root[data-palette="forja"] .screen-header.is-band .screen-header-inner {
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 0 1.2rem;
+}
+@media (min-width: 1957px) {
+  :root[data-palette="forja"] .screen-header.is-band .screen-header-inner { max-width: 92vw; }
+}
+/* Mientras el contenido llega cerca del borde, las cifras libran el botón de tema flotante. */
+@media (max-width: 1940px) {
+  :root[data-palette="forja"] .screen-header.is-band .screen-header-inner { padding-right: calc(42px + 14px + .9rem); }
+}
+:root[data-palette="forja"] .screen-header.is-band + .tabs { padding-top: .35rem; }
+:root[data-palette="forja"] .screen-header-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: .5rem 1.5rem;
+}
+:root[data-palette="forja"] .screen-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  min-width: 0;
+}
+:root[data-palette="forja"] .screen-header-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  font-family: var(--font-label);
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+:root[data-palette="forja"] .screen-header-kicker::before {
+  content: "";
+  width: .4rem;
+  height: .4rem;
+  border-radius: 50%;
+  background: var(--steam);
+}
+:root[data-palette="forja"] .screen-header-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-3xl);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: .01em;
+  color: var(--text);
+}
+:root[data-palette="forja"] .screen-header-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem 1.1rem;
+  padding-bottom: .3rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+:root[data-palette="forja"] .screen-header-figure b {
+  font-weight: 600;
+  color: var(--text);
+}

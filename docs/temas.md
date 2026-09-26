@@ -70,6 +70,7 @@ el que pinta el primer fotograma y no puede llegar tarde.
 | la letra | `themes/<id>/<id>.scss` (`--font-*`), y `vendor-fonts.mjs` si es una familia nueva |
 | la forma: radios, filetes, texturas, ornamento | `themes/<id>/<id>.scss` |
 | la forma de **las gráficas del panel** | la ficha `--stats-*` en `themes/<id>/<id>.scss` (ver abajo) |
+| encender la **cabecera de pantalla** | `.screen-header` en `themes/<id>/<id>.scss` (apagada en la base; Forja la trae) |
 | el nombre visible o la muestra del selector | `constants/themes/<id>.ts` |
 | lo que dice al fallar o al quedarse sin red | `constants/themes/<id>.ts` (app) o `<id>.social.ts` (hub) |
 

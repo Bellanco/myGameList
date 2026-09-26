@@ -11,6 +11,10 @@ import { normalizeData } from './model/repository/localRepository';
 import { IconSprite } from './view/components/IconSprite';
 import { FloatingControls } from './view/components/FloatingControls';
 import { TabBar } from './view/components/TabBar';
+import { ScreenHeader, type ScreenHeaderFigure } from './view/components/ScreenHeader';
+import { listHeaderFigures } from './viewmodel/screenHeaderFigures';
+import { useScoreScale } from './view/hooks/useScoreScale';
+import { formatCount, formatDecimal, formatHours } from './view/components/stats/format';
 import { Toolbar } from './view/components/Toolbar';
 import { GameTable } from './view/components/GameTable';
 import { useCoverBackfill } from './view/hooks/useCoverBackfill';
@@ -234,6 +238,18 @@ export default function App() {
   // porque la serie debe acumularse se visite o no esa pantalla; sin este registro no hay forma de saber cómo
   // evoluciona el backlog (`listedAt` se reescribe al mover de lista). Local, silencioso y en idle.
   useBacklogSnapshot(vm.data);
+  // Las cifras de la cabecera de la lista (ver `ScreenHeader`): juegos, horas y nota media, con la misma cuenta y
+  // la misma escala que la ficha del panel. Horas no en Próximos, nota solo en Completados.
+  const scoreScale = useScoreScale();
+  const listHeader = useMemo<ScreenHeaderFigure[]>(() => {
+    const H = UI_MESSAGES.screenHeader;
+    const { count, hours, avg } = listHeaderFigures(currentTab, vm.data[currentTab], scoreScale);
+    return [
+      { value: formatCount(count), unit: H.games(count) },
+      ...(hours !== null ? [{ value: formatHours(hours), unit: H.hours }] : []),
+      ...(avg !== null ? [{ value: formatDecimal(avg), unit: scoreScale === 'grade' ? H.outOf100 : H.outOf5 }] : []),
+    ];
+  }, [currentTab, vm.data, scoreScale]);
   useCoverBackfill(vm.data);
   // Estrellas fugaces aleatorias por los bordes de botones/chips (solo en la paleta "Sol y luna").
   // El scroll al cambiar de pantalla: arriba al entrar, donde estabas al volver (ver el hook).
@@ -1022,6 +1038,9 @@ export default function App() {
           por los controles flotantes y la barra de pestañas en cada carga. Solo se ve al recibir el foco. */}
       <a className="skip-link" href="#contenido">{UI_MESSAGES.skipToContent}</a>
       <FloatingControls activeSection={activeSection} />
+      {activeSection === 'lists' ? (
+        <ScreenHeader variant="band" kicker={UI_MESSAGES.screenHeader.lists} title={TAB_TITLES[currentTab]} figures={listHeader} />
+      ) : null}
       {activeSection === 'lists' ? <TabBar currentTab={currentTab} tabCounts={vm.tabCounts} onTabChange={handleTabChange} /> : null}
       {/* ═══ EL CARRIL DE LOS AVISOS · abajo a la izquierda, sobre la barra inferior ═══════════════════════
           UN SOLO CARRIL PARA LAS TRES CÁPSULAS, y se monta AQUÍ y no dentro de cada una. Antes lo traía cada
@@ -1073,6 +1092,9 @@ export default function App() {
         }`.trim()}
       >
         <h1 className="sr-only">{getPageHeading(activeSection, currentTab, settingsGroup)}</h1>
+        {activeSection === 'settings' && settingsGroup ? (
+          <ScreenHeader kicker={UI_MESSAGES.screenHeader.settings} title={UI_MESSAGES.settingsMenu[settingsGroup]} />
+        ) : null}
         <Routes>
           {APP_ROUTES.map(({ path, section }) => (
             <Route key={path} path={path} element={sectionScreens[section]} />

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useStatsViewModel } from '../../../viewmodel/useStatsViewModel';
 import { StatsPanel } from './StatsPanel';
 import { StatsReviews } from './StatsReviews';
+import { ScreenHeader } from '../ScreenHeader';
 import { AchievementsCard } from './AchievementsCard';
 import { AchievementsScreen } from './AchievementsScreen';
 import { listForScreen, useAchievements } from '../../../viewmodel/useAchievements';
@@ -151,34 +152,41 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
   }
 
   return (
-    <StatsPanel
-      stats={vm.stats}
-      scale={vm.scale}
-      // De ti mismo se ve TODO: aquí no hay rango que recorte ni datos que no hayan llegado.
-      blocks={OWN_STATS_BLOCKS}
-      voice="own"
-      full
-      scope={vm.scope}
-      years={vm.availableYears}
-      onScope={vm.setScope}
-      yearSummary={vm.yearSummary}
-      yearMetric={vm.yearMetric}
-      onYearMetric={vm.setYearMetric}
-      backlog={{
-        points: vm.hasRealHistory ? vm.history : vm.stats.arrivals,
-        mode: vm.hasRealHistory ? 'real' : 'derived',
-      }}
-      onOpenReviews={openReviews}
-      onOpenReview={openReviewFromPanel}
-      achievements={
-        ENABLE_ACHIEVEMENTS ? (
-          <AchievementsCard
-            summary={achievements.summary}
-            earned={achievements.earned}
-            onOpen={openAchievements}
-          />
-        ) : null
-      }
-    />
+    <>
+      {/* La cabecera de pantalla va solo en el panel: las sub-rutas (reseñas, logros) traen su propia cabecera. */}
+      <ScreenHeader
+        kicker={STATS_UI.screenHeader.kicker}
+        title={vm.scope === 'general' ? STATS_UI.screenHeader.general : STATS_UI.screenHeader.year(vm.scope)}
+      />
+      <StatsPanel
+        stats={vm.stats}
+        scale={vm.scale}
+        // De ti mismo se ve TODO: aquí no hay rango que recorte ni datos que no hayan llegado.
+        blocks={OWN_STATS_BLOCKS}
+        voice="own"
+        full
+        scope={vm.scope}
+        years={vm.availableYears}
+        onScope={vm.setScope}
+        yearSummary={vm.yearSummary}
+        yearMetric={vm.yearMetric}
+        onYearMetric={vm.setYearMetric}
+        backlog={{
+          points: vm.hasRealHistory ? vm.history : vm.stats.arrivals,
+          mode: vm.hasRealHistory ? 'real' : 'derived',
+        }}
+        onOpenReviews={openReviews}
+        onOpenReview={openReviewFromPanel}
+        achievements={
+          ENABLE_ACHIEVEMENTS ? (
+            <AchievementsCard
+              summary={achievements.summary}
+              earned={achievements.earned}
+              onOpen={openAchievements}
+            />
+          ) : null
+        }
+      />
+    </>
   );
 });

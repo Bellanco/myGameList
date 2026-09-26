@@ -6,6 +6,12 @@
 export const STATS_UI = {
   // The Witcher 3: «el destino es solo la mitad; la otra mitad somos nosotros».
   subtitle: 'El destino es solo la mitad: la otra mitad son tus listas, y esto es lo que cuentan.',
+  // La cabecera de pantalla del panel (ver `screenHeader` en `labels.ts`): el título sigue al alcance elegido.
+  screenHeader: {
+    kicker: 'Estadísticas',
+    general: 'Todo lo que has jugado',
+    year: (year: number) => `Tu ${year}`,
+  },
   empty: {
     // The Legend of Zelda: «es peligroso ir solo».
     title: 'Es peligroso ir solo',

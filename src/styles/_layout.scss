@@ -1878,3 +1878,6 @@
   border-color: rgba(var(--steam-rgb),.42);
   box-shadow: var(--ring-accent);
 }
+
+/* La CABECERA DE PANTALLA (`ScreenHeader`) es una pieza que un tema puede encender: en la base, apagada. */
+.screen-header { display: none; }

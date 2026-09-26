@@ -166,7 +166,9 @@ Doce pasos, razón ≈1,08 en la zona de interfaz. Multiplicados por `--font-sca
 - Contenedor de lectura ≤ 1140 px; la tabla puede desbordar en su propio contenedor con `overflow-x`.
 - Gutter lateral mínimo de 16 px a cualquier ancho.
 - La app es **headerless**: no hay barra superior fija, sino navegación inferior y un control flotante.
-  *(Propuesta: cabecera de pantalla con rótulo, título y cifras — hoy las pantallas empiezan en frío.)*
+- **Cabecera de pantalla** (`ScreenHeader`): rótulo en versales, título en la letra de titulares y hasta tres
+  cifras en la mono. Pieza neutra, apagada en la base: hoy solo la enciende **Forja**, en las cuatro listas (juegos ·
+  horas · nota media), el panel y Ajustes. Va en el flujo, `aria-hidden` (el `h1` accesible sigue en `main`).
 
 ### 5.1 · Navegación
 
