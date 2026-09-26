@@ -226,9 +226,11 @@ están — y sus bordes tampoco, que ahí el marco de oro o el filete cian **son
   Inserte moneda y Plata y acero 2/3/4; Cámara de pruebas 3/6/10; Ladrones de corazones 3/4/8; Sin futuro y Sol y
   luna 0/0/2; Solo hay guerra 0/2/3.
 - Un radio de 0 es una decisión, no un olvido: en esos temas la esquina viva **es** la identidad.
-- Pastillas (`--radius-pill`) para chips, botones de filtro y segmentados en todos los temas.
-- Botones de acción: el radio del tema, salvo Forja, que los lleva a **15 px** (`--forja-btn-radius`, fuera de su
-  escala 6/10/16). Los círculos (`.btn-icon`, `.fab`) y los segmentados no cambian.
+- Pastillas (`--radius-pill`) para chips, botones de filtro y segmentados, salvo en Forja.
+- **Forja no usa píldoras en lo que se pulsa**: botones de acción, filtros y alcances, segmentados, la barra de
+  navegación y los indicadores que se deslizan bajo el botón activo llevan **15 px** (`--forja-btn-radius`, fuera
+  de su escala 6/10/16); sus contenedores suman el relleno para que las esquinas sean concéntricas. Los círculos
+  (`.btn-icon`, `.fab`) siguen redondos y los chips, en pastilla.
 
 ---
 

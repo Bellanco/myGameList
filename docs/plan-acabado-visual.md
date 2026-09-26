@@ -200,6 +200,8 @@ En `:root[data-palette="forja"] .game-card.is-flat`:
   - `.btn-icon` y `.fab`, que son círculos;
   - `.btn-toggle` y `.hub-seg-btn`: son segmentados y filtros, y `DESIGN.md §7` los quiere en píldora en todos los
     temas (decidido, §7).
+- **Ampliado el 27-09 (decisión 7):** los segmentados y filtros también pasan a 15 px, y con ellos la barra de
+  navegación y los indicadores deslizantes; los contenedores suman su relleno. Solo quedan redondos los círculos.
 
 ---
 
@@ -279,8 +281,12 @@ Se revisó sobre una maqueta con los componentes reales y datos inventados (`doc
 ## 7. Decisiones (cerradas el 25-09-2026)
 
 1. **Fichas impares en dos columnas:** a todo el ancho va la **primera**, «Juegos».
-2. **Botones de Forja:** los segmentados **no** cambian; siguen en píldora por `DESIGN.md §7`.
+2. ~~**Botones de Forja:** los segmentados **no** cambian; siguen en píldora por `DESIGN.md §7`.~~ Revocada el
+   27-09 (decisión 7).
 3. **Social, paso ya dado:** **conserva** su tinte verde; solo el pendiente se queda sin caja.
 4. **(26-09) F, retirada:** sin línea a la izquierda en ningún listado.
 5. **(26-09) A, una fila en rejilla ancha:** ≥ 83 rem, las ocho en una fila.
 6. **(26-09) S, dentro:** el social por dentro sigue la regla de B.
+7. **(27-09) H, a toda la botonería:** en Forja no queda ninguna píldora en lo que se pulsa —filtros, alcances,
+   segmentados, la barra de navegación y sus indicadores también a 15 px—, porque la píldora hacía el tema
+   genérico. Siguen redondos los círculos y en pastilla los chips.
