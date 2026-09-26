@@ -163,8 +163,42 @@
 :root[data-palette="portal"] .badge-rejugar-inactivo,
 :root[data-palette="portal"] .badge-opp-inactivo { background: var(--surface-elevated) !important; color: var(--text-muted) !important; border: 1px solid var(--border) !important; box-shadow: none !important; }
 
-/* ── §9 · Puntuación 0–100: sin marco de color añadido (el arco rojo→verde ya es la nota; un aro azul
-   encima quedaba mal). Se conserva el aro base; el número va en monoespaciada (§1). ── */
+/* ── §9 · Puntuación 0–100 = MARCO CUADRADO: el mismo `conic-gradient` de la hoja base (es quien sabe la
+   nota), sobre un cuadrado redondeado en vez de un disco, como una placa del complejo. Sin marco de color
+   añadido (el arco rojo→verde ya es la nota; un aro azul encima quedaba mal); el número va en monoespaciada
+   (§1). El avance sigue siendo por ángulo, así que en las esquinas corre algo más: es lo aceptado frente a
+   un trazo por el perímetro, que obligaba a pintar un SVG.
+   EL RADIO ES PROPORCIONAL AL LADO: 15px en el dial (6,5rem = 104px) y la misma proporción en todos los
+   tamaños. Con 15px fijos, el aro de una tarjeta o del feed (~2rem) se quedaba en un 45 % de su lado y volvía
+   a parecer un círculo. El disco interior resta el grosor del aro al radio para que el canto sea igual de
+   ancho en la curva. La manecilla del dial lee este radio (ScoreDial). ── */
+:root[data-palette="portal"] .score-ring,
+:root[data-palette="portal"] .score-dial { --score-radius: calc(var(--sz) * 15 / 104); border-radius: var(--score-radius); }
+:root[data-palette="portal"] .score-ring::after { border-radius: max(var(--score-radius) - 3px, 0px); }
+:root[data-palette="portal"] .score-dial::after { border-radius: max(var(--score-radius) - var(--track-w), 0px); }
+/* El medallón de las reseñas (análisis recomendados y lista de reseñas de un perfil) no es el aro —relleno
+   suave y borde, sin arco—, pero dice la misma nota y se cuadra igual. Mide distinto en cada sitio
+   (reviews.scss), así que el radio va en porcentaje: en una caja cuadrada, el 15/104 del lado. */
+:root[data-palette="portal"] .hub-review-medal { border-radius: calc(100% * 15 / 104); }
+/* Sobre la carátula, la hoja base le pone a la nota una plaquita en PÍLDORA para que se lea sobre cualquier
+   imagen: alrededor del marco cuadrado quedaba un halo redondo. Se quita la placa y esa legibilidad la pone el
+   propio marco —pista sobre la superficie opaca y la misma sombra—, en su forma. Solo con el marco: con
+   estrellas la placa sigue haciendo falta. La posición suma el relleno que tenía la placa, para no moverla. */
+:root[data-palette="portal"] .game-card-score:has(> .score-ring) {
+  top: .65rem;
+  right: .65rem;
+  padding: 0;
+  background: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+:root[data-palette="portal"] .game-card-score .score-ring:not(.is-noscore) {
+  background: conic-gradient(hsl(var(--score-hue, 0) 58% var(--acc-l)) calc(var(--score-pct, 0) * 1%), var(--score-track) 0), var(--surface);
+  box-shadow: var(--e2);
+}
+/* Y el disco interior, opaco: el 92 % de la hoja base contaba con la placa desenfocada debajo; sin ella, la
+   pista del arco se transparentaba en cuña por dentro del marco. */
+:root[data-palette="portal"] .game-card-score .score-ring::after { background: var(--surface); }
 
 /* ── §10 · Actividad social. FECHAS = terminal de GLaDOS: el timestamp en monoespaciada con un prompt azul
    `>`; la cabecera de día es un rótulo de señalética con FRANJA DE PELIGRO amarillo/negro debajo. La barra

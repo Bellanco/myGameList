@@ -170,7 +170,7 @@ export const SOCIAL_UI = {
     reviewEmpty: 'Sin comentario adicional en el análisis.',
     showMore: 'Más',
     viewDetail: 'Ver detalle',
-    detailTitle: 'Detalle de actividad social',
+    detailTitle: 'Análisis',
     detailSubtitle: 'Contenido completo del análisis seleccionado.',
     detailActionsAria: 'Acciones del detalle social',
     detailMissing: 'No se encontró la actividad solicitada o ya no está disponible.',
@@ -210,7 +210,7 @@ export const SOCIAL_UI = {
     reviewExpand: 'Ver más',
     reviewCollapse: 'Ver menos',
     reviewOpenAria: (gameName: string) => `Abrir la reseña de ${gameName}`,
-    reviewDetailTitle: 'Reseña',
+    reviewDetailTitle: 'Análisis',
     reviewDetailSubtitle: 'Análisis completo de este juego.',
     reviewsBackToList: 'Volver a las reseñas',
     // Reseñas relacionadas, al final de una reseña abierta.

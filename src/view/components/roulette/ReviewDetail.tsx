@@ -33,6 +33,7 @@ export function ReviewDetail({ game, author }: ReviewDetailProps) {
           genres={game.genres}
           strengths={game.strengths}
           weaknesses={game.weaknesses}
+          score={game}
         />
       </article>
     </div>

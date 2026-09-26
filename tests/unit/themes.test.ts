@@ -4,6 +4,7 @@ import { DEFAULT_PALETTE, THEMES, parsePaletteId, type PaletteId } from '../../s
 import { socialVoiceByPalette } from '../../src/core/constants/themes/social';
 import { premiosVoiceByPalette } from '../../src/core/constants/themes/premios';
 import type { ThemeDefinition } from '../../src/core/constants/themes/theme';
+import { PALETTE_LOCK_KEY } from '../../src/core/constants/storageKeys';
 
 /**
  * EL CONTRATO DE UN TEMA, comprobado.
@@ -213,17 +214,28 @@ describe('temas · el de por defecto', () => {
   });
 });
 
-describe('temas · un id renombrado sigue llevando a su tema', () => {
-  // «Plata y acero» se llamaba `steam`. Ese valor sigue en el localStorage y en la preferencia de la nube de quien
-  // lo eligió: si deja de reconocerse, esa persona cambia de tema sin haberlo pedido.
-  it('`steam` se lee como `witcher`, en el TypeScript y en el anti-flash', () => {
-    expect(parsePaletteId('steam')).toBe('witcher');
-    expect(ANTI_FLASH).toMatch(/if \(palette === 'steam'\) \{\s*palette = 'witcher';/);
+describe('temas · un id retirado lleva a donde debe', () => {
+  // `steam` fue «Clásico», el tema POR DEFECTO hasta el 14-09-2026: lo tiene guardado —en el dispositivo o en la
+  // nube— gente que nunca eligió nada. Heredarlo como The Witcher les cambiaba de tema sin haberlo pedido.
+  it('`steam` se lee como el de por defecto, en el TypeScript y en el anti-flash', () => {
+    expect(parsePaletteId('steam')).toBe(DEFAULT_PALETTE);
+    // El anti-flash no lo traduce: `steam` no está en su mapa `BG`, así que cae al respaldo, que es el de por
+    // defecto. Una traducción a otro tema ahí volvería a separar el primer fotograma de lo que pinta React.
+    expect(ANTI_FLASH).not.toMatch(/palette === 'steam'/);
+    expect(ANTI_FLASH).not.toMatch(/\bsteam: \{/);
   });
 
   it('lo que no es un tema cae al de por defecto, aunque sea una clave de Object', () => {
     for (const raro of ['constructor', 'toString', '__proto__', '', 'STEAM']) {
       expect(parsePaletteId(raro), raro).toBe(DEFAULT_PALETTE);
     }
+  });
+});
+
+describe('temas · sin espacio social, el de por defecto', () => {
+  // La marca la escribe `paletteLockPreference` y el anti-flash la lee ANTES que el bundle: si los literales se
+  // separan, quien no tiene social ve un fotograma de su tema viejo en cada carga.
+  it('el anti-flash lee la misma clave y el mismo valor que la preferencia', () => {
+    expect(ANTI_FLASH).toContain(`localStorage.getItem('${PALETTE_LOCK_KEY}') === 'on'`);
   });
 });

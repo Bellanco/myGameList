@@ -1,8 +1,10 @@
 # Acabado visual — plan
 
-Estado: **plan aprobado, sin implementar** (25-09-2026). Sale de una revisión con capturas antes/después
-de las ocho paletas en los dos modos. El «después» fue un prototipo inyectado solo en el recorrido de fotos,
-nunca en `src/`. Aquí queda **solo lo que el mantenedor aprobó**; lo demás está en §4 y no entra en ningún tema.
+Estado: **implementado** (26-09-2026, rama `feat/acabado-visual`). Aprobado el 25-09-2026 tras una revisión con
+capturas antes/después de las ocho paletas en los dos modos. Antes de implementarlo se revisó otra vez sobre un
+prototipo navegable (antes/después lado a lado, a 390, 1280, 1512 y 3840 px), y de esa revisión salieron tres
+cambios respecto a lo aprobado, marcados abajo: **F se retiró**, **A ganó una regla** para rejillas anchas y se
+añadió **S**, el social por dentro. Lo que no entra sigue en §4.
 
 ---
 
@@ -15,12 +17,13 @@ nunca en `src/`. Aquí queda **solo lo que el mantenedor aprobó**; lo demás es
 | C | Lista vacía: icono en tinta de enlace y título en letra de titulares. **El texto no cambia** | **Todos los temas** | `_table.scss` |
 | D | Ajustes: la ayuda de Sincronización con filete lateral; las guías y los enlaces legales, en filas | **Todos los temas** | `sync-card.scss`, `import.scss`, `settings.scss` |
 | E | Cabecera de pantalla | **Solo Forja** | componente neutro + `forja/forja.scss` |
-| F | Franja de color del género en el renglón y en la caja | **Solo Forja** | `GameTable.tsx`, `categoryTone.ts`, `forja.scss` |
-| G | Mosaico: el canto de temple pasa a filete y el rescoldo toma el género | **Solo Forja** | `forja.scss` |
+| ~~F~~ | ~~Franja de color del género en el renglón y en la caja~~ — **retirada** (§3.F) | — | — |
+| G | Mosaico: el canto de temple pasa a filete y el rescoldo toma el género | **Solo Forja** | `forja.scss`, `GameTable.tsx`, `categoryTone.ts` |
 | H | Botones con radio de 15 px | **Solo Forja** | `forja.scss` |
+| S | Social por dentro: una caja por nivel (feed, perfil, reseña, directorio) | **Todos los temas** (base) | `_layout.scss`, `social.scss`, `reviews.scss` |
 
-Orden de PRs, de menos a más riesgo: **A** → **B + C + D** (solo CSS) → **G + H** (solo el skin de Forja) →
-**F** (marcado) → **E** (componente y cifras) → documentación (§5).
+Orden de commits, de menos a más riesgo: **A** → **B + C + D** (solo CSS) → **G + H** (solo el skin de Forja) →
+**E** (componente y cifras) → **S**. La documentación (§5) va en el commit de cada cambio.
 
 ---
 
@@ -71,6 +74,12 @@ cada ficha se monta o no según los datos:
 **En dos columnas y con un número impar, la ficha que va a todo el ancho es la primera**, «Juegos», que es la
 cifra que abre el panel. Si la ancha fuera la última, sería la que menos se busca (decidido, §7).
 
+**Añadido en la revisión del 26-09: en una rejilla ancha, todas en una fila.** Con el tope de 4 por fila, a
+1512 px (un portátil de 14″ con la escala por defecto) el resumen pasaba de UNA fila de ocho —como estaba— a
+4 · 4, y en 4K salían fichas de 856 px. Cuando caben las ocho a ≥ 9,5 rem (tarjeta ≥ 83 rem) van en una fila.
+La rejilla no puede consultarse a sí misma, así que la pregunta la hace su tarjeta (`stats-tiles-box`). A 1280 px
+sigue el 4 · 4 de la tabla.
+
 **Y fuera el filete lateral** (`.stat-tile::before`). El tono de cada ficha se queda en la cifra y en el velo del
 fondo: una vez, no tres. Ningún skin toca `.stat-tile` ni `.stats-tiles` (comprobado), así que el cambio es igual
 en los ocho temas.
@@ -119,6 +128,9 @@ respetan: ninguna añade textura, solo tono, jerarquía y canto.
 
 ### E · Cabecera de pantalla
 
+> **27-09-2026: sin cifras.** Se quitaron del tema (y con ellas `listHeaderFigures` y su formateo en `App`): la
+> cabecera es rótulo y título. Lo de abajo sobre las cifras queda como registro.
+
 **Qué es:**
 - Rótulo en versales (`--font-label`, con el punto del acento).
 - Título en `--font-display` a `--fs-3xl`.
@@ -151,7 +163,11 @@ No sale en Social, Logros, Premios, Admin, Legal, Bandeja ni en las sub-rutas de
   son solo iconos y hasta ahora nada decía en qué lista estás. Cuesta ~70 px de alto.
 - **El virtualizador** mide desde la ventana: hay que comprobar su desfase con la cabecera encima, con 150+ juegos.
 
-### F · Franja de color del género
+### F · Franja de color del género — RETIRADA (26-09-2026)
+
+Se probó en el prototipo y el mantenedor la quitó: **ninguna línea a la izquierda en los listados**, ni en el
+renglón ni en la caja. Del cambio sobrevive solo el tono del género en el rescoldo del mosaico (G), que viaja en
+`--card-tone` sobre la caja. Lo de abajo queda como registro de lo que se probó.
 
 - **El elemento:** un `<span className="row-tone" aria-hidden>` dentro del renglón (`td:first-child`) y de la caja
   (`.game-card`), con `style={{ '--row-tone': var(--cat-N) }}` del **primer género**.
@@ -174,6 +190,8 @@ En `:root[data-palette="forja"] .game-card.is-flat`:
 - El rescoldo del pie toma `var(--row-tone, var(--steam))` al 20 % (hoy `--steam` al 22 %). Es lo que convierte la
   parrilla en colección.
 - Actualizar el comentario «LA CAJA SIN CARÁTULA = EL LINGOTE», que describe el canto de temple.
+- Con F retirada, el tono viaja en `--card-tone` (no `--row-tone`) sobre el `<article>`, y el helper
+  `categoryToneVar` lo da sin tocar `--cat`.
 
 ### H · Botones con radio de 15 px
 
@@ -185,6 +203,27 @@ En `:root[data-palette="forja"] .game-card.is-flat`:
   - `.btn-icon` y `.fab`, que son círculos;
   - `.btn-toggle` y `.hub-seg-btn`: son segmentados y filtros, y `DESIGN.md §7` los quiere en píldora en todos los
     temas (decidido, §7).
+- **Ampliado el 27-09 (decisión 7):** los segmentados y filtros también pasan a 15 px, y con ellos la barra de
+  navegación y los indicadores deslizantes; los contenedores suman su relleno. Solo quedan redondos los círculos.
+
+---
+
+### S · El social por dentro (añadido el 26-09-2026)
+
+La regla de B llevada al resto del hub: la tarjeta de pantalla ya es la caja, y lo de dentro se asienta en ella.
+Se revisó sobre una maqueta con los componentes reales y datos inventados (`docs/maquetas/social.html`).
+
+- **Perfil de un amigo y detalle de una reseña**: fuera la caja del medio (`.hub-feed-card-detail` dentro de
+  `.hub-screen-card`). En el perfil había cuatro niveles: pantalla › ficha › tabla › renglón. Con carátula
+  (`has-cover`) la caja se queda: es el marco de la portada.
+- **La fecha** («Analizado el…») en `--fs-xs` y atenuada; en el detalle, centrada con las estrellas bajo la
+  cabecera, que ya iba centrada.
+- **Reseñas relacionadas y lista de reseñas de un perfil**: sin la barra lateral del color de la nota; lo dicen
+  la medalla y las estrellas.
+- **Feed**: reseñas, recomendaciones y publicaciones con filete fino en vez del lomo de acento de 3 px; nombre y
+  juego alineados a la izquierda con el texto. Los movimientos de lista y los logros no cambian.
+- **Directorio y solicitudes**: el buscador sin caja alrededor.
+- Todo va en la base: los temas que visten estas piezas en su skin (Witcher, Persona…) siguen mandando.
 
 ---
 
@@ -200,6 +239,9 @@ En `:root[data-palette="forja"] .game-card.is-flat`:
 - Tinte cálido del claro de Forja (su frío es a propósito).
 - Las erratas de `DESIGN.md` que no tocan esto (§8 frente a §1 sobre imágenes, «seis temas» en §9, columna de
   Persona en §3).
+- **Punto abierto (26-09): el ancho en pantallas grandes.** En 4K la app se estira a `92vw` (desde 1957 px): los
+  renglones del listado miden ~3500 px con los chips repartidos por todo el ancho, y Ajustes y el perfil igual. Es
+  anterior a este plan. Candidato: un tope de ancho de lectura, a decidir aparte con capturas a 1512, 1920 y 3840 px.
 
 ---
 
@@ -227,8 +269,30 @@ En `:root[data-palette="forja"] .game-card.is-flat`:
 
 ---
 
+### Resultado (26-09-2026)
+
+- `npm test`: 2857 en verde. `tsc` y `eslint` limpios.
+- `npm run test:e2e` sobre el build de la rama: 266 en verde, con la auditoría de axe de las ocho paletas × dos modos.
+- `tests/e2e/statsTiles.test.ts` (nuevo, el test de A): 1–8 fichas a 240, 320, 560, 800 y 1440 px.
+- Virtualización con la cabecera encima, Completados con 149 juegos a 1280 y 390 px: la pantalla queda cubierta de
+  filas en cualquier punto del desplazamiento y el mayor hueco es el de 8 px entre filas.
+- Peso del arranque (build de la rama contra su padre, `index-*.js` en gzip): **+0,78 kB** de JS y **+0,25 kB** de
+  CSS, todo de E (componente, cifras y formateo en `App`). Sin las cifras (27-09): **+0,16 kB** de JS (65,01 →
+  65,17) y **+0,31 kB** de CSS contando también el canto de 15 px de Forja.
+
+---
+
 ## 7. Decisiones (cerradas el 25-09-2026)
 
 1. **Fichas impares en dos columnas:** a todo el ancho va la **primera**, «Juegos».
-2. **Botones de Forja:** los segmentados **no** cambian; siguen en píldora por `DESIGN.md §7`.
+2. ~~**Botones de Forja:** los segmentados **no** cambian; siguen en píldora por `DESIGN.md §7`.~~ Revocada el
+   27-09 (decisión 7).
 3. **Social, paso ya dado:** **conserva** su tinte verde; solo el pendiente se queda sin caja.
+4. **(26-09) F, retirada:** sin línea a la izquierda en ningún listado.
+5. **(26-09) A, una fila en rejilla ancha:** ≥ 83 rem, las ocho en una fila.
+6. **(26-09) S, dentro:** el social por dentro sigue la regla de B.
+7. **(27-09) H, a toda la botonería:** en Forja no queda ninguna píldora en lo que se pulsa —filtros, alcances,
+   segmentados, la barra de navegación y sus indicadores también a 15 px—, porque la píldora hacía el tema
+   genérico. Siguen redondos los círculos y en pastilla los chips.
+8. **(27-09) E, sin cifras:** la cabecera se queda en rótulo y título; las cifras repetían la pestaña y el panel
+   y se quitaron, con el código que las calculaba.

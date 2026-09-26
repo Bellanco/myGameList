@@ -893,6 +893,17 @@
   gap: .45rem;
 }
 
+/* UNA CAJA POR NIVEL: la ficha de un perfil y el detalle de una reseña se asientan en la tarjeta de pantalla, que ya
+   es la caja, en vez de abrir otra dentro. En el perfil había cuatro niveles —pantalla, ficha, tabla, renglón—.
+   Con carátula (`has-cover`) se queda la caja: es el marco de la portada que va de fondo. */
+.hub-screen-card .hub-feed-card-detail:not(.has-cover) {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  padding: 0;
+}
+
 .hub-feed-card h3 {
   font-size: clamp(.9rem, .84rem + .3vw, 1.02rem);
   font-weight: 700;
@@ -964,7 +975,7 @@
   grid-template-areas: 'medal head' 'body body';
   align-items: start;
   gap: .5rem .9rem;
-  padding: 1rem 1.15rem 1rem 1.35rem;
+  padding: 1rem 1.15rem;
 }
 
 .hub-profile-reviews-list .hub-review-entry.is-review,
@@ -978,14 +989,8 @@
   box-shadow: var(--e1);
 }
 
-/* Barra lateral con el color de la nota. */
-.hub-review-entry::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 4px;
-  background: var(--acc);
-}
+/* SIN BARRA LATERAL DEL COLOR DE LA NOTA en la lista de reseñas de un perfil ni en las relacionadas: la nota ya
+   la dicen la medalla y las estrellas en ese mismo color, y la barra era la tercera vez. */
 
 /* Reseña sin puntuación (lista de la vergüenza y demás): medallón "??" en azul suave (poco contraste), sin estrellas. */
 .hub-review-entry.is-noscore { --acc: var(--noscore); --acc-soft: var(--noscore-soft); }
@@ -1017,12 +1022,13 @@
   white-space: pre-wrap;
 }
 
-/* Acento por tipo de evento */
-.hub-feed-activity-item.is-review { border-left-color: var(--steam); }
+/* LAS BURBUJAS CON TEXTO (reseña, recomendación, publicación) VAN CON UN FILETE FINO, sin lomo de acento. Lo
+   llevaban de 3 px y de un color por tipo, y dentro de la tarjeta de pantalla eran otra caja más con su propio
+   borde grueso: el tipo ya lo dicen la fecha («Analizado…», «Publicado…») y las estrellas. Los movimientos de
+   lista y los logros no son burbujas —son apuntes centrados con su tinte— y conservan su color (abajo). */
+.hub-feed-activity-item:is(.is-review, .is-recommendation, .is-post) { border: 1px solid var(--hair); }
 
-.hub-feed-activity-item.is-recommendation { border-left-color: var(--success); }
-
-.hub-feed-activity-item.is-post { border-left-color: var(--text-muted); cursor: default; }
+.hub-feed-activity-item.is-post { cursor: default; }
 
 /* F4 — MOVIMIENTO DE LISTA: el AVISO DE SISTEMA del chat.
    Un renglón —quién, qué hizo, con qué juego, a qué hora— que deja de ser una burbuja más para ser lo que es:
@@ -1184,6 +1190,15 @@
   gap: .15rem;
 }
 
+/* En la burbuja del feed, nombre y juego se alinean con el texto que presentan, a la izquierda. Centrados sobre un
+   párrafo alineado a la izquierda, la burbuja tenía dos ejes. El detalle y las tarjetas de perfil siguen
+   centrados: allí la cabecera es lo único que hay encima. */
+.hub-feed-activity-item .hub-feed-card-head,
+.hub-feed-activity-item .hub-feed-card-head-text {
+  align-items: flex-start;
+  text-align: left;
+}
+
 .hub-avatar {
   flex: 0 0 auto;
   width: 2.1rem;
@@ -1267,6 +1282,21 @@
   flex-wrap: nowrap;
   gap: .7rem;
   min-width: 0;
+}
+
+/* LA FECHA, EN VOZ BAJA: es contexto, no titular. Salía al tamaño del texto de la reseña y, en la mono, pesaba
+   más que el nombre de quien la escribe. En el detalle se centra con las estrellas bajo la cabecera, que ya va
+   centrada; suelta a la izquierda se leía como el principio del texto. */
+.hub-feed-card .hub-feed-date {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  letter-spacing: 0;
+}
+
+.hub-feed-card-detail > .hub-feed-date,
+.hub-feed-card-detail > .stars {
+  align-self: center;
+  text-align: center;
 }
 
 .hub-feed-meta > .hub-feed-date {
@@ -1375,6 +1405,8 @@
   flex-direction: column;
   gap: .9rem;
   min-width: 0;
+  /* Aire bajo la última línea: con solo el relleno de la tarjeta (.8rem), el borde quedaba pegado al texto. */
+  padding-bottom: .6rem;
 }
 
 .hub-detail-body .hub-feed-review-text {
@@ -1437,6 +1469,11 @@
     top: 1rem;
     align-self: flex-start;
   }
+}
+
+/* La nota encabeza la columna de metadatos (ver `ReviewDetailBody`), alineada a la izquierda con los rótulos. */
+.hub-detail-score {
+  display: flex;
 }
 
 .hub-metadata-section {
@@ -1878,3 +1915,6 @@
   border-color: rgba(var(--steam-rgb),.42);
   box-shadow: var(--ring-accent);
 }
+
+/* La CABECERA DE PANTALLA (`ScreenHeader`) es una pieza que un tema puede encender: en la base, apagada. */
+.screen-header { display: none; }

@@ -110,10 +110,11 @@
 
 /* ── Ayudas y campos (venían de `settings.scss`, sin tocar una declaración) ─────────────────────────── */
 
+/* Sin caja: un filete lateral la separa del formulario. Era una caja elevada dentro de la tarjeta de
+   Sincronización. El `code` de dentro conserva su fondo, que es lo que lo distingue del texto. */
 .sync-help {
   font-size: var(--fs-xs); color:var(--text-muted); line-height:1.6;
-  background:var(--surface-elevated); border-radius:var(--radius-sm);
-  padding:.8rem 1rem; border:1px solid var(--border);
+  padding:.2rem 0 .2rem 1rem; border-left:2px solid var(--hair);
 }
 .sync-help a { color:var(--fg-link); text-decoration:none; }
 .sync-help a:hover { text-decoration:underline; }

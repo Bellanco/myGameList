@@ -258,23 +258,22 @@
   gap: .7rem;
 }
 
+/* Cada estado, SIN CAJA: un filete lateral de 2 px que conserva el color de su estado. Eran fichas con borde y
+   fondo dentro del desplegable, que a su vez era otra caja dentro de la tarjeta de la puerta. */
 .hub-status-card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: .75rem .85rem;
-  background: var(--hub-card-bg);
+  border-left: 2px solid var(--hair);
+  padding: .15rem 0 .15rem .85rem;
   display: flex;
   flex-direction: column;
   gap: .35rem;
 }
 
 .hub-status-card.is-ok {
-  border-color: rgba(var(--success-rgb),.35);
-  background: rgba(var(--success-rgb),.08);
+  border-left-color: var(--success);
 }
 
 .hub-status-card.is-pending {
-  border-color: rgba(var(--steam-rgb),.25);
+  border-left-color: rgba(var(--steam-rgb),.25);
 }
 
 .hub-status-label {
@@ -436,11 +435,9 @@
 }
 
 
+/* El buscador del directorio y de solicitudes, SIN CAJA alrededor: el campo ya tiene la suya, y la tarjeta de
+   pantalla es la de fuera. Queda el campo y el recuento. */
 .hub-feed-toolbar {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--hub-card-bg);
-  padding: .78rem;
   display: grid;
   gap: .6rem;
 }
@@ -692,7 +689,9 @@
 }
 
 .hub-gateway-btn-primary {
-  min-height: 3.8rem;
+  /* Al alto de su contenido, sin bajar de la diana táctil. Medía 3,8 rem: el paso actual ya se distingue por su
+     caja teñida, y el botón no necesita además ser el doble de alto que su texto. */
+  min-height: 44px;
   font-size: var(--fs-lg);
   box-shadow: var(--glow-accent-lift);
   animation: socialCtaIn .36s ease-out;
@@ -705,9 +704,6 @@
 
 .hub-gateway-details {
   width: 100%;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--hub-card-bg);
   padding: .4rem .6rem .65rem;
 }
 
@@ -775,8 +771,13 @@
   background: color-mix(in srgb, var(--success) 10%, var(--hub-card-bg));
 }
 
-/* EL QUE AÚN NO TOCA: se lee, pero atenuado. Al mismo peso que el actual pedía dos cosas a la vez; tapado,
-   escondería cuánto queda. */
+/* EL QUE AÚN NO TOCA: se lee, pero atenuado y SIN CAJA. Al mismo peso que el actual pedía dos cosas a la vez;
+   tapado, escondería cuánto queda. */
+.hub-gateway-stage:not(.is-current):not(.is-done) {
+  border-color: transparent;
+  background: none;
+}
+
 .hub-gateway-stage:not(.is-current):not(.is-done) .hub-gateway-stage-title,
 .hub-gateway-stage:not(.is-current):not(.is-done) .hub-gateway-stage-note {
   color: var(--text-muted);
@@ -937,7 +938,7 @@
   }
 
   .hub-gateway-btn-primary {
-    min-height: 3.95rem;
+    min-height: 44px;
     font-size: var(--fs-lg);
   }
 

@@ -6,8 +6,8 @@
 //
 // La lógica de aplicación debe seguir siendo IDÉNTICA a la de `public/theme-init.js`, que corre antes del primer
 // render para evitar el flash de tema/paleta/caja.
-import { COVERS_KEY, EFFECTS_KEY, GRID_SIZE_KEY, LIST_SHAPE_KEY, PALETTE_KEY, STEAM_BUTTON_KEY, THEME_KEY, UPPERCASE_KEY } from '../../core/constants/storageKeys';
-import { paletteBg, parsePaletteId, type PaletteId } from '../../core/constants/palettes';
+import { COVERS_KEY, EFFECTS_KEY, GRID_SIZE_KEY, LIST_SHAPE_KEY, PALETTE_KEY, PALETTE_LOCK_KEY, STEAM_BUTTON_KEY, THEME_KEY, UPPERCASE_KEY } from '../../core/constants/storageKeys';
+import { DEFAULT_PALETTE, paletteBg, parsePaletteId, type PaletteId } from '../../core/constants/palettes';
 import { createPreferenceStore, hydratePreferencesFromCloud } from '../../model/repository/preferenceStore';
 import { loadPaletteSkin } from './paletteSkin';
 
@@ -35,7 +35,7 @@ function systemDefault(): ThemePreference {
 export function applyThemeColor(theme: ThemePreference): void {
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
-    meta.setAttribute('content', paletteBg(palettePreference.get(), theme));
+    meta.setAttribute('content', paletteBg(appliedPalette(), theme));
   }
 }
 
@@ -75,14 +75,41 @@ export const palettePreference = createPreferenceStore<PaletteId>({
   serialize: (value) => value,
   cloudField: 'palette',
   fromCloud: (value) => (typeof value === 'string' ? parsePaletteId(value) : null),
-  applyToDom: (palette) => {
-    // `loadPaletteSkin` es no-op para las que no tienen skin bajo demanda (la de por defecto, que lo trae en el
-    // bundle base), así que no hace falta preguntar por cuál es cuál.
-    loadPaletteSkin(palette);
-    document.documentElement.setAttribute('data-palette', palette);
-    applyThemeColor(themePreference.get());
-  },
+  applyToDom: () => applyPaletteToDom(),
 });
+
+/**
+ * LOS TEMAS SON DE QUIEN TIENE ESPACIO SOCIAL (26-09-2026). Sin él se pinta el de por defecto, pase lo que pase
+ * con lo guardado: lo que haya en local o en la nube —un tema de antes, el `steam` que fue el de casa— se
+ * conserva, y vuelve si vuelve el social. Por eso es una marca aparte y no una escritura en `palettePreference`:
+ * sobrescribir la paleta la perdería, y además la replicaría a la cuenta.
+ *
+ * La pone `useAppliedPalette` con el MISMO gate que la pantalla «Diseño», donde vive el selector: quien no puede
+ * elegir tema no ve otro que el de casa. Es de este aparato (sin `cloudField`), porque lo que decide es el estado
+ * social, que ya viaja por su lado.
+ */
+export const paletteLockPreference = createPreferenceStore<boolean>({
+  key: PALETTE_LOCK_KEY,
+  parse: (raw) => raw === 'on',
+  serialize: onOff.serialize,
+  applyToDom: () => applyPaletteToDom(),
+});
+
+/** La paleta que SE PINTA: la guardada, o la de por defecto si está bloqueada. La que deben leer la voz de cada
+ *  tema y los logros; `palettePreference.get()` es solo la elección guardada. */
+export function appliedPalette(): PaletteId {
+  return paletteLockPreference.get() ? DEFAULT_PALETTE : palettePreference.get();
+}
+
+/** Lee las dos de localStorage en vez de fiarse del valor recibido: cambie la que cambie, la otra también cuenta. */
+function applyPaletteToDom(): void {
+  const palette = appliedPalette();
+  // `loadPaletteSkin` es no-op para las que no tienen skin bajo demanda (la de por defecto, que lo trae en el
+  // bundle base), así que no hace falta preguntar por cuál es cuál.
+  loadPaletteSkin(palette);
+  document.documentElement.setAttribute('data-palette', palette);
+  applyThemeColor(themePreference.get());
+}
 
 /** Caja del texto de interfaz (mayúsculas sí/no), común a todos los temas. Opt-in. */
 export const uppercasePreference = createPreferenceStore<boolean>({

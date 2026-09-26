@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useStat
 import { Link } from 'react-router-dom';
 import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import { COMMON_ICONS, TAB_ICONS } from '../../core/constants/icons';
-import { categoryToneStyle } from '../../core/constants/categoryTone';
+import { categoryToneStyle, categoryToneVar } from '../../core/constants/categoryTone';
 import { TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from '../../core/constants/labels';
 import { COMPACT_TABLE_MAX_WIDTH } from '../../core/constants/uiConfig';
 import { FilePickerButton } from './FilePickerButton';
@@ -1133,6 +1133,9 @@ export const GameTable = memo(function GameTable({
                               <article
                                 key={game.id}
                                 className={`game-card${covers ? '' : ' is-flat'}${expanded ? ' is-open' : ''}${game.id === recentlyChangedId ? ' just-changed' : ''}${game.id === removingId ? ' is-leaving' : ''}`}
+                                // El tono del PRIMER género, para el tema que quiera teñir la caja con él (hoy Forja,
+                                // en el rescoldo del pie).
+                                style={game.genres?.[0] ? ({ '--card-tone': categoryToneVar(game.genres[0]) } as CSSProperties) : undefined}
                               >
                                 {/* Toda la caja abre el detalle; el botón cubre su superficie y se queda con el
                                     foco y el nombre accesible, igual que en el bloque de reseñas del hub. */}

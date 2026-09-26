@@ -201,8 +201,13 @@ export function juegosAlBorde(variante: 'uno' | 'varios' | 'hito' | 'casi') {
 interface SeedOptions {
   /** Tema con el que arranca la app. Lo lee el script de arranque ANTES del primer render. */
   theme?: 'dark' | 'light';
-  /** Paleta de color activa (ver `core/constants/palettes`). */
+  /** Paleta de color activa (ver `core/constants/palettes`). Se pinta como si hubiera espacio social. */
   palette?: string;
+  /**
+   * Deja que la puerta de los temas actúe: sin sesión no hay social, así que la app pinta el de por defecto aunque
+   * `palette` diga otra cosa. Solo para probar esa puerta.
+   */
+  sinSocial?: boolean;
   /**
    * Siembra la biblioteca amplia en vez de las tres fichas. Para el panel de estadísticas, que con tres juegos
    * enseña estados vacíos en casi todos sus bloques.
@@ -236,9 +241,21 @@ interface SeedOptions {
 /** Siembra la biblioteca ANTES de que cargue la app (la clave la fija `core/constants/storageKeys`). */
 export async function sembrarBiblioteca(page: Page, options: SeedOptions = {}): Promise<void> {
   await page.addInitScript(
-    ({ juegos, amplios, amplia, deLogros, logros, deCurva, curva, borde, marca, theme, palette }) => {
+    ({ juegos, amplios, amplia, deLogros, logros, deCurva, curva, borde, marca, theme, palette, sinSocial }) => {
       const now = Date.now();
       const SEMANA = 7 * 24 * 60 * 60 * 1000;
+      if (palette && !sinSocial) {
+        /* LA PALETA SEMBRADA ES LA QUE SE PRUEBA. Los temas son de quien tiene espacio social y aquí no hay
+           sesión, así que la app apuntaría la marca de bloqueo y pintaría el de por defecto: los recorridos por
+           paleta probarían ocho veces el mismo tema, en verde y sin avisar. Se hace como si hubiera social
+           ignorando esa escritura —la app la lee de localStorage en cada paso—; la puerta en sí la prueba
+           `themes-social.test.ts` con `sinSocial`. */
+        const setItem = Storage.prototype.setItem;
+        Storage.prototype.setItem = function (key: string, value: string) {
+          if (key === 'mis-listas-palette-locked') return;
+          setItem.call(this, key, value);
+        };
+      }
       const ajustes = () => {
         localStorage.setItem('mis-listas-analytics-consent', 'denied');
         if (theme) localStorage.setItem('mis-listas-theme', theme);
@@ -338,7 +355,7 @@ export async function sembrarBiblioteca(page: Page, options: SeedOptions = {}): 
       amplia: Boolean(options.amplia), logros: Boolean(options.logros), curva: Boolean(options.curva),
       borde: options.alBorde ? juegosAlBorde(options.alBorde) : null,
       marca: options.marcaPrevia ?? null,
-      theme: options.theme, palette: options.palette,
+      theme: options.theme, palette: options.palette, sinSocial: options.sinSocial ?? false,
     },
   );
 }

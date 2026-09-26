@@ -54,3 +54,12 @@ export function categoryToneStyle(nombre: string): Record<string, string> {
   const tono = categoryTone(nombre);
   return { '--cat': `var(--cat-${tono})`, '--cat-fg': `var(--cat-${tono}-fg)` };
 }
+
+/**
+ * Solo el RELLENO del tono (`var(--cat-N)`), para teñir una pieza entera con su categoría: hoy, el rescoldo de la
+ * caja del mosaico en Forja (`--card-tone`). No va en `--cat` porque `--cat` lo heredarían los chips de plataforma
+ * de dentro, que no llevan tono propio y saldrían teñidos.
+ */
+export function categoryToneVar(nombre: string): string {
+  return `var(--cat-${categoryTone(nombre)})`;
+}

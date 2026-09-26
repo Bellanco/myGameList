@@ -11,6 +11,7 @@ import { normalizeData } from './model/repository/localRepository';
 import { IconSprite } from './view/components/IconSprite';
 import { FloatingControls } from './view/components/FloatingControls';
 import { TabBar } from './view/components/TabBar';
+import { ScreenHeader } from './view/components/ScreenHeader';
 import { Toolbar } from './view/components/Toolbar';
 import { GameTable } from './view/components/GameTable';
 import { useCoverBackfill } from './view/hooks/useCoverBackfill';
@@ -223,7 +224,7 @@ export default function App() {
   useLegacyProfileHeal();
   // F1: aplica la paleta app-wide y reacciona a la hidratación de cuenta, para que el tema sincronizado se
   // aplique al iniciar sesión (no solo al abrir Ajustes, donde vive el selector `usePalette`).
-  useAppliedPalette();
+  useAppliedPalette(socialStatus);
   // F1: aplica la preferencia de caja (mayúsculas) al <html> app-wide y reacciona a la hidratación.
   useUppercase();
   // F1: aplica la preferencia de efectos visuales (data-effects) al <html> app-wide y reacciona a la hidratación.
@@ -1022,6 +1023,9 @@ export default function App() {
           por los controles flotantes y la barra de pestañas en cada carga. Solo se ve al recibir el foco. */}
       <a className="skip-link" href="#contenido">{UI_MESSAGES.skipToContent}</a>
       <FloatingControls activeSection={activeSection} />
+      {activeSection === 'lists' ? (
+        <ScreenHeader variant="band" kicker={UI_MESSAGES.screenHeader.lists} title={TAB_TITLES[currentTab]} />
+      ) : null}
       {activeSection === 'lists' ? <TabBar currentTab={currentTab} tabCounts={vm.tabCounts} onTabChange={handleTabChange} /> : null}
       {/* ═══ EL CARRIL DE LOS AVISOS · abajo a la izquierda, sobre la barra inferior ═══════════════════════
           UN SOLO CARRIL PARA LAS TRES CÁPSULAS, y se monta AQUÍ y no dentro de cada una. Antes lo traía cada
@@ -1073,6 +1077,9 @@ export default function App() {
         }`.trim()}
       >
         <h1 className="sr-only">{getPageHeading(activeSection, currentTab, settingsGroup)}</h1>
+        {activeSection === 'settings' && settingsGroup ? (
+          <ScreenHeader kicker={UI_MESSAGES.screenHeader.settings} title={UI_MESSAGES.settingsMenu[settingsGroup]} />
+        ) : null}
         <Routes>
           {APP_ROUTES.map(({ path, section }) => (
             <Route key={path} path={path} element={sectionScreens[section]} />

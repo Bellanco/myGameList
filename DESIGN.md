@@ -67,9 +67,9 @@ Cada tema define los mismos tokens; el resto del sistema se deriva. **Nunca uses
 
 | id | Nombre | Acento oscuro | Fondo oscuro | Mundo |
 |---|---|---|---|---|
-| `forja` | **Forja y temple** (por defecto) | `#ff7a3c` metal al rojo | `#0f1315` | La fragua. El único sin mundo detrás: es el que ve quien no ha elegido nada. Naranja que **rellena** y turquesa de temple (`#2fd6c0`) que **escribe y señala** |
+| `forja` | **Forja y temple** (por defecto) | `#ff7a3c` metal al rojo | `#0f1315` | La fragua. El único sin mundo detrás: es el que ve quien no ha elegido nada, y el ÚNICO que ve quien no tiene espacio social (los demás son de la cuenta; ver `paletteLockPreference`). Naranja que **rellena** y turquesa de temple (`#2fd6c0`) que **escribe y señala** |
 | `arcade` | Inserte moneda | `#b23cff` | `#150a24` | Sala de recreativos de los ochenta: violeta de neón, cian de tubo y rosa de pegatina |
-| `witcher` | Plata y acero | `#c6ced8` plata | `#141922` | The Witcher: acero templado; la plata **rellena** y el fuego de Igni (`#ff8f4a`) **escribe y señala**. Las cinco señales van en la rampa. Hasta la 1.4.4 su id era `steam` (ver `LEGACY_PALETTE_IDS`) |
+| `witcher` | Plata y acero | `#c6ced8` plata | `#141922` | The Witcher: acero templado; la plata **rellena** y el fuego de Igni (`#ff8f4a`) **escribe y señala**. Las cinco señales van en la rampa. Hasta la 1.4.4 su id era `steam`, pero un `steam` guardado ya no lleva aquí: era el id de «Clásico», el de por defecto hasta el 14-09-2026, y lleva al de por defecto de hoy (ver `LEGACY_PALETTE_IDS`) |
 | `persona` | Ladrones de corazones | `#ff1f3d` | `#0d0d0d` | Persona 5: rojo, negro, blanco y oro de calendario |
 | `portal` | Cámara de pruebas | `#29b6f6` | `#12171b` | Aperture moderna en oscuro; la antigua (pergamino) en claro |
 | `cyberpunk` | Sin futuro | `#fcee0a` | `#08090d` | HUD de Night City: amarillo, cian, magenta |
@@ -130,7 +130,8 @@ Doce pasos, razón ≈1,08 en la zona de interfaz. Multiplicados por `--font-sca
 - **Tarjeta**: superficie + `--hair` + `--e2` + `--edge`. *(Propuesta: degradado corto y textura del tema al 2 %.)*
 - **Chip**: píldora, `--fs-3xs`, `--font-label`. Neutro para plataforma; teñido con el color de su categoría
   para género y estado.
-- **Fila de tabla**: sin caja. La separa `--hair`; el color entra por un **lomo de 3 px** a la izquierda.
+- **Fila de tabla**: cada fila es una pieza (superficie + `--hair` + el canto del tema) con aire entre una y otra.
+  **Sin lomo de color** a la izquierda, en ningún tema ni en la caja del mosaico: el color lo llevan los chips.
 - **Anillo de nota**: `conic-gradient` con la rampa roja→verde (`--acc-l` fija la luminosidad por tema).
 - **Medalla**: disco en penumbra con dibujo de Lucide en oro; receta en `docs/logros/receta-medalla.md`.
 - **Cápsula** (`.ach-toast`, `_capsule.scss`): la pieza con la que la app dice algo. Disco a la izquierda +
@@ -148,7 +149,12 @@ Doce pasos, razón ≈1,08 en la zona de interfaz. Multiplicados por `--font-sca
 - **Sello de rango** (`.tier-seal`): el rango del perfil dicho con color **y palabra**. Píldora con disco del
   metal, deliberadamente distinta de la medalla, con la que convive en el hero del perfil. El color solo (muesca
   de la tarjeta del directorio, borde del selector de admin) vale para comparar en rejilla, no para informar.
-- **Estados vacíos**: icono grande del sprite + título + una acción. Nunca un párrafo gris suelto.
+- **Cifras del panel** (`.stats-tiles`): la rejilla sale **siempre completa**. Doce pistas; cada ficha ocupa las
+  que le tocan según el ancho de su rejilla (4 / 3 / 2 / 1 por fila) y cuántas hay, y la última fila se reparte el
+  ancho. Con número impar en dos columnas, la ancha es la primera. Si caben todas a ≥ 9,5 rem, van en una fila.
+  El tono de cada ficha va en la cifra y en el velo, sin filete lateral.
+- **Estados vacíos**: icono grande del sprite en la tinta de enlace (`--fg-link`) + título en la letra de titulares
+  (`--font-display`) + una acción. Nunca un párrafo gris suelto.
 - **Iconos**: sprite propio de 49 símbolos (`IconSprite`), `<Icon name="…" />`. Tamaño por ficha
   (`--ico-xs`…`--ico-2xl`), color por papel — no siempre `currentColor`.
 
@@ -160,7 +166,9 @@ Doce pasos, razón ≈1,08 en la zona de interfaz. Multiplicados por `--font-sca
 - Contenedor de lectura ≤ 1140 px; la tabla puede desbordar en su propio contenedor con `overflow-x`.
 - Gutter lateral mínimo de 16 px a cualquier ancho.
 - La app es **headerless**: no hay barra superior fija, sino navegación inferior y un control flotante.
-  *(Propuesta: cabecera de pantalla con rótulo, título y cifras — hoy las pantallas empiezan en frío.)*
+- **Cabecera de pantalla** (`ScreenHeader`): rótulo en versales y título en la letra de titulares, sin cifras.
+  Pieza neutra, apagada en la base: hoy solo la enciende **Forja**, en las cuatro listas, el panel y Ajustes. Va
+  en el flujo, `aria-hidden` (el `h1` accesible sigue en `main`).
 
 ### 5.1 · Navegación
 
@@ -218,7 +226,12 @@ están — y sus bordes tampoco, que ahí el marco de oro o el filete cian **son
   Inserte moneda y Plata y acero 2/3/4; Cámara de pruebas 3/6/10; Ladrones de corazones 3/4/8; Sin futuro y Sol y
   luna 0/0/2; Solo hay guerra 0/2/3.
 - Un radio de 0 es una decisión, no un olvido: en esos temas la esquina viva **es** la identidad.
-- Pastillas (`--radius-pill`) para chips, botones de filtro y segmentados en todos los temas.
+- Pastillas (`--radius-pill`) para chips, botones de filtro y segmentados, salvo en Forja.
+- **Forja no usa píldoras en lo que se pulsa**: botones de acción, filtros y alcances, segmentados, la barra de
+  navegación y los indicadores que se deslizan bajo el botón activo llevan **15 px** (`--forja-btn-radius`, fuera
+  de su escala 6/10/16); sus contenedores suman el relleno para que las esquinas sean concéntricas. Los círculos
+  (`.btn-icon`, `.fab`) siguen redondos y los chips, en pastilla. Los campos que en la casa van en cápsula
+  (`.input-base`: buscador, desplegables de filtro) también van a 15 px.
 
 ---
 
@@ -234,6 +247,9 @@ están — y sus bordes tampoco, que ahí el marco de oro o el filete cian **son
 - Apaga los efectos con `:root:not([data-effects="on"])`. El valor `off` **no existe**: al desactivarlos el
   atributo se retira, así que `[data-effects="off"]` no casa nunca y la regla no llega a aplicarse.
 - Siembra +120 juegos antes de juzgar la tabla: virtualizada y con tres juegos no enseña sus fallos.
+- **Una caja por nivel.** Lo que va dentro de una tarjeta se asienta en ella —filete, fila, sangría— en vez de
+  abrir otra caja con su borde y su fondo. Y el color de un dato, una vez: si lo dice la medalla, no lo repite
+  una barra lateral.
 
 **Don't**
 - No escribas un `font-size`, una sombra o una familia literales.

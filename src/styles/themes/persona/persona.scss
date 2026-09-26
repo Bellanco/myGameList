@@ -91,6 +91,9 @@
 :root[data-palette="persona"] .score-ring-num,
 :root[data-palette="persona"] .score-dial-num,
 :root[data-palette="persona"] .hub-review-medal,
+/* El título del listado vacío va en la letra de titulares desde el acabado visual (§2.C); sin nombrarlo aquí se
+   quedaba en la display sin la cursiva que la acompaña en este tema. */
+:root[data-palette="persona"] .table-empty-title,
 :root[data-palette="persona"] .active-filter-chip {
   font-family: var(--font-display);
   font-style: italic; letter-spacing: .01em;

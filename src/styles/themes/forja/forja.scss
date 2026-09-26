@@ -75,15 +75,14 @@
 
 /* ── §N · LA CAJA SIN CARÁTULA = EL LINGOTE ────────────────────────────────────────────────────────────
    El tema de casa no se disfraza de nada, así que su pieza es la más sobria de las ocho: el canto muy
-   rebajado que ya tiene (`--radius-lg`), el rescoldo del metal todavía caliente entrando por el filo de
-   abajo y el TEMPLE —el turquesa del agua— en el canto de la izquierda. Los dos estados del metal, uno a
-   cada lado, que es el reparto por papel de toda la paleta. ── */
+   rebajado que ya tiene (`--radius-lg`) y el rescoldo del metal todavía caliente entrando por el filo de
+   abajo, que toma el color del GÉNERO del juego (`--card-tone`, el primero): es lo que convierte la parrilla en
+   colección. Sin línea a la izquierda: tuvo un canto de temple de 3 px y se quedó en el filete de la caja. ── */
 :root[data-palette="forja"] .game-card.is-flat {
   border: 1px solid var(--hair);
-  border-left: 3px solid color-mix(in srgb, var(--forja-temple) 75%, transparent);
   border-radius: var(--radius-lg);
   background:
-    linear-gradient(0deg, color-mix(in srgb, var(--steam) 22%, transparent) 0, transparent 42%),
+    linear-gradient(0deg, color-mix(in srgb, var(--card-tone, var(--steam)) 20%, transparent) 0, transparent 42%),
     linear-gradient(180deg, color-mix(in srgb, var(--text) 9%, transparent) 0 1px, transparent 1px),
     var(--surface);
   box-shadow: var(--e2);
@@ -136,3 +135,103 @@
    Este tema no cambia de forma (es su regla, arriba), así que solo toma la MONO para las cifras: la misma
    que ya numera el aro de la nota y la fecha del feed. Una cifra de gráfica es un dato, no texto corrido. ── */
 :root[data-palette="forja"] .stats-hub { --stats-num: var(--font-mono); }
+
+/* ── §N · EL CANTO DE 15 PX: NADA DE PÍLDORAS ──────────────────────────────────────────────────────────
+   La píldora es la forma por defecto de cualquier interfaz, y en el tema de casa hacía que los botones
+   parecieran genéricos. Todo lo que se pulsa y no es un círculo lleva un canto de 15 px: los botones de acción,
+   los filtros y alcances (`.btn-toggle`), los segmentados, la barra de navegación y los INDICADORES que se
+   deslizan bajo el botón activo, que tienen que casar con él. Es respetar la regla del skin: no añade textura,
+   solo canto. No es uno de los radios del tema (6/10/16), por eso va con ficha propia y no como literal suelto.
+
+   Los CONTENEDORES de varios botones (la barra, el conmutador de listas) suman su relleno al canto, para que las
+   esquinas de dentro y de fuera sean concéntricas: con el mismo radio, la de fuera se vería más cerrada.
+
+   Se quedan redondos los círculos (`.btn-icon`, `.fab`, la flecha de la ficha): un icono solo no es una píldora.
+   Los chips (plataforma, género) tampoco son botones y siguen en pastilla, como en todos los temas. ── */
+:root[data-palette="forja"] { --forja-btn-radius: 15px; }
+:root[data-palette="forja"] :is(
+  .btn,
+  .hub-gateway-btn,
+  .hub-seg-btn,
+  .hub-seg-ind,
+  .bottom-nav-btn,
+  .bottom-nav-ind,
+  .sync-help-toggle
+):not(.btn-icon, .fab, .stat-tile-go) {
+  border-radius: var(--forja-btn-radius);
+}
+:root[data-palette="forja"] .bottom-nav-inner { border-radius: calc(var(--forja-btn-radius) + .4rem); }
+:root[data-palette="forja"] .hub-seg { border-radius: calc(var(--forja-btn-radius) + 4px); }
+/* Y LOS CAMPOS QUE IBAN EN PÍLDORA (`.input-base`: el buscador del listado, los desplegables de filtro y el
+   filtro por título del perfil), con el mismo canto: un buscador en cápsula junto a botones de 15 px volvía a
+   decir «interfaz genérica». Los campos de formulario (`.finput`, `.ftextarea`) ya llevan el radio pequeño del
+   tema y no cambian. */
+:root[data-palette="forja"] .input-base { border-radius: var(--forja-btn-radius); }
+
+/* ── §N · LA CABECERA DE PANTALLA ─────────────────────────────────────────────────────────────────────
+   Este tema la enciende (`ScreenHeader` es neutra y en la base no se ve): rótulo en versales con el punto del
+   acento y título en la letra de titulares. Va en el flujo —se va al bajar, no es
+   fija— y en el teléfono es donde más se nota: allí las pestañas son solo iconos y nada decía en qué lista estás.
+   En las listas va en la banda de las pestañas; en el panel y en Ajustes, como primer hijo de `main`. ── */
+:root[data-palette="forja"] .screen-header {
+  display: block;
+  padding-right: calc(42px + 14px);
+}
+:root[data-palette="forja"] .screen-header.is-band {
+  background: var(--surface);
+  padding: 1.25rem 0 .35rem;
+}
+/* El interior sigue la MISMA medida que `main` (1800 px, y 92vw desde 1957 px) para que el rótulo caiga sobre el
+   borde del contenido en cualquier ancho, 4K incluido. */
+:root[data-palette="forja"] .screen-header.is-band .screen-header-inner {
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 0 1.2rem;
+}
+@media (min-width: 1957px) {
+  :root[data-palette="forja"] .screen-header.is-band .screen-header-inner { max-width: 92vw; }
+}
+/* Mientras el contenido llega cerca del borde, el título libra el botón de tema flotante. */
+@media (max-width: 1940px) {
+  :root[data-palette="forja"] .screen-header.is-band .screen-header-inner { padding-right: calc(42px + 14px + .9rem); }
+}
+:root[data-palette="forja"] .screen-header.is-band + .tabs { padding-top: .35rem; }
+:root[data-palette="forja"] .screen-header-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: .5rem 1.5rem;
+}
+:root[data-palette="forja"] .screen-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  min-width: 0;
+}
+:root[data-palette="forja"] .screen-header-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  font-family: var(--font-label);
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+:root[data-palette="forja"] .screen-header-kicker::before {
+  content: "";
+  width: .4rem;
+  height: .4rem;
+  border-radius: 50%;
+  background: var(--steam);
+}
+:root[data-palette="forja"] .screen-header-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-3xl);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: .01em;
+  color: var(--text);
+}

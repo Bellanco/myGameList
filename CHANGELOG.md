@@ -5,6 +5,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.4.6] - 2026-09-26
+
+La versión de **los temas en su sitio**. Quien no tiene espacio social vuelve a ver solo «Forja y temple», el tema
+de casa, y un `steam` guardado —el id del antiguo tema por defecto— deja de abrir «Plata y acero».
+
+### Fixed
+- **Sin espacio social solo se ve «Forja y temple».** Los demás temas son de la cuenta y el selector ya estaba
+  tras la puerta social, pero se seguía pintando lo que hubiera guardado en el dispositivo o en la nube. La
+  elección no se borra: si vuelve el social, vuelve su tema. El anti-flash lo sabe desde el primer fotograma.
+- **Un `steam` guardado vuelve a ser el tema de por defecto** y no «Plata y acero»: era el id de «Clásico», el
+  tema de casa hasta el 14 de septiembre, así que lo tenía guardado sobre todo quien no había elegido nada.
+
 ## [1.4.5] - 2026-09-25
 
 La versión de **la revisión de código y de un arranque más ligero**. Se cierran los doce hallazgos altos de la

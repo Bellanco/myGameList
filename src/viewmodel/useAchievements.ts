@@ -5,7 +5,7 @@ import { ACHIEVEMENTS, ACHIEVEMENTS_BY_LADDER, catalogEpoch } from '../core/achi
 import { ACHIEVEMENTS_PEAK_KEY } from '../core/constants/storageKeys';
 import { rouletteUsedAt } from '../core/achievements/deviceSignals';
 import { DEFAULT_PALETTE } from '../core/constants/palettes';
-import { palettePreference } from '../view/hooks/preferences';
+import { appliedPalette } from '../view/hooks/preferences';
 import { RARITY_POINTS } from '../core/achievements/types';
 import {
   NO_ACHIEVEMENTS_CONFIG,
@@ -90,7 +90,7 @@ export function useAchievements({
         device: {
           hasSync,
           rouletteUsedAt: rouletteUsedAt(),
-          themeChanged: palettePreference.get() !== DEFAULT_PALETTE,
+          themeChanged: appliedPalette() !== DEFAULT_PALETTE,
         },
         now: Date.now(),
       },
