@@ -77,6 +77,13 @@ export interface SocialProfileReference {
    * aparato con la biblioteca a medio sincronizar le borraría medallas a la vitrina (ver `mergeForPublish`).
    */
   achievementsMirror?: string;
+  /**
+   * CUÁNDO se publicó ese espejo (`achievements.at`, ms). 0 si no se sabe.
+   *
+   * Es la cota de las fechas que llegan tarde: un logro que ya figuraba en el espejo SIN fecha estaba conseguido
+   * en ese instante, así que una fecha posterior no puede ser la suya (ver `mergeForPublish`).
+   */
+  achievementsMirrorAt?: number;
   /** Ediciones de la porra ganadas. Viene en el MISMO documento que el espejo, así que no cuesta una lectura. */
   palmares?: PalmaresEntry[];
 }

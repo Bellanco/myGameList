@@ -52,13 +52,15 @@ import { useSocialStartupTasks } from './social/useSocialStartupTasks';
 import { loadLocalState } from '../model/repository/localRepository';
 import { matchSocialRoute, OWN_PROFILE_ALIAS } from './social/socialRoutes';
 import { ENABLE_ACHIEVEMENTS, ENABLE_ACHIEVEMENTS_PUBLISH } from '../core/achievements/flags';
-import { mergeForPublish, packAchievements } from '../core/achievements/pack';
+import { mergeForPublish } from '../core/achievements/pack';
 import { rememberSocialCounters } from '../core/achievements/deviceSignals';
 import { achievementsPublishedKey } from '../core/constants/storageKeys';
 import { useAchievements } from './useAchievements';
 
 /** Biblioteca vacía estable: el hub puede montarse sin `games` y un literal nuevo rompería el memo. */
 const EMPTY_LIBRARY = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 };
+/** Sin espejo publicado todavía (o sin leer): cadena vacía y sin instante, que es «no hay cota». */
+const NO_PUBLISHED_MIRROR = { list: '', at: 0 };
 
 /** Referencia estable: un `new Map()` inline rompería el memo del feed en cada render. */
 import { useSocialCompose } from './social/useSocialCompose';
@@ -200,7 +202,9 @@ export function useSocialViewModel(options?: {
    */
   const [ownProfilePublished, setOwnProfilePublished] = useState(false);
   /** Tu espejo tal y como está PUBLICADO. Es el suelo de la próxima publicación: de ahí no se baja. */
-  const [ownPublishedMirror, setOwnPublishedMirror] = useState('');
+  // El espejo publicado ENTERO —cadena e instante—, no solo la cadena: el `at` es la cota de las fechas que
+  // llegan tarde (ver `mergeForPublish`).
+  const [ownPublishedMirror, setOwnPublishedMirror] = useState<{ list: string; at: number }>(NO_PUBLISHED_MIRROR);
   /**
    * ¿Se sabe ya el rango propio? `ownTier` arranca en bronce porque es el valor por defecto real, pero "bronce
    * porque aún no se ha leído el perfil" y "bronce porque ese es su rango" NO son lo mismo para el directorio: el
@@ -1078,8 +1082,8 @@ export function useSocialViewModel(options?: {
    * Ante duplicados (posibles al fusionar dos gists sociales) sigue ganando el más reciente, como antes.
    */
   /**
-   * TUS logros para el feed. Se empaquetan con la MISMA gramática que se publicaría (`packAchievements`) y se
-   * leen con el mismo parser, así que tu tarjeta y la de una amistad recorren exactamente el mismo camino: si
+   * TUS logros para el feed. Salen del MISMO espejo que se publica (`ownMergedMirror`, más abajo) y se leen con
+   * el mismo parser, así que tu tarjeta y la de una amistad recorren exactamente el mismo camino: si
    * algo se pinta mal en la tuya, se pintaría igual de mal en la suya, y eso se ve enseguida.
    *
    * Depende de `games`, que el hub ya recibe: no hay lectura nueva.
@@ -1169,15 +1173,28 @@ export function useSocialViewModel(options?: {
     [rawSocialDirectory, authUser?.uid, ownProfileId],
   );
 
+  /**
+   * TU ESPEJO TAL Y COMO LO VEN LOS DEMÁS: lo publicado unido a lo de este dispositivo (ver `mergeForPublish`).
+   *
+   * Es el mismo cálculo que se publica, y por eso lo usan también tu tarjeta del feed y tu ficha. Antes esas dos
+   * salían de `packAchievements` sobre el cálculo LOCAL: sin las medallas de tus otros dispositivos, sin tus
+   * destacados, y con la fecha de este aparato, que es la que se movía — tus logros salían «de hoy» en tu propio
+   * feed mientras tus amistades los veían en su día.
+   */
+  const ownMergedMirror = useMemo(
+    () => (ownAchievementStates ? mergeForPublish(ownPublishedMirror, ownAchievementStates) : ''),
+    [ownPublishedMirror, ownAchievementStates],
+  );
+
   const ownAchievementsFeed = useMemo(() => {
     if (!ENABLE_ACHIEVEMENTS || !ownAchievementStates) return undefined;
     return {
       profileId: ownDirectoryProfileId || OWN_PROFILE_ALIAS,
       displayName: socialDisplayName || '',
       photoURL: authUser?.photoURL || '',
-      mirror: packAchievements(ownAchievementStates),
+      mirror: ownMergedMirror,
     };
-  }, [ownAchievementStates, ownDirectoryProfileId, socialDisplayName, authUser?.photoURL]);
+  }, [ownAchievementStates, ownMergedMirror, ownDirectoryProfileId, socialDisplayName, authUser?.photoURL]);
 
   /**
    * TU espejo, el mismo que va al feed.
@@ -1222,7 +1239,7 @@ export function useSocialViewModel(options?: {
 
     // LA UNIÓN, no el reemplazo: lo que ya está publicado es el suelo. Sin esto, abrir la app en un aparato con
     // la biblioteca a medio sincronizar le borra medallas a tu vitrina (ver `mergeForPublish`).
-    const mirror = mergeForPublish(ownPublishedMirror, ownAchievementStates);
+    const mirror = ownMergedMirror;
     const key = achievementsPublishedKey(uid);
     let published = '';
     try {
@@ -1243,7 +1260,7 @@ export function useSocialViewModel(options?: {
       .catch((error) => {
         console.warn('[social] no se pudo publicar el espejo de logros:', error instanceof Error ? error.message : error);
       });
-  }, [authUser?.uid, ownProfilePublished, ownPublishedMirror, ownAchievementStates]);
+  }, [authUser?.uid, ownProfilePublished, ownMergedMirror, ownAchievementStates]);
 
   const { feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed } = useSocialFeed(
     socialDirectory,
@@ -1738,7 +1755,7 @@ export function useSocialViewModel(options?: {
       setOwnTier(DEFAULT_PROFILE_TIER);
       setOwnProfileCreatedAt(0);
       setOwnProfilePublished(false);
-      setOwnPublishedMirror('');
+      setOwnPublishedMirror(NO_PUBLISHED_MIRROR);
       setTierResolved(false);
       return;
     }
@@ -1750,7 +1767,7 @@ export function useSocialViewModel(options?: {
         // De paso, la fecha de alta y si el perfil está publicado: es el mismo documento y la misma lectura.
         setOwnProfileCreatedAt(profile?.createdAt || 0);
         setOwnProfilePublished(Boolean(profile?.socialEnabled));
-        setOwnPublishedMirror(profile?.achievementsMirror || '');
+        setOwnPublishedMirror({ list: profile?.achievementsMirror || '', at: profile?.achievementsMirrorAt || 0 });
       })
       .catch(() => {
         /* sin rango conocido → bronce */

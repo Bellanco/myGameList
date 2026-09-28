@@ -154,6 +154,26 @@ describe('el espejo publicado nunca encoge', () => {
   });
 
   /**
+   * UNA FECHA QUE LLEGA TARDE NO ENTRA. Si el logro ya estaba publicado SIN fecha en el instante `at`, estaba
+   * conseguido entonces: una fecha posterior es la de un sello que se movió después (una nota cambiada), y
+   * dejarla pasar lo enseñaba a tus amistades como conseguido hoy.
+   */
+  it('una fecha posterior a cuando ya estaba publicado sin fecha no entra', () => {
+    const dia = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+    const publicadoEn = Date.UTC(2026, 5, 1);
+    const publicado = { v: MIRROR_VERSION, at: publicadoEn, list: packAchievements([estado('completados-10', 0)]) };
+
+    const tarde = mergeForPublish(publicado, [estado('completados-10', Date.UTC(2026, 8, 28)), estado('horas-10', Date.UTC(2026, 8, 28))]);
+    expect(parseMirror(tarde).find((item) => item.id === 'completados-10')?.unlockedAt).toBe(0);
+    // Lo que NO estaba publicado sí trae su fecha: ese logro es nuevo de verdad.
+    expect(dia(parseMirror(tarde).find((item) => item.id === 'horas-10')!.unlockedAt)).toBe('2026-09-28');
+
+    // Una fecha ANTERIOR a la publicación sí se acepta: es la que el recorte de la cola había perdido.
+    const antes = mergeForPublish(publicado, [estado('completados-10', Date.UTC(2025, 0, 10))]);
+    expect(dia(parseMirror(antes)[0].unlockedAt)).toBe('2025-01-10');
+  });
+
+  /**
    * LOS DESTACADOS SON UNA PREFERENCIA DEL DUEÑO y puede haberla elegido en otro aparato, que este no conoce.
    * Descartarlos haría que cambiar de móvil te deshiciera la vitrina.
    */
