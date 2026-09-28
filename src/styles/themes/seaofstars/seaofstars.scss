@@ -199,6 +199,8 @@
 :root[data-palette="seaofstars"] .badge-opp-activo { background: var(--steam) !important; color: #0b1b3a !important; border-radius: 0 !important; box-shadow: 0 0 8px color-mix(in srgb, var(--steam) 45%, transparent) !important; }
 :root[data-palette="seaofstars"] .badge-rejugar-inactivo,
 :root[data-palette="seaofstars"] .badge-opp-inactivo { border-radius: 0 !important; }
+/* El acceso a la reseña del mosaico, recto como las insignias del tema. */
+:root[data-palette="seaofstars"] .game-card-review { border-radius: 0; }
 
 /* ── §10 · Actividad social: nombres = turquesa (agua); fecha en píxel; reseña como nota con filete turquesa. ── */
 :root[data-palette="seaofstars"] .hub-name-link,

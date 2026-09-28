@@ -9,12 +9,18 @@
 // en silencio: sin él, React lanza «useHref() may be used only in the context of a <Router>» y la pantalla se
 // queda en blanco. Ningún otro test despliega un detalle CON análisis, así que este fichero es lo único que
 // separa ese fallo de producción.
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { GameTable } from '../../src/view/components/GameTable';
 import type { GameItem, TabId } from '../../src/model/types/game';
+
+// El mosaico lee la preferencia de carátulas, que se sincroniza por cuenta: sin esto intentaría hablar con Firebase.
+vi.mock('../../src/model/repository/firebaseRepository', () => ({
+  getPublicConfig: vi.fn(),
+  setPublicConfig: vi.fn(async () => {}),
+}));
 
 function makeGame(over: Partial<GameItem> = {}): GameItem {
   return {
@@ -151,3 +157,64 @@ describe('GameTable — el análisis, en el detalle', () => {
   });
 });
 
+// EL MISMO ACCESO, EN LA CAJA DEL MOSAICO: un disco en la esquina de abajo a la derecha de la carátula, debajo de la
+// nota. Sin desplegar nada: es lo que se ofrece a quien pasea por la colección en mosaico.
+describe('GameTable — el análisis, en la caja del mosaico', () => {
+  afterEach(() => {
+    cleanup();
+    localStorage.clear();
+  });
+
+  function mosaico(
+    over: Partial<GameItem> = {},
+    { tab = 'c', covers = true, reviewLink }: { tab?: TabId; covers?: boolean; reviewLink?: (id: number) => { to: string } } = {},
+  ) {
+    localStorage.setItem('mis-listas-list-shape', 'grid');
+    localStorage.setItem('mis-listas-covers', covers ? 'on' : 'off');
+    return render(
+      <MemoryRouter>
+        <GameTable
+          games={[makeGame(over)]}
+          currentTab={tab}
+          expandedId={null}
+          onExpandedChange={vi.fn()}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onMigrate={vi.fn()}
+          tabActions={[]}
+          reviewLink={reviewLink}
+        />
+      </MemoryRouter>,
+    );
+  }
+
+  it('con reseña, la carátula lleva el enlace a su pantalla', () => {
+    const { container } = mosaico();
+    const enlace = container.querySelector('.game-card-art .game-card-review');
+
+    expect(enlace).not.toBeNull();
+    expect(enlace).toHaveAttribute('href', '/stats/resenas/7');
+    expect(enlace).toHaveAccessibleName('Ver análisis de Rise of Nations');
+  });
+
+  it('va a donde diga `reviewLink`, igual que el del detalle: en un perfil ajeno, a SU reseña', () => {
+    const { container } = mosaico({}, { reviewLink: (id) => ({ to: `/social/profiles/ana/game/${id}/review` }) });
+    expect(container.querySelector('.game-card-review')).toHaveAttribute('href', '/social/profiles/ana/game/7/review');
+  });
+
+  it('sin reseña no hay disco', () => {
+    const { container } = mosaico({ review: '' });
+    expect(container.querySelector('.game-card-review')).toBeNull();
+  });
+
+  it('sin carátulas tampoco: la caja plana abre el análisis desde el detalle desplegado', () => {
+    const { container } = mosaico({}, { covers: false });
+    expect(container.querySelector('.game-card.is-flat')).not.toBeNull();
+    expect(container.querySelector('.game-card-review')).toBeNull();
+  });
+
+  it('ni en próximos, donde no hay análisis que leer', () => {
+    const { container } = mosaico({}, { tab: 'p' });
+    expect(container.querySelector('.game-card-review')).toBeNull();
+  });
+});

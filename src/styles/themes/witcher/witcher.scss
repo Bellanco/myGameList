@@ -576,6 +576,8 @@
   background: linear-gradient(180deg, #39414b, #262d36) !important;
   color: var(--text-dim) !important; border: 0 !important; box-shadow: none !important;
 }
+/* El acceso a la reseña del mosaico, remachado a la lámina como la insignia de al lado. */
+:root[data-palette="witcher"] .game-card-review { box-shadow: 0 1px 2px rgba(0,0,0,.4); }
 
 /* ── §8b · La barra inferior era una píldora de cristal, el acabado de la casa. Aquí es el FRONTAL de la
    chapa: recta, con filete, canto de luz arriba y la sección activa como una placa de acero pulido con

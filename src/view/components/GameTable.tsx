@@ -522,9 +522,9 @@ export const GameTable = memo(function GameTable({
   };
 
   const supportsReview = (tab: TabId) => tab !== 'p';
-  /* A DÓNDE LLEVA «ver el análisis» desde el detalle desplegado. `backTo` es de dónde se viene, para que el
-     botón de volver de aquella pantalla devuelva AQUÍ y no al listado de reseñas, que es de donde se llega
-     normalmente. */
+  /* A DÓNDE LLEVA «ver el análisis», el mismo destino desde el detalle del renglón y desde la caja del
+     mosaico. `backTo` es de dónde se viene, para que el botón de volver de aquella pantalla devuelva AQUÍ y no
+     al listado de reseñas, que es de donde se llega normalmente. */
   const reviewTarget = (gameId: number) =>
     reviewLink?.(gameId) ?? { to: `/stats/resenas/${gameId}`, state: { backTo: TAB_ROUTE[currentTab] } };
 
@@ -1136,6 +1136,21 @@ export const GameTable = memo(function GameTable({
                             const nota = (currentTab === 'c' || currentTab === 'p') || (showShameScore && hasScore(game)) ? (
                               <span className="game-card-score"><ScoreDisplay game={game} /></span>
                             ) : null;
+                            /* EL ACCESO A LA RESEÑA, en la esquina que quedaba libre: debajo de la nota y
+                               al otro canto que la insignia. Solo con carátula —en la caja plana el análisis
+                               se abre desde el detalle desplegado— y es un ENLACE por lo mismo que el del
+                               detalle: abrir en otra pestaña, copiar la dirección, volver con atrás. */
+                            const resena = covers && showReview && supportsReview(currentTab) && game.review ? (
+                              <Link
+                                className="game-card-review"
+                                {...reviewTarget(game.id)}
+                                aria-label={UI_MESSAGES.detail.reviewLinkAria(game.name)}
+                                title={UI_MESSAGES.detail.reviewLinkAria(game.name)}
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                <Icon name={COMMON_ICONS.reviewCard} />
+                              </Link>
+                            ) : null;
                             const insignia = currentTab === 'c' && showReplayable
                               ? <span className="game-card-badge">{renderBooleanBadge('replayable', Boolean(game.replayable))}</span>
                               : currentTab === 'v' && showRetry
@@ -1182,6 +1197,7 @@ export const GameTable = memo(function GameTable({
                                         chips el ancho que necesitan: en una caja de 190 px eso es la diferencia
                                         entre leer «RogueLike» y leer «Rog…». */}
                                     {insignia}
+                                    {resena}
                                   </div>
                                 ) : null}
                                 <div className="game-card-body">

@@ -272,6 +272,19 @@
 :root[data-palette="persona"] .badge-opp-activo { background: var(--steam) !important; color: #fff !important; border: 2px solid #0a0a0a !important; box-shadow: 2px 2px 0 #0a0a0a !important; }
 :root[data-palette="persona"] .badge-rejugar-inactivo,
 :root[data-palette="persona"] .badge-opp-inactivo { background: #0a0a0a !important; color: #fff !important; border: 2px solid #0a0a0a !important; box-shadow: 2px 2px 0 rgba(255, 31, 61, .55) !important; }
+/* El acceso a la reseña del mosaico, en la voz de viñeta de las insignias: contorno negro y sombra dura. En
+   blanco con el icono rojo, para no ser la gemela negra del candado de al lado; al pasar por encima se
+   invierte, como los botones del tema. */
+:root[data-palette="persona"] .game-card-review {
+  background: #fff;
+  color: var(--steam);
+  border: 2px solid #0a0a0a;
+  box-shadow: 2px 2px 0 #0a0a0a;
+  backdrop-filter: none;
+}
+@media (hover: hover) {
+  :root[data-palette="persona"] .game-card-review:hover { background: var(--steam); color: #fff; }
+}
 
 /* ── §9 · Puntuación 0–100: sin aro/borde añadido (el arco de color ya es la nota). El número toma la
    tipografía del tema (§1). ── */

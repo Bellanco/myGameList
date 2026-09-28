@@ -600,6 +600,13 @@
   background: linear-gradient(180deg, #fff, #e6d6fa) !important;
   color: var(--text-muted) !important;
 }
+/* El acceso a la reseña del mosaico, con el canto de la tecla apagada de al lado: la misma tinta en oscuro y
+   el mismo troquel blanco con aro en claro. La plaquita y el color del icono son los de la hoja base. */
+:root[data-palette="arcade"] .game-card-review { border: 2px solid var(--arc-ink); box-shadow: 0 2px 0 rgba(0, 0, 0, .4); }
+:root[data-palette="arcade"][data-theme="light"] .game-card-review {
+  border-color: #fff;
+  box-shadow: 0 0 0 1.5px rgba(123, 27, 208, .3), 0 2px 0 rgba(58, 24, 92, .16);
+}
 
 /* ── §15 · Ruleta = la máquina de premios. El tambor es una RANURA de la chapa (hundido duro, como los
    campos), el visor de selección un tubo de neón cian recto —no un óvalo—, y las tarjetas del resultado,
