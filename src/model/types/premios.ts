@@ -153,6 +153,13 @@ export interface PremiosArchivedEntry {
   points: number;
 }
 
+/**
+ * EL VOTO POPULAR de una edición: categoría → `optionId` → cuántas personas lo votaron.
+ *
+ * Solo cifras, nunca quién: va dentro del archivo, que es público (ver `core/premios/popularVote`).
+ */
+export type PremiosVoteTally = Record<string, Record<string, number>>;
+
 /** Una edición archivada: lo único que queda de ella cuando se publica. */
 export interface PremiosSeasonResult {
   season: number;
@@ -162,6 +169,11 @@ export interface PremiosSeasonResult {
   categoriesSnapshot: PremiosCategorySnapshot[];
   leaderboard: PremiosArchivedEntry[];
   totalBallots: number;
+  /**
+   * El recuento del voto popular, congelado al publicar. AUSENTE en las ediciones publicadas antes de que
+   * existiera: sus papeletas ya se retiraron y no hay con qué rehacerlo.
+   */
+  votes?: PremiosVoteTally;
 }
 
 /**
@@ -181,7 +193,17 @@ export interface PalmaresEntry {
   seasonId: string;
   /** Nombre visible, congelado en el momento de conceder: el archivo puede renombrarse después. */
   seasonName: string;
-  /** Puesto DENSO, 1..5. Los empatados comparten puesto. */
+  /**
+   * Puesto DENSO, 1..5. Los empatados comparten puesto.
+   *
+   * `0` = PARTICIPACIÓN (`PALMARES_PARTICIPATION_RANK`): votó en esa edición y no entró en los cinco primeros.
+   * Hay una sola entrada por persona y edición, así que la del puesto sustituye a la de participar.
+   */
   rank: number;
+  /**
+   * Año de la edición, que es lo que la medalla enseña y por lo que se ordena la vitrina. Ausente en los trofeos
+   * concedidos antes de guardarlo; se deduce entonces del id o del nombre (ver `core/premios/palmares`).
+   */
+  season?: number;
   awardedAt: number;
 }

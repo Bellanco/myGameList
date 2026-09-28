@@ -23,7 +23,8 @@ import {
 } from 'firebase/firestore/lite';
 import { archivableCategories, categoriesMissingWinner } from '../../../core/premios/archivable';
 import { buildScheduleFields } from '../../../core/premios/closingDate';
-import { hasAward } from '../../../core/premios/awards';
+import { palmaresRecipientsFrom } from '../../../core/premios/palmares';
+import { tallyVotes } from '../../../core/premios/popularVote';
 import { computeLeaderboard } from '../../../core/premios/scoring';
 import { getSeasonId, getSeasonLabel, toSeasonId } from '../../../core/premios/seasonId';
 import type {
@@ -405,6 +406,9 @@ export interface BuildSnapshotParams {
  *    así que congelar ahí la URL de la foto de cada participante dejaría datos personales en un documento abierto
  *    —y quitar la foto de la cuenta ya no la retiraría—. La cara se resuelve al PINTAR, con la reciprocidad del
  *    hub, que es dinámica; sin sesión se ven iniciales.
+ *
+ * Y LLEVA EL VOTO POPULAR: cuántos votos tuvo cada nominado, sin decir de quién (ver `core/premios/popularVote`).
+ * Tiene que salir de aquí porque es la última vez que existen las papeletas.
  */
 export function buildSeasonSnapshot({
   season,
@@ -445,6 +449,7 @@ export function buildSeasonSnapshot({
     categoriesSnapshot,
     leaderboard,
     totalBallots: (ballots || []).length,
+    votes: tallyVotes(ballots || [], categories || []),
   };
 }
 
@@ -513,10 +518,11 @@ export async function publishAndArchiveSeason({
   //
   //       LA CUENTA ES LA CLAVE, no el nombre: `userId` es el uid con el que se votó, así que quien cambie de
   //       nick después —o lo cambiara entre votar y publicar— recibe su trofeo igual, en su perfil de siempre.
-  const premiados: PalmaresRecipient[] = computeLeaderboard(ballots, categories, resolved)
-    .filter((entry) => hasAward(entry.rank) && entry.userId)
-    .map((entry) => ({ uid: entry.userId, rank: entry.rank }));
-  const awarded = await grantPalmares(premiados, snapshot.seasonId, snapshot.name);
+  //
+  //       Y QUIEN NO ENTRA EN LOS CINCO PRIMEROS SE LLEVA EL DE PARTICIPAR. Una entrada por persona y edición: la
+  //       del puesto ya dice que participó, así que no se le suma otra.
+  const premiados: PalmaresRecipient[] = palmaresRecipientsFrom(computeLeaderboard(ballots, categories, resolved));
+  const awarded = await grantPalmares(premiados, snapshot.seasonId, snapshot.name, season);
 
   //       Y SE APUNTA A QUIÉN SE LE DIO, en la colección que solo lee el administrador. Es lo que hace
   //       reversible el trofeo desde el histórico: aquí se retiran las papeletas, así que después de esta línea

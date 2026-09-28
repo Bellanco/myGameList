@@ -1231,6 +1231,27 @@
   color: var(--text-dim);
 }
 
+/* LA CASILLA CAMBIA DE LÁMINA (ver `pulsarEscalon`): una capa transparente cubre el escalón y recoge el clic.
+   Lo que tiene destino propio —el nombre que lleva al perfil y el botón del trofeo— sube por encima de ella y
+   sigue funcionando. Y en un empate se marca de quién es la lámina que se está viendo, subrayada con el acento
+   en texto. */
+.premios-results__step.has-award { position: relative; }
+.premios-results__step-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.premios-results__step.has-award .premios-results__link,
+.premios-results__step.has-award .premios-results__step-trophy { position: relative; z-index: 2; }
+.premios-results__step-name.is-showing {
+  text-decoration: underline;
+  text-decoration-color: var(--fg-link);
+  text-decoration-thickness: 2px;
+  text-underline-offset: .18em;
+}
+
 .premios-results__step-points {
   grid-column: 2;
   display: flex;
@@ -1374,6 +1395,39 @@
 }
 
 .premios-results__winner { color: var(--fg-link); font-size: var(--fs-md); line-height: 1.2; }
+
+/* El enlace a lo más votado, al final de la cabecera de los ganadores: es la otra lectura de esa misma lista. */
+.premios-results__popular-link {
+  margin-left: auto;
+  font-size: var(--fs-sm);
+  color: var(--fg-link);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.premios-results__popular-link:hover { text-decoration: underline; }
+
+/* ─── Lo más votado ───────────────────────────────────────────────────────────────────────────────────── */
+
+.premios-popular__lead { color: var(--text-muted); font-size: var(--fs-sm); margin: .2rem 0 0; }
+
+/* Con empate van todos los empatados, uno por línea: separados por comas, dos títulos largos se leían como uno. */
+.premios-popular__names { display: grid; gap: .1rem; }
+
+.premios-popular__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .2rem .6rem;
+  align-items: baseline;
+  margin-top: .15rem;
+}
+
+.premios-popular__votes { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-muted); }
+
+.premios-popular__jury {
+  font-family: var(--font-label);
+  font-size: var(--fs-2xs);
+  color: var(--text-dim);
+}
 
 .premios-results__board { display: grid; gap: .25rem; list-style: none; margin: 0; padding: 0; }
 

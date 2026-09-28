@@ -216,6 +216,30 @@ export const PREMIOS_UI = {
     // La clasificación enseña la cara de una amistad y la inicial del resto: es la misma regla de reciprocidad
     // del espacio social, aplicada aquí (ver §4.1 del plan).
     avatarAria: (nombre: string) => `Perfil de ${nombre}`,
+    /** El enlace a lo que votó la gente, en la cabecera de los ganadores. */
+    popularLink: 'Lo más votado',
+    /**
+     * UN ESCALÓN CON EMPATE CAMBIA DE LÁMINA al pulsarlo: cada pulsación pasa a la siguiente persona. El rótulo
+     * dice de quién es la que se va a ver, no la que ya se está viendo.
+     */
+    seeOf: (nombre: string) => `Ver el trofeo de ${nombre}`,
+  },
+
+  /**
+   * EL VOTO POPULAR: lo que eligió más gente en cada categoría. Es la otra lectura de una edición —la porra se
+   * gana acertando al jurado— y va en su propia pantalla, enlazada desde los resultados.
+   */
+  votos: {
+    sectionAria: 'Lo más votado',
+    title: 'Lo más votado',
+    lead: 'Lo que eligió más gente en cada categoría, acertara o no el jurado.',
+    back: 'Volver a los resultados',
+    /** «9 de 14 votos». Con empate, cada uno de los empatados tiene esos votos. */
+    votes: (votos: number, total: number) => (total === 1 ? '1 voto' : `${votos} de ${total} votos`),
+    tie: 'Empate',
+    /** La gente eligió lo mismo que el jurado. Sin esta marca habría que ir y volver entre las dos pantallas. */
+    matchesJury: 'Como el jurado',
+    empty: 'Esta edición no guardó el recuento de votos.',
   },
 
   // EL PANEL. Vive dentro del de administración de la app, como una vista más: no hay un segundo `/admin`.
@@ -452,16 +476,26 @@ export const PREMIOS_UI = {
   palmares: {
     title: 'Palmarés',
     // Se dice «en» y no «ganó»: un empate a primer puesto es de dos, y «ganó» sonaría a que fue el único.
-    entry: (rank: number, edicion: string) => `${rank}.º en ${edicion}`,
-    medalAria: (rank: number, edicion: string) => `Trofeo: ${rank}.º puesto en ${edicion}`,
+    // El puesto `0` es la PARTICIPACIÓN (ver `core/premios/palmares`).
+    entry: (rank: number, edicion: string) => (rank === 0 ? `Participó en ${edicion}` : `${rank}.º en ${edicion}`),
+    medalAria: (rank: number, edicion: string) =>
+      rank === 0 ? `Trofeo: participación en ${edicion}` : `Trofeo: ${rank}.º puesto en ${edicion}`,
+    /**
+     * La píldora del canto: «1.º·’21», o solo el año si es de participar. Sin espacios a propósito: a 48 px la
+     * píldora no puede ser más ancha que el disco.
+     */
+    pill: (rank: number, anio: string) => (rank === 0 ? anio : [`${rank}.º`, anio].filter(Boolean).join('·')),
     /**
      * EL TROFEO ES UN ENLACE al archivo de esa edición, y hay que decir a dónde lleva: con el rótulo suelto, un
      * lector de pantalla anunciaba «enlace, Trofeo: 1.º puesto en…» y no había forma de saber que al pulsar se
      * sale del perfil. Puesto en el enlace, sustituye a lo que digan la medalla y el rótulo de dentro, que si no
      * se leerían los dos seguidos.
      */
-    entryAria: (rank: number, edicion: string) => `${rank}.º en ${edicion}: ver los resultados`,
+    entryAria: (rank: number, edicion: string) =>
+      `${rank === 0 ? 'Participó' : `${rank}.º`} en ${edicion}: ver los resultados`,
     rarity: 'Excepcional',
+    // Participar lo tiene todo el que votó: su aura es la común, la misma que en el catálogo dice «lo tiene mucha gente».
+    rarityParticipation: 'Común',
     empty: 'Todavía no ha ganado ninguna edición.',
   },
 

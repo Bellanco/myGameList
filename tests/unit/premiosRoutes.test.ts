@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   matchPremiosRoute,
   panelNeedsSession,
+  popularPath,
   resultsPath,
   votePath,
 } from '../../src/viewmodel/premios/premiosRoutes';
@@ -39,6 +40,12 @@ describe('matchPremiosRoute', () => {
     expect(matchPremiosRoute('/premios/resultados/%zz').seasonId).toBe('%zz');
   });
 
+  it('lee el voto popular de una edición', () => {
+    expect(matchPremiosRoute('/premios/resultados/2025/votos')).toMatchObject({ panel: 'votos', seasonId: '2025' });
+    // Sin la edición delante no es el voto popular: «votos» sería el id de una edición.
+    expect(matchPremiosRoute('/premios/resultados/votos')).toMatchObject({ panel: 'resultados', seasonId: 'votos' });
+  });
+
   it('cualquier otra sub-ruta cae en la portada', () => {
     expect(matchPremiosRoute('/premios/lo-que-sea').panel).toBe('portada');
   });
@@ -50,6 +57,7 @@ describe('constructores de dirección', () => {
     expect(votePath(0)).toBe('/premios/votar/1');
     expect(matchPremiosRoute(resultsPath('porra-2026')).seasonId).toBe('porra-2026');
     expect(resultsPath()).toBe('/premios/resultados');
+    expect(matchPremiosRoute(popularPath('reto 2026'))).toMatchObject({ panel: 'votos', seasonId: 'reto 2026' });
   });
 });
 
@@ -64,6 +72,7 @@ describe('qué exige sesión', () => {
   it('la portada y los resultados NO', () => {
     expect(panelNeedsSession('portada')).toBe(false);
     expect(panelNeedsSession('resultados')).toBe(false);
+    expect(panelNeedsSession('votos')).toBe(false);
   });
 
   it('la confirmación de envío tampoco: quien acaba de votar ya la tenía', () => {

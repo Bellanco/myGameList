@@ -763,6 +763,16 @@ contraste corregidos que venían de antes (`--text-dim` sobre superficie elevada
 **No la cubre el axe del CI**, porque la auditoría de `tests/e2e/a11y.test.ts` necesita una edición publicada y
 en el build de pruebas no hay ninguna.
 
+**Voto popular, empates y palmarés con año (28-09-2026).** Un escalón del podio con empate cambia de lámina a
+cada pulsación (trofeo o casilla) y marca de quién es la que se ve. Publicar congela en el archivo el recuento del
+voto popular (`votes`: categoría → nominado → cuántos, sin quién; `core/premios/popularVote`), que se enseña en
+`/premios/resultados/:seasonId/votos`, pública como los resultados; las ediciones sin recuento no la ofrecen. El
+palmarés gana la **participación** (puesto `0`, una entrada por persona y edición: la del puesto la sustituye) y
+el **año** de la edición, que va en la píldora de la medalla («1.º·’21») y ordena la vitrina
+(`core/premios/palmares`). Las ediciones 2020–2023 se importan con `scripts/import-premios-historico.mjs`, con
+el ganador del palmarés real de TGA contrastado contra todas las marcas de las hojas, y a 2025 se le añaden el
+recuento y la participación con `scripts/premios-2025-votos.mjs`.
+
 **Dónde vive el arte del podio, dicho sin adornos.** Las cinco láminas están en `public/awards/` (1,2 MB), tal y
 como venían, **con su rótulo original**: se trajeron sin rerotular por decisión del 20-09-2026. La consecuencia es
 que quien adivine su URL puede abrirlas en blanco; no se enlazan en ninguna parte pública, el dominio va con

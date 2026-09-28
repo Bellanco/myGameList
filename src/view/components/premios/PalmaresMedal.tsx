@@ -1,5 +1,6 @@
 import { memo, type CSSProperties } from 'react';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
+import { isParticipation, palmaresYear, shortYear } from '../../../core/premios/palmares';
 import type { PalmaresEntry } from '../../../model/types/premios';
 // La hoja de las medallas se importa AQUÍ, igual que hace `AchievementMedal`: esta medalla se pinta en chunks
 // perezosos distintos (el perfil social y la sección de premios), y colgar sus estilos de la hoja de uno de los
@@ -25,7 +26,12 @@ export type PalmaresMedalSize = keyof typeof SIZES;
  *    medirla — solo hay cinco puestos por edición, y casi nadie los va a tener.
  *  · **El temple dice el PUESTO**, que es la información que de verdad importa: oro el primero, plata el
  *    segundo, cobre del tercero en adelante. Es el mismo canal que en el catálogo usa el tramo de la escalera.
- *  · **La píldora del canto lleva el puesto**, no un umbral.
+ *  · **La píldora del canto lleva el puesto Y EL AÑO** («1.º·’21»), no un umbral. El año es lo que separa las
+ *    ediciones de la hoja de cálculo (2020–2024) de las jugadas aquí: con el mismo disco, sin él no se sabría
+ *    cuál es cuál.
+ *
+ * LA PARTICIPACIÓN (puesto `0`) es la misma medalla bajada de tono: aura común —la tiene todo el que votó—, el
+ * filo neutro de siempre en vez de un metal, la urna en lugar de la copa, y solo el año en la píldora.
  */
 export interface PalmaresMedalProps {
   entry: PalmaresEntry;
@@ -42,28 +48,36 @@ function templeDelPuesto(rank: number): string {
 export const PalmaresMedal = memo(function PalmaresMedal({ entry, size = 'md' }: PalmaresMedalProps) {
   const side = SIZES[size];
   const L = PREMIOS_UI.palmares;
+  const participa = isParticipation(entry);
+  // Sin filo de metal para la participación: sin clase de temple, la medalla se queda con el neutro de la casa.
+  const clase = participa ? 'is-comun is-participation' : `is-excepcional ${templeDelPuesto(entry.rank)}`;
+  const simbolo = participa ? '#ach-participacion' : '#ach-palmares';
 
   return (
     <span
-      className={`ach-medal premios-palmares-medal is-excepcional ${templeDelPuesto(entry.rank)}`}
+      className={`ach-medal premios-palmares-medal ${clase}`}
       style={{ '--sz': `${side}px` } as CSSProperties}
       role="img"
       aria-label={L.medalAria(entry.rank, entry.seasonName)}
-      data-rarity={L.rarity}
+      data-rarity={participa ? L.rarityParticipation : L.rarity}
     >
       <span className="ach-canvas" aria-hidden="true">
         <svg className="ach-art" viewBox="0 0 24 24">
-          <g className="ach-sh"><use href="#ach-palmares" /></g>
-          <g className="ach-fg"><use href="#ach-palmares" /></g>
-          <g className="ach-hl"><use href="#ach-palmares" /></g>
+          <g className="ach-sh"><use href={simbolo} /></g>
+          <g className="ach-fg"><use href={simbolo} /></g>
+          <g className="ach-hl"><use href={simbolo} /></g>
         </svg>
         <span className="ach-light" />
         <span className="ach-grain" />
       </span>
-      {/* La píldora del canto, con el PUESTO. Fuera del lienzo, como en las medallas del catálogo: montada en el
-          borde de abajo es lo que la hace caber a 48 px sin tapar el dibujo. A 28 no sale, que es donde no cabe
-          nada legible. */}
-      {size === 'sm' ? null : <span className="ach-step" aria-hidden="true">{entry.rank}</span>}
+      {/* La píldora del canto, con el PUESTO y el AÑO. Fuera del lienzo, como en las medallas del catálogo:
+          montada en el borde de abajo es lo que la hace caber a 48 px sin tapar el dibujo. A 28 no sale, que es
+          donde no cabe nada legible. */}
+      {size === 'sm' ? null : (
+        <span className="ach-step" aria-hidden="true">
+          {L.pill(participa ? 0 : entry.rank, shortYear(palmaresYear(entry)))}
+        </span>
+      )}
     </span>
   );
 });

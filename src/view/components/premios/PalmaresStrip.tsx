@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
+import { sortPalmares } from '../../../core/premios/palmares';
 import type { PalmaresEntry } from '../../../model/types/premios';
 import { resultsPath } from '../../../viewmodel/premios/premiosRoutes';
 import { PalmaresMedal } from './PalmaresMedal';
@@ -8,10 +9,11 @@ import { PalmaresMedal } from './PalmaresMedal';
 const L = PREMIOS_UI.palmares;
 
 /**
- * LA VITRINA DEL PALMARÉS en la ficha de un perfil: las ediciones de la porra que esa persona ha ganado.
+ * LA VITRINA DEL PALMARÉS en la ficha de un perfil: las ediciones de la porra en las que esa persona quedó entre
+ * los cinco primeros o, desde 2025, en las que participó.
  *
  * Va DELANTE de la tira de logros y separada. Es lo más raro que puede tener un perfil —cinco puestos por
- * edición y una edición al año—, y mezclada entre las medallas del catálogo, que se cuentan por decenas, se
+ * edición y una edición al año, más la participación de quien votó y no entró—, y mezclada entre las medallas del catálogo, que se cuentan por decenas, se
  * perdería. Esa separación es lo que la hace «especial» sin necesidad de ningún adorno extra.
  *
  * Con rótulo, a diferencia de la tira de logros —que es solo imagen—: un trofeo sin edición no dice nada, y son
@@ -27,10 +29,9 @@ const L = PREMIOS_UI.palmares;
  * tira de logros de quien no publica ninguno.
  */
 export const PalmaresStrip = memo(function PalmaresStrip({ entries }: { entries: PalmaresEntry[] }) {
-  const ordenadas = [...entries]
-    .filter((entry) => entry && entry.seasonId)
-    // Lo más reciente primero, y a igualdad de fecha manda el mejor puesto.
-    .sort((a, b) => (b.awardedAt || 0) - (a.awardedAt || 0) || (a.rank || 99) - (b.rank || 99));
+  // Por el AÑO DE LA EDICIÓN, no por la fecha de concesión: las ediciones antiguas se importaron todas a la vez,
+  // y por fecha 2020 saldría delante de 2025 solo por haber entrado después.
+  const ordenadas = sortPalmares(entries);
 
   if (ordenadas.length === 0) return null;
 

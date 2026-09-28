@@ -17,6 +17,7 @@
  */
 import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, writeBatch } from 'firebase/firestore/lite';
 import type { PalmaresEntry } from '../../types/premios';
+import { PALMARES_PARTICIPATION_RANK } from '../../../core/premios/palmares';
 import { ADMIN_COLLECTION, BATCH_LIMIT, palmaresDocId, requireServices } from './premiosShared';
 
 /** Quién se llevó trofeo en una edición y en qué puesto. Solo existe en la colección de administración. */
@@ -33,14 +34,19 @@ export interface PalmaresRecord {
   recipients: PalmaresRecipient[];
 }
 
-/** Lista de premiados saneada: sin uid vacío, sin puestos raros y sin repetidos. */
+/**
+ * Lista de premiados saneada: sin uid vacío, sin puestos raros y sin repetidos.
+ *
+ * El `0` es un puesto válido: es la PARTICIPACIÓN (ver `core/premios/palmares`). Un registro que la perdiera
+ * aquí dejaría sin trofeo a toda la gente de fuera del podio al volver a encender el interruptor del histórico.
+ */
 function cleanRecipients(raw: unknown): PalmaresRecipient[] {
   if (!Array.isArray(raw)) return [];
   const porUid = new Map<string, PalmaresRecipient>();
   for (const entry of raw as PalmaresRecipient[]) {
     const uid = String(entry?.uid || '');
-    const rank = Number(entry?.rank || 0);
-    if (!uid || !Number.isInteger(rank) || rank < 1) continue;
+    const rank = Number(entry?.rank ?? -1);
+    if (!uid || !Number.isInteger(rank) || rank < PALMARES_PARTICIPATION_RANK) continue;
     porUid.set(uid, { uid, rank });
   }
   return [...porUid.values()];
@@ -133,6 +139,8 @@ export async function grantPalmares(
   premiados: PalmaresRecipient[],
   seasonId: string,
   seasonName: string,
+  /** Año de la edición: la medalla lo enseña. Sin él se deduce del id o del nombre al pintar. */
+  season?: number,
 ): Promise<number> {
   const { firestore } = await requireServices();
   const awardedAt = Date.now();
@@ -146,7 +154,9 @@ export async function grantPalmares(
 
       const previo = (snapshot.data()?.palmares || []) as PalmaresEntry[];
       const sinEsta = Array.isArray(previo) ? previo.filter((entry) => entry?.seasonId !== seasonId) : [];
-      const palmares = [...sinEsta, { seasonId, seasonName, rank, awardedAt }];
+      const entrada: PalmaresEntry = { seasonId, seasonName, rank, awardedAt };
+      if (season) entrada.season = season;
+      const palmares = [...sinEsta, entrada];
 
       await setDoc(ref, { palmares, updatedAt: awardedAt }, { merge: true });
       concedidos += 1;
@@ -236,6 +246,7 @@ export async function setSeasonPalmaresGranted(
   seasonId: string,
   seasonName: string,
   granted: boolean,
+  season?: number,
 ): Promise<number> {
   if (!granted) {
     const retirados = await revokePalmares(seasonId);
@@ -257,7 +268,7 @@ export async function setSeasonPalmaresGranted(
     );
   }
 
-  const concedidos = await grantPalmares(registro.recipients, seasonId, seasonName);
+  const concedidos = await grantPalmares(registro.recipients, seasonId, seasonName, season);
   await savePalmaresRecord(seasonId, true);
   return concedidos;
 }

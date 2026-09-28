@@ -79,7 +79,7 @@ export function AdminPremiosHistorico({
     const nombre = season.name || season.id;
     const dar = !concedido(season.id);
     void ejecutar(async () => {
-      const cuantos = await setSeasonPalmaresGranted(season.id, nombre, dar);
+      const cuantos = await setSeasonPalmaresGranted(season.id, nombre, dar, season.season);
       await recargar();
       if (cuantos === 0) return L.awardNone;
       return dar ? L.awardGranted(cuantos) : L.awardRevoked(cuantos);
