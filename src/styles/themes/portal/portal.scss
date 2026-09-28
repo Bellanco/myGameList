@@ -166,6 +166,15 @@
    CUADRADA como el marco de la nota que tiene encima (§9): el mismo 15/104 del lado, en porcentaje como el
    medallón de las reseñas. Las dos piezas de la columna derecha de la carátula se leen de la misma familia. */
 :root[data-palette="portal"] .game-card-review { border: 1px solid var(--border); border-radius: calc(100% * 15 / 104); }
+/* Y las insignias, con la misma placa: en la caja del mosaico son la otra esquina de abajo, y un disco frente a
+   dos cuadrados rompía la familia. Van en porcentaje porque salen a tres tamaños (26 px en la caja, 32 en el
+   detalle, 38 en el renglón) y el radio tiene que ser el mismo 15/104 en los tres. El envoltorio de la caja
+   también, que es quien lleva la sombra: redondo, dejaba un halo circular alrededor del cuadrado. */
+:root[data-palette="portal"] .badge-rejugar-activo,
+:root[data-palette="portal"] .badge-rejugar-inactivo,
+:root[data-palette="portal"] .badge-opp-activo,
+:root[data-palette="portal"] .badge-opp-inactivo,
+:root[data-palette="portal"] .game-card-badge { border-radius: calc(100% * 15 / 104); }
 
 /* ── §9 · Puntuación 0–100 = MARCO CUADRADO: el mismo `conic-gradient` de la hoja base (es quien sabe la
    nota), sobre un cuadrado redondeado en vez de un disco, como una placa del complejo. Sin marco de color
