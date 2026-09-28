@@ -18,8 +18,9 @@ reseña deja de republicar la foto de Google que el usuario había ocultado.
   publicadas antes no tienen con qué rehacer el recuento y no ofrecen la pantalla.
 - **Los empates del podio se ven**: un escalón compartido cambia de lámina a cada pulsación y dice de quién es la
   que se está viendo.
-- **Palmarés con año y con participación.** La medalla lleva el año de la edición («1.º·’21») y la vitrina se
-  ordena por él; quien votó sin entrar en los cinco primeros recibe el trofeo de participar.
+- **Palmarés con año y con participación.** La medalla dice el año de la edición en su rótulo («3.º en Game
+  Awards 2021») —la píldora lleva solo el puesto— y la vitrina se ordena por él; quien votó sin entrar en los
+  cinco primeros recibe el trofeo de participar, con el año en la píldora.
 - **Scripts para el histórico de premios**: `import-premios-historico.mjs` importa las ediciones 2020–2023,
   contrastando el ganador con el palmarés real de los TGA, y `premios-2025-votos.mjs` añade a 2025 el recuento y la
   participación. «Best E-Sport Game» de 2020 se queda fuera del archivo porque aquel año no contó.
