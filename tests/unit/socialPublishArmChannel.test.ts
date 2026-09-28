@@ -143,6 +143,33 @@ describe('publishReviewActivity — armado del canal social', () => {
     expect(firebaseMocks.ensureProfileByEmail).toHaveBeenCalledWith(expect.objectContaining({ preferredName: '' }));
   });
 
+  // El perfil público y los docs de amistad llevan la MISMA foto. Antes el perfil caía a la de la sesión sin filtrar:
+  // cada reseña republicaba la foto de quien la había ocultado, y el panel veía una identidad rancia perpetua.
+  it('con la foto oculta, el perfil público se asegura sin foto', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({
+      uid: 'uid-1', email: 'yo@example.com', displayName: 'Real Name', photoURL: 'https://lh3.googleusercontent.com/a/cara=s96-c',
+    });
+    firebaseMocks.getPrivateConfig.mockResolvedValue({ socialGistId: 'ddee1122aabb6666' });
+    const gist = socialGist();
+    gist.profile.visibility.showPhoto = false;
+    stubGistStore(gist);
+
+    await publishReviewActivity(REVIEW);
+
+    expect(firebaseMocks.ensureProfileByEmail).toHaveBeenCalledWith(expect.objectContaining({ photoURL: '' }));
+  });
+
+  it('con la foto visible, el perfil público lleva la de la sesión', async () => {
+    const photo = 'https://lh3.googleusercontent.com/a/cara=s96-c';
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'yo@example.com', displayName: 'Real Name', photoURL: photo });
+    firebaseMocks.getPrivateConfig.mockResolvedValue({ socialGistId: 'ddee1122aabb5555' });
+    stubGistStore();
+
+    await publishReviewActivity(REVIEW);
+
+    expect(firebaseMocks.ensureProfileByEmail).toHaveBeenCalledWith(expect.objectContaining({ photoURL: photo }));
+  });
+
   it('sin sesión de Google marca la publicación como pendiente (antes se perdía en silencio)', async () => {
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue(null);
     const store = stubGistStore();

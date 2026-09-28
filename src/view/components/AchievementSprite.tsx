@@ -34,6 +34,34 @@ export function AchievementSprite() {
           <stop offset="0.72" stopColor="#8e5c20" />
           <stop offset="1" stopColor="#412a0f" />
         </linearGradient>
+        {/* Los otros metales del PALMARÉS de la porra: el trofeo del segundo puesto es de plata, el del tercero de
+            bronce, el del cuarto y el quinto de cobre, y el de participar azul (ver `PalmaresMedal`). Misma
+            receta que `#ach-lux` —claro arriba a la izquierda, sombra casi negra en la esquina contraria— para que
+            el relieve sea el mismo y solo cambie la aleación. */}
+        <linearGradient id="ach-lux-plata" x1="14%" y1="0%" x2="86%" y2="100%">
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset="0.34" stopColor="#c9d2de" />
+          <stop offset="0.72" stopColor="#6d7684" />
+          <stop offset="1" stopColor="#2a2f37" />
+        </linearGradient>
+        <linearGradient id="ach-lux-bronce" x1="14%" y1="0%" x2="86%" y2="100%">
+          <stop offset="0" stopColor="#f3dcb0" />
+          <stop offset="0.34" stopColor="#b38a4e" />
+          <stop offset="0.72" stopColor="#6b4e25" />
+          <stop offset="1" stopColor="#2e210f" />
+        </linearGradient>
+        <linearGradient id="ach-lux-cobre" x1="14%" y1="0%" x2="86%" y2="100%">
+          <stop offset="0" stopColor="#ffd2b8" />
+          <stop offset="0.34" stopColor="#d8683c" />
+          <stop offset="0.72" stopColor="#86351a" />
+          <stop offset="1" stopColor="#3a160a" />
+        </linearGradient>
+        <linearGradient id="ach-lux-azul" x1="14%" y1="0%" x2="86%" y2="100%">
+          <stop offset="0" stopColor="#e2efff" />
+          <stop offset="0.34" stopColor="#6fa6ea" />
+          <stop offset="0.72" stopColor="#2f5d9c" />
+          <stop offset="1" stopColor="#142844" />
+        </linearGradient>
       </defs>
         {/* Clapperboard */}
         <symbol id="ach-completados" viewBox="0 0 24 24"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z" /><path d="m6.2 5.3 3.1 3.9" /><path d="m12.4 3.4 3.1 4" /><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /></symbol>
@@ -170,6 +198,10 @@ export function AchievementSprite() {
             biblioteca; esto lo concede el administrador al publicar una edición), pero se enseña con la misma
             medalla y por eso su símbolo vive aquí, con los demás. Ver `PalmaresMedal`. */}
         <symbol id="ach-palmares" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" /></symbol>
+        {/* Award — la PARTICIPACIÓN en una edición de la porra: la escarapela con sus cintas. Mismo carril que el
+            trofeo de arriba (lo concede el administrador al publicar), para quien votó y no entró en los cinco
+            primeros. Fue la urna de «Vote», y su base —una raya más ancha que la caja— se leía como un tachón. */}
+        <symbol id="ach-participacion" viewBox="0 0 24 24"><path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526" /><circle cx="12" cy="8" r="6" /></symbol>
     </svg>
   );
 }

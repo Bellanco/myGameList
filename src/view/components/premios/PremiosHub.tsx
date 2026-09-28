@@ -15,6 +15,7 @@ import { usePremiosVoter } from '../../../viewmodel/premios/usePremiosVoter';
 import { usePremiosVoting } from '../../../viewmodel/premios/usePremiosVoting';
 import { usePalette } from '../../hooks/usePalette';
 import { PremiosCerrada, PremiosEnviada, PremiosIdentificate } from './PremiosEstado';
+import { PremiosPopularScreen } from './PremiosPopularScreen';
 import { PremiosPortada } from './PremiosPortada';
 import { PremiosResultsScreen } from './PremiosResultsScreen';
 import { PremiosReviewScreen } from './PremiosReviewScreen';
@@ -63,8 +64,10 @@ export function PremiosHub() {
   const edition = usePremiosEdition(user?.uid || '', voter);
   const voting = usePremiosVoting(edition.categories);
   const route = matchPremiosRoute(location.pathname);
-  // El archivo se pide SOLO cuando se está mirando: es una lectura más, y la portada no lo necesita.
-  const archivo = usePremiosResult(route.panel === 'resultados' ? route.seasonId : '', route.panel === 'resultados' ? edition.config : null);
+  // El archivo se pide SOLO cuando se está mirando: es una lectura más, y la portada no lo necesita. El voto
+  // popular sale del mismo documento, así que ir y volver entre las dos pantallas no lo pide dos veces.
+  const conArchivo = route.panel === 'resultados' || route.panel === 'votos';
+  const archivo = usePremiosResult(conArchivo ? route.seasonId : '', conArchivo ? edition.config : null);
   // Quién de la clasificación tiene perfil al que enlazar. Cacheado por el repositorio: llegar aquí desde la app
   // no cuesta ninguna lectura.
   const perfiles = usePremiosProfiles(archivo.leaderboard, user?.uid || '');
@@ -248,6 +251,8 @@ export function PremiosHub() {
             profiles={perfiles}
           />
         )
+      ) : route.panel === 'votos' ? (
+        archivo.loading ? null : <PremiosPopularScreen result={archivo.result} />
       ) : route.panel === 'enviada' ? (
         <PremiosEnviada
           displayName={edition.ballot?.userDisplayName || user?.displayName || ''}

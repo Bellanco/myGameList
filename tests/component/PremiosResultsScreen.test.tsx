@@ -217,6 +217,101 @@ describe('PremiosResultsScreen', () => {
     ).not.toBeInTheDocument();
   });
 
+  /**
+   * UN ESCALÓN CON EMPATE TIENE UN SOLO TROFEO, y antes abría siempre la misma lámina: la del resto de empatados
+   * no había forma de verla. Ahora cada pulsación pasa a la siguiente persona y vuelve a la primera.
+   */
+  it('en un escalón con empate, cada pulsación del trofeo pasa a la siguiente persona', async () => {
+    const empatados = [
+      { rank: 1, profileId: 'p-ana', nickname: 'Ana', points: 6 },
+      { rank: 1, profileId: 'p-beto', nickname: 'Beto', points: 6 },
+      { rank: 2, profileId: 'p-cris', nickname: 'Cris', points: 4 },
+    ];
+    const { container } = render(
+      <MemoryRouter>
+        <PremiosResultsScreen
+          result={{ ...archivo, leaderboard: empatados }}
+          leaderboard={empatados}
+          ownProfileId="p-cris"
+        />
+      </MemoryRouter>,
+    );
+    const quien = () => container.querySelector('.premios-award__who')?.textContent || '';
+
+    // Abre por la tuya (Cris); el trofeo del escalón compartido dice a quién se va a ver.
+    await waitFor(() => expect(quien()).toContain('Cris'));
+    await userEvent.click(screen.getByRole('button', { name: L.seeOf('Ana') }));
+    await waitFor(() => expect(quien()).toContain('Ana'));
+
+    await userEvent.click(screen.getByRole('button', { name: L.seeOf('Beto') }));
+    await waitFor(() => expect(quien()).toContain('Beto'));
+    // Y se marca en el escalón de quién es la que se está viendo.
+    expect(container.querySelector('.premios-results__step-name.is-showing')?.textContent).toBe('Beto');
+
+    await userEvent.click(screen.getByRole('button', { name: L.seeOf('Ana') }));
+    await waitFor(() => expect(quien()).toContain('Ana'));
+  });
+
+  // Con el ratón, la casilla entera es el blanco: no hace falta atinar al trofeo.
+  it('pulsar la casilla del escalón también cambia la lámina', async () => {
+    const empatados = [
+      { rank: 1, profileId: 'p-ana', nickname: 'Ana', points: 6 },
+      { rank: 1, profileId: 'p-beto', nickname: 'Beto', points: 6 },
+    ];
+    const { container } = render(
+      <MemoryRouter>
+        <PremiosResultsScreen result={{ ...archivo, leaderboard: empatados }} leaderboard={empatados} ownProfileId="p-x" />
+      </MemoryRouter>,
+    );
+    const quien = () => container.querySelector('.premios-award__who')?.textContent || '';
+    await waitFor(() => expect(quien()).toContain('Ana'));
+
+    await userEvent.click(container.querySelector('.premios-results__step-hit') as HTMLElement);
+    await waitFor(() => expect(quien()).toContain('Beto'));
+  });
+
+  it('enlaza lo más votado solo si la edición guardó el recuento', () => {
+    const { unmount } = render(
+      <MemoryRouter>
+        <PremiosResultsScreen result={archivo} leaderboard={archivo.leaderboard} ownProfileId="" />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole('link', { name: L.popularLink })).not.toBeInTheDocument();
+    unmount();
+
+    const conVotos = { ...archivo, votes: { goty: { goty_option_0: 2, goty_option_1: 1 } } };
+    render(
+      <MemoryRouter>
+        <PremiosResultsScreen result={conVotos} leaderboard={conVotos.leaderboard} ownProfileId="" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('link', { name: L.popularLink })).toHaveAttribute(
+      'href',
+      '/premios/resultados/reto-2026/votos',
+    );
+  });
+
+  // 2018 y 2019: solo se sabe el puesto. Un «0 puntos» en el podio diría algo que no pasó.
+  it('una edición sin puntuación enseña el puesto y no los puntos', () => {
+    const sinPuntos = {
+      ...archivo,
+      unscored: true,
+      leaderboard: [
+        { rank: 1, profileId: 'p-ana', nickname: 'Ana', points: 0 },
+        { rank: 2, profileId: 'p-beto', nickname: 'Beto', points: 0 },
+      ],
+    };
+    const { container } = render(
+      <MemoryRouter>
+        <PremiosResultsScreen result={sinPuntos} leaderboard={sinPuntos.leaderboard} ownProfileId="" />
+      </MemoryRouter>,
+    );
+    const escalones = [...container.querySelectorAll('.premios-results__step')];
+    expect(escalones.map((e) => e.classList.contains('is-rank-2'))).toEqual([false, true]);
+    expect(container.querySelector('.premios-results__step-points')).toBeNull();
+    expect(screen.getByText(new RegExp(L.unscored))).toBeInTheDocument();
+  });
+
   it('lo dice claro cuando no hay edición publicada', () => {
     render(
       <MemoryRouter>

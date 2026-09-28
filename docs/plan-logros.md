@@ -314,6 +314,16 @@ export interface AchievementMeasure {
 es la que conoce qué sello mira cada logro (`enteredAt.c` para los terminados, `reviewedAt` para las reseñas…).
 Y como el sello es estable, la fecha **converge**: dos dispositivos calculan la misma sin hablar entre ellos.
 
+> ⚑ **Revisión (28-09-2026) — los sellos NO son estables, y la fecha ya no se recalcula.** `gradedAt` se estrena al
+> cambiar la nota, `reviewedAt` al reescribir la reseña, y guardar un juego anterior a la nota fina estrenaba
+> `gradedAt` aunque la nota no cambiara (arreglado: se compara con la nota efectiva, `resolveGrade`). Como la fecha
+> es «el sello número N de lo que cuenta», un sello que pasaba a ser de hoy fechaba HOY un logro de hace meses, y
+> así salía en el listado y en el feed de las amistades. Ahora la métrica deduce la fecha **la primera vez** que el
+> dispositivo ve el logro conseguido y `freezeDates` la fija (`mis-listas-achievements-dates`, en `localStorage`):
+> después solo puede **adelantarse** —llegan sellos más antiguos por la sync— y nunca pasar del instante en que se
+> vio conseguido por primera vez. Un logro sin fecha deducible se queda **sin fecha**, en vez de ganar una más
+> tarde. La convergencia entre dispositivos la da el espejo publicado (la fecha más antigua gana, §5.5).
+
 ### 5.2 El resultado (memoria, efímero)
 
 ```ts
@@ -431,7 +441,7 @@ la próxima vez no haya que rehacerlo.
 | `profiles/{uid}` | `achievements: { v, at, list }` | F3 | El único campo nuevo de todo el evolutivo en un canal compartido. Con su regla y su tope (§9.2) |
 | `publicConfig/{uid}` | `showAchievements: boolean` | F3 | Y sus **cuatro** piezas, no una (§8.3) |
 | `LocalMeta` | `achievementsPublished`, `achievementsSeen`, `achievementsSeenAt`, `achievementsPeak` | F2–F3 | Estado de dispositivo, nunca sube (§5.4) |
-| `LocalMeta` | `achievementsPeerSeen` | F5 | Línea base del feed (§8.4) |
+| `LocalMeta` | `achievementsPeerSeen` | F5 | Línea base del feed (§8.4). ⚑ Hecho el 28-09-2026: `uid → espejo`, la PRIMERA foto |
 | `LocalMeta` | `rouletteUsedAt?: number` | F6 | ⚑ Ver abajo: es el único dato que hoy **no existe en ninguna parte** |
 
 **⚑ El único agujero de datos de todo el plan, y es diminuto: la ruleta no deja rastro.**
@@ -465,12 +475,12 @@ achievementsPublished?: string;  // último `list` ya escrito en Firestore: evit
 achievementsSeen?: string;       // lo que el dueño ya ha visto: alimenta el aviso de «nuevos» (§7.3)
 achievementsSeenAt?: number;
 achievementsPeak?: string;       // marca de agua: el nivel más alto alcanzado por cada logro (§5.5)
-achievementsPeerSeen?: Record<string, string>; // ⚑ último espejo visto de cada amistad: la línea base de F5 (§8.4)
+achievementsPeerSeen?: Record<string, string>; // ⚑ PRIMER espejo visto de cada amistad (y el tuyo): la línea base de F5 (§8.4)
 ```
 
 ⚑ **`achievementsPeerSeen` es nuevo y no es un lujo:** el §8.4 daba por hecho que la línea base para deducir las
 novedades de una amistad se saca de la caché del directorio, y no se puede. El porqué está allí; lo que hay que
-saber aquí es que este mapa es `profileId → cadena` (una línea por amistad, del orden de 600 bytes cada una) y
+saber aquí es que este mapa es `uid → cadena` (una línea por amistad, del orden de 600 bytes cada una) y
 que **no caduca ni se invalida**: es una foto de lo último visto, no un caché. Se poda con el grafo de amistad,
 para que no crezca con gente que ya no está.
 
@@ -494,6 +504,12 @@ auto-repare, que es exactamente la propiedad que tiene el resto del sistema (§1
 
 **La fecha se queda con el nivel.** Si el nivel actual lo sostiene la marca de agua y no el cálculo de hoy, la
 fecha es la que se guardó entonces: recalcularla diría que lo conseguiste hoy, que es falso.
+
+> ⚑ **Revisión (28-09-2026).** Esto no era verdad en el código: la marca de agua guarda `id:1`, sin fecha, y la
+> fecha se volvía a deducir en cada evaluación. Lo es desde `freezeDates` (§5.1). Y el espejo tiene la misma regla
+> en su lado: al publicar, un logro que ya figuraba **sin fecha** en lo publicado no acepta una fecha posterior al
+> `at` de ese espejo —estaba conseguido entonces—. Eso cubre también las fechas que se pierde el recorte de la cola
+> (con el catálogo lleno caben unas 136 de 404), que antes volvían con la fecha que el dispositivo dedujera.
 
 **Y por qué el sistema de referencia hace lo contrario.** En Chollómetro los puntos **caducan a los 12 meses** y
 el nivel **se degrada tras 7 días** por debajo del umbral. No es un descuido suyo ni un despiste nuestro: sus
@@ -1398,6 +1414,10 @@ Cinco condiciones para que no se vuelva molesto:
 - **Lo que ya se ha contado no se cuenta otra vez**, venga de donde venga. Y eso lo recuerda una clave propia
   (`ACHIEVEMENTS_TOLD_KEY`), **no la marca de agua**: son dos preguntas distintas —«¿lo tenías?» y «¿ya te lo
   anuncié?»— y la marca la escriben además el hub y el panel, así que compartir almacén las confundía.
+- ⚑ **Solo lo que hace el usuario EN ESTE dispositivo** (28-09-2026). `ACHIEVEMENTS_TOLD_KEY` es por dispositivo,
+  así que lo cerrado en el móvil se celebraba otra vez en el portátil al llegar el merge de la sync: el «se
+  desbloquean varias veces». La biblioteca que llega de fuera —sync o hidratación desde IndexedDB— va marcada
+  (`markExternalLibrary`, `viewmodel/libraryOrigin.ts`) y lo que sube con ella se calla y queda contado.
 
 > ⚑ **El fallo que costó esta quinta condición.** «Nuevo» se decidía comparando solo contra la foto en memoria de
 > la evaluación anterior, y esa foto envejece sin que nadie la toque: **el catálogo crece a mitad de sesión**,
@@ -1631,8 +1651,16 @@ Es la misma idea que sostiene todo el documento —derivar en vez de registrar�
 > 3. **Se descarta entera al subir `SOCIAL_DIRECTORY_CACHE_VERSION`**, y añadir `achievements` a las entradas
 >    obliga a subirla a 5. La propia versión que estrena F5 se quedaría muda el primer día.
 >
-> **La línea base va aparte, en `achievementsPeerSeen` de `LocalMeta` (§5.4): un mapa `profileId → cadena`, sin
-> TTL, que se actualiza en cada hidratación y solo se poda cuando la amistad desaparece.** Es el mismo patrón que
+> **La línea base va aparte, en `achievementsPeerSeen` de `LocalMeta` (§5.4): un mapa `uid → cadena`, sin
+> TTL, que solo se poda cuando la amistad desaparece.**
+>
+> ⚑ **Revisión (28-09-2026, al implementarlo) — la línea base es la PRIMERA foto, no la última, y va por `uid`.**
+> Aquí decía «se actualiza en cada hidratación»: así una novedad salía UNA vez y al reabrir el feed ya era «lo
+> visto» y la entrada desaparecía, cuando una reseña o un movimiento se quedan en su día. Con la foto fija, lo que
+> no estaba en ella se queda en su día hasta el corte de 30 días. La clave es el `uid` y no el `profileId`, que
+> puede desfasarse respecto al del directorio. Tu propia tarjeta pasa por el mismo filtro (su línea base se toma
+> cuando lo publicado ya está leído), y de paso eso calla las fechas «de hoy» que se publicaron mal antes de
+> `freezeDates`: estaban en la primera foto. Es el mismo patrón que
 > `friendshipHealedForGist` y por el mismo motivo: lo que hay que recordar «hasta la próxima vez» no cabe en algo
 > que existe para caducar. La caché del directorio se sigue usando para lo que es —traer el espejo sin releer
 > Firestore—, y **sí** hay que subir su versión a 5 al añadir el campo.
@@ -2063,7 +2091,10 @@ por rareza cuando no los hay** (§8.2), silencio si no hay nada. Test de que las
 se rompe sola en cuanto alguien reutiliza el componente de la ficha. Tests de componente con espejos corruptos,
 vacíos, con ids desconocidos y con quince destacados marcados. E2E de la ficha con la vitrina puesta.
 
-**F5 · Novedades en el feed** — ⚑ **una entrada por persona y día, con todos sus logros dentro** (§8.4), y
+**F5 · Novedades en el feed** — ⚑ **Hecho el 28-09-2026** (`useAchievementBaselines`, `seedAchievementsPeerSeen`
+y el filtro `seen` de `achievementFeedEntries`), con dos ajustes sobre lo escrito: la línea base es la PRIMERA foto
+(§8.4) y el tope es de **cinco días por persona** (`FEED_DAYS_PER_PERSON`) en vez de solo el más reciente.
+⚑ **una entrada por persona y día, con todos sus logros dentro** (§8.4), y
 comparación con ⚑ `achievementsPeerSeen` (§5.4), **no con la caché del directorio**: el porqué está en el §8.4 y es lo que impide que un mithril no vea jamás un logro ajeno. Incluye
 subir `SOCIAL_DIRECTORY_CACHE_VERSION` a 5 al añadir `achievements` a las entradas cacheadas. Va **después** de la
 vitrina a propósito: sin espejos reales circulando no hay nada que comparar, y el corte de 30 días solo se puede

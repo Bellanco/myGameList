@@ -1,6 +1,7 @@
 // Publicación de actividad social al guardar una reseña (M4): orquestación pura de repos, sin estado de React.
 // Extraído verbatim de App.tsx para sacar la lógica de negocio del componente. Lee el gist social, inserta/actualiza
 // la actividad (que se convierte a snippet index-only), reescribe el gist y asegura el perfil en Firestore.
+import { isGenericGooglePhoto } from '../../core/social/googlePhoto';
 import { deriveMoveActivity, reconcileMoveActivity } from '../../core/social/moveActivity';
 import { ensureProfileByEmail, getCurrentSocialAuthUser, healOwnFriendshipIdentity, resolveStableProfileId } from './firebaseRepository';
 import { getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta } from './indexedDbRepository';
@@ -40,15 +41,22 @@ async function armSocialChannel(email: string | null): Promise<SocialChannel | n
  * Best-effort y con sello en `meta` para no lanzar la query de amistades en cada guardado de reseña.
  */
 /**
- * Foto que puede ir a un canal público (docs de amistad), con la MISMA semántica que el hub: si el usuario
- * tiene la foto desactivada en el gist, cadena vacía (propaga su opt-out); si la muestra, la del gist y, si su
- * gist es antiguo y no la lleva, la de la sesión de Google (evita pisar con vacío una foto ya guardada).
+ * Foto que puede ir a un canal público (el perfil de Firestore y los docs de amistad), con la MISMA semántica que
+ * `ownPublishablePhoto` del hub: con la foto desactivada en el gist, cadena vacía (propaga su opt-out); si la
+ * muestra, la de la sesión de Google —o la del gist si la sesión no trae ninguna, para no pisar con vacío una foto
+ * ya guardada—, y vacía si lo que hay es el avatar genérico de Google.
+ *
+ * VA A LOS DOS CANALES, y por eso es una función. Antes el perfil se escribía sin foto explícita y
+ * `ensureProfileByEmail` caía a la de la sesión SIN filtrar: cada reseña volvía a publicar la foto de quien la había
+ * ocultado, y el perfil y sus amistades quedaban con fotos distintas para siempre —el panel lo leía como identidad
+ * rancia, y propagarla desde allí extendía la foto oculta a sus amistades—.
  */
-function publicPhotoURL(data: { profile: { photoURL?: string; visibility?: { showPhoto?: boolean } } }, sessionPhoto: string | null): string {
+async function publicPhotoURL(data: { profile: { photoURL?: string; visibility?: { showPhoto?: boolean } } }, sessionPhoto: string | null): Promise<string> {
   if (data.profile.visibility?.showPhoto === false) {
     return '';
   }
-  return String(data.profile.photoURL || sessionPhoto || '');
+  const photo = String(sessionPhoto || data.profile.photoURL || '');
+  return (await isGenericGooglePhoto(photo)) ? '' : photo;
 }
 
 /**
@@ -211,6 +219,8 @@ async function commitSocialWrite(ctx: SocialWriteContext, nextPayload: SocialGis
  */
 async function syncPublicIdentity(ctx: SocialWriteContext, etag: string | null): Promise<void> {
   const mainSyncConfig = getSyncConfig();
+  // La MISMA foto para el perfil y para las amistades (ver `publicPhotoURL`).
+  const photoURL = await publicPhotoURL(ctx.socialRead.data, ctx.authUser.photoURL);
 
   await ensureProfileByEmail({
     user: ctx.authUser,
@@ -221,6 +231,7 @@ async function syncPublicIdentity(ctx: SocialWriteContext, etag: string | null):
     // Si el gist no tiene nick, `ensureProfileByEmail` cae al nombre de la cuenta de Google (nunca al correo): más
     // vale un nombre razonable que un perfil sin nombre —la anomalía `no-display-name`— o un guardado abortado.
     preferredName: ctx.socialNick,
+    photoURL,
   });
 
   await healFriendshipGistIfChanged({
@@ -230,7 +241,7 @@ async function syncPublicIdentity(ctx: SocialWriteContext, etag: string | null):
     // Mismo criterio que el perfil público: si el gist no tiene nick, el nombre de la cuenta de Google antes que
     // dejar a sus amistades con un nombre vacío en la bandeja. El correo, nunca.
     nick: ctx.socialNick || String(ctx.authUser.displayName || '').trim(),
-    photoURL: publicPhotoURL(ctx.socialRead.data, ctx.authUser.photoURL),
+    photoURL,
   });
 }
 

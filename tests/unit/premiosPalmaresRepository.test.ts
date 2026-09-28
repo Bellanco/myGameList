@@ -122,6 +122,7 @@ const {
   fetchPalmaresRecords,
   grantPalmares,
   revokePalmares,
+  savePalmaresRecord,
   setSeasonPalmaresGranted,
 } = await import('../../src/model/repository/premios/premiosPalmaresRepository');
 
@@ -206,6 +207,21 @@ describe('el interruptor del logro de una edición', () => {
     expect(palmaresDe('uid-1')[0]).toMatchObject({ seasonId: 'test', rank: 1 });
     expect(palmaresDe('uid-2')[0]).toMatchObject({ seasonId: 'test', rank: 2 });
     expect((await fetchPalmaresRecord('test'))?.granted).toBe(true);
+  });
+
+  // LA PARTICIPACIÓN ES EL PUESTO 0, y tiene que sobrevivir al registro: si se perdiera al sanearlo, apagar y
+  // volver a encender el interruptor dejaría sin trofeo a toda la gente de fuera del podio.
+  it('apagar y encender devuelve también el trofeo de participar', async () => {
+    escribir('profiles', 'uid-2', { palmares: [{ seasonId: 'test', seasonName: 'Test', rank: 0, awardedAt: 1 }] }, true);
+    await savePalmaresRecord('test', true, [
+      { uid: 'uid-1', rank: 1 },
+      { uid: 'uid-2', rank: 0 },
+    ]);
+    await setSeasonPalmaresGranted('test', 'Test', false);
+    expect((await fetchPalmaresRecord('test'))?.recipients).toContainEqual({ uid: 'uid-2', rank: 0 });
+    await setSeasonPalmaresGranted('test', 'Test', true, 2026);
+
+    expect(palmaresDe('uid-2')[0]).toMatchObject({ seasonId: 'test', rank: 0, season: 2026 });
   });
 
   it('no toca el logro de las demás ediciones', async () => {

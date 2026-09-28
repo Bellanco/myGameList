@@ -5,6 +5,7 @@ import type { AchievementFlash } from '../components/stats/AchievementToast';
 import type { AchievementDef } from '../../core/achievements/types';
 import type { StatusNotice } from '../../model/types/game';
 import type { TabData } from '../../model/types/game';
+import { isExternalLibrary } from '../../viewmodel/libraryOrigin';
 
 /**
  * EL INSTANTE DEL DESBLOQUEO. Ver docs/plan-logros.md §7.4.
@@ -144,17 +145,25 @@ export function useAchievementNotice(
       const contadoRaw = leer(keys.ACHIEVEMENTS_TOLD_KEY) || peak;
       const contado = evaluate.parsePeak(contadoRaw);
 
-      const states = evaluate.evaluateAchievements(
+      const now = Date.now();
+      const evaluated = evaluate.evaluateAchievements(
         {
           games,
           // Los contadores sociales no están a mano fuera del hub y llegan a cero. La marca de agua es justo lo
           // que impide que eso RETIRE lo ya conseguido, así que no hace falta ir a buscarlos.
           social: { friends: 0, postWeeks: 0, profileCreatedAt: 0 },
           device: { hasSync: false, rouletteUsedAt: signals.rouletteUsedAt(), themeChanged: false },
-          now: Date.now(),
+          now,
         },
         peak,
       );
+
+      // Las fechas, FIJADAS como en el hub (ver `freezeDates`): los dos evaluadores escriben el mismo registro, y
+      // este es el que corre tras cada guardado, que es justo cuando un sello se mueve.
+      const datesRaw = leer(keys.ACHIEVEMENTS_DATES_KEY);
+      const frozen = evaluate.freezeDates(evaluated, datesRaw, now);
+      if (frozen.raw !== datesRaw) guardar(keys.ACHIEVEMENTS_DATES_KEY, frozen.raw);
+      const states = frozen.states;
 
       const toma: Toma = {
         escalones: new Map<string, Foto>(states.map((state) => [
@@ -199,7 +208,10 @@ export function useAchievementNotice(
          *  - **la primera vez en este aparato** —no hay nada contado— donde de verdad no hay noticia que dar;
          *  - y **volver a abrir la app y encontrarse logros nuevos**, que sí la hay. Pasa al desplegar una
          *    ampliación del catálogo (noventa y ocho escalones nuevos concedidos de golpe a quien ya tenía
-         *    biblioteca) y pasa también al sincronizar: lo que se cerró en el móvil se concede aquí al abrir.
+         *    biblioteca), o con lo que el hub concedió desde la última vez (los logros sociales).
+         *
+         * Lo que llega por la SYNC ya no pasa por aquí: se calla en el momento en que llega (ver
+         * `isExternalLibrary` más abajo) y queda contado, porque ya se celebró en el dispositivo donde se hizo.
          */
         if (!antes) {
           if (!contadoRaw) return null;
@@ -218,6 +230,14 @@ export function useAchievementNotice(
          * por la misma regla de siempre, no reparte veinte avisos.
          */
         if (antes.juegos === 0 && toma.juegos > 1) return null;
+
+        /**
+         * LA BIBLIOTECA LLEGA DE FUERA: un merge de la sync o una hidratación, no algo que se acabe de hacer aquí.
+         * Lo que suba con ella se consiguió en otro dispositivo, donde ya se celebró; contarlo otra vez es el
+         * «se desbloquean varias veces», una por aparato. Se calla —y se apunta como contado, abajo—, y con ello
+         * también los hitos: cruzar la mitad de una escalera en el móvil no es noticia en el portátil.
+         */
+        if (isExternalLibrary(games)) return null;
 
         /**
          * EL CATÁLOGO HA CRECIDO ENTRE LAS DOS FOTOS. No son comparables: los escalones que el panel acaba de

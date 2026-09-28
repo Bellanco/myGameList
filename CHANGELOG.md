@@ -5,6 +5,64 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.4.7] - 2026-09-28
+
+La versión de **los logros en su día**. Un logro deja de «desbloquearse» otra vez: ya no cambia de fecha al renotar
+un juego o guardar uno antiguo, no sale en el feed social como conseguido hoy si es de hace meses y no se vuelve a
+celebrar en cada dispositivo. Además, los premios estrenan el voto popular y el palmarés con año, y publicar una
+reseña deja de republicar la foto de Google que el usuario había ocultado.
+
+### Added
+- **El voto popular de cada edición de premios**, en `/premios/resultados/:edición/votos` y pública como los
+  resultados: al publicar se congela cuántos votos tuvo cada nominado, nunca quién los dio. Las ediciones
+  publicadas antes no tienen con qué rehacer el recuento y no ofrecen la pantalla.
+- **Los empates del podio se ven**: un escalón compartido cambia de lámina a cada pulsación y dice de quién es la
+  que se está viendo.
+- **Palmarés con año y con participación.** La medalla dice el año de la edición en su rótulo («3.º en Game
+  Awards 2021») —la píldora lleva solo el puesto— y la vitrina se ordena por él; quien votó sin entrar en los
+  cinco primeros recibe el trofeo de participar, con el año en la píldora. El metal de la medalla —filo, aura y
+  trofeo— dice el puesto: oro, plata y bronce el podio, cobre el cuarto y el quinto, y azul la participación.
+- **Scripts para el histórico de premios**: `import-premios-historico.mjs` importa las ediciones 2020–2023,
+  contrastando el ganador con el palmarés real de los TGA, y `premios-2025-votos.mjs` añade a 2025 el recuento y la
+  participación. «Best E-Sport Game» de 2020 se queda fuera del archivo porque aquel año no contó.
+  `import-premios-2018-2019.mjs` añade 2018 y 2019, de las que solo se sabe el puesto: se archivan **sin
+  puntuación** (`unscored`), y la pantalla respeta el puesto guardado y no enseña puntos.
+- **Panel: «Foto publicada de más».** Una señal nueva para los perfiles que enseñan la foto genérica de Google, o
+  una foto que ninguna de sus amistades guarda, que es el rastro de quien la ocultó. Se retira desde la ficha o de
+  golpe encima del censo («Retirar las N fotos»); quien la quería visible la recupera al publicar o guardar su
+  perfil.
+
+### Changed
+- **El feed social solo anuncia los logros NUEVOS.** Cada dispositivo guarda la foto de la vitrina de cada amistad
+  —y de la tuya— la primera vez que la ve, y a partir de ahí solo sale lo que no estaba en ella, en su día. Antes
+  salía todo lo que tuviera fecha de los últimos 30 días, fuera nuevo o no. La primera vez que se abre el feed
+  tras actualizar no enseña logros: es cuando se toma esa foto.
+- **Una entrada de logros por persona y día, hasta cinco días**, en vez de solo la del día más reciente: la
+  entrada del lunes ya no desaparece porque esa persona consiga algo el miércoles.
+- **Tu tarjeta de logros del feed y tu ficha enseñan lo mismo que ven tus amistades**: salen de tu vitrina
+  publicada unida a la de este dispositivo, con tus destacados y lo conseguido en tus otros aparatos.
+- **Un panel de administración más ligero**: filtro por tipo de señal y lo grave primero, el bloque de identidad
+  dice qué no coincide, la última actividad en relativo, notas y acciones secundarias plegadas, y tras una acción
+  solo se recarga la ficha tocada. El menú enseña el estado del aviso y del reto.
+
+### Fixed
+- **Los logros ya no cambian de fecha.** La fecha se deducía otra vez en cada evaluación a partir de los juegos, y
+  renotar uno o reescribir una reseña movía un logro de hace meses a hoy, en el listado y en el feed de tus
+  amistades. Ahora se fija la primera vez que se consigue: solo puede adelantarse —si llegan por la sincronización
+  juegos con fechas más antiguas— y un logro sin fecha conocida se queda sin fecha en vez de inventarse una. Las
+  fechas que ya se habían movido antes de esta versión se quedan como estaban.
+- **Guardar un juego anterior a la nota 0–100 ya no estrena la fecha de su nota** aunque no se toque: bastaba con
+  moverlo de lista, y fechaba hoy logros como «Nota del crítico».
+- **Tu vitrina publicada no acepta fechas imposibles**: un logro que ya estaba publicado sin fecha no gana después
+  una posterior a esa publicación. Cubre también las fechas que el tope del espejo deja fuera cuando hay muchos
+  logros (caben unas 136 de 404), que antes volvían con la de hoy.
+- **Un logro conseguido en otro dispositivo no se celebra otra vez** al llegar la sincronización: se contaba una
+  vez por aparato. Tampoco la carga desde IndexedDB cuenta como conseguido ahora.
+- **Publicar una reseña ya no republica la foto de Google oculta.** El perfil se escribía con la foto de sesión
+  sin filtrar, sin respetar «mostrar foto» ni descartar el avatar genérico, y el panel la extendía a las
+  amistades al propagar. Ahora el perfil y las amistades reciben la misma foto filtrada, y el panel nunca le añade
+  foto a una amistad que no la tiene.
+
 ## [1.4.6] - 2026-09-26
 
 La versión de **los temas en su sitio**. Quien no tiene espacio social vuelve a ver solo «Forja y temple», el tema

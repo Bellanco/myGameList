@@ -69,6 +69,10 @@ export interface LocalMeta {
   friendshipIdentityHealedAt?: number;
   // Último latido de uso enviado a `profiles.updatedAt` desde este dispositivo (acota a una escritura diaria).
   profileTouchedAt?: number;
+  // F5 — LÍNEA BASE del feed de logros (plan-logros §5.4 y §8.4): `uid → espejo` tal y como estaba la PRIMERA vez
+  // que este dispositivo lo vio. Lo que ya estaba ahí no se anuncia. Sin TTL y sin invalidación —no es un caché,
+  // es una foto—, y por eso no puede ser la caché del directorio. Solo se poda cuando la amistad desaparece.
+  achievementsPeerSeen?: Record<string, string>;
   // Sellos de los SANEADOS DE ARRANQUE del espacio social (ver `viewmodel/social/useSocialStartupTasks`). Cada uno
   // guarda la huella de las entradas con las que su tarea terminó bien; mientras no cambie, la tarea no se
   // ejecuta. Sustituyen a un `useRef` por tarea, que moría con el desmontaje del hub y hacía que abrir el espacio

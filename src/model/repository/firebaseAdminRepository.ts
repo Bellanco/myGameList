@@ -23,13 +23,17 @@
 export {
   ADMIN_PROFILES_LIMIT,
   loadAdminCensus,
+  readAdminCensusRow,
+  replaceCensusRow,
   type AdminCensus,
+  type AdminCensusRowReading,
   type AdminUserRow,
 } from './admin/adminCensus';
 
 export { FOSSIL_PENDING_MS, type AdminActionResult, type LegacyProfileField } from './admin/adminShared';
 
 export {
+  clearStrayProfilePhoto,
   healUserFriendshipIdentity,
   purgeFossilFriendshipRequests,
   purgeLegacyProfileFields,
@@ -39,6 +43,7 @@ export {
   setUserSocialEnabled,
   setUserTier,
   type AdminFriendshipSweepResult,
+  type AdminStrayPhotoResult,
 } from './admin/adminModeration';
 
 export {

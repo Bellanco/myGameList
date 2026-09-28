@@ -1,8 +1,8 @@
 import { useMemo, useRef } from 'react';
-import { evaluateAchievements, levelUps, nextPeak } from '../core/achievements/evaluate';
+import { evaluateAchievements, freezeDates, levelUps, nextPeak } from '../core/achievements/evaluate';
 import { summarize } from '../core/achievements/summary';
 import { ACHIEVEMENTS, ACHIEVEMENTS_BY_LADDER, catalogEpoch } from '../core/achievements/catalog';
-import { ACHIEVEMENTS_PEAK_KEY } from '../core/constants/storageKeys';
+import { ACHIEVEMENTS_DATES_KEY, ACHIEVEMENTS_PEAK_KEY } from '../core/constants/storageKeys';
 import { rouletteUsedAt } from '../core/achievements/deviceSignals';
 import { DEFAULT_PALETTE } from '../core/constants/palettes';
 import { appliedPalette } from '../view/hooks/preferences';
@@ -83,7 +83,8 @@ export function useAchievements({
 
   return useMemo(() => {
     const peak = read(ACHIEVEMENTS_PEAK_KEY);
-    const states = evaluateAchievements(
+    const now = Date.now();
+    const evaluated = evaluateAchievements(
       {
         games,
         social: { friends, postWeeks, profileCreatedAt },
@@ -92,10 +93,17 @@ export function useAchievements({
           rouletteUsedAt: rouletteUsedAt(),
           themeChanged: appliedPalette() !== DEFAULT_PALETTE,
         },
-        now: Date.now(),
+        now,
       },
       peak,
     );
+
+    // La fecha de lo conseguido se FIJA la primera vez y ya no se recalcula (ver `freezeDates`): sin esto, renotar
+    // un juego viejo fechaba hoy logros de hace meses.
+    const datesRaw = read(ACHIEVEMENTS_DATES_KEY);
+    const frozen = freezeDates(evaluated, datesRaw, now);
+    if (frozen.raw !== datesRaw) write(ACHIEVEMENTS_DATES_KEY, frozen.raw);
+    const states = frozen.states;
 
     // La marca de agua se guarda SIEMPRE que sube, y nunca baja: `nextPeak` toma el máximo con lo que había.
     const grown = nextPeak(states, peak);

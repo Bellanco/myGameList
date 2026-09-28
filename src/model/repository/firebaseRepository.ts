@@ -229,6 +229,7 @@ export async function upsertProfileSocialReferences(input: {
     socialEnabled: true,
     createdAt: known.createdAt,
     achievementsMirror: known.achievementsMirror,
+    achievementsMirrorAt: known.achievementsMirrorAt,
     palmares: known.palmares,
   });
 }
@@ -527,7 +528,12 @@ export async function ensureProfileByEmail(input: {
     // vacía, el publicador de logros sube la de este dispositivo como REEMPLAZO y se lleva las medallas ganadas en
     // otros (ver `mergeForPublish`). El canónico que nace de un documento ajeno no tiene nada de esto todavía.
     ...(existing && !isForeignDoc
-      ? { createdAt: existing.createdAt, achievementsMirror: existing.achievementsMirror, palmares: existing.palmares }
+      ? {
+        createdAt: existing.createdAt,
+        achievementsMirror: existing.achievementsMirror,
+        achievementsMirrorAt: existing.achievementsMirrorAt,
+        palmares: existing.palmares,
+      }
       : {}),
   };
   saveOwnProfileCache(input.user.uid, written);

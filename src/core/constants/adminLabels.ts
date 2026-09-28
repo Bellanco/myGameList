@@ -7,6 +7,22 @@
 import type { AdminAnomaly } from '../../model/types/firestore';
 import { APP_LOCALE } from './locale';
 
+const RELATIVE = new Intl.RelativeTimeFormat(APP_LOCALE, { numeric: 'auto' });
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Cuánto hace, EN DÍAS NATURALES y no en bloques de 24 h: algo de anoche a las once es «ayer» a las nueve de la
+ * mañana, aunque no hayan pasado 24 horas. Pasado el mes, en meses; pasado el año, en años. Una fecha futura (la
+ * señal `future-activity`) se dice tal cual, «dentro de 3 días»: disimularla escondería la anomalía.
+ */
+function relativeDays(millis: number, now: number): string {
+  const startOf = (value: number) => new Date(value).setHours(0, 0, 0, 0);
+  const days = Math.round((startOf(millis) - startOf(now)) / DAY_MS);
+  if (Math.abs(days) < 31) return RELATIVE.format(days, 'day');
+  if (Math.abs(days) < 365) return RELATIVE.format(Math.trunc(days / 30), 'month');
+  return RELATIVE.format(Math.trunc(days / 365), 'year');
+}
+
 // Panel de administración (`/admin`, ruta oculta). Nada que ver con `SETTINGS_UI.admin`, que es la
 // administración de ETIQUETAS de la propia biblioteca.
 export const ADMIN_PANEL_UI = {
@@ -14,6 +30,18 @@ export const ADMIN_PANEL_UI = {
   /** El menú del panel: las pantallas que no son el censo. */
   menuTitle: 'Panel de administración',
   menuAria: 'Pantallas del panel',
+  /**
+   * El estado de cada pantalla, debajo de su botón: responde «¿hay un aviso puesto?» o «¿hay que publicar los
+   * retos?» sin tener que entrar. Mientras no se ha leído no se dice nada (ni «sin aviso», que sería afirmarlo).
+   */
+  menuStatus: {
+    announcementActive: (title: string) => `Publicado: «${title}»`,
+    announcementOff: 'Redactado, pero apagado',
+    announcementNone: 'Ninguno publicado',
+    premiosOpen: (day: string) => `Votación abierta · cierra el ${day}`,
+    premiosPending: 'Votación cerrada · falta publicar los resultados',
+    premiosNone: 'Sin edición en marcha',
+  },
   title: 'Administración',
   subtitle: 'Censo de usuarios con perfil social y acciones de moderación.',
   /** En el panel la porra se llama RETOS —la edición es «El reto del jugador»—, y deja «Premios» para la sección pública. */
@@ -26,14 +54,23 @@ export const ADMIN_PANEL_UI = {
   searchLabel: 'Buscar',
   searchPlaceholder: 'Nombre o identificador',
   // Filtro de atención. Se nombra por lo que deja ver, no por lo que esconde: al abrir el panel la pregunta es
-  // "¿hay algo que mirar hoy?", y con el censo creciendo eso era un barrido visual de todas las fichas.
-  onlyFlaggedLabel: 'Solo perfiles con señales',
+  // "¿hay algo que mirar hoy?", y con el censo creciendo eso era un barrido visual de todas las fichas. Las señales
+  // sueltas salen solo si alguna ficha las tiene, con cuántas: un filtro que no puede devolver nada es ruido.
+  signalFilter: {
+    label: 'Señales',
+    all: 'Todas las fichas',
+    flagged: 'Con alguna señal',
+    one: (label: string, count: number) => `${label} (${count})`,
+  },
   empty: 'No hay ningún perfil todavía.',
   emptyFiltered: 'Ningún perfil coincide con la búsqueda.',
   /** Con el filtro puesto y nada que enseñar, la respuesta no es "no hay perfiles" sino "no hay nada que mirar". */
   emptyFlagged: 'Ningún perfil tiene señales: no hay nada que revisar.',
+  emptySignal: 'Ningún perfil tiene esa señal.',
   resultCount: (count: number) => (count === 1 ? '1 usuario' : `${count} usuarios`),
-  // Aviso permanente: el panel enseña `profiles`, que no es el censo real de cuentas.
+  // Las notas de alcance, plegadas: se leen una vez, y abiertas encima del censo empujaban las fichas hacia abajo.
+  notesSummary: 'Qué se ve en este censo',
+  // El panel enseña `profiles`, que no es el censo real de cuentas.
   scopeNote: 'Solo aparece quien tiene perfil social. Quien usa la app sin crearlo no es visible desde aquí: sus documentos son owner-only y las reglas no dejan leerlos ni al administrador.',
   // El saneado automático hace innecesaria la purga manual en cuanto el usuario vuelve a entrar. Conviene que se
   // vea, para que la purga manual se use solo donde de verdad aporta: en quien ya no vuelve.
@@ -70,6 +107,11 @@ export const ADMIN_PANEL_UI = {
     // Se dice de dónde sale la estimación para que no se confunda con un dato sellado.
     estimatedHint: 'Estimada a partir de su amistad más antigua: los perfiles creados antes de registrar la fecha de alta no la tienen.',
     lastActivity: 'Última actividad',
+    /**
+     * «hace 3 días», con la fecha y la hora completas en el `title`. De un vistazo lo que se busca es cuánto hace,
+     * no qué día fue; y el día exacto sigue a un gesto.
+     */
+    lastActivityAgo: (millis: number, now: number) => relativeDays(millis, now),
     friends: 'Amistades',
     pendingOut: 'Peticiones enviadas',
     pendingIn: 'Peticiones recibidas',
@@ -79,9 +121,6 @@ export const ADMIN_PANEL_UI = {
     // los datos que sí se leen. Lo que importa es que lo siga publicando.
     socialGist: 'Gist social (resto legacy)',
     socialGistPresent: 'Lo sigue publicando',
-    // Estado del canal SOCIAL según lo que guardan sus amistades. Antes se listaban los ids; no servían para nada
-    // —el panel no puede abrir un gist ajeno— y lo único accionable es cuántos hay: con más de uno hay deriva.
-    friendGists: 'Canal social',
     /** El gist de JUEGOS denormalizado: con lo que un amigo carga sus listas compartidas. */
     friendGamesGists: 'Listas compartidas',
     /** Un solo canal en circulación: el caso sano. */
@@ -99,15 +138,10 @@ export const ADMIN_PANEL_UI = {
     staleFriendNames: 'Nombre que le ven sus amigos',
     profileNameSource: 'Nombre en su perfil (Firestore)',
     nameMismatchHint: 'No coinciden. El que vale es el de su gist social, que este panel no puede leer: si su último guardado falló a medias, el rancio es el del perfil.',
-    /** Estado de la foto denormalizada. No se pinta la URL: ocupa una línea entera y no dice nada de un vistazo. */
-    friendPhoto: 'Foto que le ven sus amigos',
-    friendPhotoStale: 'Desactualizada',
-    friendPhotoFresh: 'Al día',
     /** Solicitudes suyas que llevan mucho esperando, con el detalle de cuántas son ya purgables. */
     stalePending: 'Solicitudes sin respuesta',
     stalePendingDetail: (stale: number, fossil: number) =>
       fossil > 0 ? `${stale} (+90 d), ${fossil} purgables (+180 d)` : `${stale} (+90 d)`,
-    schema: 'Esquema',
     /**
      * Estado de la foto, en tres valores en vez de un sí/no.
      *
@@ -130,9 +164,6 @@ export const ADMIN_PANEL_UI = {
     photoHiddenHint: 'Su perfil no publica foto, pero sus amistades guardan una suya de antes: la ha ocultado con el interruptor de su perfil social.',
     photoOffHint: 'No publica foto y ninguna de sus amistades guarda una suya: no llegó a publicarla desde que se hicieron amigos. O su cuenta de Google no tiene foto, o la lleva apagada desde entonces.',
     photoUnknownHint: 'No publica foto y no tiene amistades con las que comparar, así que desde aquí no se puede saber si la ha ocultado o si nunca ha tenido: el interruptor vive en su gist social y este panel no lo lee.',
-    etag: 'ETag del gist',
-    yes: 'Sí',
-    no: 'No',
     none: '—',
   },
   // Unificación del canal social cuando un usuario acabó con dos gists en circulación.
@@ -152,12 +183,17 @@ export const ADMIN_PANEL_UI = {
   // el espacio social. Los ids de gist NO se tocan (haría falta su token para saber cuál es el bueno).
   healIdentity: {
     title: 'Identidad en sus amistades',
-    hint: 'Sus amigos le ven con el nombre y la foto que se guardaron al hacerse amigos. Su propio cliente los refresca al abrir el espacio social, al guardar el perfil o al publicar, así que quien solo usa sus listas los arrastra indefinidamente. Desde aquí se propagan su nick y su foto actuales; los ids de gist no se tocan.',
+    /** QUÉ no cuadra, en el título del bloque: con el nombre bien, decir «identidad» hacía creer que era el nombre. */
+    titleName: 'Sus amigos le ven con otro nombre',
+    titlePhoto: 'Sus amigos le ven con otra foto',
+    titleBoth: 'Sus amigos le ven con otro nombre y otra foto',
+    hint: 'Sus amigos le ven con el nombre y la foto que se guardaron al hacerse amigos. Su propio cliente los refresca al abrir el espacio social, al guardar el perfil o al publicar, así que quien solo usa sus listas los arrastra indefinidamente. Desde aquí se propagan su nick y su foto actuales —nunca se añade una foto donde sus amigos no tienen ninguna: podría ser una que ha ocultado—; los ids de gist no se tocan.',
     btn: 'Propagar nombre y foto',
+    btnPhoto: 'Propagar la foto',
+    confirmPhoto: (name: string) => `¿Actualizar la foto de ${name} en sus documentos de amistad? Solo se escriben los que estén desactualizados.`,
     // Sin nick ni nombre conocido no hay nada que propagar, y escribir un vacío borraría a sus amigos la única
     // forma de reconocerle.
     noName: 'Este perfil no tiene nombre que propagar: ni nick propio ni nombre guardado por sus amistades.',
-    confirm: (name: string) => `¿Propagar el nombre y la foto actuales de ${name} a sus documentos de amistad? Solo se escriben los que estén desactualizados.`,
     // Con el nombre a la vista: es lo que de verdad se va a escribir en los documentos de amistad, y si el perfil
     // llevaba el rancio esta es la última oportunidad de no propagarlo.
     confirmWithName: (name: string, willWrite: string) =>
@@ -219,6 +255,24 @@ export const ADMIN_PANEL_UI = {
         ? `Documento huérfano retirado. Rescatado al perfil vivo: ${carried.join(', ')}.`
         : 'Documento huérfano retirado: el perfil vivo ya tenía todo lo que hacía falta.',
   },
+  // Retirada de la foto publicada de más (señal `stray-photo`): en su ficha y, para todas, encima del censo.
+  strayPhoto: {
+    title: 'Foto publicada de más',
+    hint: 'Su perfil enseña en el directorio una foto que probablemente no quiere enseñar. Retirarla la borra del perfil y de las amistades que la guarden. Si en realidad la quería visible, vuelve sola en cuanto publique una reseña o guarde su perfil social.',
+    btn: 'Retirar la foto',
+    confirm: (name: string) => `¿Retirar la foto que publica el perfil de ${name}?`,
+    ok: 'Foto retirada.',
+    partial: 'La foto se retiró del perfil, pero no de todas sus amistades: revisa la consola para el detalle.',
+    bulkTitle: (count: number) =>
+      count === 1 ? '1 perfil publica una foto de más' : `${count} perfiles publican una foto de más`,
+    bulkBtn: (count: number) => (count === 1 ? 'Retirar 1 foto' : `Retirar las ${count} fotos`),
+    bulkConfirm: (count: number) =>
+      `¿Retirar la foto de ${count === 1 ? '1 perfil' : `${count} perfiles`}? Se borra del perfil y de las amistades que la guarden; quien la quiera visible la recupera al publicar o guardar su perfil.`,
+    bulkOk: (done: number, total: number) =>
+      done === total ? `Fotos retiradas: ${done}.` : `Fotos retiradas: ${done} de ${total}. Vuelve a pulsar para reintentar las demás.`,
+  },
+  /** Las acciones de la ficha que no arreglan una señal, plegadas: suspender, borrar la vitrina y borrar. */
+  moreActions: 'Más acciones',
   // Señales de algo fuera de lugar. Etiqueta corta para la píldora y explicación en el `title`.
   anomalies: {
     aria: 'Señales detectadas',
@@ -277,6 +331,10 @@ export const ADMIN_PANEL_UI = {
     'stale-pending-out': {
       label: 'solicitudes sin respuesta',
       hint: 'Envió solicitudes que llevan más de 90 días pendientes. A partir de los 180 días se pueden purgar desde su ficha.',
+    },
+    'stray-photo': {
+      label: 'foto de más',
+      hint: 'Su perfil publica una foto que no debería: o es el avatar genérico de Google, o ninguna de sus amistades guarda una suya, que es lo que deja quien la ocultó. Se puede retirar desde su ficha.',
     },
   } satisfies { aria: string } & Record<AdminAnomaly, { label: string; hint: string }>,
   tier: {

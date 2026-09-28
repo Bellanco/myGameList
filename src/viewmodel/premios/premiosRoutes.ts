@@ -10,7 +10,7 @@
 import { matchPath } from 'react-router-dom';
 
 /** Panel visible de la sección. `portada` es el estado por defecto y el de `/premios` a secas. */
-export type PremiosPanel = 'portada' | 'votar' | 'revisar' | 'enviada' | 'resultados' | 'papeleta';
+export type PremiosPanel = 'portada' | 'votar' | 'revisar' | 'enviada' | 'resultados' | 'votos' | 'papeleta';
 
 export const PREMIOS_ROUTES = {
   home: '/premios',
@@ -29,6 +29,11 @@ export const PREMIOS_ROUTES = {
   results: '/premios/resultados',
   /** Una edición concreta del histórico. Es la dirección que se comparte. */
   resultsSeason: '/premios/resultados/:seasonId',
+  /**
+   * EL VOTO POPULAR de una edición. Solo con el id delante: sin él, «votos» se leería como el id de una edición
+   * y una dirección escrita a mano podría abrir la pantalla equivocada.
+   */
+  popular: '/premios/resultados/:seasonId/votos',
 } as const;
 
 export interface PremiosRouteState {
@@ -72,6 +77,11 @@ export function matchPremiosRoute(pathname: string): PremiosRouteState {
     return { ...EMPTY, panel: 'papeleta' };
   }
 
+  const popular = matchPath(PREMIOS_ROUTES.popular, pathname);
+  if (popular) {
+    return { ...EMPTY, panel: 'votos', seasonId: decode(popular.params.seasonId) };
+  }
+
   const season = matchPath(PREMIOS_ROUTES.resultsSeason, pathname);
   if (season) {
     return { ...EMPTY, panel: 'resultados', seasonId: decode(season.params.seasonId) };
@@ -94,12 +104,18 @@ export function resultsPath(seasonId?: string): string {
   return seasonId ? `/premios/resultados/${encodeURIComponent(seasonId)}` : PREMIOS_ROUTES.results;
 }
 
+/** Dirección del voto popular de una edición. */
+export function popularPath(seasonId: string): string {
+  return `${resultsPath(seasonId)}/votos`;
+}
+
 /**
  * ¿Este panel exige sesión iniciada?
  *
- * VOTAR, REVISAR Y VER LA PAPELETA. La portada y los resultados se ven SIN CUENTA a propósito: el calendario es
- * de lectura pública y el archivo de una edición publicada también, porque quien recibe el enlace tiene que poder
- * ver quién ganó (ver `docs/plan-unificar-premios.md` §4.2). La papeleta, en cambio, es de su dueño.
+ * VOTAR, REVISAR Y VER LA PAPELETA. La portada, los resultados y el voto popular se ven SIN CUENTA a propósito:
+ * el calendario es de lectura pública y el archivo de una edición publicada también, porque quien recibe el enlace
+ * tiene que poder ver quién ganó (ver `docs/plan-unificar-premios.md` §4.2). La papeleta, en cambio, es de su
+ * dueño.
  *
  * Vive aquí, como función pura, porque la primera versión lo resolvía con un `panel !== 'portada'` escrito en el
  * componente y eso dejaba los RESULTADOS pidiendo sesión — justo la pantalla que se comparte por enlace. Con la

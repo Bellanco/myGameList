@@ -162,6 +162,7 @@ function mapProfileReference(id: string, data: Record<string, unknown>): SocialP
     tier: normalizeTier(data.tier),
     createdAt: profileCreatedAtMillis(data.createdAt),
     achievementsMirror: String((data.achievements as { list?: unknown } | undefined)?.list || ''),
+    achievementsMirrorAt: Number((data.achievements as { at?: unknown } | undefined)?.at) || 0,
     // Lectura DEFENSIVA, como el espejo: lo escribe el administrador, pero un documento con cualquier cosa en
     // este campo no puede tumbar el perfil — se queda sin vitrina y ya.
     palmares: Array.isArray(data.palmares) ? (data.palmares as PalmaresEntry[]) : undefined,

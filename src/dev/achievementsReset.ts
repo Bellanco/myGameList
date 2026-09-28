@@ -22,7 +22,7 @@
  *     logros.marca()     → qué guarda la marca de agua ahora mismo
  *     logros.olvidar()   → borra marca, contados y sello, y recarga: el aparato vuelve a estar recién instalado
  */
-import { ACHIEVEMENTS_PEAK_KEY, ACHIEVEMENTS_TOLD_KEY, ROULETTE_USED_KEY } from '../core/constants/storageKeys';
+import { ACHIEVEMENTS_DATES_KEY, ACHIEVEMENTS_PEAK_KEY, ACHIEVEMENTS_TOLD_KEY, ROULETTE_USED_KEY } from '../core/constants/storageKeys';
 
 declare global {
   interface Window {
@@ -46,6 +46,9 @@ export function installAchievementReset(): void {
         // el aparato volvería a estar recién instalado para los logros pero seguiría creyendo que ya te los
         // anunció, así que no saldría ni una cápsula.
         localStorage.removeItem(ACHIEVEMENTS_TOLD_KEY);
+        // Y las fechas fijadas: sin marca de agua los logros se vuelven a conceder, y su fecha tiene que volver a
+        // deducirse en vez de quedarse con la de la vez anterior.
+        localStorage.removeItem(ACHIEVEMENTS_DATES_KEY);
         localStorage.removeItem(ROULETTE_USED_KEY);
       } catch {
         return 'Sin almacenamiento: no hay nada que olvidar.';
@@ -53,7 +56,7 @@ export function installAchievementReset(): void {
       // Se recarga porque la marca se lee al evaluar, y evaluar pasa en el render: sin recargar, la pantalla
       // sigue enseñando lo de antes y parece que el borrado no ha hecho nada.
       setTimeout(() => location.reload(), 0);
-      return 'Marca de agua, avisos contados y sello de la ruleta borrados. Recargando…';
+      return 'Marca de agua, avisos contados, fechas y sello de la ruleta borrados. Recargando…';
     },
   };
   // eslint-disable-next-line no-console

@@ -54,8 +54,14 @@ export function usePremiosResult(
   // EL PUESTO SE RECALCULA AL LEER, no se cree el que venga guardado: los archivos publicados antes del ranking
   // denso guardaban la POSICIÓN en la lista, así que un empate salía como 1, 2, 3 en vez de 1, 1, 2. Recalcular
   // es idempotente y evita migrar nada.
+  //
+  // Salvo en una edición SIN PUNTUACIÓN: ahí los puntos son todos 0 y recalcular pondría a todo el mundo primero.
+  // El puesto guardado es el único dato que hay, y manda.
   const leaderboard = useMemo(
-    () => assignDenseRanks(result?.leaderboard || []) as PremiosArchivedEntry[],
+    () =>
+      result?.unscored
+        ? [...(result.leaderboard || [])].sort((a, b) => a.rank - b.rank)
+        : (assignDenseRanks(result?.leaderboard || []) as PremiosArchivedEntry[]),
     [result],
   );
 

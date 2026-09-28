@@ -116,6 +116,11 @@ export const ACHIEVEMENTS_PEAK_KEY = 'mis-listas-achievements-peak-2';
 // lleva meses usando la app.
 export const ACHIEVEMENTS_TOLD_KEY = 'mis-listas-achievements-told';
 
+// Logros — LA FECHA FIJADA de cada logro conseguido (ver `freezeDates`). OTRA clave y no la marca de agua, aunque
+// las dos hablen de lo conseguido: la marca de agua se escribe como `id:1`, y una pestaña con la versión anterior
+// que la reescribiera borraría las fechas sin enterarse. Con clave propia, el código viejo ni la ve.
+export const ACHIEVEMENTS_DATES_KEY = 'mis-listas-achievements-dates';
+
 // Logros — el ÚLTIMO ESPEJO PUBLICADO en este dispositivo, para no reescribir en Firestore una cadena idéntica.
 //
 // Es una caché de escritura, no un dato: si se pierde (navegador limpio, otro dispositivo) lo único que pasa es

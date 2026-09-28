@@ -237,6 +237,23 @@ describe('publishAndArchiveSeason', () => {
    * un año después de la última edición. Sin el campo, el calendario enseña los resultados recién publicados y
    * retira la entrada al mes.
    */
+  // EL VOTO POPULAR SE CONGELA AL PUBLICAR: es la última vez que existen las papeletas. Solo cifras: el archivo
+  // es público y no puede decir quién votó qué.
+  it('archiva cuántos votos tuvo cada nominado, sin decir de quién', async () => {
+    state.premiosCategories = [category('cat1')];
+    state.premiosBallots = [
+      ballot('uid-1', 'Ana', 'cat1_option_0'),
+      ballot('uid-2', 'Bea', 'cat1_option_1'),
+      ballot('uid-3', 'Cris', 'cat1_option_1'),
+    ];
+
+    await publishAndArchiveSeason({ season: 2026, seasonId: 'test', seasonName: 'Test' });
+
+    const archivo = lastResultsWrite()?.data;
+    expect(archivo?.votes).toEqual({ cat1: { cat1_option_0: 1, cat1_option_1: 2 } });
+    expect(JSON.stringify(archivo?.votes)).not.toContain('uid-');
+  });
+
   it('devuelve la visibilidad al calendario al publicar', async () => {
     state.premiosCategories = [category('cat1')];
     state.premiosBallots = [ballot('uid-1', 'Ana', 'cat1_option_0')];
@@ -291,6 +308,19 @@ describe('publishAndArchiveSeason', () => {
       const trofeo = state.sets.find((s) => s.path === 'profiles/uid-1');
       const palmares = trofeo?.data.palmares as Array<Record<string, unknown>>;
       expect(palmares[0]).toMatchObject({ seasonId: 'test', seasonName: 'Test', rank: 1 });
+    });
+
+    it('guarda el año de la edición en el trofeo, que es lo que enseña la medalla', async () => {
+      state.premiosCategories = [category('cat1')];
+      state.premiosBallots = [ballot('uid-1', 'Ana', 'cat1_option_0')];
+      state.profiles = [{ id: 'uid-1', data: { uid: 'uid-1' } }];
+
+      await publishAndArchiveSeason({ season: 2026, seasonId: 'test', seasonName: 'Test' });
+
+      const palmares = state.sets.find((s) => s.path === 'profiles/uid-1')?.data.palmares as Array<
+        Record<string, unknown>
+      >;
+      expect(palmares[0]).toMatchObject({ season: 2026 });
     });
 
     it('sustituye el trofeo de esa misma edición en vez de duplicarlo', async () => {

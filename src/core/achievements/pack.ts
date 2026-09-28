@@ -240,6 +240,13 @@ export function buildMirror(list: string, now: number): AchievementMirror {
  * Un dispositivo que llegó tarde a la biblioteca deduce sellos posteriores, y dejarle pisar el bueno movería la
  * medalla de día en la vitrina de todo el mundo.
  *
+ * ⚑ PERO UNA FECHA QUE LLEGA TARDE NO ENTRA. Si un logro ya figuraba en el espejo SIN fecha —porque nadie la supo
+ * deducir, o porque el recorte de la cola se la llevó: con el catálogo lleno solo caben unas 136 de 404—, estaba
+ * conseguido en el instante en que se publicó ese espejo (`at`). Una fecha posterior no puede ser la suya: es la
+ * de un sello que se movió después (una nota cambiada, una reseña reescrita) y, con la regla de «un 0 pierde
+ * siempre», pasaba a la vitrina y al feed de tus amistades como un logro conseguido HOY. Para eso hace falta el
+ * `at`: con la cadena sola —o un espejo sin él— no hay cota y se hace lo de siempre.
+ *
  * LOS DESTACADOS SE CONSERVAN de lo publicado. Son una preferencia del dueño que puede haber elegido en otro
  * aparato, y este no tiene forma de saberla: descartarlos sería que cambiar de móvil te deshiciera la vitrina.
  */
@@ -249,6 +256,7 @@ export function mergeForPublish(
   now = Date.now(),
 ): string {
   const previous = parseMirror(published, now);
+  const publishedAt = Number((published as Partial<AchievementMirror> | null)?.at) || 0;
   const byId = new Map<string, AchievementState>();
   for (const item of previous) {
     byId.set(item.id, { id: item.id, level: 1, value: 0, next: null, unlockedAt: item.unlockedAt });
@@ -256,11 +264,13 @@ export function mergeForPublish(
   for (const state of states) {
     if (state.level < 1) continue;
     const before = byId.get(state.id);
+    const late = Boolean(before) && publishedAt > 0 && state.unlockedAt > publishedAt;
     byId.set(state.id, {
       ...state,
       level: 1,
-      // La más antigua de las conocidas. Un 0 es «no se sabe» y pierde siempre contra una fecha de verdad.
-      unlockedAt: earliestStamp(before?.unlockedAt, state.unlockedAt),
+      // La más antigua de las conocidas. Un 0 es «no se sabe» y pierde contra una fecha de verdad… salvo que la
+      // fecha sea posterior a cuando el logro ya estaba publicado, que entonces no es de verdad (ver arriba).
+      unlockedAt: late ? before!.unlockedAt : earliestStamp(before?.unlockedAt, state.unlockedAt),
     });
   }
   return packAchievements([...byId.values()], previous.filter((item) => item.featured).map((item) => item.id));

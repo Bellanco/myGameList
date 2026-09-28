@@ -82,7 +82,7 @@ describe('AdminPremiosHistorico', () => {
     await userEvent.click(interruptor());
 
     expect(confirmar).not.toHaveBeenCalled();
-    expect(setGrantedMock).toHaveBeenCalledWith('game-awards-2025', 'Game Awards 2025', false);
+    expect(setGrantedMock).toHaveBeenCalledWith('game-awards-2025', 'Game Awards 2025', false, 2025);
     await waitFor(() => expect(avisos).toContain(L.awardRevoked(2)));
     confirmar.mockRestore();
   });
@@ -93,7 +93,7 @@ describe('AdminPremiosHistorico', () => {
 
     await userEvent.click(interruptor());
 
-    expect(setGrantedMock).toHaveBeenCalledWith('game-awards-2025', 'Game Awards 2025', true);
+    expect(setGrantedMock).toHaveBeenCalledWith('game-awards-2025', 'Game Awards 2025', true, 2025);
     await waitFor(() => expect(avisos).toContain(L.awardGranted(2)));
   });
 

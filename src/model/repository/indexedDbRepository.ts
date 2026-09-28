@@ -131,6 +131,42 @@ export async function getLocalMeta(): Promise<LocalMeta | null> {
   }
 }
 
+/**
+ * F5 — SIEMBRA la línea base del feed de logros (`achievementsPeerSeen`) y devuelve el mapa resultante.
+ *
+ * Añade SOLO lo que no esté: la línea base es la primera foto y no se reescribe nunca (ver `achievementFeedEntries`).
+ * Y lo hace DENTRO de la transacción, leyendo el mapa en el mismo paso en que se escribe, en vez de con un
+ * `patchLocalMeta` del mapa entero: con dos pestañas abiertas, la segunda pisaría las siembras de la primera.
+ *
+ * `keep`, si llega, poda lo que no esté dentro: las amistades que ya no lo son. Solo se debe pasar con el grafo de
+ * amistad RESUELTO — un grafo a medio cargar está vacío, y podar contra él borraría todas las líneas base.
+ */
+export async function seedAchievementsPeerSeen(
+  additions: Readonly<Record<string, string>>,
+  keep?: ReadonlySet<string>,
+): Promise<Record<string, string>> {
+  const db = await openSharedDatabase();
+  return new Promise<Record<string, string>>((resolve, reject) => {
+    const tx = db.transaction(META_STORE, 'readwrite');
+    const store = tx.objectStore(META_STORE);
+    const getReq = store.get(META_KEY);
+    let result: Record<string, string> = {};
+    getReq.onsuccess = () => {
+      const current = (getReq.result as LocalMeta | undefined) ?? null;
+      const seen: Record<string, string> = { ...(current?.achievementsPeerSeen || {}) };
+      for (const [key, mirror] of Object.entries(additions)) {
+        if (key && mirror && seen[key] === undefined) seen[key] = mirror;
+      }
+      if (keep) for (const key of Object.keys(seen)) if (!keep.has(key)) delete seen[key];
+      result = seen;
+      store.put({ ...(current || {}), achievementsPeerSeen: seen, _key: META_KEY } as LocalMeta);
+    };
+    tx.oncomplete = () => resolve(result);
+    tx.onerror = () => reject(tx.error || new Error('seedAchievementsPeerSeen failed'));
+    tx.onabort = () => reject(tx.error || new Error('seedAchievementsPeerSeen aborted'));
+  });
+}
+
 export async function setLocalMeta(meta: LocalMeta): Promise<void> {
   await idbPut<LocalMeta>(META_STORE, { ...meta, _key: META_KEY });
 }

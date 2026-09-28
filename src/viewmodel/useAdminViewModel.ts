@@ -12,12 +12,15 @@ import { ADMIN_PANEL_UI } from '../core/constants/adminLabels';
 import { readAdminClaim, subscribeSocialAuth } from '../model/repository/firebaseGateway';
 import { ADMIN_ONLY_TIER, PROFILE_TIER_LABELS, type ProfileTier } from '../core/constants/tiers';
 import {
+  clearStrayProfilePhoto,
   deleteUserProfile,
   healUserFriendshipIdentity,
   loadAdminCensus,
   migrateForeignProfileDoc,
   purgeFossilFriendshipRequests,
   purgeLegacyProfileFields,
+  readAdminCensusRow,
+  replaceCensusRow,
   setUserDisplayName,
   setUserSocialEnabled,
   setUserTier,
@@ -25,10 +28,37 @@ import {
   type AdminUserRow,
   type LegacyProfileField,
 } from '../model/repository/firebaseAdminRepository';
+import type { AdminAnomaly } from '../model/types/firestore';
 
 export type AdminAccess = 'checking' | 'denied' | 'granted';
 
 export type AdminStatus = { kind: 'ok' | 'warn' | 'err'; text: string } | null;
+
+/**
+ * Señales que no son "estado raro" sino un problema con consecuencias hoy: un token en claro que cualquiera puede
+ * leer, una foto a la vista que su dueño quiso ocultar, unas reseñas que no llegan al feed, o fechas imposibles. La ficha las destaca y la lista las pone primero,
+ * para que no se pierdan entre las informativas (esquema antiguo, inactividad).
+ */
+export const SEVERE_ANOMALIES: ReadonlySet<AdminAnomaly> = new Set<AdminAnomaly>([
+  'legacy-token',
+  'gist-drift',
+  'future-activity',
+  'created-after-activity',
+  'stray-photo',
+]);
+
+/** Qué fichas se enseñan: todas, las que tienen alguna señal, o las que tienen UNA señal concreta. */
+export type AdminSignalFilter = 'all' | 'flagged' | AdminAnomaly;
+
+function matchesSignal(user: AdminUserRow, filter: AdminSignalFilter): boolean {
+  if (filter === 'all') return true;
+  if (filter === 'flagged') return user.anomalies.length > 0;
+  return user.anomalies.includes(filter);
+}
+
+function isSevere(user: AdminUserRow): boolean {
+  return user.anomalies.some((code) => SEVERE_ANOMALIES.has(code));
+}
 
 function matchesSearch(user: AdminUserRow, term: string): boolean {
   if (!term) {
@@ -59,9 +89,10 @@ export function useAdminViewModel() {
   const [error, setError] = useState('');
   const [status, setStatus] = useState<AdminStatus>(null);
   const [search, setSearch] = useState('');
-  // Filtro de atención: deja solo los perfiles con alguna señal. El censo crece y la búsqueda por texto no sirve
-  // para la pregunta que se hace al abrir el panel, que no es "¿dónde está fulano?" sino "¿hay algo que mirar hoy?".
-  const [onlyFlagged, setOnlyFlagged] = useState(false);
+  // Filtro de atención. El censo crece y la búsqueda por texto no sirve para la pregunta que se hace al abrir el
+  // panel, que no es "¿dónde está fulano?" sino "¿hay algo que mirar hoy?" — y, en cuanto hay algo, "¿quién más
+  // tiene ESTO?", que es lo que responde filtrar por una señal concreta.
+  const [signalFilter, setSignalFilter] = useState<AdminSignalFilter>('all');
   const [busyId, setBusyId] = useState('');
   const mountedRef = useRef(true);
 
@@ -106,6 +137,12 @@ export function useAdminViewModel() {
     });
   }, []);
 
+  // El censo vigente, para las relecturas de una ficha: necesitan saber qué documentos hay sin depender del render.
+  const censusRef = useRef<AdminCensus | null>(null);
+  useEffect(() => {
+    censusRef.current = census;
+  }, [census]);
+
   const refresh = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -129,11 +166,31 @@ export function useAdminViewModel() {
   }, [access, refresh]);
 
   /**
-   * Envoltorio común de las acciones: marca la fila ocupada, traduce el fallo a un mensaje y recarga el censo
-   * (las tres acciones cambian lo que la tabla muestra, así que releer es más honesto que parchear el estado).
+   * Relee SOLO la ficha de esa persona y la coloca sobre el censo que haya en ese momento. Si la relectura falla,
+   * el censo entero: más caro, pero la pantalla no se queda enseñando lo de antes de la acción.
+   */
+  const refreshRow = useCallback(async (profileDocId: string) => {
+    const current = censusRef.current;
+    if (!current) {
+      await refresh();
+      return;
+    }
+    try {
+      const reading = await readAdminCensusRow(current, profileDocId);
+      if (!mountedRef.current) return;
+      setCensus((latest) => (latest ? replaceCensusRow(latest, reading) : latest));
+    } catch {
+      await refresh();
+    }
+  }, [refresh]);
+
+  /**
+   * Envoltorio común de las acciones: marca la fila ocupada, traduce el fallo a un mensaje y relee lo que la acción
+   * ha cambiado (releer es más honesto que parchear el estado). `scope`: su ficha, o el censo entero cuando la acción
+   * cambia también filas ajenas (ver `readAdminCensusRow`).
    */
   const runAction = useCallback(
-    async (row: AdminUserRow, action: () => Promise<AdminStatus>) => {
+    async (row: AdminUserRow, action: () => Promise<AdminStatus>, scope: 'row' | 'census' = 'row') => {
       setBusyId(row.id);
       setStatus(null);
       try {
@@ -151,11 +208,11 @@ export function useAdminViewModel() {
         // Si la pantalla ya no está montada no se recarga: sería una lectura de Firestore para nadie.
         if (mountedRef.current) {
           setBusyId('');
-          await refresh();
+          await (scope === 'row' ? refreshRow(row.id) : refresh());
         }
       }
     },
-    [refresh],
+    [refresh, refreshRow],
   );
 
   const toggleSocial = useCallback(
@@ -221,7 +278,7 @@ export function useAdminViewModel() {
             ? ADMIN_PANEL_UI.cutover.okMoved
             : ADMIN_PANEL_UI.cutover.okMerged(result.carried),
         };
-      }),
+      }, 'census'),
     [runAction],
   );
 
@@ -271,6 +328,51 @@ export function useAdminViewModel() {
     [runAction],
   );
 
+  /** Retira la foto que su perfil publica de más (señal `stray-photo`), del perfil y de sus amistades. */
+  const clearStrayPhoto = useCallback(
+    (row: AdminUserRow) =>
+      runAction(row, async () => {
+        const result = await clearStrayProfilePhoto(row.id, row.uid, row.photoURL);
+        if (!result.ok) {
+          console.warn('[admin] retirada de foto incompleta:', result.failures);
+          return { kind: 'warn', text: ADMIN_PANEL_UI.strayPhoto.partial };
+        }
+        return { kind: 'ok', text: ADMIN_PANEL_UI.strayPhoto.ok };
+      }),
+    [runAction],
+  );
+
+  /**
+   * Retira TODAS las fotos publicadas de más del censo cargado. Una detrás de otra —no en paralelo— porque son
+   * pocas y así un fallo de red a mitad deja un recuento honesto de cuántas salieron; el censo se relee entero al
+   * acabar. Un perfil que no se deja escribir no para a los demás.
+   */
+  const [clearingStrayPhotos, setClearingStrayPhotos] = useState(false);
+  const clearAllStrayPhotos = useCallback(async () => {
+    const targets = (censusRef.current?.users || []).filter((user) => user.anomalies.includes('stray-photo'));
+    if (targets.length === 0) return;
+    setClearingStrayPhotos(true);
+    setStatus(null);
+    let done = 0;
+    for (const target of targets) {
+      try {
+        const result = await clearStrayProfilePhoto(target.id, target.uid, target.photoURL);
+        if (!result.ok) console.warn('[admin] retirada de foto incompleta:', target.id, result.failures);
+        // El perfil es lo que se ve en el directorio: si ese se escribió, la foto ya no está a la vista.
+        if (result.profileCleared) done += 1;
+      } catch (error) {
+        console.warn('[admin] no se pudo retirar la foto:', target.id, error);
+      }
+    }
+    if (!mountedRef.current) return;
+    setClearingStrayPhotos(false);
+    setStatus({
+      kind: done === targets.length ? 'ok' : 'warn',
+      text: ADMIN_PANEL_UI.strayPhoto.bulkOk(done, targets.length),
+    });
+    await refresh();
+  }, [refresh]);
+
   /** Borra sus solicitudes enviadas que llevan más de 180 días pendientes. */
   const purgeFossilRequests = useCallback(
     (row: AdminUserRow) =>
@@ -281,7 +383,7 @@ export function useAdminViewModel() {
           return { kind: 'warn', text: ADMIN_PANEL_UI.fossil.partial };
         }
         return { kind: 'ok', text: ADMIN_PANEL_UI.fossil.ok(result.touched) };
-      }),
+      }, 'census'),
     [runAction],
   );
 
@@ -294,17 +396,28 @@ export function useAdminViewModel() {
           return { kind: 'warn', text: ADMIN_PANEL_UI.partialDeleted };
         }
         return { kind: 'ok', text: ADMIN_PANEL_UI.okDeleted };
-      }),
+      }, 'census'),
     [runAction],
   );
 
+  // LO GRAVE PRIMERO. Dentro de cada grupo se respeta el orden del censo (actividad más reciente arriba): `sort` es
+  // estable, así que basta con comparar la gravedad.
   const users = useMemo(
     () =>
-      (census?.users || []).filter(
-        (user) => matchesSearch(user, search) && (!onlyFlagged || user.anomalies.length > 0),
-      ),
-    [census, search, onlyFlagged],
+      (census?.users || [])
+        .filter((user) => matchesSearch(user, search) && matchesSignal(user, signalFilter))
+        .sort((a, b) => Number(isSevere(b)) - Number(isSevere(a))),
+    [census, search, signalFilter],
   );
+
+  /** Cuántas fichas tiene cada señal, para el desplegable del filtro: solo se ofrecen las que hay. */
+  const signalCounts = useMemo(() => {
+    const counts = new Map<AdminAnomaly, number>();
+    (census?.users || []).forEach((user) => {
+      user.anomalies.forEach((code) => counts.set(code, (counts.get(code) || 0) + 1));
+    });
+    return counts;
+  }, [census]);
 
   return {
     access,
@@ -316,8 +429,9 @@ export function useAdminViewModel() {
     status,
     search,
     setSearch,
-    onlyFlagged,
-    setOnlyFlagged,
+    signalFilter,
+    setSignalFilter,
+    signalCounts,
     busyId,
     refresh,
     changeTier,
@@ -327,6 +441,9 @@ export function useAdminViewModel() {
     healIdentity,
     chooseDisplayName,
     purgeFossilRequests,
+    clearStrayPhoto,
+    clearAllStrayPhotos,
+    clearingStrayPhotos,
     deleteUser,
   };
 }

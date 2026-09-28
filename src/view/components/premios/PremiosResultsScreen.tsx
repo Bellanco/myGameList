@@ -3,7 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { hasAward } from '../../../core/premios/awards';
 import { getOptionLabel, tField } from '../../../core/premios/localize';
-import { PREMIOS_ROUTES } from '../../../viewmodel/premios/premiosRoutes';
+import { hasPopularVote } from '../../../core/premios/popularVote';
+import { popularPath, PREMIOS_ROUTES } from '../../../viewmodel/premios/premiosRoutes';
 import type { PremiosArchivedEntry, PremiosSeasonResult } from '../../../model/types/premios';
 import { Icon } from '../Icon';
 import { HubBackButton } from '../socialhub/HubBackButton';
@@ -122,6 +123,26 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
     return [...porPuesto.entries()].sort(([a], [b]) => a - b).map(([rank, entries]) => ({ rank, entries }));
   }, [leaderboard]);
 
+  /**
+   * LA LÁMINA DE UN ESCALÓN, Y CON EMPATE VA PASANDO. Un escalón compartido tiene un solo trofeo, y antes abría
+   * siempre la misma lámina —la tuya o la del primero de la lista—: la del resto de empatados no había forma de
+   * verla. Ahora cada pulsación pasa a la siguiente persona y, tras la última, vuelve a la primera. Con una sola
+   * persona sigue como siempre: pulsar abre y volver a pulsar retira.
+   */
+  const indicesDe = (entries: PremiosArchivedEntry[]) =>
+    entries.map((entry) => premiados.indexOf(entry)).filter((indice) => indice >= 0);
+  /** La que toca abrir al pulsar el escalón: la siguiente de la rueda si ya se está viendo una de ellas. */
+  const siguienteDe = (entries: PremiosArchivedEntry[], destino: PremiosArchivedEntry): number => {
+    const indices = indicesDe(entries);
+    const actual = galeria === null ? -1 : indices.indexOf(galeria);
+    if (actual < 0) return premiados.indexOf(destino);
+    return indices[(actual + 1) % indices.length];
+  };
+  const pulsarEscalon = (entries: PremiosArchivedEntry[], destino: PremiosArchivedEntry) => {
+    if (indicesDe(entries).length > 1) setGaleria(siguienteDe(entries, destino));
+    else verLamina(premiados.indexOf(destino));
+  };
+
   /** Del cuarto en adelante. Lo que ya está en el podio no se repite debajo. */
   const resto = useMemo(() => leaderboard.filter((entry) => entry.rank > PODIUM_RANKS), [leaderboard]);
 
@@ -152,7 +173,9 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
     getOptionLabel({ id: category.id, title: category.title, options: category.options }, category.winner || '');
 
   /** El nombre de alguien: enlace a su ficha si tiene perfil visible, y texto si no. */
-  const nombreDe = (entry: PremiosArchivedEntry, className: string) => {
+  const nombreDe = (entry: PremiosArchivedEntry, base: string) => {
+    // En un escalón con empate, se marca de quién es la lámina que se está viendo.
+    const className = galeria !== null && premiados[galeria] === entry ? `${base} is-showing` : base;
     const uid = profiles?.get(entry.profileId);
     return uid ? (
       <Link
@@ -183,7 +206,10 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
 
       <header className="premios-results__head">
         <h2>{result.name || L.title}</h2>
-        <p className="premios-results__count">{L.ballots(result.totalBallots || 0)}</p>
+        <p className="premios-results__count">
+          {L.ballots(result.totalBallots || 0)}
+          {result.unscored ? ` · ${L.unscored}` : ''}
+        </p>
       </header>
 
       {/* EL PODIO. Lo primero y en grande, porque es la respuesta a la pregunta con la que se entra: quién ha
@@ -196,10 +222,16 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
             const puntos = entries[0]?.points || 0;
             const mio = entries.some(esPropia);
             const destino = entries.find(esPropia) || entries[0];
+            const conLamina = Boolean(ownProfileId) && premiados.includes(destino);
+            const rueda = conLamina && indicesDe(entries).length > 1;
+            const viendo = galeria !== null && indicesDe(entries).includes(galeria);
+            // El rótulo del trofeo dice a quién se va a ver: con empate, a la siguiente persona de la rueda.
+            const proxima = rueda ? premiados[siguienteDe(entries, destino)] : null;
+            const rotulo = proxima ? L.seeOf(proxima.nickname) : mio ? L.trophy : L.see;
             return (
               <li
                 key={rank}
-                className={`premios-results__step is-rank-${rank}${mio ? ' is-own' : ''}`}
+                className={`premios-results__step is-rank-${rank}${mio ? ' is-own' : ''}${conLamina ? ' has-award' : ''}`}
                 aria-label={mio ? L.yourRow : undefined}
               >
                 <span className={`premios-results__medal ${METAL[rank - 1] || ''}`}>
@@ -214,21 +246,37 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
                   {entries.length > 1 ? <span className="premios-results__tie">{L.tie}</span> : null}
                 </div>
 
-                <p className="premios-results__step-points">
-                  <span className="sr-only">{L.points(puntos)}</span>
-                  <strong aria-hidden="true">{L.pointsShort(puntos)}</strong>
-                  <span aria-hidden="true">{L.pointsUnit}</span>
-                </p>
+                {/* Sin puntuación no se pinta un «0 puntos»: se sabe el puesto y nada más (ver `unscored`). */}
+                {result.unscored ? null : (
+                  <p className="premios-results__step-points">
+                    <span className="sr-only">{L.points(puntos)}</span>
+                    <strong aria-hidden="true">{L.pointsShort(puntos)}</strong>
+                    <span aria-hidden="true">{L.pointsUnit}</span>
+                  </p>
+                )}
+
+                {/* LA CASILLA ENTERA CAMBIA DE LÁMINA, no solo el trofeo: con el ratón, el blanco es la tarjeta.
+                    Es una capa transparente encima del escalón y fuera del árbol accesible, porque para el teclado
+                    y el lector de pantalla el camino es el botón de abajo — el mismo gesto, dicho una sola vez.
+                    No es el `::after` del botón estirado: en Witcher ese pseudo es la chapa de acero de cada
+                    `.btn`, y estirarlo pintaría el escalón entero de metal. */}
+                {conLamina ? (
+                  <span
+                    className="premios-results__step-hit"
+                    aria-hidden="true"
+                    onClick={() => pulsarEscalon(entries, destino)}
+                  />
+                ) : null}
 
                 {/* La lámina, solo con sesión: el arte no se enseña en abierto (ver `AwardPanel`). */}
-                {ownProfileId && premiados.includes(destino) ? (
+                {conLamina ? (
                   <button
                     type="button"
                     className="btn premios-results__step-trophy"
-                    aria-label={mio ? L.trophy : L.see}
-                    title={mio ? L.trophy : L.see}
-                    aria-pressed={galeria === premiados.indexOf(destino)}
-                    onClick={() => verLamina(premiados.indexOf(destino))}
+                    aria-label={rotulo}
+                    title={rotulo}
+                    aria-pressed={viendo}
+                    onClick={() => pulsarEscalon(entries, destino)}
                   >
                     <Icon name="trophy" />
                   </button>
@@ -279,6 +327,13 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
           <div className="premios-results__panel-head">
             <h3>{L.winners}</h3>
             <span className="premios-results__panel-count">{L.winnersCount(ganadores.length)}</span>
+            {/* LO QUE VOTÓ LA GENTE, en su propia pantalla. Solo si el archivo guardó el recuento: las ediciones
+                publicadas antes de que existiera no tienen con qué enseñarlo. */}
+            {hasPopularVote(result) ? (
+              <Link className="premios-results__popular-link" to={popularPath(result.seasonId)}>
+                {L.popularLink}
+              </Link>
+            ) : null}
           </div>
 
           {ganadores.length === 0 ? <p className="premios-results__muted">{L.noWinners}</p> : null}
@@ -335,10 +390,12 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
                         cierra. */}
                     {nombreDe(entry, 'premios-results__name')}
 
-                    <span className="premios-results__points">
-                      <span className="sr-only">{L.points(entry.points)}</span>
-                      <span aria-hidden="true">{L.pointsShort(entry.points)}</span>
-                    </span>
+                    {result.unscored ? null : (
+                      <span className="premios-results__points">
+                        <span className="sr-only">{L.points(entry.points)}</span>
+                        <span aria-hidden="true">{L.pointsShort(entry.points)}</span>
+                      </span>
+                    )}
 
                     {/* El trofeo, solo para quien tiene sesión, y como icono: cinco botones con rótulo en cinco
                         renglones seguidos tapaban los nombres, que es lo que se viene a leer. */}

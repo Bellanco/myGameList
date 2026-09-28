@@ -5,7 +5,7 @@ import { reabrirLaPregunta } from '../core/utils/coverDone';
 import { tagKey } from '../core/utils/tags';
 import { DEFAULT_SORT, nextSort, sortGames } from '../core/utils/sortGames';
 import { normalizeHours } from '../core/utils/normalize';
-import { clampGrade, gradeFromStars, resolveStars, starsFromGrade } from '../core/utils/scoreScale';
+import { clampGrade, gradeFromStars, resolveGrade, resolveStars, starsFromGrade } from '../core/utils/scoreScale';
 import { resolveReviewedAt } from '../core/utils/reviewDate';
 import { nextVersion, resolveGradedAt, stampEntry } from '../core/utils/gameStamps';
 import { mapTabDataTags, type TagCategory } from '../core/utils/tagMutations';
@@ -20,6 +20,7 @@ import { transitionTo } from '../model/repository/syncMachineRepository';
 import type { TabAction as LabelsTabAction } from '../core/constants/labels';
 import type { GameItem, StatusNotice, TabData, TabId, TabSort, ToolbarFilters } from '../model/types/game';
 import { filterGames } from './toolbarFilters';
+import { markExternalLibrary } from './libraryOrigin';
 
 export interface LookupData {
   genres: string[];
@@ -193,7 +194,10 @@ export function useGameListViewModel() {
         if (!hasData(dataSource)) return prev;
         if (currentHasData && dataSource.updatedAt <= (prev.updatedAt || 0)) return prev;
 
-        return normalizeData(dataSource);
+        // Hidratar no es hacer nada: lo que esta biblioteca sostenga no se ha conseguido ahora (ver `libraryOrigin`).
+        const hydrated = normalizeData(dataSource);
+        markExternalLibrary(hydrated);
+        return hydrated;
       });
 
       setMeta((prev) => {
@@ -250,6 +254,9 @@ export function useGameListViewModel() {
       const gamesUnchanged = tabGamesEqual(dataRef.current, normalized);
 
       if (!gamesUnchanged) {
+        // Lo que llega por el ciclo de sync lo hizo otro dispositivo: el aviso de logros no debe celebrarlo aquí
+        // como si acabara de pasar (ver `libraryOrigin`).
+        if (!markDirtyState) markExternalLibrary(normalized);
         setData(normalized);
         // Espejo al store `games`/`deleted` + timestamp (dual-write). Best-effort: appState sigue siendo
         // el backup, así que un fallo aquí no afecta al guardado ni al modo offline.
@@ -505,7 +512,15 @@ export function useGameListViewModel() {
       // `gradedAt` necesita la nota ya resuelta (el bloque de arriba decide entre el dial, las estrellas y el
       // caso "sin puntuar" de la vergüenza), no la del borrador.
       base.enteredAt = stampEntry(previous?.enteredAt, tab, now);
-      base.gradedAt = resolveGradedAt({ grade: base.grade, previousGrade: previous?.grade, previousGradedAt: previous?.gradedAt, now });
+      // La nota anterior es la EFECTIVA, no el campo `grade` a secas: un juego de antes de la nota fina solo trae
+      // `score`, y comparar contra su `grade` ausente estrenaba `gradedAt` en cualquier guardado —moverlo de
+      // lista bastaba— aunque la nota no se tocara. Eso fechaba HOY logros de hace meses («Nota del crítico»).
+      base.gradedAt = resolveGradedAt({
+        grade: base.grade,
+        previousGrade: previous ? resolveGrade(previous) : undefined,
+        previousGradedAt: previous?.gradedAt,
+        now,
+      });
 
       if (!base.name || !base.genres.length || !base.platforms.length) {
         notify('warn', UI_MESSAGES.games.fieldsRequired);

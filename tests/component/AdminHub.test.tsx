@@ -53,9 +53,24 @@ const setUserDisplayNameMock = vi.fn<(...args: unknown[]) => Promise<SweepResult
   ok: true, failures: [], touched: 2, scanned: 2,
 }));
 
-vi.mock('../../src/model/repository/firebaseAdminRepository', () => ({
+// La relectura de UNA ficha tras una acción. Por defecto relee del mismo sitio que el censo (la ficha tal y como la
+// devuelva ahora `loadAdminCensusMock`), para que los casos que cambian el censo tras la acción sigan valiendo.
+const readAdminCensusRowMock = vi.fn(async (_census: unknown, id: string) => {
+  const next = (await loadAdminCensusMock()) as { users: Array<{ id: string }> };
+  return { id, row: next.users.find((entry) => entry.id === id) || null };
+});
+
+const clearStrayProfilePhotoMock = vi.fn<(...args: unknown[]) => Promise<SweepResult & { profileCleared: boolean }>>(
+  async () => ({ ok: true, failures: [], touched: 0, scanned: 1, profileCleared: true }),
+);
+
+vi.mock('../../src/model/repository/firebaseAdminRepository', async (importOriginal) => ({
+  clearStrayProfilePhoto: (...args: unknown[]) => clearStrayProfilePhotoMock(...args),
   ADMIN_PROFILES_LIMIT: 300,
   loadAdminCensus: (...args: unknown[]) => loadAdminCensusMock(...args),
+  readAdminCensusRow: (census: unknown, id: string) => readAdminCensusRowMock(census, id),
+  // Colocar la ficha es puro: el de verdad.
+  replaceCensusRow: (await importOriginal<typeof import('../../src/model/repository/firebaseAdminRepository')>()).replaceCensusRow,
   setUserSocialEnabled: (...args: unknown[]) => setUserSocialEnabledMock(...args),
   purgeLegacyProfileFields: (...args: unknown[]) => purgeLegacyProfileFieldsMock(...args),
   deleteUserProfile: (...args: unknown[]) => deleteUserProfileMock(...args),
@@ -94,6 +109,12 @@ const saveAnnouncementMock = vi.fn(async (next: unknown) => next);
 vi.mock('../../src/model/repository/announcementRepository', () => ({
   loadAnnouncement: (...args: unknown[]) => loadAnnouncementMock(...args),
   saveAnnouncement: (next: unknown) => saveAnnouncementMock(next),
+}));
+
+// El estado de los retos para la línea del menú: un documento de Firestore que aquí se sirve a mano.
+const fetchVotingConfigMock = vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => null);
+vi.mock('../../src/model/repository/premios/premiosSeasonRepository', () => ({
+  fetchVotingConfig: (...args: unknown[]) => fetchVotingConfigMock(...args),
 }));
 
 import { AdminHub } from '../../src/view/components/AdminHub';
@@ -539,18 +560,16 @@ describe('AdminHub — moderación', () => {
   });
 
   // El id del canal dejó de publicarse en el perfil (se purga al guardar), así que ese campo está vacío para
-  // cualquier perfil al día: pintarlo siempre enseñaba un "—" que se leía como un dato que faltaba. El canal de
-  // alguien se ve ahora por lo que guardan sus amistades, y eso sí se pinta siempre.
-  it('el gist del perfil solo aparece si de verdad lo arrastra, y el de sus amistades siempre', async () => {
+  // cualquier perfil al día: pintarlo siempre enseñaba un "—" que se leía como un dato que faltaba. Y el canal
+  // que guardan sus amistades tampoco se pinta en el caso sano: con uno no dice nada, y con más sale la deriva.
+  it('el gist del perfil solo aparece si de verdad lo arrastra, y un canal sano no ocupa sitio', async () => {
     loadAdminCensusMock.mockResolvedValue(census([user({ socialGistId: '', friendSocialGistIds: ['gs-vivo'] })]));
     renderHub();
     signInAsAdmin();
     await screen.findByText('Ada');
 
     expect(screen.queryByText(ADMIN_PANEL_UI.field.socialGist)).not.toBeInTheDocument();
-    expect(screen.getByText(ADMIN_PANEL_UI.field.friendGists)).toBeInTheDocument();
-    // El estado del canal, no su id: con uno solo está sano, y el identificador no permitía hacer nada.
-    expect(screen.getByText(ADMIN_PANEL_UI.field.channelSingle)).toBeInTheDocument();
+    expect(screen.queryByText(ADMIN_PANEL_UI.field.channelSingle)).not.toBeInTheDocument();
     expect(screen.queryByText('gs-vivo')).not.toBeInTheDocument();
   });
 
@@ -661,8 +680,24 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
     signInAsAdmin();
     await screen.findByText('Ada');
 
-    expect(screen.getByText(ADMIN_PANEL_UI.field.friendPhotoStale)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: ADMIN_PANEL_UI.healIdentity.btn })).toBeInTheDocument();
+    // El bloque dice QUÉ no cuadra —la foto— y el botón, lo que va a arreglar: con el nombre bien, hablar de
+    // «nombre y foto» hacía creer que había que volver a lanzar el nombre.
+    expect(screen.getByText(ADMIN_PANEL_UI.healIdentity.titlePhoto)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: ADMIN_PANEL_UI.healIdentity.btnPhoto })).toBeInTheDocument();
+  });
+
+  // PRIVACIDAD. Sus amistades sin foto y el perfil publicando una es lo que deja quien la ocultó: el panel no lee
+  // ese interruptor y la acción no se la pone, así que tampoco se la ofrece —si no, el aviso no se iría nunca—.
+  it('no ofrece propagar una foto a amistades que no tienen ninguna', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([user({ photoURL: 'https://f/cara.png', hasPhoto: true, friendKnownNames: ['Ada'], friendKnownPhotos: [''] })]),
+    );
+    renderHub();
+    signInAsAdmin();
+    await screen.findByText('Ada');
+
+    expect(screen.queryByText(ADMIN_PANEL_UI.healIdentity.titlePhoto)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: ADMIN_PANEL_UI.healIdentity.btnPhoto })).not.toBeInTheDocument();
   });
 
   /**
@@ -678,9 +713,9 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
     signInAsAdmin();
     await screen.findByText('Ada');
 
-    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.healIdentity.btn }));
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.healIdentity.btnPhoto }));
 
-    expect(screen.getByText(ADMIN_PANEL_UI.healIdentity.confirm('Ada'))).toBeInTheDocument();
+    expect(screen.getByText(ADMIN_PANEL_UI.healIdentity.confirmPhoto('Ada'))).toBeInTheDocument();
     expect(screen.queryByText(ADMIN_PANEL_UI.healIdentity.confirmWithName('Ada', 'Ada'))).not.toBeInTheDocument();
   });
 
@@ -691,7 +726,7 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
     await screen.findByText('Ada');
 
     expect(screen.queryByRole('button', { name: ADMIN_PANEL_UI.healIdentity.btn })).not.toBeInTheDocument();
-    expect(screen.getByText(ADMIN_PANEL_UI.field.friendPhotoFresh)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: ADMIN_PANEL_UI.healIdentity.btnPhoto })).not.toBeInTheDocument();
   });
 
   // La señal avisa a los 90 días; el botón de purga espera a los 180. Con solo señal, no hay botón.
@@ -782,14 +817,14 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
     expect(screen.queryByText(ADMIN_PANEL_UI.chooseName.title)).not.toBeInTheDocument();
   });
 
-  it('dice el estado del canal de listas, y que no tenerlo no es un fallo', async () => {
+  it('el canal de listas solo se pinta fuera del caso sano, y no tenerlo no es un fallo', async () => {
     loadAdminCensusMock.mockResolvedValue(census([user({ friendGamesGistIds: ['gj-1'] })]));
     const { unmount } = renderHub();
     signInAsAdmin();
     await screen.findByText('Ada');
 
-    expect(screen.getByText(ADMIN_PANEL_UI.field.friendGamesGists)).toBeInTheDocument();
-    expect(screen.getByText(ADMIN_PANEL_UI.field.channelSingle)).toBeInTheDocument();
+    // Un solo canal: sano, y la ficha no gasta una línea en decirlo.
+    expect(screen.queryByText(ADMIN_PANEL_UI.field.friendGamesGists)).not.toBeInTheDocument();
     expect(screen.queryByText('gj-1')).not.toBeInTheDocument();
 
     // Sin canal de listas el hueco se explica: es quien usa el social sin sincronizar sus juegos, no una avería.
@@ -1035,7 +1070,7 @@ describe('AdminHub — resumen y filtros', () => {
     signInAsAdmin();
     await screen.findByText('Ada');
 
-    await userEvent.click(screen.getByLabelText(ADMIN_PANEL_UI.onlyFlaggedLabel));
+    await userEvent.selectOptions(screen.getByLabelText(ADMIN_PANEL_UI.signalFilter.label), 'flagged');
     expect(screen.getByText('Bob')).toBeInTheDocument();
     expect(screen.queryByText('Ada')).not.toBeInTheDocument();
     expect(screen.getByText(ADMIN_PANEL_UI.resultCount(1))).toBeInTheDocument();
@@ -1048,7 +1083,7 @@ describe('AdminHub — resumen y filtros', () => {
     signInAsAdmin();
     await screen.findByText('Ada');
 
-    await userEvent.click(screen.getByLabelText(ADMIN_PANEL_UI.onlyFlaggedLabel));
+    await userEvent.selectOptions(screen.getByLabelText(ADMIN_PANEL_UI.signalFilter.label), 'flagged');
     expect(screen.getByText(ADMIN_PANEL_UI.emptyFlagged)).toBeInTheDocument();
     expect(screen.queryByText(ADMIN_PANEL_UI.emptyFiltered)).not.toBeInTheDocument();
   });
@@ -1061,11 +1096,77 @@ describe('AdminHub — resumen y filtros', () => {
     signInAsAdmin();
     await screen.findByText('Ada');
 
-    await userEvent.click(screen.getByLabelText(ADMIN_PANEL_UI.onlyFlaggedLabel));
+    await userEvent.selectOptions(screen.getByLabelText(ADMIN_PANEL_UI.signalFilter.label), 'flagged');
     fireEvent.change(screen.getByLabelText(ADMIN_PANEL_UI.searchLabel), { target: { value: 'Zoe' } });
 
     // Ada no tiene señales y Bob no es Zoe: no queda nadie, pero por la búsqueda, no por el filtro.
     expect(screen.getByText(ADMIN_PANEL_UI.emptyFiltered)).toBeInTheDocument();
+  });
+
+  // «¿Quién más tiene ESTO?»: el desplegable ofrece solo las señales que alguna ficha tiene, con cuántas.
+  it('filtra por una señal concreta, y solo ofrece las que hay', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([
+        user({ anomalies: ['stale-schema'] }),
+        user({ id: 'uid-b', uid: 'uid-b', displayName: 'Bob', anomalies: ['inactive', 'stale-schema'] }),
+      ]),
+    );
+    renderHub();
+    signInAsAdmin();
+    await screen.findByText('Ada');
+
+    const filter = screen.getByLabelText(ADMIN_PANEL_UI.signalFilter.label);
+    const inactive = ADMIN_PANEL_UI.signalFilter.one(ADMIN_PANEL_UI.anomalies.inactive.label, 1);
+    expect(within(filter).getByRole('option', { name: inactive })).toBeInTheDocument();
+    expect(
+      within(filter).getByRole('option', { name: ADMIN_PANEL_UI.signalFilter.one(ADMIN_PANEL_UI.anomalies['stale-schema'].label, 2) }),
+    ).toBeInTheDocument();
+    expect(
+      within(filter).queryByRole('option', { name: new RegExp(ADMIN_PANEL_UI.anomalies['legacy-token'].label) }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.selectOptions(filter, 'inactive');
+    expect(screen.getByText('Bob')).toBeInTheDocument();
+    expect(screen.queryByText('Ada')).not.toBeInTheDocument();
+  });
+
+  // Lo grave primero: un token en claro no puede quedar debajo de cuarenta fichas sanas más recientes.
+  it('pone primero las fichas con señales graves', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([
+        user({ updatedAt: 3 }),
+        user({ id: 'uid-b', uid: 'uid-b', displayName: 'Bob', updatedAt: 2, anomalies: ['inactive'] }),
+        user({ id: 'uid-c', uid: 'uid-c', displayName: 'Cleo', updatedAt: 1, anomalies: ['legacy-token'] }),
+      ]),
+    );
+    renderHub();
+    signInAsAdmin();
+    await screen.findByText('Ada');
+
+    const cards = within(screen.getByRole('list', { name: ADMIN_PANEL_UI.table.aria })).getAllByRole('listitem');
+    const names = cards
+      .map((card) => card.querySelector('.admin-user-text b')?.textContent || '')
+      .filter(Boolean);
+    // Cleo (grave) primero; las demás, en el orden del censo.
+    expect(names).toEqual(['Cleo', 'Ada', 'Bob']);
+  });
+
+  // Tras una acción de ficha se relee ESA ficha, no el censo entero.
+  it('tras cambiar el rango relee solo esa ficha', async () => {
+    loadAdminCensusMock.mockResolvedValue(census([user()]));
+    renderHub();
+    signInAsAdmin();
+    await screen.findByText('Ada');
+    loadAdminCensusMock.mockClear();
+
+    await userEvent.selectOptions(
+      screen.getByLabelText(ADMIN_PANEL_UI.tier.selectAria('Ada')),
+      'silver',
+    );
+
+    await waitFor(() => expect(readAdminCensusRowMock).toHaveBeenCalledWith(expect.anything(), 'uid-a'));
+    // La única llamada al censo es la que hace el mock de la relectura para servir la ficha.
+    expect(loadAdminCensusMock).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -1099,5 +1200,125 @@ describe('AdminHub — el aviso publicado', () => {
     await userEvent.click(await screen.findByRole('button', { name: ADMIN_ANNOUNCEMENT_UI.save }));
     await waitFor(() => expect(saveAnnouncementMock).toHaveBeenCalledTimes(1));
     expect(saveAnnouncementMock.mock.calls[0][0]).toMatchObject({ id: 'campana-1', title: 'Premios 2026' });
+  });
+});
+
+// El menú dice el estado de cada pantalla que lo tiene, para saber si hace falta entrar.
+describe('AdminHub — estado en el menú', () => {
+  beforeEach(() => {
+    loadAdminCensusMock.mockReset();
+    loadAdminCensusMock.mockResolvedValue(census([user()]));
+    readAdminClaimMock.mockReset();
+    loadAnnouncementMock.mockReset();
+    fetchVotingConfigMock.mockReset();
+  });
+
+  it('dice qué aviso hay publicado y si los retos esperan a publicarse', async () => {
+    loadAnnouncementMock.mockResolvedValue({
+      id: 'c-1', kicker: '', title: 'Premios 2026', body: '', url: 'https://example.com',
+      icon: 'votar', active: true, repeats: 3, intervalHours: 24, updatedAt: 1,
+    });
+    // Cerrada ayer y sin publicar: es lo único del menú que pide hacer algo.
+    fetchVotingConfigMock.mockResolvedValue({ closesAtMillis: Date.now() - 86_400_000 });
+    renderHub();
+    signInAsAdmin();
+
+    expect(await screen.findByText(ADMIN_PANEL_UI.menuStatus.announcementActive('Premios 2026'))).toBeInTheDocument();
+    expect(await screen.findByText(ADMIN_PANEL_UI.menuStatus.premiosPending)).toHaveClass('is-pending');
+  });
+
+  it('sin aviso ni edición lo dice, y mientras no ha leído no afirma nada', async () => {
+    let entregar: (value: unknown) => void = () => {};
+    loadAnnouncementMock.mockImplementation(() => new Promise((resolve) => { entregar = resolve; }));
+    fetchVotingConfigMock.mockResolvedValue(null);
+    renderHub();
+    signInAsAdmin();
+
+    expect(await screen.findByText(ADMIN_PANEL_UI.menuStatus.premiosNone)).toBeInTheDocument();
+    expect(screen.queryByText(ADMIN_PANEL_UI.menuStatus.announcementNone)).not.toBeInTheDocument();
+    entregar(null);
+    expect(await screen.findByText(ADMIN_PANEL_UI.menuStatus.announcementNone)).toBeInTheDocument();
+  });
+});
+
+describe('AdminHub — última actividad', () => {
+  beforeEach(() => {
+    loadAdminCensusMock.mockReset();
+    readAdminClaimMock.mockReset();
+  });
+
+  // Cuánto hace, de un vistazo; la fecha exacta, en el `title`.
+  it('se dice en relativo, con la fecha completa a mano', async () => {
+    const haceTresDias = Date.now() - 3 * 86_400_000;
+    loadAdminCensusMock.mockResolvedValue(census([user({ updatedAt: haceTresDias })]));
+    renderHub();
+    signInAsAdmin();
+    await screen.findByText('Ada');
+
+    const valor = screen.getByText(ADMIN_PANEL_UI.field.lastActivityAgo(haceTresDias, Date.now()));
+    expect(valor.textContent).toBe('hace 3 días');
+    expect(valor).toHaveAttribute('title');
+  });
+});
+
+// Los restos del fallo de la foto: perfiles que publican una foto que su dueño ocultó (o el avatar genérico).
+describe('AdminHub — fotos publicadas de más', () => {
+  beforeEach(() => {
+    loadAdminCensusMock.mockReset();
+    readAdminClaimMock.mockReset();
+    clearStrayProfilePhotoMock.mockClear();
+  });
+
+  const conFoto = (id: string, name: string) =>
+    user({ id, uid: id, displayName: name, photoURL: `https://f/${id}.png`, hasPhoto: true, anomalies: ['stray-photo'] });
+
+  it('las retira todas de una vez, tras confirmar, y relee el censo', async () => {
+    loadAdminCensusMock.mockResolvedValue(census([user(), conFoto('uid-b', 'Bob'), conFoto('uid-c', 'Cleo')]));
+    renderHub();
+    signInAsAdmin();
+    await screen.findByText('Bob');
+    loadAdminCensusMock.mockClear();
+
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.strayPhoto.bulkBtn(2) }));
+    expect(screen.getByText(ADMIN_PANEL_UI.strayPhoto.bulkConfirm(2))).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.confirmAccept }));
+
+    expect(await screen.findByText(ADMIN_PANEL_UI.strayPhoto.bulkOk(2, 2))).toBeInTheDocument();
+    expect(clearStrayProfilePhotoMock).toHaveBeenCalledWith('uid-b', 'uid-b', 'https://f/uid-b.png');
+    expect(clearStrayProfilePhotoMock).toHaveBeenCalledWith('uid-c', 'uid-c', 'https://f/uid-c.png');
+    expect(clearStrayProfilePhotoMock).not.toHaveBeenCalledWith('uid-a', expect.anything(), expect.anything());
+    expect(loadAdminCensusMock).toHaveBeenCalled();
+  });
+
+  it('dice cuántas no salieron si un perfil no se deja escribir', async () => {
+    loadAdminCensusMock.mockResolvedValue(census([conFoto('uid-b', 'Bob'), conFoto('uid-c', 'Cleo')]));
+    clearStrayProfilePhotoMock.mockResolvedValueOnce({ ok: false, failures: ['x'], touched: 0, scanned: 0, profileCleared: false });
+    renderHub();
+    signInAsAdmin();
+    await screen.findByText('Bob');
+
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.strayPhoto.bulkBtn(2) }));
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.confirmAccept }));
+
+    expect(await screen.findByText(ADMIN_PANEL_UI.strayPhoto.bulkOk(1, 2))).toBeInTheDocument();
+  });
+
+  it('cada ficha afectada tiene su botón, y sin ninguna no hay bloque', async () => {
+    loadAdminCensusMock.mockResolvedValue(census([conFoto('uid-b', 'Bob')]));
+    const { unmount } = renderHub();
+    signInAsAdmin();
+    await screen.findByText('Bob');
+
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.strayPhoto.btn }));
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.confirmAccept }));
+    await waitFor(() => expect(clearStrayProfilePhotoMock).toHaveBeenCalledWith('uid-b', 'uid-b', 'https://f/uid-b.png'));
+
+    unmount();
+    loadAdminCensusMock.mockResolvedValue(census([user()]));
+    renderHub();
+    signInAsAdmin();
+    await screen.findByText('Ada');
+    expect(screen.queryByText(ADMIN_PANEL_UI.strayPhoto.bulkTitle(1))).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: ADMIN_PANEL_UI.strayPhoto.btn })).not.toBeInTheDocument();
   });
 });

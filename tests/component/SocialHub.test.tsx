@@ -98,6 +98,25 @@ const localMocks = vi.hoisted(() => ({
 
 vi.mock('../../src/model/repository/localRepository', () => localMocks);
 
+// F5 — las líneas base del feed de logros viven en `LocalMeta` (IndexedDB), que jsdom no tiene: sin tocar nada,
+// `getLocalMeta` da `null` como siempre. Los tests de logros ajenos la sobrescriben para partir de una línea base
+// ya tomada, que es el caso normal a partir del segundo día (la primera foto calla).
+const metaMocks = vi.hoisted(() => ({
+  getLocalMeta: vi.fn(async (): Promise<unknown> => null),
+  // Como la escritura real: añade lo que falte sin pisar lo que había y poda lo que no esté en `keep`.
+  seedAchievementsPeerSeen: vi.fn(async (additions: Record<string, string>, keep?: ReadonlySet<string>) => {
+    const meta = (await metaMocks.getLocalMeta()) as { achievementsPeerSeen?: Record<string, string> } | null;
+    const seen: Record<string, string> = { ...additions, ...(meta?.achievementsPeerSeen || {}) };
+    if (keep) for (const key of Object.keys(seen)) if (!keep.has(key)) delete seen[key];
+    return seen;
+  }),
+}));
+vi.mock('../../src/model/repository/indexedDbRepository', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/model/repository/indexedDbRepository')>()),
+  getLocalMeta: metaMocks.getLocalMeta,
+  seedAchievementsPeerSeen: metaMocks.seedAchievementsPeerSeen,
+}));
+
 // El botón de compartir trae su propio view-model, que habla con `/api/share` y con Firebase. Aquí interesa DÓNDE
 // se ofrece el botón, no su estado interno: se le da una sesión válida y ningún enlace previo.
 const shareMocks = vi.hoisted(() => ({
@@ -137,6 +156,7 @@ import { GithubConnectionProvider, type GithubConnection } from '../../src/viewm
 import { SETTINGS_UI } from '../../src/core/constants/settingsLabels';
 import { SHARE_UI } from '../../src/core/constants/shareLabels';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
+import { ACHIEVEMENTS_BY_ID } from '../../src/core/achievements/catalog';
 import { LEGAL_CONSENT_UI, LEGAL_VERSION } from '../../src/core/constants/legal';
 import { PREMIOS_UI } from '../../src/core/constants/premiosLabels';
 import { DEFAULT_PALETTE } from '../../src/core/constants/palettes';
@@ -154,6 +174,20 @@ function renderHub(initialPath = '/social', games?: unknown, conexionGithub: Git
       </GithubConnectionProvider>
     </MemoryRouter>,
   );
+}
+
+/**
+ * Espera a la pantalla REAL del feed, no a su esqueleto.
+ *
+ * Mientras el ViewModel carga, `SocialHub` pinta `SocialHubSkeleton`, que usa el MISMO `FeedShell` y por tanto el
+ * mismo título: esperar a «Actividad social» encuentra el del esqueleto. Cuando llega la pantalla, React sustituye
+ * ese subárbol entero (son componentes distintos) y el nodo encontrado se queda fuera del documento; si el `expect`
+ * caía justo en ese hueco, el test fallaba 3 de cada 10 veces, y cuando no fallaba comprobaba el esqueleto en vez
+ * del feed. Lo que solo tiene la pantalla real es la fila de botones activa: en el esqueleto va `aria-hidden`, así
+ * que una consulta por rol no la ve.
+ */
+function findFeedScreen() {
+  return screen.findByRole('button', { name: SOCIAL_UI.feed.openProfiles });
 }
 
 /**
@@ -484,9 +518,10 @@ describe('SocialHub (componente, post-M3)', () => {
 
     renderHub('/social');
 
-    // El feed ya está montado (su título está a la vista) y la query de amistades sigue sin responder: es
+    // El feed ya está montado —el de verdad, no su esqueleto— y la query de amistades sigue sin responder: es
     // exactamente el instante en el que se colaba el vacío.
-    expect(await screen.findByText(SOCIAL_UI.feed.title)).toBeInTheDocument();
+    await findFeedScreen();
+    expect(screen.getByText(SOCIAL_UI.feed.title)).toBeInTheDocument();
     await waitFor(() => expect(firebaseMocks.getMyFriendships).toHaveBeenCalled());
     expect(screen.queryByText(SOCIAL_UI.feed.activityEmptyNoFriends)).not.toBeInTheDocument();
 
@@ -576,7 +611,8 @@ describe('SocialHub (componente, post-M3)', () => {
 
       renderHub('/social');
 
-      await screen.findByText(SOCIAL_UI.feed.title);
+      // La pantalla real: con el esqueleto delante, «no se ha hidratado» sería cierto solo por llegar pronto.
+      await findFeedScreen();
       // Sin rango todavía: no se ha hidratado nada (antes se hidrataba con el TTL de bronce).
       expect(firebaseMocks.listSocialDirectory).not.toHaveBeenCalled();
 
@@ -1856,9 +1892,18 @@ describe('SocialHub — los logros de otras personas', () => {
   const espejoDe = (id: string) =>
     packAchievements([{ id, level: 1, value: 0, next: null, unlockedAt: Date.now() }]);
 
+  /**
+   * LA LÍNEA BASE de este dispositivo: el espejo de cada persona tal y como estaba la primera vez que se vio. Aquí,
+   * VACÍO para todos: los logros de hoy aparecieron después de esa foto y por eso son noticia (F5, §8.4).
+   */
+  const lineaBaseVacia = (...uids: string[]) => ({
+    achievementsPeerSeen: Object.fromEntries(uids.map((uid) => [uid, packAchievements([])])),
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    metaMocks.getLocalMeta.mockResolvedValue(lineaBaseVacia('friendUid', 'strangerUid', 'me'));
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
     firebaseMocks.getPublicConfig.mockResolvedValue({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
     firebaseMocks.resolveOwnProfile.mockResolvedValue(null);
@@ -1921,6 +1966,49 @@ describe('SocialHub — los logros de otras personas', () => {
     await screen.findByLabelText(`${SOCIAL_UI.feed.openProfileAria('Ada')}. ${ADA_LOGRO_NOMBRE}`);
     expect(screen.queryByText(BOB_LOGRO_NOMBRE)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(`${SOCIAL_UI.feed.openProfileAria('Bob')}. ${BOB_LOGRO_NOMBRE}`)).not.toBeInTheDocument();
+  });
+
+  /**
+   * F5 — LA PRIMERA FOTO CALLA. Sin línea base, lo que ya estaba en el espejo de una amistad no es noticia, traiga
+   * la fecha que traiga: así se callan también las fechas «de hoy» que se publicaron mal antes de fijarlas. Lo que
+   * sí pasa es que se SIEMBRA, y eso es lo que se espera aquí antes de mirar el feed.
+   */
+  it('sin línea base, el espejo de una amistad se siembra y no se anuncia', async () => {
+    metaMocks.getLocalMeta.mockResolvedValue(null);
+    renderHub('/social');
+
+    await waitFor(() => expect(metaMocks.seedAchievementsPeerSeen).toHaveBeenCalledWith(
+      expect.objectContaining({ friendUid: espejoDe(ADA_LOGRO) }),
+      expect.anything(),
+    ));
+    expect(screen.queryByLabelText(`${SOCIAL_UI.feed.openProfileAria('Ada')}. ${ADA_LOGRO_NOMBRE}`)).not.toBeInTheDocument();
+    // Y al desconocido no se le toma línea base: su espejo no entra en el feed de ningún modo.
+    for (const [additions] of metaMocks.seedAchievementsPeerSeen.mock.calls) expect(additions).not.toHaveProperty('strangerUid');
+  });
+
+  /**
+   * LO QUE YA ESTABA NO SE ANUNCIA, AUNQUE TRAIGA FECHA DE HOY; lo que apareció después, sí. Es la diferencia entre
+   * «reciente» y «nuevo», y la que hacía que logros viejos salieran como conseguidos hoy.
+   */
+  it('anuncia lo que apareció después de la línea base, y no lo que ya estaba', async () => {
+    const VIEJO = 'resenas-50';
+    const VIEJO_NOMBRE = ACHIEVEMENTS_BY_ID.get(VIEJO)!.labels.name;
+    const hoy = Date.now();
+    firebaseMocks.listSocialDirectory.mockResolvedValue([{
+      id: 'friendUid', uid: 'friendUid', displayName: 'Ada', photoURL: '',
+      socialGistId: 'ada-social', gamesGistId: '', updatedAt: hoy, tier: 'bronce',
+      achievementsMirror: packAchievements([
+        { id: VIEJO, level: 1, value: 0, next: null, unlockedAt: hoy },
+        { id: ADA_LOGRO, level: 1, value: 0, next: null, unlockedAt: hoy },
+      ]),
+    }]);
+    metaMocks.getLocalMeta.mockResolvedValue({
+      achievementsPeerSeen: { friendUid: packAchievements([{ id: VIEJO, level: 1, value: 0, next: null, unlockedAt: 0 }]), me: packAchievements([]) },
+    });
+    renderHub('/social');
+
+    const tarjeta = await screen.findByLabelText(`${SOCIAL_UI.feed.openProfileAria('Ada')}. ${ADA_LOGRO_NOMBRE}`);
+    expect(tarjeta.textContent).not.toContain(VIEJO_NOMBRE);
   });
 
   it('la ficha de una amistad pinta su vitrina', async () => {

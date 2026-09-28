@@ -14,6 +14,7 @@ import { applyExtraSteps } from '../../src/core/achievements/catalog';
 import { evaluateAchievements, nextPeak } from '../../src/core/achievements/evaluate';
 import { ACHIEVEMENTS_PEAK_KEY, ACHIEVEMENTS_TOLD_KEY } from '../../src/core/constants/storageKeys';
 import type { TabData } from '../../src/model/types/game';
+import { markExternalLibrary } from '../../src/viewmodel/libraryOrigin';
 
 const NOW = Date.parse('2026-09-09T10:00:00.000Z');
 
@@ -162,6 +163,30 @@ describe('el aviso del instante no repite lo que ya ha contado', () => {
       .toContain('completados-100');
     expect(notify).toHaveBeenCalledTimes(1);
     // Y queda apuntado, para que no vuelva a contarse nunca.
+    expect(localStorage.getItem(ACHIEVEMENTS_TOLD_KEY)).toContain('completados-100');
+  });
+
+  /**
+   * LO QUE LLEGA POR LA SYNC NO SE CELEBRA OTRA VEZ. Se cerró en el móvil y allí ya salió su medalla; celebrarlo
+   * de nuevo en el portátil al llegar el merge era el «se desbloquean varias veces», una vez por dispositivo.
+   */
+  it('lo que sube con una biblioteca llegada por la sync se calla, y queda contado', async () => {
+    sembrarMarcaDeAgua(biblioteca(99));
+    const notify = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ games }) => useAchievementNotice(games, notify),
+      { initialProps: { games: biblioteca(99) } },
+    );
+    await asentar();
+
+    const desdeLaSync = biblioteca(100);
+    markExternalLibrary(desdeLaSync);
+    rerender({ games: desdeLaSync });
+    await asentar();
+
+    expect(result.current.flash).toBeNull();
+    expect(notify).not.toHaveBeenCalled();
+    // Contado, para que no salga en la siguiente escritura como si fuera nuevo.
     expect(localStorage.getItem(ACHIEVEMENTS_TOLD_KEY)).toContain('completados-100');
   });
 
