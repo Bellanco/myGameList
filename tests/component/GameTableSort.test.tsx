@@ -43,8 +43,8 @@ function renderSortable(tab: TabId, onSort: (tab: TabId, column: string) => void
 
 describe('GameTable — chips de ordenar', () => {
   it.each<[TabId, Array<[string, string]>]>([
-    ['c', [['Nombre', 'name'], ['Año', 'years'], ['Plataformas', 'platforms'], ['Géneros', 'genres'], ['Puntuación', 'score']]],
-    ['p', [['Nombre', 'name'], ['Plataformas', 'platforms'], ['Géneros', 'genres'], ['Interés', 'score']]],
+    ['c', [['Nombre', 'name'], ['Año', 'years'], ['Puntuación', 'score']]],
+    ['p', [['Nombre', 'name'], ['Interés', 'score']]],
   ])('en la pestaña %s, cada chip manda la clave de su columna', async (tab, expected) => {
     const onSort = vi.fn();
     const { container } = renderSortable(tab, onSort);
@@ -61,5 +61,17 @@ describe('GameTable — chips de ordenar', () => {
       expect(onSort).toHaveBeenCalledWith(tab, clave);
     }
     expect(screen.queryByText('Puntos fuertes', { selector: '.list-sort-chip span' })).toBeNull();
+  });
+
+  it('ni plataformas ni géneros: son listas, y ordenar por la primera de cada juego no dice nada', () => {
+    const { container } = renderSortable('c', vi.fn());
+    const chips = container.querySelector('.list-sort-chips') as HTMLElement;
+    expect(within(chips).queryByText('Plataformas')).toBeNull();
+    expect(within(chips).queryByText('Géneros')).toBeNull();
+  });
+
+  it('con una sola columna ordenable no hay barra: en curso solo se ordena por nombre', () => {
+    const { container } = renderSortable('e', vi.fn());
+    expect(container.querySelector('.list-sort-chips')).toBeNull();
   });
 });

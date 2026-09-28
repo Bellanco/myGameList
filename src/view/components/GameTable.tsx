@@ -365,11 +365,12 @@ type TableColumn = keyof typeof UI_MESSAGES.table.columns;
 // Columnas ordenables: columna → clave de orden que entiende `sortGames`/`sortBy`. El resto (Puntos
 // fuertes/débiles, Rejugar…) no son ordenables. Va por el ID de la columna y NO por su rótulo: la clave era la
 // palabra en español («Juego», «Año»…), así que cambiar un rótulo dejaba la columna sin ordenar sin que fallara nada.
+// NI PLATAFORMAS NI GÉNEROS: son listas, y ordenarlas era ordenar por la PRIMERA de cada juego, que es la que se
+// escribió primero y no dice nada —un juego de Steam y Switch caía en la «S» o en la «N» según el orden en que se
+// teclearon—. Filtrar por ellas sí tiene sentido, y eso lo hace la barra de filtros.
 const SORT_COLUMN: Partial<Record<TableColumn, string>> = {
   name: 'name',
   year: 'years',
-  platforms: 'platforms',
-  genres: 'genres',
   score: 'score',
   interest: 'score',
 };
@@ -831,20 +832,20 @@ export const GameTable = memo(function GameTable({
     .map((column): { header: string; key: string | undefined } => ({ header: UI_MESSAGES.table.columns[column], key: SORT_COLUMN[column] }))
     .filter((c): c is { header: string; key: string } => Boolean(c.key));
   /**
-   * EL ORDEN, SIN CARRIL QUE ARRASTRAR. Las cinco columnas no caben en un teléfono y hasta ahora sobraba
+   * EL ORDEN, SIN CARRIL QUE ARRASTRAR. Las columnas no cabían en un teléfono y hasta ahora sobraba
    * desplazándolas de lado: en la práctica eso esconde opciones —nadie arrastra una fila que no parece
    * arrastrable— y deja «Puntuación» partida por el canto, que se lee como un fallo de pintado.
    *
    * ASÍ QUE SE CEDE POR ORDEN DE IMPORTANCIA, como hace la barra inferior con sus rótulos:
    *   · primero se va la palabra «Ordenar», que es la única que no es una opción: el grupo ya se anuncia con
-   *     ese mismo nombre (`aria-label`), así que quien lo oye no pierde nada y quien lo ve tampoco —cinco
+   *     ese mismo nombre (`aria-label`), así que quien lo oye no pierde nada y quien lo ve tampoco —varias
    *     columnas en fila, con una en el color del acento, se leen como un orden sin que nadie lo diga—;
    *   · si aún no caben, los chips bajan un punto de cuerpo;
    *   · y si tampoco —de 360 px para abajo no hay manera—, se PARTEN EN DOS LÍNEAS. Es la única salida que
    *     sigue enseñándolas todas; cuesta un renglón de alto en las pantallas más estrechas y a cambio no
    *     esconde ninguna opción detrás de un arrastre que nadie adivina.
    *
-   * SE MIDE, NO SE ESTIMA, y por el mismo motivo que allí: lo que ocupan cinco palabras cambia con el idioma,
+   * SE MIDE, NO SE ESTIMA, y por el mismo motivo que allí: lo que ocupan esas palabras cambia con el idioma,
    * con la letra del tema y con el ajuste de mayúsculas. Cada pasada mide lo que HAY PINTADO y solo decide el
    * escalón siguiente; los anchos que hacen falta para volver a subir se guardan cuando se han podido medir de
    * verdad, que es la única forma de que el escalón no sea un pestillo de un solo sentido.
@@ -933,7 +934,9 @@ export const GameTable = memo(function GameTable({
     };
   }, [sortableColumns.length]);
 
-  const showSortBar = Boolean(onSort) && sortableColumns.length > 0 && (cards || shape === 'grid');
+  // Con UNA sola columna ordenable no hay orden que elegir —«En curso» solo ordena por nombre, y la vergüenza
+  // también mientras no haya ningún juego puntuado—: la barra diría «Ordenar: Nombre» y nada más.
+  const showSortBar = Boolean(onSort) && sortableColumns.length > 1 && (cards || shape === 'grid');
 
   return (
     <div className="table-wrap" ref={parentRef}>

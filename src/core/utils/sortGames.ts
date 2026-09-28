@@ -41,8 +41,6 @@ export function sortGames(games: GameItem[], sort: TabSort, tab: TabId): GameIte
 
   const keyOf = (game: GameItem): string | number => {
     if (col === 'years') return game.years?.length ? Math.max(...game.years) : 0;
-    if (col === 'genres') return game.genres[0] || '';
-    if (col === 'platforms') return game.platforms[0] || '';
     // La columna de puntuación ordena por la nota fina EFECTIVA (0–100, `grade` o su fallback ×20), no por el
     // espejo `score` 0–5: si no, notas como 90/96/98/99/100 caen todas en 5★, empatan y el orden estable las deja
     // en el orden de inserción (p. ej. 96-98-90-99-100). Ver core/utils/scoreScale (resolveGrade).

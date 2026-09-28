@@ -35,7 +35,6 @@ describe('nextSort', () => {
 
   it('columna de texto nueva → ascendente', () => {
     expect(nextSort({ col: 'score', asc: false }, 'name')).toEqual({ col: 'name', asc: true });
-    expect(nextSort({ col: 'name', asc: true }, 'platforms')).toEqual({ col: 'platforms', asc: true });
   });
 
   it('columna numérica/booleana nueva → descendente (mayor primero)', () => {
