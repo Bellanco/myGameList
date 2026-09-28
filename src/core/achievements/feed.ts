@@ -19,6 +19,12 @@ import type { AchievementDef } from './types';
 /** Cuánto hacia atrás se anuncia. Sin este corte, quien lleva un mes sin abrir el hub recibe treinta avisos. */
 export const FEED_RECENT_DAYS = 30;
 
+/**
+ * Cuántos DÍAS distintos de una misma persona entran en el feed. Con la línea base el volumen normal es cero o un
+ * día por persona; esto es la red para quien vuelve tras un mes fuera, que traería treinta de golpe.
+ */
+export const FEED_DAYS_PER_PERSON = 5;
+
 export interface AchievementFeedEntry {
   /** `<profileId>:<AAAA-MM-DD>`: una entrada por persona y día, y determinista para la clave de render. */
   key: string;
@@ -45,17 +51,28 @@ export interface AchievementFeedSource {
   /** El espejo crudo de esa persona, tal y como llega de `profiles/{uid}`. */
   mirror: string;
   own?: boolean;
+  /**
+   * LA LÍNEA BASE (§8.4): el espejo de esa persona tal y como estaba la PRIMERA vez que este dispositivo lo vio.
+   * Lo que ya estaba ahí no es noticia, traiga la fecha que traiga. Sin ella (`undefined`) no se filtra nada: es
+   * el llamante quien decide que una fuente sin línea base se siembra y calla.
+   */
+  seen?: string;
 }
 
 /**
  * Las entradas de logros del feed, deducidas de los espejos del directorio.
  *
- * PENDIENTE DE F5, y va escrito para que no se olvide: aquí falta comparar contra `achievementsPeerSeen`
- * (`LocalMeta`, §5.4), que es lo que convierte «lo reciente» en «lo que ha cambiado desde la última vez que
- * miré». Sin esa comparación, esta función anuncia todo lo reciente en cada apertura en vez de anunciarlo una
- * sola vez.
+ * F5 — SOLO ES NOTICIA LO QUE NO ESTABA EN LA LÍNEA BASE (`seen`, guardada en `achievementsPeerSeen` de
+ * `LocalMeta`, §5.4). Sin esa comparación, cualquier fecha reciente que llegara a un espejo salía como un logro de
+ * ese día, fuera o no nuevo: una fecha recuperada del recorte de la cola, o las que se publicaron «de hoy» antes
+ * de que las fechas se fijaran (ver `freezeDates`).
  *
- * Lo que NO se puede usar para eso es la caché del directorio: tiene TTL por rango —30 min en bronce, **60 s en
+ * ⚑ LA LÍNEA BASE ES LA PRIMERA FOTO, NO LA ÚLTIMA. El plan decía «el último espejo visto», actualizado en cada
+ * hidratación, y así una novedad salía UNA vez: al reabrir el feed ya formaba parte de lo visto y la entrada
+ * desaparecía, cuando una reseña o un movimiento de lista se quedan en su día. Con la foto fija, lo nuevo se queda
+ * en su día hasta que lo saca el corte de `FEED_RECENT_DAYS`, como cualquier otro elemento del feed.
+ *
+ * Lo que NO se puede usar como línea base es la caché del directorio: tiene TTL por rango —30 min en bronce, **60 s en
  * mithril**— se invalida al aceptar una amistad y se descarta al subir su versión de forma. Devuelve `null` al
  * caducar, que significaría «no hay foto previa» y por tanto «callar»: el resultado sería el revés exacto de lo
  * que el rango promete, con el rango más alto viendo MENOS logros ajenos. La línea base tiene que ser un
@@ -71,8 +88,15 @@ export function achievementFeedEntries(
   for (const source of sources) {
     if (!source.mirror) continue; // quien no publica no tiene espejo que comparar: el opt-out sale gratis
 
+    // Se lee con el MISMO catálogo que el espejo de hoy: así, los logros que este cliente empieza a reconocer al
+    // actualizarse —o al llegar la configuración del panel— salen en las dos lecturas y no pasan por nuevos.
+    const seen = source.seen === undefined
+      ? null
+      : new Set(parseMirror(source.seen, now).map((item) => item.id));
+
     const byDay = new Map<string, Array<{ def: AchievementDef; level: number }>>();
     for (const item of parseMirror(source.mirror, now)) {
+      if (seen?.has(item.id)) continue;
       // Sin fecha no se puede situar en el feed, y un logro sin sello es un estado previsto, no un error: se
       // queda fuera del feed y se sigue viendo en su vitrina.
       if (!item.unlockedAt || item.unlockedAt < cutoff) continue;
@@ -86,34 +110,31 @@ export function achievementFeedEntries(
     }
 
     /**
-     * UNA ENTRADA POR PERSONA: la de su día MÁS RECIENTE, no una por cada día de los últimos treinta.
+     * UNA ENTRADA POR PERSONA Y DÍA, hasta `FEED_DAYS_PER_PERSON` días, los más recientes.
      *
-     * El corte de 30 días acota cuánto hacia atrás se mira, pero no cuántas entradas produce cada persona: sin
-     * este segundo tope, alguien con actividad diaria mete treinta tarjetas en el feed él solo, y con cuarenta
-     * perfiles el feed deja de tener reseñas. Es la misma lección de `keepLatestPerDay`, un escalón más arriba.
-     *
-     * Cuando llegue F5 este tope deja de ser el que manda —lo será la comparación contra `achievementsPeerSeen`,
-     * que normalmente da cero o un día por persona— pero se queda como red: quien vuelve tras un mes fuera
-     * seguiría trayendo treinta días de golpe.
+     * Antes era solo el día MÁS RECIENTE, porque sin línea base cada apertura traía todo lo de los últimos treinta
+     * días y el tope era lo único que frenaba a alguien con actividad diaria. Pero así una entrada desaparecía del
+     * feed en cuanto esa persona conseguía algo al día siguiente. Con la línea base el volumen normal es cero o un
+     * día por persona, y el tope se queda como red para quien vuelve tras un mes fuera.
      */
-    const latest = [...byDay.entries()].sort((a, b) => b[0].localeCompare(a[0]))[0];
-    if (!latest) continue;
-    const [day, items] = latest;
-    entries.push({
-      key: `${source.id}:${day}`,
-      profileId: source.id,
-      authorName: String(source.displayName || ''),
-      photoURL: String(source.photoURL || ''),
-      updatedAt: noonOfLocalDay(day),
-      own: Boolean(source.own),
-      // Lo más raro primero dentro del día: si la entrada se recorta, que se quede lo que de verdad es noticia.
-      // Por RAREZA y, a igualdad, por escalón: desde que cada escalón es un logro, el `level` vale 1 en todos y
-      // ordenar por él dejaba el orden al azar del catálogo.
-      items: items.sort((a, b) => {
-        const weight = RARITY_POINTS[b.def.rarity] - RARITY_POINTS[a.def.rarity];
-        return weight !== 0 ? weight : b.def.grade - a.def.grade;
-      }),
-    });
+    const days = [...byDay.entries()].sort((a, b) => b[0].localeCompare(a[0])).slice(0, FEED_DAYS_PER_PERSON);
+    for (const [day, items] of days) {
+      entries.push({
+        key: `${source.id}:${day}`,
+        profileId: source.id,
+        authorName: String(source.displayName || ''),
+        photoURL: String(source.photoURL || ''),
+        updatedAt: noonOfLocalDay(day),
+        own: Boolean(source.own),
+        // Lo más raro primero dentro del día: si la entrada se recorta, que se quede lo que de verdad es noticia.
+        // Por RAREZA y, a igualdad, por escalón: desde que cada escalón es un logro, el `level` vale 1 en todos y
+        // ordenar por él dejaba el orden al azar del catálogo.
+        items: items.sort((a, b) => {
+          const weight = RARITY_POINTS[b.def.rarity] - RARITY_POINTS[a.def.rarity];
+          return weight !== 0 ? weight : b.def.grade - a.def.grade;
+        }),
+      });
+    }
   }
 
   return entries;

@@ -11,6 +11,7 @@ import type { SocialActivityEntry, SocialMoveEntry, SocialPostEntry } from '../.
 import type { PalmaresEntry } from '../../model/types/premios';
 import { useFeedMoveTabs } from '../../view/hooks/useFeedMoveTabs';
 import { achievementFeedEntries, type AchievementFeedEntry } from '../../core/achievements/feed';
+import { useAchievementBaselines, type AchievementBaselineSource } from './useAchievementBaselines';
 import { ENABLE_ACHIEVEMENTS } from '../../core/achievements/flags';
 import type { ProfileTier } from '../../core/constants/tiers';
 import type { GameItem, TabId } from '../../model/types/game';
@@ -94,6 +95,9 @@ const FEED_PAGE_SIZE = 25;
 
 /** Referencia estable para el valor por defecto: un `new Set()` en la firma rompería el memo en cada render. */
 const NO_FRIENDS: ReadonlySet<string> = new Set();
+
+/** Clave de TU línea base cuando todavía no se sabe tu uid. */
+const OWN_BASELINE_KEY = 'me';
 
 /**
  * Cupo de mensajes de lista por AUTOR y DÍA. Las reseñas y las publicaciones no cuentan para él y no tienen tope:
@@ -183,7 +187,20 @@ export function useSocialFeed(
    * espejo no existe en `profiles/{uid}`. Y aunque estuviera, seguiría llegando aparte: el evaluador es la
    * fuente fresca —sabe lo de hace un minuto— y el espejo va siempre un paso por detrás.
    */
-  ownAchievements?: { profileId: string; displayName: string; photoURL: string; mirror: string },
+  ownAchievements?: {
+    profileId: string;
+    displayName: string;
+    photoURL: string;
+    mirror: string;
+    /** Tu uid: la clave de TU línea base (ver `useAchievementBaselines`). */
+    uid?: string;
+    /**
+     * ¿Está ya leído lo que tienes PUBLICADO? Hasta entonces tu espejo es solo el de este dispositivo, y sembrar
+     * la línea base con él haría pasar por nuevo lo que traigan tus otros dispositivos —incluidas las fechas
+     * «de hoy» mal publicadas que la línea base existe para callar—.
+     */
+    ready?: boolean;
+  },
   /**
    * uid de tus AMISTADES. Solo se anuncian los logros de quien está aquí dentro, y es la misma política que ya
    * aplicaba la ficha (`canSeeFullProfile`): allí la vitrina de un desconocido no se enseña.
@@ -197,6 +214,11 @@ export function useSocialFeed(
    * identidad, solo un porcentaje con su denominador.
    */
   friendUids: ReadonlySet<string> = NO_FRIENDS,
+  /**
+   * ¿Está RESUELTO el grafo de amistad? Solo entonces se podan las líneas base de quien ya no es amistad: un grafo
+   * a medio cargar está vacío, y podar contra él las borraría todas.
+   */
+  friendsResolved = false,
 ): {
   feedItems: SocialFeedItem[];
   groupedFeedItems: SocialFeedDayGroup[];
@@ -210,6 +232,23 @@ export function useSocialFeed(
   // primitivo estable y por tanto una dependencia honesta de este `useMemo`: cambiar el filtro recalcula la mezcla
   // y nada más —ni una lectura de red, ni una rehidratación del directorio—.
   const { moveTabsValue } = useFeedMoveTabs();
+
+  // F5 — de quién se toma línea base: tus amistades con espejo y tú, cuando lo tuyo ya está leído. La clave es el
+  // uid, que es por quien va el grafo de amistad y no se desfasa como el `profileId` del directorio.
+  const ownKey = ownAchievements?.uid || OWN_BASELINE_KEY;
+  const baselineSources = useMemo<AchievementBaselineSource[]>(() => {
+    if (!ENABLE_ACHIEVEMENTS) return [];
+    const sources = directory
+      .filter((entry) => friendUids.has(String(entry.uid || '')) && entry.achievementsMirror)
+      .map((entry) => ({ key: String(entry.uid), mirror: String(entry.achievementsMirror) }));
+    if (ownAchievements?.ready && ownAchievements.mirror) sources.push({ key: ownKey, mirror: ownAchievements.mirror });
+    return sources;
+  }, [directory, friendUids, ownAchievements, ownKey]);
+  const baselineKeep = useMemo(
+    () => (friendsResolved ? new Set([...friendUids, ownKey]) : null),
+    [friendsResolved, friendUids, ownKey],
+  );
+  const baselines = useAchievementBaselines(baselineSources, baselineKeep);
 
   const feedItems = useMemo<SocialFeedItem[]>(() => {
     const activity = directory.flatMap((entry) => entry.activity || []);
@@ -230,7 +269,11 @@ export function useSocialFeed(
 
     // LOGROS: una entrada por persona y DÍA, con todos sus logros de ese día dentro (§8.4). No cuesta una
     // petición ni un byte de canal: sale de los espejos que el directorio ya trajo.
-    const achievements = ENABLE_ACHIEVEMENTS
+    //
+    // F5 — y SOLO lo que no estaba en su línea base. Quien todavía no tiene línea base no sale: es su primera
+    // foto, que se siembra y calla. Y hasta haber leído las líneas base no sale nadie, o aparecería un anuncio que
+    // se retira al instante.
+    const achievements = ENABLE_ACHIEVEMENTS && baselines
       ? achievementFeedEntries([
         ...directory
           // SOLO AMISTADES, como el resto del feed. La comparación va por `uid` porque es la clave del grafo de
@@ -242,17 +285,19 @@ export function useSocialFeed(
             photoURL: entry.photoURL,
             mirror: String(entry.achievementsMirror || ''),
             own: false,
+            seen: baselines[String(entry.uid || '')],
           }))
           // Tu propia entrada del directorio se descarta: la tuya la pone `ownAchievements`, que está más fresca
           // y no depende de que el espejo se haya publicado.
-          .filter((entry) => entry.id && entry.mirror && entry.id !== ownAchievements?.profileId),
-        ...(ownAchievements?.mirror
+          .filter((entry) => entry.id && entry.mirror && entry.seen !== undefined && entry.id !== ownAchievements?.profileId),
+        ...(ownAchievements?.mirror && baselines[ownKey] !== undefined
           ? [{
             id: ownAchievements.profileId,
             displayName: ownAchievements.displayName,
             photoURL: ownAchievements.photoURL,
             mirror: ownAchievements.mirror,
             own: true,
+            seen: baselines[ownKey],
           }]
           : []),
       ]).map((entry) => ({ ...entry, kind: 'achievements' as const }))
@@ -264,7 +309,7 @@ export function useSocialFeed(
       .filter((item) => hasRenderableTimestamp(item.updatedAt))
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, FEED_MAX_ITEMS);
-  }, [directory, moveTabsValue, ownAchievements, friendUids]);
+  }, [directory, moveTabsValue, ownAchievements, friendUids, baselines, ownKey]);
 
   const groupedFeedItems = useMemo<SocialFeedDayGroup[]>(() => {
     const groups: SocialFeedDayGroup[] = [];

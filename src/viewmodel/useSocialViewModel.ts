@@ -1193,8 +1193,12 @@ export function useSocialViewModel(options?: {
       displayName: socialDisplayName || '',
       photoURL: authUser?.photoURL || '',
       mirror: ownMergedMirror,
+      uid: authUser?.uid || '',
+      // `tierResolved` se da al terminar de leer tu perfil, que es de donde sale lo PUBLICADO: antes de eso el
+      // espejo es solo el de este dispositivo y no vale como línea base (ver `useSocialFeed`).
+      ready: tierResolved,
     };
-  }, [ownAchievementStates, ownMergedMirror, ownDirectoryProfileId, socialDisplayName, authUser?.photoURL]);
+  }, [ownAchievementStates, ownMergedMirror, ownDirectoryProfileId, socialDisplayName, authUser?.photoURL, authUser?.uid, tierResolved]);
 
   /**
    * TU espejo, el mismo que va al feed.
@@ -1269,6 +1273,7 @@ export function useSocialViewModel(options?: {
     // cualquier autenticado puede leer, así que aquí no vale la garantía implícita del resto del feed («solo se
     // leen los gists de los amigos»).
     friendUidSet,
+    friendshipsResolved,
   );
 
 
