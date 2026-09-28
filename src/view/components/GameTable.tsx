@@ -85,9 +85,15 @@ interface GameTableProps {
     showReplayable?: boolean;
     showRetry?: boolean;
     showHours?: boolean;
-    /** Muestra el "Análisis" (reseña) en la fila expandida. En el perfil social se oculta: tiene pestaña propia. */
+    /** Muestra el enlace al "Análisis" (reseña) en la fila expandida. */
     showReview?: boolean;
   };
+  /**
+   * A DÓNDE LLEVA el enlace «Ver análisis» de la fila expandida. Por defecto, a tu reseña en
+   * `/stats/resenas/:id`; el perfil social lo apunta a la reseña de ESE perfil dentro del hub, que es donde se
+   * lee la de otra persona. `state` viaja con la navegación (el `backTo` del botón de volver).
+   */
+  reviewLink?: (gameId: number) => { to: string; state?: unknown };
 }
 
 interface VirtualRow {
@@ -456,6 +462,7 @@ export const GameTable = memo(function GameTable({
   sort,
   onSort,
   visibility,
+  reviewLink,
   recentlyChangedId = null,
   removingId = null,
 }: GameTableProps) {
@@ -515,6 +522,11 @@ export const GameTable = memo(function GameTable({
   };
 
   const supportsReview = (tab: TabId) => tab !== 'p';
+  /* A DÓNDE LLEVA «ver el análisis» desde el detalle desplegado. `backTo` es de dónde se viene, para que el
+     botón de volver de aquella pantalla devuelva AQUÍ y no al listado de reseñas, que es de donde se llega
+     normalmente. */
+  const reviewTarget = (gameId: number) =>
+    reviewLink?.(gameId) ?? { to: `/stats/resenas/${gameId}`, state: { backTo: TAB_ROUTE[currentTab] } };
 
   // Por debajo de `COMPACT_TABLE_MAX_WIDTH` no cabe una fila de tabla, se pinte lo que se pinte. Se calcula
   // aquí y no con un listener propio porque este efecto ya escucha `resize` y observa el `<body>`: es
@@ -1422,7 +1434,8 @@ export const GameTable = memo(function GameTable({
                         {/* EL ANÁLISIS NO SE VUELCA AQUÍ: se va a leer a su pantalla. Volcado ocupaba el detalle
                             entero —hay reseñas de veinte mil caracteres— y empujaba fuera de la vista todo lo
                             demás, que es lo que se abre el detalle para ver. El enlace lleva a
-                            `/stats/resenas/:id`, donde ya se lee con su ancho de lectura y su medallón.
+                            `/stats/resenas/:id` (o a donde diga `reviewLink`), donde ya se lee con su ancho de
+                            lectura y su medallón.
                             Es un ENLACE y no un botón porque es navegación: así se puede abrir en otra pestaña,
                             copiar la dirección o volver con el botón de atrás. Y ocupa una celda de la rejilla
                             del detalle, no la fila entera (`is-wide`), que es de donde sale el sitio. */}
@@ -1432,12 +1445,9 @@ export const GameTable = memo(function GameTable({
                             <div>
                               <Link
                                 className="btn btn-secondary"
-                                to={`/stats/resenas/${game.id}`}
-                                /* DE DÓNDE SE VIENE, para que el botón de volver de aquella pantalla devuelva
-                                   AQUÍ y no al listado de reseñas, que es de donde se llega normalmente. El
-                                   panel ya usaba este mismo estado para distinguir sus dos orígenes; esta es la
-                                   tercera puerta. */
-                                state={{ backTo: TAB_ROUTE[currentTab] }}
+                                /* Con su `backTo` (ver `reviewTarget`): el panel ya usaba este mismo estado
+                                   para distinguir sus dos orígenes; esta es la tercera puerta. */
+                                {...reviewTarget(game.id)}
                                 aria-label={UI_MESSAGES.detail.reviewLinkAria(game.name)}
                                 onClick={(event) => event.stopPropagation()}
                               >

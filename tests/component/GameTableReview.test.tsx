@@ -2,7 +2,7 @@
 //
 // Volcado ocupaba el detalle entero —hay reseñas de veinte mil caracteres, ver el CHANGELOG de la 1.2.6— y
 // empujaba fuera de la vista todo lo demás, que es justo lo que se abre el detalle para ver. Ahora hay un
-// enlace a `/stats/resenas/:id`.
+// enlace a `/stats/resenas/:id` (o, en el perfil social, a la reseña de ese perfil dentro del hub).
 //
 // Y ES UN ENLACE, no un botón, por tres cosas que un botón no da: abrir en otra pestaña, copiar la dirección y
 // volver con el botón de atrás. El precio es que `GameTable` pasa a necesitar un Router, y ese precio se paga
@@ -101,9 +101,46 @@ describe('GameTable — el análisis, en el detalle', () => {
     expect(screen.queryByRole('link', { name: /análisis/i })).toBeNull();
   });
 
-  it('en el perfil de otra persona no se ofrece: allí el análisis tiene pestaña propia', () => {
-    // `showReview: false` es lo que pasa `SocialProfileDetailScreen`. El enlace lleva a la reseña PROPIA, así
-    // que ofrecerlo sobre el juego de otro llevaría a una pantalla que no habla de lo que se estaba mirando.
+  it('en el perfil de otra persona lleva a SU reseña en el hub, no a la tuya', async () => {
+    // `reviewLink` es lo que pasa `SocialProfileDetailScreen`: el enlace por defecto lleva a la reseña PROPIA,
+    // que sobre el juego de otro abriría una pantalla que no habla de lo que se estaba mirando.
+    function Sonda() {
+      const { pathname, state } = useLocation();
+      return <p>{pathname} desde {(state as { backTo?: string } | null)?.backTo ?? 'ninguno'}</p>;
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/social/profiles/ana']}>
+        <Routes>
+          <Route
+            path="/social/profiles/:profileId"
+            element={
+              <GameTable
+                games={[makeGame()]}
+                currentTab="c"
+                expandedId={7}
+                onExpandedChange={vi.fn()}
+                onEdit={vi.fn()}
+                onDelete={vi.fn()}
+                onMigrate={vi.fn()}
+                tabActions={[]}
+                readOnly
+                reviewLink={(id) => ({ to: `/social/profiles/ana/game/${id}/review`, state: { backTo: '/social/profiles/ana' } })}
+              />
+            }
+          />
+          <Route path="/social/profiles/:profileId/game/:gameId/review" element={<Sonda />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const enlace = screen.getByRole('link', { name: /Ver análisis de Rise of Nations/i });
+    expect(enlace).toHaveAttribute('href', '/social/profiles/ana/game/7/review');
+    await userEvent.click(enlace);
+    expect(await screen.findByText('/social/profiles/ana/game/7/review desde /social/profiles/ana')).toBeInTheDocument();
+  });
+
+  it('con `showReview: false` no se ofrece', () => {
     abrir({}, 'c', { showReview: false });
     expect(screen.queryByRole('link', { name: /análisis/i })).toBeNull();
   });
@@ -113,3 +150,4 @@ describe('GameTable — el análisis, en el detalle', () => {
     expect(screen.queryByRole('link', { name: /análisis/i })).toBeNull();
   });
 });
+

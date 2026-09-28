@@ -168,6 +168,7 @@ function SocialProfileDetailScreenBase({
   onOpenAchievements,
   onToggleReviews,
   onOpenReview,
+  reviewLink,
   status,
   statusKind,
   onAddToProximos,
@@ -202,6 +203,8 @@ function SocialProfileDetailScreenBase({
   onOpenAchievements?: () => void;
   onToggleReviews: () => void;
   onOpenReview: (gameId: number) => void;
+  /** Destino del «Ver análisis» de la fila expandida del listado: la reseña de este perfil dentro del hub. */
+  reviewLink?: (gameId: number) => { to: string; state?: unknown };
   status: string;
   statusKind: string;
   onAddToProximos?: (game: Partial<GameItem>) => 'added' | 'duplicate' | 'invalid';
@@ -556,6 +559,9 @@ function SocialProfileDetailScreenBase({
                     sort={sortByTab[currentTab]}
                     onSort={handleSort}
                     readOnly
+                    // El mismo «Ver análisis» que en tus listas, pero a la reseña de ESTE perfil en el hub: la
+                    // que abre también su pestaña de reseñas.
+                    reviewLink={reviewLink}
                     /* LAS CARÁTULAS AJENAS, PARA TODOS Y SIN RESOLVER NADA. Tu biblioteca la calienta el
                        recorrido de fondo una vez y ya está resuelta; la de otra persona es un catálogo entero de
                        juegos que tú no tienes, y se multiplica por cada perfil que abras. Resolverlo gastaría
@@ -579,8 +585,8 @@ function SocialProfileDetailScreenBase({
                       showReplayable: !activeProfileDetail.visibility?.hideReplayable,
                       showRetry: !activeProfileDetail.visibility?.hideRetry,
                       showHours: !activeProfileDetail.visibility?.hideGameTime,
-                      // El análisis tiene su propia pestaña ("Reseñas"); no se repite en la fila expandida de Juegos.
-                      showReview: false,
+                      // Sin enlace a dónde llevar, el análisis se queda en su pestaña ("Reseñas").
+                      showReview: Boolean(reviewLink),
                     }}
                   />
                   )}
