@@ -64,7 +64,6 @@ export function PremiosPopularScreen({ result }: PremiosPopularScreenProps) {
       <header className="premios-results__head">
         <h2>{L.title}</h2>
         <p className="premios-results__count">{result.name || result.seasonId}</p>
-        <p className="premios-popular__lead">{L.lead}</p>
       </header>
 
       <ul className="premios-results__winners">

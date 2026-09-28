@@ -1408,8 +1408,6 @@
 
 /* ─── Lo más votado ───────────────────────────────────────────────────────────────────────────────────── */
 
-.premios-popular__lead { color: var(--text-muted); font-size: var(--fs-sm); margin: .2rem 0 0; }
-
 /* Con empate van todos los empatados, uno por línea: separados por comas, dos títulos largos se leían como uno. */
 .premios-popular__names { display: grid; gap: .1rem; }
 
