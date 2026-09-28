@@ -206,7 +206,10 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
 
       <header className="premios-results__head">
         <h2>{result.name || L.title}</h2>
-        <p className="premios-results__count">{L.ballots(result.totalBallots || 0)}</p>
+        <p className="premios-results__count">
+          {L.ballots(result.totalBallots || 0)}
+          {result.unscored ? ` · ${L.unscored}` : ''}
+        </p>
       </header>
 
       {/* EL PODIO. Lo primero y en grande, porque es la respuesta a la pregunta con la que se entra: quién ha
@@ -243,11 +246,14 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
                   {entries.length > 1 ? <span className="premios-results__tie">{L.tie}</span> : null}
                 </div>
 
-                <p className="premios-results__step-points">
-                  <span className="sr-only">{L.points(puntos)}</span>
-                  <strong aria-hidden="true">{L.pointsShort(puntos)}</strong>
-                  <span aria-hidden="true">{L.pointsUnit}</span>
-                </p>
+                {/* Sin puntuación no se pinta un «0 puntos»: se sabe el puesto y nada más (ver `unscored`). */}
+                {result.unscored ? null : (
+                  <p className="premios-results__step-points">
+                    <span className="sr-only">{L.points(puntos)}</span>
+                    <strong aria-hidden="true">{L.pointsShort(puntos)}</strong>
+                    <span aria-hidden="true">{L.pointsUnit}</span>
+                  </p>
+                )}
 
                 {/* LA CASILLA ENTERA CAMBIA DE LÁMINA, no solo el trofeo: con el ratón, el blanco es la tarjeta.
                     Es una capa transparente encima del escalón y fuera del árbol accesible, porque para el teclado
@@ -384,10 +390,12 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
                         cierra. */}
                     {nombreDe(entry, 'premios-results__name')}
 
-                    <span className="premios-results__points">
-                      <span className="sr-only">{L.points(entry.points)}</span>
-                      <span aria-hidden="true">{L.pointsShort(entry.points)}</span>
-                    </span>
+                    {result.unscored ? null : (
+                      <span className="premios-results__points">
+                        <span className="sr-only">{L.points(entry.points)}</span>
+                        <span aria-hidden="true">{L.pointsShort(entry.points)}</span>
+                      </span>
+                    )}
 
                     {/* El trofeo, solo para quien tiene sesión, y como icono: cinco botones con rótulo en cinco
                         renglones seguidos tapaban los nombres, que es lo que se viene a leer. */}

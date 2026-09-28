@@ -291,6 +291,27 @@ describe('PremiosResultsScreen', () => {
     );
   });
 
+  // 2018 y 2019: solo se sabe el puesto. Un «0 puntos» en el podio diría algo que no pasó.
+  it('una edición sin puntuación enseña el puesto y no los puntos', () => {
+    const sinPuntos = {
+      ...archivo,
+      unscored: true,
+      leaderboard: [
+        { rank: 1, profileId: 'p-ana', nickname: 'Ana', points: 0 },
+        { rank: 2, profileId: 'p-beto', nickname: 'Beto', points: 0 },
+      ],
+    };
+    const { container } = render(
+      <MemoryRouter>
+        <PremiosResultsScreen result={sinPuntos} leaderboard={sinPuntos.leaderboard} ownProfileId="" />
+      </MemoryRouter>,
+    );
+    const escalones = [...container.querySelectorAll('.premios-results__step')];
+    expect(escalones.map((e) => e.classList.contains('is-rank-2'))).toEqual([false, true]);
+    expect(container.querySelector('.premios-results__step-points')).toBeNull();
+    expect(screen.getByText(new RegExp(L.unscored))).toBeInTheDocument();
+  });
+
   it('lo dice claro cuando no hay edición publicada', () => {
     render(
       <MemoryRouter>

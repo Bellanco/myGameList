@@ -174,6 +174,11 @@ export interface PremiosSeasonResult {
    * existiera: sus papeletas ya se retiraron y no hay con qué rehacerlo.
    */
   votes?: PremiosVoteTally;
+  /**
+   * EDICIÓN SIN PUNTUACIÓN: solo se sabe en qué puesto quedó cada cual (2018 y 2019, de las que no queda hoja).
+   * Sus puntos van a 0 y NO mandan: el puesto es el guardado, y la pantalla no los enseña.
+   */
+  unscored?: boolean;
 }
 
 /**

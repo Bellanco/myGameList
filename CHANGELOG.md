@@ -25,6 +25,8 @@ reseña deja de republicar la foto de Google que el usuario había ocultado.
 - **Scripts para el histórico de premios**: `import-premios-historico.mjs` importa las ediciones 2020–2023,
   contrastando el ganador con el palmarés real de los TGA, y `premios-2025-votos.mjs` añade a 2025 el recuento y la
   participación. «Best E-Sport Game» de 2020 se queda fuera del archivo porque aquel año no contó.
+  `import-premios-2018-2019.mjs` añade 2018 y 2019, de las que solo se sabe el puesto: se archivan **sin
+  puntuación** (`unscored`), y la pantalla respeta el puesto guardado y no enseña puntos.
 - **Panel: «Foto publicada de más».** Una señal nueva para los perfiles que enseñan la foto genérica de Google, o
   una foto que ninguna de sus amistades guarda, que es el rastro de quien la ocultó. Se retira desde la ficha o de
   golpe encima del censo («Retirar las N fotos»); quien la quería visible la recupera al publicar o guardar su

@@ -200,6 +200,8 @@ export const PREMIOS_UI = {
      */
     pointsShort: (puntos: number) => puntos.toLocaleString(APP_LOCALE, { maximumFractionDigits: 2 }),
     pointsUnit: 'puntos',
+    /** Una edición de la que solo se sabe el puesto de cada cual (ver `PremiosSeasonResult.unscored`). */
+    unscored: 'sin puntuación',
     yourRow: 'Tu posición',
     /** EL PODIO: los tres primeros puestos, que es lo que se viene a mirar. */
     podium: 'Podio',
