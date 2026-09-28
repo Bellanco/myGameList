@@ -5,7 +5,7 @@ import { reabrirLaPregunta } from '../core/utils/coverDone';
 import { tagKey } from '../core/utils/tags';
 import { DEFAULT_SORT, nextSort, sortGames } from '../core/utils/sortGames';
 import { normalizeHours } from '../core/utils/normalize';
-import { clampGrade, gradeFromStars, resolveStars, starsFromGrade } from '../core/utils/scoreScale';
+import { clampGrade, gradeFromStars, resolveGrade, resolveStars, starsFromGrade } from '../core/utils/scoreScale';
 import { resolveReviewedAt } from '../core/utils/reviewDate';
 import { nextVersion, resolveGradedAt, stampEntry } from '../core/utils/gameStamps';
 import { mapTabDataTags, type TagCategory } from '../core/utils/tagMutations';
@@ -505,7 +505,15 @@ export function useGameListViewModel() {
       // `gradedAt` necesita la nota ya resuelta (el bloque de arriba decide entre el dial, las estrellas y el
       // caso "sin puntuar" de la vergüenza), no la del borrador.
       base.enteredAt = stampEntry(previous?.enteredAt, tab, now);
-      base.gradedAt = resolveGradedAt({ grade: base.grade, previousGrade: previous?.grade, previousGradedAt: previous?.gradedAt, now });
+      // La nota anterior es la EFECTIVA, no el campo `grade` a secas: un juego de antes de la nota fina solo trae
+      // `score`, y comparar contra su `grade` ausente estrenaba `gradedAt` en cualquier guardado —moverlo de
+      // lista bastaba— aunque la nota no se tocara. Eso fechaba HOY logros de hace meses («Nota del crítico»).
+      base.gradedAt = resolveGradedAt({
+        grade: base.grade,
+        previousGrade: previous ? resolveGrade(previous) : undefined,
+        previousGradedAt: previous?.gradedAt,
+        now,
+      });
 
       if (!base.name || !base.genres.length || !base.platforms.length) {
         notify('warn', UI_MESSAGES.games.fieldsRequired);

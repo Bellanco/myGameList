@@ -24,7 +24,7 @@ vi.mock('../../src/model/repository/firebaseGateway', async (importOriginal) => 
 }));
 
 const { useGameListViewModel } = await import('../../src/viewmodel/useGameListViewModel');
-const { flushLocalState } = await import('../../src/model/repository/localRepository');
+const { flushLocalState, saveLocalState } = await import('../../src/model/repository/localRepository');
 type GameDraft = import('../../src/viewmodel/useGameListViewModel').GameDraft;
 
 /** Borrador vacío equivalente al del formulario (allí es privado; aquí se declara para no exportarlo solo por un test). */
@@ -112,6 +112,23 @@ describe('sellos a lo largo de la vida de un juego', () => {
       }));
     });
     expect(byName(result.current.data.c, 'Bloodborne').gradedAt).toBe(scored.gradedAt);
+  });
+
+  // Regresión: un juego de antes de la nota fina solo trae `score`. Comparar la nota nueva contra su `grade`
+  // AUSENTE estrenaba `gradedAt` en cualquier guardado, y eso fechaba hoy logros de hace meses.
+  it('guardar un juego antiguo sin tocar la nota no estrena la fecha de la nota', async () => {
+    const legacy = {
+      id: 7, _ts: 1_700_000_000_000, name: 'Dark Souls', genres: ['RPG'], platforms: ['Steam'], steamDeck: false,
+      review: '', score: 4, years: [2019], enteredAt: { c: 1_700_000_000_000 }, listedAt: 1_700_000_000_000,
+    } as GameItem;
+    saveLocalState({ c: [legacy], v: [], e: [], p: [], deleted: [], updatedAt: 1, etag: null, lastRemoteUpdatedAt: 0 });
+    flushLocalState();
+
+    const { result } = renderHook(() => useGameListViewModel());
+    await act(async () => {
+      result.current.saveDraft('c', draftFor('Dark Souls', { id: 7, years: [2019], score: 4, grade: undefined, review: 'Ahora con reseña' }));
+    });
+    expect(byName(result.current.data.c, 'Dark Souls').gradedAt).toBeUndefined();
   });
 
   // Regresión: `existing` solo mira la lista DESTINO, así que al mover un juego con reseña el texto anterior se
