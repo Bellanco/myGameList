@@ -1471,6 +1471,18 @@
 
 /* ─── El palmarés: los trofeos, con forma de logro, en la ficha del perfil ────────────────────────────── */
 
+/* LOS METALES QUE EL CATÁLOGO NO TIENE. El oro y la plata del primero y el segundo son los temples de la
+   escalera (`achievements.scss`); del tercero en adelante hacían falta tres más, porque el cobre único del
+   catálogo dejaba igual al tercero que al quinto:
+     · BRONCE, el tercero: pardo y tirando a oliva, el metal apagado del podio.
+     · COBRE, el cuarto y el quinto: rojizo, para que junto al bronce se lean como dos puestos distintos.
+     · AZUL, la participación: no es un metal a propósito, porque no es un puesto.
+   Solo el filo, como los temples: el cuerpo del disco sigue en su penumbra. Especificidad (0,3,0) para ganar
+   a `.ach-medal.is-temple-*` sin depender del orden de las hojas. */
+.ach-medal.premios-palmares-medal.is-bronce { --temple: rgba(170, 132, 74, .84); }
+.ach-medal.premios-palmares-medal.is-cobre { --temple: rgba(206, 98, 60, .8); }
+.ach-medal.premios-palmares-medal.is-participation { --temple: rgba(96, 150, 222, .74); }
+
 .premios-palmares {
   display: grid;
   gap: .4rem;
