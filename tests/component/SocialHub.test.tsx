@@ -157,6 +157,20 @@ function renderHub(initialPath = '/social', games?: unknown, conexionGithub: Git
 }
 
 /**
+ * Espera a la pantalla REAL del feed, no a su esqueleto.
+ *
+ * Mientras el ViewModel carga, `SocialHub` pinta `SocialHubSkeleton`, que usa el MISMO `FeedShell` y por tanto el
+ * mismo título: esperar a «Actividad social» encuentra el del esqueleto. Cuando llega la pantalla, React sustituye
+ * ese subárbol entero (son componentes distintos) y el nodo encontrado se queda fuera del documento; si el `expect`
+ * caía justo en ese hueco, el test fallaba 3 de cada 10 veces, y cuando no fallaba comprobaba el esqueleto en vez
+ * del feed. Lo que solo tiene la pantalla real es la fila de botones activa: en el esqueleto va `aria-hidden`, así
+ * que una consulta por rol no la ve.
+ */
+function findFeedScreen() {
+  return screen.findByRole('button', { name: SOCIAL_UI.feed.openProfiles });
+}
+
+/**
  * F3 — QUE ENCENDER EL INTERRUPTOR PUBLIQUE DE VERDAD.
  *
  * Es la conducta que se estrena al poner `ENABLE_ACHIEVEMENTS_PUBLISH` a `true`, y hasta ahora no la probaba
@@ -484,9 +498,10 @@ describe('SocialHub (componente, post-M3)', () => {
 
     renderHub('/social');
 
-    // El feed ya está montado (su título está a la vista) y la query de amistades sigue sin responder: es
+    // El feed ya está montado —el de verdad, no su esqueleto— y la query de amistades sigue sin responder: es
     // exactamente el instante en el que se colaba el vacío.
-    expect(await screen.findByText(SOCIAL_UI.feed.title)).toBeInTheDocument();
+    await findFeedScreen();
+    expect(screen.getByText(SOCIAL_UI.feed.title)).toBeInTheDocument();
     await waitFor(() => expect(firebaseMocks.getMyFriendships).toHaveBeenCalled());
     expect(screen.queryByText(SOCIAL_UI.feed.activityEmptyNoFriends)).not.toBeInTheDocument();
 
@@ -576,7 +591,8 @@ describe('SocialHub (componente, post-M3)', () => {
 
       renderHub('/social');
 
-      await screen.findByText(SOCIAL_UI.feed.title);
+      // La pantalla real: con el esqueleto delante, «no se ha hidratado» sería cierto solo por llegar pronto.
+      await findFeedScreen();
       // Sin rango todavía: no se ha hidratado nada (antes se hidrataba con el TTL de bronce).
       expect(firebaseMocks.listSocialDirectory).not.toHaveBeenCalled();
 
