@@ -4,6 +4,7 @@ import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { sortPalmares } from '../../../core/premios/palmares';
 import type { PalmaresEntry } from '../../../model/types/premios';
 import { resultsPath } from '../../../viewmodel/premios/premiosRoutes';
+import { AchievementSprite } from '../AchievementSprite';
 import { PalmaresMedal } from './PalmaresMedal';
 
 const L = PREMIOS_UI.palmares;
@@ -37,6 +38,10 @@ export const PalmaresStrip = memo(function PalmaresStrip({ entries }: { entries:
 
   return (
     <section className="premios-palmares" aria-label={L.title}>
+      {/* EL SPRITE DE LAS MEDALLAS lo monta también la vitrina, no solo la de logros: la copa, la escarapela y
+          los degradados de cada metal viven ahí, y quien tiene palmarés pero ningún logro publicado veía el
+          disco vacío (28-09-2026). El relevo del sprite evita que haya dos en el documento. */}
+      <AchievementSprite />
       <h4 className="premios-palmares__title">{L.title}</h4>
       <ul className="premios-palmares__list">
         {ordenadas.map((entry) => (
