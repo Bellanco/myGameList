@@ -5,6 +5,7 @@ import type { AchievementFlash } from '../components/stats/AchievementToast';
 import type { AchievementDef } from '../../core/achievements/types';
 import type { StatusNotice } from '../../model/types/game';
 import type { TabData } from '../../model/types/game';
+import { isExternalLibrary } from '../../viewmodel/libraryOrigin';
 
 /**
  * EL INSTANTE DEL DESBLOQUEO. Ver docs/plan-logros.md §7.4.
@@ -207,7 +208,10 @@ export function useAchievementNotice(
          *  - **la primera vez en este aparato** —no hay nada contado— donde de verdad no hay noticia que dar;
          *  - y **volver a abrir la app y encontrarse logros nuevos**, que sí la hay. Pasa al desplegar una
          *    ampliación del catálogo (noventa y ocho escalones nuevos concedidos de golpe a quien ya tenía
-         *    biblioteca) y pasa también al sincronizar: lo que se cerró en el móvil se concede aquí al abrir.
+         *    biblioteca), o con lo que el hub concedió desde la última vez (los logros sociales).
+         *
+         * Lo que llega por la SYNC ya no pasa por aquí: se calla en el momento en que llega (ver
+         * `isExternalLibrary` más abajo) y queda contado, porque ya se celebró en el dispositivo donde se hizo.
          */
         if (!antes) {
           if (!contadoRaw) return null;
@@ -226,6 +230,14 @@ export function useAchievementNotice(
          * por la misma regla de siempre, no reparte veinte avisos.
          */
         if (antes.juegos === 0 && toma.juegos > 1) return null;
+
+        /**
+         * LA BIBLIOTECA LLEGA DE FUERA: un merge de la sync o una hidratación, no algo que se acabe de hacer aquí.
+         * Lo que suba con ella se consiguió en otro dispositivo, donde ya se celebró; contarlo otra vez es el
+         * «se desbloquean varias veces», una por aparato. Se calla —y se apunta como contado, abajo—, y con ello
+         * también los hitos: cruzar la mitad de una escalera en el móvil no es noticia en el portátil.
+         */
+        if (isExternalLibrary(games)) return null;
 
         /**
          * EL CATÁLOGO HA CRECIDO ENTRE LAS DOS FOTOS. No son comparables: los escalones que el panel acaba de

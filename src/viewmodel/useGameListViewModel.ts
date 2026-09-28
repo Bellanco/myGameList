@@ -20,6 +20,7 @@ import { transitionTo } from '../model/repository/syncMachineRepository';
 import type { TabAction as LabelsTabAction } from '../core/constants/labels';
 import type { GameItem, StatusNotice, TabData, TabId, TabSort, ToolbarFilters } from '../model/types/game';
 import { filterGames } from './toolbarFilters';
+import { markExternalLibrary } from './libraryOrigin';
 
 export interface LookupData {
   genres: string[];
@@ -193,7 +194,10 @@ export function useGameListViewModel() {
         if (!hasData(dataSource)) return prev;
         if (currentHasData && dataSource.updatedAt <= (prev.updatedAt || 0)) return prev;
 
-        return normalizeData(dataSource);
+        // Hidratar no es hacer nada: lo que esta biblioteca sostenga no se ha conseguido ahora (ver `libraryOrigin`).
+        const hydrated = normalizeData(dataSource);
+        markExternalLibrary(hydrated);
+        return hydrated;
       });
 
       setMeta((prev) => {
@@ -250,6 +254,9 @@ export function useGameListViewModel() {
       const gamesUnchanged = tabGamesEqual(dataRef.current, normalized);
 
       if (!gamesUnchanged) {
+        // Lo que llega por el ciclo de sync lo hizo otro dispositivo: el aviso de logros no debe celebrarlo aquí
+        // como si acabara de pasar (ver `libraryOrigin`).
+        if (!markDirtyState) markExternalLibrary(normalized);
         setData(normalized);
         // Espejo al store `games`/`deleted` + timestamp (dual-write). Best-effort: appState sigue siendo
         // el backup, así que un fallo aquí no afecta al guardado ni al modo offline.
