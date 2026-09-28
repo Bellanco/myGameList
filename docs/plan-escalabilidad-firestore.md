@@ -87,13 +87,14 @@ que hacer.
 4. **`options.force`** para la migración de canal social, donde la garantía manda sobre el ahorro: lo que viene
    después **borra** el gist antiguo, así que un saneado saltado por huella dejaría a los amigos apuntando a un
    id que va a desaparecer.
-5. **La ruta de publicación conserva su guarda propia** (`friendshipHealedForGist`), y no es redundancia con la
-   huella: esa ruta **no sabe calcular la foto**. El hub y el guardado del perfil usan `ownPublishablePhoto`, que
-   descarta el monograma genérico de Google (`ownPhotoIsGeneric`, un veredicto de red que vive en el ViewModel);
-   la publicación solo tiene `publicPhotoURL`, que no puede aplicar esa regla. Sin la guarda, las dos rutas
-   calcularían fotos distintas y se pelearían por la huella: cada publicación reescribiría los N documentos con el
-   avatar genérico y la siguiente apertura del hub los reescribiría de vuelta, **en bucle**. Es decir, quitarla
-   convertía la optimización en la amplificación que venía a matar.
+5. **La ruta de publicación conserva su guarda propia** (`friendshipHealedForGist`). Nació porque esa ruta **no
+   sabía calcular la foto**: el hub y el guardado del perfil usan `ownPublishablePhoto`, que descarta el monograma
+   genérico de Google, y la publicación no aplicaba esa regla, así que sin la guarda las dos rutas se peleaban por
+   la huella **en bucle**. Desde el 28-09-2026 `publicPhotoURL` la aplica (espera a `isGenericGooglePhoto`, cuyo
+   veredicto se cachea por URL en el módulo) y es la MISMA foto para el perfil público y para las amistades: antes
+   el perfil caía a la foto de Google sin filtrar, republicaba en cada reseña la de quien la había ocultado y
+   dejaba perfil y amistades en desacuerdo perpetuo. La guarda se queda igual: sigue ahorrando la consulta de
+   amistades en cada publicación.
 6. El saneado **no** aplica el tope de la Fase 2. Recortar ahí dejaría documentos sin sanear y, como el recorte
    no es determinista, podrían ser siempre los mismos: justo el fallo que este saneado existe para evitar.
 

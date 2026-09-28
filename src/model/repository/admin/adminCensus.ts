@@ -7,7 +7,7 @@
 // PRIVACIDAD: del `email` legacy que arrastran los perfiles antiguos solo se expone si EXISTE, nunca su valor.
 // Para purgarlo no hace falta leerlo, y no tiene sentido pasear PII por el cliente para enseñarla en una tabla.
 // Lo mismo con el id del gist de juegos y con el token en claro legacy.
-import { collection, getDocs, limit, query } from 'firebase/firestore/lite';
+import { collection, doc, getDoc, getDocs, limit, query, where } from 'firebase/firestore/lite';
 import { normalizeTier, type ProfileTier } from '../../../core/constants/tiers';
 // La versión vigente se comparte con quien la sella (`firebaseRepository` y el saneado del arranque): con un
 // espejo propio, subirla allí habría dejado de marcar aquí a los perfiles pendientes de migrar.
@@ -214,11 +214,19 @@ async function tallyFriendships(
   now: number,
 ): Promise<FriendshipTally> {
   const snapshot = await getDocs(collection(firestore, 'friendships'));
+  return tallyFriendshipDocs(snapshot.docs, now);
+}
+
+/**
+ * El recuento en sí, sobre los documentos que se le den. Aparte de la lectura para poder recontar UNA ficha con solo
+ * sus amistades (`reloadAdminCensusRow`) sin que el criterio pueda separarse del del censo entero.
+ */
+function tallyFriendshipDocs(docs: ReadonlyArray<{ data(): unknown }>, now: number): FriendshipTally {
   const byUid = new Map<string, FriendshipFacts>();
   let total = 0;
   let pending = 0;
 
-  snapshot.docs.forEach((entry) => {
+  docs.forEach((entry) => {
     const data = entry.data() as {
       users?: unknown;
       status?: unknown;
@@ -380,6 +388,98 @@ function detectAnomalies(row: Omit<AdminUserRow, 'anomalies'>, friendGistIds: Se
   return found;
 }
 
+/** Monta la fila de un perfil con lo que sus amistades dicen de él, señales incluidas. */
+function buildRow(
+  entry: { id: string; data(): unknown },
+  byUid: Map<string, FriendshipFacts>,
+  docIds: Set<string>,
+  now: number,
+): AdminUserRow {
+  const data = entry.data() as {
+    uid?: string;
+    profileId?: string;
+    schemaVersion?: number;
+    displayName?: string;
+    photoURL?: string;
+    email?: string;
+    tier?: string;
+    social?: { gistId?: string; etag?: string | null; gamesGistId?: string; githubToken?: string; enabled?: boolean };
+    updatedAt?: { toMillis?: () => number } | number;
+    createdAt?: { toMillis?: () => number } | number;
+  };
+  const social = data.social || {};
+  const uid = String(data.uid || entry.id);
+  const facts = byUid.get(uid) || emptyFacts();
+
+  const row = {
+    id: entry.id,
+    uid,
+    displayName: String(data.displayName || ''),
+    knownAs: facts.name,
+    friendKnownNames: [...facts.names],
+    friendKnownPhotos: [...facts.photos],
+    photoURL: String(data.photoURL || ''),
+    socialEnabled: Boolean(social.enabled),
+    socialGistId: String(social.gistId || ''),
+    tier: normalizeTier(data.tier),
+    updatedAt: toMillis(data.updatedAt),
+    friends: facts.friends,
+    pending: facts.pending,
+    pendingOut: facts.pendingOut,
+    pendingIn: facts.pendingIn,
+    profileId: String(data.profileId || ''),
+    schemaVersion: Number(data.schemaVersion || 0),
+    hasPhoto: Boolean(data.photoURL),
+    hasSocialEtag: Boolean(social.etag),
+    createdAt: toMillis(data.createdAt),
+    estimatedFirstSeenAt: facts.firstAt,
+    lastFriendshipAt: facts.lastAt,
+    friendSocialGistIds: [...facts.socialGistIds],
+    friendGamesGistIds: [...facts.gamesGistIds],
+    stalePendingOut: facts.stalePendingOut,
+    fossilPendingOut: facts.fossilPendingOut,
+    // Un documento no es gemelo de sí mismo: solo cuenta si el destino del cutover es OTRO documento del censo.
+    canonicalTwinFound: uid !== entry.id && docIds.has(uid),
+    legacy: {
+      email: Boolean(data.email), // audit-allow: solo se comprueba la PRESENCIA del campo legacy; el valor no sale de aquí
+      gamesGistId: Boolean(social.gamesGistId), // audit-allow: presencia del campo legacy para poder purgarlo; no se escribe ni se muestra
+      token: Boolean(social.githubToken), // audit-allow: LECTURA de presencia para poder purgarlo; no se almacena ni se muestra
+    },
+    // Se compara contra el campo `uid` REAL del documento, no contra el `uid` derivado de arriba (que cae al
+    // id del doc cuando falta): un perfil tan viejo que ni siquiera tiene `uid` es justo el que no se puede
+    // purgar a ciegas, y darlo por bueno sería el error caro.
+    idMatchesUid: String(data.uid || '') === entry.id,
+  };
+  // Las señales se calculan sobre la fila ya montada (necesitan varios de sus campos a la vez) y con el `now`
+  // que se le pase, para que todas las filas de un censo se juzguen con el mismo reloj.
+  return { ...row, anomalies: detectAnomalies(row, facts.socialGistIds, now) };
+}
+
+/** Más recientes primero; los que no traen `updatedAt` caen al final (pero SALEN). */
+function sortRows(users: AdminUserRow[]): AdminUserRow[] {
+  return users.sort((a, b) => b.updatedAt - a.updatedAt || a.displayName.localeCompare(b.displayName, APP_LOCALE));
+}
+
+/**
+ * Los totales del resumen. Los de perfiles salen de las filas; los de amistades, del recuento de la colección, que
+ * cuenta documentos y no personas (una amistad es de dos).
+ */
+function buildTotals(users: AdminUserRow[], friendships: number, pending: number): AdminCensus['totals'] {
+  return {
+    profiles: users.length,
+    socialEnabled: users.filter((user) => user.socialEnabled).length,
+    friendships,
+    pending,
+    legacy: users.filter((user) => user.legacy.email || user.legacy.gamesGistId || user.legacy.token).length,
+    /** Perfiles con al menos una señal: es el número que dice si hay que mirar algo hoy. */
+    flagged: users.filter((user) => user.anomalies.length > 0).length,
+    byTier: users.reduce(
+      (acc, user) => ({ ...acc, [user.tier]: acc[user.tier] + 1 }),
+      { bronze: 0, silver: 0, gold: 0, mithril: 0 } as Record<ProfileTier, number>,
+    ),
+  };
+}
+
 /**
  * Censo completo: todos los perfiles (incluidos los que tienen el social DESACTIVADO, que el directorio filtra) con
  * su recuento de amistades.
@@ -427,91 +527,84 @@ export async function loadAdminCensus(limitCount = ADMIN_PROFILES_LIMIT): Promis
     .map((entry) => String((entry.data() as { achievements?: { list?: string } }).achievements?.list || ''))
     .filter(Boolean);
 
-  const users = profilesSnapshot.docs
-    .filter((entry) => entry.id !== PLACEHOLDER_ID)
-    .map((entry) => {
-      const data = entry.data() as {
-        uid?: string;
-        profileId?: string;
-        schemaVersion?: number;
-        displayName?: string;
-        photoURL?: string;
-        email?: string;
-        tier?: string;
-        social?: { gistId?: string; etag?: string | null; gamesGistId?: string; githubToken?: string; enabled?: boolean };
-        updatedAt?: { toMillis?: () => number } | number;
-        createdAt?: { toMillis?: () => number } | number;
-      };
-      const social = data.social || {};
-      const uid = String(data.uid || entry.id);
-      const facts = friendships.byUid.get(uid) || emptyFacts();
-
-      return {
-        id: entry.id,
-        uid,
-        displayName: String(data.displayName || ''),
-        knownAs: facts.name,
-        friendKnownNames: [...facts.names],
-        friendKnownPhotos: [...facts.photos],
-        photoURL: String(data.photoURL || ''),
-        socialEnabled: Boolean(social.enabled),
-        socialGistId: String(social.gistId || ''),
-        tier: normalizeTier(data.tier),
-        updatedAt: toMillis(data.updatedAt),
-        friends: facts.friends,
-        pending: facts.pending,
-        pendingOut: facts.pendingOut,
-        pendingIn: facts.pendingIn,
-        profileId: String(data.profileId || ''),
-        schemaVersion: Number(data.schemaVersion || 0),
-        hasPhoto: Boolean(data.photoURL),
-        hasSocialEtag: Boolean(social.etag),
-        createdAt: toMillis(data.createdAt),
-        estimatedFirstSeenAt: facts.firstAt,
-        lastFriendshipAt: facts.lastAt,
-        friendSocialGistIds: [...facts.socialGistIds],
-        friendGamesGistIds: [...facts.gamesGistIds],
-        stalePendingOut: facts.stalePendingOut,
-        fossilPendingOut: facts.fossilPendingOut,
-        // Un documento no es gemelo de sí mismo: solo cuenta si el destino del cutover es OTRO documento del censo.
-        canonicalTwinFound: uid !== entry.id && docIds.has(uid),
-        legacy: {
-          email: Boolean(data.email), // audit-allow: solo se comprueba la PRESENCIA del campo legacy; el valor no sale de aquí
-          gamesGistId: Boolean(social.gamesGistId), // audit-allow: presencia del campo legacy para poder purgarlo; no se escribe ni se muestra
-          token: Boolean(social.githubToken), // audit-allow: LECTURA de presencia para poder purgarlo; no se almacena ni se muestra
-        },
-        // Se compara contra el campo `uid` REAL del documento, no contra el `uid` derivado de arriba (que cae al
-        // id del doc cuando falta): un perfil tan viejo que ni siquiera tiene `uid` es justo el que no se puede
-        // purgar a ciegas, y darlo por bueno sería el error caro.
-        idMatchesUid: String(data.uid || '') === entry.id,
-      };
-    })
-    // Las señales se calculan sobre la fila ya montada (necesitan varios de sus campos a la vez) y con un único
-    // `now`, para que todas las filas se juzguen con el mismo reloj.
-    .map((row) => ({
-      ...row,
-      anomalies: detectAnomalies(row, friendships.byUid.get(row.uid)?.socialGistIds || new Set(), now),
-    }))
-    // Más recientes primero; los que no traen `updatedAt` caen al final (pero SALEN).
-    .sort((a, b) => b.updatedAt - a.updatedAt || a.displayName.localeCompare(b.displayName, APP_LOCALE));
+  const users = sortRows(
+    profilesSnapshot.docs
+      .filter((entry) => entry.id !== PLACEHOLDER_ID)
+      .map((entry) => buildRow(entry, friendships.byUid, docIds, now)),
+  );
 
   return {
     users,
     mirrors,
     truncated: profilesSnapshot.size >= normalizedLimit,
-    totals: {
-      profiles: users.length,
-      socialEnabled: users.filter((user) => user.socialEnabled).length,
-      friendships: friendships.total,
-      pending: friendships.pending,
-      legacy: users.filter((user) => user.legacy.email || user.legacy.gamesGistId || user.legacy.token).length,
-      /** Perfiles con al menos una señal: es el número que dice si hay que mirar algo hoy. */
-      flagged: users.filter((user) => user.anomalies.length > 0).length,
-      byTier: users.reduce(
-        (acc, user) => ({ ...acc, [user.tier]: acc[user.tier] + 1 }),
-        { bronze: 0, silver: 0, gold: 0, mithril: 0 } as Record<ProfileTier, number>,
-      ),
-    },
+    totals: buildTotals(users, friendships.total, friendships.pending),
+  };
+}
+
+/** Una ficha releída. `row: null` = el perfil ya no existe, y la ficha sale del censo. */
+export interface AdminCensusRowReading {
+  id: string;
+  row: AdminUserRow | null;
+}
+
+/**
+ * Vuelve a leer UNA ficha —su perfil y sus amistades— y la sustituye en el censo que ya había.
+ *
+ * PARA QUÉ. Cada acción de la ficha recargaba el censo entero: todos los perfiles y la colección de amistades
+ * completa, para cambiar un dato de una persona. Esto son una lectura del perfil y una consulta de sus amistades.
+ *
+ * SOLO PARA ACCIONES QUE NO TOCAN A OTROS. Las filas ajenas no se releen, así que vale para lo que escribe en su
+ * perfil o en SU lado de sus amistades (rango, social, restos legacy, identidad). Lo que cambia filas ajenas —purgar
+ * solicitudes, que baja el `pendingIn` de quien las recibía; borrar; el cutover— necesita el censo entero.
+ *
+ * Va en dos piezas —leer y colocar— para que el ViewModel coloque la lectura sobre el censo que tenga EN ESE
+ * MOMENTO: con dos fichas releyéndose a la vez, colocar sobre el censo del arranque borraría el cambio de la otra.
+ *
+ * Los totales de amistades se corrigen por diferencia: los documentos de esta persona son los únicos que han podido
+ * cambiar, así que basta con restar lo que contaban antes y sumar lo que cuentan ahora.
+ */
+export async function readAdminCensusRow(census: AdminCensus, profileDocId: string): Promise<AdminCensusRowReading> {
+  const previous = census.users.find((user) => user.id === profileDocId);
+  if (!previous) {
+    return { id: profileDocId, row: null };
+  }
+  const services = await requireServices();
+
+  let profile;
+  let friendshipDocs;
+  try {
+    [profile, friendshipDocs] = await Promise.all([
+      getDoc(doc(services.firestore, 'profiles', profileDocId)),
+      getDocs(query(collection(services.firestore, 'friendships'), where('users', 'array-contains', previous.uid))),
+    ]);
+  } catch (error) {
+    throw toAdminError(error, 'releer el perfil');
+  }
+
+  const now = Date.now();
+  const docIds = new Set(census.users.map((user) => user.id));
+  const tally = tallyFriendshipDocs(friendshipDocs.docs, now);
+  return { id: profileDocId, row: profile.exists() ? buildRow(profile, tally.byUid, docIds, now) : null };
+}
+
+/** La ficha releída, puesta en su sitio. Pura: se aplica sobre el censo MÁS RECIENTE, no sobre el de la lectura. */
+export function replaceCensusRow(census: AdminCensus, reading: AdminCensusRowReading): AdminCensus {
+  const previous = census.users.find((user) => user.id === reading.id);
+  if (!previous) {
+    return census;
+  }
+  const next = reading.row;
+  const users = census.users.flatMap((user) => (user.id !== reading.id ? [user] : next ? [next] : []));
+  const before = previous.friends + previous.pending;
+  const after = next ? next.friends + next.pending : 0;
+  return {
+    ...census,
+    users,
+    totals: buildTotals(
+      users,
+      census.totals.friendships - before + after,
+      census.totals.pending - previous.pending + (next ? next.pending : 0),
+    ),
   };
 }
 

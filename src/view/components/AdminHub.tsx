@@ -24,7 +24,8 @@ import {
   type LegacyProfileField,
 } from '../../model/repository/firebaseAdminRepository';
 import type { AdminAnomaly } from '../../model/types/firestore';
-import { useAdminViewModel } from '../../viewmodel/useAdminViewModel';
+import { healedFriendPhoto } from '../../core/social/friendPhoto';
+import { SEVERE_ANOMALIES, useAdminViewModel, type AdminSignalFilter } from '../../viewmodel/useAdminViewModel';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { AdminUserShares, type ShareActionRequest } from './AdminUserShares';
 import { ADMIN_SHARES_UI } from '../../core/constants/adminLabels';
@@ -80,18 +81,6 @@ const DAY_FORMAT = createLocalDateFormat({ dateStyle: 'medium' });
  */
 const LEGACY_ANOMALIES = new Set<AdminAnomaly>(['legacy-token', 'legacy-fields']);
 
-/**
- * Señales que no son "estado raro" sino un problema con consecuencias hoy: un token en claro que cualquiera puede
- * leer, un perfil que no publica nada, unas reseñas que no llegan al feed, o fechas imposibles. Se destacan para
- * que no se pierdan entre las informativas (esquema antiguo, inactividad).
- */
-const SEVERE_ANOMALIES = new Set<AdminAnomaly>([
-  'legacy-token',
-  'gist-drift',
-  'future-activity',
-  'created-after-activity',
-]);
-
 /** Acción pendiente de confirmar: la ejecuta el modal, no el botón de la fila. */
 type PendingAction = { title: string; run: () => void } | null;
 
@@ -108,6 +97,25 @@ const LEGACY_FIELDS = [
 
 function formatActivity(updatedAt: number): string {
   return updatedAt > 0 ? DATE_FORMAT.format(new Date(updatedAt)) : A.never;
+}
+
+/** Estado de los retos para el menú: solo lo que decide si hay algo que hacer allí. */
+type PremiosStatus = { stage: 'none' | 'open' | 'pending'; closesAt: number | null };
+
+/** La línea de estado del aviso, o nada mientras no se ha leído. */
+function describeAnnouncement(announcement: Announcement | null | undefined): string {
+  if (announcement === undefined) return '';
+  if (!announcement) return A.menuStatus.announcementNone;
+  return announcement.active ? A.menuStatus.announcementActive(announcement.title) : A.menuStatus.announcementOff;
+}
+
+/** La línea de estado de los retos, o nada mientras no se ha leído. */
+function describePremios(status: PremiosStatus | null): string {
+  if (!status) return '';
+  if (status.stage === 'open') {
+    return A.menuStatus.premiosOpen(status.closesAt ? formatDate(status.closesAt) : A.field.none);
+  }
+  return status.stage === 'pending' ? A.menuStatus.premiosPending : A.menuStatus.premiosNone;
 }
 
 function formatDate(millis: number): string {
@@ -209,6 +217,8 @@ export const AdminHub = memo(function AdminHub() {
   /* Gasto de carátulas del día. Sale del Worker de carátulas, así que puede no llegar; mientras sea `null` la
      fila no se pinta, igual que con el censo de enlaces. */
   const [coverStats, setCoverStats] = useState<GastoDeCaratulas | null>(null);
+  // Estado de los retos, para su línea del menú. `null` = sin leer (o sin poder leerse): la línea no se pinta.
+  const [premiosStatus, setPremiosStatus] = useState<PremiosStatus | null>(null);
   const [notice, setNotice] = useState('');
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -249,6 +259,50 @@ export const AdminHub = memo(function AdminHub() {
       .catch(() => {
         // Sin documento (o sin red) la pantalla abre en blanco, que es lo que hay: un aviso por escribir.
         if (!cancelled) setAnnouncement(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [view]);
+
+  /**
+   * El aviso, para su línea del menú: se lee al volver al censo SOLO si no se tiene ya. Al salir de su pantalla se
+   * tiene —la lectura o el guardado de allí—, así que la línea dice lo que se acaba de ver sin volver a pedirlo.
+   */
+  useEffect(() => {
+    if (view !== 'users' || announcement !== undefined) return;
+    let cancelled = false;
+    void import('../../model/repository/announcementRepository')
+      .then((module) => module.loadAnnouncement(true))
+      .then((value) => {
+        if (!cancelled) setAnnouncement(value);
+      })
+      .catch(() => {
+        // Sin respuesta no se afirma nada: la línea del menú se queda sin pintar.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [view, announcement]);
+
+  /**
+   * Los retos, para su línea del menú. Se releen cada vez que se vuelve al censo: la pantalla de los retos es la que
+   * los cambia, y sin tocar su estado no se sabría si lo que se ha hecho allí ha cambiado la etapa. Es UN documento.
+   */
+  useEffect(() => {
+    if (view !== 'users') return;
+    let cancelled = false;
+    void Promise.all([
+      import('../../model/repository/premios/premiosSeasonRepository'),
+      import('../../core/premios/votingSchedule'),
+    ])
+      .then(async ([season, schedule]) => {
+        const config = await season.fetchVotingConfig();
+        if (cancelled) return;
+        setPremiosStatus({ stage: schedule.getSeasonStage(config), closesAt: config?.closesAtMillis ?? null });
+      })
+      .catch(() => {
+        // Igual que el aviso: sin lectura, sin línea.
       });
     return () => {
       cancelled = true;
@@ -450,24 +504,44 @@ export const AdminHub = memo(function AdminHub() {
           aquí». Sacados a su tarjeta, con su rótulo, son lo que son — el menú del panel. */}
       <nav className="admin-card admin-menu" aria-label={A.menuAria}>
         <h2>{A.menuTitle}</h2>
-        <div className="admin-menu-links">
-          <button type="button" className="btn btn-secondary" onClick={() => setView('achievements')}>
-            {ADMIN_ACHIEVEMENTS_UI.open}
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={() => setView('announcement')}>
-            {ADMIN_ANNOUNCEMENT_UI.open}
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={() => setView('premios')}>
-            {PREMIOS_ADMIN_OPEN}
-          </button>
-        </div>
+        {/* Cada destino con su estado debajo, cuando lo tiene: es lo que dice si hace falta entrar. El catálogo de
+            logros no lleva línea: no tiene un estado que pida atención. */}
+        <ul className="admin-menu-links">
+          <li>
+            <button type="button" className="btn btn-secondary" onClick={() => setView('achievements')}>
+              {ADMIN_ACHIEVEMENTS_UI.open}
+            </button>
+          </li>
+          <li>
+            <button type="button" className="btn btn-secondary" onClick={() => setView('announcement')}>
+              {ADMIN_ANNOUNCEMENT_UI.open}
+            </button>
+            {describeAnnouncement(announcement) ? (
+              <span className="admin-menu-status">{describeAnnouncement(announcement)}</span>
+            ) : null}
+          </li>
+          <li>
+            <button type="button" className="btn btn-secondary" onClick={() => setView('premios')}>
+              {PREMIOS_ADMIN_OPEN}
+            </button>
+            {premiosStatus ? (
+              <span className={`admin-menu-status${premiosStatus.stage === 'pending' ? ' is-pending' : ''}`}>
+                {describePremios(premiosStatus)}
+              </span>
+            ) : null}
+          </li>
+        </ul>
       </nav>
 
       <div className="admin-card">
         <h2>{A.title}</h2>
         <p className="admin-card-sub">{A.subtitle}</p>
-        <p className="admin-card-note">{A.scopeNote}</p>
-        <p className="admin-card-note">{A.legacyNote}</p>
+        {/* Las notas, plegadas: se leen una vez. La de los restos legacy solo sale si hay alguno que purgar. */}
+        <details className="admin-notes">
+          <summary>{A.notesSummary}</summary>
+          <p className="admin-card-note">{A.scopeNote}</p>
+          {totals && totals.legacy > 0 ? <p className="admin-card-note">{A.legacyNote}</p> : null}
+        </details>
 
         {totals ? (
           <dl className="admin-totals" aria-label={A.totals.aria}>
@@ -521,15 +595,26 @@ export const AdminHub = memo(function AdminHub() {
               onChange={(event) => vm.setSearch(event.target.value)}
             />
           </label>
-          {/* El filtro que responde a "¿hay algo que mirar hoy?". Va junto a la búsqueda porque los dos recortan
-              la misma lista, y el recuento de al lado dice cuánto queda tras aplicarlos. */}
-          <label className="admin-only-flagged">
-            <input
-              type="checkbox"
-              checked={vm.onlyFlagged}
-              onChange={(event) => vm.setOnlyFlagged(event.target.checked)}
-            />
-            <span>{A.onlyFlaggedLabel}</span>
+          {/* El filtro que responde a "¿hay algo que mirar hoy?" y, después, "¿quién más tiene esto?". Va junto a la
+              búsqueda porque los dos recortan la misma lista, y el recuento de al lado dice cuánto queda tras
+              aplicarlos. Solo se ofrecen las señales que alguna ficha tiene, en el orden del catálogo de textos. */}
+          <label className="admin-signal-filter">
+            <span>{A.signalFilter.label}</span>
+            <select
+              className="finput"
+              value={vm.signalFilter}
+              onChange={(event) => vm.setSignalFilter(event.target.value as AdminSignalFilter)}
+            >
+              <option value="all">{A.signalFilter.all}</option>
+              <option value="flagged">{A.signalFilter.flagged}</option>
+              {(Object.keys(A.anomalies) as Array<AdminAnomaly | 'aria'>)
+                .filter((code): code is AdminAnomaly => code !== 'aria' && vm.signalCounts.has(code))
+                .map((code) => (
+                  <option key={code} value={code}>
+                    {A.signalFilter.one(A.anomalies[code].label, vm.signalCounts.get(code) || 0)}
+                  </option>
+                ))}
+            </select>
           </label>
           <p className="admin-result-count">{A.resultCount(vm.users.length)}</p>
           {/* Actualizar y NADA MÁS. La salida del panel («volver a mis listas») se retiró de aquí: la cabecera de
@@ -558,9 +643,11 @@ export const AdminHub = memo(function AdminHub() {
           <p>
             {!vm.census?.users.length
               ? A.empty
-              : vm.onlyFlagged && !vm.search.trim()
-                ? A.emptyFlagged
-                : A.emptyFiltered}
+              : vm.search.trim() || vm.signalFilter === 'all'
+                ? A.emptyFiltered
+                : vm.signalFilter === 'flagged'
+                  ? A.emptyFlagged
+                  : A.emptySignal}
           </p>
         ) : (
           <ul className="admin-user-grid" aria-label={A.table.aria}>
@@ -577,9 +664,13 @@ export const AdminHub = memo(function AdminHub() {
               const staleNames = user.displayName.trim()
                 ? user.friendKnownNames.filter((known) => known !== user.displayName.trim())
                 : [];
-              // La foto denormalizada se queda rancia por la misma vía que el nombre. Una foto vacía en sus amistades
-              // cuando el perfil sí tiene una también cuenta: sus amigos le ven sin foto.
-              const photoIsStale = user.friendKnownPhotos.some((known) => known !== user.photoURL);
+              // La foto denormalizada se queda rancia por la misma vía que el nombre. Rancia = la que el panel
+              // ESCRIBIRÍA no es la que hay (`healedFriendPhoto`): una amistad sin foto no cuenta aunque el perfil
+              // publique una, porque podría ser una que ocultó y el panel no se la pone. Con otro criterio, el aviso
+              // pedía propagar algo que la acción se niega a escribir y no se iba nunca.
+              const photoIsStale = user.friendKnownPhotos.some(
+                (known) => known !== healedFriendPhoto(known, user.photoURL),
+              );
               // El botón de propagar solo aparece cuando hay algo que propagar de verdad.
               const identityIsStale = staleNames.length > 0 || photoIsStale;
               // Cuota REAL de esta persona: su rango, ya resuelto con su ajuste individual si lo tiene. Es la
@@ -707,10 +798,16 @@ export const AdminHub = memo(function AdminHub() {
                             : A.field.createdAtUnknown}
                       </dd>
                     </div>
-                    <div><dt>{A.field.lastActivity}</dt><dd>{formatActivity(user.updatedAt)}</dd></div>
+                    <div>
+                      <dt>{A.field.lastActivity}</dt>
+                      <dd title={user.updatedAt > 0 ? formatActivity(user.updatedAt) : undefined}>
+                        {user.updatedAt > 0 ? A.field.lastActivityAgo(user.updatedAt, Date.now()) : A.never}
+                      </dd>
+                    </div>
                     <div><dt>{A.field.friends}</dt><dd>{user.friends}</dd></div>
-                    <div><dt>{A.field.pendingOut}</dt><dd>{user.pendingOut}</dd></div>
-                    <div><dt>{A.field.pendingIn}</dt><dd>{user.pendingIn}</dd></div>
+                    {/* Las peticiones, solo si hay alguna: un «0» en cada ficha no decía nada. */}
+                    {user.pendingOut > 0 ? <div><dt>{A.field.pendingOut}</dt><dd>{user.pendingOut}</dd></div> : null}
+                    {user.pendingIn > 0 ? <div><dt>{A.field.pendingIn}</dt><dd>{user.pendingIn}</dd></div> : null}
                     {/* El id del canal ya no se publica en el perfil, así que este campo solo existe como resto
                         legacy: pintarlo siempre enseñaba un "—" a todo el mundo. El canal de alguien se ve ahora
                         por lo que guardan sus amistades, que es el dato de abajo. El id EN SÍ no se enseña: no se
@@ -718,18 +815,17 @@ export const AdminHub = memo(function AdminHub() {
                     {user.socialGistId ? (
                       <div><dt>{A.field.socialGist}</dt><dd>{A.field.socialGistPresent}</dd></div>
                     ) : null}
-                    {/* Cuántos canales suyos hay en circulación, no cuáles: con más de uno hay deriva (y ahí sí
-                        aparece el bloque que lo explica); con uno, está sano. La lista de ids no decidía nada. */}
-                    <div>
-                      <dt>{A.field.friendGists}</dt>
-                      <dd>{describeChannels(user.friendSocialGistIds.length, A.field.channelNone)}</dd>
-                    </div>
-                    {/* El otro canal: con él un amigo carga sus LISTAS compartidas. Vacío no es un fallo —
-                        significa que no tiene la sincronización de listas configurada—, así que no lleva señal. */}
-                    <div>
-                      <dt>{A.field.friendGamesGists}</dt>
-                      <dd>{describeChannels(user.friendGamesGistIds.length, A.field.listsNone)}</dd>
-                    </div>
+                    {/* El canal SOCIAL ya no se pinta como campo: con uno está sano y no dice nada, y con más de uno
+                        sale el bloque de deriva de abajo, que lo cuenta con su explicación. */}
+                    {/* El otro canal: con él un amigo carga sus LISTAS compartidas. Solo cuando no es el caso sano
+                        (uno): vacío no es un fallo —no tiene la sincronización de listas configurada—, pero sí es un
+                        dato; con más de uno es la señal `games-gist-drift`, dicha con el número. */}
+                    {user.friendGamesGistIds.length !== 1 ? (
+                      <div>
+                        <dt>{A.field.friendGamesGists}</dt>
+                        <dd>{describeChannels(user.friendGamesGistIds.length, A.field.listsNone)}</dd>
+                      </div>
+                    ) : null}
                     {/* Solo cuando alguno de sus amigos le ve con otro nombre: en el caso normal repetir el nick
                         que ya está arriba no aporta nada. */}
                     {/* Los DOS nombres, etiquetados por origen. Antes solo se pintaba el de las amistades como "el
@@ -740,21 +836,15 @@ export const AdminHub = memo(function AdminHub() {
                         <div><dt>{A.field.staleFriendNames}</dt><dd>{staleNames.join(', ')}</dd></div>
                       </>
                     ) : null}
-                    {/* Solo se dice si está al día o no: la URL ocuparía una línea entera para no informar de nada
-                        que no se vea ya en el avatar. Y solo con amistades: sin ellas no hay foto que comparar. */}
-                    {user.friendKnownPhotos.length > 0 ? (
-                      <div>
-                        <dt>{A.field.friendPhoto}</dt>
-                        <dd>{photoIsStale ? A.field.friendPhotoStale : A.field.friendPhotoFresh}</dd>
-                      </div>
-                    ) : null}
+                    {/* La foto de sus amistades ya no es un campo: al día no decía nada, y desactualizada la cuenta el
+                        bloque de identidad de abajo, que es donde está el botón que la arregla. */}
                     {user.stalePendingOut > 0 ? (
                       <div>
                         <dt>{A.field.stalePending}</dt>
                         <dd>{A.field.stalePendingDetail(user.stalePendingOut, user.fossilPendingOut)}</dd>
                       </div>
                     ) : null}
-                    <div><dt>{A.field.etag}</dt><dd>{user.hasSocialEtag ? A.field.yes : A.field.no}</dd></div>
+                    {/* Sin «ETag del gist»: un dato de caché interno, sin nada que decidir con él. */}
                     {/* Tres estados en vez de un sí/no: "no" se leía como "no tiene", cuando lo más frecuente es
                         que la haya ocultado. Cuál de los tres es y por qué, en el `title`. */}
                     <div>
@@ -763,7 +853,7 @@ export const AdminHub = memo(function AdminHub() {
                         {photoState.label}
                       </dd>
                     </div>
-                    <div><dt>{A.field.schema}</dt><dd>{user.schemaVersion || A.field.none}</dd></div>
+                    {/* Sin campo de esquema: solo importa cuando es antiguo, y entonces ya lo dice su señal. */}
                   </dl>
 
                   {/* Deriva de gist: DE DÓNDE sale (su perfil, sus amistades, o las dos) y cuántos canales hay.
@@ -793,7 +883,15 @@ export const AdminHub = memo(function AdminHub() {
                       publicar; quien no pasa por ahí lo arrastra, y esta es la única vía que no depende de él. */}
                   {identityIsStale ? (
                     <div className="admin-gist-drift" role="group" aria-label={A.healIdentity.title}>
-                      <span className="admin-field-label">{A.healIdentity.title}</span>
+                      {/* El título dice QUÉ no cuadra. Con el nombre bien y la foto rancia, un «identidad» a secas
+                          se leía como que había que relanzar el nombre, que ya era el mismo. */}
+                      <span className="admin-field-label">
+                        {staleNames.length > 0 && photoIsStale
+                          ? A.healIdentity.titleBoth
+                          : staleNames.length > 0
+                            ? A.healIdentity.titleName
+                            : A.healIdentity.titlePhoto}
+                      </span>
                       <p className="admin-card-note">{A.healIdentity.hint}</p>
                       {/* Aviso cuando los nombres no coinciden: propagar escribe el del PERFIL, que puede ser el
                           viejo. Sin esto, el botón deshacía en las amistades un nombre que ya era el correcto. */}
@@ -849,12 +947,12 @@ export const AdminHub = memo(function AdminHub() {
                              */
                             title: staleNames.length > 0
                               ? A.healIdentity.confirmWithName(name, user.displayName.trim() || user.knownAs.trim())
-                              : A.healIdentity.confirm(name),
+                              : A.healIdentity.confirmPhoto(name),
                             run: () => void vm.healIdentity(user),
                           })
                         }
                       >
-                        {busy ? A.working : A.healIdentity.btn}
+                        {busy ? A.working : staleNames.length > 0 ? A.healIdentity.btn : A.healIdentity.btnPhoto}
                       </button>
                     </div>
                   ) : null}
@@ -969,49 +1067,55 @@ export const AdminHub = memo(function AdminHub() {
                         })}
                       </span>
                     )}
-                    <div className="admin-actions">
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        disabled={busy}
-                        onClick={() =>
-                          setPending({
-                            title: user.socialEnabled ? A.confirmDisable(name) : A.confirmEnable(name),
-                            run: () => void vm.toggleSocial(user),
-                          })
-                        }
-                      >
-                        {busy ? A.working : user.socialEnabled ? A.disableBtn : A.enableBtn}
-                      </button>
-                      {/* Borrar SU vitrina publicada. Va con los demás botones de la ficha porque es una acción
-                          sobre esta persona, y no en la pantalla del catálogo, que decide para todo el mundo. */}
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        disabled={busy}
-                        onClick={() =>
-                          setPending({
-                            title: A.achievementsConfirm(name),
-                            run: () => void clearAchievements(user.id),
-                          })
-                        }
-                      >
-                        {A.achievementsBtn}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-danger"
-                        disabled={busy}
-                        onClick={() =>
-                          setPending({
-                            title: `${A.confirmDelete(name)} ${A.deleteScope}`,
-                            run: () => void vm.deleteUser(user),
-                          })
-                        }
-                      >
-                        {A.deleteBtn}
-                      </button>
-                    </div>
+                    {/* Las acciones que no arreglan una señal, plegadas: estaban a la vista en todas las fichas y
+                        competían con lo que sí pide atención. Los restos legacy de la izquierda siguen fuera: son
+                        una señal, y el botón que la purga. */}
+                    <details className="admin-more-actions">
+                      <summary>{A.moreActions}</summary>
+                      <div className="admin-actions">
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          disabled={busy}
+                          onClick={() =>
+                            setPending({
+                              title: user.socialEnabled ? A.confirmDisable(name) : A.confirmEnable(name),
+                              run: () => void vm.toggleSocial(user),
+                            })
+                          }
+                        >
+                          {busy ? A.working : user.socialEnabled ? A.disableBtn : A.enableBtn}
+                        </button>
+                        {/* Borrar SU vitrina publicada. Va con los demás botones de la ficha porque es una acción
+                            sobre esta persona, y no en la pantalla del catálogo, que decide para todo el mundo. */}
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          disabled={busy}
+                          onClick={() =>
+                            setPending({
+                              title: A.achievementsConfirm(name),
+                              run: () => void clearAchievements(user.id),
+                            })
+                          }
+                        >
+                          {A.achievementsBtn}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-danger"
+                          disabled={busy}
+                          onClick={() =>
+                            setPending({
+                              title: `${A.confirmDelete(name)} ${A.deleteScope}`,
+                              run: () => void vm.deleteUser(user),
+                            })
+                          }
+                        >
+                          {A.deleteBtn}
+                        </button>
+                      </div>
+                    </details>
                   </div>
                 </li>
               );

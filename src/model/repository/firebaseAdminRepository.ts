@@ -23,7 +23,10 @@
 export {
   ADMIN_PROFILES_LIMIT,
   loadAdminCensus,
+  readAdminCensusRow,
+  replaceCensusRow,
   type AdminCensus,
+  type AdminCensusRowReading,
   type AdminUserRow,
 } from './admin/adminCensus';
 

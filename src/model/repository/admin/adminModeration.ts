@@ -4,6 +4,7 @@
 // (`adminCensus`) detecta lo que hay que arreglar; aquí se arregla.
 import { collection, deleteDoc, deleteField, doc, getDocs, query, updateDoc, where } from 'firebase/firestore/lite';
 import { DEFAULT_PROFILE_TIER, type ProfileTier } from '../../../core/constants/tiers';
+import { healedFriendPhoto } from '../../../core/social/friendPhoto';
 import { invalidateOwnProfileCache, invalidateSocialDirectoryCache } from '../firebaseSocialRepository';
 import { invalidateMyFriendshipsCache } from '../firebaseFriendshipRepository';
 import {
@@ -79,14 +80,15 @@ export async function healUserFriendshipIdentity(
     }
 
     const currentName = amRequester ? data.requesterName : data.recipientName;
-    const currentPhoto = amRequester ? data.requesterPhoto : data.recipientPhoto;
-    if (currentName === name && currentPhoto === photo) {
+    const currentPhoto = String((amRequester ? data.requesterPhoto : data.recipientPhoto) || '');
+    const nextPhoto = healedFriendPhoto(currentPhoto, photo);
+    if (currentName === name && currentPhoto === nextPhoto) {
       return [];
     }
 
     const fields = amRequester
-      ? { requesterName: name, requesterPhoto: photo, updatedAt: Date.now() }
-      : { recipientName: name, recipientPhoto: photo, updatedAt: Date.now() };
+      ? { requesterName: name, requesterPhoto: nextPhoto, updatedAt: Date.now() }
+      : { recipientName: name, recipientPhoto: nextPhoto, updatedAt: Date.now() };
     return [updateDoc(entry.ref, fields)];
   });
 

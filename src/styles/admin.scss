@@ -59,17 +59,15 @@
 }
 .admin-search { display: grid; gap: .25rem; flex: 1 1 14rem; min-width: 0; font-size: var(--fs-sm); }
 .admin-search span { color: var(--text-muted); }
-/* El filtro va pegado a la búsqueda (recortan la misma lista) y antes del recuento, que es su resultado. */
-.admin-only-flagged {
-  display: flex;
-  align-items: center;
-  gap: .35rem;
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-  cursor: pointer;
-  flex: 0 0 auto;
-  padding-bottom: .35rem; /* alinea con la base del campo de búsqueda, que lleva etiqueta encima */
-}
+/* El filtro va pegado a la búsqueda (recortan la misma lista) y antes del recuento, que es su resultado. Misma
+   anatomía que la búsqueda —etiqueta encima—, pero sin crecer: el desplegable mide lo que su opción más larga. */
+.admin-signal-filter { display: grid; gap: .25rem; flex: 0 1 15rem; min-width: 0; font-size: var(--fs-sm); }
+.admin-signal-filter span { color: var(--text-muted); }
+
+/* Las notas de alcance, plegadas: se leen una vez y abiertas empujaban el censo hacia abajo. */
+.admin-notes { display: grid; gap: .4rem; font-size: var(--fs-sm); }
+.admin-notes summary { cursor: pointer; color: var(--fg-link); }
+.admin-notes[open] summary { margin-bottom: .2rem; }
 .admin-result-count { margin: 0 auto 0 0; color: var(--text-muted); font-size: var(--fs-sm); }
 
 /* AVISOS DEL PANEL: son NOTAS DE TEXTO, no el cartel del gestor de etiquetas.
@@ -223,7 +221,20 @@
   margin: 0;
 }
 
-.admin-menu-links { display: flex; flex-wrap: wrap; gap: .5rem; }
+.admin-menu-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: .5rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* Cada destino con su estado debajo, en letra pequeña: informa, no compite con el botón. */
+.admin-menu-links li { display: grid; gap: .25rem; justify-items: start; }
+.admin-menu-status { color: var(--text-muted); font-size: var(--fs-xs); max-width: 18rem; }
+/* Retos cerrados y sin publicar: es lo único del menú que pide hacer algo, así que se tiñe. */
+.admin-menu-status.is-pending { color: var(--danger); }
 
 .admin-card-actions {
   display: flex;
@@ -298,6 +309,13 @@
 .admin-legacy-clean { color: var(--text-dim); font-size: var(--fs-xs); }
 
 .admin-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
+
+/* «Más acciones»: suspender, borrar la vitrina y borrar, plegadas en el pie. A la derecha, donde estaban los botones;
+   abierto, la fila de botones cae debajo del rótulo sin empujar los restos legacy de la izquierda. */
+.admin-more-actions { margin-left: auto; display: grid; justify-items: end; gap: .4rem; }
+.admin-more-actions summary { cursor: pointer; color: var(--fg-link); font-size: var(--fs-xs); }
+.admin-more-actions summary:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.admin-more-actions .admin-actions { justify-content: flex-end; }
 .admin-actions .btn { font-size: var(--fs-xs); padding: .35rem .6rem; }
 
 /* Bloque de deriva de gist: se enseñan los dos ids candidatos y el botón que unifica. Enmarcado en el color de
