@@ -60,8 +60,9 @@ describe('sortPalmares', () => {
 });
 
 describe('la píldora del canto', () => {
-  it('lleva el puesto y el año corto, y solo el año si es de participar', () => {
-    expect(PREMIOS_UI.palmares.pill(1, shortYear(2021))).toBe('1.º·’21');
+  // El año ya va en el rótulo de debajo: en la pastilla solo cabe el puesto.
+  it('lleva solo el puesto, y el año si es de participar', () => {
+    expect(PREMIOS_UI.palmares.pill(3, shortYear(2025))).toBe('3.º');
     expect(PREMIOS_UI.palmares.pill(0, shortYear(2025))).toBe('’25');
     expect(PREMIOS_UI.palmares.pill(2, '')).toBe('2.º');
   });

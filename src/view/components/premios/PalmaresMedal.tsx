@@ -26,12 +26,13 @@ export type PalmaresMedalSize = keyof typeof SIZES;
  *    medirla — solo hay cinco puestos por edición, y casi nadie los va a tener.
  *  · **El temple dice el PUESTO**, que es la información que de verdad importa: oro el primero, plata el
  *    segundo, cobre del tercero en adelante. Es el mismo canal que en el catálogo usa el tramo de la escalera.
- *  · **La píldora del canto lleva el puesto Y EL AÑO** («1.º·’21»), no un umbral. El año es lo que separa las
- *    ediciones de la hoja de cálculo (2020–2024) de las jugadas aquí: con el mismo disco, sin él no se sabría
- *    cuál es cuál.
+ *  · **La píldora del canto lleva el puesto** («3.º»), no un umbral. El AÑO va en el rótulo de debajo («3.º en
+ *    Game Awards 2021»), que es lo que separa las ediciones de la hoja de cálculo (2020–2024) de las jugadas
+ *    aquí, y ordena la vitrina.
  *
  * LA PARTICIPACIÓN (puesto `0`) es la misma medalla bajada de tono: aura común —la tiene todo el que votó—, el
- * filo neutro de siempre en vez de un metal, la urna en lugar de la copa, y solo el año en la píldora.
+ * filo neutro de siempre en vez de un metal, la urna en lugar de la copa, y el año en la píldora (no hay puesto
+ * que poner).
  */
 export interface PalmaresMedalProps {
   entry: PalmaresEntry;
@@ -70,9 +71,9 @@ export const PalmaresMedal = memo(function PalmaresMedal({ entry, size = 'md' }:
         <span className="ach-light" />
         <span className="ach-grain" />
       </span>
-      {/* La píldora del canto, con el PUESTO y el AÑO. Fuera del lienzo, como en las medallas del catálogo:
-          montada en el borde de abajo es lo que la hace caber a 48 px sin tapar el dibujo. A 28 no sale, que es
-          donde no cabe nada legible. */}
+      {/* La píldora del canto, con el PUESTO (o el año, si es de participar). Fuera del lienzo, como en las
+          medallas del catálogo: montada en el borde de abajo es lo que la hace caber a 48 px sin tapar el dibujo.
+          A 28 no sale, que es donde no cabe nada legible. */}
       {size === 'sm' ? null : (
         <span className="ach-step" aria-hidden="true">
           {L.pill(participa ? 0 : entry.rank, shortYear(palmaresYear(entry)))}

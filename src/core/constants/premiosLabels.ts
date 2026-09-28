@@ -481,10 +481,11 @@ export const PREMIOS_UI = {
     medalAria: (rank: number, edicion: string) =>
       rank === 0 ? `Trofeo: participación en ${edicion}` : `Trofeo: ${rank}.º puesto en ${edicion}`,
     /**
-     * La píldora del canto: «1.º·’21», o solo el año si es de participar. Sin espacios a propósito: a 48 px la
-     * píldora no puede ser más ancha que el disco.
+     * La píldora del canto: el PUESTO a secas («3.º»). El año ya lo dice el rótulo de debajo, y los dos juntos
+     * («3.º·’25») eran demasiado para una pastilla de 48 px (decisión del 28-09-2026). La participación no tiene
+     * puesto, así que lleva el año, que es lo único que la distingue de otra.
      */
-    pill: (rank: number, anio: string) => (rank === 0 ? anio : [`${rank}.º`, anio].filter(Boolean).join('·')),
+    pill: (rank: number, anio: string) => (rank === 0 ? anio : `${rank}.º`),
     /**
      * EL TROFEO ES UN ENLACE al archivo de esa edición, y hay que decir a dónde lleva: con el rótulo suelto, un
      * lector de pantalla anunciaba «enlace, Trofeo: 1.º puesto en…» y no había forma de saber que al pulsar se
