@@ -4,7 +4,7 @@
 // vigilado (`BOOT_CRITICAL_BUDGET_KB` en `scripts/ci-validate.js`). Medido sobre el build —el grafo de arranque
 // se lee de los sourcemaps de los chunks que cuelgan de `index.html`, no a ojo—, de sus 51 símbolos el arranque
 // solo dibujaba 36. De los otros 15, dos (`uncharted` y `keyboard-arrow-up`) no los pintaba NADIE y se
-// borraron; los 13 que quedan aquí (6,4 kB de marcado) los pintan pantallas perezosas: ajustes, hub social,
+// borraron; los que quedan aquí (unos 6 kB de marcado) los pintan pantallas perezosas: ajustes, hub social,
 // estadísticas, panel, los modales y las pantallas legales.
 //
 // SE MONTA UNA VEZ, DESDE `App`, EN CUANTO EL NAVEGADOR ESTÁ OCIOSO, y no desde cada pantalla como
@@ -65,7 +65,6 @@ export function IconSpriteRest() {
         <circle cx="12" cy="8.4" r="3.75" />
         <path d="M4.6 20.2c0-4.1 3.3-6.7 7.4-6.7s7.4 2.6 7.4 6.7" />
       </symbol>
-      <symbol id="icon-arrow-back" viewBox="0 -960 960 960"><path d="m313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z" /></symbol>
     </svg>
   );
 }

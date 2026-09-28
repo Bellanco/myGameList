@@ -234,7 +234,6 @@ export const PREMIOS_UI = {
   votos: {
     sectionAria: 'Lo más votado',
     title: 'Lo más votado',
-    lead: 'Lo que eligió más gente en cada categoría, acertara o no el jurado.',
     back: 'Volver a los resultados',
     /** «9 de 14 votos». Con empate, cada uno de los empatados tiene esos votos. */
     votes: (votos: number, total: number) => (total === 1 ? '1 voto' : `${votos} de ${total} votos`),
