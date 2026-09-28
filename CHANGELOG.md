@@ -20,7 +20,8 @@ reseña deja de republicar la foto de Google que el usuario había ocultado.
   que se está viendo.
 - **Palmarés con año y con participación.** La medalla dice el año de la edición en su rótulo («3.º en Game
   Awards 2021») —la píldora lleva solo el puesto— y la vitrina se ordena por él; quien votó sin entrar en los
-  cinco primeros recibe el trofeo de participar, con el año en la píldora.
+  cinco primeros recibe el trofeo de participar, con el año en la píldora. El filo de la medalla dice el puesto:
+  oro, plata y bronce el podio, cobre el cuarto y el quinto, y azul la participación.
 - **Scripts para el histórico de premios**: `import-premios-historico.mjs` importa las ediciones 2020–2023,
   contrastando el ganador con el palmarés real de los TGA, y `premios-2025-votos.mjs` añade a 2025 el recuento y la
   participación. «Best E-Sport Game» de 2020 se queda fuera del archivo porque aquel año no contó.
