@@ -354,6 +354,8 @@
 :root[data-palette="cyberpunk"] .badge-opp-activo { background: var(--cyber-yellow) !important; color: #08090d !important; border: 1px solid var(--cyber-yellow) !important; box-shadow: 0 0 8px rgba(252, 238, 10, .45) !important; }
 :root[data-palette="cyberpunk"] .badge-rejugar-inactivo,
 :root[data-palette="cyberpunk"] .badge-opp-inactivo { background: var(--surface-elevated) !important; color: var(--text-muted) !important; border: 1px solid var(--cyber-edge) !important; box-shadow: none !important; }
+/* El acceso a la reseña del mosaico lleva el filete cian de la insignia apagada. */
+:root[data-palette="cyberpunk"] .game-card-review { border: 1px solid var(--cyber-edge); }
 
 /* ── §9 · Puntuación 0–100: sin aro/borde añadido (el arco de color ya es la nota). Número en
    monoespaciada (§1). ── */

@@ -85,9 +85,15 @@ interface GameTableProps {
     showReplayable?: boolean;
     showRetry?: boolean;
     showHours?: boolean;
-    /** Muestra el "Análisis" (reseña) en la fila expandida. En el perfil social se oculta: tiene pestaña propia. */
+    /** Muestra el enlace al "Análisis" (reseña) en la fila expandida. */
     showReview?: boolean;
   };
+  /**
+   * A DÓNDE LLEVA el enlace «Ver análisis» de la fila expandida. Por defecto, a tu reseña en
+   * `/stats/resenas/:id`; el perfil social lo apunta a la reseña de ESE perfil dentro del hub, que es donde se
+   * lee la de otra persona. `state` viaja con la navegación (el `backTo` del botón de volver).
+   */
+  reviewLink?: (gameId: number) => { to: string; state?: unknown };
 }
 
 interface VirtualRow {
@@ -359,11 +365,12 @@ type TableColumn = keyof typeof UI_MESSAGES.table.columns;
 // Columnas ordenables: columna → clave de orden que entiende `sortGames`/`sortBy`. El resto (Puntos
 // fuertes/débiles, Rejugar…) no son ordenables. Va por el ID de la columna y NO por su rótulo: la clave era la
 // palabra en español («Juego», «Año»…), así que cambiar un rótulo dejaba la columna sin ordenar sin que fallara nada.
+// NI PLATAFORMAS NI GÉNEROS: son listas, y ordenarlas era ordenar por la PRIMERA de cada juego, que es la que se
+// escribió primero y no dice nada —un juego de Steam y Switch caía en la «S» o en la «N» según el orden en que se
+// teclearon—. Filtrar por ellas sí tiene sentido, y eso lo hace la barra de filtros.
 const SORT_COLUMN: Partial<Record<TableColumn, string>> = {
   name: 'name',
   year: 'years',
-  platforms: 'platforms',
-  genres: 'genres',
   score: 'score',
   interest: 'score',
 };
@@ -456,6 +463,7 @@ export const GameTable = memo(function GameTable({
   sort,
   onSort,
   visibility,
+  reviewLink,
   recentlyChangedId = null,
   removingId = null,
 }: GameTableProps) {
@@ -515,6 +523,11 @@ export const GameTable = memo(function GameTable({
   };
 
   const supportsReview = (tab: TabId) => tab !== 'p';
+  /* A DÓNDE LLEVA «ver el análisis», el mismo destino desde el detalle del renglón y desde la caja del
+     mosaico. `backTo` es de dónde se viene, para que el botón de volver de aquella pantalla devuelva AQUÍ y no
+     al listado de reseñas, que es de donde se llega normalmente. */
+  const reviewTarget = (gameId: number) =>
+    reviewLink?.(gameId) ?? { to: `/stats/resenas/${gameId}`, state: { backTo: TAB_ROUTE[currentTab] } };
 
   // Por debajo de `COMPACT_TABLE_MAX_WIDTH` no cabe una fila de tabla, se pinte lo que se pinte. Se calcula
   // aquí y no con un listener propio porque este efecto ya escucha `resize` y observa el `<body>`: es
@@ -819,20 +832,20 @@ export const GameTable = memo(function GameTable({
     .map((column): { header: string; key: string | undefined } => ({ header: UI_MESSAGES.table.columns[column], key: SORT_COLUMN[column] }))
     .filter((c): c is { header: string; key: string } => Boolean(c.key));
   /**
-   * EL ORDEN, SIN CARRIL QUE ARRASTRAR. Las cinco columnas no caben en un teléfono y hasta ahora sobraba
+   * EL ORDEN, SIN CARRIL QUE ARRASTRAR. Las columnas no cabían en un teléfono y hasta ahora sobraba
    * desplazándolas de lado: en la práctica eso esconde opciones —nadie arrastra una fila que no parece
    * arrastrable— y deja «Puntuación» partida por el canto, que se lee como un fallo de pintado.
    *
    * ASÍ QUE SE CEDE POR ORDEN DE IMPORTANCIA, como hace la barra inferior con sus rótulos:
    *   · primero se va la palabra «Ordenar», que es la única que no es una opción: el grupo ya se anuncia con
-   *     ese mismo nombre (`aria-label`), así que quien lo oye no pierde nada y quien lo ve tampoco —cinco
+   *     ese mismo nombre (`aria-label`), así que quien lo oye no pierde nada y quien lo ve tampoco —varias
    *     columnas en fila, con una en el color del acento, se leen como un orden sin que nadie lo diga—;
    *   · si aún no caben, los chips bajan un punto de cuerpo;
    *   · y si tampoco —de 360 px para abajo no hay manera—, se PARTEN EN DOS LÍNEAS. Es la única salida que
    *     sigue enseñándolas todas; cuesta un renglón de alto en las pantallas más estrechas y a cambio no
    *     esconde ninguna opción detrás de un arrastre que nadie adivina.
    *
-   * SE MIDE, NO SE ESTIMA, y por el mismo motivo que allí: lo que ocupan cinco palabras cambia con el idioma,
+   * SE MIDE, NO SE ESTIMA, y por el mismo motivo que allí: lo que ocupan esas palabras cambia con el idioma,
    * con la letra del tema y con el ajuste de mayúsculas. Cada pasada mide lo que HAY PINTADO y solo decide el
    * escalón siguiente; los anchos que hacen falta para volver a subir se guardan cuando se han podido medir de
    * verdad, que es la única forma de que el escalón no sea un pestillo de un solo sentido.
@@ -921,7 +934,9 @@ export const GameTable = memo(function GameTable({
     };
   }, [sortableColumns.length]);
 
-  const showSortBar = Boolean(onSort) && sortableColumns.length > 0 && (cards || shape === 'grid');
+  // Con UNA sola columna ordenable no hay orden que elegir —«En curso» solo ordena por nombre, y la vergüenza
+  // también mientras no haya ningún juego puntuado—: la barra diría «Ordenar: Nombre» y nada más.
+  const showSortBar = Boolean(onSort) && sortableColumns.length > 1 && (cards || shape === 'grid');
 
   return (
     <div className="table-wrap" ref={parentRef}>
@@ -1124,6 +1139,21 @@ export const GameTable = memo(function GameTable({
                             const nota = (currentTab === 'c' || currentTab === 'p') || (showShameScore && hasScore(game)) ? (
                               <span className="game-card-score"><ScoreDisplay game={game} /></span>
                             ) : null;
+                            /* EL ACCESO A LA RESEÑA, en la esquina que quedaba libre: debajo de la nota y
+                               al otro canto que la insignia. Solo con carátula —en la caja plana el análisis
+                               se abre desde el detalle desplegado— y es un ENLACE por lo mismo que el del
+                               detalle: abrir en otra pestaña, copiar la dirección, volver con atrás. */
+                            const resena = covers && showReview && supportsReview(currentTab) && game.review ? (
+                              <Link
+                                className="game-card-review"
+                                {...reviewTarget(game.id)}
+                                aria-label={UI_MESSAGES.detail.reviewLinkAria(game.name)}
+                                title={UI_MESSAGES.detail.reviewLinkAria(game.name)}
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                <Icon name={COMMON_ICONS.reviewCard} />
+                              </Link>
+                            ) : null;
                             const insignia = currentTab === 'c' && showReplayable
                               ? <span className="game-card-badge">{renderBooleanBadge('replayable', Boolean(game.replayable))}</span>
                               : currentTab === 'v' && showRetry
@@ -1170,6 +1200,7 @@ export const GameTable = memo(function GameTable({
                                         chips el ancho que necesitan: en una caja de 190 px eso es la diferencia
                                         entre leer «RogueLike» y leer «Rog…». */}
                                     {insignia}
+                                    {resena}
                                   </div>
                                 ) : null}
                                 <div className="game-card-body">
@@ -1422,7 +1453,8 @@ export const GameTable = memo(function GameTable({
                         {/* EL ANÁLISIS NO SE VUELCA AQUÍ: se va a leer a su pantalla. Volcado ocupaba el detalle
                             entero —hay reseñas de veinte mil caracteres— y empujaba fuera de la vista todo lo
                             demás, que es lo que se abre el detalle para ver. El enlace lleva a
-                            `/stats/resenas/:id`, donde ya se lee con su ancho de lectura y su medallón.
+                            `/stats/resenas/:id` (o a donde diga `reviewLink`), donde ya se lee con su ancho de
+                            lectura y su medallón.
                             Es un ENLACE y no un botón porque es navegación: así se puede abrir en otra pestaña,
                             copiar la dirección o volver con el botón de atrás. Y ocupa una celda de la rejilla
                             del detalle, no la fila entera (`is-wide`), que es de donde sale el sitio. */}
@@ -1432,12 +1464,9 @@ export const GameTable = memo(function GameTable({
                             <div>
                               <Link
                                 className="btn btn-secondary"
-                                to={`/stats/resenas/${game.id}`}
-                                /* DE DÓNDE SE VIENE, para que el botón de volver de aquella pantalla devuelva
-                                   AQUÍ y no al listado de reseñas, que es de donde se llega normalmente. El
-                                   panel ya usaba este mismo estado para distinguir sus dos orígenes; esta es la
-                                   tercera puerta. */
-                                state={{ backTo: TAB_ROUTE[currentTab] }}
+                                /* Con su `backTo` (ver `reviewTarget`): el panel ya usaba este mismo estado
+                                   para distinguir sus dos orígenes; esta es la tercera puerta. */
+                                {...reviewTarget(game.id)}
                                 aria-label={UI_MESSAGES.detail.reviewLinkAria(game.name)}
                                 onClick={(event) => event.stopPropagation()}
                               >

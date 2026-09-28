@@ -52,7 +52,9 @@ export type IconName =
   /** Dos hojas superpuestas: copiar al portapapeles. */
   | 'content-copy'
   | 'view-list'
-  | 'view-grid';
+  | 'view-grid'
+  /** Tres barras (Font Awesome «chart-simple»): el acceso a la reseña desde la caja del mosaico. */
+  | 'chart-simple';
 
 export const TAB_ICONS: Record<TabId, IconName> = {
   c: 'trophy',
@@ -90,4 +92,5 @@ export const COMMON_ICONS = {
   copy: 'content-copy',
   viewList: 'view-list',
   viewGrid: 'view-grid',
+  reviewCard: 'chart-simple',
 } as const;

@@ -4,12 +4,12 @@ import { sembrarBiblioteca } from './seed';
 /**
  * LA CABECERA DEL LISTADO — el recuento, el orden y los controles de vista.
  *
- * ES UN RECORRIDO END-TO-END Y NO PUEDE SER OTRA COSA: lo que se vigila es cuánto MIDEN cinco palabras con la
- * letra del tema y si caben en la columna que les toca. En jsdom todo mide cero y un test de componente daría
+ * ES UN RECORRIDO END-TO-END Y NO PUEDE SER OTRA COSA: lo que se vigila es cuánto MIDEN las palabras del orden con
+ * la letra del tema y si caben en la columna que les toca. En jsdom todo mide cero y un test de componente daría
  * verde con la barra rota, que es justo lo que ya pasó con la barra inferior.
  *
  * Las dos promesas, por orden de gravedad si se rompen:
- *  · las cinco columnas de orden se VEN TODAS, sin carril que arrastrar: lo que hay que arrastrar para
+ *  · las columnas de orden se VEN TODAS, sin carril que arrastrar: lo que hay que arrastrar para
  *    descubrir no lo descubre nadie, y «Puntuación» partida por el canto se lee como un fallo de pintado;
  *  · los controles de vista se quedan pegados al canto DERECHO, que es donde el ojo los busca y donde están en
  *    escritorio: si se sueltan, se pegan al recuento y la barra parece descuadrada.
@@ -26,7 +26,7 @@ async function abrir(page: Page, ancho: number): Promise<void> {
   await expect(page.locator('.list-head')).toBeVisible();
   /* SE MIDE CON LA LETRA DE LA APP PUESTA. `fonts.ready` resuelve con las cargas que hubiera EN MARCHA al
      preguntar, así que se PIDE la cara que hace falta y se espera a que esté disponible: con la de reserva,
-     las cinco columnas miden bastante más y el escalón se decidiría con un número que no es el real. */
+     las columnas miden bastante más y el escalón se decidiría con un número que no es el real. */
   await page.evaluate(() => document.fonts.load('700 12px "DM Sans"', 'Puntuación').catch(() => []));
   await expect.poll(() => page.evaluate(() => document.fonts.check('700 12px "DM Sans"', 'Puntuación'))).toBe(true);
   await page.evaluate(() => document.fonts.ready);
@@ -54,13 +54,13 @@ async function medir(page: Page) {
 
 test.describe('la cabecera del listado', () => {
   /* 390 y 360 son los dos anchos que hay que vigilar: el más común de todos y el otro más común de Android.
-     En el primero las cinco entran en una línea cediendo el rótulo y el cuerpo; en el segundo ya no hay letra
-     que valga y se parten en dos, que sigue siendo mejor que esconderlas. */
+     Eran cinco columnas y en 360 ya se partían en dos; desde que plataformas y géneros no se ordenan son tres
+     (Nombre, Año, Puntuación), pero la promesa es la misma: todas a la vista, ninguna por arrastrar. */
   for (const ancho of [390, 360, 320]) {
-    test(`en ${ancho} px se ven las cinco columnas de orden y no hay nada que arrastrar`, async ({ page }) => {
+    test(`en ${ancho} px se ven las tres columnas de orden y no hay nada que arrastrar`, async ({ page }) => {
       await abrir(page, ancho);
       const m = await medir(page);
-      expect(m.opciones, 'faltan columnas de orden').toBe(5);
+      expect(m.opciones, 'faltan columnas de orden').toBe(3);
       expect(m.desplazamiento, `el orden se quedó con carril (${m.escalon})`).toBeLessThanOrEqual(1);
       expect(m.asomanPorElCanto, `hay columnas cortadas por el canto (${m.escalon})`).toBe(0);
     });

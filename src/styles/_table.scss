@@ -1158,6 +1158,38 @@ table.is-grid {
 .game-card-badge .badge-opp-inactivo { width: 26px; height: 26px; }
 .game-card-badge .ui-icon { width: var(--ico-sm); height: var(--ico-sm); }
 
+/* EL ACCESO A LA RESEÑA, en la cuarta esquina: debajo de la nota y al otro canto que la insignia. Lleva la
+   MISMA PLAQUITA que la nota —superficie con desenfoque, que se lee sobre cualquier carátula—, así que la
+   columna de la derecha son dos piezas de la misma familia, y no se confunde con la insignia, que es un
+   estado pintado con el color de ese estado. El color de enlace en el icono es lo que dice «esto se pulsa».
+   La forma (disco, placa recta, pegatina) la pone cada tema, igual que en su insignia.
+   `pointer-events` de vuelta: la lámina entera los tiene apagados para que la pulsación sea del botón de la
+   caja, que va debajo. */
+.game-card-review {
+  position: absolute;
+  right: .45rem;
+  bottom: .45rem;
+  z-index: 2;
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  backdrop-filter: blur(4px);
+  box-shadow: var(--e2);
+  color: var(--fg-link);
+  text-decoration: none;
+  transition: background-color .15s ease, color .15s ease;
+}
+.game-card-review .ui-icon { width: var(--ico-sm); height: var(--ico-sm); }
+.game-card-review:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+@media (hover: hover) {
+  .game-card-review:hover { background: var(--surface); color: var(--text); }
+}
+
 /* EL MEDIDOR DEL PIE: la misma nota que el aro, dicha como un filo que cruza la caja de lado a lado. De un
    vistazo, y sin leer una sola cifra, una fila de cajas se ordena sola. Mismo tono rojo→verde que el aro
    (`--score-hue`), así que también dice algo cuando la escala elegida son estrellas. */

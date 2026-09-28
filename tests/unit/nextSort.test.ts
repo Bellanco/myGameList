@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextSort, sortGames } from '../../src/core/utils/sortGames';
+import { DEFAULT_SORT, nextSort, sortGames } from '../../src/core/utils/sortGames';
 import { DEFAULT_FILTERS, filterGames } from '../../src/viewmodel/toolbarFilters';
 import { resolveStars } from '../../src/core/utils/scoreScale';
 import type { GameItem } from '../../src/model/types/game';
@@ -35,7 +35,6 @@ describe('nextSort', () => {
 
   it('columna de texto nueva → ascendente', () => {
     expect(nextSort({ col: 'score', asc: false }, 'name')).toEqual({ col: 'name', asc: true });
-    expect(nextSort({ col: 'name', asc: true }, 'platforms')).toEqual({ col: 'platforms', asc: true });
   });
 
   it('columna numérica/booleana nueva → descendente (mayor primero)', () => {
@@ -132,5 +131,33 @@ describe('sortGames — columna de puntuación', () => {
     // grade 9 → 0★ y grade 0 → 0★ quedan fuera; el resto (incl. legacy) entra.
     expect(filtered.map((g) => resolveStars(g)).every((s) => s >= 1)).toBe(true);
     expect(filtered.some((g) => resolveGradeOf(g) === 9 || resolveGradeOf(g) === 0)).toBe(false);
+  });
+});
+
+// La vergüenza se abre por NOTA, como las listas que se puntúan. Y como ahí puntuar es opcional, la mayoría de
+// los juegos valen 0: entre ellos manda el nombre, que era el orden de siempre de esta lista.
+describe('sortGames — la lista de la vergüenza', () => {
+  const ordena = (games: GameItem[]) => sortGames(games, DEFAULT_SORT.v, 'v').map((g) => g.name);
+
+  it('por defecto ordena por nota, de la mejor a la peor', () => {
+    expect(DEFAULT_SORT.v).toEqual({ col: 'score', asc: false });
+    expect(ordena([
+      game(1, { name: 'Bravo', grade: 40 }),
+      game(2, { name: 'Alfa', grade: 90 }),
+      game(3, { name: 'Charlie', grade: 65 }),
+    ])).toEqual(['Alfa', 'Charlie', 'Bravo']);
+  });
+
+  it('los que no tienen nota van al final y, entre ellos, por nombre', () => {
+    expect(ordena([
+      game(1, { name: 'Zelda' }),
+      game(2, { name: 'Celeste', grade: 70 }),
+      game(3, { name: 'Ashen' }),
+      game(4, { name: 'Metroid' }),
+    ])).toEqual(['Celeste', 'Ashen', 'Metroid', 'Zelda']);
+  });
+
+  it('sin ningún juego puntuado queda igual que antes: por nombre', () => {
+    expect(ordena([game(1, { name: 'b' }), game(2, { name: 'C' }), game(3, { name: 'a' })])).toEqual(['a', 'b', 'C']);
   });
 });

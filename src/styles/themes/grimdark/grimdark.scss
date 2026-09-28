@@ -202,6 +202,8 @@
 :root[data-palette="grimdark"][data-theme="light"] .badge-opp-activo { color: #fff !important; box-shadow: none !important; }
 :root[data-palette="grimdark"] .badge-rejugar-inactivo,
 :root[data-palette="grimdark"] .badge-opp-inactivo { background: var(--surface-elevated) !important; color: var(--text-muted) !important; border: 1px solid var(--grim-gold) !important; box-shadow: none !important; }
+/* El acceso a la reseña del mosaico lleva el filete de oro de la insignia apagada. */
+:root[data-palette="grimdark"] .game-card-review { border: 1px solid var(--grim-gold); }
 
 /* ── §9 · Puntuación 0–100: sin aro/borde añadido (el arco de color ya es la nota). Número en VT323 (§1). ── */
 

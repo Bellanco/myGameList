@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, generatePath, useLocation } from 'react-router-dom';
 // La hoja del hub se importa AQUÍ y no desde `index.scss`: como el hub entra por `lazy()`, Vite emite su CSS en
 // el mismo chunk perezoso y el arranque no carga ni un byte de estilos de estas pantallas (igual que `stats.scss`).
 import '../../styles/social.scss';
@@ -8,7 +8,7 @@ import { LEGAL_CONSENT_UI, LEGAL_ROUTES } from '../../core/constants/legal';
 import type { GameItem, TabData } from '../../model/types/game';
 import { useSocialViewModel } from '../../viewmodel/useSocialViewModel';
 import { useGithubConnection } from '../../viewmodel/sync/githubConnection';
-import { matchSocialRoute } from '../../viewmodel/social/socialRoutes';
+import { SOCIAL_ROUTES, matchSocialRoute } from '../../viewmodel/social/socialRoutes';
 import { ENABLE_ACHIEVEMENTS } from '../../core/achievements/flags';
 import { Icon } from './Icon';
 import { SocialHubSkeleton } from './SocialHubSkeleton';
@@ -356,6 +356,15 @@ const SocialHubInner = memo(function SocialHubInner({
     (gameId: number) => openProfileReviewDetail(detailId, gameId),
     [openProfileReviewDetail, detailId],
   );
+  // El «Ver análisis» del listado del perfil: la misma pantalla que abre su pestaña de reseñas, pero volviendo a
+  // la FICHA (`backTo`), que es de donde se sale, y no a esa lista, por la que no se ha pasado.
+  const detailReviewLink = useCallback(
+    (gameId: number) => ({
+      to: generatePath(SOCIAL_ROUTES.profileReview, { profileId: detailId, gameId: String(gameId) }),
+      state: { backTo: location.pathname },
+    }),
+    [detailId, location.pathname],
+  );
   const addOrAcceptDetailFriend = useCallback(
     () => handleAddOrAcceptFriend(detailUid),
     [handleAddOrAcceptFriend, detailUid],
@@ -488,6 +497,7 @@ const SocialHubInner = memo(function SocialHubInner({
           onOpenAchievements={openDetailAchievements}
           onToggleReviews={toggleDetailReviews}
           onOpenReview={openDetailReview}
+          reviewLink={detailReviewLink}
           status={status}
           statusKind={statusKind}
           onAddToProximos={onAddToProximos}

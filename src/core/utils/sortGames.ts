@@ -9,7 +9,10 @@ import { resolveGrade } from './scoreScale';
  */
 export const DEFAULT_SORT: Record<TabId, TabSort> = {
   c: { col: 'years', asc: false },
-  v: { col: 'name', asc: true },
+  // La vergüenza, por NOTA, de la mejor a la peor, como las listas que se puntúan. Ahí la nota es opcional y los
+  // juegos sin puntuar valen 0: caen al final y, entre ellos, siguen por nombre (ver el desempate de `sortGames`),
+  // que era el orden de esta lista hasta ahora.
+  v: { col: 'score', asc: false },
   e: { col: 'name', asc: true },
   p: { col: 'score', asc: false },
 };
@@ -29,7 +32,8 @@ export function nextSort(current: TabSort, column: string): TabSort {
 
 /**
  * Ordena una lista de juegos según `sort` (columna + dirección). En la pestaña completista (c),
- * a igualdad de clave desempata por la llegada más reciente a la lista (`listedAt`/`_ts`).
+ * a igualdad de clave desempata por la llegada más reciente a la lista (`listedAt`/`_ts`); en la vergüenza (v),
+ * por nombre, para que el bloque de juegos sin nota —todos a 0— no quede en el orden en que se añadieron.
  * Decorate-sort-undecorate: calcula la clave de orden UNA vez por juego.
  */
 export function sortGames(games: GameItem[], sort: TabSort, tab: TabId): GameItem[] {
@@ -37,8 +41,6 @@ export function sortGames(games: GameItem[], sort: TabSort, tab: TabId): GameIte
 
   const keyOf = (game: GameItem): string | number => {
     if (col === 'years') return game.years?.length ? Math.max(...game.years) : 0;
-    if (col === 'genres') return game.genres[0] || '';
-    if (col === 'platforms') return game.platforms[0] || '';
     // La columna de puntuación ordena por la nota fina EFECTIVA (0–100, `grade` o su fallback ×20), no por el
     // espejo `score` 0–5: si no, notas como 90/96/98/99/100 caen todas en 5★, empatan y el orden estable las deja
     // en el orden de inserción (p. ej. 96-98-90-99-100). Ver core/utils/scoreScale (resolveGrade).
@@ -63,6 +65,7 @@ export function sortGames(games: GameItem[], sort: TabSort, tab: TabId): GameIte
     }
 
     if (cmp === 0 && tieBreak) return b.tie - a.tie; // completista: llegada más reciente primero
+    if (cmp === 0 && tab === 'v') return compareText(a.game.name, b.game.name); // vergüenza: por nombre
     return cmp;
   });
 
