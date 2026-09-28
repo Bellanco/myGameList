@@ -11,8 +11,9 @@
  * Si una marca dice «acertó» y el ganador dice otra cosa, PARA.
  *
  * LOS PUNTOS:
- *   · 2020 — la hoja no trae totales. Se cuentan por el ganador real y el nombre votado, TODAS las categorías,
- *            también las tres con el resultado en blanco (decisión del 28-09-2026). Una categoría, un punto.
+ *   · 2020 — la hoja no trae totales. Se cuentan por el ganador real y el nombre votado, una categoría, un
+ *            punto. «Best E-Sport Game» NO contó aquel año y se queda fuera del archivo (ver `NO_CONTARON`):
+ *            sale un empate 11–11, que es lo que dice la hoja.
  *   · 2021 — se recuentan y tienen que dar los de la hoja (12–11).
  *   · 2022 — se publican LOS DE LA HOJA (11–12), aunque el recuento por marcas no dé eso: es lo que se anunció
  *            (decisión del 28-09-2026). El script enseña la diferencia.
@@ -218,6 +219,16 @@ const GRAFIAS = {
   },
 };
 
+/**
+ * CATEGORÍAS QUE ESTÁN EN LA HOJA Y NO CONTARON, confirmado por quien las organizó (28-09-2026). Se quedan fuera
+ * del archivo, igual que «Best Perfomance» en `import-premios-2025.mjs`: ni puntúan ni salen como ganador.
+ * Lo que la hoja deja en blanco NO es esto por sí solo: Accesibilidad y Lucha de 2020 también están en blanco y
+ * se archivan, porque no las acertó nadie y su ganador es un dato de la edición.
+ */
+const NO_CONTARON = {
+  2020: ['bestesportgame'],
+};
+
 /** Una marca de «acertó» en la hoja: «X», «x» o «1». Un espacio suelto no cuenta. */
 const marca = (s) => ['x', '1'].includes(String(s || '').trim().toLowerCase());
 
@@ -301,6 +312,10 @@ for (const anio of [2020, 2021, 2022, 2023]) {
 
   for (const categoria of categorias) {
     const k = clave(categoria.titulo);
+    if ((NO_CONTARON[anio] || []).includes(k)) {
+      avisos.push(`${anio} · ${categoria.titulo}: no contó aquel año; fuera del archivo.`);
+      continue;
+    }
     const ganador = GANADORES[anio][k];
     if (!ganador) {
       errores.push(`«${categoria.titulo}» no tiene ganador escrito en GANADORES[${anio}].`);
