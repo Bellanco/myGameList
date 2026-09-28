@@ -9,6 +9,7 @@ import { applyReviewPublication } from './viewmodel/applyReviewPublication';
 import { copyText } from './core/utils/clipboard';
 import { normalizeData } from './model/repository/localRepository';
 import { IconSprite } from './view/components/IconSprite';
+import { SilentBoundary } from './view/components/SilentBoundary';
 import { FloatingControls } from './view/components/FloatingControls';
 import { TabBar } from './view/components/TabBar';
 import { ScreenHeader } from './view/components/ScreenHeader';
@@ -97,7 +98,7 @@ const AdminHub = lazy(() => import('./view/components/AdminHub').then((module) =
 const AchievementToast = lazy(() => import('./view/components/stats/AchievementToast').then((module) => ({ default: module.AchievementToast })));
 
 /**
- * EL RESTO DEL SPRITE DE ICONOS (ver `IconSpriteRest`): los 15 símbolos que ninguna pieza del arranque dibuja.
+ * EL RESTO DEL SPRITE DE ICONOS (ver `IconSpriteRest`): los símbolos que ninguna pieza del arranque dibuja.
  *
  * Perezoso Y montado en idle, que son dos cosas distintas y las dos hacen falta: `lazy()` lo saca del chunk de
  * arranque, y esperar a que el navegador esté ocioso evita que su descarga compita con el primer pintado. Quien
@@ -1011,13 +1012,25 @@ export default function App() {
        distintos del `<Routes>`. */
     <GithubConnectionProvider value={githubConnection}>
       <IconSprite />
+      {/* CADA UNO CON SU SUSPENSE Y SU LÍMITE. Compartían un solo `Suspense`, así que el sprite no aparecía hasta
+          que llegaban LOS DOS chunks: una descarga colgada de los efectos dejaba sin iconos media aplicación (se
+          vio el 28-09-2026 en Firefox para Android: el botón de volver, vacío). Y colgaban del límite raíz, de
+          modo que un `import()` fallido tumbaba la app entera. Ver `SilentBoundary`. */}
       {spriteRestoListo ? (
-        <Suspense fallback={null}>
-          <IconSpriteRest />
+        <>
+          <SilentBoundary source="icon-sprite-rest">
+            <Suspense fallback={null}>
+              <IconSpriteRest />
+            </Suspense>
+          </SilentBoundary>
           {/* Efectos de firma por interacción (wipe P5 al navegar, apertura de portal al clic, sol↔luna,
               boot-up 40K). No pinta nada: solo escucha. */}
-          <SignatureEffects />
-        </Suspense>
+          <SilentBoundary source="signature-effects">
+            <Suspense fallback={null}>
+              <SignatureEffects />
+            </Suspense>
+          </SilentBoundary>
+        </>
       ) : null}
       {/* A11y-4: primer elemento enfocable de la página. Sin él, llegar al contenido con teclado obligaba a pasar
           por los controles flotantes y la barra de pestañas en cada carga. Solo se ve al recibir el foco. */}

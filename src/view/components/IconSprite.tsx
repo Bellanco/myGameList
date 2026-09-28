@@ -135,8 +135,11 @@ export function IconSprite() {
       </symbol>      <symbol id="icon-bell" viewBox="0 -960 960 960">
         <path fill="currentColor" d="M160-200v-80h80v-280q0-83 50-147.5T420-792v-28q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v28q80 20 130 84.5T720-560v280h80v80H160Zm320-300Zm0 420q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM320-280h320v-280q0-66-47-113t-113-47q-66 0-113 47t-47 113v280Z" />
       </symbol>
-      
-      
+      {/* LA FLECHA DE VOLVER va en el sprite del arranque aunque la pinten pantallas perezosas: es la salida de
+          cada pantalla, y en el móvil su botón es SOLO icono. Vivía en `IconSpriteRest`, que llega más tarde y
+          puede no llegar (una descarga colgada tras un despliegue), y se quedaba el recuadro vacío (Firefox para
+          Android, 28-09-2026). Son cien bytes. */}
+      <symbol id="icon-arrow-back" viewBox="0 -960 960 960"><path d="m313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z" /></symbol>
     </svg>
   );
 }
