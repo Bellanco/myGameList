@@ -198,10 +198,10 @@ export function AchievementSprite() {
             biblioteca; esto lo concede el administrador al publicar una edición), pero se enseña con la misma
             medalla y por eso su símbolo vive aquí, con los demás. Ver `PalmaresMedal`. */}
         <symbol id="ach-palmares" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" /></symbol>
-        {/* Vote — la PARTICIPACIÓN en una edición de la porra: la urna con su papeleta. Mismo carril que el
+        {/* Award — la PARTICIPACIÓN en una edición de la porra: la escarapela con sus cintas. Mismo carril que el
             trofeo de arriba (lo concede el administrador al publicar), para quien votó y no entró en los cinco
-            primeros. */}
-        <symbol id="ach-participacion" viewBox="0 0 24 24"><path d="m9 12 2 2 4-4" /><path d="M5 7c0-1.1.9-2 2-2h10a2 2 0 0 1 2 2v12H5V7Z" /><path d="M22 19H2" /></symbol>
+            primeros. Fue la urna de «Vote», y su base —una raya más ancha que la caja— se leía como un tachón. */}
+        <symbol id="ach-participacion" viewBox="0 0 24 24"><path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526" /><circle cx="12" cy="8" r="6" /></symbol>
     </svg>
   );
 }

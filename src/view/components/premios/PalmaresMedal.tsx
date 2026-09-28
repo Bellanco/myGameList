@@ -33,7 +33,7 @@ export type PalmaresMedalSize = keyof typeof SIZES;
  *    aquí, y ordena la vitrina.
  *
  * LA PARTICIPACIÓN (puesto `0`) es la misma medalla en azul —no es un metal a propósito, porque no es un
- * puesto—, con la urna en lugar de la copa y el año en la píldora (no hay puesto que poner).
+ * puesto—, con la escarapela en lugar de la copa y el año en la píldora (no hay puesto que poner).
  */
 export interface PalmaresMedalProps {
   entry: PalmaresEntry;
