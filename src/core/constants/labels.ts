@@ -440,7 +440,7 @@ export const UI_MESSAGES = {
       existingBadge: 'Ya en tus listas',
       suggested: 'sugerida',
       origin: 'Origen',
-      game: 'Juego',
+      game: 'Nombre',
       search: 'Buscar por nombre',
       enrich: 'Actualizar en tus listas',
       enrichHint: 'Ya lo tienes: añade género/plataforma/horas que falten al juego de tu lista.',
@@ -543,7 +543,7 @@ export const UI_MESSAGES = {
     // Los datos que enseña cada lista, por su ID de columna (ver `getTableHeaders` en `GameTable`). De aquí salen
     // los chips de ordenar; el ID, y no el rótulo, es lo que decide si una columna se puede ordenar.
     columns: {
-      name: 'Juego',
+      name: 'Nombre',
       year: 'Año',
       platforms: 'Plataformas',
       genres: 'Géneros',

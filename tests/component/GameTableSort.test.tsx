@@ -43,8 +43,8 @@ function renderSortable(tab: TabId, onSort: (tab: TabId, column: string) => void
 
 describe('GameTable — chips de ordenar', () => {
   it.each<[TabId, Array<[string, string]>]>([
-    ['c', [['Juego', 'name'], ['Año', 'years'], ['Plataformas', 'platforms'], ['Géneros', 'genres'], ['Puntuación', 'score']]],
-    ['p', [['Juego', 'name'], ['Plataformas', 'platforms'], ['Géneros', 'genres'], ['Interés', 'score']]],
+    ['c', [['Nombre', 'name'], ['Año', 'years'], ['Plataformas', 'platforms'], ['Géneros', 'genres'], ['Puntuación', 'score']]],
+    ['p', [['Nombre', 'name'], ['Plataformas', 'platforms'], ['Géneros', 'genres'], ['Interés', 'score']]],
   ])('en la pestaña %s, cada chip manda la clave de su columna', async (tab, expected) => {
     const onSort = vi.fn();
     const { container } = renderSortable(tab, onSort);
