@@ -8,16 +8,16 @@ const medalla = (rank: number) => {
   return render(<PalmaresMedal entry={entry} />).container.querySelector('.ach-medal') as HTMLElement;
 };
 
-// EL FILO DICE EL PUESTO: con un solo cobre del tercero en adelante, el tercero y el quinto eran la misma medalla.
+// EL METAL DICE EL PUESTO: con un solo cobre del tercero en adelante, el tercero y el quinto eran la misma medalla.
 describe('PalmaresMedal', () => {
   it.each([
-    [1, 'is-temple-3'],
-    [2, 'is-temple-2'],
+    [1, 'is-oro'],
+    [2, 'is-plata'],
     [3, 'is-bronce'],
     [4, 'is-cobre'],
     [5, 'is-cobre'],
     [0, 'is-participation'],
-  ])('el puesto %i lleva el filo %s', (rank, clase) => {
+  ])('el puesto %i lleva el metal %s', (rank, clase) => {
     expect(medalla(rank)).toHaveClass(clase);
   });
 

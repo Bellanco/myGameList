@@ -1471,17 +1471,42 @@
 
 /* ─── El palmarés: los trofeos, con forma de logro, en la ficha del perfil ────────────────────────────── */
 
-/* LOS METALES QUE EL CATÁLOGO NO TIENE. El oro y la plata del primero y el segundo son los temples de la
-   escalera (`achievements.scss`); del tercero en adelante hacían falta tres más, porque el cobre único del
-   catálogo dejaba igual al tercero que al quinto:
+/* EL METAL DE CADA PUESTO, entero: el filo (`--temple`), el aura exterior (`--g1`, `--g2`) y el trofeo (su
+   degradado del sprite y el brillo que lo rodea). Con solo el filo distinto no bastaba: el aura naranja de
+   «excepcional» y el trofeo dorado eran iguales en las seis y se comían la diferencia.
+     · ORO y PLATA, el primero y el segundo: el filo es el de los temples de la escalera (`achievements.scss`).
      · BRONCE, el tercero: pardo y tirando a oliva, el metal apagado del podio.
      · COBRE, el cuarto y el quinto: rojizo, para que junto al bronce se lean como dos puestos distintos.
      · AZUL, la participación: no es un metal a propósito, porque no es un puesto.
-   Solo el filo, como los temples: el cuerpo del disco sigue en su penumbra. Especificidad (0,3,0) para ganar
-   a `.ach-medal.is-temple-*` sin depender del orden de las hojas. */
-.ach-medal.premios-palmares-medal.is-bronce { --temple: rgba(170, 132, 74, .84); }
-.ach-medal.premios-palmares-medal.is-cobre { --temple: rgba(206, 98, 60, .8); }
-.ach-medal.premios-palmares-medal.is-participation { --temple: rgba(96, 150, 222, .74); }
+   El cuerpo del disco sigue en su penumbra: el metal está en el borde y en el dibujo, como en el catálogo.
+   Especificidad (0,3,0) y (0,5,0) para no depender del orden de las hojas. */
+.ach-medal.premios-palmares-medal {
+  --temple: rgba(244, 200, 96, .82);
+  --g1: rgba(244, 190, 70, .6); --g2: rgba(244, 190, 70, .45);
+  --lux: url(#ach-lux); --lux-glow: rgba(232, 173, 61, .3);
+}
+.ach-medal.premios-palmares-medal.is-plata {
+  --temple: rgba(202, 210, 222, .62);
+  --g1: rgba(192, 206, 224, .5); --g2: rgba(192, 206, 224, .32);
+  --lux: url(#ach-lux-plata); --lux-glow: rgba(200, 214, 232, .28);
+}
+.ach-medal.premios-palmares-medal.is-bronce {
+  --temple: rgba(170, 132, 74, .84);
+  --g1: rgba(170, 132, 74, .56); --g2: rgba(170, 132, 74, .38);
+  --lux: url(#ach-lux-bronce); --lux-glow: rgba(179, 138, 78, .3);
+}
+.ach-medal.premios-palmares-medal.is-cobre {
+  --temple: rgba(206, 98, 60, .8);
+  --g1: rgba(214, 92, 52, .58); --g2: rgba(214, 92, 52, .42);
+  --lux: url(#ach-lux-cobre); --lux-glow: rgba(216, 104, 60, .3);
+}
+.ach-medal.premios-palmares-medal.is-participation {
+  --temple: rgba(96, 150, 222, .74);
+  --g1: rgba(90, 150, 230, .5); --g2: rgba(90, 150, 230, .34);
+  --lux: url(#ach-lux-azul); --lux-glow: rgba(111, 166, 234, .28);
+}
+.ach-medal.premios-palmares-medal .ach-art { filter: drop-shadow(0 0 calc(var(--sz) * .05) var(--lux-glow)); }
+.ach-medal.premios-palmares-medal .ach-art .ach-fg { stroke: var(--lux); }
 
 .premios-palmares {
   display: grid;

@@ -22,29 +22,28 @@ export type PalmaresMedalSize = keyof typeof SIZES;
  *
  * QUÉ LA HACE ESPECIAL, y se nota sin leer nada:
  *
- *  · **Aura excepcional siempre.** En el catálogo la rareza dice cuánta gente lo tiene; aquí no hace falta
- *    medirla — solo hay cinco puestos por edición, y casi nadie los va a tener.
- *  · **El temple dice el PUESTO**, que es la información que de verdad importa: oro el primero, plata el
+ *  · **EL METAL DICE EL PUESTO, y lo dice entero**: filo, aura exterior y trofeo. Oro el primero, plata el
  *    segundo, bronce el tercero, cobre el cuarto y el quinto —más rojizo que el bronce, para que no se
- *    confundan—, y azul la participación (decisión del 28-09-2026). Es el mismo canal que en el catálogo usa el
- *    tramo de la escalera; el oro y la plata son los suyos, y los otros tres viven en la hoja de premios.
+ *    confundan— y azul la participación (decisiones del 28-09-2026). Con solo el filo distinto, el aura naranja
+ *    de «excepcional» y el trofeo dorado igualaban las seis a simple vista. El aura aquí no mide rareza, como en
+ *    el catálogo: solo hay cinco puestos por edición y medirla no diría nada. Los metales viven en la hoja de
+ *    premios y los degradados del trofeo en el sprite (`#ach-lux-*`).
  *  · **La píldora del canto lleva el puesto** («3.º»), no un umbral. El AÑO va en el rótulo de debajo («3.º en
  *    Game Awards 2021»), que es lo que separa las ediciones de la hoja de cálculo (2020–2024) de las jugadas
  *    aquí, y ordena la vitrina.
  *
- * LA PARTICIPACIÓN (puesto `0`) es la misma medalla bajada de tono: aura común —la tiene todo el que votó—, un
- * filo azulado en vez de un metal, la urna en lugar de la copa, y el año en la píldora (no hay puesto que
- * poner).
+ * LA PARTICIPACIÓN (puesto `0`) es la misma medalla en azul —no es un metal a propósito, porque no es un
+ * puesto—, con la urna en lugar de la copa y el año en la píldora (no hay puesto que poner).
  */
 export interface PalmaresMedalProps {
   entry: PalmaresEntry;
   size?: PalmaresMedalSize;
 }
 
-/** Oro, plata, bronce y cobre: el filo dice en qué puesto se quedó. */
-function templeDelPuesto(rank: number): string {
-  if (rank <= 1) return 'is-temple-3';
-  if (rank === 2) return 'is-temple-2';
+/** El metal de cada puesto: oro, plata, bronce y cobre. */
+function metalDelPuesto(rank: number): string {
+  if (rank <= 1) return 'is-oro';
+  if (rank === 2) return 'is-plata';
   if (rank === 3) return 'is-bronce';
   return 'is-cobre';
 }
@@ -53,8 +52,8 @@ export const PalmaresMedal = memo(function PalmaresMedal({ entry, size = 'md' }:
   const side = SIZES[size];
   const L = PREMIOS_UI.palmares;
   const participa = isParticipation(entry);
-  // Sin metal para la participación: su filo azulado lo pone `.is-participation` en la hoja de premios.
-  const clase = participa ? 'is-comun is-participation' : `is-excepcional ${templeDelPuesto(entry.rank)}`;
+  // La participación no es un puesto, así que no lleva metal: su azul lo pone `.is-participation`.
+  const clase = participa ? 'is-participation' : metalDelPuesto(entry.rank);
   const simbolo = participa ? '#ach-participacion' : '#ach-palmares';
 
   return (
