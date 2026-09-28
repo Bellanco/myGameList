@@ -6,7 +6,7 @@ import {
   LADDERS,
   SCORING_ACHIEVEMENTS,
 } from '../../src/core/achievements/catalog';
-import { evaluateAchievements, nextPeak } from '../../src/core/achievements/evaluate';
+import { evaluateAchievements, freezeDates, nextPeak, parseFrozenDates } from '../../src/core/achievements/evaluate';
 import { libraryStart } from '../../src/core/achievements/metrics';
 import { rememberSocialCounters, socialCounters } from '../../src/core/achievements/deviceSignals';
 import { levelFromPoints, summarize } from '../../src/core/achievements/summary';
@@ -603,6 +603,61 @@ describe('la marca de agua — lo conseguido no se devuelve', () => {
     expect(nextPeak([], 'inventado-99:1')).toContain('inventado-99');
     const peak = nextPeak([{ id: 'completados-10', level: 1, value: 10, next: null, unlockedAt: 0 }], '');
     expect(peak).toBe('completados-10:1');
+  });
+});
+
+describe('la fecha fijada — un sello que se mueve no arrastra el logro', () => {
+  const NOTAS = [10, 90, 20, 80, 30, 70, 40, 60, 15, 95, 25, 85, 35, 75, 45, 65, 5, 99, 50, 55, 12, 88, 33, 66, 21];
+  const LEJOS = NOW - 200 * DAY;
+
+  /** Veinticinco notas, con su fecha de nota o sin ella: justo el primer escalón de «Nota del crítico». */
+  function notas(gradedAt: (index: number) => number | undefined): GameItem[] {
+    return NOTAS.map((grade, index) => game({ id: index + 1, grade, gradedAt: gradedAt(index) }));
+  }
+
+  function fijar(games: GameItem[], raw: string, now = NOW) {
+    const states = evaluateAchievements({ games: library({ c: games }), social: NO_SOCIAL, device: NO_DEVICE, now }, '');
+    const frozen = freezeDates(states, raw, now);
+    return { raw: frozen.raw, state: frozen.states.find((state) => state.id === 'criterio-25')! };
+  }
+
+  it('renotar un juego viejo NO fecha hoy un logro de hace meses', () => {
+    const primera = fijar(notas((index) => LEJOS + index * DAY), '');
+    expect(primera.state.unlockedAt).toBe(LEJOS + 24 * DAY);
+
+    // Se cambia la nota del primer juego: su `gradedAt` pasa a hoy y el sello número 25 ahora es el de hoy.
+    const renotado = notas((index) => LEJOS + index * DAY).map((item) => (item.id === 1 ? { ...item, gradedAt: NOW } : item));
+    const despues = fijar(renotado, primera.raw, NOW + DAY);
+    expect(despues.state.unlockedAt).toBe(LEJOS + 24 * DAY);
+  });
+
+  it('un logro SIN fecha no gana una más tarde', () => {
+    // Juegos de antes de `gradedAt`: el logro se consigue, pero de su fecha no se sabe nada.
+    const primera = fijar(notas(() => undefined), '');
+    expect(primera.state.level).toBe(1);
+    expect(primera.state.unlockedAt).toBe(0);
+
+    // Al día siguiente uno de ellos estrena `gradedAt`: el sello número 25 ya no es «sin fecha» sino mañana.
+    const tocado = notas((index) => (index === 3 ? NOW + DAY : undefined));
+    expect(fijar(tocado, '', NOW + DAY).state.unlockedAt).toBe(NOW + DAY); // lo que se deduciría sin fijar
+    expect(fijar(tocado, primera.raw, NOW + DAY).state.unlockedAt).toBe(0);
+  });
+
+  it('la fecha sí se ADELANTA si llegan sellos más antiguos', () => {
+    // Un dispositivo con la biblioteca a medio sincronizar deduce una fecha tardía; al llegar el resto, se corrige.
+    const primera = fijar(notas((index) => NOW - (index < 24 ? 300 : 10) * DAY), '');
+    expect(primera.state.unlockedAt).toBe(NOW - 10 * DAY);
+    const sincronizada = fijar(notas(() => NOW - 300 * DAY), primera.raw, NOW + DAY);
+    expect(sincronizada.state.unlockedAt).toBe(NOW - 300 * DAY);
+  });
+
+  it('solo añade: lo que no sale en esta evaluación conserva su registro', () => {
+    const raw = freezeDates([], 'completados-10:0.abc', NOW).raw;
+    expect(parseFrozenDates(raw).get('completados-10')).toEqual({ at: 0, cap: parseInt('abc', 36) });
+  });
+
+  it('lo que no está conseguido no se registra', () => {
+    expect(freezeDates([{ id: 'completados-10', level: 0, value: 3, next: 10, unlockedAt: 0 }], '', NOW).raw).toBe('');
   });
 });
 

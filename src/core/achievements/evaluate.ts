@@ -140,6 +140,77 @@ export function nextPeak(states: readonly AchievementState[], raw: string): stri
 }
 
 /**
+ * Lo que se recuerda de la FECHA de cada logro conseguido: el día que se le dio (`at`, 0 = sin fecha) y el
+ * instante en que este dispositivo lo vio conseguido por primera vez (`cap`), que es el techo de esa fecha.
+ */
+interface FrozenDate {
+  at: number;
+  cap: number;
+}
+
+/** `id:at.cap,…`, con los instantes en base 36. Formato de `localStorage`, nunca sale del aparato. */
+export function parseFrozenDates(raw: string): Map<string, FrozenDate> {
+  const out = new Map<string, FrozenDate>();
+  for (const piece of String(raw || '').split(',')) {
+    const [id, pair] = piece.split(':');
+    const [at, cap] = String(pair || '').split('.').map((part) => parseInt(part, 36));
+    if (id && Number.isFinite(cap) && cap > 0) out.set(id, { at: Number.isFinite(at) && at > 0 ? at : 0, cap });
+  }
+  return out;
+}
+
+function serializeFrozenDates(dates: ReadonlyMap<string, FrozenDate>): string {
+  return [...dates.entries()].map(([id, { at, cap }]) => `${id}:${at.toString(36)}.${cap.toString(36)}`).join(',');
+}
+
+/**
+ * LA FECHA DE UN LOGRO SE FIJA, NO SE RECALCULA.
+ *
+ * El evaluador deduce la fecha de los sellos de los juegos (`enteredAt`, `gradedAt`, `reviewedAt`), y esos sellos
+ * se MUEVEN: renotar un juego, reescribir una reseña o guardar uno anterior a un campo nuevo los estrena. Como la
+ * fecha es «el sello número N de lo que cuenta», un sello que pasa a ser de hoy fecha HOY un logro de hace meses,
+ * y así salía en el listado, en tu vitrina y en el feed de tus amistades — una vez cada vez que tocabas algo.
+ *
+ * Por eso lo deducido solo vale la PRIMERA vez que el dispositivo ve el logro conseguido, y a partir de ahí:
+ *
+ *  - la fecha solo puede ADELANTARSE, nunca retrasarse. Llega una biblioteca sincronizada con sellos más
+ *    antiguos y la fecha se corrige; un sello que se mueve a hoy no la arrastra;
+ *  - y nunca puede pasar de `cap`, el instante en que se vio conseguido por primera vez: lo que ya tenías no se
+ *    pudo conseguir después. Es lo que impide que un logro SIN fecha gane una más tarde —antes bastaba con que el
+ *    sello que hacía el número pasara de «sin fecha» a «hoy»—, y lo que hace que «conseguido, sin día» (§5.3) se
+ *    quede así en vez de inventarse un día.
+ *
+ * Lo que ya estaba en la marca de agua cuando nació esta clave entra con `cap` = el momento de estrenarla: es la
+ * mejor cota que existe, y cierra el mismo agujero para todo lo conseguido antes.
+ *
+ * Solo AÑADE: un registro no se borra aunque el logro no salga en esta evaluación (un escalón de configuración
+ * que todavía no ha llegado, §6.4bis). Es estado de dispositivo, como la marca de agua.
+ */
+export function freezeDates(
+  states: readonly AchievementState[],
+  raw: string,
+  now: number,
+): { states: AchievementState[]; raw: string } {
+  const dates = parseFrozenDates(raw);
+  const out = states.map((state) => {
+    if (state.level < 1) return state;
+    const known = dates.get(state.id);
+    if (!known) {
+      dates.set(state.id, { at: state.unlockedAt, cap: now });
+      return state;
+    }
+    const candidate = state.unlockedAt;
+    if (candidate > 0 && candidate <= known.cap && (known.at === 0 || candidate < known.at)) {
+      dates.set(state.id, { at: candidate, cap: known.cap });
+      return state;
+    }
+    return known.at === state.unlockedAt ? state : { ...state, unlockedAt: known.at };
+  });
+  const next = serializeFrozenDates(dates);
+  return { states: out, raw: next === raw ? raw : next };
+}
+
+/**
  * Lo que ha subido entre dos evaluaciones. Es el aviso del instante (§7.4): solo lo que cambia AHORA, nunca el
  * arrastre de la retroactividad — quien importa una biblioteca entera no recibe cien avisos.
  */

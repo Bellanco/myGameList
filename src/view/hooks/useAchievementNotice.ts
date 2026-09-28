@@ -144,17 +144,25 @@ export function useAchievementNotice(
       const contadoRaw = leer(keys.ACHIEVEMENTS_TOLD_KEY) || peak;
       const contado = evaluate.parsePeak(contadoRaw);
 
-      const states = evaluate.evaluateAchievements(
+      const now = Date.now();
+      const evaluated = evaluate.evaluateAchievements(
         {
           games,
           // Los contadores sociales no están a mano fuera del hub y llegan a cero. La marca de agua es justo lo
           // que impide que eso RETIRE lo ya conseguido, así que no hace falta ir a buscarlos.
           social: { friends: 0, postWeeks: 0, profileCreatedAt: 0 },
           device: { hasSync: false, rouletteUsedAt: signals.rouletteUsedAt(), themeChanged: false },
-          now: Date.now(),
+          now,
         },
         peak,
       );
+
+      // Las fechas, FIJADAS como en el hub (ver `freezeDates`): los dos evaluadores escriben el mismo registro, y
+      // este es el que corre tras cada guardado, que es justo cuando un sello se mueve.
+      const datesRaw = leer(keys.ACHIEVEMENTS_DATES_KEY);
+      const frozen = evaluate.freezeDates(evaluated, datesRaw, now);
+      if (frozen.raw !== datesRaw) guardar(keys.ACHIEVEMENTS_DATES_KEY, frozen.raw);
+      const states = frozen.states;
 
       const toma: Toma = {
         escalones: new Map<string, Foto>(states.map((state) => [
