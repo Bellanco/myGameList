@@ -21,6 +21,12 @@ vi.mock('../../src/model/repository/firebaseFriendshipRepository', () => ({
   invalidateMyFriendshipsCache: vi.fn(),
 }));
 
+// La criba del avatar genérico sale a la red (pide la imagen): aquí se decide a mano qué URL es genérica.
+const genericPhotos = new Set<string>();
+vi.mock('../../src/core/social/googlePhoto', () => ({
+  isGenericGooglePhoto: vi.fn(async (url: string) => genericPhotos.has(url)),
+}));
+
 vi.mock('firebase/firestore/lite', () => ({
   collection: (_fs: unknown, name: string) => ({ collection: name }),
   doc: (_fs: unknown, name: string, id: string) => ({ collection: name, id }),
@@ -37,6 +43,7 @@ vi.mock('firebase/firestore/lite', () => ({
 
 import {
   ADMIN_PROFILES_LIMIT,
+  clearStrayProfilePhoto,
   FOSSIL_PENDING_MS,
   deleteUserProfile,
   healUserFriendshipIdentity,
@@ -874,5 +881,64 @@ describe('readAdminCensusRow / replaceCensusRow', () => {
 
     expect(next.users.map((user) => user.id)).toEqual(['b']);
     expect(next.totals).toMatchObject({ profiles: 1, friendships: 0 });
+  });
+});
+
+// Hasta el 28-09-2026, publicar una reseña escribía en el perfil la foto de Google sin filtrar.
+describe('foto publicada de más (`stray-photo`)', () => {
+  beforeEach(() => {
+    getDocsMock.mockReset();
+    updateDocMock.mockClear();
+    genericPhotos.clear();
+  });
+
+  const perfil = (id: string, photoURL: string) =>
+    docOf(id, { uid: id, displayName: id, photoURL, social: { enabled: true }, updatedAt: 1 });
+  const amistadCon = (id: string, photo: string) =>
+    docOf(`${id}__z`, { users: [id, 'z'], status: 'accepted', requester: id, recipient: 'z', requesterName: id, requesterPhoto: photo });
+
+  it('la señala cuando ninguna amistad guarda foto suya, o cuando es el avatar genérico', async () => {
+    genericPhotos.add('https://f/monograma.png');
+    respondWith(
+      [
+        perfil('oculta', 'https://f/cara.png'),
+        perfil('generica', 'https://f/monograma.png'),
+        perfil('visible', 'https://f/otra.png'),
+        perfil('sin-amigos', 'https://f/sola.png'),
+        perfil('sin-foto', ''),
+      ],
+      [amistadCon('oculta', ''), amistadCon('visible', 'https://f/otra.png'), amistadCon('sin-foto', '')],
+    );
+
+    const census = await loadAdminCensus();
+    const conSenal = census.users.filter((row) => row.anomalies.includes('stray-photo')).map((row) => row.id).sort();
+
+    // `sin-amigos` no: sin amistades, quien la oculta y quien la enseña se ven igual, y no se afirma nada.
+    expect(conSenal).toEqual(['generica', 'oculta']);
+  });
+
+  it('la retira del perfil y de las amistades que guardan ESA foto, no de las que guardan otra', async () => {
+    getDocsMock.mockResolvedValue(snapshotOf([
+      docOf('a__b', { users: ['a', 'b'], requester: 'a', recipient: 'b', requesterPhoto: 'https://f/m.png' }),
+      docOf('c__a', { users: ['a', 'c'], requester: 'c', recipient: 'a', recipientPhoto: 'https://f/otra.png' }),
+    ]));
+
+    const result = await clearStrayProfilePhoto('a', 'a', 'https://f/m.png');
+
+    expect(result).toMatchObject({ ok: true, profileCleared: true, touched: 1 });
+    const escrituras = updateDocMock.mock.calls.map(([ref, fields]) => [(ref as { id: string }).id, fields]);
+    expect(escrituras[0]).toEqual(['a', { photoURL: '' }]);
+    expect(escrituras[1][0]).toBe('a__b');
+    expect(escrituras[1][1]).toMatchObject({ requesterPhoto: '' });
+    expect(escrituras).toHaveLength(2);
+  });
+
+  it('si el perfil no se deja escribir, no toca las amistades y lo dice', async () => {
+    updateDocMock.mockRejectedValueOnce(Object.assign(new Error('denied'), { code: 'permission-denied' }));
+
+    const result = await clearStrayProfilePhoto('a', 'a', 'https://f/m.png');
+
+    expect(result).toMatchObject({ ok: false, profileCleared: false });
+    expect(getDocsMock).not.toHaveBeenCalled();
   });
 });

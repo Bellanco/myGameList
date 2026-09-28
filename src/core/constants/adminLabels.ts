@@ -255,6 +255,22 @@ export const ADMIN_PANEL_UI = {
         ? `Documento huérfano retirado. Rescatado al perfil vivo: ${carried.join(', ')}.`
         : 'Documento huérfano retirado: el perfil vivo ya tenía todo lo que hacía falta.',
   },
+  // Retirada de la foto publicada de más (señal `stray-photo`): en su ficha y, para todas, encima del censo.
+  strayPhoto: {
+    title: 'Foto publicada de más',
+    hint: 'Su perfil enseña en el directorio una foto que probablemente no quiere enseñar. Retirarla la borra del perfil y de las amistades que la guarden. Si en realidad la quería visible, vuelve sola en cuanto publique una reseña o guarde su perfil social.',
+    btn: 'Retirar la foto',
+    confirm: (name: string) => `¿Retirar la foto que publica el perfil de ${name}?`,
+    ok: 'Foto retirada.',
+    partial: 'La foto se retiró del perfil, pero no de todas sus amistades: revisa la consola para el detalle.',
+    bulkTitle: (count: number) =>
+      count === 1 ? '1 perfil publica una foto de más' : `${count} perfiles publican una foto de más`,
+    bulkBtn: (count: number) => (count === 1 ? 'Retirar 1 foto' : `Retirar las ${count} fotos`),
+    bulkConfirm: (count: number) =>
+      `¿Retirar la foto de ${count === 1 ? '1 perfil' : `${count} perfiles`}? Se borra del perfil y de las amistades que la guarden; quien la quiera visible la recupera al publicar o guardar su perfil.`,
+    bulkOk: (done: number, total: number) =>
+      done === total ? `Fotos retiradas: ${done}.` : `Fotos retiradas: ${done} de ${total}. Vuelve a pulsar para reintentar las demás.`,
+  },
   /** Las acciones de la ficha que no arreglan una señal, plegadas: suspender, borrar la vitrina y borrar. */
   moreActions: 'Más acciones',
   // Señales de algo fuera de lugar. Etiqueta corta para la píldora y explicación en el `title`.
@@ -315,6 +331,10 @@ export const ADMIN_PANEL_UI = {
     'stale-pending-out': {
       label: 'solicitudes sin respuesta',
       hint: 'Envió solicitudes que llevan más de 90 días pendientes. A partir de los 180 días se pueden purgar desde su ficha.',
+    },
+    'stray-photo': {
+      label: 'foto de más',
+      hint: 'Su perfil publica una foto que no debería: o es el avatar genérico de Google, o ninguna de sus amistades guarda una suya, que es lo que deja quien la ocultó. Se puede retirar desde su ficha.',
     },
   } satisfies { aria: string } & Record<AdminAnomaly, { label: string; hint: string }>,
   tier: {

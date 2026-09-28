@@ -492,6 +492,7 @@ export const AdminHub = memo(function AdminHub() {
   }
 
   const totals = vm.census?.totals;
+  const strayPhotoCount = vm.signalCounts.get('stray-photo') || 0;
 
   // Tarjeta contenedora propia y NO `.settings-hub`/`.settings-card`: ese hub reparte sus tarjetas en una rejilla
   // de dos columnas a partir de 48rem, y eso partía el panel por la mitad. Aquí ocupa el ancho entero, y dentro va
@@ -630,6 +631,28 @@ export const AdminHub = memo(function AdminHub() {
         {vm.error ? <p className="admin-feedback err">{vm.error}</p> : null}
         {vm.status ? <p className={`admin-feedback ${vm.status.kind}`}>{vm.status.text}</p> : null}
         {notice ? <p className="admin-feedback ok">{notice}</p> : null}
+
+        {/* Las fotos publicadas de más, todas de una vez: es un resto de un fallo ya arreglado, no una decisión ficha a
+            ficha, y retirarlas de una en una obligaba a buscarlas por el censo. Cada ficha conserva su botón. */}
+        {strayPhotoCount > 0 ? (
+          <div className="admin-gist-drift" role="group" aria-label={A.strayPhoto.bulkTitle(strayPhotoCount)}>
+            <span className="admin-field-label">{A.strayPhoto.bulkTitle(strayPhotoCount)}</span>
+            <p className="admin-card-note">{A.strayPhoto.hint}</p>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={vm.clearingStrayPhotos || vm.loading}
+              onClick={() =>
+                setPending({
+                  title: A.strayPhoto.bulkConfirm(strayPhotoCount),
+                  run: () => void vm.clearAllStrayPhotos(),
+                })
+              }
+            >
+              {vm.clearingStrayPhotos ? A.working : A.strayPhoto.bulkBtn(strayPhotoCount)}
+            </button>
+          </div>
+        ) : null}
 
         {vm.loading && !vm.census ? (
           <p>{A.loading}</p>
@@ -975,6 +998,28 @@ export const AdminHub = memo(function AdminHub() {
                         }
                       >
                         {busy ? A.working : A.fossil.btn(user.fossilPendingOut)}
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {/* Foto publicada de más: la retira del perfil y de las amistades que guarden esa misma foto. */}
+                  {user.anomalies.includes('stray-photo') ? (
+                    <div className="admin-gist-drift" role="group" aria-label={A.strayPhoto.title}>
+                      {/* Sin la explicación larga: ya la da el bloque de encima del censo, y la píldora la trae en
+                          su `title`. Repetida en cada ficha afectada era un muro. */}
+                      <span className="admin-field-label">{A.strayPhoto.title}</span>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        disabled={busy || vm.clearingStrayPhotos}
+                        onClick={() =>
+                          setPending({
+                            title: A.strayPhoto.confirm(name),
+                            run: () => void vm.clearStrayPhoto(user),
+                          })
+                        }
+                      >
+                        {busy ? A.working : A.strayPhoto.btn}
                       </button>
                     </div>
                   ) : null}

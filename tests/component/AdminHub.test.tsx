@@ -60,7 +60,12 @@ const readAdminCensusRowMock = vi.fn(async (_census: unknown, id: string) => {
   return { id, row: next.users.find((entry) => entry.id === id) || null };
 });
 
+const clearStrayProfilePhotoMock = vi.fn<(...args: unknown[]) => Promise<SweepResult & { profileCleared: boolean }>>(
+  async () => ({ ok: true, failures: [], touched: 0, scanned: 1, profileCleared: true }),
+);
+
 vi.mock('../../src/model/repository/firebaseAdminRepository', async (importOriginal) => ({
+  clearStrayProfilePhoto: (...args: unknown[]) => clearStrayProfilePhotoMock(...args),
   ADMIN_PROFILES_LIMIT: 300,
   loadAdminCensus: (...args: unknown[]) => loadAdminCensusMock(...args),
   readAdminCensusRow: (census: unknown, id: string) => readAdminCensusRowMock(census, id),
@@ -1253,5 +1258,67 @@ describe('AdminHub — última actividad', () => {
     const valor = screen.getByText(ADMIN_PANEL_UI.field.lastActivityAgo(haceTresDias, Date.now()));
     expect(valor.textContent).toBe('hace 3 días');
     expect(valor).toHaveAttribute('title');
+  });
+});
+
+// Los restos del fallo de la foto: perfiles que publican una foto que su dueño ocultó (o el avatar genérico).
+describe('AdminHub — fotos publicadas de más', () => {
+  beforeEach(() => {
+    loadAdminCensusMock.mockReset();
+    readAdminClaimMock.mockReset();
+    clearStrayProfilePhotoMock.mockClear();
+  });
+
+  const conFoto = (id: string, name: string) =>
+    user({ id, uid: id, displayName: name, photoURL: `https://f/${id}.png`, hasPhoto: true, anomalies: ['stray-photo'] });
+
+  it('las retira todas de una vez, tras confirmar, y relee el censo', async () => {
+    loadAdminCensusMock.mockResolvedValue(census([user(), conFoto('uid-b', 'Bob'), conFoto('uid-c', 'Cleo')]));
+    renderHub();
+    signInAsAdmin();
+    await screen.findByText('Bob');
+    loadAdminCensusMock.mockClear();
+
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.strayPhoto.bulkBtn(2) }));
+    expect(screen.getByText(ADMIN_PANEL_UI.strayPhoto.bulkConfirm(2))).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.confirmAccept }));
+
+    expect(await screen.findByText(ADMIN_PANEL_UI.strayPhoto.bulkOk(2, 2))).toBeInTheDocument();
+    expect(clearStrayProfilePhotoMock).toHaveBeenCalledWith('uid-b', 'uid-b', 'https://f/uid-b.png');
+    expect(clearStrayProfilePhotoMock).toHaveBeenCalledWith('uid-c', 'uid-c', 'https://f/uid-c.png');
+    expect(clearStrayProfilePhotoMock).not.toHaveBeenCalledWith('uid-a', expect.anything(), expect.anything());
+    expect(loadAdminCensusMock).toHaveBeenCalled();
+  });
+
+  it('dice cuántas no salieron si un perfil no se deja escribir', async () => {
+    loadAdminCensusMock.mockResolvedValue(census([conFoto('uid-b', 'Bob'), conFoto('uid-c', 'Cleo')]));
+    clearStrayProfilePhotoMock.mockResolvedValueOnce({ ok: false, failures: ['x'], touched: 0, scanned: 0, profileCleared: false });
+    renderHub();
+    signInAsAdmin();
+    await screen.findByText('Bob');
+
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.strayPhoto.bulkBtn(2) }));
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.confirmAccept }));
+
+    expect(await screen.findByText(ADMIN_PANEL_UI.strayPhoto.bulkOk(1, 2))).toBeInTheDocument();
+  });
+
+  it('cada ficha afectada tiene su botón, y sin ninguna no hay bloque', async () => {
+    loadAdminCensusMock.mockResolvedValue(census([conFoto('uid-b', 'Bob')]));
+    const { unmount } = renderHub();
+    signInAsAdmin();
+    await screen.findByText('Bob');
+
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.strayPhoto.btn }));
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.confirmAccept }));
+    await waitFor(() => expect(clearStrayProfilePhotoMock).toHaveBeenCalledWith('uid-b', 'uid-b', 'https://f/uid-b.png'));
+
+    unmount();
+    loadAdminCensusMock.mockResolvedValue(census([user()]));
+    renderHub();
+    signInAsAdmin();
+    await screen.findByText('Ada');
+    expect(screen.queryByText(ADMIN_PANEL_UI.strayPhoto.bulkTitle(1))).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: ADMIN_PANEL_UI.strayPhoto.btn })).not.toBeInTheDocument();
   });
 });

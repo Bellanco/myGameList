@@ -156,6 +156,100 @@ export async function setUserDisplayName(
   return { ok: failures.length === 0, failures, touched: sweep.touched, scanned: sweep.scanned };
 }
 
+export interface AdminStrayPhotoResult extends AdminFriendshipSweepResult {
+  /** ¿Se borró del perfil? Es lo que la enseña en el directorio: con esto hecho, la foto ya no está a la vista. */
+  profileCleared: boolean;
+}
+
+/**
+ * RETIRA LA FOTO QUE UN PERFIL PUBLICA DE MÁS (señal `stray-photo`): la borra del perfil y, si alguna de sus
+ * amistades guarda esa MISMA foto, también de ella.
+ *
+ * DE DÓNDE SALEN. Hasta el 28-09-2026, publicar una reseña escribía en el perfil la foto de la sesión de Google sin
+ * filtrar, así que quien la había ocultado —o solo tenía el avatar genérico— la volvía a enseñar en el directorio.
+ * El cliente ya no lo hace, pero los perfiles escritos entonces la conservan hasta que su dueño vuelva a guardar.
+ *
+ * QUÉ NO TOCA: su gist (es suyo y el panel no lo lee), el nombre, ni la foto de una amistad que guarde OTRA foto
+ * —esa es la que él propagó a sabiendas—. Y se deshace sola si se retira por error: quien la quiere visible la vuelve
+ * a publicar al guardar su perfil o publicar una reseña (`ensureProfileByEmail` reescribe el perfil si la foto
+ * difiere).
+ *
+ * Igual que el resto de acciones sobre amistades: best-effort acumulativo, y el perfil primero. Si el perfil no se
+ * deja escribir no se sigue, porque la foto seguiría a la vista en el directorio de todos modos.
+ */
+export async function clearStrayProfilePhoto(
+  profileDocId: string,
+  uid: string,
+  photoURL: string,
+): Promise<AdminStrayPhotoResult> {
+  const cleanId = String(profileDocId || '').trim();
+  if (!cleanId || cleanId === PLACEHOLDER_ID) {
+    return { ok: false, failures: ['Identificador de perfil no válido'], touched: 0, scanned: 0, profileCleared: false };
+  }
+  const photo = String(photoURL || '');
+
+  const services = await requireServices();
+  try {
+    // `''` y no `deleteField()`: es lo que escribe el propio cliente al ocultarla (`updateProfilePhoto`), y así el
+    // documento queda igual que el de alguien que la apagó desde su perfil.
+    await updateDoc(doc(services.firestore, 'profiles', cleanId), { photoURL: '' });
+  } catch (error) {
+    return {
+      ok: false,
+      failures: [describe(toAdminError(error, 'retirar la foto del perfil'))],
+      touched: 0,
+      scanned: 0,
+      profileCleared: false,
+    };
+  }
+  invalidateOwnProfileCache(cleanId);
+  invalidateSocialDirectoryCache();
+
+  const cleanUid = String(uid || '').trim();
+  if (!cleanUid || !photo) {
+    return { ok: true, failures: [], touched: 0, scanned: 0, profileCleared: true };
+  }
+
+  let snapshot;
+  try {
+    snapshot = await getDocs(
+      query(collection(services.firestore, 'friendships'), where('users', 'array-contains', cleanUid)),
+    );
+  } catch (error) {
+    return {
+      ok: false,
+      failures: [describe(toAdminError(error, 'listar sus amistades'))],
+      touched: 0,
+      scanned: 0,
+      profileCleared: true,
+    };
+  }
+
+  const writes = snapshot.docs.flatMap((entry) => {
+    const data = entry.data() as Partial<import('../../types/firestore').FriendshipDoc>;
+    if (data.requester === cleanUid && data.requesterPhoto === photo) {
+      return [updateDoc(entry.ref, { requesterPhoto: '', updatedAt: Date.now() })];
+    }
+    if (data.recipient === cleanUid && data.recipientPhoto === photo) {
+      return [updateDoc(entry.ref, { recipientPhoto: '', updatedAt: Date.now() })];
+    }
+    return [];
+  });
+
+  const failures: string[] = [];
+  let touched = 0;
+  (await Promise.allSettled(writes)).forEach((result) => {
+    if (result.status === 'rejected') {
+      failures.push(describe(toAdminError(result.reason, 'retirar la foto de una amistad')));
+    } else {
+      touched += 1;
+    }
+  });
+  invalidateMyFriendshipsCache();
+
+  return { ok: failures.length === 0, failures, touched, scanned: snapshot.size, profileCleared: true };
+}
+
 /**
  * Borra las solicitudes de amistad que ESE usuario envió, siguen pendientes y llevan más de `FOSSIL_PENDING_MS`
  * (180 días) sin que nadie las acepte.

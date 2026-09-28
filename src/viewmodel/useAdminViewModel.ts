@@ -12,6 +12,7 @@ import { ADMIN_PANEL_UI } from '../core/constants/adminLabels';
 import { readAdminClaim, subscribeSocialAuth } from '../model/repository/firebaseGateway';
 import { ADMIN_ONLY_TIER, PROFILE_TIER_LABELS, type ProfileTier } from '../core/constants/tiers';
 import {
+  clearStrayProfilePhoto,
   deleteUserProfile,
   healUserFriendshipIdentity,
   loadAdminCensus,
@@ -35,7 +36,7 @@ export type AdminStatus = { kind: 'ok' | 'warn' | 'err'; text: string } | null;
 
 /**
  * Señales que no son "estado raro" sino un problema con consecuencias hoy: un token en claro que cualquiera puede
- * leer, unas reseñas que no llegan al feed, o fechas imposibles. La ficha las destaca y la lista las pone primero,
+ * leer, una foto a la vista que su dueño quiso ocultar, unas reseñas que no llegan al feed, o fechas imposibles. La ficha las destaca y la lista las pone primero,
  * para que no se pierdan entre las informativas (esquema antiguo, inactividad).
  */
 export const SEVERE_ANOMALIES: ReadonlySet<AdminAnomaly> = new Set<AdminAnomaly>([
@@ -43,6 +44,7 @@ export const SEVERE_ANOMALIES: ReadonlySet<AdminAnomaly> = new Set<AdminAnomaly>
   'gist-drift',
   'future-activity',
   'created-after-activity',
+  'stray-photo',
 ]);
 
 /** Qué fichas se enseñan: todas, las que tienen alguna señal, o las que tienen UNA señal concreta. */
@@ -326,6 +328,51 @@ export function useAdminViewModel() {
     [runAction],
   );
 
+  /** Retira la foto que su perfil publica de más (señal `stray-photo`), del perfil y de sus amistades. */
+  const clearStrayPhoto = useCallback(
+    (row: AdminUserRow) =>
+      runAction(row, async () => {
+        const result = await clearStrayProfilePhoto(row.id, row.uid, row.photoURL);
+        if (!result.ok) {
+          console.warn('[admin] retirada de foto incompleta:', result.failures);
+          return { kind: 'warn', text: ADMIN_PANEL_UI.strayPhoto.partial };
+        }
+        return { kind: 'ok', text: ADMIN_PANEL_UI.strayPhoto.ok };
+      }),
+    [runAction],
+  );
+
+  /**
+   * Retira TODAS las fotos publicadas de más del censo cargado. Una detrás de otra —no en paralelo— porque son
+   * pocas y así un fallo de red a mitad deja un recuento honesto de cuántas salieron; el censo se relee entero al
+   * acabar. Un perfil que no se deja escribir no para a los demás.
+   */
+  const [clearingStrayPhotos, setClearingStrayPhotos] = useState(false);
+  const clearAllStrayPhotos = useCallback(async () => {
+    const targets = (censusRef.current?.users || []).filter((user) => user.anomalies.includes('stray-photo'));
+    if (targets.length === 0) return;
+    setClearingStrayPhotos(true);
+    setStatus(null);
+    let done = 0;
+    for (const target of targets) {
+      try {
+        const result = await clearStrayProfilePhoto(target.id, target.uid, target.photoURL);
+        if (!result.ok) console.warn('[admin] retirada de foto incompleta:', target.id, result.failures);
+        // El perfil es lo que se ve en el directorio: si ese se escribió, la foto ya no está a la vista.
+        if (result.profileCleared) done += 1;
+      } catch (error) {
+        console.warn('[admin] no se pudo retirar la foto:', target.id, error);
+      }
+    }
+    if (!mountedRef.current) return;
+    setClearingStrayPhotos(false);
+    setStatus({
+      kind: done === targets.length ? 'ok' : 'warn',
+      text: ADMIN_PANEL_UI.strayPhoto.bulkOk(done, targets.length),
+    });
+    await refresh();
+  }, [refresh]);
+
   /** Borra sus solicitudes enviadas que llevan más de 180 días pendientes. */
   const purgeFossilRequests = useCallback(
     (row: AdminUserRow) =>
@@ -394,6 +441,9 @@ export function useAdminViewModel() {
     healIdentity,
     chooseDisplayName,
     purgeFossilRequests,
+    clearStrayPhoto,
+    clearAllStrayPhotos,
+    clearingStrayPhotos,
     deleteUser,
   };
 }

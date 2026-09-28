@@ -15,6 +15,7 @@ import { FIRESTORE_SCHEMA_VERSION } from '../../../core/constants/schema';
 import type { AdminAnomaly } from '../../types/firestore';
 import { INACTIVITY_MS, PLACEHOLDER_ID, STALE_PENDING_MS, FOSSIL_PENDING_MS, requireServices, toAdminError, toMillis } from './adminShared';
 import { APP_LOCALE } from '../../../core/constants/locale';
+import { isGenericGooglePhoto } from '../../../core/social/googlePhoto';
 
 /**
  * Tope de perfiles que se traen de una vez. No hay paginación a propósito (el censo cabe de sobra); si algún día
@@ -323,7 +324,12 @@ function tallyFriendshipDocs(docs: ReadonlyArray<{ data(): unknown }>, now: numb
  * Señales de que algo no cuadra. Se calculan aquí (y no en la vista) para que sean el mismo juicio en cualquier
  * sitio que las pinte, y para poder probarlas sin renderizar nada.
  */
-function detectAnomalies(row: Omit<AdminUserRow, 'anomalies'>, friendGistIds: Set<string>, now: number): AdminAnomaly[] {
+function detectAnomalies(
+  row: Omit<AdminUserRow, 'anomalies'>,
+  friendGistIds: Set<string>,
+  now: number,
+  genericPhotos: ReadonlySet<string>,
+): AdminAnomaly[] {
   const found: AdminAnomaly[] = [];
 
   // DESACUERDO DE NOMBRE entre el perfil y sus amistades. Los dos pueden ser el rancio:
@@ -385,6 +391,17 @@ function detectAnomalies(row: Omit<AdminUserRow, 'anomalies'>, friendGistIds: Se
     found.push('stale-pending-out');
   }
 
+  // FOTO PUBLICADA DE MÁS. Hasta el 28-09-2026, publicar una reseña escribía en el perfil la foto de la sesión de
+  // Google SIN FILTRAR: ni el interruptor de ocultarla ni la criba del avatar genérico. Dos huellas lo delatan:
+  //   · es el avatar genérico (el monograma de Google, que la app nunca publica a sabiendas);
+  //   · el perfil publica foto y NINGUNA de sus amistades guarda una: su propio cliente propaga a las amistades la
+  //     foto que quiere enseñar, así que todas vacías es lo que deja quien la ocultó.
+  // Sin amistades la segunda no se puede afirmar —quien la oculta y quien la enseña se ven igual— y no se afirma.
+  const friendsSeeNoPhoto = row.friendKnownPhotos.length > 0 && row.friendKnownPhotos.every((photo) => !photo);
+  if (row.photoURL && (genericPhotos.has(row.photoURL) || friendsSeeNoPhoto)) {
+    found.push('stray-photo');
+  }
+
   return found;
 }
 
@@ -394,6 +411,7 @@ function buildRow(
   byUid: Map<string, FriendshipFacts>,
   docIds: Set<string>,
   now: number,
+  genericPhotos: ReadonlySet<string>,
 ): AdminUserRow {
   const data = entry.data() as {
     uid?: string;
@@ -452,7 +470,18 @@ function buildRow(
   };
   // Las señales se calculan sobre la fila ya montada (necesitan varios de sus campos a la vez) y con el `now`
   // que se le pase, para que todas las filas de un censo se juzguen con el mismo reloj.
-  return { ...row, anomalies: detectAnomalies(row, facts.socialGistIds, now) };
+  return { ...row, anomalies: detectAnomalies(row, facts.socialGistIds, now, genericPhotos) };
+}
+
+/**
+ * Cuáles de estas fotos son el avatar genérico de Google. El veredicto se cachea por URL (`googlePhoto`), y las
+ * mismas fotos las acaba de pedir el avatar de cada ficha, así que casi nunca sale a la red. Ante la duda, `false`:
+ * una foto real nunca se marca por un fallo de red.
+ */
+async function resolveGenericPhotos(urls: readonly string[]): Promise<Set<string>> {
+  const unique = [...new Set(urls.filter(Boolean))];
+  const verdicts = await Promise.all(unique.map((url) => isGenericGooglePhoto(url).catch(() => false)));
+  return new Set(unique.filter((_, index) => verdicts[index]));
 }
 
 /** Más recientes primero; los que no traen `updatedAt` caen al final (pero SALEN). */
@@ -527,11 +556,11 @@ export async function loadAdminCensus(limitCount = ADMIN_PROFILES_LIMIT): Promis
     .map((entry) => String((entry.data() as { achievements?: { list?: string } }).achievements?.list || ''))
     .filter(Boolean);
 
-  const users = sortRows(
-    profilesSnapshot.docs
-      .filter((entry) => entry.id !== PLACEHOLDER_ID)
-      .map((entry) => buildRow(entry, friendships.byUid, docIds, now)),
+  const profileDocs = profilesSnapshot.docs.filter((entry) => entry.id !== PLACEHOLDER_ID);
+  const genericPhotos = await resolveGenericPhotos(
+    profileDocs.map((entry) => String((entry.data() as { photoURL?: string }).photoURL || '')),
   );
+  const users = sortRows(profileDocs.map((entry) => buildRow(entry, friendships.byUid, docIds, now, genericPhotos)));
 
   return {
     users,
@@ -584,7 +613,11 @@ export async function readAdminCensusRow(census: AdminCensus, profileDocId: stri
   const now = Date.now();
   const docIds = new Set(census.users.map((user) => user.id));
   const tally = tallyFriendshipDocs(friendshipDocs.docs, now);
-  return { id: profileDocId, row: profile.exists() ? buildRow(profile, tally.byUid, docIds, now) : null };
+  if (!profile.exists()) {
+    return { id: profileDocId, row: null };
+  }
+  const genericPhotos = await resolveGenericPhotos([String((profile.data() as { photoURL?: string }).photoURL || '')]);
+  return { id: profileDocId, row: buildRow(profile, tally.byUid, docIds, now, genericPhotos) };
 }
 
 /** La ficha releída, puesta en su sitio. Pura: se aplica sobre el censo MÁS RECIENTE, no sobre el de la lectura. */

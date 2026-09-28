@@ -54,7 +54,13 @@ export type AdminAnomaly =
    */
   | 'games-gist-drift'
   /** Envió solicitudes que llevan más de 90 días pendientes: nadie se las ha aceptado. */
-  | 'stale-pending-out';
+  | 'stale-pending-out'
+  /**
+   * Su perfil publica una foto que no debería: o es el avatar genérico de Google, o sus amistades no guardan
+   * ninguna suya —la huella de quien la ocultó y luego publicó una reseña con un cliente anterior al 28-09-2026,
+   * que escribía en el perfil la foto de la sesión sin filtrar—.
+   */
+  | 'stray-photo';
 
 /** profiles/{profileId} — index-only, identificado por el pseudónimo, NO por uid. */
 export interface ProfileIndexDoc {
