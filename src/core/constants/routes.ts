@@ -42,6 +42,7 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
   { path: LEGAL_ROUTES.terms, section: 'legal' },
   { path: LEGAL_ROUTES.privacy, section: 'legal' },
   { path: LEGAL_ROUTES.cookies, section: 'legal' },
+  { path: LEGAL_ROUTES.credits, section: 'legal' },
   // LA PORRA DE PREMIOS. Comodín, por el mismo motivo que social y el panel: las sub-rutas (votar paso a paso,
   // revisar, resultados de una edición) las resuelve la propia sección con `matchPremiosRoute`, y declararlas
   // aquí una a una obligaría a tocar este fichero cada vez que se añade una pantalla.

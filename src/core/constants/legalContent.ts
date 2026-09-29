@@ -264,8 +264,35 @@ const COOKIES: LegalDocument = {
   ],
 };
 
+/**
+ * CRÉDITOS: de dónde salen los datos y las imágenes que no son de quien usa la app. No es un documento que se
+ * acepte —no cuenta para `LEGAL_VERSION`—, pero vive con los demás porque es donde se busca, y porque TMDB exige su
+ * logo y su frase, EXACTA y en inglés, en una sección «Acerca de» o «Créditos» para poder usar su API.
+ */
+const CREDITS: LegalDocument = {
+  id: 'credits',
+  title: 'Créditos',
+  updated: '2026-09-29',
+  intro: 'De dónde salen los datos y las imágenes que la app enseña y no son tuyos.',
+  sections: [
+    {
+      heading: 'Videojuegos',
+      paragraphs: ['Los datos y las carátulas de videojuegos proceden de IGDB.com.'],
+    },
+    {
+      heading: 'Series, películas y actores',
+      logo: { src: '/credits/tmdb.svg', alt: 'TMDB', width: 96, height: 12 },
+      paragraphs: [
+        'Los pósters de series y películas y las fotos de actores de los premios proceden de TMDB.',
+        'This product uses the TMDB API but is not endorsed or certified by TMDB.',
+      ],
+    },
+  ],
+};
+
 export const LEGAL_DOCUMENTS: Record<LegalDocId, LegalDocument> = {
   terms: TERMS,
   privacy: PRIVACY,
   cookies: COOKIES,
+  credits: CREDITS,
 };
