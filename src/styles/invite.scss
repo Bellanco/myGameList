@@ -45,17 +45,6 @@
 .invite-actions { display: grid; gap: 10px; }
 .invite-actions .btn { min-height: 44px; }
 .invite-actions .btn .ui-icon { width: var(--ico-md); height: var(--ico-md); }
-.invite-privacy {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin: 10px 0 0;
-  font-size: var(--fs-xs);
-  color: var(--text-dim);
-  text-align: center;
-}
-.invite-privacy .ui-icon { width: 14px; height: 14px; }
 
 /* ── Compacta (pantalla de Amigos): miniatura al lado de la dirección, botón secundario ─────────────────────
    Acompaña a la lista, no compite con ella: la vista previa baja a una miniatura que solo dice «esto es lo que
@@ -83,4 +72,3 @@
 .invite-link.is-compact .invite-url { font-size: var(--fs-xs); color: var(--text-muted); }
 .invite-link.is-compact .invite-msg { margin-top: 4px; text-align: left; }
 .invite-link.is-compact .invite-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .9rem; }
-.invite-link.is-compact .invite-privacy { justify-content: flex-start; margin-top: .55rem; }

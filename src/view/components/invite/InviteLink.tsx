@@ -72,7 +72,6 @@ export function InviteLink({ onShared, secondary, buttonClassName = '', variant 
         )}
         {secondary?.(message === INVITE_UI.copied)}
       </div>
-      <p className="invite-privacy"><Icon name="lock" /><span>{INVITE_UI.privacy}</span></p>
     </div>
   );
 }

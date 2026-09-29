@@ -12,6 +12,5 @@ export const INVITE_UI = {
   copied: 'Enlace copiado',
   copyFailed: 'No se pudo copiar: mantén pulsado el enlace para copiarlo.',
   later: 'Ahora no',
-  privacy: 'El enlace no lleva tu nombre ni tus datos.',
   previewAlt: 'Vista previa del enlace: la portada de My Game List',
 } as const;
