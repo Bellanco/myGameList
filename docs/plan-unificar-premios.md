@@ -959,7 +959,7 @@ el principio rector sin discutir de gustos.
    TMDB) y se sirve desde el propio dominio por `/poster`, que no usa el token. Nada se empareja solo: «Troy
    Baker» tiene homónimos y «The Last of Us» devuelve la serie y cinco documentales. Quién gana a quién (carátula,
    póster o portada de casa) lo decide `core/premios/nomineeImage`. La atribución que exige TMDB (logo y frase)
-   está en Ajustes → Datos, «Créditos».
+   es un documento legal más, «Créditos» (`/legal/creditos`), y su logo solo se pide al abrirlo.
 
    *(Revisado el 20-09-2026.)* Este punto pedía antes que en la tarjeta se reconociera **tu** juego —«lo
    terminaste, tu nota»—; esa marca se retiró (§6.5) y con ella se fue el único consumidor de
