@@ -18,9 +18,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - **Invita a un amigo**, al final de lo social: la dirección completa (`https://mygamelist.pages.dev/completados`)
   con la vista previa del enlace, para compartirla o copiarla.
 
+### Changed
+- **Sincronizar con GitHub es un botón.** La tarjeta de Ajustes › Datos llega en su forma sencilla: qué hace en una
+  frase, tres ventajas (copia de seguridad, las mismas listas en el móvil y en el PC, datos en un gist privado de tu
+  cuenta) y «Conectar con GitHub», con la promesa debajo: sin tokens ni configuración. El token y el Gist ID pasan a
+  una «Conexión manual» plegada al pie, y desaparece el «¿Qué es GitHub Gist?». En un build sin OAuth (el servidor
+  de desarrollo) la tarjeta tiene la misma forma y el botón abre la conexión manual diciendo por qué.
+- La misión «Partida en la nube» de la guía señala la tarjeta entera, con sus ventajas a la vista, y la burbuja se
+  queda en lo esencial: un solo botón, te identificas y vuelves.
+
 ### Performance
 - La guía viaja en su propio chunk perezoso (9,3 kB de JS y 2,5 kB de CSS comprimidos) y solo lo descarga quien la
-  tiene en marcha. El arranque crece 0,7 kB comprimidos (crítico 183,3 → 184,0 de 190 kB) y sigue en 18 ficheros.
+  tiene en marcha. El arranque crece 0,8 kB comprimidos (crítico 183,3 → 184,1 de 190 kB, con los textos nuevos
+  de la tarjeta de sincronización) y sigue en 18 ficheros.
 
 ## [1.4.8] - 2026-09-29
 
