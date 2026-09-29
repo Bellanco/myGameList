@@ -232,7 +232,9 @@ export function AdminPremiosCategorias({ categories, busy, ejecutar }: AdminPrem
               className="input"
               type="text"
               value={option.value}
-              placeholder={L.nomineePlaceholder(index + 1)}
+              placeholder={
+                borrador.nomineeKind === 'person' ? L.nomineePlaceholderPerson : L.nomineePlaceholder(index + 1)
+              }
               aria-label={L.nomineePlaceholder(index + 1)}
               onChange={(event) =>
                 setBorrador((prev) => ({

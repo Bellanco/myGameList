@@ -43,6 +43,21 @@ describe('AdminPremiosImagen', () => {
     expect(buscarMock).toHaveBeenCalledWith('Troy Baker', 'person');
   });
 
+  // El nominado se escribe «Actor - Juego»; TMDB solo encuentra al actor sin el juego.
+  it('en una interpretación busca al actor sin el juego, y deja la consulta a la vista', async () => {
+    render(<AdminPremiosImagen kind="person" nombre="Troy Baker - The Last of Us" numero={1} image={null} onChange={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: L.searchAria(1) }));
+    expect(buscarMock).toHaveBeenCalledWith('Troy Baker', 'person');
+    expect(screen.getByRole('searchbox', { name: L.queryAria(1) })).toHaveValue('Troy Baker');
+  });
+
+  // En cine o serie el guion es parte del título: «Misión: Imposible - Fallout».
+  it('en cine o serie busca el título entero', async () => {
+    render(<AdminPremiosImagen kind="screen" nombre="Misión: Imposible - Fallout" numero={1} image={null} onChange={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: L.searchAria(1) }));
+    expect(buscarMock).toHaveBeenCalledWith('Misión: Imposible - Fallout', 'screen');
+  });
+
   it('se puede quitar la imagen elegida', async () => {
     const onChange = vi.fn();
     render(
