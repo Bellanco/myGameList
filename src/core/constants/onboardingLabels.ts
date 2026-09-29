@@ -70,8 +70,8 @@ export const TOUR_UI = {
     'to-data': { title: 'Aquí, en Datos', text: 'Tus datos viven juntos: importar, exportar y sincronizar.', tap: 'Toca «Datos»' },
     sync: {
       title: 'Guarda la partida',
-      text: 'Pulsa «Conectar con GitHub»: autorizas allí y vuelves aquí, justo donde lo dejaste.',
-      tap: 'Tócalo tú: te espero a la vuelta',
+      text: 'Lo que ganas lo tienes en la tarjeta. Conectar es un solo botón: te identificas en GitHub y vuelves aquí. Sin tokens ni configuración.',
+      tap: 'Pulsa «Conectar con GitHub»: te espero a la vuelta',
     },
     synced: {
       title: '¡Partida en la nube!',
@@ -93,7 +93,7 @@ export const TOUR_UI = {
     'to-social': { title: 'Rumbo a lo social', text: 'El modo cooperativo está en Social. Toca aquí y te sigo.', tap: 'Toca «Social»' },
     'coop-sync': {
       title: 'Primero, la nube',
-      text: 'Lo social guarda tus listas en tu propio GitHub. Conecta aquí y volvemos al modo cooperativo.',
+      text: 'Lo social guarda tus listas en tu propio GitHub. Es un solo botón, sin tokens: conecta aquí y volvemos al modo cooperativo.',
       tap: 'Pulsa «Conectar con GitHub»',
     },
     gateway: {
@@ -114,12 +114,6 @@ export const TOUR_UI = {
     text: 'Son dos pasos: tu GitHub y entrar con Google. Te falta el primero: te llevo y volvemos aquí.',
     tap: 'Toca el botón del paso 1',
   } satisfies StepText,
-  benefits: [
-    { icon: 'shield', title: 'Copia de seguridad.', text: 'Si borras el navegador o cambias de equipo, no pierdes nada.' },
-    { icon: 'devices', title: 'Todos tus dispositivos.', text: 'Móvil y PC con las mismas listas.' },
-    { icon: 'lock', title: 'Tus datos, en tu cuenta.', text: 'Un gist privado de tu GitHub, no un servidor nuestro.' },
-    { icon: 'users', title: 'La llave del modo cooperativo.', text: 'Es el primer paso para entrar en lo social.' },
-  ],
   nextMission: 'Siguiente misión',
   missionDoneKicker: 'Misión cumplida',
   optional: 'Opcional',

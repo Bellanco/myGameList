@@ -187,31 +187,6 @@
   background: color-mix(in srgb, var(--fg-link) 11%, transparent);
 }
 
-.ob-benefits {
-  display: grid;
-  gap: 10px;
-  margin: 12px 0 0;
-  padding: 0;
-  list-style: none;
-  font-size: var(--fs-sm);
-  line-height: 1.4;
-  color: var(--text-muted);
-}
-.ob-benefits li { display: flex; gap: 10px; align-items: flex-start; }
-.ob-benefits b { color: var(--text); font-weight: 600; }
-.ob-benefit-icon {
-  width: 30px;
-  height: 30px;
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-sm);
-  color: var(--fg-link);
-  background: color-mix(in srgb, var(--fg-link) 13%, transparent);
-}
-.ob-benefit-icon .ob-icon { width: 16px; height: 16px; }
-
 .ob-next {
   display: flex;
   align-items: center;

@@ -66,6 +66,34 @@ test.describe('guía de primeros pasos', () => {
     expect(pedidos.filter((url) => url.includes('OnboardingTour'))).toEqual([]);
   });
 
+  test('la nube es un botón: tarjeta sencilla, sin tokens a la vista, y la guía la señala entera', async ({ page }) => {
+    await sembrarBiblioteca(page);
+    await page.addInitScript(() => {
+      localStorage.setItem('mis-listas-onboarding', JSON.stringify({
+        v: 1, status: 'active', mission: 'cloud', step: 0, completed: ['first-game'], skipped: [],
+      }));
+    });
+    await page.goto('/ajustes/datos');
+
+    const card = page.locator('[data-tour="sync-card"]');
+    await expect(card.getByRole('button', { name: 'Conectar con GitHub' })).toBeVisible();
+    await expect(card.getByText('Sin tokens ni configuración.')).toBeVisible();
+    await expect(card.getByLabel('Token *')).toHaveCount(0);
+
+    const bubble = page.getByRole('dialog', { name: 'Guarda la partida' });
+    await expect(bubble).toBeVisible();
+    // El hueco abarca la tarjeta: sus ventajas quedan a la vista junto al botón.
+    const ring = await page.locator('.ob-ring').boundingBox();
+    const box = await card.boundingBox();
+    expect(ring && box && ring.height >= box.height).toBe(true);
+    const { violations } = await new AxeBuilder({ page }).include('[data-tour="sync-card"]').include('.ob-bubble').withTags(WCAG).analyze();
+    expect(violations.map((violation) => violation.id)).toEqual([]);
+
+    // La conexión manual sigue ahí para quien la busca.
+    await card.getByRole('button', { name: 'Conectar a mano, con token y Gist ID' }).click();
+    await expect(card.getByLabel('Token *')).toBeVisible();
+  });
+
   test('«Ahora no» la pliega en el botón de la izquierda, que sobrevive a recargar', async ({ page }) => {
     await page.goto('/completados');
     await page.getByRole('button', { name: 'Rechazar' }).click();

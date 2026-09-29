@@ -40,8 +40,6 @@ const PATHS = {
   cloud: 'M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z',
   users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
   library: 'm16 6 4 14M12 6v14M8 8v12M4 4v16',
-  shield: 'M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z',
-  devices: 'M18 8V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h8M10 19v-4M7 19h5M18 12h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2z',
   lock: 'M5 11h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2zM7 11V7a5 5 0 0 1 10 0v4',
   share: 'M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13',
   copy: 'M10 8h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zM4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2',
@@ -312,7 +310,6 @@ function Spotlight({ state, mission, index, step, ctx }: SpotlightProps) {
         </div>
         <h2 className="ob-title" id={titleId}>{text.title}</h2>
         <p className="ob-text">{text.text}</p>
-        {step.id === 'sync' ? <Benefits /> : null}
         {step.id === 'added' ? <NextMission state={state} /> : null}
         {text.tap && (step.kind === 'action' || step.kind === 'nav') ? (
           <p className="ob-tap"><TourIcon name="tap" /><span>{text.tap}</span></p>
@@ -320,20 +317,6 @@ function Spotlight({ state, mission, index, step, ctx }: SpotlightProps) {
         <StepFooter state={state} mission={mission} index={index} step={step} />
       </section>
     </>
-  );
-}
-
-function Benefits() {
-  const icons: IconName[] = ['shield', 'devices', 'lock', 'users'];
-  return (
-    <ul className="ob-benefits">
-      {TOUR_UI.benefits.map((benefit, position) => (
-        <li key={benefit.title}>
-          <span className="ob-benefit-icon"><TourIcon name={icons[position]} /></span>
-          <span><b>{benefit.title}</b> {benefit.text}</span>
-        </li>
-      ))}
-    </ul>
   );
 }
 

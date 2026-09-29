@@ -72,8 +72,11 @@ const isLists = (ctx: TourContext) => LIST_PATHS.has(ctx.path);
 const isData = (ctx: TourContext) => ctx.path === DATA_PATH;
 const isSocial = (ctx: TourContext) => ctx.path === '/social' || ctx.path.startsWith('/social/');
 const synced = (ctx: TourContext) => ctx.syncConnected;
-/** El botón de conectar con GitHub y, en un build sin OAuth (que no lo tiene), la tarjeta entera. */
-const SYNC_ANCHOR = ['[data-tour="sync-connect"]', '[data-tour="sync-card"]'] as const;
+/**
+ * La tarjeta de sincronización ENTERA, no solo su botón: lo que se gana conectando está escrito en ella, y el
+ * hueco del velo lo deja a la vista junto al botón. La burbuja ya no tiene que repetirlo.
+ */
+const SYNC_ANCHOR = '[data-tour="sync-card"]';
 const socialActive = (ctx: TourContext) => ctx.socialStatus === 'active';
 
 /** Los dos pasos de «ve a Ajustes › Datos», que comparten la nube y Playnite. */
