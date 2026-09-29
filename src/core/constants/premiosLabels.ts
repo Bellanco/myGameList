@@ -491,6 +491,8 @@ export const PREMIOS_UI = {
       },
       nomineesLabel: 'Nominados',
       nomineePlaceholder: (n: number) => `Nominado ${n}`,
+      /** Solo el texto de ejemplo: el nombre accesible sigue siendo `nomineePlaceholder`. */
+      nomineePlaceholderPerson: 'Actor o actriz - Juego',
       addNominee: 'Añadir nominado',
       removeNominee: (n: number) => `Quitar el nominado ${n}`,
       save: 'Guardar',

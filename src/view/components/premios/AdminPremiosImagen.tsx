@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { posterUrl } from '../../../core/premios/nomineeImage';
+import { nombreDeInterprete } from '../../../core/premios/personQuery';
 import { buscarImagenesTmdb } from '../../../model/repository/premios/premiosTmdbRepository';
 import type { PremiosNomineeImage, PremiosNomineeKind, PremiosTmdbCandidate } from '../../../model/types/premios';
 import { GameCover } from '../GameCover';
@@ -10,7 +11,7 @@ const L = PREMIOS_UI.admin.categories.image;
 export interface AdminPremiosImagenProps {
   /** Qué se nomina: interpretaciones buscan personas; cine o serie, películas y series. */
   kind: Exclude<PremiosNomineeKind, 'game'>;
-  /** El nombre del nominado, que es lo que se busca de entrada. */
+  /** El nombre del nominado, que es lo que se busca de entrada (en interpretaciones, sin el juego). */
   nombre: string;
   /** Su número en la lista, para los rótulos: «Imagen del nominado 3». */
   numero: number;
@@ -29,8 +30,10 @@ export interface AdminPremiosImagenProps {
  * `/poster`: lo que se ve aquí es lo que verá quien vote.
  */
 export function AdminPremiosImagen({ kind, nombre, numero, image, onChange }: AdminPremiosImagenProps) {
+  // Una interpretación se escribe «Actor - Juego», y TMDB solo encuentra al actor sin el juego (ver `personQuery`).
+  const consultaInicial = kind === 'person' ? nombreDeInterprete(nombre) : nombre;
   const [abierto, setAbierto] = useState(false);
-  const [consulta, setConsulta] = useState(nombre);
+  const [consulta, setConsulta] = useState(consultaInicial);
   const [candidatos, setCandidatos] = useState<PremiosTmdbCandidate[] | null>(null);
   const [buscando, setBuscando] = useState(false);
   const [error, setError] = useState('');
@@ -51,13 +54,13 @@ export function AdminPremiosImagen({ kind, nombre, numero, image, onChange }: Ad
 
   const abrir = () => {
     // Se busca de entrada con el nombre escrito: es lo que se iba a buscar casi siempre.
-    setConsulta(nombre);
+    setConsulta(consultaInicial);
     setAbierto(true);
     setCandidatos(null);
     setError('');
-    if (nombre.trim()) {
+    if (consultaInicial.trim()) {
       setBuscando(true);
-      void buscarImagenesTmdb(nombre, kind)
+      void buscarImagenesTmdb(consultaInicial, kind)
         .then(setCandidatos)
         .catch((fallo: unknown) => setError(fallo instanceof Error ? fallo.message : String(fallo)))
         .finally(() => setBuscando(false));
