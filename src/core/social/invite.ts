@@ -9,6 +9,12 @@
 /** Con este número de amigos o más, la tarjeta ya no se ofrece. */
 export const INVITE_UNTIL_FRIENDS = 3;
 
+/**
+ * ⚠️ TEMPORAL (29-09-2026): a la vista de TODO EL MUNDO para revisar cómo queda, también con el grupo entero ya
+ * añadido. Cuando se dé el visto bueno, se revierte este commit y vuelve la regla de arriba.
+ */
+const INVITE_FOR_EVERYONE_WHILE_REVIEWING = true;
+
 export function shouldOfferInvite(friendCount: number): boolean {
-  return friendCount < INVITE_UNTIL_FRIENDS;
+  return INVITE_FOR_EVERYONE_WHILE_REVIEWING || friendCount < INVITE_UNTIL_FRIENDS;
 }
