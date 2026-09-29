@@ -1,7 +1,10 @@
-import { memo, useState } from 'react';
+import { memo, useState, useSyncExternalStore } from 'react';
 import { COMMON_ICONS } from '../../core/constants/icons';
 import { UI_MESSAGES } from '../../core/constants/labels';
 import { SETTINGS_UI } from '../../core/constants/settingsLabels';
+import { TOUR_CARD } from '../../core/constants/onboardingCardLabels';
+import { isTourVisible, offeredTour, parseTourState } from '../../core/onboarding/tourState';
+import { onboardingStore, saveTourState } from '../../model/repository/onboardingStore';
 import { useGithubConnection } from '../../viewmodel/sync/githubConnection';
 import { FilePickerButton } from './FilePickerButton';
 import { Icon } from './Icon';
@@ -131,7 +134,36 @@ export const SettingsHub = memo(function SettingsHub({
         ) : null}
       </div>
 
-
+      <OnboardingCard />
     </section>
   );
 });
+
+/**
+ * «PRIMEROS PASOS»: la guía, para quien la quiera ver o repetir. Es la única puerta para quien ya usaba la
+ * aplicación —a esa persona la guía no se le ofrece sola— y la vuelta para quien la cerró.
+ *
+ * Abrirla con la guía a medias despliega su lista de misiones; abrirla sin guía, o ya terminada, la ofrece desde
+ * el principio. La guía se monta en cuanto cambia el estado (lo escucha `App`), aquí mismo, en Datos.
+ */
+function OnboardingCard() {
+  const raw = useSyncExternalStore(onboardingStore.subscribe, onboardingStore.get, onboardingStore.get);
+  const state = parseTourState(raw || null);
+  const inProgress = state !== null && isTourVisible(state);
+  const finished = state?.status === 'done';
+
+  const open = () => {
+    saveTourState(inProgress && state ? { ...state, status: 'menu' } : offeredTour());
+  };
+
+  return (
+    // A lo ancho, como la de importar: sola en su fila, la regla de escritorio la dejaría en cinco columnas de doce.
+    <div className="settings-card settings-card-onboarding" style={{ gridColumn: '1 / -1' }}>
+      <h2>{TOUR_CARD.title}</h2>
+      <p className="settings-card-sub">{finished ? TOUR_CARD.doneNote : TOUR_CARD.text}</p>
+      <button type="button" className="btn btn-secondary settings-onboarding-btn" onClick={open}>
+        {inProgress ? TOUR_CARD.resume : finished ? TOUR_CARD.repeat : TOUR_CARD.open}
+      </button>
+    </div>
+  );
+}

@@ -2,7 +2,7 @@
 //
 // Aparte de `labels.ts` por el mismo motivo que `rouletteLabels`: la guía llega en un chunk perezoso que solo
 // descarga quien la tiene en marcha, y en `labels.ts` viajarían en el arranque de todo el mundo. El único texto
-// suyo que sí vive fuera es la tarjeta de Ajustes › Datos (`SETTINGS_UI.onboarding`), porque la pinta Ajustes.
+// suyo que vive fuera es el de la tarjeta de Ajustes › Datos (`onboardingCardLabels`), porque la pinta Ajustes.
 //
 // EL TONO LLEVA GUIÑO a propósito, y el guiño son los nombres de los logros de primeros pasos que ya existen
 // («Empieza la partida», «Partida en la nube», «Tutorial superado»): la guía y la pantalla de logros hablan de lo
