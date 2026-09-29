@@ -44,7 +44,7 @@
 .invite-msg { min-height: 1.2em; margin: 8px 0 0; font-size: var(--fs-xs); color: var(--success); text-align: center; }
 .invite-actions { display: grid; gap: 10px; }
 .invite-actions .btn { min-height: 44px; }
-.invite-actions .btn .ui-icon { width: var(--ico-md); height: var(--ico-md); }
+.invite-share .ui-icon { width: var(--ico-md); height: var(--ico-md); }
 
 /* ── Compacta (pantalla de Amigos): miniatura al lado de la dirección, botón secundario ─────────────────────
    Acompaña a la lista, no compite con ella: la vista previa baja a una miniatura que solo dice «esto es lo que
@@ -71,4 +71,6 @@
 }
 .invite-link.is-compact .invite-url { font-size: var(--fs-xs); color: var(--text-muted); }
 .invite-link.is-compact .invite-msg { margin-top: 4px; text-align: left; }
-.invite-link.is-compact .invite-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .9rem; }
+/* La dirección y, debajo, «Compartir»: las dos dentro del mismo bloque que la miniatura. */
+.invite-link.is-compact .invite-preview-link { flex-direction: column; align-items: flex-start; gap: .4rem; }
+.invite-link.is-compact .invite-share { min-height: 40px; padding: .35rem .95rem; font-size: var(--fs-sm); }

@@ -272,7 +272,6 @@ export const SOCIAL_UI = {
     othersEmpty: 'No hay más perfiles que mostrar.',
     inviteAria: 'Invitar a un amigo',
     inviteTitle: 'Invita a un amigo',
-    inviteText: '¿Echas a alguien en falta? Mándale el enlace y, cuando entre, aparecerá aquí para que os añadáis.',
   },
   requests: {
     sectionAria: 'Solicitudes de amistad',

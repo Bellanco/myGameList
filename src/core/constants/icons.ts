@@ -49,6 +49,8 @@ export type IconName =
   | 'person'
   /** Nodos conectados: compartir una reseña con enlace público. */
   | 'share-nodes'
+  /** Compartir de Carbon (IBM): el botón de «Invita a un amigo». */
+  | 'share'
   /** Dos hojas superpuestas: copiar al portapapeles. */
   | 'content-copy'
   | 'view-list'

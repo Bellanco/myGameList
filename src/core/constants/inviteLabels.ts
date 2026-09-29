@@ -7,9 +7,10 @@ export const INVITE_UI = {
   url: 'https://mygamelist.pages.dev/completados',
   shareTitle: 'My Game List',
   shareText: 'Llevo aquí mis listas de juegos. ¿Te apuntas y nos seguimos?',
-  share: 'Compartir enlace',
+  /** El rótulo del botón, SIEMPRE «Compartir»: donde no hay hoja de compartir del sistema, copia el enlace. */
+  share: 'Compartir',
   copy: 'Copiar enlace',
-  copied: 'Enlace copiado',
+  copied: 'Enlace copiado: pégalo donde quieras compartirlo.',
   copyFailed: 'No se pudo copiar: mantén pulsado el enlace para copiarlo.',
   later: 'Ahora no',
   previewAlt: 'Vista previa del enlace: la portada de My Game List',

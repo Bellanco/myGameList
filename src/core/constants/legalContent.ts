@@ -84,7 +84,7 @@ const TERMS: LegalDocument = {
            está en el aviso legal y no en un comentario del código. Los sprites lo dan por hecho y apuntan aquí
            (ver `view/components/IconSprite`). Al añadir un icono de una procedencia nueva, esta lista es la que
            hay que revisar. */
-        'Parte de lo que ves no es de quien firma la app. Los iconos de la interfaz salen de Font Awesome Free (© Fonticons, Inc.), cuyos dibujos se publican bajo CC BY 4.0, y de Material Symbols (© Google, Apache 2.0); los de las medallas de logros, de Lucide (© Lucide Contributors, ISC). Las fuentes se sirven desde este mismo dominio bajo la SIL Open Font License 1.1, con su aviso completo en el propio directorio que las contiene. Cada una conserva su licencia, que es independiente de la del código.',
+        'Parte de lo que ves no es de quien firma la app. Los iconos de la interfaz salen de Font Awesome Free (© Fonticons, Inc.), cuyos dibujos se publican bajo CC BY 4.0, de Material Symbols (© Google, Apache 2.0) y de Carbon (© IBM, Apache 2.0); los de las medallas de logros, de Lucide (© Lucide Contributors, ISC). Las fuentes se sirven desde este mismo dominio bajo la SIL Open Font License 1.1, con su aviso completo en el propio directorio que las contiene. Cada una conserva su licencia, que es independiente de la del código.',
       ],
     },
     {

@@ -46,7 +46,18 @@ export function InviteLink({ onShared, secondary, buttonClassName = '', variant 
   };
 
   const compact = variant === 'compact';
-  const actionClass = `btn ${compact ? 'btn-secondary' : 'btn-primary'} ${buttonClassName}`.trim();
+  // UN SOLO BOTÓN, «Compartir», con el icono de compartir de Carbon. Donde el navegador tiene la hoja de compartir
+  // del sistema (móvil, Safari, Chrome) la abre; donde no, copia el enlace y lo dice: el gesto es el mismo para
+  // quien lo pulsa, y no hay que decidir entre dos botones.
+  const shareButton = (
+    <button
+      type="button"
+      className={`btn ${compact ? 'btn-secondary' : 'btn-primary'} invite-share ${buttonClassName}`.trim()}
+      onClick={canShare ? share : copy}
+    >
+      <Icon name="share" /><span>{INVITE_UI.share}</span>
+    </button>
+  );
 
   return (
     <div className={`invite-link${compact ? ' is-compact' : ''}`}>
@@ -54,24 +65,21 @@ export function InviteLink({ onShared, secondary, buttonClassName = '', variant 
         <img src="/share-card.jpg" width={1200} height={630} alt={INVITE_UI.previewAlt} decoding="async" loading="lazy" />
         <figcaption className="invite-preview-link">
           <span className="invite-url">{INVITE_UI.url}</span>
-          <button type="button" className="invite-copy" aria-label={INVITE_UI.copy} title={INVITE_UI.copy} onClick={copy}>
-            <Icon name="content-copy" />
-          </button>
+          {/* En la compacta el botón va DENTRO del bloque, bajo la dirección: todo lo de compartir en una pieza. */}
+          {compact ? shareButton : (
+            <button type="button" className="invite-copy" aria-label={INVITE_UI.copy} title={INVITE_UI.copy} onClick={copy}>
+              <Icon name="content-copy" />
+            </button>
+          )}
         </figcaption>
       </figure>
       <p className="invite-msg" aria-live="polite">{message}</p>
-      <div className="invite-actions">
-        {canShare ? (
-          <button type="button" className={actionClass} onClick={share}>
-            <Icon name="share-nodes" /><span>{INVITE_UI.share}</span>
-          </button>
-        ) : (
-          <button type="button" className={actionClass} onClick={copy}>
-            <Icon name="content-copy" /><span>{INVITE_UI.copy}</span>
-          </button>
-        )}
-        {secondary?.(message === INVITE_UI.copied)}
-      </div>
+      {!compact || secondary ? (
+        <div className="invite-actions">
+          {compact ? null : shareButton}
+          {secondary?.(message === INVITE_UI.copied)}
+        </div>
+      ) : null}
     </div>
   );
 }

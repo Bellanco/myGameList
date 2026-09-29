@@ -66,7 +66,6 @@ function SocialProfilesScreenBase({
   const invite = offerInvite ? (
     <section className="hub-invite" aria-label={SOCIAL_UI.profiles.inviteAria}>
       <h3 className="hub-invite-title">{SOCIAL_UI.profiles.inviteTitle}</h3>
-      <p className="hub-invite-text">{SOCIAL_UI.profiles.inviteText}</p>
       <InviteLink variant="compact" />
     </section>
   ) : null;
