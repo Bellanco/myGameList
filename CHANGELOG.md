@@ -5,6 +5,23 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Added
+- **Guía de primeros pasos**, con flechas y burbujas sobre la propia aplicación. Se ofrece sola a quien llega sin
+  nada a este navegador y le lleva por tres misiones: añadir su primer juego, guardar sus listas en GitHub (con
+  sus ventajas: copia de seguridad, todos sus dispositivos, datos en su cuenta) y entrar en lo social. Traer la
+  biblioteca de Playnite es una misión secundaria que se puede saltar. Como en las aplicaciones de banca, no
+  navega por nadie: dice dónde tocar y espera en la pantalla siguiente, y cada paso se cumple haciendo la acción de
+  verdad, también a la vuelta de autorizar en GitHub. El velo no bloquea, y el aviso de analítica queda por encima.
+- **Botón de la guía a la izquierda**, en el carril de avisos: quien la pliega o vuelve otro día la retoma donde la
+  dejó. Y en Ajustes › Datos, la tarjeta **«Primeros pasos»** para abrirla, seguirla o repetirla: es la puerta para
+  quien ya usaba la aplicación, a quien no se le ofrece sola.
+- **Invita a un amigo**, al final de lo social: la dirección completa (`https://mygamelist.pages.dev/completados`)
+  con la vista previa del enlace, para compartirla o copiarla.
+
+### Performance
+- La guía viaja en su propio chunk perezoso (9,3 kB de JS y 2,5 kB de CSS comprimidos) y solo lo descarga quien la
+  tiene en marcha. El arranque crece 0,7 kB comprimidos (crítico 183,3 → 184,0 de 190 kB) y sigue en 18 ficheros.
+
 ## [1.4.8] - 2026-09-29
 
 La versión de **las imágenes que no son de juegos**. Los premios dejan de poner la carátula del juego en las
