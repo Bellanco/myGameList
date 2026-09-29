@@ -92,12 +92,14 @@ export function AdminPremiosGanadores({ categories, busy, ejecutar }: AdminPremi
                   </div>
 
                   {/* `role="group"` y `aria-pressed` y no un grupo de radios: marcar un ganador se deshace
-                      volviendo a pulsarlo, y un radio no se puede desmarcar. El botón «Sin ganador» hace lo
-                      mismo y está siempre, para quien navegue con el teclado de izquierda a derecha. */}
-                  <div className="premios-admin__picks" role="group" aria-label={titulo}>
+                      volviendo a pulsarlo, y un radio no se puede desmarcar.
+                      «SIN GANADOR» ES UNA TARJETA MÁS, LA PRIMERA, con el mismo tamaño que los nominados y marcada
+                      cuando es lo que hay: era una píldora aparte, más pequeña, y con la categoría sin marcar no se
+                      veía nada seleccionado. Así la rejilla dice siempre cuál es el estado. */}
+                  <div className="premios-admin__nominee-grid" role="group" aria-label={titulo}>
                     <button
                       type="button"
-                      className={`premios-admin__pick${ganador ? '' : ' is-none'}`}
+                      className={`premios-nominee premios-admin__no-winner${ganador ? '' : ' is-selected'}`}
                       aria-pressed={!ganador}
                       onClick={() =>
                         setWinners((prev) => {
@@ -107,39 +109,42 @@ export function AdminPremiosGanadores({ categories, busy, ejecutar }: AdminPremi
                         })
                       }
                     >
-                      {L.pick}
+                      <span className="premios-nominee__slot">
+                        <span className="premios-admin__no-winner-slot" aria-hidden="true">—</span>
+                      </span>
+                      <span className="premios-nominee__body">
+                        <span className="premios-nominee__name">{L.pick}</span>
+                      </span>
                     </button>
 
-                    <div className="premios-admin__nominee-grid">
-                      {(category.options || []).map((option, index) => {
-                        const image = nomineeImageOf(option);
-                        const nominado: PremiosOption = {
-                          id: getOptionId(option, category.id, index),
-                          name: tField(option),
-                          ...(image ? { image } : {}),
-                        };
-                        const elegido = ganador === nominado.id;
-                        return (
-                          <NomineeCard
-                            key={nominado.id}
-                            option={nominado}
-                            selected={elegido}
-                            withCover={conCaratula}
-                            ariaLabel={L.markAria(nominado.name)}
-                            onChoose={() =>
-                              setWinners((prev) => {
-                                const next = { ...prev };
-                                // Volver a pulsar el que ya estaba marcado lo quita: es el gesto que se espera de
-                                // un botón que se queda hundido.
-                                if (elegido) delete next[category.id];
-                                else next[category.id] = nominado.id;
-                                return next;
-                              })
-                            }
-                          />
-                        );
-                      })}
-                    </div>
+                    {(category.options || []).map((option, index) => {
+                      const image = nomineeImageOf(option);
+                      const nominado: PremiosOption = {
+                        id: getOptionId(option, category.id, index),
+                        name: tField(option),
+                        ...(image ? { image } : {}),
+                      };
+                      const elegido = ganador === nominado.id;
+                      return (
+                        <NomineeCard
+                          key={nominado.id}
+                          option={nominado}
+                          selected={elegido}
+                          withCover={conCaratula}
+                          ariaLabel={L.markAria(nominado.name)}
+                          onChoose={() =>
+                            setWinners((prev) => {
+                              const next = { ...prev };
+                              // Volver a pulsar el que ya estaba marcado lo quita: es el gesto que se espera de
+                              // un botón que se queda hundido.
+                              if (elegido) delete next[category.id];
+                              else next[category.id] = nominado.id;
+                              return next;
+                            })
+                          }
+                        />
+                      );
+                    })}
                   </div>
                 </li>
               );

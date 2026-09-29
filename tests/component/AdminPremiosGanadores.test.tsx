@@ -77,7 +77,8 @@ describe('AdminPremiosGanadores', () => {
     // Con la imagen elegida en TMDB, su póster, servido desde este dominio.
     const conPoster = screen.getByRole('button', { name: L.markAria('The Last of Us') });
     expect(conPoster.querySelector('img')?.getAttribute('src')).toBe('/poster?p=%2FtNQWO6cNzQYCyvw36mUcAQQyf5F.jpg');
-    expect(container.querySelectorAll('.premios-nominee')).toHaveLength(4);
+    // Dos nominados en cada una de las dos categorías con nominados, más su tarjeta «Sin ganador».
+    expect(container.querySelectorAll('.premios-nominee')).toHaveLength(6);
   });
 
   it('guarda por optionId, que es lo que hace el recuento independiente del idioma', async () => {
@@ -88,6 +89,19 @@ describe('AdminPremiosGanadores', () => {
     await userEvent.click(screen.getByRole('button', { name: L.save }));
 
     expect(saveWinnersMock).toHaveBeenCalledWith(categories, { goty: 'goty_option_0' });
+  });
+
+  // «SIN GANADOR» ES UNA TARJETA MÁS, LA PRIMERA, y sale marcada cuando es lo que hay.
+  it('«Sin ganador» es la primera tarjeta y está marcada si la categoría no tiene ganador', async () => {
+    render(<AdminPremiosGanadores categories={categories} busy={false} ejecutar={ejecutar} />);
+
+    const juegoDelAno = await screen.findByRole('group', { name: 'Juego del año' });
+    const adaptacion = screen.getByRole('group', { name: 'Mejor adaptación' });
+    const primera = (grupo: HTMLElement) => grupo.querySelector('button') as HTMLButtonElement;
+
+    expect(primera(adaptacion)).toHaveAccessibleName(L.pick);
+    expect(primera(adaptacion)).toHaveAttribute('aria-pressed', 'true');
+    await waitFor(() => expect(primera(juegoDelAno)).toHaveAttribute('aria-pressed', 'false'));
   });
 
   it('se puede dejar una categoría sin ganador', async () => {
