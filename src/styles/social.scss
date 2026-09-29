@@ -977,18 +977,16 @@
   font-size: var(--fs-sm);
 }
 
-/* «INVITA A UN AMIGO» en la pantalla de Amigos: un panel dentro del hub, con el papel de la casilla de condiciones
-   de la pasarela (superficie tenue y filete, sin elevación), no una tarjeta flotando sobre otra. La vista previa y
-   los botones son los de `InviteLink` (`invite.scss`), los mismos que el último paso de la guía. */
+/* «INVITA A UN AMIGO» en la pantalla de Amigos, al pie y SUAVE: sin panel ni fondo, un filete que la separa de
+   «Descubrir» y el título a tamaño de texto. Es una sugerencia al final de la lista, no una sección más que compita
+   con ella. La miniatura y el botón son los de `InviteLink` en su variante compacta (`invite.scss`). */
 .hub-invite {
   display: grid;
-  gap: .35rem;
+  gap: .25rem;
   max-width: 34rem;
-  margin: .4rem 0 1.2rem;
-  padding: 1rem;
-  background: var(--surface-soft);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  margin: 1.4rem 0 .4rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--hair);
 }
-.hub-invite-title { margin: 0; font-family: var(--font-display); font-size: var(--fs-lg); }
-.hub-invite-text { margin: 0; font-size: var(--fs-sm); line-height: 1.45; color: var(--text-muted); }
+.hub-invite-title { margin: 0; font-family: var(--font-display); font-size: var(--fs-md); font-weight: 600; color: var(--text); }
+.hub-invite-text { margin: 0; font-size: var(--fs-xs); line-height: 1.45; color: var(--text-dim); }

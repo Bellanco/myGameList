@@ -13,6 +13,12 @@ export interface InviteLinkProps {
   secondary?: (copied: boolean) => ReactNode;
   /** Clase de ancho de los botones, la del contenedor que lo pinta. */
   buttonClassName?: string;
+  /**
+   * `compact`: la vista previa en MINIATURA al lado de la dirección y el botón en secundario. Es la de la pantalla
+   * de Amigos, donde la invitación acompaña a la lista y no puede pesar más que ella. La grande, por defecto, es la
+   * del último paso de la guía, donde invitar ES lo que se está haciendo.
+   */
+  variant?: 'full' | 'compact';
 }
 
 /**
@@ -21,7 +27,7 @@ export interface InviteLinkProps {
  * completa con su botón de copiar, y la acción principal: compartir donde el navegador sabe (móvil) y copiar
  * donde no.
  */
-export function InviteLink({ onShared, secondary, buttonClassName = '' }: InviteLinkProps) {
+export function InviteLink({ onShared, secondary, buttonClassName = '', variant = 'full' }: InviteLinkProps) {
   const [message, setMessage] = useState('');
   const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
@@ -39,8 +45,11 @@ export function InviteLink({ onShared, secondary, buttonClassName = '' }: Invite
     }
   };
 
+  const compact = variant === 'compact';
+  const actionClass = `btn ${compact ? 'btn-secondary' : 'btn-primary'} ${buttonClassName}`.trim();
+
   return (
-    <div className="invite-link">
+    <div className={`invite-link${compact ? ' is-compact' : ''}`}>
       <figure className="invite-preview">
         <img src="/share-card.jpg" width={1200} height={630} alt={INVITE_UI.previewAlt} decoding="async" loading="lazy" />
         <figcaption className="invite-preview-link">
@@ -53,11 +62,11 @@ export function InviteLink({ onShared, secondary, buttonClassName = '' }: Invite
       <p className="invite-msg" aria-live="polite">{message}</p>
       <div className="invite-actions">
         {canShare ? (
-          <button type="button" className={`btn btn-primary ${buttonClassName}`.trim()} onClick={share}>
+          <button type="button" className={actionClass} onClick={share}>
             <Icon name="share-nodes" /><span>{INVITE_UI.share}</span>
           </button>
         ) : (
-          <button type="button" className={`btn btn-primary ${buttonClassName}`.trim()} onClick={copy}>
+          <button type="button" className={actionClass} onClick={copy}>
             <Icon name="content-copy" /><span>{INVITE_UI.copy}</span>
           </button>
         )}

@@ -56,3 +56,31 @@
   text-align: center;
 }
 .invite-privacy .ui-icon { width: 14px; height: 14px; }
+
+/* ── Compacta (pantalla de Amigos): miniatura al lado de la dirección, botón secundario ─────────────────────
+   Acompaña a la lista, no compite con ella: la vista previa baja a una miniatura que solo dice «esto es lo que
+   verá», sin marco elevado, y la acción deja el naranja para lo que la pantalla ha venido a hacer. */
+.invite-link.is-compact .invite-preview {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin-top: .55rem;
+  padding: .4rem .4rem .4rem .5rem;
+  background: transparent;
+}
+.invite-link.is-compact .invite-preview img {
+  width: 84px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+}
+.invite-link.is-compact .invite-preview-link {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  border-top: 0;
+  box-shadow: none;
+}
+.invite-link.is-compact .invite-url { font-size: var(--fs-xs); color: var(--text-muted); }
+.invite-link.is-compact .invite-msg { margin-top: 4px; text-align: left; }
+.invite-link.is-compact .invite-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .9rem; }
+.invite-link.is-compact .invite-privacy { justify-content: flex-start; margin-top: 0; }

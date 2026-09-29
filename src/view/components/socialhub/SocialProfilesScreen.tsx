@@ -67,7 +67,7 @@ function SocialProfilesScreenBase({
     <section className="hub-invite" aria-label={SOCIAL_UI.profiles.inviteAria}>
       <h3 className="hub-invite-title">{SOCIAL_UI.profiles.inviteTitle}</h3>
       <p className="hub-invite-text">{SOCIAL_UI.profiles.inviteText}</p>
-      <InviteLink />
+      <InviteLink variant="compact" />
     </section>
   ) : null;
 
@@ -145,8 +145,6 @@ function SocialProfilesScreenBase({
               rowsPerPage={PROFILE_ROWS_PER_PAGE}
               resetKey={profileSearch}
             />
-            {/* Entre tus amigos y el resto: justo después de ver cuántos tienes, y antes de buscar a más. */}
-            {invite}
             <HubUserSection
               title={SOCIAL_UI.profiles.othersTitle}
               items={otherProfiles}
@@ -158,6 +156,9 @@ function SocialProfilesScreenBase({
               rowsPerPage={PROFILE_ROWS_PER_PAGE}
               resetKey={profileSearch}
             />
+            {/* AL FINAL, DEBAJO DE «DESCUBRIR»: primero la gente que ya está, y solo después, a quien le quede alguien
+                por traer, cómo traerlo. Arriba competía con la lista que se viene a mirar. */}
+            {invite}
           </>
         )}
         <HubStatus status={status} statusKind={statusKind} />
