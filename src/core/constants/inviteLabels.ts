@@ -10,7 +10,7 @@ export const INVITE_UI = {
   /** El rótulo del botón, SIEMPRE «Compartir»: donde no hay hoja de compartir del sistema, copia el enlace. */
   share: 'Compartir',
   copy: 'Copiar enlace',
-  copied: 'Enlace copiado: pégalo donde quieras compartirlo.',
+  copied: '¡Copiado! Ahora pásaselo a tus amigos por donde soléis hablar.',
   copyFailed: 'No se pudo copiar: mantén pulsado el enlace para copiarlo.',
   later: 'Ahora no',
   previewAlt: 'Vista previa del enlace: la portada de My Game List',
