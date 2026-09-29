@@ -34,10 +34,12 @@ export interface NomineeCardProps {
   selected: boolean;
   /** Si se pide carátula a IGDB. Solo en las categorías de juegos. */
   withCover: boolean;
+  /** Lo que oye quien no ve la tarjeta. Por defecto, el de votar; el panel de ganadores pone el suyo. */
+  ariaLabel?: string;
   onChoose: (option: PremiosOption) => void;
 }
 
-function NomineeCardBase({ option, selected, withCover, onChoose }: NomineeCardProps) {
+function NomineeCardBase({ option, selected, withCover, ariaLabel, onChoose }: NomineeCardProps) {
   // SIN PLATAFORMAS: aquí no hay más dato que el nombre del nominado, que es lo que el administrador escribió, y
   // es con lo que lo resolvió el panel.
   const src = withCover ? coverUrl(option.name, [], false, 'normal', true) : null;
@@ -48,7 +50,7 @@ function NomineeCardBase({ option, selected, withCover, onChoose }: NomineeCardP
       type="button"
       className={`premios-nominee${selected ? ' is-selected' : ''}`}
       aria-pressed={selected}
-      aria-label={selected ? L.nomineeChosenAria(option.name) : L.nomineeAria(option.name)}
+      aria-label={ariaLabel ?? (selected ? L.nomineeChosenAria(option.name) : L.nomineeAria(option.name))}
       onClick={() => onChoose(option)}
     >
       <span className="premios-nominee__slot">

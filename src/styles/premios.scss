@@ -1601,3 +1601,13 @@
 }
 
 .premios-results__trophy:hover { color: var(--text); }
+
+/* LOS NOMINADOS DE GANADORES, CON SU CARÁTULA: las mismas tarjetas de votar (`NomineeCard`) en una rejilla más
+   pequeña, a lo ancho de la fila y debajo de «Sin ganador». Aquí no se reparte el alto como en la votación: la
+   página se desplaza, así que cada tarjeta conserva su 3:4. */
+.premios-admin__nominee-grid {
+  flex-basis: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 8.5rem), 1fr));
+  gap: .6rem;
+}

@@ -6,8 +6,7 @@ import { PREMIOS_VISIBILITY_EVENT } from '../../src/core/premios/visibilitySnaps
 
 /**
  * LA ENTRADA A LOS PREMIOS en el menú de Ajustes, que la ve TODO EL MUNDO —también quien no ha iniciado sesión
- * nunca—. Su respuesta viene de `/api/premios`, del propio dominio, y la regla se aplica aquí con la hora de
- * quien mira.
+ * nunca—. Su respuesta viene de `/api/premios`, del propio dominio, y la regla se aplica aquí.
  */
 function Sonda() {
   return <output data-testid="ofrece">{usePremiosVisible() ? 'sí' : 'no'}</output>;
@@ -34,8 +33,8 @@ afterEach(() => {
 describe('usePremiosVisible', () => {
   // EL FALLO QUE ESTO CIERRA: antes solo se preguntaba si ya había sesión guardada, así que quien usa la app sin
   // cuenta se quedaba con «no enseñar nada» para siempre, aunque la votación estuviera abierta para todos.
-  it('ofrece la entrada sin sesión cuando hay votación abierta', async () => {
-    vi.stubGlobal('fetch', respondeCon({ closesAtMillis: AHORA + DIA }));
+  it('ofrece la entrada sin sesión cuando el administrador la ha encendido', async () => {
+    vi.stubGlobal('fetch', respondeCon({ visible: true, closesAtMillis: AHORA + DIA }));
 
     render(<Sonda />);
     await waitFor(() => expect(screen.getByTestId('ofrece')).toHaveTextContent('sí'));
@@ -43,9 +42,10 @@ describe('usePremiosVisible', () => {
     expect(localStorage.getItem(PREMIOS_VISIBLE_KEY)).toBe('on');
   });
 
-  it('no la ofrece cuando la edición ya se cerró', async () => {
+  // Solo el interruptor decide: con la votación abierta pero sin encender, tampoco (ver `core/premios/visibility`).
+  it('no la ofrece si no está encendida, aunque haya votación abierta', async () => {
     localStorage.setItem(PREMIOS_VISIBLE_KEY, 'on');
-    vi.stubGlobal('fetch', respondeCon({ closesAtMillis: AHORA - 1 }));
+    vi.stubGlobal('fetch', respondeCon({ closesAtMillis: AHORA + DIA }));
 
     render(<Sonda />);
     await waitFor(() => expect(screen.getByTestId('ofrece')).toHaveTextContent('no'));
@@ -68,7 +68,7 @@ describe('usePremiosVisible', () => {
    * hasta recargar. El panel avisa al publicar y esto vuelve a preguntar.
    */
   it('se entera cuando el panel publica una foto nueva', async () => {
-    const respuestas = [{ closesAtMillis: null }, { closesAtMillis: AHORA + DIA }];
+    const respuestas = [{ visible: false }, { visible: true }];
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => ({ ok: true, json: async () => respuestas.shift() ?? respuestas[0] })) as unknown as typeof fetch,

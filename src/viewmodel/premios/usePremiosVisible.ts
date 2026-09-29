@@ -10,8 +10,8 @@
  *
  *   1. Se pinta con la ÚLTIMA RESPUESTA conocida, guardada en este navegador. Sin red y sin parpadeo.
  *   2. Se refresca contra `/api/premios`, del PROPIO ORIGEN (Pages Function sobre KV, como el aviso a los
- *      usuarios). Lo que llega son las FECHAS del calendario, y la regla se aplica aquí con la hora de quien
- *      mira: así la entrada aparece y se retira sola sin que nadie toque nada.
+ *      usuarios). Lo que llega es la foto del calendario, y la regla se aplica aquí. Desde el 29-09-2026 la
+ *      regla solo mira el interruptor del administrador (ver `core/premios/visibility`).
  *
  * SIN PUERTA DE SESIÓN, y es el arreglo del 20-09-2026: antes solo se refrescaba con sesión guardada, de modo
  * que quien usa la app sin cuenta se quedaba para siempre con «no enseñar nada» — la sección estaba abierta para
@@ -88,8 +88,8 @@ export function usePremiosVisible(): boolean {
       .then(async ([repo, regla]) => {
         // Con `sello` por delante se pide de nuevo saltando la caché: es la vuelta que da el aviso del panel.
         const foto = await repo.loadPremiosSnapshot(sello > 0);
-        // La foto trae las fechas; la respuesta la da la regla con la hora de AHORA, que es lo que hace que la
-        // entrada se retire sola al cerrarse la edición.
+        // La respuesta la da la regla, que hoy solo mira el interruptor del administrador (ver
+        // `core/premios/visibility`).
         const siguiente = regla.shouldOfferPremios(foto);
         guardarCache(siguiente);
         if (vivo) setVisible(siguiente);

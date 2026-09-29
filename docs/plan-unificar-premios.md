@@ -328,12 +328,15 @@ Y tres más que salieron al usarlo:
 Un booleano que decide si la porra se ofrece en la navegación. Lo escribe el panel. La regla de presentación:
 
 ```
-visible === false           → la sección no se ofrece (la ruta sigue respondiendo a quien tenga el enlace)
-visible === true            → se ofrece siempre
-visible ausente (por defecto)→ se ofrece si hay edición abierta, o si hay resultados publicados hace < 30 días
+visible === true            → se ofrece
+visible === false o ausente → no se ofrece (la ruta sigue respondiendo a quien tenga el enlace)
 ```
 
-Así el interruptor del admin manda, y sin tocarlo el comportamiento razonable sale solo.
+*(Revisado el 29-09-2026.)* **Solo manda el interruptor del admin.** Antes, sin el campo se ofrecía si había
+edición abierta o resultados de menos de 30 días, abrir una edición escribía `visible: true` y publicarla borraba
+el campo. Se retiró todo eso: la sección aparecía y desaparecía sin que nadie lo decidiera. Ni abrir ni publicar
+tocan ya `visible`; al abrir con la sección oculta, el panel lo avisa en un diálogo y ofrece «Abrir y hacer
+visible» o «Abrir oculta» (ver `core/premios/visibility` y `AdminPremios`).
 
 ### 2.5 Lo que no se toca
 

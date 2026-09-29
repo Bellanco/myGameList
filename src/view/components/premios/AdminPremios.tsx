@@ -69,7 +69,7 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
   const publicado = useRef<PremiosVisibilitySnapshot | null>(null);
   /** ¿Ha terminado ya la primera lectura? Sin esto, el bloqueo de abrir saltaría con la pantalla aún vacía. */
   const [cargado, setCargado] = useState(false);
-  /** ¿Se está preguntando si abrir con categorías a medias? */
+  /** ¿Se está preguntando si abrir con categorías a medias o con la sección oculta? */
   const [pidiendoAbrir, setPidiendoAbrir] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
@@ -184,12 +184,14 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
     [recargar],
   );
 
-  const abrir = () =>
+  /** `makeVisible`: encender «Dónde se ve» en la misma escritura. Solo lo pide el diálogo de la sección oculta. */
+  const abrir = (makeVisible = false) =>
     ejecutar(async () => {
       const hoy = todayInVotingZone();
       if (validateClosingDay(closesDay, hoy)) throw new Error(L.season.errorDay);
-      const result = await openSeason({ name, closesDay, season: new Date().getFullYear() });
-      const aviso = L.season.opened(result.name || String(new Date().getFullYear()));
+      const result = await openSeason({ name, closesDay, season: new Date().getFullYear(), makeVisible });
+      const nombreEdicion = result.name || String(new Date().getFullYear());
+      const aviso = makeVisible || seOfrece ? L.season.opened(nombreEdicion) : L.season.openedHidden(nombreEdicion);
       /* LAS CARÁTULAS DE TODOS LOS NOMINADOS, antes de que entre nadie: la votación solo enseña lo ya resuelto
          (ver `resolverCaratulasDeNominados`). Las que ya lo estaban —las guardadas al editar cada categoría—
          salen de la caché, así que repetirlas aquí no gasta nada y cubre las categorías de ediciones anteriores. */
@@ -210,7 +212,8 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
    * que se pinta fuera de la aplicación, con la dirección del sitio de cabecera y sin una sola de sus formas.
    */
   const pedirAbrir = () => {
-    if (nombresIncompletos.length > 0) setPidiendoAbrir(true);
+    // ABRIR NO ENSEÑA LA SECCIÓN (ver `core/premios/visibility`): si está oculta, se pregunta aquí mismo.
+    if (nombresIncompletos.length > 0 || !seOfrece) setPidiendoAbrir(true);
     else void abrir();
   };
 
@@ -508,18 +511,44 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
         )}
       </div>
 
-      <ConfirmModal
-        open={pidiendoAbrir}
-        title={L.season.openConfirmTitle}
-        body={L.season.openIncomplete(nombresIncompletos)}
-        confirmLabel={L.season.openAction}
-        tone="primary"
-        onCancel={() => setPidiendoAbrir(false)}
-        onConfirm={() => {
-          setPidiendoAbrir(false);
-          void abrir();
-        }}
-      />
+      {/* UN SOLO DIÁLOGO PARA LOS DOS AVISOS. Con la sección oculta, la pregunta es esa —y ofrece encenderla ahí
+          mismo—, y si además hay categorías a medias se dice debajo. Sin ocultar, es el aviso de siempre. */}
+      {seOfrece ? (
+        <ConfirmModal
+          open={pidiendoAbrir}
+          title={L.season.openConfirmTitle}
+          body={L.season.openIncomplete(nombresIncompletos)}
+          confirmLabel={L.season.openAction}
+          tone="primary"
+          onCancel={() => setPidiendoAbrir(false)}
+          onConfirm={() => {
+            setPidiendoAbrir(false);
+            void abrir();
+          }}
+        />
+      ) : (
+        <ConfirmModal
+          open={pidiendoAbrir}
+          title={L.season.openHiddenTitle}
+          body={
+            nombresIncompletos.length > 0
+              ? `${L.season.openHiddenBody} ${L.season.openIncomplete(nombresIncompletos)}`
+              : L.season.openHiddenBody
+          }
+          confirmLabel={L.season.openMakeVisible}
+          tone="primary"
+          secondaryLabel={L.season.openKeepHidden}
+          onSecondary={() => {
+            setPidiendoAbrir(false);
+            void abrir(false);
+          }}
+          onCancel={() => setPidiendoAbrir(false)}
+          onConfirm={() => {
+            setPidiendoAbrir(false);
+            void abrir(true);
+          }}
+        />
+      )}
     </section>
   );
 }

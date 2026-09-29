@@ -27,11 +27,19 @@ const sinNominados: PremiosCategory = { id: 'arte', title: { es: 'Mejor arte' },
 const placeholder: PremiosCategory = { id: 'hueco', title: { es: '' }, options: [], isPlaceholder: true };
 
 const categorias: { valor: PremiosCategory[] } = { valor: [] };
+/** «Dónde se ve». A la vista salvo que el test diga otra cosa: el diálogo de la sección oculta va aparte. */
+const visible: { valor: boolean | undefined } = { valor: true };
 const openMock = vi.fn(async () => ({ seasonId: 'test', name: 'Test', closesAt: '', leftovers: 0 }));
 
 /** Sin edición en marcha: no hay fecha de cierre, que es lo que pone el ciclo en «Sin edición». */
 vi.mock('../../src/model/repository/premios/premiosSeasonRepository', () => ({
-  fetchVotingConfig: async () => ({ season: 2026, isOpen: false, closesAtMillis: null, closesAt: null }),
+  fetchVotingConfig: async () => ({
+    season: 2026,
+    isOpen: false,
+    closesAtMillis: null,
+    closesAt: null,
+    visible: visible.valor,
+  }),
   openSeason: (...args: unknown[]) => openMock(...(args as [])),
   closeSeasonNow: async () => {},
   updateLiveSeason: async () => {},
@@ -75,6 +83,7 @@ async function pintar({ nombre = 'El reto del jugador 2026', dia = DIA_DE_CIERRE
 describe('AdminPremios · abrir la votación', () => {
   beforeEach(() => {
     categorias.valor = [];
+    visible.valor = true;
     openMock.mockClear();
     resolverMock.mockClear();
   });
@@ -126,6 +135,70 @@ describe('AdminPremios · abrir la votación', () => {
     await waitFor(() => expect(resolverMock).toHaveBeenCalledWith(['Elden Ring', 'Hades II']));
     const resumen = PREMIOS_UI.admin.covers.summary(2, 0, 0);
     expect(await screen.findByText((texto) => texto.includes(resumen))).toBeInTheDocument();
+  });
+
+  /**
+   * ABRIR NO ENSEÑA LA SECCIÓN (29-09-2026): lo decide el administrador. Si está oculta, se avisa al pulsar y se
+   * ofrece encenderla ahí mismo, en la misma escritura que abre.
+   */
+  describe('con la sección oculta', () => {
+    it('pregunta, y «Abrir y hacer visible» abre encendiéndola', async () => {
+      categorias.valor = [completa];
+      visible.valor = undefined;
+      const boton = await pintar();
+      await waitFor(() => expect(boton).toBeEnabled());
+
+      await userEvent.click(boton);
+      const dialogo = await screen.findByRole('dialog', { name: L.openHiddenTitle });
+      expect(within(dialogo).getByText(L.openHiddenBody)).toBeInTheDocument();
+
+      await userEvent.click(within(dialogo).getByRole('button', { name: L.openMakeVisible }));
+      await waitFor(() => expect(openMock).toHaveBeenCalledTimes(1));
+      expect(openMock.mock.calls[0]).toEqual([expect.objectContaining({ makeVisible: true })]);
+    });
+
+    it('«Abrir oculta» abre sin tocarla, y el aviso lo recuerda', async () => {
+      categorias.valor = [completa];
+      visible.valor = false;
+      const boton = await pintar();
+      await waitFor(() => expect(boton).toBeEnabled());
+
+      await userEvent.click(boton);
+      await userEvent.click(
+        within(await screen.findByRole('dialog', { name: L.openHiddenTitle })).getByRole('button', {
+          name: L.openKeepHidden,
+        }),
+      );
+      await waitFor(() => expect(openMock).toHaveBeenCalledTimes(1));
+      expect(openMock.mock.calls[0]).toEqual([expect.objectContaining({ makeVisible: false })]);
+      expect(await screen.findByText((texto) => texto.includes(L.openedHidden('Test')))).toBeInTheDocument();
+    });
+
+    it('cancelar no abre nada', async () => {
+      categorias.valor = [completa];
+      visible.valor = false;
+      const boton = await pintar();
+      await waitFor(() => expect(boton).toBeEnabled());
+
+      await userEvent.click(boton);
+      const dialogo = await screen.findByRole('dialog', { name: L.openHiddenTitle });
+      await userEvent.click(within(dialogo).getByRole('button', { name: DIALOG_MESSAGES.cancel }));
+      expect(openMock).not.toHaveBeenCalled();
+    });
+
+    // Un solo diálogo para los dos avisos: si además hay categorías a medias, se dice debajo.
+    it('si además hay categorías a medias, lo dice en el mismo diálogo', async () => {
+      categorias.valor = [completa, sinNominados];
+      visible.valor = false;
+      const boton = await pintar();
+      await waitFor(() => expect(boton).toBeEnabled());
+
+      await userEvent.click(boton);
+      const dialogo = await screen.findByRole('dialog', { name: L.openHiddenTitle });
+      expect(
+        within(dialogo).getByText(`${L.openHiddenBody} ${L.openIncomplete(['Mejor arte'])}`),
+      ).toBeInTheDocument();
+    });
   });
 
   /**
