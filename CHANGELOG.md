@@ -5,6 +5,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-09-29
+
+La versión de **los primeros pasos**. Quien llega sin nada tiene una guía que le acompaña por las pantallas —su
+primer juego, sus listas en la nube y lo social—, sincronizar con GitHub pasa a ser un solo botón y se puede
+invitar a un amigo con un enlace.
+
+Incluye también lo preparado como 1.4.8, que no llegó a publicarse: **las imágenes que no son de juegos**. Los
+premios dejan de poner la carátula del juego en las categorías de actuación y de adaptación —la serie *The Last of
+Us* sacaba la del juego y *Arcane* la de un juego de 2016 que se llama igual—: ahora el administrador elige en TMDB
+el póster o la foto de cada nominado, y el panel enseña las carátulas al marcar los ganadores.
+
 ### Added
 - **Guía de primeros pasos**, con flechas y burbujas sobre la propia aplicación. Se ofrece sola a quien llega sin
   nada a este navegador y le lleva por tres misiones: añadir su primer juego, guardar sus listas en GitHub (con
@@ -18,29 +29,6 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - **Invita a un amigo**, al final de lo social: la dirección completa (`https://mygamelist.pages.dev/completados`)
   con la vista previa del enlace, para compartirla o copiarla. También en **Social › Amigos**, al pie y en discreto
   (debajo de «Descubrir», con la vista previa en miniatura), para quien tiene menos de tres amigos.
-
-### Changed
-- **Sincronizar con GitHub es un botón.** La tarjeta de Ajustes › Datos llega en su forma sencilla: qué hace en una
-  frase, tres ventajas (copia de seguridad, las mismas listas en el móvil y en el PC, datos en un gist privado de tu
-  cuenta) y «Conectar con GitHub», con la promesa debajo: sin tokens ni configuración. El token y el Gist ID pasan a
-  una «Conexión manual» plegada al pie, y desaparece el «¿Qué es GitHub Gist?». En un build sin OAuth (el servidor
-  de desarrollo) la tarjeta tiene la misma forma y el botón abre la conexión manual diciendo por qué.
-- La misión «Partida en la nube» de la guía señala la tarjeta entera, con sus ventajas a la vista, y la burbuja se
-  queda en lo esencial: un solo botón, te identificas y vuelves.
-
-### Performance
-- La guía viaja en su propio chunk perezoso (9,3 kB de JS y 2,5 kB de CSS comprimidos) y solo lo descarga quien la
-  tiene en marcha. El arranque crece 0,8 kB comprimidos (crítico 183,3 → 184,1 de 190 kB, con los textos nuevos
-  de la tarjeta de sincronización) y sigue en 18 ficheros.
-
-## [1.4.8] - 2026-09-29
-
-La versión de **las imágenes que no son de juegos**. Los premios dejan de poner la carátula del juego en las
-categorías de actuación y de adaptación: la serie *The Last of Us* sacaba la del juego y *Arcane* la de un juego
-de 2016 que se llama igual. Ahora el administrador elige en TMDB el póster o la foto de cada nominado, y el panel
-enseña las carátulas al marcar los ganadores.
-
-### Added
 - **Qué se nomina en cada categoría**: juegos, interpretaciones o cine o serie. Lo marca el administrador y no se
   deduce del título. Solo los juegos se buscan en IGDB; lo demás sale con la portada de casa hasta que se le elige
   imagen.
@@ -55,11 +43,24 @@ enseña las carátulas al marcar los ganadores.
   la frase que TMDB exige. El logo solo se descarga al abrir ese documento.
 
 ### Changed
+- **Sincronizar con GitHub es un botón.** La tarjeta de Ajustes › Datos llega en su forma sencilla: qué hace en una
+  frase, tres ventajas (copia de seguridad, las mismas listas en el móvil y en el PC, datos en un gist privado de tu
+  cuenta) y «Conectar con GitHub», con la promesa debajo: sin tokens ni configuración. El token y el Gist ID pasan a
+  una «Conexión manual» plegada al pie, y desaparece el «¿Qué es GitHub Gist?». En un build sin OAuth (el servidor
+  de desarrollo) la tarjeta tiene la misma forma y el botón abre la conexión manual diciendo por qué.
+- La misión «Partida en la nube» de la guía señala la tarjeta entera, con sus ventajas a la vista, y la burbuja se
+  queda en lo esencial: un solo botón, te identificas y vuelves.
 - **«Dónde se ve» lo decide solo el administrador.** Abrir o publicar una edición ya no pone la sección a la vista
   ni la retira, y sin marcar cuenta como oculta. Al abrir con la sección oculta, un aviso ofrece abrir y hacerla
   visible, abrir dejándola oculta o no abrir.
 - **En las categorías del panel, Editar va primero**, con las flechas de subir y bajar a su derecha.
 - El aviso legal y la política de privacidad incluyen TMDB, que no recibe ningún dato de quien usa la app.
+- Las condiciones de uso citan también los iconos de Carbon (© IBM, Apache 2.0), de donde sale el de «Compartir».
+
+### Performance
+- La guía viaja en su propio chunk perezoso (9,3 kB de JS y 2,5 kB de CSS comprimidos) y solo lo descarga quien la
+  tiene en marcha. El arranque crece 0,8 kB comprimidos (crítico 183,3 → 184,1 de 190 kB, con los textos nuevos
+  de la tarjeta de sincronización) y sigue en 18 ficheros.
 
 ## [1.4.7] - 2026-09-28
 
