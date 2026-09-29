@@ -16,7 +16,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   dejó. Y en Ajustes › Datos, la tarjeta **«Primeros pasos»** para abrirla, seguirla o repetirla: es la puerta para
   quien ya usaba la aplicación, a quien no se le ofrece sola.
 - **Invita a un amigo**, al final de lo social: la dirección completa (`https://mygamelist.pages.dev/completados`)
-  con la vista previa del enlace, para compartirla o copiarla.
+  con la vista previa del enlace, para compartirla o copiarla. También en **Social › Amigos**, entre tus amigos y
+  «Descubrir», para quien tiene menos de tres amigos.
 
 ### Changed
 - **Sincronizar con GitHub es un botón.** La tarjeta de Ajustes › Datos llega en su forma sencilla: qué hace en una
