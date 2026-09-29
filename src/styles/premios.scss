@@ -1614,6 +1614,15 @@
   gap: .6rem;
 }
 
+/* SIN CONTENCIÓN DE TAMAÑO FUERA DE LA VOTACIÓN. La tarjeta lleva `container-type: size` para adaptarse al alto
+   que le reparte la rejilla de votar, y esa contención hace que su alto NO salga de su contenido. Aquí nadie se
+   lo reparte —la página se desplaza—, así que con ella la tarjeta medía cero y solo asomaba la franja inferior
+   de la selección. Sin contenedor, las consultas de alto de la votación tampoco se aplican, que es lo que toca. */
+.premios-admin__nominee-grid .premios-nominee,
+.premios-admin__image-results .premios-nominee {
+  container-type: normal;
+}
+
 /* LA IMAGEN DE UN NOMINADO QUE NO ES UN JUEGO (`AdminPremiosImagen`). La miniatura es la misma portada de la
    tarjeta de votar, en pequeño: lo que se ve aquí es lo que verá quien vote. Vacía mientras no se elija, para que
    los campos de la lista sigan alineados. */
