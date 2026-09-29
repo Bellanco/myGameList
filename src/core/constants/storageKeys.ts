@@ -191,3 +191,14 @@ export const ANNOUNCEMENT_SEEN_KEY = 'mis-listas-announcement-seen';
 // Equivocarse aquí solo cuesta un rectángulo gris de más o de menos mientras carga, así que es de dispositivo y no
 // se replica a la nube.
 export const SOCIAL_CAN_POST_KEY = 'mis-listas-social-can-post';
+
+// PRIMEROS PASOS — por dónde va la guía de bienvenida en ESTE dispositivo: si está ofrecida, en curso, plegada o
+// terminada, en qué misión y paso, y qué misiones se dieron por hechas o se saltaron. JSON con la forma de
+// `TourState` (ver `core/onboarding/tourState.ts`), con versión dentro para poder cambiar la forma sin arrastrar
+// estados viejos.
+//
+// Es de dispositivo y no se replica a la nube a propósito: la guía se ofrece a quien llega SIN NADA a este
+// navegador, y subirla obligaría a un campo nuevo en `publicConfig` —con sus reglas desplegadas— para recordar
+// algo que cuesta un «Ahora no» repetir en otro aparato. Que NO haya clave es el caso normal de quien ya usaba la
+// aplicación: para esa persona la guía no existe hasta que la pide desde Ajustes › Datos.
+export const ONBOARDING_KEY = 'mis-listas-onboarding';
