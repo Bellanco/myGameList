@@ -114,6 +114,29 @@ describe('PremiosReviewScreen', () => {
     );
   });
 
+  // Lo votado en una categoría de cine o serie no se pide a IGDB: casaría con el juego que adapta.
+  it('lo que no es un juego se queda con la portada de casa, sin pedir carátula', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <PremiosReviewScreen
+          categories={[categories[0], { ...categoria('adapt', 'Mejor adaptación'), nomineeKind: 'screen' }]}
+          votes={{ goty: completa.goty, adapt: { id: 'adapt_option_0', name: 'Uno' } }}
+          defaultName="Ana"
+          remainingOpportunities={5}
+          isEdit={false}
+          submitting={false}
+          error=""
+          onSubmit={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+
+    const huecos = container.querySelectorAll('.premios-review__slot');
+    expect(huecos[0].querySelector('img')).not.toBeNull();
+    expect(huecos[1].querySelector('img')).toBeNull();
+    expect(huecos[1].querySelector('.game-cover-title')).toHaveTextContent('Uno');
+  });
+
   it('el atajo de lo que falta lleva a la primera sin votar', () => {
     pintar({ goty: completa.goty });
     expect(screen.getByRole('link', { name: L.firstPending })).toHaveAttribute('href', '/premios/votar/2');

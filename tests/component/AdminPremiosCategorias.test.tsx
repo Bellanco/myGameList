@@ -35,6 +35,17 @@ const categories: PremiosCategory[] = [
     ],
   },
   { id: 'cat-2', title: { es: 'Mejor arte' }, weight: 1, orderIndex: 1, options: [] },
+  {
+    id: 'cat-3',
+    title: { es: 'Mejor adaptación' },
+    weight: 0.5,
+    orderIndex: 2,
+    nomineeKind: 'screen',
+    options: [
+      { id: 'cat-3_option_a', name: 'The Last of Us' },
+      { id: 'cat-3_option_b', name: 'Arcane' },
+    ],
+  },
 ];
 
 /** El panel pasa este envoltorio; aquí solo interesa que la acción llegue a ejecutarse. */
@@ -74,6 +85,34 @@ describe('AdminPremiosCategorias', () => {
     await userEvent.click(screen.getByRole('button', { name: L.save }));
 
     expect(resolverMock).toHaveBeenCalledWith(['Elden Ring', 'Hades II']);
+  });
+
+  // Una serie buscada en IGDB casa con el juego que adapta: ni se busca, ni se gasta cupo.
+  it('una categoría de cine o serie no resuelve carátulas al guardar', async () => {
+    pintar();
+    resolverMock.mockClear();
+    saveCategoryMock.mockClear();
+    await userEvent.click(screen.getAllByRole('button', { name: L.edit })[2]);
+    expect(screen.getByRole('button', { name: L.kinds.screen })).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(screen.getByRole('button', { name: L.save }));
+
+    const [params] = saveCategoryMock.mock.calls[0] as unknown as [{ nomineeKind: string }];
+    expect(params.nomineeKind).toBe('screen');
+    expect(resolverMock).not.toHaveBeenCalled();
+  });
+
+  it('el tipo se elige en el formulario y se ve en la lista cuando no es de juegos', async () => {
+    pintar();
+    expect(screen.getByText(`${L.nominees(2)} · ${L.weight(0.5)} · ${L.kinds.screen}`)).toBeInTheDocument();
+
+    saveCategoryMock.mockClear();
+    await userEvent.click(screen.getAllByRole('button', { name: L.edit })[0]);
+    expect(screen.getByRole('button', { name: L.kinds.game })).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(screen.getByRole('button', { name: L.kinds.person }));
+    await userEvent.click(screen.getByRole('button', { name: L.save }));
+
+    const [params] = saveCategoryMock.mock.calls[0] as unknown as [{ nomineeKind: string }];
+    expect(params.nomineeKind).toBe('person');
   });
 
   it('cada nominado es un campo propio, y se pueden añadir y quitar', async () => {
@@ -124,7 +163,7 @@ describe('AdminPremiosCategorias', () => {
     reorderMock.mockClear();
     await userEvent.click(screen.getByRole('button', { name: L.moveDown('Juego del año') }));
 
-    expect(reorderMock).toHaveBeenCalledWith([{ id: 'cat-2' }, { id: 'cat-1' }]);
+    expect(reorderMock).toHaveBeenCalledWith([{ id: 'cat-2' }, { id: 'cat-1' }, { id: 'cat-3' }]);
   });
 
   it('eliminar pregunta antes, y no hace nada si se cancela', async () => {

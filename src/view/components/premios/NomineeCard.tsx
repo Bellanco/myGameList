@@ -20,6 +20,10 @@ const L = PREMIOS_UI.votar;
  * flotante: en una tarjeta estrecha ese icono se montaba sobre la primera línea del nombre. El estado va además
  * en `aria-pressed`, que es lo que oye quien no ve el color.
  *
+ * SALVO QUE NO SEA UN JUEGO: en las categorías de interpretaciones y de cine o serie (`withCover` a `false`, ver
+ * `core/premios/nomineeKind`) no se pide imagen y queda la portada de casa con el nombre. Esas carátulas no
+ * existen en IGDB, y la que saliera por el nombre sería la de otro juego.
+ *
  * LA TARJETA NO DICE LO QUE TÚ SABES DE ESE JUEGO. Llevó debajo del nombre en qué lista lo tenías y con qué nota
  * —el cruce de `core/premios/library`— y se retiró el 20-09-2026: en una rejilla de cinco portadas, esa línea
  * sobraba en la mayoría de tarjetas (casi ningún nominado está en tu biblioteca) y le robaba sitio al título
@@ -28,14 +32,16 @@ const L = PREMIOS_UI.votar;
 export interface NomineeCardProps {
   option: PremiosOption;
   selected: boolean;
+  /** Si se pide carátula a IGDB. Solo en las categorías de juegos. */
+  withCover: boolean;
   onChoose: (option: PremiosOption) => void;
 }
 
-function NomineeCardBase({ option, selected, onChoose }: NomineeCardProps) {
+function NomineeCardBase({ option, selected, withCover, onChoose }: NomineeCardProps) {
   // SIN PLATAFORMAS: aquí no hay más dato que el nombre del nominado, que es lo que el administrador escribió, y
   // es con lo que lo resolvió el panel.
-  const src = coverUrl(option.name, [], false, 'normal', true);
-  const src2x = coverUrl(option.name, [], false, 'medio', true);
+  const src = withCover ? coverUrl(option.name, [], false, 'normal', true) : null;
+  const src2x = withCover ? coverUrl(option.name, [], false, 'medio', true) : null;
 
   return (
     <button

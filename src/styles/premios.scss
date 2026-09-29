@@ -934,7 +934,7 @@
 
 .premios-admin__season-bar .btn { display: inline-flex; align-items: center; gap: .35rem; }
 
-.premios-admin__weights { display: flex; gap: .35rem; }
+.premios-admin__weights { display: flex; flex-wrap: wrap; gap: .35rem; }
 
 /* Un campo por nominado, con su botón de quitar al lado. */
 .premios-admin__nominee {

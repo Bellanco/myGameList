@@ -944,6 +944,11 @@ el principio rector sin discutir de gustos.
    para todo el mundo. Se piden con `c=1` —solo lo ya resuelto— y las resuelve el panel al abrir la edición y al
    guardar cada categoría (`resolverCaratulasDeNominados`), así que votar no consulta IGDB ni escribe en KV.
 
+   *(Revisado el 29-09-2026.)* **Solo en las categorías de juegos.** Cada categoría lleva `nomineeKind`
+   (`game` / `person` / `screen`, sin él `game`), y lo marca el administrador en el panel en lugar de deducirlo
+   del título. Las de interpretaciones y cine o serie no se buscan en IGDB y salen con la portada de casa: IGDB
+   solo tiene juegos, y por el nombre la serie *The Last of Us* casaba con el juego. Ver `core/premios/nomineeKind`.
+
    *(Revisado el 20-09-2026.)* Este punto pedía antes que en la tarjeta se reconociera **tu** juego —«lo
    terminaste, tu nota»—; esa marca se retiró (§6.5) y con ella se fue el único consumidor de
    `core/premios/library`. El criterio se sustituye por el cruce que **sí** está en pie, que además es el que se

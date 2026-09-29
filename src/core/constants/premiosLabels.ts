@@ -450,6 +450,10 @@ export const PREMIOS_UI = {
       titleEnPlaceholder: 'Game of the year',
       weightLabel: 'Peso',
       weightHint: 'Lo que vale acertarla. La mayoría van a 1; «Juego del año», a 3.',
+      kindLabel: 'Qué se nomina',
+      kinds: { game: 'Juegos', person: 'Interpretaciones', screen: 'Cine o serie' },
+      kindHint:
+        'Solo los juegos llevan carátula: de lo demás IGDB no tiene imagen, y la que encontrara por el nombre sería la de otro juego. Se ven con la portada de casa.',
       nomineesLabel: 'Nominados',
       nomineePlaceholder: (n: number) => `Nominado ${n}`,
       addNominee: 'Añadir nominado',

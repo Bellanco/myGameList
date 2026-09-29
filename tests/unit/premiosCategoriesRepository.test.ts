@@ -74,6 +74,14 @@ describe('saveCategory', () => {
     expect(escrito.data).not.toHaveProperty('isActive');
   });
 
+  it('guarda qué se nomina, y sin indicarlo, juegos', async () => {
+    await saveCategory({ docId: 'c', titleEs: 'Arte', options: [], weight: 1 });
+    expect(state.sets[0].data.nomineeKind).toBe('game');
+
+    await saveCategory({ docId: 'c', titleEs: 'Mejor adaptación', options: [], weight: 0.5, nomineeKind: 'screen' });
+    expect(state.sets[1].data.nomineeKind).toBe('screen');
+  });
+
   it('usa el título español cuando el inglés va vacío', async () => {
     await saveCategory({ docId: 'c', titleEs: 'Arte', titleEn: '  ', options: [], weight: 1 });
     expect(state.sets[0].data.title).toEqual({ es: 'Arte', en: 'Arte' });

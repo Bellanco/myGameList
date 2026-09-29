@@ -8,7 +8,7 @@ import { collection, deleteDoc, doc, getDocs, setDoc, writeBatch } from 'firebas
 import { isArchivableCategory } from '../../../core/premios/archivable';
 import { hasTitle, tField } from '../../../core/premios/localize';
 import { buildStableOptions, generateUUID, type PremiosOptionForm } from '../../../core/premios/options';
-import type { PremiosCategory } from '../../types/premios';
+import type { PremiosCategory, PremiosNomineeKind } from '../../types/premios';
 import { CATEGORIES_COLLECTION, requireServices } from './premiosShared';
 
 /**
@@ -101,6 +101,8 @@ export interface SaveCategoryParams {
   titleEn?: string;
   options: PremiosOptionForm[];
   weight: number;
+  /** Qué se nomina. Sin él, `game`: ver `core/premios/nomineeKind`. */
+  nomineeKind?: PremiosNomineeKind;
   /** Solo para categorías nuevas. */
   orderIndex?: number;
 }
@@ -120,6 +122,7 @@ export async function saveCategory({
   titleEn = '',
   options,
   weight,
+  nomineeKind = 'game',
   orderIndex,
 }: SaveCategoryParams): Promise<{ docId: string; isNew: boolean }> {
   const isNew = !docId;
@@ -140,6 +143,9 @@ export async function saveCategory({
       // Espejo plano de los ids, por compatibilidad con lecturas antiguas.
       optionIds: builtOptions.map((option) => option.id),
       weight,
+      // SIEMPRE, también al editar: con `merge: true` un campo ausente conservaría el tipo anterior, y volver una
+      // categoría a «juego» no se guardaría nunca.
+      nomineeKind,
       // DEJA DE SER EL DOCUMENTO VACÍO. Borrar la última categoría con título convierte su documento en un
       // placeholder; si después se reutiliza para escribir una categoría de verdad, la marca se quedaba puesta y
       // la categoría no se archivaba ni se podía votar —pero sí pedía ganador en el panel—.

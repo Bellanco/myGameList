@@ -38,11 +38,26 @@ export type PremiosOptionLike =
   | { id?: string; name?: string; es?: string; en?: string }
   | string;
 
+/**
+ * QUÉ SE NOMINA en una categoría, y por tanto de dónde sale la imagen de cada nominado.
+ *
+ *  - `game`   — un juego: la carátula se busca en IGDB por su nombre, como en la biblioteca.
+ *  - `person` — una interpretación (actor o actriz).
+ *  - `screen` — una adaptación al cine o a la serie.
+ *
+ * Las dos últimas NO se buscan en IGDB: solo tiene juegos, y el nombre de una serie casa con el del juego
+ * adaptado («The Last of Us») o con otro homónimo. Se pintan con la portada de casa. Lo marca el administrador y
+ * no se deduce del título, que es bilingüe y puede cambiar de un año a otro. Ver `core/premios/nomineeKind`.
+ */
+export type PremiosNomineeKind = 'game' | 'person' | 'screen';
+
 /** Una categoría de premio con sus nominados. */
 export interface PremiosCategory {
   id: string;
   title: PremiosTitle | string;
   options: PremiosOptionLike[];
+  /** Qué se nomina. Ausente = `game`, que es lo que eran todas las categorías antes de existir el campo. */
+  nomineeKind?: PremiosNomineeKind;
   /** Espejo plano de los ids, por compatibilidad con lecturas antiguas. */
   optionIds?: string[];
   /** Cuántos puntos vale acertarla. Ausente = 1. */
