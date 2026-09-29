@@ -369,48 +369,6 @@ button.ob-row-inner:hover .ob-mission-name { color: var(--fg-link); }
 }
 .ob-grip { display: block; width: 40px; height: 4px; margin: 0 auto 14px; border-radius: 2px; background: var(--border); }
 
-.ob-preview {
-  margin: 16px 0 0;
-  overflow: hidden;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--hair);
-  background: var(--bg);
-}
-.ob-preview img { display: block; width: 100%; height: auto; aspect-ratio: 1200 / 630; object-fit: cover; }
-.ob-preview-link {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 2px 4px 2px 12px;
-  border-top: 1px solid var(--hair);
-  box-shadow: var(--sunk);
-}
-.ob-url {
-  flex-grow: 1;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  color: var(--text);
-  user-select: all;
-}
-.ob-copy {
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--fg-link);
-  cursor: pointer;
-}
-.ob-copy-msg { min-height: 1.2em; margin: 8px 0 0; font-size: var(--fs-xs); color: var(--success); text-align: center; }
-.ob-sheet-actions { display: grid; gap: 10px; }
-.ob-sheet-actions .ob-wide { margin-top: 0; }
-
 /* ── Movimiento ─────────────────────────────────────────────────────────────────────────────────────────── */
 @keyframes ob-fade { from { opacity: 0; } }
 @keyframes ob-rise { from { opacity: 0; translate: 0 6px; } }

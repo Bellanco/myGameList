@@ -17,8 +17,9 @@ import {
   type TourContext,
   type TourStep,
 } from '../../../core/onboarding/tourSteps';
-import { copyText } from '../../../core/utils/clipboard';
+import { INVITE_UI } from '../../../core/constants/inviteLabels';
 import { saveTourState } from '../../../model/repository/onboardingStore';
+import { InviteLink } from '../invite/InviteLink';
 import { placeBubble, type Box } from './placement';
 import { useDialogOpen, useTourAnchor } from './useTourAnchor';
 // La hoja viaja con este chunk y no en el arranque: quien no tiene la guía en marcha no la descarga.
@@ -41,8 +42,6 @@ const PATHS = {
   users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
   library: 'm16 6 4 14M12 6v14M8 8v12M4 4v16',
   lock: 'M5 11h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2zM7 11V7a5 5 0 0 1 10 0v4',
-  share: 'M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13',
-  copy: 'M10 8h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zM4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2',
   trophy: 'M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2Z',
   minus: 'M5 12h14',
   up: 'm18 15-6-6-6 6',
@@ -560,30 +559,13 @@ function TourPill({ state }: { state: TourState }) {
 /* ── Invitar a un amigo ───────────────────────────────────────────────────────────────────────────────────── */
 
 function InviteSheet({ state, index }: { state: TourState; index: number }) {
-  const I = TOUR_UI.invite;
   const titleId = useId();
   const sheetRef = useRef<HTMLElement>(null);
-  const [message, setMessage] = useState('');
-  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
   const finish = () => saveTourState(advanceStep(state, index));
 
   useEffect(() => {
     sheetRef.current?.focus();
   }, []);
-
-  const copy = async () => {
-    setMessage((await copyText(I.url)) ? I.copied : I.copyFailed);
-  };
-
-  const share = async () => {
-    try {
-      await navigator.share({ title: I.shareTitle, text: I.shareText, url: I.url });
-      finish();
-    } catch (error) {
-      // Cerrar la hoja de compartir del sistema no es un error: se sigue aquí, con el enlace delante.
-      if ((error as { name?: string } | null)?.name !== 'AbortError') setMessage(I.copyFailed);
-    }
-  };
 
   return (
     <>
@@ -607,33 +589,16 @@ function InviteSheet({ state, index }: { state: TourState; index: number }) {
         </div>
         <h2 className="ob-title ob-title-lg" id={titleId}>{TOUR_UI.steps.invite.title}</h2>
         <p className="ob-text">{TOUR_UI.steps.invite.text}</p>
-        {/* LA VISTA PREVIA DEL ENLACE, la misma tarjeta que enseñan WhatsApp o Telegram al pegarlo: así se ve qué se
-            está mandando antes de mandarlo. */}
-        <figure className="ob-preview">
-          <img src="/share-card.jpg" width={1200} height={630} alt={I.previewAlt} decoding="async" />
-          <figcaption className="ob-preview-link">
-            <span className="ob-url">{I.url}</span>
-            <button type="button" className="ob-copy" aria-label={I.copy} title={I.copy} onClick={copy}>
-              <TourIcon name="copy" />
-            </button>
-          </figcaption>
-        </figure>
-        <p className="ob-copy-msg" aria-live="polite">{message}</p>
-        <div className="ob-sheet-actions">
-          {canShare ? (
-            <button type="button" className="btn btn-primary ob-wide" onClick={share}>
-              <TourIcon name="share" /><span>{I.share}</span>
-            </button>
-          ) : (
-            <button type="button" className="btn btn-primary ob-wide" onClick={copy}>
-              <TourIcon name="copy" /><span>{I.copy}</span>
+        {/* El mismo bloque que la pantalla de Amigos: vista previa, dirección, copiar y compartir. */}
+        <InviteLink
+          onShared={finish}
+          buttonClassName="ob-wide"
+          secondary={(copied) => (
+            <button type="button" className="btn btn-secondary ob-wide" onClick={finish}>
+              {copied ? TOUR_UI.buttons.next : INVITE_UI.later}
             </button>
           )}
-          <button type="button" className="btn btn-secondary ob-wide" onClick={finish}>
-            {message === I.copied ? TOUR_UI.buttons.next : I.later}
-          </button>
-        </div>
-        <p className="ob-note"><TourIcon name="lock" className="ob-icon ob-icon-sm" /><span>{I.privacy}</span></p>
+        />
       </section>
     </>
   );

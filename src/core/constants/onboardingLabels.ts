@@ -141,17 +141,5 @@ export const TOUR_UI = {
     text: 'Ya sabes lo básico. La guía se retira; si quieres repasarla, está en Ajustes › Datos.',
     cta: '¡A jugar!',
   },
-  invite: {
-    url: 'https://mygamelist.pages.dev/completados',
-    shareTitle: 'My Game List',
-    shareText: 'Llevo aquí mis listas de juegos. ¿Te apuntas y nos seguimos?',
-    share: 'Compartir enlace',
-    copy: 'Copiar enlace',
-    copied: 'Enlace copiado',
-    copyFailed: 'No se pudo copiar: mantén pulsado el enlace para copiarlo.',
-    later: 'Ahora no',
-    privacy: 'El enlace no lleva tu nombre ni tus datos.',
-    previewAlt: 'Vista previa del enlace: la portada de My Game List',
-  },
   regionAria: 'Guía de primeros pasos',
 } as const;

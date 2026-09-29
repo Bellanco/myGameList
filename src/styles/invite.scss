@@ -1,0 +1,58 @@
+/* INVITA A UN AMIGO — la vista previa del enlace, la dirección con su botón de copiar y las acciones.
+   Viaja con `InviteLink`, que lo montan la guía de primeros pasos y la pantalla de Amigos. Todo con fichas. */
+
+.invite-link { display: grid; gap: 0; }
+.invite-preview {
+  margin: 16px 0 0;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hair);
+  background: var(--bg);
+}
+.invite-preview img { display: block; width: 100%; height: auto; aspect-ratio: 1200 / 630; object-fit: cover; }
+.invite-preview-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px 2px 12px;
+  border-top: 1px solid var(--hair);
+  box-shadow: var(--sunk);
+}
+.invite-url {
+  flex-grow: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text);
+  user-select: all;
+}
+.invite-copy {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg-link);
+  cursor: pointer;
+}
+.invite-copy:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.invite-msg { min-height: 1.2em; margin: 8px 0 0; font-size: var(--fs-xs); color: var(--success); text-align: center; }
+.invite-actions { display: grid; gap: 10px; }
+.invite-actions .btn { min-height: 44px; }
+.invite-actions .btn .ui-icon { width: var(--ico-md); height: var(--ico-md); }
+.invite-privacy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  text-align: center;
+}
+.invite-privacy .ui-icon { width: 14px; height: 14px; }

@@ -6,6 +6,7 @@ import { offeredTour, parseTourState, type TourState } from '../../src/core/onbo
 import type { TourContext } from '../../src/core/onboarding/tourSteps';
 import { onboardingStore } from '../../src/model/repository/onboardingStore';
 import { TOUR_UI } from '../../src/core/constants/onboardingLabels';
+import { INVITE_UI } from '../../src/core/constants/inviteLabels';
 
 const CTX: TourContext = {
   path: '/completados',
@@ -110,13 +111,13 @@ describe('guía de primeros pasos', () => {
     const state: TourState = { ...offeredTour(), status: 'active', mission: 'coop', step: 4, completed: ['first-game', 'cloud'] };
     render(<OnboardingTour state={state} ctx={{ ...CTX, path: '/social', socialStatus: 'active', syncConnected: true }} />);
 
-    expect(screen.getByRole('img', { name: TOUR_UI.invite.previewAlt })).toBeTruthy();
-    expect(screen.getByText(TOUR_UI.invite.url)).toBeTruthy();
-    expect(TOUR_UI.invite.url).toBe('https://mygamelist.pages.dev/completados');
+    expect(screen.getByRole('img', { name: INVITE_UI.previewAlt })).toBeTruthy();
+    expect(screen.getByText(INVITE_UI.url)).toBeTruthy();
+    expect(INVITE_UI.url).toBe('https://mygamelist.pages.dev/completados');
 
-    await userEvent.click(screen.getAllByRole('button', { name: TOUR_UI.invite.copy })[0]);
-    expect(writeText).toHaveBeenCalledWith(TOUR_UI.invite.url);
-    expect(await screen.findByText(TOUR_UI.invite.copied)).toBeTruthy();
+    await userEvent.click(screen.getAllByRole('button', { name: INVITE_UI.copy })[0]);
+    expect(writeText).toHaveBeenCalledWith(INVITE_UI.url);
+    expect(await screen.findByText(INVITE_UI.copied)).toBeTruthy();
 
     await userEvent.click(screen.getByRole('button', { name: TOUR_UI.buttons.next }));
     expect(saved()).toMatchObject({ status: 'finale', completed: ['first-game', 'cloud', 'coop'] });
