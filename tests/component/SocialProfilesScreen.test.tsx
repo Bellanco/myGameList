@@ -6,6 +6,8 @@ import type { ProfileTier } from '../../src/core/constants/tiers';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { PROFILE_TIER_LABELS } from '../../src/core/constants/tiers';
 import type { RelationshipState } from '../../src/model/types/social';
+import { INVITE_UI } from '../../src/core/constants/inviteLabels';
+import { INVITE_UNTIL_FRIENDS } from '../../src/core/social/invite';
 
 // `tier` va explícito: el modelo lo declara OBLIGATORIO justamente para que olvidarlo sea un error de
 // compilación y no un directorio entero pintado de bronce por descuido. `lastActiveAt` (último uso de la app)
@@ -204,5 +206,40 @@ describe('SocialProfilesScreen — división amigos / no-amigos', () => {
     );
     expect(screen.getByText(SOCIAL_UI.profiles.friendsEmpty)).toBeInTheDocument();
     expect(screen.getByText('Bob')).toBeInTheDocument();
+  });
+});
+
+describe('SocialProfilesScreen — invitar a un amigo', () => {
+  const invite = () => screen.queryByRole('region', { name: SOCIAL_UI.profiles.inviteAria });
+  const directorio = [entry('ada', 'Ada'), entry('bob', 'Bob'), entry('cid', 'Cid'), entry('dan', 'Dan')];
+
+  it('se ofrece a quien tiene pocos amigos, con la dirección completa y su vista previa', () => {
+    render(<SocialProfilesScreen {...baseProps} relationshipWith={() => 'none'} filteredSocialDirectory={directorio} />);
+    const region = invite();
+    expect(region).not.toBeNull();
+    expect(within(region!).getByText(INVITE_UI.url)).toBeInTheDocument();
+    expect(within(region!).getByRole('img', { name: INVITE_UI.previewAlt })).toBeInTheDocument();
+  });
+
+  it(`con ${INVITE_UNTIL_FRIENDS} amigos o más ya no se ofrece`, () => {
+    const amigos = new Set(['ada', 'bob', 'cid']);
+    render(
+      <SocialProfilesScreen
+        {...baseProps}
+        relationshipWith={(uid) => (amigos.has(uid) ? 'friends' : 'none')}
+        filteredSocialDirectory={directorio}
+      />,
+    );
+    expect(invite()).toBeNull();
+  });
+
+  it('ni con una búsqueda puesta ni mientras carga el directorio', () => {
+    const { unmount } = render(
+      <SocialProfilesScreen {...baseProps} profileSearch="ad" relationshipWith={() => 'none'} filteredSocialDirectory={[entry('ada', 'Ada')]} />,
+    );
+    expect(invite()).toBeNull();
+    unmount();
+    render(<SocialProfilesScreen {...baseProps} loadingDirectory relationshipWith={() => 'none'} filteredSocialDirectory={[]} />);
+    expect(invite()).toBeNull();
   });
 });

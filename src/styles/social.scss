@@ -976,3 +976,19 @@
   gap: .35rem 1rem;
   font-size: var(--fs-sm);
 }
+
+/* «INVITA A UN AMIGO» en la pantalla de Amigos: un panel dentro del hub, con el papel de la casilla de condiciones
+   de la pasarela (superficie tenue y filete, sin elevación), no una tarjeta flotando sobre otra. La vista previa y
+   los botones son los de `InviteLink` (`invite.scss`), los mismos que el último paso de la guía. */
+.hub-invite {
+  display: grid;
+  gap: .35rem;
+  max-width: 34rem;
+  margin: .4rem 0 1.2rem;
+  padding: 1rem;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.hub-invite-title { margin: 0; font-family: var(--font-display); font-size: var(--fs-lg); }
+.hub-invite-text { margin: 0; font-size: var(--fs-sm); line-height: 1.45; color: var(--text-muted); }
