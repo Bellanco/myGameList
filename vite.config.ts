@@ -9,6 +9,7 @@ import react from '@vitejs/plugin-react';
 // El MISMO saneado que usan el cliente y la Pages Function: el servidor de desarrollo no puede ser más
 // permisivo que producción, o se prueba con textos que en la web real se recortan.
 import { sanitizeAnnouncement } from './src/core/announcement/announcement';
+import { githubOAuthDevMiddleware } from './scripts/devGithubOAuth';
 // Y el MISMO saneado de la foto del calendario de la porra, por lo mismo: el servidor de desarrollo no puede
 // guardar algo que la Pages Function rechazaría.
 import { sanitizePremiosSnapshot } from './src/core/premios/visibilitySnapshot';
@@ -627,6 +628,44 @@ function localTmdbApi(): Plugin {
   };
 }
 
+/**
+ * GEMELO DE `/api/github-oauth` en desarrollo: el canje del `code` de «Conectar con GitHub» por el token. La lógica
+ * y el porqué están en `scripts/devGithubOAuth.ts`, que llama a la misma Function de producción.
+ *
+ * Con una OAUTH APP DE DESARROLLO, nunca la de producción (su callback es el dominio publicado y GitHub no acepta
+ * otro): su `client_id` va en `VITE_GITHUB_CLIENT_ID` de `.env.development.local` —el mismo que lee la
+ * aplicación, así que el botón aparece en local en cuanto lo pones— y su secreto en `GITHUB_DEV_CLIENT_SECRET` de
+ * `.dev.vars`. Con otro nombre que el de producción A PROPÓSITO: `wrangler pages secret bulk .dev.vars` sube todas
+ * las líneas, y un `GITHUB_CLIENT_SECRET` de desarrollo pisaría el bueno. Sin nada de esto, local sigue como
+ * estaba: sin OAuth, y el botón abre la conexión manual.
+ */
+function localGithubOAuthApi(): Plugin {
+  let clientId = '';
+  const deDevVars = (clave: string): string => {
+    try {
+      const texto = readFileSync(new URL('./.dev.vars', import.meta.url), 'utf-8');
+      return new RegExp(`^${clave}=(.*)$`, 'm').exec(texto)?.[1]?.trim() ?? '';
+    } catch {
+      return '';
+    }
+  };
+
+  return {
+    name: 'local-github-oauth-api',
+    apply: 'serve',
+    configResolved(config) {
+      clientId = String(config.env.VITE_GITHUB_CLIENT_ID ?? '').trim();
+    },
+    configureServer(server) {
+      server.middlewares.use(githubOAuthDevMiddleware({
+        clientId: () => clientId,
+        clientSecret: () => deDevVars('GITHUB_DEV_CLIENT_SECRET'),
+        warn: (message) => server.config.logger.warn(message),
+      }));
+    },
+  };
+}
+
 export default defineConfig({
   // Identificador de build inyectado en tiempo de compilación; lo usa la telemetría para etiquetar errores/eventos.
   define: {
@@ -640,6 +679,7 @@ export default defineConfig({
     localPremiosApi(),
     localCoverApi(),
     localTmdbApi(),
+    localGithubOAuthApi(),
   ],
   server: {
     port: 8000,

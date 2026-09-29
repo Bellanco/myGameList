@@ -23,6 +23,12 @@
 # del usuario. Su gemelo público es GITHUB_CLIENT_ID, en `wrangler.toml`.
 # GITHUB_CLIENT_SECRET=
 
+# Secret de la OAuth App de DESARROLLO (callback `http://localhost:8000/ajustes`), para que «Conectar con GitHub»
+# funcione con `npm run dev`. Lo lee solo el gemelo de `vite.config.ts`; su client id va en `.env.development.local`
+# (ver `.env.example`). Otro nombre que el de producción a propósito: si este fichero se sube con `secret bulk`,
+# llega a Cloudflare como un secreto más que nadie lee, en vez de pisar GITHUB_CLIENT_SECRET.
+# GITHUB_DEV_CLIENT_SECRET=
+
 # Secret de la aplicación de Twitch con la que se consulta IGDB (carátulas de los juegos). Su gemelo público
 # es IGDB_CLIENT_ID, en `wrangler.toml`. Se saca de https://dev.twitch.tv/console/apps y se puede revocar
 # desde ahí mismo (New Secret invalida el anterior).
