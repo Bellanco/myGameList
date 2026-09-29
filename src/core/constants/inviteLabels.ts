@@ -10,6 +10,7 @@ export const INVITE_UI = {
   /** El rótulo del botón, SIEMPRE «Compartir»: donde no hay hoja de compartir del sistema, copia el enlace. */
   share: 'Compartir',
   copy: 'Copiar enlace',
+  copyUrlAria: (url: string) => `Copiar enlace: ${url}`,
   copied: '¡Copiado! Ahora pásaselo a tus amigos por donde soléis hablar.',
   copyFailed: 'No se pudo copiar: mantén pulsado el enlace para copiarlo.',
   later: 'Ahora no',

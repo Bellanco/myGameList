@@ -234,18 +234,27 @@ describe('SocialProfilesScreen — invitar a un amigo', () => {
     expect(invite()).toBeNull();
   });
 
-  it('un solo botón, «Compartir», dentro del bloque; sin hoja de compartir del sistema copia el enlace', async () => {
+  it('«Compartir», dentro del bloque; sin hoja de compartir del sistema copia el enlace', async () => {
     const writeText = vi.fn(async () => {});
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     render(<SocialProfilesScreen {...baseProps} relationshipWith={() => 'none'} filteredSocialDirectory={directorio} />);
     const region = invite()!;
-    const botones = within(region).getAllByRole('button');
-    expect(botones).toHaveLength(1);
-    expect(botones[0]).toHaveTextContent(INVITE_UI.share);
-    expect(region.querySelector('figure')!.contains(botones[0])).toBe(true);
+    const compartir = within(region).getByRole('button', { name: INVITE_UI.share });
+    expect(region.querySelector('figure')!.contains(compartir)).toBe(true);
     expect(within(region).queryByText(/Echas a alguien en falta/)).toBeNull();
 
-    await userEvent.click(botones[0]);
+    await userEvent.click(compartir);
+    expect(writeText).toHaveBeenCalledWith(INVITE_UI.url);
+    expect(await within(region).findByText(INVITE_UI.copied)).toBeInTheDocument();
+  });
+
+  it('pulsar la dirección también la copia', async () => {
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    render(<SocialProfilesScreen {...baseProps} relationshipWith={() => 'none'} filteredSocialDirectory={directorio} />);
+    const region = invite()!;
+
+    await userEvent.click(within(region).getByRole('button', { name: INVITE_UI.copyUrlAria(INVITE_UI.url) }));
     expect(writeText).toHaveBeenCalledWith(INVITE_UI.url);
     expect(await within(region).findByText(INVITE_UI.copied)).toBeInTheDocument();
   });

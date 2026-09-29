@@ -64,13 +64,21 @@ export function InviteLink({ onShared, secondary, buttonClassName = '', variant 
       <figure className="invite-preview">
         <img src="/share-card.jpg" width={1200} height={630} alt={INVITE_UI.previewAlt} decoding="async" loading="lazy" />
         <figcaption className="invite-preview-link">
-          {/* Con un punto de corte tras cada barra: en un móvil la dirección baja por «/completados» y no a mitad de
-              palabra. `<wbr>` no añade nada al texto, así que se copia y se lee igual. */}
-          <span className="invite-url">
+          {/* LA DIRECCIÓN TAMBIÉN COPIA al pulsarla: es lo primero que se toca para copiar un enlace. Es un botón con
+              aspecto de texto, y no un texto con `onClick`, para que llegue también con teclado y lector de pantalla.
+              Con un punto de corte tras cada barra: en un móvil baja por «/completados» y no a mitad de palabra.
+              `<wbr>` no añade nada al texto. */}
+          <button
+            type="button"
+            className="invite-url"
+            aria-label={INVITE_UI.copyUrlAria(INVITE_UI.url)}
+            title={INVITE_UI.copy}
+            onClick={copy}
+          >
             {INVITE_UI.url.split('/').map((part, index, parts) => (
               <Fragment key={index}>{part}{index < parts.length - 1 ? <>/<wbr /></> : null}</Fragment>
             ))}
-          </span>
+          </button>
           {/* En la compacta el botón va DENTRO del bloque, bajo la dirección: todo lo de compartir en una pieza. */}
           {compact ? shareButton : (
             <button type="button" className="invite-copy" aria-label={INVITE_UI.copy} title={INVITE_UI.copy} onClick={copy}>

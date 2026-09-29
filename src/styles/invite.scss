@@ -21,6 +21,12 @@
 .invite-url {
   flex-grow: 1;
   min-width: 0;
+  /* Botón con aspecto de texto: la dirección copia al pulsarla. */
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: copy;
   overflow-wrap: break-word;
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
@@ -40,7 +46,9 @@
   color: var(--fg-link);
   cursor: pointer;
 }
-.invite-copy:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.invite-copy:focus-visible,
+.invite-url:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.invite-url:hover { color: var(--fg-link); }
 .invite-msg { min-height: 1.2em; margin: 8px 0 0; font-size: var(--fs-xs); color: var(--success); text-align: center; }
 .invite-actions { display: grid; gap: 10px; }
 .invite-actions .btn { min-height: 44px; }
