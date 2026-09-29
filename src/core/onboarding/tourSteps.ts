@@ -47,8 +47,11 @@ export type StepId =
 export interface TourStep {
   id: StepId;
   kind: StepKind;
-  /** Selector del control señalado. Sin él (o si no aparece) la burbuja sale sin flecha. */
-  anchor?: string;
+  /**
+   * Selector del control señalado, o varios por orden de preferencia (gana el primero que exista). Sin él —o si
+   * no aparece— la burbuja sale sin flecha.
+   */
+  anchor?: string | readonly string[];
   screen(ctx: TourContext): boolean;
   done?(ctx: TourContext): boolean;
   /** Puede volver a salir por debajo del paso en curso (ver la cabecera). */
@@ -69,6 +72,8 @@ const isLists = (ctx: TourContext) => LIST_PATHS.has(ctx.path);
 const isData = (ctx: TourContext) => ctx.path === DATA_PATH;
 const isSocial = (ctx: TourContext) => ctx.path === '/social' || ctx.path.startsWith('/social/');
 const synced = (ctx: TourContext) => ctx.syncConnected;
+/** El botón de conectar con GitHub y, en un build sin OAuth (que no lo tiene), la tarjeta entera. */
+const SYNC_ANCHOR = ['[data-tour="sync-connect"]', '[data-tour="sync-card"]'] as const;
 const socialActive = (ctx: TourContext) => ctx.socialStatus === 'active';
 
 /** Los dos pasos de «ve a Ajustes › Datos», que comparten la nube y Playnite. */
@@ -110,7 +115,7 @@ export const MISSIONS: Readonly<Record<MissionId, Mission>> = {
     id: 'cloud',
     steps: [
       ...toDataSteps(synced),
-      { id: 'sync', kind: 'action', anchor: '[data-tour="sync-card"]', screen: isData, done: synced, counted: true },
+      { id: 'sync', kind: 'action', anchor: SYNC_ANCHOR, screen: isData, done: synced, counted: true },
       // En cualquier pantalla: al volver de autorizar en GitHub la aplicación deja a cada uno donde empezó.
       { id: 'synced', kind: 'done', screen: () => true },
     ],
@@ -152,7 +157,7 @@ export const MISSIONS: Readonly<Record<MissionId, Mission>> = {
         // Lo social pide GitHub primero. Quien se saltó la nube llega aquí desde la pasarela.
         id: 'coop-sync',
         kind: 'nav',
-        anchor: '[data-tour="sync-card"]',
+        anchor: SYNC_ANCHOR,
         screen: (ctx) => isData(ctx) && !ctx.syncConnected,
         done: synced,
         detour: true,

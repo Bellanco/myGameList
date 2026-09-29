@@ -84,6 +84,8 @@ export const GithubSyncCard = memo(function GithubSyncCard({
     <button
       className={ctaClassName}
       type="button"
+      // Ancla de la guía de primeros pasos: «pulsa Conectar con GitHub».
+      data-tour="sync-connect"
       onClick={onOAuthLogin}
       disabled={oauthLoggingIn}
     >

@@ -1,18 +1,38 @@
 // El estado de la guía de primeros pasos, guardado en ESTE dispositivo (ver `ONBOARDING_KEY`).
 //
-// Es un `createPreferenceStore` sin réplica en la nube, y guarda el JSON tal cual: la fábrica exige que `get()`
-// devuelva un primitivo para valer como snapshot de `useSyncExternalStore`, así que el texto se interpreta en
-// quien lo lee (`parseTourState`), no aquí.
+// Tiene la forma de las preferencias (`get` / `set` / `subscribe`, para `useSyncExternalStore`), pero NO sale de
+// `createPreferenceStore` a propósito: esa fábrica trae la réplica en la nube y, con ella, un chunk más en el
+// arranque de todo el mundo —medido: 18 → 19 ficheros— para una guía que casi nadie tiene en marcha. `get()`
+// devuelve el JSON tal cual (un primitivo, como pide el snapshot), y lo interpreta quien lo lee (`parseTourState`).
 import { GIST_CFG_KEY, ONBOARDING_KEY, STORAGE_KEY } from '../../core/constants/storageKeys';
 import { LEGACY_STORAGE_KEYS } from '../migration/legacyLocalStorage';
 import { serializeTourState, type TourState } from '../../core/onboarding/tourState';
-import { createPreferenceStore } from './preferenceStore';
 
-export const onboardingStore = createPreferenceStore<string>({
-  key: ONBOARDING_KEY,
-  parse: (raw) => raw ?? '',
-  serialize: (value) => value,
-});
+const listeners = new Set<() => void>();
+
+export const onboardingStore = {
+  get(): string {
+    try {
+      return localStorage.getItem(ONBOARDING_KEY) ?? '';
+    } catch {
+      return '';
+    }
+  },
+  set(value: string): void {
+    try {
+      localStorage.setItem(ONBOARDING_KEY, value);
+    } catch {
+      // Sin persistencia la guía sigue funcionando en esta visita; solo no se recordará.
+    }
+    for (const listener of listeners) listener();
+  },
+  subscribe(listener: () => void): () => void {
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  },
+};
 
 export function saveTourState(state: TourState): void {
   onboardingStore.set(serializeTourState(state));
