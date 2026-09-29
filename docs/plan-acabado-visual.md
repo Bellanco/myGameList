@@ -111,7 +111,7 @@ Lo que se vio en la captura aprobada, en `social.scss`:
 
 ### D · Ajustes
 
-- **`.sync-help`** («¿Qué es GitHub Gist?», «Cómo configurar»): sin fondo, sin borde y sin radio; queda un filete
+- **`.sync-help`** («Cómo configurar», dentro de la conexión manual; «¿Qué es GitHub Gist?» se retiró el 29-09-2026): sin fondo, sin borde y sin radio; queda un filete
   lateral de 2 px en `--hair`. El `code` de dentro conserva su fondo.
 - **`.import-guide-block`** (los desplegables de Integraciones): filas separadas por `--hair` arriba, más un
   filete de cierre abajo en la última, sin fondo ni radio. Hay que comprobar que el desplegado abierto y el caret

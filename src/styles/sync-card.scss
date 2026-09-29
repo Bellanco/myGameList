@@ -57,16 +57,84 @@
   gap: .3rem .8rem;
 }
 
-/* LA FILA DE LA ACCIÓN PRINCIPAL: el botón que se ha venido a pulsar y el enlace que despliega el detalle.
-   Es la misma idea que `.settings-actions-lead`, y está repetida a propósito: aquella vive en la hoja de
-   Ajustes, que en el hub social no se carga. */
-.sync-card-lead {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: .6rem .9rem;
-  margin: .2rem 0 .1rem;
+/* ── LA FORMA SENCILLA: qué hace, lo que se gana y un botón ───────────────────────────────────────────── */
+.sync-lead {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--text-muted);
 }
+
+/* Las tres ventajas, como lista con icono y no como párrafo: se leen de un vistazo antes de decidir. */
+.sync-perks {
+  display: grid;
+  gap: .45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sync-perks li {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+.sync-perk-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--fg-link);
+  background: color-mix(in srgb, var(--fg-link) 12%, transparent);
+}
+
+/* EL BOTÓN, CON SU PROMESA DEBAJO: «sin tokens ni configuración» es lo que convence de pulsarlo. En un móvil,
+   a lo ancho: es lo único que se ha venido a hacer aquí. */
+.sync-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .45rem;
+  margin-top: .2rem;
+}
+.sync-cta .btn-connect { min-height: 44px; padding-inline: 1.3rem; }
+@media (max-width: 600px) {
+  .sync-cta .btn-connect { align-self: stretch; }
+}
+.sync-howto {
+  margin: 0;
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+  color: var(--text-dim);
+}
+
+/* LA CONEXIÓN MANUAL, al pie y tras un filete: es otra cosa, para otro momento. */
+.sync-manual {
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+  padding-top: .7rem;
+  border-top: 1px solid var(--hair);
+}
+.sync-manual-body {
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+}
+.sync-card-link.sync-manual-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  min-height: 44px;
+  font-size: var(--fs-sm);
+  text-decoration: none;
+  color: var(--text-muted);
+}
+.sync-card-link.sync-manual-toggle:hover { color: var(--fg-link); }
 
 .sync-card-actions {
   display: flex;
