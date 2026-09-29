@@ -939,6 +939,8 @@
 /* Un campo por nominado, con su botón de quitar al lado. */
 .premios-admin__nominee {
   display: flex;
+  // Parte línea para el panel de la imagen, que va debajo de la fila a todo lo ancho.
+  flex-wrap: wrap;
   gap: .4rem;
   align-items: center;
   width: 100%;
@@ -1611,3 +1613,43 @@
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 8.5rem), 1fr));
   gap: .6rem;
 }
+
+/* LA IMAGEN DE UN NOMINADO QUE NO ES UN JUEGO (`AdminPremiosImagen`). La miniatura es la misma portada de la
+   tarjeta de votar, en pequeño: lo que se ve aquí es lo que verá quien vote. Vacía mientras no se elija, para que
+   los campos de la lista sigan alineados. */
+.premios-admin__nominee-thumb {
+  flex: none;
+  width: 1.9rem;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--surface-hover);
+}
+
+.premios-admin__nominee-thumb .game-cover { width: 100%; height: 100%; border-radius: 0; }
+.premios-admin__nominee-thumb .game-cover-title { display: none; }
+
+.premios-admin__image-panel {
+  flex-basis: 100%;
+  display: grid;
+  gap: .5rem;
+  padding: .6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.premios-admin__image-search { display: flex; flex-wrap: wrap; gap: .4rem; }
+.premios-admin__image-search .input { flex: 1 1 12rem; }
+
+/* Los candidatos, con la forma de la tarjeta de votar y más pequeños: se elige mirando la imagen. */
+.premios-admin__image-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 7.5rem), 1fr));
+  gap: .5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.premios-admin__image-results .premios-nominee { width: 100%; height: 100%; }

@@ -17,6 +17,10 @@ vi.mock('../../src/model/repository/premios/premiosCoversRepository', () => ({
   resolverCaratulasDeNominados: (nombres: readonly string[]) => resolverMock(nombres),
 }));
 
+vi.mock('../../src/model/repository/premios/premiosTmdbRepository', () => ({
+  buscarImagenesTmdb: async () => [{ kind: 'tv', id: 100088, title: 'The Last of Us', year: '2023', path: '/tNQWO6cNzQYCyvw36mUcAQQyf5F.jpg' }],
+}));
+
 vi.mock('../../src/model/repository/premios/premiosCategoriesRepository', () => ({
   saveCategory: (...args: unknown[]) => saveCategoryMock(...(args as [])),
   deleteCategory: (...args: unknown[]) => deleteCategoryMock(...(args as [])),
@@ -113,6 +117,27 @@ describe('AdminPremiosCategorias', () => {
 
     const [params] = saveCategoryMock.mock.calls[0] as unknown as [{ nomineeKind: string }];
     expect(params.nomineeKind).toBe('person');
+  });
+
+  // LA IMAGEN SE ELIGE A MANO en las que no son de juegos, y viaja con el nominado al guardar.
+  it('en cine o serie se busca la imagen de cada nominado y se guarda con él', async () => {
+    pintar();
+    saveCategoryMock.mockClear();
+    await userEvent.click(screen.getAllByRole('button', { name: L.edit })[2]);
+
+    await userEvent.click(screen.getByRole('button', { name: L.image.searchAria(1) }));
+    await userEvent.click(await screen.findByRole('button', { name: /Elegir The Last of Us/ }));
+    await userEvent.click(screen.getByRole('button', { name: L.save }));
+
+    const [params] = saveCategoryMock.mock.calls[0] as unknown as [{ options: Array<{ image?: unknown }> }];
+    expect(params.options[0].image).toEqual({ source: 'tmdb', kind: 'tv', id: 100088, path: '/tNQWO6cNzQYCyvw36mUcAQQyf5F.jpg' });
+    expect(params.options[1].image).toBeNull();
+  });
+
+  it('en las de juegos no hay nada que buscar', async () => {
+    pintar();
+    await userEvent.click(screen.getAllByRole('button', { name: L.edit })[0]);
+    expect(screen.queryByRole('button', { name: L.image.searchAria(1) })).not.toBeInTheDocument();
   });
 
   it('cada nominado es un campo propio, y se pueden añadir y quitar', async () => {

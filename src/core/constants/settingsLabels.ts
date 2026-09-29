@@ -59,6 +59,16 @@ export const SETTINGS_UI = {
     deletedPartial: 'Cuenta borrada con incidencias: algunos datos remotos no se pudieron eliminar. Vuelve a intentarlo o escribe al contacto de privacidad.',
     deleteError: 'No se pudo completar el borrado. Revisa la conexión e inténtalo de nuevo.',
   },
+  // CRÉDITOS: de dónde salen los datos y las imágenes ajenas. TMDB exige su logo y su frase EXACTA, en inglés,
+  // en una sección de este tipo; no se traduce.
+  credits: {
+    title: 'Créditos',
+    subtitle: 'De dónde salen los datos y las imágenes que no son tuyos.',
+    igdb: 'Los datos y las carátulas de videojuegos proceden de IGDB.com.',
+    tmdb: 'Los pósters de series y películas y las fotos de actores de los premios proceden de TMDB.',
+    tmdbNotice: 'This product uses the TMDB API but is not endorsed or certified by TMDB.',
+    tmdbLogoAlt: 'TMDB',
+  },
   // L4 — enlaces a los documentos legales.
   legal: {
     title: 'Legal',

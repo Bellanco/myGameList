@@ -23,10 +23,40 @@ export interface PremiosTitle {
   en?: string;
 }
 
+/**
+ * LA IMAGEN QUE EL ADMINISTRADOR ELIGIÓ para un nominado que no es un juego: el póster de una serie o película, o
+ * la foto de un actor, de TMDB. Se elige a mano en el panel y no se deduce del nombre (ver `functions/_lib/tmdb`),
+ * y se sirve desde el propio dominio por `/poster`.
+ */
+export interface PremiosNomineeImage {
+  source: 'tmdb';
+  kind: 'person' | 'movie' | 'tv';
+  /** Id de la ficha en TMDB, para saber qué se eligió. */
+  id: number;
+  /** Ruta de la imagen en TMDB («/abc.jpg»): es lo que pide `/poster`. */
+  path: string;
+}
+
+/**
+ * Un candidato de la búsqueda de TMDB, tal y como lo enseña el panel para elegir. Es el contrato de
+ * `functions/api/tmdb-search.ts` (su `CandidatoTmdb`, en `functions/_lib/tmdb.ts`).
+ */
+export interface PremiosTmdbCandidate {
+  kind: PremiosNomineeImage['kind'];
+  id: number;
+  title: string;
+  originalTitle?: string;
+  year?: string;
+  path: string;
+  knownFor?: string[];
+}
+
 /** Un nominado, en su forma actual: id estable + nombre único. */
 export interface PremiosOption {
   id: string;
   name: string;
+  /** Solo en las categorías que no son de juegos, y solo si el administrador la eligió. */
+  image?: PremiosNomineeImage;
 }
 
 /**

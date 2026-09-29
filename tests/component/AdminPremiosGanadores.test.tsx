@@ -31,7 +31,14 @@ const categories: PremiosCategory[] = [
     title: { es: 'Mejor adaptación' },
     weight: 0.5,
     nomineeKind: 'screen',
-    options: [{ id: 'adapt_option_0', name: 'Arcane' }],
+    options: [
+      { id: 'adapt_option_0', name: 'Arcane' },
+      {
+        id: 'adapt_option_1',
+        name: 'The Last of Us',
+        image: { source: 'tmdb', kind: 'tv', id: 100088, path: '/tNQWO6cNzQYCyvw36mUcAQQyf5F.jpg' },
+      },
+    ],
   },
 ];
 
@@ -67,7 +74,10 @@ describe('AdminPremiosGanadores', () => {
 
     const serie = screen.getByRole('button', { name: L.markAria('Arcane') });
     expect(serie.querySelector('img')).toBeNull();
-    expect(container.querySelectorAll('.premios-nominee')).toHaveLength(3);
+    // Con la imagen elegida en TMDB, su póster, servido desde este dominio.
+    const conPoster = screen.getByRole('button', { name: L.markAria('The Last of Us') });
+    expect(conPoster.querySelector('img')?.getAttribute('src')).toBe('/poster?p=%2FtNQWO6cNzQYCyvw36mUcAQQyf5F.jpg');
+    expect(container.querySelectorAll('.premios-nominee')).toHaveLength(4);
   });
 
   it('guarda por optionId, que es lo que hace el recuento independiente del idioma', async () => {

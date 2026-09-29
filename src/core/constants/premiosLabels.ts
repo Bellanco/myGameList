@@ -466,7 +466,29 @@ export const PREMIOS_UI = {
       kindLabel: 'Qué se nomina',
       kinds: { game: 'Juegos', person: 'Interpretaciones', screen: 'Cine o serie' },
       kindHint:
-        'Solo los juegos llevan carátula: de lo demás IGDB no tiene imagen, y la que encontrara por el nombre sería la de otro juego. Se ven con la portada de casa.',
+        'Los juegos llevan la carátula de IGDB. En interpretaciones y cine o serie la imagen se elige a mano en TMDB con «Buscar imagen»; sin elegirla, sale la portada de casa.',
+      /**
+       * ELEGIR LA IMAGEN DE UN NOMINADO en TMDB (ver `AdminPremiosImagen`). Solo en las categorías que no son de
+       * juegos.
+       */
+      image: {
+        search: 'Buscar imagen',
+        change: 'Cambiar imagen',
+        close: 'Cerrar',
+        searchAria: (n: number) => `Buscar imagen del nominado ${n}`,
+        changeAria: (n: number) => `Cambiar la imagen del nominado ${n}`,
+        panelAria: (n: number) => `Imagen del nominado ${n}`,
+        queryAria: (n: number) => `Qué buscar para el nominado ${n}`,
+        placeholderPerson: 'Nombre del actor o actriz',
+        placeholderScreen: 'Título de la serie o película',
+        searchAction: 'Buscar',
+        searching: 'Buscando…',
+        remove: 'Quitar imagen',
+        empty: 'TMDB no tiene nada con imagen con ese nombre. Prueba con el título original.',
+        kindTv: 'Serie',
+        kindMovie: 'Película',
+        pickAria: (titulo: string, meta: string) => (meta ? `Elegir ${titulo} (${meta})` : `Elegir ${titulo}`),
+      },
       nomineesLabel: 'Nominados',
       nomineePlaceholder: (n: number) => `Nominado ${n}`,
       addNominee: 'Añadir nominado',

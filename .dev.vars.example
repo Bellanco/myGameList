@@ -27,3 +27,9 @@
 # es IGDB_CLIENT_ID, en `wrangler.toml`. Se saca de https://dev.twitch.tv/console/apps y se puede revocar
 # desde ahí mismo (New Secret invalida el anterior).
 IGDB_CLIENT_SECRET=
+
+# Token de acceso de lectura de TMDB (API Read Access Token, el largo que empieza por `eyJ`; NO la «clave de
+# API» corta). Lo usan `functions/api/tmdb-search.ts` y su gemelo de desarrollo para que el panel de premios
+# busque pósters de series y películas y fotos de actores. Las imágenes ya elegidas las sirve `/poster`, que no
+# lo necesita. Se saca de https://www.themoviedb.org/settings/api y se regenera desde ahí mismo.
+TMDB_READ_TOKEN=

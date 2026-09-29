@@ -19,7 +19,9 @@ const TERMS: LegalDocument = {
   // carátulas (2026-09-15) se añade un tratamiento NUEVO pero OPT-IN y apagado por defecto, que no envía ningún
   // dato personal —solo el título del juego, y desde el servidor—. Revisar el texto sí; obligar a todo el mundo
   // a volver a aceptar por algo que no ha empezado a ocurrir todavía, no.
-  updated: '2026-09-16',
+  // TMDB (2026-09-29): un proveedor más para los premios que no recibe ningún dato de quien usa la app; se
+  // revisa el texto sin volver a pedir la aceptación, por lo mismo que las carátulas.
+  updated: '2026-09-29',
   intro:
     'myGameList es un proyecto personal y sin ánimo de lucro para gestionar listas de videojuegos. Al usarlo aceptas estas condiciones.',
   sections: [
@@ -70,7 +72,7 @@ const TERMS: LegalDocument = {
     {
       heading: 'Servicios de terceros',
       paragraphs: [
-        'La app se apoya en GitHub (Gists), Google (inicio de sesión, base de datos y analítica), Cloudflare (alojamiento) e IGDB/Twitch (datos de videojuegos, solo si activas las carátulas). Al usarla, también te aplican sus propias condiciones. Los datos de videojuegos proceden de IGDB.com. Las carátulas y marcas de videojuegos pertenecen a sus titulares y se muestran con fines identificativos.',
+        'La app se apoya en GitHub (Gists), Google (inicio de sesión, base de datos y analítica), Cloudflare (alojamiento), IGDB/Twitch (datos de videojuegos, solo si activas las carátulas) y TMDB (pósters de series y películas y fotos de actores de los premios). Al usarla, también te aplican sus propias condiciones. Los datos de videojuegos proceden de IGDB.com. This product uses the TMDB API but is not endorsed or certified by TMDB. Las carátulas, pósters, fotos y marcas pertenecen a sus titulares y se muestran con fines identificativos.',
       ],
     },
     {
@@ -106,7 +108,8 @@ const PRIVACY: LegalDocument = {
   // el archivo de una edición publicada es de LECTURA PÚBLICA con su enlace, votar crea una cuenta mínima aunque
   // no se tuviera perfil, y quien queda entre los cinco primeros recibe un trofeo en su perfil que él no puede
   // retirar. Son tratamientos nuevos con efectos hacia fuera: toca volver a pedir la aceptación.
-  updated: '2026-09-20',
+  // TMDB (2026-09-29) no sube `LEGAL_VERSION`: no recibe ningún dato de quien usa la app (ver «Quién más los ve»).
+  updated: '2026-09-29',
   intro:
     'Esta política explica qué datos trata la app, con qué base y cómo ejercer tus derechos. Está escrita sobre lo que el código hace hoy, no sobre lo que podría hacer.',
   sections: [
@@ -145,6 +148,7 @@ const PRIVACY: LegalDocument = {
         'GitHub: alojamiento de tus Gists, en tu propia cuenta.',
         'Cloudflare: alojamiento y entrega de la web.',
         'IGDB (Twitch), solo si activas las carátulas: recibe el TÍTULO del juego para buscar su portada. La petición la hace el servidor de esta app, no tu navegador, así que IGDB no ve tu dirección IP ni nada que te identifique: solo un nombre de juego, sin saber de quién es la lista ni cuántas más hay. Lo buscado se guarda en una caché compartida por todos los usuarios, de modo que un título ya consultado no se vuelve a preguntar.',
+        'TMDB (The Movie Database), en los premios: de ahí salen los pósters de las series y películas nominadas y las fotos de los actores. No recibe nada tuyo: las búsquedas las hace la persona que administra el servicio al preparar una edición, y las imágenes las trae el servidor de esta app, no tu navegador, así que TMDB no ve tu dirección IP ni sabe quién vota.',
         'CUALQUIERA CON EL ENLACE, si se publica una edición de los premios en la que votaste: el archivo de esa edición es de lectura pública y contiene el nombre que elegiste, tus puntos y tu puesto, junto a los de los demás participantes. NO contiene tu identificador de usuario, ni tu correo, ni tu foto: solo tu nombre elegido y un pseudónimo con el que la pantalla reconoce tu propia fila. Es permanente mientras la edición siga publicada.',
         'Otros usuarios con sesión iniciada: tu nick, tu foto, tu rango, cuándo estuviste activo por última vez, tus logros y tu actividad social, en los términos descritos arriba. Con los logros conviene distinguir dos cosas: la vitrina de medallas solo se PINTA en las fichas de tus amistades, pero el dato viaja en tu perfil, y tu perfil lo puede leer cualquier usuario con sesión, tenga o no amistad contigo. Lo primero es una decisión de presentación; lo que te protege es lo segundo, y es lo que aquí se declara.',
         'Cualquier persona que conozca el identificador de tu Gist social. Ese Gist ya NO es público: la app lo crea (y migra los antiguos) como Gist no listado, así que no aparece en tu perfil de GitHub ni en los buscadores. Pero «no listado» no es «privado»: quien tenga el identificador puede leerlo sin necesidad de sesión en esta app. La app solo lo comparte con tus amistades.',

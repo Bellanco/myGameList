@@ -14,6 +14,7 @@
  * superviviente — y a partir de ahí los votos de uno cuentan para el otro. El respaldo por índice de
  * `localize.getOptionId` existe solo para LEER datos viejos sin id.
  */
+import type { PremiosNomineeImage, PremiosOption } from '../../model/types/premios';
 
 /** Genera un identificador irrepetible. `crypto.randomUUID` cuando está; si no, el equivalente a mano. */
 export function generateUUID(): string {
@@ -32,6 +33,8 @@ export interface PremiosOptionForm {
   /** Id que ya tenía, si lo tenía. */
   id?: string | null;
   value: string;
+  /** La imagen elegida en TMDB, si la tiene (ver `PremiosNomineeImage`). */
+  image?: PremiosNomineeImage | null;
 }
 
 /**
@@ -46,13 +49,14 @@ export function buildStableOptions(
   formOptions: PremiosOptionForm[] | null | undefined,
   docId: string,
   generateId: () => string = generateUUID,
-): Array<{ id: string; name: string }> {
+): PremiosOption[] {
   const usedIds = new Set<string>();
 
   return (formOptions || []).map((option) => {
     const canKeepId = Boolean(option.id) && !usedIds.has(option.id as string);
     const id = canKeepId ? (option.id as string) : `${docId}_option_${generateId()}`;
     usedIds.add(id);
-    return { id, name: (option.value || '').trim() };
+    // La imagen, SOLO si está: Firestore rechaza los `undefined` y un `null` guardaría un campo vacío en cada uno.
+    return { id, name: (option.value || '').trim(), ...(option.image ? { image: option.image } : {}) };
   });
 }

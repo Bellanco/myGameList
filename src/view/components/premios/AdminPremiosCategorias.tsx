@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { Icon } from '../Icon';
 import { getCategoryTitle, tField } from '../../../core/premios/localize';
+import { nomineeImageOf } from '../../../core/premios/nomineeImage';
 import { hasGameCovers, NOMINEE_KINDS, nomineeKindOf } from '../../../core/premios/nomineeKind';
 import type { PremiosOptionForm } from '../../../core/premios/options';
 import {
@@ -11,6 +12,7 @@ import {
 } from '../../../model/repository/premios/premiosCategoriesRepository';
 import { resolverCaratulasDeNominados } from '../../../model/repository/premios/premiosCoversRepository';
 import type { PremiosCategory, PremiosNomineeKind } from '../../../model/types/premios';
+import { AdminPremiosImagen } from './AdminPremiosImagen';
 
 const L = PREMIOS_UI.admin.categories;
 
@@ -45,6 +47,7 @@ function borradorDe(category: PremiosCategory | null): Borrador {
   const options: PremiosOptionForm[] = (category.options || []).map((option) => ({
     id: typeof option === 'object' && option.id ? option.id : null,
     value: tField(option),
+    image: nomineeImageOf(option),
   }));
   while (options.length < MIN_NOMINEE_FIELDS) options.push({ id: null, value: '' });
 
@@ -238,6 +241,23 @@ export function AdminPremiosCategorias({ categories, busy, ejecutar }: AdminPrem
                 }))
               }
             />
+            {/* LA IMAGEN SE ELIGE AQUÍ, en las categorías que no son de juegos. En las de juegos no hay nada que
+                elegir: la carátula sale sola de IGDB. Si una categoría vuelve a «Juegos», la imagen elegida se
+                conserva pero deja de pintarse (ver `nomineeImageUrls`). */}
+            {borrador.nomineeKind !== 'game' ? (
+              <AdminPremiosImagen
+                kind={borrador.nomineeKind}
+                nombre={option.value}
+                numero={index + 1}
+                image={option.image}
+                onChange={(image) =>
+                  setBorrador((prev) => ({
+                    ...prev,
+                    options: prev.options.map((o, i) => (i === index ? { ...o, image } : o)),
+                  }))
+                }
+              />
+            ) : null}
             {borrador.options.length > MIN_NOMINEE_FIELDS ? (
               <button
                 type="button"

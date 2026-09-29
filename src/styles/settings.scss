@@ -659,3 +659,18 @@
   height: 40px;
   padding: 0;
 }
+/* CRÉDITOS (`LegalSettings`): una línea por fuente. El logo de TMDB va a la izquierda de su frase y MÁS
+   DISCRETO que la marca de la app, que es lo que pide su guía de uso; sin recolorear, que también lo prohíbe. */
+.settings-credits {
+  display: grid;
+  gap: .6rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+
+.settings-credits li { display: flex; align-items: flex-start; gap: .6rem; }
+.settings-credits-logo { flex: none; width: 6rem; height: auto; margin-top: .3rem; }

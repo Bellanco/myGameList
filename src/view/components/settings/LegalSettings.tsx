@@ -102,6 +102,29 @@ export const LegalSettings = memo(function LegalSettings() {
         </ul>
       </div>
 
+      {/* CRÉDITOS, y no un agradecimiento: TMDB pide su logo y su frase en una sección «Acerca de» o «Créditos»
+          para usar su API. Va antes de la zona de riesgo, con los documentos, que es donde se busca lo que no es
+          de uno. El logo va servido desde el propio dominio (`public/credits/`), como todo lo demás. */}
+      <div className="settings-card">
+        <h2>{SETTINGS_UI.credits.title}</h2>
+        <p className="settings-card-sub">{SETTINGS_UI.credits.subtitle}</p>
+        <ul className="settings-credits">
+          <li>{SETTINGS_UI.credits.igdb}</li>
+          <li>
+            <img
+              className="settings-credits-logo"
+              src="/credits/tmdb.svg"
+              alt={SETTINGS_UI.credits.tmdbLogoAlt}
+              width={96}
+              height={12}
+            />
+            <span>
+              {SETTINGS_UI.credits.tmdb} <span lang="en">{SETTINGS_UI.credits.tmdbNotice}</span>
+            </span>
+          </li>
+        </ul>
+      </div>
+
       <DangerZone />
     </section>
   );
