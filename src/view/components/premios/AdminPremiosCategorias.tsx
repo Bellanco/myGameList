@@ -323,8 +323,19 @@ export function AdminPremiosCategorias({ categories, busy, ejecutar }: AdminPrem
                 {/* CADA ACCIÓN CON SU ICONO Y SU COLOR, como en el resto del panel: mover es una flecha, editar
                     el lápiz y BORRAR va en rojo (`btn-danger`) porque es lo único de esta fila que no se puede
                     deshacer. Antes eran cuatro cajas de texto idénticas —«↑ ↓ Editar Eliminar»— donde la más
-                    peligrosa se pulsaba por error con la misma facilidad que la más inocente. */}
+                    peligrosa se pulsaba por error con la misma facilidad que la más inocente.
+                    EDITAR VA PRIMERO y las flechas a su derecha (29-09-2026): es lo que más se pulsa, y así queda
+                    alineado en todas las filas. Borrar sigue el último. */}
                 <span className="premios-admin__cat-actions">
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={busy}
+                    onClick={() => (editando === category.id ? cerrar() : abrir(category))}
+                  >
+                    <Icon name={editando === category.id ? 'close' : 'edit'} />
+                    <span>{editando === category.id ? L.cancel : L.edit}</span>
+                  </button>
                   <button
                     type="button"
                     className="btn premios-admin__icon-btn"
@@ -344,15 +355,6 @@ export function AdminPremiosCategorias({ categories, busy, ejecutar }: AdminPrem
                     onClick={() => mover(index, 1)}
                   >
                     <Icon name="chevron-down" />
-                  </button>
-                  <button
-                    type="button"
-                    className="btn"
-                    disabled={busy}
-                    onClick={() => (editando === category.id ? cerrar() : abrir(category))}
-                  >
-                    <Icon name={editando === category.id ? 'close' : 'edit'} />
-                    <span>{editando === category.id ? L.cancel : L.edit}</span>
                   </button>
                   <button
                     type="button"

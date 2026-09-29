@@ -183,6 +183,18 @@ describe('AdminPremiosCategorias', () => {
     expect(saveCategoryMock).not.toHaveBeenCalled();
   });
 
+  // EDITAR VA PRIMERO, con las flechas a su derecha y borrar el último.
+  it('las acciones de cada categoría van en orden: editar, subir, bajar, eliminar', () => {
+    const { container } = render(<AdminPremiosCategorias categories={categories} busy={false} ejecutar={ejecutar} />);
+    const acciones = [...(container.querySelector('.premios-admin__cat-actions') as HTMLElement).querySelectorAll('button')];
+    expect(acciones.map((boton) => boton.getAttribute('aria-label') || boton.textContent)).toEqual([
+      L.edit,
+      L.moveUp('Juego del año'),
+      L.moveDown('Juego del año'),
+      L.remove,
+    ]);
+  });
+
   it('reordenar reasigna el orden de todas en un lote', async () => {
     pintar();
     reorderMock.mockClear();
