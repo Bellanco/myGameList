@@ -174,6 +174,8 @@ export const SettingsMenu = memo(function SettingsMenu({ hasSocialProfile, onTog
             replace
             className={`settings-menu-point ${rank ? `is-${rank}` : ''} ${premios ? 'is-premios' : ''} ${actual ? 'is-current' : ''}`.replace(/\s+/g, ' ').trim()}
             aria-current={actual ? 'page' : undefined}
+            // Ancla de la guía de primeros pasos: «y aquí, en Datos».
+            data-tour={`menu-${key}`}
             onClick={alElegir}
           >
             <span className="settings-menu-dot" aria-hidden="true" />

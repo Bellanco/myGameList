@@ -331,6 +331,8 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
             key={item.key}
             type="button"
             className={`bottom-nav-btn ${currentSection === item.key ? 'active' : ''}`.trim()}
+            // Ancla de la guía de primeros pasos (`core/onboarding/tourSteps`): «toca Ajustes», «toca Social».
+            data-tour={`nav-${item.key}`}
             // EL ESTADO, PARA QUIEN NO VE EL COLOR. Va en el `aria-label` y no en un texto de apoyo dentro del
             // botón porque el rótulo se MIDE para decidir si los nombres caben: un `sr-only` ahí dentro entraría
             // en esa cuenta. Empieza por «Social», así que la pestaña se sigue encontrando por su nombre.

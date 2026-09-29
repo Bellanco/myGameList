@@ -55,7 +55,7 @@ export const SettingsHub = memo(function SettingsHub({
       {/* EL ORDEN ES EL DE QUIEN NO SABE TODAVÍA: qué hace esto, qué necesitas, de dónde lo trae, cómo se hace
           y —al final— el botón. Puesto arriba, el botón pedía elegir un fichero a quien aún no sabía qué fichero
           era ni de dónde salía; lo que se gana leyendo primero no lo compensa un clic ahorrado. */}
-      <div className="settings-card settings-card-import" style={{ gridColumn: '1 / -1' }}>
+      <div className="settings-card settings-card-import" style={{ gridColumn: '1 / -1' }} data-tour="import-card">
         <h2>{IMPORT_UI.title}</h2>
         <p className="settings-card-sub">{IMPORT_UI.note}</p>
 

@@ -129,7 +129,7 @@ export const GithubSyncCard = memo(function GithubSyncCard({
   }
 
   return (
-    <div className="settings-card settings-card-status">
+    <div className="settings-card settings-card-status" data-tour="sync-card">
       <div className="sync-card-head">
         <h2>{SETTINGS_UI.sync.title}</h2>
         {/* EL ESTADO, CON FORMA DE ESTADO. Era una línea de texto corrida —«Estado actual: No sincronizado»—

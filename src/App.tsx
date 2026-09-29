@@ -1134,6 +1134,7 @@ export default function App() {
           <button
             className="fab"
             type="button"
+            data-tour="add-game"
             aria-label={UI_MESSAGES.fab.addGame}
             title={UI_MESSAGES.fab.addGame}
             onClick={handleAddGame}
