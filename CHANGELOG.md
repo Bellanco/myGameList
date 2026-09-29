@@ -5,6 +5,34 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.4.8] - 2026-09-29
+
+La versión de **las imágenes que no son de juegos**. Los premios dejan de poner la carátula del juego en las
+categorías de actuación y de adaptación: la serie *The Last of Us* sacaba la del juego y *Arcane* la de un juego
+de 2016 que se llama igual. Ahora el administrador elige en TMDB el póster o la foto de cada nominado, y el panel
+enseña las carátulas al marcar los ganadores.
+
+### Added
+- **Qué se nomina en cada categoría**: juegos, interpretaciones o cine o serie. Lo marca el administrador y no se
+  deduce del título. Solo los juegos se buscan en IGDB; lo demás sale con la portada de casa hasta que se le elige
+  imagen.
+- **Pósters de series y películas y fotos de actores, de TMDB.** En las categorías de interpretaciones y de cine o
+  serie, cada nominado tiene «Buscar imagen»: se ven los candidatos con su año o sus obras conocidas y se pulsa el
+  bueno, porque nada se empareja solo. La búsqueda es solo del administrador (`/api/tmdb-search`) y la imagen se
+  sirve desde el propio dominio (`/poster`), así que el navegador de quien vota no habla con TMDB.
+- **Las carátulas al marcar los ganadores.** La pestaña Ganadores usa las tarjetas de la votación, con su imagen:
+  sirve para comprobar las portadas antes de abrir la edición. «Sin ganador» es la primera tarjeta, del mismo
+  tamaño, y sale marcada cuando la categoría no tiene ganador.
+- **Créditos**, un documento más en Legal: de dónde salen los datos de IGDB y las imágenes de TMDB, con el logo y
+  la frase que TMDB exige. El logo solo se descarga al abrir ese documento.
+
+### Changed
+- **«Dónde se ve» lo decide solo el administrador.** Abrir o publicar una edición ya no pone la sección a la vista
+  ni la retira, y sin marcar cuenta como oculta. Al abrir con la sección oculta, un aviso ofrece abrir y hacerla
+  visible, abrir dejándola oculta o no abrir.
+- **En las categorías del panel, Editar va primero**, con las flechas de subir y bajar a su derecha.
+- El aviso legal y la política de privacidad incluyen TMDB, que no recibe ningún dato de quien usa la app.
+
 ## [1.4.7] - 2026-09-28
 
 La versión de **los logros en su día**. Un logro deja de «desbloquearse» otra vez: ya no cambia de fecha al renotar
