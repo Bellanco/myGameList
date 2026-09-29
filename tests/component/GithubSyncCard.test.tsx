@@ -109,11 +109,38 @@ describe('GithubSyncCard', () => {
     expect(conn.onConnect).toHaveBeenCalled();
   });
 
-  // Sin OAuth en el build no hay atajo que ofrecer: el modo manual es el único camino y va a la vista.
-  it('sin OAuth configurada, el modo manual se muestra desplegado', () => {
-    render(<GithubSyncCard connection={conexion({ oauthEnabled: false })} variant="settings" />);
+  /**
+   * LA FORMA SENCILLA ES LA DE SIEMPRE: qué hace, lo que se gana y un botón, con la promesa de que no hay tokens
+   * que crear. El token y el Gist ID no se ven hasta que se piden.
+   */
+  it('en Ajustes llega la forma sencilla: ventajas, un botón y nada de tokens a la vista', () => {
+    const conn = conexion();
+    render(<GithubSyncCard connection={conn} variant="settings" />);
 
-    expect(screen.queryByText(SETTINGS_UI.sync.oauthConnectBtn)).not.toBeInTheDocument();
+    expect(screen.getByText(SETTINGS_UI.sync.lead)).toBeInTheDocument();
+    for (const perk of SETTINGS_UI.sync.perks) expect(screen.getByText(perk.text)).toBeInTheDocument();
+    expect(screen.getByText(SETTINGS_UI.sync.oauthHowto)).toBeInTheDocument();
+    expect(screen.queryByLabelText(SETTINGS_UI.sync.tokenLabel)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: SETTINGS_UI.sync.manualToggleShow })).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(screen.getByRole('button', { name: SETTINGS_UI.sync.oauthConnectBtn }));
+    expect(conn.onOAuthLogin).toHaveBeenCalled();
+  });
+
+  /**
+   * SIN OAUTH EN EL BUILD (el servidor de desarrollo) la tarjeta tiene la MISMA forma: el botón está, y abre la
+   * conexión manual diciendo por qué, en vez de un segundo diseño que solo se vería en local.
+   */
+  it('sin OAuth, la tarjeta sigue siendo la sencilla y su botón abre la conexión manual', () => {
+    const conn = conexion({ oauthEnabled: false });
+    render(<GithubSyncCard connection={conn} variant="settings" />);
+
+    expect(screen.queryByLabelText(SETTINGS_UI.sync.tokenLabel)).not.toBeInTheDocument();
+    expect(screen.queryByText(SETTINGS_UI.sync.oauthHowto)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: SETTINGS_UI.sync.oauthConnectBtn }));
+    expect(conn.onOAuthLogin).not.toHaveBeenCalled();
+    expect(screen.getByText(SETTINGS_UI.sync.manualNoOauth)).toBeInTheDocument();
     expect(screen.getByLabelText(SETTINGS_UI.sync.tokenLabel)).toBeInTheDocument();
   });
 

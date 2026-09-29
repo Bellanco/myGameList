@@ -187,8 +187,8 @@ export async function setVotingOpen(isOpen: boolean, extra: { season?: number } 
 /**
  * ENSEÑA U OCULTA la sección en el resto de la aplicación: el punto de Ajustes y el botón del espacio social.
  *
- * Es una decisión de producto, no un estado derivado: `null` devuelve el mando al calendario —a la vista mientras
- * haya votación o resultados recientes—, y `true`/`false` lo fuerzan. Ver `core/premios/visibility`.
+ * Es una decisión de producto, no un estado derivado, y la toma SOLO el administrador: ni abrir ni publicar la
+ * tocan. `null` borra el campo, que cuenta como oculta. Ver `core/premios/visibility`.
  */
 export async function setPremiosVisible(visible: boolean | null): Promise<void> {
   const { firestore } = await requireServices();
@@ -274,6 +274,8 @@ export interface OpenSeasonParams {
   name?: string;
   closesDay: string;
   season?: number;
+  /** Ponerla a la vista en la misma escritura. Lo decide el administrador en el diálogo de abrir. */
+  makeVisible?: boolean;
 }
 
 /**
@@ -287,11 +289,11 @@ export interface OpenSeasonParams {
  * que siga ahí es un resto de la anterior —una publicación a medias, una prueba hecha a mano— y contaminaría la
  * nueva: entraría tal cual en el siguiente archivo, y además su dueño no podría votar por el bloqueo de re-voto.
  *
- * Y LA DEJA A LA VISTA. Abrir una edición y enseñarla son el mismo gesto: al recoger la anterior el interruptor
- * se queda en «Oculta», y sin esto la votación nueva arrancaba escondida —abierta, contando días y sin que nadie
- * la viera en Ajustes ni en el espacio social— hasta que alguien se acordaba de volver a encenderlo.
+ * NO TOCA DÓNDE SE VE, salvo que se pida (`makeVisible`). Antes la ponía a la vista siempre, y enseñarla dejó de
+ * ser automático el 29-09-2026: lo decide el administrador. Para que no arranque escondida sin querer, el panel
+ * avisa al abrir si está oculta y ofrece encenderla ahí mismo (ver `AdminPremios`).
  */
-export async function openSeason({ name, closesDay, season }: OpenSeasonParams): Promise<{
+export async function openSeason({ name, closesDay, season, makeVisible = false }: OpenSeasonParams): Promise<{
   seasonId: string;
   name: string;
   closesAt: string;
@@ -319,7 +321,7 @@ export async function openSeason({ name, closesDay, season }: OpenSeasonParams):
     await votingDocRef(),
     {
       isOpen: true,
-      visible: true,
+      ...(makeVisible ? { visible: true } : {}),
       season: year,
       seasonId: id,
       seasonName: nombre,
@@ -454,7 +456,7 @@ export function buildSeasonSnapshot({
 }
 
 /**
- * PUBLICA la edición: la archiva, la hace visible y deja el panel listo para la siguiente. Es el último paso y el
+ * PUBLICA la edición: la archiva y deja el panel listo para la siguiente. Es el último paso y el
  * único destructivo. En orden:
  *
  * 0. **Lee de Firestore** las papeletas y las categorías. No las recibe de quien llama, por el fallo que explica
@@ -556,15 +558,12 @@ export async function publishAndArchiveSeason({
   }
   if (opsInBatch > 0) await batch.commit();
 
-  // 5. Cerrar el ciclo. Y DEVOLVER LA ENTRADA AL CALENDARIO: abrir la edición la puso a la vista a mano, y ese
-  //    «sí» explícito la habría dejado en el menú para siempre. Sin el campo manda el calendario, que enseña los
-  //    resultados recién publicados y retira la entrada al cabo de un mes (ver `core/premios/visibility`). Quien
-  //    quiera recogerla antes —o dejarla puesta— sigue teniendo el interruptor del panel.
+  // 5. Cerrar el ciclo. DÓNDE SE VE NO SE TOCA: lo decide el administrador con su interruptor, y publicar la
+  //    deja como estaba (ver `core/premios/visibility`).
   await setDoc(
     await votingDocRef(),
     {
       isOpen: false,
-      visible: deleteField(),
       season: season + 1,
       seasonId: '',
       seasonName: '',

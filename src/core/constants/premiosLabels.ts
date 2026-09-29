@@ -323,6 +323,15 @@ export const PREMIOS_UI = {
        * da igual— lo cuenta el mismo texto que ya está encima del botón, debajo de ella.
        */
       openConfirmTitle: '¿Abrir la votación de todos modos?',
+      /**
+       * ABRIR CON LA SECCIÓN OCULTA. Enseñarla dejó de ser automático (29-09-2026), así que se avisa aquí, con el
+       * dedo en el botón, y se ofrece encenderla sin tener que ir a buscar el interruptor.
+       */
+      openHiddenTitle: 'La sección está oculta',
+      openHiddenBody:
+        'Nadie la encontrará en el menú ni en el espacio social: solo con el enlace. Actívala para que se pueda votar.',
+      openMakeVisible: 'Abrir y hacer visible',
+      openKeepHidden: 'Abrir oculta',
       /** Esto SÍ impide abrir: sin una sola categoría con nominados no hay nada que votar. */
       openNoCategories: 'No hay ninguna categoría con nominados: ponlos en «Categorías» antes de abrir la votación.',
       closeAction: 'Cerrar ahora',
@@ -349,6 +358,8 @@ export const PREMIOS_UI = {
       closesAt: (fecha: string) => `Se cierra el ${fecha}`,
       leftovers: (cuantas: number) => `Se retiraron ${cuantas} papeleta(s) sueltas de una edición anterior.`,
       opened: (nombre: string) => `Edición «${nombre}» abierta y a la vista.`,
+      openedHidden: (nombre: string) =>
+        `Edición «${nombre}» abierta. La sección sigue oculta: solo se llega con el enlace.`,
       closed: 'Votación cerrada.',
       published: (nombre: string, votos: number) => `«${nombre}» publicada con ${votos} papeleta(s).`,
       errorDay: 'Hace falta un día de cierre que no esté en el pasado.',
@@ -363,15 +374,17 @@ export const PREMIOS_UI = {
       visibilitySaved: 'Guardado dónde se ve la sección.',
       /** DÓNDE aparece, que es lo único que este bloque tiene que responder. */
       visibilityHint:
-        'Visible, la sección aparece en el menú de Ajustes y en el espacio social. Oculta, solo se llega con el enlace. Al abrir una edición se pone en «Visible» sola.',
+        'Visible, la sección aparece en el menú de Ajustes y en el espacio social. Oculta, solo se llega con el enlace. Solo cambia desde aquí: abrir o publicar una edición no la toca.',
     },
 
     // Marcar quién ganó cada categoría. Vive en un documento que solo lee el administrador: hasta que se publica
     // la edición, esto no lo ve nadie más.
     winners: {
       title: 'Ganadores',
-      hint: 'Se guardan donde no los ve nadie hasta publicar la edición.',
+      hint: 'Se guardan donde no los ve nadie hasta publicar la edición. Los nominados salen como en la votación: sirve también para comprobar las carátulas antes de abrirla.',
       pick: 'Sin ganador',
+      /** Fijo: si está marcado ya lo dice `aria-pressed`. */
+      markAria: (nombre: string) => `Marcar ${nombre} como ganador`,
       save: 'Guardar ganadores',
       saved: (cuantos: number) => `${cuantos} ganador(es) guardado(s).`,
       skipped: (cuantas: number) => `${cuantas} categoría(s) sin nominados se han omitido.`,
@@ -450,6 +463,32 @@ export const PREMIOS_UI = {
       titleEnPlaceholder: 'Game of the year',
       weightLabel: 'Peso',
       weightHint: 'Lo que vale acertarla. La mayoría van a 1; «Juego del año», a 3.',
+      kindLabel: 'Qué se nomina',
+      kinds: { game: 'Juegos', person: 'Interpretaciones', screen: 'Cine o serie' },
+      kindHint:
+        'Los juegos llevan la carátula de IGDB. En interpretaciones y cine o serie la imagen se elige a mano en TMDB con «Buscar imagen»; sin elegirla, sale la portada de casa.',
+      /**
+       * ELEGIR LA IMAGEN DE UN NOMINADO en TMDB (ver `AdminPremiosImagen`). Solo en las categorías que no son de
+       * juegos.
+       */
+      image: {
+        search: 'Buscar imagen',
+        change: 'Cambiar imagen',
+        close: 'Cerrar',
+        searchAria: (n: number) => `Buscar imagen del nominado ${n}`,
+        changeAria: (n: number) => `Cambiar la imagen del nominado ${n}`,
+        panelAria: (n: number) => `Imagen del nominado ${n}`,
+        queryAria: (n: number) => `Qué buscar para el nominado ${n}`,
+        placeholderPerson: 'Nombre del actor o actriz',
+        placeholderScreen: 'Título de la serie o película',
+        searchAction: 'Buscar',
+        searching: 'Buscando…',
+        remove: 'Quitar imagen',
+        empty: 'TMDB no tiene nada con imagen con ese nombre. Prueba con el título original.',
+        kindTv: 'Serie',
+        kindMovie: 'Película',
+        pickAria: (titulo: string, meta: string) => (meta ? `Elegir ${titulo} (${meta})` : `Elegir ${titulo}`),
+      },
       nomineesLabel: 'Nominados',
       nomineePlaceholder: (n: number) => `Nominado ${n}`,
       addNominee: 'Añadir nominado',

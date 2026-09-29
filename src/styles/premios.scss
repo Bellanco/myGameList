@@ -934,11 +934,13 @@
 
 .premios-admin__season-bar .btn { display: inline-flex; align-items: center; gap: .35rem; }
 
-.premios-admin__weights { display: flex; gap: .35rem; }
+.premios-admin__weights { display: flex; flex-wrap: wrap; gap: .35rem; }
 
 /* Un campo por nominado, con su botón de quitar al lado. */
 .premios-admin__nominee {
   display: flex;
+  // Parte línea para el panel de la imagen, que va debajo de la fila a todo lo ancho.
+  flex-wrap: wrap;
   gap: .4rem;
   align-items: center;
   width: 100%;
@@ -999,58 +1001,6 @@
 }
 
 .premios-admin__cat-head select.input { width: auto; min-width: 12rem; }
-
-/* LOS NOMINADOS COMO BOTONES, para marcar el ganador de una pulsada. Son las tarjetas de votar sin adornos: aquí
-   no hay que elegir con gusto, hay que apuntar un resultado que ya se sabe, así que lo que importa es verlos
-   todos a la vez, leerlos sin esfuerzo y que el marcado cante. */
-.premios-admin__picks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .45rem;
-  margin-top: .45rem;
-}
-
-/* GRANDES A PROPÓSITO. Nacieron del tamaño de un chip (`--fs-2xs` y 4px de alto de relleno) y con veintiséis
-   categorías de cinco nominados eso son ciento treinta blancos diminutos: el nombre costaba de leer y el dedo
-   fallaba la pulsada. Con el cuerpo de tarjeta y 44px de alto —el mínimo cómodo para un dedo— se leen y se
-   aciertan, y siguen cabiendo varios por línea. */
-.premios-admin__pick {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2.75rem;
-  font-family: var(--font-label);
-  font-size: var(--fs-md);
-  line-height: 1.25;
-  color: var(--text-muted);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  padding: .45rem 1rem;
-  cursor: pointer;
-  transition: background .15s ease, border-color .15s ease, color .15s ease;
-}
-
-.premios-admin__pick:hover { background: var(--surface-hover); color: var(--text); }
-
-.premios-admin__pick:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
-/* El ganador marcado: el acento del tema, como la tarjeta elegida de la votación. */
-.premios-admin__pick.is-winner {
-  color: var(--on-accent);
-  background: var(--accent-fill);
-  border-color: color-mix(in srgb, var(--steam) 70%, #000);
-  box-shadow: var(--glow-accent);
-}
-
-/* «Sin ganador» cuando lo está: se marca en hueco, para que se distinga de un ganador de verdad. */
-.premios-admin__pick.is-none {
-  color: var(--text);
-  border-color: color-mix(in srgb, var(--steam) 45%, transparent);
-  border-style: dashed;
-}
 
 /* LA PAPELETA DE CADA VOTANTE, plegada bajo su nombre. Es `<details>` y no un estado de React por lo de siempre:
    catorce papeletas abiertas a la vez no las quiere nadie, y plegar y desplegar lo hace el navegador gratis. */
@@ -1601,3 +1551,76 @@
 }
 
 .premios-results__trophy:hover { color: var(--text); }
+
+/* LOS NOMINADOS DE GANADORES, CON SU CARÁTULA: las mismas tarjetas de votar (`NomineeCard`) en una rejilla más
+   pequeña, a lo ancho de la fila y debajo de «Sin ganador». Aquí no se reparte el alto como en la votación: la
+   página se desplaza, así que cada tarjeta conserva su 3:4. */
+.premios-admin__nominee-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 8.5rem), 1fr));
+  gap: .6rem;
+  margin-top: .45rem;
+}
+
+/* «SIN GANADOR», la primera tarjeta de la rejilla: el mismo tamaño que un nominado y, en lugar de carátula, un
+   hueco con la misma proporción. Marcada (`is-selected`) cuando la categoría no tiene ganador. */
+.premios-admin__no-winner-slot {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  font-size: var(--fs-xl, 1.5rem);
+  color: var(--text-dim);
+  background: repeating-linear-gradient(135deg, transparent 0 10px, color-mix(in srgb, var(--border) 45%, transparent) 10px 11px);
+}
+
+.premios-admin__no-winner.is-selected .premios-admin__no-winner-slot { color: var(--text); }
+
+/* SIN CONTENCIÓN DE TAMAÑO FUERA DE LA VOTACIÓN. La tarjeta lleva `container-type: size` para adaptarse al alto
+   que le reparte la rejilla de votar, y esa contención hace que su alto NO salga de su contenido. Aquí nadie se
+   lo reparte —la página se desplaza—, así que con ella la tarjeta medía cero y solo asomaba la franja inferior
+   de la selección. Sin contenedor, las consultas de alto de la votación tampoco se aplican, que es lo que toca. */
+.premios-admin__nominee-grid .premios-nominee,
+.premios-admin__image-results .premios-nominee {
+  container-type: normal;
+}
+
+/* LA IMAGEN DE UN NOMINADO QUE NO ES UN JUEGO (`AdminPremiosImagen`). La miniatura es la misma portada de la
+   tarjeta de votar, en pequeño: lo que se ve aquí es lo que verá quien vote. Vacía mientras no se elija, para que
+   los campos de la lista sigan alineados. */
+.premios-admin__nominee-thumb {
+  flex: none;
+  width: 1.9rem;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--surface-hover);
+}
+
+.premios-admin__nominee-thumb .game-cover { width: 100%; height: 100%; border-radius: 0; }
+.premios-admin__nominee-thumb .game-cover-title { display: none; }
+
+.premios-admin__image-panel {
+  flex-basis: 100%;
+  display: grid;
+  gap: .5rem;
+  padding: .6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.premios-admin__image-search { display: flex; flex-wrap: wrap; gap: .4rem; }
+.premios-admin__image-search .input { flex: 1 1 12rem; }
+
+/* Los candidatos, con la forma de la tarjeta de votar y más pequeños: se elige mirando la imagen. */
+.premios-admin__image-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 7.5rem), 1fr));
+  gap: .5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.premios-admin__image-results .premios-nominee { width: 100%; height: 100%; }

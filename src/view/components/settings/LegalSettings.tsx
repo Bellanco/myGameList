@@ -80,7 +80,7 @@ export const LegalSettings = memo(function LegalSettings() {
         </div>
       </div>
 
-      {/* LOS TRES DOCUMENTOS, EN FILAS. Iban seguidos en una línea que envolvía por donde le tocaba: dos
+      {/* LOS DOCUMENTOS, EN FILAS. Iban seguidos en una línea que envolvía por donde le tocaba: dos
           títulos arriba, uno abajo y ninguno con forma de destino. Como filas se cuentan de un vistazo, cada
           una es una diana entera y la flecha dice que llevan a otra pantalla. */}
       <div className="settings-card">
@@ -91,6 +91,8 @@ export const LegalSettings = memo(function LegalSettings() {
             { to: LEGAL_ROUTES.terms, label: LEGAL_DOCUMENTS.terms.title },
             { to: LEGAL_ROUTES.privacy, label: LEGAL_DOCUMENTS.privacy.title },
             { to: LEGAL_ROUTES.cookies, label: LEGAL_DOCUMENTS.cookies.title },
+            // Los créditos, como un documento más: su logo solo se carga al abrirlo (ver `LegalScreen`).
+            { to: LEGAL_ROUTES.credits, label: LEGAL_DOCUMENTS.credits.title },
           ].map(({ to, label }) => (
             <li key={to}>
               <Link to={to} className="settings-legal-link">

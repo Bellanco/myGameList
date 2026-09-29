@@ -54,6 +54,19 @@ export const LegalScreen = memo(function LegalScreen({ docId }: LegalScreenProps
       {document.sections.map((section) => (
         <div className="legal-card" key={section.heading}>
           <h2>{section.heading}</h2>
+          {/* EN DIFERIDO: esta pantalla ya es perezosa, y el logo solo se pide al abrir el documento que lo lleva
+              —nunca al arrancar la app—. Tamaño declarado para que no mueva el texto al llegar. */}
+          {section.logo ? (
+            <img
+              className="legal-logo"
+              src={section.logo.src}
+              alt={section.logo.alt}
+              width={section.logo.width}
+              height={section.logo.height}
+              loading="lazy"
+              decoding="async"
+            />
+          ) : null}
           {section.bullets ? (
             <ul className="legal-list">
               {section.bullets.map((bullet) => (

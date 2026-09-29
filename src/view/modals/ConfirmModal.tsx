@@ -20,6 +20,12 @@ interface ConfirmModalProps {
    * «Abrir votación» avisa de un peligro que no existe.
    */
   tone?: 'danger' | 'primary';
+  /**
+   * Una TERCERA salida, entre cancelar y confirmar, para cuando la pregunta no es sí o no. La usa el panel de
+   * premios al abrir con la sección oculta: abrir y enseñarla, abrir y dejarla oculta, o no abrir.
+   */
+  secondaryLabel?: string;
+  onSecondary?: () => void;
 }
 
 export const ConfirmModal = memo(function ConfirmModal({
@@ -30,6 +36,8 @@ export const ConfirmModal = memo(function ConfirmModal({
   confirmLabel = DIALOG_MESSAGES.confirmDelete,
   body,
   tone = 'danger',
+  secondaryLabel,
+  onSecondary,
 }: ConfirmModalProps) {
   // A11y-1: `showModal()` (no el atributo `open`) → focus trap, restauración de foco, `::backdrop` y Esc → onCancel.
   const dialogRef = useNativeDialog(open, onCancel);
@@ -49,6 +57,11 @@ export const ConfirmModal = memo(function ConfirmModal({
             <button className="btn btn-secondary" type="button" onClick={onCancel}>
               {DIALOG_MESSAGES.cancel}
             </button>
+            {secondaryLabel && onSecondary ? (
+              <button className="btn" type="button" onClick={onSecondary}>
+                {secondaryLabel}
+              </button>
+            ) : null}
             <button className={`btn btn-${tone}`} type="button" onClick={onConfirm}>
               {confirmLabel}
             </button>

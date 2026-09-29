@@ -2,8 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { archivableCategories, getValidWinnerId } from '../../../core/premios/archivable';
 import { getCategoryTitle, getOptionId, tField } from '../../../core/premios/localize';
+import { hasGameCovers } from '../../../core/premios/nomineeKind';
+import { nomineeImageOf } from '../../../core/premios/nomineeImage';
 import { fetchWinners, saveWinners } from '../../../model/repository/premios/premiosWinnersRepository';
-import type { PremiosCategory, PremiosWinnersMap } from '../../../model/types/premios';
+import type { PremiosCategory, PremiosOption, PremiosWinnersMap } from '../../../model/types/premios';
+import { NomineeCard } from './NomineeCard';
 
 const L = PREMIOS_UI.admin.winners;
 
@@ -20,8 +23,11 @@ const L = PREMIOS_UI.admin.winners;
  * SE MARCAN CON BOTONES, NO CON UN DESPLEGABLE. Con veintiséis categorías de cinco nominados, el desplegable
  * obligaba a abrir, leer y elegir a ciegas —los nominados solo se veían de uno en uno, y para comparar dos había
  * que abrirlo dos veces—. En botones están TODOS a la vista: se marca de una pulsada y se ve de un vistazo qué
- * queda por marcar. Son los mismos de la pantalla de votar, más pequeños, porque aquí no hay que elegir con
- * gusto sino apuntar un resultado que ya se sabe.
+ * queda por marcar.
+ *
+ * Y SON LAS TARJETAS DE VOTAR, con su carátula (29-09-2026), en una rejilla más pequeña. Así este es también el
+ * sitio donde ver las portadas tal y como las verá quien vote —las mismas, pedidas igual, solo lo ya resuelto—
+ * sin tener que abrir la edición para comprobarlas. Eran píldoras de texto.
  */
 export interface AdminPremiosGanadoresProps {
   categories: PremiosCategory[];
@@ -78,6 +84,7 @@ export function AdminPremiosGanadores({ categories, busy, ejecutar }: AdminPremi
             {votables.map((category) => {
               const titulo = getCategoryTitle(category);
               const ganador = getValidWinnerId(category, winners);
+              const conCaratula = hasGameCovers(category);
               return (
                 <li key={category.id} className="premios-admin__cat">
                   <div className="premios-admin__cat-head">
@@ -85,12 +92,14 @@ export function AdminPremiosGanadores({ categories, busy, ejecutar }: AdminPremi
                   </div>
 
                   {/* `role="group"` y `aria-pressed` y no un grupo de radios: marcar un ganador se deshace
-                      volviendo a pulsarlo, y un radio no se puede desmarcar. El botón «Sin ganador» hace lo
-                      mismo y está siempre, para quien navegue con el teclado de izquierda a derecha. */}
-                  <div className="premios-admin__picks" role="group" aria-label={titulo}>
+                      volviendo a pulsarlo, y un radio no se puede desmarcar.
+                      «SIN GANADOR» ES UNA TARJETA MÁS, LA PRIMERA, con el mismo tamaño que los nominados y marcada
+                      cuando es lo que hay: era una píldora aparte, más pequeña, y con la categoría sin marcar no se
+                      veía nada seleccionado. Así la rejilla dice siempre cuál es el estado. */}
+                  <div className="premios-admin__nominee-grid" role="group" aria-label={titulo}>
                     <button
                       type="button"
-                      className={`premios-admin__pick${ganador ? '' : ' is-none'}`}
+                      className={`premios-nominee premios-admin__no-winner${ganador ? '' : ' is-selected'}`}
                       aria-pressed={!ganador}
                       onClick={() =>
                         setWinners((prev) => {
@@ -100,31 +109,40 @@ export function AdminPremiosGanadores({ categories, busy, ejecutar }: AdminPremi
                         })
                       }
                     >
-                      {L.pick}
+                      <span className="premios-nominee__slot">
+                        <span className="premios-admin__no-winner-slot" aria-hidden="true">—</span>
+                      </span>
+                      <span className="premios-nominee__body">
+                        <span className="premios-nominee__name">{L.pick}</span>
+                      </span>
                     </button>
 
                     {(category.options || []).map((option, index) => {
-                      const id = getOptionId(option, category.id, index);
-                      const elegido = ganador === id;
+                      const image = nomineeImageOf(option);
+                      const nominado: PremiosOption = {
+                        id: getOptionId(option, category.id, index),
+                        name: tField(option),
+                        ...(image ? { image } : {}),
+                      };
+                      const elegido = ganador === nominado.id;
                       return (
-                        <button
-                          key={id}
-                          type="button"
-                          className={`premios-admin__pick${elegido ? ' is-winner' : ''}`}
-                          aria-pressed={elegido}
-                          onClick={() =>
+                        <NomineeCard
+                          key={nominado.id}
+                          option={nominado}
+                          selected={elegido}
+                          withCover={conCaratula}
+                          ariaLabel={L.markAria(nominado.name)}
+                          onChoose={() =>
                             setWinners((prev) => {
                               const next = { ...prev };
                               // Volver a pulsar el que ya estaba marcado lo quita: es el gesto que se espera de
                               // un botón que se queda hundido.
                               if (elegido) delete next[category.id];
-                              else next[category.id] = id;
+                              else next[category.id] = nominado.id;
                               return next;
                             })
                           }
-                        >
-                          {tField(option)}
-                        </button>
+                        />
                       );
                     })}
                   </div>

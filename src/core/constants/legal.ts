@@ -69,6 +69,8 @@ export const LEGAL_ROUTES = {
   terms: '/legal/aviso',
   privacy: '/legal/privacidad',
   cookies: '/legal/cookies',
+  // No es un documento que se acepte: es la atribución de los datos ajenos, y TMDB la exige en una sección así.
+  credits: '/legal/creditos',
 } as const;
 
 export type LegalDocId = keyof typeof LEGAL_ROUTES;
@@ -83,6 +85,11 @@ export interface LegalSection {
    * cumple de boquilla y no sirve de nada. Los `href` son constantes del código, nunca datos de usuario.
    */
   links?: Array<{ label: string; href: string }>;
+  /**
+   * El logo de un tercero que su atribución exige (TMDB). Servido desde el propio dominio y en diferido: solo se
+   * pide al abrir este documento, nunca al arrancar la app.
+   */
+  logo?: { src: string; alt: string; width: number; height: number };
 }
 
 export interface LegalDocument {

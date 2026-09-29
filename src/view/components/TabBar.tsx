@@ -25,7 +25,7 @@ export const TabBar = memo(function TabBar({ currentTab, tabCounts, onTabChange 
   }, [currentTab, tabCounts]);
 
   return (
-    <div className="tabs" ref={tabsRef}>
+    <div className="tabs" ref={tabsRef} data-tour="tabs">
       {TAB_ORDER.map((tab) => (
         <button
           key={tab}

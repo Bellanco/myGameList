@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { BALLOT_NAME_MAX_LENGTH } from '../../../core/premios/limits';
-import { getCategoryTitle } from '../../../core/premios/localize';
-import { coverUrl } from '../../../core/utils/coverUrl';
+import { getCategoryTitle, getOptionById } from '../../../core/premios/localize';
+import { hasGameCovers } from '../../../core/premios/nomineeKind';
+import { nomineeImageUrls } from '../../../core/premios/nomineeImage';
 import { votePath } from '../../../viewmodel/premios/premiosRoutes';
 import type { PremiosCategory } from '../../../model/types/premios';
 import type { PremiosVotes } from '../../../viewmodel/premios/usePremiosVoting';
@@ -139,6 +140,11 @@ export function PremiosReviewScreen({
       <ol className="premios-review__grid">
         {categories.map((category, index) => {
           const vote = votes[category.id];
+          // La misma regla que en la votación (`nomineeImageUrls`): carátula en las de juegos, la imagen elegida
+          // en TMDB en las demás, y si no hay, la portada de casa.
+          const imagen = vote
+            ? nomineeImageUrls(getOptionById(category, vote.id), vote.name, hasGameCovers(category))
+            : null;
           const titulo = getCategoryTitle(category);
           const clase = `premios-review__card${vote ? '' : ' is-empty'}`;
           const contenido = (
@@ -151,8 +157,8 @@ export function PremiosReviewScreen({
                 {vote ? (
                   <GameCover
                     name={vote.name}
-                    src={coverUrl(vote.name, [], false, 'normal', true)}
-                    src2x={coverUrl(vote.name, [], false, 'medio', true)}
+                    src={imagen?.src}
+                    src2x={imagen?.src2x}
                   />
                 ) : null}
               </span>

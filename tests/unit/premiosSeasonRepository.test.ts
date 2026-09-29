@@ -254,14 +254,15 @@ describe('publishAndArchiveSeason', () => {
     expect(JSON.stringify(archivo?.votes)).not.toContain('uid-');
   });
 
-  it('devuelve la visibilidad al calendario al publicar', async () => {
+  // DÓNDE SE VE LO DECIDE SOLO EL ADMINISTRADOR: publicar no lo toca (ver `core/premios/visibility`).
+  it('publicar no toca la visibilidad', async () => {
     state.premiosCategories = [category('cat1')];
     state.premiosBallots = [ballot('uid-1', 'Ana', 'cat1_option_0')];
     state.config = { visible: true };
 
     await publishAndArchiveSeason({ season: 2026, seasonId: 'test' });
 
-    expect(lastConfigWrite()?.data.visible).toBe('__deleteField__');
+    expect(lastConfigWrite()?.data).not.toHaveProperty('visible');
   });
 
   it('deja la configuración sin edición y apuntando al archivo publicado', async () => {
@@ -399,10 +400,19 @@ describe('openSeason', () => {
 
   // ABRIR ES ENSEÑAR. Al recoger la edición anterior el interruptor se queda en «Oculta», y la votación nueva
   // arrancaba escondida: abierta, contando días y sin entrada en Ajustes ni en el espacio social.
-  it('deja la sección a la vista aunque se hubiera recogido la anterior', async () => {
+  // Abrir tampoco la toca: si está oculta, el panel lo avisa y ofrece encenderla (`makeVisible`).
+  it('abrir no toca la visibilidad', async () => {
     state.config = { visible: false, lastPublishedId: 'test' };
 
     await openSeason({ name: 'Nuevo test', closesDay: '2026-12-31', season: 2026 });
+
+    expect(lastConfigWrite()?.data).not.toHaveProperty('visible');
+  });
+
+  it('salvo que se pida encenderla en la misma escritura', async () => {
+    state.config = { visible: false, lastPublishedId: 'test' };
+
+    await openSeason({ name: 'Nuevo test', closesDay: '2026-12-31', season: 2026, makeVisible: true });
 
     expect(lastConfigWrite()?.data.visible).toBe(true);
   });

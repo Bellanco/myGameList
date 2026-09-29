@@ -23,10 +23,40 @@ export interface PremiosTitle {
   en?: string;
 }
 
+/**
+ * LA IMAGEN QUE EL ADMINISTRADOR ELIGIÓ para un nominado que no es un juego: el póster de una serie o película, o
+ * la foto de un actor, de TMDB. Se elige a mano en el panel y no se deduce del nombre (ver `functions/_lib/tmdb`),
+ * y se sirve desde el propio dominio por `/poster`.
+ */
+export interface PremiosNomineeImage {
+  source: 'tmdb';
+  kind: 'person' | 'movie' | 'tv';
+  /** Id de la ficha en TMDB, para saber qué se eligió. */
+  id: number;
+  /** Ruta de la imagen en TMDB («/abc.jpg»): es lo que pide `/poster`. */
+  path: string;
+}
+
+/**
+ * Un candidato de la búsqueda de TMDB, tal y como lo enseña el panel para elegir. Es el contrato de
+ * `functions/api/tmdb-search.ts` (su `CandidatoTmdb`, en `functions/_lib/tmdb.ts`).
+ */
+export interface PremiosTmdbCandidate {
+  kind: PremiosNomineeImage['kind'];
+  id: number;
+  title: string;
+  originalTitle?: string;
+  year?: string;
+  path: string;
+  knownFor?: string[];
+}
+
 /** Un nominado, en su forma actual: id estable + nombre único. */
 export interface PremiosOption {
   id: string;
   name: string;
+  /** Solo en las categorías que no son de juegos, y solo si el administrador la eligió. */
+  image?: PremiosNomineeImage;
 }
 
 /**
@@ -38,11 +68,26 @@ export type PremiosOptionLike =
   | { id?: string; name?: string; es?: string; en?: string }
   | string;
 
+/**
+ * QUÉ SE NOMINA en una categoría, y por tanto de dónde sale la imagen de cada nominado.
+ *
+ *  - `game`   — un juego: la carátula se busca en IGDB por su nombre, como en la biblioteca.
+ *  - `person` — una interpretación (actor o actriz).
+ *  - `screen` — una adaptación al cine o a la serie.
+ *
+ * Las dos últimas NO se buscan en IGDB: solo tiene juegos, y el nombre de una serie casa con el del juego
+ * adaptado («The Last of Us») o con otro homónimo. Se pintan con la portada de casa. Lo marca el administrador y
+ * no se deduce del título, que es bilingüe y puede cambiar de un año a otro. Ver `core/premios/nomineeKind`.
+ */
+export type PremiosNomineeKind = 'game' | 'person' | 'screen';
+
 /** Una categoría de premio con sus nominados. */
 export interface PremiosCategory {
   id: string;
   title: PremiosTitle | string;
   options: PremiosOptionLike[];
+  /** Qué se nomina. Ausente = `game`, que es lo que eran todas las categorías antes de existir el campo. */
+  nomineeKind?: PremiosNomineeKind;
   /** Espejo plano de los ids, por compatibilidad con lecturas antiguas. */
   optionIds?: string[];
   /** Cuántos puntos vale acertarla. Ausente = 1. */

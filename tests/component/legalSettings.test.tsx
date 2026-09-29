@@ -10,6 +10,8 @@ import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LegalSettings } from '../../src/view/components/settings/LegalSettings';
+import { LegalScreen } from '../../src/view/components/LegalScreen';
+import { LEGAL_ROUTES } from '../../src/core/constants/legal';
 
 describe('la pantalla Legal', () => {
   it('reúne analítica, documentos y borrado de la cuenta', () => {
@@ -24,5 +26,24 @@ describe('la pantalla Legal', () => {
     render(<MemoryRouter><LegalSettings /></MemoryRouter>);
     const titulos = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
     expect(titulos[titulos.length - 1]).toMatch(/Zona de riesgo/i);
+  });
+
+  // CRÉDITOS, UN DOCUMENTO MÁS: una fila de la lista, y el logo de TMDB no se pide aquí sino al abrirlo.
+  it('los créditos son una fila de la lista, sin cargar ningún logo', () => {
+    const { container } = render(<MemoryRouter><LegalSettings /></MemoryRouter>);
+    expect(screen.getByRole('link', { name: 'Créditos' })).toHaveAttribute('href', LEGAL_ROUTES.credits);
+    expect(container.querySelector('img')).toBeNull();
+  });
+});
+
+describe('el documento de créditos', () => {
+  // TMDB exige su logo y su frase exacta para usar su API.
+  it('lleva la atribución de TMDB, con su logo en diferido', () => {
+    render(<MemoryRouter><LegalScreen docId="credits" /></MemoryRouter>);
+    expect(screen.getByText('This product uses the TMDB API but is not endorsed or certified by TMDB.')).toBeTruthy();
+    expect(screen.getByText(/IGDB\.com/)).toBeTruthy();
+    const logo = screen.getByRole('img', { name: 'TMDB' });
+    expect(logo).toHaveAttribute('src', '/credits/tmdb.svg');
+    expect(logo).toHaveAttribute('loading', 'lazy');
   });
 });

@@ -23,7 +23,19 @@
 # del usuario. Su gemelo público es GITHUB_CLIENT_ID, en `wrangler.toml`.
 # GITHUB_CLIENT_SECRET=
 
+# Secret de la OAuth App de DESARROLLO (callback `http://localhost:8000/ajustes`), para que «Conectar con GitHub»
+# funcione con `npm run dev`. Lo lee solo el gemelo de `vite.config.ts`; su client id va en `.env.development.local`
+# (ver `.env.example`). Otro nombre que el de producción a propósito: si este fichero se sube con `secret bulk`,
+# llega a Cloudflare como un secreto más que nadie lee, en vez de pisar GITHUB_CLIENT_SECRET.
+# GITHUB_DEV_CLIENT_SECRET=
+
 # Secret de la aplicación de Twitch con la que se consulta IGDB (carátulas de los juegos). Su gemelo público
 # es IGDB_CLIENT_ID, en `wrangler.toml`. Se saca de https://dev.twitch.tv/console/apps y se puede revocar
 # desde ahí mismo (New Secret invalida el anterior).
 IGDB_CLIENT_SECRET=
+
+# Token de acceso de lectura de TMDB (API Read Access Token, el largo que empieza por `eyJ`; NO la «clave de
+# API» corta). Lo usan `functions/api/tmdb-search.ts` y su gemelo de desarrollo para que el panel de premios
+# busque pósters de series y películas y fotos de actores. Las imágenes ya elegidas las sirve `/poster`, que no
+# lo necesita. Se saca de https://www.themoviedb.org/settings/api y se regenera desde ahí mismo.
+TMDB_READ_TOKEN=

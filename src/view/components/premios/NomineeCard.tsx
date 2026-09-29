@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
-import { coverUrl } from '../../../core/utils/coverUrl';
+import { nomineeImageUrls } from '../../../core/premios/nomineeImage';
 import type { PremiosOption } from '../../../model/types/premios';
 import { GameCover } from '../GameCover';
 
@@ -20,6 +20,10 @@ const L = PREMIOS_UI.votar;
  * flotante: en una tarjeta estrecha ese icono se montaba sobre la primera línea del nombre. El estado va además
  * en `aria-pressed`, que es lo que oye quien no ve el color.
  *
+ * SALVO QUE NO SEA UN JUEGO: en las categorías de interpretaciones y de cine o serie (`withCover` a `false`, ver
+ * `core/premios/nomineeKind`) no se busca en IGDB. Sale la imagen que el administrador eligió en TMDB, si la
+ * eligió, y si no la portada de casa con el nombre. Quién gana a quién lo decide `core/premios/nomineeImage`.
+ *
  * LA TARJETA NO DICE LO QUE TÚ SABES DE ESE JUEGO. Llevó debajo del nombre en qué lista lo tenías y con qué nota
  * —el cruce de `core/premios/library`— y se retiró el 20-09-2026: en una rejilla de cinco portadas, esa línea
  * sobraba en la mayoría de tarjetas (casi ningún nominado está en tu biblioteca) y le robaba sitio al título
@@ -28,25 +32,26 @@ const L = PREMIOS_UI.votar;
 export interface NomineeCardProps {
   option: PremiosOption;
   selected: boolean;
+  /** Si la categoría es de juegos: carátula de IGDB. Si no, la imagen elegida en TMDB, si la hay. */
+  withCover: boolean;
+  /** Lo que oye quien no ve la tarjeta. Por defecto, el de votar; el panel de ganadores pone el suyo. */
+  ariaLabel?: string;
   onChoose: (option: PremiosOption) => void;
 }
 
-function NomineeCardBase({ option, selected, onChoose }: NomineeCardProps) {
-  // SIN PLATAFORMAS: aquí no hay más dato que el nombre del nominado, que es lo que el administrador escribió, y
-  // es con lo que lo resolvió el panel.
-  const src = coverUrl(option.name, [], false, 'normal', true);
-  const src2x = coverUrl(option.name, [], false, 'medio', true);
+function NomineeCardBase({ option, selected, withCover, ariaLabel, onChoose }: NomineeCardProps) {
+  const imagen = nomineeImageUrls(option, option.name, withCover);
 
   return (
     <button
       type="button"
       className={`premios-nominee${selected ? ' is-selected' : ''}`}
       aria-pressed={selected}
-      aria-label={selected ? L.nomineeChosenAria(option.name) : L.nomineeAria(option.name)}
+      aria-label={ariaLabel ?? (selected ? L.nomineeChosenAria(option.name) : L.nomineeAria(option.name))}
       onClick={() => onChoose(option)}
     >
       <span className="premios-nominee__slot">
-        <GameCover name={option.name} src={src} src2x={src2x} />
+        <GameCover name={option.name} src={imagen?.src} src2x={imagen?.src2x} />
       </span>
 
       <span className="premios-nominee__body">

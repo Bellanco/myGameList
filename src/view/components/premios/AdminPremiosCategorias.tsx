@@ -2,6 +2,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { Icon } from '../Icon';
 import { getCategoryTitle, tField } from '../../../core/premios/localize';
+import { nomineeImageOf } from '../../../core/premios/nomineeImage';
+import { hasGameCovers, NOMINEE_KINDS, nomineeKindOf } from '../../../core/premios/nomineeKind';
 import type { PremiosOptionForm } from '../../../core/premios/options';
 import {
   deleteCategory,
@@ -9,7 +11,8 @@ import {
   saveCategory,
 } from '../../../model/repository/premios/premiosCategoriesRepository';
 import { resolverCaratulasDeNominados } from '../../../model/repository/premios/premiosCoversRepository';
-import type { PremiosCategory } from '../../../model/types/premios';
+import type { PremiosCategory, PremiosNomineeKind } from '../../../model/types/premios';
+import { AdminPremiosImagen } from './AdminPremiosImagen';
 
 const L = PREMIOS_UI.admin.categories;
 
@@ -24,6 +27,7 @@ interface Borrador {
   titleEs: string;
   titleEn: string;
   weight: number;
+  nomineeKind: PremiosNomineeKind;
   /** Cada campo conserva el id del nominado que ya existía: es lo que evita invalidar votos al reordenar. */
   options: PremiosOptionForm[];
 }
@@ -35,6 +39,7 @@ function borradorDe(category: PremiosCategory | null): Borrador {
       titleEs: '',
       titleEn: '',
       weight: 1,
+      nomineeKind: 'game',
       options: Array.from({ length: MIN_NOMINEE_FIELDS }, () => ({ id: null, value: '' })),
     };
   }
@@ -42,6 +47,7 @@ function borradorDe(category: PremiosCategory | null): Borrador {
   const options: PremiosOptionForm[] = (category.options || []).map((option) => ({
     id: typeof option === 'object' && option.id ? option.id : null,
     value: tField(option),
+    image: nomineeImageOf(option),
   }));
   while (options.length < MIN_NOMINEE_FIELDS) options.push({ id: null, value: '' });
 
@@ -50,6 +56,7 @@ function borradorDe(category: PremiosCategory | null): Borrador {
     titleEs: typeof category.title === 'string' ? category.title : category.title?.es || '',
     titleEn: typeof category.title === 'string' ? '' : category.title?.en || '',
     weight: category.weight || 1,
+    nomineeKind: nomineeKindOf(category),
     options,
   };
 }
@@ -101,17 +108,18 @@ export function AdminPremiosCategorias({ categories, busy, ejecutar }: AdminPrem
         titleEn: borrador.titleEn,
         options,
         weight: borrador.weight,
+        nomineeKind: borrador.nomineeKind,
         // Al final de la lista: una categoría nueva no debería colarse en medio de las que ya estaban.
         ...(esNueva ? { orderIndex: ordenadas.length } : {}),
       });
 
       setEditando(null);
+      const aviso = esNueva ? L.created(borrador.titleEs) : L.saved(borrador.titleEs);
+      // Lo que no son juegos no se busca en IGDB (ver `core/premios/nomineeKind`): ni se gasta cupo ni hay resumen.
+      if (!options.length || !hasGameCovers(borrador)) return aviso;
       // Las carátulas de sus nominados, ya: la votación solo enseña lo resuelto (ver `resolverCaratulasDeNominados`).
       const caratulas = await resolverCaratulasDeNominados(options.map((option) => option.value));
-      const aviso = esNueva ? L.created(borrador.titleEs) : L.saved(borrador.titleEs);
-      return options.length
-        ? `${aviso} ${PREMIOS_UI.admin.covers.summary(caratulas.conCaratula, caratulas.sinCaratula, caratulas.fallidas)}`
-        : aviso;
+      return `${aviso} ${PREMIOS_UI.admin.covers.summary(caratulas.conCaratula, caratulas.sinCaratula, caratulas.fallidas)}`;
     });
 
   const eliminar = (category: PremiosCategory) => {
@@ -198,6 +206,22 @@ export function AdminPremiosCategorias({ categories, busy, ejecutar }: AdminPrem
       </div>
       <p className="premios-admin__muted">{L.weightHint}</p>
 
+      <span className="premios-admin__label">{L.kindLabel}</span>
+      <div className="premios-admin__weights" role="group" aria-label={L.kindLabel}>
+        {NOMINEE_KINDS.map((kind) => (
+          <button
+            key={kind}
+            type="button"
+            className={`btn${borrador.nomineeKind === kind ? ' btn-primary' : ''}`}
+            aria-pressed={borrador.nomineeKind === kind}
+            onClick={() => setBorrador((prev) => ({ ...prev, nomineeKind: kind }))}
+          >
+            {L.kinds[kind]}
+          </button>
+        ))}
+      </div>
+      <p className="premios-admin__muted">{L.kindHint}</p>
+
       <span className="premios-admin__label">
         {`${L.nomineesLabel} (${borrador.options.filter((o) => o.value.trim()).length})`}
       </span>
@@ -217,6 +241,23 @@ export function AdminPremiosCategorias({ categories, busy, ejecutar }: AdminPrem
                 }))
               }
             />
+            {/* LA IMAGEN SE ELIGE AQUÍ, en las categorías que no son de juegos. En las de juegos no hay nada que
+                elegir: la carátula sale sola de IGDB. Si una categoría vuelve a «Juegos», la imagen elegida se
+                conserva pero deja de pintarse (ver `nomineeImageUrls`). */}
+            {borrador.nomineeKind !== 'game' ? (
+              <AdminPremiosImagen
+                kind={borrador.nomineeKind}
+                nombre={option.value}
+                numero={index + 1}
+                image={option.image}
+                onChange={(image) =>
+                  setBorrador((prev) => ({
+                    ...prev,
+                    options: prev.options.map((o, i) => (i === index ? { ...o, image } : o)),
+                  }))
+                }
+              />
+            ) : null}
             {borrador.options.length > MIN_NOMINEE_FIELDS ? (
               <button
                 type="button"
@@ -272,13 +313,29 @@ export function AdminPremiosCategorias({ categories, busy, ejecutar }: AdminPrem
               <div className="premios-admin__cat-head">
                 <strong>{titulo}</strong>
                 <span className="premios-admin__muted">
-                  {`${L.nominees(nominados.length)} · ${L.weight(category.weight || 1)}`}
+                  {[
+                    L.nominees(nominados.length),
+                    L.weight(category.weight || 1),
+                    // El tipo solo cuando no es el de siempre: en una lista de veintiséis juegos, «Juegos» sería ruido.
+                    ...(hasGameCovers(category) ? [] : [L.kinds[nomineeKindOf(category)]]),
+                  ].join(' · ')}
                 </span>
                 {/* CADA ACCIÓN CON SU ICONO Y SU COLOR, como en el resto del panel: mover es una flecha, editar
                     el lápiz y BORRAR va en rojo (`btn-danger`) porque es lo único de esta fila que no se puede
                     deshacer. Antes eran cuatro cajas de texto idénticas —«↑ ↓ Editar Eliminar»— donde la más
-                    peligrosa se pulsaba por error con la misma facilidad que la más inocente. */}
+                    peligrosa se pulsaba por error con la misma facilidad que la más inocente.
+                    EDITAR VA PRIMERO y las flechas a su derecha (29-09-2026): es lo que más se pulsa, y así queda
+                    alineado en todas las filas. Borrar sigue el último. */}
                 <span className="premios-admin__cat-actions">
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={busy}
+                    onClick={() => (editando === category.id ? cerrar() : abrir(category))}
+                  >
+                    <Icon name={editando === category.id ? 'close' : 'edit'} />
+                    <span>{editando === category.id ? L.cancel : L.edit}</span>
+                  </button>
                   <button
                     type="button"
                     className="btn premios-admin__icon-btn"
@@ -298,15 +355,6 @@ export function AdminPremiosCategorias({ categories, busy, ejecutar }: AdminPrem
                     onClick={() => mover(index, 1)}
                   >
                     <Icon name="chevron-down" />
-                  </button>
-                  <button
-                    type="button"
-                    className="btn"
-                    disabled={busy}
-                    onClick={() => (editando === category.id ? cerrar() : abrir(category))}
-                  >
-                    <Icon name={editando === category.id ? 'close' : 'edit'} />
-                    <span>{editando === category.id ? L.cancel : L.edit}</span>
                   </button>
                   <button
                     type="button"

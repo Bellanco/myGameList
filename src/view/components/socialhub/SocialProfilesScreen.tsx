@@ -8,6 +8,8 @@ import { HubBackButton } from './HubBackButton';
 import { FriendshipButton } from './FriendshipButton';
 import type { RelationshipState } from '../../../model/types/social';
 import type { SocialDirectoryEntry } from '../../../viewmodel/useSocialViewModel';
+import { shouldOfferInvite } from '../../../core/social/invite';
+import { InviteLink } from '../invite/InviteLink';
 
 /** Lo que esta pantalla necesita de una entrada del directorio: identidad, nombre, foto, rango y recencia. */
 type DirectoryCard = Pick<SocialDirectoryEntry, 'id' | 'uid' | 'displayName' | 'photoURL' | 'tier' | 'lastActiveAt'>;
@@ -58,6 +60,15 @@ function SocialProfilesScreenBase({
     .filter((entry) => relationshipWith(entry.uid) === 'friends')
     .sort((a, b) => (b.lastActiveAt || 0) - (a.lastActiveAt || 0));
   const otherProfiles = filteredSocialDirectory.filter((entry) => relationshipWith(entry.uid) !== 'friends');
+  // SOLO SIN BÚSQUEDA: con un filtro puesto, la lista de amigos es la de los que casan con el nombre, no la de
+  // todos, y la tarjeta aparecería y desaparecería al teclear. Ver `shouldOfferInvite`.
+  const offerInvite = !loadingDirectory && !profileSearch.trim() && shouldOfferInvite(friendProfiles.length);
+  const invite = offerInvite ? (
+    <section className="hub-invite" aria-label={SOCIAL_UI.profiles.inviteAria}>
+      <h3 className="hub-invite-title">{SOCIAL_UI.profiles.inviteTitle}</h3>
+      <InviteLink variant="compact" />
+    </section>
+  ) : null;
 
   const renderProfileCard = (entry: DirectoryCard) => (
     <HubUserCard
@@ -116,7 +127,10 @@ function SocialProfilesScreenBase({
             </div>
           </div>
         ) : filteredSocialDirectory.length === 0 ? (
-          <div className="fg"><p>{SOCIAL_UI.profiles.empty}</p></div>
+          <>
+            <div className="fg"><p>{SOCIAL_UI.profiles.empty}</p></div>
+            {invite}
+          </>
         ) : (
           <>
             <HubUserSection
@@ -141,6 +155,9 @@ function SocialProfilesScreenBase({
               rowsPerPage={PROFILE_ROWS_PER_PAGE}
               resetKey={profileSearch}
             />
+            {/* AL FINAL, DEBAJO DE «DESCUBRIR»: primero la gente que ya está, y solo después, a quien le quede alguien
+                por traer, cómo traerlo. Arriba competía con la lista que se viene a mirar. */}
+            {invite}
           </>
         )}
         <HubStatus status={status} statusKind={statusKind} />

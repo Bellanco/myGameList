@@ -270,6 +270,8 @@ export const SOCIAL_UI = {
     showMore: (remaining: number) => `Mostrar más (quedan ${remaining})`,
     friendsEmpty: 'Aún no tienes amigos. Envía una petición desde la lista de abajo.',
     othersEmpty: 'No hay más perfiles que mostrar.',
+    inviteAria: 'Invitar a un amigo',
+    inviteTitle: 'Invita a un amigo',
   },
   requests: {
     sectionAria: 'Solicitudes de amistad',

@@ -1,0 +1,383 @@
+/* GUÍA DE PRIMEROS PASOS — velo con hueco, anillo, burbuja, tarjetas, botón plegado y hoja de invitar.
+   ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   Viaja en el chunk de la guía (lo importa `OnboardingTour`), no en el arranque.
+
+   TODO CON FICHAS: superficie elevada, texto, tinta de enlace para lo que SEÑALA (la misma que el anillo de foco:
+   en Forja, el temple) y el acento para lo que se RELLENA. Así cada tema la viste a su manera sin una línea con
+   su nombre, y en claro cada pieza tiene su gemela de día sola.
+
+   CAPA 128: sobre la barra (120) y el carril de avisos (125), BAJO el aviso de cookies (130). El consentimiento
+   es una decisión legal y tiene que poder tomarse con la guía delante; por eso queda por encima del velo y la
+   tarjeta de bienvenida se aparta de él (`--consent-h`). */
+
+:root {
+  --ob-scrim: rgba(var(--shadow-rgb), .66);
+  --ob-z: 128;
+  --ob-mark: var(--focus-ring, var(--fg-link));
+}
+:root[data-theme="light"] { --ob-scrim: rgba(var(--shadow-rgb), .42); }
+
+.ob-root { display: contents; }
+
+/* El velo NO recoge toques: la guía acompaña, no obliga. Lo único que se pulsa es la burbuja. */
+.ob-scrim {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: var(--ob-z);
+  pointer-events: none;
+  animation: ob-fade .2s ease both;
+}
+.ob-scrim-fill { fill: var(--ob-scrim); }
+
+.ob-ring {
+  position: fixed;
+  z-index: var(--ob-z);
+  pointer-events: none;
+  box-shadow: 0 0 0 2px var(--ob-mark), 0 0 0 7px color-mix(in srgb, var(--ob-mark) 18%, transparent);
+  transition: left .18s ease, top .18s ease, width .18s ease, height .18s ease;
+}
+.ob-ring.is-done { --ob-mark: var(--success); }
+.ob-ring.is-optional { --ob-mark: var(--warn); }
+/* Un paso que hay que HACER late: se lee a la primera que ahí hay que tocar. */
+.ob-ring.is-action::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  box-shadow: 0 0 0 2px var(--ob-mark);
+  animation: ob-pulse 1.6s ease-out infinite;
+}
+
+/* ── Burbuja y tarjetas ─────────────────────────────────────────────────────────────────────────────────── */
+.ob-bubble,
+.ob-card,
+.ob-sheet {
+  position: fixed;
+  z-index: var(--ob-z);
+  box-sizing: border-box;
+  color: var(--text);
+  background: var(--surface-elevated);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--e3), var(--edge);
+  pointer-events: auto;
+  outline: none;
+  animation: ob-rise .2s ease both;
+}
+.ob-bubble {
+  width: min(358px, calc(100vw - 32px));
+  padding: 14px 16px;
+}
+@media (min-width: 700px) { .ob-bubble { width: 344px; } }
+
+.ob-caret {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: var(--surface-elevated);
+  border-radius: 3px;
+  transform: rotate(45deg);
+}
+
+.ob-kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 20px;
+  margin: 0;
+  font-family: var(--font-label);
+  font-weight: 600;
+  font-size: var(--fs-2xs);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--fg-link);
+}
+.ob-bubble.is-done .ob-kicker { color: var(--success); }
+.ob-bubble.is-optional .ob-kicker,
+.ob-kicker.is-optional { color: var(--warn); }
+.ob-kicker-center { justify-content: center; }
+
+.ob-count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.ob-tag {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-label);
+  font-weight: 600;
+  font-size: var(--fs-3xs);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--warn);
+  background: rgba(var(--warn-rgb), .12);
+  border: 1px solid rgba(var(--warn-rgb), .34);
+}
+.ob-tag + .ob-count { margin-left: 0; }
+
+/* La X pliega (no cierra): 44 px de diana aunque el dibujo sea pequeño. */
+.ob-close {
+  margin: -12px -12px -12px auto;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.ob-count + .ob-close,
+.ob-tag + .ob-close { margin-left: 0; }
+.ob-close:hover { color: var(--text); }
+.ob-close:focus-visible,
+.ob-copy:focus-visible,
+.ob-row-inner:focus-visible,
+.ob-pill:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+.ob-title {
+  margin: 6px 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-xl);
+  line-height: 1.2;
+}
+.ob-title-lg { font-size: var(--fs-2xl); }
+.ob-text {
+  margin: 0;
+  font-size: var(--fs-md);
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.ob-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ob-icon-sm { width: 14px; height: 14px; }
+
+.ob-tap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-label);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: var(--fg-link);
+  background: color-mix(in srgb, var(--fg-link) 11%, transparent);
+}
+
+.ob-next {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hair);
+  background: color-mix(in srgb, var(--bg) 45%, transparent);
+}
+.ob-next-body { display: flex; flex-direction: column; }
+.ob-next-label {
+  font-family: var(--font-label);
+  font-size: var(--fs-3xs);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.ob-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.ob-foot .btn,
+.ob-wide { min-height: 44px; }
+.ob-foot-split .btn { flex: 1 1 0; }
+.ob-foot-split .btn-primary { flex-grow: 2; }
+.ob-dots { display: flex; gap: 4px; flex-grow: 1; }
+.ob-dot { width: 16px; height: 4px; border-radius: 2px; background: var(--border); }
+.ob-dot.is-on { background: var(--steam); }
+.ob-dot.is-done { background: var(--success); }
+
+.ob-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  font-size: var(--fs-xs);
+  line-height: 1.35;
+  text-align: center;
+  color: var(--text-dim);
+}
+
+/* ── Lista de misiones ──────────────────────────────────────────────────────────────────────────────────── */
+.ob-card {
+  left: 16px;
+  right: 16px;
+  top: calc(env(safe-area-inset-top, 0px) + 76px);
+  /* Nunca bajo el aviso de cookies ni bajo la barra: si no cabe, la tarjeta se desplaza por dentro. */
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 76px - var(--bottom-nav-h, 4.6rem) - var(--consent-h, 0px) - 16px);
+  overflow-y: auto;
+  padding: 16px;
+}
+@media (min-width: 700px) {
+  .ob-card { left: 50%; right: auto; width: 420px; transform: translateX(-50%); }
+}
+.ob-card-finale { text-align: center; padding-top: 24px; }
+.ob-card-finale .ob-missions { text-align: left; }
+
+.ob-missions { margin: 12px 0 0; padding: 0; list-style: none; }
+.ob-row { border-top: 1px solid var(--hair); }
+.ob-row-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+button.ob-row-inner { cursor: pointer; border-radius: var(--radius-sm); }
+button.ob-row-inner:hover .ob-mission-name { color: var(--fg-link); }
+.ob-row-body { display: flex; flex-direction: column; min-width: 0; }
+.ob-mission-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-md);
+  line-height: 1.2;
+  color: var(--text);
+}
+.ob-mission-sub { font-size: var(--fs-xs); line-height: 1.35; color: var(--text-dim); }
+.ob-mission-icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  color: var(--fg-link);
+  background: color-mix(in srgb, var(--fg-link) 13%, transparent);
+}
+.ob-mission-icon.is-current { color: var(--on-accent); background: var(--steam); }
+.ob-mission-icon.is-done { color: var(--success); background: rgba(var(--success-rgb), .16); }
+.ob-mission-icon.is-optional { color: var(--warn); background: rgba(var(--warn-rgb), .12); }
+.ob-mission-icon.is-skipped { color: var(--text-dim); background: color-mix(in srgb, var(--border) 35%, transparent); }
+.ob-row-state {
+  margin-left: auto;
+  font-family: var(--font-label);
+  font-weight: 600;
+  font-size: var(--fs-3xs);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.ob-row-state.is-done { color: var(--success); }
+.ob-row-state.is-now { color: var(--steam-hover); }
+
+.ob-trophy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  color: var(--warn);
+  background: radial-gradient(circle at 50% 35%, rgba(var(--warn-rgb), .22), rgba(var(--warn-rgb), .06));
+  box-shadow: inset 0 0 0 2px rgba(var(--warn-rgb), .55);
+}
+.ob-trophy .ob-icon { width: 32px; height: 32px; }
+.ob-wide { width: 100%; margin-top: 16px; }
+
+/* ── El botón plegado (vive en el carril de avisos) ─────────────────────────────────────────────────────── */
+.ob-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  max-width: min(300px, calc(100vw - 110px));
+  padding: 0 14px 0 8px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  color: var(--text);
+  background: var(--surface-elevated);
+  box-shadow: var(--e3), var(--edge);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+  animation: ob-rise .2s ease both;
+}
+.ob-pill-ring { width: 36px; height: 36px; flex-shrink: 0; }
+.ob-pill-track, .ob-pill-value { fill: none; stroke-width: 4; }
+.ob-pill-track { stroke: var(--border); }
+.ob-pill-value { stroke: var(--steam); stroke-linecap: round; }
+.ob-pill-ring text { font-family: var(--font-mono); font-size: 12px; fill: var(--text); }
+.ob-pill-body { display: flex; flex-direction: column; min-width: 0; }
+.ob-pill-title { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-sm); line-height: 1.2; }
+.ob-pill-next {
+  font-size: var(--fs-xs);
+  line-height: 1.3;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ob-pill-chevron { margin-left: auto; color: var(--text-dim); }
+
+/* ── Invitar a un amigo ─────────────────────────────────────────────────────────────────────────────────── */
+.ob-sheet {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  padding: 12px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--e4), var(--edge);
+}
+@media (min-width: 700px) {
+  .ob-sheet { left: 50%; right: auto; bottom: 24px; width: 460px; transform: translateX(-50%); border-radius: var(--radius-lg); }
+}
+.ob-grip { display: block; width: 40px; height: 4px; margin: 0 auto 14px; border-radius: 2px; background: var(--border); }
+
+/* ── Movimiento ─────────────────────────────────────────────────────────────────────────────────────────── */
+@keyframes ob-fade { from { opacity: 0; } }
+@keyframes ob-rise { from { opacity: 0; translate: 0 6px; } }
+@keyframes ob-pulse {
+  from { opacity: .9; transform: scale(1); }
+  to { opacity: 0; transform: scale(1.18); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ob-scrim, .ob-bubble, .ob-card, .ob-sheet, .ob-pill { animation: none; }
+  .ob-ring { transition: none; }
+  .ob-ring.is-action::after { animation: none; opacity: .6; }
+}

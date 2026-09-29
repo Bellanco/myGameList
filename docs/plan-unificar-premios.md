@@ -328,12 +328,15 @@ Y tres más que salieron al usarlo:
 Un booleano que decide si la porra se ofrece en la navegación. Lo escribe el panel. La regla de presentación:
 
 ```
-visible === false           → la sección no se ofrece (la ruta sigue respondiendo a quien tenga el enlace)
-visible === true            → se ofrece siempre
-visible ausente (por defecto)→ se ofrece si hay edición abierta, o si hay resultados publicados hace < 30 días
+visible === true            → se ofrece
+visible === false o ausente → no se ofrece (la ruta sigue respondiendo a quien tenga el enlace)
 ```
 
-Así el interruptor del admin manda, y sin tocarlo el comportamiento razonable sale solo.
+*(Revisado el 29-09-2026.)* **Solo manda el interruptor del admin.** Antes, sin el campo se ofrecía si había
+edición abierta o resultados de menos de 30 días, abrir una edición escribía `visible: true` y publicarla borraba
+el campo. Se retiró todo eso: la sección aparecía y desaparecía sin que nadie lo decidiera. Ni abrir ni publicar
+tocan ya `visible`; al abrir con la sección oculta, el panel lo avisa en un diálogo y ofrece «Abrir y hacer
+visible» o «Abrir oculta» (ver `core/premios/visibility` y `AdminPremios`).
 
 ### 2.5 Lo que no se toca
 
@@ -943,6 +946,20 @@ el principio rector sin discutir de gustos.
    *(Revisado el 24-09-2026.)* Ya **no** depende de la preferencia de imágenes: los nominados salen con carátula
    para todo el mundo. Se piden con `c=1` —solo lo ya resuelto— y las resuelve el panel al abrir la edición y al
    guardar cada categoría (`resolverCaratulasDeNominados`), así que votar no consulta IGDB ni escribe en KV.
+
+   *(Revisado el 29-09-2026.)* **Solo en las categorías de juegos.** Cada categoría lleva `nomineeKind`
+   (`game` / `person` / `screen`, sin él `game`), y lo marca el administrador en el panel en lugar de deducirlo
+   del título. Las de interpretaciones y cine o serie no se buscan en IGDB y salen con la portada de casa: IGDB
+   solo tiene juegos, y por el nombre la serie *The Last of Us* casaba con el juego. Ver `core/premios/nomineeKind`.
+
+   *(Revisado el 29-09-2026.)* **Esas categorías llevan imagen de TMDB, elegida a mano.** En el formulario de la
+   categoría, cada nominado tiene «Buscar imagen»: el panel busca en TMDB (`/api/tmdb-search`, solo admin, con el
+   secreto `TMDB_READ_TOKEN`) personas para interpretaciones y series o películas para cine o serie, en español
+   si existe, y el administrador pulsa el candidato bueno. Se guarda con el nominado (`image`: tipo, id y ruta de
+   TMDB) y se sirve desde el propio dominio por `/poster`, que no usa el token. Nada se empareja solo: «Troy
+   Baker» tiene homónimos y «The Last of Us» devuelve la serie y cinco documentales. Quién gana a quién (carátula,
+   póster o portada de casa) lo decide `core/premios/nomineeImage`. La atribución que exige TMDB (logo y frase)
+   es un documento legal más, «Créditos» (`/legal/creditos`), y su logo solo se pide al abrirlo.
 
    *(Revisado el 20-09-2026.)* Este punto pedía antes que en la tarjeta se reconociera **tu** juego —«lo
    terminaste, tu nota»—; esa marca se retiró (§6.5) y con ella se fue el único consumidor de

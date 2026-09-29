@@ -52,34 +52,19 @@ describe('sanitizePremiosSnapshot', () => {
 
 // LA REGLA ES LA MISMA para las dos fuentes: el calendario que lee el panel de Firestore y la foto que se sirve
 // desde nuestro dominio. Si divergieran, el panel diría que la entrada se ofrece y el menú no la enseñaría.
-describe('la foto decide lo mismo que el calendario', () => {
-  it('con votación abierta se ofrece', () => {
-    const foto = sanitizePremiosSnapshot({ closesAtMillis: NOW + DIA });
-    expect(shouldOfferPremios(foto, NOW)).toBe(true);
+describe('la foto decide lo mismo que el panel', () => {
+  // SOLO EL INTERRUPTOR: el calendario ya no enseña la sección por su cuenta (ver `core/premios/visibility`).
+  it('con votación abierta pero sin encender, no se ofrece', () => {
+    expect(shouldOfferPremios(sanitizePremiosSnapshot({ closesAtMillis: NOW + DIA }))).toBe(false);
   });
 
-  it('el cierre forzado del administrador viaja y se respeta', () => {
-    const foto = sanitizePremiosSnapshot({ closesAtMillis: NOW + DIA, isOpen: false });
-    expect(shouldOfferPremios(foto, NOW)).toBe(false);
-  });
-
-  it('el interruptor manda sobre el calendario, en los dos sentidos', () => {
-    expect(shouldOfferPremios(sanitizePremiosSnapshot({ visible: false, closesAtMillis: NOW + DIA }), NOW)).toBe(false);
-    expect(shouldOfferPremios(sanitizePremiosSnapshot({ visible: true }), NOW)).toBe(true);
-  });
-
-  // Y CADUCA SOLA, que es la razón de publicar las fechas y no un «sí/no» ya resuelto: el día del cierre la
-  // entrada se retira sin que nadie entre al panel a apagarla.
-  it('pasado el cierre deja de ofrecerse sin que nadie toque nada', () => {
-    const foto = sanitizePremiosSnapshot({ closesAtMillis: NOW - 1 });
-    expect(shouldOfferPremios(foto, NOW)).toBe(false);
-  });
-
-  it('con resultados recientes se ofrece, y al mes ya no', () => {
+  it('con resultados recientes pero sin encender, tampoco', () => {
     const publicada = { lastPublishedId: '2025', updatedAt: new Date(NOW - 10 * DIA).toISOString() };
-    expect(shouldOfferPremios(sanitizePremiosSnapshot(publicada), NOW)).toBe(true);
+    expect(shouldOfferPremios(sanitizePremiosSnapshot(publicada))).toBe(false);
+  });
 
-    const vieja = { lastPublishedId: '2025', updatedAt: new Date(NOW - 40 * DIA).toISOString() };
-    expect(shouldOfferPremios(sanitizePremiosSnapshot(vieja), NOW)).toBe(false);
+  it('el interruptor viaja y es lo que decide, en los dos sentidos', () => {
+    expect(shouldOfferPremios(sanitizePremiosSnapshot({ visible: false, closesAtMillis: NOW + DIA }))).toBe(false);
+    expect(shouldOfferPremios(sanitizePremiosSnapshot({ visible: true }))).toBe(true);
   });
 });

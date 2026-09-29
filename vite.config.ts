@@ -9,6 +9,7 @@ import react from '@vitejs/plugin-react';
 // El MISMO saneado que usan el cliente y la Pages Function: el servidor de desarrollo no puede ser más
 // permisivo que producción, o se prueba con textos que en la web real se recortan.
 import { sanitizeAnnouncement } from './src/core/announcement/announcement';
+import { githubOAuthDevMiddleware } from './scripts/devGithubOAuth';
 // Y el MISMO saneado de la foto del calendario de la porra, por lo mismo: el servidor de desarrollo no puede
 // guardar algo que la Pages Function rechazaría.
 import { sanitizePremiosSnapshot } from './src/core/premios/visibilitySnapshot';
@@ -24,6 +25,14 @@ import {
   urlDeImagen,
   type EntornoIgdb,
 } from './functions/_lib/igdbCover';
+// Y lo mismo con TMDB: las mismas reglas de ruta, tamaños y búsqueda que `/poster` y `/api/tmdb-search`.
+import {
+  buscarEnTmdb,
+  esRutaDeImagenTmdb,
+  MAX_BUSQUEDA_TMDB,
+  tamanoPoster,
+  urlDeImagenTmdb,
+} from './functions/_lib/tmdb';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version?: string };
 const brotli = promisify(brotliCompress);
@@ -528,6 +537,135 @@ function localCoverApi(): Plugin {
   };
 }
 
+/**
+ * GEMELO DE `/poster` Y `/api/tmdb-search` en desarrollo, como `localCoverApi` lo es de `/cover`: sin él, el panel
+ * no podría buscar imágenes de nominados en local y la votación enseñaría huecos donde producción pinta pósters.
+ *
+ * Tira de `functions/_lib/tmdb`, el mismo módulo que las Functions, y lee el token de `.dev.vars`. Lo único que
+ * no tiene es la comprobación de administrador de la búsqueda: aquí no hay tokens que verificar, y quien llama es
+ * quien ha levantado el servidor en su propia máquina (el mismo criterio que `localPremiosApi`).
+ */
+function localTmdbApi(): Plugin {
+  const deDevVars = (clave: string): string => {
+    try {
+      const texto = readFileSync(new URL('./.dev.vars', import.meta.url), 'utf-8');
+      return new RegExp(`^${clave}=(.*)$`, 'm').exec(texto)?.[1]?.trim() ?? '';
+    } catch {
+      return '';
+    }
+  };
+
+  const enviar = (res: ServerResponse, status: number, cuerpo: unknown): void => {
+    res.statusCode = status;
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    res.end(JSON.stringify(cuerpo));
+  };
+
+  return {
+    name: 'local-tmdb-api',
+    apply: 'serve',
+
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const ruta = req.url?.split('?')[0];
+        if (ruta !== '/poster' && ruta !== '/api/tmdb-search') {
+          next();
+          return;
+        }
+        const url = new URL(req.url ?? '', 'http://localhost');
+
+        void (async () => {
+          try {
+            if (ruta === '/poster') {
+              const camino = url.searchParams.get('p');
+              if (!esRutaDeImagenTmdb(camino)) {
+                res.statusCode = 400;
+                res.end('Ruta de imagen no válida');
+                return;
+              }
+              const imagen = await fetch(urlDeImagenTmdb(camino, tamanoPoster(url.searchParams.get('s'))));
+              if (!imagen.ok) {
+                res.statusCode = 502;
+                res.end('La imagen no se pudo descargar');
+                return;
+              }
+              res.statusCode = 200;
+              res.setHeader('Content-Type', imagen.headers.get('Content-Type') ?? 'image/jpeg');
+              // Sin caché de navegador en local, como `/cover`: se quiere ver el cambio al recargar.
+              res.setHeader('Cache-Control', 'no-store');
+              res.end(Buffer.from(await imagen.arrayBuffer()));
+              return;
+            }
+
+            const token = deDevVars('TMDB_READ_TOKEN');
+            if (!token) {
+              enviar(res, 501, {
+                error: 'No hay TMDB_READ_TOKEN en .dev.vars: la búsqueda de TMDB no funciona en desarrollo.',
+              });
+              return;
+            }
+            const consulta = (url.searchParams.get('q') ?? '').trim();
+            if (!consulta || consulta.length > MAX_BUSQUEDA_TMDB) {
+              enviar(res, 400, { error: 'Falta qué buscar' });
+              return;
+            }
+            const tipo = url.searchParams.get('k') === 'person' ? 'person' : 'screen';
+            const candidatos = await buscarEnTmdb(token, consulta, tipo);
+            if (candidatos === null) {
+              enviar(res, 503, { error: 'No se ha podido consultar TMDB; inténtalo más tarde' });
+              return;
+            }
+            enviar(res, 200, { results: candidatos });
+          } catch {
+            res.statusCode = 502;
+            res.setHeader('Cache-Control', 'no-store');
+            res.end('No se pudo atender la petición a TMDB');
+          }
+        })();
+      });
+    },
+  };
+}
+
+/**
+ * GEMELO DE `/api/github-oauth` en desarrollo: el canje del `code` de «Conectar con GitHub» por el token. La lógica
+ * y el porqué están en `scripts/devGithubOAuth.ts`, que llama a la misma Function de producción.
+ *
+ * Con una OAUTH APP DE DESARROLLO, nunca la de producción (su callback es el dominio publicado y GitHub no acepta
+ * otro): su `client_id` va en `VITE_GITHUB_CLIENT_ID` de `.env.development.local` —el mismo que lee la
+ * aplicación, así que el botón aparece en local en cuanto lo pones— y su secreto en `GITHUB_DEV_CLIENT_SECRET` de
+ * `.dev.vars`. Con otro nombre que el de producción A PROPÓSITO: `wrangler pages secret bulk .dev.vars` sube todas
+ * las líneas, y un `GITHUB_CLIENT_SECRET` de desarrollo pisaría el bueno. Sin nada de esto, local sigue como
+ * estaba: sin OAuth, y el botón abre la conexión manual.
+ */
+function localGithubOAuthApi(): Plugin {
+  let clientId = '';
+  const deDevVars = (clave: string): string => {
+    try {
+      const texto = readFileSync(new URL('./.dev.vars', import.meta.url), 'utf-8');
+      return new RegExp(`^${clave}=(.*)$`, 'm').exec(texto)?.[1]?.trim() ?? '';
+    } catch {
+      return '';
+    }
+  };
+
+  return {
+    name: 'local-github-oauth-api',
+    apply: 'serve',
+    configResolved(config) {
+      clientId = String(config.env.VITE_GITHUB_CLIENT_ID ?? '').trim();
+    },
+    configureServer(server) {
+      server.middlewares.use(githubOAuthDevMiddleware({
+        clientId: () => clientId,
+        clientSecret: () => deDevVars('GITHUB_DEV_CLIENT_SECRET'),
+        warn: (message) => server.config.logger.warn(message),
+      }));
+    },
+  };
+}
+
 export default defineConfig({
   // Identificador de build inyectado en tiempo de compilación; lo usa la telemetría para etiquetar errores/eventos.
   define: {
@@ -540,6 +678,8 @@ export default defineConfig({
     localAnnouncementApi(),
     localPremiosApi(),
     localCoverApi(),
+    localTmdbApi(),
+    localGithubOAuthApi(),
   ],
   server: {
     port: 8000,

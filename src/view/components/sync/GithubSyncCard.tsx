@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useId, useState } from 'react';
 import { COMMON_ICONS } from '../../../core/constants/icons';
 import { SETTINGS_UI } from '../../../core/constants/settingsLabels';
 import type { GithubConnection } from '../../../viewmodel/sync/githubConnection';
@@ -67,11 +67,10 @@ export const GithubSyncCard = memo(function GithubSyncCard({
 
   const [showToken, setShowToken] = useState(false);
   const [showConfigHelp, setShowConfigHelp] = useState(false);
-  /** «¿Qué es GitHub Gist?»: la explicación, plegada, para que el botón de conectar quede el primero. */
-  const [showWhatIsGist, setShowWhatIsGist] = useState(false);
-  // Con OAuth disponible, el modo manual (PAT) queda plegado como opción avanzada; sin OAuth, se muestra siempre.
+  // LA CONEXIÓN MANUAL (token + Gist ID) va SIEMPRE plegada: es para quien la busca, no lo que se ve al llegar.
+  // Sin OAuth en el build se despliega pulsando el mismo botón de conectar (ver `botonOAuth`).
   const [showManual, setShowManual] = useState(false);
-  const manualVisible = !oauthEnabled || showManual;
+  const manualId = useId();
 
   const isGateway = variant === 'gateway';
   // Los identificadores de los campos llevan la variante: hoy solo los pinta Ajustes, pero un `id` repetido rompe
@@ -79,12 +78,18 @@ export const GithubSyncCard = memo(function GithubSyncCard({
   const tokenFieldId = `sync-token-${variant}`;
   const gistFieldId = `sync-gist-${variant}`;
 
-  /** El botón que de verdad conecta. Uno solo, compartido por el modo sencillo y por la tarjeta completa. */
+  /**
+   * El botón que de verdad conecta. Uno solo, compartido por la pasarela y por la tarjeta completa.
+   *
+   * SIN OAUTH EN EL BUILD (el servidor de desarrollo, que no lee `.env.production`) el botón sigue ahí y abre la
+   * conexión manual, con una línea que dice por qué. Así la tarjeta tiene la misma forma en todas partes —la
+   * sencilla— y no hay un segundo diseño que solo se vea en local. La pasarela no llega aquí sin OAuth.
+   */
   const botonOAuth = (
     <button
       className={ctaClassName}
       type="button"
-      onClick={onOAuthLogin}
+      onClick={oauthEnabled ? onOAuthLogin : () => setShowManual(true)}
       disabled={oauthLoggingIn}
     >
       <Icon name="cloud-sync" />
@@ -94,15 +99,16 @@ export const GithubSyncCard = memo(function GithubSyncCard({
     </button>
   );
 
-  /** La puerta al modo manual, solo en Ajustes (ver la nota de la variante `gateway`). */
+  /** La puerta a la conexión manual, solo en Ajustes (ver la nota de la variante `gateway`). */
   const enlaceManual = (
     <button
-      className="sync-help-toggle"
+      className="sync-card-link sync-manual-toggle"
       type="button"
       onClick={() => setShowManual((prev) => !prev)}
       aria-expanded={showManual}
     >
-      {showManual ? SETTINGS_UI.sync.manualToggleHide : SETTINGS_UI.sync.manualToggleShow}
+      <Icon name={showManual ? 'chevron-up' : 'chevron-down'} />
+      <span>{showManual ? SETTINGS_UI.sync.manualToggleHide : SETTINGS_UI.sync.manualToggleShow}</span>
     </button>
   );
 
@@ -129,7 +135,7 @@ export const GithubSyncCard = memo(function GithubSyncCard({
   }
 
   return (
-    <div className="settings-card settings-card-status">
+    <div className="settings-card settings-card-status" data-tour="sync-card">
       <div className="sync-card-head">
         <h2>{SETTINGS_UI.sync.title}</h2>
         {/* EL ESTADO, CON FORMA DE ESTADO. Era una línea de texto corrida —«Estado actual: No sincronizado»—
@@ -159,146 +165,132 @@ export const GithubSyncCard = memo(function GithubSyncCard({
 
       {!hasConfig && (
         <>
-          {/* EL BOTÓN PRIMERO. Aquí se llega a conectar, y antes había que bajar por dos cajas de ayuda —qué
-              es un Gist, cómo funciona la conexión— para encontrarlo. La explicación sigue estando, debajo y
-              plegada: quien la necesita la abre una vez y quien no, no la vuelve a ver. */}
-          {oauthEnabled && (
-            <>
-              <div className="sync-card-lead">
-                {botonOAuth}
-                {enlaceManual}
-              </div>
-              <button
-                type="button"
-                className="sync-card-link"
-                aria-expanded={showWhatIsGist}
-                onClick={() => setShowWhatIsGist((prev) => !prev)}
-              >
-                {SETTINGS_UI.sync.helpGithubTitle}
-              </button>
-              {showWhatIsGist ? (
+          {/* LA FORMA SENCILLA, QUE ES LA DE SIEMPRE: qué hace en una frase, lo que se gana, y UN botón. Conectar
+              es identificarse en GitHub y volver; no hay que saber qué es un gist ni crear nada. Lo de antes —un
+              «¿Qué es GitHub Gist?» plegado y el enlace al token junto al botón— contaba la parte técnica en el
+              mismo sitio que la sencilla, y quien llegaba no sabía cuál de las dos le tocaba. */}
+          <p className="sync-lead">{SETTINGS_UI.sync.lead}</p>
+          <ul className="sync-perks">
+            {SETTINGS_UI.sync.perks.map((perk) => (
+              <li key={perk.text}>
+                <span className="sync-perk-icon" aria-hidden="true"><Icon name={perk.icon} /></span>
+                <span>{perk.text}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="sync-cta">
+            {botonOAuth}
+            {oauthEnabled ? <p className="sync-howto">{SETTINGS_UI.sync.oauthHowto}</p> : null}
+          </div>
+
+          {/* LA CONEXIÓN MANUAL, al final y plegada, separada por un filete: es otra cosa, para otro momento. */}
+          <div className="sync-manual">
+            {enlaceManual}
+            {showManual ? (
+              <div className="sync-manual-body" id={manualId}>
+                {!oauthEnabled ? <p className="sync-howto">{SETTINGS_UI.sync.manualNoOauth}</p> : null}
                 <div className="sync-help">
-                  {SETTINGS_UI.sync.helpGithubBody}
+                  <strong>{SETTINGS_UI.sync.helpConfigTitle}</strong>
                   <br />
-                  {SETTINGS_UI.sync.oauthHelpBody}
-                </div>
-              ) : null}
-            </>
-          )}
-
-          {/* Sin OAuth disponible no hay atajo que ofrecer, así que la explicación va a la vista: el modo
-              manual es el único camino y hay que saber qué se está montando. */}
-          {!oauthEnabled && (
-            <div className="sync-help">
-              <strong>{SETTINGS_UI.sync.helpGithubTitle}</strong>
-              <br />
-              {SETTINGS_UI.sync.helpGithubBody}
-            </div>
-          )}
-
-          {manualVisible && (
-            <>
-              <div className="sync-help">
-                <strong>{SETTINGS_UI.sync.helpConfigTitle}</strong>
-                <br />
-                {SETTINGS_UI.sync.helpConfigBody}
-                <br />
-                <a
-                  href={SETTINGS_UI.sync.helpConfigLinkUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {SETTINGS_UI.sync.helpConfigLinkLabel}
-                </a>
-                <div className="sync-help-actions">
-                  <button
-                    className="sync-help-toggle"
-                    type="button"
-                    onClick={() => setShowConfigHelp((prev) => !prev)}
-                    aria-expanded={showConfigHelp}
+                  {SETTINGS_UI.sync.helpConfigBody}
+                  <br />
+                  <a
+                    href={SETTINGS_UI.sync.helpConfigLinkUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
                   >
-                    {showConfigHelp ? SETTINGS_UI.sync.helpConfigCollapse : SETTINGS_UI.sync.helpConfigExpand}
+                    {SETTINGS_UI.sync.helpConfigLinkLabel}
+                  </a>
+                  <div className="sync-help-actions">
+                    <button
+                      className="sync-help-toggle"
+                      type="button"
+                      onClick={() => setShowConfigHelp((prev) => !prev)}
+                      aria-expanded={showConfigHelp}
+                    >
+                      {showConfigHelp ? SETTINGS_UI.sync.helpConfigCollapse : SETTINGS_UI.sync.helpConfigExpand}
+                    </button>
+                  </div>
+                  {showConfigHelp ? (
+                    <ol>
+                      <li>{SETTINGS_UI.sync.helpConfigStep1}</li>
+                      <li>{SETTINGS_UI.sync.helpConfigStep2}</li>
+                      <li>{SETTINGS_UI.sync.helpConfigStep3}</li>
+                      <li>{SETTINGS_UI.sync.helpConfigStep4}</li>
+                      <li>{SETTINGS_UI.sync.helpConfigStep5}</li>
+                      <li>{SETTINGS_UI.sync.helpConfigStep6}</li>
+                      <li>{SETTINGS_UI.sync.helpConfigStep7}</li>
+                    </ol>
+                  ) : null}
+                </div>
+
+                <div className="fg">
+                  <label htmlFor={tokenFieldId} className="flabel">
+                    {SETTINGS_UI.sync.tokenLabel}
+                  </label>
+                  <div className="token-row">
+                    <input
+                      id={tokenFieldId}
+                      className="finput"
+                      type={showToken ? 'text' : 'password'}
+                      value={token}
+                      onChange={(event) => onTokenChange(event.target.value)}
+                      placeholder={SETTINGS_UI.sync.tokenPlaceholder}
+                    />
+                    <button
+                      className="token-toggle"
+                      type="button"
+                      aria-label={SETTINGS_UI.sync.tokenToggle(showToken)}
+                      title={SETTINGS_UI.sync.tokenToggle(showToken)}
+                      aria-pressed={showToken}
+                      onClick={() => setShowToken((prev) => !prev)}
+                    >
+                      <Icon name={showToken ? COMMON_ICONS.eyeOff : COMMON_ICONS.eye} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="fg">
+                  <label htmlFor={gistFieldId} className="flabel">
+                    {SETTINGS_UI.sync.gistLabel}
+                  </label>
+                  <div className="sync-gist-row">
+                    <input
+                      id={gistFieldId}
+                      className="finput"
+                      value={gistId}
+                      onChange={(event) => onGistIdChange(event.target.value)}
+                      placeholder={SETTINGS_UI.sync.gistPlaceholder}
+                    />
+                  </div>
+                </div>
+
+                <div className="sync-card-actions sync-card-actions-row">
+                  <button
+                    className="btn btn-steam btn-connect"
+                    type="button"
+                    onClick={onConnect}
+                    style={{ marginRight: 'auto' }}
+                  >
+                    <Icon name="cloud-sync" />
+                    <span className="btn-label desktop-only">{SETTINGS_UI.sync.connectBtn}</span>
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-recover"
+                    type="button"
+                    onClick={onRecoverGistId}
+                    disabled={recoveringGistId}
+                    style={{ marginLeft: 'auto' }}
+                  >
+                    <Icon name={COMMON_ICONS.googleRecover} />
+                    <span className="btn-label desktop-only">
+                      {recoveringGistId ? SETTINGS_UI.sync.recoveringBtn : SETTINGS_UI.sync.recoverBtn}
+                    </span>
                   </button>
                 </div>
-                {showConfigHelp ? (
-                  <ol>
-                    <li>{SETTINGS_UI.sync.helpConfigStep1}</li>
-                    <li>{SETTINGS_UI.sync.helpConfigStep2}</li>
-                    <li>{SETTINGS_UI.sync.helpConfigStep3}</li>
-                    <li>{SETTINGS_UI.sync.helpConfigStep4}</li>
-                    <li>{SETTINGS_UI.sync.helpConfigStep5}</li>
-                    <li>{SETTINGS_UI.sync.helpConfigStep6}</li>
-                    <li>{SETTINGS_UI.sync.helpConfigStep7}</li>
-                  </ol>
-                ) : null}
               </div>
-
-              <div className="fg">
-                <label htmlFor={tokenFieldId} className="flabel">
-                  {SETTINGS_UI.sync.tokenLabel}
-                </label>
-                <div className="token-row">
-                  <input
-                    id={tokenFieldId}
-                    className="finput"
-                    type={showToken ? 'text' : 'password'}
-                    value={token}
-                    onChange={(event) => onTokenChange(event.target.value)}
-                    placeholder={SETTINGS_UI.sync.tokenPlaceholder}
-                  />
-                  <button
-                    className="token-toggle"
-                    type="button"
-                    aria-label={SETTINGS_UI.sync.tokenToggle(showToken)}
-                    title={SETTINGS_UI.sync.tokenToggle(showToken)}
-                    aria-pressed={showToken}
-                    onClick={() => setShowToken((prev) => !prev)}
-                  >
-                    <Icon name={showToken ? COMMON_ICONS.eyeOff : COMMON_ICONS.eye} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="fg">
-                <label htmlFor={gistFieldId} className="flabel">
-                  {SETTINGS_UI.sync.gistLabel}
-                </label>
-                <div className="sync-gist-row">
-                  <input
-                    id={gistFieldId}
-                    className="finput"
-                    value={gistId}
-                    onChange={(event) => onGistIdChange(event.target.value)}
-                    placeholder={SETTINGS_UI.sync.gistPlaceholder}
-                  />
-                </div>
-              </div>
-
-              <div className="sync-card-actions sync-card-actions-row">
-                <button
-                  className="btn btn-steam btn-connect"
-                  type="button"
-                  onClick={onConnect}
-                  style={{ marginRight: 'auto' }}
-                >
-                  <Icon name="cloud-sync" />
-                  <span className="btn-label desktop-only">{SETTINGS_UI.sync.connectBtn}</span>
-                </button>
-                <button
-                  className="btn btn-secondary btn-recover"
-                  type="button"
-                  onClick={onRecoverGistId}
-                  disabled={recoveringGistId}
-                  style={{ marginLeft: 'auto' }}
-                >
-                  <Icon name={COMMON_ICONS.googleRecover} />
-                  <span className="btn-label desktop-only">
-                    {recoveringGistId ? SETTINGS_UI.sync.recoveringBtn : SETTINGS_UI.sync.recoverBtn}
-                  </span>
-                </button>
-              </div>
-            </>
-          )}
+            ) : null}
+          </div>
         </>
       )}
 

@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_MESSAGES, TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from './core/constants/labels';
 import { LEGAL_ROUTES, type LegalDocId } from './core/constants/legal';
@@ -57,6 +57,9 @@ import { useMountedOnceOpen } from './view/modals/useMountedOnceOpen';
 import { runWhenIdle } from './core/utils/idle';
 import { carryStamps } from './core/utils/gameStamps';
 import { importedToPartialGame, mergeImportedIntoGame } from './core/import/staging';
+import { isTourVisible, offeredTour, parseTourState } from './core/onboarding/tourState';
+import type { TourContext } from './core/onboarding/tourSteps';
+import { hadLocalFootprint, onboardingStore, saveTourState } from './model/repository/onboardingStore';
 import type { ImportedGame, RawExternalGame } from './model/types/import';
 
 // Los tres modales se montan solo tras su primera apertura (ver `useMountedOnceOpen`), así que sus chunks ya no
@@ -120,6 +123,24 @@ const AnnouncementToast = lazy(() => import('./view/components/AnnouncementToast
  * tema—, así que llegar unos milisegundos después de pintar no se nota.
  */
 const SignatureEffects = lazy(() => import('./view/components/SignatureEffects').then((module) => ({ default: module.SignatureEffects })));
+
+/**
+ * LA GUÍA DE PRIMEROS PASOS (ver `OnboardingTour`), por la misma puerta que el resto: perezosa y montada en idle.
+ * Aquí solo viaja la decisión de SI se monta, que es leer una clave de `localStorage`; los textos, el motor de
+ * pasos y la hoja de estilos llegan con el chunk, y quien no tiene la guía en marcha —casi todo el mundo— no lo
+ * descarga nunca.
+ */
+const OnboardingTour = lazy(() => import('./view/components/onboarding/OnboardingTour').then((module) => ({ default: module.OnboardingTour })));
+
+/**
+ * ¿Traía este navegador algo de la aplicación AL ARRANCAR? Se pregunta al evaluar el módulo, antes del primer
+ * render, porque en cuanto la carga escribe las listas ya no se distingue a quien llega por primera vez de quien
+ * vuelve. Ver `hadLocalFootprint`.
+ */
+const HUELLA_AL_ARRANCAR = hadLocalFootprint();
+
+/** Secciones en las que la guía puede salir: las de uso. Ni los documentos legales, ni el panel, ni una reseña. */
+const TOUR_SECTIONS: ReadonlySet<AppSection> = new Set<AppSection>(['lists', 'social', 'stats', 'settings', 'inbox', 'premios']);
 
 /**
  * LA PANTALLA DEL AVISO EN LOCAL (`/dev/aviso`), SOLO EN DESARROLLO. En producción `import.meta.env.DEV` es
@@ -803,6 +824,29 @@ export default function App() {
     setSpriteRestoListo(true);
   }), []);
 
+  /**
+   * LA GUÍA DE PRIMEROS PASOS. Se OFRECE sola una única vez: a quien llega sin nada a este navegador (ni listas
+   * guardadas al arrancar ni juegos una vez cargadas, que cubre lo que solo está en IndexedDB) y entra por los
+   * listados. Para todos los demás no hay clave guardada y la guía no existe hasta que la piden en Ajustes › Datos.
+   * Se espera al idle, como el resto de lo que no es el primer pintado.
+   */
+  const tourRaw = useSyncExternalStore(onboardingStore.subscribe, onboardingStore.get, onboardingStore.get);
+  const tourState = useMemo(() => parseTourState(tourRaw || null), [tourRaw]);
+  const gameCount = TAB_IDS.reduce((total, tab) => total + vm.data[tab].length, 0);
+  useEffect(() => {
+    if (!spriteRestoListo || tourState || HUELLA_AL_ARRANCAR || gameCount > 0 || activeSection !== 'lists') return;
+    saveTourState(offeredTour());
+  }, [activeSection, gameCount, spriteRestoListo, tourState]);
+  const tourContext = useMemo<TourContext>(() => ({
+    path: location.pathname,
+    gameCount,
+    syncConnected: syncVm.hasConfig,
+    socialStatus,
+    settingsMenuOpen,
+    inboxCount,
+  }), [gameCount, inboxCount, location.pathname, settingsMenuOpen, socialStatus, syncVm.hasConfig]);
+  const tourMounted = spriteRestoListo && tourState !== null && isTourVisible(tourState) && TOUR_SECTIONS.has(activeSection);
+
   const syncBadgeText = resolveSyncBadge(syncVm.status, syncVm.pendingUpload);
 
   /**
@@ -1134,6 +1178,7 @@ export default function App() {
           <button
             className="fab"
             type="button"
+            data-tour="add-game"
             aria-label={UI_MESSAGES.fab.addGame}
             title={UI_MESSAGES.fab.addGame}
             onClick={handleAddGame}
@@ -1158,6 +1203,16 @@ export default function App() {
       {/* Los dos comparten carril y no coinciden nunca: la invitación espera a que el consentimiento se decida
           (ver `InstallBanner`). Van seguidos para que se lea aquí que el hueco es el mismo. */}
       <InstallBanner />
+      {/* Fuera del `main`, como los avisos: el `main` se apaga cuando se abre el menú de Ajustes, y la guía tiene
+          que poder señalar DENTRO de ese menú. Con su propio límite: si su chunk no llega (sin red, recién
+          desplegado) no hay guía y no pasa nada más. */}
+      {tourMounted && tourState ? (
+        <SilentBoundary source="onboarding-tour">
+          <Suspense fallback={null}>
+            <OnboardingTour state={tourState} ctx={tourContext} />
+          </Suspense>
+        </SilentBoundary>
+      ) : null}
       <ScrollToTop />
 
       <Suspense fallback={null}>

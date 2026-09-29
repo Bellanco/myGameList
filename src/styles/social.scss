@@ -976,3 +976,16 @@
   gap: .35rem 1rem;
   font-size: var(--fs-sm);
 }
+
+/* «INVITA A UN AMIGO» en la pantalla de Amigos, al pie y SUAVE: sin panel ni fondo, un filete que la separa de
+   «Descubrir» y el título a tamaño de texto. Es una sugerencia al final de la lista, no una sección más que compita
+   con ella. La miniatura y el botón son los de `InviteLink` en su variante compacta (`invite.scss`). */
+.hub-invite {
+  display: grid;
+  gap: .25rem;
+  max-width: 34rem;
+  margin: 1.4rem 0 .4rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--hair);
+}
+.hub-invite-title { margin: 0; font-family: var(--font-display); font-size: var(--fs-md); font-weight: 600; color: var(--text); }

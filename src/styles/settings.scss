@@ -659,3 +659,10 @@
   height: 40px;
   padding: 0;
 }
+
+/* EL LOGO DE UN TERCERO en un documento legal (el de TMDB, en «Créditos»). MÁS DISCRETO que la marca de la app y
+   sin recolorear, que es lo que pide su guía de uso. */
+.legal-logo { display: block; width: 6rem; height: auto; margin: .2rem 0 .6rem; }
+
+/* «Primeros pasos»: el botón no se estira a lo ancho de la tarjeta, que es de fila entera. */
+.settings-onboarding-btn { justify-self: start; }

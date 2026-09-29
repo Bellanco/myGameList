@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { getCategoryTitle, getOptionId, tField } from '../../../core/premios/localize';
 import { getGridColumns } from '../../../core/premios/gridDensity';
+import { hasGameCovers } from '../../../core/premios/nomineeKind';
+import { nomineeImageOf } from '../../../core/premios/nomineeImage';
 import { PREMIOS_ROUTES, votePath } from '../../../viewmodel/premios/premiosRoutes';
 import type { PremiosCategory, PremiosOption } from '../../../model/types/premios';
 import type { PremiosVotes } from '../../../viewmodel/premios/usePremiosVoting';
@@ -78,10 +80,11 @@ export function PremiosVoteScreen({
 
   const nominados = useMemo<PremiosOption[]>(
     () =>
-      (category?.options || []).map((option, i) => ({
-        id: getOptionId(option, category.id, i),
-        name: tField(option),
-      })),
+      (category?.options || []).map((option, i) => {
+        // La imagen elegida en TMDB viaja con el nominado: sin ella, la tarjeta no sabría qué póster pintar.
+        const image = nomineeImageOf(option);
+        return { id: getOptionId(option, category.id, i), name: tField(option), ...(image ? { image } : {}) };
+      }),
     [category],
   );
 
@@ -108,6 +111,7 @@ export function PremiosVoteScreen({
   if (!category) return null;
 
   const elegido = votes[category.id];
+  const conCaratula = hasGameCovers(category);
   const esUltima = indice === total - 1;
   const siguiente = esUltima ? PREMIOS_ROUTES.review : votePath(indice + 2);
 
@@ -141,6 +145,7 @@ export function PremiosVoteScreen({
               key={option.id}
               option={option}
               selected={elegido?.id === option.id}
+              withCover={conCaratula}
               onChoose={(chosen) => {
                 onChoose(category.id, chosen);
                 // Elegir avanza, con una pausa para que dé tiempo a ver la marca. Los botones del pie siguen
