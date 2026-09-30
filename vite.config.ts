@@ -1,9 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { readFile, writeFile } from 'node:fs/promises';
+import { copyFile } from 'node:fs/promises';
 import type { ServerResponse } from 'node:http';
-import { promisify } from 'node:util';
-import { brotliCompress, constants as zlibConstants } from 'node:zlib';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 // El MISMO saneado que usan el cliente y la Pages Function: el servidor de desarrollo no puede ser más
@@ -35,7 +33,6 @@ import {
 } from './functions/_lib/tmdb';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version?: string };
-const brotli = promisify(brotliCompress);
 
 /**
  * Inyecta en `service-worker.js` la lista REAL de assets del arranque y un identificador de build.
@@ -152,41 +149,39 @@ function serviceWorkerPrecache(): Plugin {
 }
 
 /**
- * Deja un `<fichero>.br` (brotli, calidad 11) al lado de cada `.js` y `.css` del build.
+ * Deja `404.html` al lado de `index.html`, con el MISMO contenido. Es lo que hace que un fichero que no existe dé un
+ * 404 de verdad sin pasar por ninguna Pages Function.
  *
- * Los sirve la Function de `/assets/*` (`functions/_lib/brotliAsset.ts`) a quien acepta brotli. Hace falta porque
- * Cloudflare Pages comprime al vuelo con un nivel bajo que apenas mejora al gzip; hecho aquí, una vez por build, el
- * arranque baja un 14 % por la red sin cambiar una línea de la aplicación.
+ * EL PROBLEMA: sin un `404.html` de primer nivel, Pages entra en «modo SPA» y contesta con el shell y un 200 a
+ * CUALQUIER ruta sin fichero, incluidos los chunks de un despliegue anterior. El navegador se guarda entonces ese
+ * HTML bajo la URL de un `.js` con el `immutable` de `public/_headers`, y el dispositivo queda inservible un año.
+ * Lo resolvían dos Functions (`/assets/*` y `/fonts/*`) que convertían ese 200 en un 404, pero cada fichero del
+ * build pasaba así por Workers, cuyo cupo gratuito es de 100.000 invocaciones al día: ~36 por dispositivo nuevo y
+ * ~18 por dispositivo en cada despliegue (ver `docs/plan-capacidad-gratuita.md`, fase 3).
  *
- * TODOS los `.js` y `.css`, también los perezosos y aunque el `.br` salga más grande en algún fichero diminuto: si
- * faltara uno, la Function lo pediría, recibiría el shell del `_redirects` y tendría que volver por el camino
- * normal —una ida y vuelta de más por cada fichero sin pareja—.
+ * CON ESTO: existe `404.html`, Pages deja el modo SPA y sirve este fichero con estado 404 a lo que no casa. Las
+ * rutas de la app se reescriben al shell una a una en `public/_redirects` (y un test comprueba que no falte
+ * ninguna). Es una COPIA del shell y no una página de error para que una dirección desconocida siga arrancando la
+ * app, que la manda a su sitio como siempre; y para un chunk viejo es un 404, que es lo que `vite:preloadError`
+ * sabe tratar.
  *
- * En `writeBundle` porque es cuando los ficheros ya están escritos, y DESPUÉS de que `serviceWorkerPrecache` haya
- * leído el bundle: los `.br` no están en él, así que no entran en el precache. El service worker guarda la
- * respuesta ya descomprimida, que es lo que le da el navegador.
+ * Se renunció a cambio al brotli de calidad 11 que servía la Function de `/assets/*`: el arranque viaja con la
+ * compresión de Cloudflare (185 kB frente a 159 kB, medido el 25-09-2026), y solo en la primera visita.
  */
-function brotliAssets(): Plugin {
+function notFoundShell(): Plugin {
   return {
-    name: 'brotli-assets',
+    name: 'not-found-shell',
     apply: 'build',
 
-    async writeBundle(options, bundle) {
-      const dir = options.dir || 'dist';
-      const ficheros = Object.keys(bundle).filter((name) => /\.(js|css)$/.test(name));
-      await Promise.all(
-        ficheros.map(async (name) => {
-          const origen = await readFile(`${dir}/${name}`);
-          const comprimido = await brotli(origen, {
-            params: {
-              [zlibConstants.BROTLI_PARAM_MODE]: zlibConstants.BROTLI_MODE_TEXT,
-              [zlibConstants.BROTLI_PARAM_QUALITY]: zlibConstants.BROTLI_MAX_QUALITY,
-              [zlibConstants.BROTLI_PARAM_SIZE_HINT]: origen.length,
-            },
-          });
-          await writeFile(`${dir}/${name}.br`, comprimido);
-        }),
-      );
+    // `closeBundle` y AL FINAL (`order: 'post'`, `sequential`): `serviceWorkerPrecache` escribe el identificador de
+    // build en `dist/index.html` en su propio `closeBundle`, y una copia hecha antes llevaría el marcador sin
+    // sustituir. `npm run validate` comprueba que las dos salen iguales.
+    closeBundle: {
+      order: 'post',
+      sequential: true,
+      async handler() {
+        await copyFile(new URL('./dist/index.html', import.meta.url), new URL('./dist/404.html', import.meta.url));
+      },
     },
   };
 }
@@ -674,7 +669,7 @@ export default defineConfig({
   plugins: [
     react(),
     serviceWorkerPrecache(),
-    brotliAssets(),
+    notFoundShell(),
     localAnnouncementApi(),
     localPremiosApi(),
     localCoverApi(),

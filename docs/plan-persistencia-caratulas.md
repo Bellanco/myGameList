@@ -329,8 +329,8 @@ empuja a instalar—, pero siguen siendo ciertos y conviene no perderlos:
    (`firebaseClient.ts:168`). En una web app de iOS el popup es frágil. Pasar a `signInWithRedirect`
    NO es directo: con el authDomain de `firebaseapp.com` depende de cookies de terceros, así que
    antes haría falta servir el handler desde el dominio propio con una Pages Function en
-   `functions/__/auth/[[path]].ts` (una regla de `_redirects` no vale: `/* /index.html 200` se
-   tragaría `/__/auth/*`).
+   `functions/__/auth/[[path]].ts` (una regla de `_redirects` no vale: un 200 al shell
+   se tragaría `/__/auth/*`; desde el 30-09-2026 ya no hay comodín, así que bastaría con no listarla).
 3. **La apariencia cuelga del candado de la escala de nota.** `AppearanceSettings` vive dentro de
    `<div className="settings-account-body" inert={!scoreScaleUid}>` (`AccountHub.tsx:46`). Hoy es
    inocuo porque el hub no se renderiza sin uid, pero si algún día se renderizara, el tema y las

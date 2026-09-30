@@ -665,7 +665,7 @@ Dos cosas que **hay que revisar al traerlo**:
 
 - **La letra de la lámina es la del cartel impreso** (Comic Sans MS, con Comic Neue como sustituta libre), que GA
   pide a Google Fonts bajo demanda. **Aquí eso no vale tal cual**: la CSP de esta app declara `font-src 'self' data:`
-  y las fuentes se sirven desde el propio origen (`functions/fonts/[[path]].ts`). La sustituta hay que **servirla
+  y las fuentes se sirven desde el propio origen (`public/fonts/`). La sustituta hay que **servirla
   desde casa**, o la lámina caerá en una fuente cualquiera sin que nadie se entere.
 - **El arte debe servirse del mismo origen** (`img-src 'self'`), o el canvas queda contaminado y `toBlob` muere en
   silencio: la descarga no falla, simplemente no ocurre.
@@ -881,7 +881,7 @@ verificado sobre el fichero que se cita.
 | 7 | **Claves de almacenamiento sin prefijo** | GA usa `appTheme`, `appLanguage`, `votingProgress`; aquí todo es `mis-listas-*` y lo lee también `public/theme-init.js` | Prefijar y declararlas en `storageKeys.ts`; el tema y el idioma los pone esta app, no la porra |
 | 8 | **Dos fuentes de tema** | `hooks/useTheme.js` + `context/AppContext.jsx` de GA | Se descartan los dos |
 | 9 | **Nombres de colección genéricos** | `categories`, `config`, `results`, `winners` | Prefijo `premios*` (§2.1) |
-| 10 | **La fuente de la lámina se pide a Google Fonts** | `ensureFont()` en GA; aquí `font-src 'self' data:` y fuentes servidas por `functions/fonts/[[path]].ts` | Servir la sustituta desde el propio origen o el trofeo saldrá con otra letra |
+| 10 | **La fuente de la lámina se pide a Google Fonts** | `ensureFont()` en GA; aquí `font-src 'self' data:` y fuentes servidas desde `public/fonts/` | Servir la sustituta desde el propio origen o el trofeo saldrá con otra letra |
 | 11 | **Arte de otro origen contamina el canvas** | `toBlob` falla en silencio | Láminas desde `self` |
 | 12 | **Analítica duplicada** | `services/analyticsService.js` de GA + la de esta app, con consentimiento propio | Se descarta la de GA |
 | 13 | **Iconos propios** | `Icons.jsx` (259 líneas) frente a `core/constants/icons.ts` y su e2e | Mapear a los de casa |
@@ -904,7 +904,7 @@ verificado sobre el fichero que se cita.
   comparten la sincronización y el fan-out social.
 - **Gists**: no se toca ninguno. Ni el de juegos ni el social cambian de forma.
 - **Catálogo de logros y su espejo**: intactos; el palmarés va por otro carril (§2.3).
-- **`_redirects`**: esta app ya tiene el catch-all que GA necesita (`/* /index.html 200`).
+- **`_redirects`**: `/premios` y `/premios/*` se reescriben al shell (desde el 30-09-2026 las rutas van una a una, sin comodín `/*`; ver `docs/plan-capacidad-gratuita.md`).
 - **Rutas**: `/premios` está libre; no choca con `/logros` ni con `/stats`.
 - **Migración de UID**: **no existe**, porque no se migran ni votos ni histórico. Era la fricción número uno del
   análisis inicial y la decisión de no migrar la ha eliminado entera.

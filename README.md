@@ -148,7 +148,9 @@ App estática pura (React + Vite). Configuración en el repo:
 
 - **`public/_headers`** — CSP para GitHub API + Firebase; `index.html` sin cache;
   `/assets/*` con cache inmutable (assets con hash); `service-worker.js` con revalidación.
-- **`public/_redirects`** — `/* /index.html 200` (fallback SPA para React Router).
+- **`public/_redirects`** — las rutas de la SPA, una a una, reescritas al shell (sin comodín `/*`: lo que no
+  casa da el `404.html` que deja `vite.config.ts`, y así un chunk viejo da 404 sin pasar por ninguna Function).
+  Es un PAR con `src/core/constants/routes.ts`, y lo vigila `tests/unit/redirectsRoutes.test.ts`.
 - **`public/manifest.json`** — instalación como app: nombre, atajos a las pantallas y las `screenshots` que
   enseña Chrome en Android en su diálogo de instalación. Las medidas declaradas ahí y el tamaño real de los PNG
   son un PAR: si una captura cambia de tamaño y el manifest no, el navegador la descarta sin decir nada. Se

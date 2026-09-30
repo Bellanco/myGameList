@@ -144,11 +144,27 @@ un chunk inexistente da 404; cada ruta de la SPA da 200 con el shell (también a
 ficheros existentes se sirven con sus cabeceras de `_headers`; `/r/:token`, `/cover` y `/api/*` siguen en sus
 Functions.
 
+**Lo que enseñó la prueba (30-09-2026, `wrangler pages dev`).**
+
+- **El comodín `/* /index.html 200` ya no hacía nada**: Pages lo detecta como bucle y lo descarta. La SPA
+  funcionaba porque no había `404.html` (modo SPA), no por esa regla. Por eso las reglas nuevas apuntan a `/`.
+- `/social/*` **no** cubre `/social` a secas: hacen falta las dos líneas.
+- `functions/r/[token].ts` pide el shell con `context.next()`. Sin la regla `/r/*`, un enlace **válido** habría
+  salido con estado 404, y los generadores de vista previa (WhatsApp, Telegram…) suelen descartar esas páginas.
+- El `404.html` tiene que copiarse **después** de que `serviceWorkerPrecache` escriba el identificador de build
+  en `index.html` (`closeBundle` con `order: 'post'`); `npm run validate` comprueba que salen iguales.
+- Resultado: todas las rutas de la app (también las retiradas) → 200 con el shell; una dirección inventada, un
+  chunk viejo y una fuente vieja → 404 con `no-store`; los ficheros existentes con su `immutable`; `/r/:token` →
+  200 con su `og:title`; `/api/share/related` sigue en su Function. E2e: 276 en verde sobre el `dist` nuevo.
+
+**Queda por comprobar en la vista previa de Cloudflare** (no se puede en local): lo mismo de la lista de arriba
+contra el borde real, y en especial que `/r/:token` salga con 200 y que un chunk viejo dé 404.
+
 **Qué se gana / qué se pierde.** Un dispositivo nuevo: ~36 invocaciones → 0 por arrancar. Un despliegue: ~18 por
 dispositivo activo → 0. Un visitante de un enlace compartido: ~40 → 3 (`/r`, artículo, relacionados). A cambio,
 **+26 kB en la primera carga** (las siguientes salen del service worker).
 
-**Si se descarta esta fase (3-bis).** Precachear los ficheros con hash **sin** `cache: 'reload'` y dejarlo solo
+**3-bis (no hace falta con la fase 3 hecha).** Precachear los ficheros con hash **sin** `cache: 'reload'` y dejarlo solo
 para el shell (`/`, `/manifest.json`). El hash garantiza el contenido, y `isShellFallback` sigue descartando un
 HTML colado. El despliegue baja de ~18 invocaciones por dispositivo a casi 0; el arranque en frío sigue en ~36.
 
@@ -213,7 +229,8 @@ día con uso ligero, menos cuanto más social) y, para usuarios nuevos, **las ca
 - [ ] Fase 0: una semana de números apuntada abajo.
 - [x] Fase 1: test del freno en verde (falla con el código anterior). En producción: comprobar que las invocaciones de `/api/premios` caen.
 - [x] Fase 2: `related` sin `list` (probado con `wrangler pages dev` y KV local); comentarios de cupo actualizados.
-- [ ] Fase 3: prueba previa en `wrangler pages dev` y vista previa **antes** del cambio; test de pares de rutas.
+- [x] Fase 3: prueba previa en `wrangler pages dev`; test de pares de rutas (`tests/unit/redirectsRoutes.test.ts`).
+- [ ] Fase 3: comprobación en la vista previa de Cloudflare antes de subir a producción (ver arriba).
 - [ ] Fase 4: TTL decidido; recarga del hub sin consulta a `friendships`.
 - [ ] Suite completa (`npm test`, `npm run test:rules`, `npm run test:e2e` sobre un `dist` recién construido) y
       checklist de despliegue del README en cada fase.

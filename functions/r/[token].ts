@@ -29,8 +29,9 @@ export async function onRequestGet(context: {
   params: { token: string };
   next: () => Promise<Response>;
 }): Promise<Response> {
-  // `next()` devuelve el activo estático que corresponde a esta ruta: el shell de la SPA, gracias al
-  // `/* /index.html 200` de `public/_redirects`.
+  // `next()` devuelve el activo estático que corresponde a esta ruta: el shell de la SPA, gracias a la regla
+  // `/r/* / 200` de `public/_redirects`. Sin ella llegaría el `404.html` con estado 404, y la vista previa del
+  // enlace (WhatsApp, Telegram…) saldría de una página de error.
   const shell = await context.next();
 
   const token = String(context.params.token || '');

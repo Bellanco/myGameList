@@ -248,26 +248,20 @@ if (fs.existsSync(builtSw)) {
   const criticoKb = pesos.filter(bloquea).reduce((total, { kb }) => total + kb, 0);
   const totalKb = pesos.reduce((total, { kb }) => total + kb, 0);
 
-  /* LO QUE VIAJA DE VERDAD: el `.br` que deja el plugin `brotliAssets` y sirve `functions/_lib/brotliAsset.ts`.
-     Los topes siguen midiéndose en gzip a propósito —es el peor caso (un navegador sin brotli) y así no se mueven
-     las cifras históricas de arriba—, pero si falta un `.br` del arranque la ganancia se pierde sin que nada falle
-     a la vista: la Function vuelve al asset normal en silencio. Por eso aquí sí rompe. */
-  const sinBrotli = precached.filter((asset) => /\.(js|css)$/.test(asset) && !fs.existsSync(path.join(root, 'dist', `${asset}.br`)));
-  if (sinBrotli.length > 0) {
-    fail(
-      `Estos assets del arranque no tienen su .br al lado: ${sinBrotli.join(', ')}. ` +
-        'Los genera el plugin `brotliAssets` de vite.config.ts; sin ellos el arranque viaja con la compresión de Cloudflare.',
-    );
+  /* EL 404 DE LOS CHUNKS VIEJOS depende de este fichero: sin `404.html`, Pages vuelve al modo SPA y contesta con el
+     shell y un 200 a cualquier ruta sin fichero, incluidos los chunks de un despliegue anterior (ver el plugin
+     `notFoundShell` de vite.config.ts). Y tiene que ser el shell de ESTE build: con uno viejo, una dirección
+     desconocida arrancaría pidiendo chunks que ya no existen. */
+  const shell = fs.readFileSync(path.join(root, 'dist', 'index.html'), 'utf-8');
+  const notFound = path.join(root, 'dist', '404.html');
+  if (!fs.existsSync(notFound) || fs.readFileSync(notFound, 'utf-8') !== shell) {
+    fail('dist/404.html no existe o no es copia de dist/index.html. Lo deja el plugin `notFoundShell` de vite.config.ts.');
   }
-  const criticoBrKb = precached
-    .filter((asset) => /\.(js|css)$/.test(asset))
-    .reduce((total, asset) => total + fs.statSync(path.join(root, 'dist', `${asset}.br`)).size / 1024, 0);
 
   console.log(
     `Service worker: ${precached.length} assets del arranque · ` +
       `crítico ${criticoKb.toFixed(1)}/${BOOT_CRITICAL_BUDGET_KB} kB · ` +
-      `total ${totalKb.toFixed(1)}/${BOOT_TOTAL_BUDGET_KB} kB (comprimidos) · ` +
-      `crítico en brotli ${criticoBrKb.toFixed(1)} kB (lo que se sirve).`,
+      `total ${totalKb.toFixed(1)}/${BOOT_TOTAL_BUDGET_KB} kB (comprimidos).`,
   );
   if (criticoKb > BOOT_CRITICAL_BUDGET_KB) {
     fail(
