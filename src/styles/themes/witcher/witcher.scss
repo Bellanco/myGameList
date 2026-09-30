@@ -1060,11 +1060,18 @@
 /* Sobre el acero se escribe con la tinta del tema —la de papel es la de los carteles—, en las versales de
    documento. Sin subrayado: el filo de Igni bajo el título era una raya más en una pieza que ya tiene su
    canto dibujado, y en un nombre de dos líneas lo partía por la mitad. */
-:root[data-palette="witcher"] .game-card.is-flat .game-card-name {
+:root[data-palette="witcher"] .game-card.is-flat .game-card-name { font-size: var(--fs-md); }
+/* LA CAJA LA DECIDE «Texto» de /cuenta, no el tema (lo mismo que los nombres de persona en §1b). El título es un
+   `h3` y Cinzel pinta sus minúsculas como versalitas, así que sin nombrarlo aquí salía en capitales aunque el
+   interruptor dijera «Texto normal» —y además la caja plana le forzaba `uppercase`—. En caja normal va en la
+   letra de cuerpo; con versales pedidas vuelve a Cinzel con su tracking. */
+:root[data-palette="witcher"] .game-card-name {
+  font-family: var(--font-label);
+  letter-spacing: .01em;
+}
+:root[data-palette="witcher"][data-uppercase="on"] .game-card-name {
   font-family: var(--font-display);
-  text-transform: uppercase;
   letter-spacing: .06em;
-  font-size: var(--fs-md);
 }
 /* La nota y la insignia, remachadas a la placa. */
 :root[data-palette="witcher"] .game-card.is-flat .score-ring,
