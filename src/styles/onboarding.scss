@@ -214,7 +214,10 @@
 }
 .ob-foot .btn,
 .ob-wide { min-height: 44px; }
-.ob-foot-split .btn { flex: 1 1 0; }
+/* Sin partir el rótulo: con el texto del sistema ampliado «Ahora no» se quedaba en dos líneas junto a un
+   «Empezar» de una. Si los dos no caben en una fila, es el botón entero el que baja a la siguiente. */
+.ob-foot-split { flex-wrap: wrap; }
+.ob-foot-split .btn { flex: 1 1 0; white-space: nowrap; }
 .ob-foot-split .btn-primary { flex-grow: 2; }
 /* Una pregunta con dos respuestas del mismo peso: «No, gracias» no puede partirse en dos líneas por dejarle el
    doble de sitio a la otra. */
@@ -238,17 +241,53 @@
 }
 
 /* ── Lista de misiones ──────────────────────────────────────────────────────────────────────────────────── */
+/* EN UNA PANTALLA BAJA el sitio no da para todo: a 360 × 640, con el aviso de cookies delante y el texto del
+   sistema un 30 % más grande, a la tarjeta le quedan 200 px para 740 de contenido. Por eso se sube hasta arriba
+   (el título de la página que tapa ya está bajo el velo) y el pie de botones se queda pegado abajo mientras lo
+   demás se desplaza: antes «Empezar» quedaba al fondo del desplazamiento y la tarjeta parecía cortada. */
 .ob-card {
+  --ob-card-top: 76px;
   left: 16px;
   right: 16px;
-  top: calc(env(safe-area-inset-top, 0px) + 76px);
+  top: calc(env(safe-area-inset-top, 0px) + var(--ob-card-top));
   /* Nunca bajo el aviso de cookies ni bajo la barra: si no cabe, la tarjeta se desplaza por dentro. */
-  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 76px - var(--bottom-nav-h, 4.6rem) - var(--consent-h, 0px) - 16px);
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - var(--ob-card-top) - var(--bottom-nav-h, 4.6rem) - var(--consent-h, 0px) - 16px);
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 16px;
+  transition: opacity .22s ease, visibility .22s ease;
 }
+@media (max-height: 760px) { .ob-card { --ob-card-top: 16px; } }
 @media (min-width: 700px) {
   .ob-card { left: 50%; right: auto; width: 420px; transform: translateX(-50%); }
+}
+/* El filete de arriba es el mismo que separa las misiones: sin desplazamiento se lee como la última raya de la
+   lista; con él, como el borde bajo el que sigue el contenido.
+   `bottom` NEGATIVO porque el pegado se mide desde dentro del relleno de la tarjeta: con `0` el pie se quedaba
+   16 px por encima del borde y por esa franja asomaba el texto que pasaba por debajo. */
+.ob-card > .ob-foot,
+.ob-card > .ob-wide {
+  position: sticky;
+  z-index: 1;
+}
+.ob-card > .ob-foot {
+  bottom: -16px;
+  margin-inline: -16px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--hair);
+  background: var(--surface-elevated);
+}
+.ob-card > .ob-foot + .ob-note { margin-top: 0; }
+.ob-card > .ob-wide { bottom: -4px; box-shadow: 0 0 0 12px var(--surface-elevated); }
+
+/* CON EL MENÚ DE AJUSTES ABIERTO la tarjeta se va, como los botones flotantes y el aviso de cookies (ver
+   `body.settings-menu-open` en `_overlays-and-responsive.scss`). A media luz se leía a través de ella el título
+   de la página, y seguía encogida para dejarle al aviso un sitio que ya no ocupaba. La burbuja se queda: una
+   misión la ancla precisamente a un punto de ese menú. */
+body.settings-menu-open .ob-card {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 .ob-card-finale { text-align: center; padding-top: 24px; }
 .ob-card-finale .ob-missions { text-align: left; }
@@ -346,7 +385,22 @@ button.ob-row-inner:hover .ob-mission-name { color: var(--fg-link); }
 .ob-pill-value { stroke: var(--steam); stroke-linecap: round; }
 .ob-pill-ring text { font-family: var(--font-mono); font-size: 12px; fill: var(--text); }
 .ob-pill-body { display: flex; flex-direction: column; min-width: 0; }
-.ob-pill-title { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-sm); line-height: 1.2; }
+/* UNA LÍNEA SIEMPRE. Con el texto del sistema ampliado «Primeros pasos · 0 de 3» no cabe y se partía por
+   cualquier sitio («… · 0» arriba, «de 3» abajo). Ahora el recuento salta entero a la segunda línea y el alto
+   fijo lo recorta: queda el nombre, y la cifra sigue en el anillo y en el `aria-label`. */
+.ob-pill-title {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: .3em;
+  max-height: 1.2em;
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  line-height: 1.2;
+}
+.ob-pill-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ob-pill-count { white-space: nowrap; }
 .ob-pill-next {
   font-size: var(--fs-xs);
   line-height: 1.3;
@@ -382,6 +436,6 @@ button.ob-row-inner:hover .ob-mission-name { color: var(--fg-link); }
 }
 @media (prefers-reduced-motion: reduce) {
   .ob-scrim, .ob-bubble, .ob-card, .ob-sheet, .ob-pill { animation: none; }
-  .ob-ring { transition: none; }
+  .ob-ring, .ob-card { transition: none; }
   .ob-ring.is-action::after { animation: none; opacity: .6; }
 }

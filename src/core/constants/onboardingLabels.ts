@@ -156,7 +156,9 @@ export const TOUR_UI = {
     close: 'Cerrar',
   },
   pill: {
-    title: (done: number, total: number) => `Primeros pasos · ${done} de ${total}`,
+    /** Nombre y recuento van por separado: si no caben juntos en una línea, el recuento es lo que se cae. */
+    title: 'Primeros pasos',
+    count: (done: number, total: number) => `· ${done} de ${total}`,
     next: (mission: string) => `Sigue: ${mission}`,
     aria: (done: number, total: number) => `Primeros pasos: ${done} de ${total} misiones. Abrir la guía`,
     /** Vuelta de una sola misión: el botón dice cuál, no un recuento de misiones que no se están haciendo. */

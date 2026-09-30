@@ -753,7 +753,10 @@ function TourPill({ state }: { state: TourState }) {
         <text x="18" y="22.5" textAnchor="middle">{done}</text>
       </svg>
       <span className="ob-pill-body">
-        <span className="ob-pill-title">{singleName ?? TOUR_UI.pill.title(done, total)}</span>
+        <span className="ob-pill-title">
+          <span className="ob-pill-name">{singleName ?? TOUR_UI.pill.title}</span>
+          {singleName ? null : <span className="ob-pill-count">{TOUR_UI.pill.count(done, total)}</span>}
+        </span>
         {singleName ? <span className="ob-pill-next">{TOUR_UI.pill.single}</span>
           : nextId ? <span className="ob-pill-next">{TOUR_UI.pill.next(TOUR_UI.missions[nextId].name)}</span> : null}
       </span>
