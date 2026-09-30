@@ -94,6 +94,23 @@ test.describe('guía de primeros pasos', () => {
     await expect(card.getByLabel('Token *')).toBeVisible();
   });
 
+  test('en una pantalla baja, con el aviso de analítica delante, los botones de la bienvenida se ven', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 640 });
+    await page.goto('/completados');
+    const welcome = page.getByRole('dialog', { name: '¡Pulsa Start!' });
+    await expect(welcome).toBeVisible();
+    await expect(page.locator('.consent-banner')).toBeVisible();
+    // Las misiones no caben y se desplazan, pero el pie no se va con ellas.
+    await expect(welcome.getByRole('button', { name: 'Empezar' })).toBeInViewport({ ratio: 1 });
+    await expect(welcome.getByRole('button', { name: 'Ahora no' })).toBeInViewport({ ratio: 1 });
+
+    // Con el menú de Ajustes abierto la tarjeta se aparta, como el aviso.
+    await page.locator('[data-tour="nav-settings"]').click();
+    await expect(welcome).toBeHidden();
+    await page.keyboard.press('Escape');
+    await expect(welcome).toBeVisible();
+  });
+
   test('«Ahora no» la pliega en el botón de la izquierda, que sobrevive a recargar', async ({ page }) => {
     await page.goto('/completados');
     await page.getByRole('button', { name: 'Rechazar' }).click();

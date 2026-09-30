@@ -82,7 +82,13 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
   const [layout, setLayout] = useState<NavLayout>('row');
   /** Espejo de `layout` para leerlo dentro del medidor sin re-suscribir el `resize` en cada cambio. */
   const layoutRef = useRef<NavLayout>('row');
-  /** Lo que pide el botón más ancho en cada escalón con el rótulo a la vista. */
+  /**
+   * El ANCHO DE BARRA a partir del cual cabe el botón más ancho en cada escalón con el rótulo a la vista.
+   *
+   * Se guarda en ancho de barra y no en ancho de columna porque la columna no mide igual en todos los escalones
+   * —`tight` recorta el aire y los huecos—: comparar lo que pide `tight` con la columna de `icon` dejaba una franja
+   * de ~18px de barra en la que, llegando desde iconos, nunca volvía a subir aunque abriendo en frío cupiera.
+   */
   const needsRef = useRef({ row: 0, stack: 0, tight: 0 });
   const items = NAV_ITEMS;
 
@@ -129,8 +135,9 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
      *
      * NO PUEDE OSCILAR, y ahora hace falta decir por qué con cuidado: la columna ya NO mide igual en todos los
      * escalones —`tight` recorta el aire de la barra y el hueco entre pastillas para ganar ~4,6px por columna—,
-     * así que cada pasada mide la columna DEL ESCALÓN QUE ESTÁ PINTADO y la compara con lo que ese mismo escalón
-     * necesita. Bajar solo puede bajar (cada peldaño pide menos que el anterior y ofrece igual o más sitio), y
+     * así que cada pasada mide la columna DEL ESCALÓN QUE ESTÁ PINTADO, la compara con lo que ese mismo escalón
+     * necesita y guarda el resultado como ancho de BARRA (ver `needsRef`), que es lo único comparable entre
+     * escalones. Bajar solo puede bajar (cada peldaño pide menos que el anterior y ofrece igual o más sitio), y
      * termina siempre: `row` → `stack` → `tight` → `icon`.
      *
      * EN `icon` NO SE MIDE, y no es un olvido: ahí el rótulo está fuera de la pantalla (`sr-only`) y su ancho no
@@ -140,9 +147,13 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
     const measure = () => {
       const buttons = Array.from(container.querySelectorAll<HTMLElement>('.bottom-nav-btn'));
       const column = buttons[0]?.getBoundingClientRect().width ?? 0;
+      const ancho = navRef.current?.getBoundingClientRect().width ?? 0;
       // Sin medidas reales (jsdom, o la barra aún sin pintar) se deja como está: mejor el diseño completo que
       // uno recortado por unos ceros.
-      if (!column) return;
+      if (!column || !ancho) return;
+      // Las columnas son iguales y el resto (aire, huecos, relleno) es fijo dentro de un escalón, así que cada px
+      // de barra da 1/n px de columna: lo que le falta (o sobra) a la columna, por n, es lo que le falta a la barra.
+      const anchoQuePide = (pide: number) => ancho + (pide - column) * buttons.length;
       const anchoDelRotulo = () => Math.max(...buttons.map((button) => button.querySelector<HTMLElement>('span')?.scrollWidth ?? 0));
       // Lo pedido todavía no está en pantalla: se espera al repintado en vez de medir el escalón anterior.
       const actual = pintado();
@@ -153,13 +164,13 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
       }
 
       if (layoutRef.current === 'row') {
-        needsRef.current.row = Math.max(...buttons.map((button) => {
+        needsRef.current.row = anchoQuePide(Math.max(...buttons.map((button) => {
           const icon = button.querySelector<SVGElement>('.bottom-nav-icon');
           const label = button.querySelector<HTMLElement>('span');
           const gap = parseFloat(getComputedStyle(button).columnGap) || 0;
           return (icon?.getBoundingClientRect().width ?? 0) + gap + (label?.scrollWidth ?? 0) + BTN_AIR;
-        }));
-        if (column >= needsRef.current.row) {
+        })));
+        if (ancho >= needsRef.current.row) {
           aplicar('row');
           return;
         }
@@ -169,8 +180,8 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
       }
 
       if (layoutRef.current === 'stack') {
-        needsRef.current.stack = anchoDelRotulo() + BTN_AIR;
-        if (column >= needsRef.current.stack) {
+        needsRef.current.stack = anchoQuePide(anchoDelRotulo() + BTN_AIR);
+        if (ancho >= needsRef.current.stack) {
           aplicar('stack');
           return;
         }
@@ -180,17 +191,17 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
       }
 
       if (layoutRef.current === 'tight') {
-        needsRef.current.tight = anchoDelRotulo() + BTN_AIR;
-        aplicar(column >= needsRef.current.tight ? 'tight' : 'icon');
+        needsRef.current.tight = anchoQuePide(anchoDelRotulo() + BTN_AIR);
+        aplicar(ancho >= needsRef.current.tight ? 'tight' : 'icon');
         return;
       }
 
       const { row, stack, tight } = needsRef.current;
-      const siguiente: NavLayout = column >= row ? 'row' : column >= stack ? 'stack' : column >= tight ? 'tight' : 'icon';
+      const siguiente: NavLayout = ancho >= row ? 'row' : ancho >= stack ? 'stack' : ancho >= tight ? 'tight' : 'icon';
       aplicar(siguiente);
       // Al SUBIR de escalón se vuelve a medir con el rótulo ya a la vista, y esto no es un lujo: los números
-      // guardados pueden ser de otra tipografía (la de reserva, más ancha), y la columna de aquí no es la que
-      // tendrá el escalón al que se sube —`tight` estrena la suya—. La pasada siguiente lo confirma o lo baja.
+      // guardados pueden ser de otra tipografía (la de reserva, más ancha) o de otro lado del corte de 620px,
+      // donde el aire de la barra es otro. La pasada siguiente lo confirma o lo baja.
       if (siguiente !== 'icon') requestAnimationFrame(measure);
     };
 

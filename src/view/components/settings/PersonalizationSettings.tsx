@@ -3,6 +3,7 @@ import { SETTINGS_UI } from '../../../core/constants/settingsLabels';
 import { SharedReviewsCard } from '../SharedReviewsCard';
 import { ThemePicker } from '../appearance/ThemePicker';
 import { AppearanceToggles } from '../appearance/AppearanceToggles';
+import { InstallCard } from './InstallCard';
 import { ScoreScaleCard } from './ScoreScaleCard';
 import type { TabData } from '../../../model/types/game';
 // La hoja de las pantallas de Ajustes viaja en los chunks perezosos que la usan y no en el bundle base (mismo
@@ -52,6 +53,10 @@ export const PersonalizationSettings = memo(function PersonalizationSettings({ s
           <AppearanceToggles />
         </div>
       </div>
+
+      {/* Detrás de Preferencias y, en escritorio, a su derecha: donde no se puede instalar no se pinta y
+          Preferencias recupera la fila entera. */}
+      <InstallCard />
 
       {/* Los enlaces públicos van aquí y no en «Integración»: no son una preferencia ni un canal de datos, son
           contenido tuyo publicado en internet, y se gestionan al lado de lo que decides mostrar. */}

@@ -34,11 +34,7 @@ async function abrir(page: Page, ancho: number): Promise<void> {
   await sembrarBiblioteca(page, { theme: 'dark' });
   await page.goto('/completados');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  const barraDeDesplazamiento = await page.evaluate(() => window.innerWidth - document.documentElement.clientWidth);
-  if (barraDeDesplazamiento > 0) {
-    await page.setViewportSize({ width: ancho + barraDeDesplazamiento, height: 720 });
-    await expect.poll(() => page.evaluate(() => document.documentElement.clientWidth)).toBe(ancho);
-  }
+  await ponerAncho(page, ancho);
   /*
    * Y SE MIDE CON LA LETRA DE LA APP PUESTA, que no es lo mismo que esperar a `document.fonts.ready`.
    *
@@ -66,6 +62,14 @@ async function abrir(page: Page, ancho: number): Promise<void> {
     .toBe(true);
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(150);
+}
+
+/** Deja `documentElement` midiendo justo `ancho` px, sume lo que sume la barra de desplazamiento (ver `abrir`). */
+async function ponerAncho(page: Page, ancho: number): Promise<void> {
+  await page.setViewportSize({ width: ancho, height: 720 });
+  const barraDeDesplazamiento = await page.evaluate(() => window.innerWidth - document.documentElement.clientWidth);
+  if (barraDeDesplazamiento > 0) await page.setViewportSize({ width: ancho + barraDeDesplazamiento, height: 720 });
+  await expect.poll(() => page.evaluate(() => document.documentElement.clientWidth)).toBe(ancho);
 }
 
 /** Por qué salió lo que salió: sin esto, un rojo en otra máquina solo dice «is-icons» y no se puede perseguir. */
@@ -173,6 +177,28 @@ test.describe('la barra inferior con cuatro pestañas', () => {
       expect(b.alto, b.nombre).toBeGreaterThanOrEqual(48);
       expect(b.rotuloVisible, `${b.nombre} · ${porQue(m)}`).toBe(true);
       expect(b.aire, `${b.nombre} va pegado al borde de su pastilla`).toBeGreaterThanOrEqual(10);
+    }
+  });
+
+  /**
+   * EL ESCALÓN NO PUEDE DEPENDER DEL CAMINO: la barra tiene que acabar igual si se abre a un ancho que si se llega
+   * a él ensanchando desde la franja de iconos. Es lo que pasa al girar el móvil, y lo que hacía `abrir` en el CI
+   * sin querer: el primer viewport de 365 dejaba 350 útiles (la barra de desplazamiento de Linux se come 15), la
+   * barra bajaba a iconos, y al ensanchar se quedaba MUDA en un ancho donde abriendo en frío tiene nombres.
+   *
+   * La avería: en `icon` se comparaba lo que pide `tight` con la columna de `icon`, y `tight` recorta el aire de
+   * la barra —su columna mide ~4,6px más— así que había una franja en la que nunca volvía a subir. Dónde cae esa
+   * franja depende de lo que mida la letra en cada máquina, de ahí los dos anchos: 340 la pisa en macOS y 365 en
+   * el Linux del CI.
+   */
+  test('al ensanchar desde iconos la barra acaba en el mismo escalón que abriendo a ese ancho', async ({ page }) => {
+    for (const ancho of [340, 365]) {
+      await abrir(page, ancho);
+      const enFrio = await barra(page).getAttribute('class');
+      await ponerAncho(page, 280);
+      await expect(barra(page)).toHaveClass(/is-icons/);
+      await ponerAncho(page, ancho);
+      await expect(barra(page), `a ${ancho}px`).toHaveClass(enFrio!);
     }
   });
 
