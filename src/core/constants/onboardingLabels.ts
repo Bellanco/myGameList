@@ -98,22 +98,47 @@ export const TOUR_UI = {
     },
     gateway: {
       title: 'Mira qué juegan tus amigos',
-      text: 'Ya tienes GitHub. Te queda entrar con Google: así se crea tu espacio social.',
-      tap: 'Tócalo tú: te espero aquí',
+      text: 'Son dos pasos: tu GitHub y entrar con Google. Te falta el primero: te llevo y volvemos aquí.',
+      tap: 'Toca el botón del paso 1',
+    },
+    google: {
+      title: 'Entra con Google',
+      text: 'Te identificas con tu cuenta de Google y se crea tu espacio social. Tus amigos no ven tu correo.',
+      tap: 'Pulsa «Entrar con Google»',
     },
     profile: {
       title: 'Elige tu nombre',
-      text: 'Es como te verán tus amigos. Necesitas al menos un juego completado para crear tu perfil.',
-      tap: 'Escríbelo y guarda',
+      text: 'Es como te verán tus amigos. Escríbelo aquí; para crear el perfil hace falta al menos un juego completado.',
+    },
+    'profile-save': {
+      title: 'Guarda tu perfil',
+      text: 'Un toque y listo: tu perfil queda activo y ya puedes buscar a tus amigos.',
+      tap: 'Pulsa «Guardar perfil»',
+    },
+    'coop-done': {
+      title: '¡Modo cooperativo activado!',
+      text: 'Tu perfil está listo. Ahora falta lo mejor: traer a tu gente.',
     },
     invite: { title: 'Invita a un amigo', text: 'La partida es mejor a dobles. Mándale el enlace y, cuando entre, buscaos en Amigos para enviaros la solicitud.' },
   } satisfies Record<StepId, StepText>,
-  /** Variante de la pasarela para quien todavía no tiene GitHub. */
-  gatewayNeedsSync: {
-    title: 'Mira qué juegan tus amigos',
-    text: 'Son dos pasos: tu GitHub y entrar con Google. Te falta el primero: te llevo y volvemos aquí.',
-    tap: 'Toca el botón del paso 1',
-  } satisfies StepText,
+  /**
+   * «VUELVE A ENTRAR»: quien ya tenía lo social y ha perdido la sesión. Nunca se le cuenta cómo crear un espacio,
+   * que ya tiene: solo que siga ahí y cómo volver.
+   */
+  relogin: {
+    kicker: 'Tu espacio social',
+    title: 'Vuelve a entrar',
+    text: 'Tu espacio y tus amigos siguen ahí: entra con Google y vuelves a tu actividad.',
+    textNeedsSync: 'Tu espacio y tus amigos siguen ahí: conecta GitHub y entra con Google para volver a tu actividad.',
+  },
+  /** El ofrecimiento de UNA misión en su pantalla, para quien ya usaba la aplicación. */
+  hints: {
+    kicker: 'Primeros pasos',
+    yes: 'Enséñame',
+    no: 'No, gracias',
+    coop: { title: '¿Te enseño a entrar en lo social?', text: 'Son dos pasos y tu nombre: te acompaño en cada uno.' },
+    cloud: { title: '¿Te enseño a guardar tus listas en la nube?', text: 'Es un solo botón, sin tokens: te acompaño.' },
+  },
   nextMission: 'Siguiente misión',
   missionDoneKicker: 'Misión cumplida',
   optional: 'Opcional',
@@ -134,6 +159,9 @@ export const TOUR_UI = {
     title: (done: number, total: number) => `Primeros pasos · ${done} de ${total}`,
     next: (mission: string) => `Sigue: ${mission}`,
     aria: (done: number, total: number) => `Primeros pasos: ${done} de ${total} misiones. Abrir la guía`,
+    /** Vuelta de una sola misión: el botón dice cuál, no un recuento de misiones que no se están haciendo. */
+    single: 'Sigue donde lo dejaste',
+    singleAria: (mission: string) => `Guía: ${mission}. Seguir`,
   },
   finale: {
     kicker: 'Primeros pasos',

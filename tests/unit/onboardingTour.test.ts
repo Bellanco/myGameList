@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  canOfferHint,
+  hintTour,
   isTourVisible,
   offeredTour,
   parseTourState,
@@ -26,6 +28,8 @@ const BASE: TourContext = {
   gameCount: 0,
   syncConnected: false,
   socialStatus: 'inactive',
+  socialSignedIn: false,
+  hasSocialSpace: false,
   settingsMenuOpen: false,
   inboxCount: 0,
 };
@@ -84,6 +88,26 @@ describe('qué paso toca en cada pantalla', () => {
     // En la tarjeta de sincronización sin conectar, `synced` (que vale en cualquier pantalla) no se cuela.
     const sync = indexOf('cloud', 'sync');
     expect(pickStep(MISSIONS.cloud, sync, ctx({ path: '/stats' }))).toBe(indexOf('cloud', 'to-settings'));
+  });
+
+  it('lo social paso a paso: GitHub, Google, el nombre y guardar', () => {
+    const coop = MISSIONS.coop;
+    expect(pickStep(coop, 0, ctx({ path: '/social' }))).toBe(indexOf('coop', 'gateway'));
+    expect(pickStep(coop, 0, ctx({ path: '/social', syncConnected: true }))).toBe(indexOf('coop', 'google'));
+    const google = indexOf('coop', 'google');
+    // Tras entrar con Google la aplicación lleva al perfil: el nombre (explicativo) y luego guardar.
+    expect(settleStep(coop, google, ctx({ syncConnected: true, socialSignedIn: true }))).toBe(indexOf('coop', 'profile'));
+    const profile = indexOf('coop', 'profile');
+    expect(pickStep(coop, profile, ctx({ path: '/social/profile', syncConnected: true, socialSignedIn: true }))).toBe(profile);
+    const save = indexOf('coop', 'profile-save');
+    expect(settleStep(coop, save, ctx({ syncConnected: true, socialSignedIn: true, socialStatus: 'active' }))).toBe(indexOf('coop', 'coop-done'));
+  });
+
+  it('quien ya tenía el perfil hecho va directo a invitar', () => {
+    const coop = MISSIONS.coop;
+    const done = ctx({ path: '/social', syncConnected: true, socialSignedIn: true, socialStatus: 'active' });
+    const settled = settleStep(coop, indexOf('coop', 'gateway'), done);
+    expect(pickStep(coop, settled, done)).toBe(indexOf('coop', 'invite'));
   });
 
   it('en lo social sin GitHub, la tarjeta de Datos manda sobre «vuelve a Social»', () => {
@@ -165,6 +189,33 @@ describe('transiciones', () => {
     expect(stepCounter(MISSIONS['first-game'], indexOf('first-game', 'to-lists'))).toBeNull();
     expect(stepCounter(MISSIONS['first-game'], indexOf('first-game', 'add'))).toEqual({ position: 2, total: 3 });
     expect(stepCounter(MISSIONS.cloud, indexOf('cloud', 'synced'))).toBeNull();
+  });
+});
+
+describe('ofrecimientos de una misión', () => {
+  it('se ofrece a quien no tiene guía, y a quien la tiene cerrada sin haber dicho que no', () => {
+    expect(canOfferHint(null, 'coop')).toBe(true);
+    expect(canOfferHint({ ...offeredTour(), status: 'dismissed', declined: ['cloud'] }, 'coop')).toBe(true);
+    expect(canOfferHint({ ...offeredTour(), status: 'done', completed: ['first-game'] }, 'cloud')).toBe(true);
+  });
+
+  it('nunca con una guía en marcha, ni lo rechazado, saltado o hecho', () => {
+    for (const status of ['offer', 'active', 'paused', 'menu', 'finale', 'hint'] as const) {
+      expect(canOfferHint({ ...offeredTour(), status }, 'coop')).toBe(false);
+    }
+    expect(canOfferHint({ ...offeredTour(), status: 'dismissed', declined: ['coop'] }, 'coop')).toBe(false);
+    expect(canOfferHint({ ...offeredTour(), status: 'done', skipped: ['coop'] }, 'coop')).toBe(false);
+    expect(canOfferHint({ ...offeredTour(), status: 'done', completed: ['cloud'] }, 'cloud')).toBe(false);
+  });
+
+  it('una misión suelta se retira al terminar, sin pasar a la siguiente ni a la tarjeta del final', () => {
+    const single: TourState = { ...hintTour(null, 'cloud'), status: 'active' };
+    expect(completeMission(single)).toMatchObject({ status: 'done', mission: null, single: false, completed: ['cloud'] });
+  });
+
+  it('lee estados guardados antes de los ofrecimientos', () => {
+    const viejo = JSON.stringify({ v: 1, status: 'done', mission: null, step: 0, completed: ['coop'], skipped: [] });
+    expect(parseTourState(viejo)).toMatchObject({ declined: [], single: false });
   });
 });
 

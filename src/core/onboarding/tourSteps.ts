@@ -23,6 +23,14 @@ export interface TourContext {
   /** ¿Hay sincronización con GitHub configurada? */
   syncConnected: boolean;
   socialStatus: 'pending' | 'active' | 'inactive';
+  /** ¿Hay sesión de Google? */
+  socialSignedIn: boolean;
+  /**
+   * ¿Guarda ESTE dispositivo un espacio social (el gist social)? Cerrar sesión no lo borra, así que sin sesión y
+   * con espacio es alguien que ya tenía lo social y ha perdido la sesión: hay que decirle «vuelve a entrar», no
+   * «crea tu espacio».
+   */
+  hasSocialSpace: boolean;
   /** ¿Está desplegado el menú de Ajustes de la barra inferior? */
   settingsMenuOpen: boolean;
   /** Juegos esperando en la bandeja de importados. */
@@ -42,7 +50,7 @@ export type StepId =
   | 'to-lists' | 'lists' | 'add' | 'added'
   | 'to-settings' | 'to-data' | 'sync' | 'synced'
   | 'library-offer' | 'library-import' | 'library-inbox'
-  | 'to-social' | 'coop-sync' | 'gateway' | 'profile' | 'invite';
+  | 'to-social' | 'coop-sync' | 'gateway' | 'google' | 'profile' | 'profile-save' | 'coop-done' | 'invite';
 
 export interface TourStep {
   id: StepId;
@@ -52,6 +60,12 @@ export interface TourStep {
    * no aparece— la burbuja sale sin flecha.
    */
   anchor?: string | readonly string[];
+  /**
+   * El control, DENTRO del ancla, al que apunta la flecha y que la burbuja no puede tapar. Hace falta cuando el hueco
+   * es una tarjeta alta —para que se lea lo que hay en ella— y lo que hay que tocar es un botón suyo: sin esto la
+   * burbuja no cabe junto a la tarjeta, se acopla abajo y tapa justo el botón que dice que pulses.
+   */
+  focus?: string;
   screen(ctx: TourContext): boolean;
   done?(ctx: TourContext): boolean;
   /** Puede volver a salir por debajo del paso en curso (ver la cabecera). */
@@ -77,6 +91,8 @@ const synced = (ctx: TourContext) => ctx.syncConnected;
  * hueco del velo lo deja a la vista junto al botón. La burbuja ya no tiene que repetirlo.
  */
 const SYNC_ANCHOR = '[data-tour="sync-card"]';
+/** «Conectar con GitHub», dentro de esa tarjeta: a él apunta la flecha. Con GitHub ya conectado no existe. */
+const SYNC_FOCUS = '[data-tour="sync-connect"]';
 const socialActive = (ctx: TourContext) => ctx.socialStatus === 'active';
 
 /** Los dos pasos de «ve a Ajustes › Datos», que comparten la nube y Playnite. */
@@ -118,7 +134,7 @@ export const MISSIONS: Readonly<Record<MissionId, Mission>> = {
     id: 'cloud',
     steps: [
       ...toDataSteps(synced),
-      { id: 'sync', kind: 'action', anchor: SYNC_ANCHOR, screen: isData, done: synced, counted: true },
+      { id: 'sync', kind: 'action', anchor: SYNC_ANCHOR, focus: SYNC_FOCUS, screen: isData, done: synced, counted: true },
       // En cualquier pantalla: al volver de autorizar en GitHub la aplicación deja a cada uno donde empezó.
       { id: 'synced', kind: 'done', screen: () => true },
     ],
@@ -161,26 +177,46 @@ export const MISSIONS: Readonly<Record<MissionId, Mission>> = {
         id: 'coop-sync',
         kind: 'nav',
         anchor: SYNC_ANCHOR,
+        focus: SYNC_FOCUS,
         screen: (ctx) => isData(ctx) && !ctx.syncConnected,
         done: synced,
         detour: true,
       },
       {
+        // Paso 1 de la pasarela, para quien llega sin GitHub: la llevará a Datos y volverá (`coop-sync`).
         id: 'gateway',
         kind: 'action',
         anchor: '.hub-gateway-stage.is-current',
-        screen: (ctx) => ctx.path === '/social' && !socialActive(ctx),
-        done: socialActive,
+        screen: (ctx) => ctx.path === '/social' && !ctx.syncConnected && !socialActive(ctx),
+        done: synced,
+      },
+      {
+        // Paso 2: identificarse. Se cumple con la sesión; la aplicación lleva sola al perfil si falta.
+        id: 'google',
+        kind: 'action',
+        anchor: '.hub-gateway-stage.is-current',
+        screen: (ctx) => ctx.path === '/social' && ctx.syncConnected && !ctx.socialSignedIn && !socialActive(ctx),
+        done: (ctx) => ctx.socialSignedIn || socialActive(ctx),
         counted: true,
       },
       {
+        // Tus datos, en dos pasos: el nombre (explicativo, se escribe y se sigue) y guardar (se cumple guardando).
         id: 'profile',
-        kind: 'action',
+        kind: 'info',
         anchor: '#hub-profile-name',
+        screen: (ctx) => ctx.path.startsWith('/social/profile') && !socialActive(ctx),
+        counted: true,
+      },
+      {
+        id: 'profile-save',
+        kind: 'action',
+        anchor: '[data-tour="profile-save"]',
         screen: (ctx) => ctx.path.startsWith('/social/profile') && !socialActive(ctx),
         done: socialActive,
         counted: true,
       },
+      // Solo justo después de guardar (ver `settleStep`): quien ya tenía el perfil no la ve.
+      { id: 'coop-done', kind: 'done', screen: (ctx) => isSocial(ctx) && socialActive(ctx) },
       { id: 'invite', kind: 'invite', screen: (ctx) => isSocial(ctx) && socialActive(ctx), counted: true },
     ],
   },
@@ -249,8 +285,12 @@ function pendingMissions(state: TourState): MissionId[] {
   return MISSION_IDS.filter((id) => !state.completed.includes(id) && !state.skipped.includes(id));
 }
 
-/** Siguiente misión por hacer, o `finale` si ya no queda ninguna PRINCIPAL (Playnite no retiene el final). */
+/**
+ * Siguiente misión por hacer, o `finale` si ya no queda ninguna PRINCIPAL (Playnite no retiene el final). En una
+ * vuelta de una sola misión —la de un ofrecimiento— la guía se retira al terminarla, sin tarjeta de final.
+ */
 function moveOn(state: TourState): TourState {
+  if (state.single) return { ...state, status: 'done', mission: null, step: 0, single: false };
   const pending = pendingMissions(state);
   if (!pending.some((id) => MAIN_MISSIONS.includes(id))) {
     return { ...state, status: 'finale', mission: null, step: 0 };

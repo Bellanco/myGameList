@@ -131,6 +131,8 @@ export function SocialProfileScreen({
             <button
               className="btn btn-primary"
               type="button"
+              // Ancla de la guía de primeros pasos: «guarda tu perfil».
+              data-tour="profile-save"
               disabled={savingProfile || hydratingProfile || !profileName.trim() || missingCompletedGames}
               onClick={onSaveProfile}
             >
