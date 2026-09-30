@@ -14,13 +14,24 @@ import { readAdminClaim, subscribeSocialAuth } from '../../model/repository/fire
  * `subscribeSocialAuth` está pensado justo para no pagarlos cuando no hay sesión guardada, y esa propiedad se
  * conserva preguntando solo cuando llega un usuario (en cuyo caso el SDK ya está cargado).
  *
+ * `enabled = false` NO PREGUNTA EN ABSOLUTO, ni siquiera por la sesión, y es para quien sabe que la respuesta no le
+ * sirve. Hace falta porque «no hay sesión guardada» no siempre se puede saber: con el almacenamiento bloqueado
+ * (cookies bloqueadas en Safari o Chrome), `hasStoredAuthSession` responde que SÍ por prudencia y la suscripción
+ * descarga el SDK. En móvil, además, Auth prepara nada más cargar el iframe de Google. Eso le pasaba a la página
+ * PÚBLICA de un enlace compartido, que promete no cargar Firebase ni contactar con terceros, solo por montar las
+ * sugerencias del pie (ver `useReviewCover`).
+ *
  * TAMPOCO SE FUERZA EL REFRESCO DEL TOKEN: aquí se pregunta de pasada, en pantallas normales, así que se lee el
  * token que haya. Quien acabe de recibir el claim lo verá en cuanto el token se renueve o vuelva a entrar; el
  * panel, que sí es donde importa, lo reintenta forzando (ver `useAdminViewModel`).
  */
-export function useIsAdmin(): boolean {
+export function useIsAdmin(enabled = true): boolean {
   const [esAdmin, setEsAdmin] = useState(false);
   useEffect(() => {
+    if (!enabled) {
+      setEsAdmin(false);
+      return undefined;
+    }
     let vivo = true;
     const desuscribir = subscribeSocialAuth((user) => {
       if (!user) {
@@ -35,6 +46,6 @@ export function useIsAdmin(): boolean {
       vivo = false;
       desuscribir();
     };
-  }, []);
+  }, [enabled]);
   return esAdmin;
 }

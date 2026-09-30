@@ -31,10 +31,13 @@ export type CoverAccess = boolean | 'solo-cache';
  */
 export function useReviewCover(acceso: CoverAccess = true): (name: string, platforms?: readonly string[]) => string | null {
   const { covers } = useCovers();
+  const permitido = covers && acceso !== false;
   // El modo ampliado (DLC, packs y mods) tiene su propio espacio de caché: se pide con la misma clave con la que
   // ese navegador ya haya pedido esta carátula en el listado, o la respuesta no se reaprovecha.
-  const ampliado = useIsAdmin();
-  const permitido = covers && acceso !== false;
+  // Solo se pregunta si puede haber carátula: si no, la respuesta no sirve de nada y preguntar no es gratis. La
+  // página pública de un enlace compartido no las permite, y ahí la pregunta descargaba Firebase y, en móvil,
+  // contactaba con Google en cuanto el navegador tenía el almacenamiento bloqueado (ver `useIsAdmin`).
+  const ampliado = useIsAdmin(permitido);
   const soloCache = acceso === 'solo-cache';
 
   return useCallback((name: string, platforms: readonly string[] = []) => {
