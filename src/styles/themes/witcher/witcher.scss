@@ -497,6 +497,10 @@
    sistema le reserva para no chocar con el rojo, el verde y el ámbar de sus vecinos de renglón. */
 :root[data-palette="witcher"] .chip-plat,
 :root[data-palette="witcher"] .chip-deck { --wt-tono: var(--chip-plat-fg); }
+/* En OSCURO esa familia es un azul pastel (#b9d6ff) calibrado para escribir sobre fondo oscuro, y con el siena
+   de la cera daba un sello gris lavanda. El lacre no lleva texto encima: aquí va el azul real de la cera. */
+:root[data-palette="witcher"]:not([data-theme="light"]) .chip-plat,
+:root[data-palette="witcher"]:not([data-theme="light"]) .chip-deck { --wt-tono: #1e6bff; }
 :root[data-palette="witcher"] .hub-feed-game-chip,
 :root[data-palette="witcher"] .hub-review-game { --wt-tono: var(--wt-igni); }
 /* ── §6b · Los botones-icono (cuenta, ajustes, tema, filtros) eran lo único sin cuerpo: un icono suelto
