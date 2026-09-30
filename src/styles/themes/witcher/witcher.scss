@@ -815,13 +815,22 @@
      dos pseudos de §4b, el `::after` ES el acero del botón, y el `translateX` que movía el destello se
      llevaba de paseo la chapa entera. Va como primera capa de ese mismo fondo y se desplaza con
      `background-position`, que mueve la capa y deja las de debajo quietas. El recorte ya no hace falta:
-     la capa está dentro de la pieza troquelada, así que el destello no puede salirse de la hoja. */
+     la capa está dentro de la pieza troquelada, así que el destello no puede salirse de la hoja.
+     UN REFLEJO, NO UNA RAYA. Iba en una banda estrecha al 55 % con los cantos vivos, y en claro —donde la
+     acción principal es acero hondo— se leía como un tajo blanco cruzando el rótulo. Ahora es el doble de
+     ancha, con hombros que se funden, el pico a la mitad y más bajo aún en claro, y pasa más despacio. */
   :root[data-effects="on"][data-palette="witcher"] .btn-steam,
   :root[data-effects="on"][data-palette="witcher"] .btn-primary {
-    --wt-brillo: linear-gradient(115deg, transparent 42%, rgba(255,255,255,.55) 50%, transparent 58%);
+    --wt-brillo: linear-gradient(115deg, transparent 34%, rgba(255,255,255,.07) 43%, rgba(255,255,255,.26) 50%,
+      rgba(255,255,255,.07) 57%, transparent 66%);
+  }
+  :root[data-effects="on"][data-palette="witcher"][data-theme="light"] .btn-steam,
+  :root[data-effects="on"][data-palette="witcher"][data-theme="light"] .btn-primary {
+    --wt-brillo: linear-gradient(115deg, transparent 34%, rgba(255,255,255,.04) 43%, rgba(255,255,255,.14) 50%,
+      rgba(255,255,255,.04) 57%, transparent 66%);
   }
   :root[data-effects="on"][data-palette="witcher"] .btn-steam::after,
-  :root[data-effects="on"][data-palette="witcher"] .btn-primary::after { transition: background-position .55s ease; }
+  :root[data-effects="on"][data-palette="witcher"] .btn-primary::after { transition: background-position .9s ease-out; }
   :root[data-effects="on"][data-palette="witcher"] .btn-steam:hover,
   :root[data-effects="on"][data-palette="witcher"] .btn-primary:hover { --wt-brillo-x: 220%; }
 
