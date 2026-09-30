@@ -5,6 +5,7 @@ import { ballotIsUnchanged } from '../../../core/premios/ballotEdits';
 import { votesToSelections } from '../../../model/repository/premios/premiosBallotRepository';
 import { ensureLightAccount } from '../../../model/repository/lightAccountRepository';
 import { signInWithGoogle, subscribeSocialAuth } from '../../../model/repository/firebaseGateway';
+import { isSupersededSignIn } from '../../../core/utils/googleSignIn';
 import type { SocialAuthUser } from '../../../model/repository/firebaseClient';
 import { areResultsOffered, SEASON_STAGE } from '../../../core/premios/votingSchedule';
 import { matchPremiosRoute, panelNeedsSession, PREMIOS_ROUTES } from '../../../viewmodel/premios/premiosRoutes';
@@ -91,13 +92,21 @@ export function PremiosHub() {
   const handleSignIn = useCallback(async () => {
     setSignInError('');
     setSigningIn(true);
+    let superseded = false;
     try {
-      await signInWithGoogle();
-    } catch {
+      // Si vuelve sin terminar (cerró la ventana, o «atrás» en el móvil), el botón se devuelve enseguida en vez de
+      // quedarse en «Entrando...» hasta que Firebase se dé cuenta (ver `core/utils/googleSignIn`).
+      await signInWithGoogle({ onAbandoned: () => setSigningIn(false) });
+    } catch (error) {
+      // Volvió a pulsar: este intento lo canceló el nuevo, que es quien lleva el botón ahora.
+      if (isSupersededSignIn(error)) {
+        superseded = true;
+        return;
+      }
       // Cerrar la ventana de Google es el caso normal, no una avería: se dice lo mismo y se puede reintentar.
       setSignInError(PREMIOS_UI.portada.signInFailed);
     } finally {
-      setSigningIn(false);
+      if (!superseded) setSigningIn(false);
     }
   }, []);
 

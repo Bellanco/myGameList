@@ -70,6 +70,7 @@ import { useForeignProfileGames } from './social/useForeignProfileGames';
 import { useSocialFeed } from './social/socialFeed';
 import { useRelatedReviews } from './social/useRelatedReviews';
 import type { RelatedReviewAnchor } from '../core/social/relatedReviews';
+import { isSupersededSignIn } from '../core/utils/googleSignIn';
 export type { RelatedReview } from '../core/social/relatedReviews';
 // Re-exportados: las pantallas del hub los importan desde este ViewModel desde antes de la extracción.
 export type {
@@ -1544,9 +1545,12 @@ export function useSocialViewModel(options?: {
   }, [attachExistingSocialGist, authUser, mainSyncConfig, reportFailure, setFeedback]);
 
   const handleSignInGoogle = useCallback(async () => {
+    let superseded = false;
     try {
       setSigningIn(true);
-      const user = await signInWithGoogle();
+      // Si vuelve sin terminar (cerró la ventana, o «atrás» en el móvil), el botón se devuelve enseguida en vez de
+      // quedarse en «Entrando...» hasta que Firebase se dé cuenta (ver `core/utils/googleSignIn`).
+      const user = await signInWithGoogle({ onAbandoned: () => setSigningIn(false) });
       setAuthUser(user);
       const linkedExisting = await attachExistingSocialGist(user);
       if (linkedExisting) {
@@ -1556,9 +1560,14 @@ export function useSocialViewModel(options?: {
         // No hacer nada aquí; el useEffect automático manejará la creación del gist
       }
     } catch (error) {
+      // Volvió a pulsar: este intento lo canceló el nuevo, que es quien lleva el botón ahora.
+      if (isSupersededSignIn(error)) {
+        superseded = true;
+        return;
+      }
       reportFailure(error, SOCIAL_UI.status.signInFailed);
     } finally {
-      setSigningIn(false);
+      if (!superseded) setSigningIn(false);
     }
   }, [attachExistingSocialGist, reportFailure, setFeedback]);
 

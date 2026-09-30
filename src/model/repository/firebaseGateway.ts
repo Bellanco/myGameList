@@ -155,9 +155,9 @@ export async function readAdminClaim(forceRefresh = false): Promise<boolean> {
   return m.readAdminClaim(forceRefresh);
 }
 
-export async function signInWithGoogle(): Promise<SocialAuthUser> {
+export async function signInWithGoogle(options?: { onAbandoned?: () => void }): Promise<SocialAuthUser> {
   const m = await loadFacade();
-  return m.signInWithGoogle();
+  return m.signInWithGoogle(options);
 }
 
 /**

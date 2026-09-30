@@ -24,6 +24,7 @@ import { clearDirty, clearDirtyIfUnchanged, loadSyncDirtyState, subscribeSyncDir
 import { acquireSyncLock, canRead, getBackoffMs, getNextReadDelayMs, getSyncState, subscribeSyncState, transitionTo, canReadNow } from '../model/repository/syncMachineRepository';
 import { countRemoteChangesApplied, isWriteConflict, logSyncError, type SyncOperation } from '../model/repository/syncLogicRepository';
 import type { TabData } from '../model/types/game';
+import { isSupersededSignIn } from '../core/utils/googleSignIn';
 
 export type SyncStatus = 'idle' | 'syncing' | 'ok' | 'error';
 
@@ -596,13 +597,33 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     }
   }, [connectSyncWithCredentials, gistId, onNotice, token, handleSyncError]);
 
+  /**
+   * VOLVER ATRÁS DESDE GITHUB. Conectar navega fuera de la app con el botón en «Conectando con GitHub...», y si en
+   * GitHub se pulsa «atrás» el navegador puede devolver ESTA MISMA página desde su caché de ida y vuelta (bfcache),
+   * con el estado de React tal cual lo dejó: el botón se quedaba deshabilitado para siempre. Chrome y Safari la
+   * usan también con el `no-store` del shell. Al restaurarse llega `pageshow` con `persisted`, y ahí se devuelve el
+   * botón. Solo si fue ESTE botón el que salió: un canje de vuelta de GitHub en curso no se toca.
+   */
+  const salidaHaciaGithubRef = useRef(false);
+  useEffect(() => {
+    const alVolver = (event: PageTransitionEvent) => {
+      if (!event.persisted || !salidaHaciaGithubRef.current) return;
+      salidaHaciaGithubRef.current = false;
+      setGithubLoggingIn(false);
+    };
+    window.addEventListener('pageshow', alVolver);
+    return () => window.removeEventListener('pageshow', alVolver);
+  }, []);
+
   // Paso 0 — "Conectar con GitHub" (OAuth). Redirige a GitHub; el usuario autoriza y vuelve a /ajustes con un `code`.
   const beginGithubLogin = useCallback(async () => {
     try {
       setGithubLoggingIn(true);
       const { beginGithubOAuth } = await cargarTrabajoOAuth();
+      salidaHaciaGithubRef.current = true;
       beginGithubOAuth(); // navega fuera de la app; no vuelve de esta función
     } catch (error) {
+      salidaHaciaGithubRef.current = false;
       setGithubLoggingIn(false);
       onNotice('err', error instanceof Error ? error.message : SYNC_MESSAGES.connectError);
     }
@@ -865,9 +886,12 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   const recoverGistIdFromGoogle = useCallback(async () => {
     const { readLegacyPlaintextToken } = await cargarMotorDeSync();
     setRecoveringGistId(true);
+    let superseded = false;
 
     try {
-      const user = (await getCurrentSocialAuthUser()) || (await signInWithGoogle());
+      // Si vuelve sin terminar la ventana de Google, el botón se devuelve enseguida (ver `core/utils/googleSignIn`).
+      const user = (await getCurrentSocialAuthUser())
+        || (await signInWithGoogle({ onAbandoned: () => setRecoveringGistId(false) }));
 
       // Telemetría: vincula los eventos/errores posteriores a este usuario (uid opaco) y registra el login.
       void setAnalyticsUser(user.uid);
@@ -921,11 +945,17 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         }
       }
     } catch (error) {
+      // Volvió a pulsar con la ventana de Google aún pendiente: este intento lo canceló el nuevo, que es quien lleva
+      // el botón ahora. No es un error que enseñar.
+      if (isSupersededSignIn(error)) {
+        superseded = true;
+        return;
+      }
       // H3: connectSyncWithCredentials deja la máquina en 'checking'/'merging' si lanza a mitad; sin un
       // transitionTo aquí el sync quedaría bloqueado hasta recargar. Mismo patrón de recuperación que connectSync.
       handleSyncError(error, { fallback: SYNC_MESSAGES.recoverError });
     } finally {
-      setRecoveringGistId(false);
+      if (!superseded) setRecoveringGistId(false);
     }
   }, [connectSyncWithCredentials, onNotice, handleSyncError]);
 
