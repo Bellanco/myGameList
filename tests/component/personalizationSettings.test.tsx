@@ -49,12 +49,12 @@ describe('la pantalla de Personalización', () => {
     expect(within(tarjeta('Preferencias')).getAllByRole('radio').some((b) => !(b as HTMLButtonElement).disabled)).toBe(true);
   });
 
-  it('los bloques van en su orden: tema, instalar, preferencias y lo publicado', () => {
+  it('los bloques van en su orden: tema, preferencias y lo publicado', () => {
     // El orden es el de uso: lo que cambia la pantalla entera primero, lo que has publicado al final. Instalar
-    // va delante de Preferencias porque en escritorio comparte su fila, a la izquierda.
+    // iría detrás de Preferencias, a su derecha en escritorio, pero sin oferta del navegador (jsdom) no se pinta.
     pintar('uid-1');
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent))
-      .toEqual(['Temas', 'Instalar la aplicación', 'Preferencias', 'Reseñas compartidas']);
+      .toEqual(['Temas', 'Preferencias', 'Reseñas compartidas']);
   });
 
   it('no arrastra lo que se fue a otros grupos', () => {

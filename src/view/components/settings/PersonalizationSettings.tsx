@@ -43,10 +43,6 @@ export const PersonalizationSettings = memo(function PersonalizationSettings({ s
         </div>
       </div>
 
-      {/* Delante de Preferencias y, en escritorio, a su izquierda: si la app ya está instalada no se pinta y
-          Preferencias recupera la fila entera. */}
-      <InstallCard />
-
       <div className="settings-card settings-card-score">
         <h2>{SETTINGS_UI.groups.preferences}</h2>
         <ScoreScaleCard scoreScaleUid={scoreScaleUid} />
@@ -57,6 +53,10 @@ export const PersonalizationSettings = memo(function PersonalizationSettings({ s
           <AppearanceToggles />
         </div>
       </div>
+
+      {/* Detrás de Preferencias y, en escritorio, a su derecha: donde no se puede instalar no se pinta y
+          Preferencias recupera la fila entera. */}
+      <InstallCard />
 
       {/* Los enlaces públicos van aquí y no en «Integración»: no son una preferencia ni un canal de datos, son
           contenido tuyo publicado en internet, y se gestionan al lado de lo que decides mostrar. */}

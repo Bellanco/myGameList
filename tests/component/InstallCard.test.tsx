@@ -4,8 +4,9 @@ import { INSTALL_CARD } from '../../src/core/constants/installCardLabels';
 import { INSTALL_HINT_KEY } from '../../src/core/constants/storageKeys';
 
 /**
- * LA TARJETA DE INSTALAR DE AJUSTES › DISEÑO: botón cuando el navegador lo ofrece, instrucciones cuando no, y nada
- * cuando la app ya está instalada. A diferencia del aviso del principio, el «Ahora no» no la apaga.
+ * LA TARJETA DE INSTALAR DE AJUSTES › DISEÑO: botón cuando el navegador lo ofrece, la instrucción de Compartir en
+ * iOS, y nada en el resto —ni donde no se puede instalar ni cuando ya está instalada—. A diferencia del aviso del
+ * principio, el «Ahora no» no la apaga.
  *
  * Como en `InstallBanner.test.tsx`, el repositorio guarda la oferta en una variable suya: cada caso lo reimporta
  * limpio para que la oferta de uno no se cuele en el siguiente.
@@ -47,33 +48,32 @@ describe('InstallCard — instalar desde Ajustes', () => {
 
     expect(tarjeta()).toBeInTheDocument();
     expect(boton()).toBeInTheDocument();
-    expect(screen.queryByText(INSTALL_CARD.manual)).not.toBeInTheDocument();
+    expect(screen.queryByText(INSTALL_CARD.ios)).not.toBeInTheDocument();
   });
 
-  it('el botón abre el diálogo del navegador; gastada la oferta sin instalar, explica cómo hacerlo a mano', async () => {
+  it('el botón abre el diálogo del navegador; gastada la oferta sin instalar, la tarjeta se retira', async () => {
     const { prompt } = await montar({ oferta: true });
 
     fireEvent.click(boton()!);
     expect(prompt).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(screen.getByText(INSTALL_CARD.manual)).toBeInTheDocument());
-    expect(boton()).not.toBeInTheDocument();
+    await waitFor(() => expect(tarjeta()).not.toBeInTheDocument());
   });
 
-  it('sin oferta explica el camino del menú del navegador', async () => {
-    await montar({ oferta: false });
+  it('sin oferta, fuera de iOS, no se pinta: no hay nada que prometer', async () => {
+    const { container } = await montar({ oferta: false });
 
-    expect(tarjeta()).toBeInTheDocument();
-    expect(boton()).not.toBeInTheDocument();
-    expect(screen.getByText(INSTALL_CARD.manual)).toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
   });
 
-  it('en un iPhone explica el de Compartir', async () => {
+  it('en un iPhone, sin oferta, explica el camino de Compartir', async () => {
     Object.defineProperty(navigator, 'userAgent', {
       value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
       configurable: true,
     });
     await montar({ oferta: false });
 
+    expect(tarjeta()).toBeInTheDocument();
+    expect(boton()).not.toBeInTheDocument();
     expect(screen.getByText(INSTALL_CARD.ios)).toBeInTheDocument();
   });
 

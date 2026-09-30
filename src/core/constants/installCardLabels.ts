@@ -5,13 +5,10 @@
 // viajan en el arranque, y esto solo lo necesita una pantalla perezosa.
 export const INSTALL_CARD = {
   title: 'Instalar la aplicación',
-  lead: 'Añádela a tu pantalla de inicio y ábrela como una app más.',
-  /** Lo que se gana, en tres líneas: lo mismo que promete el aviso del principio, a la vista antes de decidir. */
-  perks: ['Sin la barra del navegador', 'Arranca aunque no haya conexión', 'Con su icono, junto a tus apps'],
+  /** Lo que se gana, en una frase: lo mismo que promete el aviso del principio. */
+  lead: 'Ábrela como una app más: con su icono, sin la barra del navegador y aunque no haya conexión.',
   /** Hay oferta del navegador: el botón abre su diálogo. */
-  add: 'Añadir a la pantalla de inicio',
+  add: 'Instalar',
   /** Safari de iOS no ofrece nada que atrapar: se instala a mano desde el menú de compartir. */
-  ios: 'En Safari, pulsa Compartir y después «Añadir a la pantalla de inicio».',
-  /** Ni oferta ni iOS: Chromium sin oferta en esta visita, Firefox para Android… Algunos (Firefox en ordenador) no lo permiten. */
-  manual: 'Búscalo en el menú del navegador: «Instalar aplicación» o «Añadir a la pantalla de inicio». Algunos navegadores de ordenador no lo permiten.',
+  ios: 'Pulsa Compartir y después «Añadir a la pantalla de inicio».',
 } as const;
