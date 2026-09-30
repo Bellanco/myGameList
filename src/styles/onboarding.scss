@@ -216,6 +216,10 @@
 .ob-wide { min-height: 44px; }
 .ob-foot-split .btn { flex: 1 1 0; }
 .ob-foot-split .btn-primary { flex-grow: 2; }
+/* Una pregunta con dos respuestas del mismo peso: «No, gracias» no puede partirse en dos líneas por dejarle el
+   doble de sitio a la otra. */
+.ob-foot-even .btn,
+.ob-foot-even .btn-primary { flex: 1 1 0; white-space: nowrap; }
 .ob-dots { display: flex; gap: 4px; flex-grow: 1; }
 .ob-dot { width: 16px; height: 4px; border-radius: 2px; background: var(--border); }
 .ob-dot.is-on { background: var(--steam); }

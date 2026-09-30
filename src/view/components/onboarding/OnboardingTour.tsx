@@ -449,7 +449,7 @@ function HintBubble({ state, ctx }: { state: TourState; ctx: TourContext }) {
       </div>
       <h2 className="ob-title" id={titleId}>{H[mission].title}</h2>
       <p className="ob-text">{H[mission].text}</p>
-      <div className="ob-foot ob-foot-split">
+      <div className="ob-foot ob-foot-split ob-foot-even">
         <button type="button" className="btn btn-secondary" onClick={decline}>{H.no}</button>
         <button type="button" className="btn btn-primary" onClick={accept}>{H.yes}</button>
       </div>
