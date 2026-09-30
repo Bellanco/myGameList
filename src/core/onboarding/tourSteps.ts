@@ -60,6 +60,12 @@ export interface TourStep {
    * no aparece— la burbuja sale sin flecha.
    */
   anchor?: string | readonly string[];
+  /**
+   * El control, DENTRO del ancla, al que apunta la flecha y que la burbuja no puede tapar. Hace falta cuando el hueco
+   * es una tarjeta alta —para que se lea lo que hay en ella— y lo que hay que tocar es un botón suyo: sin esto la
+   * burbuja no cabe junto a la tarjeta, se acopla abajo y tapa justo el botón que dice que pulses.
+   */
+  focus?: string;
   screen(ctx: TourContext): boolean;
   done?(ctx: TourContext): boolean;
   /** Puede volver a salir por debajo del paso en curso (ver la cabecera). */
@@ -85,6 +91,8 @@ const synced = (ctx: TourContext) => ctx.syncConnected;
  * hueco del velo lo deja a la vista junto al botón. La burbuja ya no tiene que repetirlo.
  */
 const SYNC_ANCHOR = '[data-tour="sync-card"]';
+/** «Conectar con GitHub», dentro de esa tarjeta: a él apunta la flecha. Con GitHub ya conectado no existe. */
+const SYNC_FOCUS = '[data-tour="sync-connect"]';
 const socialActive = (ctx: TourContext) => ctx.socialStatus === 'active';
 
 /** Los dos pasos de «ve a Ajustes › Datos», que comparten la nube y Playnite. */
@@ -126,7 +134,7 @@ export const MISSIONS: Readonly<Record<MissionId, Mission>> = {
     id: 'cloud',
     steps: [
       ...toDataSteps(synced),
-      { id: 'sync', kind: 'action', anchor: SYNC_ANCHOR, screen: isData, done: synced, counted: true },
+      { id: 'sync', kind: 'action', anchor: SYNC_ANCHOR, focus: SYNC_FOCUS, screen: isData, done: synced, counted: true },
       // En cualquier pantalla: al volver de autorizar en GitHub la aplicación deja a cada uno donde empezó.
       { id: 'synced', kind: 'done', screen: () => true },
     ],
@@ -169,6 +177,7 @@ export const MISSIONS: Readonly<Record<MissionId, Mission>> = {
         id: 'coop-sync',
         kind: 'nav',
         anchor: SYNC_ANCHOR,
+        focus: SYNC_FOCUS,
         screen: (ctx) => isData(ctx) && !ctx.syncConnected,
         done: synced,
         detour: true,

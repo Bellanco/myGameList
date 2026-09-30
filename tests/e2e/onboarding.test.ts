@@ -145,4 +145,62 @@ test.describe('guía de primeros pasos', () => {
     // No es una guía: no deja nada guardado.
     expect(await page.evaluate(() => localStorage.getItem('mis-listas-onboarding'))).toBeNull();
   });
+
+  for (const [nombre, viewport] of [['móvil', { width: 390, height: 844 }], ['escritorio', { width: 1512, height: 900 }]] as const) {
+    test(`en ${nombre}, la burbuja de la nube no tapa «Conectar con GitHub»`, async ({ page }) => {
+      await page.setViewportSize(viewport);
+      await sembrarBiblioteca(page);
+      await page.addInitScript(() => {
+        localStorage.setItem('mis-listas-onboarding', JSON.stringify({
+          v: 1, status: 'active', mission: 'cloud', step: 0, completed: ['first-game'], skipped: [], declined: [], single: false,
+        }));
+      });
+      await page.goto('/ajustes/datos');
+      await expect(page.getByRole('dialog', { name: 'Guarda la partida' })).toBeVisible();
+      await page.waitForTimeout(800);
+
+      const boton = page.locator('[data-tour="sync-connect"]');
+      const caja = await boton.boundingBox();
+      expect(caja).not.toBeNull();
+      // En el centro del botón está el botón (o lo que lleva dentro), no la burbuja.
+      const encima = await page.evaluate(({ x, y }) => {
+        const el = document.elementFromPoint(x, y);
+        return el?.closest('[data-tour="sync-connect"]') ? 'botón' : el?.closest('.ob-bubble') ? 'burbuja' : el?.className ?? 'nada';
+      }, { x: caja!.x + caja!.width / 2, y: caja!.y + caja!.height / 2 });
+      expect(encima).toBe('botón');
+      const burbuja = await page.locator('.ob-bubble').boundingBox();
+      const solapa = burbuja && caja
+        && burbuja.x < caja.x + caja.width && caja.x < burbuja.x + burbuja.width
+        && burbuja.y < caja.y + caja.height && caja.y < burbuja.y + burbuja.height;
+      expect(solapa, 'la burbuja no debería solaparse con el botón').toBe(false);
+    });
+  }
+
+  test('con GitHub ya conectado no se ofrece la nube ni sale su paso: la misión se da por hecha', async ({ page }) => {
+    await sembrarBiblioteca(page);
+    await page.addInitScript(() => {
+      localStorage.setItem('mis-listas-gist-config', JSON.stringify({
+        gistId: 'f6e5d4c3b2a1', token: 'ghp_ejemploDeTokenDeMaqueta0000000000000', etag: null, lastRemoteUpdatedAt: 0,
+      }));
+    });
+    await page.route('https://api.github.com/**', (route) => route.abort());
+    await page.goto('/ajustes/datos');
+    await expect(page.locator('[data-tour="sync-card"]')).toBeVisible();
+    await page.waitForTimeout(1500);
+    await expect(page.getByRole('dialog', { name: '¿Te enseño a guardar tus listas en la nube?' })).toHaveCount(0);
+    await expect(page.locator('[data-tour="sync-connect"]')).toHaveCount(0);
+
+    // Y quien llega con la misión de la nube en marcha la ve cumplida sin que salga nada.
+    await page.evaluate(() => {
+      localStorage.setItem('mis-listas-onboarding', JSON.stringify({
+        v: 1, status: 'active', mission: 'cloud', step: 0, completed: ['first-game'], skipped: [], declined: [], single: true,
+      }));
+    });
+    await page.reload();
+    await expect(page.locator('[data-tour="sync-card"]')).toBeVisible();
+    await page.waitForTimeout(1500);
+    await expect(page.getByRole('dialog', { name: 'Guarda la partida' })).toHaveCount(0);
+    const guardado = await page.evaluate(() => JSON.parse(localStorage.getItem('mis-listas-onboarding') || 'null'));
+    expect(guardado).toMatchObject({ status: 'done', completed: ['first-game', 'cloud'] });
+  });
 });

@@ -243,6 +243,8 @@ interface AnchoredBubbleProps {
   /** Identifica lo que se señala: al cambiar, se vuelve a buscar el control y a desplazar hasta él. */
   anchorKey: string;
   anchor?: string | readonly string[];
+  /** Control dentro del ancla al que apunta la flecha y que la burbuja no tapa (ver `TourStep.focus`). */
+  focus?: string;
   /** Tono del anillo y la cabecera: `is-done` (celebración), `is-optional` (misión secundaria) o ninguno. */
   tone?: '' | ' is-done' | ' is-optional';
   /** El anillo late: hay que tocar ahí. */
@@ -257,7 +259,7 @@ interface AnchoredBubbleProps {
  * paso de una misión, el ofrecimiento de una misión («¿Te enseño?») y el «vuelve a entrar» de lo social: los tres
  * señalan algo de la pantalla y cambian solo lo que dicen.
  */
-function AnchoredBubble({ anchorKey, anchor: anchorSpec, tone = '', pulse = false, labelledBy, onKeyDown, children }: AnchoredBubbleProps) {
+function AnchoredBubble({ anchorKey, anchor: anchorSpec, focus, tone = '', pulse = false, labelledBy, onKeyDown, children }: AnchoredBubbleProps) {
   const selectors = useMemo(
     () => (anchorSpec ? (typeof anchorSpec === 'string' ? [anchorSpec] : [...anchorSpec]) : null),
     [anchorSpec],
@@ -309,7 +311,15 @@ function AnchoredBubble({ anchorKey, anchor: anchorSpec, tone = '', pulse = fals
     }
     : null;
   const view = { w: document.documentElement.clientWidth || window.innerWidth, h: window.innerHeight, bottomInset };
-  const placement = size ? placeBubble(hole, size, view) : null;
+  // Con un control de foco, la burbuja se coloca respecto a ÉL y no a todo el hueco: así se queda a su lado, con la
+  // flecha apuntándole, en vez de acoplarse encima. Se lee en cada pintado, que llega con cada scroll (ver
+  // `useTourAnchor`).
+  const focusElement = focus && anchor.element ? anchor.element.querySelector(focus) : null;
+  const focusRect = focusElement?.getBoundingClientRect();
+  const target = focusRect && focusRect.width > 0
+    ? { x: focusRect.left - HOLE_PAD, y: focusRect.top - HOLE_PAD, w: focusRect.width + HOLE_PAD * 2, h: focusRect.height + HOLE_PAD * 2 }
+    : hole;
+  const placement = size ? placeBubble(target, size, view) : null;
 
   const caretStyle = placement?.side
     ? placement.side === 'bottom'
@@ -374,6 +384,7 @@ function Spotlight({ state, mission, index, step, ctx }: SpotlightProps) {
     <AnchoredBubble
       anchorKey={`${mission.id}:${step.id}`}
       anchor={step.anchor}
+      focus={step.focus}
       tone={tone}
       pulse={step.kind === 'action' || step.kind === 'nav'}
       labelledBy={titleId}
@@ -402,12 +413,12 @@ function Spotlight({ state, mission, index, step, ctx }: SpotlightProps) {
 /* ── El ofrecimiento de una misión, en su pantalla ────────────────────────────────────────────────────────── */
 
 /** Dónde se ofrece cada misión y qué se señala allí. Solo hay ofrecimientos de lo social y de la nube. */
-const HINTS: Partial<Record<MissionId, { screen: (ctx: TourContext) => boolean; anchor: readonly string[] }>> = {
+const HINTS: Partial<Record<MissionId, { screen: (ctx: TourContext) => boolean; anchor: readonly string[]; focus?: string }>> = {
   coop: {
     screen: (ctx) => ctx.path === '/social' || ctx.path.startsWith('/social/'),
     anchor: ['.hub-gateway-stage.is-current', '#hub-profile-name'],
   },
-  cloud: { screen: (ctx) => ctx.path === '/ajustes/datos', anchor: ['[data-tour="sync-card"]'] },
+  cloud: { screen: (ctx) => ctx.path === '/ajustes/datos', anchor: ['[data-tour="sync-card"]'], focus: '[data-tour="sync-connect"]' },
 };
 
 /**
@@ -434,6 +445,7 @@ function HintBubble({ state, ctx }: { state: TourState; ctx: TourContext }) {
     <AnchoredBubble
       anchorKey={`hint:${mission}`}
       anchor={hint.anchor}
+      focus={hint.focus}
       labelledBy={titleId}
       onKeyDown={(event) => {
         if (event.key !== 'Escape') return;
