@@ -666,6 +666,61 @@ export async function invalidateCachedSocialDirectory(ownGistId: string): Promis
 }
 
 // ---------------------------------------------------------------------------
+// Caché persistente de MIS AMISTADES (amigos, peticiones recibidas y enviadas), ya categorizadas. Reutiliza el store
+// `profileCache` con clave reservada por uid (`__friendships__:<uid>`). Existe porque la consulta de `friendships`
+// cuesta UNA LECTURA DE FIRESTORE POR AMIGO, y antes solo se guardaba 60 s en memoria: cada recarga de la página con
+// el espacio social abierto la repetía entera contra un cupo gratuito de 50.000 lecturas al día (ver
+// `docs/plan-capacidad-gratuita.md`, fase 4). La caducidad NO se decide aquí: se devuelve con su sello y la aplica
+// `getMyFriendships`, porque depende de quién pregunta (la pantalla de solicitudes la quiere más fresca).
+// Va por uid y no por gist: es de la sesión de Google, y otra cuenta en el mismo navegador tiene la suya.
+// ---------------------------------------------------------------------------
+const MY_FRIENDSHIPS_KEY_PREFIX = '__friendships__:';
+/** Versión de la FORMA guardada; subirla si cambia `MyFriendships` para que no se sirva una copia ilegible. */
+const MY_FRIENDSHIPS_CACHE_VERSION = 1;
+
+interface CachedMyFriendships<T> {
+  profileId: string; // keyPath del store
+  cachedAt: number;
+  version: number;
+  value: T;
+}
+
+/** La copia guardada y cuándo se leyó de Firestore, sea cual sea su edad. `null` si no hay o es de otra forma. */
+export async function getCachedMyFriendships<T>(uid: string): Promise<{ value: T; cachedAt: number } | null> {
+  if (!uid) return null;
+  try {
+    const rec = await idbGet<CachedMyFriendships<T>>(PROFILE_CACHE_STORE, MY_FRIENDSHIPS_KEY_PREFIX + uid);
+    if (!rec || rec.version !== MY_FRIENDSHIPS_CACHE_VERSION) return null;
+    return { value: rec.value, cachedAt: rec.cachedAt };
+  } catch {
+    return null;
+  }
+}
+
+export async function putCachedMyFriendships<T>(uid: string, value: T, cachedAt: number): Promise<void> {
+  if (!uid) return;
+  try {
+    await idbPut<CachedMyFriendships<T>>(PROFILE_CACHE_STORE, {
+      profileId: MY_FRIENDSHIPS_KEY_PREFIX + uid,
+      cachedAt,
+      version: MY_FRIENDSHIPS_CACHE_VERSION,
+      value,
+    });
+  } catch {
+    // best-effort: sin copia persistente se vuelve a leer de Firestore, que es lo que pasaba antes.
+  }
+}
+
+export async function invalidateCachedMyFriendships(uid: string): Promise<void> {
+  if (!uid) return;
+  try {
+    await idbDelete(PROFILE_CACHE_STORE, MY_FRIENDSHIPS_KEY_PREFIX + uid);
+  } catch {
+    // best-effort.
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Caché persistente del PERFIL PROPIO ya resuelto (nombre + visibilidad + actividad). Reutiliza el store
 // `profileCache` con clave reservada por gist propio (`__profile__:<ownGistId>`). TTL corto: al volver a navegar a la
 // pantalla social dentro de la ventana se sirve de IndexedDB sin releer el gist propio ni consultar Firestore. El

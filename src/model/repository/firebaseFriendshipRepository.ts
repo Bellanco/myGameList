@@ -6,12 +6,31 @@
 import { collection, deleteDoc, doc, getDoc, getDocs, limit, query, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore/lite';
 import { mapWithConcurrency } from '../../core/utils/concurrency';
 import { initializeFirebaseServices, isPermissionDeniedError } from './firebaseClient';
-import { getLocalMeta, patchLocalMeta } from './indexedDbRepository';
+import {
+  getCachedMyFriendships,
+  getLocalMeta,
+  invalidateCachedMyFriendships,
+  patchLocalMeta,
+  putCachedMyFriendships,
+} from './indexedDbRepository';
 import { trackAnalyticsEvent } from './telemetryRepository';
 import type { FriendshipDoc } from '../types/firestore';
 import type { FriendshipView, MyFriendships } from '../types/social';
 
-const MY_FRIENDSHIPS_CACHE_TTL_MS = 60_000;
+/**
+ * CUÁNTO VALE UNA COPIA DE MIS AMISTADES, en memoria o en IndexedDB. La consulta cuesta una lectura de Firestore POR
+ * AMIGO, y antes solo se guardaba 60 s en memoria: cada recarga con el espacio social abierto la repetía entera
+ * contra el cupo gratuito de 50.000 lecturas al día (ver `docs/plan-capacidad-gratuita.md`, fase 4). Con 15 min,
+ * una petición que te envíen puede tardar eso en aparecer en el feed; las acciones propias (enviar, aceptar,
+ * borrar) invalidan y releen al momento, y la pantalla de solicitudes pide su propia frescura (abajo).
+ */
+export const MY_FRIENDSHIPS_MAX_AGE_MS = 15 * 60_000;
+
+/**
+ * La pantalla de SOLICITUDES es a donde se va a ver si ha llegado alguna: ahí servir una copia de hace un cuarto de
+ * hora sería justo lo contrario de lo que se busca. Acepta como mucho la frescura de antes (60 s).
+ */
+export const MY_FRIENDSHIPS_REQUESTS_MAX_AGE_MS = 60_000;
 
 /**
  * Cinturón de seguridad de la lectura, no paginación. La consulta `array-contains` no tenía tope: un grafo
@@ -24,10 +43,25 @@ const MY_FRIENDSHIPS_CACHE_TTL_MS = 60_000;
  */
 const FRIENDSHIPS_HARD_CAP = 1000;
 
-type CachedValue<T> = { value: T; expiresAt: number };
+/** Una copia y CUÁNDO SE LEYÓ de Firestore (no cuándo caduca): la edad aceptable la decide quien pregunta. */
+type CachedValue<T> = { value: T; fetchedAt: number };
 
 const myFriendshipsCache = new Map<string, CachedValue<MyFriendships>>();
 const myFriendshipsInFlight = new Map<string, Promise<MyFriendships>>();
+
+/**
+ * Cuándo se invalidó por última vez, por uid y en general. Una copia leída ANTES de eso no vale aunque siga en
+ * IndexedDB: el borrado es asíncrono, y sin esta marca una lectura que llegara justo detrás de una invalidación podía
+ * encontrarse la copia vieja todavía ahí. Sirve también para no guardar una lectura que empezó antes de un cambio.
+ */
+const invalidatedAt = new Map<string, number>();
+let invalidatedAllAt = 0;
+/** uids con copia persistente tocada en esta sesión: la invalidación general (panel de admin) borra las suyas. */
+const persistedUids = new Set<string>();
+
+function lastInvalidation(myUid: string): number {
+  return Math.max(invalidatedAt.get(myUid) ?? 0, invalidatedAllAt);
+}
 
 /** Id canónico del doc de amistad: los dos uid ordenados y unidos por `__`. Determinista → un solo doc por par. */
 export function friendshipDocId(uidA: string, uidB: string): string {
@@ -146,29 +180,47 @@ function toFriendshipView(docId: string, data: Partial<FriendshipDoc>, myUid: st
   };
 }
 
-function readMyFriendshipsCache(myUid: string): MyFriendships | undefined {
+function readMyFriendshipsCache(myUid: string, maxAgeMs: number): MyFriendships | undefined {
   const cached = myFriendshipsCache.get(myUid);
   if (!cached) {
     return undefined;
   }
-  if (cached.expiresAt <= Date.now()) {
+  const age = Date.now() - cached.fetchedAt;
+  if (age >= MY_FRIENDSHIPS_MAX_AGE_MS) {
     myFriendshipsCache.delete(myUid);
     return undefined;
   }
-  return cached.value;
+  // Más vieja de lo que pide ESTE llamador, pero puede valerle a otro: se conserva.
+  return age < maxAgeMs ? cached.value : undefined;
 }
 
-function saveMyFriendshipsCache(myUid: string, value: MyFriendships): void {
-  myFriendshipsCache.set(myUid, { value, expiresAt: Date.now() + MY_FRIENDSHIPS_CACHE_TTL_MS });
+/** La copia persistente, si no es anterior a la última invalidación. Cualquier edad: la filtra quien llama. */
+async function readPersistedFriendships(myUid: string): Promise<CachedValue<MyFriendships> | null> {
+  const persisted = await getCachedMyFriendships<MyFriendships>(myUid);
+  if (!persisted || persisted.cachedAt < lastInvalidation(myUid)) {
+    return null;
+  }
+  return { value: persisted.value, fetchedAt: persisted.cachedAt };
 }
 
 /** Invalida la caché de amistad (llamar tras cualquier mutación para que el ViewModel re-derive). */
 export function invalidateMyFriendshipsCache(myUid?: string): void {
+  const now = Date.now();
   if (myUid) {
     myFriendshipsCache.delete(myUid);
+    invalidatedAt.set(myUid, now);
+    persistedUids.delete(myUid);
+    void invalidateCachedMyFriendships(myUid);
     return;
   }
+  // Sin uid (panel de administración, que toca amistades ajenas): todo lo de esta sesión deja de valer.
+  invalidatedAllAt = now;
+  // La marca general sustituye a las de cada uid (es posterior a todas), así que esas ya no dicen nada.
+  invalidatedAt.clear();
+  const tocados = new Set([...myFriendshipsCache.keys(), ...persistedUids]);
   myFriendshipsCache.clear();
+  persistedUids.clear();
+  tocados.forEach((uid) => void invalidateCachedMyFriendships(uid));
 }
 
 const EMPTY_FRIENDSHIPS: MyFriendships = { friends: [], incoming: [], outgoing: [], byOtherUid: {} };
@@ -177,24 +229,41 @@ const EMPTY_FRIENDSHIPS: MyFriendships = { friends: [], incoming: [], outgoing: 
  * Todo el estado de amistad del usuario en UNA sola lectura: `friendships where users array-contains myUid`.
  * Categoriza en amigos / recibidas / enviadas y expone `byOtherUid` para el estado O(1) en tarjetas y perfiles.
  * Si las reglas deniegan o Firebase no está configurado, degrada a vacío para no bloquear la UI social.
+ *
+ * ANTES DE IR A FIRESTORE mira la memoria y después IndexedDB, y sirve la copia si no pasa de `maxAgeMs` (por
+ * defecto `MY_FRIENDSHIPS_MAX_AGE_MS`; nunca más). `forceRefresh` se salta las dos. Y si la lectura de red falla
+ * (sin salida, Firestore caído) y hay copia guardada, se sirve esa aunque sea vieja: es lo mismo que hace el
+ * directorio sin red, y mejor que un feed sin amigos.
  */
-export async function getMyFriendships(myUid: string, options?: { forceRefresh?: boolean }): Promise<MyFriendships> {
+export async function getMyFriendships(
+  myUid: string,
+  options?: { forceRefresh?: boolean; maxAgeMs?: number },
+): Promise<MyFriendships> {
   if (!myUid) {
     return EMPTY_FRIENDSHIPS;
   }
 
   const forceRefresh = Boolean(options?.forceRefresh);
+  const maxAgeMs = Math.min(options?.maxAgeMs ?? MY_FRIENDSHIPS_MAX_AGE_MS, MY_FRIENDSHIPS_MAX_AGE_MS);
   if (!forceRefresh) {
-    const cached = readMyFriendshipsCache(myUid);
+    const cached = readMyFriendshipsCache(myUid, maxAgeMs);
     if (cached) {
       return cached;
     }
+    const persisted = await readPersistedFriendships(myUid);
+    if (persisted && Date.now() - persisted.fetchedAt < maxAgeMs) {
+      myFriendshipsCache.set(myUid, persisted);
+      return persisted.value;
+    }
+    // La dedupe va SOLO sobre la lectura de red, y por eso después de mirar las copias: si abarcara también la
+    // de IndexedDB, quien pide 60 s de frescura podía heredar la respuesta de quien se conformaba con 15 min.
     const inFlight = myFriendshipsInFlight.get(myUid);
     if (inFlight) {
       return inFlight;
     }
   }
 
+  const startedAt = Date.now();
   const request = (async () => {
     const services = await initializeFirebaseServices();
     if (!services) {
@@ -213,6 +282,10 @@ export async function getMyFriendships(myUid: string, options?: { forceRefresh?:
     } catch (error) {
       if (isPermissionDeniedError(error)) {
         return EMPTY_FRIENDSHIPS;
+      }
+      const stale = await readPersistedFriendships(myUid);
+      if (stale) {
+        return stale.value;
       }
       throw error;
     }
@@ -262,7 +335,13 @@ export async function getMyFriendships(myUid: string, options?: { forceRefresh?:
     outgoing.sort(byRequestDate);
 
     const result: MyFriendships = { friends, incoming, outgoing, byOtherUid };
-    saveMyFriendshipsCache(myUid, result);
+    // Una lectura que empezó ANTES de una invalidación puede no traer el cambio que la provocó: se devuelve, pero
+    // no se guarda, para que la siguiente pregunta vaya a por la buena.
+    if (startedAt >= lastInvalidation(myUid)) {
+      myFriendshipsCache.set(myUid, { value: result, fetchedAt: startedAt });
+      persistedUids.add(myUid);
+      void putCachedMyFriendships(myUid, result, startedAt);
+    }
     return result;
   })();
 

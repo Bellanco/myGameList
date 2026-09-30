@@ -15,7 +15,7 @@
 | 1 | Frenar la reconsulta de `/api/premios` | S | Deja de gastar 1 invocación + 1 lectura de KV **cada vez que se vuelve a la pestaña** |
 | 2 | Enlaces relacionados sin `list()` | M | Una visita anónima pasa de 1 *list* + ~51 lecturas a **2 lecturas**; se cierra la puerta por la que un enlace viral tumba los enlaces de todos |
 | 3 | Sacar `/assets/*` y `/fonts/*` de las Functions *(requiere decisión)* | M | Un dispositivo nuevo pasa de ~36 invocaciones a **0** por arrancar, y un despliegue deja de costar ~18 por dispositivo |
-| 4 | Amistades en caché persistente | M | Deja de leer N documentos de `friendships` en cada recarga del social |
+| 4 | Amistades en caché persistente ✅ | M | Deja de leer N documentos de `friendships` en cada recarga del social |
 | 5 | Umbrales de vigilancia | S | Avisar antes de que un cupo corte, no después |
 
 Orden recomendado: 0 → 1 → 2 → 3 (con su prueba previa) → 4. Cada fase es un commit independiente y reversible.
@@ -170,22 +170,35 @@ HTML colado. El despliegue baja de ~18 invocaciones por dispositivo a casi 0; el
 
 ---
 
-## Fase 4 — Amistades en caché persistente · M
+## Fase 4 — Amistades en caché persistente · M · ✅ hecha (30-09-2026)
 
-**Problema.** `getMyFriendships` solo guarda 60 s **en memoria** (`MY_FRIENDSHIPS_CACHE_TTL_MS`): cada recarga
-de la página con el social abierto lee N documentos de `friendships`, uno por amigo. El directorio ya vive en
-IndexedDB 30 min; las amistades no.
+**Problema.** `getMyFriendships` solo guardaba 60 s **en memoria**: cada recarga de la página con el social
+abierto leía N documentos de `friendships`, uno por amigo. El directorio ya vivía en IndexedDB 30 min; las
+amistades no.
 
-**Cambio.** Guardar la vista en IndexedDB con TTL corto (**propuesta: 5 min**) junto al resto de cachés de
-`indexedDbRepository`. Se sigue invalidando en `sendFriendRequest`, `acceptFriendRequest` y `deleteFriendship`
-(`invalidateMyFriendshipsCache`, que tendrá que borrar también la copia persistente) y se salta con el refresco
-manual (`forceRefresh`).
+**Lo implementado.**
 
-**Decisión pendiente.** El TTL: con 5 min, una petición recibida puede tardar hasta 5 min en aparecer en la
-bandeja si no se refresca a mano.
+- Copia en IndexedDB (`__friendships__:<uid>` en `profileCache`, con versión de forma) y **una sola edad**:
+  memoria, luego IndexedDB, luego Firestore. Por defecto vale **15 min** (`MY_FRIENDSHIPS_MAX_AGE_MS`, decisión
+  del usuario).
+- **La pantalla de solicitudes pide 60 s** (`MY_FRIENDSHIPS_REQUESTS_MAX_AGE_MS`), la frescura de antes: es a
+  donde se va a ver si ha llegado alguna. Ir y volver entre pantallas no cuesta lecturas mientras la copia tenga
+  la edad que pide cada una.
+- La dedupe «en vuelo» cubre solo la lectura de red, para que quien pide 60 s no herede la respuesta de quien se
+  conformaba con 15 min.
+- `invalidateMyFriendshipsCache` borra también la copia persistente y deja una **marca de tiempo**: una copia o
+  una lectura anterior a la invalidación no se sirve ni se guarda (el borrado de IndexedDB es asíncrono, y una
+  lectura que salió antes de aceptar una petición puede no traer la aceptación). Las acciones propias siguen
+  releyendo al momento con `forceRefresh`.
+- Si Firestore falla (sin salida, caído) y hay copia, se sirve aunque sea vieja, como el directorio sin red.
+- El borrado de cuenta ya elimina la base de IndexedDB entera, así que la copia no deja rastro.
 
-**Verificación.** Recargar dos veces seguidas el hub → la segunda no consulta `friendships`; aceptar una petición
-→ la lista se actualiza al momento.
+**Coste asumido.** Una petición que te envíen puede tardar hasta 15 min en aparecer en el feed o en el contador
+de la campana; en la pantalla de solicitudes, como mucho 60 s.
+
+**Verificación.** `tests/unit/friendshipRepository.test.ts` (recarga dentro de 15 min sin consulta, pasados 15 min
+sí, 60 s en solicitudes, invalidación, copia vieja sin red, lectura en vuelo durante una invalidación) y
+`tests/component/SocialHub.test.tsx` (la pantalla de solicitudes pide 60 s).
 
 ---
 
@@ -231,7 +244,7 @@ día con uso ligero, menos cuanto más social) y, para usuarios nuevos, **las ca
 - [x] Fase 2: `related` sin `list` (probado con `wrangler pages dev` y KV local); comentarios de cupo actualizados.
 - [x] Fase 3: prueba previa en `wrangler pages dev`; test de pares de rutas (`tests/unit/redirectsRoutes.test.ts`).
 - [ ] Fase 3: comprobación en la vista previa de Cloudflare antes de subir a producción (ver arriba).
-- [ ] Fase 4: TTL decidido; recarga del hub sin consulta a `friendships`.
+- [x] Fase 4: TTL de 15 min (60 s en solicitudes); recarga del hub sin consulta a `friendships`.
 - [ ] Suite completa (`npm test`, `npm run test:rules`, `npm run test:e2e` sobre un `dist` recién construido) y
       checklist de despliegue del README en cada fase.
 

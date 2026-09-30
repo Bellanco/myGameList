@@ -485,6 +485,7 @@ export function useSocialViewModel(options?: {
     myUid: authUser?.uid,
     socialGistId: socialCfgGistId,
     socialSpaceOpen,
+    requestsPanelOpen: activePanel === 'requests',
     buildSelfInfo: buildFriendshipSelfInfo,
     setFeedback,
     reportFailure,

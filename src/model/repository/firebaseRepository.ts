@@ -57,6 +57,7 @@ export {
   getMyFriendships,
   healOwnFriendshipIdentity,
   invalidateMyFriendshipsCache,
+  MY_FRIENDSHIPS_REQUESTS_MAX_AGE_MS,
   readFriendship,
   sendFriendRequest,
   type FriendshipSelfInfo,

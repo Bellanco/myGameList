@@ -30,6 +30,7 @@ const firebaseMocks = vi.hoisted(() => ({
   publishAchievementMirror: vi.fn(async () => {}),
   // Amistad
   getMyFriendships: vi.fn(async (): Promise<any> => ({ friends: [], incoming: [], outgoing: [], byOtherUid: {} })),
+  MY_FRIENDSHIPS_REQUESTS_MAX_AGE_MS: 60_000,
   acceptFriendRequest: vi.fn(async () => {}),
   deleteFriendship: vi.fn(async () => {}),
   sendFriendRequest: vi.fn(async () => {}),
@@ -1207,6 +1208,10 @@ describe('SocialHub (componente, post-M3)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: SOCIAL_UI.friendship.rejectConfirmAction }));
     await waitFor(() => expect(firebaseMocks.deleteFriendship).toHaveBeenCalledWith({ myUid: 'me', docId: 'zoe__me' }));
+
+    // A solicitudes se va a ver si ha llegado alguna: no le vale la copia de hasta 15 min que sirve al resto del
+    // espacio social (ver `MY_FRIENDSHIPS_REQUESTS_MAX_AGE_MS` y `docs/plan-capacidad-gratuita.md`, fase 4).
+    expect(firebaseMocks.getMyFriendships).toHaveBeenCalledWith('me', expect.objectContaining({ maxAgeMs: 60_000 }));
   });
 
   it('directorio: muestra a los NO-amigos (sin leer su gist) para poder enviarles petición', async () => {
