@@ -44,6 +44,40 @@ export const PROFILE_TIER_FEED_TTL_MS: Record<ProfileTier, number> = {
 };
 
 /**
+ * CUÁNTO VALE LA COPIA DEL DIRECTORIO SOCIAL: la consulta de `profiles` en Firestore (hasta 50 documentos, UNA
+ * LECTURA POR PERFIL), guardada en IndexedDB aparte del feed.
+ *
+ * Existe porque esa consulta se repetía cada vez que caducaba el feed (`PROFILE_TIER_FEED_TTL_MS`), y era el mayor
+ * gasto de Firestore que quedaba contra el cupo gratuito de 50.000 lecturas al día (ver
+ * `docs/plan-capacidad-gratuita.md`). Separarlas no quita frescura a lo que importa: la actividad de los amigos sale
+ * de sus gists y se sigue releyendo al ritmo del feed. Lo que tarda esto en verse es lo que vive en el perfil: un
+ * perfil nuevo en «descubrir», un nick, una foto, un rango o los logros de los demás. Lo tuyo se ve al momento,
+ * porque cada escritura de tu perfil invalida la copia (`invalidateSocialDirectoryCache`).
+ *
+ * Decisión del usuario (30-09-2026). Como el feed, manda el rango de QUIEN MIRA.
+ */
+export const PROFILE_TIER_DIRECTORY_TTL_MS: Record<ProfileTier, number> = {
+  bronze: 2 * 60 * 60 * 1000,
+  silver: 90 * 60 * 1000,
+  gold: 60 * 60 * 1000,
+  mithril: 30 * 60 * 1000,
+};
+
+/**
+ * Lo mismo para la CLASIFICACIÓN DE PREMIOS, que pide hasta 60 perfiles solo para enlazar cada fila con el suyo
+ * (`usePremiosProfiles`). Antes lo hacía en CADA visita, porque la única caché era la de 30 s en memoria. Aquí
+ * lo único que se retrasa es el enlace de alguien que acabe de crear su perfil, así que la copia dura más.
+ *
+ * Decisión del usuario (30-09-2026).
+ */
+export const PROFILE_TIER_PREMIOS_PROFILES_TTL_MS: Record<ProfileTier, number> = {
+  bronze: 6 * 60 * 60 * 1000,
+  silver: 4 * 60 * 60 * 1000,
+  gold: 2 * 60 * 60 * 1000,
+  mithril: 30 * 60 * 1000,
+};
+
+/**
  * Techo ABSOLUTO de una publicación. No es un límite de producto: es la cota del saneador, para que un payload
  * corrupto o manipulado no meta un texto desmedido en el gist ni en el render. Mithril no tiene límite de cara al
  * usuario (ni contador ni corte al escribir), pero sigue pasando por aquí.

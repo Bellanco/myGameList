@@ -17,6 +17,7 @@ import {
   type SocialDirectoryEntry,
   type SocialProfileReference,
 } from './firebaseClient';
+import { getCachedDirectoryQuery, invalidateCachedDirectoryQueries, putCachedDirectoryQuery } from './indexedDbRepository';
 
 const SOCIAL_PROFILE_CACHE_TTL_MS = 60_000;
 const SOCIAL_DIRECTORY_CACHE_TTL_MS = 30_000;
@@ -32,6 +33,11 @@ const ownProfileCacheByUid = new Map<string, CachedValue<SocialProfileReference 
 const ownProfileInFlightByUid = new Map<string, Promise<SocialProfileReference | null>>();
 const socialDirectoryCacheByLimit = new Map<number, CachedValue<SocialDirectoryEntry[]>>();
 const socialDirectoryInFlightByLimit = new Map<number, Promise<SocialDirectoryEntry[]>>();
+/**
+ * Cuándo se invalidó el directorio por última vez. Una copia de IndexedDB leída antes no vale aunque siga ahí (el
+ * borrado es asíncrono), y una consulta que salió antes no se guarda: puede no traer el cambio que la invalidó.
+ */
+let socialDirectoryInvalidatedAt = 0;
 
 /** ¿El error es "falta el índice compuesto" (código `failed-precondition` de Firestore)? */
 function isMissingIndexError(error: unknown): boolean {
@@ -267,6 +273,9 @@ function readSocialDirectoryCache(limitCount: number): SocialDirectoryEntry[] | 
 // Exportado para que la fachada invalide el directorio tras crear/actualizar un perfil.
 export function invalidateSocialDirectoryCache(): void {
   socialDirectoryCacheByLimit.clear();
+  socialDirectoryInvalidatedAt = Date.now();
+  // También la copia persistente: sin esto, tu propio cambio de nick o de foto tardaría horas en verse.
+  void invalidateCachedDirectoryQueries();
 }
 
 /**
@@ -361,8 +370,16 @@ export async function findSocialProfileByEmail(email: string): Promise<SocialPro
 /**
  * Devuelve un listado reducido de perfiles para feed social.
  * Si las reglas no permiten lectura, retorna array vacío para no bloquear la UI.
+ *
+ * `maxAgeMs` acepta una copia de IndexedDB de hasta esa edad antes de preguntar a Firestore, que cobra una lectura
+ * por perfil devuelto. Lo pasa cada llamador según el rango de quien mira (`PROFILE_TIER_DIRECTORY_TTL_MS`,
+ * `PROFILE_TIER_PREMIOS_PROFILES_TTL_MS`); sin él, solo vale la caché de 30 s en memoria, como siempre.
+ * `forceRefresh` se salta las dos.
  */
-export async function listSocialDirectory(limitCount = 12, options?: { forceRefresh?: boolean }): Promise<SocialDirectoryEntry[]> {
+export async function listSocialDirectory(
+  limitCount = 12,
+  options?: { forceRefresh?: boolean; maxAgeMs?: number },
+): Promise<SocialDirectoryEntry[]> {
   const services = await initializeFirebaseServices();
   if (!services) {
     throw new Error('Firebase no está configurado en este entorno');
@@ -375,6 +392,20 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
     return cached;
   }
 
+  const maxAgeMs = Math.max(0, options?.maxAgeMs ?? 0);
+  if (!forceRefresh && maxAgeMs > 0) {
+    const persisted = await getCachedDirectoryQuery<SocialDirectoryEntry>(normalizedLimit);
+    if (
+      persisted
+      && persisted.cachedAt >= socialDirectoryInvalidatedAt
+      && Date.now() - persisted.cachedAt < maxAgeMs
+    ) {
+      saveSocialDirectoryCache(normalizedLimit, persisted.entries);
+      return persisted.entries;
+    }
+  }
+
+  const startedAt = Date.now();
   const inFlight = forceRefresh ? null : socialDirectoryInFlightByLimit.get(normalizedLimit);
   if (inFlight) {
     return inFlight;
@@ -500,6 +531,9 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
       }));
 
     saveSocialDirectoryCache(normalizedLimit, entries);
+    if (startedAt >= socialDirectoryInvalidatedAt) {
+      void putCachedDirectoryQuery(normalizedLimit, entries, startedAt);
+    }
     return entries;
   })();
 

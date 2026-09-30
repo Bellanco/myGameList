@@ -202,6 +202,31 @@ sí, 60 s en solicitudes, invalidación, copia vieja sin red, lectura en vuelo d
 
 ---
 
+## Fase 4b — Directorio y clasificación de premios en caché persistente · ✅ hecha (30-09-2026)
+
+**Problema.** La consulta del directorio (`profiles`, hasta 50 documentos = 50 lecturas) se repetía cada vez que
+caducaba el feed: cada 30 min en bronce, 15 en plata, 10 en oro. Era el mayor gasto de Firestore que quedaba, ~100
+lecturas por hora de uso del social y usuario. Y la clasificación de premios pedía hasta 60 perfiles **en cada
+visita** con sesión, porque la única caché era la de 30 s en memoria (su comentario daba por hecho otra cosa).
+
+**Lo implementado.** `listSocialDirectory` acepta `maxAgeMs` y guarda cada consulta en IndexedDB (un registro,
+una entrada por tamaño). La edad la marca el rango de quien mira, decisión del usuario:
+
+| Rango | Directorio (`PROFILE_TIER_DIRECTORY_TTL_MS`) | Premios (`PROFILE_TIER_PREMIOS_PROFILES_TTL_MS`) |
+|---|---|---|
+| Bronce | 2 h | 6 h |
+| Plata | 1 h 30 | 4 h |
+| Oro | 1 h | 2 h |
+| Mithril | 30 min | 30 min |
+
+La actividad de los amigos sigue al ritmo del feed (sale de sus gists). Lo que tarda más en verse es lo que vive en
+el perfil de los demás: un perfil nuevo en «descubrir», nick, foto, rango y logros. Lo propio se ve al momento:
+cada escritura del perfil invalida la copia (también la de IndexedDB), y los refrescos forzados se la saltan.
+
+**Verificación.** `tests/unit/socialDirectoryPersisted.test.ts`.
+
+---
+
 ## Fase 5 — Umbrales de vigilancia · S
 
 No es código: son los números a los que hay que mirar, apuntados en la checklist de despliegue del README.
