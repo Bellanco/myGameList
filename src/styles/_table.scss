@@ -379,9 +379,6 @@ table.meta-score.meta-grade .row-score { min-width: 2.9rem; }
    los chips de una ranura no se encogen (la nota de aquí arriba). */
 .row-cat:has(.chip-more) .chips .chip {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: inline-block;
   flex: 0 1 auto;
 }
 .row-cat .chip.chip-more { flex: 0 0 auto; }
@@ -391,9 +388,6 @@ table.meta-score.meta-grade .row-score { min-width: 2.9rem; }
 .row-cat.is-apretado .chip:not(.chip-more) {
   max-width: 100%;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: inline-block;
   flex: 0 1 auto;
 }
 
@@ -477,9 +471,6 @@ table.meta-score.meta-grade .row-score { min-width: 2.9rem; }
 .row-note .chip {
   max-width: 100%;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: inline-block;
 }
 /* Fila y columna puestas a mano: si la de los fuertes no existe, la de los débiles NO puede correrse a su
    sitio, que es lo único que mantiene la lectura vertical entre filas. */
@@ -1100,12 +1091,9 @@ table.is-grid {
 /* LA EXCEPCIÓN: la ranura APRETADA, la que el componente marca cuando ni el primer chip cabe entero (un género
    como «Coleccionista de criaturas» pide 172 px y en la densidad pequeña la ranura tiene 157). Ahí el único que
    puede ceder es el chip, porque el «+N» que no se ve no cuenta nada: se recorta con puntos suspensivos y el
-   contador se queda dentro. `inline-block` porque a un ítem flex no le llega el `text-overflow`. */
+   contador se queda dentro (el recorte lo hace su `.chip-text`, ver más abajo). */
 .game-card-slot.is-apretado .chip:not(.chip-more) {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: inline-block;
   flex: 0 1 auto;
 }
 .game-card-slot .chips {
@@ -1119,14 +1107,24 @@ table.is-grid {
 /* EL ÚLTIMO RECURSO, solo donde hay «+N»: si la cuenta se queda corta por unos píxeles, el chip se recorta con
    puntos suspensivos y el contador se queda dentro. Al revés —chip entero y número fuera— se pierde justo lo
    que hay que saber: que ahí falta algo. No se aplica sin «+N» porque entonces no hay nada que proteger, y los
-   chips de una ranura no se encogen: repartir la estrechez entre todos deja «P…» junto a «PlayStation…».
-   `inline-block` porque a un ítem flex no le llega el `text-overflow`, igual que en la ranura apretada. */
+   chips de una ranura no se encogen: repartir la estrechez entre todos deja «P…» junto a «PlayStation…». */
 .game-card-slot:has(.chip-more) .chips .chip {
+  min-width: 0;
+  flex: 0 1 auto;
+}
+/* LOS PUNTOS SUSPENSIVOS VAN EN EL TEXTO, NO EN EL CHIP (las cuatro reglas de recorte de arriba y la de las
+   notas). Con el `overflow` en el chip se cortaba todo lo que el tema le pinta por fuera de su caja: el papel
+   rasgado y el lacre de Witcher desaparecían y el chip recortado se quedaba en un rectángulo plano. El chip
+   solo cede ancho; quien recorta es su `.chip-text`. */
+.row-cat:has(.chip-more) .chips .chip-text,
+.row-cat.is-apretado .chip:not(.chip-more) .chip-text,
+.row-note .chip-text,
+.game-card-slot.is-apretado .chip:not(.chip-more) .chip-text,
+.game-card-slot:has(.chip-more) .chips .chip-text {
+  display: block;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: inline-block;
-  flex: 0 1 auto;
 }
 /* NI MÁSCARA NI `overflow`: NADA RECORTA AQUÍ. Hubo las dos cosas y las dos se vieron:
    · el `overflow: hidden` corta por los CUATRO cantos, y a las pegatinas de «Inserte moneda» y a las viñetas
