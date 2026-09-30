@@ -13,7 +13,7 @@
 |---|---|---|---|
 | 0 | Línea base de consumo real | S | Saber de qué número partimos y comprobar cada fase |
 | 1 | Frenar la reconsulta de `/api/premios` | S | Deja de gastar 1 invocación + 1 lectura de KV **cada vez que se vuelve a la pestaña** |
-| 2 | Enlaces relacionados sin `list()` | M | Una visita anónima pasa de 1 *list* + ~51 lecturas a **3 lecturas**; se cierra la puerta por la que un enlace viral tumba los enlaces de todos |
+| 2 | Enlaces relacionados sin `list()` | M | Una visita anónima pasa de 1 *list* + ~51 lecturas a **2 lecturas**; se cierra la puerta por la que un enlace viral tumba los enlaces de todos |
 | 3 | Sacar `/assets/*` y `/fonts/*` de las Functions *(requiere decisión)* | M | Un dispositivo nuevo pasa de ~36 invocaciones a **0** por arrancar, y un despliegue deja de costar ~18 por dispositivo |
 | 4 | Amistades en caché persistente | M | Deja de leer N documentos de `friendships` en cada recarga del social |
 | 5 | Umbrales de vigilancia | S | Avisar antes de que un cupo corte, no después |
@@ -95,10 +95,13 @@ La Cache API del borde no sirve: no funciona en `*.pages.dev`.
 - **Se autorrepara**: `readShareStatus` ya lista los enlaces vivos (fuente de verdad); si el índice no coincide, se
   reescribe. Así una carrera entre dos publicaciones simultáneas del mismo autor se corrige en su siguiente visita
   a «mis enlaces».
-- `related` pasa a leer **ancla + dueño + índice**: 3 lecturas, 0 *list*, 0 lecturas de artículos. Filtra los
-  caducados por `expiresAt`. **Sin índice → lista vacía** (el pie no se pinta); nunca vuelve a listar.
-- **Migración única** con un script en `scripts/` (vía `wrangler kv`) que construya `relidx:` para los autores que
-  ya tienen enlaces vivos. Cuesta una escritura por autor; se lanza en el despliegue.
+- `related` pasa a leer **dueño + índice** (la fila del propio enlace hace de ancla): 2 lecturas, 0 *list*, 0
+  lecturas de artículos. Filtra los caducados por `expiresAt`. **Sin índice → lista vacía** (el pie no se pinta);
+  nunca vuelve a listar ni escribe.
+- **Migración perezosa, sin script.** El índice de un autor con enlaces anteriores se crea la primera vez que abre
+  «mis enlaces» o publica (la reparación lee los artículos que falten). Hasta entonces sus enlaces salen sin
+  sugerencias, y los que nunca se reparen caducan solos en 7-90 días (`PROFILE_TIER_SHARE_TTL_DAYS`). Se descartó
+  un script con `wrangler kv` porque habría que duplicar fuera de `functions/` la forma de las filas.
 
 **Coste asumido.** Publicar pasa de 4 a 5 escrituras de KV: con el reparto de `COVER_DAILY_BUDGET` quedan ~57
 publicaciones diarias en vez de ~71, muy por encima del uso real. Actualizar la cuenta en el comentario de
@@ -200,7 +203,7 @@ No es código: son los números a los que hay que mirar, apuntados en la checkli
 | Dispositivo nuevo, sin carátulas | ~45–50 | ~5 |
 | Usuario habitual, día normal | ~10–30 | ~5 |
 | Usuario habitual, día de despliegue | +25–35 | +0–2 |
-| Visitante anónimo de un enlace | ~40 invocaciones + 1 *list* + ~51 lecturas de KV | 3 invocaciones + 3–4 lecturas |
+| Visitante anónimo de un enlace | ~40 invocaciones + 1 *list* + ~51 lecturas de KV | 3 invocaciones + 3 lecturas |
 
 Con eso, Workers deja de ser el primer techo para el uso normal: pasa a serlo **Firestore** (~5.000 activos al
 día con uso ligero, menos cuanto más social) y, para usuarios nuevos, **las carátulas**.
@@ -208,8 +211,8 @@ día con uso ligero, menos cuanto más social) y, para usuarios nuevos, **las ca
 ## Checklist
 
 - [ ] Fase 0: una semana de números apuntada abajo.
-- [ ] Fase 1: test del freno en verde; en producción, las invocaciones de `/api/premios` caen.
-- [ ] Fase 2: `related` sin `list`; migración de `relidx:` lanzada; comentarios de cupo actualizados.
+- [x] Fase 1: test del freno en verde (falla con el código anterior). En producción: comprobar que las invocaciones de `/api/premios` caen.
+- [x] Fase 2: `related` sin `list` (probado con `wrangler pages dev` y KV local); comentarios de cupo actualizados.
 - [ ] Fase 3: prueba previa en `wrangler pages dev` y vista previa **antes** del cambio; test de pares de rutas.
 - [ ] Fase 4: TTL decidido; recarga del hub sin consulta a `friendships`.
 - [ ] Suite completa (`npm test`, `npm run test:rules`, `npm run test:e2e` sobre un `dist` recién construido) y

@@ -75,6 +75,7 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
       quota: status.quota,
       now,
       existingToken: existing?.token || null,
+      liveTokens: status.active.map((row) => row.token),
     });
   } catch (error) {
     // Aquí acaba lo que rechaza el esquema: un campo privado o de identidad colado en el cuerpo. Es un fallo del

@@ -72,6 +72,7 @@ Todo vive en un único namespace de KV. Nada de esto toca Firestore ni los Gists
 | `quota:{uid}:{yyyy-mm-dd}` | Contador de creaciones del día (anti-abuso) | 48 h |
 | `quota:override:{uid}` | Ajuste individual de cuota: `{ maxActive?, ttlDays?, reason?, setAt, by }` | sin TTL |
 | `ban:{uid}` | Veto de compartir: `{ reason?, bannedAt, by }` | sin TTL |
+| `relidx:{uid}` | Índice de «análisis sugeridos» (desde el 30-09-2026): una fila por enlace vivo con lo que pinta el pie. Derivado de `user:{uid}:*` y autorreparado; existe para que el pie anónimo no gaste `list()` (ver `docs/plan-capacidad-gratuita.md`, fase 2) | el enlace que más dure |
 
 `owner:{token}` existe porque `share:{token}` **no puede llevar el uid** (lo lee cualquiera con el enlace) y aun
 así hacen falta tres cosas que necesitan saber de quién es un enlace: retirarlo desde `/admin` conociendo solo el
@@ -195,7 +196,8 @@ export function shareDailyLimit(quota: ShareQuota): number {
 **Techo diario, y por qué es el mismo número.** Al día se pueden crear tantos enlaces como se pueden tener vivos
 (5, 10, 15, 50). Salió de contrastar las cuotas con los límites reales de KV: publicar cuesta **4 escrituras**
 (artículo, propietario, índice y contador) y el plan gratuito da **1.000 al día**, o sea ~250 publicaciones
-diarias en todo el sistema. Con el techo suelto de 20 que había antes, **trece personas** en su tope agotaban el
+diarias en todo el sistema. *(Desde el 30-09-2026 son 5: se suma el índice de sugeridos, `relidx:{uid}`. Con el
+reparto de `COVER_DAILY_BUDGET` quedan ~57 publicaciones al día; ver `functions/_lib/keys.ts`.)* Con el techo suelto de 20 que había antes, **trece personas** en su tope agotaban el
 día —siete si se dedicaban a crear y retirar—, y las publicaciones legítimas de los demás empezaban a fallar. Con
 la regla actual harían falta ~50 usuarios de bronce a la vez, que es un problema de éxito y no de diseño.
 

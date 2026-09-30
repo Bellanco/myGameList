@@ -12,7 +12,7 @@ import { requireAdmin } from '../../../_lib/context';
 import { fail, json, readJson } from '../../../_lib/http';
 import { banKey, type Env } from '../../../_lib/keys';
 import { listActiveShares } from '../../../_lib/quota';
-import { removeShare } from '../../../_lib/shares';
+import { removeShares } from '../../../_lib/shares';
 
 const REASON_MAX = 500;
 
@@ -38,7 +38,7 @@ export async function onRequestPost(context: { request: Request; env: Env; param
   let purged = 0;
   if (purge) {
     const rows = await listActiveShares(context.env.SHARES, uid);
-    await Promise.all(rows.map((row) => removeShare(context.env.SHARES, uid, row.token)));
+    await removeShares(context.env.SHARES, uid, rows.map((row) => row.token), { everything: true });
     purged = rows.length;
   }
 
