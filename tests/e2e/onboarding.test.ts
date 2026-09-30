@@ -173,6 +173,14 @@ test.describe('guía de primeros pasos', () => {
         && burbuja.x < caja.x + caja.width && caja.x < burbuja.x + burbuja.width
         && burbuja.y < caja.y + caja.height && caja.y < burbuja.y + burbuja.height;
       expect(solapa, 'la burbuja no debería solaparse con el botón').toBe(false);
+
+      // Ni con las ventajas de la tarjeta: la burbuja dice «lo que ganas lo tienes en la tarjeta».
+      const ventajas = await page.locator('.sync-perks li').evaluateAll((items) => items.map((item) => {
+        const r = item.getBoundingClientRect();
+        const el = document.elementFromPoint(r.left + 40, r.top + r.height / 2);
+        return Boolean(el?.closest('.ob-bubble'));
+      }));
+      expect(ventajas, 'ninguna ventaja debería quedar bajo la burbuja').toEqual(ventajas.map(() => false));
     });
   }
 

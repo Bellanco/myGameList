@@ -220,6 +220,8 @@ function stepText(step: TourStep, ctx: TourContext): StepText {
 /* ── Velo con hueco ───────────────────────────────────────────────────────────────────────────────────────── */
 
 const HOLE_PAD = 6;
+/** Altura de la pantalla (en fracción) a la que se deja el control de foco al desplazar. Ver `AnchoredBubble`. */
+const FOCUS_LINE = 0.36;
 
 function Scrim({ hole }: { hole: (Box & { r: number }) | null }) {
   const rawId = useId();
@@ -288,15 +290,28 @@ function AnchoredBubble({ anchorKey, anchor: anchorSpec, focus, tone = '', pulse
 
   // UNA vez por control, y solo si está fuera de la vista: la tarjeta de sincronización queda por debajo de la de
   // importar en un móvil. Lo fijo (barra, «+», menú) no se desplaza.
+  //
+  // CON CONTROL DE FOCO se deja ese control algo por encima de la mitad de la pantalla, y no la tarjeta centrada: así
+  // la burbuja cabe DEBAJO del botón y lo que la tarjeta cuenta ENCIMA de él (las ventajas) sigue a la vista. Centrar
+  // la tarjeta dejaba el botón tan abajo que la burbuja solo cabía encima, tapando justo lo que dice que mires.
   useEffect(() => {
     const { element, box } = anchor;
     if (!element || !box || scrolledRef.current) return;
     scrolledRef.current = true;
-    const offscreen = box.y < 56 || box.y + box.h > window.innerHeight - 96;
-    if (offscreen && !insideFixed(element) && typeof element.scrollIntoView === 'function') {
-      element.scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    if (insideFixed(element)) return;
+    const behavior: ScrollBehavior = prefersReducedMotion() ? 'auto' : 'smooth';
+    const focusElement = focus ? element.querySelector(focus) : null;
+    if (focusElement) {
+      const rect = focusElement.getBoundingClientRect();
+      const desired = window.innerHeight * FOCUS_LINE;
+      if (Math.abs(rect.top - desired) > 24) window.scrollBy({ top: rect.top - desired, behavior });
+      return;
     }
-  }, [anchor]);
+    const offscreen = box.y < 56 || box.y + box.h > window.innerHeight - 96;
+    if (offscreen && typeof element.scrollIntoView === 'function') {
+      element.scrollIntoView({ block: 'center', behavior });
+    }
+  }, [anchor, focus]);
 
   // Mientras se busca el control, nada: una burbuja que aparece en el centro y salta a su sitio despista.
   if (!anchor.box && !anchor.missing) return null;
