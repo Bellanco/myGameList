@@ -30,6 +30,7 @@ const firebaseMocks = vi.hoisted(() => ({
   publishAchievementMirror: vi.fn(async () => {}),
   // Amistad
   getMyFriendships: vi.fn(async (): Promise<any> => ({ friends: [], incoming: [], outgoing: [], byOtherUid: {} })),
+  MY_FRIENDSHIPS_REQUESTS_MAX_AGE_MS: 60_000,
   acceptFriendRequest: vi.fn(async () => {}),
   deleteFriendship: vi.fn(async () => {}),
   sendFriendRequest: vi.fn(async () => {}),
@@ -886,6 +887,47 @@ describe('SocialHub (componente, post-M3)', () => {
     expect(gistMocks.createSocialGist).not.toHaveBeenCalled();
   });
 
+  /**
+   * VOLVER SIN TERMINAR LA VENTANA DE GOOGLE. Firebase tarda hasta 10 s en dar el popup por cerrado (en el móvil,
+   * indefinidamente si se vuelve atrás sin cerrar la pestaña), y el botón se quedaba en «Entrando...». Ahora el
+   * repositorio avisa (`onAbandoned`) y el botón vuelve; y si se pulsa otra vez, el intento viejo que Firebase
+   * cancela no se cuenta como fallo (ver `core/utils/googleSignIn`).
+   */
+  it('Google: si vuelve sin terminar, el botón se devuelve; y reintentar no enseña un error', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue(null);
+    gistMocks.getSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'games', etag: null, lastRemoteUpdatedAt: 0 } as never);
+    gistMocks.getSocialSyncConfig.mockReturnValue(null);
+    // Primer intento: la persona vuelve a la app sin elegir cuenta, y el popup nunca se resuelve.
+    let cancelarPrimero: (error: unknown) => void = () => undefined;
+    firebaseMocks.signInWithGoogle.mockImplementationOnce(((options?: { onAbandoned?: () => void }) => {
+      setTimeout(() => options?.onAbandoned?.(), 0);
+      return new Promise((_resolve, reject) => {
+        cancelarPrimero = reject;
+      });
+    }) as never);
+
+    renderHub();
+    fireEvent.click(await screen.findByText(SOCIAL_UI.gateway.signIn));
+    // Vuelve a estar disponible sin esperar a Firebase.
+    const otraVez = await screen.findByText(SOCIAL_UI.gateway.signIn);
+    expect(screen.queryByText(SOCIAL_UI.gateway.signingIn)).not.toBeInTheDocument();
+
+    // Segundo intento, con el primero aún pendiente: Firebase cancela el viejo con `auth/cancelled-popup-request`.
+    firebaseMocks.signInWithGoogle.mockImplementationOnce((() => new Promise(() => undefined)) as never);
+    fireEvent.click(otraVez);
+    await act(async () => {
+      cancelarPrimero({ code: 'auth/cancelled-popup-request' });
+    });
+
+    // Ni aviso de fallo, ni el botón liberado por el intento viejo: lo lleva el nuevo, y mientras se entra el
+    // botón no se ofrece (`canSignInGoogle` exige que no haya un inicio de sesión en curso).
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.queryByText(SOCIAL_UI.status.signInFailed)).not.toBeInTheDocument();
+    expect(screen.queryByText(SOCIAL_UI.gateway.signIn)).not.toBeInTheDocument();
+  });
+
   // Caso reportado: "sincronizado pero se va a la edición de perfil, y ahí mismo me dice que está sincronizado".
   // Sin juegos completados EN ESTE DISPOSITIVO (biblioteca no sincronizada aún, otro origen) el perfil se tomaba por
   // inexistente y se mandaba al usuario al editor, que acto seguido le confirmaba "Sincronizado". Con nombre en el
@@ -1207,6 +1249,10 @@ describe('SocialHub (componente, post-M3)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: SOCIAL_UI.friendship.rejectConfirmAction }));
     await waitFor(() => expect(firebaseMocks.deleteFriendship).toHaveBeenCalledWith({ myUid: 'me', docId: 'zoe__me' }));
+
+    // A solicitudes se va a ver si ha llegado alguna: no le vale la copia de hasta 15 min que sirve al resto del
+    // espacio social (ver `MY_FRIENDSHIPS_REQUESTS_MAX_AGE_MS` y `docs/plan-capacidad-gratuita.md`, fase 4).
+    expect(firebaseMocks.getMyFriendships).toHaveBeenCalledWith('me', expect.objectContaining({ maxAgeMs: 60_000 }));
   });
 
   it('directorio: muestra a los NO-amigos (sin leer su gist) para poder enviarles petición', async () => {

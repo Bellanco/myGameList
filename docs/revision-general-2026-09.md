@@ -614,7 +614,11 @@ precache. Es un cambio para probar en un despliegue de vista previa, no a ciegas
     `router` (14,5 kB, 38 %). El CSS de entrada solo usa el 21 % al pintar, pero casi todo lo demás es `:hover`,
     anchos y modo claro; las paletas inactivas son ~4–6 kB gzip, y sacarlas arriesga el primer fotograma.
 
-17. ✅ **Brotli del build en vez del de Cloudflare** (25-09-2026, verificado en vista previa). Pages
+17. ↩️ **Brotli del build en vez del de Cloudflare** (25-09-2026, verificado en vista previa). **Retirado el
+    30-09-2026**: servirlo obligaba a que cada `/assets/*` pasara por una Pages Function, y eso gastaba el cupo
+    gratuito de Workers (100.000/día) a razón de ~36 invocaciones por dispositivo nuevo y ~18 por despliegue. El
+    404 de los chunks viejos lo da ahora un `404.html` sin Function; el arranque vuelve a viajar con la compresión
+    de Cloudflare. Ver `docs/plan-capacidad-gratuita.md`, fase 3. Lo que sigue es el registro de lo que se hizo. Pages
     comprime al vuelo con un brotli de nivel bajo: en producción el chunk de React viaja con 67 745 bytes en `br`
     frente a 67 361 en `gzip`. Recomprimidos con calidad 11, los 15 ficheros del arranque de producción pasan de
     185,0 kB (gzip-9) a **158,7 kB** (−14 %), sin tocar la aplicación. El plugin `brotliAssets` (`vite.config.ts`)

@@ -5,26 +5,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
-### Added
-- **La guía acompaña hasta el final de lo social**: después de conectar GitHub, «Entra con Google», «Elige tu nombre»
-  y «Guarda tu perfil», con la celebración «¡Modo cooperativo activado!» antes de invitar a un amigo. Cada paso se
-  cumple con la señal real (la sesión, el perfil activo), no con un «Siguiente».
-- **Ayuda en su pantalla para quien ya usaba la aplicación**: al abrir Social sin lo social, o Ajustes › Datos sin
-  sincronización, la guía pregunta «¿Te enseño?». «Enséñame» hace solo esa misión y se retira; «No, gracias» no
-  vuelve a preguntar (sigue en Ajustes › Datos). Nunca con una guía ya en marcha.
-- **«Vuelve a entrar»** para quien ya tenía lo social y ha perdido la sesión (su espacio sigue en el dispositivo):
-  al abrir Social se le señala el paso que falta y se le dice que su espacio y sus amigos siguen ahí, sin ofrecerle
-  crear nada.
-
-### Fixed
-- La burbuja de la guía ya no tapa el aviso de un logro ni el de lo último que hiciste: se aparta del carril de
-  abajo a la izquierda en vez de acoplarse encima.
-
-## [1.5.0] - 2026-09-29
+## [1.5.0] - 2026-09-30
 
 La versión de **los primeros pasos**. Quien llega sin nada tiene una guía que le acompaña por las pantallas —su
 primer juego, sus listas en la nube y lo social—, sincronizar con GitHub pasa a ser un solo botón y se puede
-invitar a un amigo con un enlace.
+invitar a un amigo con un enlace. El tema por defecto, «Forja y temple», cambia de letra a una pensada para leerse
+sin esfuerzo y estrena un fondo de curvas de calor.
 
 Incluye también lo preparado como 1.4.8, que no llegó a publicarse: **las imágenes que no son de juegos**. Los
 premios dejan de poner la carátula del juego en las categorías de actuación y de adaptación —la serie *The Last of
@@ -56,6 +42,18 @@ el póster o la foto de cada nominado, y el panel enseña las carátulas al marc
   tamaño, y sale marcada cuando la categoría no tiene ganador.
 - **Créditos**, un documento más en Legal: de dónde salen los datos de IGDB y las imágenes de TMDB, con el logo y
   la frase que TMDB exige. El logo solo se descarga al abrir ese documento.
+- **La guía acompaña hasta el final de lo social**: después de conectar GitHub, «Entra con Google», «Elige tu nombre»
+  y «Guarda tu perfil», con la celebración «¡Modo cooperativo activado!» antes de invitar a un amigo. Cada paso se
+  cumple con la señal real (la sesión, el perfil activo), no con un «Siguiente».
+- **Ayuda en su pantalla para quien ya usaba la aplicación**: al abrir Social sin lo social, o Ajustes › Datos sin
+  sincronización, la guía pregunta «¿Te enseño?». «Enséñame» hace solo esa misión y se retira; «No, gracias» no
+  vuelve a preguntar (sigue en Ajustes › Datos). Nunca con una guía ya en marcha.
+- **«Vuelve a entrar»** para quien ya tenía lo social y ha perdido la sesión (su espacio sigue en el dispositivo):
+  al abrir Social se le señala el paso que falta y se le dice que su espacio y sus amigos siguen ahí, sin ofrecerle
+  crear nada.
+- **Isotermas, el fondo de «Forja y temple»**: curvas de calor de un píxel alrededor de una pieza al rojo fuera de
+  cuadro, del naranja de la forja al turquesa del temple. Solo asoman por los márgenes (un 6 % de la pantalla a
+  1512 px) y el trazo no engorda en pantallas grandes.
 
 ### Changed
 - **Sincronizar con GitHub es un botón.** La tarjeta de Ajustes › Datos llega en su forma sencilla: qué hace en una
@@ -71,11 +69,38 @@ el póster o la foto de cada nominado, y el panel enseña las carátulas al marc
 - **En las categorías del panel, Editar va primero**, con las flechas de subir y bajar a su derecha.
 - El aviso legal y la política de privacidad incluyen TMDB, que no recibe ningún dato de quien usa la app.
 - Las condiciones de uso citan también los iconos de Carbon (© IBM, Apache 2.0), de donde sale el de «Compartir».
+- **«Forja y temple» se escribe en Atkinson Hyperlegible**: la Next en rótulos, titulares y cuerpo, y su Mono en las
+  cifras. La dibujó el Braille Institute para que no se confundan la I, la l y el 1 ni la O y el 0. Sustituye a Saira
+  (rótulos), DM Sans (cuerpo) e IBM Plex Mono (cifras) al mismo tamaño: altura de x igual a la de DM Sans y el
+  texto ocupa un 97 % del ancho, así que la tabla no se recoloca.
+- **El destello de la hoja en «Plata y acero» es más sutil**: el doble de ancho y con los bordes fundidos, el pico al
+  26 % (14 % en claro, antes 55 %) y una pasada de 0,9 s en vez de 0,55 s.
+
+### Fixed
+- La burbuja de la guía ya no tapa el aviso de un logro ni el de lo último que hiciste: se aparta del carril de
+  abajo a la izquierda en vez de acoplarse encima.
+- Con el almacenamiento del navegador bloqueado, la página pública de una reseña compartida (`/r/:token`) ya no
+  descarga Firebase ni habla con Google.
 
 ### Performance
 - La guía viaja en su propio chunk perezoso (9,3 kB de JS y 2,5 kB de CSS comprimidos) y solo lo descarga quien la
   tiene en marcha. El arranque crece 0,8 kB comprimidos (crítico 183,3 → 184,1 de 190 kB, con los textos nuevos
   de la tarjeta de sincronización) y sigue en 18 ficheros.
+- **Menos consumo del plan gratuito** (`docs/plan-capacidad-gratuita.md`, fases 1 a 4b):
+  - volver a la pestaña solo reconsulta la visibilidad de los premios si han pasado 5 minutos (lo que publica el
+    administrador sigue viéndose al momento);
+  - las reseñas relacionadas de un enlace compartido salen de un índice por autor: una visita anónima pasa de un
+    *list* y ~51 lecturas de KV a 2 lecturas. El índice de quien ya tenía enlaces se crea la primera vez que abre
+    «mis enlaces» o publica; hasta entonces sus enlaces salen sin sugerencias;
+  - `/assets/*` y `/fonts/*` se sirven como ficheros estáticos, sin pasar por las Pages Functions: un dispositivo
+    nuevo deja de gastar ~36 invocaciones al arrancar;
+  - las amistades propias se guardan 15 minutos en IndexedDB (60 s en la pantalla de solicitudes), así que una
+    petición nueva puede tardar hasta 15 min en salir en el feed o en la campana;
+  - el directorio social y la clasificación de premios se guardan en IndexedDB con una edad según el rango de quien
+    mira (directorio de 2 h en bronce a 30 min en mithril; premios de 6 h a 30 min).
+- **La fuente del primer fotograma es la del tema por defecto**: se precarga y se precachea Atkinson Hyperlegible
+  Next (33 kB) en vez de DM Sans (37 kB), que sigue siendo la letra de los demás temas y se descarga cuando alguno
+  la usa. El arranque queda en 184,8 de 190 kB críticos y 218,1 de 240 kB en total.
 
 ## [1.4.7] - 2026-09-28
 

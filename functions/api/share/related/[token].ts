@@ -15,14 +15,19 @@
 // enlaces— ni el texto completo de ninguna reseña: solo un adelanto. Para leer una entera se abre SU enlace,
 // que es el gesto que su autor autorizó al publicarla.
 //
+// QUÉ CUESTA: dos lecturas de KV —de quién es el enlace y el índice de sugeridos de su autor— y NINGÚN `list()`.
+// Este endpoint lo abre cualquiera sin cuenta, y el cupo gratuito de `list` (1.000 al día) es de la cuenta entera:
+// antes, mil visitas a enlaces compartidos dejaban a todo el mundo sin publicar ni ver sus enlaces. El índice lo
+// mantiene quien publica y retira (`_lib/relatedIndex.ts`); aquí solo se lee, nunca se escribe.
+//
 // EL ORDEN lo pone `rankRelatedReviews`, el mismo módulo que ordena el bloque del hub social, con la señal de
 // autor apagada (`ignoreAuthorLink`): aquí todas las candidatas son de la misma firma, así que premiarla no
 // distinguiría a ninguna y además metería en el bloque análisis suyos que no tienen nada que ver.
 import { rankRelatedReviews, type RelatedReviewCandidate } from '../../../../src/core/social/relatedReviews';
 import { gameTitleKey } from '../../../../src/core/utils/gameTitleKey';
-import { SHARE_MAX_ACTIVE_CEILING } from '../../../../src/core/constants/tiers';
 import { isValidToken, json } from '../../../_lib/http';
-import { drainPages, shareKey, userSharePrefix, type Env, type ShareIndexMetadata } from '../../../_lib/keys';
+import type { Env } from '../../../_lib/keys';
+import { isEntryExpired, readRelatedIndex } from '../../../_lib/relatedIndex';
 import { readOwner } from '../../../_lib/shares';
 
 /**
@@ -34,35 +39,6 @@ import { readOwner } from '../../../_lib/shares';
  * parece a lo que se está leyendo, y como mucho esto.
  */
 const RELATED_LIMIT = 6;
-
-/** Adelanto del texto: el mismo recorte que el canal social (ver `buildReviewSnippet` en `socialProjection`). */
-const SNIPPET_MAX_CHARS = 160;
-
-interface StoredArticle {
-  gameName?: unknown;
-  grade?: unknown;
-  rating?: unknown;
-  review?: unknown;
-  genres?: unknown;
-  reviewedAt?: unknown;
-  createdAt?: unknown;
-  expiresAt?: unknown;
-}
-
-const text = (value: unknown): string => (typeof value === 'string' ? value : '');
-const asNumber = (value: unknown): number | null => (typeof value === 'number' && Number.isFinite(value) ? value : null);
-const list = (value: unknown): string[] =>
-  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
-
-/**
- * El TTL de KV borra solo, pero no al instante. Se comprueba igual, por lo mismo que en el endpoint del
- * artículo: un enlace caducado no debe seguir vivo unas horas por un detalle del almacén, y menos aún colarse
- * como sugerencia de otro que sí lo está.
- */
-const isExpired = (article: StoredArticle, now: number): boolean => {
-  const expiresAt = asNumber(article.expiresAt);
-  return expiresAt !== null && expiresAt > 0 && expiresAt < now;
-};
 
 export async function onRequestGet(context: { request: Request; env: Env; params: { token: string } }): Promise<Response> {
   // Lista vacía y no un 404: «no hay nada que sugerir» es el caso NORMAL (un autor con un solo enlace, o con
@@ -77,12 +53,6 @@ export async function onRequestGet(context: { request: Request; env: Env; params
   const kv = context.env.SHARES;
   const now = Date.now();
 
-  const anchor = (await kv.get(shareKey(token), 'json')) as StoredArticle | null;
-  const anchorName = anchor ? text(anchor.gameName) : '';
-  if (!anchor || !anchorName || isExpired(anchor, now)) {
-    return empty();
-  }
-
   // De quién es el enlace. Es la ÚNICA razón por la que este endpoint lee `owner:{token}`, y el uid se queda
   // aquí: no viaja en la respuesta ni en ninguna de las tarjetas.
   const owner = await readOwner(kv, token);
@@ -90,61 +60,48 @@ export async function onRequestGet(context: { request: Request; env: Env; params
     return empty();
   }
 
-  const prefix = userSharePrefix(owner);
-  const indexKeys = await drainPages<ShareIndexMetadata>((cursor) =>
-    kv.list<ShareIndexMetadata>({ prefix, cursor }),
-  );
-  const others = indexKeys
-    .map((key) => key.name.slice(prefix.length))
-    .filter((other) => other !== token && isValidToken(other))
-    // Techo de lecturas por petición: nadie puede tener más enlaces activos que esto (ver `resolveShareQuota`),
-    // así que en la práctica no recorta nada; está para que un índice descuadrado no dispare las lecturas.
-    .slice(0, SHARE_MAX_ACTIVE_CEILING);
-
-  const articles = await Promise.all(
-    others.map(async (other) => [other, (await kv.get(shareKey(other), 'json')) as StoredArticle | null] as const),
-  );
+  // El índice trae también la fila del propio enlace, que hace de ancla: si no está (retirado, caducado, o un
+  // autor cuyo índice aún no se ha creado), no hay nada que sugerir.
+  const entries = (await readRelatedIndex(kv, owner)).filter((entry) => !isEntryExpired(entry, now));
+  const anchor = entries.find((entry) => entry.token === token);
+  if (!anchor) {
+    return empty();
+  }
 
   const candidates: RelatedReviewCandidate[] = [];
   // Índice de géneros por título, que es como `rankRelatedReviews` los cruza. Aquí SÍ se conocen —viajan en el
   // artículo público—, al revés que en el hub social, donde no pasan por el canal.
   const genresByName = new Map<string, string[]>();
 
-  for (const [other, article] of articles) {
-    if (!article || isExpired(article, now)) {
+  for (const entry of entries) {
+    if (entry.token === token) {
       continue;
     }
-    const gameName = text(article.gameName);
-    const review = text(article.review);
-    if (!gameName || !review.trim()) {
-      continue;
-    }
-    const genres = list(article.genres);
-    if (genres.length > 0) {
-      genresByName.set(gameTitleKey(gameName), genres);
+    if (entry.genres.length > 0) {
+      genresByName.set(gameTitleKey(entry.gameName), entry.genres);
     }
     candidates.push({
       // El token hace de clave: es lo que identifica la tarjeta y, en el cliente, su dirección (`/r/{token}`).
-      key: other,
+      key: entry.token,
       // El `id` de un juego es de cada biblioteca y no significa nada fuera de ella; el cruce va por nombre.
       gameId: 0,
-      gameName,
+      gameName: entry.gameName,
       // La firma se deja vacía a propósito: todas son del mismo autor y su nombre ya está en el artículo que se
       // está leyendo. Que no puntúe lo garantiza `ignoreAuthorLink`, no este campo.
       authorId: '',
       authorName: '',
       isOwn: false,
-      rating: asNumber(article.rating) ?? 0,
-      grade: asNumber(article.grade),
-      snippet: review.slice(0, SNIPPET_MAX_CHARS).trimEnd(),
+      rating: entry.rating ?? 0,
+      grade: entry.grade,
+      snippet: entry.snippet,
       // `reviewedAt` puede venir a 0 (una ficha sin fecha); entonces vale el sello de publicación, que lo pone
       // siempre el servidor. Sin uno de los dos, `rankRelatedReviews` descarta la candidata.
-      updatedAt: asNumber(article.reviewedAt) || asNumber(article.createdAt) || 0,
+      updatedAt: entry.reviewedAt || entry.createdAt || 0,
     });
   }
 
   const ranked = rankRelatedReviews(
-    { gameName: anchorName, authorId: '', isOwn: false, genres: list(anchor.genres) },
+    { gameName: anchor.gameName, authorId: '', isOwn: false, genres: anchor.genres },
     candidates,
     genresByName,
     { limit: RELATED_LIMIT, maxPerReason: RELATED_LIMIT, ignoreAuthorLink: true },

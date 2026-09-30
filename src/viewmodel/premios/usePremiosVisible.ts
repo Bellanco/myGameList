@@ -18,12 +18,21 @@
  * todo el mundo y no se ofrecía a casi nadie. La puerta existía porque la lectura era de Firestore; con la
  * respuesta servida desde casa, ya no hace falta.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PREMIOS_VISIBLE_KEY } from '../../core/constants/storageKeys';
 import {
   PREMIOS_VISIBILITY_CHANNEL,
   PREMIOS_VISIBILITY_EVENT,
 } from '../../core/premios/visibilitySnapshot';
+
+/**
+ * CADA CUÁNTO SE VUELVE A PREGUNTAR AL VOLVER A LA APP, como mucho. El mismo plazo que el aviso a los usuarios
+ * (`RECHECK_MS` de `useAnnouncement`) y por lo mismo: la vuelta a la pestaña pide saltándose la caché, así que
+ * sin tope cada cambio de ventana era una invocación de Pages Functions y una lectura de KV, dos cupos DIARIOS
+ * del plan gratuito (ver `docs/plan-capacidad-gratuita.md`). El aviso del panel no pasa por aquí: ese fuerza
+ * siempre, porque es quien acaba de publicar.
+ */
+const RECHECK_MS = 5 * 60_000;
 
 function leerCache(): boolean {
   try {
@@ -45,6 +54,8 @@ export function usePremiosVisible(): boolean {
   const [visible, setVisible] = useState(leerCache);
   /** Fuerza una relectura cuando el panel publica una foto nueva. */
   const [sello, setSello] = useState(0);
+  /** Cuándo se preguntó por última vez: lo mira la vuelta a la app para no repetir antes de `RECHECK_MS`. */
+  const ultimaConsultaRef = useRef(0);
 
   // EL PANEL PUBLICA Y ESTO SE ENTERA, en esta pestaña y en las demás. Sin esto, quien tuviera la app abierta
   // cuando el administrador abre la edición no veía aparecer la entrada hasta recargar: la respuesta está
@@ -55,9 +66,12 @@ export function usePremiosVisible(): boolean {
 
     // Y AL VOLVER A LA APP, que es como se entera quien la tenía abierta en otra pestaña o en otro aparato: el
     // administrador abre la edición desde el móvil y aquí la entrada aparece al volver, sin recargar. Solo al
-    // volver a primer plano, no en cada pulsación: la respuesta se sirve cacheada cinco minutos.
+    // volver a primer plano y como mucho una vez cada `RECHECK_MS`: esta relectura salta la caché HTTP, así que
+    // la cabecera de cinco minutos de `/api/premios` no la frena.
     const alVolver = () => {
-      if (document.visibilityState === 'visible') refrescar();
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - ultimaConsultaRef.current < RECHECK_MS) return;
+      refrescar();
     };
     document.addEventListener('visibilitychange', alVolver);
 
@@ -78,6 +92,7 @@ export function usePremiosVisible(): boolean {
 
   useEffect(() => {
     let vivo = true;
+    ultimaConsultaRef.current = Date.now();
     // TODO lo de la porra llega por `import()`, también la REGLA: este hook lo usa el menú de Ajustes, que es
     // cromo de la aplicación, así que cualquier import estático de la sección —aunque sean unas líneas de
     // cálculo— acaba en el grafo de arranque de todo el mundo. Aquí solo se queda la lectura de la caché.

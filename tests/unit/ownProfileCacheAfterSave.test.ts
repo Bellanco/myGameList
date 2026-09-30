@@ -26,6 +26,10 @@ vi.mock('../../src/model/repository/indexedDbRepository', () => ({
   seedProfileIdFromRemote: vi.fn(async (remote: string | null) => remote || 'pid-1'),
   getLocalMeta: vi.fn(async () => ({ lastProfileTouchAt: Date.now() })),
   patchLocalMeta: vi.fn(async () => {}),
+  // Guardar el perfil invalida también la copia persistente del directorio.
+  getCachedDirectoryQuery: vi.fn(async () => null),
+  putCachedDirectoryQuery: vi.fn(async () => {}),
+  invalidateCachedDirectoryQueries: vi.fn(async () => {}),
 }));
 
 vi.mock('../../src/model/repository/gistRepository', () => ({

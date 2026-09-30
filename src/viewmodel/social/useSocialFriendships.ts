@@ -5,6 +5,7 @@ import {
   acceptFriendRequest,
   deleteFriendship,
   getMyFriendships,
+  MY_FRIENDSHIPS_REQUESTS_MAX_AGE_MS,
   readFriendship,
   sendFriendRequest,
   type FriendshipSelfInfo,
@@ -39,7 +40,7 @@ export interface SocialFriendships {
   friendUidSet: ReadonlySet<string>;
   pendingIncomingCount: number;
   relationshipWith: (otherUid: string) => RelationshipState;
-  refreshFriendships: (forceRefresh?: boolean) => Promise<void>;
+  refreshFriendships: (forceRefresh?: boolean, maxAgeMs?: number) => Promise<void>;
   /** Tras una mutación: tira la caché del directorio y relee las amistades. */
   refreshAfterFriendshipChange: () => Promise<void>;
   handleAddOrAcceptFriend: (otherUid: string) => Promise<void>;
@@ -74,6 +75,11 @@ export interface SocialFriendshipsOptions {
   socialGistId: string;
   /** ¿Está abierto el espacio social? Fuera de él no se consulta nada. */
   socialSpaceOpen: boolean;
+  /**
+   * ¿Está en pantalla la de SOLICITUDES? Ahí se va a ver si ha llegado alguna, así que no le vale la copia de hasta
+   * 15 min que sirve al resto del espacio social: pide la frescura de `MY_FRIENDSHIPS_REQUESTS_MAX_AGE_MS`.
+   */
+  requestsPanelOpen?: boolean;
   /** Identidad denormalizada que viaja al documento de amistad (nick, foto y gists). */
   buildSelfInfo: () => FriendshipSelfInfo;
   setFeedback: (kind: 'ok' | 'warn' | 'err', message: string, duration?: 'short' | 'long') => void;
@@ -83,7 +89,7 @@ export interface SocialFriendshipsOptions {
 const EMPTY: MyFriendships = { friends: [], incoming: [], outgoing: [], byOtherUid: {} };
 
 export function useSocialFriendships(options: SocialFriendshipsOptions): SocialFriendships {
-  const { myUid, socialGistId, socialSpaceOpen, buildSelfInfo, setFeedback, reportFailure } = options;
+  const { myUid, socialGistId, socialSpaceOpen, requestsPanelOpen = false, buildSelfInfo, setFeedback, reportFailure } = options;
 
   const [friendships, setFriendships] = useState<MyFriendships>(EMPTY);
   const [loadingFriendships, setLoadingFriendships] = useState(false);
@@ -91,7 +97,7 @@ export function useSocialFriendships(options: SocialFriendshipsOptions): SocialF
   const [friendshipBusyUid, setFriendshipBusyUid] = useState<string>('');
   const [friendActionTarget, setFriendActionTarget] = useState<FriendActionTarget | null>(null);
 
-  const refreshFriendships = useCallback(async (forceRefresh = false) => {
+  const refreshFriendships = useCallback(async (forceRefresh = false, maxAgeMs?: number) => {
     if (!myUid) {
       setFriendships(EMPTY);
       setFriendshipsResolved(true);
@@ -99,7 +105,7 @@ export function useSocialFriendships(options: SocialFriendshipsOptions): SocialF
     }
     try {
       setLoadingFriendships(true);
-      setFriendships(await getMyFriendships(myUid, { forceRefresh }));
+      setFriendships(await getMyFriendships(myUid, { forceRefresh, maxAgeMs }));
     } catch {
       /* best-effort: sin amistad el resto del social sigue usable. */
     } finally {
@@ -109,12 +115,14 @@ export function useSocialFriendships(options: SocialFriendshipsOptions): SocialF
     }
   }, [myUid]);
 
+  // Al abrir el espacio social y al ENTRAR en solicitudes. Ir y volver entre pantallas no cuesta lecturas: la copia
+  // del repositorio (memoria e IndexedDB) responde mientras tenga la edad que pide cada una.
   useEffect(() => {
     if (!socialSpaceOpen || !myUid) {
       return;
     }
-    void refreshFriendships();
-  }, [socialSpaceOpen, myUid, refreshFriendships]);
+    void refreshFriendships(false, requestsPanelOpen ? MY_FRIENDSHIPS_REQUESTS_MAX_AGE_MS : undefined);
+  }, [socialSpaceOpen, myUid, requestsPanelOpen, refreshFriendships]);
 
   const refreshAfterFriendshipChange = useCallback(async () => {
     if (socialGistId) {

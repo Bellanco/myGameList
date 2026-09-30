@@ -11,6 +11,10 @@
 //   quota:{uid}:{fecha}  contador diario de creaciones (anti-abuso).
 //   quota:override:{uid} ajuste individual de cuota puesto por el administrador.
 //   ban:{uid}            veto de compartir.
+//   relidx:{uid}         índice de «análisis sugeridos» del autor (ver `relatedIndex.ts`). Existe para que el pie
+//                        ANÓNIMO de un enlace no gaste `list()`, cuyo cupo gratuito (1.000/día) es de la cuenta
+//                        entera. Derivado de `user:{uid}:*`, nunca al revés. NO puede empezar por `user:`: el
+//                        censo de `/api/share/all` recorre ese prefijo y parte cada clave por el último `:`.
 //
 // Los tres primeros caducan solos con el TTL del enlace, así que no hay tarea de limpieza que mantener: lo que
 // caduca desaparece de KV sin que nadie barra.
@@ -74,6 +78,7 @@ export const userSharePrefix = (uid: string): string => `user:${uid}:`;
 export const userShareKey = (uid: string, token: string): string => `user:${uid}:${token}`;
 export const overrideKey = (uid: string): string => `quota:override:${uid}`;
 export const banKey = (uid: string): string => `ban:${uid}`;
+export const relatedIndexKey = (uid: string): string => `relidx:${uid}`;
 
 /**
  * CUPO DE CARÁTULAS LEVANTADO para una IP. Lo escribe `/api/cover-quota` cuando quien llama demuestra, con su
@@ -100,9 +105,10 @@ export const coverExemptionKey = (ip: string): string => `igdb:cupo-libre:v1:${i
  * unidad del recurso que protege.
  *
  * Por qué 700. Resolver un juego nuevo cuesta una escritura (el emparejamiento), más las del contador: con el
- * lote de 50 son ~14 al día, o sea ~714 en total. Quedan ~285 para compartir —unas 70 publicaciones diarias a
- * cuatro escrituras cada una, muy por encima del uso real— y aun así caben DOS bibliotecas grandes nuevas en un
- * mismo día, que es el caso legítimo más caro que existe (la de referencia tiene 302 juegos).
+ * lote de 50 son ~14 al día, o sea ~714 en total. Quedan ~285 para compartir —unas 57 publicaciones diarias a
+ * cinco escrituras cada una (artículo, propietario, índice, contador e índice de sugeridos), muy por encima del
+ * uso real— y aun así caben DOS bibliotecas grandes nuevas en un mismo día, que es el caso legítimo más caro que
+ * existe (la de referencia tiene 302 juegos).
  *
  * Sigue siendo un tope BLANDO, por lo mismo que el de IP: KV no tiene incremento atómico y sus lecturas llegan
  * con retraso. Acota el gasto sostenido, que es lo que vacía el presupuesto; no el segundo exacto en que corta.

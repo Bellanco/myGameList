@@ -148,7 +148,9 @@ App estática pura (React + Vite). Configuración en el repo:
 
 - **`public/_headers`** — CSP para GitHub API + Firebase; `index.html` sin cache;
   `/assets/*` con cache inmutable (assets con hash); `service-worker.js` con revalidación.
-- **`public/_redirects`** — `/* /index.html 200` (fallback SPA para React Router).
+- **`public/_redirects`** — las rutas de la SPA, una a una, reescritas al shell (sin comodín `/*`: lo que no
+  casa da el `404.html` que deja `vite.config.ts`, y así un chunk viejo da 404 sin pasar por ninguna Function).
+  Es un PAR con `src/core/constants/routes.ts`, y lo vigila `tests/unit/redirectsRoutes.test.ts`.
 - **`public/manifest.json`** — instalación como app: nombre, atajos a las pantallas y las `screenshots` que
   enseña Chrome en Android en su diálogo de instalación. Las medidas declaradas ahí y el tamaño real de los PNG
   son un PAR: si una captura cambia de tamaño y el manifest no, el navegador la descarta sin decir nada. Se
@@ -161,8 +163,9 @@ App estática pura (React + Vite). Configuración en el repo:
   arranque; sin ellos la app no arrancaría sin red, y tanto el build como `npm run validate` fallan.
 - **`public/fonts/`** — tipografías propias (generadas por `scripts/vendor-fonts.mjs`, todas OFL). No se usa
   Google Fonts: la CSP ya no lo permite. Para actualizar una familia, se re-ejecuta el script y se commitea el
-  resultado; si cambia el nombre de la fuente base, hay que actualizar el `preload` de `index.html`
-  (`npm run validate` avisa).
+  resultado; si cambia el nombre de la fuente crítica (la del tema por defecto, hoy Atkinson Hyperlegible
+  Next), hay que actualizar el `preload` de `index.html` y el filtro del precache de `vite.config.ts`
+  (`npm run validate` avisa del primero; el build, del segundo).
 - **`wrangler.toml`** — `pages_build_output_dir = ./dist`.
 
 Ajustes en el dashboard de Cloudflare Pages:

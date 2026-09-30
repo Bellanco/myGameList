@@ -12,6 +12,7 @@ import {
 // construye servicios para todo el mundo, y ahí NO debe cargarse reCAPTCHA.
 import { ensureAppCheck } from './appCheckRepository';
 import { hasAdminClaim } from '../../core/security/admin';
+import { watchReturnToApp } from '../../core/utils/googleSignIn';
 
 function toSocialAuthUser(user: { uid: string; displayName: string | null; email: string | null; photoURL: string | null }): SocialAuthUser {
   return {
@@ -130,8 +131,14 @@ export function onSocialAuthChanged(callback: (user: SocialAuthUser | null) => v
 
 /**
  * Inicia sesión con Google para funcionalidades sociales.
+ *
+ * `onAbandoned` se llama si la persona vuelve a la app con el popup sin resolver (lo cerró sin elegir cuenta, o en
+ * el móvil volvió atrás desde la pestaña de Google): es la señal para devolver el botón, que si no se quedaría en
+ * «Entrando...» hasta 10 s, o para siempre en el móvil (ver `core/utils/googleSignIn`). La promesa NO se rechaza
+ * por eso: si al final elige cuenta en la pestaña que dejó abierta, el inicio de sesión sigue su curso. Si vuelve a
+ * pulsar, Firebase cancela este intento con `auth/cancelled-popup-request` (`isSupersededSignIn`).
  */
-export async function signInWithGoogle(): Promise<SocialAuthUser> {
+export async function signInWithGoogle(options?: { onAbandoned?: () => void }): Promise<SocialAuthUser> {
   if (isCloudflarePreviewHost()) {
     throw new Error('Google no está disponible en previews de Cloudflare. Usa el dominio principal o autoriza este subdominio en Firebase Auth.');
   }
@@ -147,6 +154,7 @@ export async function signInWithGoogle(): Promise<SocialAuthUser> {
 
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
+  const stopWatching = options?.onAbandoned ? watchReturnToApp(options.onAbandoned) : () => undefined;
   try {
     const result = await signInWithPopup(services.auth, provider);
     return toSocialAuthUser(result.user);
@@ -167,6 +175,8 @@ export async function signInWithGoogle(): Promise<SocialAuthUser> {
     }
 
     throw error;
+  } finally {
+    stopWatching();
   }
 }
 

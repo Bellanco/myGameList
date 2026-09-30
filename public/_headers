@@ -61,7 +61,7 @@
 # decisión escrita y no la que herede el proveedor.
 #
 # `no-store` y no solo `no-cache` porque un shell obsoleto no es una molestia estética: referencia chunks que ya
-# no están en el servidor y deja la app sin arrancar (ver `functions/_lib/staleAsset.ts`).
+# no están en el servidor y deja la app sin arrancar (ver el plugin `notFoundShell` de `vite.config.ts`).
 /
   Cache-Control: no-cache, no-store, must-revalidate
 

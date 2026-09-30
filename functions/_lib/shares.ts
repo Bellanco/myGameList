@@ -1,9 +1,11 @@
 // Crear, renovar y retirar enlaces. Es la única pieza que escribe en KV, para que las tres claves de un enlace
 // (artículo, propietario e índice) no puedan quedar descuadradas por dos endpoints que hagan las cosas distinto.
+// El índice de sugeridos (`relidx:{uid}`) lo mantiene `relatedIndex.ts`, y se le llama desde aquí por lo mismo.
 import { assertValidSharedReview } from '../../src/model/schemas/shareSchema';
 import { shareExpiresAt, type ShareQuota } from '../../src/core/constants/tiers';
 import { newToken } from './http';
 import { ownerKey, shareKey, userShareKey, type KVNamespace, type ShareIndexMetadata } from './keys';
+import { entryFromArticle, updateRelatedIndex } from './relatedIndex';
 
 /**
  * Lo que el cliente propone publicar.
@@ -77,6 +79,8 @@ export async function publishShare(input: {
   quota: ShareQuota;
   now: number;
   existingToken?: string | null;
+  /** Los tokens vivos del autor según su listado, que quien publica ya tiene: con ellos se repara el índice. */
+  liveTokens?: readonly string[];
 }): Promise<PublishResult> {
   const { kv, uid, draft, nick, quota, now } = input;
   const token = input.existingToken || newToken();
@@ -116,13 +120,36 @@ export async function publishShare(input: {
   await kv.put(shareKey(token), JSON.stringify(article), { expirationTtl });
   await kv.put(ownerKey(token), uid, { expirationTtl });
   await kv.put(userShareKey(uid, token), JSON.stringify(metadata), { expirationTtl, metadata });
+  // Lo último, y sin poder fallar: un índice sin actualizar solo cuesta sugerencias (ver `relatedIndex.ts`).
+  await updateRelatedIndex(
+    kv,
+    uid,
+    { live: input.liveTokens ? [...input.liveTokens, token] : undefined, add: entryFromArticle(token, article) },
+    now,
+  );
 
   return { token, expiresAt, renewed: Boolean(input.existingToken) };
 }
 
-/** Retira un enlace: borra las tres claves. Idempotente — borrar lo ya borrado no es un error. */
-export async function removeShare(kv: KVNamespace, uid: string, token: string): Promise<void> {
-  await Promise.all([kv.delete(shareKey(token)), kv.delete(ownerKey(token)), kv.delete(userShareKey(uid, token))]);
+/**
+ * Retira enlaces de un autor: borra las tres claves de cada uno y actualiza su índice de sugeridos UNA vez.
+ * Idempotente — borrar lo ya borrado no es un error.
+ *
+ * Por qué de golpe y no enlace a enlace: el índice es un solo valor que se lee, se cambia y se escribe, y KV no
+ * tiene escrituras atómicas. Retirar diez en paralelo con una actualización por cada uno haría que se pisaran
+ * entre sí y que sobrevivieran filas de enlaces ya borrados. `everything` es el «retirar todos» (borrado de cuenta,
+ * veto con purga): entonces el índice se vacía entero, aunque tuviera alguna fila que el listado ya no conocía.
+ */
+export async function removeShares(
+  kv: KVNamespace,
+  uid: string,
+  tokens: readonly string[],
+  options: { everything?: boolean } = {},
+): Promise<void> {
+  await Promise.all(
+    tokens.flatMap((token) => [kv.delete(shareKey(token)), kv.delete(ownerKey(token)), kv.delete(userShareKey(uid, token))]),
+  );
+  await updateRelatedIndex(kv, uid, options.everything ? { live: [] } : { remove: tokens }, Date.now());
 }
 
 /** Dueño de un enlace, o `null` si ya no existe. */

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock de la capa Firestore: getMyFriendships solo necesita initializeFirebaseServices + getDocs.
 const getDocsMock = vi.fn();
@@ -25,9 +25,19 @@ let localMeta: Record<string, unknown> | null = null;
 const patchLocalMetaMock = vi.fn(async (patch: Record<string, unknown>) => {
   localMeta = { ...(localMeta || {}), ...patch };
 });
+// La copia persistente de mis amistades, también en memoria: sobrevive a `vi.resetModules()`, que es como se simula
+// una recarga de la página (el módulo pierde su caché en memoria; IndexedDB no).
+const persistedFriendships = new Map<string, { value: unknown; cachedAt: number }>();
 vi.mock('../../src/model/repository/indexedDbRepository', () => ({
   getLocalMeta: async () => localMeta,
   patchLocalMeta: (patch: Record<string, unknown>) => patchLocalMetaMock(patch),
+  getCachedMyFriendships: async (uid: string) => persistedFriendships.get(uid) ?? null,
+  putCachedMyFriendships: async (uid: string, value: unknown, cachedAt: number) => {
+    persistedFriendships.set(uid, { value: structuredClone(value), cachedAt });
+  },
+  invalidateCachedMyFriendships: async (uid: string) => {
+    persistedFriendships.delete(uid);
+  },
 }));
 
 const trackAnalyticsEventMock = vi.fn(async () => undefined);
@@ -56,6 +66,7 @@ import {
   getMyFriendships,
   healOwnFriendshipIdentity,
   invalidateMyFriendshipsCache,
+  MY_FRIENDSHIPS_REQUESTS_MAX_AGE_MS,
   sendFriendRequest,
 } from '../../src/model/repository/firebaseFriendshipRepository';
 
@@ -85,6 +96,7 @@ function resetAll() {
   limitMock.mockClear();
   localMeta = null;
   invalidateMyFriendshipsCache();
+  persistedFriendships.clear();
 }
 
 describe('friendshipDocId', () => {
@@ -173,6 +185,111 @@ describe('getMyFriendships', () => {
     getDocsMock.mockRejectedValueOnce({ code: 'permission-denied' });
     const result = await getMyFriendships('me');
     expect(result).toEqual({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+  });
+});
+
+/**
+ * LA COPIA PERSISTENTE (fase 4 de `docs/plan-capacidad-gratuita.md`). La consulta cuesta una lectura de Firestore
+ * por amigo, y antes solo vivía 60 s en memoria: cada recarga con el social abierto la repetía entera.
+ */
+describe('getMyFriendships · copia en IndexedDB', () => {
+  const AHORA = Date.parse('2026-09-30T12:00:00.000Z');
+  const amistad = snapshot([
+    { id: 'me__x', data: { users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'accepted', recipientName: 'X' } },
+  ]);
+
+  /** Una recarga de la página: el módulo vuelve a empezar sin memoria, y lo guardado en IndexedDB sigue ahí. */
+  async function recargar() {
+    vi.resetModules();
+    return import('../../src/model/repository/firebaseFriendshipRepository');
+  }
+
+  beforeEach(() => {
+    // El reloj ANTES que `resetAll`: su invalidación deja una marca de tiempo, y una lectura anterior a ella no se
+    // guarda (ver el último caso).
+    vi.useFakeTimers({ now: AHORA, toFake: ['Date'] });
+    resetAll();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('sobrevive a una recarga: dentro de 15 min no vuelve a Firestore', async () => {
+    getDocsMock.mockResolvedValue(amistad);
+    await getMyFriendships('me');
+
+    vi.setSystemTime(AHORA + 14 * 60_000);
+    const repo = await recargar();
+    const result = await repo.getMyFriendships('me');
+
+    expect(getDocsMock).toHaveBeenCalledTimes(1);
+    expect(result.friends.map((view) => view.otherUid)).toEqual(['x']);
+  });
+
+  it('pasados 15 min vuelve a leer', async () => {
+    getDocsMock.mockResolvedValue(amistad);
+    await getMyFriendships('me');
+
+    vi.setSystemTime(AHORA + 15 * 60_000);
+    const repo = await recargar();
+    await repo.getMyFriendships('me');
+
+    expect(getDocsMock).toHaveBeenCalledTimes(2);
+  });
+
+  // La pantalla de solicitudes es a donde se va a ver si ha llegado alguna: ahí no vale una copia de hace un rato.
+  it('la pantalla de solicitudes no acepta una copia de más de 60 s, y el resto sí', async () => {
+    getDocsMock.mockResolvedValue(amistad);
+    await getMyFriendships('me');
+
+    vi.setSystemTime(AHORA + 61_000);
+    await getMyFriendships('me');
+    expect(getDocsMock).toHaveBeenCalledTimes(1);
+
+    await getMyFriendships('me', { maxAgeMs: MY_FRIENDSHIPS_REQUESTS_MAX_AGE_MS });
+    expect(getDocsMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('invalidar borra también la copia persistente', async () => {
+    getDocsMock.mockResolvedValue(amistad);
+    await getMyFriendships('me');
+    expect(persistedFriendships.has('me')).toBe(true);
+
+    invalidateMyFriendshipsCache('me');
+    expect(persistedFriendships.has('me')).toBe(false);
+  });
+
+  // Sin salida a la red, lo mismo que hace el directorio: mejor la última copia que un feed sin amigos.
+  it('si Firestore falla, sirve la última copia aunque haya caducado', async () => {
+    getDocsMock.mockResolvedValueOnce(amistad);
+    await getMyFriendships('me');
+
+    vi.setSystemTime(AHORA + 60 * 60_000);
+    const repo = await recargar();
+    getDocsMock.mockRejectedValueOnce(new Error('sin red'));
+    const result = await repo.getMyFriendships('me');
+
+    expect(result.friends.map((view) => view.otherUid)).toEqual(['x']);
+  });
+
+  // Una lectura que salió ANTES de aceptar una petición puede no traer la aceptación: no puede quedarse 15 min.
+  it('no guarda una lectura que empezó antes de una invalidación', async () => {
+    let responder: (value: unknown) => void = () => undefined;
+    getDocsMock.mockReturnValueOnce(new Promise((resolve) => { responder = resolve; }));
+    const enVuelo = getMyFriendships('me');
+    // Hasta que la consulta no ha salido de verdad no hay «lectura en vuelo»: antes se miran las copias.
+    await vi.waitFor(() => expect(getDocsMock).toHaveBeenCalledTimes(1));
+
+    // Relativo a «ahora» y no a `AHORA`: `vi.waitFor` adelanta el reloj falso mientras espera.
+    vi.setSystemTime(Date.now() + 1);
+    invalidateMyFriendshipsCache('me');
+    responder(amistad);
+    await enVuelo;
+
+    expect(persistedFriendships.has('me')).toBe(false);
+    getDocsMock.mockResolvedValueOnce(amistad);
+    await getMyFriendships('me');
+    expect(getDocsMock).toHaveBeenCalledTimes(2);
   });
 });
 

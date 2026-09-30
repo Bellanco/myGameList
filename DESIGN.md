@@ -92,10 +92,10 @@ le toca a cada género. Las reglas y de dónde sale cada rampa están en la cabe
 
 | Ficha | Papel | Forja y temple | Inserte moneda | Plata y acero | Cámara de pruebas | Sin futuro | Solo hay guerra | Sol y luna |
 |---|---|---|---|---|---|---|---|---|
-| `--font-body` | Cuerpo | DM Sans | Exo 2 | Lora | Saira | Rajdhani | Chakra Petch | Pixelify Sans |
-| `--font-label` | Rótulos de interfaz | **Saira** | **Orbitron** | = cuerpo | **Oswald** | Rajdhani | Chakra Petch | = cuerpo |
-| `--font-display` | Titulares | Saira | Orbitron | **Cinzel** | Oswald | Rajdhani | **UnifrakturCook** | = cuerpo |
-| `--font-mono` | Cifras y fechas | **IBM Plex Mono** | Share Tech Mono | IBM Plex Mono | Share Tech Mono | Share Tech Mono | **VT323** | SoS Digits |
+| `--font-body` | Cuerpo | **Atkinson Hyperlegible Next** | Exo 2 | Lora | Saira | Rajdhani | Chakra Petch | Pixelify Sans |
+| `--font-label` | Rótulos de interfaz | = cuerpo | **Orbitron** | = cuerpo | **Oswald** | Rajdhani | Chakra Petch | = cuerpo |
+| `--font-display` | Titulares | = cuerpo | Orbitron | **Cinzel** | Oswald | Rajdhani | **UnifrakturCook** | = cuerpo |
+| `--font-mono` | Cifras y fechas | **Atkinson Hyperlegible Mono** | Share Tech Mono | IBM Plex Mono | Share Tech Mono | Share Tech Mono | **VT323** | SoS Digits |
 
 *Ladrones de corazones* no carga webfont: su display es `'Arial Black', Impact`.
 

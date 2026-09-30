@@ -6,15 +6,32 @@
  * admin. Es una decisión de producto, no una barrera de seguridad — quien manda ya puede escribir cualquier tier
  * en cualquier perfil, y no tiene sentido protegerse de uno mismo.
  */
-export const PROFILE_TIERS = ['bronze', 'silver', 'gold', 'mithril'] as const;
+/**
+ * LOS RANGOS, CON NOMBRE. Para referirse a uno concreto en el código se usa esto (`PROFILE_TIER.gold`) y no la
+ * cadena escrita a mano: una errata en `'gold'` compila si el sitio acepta un `string`, y con la constante no.
+ * El valor es el que se guarda en Firestore (`profiles/{uid}.tier`), así que NO se renombra: cambiarlo dejaría
+ * sin rango a todos los perfiles que ya lo tienen.
+ *
+ * `firestore.rules` repite estos nombres a mano porque su lenguaje no puede importar nada: si se añade un rango,
+ * hay que añadirlo también allí (ver `profileTierNotSelfAssigned` y los topes por rango).
+ */
+export const PROFILE_TIER = {
+  bronze: 'bronze',
+  silver: 'silver',
+  gold: 'gold',
+  mithril: 'mithril',
+} as const;
 
-export type ProfileTier = (typeof PROFILE_TIERS)[number];
+export type ProfileTier = (typeof PROFILE_TIER)[keyof typeof PROFILE_TIER];
+
+/** Todos los rangos, de MENOR a MAYOR. El orden importa: lo recorren el panel y las comprobaciones de «más alto». */
+export const PROFILE_TIERS = [PROFILE_TIER.bronze, PROFILE_TIER.silver, PROFILE_TIER.gold, PROFILE_TIER.mithril] as const;
 
 /** Rango de quien no tiene ninguno asignado: TODO perfil es bronce mientras el admin no diga otra cosa. */
-export const DEFAULT_PROFILE_TIER: ProfileTier = 'bronze';
+export const DEFAULT_PROFILE_TIER: ProfileTier = PROFILE_TIER.bronze;
 
 /** Rango reservado a la cuenta del administrador. */
-export const ADMIN_ONLY_TIER: ProfileTier = 'mithril';
+export const ADMIN_ONLY_TIER: ProfileTier = PROFILE_TIER.mithril;
 
 /**
  * QUÉ HACE EL RANGO: cuánto vale la caché del directorio social hidratado, es decir cada cuánto se vuelven a leer
@@ -41,6 +58,40 @@ export const PROFILE_TIER_FEED_TTL_MS: Record<ProfileTier, number> = {
   silver: 15 * 60 * 1000,
   gold: 10 * 60 * 1000,
   mithril: 60_000,
+};
+
+/**
+ * CUÁNTO VALE LA COPIA DEL DIRECTORIO SOCIAL: la consulta de `profiles` en Firestore (hasta 50 documentos, UNA
+ * LECTURA POR PERFIL), guardada en IndexedDB aparte del feed.
+ *
+ * Existe porque esa consulta se repetía cada vez que caducaba el feed (`PROFILE_TIER_FEED_TTL_MS`), y era el mayor
+ * gasto de Firestore que quedaba contra el cupo gratuito de 50.000 lecturas al día (ver
+ * `docs/plan-capacidad-gratuita.md`). Separarlas no quita frescura a lo que importa: la actividad de los amigos sale
+ * de sus gists y se sigue releyendo al ritmo del feed. Lo que tarda esto en verse es lo que vive en el perfil: un
+ * perfil nuevo en «descubrir», un nick, una foto, un rango o los logros de los demás. Lo tuyo se ve al momento,
+ * porque cada escritura de tu perfil invalida la copia (`invalidateSocialDirectoryCache`).
+ *
+ * Decisión del usuario (30-09-2026). Como el feed, manda el rango de QUIEN MIRA.
+ */
+export const PROFILE_TIER_DIRECTORY_TTL_MS: Record<ProfileTier, number> = {
+  bronze: 2 * 60 * 60 * 1000,
+  silver: 90 * 60 * 1000,
+  gold: 60 * 60 * 1000,
+  mithril: 30 * 60 * 1000,
+};
+
+/**
+ * Lo mismo para la CLASIFICACIÓN DE PREMIOS, que pide hasta 60 perfiles solo para enlazar cada fila con el suyo
+ * (`usePremiosProfiles`). Antes lo hacía en CADA visita, porque la única caché era la de 30 s en memoria. Aquí
+ * lo único que se retrasa es el enlace de alguien que acabe de crear su perfil, así que la copia dura más.
+ *
+ * Decisión del usuario (30-09-2026).
+ */
+export const PROFILE_TIER_PREMIOS_PROFILES_TTL_MS: Record<ProfileTier, number> = {
+  bronze: 6 * 60 * 60 * 1000,
+  silver: 4 * 60 * 60 * 1000,
+  gold: 2 * 60 * 60 * 1000,
+  mithril: 30 * 60 * 1000,
 };
 
 /**

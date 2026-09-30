@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SOCIAL_UI } from '../../core/constants/socialLabels';
-import { DEFAULT_PROFILE_TIER, PROFILE_TIER_FEED_TTL_MS, type ProfileTier } from '../../core/constants/tiers';
+import { DEFAULT_PROFILE_TIER, PROFILE_TIER_DIRECTORY_TTL_MS, PROFILE_TIER_FEED_TTL_MS, type ProfileTier } from '../../core/constants/tiers';
 import { mapWithConcurrency } from '../../core/utils/concurrency';
 import { isNetworkFailure, isOffline } from '../../core/utils/network';
 import { normalizeTimestamp as toSafeTimestamp } from '../../core/utils/normalize';
@@ -212,7 +212,12 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
 
     try {
       setLoadingDirectory(true);
-      const dirEntries = await listSocialDirectory(SOCIAL_DIRECTORY_LIMIT, { forceRefresh });
+      // La CONSULTA de perfiles tiene su propia copia, más larga que la del feed: lo que caduca a menudo es la
+      // actividad de los amigos, que sale de sus gists, no el nick o la foto (ver `PROFILE_TIER_DIRECTORY_TTL_MS`).
+      const dirEntries = await listSocialDirectory(SOCIAL_DIRECTORY_LIMIT, {
+        forceRefresh,
+        maxAgeMs: PROFILE_TIER_DIRECTORY_TTL_MS[ownTier],
+      });
       const socialConfig = getSocialSyncConfig();
       // Foto propia inmediata (de la sesión Google) aunque aún no se haya re-guardado el perfil; respeta showPhoto y
       // descarta el avatar genérico de Google.

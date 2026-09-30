@@ -111,14 +111,16 @@ function isDevRequest(url) {
 /**
  * ¿La respuesta es el shell de la SPA colado donde se esperaba otra cosa?
  *
- * El `/* /index.html 200` de `public/_redirects` responde a CUALQUIER ruta sin fichero con el shell y un 200, así
- * que un chunk que ya no existe no da 404: da `index.html` con `Content-Type: text/html`. El navegador rechaza
- * el módulo por MIME y la app no arranca. Peor: la regla `/assets/*` de `public/_headers` le pone
+ * Pages en «modo SPA» (sin `404.html`) responde a CUALQUIER ruta sin fichero con el shell y un 200, así que un
+ * chunk que ya no existe no da 404: da `index.html` con `Content-Type: text/html`. El navegador rechaza el módulo
+ * por MIME y la app no arranca. Peor: la regla `/assets/*` de `public/_headers` le pone
  * `immutable, max-age=31536000` a ESA respuesta, de modo que la basura se queda un año en la caché HTTP, y sin
  * esta comprobación también se quedaba en la del service worker.
  *
- * `functions/assets/[[path]].ts` corta el problema en el servidor devolviendo un 404 de verdad; esto es la red de
- * seguridad del lado del cliente, y lo que rescata a un dispositivo que arrastre el envenenamiento de antes.
+ * Desde el 30-09-2026 el servidor da un 404 de verdad sin pasar por ninguna Function (el `404.html` del plugin
+ * `notFoundShell` de `vite.config.ts` y las rutas una a una de `public/_redirects`); antes lo hacía
+ * `functions/assets/[[path]].ts`. Esto sigue siendo la red de seguridad del lado del cliente, y lo que rescata a
+ * un dispositivo que arrastre el envenenamiento de antes.
  */
 function isShellFallback(request, response) {
   if (!response) {

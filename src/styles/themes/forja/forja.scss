@@ -10,24 +10,31 @@
    ESTE SKIN ES SOLO LA LETRA, Y ES A PROPÓSITO. Los otros siete temas son mundos —la rejilla del horizonte,
    el pergamino, el cogitador— y pueden permitirse textura, halo y ornamento porque se eligen a posta. Este
    es el que se encuentra quien no ha elegido nada, así que su carácter tiene que salir del COLOR y de la
-   LETRA, no de un decorado: el fondo se queda liso, las sombras son las de la casa y ninguna pieza cambia
-   de forma. Un tema por defecto que grita se hace viejo en una semana.
+   LETRA, no de un decorado: las sombras son las de la casa y ninguna pieza cambia de forma. Un tema por
+   defecto que grita se hace viejo en una semana. Lo único que lleva el fondo son unas curvas de calor de un
+   píxel (§3), y solo asoman por los márgenes.
 
-   LA LETRA, entonces, es lo único que pone aquí la personalidad, y se reparte en tres papeles:
-     · SAIRA en los rótulos y titulares — una grotesca ANCHA de rótulo técnico: tiene el aire de instrumento
-       que pide una herramienta, y a tamaños de interfaz se lee de un vistazo;
-     · DM SANS en el cuerpo, que es la letra base de la casa y donde de verdad hay que leer: la tabla es
-       densa y Saira ahí cansa;
-     · IBM PLEX MONO en las cifras — una nota, una fecha y un contador se leen como DATO y no como texto, que
-       es lo que separa una tabla de trabajo de una lista cualquiera.
+   LA LETRA, entonces, es lo único que pone aquí la personalidad, y es UNA familia para leer y otra para contar:
+     · ATKINSON HYPERLEGIBLE NEXT en rótulos, titulares y cuerpo. La dibujó el Braille Institute para que ninguna
+       letra se confunda con otra —la I, la l y el 1; la O y el 0—, y de esas formas distintas le sale el
+       carácter sin decorado. Es el tema de quien empieza, así que lo primero es que se lea sin esfuerzo. Tuvo
+       Saira en los rótulos: una grotesca ancha de instrumento que, en versales y a 12 px, se leía letra a letra;
+     · ATKINSON HYPERLEGIBLE MONO en las cifras — una nota, una fecha y un contador se leen como DATO y no como
+       texto, que es lo que separa una tabla de trabajo de una lista cualquiera.
+   SE ELIGIÓ AL MISMO TAMAÑO, medido: altura de x al 100 % de DM Sans y anchura a 15 px en el 97 %, así que
+   cambiar de letra no mueve la tabla ni empequeñece el texto.
+   El `latin` de Atkinson Next es la FUENTE CRÍTICA de la app: la precarga `index.html` y la precachea el
+   service worker (`vite.config.ts`), porque es la del primer fotograma de casi todo el mundo. DM Sans sigue
+   siendo la base de los demás temas y llega cuando alguno la pide.
    La CAJA no la pone el tema: las versales son la preferencia «Texto» de /cuenta (`data-uppercase`). Lo que
-   sí pone es el TRACKING, porque Saira es ancha y en caja alta pide aire. ═══════════════════════════════ */
+   sí pone es el TRACKING de los rótulos en caja alta, que piden aire. ═══════════════════════════════════════ */
 
-/* ── §1 · Los tres papeles de letra ── */
+/* ── §1 · Los papeles de letra: rótulo, titular y cuerpo en Atkinson Next; las cifras, en su Mono ── */
 :root[data-palette="forja"] {
-  --font-label: 'Saira', system-ui, sans-serif;
-  --font-display: 'Saira', system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-body: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
+  --font-label: var(--font-body);
+  --font-display: var(--font-body);
+  --font-mono: 'Atkinson Hyperlegible Mono', ui-monospace, monospace;
 }
 :root[data-palette="forja"] h2,
 :root[data-palette="forja"] h3,
@@ -57,8 +64,8 @@
 :root[data-palette="forja"] .flabel,
 :root[data-palette="forja"] .detail-label { letter-spacing: .05em; }
 
-/* Saira es ancha: 600 es el peso al que conserva el filo sin ensanchar los rótulos largos (cabeceras de
-   columna, botones de rol). Por encima, «PUNTOS DÉBILES» se sale de su caja. */
+/* Los rótulos que se pulsan o encabezan van a 600: por encima, los largos (cabeceras de columna, botones de
+   rol, «PUNTOS DÉBILES») se ensanchan y se salen de su caja. */
 :root[data-palette="forja"] .btn,
 :root[data-palette="forja"] .chip,
 :root[data-palette="forja"] .bottom-nav-btn,
@@ -72,6 +79,44 @@
 :root[data-palette="forja"] .hub-review-medal,
 :root[data-palette="forja"] .hub-feed-date,
 :root[data-palette="forja"] .hub-review-date { font-family: var(--font-mono); }
+
+/* ── §3 · EL FONDO: ISOTERMAS ─────────────────────────────────────────────────────────────────────────────
+   Las curvas de calor alrededor de una pieza al rojo que queda fuera de cuadro, abajo a la derecha: naranja de
+   forja donde quema, latón al enfriarse y turquesa de temple en las más lejanas. Son los dos metales del tema
+   dichos con un trazo de un píxel, sin abrir ningún color.
+
+   LAS CURVAS SON UNA MÁSCARA Y EL COLOR ES UN DEGRADADO DE LAS FICHAS. `isotermas.svg` solo lleva trazos
+   blancos con su peso; lo que se pinta es el `radial-gradient` de aquí, con el mismo centro y la misma elipse
+   que las curvas, así que cada una toma el tono de su distancia a la pieza. Un solo fichero vale para los dos
+   modos y sigue a `--steam` y `--forja-temple` si cambian. Lo genera `scripts/forja-isotermas.mjs`, que
+   imprime las medidas de este degradado: si se toca el centro o el paso allí, se copian aquí.
+
+   LA CAPA TIENE LA PROPORCIÓN DEL DIBUJO, NO LA DE LA VENTANA. Anclada abajo a la derecha y con el lado mayor
+   cubriendo la pantalla, el porcentaje del degradado cae siempre en el mismo sitio de las curvas; en un móvil en
+   vertical se ve el tramo de la derecha, que es donde se aprietan. El trazo no engorda al estirarse
+   (`non-scaling-stroke` dentro del SVG): a 3840 px sigue siendo de un píxel.
+
+   Va detrás de todo (`z-index: -1`) y fija: los paneles son opacos y la tapan casi entera —a 1512 px solo queda
+   a la vista el 6 % de la pantalla—, y una capa fija que no se mueve no se repinta al hacer scroll. Medido
+   (dev, 36 juegos, 1512 px, treinta ruedas arriba y abajo): 89–94 ms de rasterizado con ella y 73–94 sin ella,
+   o sea, ruido. ── */
+:root[data-palette="forja"] body::before {
+  content: '';
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  pointer-events: none;
+  width: max(100vw, 160vh);
+  aspect-ratio: 1512 / 945;
+  background: radial-gradient(ellipse 163.2% 208.9% at 86% 108%,
+    var(--steam) 4.6%, var(--cat-3) 38%, var(--forja-temple) 100%);
+  -webkit-mask: url('./isotermas.svg') 0 0 / 100% 100% no-repeat;
+  mask: url('./isotermas.svg') 0 0 / 100% 100% no-repeat;
+  opacity: .45;
+}
+/* A la luz los tres metales son tinta honda y un trazo al mismo peso pesaba más que en oscuro. */
+:root[data-palette="forja"][data-theme="light"] body::before { opacity: .33; }
 
 /* ── §N · LA CAJA SIN CARÁTULA = EL LINGOTE ────────────────────────────────────────────────────────────
    El tema de casa no se disfraza de nada, así que su pieza es la más sobria de las ocho: el canto muy

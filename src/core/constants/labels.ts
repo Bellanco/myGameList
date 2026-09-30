@@ -113,6 +113,10 @@ export const SYNC_MESSAGES = {
   needsConfiguration: 'Primero configura la sincronización.',
   connectSuccess: 'Sincronización configurada',
   connectError: 'Error al conectar sincronización',
+  /** El módulo de conexión no llegó (red que ni responde ni falla): ver `beginGithubLogin`. */
+  oauthModuleTimeout: 'No se ha podido preparar la conexión con GitHub. Revisa la red e inténtalo de nuevo.',
+  /** Se pidió ir a GitHub y la página sigue aquí: navegación colgada o abortada, o el móvil abrió la app de GitHub. */
+  oauthDidNotOpen: 'GitHub no llegó a abrirse. Vuelve a intentarlo; si se abre la app de GitHub, vuelve aquí y prueba de nuevo.',
   syncSuccess: 'Datos sincronizados',
   syncError: 'Error al sincronizar',
   initError: 'Error de sincronización',

@@ -31,6 +31,6 @@
 // app sin haber elegido nada, y un skin que llega un instante después es un cambio de letra y de forma a la
 // vista (los colores no, que esos ya van en CAPA 2). Cargarlo aquí es lo que hacía Clásico cuando era la de
 // por defecto, solo que sus reglas vivían repartidas por las hojas base en vez de en un fichero suyo.
-// Hoy la de por defecto es «Forja y temple», y su skin es SOLO la letra (Saira + IBM Plex Mono): son ~1 kB de
-// reglas más los dos .woff2, que es lo que cuesta que el primer fotograma ya salga con su tipografía.
+// Hoy la de por defecto es «Forja y temple», y su skin es casi solo la letra (Atkinson Hyperlegible Next + su
+// Mono): unas reglas más los dos .woff2, que es lo que cuesta que el primer fotograma ya salga con su tipografía.
 @use './themes/forja/forja';

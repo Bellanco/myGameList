@@ -1,1 +1,40 @@
-/* /index.html 200
+# Rutas de la SPA → shell. UNA A UNA, y no con un comodín `/*`: es lo que deja que un fichero que no existe (un
+# chunk de un despliegue anterior) dé un 404 de verdad —el `404.html` que deja el plugin `notFoundShell` de
+# `vite.config.ts`— sin que cada fichero del build pase por una Pages Function. El porqué entero está en ese
+# plugin y en `docs/plan-capacidad-gratuita.md` (fase 3).
+#
+# AL AÑADIR UNA RUTA en `src/core/constants/routes.ts` hay que añadirla aquí, o recargar dentro de ella daría la
+# app con un 404 (arranca igual, porque `404.html` es una copia del shell, pero con el estado mal). Lo vigila
+# `tests/unit/redirectsRoutes.test.ts`.
+#
+# El destino es `/` y no `/index.html`: Pages quita el `index.html` de las direcciones, y una regla que apunte ahí
+# la trata como un bucle y la descarta (lo avisa `wrangler pages dev`). Las fijas van antes que los comodines,
+# que es el orden que Pages recorre más rápido.
+
+# Listas, panel, ajustes, bandeja, premios y administración.
+/completados      / 200
+/abandonados      / 200
+/en-curso         / 200
+/proximos         / 200
+/social           / 200
+/stats            / 200
+/logros           / 200
+/ajustes          / 200
+/bandeja          / 200
+/premios          / 200
+/admin            / 200
+
+# Nombres retirados: los redirige la propia app (`LEGACY_ROUTE_REDIRECTS`), así que aquí solo tienen que arrancarla.
+/visitados        / 200
+/perfil           / 200
+/cuenta           / 200
+
+# Comodines. `/r/*` lo necesita además `functions/r/[token].ts`, que pide el shell con `context.next()`: sin esta
+# línea le llegaría el 404 y la vista previa del enlace compartido saldría con ese estado.
+/social/*         / 200
+/stats/*          / 200
+/ajustes/*        / 200
+/legal/*          / 200
+/premios/*        / 200
+/perfil/*         / 200
+/r/*              / 200

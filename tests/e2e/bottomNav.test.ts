@@ -44,15 +44,22 @@ async function abrir(page: Page, ancho: number): Promise<void> {
    *
    * `ready` resuelve con las cargas que hubiera EN MARCHA al preguntar, y el navegador no pide el woff2 hasta
    * que encuentra el primer texto que lo necesita: en una máquina cargada (CI) contesta «ya está» con la letra
-   * de reserva todavía puesta. Y la de reserva de Linux mide un 9 % más que DM Sans —«Estadísticas» apilada
-   * pasa de 69 a ~75px—, que es justo la diferencia entre que la barra tenga nombres o se quede muda. Así que
-   * lo que se espera es que la FAMILIA esté disponible para ese texto.
+   * de reserva todavía puesta. Y la de reserva de Linux mide un 9 % más que la de la app —«Estadísticas»
+   * apilada pasa de 69 a ~75px—, que es justo la diferencia entre que la barra tenga nombres o se quede muda.
+   * Así que lo que se espera es que la FAMILIA esté disponible para ese texto.
+   *
+   * Y LA FAMILIA SE LEE DEL RÓTULO, no se escribe aquí: esperaba a DM Sans mientras la barra se pintaba en la
+   * letra de rótulos del tema por defecto, así que se daba por cargada una fuente que no era la que se medía.
    */
   // `load()` y no solo esperar: PIDE la cara que hace falta y resuelve cuando está puesta. Esperar a secas
   // dependería de que algo más la hubiera pedido ya.
-  await page.evaluate(() => document.fonts.load('700 12px "DM Sans"', 'Estadísticas').catch(() => []));
+  const cara = await page.evaluate(() => {
+    const rotulo = document.querySelector('.bottom-nav-btn span') ?? document.querySelector('.bottom-nav-btn');
+    return `700 12px ${rotulo ? getComputedStyle(rotulo).fontFamily.split(',')[0].trim() : 'sans-serif'}`;
+  });
+  await page.evaluate((f) => document.fonts.load(f, 'Estadísticas').catch(() => []), cara);
   await expect
-    .poll(() => page.evaluate(() => document.fonts.check('700 12px "DM Sans"', 'Estadísticas')), {
+    .poll(() => page.evaluate((f) => document.fonts.check(f, 'Estadísticas'), cara), {
       message: 'la tipografía de la app no llegó a cargarse; con la de reserva la barra se mide un 9 % más ancha',
       timeout: 15_000,
     })
@@ -63,7 +70,7 @@ async function abrir(page: Page, ancho: number): Promise<void> {
 
 /** Por qué salió lo que salió: sin esto, un rojo en otra máquina solo dice «is-icons» y no se puede perseguir. */
 function porQue(m: Awaited<ReturnType<typeof medir>>): string {
-  return `ancho útil ${m.ancho}px · columna ${m.columna}px · rótulo más ancho ${m.rotuloMax}px · ${m.letra} · DM Sans disponible: ${m.letraDeLaApp}`;
+  return `ancho útil ${m.ancho}px · columna ${m.columna}px · rótulo más ancho ${m.rotuloMax}px · ${m.letra} · letra de la app disponible: ${m.letraDeLaApp}`;
 }
 
 async function medir(page: Page) {
@@ -86,7 +93,10 @@ async function medir(page: Page) {
         const estilo = rotulo ? getComputedStyle(rotulo) : null;
         return estilo ? `${estilo.fontFamily} a ${estilo.fontSize}` : 'sin rótulo';
       })(),
-      letraDeLaApp: document.fonts.check('700 12px "DM Sans"', 'Estadísticas'),
+      letraDeLaApp: (() => {
+        const rotulo = botones[0]?.querySelector('span') ?? botones[0];
+        return !!rotulo && document.fonts.check(`700 12px ${getComputedStyle(rotulo).fontFamily.split(',')[0].trim()}`, 'Estadísticas');
+      })(),
       botones: botones.map((b) => {
         const rotulo = b.querySelector('span');
         return {

@@ -8,7 +8,8 @@ import { requireUser } from '../../_lib/context';
 import { json } from '../../_lib/http';
 import type { Env } from '../../_lib/keys';
 import { listActiveShares, readShareStatus } from '../../_lib/quota';
-import { removeShare } from '../../_lib/shares';
+import { removeShares } from '../../_lib/shares';
+import { updateRelatedIndex } from '../../_lib/relatedIndex';
 
 export async function onRequestGet(context: { request: Request; env: Env }): Promise<Response> {
   const caller = await requireUser(context.request, context.env);
@@ -17,6 +18,10 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
   }
 
   const status = await readShareStatus(context.env, caller.user, caller.projectId, caller.appCheckToken);
+  // Con el listado ya en la mano se repara el índice de sugeridos: es lo que crea el de los autores que tenían
+  // enlaces antes de que existiera y lo que deshace cualquier carrera entre dos publicaciones (ver `relatedIndex`).
+  // Solo escribe si algo no cuadra.
+  await updateRelatedIndex(context.env.SHARES, caller.user.uid, { live: status.active.map((row) => row.token) }, Date.now());
 
   return json({
     shares: status.active
@@ -52,7 +57,7 @@ export async function onRequestDelete(context: { request: Request; env: Env }): 
   }
 
   const rows = await listActiveShares(context.env.SHARES, caller.user.uid);
-  await Promise.all(rows.map((row) => removeShare(context.env.SHARES, caller.user.uid, row.token)));
+  await removeShares(context.env.SHARES, caller.user.uid, rows.map((row) => row.token), { everything: true });
 
   return json({ removed: rows.length });
 }

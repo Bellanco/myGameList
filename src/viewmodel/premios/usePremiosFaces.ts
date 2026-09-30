@@ -2,9 +2,13 @@
  * QUIÉN DE LA CLASIFICACIÓN TIENE PERFIL, para poder enlazarlo.
  *
  * El archivo publicado no lleva uid ni fotos —es público y permanente, ver `docs/plan-unificar-premios.md` §4.1—,
- * solo el pseudónimo. Con él se cruza aquí contra el directorio social, que ya está cacheado, y así una fila de
- * la clasificación deja de ser un nombre suelto y lleva a su perfil. Es lo que convierte la pantalla en un sitio
- * por el que se puede seguir tirando.
+ * solo el pseudónimo. Con él se cruza aquí contra el directorio social, y así una fila de la clasificación deja de
+ * ser un nombre suelto y lleva a su perfil. Es lo que convierte la pantalla en un sitio por el que se puede seguir
+ * tirando.
+ *
+ * EL DIRECTORIO NO ESTABA CACHEADO, aunque este comentario lo diera por hecho: la única caché era la de 30 s en
+ * memoria, así que cada visita con sesión costaba hasta 60 lecturas de Firestore. Ahora se acepta la copia de
+ * IndexedDB con la edad que marca el rango de quien mira (`PROFILE_TIER_PREMIOS_PROFILES_TTL_MS`).
  *
  * ⚠️ POR QUÉ AQUÍ NO SE PINTAN CARAS, todavía.
  *
@@ -21,11 +25,24 @@
  * Mientras tanto, iniciales para todo el mundo, que es lo que ya ve un visitante sin sesión.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { listSocialDirectory } from '../../model/repository/firebaseSocialRepository';
+import { DEFAULT_PROFILE_TIER, PROFILE_TIER_PREMIOS_PROFILES_TTL_MS, type ProfileTier } from '../../core/constants/tiers';
+import { getOwnProfileRef, listSocialDirectory, peekOwnProfileCache } from '../../model/repository/firebaseSocialRepository';
 import type { PremiosArchivedEntry } from '../../model/types/premios';
 
 /** Perfiles reconocidos en la clasificación: pseudónimo → uid de su perfil. */
 export type PremiosProfiles = Map<string, string>;
+
+/**
+ * Rango de quien mira, que decide cuánto vale la copia. El perfil propio suele estar ya en memoria (lo resuelve el
+ * arranque con sesión); si no, cuesta UNA lectura, que es lo que se paga por ahorrarse hasta 60. Ante cualquier
+ * fallo, bronce: la copia más larga, que es el lado barato.
+ */
+async function rangoDe(uid: string): Promise<ProfileTier> {
+  const enMemoria = peekOwnProfileCache(uid);
+  if (enMemoria) return enMemoria.tier || DEFAULT_PROFILE_TIER;
+  const perfil = await getOwnProfileRef(uid).catch(() => null);
+  return perfil?.tier || DEFAULT_PROFILE_TIER;
+}
 
 export function usePremiosProfiles(leaderboard: PremiosArchivedEntry[], uid: string): PremiosProfiles {
   const [profiles, setProfiles] = useState<PremiosProfiles>(new Map());
@@ -47,7 +64,8 @@ export function usePremiosProfiles(leaderboard: PremiosArchivedEntry[], uid: str
       };
     }
 
-    void listSocialDirectory(60)
+    void rangoDe(uid)
+      .then((tier) => listSocialDirectory(60, { maxAgeMs: PROFILE_TIER_PREMIOS_PROFILES_TTL_MS[tier] }))
       .then((directory) => {
         if (!vivo) return;
         const siguiente: PremiosProfiles = new Map();

@@ -6,6 +6,7 @@
 // que aquí solo se descargan cuando alguien abre `/admin`.
 import type { AdminAnomaly } from '../../model/types/firestore';
 import { APP_LOCALE } from './locale';
+import { ADMIN_ONLY_TIER, PROFILE_TIER_LABELS } from './tiers';
 
 const RELATIVE = new Intl.RelativeTimeFormat(APP_LOCALE, { numeric: 'auto' });
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -396,7 +397,7 @@ export const ADMIN_PANEL_UI = {
   confirmCancel: 'Cancelar',
   confirmAccept: 'Confirmar',
   okTier: (tier: string) => `Rango cambiado a ${tier}.`,
-  tierReservedWarning: 'Mithril está reservado a la cuenta del administrador.',
+  tierReservedWarning: `${PROFILE_TIER_LABELS[ADMIN_ONLY_TIER]} está reservado a la cuenta del administrador.`,
   okDisabled: 'Social desactivado.',
   okEnabled: 'Social reactivado.',
   okPurged: 'Campos legacy purgados.',
