@@ -6,15 +6,32 @@
  * admin. Es una decisión de producto, no una barrera de seguridad — quien manda ya puede escribir cualquier tier
  * en cualquier perfil, y no tiene sentido protegerse de uno mismo.
  */
-export const PROFILE_TIERS = ['bronze', 'silver', 'gold', 'mithril'] as const;
+/**
+ * LOS RANGOS, CON NOMBRE. Para referirse a uno concreto en el código se usa esto (`PROFILE_TIER.gold`) y no la
+ * cadena escrita a mano: una errata en `'gold'` compila si el sitio acepta un `string`, y con la constante no.
+ * El valor es el que se guarda en Firestore (`profiles/{uid}.tier`), así que NO se renombra: cambiarlo dejaría
+ * sin rango a todos los perfiles que ya lo tienen.
+ *
+ * `firestore.rules` repite estos nombres a mano porque su lenguaje no puede importar nada: si se añade un rango,
+ * hay que añadirlo también allí (ver `profileTierNotSelfAssigned` y los topes por rango).
+ */
+export const PROFILE_TIER = {
+  bronze: 'bronze',
+  silver: 'silver',
+  gold: 'gold',
+  mithril: 'mithril',
+} as const;
 
-export type ProfileTier = (typeof PROFILE_TIERS)[number];
+export type ProfileTier = (typeof PROFILE_TIER)[keyof typeof PROFILE_TIER];
+
+/** Todos los rangos, de MENOR a MAYOR. El orden importa: lo recorren el panel y las comprobaciones de «más alto». */
+export const PROFILE_TIERS = [PROFILE_TIER.bronze, PROFILE_TIER.silver, PROFILE_TIER.gold, PROFILE_TIER.mithril] as const;
 
 /** Rango de quien no tiene ninguno asignado: TODO perfil es bronce mientras el admin no diga otra cosa. */
-export const DEFAULT_PROFILE_TIER: ProfileTier = 'bronze';
+export const DEFAULT_PROFILE_TIER: ProfileTier = PROFILE_TIER.bronze;
 
 /** Rango reservado a la cuenta del administrador. */
-export const ADMIN_ONLY_TIER: ProfileTier = 'mithril';
+export const ADMIN_ONLY_TIER: ProfileTier = PROFILE_TIER.mithril;
 
 /**
  * QUÉ HACE EL RANGO: cuánto vale la caché del directorio social hidratado, es decir cada cuánto se vuelven a leer
