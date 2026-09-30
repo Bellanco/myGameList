@@ -80,4 +80,34 @@ describe('usePremiosVisible', () => {
     window.dispatchEvent(new CustomEvent(PREMIOS_VISIBILITY_EVENT));
     await waitFor(() => expect(screen.getByTestId('ofrece')).toHaveTextContent('sí'));
   });
+
+  /**
+   * LA VUELTA A LA APP TIENE TOPE. Salta la caché HTTP, así que sin él cada cambio de ventana era una invocación
+   * de Pages Functions y una lectura de KV: dos cupos diarios del plan gratuito (docs/plan-capacidad-gratuita.md).
+   * El aviso del panel sigue forzando siempre: es quien acaba de publicar.
+   */
+  it('al volver a la app no repite la pregunta antes de cinco minutos, y el panel sí fuerza', async () => {
+    const pedir = respondeCon({ visible: true });
+    vi.stubGlobal('fetch', pedir);
+    const volver = () => document.dispatchEvent(new Event('visibilitychange'));
+
+    render(<Sonda />);
+    await waitFor(() => expect(screen.getByTestId('ofrece')).toHaveTextContent('sí'));
+    const alAbrir = vi.mocked(pedir).mock.calls.length;
+
+    volver();
+    volver();
+    vi.setSystemTime(AHORA + 4 * 60_000);
+    volver();
+    // Los `import()` del hook resuelven en otra vuelta: hay que dejarles llegar antes de contar lo que NO pasó.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(vi.mocked(pedir).mock.calls.length).toBe(alAbrir);
+
+    vi.setSystemTime(AHORA + 5 * 60_000 + 1);
+    volver();
+    await waitFor(() => expect(vi.mocked(pedir).mock.calls.length).toBe(alAbrir + 1));
+
+    window.dispatchEvent(new CustomEvent(PREMIOS_VISIBILITY_EVENT));
+    await waitFor(() => expect(vi.mocked(pedir).mock.calls.length).toBe(alAbrir + 2));
+  });
 });
