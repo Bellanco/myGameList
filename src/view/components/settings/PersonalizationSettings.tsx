@@ -3,6 +3,7 @@ import { SETTINGS_UI } from '../../../core/constants/settingsLabels';
 import { SharedReviewsCard } from '../SharedReviewsCard';
 import { ThemePicker } from '../appearance/ThemePicker';
 import { AppearanceToggles } from '../appearance/AppearanceToggles';
+import { InstallCard } from './InstallCard';
 import { ScoreScaleCard } from './ScoreScaleCard';
 import type { TabData } from '../../../model/types/game';
 // La hoja de las pantallas de Ajustes viaja en los chunks perezosos que la usan y no en el bundle base (mismo
@@ -41,6 +42,10 @@ export const PersonalizationSettings = memo(function PersonalizationSettings({ s
           <ThemePicker />
         </div>
       </div>
+
+      {/* Delante de Preferencias y, en escritorio, a su izquierda: si la app ya está instalada no se pinta y
+          Preferencias recupera la fila entera. */}
+      <InstallCard />
 
       <div className="settings-card settings-card-score">
         <h2>{SETTINGS_UI.groups.preferences}</h2>

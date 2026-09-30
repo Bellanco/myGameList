@@ -666,3 +666,38 @@
 
 /* «Primeros pasos»: el botón no se estira a lo ancho de la tarjeta, que es de fila entera. */
 .settings-onboarding-btn { justify-self: start; }
+
+/* «Instalar la aplicación», en Diseño. EN ESCRITORIO, A LA IZQUIERDA DE PREFERENCIAS y en su misma fila: es una
+   tarjeta corta (una frase, tres ventajas y un botón), y sola a lo ancho dejaba una franja casi vacía. El corte es el de esta
+   pantalla (64rem, ver arriba): por debajo va encima de Preferencias, a lo ancho. Las dos se estiran a la misma
+   altura —la regla de `align-self: start` de arriba las dejaría en escalón— y el botón baja al pie. Si la app ya
+   está instalada la tarjeta no existe, el `+` no casa y Preferencias vuelve a la fila entera. */
+@media (min-width: 64rem) {
+  .settings-personalization .settings-card.settings-card-install { grid-column: span 4; align-self: stretch; }
+  .settings-personalization .settings-card-install + .settings-card.settings-card-score { grid-column: span 8; align-self: stretch; }
+}
+/* Las ventajas, con la misma forma que las de la sincronización (`.sync-perks`), pero escritas aquí: aquella hoja
+   viaja con el chunk de Datos y entrando directamente en Diseño no estaría. */
+.settings-install-perks { display: grid; gap: .45rem; margin: 0; padding: 0; list-style: none; }
+.settings-install-perks li { display: flex; align-items: center; gap: .6rem; font-size: var(--fs-sm); color: var(--text); }
+.settings-install-perk-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--fg-link);
+  background: color-mix(in srgb, var(--fg-link) 12%, transparent);
+}
+.settings-install-btn { align-self: flex-start; margin-top: auto; }
+/* Sin botón, el cómo va en una caja de aviso: es una instrucción que seguir, no una frase más de la tarjeta. */
+.settings-card .settings-install-how {
+  margin-top: auto;
+  padding: .6rem .75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--hair);
+  background: var(--surface-soft);
+  color: var(--text);
+}
