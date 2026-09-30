@@ -14,21 +14,27 @@
    defecto que grita se hace viejo en una semana. Lo único que lleva el fondo son unas curvas de calor de un
    píxel (§3), y solo asoman por los márgenes.
 
-   LA LETRA, entonces, es lo único que pone aquí la personalidad, y se reparte en tres papeles:
-     · SAIRA en los rótulos y titulares — una grotesca ANCHA de rótulo técnico: tiene el aire de instrumento
-       que pide una herramienta, y a tamaños de interfaz se lee de un vistazo;
-     · DM SANS en el cuerpo, que es la letra base de la casa y donde de verdad hay que leer: la tabla es
-       densa y Saira ahí cansa;
-     · IBM PLEX MONO en las cifras — una nota, una fecha y un contador se leen como DATO y no como texto, que
-       es lo que separa una tabla de trabajo de una lista cualquiera.
+   LA LETRA, entonces, es lo único que pone aquí la personalidad, y es UNA familia para leer y otra para contar:
+     · ATKINSON HYPERLEGIBLE NEXT en rótulos, titulares y cuerpo. La dibujó el Braille Institute para que ninguna
+       letra se confunda con otra —la I, la l y el 1; la O y el 0—, y de esas formas distintas le sale el
+       carácter sin decorado. Es el tema de quien empieza, así que lo primero es que se lea sin esfuerzo. Tuvo
+       Saira en los rótulos: una grotesca ancha de instrumento que, en versales y a 12 px, se leía letra a letra;
+     · ATKINSON HYPERLEGIBLE MONO en las cifras — una nota, una fecha y un contador se leen como DATO y no como
+       texto, que es lo que separa una tabla de trabajo de una lista cualquiera.
+   SE ELIGIÓ AL MISMO TAMAÑO, medido: altura de x al 100 % de DM Sans y anchura a 15 px en el 97 %, así que
+   cambiar de letra no mueve la tabla ni empequeñece el texto.
+   El `latin` de Atkinson Next es la FUENTE CRÍTICA de la app: la precarga `index.html` y la precachea el
+   service worker (`vite.config.ts`), porque es la del primer fotograma de casi todo el mundo. DM Sans sigue
+   siendo la base de los demás temas y llega cuando alguno la pide.
    La CAJA no la pone el tema: las versales son la preferencia «Texto» de /cuenta (`data-uppercase`). Lo que
-   sí pone es el TRACKING, porque Saira es ancha y en caja alta pide aire. ═══════════════════════════════ */
+   sí pone es el TRACKING de los rótulos en caja alta, que piden aire. ═══════════════════════════════════════ */
 
-/* ── §1 · Los tres papeles de letra ── */
+/* ── §1 · Los papeles de letra: rótulo, titular y cuerpo en Atkinson Next; las cifras, en su Mono ── */
 :root[data-palette="forja"] {
-  --font-label: 'Saira', system-ui, sans-serif;
-  --font-display: 'Saira', system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-body: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
+  --font-label: var(--font-body);
+  --font-display: var(--font-body);
+  --font-mono: 'Atkinson Hyperlegible Mono', ui-monospace, monospace;
 }
 :root[data-palette="forja"] h2,
 :root[data-palette="forja"] h3,
@@ -58,8 +64,8 @@
 :root[data-palette="forja"] .flabel,
 :root[data-palette="forja"] .detail-label { letter-spacing: .05em; }
 
-/* Saira es ancha: 600 es el peso al que conserva el filo sin ensanchar los rótulos largos (cabeceras de
-   columna, botones de rol). Por encima, «PUNTOS DÉBILES» se sale de su caja. */
+/* Los rótulos que se pulsan o encabezan van a 600: por encima, los largos (cabeceras de columna, botones de
+   rol, «PUNTOS DÉBILES») se ensanchan y se salen de su caja. */
 :root[data-palette="forja"] .btn,
 :root[data-palette="forja"] .chip,
 :root[data-palette="forja"] .bottom-nav-btn,

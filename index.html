@@ -98,9 +98,11 @@
          se declaran en el CSS de la app, así que aquí no hay nada que enlazar. Antes había dos `preconnect` y una
          hoja BLOQUEANTE de Google Fonts: dos saltos de red a dos dominios de terceros (DNS + TLS cada uno) antes
          de poder pedir siquiera el .woff2, y la IP del visitante enviada a Google en cada carga.
-         DM Sans (base de todas las paletas) entra por `src/styles/index.scss`; las fuentes propias de cada paleta,
-         por su skin, que se carga bajo demanda (ver src/view/hooks/paletteSkin.ts). -->
-    <link rel="preload" href="/fonts/dm-sans-latin-468d56b6.woff2" as="font" type="font/woff2" crossorigin>
+         DM Sans (base de las paletas) y la letra de la de por defecto entran por `src/styles/index.scss`; las
+         fuentes propias de las demás, por su skin, que se carga bajo demanda (ver src/view/hooks/paletteSkin.ts).
+         Se precarga la de la paleta POR DEFECTO, Atkinson Hyperlegible Next: es la del primer fotograma de quien
+         no ha elegido tema, y la única que ve quien no tiene espacio social. -->
+    <link rel="preload" href="/fonts/atkinson-hyperlegible-next-latin-1e4cea71.woff2" as="font" type="font/woff2" crossorigin>
     <!-- SIN JAVASCRIPT, el armazón de arranque del `<body>` no es una espera: es una mentira. Nadie va a montar
          nada encima, así que sus barras latirían para siempre por delante del aviso que explica lo que pasa.
          Dentro de un `<noscript>` del `<head>`, que es donde el estándar admite un `<style>`: con JS activado el

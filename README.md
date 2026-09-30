@@ -163,8 +163,9 @@ App estática pura (React + Vite). Configuración en el repo:
   arranque; sin ellos la app no arrancaría sin red, y tanto el build como `npm run validate` fallan.
 - **`public/fonts/`** — tipografías propias (generadas por `scripts/vendor-fonts.mjs`, todas OFL). No se usa
   Google Fonts: la CSP ya no lo permite. Para actualizar una familia, se re-ejecuta el script y se commitea el
-  resultado; si cambia el nombre de la fuente base, hay que actualizar el `preload` de `index.html`
-  (`npm run validate` avisa).
+  resultado; si cambia el nombre de la fuente crítica (la del tema por defecto, hoy Atkinson Hyperlegible
+  Next), hay que actualizar el `preload` de `index.html` y el filtro del precache de `vite.config.ts`
+  (`npm run validate` avisa del primero; el build, del segundo).
 - **`wrangler.toml`** — `pages_build_output_dir = ./dist`.
 
 Ajustes en el dashboard de Cloudflare Pages:

@@ -90,17 +90,19 @@ function serviceWorkerPrecache(): Plugin {
       precachePaths = [...reachable, ...css].sort().map((file) => `/${file}`);
     },
 
-    // La fuente base va aparte: vive en `public/fonts/` (no la emite el bundle, así que no aparece en `bundle`)
-    // y sin precachearla la app arrancaría sin red pero con la tipografía de sistema. Solo el subconjunto `latin`:
+    // La fuente crítica va aparte: vive en `public/fonts/` (no la emite el bundle, así que no aparece en `bundle`)
+    // y sin precachearla la app arrancaría sin red pero con la tipografía de sistema. Es la de la paleta POR
+    // DEFECTO (Forja, Atkinson Hyperlegible Next), la misma que precarga `index.html`; DM Sans, la base de las
+    // demás, cae en la caché de `/fonts/` la primera vez que se usa. Solo el subconjunto `latin`:
     // `latin-ext` cubre caracteres que el castellano y el inglés casi nunca usan, y su `unicode-range` hace que el
     // navegador solo lo pida si de verdad aparece uno.
     buildStart() {
       const fontsDir = new URL('./public/fonts/', import.meta.url);
       criticalFontPaths = readdirSync(fontsDir)
-        .filter((name) => /^dm-sans-latin-[a-f0-9]+\.woff2$/.test(name))
+        .filter((name) => /^atkinson-hyperlegible-next-latin-[a-f0-9]+\.woff2$/.test(name))
         .map((name) => `/fonts/${name}`);
       if (criticalFontPaths.length === 0) {
-        throw new Error('[service-worker-precache] No se ha encontrado la fuente base en public/fonts/ (dm-sans-latin-*.woff2).');
+        throw new Error('[service-worker-precache] No se ha encontrado la fuente crítica en public/fonts/ (atkinson-hyperlegible-next-latin-*.woff2).');
       }
     },
 
