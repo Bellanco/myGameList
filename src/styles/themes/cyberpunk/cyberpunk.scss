@@ -273,6 +273,29 @@
    `box-shadow: none` para permitir el halo neón por categoría de abajo. ── */
 :root[data-palette="cyberpunk"] .chip,
 :root[data-palette="cyberpunk"] .rl-chip { border-radius: 0; transform: none; clip-path: none; }
+/* La MUESCA de los botones (§5), en pequeño. No sirve la doble capa de §5: el relleno de los chips es translúcido
+   y el filete se transparentaría a través de él. Aquí el recorte va sobre el propio chip, pero el polígono se sale
+   8px por fuera de la caja para no comerse el halo neón; solo la diagonal cae dentro. El filete de esa diagonal lo
+   pinta `::after`: un cuadrado del color del borde (`border-bottom-color: inherit`, así vale para cualquier tipo de
+   chip sin conocer su tono) enmascarado a una línea de 1px justo dentro del corte. */
+:root[data-palette="cyberpunk"] .chip,
+:root[data-palette="cyberpunk"] .rl-chip,
+:root[data-palette="cyberpunk"] .hub-feed-game-chip {
+  --chip-notch: 5px;
+  position: relative;
+  clip-path: polygon(-8px -8px, calc(100% + 8px) -8px, calc(100% + 8px) calc(100% - var(--chip-notch) - 8px), calc(100% - var(--chip-notch) - 8px) calc(100% + 8px), -8px calc(100% + 8px));
+}
+:root[data-palette="cyberpunk"] .chip::after,
+:root[data-palette="cyberpunk"] .rl-chip::after,
+:root[data-palette="cyberpunk"] .hub-feed-game-chip::after {
+  content: '';
+  position: absolute; right: -1px; bottom: -1px;
+  width: var(--chip-notch); height: 0;
+  border-bottom: var(--chip-notch) solid; border-bottom-color: inherit;
+  -webkit-mask-image: linear-gradient(to top left, transparent 50%, #000 50%, #000 calc(50% + 1px), transparent calc(50% + 1px));
+  mask-image: linear-gradient(to top left, transparent 50%, #000 50%, #000 calc(50% + 1px), transparent calc(50% + 1px));
+  pointer-events: none;
+}
 /* Chips HUD con la PALETA de Cyberpunk 2077 (tríada amarillo ácido + cian + rojo carmesí, más teal y magenta neón
    como acentos). Cada tipo fija su tono en `--chipc` y una sola regla deriva texto/borde/relleno/halo con
    `color-mix`, así se adapta solo a claro/oscuro. Plataformas=cian, géneros=amarillo, fuertes=teal, débiles=rojo
