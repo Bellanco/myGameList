@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SYNC_MESSAGES } from '../../src/core/constants/labels';
 import type { TabData } from '../../src/model/types/game';
 
 /**
@@ -41,7 +42,7 @@ vi.mock('../../src/model/repository/firebaseGateway', () => ({
 
 import { useSyncViewModel } from '../../src/viewmodel/useSyncViewModel';
 
-function montar() {
+function montar(onNotice = vi.fn()) {
   const data: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 1 };
   const meta = { updatedAt: 1, etag: null, lastRemoteUpdatedAt: 0 };
   return renderHook(() =>
@@ -50,7 +51,7 @@ function montar() {
       getMeta: () => meta,
       setData: vi.fn(),
       setMeta: vi.fn(),
-      onNotice: vi.fn(),
+      onNotice,
       persist: vi.fn(),
     }),
   );
@@ -90,5 +91,79 @@ describe('conectar con GitHub y volver atrás', () => {
 
     act(() => pageshow(false));
     expect(result.current.githubLoggingIn).toBe(true);
+  });
+});
+
+/**
+ * «SE QUEDA PENSANDO». Casos de producción del 30-09-2026: se pide ir a GitHub y la página NO se va —navegación
+ * abortada, o el móvil abre la app de GitHub en vez de una pestaña—. Aquí `beginGithubOAuth` no navega, que es
+ * exactamente eso visto desde la página.
+ */
+describe('conectar con GitHub cuando la página no llega a irse', () => {
+  let visibilidad: DocumentVisibilityState = 'visible';
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    visibilidad = 'visible';
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => visibilidad });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  async function pulsar(onNotice = vi.fn()) {
+    const hook = montar(onNotice);
+    await act(async () => {
+      await hook.result.current.beginGithubLogin();
+    });
+    expect(hook.result.current.githubLoggingIn).toBe(true);
+    return { ...hook, onNotice };
+  }
+
+  it('si sigue aquí y a la vista pasados 12 s, devuelve el botón y lo dice', async () => {
+    const { result, onNotice } = await pulsar();
+
+    act(() => {
+      vi.advanceTimersByTime(11_999);
+    });
+    expect(result.current.githubLoggingIn).toBe(true);
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(result.current.githubLoggingIn).toBe(false);
+    expect(onNotice).toHaveBeenCalledWith('warn', SYNC_MESSAGES.oauthDidNotOpen);
+  });
+
+  // El móvil abrió la app de GitHub: la página se oculta y, al volver, sigue igual.
+  it('al volver a la app sin haber salido, devuelve el botón', async () => {
+    const { result, onNotice } = await pulsar();
+
+    act(() => {
+      visibilidad = 'hidden';
+      document.dispatchEvent(new Event('visibilitychange'));
+      vi.advanceTimersByTime(60_000);
+    });
+    // Mientras está en la otra app no se toca nada.
+    expect(result.current.githubLoggingIn).toBe(true);
+
+    act(() => {
+      visibilidad = 'visible';
+      document.dispatchEvent(new Event('visibilitychange'));
+      vi.advanceTimersByTime(3_000);
+    });
+    expect(result.current.githubLoggingIn).toBe(false);
+    expect(onNotice).toHaveBeenCalledWith('warn', SYNC_MESSAGES.oauthDidNotOpen);
+  });
+
+  // Si la página SÍ se va, nada debe despertar después (los temporizadores se congelan con ella en la bfcache).
+  it('si la página se va de verdad, no avisa de nada', async () => {
+    const { result, onNotice } = await pulsar();
+
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'));
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(result.current.githubLoggingIn).toBe(true);
+    expect(onNotice).not.toHaveBeenCalled();
   });
 });

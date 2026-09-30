@@ -19,12 +19,39 @@ import { hasGithubOAuthRedirect, isGithubOAuthConfigured } from '../model/reposi
  * de dónde salimos) siguen siendo estáticas: las hace la aplicación siempre.
  */
 const cargarTrabajoOAuth = () => import('../model/repository/githubOAuthRepository');
+
+/**
+ * CONECTAR CON GITHUB NO PUEDE QUEDARSE «PENSANDO». Entre el clic y la salida hay dos esperas que no avisan si se
+ * cuelgan, y las dos dejaban el botón en «Conectando con GitHub...» para siempre (reproducido el 30-09-2026):
+ *  · la carga del módulo de OAuth (`import()` sin límite: una red móvil que ni responde ni falla);
+ *  · la propia navegación a GitHub: colgada, abortada por el navegador o una extensión, o, en el móvil,
+ *    interceptada por el sistema para abrir la app de GitHub en vez de una pestaña. La página no llega a irse.
+ */
+const OAUTH_MODULE_TIMEOUT_MS = 10_000;
+/** Pedida la salida, si la página sigue aquí y a la vista pasado esto, GitHub no se ha abierto. */
+const OAUTH_LEAVE_TIMEOUT_MS = 12_000;
+
+function conLimite<T>(promesa: Promise<T>, ms: number, mensaje: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(mensaje)), ms);
+    promesa.then(
+      (valor) => {
+        clearTimeout(timer);
+        resolve(valor);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
 import { normalizeData } from '../model/repository/localRepository';
 import { clearDirty, clearDirtyIfUnchanged, loadSyncDirtyState, subscribeSyncDirtyState, type SyncDirtyState } from '../model/repository/syncStateRepository';
 import { acquireSyncLock, canRead, getBackoffMs, getNextReadDelayMs, getSyncState, subscribeSyncState, transitionTo, canReadNow } from '../model/repository/syncMachineRepository';
 import { countRemoteChangesApplied, isWriteConflict, logSyncError, type SyncOperation } from '../model/repository/syncLogicRepository';
 import type { TabData } from '../model/types/game';
-import { isSupersededSignIn } from '../core/utils/googleSignIn';
+import { isSupersededSignIn, watchReturnToApp } from '../core/utils/googleSignIn';
 
 export type SyncStatus = 'idle' | 'syncing' | 'ok' | 'error';
 
@@ -605,6 +632,8 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
    * botón. Solo si fue ESTE botón el que salió: un canje de vuelta de GitHub en curso no se toca.
    */
   const salidaHaciaGithubRef = useRef(false);
+  /** Deja de vigilar si la salida hacia GitHub llega a producirse (ver `vigilarSalidaHaciaGithub`). */
+  const dejarDeVigilarSalidaRef = useRef<(() => void) | null>(null);
   useEffect(() => {
     const alVolver = (event: PageTransitionEvent) => {
       if (!event.persisted || !salidaHaciaGithubRef.current) return;
@@ -612,22 +641,57 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       setGithubLoggingIn(false);
     };
     window.addEventListener('pageshow', alVolver);
-    return () => window.removeEventListener('pageshow', alVolver);
+    return () => {
+      window.removeEventListener('pageshow', alVolver);
+      dejarDeVigilarSalidaRef.current?.();
+    };
   }, []);
+
+  /**
+   * Pedida la navegación a GitHub, espera a que la página SE VAYA de verdad (`pagehide`). Si no se va —sigue aquí y
+   * a la vista pasado `OAUTH_LEAVE_TIMEOUT_MS`, o la persona vuelve a la app, que es lo que pasa cuando el móvil
+   * abrió la app de GitHub—, devuelve el botón y lo dice. Si se va, no toca nada: la vuelta atrás desde la caché la
+   * resuelve `pageshow`, y los temporizadores congelados con la página no deben despertar al restaurarla.
+   */
+  const vigilarSalidaHaciaGithub = useCallback(() => {
+    dejarDeVigilarSalidaRef.current?.();
+    const liberar = () => {
+      dejarDeVigilar();
+      if (!salidaHaciaGithubRef.current) return;
+      salidaHaciaGithubRef.current = false;
+      setGithubLoggingIn(false);
+      onNotice('warn', SYNC_MESSAGES.oauthDidNotOpen);
+    };
+    const timer = setTimeout(() => {
+      // Oculta, está en otra app o pestaña (quizá la de GitHub): la vuelta la recoge `watchReturnToApp`.
+      if (document.visibilityState === 'visible') liberar();
+    }, OAUTH_LEAVE_TIMEOUT_MS);
+    const dejarDeVigilarVuelta = watchReturnToApp(liberar);
+    const alIrse = () => dejarDeVigilar();
+    window.addEventListener('pagehide', alIrse);
+    function dejarDeVigilar() {
+      clearTimeout(timer);
+      dejarDeVigilarVuelta();
+      window.removeEventListener('pagehide', alIrse);
+      if (dejarDeVigilarSalidaRef.current === dejarDeVigilar) dejarDeVigilarSalidaRef.current = null;
+    }
+    dejarDeVigilarSalidaRef.current = dejarDeVigilar;
+  }, [onNotice]);
 
   // Paso 0 — "Conectar con GitHub" (OAuth). Redirige a GitHub; el usuario autoriza y vuelve a /ajustes con un `code`.
   const beginGithubLogin = useCallback(async () => {
     try {
       setGithubLoggingIn(true);
-      const { beginGithubOAuth } = await cargarTrabajoOAuth();
+      const { beginGithubOAuth } = await conLimite(cargarTrabajoOAuth(), OAUTH_MODULE_TIMEOUT_MS, SYNC_MESSAGES.oauthModuleTimeout);
       salidaHaciaGithubRef.current = true;
-      beginGithubOAuth(); // navega fuera de la app; no vuelve de esta función
+      beginGithubOAuth(); // pide la navegación fuera de la app; si no llega a producirse, ver `vigilarSalidaHaciaGithub`
+      vigilarSalidaHaciaGithub();
     } catch (error) {
       salidaHaciaGithubRef.current = false;
       setGithubLoggingIn(false);
       onNotice('err', error instanceof Error ? error.message : SYNC_MESSAGES.connectError);
     }
-  }, [onNotice]);
+  }, [onNotice, vigilarSalidaHaciaGithub]);
 
   // Al volver del redirect de GitHub: canjea el `code` por un token, autodescubre el gist existente (para no
   // duplicarlo) y conecta reusando el mismo camino que el flujo manual. Se invoca desde App al detectar el retorno.
