@@ -26,8 +26,11 @@ import { useDialogOpen, useTourAnchor } from './useTourAnchor';
 import '../../../styles/onboarding.scss';
 
 export interface OnboardingTourProps {
-  state: TourState;
+  /** `null` = no hay guía en este dispositivo; solo puede salir el «vuelve a entrar» (`relogin`). */
+  state: TourState | null;
   ctx: TourContext;
+  /** Quien ya tenía lo social ha perdido la sesión y está en Social: manda sobre todo lo demás. */
+  relogin?: boolean;
 }
 
 /* ── Iconos ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -80,10 +83,43 @@ function onEscape(state: TourState) {
   };
 }
 
-function readConsentInset(): number {
-  if (typeof document === 'undefined' || document.documentElement.dataset.consent !== 'pending') return 0;
-  const value = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--consent-h'));
-  return Number.isFinite(value) ? value : 0;
+/**
+ * LO QUE LA BURBUJA NO PUEDE TAPAR POR ABAJO: el aviso de cookies mientras está pendiente, y el carril de avisos
+ * (`.ach-toast-stack`: el logro recién conseguido, lo último que hiciste) cuando tiene algo a la vista. Tapar un
+ * logro con la guía lo deja sin poder tocarse, y es justo lo que alguien acaba de ganar.
+ */
+function readBottomInset(): number {
+  if (typeof document === 'undefined') return 0;
+  let inset = 0;
+  if (document.documentElement.dataset.consent === 'pending') {
+    const value = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--consent-h'));
+    if (Number.isFinite(value)) inset = value;
+  }
+  const lane = document.querySelector('.ach-toast-stack');
+  if (lane) {
+    let top = Infinity;
+    for (const child of Array.from(lane.children)) {
+      // El botón plegado de la propia guía también vive ahí, y no cuenta: con la burbuja fuera, no se pinta.
+      if (child.classList.contains('ob-pill')) continue;
+      const rect = child.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) top = Math.min(top, rect.top);
+    }
+    if (Number.isFinite(top)) inset = Math.max(inset, window.innerHeight - top);
+  }
+  return inset;
+}
+
+/** Sigue a `readBottomInset`: un logro puede aparecer con la burbuja ya colocada, y hay que apartarse. */
+function useBottomInset(): number {
+  const [inset, setInset] = useState(readBottomInset);
+  useEffect(() => {
+    const timer = setInterval(() => setInset((prev) => {
+      const next = readBottomInset();
+      return Math.abs(next - prev) < 0.5 ? prev : next;
+    }), 400);
+    return () => clearInterval(timer);
+  }, []);
+  return inset;
 }
 
 function prefersReducedMotion(): boolean {
@@ -111,14 +147,15 @@ function insideFixed(element: Element): boolean {
  * El velo NO bloquea: deja pasar los toques a lo que hay debajo. La guía acompaña, no obliga, y quien quiere ir a
  * otro sitio puede; al llegar, la guía le sigue (`pickStep`).
  */
-export function OnboardingTour({ state, ctx }: OnboardingTourProps) {
+export function OnboardingTour({ state, ctx, relogin = false }: OnboardingTourProps) {
   const dialogOpen = useDialogOpen();
-  const mission = state.status === 'active' && state.mission ? MISSIONS[state.mission] : null;
-  const settled = mission ? settleStep(mission, state.step, ctx) : state.step;
-  const shown = mission && settled === state.step ? pickStep(mission, state.step, ctx) : null;
+  const mission = state?.status === 'active' && state.mission ? MISSIONS[state.mission] : null;
+  const settled = mission && state ? settleStep(mission, state.step, ctx) : state?.step ?? 0;
+  const shown = mission && state && settled === state.step ? pickStep(mission, state.step, ctx) : null;
 
   // Lo que el motor resuelve se apunta, para que sobreviva a una recarga (la vuelta de GitHub recarga la página).
   useEffect(() => {
+    if (!state) return;
     if (state.status === 'active' && !state.mission) {
       saveTourState(startTour(state));
       return;
@@ -135,8 +172,13 @@ export function OnboardingTour({ state, ctx }: OnboardingTourProps) {
   let view: ReactNode = null;
   let announce = '';
 
-  if (!dialogOpen) {
-    if (state.status === 'offer' || state.status === 'menu') {
+  if (!dialogOpen && relogin) {
+    view = <ReloginBubble ctx={ctx} />;
+    announce = TOUR_UI.relogin.title;
+  } else if (!dialogOpen && state) {
+    if (state.status === 'hint') {
+      view = <HintBubble state={state} ctx={ctx} />;
+    } else if (state.status === 'offer' || state.status === 'menu') {
       view = <MissionsCard state={state} />;
       announce = state.status === 'offer' ? TOUR_UI.welcome.title : TOUR_UI.menu.title;
     } else if (state.status === 'finale') {
@@ -168,7 +210,10 @@ export function OnboardingTour({ state, ctx }: OnboardingTourProps) {
 }
 
 function stepText(step: TourStep, ctx: TourContext): StepText {
-  if (step.id === 'gateway' && !ctx.syncConnected) return TOUR_UI.gatewayNeedsSync;
+  // Quien ya tiene espacio y ha perdido la sesión no «crea» nada: vuelve a entrar.
+  if (step.id === 'google' && ctx.hasSocialSpace) {
+    return { title: TOUR_UI.relogin.title, text: TOUR_UI.relogin.text, tap: TOUR_UI.steps.google.tap };
+  }
   return TOUR_UI.steps[step.id];
 }
 
@@ -192,28 +237,38 @@ function Scrim({ hole }: { hole: (Box & { r: number }) | null }) {
   );
 }
 
-/* ── La burbuja de cada paso ──────────────────────────────────────────────────────────────────────────────── */
+/* ── La burbuja anclada a un control ──────────────────────────────────────────────────────────────────────── */
 
-interface SpotlightProps {
-  state: TourState;
-  mission: Mission;
-  index: number;
-  step: TourStep;
-  ctx: TourContext;
+interface AnchoredBubbleProps {
+  /** Identifica lo que se señala: al cambiar, se vuelve a buscar el control y a desplazar hasta él. */
+  anchorKey: string;
+  anchor?: string | readonly string[];
+  /** Tono del anillo y la cabecera: `is-done` (celebración), `is-optional` (misión secundaria) o ninguno. */
+  tone?: '' | ' is-done' | ' is-optional';
+  /** El anillo late: hay que tocar ahí. */
+  pulse?: boolean;
+  labelledBy: string;
+  onKeyDown?: (event: KeyboardEvent) => void;
+  children: ReactNode;
 }
 
-function Spotlight({ state, mission, index, step, ctx }: SpotlightProps) {
+/**
+ * EL VELO CON SU HUECO, EL ANILLO Y LA BURBUJA CON SU FLECHA, colocados junto al control que se señala. Lo usan el
+ * paso de una misión, el ofrecimiento de una misión («¿Te enseño?») y el «vuelve a entrar» de lo social: los tres
+ * señalan algo de la pantalla y cambian solo lo que dicen.
+ */
+function AnchoredBubble({ anchorKey, anchor: anchorSpec, tone = '', pulse = false, labelledBy, onKeyDown, children }: AnchoredBubbleProps) {
   const selectors = useMemo(
-    () => (step.anchor ? (typeof step.anchor === 'string' ? [step.anchor] : [...step.anchor]) : null),
-    [step.anchor],
+    () => (anchorSpec ? (typeof anchorSpec === 'string' ? [anchorSpec] : [...anchorSpec]) : null),
+    [anchorSpec],
   );
-  const anchor = useTourAnchor(selectors, `${mission.id}:${step.id}`);
+  const anchor = useTourAnchor(selectors, anchorKey);
   // Por estado y no por `useRef`: la burbuja no existe en el primer render (se espera al control), así que la
   // medida tiene que arrancar cuando aparece, no al montar.
   const [bubbleNode, setBubbleNode] = useState<HTMLElement | null>(null);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   const scrolledRef = useRef(false);
-  const titleId = useId();
+  const bottomInset = useBottomInset();
 
   useLayoutEffect(() => {
     const node = bubbleNode;
@@ -229,8 +284,8 @@ function Spotlight({ state, mission, index, step, ctx }: SpotlightProps) {
     return () => observer.disconnect();
   }, [bubbleNode]);
 
-  // UNA vez por paso, y solo si el control está fuera de la vista: la tarjeta de sincronización queda por debajo
-  // de la de importar en un móvil. Lo fijo (barra, «+», menú) no se desplaza.
+  // UNA vez por control, y solo si está fuera de la vista: la tarjeta de sincronización queda por debajo de la de
+  // importar en un móvil. Lo fijo (barra, «+», menú) no se desplaza.
   useEffect(() => {
     const { element, box } = anchor;
     if (!element || !box || scrolledRef.current) return;
@@ -253,16 +308,8 @@ function Spotlight({ state, mission, index, step, ctx }: SpotlightProps) {
       r: anchor.box.r + HOLE_PAD,
     }
     : null;
-  const view = { w: document.documentElement.clientWidth || window.innerWidth, h: window.innerHeight, bottomInset: readConsentInset() };
+  const view = { w: document.documentElement.clientWidth || window.innerWidth, h: window.innerHeight, bottomInset };
   const placement = size ? placeBubble(hole, size, view) : null;
-
-  const text = stepText(step, ctx);
-  const counter = stepCounter(mission, index);
-  const secondary = mission.id === 'library';
-  const isDone = step.kind === 'done';
-  const ringTone = isDone ? ' is-done' : secondary ? ' is-optional' : '';
-  const pulse = step.kind === 'action' || step.kind === 'nav' ? ' is-action' : '';
-  const kicker = isDone ? TOUR_UI.missionDoneKicker : TOUR_UI.missions[mission.id].kicker;
 
   const caretStyle = placement?.side
     ? placement.side === 'bottom'
@@ -279,18 +326,18 @@ function Spotlight({ state, mission, index, step, ctx }: SpotlightProps) {
       <Scrim hole={hole} />
       {hole ? (
         <div
-          className={`ob-ring${ringTone}${pulse}`}
+          className={`ob-ring${tone}${pulse ? ' is-action' : ''}`}
           aria-hidden="true"
           style={{ left: hole.x, top: hole.y, width: hole.w, height: hole.h, borderRadius: hole.r }}
         />
       ) : null}
       <section
         ref={setBubbleNode}
-        className={`ob-bubble${ringTone}`}
+        className={`ob-bubble${tone}`}
         role="dialog"
         aria-modal="false"
-        aria-labelledby={titleId}
-        onKeyDown={onEscape(state)}
+        aria-labelledby={labelledBy}
+        onKeyDown={onKeyDown}
         style={{
           left: placement?.left ?? 0,
           top: placement?.top ?? 0,
@@ -298,24 +345,152 @@ function Spotlight({ state, mission, index, step, ctx }: SpotlightProps) {
         }}
       >
         {caretStyle ? <span className="ob-caret" aria-hidden="true" style={caretStyle} /> : null}
-        <div className="ob-kicker">
-          {isDone ? <TourIcon name="check" className="ob-icon ob-icon-sm" /> : null}
-          <span>{kicker}</span>
-          {secondary && !isDone ? <span className="ob-tag">{TOUR_UI.optional}</span> : null}
-          {counter ? <span className="ob-count">{counter.position}/{counter.total}</span> : null}
-          <button type="button" className="ob-close" aria-label={TOUR_UI.buttons.fold} title={TOUR_UI.buttons.fold} onClick={() => fold(state)}>
-            <TourIcon name="close" />
-          </button>
-        </div>
-        <h2 className="ob-title" id={titleId}>{text.title}</h2>
-        <p className="ob-text">{text.text}</p>
-        {step.id === 'added' ? <NextMission state={state} /> : null}
-        {text.tap && (step.kind === 'action' || step.kind === 'nav') ? (
-          <p className="ob-tap"><TourIcon name="tap" /><span>{text.tap}</span></p>
-        ) : null}
-        <StepFooter state={state} mission={mission} index={index} step={step} />
+        {children}
       </section>
     </>
+  );
+}
+
+/* ── La burbuja de cada paso ──────────────────────────────────────────────────────────────────────────────── */
+
+interface SpotlightProps {
+  state: TourState;
+  mission: Mission;
+  index: number;
+  step: TourStep;
+  ctx: TourContext;
+}
+
+function Spotlight({ state, mission, index, step, ctx }: SpotlightProps) {
+  const titleId = useId();
+  const text = stepText(step, ctx);
+  const counter = stepCounter(mission, index);
+  const secondary = mission.id === 'library';
+  const isDone = step.kind === 'done';
+  const tone = isDone ? ' is-done' : secondary ? ' is-optional' : '';
+  const kicker = isDone ? TOUR_UI.missionDoneKicker : TOUR_UI.missions[mission.id].kicker;
+
+  return (
+    <AnchoredBubble
+      anchorKey={`${mission.id}:${step.id}`}
+      anchor={step.anchor}
+      tone={tone}
+      pulse={step.kind === 'action' || step.kind === 'nav'}
+      labelledBy={titleId}
+      onKeyDown={onEscape(state)}
+    >
+      <div className="ob-kicker">
+        {isDone ? <TourIcon name="check" className="ob-icon ob-icon-sm" /> : null}
+        <span>{kicker}</span>
+        {secondary && !isDone ? <span className="ob-tag">{TOUR_UI.optional}</span> : null}
+        {counter ? <span className="ob-count">{counter.position}/{counter.total}</span> : null}
+        <button type="button" className="ob-close" aria-label={TOUR_UI.buttons.fold} title={TOUR_UI.buttons.fold} onClick={() => fold(state)}>
+          <TourIcon name="close" />
+        </button>
+      </div>
+      <h2 className="ob-title" id={titleId}>{text.title}</h2>
+      <p className="ob-text">{text.text}</p>
+      {step.id === 'added' ? <NextMission state={state} /> : null}
+      {text.tap && (step.kind === 'action' || step.kind === 'nav') ? (
+        <p className="ob-tap"><TourIcon name="tap" /><span>{text.tap}</span></p>
+      ) : null}
+      <StepFooter state={state} mission={mission} index={index} step={step} />
+    </AnchoredBubble>
+  );
+}
+
+/* ── El ofrecimiento de una misión, en su pantalla ────────────────────────────────────────────────────────── */
+
+/** Dónde se ofrece cada misión y qué se señala allí. Solo hay ofrecimientos de lo social y de la nube. */
+const HINTS: Partial<Record<MissionId, { screen: (ctx: TourContext) => boolean; anchor: readonly string[] }>> = {
+  coop: {
+    screen: (ctx) => ctx.path === '/social' || ctx.path.startsWith('/social/'),
+    anchor: ['.hub-gateway-stage.is-current', '#hub-profile-name'],
+  },
+  cloud: { screen: (ctx) => ctx.path === '/ajustes/datos', anchor: ['[data-tour="sync-card"]'] },
+};
+
+/**
+ * «¿TE ENSEÑO?», para quien ya usaba la aplicación y llega a una pantalla sin tener lo que se hace en ella. Una
+ * pregunta y dos respuestas: «Enséñame» arranca SOLO esa misión, y «No, gracias» (o la X) la aparta para siempre
+ * —queda en Ajustes › Datos—. Fuera de su pantalla no se pinta nada: no es una guía que te siga, es una oferta.
+ */
+function HintBubble({ state, ctx }: { state: TourState; ctx: TourContext }) {
+  const titleId = useId();
+  const mission = state.mission;
+  const hint = mission ? HINTS[mission] : undefined;
+  if (!mission || !hint || !hint.screen(ctx) || (mission !== 'coop' && mission !== 'cloud')) return null;
+  const H = TOUR_UI.hints;
+  const decline = () => saveTourState({
+    ...state,
+    status: 'dismissed',
+    mission: null,
+    single: false,
+    declined: state.declined.includes(mission) ? state.declined : [...state.declined, mission],
+  });
+  const accept = () => saveTourState({ ...state, status: 'active', step: 0, single: true });
+
+  return (
+    <AnchoredBubble
+      anchorKey={`hint:${mission}`}
+      anchor={hint.anchor}
+      labelledBy={titleId}
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape') return;
+        event.stopPropagation();
+        decline();
+      }}
+    >
+      <div className="ob-kicker">
+        <span>{H.kicker}</span>
+        <button type="button" className="ob-close" aria-label={TOUR_UI.buttons.close} title={TOUR_UI.buttons.close} onClick={decline}>
+          <TourIcon name="close" />
+        </button>
+      </div>
+      <h2 className="ob-title" id={titleId}>{H[mission].title}</h2>
+      <p className="ob-text">{H[mission].text}</p>
+      <div className="ob-foot ob-foot-split">
+        <button type="button" className="btn btn-secondary" onClick={decline}>{H.no}</button>
+        <button type="button" className="btn btn-primary" onClick={accept}>{H.yes}</button>
+      </div>
+    </AnchoredBubble>
+  );
+}
+
+/* ── «Vuelve a entrar» ────────────────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * PARA QUIEN YA TENÍA LO SOCIAL Y HA PERDIDO LA SESIÓN: su espacio sigue en este dispositivo (ver
+ * `TourContext.hasSocialSpace`). Sale cada vez que entra en Social así, señalando el paso que le falta de la
+ * pasarela; la X la cierra hasta que vuelva a entrar en Social. Sin misión, sin recuento y sin una palabra sobre
+ * crear nada.
+ */
+function ReloginBubble({ ctx }: { ctx: TourContext }) {
+  const titleId = useId();
+  const [closed, setClosed] = useState(false);
+  const R = TOUR_UI.relogin;
+  if (closed || ctx.path !== '/social') return null;
+  return (
+    <AnchoredBubble
+      anchorKey="relogin"
+      anchor=".hub-gateway-stage.is-current"
+      pulse
+      labelledBy={titleId}
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape') return;
+        event.stopPropagation();
+        setClosed(true);
+      }}
+    >
+      <div className="ob-kicker">
+        <span>{R.kicker}</span>
+        <button type="button" className="ob-close" aria-label={TOUR_UI.buttons.close} title={TOUR_UI.buttons.close} onClick={() => setClosed(true)}>
+          <TourIcon name="close" />
+        </button>
+      </div>
+      <h2 className="ob-title" id={titleId}>{R.title}</h2>
+      <p className="ob-text">{ctx.syncConnected ? R.text : R.textNeedsSync}</p>
+    </AnchoredBubble>
   );
 }
 
@@ -480,7 +655,8 @@ function MissionsCard({ state }: { state: TourState }) {
             </>
           ) : (
             <>
-              <button type="button" className="btn btn-secondary" onClick={() => saveTourState({ ...state, status: 'dismissed' })}>{TOUR_UI.menu.exit}</button>
+              {/* Salir de la guía es decir que no a TODO: tampoco se ofrecerá sola ninguna misión en su pantalla. */}
+              <button type="button" className="btn btn-secondary" onClick={() => saveTourState({ ...state, status: 'dismissed', declined: [...MISSION_IDS] })}>{TOUR_UI.menu.exit}</button>
               <button type="button" className="btn btn-primary" onClick={() => saveTourState(startTour(state))}>{TOUR_UI.menu.resume}</button>
             </>
           )}
@@ -527,12 +703,15 @@ function TourPill({ state }: { state: TourState }) {
   const pending = MISSION_IDS.find((id) => !state.completed.includes(id) && !state.skipped.includes(id));
   const nextId = state.mission ?? pending ?? null;
   const circumference = 2 * Math.PI * 14;
+  // Una vuelta de una sola misión (la de un ofrecimiento) se nombra por su misión: «1 de 3» contaría una guía que
+  // no se está haciendo.
+  const singleName = state.single && state.mission ? TOUR_UI.missions[state.mission].name : null;
   const pill = (
     <button
       type="button"
       className="ob-pill"
-      aria-label={TOUR_UI.pill.aria(done, total)}
-      onClick={() => saveTourState({ ...state, status: 'menu' })}
+      aria-label={singleName ? TOUR_UI.pill.singleAria(singleName) : TOUR_UI.pill.aria(done, total)}
+      onClick={() => saveTourState(state.single && state.status === 'paused' ? { ...state, status: 'active' } : { ...state, status: 'menu' })}
     >
       <svg className="ob-pill-ring" viewBox="0 0 36 36" aria-hidden="true" focusable="false">
         <circle className="ob-pill-track" cx="18" cy="18" r="14" />
@@ -547,8 +726,9 @@ function TourPill({ state }: { state: TourState }) {
         <text x="18" y="22.5" textAnchor="middle">{done}</text>
       </svg>
       <span className="ob-pill-body">
-        <span className="ob-pill-title">{TOUR_UI.pill.title(done, total)}</span>
-        {nextId ? <span className="ob-pill-next">{TOUR_UI.pill.next(TOUR_UI.missions[nextId].name)}</span> : null}
+        <span className="ob-pill-title">{singleName ?? TOUR_UI.pill.title(done, total)}</span>
+        {singleName ? <span className="ob-pill-next">{TOUR_UI.pill.single}</span>
+          : nextId ? <span className="ob-pill-next">{TOUR_UI.pill.next(TOUR_UI.missions[nextId].name)}</span> : null}
       </span>
       <TourIcon name="up" className="ob-icon ob-pill-chevron" />
     </button>

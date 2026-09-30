@@ -23,6 +23,14 @@ export interface TourContext {
   /** ¿Hay sincronización con GitHub configurada? */
   syncConnected: boolean;
   socialStatus: 'pending' | 'active' | 'inactive';
+  /** ¿Hay sesión de Google? */
+  socialSignedIn: boolean;
+  /**
+   * ¿Guarda ESTE dispositivo un espacio social (el gist social)? Cerrar sesión no lo borra, así que sin sesión y
+   * con espacio es alguien que ya tenía lo social y ha perdido la sesión: hay que decirle «vuelve a entrar», no
+   * «crea tu espacio».
+   */
+  hasSocialSpace: boolean;
   /** ¿Está desplegado el menú de Ajustes de la barra inferior? */
   settingsMenuOpen: boolean;
   /** Juegos esperando en la bandeja de importados. */
@@ -42,7 +50,7 @@ export type StepId =
   | 'to-lists' | 'lists' | 'add' | 'added'
   | 'to-settings' | 'to-data' | 'sync' | 'synced'
   | 'library-offer' | 'library-import' | 'library-inbox'
-  | 'to-social' | 'coop-sync' | 'gateway' | 'profile' | 'invite';
+  | 'to-social' | 'coop-sync' | 'gateway' | 'google' | 'profile' | 'profile-save' | 'coop-done' | 'invite';
 
 export interface TourStep {
   id: StepId;
@@ -166,21 +174,40 @@ export const MISSIONS: Readonly<Record<MissionId, Mission>> = {
         detour: true,
       },
       {
+        // Paso 1 de la pasarela, para quien llega sin GitHub: la llevará a Datos y volverá (`coop-sync`).
         id: 'gateway',
         kind: 'action',
         anchor: '.hub-gateway-stage.is-current',
-        screen: (ctx) => ctx.path === '/social' && !socialActive(ctx),
-        done: socialActive,
+        screen: (ctx) => ctx.path === '/social' && !ctx.syncConnected && !socialActive(ctx),
+        done: synced,
+      },
+      {
+        // Paso 2: identificarse. Se cumple con la sesión; la aplicación lleva sola al perfil si falta.
+        id: 'google',
+        kind: 'action',
+        anchor: '.hub-gateway-stage.is-current',
+        screen: (ctx) => ctx.path === '/social' && ctx.syncConnected && !ctx.socialSignedIn && !socialActive(ctx),
+        done: (ctx) => ctx.socialSignedIn || socialActive(ctx),
         counted: true,
       },
       {
+        // Tus datos, en dos pasos: el nombre (explicativo, se escribe y se sigue) y guardar (se cumple guardando).
         id: 'profile',
-        kind: 'action',
+        kind: 'info',
         anchor: '#hub-profile-name',
+        screen: (ctx) => ctx.path.startsWith('/social/profile') && !socialActive(ctx),
+        counted: true,
+      },
+      {
+        id: 'profile-save',
+        kind: 'action',
+        anchor: '[data-tour="profile-save"]',
         screen: (ctx) => ctx.path.startsWith('/social/profile') && !socialActive(ctx),
         done: socialActive,
         counted: true,
       },
+      // Solo justo después de guardar (ver `settleStep`): quien ya tenía el perfil no la ve.
+      { id: 'coop-done', kind: 'done', screen: (ctx) => isSocial(ctx) && socialActive(ctx) },
       { id: 'invite', kind: 'invite', screen: (ctx) => isSocial(ctx) && socialActive(ctx), counted: true },
     ],
   },
@@ -249,8 +276,12 @@ function pendingMissions(state: TourState): MissionId[] {
   return MISSION_IDS.filter((id) => !state.completed.includes(id) && !state.skipped.includes(id));
 }
 
-/** Siguiente misión por hacer, o `finale` si ya no queda ninguna PRINCIPAL (Playnite no retiene el final). */
+/**
+ * Siguiente misión por hacer, o `finale` si ya no queda ninguna PRINCIPAL (Playnite no retiene el final). En una
+ * vuelta de una sola misión —la de un ofrecimiento— la guía se retira al terminarla, sin tarjeta de final.
+ */
 function moveOn(state: TourState): TourState {
+  if (state.single) return { ...state, status: 'done', mission: null, step: 0, single: false };
   const pending = pendingMissions(state);
   if (!pending.some((id) => MAIN_MISSIONS.includes(id))) {
     return { ...state, status: 'finale', mission: null, step: 0 };

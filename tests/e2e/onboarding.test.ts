@@ -106,4 +106,43 @@ test.describe('guía de primeros pasos', () => {
     await pill.click();
     await expect(page.getByRole('dialog', { name: 'Tus misiones' })).toBeVisible();
   });
+
+  test('a quien ya usaba la app se le ofrece lo social en Social, y «No, gracias» no vuelve', async ({ page }) => {
+    await sembrarBiblioteca(page);
+    await page.goto('/social');
+    const hint = page.getByRole('dialog', { name: '¿Te enseño a entrar en lo social?' });
+    await expect(hint).toBeVisible();
+    const { violations } = await new AxeBuilder({ page }).include('.ob-bubble').withTags(WCAG).analyze();
+    expect(violations.map((violation) => violation.id)).toEqual([]);
+    await hint.getByRole('button', { name: 'No, gracias' }).click();
+    await expect(hint).toBeHidden();
+
+    await page.reload();
+    await expect(page.locator('.hub-gateway-stage').first()).toBeVisible();
+    await page.waitForTimeout(1500);
+    await expect(page.getByRole('dialog', { name: '¿Te enseño a entrar en lo social?' })).toHaveCount(0);
+  });
+
+  test('sin sincronización, en Ajustes › Datos se ofrece la nube y lleva a su tarjeta', async ({ page }) => {
+    await sembrarBiblioteca(page);
+    await page.goto('/ajustes/datos');
+    const hint = page.getByRole('dialog', { name: '¿Te enseño a guardar tus listas en la nube?' });
+    await expect(hint).toBeVisible();
+    await hint.getByRole('button', { name: 'Enséñame' }).click();
+    await expect(page.getByRole('dialog', { name: 'Guarda la partida' })).toBeVisible();
+  });
+
+  test('quien tiene espacio social pero perdió la sesión ve «vuelve a entrar», nunca «crea tu espacio»', async ({ page }) => {
+    await sembrarBiblioteca(page);
+    await page.addInitScript(() => {
+      localStorage.setItem('mis-listas-social-gist-config', JSON.stringify({ gistId: 'a1b2c3d4e5f6', etag: null, lastRemoteUpdatedAt: 0 }));
+    });
+    await page.goto('/social');
+    const relogin = page.getByRole('dialog', { name: 'Vuelve a entrar' });
+    await expect(relogin).toBeVisible();
+    await expect(relogin).toContainText('siguen ahí');
+    await expect(page.getByRole('dialog', { name: '¿Te enseño a entrar en lo social?' })).toHaveCount(0);
+    // No es una guía: no deja nada guardado.
+    expect(await page.evaluate(() => localStorage.getItem('mis-listas-onboarding'))).toBeNull();
+  });
 });

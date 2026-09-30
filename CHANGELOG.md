@@ -5,6 +5,21 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Added
+- **La guía acompaña hasta el final de lo social**: después de conectar GitHub, «Entra con Google», «Elige tu nombre»
+  y «Guarda tu perfil», con la celebración «¡Modo cooperativo activado!» antes de invitar a un amigo. Cada paso se
+  cumple con la señal real (la sesión, el perfil activo), no con un «Siguiente».
+- **Ayuda en su pantalla para quien ya usaba la aplicación**: al abrir Social sin lo social, o Ajustes › Datos sin
+  sincronización, la guía pregunta «¿Te enseño?». «Enséñame» hace solo esa misión y se retira; «No, gracias» no
+  vuelve a preguntar (sigue en Ajustes › Datos). Nunca con una guía ya en marcha.
+- **«Vuelve a entrar»** para quien ya tenía lo social y ha perdido la sesión (su espacio sigue en el dispositivo):
+  al abrir Social se le señala el paso que falta y se le dice que su espacio y sus amigos siguen ahí, sin ofrecerle
+  crear nada.
+
+### Fixed
+- La burbuja de la guía ya no tapa el aviso de un logro ni el de lo último que hiciste: se aparta del carril de
+  abajo a la izquierda en vez de acoplarse encima.
+
 ## [1.5.0] - 2026-09-29
 
 La versión de **los primeros pasos**. Quien llega sin nada tiene una guía que le acompaña por las pantallas —su

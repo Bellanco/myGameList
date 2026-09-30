@@ -57,9 +57,10 @@ import { useMountedOnceOpen } from './view/modals/useMountedOnceOpen';
 import { runWhenIdle } from './core/utils/idle';
 import { carryStamps } from './core/utils/gameStamps';
 import { importedToPartialGame, mergeImportedIntoGame } from './core/import/staging';
-import { isTourVisible, offeredTour, parseTourState } from './core/onboarding/tourState';
+import { canOfferHint, hintTour, isTourVisible, offeredTour, parseTourState } from './core/onboarding/tourState';
 import type { TourContext } from './core/onboarding/tourSteps';
 import { hadLocalFootprint, onboardingStore, saveTourState } from './model/repository/onboardingStore';
+import { getSocialSyncConfig } from './model/repository/gistConfigRepository';
 import type { ImportedGame, RawExternalGame } from './model/types/import';
 
 // Los tres modales se montan solo tras su primera apertura (ver `useMountedOnceOpen`), así que sus chunks ya no
@@ -837,15 +838,45 @@ export default function App() {
     if (!spriteRestoListo || tourState || HUELLA_AL_ARRANCAR || gameCount > 0 || activeSection !== 'lists') return;
     saveTourState(offeredTour());
   }, [activeSection, gameCount, spriteRestoListo, tourState]);
+  /**
+   * ¿TIENE ESTE DISPOSITIVO UN ESPACIO SOCIAL? Cerrar sesión no borra la configuración del gist social, así que
+   * «sin sesión y con espacio» es quien ya tenía lo social y ha perdido la sesión (la misma señal con la que la
+   * pasarela dice «Ya tienes espacio»). Se relee al navegar y al cambiar la sesión: se escribe al crear o enlazar
+   * el espacio, que pasa en lo social.
+   */
+  const socialSignedIn = Boolean(scoreScaleUid);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const hasSocialSpace = useMemo(() => Boolean(getSocialSyncConfig()?.gistId?.trim()), [location.pathname, scoreScaleUid]);
+  const reloginNeeded = authReady && !socialSignedIn && hasSocialSpace && activeSection === 'social';
+
+  /**
+   * LOS OFRECIMIENTOS DE UNA MISIÓN («¿Te enseño?»), para quien ya usaba la aplicación: al llegar a Social sin lo
+   * social, o a Ajustes › Datos sin sincronización. Quién puede recibirlos lo decide `canOfferHint` (nadie con una
+   * guía en marcha, y nunca lo ya rechazado). Lo social espera a que su estado se sepa —`pending` no cuenta— y
+   * nunca se ofrece a quien ya tiene espacio: a esa persona le toca «vuelve a entrar».
+   */
+  useEffect(() => {
+    if (!spriteRestoListo || !authReady) return;
+    if (activeSection === 'social' && socialStatus === 'inactive' && !hasSocialSpace && canOfferHint(tourState, 'coop')) {
+      saveTourState(hintTour(tourState, 'coop'));
+    } else if (location.pathname === SETTINGS_ROUTES.data && !syncVm.hasConfig && canOfferHint(tourState, 'cloud')) {
+      saveTourState(hintTour(tourState, 'cloud'));
+    }
+  }, [activeSection, authReady, hasSocialSpace, location.pathname, socialStatus, spriteRestoListo, syncVm.hasConfig, tourState]);
+
   const tourContext = useMemo<TourContext>(() => ({
     path: location.pathname,
     gameCount,
     syncConnected: syncVm.hasConfig,
     socialStatus,
+    socialSignedIn,
+    hasSocialSpace,
     settingsMenuOpen,
     inboxCount,
-  }), [gameCount, inboxCount, location.pathname, settingsMenuOpen, socialStatus, syncVm.hasConfig]);
-  const tourMounted = spriteRestoListo && tourState !== null && isTourVisible(tourState) && TOUR_SECTIONS.has(activeSection);
+  }), [gameCount, hasSocialSpace, inboxCount, location.pathname, settingsMenuOpen, socialSignedIn, socialStatus, syncVm.hasConfig]);
+  const tourMounted = spriteRestoListo
+    && TOUR_SECTIONS.has(activeSection)
+    && ((tourState !== null && isTourVisible(tourState)) || reloginNeeded);
 
   const syncBadgeText = resolveSyncBadge(syncVm.status, syncVm.pendingUpload);
 
@@ -1206,10 +1237,10 @@ export default function App() {
       {/* Fuera del `main`, como los avisos: el `main` se apaga cuando se abre el menú de Ajustes, y la guía tiene
           que poder señalar DENTRO de ese menú. Con su propio límite: si su chunk no llega (sin red, recién
           desplegado) no hay guía y no pasa nada más. */}
-      {tourMounted && tourState ? (
+      {tourMounted ? (
         <SilentBoundary source="onboarding-tour">
           <Suspense fallback={null}>
-            <OnboardingTour state={tourState} ctx={tourContext} />
+            <OnboardingTour state={tourState} ctx={tourContext} relogin={reloginNeeded} />
           </Suspense>
         </SilentBoundary>
       ) : null}

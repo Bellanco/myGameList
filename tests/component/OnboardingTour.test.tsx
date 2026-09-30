@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { OnboardingTour } from '../../src/view/components/onboarding/OnboardingTour';
 import { offeredTour, parseTourState, type TourState } from '../../src/core/onboarding/tourState';
-import type { TourContext } from '../../src/core/onboarding/tourSteps';
+import { MISSIONS, type TourContext } from '../../src/core/onboarding/tourSteps';
 import { onboardingStore } from '../../src/model/repository/onboardingStore';
 import { TOUR_UI } from '../../src/core/constants/onboardingLabels';
 import { INVITE_UI } from '../../src/core/constants/inviteLabels';
@@ -13,6 +13,8 @@ const CTX: TourContext = {
   gameCount: 0,
   syncConnected: false,
   socialStatus: 'inactive',
+  socialSignedIn: false,
+  hasSocialSpace: false,
   settingsMenuOpen: false,
   inboxCount: 0,
 };
@@ -108,7 +110,8 @@ describe('guía de primeros pasos', () => {
   it('la invitación enseña la vista previa y la dirección completa, y copiarla la da por hecha', async () => {
     const writeText = vi.fn(async () => {});
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
-    const state: TourState = { ...offeredTour(), status: 'active', mission: 'coop', step: 4, completed: ['first-game', 'cloud'] };
+    const invite = MISSIONS.coop.steps.findIndex((candidate) => candidate.id === 'invite');
+    const state: TourState = { ...offeredTour(), status: 'active', mission: 'coop', step: invite, completed: ['first-game', 'cloud'] };
     render(<OnboardingTour state={state} ctx={{ ...CTX, path: '/social', socialStatus: 'active', syncConnected: true }} />);
 
     expect(screen.getByRole('img', { name: INVITE_UI.previewAlt })).toBeTruthy();
@@ -131,5 +134,38 @@ describe('guía de primeros pasos', () => {
     bubble.querySelector<HTMLButtonElement>('.ob-close')!.focus();
     await userEvent.keyboard('{Escape}');
     expect(saved()).toMatchObject({ status: 'paused', mission: 'first-game' });
+  });
+
+  it('el ofrecimiento de lo social: «Enséñame» arranca solo esa misión y «No, gracias» no vuelve', async () => {
+    const hint: TourState = { ...offeredTour(), status: 'hint', mission: 'coop', single: true };
+    const { rerender } = render(<OnboardingTour state={hint} ctx={{ ...CTX, path: '/social' }} />);
+    const bubble = await screen.findByRole('dialog', { name: TOUR_UI.hints.coop.title }, { timeout: 3000 });
+    await userEvent.click(within(bubble).getByRole('button', { name: TOUR_UI.hints.yes }));
+    expect(saved()).toMatchObject({ status: 'active', mission: 'coop', step: 0, single: true });
+
+    rerender(<OnboardingTour state={hint} ctx={{ ...CTX, path: '/social' }} />);
+    const again = await screen.findByRole('dialog', { name: TOUR_UI.hints.coop.title }, { timeout: 3000 });
+    await userEvent.click(within(again).getByRole('button', { name: TOUR_UI.hints.no }));
+    expect(saved()).toMatchObject({ status: 'dismissed', declined: ['coop'] });
+  });
+
+  it('el ofrecimiento no sale fuera de su pantalla', async () => {
+    const hint: TourState = { ...offeredTour(), status: 'hint', mission: 'cloud', single: true };
+    render(<OnboardingTour state={hint} ctx={{ ...CTX, path: '/stats' }} />);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('quien perdió la sesión con espacio ve «vuelve a entrar», aunque no tenga guía', async () => {
+    render(<OnboardingTour state={null} relogin ctx={{ ...CTX, path: '/social', syncConnected: true, hasSocialSpace: true }} />);
+    const bubble = await screen.findByRole('dialog', { name: TOUR_UI.relogin.title }, { timeout: 3000 });
+    expect(bubble.textContent).toContain(TOUR_UI.relogin.text);
+    expect(bubble.textContent).not.toContain('crea');
+    await userEvent.click(within(bubble).getByRole('button', { name: TOUR_UI.buttons.close }));
+    expect(screen.queryByRole('dialog', { name: TOUR_UI.relogin.title })).toBeNull();
+    // Y no escribe nada: no es una guía, es un aviso.
+    expect(saved()).toBeNull();
   });
 });
