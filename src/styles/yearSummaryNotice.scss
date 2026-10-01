@@ -1,0 +1,15 @@
+// EL AVISO DEL RESUMEN DEL AÑO en el carril: la cápsula de siempre (`_capsule.scss`) teñida del acento, con el
+// radio de «la mitad de lo que mida» del aviso del administrador (la descripción puede ocupar dos líneas) y esa
+// descripción recortada a dos. Las paletas angulosas lo vuelven a poner recto en su skin, como con los otros.
+.ach-toast.is-year-summary {
+  --glow: var(--steam-rgb);
+  border-radius: 999px;
+}
+
+.ach-toast.is-year-summary .ach-toast-desc {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}

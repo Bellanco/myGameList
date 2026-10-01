@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { ANALYTICS_UI } from '../../src/core/constants/labels';
+import { ANALYTICS_UI } from '../../src/core/constants/consentLabels';
 
 // GA4 no se toca aquí: interesa lo que el banner le cuenta al resto de la pantalla, no lo que activa al aceptar.
 vi.mock('../../src/model/repository/firebaseGateway', () => ({

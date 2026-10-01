@@ -37,6 +37,7 @@ function renderFeed(items: SocialFeedItem[] = []) {
       loadingDirectory={false}
       openProfileDetail={() => {}}
       openProfileAchievements={() => {}}
+      openProfileSummary={() => {}}
       onOpenProfiles={() => {}}
       onOpenOwnProfile={() => {}}
       onOpenRequests={() => {}}

@@ -310,17 +310,24 @@ function coverDeCaja(
   };
 }
 
-/** La del renglón: una sola, del tamaño con que se recorta la franja que cruza la fila. */
+/**
+ * La del renglón: una sola, y `medio` (508×720) para todo el mundo.
+ *
+ * La `ancho` (762×1080) se reservaba a la cuenta de administración, y no compensaba. Se compararon las dos en la
+ * franja, con su velo encima, y a 151 px de alto con el 90 % de la superficie del tema delante el detalle de más
+ * no llega a la pantalla. Lo que sí llegaba era el coste, medido en producción el 01-10-2026 con 149 renglones:
+ * casi el doble de tiempo descodificando imágenes (660 ms frente a 363 por recorrido) y un 45 % más de
+ * fotogramas perdidos al bajar, además de ~100 kB por juego en vez de ~65.
+ */
 function coverDeRenglon(
   covers: boolean,
   game: GameItem,
   ampliado: boolean,
-  grande: boolean,
   pedido: PedidoDePortada,
 ): string | null {
   const peticion = peticionDeCaratula(game.name, game.platforms, ampliado, pedido);
   if (!coverBase(covers, peticion, ampliado)) return null;
-  return coverUrl(peticion.nombre, peticion.plataformas, ampliado, grande ? 'ancho' : 'medio', peticion.soloCache);
+  return coverUrl(peticion.nombre, peticion.plataformas, ampliado, 'medio', peticion.soloCache);
 }
 
 function renderTags(values: string[], className: string, maxVisible?: number, tone = false) {
@@ -566,19 +573,6 @@ export const GameTable = memo(function GameTable({
      mods, que dan PEORES emparejamientos— sino una lente para ver qué hay en el catálogo. Su respuesta vive en
      un espacio de caché aparte, así que encenderla no le cambia la carátula a nadie más. */
   const coversAmpliadas = useIsAdmin();
-  /* LA RESOLUCIÓN DE LA FRANJA, y por qué no es la misma para todo el mundo. La portada a 1080p pesa unos 150 kB
-     por juego y la de 720, unos 80: recorrer una biblioteca de trescientos son 45 MB contra 24. Y la diferencia
-     no se ve: se compararon las dos recortadas en la franja y con su velo encima, y a 151 px de alto con el 90 %
-     de la superficie del tema delante, el detalle que aporta doblar los píxeles no llega a la pantalla. Así que
-     la grande deja de ser lo normal y pasa a ser lo que se lleva MITHRIL, que es el rango que paga la factura de
-     los privilegios (ver `PROFILE_TIER_*` en `constants/tiers`).
-     Se resuelve con `useIsAdmin` y no leyendo el perfil porque hoy son lo mismo: `ADMIN_ONLY_TIER` es mithril y
-     el panel solo ofrece ese rango en la fila del propio administrador. Leer el perfil aquí costaría una lectura
-     de Firestore en el listado a todo el mundo, incluido quien no ha abierto el hub social en su vida. Si algún
-     día mithril se le concede a alguien más, ESTA línea es la que hay que cambiar.
-     Y como el modo ampliado: el tamaño viaja en la URL, así que se puede falsificar. Falsificarlo solo te cuesta
-     bytes a ti, y el cupo por IP sigue acotando el gasto de resolver. */
-  const franjaGrande = coversAmpliadas;
   /* El MOSAICO también vale en un teléfono: sus columnas salen del mismo mínimo de caja que en escritorio (a
      412 px caben dos), así que elegir «cajas» en el móvil ya no revierte a renglones sin avisar. */
   const cards = shape === 'list';
@@ -754,12 +748,20 @@ export const GameTable = memo(function GameTable({
     overscan: 5,
   });
 
+  /* EL TAMAÑO DE LA VENTANA, DESDE EL PRIMER RENDER. Sin `initialRect` el virtualizador nace con un viewport de
+     0×0 —la ventana la mide en su efecto, después del montaje—, así que el primer render no devolvía ninguna fila
+     y saltaba la red de seguridad de abajo: se montaba la lista ENTERA y en la misma tarea se recortaba a diez.
+     No llegaba a pintarse, pero el cálculo de estilo de ese render intermedio bastaba para que cada renglón
+     pidiera su carátula de fondo (`--row-cover`), y esas descargas ya no se cancelan: 149 carátulas, unos 10 MB,
+     cada vez que se abría una lista larga en renglones. Es la misma medida que tomará el efecto, así que el
+     primer render ya sale recortado. */
   const windowVirtualizer = useWindowVirtualizer({
     count: virtualRows.length,
     measureElement,
     getItemKey,
     estimateSize,
     scrollMargin,
+    initialRect: { width: window.innerWidth, height: window.innerHeight },
     overscan: 5,
   });
 
@@ -796,7 +798,8 @@ export const GameTable = memo(function GameTable({
   const bottomSpacerHeight =
     virtualRowEntries.length > 0 ? totalSize - (virtualRowEntries[virtualRowEntries.length - 1].end - originOffset) : 0;
   // Red de seguridad: si el virtualizador elegido no devuelve nada habiendo filas (medidas degeneradas, entorno
-  // sin layout), se pinta todo antes que dejar la tabla vacía.
+  // sin layout), se pinta todo antes que dejar la tabla vacía. NO debe saltar en el montaje normal: pintar todo
+  // lanza la descarga de todas las carátulas del renglón (ver `initialRect` del virtualizador de ventana).
   const fallbackToFullRender =
     !virtualize || (games.length > 0 && virtualRows.length > 0 && virtualRowEntries.length === 0);
   const rowIndexesToRender = fallbackToFullRender
@@ -1262,7 +1265,7 @@ export const GameTable = memo(function GameTable({
                      no como `<img>` porque aquí no se mira: no necesita alt, ni hueco reservado, ni participar
                      en la medición de la fila. Sin preferencia de carátulas encendida —o sin imagen para ese
                      juego— la pieza se queda en su superficie plana, que es la maqueta §2. */
-                  const rowCover = coverDeRenglon(covers, game, coversAmpliadas, franjaGrande, pedidoDePortada);
+                  const rowCover = coverDeRenglon(covers, game, coversAmpliadas, pedidoDePortada);
                   /* El lado malo del renglón: en la vergüenza son los MOTIVOS de dejarlo, no los defectos. */
                   const malos = (currentTab === 'v' ? game.reasons : game.weaknesses) || [];
                   /* Cuántos chips enseña ESTE juego en cada ranura, medidos con el ancho de su columna. */

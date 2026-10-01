@@ -41,7 +41,6 @@ export interface KVNamespace {
 export interface Env {
   SHARES: KVNamespace;
   FIREBASE_PROJECT_ID?: string;
-  ADMIN_EMAIL?: string;
   /** Verificación de App Check en el borde (ver `appCheck.ts`): el NÚMERO de proyecto, el App ID y el modo. */
   FIREBASE_PROJECT_NUMBER?: string;
   FIREBASE_APP_ID?: string;

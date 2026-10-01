@@ -26,10 +26,16 @@ export type CoverAccess = boolean | 'solo-cache';
  *     (`cachedOnly` en `SocialProfileDetailScreen`).
  *  3. Que de ese título no conste ya que no tiene carátula (`sabemosQueNoTiene`), para no volver a preguntar.
  *
- * El tamaño es el `ancho` del renglón por lo mismo que allí: la franja es apaisada y recorta una banda de una
- * imagen vertical, así que la pequeña llega estirada casi seis veces y lo que queda es una mancha.
+ * El tamaño es el `ancho`: la franja es apaisada y recorta una banda de una imagen vertical, así que la pequeña
+ * llega estirada casi seis veces y lo que queda es una mancha. (El renglón de la lista se quedó en `medio`, que
+ * bajo su velo no se distingue y pesa menos al recorrer una biblioteca entera; ver `coverDeRenglon`.)
+ *
+ * Quien pinta la carátula ENTERA y pequeña —la composición del resumen del año— pide `medio`, que es además la URL
+ * exacta del renglón del listado: la imagen que ya se vio en la lista sale de la caché del navegador.
  */
-export function useReviewCover(acceso: CoverAccess = true): (name: string, platforms?: readonly string[]) => string | null {
+export function useReviewCover(
+  acceso: CoverAccess = true,
+): (name: string, platforms?: readonly string[], tamano?: 'medio' | 'ancho') => string | null {
   const { covers } = useCovers();
   const permitido = covers && acceso !== false;
   // El modo ampliado (DLC, packs y mods) tiene su propio espacio de caché: se pide con la misma clave con la que
@@ -40,7 +46,7 @@ export function useReviewCover(acceso: CoverAccess = true): (name: string, platf
   const ampliado = useIsAdmin(permitido);
   const soloCache = acceso === 'solo-cache';
 
-  return useCallback((name: string, platforms: readonly string[] = []) => {
+  return useCallback((name: string, platforms: readonly string[] = [], tamano: 'medio' | 'ancho' = 'ancho') => {
     if (!permitido) return null;
     const limpio = String(name || '').trim();
     if (!limpio) return null;
@@ -57,6 +63,6 @@ export function useReviewCover(acceso: CoverAccess = true): (name: string, platf
     // Se pregunta con la URL NORMAL —que es la que guarda el registro de fallos— y se pide la ancha: si de este
     // título no hay carátula, tampoco la habrá en otro tamaño.
     if (sabemosQueNoTiene(coverUrl(nombre, plataformas, ampliado))) return null;
-    return coverUrl(nombre, plataformas, ampliado, 'ancho', marca);
+    return coverUrl(nombre, plataformas, ampliado, tamano, marca);
   }, [permitido, soloCache, ampliado]);
 }

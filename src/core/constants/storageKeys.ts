@@ -131,6 +131,15 @@ export const ACHIEVEMENTS_DATES_KEY = 'mis-listas-achievements-dates';
 // única haría que la segunda creyera publicado el de la primera —y se quedaría sin publicar el suyo.
 export const achievementsPublishedKey = (uid: string): string => `mis-listas-achievements-published-${uid}`;
 
+// Resumen del año — el último año cuyo «ya lo he visto» se publicó en el perfil (`profiles/{uid}.yearSummary`).
+// Caché de escritura como la de arriba, y por la misma razón con el uid dentro: perderla solo cuesta publicar otra
+// vez el mismo año, que no cambia nada salvo la fecha de la tarjeta.
+export const yearSummaryPublishedKey = (uid: string): string => `mis-listas-year-summary-published-${uid}`;
+
+// Resumen del año — el último año del que ya se dio el aviso propio del 15 de diciembre. Uno por año y navegador:
+// es un aviso, no un dato, y verlo dos veces en dos dispositivos no hace daño.
+export const YEAR_SUMMARY_TOLD_KEY = 'mis-listas-year-summary-told';
+
 // Logros — sello de la primera vez que se usó la ruleta. Es el ÚNICO dato de todo el evolutivo que hay que
 // registrar en vez de derivar: `core/roulette/roulette.ts` es una función pura —tira, devuelve un juego y no
 // persiste ni un byte—, así que sin esto no hay forma de saber que alguien la probó. No sube y no se publica

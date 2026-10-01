@@ -186,6 +186,24 @@
 
 /* ── §7 · Segmentos y campos: entrada de TERMINAL — recta, filete verde, foco verde (lo da --steam en base). ── */
 :root[data-palette="grimdark"] .hub-seg { border: 1px solid var(--grim-gold); border-radius: 0; }
+/* LA CATEGORÍA ELEGIDA SE ENCIENDE EN FÓSFORO, como la pestaña activa (§16): recta, con el filete y el rótulo
+   en verde de cogitador y su halo. La píldora de la casa ponía el rótulo blanco sobre el verde ácido. */
+:root[data-palette="grimdark"] .hub-seg-btn { border-radius: 0; }
+:root[data-palette="grimdark"] .hub-seg-btn.is-active {
+  color: var(--grim-green);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--grim-green) 45%, transparent);
+}
+:root[data-palette="grimdark"] .hub-seg-ind {
+  border-radius: 0;
+  background: color-mix(in srgb, var(--grim-green) 10%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--grim-green) 70%, transparent),
+    0 0 10px color-mix(in srgb, var(--grim-green) 25%, transparent);
+}
+:root[data-palette="grimdark"][data-theme="light"] .hub-seg-btn.is-active { text-shadow: none; }
+:root[data-palette="grimdark"][data-theme="light"] .hub-seg-ind {
+  background: color-mix(in srgb, var(--grim-green) 10%, transparent);
+  box-shadow: inset 0 0 0 1px var(--grim-green);
+}
 :root[data-palette="grimdark"] .input-base,
 :root[data-palette="grimdark"] .finput,
 :root[data-palette="grimdark"] .ftextarea,

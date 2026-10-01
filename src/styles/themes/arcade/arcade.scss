@@ -651,6 +651,15 @@
   box-shadow: var(--arc-cast);
 }
 :root[data-palette="arcade"][data-theme="light"] .hub-seg { background: linear-gradient(180deg, #fff, #eadcfa); }
+/* Y LA CATEGORÍA ELEGIDA ES LA TECLA PULSADA de la barra de abajo (§11), no la píldora de la casa: dentro de
+   una chapa recta, una cápsula redonda era la única pieza blanda del panel. */
+:root[data-palette="arcade"] .hub-seg-btn { border-radius: var(--radius-sm); letter-spacing: .05em; }
+:root[data-palette="arcade"] .hub-seg-ind {
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, #b957ff, #6d1fc9);
+  box-shadow: inset 0 0 0 2px var(--arc-ink), inset 0 2px 0 rgba(255, 255, 255, .25);
+}
+:root[data-palette="arcade"][data-theme="light"] .hub-seg-ind { background: linear-gradient(180deg, #9b34f0, #6b12bd); }
 /* El chip con el nombre del juego en la actividad es una PEGATINA cian: el nombre del juego es lo que se
    busca al recorrer el feed, y el cian es el color con el que este tema señala. */
 :root[data-palette="arcade"] .hub-feed-game-chip,

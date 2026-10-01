@@ -1456,9 +1456,14 @@
 .ach-medal.premios-palmares-medal .ach-art { filter: drop-shadow(0 0 calc(var(--sz) * .05) var(--lux-glow)); }
 .ach-medal.premios-palmares-medal .ach-art .ach-fg { stroke: var(--lux); }
 
+/* CENTRADA COMO LA TIRA DE LOGROS, y a lo ancho de la cabecera. Sin el ancho entero, la sección encogía a su
+   contenido mientras cabía en una fila —y parecía centrada— y al partirse en dos en el móvil pasaba a ocupar
+   todo el ancho con los trofeos pegados a la izquierda: de ahí el «a veces no está centrado» (01-10-2026). */
 .premios-palmares {
   display: grid;
+  justify-items: center;
   gap: .4rem;
+  width: 100%;
   margin-top: .8rem;
 }
 
@@ -1475,6 +1480,7 @@
   display: flex;
   gap: .9rem;
   flex-wrap: wrap;
+  justify-content: center;
   list-style: none;
   margin: 0;
   padding: 0;

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useYearSummarySignal } from './social/useYearSummarySignal';
 import { ensureSyncConfigLoaded, getSyncConfig } from '../model/repository/gistRepository';
 import { writeCanPublishHint } from '../model/repository/socialShellHint';
 import { localWeekKey } from '../core/utils/dateTime';
@@ -863,6 +864,18 @@ export function useSocialViewModel(options?: {
     [rawSocialDirectory, photoViewer, friendUidSet, authUser?.uid, ownProfileId],
   );
 
+  // El RESUMEN DEL AÑO: abrir el tuyo en temporada publica en tu perfil que ya lo has visto, y eso es lo que pinta
+  // la tarjeta destacada en el feed de tus amistades. Lo ya publicado se lee de tu propia entrada del directorio.
+  const ownYearSummarySeenYear = useMemo(() => {
+    const own = socialDirectory.find((entry) => isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId));
+    return own?.yearSummarySeen?.year ?? null;
+  }, [socialDirectory, authUser?.uid, ownProfileId]);
+  const markOwnYearSummaryOpened = useYearSummarySignal({
+    uid: authUser?.uid || '',
+    published: ownProfilePublished,
+    alreadySeenYear: ownYearSummarySeenYear,
+  });
+
   // Filas enriquecidas de la bandeja y la gestión. El cálculo vive en `social/friendshipViews` (puro): necesita el
   // directorio, que a su vez necesita saber quiénes son tus amigos, así que dentro del hook de amistades cerraría
   // un círculo entre los dos.
@@ -1350,6 +1363,7 @@ export function useSocialViewModel(options?: {
     closeProfileReviews,
     openProfileReviewDetail,
     openProfileAchievements,
+    openProfileSummary,
     closeProfileAchievements,
     openProfileGlobals,
     openRelatedReview,
@@ -2321,6 +2335,8 @@ export function useSocialViewModel(options?: {
     openProfileReviews,
     closeProfileReviews,
     openProfileAchievements,
+    openProfileSummary,
+    markOwnYearSummaryOpened,
     closeProfileAchievements,
     openProfileGlobals,
     openProfileReviewDetail,

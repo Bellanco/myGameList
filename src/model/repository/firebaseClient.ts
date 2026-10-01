@@ -88,6 +88,15 @@ export interface SocialProfileReference {
   palmares?: PalmaresEntry[];
 }
 
+/**
+ * Que esa persona ya abrió su RESUMEN DEL AÑO en temporada: el año y cuándo (ms). Es lo que pinta la tarjeta
+ * destacada del feed de sus amistades (`core/social/yearSummaryFeed.ts`).
+ */
+export interface YearSummarySeen {
+  year: number;
+  at: number;
+}
+
 export interface SocialDirectoryEntry {
   id: string;
   uid: string; // uid de Firebase del perfil — necesario para relaciones de amistad (id del doc canónico) y robusto ante el cutover uid→profileId
@@ -122,6 +131,11 @@ export interface SocialDirectoryEntry {
    * olvidar copiarlo es un error de compilación y no una vitrina en blanco.
    */
   achievementsMirror: string;
+  /**
+   * Si ya abrió su resumen del año en temporada, y cuándo; `null` si no. OBLIGATORIO por lo mismo que el espejo:
+   * la hidratación reconstruye cada entrada campo a campo, y declarado opcional se perdería sin que nada avisara.
+   */
+  yearSummarySeen: YearSummarySeen | null;
   /**
    * El PALMARÉS: las ediciones de la porra que ha ganado, para la vitrina de su ficha.
    *

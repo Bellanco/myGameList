@@ -8,7 +8,7 @@ import { LEGAL_CONSENT_UI, LEGAL_ROUTES } from '../../core/constants/legal';
 import type { GameItem, TabData } from '../../model/types/game';
 import { useSocialViewModel } from '../../viewmodel/useSocialViewModel';
 import { useGithubConnection } from '../../viewmodel/sync/githubConnection';
-import { SOCIAL_ROUTES, matchSocialRoute } from '../../viewmodel/social/socialRoutes';
+import { SOCIAL_ROUTES, matchSocialRoute, wantsYearSummary } from '../../viewmodel/social/socialRoutes';
 import { ENABLE_ACHIEVEMENTS } from '../../core/achievements/flags';
 import { Icon } from './Icon';
 import { SocialHubSkeleton } from './SocialHubSkeleton';
@@ -119,6 +119,8 @@ const SocialHubInner = memo(function SocialHubInner({
     openProfileReviews,
     closeProfileReviews,
     openProfileAchievements,
+    openProfileSummary,
+    markOwnYearSummaryOpened,
     closeProfileAchievements,
     openProfileGlobals,
     openProfileReviewDetail,
@@ -510,6 +512,10 @@ const SocialHubInner = memo(function SocialHubInner({
           onRemoveFriend={removeDetailFriend}
           viewerTier={ownTier}
           viewerHiddenTabs={hiddenTabs}
+          viewerCompleted={games?.c}
+          // La tarjeta del feed y el aviso del 15 llegan con el resumen ya desplegado (estado de la navegación).
+          openSummaryOnMount={wantsYearSummary(location.state)}
+          onOwnSummaryOpened={markOwnYearSummaryOpened}
         />
         {friendActionDialog}
         </>
@@ -612,6 +618,7 @@ const SocialHubInner = memo(function SocialHubInner({
         loadingDirectory={loadingDirectory}
         openProfileDetail={openDirectoryProfile}
         openProfileAchievements={openProfileAchievements}
+        openProfileSummary={openProfileSummary}
         onOpenProfiles={goToProfiles}
         onOpenOwnProfile={openOwnProfileDetail}
         onOpenRequests={goToRequests}

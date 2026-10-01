@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import type { TabId } from '../../../model/types/game';
 import type { ImportField, ImportFieldGroup, ImportFieldPrefs, ImportedGame } from '../../../model/types/import';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { IMPORT_UI } from '../../../core/constants/importLabels';
 import { COMMON_ICONS } from '../../../core/constants/icons';
 import { normalizeName } from '../../../core/utils/normalizeName';
 import { copyText } from '../../../core/utils/clipboard';
@@ -14,7 +14,7 @@ import '../../../styles/import.scss';
 // desde aquí o la bandeja se pinta sin ellas (mismo motivo que en las cuatro pantallas de Ajustes).
 import '../../../styles/settings.scss';
 
-const M = UI_MESSAGES.import.inbox;
+const M = IMPORT_UI.inbox;
 const PAGE = 40; // scroll infinito: se renderizan de PAGE en PAGE
 
 interface InboxScreenProps {
@@ -75,7 +75,7 @@ function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, on
     <div className="import-actions">
       <button type="button" className="btn btn-secondary" onClick={onBack}>
         <Icon name={COMMON_ICONS.arrowBack} />
-        <span>{UI_MESSAGES.import.back}</span>
+        <span>{IMPORT_UI.back}</span>
       </button>
     </div>
   );

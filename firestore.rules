@@ -51,7 +51,7 @@ service cloud.firestore {
         // (`scripts/purge-profile-pii.js`); esto cierra la puerta para que no pueda volver por una regresión.
         && request.resource.data.keys().hasOnly([
           "schemaVersion", "uid", "profileId", "displayName", "photoURL", "social", "updatedAt", "tier",
-          "createdAt", "achievements", "palmares"
+          "createdAt", "achievements", "palmares", "yearSummary"
         ])
         && profileTierNotSelfAssigned()
         && profilePalmaresNotSelfAssigned()
@@ -97,7 +97,25 @@ service cloud.firestore {
         && (!("createdAt" in request.resource.data)
             || request.resource.data.createdAt is number || request.resource.data.createdAt is timestamp)
         && (!("achievements" in request.resource.data) || profileAchievementsAreSane())
-        && (!("palmares" in request.resource.data) || profilePalmaresIsSane());
+        && (!("palmares" in request.resource.data) || profilePalmaresIsSane())
+        && (!("yearSummary" in request.resource.data) || profileYearSummaryIsSane());
+    }
+
+    /**
+     * EL AVISO DEL RESUMEN DEL AÑO (`profiles/{uid}.yearSummary`): `{ year, at }`, el año del resumen que su dueño
+     * ya ha abierto y cuándo. Lo escribe el propio dueño al abrirlo en temporada (del 15 al 31 de diciembre) y lo
+     * leen sus amistades para pintar la tarjeta del feed (ver `core/social/yearSummaryFeed.ts`).
+     *
+     * Forma cerrada y acotada, como el espejo de logros: un mapa con esas dos claves, un año entero razonable y una
+     * fecha. Nada que se pueda usar como almacén.
+     */
+    function profileYearSummaryIsSane() {
+      return request.resource.data.yearSummary is map
+        && request.resource.data.yearSummary.keys().hasOnly(["year", "at"])
+        && request.resource.data.yearSummary.year is int
+        && request.resource.data.yearSummary.year >= 2000
+        && request.resource.data.yearSummary.year <= 2100
+        && (request.resource.data.yearSummary.at is number || request.resource.data.yearSummary.at is timestamp);
     }
 
     /**

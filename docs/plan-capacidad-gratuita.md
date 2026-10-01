@@ -11,14 +11,19 @@
 
 | Fase | Qué | Esfuerzo | Qué gana |
 |---|---|---|---|
-| 0 | Línea base de consumo real | S | Saber de qué número partimos y comprobar cada fase |
-| 1 | Frenar la reconsulta de `/api/premios` | S | Deja de gastar 1 invocación + 1 lectura de KV **cada vez que se vuelve a la pestaña** |
-| 2 | Enlaces relacionados sin `list()` | M | Una visita anónima pasa de 1 *list* + ~51 lecturas a **2 lecturas**; se cierra la puerta por la que un enlace viral tumba los enlaces de todos |
-| 3 | Sacar `/assets/*` y `/fonts/*` de las Functions *(requiere decisión)* | M | Un dispositivo nuevo pasa de ~36 invocaciones a **0** por arrancar, y un despliegue deja de costar ~18 por dispositivo |
+| 0 | Línea base de consumo real *(pendiente)* | S | Saber de qué número partimos y comprobar cada fase |
+| 1 | Frenar la reconsulta de `/api/premios` ✅ | S | Deja de gastar 1 invocación + 1 lectura de KV **cada vez que se vuelve a la pestaña** |
+| 2 | Enlaces relacionados sin `list()` ✅ | M | Una visita anónima pasa de 1 *list* + ~51 lecturas a **2 lecturas**; se cierra la puerta por la que un enlace viral tumba los enlaces de todos |
+| 3 | Sacar `/assets/*` y `/fonts/*` de las Functions ✅ *(falta la vista previa de Cloudflare)* | M | Un dispositivo nuevo pasa de ~36 invocaciones a **0** por arrancar, y un despliegue deja de costar ~18 por dispositivo |
 | 4 | Amistades en caché persistente ✅ | M | Deja de leer N documentos de `friendships` en cada recarga del social |
-| 5 | Umbrales de vigilancia | S | Avisar antes de que un cupo corte, no después |
+| 4b | Directorio y clasificación de premios en caché persistente ✅ | M | La consulta del directorio (hasta 50 lecturas) se guarda en IndexedDB con una edad según el rango |
+| 5 | Umbrales de vigilancia *(pendiente)* | S | Avisar antes de que un cupo corte, no después |
 
 Orden recomendado: 0 → 1 → 2 → 3 (con su prueba previa) → 4. Cada fase es un commit independiente y reversible.
+
+**Estado (revisado el 01-10-2026):** fases 1 (`10094472`), 2 (`fc666e23`), 3 (`7d84a1f6`), 4 (`e6848d7b`) y 4b
+(`2a5364de`) hechas el 30-09-2026. Pendientes: la Fase 0, la Fase 5 y la comprobación de la Fase 3 en la vista
+previa de Cloudflare.
 
 ---
 
@@ -28,9 +33,9 @@ Todo se reinicia cada día (KV y Workers a las 00:00 UTC; Firestore a medianoche
 
 | Cupo gratuito | Techo | Quién lo gasta hoy |
 |---|---|---|
-| KV · *list* | **1.000/día** | `/api/share/related` (anónimo, por visita), `/api/share/mine`, publicar |
-| KV · escrituras | **1.000/día** | Carátulas (tope propio de 700, `COVER_DAILY_BUDGET`) + publicar (4 por enlace) |
-| Workers (Functions) | **100.000/día** | **Cada** `/assets/*` y `/fonts/*` (pasan por `brotliAsset`/`staleAsset`), `/cover`, `/api/*`, `/r/*` |
+| KV · *list* | **1.000/día** | `/api/share/mine`, publicar (`/api/share/related` ya no lista: lee el índice por autor, Fase 2) |
+| KV · escrituras | **1.000/día** | Carátulas (tope propio de 700, `COVER_DAILY_BUDGET`) + publicar (5 por enlace desde la Fase 2) |
+| Workers (Functions) | **100.000/día** | `/cover`, `/api/*`, `/r/*` (`/assets/*` y `/fonts/*` ya son estáticos, Fase 3) |
 | KV · lecturas | 100.000/día | `/cover` sin caché, avisos, premios, enlaces |
 | Firestore · lecturas | **50.000/día** | 5–15 por apertura; el social, 60–150 por usuario y día |
 | IGDB | 4 pet./s globales | Llenado inicial de carátulas (falla blando: 503 y reintento) |
@@ -38,7 +43,8 @@ Todo se reinicia cada día (KV y Workers a las 00:00 UTC; Firestore a medianoche
 
 Medido sobre el `dist` del 30-09-2026: el arranque pide **17 ficheros de `/assets` + 1 fuente**, y el service
 worker vuelve a pedir esos **18** con `cache: 'reload'` al instalarse. Como las dos rutas son Functions, un
-dispositivo nuevo gasta ~36 invocaciones solo en arrancar, más las pantallas perezosas.
+dispositivo nuevo gasta ~36 invocaciones solo en arrancar, más las pantallas perezosas. (Era así antes de la Fase 3:
+hoy esos ficheros son estáticos y no cuentan.)
 
 ---
 
@@ -55,7 +61,7 @@ Apuntar los números al pie de este documento (sección «Mediciones»).
 
 ---
 
-## Fase 1 — Frenar la reconsulta de premios · S
+## Fase 1 — Frenar la reconsulta de premios · S · ✅ hecha (30-09-2026)
 
 **Problema.** `usePremiosVisible` (montado siempre, desde `SettingsMenu`) sube `sello` en cada
 `visibilitychange` a visible, y con `sello > 0` llama a `loadPremiosSnapshot(true)`, que hace
@@ -74,7 +80,7 @@ una vuelta pasados 5 min → otra; el evento del panel → siempre.
 
 ---
 
-## Fase 2 — Enlaces relacionados sin `list()` · M
+## Fase 2 — Enlaces relacionados sin `list()` · M · ✅ hecha (30-09-2026)
 
 **Problema.** `GET /api/share/related/:token` es **anónimo** y, por cada visita, hace
 `kv.list({ prefix: 'user:{uid}:' })` y luego lee **cada** artículo del autor (hasta
@@ -115,7 +121,7 @@ va en la clave, igual que en `owner:{token}`, y nunca en la respuesta.
 
 ---
 
-## Fase 3 — `/assets/*` y `/fonts/*` como estáticos · M · *requiere decisión*
+## Fase 3 — `/assets/*` y `/fonts/*` como estáticos · M · ✅ hecha (30-09-2026, `7d84a1f6`)
 
 **Problema.** `functions/assets/[[path]].ts` y `functions/fonts/[[path]].ts` convierten cada fichero del build
 en una invocación de Workers. Existen por dos motivos:
@@ -229,7 +235,8 @@ cada escritura del perfil invalida la copia (también la de IndexedDB), y los re
 
 ## Fase 5 — Umbrales de vigilancia · S
 
-No es código: son los números a los que hay que mirar, apuntados en la checklist de despliegue del README.
+No es código: son los números a los que hay que mirar, para apuntarlos en la checklist de despliegue del README
+(pendiente: revisado el 01-10-2026, el README aún no los recoge).
 
 - **Al 60 % de cualquier cupo diario** (Fase 0 dice dónde mirar) → revisar antes de que corte.
 - **App Check sigue en `monitor`.** No pasar a `enforce` por encima de ~300 usuarios activos al día sin

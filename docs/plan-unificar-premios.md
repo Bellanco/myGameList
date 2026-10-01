@@ -15,7 +15,9 @@
 > **Estado:** escrito el 20-09-2026 con las decisiones de esa fecha (§Decisiones).
 > **F0 COMPLETA** (rama `feature/unificar-premios`, 20-09-2026): el criterio de administrador es el custom claim,
 > el claim está concedido en producción y las reglas nuevas están desplegadas en `mylists-f7313`, en ese orden
-> (§3.1). El resto de fases, sin empezar.
+> (§3.1).
+> **Estado real (revisado el 01-10-2026):** F0 a F4 hechas; F5 casi hecha (faltan las caras en la clasificación, ver
+> §8); F6 —retirar GA— no se puede comprobar desde este repositorio. Ya hay histórico importado: 2018–2023 y 2025.
 
 ---
 
@@ -57,7 +59,7 @@ unificación no está terminada mientras alguna falle.
 |---|---|---|
 | 0 | **Quién manda** | **Esta app.** GA se integra hasta desaparecer como aplicación; nada de dos sistemas conviviendo (§Principio rector, §13) |
 | 1 | Proyecto Firebase | **Uno solo: `mylists-f7313`**. `game-awards-d7881` se retira |
-| 2 | Datos que se migran | **Solo `categories`**. El resto se crea vacío: no hay ninguna edición publicada todavía |
+| 2 | Datos que se migran | **Solo `categories`**. El resto se crea vacío: no hay ninguna edición publicada todavía. *(Después sí se importó el histórico de las hojas —2018–2023 y 2025—, ver §8)* |
 | 3 | Administrador | **Custom claim `admin: true`** en los dos lados. GL abandona el email escrito en las reglas |
 | 4 | Idioma | Español ahora, **datos bilingües conservados**. La i18n de la app va en su propio plan posterior |
 | 5 | Entrada en la app | Ruta `/premios`, **sección estacional** con interruptor del administrador |
@@ -73,7 +75,8 @@ unificación no está terminada mientras alguna falle.
 | 15 | Retirada de GA | Redirección permanente + repositorio archivado |
 | 16 | Forma de trabajo | Plan primero (este documento), luego implementación **fase a fase**, parando al final de cada una |
 
-**Lo que NO se hace:** no se migran votos ni histórico (no existen); no se toca el catálogo de logros ni su mapa de
+**Lo que NO se hace:** no se migran votos ni histórico de GA (no existen; el histórico de las hojas de cálculo sí se
+importó después, ver §8); no se toca el catálogo de logros ni su mapa de
 bits; no hay voto ponderado por rango; no se levanta el `noindex` del dominio; no se abre la lectura de `profiles`
 ajenos para pintar avatares (se denormaliza, ver §4.1).
 
@@ -246,7 +249,8 @@ El resto nace vacío.
 
 Hoy, para existir en lo social hacen falta **las dos cosas**: sesión de Google y GitHub conectado. El canal de
 publicación es el gist social, y el directorio filtra por `social.enabled == true`; un perfil con esa marca y sin
-gist está tratado explícitamente como roto (`firebaseSocialRepository.ts:437`, señal `enabled-without-gist`).
+gist estaba tratado explícitamente como roto (señal `enabled-without-gist`). *(Hoy esa señal ya no se emite
+—`adminCensus.ts`: el id del canal dejó de publicarse en el perfil— y el directorio los enseña como index-only.)*
 
 Exigir eso para votar sería poner un muro de GitHub el día de más afluencia del año. Así que se define un tercer
 estado, que hasta ahora no existía:
@@ -264,7 +268,7 @@ perfil social completo→ lo de hoy: + social.enabled + gist + canal + feed
 1. **Nunca se escribe `social.enabled` sin gist.** Esa combinación ya significa «perfil roto» en el código que
    hidrata el directorio, y usarla para otra cosa haría que las cuentas ligeras aparecieran como perfiles
    averiados en el hub de todo el mundo.
-2. **La cuenta ligera se crea SIN el campo `tier`.** Comprobado en `firestore.rules:180`
+2. **La cuenta ligera se crea SIN el campo `tier`.** Comprobado en `firestore.rules:218`
    (`profileTierNotSelfAssigned`): en un `create` —donde `resource == null`— la regla exige que `tier` **no esté**
    en la escritura. Un `create` con `tier: 'bronze'` sería denegado. El rango lo pone el admin después, y quien no
    lo tenga se trata como bronce por el valor por omisión del código (`DEFAULT_PROFILE_TIER`).
@@ -295,7 +299,7 @@ Vive en `profiles/{uid}.palmares` (array, tope 50 entradas). Tres decisiones:
 - **Solo el admin lo escribe**, con la misma forma de protección que el rango: una función
   `profilePalmaresNotSelfAssigned()` que en escrituras del dueño exige que el campo **no cambie**. Sin eso,
   cualquiera se concede un trofeo en su propio documento, que lo lee todo el directorio.
-- **`palmares` entra en la allowlist** de `profileWriteIsValid()` (`firestore.rules:36`), que hoy es
+- **`palmares` entra en la allowlist** de `profileWriteIsValid()` (`firestore.rules:46`), que hoy es
   `["schemaVersion", "uid", "profileId", "displayName", "photoURL", "social", "updatedAt", "tier", "createdAt",
   "achievements"]`. Sin tocar esa lista, **toda escritura del perfil sería denegada** en cuanto el documento tenga
   el campo: recuérdese que en un `update` por merge lo que se valida es el documento RESULTANTE.
@@ -349,7 +353,8 @@ porra es **solo Firestore**: no gasta ni una petición del rate-limit de GitHub,
 
 ### 3.1 El administrador pasa a custom claim
 
-Hoy `isAdmin()` (`firestore.rules:13`) compara el email del token con una dirección escrita en el fichero. GA usa
+Antes de F0, `isAdmin()` comparaba el email del token con una dirección escrita en el fichero; hoy
+(`firestore.rules:31`) ya lee el claim. GA usa
 `request.auth.token.admin == true`. Se unifica en el claim, que es lo correcto: no ata las reglas a una cuenta, no
 publica tu correo en el repositorio y permite un segundo administrador.
 
@@ -390,6 +395,11 @@ intentos y volverán a aparecer cuando haya que nombrar a alguien:
 - **Desde `firebase-admin` 14 la API namespaced no existe**: `require('firebase-admin')` devuelve la API modular y
   `admin.credential` / `admin.auth()` son `undefined`. Se usan los subpaths `firebase-admin/app` y
   `firebase-admin/auth`, estables desde la v10.
+
+**El borde siguió con el correo hasta el 01-10-2026.** `isAdmin` de `functions/_lib/firebaseAuth.ts` comparaba con
+`ADMIN_EMAIL` aunque su comentario dijera que era el mismo criterio que `firestore.rules`. Ese día pasó al claim, con
+la misma función que el cliente (`hasAdminClaim`), y `ADMIN_EMAIL` salió de `wrangler.toml`: hallazgo 13 de
+`docs/revision-general-2026-09.md`, cerrado.
 
 **Aviso operativo:** revocar un claim no es inmediato —el token vive hasta una hora—, así que quitar el permiso de
 administrador a alguien tarda en surtir efecto. Con un solo administrador da igual; conviene saberlo.
@@ -502,7 +512,7 @@ Lo que **no** sale en público: ningún voto individual, ningún email, ningún 
 
 ### 4.3 Consentimiento
 
-Subir `LEGAL_VERSION` (`core/constants/legal.ts:56`, hoy `'2026-09-07'`) devuelve a **todo el mundo** a la puerta de
+Subir `LEGAL_VERSION` (`core/constants/legal.ts:59`, hoy `'2026-09-20'`; antes de F5 era `'2026-09-07'`) devuelve a **todo el mundo** a la puerta de
 aceptación. Se hace **una sola vez**, agrupando los cuatro cambios: resultados públicos, avatares en la
 clasificación, cuenta ligera y palmarés.
 
@@ -742,7 +752,7 @@ Cada fase termina con algo comprobable y con la suite en verde. Se para al final
 |---|---|---|---|
 | **F0** · Preparación | Claim de admin asignado; `isAdmin()` por claim en las reglas de esta app + sus tests; rama `feature/unificar-premios` desde `develop` | `npm run test:rules` en verde y `/admin` accesible tras re-loguear | 5 % |
 | **F1** · Lógica | `core/premios/` y `model/repository/premios*` en TypeScript, con los tests de `utils` y servicios portados | `npm run typecheck` + `npm test`; scoring y plazo cubiertos | 25 % |
-| | **Hecha, salvo los hooks.** Los tipos, los **diez módulos de cálculo** de `core/premios/` y los **cuatro repositorios** de `model/repository/premios/`, con 189 pruebas. Los hooks pasan a F3 a propósito: ver la nota de abajo | | |
+| | **Hecha, salvo los hooks.** Los tipos, los **diez módulos de cálculo** de `core/premios/` y los **cuatro repositorios** de `model/repository/premios/`, con 189 pruebas (hoy, 01-10-2026, son 20 módulos y 8 ficheros de repositorio). Los hooks pasan a F3 a propósito: ver la nota de abajo | | |
 
 **Por qué los hooks se van a F3.** El plan los metía aquí, pero al llegar se ve que no son lógica: son el cableado
 entre un repositorio y una pantalla que todavía no existe. `useVotingFlow` hay que reescribirlo entero (los pasos
@@ -773,8 +783,9 @@ voto popular (`votes`: categoría → nominado → cuántos, sin quién; `core/p
 palmarés gana la **participación** (puesto `0`, una entrada por persona y edición: la del puesto la sustituye) y
 el **año** de la edición, que va en el rótulo de la medalla («3.º en Game Awards 2021»; la píldora lleva solo el
 puesto, o el año si es de participar) y ordena la vitrina (`core/premios/palmares`). Las ediciones 2020–2023 se importan con `scripts/import-premios-historico.mjs`, con
-el ganador del palmarés real de TGA contrastado contra todas las marcas de las hojas, y a 2025 se le añaden el
-recuento y la participación con `scripts/premios-2025-votos.mjs`.
+el ganador del palmarés real de TGA contrastado contra todas las marcas de las hojas; 2018 y 2019, sin puntos, con
+`scripts/import-premios-2018-2019.mjs` (`c70f86db`); 2025 con `scripts/import-premios-2025.mjs` (`e05409f4`), y a
+2025 se le añaden el recuento y la participación con `scripts/premios-2025-votos.mjs`.
 
 **Dónde vive el arte del podio, dicho sin adornos.** Las cinco láminas están en `public/awards/` (1,2 MB), tal y
 como venían, **con su rótulo original**: se trajeron sin rerotular por decisión del 20-09-2026. La consecuencia es
@@ -785,7 +796,8 @@ las reseñas compartidas. La medalla tipográfica (`PalmaresMedal`) sigue siendo
 
 **La entrada estacional, hecha el 20-09-2026.** Dos accesos, los dos gobernados por `core/premios/visibility` y
 por el interruptor «Dónde se ve» del panel: un punto **en ámbar** en el menú de Ajustes, detrás de «Diseño», y un
-botón con el rey de ajedrez junto a las solicitudes del espacio social. Se leen sin cargar Firebase: la respuesta
+botón con el rey de ajedrez junto a las solicitudes del espacio social *(retirado del feed en `a9d6525b`; queda la
+entrada de Ajustes)*. Se leen sin cargar Firebase: la respuesta
 se guarda en este navegador y solo se refresca cuando ya hay sesión (ver `usePremiosVisible`), así que el arranque
 sube 0,4 kB y no 172. El ámbar es `--warn` **mezclado con el color de texto al 54 %**: a pelo se quedaba en 2,67:1
 sobre las paletas claras, y axe lo comprueba ahora en las dieciséis combinaciones.
@@ -796,7 +808,7 @@ justo lo que trae F4. Un aviso que nunca puede aparecer no se puede ni probar. A
 la portada de la app metería el SDK de Firebase en el grafo de arranque —172 kB para todo el mundo, incluido
 quien no vota nunca—, así que cuando se haga hay que resolverlo por otra vía (la función de avisos ya sirve
 desde KV, sin Firebase).
-| **F4** · Panel | Las seis pestañas dentro del `AdminHub` | e2e de admin rehecho: abrir edición, publicar, archivar | 15 % |
+| **F4** · Panel | Las pestañas de la porra (seis en el plan; al final, cinco) dentro del `AdminHub` | e2e de admin rehecho: abrir edición, publicar, archivar | 15 % |
 | | ✅ **HECHA.** La porra como una VISTA MÁS de `AdminHub` (sin segundo `/admin` ni segunda guarda), con sus **cinco pestañas**: Temporada (abrir, cerrar, publicar), Categorías (crear, editar, ordenar, eliminar; los nominados son un campo cada uno y conservan su id), Ganadores, Votos (censo + clasificación provisional) e Histórico (renombrar y borrar, con reapunte de la pantalla pública) | | |
 | **F5** · Social | Cuenta ligera, avatares en la clasificación, palmarés en el perfil, trofeo por rango, los tres cruces restantes de §6.5 (feed, estadísticas, añadir a Próximos), `LEGAL_VERSION` | Tests de reglas de `palmares`; comprobación manual de las cuatro puertas de la foto | 10 % |
 | | **Casi hecha.** Cuenta ligera al votar, palmarés concedido al publicar y enseñado como logro en la ficha del perfil (con sus 5 pruebas de reglas), la fila de la clasificación enlaza al perfil, y `LEGAL_VERSION` subida a `2026-09-20` con los tres tratamientos nuevos declarados. **Las caras en la clasificación quedan fuera**, con motivo medido: ver abajo | | |
@@ -867,9 +879,9 @@ verificado sobre el fichero que se cita.
 
 | # | Conflicto | Evidencia | Salida |
 |---|---|---|---|
-| 1 | **La cuenta ligera no puede crearse con `tier`** | `firestore.rules:180` — en `create` (`resource == null`) exige que `tier` **no** esté en la escritura | Crear sin el campo; el rango lo pone el admin |
-| 2 | **`social.enabled` sin gist ya significa «perfil roto»** | `firebaseSocialRepository.ts:437`, señal `enabled-without-gist` | La cuenta ligera **nunca** escribe esa marca |
-| 3 | **`palmares` fuera de la allowlist congela el perfil** | `profileWriteIsValid()`, `firestore.rules:36` — valida el documento RESULTANTE, así que un campo no listado deniega **toda** escritura posterior | Añadirlo a la lista **en el mismo despliegue** que lo escribe |
+| 1 | **La cuenta ligera no puede crearse con `tier`** | `firestore.rules:218` — en `create` (`resource == null`) exige que `tier` **no** esté en la escritura | Crear sin el campo; el rango lo pone el admin |
+| 2 | **`social.enabled` sin gist ya significa «perfil roto»** | Señal `enabled-without-gist` (hoy ya no la emite `adminCensus.ts`, revisado el 01-10-2026) | La cuenta ligera **nunca** escribe esa marca |
+| 3 | **`palmares` fuera de la allowlist congela el perfil** | `profileWriteIsValid()`, `firestore.rules:46` — valida el documento RESULTANTE, así que un campo no listado deniega **toda** escritura posterior | Añadirlo a la lista **en el mismo despliegue** que lo escribe |
 | 4 | **La regla de cierre deniega lo no declarado** | final de `firestore.rules`: `match /{document=**} { allow read, write: if false; }` | Las colecciones de la porra no existen hasta que sus reglas estén escritas |
 | 5 | **Una quinta pestaña rompe la barra y su test** | `tests/e2e/bottomNav.test.ts`: cuatro columnas medidas en 280 px | Entrada estacional por aviso, hub y ajustes (§6.2) |
 | 6 | **Dos rutas `/admin`** | `routes.ts` de esta app y `ROUTES.admin` de GA | Un solo panel: la porra es una sección más del `AdminHub` |
@@ -934,7 +946,7 @@ el principio rector sin discutir de gustos.
 1. **Ni un `.jsx` ni una clase de Tailwind** en el repositorio, y `tailwindcss` no aparece en `package.json`.
 2. **Una sola pantalla de inicio de sesión**, un solo `isAdmin()`, un solo error boundary por sección, un solo
    sistema de avisos, un solo mecanismo de tema. `grep` de `appTheme`, `appLanguage` y `AppContext` sin resultados.
-3. **Cambiar de tema en Ajustes cambia `/premios`** — los ocho, en claro y en oscuro — y axe pasa AA en las doce
+3. **Cambiar de tema en Ajustes cambia `/premios`** — los ocho, en claro y en oscuro — y axe pasa AA en las dieciséis
    combinaciones auditadas, con la porra incluida en el recorrido.
 4. **El presupuesto de arranque no se mueve**: ningún módulo de la porra entra en el grafo crítico
    (`scripts/ci-validate.js`), igual que no entra el hub social.

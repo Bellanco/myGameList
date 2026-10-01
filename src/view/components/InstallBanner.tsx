@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { INSTALL_UI } from '../../core/constants/labels';
+import { INSTALL_UI } from '../../core/constants/consentLabels';
 import { ANALYTICS_CONSENT_EVENT, readAnalyticsConsent } from '../../model/repository/analyticsConsentRepository';
 import {
   INSTALL_PROMPT_EVENT,

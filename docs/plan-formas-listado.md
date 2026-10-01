@@ -1,7 +1,13 @@
 # F5 — Las dos formas del listado (lista y caja)
 
-Estado: **en curso**, rama `feat/formas-listado`. Esto no es documentación de algo terminado: es dónde se
-quedó el trabajo, qué se decidió y qué falta, para poder retomarlo sin reconstruir el razonamiento.
+Estado: **fusionado** el 16-09-2026 (rama `feat/formas-listado`, `fab460e2`; entró en la 1.3.0). Nació como
+cuaderno de un trabajo en curso —dónde se quedó, qué se decidió y qué faltaba, para poder retomarlo sin
+reconstruir el razonamiento— y lo que sigue abierto está en la lista de pendientes de la §2.
+
+> **Revisado el 01-10-2026.** El estado pasa de «en curso» a fusionado; `GRID_CARD_MIN_PX` es hoy una tabla por
+> tamaño de cuadro y el CSS ya no tiene número que casar; la plantilla de `.row-cats`, el alto medido del
+> renglón, la carátula en desarrollo (`localCoverApi`) y la sincronización del tamaño de los cuadros se corrigen
+> donde aparecen. Y tras `4a68dc73` los renglones ya no descargan todas las carátulas al montar (§6.4).
 
 > **Al día de 2026-09-15**, los dos problemas de la §3 están resueltos y el renglón y la caja se rehicieron
 > sobre una maqueta de referencia. Lo que cambió está en la §6, al final; la §3 se conserva porque es el
@@ -58,8 +64,10 @@ aparte, `.row-meta`.)*
 
 **Forma caja.** Mosaico en rejilla. Cada fila de la rejilla es **una fila de tabla** (`tr.grid-row`) con una
 celda `colSpan` que contiene las cajas: así el virtualizador sigue midiendo filas de verdad. `GameTable`
-agrupa los juegos de N en N, con N calculado midiendo el contenedor (`GRID_CARD_MIN_PX`, que debe coincidir
-con el `minmax` de `.game-grid`). El detalle abierto se inserta tras la fila que contiene la caja pulsada.
+agrupa los juegos de N en N, con N calculado midiendo el contenedor contra el ancho mínimo de cuadro
+(`GRID_CARD_MIN_PX`, hoy una tabla por tamaño: `{ sm: 150, md: 205, lg: 268 }`, con sus gemelas para teléfono y
+para la caja sin carátula). El CSS ya no tiene un `minmax` que casar: `.game-grid` solo parte el ancho en las
+columnas que le llegan en `--grid-cols`. El detalle abierto se inserta tras la fila que contiene la caja pulsada.
 
 **El conmutador** (dos iconos nuevos en el sprite: `view-list`, `view-grid`) vive en la barra de filtros y no
 recibe props: lee el store.
@@ -123,7 +131,8 @@ La (1) es la que hace que el mosaico se lea como una colección y no como fichas
   de las que caben y que la virtualización sigue midiendo filas. *(Ya están cubiertas la alineación del renglón
   y la regularidad de la caja (`GameTableColumns.test.tsx`), las tres caras de la carga (`GameCover.test.tsx`) y
   la preferencia de tamaño (`gridSizePreference.test.ts`).)*
-- Decidir si el conmutador va también en /cuenta → Apariencia (hoy solo en la barra del listado).
+- Decidir si el conmutador va también en Ajustes → Diseño (`/ajustes/diseno`, la antigua /cuenta → Apariencia;
+  hoy solo en la barra del listado).
 - El detalle en mosaico funciona, pero no se ha probado con teclado.
 
 **~~Y lo que queda por limpiar~~ — HECHO:** la tabla clásica era código muerto y se ha ido. `shape` solo vale
@@ -184,7 +193,8 @@ Resuelve la §3.1. Cada renglón es una pieza con tres líneas:
 1. **Cabecera** (`.row-head`): el nombre a la izquierda; la nota y la insignia pegadas al canto derecho. Antes
    la nota viajaba al final de una línea de chips cuya longitud cambia en cada fila.
 2. **Categorías** (`.row-cats`): año, plataformas y géneros, cada uno en su ranura. En pantalla ancha es una
-   rejilla de columnas fijas (`auto 13rem 1fr`) **sin una sola línea dibujada**; en estrecha las ranuras se
+   rejilla de columnas proporcionales (`var(--row-col-year) minmax(0, 1fr) minmax(0, 2.2fr)`, con la del año a
+cero en las pestañas que no tienen años) **sin una sola línea dibujada**; en estrecha las ranuras se
    apilan —plataforma arriba, género debajo—, que es la maqueta §4.
 
 Y **un solo marcado para todos los anchos**: desaparece el `.row-meta` de mini-píldoras que había para el
@@ -221,7 +231,7 @@ justo los que la plataforma necesita para verse entera, y de los tres es el que 
 
 El año enseña **varios con su «+N»**, como llevaba en su columna: tres en escritorio, uno en el teléfono.
 
-Medido sobre el build con la biblioteca real: **las 302 filas miden 151 px exactas** a 1200 y a 1440 px de
+Medido sobre el build con la biblioteca real: **las 302 filas miden 150 px exactas** a 1200 y a 1440 px de
 ancho (129 en un teléfono de 412), y el género de todas empieza en el mismo píxel. Eso sale de reservar el
 alto de un chip (`--chip-slot-h`, 27 px medidos) en toda ranura que pueda quedarse vacía.
 
@@ -282,10 +292,14 @@ misma línea.
 ### 6.4 La carátula del renglón, y por qué en desarrollo no se ve
 
 `/cover` **no es un fichero: es una Pages Function** (`functions/cover.ts`, que habla con IGDB y sirve los
-bytes desde este dominio). `npm run dev` y `vite preview` sirven estáticos y no ejecutan Functions, así que
-`/cover?n=…` cae en el `_redirects` de la SPA y devuelve `index.html`: el `<img>` recibe HTML, no una imagen, y
-no se pinta nada — con la preferencia encendida y sin un solo error visible. Para verlas en local hace falta el
-runtime de Cloudflare, que además lee el `IGDB_CLIENT_SECRET` de `.dev.vars`:
+bytes desde este dominio). Vite no ejecuta Functions, y al principio `/cover?n=…` caía en el `_redirects` de la
+SPA y devolvía `index.html`: el `<img>` recibía HTML, no una imagen, y no se pintaba nada — con la preferencia
+encendida y sin un solo error visible.
+
+*Revisado el 01-10-2026:* en `npm run dev` la ruta la sirve hoy un gemelo, `localCoverApi` (`vite.config.ts`),
+que tira del mismo `functions/_lib/igdbCover` que la Function y lee el `IGDB_CLIENT_SECRET` de `.dev.vars`; sin el
+secreto contesta 501 y lo avisa por consola. Tocar una sin la otra separa desarrollo de producción. `vite preview`
+sigue sin servirla: para probar el build con la Function de verdad hace falta el runtime de Cloudflare:
 
 ```bash
 npm run build && npx wrangler pages dev --port 8000 --ip 127.0.0.1
@@ -298,10 +312,16 @@ que se ve es un renglón recortado de la carátula. Encima cae la capa —la sup
 la izquierda, donde están el nombre y las etiquetas, y abriéndose hacia la derecha—; en el teléfono la capa
 cierra más, porque allí el texto ocupa la fila entera.
 
-**Y por eso `/cover` tiene dos tamaños.** Con los 264 px de `t_cover_big`, llenar 1.400 son casi seis aumentos
-y lo que queda es una mancha de color. El renglón pide `s=ancho` (`t_1080p`, ~762 px) y el aumento baja a menos
-de dos. Cuesta ~120 kB por juego en vez de 25, y por eso no es el tamaño por defecto: el mosaico sigue con la
-pequeña, que es la que cabe en su ranura. Cada tamaño va en la URL y no en una cabecera porque el service
+**Y por eso `/cover` tiene varios tamaños.** Con los 264 px de `t_cover_big`, llenar 1.400 son casi seis aumentos
+y lo que queda es una mancha de color. El renglón pide `s=medio` (`t_720p`, 508 px), para todo el mundo: la
+`s=ancho` (`t_1080p`, ~762 px) se probó y bajo el velo no se distingue, pero en producción costaba casi el doble
+de descodificación al bajar y un 45 % más de fotogramas perdidos (medido el 01-10-2026; ver `coverDeRenglon`).
+Y desde `4a68dc73` (01-10-2026) los renglones ya no descargan todas las carátulas al montar: el virtualizador
+nace con el tamaño de la ventana (`initialRect`) en vez de caer en el render completo de respaldo, que montaba
+la biblioteca entera y lanzaba un fondo por renglón, y la franja `medio` (la de 720 px) es la de todas las
+cuentas, administración incluida.
+La `ancho` sigue sirviendo a la franja de las reseñas del social. El mosaico sigue con la pequeña, que es la que
+cabe en su ranura, y la `medio` en pantallas de densidad doble. Cada tamaño va en la URL y no en una cabecera porque el service
 worker cachea por URL y sin `Vary`: sin eso, el mosaico acabaría pintando la grande —o al revés— según cuál
 se pidiera primero.
 
@@ -347,7 +367,9 @@ gratis— con el carril nativo en transparente: la cuña son dos capas recortada
 la cápsula (el canal apagado y el relleno, tan ancho como diga `--grid-size-pos`). Y con `aria-valuetext`, para
 que no se anuncie «2 de 3» sino «Normales».
 
-**Y SINCRONIZA**, lo que obligó a arreglar de paso un fallo viejo: el `hasOnly` de `publicConfig` en
+**Y SINCRONIZABA** —hasta el 20-09-2026: hoy el tamaño, como la forma, vive solo en este aparato (ver §2), y el
+campo `gridSize` queda en la nube como `@deprecated`—, lo que obligó a arreglar de paso un fallo viejo: el
+`hasOnly` de `publicConfig` en
 `firestore.rules` no incluía `listShape` ni `covers`, que el cliente lleva escribiendo desde que existen. Un
 `hasOnly` que no cuadra **rechaza la escritura ENTERA**, así que a quien hubiera cambiado la forma del listado
 le dejaban de sincronizarse también la paleta y el tema. Es el mismo caso que le pasó a `effects` (test «L2»).

@@ -1,8 +1,9 @@
 # Acabado visual — plan
 
-Estado: **implementado** (26-09-2026, rama `feat/acabado-visual`). Aprobado el 25-09-2026 tras una revisión con
-capturas antes/después de las ocho paletas en los dos modos. Antes de implementarlo se revisó otra vez sobre un
-prototipo navegable (antes/después lado a lado, a 390, 1280, 1512 y 3840 px), y de esa revisión salieron tres
+Estado: **implementado** (26-09-2026, en la rama `feat/acabado-visual`, ya fusionada en develop; entró en la
+1.4.6). *Revisado el 01-10-2026: la rama ya no está abierta, el trabajo vive en develop.* Aprobado el
+25-09-2026 tras una revisión con capturas antes/después de las ocho paletas en los dos modos. Antes de
+implementarlo se revisó otra vez sobre un prototipo navegable (antes/después lado a lado, a 390, 1280, 1512 y 3840 px), y de esa revisión salieron tres
 cambios respecto a lo aprobado, marcados abajo: **F se retiró**, **A ganó una regla** para rejillas anchas y se
 añadió **S**, el social por dentro. Lo que no entra sigue en §4.
 

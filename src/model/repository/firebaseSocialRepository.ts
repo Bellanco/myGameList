@@ -16,6 +16,7 @@ import {
   isPermissionDeniedError,
   type SocialDirectoryEntry,
   type SocialProfileReference,
+  type YearSummarySeen,
 } from './firebaseClient';
 import { getCachedDirectoryQuery, invalidateCachedDirectoryQueries, putCachedDirectoryQuery } from './indexedDbRepository';
 
@@ -47,6 +48,17 @@ function isMissingIndexError(error: unknown): boolean {
 }
 
 /** `updatedAt` puede venir como Timestamp de Firestore o como número (docs escritos por clientes antiguos). */
+/**
+ * El aviso del resumen del año leído A LA DEFENSIVA: lo escribe su dueño, y un documento con cualquier cosa en el
+ * campo no puede tumbar el directorio — se queda sin tarjeta y ya.
+ */
+function readYearSummarySeen(raw: unknown): YearSummarySeen | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const { year, at } = raw as { year?: unknown; at?: { toMillis?: () => number } | number };
+  const millis = toMillis(at);
+  return Number.isInteger(year) && millis > 0 ? { year: year as number, at: millis } : null;
+}
+
 function toMillis(value: { toMillis?: () => number } | number | undefined): number {
   if (typeof value === 'number') {
     return Number.isFinite(value) ? value : 0;
@@ -452,6 +464,7 @@ export async function listSocialDirectory(
           updatedAt?: { toMillis?: () => number } | number;
           achievements?: { list?: unknown };
           palmares?: unknown;
+          yearSummary?: unknown;
         };
 
         return {
@@ -476,6 +489,8 @@ export async function listSocialDirectory(
           // local— y sin él la vitrina de una amistad y el porcentaje comparado se quedaban en blanco para
           // siempre, aunque el espejo estuviera publicado (lo estaba: la escritura nunca fue el problema).
           achievementsMirror: String(data.achievements?.list || ''),
+          // Del mismo documento, sin coste: la tarjeta del resumen del año en el feed de sus amistades.
+          yearSummarySeen: readYearSummarySeen(data.yearSummary),
           palmares: Array.isArray(data.palmares) ? (data.palmares as PalmaresEntry[]) : undefined,
         };
       })
@@ -527,6 +542,7 @@ export async function listSocialDirectory(
         updatedAt: entry.updatedAt,
         tier: entry.tier,
         achievementsMirror: entry.achievementsMirror,
+        yearSummarySeen: entry.yearSummarySeen,
         palmares: entry.palmares,
       }));
 

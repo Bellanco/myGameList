@@ -2,8 +2,6 @@ import { STATS_UI } from './statsLabels';
 import type { IconName } from './icons';
 import { voiceByPalette } from './palettes';
 import { TAB_IDS, type TabId } from '../../model/types/game';
-import type { ImportField } from '../../model/types/import';
-import { APP_LOCALE } from './locale';
 
 export interface TabAction {
   target: TabId;
@@ -136,8 +134,8 @@ export const SYNC_MESSAGES = {
 } as const;
 
 /**
- * Textos de apariencia (tema y paleta). Fuera de `settingsLabels` por el mismo motivo que la analítica: los
- * usa `ThemeToggle`, que viaja en el arranque, y tenerlos allí traería de vuelta todo el módulo de Ajustes.
+ * Textos de apariencia (tema y paleta). Fuera de `settingsLabels` porque los usa `ThemeToggle`, que viaja en el
+ * arranque, y tenerlos allí traería de vuelta todo el módulo de Ajustes.
  */
 export const APPEARANCE_UI = {
   groupAria: 'Tema de la aplicación',
@@ -165,60 +163,6 @@ export const APPEARANCE_UI = {
   coversOff: 'Desactivadas',
 } as const;
 
-/**
- * Textos del consentimiento de analítica. Fuera de `settingsLabels` a propósito: los pinta `ConsentBanner`, que
- * se monta con la aplicación, y tenerlos allí arrastraría los ~11 kB de Ajustes al chunk de arranque.
- */
-export const ANALYTICS_UI = {
-  title: 'Analítica',
-  subtitle: 'Estadísticas de uso anónimas (Google Analytics) para saber qué falla y qué se usa.',
-  groupAria: 'Consentimiento de analítica',
-  on: 'Activada',
-  off: 'Desactivada',
-  /**
-   * QUÉ SE MIRA Y QUÉ NO, dicho en dos listas. La tarjeta tenía una frase y dos botones, y se quedaba a medias
-   * —medio palmo de tarjeta vacía— justo donde hace falta lo contrario: nadie decide sobre un permiso sin saber
-   * qué alcanza. Lo que sale aquí no es relleno; es la respuesta a la única pregunta que se hace al leerlo.
-   */
-  collectsLabel: 'Qué se registra',
-  collects: ['Qué pantallas se visitan', 'Errores de la aplicación', 'Navegador y tamaño de pantalla'],
-  neverLabel: 'Qué no sale nunca de aquí',
-  never: ['Tus listas y tus notas', 'Tus reseñas', 'Tu correo o tu nombre'],
-  bannerTitle: 'Analítica opcional',
-  /* CUATRO LÍNEAS ERAN TRES DE MÁS, y tres seguían siendo una de más: el aviso se lee de pie, tapando la
-     pantalla, y lo único que hay que saber para decidir cabe en dos —qué se recoge y que se puede cambiar de
-     idea—. El detalle —qué identificadores, cuánto duran— está en la política de cookies, que tiene su enlace
-     justo debajo. Y ya no manda a «Cuenta», que era una pantalla que ha dejado de existir.
-
-     SOBRABA «Solo se activan si aceptas»: lo dicen ya los dos botones, que es donde se mira antes de decidir, y
-     costaba una línea entera de aviso —de ella depende el alto que publica `--consent-h`, y de ese alto, lo que
-     se aparta todo lo que se apoya sobre la barra—. El hecho no cambia: sin decisión guardada no se inicializa
-     Analytics (ver `ConsentBanner`), y la promesa por escrito sigue en la política de cookies. */
-  bannerBody: 'Estadísticas de uso anónimas para saber qué falla y qué se usa. Puedes cambiarlo cuando quieras en Ajustes › Legal.',
-  bannerAccept: 'Aceptar',
-  bannerReject: 'Rechazar',
-  bannerMore: 'Política de cookies',
-  bannerAria: 'Consentimiento de analítica',
-} as const;
-
-/**
- * INVITACIÓN A INSTALAR. Se ofrece una vez y se puede decir que no una vez.
- *
- * El cuerpo dice lo que se GANA, no lo que se hace: «añadir a la pantalla de inicio» es el gesto, y el gesto no
- * convence a nadie. Lo que convence es que se abra sin la barra del navegador y que arranque sin conexión —las
- * dos cosas que esta app ya sabe hacer y que, sin instalar, no se llegan a ver nunca.
- *
- * NO se menciona que ocupe poco ni que «no es una descarga»: es cierto, pero defenderse de una objeción que
- * nadie ha puesto la planta en la cabeza de quien lee.
- */
-export const INSTALL_UI = {
-  bannerAria: 'Instalar la aplicación',
-  bannerTitle: 'Ten Mis Listas a mano',
-  bannerBody: 'Añádela a tu pantalla de inicio: se abre sin la barra del navegador y arranca aunque no haya conexión.',
-  bannerAccept: 'Añadir',
-  bannerReject: 'Ahora no',
-} as const;
-
 export const UI_MESSAGES = {
   /** Lo que la app cuenta al guardar, borrar o mover un juego (el banner de estado de la página). */
   games: {
@@ -243,53 +187,6 @@ export const UI_MESSAGES = {
   },
   /** El rótulo de la cápsula de estado, según la clase de aviso. */
   statusKind: { ok: 'Correcto', warn: 'Aviso', err: 'Error' },
-  admin: {
-    noTags: 'No hay etiquetas',
-    editPlaceholder: 'Escribe el nuevo valor',
-    editBtn: 'Editar',
-    deleteBtn: 'Eliminar',
-    editCancelBtn: 'Cancelar',
-    editSaveBtn: 'Guardar',
-    closeAria: 'Cerrar modal',
-  },
-  form: {
-    // El hint también hace de "spacer" invisible (aria-hidden) en los campos que no son de etiquetas, para que
-    // las columnas de una misma fila queden alineadas aunque solo una lleve texto de ayuda.
-    enterToAddHint: 'Pulsa Enter o separa con comas',
-    newTitle: 'Nuevo juego',
-    editTitle: 'Editar juego',
-    nameLabel: 'Nombre *',
-    namePlaceholder: 'Ej: The Witcher 3',
-    genresLabel: 'Géneros',
-    genresPlaceholder: 'Ej: Acción',
-    platformsLabel: 'Plataformas',
-    platformsPlaceholder: 'Ej: PC',
-    scoreLabel: 'Puntuación',
-    scoreToggle: 'Puntuar este juego',
-    scoreToggleHint: 'Activa la puntuación de este juego. Si no la activas, no cuenta en la ruleta.',
-    interestLabel: 'Interés',
-    yearsLabel: 'Años completado',
-    yearsPlaceholder: (year: number) => `Ej: ${year}`,
-    hoursLabel: 'Horas jugadas',
-    hoursPlaceholder: 'Ej: 120',
-    strengthsLabel: 'Puntos fuertes',
-    strengthsPlaceholder: 'Ej: Combate',
-    weaknessesLabel: 'Puntos débiles',
-    weaknessesPlaceholder: 'Ej: Repetitivo',
-    reasonsLabel: 'Razones',
-    reasonsPlaceholder: 'Ej: Falta de tiempo',
-    steamDeck: 'Steam Deck',
-    reviewLabel: 'Análisis',
-    reviewPlaceholder: 'Ej: Historia sólida, combate excelente y gran ambientación.',
-    charCount: (count: number, max: number) => `${count.toLocaleString(APP_LOCALE)} / ${max.toLocaleString(APP_LOCALE)} caracteres`,
-    // A11y-3: mensajes de umbral para lectores de pantalla (texto constante por banda → se anuncian una vez al
-    // cruzar el umbral, no en cada pulsación). El conteo numérico se deja como texto visible SIN aria-live.
-    charNearLimit: 'Te acercas al límite de caracteres del análisis.',
-    charLimitReached: 'Has alcanzado el límite de caracteres del análisis.',
-    close: 'Cerrar',
-    cancel: 'Cancelar',
-    save: 'Guardar',
-  },
   appTitle: 'Mis Listas',
   scrollTop: 'Volver arriba',
   // A11y-4: encabezado de nivel 1 de cada pantalla. El diseño es "headerless" a propósito (sin barra ni título
@@ -372,103 +269,22 @@ export const UI_MESSAGES = {
     action: 'Recargar',
     announce: 'Hay una nueva versión de la aplicación. Recarga para verla.',
   },
+  /**
+   * LO QUE DICE EL ARRANQUE AL IMPORTAR: los avisos que lanza `App` y el botón de la lista vacía de `GameTable`.
+   * El resto —las guías de Playnite y la bandeja— vive en `importLabels`, porque solo lo pintan pantallas
+   * perezosas y aquí viajaría en el arranque.
+   */
   import: {
-    back: 'Volver',
     // Importar un JSON de copia desde Ajustes.
     fileDone: 'Datos importados correctamente',
     fileDoneOverwritten: 'Datos importados y Gist sobrescrito correctamente',
     fileDoneLocalOnly: 'Datos importados localmente, pero no hay Gist configurado para sobrescribir.',
     fileInvalid: 'Archivo JSON no válido',
     integrations: {
-      title: 'Integraciones',
-      /* CINCO FRASES SEGUIDAS ERAN UN MURO. Decían cosas distintas —qué hace, qué necesitas, de dónde trae,
-         qué pasa con los duplicados— y había que leerlas enteras para saber si esto te servía. Ahora la
-         primera va sola arriba y el resto se reparte en lo que cada cosa es: una condición, una lista de
-         tiendas que se lee de un vistazo y una nota al pie. */
-      /* TRES FRASES Y SE ACABÓ. Aquí se viene a traer la biblioteca, no a estudiar cómo funciona: basta con
-         saber qué hace, de dónde lo saca y qué hace falta para ello. Lo demás —los pasos, el detalle de las
-         consolas, qué pasa con un juego repetido— está en las dos guías de abajo, que es donde se busca cuando
-         de verdad hace falta. Las tiendas van dentro de la frase y no en fichas sueltas: son siete nombres, se
-         leen igual de rápido y no fingen ser botones. */
-      note: 'Trae de una vez los juegos que ya tienes en tus tiendas, sin añadirlos a mano: llegan a la bandeja para que elijas cuáles te quedas.',
-      sources: 'Funciona con Steam, GOG, Epic, EA, Ubisoft, Amazon y Battle.net, y también con PlayStation y Xbox si les instalas su complemento en Playnite.',
-      requires: 'Necesitas Playnite (solo Windows) y su extensión gratuita «Playnite Library Exporter».',
-      stepsTitle: 'Cómo traer tu biblioteca, paso a paso',
-      /* UN PASO, UNA COSA. Estas instrucciones las sigue alguien con Playnite abierta en la otra pantalla, y
-         cada paréntesis, cada «cuando termine» y cada frase con dos acciones dentro obliga a releer para saber
-         qué toca hacer ahora. Se cuentan como se dictan en voz alta: haz esto, ahora esto. */
-      /* La invitación a descargar Playnite va SUELTA y no dentro del primer paso: solo se enseña en un
-         navegador de Windows, que es el único sitio donde se puede instalar (ver `isWindows`). En el resto
-         —el móvil incluido— el paso se queda en «abre Playnite» y nadie persigue un programa que no existe
-         para su sistema. */
-      downloadHint: 'Si no la tienes, descárgala en',
-      downloadLabel: 'playnite.link',
-      downloadUrl: 'https://playnite.link',
-      steps: [
-        'Abre Playnite en tu PC con Windows.',
-        'Arriba a la izquierda, entra en «Complementos» → «Explorar complementos» y abre la pestaña «Genérica».',
-        'Busca «Playnite Library Exporter» y pulsa «Instalar».',
-        'Cierra Playnite y vuelve a abrirla.',
-        'Entra otra vez en «Complementos» → «Playnite Library Exporter» → «Export» y confirma. Deja el formato JSON, que es el que viene puesto.',
-        'Se guardará un archivo «.json». Vuelve aquí, pulsa «Importar de Playnite» y elígelo.',
-        'Tus juegos aparecerán en la bandeja de importados, donde eliges cuáles te quedas.',
-      ],
       importBtn: 'Importar de Playnite',
       importAria: 'Seleccionar el archivo JSON exportado por Playnite Library Exporter',
       viewInbox: (n: number) => `Ver bandeja (${n})`,
       parseError: 'No se pudo leer el fichero. Comprueba que es el JSON exportado por «Playnite Library Exporter».',
-      consoles: {
-        psn: {
-          title: 'Añadir tus juegos de PlayStation',
-          steps: [
-            'Abre Playnite en tu PC con Windows.',
-            'Arriba a la izquierda, entra en «Complementos» → «Explorar complementos» y abre la pestaña «Bibliotecas».',
-            'Busca «PlayStation library integration», de Xenor, y pulsa «Instalar».',
-            'Cierra Playnite y vuelve a abrirla.',
-            'Entra en «Complementos» → ajustes de «PlayStation library integration» e inicia sesión con tu cuenta de PlayStation.',
-            'Tus juegos de PlayStation ya están en Playnite. Ahora tráelos aquí con los pasos de la otra guía.',
-          ],
-        },
-      },
-    },
-    inbox: {
-      title: 'Bandeja de importados',
-      note: 'Estos juegos se guardan en este equipo y caducan a los 30 días si no los clasificas.',
-      sectionNew: 'Nuevos',
-      sectionExisting: 'Ya en tus listas',
-      empty: 'No hay juegos en la bandeja. Impórtalos desde Ajustes.',
-      goSettings: 'Ir a Ajustes',
-      classifyTo: 'Clasificar en',
-      discard: 'Descartar',
-      clear: 'Vaciar bandeja',
-      existingBadge: 'Ya en tus listas',
-      suggested: 'sugerida',
-      origin: 'Origen',
-      game: 'Nombre',
-      search: 'Buscar por nombre',
-      enrich: 'Actualizar en tus listas',
-      enrichHint: 'Ya lo tienes: añade género/plataforma/horas que falten al juego de tu lista.',
-      showing: (shown: number, total: number) => `Mostrando ${shown} de ${total}`,
-      copyNameAria: (name: string) => `Copiar «${name}»`,
-      copyNameSuccess: (name: string) => `«${name}» copiado`,
-      copyNameError: 'No se pudo copiar el nombre',
-      fields: {
-        title: 'Qué datos traer',
-        note: 'Se aplica a TODOS los juegos de la bandeja. El nombre siempre se traslada; lo que desmarques aquí no se copiará (podrás rellenarlo a mano en el formulario).',
-        toggleShow: 'Ver qué datos traer',
-        toggleHide: 'Ocultar qué datos traer',
-        newGames: 'Al clasificar un juego nuevo',
-        existingGames: 'Al actualizar uno que ya tienes',
-        existingHint: 'Las plataformas y los géneros se SUMAN a los que ya tenga el juego (no se quita nada); las horas y la nota solo se rellenan si las tienes vacías.',
-        labels: {
-          platforms: 'Plataformas',
-          genres: 'Géneros',
-          hours: 'Horas',
-          grade: 'Nota',
-        } satisfies Record<ImportField, string>,
-        fieldAria: (field: string, group: string) => `${field} — ${group}`,
-        summary: (fields: string) => (fields ? `Se traen: ${fields}.` : 'No se trae ningún dato extra.'),
-      },
     },
     notice: (added: number, merged: number, duplicates: number) =>
       `${added} añadido(s)` +
@@ -519,10 +335,6 @@ export const UI_MESSAGES = {
     chipScore: (value: number | string) => `Puntuación: ${value}+`,
     chipHours: (value: string) => `Horas: ${value}`,
     clearFilters: 'Limpiar filtros',
-  },
-  starPicker: {
-    groupAria: 'Seleccionar puntuación',
-    starAria: (star: number) => `${star} estrella${star > 1 ? 's' : ''}`,
   },
   table: {
     edit: 'Editar',

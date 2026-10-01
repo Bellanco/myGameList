@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ANALYTICS_UI } from '../../core/constants/labels';
+import { ANALYTICS_UI } from '../../core/constants/consentLabels';
 import { LEGAL_ROUTES } from '../../core/constants/legal';
 import { ANALYTICS_CONSENT_EVENT, persistAnalyticsConsent, readAnalyticsConsent } from '../../model/repository/analyticsConsentRepository';
 import { enableAnalyticsAfterConsent } from '../../model/repository/firebaseGateway';

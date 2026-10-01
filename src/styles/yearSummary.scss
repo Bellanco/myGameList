@@ -1,0 +1,428 @@
+/* ══ EL RESUMEN DEL AÑO del perfil social ═══════════════════════════════════════════════════════════════════
+   La importa `YearSummary.tsx`, que es perezoso: así llega con el componente y no depende de que otra hoja del
+   hub esté cargada (una hoja atada a otro chunk dejaba pantallas sin estilo).
+
+   Lo que queda de «historias» es la construcción —número de capítulo, una idea por tarjeta, la cifra grande y la
+   primera tarjeta en el color de acento—, pero apiladas hacia abajo: sin carrusel y sin desplazamiento lateral.
+
+   SOLO FICHAS. El color de acento, las superficies y las letras salen de cada tema (`--steam`, `--surface`,
+   `--font-display`…), así que el resumen se viste con el tema que haya sin un selector con su nombre. La rueda de
+   la nota (rojo → verde) es común a todos, como en el resto de la app. */
+
+.ys {
+  display: grid;
+  gap: 1.1rem;
+  color: var(--text);
+  font-family: var(--font-body);
+  min-width: 0;
+}
+
+/* Las cabeceras del hub ponen color, tamaño y recorte a sus `h3`/`h4`; aquí mandan las del resumen. */
+.hub-feed-card-detail .ys .ys-title {
+  margin: 0;
+  color: inherit;
+  font: 800 clamp(1.35rem, 3.6vw, 2rem) / 1.08 var(--font-display);
+  letter-spacing: -.01em;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  text-transform: none;
+}
+
+.ys-card {
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  isolation: isolate;
+}
+
+/* LA TARJETA ES LA SOCIAL (`hub-feed-card`): su fondo, su borde y su sombra los pone cada tema —la placa de
+   Cámara de pruebas, el filete HUD de Sin futuro, el pergamino de Plata y acero—, igual que en el feed. Aquí solo
+   se le da el aire y se le quita el apilado en columna de la base, que separaría cada pieza con su hueco. */
+.ys .ys-card.hub-feed-card {
+  display: block;
+  padding: clamp(1.1rem, 3.5vw, 2rem);
+  border-radius: var(--radius-lg);
+}
+
+/* La portada, en el acento del tema y con su tinta (`--on-accent`), que es la que cada tema ajusta para leerse
+   sobre su acento: así funciona igual con el naranja de la forja que con el amarillo de Sin futuro. Es la única
+   tarjeta propia del resumen, y por eso la única que lleva velo. */
+.ys-card.is-accent {
+  padding: clamp(1.1rem, 3.5vw, 2rem);
+  border-radius: calc(var(--radius-lg) + 4px);
+  color: var(--on-accent);
+  background: linear-gradient(150deg, var(--steam) 0%, color-mix(in srgb, var(--steam) 86%, var(--bg)) 100%);
+  box-shadow: var(--e2);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(60% 120% at 100% 0%, rgb(255 255 255 / .16), transparent 70%);
+  }
+
+  .ys-kicker, .ys-chap, .ys-lead, .ys-avg span { color: color-mix(in srgb, var(--on-accent) 82%, transparent); }
+}
+
+/* LA COMPOSICIÓN DE LA PORTADA: un mosaico inclinado de carátulas en la mitad derecha, que se funde con el acento
+   hacia el texto. Va en absoluto, así que la tarjeta mide lo mismo con ella que sin ella. Entra con un fundido
+   cuando han cargado las suficientes (`is-ready`), para que no se vea llegar tesela a tesela. */
+.ys-collage {
+  position: absolute;
+  inset: -12% -6% -12% 42%;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 45%);
+          mask-image: linear-gradient(90deg, transparent 0%, #000 45%);
+
+  &.is-ready { opacity: .9; }
+}
+
+.ys-collage-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .55rem;
+  transform: rotate(-9deg) translateY(-6%);
+
+  img {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+    border-radius: var(--stats-radius, 8px);
+    box-shadow: 0 6px 16px rgb(0 0 0 / .35);
+  }
+}
+
+/* La nota media y el número de capítulo caen sobre las carátulas: llevan una placa del acento para leerse, sin
+   añadir alto a su fila. */
+.ys-card.is-accent .ys-chap {
+  margin: -.25rem -.45rem;
+  padding: .25rem .45rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--steam) 82%, transparent);
+}
+
+.ys-card.is-accent .ys-avg {
+  margin: -.3rem -.6rem;
+  padding: .3rem .6rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--steam) 82%, transparent);
+}
+
+.ys-card.is-common { border-color: color-mix(in srgb, var(--steam) 35%, var(--border)); }
+
+/* EL FONDO DE «CONTIGO»: la carátula del juego en común que más os gustó, con el velo de las reseñas del perfil
+   (`reviews.scss`): tapa por la izquierda, donde va el texto, y deja ver el dibujo por la derecha. Va en un
+   elemento propio y no en un pseudoelemento de la tarjeta, que son del tema. */
+.ys-card-cover {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--surface) 95%, transparent) 0%,
+      color-mix(in srgb, var(--surface) 86%, transparent) 55%,
+      color-mix(in srgb, var(--surface) 62%, transparent) 100%
+    ),
+    var(--ys-cover);
+  background-repeat: no-repeat;
+  background-size: cover, cover;
+  background-position: center, center 35%;
+}
+
+.ys-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: .9rem;
+}
+
+.ys-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  font: 600 var(--fs-2xs) / 1.25 var(--font-label, var(--font-body));
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ys-kicker-icon { width: 1.15em; height: 1.15em; flex: none; color: var(--steam); }
+.ys-card.is-accent .ys-kicker-icon { color: inherit; }
+
+.ys-chap {
+  flex: none;
+  white-space: nowrap;
+  font: 700 var(--fs-xs) / 1 var(--font-mono);
+  letter-spacing: .08em;
+  color: var(--text-muted);
+}
+
+.ys-dim { color: var(--text-muted); }
+.ys-note { margin: 1rem 0 0; font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.45; }
+
+.ys-grade {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: hsl(var(--ys-hue) 62% 50%);
+
+  /* En claro, más oscura: sobre el pergamino o la placa clara de algunos temas, al 32 % no llegaba a 4,5:1 (Sol y luna es el más exigente). */
+  :root[data-theme="light"] & { color: hsl(var(--ys-hue) 80% 21%); }
+}
+
+/* ── 1 · Portada ─────────────────────────────────────────────────────────────────────────────────────────── */
+.ys-cover-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem 1.4rem;
+}
+
+.ys-big {
+  font: 800 clamp(4rem, 13vw, 7.5rem) / .85 var(--font-display);
+  letter-spacing: -.045em;
+}
+
+.ys-lead { margin: .5rem 0 0; font-size: var(--fs-lg); line-height: 1.35; }
+
+.ys-avg {
+  text-align: right;
+
+  span { display: block; font-size: var(--fs-sm); }
+  b { display: block; font: 800 var(--fs-4xl) / 1 var(--font-mono); }
+}
+
+.ys-chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: 1rem; }
+
+.ys-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: .3rem .65rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-xs);
+  border: 1px solid color-mix(in srgb, var(--on-accent) 28%, transparent);
+  background: color-mix(in srgb, var(--on-accent) 10%, transparent);
+}
+
+/* ── 2 · Juego del año ───────────────────────────────────────────────────────────────────────────────────── */
+.ys-two {
+  display: grid;
+  grid-template-columns: minmax(8rem, 13rem) minmax(0, 1fr);
+  gap: 1.4rem;
+  align-items: center;
+}
+
+/* La portada de casa cuando no hay carátula (o quien mira las tiene apagadas): un rectángulo en el acento con
+   el título. Con carátula, la imagen va encima y el título se queda solo para lectores de pantalla. */
+.ys-boxart {
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-md);
+  display: grid;
+  place-items: end start;
+  padding: .7rem;
+  overflow: hidden;
+  /* Oscura por ABAJO en los dos modos, que es donde va el título en blanco: con la mezcla hacia la superficie, en
+     claro se quedaba en un pastel y el título no se leía. */
+  background: linear-gradient(160deg, var(--steam) 0%, color-mix(in srgb, var(--steam) 42%, #000) 100%);
+  box-shadow: var(--e2);
+  font: 700 var(--fs-sm) / 1.15 var(--font-display);
+  color: #fff;
+  text-shadow: 0 1px 2px rgb(0 0 0 / .5);
+
+  &.has-cover {
+    background: var(--ys-cover) center / cover no-repeat, var(--surface);
+
+    span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  }
+}
+
+.ys-meta { margin-top: .4rem; }
+
+.ys-quote {
+  margin: .9rem 0 0;
+  padding-left: .9rem;
+  border-left: 3px solid var(--steam);
+  font-style: italic;
+  font-size: var(--fs-lg);
+  line-height: 1.45;
+}
+
+.ys-podium {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  counter-reset: ys-podium 1;
+
+  li {
+    counter-increment: ys-podium;
+    display: grid;
+    grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+    gap: .5rem;
+    align-items: baseline;
+    padding: .5rem 0;
+    border-top: 1px dashed var(--border);
+
+    &::before { content: counter(ys-podium); font: 700 var(--fs-sm) / 1 var(--font-mono); color: var(--text-muted); }
+  }
+}
+
+/* ── 3 · Cuándo los terminó ──────────────────────────────────────────────────────────────────────────────── */
+.ys-months {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: .4rem;
+  align-items: end;
+  height: 9.5rem;
+  margin-top: 1.6rem;
+}
+
+.ys-month {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  height: 100%;
+  gap: .3rem;
+  text-align: center;
+
+  small { font: 600 var(--fs-2xs) / 1 var(--font-mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+  &.is-zero small { color: var(--text-muted); }
+}
+
+.ys-month-bar {
+  position: relative;
+  align-self: end;
+  height: calc(var(--ys-n) / var(--ys-max) * 100%);
+  min-height: 3px;
+  /* Las PALANCAS del tema (ver `stats.scss`): a canto vivo donde el tema no admite curvas. */
+  border-radius: var(--stats-radius, 6px) var(--stats-radius, 6px) var(--stats-bar, 2px) var(--stats-bar, 2px);
+  background: color-mix(in srgb, var(--steam) 55%, var(--surface));
+
+  b { position: absolute; top: -1.3rem; left: 0; right: 0; font: 700 var(--fs-xs) / 1 var(--stats-num, var(--font-mono)); color: var(--text); }
+  .is-top & { background: var(--steam); box-shadow: 0 0 0 3px color-mix(in srgb, var(--steam) 22%, transparent); }
+}
+
+/* El año día a día: 53 columnas de semana que se estrechan con el ancho; nunca empujan la página. */
+.ys-cal {
+  display: grid;
+  grid-template-rows: repeat(7, auto);
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 2px;
+  margin-top: 1.4rem;
+
+  i { aspect-ratio: 1; border-radius: var(--stats-bar, 2px); background: color-mix(in srgb, var(--text) 8%, transparent); }
+  i.is-on { background: var(--steam); box-shadow: 0 0 0 1px color-mix(in srgb, var(--steam) 40%, transparent); }
+  i.is-pad { background: none; }
+}
+
+.ys-cal-cap {
+  display: flex;
+  justify-content: space-between;
+  margin-top: .4rem;
+  font: 500 var(--fs-3xs) / 1 var(--font-mono);
+  color: var(--text-muted);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.ys-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1rem;
+  margin-top: 1.3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+
+  b { display: block; font: 700 var(--fs-lg) / 1.2 var(--font-display); }
+  span { display: block; margin-top: .25rem; font-size: var(--fs-sm); color: var(--text-muted); line-height: 1.35; }
+}
+
+/* ── 4 · Géneros ─────────────────────────────────────────────────────────────────────────────────────────── */
+.ys-genres { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: .85rem; }
+
+.ys-genre {
+  display: grid;
+  grid-template-columns: minmax(7rem, 11rem) minmax(0, 1fr) auto;
+  gap: .2rem 1rem;
+  align-items: center;
+}
+
+.ys-genre-name { font-weight: 700; overflow-wrap: anywhere; }
+.ys-genre-bar { height: .7rem; border-radius: var(--stats-pill, var(--radius-pill)); background: color-mix(in srgb, var(--text) 8%, transparent); overflow: hidden; }
+.ys-genre-bar i { display: block; height: 100%; width: calc(var(--ys-p) * 1%); border-radius: inherit; background: var(--ys-c); }
+.ys-genre-n { font: 700 var(--fs-md) / 1 var(--font-mono); }
+.ys-genre-best { grid-column: 2 / -1; font-size: var(--fs-xs); color: var(--text-muted); }
+
+/* ── 5 · Lo que valoró y lo que le chirrió · 7 · Contigo ─────────────────────────────────────────────────── */
+.ys-tags { list-style: none; margin: .7rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: .45rem; }
+
+.ys-tag {
+  display: inline-flex;
+  align-items: baseline;
+  gap: .4rem;
+  padding: .4rem .75rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  font-size: calc(var(--fs-sm) + var(--ys-w, 0) * .12rem);
+
+  /* La cifra con el color de su etiqueta: sobre el tinte verde o rojo, el gris tenue no llegaba a 4,5:1. */
+  b { font: 700 var(--fs-xs) / 1 var(--font-mono); color: inherit; }
+  &.is-up { border-color: color-mix(in srgb, var(--success) 45%, var(--border)); background: color-mix(in srgb, var(--success) 10%, transparent); }
+  &.is-down { border-color: color-mix(in srgb, var(--danger) 40%, var(--border)); background: color-mix(in srgb, var(--danger) 8%, transparent); }
+}
+
+.ys-gap { margin: 1rem 0 0; line-height: 1.45; }
+
+/* ── 6 · Frente al año anterior ──────────────────────────────────────────────────────────────────────────── */
+.ys-vs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 1rem;
+
+  /* Filete y no velo: sobre la tarjeta de algunos temas, el gris tenue encima de un velo no llegaba a 4,5:1. */
+  > div { padding: .9rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--border); }
+  b { display: block; font: 800 var(--fs-3xl) / 1 var(--font-mono); }
+  /* El verde y el rojo del tema, mezclados con la tinta: el `--success` claro de algunos temas es un verde de
+     relleno, no de texto. */
+  b.is-up { color: color-mix(in srgb, var(--success) 60%, var(--text)); }
+  b.is-down { color: color-mix(in srgb, var(--danger) 60%, var(--text)); }
+  small { display: block; margin-top: .3rem; font-size: var(--fs-sm); color: var(--text-muted); line-height: 1.35; }
+}
+
+@media (max-width: 620px) {
+  .ys-two { grid-template-columns: 1fr; }
+  .ys-boxart { max-width: 8rem; }
+  .ys-months { gap: .2rem; }
+  .ys-month small { font-size: var(--fs-3xs); }
+  .ys-genre { grid-template-columns: minmax(0, 1fr) auto; }
+  .ys-genre-bar { grid-column: 1 / -1; grid-row: 2; }
+  .ys-genre-best { grid-column: 1 / -1; }
+}
+
+@media (max-width: 620px) {
+  /* En el teléfono no hay mitad derecha libre: el mosaico se queda en la esquina de arriba a la derecha y se funde
+     hacia la izquierda y hacia abajo, para que el rótulo, el año y la frase sigan sobre el acento. */
+  .ys-collage {
+    inset: -18% -22% 38% 46%;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 55%), linear-gradient(180deg, #000 35%, transparent 100%);
+    -webkit-mask-composite: source-in;
+            mask-image: linear-gradient(90deg, transparent 0%, #000 55%), linear-gradient(180deg, #000 35%, transparent 100%);
+            mask-composite: intersect;
+
+    &.is-ready { opacity: .8; }
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ys-month-bar, .ys-genre-bar i { transition: height .3s ease, width .3s ease; }
+  .ys-collage { transition: opacity .5s ease; }
+}
+

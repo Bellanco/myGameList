@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FILTER_BOOL, TAB_TOOLTIPS, UI_MESSAGES, VALIDATION_MESSAGES } from '../../core/constants/labels';
+import { FILTER_BOOL, TAB_TOOLTIPS, VALIDATION_MESSAGES } from '../../core/constants/labels';
+import { FORM_UI } from '../../core/constants/formLabels';
 import { COMMON_ICONS } from '../../core/constants/icons';
 import type { GameItem, TabId } from '../../model/types/game';
 import type { GameDraft } from '../../viewmodel/useGameListViewModel';
@@ -140,7 +141,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
   const reviewProgressClass = reviewProgress >= 100 ? 'has-error' : reviewProgress >= 90 ? 'has-warning' : '';
   // A11y-3: mensaje anunciado por SR solo en umbrales (texto constante por banda → no se reanuncia por tecla).
   const reviewLiveMessage =
-    reviewProgress >= 100 ? UI_MESSAGES.form.charLimitReached : reviewProgress >= 90 ? UI_MESSAGES.form.charNearLimit : '';
+    reviewProgress >= 100 ? FORM_UI.charLimitReached : reviewProgress >= 90 ? FORM_UI.charNearLimit : '';
 
   /**
    * Juego ya guardado con este mismo nombre (en cualquier lista, ignorando el que se está editando). Se calcula
@@ -364,7 +365,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
 
   const hoursField = (
     <div className="fg">
-      <label htmlFor="draft-hours" className="flabel">{UI_MESSAGES.form.hoursLabel}</label>
+      <label htmlFor="draft-hours" className="flabel">{FORM_UI.hoursLabel}</label>
       <input
         id="draft-hours"
         className={`finput ${fieldErrors.hours ? 'has-error' : hoursNotice ? 'has-warning' : ''}`.trim()}
@@ -373,7 +374,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
         type="text"
         inputMode="decimal"
         autoComplete="off"
-        placeholder={UI_MESSAGES.form.hoursPlaceholder}
+        placeholder={FORM_UI.hoursPlaceholder}
         value={hoursText}
         aria-invalid={fieldErrors.hours ? true : undefined}
         aria-describedby={fieldErrors.hours || hoursNotice ? 'draft-hours-error' : undefined}
@@ -384,7 +385,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
           {fieldErrors.hours || hoursNotice}
         </small>
       ) : (
-        <small className="tag-hint tag-hint--spacer" aria-hidden="true">{UI_MESSAGES.form.enterToAddHint}</small>
+        <small className="tag-hint tag-hint--spacer" aria-hidden="true">{FORM_UI.enterToAddHint}</small>
       )}
     </div>
   );
@@ -393,7 +394,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
     <dialog
       ref={dialogRef}
       className="modal-dialog"
-      aria-label={initialDraft.id ? UI_MESSAGES.form.editTitle : UI_MESSAGES.form.newTitle}
+      aria-label={initialDraft.id ? FORM_UI.editTitle : FORM_UI.newTitle}
       onMouseDown={(event) => {
         // Click en el backdrop (fuera de .modal) → cerrar; el target es el propio <dialog>.
         if (event.target === event.currentTarget) onClose();
@@ -402,12 +403,12 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
       {open ? (
       <div className="modal">
         <div className="modal-hd">
-          <div className="modal-title">{draft.id ? UI_MESSAGES.form.editTitle : UI_MESSAGES.form.newTitle}</div>
+          <div className="modal-title">{draft.id ? FORM_UI.editTitle : FORM_UI.newTitle}</div>
           <button
             className="btn-icon"
             type="button"
-            aria-label={UI_MESSAGES.form.close}
-            title={UI_MESSAGES.form.close}
+            aria-label={FORM_UI.close}
+            title={FORM_UI.close}
             onClick={onClose}
           >
             <Icon name={COMMON_ICONS.close} />
@@ -416,12 +417,12 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
         <div className="modal-body">
           <div className="frow">
             <div className="fg">
-              <label htmlFor="draft-name" className="flabel">{UI_MESSAGES.form.nameLabel}</label>
+              <label htmlFor="draft-name" className="flabel">{FORM_UI.nameLabel}</label>
               <input
                 id="draft-name"
                 className={`finput ${fieldErrors.name || duplicate ? 'has-error' : ''}`.trim()}
                 value={draft.name}
-                placeholder={UI_MESSAGES.form.namePlaceholder}
+                placeholder={FORM_UI.namePlaceholder}
                 aria-invalid={duplicate || fieldErrors.name ? true : undefined}
                 aria-describedby={duplicate || fieldErrors.name ? 'draft-name-error' : undefined}
                 onChange={(event) => {
@@ -434,45 +435,45 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
                   {duplicateMessage || fieldErrors.name}
                 </small>
               ) : (
-                <small className="tag-hint tag-hint--spacer" aria-hidden="true">{UI_MESSAGES.form.enterToAddHint}</small>
+                <small className="tag-hint tag-hint--spacer" aria-hidden="true">{FORM_UI.enterToAddHint}</small>
               )}
             </div>
             <TagInput
-              label={UI_MESSAGES.form.genresLabel}
+              label={FORM_UI.genresLabel}
               required
               inputId="draft-genres"
               listId="dl-genres"
-              placeholder={UI_MESSAGES.form.genresPlaceholder}
+              placeholder={FORM_UI.genresPlaceholder}
               values={draft.genres}
               pendingValue={pending.genres}
               onPendingValueChange={(value) => setPendingValue('genres', value)}
               onAdd={(values) => addTextTags('genres', values)}
               onRemove={(value) => removeTextTag('genres', value)}
               chipClassName="chip-genre"
-              hint={UI_MESSAGES.form.enterToAddHint}
+              hint={FORM_UI.enterToAddHint}
               errorMessage={fieldErrors.genres}
             />
           </div>
 
           <div className="frow">
             <TagInput
-              label={UI_MESSAGES.form.platformsLabel}
+              label={FORM_UI.platformsLabel}
               required
               inputId="draft-platforms"
               listId="dl-platforms"
-              placeholder={UI_MESSAGES.form.platformsPlaceholder}
+              placeholder={FORM_UI.platformsPlaceholder}
               values={draft.platforms}
               pendingValue={pending.platforms}
               onPendingValueChange={(value) => setPendingValue('platforms', value)}
               onAdd={(values) => addTextTags('platforms', values)}
               onRemove={(value) => removeTextTag('platforms', value)}
               chipClassName="chip-plat"
-              hint={UI_MESSAGES.form.enterToAddHint}
+              hint={FORM_UI.enterToAddHint}
               errorMessage={fieldErrors.platforms}
             />
             {supportsScore(currentTab) ? (
               <div className="fg fg-score-field">
-                <label className="flabel">{currentTab === 'p' ? UI_MESSAGES.form.interestLabel : UI_MESSAGES.form.scoreLabel} {currentTab === 'c' ? '*' : ''}</label>
+                <label className="flabel">{currentTab === 'p' ? FORM_UI.interestLabel : FORM_UI.scoreLabel} {currentTab === 'c' ? '*' : ''}</label>
                 <div className={`score-input-shell ${fieldErrors.score ? 'has-error' : ''}`.trim()}>
                   {scoreScale === 'grade' ? (
                     <ScoreDial
@@ -493,7 +494,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
                   )}
                 </div>
                 {fieldErrors.score ? <small className="tag-hint is-error">{fieldErrors.score}</small> : null}
-                {!fieldErrors.score ? <small className="tag-hint tag-hint--spacer" aria-hidden="true">{UI_MESSAGES.form.enterToAddHint}</small> : null}
+                {!fieldErrors.score ? <small className="tag-hint tag-hint--spacer" aria-hidden="true">{FORM_UI.enterToAddHint}</small> : null}
               </div>
             ) : null}
           </div>
@@ -501,10 +502,10 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
           {supportsYears(currentTab) ? (
             <div className="frow">
               <TagInput
-                label={UI_MESSAGES.form.yearsLabel}
+                label={FORM_UI.yearsLabel}
                 required
                 inputId="draft-years"
-                placeholder={UI_MESSAGES.form.yearsPlaceholder(new Date().getFullYear())}
+                placeholder={FORM_UI.yearsPlaceholder(new Date().getFullYear())}
                 values={draft.years}
                 pendingValue={pending.years}
                 onPendingValueChange={(value) => setPendingValue('years', value)}
@@ -513,7 +514,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
                   setLocalDraft({ ...draft, years: draft.years.filter((entry) => entry !== Number(value)) });
                 }}
                 chipClassName="chip-generic"
-                hint={UI_MESSAGES.form.enterToAddHint}
+                hint={FORM_UI.enterToAddHint}
                 errorMessage={fieldErrors.years}
               />
               {supportsHours(currentTab) ? hoursField : null}
@@ -524,49 +525,49 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
             <div className="frow">
               {supportsStrengths(currentTab) ? (
                 <TagInput
-                  label={UI_MESSAGES.form.strengthsLabel}
+                  label={FORM_UI.strengthsLabel}
                   inputId="draft-strengths"
                   listId="dl-strengths"
-                  placeholder={UI_MESSAGES.form.strengthsPlaceholder}
+                  placeholder={FORM_UI.strengthsPlaceholder}
                   values={draft.strengths}
                   pendingValue={pending.strengths}
                   onPendingValueChange={(value) => setPendingValue('strengths', value)}
                   onAdd={(values) => addTextTags('strengths', values)}
                   onRemove={(value) => removeTextTag('strengths', value)}
                   chipClassName="chip-pf"
-                  hint={UI_MESSAGES.form.enterToAddHint}
+                  hint={FORM_UI.enterToAddHint}
                 />
               ) : null}
 
               {supportsWeaknesses(currentTab) ? (
                 <TagInput
-                  label={UI_MESSAGES.form.weaknessesLabel}
+                  label={FORM_UI.weaknessesLabel}
                   inputId="draft-weaknesses"
                   listId="dl-weaknesses"
-                  placeholder={UI_MESSAGES.form.weaknessesPlaceholder}
+                  placeholder={FORM_UI.weaknessesPlaceholder}
                   values={draft.weaknesses}
                   pendingValue={pending.weaknesses}
                   onPendingValueChange={(value) => setPendingValue('weaknesses', value)}
                   onAdd={(values) => addTextTags('weaknesses', values)}
                   onRemove={(value) => removeTextTag('weaknesses', value)}
                   chipClassName="chip-pd"
-                  hint={UI_MESSAGES.form.enterToAddHint}
+                  hint={FORM_UI.enterToAddHint}
                 />
               ) : null}
 
               {supportsReasons(currentTab) ? (
                 <TagInput
-                  label={UI_MESSAGES.form.reasonsLabel}
+                  label={FORM_UI.reasonsLabel}
                   inputId="draft-reasons"
                   listId="dl-weaknesses"
-                  placeholder={UI_MESSAGES.form.reasonsPlaceholder}
+                  placeholder={FORM_UI.reasonsPlaceholder}
                   values={draft.reasons}
                   pendingValue={pending.reasons}
                   onPendingValueChange={(value) => setPendingValue('reasons', value)}
                   onAdd={(values) => addTextTags('reasons', values)}
                   onRemove={(value) => removeTextTag('reasons', value)}
                   chipClassName="chip-pd"
-                  hint={UI_MESSAGES.form.enterToAddHint}
+                  hint={FORM_UI.enterToAddHint}
                 />
               ) : null}
             </div>
@@ -575,7 +576,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
           {currentTab === 'v' ? (
             <div className="frow">
               <div className="fg fg-score-field">
-                <label className="flabel">{UI_MESSAGES.form.scoreLabel}</label>
+                <label className="flabel">{FORM_UI.scoreLabel}</label>
                 <button
                   type="button"
                   className={`btn btn-toggle ${draft.scored ? 'active' : ''}`.trim()}
@@ -591,7 +592,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
                   }
                 >
                   <Icon name={COMMON_ICONS.star} />
-                  <span>{UI_MESSAGES.form.scoreToggle}</span>
+                  <span>{FORM_UI.scoreToggle}</span>
                 </button>
                 {draft.scored ? (
                   <div className="score-input-shell">
@@ -605,7 +606,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
                     )}
                   </div>
                 ) : (
-                  <small className="tag-hint">{UI_MESSAGES.form.scoreToggleHint}</small>
+                  <small className="tag-hint">{FORM_UI.scoreToggleHint}</small>
                 )}
               </div>
               {hoursField}
@@ -617,11 +618,11 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
               <button
                 className={`btn btn-toggle btn-toggle-deck ${draft.steamDeck ? 'active' : ''}`}
                 type="button"
-                aria-label={UI_MESSAGES.form.steamDeck}
+                aria-label={FORM_UI.steamDeck}
                 onClick={() => setLocalDraft({ ...draft, steamDeck: !draft.steamDeck })}
               >
                 <Icon name={COMMON_ICONS.steamDeck} />
-                <span>{UI_MESSAGES.form.steamDeck}</span>
+                <span>{FORM_UI.steamDeck}</span>
               </button>
             </div>
             {boolField ? (
@@ -646,13 +647,13 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
 
           {supportsReview(currentTab) ? (
             <div className="fg">
-              <label htmlFor="draft-review" className="flabel">{UI_MESSAGES.form.reviewLabel}</label>
+              <label htmlFor="draft-review" className="flabel">{FORM_UI.reviewLabel}</label>
               <textarea
                 id="draft-review"
                 className="ftextarea"
                 maxLength={REVIEW_MAX_LENGTH}
                 value={draft.review}
-                placeholder={UI_MESSAGES.form.reviewPlaceholder}
+                placeholder={FORM_UI.reviewPlaceholder}
                 onChange={(event) => {
                   const nextReview = event.target.value.slice(0, REVIEW_MAX_LENGTH);
                   setLocalDraft({ ...draft, review: nextReview });
@@ -661,7 +662,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
               <div className="field-footer">
                 {/* A11y-3: conteo visible sin aria-live (ya no se anuncia por pulsación). */}
                 <small className={`tag-hint ${reviewProgressClass}`.trim()}>
-                  {UI_MESSAGES.form.charCount(reviewCount, REVIEW_MAX_LENGTH)}
+                  {FORM_UI.charCount(reviewCount, REVIEW_MAX_LENGTH)}
                 </small>
                 {/* Región viva exclusiva para SR: solo lleva texto en los umbrales (90% / 100%). */}
                 <span className="sr-only" role="status" aria-live="polite">
@@ -685,10 +686,10 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
             </div>
           ) : null}
           <button className="btn btn-secondary" type="button" onClick={onClose}>
-            {UI_MESSAGES.form.cancel}
+            {FORM_UI.cancel}
           </button>
           <button className="btn btn-steam" type="button" onClick={runSave}>
-            {UI_MESSAGES.form.save}
+            {FORM_UI.save}
           </button>
         </div>
       </div>

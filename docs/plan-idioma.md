@@ -1,6 +1,6 @@
 # Idioma — la aplicación en español e inglés
 
-Estado: **F0 hecha** (2026-09-25; ver §4.1), el resto sin empezar. Recoge lo medido en el código ese día y las decisiones tomadas con el
+Estado: **F0 hecha** (2026-09-25; ver §4.1), el resto sin empezar (revisado el 01-10-2026). Recoge lo medido en el código ese día y las decisiones tomadas con el
 propietario (§6). Si una cifra no cuadra con el código, manda el código: corrígela aquí.
 
 ---
@@ -33,7 +33,7 @@ categoría bilingües y los textos en módulos propios para no pagar dos veces.
 **No hay infraestructura de i18n**: ni librería, ni contexto de idioma, ni `navigator.language`, ni
 `documentElement.lang` en tiempo de ejecución. Lo que sí hay y sirve:
 
-- **`WidenText<T>`** (`labels.ts:532-546`): ensancha un objeto `as const` a `string`, así que un segundo
+- **`WidenText<T>`** (`labels.ts`, junto a `StatsLabels`): ensancha un objeto `as const` a `string`, así que un segundo
   diccionario puede cumplir *exactamente* el mismo tipo. Una clave que falte en inglés es un error de compilación.
 - **`statsVoice.ts`**: dos diccionarios del mismo tipo (`own`/`other`) servidos por contexto. Es el esquema de
   un idioma, aplicado hoy a la persona gramatical.

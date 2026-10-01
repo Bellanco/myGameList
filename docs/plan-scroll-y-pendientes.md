@@ -55,25 +55,31 @@
   scroll** y elimina el único `scrollTo` instantáneo de la aplicación, que era el caso límite que el filtro del
   hook tenía que distinguir. El test de componente que lo protegía ahora comprueba lo contrario, para que nadie
   lo reintroduzca.
-- **`StatsPanel.tsx:121` se queda.** Ese sí es un cambio de estado (abrir un año desde la curva), no de ruta.
+- **`src/view/components/stats/StatsPanel.tsx:121` se queda.** Ese sí es un cambio de estado (abrir un año desde la curva), no de ruta.
 
 ---
 
-## 2. Purgar los restos legacy de los perfiles  ·  **seguridad, operativo**
+## 2. Purgar los restos legacy de los perfiles  ·  ✅ **HECHO**
 
 `profiles/{userId}` lo lee **cualquier usuario autenticado** cuando `social.enabled == true`
-(`firestore.rules:322`). El código ya hace lo correcto: al guardar un perfil borra `email` y `social.gistId` con
-`deleteField()` (`firebaseRepository.ts:163,171`), y `/admin` tiene los tres botones de purga (email, gist de
+(`firestore.rules:387`). El código ya hace lo correcto: al guardar un perfil borra `email` y `social.gistId` con
+`deleteField()` (`firebaseRepository.ts:165,173`), y `/admin` tiene los tres botones de purga (email, gist de
 juegos, token en claro).
 
 Pero eso solo sanea a quien **vuelve a guardar**. Los perfiles de quien no ha vuelto siguen con sus restos en
-producción. **No es código: es pasar la purga desde el panel.** Es el único punto de seguridad abierto.
+producción. **No es código: es pasar la purga desde el panel.** Era el único punto de seguridad abierto.
+
+**Cerrado (revisado el 01-10-2026):** según `SECURITY.md` («Restos legacy: purgados»), quien vuelve se sanea al
+iniciar sesión (`firebaseProfileHealRepository`) y `scripts/purge-profile-pii.js` remató a los inactivos; el
+contador `legacy` del panel estaba a cero al cerrarlo.
 
 ---
 
 ## 3. `IconSprite` a `.svg` externo  ·  **solo cuando apriete**
 
-28,4 kB sin comprimir, el 15 % del chunk de arranque y el mayor con diferencia. Sacarlo con
+28,4 kB sin comprimir, el 15 % del chunk de arranque y el mayor con diferencia. *(Cifra anterior a `873f7e78`, que
+partió el sprite en dos y dejó los extras perezosos en `IconSpriteRest`: hoy son 20,5 kB minificados en el chunk de
+entrada, medido el 01-10-2026. El margen y el ahorro de abajo hay que volver a medirlos.)* Sacarlo con
 `<use href="/sprite.svg#icon-x">` da ~6 kB comprimidos y subiría el margen de 5,7 a unos 11 kB.
 
 Coste: una petición más (precacheable, así que solo la primera visita), toca el componente `Icon` que usa toda
@@ -83,14 +89,15 @@ El desglose completo y el método de medición están en el comentario de `scrip
 
 ---
 
-## 4. La versión 1.3.1  ·  **sin desplegar**
+## 4. La versión 1.3.1  ·  ✅ **desplegada**
 
 Entra todo lo de esta tanda y ya está en las notas: las carátulas, la persistencia silenciosa, el `state` de
 OAuth, la ruleta fuera del arranque, el scroll y el salto al logro. El bump (`5a590ae`) quedó ANTES de esos
 últimos commits en el historial; como no se ha desplegado, no se reescribió nada: el changelog es el que manda.
 
-Recordatorio de releases anteriores: **el tag puede no subir** —el PAT no tiene scope `workflow` y la clave SSH
-es de otra cuenta—; la rama sí sube sola.
+~~Recordatorio de releases anteriores: **el tag puede no subir** —el PAT no tiene scope `workflow` y la clave SSH
+es de otra cuenta—; la rama sí sube sola.~~ Obsoleto: desde el 24-09-2026 el PAT tiene scope `workflow`. La 1.3.1
+salió con su etiqueta, y detrás vinieron las 1.3.2 a 1.4.7 y la 1.5.0 (fusionada en `master`).
 
 ---
 
@@ -106,14 +113,15 @@ De `docs/plan-persistencia-caratulas.md`, sin cambios:
 
 ---
 
-## Estado y orden
+## Estado y orden (revisado el 01-10-2026)
 
 | | |
 |---|---|
 | 1. El scroll al navegar | ✅ hecho (`fcea1d2`, `26115c1`) |
-| 2. Purgar los perfiles | ⬜ pendiente — operativo, desde `/admin` |
-| 3. `IconSprite` externo | ⬜ aplazado — solo cuando el margen de arranque apriete |
-| 4. Desplegar la 1.3.1 | ⬜ pendiente |
+| 2. Purgar los perfiles | ✅ hecho — ver `SECURITY.md`, «Restos legacy: purgados» |
+| 3. `IconSprite` externo | ⬜ aplazado — solo cuando el margen de arranque apriete (cifras por volver a medir) |
+| 4. Desplegar la 1.3.1 | ✅ hecho |
 | 5. Comprobación del criterio de las carátulas | ⬜ pendiente — justo después de desplegar |
 
-**Orden:** desplegar la 1.3.1 → comprobar el criterio → la purga. `IconSprite` no tiene prisa.
+**Orden:** desplegar la 1.3.1 → comprobar el criterio → la purga. Hechos el despliegue y la purga, solo queda
+comprobar el criterio. `IconSprite` no tiene prisa.

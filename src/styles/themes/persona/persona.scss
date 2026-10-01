@@ -261,7 +261,29 @@
 /* ── §7 · Segmentos y campos (filtros, búsqueda, formulario, compositor de posts): superficies con borde
    de contenedor, así que llevan el contorno `--pop-line` visible (blanco en oscuro / oscuro en claro),
    igual que los paneles. Botones/chips/insignias mantienen su borde negro (tienen su propia forma). ── */
-:root[data-palette="persona"] .hub-seg { border: 2px solid var(--pop-line); }
+:root[data-palette="persona"] .hub-seg { border: 2px solid var(--pop-line); border-radius: 0; }
+/* LA CATEGORÍA ELEGIDA ES UN BOTÓN DEL TEMA en pequeño: rojo, inclinado, filete de tinta y sombra dura (§5).
+   La inclinación va en el `::after` y no en la pieza porque su `transform` lo escribe el componente para
+   deslizarla. La sombra tira 3 px y no 5: dentro del segmento solo hay 4 px de aire y el resto se cortaría. */
+:root[data-palette="persona"] .hub-seg-btn { border-radius: 0; }
+:root[data-palette="persona"] .hub-seg-ind {
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+:root[data-palette="persona"] .hub-seg-ind::after {
+  content: '';
+  position: absolute;
+  inset: 0 3px;
+  transform: skewX(-7deg);
+  background: color-mix(in srgb, var(--steam) 85%, #000);
+  border: 2px solid #0a0a0a;
+  box-shadow: 3px 3px 0 rgba(255, 255, 255, .92);
+}
+:root[data-palette="persona"][data-theme="light"] .hub-seg-ind::after {
+  border-color: #151011;
+  box-shadow: 3px 3px 0 #151011;
+}
 :root[data-palette="persona"] .input-base,
 :root[data-palette="persona"] .finput,
 :root[data-palette="persona"] .ftextarea,

@@ -15,10 +15,10 @@ import { TabBar } from './view/components/TabBar';
 import { ScreenHeader } from './view/components/ScreenHeader';
 import { Toolbar } from './view/components/Toolbar';
 import { GameTable } from './view/components/GameTable';
-import { useCoverBackfill } from './view/hooks/useCoverBackfill';
 import { StatusBanner } from './view/components/StatusBanner';
 import { useAchievementNotice } from './view/hooks/useAchievementNotice';
 import { useAnnouncement } from './view/hooks/useAnnouncement';
+import { useYearSummaryNotice } from './view/hooks/useYearSummaryNotice';
 import { UpdateNotice } from './view/components/UpdateNotice';
 import { BottomNavigation } from './view/components/BottomNavigation';
 import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, SETTINGS_ROUTES, isKnownRoute, matchAppSection, matchSettingsGroup, type AppSection, type SettingsGroup } from './core/constants/routes';
@@ -26,8 +26,7 @@ import { LegacyTailRedirect } from './view/components/LegacyTailRedirect';
 import { SettingsMenu } from './view/components/SettingsMenu';
 import { ScrollToTop } from './view/components/ScrollToTop';
 import { useScrollOnNavigate } from './view/hooks/useScrollOnNavigate';
-import { ConsentBanner } from './view/components/ConsentBanner';
-import { InstallBanner } from './view/components/InstallBanner';
+import { LaneBanners } from './view/components/LaneBanners';
 import { SocialHubSkeleton } from './view/components/SocialHubSkeleton';
 import { ScreenSkeleton } from './view/components/ScreenSkeleton';
 import { useGameListViewModel, type GameDraft } from './viewmodel/useGameListViewModel';
@@ -44,8 +43,6 @@ import { useEffects } from './view/hooks/useEffects';
 import { useShowSteamButton } from './view/hooks/useShowSteamButton';
 import { useReturnTo } from './view/hooks/useReturnTo';
 import { useLegacyProfileHeal } from './view/hooks/useLegacyProfileHeal';
-import { useShootingStars } from './view/hooks/useShootingStars';
-import { useBacklogSnapshot } from './view/hooks/useBacklogSnapshot';
 import { useScreenTransition } from './view/hooks/useScreenTransition';
 import { useAppliedPalette } from './view/hooks/usePalette';
 import { hasGithubOAuthRedirect, takeGithubOAuthOrigin } from './model/repository/githubOAuthChecks';
@@ -117,13 +114,14 @@ const IconSpriteRest = lazy(() => import('./view/components/IconSpriteRest').the
  * navegador está ocioso, así que ni el chunk ni la petición compiten con el primer pintado.
  */
 const AnnouncementToast = lazy(() => import('./view/components/AnnouncementToast').then((module) => ({ default: module.AnnouncementToast })));
+const YearSummaryToast = lazy(() => import('./view/components/YearSummaryToast').then((module) => ({ default: module.YearSummaryToast })));
 
 /**
- * LOS EFECTOS DE FIRMA (ver `SignatureEffects`), por la misma puerta que el resto del sprite: fuera del chunk de
- * arranque y montados en cuanto hay hueco. Responden a interacciones —un clic, cerrar un juego, cambiar de
- * tema—, así que llegar unos milisegundos después de pintar no se nota.
+ * EL TRABAJO DE FONDO (ver `IdleWork`): efectos de firma, estrellas fugaces, histórico del backlog y recorrido de
+ * carátulas. Por la misma puerta que el resto del sprite: fuera del chunk de arranque y montado en cuanto hay
+ * hueco. Nada de eso pinta el primer fotograma, así que llegar unos milisegundos después no se nota.
  */
-const SignatureEffects = lazy(() => import('./view/components/SignatureEffects').then((module) => ({ default: module.SignatureEffects })));
+const IdleWork = lazy(() => import('./view/components/IdleWork').then((module) => ({ default: module.IdleWork })));
 
 /**
  * LA GUÍA DE PRIMEROS PASOS (ver `OnboardingTour`), por la misma puerta que el resto: perezosa y montada en idle.
@@ -239,6 +237,8 @@ export default function App() {
   // él, y el piloto de la barra necesita además distinguir el tramo en el que todavía no se sabe.
   const socialStatus = useSocialProfileStatus(completedGameIds);
   const hasSocialProfile = socialStatus === 'active';
+  // El aviso del resumen del año (15–31 de diciembre): solo con perfil social, que es donde vive el resumen.
+  const yearSummaryNotice = useYearSummaryNotice(hasSocialProfile, vm.data.c);
   // F1: enlaza la sesión con la apariencia (paleta + claro/oscuro) → hidrata/replica en Firestore.
   useAppearanceSession();
   // Al iniciar sesión, migra y limpia los restos legacy del perfil público (email / id del gist de juegos /
@@ -254,15 +254,9 @@ export default function App() {
   useEffects();
   // F1: visibilidad del botón "Steam Deck" (preferencia de cuenta) → se pasa a la Toolbar.
   const { showSteamButton } = useShowSteamButton();
-  // Histórico del backlog: anota una vez al mes el tamaño de cada lista. Va aquí y no en el panel "Perfil"
-  // porque la serie debe acumularse se visite o no esa pantalla; sin este registro no hay forma de saber cómo
-  // evoluciona el backlog (`listedAt` se reescribe al mover de lista). Local, silencioso y en idle.
-  useBacklogSnapshot(vm.data);
-  useCoverBackfill(vm.data);
-  // Estrellas fugaces aleatorias por los bordes de botones/chips (solo en la paleta "Sol y luna").
+  // El histórico del backlog, el recorrido de carátulas y las estrellas fugaces se montan en idle con `IdleWork`.
   // El scroll al cambiar de pantalla: arriba al entrar, donde estabas al volver (ver el hook).
   useScrollOnNavigate();
-  useShootingStars();
 
   /**
    * LA PUERTA DE «DISEÑO» TAMBIÉN EN LA RUTA, y no solo en el menú. Ahí dentro está lo que se guarda en
@@ -1098,11 +1092,12 @@ export default function App() {
               <IconSpriteRest />
             </Suspense>
           </SilentBoundary>
-          {/* Efectos de firma por interacción (wipe P5 al navegar, apertura de portal al clic, sol↔luna,
-              boot-up 40K). No pinta nada: solo escucha. */}
-          <SilentBoundary source="signature-effects">
+          {/* El trabajo de fondo: efectos de firma por interacción (wipe P5 al navegar, apertura de portal al
+              clic, sol↔luna, boot-up 40K), estrellas fugaces, histórico del backlog y recorrido de carátulas.
+              No pinta nada. */}
+          <SilentBoundary source="idle-work">
             <Suspense fallback={null}>
-              <SignatureEffects />
+              <IdleWork data={vm.data} />
             </Suspense>
           </SilentBoundary>
         </>
@@ -1137,6 +1132,12 @@ export default function App() {
               onDone={clearAchievementFlash}
               onOpen={openAchievements}
             />
+          </Suspense>
+        ) : yearSummaryNotice.year !== null ? (
+          // EL RESUMEN DEL AÑO, del 15 al 31 de diciembre: detrás del logro (lo que acabas de conseguir manda) y
+          // delante del anuncio, que puede esperar a otra visita.
+          <Suspense fallback={null}>
+            <YearSummaryToast year={yearSummaryNotice.year} onShown={yearSummaryNotice.markShown} onDone={yearSummaryNotice.dismiss} />
           </Suspense>
         ) : announcement.announcement ? (
           <Suspense fallback={null}>
@@ -1230,10 +1231,8 @@ export default function App() {
         settingsMenuOpen={settingsMenuOpen}
         socialStatus={socialStatus}
       />
-      <ConsentBanner />
-      {/* Los dos comparten carril y no coinciden nunca: la invitación espera a que el consentimiento se decida
-          (ver `InstallBanner`). Van seguidos para que se lea aquí que el hueco es el mismo. */}
-      <InstallBanner />
+      {/* El consentimiento y la invitación a instalar: comparten carril y llegan por `lazy()` (ver `LaneBanners`). */}
+      <LaneBanners />
       {/* Fuera del `main`, como los avisos: el `main` se apaga cuando se abre el menú de Ajustes, y la guía tiene
           que poder señalar DENTRO de ese menú. Con su propio límite: si su chunk no llega (sin red, recién
           desplegado) no hay guía y no pasa nada más. */}

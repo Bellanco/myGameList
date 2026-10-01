@@ -5,6 +5,36 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Added
+- **Resumen del año en el perfil.** Un cuarto botón en la ficha de cada perfil, «Resumen del año», con el año
+  anterior (en diciembre, el que está acabando) contado en tarjetas una debajo de otra: cuántos juegos terminó y
+  su nota media, el juego del año con una frase de su reseña y el podio, en qué meses los terminó, sus géneros con
+  la media y el mejor de cada uno, lo que más valoró y lo que le chirrió, cómo le fue frente al año anterior y,
+  en el perfil de otra persona, los juegos que terminasteis los dos y en cuál más chocáis. Sin horas: el tiempo
+  de juego se puede esconder, y un resumen que lo enseñara a medias se leería como un año flojo.
+- **Con las carátulas activadas**, la portada del resumen lleva de fondo un mosaico inclinado con las del año, y
+  «Contigo», la del juego en común que más os gustó a los dos. Cada capítulo tiene su icono y las tarjetas se
+  visten con el tema, como el resto de lo social.
+- **El resumen del año en curso se estrena el 15 de diciembre** y se sigue actualizando, sin avisar, hasta el 31;
+  el resto del año se enseña el del año anterior. Ese día, quien tiene perfil social y completó algo recibe un
+  aviso en la app («Tu resumen de 2026») que abre su resumen.
+- **Cuando abres tu resumen entre el 15 y el 31 de diciembre, tus amigos se enteran**: les sale en su actividad
+  una tarjeta destacada —en el color del tema, con su brillo— que abre tu resumen, durante 30 días. Una sola vez
+  por año. Tu perfil guarda solo el año y la fecha; la política de privacidad lo declara.
+  ⚠️ Requiere desplegar `firestore.rules` antes que la app (campo nuevo `yearSummary` en `profiles`).
+- En **tu propio perfil**, el resumen trae además el año día a día y tu día de la semana para terminar. Tus
+  amistades ven solo el **mes** de cada fin, nunca el día; los días en que entraron muchos juegos de golpe (una
+  importación) no cuentan como fechas. La política de privacidad lo declara.
+
+### Fixed
+- **Las listas largas en renglones ya no descargan todas sus carátulas al abrirse.** El primer render montaba la
+  lista entera antes de recortarla a lo que se ve, y eso bastaba para que cada renglón pidiera su imagen de fondo:
+  con 149 completados, 149 carátulas (~10 MB) por visita en vez de las diez de la pantalla.
+
+### Changed
+- **La franja del renglón es la misma para todo el mundo**: la de 720 px. La de 1080, que era de la cuenta de
+  administración, no se distinguía bajo el velo y costaba casi el doble de trabajo al bajar por la lista.
+
 ## [1.5.0] - 2026-09-30
 
 La versión de **los primeros pasos**. Quien llega sin nada tiene una guía que le acompaña por las pantallas —su

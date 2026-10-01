@@ -1,7 +1,8 @@
 # Plan — reseñas que no salen en el feed de actividad (usuarios recién llegados)
 
 > **Estado:** TODOS los pasos implementados (1, 1b, 1c, 2, 3, 4 + 4bis y 5). La Fase 0 sigue siendo útil para
-> confirmar en los usuarios ya afectados que su actividad se recupera.
+> confirmar en los usuarios ya afectados que su actividad se recupera. *(Revisado el 01-10-2026: el paso 5 quedó
+> superado por `feeda33c`, que retiró la maquinaria de visibilidad; ver el paso 5.)*
 >
 > **DESPLIEGUE:** el paso 4 necesita el índice compuesto `profiles(social.enabled ASC, updatedAt DESC)`.
 > Despliégalo ANTES o a la vez que la app: `firebase deploy --only firestore:indexes`. Si faltara, la consulta
@@ -10,7 +11,7 @@
 >
 > Piezas nuevas: `src/model/repository/socialActivityReconcile.ts` (reconciliación + marca de pendiente),
 > `src/model/repository/socialChannel.ts` (`resolveSocialChannel`) y `mergeSocialGistData` en
-> `gistRepository.ts` (fusión de los dos candidatos de gist de un amigo). Tests:
+> `socialGistRepository.ts:907` (fusión de los dos candidatos de gist de un amigo). Tests:
 > `tests/unit/socialActivityReconcile.test.ts`, `tests/unit/socialPublishArmChannel.test.ts`,
 > `tests/unit/socialGistMerge.test.ts` y, en `tests/component/SocialHub.test.tsx`, la regresión de C2 y la de
 > deriva de gist. Ojo: el test previo "amigo PRESENTE en el directorio con gistId obsoleto" ya no puede afirmar
@@ -98,11 +99,12 @@ desfasados.
 
 ### C3 — Deriva de gist social: el lector prefiere el id de la amistad, que puede ser el viejo
 
-En la hidratación del directorio (`src/viewmodel/useSocialViewModel.ts:1336-1370`) para un amigo se prefiere
+En la hidratación del directorio (`hydrateSocialDirectory`, hoy en `src/viewmodel/social/useSocialDirectory.ts`) para un amigo se prefiere
 `otherSocialGistId` (doc de amistad) sobre `social.gistId` (directorio Firestore). Ese orden se eligió para
 arreglar la deriva inversa, pero las dos fuentes se sanean de forma **asimétrica**:
 
-- `healOwnDirectoryGist` → al abrir el hub, sincroniza el directorio (`firebaseRepository.ts:426`).
+- `healOwnDirectoryGist` → al abrir el hub, sincroniza el directorio (`firebaseRepository.ts:426`). *(Ya
+  retirado: hoy no existe en el código.)*
 - `healOwnFriendshipIdentity` → al abrir el hub (condicionado a tener nick cargado) y al guardar perfil.
 - `publishReviewActivity` / `publishPost` → llaman a `ensureProfileByEmail`, que actualiza **solo el
   directorio**, nunca los docs de amistad.
@@ -243,12 +245,14 @@ En `publishReviewActivity` / `publishPost` (`socialPublishRepository.ts`):
   (`resolveSocialChannel()`) para no duplicar la lógica.
 - Refrescar el token de la config social con el de la principal cuando difieran (mata C1d).
 - Si aun así no se puede publicar (sin sesión de Google en este dispositivo), **dejar rastro**:
-  `patchLocalMeta({ pendingActivity: true })` en lugar de un `return` mudo.
+  `patchLocalMeta({ pendingActivity: true })` en lugar de un `return` mudo. *(La marca se llama
+  `pendingSocialActivity`.)*
 
 ### Paso 1c — No perder publicaciones por fallos transitorios (C1b, C1c)
 
 - Marcar `pendingActivity` también en el `catch` de `src/App.tsx:462` y `:481` (cubre tanto el fallo del import
-  dinámico como el error de GitHub). La reconciliación del Paso 1 lo consume y lo limpia: con `pendingActivity`
+  dinámico como el error de GitHub). *(Hoy ese tratamiento vive en `src/viewmodel/applyReviewPublication.ts`,
+  que marca `pendingSocialActivity`.)* La reconciliación del Paso 1 lo consume y lo limpia: con `pendingActivity`
   activo se fuerza pasada, ignorando el sello.
 - Añadir un manejador de `vite:preloadError` (recarga controlada) como higiene general: hoy un despliegue puede
   dejar sin publicar cualquier reseña guardada con el index.html viejo en caché.
@@ -265,7 +269,7 @@ En `publishReviewActivity` / `publishPost` (`socialPublishRepository.ts`):
 
 ### Paso 3 — Curar la deriva de gist en las dos direcciones (C3) — HECHO
 
-- En `hydrateSocialDirectory`: si `otherSocialGistId` y `entry.socialGistId` **difieren**, leer ambos y
+- En `hydrateSocialDirectory` (`viewmodel/social/useSocialDirectory.ts`): si `otherSocialGistId` y `entry.socialGistId` **difieren**, leer ambos y
   fusionar (`activity`/`posts` deduplicados por `key`/`id`; perfil el de `updatedAt` mayor). Solo cuesta una
   lectura extra en el caso divergente, que es raro. Un candidato ilegible no invalida al otro.
 - En `publishReviewActivity` y `publishPost`: llamar también a `healOwnFriendshipIdentity`, para que la
@@ -273,6 +277,8 @@ En `publishReviewActivity` / `publishPost` (`socialPublishRepository.ts`):
   `meta.friendshipHealedForGist` para no lanzar la query de amistades en cada guardado (solo cuando el id del
   gist cambia de verdad), y no sanear si el nick del gist está vacío, para no pisar con vacío un nick bueno
   (eso lo hace el hub, que espera a tener el nick cargado).
+  *(El sello `friendshipHealedForGist` ya no se lee: lo sustituyó la huella de identidad, ver
+  `docs/plan-escalabilidad-firestore.md`, Fase 1.)*
 
 ### Paso 4 — Directorio: quitar el tope arbitrario (C4) — HECHO
 
@@ -307,6 +313,10 @@ sintetiza desde su doc de amistad), así que ordenar el directorio no basta: hac
 
 ### Paso 5 — `updateGistPrivacy` deja de clonar por fallos transitorios (C5) — HECHO
 
+> **Superado (revisado el 01-10-2026):** `updateGistPrivacy` y `probePublicGistAccess` ya no existen. Los retiró
+> `feeda33c` junto con la maquinaria de visibilidad, después de que el canal social pasara a crearse como gist
+> secreto sin publicar su id (`e69aa401`). Lo de abajo queda como historia.
+
 - `probePublicGistAccess` devuelve tres estados (`public` / `not-public` / `unknown`) en vez de un booleano:
   solo un 404 anónimo es veredicto de "secreto"; 403 por rate-limit anónimo (60 req/h por IP), 401 o un fallo de
   red son `unknown` y NO migran. Antes cualquiera de esos clonaba el gist a un id nuevo por un error transitorio,
@@ -325,7 +335,7 @@ sintetiza desde su doc de amistad), así que ordenar el directorio no basta: hac
   actividad aparece igual.
 - `socialDirectoryRecency.test.ts`: orden por `updatedAt` sin desigualdad sobre `documentId`, `updatedAt` en ms
   (Timestamp o número), descarte del placeholder y degradación si falta el índice.
-- `socialGistPrivacy.test.ts`: 403/red → no clona; 404 → clona.
+- `socialGistPrivacy.test.ts`: 403/red → no clona; 404 → clona. *(Ya no existe: se fue con el paso 5.)*
 - `SocialHub.test.tsx`: corte por inactividad (no entra al feed ni se lee su gist) y su contrapartida (al abrir
   el perfil sí se lee).
 - Regresión de C2: abrir el detalle de una reseña propia con listados desfasados **no** escribe en el gist.

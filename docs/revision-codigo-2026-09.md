@@ -6,6 +6,10 @@
 > Sobre `develop` en `d63c1d8` (25-09-2026).
 >
 > ⚠️ **Documento vivo.** Las líneas citadas se mueven. Al cerrar un punto, márcalo con ✅ y el commit.
+>
+> **Revisado el 01-10-2026** (`4a68dc73`): las 12 altas están cerradas; de las medias quedan abiertas la mayoría
+> de las de sync, view-model social y vista, y la baja sigue entera salvo un punto. Las líneas citadas pueden
+> haberse movido (p. ej. `GameTable.tsx:1396` → `:1439`, `useSyncViewModel.ts:116-163` → `:142-191`).
 
 ## Cómo se hizo
 
@@ -18,9 +22,9 @@
 
 1. **Sync y pérdida de datos:** A1, A2, M-githubHttp, M-legacyGamesFormat. · ✅ hecho (25-09-2026)
 2. **Social:** A3–A7, M-socialGist ilegible, M-profileHeal. · ✅ hecho (25-09-2026)
-3. **Borde y admin:** A8, A10, A11, M-achievementsConfig, M-AdminPremios.
-4. **Privacidad:** A12, M-accountDeletion.
-5. **Formularios y accesibilidad:** A9, M-StarPicker, M-feed con teclado.
+3. **Borde y admin:** A8, A10, A11, M-achievementsConfig, M-AdminPremios. · ⏳ parcial: las altas ✅, las medias no
+4. **Privacidad:** A12, M-accountDeletion. · ⏳ parcial: A12 ✅, `accountDeletion` abierto
+5. **Formularios y accesibilidad:** A9, M-StarPicker, M-feed con teclado. · ⏳ parcial: A9 ✅, las medias no
 6. Resto de media; la baja en bloque.
 
 Cada arreglo de los grupos 1 y 2 va con un test que reproduce el fallo antes de corregirlo.
@@ -29,8 +33,8 @@ Cada arreglo de los grupos 1 y 2 va con un test que reproduce el fallo antes de 
 
 | # | Estado | Dónde | Qué pasa |
 |---|---|---|---|
-| A1 ✔ | ✅ | `src/core/utils/tagMutations.ts:37` | Renombrar/borrar una etiqueta sube el `_ts` de **todos** los juegos, aunque no la lleven. Con LWW por juego (`mergeCrdt`), una edición sin subir de otro dispositivo pierde. Sellar solo los que cambian. |
-| A2 ✔ | ✅ | `src/model/repository/gistConfigRepository.ts:134-157` | Cada `saveSyncConfig` (tras cada ciclo) escribe la config sin `encToken` y recifra en segundo plano. Cerrar en ese hueco, o que el cifrado falle (`.catch(() => {})`), deja el disco sin token. Conservar el `encToken` previo si el token no cambia. |
+| A1 ✔ | ✅ 15037192 | `src/core/utils/tagMutations.ts:37` | Renombrar/borrar una etiqueta sube el `_ts` de **todos** los juegos, aunque no la lleven. Con LWW por juego (`mergeCrdt`), una edición sin subir de otro dispositivo pierde. Sellar solo los que cambian. |
+| A2 ✔ | ✅ ad2efbb7 | `src/model/repository/gistConfigRepository.ts:134-157` | Cada `saveSyncConfig` (tras cada ciclo) escribe la config sin `encToken` y recifra en segundo plano. Cerrar en ese hueco, o que el cifrado falle (`.catch(() => {})`), deja el disco sin token. Conservar el `encToken` previo si el token no cambia. |
 | A3 ✔ | ✅ e174d69 | `src/view/components/socialhub/SocialProfileDetailScreen.tsx:641` | «Añadir a próximos» desde la ruleta de un amigo copia **su reseña y su nota** (`buildProfilePool`) a tus listas y a tu gist (`addGameToProximos` las copia). |
 | A4 | ✅ 3af553c | `src/model/repository/firebaseRepository.ts:498-515` (y `:205-221`) | `ensureProfileByEmail` cachea 60 s el perfil propio sin `achievementsMirror`/`palmares`/`createdAt`. Abrir el hub en ese plazo publica la vitrina como reemplazo (`mergeForPublish('')`) y se pierden medallas de otros dispositivos. |
 | A5 ✔ | ✅ 510cd42 | `src/model/repository/firebaseSocialRepository.ts:478-490` | El último `.map` de `listSocialDirectory` descarta `profileId`; `usePremiosProfiles` cruza por él y la clasificación de premios no enlaza nunca (desde 770507b). |
@@ -48,8 +52,8 @@ Cada arreglo de los grupos 1 y 2 va con un test que reproduce el fallo antes de 
 
 | Estado | Dónde | Qué pasa |
 |---|---|---|
-| ✅ | `src/model/repository/githubHttp.ts:55-70` | El timeout se limpia al llegar las cabeceras; `response.json()` queda sin límite y una red colgada deja el cerrojo de sync tomado. |
-| ✅ | `src/model/migration/legacyGamesFormat.ts:111-120` | `assembleChunkedGames` salta en silencio chunks ausentes o corruptos (overflow lanza); la siguiente escritura borra esos juegos. |
+| ✅ 4afb9cf4 | `src/model/repository/githubHttp.ts:55-70` | El timeout se limpia al llegar las cabeceras; `response.json()` queda sin límite y una red colgada deja el cerrojo de sync tomado. |
+| ✅ 5e34c918 | `src/model/migration/legacyGamesFormat.ts:111-120` | `assembleChunkedGames` salta en silencio chunks ausentes o corruptos (overflow lanza); la siguiente escritura borra esos juegos. |
 | | `src/model/repository/indexedDbRepository.ts:396-400`, `:453-456` | El `oncomplete` del espejo rearma el índice aunque se invalidara en vuelo (solo migración v3). Contador de generación. |
 | | `src/viewmodel/useSyncViewModel.ts:116-124`, `:163` | Un fallo de escritura suma dos veces al backoff y pisa `pendingAction: 'write'`; `retryPendingWrite` casi muerto y sin re-merge. |
 | | `src/model/repository/achievementsConfigRepository.ts:182-186` | `setDoc(..., { merge: true })` no borra la clave quitada de `extraSteps`: el escalón vuelve. Usar `deleteField()` o `updateDoc`. |
@@ -131,8 +135,11 @@ Cada arreglo de los grupos 1 y 2 va con un test que reproduce el fallo antes de 
   - `GameTable.tsx:565`, `:921` — `cards` significa «list»; condición siempre cierta.
   - `firebaseProfileHealRepository.ts:263-270` — rama `profile.id !== uid` inalcanzable.
 - **Comentarios que contradicen el código**
-  - `announcement.ts:57-59` (par en `firestore.rules` que ya no existe), `crypto.ts:275-278`, `:290-305`,
+  - ~~`functions/_lib/firebaseAuth.ts` (`isAdmin`) y su gemelo en `wrangler.toml` («mismo criterio que
+    `firestore.rules`»): las reglas deciden ya por el claim y el borde por `ADMIN_EMAIL`.~~ ✅ 01-10-2026: el borde
+    decide ya por el claim (hallazgo 13 de `revision-general-2026-09.md`).
+  - `core/announcement/announcement.ts:57-59` (par en `firestore.rules` que ya no existe), `crypto.ts:275-278`, `:290-305`,
     `types/firestore.ts:59`, `shareSchema.ts:13-15`, `useOpenFrontier.ts:48-50`, `socialPublishRepository.ts:29-41`,
     docblocks huérfanos en `admin/adminShared.ts` y `admin/adminCensus.ts`, duplicado en
-    `indexedDbRepository.ts:429-436`, `useSignatureEffects.ts:18-20` («Clásico» → «Plata y acero»).
+    `indexedDbRepository.ts:429-436`, ~~`useSignatureEffects.ts:18-20` («Clásico» → «Plata y acero»)~~ ✅ fbc6bbb9.
   - Textos `done` de `constancia` y `cadena-de-anos`: presente para la mejor racha histórica.

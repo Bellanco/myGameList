@@ -6,7 +6,7 @@
 // de dónde salen las claves. El KV es un `Map`: aquí solo guarda la caché de claves, no lógica que probar.
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { APPCHECK_JWKS_URL, appCheckMode, gateAppCheck, verifyAppCheckToken } from '../../functions/_lib/appCheck';
-import { JWKS_URL, verifyIdToken } from '../../functions/_lib/firebaseAuth';
+import { JWKS_URL, isAdmin, verifyIdToken } from '../../functions/_lib/firebaseAuth';
 import type { Env, KVNamespace } from '../../functions/_lib/keys';
 
 const PROJECT_NUMBER = '721023375695';
@@ -250,6 +250,7 @@ describe('ID token de Firebase Auth', () => {
       uid: 'uid-1',
       email: 'alguien@example.test',
       emailVerified: true,
+      admin: false,
       idToken: token,
     });
   });
@@ -265,6 +266,32 @@ describe('ID token de Firebase Auth', () => {
   ])('rechaza %s', async (_caso, header, overrides, error) => {
     const token = await sign(header, { ...authPayload(), ...overrides });
     await expect(verifyIdToken(token, PROJECT_ID, memoryKv())).rejects.toThrow(error);
+  });
+
+  // EL ADMINISTRADOR ES EL CLAIM, como en `firestore.rules`. Antes el borde comparaba el correo con `ADMIN_EMAIL`
+  // y las reglas ya miraban el claim: dos criterios que habrían divergido al dar o quitar el claim a alguien.
+  describe('administrador', () => {
+    it('lo es quien trae el claim `admin: true`', async () => {
+      const user = await verifyIdToken(await sign(authHeader, { ...authPayload(), admin: true }), PROJECT_ID, memoryKv());
+      expect(user.admin).toBe(true);
+      expect(isAdmin(user)).toBe(true);
+    });
+
+    it('no lo es un token sin claim, aunque traiga el correo verificado de antes', async () => {
+      const token = await sign(authHeader, { ...authPayload(), email: 'admin@example.test', email_verified: true });
+      expect(isAdmin(await verifyIdToken(token, PROJECT_ID, memoryKv()))).toBe(false);
+    });
+
+    // Estricto contra `true`, igual que las reglas (`== true`): si el borde aceptara más, ofrecería lo que
+    // Firestore deniega.
+    it.each<[string, unknown]>([
+      ['la cadena "true"', 'true'],
+      ['un 1', 1],
+      ['false', false],
+    ])('no lo es con el claim como %s', async (_caso, valor) => {
+      const token = await sign(authHeader, { ...authPayload(), admin: valor });
+      expect(isAdmin(await verifyIdToken(token, PROJECT_ID, memoryKv()))).toBe(false);
+    });
   });
 
   // Un token de App Check no es una sesión, aunque lo firme Google con el mismo algoritmo.
