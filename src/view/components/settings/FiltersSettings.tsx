@@ -1,6 +1,6 @@
 import { memo, useMemo, useState } from 'react';
 import { COMMON_ICONS } from '../../../core/constants/icons';
-import { UI_MESSAGES, VALIDATION_MESSAGES } from '../../../core/constants/labels';
+import { VALIDATION_MESSAGES } from '../../../core/constants/labels';
 import { SETTINGS_UI } from '../../../core/constants/settingsLabels';
 import { Icon } from '../Icon';
 // La hoja de las pantallas de Ajustes viaja en los chunks perezosos que la usan y no en el bundle base (mismo
@@ -130,7 +130,7 @@ export const FiltersSettings = memo(function FiltersSettings({ lookups, onEditTa
                         type="text"
                         className={`finput ${mergePending ? 'has-warning' : ''}`.trim()}
                         value={draftValue}
-                        placeholder={UI_MESSAGES.admin.editPlaceholder}
+                        placeholder={SETTINGS_UI.admin.editPlaceholder}
                         onChange={(event) => setDraftValue(event.target.value)}
                         onKeyDown={(event) => {
                           if (event.key !== 'Enter') return;
@@ -141,7 +141,7 @@ export const FiltersSettings = memo(function FiltersSettings({ lookups, onEditTa
                       <div className="row-actions">
                         <button className="btn btn-secondary btn-icon-text admin-action-btn" type="button" onClick={cancelEdit}>
                           <Icon name={COMMON_ICONS.close} />
-                          <span>{UI_MESSAGES.admin.editCancelBtn}</span>
+                          <span>{SETTINGS_UI.admin.editCancelBtn}</span>
                         </button>
                         <button
                           className="btn btn-steam btn-icon-text admin-action-btn"
@@ -149,7 +149,7 @@ export const FiltersSettings = memo(function FiltersSettings({ lookups, onEditTa
                           onClick={() => saveEdit(activeCategory.key, tag, activeCategory.values)}
                         >
                           <Icon name={COMMON_ICONS.save} />
-                          <span>{UI_MESSAGES.admin.editSaveBtn}</span>
+                          <span>{SETTINGS_UI.admin.editSaveBtn}</span>
                         </button>
                       </div>
                     </>
@@ -166,8 +166,8 @@ export const FiltersSettings = memo(function FiltersSettings({ lookups, onEditTa
                         <button
                           className="btn btn-secondary btn-icon-text admin-action-btn is-compact"
                           type="button"
-                          aria-label={`${UI_MESSAGES.admin.editBtn}: ${tag}`}
-                          title={UI_MESSAGES.admin.editBtn}
+                          aria-label={`${SETTINGS_UI.admin.editBtn}: ${tag}`}
+                          title={SETTINGS_UI.admin.editBtn}
                           onClick={() => startEdit(activeCategory.key, tag)}
                         >
                           <Icon name={COMMON_ICONS.edit} className="ui-icon" />
@@ -175,8 +175,8 @@ export const FiltersSettings = memo(function FiltersSettings({ lookups, onEditTa
                         <button
                           className="btn btn-danger btn-icon-text admin-action-btn is-compact"
                           type="button"
-                          aria-label={`${UI_MESSAGES.admin.deleteBtn}: ${tag}`}
-                          title={UI_MESSAGES.admin.deleteBtn}
+                          aria-label={`${SETTINGS_UI.admin.deleteBtn}: ${tag}`}
+                          title={SETTINGS_UI.admin.deleteBtn}
                           onClick={() => onDeleteTag(activeCategory.key, tag)}
                         >
                           <Icon name={COMMON_ICONS.trash} className="ui-icon" />
@@ -188,7 +188,7 @@ export const FiltersSettings = memo(function FiltersSettings({ lookups, onEditTa
               );
             })
           ) : (
-            <span className="settings-admin-empty">{UI_MESSAGES.admin.noTags}</span>
+            <span className="settings-admin-empty">{SETTINGS_UI.admin.noTags}</span>
           )}
         </div>
       </div>

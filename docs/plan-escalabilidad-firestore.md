@@ -62,6 +62,9 @@ que hacer.
 1. **Huella de identidad** (`identityFingerprint`): hash estable de `{name, photo, socialGistId, gamesGistId}`,
    persistido en `LocalMeta.friendshipIdentityFingerprint`. Si coincide con el último saneado correcto, se sale
    **sin leer ni escribir nada**. El caso normal pasa a coste cero.
+   - **Salvo una revisión semanal** (`FRIENDSHIP_IDENTITY_RECHECK_MS`, 7 días, `9d5a58fb`): pasada una semana desde
+     `LocalMeta.friendshipIdentityHealedAt`, se sanea aunque la huella coincida —una consulta, y escrituras solo si
+     de verdad hay un desacuerdo—, para corregir documentos que otro dispositivo dejara divergentes.
    - Es **local por dispositivo** a propósito: la foto publicable y el gist de la sesión se resuelven en cada
      dispositivo por separado, así que un sello compartido daría por propagado lo que este nunca escribió.
    - El sello **solo se pone si todo se escribió**. Un fallo parcial lo deja sin sellar para que el siguiente
@@ -144,7 +147,7 @@ de la aplicación en `buildFriendshipViews`, sin cambios.
 
 ---
 
-## Fase 3 — Fan-out de gists del feed · *documentada, sin implementar*
+## Fase 3 — Fan-out de gists del feed · *documentada, sin implementar (revisado el 01-10-2026)*
 
 El feed lee **un gist de GitHub por amigo** (`useSocialDirectory`, `readPublicSocialGistById`). Crece
 linealmente y consume rate-limit de GitHub.
@@ -171,9 +174,9 @@ escrituras al publicar. Anotado como trabajo futuro.
   los dos (deduplicarlos perdería el segundo), y con la misma identidad el segundo ya sale gratis por la huella.
   Con las guardas actuales el solape es raro; un mutex por uid añadiría maquinaria de concurrencia por un ahorro
   marginal.
-- **La ruta de publicación puede escribir una vez por id de gist con una foto calculada por otra regla** (no sabe
-  descartar el monograma de Google). El hub lo corrige en la siguiente apertura y converge. Es comportamiento
-  previo, no introducido aquí, y su guarda propia lo mantiene acotado.
+- ~~**La ruta de publicación puede escribir una vez por id de gist con una foto calculada por otra regla** (no sabe
+  descartar el monograma de Google).~~ **Resuelto el 28-09-2026** (`51cab63a`): `publicPhotoURL`
+  (`socialPublishRepository.ts`) aplica ya la misma regla que el hub y descarta el avatar genérico de Google.
 
 ## Lo que NO se hace, y por qué
 

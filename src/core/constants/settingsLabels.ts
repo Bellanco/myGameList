@@ -4,8 +4,8 @@
 // Aparte de `labels.ts` por peso y por orden: son ~11 kB que solo consumen chunks perezosos (`SettingsHub`,
 // `AccountHub`, `LegalScreen`…), mientras que `labels.ts` viaja en el arranque.
 //
-// El texto de la ANALÍTICA se quedó fuera a propósito, en `labels.ts`: lo pinta `ConsentBanner`, que se monta con
-// la aplicación, y traerlo aquí devolvería estos 11 kB al chunk de entrada por catorce líneas.
+// El texto de la ANALÍTICA se quedó fuera a propósito, en `consentLabels`: lo pinta también `ConsentBanner`, que
+// sale en la primera visita, y traerlo aquí le haría descargar estos 11 kB por catorce líneas.
 export const SETTINGS_UI = {
   title: 'Ajustes',
   /**
@@ -139,5 +139,11 @@ export const SETTINGS_UI = {
     weaknesses: 'Puntos débiles / razón',
     collapseAria: 'Ocultar categoría',
     expandAria: 'Mostrar categoría',
+    noTags: 'No hay etiquetas',
+    editPlaceholder: 'Escribe el nuevo valor',
+    editBtn: 'Editar',
+    deleteBtn: 'Eliminar',
+    editCancelBtn: 'Cancelar',
+    editSaveBtn: 'Guardar',
   },
 } as const;

@@ -30,6 +30,7 @@ function renderFeed(over: { offline?: boolean; offlineHasCachedData?: boolean; i
       loadingDirectory={false}
       openProfileDetail={() => {}}
       openProfileAchievements={() => {}}
+      openProfileSummary={() => {}}
       onOpenProfiles={() => {}}
       onOpenOwnProfile={() => {}}
       onOpenRequests={() => {}}

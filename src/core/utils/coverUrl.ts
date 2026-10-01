@@ -17,7 +17,8 @@ export function coverUrl(
    * `normal` (264×374) es la de la ranura 3:4 del mosaico en una pantalla de densidad sencilla.
    * `medio`  (508×720) es la misma para una pantalla de densidad doble, donde la caja ocupa 471 píxeles reales y
    *          la normal se estiraría 1,78 veces. Las dos se ofrecen juntas con `srcset` y elige el navegador.
-   * `ancho`  (~762×1080) la pide el renglón de la lista, que recorta una franja a lo ancho de la fila entera.
+   *          Es también la del renglón de la lista, que recorta una franja a lo ancho de la fila entera.
+   * `ancho`  (~762×1080) la pide la franja de las reseñas del social.
    */
   tamano: 'normal' | 'medio' | 'ancho' = 'normal',
   /**

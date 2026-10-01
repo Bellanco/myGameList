@@ -13,7 +13,8 @@
 - **La primera integración es Playnite** — la más sencilla y la que más cubre con menos riesgo:
   es un gestor (Windows) que ya agrega Steam/GOG/Epic/Xbox/PSN **en local**; con una extensión de
   export a JSON, el usuario suelta un fichero y **reutilizamos el import de fichero que ya existe**
-  (`SettingsHub.tsx:312`). **Sin backend, sin CORS, sin secretos, sin nada específico de cada tienda.**
+  (la tarjeta de Ajustes, `SettingsHub` → `onImportLibrary`; el manejador es `handleImportLibraryExporter`
+  en `App.tsx`). **Sin backend, sin CORS, sin secretos, sin nada específico de cada tienda.**
 - Esta primera entrega incluye **todo el cimiento común** (Bandeja + clasificación + UI) que
   reutilizarán las futuras integraciones, **pero nada por plataforma**.
 - **Añadidos futuros** (fuera de esta primera entrega): el **enriquecimiento con IGDB** y las
@@ -33,6 +34,8 @@
    re-import del mismo origen es idempotente; el mismo juego desde **otra plataforma** → **fusión**
    (acumula plataformas), no un duplicado.
 4. **Acceso a la bandeja:** entrada en el **menú** con contador, visible solo si hay elementos.
+   *(Retirada en `19264412`: hoy se llega por «Ver bandeja (n)» en Ajustes y en el estado vacío de un
+   listado.)*
 5. **Los campos de import NO van al gist.** `externalIds`/`coverUrl`/`sources` viven **solo en la
    bandeja** (`ImportedGame`, local). `GameItem` **no se modifica**: al clasificar, el juego pasa
    al gist como un `GameItem` estándar. *Consecuencia:* un juego ya clasificado no conserva
@@ -62,7 +65,8 @@
 
 ## Arquitectura de la primera integración
 
-Reutiliza el **import de fichero** de Ajustes (`SettingsHub.tsx:312`). **No introduce ningún
+Reutiliza el **import de fichero** de Ajustes (`SettingsHub`, cableado en `App.tsx` con
+`handleImportLibraryExporter`). **No introduce ningún
 proxy ni Function nueva.** Piezas:
 
 ### A. Almacén de la Bandeja (local)
@@ -119,12 +123,13 @@ género/plataforma.)
    - **Mismo juego, otra plataforma** → **fusión** (añade la plataforma y el `externalIds[source]`),
      sin crear otra entrada.
 2. **Preview con selección** (checkboxes, avisos de duplicado).
-3. **Inserción en lote en la bandeja**: `addGamesToStaging` (Anexo A).
+3. **Inserción en lote en la bandeja**: `addGamesToInbox` (`core/import/staging.ts`; Anexo A).
 
 ### D. Normalización de tags (sin IGDB)
-`src/core/utils/metadataNormalize.ts` — mapea las plataformas/géneros de **Playnite** a los tags
-libres de la app, con tablas y **fallback al nombre crudo**; luego `getCanonicalTag`
-(`FormModal.tsx:70`) para respetar la capitalización previa del usuario. (Las mismas tablas se
+`src/core/import/playniteShared.ts` (en el plan, `metadataNormalize.ts`) — mapea las plataformas/géneros
+de **Playnite** a los tags libres de la app, con tablas y **fallback al nombre crudo**; luego
+`canonicalTag` (`core/utils/tags.ts`, lo aplica `FormModal`) para respetar la capitalización previa
+del usuario. (Las mismas tablas se
 ampliarán para IGDB cuando llegue.)
 
 ### E. UI
@@ -183,7 +188,8 @@ vacío                                     ▼
 3. **Bandeja** — almacén `ImportInbox` local; caducidad 30 días. Dos secciones: **"Nuevos"** y
    **"Ya en tus listas"** (los `existsInLists`). Renderizable con `@tanstack/react-virtual`.
 4. **Acceso persistente** — **entrada de menú con contador**, visible solo si `imported.length > 0`;
-   desaparece al vaciarse. Extender `AppSection` (`BottomNavigation.tsx:6`).
+   desaparece al vaciarse. Extender `AppSection` (hoy en `core/constants/routes.ts:14`). *(La entrada
+   del menú se retiró en `19264412`; queda «Ver bandeja (n)» en Ajustes y en el listado vacío.)*
 5. **Clasificar** — **siempre abre `FormModal`** precargado; al guardar, el item sale de la bandeja
    y entra en la lista como `GameItem` normal. Acciones por item: Clasificar / Editar / Descartar.
 
@@ -192,13 +198,15 @@ vacío                                     ▼
 ## Prerrequisitos (pre-flight)
 
 ### Para la PRIMERA integración (Playnite) — mínimos, sin cuentas ni backend
-- [ ] **IndexedDB**: object store dedicado para la bandeja ⇒ bump `DB_VERSION`
+- [x] **IndexedDB**: object store dedicado para la bandeja ⇒ bump `DB_VERSION`
       (`idbConnectionRepository.ts:2`) + crear el store en `onupgradeneeded`; y bump
-      `LOCAL_SCHEMA_VERSION` (`storageKeys.ts:5`).
-- [ ] **Routing**: añadir `/bandeja` a la tabla de rutas (`routes.ts`; hay test de regresión de
+      `LOCAL_SCHEMA_VERSION` (`storageKeys.ts:5`). *(Hecho con `DB_VERSION = 5` y el store
+      `importInbox`; `LOCAL_SCHEMA_VERSION` sigue en 1: no hizo falta subirlo.)*
+- [x] **Routing**: añadir `/bandeja` a la tabla de rutas (`routes.ts`; hay test de regresión de
       rutas) y extender `AppSection`. (`/integraciones` llegó a existir y se eliminó después.)
-- [ ] **JSON de muestra de Playnite**: elegir **la** extensión de export soportada y capturar un
+- [x] **JSON de muestra de Playnite**: elegir **la** extensión de export soportada y capturar un
       **export real** — sin él no se puede escribir/validar el `playniteMapper`. Fijar y documentar aquí su esquema.
+      *(Elegida «Playnite Library Exporter»; su forma está en la cabecera de `core/import/libraryExporter.ts`.)*
 - **No hace falta**: ni CSP (Playnite no carga carátulas remotas), ni Cloudflare Functions, ni
   Steam API key, ni Twitch/IGDB, ni ningún secreto.
 
@@ -210,9 +218,10 @@ vacío                                     ▼
 
 ### Verificado que NO bloquea (para todas las vías)
 - **`GameItem`/gist:** al no llevar los campos de import al gist, **no** se toca `leanGameItem`
-  (`socialProjection.ts:119-146`) ni la serialización. **Merge CRDT** (`syncRepository.ts`, por
-  item completo) y **lectura del gist** (genérica, `legacyGamesFormat.ts:71`) intactos. **Zod**
-  solo valida el gist social.
+  (`socialProjection.ts:120`) ni la serialización. **Merge CRDT** (`syncRepository.ts`, por
+  item completo) y **lectura del gist** (genérica, `model/migration/legacyGamesFormat.ts`,
+  `unwrapGamesFile`) intactos. **Zod** valida el gist social, el de juegos (`gamesGistSchema.ts`) y
+  los enlaces compartidos (`shareSchema.ts`); el import de Playnite no lo usa.
 
 ---
 
@@ -220,26 +229,34 @@ vacío                                     ▼
 
 > Recordatorio: al abordar cada punto, confirmar la realidad y **actualizar este documento**.
 
-### Entrega 1 — Primera integración (Playnite)
+### Entrega 1 — Primera integración (Playnite) · ✅ hecha (revisado el 01-10-2026)
 
 **Cimiento común** (lo reutilizarán los futuros):
-- [ ] Almacén `ImportInbox`/`ImportedGame` (sección A), **solo local**, store IndexedDB dedicado + TTL.
-- [ ] `addGamesToStaging(items[])` — dedupe+fusión (marcar `existsInLists`, idempotente por
+- [x] Almacén `ImportInbox`/`ImportedGame` (sección A), **solo local**, store IndexedDB dedicado + TTL.
+- [x] `addGamesToInbox(items[])` (en el plan, `addGamesToStaging`; `core/import/staging.ts`) — dedupe+fusión (marcar `existsInLists`, idempotente por
       `externalIds[source]`, fusionar plataformas si difiere el origen), **un solo persist**, id
       máx calculado una vez (Anexo A).
-- [ ] `graduateFromStaging(importedId, targetTab)` — **abre `FormModal`**; al guardar, saca de la
-      bandeja y crea el `GameItem` en la lista destino.
-- [ ] `purgeStaleImports(now)` — purga los no clasificados pasados 30 días.
-- [ ] Interfaz `LibraryConnector` + carpeta `src/model/repository/import/`.
-- [ ] Normalización de tags `metadataNormalize.ts` (tablas Playnite + `getCanonicalTag`).
-- [ ] **UI**: tarjeta "Integraciones" en Ajustes (solo Playnite) y en el estado vacío de un listado,
-      pantalla de la Bandeja (secciones "Nuevos"/"Ya en tus listas") y entrada de menú con contador.
+- [x] Graduación — **abre `FormModal`**; al guardar, saca de la bandeja y crea el `GameItem` en la
+      lista destino. No existe `graduateFromStaging`: vive en `App.tsx` (`handleClassifyImport` /
+      `handleEnrichImport` apuntan `graduatingIdRef`, y el guardado retira el importado de la bandeja).
+- [x] `purgeStaleImports(now)` — purga los no clasificados pasados 30 días.
+- [ ] Interfaz `LibraryConnector` + carpeta `src/model/repository/import/`. *(La carpeta existe
+      —`inboxRepository.ts`, `importFieldPrefsRepository.ts`—; la interfaz no se hizo: con un solo
+      conector no hacía falta. `RawExternalGame` vive en `model/types/import.ts`.)*
+- [x] Normalización de tags en `playniteShared.ts` (en el plan, `metadataNormalize.ts`; tablas
+      Playnite + `canonicalTag` de `core/utils/tags.ts`).
+- [x] **UI**: tarjeta "Integraciones" en Ajustes (solo Playnite) y en el estado vacío de un listado,
+      pantalla de la Bandeja (secciones "Nuevos"/"Ya en tus listas"). *(La entrada de menú con
+      contador se retiró en `19264412`.)*
 
 **Conector Playnite**:
-- [ ] Fijar y documentar el esquema JSON de la extensión de export elegida (Anexo B).
-- [ ] `playniteMapper` (zod tolerante) → `RawExternalGame[]` → `addGamesToStaging`.
-- [ ] Enrutar el input de fichero de `SettingsHub` al `playniteMapper` (junto al import de backup).
-- [ ] Tests (Vitest): mapper, dedupe+fusión, graduación vía formulario, purga TTL.
+- [x] Fijar y documentar el esquema JSON de la extensión de export elegida: *Playnite Library
+      Exporter* (cabecera de `core/import/libraryExporter.ts`).
+- [x] Parser → `RawExternalGame[]` → `addGamesToInbox`. No es un `playniteMapper` con zod: es
+      `parseLibraryExporter` (`core/import/libraryExporter.ts`), tolerante a mano, sin zod.
+- [x] Enrutar el input de fichero de `SettingsHub` al parser (junto al import de backup), vía
+      `handleImportLibraryExporter` en `App.tsx`.
+- [x] Tests (Vitest): `libraryExporter.test.ts`, `importStaging.test.ts`, `useImportInbox.test.ts`.
 
 ### Añadidos futuros (cada uno, cuando se decida)
 - [ ] **IGDB** (enriquecimiento): `functions/api/metadata.ts` + `metadataRepository.ts` + ampliar
@@ -263,16 +280,16 @@ vacío                                     ▼
 
 ## Puntos de anclaje en el código
 
-- Modelo del juego: `src/model/types/game.ts:4` (`GameItem`), `TabData` `:35`.
-- Listas/transiciones: `src/core/constants/labels.ts:11`, `:41` (`TAB_ACTIONS`).
-- Alta/mover/insertar: `useGameListViewModel.ts` → `GameDraft:28`, `saveDraft:330`,
-  `moveGameToTab:451`, `addGameToProximos:489`, dedupe `hasGameInLists:479`.
-- Alta manual (UI): `FormModal.tsx` (borrador local `:92`, `getCanonicalTag:70`, `runSave:186`),
-  import de backup `SettingsHub.tsx:312`.
+- Modelo del juego: `src/model/types/game.ts:4` (`GameItem`), `TabData` `:70`.
+- Listas/transiciones: `src/core/constants/labels.ts` (`TAB_ORDER`, `TAB_ACTIONS`).
+- Alta/mover/insertar: `useGameListViewModel.ts` → `GameDraft:34`, `saveDraft:448`,
+  `moveGameToTab:635`, `addGameToProximos:674`, dedupe `hasGameInLists:671`.
+- Alta manual (UI): `FormModal.tsx` (borrador local, `canonicalTag` de `core/utils/tags.ts`),
+  import de backup en `SettingsHub` (`onImport`, cableado en `App.tsx`).
 - Persistencia local/IDB: `storageKeys.ts:5` (`LOCAL_SCHEMA_VERSION`), `idbConnectionRepository.ts:2`
   (`DB_VERSION`), `localRepository.ts`, `indexedDbRepository.ts`.
-- Routing: `App.tsx:57` (`APP_ROUTE_PATHS`), `BottomNavigation.tsx:6` (`AppSection`).
-- Sync/gist (no se toca): `gistRepository.ts`, `syncRepository.ts`, `socialProjection.ts:119`
+- Routing: `src/core/constants/routes.ts:14` (`AppSection`) y `:16` (`APP_ROUTES`).
+- Sync/gist (no se toca): `gistRepository.ts`, `syncRepository.ts`, `socialProjection.ts:120`
   (`leanGameItem`). Proxy de referencia (futuros): `functions/api/github-oauth.ts`, `wrangler.toml`.
 
 ## Fuentes
@@ -290,6 +307,11 @@ vacío                                     ▼
 # Anexo A — Diseño técnico del cimiento (primera integración)
 
 Base que reutilizarán también los añadidos futuros. Sin IGDB ni proxies.
+
+> **Nombres reales (revisado el 01-10-2026):** `addGamesToStaging` es `addGamesToInbox`
+> (`core/import/staging.ts`); `graduateFromStaging` no existe como función (la graduación está en
+> `App.tsx`, ver la Entrega 1); `metadataNormalize.ts` es `core/import/playniteShared.ts`, y
+> `getCanonicalTag` es `canonicalTag` (`core/utils/tags.ts`). Lo de abajo conserva el diseño original.
 
 ## Almacén y persistencia
 `ImportInbox`/`ImportedGame` (sección A) en un **object store IndexedDB dedicado** (bump de
@@ -366,6 +388,12 @@ sin IGDB; reutiliza el import de fichero existente; y el riesgo de no-oficialida
 > **clasificar se abre siempre el `FormModal`**, donde el usuario completa lo que falte.
 
 ## Mapeo (`playniteMapper` → `RawExternalGame`)
+> **Lo que se implementó (revisado el 01-10-2026):** no hay `playniteMapper.ts` ni zod. El parser es
+> `src/core/import/libraryExporter.ts` (`parseLibraryExporter`), para el export de *Playnite Library
+> Exporter*, tolerante a mano (descarta lo que no tiene nombre y no lanza). Ese export **no trae estado
+> de finalización ni nota de usuario**, así que los dos extras de abajo no se rellenan por esta vía
+> (`suggestedTab` y `grade` llegan vacíos). Lo que sigue es el diseño original.
+
 `src/model/repository/import/playniteMapper.ts` valida el JSON con `zod` (tolerante; descarta
 entradas inválidas sin abortar) y mapea:
 - `name ← Name`; `genres ← Genres[]` (normalizados).

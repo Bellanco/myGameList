@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { INSTALL_UI } from '../../src/core/constants/labels';
+import { INSTALL_UI } from '../../src/core/constants/consentLabels';
 import { ANALYTICS_CONSENT_KEY, INSTALL_HINT_KEY } from '../../src/core/constants/storageKeys';
 
 /**

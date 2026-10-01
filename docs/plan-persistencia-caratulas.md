@@ -21,7 +21,7 @@
 
 > **Regla de este plan:** si un cambio obliga a enseñarle algo al usuario, no es de este plan.
 
-> **Estado (2026-09-17):** los dos pasos están hechos y en `develop`. Firestore queda aplazado con un
+> **Estado (2026-09-17; revisado el 01-10-2026):** los dos pasos están hechos y en producción desde la 1.3.1. Firestore queda aplazado con un
 > criterio escrito para reabrirlo. Ningún cambio de los hechos añade UI, toca el esquema ni mueve datos.
 
 ## El problema
@@ -116,7 +116,7 @@ conceda.
 
 ## Paso 1 — Cachear las respuestas de `m=1` ✅
 
-> **HECHO** — `a9518bf` *feat(caratulas): el recorrido guarda en el equipo lo que aprende*
+> **HECHO** — `b7de4c60` *feat(caratulas): el recorrido guarda en el equipo lo que aprende*
 >
 > **Decisión tomada al implementarlo:** se cachea **solo en el modo `m=1`**, no el 404 del mosaico. El
 > plazo depende de quién pregunta: el recorrido guarda lo que aprende (`CACHE_MAPA`), la etiqueta `<img>`
@@ -139,7 +139,7 @@ un dato. Hoy el servidor ya los separa (429 es 429, 501 es 501) y `useCoverBackf
 así que el 404 es un dato fiable.
 
 Haciéndolas cacheables **siete días** con `stale-while-revalidate` —alineado con `MISS_TTL`
-(`igdbCover.ts:98`), que es lo que el servidor ya considera correcto para olvidar un negativo—, el
+(`igdbCover.ts:112`), que es lo que el servidor ya considera correcto para olvidar un negativo—, el
 recorrido se resuelve desde la caché HTTP del equipo: sin red, sin cuenta y en todos los navegadores.
 Mantener `no-store` en 429/501/403/502. El atajo de reabrir la pregunta al editar un juego se conserva
 forzando `cache: 'reload'` en esa URL.
@@ -149,7 +149,7 @@ desaparece del todo (eso solo lo da Firestore, hoy aplazado).
 
 ## Paso 2 — Pedir la persistencia en silencio (propina) ✅
 
-> **HECHO** — `6bd8c1e` *feat(almacenamiento): pedir la persistencia en el arranque, sin avisar a nadie*
+> **HECHO** — `1d91af20` *feat(almacenamiento): pedir la persistencia en el arranque, sin avisar a nadie*
 >
 > **Decisiones tomadas al implementarlo:**
 > - La función se mudó de `coverLimits` a **`src/core/utils/durableStorage.ts`**: protege el origen entero
@@ -162,7 +162,8 @@ desaparece del todo (eso solo lo da Firestore, hoy aplazado).
 > Cubierto por `tests/unit/durableStorage.test.ts` (8 casos).
 >
 > **Nota operativa:** tras este cambio el chunk de arranque queda en **215,1 kB** comprimidos sobre un
-> presupuesto de 220 (`scripts/ci-validate.js`). El margen estrecho no lo trajo este paso: medido contra
+> presupuesto de 220 (`scripts/ci-validate.js`). *(Cifras de entonces. Hoy el tope es de 190 kB
+> —`BOOT_CRITICAL_BUDGET_KB`— y el crítico mide 180,2 kB, medido el 01-10-2026 sobre `82978f93`.)* El margen estrecho no lo trajo este paso: medido contra
 > un build del commit anterior, antes eran **215,0 kB**. Este módulo aportó 0,1 kB.
 >
 > La palanca más grande que queda está anotada en el propio `ci-validate.js`: la tipografía base son
@@ -265,7 +266,12 @@ coverKnowledge/{uid} → { <hash de nombre+plataformas+modo>: <timestamp>, … }
 **No hay hueco por falta de sesión** (verificado 2026-09-17). El interruptor de carátulas vive solo
 en `AppearanceSettings`, que se monta únicamente dentro de `AccountHub` (`AccountHub.tsx:73`), y esa
 pantalla solo existe con sesión de Google: `App.tsx:792` no la renderiza sin uid y `App.tsx:211`
-redirige `/cuenta` a la lista. Es además el único `setCovers` de la app, y la preferencia viene
+redirige `/cuenta` a la lista.
+*(Revisado el 01-10-2026: `AccountHub.tsx` ya no existe. El interruptor está en `AppearanceToggles`,
+dentro de `settings/PersonalizationSettings.tsx` —Ajustes › Diseño, `/ajustes/diseno`, adonde ahora
+redirige `/cuenta`—. Sigue siendo así por construcción: el menú solo ofrece «Diseño» con perfil social activo
+(`SettingsMenu.tsx`) y, si se entra a mano por la ruta, `App.tsx` (~:275) redirige fuera en cuanto la sesión
+está resuelta y no hay perfil.)* Es además el único `setCovers` de la app, y la preferencia viene
 apagada de fábrica.
 
 Es decir: **quien puede tener carátulas ya tiene cuenta de Google, por construcción**. Firestore
@@ -331,11 +337,14 @@ empuja a instalar—, pero siguen siendo ciertos y conviene no perderlos:
    antes haría falta servir el handler desde el dominio propio con una Pages Function en
    `functions/__/auth/[[path]].ts` (una regla de `_redirects` no vale: un 200 al shell
    se tragaría `/__/auth/*`; desde el 30-09-2026 ya no hay comodín, así que bastaría con no listarla).
-3. **La apariencia cuelga del candado de la escala de nota.** `AppearanceSettings` vive dentro de
+3. ~~**La apariencia cuelga del candado de la escala de nota.**~~ `AppearanceSettings` vive dentro de
    `<div className="settings-account-body" inert={!scoreScaleUid}>` (`AccountHub.tsx:46`). Hoy es
    inocuo porque el hub no se renderiza sin uid, pero si algún día se renderizara, el tema y las
    carátulas saldrían bloqueados por un gate que es de otra cosa.
-4. **`App.tsx:396`**: si hay retorno de OAuth se llama a `completeGithubLoginFromRedirect()` **en
+   *Ya no aplica (revisado el 01-10-2026): `AccountHub.tsx` desapareció y en `PersonalizationSettings`
+   los interruptores no están bajo ningún `inert`; el candado se queda en la propia tarjeta de la escala
+   (`ScoreScaleCard`).*
+4. **`App.tsx`** (efecto de montaje, `completeGithubLoginFromRedirect`; sigue abierto a 01-10-2026): si hay retorno de OAuth se llama a `completeGithubLoginFromRedirect()` **en
    lugar de** `initializeSync()`. Si el retorno falla, el ciclo de sync no arranca en esa carga.
    Bastaría con llamarlo en el `finally`.
 
@@ -345,7 +354,7 @@ empuja a instalar—, pero siguen siendo ciertos y conviene no perderlos:
 - [ ] WebKit **con la app en la pantalla de inicio / el Dock**: ¿concede?
 - [x] Safari macOS sin instalar: idéntico a iOS (deniega en silencio, sin `permissions.query`).
 - [ ] Hacer la comprobación del criterio (borrar las dos claves y mirar `Size` en Network) la primera vez
-      que el Paso 1 esté en producción.
+      que el Paso 1 esté en producción. *(Ya lo está, desde la 1.3.1: la comprobación se puede hacer.)*
 - [ ] (solo si se reabre Firestore) Decidir el algoritmo del hash: nombre + plataformas + modo.
 - [ ] (solo si se reabre Firestore) Confirmar que las reglas nuevas no bloquean el documento.
-- [ ] Vigilar el presupuesto del chunk de arranque: 215,1 kB de 220.
+- [ ] Vigilar el presupuesto del chunk de arranque: 180,2 kB de 190 (medido el 01-10-2026 sobre `82978f93`).

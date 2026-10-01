@@ -1,9 +1,9 @@
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { IMPORT_UI } from '../../../core/constants/importLabels';
 // La hoja del flujo de importación se importa AQUÍ y no desde `index.scss`: la pantalla que la usa es perezosa,
 // así que su CSS viaja en ese chunk y no pesa en el arranque.
 import '../../../styles/import.scss';
 
-const M = UI_MESSAGES.import.integrations;
+const M = IMPORT_UI.integrations;
 
 /**
  * Qué trae la importación y qué hace falta para usarla: dos frases y ninguna pieza más.

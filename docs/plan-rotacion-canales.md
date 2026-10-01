@@ -77,7 +77,9 @@ volver a conectar la sincronización en tus otros dispositivos». Es aceptable p
 
 ## 6. Interfaz
 
-En **Cuenta**, junto a la zona de peligro pero **fuera** de ella (esto no destruye datos del usuario):
+En **Ajustes › Datos** (`/ajustes/datos`; la antigua pantalla «Cuenta» ya no existe y `/cuenta` redirige a Diseño),
+junto a la zona de peligro (`DangerZone`, dentro de `LegalSettings`) pero **fuera** de ella (esto no destruye datos
+del usuario):
 
 - Explicar en una frase qué hace y qué no (§2).
 - Un botón para el canal social —el barato— y, si se implementa la Fase B, otro aparte para los listados con su

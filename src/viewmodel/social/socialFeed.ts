@@ -9,8 +9,10 @@ import { createLocalDateFormat, localDayKey, startOfLocalDay } from '../../core/
 import { normalizeTimestamp as toSafeTimestamp } from '../../core/utils/normalize';
 import type { SocialActivityEntry, SocialMoveEntry, SocialPostEntry } from '../../model/repository/socialGistRepository';
 import type { PalmaresEntry } from '../../model/types/premios';
+import type { YearSummarySeen } from '../../model/repository/firebaseClient';
 import { useFeedMoveTabs } from '../../view/hooks/useFeedMoveTabs';
 import { achievementFeedEntries, type AchievementFeedEntry } from '../../core/achievements/feed';
+import { yearSummaryFeedEntries, type YearSummaryFeedEntry } from '../../core/social/yearSummaryFeed';
 import { useAchievementBaselines, type AchievementBaselineSource } from './useAchievementBaselines';
 import { ENABLE_ACHIEVEMENTS } from '../../core/achievements/flags';
 import type { ProfileTier } from '../../core/constants/tiers';
@@ -67,7 +69,8 @@ export type SocialFeedItem =
   | (SocialActivityFeedItem & { kind?: undefined })
   | (SocialPostFeedItem & { kind: 'post' })
   | (SocialMoveFeedItem & { kind: 'move' })
-  | (AchievementFeedEntry & { kind: 'achievements' });
+  | (AchievementFeedEntry & { kind: 'achievements' })
+  | (YearSummaryFeedEntry & { kind: 'yearSummary' });
 
 /** Un día del feed agrupado, tal y como lo pinta la pantalla. */
 export type SocialFeedDayGroup = {
@@ -89,6 +92,8 @@ type FeedSource = {
   displayName?: string;
   photoURL?: string;
   achievementsMirror?: string;
+  /** Si ya abrió su resumen del año en temporada: de aquí sale su tarjeta destacada. */
+  yearSummarySeen?: { year: number; at: number } | null;
 };
 
 const FEED_PAGE_SIZE = 25;
@@ -303,7 +308,22 @@ export function useSocialFeed(
       ]).map((entry) => ({ ...entry, kind: 'achievements' as const }))
       : [];
 
-    return [...activity, ...posts, ...moves, ...achievements]
+    // EL RESUMEN DEL AÑO: una tarjeta por persona y año, de tus amistades y la tuya, sacada del directorio igual
+    // que los logros. Sin línea base: el aviso lo publica su dueño una sola vez, al abrir su resumen en temporada.
+    const ownUid = ownAchievements?.uid || '';
+    const yearSummaries = yearSummaryFeedEntries(
+      directory
+        .filter((entry) => friendUids.has(String(entry.uid || '')) || (ownUid && String(entry.uid || '') === ownUid))
+        .map((entry) => ({
+          id: String(entry.id || ''),
+          displayName: entry.displayName,
+          photoURL: entry.photoURL,
+          seen: entry.yearSummarySeen ?? null,
+          own: Boolean(ownUid) && String(entry.uid || '') === ownUid,
+        })),
+    ).map((entry) => ({ ...entry, kind: 'yearSummary' as const }));
+
+    return [...activity, ...posts, ...moves, ...achievements, ...yearSummaries]
       // Descarta ítems con timestamp inválido/fuera de rango ANTES de ordenar y cortar: si no, ordenarían arriba,
       // coparían el corte visible y el agrupado por día los eliminaría, dejando el feed en blanco (ver bug del 2º amigo).
       .filter((item) => hasRenderableTimestamp(item.updatedAt))
@@ -399,6 +419,8 @@ export type SocialDirectoryEntry = {
    * reconstrucciones lo dejaban fuera y nadie veía los logros de nadie más.
    */
   achievementsMirror: string;
+  /** Si ya abrió su resumen del año en temporada (`profiles/{uid}.yearSummary`). Obligatorio por lo mismo. */
+  yearSummarySeen: YearSummarySeen | null;
   /**
    * EL PALMARÉS: las ediciones de la porra ganadas, para la vitrina de la ficha.
    *

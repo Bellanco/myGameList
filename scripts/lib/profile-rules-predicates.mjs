@@ -30,7 +30,7 @@ export const LIMITS = {
  */
 export const PROFILE_ALLOWED_KEYS = [
   'schemaVersion', 'uid', 'profileId', 'displayName', 'photoURL', 'social', 'updatedAt', 'tier', 'createdAt',
-  'achievements', 'palmares',
+  'achievements', 'palmares', 'yearSummary',
 ];
 
 /** Subclaves admitidas en `social` (allowlist `hasOnly` de `profileSocialIsSane`). `githubToken` NO está. */
@@ -107,6 +107,14 @@ export function auditProfile(data) {
   for (const k of ['updatedAt', 'createdAt']) {
     if (has(k) && !isNumberOrTimestamp(data[k])) {
       problemas.push({ nuevo: true, motivo: `${k} no es número ni timestamp (${typeof data[k]})` });
+    }
+  }
+  // `profileYearSummaryIsSane()`: `{ year, at }`, año entero entre 2000 y 2100 y fecha en número o timestamp.
+  if (has('yearSummary')) {
+    const y = data.yearSummary;
+    const forma = y && typeof y === 'object' && !Array.isArray(y) && Object.keys(y).every((k) => k === 'year' || k === 'at');
+    if (!forma || !Number.isInteger(y.year) || y.year < 2000 || y.year > 2100 || !isNumberOrTimestamp(y.at)) {
+      problemas.push({ nuevo: true, motivo: 'yearSummary no es { year: entero 2000–2100, at: fecha }' });
     }
   }
 

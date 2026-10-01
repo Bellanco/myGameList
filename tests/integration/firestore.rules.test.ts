@@ -174,6 +174,19 @@ describe('firestore.rules', () => {
       }));
     });
 
+    /**
+     * EL AVISO DEL RESUMEN DEL AÑO: `{ year, at }`, que lo escribe su dueño al abrir el resumen en temporada y lo
+     * leen sus amistades. Forma cerrada: ni subclaves, ni un año que no sea entero razonable.
+     */
+    it('el dueño publica que ya vio su resumen del año, con forma cerrada', async () => {
+      const aviso = { year: 2026, at: 1765800000000 };
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a', yearSummary: aviso }));
+      await assertFails(setDoc(doc(ownerDb('uid-b'), 'profiles', 'uid-a'), { uid: 'uid-a', yearSummary: aviso }));
+      for (const malo of [{ ...aviso, basura: 1 }, { year: '2026', at: 1 }, { year: 1999, at: 1 }, { year: 2026 }, 'todo']) {
+        await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a', yearSummary: malo }));
+      }
+    });
+
     it('el dueño y un autenticado pueden leer un perfil social.enabled; el anónimo no', async () => {
       await seed('profiles', 'uid-a', { uid: 'uid-a', social: { enabled: true } });
       await assertSucceeds(getDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a')));

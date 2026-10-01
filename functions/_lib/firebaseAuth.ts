@@ -9,6 +9,7 @@
 // esas comprobaciones el token sería falsificable, así que no hay atajos "de desarrollo" en este fichero.
 import type { KVNamespace } from './keys';
 import { CLOCK_SKEW_SECONDS, decodeRs256Jwt, loadJwks, verifyRs256Signature } from './jwt';
+import { hasAdminClaim } from '../../src/core/security/admin';
 
 /**
  * Claves públicas con las que Google firma los ID tokens de Firebase Auth.
@@ -26,6 +27,8 @@ export interface AuthUser {
   uid: string;
   email: string | null;
   emailVerified: boolean;
+  /** Si el token trae el custom claim de administrador (ver `isAdmin`). */
+  admin: boolean;
   /** El token tal cual llegó: se reenvía a Firestore para leer el perfil con los permisos de su dueño. */
   idToken: string;
 }
@@ -64,6 +67,7 @@ export async function verifyIdToken(idToken: string, projectId: string, kv: KVNa
     uid: sub,
     email: typeof payload.email === 'string' ? payload.email : null,
     emailVerified: payload.email_verified === true,
+    admin: hasAdminClaim(payload),
     idToken,
   };
 }
@@ -76,11 +80,14 @@ export function bearerToken(request: Request): string | null {
 }
 
 /**
- * ¿Es el administrador? MISMO criterio que `firestore.rules` (`isAdmin`): correo verificado e igual al del
- * administrador. El correo se lee de la variable de entorno para no tener el literal en dos sitios que puedan
- * divergir.
+ * ¿Es el administrador? El MISMO criterio que `firestore.rules` (`isAdmin()`) y que el cliente: el custom claim
+ * `admin`, comprobado con la misma función (`hasAdminClaim`, estricta contra `true`). Lo concede o retira
+ * `scripts/set-admin-claim.mjs` y viaja dentro del ID token ya verificado, así que no hace falta leer nada más.
+ *
+ * ANTES ERA EL CORREO de `ADMIN_EMAIL` (`wrangler.toml`), y se quedó así cuando las reglas pasaron al claim: dos
+ * criterios que señalaban a la misma persona, pero que habrían divergido en silencio al dar o quitar el claim a
+ * alguien. Además publicaba la dirección en el repositorio. Un token con ese correo y sin claim ya NO es admin.
  */
-export function isAdmin(user: AuthUser, adminEmail: string | undefined): boolean {
-  const expected = String(adminEmail || '').trim().toLowerCase();
-  return Boolean(expected) && user.emailVerified && (user.email || '').toLowerCase() === expected;
+export function isAdmin(user: AuthUser): boolean {
+  return user.admin;
 }

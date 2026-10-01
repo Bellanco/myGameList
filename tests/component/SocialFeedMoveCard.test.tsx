@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
+import { YEAR_SUMMARY_UI } from '../../src/core/constants/yearSummaryLabels';
 import { SocialFeedScreen } from '../../src/view/components/socialhub/SocialFeedScreen';
 import type { SocialFeedDayGroup, SocialFeedItem, SocialMoveFeedItem } from '../../src/viewmodel/social/socialFeed';
 import { ACHIEVEMENTS_BY_ID } from '../../src/core/achievements/catalog';
@@ -37,6 +38,7 @@ function renderFeed(
     openActivityDetail?: () => void;
     openProfileDetail?: (id: string) => void;
     openProfileAchievements?: (id: string) => void;
+    openProfileSummary?: (id: string) => void;
     openMoveReview?: (profileId: string, gameId: number) => void;
   } = {},
 ) {
@@ -50,6 +52,7 @@ function renderFeed(
       loadingDirectory={false}
       openProfileDetail={over.openProfileDetail ?? (() => {})}
       openProfileAchievements={over.openProfileAchievements ?? (() => {})}
+      openProfileSummary={over.openProfileSummary ?? (() => {})}
       onOpenProfiles={() => {}}
       onOpenOwnProfile={() => {}}
       onOpenRequests={() => {}}
@@ -286,5 +289,32 @@ describe('SocialFeedScreen — la tarjeta de LOGROS', () => {
   it('tus propios logros salen marcados como actividad PROPIA', async () => {
     renderFeed([{ ...logros(), own: true }]);
     expect(tarjetaDeLogros().className).toContain('is-own-activity');
+  });
+});
+
+/* EL RESUMEN DEL AÑO en el feed: una tarjeta destacada cuando una amistad abre el suyo en temporada. La tarjeta
+   entera abre su resumen; el nombre, su ficha. La tuya dice «Ya tienes tu resumen» y no lleva enlace al nombre. */
+describe('SocialFeedScreen — tarjeta del resumen del año', () => {
+  const resumen = (own = false): SocialFeedItem => ({
+    key: `pid-2:year-summary:2026`, profileId: 'pid-2', displayName: 'Ada', photoURL: '', year: 2026, updatedAt: AT, own, kind: 'yearSummary',
+  });
+
+  it('la tarjeta abre su resumen y el nombre, su ficha', async () => {
+    const openProfileSummary = vi.fn();
+    const openProfileDetail = vi.fn();
+    renderFeed([resumen()], { openProfileSummary, openProfileDetail });
+    const tarjeta = screen.getByRole('listitem', { name: YEAR_SUMMARY_UI.feed.aria('Ada', 2026) });
+    expect(tarjeta).toHaveClass('is-year-summary');
+    await userEvent.click(within(tarjeta).getByRole('button', { name: 'Ada' }));
+    expect(openProfileDetail).toHaveBeenCalledWith('pid-2');
+    expect(openProfileSummary).not.toHaveBeenCalled();
+    await userEvent.click(within(tarjeta).getByText(YEAR_SUMMARY_UI.feed.line(2026)));
+    expect(openProfileSummary).toHaveBeenCalledWith('pid-2');
+  });
+
+  it('la tuya habla en segunda persona', () => {
+    renderFeed([resumen(true)]);
+    expect(screen.getByText(YEAR_SUMMARY_UI.feed.own(2026))).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ada' })).not.toBeInTheDocument();
   });
 });

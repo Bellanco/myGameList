@@ -16,6 +16,10 @@ vi.mock('../../src/model/repository/firebaseRepository', () => ({
   setPublicConfig: vi.fn(async () => {}),
 }));
 
+/* La cuenta de administración pide sus carátulas en modo ampliado; aquí se finge serlo o no sin pasar por Auth. */
+const admin = vi.hoisted(() => ({ es: false }));
+vi.mock('../../src/view/hooks/useIsAdmin', () => ({ useIsAdmin: () => admin.es }));
+
 function juego(id: number, name: string): GameItem {
   return {
     id, _ts: 1, name, platforms: ['Steam'], genres: ['Acción'], steamDeck: false, review: '', grade: 50, score: 3,
@@ -41,6 +45,7 @@ function pinta(forma: 'grid' | 'list', juegos: GameItem[], tab: TabId = 'c', all
 }
 
 beforeEach(() => {
+  admin.es = false;
   localStorage.clear();
   reiniciarMemoriaDeCaratulas();
   reiniciarIndiceDeCaratulas();
@@ -79,6 +84,66 @@ describe('qué carátulas pide el listado', () => {
 
     expect(fila?.className).toContain('has-cover');
     expect(fila?.style.getPropertyValue('--row-cover')).toBe(`url("${coverUrl('Celeste', ['Steam'], false, 'medio')}")`);
+  });
+
+  /* La `ancho` (762×1080) era de la cuenta de administración, y costaba casi el doble de descodificación al bajar
+     sin que el detalle de más llegara a verse bajo el velo (ver `coverDeRenglon`). */
+  it('la cuenta de administración también pide la de en medio', () => {
+    admin.es = true;
+    const { container } = pinta('list', [juego(1, 'Celeste')]);
+    const fila = container.querySelector<HTMLElement>('tr.main-row');
+
+    expect(fila?.style.getPropertyValue('--row-cover')).toBe(`url("${coverUrl('Celeste', ['Steam'], true, 'medio')}")`);
+  });
+
+  /* EL PRIMER RENDER YA SALE RECORTADO. Si el virtualizador nace sin viewport, la red de seguridad monta la lista
+     entera y la recorta en la misma tarea: no se ve, pero cada renglón llega a pedir su carátula de fondo y esas
+     descargas no se cancelan (149 carátulas por visita en producción). Las filas que se quitan sin haberse
+     pintado son la huella de ese render intermedio. */
+  it('una lista larga en renglones no monta todas sus filas para recortarlas después', async () => {
+    const juegos = Array.from({ length: 150 }, (_unused, i) => juego(i + 1, `Juego ${i + 1}`));
+    // jsdom no tiene layout: con filas de 0 px, el virtualizador ya medido mete la lista entera en la ventana y no
+    // habría nada que distinguir. Con una altura de renglón de verdad recorta como en el navegador.
+    const original = Element.prototype.getBoundingClientRect;
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      return this.matches('tr.main-row') ? DOMRect.fromRect({ width: 1000, height: 150 }) : original.call(this);
+    });
+    const contenedor = document.body.appendChild(document.createElement('div'));
+    let quitadas = 0;
+    const observador = new MutationObserver((registros) => {
+      for (const registro of registros) {
+        registro.removedNodes.forEach((nodo) => {
+          if (!(nodo instanceof Element)) return;
+          quitadas += (nodo.matches('tr.main-row') ? 1 : 0) + nodo.querySelectorAll('tr.main-row').length;
+        });
+      }
+    });
+    observador.observe(contenedor, { childList: true, subtree: true });
+    localStorage.setItem('mis-listas-covers', 'on');
+    localStorage.setItem('mis-listas-list-shape', 'list');
+
+    const { container } = render(
+      <GameTable
+        games={juegos}
+        currentTab="c"
+        expandedId={null}
+        onExpandedChange={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onMigrate={vi.fn()}
+        tabActions={[]}
+        coverPolicy={{ allowed: true }}
+      />,
+      { container: contenedor },
+    );
+    await Promise.resolve();
+    observador.disconnect();
+    vi.restoreAllMocks();
+
+    const montadas = container.querySelectorAll('tr.main-row').length;
+    expect(montadas).toBeGreaterThan(0);
+    expect(montadas).toBeLessThan(juegos.length);
+    expect(quitadas).toBeLessThan(juegos.length / 2);
   });
 
   it('y sin carátula conocida el renglón se queda en su superficie plana', () => {

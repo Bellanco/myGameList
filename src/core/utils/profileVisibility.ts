@@ -1,6 +1,7 @@
 import { ADMIN_ONLY_TIER, type ProfileTier } from '../constants/tiers';
 import { TAB_IDS, type GameItem, type TabData, type TabId } from '../../model/types/game';
 import type { SocialProfileVisibility } from '../../model/types/social';
+import { finishDays } from './finishDates';
 
 /**
  * Bloque 6 — Filtra la lista de juegos de OTRO perfil según la visibilidad que ese usuario publicó (respeto de la
@@ -11,6 +12,11 @@ import type { SocialProfileVisibility } from '../../model/types/social';
  * esconde y sus marcas de rejugable y de "merece otra oportunidad", pero NO sus horas. El tiempo de juego es el
  * único ajuste que se respeta frente a todo el mundo, así que quien lo oculta lo oculta de verdad. Está declarado
  * en la política de privacidad (ver `core/constants/legal`): sin decirlo, no valdría hacerlo.
+ *
+ * EL MES EN QUE TERMINÓ CADA JUEGO sí pasa, como `finishedOn` (`AAAA-MM`), para el resumen del año de su perfil;
+ * la cuenta de administración lo recibe con el día (`AAAA-MM-DD`). Se deriva aquí del sello de completados antes
+ * de tirarlo, sin los días de carga en bloque (ver `core/utils/finishDates`), y también está declarado en la
+ * política de privacidad.
  */
 export function applyProfileVisibility(
   games: TabData,
@@ -19,8 +25,10 @@ export function applyProfileVisibility(
 ): Record<TabId, GameItem[]> {
   const isAdmin = viewerTier === ADMIN_ONLY_TIER;
   const hidden = new Set(isAdmin ? [] : visibility.hiddenTabs || []);
-  const scrub = (game: GameItem): GameItem => {
-    const next: GameItem = { ...game };
+  // Se calcula sobre la lista de completados ENTERA: una carga en bloque solo se distingue viéndolas todas.
+  const finished = finishDays(games.c || []);
+  const scrub = (game: GameItem, tab: TabId): GameItem => {
+    const next: GameItem & { finishedOn?: string } = { ...game };
     if (visibility.hideGameTime) next.hours = null;
     if (!isAdmin && visibility.hideReplayable) next.replayable = false;
     if (!isAdmin && visibility.hideRetry) next.retry = false;
@@ -35,14 +43,19 @@ export function applyProfileVisibility(
      * Y siguen yéndose después de F4, que publica la actividad de listas: lo que se publica allí es una
      * proyección acotada y declarada (la primera entrada a cada lista, nunca las ocultas), no el registro
      * completo. Dejar pasar el campo aquí daría el historial entero, que es otra cosa.
+     *
+     * Del de completados se rescata solo el MES (el día, para la administración): es lo que necesita el resumen
+     * del año, y es menos de lo que la actividad de listas ya publica de cada fin.
      */
+    const day = tab === 'c' ? finished.get(game.id) : undefined;
+    if (day) next.finishedOn = isAdmin ? day : day.slice(0, 7);
     delete next.enteredAt;
     delete next.gradedAt;
     return next;
   };
   const out = { c: [], v: [], e: [], p: [] } as Record<TabId, GameItem[]>;
   for (const tab of TAB_IDS) {
-    out[tab] = hidden.has(tab) ? [] : (games[tab] || []).map(scrub);
+    out[tab] = hidden.has(tab) ? [] : (games[tab] || []).map((game) => scrub(game, tab));
   }
   return out;
 }

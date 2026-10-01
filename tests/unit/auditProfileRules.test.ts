@@ -48,6 +48,14 @@ describe('auditoría previa al despliegue de reglas', () => {
       expect(auditProfile({ uid: 'uid-a', updatedAt: { toMillis: () => 1 } })).toEqual([]);
     });
 
+    it('el aviso del resumen del año: { year, at } y nada más', () => {
+      expect(auditProfile({ ...perfilValido(), yearSummary: { year: 2026, at: 1 } })).toEqual([]);
+      expect(auditProfile({ ...perfilValido(), yearSummary: { year: 2026, at: { toMillis: () => 1 } } })).toEqual([]);
+      for (const malo of [{ year: '2026', at: 1 }, { year: 1999, at: 1 }, { year: 2026.5, at: 1 }, { year: 2026, at: 1, x: 1 }, { year: 2026 }, 'todo']) {
+        expect(auditProfile({ ...perfilValido(), yearSummary: malo }).map((p) => p.motivo).join()).toMatch(/yearSummary/);
+      }
+    });
+
     it('detecta lo que la validación C7 rechazaría', () => {
       const motivos = (d: Record<string, unknown>) => auditProfile(d).map((p) => p.motivo).join(' | ');
 

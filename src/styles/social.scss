@@ -989,3 +989,110 @@
   border-top: 1px solid var(--hair);
 }
 .hub-invite-title { margin: 0; font-family: var(--font-display); font-size: var(--fs-md); font-weight: 600; color: var(--text); }
+
+/* ═══ LA TARJETA DEL RESUMEN DEL AÑO en el feed ════════════════════════════════════════════════════════════
+   Alguien abrió su resumen en temporada. Es la misma anatomía que el aviso de logro —una línea centrada, con la
+   FORMA que cada tema da a sus avisos (`--sys-radius`, `--sys-skew`, `--sys-clip`)— pero RELLENA del acento, con
+   su tinta (`--on-accent`), un halo y un brillo que la cruza: sale una vez al año y tiene que destacar sobre los
+   logros, que solo tiñen el filete.
+
+   El selector pesa (0,4,0) a propósito: varios skins visten `.hub-feed-card` con (0,2,1)–(0,4,0), y aquí el
+   relleno es la tarjeta. Lo que un tema fuerza con `!important` (el marco HUD de Sin futuro) se respeta: es su
+   identidad. */
+:root .hub-feed-card.hub-feed-activity-item.is-year-summary {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  align-self: center;
+  width: fit-content;
+  max-width: 100%;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem .8rem;
+  padding: .7rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--steam) 70%, transparent);
+  border-radius: var(--sys-radius);
+  transform: var(--sys-skew);
+  clip-path: var(--sys-clip);
+  /* El acento LISO, sin degradado: `--steam` y `--on-accent` son la pareja que cada tema ajusta para leerse (la
+     de sus botones), y un degradado hacia el fondo la aclaraba en los temas claros justo donde va el texto. */
+  background: var(--steam);
+  color: var(--on-accent);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--steam) 16%, transparent),
+    0 10px 24px -10px color-mix(in srgb, var(--steam) 75%, transparent);
+  cursor: pointer;
+}
+
+/* El sesgo de Ladrones de corazones se contra-aplica al contenido, como en el resto de avisos. */
+:root .hub-feed-activity-item.is-year-summary > * { transform: var(--sys-unskew, none); }
+
+/* EL BRILLO: una franja de luz que cruza la tarjeta tres veces al aparecer y se queda quieta. Detrás del contenido
+   (`z-index: -1` dentro de su propio contexto de apilado), así que no toca el contraste del texto. */
+.hub-feed-activity-item.is-year-summary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / .26) 50%, transparent 70%);
+  translate: -100% 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hub-feed-activity-item.is-year-summary::after { animation: hub-ys-shine 2.8s ease-in-out .6s 3; }
+}
+
+@keyframes hub-ys-shine {
+  0%, 55% { translate: -100% 0; }
+  100% { translate: 100% 0; }
+}
+
+.hub-feed-activity-item.is-year-summary:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.hub-feed-ys-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  font: 800 var(--fs-lg) / 1 var(--font-display);
+  letter-spacing: -.01em;
+}
+
+.hub-feed-ys-icon { width: 1.15em; height: 1.15em; }
+
+/* TODO EL TEXTO EN LA TINTA DEL ACENTO, con el mismo peso que la tarjeta. Las reglas de la línea de feed y de
+   los enlaces de nombre (y las de cada skin) le ponían su gris o su color de enlace, que sobre el relleno del
+   acento no se leían —rojo sobre rojo en Ladrones de corazones claro—. axe no lo ve: no mide sobre degradados. */
+:root .hub-feed-activity-item.is-year-summary .hub-feed-ys-line {
+  margin: 0;
+  color: inherit;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+/* El nombre sigue siendo un enlace a la ficha: subrayado en la tinta del acento, no en el color de enlace. */
+:root .hub-feed-activity-item.is-year-summary .hub-name-link {
+  color: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Y al pasar por encima, igual: los skins tiñen el `:hover` del nombre con su color de enlace, con el mismo peso
+   que la regla de arriba, y llegan después (son un chunk propio). */
+:root .hub-feed-card.hub-feed-activity-item.is-year-summary .hub-name-link:hover { color: inherit; text-decoration-thickness: 2px; }
+
+.hub-feed-ys-cta {
+  padding: .3rem .65rem;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--on-accent) 14%, transparent);
+  font: 700 var(--fs-2xs) / 1 var(--font-label, var(--font-body));
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}

@@ -367,6 +367,21 @@
 
 /* ── §7 · Segmentos y campos: HUD — recto, filete cian, foco amarillo (lo da --steam en base). ── */
 :root[data-palette="cyberpunk"] .hub-seg { border: 1px solid var(--cyber-edge-field); border-radius: 0; }
+/* LA CATEGORÍA ELEGIDA ES UNA CELDA SELECCIONADA DEL HUD, no un relleno: recta, filete y rótulo en amarillo y la
+   barra ácida a la izquierda, como las pestañas (§16) y la ficha de contacto (§17). La píldora de la casa en
+   amarillo macizo llevaba encima el rótulo blanco de la base, que sobre ese amarillo no se leía. */
+:root[data-palette="cyberpunk"] .hub-seg-btn { border-radius: 0; }
+:root[data-palette="cyberpunk"] .hub-seg-btn.is-active { color: var(--cyber-yellow-fg); }
+:root[data-palette="cyberpunk"] .hub-seg-ind {
+  border-radius: 0;
+  background: color-mix(in srgb, var(--cyber-yellow) 10%, transparent);
+  box-shadow: inset 0 0 0 1px var(--cyber-yellow-fg), inset 3px 0 0 var(--cyber-yellow),
+    0 0 12px color-mix(in srgb, var(--cyber-yellow) 30%, transparent);
+}
+:root[data-palette="cyberpunk"][data-theme="light"] .hub-seg-ind {
+  background: color-mix(in srgb, var(--cyber-yellow) 16%, transparent);
+  box-shadow: inset 0 0 0 1px var(--cyber-yellow-fg), inset 3px 0 0 var(--cyber-yellow);
+}
 :root[data-palette="cyberpunk"] .input-base,
 :root[data-palette="cyberpunk"] .finput,
 :root[data-palette="cyberpunk"] .ftextarea,
