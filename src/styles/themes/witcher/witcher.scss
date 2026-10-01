@@ -685,6 +685,22 @@
 
 /* ── §11 · Hub social. ── */
 :root[data-palette="witcher"] .hub-seg { border: 1px solid var(--border); border-radius: var(--radius-sm); }
+/* LA CATEGORÍA ELEGIDA ES LA PLACA PULIDA de la barra de abajo (§8b): acero con el filo de Igni, recortada en
+   punta. La píldora de la casa en plata llevaba el rótulo blanco de la base, que sobre la plata no se leía. */
+:root[data-palette="witcher"] .hub-seg-btn { border-radius: var(--radius-sm); }
+:root[data-palette="witcher"] .hub-seg-btn.is-active { color: var(--on-accent); }
+:root[data-palette="witcher"] .hub-seg-ind {
+  @include pieza-de-chapa;
+  --pz-corte: polygon(9px 0, calc(100% - 9px) 0, 100% 50%, calc(100% - 9px) 100%, 9px 100%, 0 50%);
+  --pz-chapa: linear-gradient(180deg, #e2e8ef 0%, #c3ccd7 46%, #92a0af 54%, #d6dee6 100%);
+  --pz-filete: rgba(255,143,74,.75);
+  --pz-grosor: 1.5px;
+}
+:root[data-palette="witcher"][data-theme="light"] .hub-seg-ind {
+  --pz-chapa: linear-gradient(180deg, #566270 0%, #434d5a 46%, #333c47 54%, #4d5765 100%);
+  --pz-filete: rgba(143,54,8,.6);
+}
+:root[data-palette="witcher"][data-theme="light"] .hub-seg-btn.is-active { color: #fff; }
 /* LOS NOMBRES DEL HUB NO VAN EN IGNI. El fuego es la señal de lo que se pulsa y de lo que está activo;
    usarlo también para cada nombre del feed llenaba la columna de naranja y le quitaba fuerza justo donde
    sí hace falta. Los nombres van en PLATA BRUÑIDA, el otro metal del tema.

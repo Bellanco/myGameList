@@ -188,7 +188,17 @@
 }
 
 /* ── §7 · Segmentos y campos: rectos, con borde de contenedor (el foco lo da --steam en base). ── */
-:root[data-palette="seaofstars"] .hub-seg { border-radius: 0; }
+:root[data-palette="seaofstars"] .hub-seg { border: 2px solid var(--border); border-radius: 0; }
+/* LA CATEGORÍA ELEGIDA ES EL BLOQUE DE ORO de las pestañas (§18) y de los botones activos (§5): recto, macizo,
+   con la tinta encima y una sombra de un píxel sin difuminar. La píldora de la casa era la única curva de la
+   caja de diálogo, y su rótulo blanco sobre el oro no se leía. */
+:root[data-palette="seaofstars"] .hub-seg-btn { border-radius: 0; }
+:root[data-palette="seaofstars"] .hub-seg-btn.is-active { color: var(--on-accent); }
+:root[data-palette="seaofstars"] .hub-seg-ind {
+  border-radius: 0;
+  background: var(--steam);
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--sos-turq) 55%, transparent);
+}
 :root[data-palette="seaofstars"] .input-base,
 :root[data-palette="seaofstars"] .finput,
 :root[data-palette="seaofstars"] .ftextarea,
