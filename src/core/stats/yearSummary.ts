@@ -70,9 +70,17 @@ export interface SummaryWhen {
   };
 }
 
+/** Lo mínimo de un juego para pedir su carátula: nombre y plataformas (la clave con la que se resolvió). */
+export interface SummaryCoverRef {
+  name: string;
+  platforms: string[];
+}
+
 export interface YearSummary {
   year: number;
   count: number;
+  /** Los juegos del año de mejor a peor nota, con lo justo para pedir sus carátulas (la composición de la portada). */
+  covers: SummaryCoverRef[];
   /** Media de nota (0–100) de los que tienen nota; `null` si ninguno. */
   avgGrade: number | null;
   /** Cuántos de ese año tienen reseña escrita. */
@@ -88,7 +96,7 @@ export interface YearSummary {
   weaknesses: Ranked[];
   previous: { year: number; count: number; avgGrade: number | null } | null;
   /** Solo al mirar a OTRA persona: lo que completasteis los dos ese año. */
-  common: { names: string[]; gap: { name: string; theirs: number; yours: number } | null } | null;
+  common: { names: string[]; top: SummaryCoverRef | null; gap: { name: string; theirs: number; yours: number } | null } | null;
   /** Su resultado en la porra de ese año: puesto 1–5, o 0 si participó sin entrar en los cinco. */
   palmares: { rank: number; seasonName: string } | null;
 }
@@ -217,7 +225,14 @@ function buildCommon(theirs: GameItem[], viewer: readonly GameItem[], year: numb
   }
   // Un «donde más chocáis» con dos notas iguales no dice nada.
   if (gap && gap.theirs === gap.yours) gap = null;
-  return { names: shared.map((game) => game.name), gap };
+  // El MEJOR en común —el de la carátula de fondo— es el que más os gustó a los dos: la media de las dos notas.
+  const both = (game: GameItem) => (gradeOf(game) + gradeOf(mine.get(normalizeName(game.name)) as GameItem)) / 2;
+  const topGame = [...shared].sort((a, b) => both(b) - both(a) || a.name.localeCompare(b.name, 'es'))[0];
+  return {
+    names: shared.map((game) => game.name),
+    top: topGame ? { name: topGame.name, platforms: topGame.platforms || [] } : null,
+    gap,
+  };
 }
 
 function buildPalmares(entries: readonly PalmaresEntry[], year: number): YearSummary['palmares'] {
@@ -248,9 +263,12 @@ export function buildYearSummary({ completed, year, precision, viewerCompleted =
   const top = ranked[0];
   const previousGames = completedIn(completed, year - 1);
 
+  const byGrade = [...games].sort((a, b) => gradeOf(b) - gradeOf(a) || a.name.localeCompare(b.name, 'es'));
+
   return {
     year,
     count: games.length,
+    covers: byGrade.map((game) => ({ name: game.name, platforms: game.platforms || [] })),
     avgGrade: average(graded.map((entry) => entry.grade)),
     withReview: games.filter((game) => String(game.review || '').trim().length > 0).length,
     platforms: tally(games.map((game) => game.platforms)),

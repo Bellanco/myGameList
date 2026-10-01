@@ -12,6 +12,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   la media y el mejor de cada uno, lo que más valoró y lo que le chirrió, cómo le fue frente al año anterior y,
   en el perfil de otra persona, los juegos que terminasteis los dos y en cuál más chocáis. Sin horas: el tiempo
   de juego se puede esconder, y un resumen que lo enseñara a medias se leería como un año flojo.
+- **Con las carátulas activadas**, la portada del resumen lleva de fondo un mosaico inclinado con las del año, y
+  «Contigo», la del juego en común que más os gustó a los dos. Cada capítulo tiene su icono y las tarjetas se
+  visten con el tema, como el resto de lo social.
 - En **tu propio perfil**, el resumen trae además el año día a día y tu día de la semana para terminar. Tus
   amistades ven solo el **mes** de cada fin, nunca el día; los días en que entraron muchos juegos de golpe (una
   importación) no cuentan como fechas. La política de privacidad lo declara.

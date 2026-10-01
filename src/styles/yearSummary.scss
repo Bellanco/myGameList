@@ -33,35 +33,108 @@
   position: relative;
   overflow: hidden;
   min-width: 0;
-  border-radius: calc(var(--radius-lg) + 4px);
+  isolation: isolate;
+}
+
+/* LA TARJETA ES LA SOCIAL (`hub-feed-card`): su fondo, su borde y su sombra los pone cada tema —la placa de
+   Cámara de pruebas, el filete HUD de Sin futuro, el pergamino de Plata y acero—, igual que en el feed. Aquí solo
+   se le da el aire y se le quita el apilado en columna de la base, que separaría cada pieza con su hueco. */
+.ys .ys-card.hub-feed-card {
+  display: block;
   padding: clamp(1.1rem, 3.5vw, 2rem);
-  background: var(--surface);
-  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+/* La portada, en el acento del tema y con su tinta (`--on-accent`), que es la que cada tema ajusta para leerse
+   sobre su acento: así funciona igual con el naranja de la forja que con el amarillo de Sin futuro. Es la única
+   tarjeta propia del resumen, y por eso la única que lleva velo. */
+.ys-card.is-accent {
+  padding: clamp(1.1rem, 3.5vw, 2rem);
+  border-radius: calc(var(--radius-lg) + 4px);
+  color: var(--on-accent);
+  background: linear-gradient(150deg, var(--steam) 0%, color-mix(in srgb, var(--steam) 86%, var(--bg)) 100%);
   box-shadow: var(--e2);
 
-  /* El velo de acento en la esquina: el mismo gesto en todas las tarjetas, más fuerte en la primera. */
   &::before {
     content: '';
     position: absolute;
     inset: 0;
+    z-index: -1;
     pointer-events: none;
-    background: radial-gradient(70% 90% at 100% 0%, color-mix(in srgb, var(--steam) 14%, transparent), transparent 70%);
+    background: radial-gradient(60% 120% at 100% 0%, rgb(255 255 255 / .16), transparent 70%);
   }
 
-  > * { position: relative; }
+  .ys-kicker, .ys-chap, .ys-lead, .ys-avg span { color: color-mix(in srgb, var(--on-accent) 82%, transparent); }
+}
 
-  /* La portada, en el acento del tema y con su tinta (`--on-accent`), que es la que cada tema ajusta para leerse
-     sobre su acento: así funciona igual con el naranja de la forja que con el amarillo de Sin futuro. */
-  &.is-accent {
-    color: var(--on-accent);
-    border-color: transparent;
-    background: linear-gradient(150deg, var(--steam) 0%, color-mix(in srgb, var(--steam) 86%, var(--bg)) 100%);
+/* LA COMPOSICIÓN DE LA PORTADA: un mosaico inclinado de carátulas en la mitad derecha, que se funde con el acento
+   hacia el texto. Va en absoluto, así que la tarjeta mide lo mismo con ella que sin ella. Entra con un fundido
+   cuando han cargado las suficientes (`is-ready`), para que no se vea llegar tesela a tesela. */
+.ys-collage {
+  position: absolute;
+  inset: -12% -6% -12% 42%;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 45%);
+          mask-image: linear-gradient(90deg, transparent 0%, #000 45%);
 
-    &::before { background: radial-gradient(60% 120% at 100% 0%, rgb(255 255 255 / .16), transparent 70%); }
-    .ys-kicker, .ys-chap, .ys-lead, .ys-avg span { color: color-mix(in srgb, var(--on-accent) 82%, transparent); }
+  &.is-ready { opacity: .9; }
+}
+
+.ys-collage-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .55rem;
+  transform: rotate(-9deg) translateY(-6%);
+
+  img {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+    border-radius: var(--stats-radius, 8px);
+    box-shadow: 0 6px 16px rgb(0 0 0 / .35);
   }
+}
 
-  &.is-common { border-color: color-mix(in srgb, var(--steam) 35%, var(--border)); }
+/* La nota media y el número de capítulo caen sobre las carátulas: llevan una placa del acento para leerse, sin
+   añadir alto a su fila. */
+.ys-card.is-accent .ys-chap {
+  margin: -.25rem -.45rem;
+  padding: .25rem .45rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--steam) 82%, transparent);
+}
+
+.ys-card.is-accent .ys-avg {
+  margin: -.3rem -.6rem;
+  padding: .3rem .6rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--steam) 82%, transparent);
+}
+
+.ys-card.is-common { border-color: color-mix(in srgb, var(--steam) 35%, var(--border)); }
+
+/* EL FONDO DE «CONTIGO»: la carátula del juego en común que más os gustó, con el velo de las reseñas del perfil
+   (`reviews.scss`): tapa por la izquierda, donde va el texto, y deja ver el dibujo por la derecha. Va en un
+   elemento propio y no en un pseudoelemento de la tarjeta, que son del tema. */
+.ys-card-cover {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--surface) 95%, transparent) 0%,
+      color-mix(in srgb, var(--surface) 86%, transparent) 55%,
+      color-mix(in srgb, var(--surface) 62%, transparent) 100%
+    ),
+    var(--ys-cover);
+  background-repeat: no-repeat;
+  background-size: cover, cover;
+  background-position: center, center 35%;
 }
 
 .ys-head {
@@ -73,29 +146,36 @@
 }
 
 .ys-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
   font: 600 var(--fs-2xs) / 1.25 var(--font-label, var(--font-body));
   letter-spacing: .14em;
   text-transform: uppercase;
   color: var(--text-muted);
 }
 
+.ys-kicker-icon { width: 1.15em; height: 1.15em; flex: none; color: var(--steam); }
+.ys-card.is-accent .ys-kicker-icon { color: inherit; }
+
 .ys-chap {
   flex: none;
   white-space: nowrap;
   font: 700 var(--fs-xs) / 1 var(--font-mono);
   letter-spacing: .08em;
-  color: var(--text-dim);
+  color: var(--text-muted);
 }
 
-.ys-dim { color: var(--text-dim); }
-.ys-note { margin: 1rem 0 0; font-size: var(--fs-xs); color: var(--text-dim); line-height: 1.45; }
+.ys-dim { color: var(--text-muted); }
+.ys-note { margin: 1rem 0 0; font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.45; }
 
 .ys-grade {
   font-family: var(--font-mono);
   font-weight: 700;
   color: hsl(var(--ys-hue) 62% 50%);
 
-  :root[data-theme="light"] & { color: hsl(var(--ys-hue) 70% 32%); }
+  /* En claro, más oscura: sobre el pergamino o la placa clara de algunos temas, al 32 % no llegaba a 4,5:1 (Sol y luna es el más exigente). */
+  :root[data-theme="light"] & { color: hsl(var(--ys-hue) 80% 21%); }
 }
 
 /* ── 1 · Portada ─────────────────────────────────────────────────────────────────────────────────────────── */
@@ -191,7 +271,7 @@
     padding: .5rem 0;
     border-top: 1px dashed var(--border);
 
-    &::before { content: counter(ys-podium); font: 700 var(--fs-sm) / 1 var(--font-mono); color: var(--text-dim); }
+    &::before { content: counter(ys-podium); font: 700 var(--fs-sm) / 1 var(--font-mono); color: var(--text-muted); }
   }
 }
 
@@ -213,7 +293,7 @@
   text-align: center;
 
   small { font: 600 var(--fs-2xs) / 1 var(--font-mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
-  &.is-zero small { color: var(--text-dim); }
+  &.is-zero small { color: var(--text-muted); }
 }
 
 .ys-month-bar {
@@ -221,10 +301,11 @@
   align-self: end;
   height: calc(var(--ys-n) / var(--ys-max) * 100%);
   min-height: 3px;
-  border-radius: 6px 6px 2px 2px;
+  /* Las PALANCAS del tema (ver `stats.scss`): a canto vivo donde el tema no admite curvas. */
+  border-radius: var(--stats-radius, 6px) var(--stats-radius, 6px) var(--stats-bar, 2px) var(--stats-bar, 2px);
   background: color-mix(in srgb, var(--steam) 55%, var(--surface));
 
-  b { position: absolute; top: -1.3rem; left: 0; right: 0; font: 700 var(--fs-xs) / 1 var(--font-mono); color: var(--text); }
+  b { position: absolute; top: -1.3rem; left: 0; right: 0; font: 700 var(--fs-xs) / 1 var(--stats-num, var(--font-mono)); color: var(--text); }
   .is-top & { background: var(--steam); box-shadow: 0 0 0 3px color-mix(in srgb, var(--steam) 22%, transparent); }
 }
 
@@ -237,7 +318,7 @@
   gap: 2px;
   margin-top: 1.4rem;
 
-  i { aspect-ratio: 1; border-radius: 2px; background: color-mix(in srgb, var(--text) 8%, transparent); }
+  i { aspect-ratio: 1; border-radius: var(--stats-bar, 2px); background: color-mix(in srgb, var(--text) 8%, transparent); }
   i.is-on { background: var(--steam); box-shadow: 0 0 0 1px color-mix(in srgb, var(--steam) 40%, transparent); }
   i.is-pad { background: none; }
 }
@@ -247,7 +328,7 @@
   justify-content: space-between;
   margin-top: .4rem;
   font: 500 var(--fs-3xs) / 1 var(--font-mono);
-  color: var(--text-dim);
+  color: var(--text-muted);
   letter-spacing: .06em;
   text-transform: uppercase;
 }
@@ -275,7 +356,7 @@
 }
 
 .ys-genre-name { font-weight: 700; overflow-wrap: anywhere; }
-.ys-genre-bar { height: .7rem; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--text) 8%, transparent); overflow: hidden; }
+.ys-genre-bar { height: .7rem; border-radius: var(--stats-pill, var(--radius-pill)); background: color-mix(in srgb, var(--text) 8%, transparent); overflow: hidden; }
 .ys-genre-bar i { display: block; height: 100%; width: calc(var(--ys-p) * 1%); border-radius: inherit; background: var(--ys-c); }
 .ys-genre-n { font: 700 var(--fs-md) / 1 var(--font-mono); }
 .ys-genre-best { grid-column: 2 / -1; font-size: var(--fs-xs); color: var(--text-muted); }
@@ -292,7 +373,8 @@
   border: 1px solid var(--border);
   font-size: calc(var(--fs-sm) + var(--ys-w, 0) * .12rem);
 
-  b { font: 700 var(--fs-xs) / 1 var(--font-mono); color: var(--text-muted); }
+  /* La cifra con el color de su etiqueta: sobre el tinte verde o rojo, el gris tenue no llegaba a 4,5:1. */
+  b { font: 700 var(--fs-xs) / 1 var(--font-mono); color: inherit; }
   &.is-up { border-color: color-mix(in srgb, var(--success) 45%, var(--border)); background: color-mix(in srgb, var(--success) 10%, transparent); }
   &.is-down { border-color: color-mix(in srgb, var(--danger) 40%, var(--border)); background: color-mix(in srgb, var(--danger) 8%, transparent); }
 }
@@ -305,10 +387,13 @@
   grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
   gap: 1rem;
 
-  > div { padding: .9rem 1rem; border-radius: var(--radius-md); background: color-mix(in srgb, var(--text) 4%, transparent); }
+  /* Filete y no velo: sobre la tarjeta de algunos temas, el gris tenue encima de un velo no llegaba a 4,5:1. */
+  > div { padding: .9rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--border); }
   b { display: block; font: 800 var(--fs-3xl) / 1 var(--font-mono); }
-  b.is-up { color: var(--success); }
-  b.is-down { color: var(--danger); }
+  /* El verde y el rojo del tema, mezclados con la tinta: el `--success` claro de algunos temas es un verde de
+     relleno, no de texto. */
+  b.is-up { color: color-mix(in srgb, var(--success) 60%, var(--text)); }
+  b.is-down { color: color-mix(in srgb, var(--danger) 60%, var(--text)); }
   small { display: block; margin-top: .3rem; font-size: var(--fs-sm); color: var(--text-muted); line-height: 1.35; }
 }
 
@@ -322,6 +407,22 @@
   .ys-genre-best { grid-column: 1 / -1; }
 }
 
+@media (max-width: 620px) {
+  /* En el teléfono no hay mitad derecha libre: el mosaico se queda en la esquina de arriba a la derecha y se funde
+     hacia la izquierda y hacia abajo, para que el rótulo, el año y la frase sigan sobre el acento. */
+  .ys-collage {
+    inset: -18% -22% 38% 46%;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 55%), linear-gradient(180deg, #000 35%, transparent 100%);
+    -webkit-mask-composite: source-in;
+            mask-image: linear-gradient(90deg, transparent 0%, #000 55%), linear-gradient(180deg, #000 35%, transparent 100%);
+            mask-composite: intersect;
+
+    &.is-ready { opacity: .8; }
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .ys-month-bar, .ys-genre-bar i { transition: height .3s ease, width .3s ease; }
+  .ys-collage { transition: opacity .5s ease; }
 }
+

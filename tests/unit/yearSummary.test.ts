@@ -86,6 +86,10 @@ describe('el resumen', () => {
     expect(summary.weaknesses).toEqual([{ name: 'Ritmo', count: 1 }]);
   });
 
+  it('las carátulas de la composición, de mejor a peor nota', () => {
+    expect(summary.covers.map((cover) => cover.name)).toEqual(['Clair Obscur', 'Silksong', 'Hades II', 'Celeste', 'Avowed']);
+  });
+
   it('por meses, con la rejugada sin fecha y el mes estrella', () => {
     const when = summary.when!;
     expect(when.dated).toBe(4);
@@ -135,7 +139,12 @@ describe('contigo', () => {
 
   it('cruza por nombre lo que completasteis los dos ese año y busca dónde más chocáis', () => {
     const summary = buildYearSummary({ completed: theirs, year: 2025, precision: 'month', viewerCompleted: mine })!;
-    expect(summary.common).toEqual({ names: ['Hades II', 'Split Fiction'], gap: { name: 'Hades II', theirs: 90, yours: 68 } });
+    expect(summary.common).toEqual({
+      names: ['Hades II', 'Split Fiction'],
+      // El de fondo es el que más os gustó a los dos: Split Fiction (84,5 de media) frente a Hades II (79).
+      top: { name: 'Split Fiction', platforms: ['PC'] },
+      gap: { name: 'Hades II', theirs: 90, yours: 68 },
+    });
   });
 
   it('en el perfil propio no hay «contigo»', () => {

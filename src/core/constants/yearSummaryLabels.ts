@@ -6,6 +6,23 @@
 // DOS VOCES, y ningún pronombre. El mismo resumen se lee en tu perfil («terminaste») y en el de otra persona
 // («Lucía terminó», «sus géneros»): el posesivo no tiene género, y donde hace falta un sujeto va el nombre.
 
+import type { IconName } from './icons';
+
+/**
+ * Un icono del sprite por capítulo, en la cabecera de su tarjeta. Del sprite general y no de uno propio: son los
+ * mismos dibujos que el resto de la app ya enseña para esas ideas (el trofeo de los premios, la bandera a cuadros
+ * de terminar un juego, las dos personas de lo social).
+ */
+export const YEAR_SUMMARY_ICONS: Record<'cover' | 'best' | 'when' | 'genres' | 'tags' | 'previous' | 'common', IconName> = {
+  cover: 'star',
+  best: 'trophy',
+  when: 'checkered-flag',
+  genres: 'chart-simple',
+  tags: 'signature',
+  previous: 'repeat',
+  common: 'bottom-hub',
+};
+
 const MONTHS_LONG = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'] as const;
 /** En plural, que es como se dice un hábito: «los sábados». */
 const WEEKDAYS = ['domingos', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábados'] as const;
