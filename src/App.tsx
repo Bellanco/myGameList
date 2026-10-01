@@ -26,8 +26,7 @@ import { LegacyTailRedirect } from './view/components/LegacyTailRedirect';
 import { SettingsMenu } from './view/components/SettingsMenu';
 import { ScrollToTop } from './view/components/ScrollToTop';
 import { useScrollOnNavigate } from './view/hooks/useScrollOnNavigate';
-import { ConsentBanner } from './view/components/ConsentBanner';
-import { InstallBanner } from './view/components/InstallBanner';
+import { LaneBanners } from './view/components/LaneBanners';
 import { SocialHubSkeleton } from './view/components/SocialHubSkeleton';
 import { ScreenSkeleton } from './view/components/ScreenSkeleton';
 import { useGameListViewModel, type GameDraft } from './viewmodel/useGameListViewModel';
@@ -1230,10 +1229,8 @@ export default function App() {
         settingsMenuOpen={settingsMenuOpen}
         socialStatus={socialStatus}
       />
-      <ConsentBanner />
-      {/* Los dos comparten carril y no coinciden nunca: la invitación espera a que el consentimiento se decida
-          (ver `InstallBanner`). Van seguidos para que se lea aquí que el hueco es el mismo. */}
-      <InstallBanner />
+      {/* El consentimiento y la invitación a instalar: comparten carril y llegan por `lazy()` (ver `LaneBanners`). */}
+      <LaneBanners />
       {/* Fuera del `main`, como los avisos: el `main` se apaga cuando se abre el menú de Ajustes, y la guía tiene
           que poder señalar DENTRO de ese menú. Con su propio límite: si su chunk no llega (sin red, recién
           desplegado) no hay guía y no pasa nada más. */}

@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Link } from 'react-router-dom';
-import { ANALYTICS_UI } from '../../../core/constants/labels';
+import { ANALYTICS_UI } from '../../../core/constants/consentLabels';
 import { SETTINGS_UI } from '../../../core/constants/settingsLabels';
 import { LEGAL_ROUTES } from '../../../core/constants/legal';
 import { LEGAL_DOCUMENTS } from '../../../core/constants/legalContent';

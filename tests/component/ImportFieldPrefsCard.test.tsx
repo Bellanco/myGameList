@@ -3,9 +3,9 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ImportFieldPrefsCard } from '../../src/view/components/import/ImportFieldPrefsCard';
 import { DEFAULT_IMPORT_FIELD_PREFS } from '../../src/core/import/fieldPrefs';
-import { UI_MESSAGES } from '../../src/core/constants/labels';
+import { IMPORT_UI } from '../../src/core/constants/importLabels';
 
-const M = UI_MESSAGES.import.inbox.fields;
+const M = IMPORT_UI.inbox.fields;
 
 // La preferencia se aplica a TODOS los juegos, en dos grupos independientes (nuevos / ya en tus listas).
 describe('ImportFieldPrefsCard — "qué datos traer"', () => {

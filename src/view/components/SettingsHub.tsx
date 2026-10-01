@@ -1,6 +1,7 @@
 import { memo, useState, useSyncExternalStore } from 'react';
 import { COMMON_ICONS } from '../../core/constants/icons';
 import { UI_MESSAGES } from '../../core/constants/labels';
+import { IMPORT_UI as IMPORT_TEXTS } from '../../core/constants/importLabels';
 import { SETTINGS_UI } from '../../core/constants/settingsLabels';
 import { TOUR_CARD } from '../../core/constants/onboardingCardLabels';
 import { isTourVisible, offeredTour, parseTourState } from '../../core/onboarding/tourState';
@@ -16,7 +17,10 @@ import { GithubSyncCard } from './sync/GithubSyncCard';
 // desde una, entrar por otra ruta la dejaría sin estilo.
 import '../../styles/settings.scss';
 
-const IMPORT_UI = UI_MESSAGES.import.integrations;
+// El botón de importar dice lo mismo que el de la lista vacía, que viaja en el arranque (`labels.ts`); el título
+// y la nota de la tarjeta solo salen aquí (`importLabels`).
+const IMPORT_BUTTON = UI_MESSAGES.import.integrations;
+const IMPORT_CARD = IMPORT_TEXTS.integrations;
 
 interface SettingsHubProps {
   onExport: () => void;
@@ -59,8 +63,8 @@ export const SettingsHub = memo(function SettingsHub({
           y —al final— el botón. Puesto arriba, el botón pedía elegir un fichero a quien aún no sabía qué fichero
           era ni de dónde salía; lo que se gana leyendo primero no lo compensa un clic ahorrado. */}
       <div className="settings-card settings-card-import" style={{ gridColumn: '1 / -1' }} data-tour="import-card">
-        <h2>{IMPORT_UI.title}</h2>
-        <p className="settings-card-sub">{IMPORT_UI.note}</p>
+        <h2>{IMPORT_CARD.title}</h2>
+        <p className="settings-card-sub">{IMPORT_CARD.note}</p>
 
         <PlayniteNote />
 
@@ -70,15 +74,15 @@ export const SettingsHub = memo(function SettingsHub({
           <FilePickerButton
             id="import-library-settings"
             className="btn btn-primary"
-            label={IMPORT_UI.importBtn}
-            ariaLabel={IMPORT_UI.importAria}
+            label={IMPORT_BUTTON.importBtn}
+            ariaLabel={IMPORT_BUTTON.importAria}
             accept=".json,application/json"
             onPick={onImportLibrary}
           />
           {inboxCount > 0 ? (
             <button type="button" className="btn btn-secondary btn-accent" onClick={onOpenInbox}>
               <Icon name={COMMON_ICONS.download} />
-              <span>{IMPORT_UI.viewInbox(inboxCount)}</span>
+              <span>{IMPORT_BUTTON.viewInbox(inboxCount)}</span>
             </button>
           ) : null}
         </div>

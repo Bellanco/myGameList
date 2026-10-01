@@ -1,12 +1,12 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { IMPORT_UI } from '../../../core/constants/importLabels';
 import { isWindows } from '../../../core/utils/platform';
 import { Icon } from '../Icon';
 // La hoja del flujo de importación se importa AQUÍ y no desde `index.scss`: la pantalla que la usa es perezosa,
 // así que su CSS viaja en ese chunk y no pesa en el arranque.
 import '../../../styles/import.scss';
 
-const M = UI_MESSAGES.import.integrations;
+const M = IMPORT_UI.integrations;
 
 /**
  * LAS DOS GUÍAS, CON LA MISMA CARA. Cómo traer tu biblioteca y cómo añadir los juegos de PlayStation son lo

@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import type { ImportField, ImportFieldGroup, ImportFieldPrefs } from '../../../model/types/import';
 import { IMPORT_FIELD_GROUPS, IMPORT_FIELDS } from '../../../core/import/fieldPrefs';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { IMPORT_UI } from '../../../core/constants/importLabels';
 import { Icon } from '../Icon';
 import '../../../styles/import.scss';
 
-const M = UI_MESSAGES.import.inbox.fields;
+const M = IMPORT_UI.inbox.fields;
 
 const GROUP_TITLE: Record<ImportFieldGroup, string> = { newGames: M.newGames, existingGames: M.existingGames };
 

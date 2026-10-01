@@ -2,10 +2,11 @@ import { Fragment } from 'react';
 import { TAB_IDS, type TabId } from '../../../model/types/game';
 import type { ImportedGame } from '../../../model/types/import';
 import { TAB_TITLES, TAB_TOOLTIPS, UI_MESSAGES } from '../../../core/constants/labels';
+import { IMPORT_UI } from '../../../core/constants/importLabels';
 import { COMMON_ICONS, TAB_ICONS } from '../../../core/constants/icons';
 import { Icon } from '../Icon';
 
-const M = UI_MESSAGES.import.inbox;
+const M = IMPORT_UI.inbox;
 
 // Color de la píldora de "ya en tus listas" según la lista, con los mismos colores que los listados.
 const LIST_CHIP_CLASS: Record<TabId, string> = { c: 'chip-list-c', v: 'chip-list-v', e: 'chip-list-e', p: 'chip-list-p' };
