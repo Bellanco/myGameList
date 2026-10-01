@@ -3,6 +3,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { SocialProfileDetailScreen } from '../../src/view/components/socialhub/SocialProfileDetailScreen';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { ADMIN_ONLY_TIER } from '../../src/core/constants/tiers';
+import { YEAR_SUMMARY_UI } from '../../src/core/constants/yearSummaryLabels';
 
 /* La preferencia de carátulas se replica a la nube cuando hay sesión; aquí no hay ninguna, y lo que se mira es
    qué pide la pantalla, no dónde se guarda el ajuste. */
@@ -188,5 +189,84 @@ describe('SocialProfileDetailScreen — gating por amistad', () => {
     expect(screen.getByText('Halo')).toBeInTheDocument();
     // Y ofrece eliminar amistad.
     expect(screen.getByLabelText(SOCIAL_UI.friendship.removeAria('Ada'))).toBeInTheDocument();
+  });
+});
+
+/* EL RESUMEN DEL AÑO. Cuarto botón de la ficha: del año anterior (en diciembre, del que acaba), solo de
+   completados, con el MES de cada fin para una amistad y el DÍA en tu propio perfil o para la administración.
+   Sus reglas de quién lo ve son las de las estadísticas de un amigo, salvo el rango. */
+describe('SocialProfileDetailScreen — resumen del año', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    cleanup();
+  });
+
+  const visibility = { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false };
+  const of2025 = (id: number, name: string, extra: Record<string, unknown> = {}) => ({ ...game(id, name), years: [2025], grade: 90, ...extra });
+  // Los juegos de prueba mezclan las dos formas (completa y pública) a propósito: el tipo no admite el cruce.
+  const friend = (c: object[]) => ({ displayName: 'Ada', visibility, sharedLists: { c: c as never[], v: [], e: [], p: [] } });
+
+  function pinta(props: Record<string, unknown>) {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 1));
+    return render(
+      <SocialProfileDetailScreen
+        SOCIAL_UI={SOCIAL_UI}
+        friendshipState="friends"
+        onBack={vi.fn()}
+        showReviews={false}
+        onToggleReviews={vi.fn()}
+        onOpenReview={vi.fn()}
+        status=""
+        statusKind=""
+        activeProfileDetail={friend([])}
+        {...props}
+      />,
+    );
+  }
+
+  it('de una amistad: se abre con el botón, por meses y con lo que compartís', async () => {
+    pinta({
+      activeProfileDetail: friend([of2025(1, 'Halo', { finishedOn: '2025-05' }), of2025(2, 'Zelda', { finishedOn: '2025-05', grade: 70 })]),
+      viewerCompleted: [of2025(10, 'zelda', { grade: 95 })],
+    });
+    screen.getByRole('button', { name: YEAR_SUMMARY_UI.button }).click();
+
+    expect(await screen.findByText(YEAR_SUMMARY_UI.title(2025))).toBeInTheDocument();
+    expect(await screen.findByText(YEAR_SUMMARY_UI.when.top({ own: false, name: 'Ada' }, [4], 2))).toBeInTheDocument();
+    // Con precisión de mes no hay calendario día a día.
+    expect(screen.queryByRole('img', { name: YEAR_SUMMARY_UI.when.calendarAria })).not.toBeInTheDocument();
+    expect(screen.getByText(YEAR_SUMMARY_UI.common.title(1))).toBeInTheDocument();
+  });
+
+  it('sin completados ese año, no hay botón', () => {
+    pinta({ activeProfileDetail: friend([game(1, 'Halo')]) });
+    expect(screen.queryByRole('button', { name: YEAR_SUMMARY_UI.button })).not.toBeInTheDocument();
+  });
+
+  it('con solo la proyección pública (el gist de listados aún no ha llegado), tampoco', () => {
+    pinta({ activeProfileDetail: friend([{ id: 1, name: 'Halo', platforms: [], genres: [], rating: 4, grade: 80, snippet: '', years: [2025] }]) });
+    expect(screen.queryByRole('button', { name: YEAR_SUMMARY_UI.button })).not.toBeInTheDocument();
+  });
+
+  it('reciprocidad: quien esconde sus completados no lo ve, salvo la administración', () => {
+    const lists = friend([of2025(1, 'Halo')]);
+    pinta({ activeProfileDetail: lists, viewerHiddenTabs: ['c'] });
+    expect(screen.queryByRole('button', { name: YEAR_SUMMARY_UI.button })).not.toBeInTheDocument();
+    cleanup();
+    pinta({ activeProfileDetail: lists, viewerHiddenTabs: ['c'], viewerTier: ADMIN_ONLY_TIER });
+    expect(screen.getByRole('button', { name: YEAR_SUMMARY_UI.button })).toBeInTheDocument();
+  });
+
+  it('en tu perfil, con el día de cada fin', async () => {
+    const at = (iso: string) => new Date(`${iso}T18:00:00`).getTime();
+    pinta({
+      isOwnProfile: true,
+      activeProfileDetail: { displayName: 'Yo', visibility, sharedLists: { c: [], v: [], e: [], p: [] } },
+      viewerCompleted: [of2025(1, 'Halo', { enteredAt: { c: at('2025-03-08') } }), of2025(2, 'Zelda', { enteredAt: { c: at('2025-11-15') } })],
+    });
+    screen.getByRole('button', { name: YEAR_SUMMARY_UI.button }).click();
+    expect(await screen.findByRole('img', { name: YEAR_SUMMARY_UI.when.calendarAria })).toBeInTheDocument();
+    expect(screen.getByText(YEAR_SUMMARY_UI.cover.finished({ own: true, name: 'Yo' }, 2))).toBeInTheDocument();
   });
 });

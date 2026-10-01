@@ -26,6 +26,11 @@ import { ENABLE_ACHIEVEMENTS } from '../../../core/achievements/flags';
  * FEED descargaba unos gráficos que solo se ven al abrir el perfil de alguien y pulsar su pestaña.
  */
 const FriendStats = lazy(() => import('../stats/FriendStats').then((m) => ({ default: m.FriendStats })));
+/** El resumen del año, perezoso por lo mismo: su marcado y su hoja solo hacen falta al abrirlo. */
+const YearSummary = lazy(() => import('./YearSummary').then((m) => ({ default: m.YearSummary })));
+import { YEAR_SUMMARY_UI } from '../../../core/constants/yearSummaryLabels';
+import { buildYearSummary, summaryYear } from '../../../core/stats/yearSummary';
+import { withFinishedOn, type FinishedGame } from '../../../core/utils/finishDates';
 import type { ProfileTier } from '../../../core/constants/tiers';
 import { ADMIN_ONLY_TIER, DEFAULT_PROFILE_TIER } from '../../../core/constants/tiers';
 import type { RelationshipState } from '../../../model/types/social';
@@ -181,6 +186,7 @@ function SocialProfileDetailScreenBase({
   onRemoveFriend,
   viewerTier = DEFAULT_PROFILE_TIER,
   viewerHiddenTabs = [],
+  viewerCompleted,
 }: {
   SOCIAL_UI: SocialUiLabels;
   activeProfileDetail: SocialProfileDetail | null;
@@ -216,6 +222,11 @@ function SocialProfileDetailScreenBase({
   viewerTier?: ProfileTier;
   /** Listas que quien mira esconde en su propio perfil: lo que esconde, tampoco lo ve aquí. */
   viewerHiddenTabs?: TabId[];
+  /**
+   * Los completados VIVOS de quien mira: en su propio perfil son el resumen (con el día de cada fin), y en el de
+   * otra persona dan el «contigo».
+   */
+  viewerCompleted?: GameItem[];
   onAddOrAcceptFriend?: () => void;
   onCancelFriendRequest?: () => void;
   onRemoveFriend?: () => void;
@@ -230,6 +241,8 @@ function SocialProfileDetailScreenBase({
   // Tercera vista del perfil, junto a las listas y las reseñas. Estado local y no sub-ruta: no hay nada dentro
   // a lo que enlazar (las reseñas sí abren una concreta), y así volver del perfil no arrastra un nivel más.
   const [showStats, setShowStats] = useState(false);
+  // Cuarta vista, el resumen del año. Estado local por lo mismo que las estadísticas.
+  const [showSummary, setShowSummary] = useState(false);
   const [expandedByTab, setExpandedByTab] = useState<Partial<Record<TabId, number | null>>>({});
   const [visibleCount, setVisibleCount] = useState(LIST_PAGE_SIZE);
   const [gameQuery, setGameQuery] = useState('');
@@ -237,6 +250,31 @@ function SocialProfileDetailScreenBase({
   // Amistad: solo el perfil propio o el de un amigo muestra reseñas, ruleta y listados. Para no-amigos, "solo nombre
   // y foto" + CTA de "Añadir amigo"; el resto queda bloqueado con un aviso.
   const canSeeFullProfile = isOwnProfile || friendshipState === 'friends';
+
+  /**
+   * El resumen del año, o `null` si no hay nada que resumir (y entonces no se ofrece el botón).
+   *
+   * Las reglas de quién ve qué, las mismas que las estadísticas de un amigo salvo el rango, que aquí no recorta:
+   *  - en tu perfil, tus completados vivos y con el DÍA de cada fin;
+   *  - en el de una amistad, sus juegos del gist de listados ya filtrados por su visibilidad, con el MES (el día,
+   *    solo para la administración). Mientras ese gist no llega, no hay resumen: la proyección pública no trae ni
+   *    fechas ni etiquetas, y un resumen a medias se leería como un año flojo;
+   *  - RECIPROCIDAD: quien esconde sus completados no ve los de nadie, salvo la administración.
+   */
+  const yearSummary = useMemo(() => {
+    if (!canSeeFullProfile || !activeProfileDetail) return null;
+    const isAdmin = viewerTier === ADMIN_ONLY_TIER;
+    const year = summaryYear();
+    if (isOwnProfile) {
+      const own = viewerCompleted ?? ((activeProfileDetail.sharedLists?.c || []) as GameItem[]);
+      return buildYearSummary({ completed: withFinishedOn(own, 'day'), year, precision: 'day', palmares });
+    }
+    if (!isAdmin && viewerHiddenTabs.includes('c')) return null;
+    const theirs = ((activeProfileDetail.sharedLists?.c || []) as SharedListGame[]).filter(
+      (game): game is FinishedGame => typeof game === 'object' && game !== null && '_ts' in game,
+    );
+    return buildYearSummary({ completed: theirs, year, precision: isAdmin ? 'day' : 'month', viewerCompleted: viewerCompleted ?? [], palmares });
+  }, [activeProfileDetail, canSeeFullProfile, isOwnProfile, palmares, viewerCompleted, viewerHiddenTabs, viewerTier]);
 
   // Fecha de PUBLICACIÓN por juego, tomada de la actividad social del perfil: es la misma que muestra el feed.
   // Unifica ambas vistas — antes esta pantalla usaba el `_ts` del juego (última modificación), que una
@@ -406,9 +444,10 @@ function SocialProfileDetailScreenBase({
                   type="button"
                   aria-pressed={showReviews}
                   onClick={() => {
-                    // Las tres vistas del perfil —listas, reseñas y estadísticas— son excluyentes: abrir una
-                    // devuelve la otra a su estado de reposo.
+                    // Las vistas del perfil —listas, reseñas, estadísticas y resumen del año— son excluyentes:
+                    // abrir una devuelve las otras a su estado de reposo.
                     setShowStats(false);
+                    setShowSummary(false);
                     onToggleReviews();
                   }}
                 >
@@ -421,13 +460,29 @@ function SocialProfileDetailScreenBase({
                     type="button"
                     aria-pressed={showStats}
                     onClick={() => {
-                      // Las tres vistas son excluyentes: entrar en una apaga la otra.
+                      // Las vistas son excluyentes: entrar en una apaga las otras.
                       if (showReviews) onToggleReviews();
+                      setShowSummary(false);
                       setShowStats((open) => !open);
                     }}
                   >
                     <Icon name="bottom-stats" />
                     {showStats ? FRIEND_STATS_BACK : FRIEND_STATS_BUTTON}
+                  </button>
+                ) : null}
+                {yearSummary ? (
+                  <button
+                    className={`btn btn-secondary ${showSummary ? 'is-active' : ''}`.trim()}
+                    type="button"
+                    aria-pressed={showSummary}
+                    onClick={() => {
+                      if (showReviews) onToggleReviews();
+                      setShowStats(false);
+                      setShowSummary((open) => !open);
+                    }}
+                  >
+                    <Icon name="star" />
+                    {showSummary ? YEAR_SUMMARY_UI.buttonBack : YEAR_SUMMARY_UI.button}
                   </button>
                 ) : null}
                 <button
@@ -507,6 +562,15 @@ function SocialProfileDetailScreenBase({
                      preferencia de quien mira, que viene apagada de fábrica (ver `useReviewCover`). */
                   coversAllowed="solo-cache"
                 />
+              </div>
+            </div>
+          ) : showSummary && yearSummary && activeProfileDetail ? (
+            <div className="hub-detail-metadata">
+              <div className="hub-metadata-section">
+                <strong>{YEAR_SUMMARY_UI.title(yearSummary.year)}</strong>
+                <Suspense fallback={null}>
+                  <YearSummary summary={yearSummary} voice={{ own: isOwnProfile, name: activeProfileDetail.displayName }} />
+                </Suspense>
               </div>
             </div>
           ) : showStats ? (

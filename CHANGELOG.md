@@ -5,6 +5,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Added
+- **Resumen del año en el perfil.** Un cuarto botón en la ficha de cada perfil, «Resumen del año», con el año
+  anterior (en diciembre, el que está acabando) contado en tarjetas una debajo de otra: cuántos juegos terminó y
+  su nota media, el juego del año con una frase de su reseña y el podio, en qué meses los terminó, sus géneros con
+  la media y el mejor de cada uno, lo que más valoró y lo que le chirrió, cómo le fue frente al año anterior y,
+  en el perfil de otra persona, los juegos que terminasteis los dos y en cuál más chocáis. Sin horas: el tiempo
+  de juego se puede esconder, y un resumen que lo enseñara a medias se leería como un año flojo.
+- En **tu propio perfil**, el resumen trae además el año día a día y tu día de la semana para terminar. Tus
+  amistades ven solo el **mes** de cada fin, nunca el día; los días en que entraron muchos juegos de golpe (una
+  importación) no cuentan como fechas. La política de privacidad lo declara.
+
 ### Fixed
 - **Las listas largas en renglones ya no descargan todas sus carátulas al abrirse.** El primer render montaba la
   lista entera antes de recortarla a lo que se ve, y eso bastaba para que cada renglón pidiera su imagen de fondo:

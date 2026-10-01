@@ -13,7 +13,8 @@ conservando el estilo visual, el comportamiento y la compatibilidad con los dato
   merge por marcas de tiempo y tombstones. El gist de juegos va comprimido con gzip (activo:
   `ENABLE_GAMES_COMPRESSION`); el desborde a gists adicionales existe pero sigue apagado.
 - **Social**: perfiles, sistema de amistades y feed de reseñas (canal separado en Gist +
-  Firebase Firestore/Auth), reseñas compartidas con enlace público (`/r/:token`) e invitación a amigos.
+  Firebase Firestore/Auth), reseñas compartidas con enlace público (`/r/:token`), invitación a amigos y un
+  resumen del año en cada perfil.
 - **Estadísticas, ruleta, logros y premios** (la porra estacional de `/premios`), y una guía de primeros pasos.
 - **Importación** de la biblioteca de Playnite (Library Exporter) a una bandeja, y copia de seguridad en JSON.
 - **Ocho temas**, cada uno en claro y oscuro (la primera vez sigue al sistema); todos los colores son variables

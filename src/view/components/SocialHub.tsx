@@ -510,6 +510,7 @@ const SocialHubInner = memo(function SocialHubInner({
           onRemoveFriend={removeDetailFriend}
           viewerTier={ownTier}
           viewerHiddenTabs={hiddenTabs}
+          viewerCompleted={games?.c}
         />
         {friendActionDialog}
         </>
