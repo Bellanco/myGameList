@@ -6,8 +6,10 @@ import { yearSummaryFeedEntries, YEAR_SUMMARY_FEED_DAYS } from '../../src/core/s
 import { YEAR_SUMMARY_TOLD_KEY, yearSummaryPublishedKey } from '../../src/core/constants/storageKeys';
 import type { GameItem } from '../../src/model/types/game';
 
-const publish = vi.fn(async () => {});
-vi.mock('../../src/model/repository/firebaseRepository', () => ({ publishYearSummarySeen: (...args: unknown[]) => publish(...args) }));
+const publish = vi.fn(async (_uid: string, _year: number) => {});
+vi.mock('../../src/model/repository/firebaseRepository', () => ({
+  publishYearSummarySeen: (uid: string, year: number) => publish(uid, year),
+}));
 
 const { useYearSummarySignal } = await import('../../src/viewmodel/social/useYearSummarySignal');
 const { useYearSummaryNotice } = await import('../../src/view/hooks/useYearSummaryNotice');
