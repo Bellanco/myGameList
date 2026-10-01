@@ -139,9 +139,9 @@ con WebCrypto, claves cacheadas en KV). Del token verificado salen `uid`, `email
 literal: dos copias del correo del administrador en dos ficheros es una divergencia esperando a ocurrir.
 *(Revisado el 01-10-2026: ya no es el mismo criterio. Desde F0 de `docs/plan-unificar-premios.md`, `firestore.rules`
 decide por el custom claim —`request.auth.token.admin == true`, `isAdmin()` en la línea 31—, pero `isAdmin` de
-`functions/_lib/firebaseAuth.ts`, el que usa `functions/_lib/context.ts`, sigue comparando con `ADMIN_EMAIL`, y su
-comentario aún dice que es el mismo criterio. Hoy divergen: hallazgo abierto n.º 13 de
-`docs/revision-general-2026-09.md`.)*
+`functions/_lib/firebaseAuth.ts` siguió comparando con `ADMIN_EMAIL` hasta el 01-10-2026, cuando pasó también al
+claim, con la misma función que el cliente (`hasAdminClaim`). `ADMIN_EMAIL` ya no existe: hallazgo 13 de
+`docs/revision-general-2026-09.md`, cerrado.)*
 
 **Cómo conoce la Function el rango.** El `tier` vive en `profiles/{uid}`. El cliente envía en la petición su ID
 token **y su token de App Check** (`getToken()` del SDK), y la Function los reenvía a la API REST de Firestore
@@ -428,7 +428,8 @@ functions/api/share/related/[token].ts GET sugeridos del mismo autor (anónimo; 
 functions/r/[token].ts           SSR de la página pública
 ```
 
-- `wrangler.toml`: binding del namespace KV (`SHARES`) y vars `ADMIN_EMAIL`, `FIREBASE_PROJECT_ID`. El
+- `wrangler.toml`: binding del namespace KV (`SHARES`) y vars `FIREBASE_PROJECT_ID` (y `ADMIN_EMAIL`, retirada el
+  01-10-2026 al pasar el borde al claim). El
   `client_id` de GitHub que ya está ahí es el precedente de cómo se documentan estas variables.
 - `tests/unit/shareFunctions.test.ts`: 14 casos sobre los ayudantes puros. Lo que necesita KV o HTMLRewriter se
   probó con `wrangler pages dev` de verdad, no con simulacros: imitar el almacén no habría demostrado nada.

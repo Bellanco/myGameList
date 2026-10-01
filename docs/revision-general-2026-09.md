@@ -56,7 +56,7 @@ lista de mejoras de segundo orden. Ninguno es una emergencia.
 | 10 | Código muerto | Baja | 127 `export` sin consumidor externo; solo 2 son código inalcanzable · **+2 símbolos de icono sin ninguna referencia** (`uncharted`, `keyboard-arrow-up`, 1,6 kB) · **✅ borrados (fase 5)** |
 | 11 | Documentación | Baja | ~~«Diseño» sin cuenta de Google~~ · **✅ es así a propósito**; lo que estaba mal era la entrada de la 1.3.3, corregida |
 | 12 | Rendimiento visual | **Media** | ~~La barra inferior se quedaba muda según la máquina~~ · **✅ arreglado** — un pestillo de un solo sentido y una constante desincronizada del CSS; lo cazó CI · **2.ª pasada:** la barra de desplazamiento de Linux se comía 15 px y el salto a iconos se decidía por dos; peldaño intermedio |
-| 13 | Seguridad / coherencia | Baja | **Nuevo (01-10-2026).** Dos criterios de administrador: `firestore.rules` decide por el *custom claim* y el borde, por `ADMIN_EMAIL` — con un comentario que dice que son el mismo |
+| 13 | Seguridad / coherencia | Baja | **Nuevo (01-10-2026).** ~~Dos criterios de administrador: `firestore.rules` decide por el *custom claim* y el borde, por `ADMIN_EMAIL`~~ · **✅ arreglado el mismo día**: el borde decide por el claim con la misma función que el cliente |
 | 14 | Rendimiento | **Media** | **Nuevo (01-10-2026).** El arranque había vuelto a crecer: **crítico 185,5/190 kB** (97,6 %), holgura 4,5 kB · **✅ recuperado el mismo día** (`f62dc8a7`, `82978f93`): 180,2/190, holgura 9,8 kB |
 
 ---
@@ -259,7 +259,8 @@ entre los ficheros de más de 100 líneas ejecutables:
 | `model/repository/socialGistRepository.ts` | 69,6 % | 72,0 % | 62,7 % |
 | `viewmodel/useSyncViewModel.ts` | 74,3 % | 78,5 % | 58,7 % |
 
-`ListsRouletteModal.tsx` (la ruleta de las listas) sale al **0 %**: ningún test la monta.
+`ListsRouletteModal.tsx` (la ruleta de las listas) sale al **0 %**: ningún test la monta, y no hace falta (fase 6,
+punto 20).
 
 Los tres últimos son los que importan: son exactamente donde han vivido los incidentes de pérdida de datos y de
 sincronización que no propaga. El resto (gráficas, ruleta) es aceptable.
@@ -433,7 +434,15 @@ Si esto vuelve a ponerse rojo en otra máquina, el log dirá cuál de las dos ca
 **Lo que esto NO cubre:** por debajo de ~348 px con la letra normal —o de ~345 con una un 9 % más ancha— la barra
 sigue quedándose en iconos, que es el suelo de 280 px prometido y comprobado.
 
-### 13 · Dos criterios de administrador · Baja · ABIERTO (01-10-2026)
+### 13 · Dos criterios de administrador · Baja · ✅ ARREGLADO (01-10-2026)
+
+**Estado:** `verifyIdToken` devuelve `admin: hasAdminClaim(payload)` —la misma función de
+`src/core/security/admin.ts` que usa el cliente, estricta contra `true` como las reglas— e `isAdmin(user)` decide
+solo por eso. `ADMIN_EMAIL` salió de `wrangler.toml` (los tres entornos) y de `Env`, con lo que la dirección deja de
+publicarse en el código vigente (el historial de git la conserva). Antes de cambiarlo se comprobó en producción que
+la cuenta del administrador tiene el claim (`customAttributes: {"admin":true}`), así que no hay riesgo de quedarse
+fuera al desplegar. Lo fijan cinco casos nuevos en `tests/unit/appCheckEdge.test.ts`: con claim sí; sin claim y con
+el correo de antes, no; y no con `"true"`, `1` ni `false`. Lo de abajo es el diagnóstico original.
 
 Desde que el panel pasó al *custom claim*, **las reglas y el borde preguntan cosas distintas**:
 
@@ -448,7 +457,7 @@ Hoy no abre nada —las dos vías señalan a la misma persona—, pero **el come
 `wrangler.toml` dicen «mismo criterio que `firestore.rules`»**, y eso ya es falso. El día que se conceda el claim a
 una segunda cuenta, o se le retire a la primera, el panel cambiará y el borde no, sin ningún error que lo cante.
 
-**Arreglo propuesto, sin aplicar:** que `verifyIdToken` devuelva también `payload.admin === true` (el claim viaja
+**Arreglo propuesto (aplicado tal cual, ver el estado arriba):** que `verifyIdToken` devuelva también `payload.admin === true` (el claim viaja
 en el ID token ya verificado, no hace falta leer nada más) y que `isAdmin` decida por él; `ADMIN_EMAIL` sale de
 `wrangler.toml` en el mismo cambio. Ojo al orden de despliegue que ya avisa `firestore.rules`: el token tiene que
 traer el claim, así que quien no haya vuelto a iniciar sesión desde que se le concedió se queda fuera hasta
@@ -721,17 +730,19 @@ precache. Es un cambio para probar en un despliegue de vista previa, no a ciegas
 la holgura del presupuesto casi se dobla. Los tres ficheros de sync siguen por debajo del 80 % de ramas (punto
 14, sin empezar).
 
-### Fase 6 — Lo que salió al remedir (01-10-2026) · ⏳ PARCIAL
+### Fase 6 — Lo que salió al remedir (01-10-2026) · ✅ COMPLETADA
 
-18. ⬜ **Un solo criterio de administrador**: el borde lee el claim `admin` del ID token verificado y `ADMIN_EMAIL`
+18. ✅ **Un solo criterio de administrador**: el borde lee el claim `admin` del ID token verificado y `ADMIN_EMAIL`
     sale de `wrangler.toml`. *(Hallazgo 13)*
-19. ✅ **Recuperar holgura de arranque** (`f62dc8a7`, `82978f93`: crítico 180,2 kB, holgura 9,8 kB) antes de meter nada en las listas: medir con la cobertura de Chromium qué
-    parte de `labels.ts` usa el primer pintado y, si compensa, partir `UI_MESSAGES` por pantalla con el plan de
-    idioma delante. *(Hallazgo 14)*
-20. ⬜ Un test que monte `ListsRouletteModal` (0 % de líneas). *(Hallazgo 8)*
+19. ✅ **Recuperar holgura de arranque** antes de meter nada en las listas (`f62dc8a7`, `82978f93`: los textos que
+    solo pintan pantallas perezosas salen de `labels.ts`, y los hooks de fondo se montan en idle; crítico 180,2 kB,
+    holgura 9,8 kB). *(Hallazgo 14)*
+20. ❌ ~~Un test que monte `ListsRouletteModal` (0 % de líneas)~~ **descartado**: son 36 líneas que solo calculan los
+    candidatos con `buildListsPool`/`buildListsWeigher` y se los pasan a `RouletteModal`, y esas dos funciones ya
+    tienen 23 casos en `tests/unit/roulette.test.ts`. Subiría la cifra sin vigilar nada. *(Hallazgo 8)*
 
-**Criterio de aceptación:** `isAdmin` del borde y `isAdmin()` de las reglas preguntan por lo mismo, con un test que
-lo fije (pendiente); y el crítico de `npm run validate` vuelve por debajo de 182 kB (✅ 180,2 kB).
+**Criterio de aceptación — cumplido.** `isAdmin` del borde y `isAdmin()` de las reglas preguntan por el mismo claim,
+con test que lo fija; y el crítico de `npm run validate` vuelve por debajo de 182 kB (180,2 kB).
 
 ## Lo que NO se hace
 

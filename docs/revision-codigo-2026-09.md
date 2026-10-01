@@ -135,9 +135,9 @@ Cada arreglo de los grupos 1 y 2 va con un test que reproduce el fallo antes de 
   - `GameTable.tsx:565`, `:921` — `cards` significa «list»; condición siempre cierta.
   - `firebaseProfileHealRepository.ts:263-270` — rama `profile.id !== uid` inalcanzable.
 - **Comentarios que contradicen el código**
-  - `functions/_lib/firebaseAuth.ts` (`isAdmin`) y su gemelo en `wrangler.toml` («mismo criterio que
-    `firestore.rules`»): las reglas deciden ya por el claim y el borde por `ADMIN_EMAIL`. No es solo el comentario:
-    ver el hallazgo 13 de `revision-general-2026-09.md`. *(Añadido el 01-10-2026.)*
+  - ~~`functions/_lib/firebaseAuth.ts` (`isAdmin`) y su gemelo en `wrangler.toml` («mismo criterio que
+    `firestore.rules`»): las reglas deciden ya por el claim y el borde por `ADMIN_EMAIL`.~~ ✅ 01-10-2026: el borde
+    decide ya por el claim (hallazgo 13 de `revision-general-2026-09.md`).
   - `core/announcement/announcement.ts:57-59` (par en `firestore.rules` que ya no existe), `crypto.ts:275-278`, `:290-305`,
     `types/firestore.ts:59`, `shareSchema.ts:13-15`, `useOpenFrontier.ts:48-50`, `socialPublishRepository.ts:29-41`,
     docblocks huérfanos en `admin/adminShared.ts` y `admin/adminCensus.ts`, duplicado en

@@ -396,9 +396,10 @@ intentos y volverán a aparecer cuando haya que nombrar a alguien:
   `admin.credential` / `admin.auth()` son `undefined`. Se usan los subpaths `firebase-admin/app` y
   `firebase-admin/auth`, estables desde la v10.
 
-**El borde todavía no sigue este criterio (revisado el 01-10-2026).** `isAdmin` de `functions/_lib/firebaseAuth.ts`
-(el que usa `functions/_lib/context.ts`) sigue comparando con `ADMIN_EMAIL`, aunque su comentario diga que es el mismo
-criterio que `firestore.rules`. Hoy divergen: hallazgo abierto n.º 13 de `docs/revision-general-2026-09.md`.
+**El borde siguió con el correo hasta el 01-10-2026.** `isAdmin` de `functions/_lib/firebaseAuth.ts` comparaba con
+`ADMIN_EMAIL` aunque su comentario dijera que era el mismo criterio que `firestore.rules`. Ese día pasó al claim, con
+la misma función que el cliente (`hasAdminClaim`), y `ADMIN_EMAIL` salió de `wrangler.toml`: hallazgo 13 de
+`docs/revision-general-2026-09.md`, cerrado.
 
 **Aviso operativo:** revocar un claim no es inmediato —el token vive hasta una hora—, así que quitar el permiso de
 administrador a alguien tarda en surtir efecto. Con un solo administrador da igual; conviene saberlo.
