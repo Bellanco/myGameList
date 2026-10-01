@@ -6,6 +6,12 @@
 >
 > ⚠️ **Documento vivo.** Los números de aquí se midieron; las líneas citadas se mueven. Antes de tocar algo,
 > vuelve a medir y actualiza este fichero con lo que cambie.
+>
+> **Remedido el 01-10-2026** sobre `develop` en `4a68dc73` (1.5.0), con los mismos comandos: tipos de los dos
+> proyectos en verde, ESLint con los mismos 2 avisos, **3116 casos en 274 ficheros** (2 saltados), cobertura
+> **80,3 % de líneas y 71,4 % de ramas**, y el arranque **al 97,6 % de su presupuesto** (hallazgo 14, recuperado
+> ese mismo día hasta 180,2/190 kB). Hay dos
+> hallazgos nuevos (13 y 14); las cifras antiguas se dejan donde explican una decisión, con la de hoy al lado.
 
 ## Cómo se midió
 
@@ -42,21 +48,23 @@ lista de mejoras de segundo orden. Ninguno es una emergencia.
 | 2 | Rendimiento | **Media** | ~~El árbol social se repinta con cualquier cambio~~ · **✅ hecho (fase 3)** — la causa real era el borrador del compositor, no la falta de `memo` |
 | 3 | Escalabilidad | **Media** | ~~La válvula de desborde del gist está apagada y sus pruebas se saltan solas~~ · **✅ hecho (fase 2)** — y al encenderlas, una fallaba |
 | 4 | Pruebas | **Media** | ~~La suite es inestable bajo carga~~ · **✅ hecho (fase 2)** — el reloj que agotaba era el de Testing Library, no el de vitest |
-| 5 | Modularidad | Media | `useSocialViewModel` **2370 líneas** (desde 2453), 90 hooks · **2 dominios extraídos (fases 3 y 4)**, resto pendiente |
+| 5 | Modularidad | Media | `useSocialViewModel` **2373 líneas** (desde 2453) · **2 dominios extraídos (fases 3 y 4)**, resto pendiente · `useSyncViewModel` ya pasa de 1000 (1097) |
 | 6 | Rendimiento | Baja | ~~El arranque lleva peso que no necesita~~ · **⚠️ parcial (fase 5)**: OAuth fuera; el peso real está en `IconSprite`, no donde decía este informe |
 | 7 | CI | Baja | ~~Los 2266 casos se ejecutan dos veces por build~~ · **✅ hecho (fase 1)** |
-| 8 | Cobertura | Baja | 79,4 % de líneas y 70,3 % de ramas, con los huecos justo en el camino de sync |
-| 9 | Documentación | Baja | README con versiones caducadas; `package.json` en 1.3.2 con el CHANGELOG ya en 1.3.3 |
+| 8 | Cobertura | Baja | 80,3 % de líneas y 71,4 % de ramas (01-10-2026), con los huecos justo en el camino de sync |
+| 9 | Documentación | Baja | ~~README con versiones caducadas; `package.json` en 1.3.2 con el CHANGELOG ya en 1.3.3~~ · **✅ resuelto** (los dos en 1.5.0; README repasado el 01-10-2026) |
 | 10 | Código muerto | Baja | 127 `export` sin consumidor externo; solo 2 son código inalcanzable · **+2 símbolos de icono sin ninguna referencia** (`uncharted`, `keyboard-arrow-up`, 1,6 kB) · **✅ borrados (fase 5)** |
 | 11 | Documentación | Baja | ~~«Diseño» sin cuenta de Google~~ · **✅ es así a propósito**; lo que estaba mal era la entrada de la 1.3.3, corregida |
 | 12 | Rendimiento visual | **Media** | ~~La barra inferior se quedaba muda según la máquina~~ · **✅ arreglado** — un pestillo de un solo sentido y una constante desincronizada del CSS; lo cazó CI · **2.ª pasada:** la barra de desplazamiento de Linux se comía 15 px y el salto a iconos se decidía por dos; peldaño intermedio |
+| 13 | Seguridad / coherencia | Baja | **Nuevo (01-10-2026).** Dos criterios de administrador: `firestore.rules` decide por el *custom claim* y el borde, por `ADMIN_EMAIL` — con un comentario que dice que son el mismo |
+| 14 | Rendimiento | **Media** | **Nuevo (01-10-2026).** El arranque había vuelto a crecer: **crítico 185,5/190 kB** (97,6 %), holgura 4,5 kB · **✅ recuperado el mismo día** (`f62dc8a7`, `82978f93`): 180,2/190, holgura 9,8 kB |
 
 ---
 
 ### 1 · CI no comprueba los tipos de `functions/` ni de `tests/integration` · **Alta** · ✅ HECHO
 
 `tsconfig.json` incluye solo `src/**` y `tests/**`, y **excluye `tests/integration`**. El paso de CI es
-`npx tsc --noEmit`, así que la verja **no mira `functions/`**: los 2152 líneas del borde —canje de OAuth con el
+`npx tsc --noEmit`, así que la verja **no mira `functions/`**: las 2152 líneas del borde (3498 el 01-10-2026) —canje de OAuth con el
 `client_secret`, verificación del ID token de Firebase, cuotas de compartir y de carátulas, moderación— entran
 en producción sin comprobación de tipos. El script `npm run typecheck` sí hace los dos proyectos
 (`tsc --noEmit && tsc -p tsconfig.functions.json`), pero CI no lo usa.
@@ -189,12 +197,13 @@ la vía para bajarlo es partir los ficheros grandes (hallazgo 5), no cambiar de 
 
 ### 5 · Dos piezas hacen demasiado · Media
 
-| Fichero | Líneas | Señal |
-|---|---|---|
-| `src/viewmodel/useSocialViewModel.ts` | 2453 | 94 hooks, 43 imports, 109 claves devueltas |
-| `src/App.tsx` | 1155 | 52 hooks; 56 KB de fuente en el chunk de entrada |
-| `src/view/components/GameTable.tsx` | 1372 | 26 props; 87 KB de fuente en el chunk de entrada |
-| `src/styles/stats.scss` | 3225 | la hoja más larga (va en chunk perezoso, no en el arranque) |
+| Fichero | Líneas (18-09) | Líneas (01-10) | Señal |
+|---|---|---|---|
+| `src/viewmodel/useSocialViewModel.ts` | 2453 | 2373 | 94 hooks, 43 imports, 109 claves devueltas (18-09) |
+| `src/App.tsx` | 1155 | 1312 | 52 hooks (18-09); 17,2 kB minificados en el chunk de entrada (01-10) |
+| `src/view/components/GameTable.tsx` | 1372 | 1547 | 26 props (18-09); 20,2 kB minificados en el chunk de entrada (01-10) |
+| `src/viewmodel/useSyncViewModel.ts` | — | 1097 | 11,2 kB minificados en el chunk de entrada (01-10) |
+| `src/styles/stats.scss` | 3225 | 3353 | la hoja más larga (va en chunk perezoso, no en el arranque) |
 
 El refactor que está ahora en el árbol de trabajo va **en la dirección correcta**: extraer `GithubSyncCard` +
 `githubConnection` quita 249 líneas de `SettingsHub.tsx` y las comparte con `SocialHub`. Es el patrón a repetir
@@ -220,8 +229,8 @@ que la próxima pantalla que entre al grafo de arranque rompe el build.
 Mover ese grupo a un chunk cargado en `idle` (el proyecto ya tiene `runWhenIdle` y el patrón de precarga de
 modales) debería quitar del camino crítico del orden de 15–20 KB gzip sin cambiar ninguna funcionalidad.
 
-**Lo que NO es un problema, y conviene no volver a levantarlo:** los 72 `.map` (7 MB) que se publican con el
-deploy. Está decidido y escrito en `vite.config.ts`: el código es GPL y público, los mapas no revelan nada que
+**Lo que NO es un problema, y conviene no volver a levantarlo:** los `.map` que se publican con el deploy (72 y
+7 MB al escribir esto; 94 y 7,9 MB el 01-10-2026). Está decidido y escrito en `vite.config.ts`: el código es GPL y público, los mapas no revelan nada que
 no esté en el repositorio, y sirven para leer los stacks de telemetría.
 
 ### 7 · CI ejecuta la suite dos veces · Baja · ✅ HECHO
@@ -236,23 +245,30 @@ ya tenía `reportOnFailure: true`), y el navegador de Playwright se cachea con `
 
 ### 8 · Cobertura: los huecos están en el camino de sync · Baja
 
-Total: **79,4 % de líneas** (11 108/13 992) y **70,3 % de ramas** (8579/12 202). Los peores, entre los ficheros
-de más de 100 líneas ejecutables:
+Total al escribir esto: **79,4 % de líneas** (11 108/13 992) y **70,3 % de ramas** (8579/12 202). **Remedido el
+01-10-2026: 80,3 % de líneas (13 656/17 015) y 71,4 % de ramas (10 893/15 247)**, con 3116 casos. Los peores,
+entre los ficheros de más de 100 líneas ejecutables:
 
-| Fichero | Líneas cubiertas |
-|---|---|
-| `view/components/stats/GenreBump.tsx` | 22,1 % |
-| `model/repository/socialActivityHistory.ts` | 30,9 % |
-| `view/components/roulette/RouletteModal.tsx` | 41,5 % |
-| `App.tsx` | 57,2 % |
-| `model/repository/gistRepository.ts` | 67,4 % |
-| `model/repository/socialGistRepository.ts` | 69,6 % |
-| `viewmodel/useSyncViewModel.ts` | 74,3 % |
+| Fichero | Líneas (18-09) | Líneas (01-10) | Ramas (01-10) |
+|---|---|---|---|
+| `view/components/stats/GenreBump.tsx` | 22,1 % | 22,1 % | 6,3 % |
+| `model/repository/socialActivityHistory.ts` | 30,9 % | 30,9 % | 24,8 % |
+| `view/components/roulette/RouletteModal.tsx` | 41,5 % | 41,5 % | 13,0 % |
+| `App.tsx` | 57,2 % | 58,9 % | 37,1 % |
+| `model/repository/gistRepository.ts` | 67,4 % | 68,1 % | 55,6 % |
+| `model/repository/socialGistRepository.ts` | 69,6 % | 72,0 % | 62,7 % |
+| `viewmodel/useSyncViewModel.ts` | 74,3 % | 78,5 % | 58,7 % |
+
+`ListsRouletteModal.tsx` (la ruleta de las listas) sale al **0 %**: ningún test la monta.
 
 Los tres últimos son los que importan: son exactamente donde han vivido los incidentes de pérdida de datos y de
 sincronización que no propaga. El resto (gráficas, ruleta) es aceptable.
 
-### 9 · Documentación desfasada · Baja
+### 9 · Documentación desfasada · Baja · ✅ RESUELTO
+
+**Estado (01-10-2026):** `package.json` y el CHANGELOG van los dos en 1.5.0, y el README se repasó entero contra el
+código (características, árbol, scripts, variables, despliegue y la checklist con el `build` delante). Lo de
+abajo es el registro de lo que había.
 
 - `package.json` está en **1.3.2** y el CHANGELOG ya tiene `[1.3.3] - 2026-09-18` cerrada. El propio README
   advierte de que la versión se hornea en `__APP_VERSION__` y etiqueta la telemetría: sin subirla, los errores
@@ -260,7 +276,7 @@ sincronización que no propaga. El resto (gráficas, ruleta) es aceptable.
 - README: decía `react ^19.2.0` (está fijado en `19.3.0`), `vitest ^4.1.5` (es `^5.0.0`), **Node ≥ 20** en dos
   sitios (`engines` pide `>=22.16.0`) y `npm run typecheck` como «`tsc --noEmit`» (son dos proyectos).
   **Corregido en esta pasada.**
-- `CHANGELOG.md` (176 KB) y `docs/plan-logros.md` (166 KB) en un solo fichero cada uno. No estorba a nadie
+- `CHANGELOG.md` (176 KB; 220 KB el 01-10-2026) y `docs/plan-logros.md` (166 KB) en un solo fichero cada uno. No estorba a nadie
   todavía; el día que estorbe, se archiva por versiones (`docs/changelog/1.2.md`…).
 
 ### 10 · Código muerto: prácticamente no hay · Baja
@@ -417,6 +433,67 @@ Si esto vuelve a ponerse rojo en otra máquina, el log dirá cuál de las dos ca
 **Lo que esto NO cubre:** por debajo de ~348 px con la letra normal —o de ~345 con una un 9 % más ancha— la barra
 sigue quedándose en iconos, que es el suelo de 280 px prometido y comprobado.
 
+### 13 · Dos criterios de administrador · Baja · ABIERTO (01-10-2026)
+
+Desde que el panel pasó al *custom claim*, **las reglas y el borde preguntan cosas distintas**:
+
+- `firestore.rules` (`isAdmin()`, línea 31): `request.auth.token.admin == true`. Lo mismo el cliente
+  (`src/core/security/admin.ts`), y el claim lo concede o retira `scripts/set-admin-claim.mjs`.
+- `functions/_lib/firebaseAuth.ts` (`isAdmin`), que usan `requireAdmin` y `caller.isAdmin` en
+  `functions/_lib/context.ts:50`: correo verificado **igual a `ADMIN_EMAIL`** de `wrangler.toml`. De él dependen
+  `/api/tmdb-search`, borrar el enlace compartido de otro (`api/share/[token].ts:48`) y los ajustes de cupo y vetos
+  de compartir.
+
+Hoy no abre nada —las dos vías señalan a la misma persona—, pero **el comentario de la función y el de
+`wrangler.toml` dicen «mismo criterio que `firestore.rules`»**, y eso ya es falso. El día que se conceda el claim a
+una segunda cuenta, o se le retire a la primera, el panel cambiará y el borde no, sin ningún error que lo cante.
+
+**Arreglo propuesto, sin aplicar:** que `verifyIdToken` devuelva también `payload.admin === true` (el claim viaja
+en el ID token ya verificado, no hace falta leer nada más) y que `isAdmin` decida por él; `ADMIN_EMAIL` sale de
+`wrangler.toml` en el mismo cambio. Ojo al orden de despliegue que ya avisa `firestore.rules`: el token tiene que
+traer el claim, así que quien no haya vuelto a iniciar sesión desde que se le concedió se queda fuera hasta
+hacerlo. Lleva test en `functions/` que fije que un token sin claim, con el correo de antes, ya no es admin.
+
+### 14 · El arranque ha vuelto a crecer: 97,6 % del presupuesto · **Media** · ✅ RECUPERADO (01-10-2026)
+
+**Estado:** el mismo día, `f62dc8a7` (los textos que solo pintan pantallas perezosas salen de `labels.ts` a
+`consentLabels.ts`, `formLabels.ts` e `importLabels.ts`, y los avisos del carril salen del chunk de entrada) y
+`82978f93` (los hooks de fondo se montan perezosos en idle). Medido sobre un worktree de `82978f93`: **crítico
+180,2/190 kB** (holgura 9,8 kB), chunk de entrada **190,2 kB minificados (62,6 gzip)** y `labels.ts` de 14 404 a
+**8 922** bytes minificados. Lo de abajo es la medición que lo destapó.
+
+Medido con `npm run build && npm run validate` sobre `4a68dc73`: **«crítico 185,5/190 kB · total 218,7/240 kB»**.
+La fase 5 lo había dejado en 179,1 con 10,9 kB de holgura; hoy quedan **4,5 kB**. El chunk de entrada pesa
+**202,7 kB minificados (66,9 gzip)**, frente a 172,1 (58,0) tras partir `IconSprite`.
+
+Atribución de bytes MINIFICADOS del chunk de entrada (mismo script de sourcemap de «Cómo se midió»):
+
+| Fuente | Bytes minificados |
+|---|---|
+| `view/components/IconSprite.tsx` | 20 509 |
+| `view/components/GameTable.tsx` | 20 178 |
+| `App.tsx` | 17 171 |
+| `core/constants/labels.ts` | **14 404** |
+| `viewmodel/useSyncViewModel.ts` | 11 211 |
+| `viewmodel/useGameListViewModel.ts` | 8 358 |
+| `model/repository/indexedDbRepository.ts` | 6 977 |
+| `view/components/Toolbar.tsx` | 5 509 |
+
+Lo que se ve, y lo que falta por medir:
+
+- **No es la guía de primeros pasos**: del arranque solo llevan `core/onboarding/tourState.ts` (1,2 kB) y
+  `onboardingStore.ts` (0,3 kB); el resto ya va perezoso.
+- **`labels.ts` es el candidato nuevo.** 34 KB de fuente (30 KB antes del 20-09), con `UI_MESSAGES` como un único
+  objeto de ~400 líneas: al ser un objeto, el empaquetador no puede quedarse solo con las cadenas que usa el
+  arranque. Cuánto de él lo pinta de verdad la lista está **por medir** (cobertura de Chromium, como el punto 16).
+  Partirlo por pantalla es además lo que pide `docs/plan-idioma.md` para tener un fichero por idioma, así que
+  conviene hacerlo una vez y con ese plan delante. Hecho en `f62dc8a7` (ver el estado arriba).
+- `GameTable` (+2,3 kB desde la fase 5) y `App.tsx` (+2,3 kB) crecen con cada funcionalidad de las listas.
+
+**Consecuencia práctica:** cualquier funcionalidad nueva que toque la pantalla de listas tiene que entrar por
+`lazy()`/`import()`; con 4,5 kB, una tarjeta más en el grafo de arranque rompe el build. No se sube el tope: está
+puesto para que esto se note.
+
 ## Lo que se comprobó y está bien
 
 Para no repetir el trabajo en la próxima pasada:
@@ -429,7 +506,7 @@ Para no repetir el trabajo en la próxima pasada:
 - **Dependencias de producción: 0 vulnerabilidades.** Las 8 moderadas son de `firebase-tools` y su cadena
   (`@google-cloud/pubsub`, `csv-parse`, `re2`, `uuid`…), solo `devDependencies`; CI ya las trata como
   informativas.
-- **Sin sumideros de XSS.** Un único `innerHTML` (`useSignatureEffects.ts:106`) y su interpolación son tres
+- **Sin sumideros de XSS.** Un único `innerHTML` (`useSignatureEffects.ts:111`) y su interpolación son tres
   literales del propio código (`'signature'`, `'check'`, `'star-olive-branches'`). Ni `eval`, ni
   `dangerouslySetInnerHTML`, ni `document.write`.
 - **El borde está bien hecho.** `verifyIdToken` comprueba RS256, `kid` vigente, firma, `iss`, `aud`, expiración,
@@ -449,7 +526,6 @@ Para no repetir el trabajo en la próxima pasada:
 - **Higiene del repositorio:** `firestore-debug.log` (871 KB), `myGames.json` (255 KB, datos reales),
   `audit-report.json`, `.dev.vars`, `.covers.local.json`, `dist/`, `coverage/` y `test-results/` están todos
   ignorados y ninguno trackeado.
-- **El directorio `base/`** (4,8 MB, copia del proyecto anterior) no está en git: es solo residuo local.
 
 ## Plan
 
@@ -458,7 +534,7 @@ Para no repetir el trabajo en la próxima pasada:
 1. ✅ `.github/workflows/ci.yml`: `npx tsc --noEmit` → `npm run typecheck`. *(Hallazgo 1)*
 2. ✅ Quitado el paso `Run unit tests`; queda `npm run test:coverage -- --reporter=verbose`. *(Hallazgo 7)*
 3. ✅ `actions/cache@v6` sobre `~/.cache/ms-playwright`, con clave por versión de `@playwright/test`. *(7)*
-4. ⏸️ Subir `package.json` a `1.3.3`: **lo hace el mantenedor al desplegar**, no el plan. *(Hallazgo 9)*
+4. ✅ Subir `package.json` a `1.3.3`: lo hizo el mantenedor al desplegar; hoy los dos van en 1.5.0. *(Hallazgo 9)*
 
 **Criterio de aceptación — cumplido.** Con los comandos exactos del workflow: `npm run typecheck` en verde (los
 dos proyectos), `npm run test:coverage -- --reporter=verbose` en verde (195 ficheros, 2265 casos, 2 saltados),
@@ -544,7 +620,8 @@ decía el plan. Lo hecho y lo descartado, con ese dato delante:
     (`parseSeen`, al montar), así que no puede ser dinámica sin mover el hook entero detrás de un componente
     perezoso — y eso **costaría una petición extra en el caso normal** (no hay aviso que enseñar casi nunca) a
     cambio de ~0,35 kB gzip. Mal cambio; se queda como está.
-14. ⏸️ **Cobertura de los tres ficheros de sync**: sin empezar. Sigue en 74,3 / 67,4 / 69,6 % de ramas.
+14. ⏸️ **Cobertura de los tres ficheros de sync**: sin empezar. Estaban en 74,3 / 67,4 / 69,6 % de LÍNEAS; el
+    01-10-2026, 78,5 / 68,1 / 72,0 % de líneas y **58,7 / 55,6 / 62,7 % de ramas**, que es lo que pide el criterio.
 
 15. ✅ **`IconSprite` partido en dos** (era la palanca de verdad: 28,4 kB minificados, el mayor del arranque).
 
@@ -570,10 +647,10 @@ Dos trampas que la medición evitó y un `grep` no habría:
   allowlist cuenta como referencia — pero de haberlos movido, un aviso habría salido con el disco vacío.
 
 **Lo implementado.** Los dos símbolos sin referencia **se borraron** —del sprite y del catálogo `IconName`, con
-su alias de `COMMON_ICONS`—, así que el reparto final es 36 en el arranque y 13 en `IconSpriteRest`, montado **una sola vez desde `App` y en idle**
+su alias de `COMMON_ICONS`—, así que el reparto final es 36 en el arranque y 13 en `IconSpriteRest` (38 y 13 el 01-10-2026: dos iconos nuevos entraron en el del arranque), montado **una sola vez desde `App` y en idle**
 (`lazy()` lo saca del chunk; el idle evita que su descarga compita con el primer pintado). NO se sigue el patrón
 de `AchievementSprite` —que lo monta cada pantalla, con relevo por orden de llegada— y la razón es a quién sirve
-cada uno: aquel lo piden cinco pantallas que nunca coinciden; estos 15 los necesitan una decena de sitios
+cada uno: aquel lo piden cinco pantallas que nunca coinciden; estos 13 los necesitan una decena de sitios
 repartidos, incluidos modales que se abren encima de cualquier pantalla. Un solo montaje no se puede olvidar.
 
 **Medido después:** `IconSprite` pasa de **28 369 a 19 895 bytes minificados** (−30 %) y el chunk de entrada de
@@ -615,7 +692,7 @@ precache. Es un cambio para probar en un despliegue de vista previa, no a ciegas
     anchos y modo claro; las paletas inactivas son ~4–6 kB gzip, y sacarlas arriesga el primer fotograma.
 
 17. ↩️ **Brotli del build en vez del de Cloudflare** (25-09-2026, verificado en vista previa). **Retirado el
-    30-09-2026**: servirlo obligaba a que cada `/assets/*` pasara por una Pages Function, y eso gastaba el cupo
+    30-09-2026** (`7d84a1f6`: se borraron el plugin `brotliAssets` y `functions/_lib/brotliAsset.ts`): servirlo obligaba a que cada `/assets/*` pasara por una Pages Function, y eso gastaba el cupo
     gratuito de Workers (100.000/día) a razón de ~36 invocaciones por dispositivo nuevo y ~18 por despliegue. El
     404 de los chunks viejos lo da ahora un `404.html` sin Function; el arranque vuelve a viajar con la compresión
     de Cloudflare. Ver `docs/plan-capacidad-gratuita.md`, fase 3. Lo que sigue es el registro de lo que se hizo. Pages
@@ -643,6 +720,18 @@ precache. Es un cambio para probar en un despliegue de vista previa, no a ciegas
 **Criterio de aceptación:** el arranque baja de 182,8 a **179,1 kB** críticos (−2 %) sin perder funcionalidad, y
 la holgura del presupuesto casi se dobla. Los tres ficheros de sync siguen por debajo del 80 % de ramas (punto
 14, sin empezar).
+
+### Fase 6 — Lo que salió al remedir (01-10-2026) · ⏳ PARCIAL
+
+18. ⬜ **Un solo criterio de administrador**: el borde lee el claim `admin` del ID token verificado y `ADMIN_EMAIL`
+    sale de `wrangler.toml`. *(Hallazgo 13)*
+19. ✅ **Recuperar holgura de arranque** (`f62dc8a7`, `82978f93`: crítico 180,2 kB, holgura 9,8 kB) antes de meter nada en las listas: medir con la cobertura de Chromium qué
+    parte de `labels.ts` usa el primer pintado y, si compensa, partir `UI_MESSAGES` por pantalla con el plan de
+    idioma delante. *(Hallazgo 14)*
+20. ⬜ Un test que monte `ListsRouletteModal` (0 % de líneas). *(Hallazgo 8)*
+
+**Criterio de aceptación:** `isAdmin` del borde y `isAdmin()` de las reglas preguntan por lo mismo, con un test que
+lo fije (pendiente); y el crítico de `npm run validate` vuelve por debajo de 182 kB (✅ 180,2 kB).
 
 ## Lo que NO se hace
 

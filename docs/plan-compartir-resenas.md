@@ -34,9 +34,9 @@ desde el servidor; no se crean Gists nuevos; no se cuentan visitas por enlace.
 ## 1. Contexto de arquitectura (para quien implemente)
 
 **Dónde vive hoy una reseña.** El texto completo (`review`) está SOLO en el **gist de juegos**, que la app crea
-con `public: false` (`gistRepository.ts:144`). El canal social publica únicamente un `snippet` de ≤160 caracteres
-(`socialProjection.ts:294-318`), con allowlist Zod estricta (`socialGistSchema.ts`) y `review` en la denylist
-(`SOCIAL_PRIVATE_FIELDS`, `socialProjection.ts:456`).
+con `public: false` (`gistRepository.ts:222`). El canal social publica únicamente un `snippet` de ≤160 caracteres
+(`socialProjection.ts:293-317`), con allowlist Zod estricta (`socialGistSchema.ts`) y `review` en la denylist
+(`SOCIAL_PRIVATE_FIELDS`, `socialProjection.ts:476`).
 
 **Por qué el enlace no puede apoyarse en un Gist.**
 
@@ -137,12 +137,17 @@ con WebCrypto, claves cacheadas en KV). Del token verificado salen `uid`, `email
 **Admin: el mismo criterio que las reglas** — `email_verified == true` y correo igual al del administrador
 (`firestore.rules:13-18`). Se lee de una **variable de entorno del Worker** (`ADMIN_EMAIL`), no se repite el
 literal: dos copias del correo del administrador en dos ficheros es una divergencia esperando a ocurrir.
+*(Revisado el 01-10-2026: ya no es el mismo criterio. Desde F0 de `docs/plan-unificar-premios.md`, `firestore.rules`
+decide por el custom claim —`request.auth.token.admin == true`, `isAdmin()` en la línea 31—, pero `isAdmin` de
+`functions/_lib/firebaseAuth.ts`, el que usa `functions/_lib/context.ts`, sigue comparando con `ADMIN_EMAIL`, y su
+comentario aún dice que es el mismo criterio. Hoy divergen: hallazgo abierto n.º 13 de
+`docs/revision-general-2026-09.md`.)*
 
 **Cómo conoce la Function el rango.** El `tier` vive en `profiles/{uid}`. El cliente envía en la petición su ID
 token **y su token de App Check** (`getToken()` del SDK), y la Function los reenvía a la API REST de Firestore
 (`Authorization: Bearer` + `X-Firebase-AppCheck`). Así funciona **esté o no activada la exigencia de App Check**,
-sin cuenta de servicio ni secretos nuevos en el Worker. El tier se cachea 5 minutos en KV: una lectura por
-publicación, nunca por visita.
+sin cuenta de servicio ni secretos nuevos en el Worker. El tier **no** se cachea (`functions/_lib/quota.ts` lo lee
+en cada petición autenticada que lo necesita): una lectura de Firestore por publicación, nunca por visita.
 
 **Veto.** `POST /api/share` comprueba `ban:{uid}` **antes que la cuota** y responde `403` con el motivo si existe.
 El veto no retira por sí solo lo ya publicado: retirar es una decisión aparte, que el admin toma con
@@ -228,6 +233,10 @@ solo el número de enlaces sin tocar su duración, o al revés.
 4. En cualquier caso, nunca por encima del techo de mithril (**90 días / 50 enlaces**) ni del techo diario de
    creaciones. Es la cota del saneador: protege de un dedazo en el panel, no del usuario.
 
+*(Revisado el 01-10-2026: además, **el ajuste solo recorta**. `POST /api/share/quota/:uid` rechaza con un 400 un
+ajuste que supere lo que da el rango del usuario (`overrideExceedsTier`, `functions/_lib/quota.ts`); para darle más,
+se le sube el rango.)*
+
 **Consecuencias, deliberadamente iguales a las de cambiar de rango:**
 
 - El override **manda sobre el rango mientras exista**. Si luego se le sube el rango, sigue mandando el override
@@ -269,8 +278,8 @@ autor, no puede volver atrás dentro de la app, no puede navegar libremente.
 - Única salida ofrecida: un CTA discreto *«Descubre My Game List»* hacia la home. Explícito y elegido, no una
   deriva accidental.
 - **No se registra el service worker** en esta ruta: no tiene sentido instalar la PWA a un visitante de paso.
-- **Tema por defecto.** `public/theme-init.js` ya lee `THEME_KEY` y `PALETTE_KEY` de `localStorage` antes del
-  primer render: si el visitante resulta tener la app con tema elegido, se respeta; si no hay claves, tema por
+- **Tema por defecto.** El script en línea de `index.html` (antes `public/theme-init.js`, integrado en `b0c02e79`)
+  ya lee `THEME_KEY` y `PALETTE_KEY` de `localStorage` antes del primer render: si el visitante resulta tener la app con tema elegido, se respeta; si no hay claves, tema por
   defecto. No hay que hacer nada especial, solo **no** forzar el tema del autor.
 
 **Con la app en este navegador**, la pantalla se integra con normalidad (cromo, atrás) y el nick enlaza al perfil
@@ -303,7 +312,8 @@ Sección nueva en `AdminHub` (`view/components/AdminHub.tsx`), coherente con lo 
   Se levanta desde la misma fila.
 - **Ajustar la cuota** de un usuario (`POST /api/share/quota/:uid`): dos campos opcionales —enlaces activos y
   días— con su motivo, y un botón para volver a la cuota del rango. La ficha muestra siempre la cuota efectiva y,
-  si hay ajuste, de qué valor de rango viene: *«8 enlaces (rango: 5)»*.
+  si hay ajuste, de qué valor de rango viene: *«3 enlaces (rango: 5)»*. El ajuste no puede superar el valor del
+  rango (ver §4).
 - El veto y el ajuste son accesibles desde **las dos vistas**: la fila del censo de enlaces y la ficha del
   usuario en el censo de perfiles que ya existe, que es donde el admin suele estar cuando llega un aviso.
 - Filtro por autor y orden por fecha, para atender un aviso concreto sin recorrer el censo entero.
@@ -320,7 +330,7 @@ para tumbar un enlace sin desplegar código.
 ## 7. Legal y borrado de cuenta
 
 1. Actualizar `core/constants/legal.ts`: destinatarios, plazos de conservación **por rango**, derecho a retirar.
-2. Subir `LEGAL_VERSION` (hoy `'2026-08-12'`) → todos los usuarios repiten el consentimiento en la puerta del hub.
+2. Subir `LEGAL_VERSION` (entonces `'2026-08-12'`; hoy, `'2026-09-20'`) → todos los usuarios repiten el consentimiento en la puerta del hub.
 3. Decir con todas las letras lo que ya se dice bien de los Gists: retirar un enlace lo deja inaccesible, **pero
    no recoge las copias** — un enlace ya reenviado no vuelve. El botón se llama *«Dejar de compartir»*, nunca
    *«Borrar»*.
@@ -362,9 +372,10 @@ Siete pasos, en este orden. Cada uno deja el árbol desplegable y con `npm run v
 - `public/_headers`: `/r/*` con `Cache-Control: public, max-age=60` (corto, para que retirar un enlace se note) y
   `/share-card.jpg` con un día. El `X-Robots-Tag: noindex, nofollow` global sigue cubriéndolo todo.
 
-**Pendiente de una decisión que no bloquea:** `og:image` es una ruta relativa. La especificación de Open Graph
+~~**Pendiente de una decisión que no bloquea:** `og:image` es una ruta relativa. La especificación de Open Graph
 pide URL absoluta, aunque en la práctica los agentes actuales la resuelven. Se deja así hasta que esté confirmado
-el dominio definitivo (§12.1), y entonces se pone absoluta.
+el dominio definitivo (§12.1), y entonces se pone absoluta.~~ **Resuelto (revisado el 01-10-2026):** `index.html`
+ya declara `og:image` absoluta (`https://mygamelist.pages.dev/share-card.jpg`).
 
 **Verificación hecha:** `npm run validate` en verde (ci-validate, html-validate y eslint sin errores nuevos; los
 14 avisos de `react-hooks/exhaustive-deps` son preexistentes) y revisión visual del render.
@@ -403,15 +414,17 @@ presupuesto de arranque no se mueve (210,3 kB de 215): los módulos nuevos todav
 
 ```
 functions/_lib/firebaseAuth.ts   verificación de ID token (JWKS + RS256, caché en KV)
-functions/_lib/tier.ts           lectura del tier vía Firestore REST (reenvía idToken + App Check), caché 5 min
-functions/_lib/quota.ts          resolución de cuota (veto → override → rango → techos) + contador diario
-functions/_lib/ban.ts            lectura/escritura del veto y purga de los enlaces de un usuario
+functions/_lib/quota.ts          lectura del tier vía Firestore REST (reenvía idToken + App Check, sin caché),
+                                 lectura del veto, resolución de cuota (veto → override → rango → techos)
+                                 + contador diario
+functions/_lib/shares.ts         publicar y retirar enlaces (la purga del veto la usa desde ban/[uid].ts)
 functions/_lib/html.ts           escapado y plantilla de metadatos
 functions/api/share/index.ts     POST (crear/renovar) · GET mine (incluye estado de veto)
 functions/api/share/[token].ts   DELETE (propietario o admin)
 functions/api/share/all.ts       GET censo (admin)
 functions/api/share/ban/[uid].ts POST veto (con purga opcional) · DELETE levantar (admin)
 functions/api/share/quota/[uid].ts POST ajuste individual · DELETE volver al rango (admin)
+functions/api/share/related/[token].ts GET sugeridos del mismo autor (anónimo; índice `relidx:{uid}`)
 functions/r/[token].ts           SSR de la página pública
 ```
 
@@ -444,7 +457,7 @@ token; `/r/:token` con un artículo sembrado → reescribe `<title>`, `og:title`
 etiqueta `<script>` incrustada en el texto de prueba.
 
 **Configuración completa y verificada en un despliegue real.** `FIREBASE_PROJECT_ID = "mylists-f7313"`, tomado del fallback público de
-`firebaseClient.ts:139-147`: como en Cloudflare no hay variables `VITE_FIREBASE_*`, el build usa ese fallback, así
+`firebaseClient.ts:190-191`: como en Cloudflare no hay variables `VITE_FIREBASE_*`, el build usa ese fallback, así
 que es el proyecto real. Si algún día se definen esas variables en el panel, hay que sincronizar este valor.
 
 **Un fallo que solo apareció al comprobar la configuración de verdad:** la URL de las claves públicas de Google
@@ -501,7 +514,7 @@ Firebase (verificable en la pestaña de red).
   mismas dos vistas. La ficha muestra la cuota efectiva y el valor de rango del que viene.
 - Sube a ~1,5 días con el veto y el ajuste incluidos.
 
-### Paso 7 — Legal, supresión y cierre · **HECHO** (falta la QA de tarjetas en clientes reales)
+### Paso 7 — Legal, supresión y cierre · **HECHO** (falta la QA de tarjetas en clientes reales; revisado el 01-10-2026)
 
 - `legal.ts` + `LEGAL_VERSION`.
 - `accountDeletionRepository.ts`: retirada de enlaces antes de borrar el perfil.
@@ -572,7 +585,8 @@ responden con **404 «Este enlace ya no está disponible»** y **401 «Falta la 
 el bloque `[env.preview]` del `wrangler.toml` **valida en un despliegue de verdad**, con su namespace de vista
 previa, que era la incógnita que quedaba de la configuración.
 
-Producción (`mygamelist.pages.dev`) sigue en la versión anterior: su `og:image` todavía apunta al SVG.
+Producción (`mygamelist.pages.dev`) sigue en la versión anterior: su `og:image` todavía apunta al SVG. *(Superado:
+hoy `og:image` es la tarjeta JPEG con URL absoluta; revisado el 01-10-2026.)*
 
 **Lo que se puede probar ya en la vista previa, sin tocar producción:** publicar un enlace con una cuenta real
 de principio a fin, la pantalla de gestión en Cuenta, la moderación en `/admin` y la página pública `/r/:token`.

@@ -2,10 +2,10 @@
 version: 1
 name: mis-listas-design
 description: |
-  Biblioteca personal de videojuegos, 100 % tipográfica: no hay ni una carátula ni una imagen de juego
-  en toda la aplicación, así que el color, la forma y la letra hacen el trabajo que en otras webs hace
-  el arte de portada. Ocho TEMAS coexisten como mundos completos —uno neutro de casa y siete tomados de
-  juegos— y cada uno redefine los mismos ~26 tokens de identidad, más su propia tipografía, sus radios y
+  Biblioteca personal de videojuegos, tipográfica de partida: de fábrica no hay ni una carátula ni una
+  imagen de juego —las de IGDB son opcionales y van apagadas hasta que alguien las enciende—, así que el
+  color, la forma y la letra hacen el trabajo que en otras webs hace el arte de portada. Ocho TEMAS
+  coexisten como mundos completos —uno neutro de casa y siete tomados de juegos— y cada uno redefine los mismos ~26 tokens de identidad, más su propia tipografía, sus radios y
   su ornamento. Cada tema tiene además modo claro y oscuro, y no son el mismo diseño invertido: en varios
   el claro cuenta otra historia (la Aperture antigua frente a la moderna, el códice frente al cogitador).
   El sistema se apoya en CUATRO CAPAS: medidas (CAPA 0), color base derivado (CAPA 1), identidad de cada
@@ -97,11 +97,13 @@ le toca a cada género. Las reglas y de dónde sale cada rampa están en la cabe
 | `--font-display` | Titulares | = cuerpo | Orbitron | **Cinzel** | Oswald | Rajdhani | **UnifrakturCook** | = cuerpo |
 | `--font-mono` | Cifras y fechas | **Atkinson Hyperlegible Mono** | Share Tech Mono | IBM Plex Mono | Share Tech Mono | Share Tech Mono | **VT323** | SoS Digits |
 
-*Ladrones de corazones* no carga webfont: su display es `'Arial Black', Impact`.
+*Ladrones de corazones* no trae webfont propia: el cuerpo se queda en DM Sans, la letra de la casa, y el
+display (y con él los rótulos) es `'Arial Black', Impact`, de sistema.
 
 ### Escala
 
-Doce pasos, razón ≈1,08 en la zona de interfaz. Multiplicados por `--font-scale` (0,94 / 1 / 1,08).
+Doce pasos, razón ≈1,08 en la zona de interfaz. Multiplicados por `--font-scale`, que hoy vale siempre 1: está
+preparada para un «compacto / cómodo» que no se ha construido.
 **Nunca escribas un `font-size` literal.**
 
 ```
@@ -155,7 +157,8 @@ Doce pasos, razón ≈1,08 en la zona de interfaz. Multiplicados por `--font-sca
   El tono de cada ficha va en la cifra y en el velo, sin filete lateral.
 - **Estados vacíos**: icono grande del sprite en la tinta de enlace (`--fg-link`) + título en la letra de titulares
   (`--font-display`) + una acción. Nunca un párrafo gris suelto.
-- **Iconos**: sprite propio de 49 símbolos (`IconSprite`), `<Icon name="…" />`. Tamaño por ficha
+- **Iconos**: sprite propio de 51 símbolos —38 en `IconSprite`, que va en el arranque, y 13 en `IconSpriteRest`—,
+  `<Icon name="…" />`. Tamaño por ficha
   (`--ico-xs`…`--ico-2xl`), color por papel — no siempre `currentColor`.
 
 ---
@@ -177,8 +180,9 @@ tema. Esa separación es la regla: **abajo lo que LLEVA a algún sitio, arriba l
 Importa porque los flotantes se esconden al bajar, y un destino que desaparece a mitad de página deja media
 aplicación sin salida; un control que se aparta mientras lees, no.
 
-La cuarta pestaña no navega: despliega un `popover` con los cuatro grupos de ajustes —Personalización,
-Integración, Filtros y, como pie, Legal—. Cuatro rótulos con un punto de luz delante, **sin panel, sin caja y
+La cuarta pestaña no navega: despliega un `popover` con los grupos de ajustes —Diseño (solo con espacio
+social), Filtros y, como pie, Datos—, más Premios detrás de Diseño cuando hay temporada. Rótulos con un punto de
+luz delante, **sin panel, sin caja y
 sin velo**. El contraste no lo pone una superficie sino el apagado de todo lo demás: mientras el menú está
 abierto, el contenido, los avisos y los controles flotantes bajan al **30 %** y los dos botones de acción
 desaparecen (nacen en la misma esquina de la que sale el menú). Medido sobre el peor fondo posible —una carátula
@@ -253,9 +257,11 @@ están — y sus bordes tampoco, que ahí el marco de oro o el filete cian **son
 
 **Don't**
 - No escribas un `font-size`, una sombra o una familia literales.
-- No uses el acento para todo: hay `--acc-2/3/4` y semánticos, y la interfaz monócroma es el problema a resolver.
+- No uses el acento para todo: hay la rampa `--cat-1` … `--cat-7` y semánticos, y la interfaz monócroma es el problema a resolver.
 - No pongas borde de 1 px a todo. Borde, relleno, radio y sombra se gastan **por papel**: si todo destaca, nada destaca.
-- No metas imágenes de juegos: la aplicación es tipográfica a propósito y presume de no depender de terceros.
+- No metas imágenes de juegos fuera del camino de las carátulas: la aplicación es tipográfica de partida, y la
+  única imagen ajena es la de IGDB, que pasa por `/cover`, va apagada de fábrica y siempre tiene la portada de casa
+  debajo.
 - No aplanes las sombras de los skins: son la identidad de cada tema.
 - No inviertas el claro a partir del oscuro; varios temas cuentan otra historia en claro.
 
@@ -269,10 +275,8 @@ Al construir interfaz en este proyecto:
    los dos están comentados con el porqué.
 2. Escribe el componente **neutro**, con fichas. Si necesita carácter propio de un tema, va en `themes/<id>/<id>.scss`.
 3. Añadir un tema es aditivo y tiene receta propia: [`docs/temas.md`](docs/temas.md). En corto, una carpeta en
-   `styles/themes/`, dos ficheros en `core/constants/themes/` y cuatro índices; `tests/unit/themes.test.ts` avisa
-   de lo que falte
-   (recalcula el hash CSP de `public/_headers`) + opcionalmente un skin.
-4. Verifica: `npm run build`, `npm test`, y `npx playwright test tests/e2e/a11y.test.ts` (96 recorridos).
-
-**Muestrarios vivos** (previews del sistema, con selector de los seis temas):
-taller de diseño, opciones de color y vida, y las cuatro pantallas rediseñadas.
+   `styles/themes/`, dos ficheros en `core/constants/themes/`, cinco índices (entre ellos su entrada en
+   `core/constants/themes/premios.ts`; si toca `index.html`, recalcula el hash CSP de `public/_headers`) y,
+   opcionalmente, un skin. `tests/unit/themes.test.ts` avisa de lo que falte.
+4. Verifica: `npm run build`, `npm test`, y `npx playwright test tests/e2e/a11y.test.ts` (176 recorridos:
+   8 temas × 2 modos × 9 pantallas, más la barra de progreso de logros y el anillo de foco en cada combinación).

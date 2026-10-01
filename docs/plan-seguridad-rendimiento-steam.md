@@ -139,7 +139,7 @@ descuido».
 
 | Sumidero | Dónde | Qué hacer |
 |---|---|---|
-| `innerHTML` | `src/view/hooks/useSignatureEffects.ts:110` | Construir el `<svg><use>` con `createElementNS`. No necesita política |
+| `innerHTML` | `src/view/hooks/useSignatureEffects.ts:111` | Construir el `<svg><use>` con `createElementNS`. No necesita política |
 | `serviceWorker.register('/service-worker.js')` | `src/core/utils/appUpdate.ts:248` | Es un sumidero `TrustedScriptURL`: pasa por la política propia |
 | `script.src` de terceros | reCAPTCHA (App Check), `gtag` (Analytics), `apis.google.com` (inicio de sesión con Google) | No los controlamos: los cubre la política `default` |
 
@@ -193,10 +193,11 @@ y la marcha atrás está escrita en `_headers`.
 
 Todo se mide antes y después, y el resultado se anota en la revisión general.
 
-1. **Terminar la fase 4 de la revisión** (partir `useSocialViewModel`, 2370 líneas). Los tres dominios que
+1. **Terminar la fase 4 de la revisión** (partir `useSocialViewModel`, 2373 líneas). Los tres dominios que
    faltan, en el orden ya decidido allí: detalle de una actividad → vitrina de logros → ficha de un perfil
    ajeno. Y luego adelgazar la fachada y mover los `use*Session` de `App.tsx` a `viewmodel/`.
-   *Criterio (el de la revisión):* ningún fichero de `src/viewmodel/` por encima de 800 líneas.
+   *Criterio (el de la revisión):* ningún fichero de `src/viewmodel/` por encima de 800 líneas. Hoy también lo
+   incumple `useSyncViewModel` (1097 líneas, medido el 01-10-2026).
 2. **Probar el React Compiler en una rama y decidir con números.** Antes de nada, comprobar cómo se integra
    con `@vitejs/plugin-react` 6, que ya no trae Babel. Medir con el método de la fase 3 de la revisión (renders
    del feed por pulsación) y con `npm run validate` (presupuesto de arranque). Si no mejora nada que se note o

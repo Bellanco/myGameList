@@ -10,11 +10,14 @@ conservando el estilo visual, el comportamiento y la compatibilidad con los dato
   ordenación por columnas y búsqueda.
 - **Puntuación** en estrellas (0–5) con escala opcional **0–100**, elegible en Ajustes.
 - **Sincronización CRDT** con GitHub Gist para minimizar pérdida de datos en conflictos, con
-  merge por marcas de tiempo y tombstones. Compresión gzip del gist (gated).
+  merge por marcas de tiempo y tombstones. El gist de juegos va comprimido con gzip (activo:
+  `ENABLE_GAMES_COMPRESSION`); el desborde a gists adicionales existe pero sigue apagado.
 - **Social**: perfiles, sistema de amistades y feed de reseñas (canal separado en Gist +
-  Firebase Firestore/Auth).
-- **Tema claro / oscuro / automático** con paleta clara "arena" (tonos cálidos) y azul de marca;
-  todos los colores son variables CSS theme-aware (`src/styles/_base.scss`).
+  Firebase Firestore/Auth), reseñas compartidas con enlace público (`/r/:token`) e invitación a amigos.
+- **Estadísticas, ruleta, logros y premios** (la porra estacional de `/premios`), y una guía de primeros pasos.
+- **Importación** de la biblioteca de Playnite (Library Exporter) a una bandeja, y copia de seguridad en JSON.
+- **Ocho temas**, cada uno en claro y oscuro (la primera vez sigue al sistema); todos los colores son variables
+  CSS (`src/styles/_base.scss` y `src/styles/themes/`). El sistema visual está en [`DESIGN.md`](DESIGN.md).
 - **Offline-first / PWA**: Service Worker + `manifest.json`. El build inyecta en el Service Worker los
   chunks del arranque, así que la app arranca y las listas funcionan sin red; las pantallas perezosas
   (social, panel, temas) quedan disponibles offline tras visitarlas una vez.
@@ -30,7 +33,7 @@ Dependencias principales (versiones declaradas en `package.json`):
 - `firebase` ^12.13.0 (Analytics, Firestore, Authentication)
 - `zod` ^4.4.3 (validación de esquemas)
 
-Tooling: `vite` ^8.0.11, `@vitejs/plugin-react` ^6.0.1, `typescript` ^6.0.3, `vitest` ^5.0.0,
+Tooling: `vite` ^8.0.11, `@vitejs/plugin-react` ^6.0.1, `typescript` ^6.0.3, `vitest` ^5.0.2,
 `eslint` ^9.39.4, `sass` ^1.99.0.
 
 Node.js **≥ 24.8.0** (`engines` en `package.json`), que es la LTS activa. El suelo exacto lo marca
@@ -46,23 +49,28 @@ el sistema de build de Cloudflare Pages. `engines` NO sirve para eso — ver aba
 src/
   model/
     types/        contratos de datos (GameItem y relacionados)
-    repository/   acceso a datos local, migración legacy, sync CRDT, Gist y Firebase
-    schemas/      esquemas Zod (p. ej. gist social)
-  viewmodel/      hooks de estado: listas, filtros, CRUD, sync, social
+    repository/   acceso a datos local, sync CRDT, Gist, Firebase y el borde (share, carátulas, premios)
+    migration/    formatos antiguos del gist y su montaje por trozos
+    schemas/      esquemas Zod (gist de juegos, gist social, enlaces compartidos)
+  viewmodel/      hooks de estado: listas, filtros, CRUD, sync, social (social/), premios (premios/), estadísticas
   view/
-    components/   piezas visuales reutilizables e iconos
+    components/   piezas visuales reutilizables e iconos (por área: socialhub/, stats/, settings/, onboarding/…)
     hooks/        utilidades de UI (tema, preferencias) y los hooks de SESIÓN (ver nota)
     modals/       formularios y acciones de administración/sync
   core/
-    constants/    labels, iconos, storage keys, configuración UI
+    constants/    labels, iconos, storage keys, rutas, temas
     security/     sanitización, criptografía del token, validaciones defensivas
+    achievements/ stats/ premios/ social/ import/ onboarding/ roulette/ announcement/ effects/
+                  lógica pura de cada dominio, sin repositorios (lo vigila ESLint)
     utils/        comparadores y helpers puros
-  styles/         SCSS: tokens de tema en _base.scss, resto por área
+  dev/            ayudas solo de desarrollo
+  styles/         SCSS: tokens de tema en _base.scss, un directorio por tema en themes/, resto por área
+functions/        Pages Functions de Cloudflare (OAuth de GitHub, compartir, /cover, /poster, avisos, premios)
 ```
 
 **Dónde la práctica se separa del esquema, y por qué conviene saberlo.** Las flechas de arriba describen la
-intención, no una regla que nadie compruebe. Medido sobre el código (18-09-2026): de los 26 ficheros de `view/`
-que importan un repositorio, **17 importan uno que habla con la red** (`firebaseGateway`, `firebaseRepository`,
+intención, no una regla que nadie compruebe. Medido sobre el código (18-09-2026; recontado el 01-10-2026): de los 38 ficheros de `view/`
+que importan un repositorio, **19 importan uno que habla con la red** (`firebaseGateway`, `firebaseRepository`,
 `firebaseAdminRepository`, `socialGistRepository`, `publicShareRepository`, `shareAdminRepository`,
 `coverStatsRepository`, `coverQuotaRepository`) en vez de pasar por un view-model. No es descuido repartido: son dos grupos con forma propia.
 
@@ -70,7 +78,7 @@ que importan un repositorio, **17 importan uno que habla con la red** (`firebase
   `useLegacyProfileHeal`…) son view-models de sesión en todo menos en el nombre: no pintan nada, enlazan la
   sesión de Google con una preferencia y la hidratan. Su sitio natural sería `viewmodel/`, y moverlos es mudar
   ficheros, no reescribir lógica.
-- Las pantallas que hablan con su repositorio directamente (`AdminHub`, `AccountHub`, `DangerZone`,
+- Las pantallas que hablan con su repositorio directamente (`AdminHub`, `DangerZone`,
   `PublicReviewScreen`…) sí son la desviación de verdad, y ordenarlas es un refactor amplio sin red de pruebas
   de interfaz que lo respalde.
 
@@ -94,6 +102,11 @@ el directorio, lo que no significa que el código esté mal, sino que **la regla
 | `npm run test:e2e` | Smoke end-to-end (Playwright) contra el build de producción |
 | `npm run screenshots` | Regenera las capturas del manifest en `public/screenshots/` (necesita `npm run build` antes) |
 | `npm run typecheck` | Tipos de los DOS proyectos: `src`/`tests` y `functions` (`tsconfig.functions.json`) |
+| `npm run typecheck:functions` | Solo los tipos de `functions` |
+| `npm run format` / `format:check` | Prettier sobre `src` y `tests` (no sobre un fichero entero ajeno: reformatea lo que no tocas) |
+| `npm run emulators` | Emulador de Firestore |
+| `npm run emulate:social` | Emula el hub social e imprime lo que lee y pinta (no afirma: se mira) |
+| `npm run build:share-card` | Rasteriza `public/share-card.svg` a la `.jpg` de vista previa (necesita Chromium de Playwright) |
 | `npm run validate` | Validación CI + HTML + ESLint |
 | `npm run lint` | Autocorrecciones ESLint |
 | `npm run audit:privacy` | Auditoría de privacidad |
@@ -113,6 +126,10 @@ La app integra Firebase Analytics, Cloud Firestore y Authentication
 - `VITE_FIREBASE_APP_ID`
 - `VITE_FIREBASE_MEASUREMENT_ID` (opcional; habilita Analytics)
 - `VITE_ENABLE_ANALYTICS` (opcional; en producción `true` por defecto)
+- `VITE_RECAPTCHA_SITE_KEY` (opcional; clave pública de App Check; vacía, App Check no se carga)
+- `VITE_APPCHECK_DEBUG_TOKEN` (solo desarrollo)
+- `VITE_GITHUB_CLIENT_ID` (opcional; habilita «Conectar con GitHub»; en local hace falta una OAuth App propia,
+  ver `.env.example`)
 
 Pasos: crear proyecto en Firebase Console → habilitar Authentication → crear Firestore en modo
 bloqueado con reglas seguras (`firestore.rules`) → copiar la config web a `.env` → `npm run dev`.
@@ -137,14 +154,15 @@ Los formatos antiguos se migran y normalizan al cargar
 ## Testing
 
 Suite con Vitest (jsdom cuando se requiere): `tests/unit`, `tests/component`, `tests/integration`,
-`tests/e2e`, además de tests colocados en `src`. Al cierre de la revisión de septiembre de 2026: **2266 casos**
-(2 saltados por bandera de despliegue) en 195 ficheros, con **79,4 % de líneas y 70,3 % de ramas** cubiertas.
+`tests/e2e`, además de tests colocados en `src`. Medido el 01-10-2026 con `npm run test:coverage`: **3116 casos**
+(2 saltados por bandera de despliegue) en 274 ficheros, con **80,3 % de líneas y 71,4 % de ramas** cubiertas.
 Los huecos y los puntos frágiles conocidos están inventariados en
 [`docs/revision-general-2026-09.md`](docs/revision-general-2026-09.md).
 
 ## Despliegue (Cloudflare Pages)
 
-App estática pura (React + Vite). Configuración en el repo:
+SPA estática (React + Vite) más unas pocas Pages Functions (`functions/`) con dos KV (`SHARES` y `COVERS`).
+Configuración en el repo:
 
 - **`public/_headers`** — CSP para GitHub API + Firebase; `index.html` sin cache;
   `/assets/*` con cache inmutable (assets con hash); `service-worker.js` con revalidación.
@@ -166,7 +184,9 @@ App estática pura (React + Vite). Configuración en el repo:
   resultado; si cambia el nombre de la fuente crítica (la del tema por defecto, hoy Atkinson Hyperlegible
   Next), hay que actualizar el `preload` de `index.html` y el filtro del precache de `vite.config.ts`
   (`npm run validate` avisa del primero; el build, del segundo).
-- **`wrangler.toml`** — `pages_build_output_dir = ./dist`.
+- **`wrangler.toml`** — `pages_build_output_dir = ./dist`, y es la fuente de verdad de las variables y los KV de
+  cada entorno (lo que se ponga en el panel no se aplica). Los secretos (`GITHUB_CLIENT_SECRET`,
+  `IGDB_CLIENT_SECRET`, `TMDB_READ_TOKEN`) van con `npx wrangler pages secret put`.
 
 Ajustes en el dashboard de Cloudflare Pages:
 
@@ -188,7 +208,8 @@ Ajustes en el dashboard de Cloudflare Pages:
 3. **Desplegar reglas e índices de Firestore**, que Cloudflare Pages no toca:
    `firebase deploy --only firestore:rules,firestore:indexes`. El despliegue de índices **borra** los que ya no
    están en `firestore.indexes.json` y pedirá confirmación.
-4. `npm run validate && npm test && npm run test:rules && npm run test:e2e` en verde.
+4. `npm run build && npm run typecheck && npm run validate && npm test && npm run test:rules && npm run test:e2e`
+   en verde. El `build` va primero porque `validate` mide el `dist` y `test:e2e` NO construye: prueba el que haya.
 
 ### Checklist post-deploy
 
