@@ -15,7 +15,6 @@ import { TabBar } from './view/components/TabBar';
 import { ScreenHeader } from './view/components/ScreenHeader';
 import { Toolbar } from './view/components/Toolbar';
 import { GameTable } from './view/components/GameTable';
-import { useCoverBackfill } from './view/hooks/useCoverBackfill';
 import { StatusBanner } from './view/components/StatusBanner';
 import { useAchievementNotice } from './view/hooks/useAchievementNotice';
 import { useAnnouncement } from './view/hooks/useAnnouncement';
@@ -43,8 +42,6 @@ import { useEffects } from './view/hooks/useEffects';
 import { useShowSteamButton } from './view/hooks/useShowSteamButton';
 import { useReturnTo } from './view/hooks/useReturnTo';
 import { useLegacyProfileHeal } from './view/hooks/useLegacyProfileHeal';
-import { useShootingStars } from './view/hooks/useShootingStars';
-import { useBacklogSnapshot } from './view/hooks/useBacklogSnapshot';
 import { useScreenTransition } from './view/hooks/useScreenTransition';
 import { useAppliedPalette } from './view/hooks/usePalette';
 import { hasGithubOAuthRedirect, takeGithubOAuthOrigin } from './model/repository/githubOAuthChecks';
@@ -118,11 +115,11 @@ const IconSpriteRest = lazy(() => import('./view/components/IconSpriteRest').the
 const AnnouncementToast = lazy(() => import('./view/components/AnnouncementToast').then((module) => ({ default: module.AnnouncementToast })));
 
 /**
- * LOS EFECTOS DE FIRMA (ver `SignatureEffects`), por la misma puerta que el resto del sprite: fuera del chunk de
- * arranque y montados en cuanto hay hueco. Responden a interacciones —un clic, cerrar un juego, cambiar de
- * tema—, así que llegar unos milisegundos después de pintar no se nota.
+ * EL TRABAJO DE FONDO (ver `IdleWork`): efectos de firma, estrellas fugaces, histórico del backlog y recorrido de
+ * carátulas. Por la misma puerta que el resto del sprite: fuera del chunk de arranque y montado en cuanto hay
+ * hueco. Nada de eso pinta el primer fotograma, así que llegar unos milisegundos después no se nota.
  */
-const SignatureEffects = lazy(() => import('./view/components/SignatureEffects').then((module) => ({ default: module.SignatureEffects })));
+const IdleWork = lazy(() => import('./view/components/IdleWork').then((module) => ({ default: module.IdleWork })));
 
 /**
  * LA GUÍA DE PRIMEROS PASOS (ver `OnboardingTour`), por la misma puerta que el resto: perezosa y montada en idle.
@@ -253,15 +250,9 @@ export default function App() {
   useEffects();
   // F1: visibilidad del botón "Steam Deck" (preferencia de cuenta) → se pasa a la Toolbar.
   const { showSteamButton } = useShowSteamButton();
-  // Histórico del backlog: anota una vez al mes el tamaño de cada lista. Va aquí y no en el panel "Perfil"
-  // porque la serie debe acumularse se visite o no esa pantalla; sin este registro no hay forma de saber cómo
-  // evoluciona el backlog (`listedAt` se reescribe al mover de lista). Local, silencioso y en idle.
-  useBacklogSnapshot(vm.data);
-  useCoverBackfill(vm.data);
-  // Estrellas fugaces aleatorias por los bordes de botones/chips (solo en la paleta "Sol y luna").
+  // El histórico del backlog, el recorrido de carátulas y las estrellas fugaces se montan en idle con `IdleWork`.
   // El scroll al cambiar de pantalla: arriba al entrar, donde estabas al volver (ver el hook).
   useScrollOnNavigate();
-  useShootingStars();
 
   /**
    * LA PUERTA DE «DISEÑO» TAMBIÉN EN LA RUTA, y no solo en el menú. Ahí dentro está lo que se guarda en
@@ -1097,11 +1088,12 @@ export default function App() {
               <IconSpriteRest />
             </Suspense>
           </SilentBoundary>
-          {/* Efectos de firma por interacción (wipe P5 al navegar, apertura de portal al clic, sol↔luna,
-              boot-up 40K). No pinta nada: solo escucha. */}
-          <SilentBoundary source="signature-effects">
+          {/* El trabajo de fondo: efectos de firma por interacción (wipe P5 al navegar, apertura de portal al
+              clic, sol↔luna, boot-up 40K), estrellas fugaces, histórico del backlog y recorrido de carátulas.
+              No pinta nada. */}
+          <SilentBoundary source="idle-work">
             <Suspense fallback={null}>
-              <SignatureEffects />
+              <IdleWork data={vm.data} />
             </Suspense>
           </SilentBoundary>
         </>

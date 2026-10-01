@@ -72,7 +72,8 @@ const root = path.join(__dirname, '..');
 //     entraba entero igual. Hizo falta mudarla a `core/utils/normalizeName`. Resultado: 215,1 → 214,3 kB.
 //   · Los efectos de firma (`useSignatureEffects` 2,7 kB + `useShootingStars` 1,9) son diferibles y se
 //     DESCARTARON: el wipe al navegar se quiere listo desde el primer render, y 4,6 kB sin comprimir no pagan
-//     arriesgar la sensación de la aplicación.
+//     arriesgar la sensación de la aplicación. (Luego SÍ salieron: los dos se montan en idle con `IdleWork`, el
+//     de firma desde el 22-09-2026 y las estrellas desde el 01-10-2026.)
 //
 // Y uno que PARECÍA una fuga y no lo es: `FeedShell` está en el arranque a propósito —es el esqueleto que se
 // pinta mientras el hub social se descarga—. Si fuera perezoso no habría nada que enseñar durante la carga.
