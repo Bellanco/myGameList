@@ -121,6 +121,32 @@ describe('el panel de otra persona', () => {
     }
   });
 
+  // EL RESUMEN DEL AÑO necesita el mes en que terminó cada juego. Pasa recortado: el mes para cualquier amistad,
+  // el día solo para la administración, y nunca el sello entero ni el de las otras listas.
+  describe('el mes de fin, para el resumen del año', () => {
+    const visibility = { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true };
+    const at = (iso: string) => new Date(`${iso}T18:30:00`).getTime();
+
+    it('una amistad recibe el mes; la administración, el día', () => {
+      const lists = tabData({ c: [game({ id: 1, years: [2025], enteredAt: { c: at('2025-05-21') } })] });
+      expect((applyProfileVisibility(lists, visibility, 'gold').c[0] as { finishedOn?: string }).finishedOn).toBe('2025-05');
+      expect((applyProfileVisibility(lists, visibility, 'mithril').c[0] as { finishedOn?: string }).finishedOn).toBe('2025-05-21');
+    });
+
+    it('solo de completados: las otras listas no llevan fecha', () => {
+      const visible = applyProfileVisibility(tabData({ e: [game({ id: 2 })], p: [game({ id: 3 })] }), visibility, 'gold');
+      expect('finishedOn' in visible.e[0]).toBe(false);
+      expect('finishedOn' in visible.p[0]).toBe(false);
+    });
+
+    it('un día con cinco o más entradas es una carga en bloque y no da fecha', () => {
+      const bulk = Array.from({ length: 5 }, (_, i) => game({ id: 10 + i, years: [2025], enteredAt: { c: at('2025-03-02') } }));
+      const visible = applyProfileVisibility(tabData({ c: [...bulk, game({ id: 20, years: [2025], enteredAt: { c: at('2025-04-11') } })] }), visibility, 'gold');
+      const months = visible.c.map((item) => (item as { finishedOn?: string }).finishedOn);
+      expect(months.filter(Boolean)).toEqual(['2025-04']);
+    });
+  });
+
   it('con datos COMPLETOS, lo que llega ya viene sin sellos', () => {
     const data = toFriendTabData({ c: publicGames }, ['c'], 'full');
     expect(data.c[0].enteredAt).toBeUndefined();
