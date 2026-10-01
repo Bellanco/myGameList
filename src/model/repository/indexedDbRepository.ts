@@ -602,8 +602,10 @@ const SOCIAL_DIRECTORY_KEY_PREFIX = '__dir__:';
  *   5 = cada entrada trae `achievementsMirror` (el espejo de logros de esa persona). Lo mismo: sin subirla, una
  *       caché fresca seguiría sirviendo entradas sin espejo y los logros de los demás no aparecerían hasta media
  *       hora después de actualizar.
+ *   6 = cada entrada trae `yearSummarySeen` (si ya abrió su resumen del año). Sin subirla, la tarjeta del feed
+ *       de una amistad tardaría media hora en salir.
  */
-const SOCIAL_DIRECTORY_CACHE_VERSION = 5;
+const SOCIAL_DIRECTORY_CACHE_VERSION = 6;
 
 interface CachedSocialDirectory<T> {
   profileId: string; // keyPath del store

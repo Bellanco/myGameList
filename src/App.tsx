@@ -18,6 +18,7 @@ import { GameTable } from './view/components/GameTable';
 import { StatusBanner } from './view/components/StatusBanner';
 import { useAchievementNotice } from './view/hooks/useAchievementNotice';
 import { useAnnouncement } from './view/hooks/useAnnouncement';
+import { useYearSummaryNotice } from './view/hooks/useYearSummaryNotice';
 import { UpdateNotice } from './view/components/UpdateNotice';
 import { BottomNavigation } from './view/components/BottomNavigation';
 import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, SETTINGS_ROUTES, isKnownRoute, matchAppSection, matchSettingsGroup, type AppSection, type SettingsGroup } from './core/constants/routes';
@@ -113,6 +114,7 @@ const IconSpriteRest = lazy(() => import('./view/components/IconSpriteRest').the
  * navegador está ocioso, así que ni el chunk ni la petición compiten con el primer pintado.
  */
 const AnnouncementToast = lazy(() => import('./view/components/AnnouncementToast').then((module) => ({ default: module.AnnouncementToast })));
+const YearSummaryToast = lazy(() => import('./view/components/YearSummaryToast').then((module) => ({ default: module.YearSummaryToast })));
 
 /**
  * EL TRABAJO DE FONDO (ver `IdleWork`): efectos de firma, estrellas fugaces, histórico del backlog y recorrido de
@@ -235,6 +237,8 @@ export default function App() {
   // él, y el piloto de la barra necesita además distinguir el tramo en el que todavía no se sabe.
   const socialStatus = useSocialProfileStatus(completedGameIds);
   const hasSocialProfile = socialStatus === 'active';
+  // El aviso del resumen del año (15–31 de diciembre): solo con perfil social, que es donde vive el resumen.
+  const yearSummaryNotice = useYearSummaryNotice(hasSocialProfile, vm.data.c);
   // F1: enlaza la sesión con la apariencia (paleta + claro/oscuro) → hidrata/replica en Firestore.
   useAppearanceSession();
   // Al iniciar sesión, migra y limpia los restos legacy del perfil público (email / id del gist de juegos /
@@ -1128,6 +1132,12 @@ export default function App() {
               onDone={clearAchievementFlash}
               onOpen={openAchievements}
             />
+          </Suspense>
+        ) : yearSummaryNotice.year !== null ? (
+          // EL RESUMEN DEL AÑO, del 15 al 31 de diciembre: detrás del logro (lo que acabas de conseguir manda) y
+          // delante del anuncio, que puede esperar a otra visita.
+          <Suspense fallback={null}>
+            <YearSummaryToast year={yearSummaryNotice.year} onShown={yearSummaryNotice.markShown} onDone={yearSummaryNotice.dismiss} />
           </Suspense>
         ) : announcement.announcement ? (
           <Suspense fallback={null}>

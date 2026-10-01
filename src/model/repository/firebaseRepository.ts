@@ -640,6 +640,30 @@ export async function publishAchievementMirror(uid: string, list: string): Promi
 }
 
 /**
+ * Publica que su dueño YA ABRIÓ su resumen del año (`profiles/{uid}.yearSummary = { year, at }`). Sus amistades lo
+ * leen en el directorio y les sale la tarjeta destacada en el feed (ver `core/social/yearSummaryFeed.ts`).
+ *
+ * Lo que se publica es eso y nada más: qué año y cuándo se abrió. Ni una cifra del resumen, que cada amistad
+ * calcula con lo que ya puede ver. Solo se llama en temporada (del 15 al 31 de diciembre) y una vez por año; la
+ * guarda la lleva quien llama (`useYearSummarySignal`).
+ *
+ * `uid` y `updatedAt` van en el merge por lo mismo que en el espejo de logros: las reglas exigen el primero y el
+ * directorio ordena por el segundo. Lanza si falla, para que quien llama no lo dé por publicado y lo reintente.
+ */
+export async function publishYearSummarySeen(uid: string, year: number): Promise<void> {
+  if (!uid || !Number.isInteger(year)) return;
+  const services = await initializeFirebaseServices();
+  if (!services) throw new Error('Firebase no disponible');
+  await setDoc(
+    doc(services.firestore, 'profiles', uid),
+    { uid, yearSummary: { year, at: Date.now() }, updatedAt: serverTimestamp() },
+    { merge: true },
+  );
+  invalidateOwnProfileCache(uid);
+  invalidateSocialDirectoryCache();
+}
+
+/**
  * Latido de "uso reciente": refresca `profiles/{uid}.updatedAt`. El directorio social ordena por ese campo, de
  * modo que se muestran (y se leen) los perfiles de quien de verdad sigue usando la app en vez de los primeros
  * por uid. Publicar una reseña o un post ya lo refresca vía `ensureProfileByEmail`; esto cubre al usuario que

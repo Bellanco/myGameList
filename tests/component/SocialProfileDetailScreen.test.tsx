@@ -258,6 +258,30 @@ describe('SocialProfileDetailScreen — resumen del año', () => {
     expect(screen.getByRole('button', { name: YEAR_SUMMARY_UI.button })).toBeInTheDocument();
   });
 
+  it('llega con el resumen ya desplegado desde la tarjeta del feed o el aviso', async () => {
+    pinta({ activeProfileDetail: friend([of2025(1, 'Halo', { finishedOn: '2025-05' })]), openSummaryOnMount: true });
+    expect(await screen.findByText(YEAR_SUMMARY_UI.title(2025))).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: YEAR_SUMMARY_UI.buttonBack })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('abrir TU resumen avisa con su año; el de otra persona, no', async () => {
+    const onOwnSummaryOpened = vi.fn();
+    pinta({ activeProfileDetail: friend([of2025(1, 'Halo')]), onOwnSummaryOpened, openSummaryOnMount: true });
+    await screen.findByText(YEAR_SUMMARY_UI.title(2025));
+    expect(onOwnSummaryOpened).not.toHaveBeenCalled();
+    cleanup();
+    pinta({
+      isOwnProfile: true,
+      activeProfileDetail: { displayName: 'Yo', visibility, sharedLists: { c: [], v: [], e: [], p: [] } },
+      viewerCompleted: [of2025(1, 'Halo')],
+      onOwnSummaryOpened,
+    });
+    expect(onOwnSummaryOpened).not.toHaveBeenCalled();
+    screen.getByRole('button', { name: YEAR_SUMMARY_UI.button }).click();
+    await screen.findByText(YEAR_SUMMARY_UI.title(2025));
+    expect(onOwnSummaryOpened).toHaveBeenCalledWith(2025);
+  });
+
   it('en tu perfil, con el día de cada fin', async () => {
     const at = (iso: string) => new Date(`${iso}T18:00:00`).getTime();
     pinta({

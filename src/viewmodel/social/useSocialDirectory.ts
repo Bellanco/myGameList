@@ -270,6 +270,8 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
           // vuelva a entrar en el directorio. Vacío es exactamente «no ha publicado» para todo lo que lo lee, así
           // que se calla en vez de inventarse una.
           achievementsMirror: '',
+          // Tampoco denormaliza el aviso del resumen del año: fuera del tope, sin tarjeta en el feed.
+          yearSummarySeen: null,
           palmares: undefined,
         }));
       const entries = [...dirEntries, ...friendOnlyEntries];
@@ -343,6 +345,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
               // lectura. Quién puede verlo lo deciden la ficha y el feed, y los dos exigen amistad; de un
               // no-amigo solo lo usa el porcentaje comparado, que no lleva identidad.
               achievementsMirror: entry.achievementsMirror,
+              yearSummarySeen: entry.yearSummarySeen,
               // El palmarés viaja con el espejo, en el MISMO documento del directorio: la vitrina de su ficha lo
               // tiene sin gastar ni una lectura más.
               palmares: entry.palmares,
@@ -441,6 +444,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
               // Del directorio de Firestore, igual que el rango: el gist lo controla su dueño y el espejo no se
               // publica ahí.
               achievementsMirror: entry.achievementsMirror,
+              yearSummarySeen: entry.yearSummarySeen,
               palmares: entry.palmares,
               activity,
               posts,
@@ -472,6 +476,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
               lastActiveAt,
               // Un gist ilegible no se lleva por delante la vitrina: el espejo no estaba ahí.
               achievementsMirror: entry.achievementsMirror,
+              yearSummarySeen: entry.yearSummarySeen,
               palmares: entry.palmares,
               activity: [],
               posts: [],

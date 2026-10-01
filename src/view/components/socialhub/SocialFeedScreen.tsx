@@ -42,6 +42,7 @@ import { AchievementSprite } from '../AchievementSprite';
 const LIENZO_FX_VARIANTS = 13;
 import { ENABLE_ACHIEVEMENTS } from '../../../core/achievements/flags';
 import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
+import { YEAR_SUMMARY_ICONS, YEAR_SUMMARY_UI } from '../../../core/constants/yearSummaryLabels';
 
 /** Pantalla principal del feed social. */
 /** Medallas que abren el aviso de logro. Tres son las que caben en la línea sin convertirla en una tira. */
@@ -55,6 +56,7 @@ function SocialFeedScreenBase({
   loadingDirectory,
   openProfileDetail,
   openProfileAchievements,
+  openProfileSummary,
   onOpenProfiles,
   onOpenOwnProfile,
   onOpenRequests,
@@ -89,6 +91,8 @@ function SocialFeedScreenBase({
   openProfileDetail: (id: string) => void;
   /** Pulsar una medalla del feed lleva a los logros de esa persona, no a su ficha. */
   openProfileAchievements: (id: string) => void;
+  /** La tarjeta del resumen del año abre la ficha de esa persona con su resumen ya desplegado. */
+  openProfileSummary: (id: string) => void;
   onOpenProfiles: () => void;
   onOpenOwnProfile: () => void;
   onOpenRequests: () => void;
@@ -327,6 +331,51 @@ function SocialFeedScreenBase({
                           {/* LAS MEDALLAS SE QUEDAN FUERA del aviso. La tira era el tercer adorno de la misma línea —icono,
                               foto y sellos— y el nombre del logro ya va escrito al lado; quien quiera verlas pulsa y
                               entra en sus logros, que es lo que hace la tarjeta entera. */}
+                        </article>
+                      );
+                    }
+
+                    // EL RESUMEN DEL AÑO: alguien abrió el suyo en temporada. Misma anatomía que el aviso de logro
+                    // —una línea, la tarjeta entera abre el destino y el nombre abre la ficha—, pero rellena del
+                    // acento y con su brillo: es una vez al año y tiene que destacar sobre los logros.
+                    if (entry.kind === 'yearSummary') {
+                      const quien = entry.displayName || SOCIAL_UI.requests.unknownUser;
+                      const abrir = () => openProfileSummary(entry.profileId);
+                      return (
+                        <article
+                          key={entry.key}
+                          className={`hub-feed-card hub-feed-activity-item is-year-summary ${entry.own ? 'is-own-activity' : 'is-external-activity'}`}
+                          role="listitem"
+                          tabIndex={0}
+                          aria-label={entry.own ? YEAR_SUMMARY_UI.feed.ownAria(entry.year) : YEAR_SUMMARY_UI.feed.aria(quien, entry.year)}
+                          onClick={abrir}
+                          onKeyDown={(event) => {
+                            if (event.key !== 'Enter' && event.key !== ' ') return;
+                            event.preventDefault();
+                            abrir();
+                          }}
+                        >
+                          <span className="hub-feed-ys-badge" aria-hidden="true">
+                            <Icon name={YEAR_SUMMARY_ICONS.cover} className="ui-icon hub-feed-ys-icon" />
+                            <b>{entry.year}</b>
+                          </span>
+                          <p className="hub-feed-ys-line">
+                            {entry.own ? (
+                              YEAR_SUMMARY_UI.feed.own(entry.year)
+                            ) : (
+                              <>
+                                <button
+                                  className="hub-name-link hub-feed-move-who"
+                                  type="button"
+                                  onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
+                                >
+                                  {quien}
+                                </button>{' '}
+                                {YEAR_SUMMARY_UI.feed.line(entry.year)}
+                              </>
+                            )}
+                          </p>
+                          <span className="hub-feed-ys-cta" aria-hidden="true">{YEAR_SUMMARY_UI.feed.cta}</span>
                         </article>
                       );
                     }

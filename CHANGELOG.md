@@ -15,6 +15,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - **Con las carátulas activadas**, la portada del resumen lleva de fondo un mosaico inclinado con las del año, y
   «Contigo», la del juego en común que más os gustó a los dos. Cada capítulo tiene su icono y las tarjetas se
   visten con el tema, como el resto de lo social.
+- **El resumen del año en curso se estrena el 15 de diciembre** y se sigue actualizando, sin avisar, hasta el 31;
+  el resto del año se enseña el del año anterior. Ese día, quien tiene perfil social y completó algo recibe un
+  aviso en la app («Tu resumen de 2026») que abre su resumen.
+- **Cuando abres tu resumen entre el 15 y el 31 de diciembre, tus amigos se enteran**: les sale en su actividad
+  una tarjeta destacada —en el color del tema, con su brillo— que abre tu resumen, durante 30 días. Una sola vez
+  por año. Tu perfil guarda solo el año y la fecha; la política de privacidad lo declara.
+  ⚠️ Requiere desplegar `firestore.rules` antes que la app (campo nuevo `yearSummary` en `profiles`).
 - En **tu propio perfil**, el resumen trae además el año día a día y tu día de la semana para terminar. Tus
   amistades ven solo el **mes** de cada fin, nunca el día; los días en que entraron muchos juegos de golpe (una
   importación) no cuentan como fechas. La política de privacidad lo declara.

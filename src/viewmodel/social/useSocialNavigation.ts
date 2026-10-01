@@ -10,7 +10,7 @@
 // convertiría un `ñ` en `%25C3%25B1` y abriría la pantalla de otro (o de nadie).
 import { useMemo } from 'react';
 import { generatePath, type NavigateFunction } from 'react-router-dom';
-import { OWN_PROFILE_ALIAS, SOCIAL_ROUTES, type SocialEventType } from './socialRoutes';
+import { OWN_PROFILE_ALIAS, SOCIAL_ROUTES, YEAR_SUMMARY_NAV_STATE, type SocialEventType } from './socialRoutes';
 
 /** Lo que hace falta de una entrada de actividad para abrir su detalle. */
 export interface ActivityTarget {
@@ -34,6 +34,7 @@ export interface SocialNavigation {
   closeProfileReviews: (profileId: string) => void;
   openProfileReviewDetail: (profileId: string, gameId: number) => void;
   openProfileAchievements: (profileId: string) => void;
+  openProfileSummary: (profileId: string) => void;
   closeProfileAchievements: (profileId: string) => void;
   openProfileGlobals: (profileId: string) => void;
   openRelatedReview: (entry: RelatedTarget) => void;
@@ -98,6 +99,12 @@ export function useSocialNavigation(navigate: NavigateFunction, pathname: string
       // Logros de ese perfil: mismo par abrir/cerrar que las reseñas, y por el mismo motivo.
       openProfileAchievements: (profileId) => {
         void navigate(generatePath(SOCIAL_ROUTES.profileAchievements, { profileId }));
+      },
+      // El resumen del año de ese perfil: su ficha, con el resumen ya desplegado. Va en el ESTADO de la
+      // navegación y no en una ruta propia porque el resumen es una vista de la ficha, como sus estadísticas, y
+      // no hay nada dentro a lo que enlazar (ver `YEAR_SUMMARY_NAV_STATE`).
+      openProfileSummary: (profileId) => {
+        void navigate(generatePath(SOCIAL_ROUTES.profileDetail, { profileId }), { state: YEAR_SUMMARY_NAV_STATE });
       },
       closeProfileAchievements: (profileId) => {
         void navigate(generatePath(SOCIAL_ROUTES.profileDetail, { profileId }));

@@ -17,13 +17,8 @@ import type { FinishedGame, FinishPrecision } from '../utils/finishDates';
  * Todo sale de COMPLETADOS: es la única lista con año (`years`), y el año es lo que este resumen pregunta.
  */
 
-/**
- * El año que se resume: en diciembre, el que está acabando (que es cuando apetece mirarlo); el resto del año, el
- * anterior, ya cerrado.
- */
-export function summaryYear(now: Date = new Date()): number {
-  return now.getMonth() === 11 ? now.getFullYear() : now.getFullYear() - 1;
-}
+// El calendario (qué año se resume y cuándo es temporada) vive aparte para poder consultarlo desde el arranque.
+export { summaryYear } from './summaryYear';
 
 /** Cuántos caracteres de su reseña se citan: los mismos que el extracto que ya publica la proyección pública. */
 export const QUOTE_MAX_CHARS = 160;

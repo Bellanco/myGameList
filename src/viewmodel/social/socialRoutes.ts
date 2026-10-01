@@ -74,6 +74,17 @@ function decodeParam(raw: string | undefined): string {
  */
 export const OWN_PROFILE_ALIAS = 'me';
 
+/**
+ * Estado de navegación que abre la ficha de un perfil con su RESUMEN DEL AÑO ya desplegado. Lo usan la tarjeta
+ * del feed y el aviso propio del 15 de diciembre; la ficha lo lee al montarse (`SocialHub`).
+ */
+export const YEAR_SUMMARY_NAV_STATE = { yearSummary: true } as const;
+
+/** ¿Pide esta navegación abrir el resumen del año? Lectura defensiva: el estado de la historia es de cualquiera. */
+export function wantsYearSummary(state: unknown): boolean {
+  return Boolean(state && typeof state === 'object' && (state as { yearSummary?: unknown }).yearSummary === true);
+}
+
 /** Id numérico de un parámetro de ruta; 0 (que ninguna pantalla considera válido) si no lo es. */
 function toGameId(raw: string | undefined): number {
   const id = Number(raw);

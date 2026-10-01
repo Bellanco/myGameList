@@ -3,6 +3,7 @@
 // resume, qué juego tiene fecha y cuál no, y que nunca aparezcan horas.
 import { describe, expect, it } from 'vitest';
 import { buildYearSummary, quoteFromReview, summaryYear, QUOTE_MAX_CHARS } from '../../src/core/stats/yearSummary';
+import { hasCompletedIn, isSummarySeason } from '../../src/core/stats/summaryYear';
 import { BULK_DAY_MIN, finishDays, withFinishedOn, type FinishedGame } from '../../src/core/utils/finishDates';
 import type { GameItem } from '../../src/model/types/game';
 import type { PalmaresEntry } from '../../src/model/types/premios';
@@ -25,10 +26,23 @@ function game(id: number, extra: Partial<FinishedGame> = {}): FinishedGame {
 }
 
 describe('qué año se resume', () => {
-  it('en diciembre, el que acaba; el resto del año, el anterior', () => {
-    expect(summaryYear(new Date(2026, 11, 3))).toBe(2026);
+  it('desde el 15 de diciembre, el que acaba; el resto del año, el anterior', () => {
+    expect(summaryYear(new Date(2026, 11, 15))).toBe(2026);
+    expect(summaryYear(new Date(2026, 11, 31, 23, 59))).toBe(2026);
+    expect(summaryYear(new Date(2026, 11, 14, 23, 59))).toBe(2025);
     expect(summaryYear(new Date(2026, 9, 1))).toBe(2025);
-    expect(summaryYear(new Date(2026, 0, 1))).toBe(2025);
+    expect(summaryYear(new Date(2027, 0, 1))).toBe(2026);
+  });
+
+  it('la temporada (avisar y publicar) es solo del 15 al 31 de diciembre', () => {
+    expect(isSummarySeason(new Date(2026, 11, 15))).toBe(true);
+    expect(isSummarySeason(new Date(2026, 11, 14))).toBe(false);
+    expect(isSummarySeason(new Date(2027, 0, 2))).toBe(false);
+  });
+
+  it('hay resumen si completó algo ese año', () => {
+    expect(hasCompletedIn([{ years: [2024] }, { years: [2023, 2025] }], 2025)).toBe(true);
+    expect(hasCompletedIn([{ years: [2024] }, {}], 2025)).toBe(false);
   });
 
   it('sin completados ese año no hay resumen (ni botón)', () => {

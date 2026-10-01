@@ -122,6 +122,26 @@ export const YEAR_SUMMARY_UI = {
       `de nota media (${before} en ${year})${delta > 0 ? `: ${v.own ? 'puntuaste' : 'puntuó'} más alto` : delta < 0 ? `: ${v.own ? 'puntuaste' : 'puntuó'} más bajo` : ''}`,
   },
 
+  /** La tarjeta destacada del feed, cuando alguien abre su resumen en temporada. */
+  feed: {
+    line: (year: number) => `ya tiene su resumen de ${year}`,
+    own: (year: number) => `Ya tienes tu resumen de ${year}`,
+    cta: 'Ver resumen',
+    aria: (name: string, year: number) => `${name} ya tiene su resumen de ${year}. Abrirlo`,
+    ownAria: (year: number) => `Ya tienes tu resumen de ${year}. Abrirlo`,
+  },
+
+  /** El aviso propio del 15 de diciembre, en el carril de abajo a la izquierda. */
+  notice: {
+    kicker: 'Ya está aquí',
+    title: (year: number) => `Tu resumen de ${year}`,
+    text: 'Tus juegos del año, tus géneros y lo que compartes con tus amigos. Se irá actualizando hasta el 31.',
+    open: 'Ver mi resumen',
+    /** Lo que lee el lector de pantalla al pulsar la cápsula, y lo que anuncia su región viva al salir. */
+    aria: (year: number) => `Tu resumen de ${year}. Ver mi resumen`,
+    announce: (year: number) => `Tu resumen de ${year}. Tus juegos del año, tus géneros y lo que compartes con tus amigos.`,
+  },
+
   common: {
     kicker: 'Contigo',
     title: (count: number) => (count === 1 ? 'Un juego que terminasteis los dos' : `${count} juegos que terminasteis los dos`),

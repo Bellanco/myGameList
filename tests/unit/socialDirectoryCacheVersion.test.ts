@@ -11,8 +11,8 @@ import { PROFILE_TIER_FEED_TTL_MS } from '../../src/core/constants/tiers';
 
 const GIST = 'aabbcc0011223344';
 const KEY = `__dir__:${GIST}`;
-/** Versión de forma VIGENTE. Subirla aquí al subirla en `indexedDbRepository` (hoy 4: las entradas traen `moves`). */
-const CURRENT_VERSION = 5;
+/** Versión de forma VIGENTE. Subirla aquí al subirla en `indexedDbRepository` (hoy 6: las entradas traen `yearSummarySeen`). */
+const CURRENT_VERSION = 6;
 
 /** Escribe un registro CRUDO en el store, para simular una caché de otra versión de la app. */
 async function writeRawRecord(record: Record<string, unknown>): Promise<void> {
