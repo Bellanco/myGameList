@@ -26,8 +26,9 @@ export type CoverAccess = boolean | 'solo-cache';
  *     (`cachedOnly` en `SocialProfileDetailScreen`).
  *  3. Que de ese título no conste ya que no tiene carátula (`sabemosQueNoTiene`), para no volver a preguntar.
  *
- * El tamaño es el `ancho` del renglón por lo mismo que allí: la franja es apaisada y recorta una banda de una
- * imagen vertical, así que la pequeña llega estirada casi seis veces y lo que queda es una mancha.
+ * El tamaño es el `ancho`: la franja es apaisada y recorta una banda de una imagen vertical, así que la pequeña
+ * llega estirada casi seis veces y lo que queda es una mancha. (El renglón de la lista se quedó en `medio`, que
+ * bajo su velo no se distingue y pesa menos al recorrer una biblioteca entera; ver `coverDeRenglon`.)
  */
 export function useReviewCover(acceso: CoverAccess = true): (name: string, platforms?: readonly string[]) => string | null {
   const { covers } = useCovers();

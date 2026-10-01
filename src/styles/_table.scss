@@ -532,10 +532,10 @@ table.is-cards {
    una imagen vertical en una fila apaisada— se recorta por arriba y por abajo: lo que se ve es un renglón
    recortado de la carátula, no la carátula entera encogida.
 
-   POR QUÉ LA FILA PIDE LA IMAGEN GRANDE. Con los 264 px de `t_cover_big`, llenar 1.400 son casi seis aumentos y
-   lo que queda es una mancha de color. El renglón pide `s=ancho` (~762 px) y el aumento baja a menos de dos, que
-   es la diferencia entre reconocer el dibujo o no. El mosaico sigue con la pequeña, que es la que cabe en su
-   ranura.
+   POR QUÉ LA FILA NO PIDE LA PEQUEÑA. Con los 264 px de `t_cover_big`, llenar 1.400 son casi seis aumentos y
+   lo que queda es una mancha de color. El renglón pide `s=medio` (508 px), que bajo la capa no se distingue de
+   la `s=ancho` y cuesta la mitad de descodificar al bajar (ver `coverDeRenglon`). El mosaico sigue con la
+   pequeña, que es la que cabe en su ranura.
 
    Encima cae la CAPA, y solo cuando hay imagen: la superficie del tema, casi opaca por la izquierda —donde
    están el nombre y las etiquetas— y abriéndose hacia la derecha. No es un gris genérico, es `--surface`: la

@@ -298,10 +298,12 @@ que se ve es un renglón recortado de la carátula. Encima cae la capa —la sup
 la izquierda, donde están el nombre y las etiquetas, y abriéndose hacia la derecha—; en el teléfono la capa
 cierra más, porque allí el texto ocupa la fila entera.
 
-**Y por eso `/cover` tiene dos tamaños.** Con los 264 px de `t_cover_big`, llenar 1.400 son casi seis aumentos
-y lo que queda es una mancha de color. El renglón pide `s=ancho` (`t_1080p`, ~762 px) y el aumento baja a menos
-de dos. Cuesta ~120 kB por juego en vez de 25, y por eso no es el tamaño por defecto: el mosaico sigue con la
-pequeña, que es la que cabe en su ranura. Cada tamaño va en la URL y no en una cabecera porque el service
+**Y por eso `/cover` tiene varios tamaños.** Con los 264 px de `t_cover_big`, llenar 1.400 son casi seis aumentos
+y lo que queda es una mancha de color. El renglón pide `s=medio` (`t_720p`, 508 px), para todo el mundo: la
+`s=ancho` (`t_1080p`, ~762 px) se probó y bajo el velo no se distingue, pero en producción costaba casi el doble
+de descodificación al bajar y un 45 % más de fotogramas perdidos (medido el 01-10-2026; ver `coverDeRenglon`).
+La `ancho` sigue sirviendo a la franja de las reseñas del social. El mosaico sigue con la pequeña, que es la que
+cabe en su ranura, y la `medio` en pantallas de densidad doble. Cada tamaño va en la URL y no en una cabecera porque el service
 worker cachea por URL y sin `Vary`: sin eso, el mosaico acabaría pintando la grande —o al revés— según cuál
 se pidiera primero.
 

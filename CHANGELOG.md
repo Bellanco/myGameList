@@ -5,6 +5,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Fixed
+- **Las listas largas en renglones ya no descargan todas sus carátulas al abrirse.** El primer render montaba la
+  lista entera antes de recortarla a lo que se ve, y eso bastaba para que cada renglón pidiera su imagen de fondo:
+  con 149 completados, 149 carátulas (~10 MB) por visita en vez de las diez de la pantalla.
+
+### Changed
+- **La franja del renglón es la misma para todo el mundo**: la de 720 px. La de 1080, que era de la cuenta de
+  administración, no se distinguía bajo el velo y costaba casi el doble de trabajo al bajar por la lista.
+
 ## [1.5.0] - 2026-09-30
 
 La versión de **los primeros pasos**. Quien llega sin nada tiene una guía que le acompaña por las pantallas —su
