@@ -29,8 +29,6 @@ FIREBASE_PROJECT_ID = "mylists-f7313"
 FIREBASE_PROJECT_NUMBER = "721023375695"
 FIREBASE_APP_ID = "1:721023375695:web:da7ab55e6d8afc73470d3a"
 APPCHECK_EDGE_MODE = "monitor"
-# Mismo criterio de administrador que `firestore.rules` (isAdmin). Se lee de aquí para no repetir el literal.
-ADMIN_EMAIL = "bellanco3@gmail.com"
 # Client ID PÚBLICO de la aplicación de Twitch con la que se consulta IGDB (carátulas). Como el de GitHub,
 # aparece en las peticiones y no es secreto. El IGDB_CLIENT_SECRET NO va aquí: se sube cifrado con
 # `npx wrangler pages secret put IGDB_CLIENT_SECRET` y, en local, vive en `.dev.vars` (ignorado por git).
@@ -59,8 +57,6 @@ FIREBASE_PROJECT_ID = "mylists-f7313"
 FIREBASE_PROJECT_NUMBER = "721023375695"
 FIREBASE_APP_ID = "1:721023375695:web:da7ab55e6d8afc73470d3a"
 APPCHECK_EDGE_MODE = "monitor"
-# Mismo criterio de administrador que `firestore.rules` (isAdmin). Se lee de aquí para no repetir el literal.
-ADMIN_EMAIL = "bellanco3@gmail.com"
 # Client ID PÚBLICO de la aplicación de Twitch con la que se consulta IGDB (carátulas). Como el de GitHub,
 # aparece en las peticiones y no es secreto. El IGDB_CLIENT_SECRET NO va aquí: se sube cifrado con
 # `npx wrangler pages secret put IGDB_CLIENT_SECRET` y, en local, vive en `.dev.vars` (ignorado por git).
@@ -83,8 +79,6 @@ FIREBASE_PROJECT_ID = "mylists-f7313"
 FIREBASE_PROJECT_NUMBER = "721023375695"
 FIREBASE_APP_ID = "1:721023375695:web:da7ab55e6d8afc73470d3a"
 APPCHECK_EDGE_MODE = "monitor"
-# Mismo criterio de administrador que `firestore.rules` (isAdmin). Se lee de aquí para no repetir el literal.
-ADMIN_EMAIL = "bellanco3@gmail.com"
 # Client ID PÚBLICO de la aplicación de Twitch con la que se consulta IGDB (carátulas). Como el de GitHub,
 # aparece en las peticiones y no es secreto. El IGDB_CLIENT_SECRET NO va aquí: se sube cifrado con
 # `npx wrangler pages secret put IGDB_CLIENT_SECRET` y, en local, vive en `.dev.vars` (ignorado por git).

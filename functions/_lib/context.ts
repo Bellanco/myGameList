@@ -47,7 +47,7 @@ export async function requireUser(request: Request, env: Env): Promise<CallerCon
     user,
     appCheckToken: request.headers.get('X-Firebase-AppCheck'),
     projectId,
-    isAdmin: isAdmin(user, env.ADMIN_EMAIL),
+    isAdmin: isAdmin(user),
   };
 }
 
