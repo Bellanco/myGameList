@@ -429,9 +429,12 @@ export const YearSummary = memo(function YearSummary({ summary, voice }: YearSum
                   <i style={{ '--ys-p': String(affinity) } as CSSProperties} />
                 </span>
               ) : null}
-              <ul className="ys-tags">
+              {/* La etiqueta con la que el hub social nombra un juego (`hub-feed-game-chip`), y no el chip neutro
+                  de las etiquetas: cada tema ya la viste en su §6 —rótulo de señalética en Portal, cartel de
+                  contrato en Plata y acero, etiqueta de HUD en Sin futuro—, así que aquí se lee como en el feed. */}
+              <ul className="ys-tags ys-common-games">
                 {common.names.map((name) => (
-                  <li key={name} className="ys-tag">
+                  <li key={name} className="hub-feed-game-chip">
                     {name}
                   </li>
                 ))}

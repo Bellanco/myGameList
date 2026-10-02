@@ -115,6 +115,13 @@ describe('YearSummary — frente al año anterior', () => {
 });
 
 describe('YearSummary — contigo', () => {
+  it('los juegos en común llevan la etiqueta de juego del hub, la que viste cada tema', () => {
+    const { container } = render(<YearSummary summary={summary} voice={voice} />);
+    const chips = [...container.querySelectorAll('.ys-card.is-common .ys-common-games > li')];
+    expect(chips.map((chip) => chip.textContent)).toEqual(['Dos']);
+    expect(chips.every((chip) => chip.classList.contains('hub-feed-game-chip'))).toBe(true);
+  });
+
   it('propone lo de su año que tienes en Próximos', () => {
     const withPicks = buildYearSummary({ completed, year: 2025, precision: 'month', viewerCompleted: [game(9, 'Dos', 70)], viewerPending: [game(20, 'Uno', 0)] })!;
     render(<YearSummary summary={withPicks} voice={voice} />);
