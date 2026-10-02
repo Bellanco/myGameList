@@ -43,8 +43,10 @@ export function useReviewCover(
   // Solo se pregunta si puede haber carátula: si no, la respuesta no sirve de nada y preguntar no es gratis. La
   // página pública de un enlace compartido no las permite, y ahí la pregunta descargaba Firebase y, en móvil,
   // contactaba con Google en cuanto el navegador tenía el almacenamiento bloqueado (ver `useIsAdmin`).
-  const ampliado = useIsAdmin(permitido);
+  // Y en lo ajeno tampoco: ese espacio aparte solo lo llena la biblioteca propia, y `c=1` no resuelve lo que
+  // falta, así que la lente dejaba sin carátula todo lo que la administración no tiene (ver `GameTable`).
   const soloCache = acceso === 'solo-cache';
+  const ampliado = useIsAdmin(permitido && !soloCache);
 
   return useCallback((name: string, platforms: readonly string[] = [], tamano: 'medio' | 'ancho' = 'ancho') => {
     if (!permitido) return null;

@@ -24,6 +24,10 @@ import { coverUrl } from '../../src/core/utils/coverUrl';
 import type { CoverAccess } from '../../src/view/components/socialhub/useReviewCover';
 import type { RelatedReview } from '../../src/core/social/relatedReviews';
 
+/* Fingir la cuenta de administración sin pasar por Auth; con la pregunta apagada contesta que no, como la real. */
+const admin = vi.hoisted(() => ({ es: false }));
+vi.mock('../../src/view/hooks/useIsAdmin', () => ({ useIsAdmin: (enabled = true) => enabled && admin.es }));
+
 const RESENA: ReviewEntry = {
   id: 7,
   gameName: 'Hollow Knight',
@@ -108,6 +112,7 @@ function conCaratula(container: HTMLElement, selector: string): boolean {
 }
 
 beforeEach(() => {
+  admin.es = false;
   localStorage.clear();
   reiniciarMemoriaDeCaratulas();
   reiniciarIndiceDeCaratulas();
@@ -149,6 +154,16 @@ describe('la carátula de fondo de una reseña', () => {
       const { container } = render(pinta('solo-cache'));
       expect(conCaratula(container, selector)).toBe(true);
       expect(urlDeLaFranja(container, selector)).toContain('c=1');
+    });
+
+    it(`en ${nombre}, la cuenta de administración pide lo ajeno sin el modo ampliado`, () => {
+      // Su espacio de claves solo lo llena su biblioteca: con `x=1` y `c=1`, lo que no tiene salía sin carátula.
+      admin.es = true;
+      localStorage.setItem('mis-listas-covers', 'on');
+      const { container } = render(pinta('solo-cache'));
+      const url = urlDeLaFranja(container, selector);
+      expect(url).toContain('c=1');
+      expect(url).not.toContain('x=1');
     });
 
     it(`en ${nombre}, un título que tu biblioteca ya resolvió va sin la marca`, () => {

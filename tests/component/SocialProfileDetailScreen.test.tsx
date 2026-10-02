@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import { SocialProfileDetailScreen } from '../../src/view/components/socialhub/SocialProfileDetailScreen';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { ADMIN_ONLY_TIER } from '../../src/core/constants/tiers';
@@ -68,6 +68,58 @@ describe('SocialProfileDetailScreen — listados', () => {
     expect(screen.queryByRole('tab', { name: SOCIAL_UI.feed.profileListTabPlanned })).not.toBeInTheDocument();
     // Pero las visibles sí (se renderizan con role="tab").
     expect(screen.getByRole('tab', { name: SOCIAL_UI.feed.profileListTabCompleted })).toBeInTheDocument();
+  });
+});
+
+/* SCROLL INFINITO en la tabla, el mismo que la lista de reseñas: el botón de «ver más» es el centinela, y al
+   acercarse a la pantalla carga el siguiente lote sin pulsarlo. */
+describe('SocialProfileDetailScreen — carga continua', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    cleanup();
+  });
+
+  it('al acercarse al «ver más», carga el siguiente lote sin pulsarlo', () => {
+    const vistos: IntersectionObserverCallback[] = [];
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        constructor(callback: IntersectionObserverCallback) {
+          vistos.push(callback);
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    const juegos = Array.from({ length: 20 }, (_, i) => game(i + 1, `Juego ${i + 1}`));
+    render(
+      <SocialProfileDetailScreen
+        SOCIAL_UI={SOCIAL_UI}
+        isOwnProfile
+        activeProfileDetail={{
+          displayName: 'Yo',
+          visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false },
+          sharedLists: { c: juegos, v: [], e: [], p: [] },
+        }}
+        onBack={vi.fn()}
+        showReviews={false}
+        onToggleReviews={vi.fn()}
+        onOpenReview={vi.fn()}
+        status=""
+        statusKind=""
+      />,
+    );
+
+    // Primer lote de 15 de 20: queda más, así que el centinela está puesto.
+    expect(screen.getByRole('button', { name: SOCIAL_UI.feed.feedLoadMore })).toBeInTheDocument();
+    expect(vistos.length).toBeGreaterThan(0);
+
+    act(() => {
+      vistos.at(-1)?.([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+    });
+
+    // El segundo lote ya cubre los 20: no queda nada que cargar y el botón se va.
+    expect(screen.queryByRole('button', { name: SOCIAL_UI.feed.feedLoadMore })).not.toBeInTheDocument();
   });
 });
 
