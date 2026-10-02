@@ -106,7 +106,7 @@ export interface SummaryPick extends SummaryCoverRef {
 export interface SummaryCommon {
   names: string[];
   top: SummaryCoverRef | null;
-  /** Donde más chocáis; `null` si ningún juego en común tiene las dos notas o todas coinciden. */
+  /** Donde más chocáis; `null` si ningún juego en común tiene las dos notas o ninguno se separa `GAP_MIN`. */
   gap: SummaryPair | null;
   /** Donde más coincidís; solo con dos o más juegos con las dos notas, y nunca el mismo que `gap`. */
   near: SummaryPair | null;
@@ -148,6 +148,8 @@ export const AFFINITY_MIN = 2;
 /** Cuántos de su año se te proponen como mucho, y con cuántos caracteres de su reseña. */
 const PICKS_MAX = 2;
 const PICK_QUOTE_MAX_CHARS = 110;
+/** Por debajo de esta diferencia de nota (media estrella) dos notas no «chocan»: es el mismo juicio. */
+export const GAP_MIN = 10;
 /** Un género que gana un juego de un año a otro no «crece»: es ruido. */
 const GENRE_RISE_MIN = 2;
 
@@ -303,8 +305,8 @@ function buildCommon(theirs: FinishedGame[], viewer: readonly GameItem[], pendin
   const diff = (pair: SummaryPair) => Math.abs(pair.theirs - pair.yours);
   // A igual diferencia, el primero de la lista: el mismo criterio que tenía «donde más chocáis».
   let gap = pairs.reduce<SummaryPair | null>((best, pair) => (!best || diff(pair) > diff(best) ? pair : best), null);
-  // Un «donde más chocáis» con dos notas iguales no dice nada.
-  if (gap && diff(gap) === 0) gap = null;
+  // Un «donde más chocáis» con dos notas casi iguales no dice nada (un 98 frente a un 100 no es chocar).
+  if (gap && diff(gap) < GAP_MIN) gap = null;
   const near = pairs.length >= AFFINITY_MIN ? pairs.reduce<SummaryPair | null>((best, pair) => (pair !== gap && (!best || diff(pair) < diff(best)) ? pair : best), null) : null;
   const affinity = pairs.length >= AFFINITY_MIN ? Math.round(100 - pairs.reduce((total, pair) => total + diff(pair), 0) / pairs.length) : null;
   // El MEJOR en común —el de la carátula de fondo— es el que más os gustó a los dos: la media de las dos notas.

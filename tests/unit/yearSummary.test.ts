@@ -2,7 +2,7 @@
 // (`core/utils/finishDates`). Lo que fijan estas pruebas son las reglas que no se ven en pantalla: qué año se
 // resume, qué juego tiene fecha y cuál no, y que nunca aparezcan horas.
 import { describe, expect, it } from 'vitest';
-import { buildYearSummary, quoteFromReview, summaryYear, QUOTE_MAX_CHARS } from '../../src/core/stats/yearSummary';
+import { buildYearSummary, quoteFromReview, summaryYear, GAP_MIN, QUOTE_MAX_CHARS } from '../../src/core/stats/yearSummary';
 import { hasCompletedIn, isSummarySeason } from '../../src/core/stats/summaryYear';
 import { BULK_DAY_MIN, finishDays, withFinishedOn, type FinishedGame } from '../../src/core/utils/finishDates';
 import type { GameItem } from '../../src/model/types/game';
@@ -191,6 +191,11 @@ describe('contigo', () => {
       affinity: 89,
       picks: [],
     });
+  });
+
+  it(`por debajo de ${GAP_MIN} puntos de diferencia no hay «donde más chocáis»`, () => {
+    const close: GameItem[] = [game(10, { name: 'Hades II', grade: 88 })];
+    expect(buildYearSummary({ completed: theirs, year: 2025, precision: 'month', viewerCompleted: close })?.common?.gap).toBeNull();
   });
 
   it('con un solo juego en común con nota no hay afinidad ni «donde más coincidís»', () => {
