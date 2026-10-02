@@ -31,13 +31,14 @@ describe('FriendshipButton', () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it('estado friends: chip "Amigos" + eliminar solo si se pasa onRemove', () => {
+  it('estado friends: chip "Amigos" sin onRemove; con onRemove, solo "Eliminar amistad"', () => {
     const onRemove = vi.fn();
     const { rerender } = render(<FriendshipButton {...base} state="friends" />);
     expect(screen.getByText(SOCIAL_UI.friendship.friends)).toBeInTheDocument();
     expect(screen.queryByLabelText(SOCIAL_UI.friendship.removeAria('Ada'))).toBeNull();
 
     rerender(<FriendshipButton {...base} state="friends" onRemove={onRemove} />);
+    expect(screen.queryByText(SOCIAL_UI.friendship.friends)).toBeNull();
     fireEvent.click(screen.getByLabelText(SOCIAL_UI.friendship.removeAria('Ada')));
     expect(onRemove).toHaveBeenCalledTimes(1);
   });

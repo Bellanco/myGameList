@@ -8,7 +8,8 @@ import type { SocialUiLabels } from '../../../core/constants/socialLabels';
  * - none     → "Añadir amigo"
  * - incoming → "Aceptar"
  * - outgoing → "Pendiente" (al pulsar, retira la petición enviada)
- * - friends  → chip "Amigos" (+ "Eliminar amistad" si se pasa onRemove, p. ej. en el detalle)
+ * - friends  → chip "Amigos" en la tarjeta; con onRemove (el detalle), solo "Eliminar amistad": ahí el chip no
+ *               añadía nada —el propio botón ya dice que sois amigos— y le quitaba sitio a la fila de botones
  *
  * El rótulo de los botones con icono va envuelto en `.btn-label` porque en la tarjeta de persona, y en pantalla
  * estrecha, se oculta y queda solo el icono (el `aria-label` sigue diciendo la acción entera). "Pendiente" no lo
@@ -35,23 +36,19 @@ export function FriendshipButton({
   const F = SOCIAL_UI.friendship;
 
   if (state === 'friends') {
+    if (!onRemove) return <span className="hub-friend-chip">{F.friends}</span>;
     return (
-      <span className="hub-friend-state">
-        <span className="hub-friend-chip">{F.friends}</span>
-        {onRemove ? (
-          <button
-            className="btn btn-danger btn-sm"
-            type="button"
-            disabled={busy}
-            aria-label={F.removeAria(name)}
-            title={F.removeAria(name)}
-            onClick={onRemove}
-          >
-            <Icon name="close" />
-            <span className="btn-label">{F.remove}</span>
-          </button>
-        ) : null}
-      </span>
+      <button
+        className="btn btn-danger btn-sm"
+        type="button"
+        disabled={busy}
+        aria-label={F.removeAria(name)}
+        title={F.removeAria(name)}
+        onClick={onRemove}
+      >
+        <Icon name="close" />
+        <span className="btn-label">{F.remove}</span>
+      </button>
     );
   }
 

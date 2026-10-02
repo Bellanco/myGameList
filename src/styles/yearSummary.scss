@@ -17,6 +17,15 @@
   min-width: 0;
 }
 
+/* UNA SOLA COLUMNA, dicha en voz alta. El contenedor lleva `stats-hub` por las palancas de los temas, y esa clase
+   trae también la rejilla de 12 columnas de Estadísticas: con su hoja ya cargada (basta con haber pasado por
+   Estadísticas antes), las siete tarjetas se repartían en columnas de un dedo. Con más especificidad que
+   `.stats-hub`, porque las dos hojas son perezosas y ninguna sabe cuál llega después. */
+.ys.stats-hub {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.1rem;
+}
+
 /* Las cabeceras del hub ponen color, tamaño y recorte a sus `h3`/`h4`; aquí mandan las del resumen. */
 .hub-feed-card-detail .ys .ys-title {
   margin: 0;
@@ -379,22 +388,140 @@
   &.is-down { border-color: color-mix(in srgb, var(--danger) 40%, var(--border)); background: color-mix(in srgb, var(--danger) 8%, transparent); }
 }
 
-.ys-gap { margin: 1rem 0 0; line-height: 1.45; }
+/* La afinidad, debajo del titular que la dice: una barra en el acento, sin cifra propia. */
+.ys-affinity {
+  display: block;
+  height: .55rem;
+  margin-top: 1rem;
+  border-radius: var(--stats-pill, var(--radius-pill));
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  overflow: hidden;
+
+  i { display: block; height: 100%; width: calc(var(--ys-p) * 1%); border-radius: inherit; background: var(--steam); }
+}
+
+/* «De su año, para ti»: lo que terminó y tú tienes en Próximos, en fichas con su carátula pequeña. */
+.ys-picks {
+  margin-top: 1.3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+
+  ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; }
+}
+
+.ys-picks-title {
+  margin: 0 0 .8rem;
+  font: 600 var(--fs-2xs) / 1.25 var(--font-label, var(--font-body));
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ys-pick {
+  display: grid;
+  grid-template-columns: 3.6rem minmax(0, 1fr);
+  gap: .8rem;
+  align-items: start;
+  padding: .7rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.ys-pick-art.ys-boxart { position: relative; padding: .3rem; border-radius: var(--radius-sm); box-shadow: none; font-size: var(--fs-3xs); }
+.ys-pick-name { display: block; font: 700 var(--fs-md) / 1.2 var(--font-display); overflow-wrap: anywhere; }
+.ys-pick-meta { display: block; margin-top: .25rem; font-size: var(--fs-xs); color: var(--text-muted); }
+.ys-pick-quote { margin: .35rem 0 0; font-size: var(--fs-sm); font-style: italic; line-height: 1.35; }
+
+.ys-pick-where {
+  display: inline-block;
+  margin-top: .45rem;
+  font: 600 var(--fs-3xs) / 1 var(--font-label, var(--font-body));
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--steam);
+}
 
 /* ── 6 · Frente al año anterior ──────────────────────────────────────────────────────────────────────────── */
-.ys-vs {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-  gap: 1rem;
+/* LA CARRERA: el trazo en un SVG que se estira (sin escalar el grosor) y los puntos y cifras en HTML, en tanto por
+   ciento de la caja (`--x`, `--y`), para que la letra no crezca ni encoja con el ancho. A la derecha queda la
+   reserva de las dos cifras del final. */
+.ys-race { margin-top: 1.4rem; }
 
-  /* Filete y no velo: sobre la tarjeta de algunos temas, el gris tenue encima de un velo no llegaba a 4,5:1. */
-  > div { padding: .9rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--border); }
-  b { display: block; font: 800 var(--fs-3xl) / 1 var(--font-mono); }
-  /* El verde y el rojo del tema, mezclados con la tinta: el `--success` claro de algunos temas es un verde de
-     relleno, no de texto. */
-  b.is-up { color: color-mix(in srgb, var(--success) 60%, var(--text)); }
-  b.is-down { color: color-mix(in srgb, var(--danger) 60%, var(--text)); }
-  small { display: block; margin-top: .3rem; font-size: var(--fs-sm); color: var(--text-muted); line-height: 1.35; }
+.ys-race-plot {
+  position: relative;
+  height: 11rem;
+  margin: 1.4rem 2.4rem 0 0;
+  border-bottom: 1px solid var(--border);
+
+  svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+}
+
+.ys-race-goal { stroke: color-mix(in srgb, var(--text-muted) 60%, transparent); stroke-width: 1; stroke-dasharray: 2 4; }
+.ys-race-area { fill: color-mix(in srgb, var(--steam) 16%, transparent); }
+.ys-race-prev { fill: none; stroke: var(--text-muted); stroke-width: 2; stroke-dasharray: 5 5; stroke-linejoin: round; }
+.ys-race-now { fill: none; stroke: var(--steam); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+
+.ys-race-pt {
+  position: absolute;
+  left: calc(var(--x) * 1%);
+  bottom: calc(var(--y) * 1%);
+  width: .8rem;
+  height: .8rem;
+  transform: translate(-50%, 50%);
+  border-radius: 50%;
+  background: var(--steam);
+  box-shadow: 0 0 0 3px var(--surface);
+
+  /* El momento en que ya había superado el año anterior: hueco, con su mes al lado. */
+  &.is-pass { background: var(--surface); border: 3px solid var(--steam); box-shadow: none; width: .95rem; height: .95rem; }
+
+  b {
+    position: absolute;
+    right: calc(100% + .4rem);
+    bottom: calc(100% + .1rem);
+    white-space: nowrap;
+    font: 700 var(--fs-xs) / 1 var(--font-body);
+    color: var(--text);
+  }
+
+  &.is-right b { right: auto; left: calc(100% + .4rem); }
+}
+
+.ys-race-end {
+  position: absolute;
+  left: calc(100% + .55rem);
+  bottom: calc(var(--y) * 1%);
+  transform: translateY(50%);
+  font: 600 var(--fs-xs) / 1 var(--stats-num, var(--font-mono));
+  color: var(--text-muted);
+
+  &.is-now { font-weight: 800; font-size: var(--fs-sm); color: var(--text); }
+  /* Si las dos cifras caen casi a la misma altura, se apartan una hacia cada lado. */
+  &.is-up { transform: translateY(calc(50% - .6rem)); }
+  &.is-down { transform: translateY(calc(50% + .6rem)); }
+}
+
+.ys-race-cap {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  margin: .45rem 2.4rem 0 0;
+  text-align: center;
+  font: 500 var(--fs-3xs) / 1 var(--font-mono);
+  color: var(--text-muted);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.ys-race-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem 1.2rem;
+  margin-top: .8rem;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+
+  i { display: inline-block; width: 1.4rem; margin-right: .4rem; vertical-align: middle; border-top: 3px solid var(--steam); }
+  i.is-prev { border-top: 2px dashed var(--text-muted); }
 }
 
 @media (max-width: 620px) {
@@ -405,6 +532,8 @@
   .ys-genre { grid-template-columns: minmax(0, 1fr) auto; }
   .ys-genre-bar { grid-column: 1 / -1; grid-row: 2; }
   .ys-genre-best { grid-column: 1 / -1; }
+  /* Doce meses en el ancho de un teléfono: uno sí y otro no, que tres letras por columna no caben. */
+  .ys-race-cap span:nth-child(even) { visibility: hidden; }
 }
 
 @media (max-width: 620px) {

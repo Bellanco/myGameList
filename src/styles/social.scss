@@ -184,11 +184,51 @@
 }
 
 
-// Estado "Amigos" (chip) + posible botón de eliminar en el detalle.
-.hub-friend-state {
-  display: inline-flex;
-  align-items: center;
-  gap: .5rem;
+/* FILA DE ACCIONES DEL DETALLE DE PERFIL. Es la más cargada del hub —volver, tres vistas, la ruleta y, en el de
+   una amistad, «Dejar de ser amigos»— y con la regla común de la fila partida se rompía en la franja media:
+   · el lado izquierdo no envuelve, así que sus botones se estrujaban hasta partir el rótulo en dos o tres
+     renglones (y entre ~630 y 740px la fila se salía de la tarjeta, con scroll horizontal en la página);
+   · el que pasaba de línea era el lado derecho entero, y el botón rojo se quedaba solo debajo de «Volver».
+   Aquí es al revés: la fila no envuelve, el lado izquierdo ocupa lo que sobra y es ÉL quien baja de línea,
+   botón a botón y sin partir rótulos, y el derecho se queda arriba, alineado con el primer renglón.
+   Va con clase propia y no en `.hub-screen-actions-split` porque esa la comparten cinco pantallas más. */
+.hub-profile-detail-actions {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+
+.hub-profile-detail-actions .hub-screen-actions-left {
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+}
+
+.hub-profile-detail-actions .hub-screen-actions-right {
+  flex: 0 0 auto;
+}
+
+.hub-profile-detail-actions .btn {
+  white-space: nowrap;
+}
+
+@media (min-width: 621px) {
+  /* Por encima del móvil los botones miden lo que su rótulo: el `width: 100%` del container query de la tarjeta
+     estrecha (`_layout.scss`) los pondría uno por renglón ahora que el lado izquierdo envuelve. */
+  .hub-profile-detail-actions .btn {
+    width: auto;
+  }
+}
+
+@media (max-width: 620px) {
+  /* En móvil son cuadrados de icono en un solo renglón; con las seis acciones de una amistad no caben por debajo
+     de ~350px (o ~380px con el texto del sistema ampliado), así que ceden un poco de ancho en vez de desbordar. */
+  .hub-profile-detail-actions .hub-screen-actions-left {
+    flex-wrap: nowrap;
+  }
+
+  .hub-profile-detail-actions .btn {
+    flex: 0 1 44px;
+    min-width: 36px;
+  }
 }
 
 

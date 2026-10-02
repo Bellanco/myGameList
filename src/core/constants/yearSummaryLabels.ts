@@ -117,9 +117,22 @@ export const YEAR_SUMMARY_UI = {
 
   previous: {
     kicker: (year: number) => `Frente a ${year}`,
-    games: (before: number, year: number) => `juegos (${before} en ${year})`,
-    grade: (v: SummaryVoice, before: string, year: number, delta: number) =>
-      `de nota media (${before} en ${year})${delta > 0 ? `: ${v.own ? 'puntuaste' : 'puntuó'} más alto` : delta < 0 ? `: ${v.own ? 'puntuaste' : 'puntuó'} más bajo` : ''}`,
+    /** El titular cuando la carrera cuenta el mes en que ya había más juegos que en todo el año anterior. */
+    passed: (v: SummaryVoice, month: number, year: number) => `En ${MONTHS_LONG[month]} ya ${v.own ? 'habías' : 'había'} superado todo ${year}`,
+    /** El titular sin ese momento: sin fechas, o con menos (o los mismos) juegos que el año anterior. */
+    title: (count: number, before: number, year: number) =>
+      count === before ? `Los mismos juegos que en ${year}: ${count}` : `${games(count)}, ${Math.abs(count - before)} ${count > before ? 'más' : 'menos'} que en ${year}`,
+    games: 'juegos',
+    gamesVs: (count: number, before: number) => `${count} frente a ${before}`,
+    grade: 'de nota media',
+    gradeVs: (v: SummaryVoice, now: string, before: string, delta: number) =>
+      `${now} frente a ${before}${delta > 0 ? `: ${v.own ? 'puntuaste' : 'puntuó'} más alto` : delta < 0 ? `: ${v.own ? 'puntuaste' : 'puntuó'} más bajo` : ''}`,
+    genreRise: (name: string, from: number, to: number) => `${name}, de ${from} a ${to}`,
+    genreRiseText: 'el género que más creció',
+    raceAria: (year: number, before: number, count: number, previousCount: number) =>
+      `Juegos terminados acumulados mes a mes: ${count} en ${year} frente a ${previousCount} en ${before}`,
+    passLabel: (month: number, count: number) => `${MONTHS_LONG[month]}: ${count}`,
+    raceUndated: (count: number) => (count === 1 ? '1 juego sin fecha no sale en la gráfica, pero sí en las cifras.' : `${count} juegos sin fecha no salen en la gráfica, pero sí en las cifras.`),
   },
 
   /** La tarjeta destacada del feed, cuando alguien abre su resumen en temporada. */
@@ -145,7 +158,14 @@ export const YEAR_SUMMARY_UI = {
   common: {
     kicker: 'Contigo',
     title: (count: number) => (count === 1 ? 'Un juego que terminasteis los dos' : `${count} juegos que terminasteis los dos`),
+    /** El titular con la afinidad, que solo existe con dos o más juegos en común con nota. */
+    titleAffinity: (count: number, affinity: number) => `${count} juegos en común y un ${affinity} % de afinidad`,
     none: 'Este año no coincidisteis en ninguno.',
-    gap: (name: string, theirs: string, yours: string, v: SummaryVoice) => `Donde más chocáis: ${name} — ${theirs} para ${v.name}, ${yours} para ti.`,
+    near: (v: SummaryVoice, yours: string, theirs: string) => `donde más coincidís: ${yours} tú, ${theirs} ${v.name}`,
+    gap: (v: SummaryVoice, yours: string, theirs: string) => `donde más chocáis: ${yours} tú, ${theirs} ${v.name}`,
+    picksTitle: 'De su año, para ti',
+    pickBest: 'Su juego del año',
+    pickMonth: (month: number) => `Lo terminó en ${MONTHS_LONG[month]}`,
+    pickWhere: 'Lo tienes en Próximos',
   },
 } as const;
