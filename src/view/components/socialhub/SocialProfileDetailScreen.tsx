@@ -261,6 +261,7 @@ function SocialProfileDetailScreenBase({
   }, [openSummaryOnMount]);
   const [expandedByTab, setExpandedByTab] = useState<Partial<Record<TabId, number | null>>>({});
   const [visibleCount, setVisibleCount] = useState(LIST_PAGE_SIZE);
+  const loadMoreRef = useRef<HTMLButtonElement>(null);
   const [gameQuery, setGameQuery] = useState('');
 
   // Amistad: solo el perfil propio o el de un amigo muestra reseñas, ruleta y listados. Para no-amigos, "solo nombre
@@ -418,6 +419,27 @@ function SocialProfileDetailScreenBase({
 
   const visibleGames = useMemo(() => filteredGames.slice(0, visibleCount), [filteredGames, visibleCount]);
   const hasMoreGames = filteredGames.length > visibleCount;
+
+  /* SCROLL INFINITO, el mismo de la lista de reseñas (`ProfileReviewsList`): el botón de «ver más» hace de
+     centinela y, al acercarse a la pantalla, amplía el lote; sigue siendo pulsable como alternativa accesible.
+     Depende también de `visibleCount` para volver a observar tras cada lote: si el centinela sigue a la vista
+     (una pantalla alta, un lote que no la llena), observarlo de nuevo dispara otro, y no hace falta mover la
+     rueda para que aparezca. Y de la vista abierta, porque al volver de las reseñas o las estadísticas el
+     botón es otro nodo. */
+  const listsOpen = !showReviews && !showStats && !(showSummary && yearSummary);
+  useEffect(() => {
+    if (!hasMoreGames || !listsOpen) return undefined;
+    const node = loadMoreRef.current;
+    if (!node) return undefined;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) setVisibleCount((prev) => prev + LIST_PAGE_SIZE);
+      },
+      { rootMargin: '200px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMoreGames, listsOpen, filteredGames, visibleCount]);
 
   // ¿Hay algún listado público con juegos? (para perfiles ajenos suele estar vacío por privacidad E3).
   const hasSharedLists = useMemo(
@@ -679,6 +701,7 @@ function SocialProfileDetailScreenBase({
                   )}
                   {hasMoreGames ? (
                     <button
+                      ref={loadMoreRef}
                       className="hub-more-soft hub-feed-load-more"
                       type="button"
                       aria-label={SOCIAL_UI.feed.feedLoadMore}
