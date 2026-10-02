@@ -571,8 +571,11 @@ export const GameTable = memo(function GameTable({
   const { size: gridSize, setSize: setGridSize } = useGridSize();
   /* Modo ampliado de las carátulas: solo la cuenta de administración. No es una mejora —admite DLC, packs y
      mods, que dan PEORES emparejamientos— sino una lente para ver qué hay en el catálogo. Su respuesta vive en
-     un espacio de caché aparte, así que encenderla no le cambia la carátula a nadie más. */
-  const coversAmpliadas = useIsAdmin();
+     un espacio de caché aparte, así que encenderla no le cambia la carátula a nadie más.
+     EN LO AJENO (`cachedOnly`) NO SE ENCIENDE. Ese espacio aparte solo lo llena el recorrido de la biblioteca
+     de la administración, y `c=1` no resuelve lo que falta: con la lente puesta, la estantería de un amigo solo
+     enseñaba los juegos que la administración también tiene, aunque su dueño los viera todos con carátula. */
+  const coversAmpliadas = useIsAdmin(!coverPolicy?.cachedOnly);
   /* El MOSAICO también vale en un teléfono: sus columnas salen del mismo mínimo de caja que en escritorio (a
      412 px caben dos), así que elegir «cajas» en el móvil ya no revierte a renglones sin avisar. */
   const cards = shape === 'list';

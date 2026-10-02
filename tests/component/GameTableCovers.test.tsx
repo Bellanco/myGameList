@@ -16,9 +16,10 @@ vi.mock('../../src/model/repository/firebaseRepository', () => ({
   setPublicConfig: vi.fn(async () => {}),
 }));
 
-/* La cuenta de administración pide sus carátulas en modo ampliado; aquí se finge serlo o no sin pasar por Auth. */
+/* La cuenta de administración pide sus carátulas en modo ampliado; aquí se finge serlo o no sin pasar por Auth.
+   Como el de verdad, con la pregunta apagada (`enabled = false`) contesta que no. */
 const admin = vi.hoisted(() => ({ es: false }));
-vi.mock('../../src/view/hooks/useIsAdmin', () => ({ useIsAdmin: () => admin.es }));
+vi.mock('../../src/view/hooks/useIsAdmin', () => ({ useIsAdmin: (enabled = true) => enabled && admin.es }));
 
 function juego(id: number, name: string): GameItem {
   return {
@@ -270,6 +271,22 @@ describe('qué carátulas pide el listado', () => {
     const { container } = pintaAjena('grid', [ajeno]);
 
     expect(container.querySelector('.game-cover-img')?.getAttribute('src')).toBe(coverUrl('Celeste', ['Steam']));
+  });
+
+  /* LA LENTE DE LA ADMINISTRACIÓN SE QUEDA EN CASA. Su espacio de claves solo lo llena su propia biblioteca, y
+     con `c=1` lo que falta no se resuelve: pedido con `x=1`, lo ajeno salía sin carátula salvo los juegos que la
+     administración también tiene, aunque su dueño los viera todos. */
+  it('la cuenta de administración pide lo ajeno sin el modo ampliado', () => {
+    admin.es = true;
+    const ajeno = { ...juego(1, 'Celeste'), platforms: ['Nintendo Switch'] } as GameItem;
+    const caja = pintaAjena('grid', [ajeno]).container.querySelector('.game-cover-img');
+    expect(caja?.getAttribute('src')).toBe(coverUrl('Celeste', ['Nintendo Switch'], false, 'normal', true));
+    cleanup();
+
+    const fila = pintaAjena('list', [ajeno]).container.querySelector<HTMLElement>('tr.main-row');
+    expect(fila?.style.getPropertyValue('--row-cover')).toBe(
+      `url("${coverUrl('Celeste', ['Nintendo Switch'], false, 'medio', true)}")`,
+    );
   });
 
   it('y del que ya se sabe que no tiene no se pide nada, con marca o sin ella', () => {
