@@ -32,6 +32,20 @@ function gradeText(grade: number, scale: ScoreScale): string {
   return scale === 'grade' ? String(Math.round(grade)) : formatDecimal(grade / 20);
 }
 
+/**
+ * Una diferencia de nota tal y como se va a LEER, en las unidades de quien mira (puntos sobre 100, o estrellas con
+ * un decimal). El signo y el «más alto»
+ * salen de aquí y no de la diferencia en bruto, para que nunca salga un «+0» que dice que puntuó más alto.
+ */
+function shownDelta(delta: number, scale: ScoreScale): number {
+  return scale === 'grade' ? Math.round(delta) : Math.round(delta / 2) / 10;
+}
+
+function cumulative(months: readonly number[]): number[] {
+  let total = 0;
+  return months.map((count) => (total += count));
+}
+
 function Grade({ grade, scale }: { grade: number; scale: ScoreScale }) {
   return (
     <span className="ys-grade" style={{ '--ys-hue': String(hueFromGrade(grade)) } as CSSProperties}>
@@ -75,6 +89,64 @@ function YearCalendar({ year, finishes }: { year: number; finishes: Array<{ key:
         ))}
       </div>
     </>
+  );
+}
+
+/** Por debajo de esta distancia (en % del alto) las dos cifras del final se pisarían: se separan. */
+const RACE_LABEL_GAP = 10;
+
+/**
+ * LA CARRERA MES A MES de «frente al año anterior»: los juegos acumulados de los dos años y la línea del total del
+ * anterior, que es la meta. El trazo va en un SVG que se estira con la caja (`preserveAspectRatio="none"` y trazo
+ * que no escala); los puntos y las cifras van en HTML encima, en porcentaje, para que la letra mida lo mismo en el
+ * teléfono que en una pantalla ancha.
+ */
+function YearRace({ year, before, now, previous, goal, pass }: { year: number; before: number; now: number[]; previous: number[]; goal: number; pass: number }) {
+  const top = Math.max(1, now[11], previous[11], goal) * 1.12;
+  const x = (month: number) => ((month + 0.5) / 12) * 100;
+  const y = (value: number) => (value / top) * 100;
+  const points = (values: number[]) => ['0,100', ...values.map((value, month) => `${x(month).toFixed(2)},${(100 - y(value)).toFixed(2)}`)].join(' ');
+  const close = Math.abs(y(now[11]) - y(goal)) < RACE_LABEL_GAP;
+  const nowAbove = now[11] >= goal;
+  const at = (month: number, value: number) => ({ '--x': String(x(month)), '--y': String(y(value)) }) as CSSProperties;
+  return (
+    <div className="ys-race" role="img" aria-label={L.previous.raceAria(year, before, now[11], goal)}>
+      <div className="ys-race-plot">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <line className="ys-race-goal" x1="0" x2="100" y1={100 - y(goal)} y2={100 - y(goal)} vectorEffect="non-scaling-stroke" />
+          <polygon className="ys-race-area" points={`${points(now)} ${x(11).toFixed(2)},100`} />
+          <polyline className="ys-race-prev" points={points(previous)} vectorEffect="non-scaling-stroke" />
+          <polyline className="ys-race-now" points={points(now)} vectorEffect="non-scaling-stroke" />
+        </svg>
+        {pass >= 0 && pass < 11 ? (
+          <span className={`ys-race-pt is-pass ${pass < 5 ? 'is-right' : ''}`.trim()} style={at(pass, now[pass])}>
+            <b>{L.previous.passLabel(pass, now[pass])}</b>
+          </span>
+        ) : null}
+        <span className="ys-race-pt is-end" style={at(11, now[11])} />
+        <span className={`ys-race-end is-now ${close ? (nowAbove ? 'is-up' : 'is-down') : ''}`.trim()} style={{ '--y': String(y(now[11])) } as CSSProperties}>
+          {now[11]}
+        </span>
+        <span className={`ys-race-end is-goal ${close ? (nowAbove ? 'is-down' : 'is-up') : ''}`.trim()} style={{ '--y': String(y(goal)) } as CSSProperties}>
+          {goal}
+        </span>
+      </div>
+      <div className="ys-race-cap">
+        {L.monthsShort.map((month) => (
+          <span key={month}>{month}</span>
+        ))}
+      </div>
+      <div className="ys-race-legend">
+        <span>
+          <i />
+          {year}
+        </span>
+        <span>
+          <i className="is-prev" />
+          {before}
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -296,52 +368,126 @@ export const YearSummary = memo(function YearSummary({ summary, voice }: YearSum
 
   if (previous) {
     const countDelta = summary.count - previous.count;
-    const gradeDelta = summary.avgGrade !== null && previous.avgGrade !== null ? summary.avgGrade - previous.avgGrade : null;
+    const gradeDelta = summary.avgGrade !== null && previous.avgGrade !== null ? shownDelta(summary.avgGrade - previous.avgGrade, scale) : null;
+    // La carrera necesita fechas en los dos años; sin ellas la tarjeta se queda en las cifras.
+    const race = when && previous.months ? { now: cumulative(when.months), previous: cumulative(previous.months) } : null;
+    // El mes en que lo FECHADO de este año ya pasa del total del anterior: con fecha o sin ella, «todo» es verdad.
+    const pass = race ? race.now.findIndex((total) => total > previous.count) : -1;
+    const undated = when && race ? when.undated + previous.undated : 0;
     cards.push({
       key: 'previous',
       icon: ICONS.previous,
       kicker: L.previous.kicker(previous.year),
       body: (
-        <div className="ys-vs">
-          <div>
-            <b className={countDelta > 0 ? 'is-up' : countDelta < 0 ? 'is-down' : undefined}>{L.format.signed(String(Math.abs(countDelta)), countDelta)}</b>
-            <small>{L.previous.games(previous.count, previous.year)}</small>
-          </div>
-          {gradeDelta !== null && previous.avgGrade !== null ? (
+        <>
+          <h4 className="ys-title">{pass >= 0 ? L.previous.passed(voice, pass, previous.year) : L.previous.title(summary.count, previous.count, previous.year)}</h4>
+          {race ? <YearRace year={summary.year} before={previous.year} now={race.now} previous={race.previous} goal={previous.count} pass={pass} /> : null}
+          <div className="ys-facts">
             <div>
-              <b>{L.format.signed(gradeText(Math.abs(gradeDelta), scale), Math.round(gradeDelta * 10))}</b>
-              <small>{L.previous.grade(voice, gradeText(previous.avgGrade, scale), previous.year, Math.round(gradeDelta * 10))}</small>
+              <b>
+                {L.format.signed(String(Math.abs(countDelta)), countDelta)} {L.previous.games}
+              </b>
+              <span>{L.previous.gamesVs(summary.count, previous.count)}</span>
             </div>
-          ) : null}
-        </div>
+            {gradeDelta !== null && summary.avgGrade !== null && previous.avgGrade !== null ? (
+              <div>
+                <b>
+                  {L.format.signed(scale === 'grade' ? String(Math.abs(gradeDelta)) : formatDecimal(Math.abs(gradeDelta)), gradeDelta)} {L.previous.grade}
+                </b>
+                <span>{L.previous.gradeVs(voice, gradeText(summary.avgGrade, scale), gradeText(previous.avgGrade, scale), gradeDelta)}</span>
+              </div>
+            ) : null}
+            {previous.genreRise ? (
+              <div>
+                <b>{L.previous.genreRise(previous.genreRise.name, previous.genreRise.from, previous.genreRise.to)}</b>
+                <span>{L.previous.genreRiseText}</span>
+              </div>
+            ) : null}
+          </div>
+          {undated > 0 ? <p className="ys-note">{L.previous.raceUndated(undated)}</p> : null}
+        </>
       ),
     });
   }
 
   if (common) {
+    const { near, gap, affinity, picks } = common;
     cards.push({
       key: 'common',
       icon: ICONS.common,
       // De fondo, la carátula del juego en común que más os gustó a los dos, con el velo de las reseñas.
       className: `is-common ${commonCover ? 'has-cover' : ''}`.trim(),
       kicker: L.common.kicker,
-      body: common.names.length ? (
+      body: (
         <>
-          {commonCover ? <span className="ys-card-cover" aria-hidden="true" style={{ '--ys-cover': `url("${commonCover}")` } as CSSProperties} /> : null}
-          <h4 className="ys-title">{L.common.title(common.names.length)}</h4>
-          <ul className="ys-tags">
-            {common.names.map((name) => (
-              <li key={name} className="ys-tag">
-                {name}
-              </li>
-            ))}
-          </ul>
-          {common.gap ? (
-            <p className="ys-gap">{L.common.gap(common.gap.name, gradeText(common.gap.theirs, scale), gradeText(common.gap.yours, scale), voice)}</p>
+          {common.names.length ? (
+            <>
+              {commonCover ? <span className="ys-card-cover" aria-hidden="true" style={{ '--ys-cover': `url("${commonCover}")` } as CSSProperties} /> : null}
+              <h4 className="ys-title">{affinity !== null ? L.common.titleAffinity(common.names.length, affinity) : L.common.title(common.names.length)}</h4>
+              {affinity !== null ? (
+                <span className="ys-affinity" aria-hidden="true">
+                  <i style={{ '--ys-p': String(affinity) } as CSSProperties} />
+                </span>
+              ) : null}
+              <ul className="ys-tags">
+                {common.names.map((name) => (
+                  <li key={name} className="ys-tag">
+                    {name}
+                  </li>
+                ))}
+              </ul>
+              {near || gap ? (
+                <div className="ys-facts">
+                  {near ? (
+                    <div>
+                      <b>{near.name}</b>
+                      <span>{L.common.near(voice, gradeText(near.yours, scale), gradeText(near.theirs, scale))}</span>
+                    </div>
+                  ) : null}
+                  {gap ? (
+                    <div>
+                      <b>{gap.name}</b>
+                      <span>{L.common.gap(voice, gradeText(gap.yours, scale), gradeText(gap.theirs, scale))}</span>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <p className="ys-dim">{L.common.none}</p>
+          )}
+          {picks.length ? (
+            <div className="ys-picks">
+              <h5 className="ys-picks-title">{L.common.picksTitle}</h5>
+              <ul>
+                {picks.map((pick) => {
+                  const pickCover = coverOf(pick.name, pick.platforms);
+                  const reason = pick.best ? L.common.pickBest : pick.month !== null ? L.common.pickMonth(pick.month) : null;
+                  return (
+                    <li key={pick.name} className="ys-pick">
+                      <div
+                        className={`ys-boxart ys-pick-art ${pickCover ? 'has-cover' : ''}`.trim()}
+                        style={pickCover ? ({ '--ys-cover': `url("${pickCover}")` } as CSSProperties) : undefined}
+                        aria-hidden="true"
+                      >
+                        <span>{pick.name}</span>
+                      </div>
+                      <div>
+                        <b className="ys-pick-name">{pick.name}</b>
+                        <span className="ys-pick-meta">
+                          {reason ? `${reason} · ` : null}
+                          <Grade grade={pick.grade} scale={scale} /> {outOf}
+                        </span>
+                        {pick.quote ? <p className="ys-pick-quote">{L.format.quote(pick.quote)}</p> : null}
+                        <span className="ys-pick-where">{L.common.pickWhere}</span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           ) : null}
         </>
-      ) : (
-        <p className="ys-dim">{L.common.none}</p>
       ),
     });
   }

@@ -71,6 +71,51 @@ export interface SummaryCoverRef {
   platforms: string[];
 }
 
+export interface SummaryPrevious {
+  year: number;
+  count: number;
+  avgGrade: number | null;
+  /**
+   * Los del año anterior CON FECHA, por mes (0–11): la otra mitad de la carrera mes a mes. `null` si ninguno la
+   * tiene, y entonces la tarjeta se queda en las cifras.
+   */
+  months: number[] | null;
+  /** Los del año anterior sin fecha: no salen en la carrera, pero sí cuentan en el total. */
+  undated: number;
+  /** El género que más creció de un año a otro, si creció de verdad (`GENRE_RISE_MIN` o más). */
+  genreRise: { name: string; from: number; to: number } | null;
+}
+
+/** Dos notas de un mismo juego en común: la suya y la tuya, en 0–100. */
+export interface SummaryPair {
+  name: string;
+  theirs: number;
+  yours: number;
+}
+
+/** Un juego de su año que tú tienes en Próximos: lo que el resumen te propone. */
+export interface SummaryPick extends SummaryCoverRef {
+  grade: number;
+  /** Es su juego del año. */
+  best: boolean;
+  /** Mes (0–11) en que lo terminó, si tiene fecha de este año. */
+  month: number | null;
+  quote: string;
+}
+
+export interface SummaryCommon {
+  names: string[];
+  top: SummaryCoverRef | null;
+  /** Donde más chocáis; `null` si ningún juego en común tiene las dos notas o todas coinciden. */
+  gap: SummaryPair | null;
+  /** Donde más coincidís; solo con dos o más juegos con las dos notas, y nunca el mismo que `gap`. */
+  near: SummaryPair | null;
+  /** 0–100: cien menos la diferencia media de nota. Solo con `AFFINITY_MIN` juegos o más con las dos notas. */
+  affinity: number | null;
+  /** Lo de su año que tú tienes en Próximos, de mejor a peor nota suya. */
+  picks: SummaryPick[];
+}
+
 export interface YearSummary {
   year: number;
   count: number;
@@ -89,15 +134,22 @@ export interface YearSummary {
   when: SummaryWhen | null;
   strengths: Ranked[];
   weaknesses: Ranked[];
-  previous: { year: number; count: number; avgGrade: number | null } | null;
+  previous: SummaryPrevious | null;
   /** Solo al mirar a OTRA persona: lo que completasteis los dos ese año. */
-  common: { names: string[]; top: SummaryCoverRef | null; gap: { name: string; theirs: number; yours: number } | null } | null;
+  common: SummaryCommon | null;
   /** Su resultado en la porra de ese año: puesto 1–5, o 0 si participó sin entrar en los cinco. */
   palmares: { rank: number; seasonName: string } | null;
 }
 
 const STRENGTHS_MAX = 8;
 const WEAKNESSES_MAX = 4;
+/** Con menos juegos en común con nota, un porcentaje de afinidad es una anécdota con decimales. */
+export const AFFINITY_MIN = 2;
+/** Cuántos de su año se te proponen como mucho, y con cuántos caracteres de su reseña. */
+const PICKS_MAX = 2;
+const PICK_QUOTE_MAX_CHARS = 110;
+/** Un género que gana un juego de un año a otro no «crece»: es ruido. */
+const GENRE_RISE_MIN = 2;
 
 function completedIn(games: readonly GameItem[], year: number): GameItem[] {
   return games.filter((game) => Array.isArray(game.years) && game.years.includes(year));
@@ -133,10 +185,10 @@ function tally(lists: Array<readonly string[] | undefined>): Ranked[] {
  * La cita del juego del año: su reseña recortada a `QUOTE_MAX_CHARS`, por el final de una frase si cabe alguna
  * entera que no sea un suspiro; si no, por la última palabra y con puntos suspensivos.
  */
-export function quoteFromReview(review: string): string {
+export function quoteFromReview(review: string, max = QUOTE_MAX_CHARS): string {
   const text = String(review || '').replace(/\s+/g, ' ').trim();
-  if (text.length <= QUOTE_MAX_CHARS) return text;
-  const head = text.slice(0, QUOTE_MAX_CHARS);
+  if (text.length <= max) return text;
+  const head = text.slice(0, max);
   const sentenceEnd = Math.max(head.lastIndexOf('. '), head.lastIndexOf('! '), head.lastIndexOf('? '), head.lastIndexOf('… '));
   if (sentenceEnd >= 60) return head.slice(0, sentenceEnd + 1);
   const lastSpace = head.lastIndexOf(' ');
@@ -208,25 +260,78 @@ function buildWhen(games: FinishedGame[], year: number, precision: FinishPrecisi
   return when;
 }
 
-function buildCommon(theirs: GameItem[], viewer: readonly GameItem[], year: number): YearSummary['common'] {
+/** Juegos por mes (0–11) de los que tienen fecha de ese año; `null` si no la tiene ninguno. */
+function datedMonths(games: readonly FinishedGame[], year: number): { months: number[]; dated: number } | null {
+  const prefix = `${year}-`;
+  const months = Array.from({ length: 12 }, () => 0);
+  let dated = 0;
+  for (const game of games) {
+    if (typeof game.finishedOn !== 'string' || !game.finishedOn.startsWith(prefix)) continue;
+    months[Number(game.finishedOn.slice(5, 7)) - 1] += 1;
+    dated += 1;
+  }
+  return dated ? { months, dated } : null;
+}
+
+function buildPrevious(games: FinishedGame[], previousGames: FinishedGame[], year: number): SummaryPrevious | null {
+  if (previousGames.length === 0) return null;
+  const dated = datedMonths(previousGames, year);
+  const before = new Map(tally(previousGames.map((game) => game.genres)).map((genre) => [genre.name.toLocaleLowerCase('es'), genre.count]));
+  let genreRise: SummaryPrevious['genreRise'] = null;
+  for (const genre of tally(games.map((game) => game.genres))) {
+    const from = before.get(genre.name.toLocaleLowerCase('es')) || 0;
+    if (genre.count - from >= GENRE_RISE_MIN && (!genreRise || genre.count - from > genreRise.to - genreRise.from)) {
+      genreRise = { name: genre.name, from, to: genre.count };
+    }
+  }
+  return {
+    year,
+    count: previousGames.length,
+    avgGrade: average(previousGames.map(gradeOf).filter((grade) => grade > 0)),
+    months: dated ? dated.months : null,
+    undated: previousGames.length - (dated ? dated.dated : 0),
+    genreRise,
+  };
+}
+
+function buildCommon(theirs: FinishedGame[], viewer: readonly GameItem[], pending: readonly GameItem[], year: number, bestName: string | null): SummaryCommon {
   const mine = new Map(completedIn(viewer, year).map((game) => [normalizeName(game.name), game]));
   const shared = theirs.filter((game) => mine.has(normalizeName(game.name)));
-  let gap: { name: string; theirs: number; yours: number } | null = null;
-  for (const game of shared) {
-    const their = gradeOf(game);
-    const your = gradeOf(mine.get(normalizeName(game.name)) as GameItem);
-    if (their <= 0 || your <= 0) continue;
-    if (!gap || Math.abs(their - your) > Math.abs(gap.theirs - gap.yours)) gap = { name: game.name, theirs: their, yours: your };
-  }
+  const pairs: SummaryPair[] = shared
+    .map((game) => ({ name: game.name, theirs: gradeOf(game), yours: gradeOf(mine.get(normalizeName(game.name)) as GameItem) }))
+    .filter((pair) => pair.theirs > 0 && pair.yours > 0);
+  const diff = (pair: SummaryPair) => Math.abs(pair.theirs - pair.yours);
+  // A igual diferencia, el primero de la lista: el mismo criterio que tenía «donde más chocáis».
+  let gap = pairs.reduce<SummaryPair | null>((best, pair) => (!best || diff(pair) > diff(best) ? pair : best), null);
   // Un «donde más chocáis» con dos notas iguales no dice nada.
-  if (gap && gap.theirs === gap.yours) gap = null;
+  if (gap && diff(gap) === 0) gap = null;
+  const near = pairs.length >= AFFINITY_MIN ? pairs.reduce<SummaryPair | null>((best, pair) => (pair !== gap && (!best || diff(pair) < diff(best)) ? pair : best), null) : null;
+  const affinity = pairs.length >= AFFINITY_MIN ? Math.round(100 - pairs.reduce((total, pair) => total + diff(pair), 0) / pairs.length) : null;
   // El MEJOR en común —el de la carátula de fondo— es el que más os gustó a los dos: la media de las dos notas.
   const both = (game: GameItem) => (gradeOf(game) + gradeOf(mine.get(normalizeName(game.name)) as GameItem)) / 2;
   const topGame = [...shared].sort((a, b) => both(b) - both(a) || a.name.localeCompare(b.name, 'es'))[0];
+  // De su año, lo que tú tienes esperando en Próximos: la única parte del resumen que te propone algo.
+  const waiting = new Set(pending.map((game) => normalizeName(game.name)));
+  const prefix = `${year}-`;
+  const picks = theirs
+    .filter((game) => waiting.has(normalizeName(game.name)) && gradeOf(game) > 0)
+    .sort((a, b) => gradeOf(b) - gradeOf(a) || a.name.localeCompare(b.name, 'es'))
+    .slice(0, PICKS_MAX)
+    .map((game) => ({
+      name: game.name,
+      platforms: game.platforms || [],
+      grade: gradeOf(game),
+      best: game.name === bestName,
+      month: typeof game.finishedOn === 'string' && game.finishedOn.startsWith(prefix) ? Number(game.finishedOn.slice(5, 7)) - 1 : null,
+      quote: quoteFromReview(game.review, PICK_QUOTE_MAX_CHARS),
+    }));
   return {
     names: shared.map((game) => game.name),
     top: topGame ? { name: topGame.name, platforms: topGame.platforms || [] } : null,
     gap,
+    near,
+    affinity,
+    picks,
   };
 }
 
@@ -245,18 +350,20 @@ export interface YearSummaryInput {
   precision: FinishPrecision;
   /** Los completados de QUIEN MIRA, para «contigo». `null` en el perfil propio. */
   viewerCompleted?: readonly GameItem[] | null;
+  /** Los Próximos de QUIEN MIRA: de ahí salen las propuestas de «contigo». */
+  viewerPending?: readonly GameItem[] | null;
   palmares?: readonly PalmaresEntry[];
 }
 
 /** El resumen del año, o `null` si ese año no completó nada (y entonces no hay botón que ofrecer). */
-export function buildYearSummary({ completed, year, precision, viewerCompleted = null, palmares = [] }: YearSummaryInput): YearSummary | null {
+export function buildYearSummary({ completed, year, precision, viewerCompleted = null, viewerPending = null, palmares = [] }: YearSummaryInput): YearSummary | null {
   const games = completedIn(completed, year) as FinishedGame[];
   if (games.length === 0) return null;
 
   const graded = games.map((game) => ({ name: game.name, grade: gradeOf(game), game })).filter((entry) => entry.grade > 0);
   const ranked = [...graded].sort(byGradeThenName);
   const top = ranked[0];
-  const previousGames = completedIn(completed, year - 1);
+  const previousGames = completedIn(completed, year - 1) as FinishedGame[];
 
   const byGrade = [...games].sort((a, b) => gradeOf(b) - gradeOf(a) || a.name.localeCompare(b.name, 'es'));
 
@@ -282,14 +389,8 @@ export function buildYearSummary({ completed, year, precision, viewerCompleted =
     when: buildWhen(games, year, precision),
     strengths: tally(games.map((game) => game.strengths)).slice(0, STRENGTHS_MAX),
     weaknesses: tally(games.map((game) => game.weaknesses)).slice(0, WEAKNESSES_MAX),
-    previous: previousGames.length
-      ? {
-          year: year - 1,
-          count: previousGames.length,
-          avgGrade: average(previousGames.map(gradeOf).filter((grade) => grade > 0)),
-        }
-      : null,
-    common: viewerCompleted ? buildCommon(games, viewerCompleted, year) : null,
+    previous: buildPrevious(games, previousGames, year - 1),
+    common: viewerCompleted ? buildCommon(games, viewerCompleted, viewerPending || [], year, top?.name ?? null) : null,
     palmares: buildPalmares(palmares, year),
   };
 }

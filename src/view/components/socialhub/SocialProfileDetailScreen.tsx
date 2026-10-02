@@ -187,6 +187,7 @@ function SocialProfileDetailScreenBase({
   viewerTier = DEFAULT_PROFILE_TIER,
   viewerHiddenTabs = [],
   viewerCompleted,
+  viewerPending,
   openSummaryOnMount = false,
   onOwnSummaryOpened,
 }: {
@@ -229,6 +230,8 @@ function SocialProfileDetailScreenBase({
    * otra persona dan el «contigo».
    */
   viewerCompleted?: GameItem[];
+  /** Tus Próximos: de ahí salen las propuestas de «contigo» en su resumen del año. */
+  viewerPending?: GameItem[];
   /** Llegar con el resumen del año ya desplegado: desde su tarjeta del feed o desde el aviso del 15. */
   openSummaryOnMount?: boolean;
   /**
@@ -286,8 +289,8 @@ function SocialProfileDetailScreenBase({
     const theirs = ((activeProfileDetail.sharedLists?.c || []) as SharedListGame[]).filter(
       (game): game is FinishedGame => typeof game === 'object' && game !== null && '_ts' in game,
     );
-    return buildYearSummary({ completed: theirs, year, precision: isAdmin ? 'day' : 'month', viewerCompleted: viewerCompleted ?? [], palmares });
-  }, [activeProfileDetail, canSeeFullProfile, isOwnProfile, palmares, viewerCompleted, viewerHiddenTabs, viewerTier]);
+    return buildYearSummary({ completed: theirs, year, precision: isAdmin ? 'day' : 'month', viewerCompleted: viewerCompleted ?? [], viewerPending, palmares });
+  }, [activeProfileDetail, canSeeFullProfile, isOwnProfile, palmares, viewerCompleted, viewerHiddenTabs, viewerPending, viewerTier]);
 
   // Abrir TU resumen es lo que puede avisar a tus amistades. Se avisa al pintarse de verdad —desplegado y con
   // datos—, no al pulsar: llegar desde el aviso del 15 también cuenta como haberlo visto.

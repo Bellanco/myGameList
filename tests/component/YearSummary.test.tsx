@@ -75,3 +75,52 @@ describe('YearSummary — tarjetas', () => {
     expect(screen.getByRole('region', { name: YEAR_SUMMARY_UI.common.kicker })).toBeInTheDocument();
   });
 });
+
+describe('YearSummary — frente al año anterior', () => {
+  const dated = (id: number, name: string, grade: number, finishedOn: string, years = [2025]): FinishedGame => ({ ...game(id, name, grade), years, finishedOn });
+
+  it('con fechas en los dos años, la carrera y el mes en que superó el anterior', () => {
+    const race = buildYearSummary({
+      completed: [
+        dated(1, 'Uno', 80, '2025-02'),
+        dated(2, 'Dos', 80, '2025-04'),
+        dated(3, 'Tres', 80, '2025-04'),
+        dated(10, 'Viejo', 80, '2024-01', [2024]),
+        dated(11, 'Viejo II', 80, '2024-09', [2024]),
+      ],
+      year: 2025,
+      precision: 'month',
+    })!;
+    render(<YearSummary summary={race} voice={voice} />);
+    const card = screen.getByRole('region', { name: YEAR_SUMMARY_UI.previous.kicker(2024) });
+    expect(card).toHaveTextContent(YEAR_SUMMARY_UI.previous.passed(voice, 3, 2024));
+    expect(screen.getByRole('img', { name: YEAR_SUMMARY_UI.previous.raceAria(2025, 2024, 3, 2) })).toBeInTheDocument();
+  });
+
+  it('sin fechas no hay carrera: el titular cuenta la diferencia', () => {
+    render(<YearSummary summary={buildYearSummary({ completed: [...completed, { ...game(10, 'Viejo', 80), years: [2024] }], year: 2025, precision: 'month' })!} voice={voice} />);
+    const card = screen.getByRole('region', { name: YEAR_SUMMARY_UI.previous.kicker(2024) });
+    expect(card).toHaveTextContent(YEAR_SUMMARY_UI.previous.title(4, 1, 2024));
+    expect(card.querySelector('.ys-race')).toBeNull();
+  });
+
+  it('una diferencia que se redondea a cero no dice «más alto»', () => {
+    // 87,5 frente a 87: medio punto sobre 100, que en estrellas es 0,0.
+    const tiny = buildYearSummary({ completed: [...completed, { ...game(10, 'Viejo', 87), years: [2024] }], year: 2025, precision: 'month' })!;
+    render(<YearSummary summary={tiny} voice={voice} />);
+    const card = screen.getByRole('region', { name: YEAR_SUMMARY_UI.previous.kicker(2024) });
+    expect(card).toHaveTextContent('±0,0');
+    expect(card).not.toHaveTextContent('más alto');
+  });
+});
+
+describe('YearSummary — contigo', () => {
+  it('propone lo de su año que tienes en Próximos', () => {
+    const withPicks = buildYearSummary({ completed, year: 2025, precision: 'month', viewerCompleted: [game(9, 'Dos', 70)], viewerPending: [game(20, 'Uno', 0)] })!;
+    render(<YearSummary summary={withPicks} voice={voice} />);
+    const card = screen.getByRole('region', { name: YEAR_SUMMARY_UI.common.kicker });
+    expect(card).toHaveTextContent(YEAR_SUMMARY_UI.common.picksTitle);
+    expect(card).toHaveTextContent(YEAR_SUMMARY_UI.common.pickBest);
+    expect(card).toHaveTextContent(YEAR_SUMMARY_UI.common.pickWhere);
+  });
+});

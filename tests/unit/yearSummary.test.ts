@@ -117,7 +117,8 @@ describe('el resumen', () => {
   });
 
   it('frente al año anterior', () => {
-    expect(summary.previous).toEqual({ year: 2024, count: 1, avgGrade: 60 });
+    // «Viejo» no tiene fecha: cuenta en el total, pero no hay carrera mes a mes. Ningún género crece en dos.
+    expect(summary.previous).toEqual({ year: 2024, count: 1, avgGrade: 60, months: null, undated: 1, genreRise: null });
   });
 
   it('no lleva horas por ningún lado', () => {
@@ -127,6 +128,33 @@ describe('el resumen', () => {
   it('sin ninguna fecha, la tarjeta de cuándo no existe', () => {
     const undated = buildYearSummary({ completed: completed.map(({ finishedOn: _omit, ...rest }) => rest), year: 2025, precision: 'month' });
     expect(undated?.when).toBeNull();
+  });
+});
+
+describe('la carrera frente al año anterior', () => {
+  const summary = buildYearSummary({
+    completed: [
+      game(1, { genres: ['Roguelike'], finishedOn: '2025-03' }),
+      game(2, { genres: ['Roguelike'], finishedOn: '2025-03' }),
+      game(3, { genres: ['Roguelike'], finishedOn: '2025-07' }),
+      game(4, { genres: ['RPG'], finishedOn: '2025-07' }),
+      game(10, { years: [2024], genres: ['RPG'], finishedOn: '2024-01' }),
+      game(11, { years: [2024], genres: ['Roguelike'], finishedOn: '2024-06' }),
+      // Sin fecha: no sale en la gráfica, pero el total del año anterior sigue siendo 3.
+      game(12, { years: [2024], genres: ['RPG'] }),
+    ],
+    year: 2025,
+    precision: 'month',
+  })!;
+
+  it('reparte por mes lo que tiene fecha del año anterior y cuenta lo que no', () => {
+    expect(summary.previous?.months).toEqual([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0]);
+    expect(summary.previous?.undated).toBe(1);
+    expect(summary.previous?.count).toBe(3);
+  });
+
+  it('el género que más creció, solo si gana dos o más', () => {
+    expect(summary.previous?.genreRise).toEqual({ name: 'Roguelike', from: 1, to: 3 });
   });
 });
 
@@ -158,7 +186,30 @@ describe('contigo', () => {
       // El de fondo es el que más os gustó a los dos: Split Fiction (84,5 de media) frente a Hades II (79).
       top: { name: 'Split Fiction', platforms: ['PC'] },
       gap: { name: 'Hades II', theirs: 90, yours: 68 },
+      near: { name: 'Split Fiction', theirs: 84, yours: 85 },
+      // Cien menos la diferencia media: (22 + 1) / 2.
+      affinity: 89,
+      picks: [],
     });
+  });
+
+  it('con un solo juego en común con nota no hay afinidad ni «donde más coincidís»', () => {
+    const summary = buildYearSummary({ completed: theirs, year: 2025, precision: 'month', viewerCompleted: mine.slice(0, 1) })!;
+    expect(summary.common).toMatchObject({ names: ['Hades II'], gap: { name: 'Hades II' }, near: null, affinity: null });
+  });
+
+  it('propone lo de su año que tú tienes en Próximos, de mejor a peor nota suya', () => {
+    const completed = [
+      ...theirs,
+      game(4, { name: 'Animal Well', grade: 96, finishedOn: '2025-11', review: 'Cada vez que creía haberlo visto todo, el pozo tenía otro fondo.' }),
+      game(5, { name: 'Sin nota', grade: 0, scored: false }),
+    ];
+    const pending: GameItem[] = [game(20, { name: 'Solo suyo', years: [] }), game(21, { name: 'animal well', years: [] }), game(22, { name: 'Sin nota', years: [] })];
+    const summary = buildYearSummary({ completed, year: 2025, precision: 'month', viewerCompleted: mine, viewerPending: pending })!;
+    expect(summary.common?.picks).toEqual([
+      { name: 'Animal Well', platforms: ['PC'], grade: 96, best: true, month: 10, quote: 'Cada vez que creía haberlo visto todo, el pozo tenía otro fondo.' },
+      { name: 'Solo suyo', platforms: ['PC'], grade: 80, best: false, month: null, quote: '' },
+    ]);
   });
 
   it('en el perfil propio no hay «contigo»', () => {

@@ -513,6 +513,7 @@ const SocialHubInner = memo(function SocialHubInner({
           viewerTier={ownTier}
           viewerHiddenTabs={hiddenTabs}
           viewerCompleted={games?.c}
+          viewerPending={games?.p}
           // La tarjeta del feed y el aviso del 15 llegan con el resumen ya desplegado (estado de la navegación).
           openSummaryOnMount={wantsYearSummary(location.state)}
           onOwnSummaryOpened={markOwnYearSummaryOpened}
