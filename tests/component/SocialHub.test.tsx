@@ -1738,6 +1738,47 @@ describe('SocialHub — alta de perfil: exige juegos completados', () => {
 // P3 — el mensaje de estado se borraba con un temporizador por aviso y sin cancelar el anterior, así que dos
 // avisos seguidos se pisaban: el plazo del PRIMERO borraba el texto del SEGUNDO. Con un temporizador único
 // reutilizado, cada aviso dura lo suyo.
+/**
+ * SERVICIO LIMITADO (docs/plan-degradacion-servicios.md, fase 2). Un servicio que no atiende —GitHub limitando, el
+ * cupo de Firestore agotado— salía con su mensaje crudo en inglés y en tono de error, que además bloqueaba el feed y
+ * el editor. Ahora es un aviso propio, persistente, y lo social sigue con lo guardado.
+ */
+describe('SocialHub — servicio limitado', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    firebaseMocks.getPublicConfig.mockResolvedValue({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
+    firebaseMocks.getPrivateConfig.mockResolvedValue(null);
+    firebaseMocks.getMyFriendships.mockResolvedValue({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+    firebaseMocks.listSocialDirectory.mockResolvedValue([]);
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social-limitado', etag: null, lastRemoteUpdatedAt: 0 });
+    gistMocks.ensureSecretSocialGist.mockImplementation(async (_t?: string, gistId?: string) => ({
+      gistId: gistId || '', etag: null, migrated: false, supersededGistIds: [], keptPublicGistIds: [], copiedEntries: 0,
+    }));
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    });
+  });
+
+  it('GitHub limitando al leer tu canal: aviso propio, sin el texto crudo y sin bloquear el feed', async () => {
+    const limitado = Object.assign(new Error('Read failed: 403 - API rate limit exceeded for user ID 1.'), { status: 403, rateLimited: true });
+    const leerDeVerdad = gistMocks.readSocialGist.getMockImplementation()!;
+    gistMocks.readSocialGist.mockImplementation(async () => { throw limitado; });
+    onTestFinished(() => { gistMocks.readSocialGist.mockImplementation(leerDeVerdad); });
+    // Firestore tampoco atiende: el nombre de reserva no puede tumbar la hidratación entera.
+    firebaseMocks.resolveOwnProfile.mockRejectedValue(Object.assign(new Error('Quota exceeded.'), { code: 'resource-exhausted' }));
+
+    renderHub('/social');
+
+    expect(await screen.findByLabelText(SOCIAL_UI.limited.sectionAria)).toBeInTheDocument();
+    expect(screen.queryByText(/rate limit/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Quota exceeded.')).not.toBeInTheDocument();
+    // El feed sigue a mano: no se ha cerrado el espacio social por un cupo.
+    expect(await findFeedScreen()).toBeInTheDocument();
+  });
+});
+
 describe('SocialHub — el aviso de estado no lo borra el temporizador del aviso anterior', () => {
   beforeEach(() => {
     vi.clearAllMocks();

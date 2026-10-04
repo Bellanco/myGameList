@@ -45,6 +45,16 @@ export const SOCIAL_UI = {
     bodyEmpty: 'Aquí todavía no hay nada guardado. En cuanto vuelva la red aparecerá la actividad.',
     badge: 'Sin conexión',
   },
+  // Aviso PERSISTENTE de SERVICIO LIMITADO: hay red, pero un servicio no atiende (el cupo diario de Firestore
+  // agotado, GitHub limitando peticiones). Mismo trato que el de sin conexión: se ve lo guardado y se dice que se
+  // pondrá al día solo, sin el error de librería (docs/plan-degradacion-servicios.md).
+  limited: {
+    sectionAria: 'Servicio limitado',
+    badge: 'Servicio limitado',
+    title: 'Lo social va con lo guardado por ahora',
+    body: 'Uno de los servicios que usa el espacio social no responde en este momento. Estás viendo lo último guardado en este dispositivo; tus listas funcionan con normalidad y esto se pondrá al día solo.',
+    bodyEmpty: 'Uno de los servicios que usa el espacio social no responde en este momento. Tus listas funcionan con normalidad; la actividad aparecerá en cuanto vuelva.',
+  },
   errorBoundary: {
     sectionAria: 'Error del espacio social',
     // Mismo formato que la pantalla raíz: el guiño del tema en grande —aquí sobre lo que ha caído, que es la
@@ -390,6 +400,8 @@ export const SOCIAL_UI = {
     invalidSaveContext: 'No se pudo guardar ahora mismo. Inténtalo de nuevo.',
     missingSocialToken: 'No se pudo cargar tu espacio social. Vuelve a intentarlo.',
     firestoreCheckFailed: 'No se pudo verificar tu perfil social.',
+    // Un servicio no atiende (ver `limited`): aviso breve, el persistente lo pone el aviso de servicio limitado.
+    serviceLimited: 'Ahora mismo no se puede actualizar el espacio social. Te enseñamos lo último guardado.',
     channelCheckUnavailable: 'Ahora mismo no podemos comprobar tu espacio social. No se ha tocado nada; lo intentaremos más tarde.',
     createGistFailed: 'No se pudo crear tu espacio social.',
     signInFailed: 'No se pudo iniciar sesión con Google.',
@@ -408,6 +420,7 @@ export const SOCIAL_UI = {
     // Sin red la publicación NO se ha ido a ninguna parte, y el texto sigue en el compositor: se dice explícitamente
     // para que nadie lo dé por publicado ni lo escriba otra vez.
     postPublishOffline: 'Sin conexión: la publicación no se ha compartido. El texto sigue aquí, inténtalo al recuperar la red.',
+    postPublishLimited: 'Ahora mismo no se puede publicar: el servicio no responde. El texto sigue aquí; inténtalo más tarde.',
     profileGamesRefreshFailed: 'No se pudieron actualizar los listados de este perfil.',
     refreshThrottled: 'Espera unos segundos antes de volver a actualizar.',
     friendRequestSent: 'Petición de amistad enviada.',

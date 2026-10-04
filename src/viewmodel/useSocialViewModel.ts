@@ -8,7 +8,7 @@ import { createSocialGist, getSocialSyncConfig, readPublicSocialGistById, readSo
 import { reconcileReviewActivity } from '../model/repository/socialActivityReconcile';
 import { getCachedSocialProfile, getLocalMeta, patchLocalMeta, putCachedSocialProfile, type CachedSocialProfileData } from '../model/repository/indexedDbRepository';
 import { PUBLIC_NAME_MAX_LENGTH, safeTrim } from '../core/security/sanitize';
-import { isNetworkFailure, isOffline } from '../core/utils/network';
+import { isNetworkFailure, isOffline, isServiceUnavailable } from '../core/utils/network';
 import { isPermissionDeniedError } from '../model/repository/firebaseClient';
 import { useOnlineStatus } from '../view/hooks/useOnlineStatus';
 import { resolveViewer, withVisiblePhotos } from '../core/social/photoVisibility';
@@ -233,6 +233,8 @@ export function useSocialViewModel(options?: {
    * indicador lo enciende el propio fallo (`reportFailure`) y lo apaga la primera operación que vuelve a funcionar.
    */
   const [networkFailure, setNetworkFailure] = useState(false);
+  /** Algún servicio (Firestore, GitHub) no atiende ahora: se está viendo lo guardado. Ver `reportFailure`. */
+  const [serviceLimited, setServiceLimited] = useState(false);
   const [showSocialSpace, setShowSocialSpace] = useState(false);
   const [hasCreatedProfile, setHasCreatedProfile] = useState(false);
   const [mustCreateProfile, setMustCreateProfile] = useState(false);
@@ -330,6 +332,11 @@ export function useSocialViewModel(options?: {
    * `hasBlockingSocialIssue`, que frena la hidratación del feed y bloquea el editor de perfil —o sea, quedarse sin
    * red dejaba el espacio social cerrado además de sin datos nuevos—.
    *
+   * Un fallo del SERVICIO (Firestore sin cuota o caído, GitHub limitando, 429/5xx) tampoco: no se arregla tocando
+   * nada, solo esperando. Antes salía con su mensaje crudo («Quota exceeded.», en inglés) y en tono `err`, que
+   * cerraba el feed y el editor durante horas por un cupo diario. Ahora enciende `serviceLimited` —el aviso
+   * persistente de «servicio limitado»— y se sigue con lo guardado (docs/plan-degradacion-servicios.md, fase 2).
+   *
    * Lo demás mantiene el comportamiento de siempre (el mensaje del error, que en un 401/403/404 sí dice algo útil,
    * con el texto de la aplicación como respaldo).
    */
@@ -340,8 +347,22 @@ export function useSocialViewModel(options?: {
       return;
     }
     setNetworkFailure(false);
+    if (isServiceUnavailable(error)) {
+      setServiceLimited(true);
+      setFeedback('warn', SOCIAL_UI.status.serviceLimited, 'long');
+      return;
+    }
     setFeedback(kind, error instanceof Error ? error.message : fallback);
   }, [setFeedback]);
+
+  /**
+   * La red y el servicio han respondido: se retiran los dos avisos persistentes. Lo llama la hidratación del feed
+   * cuando termina bien de verdad (no cuando sale de una copia guardada).
+   */
+  const markSocialServiceHealthy = useCallback((failed: boolean) => {
+    setNetworkFailure(failed);
+    if (!failed) setServiceLimited(false);
+  }, []);
 
   const lockProfileEditor = useCallback(() => {
     setMustCreateProfile(true);
@@ -534,7 +555,7 @@ export function useSocialViewModel(options?: {
     defaultSocialVisibility,
     setFeedback,
     reportFailure,
-    setNetworkFailure,
+    setNetworkFailure: markSocialServiceHealthy,
   });
 
   // «Perfiles» y el porcentaje de logros de la comunidad necesitan también a quien NO es tu amigo, y eso tiene su
@@ -1698,7 +1719,9 @@ export function useSocialViewModel(options?: {
 
     try {
       setHydratingProfile(true);
-      const existingProfile = await resolveOwnProfile(authUser);
+      // Solo da un respaldo del nombre (abajo): si Firestore no atiende, se sigue con lo del gist en vez de perder la
+      // hidratación entera por un dato de reserva.
+      const existingProfile = await resolveOwnProfile(authUser).catch(() => null);
 
       const socialRead = await readSocialGist(socialConfig.token, socialCfgGistId, socialCfgEtag);
       if (!socialRead.notModified) {
@@ -1782,9 +1805,9 @@ export function useSocialViewModel(options?: {
         return;
       }
 
-      // Fallo de RED: se rescata el perfil guardado aunque su ventana haya expirado. Sin esto, quedarse sin
-      // conexión con la caché caducada equivalía a no tener perfil —y el editor se cerraba encima con un aviso.
-      if (isNetworkFailure(error) || isOffline()) {
+      // Fallo de RED o del SERVICIO (GitHub limitando, por ejemplo): se rescata el perfil guardado aunque su ventana
+      // haya expirado. Sin esto, la caché caducada equivalía a no tener perfil —y el editor se cerraba encima.
+      if (isServiceUnavailable(error) || isOffline()) {
         const stale = await getCachedSocialProfile(socialCfgGistId, { allowExpired: true }).catch(() => null);
         if (stale) {
           applyCachedProfile(stale);
@@ -2336,6 +2359,11 @@ export function useSocialViewModel(options?: {
      * único que ve un wifi conectado sin salida a internet).
      */
     offline: !online || networkFailure,
+    /**
+     * Algún servicio no atiende ahora (cuota de Firestore, límite de GitHub): se ve lo guardado y se dice con un
+     * aviso persistente propio, distinto del de sin conexión. El de sin conexión manda si se dan los dos.
+     */
+    serviceLimited: serviceLimited && online && !networkFailure,
     /**
      * ¿Hay algo guardado que mostrar mientras no hay red? Separa los dos mensajes del aviso: "esto es lo último
      * que se guardó" (hay caché) y "aquí todavía no hay nada" (nunca se abrió el espacio social en este

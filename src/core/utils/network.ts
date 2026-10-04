@@ -98,7 +98,12 @@ export function isServiceUnavailable(error: unknown): boolean {
   if (!error || typeof error !== 'object') {
     return false;
   }
-  const candidate = error as { code?: unknown; status?: unknown };
+  const candidate = error as { code?: unknown; status?: unknown; rateLimited?: unknown };
+  // GitHub limitando peticiones: llega como 403 —el mismo estado que un token sin permisos—, así que lo distingue
+  // la marca que pone `buildGithubError` al ver sus cabeceras, no el estado.
+  if (candidate.rateLimited === true) {
+    return true;
+  }
   if (typeof candidate.code === 'string' && SERVICE_DOWN_CODES.has(candidate.code.replace(/^firestore\//, ''))) {
     return true;
   }
