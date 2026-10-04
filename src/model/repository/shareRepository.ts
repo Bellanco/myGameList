@@ -94,27 +94,97 @@ export interface PublishedShare {
 export async function publishShare(
   draft: Omit<SharedReview, 'v' | 'createdAt' | 'expiresAt' | 'authorNick'>,
 ): Promise<PublishedShare> {
-  const response = await fetch(API_BASE, {
-    method: 'POST',
-    headers: await authHeaders(),
-    body: JSON.stringify(draft),
-  });
-  return (await parse(response)) as unknown as PublishedShare;
+  try {
+    const response = await fetch(API_BASE, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify(draft),
+    });
+    return (await parse(response)) as unknown as PublishedShare;
+  } finally {
+    invalidateMySharesCache();
+  }
 }
 
-/** Mis enlaces activos, mi cuota ya resuelta y mi veto si lo hubiera. */
-export async function listMyShares(): Promise<MySharesResponse & { tier: string }> {
-  const response = await fetch(`${API_BASE}/mine`, { headers: await authHeaders() });
-  return (await parse(response)) as unknown as MySharesResponse & { tier: string };
+type MySharesSnapshot = MySharesResponse & { tier: string };
+
+/**
+ * CUÁNTO VALE LA COPIA DE «MIS ENLACES». Cada `GET /api/share/mine` es un `list()` de KV, y ese cupo es de 1.000 al
+ * día para la cuenta entera: con el botón de compartir pidiéndolo al montarse en cada detalle de reseña propia,
+ * era el primer techo de la app (ver «Revisión del 04-10-2026» en docs/plan-capacidad-gratuita.md).
+ *
+ * Lo que puede quedarse viejo es poco: lo que cambia desde ESTE navegador (publicar, retirar) tira la copia al
+ * momento; solo un veto o un ajuste de cupo del administrador, o un enlace publicado desde otro dispositivo,
+ * tardan hasta esto en verse. La caducidad de cada enlace la decide el servidor al leerlo, no esta copia.
+ */
+export const MY_SHARES_MAX_AGE_MS = 5 * 60 * 1000;
+
+let mySharesCache: { uid: string; at: number; value: MySharesSnapshot } | null = null;
+let mySharesInFlight: { uid: string; promise: Promise<MySharesSnapshot> } | null = null;
+/** Sube con cada invalidación: una lectura que salió antes no puede guardar lo que ya se sabe viejo. */
+let mySharesGeneration = 0;
+
+/** Olvida la copia de «mis enlaces». La llaman publicar y retirar; exportada para las pruebas. */
+export function invalidateMySharesCache(): void {
+  mySharesCache = null;
+  mySharesInFlight = null;
+  mySharesGeneration += 1;
+}
+
+async function sessionUid(): Promise<string> {
+  const services = await initializeFirebaseServices();
+  if (!services) return '';
+  await services.auth.authStateReady();
+  return services.auth.currentUser?.uid || '';
+}
+
+/**
+ * Mis enlaces activos, mi cuota ya resuelta y mi veto si lo hubiera.
+ *
+ * Con copia en memoria de `MY_SHARES_MAX_AGE_MS` por usuario, y una sola petición en vuelo: varios botones que se
+ * montan a la vez comparten la misma respuesta.
+ */
+export async function listMyShares(): Promise<MySharesSnapshot> {
+  const uid = await sessionUid();
+  if (uid && mySharesCache?.uid === uid && Date.now() - mySharesCache.at < MY_SHARES_MAX_AGE_MS) {
+    return mySharesCache.value;
+  }
+  if (uid && mySharesInFlight?.uid === uid) {
+    return mySharesInFlight.promise;
+  }
+
+  const generation = mySharesGeneration;
+  const promise = (async () => {
+    const response = await fetch(`${API_BASE}/mine`, { headers: await authHeaders() });
+    const value = (await parse(response)) as unknown as MySharesSnapshot;
+    if (uid && generation === mySharesGeneration) {
+      mySharesCache = { uid, at: Date.now(), value };
+    }
+    return value;
+  })();
+  if (!uid) return promise;
+
+  const entry = { uid, promise };
+  mySharesInFlight = entry;
+  try {
+    return await promise;
+  } finally {
+    if (mySharesInFlight === entry) mySharesInFlight = null;
+  }
 }
 
 /** Retira un enlace. Idempotente: retirar lo ya retirado no es un error. */
 export async function removeShare(token: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/${encodeURIComponent(token)}`, {
-    method: 'DELETE',
-    headers: await authHeaders(),
-  });
-  await parse(response);
+  try {
+    const response = await fetch(`${API_BASE}/${encodeURIComponent(token)}`, {
+      method: 'DELETE',
+      headers: await authHeaders(),
+    });
+    await parse(response);
+  } finally {
+    // También si falla: no se sabe en qué estado ha quedado, y la siguiente lectura lo dirá.
+    invalidateMySharesCache();
+  }
 }
 
 /**
@@ -124,9 +194,13 @@ export async function removeShare(token: string): Promise<void> {
  * dos quedan como residuo de un uid que ya no existirá, y los limpia el administrador.
  */
 export async function removeAllMyShares(): Promise<number> {
-  const response = await fetch(`${API_BASE}/mine`, { method: 'DELETE', headers: await authHeaders() });
-  const body = await parse(response);
-  return Number(body.removed) || 0;
+  try {
+    const response = await fetch(`${API_BASE}/mine`, { method: 'DELETE', headers: await authHeaders() });
+    const body = await parse(response);
+    return Number(body.removed) || 0;
+  } finally {
+    invalidateMySharesCache();
+  }
 }
 
 // La LECTURA del artículo vive en `publicShareRepository.ts`, no aquí: la usa la página pública, que no debe
