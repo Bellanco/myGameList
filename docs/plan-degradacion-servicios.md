@@ -68,7 +68,7 @@ con el cupo agotado (falla abierto).
   «oculto» en local y la entrada desaparece hasta que la API vuelve.
 - **Enfriamiento compartido de GitHub** en `githubHttp.ts`: el token es el mismo para sync y social.
 
-## Fase 3 — Compartir · M
+## Fase 3 — Compartir · M · ✅ hecha (04-10-2026)
 
 - Cliente: `parse()` marca `unavailable` (estado 0, 429, ≥500 o cuerpo que no es JSON); `useShareViewModel` lo
   recuerda un rato (`Retry-After` o ~15 min) y **`ShareReviewButton` no se pinta** (hay retornos tempranos en
@@ -121,6 +121,13 @@ con el cupo agotado (falla abierto).
       la medianoche del Pacífico.
       **Ajuste respecto al plan:** el aviso persistente lo retira el feed al cargar bien, aunque el perfil propio
       haya fallado (de eso avisa el mensaje breve): lo que se ve está al día.
-- [ ] Fase 3: compartir oculto, servidor 503, página pública.
+- [x] Fase 3 (04-10-2026): servidor con `ServiceUnavailableError` + `unavailable()` (503, `unavailable: true`,
+      `Retry-After` hasta las 00:00 UTC) y `functions/api/_middleware.ts` (las rutas generadas siguen siendo
+      `/poster`, `/cover`, `/r/*`, `/api/*`); publicar distingue `InvalidShareError` (400) de KV; el contador diario
+      no da error tras publicar; JWKS sin KV; perfil 429/5xx → no disponible; `/r/` con el shell si falla KV.
+      Cliente: «no disponible» por la marca, un 5xx, HTML o sin red —**no** por el 429, que también es el límite
+      diario—, recordado hasta 1 h; el botón no se ofrece; Ajustes enseña la última lista para copiar (se borra con
+      la cuenta); página pública con «no se puede cargar ahora» y reintentar; el service worker sirve el shell si una
+      navegación responde 429/5xx.
 - [ ] Fase 4: carátulas; después, «Fail open» en Pages.
 - [ ] Fase 5: menores.
