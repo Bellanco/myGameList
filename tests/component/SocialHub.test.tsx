@@ -903,6 +903,49 @@ describe('SocialHub (componente, post-M3)', () => {
   });
 
   /**
+   * EL MISMO CANAL VACÍO, POR UN FALLO DEL SERVICIO (docs/plan-degradacion-servicios.md, fase 1). Con Firestore sin
+   * cuota la comprobación de «¿ya tiene canal?» fallaba, eso se leía como «no tiene» y el auto-crear fabricaba uno
+   * nuevo sin que nadie tocara nada. GitHub sí responde en ese caso, así que la creación salía bien.
+   */
+  it('con Firestore sin cuota no crea un canal vacío, avisa en suave y no reintenta en bucle', async () => {
+    const sinCuota = Object.assign(new Error('Quota exceeded.'), { code: 'resource-exhausted' });
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: '' });
+    gistMocks.getSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'games', etag: null, lastRemoteUpdatedAt: 0 } as never);
+    gistMocks.getSocialSyncConfig.mockReturnValue(null);
+    firebaseMocks.getPrivateConfig.mockRejectedValue(sinCuota);
+    firebaseMocks.resolveOwnProfile.mockRejectedValue(sinCuota);
+
+    renderHub();
+
+    expect(await screen.findByText(SOCIAL_UI.status.channelCheckUnavailable)).toBeInTheDocument();
+    const preguntas = firebaseMocks.getPrivateConfig.mock.calls.length;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(gistMocks.createSocialGist).not.toHaveBeenCalled();
+    // Una pasada del montaje y una del auto-crear, y ninguna más: el auto-crear se cierra en esta sesión.
+    expect(firebaseMocks.getPrivateConfig.mock.calls.length).toBe(preguntas);
+    expect(screen.queryByText('Quota exceeded.')).not.toBeInTheDocument();
+  });
+
+  it('si GitHub falla al comprobar el canal guardado (no un 404), tampoco crea uno nuevo', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: '' });
+    gistMocks.getSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'games', etag: null, lastRemoteUpdatedAt: 0 } as never);
+    gistMocks.getSocialSyncConfig.mockReturnValue(null);
+    firebaseMocks.getPrivateConfig.mockResolvedValue({ socialGistId: 'gs-mio' });
+    const leerDeVerdad = gistMocks.readSocialGist.getMockImplementation()!;
+    gistMocks.readSocialGist.mockImplementation(async () => {
+      throw new Error('Read failed: 403 - API rate limit exceeded');
+    });
+    onTestFinished(() => { gistMocks.readSocialGist.mockImplementation(leerDeVerdad); });
+
+    renderHub();
+
+    expect(await screen.findByText(SOCIAL_UI.status.channelCheckUnavailable)).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(gistMocks.createSocialGist).not.toHaveBeenCalled();
+  });
+
+  /**
    * VOLVER SIN TERMINAR LA VENTANA DE GOOGLE. Firebase tarda hasta 10 s en dar el popup por cerrado (en el móvil,
    * indefinidamente si se vuelve atrás sin cerrar la pestaña), y el botón se quedaba en «Entrando...». Ahora el
    * repositorio avisa (`onAbandoned`) y el botón vuelve; y si se pulsa otra vez, el intento viejo que Firebase

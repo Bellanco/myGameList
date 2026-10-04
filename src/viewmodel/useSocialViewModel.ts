@@ -9,6 +9,7 @@ import { reconcileReviewActivity } from '../model/repository/socialActivityRecon
 import { getCachedSocialProfile, getLocalMeta, patchLocalMeta, putCachedSocialProfile, type CachedSocialProfileData } from '../model/repository/indexedDbRepository';
 import { PUBLIC_NAME_MAX_LENGTH, safeTrim } from '../core/security/sanitize';
 import { isNetworkFailure, isOffline } from '../core/utils/network';
+import { isPermissionDeniedError } from '../model/repository/firebaseClient';
 import { useOnlineStatus } from '../view/hooks/useOnlineStatus';
 import { resolveViewer, withVisiblePhotos } from '../core/social/photoVisibility';
 import { useGenericPhoto } from '../view/hooks/useGenericPhoto';
@@ -91,6 +92,9 @@ const shouldRequireProfileCreation = (profileExists: boolean, justSavedProfile: 
 const shouldRedirectToProfileEditor = (isProfileEditorLocked: boolean, activePanel: string): boolean => {
   return isProfileEditorLocked && activePanel !== 'profile';
 };
+
+/** Respuesta de `attachExistingSocialGist`: vinculado, no tiene, o no se ha podido saber. */
+type ExistingSocialGist = 'linked' | 'none' | 'unknown';
 
 const isProfileEditorLocked = (mustCreateProfile: boolean, hasBlockingSocialIssue: boolean): boolean => {
   return mustCreateProfile || hasBlockingSocialIssue;
@@ -586,10 +590,21 @@ export function useSocialViewModel(options?: {
     [hasMainSync, hasSocialSession, hasSocialGist],
   );
 
-  const attachExistingSocialGist = useCallback(async (user: SocialAuthUser): Promise<boolean> => {
+  /** El auto-crear del canal social se cierra en esta sesión si no se ha podido saber si ya existe uno. */
+  const autoCreateSocialGistBlockedRef = useRef(false);
+
+  /**
+   * ¿Tiene ya esta cuenta un canal social? TRES respuestas, y la tercera es la que importa: `unknown`.
+   *
+   * Era un booleano, y cualquier fallo al preguntar (Firestore sin cuota o caído, GitHub limitado) salía como
+   * `false`, que quien llama lee como «no tiene»: el mismo canal vacío del comentario de abajo, pero por un fallo
+   * del servicio en vez de por la migración del campo (docs/plan-degradacion-servicios.md, fase 1). `none` solo
+   * cuando las fuentes RESPONDEN que no hay nada; una regla que no deja leer (`permission-denied`) es una respuesta.
+   */
+  const attachExistingSocialGist = useCallback(async (user: SocialAuthUser): Promise<ExistingSocialGist> => {
     if (!mainSyncConfig?.token) {
       setFeedback('warn', SOCIAL_UI.status.needMainSync);
-      return false;
+      return 'unknown';
     }
 
     try {
@@ -601,20 +616,23 @@ export function useSocialViewModel(options?: {
       // adoptado como propio, el historial real huérfano y el editor de perfil pidiendo el alta otra vez. Y como el
       // saneado de amistades corre al abrir el hub, habría repuntado a los amigos a ese gist vacío, dejándoles sin
       // la actividad de esta cuenta. Aquí NO vale el efecto de recuperación del montaje: ese ya corrió sin sesión.
-      const savedConfig = await getPrivateConfig(user.uid).catch(() => null);
+      const savedConfig = await getPrivateConfig(user.uid).catch((error: unknown) => {
+        if (isPermissionDeniedError(error)) return null;
+        throw error;
+      });
       const savedGistId = String(savedConfig?.socialGistId || '').trim();
       const existingProfile = savedGistId ? null : await resolveOwnProfile(user);
       const existingGistId = savedGistId || (existingProfile?.socialEnabled ? existingProfile.socialGistId.trim() : '');
 
       if (!existingGistId) {
-        return false;
+        return 'none';
       }
 
       try {
         await readSocialGist(mainSyncConfig.token, existingGistId, null);
       } catch (error) {
         if (isNotFoundGistError(error)) {
-          return false;
+          return 'none';
         }
 
         throw error;
@@ -634,10 +652,16 @@ export function useSocialViewModel(options?: {
         void setPrivateConfig(user.uid, { socialGistId: existingGistId }).catch(() => {});
       }
       setFeedback('ok', SOCIAL_UI.status.gistLinkedFromFirestore);
-      return true;
+      return 'linked';
     } catch (error) {
-      reportFailure(error, SOCIAL_UI.status.firestoreCheckFailed);
-      return false;
+      // No se sabe, y entonces no se crea nada. Sin red, el aviso de siempre; con el servicio caído o sin cuota, uno
+      // que no asusta y dice lo que importa: no se ha tocado nada.
+      if (isNetworkFailure(error) || isOffline()) {
+        reportFailure(error, SOCIAL_UI.status.firestoreCheckFailed);
+      } else {
+        setFeedback('warn', SOCIAL_UI.status.channelCheckUnavailable, 'long');
+      }
+      return 'unknown';
     } finally {
       setResolvingSocialGist(false);
     }
@@ -1572,8 +1596,15 @@ export function useSocialViewModel(options?: {
 
     try {
       setConnecting(true);
-      const linkedExisting = await attachExistingSocialGist(authUser);
-      if (linkedExisting) {
+      const existing = await attachExistingSocialGist(authUser);
+      if (existing === 'linked') {
+        return;
+      }
+      if (existing === 'unknown') {
+        // Puede que ya tenga canal: crear otro aquí sería el canal vacío de `attachExistingSocialGist`. Y el
+        // auto-crear no vuelve a intentarlo en esta sesión: su efecto se dispara cada vez que `connecting` vuelve a
+        // `false`, así que sin este cierre preguntaría en bucle a un servicio que no responde.
+        autoCreateSocialGistBlockedRef.current = true;
         return;
       }
 
@@ -1602,7 +1633,7 @@ export function useSocialViewModel(options?: {
       // quedarse en «Entrando...» hasta que Firebase se dé cuenta (ver `core/utils/googleSignIn`).
       const user = await signInWithGoogle({ onAbandoned: () => setSigningIn(false) });
       setAuthUser(user);
-      const linkedExisting = await attachExistingSocialGist(user);
+      const linkedExisting = (await attachExistingSocialGist(user)) === 'linked';
       if (linkedExisting) {
         setShowSocialSpace(true);
         setFeedback('ok', SOCIAL_UI.status.signInAndLinked);
@@ -2055,9 +2086,16 @@ export function useSocialViewModel(options?: {
     })();
   }, [authUser?.uid, authUser?.photoURL, ownPhotoIsGeneric, ownPhotoVerdictPending, showPhoto, socialSpaceOpen, socialCfgGistId, patchDirectoryEntries]);
 
-  // Auto-crear gist social si tenemos token + Google pero no gist
+  // Auto-crear gist social si tenemos token + Google pero no gist. Salvo que en esta sesión no se haya podido saber
+  // si ya existe uno (`unknown`): entonces se espera a otra sesión o al botón; nunca se crea a ciegas.
   useEffect(() => {
-    if (hasMainSync && authUser && !hasSocialGist && !connecting && !resolvingSocialGist && !signingIn) {
+    autoCreateSocialGistBlockedRef.current = false;
+  }, [authUser?.uid]);
+  useEffect(() => {
+    if (
+      hasMainSync && authUser && !hasSocialGist && !connecting && !resolvingSocialGist && !signingIn &&
+      !autoCreateSocialGistBlockedRef.current
+    ) {
       void handleCreateSocialGist();
     }
   }, [hasMainSync, authUser, hasSocialGist, connecting, resolvingSocialGist, signingIn, handleCreateSocialGist]);

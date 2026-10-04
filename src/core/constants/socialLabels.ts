@@ -390,6 +390,7 @@ export const SOCIAL_UI = {
     invalidSaveContext: 'No se pudo guardar ahora mismo. Inténtalo de nuevo.',
     missingSocialToken: 'No se pudo cargar tu espacio social. Vuelve a intentarlo.',
     firestoreCheckFailed: 'No se pudo verificar tu perfil social.',
+    channelCheckUnavailable: 'Ahora mismo no podemos comprobar tu espacio social. No se ha tocado nada; lo intentaremos más tarde.',
     createGistFailed: 'No se pudo crear tu espacio social.',
     signInFailed: 'No se pudo iniciar sesión con Google.',
     loadProfileFailed: 'No se pudo cargar tu perfil social.',
