@@ -87,6 +87,10 @@ function stripOAuthParamsFromUrl(): void {
   }
 }
 
+/** El canje con GitHub no está disponible ahora: se ofrece la conexión manual, que no pasa por nuestra Function. */
+export const GITHUB_OAUTH_UNAVAILABLE =
+  'Ahora mismo no se puede conectar con GitHub desde aquí. Puedes conectar a mano con un token y el Gist ID en Ajustes → Integración, o volver a intentarlo más tarde.';
+
 /**
  * Completa el retorno de OAuth: valida el `state`, canjea el `code` por un token vía la Function del edge y
  * limpia la URL. Devuelve el token. Lanza si el state no coincide o el intercambio falla.
@@ -139,11 +143,23 @@ export async function completeGithubOAuth(): Promise<string> {
     throw new Error('El parámetro de seguridad (state) no coincide');
   }
 
-  const response = await fetch(OAUTH_EXCHANGE_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, redirect_uri: getRedirectUri(), state: returnedState }),
-  });
+  // SI EL SERVICIO NO RESPONDE —sin red, el cupo de Functions de Cloudflare agotado (su página de error, HTML), un
+  // 429 o un 5xx—, el mensaje dice la salida que sí funciona: conectar a mano con un token. El canje necesita
+  // nuestra Function; la conexión manual habla directamente con GitHub (docs/plan-degradacion-servicios.md).
+  let response: Response;
+  try {
+    response = await fetch(OAUTH_EXCHANGE_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, redirect_uri: getRedirectUri(), state: returnedState }),
+    });
+  } catch {
+    throw new Error(GITHUB_OAUTH_UNAVAILABLE);
+  }
+  const isHtml = (response.headers?.get?.('content-type') || '').includes('text/html');
+  if (isHtml || response.status === 429 || response.status >= 500) {
+    throw new Error(GITHUB_OAUTH_UNAVAILABLE);
+  }
 
   const data = (await response.json().catch(() => null)) as { token?: string; error?: string } | null;
   if (!response.ok || !data?.token) {

@@ -711,7 +711,18 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       const existingGistId = await findGamesGistId(githubToken); // '' si es su primera conexión
       await connectSyncWithCredentials(githubToken, existingGistId);
     } catch (error) {
-      handleSyncError(error, { fallback: SYNC_MESSAGES.connectError, logName: 'completeGithubLoginFromRedirect' });
+      // Sin sincronización configurada todavía, un fallo al CONECTAR no es un fallo de sincronización: marcarlo así
+      // dejaba la insignia en «Error de sincronización» y la máquina en espera sin nada que sincronizar. Se dice lo
+      // que ha pasado y se vuelve al estado de reposo.
+      if (!getSyncConfig()) {
+        setStatus('idle');
+        const message = error instanceof Error ? error.message : SYNC_MESSAGES.connectError;
+        setStatusMessage(message);
+        onNotice('warn', message);
+        logSyncError('completeGithubLoginFromRedirect', error);
+      } else {
+        handleSyncError(error, { fallback: SYNC_MESSAGES.connectError, logName: 'completeGithubLoginFromRedirect' });
+      }
     } finally {
       lock.release();
       setGithubLoggingIn(false);

@@ -4,7 +4,7 @@
 // protege aquí es una sola: ¿este retorno lo empezaste tú? La respuesta es el `state` que se guardó al salir. Sin
 // él no hay nada que comparar, y lo que se comprueba abajo es que en ese caso NO se canjea nada.
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { completeGithubOAuth } from '../../src/model/repository/githubOAuthRepository';
+import { completeGithubOAuth, GITHUB_OAUTH_UNAVAILABLE } from '../../src/model/repository/githubOAuthRepository';
 
 const CLAVE = 'mis-listas-github-oauth-state';
 
@@ -74,3 +74,36 @@ describe('la vuelta de GitHub solo se canjea si la empezamos nosotros', () => {
     expect(sessionStorage.getItem(CLAVE)).toBeNull();
   });
 });
+
+// docs/plan-degradacion-servicios.md, fase 5: si nuestro canje no responde (sin red, cupo de Cloudflare agotado),
+// el mensaje propone lo que sí funciona: la conexión manual con un token, que habla directamente con GitHub.
+describe('la vuelta de GitHub con el servicio de canje sin responder', () => {
+  it('con la página de error de Cloudflare, propone la conexión manual', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('<html>Error 1027</html>', { status: 429, headers: { 'content-type': 'text/html' } }),
+    );
+    guardado('mio');
+    vuelveDeGithub('c0d3', 'mio');
+
+    await expect(completeGithubOAuth()).rejects.toThrow(GITHUB_OAUTH_UNAVAILABLE);
+  });
+
+  it('sin red, lo mismo', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
+    guardado('mio');
+    vuelveDeGithub('c0d3', 'mio');
+
+    await expect(completeGithubOAuth()).rejects.toThrow(GITHUB_OAUTH_UNAVAILABLE);
+  });
+
+  it('un error de verdad del canje (400 con su motivo) se sigue contando tal cual', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ error: 'El código ya se usó' }), { status: 400, headers: { 'content-type': 'application/json' } }),
+    );
+    guardado('mio');
+    vuelveDeGithub('c0d3', 'mio');
+
+    await expect(completeGithubOAuth()).rejects.toThrow('El código ya se usó');
+  });
+});
+
