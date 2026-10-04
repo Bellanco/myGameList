@@ -2,6 +2,7 @@
 import { Icon } from '../Icon';
 import { ScoreDisplay } from '../ScoreDisplay';
 import { NoScoreMedal } from '../NoScoreMedal';
+import { ReviewParagraphs } from '../ReviewParagraphs';
 import { resolveGrade } from '../../../core/utils/scoreScale';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import type {
@@ -529,7 +530,7 @@ function SocialFeedScreenBase({
                             ? <ScoreDisplay game={{ score: Number(entry.rating || 0), grade: entry.grade ?? null }} />
                             : <NoScoreMedal />}
                         </div>
-                        {reviewText ? <p className="hub-feed-review-text" title={reviewText}>{reviewText}</p> : null}
+                        {reviewText ? <p className="hub-feed-review-text" title={reviewText}><ReviewParagraphs text={reviewText} /></p> : null}
                       </article>
                     );
                   })}

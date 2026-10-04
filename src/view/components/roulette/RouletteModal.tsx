@@ -4,6 +4,7 @@ import { useNativeDialog } from '../../modals/useNativeDialog';
 import { Icon } from '../Icon';
 import { ScoreDisplay } from '../ScoreDisplay';
 import { ReviewDetail, type ReviewAuthor } from './ReviewDetail';
+import { ReviewParagraphs } from '../ReviewParagraphs';
 import type { IconName } from '../../../core/constants/icons';
 import type { GameItem } from '../../../model/types/game';
 import { pickWeighted, type RouletteCandidate } from '../../../core/roulette/roulette';
@@ -350,7 +351,7 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
                           onClick={() => setReviewOpen(true)}
                           aria-label={ROULETTE_UI.openReviewAria}
                         >
-                          {winnerGame.review}
+                          <ReviewParagraphs text={winnerGame.review} />
                         </button>
                       ) : null}
                       {resolvedAction ? (

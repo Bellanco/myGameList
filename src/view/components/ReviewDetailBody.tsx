@@ -3,6 +3,7 @@ import { resolveGrade, type ScoreScale, type ScoredLike } from '../../core/utils
 import { useScoreScale } from '../hooks/useScoreScale';
 import { MetaSection } from './MetaSection';
 import { NoScoreMedal } from './NoScoreMedal';
+import { ReviewParagraphs } from './ReviewParagraphs';
 import { ScoreRing } from './ScoreRing';
 
 /**
@@ -57,7 +58,7 @@ export function ReviewDetailBody({ review, platforms, genres, strengths, weaknes
 
   return (
     <div className="hub-detail-body">
-      {text ? <p className="hub-feed-review-text">{text}</p> : null}
+      {text ? <p className="hub-feed-review-text"><ReviewParagraphs text={text} /></p> : null}
       {hasMetadata ? (
         <div className="hub-detail-metadata">
           {showScore && score ? (

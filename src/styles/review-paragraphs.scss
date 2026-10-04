@@ -1,0 +1,20 @@
+// Párrafos y líneas del texto de una reseña (ver `ReviewParagraphs.tsx`). Hoja propia y mínima, importada por el
+// componente: la usan pantallas de chunks distintos (feed, detalle, perfil, enlace público, ruleta) y meterla en
+// `reviews.scss` arrastraría esa hoja entera a la ruleta.
+//
+// Dos niveles: el salto simple deja MEDIO renglón y la línea en blanco uno ENTERO, que es lo que ya medía antes
+// con `pre-wrap` (un renglón vacío). `1lh` es la interlínea del propio texto, distinta en cada sitio (1.3 en la
+// tarjeta, 1.45 en relacionadas, 1.6 en el perfil); el `em` de delante es el respaldo de navegadores sin `lh`.
+.review-par,
+.review-line {
+  display: block;
+}
+
+.review-line + .review-line {
+  margin-top: .5em;
+}
+
+.review-par + .review-par {
+  margin-top: 1.4em;
+  margin-top: 1lh;
+}
