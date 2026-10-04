@@ -69,6 +69,8 @@ export const SYNC_BADGE_TEXT = {
   ok: 'Sincronizado',
   syncing: 'Sincronizando…',
   error: 'Error de sincronización',
+  /** GitHub limita y se espera a que lo permita: no es un error, y lo pendiente sigue a salvo. */
+  paused: 'Sincronización en pausa',
   /**
    * Hay ediciones guardadas que todavía no están en el gist. Faltaba, y su ausencia hacía MENTIR a la línea de
    * estado: tras guardar un juego seguía diciendo «Sincronizado» hasta que un ciclo subía lo pendiente, así que
@@ -119,6 +121,9 @@ export const SYNC_MESSAGES = {
   syncError: 'Error al sincronizar',
   initError: 'Error de sincronización',
   offline: 'Sin conexión: se reintentará al recuperar la red',
+  /** GitHub limita las peticiones de este token (docs/plan-degradacion-servicios.md, fase 5). Nada se ha perdido. */
+  rateLimited: (hora: string) =>
+    `GitHub está limitando las peticiones. Tus cambios están guardados en este dispositivo y se subirán a partir de las ${hora}.`,
   syncInProgress: 'Sincronización ya en curso',
   disconnectSuccess: 'Sincronización desconectada',
   copySuccess: 'Gist ID copiado al portapapeles',
@@ -128,6 +133,7 @@ export const SYNC_MESSAGES = {
   recoverMissingInProfile: 'No se encontró gamesGistId en tu perfil de Google/Firestore',
   recoverMissingTokenInProfile: 'No se encontró el token en tu perfil de Google/Firestore',
   recoverError: 'No se pudo recuperar el Gist ID desde Google',
+  recoverUnavailable: 'Ahora mismo no se puede recuperar la configuración desde Google. Inténtalo más tarde o conecta a mano con un token y el Gist ID.',
   mergeSynced: (changes: number) => `Fusión sincronizada correctamente: ${changes} cambios remotos aplicados`,
   connectSynced: (changes: number) => `Sincronización configurada: ${changes} cambios remotos aplicados`,
   initialSynced: (changes: number) => `Sincronización inicial completada: ${changes} cambios remotos aplicados`,

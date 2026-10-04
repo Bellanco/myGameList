@@ -872,7 +872,7 @@ export default function App() {
     && TOUR_SECTIONS.has(activeSection)
     && ((tourState !== null && isTourVisible(tourState)) || reloginNeeded);
 
-  const syncBadgeText = resolveSyncBadge(syncVm.status, syncVm.pendingUpload);
+  const syncBadgeText = resolveSyncBadge(syncVm.status, syncVm.pendingUpload, syncVm.syncPaused);
 
   /**
    * LA CONEXIÓN CON GITHUB, ofrecida a TODO el árbol (ver `githubConnection`).
