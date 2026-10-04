@@ -28,6 +28,7 @@ import {
   type CachedDirectoryProfile,
 } from './indexedDbRepository';
 import { mapWithConcurrency } from '../../core/utils/concurrency';
+import { isServiceUnavailable } from '../../core/utils/network';
 import { INACTIVE_PROFILE_MAX_AGE_MS, PROFILE_INACTIVITY_MS } from '../../core/constants/socialActivity';
 
 const SOCIAL_PROFILE_CACHE_TTL_MS = 60_000;
@@ -460,6 +461,8 @@ export async function getSocialProfilesByUid(
   const missing = wanted.filter((uid) => !rows.has(uid));
   if (missing.length > 0) {
     const startedAt = Date.now();
+    // Las filas guardadas de CUALQUIER edad, por si Firestore no atiende (ver el `catch`). Se leen a lo sumo una vez.
+    let storedForFallback: Promise<Record<string, CachedDirectoryProfile<SocialDirectoryEntry>>> | null = null;
     const fetched = await mapWithConcurrency(missing, DIRECTORY_PROFILE_FETCH_CONCURRENCY, async (uid) => {
       let entry: SocialDirectoryEntry | null = null;
       try {
@@ -470,15 +473,27 @@ export async function getSocialProfilesByUid(
         }
       } catch (error) {
         // Perfil social apagado: las reglas no dejan leerlo. No es un fallo, es «no hay nada que enseñar».
-        if (!isPermissionDeniedError(error)) throw error;
+        if (isPermissionDeniedError(error)) {
+          return { uid, row: { cachedAt: startedAt, entry: null }, stale: false };
+        }
+        // EL SERVICIO NO ATIENDE (cuota agotada, caído, sin red): se sirve lo último guardado de ESTE perfil, por
+        // viejo que sea, y no se guarda como nuevo. Antes un solo `getDoc` fallido rechazaba todos y el feed
+        // perdía hasta a los amigos que sí tenían copia (docs/plan-degradacion-servicios.md, fase 2). Sin copia
+        // de nadie, se propaga: la hidratación tiene su propio rescate, el feed entero guardado.
+        if (isServiceUnavailable(error)) {
+          storedForFallback ??= getCachedDirectoryProfiles<SocialDirectoryEntry>();
+          const stored = (await storedForFallback)[uid];
+          if (stored) return { uid, row: stored, stale: true };
+        }
+        throw error;
       }
-      return { uid, row: { cachedAt: startedAt, entry } };
+      return { uid, row: { cachedAt: startedAt, entry }, stale: false };
     });
 
     const toPersist: Record<string, CachedDirectoryProfile<SocialDirectoryEntry>> = {};
-    for (const { uid, row } of fetched) {
+    for (const { uid, row, stale } of fetched) {
       rows.set(uid, row);
-      if (startedAt >= directoryProfileInvalidatedFor(uid)) {
+      if (!stale && startedAt >= directoryProfileInvalidatedFor(uid)) {
         directoryProfileMemory.set(uid, row);
         toPersist[uid] = row;
       }
@@ -660,6 +675,13 @@ export async function listSocialDirectory(
     } catch (error) {
       if (isPermissionDeniedError(error)) {
         throw new Error('Permisos insuficientes para leer perfiles sociales en Firestore');
+      }
+      // EL SERVICIO NO ATIENDE: la última copia de esta consulta, por vieja que sea, antes que una lista vacía. No se
+      // guarda como nueva ni en memoria: en cuanto Firestore vuelva, la siguiente apertura la relee.
+      if (isServiceUnavailable(error)) {
+        const persisted = await getCachedDirectoryQuery<SocialDirectoryEntry>(cacheKey);
+        if (persisted) return stillActive(persisted.entries);
+        throw error;
       }
       // El orden por `updatedAt` necesita el índice compuesto (`firestore.indexes.json`). Si se despliega la app
       // antes que el índice, Firestore responde `failed-precondition` y, sin esta degradación, el hub entero se

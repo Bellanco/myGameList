@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { DEFAULT_PROFILE_TIER, PROFILE_TIER_DIRECTORY_TTL_MS, PROFILE_TIER_FEED_TTL_MS, type ProfileTier } from '../../core/constants/tiers';
 import { mapWithConcurrency } from '../../core/utils/concurrency';
-import { isNetworkFailure, isOffline } from '../../core/utils/network';
+import { isOffline, isServiceUnavailable } from '../../core/utils/network';
 import { normalizeTimestamp as toSafeTimestamp } from '../../core/utils/normalize';
 import { reviewActorsByGame } from '../../core/social/moveActivity';
 import { getCachedSocialDirectory, getLocalMeta, patchLocalMeta, putCachedSocialDirectory } from '../../model/repository/indexedDbRepository';
@@ -280,6 +280,16 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
       // Lecturas que fallaron por credencial en esta hidratación. Se cuentan para avisar UNA vez al final, en vez
       // de por cada amigo ilegible.
       let credentialFailures = 0;
+      // Y las que fallaron porque el SERVICIO no atendía (GitHub limitando, sin red a medias). De esos amigos se
+      // enseña su última entrada guardada, y el resultado NO se guarda como copia nueva: guardarlo convertía un corte
+      // de cinco minutos en media hora de feed sin su actividad (docs/plan-degradacion-servicios.md, fase 2).
+      let transientFailure: unknown = null;
+      let previousDirectory: Promise<SocialDirectoryEntry[] | null> | null = null;
+      const previousEntryOf = async (uid: string): Promise<SocialDirectoryEntry | null> => {
+        previousDirectory ??= getCachedSocialDirectory<SocialDirectoryEntry>(socialCfgGistId, 0, { allowExpired: true })
+          .catch(() => null);
+        return (await previousDirectory)?.find((item) => item.uid === uid) ?? null;
+      };
 
       // DERIVA DE CANAL YA RESUELTA (ver `LocalMeta.socialGistWinnerByFriend`). Una lectura de `LocalMeta` por
       // hidratación —al lado de las N lecturas de gist que vienen— para no repetir la lectura doble de cada amigo
@@ -454,9 +464,24 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
               visibility: socialData.profile.visibility || defaultSocialVisibility,
             };
           } catch (readError) {
+            // Pasajero (el servicio no atiende): lo último guardado de este amigo, con lo de Firestore al día.
+            if (isServiceUnavailable(readError)) {
+              transientFailure ??= readError;
+              const previous = await previousEntryOf(entry.uid);
+              if (previous) {
+                return {
+                  ...previous,
+                  tier: entry.tier,
+                  lastActiveAt,
+                  achievementsMirror: entry.achievementsMirror,
+                  yearSummarySeen: entry.yearSummarySeen,
+                  palmares: entry.palmares,
+                };
+              }
+            }
             // Se distingue "no se pudo leer" de "no se pudo leer POR EL TOKEN": lo segundo no es un gist vacío,
             // es una credencial que ya no vale, y el usuario tiene que enterarse (abajo se avisa una sola vez).
-            if (isGithubCredentialError(readError)) {
+            else if (isGithubCredentialError(readError)) {
               credentialFailures += 1;
             }
             // Si se leyó SOLO el ganador recordado y ha fallado, el recuerdo ha caducado (gist borrado, canal
@@ -490,9 +515,14 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
       );
 
       setSocialDirectory(withProfiles);
-      // La red ha respondido: se retira el aviso de falta de conexión (que pudo encenderlo un fallo anterior con
-      // `navigator.onLine` diciendo que había red).
-      setNetworkFailure(false);
+      if (transientFailure) {
+        // Una parte salió de lo guardado: se dice (aviso de servicio limitado o de sin conexión) y no se retira.
+        reportFailure(transientFailure, SOCIAL_UI.status.firestoreCheckFailed, 'warn');
+      } else {
+        // La red ha respondido: se retira el aviso de falta de conexión (que pudo encenderlo un fallo anterior con
+        // `navigator.onLine` diciendo que había red).
+        setNetworkFailure(false);
+      }
       if (credentialFailures > 0) {
         setFeedback('warn', SOCIAL_UI.status.socialReadUnauthorized);
       }
@@ -508,9 +538,12 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
         void patchLocalMeta({ socialGistWinnerByFriend: nextWinners }).catch(() => {});
       }
 
-      void putCachedSocialDirectory(socialCfgGistId, withProfiles);
+      if (!transientFailure) {
+        void putCachedSocialDirectory(socialCfgGistId, withProfiles);
+      }
     } catch (error) {
-      if (isNetworkFailure(error) || isOffline()) {
+      // También cuando el que no atiende es el SERVICIO (Firestore sin cuota, GitHub limitando), no solo la red.
+      if (isServiceUnavailable(error) || isOffline()) {
         // Fallo de RED: en vez de vaciar el feed, se rescata la caché AUNQUE HAYA CADUCADO. Es el mismo criterio
         // que aplica `getCachedSocialDirectory` cuando el navegador admite estar sin red, y hace falta aquí porque
         // `navigator.onLine` puede decir que la hay (wifi sin salida) y entonces el TTL sí la habría descartado.

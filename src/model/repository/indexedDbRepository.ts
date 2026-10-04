@@ -658,10 +658,18 @@ export async function putCachedSocialDirectory<T>(ownGistId: string, entries: T[
 // Invalida la caché del directorio. Se llama al cambiar el grafo de amistad (aceptar/eliminar): como el directorio
 // solo lee el gist social de tus AMIGOS, un cambio de amistad altera qué actividad debe aparecer en el feed y hay
 // que releer sin esperar al TTL de 30 min.
+//
+// La MARCA COMO CADUCADA (`cachedAt: 0`) en vez de borrarla: ninguna lectura con TTL la sirve, así que la siguiente
+// apertura relee igual, pero si esa relectura falla (sin red, Firestore sin cuota, GitHub limitando) el rescate de
+// la hidratación (`allowExpired`) todavía tiene algo que enseñar. Borrándola, publicar una reseña justo antes de un
+// corte dejaba el feed en blanco (docs/plan-degradacion-servicios.md, fase 2).
 export async function invalidateCachedSocialDirectory(ownGistId: string): Promise<void> {
   if (!ownGistId) return;
   try {
-    await idbDelete(PROFILE_CACHE_STORE, SOCIAL_DIRECTORY_KEY_PREFIX + ownGistId);
+    const key = SOCIAL_DIRECTORY_KEY_PREFIX + ownGistId;
+    const rec = await idbGet<CachedSocialDirectory<unknown>>(PROFILE_CACHE_STORE, key);
+    if (!rec) return;
+    await idbPut<CachedSocialDirectory<unknown>>(PROFILE_CACHE_STORE, { ...rec, cachedAt: 0 });
   } catch {
     // best-effort.
   }

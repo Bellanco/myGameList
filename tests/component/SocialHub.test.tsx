@@ -1771,7 +1771,9 @@ describe('SocialHub — servicio limitado', () => {
 
     renderHub('/social');
 
-    expect(await screen.findByLabelText(SOCIAL_UI.limited.sectionAria)).toBeInTheDocument();
+    // El aviso breve, con las palabras de la aplicación. El persistente lo retira el feed al cargar bien: lo que se
+    // ve está al día.
+    expect(await screen.findByText(SOCIAL_UI.status.serviceLimited)).toBeInTheDocument();
     expect(screen.queryByText(/rate limit/i)).not.toBeInTheDocument();
     expect(screen.queryByText('Quota exceeded.')).not.toBeInTheDocument();
     // El feed sigue a mano: no se ha cerrado el espacio social por un cupo.
