@@ -305,8 +305,11 @@ const SocialHubInner = memo(function SocialHubInner({
     // entero, así que buscarlo aquí en el filtrado dejaba su espejo en blanco en cuanto el texto del buscador
     // dejaba de casar con su nombre —con la ficha ya abierta delante—.
     const entry = visibleSocialDirectory.find((candidate) => candidate.id === detailId);
-    return entry?.achievementsMirror || '';
-  }, [detailId, visibleSocialDirectory, isOwnProfileDetail, ownAchievementMirror]);
+    // Los logros de alguien, solo si es tu amigo: de quien no lo es se enseña el nombre y nada más, y la ruta de sus
+    // logros se puede abrir a mano. Su espejo sigue contando, sin identidad, en el porcentaje de la comunidad.
+    if (!entry || relationshipWith(entry.uid) !== 'friends') return '';
+    return entry.achievementsMirror || '';
+  }, [detailId, visibleSocialDirectory, isOwnProfileDetail, ownAchievementMirror, relationshipWith]);
 
   /**
    * EL PALMARÉS del perfil abierto: las ediciones de la porra que ha ganado.

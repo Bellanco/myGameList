@@ -2082,6 +2082,22 @@ describe('SocialHub — los logros de otras personas', () => {
   });
 
   /**
+   * DE QUIEN NO ES TU AMIGO, SOLO EL NOMBRE (decisión del 04-10-2026). Su ficha ya escondía la vitrina, pero la ruta
+   * de sus logros se puede abrir a mano y enseñaba su espejo entero. Su espejo sigue contando en el porcentaje de la
+   * comunidad, sin identidad: ver «el porcentaje comparado te cuenta a ti también».
+   */
+  it('los logros de quien no es tu amigo no se enseñan aunque se abra su ruta a mano', async () => {
+    renderHub('/social/profiles/strangerUid/logros');
+
+    // Ya se ha cargado la gente de «Perfiles» (Bob sale entre los recientes) y su pantalla está pintada…
+    await waitFor(() => expect(firebaseMocks.listSocialDirectory).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    // …y su logro no está.
+    expect(screen.queryByRole('img', { name: new RegExp(`^${BOB_LOGRO_NOMBRE}`) })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: new RegExp(`^${BOB_LOGRO_NOMBRE}`) })).not.toBeInTheDocument();
+  });
+
+  /**
    * TU VITRINA CUENTA EN LA MUESTRA del porcentaje comparado, y no contaba: sale del directorio ya FILTRADO, que
    * te excluye por identidad —es lo que impide que aparezcas en tu propia lista de gente—, así que se medía sobre
    * «todos menos yo». Con dos personas publicando, el porcentaje se calculaba sobre una y decía «el 100 %».

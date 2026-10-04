@@ -5,7 +5,7 @@
 // esto hace su propia consulta, más corta y SOLO cuando hace falta: al abrir «Perfiles», las dos pantallas del
 // porcentaje de logros de la comunidad, o la ficha de alguien que no está en ninguna de las dos listas.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { PROFILE_TIER_DIRECTORY_TTL_MS, type ProfileTier } from '../../core/constants/tiers';
+import { DEFAULT_PROFILE_TIER, PROFILE_TIER_DIRECTORY_TTL_MS, type ProfileTier } from '../../core/constants/tiers';
 import { PROFILE_INACTIVITY_MS, SOCIAL_DISCOVER_LIMIT } from '../../core/constants/socialActivity';
 import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import {
@@ -30,7 +30,11 @@ export interface SocialDiscoverOptions {
   reportFailure: (error: unknown, fallback: string, kind?: 'err' | 'warn') => void;
 }
 
-/** Entrada de quien no es tu amigo: nombre y foto de Firestore, sin actividad (de un no-amigo no se lee el gist). */
+/**
+ * Entrada de quien no es tu amigo: su NOMBRE y su FOTO de Firestore, y nada más que se pinte (decisión del
+ * 04-10-2026). Ni rango, ni palmarés, ni resumen del año: no se guardan aquí para que ninguna pantalla pueda
+ * enseñarlos por descuido. Tampoco actividad, porque de un no-amigo no se lee el gist.
+ */
 function toDiscoverEntry(profile: DirectoryProfile, visibility: SocialProfileVisibility): SocialDirectoryEntry {
   return {
     id: profile.id,
@@ -39,12 +43,14 @@ function toDiscoverEntry(profile: DirectoryProfile, visibility: SocialProfileVis
     socialGistId: '',
     gamesGistId: '',
     photoURL: profile.photoURL || '',
-    tier: profile.tier,
+    tier: DEFAULT_PROFILE_TIER,
+    // No se pinta: conserva el orden por uso reciente con el que llega la consulta.
     lastActiveAt: profile.updatedAt,
-    // Sin identidad: solo lo usa el porcentaje de logros de la comunidad (ver `directoryMirrors` en SocialHub).
+    // Tampoco se pinta de nadie en concreto: solo entra, sin identidad, en el porcentaje de logros de la comunidad
+    // (`directoryMirrors` en SocialHub). Los logros de un no-amigo no se enseñan.
     achievementsMirror: profile.achievementsMirror,
-    yearSummarySeen: profile.yearSummarySeen,
-    palmares: profile.palmares,
+    yearSummarySeen: null,
+    palmares: undefined,
     activity: [],
     posts: [],
     moves: [],
