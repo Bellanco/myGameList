@@ -11,6 +11,7 @@
 import { initializeFirebaseServices } from './firebaseGateway';
 import type { MySharesResponse, SharedReview, SharedReviewIndexEntry } from '../types/share';
 import type { ShareQuota } from '../../core/constants/tiers';
+import { SHARE_DOWN_UNTIL_KEY, shareLastMineKey } from '../../core/constants/storageKeys';
 
 const API_BASE = '/api/share';
 
@@ -18,6 +19,12 @@ export interface ShareError extends Error {
   status: number;
   /** Lo que la Function adjunta al error para poder decir algo útil: cuota, caducidad del más antiguo, veto. */
   details: Record<string, unknown>;
+  /**
+   * El SERVICIO no atiende (cupo de Cloudflare o de Firestore agotado, Function caída, sin red), no la petición.
+   * Con esto la interfaz deja de ofrecer compartir un rato en vez de enseñar un error. No sale del estado 429: esta
+   * API lo usa también para el límite diario, que sí hay que explicar. Ver `parse`.
+   */
+  unavailable?: boolean;
 }
 
 function shareError(status: number, message: string, details: Record<string, unknown> = {}): ShareError {
@@ -25,6 +32,65 @@ function shareError(status: number, message: string, details: Record<string, unk
   error.status = status;
   error.details = details;
   return error;
+}
+
+/** Más que esto no se espera aunque `Retry-After` pida hasta medianoche: un fallo pasajero no esconde el día entero. */
+const SHARE_DOWN_MAX_MS = 60 * 60 * 1000;
+/** Sin `Retry-After` (sin red, la página de error de Cloudflare). */
+const SHARE_DOWN_DEFAULT_MS = 15 * 60 * 1000;
+
+function unavailableError(retryAfterMs = 0): ShareError {
+  const error = shareError(503, SHARE_UI_UNAVAILABLE, { unavailable: true });
+  error.unavailable = true;
+  markShareServiceDown(retryAfterMs);
+  return error;
+}
+
+const SHARE_UI_UNAVAILABLE = 'Compartir no está disponible ahora mismo. Inténtalo más tarde.';
+
+function readDownUntil(): number {
+  try {
+    return Number(localStorage.getItem(SHARE_DOWN_UNTIL_KEY) || 0) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function markShareServiceDown(retryAfterMs: number): void {
+  const wait = Math.min(SHARE_DOWN_MAX_MS, retryAfterMs > 0 ? retryAfterMs : SHARE_DOWN_DEFAULT_MS);
+  try {
+    localStorage.setItem(SHARE_DOWN_UNTIL_KEY, String(Date.now() + wait));
+  } catch {
+    // Sin almacenamiento: se volverá a preguntar en la siguiente apertura, que tampoco es grave.
+  }
+}
+
+/** ¿Se sabe que el servicio de compartir no atiende ahora? Entonces no se pregunta ni se ofrece. */
+export function isShareServiceDown(): boolean {
+  return Date.now() < readDownUntil();
+}
+
+/** Lo olvida: el servicio ha vuelto a responder bien. */
+function clearShareServiceDown(): void {
+  try {
+    localStorage.removeItem(SHARE_DOWN_UNTIL_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/** ¿Es este error un «no disponible»? Para los llamadores que no saben de `ShareError`. */
+export function isShareUnavailable(error: unknown): boolean {
+  return Boolean(error && typeof error === 'object' && (error as ShareError).unavailable === true);
+}
+
+/** `fetch` que convierte el fallo de red en «no disponible» (si no hay red, compartir tampoco). */
+async function shareFetch(input: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch {
+    throw unavailableError();
+  }
 }
 
 /**
@@ -67,11 +133,22 @@ const authHeaders = (): Promise<Record<string, string>> =>
   shareAuthHeaders(() => shareError(401, 'Necesitas iniciar sesión para compartir'));
 
 async function parse(response: Response): Promise<Record<string, unknown>> {
+  // Lo que NO es una respuesta de esta API dice que el servicio no está: la página de error de Cloudflare (cupo de
+  // Functions agotado) o el `404.html` estático en modo «fail open». Las respuestas de verdad son siempre JSON.
+  const type = response.headers?.get?.('content-type') || '';
+  if (type.includes('text/html')) {
+    throw unavailableError();
+  }
   const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
   if (!response.ok) {
+    if (body.unavailable === true || response.status >= 500) {
+      const retryAfterSeconds = Number(response.headers?.get?.('retry-after') || 0);
+      throw unavailableError(Number.isFinite(retryAfterSeconds) ? retryAfterSeconds * 1000 : 0);
+    }
     const { error, ...details } = body;
     throw shareError(response.status, String(error || 'No se ha podido completar la operación'), details);
   }
+  clearShareServiceDown();
   return body;
 }
 
@@ -95,7 +172,7 @@ export async function publishShare(
   draft: Omit<SharedReview, 'v' | 'createdAt' | 'expiresAt' | 'authorNick'>,
 ): Promise<PublishedShare> {
   try {
-    const response = await fetch(API_BASE, {
+    const response = await shareFetch(API_BASE, {
       method: 'POST',
       headers: await authHeaders(),
       body: JSON.stringify(draft),
@@ -153,12 +230,18 @@ export async function listMyShares(): Promise<MySharesSnapshot> {
     return mySharesInFlight.promise;
   }
 
+  // Se sabe que no atiende: ni se pregunta (cada pregunta es una invocación más contra un cupo ya agotado).
+  if (isShareServiceDown()) {
+    throw unavailableError(readDownUntil() - Date.now());
+  }
+
   const generation = mySharesGeneration;
   const promise = (async () => {
-    const response = await fetch(`${API_BASE}/mine`, { headers: await authHeaders() });
+    const response = await shareFetch(`${API_BASE}/mine`, { headers: await authHeaders() });
     const value = (await parse(response)) as unknown as MySharesSnapshot;
     if (uid && generation === mySharesGeneration) {
       mySharesCache = { uid, at: Date.now(), value };
+      saveLastMine(uid, value);
     }
     return value;
   })();
@@ -173,10 +256,33 @@ export async function listMyShares(): Promise<MySharesSnapshot> {
   }
 }
 
+/** Guarda la última lista buena de este usuario: es lo que Ajustes enseña mientras el servicio no atiende. */
+function saveLastMine(uid: string, value: MySharesSnapshot): void {
+  try {
+    localStorage.setItem(shareLastMineKey(uid), JSON.stringify({ shares: value.shares || [], quota: value.quota || null }));
+  } catch {
+    // best-effort
+  }
+}
+
+/** La última lista buena de quien tiene la sesión abierta, o `null`. Solo para pintar, nunca para decidir. */
+export async function readLastMyShares(): Promise<Pick<MySharesSnapshot, 'shares' | 'quota'> | null> {
+  const uid = await sessionUid();
+  if (!uid) return null;
+  try {
+    const raw = localStorage.getItem(shareLastMineKey(uid));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Pick<MySharesSnapshot, 'shares' | 'quota'>;
+    return Array.isArray(parsed?.shares) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Retira un enlace. Idempotente: retirar lo ya retirado no es un error. */
 export async function removeShare(token: string): Promise<void> {
   try {
-    const response = await fetch(`${API_BASE}/${encodeURIComponent(token)}`, {
+    const response = await shareFetch(`${API_BASE}/${encodeURIComponent(token)}`, {
       method: 'DELETE',
       headers: await authHeaders(),
     });
@@ -195,7 +301,7 @@ export async function removeShare(token: string): Promise<void> {
  */
 export async function removeAllMyShares(): Promise<number> {
   try {
-    const response = await fetch(`${API_BASE}/mine`, { method: 'DELETE', headers: await authHeaders() });
+    const response = await shareFetch(`${API_BASE}/mine`, { method: 'DELETE', headers: await authHeaders() });
     const body = await parse(response);
     return Number(body.removed) || 0;
   } finally {

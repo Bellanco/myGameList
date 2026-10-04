@@ -152,6 +152,7 @@ describe('deleteOwnAccount', () => {
     localStorage.setItem(GIST_CFG_KEY, '{}');
     localStorage.setItem(SOCIAL_GIST_CFG_KEY, '{}');
     localStorage.setItem(ANALYTICS_CONSENT_KEY, 'denied');
+    localStorage.setItem('mis-listas-share-last-mine-uid-1', '{"shares":[]}');
 
     const result = await deleteOwnAccount('uid-1');
 
@@ -166,6 +167,8 @@ describe('deleteOwnAccount', () => {
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
     expect(localStorage.getItem(GIST_CFG_KEY)).toBeNull();
     expect(localStorage.getItem(SOCIAL_GIST_CFG_KEY)).toBeNull();
+    // La última lista de enlaces que Ajustes guarda para cuando compartir no atiende: dato personal, se va.
+    expect(localStorage.getItem('mis-listas-share-last-mine-uid-1')).toBeNull();
     expect(deletedDatabases).toEqual(['myGameList', 'mygamelist-secure']);
     // La Cache Storage del service worker también se limpia: el shell y los assets son públicos y se vuelven a
     // descargar, pero las versiones anteriores del SW llegaron a guardar ahí respuestas de `/api/*`.

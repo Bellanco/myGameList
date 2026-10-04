@@ -211,3 +211,13 @@ export const SOCIAL_CAN_POST_KEY = 'mis-listas-social-can-post';
 // algo que cuesta un «Ahora no» repetir en otro aparato. Que NO haya clave es el caso normal de quien ya usaba la
 // aplicación: para esa persona la guía no existe hasta que la pide desde Ajustes › Datos.
 export const ONBOARDING_KEY = 'mis-listas-onboarding';
+
+/**
+ * COMPARTIR SIN SERVICIO (docs/plan-degradacion-servicios.md, fase 3). Hasta cuándo no se vuelve a preguntar a
+ * `/api/share` tras una respuesta de «no disponible», y la última lista de enlaces de cada usuario, para que Ajustes
+ * la enseñe en solo lectura mientras tanto. La segunda es dato personal: la borra el borrado de cuenta.
+ */
+export const SHARE_DOWN_UNTIL_KEY = 'mis-listas-share-down-until';
+export const shareLastMineKey = (uid: string): string => `mis-listas-share-last-mine-${uid}`;
+export const SHARE_LAST_MINE_PREFIX = 'mis-listas-share-last-mine-';
+

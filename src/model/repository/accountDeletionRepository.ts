@@ -23,6 +23,8 @@ import { DEVICE_KEY_DB_NAME } from '../../core/security/crypto';
 import {
   GIST_CFG_KEY,
   IMPORT_FIELDS_KEY,
+  SHARE_DOWN_UNTIL_KEY,
+  SHARE_LAST_MINE_PREFIX,
   SOCIAL_GIST_CFG_KEY,
   STORAGE_KEY,
 } from '../../core/constants/storageKeys';
@@ -202,7 +204,9 @@ async function deleteRemoteData(uid: string, outcome: RemoteDeletionOutcome): Pr
  */
 async function wipeLocalData(): Promise<void> {
   clearSyncConfig(); // limpia además el token en memoria del módulo de config
-  removeLocal([STORAGE_KEY, GIST_CFG_KEY, SOCIAL_GIST_CFG_KEY, IMPORT_FIELDS_KEY]);
+  removeLocal([STORAGE_KEY, GIST_CFG_KEY, SOCIAL_GIST_CFG_KEY, IMPORT_FIELDS_KEY, SHARE_DOWN_UNTIL_KEY]);
+  // La última lista de enlaces compartidos que guarda Ajustes para cuando el servicio no atiende: es dato personal.
+  removeLocalByPrefix(SHARE_LAST_MINE_PREFIX);
 
   // La base contiene juegos, tombstones, cola de sync y cachés sociales: se borra entera, no store a store.
   await closeSharedDatabase();
@@ -229,6 +233,19 @@ async function deleteAllCaches(): Promise<void> {
     await Promise.all(names.map((name) => caches.delete(name)));
   } catch {
     // no bloqueante: el resto del borrado ya se ha hecho
+  }
+}
+
+function removeLocalByPrefix(prefix: string): void {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(prefix)) keys.push(key);
+    }
+    removeLocal(keys);
+  } catch {
+    // sin localStorage no hay nada que limpiar
   }
 }
 

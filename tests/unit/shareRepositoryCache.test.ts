@@ -33,6 +33,7 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
   currentUser.value = { uid: 'u1', getIdToken: async () => 'id-token' };
   repo.invalidateMySharesCache();
+  localStorage.clear();
 });
 
 afterEach(() => {
@@ -68,7 +69,7 @@ describe('listMyShares — copia en memoria', () => {
 
   it('retirar tira la copia aunque la petición falle', async () => {
     await repo.listMyShares();
-    fetchMock.mockImplementationOnce(async () => new Response('{}', { status: 500 }));
+    fetchMock.mockImplementationOnce(async () => new Response(JSON.stringify({ error: 'No es tuyo' }), { status: 403 }));
     await expect(repo.removeShare('tok')).rejects.toThrow();
     await repo.listMyShares();
     expect(minesCalls()).toBe(2);
@@ -94,9 +95,57 @@ describe('listMyShares — copia en memoria', () => {
   });
 
   it('un error no se guarda', async () => {
-    fetchMock.mockImplementationOnce(async () => new Response('{}', { status: 500 }));
+    fetchMock.mockImplementationOnce(async () => new Response(JSON.stringify({ error: 'Falta la sesión' }), { status: 401 }));
     await expect(repo.listMyShares()).rejects.toThrow();
     await repo.listMyShares();
     expect(minesCalls()).toBe(2);
   });
 });
+
+// docs/plan-degradacion-servicios.md, fase 3: «no disponible» no sale del estado (el 429 también es el límite
+// diario, que hay que explicar), sino de la marca del servidor, un 5xx, una página HTML o la falta de red.
+describe('listMyShares — servicio no disponible', () => {
+  it('la marca `unavailable` del servidor: no se vuelve a preguntar durante un rato', async () => {
+    fetchMock.mockImplementationOnce(async () => new Response(JSON.stringify({ error: 'x', unavailable: true }), { status: 503, headers: { 'retry-after': '600' } }));
+
+    const error = await repo.listMyShares().catch((e) => e);
+    expect(repo.isShareUnavailable(error)).toBe(true);
+    expect(repo.isShareServiceDown()).toBe(true);
+
+    await expect(repo.listMyShares()).rejects.toMatchObject({ unavailable: true });
+    expect(minesCalls()).toBe(1);
+  });
+
+  it('la página de error de Cloudflare (HTML) cuenta como no disponible', async () => {
+    fetchMock.mockImplementationOnce(async () => new Response('<html>1027</html>', { status: 429, headers: { 'content-type': 'text/html' } }));
+    await expect(repo.listMyShares()).rejects.toMatchObject({ unavailable: true });
+  });
+
+  it('el límite diario (429 con su JSON) NO es «no disponible»: se explica', async () => {
+    fetchMock.mockImplementationOnce(async () => new Response(JSON.stringify({ error: 'Has compartido demasiadas reseñas hoy.' }), { status: 429 }));
+    const error = await repo.publishShare({} as Parameters<typeof repo.publishShare>[0]).catch((e) => e);
+    expect(repo.isShareUnavailable(error)).toBe(false);
+    expect(error.message).toContain('demasiadas');
+    expect(repo.isShareServiceDown()).toBe(false);
+  });
+
+  it('sin red también, y la última lista buena queda para enseñarla', async () => {
+    await repo.listMyShares();
+    repo.invalidateMySharesCache();
+    fetchMock.mockImplementationOnce(async () => { throw new TypeError('Failed to fetch'); });
+
+    await expect(repo.listMyShares()).rejects.toMatchObject({ unavailable: true });
+    expect(await repo.readLastMyShares()).toMatchObject({ shares: [] });
+  });
+
+  it('pasado el rato, vuelve a preguntar', async () => {
+    fetchMock.mockImplementationOnce(async () => new Response(JSON.stringify({ unavailable: true }), { status: 503 }));
+    await repo.listMyShares().catch(() => null);
+    vi.setSystemTime(Date.now() + 61 * 60 * 1000);
+
+    await repo.listMyShares();
+    expect(minesCalls()).toBe(2);
+    expect(repo.isShareServiceDown()).toBe(false);
+  });
+});
+
