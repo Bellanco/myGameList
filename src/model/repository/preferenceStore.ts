@@ -99,7 +99,9 @@ export function createPreferenceStore<T>(definition: PreferenceDefinition<T>): P
       writeRaw(definition.key, definition.serialize(value));
       definition.applyToDom?.(value);
       if (definition.cloudField && currentUid) {
-        void setPublicConfig(currentUid, { [definition.cloudField]: value } as Partial<FirestorePublicConfig>);
+        // Best-effort y CAPTURADO: lo local ya manda, y sin el `catch` un Firestore sin cuota dejaba un rechazo sin
+        // atender que el gancho global de `main.tsx` reporta como error (docs/plan-degradacion-servicios.md).
+        void setPublicConfig(currentUid, { [definition.cloudField]: value } as Partial<FirestorePublicConfig>).catch(() => {});
       }
       emit();
     },

@@ -21,6 +21,7 @@ describe('scorePreferenceRepository — store de la escala de puntuación', () =
     getPublicConfig.mockReset();
     setPublicConfig.mockReset().mockResolvedValue(undefined);
     resetScoreScale();
+    localStorage.clear();
   });
   afterEach(() => {
     resetScoreScale();
@@ -55,6 +56,39 @@ describe('scorePreferenceRepository — store de la escala de puntuación', () =
   it('resetScoreScale (logout) vuelve a estrellas', async () => {
     await persistScoreScale('uid-1', 'grade');
     resetScoreScale();
+    expect(getScoreScale()).toBe('stars');
+  });
+
+  // docs/plan-degradacion-servicios.md, fase 5: con Firestore sin cuota, quien usa la nota 0–100 volvía a ver
+  // estrellas en sus listas. La copia de este navegador lo evita.
+  it('si Firestore no responde, se queda con la última escala conocida en este navegador', async () => {
+    getPublicConfig.mockResolvedValueOnce({ scoreScale: 'grade' });
+    await hydrateScoreScale('uid-1');
+    resetScoreScale(); // nueva carga de la página
+    getPublicConfig.mockRejectedValueOnce(Object.assign(new Error('Quota exceeded.'), { code: 'resource-exhausted' }));
+
+    await hydrateScoreScale('uid-1');
+
+    expect(getScoreScale()).toBe('grade');
+  });
+
+  it('cambiarla con Firestore sin cuota no rompe y la deja puesta', async () => {
+    setPublicConfig.mockRejectedValueOnce(new Error('Quota exceeded.'));
+
+    await expect(persistScoreScale('uid-1', 'grade')).resolves.toBeUndefined();
+    expect(getScoreScale()).toBe('grade');
+
+    resetScoreScale();
+    getPublicConfig.mockRejectedValueOnce(new Error('Quota exceeded.'));
+    await hydrateScoreScale('uid-1');
+    expect(getScoreScale()).toBe('grade');
+  });
+
+  it('la copia es de cada usuario', async () => {
+    await persistScoreScale('uid-1', 'grade');
+    resetScoreScale();
+    getPublicConfig.mockRejectedValueOnce(new Error('Quota exceeded.'));
+    await hydrateScoreScale('uid-2');
     expect(getScoreScale()).toBe('stars');
   });
 });

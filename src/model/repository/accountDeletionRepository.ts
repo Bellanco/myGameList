@@ -23,6 +23,7 @@ import { DEVICE_KEY_DB_NAME } from '../../core/security/crypto';
 import {
   GIST_CFG_KEY,
   IMPORT_FIELDS_KEY,
+  SCORE_SCALE_PREFIX,
   SHARE_DOWN_UNTIL_KEY,
   SHARE_LAST_MINE_PREFIX,
   SOCIAL_GIST_CFG_KEY,
@@ -207,6 +208,8 @@ async function wipeLocalData(): Promise<void> {
   removeLocal([STORAGE_KEY, GIST_CFG_KEY, SOCIAL_GIST_CFG_KEY, IMPORT_FIELDS_KEY, SHARE_DOWN_UNTIL_KEY]);
   // La última lista de enlaces compartidos que guarda Ajustes para cuando el servicio no atiende: es dato personal.
   removeLocalByPrefix(SHARE_LAST_MINE_PREFIX);
+  // Y la copia de la escala de nota de esta cuenta (fase 5): sin cuenta no hay preferencia que recordar.
+  removeLocalByPrefix(SCORE_SCALE_PREFIX);
 
   // La base contiene juegos, tombstones, cola de sync y cachés sociales: se borra entera, no store a store.
   await closeSharedDatabase();

@@ -224,3 +224,7 @@ export const SHARE_LAST_MINE_PREFIX = 'mis-listas-share-last-mine-';
 /** Hasta cuándo no se vuelve a lanzar el relleno de carátulas tras toparse con el servidor sin atender (fase 4). */
 export const COVER_BACKFILL_PAUSE_KEY = 'mis-listas-cover-backfill-pause-until';
 
+/** Copia local de la escala de nota (estrellas / 0–100) de cada usuario, por si Firestore no responde (fase 5). */
+export const SCORE_SCALE_PREFIX = 'mis-listas-score-scale-';
+export const scoreScaleKey = (uid: string): string => `${SCORE_SCALE_PREFIX}${uid}`;
+
