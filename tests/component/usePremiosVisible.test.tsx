@@ -62,6 +62,33 @@ describe('usePremiosVisible', () => {
     expect(screen.getByTestId('ofrece')).toHaveTextContent('sí');
   });
 
+  // docs/plan-degradacion-servicios.md, fase 2: una respuesta de ERROR (Function sin cupo, KV agotado) se tomaba
+  // por «no hay premios», se guardaba «oculto» en este navegador y la entrada desaparecía hasta que la API volviera.
+  it('con un error del servidor o la página de error de Cloudflare, no apaga la entrada', async () => {
+    localStorage.setItem(PREMIOS_VISIBLE_KEY, 'on');
+    const fetchSpy = vi.fn(async () => new Response('<html>Error 1027</html>', { status: 429, headers: { 'content-type': 'text/html' } }));
+    vi.stubGlobal('fetch', fetchSpy as unknown as typeof fetch);
+
+    render(<Sonda />);
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(screen.getByTestId('ofrece')).toHaveTextContent('sí');
+    expect(localStorage.getItem(PREMIOS_VISIBLE_KEY)).toBe('on');
+  });
+
+  it('ni con un 200 que en realidad es HTML (el `404.html` estático en modo «fail open»)', async () => {
+    localStorage.setItem(PREMIOS_VISIBLE_KEY, 'on');
+    const fetchSpy = vi.fn(async () => new Response('<html></html>', { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } }));
+    vi.stubGlobal('fetch', fetchSpy as unknown as typeof fetch);
+
+    render(<Sonda />);
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(localStorage.getItem(PREMIOS_VISIBLE_KEY)).toBe('on');
+  });
+
   /**
    * EL CASO QUE SE ESCAPÓ EN PRODUCCIÓN: el menú pregunta al abrir la app, el administrador abre la edición un
    * minuto después, y como la respuesta está cacheada —en memoria y en este navegador— la entrada no aparecía

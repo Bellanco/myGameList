@@ -53,19 +53,25 @@ export function loadPremiosSnapshot(force = false): Promise<PremiosVisibilitySna
     if (inFlight) return inFlight;
   }
 
+  // UN FALLO RECHAZA; no se disfraza de «no hay premios». Antes devolvía la foto vacía, y quien llama la tomaba por
+  // buena: `usePremiosVisible` guardaba «oculto» en local y la entrada de Premios desaparecía hasta que la API
+  // volviera (Function sin cupo, KV agotado, sin red), y además esa foto vacía se quedaba como la de la sesión.
+  // Rechazando, cada llamador conserva lo último que supo (docs/plan-degradacion-servicios.md, fase 2).
   const request = (async (): Promise<PremiosVisibilitySnapshot> => {
-    try {
-      const response = await fetch(API, force ? { cache: 'no-store' } : undefined);
-      if (!response.ok) return EMPTY_PREMIOS_SNAPSHOT;
-      return sanitizePremiosSnapshot(await response.json());
-    } catch {
-      // Sin red o con la función sin desplegar: no se ofrece nada. No se recuerda el fallo — la próxima apertura
-      // reintenta.
-      return EMPTY_PREMIOS_SNAPSHOT;
+    const response = await fetch(API, force ? { cache: 'no-store' } : undefined);
+    // Con el cupo de Functions agotado, Cloudflare puede contestar con HTML (su página de error o el `404.html`).
+    const type = response.headers?.get?.('content-type') || '';
+    const isHtml = type.includes('text/html');
+    if (!response.ok || isHtml) {
+      throw Object.assign(new Error(`Premios no disponible (${response.status})`), { status: response.ok ? 503 : response.status });
     }
+    return sanitizePremiosSnapshot(await response.json());
   })();
 
   if (!force) inFlight = request;
+  request.catch(() => {
+    if (inFlight === request) inFlight = null;
+  });
   return request.then((value) => {
     cached = value;
     inFlight = null;
