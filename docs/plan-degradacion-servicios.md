@@ -92,7 +92,7 @@ con el cupo agotado (falla abierto).
 - **Después** de esto, poner Pages en «Fail open» (*Settings → Runtime*): la web sigue entera y solo se pierde lo
   que necesita Functions.
 
-## Fase 5 — Menores · S
+## Fase 5 — Menores · S · ⏸️ a medias (04-10-2026)
 
 - Escala de nota solo en memoria: guardarla en local (o pasarla a `preferenceStore`); hoy vuelve a estrellas.
 - Rango propio: copia local del último perfil leído; hoy cae a bronce (pierde compositor y cupo de premios).
@@ -135,4 +135,10 @@ con el cupo agotado (falla abierto).
       en el borde, que no la llevan). `/cover` firma su 404 con `X-Cover: no-tiene` y convierte excepciones en 503
       `no-store` con `Retry-After`.
 - [ ] Poner Pages en «Fail open» (*Settings → Runtime*): ya es seguro. Es un ajuste del panel, lo hace el usuario.
-- [ ] Fase 5: menores.
+- [ ] Fase 5, a medias (04-10-2026). Hecho: escala de nota con copia local (`78a8bf0e`), rango propio con copia
+      mínima del perfil (`b509ad63`), aviso con copia local (`b3e23cac`), edición de Premios con copia (`throwOnError`
+      en sus tres lecturas) y `.catch` en el guardado suelto de preferencias. Las copias personales (perfil, escala,
+      papeleta, enlaces) las borra el borrado de cuenta.
+      **Queda:** mensajes de la sincronización cuando GitHub limita (texto propio en `warn`, sin toast en ciclos
+      automáticos, limpiar el mensaje al recuperarse; la espera compartida de la fase 2 ya evita las peticiones),
+      tope de 3-5 s en `getAppCheckToken`, y proponer la conexión manual si falla el login de GitHub.
