@@ -4,7 +4,7 @@ import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { ReviewDetailBody } from './ReviewDetailBody';
 import { ReviewDetailHead } from './ReviewDetailHead';
 import { RelatedReviews } from './socialhub/RelatedReviews';
-import { readSharedReview, readSharedReviewSuggestions } from '../../model/repository/publicShareRepository';
+import { lookupSharedReview, readSharedReviewSuggestions } from '../../model/repository/publicShareRepository';
 import type { RelatedReview } from '../../core/social/relatedReviews';
 import type { SharedReview, SharedReviewSuggestion } from '../../model/types/share';
 // La hoja de la RESEÑA. Esta pantalla la pinta sin el hub social —en modo artículo no hay hub—, así que sin
@@ -26,23 +26,28 @@ import '../../styles/reviews.scss';
  * motivo para distinguirlos, y saber "esto existió" ya es información.
  */
 export const PublicReviewScreen = memo(function PublicReviewScreen({ token, standalone = false }: { token: string; standalone?: boolean }) {
-  const [state, setState] = useState<'loading' | 'ready' | 'gone'>('loading');
+  // `unavailable`: ahora mismo no se puede saber (servicio sin cupo, caído o sin red). NO es «caducado»: decir eso
+  // durante un corte era falso y definitivo (docs/plan-degradacion-servicios.md, fase 3).
+  const [state, setState] = useState<'loading' | 'ready' | 'gone' | 'unavailable'>('loading');
   const [review, setReview] = useState<SharedReview | null>(null);
   const [suggestions, setSuggestions] = useState<SharedReviewSuggestion[]>([]);
+  /** Sube con «Reintentar»: vuelve a pedir el artículo. */
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let alive = true;
-    void readSharedReview(token).then((article) => {
+    setState('loading');
+    void lookupSharedReview(token).then((result) => {
       if (!alive) {
         return;
       }
-      setReview(article);
-      setState(article ? 'ready' : 'gone');
+      setReview(result.status === 'ready' ? result.review : null);
+      setState(result.status);
     });
     return () => {
       alive = false;
     };
-  }, [token]);
+  }, [token, attempt]);
 
   // Los sugeridos van en su PROPIA petición y con su propio estado, para que el pie no retrase la reseña: quien
   // abre el enlace la ve en cuanto llega, y el bloque aparece después (o no aparece, que es lo normal cuando el
@@ -174,6 +179,20 @@ export const PublicReviewScreen = memo(function PublicReviewScreen({ token, stan
   // Los tres finales malos comparten pantalla, y esta es la ÚNICA que no lleva el encabezado de "Reseña":
   // anunciar un análisis encima de "este enlace ya no está disponible" prometería algo que no hay. Aquí el
   // título de la página es el propio mensaje.
+  if (state === 'unavailable') {
+    return frame(
+      <section className="hub-hub hub-screen" aria-label={SHARE_UI.publicAria}>
+        <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
+          <h2>{SHARE_UI.publicUnavailableTitle}</h2>
+          <p>{SHARE_UI.publicUnavailableBody}</p>
+          <button className="btn btn-secondary" type="button" onClick={() => setAttempt((value) => value + 1)}>
+            {SHARE_UI.publicRetry}
+          </button>
+        </div>
+      </section>,
+    );
+  }
+
   if (state === 'gone' || !review) {
     return frame(
       <section className="hub-hub hub-screen" aria-label={SHARE_UI.publicAria}>

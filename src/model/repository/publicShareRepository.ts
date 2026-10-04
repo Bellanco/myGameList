@@ -30,6 +30,49 @@ export async function readSharedReview(token: string): Promise<SharedReview | nu
   }
 }
 
+/** Lo que puede pasar al abrir un enlace: la reseña, que ya no existe, o que ahora mismo no se puede saber. */
+export type SharedReviewLookup =
+  | { status: 'ready'; review: SharedReview }
+  | { status: 'gone' }
+  | { status: 'unavailable' };
+
+/**
+ * Como `readSharedReview`, pero distinguiendo «este enlace ya no existe» de «ahora no se puede cargar».
+ *
+ * Con el cupo de Cloudflare agotado o la API caída, la página decía «Puede haber caducado o haberlo retirado quien
+ * lo compartió», que es falso y además definitivo: quien lo abría no volvía. Lo que dice que el enlace no está es
+ * un 404 de ESTA API (JSON); la página de error de Cloudflare, el `404.html` estático (modo «fail open»), un 429/5xx
+ * o la falta de red dicen otra cosa (docs/plan-degradacion-servicios.md, fase 3).
+ */
+export async function lookupSharedReview(token: string): Promise<SharedReviewLookup> {
+  if (!token) {
+    return { status: 'gone' };
+  }
+  let response: Response;
+  try {
+    response = await fetch(`/api/share/${encodeURIComponent(token)}`);
+  } catch {
+    return { status: 'unavailable' };
+  }
+  const type = response.headers?.get?.('content-type') || '';
+  if (type.includes('text/html') || response.status === 429 || response.status >= 500) {
+    return { status: 'unavailable' };
+  }
+  if (!response.ok) {
+    return { status: 'gone' };
+  }
+  try {
+    const body = (await response.json()) as Partial<SharedReview> | null;
+    // La misma comprobación mínima que `readSharedReview`.
+    if (!body || typeof body !== 'object' || body.v !== 1) {
+      return { status: 'gone' };
+    }
+    return { status: 'ready', review: body as SharedReview };
+  } catch {
+    return { status: 'unavailable' };
+  }
+}
+
 /**
  * Los análisis que se sugieren al pie, o lista vacía. Nunca lanza y nunca es un error que no haya ninguno: lo
  * normal en un autor con un enlace suelto es que no haya nada que ofrecer, y entonces el bloque no se pinta.
