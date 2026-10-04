@@ -1,6 +1,6 @@
 # Premios: los votos de cada uno, a la vista hasta terminar la edición
 
-Estado: **hecho, sin desplegar** (04-10-2026). Falta solo el paso 7 (checklist de despliegue, reglas incluidas).
+Estado: **hecho; reglas de Firestore desplegadas el 04-10-2026** (van en la 1.5.1). Falta publicar la app con esa versión.
 Decisiones tomadas con el usuario en la misma fecha.
 
 ## Qué se quiere
