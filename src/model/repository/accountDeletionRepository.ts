@@ -14,6 +14,7 @@ import { deleteDoc, doc } from 'firebase/firestore/lite';
 import { initializeFirebaseServices } from './firebaseClient';
 import { deleteFriendship, getMyFriendships, invalidateMyFriendshipsCache } from './firebaseFriendshipRepository';
 import { invalidateOwnProfileCache, invalidateSocialDirectoryCache } from './firebaseSocialRepository';
+import { forgetOwnAccountMemo } from './firebaseRepository';
 import { signOutSocialUser } from './firebaseAuthRepository';
 import { closeSharedDatabase, SHARED_DB_NAME } from './idbConnectionRepository';
 import { clearSyncConfig } from './gistConfigRepository';
@@ -145,6 +146,7 @@ async function deleteRemoteData(uid: string, failures: string[]): Promise<void> 
   invalidateOwnProfileCache(uid);
   invalidateMyFriendshipsCache(uid);
   invalidateSocialDirectoryCache();
+  forgetOwnAccountMemo();
 }
 
 /**

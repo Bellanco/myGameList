@@ -38,6 +38,10 @@ vi.mock('../../src/model/repository/firebaseSocialRepository', () => ({
   invalidateSocialDirectoryCache: vi.fn(),
 }));
 
+vi.mock('../../src/model/repository/firebaseRepository', () => ({
+  forgetOwnAccountMemo: vi.fn(),
+}));
+
 vi.mock('../../src/model/repository/firebaseAuthRepository', () => ({
   signOutSocialUser: (...args: unknown[]) => signOutMock(...(args as [])),
 }));

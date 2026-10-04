@@ -262,13 +262,55 @@ export async function setPrivateConfig(uid: string, config: Partial<FirestorePri
 // Separada de privateConfig para diferenciarla. Hoy solo la escala de puntuación (estrellas/nota).
 // ---------------------------------------------------------------------------
 
+/**
+ * COPIA EN MEMORIA DE `publicConfig`. El mismo documento lo leían dos veces seguidas al arrancar la escala de nota
+ * y la apariencia, y otra el consentimiento del social en cada montaje del hub: tres lecturas para un documento que
+ * solo cambia cuando su dueño toca una preferencia. Lo que se escribe desde aquí la tira al momento; lo que cambie
+ * otro dispositivo se ve en la siguiente carga de la página o pasado este plazo.
+ */
+export const PUBLIC_CONFIG_MAX_AGE_MS = 5 * 60 * 1000;
+
+let publicConfigCache: { uid: string; at: number; value: FirestorePublicConfig | null } | null = null;
+let publicConfigInFlight: { uid: string; promise: Promise<FirestorePublicConfig | null> } | null = null;
+let publicConfigGeneration = 0;
+
+function invalidatePublicConfigCache(): void {
+  publicConfigCache = null;
+  publicConfigInFlight = null;
+  publicConfigGeneration += 1;
+}
+
 export async function getPublicConfig(uid: string): Promise<FirestorePublicConfig | null> {
-  const services = await initializeFirebaseServices();
-  if (!services) {
-    throw new Error('Firebase no está configurado en este entorno');
+  if (publicConfigCache?.uid === uid && Date.now() - publicConfigCache.at < PUBLIC_CONFIG_MAX_AGE_MS) {
+    return publicConfigCache.value ? { ...publicConfigCache.value } : null;
   }
-  const snap = await getDoc(doc(services.firestore, 'publicConfig', uid));
-  return snap.exists() ? (snap.data() as FirestorePublicConfig) : null;
+  if (publicConfigInFlight?.uid === uid) {
+    const shared = await publicConfigInFlight.promise;
+    return shared ? { ...shared } : null;
+  }
+
+  const generation = publicConfigGeneration;
+  const promise = (async () => {
+    const services = await initializeFirebaseServices();
+    if (!services) {
+      throw new Error('Firebase no está configurado en este entorno');
+    }
+    const snap = await getDoc(doc(services.firestore, 'publicConfig', uid));
+    const value = snap.exists() ? (snap.data() as FirestorePublicConfig) : null;
+    // Una lectura que salió antes de una escritura propia no guarda lo que ya se sabe viejo.
+    if (generation === publicConfigGeneration) {
+      publicConfigCache = { uid, at: Date.now(), value };
+    }
+    return value;
+  })();
+  const entry = { uid, promise };
+  publicConfigInFlight = entry;
+  try {
+    const value = await promise;
+    return value ? { ...value } : null;
+  } finally {
+    if (publicConfigInFlight === entry) publicConfigInFlight = null;
+  }
 }
 
 export async function setPublicConfig(uid: string, config: Partial<FirestorePublicConfig>): Promise<void> {
@@ -276,7 +318,11 @@ export async function setPublicConfig(uid: string, config: Partial<FirestorePubl
   if (!services) {
     throw new Error('Firebase no está configurado en este entorno');
   }
-  await setDoc(doc(services.firestore, 'publicConfig', uid), { ...config, schemaVersion: FIRESTORE_SCHEMA_VERSION }, { merge: true });
+  try {
+    await setDoc(doc(services.firestore, 'publicConfig', uid), { ...config, schemaVersion: FIRESTORE_SCHEMA_VERSION }, { merge: true });
+  } finally {
+    invalidatePublicConfigCache();
+  }
 }
 
 /**
@@ -318,7 +364,7 @@ export async function setUserMap(uid: string, profileId: string): Promise<void> 
  * escribe `userMap/{uid}` y guarda los ids en `privateConfig` (merge, conserva el token cifrado).
  * Best-effort: no rompe el guardado social si falla.
  */
-export async function establishProfileIdentity(uid: string, profileId: string, gamesGistId: string, socialGistId: string): Promise<void> {
+export async function establishProfileIdentity(uid: string, profileId: string, gamesGistId: string, socialGistId: string): Promise<boolean> {
   try {
     await setUserMap(uid, profileId);
     // Los ids VACÍOS no se escriben. `setPrivateConfig` hace merge, así que mandar `gamesGistId: ''` no es "no
@@ -330,8 +376,10 @@ export async function establishProfileIdentity(uid: string, profileId: string, g
       ...(gamesGistId ? { gamesGistId } : {}),
       ...(socialGistId ? { socialGistId } : {}),
     });
+    return true;
   } catch (error) {
     console.warn('[firebase] No se pudo establecer profileId/userMap:', error instanceof Error ? error.message : error);
+    return false;
   }
 }
 
@@ -372,8 +420,50 @@ export async function recoverRemoteProfileId(uid: string): Promise<string | null
  * pseudónimo. Si no hay remoto (primer dispositivo) o Firestore no responde, cae al `profileId` local.
  */
 export async function resolveStableProfileId(uid: string): Promise<string> {
+  // El pseudónimo no cambia una vez que existe en remoto: todos los dispositivos convergen a él. Se recuerda en
+  // memoria para no releer `privateConfig` en cada montaje del hub y en cada publicación. Solo cuando vino de
+  // Firestore: si no había remoto (primer dispositivo, sin red), el siguiente intento vuelve a preguntar.
+  if (resolvedProfileId?.uid === uid) {
+    return resolvedProfileId.profileId;
+  }
   const remote = await recoverRemoteProfileId(uid);
-  return seedProfileIdFromRemote(remote);
+  const profileId = await seedProfileIdFromRemote(remote);
+  if (remote) {
+    resolvedProfileId = { uid, profileId };
+  }
+  return profileId;
+}
+
+let resolvedProfileId: { uid: string; profileId: string } | null = null;
+
+/**
+ * Lo que ya se escribió en esta carga de la página y no hace falta repetir en cada publicación: la identidad
+ * (`userMap` + ids en `privateConfig`) y el respaldo cifrado del token con la purga del token en claro legacy.
+ * Antes eran cuatro escrituras por reseña publicada aunque nada hubiera cambiado.
+ */
+let identityWrittenStamp = '';
+let tokenBackedUpStamp = '';
+
+/** Huella del token para comparar sin guardar otra copia suya en memoria. */
+function tokenFingerprint(token: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < token.length; i += 1) {
+    hash ^= token.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(36) + ':' + token.length;
+}
+
+/**
+ * Olvida todo lo que este módulo recuerda de la cuenta propia: la copia de `publicConfig`, el pseudónimo resuelto
+ * y las escrituras ya hechas. Lo llama el borrado de cuenta, que no recarga la página: sin esto, volver a activar
+ * lo social en la misma sesión se saltaría el `userMap` que se acaba de borrar.
+ */
+export function forgetOwnAccountMemo(): void {
+  invalidatePublicConfigCache();
+  resolvedProfileId = null;
+  identityWrittenStamp = '';
+  tokenBackedUpStamp = '';
 }
 
 /**
@@ -455,7 +545,12 @@ export async function ensureProfileByEmail(input: {
   // este guardado es best-effort (se traga sus errores). Con el orden inverso, un fallo de red entre ambos dejaba
   // al usuario purgado y SIN guardar: ni podía recuperar su canal social ni su gist de juegos en otro
   // dispositivo. Guardando antes, el peor caso es tener el dato en los dos sitios, que es inofensivo.
-  await establishProfileIdentity(input.user.uid, profileId, gamesGistId, input.socialGistId);
+  const identityStamp = [input.user.uid, profileId, gamesGistId, input.socialGistId].join('|');
+  if (identityWrittenStamp !== identityStamp) {
+    if (await establishProfileIdentity(input.user.uid, profileId, gamesGistId, input.socialGistId)) {
+      identityWrittenStamp = identityStamp;
+    }
+  }
 
   if (shouldWriteProfile) {
     await setDoc(
@@ -494,7 +589,8 @@ export async function ensureProfileByEmail(input: {
   }
 
   // B1: respaldo CIFRADO del token en privateConfig; nunca en claro en `profiles`.
-  if (githubToken) {
+  const tokenStamp = githubToken ? `${input.user.uid}|${tokenFingerprint(githubToken)}` : '';
+  if (githubToken && tokenBackedUpStamp !== tokenStamp) {
     try {
       await backupGithubToken(input.user.uid, githubToken);
       // Upgrade proactivo: una vez respaldado cifrado, borrar el token en claro LEGACY que perfiles viejos
@@ -504,6 +600,7 @@ export async function ensureProfileByEmail(input: {
         { social: { githubToken: deleteField() } }, // audit-allow: deleteField() ELIMINA el token en claro legacy, no lo almacena
         { merge: true },
       );
+      tokenBackedUpStamp = tokenStamp;
     } catch (error) {
       console.warn('[firebase] No se pudo respaldar/limpiar el token:', error instanceof Error ? error.message : error);
     }
@@ -544,7 +641,14 @@ export async function ensureProfileByEmail(input: {
   if (isForeignDoc) {
     invalidateProfileByEmailCache(cleanEmail);
   }
-  invalidateSocialDirectoryCache();
+  // Solo si el documento se ha reescrito. Publicar una reseña pasa por aquí cada vez y, con el perfil igual, tirar la
+  // copia de la consulta del directorio hacía pagar sus 50 lecturas en la siguiente visita al social sin que nada
+  // de lo que enseña hubiera cambiado. La reseña nueva no vive en el directorio, sino en el gist social, y su copia
+  // (la del feed) la tira quien publica (`invalidateCachedSocialDirectory`). El latido de arriba solo mueve
+  // `updatedAt`, que decide el orden del directorio, no lo que pinta.
+  if (shouldWriteProfile) {
+    invalidateSocialDirectoryCache();
+  }
 
   return written;
 }
