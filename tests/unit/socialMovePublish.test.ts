@@ -136,6 +136,21 @@ describe('F4 — los mensajes de lista viajan en la escritura que ya iba a ocurr
     expect((written.moves || []).map((entry) => entry.id)).toEqual(['7:c', '7:e']);
   });
 
+  // El post ya está en el gist cuando Firestore falla: avisar de error hacía que el usuario lo reenviara, y salía dos
+  // veces (cada publicación lleva un id nuevo). Lo de Firestore se reintenta solo más adelante.
+  it('si Firestore falla después de escribir el post, publicar no da error (y no se reenvía duplicado)', async () => {
+    armChannel('f4aa0000000000fa');
+    const store = stubGistStore(socialGist());
+    firebaseMocks.ensureProfileByEmail.mockRejectedValueOnce(Object.assign(new Error('Quota exceeded.'), { code: 'resource-exhausted' }));
+    const avisos = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await expect(publishPost({ text: 'Una sola vez', maxLength: 1000 })).resolves.toBeUndefined();
+
+    expect(store.writes()).toBe(1);
+    expect(store.current().posts).toHaveLength(1);
+    avisos.mockRestore();
+  });
+
   it('una publicación de texto libre también los arrastra', async () => {
     armChannel('f4aa000000000002');
     seedLocalGames({ e: [game({ id: 9, name: 'Tunic', enteredAt: { p: P, e: E } })] });
