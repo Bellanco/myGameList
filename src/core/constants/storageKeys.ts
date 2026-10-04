@@ -235,3 +235,6 @@ export const scoreScaleKey = (uid: string): string => `${SCORE_SCALE_PREFIX}${ui
 export const OWN_PROFILE_PREFIX = 'mis-listas-own-profile-';
 export const ownProfileKey = (uid: string): string => `${OWN_PROFILE_PREFIX}${uid}`;
 
+/** El último aviso del administrador leído bien, para enseñarlo si `/api/announcement` no responde (fase 5). */
+export const ANNOUNCEMENT_LAST_KEY = 'mis-listas-announcement-last';
+

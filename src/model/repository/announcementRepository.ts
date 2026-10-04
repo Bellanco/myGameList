@@ -14,8 +14,8 @@
 // a pedir nada. Un aviso recién publicado tarda esos minutos en llegar a quien ya tenía la app abierta hoy, que
 // para algo que se toca dos veces al año es exactamente lo que hay que cambiar por no pedirlo en cada apertura.
 //
-// NUNCA LANZA AL LEER. Sin red, con la función sin desplegar o con la respuesta rota, devuelve `null`: no hay
-// aviso y no pasa nada. Al ESCRIBIR sí lanza, porque ahí hay un administrador esperando saber si se guardó.
+// NUNCA LANZA AL LEER. Sin red, con la función sin desplegar o con la respuesta rota, devuelve el último aviso que
+// se leyó bien en este navegador, o `null` si nunca se leyó ninguno. Al ESCRIBIR sí lanza, porque ahí hay un administrador esperando saber si se guardó.
 import {
   ANNOUNCEMENT_CHANNEL,
   ANNOUNCEMENT_PUBLISHED_EVENT,
@@ -23,9 +23,31 @@ import {
   type Announcement,
 } from '../../core/announcement/announcement';
 import { shareAuthHeaders } from './shareRepository';
+import { ANNOUNCEMENT_LAST_KEY } from '../../core/constants/storageKeys';
 
 const API = '/api/announcement';
 
+
+/**
+ * EL ÚLTIMO AVISO LEÍDO BIEN, en este navegador. Es lo que se sirve si la API no responde. Se guarda también el
+ * «no hay ninguno» (`null`): si el administrador lo apagó, un corte no puede resucitarlo.
+ */
+function storeAnnouncement(value: Announcement | null): void {
+  try {
+    localStorage.setItem(ANNOUNCEMENT_LAST_KEY, JSON.stringify(value));
+  } catch {
+    // best-effort
+  }
+}
+
+function readStoredAnnouncement(): Announcement | null {
+  try {
+    const raw = localStorage.getItem(ANNOUNCEMENT_LAST_KEY);
+    return raw ? sanitizeAnnouncement(JSON.parse(raw)) : null;
+  } catch {
+    return null;
+  }
+}
 
 /** Lo leído en esta sesión (o `null` si se leyó y no había nada). `undefined` = todavía no se ha leído. */
 let cached: Announcement | null | undefined;
@@ -48,12 +70,17 @@ export function loadAnnouncement(force = false): Promise<Announcement | null> {
   const request = (async (): Promise<Announcement | null> => {
     try {
       const response = await fetch(API, force ? { cache: 'no-store' } : undefined);
-      if (!response.ok) return null;
-      return sanitizeAnnouncement(await response.json());
+      // Con el cupo de Functions agotado Cloudflare contesta con HTML (su página de error o el `404.html`): no
+      // es la respuesta de esta API, igual que un error.
+      const isHtml = (response.headers?.get?.('content-type') || '').includes('text/html');
+      if (!response.ok || isHtml) return readStoredAnnouncement();
+      const value = sanitizeAnnouncement(await response.json());
+      storeAnnouncement(value);
+      return value;
     } catch {
-      // Sin red o con la función sin desplegar: no hay aviso. No se recuerda el fallo — la próxima apertura
-      // reintenta.
-      return null;
+      // Sin red, con la función sin desplegar o sin cupo: el último aviso que se leyó bien en este navegador. Antes
+      // el aviso desaparecía durante el corte (docs/plan-degradacion-servicios.md, fase 5).
+      return readStoredAnnouncement();
     }
   })();
 

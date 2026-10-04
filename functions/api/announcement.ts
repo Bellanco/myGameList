@@ -28,7 +28,7 @@ const KEY = 'announcement';
  *
  * Cinco minutos: un aviso se toca dos veces al año y su ciclo de insistencia se mide en horas, así que servirlo
  * de caché no cambia lo que ve nadie y ahorra una lectura de KV por apertura de la app. El cliente guarda además
- * su propia copia unas horas (ver `announcementRepository`), así que esto es la segunda red, no la única.
+ * el último aviso leído bien (ver `announcementRepository`) y lo enseña si esta función no responde.
  */
 const CACHE_SECONDS = 300;
 
