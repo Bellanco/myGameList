@@ -150,7 +150,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
   const lastForcedHydrateRef = useRef(0);
   const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const runDirectoryHydration = useCallback(async (forceRefresh: boolean) => {
+  const runDirectoryHydration = useCallback(async (forceRefresh: boolean, keepDirectoryQuery = false) => {
     if (!directoryPanelAllows || !authUser || !socialCfgGistId) {
       return;
     }
@@ -214,8 +214,10 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
       setLoadingDirectory(true);
       // La CONSULTA de perfiles tiene su propia copia, más larga que la del feed: lo que caduca a menudo es la
       // actividad de los amigos, que sale de sus gists, no el nick o la foto (ver `PROFILE_TIER_DIRECTORY_TTL_MS`).
+      // `keepDirectoryQuery`: el refresco que sigue a publicar un post salta la copia del FEED (tiene que salir el
+      // post) pero no la de la consulta de perfiles, que no ha cambiado: forzarla eran 50 lecturas por post.
       const dirEntries = await listSocialDirectory(SOCIAL_DIRECTORY_LIMIT, {
-        forceRefresh,
+        forceRefresh: forceRefresh && !keepDirectoryQuery,
         maxAgeMs: PROFILE_TIER_DIRECTORY_TTL_MS[ownTier],
       });
       const socialConfig = getSocialSyncConfig();
@@ -544,14 +546,14 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
    */
   const directoryHydrationRef = useRef<Promise<void> | null>(null);
 
-  const hydrateSocialDirectory = useCallback(async (forceRefresh = false) => {
+  const hydrateSocialDirectory = useCallback(async (forceRefresh = false, options: { keepDirectoryQuery?: boolean } = {}) => {
     const pending = directoryHydrationRef.current;
     // Un refresco FORZADO (botón "Actualizar") sí quiere una pasada nueva: su anti-spam ya lo acota aparte.
     if (pending && !forceRefresh) {
       return pending;
     }
 
-    const run = runDirectoryHydration(forceRefresh);
+    const run = runDirectoryHydration(forceRefresh, Boolean(options.keepDirectoryQuery));
     directoryHydrationRef.current = run;
     try {
       await run;

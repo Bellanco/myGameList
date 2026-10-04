@@ -357,7 +357,7 @@ export async function publishPost(input: { text: string; maxLength?: number }): 
   const etag = await commitSocialWrite(ctx, nextPayload);
 
   // SIN `invalidateCachedSocialDirectory`, a diferencia de los dos de arriba: quien publica un post refresca el
-  // feed acto seguido con `hydrateSocialDirectory(true)` (ver `useSocialCompose`), y un refresco forzado se salta
-  // la caché de todas formas. Añadir aquí la invalidación sería una escritura en IndexedDB que nadie leería.
+  // feed acto seguido con un refresco forzado (ver `onPublished` en `useSocialViewModel`), que se salta la caché del
+  // feed de todas formas. Añadir aquí la invalidación sería una escritura en IndexedDB que nadie leería.
   await syncPublicIdentity(ctx, etag);
 }

@@ -1832,7 +1832,8 @@ export function useSocialViewModel(options?: {
     showPostCounter,
   } = useSocialCompose({
     ownTier,
-    onPublished: useCallback(() => hydrateSocialDirectory(true), [hydrateSocialDirectory]),
+    // Forzado para que el post salga ya, pero sin releer la consulta de perfiles: publicar no cambia el directorio.
+    onPublished: useCallback(() => hydrateSocialDirectory(true, { keepDirectoryQuery: true }), [hydrateSocialDirectory]),
     setFeedback,
   });
 
