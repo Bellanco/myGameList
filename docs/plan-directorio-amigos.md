@@ -148,6 +148,8 @@ todas.
 
 ## Siguiente paso (sin hacer)
 
+Detallado en `docs/plan-amistades-incrementales.md`, aparcado hasta medir el consumo real.
+
 **Amistades incrementales.** En vez de releer las N, preguntar solo por las que han cambiado desde la última lectura
 (`users array-contains uid` + `updatedAt > última`): una consulta sin cambios cuesta 1 lectura. Lo que no ve es un
 documento BORRADO (una amistad retirada), así que haría falta una relectura completa de vez en cuando (p. ej. una al
