@@ -622,7 +622,11 @@ export async function healOwnFriendshipIdentity(
     });
   }
 
-  invalidateMyFriendshipsCache(myUid);
+  // Solo si se ha escrito algo. Sin escrituras, las amistades están exactamente como las dejó la última lectura, y
+  // tirar la copia hacía que la revisión semanal costara el doble: N lecturas aquí y otras N al volver al social.
+  if (pending.length > 0) {
+    invalidateMyFriendshipsCache(myUid);
+  }
 }
 
 /**

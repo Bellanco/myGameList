@@ -366,6 +366,37 @@ describe('healOwnFriendshipIdentity', () => {
     expect(batchUpdateMock).toHaveBeenCalledTimes(1);
   });
 
+  // La revisión semanal suele encontrarlo todo al día. Tirar entonces la copia de las amistades costaba otras N
+  // lecturas al volver al social, para releer exactamente lo mismo.
+  it('si no hay nada que escribir, no tira la copia de las amistades', async () => {
+    const alDia = {
+      users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'accepted',
+      requesterName: 'MiNick', requesterPhoto: 'p', requesterSocialGistId: 'gs', requesterGamesGistId: 'gg',
+    };
+    getDocsMock.mockResolvedValue(snapshot([{ id: 'me__x', data: alDia }]));
+    await getMyFriendships('me');
+    expect(getDocsMock).toHaveBeenCalledTimes(1);
+
+    await healOwnFriendshipIdentity('me', { name: 'MiNick', photo: 'p', socialGistId: 'gs', gamesGistId: 'gg' });
+    expect(batchUpdateMock).not.toHaveBeenCalled();
+    await getMyFriendships('me');
+
+    // La del saneado, y ninguna más: la copia sigue sirviendo.
+    expect(getDocsMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('y si ha escrito, sí: la siguiente lectura trae lo escrito', async () => {
+    getDocsMock.mockResolvedValue(
+      snapshot([{ id: 'me__x', data: { users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'accepted' } }]),
+    );
+    await getMyFriendships('me');
+    await healOwnFriendshipIdentity('me', { name: 'MiNick', photo: 'p', socialGistId: 'gs', gamesGistId: 'gg' });
+    expect(batchUpdateMock).toHaveBeenCalled();
+    await getMyFriendships('me');
+
+    expect(getDocsMock).toHaveBeenCalledTimes(3);
+  });
+
   it('un cambio de nick invalida la huella y vuelve a propagar', async () => {
     const stored = { users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'accepted', requesterName: 'MiNick' };
     getDocsMock.mockResolvedValue(snapshot([{ id: 'me__x', data: stored }]));
