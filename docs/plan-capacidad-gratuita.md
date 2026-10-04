@@ -325,3 +325,10 @@ quedan ~38 publicaciones al día, no ~57.
 a `ensureSyncConfigLoaded`; si el descifrado llegara tarde, esas lecturas irían sin token (60/h por IP). En la
 práctica las lecturas de Firestore que preceden al disparo dan tiempo de sobra, pero no está garantizado.
 
+**Tras `docs/plan-directorio-amigos.md` (04-10-2026, mismo método).** El feed lee por uid a los amigos y a uno
+mismo (ya no los 50 más recientes), «Perfiles» pide 34 recientes solo al abrirla, y la caché de «mis enlaces» quita
+el techo de KV *list*. Por usuario y día: medio ~60–100 lecturas de Firestore, intenso ~600–750 (dominado ahora por
+releer las amistades, N cada 15 min y cada 60 s en solicitudes). Con la mezcla 70/25/5, Firestore da para
+**~800–1.000 activos al día** y Cloudflare (carátulas de amigos, cuenta pesimista) para ~700–750: los dos techos
+quedan casi a la par. Siguiente palanca: amistades incrementales (ver ese plan); y antes de nada, la Fase 0.
+

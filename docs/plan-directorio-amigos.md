@@ -51,7 +51,7 @@ escribe `serverTimestamp()`).
 **Verificación.** `tests/unit/premiosPalmaresRepository.test.ts`: dar y quitar el trofeo no toca `updatedAt`. Las
 reglas no cambian: la escritura del administrador no exige el campo.
 
-## Fase 2 — El feed lee a tus amigos por id · M
+## Fase 2 — El feed lee a tus amigos por id · M · ✅ hecha (04-10-2026)
 
 **Cambio.**
 
@@ -78,7 +78,7 @@ Con 10 amigos activos, ~11 en vez de 50.
 amigos lee N+1 perfiles y **ninguna** consulta de colección; reabrir dentro de la ventana, 0. Tests del repositorio:
 copia por uid, edad del inactivo, `permission-denied` → sintetizado, invalidación solo del propio.
 
-## Fase 3 — «Perfiles» carga 34 recientes, solo al abrirla · M
+## Fase 3 — «Perfiles» carga 34 recientes, solo al abrirla · M · ✅ hecha (04-10-2026)
 
 **Cambio.**
 
@@ -100,7 +100,7 @@ caducidad del feed, la abra o no.
 **Verificación.** Presupuesto: abrir el feed no lanza esta consulta; abrir «Perfiles» la lanza una vez; volver
 dentro de la ventana, 0. `npm run test:rules`: la consulta con rango pasa las reglas de `profiles`.
 
-## Fase 4 — A quien no es tu amigo, solo nombre y foto · S
+## Fase 4 — A quien no es tu amigo, solo nombre y foto · S · ✅ hecha (04-10-2026)
 
 **Cambio.**
 
@@ -114,27 +114,45 @@ dentro de la ventana, 0. `npm run test:rules`: la consulta con rango pasa las re
 **Verificación.** Tests de componente de `SocialProfilesScreen`, la ficha y `SocialRequestsScreen`: un no-amigo no
 pinta rango; un amigo sí.
 
-## Fase 5 — Medir y documentar · S
+## Fase 5 — Medir y documentar · S · ✅ hecha (04-10-2026)
 
 - Rehacer la tabla por usuario de `docs/plan-capacidad-gratuita.md` con el código nuevo.
 - Suite completa, `npm run test:rules`, `npm run test:e2e` sobre un `dist` recién construido, y el emulador social
   (`npm run emulate:social`) con más de 34 perfiles y amigos inactivos.
 - Comprobar en la vista previa de Cloudflare contra el Firestore real que la consulta de la Fase 3 no pide índice.
 
-## Qué se espera ganar (estimado)
+## Qué se ha ganado (recontado el 04-10-2026, tras las cuatro fases)
 
-| | Hoy (tras A) | Tras este plan |
+Estimación leyendo el código, con los mismos supuestos que el recuento del plan de capacidad (medio: N≈10 amigos,
+social ~1 h, una reseña; intenso: N≈30, social ~4 h, tres reseñas y un post, premios). La tabla que se escribió al
+planear daba al intenso ~250–400 y un techo de ~1.600–1.800: **era demasiado optimista**, porque no pesaba bien lo
+que queda una vez que el directorio deja de costar.
+
+| | Antes de A | Hoy |
 |---|---|---|
-| Feed, por ventana del rango | 50 lecturas | amigos activos + 1 (~11 con 10 amigos) |
-| «Perfiles» | incluido en lo de arriba | 34, solo al abrirla |
-| Usuario medio, lecturas/día | ~70–120 | ~40–60 |
-| Usuario intenso, lecturas/día | ~450–800 | ~250–400 (lo que queda es sobre todo releer las amistades cada 15 min) |
-| Techo por Firestore (mezcla 70/25/5) | ~650 activos/día | **~1.600–1.800** |
+| Feed, por ventana del rango | 50 lecturas | amigos activos + 1 (~11 con 10 amigos); los dormidos, 1 al día |
+| «Perfiles» | dentro de lo de arriba | 34, solo al abrirla |
+| Usuario medio, lecturas/día | ~110–170 | ~60–100 (34 de ellas solo si abre «Perfiles») |
+| Usuario intenso, lecturas/día | ~600–1.000 | ~600–750 |
+| Techo por Firestore (mezcla 70/25/5) | ~650 activos/día | **~800–1.000** |
 
-**El siguiente techo pasa a ser Cloudflare (Functions y lecturas de KV)**, por las carátulas de las bibliotecas de
-los amigos: ~700–750 activos/día con la cuenta pesimista del primer día de un usuario intenso. Antes de tocarlo hay
-que medirlo (Fase 0 del plan de capacidad): en régimen normal el service worker y la caché del navegador sirven casi
+**Lo que domina ahora al usuario intenso son las amistades**: N documentos cada vez que vuelve al social pasados
+15 min (`MY_FRIENDSHIPS_MAX_AGE_MS`), y cada 60 s en la pantalla de solicitudes. Con 30 amigos son ~240–480 al
+día más ~150 de solicitudes, frente a ~115 del directorio y ~110 de premios. Es el siguiente sitio donde mirar (ver
+«Siguiente paso» abajo).
+
+**Y Cloudflare (Functions y lecturas de KV) queda casi a la par**, por las carátulas de las bibliotecas de los
+amigos: ~700–750 activos/día con la cuenta pesimista del primer día de un usuario intenso. Antes de tocarlo hay que
+medirlo (Fase 0 del plan de capacidad): en régimen normal el service worker y la caché del navegador sirven casi
 todas.
+
+## Siguiente paso (sin hacer)
+
+**Amistades incrementales.** En vez de releer las N, preguntar solo por las que han cambiado desde la última lectura
+(`users array-contains uid` + `updatedAt > última`): una consulta sin cambios cuesta 1 lectura. Lo que no ve es un
+documento BORRADO (una amistad retirada), así que haría falta una relectura completa de vez en cuando (p. ej. una al
+día) y que retirar una amistad propia siga invalidando al momento. Necesita un índice compuesto nuevo, que hay que
+desplegar ANTES que el código (la Fase 2 del plan de escalabilidad explica por qué se evitó hasta ahora).
 
 ## Riesgos
 
@@ -149,7 +167,14 @@ todas.
 ## Checklist
 
 - [x] Fase 1: palmarés sin `updatedAt` (04-10-2026).
-- [ ] Fase 2: feed por id, copia por uid, inactivos fuera del feed, presupuesto en `socialHubBudget`.
-- [ ] Fase 3: «Perfiles» con 34 y filtro de 30 días, solo al abrirla; porcentaje de logros con la muestra nueva.
-- [ ] Fase 4: no-amigos sin rango en «Perfiles», ficha y bandeja.
-- [ ] Fase 5: suite, reglas, e2e, emulador con > 34 perfiles; tabla de capacidad rehecha.
+- [x] Fase 2 y 3 (`f0423bbd`, un solo commit: con la 2 sola, «Perfiles» se quedaba sin no-amigos): feed por uid
+      con copia por uid, dormidos a un día, presupuesto en `socialHubBudget`; «Perfiles» con 34 y corte de 30 días,
+      solo al abrirla; porcentaje de logros con la muestra nueva.
+- [x] Fase 4 (`800fccb1`): no-amigos sin rango en «Perfiles» y en la bandeja; sus logros no se enseñan ni abriendo
+      la ruta a mano. Su FOTO ya la escondía la regla de reciprocidad (`photoVisibility.ts`, salvo mithril), que no
+      se ha tocado.
+- [x] Fase 5: 3232 casos de `npm test`, 124 de reglas (con las dos lecturas nuevas), 282 e2e sobre un `dist`
+      nuevo y el emulador social (que llevaba la versión legal escrita a mano y se quedaba en la puerta; arreglado).
+      Arranque 180,5/190 kB. La tabla de capacidad, rehecha arriba y en `plan-capacidad-gratuita.md`.
+- [ ] Comprobar en la vista previa de Cloudflare, contra el Firestore real, que la consulta de «Perfiles» no pide
+      índice (el emulador no valida índices).
