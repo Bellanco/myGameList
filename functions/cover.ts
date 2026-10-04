@@ -330,9 +330,13 @@ export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise
     // debajo. Devolver aquí un PNG genérico obligaría a descargarlo para tapar algo que ya está pintado.
     // El plazo depende de QUIÉN pregunta: el recorrido guarda lo aprendido (`CACHE_MAPA`), el mosaico no
     // guarda nada (`CACHE_FALLO`), que es la línea que costó media biblioteca y sigue igual de intacta.
+    // Y lo AJENO (`c=1`) se guarda lo mismo que su «aún sin resolver», por la misma razón de coste: sin esto, cada
+    // título sin carátula de un amigo era una invocación y una lectura de KV por visita a su perfil y por fila
+    // reciclada. El incidente de `CACHE_FALLO` no llega aquí: el 429 y el 503 salen antes y con `no-store`, y el
+    // dueño pide su biblioteca sin la marca, así que una corrección suya nunca se encuentra esta copia.
     return new Response('Sin carátula', {
       status: 404,
-      headers: { 'Cache-Control': soloMapa ? CACHE_MAPA : CACHE_FALLO },
+      headers: { 'Cache-Control': soloMapa ? CACHE_MAPA : soloCache ? CACHE_SIN_RESOLVER : CACHE_FALLO },
     });
   }
 

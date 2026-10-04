@@ -446,12 +446,15 @@ describe('/cover — solo caché', () => {
     expect(respuesta.headers.get('X-Cover')).toBe('sin-resolver');
   });
 
-  it('el «no tiene» ya sabido se contesta como siempre', async () => {
+  it('el «no tiene» ya sabido se contesta como siempre, pero el navegador lo guarda una hora', async () => {
     const kv = kvFalso({ [claveCache('Jotum', [])]: '' });
     const respuesta = await onRequestGet({ request: peticion('n=Jotum&c=1'), env: entorno(kv) });
 
     expect(respuesta.status).toBe(404);
     expect(respuesta.headers.get('X-Cover')).toBeNull();
+    // Con `no-store`, cada título sin carátula de un amigo costaba una invocación por visita y por fila reciclada.
+    // El mismo plazo que el «aún sin resolver»: lo ajeno nunca lo pide su dueño, que pide sin la marca.
+    expect(respuesta.headers.get('Cache-Control')).toBe('private, max-age=3600');
   });
 
   it('con el cupo del día agotado sigue sirviendo lo ya emparejado', async () => {
