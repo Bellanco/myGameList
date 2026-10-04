@@ -46,6 +46,7 @@ vi.mock('firebase/firestore/lite', () => ({
 }));
 
 const repo = await import('../../src/model/repository/firebaseSocialRepository');
+const { resetFirestoreQuotaForTests } = await import('../../src/model/repository/firestoreQuota');
 
 const AHORA = Date.parse('2026-10-04T12:00:00.000Z');
 const MEDIA_HORA = 30 * 60 * 1000;
@@ -76,6 +77,7 @@ beforeEach(() => {
   getDocsMock.mockReset();
   whereMock.mockClear();
   repo.invalidateSocialDirectoryCache();
+  resetFirestoreQuotaForTests();
   return () => vi.useRealTimers();
 });
 
@@ -165,6 +167,21 @@ describe('getSocialProfilesByUid — lo que el feed lee de Firestore', () => {
     expect(entries.map((entry) => entry.uid)).toEqual(['ana', 'bruno']);
     // Y lo viejo no se vuelve a guardar como nuevo.
     expect(persisted.get('ana')?.cachedAt).toBe(AHORA);
+  });
+
+  it('vista la cuota agotada, no vuelve a preguntar hasta el reinicio: va directo a lo guardado', async () => {
+    world = { ana: perfil('ana', AHORA) };
+    await repo.getSocialProfilesByUid(['ana'], { maxAgeMs: MEDIA_HORA });
+    vi.setSystemTime(AHORA + 2 * MEDIA_HORA);
+    getDocMock.mockRejectedValueOnce(Object.assign(new Error('Quota exceeded.'), { code: 'resource-exhausted' }));
+    await repo.getSocialProfilesByUid(['ana'], { maxAgeMs: MEDIA_HORA });
+    const llamadas = getDocMock.mock.calls.length;
+
+    vi.setSystemTime(AHORA + 4 * MEDIA_HORA);
+    const entries = await repo.getSocialProfilesByUid(['ana'], { maxAgeMs: MEDIA_HORA });
+
+    expect(getDocMock.mock.calls.length).toBe(llamadas);
+    expect(entries.map((entry) => entry.uid)).toEqual(['ana']);
   });
 
   it('con Firestore sin cuota y sin copia de nadie, se propaga (la hidratación rescata el feed entero)', async () => {

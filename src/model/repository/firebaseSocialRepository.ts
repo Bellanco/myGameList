@@ -29,6 +29,7 @@ import {
 } from './indexedDbRepository';
 import { mapWithConcurrency } from '../../core/utils/concurrency';
 import { isServiceUnavailable } from '../../core/utils/network';
+import { firestoreQuotaError, isFirestoreQuotaExhausted, noteFirestoreError } from './firestoreQuota';
 import { INACTIVE_PROFILE_MAX_AGE_MS, PROFILE_INACTIVITY_MS } from '../../core/constants/socialActivity';
 
 const SOCIAL_PROFILE_CACHE_TTL_MS = 60_000;
@@ -466,6 +467,8 @@ export async function getSocialProfilesByUid(
     const fetched = await mapWithConcurrency(missing, DIRECTORY_PROFILE_FETCH_CONCURRENCY, async (uid) => {
       let entry: SocialDirectoryEntry | null = null;
       try {
+        // Con la cuota del día agotada no se pregunta: va directo a la copia de abajo (ver `firestoreQuota`).
+        if (isFirestoreQuotaExhausted()) throw firestoreQuotaError();
         const snapshot = await getDoc(doc(services.firestore, 'profiles', uid));
         if (snapshot.exists()) {
           const mapped = mapDirectoryEntry(snapshot.id, snapshot.data() as DirectoryDocData);
@@ -476,6 +479,7 @@ export async function getSocialProfilesByUid(
         if (isPermissionDeniedError(error)) {
           return { uid, row: { cachedAt: startedAt, entry: null }, stale: false };
         }
+        noteFirestoreError(error);
         // EL SERVICIO NO ATIENDE (cuota agotada, caído, sin red): se sirve lo último guardado de ESTE perfil, por
         // viejo que sea, y no se guarda como nuevo. Antes un solo `getDoc` fallido rechazaba todos y el feed
         // perdía hasta a los amigos que sí tenían copia (docs/plan-degradacion-servicios.md, fase 2). Sin copia
@@ -671,11 +675,13 @@ export async function listSocialDirectory(
 
     let snapshot;
     try {
+      if (isFirestoreQuotaExhausted()) throw firestoreQuotaError();
       snapshot = await getDocs(query(profiles, enabled, ...recent, orderBy('updatedAt', 'desc'), limit(normalizedLimit)));
     } catch (error) {
       if (isPermissionDeniedError(error)) {
         throw new Error('Permisos insuficientes para leer perfiles sociales en Firestore');
       }
+      noteFirestoreError(error);
       // EL SERVICIO NO ATIENDE: la última copia de esta consulta, por vieja que sea, antes que una lista vacía. No se
       // guarda como nueva ni en memoria: en cuanto Firestore vuelva, la siguiente apertura la relee.
       if (isServiceUnavailable(error)) {

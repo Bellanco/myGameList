@@ -16,6 +16,7 @@ import {
 import { trackAnalyticsEvent } from './telemetryRepository';
 import type { FriendshipDoc } from '../types/firestore';
 import type { FriendshipView, MyFriendships } from '../types/social';
+import { firestoreQuotaError, isFirestoreQuotaExhausted, noteFirestoreError } from './firestoreQuota';
 
 /**
  * CUÁNTO VALE UNA COPIA DE MIS AMISTADES, en memoria o en IndexedDB. La consulta cuesta una lectura de Firestore POR
@@ -272,6 +273,8 @@ export async function getMyFriendships(
 
     let snapshot;
     try {
+      // Con la cuota del día agotada no se pregunta: la copia guardada, directamente (ver `firestoreQuota`).
+      if (isFirestoreQuotaExhausted()) throw firestoreQuotaError();
       snapshot = await getDocs(
         query(
           collection(services.firestore, 'friendships'),
@@ -283,6 +286,7 @@ export async function getMyFriendships(
       if (isPermissionDeniedError(error)) {
         return EMPTY_FRIENDSHIPS;
       }
+      noteFirestoreError(error);
       const stale = await readPersistedFriendships(myUid);
       if (stale) {
         return stale.value;
