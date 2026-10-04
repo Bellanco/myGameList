@@ -238,3 +238,11 @@ export const ownProfileKey = (uid: string): string => `${OWN_PROFILE_PREFIX}${ui
 /** El último aviso del administrador leído bien, para enseñarlo si `/api/announcement` no responde (fase 5). */
 export const ANNOUNCEMENT_LAST_KEY = 'mis-listas-announcement-last';
 
+/**
+ * La última edición de Premios leída bien (calendario y categorías, públicos) y la papeleta propia de cada cuenta
+ * (dato personal: la borra el borrado de cuenta), para cuando Firestore no atiende (fase 5).
+ */
+export const PREMIOS_EDITION_COPY_KEY = 'mis-listas-premios-edition-copy';
+export const PREMIOS_BALLOT_COPY_PREFIX = 'mis-listas-premios-ballot-copy-';
+export const premiosBallotCopyKey = (uid: string): string => `${PREMIOS_BALLOT_COPY_PREFIX}${uid}`;
+

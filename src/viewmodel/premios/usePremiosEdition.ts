@@ -19,6 +19,7 @@ import {
 import { loadAndSortCategories } from '../../model/repository/premios/premiosCategoriesRepository';
 import { fetchUserBallot } from '../../model/repository/premios/premiosBallotRepository';
 import { fetchVotingConfig } from '../../model/repository/premios/premiosSeasonRepository';
+import { readBallotCopy, readEditionCopy, storeBallotCopy, storeEditionCopy } from '../../model/repository/premios/premiosLocalCopy';
 import type { PremiosBallot, PremiosCategory, PremiosVotingConfig } from '../../model/types/premios';
 
 export interface PremiosEdition {
@@ -66,11 +67,35 @@ export function usePremiosEdition(uid: string, standing: PremiosVoterStanding | 
     try {
       // Las categorías y la papeleta solo se piden CON SESIÓN: sin ella las reglas las deniegan, y pedirlas sería
       // un `permission-denied` garantizado en la consola de cualquier visitante.
-      const [nextConfig, nextCategories, nextBallot] = await Promise.all([
-        fetchVotingConfig(),
-        uid ? loadAndSortCategories() : Promise.resolve<PremiosCategory[]>([]),
-        uid ? fetchUserBallot(uid) : Promise.resolve<PremiosBallot | null>(null),
+      //
+      // Y CON `throwOnError`, para distinguir «no hay» de «no se ha podido leer». Lo segundo se sirve de la última
+      // copia buena de este navegador: con Firestore sin cuota la pantalla decía «No se han podido cargar los
+      // premios» aunque se hubiera abierto mil veces (docs/plan-degradacion-servicios.md, fase 5).
+      const copy = readEditionCopy();
+      let fromCopy = false;
+      const orCopy = async <T,>(read: Promise<T>, fallback: () => T | undefined): Promise<T | undefined> => {
+        try {
+          return await read;
+        } catch {
+          fromCopy = true;
+          return fallback();
+        }
+      };
+      const [readConfig, readCategories, readBallot] = await Promise.all([
+        orCopy(fetchVotingConfig({ throwOnError: true }), () => copy?.config ?? undefined),
+        uid
+          ? orCopy(loadAndSortCategories(false, false, { throwOnError: true }), () => copy?.categories)
+          : Promise.resolve<PremiosCategory[]>([]),
+        uid ? orCopy(fetchUserBallot(uid, { throwOnError: true }), () => readBallotCopy(uid)) : Promise.resolve<PremiosBallot | null>(null),
       ]);
+      const nextConfig = readConfig ?? null;
+      const nextCategories = readCategories ?? [];
+      const nextBallot = readBallot ?? null;
+      // Solo lo leído de verdad se guarda como copia: guardar lo que ya venía de la copia no aporta nada.
+      if (!fromCopy) {
+        storeEditionCopy({ config: nextConfig, categories: uid ? nextCategories : copy?.categories ?? [] });
+        if (uid) storeBallotCopy(uid, nextBallot);
+      }
       if (!mountedRef.current) return;
       setConfig(nextConfig);
       setCategories(nextCategories);

@@ -29,6 +29,7 @@ import { CATEGORIES_COLLECTION, requireServices } from './premiosShared';
 export async function loadAndSortCategories(
   includeInvalid = false,
   autoCleanDuplicates = false,
+  options?: { throwOnError?: boolean },
 ): Promise<PremiosCategory[]> {
   try {
     const { firestore } = await requireServices();
@@ -78,7 +79,9 @@ export async function loadAndSortCategories(
     const valid = includeInvalid ? filtered : filtered.filter(isArchivableCategory);
 
     return sortCategoriesByOrder(valid);
-  } catch {
+  } catch (error) {
+    // Ver `fetchVotingConfig`: quien pide `throwOnError` sabe qué hacer con el fallo.
+    if (options?.throwOnError) throw error;
     return [];
   }
 }

@@ -67,12 +67,15 @@ async function votingDocRef() {
  * Ante un error devuelve `null`, que el resto interpreta como «no hay edición»: un fallo de red no puede dejar
  * la app sin saber qué pintar.
  */
-export async function fetchVotingConfig(): Promise<PremiosVotingConfig | null> {
+export async function fetchVotingConfig(options?: { throwOnError?: boolean }): Promise<PremiosVotingConfig | null> {
   try {
     const { firestore } = await requireServices();
     const snapshot = await getDoc(doc(firestore, CONFIG_COLLECTION, CONFIG_VOTING_DOC));
     return snapshot.exists() ? (snapshot.data() as PremiosVotingConfig) : null;
-  } catch {
+  } catch (error) {
+    // `throwOnError`: para quien necesita distinguir «no hay edición» de «no se ha podido leer» y tiene algo mejor
+    // que hacer con lo segundo (la pantalla de Premios sirve su última copia; docs/plan-degradacion-servicios.md).
+    if (options?.throwOnError) throw error;
     return null;
   }
 }
