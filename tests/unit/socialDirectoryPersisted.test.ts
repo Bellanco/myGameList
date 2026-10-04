@@ -39,6 +39,9 @@ vi.mock('../../src/model/repository/indexedDbRepository', () => ({
   invalidateCachedDirectoryQueries: async () => {
     persisted.clear();
   },
+  getCachedDirectoryProfiles: async () => ({}),
+  putCachedDirectoryProfiles: async () => {},
+  invalidateCachedDirectoryProfiles: async () => {},
 }));
 
 const AHORA = Date.parse('2026-09-30T12:00:00.000Z');

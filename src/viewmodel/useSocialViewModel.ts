@@ -46,6 +46,7 @@ import { isOwnProfileIdentity } from './social/socialIdentity';
 import type { SocialDirectoryEntry } from './social/socialFeed';
 import { buildFriendshipViews } from './social/friendshipViews';
 import { useSocialDirectory } from './social/useSocialDirectory';
+import { useSocialDiscover } from './social/useSocialDiscover';
 import { resolveGateway } from './social/socialGateway';
 import { useSocialFriendships } from './social/useSocialFriendships';
 import { useSocialNavigation } from './social/useSocialNavigation';
@@ -511,7 +512,7 @@ export function useSocialViewModel(options?: {
 
   // Directorio y feed: el estado, la caché y las 350 líneas de hidratación viven en `social/useSocialDirectory`.
   const {
-    rawSocialDirectory,
+    rawSocialDirectory: feedDirectory,
     directoryLoading,
     setDirectorySettled,
     refreshCoolingDown,
@@ -531,6 +532,41 @@ export function useSocialViewModel(options?: {
     reportFailure,
     setNetworkFailure,
   });
+
+  // «Perfiles» y el porcentaje de logros de la comunidad necesitan también a quien NO es tu amigo, y eso tiene su
+  // propia consulta (los recientes, `useSocialDiscover`) que solo se lanza cuando se abre una de esas pantallas. El
+  // feed no la paga: lo suyo son tus amigos, leídos por uid.
+  const discoverOpen =
+    directoryPanelAllows &&
+    (activePanel === 'profiles' || (activePanel === 'profile-detail' && (profileAchievementsView || profileGlobalsView)));
+  // La ficha de alguien que no está en ninguna de las dos listas (enlace directo): se lee ese perfil suelto. Solo con
+  // el feed ya asentado, o se leería por separado a un amigo que está a punto de llegar con él.
+  const missingProfileId =
+    directoryPanelAllows &&
+    activePanel === 'profile-detail' &&
+    !directoryLoading &&
+    profileDetailId &&
+    profileDetailId !== OWN_PROFILE_ALIAS &&
+    !feedDirectory.some((entry) => entry.id === profileDetailId)
+      ? profileDetailId
+      : '';
+  const { discoverEntries, discoverLoading } = useSocialDiscover({
+    enabled: discoverOpen,
+    missingProfileId,
+    authUid: authUser?.uid || '',
+    ownTier,
+    defaultSocialVisibility,
+    reportFailure,
+  });
+  const rawSocialDirectory = useMemo(() => {
+    if (discoverEntries.length === 0) return feedDirectory;
+    const known = new Set(feedDirectory.map((entry) => entry.uid));
+    const strangers = discoverEntries.filter(
+      (entry) => !known.has(entry.uid) && !isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId),
+    );
+    return strangers.length > 0 ? [...feedDirectory, ...strangers] : feedDirectory;
+  }, [feedDirectory, discoverEntries, authUser?.uid, ownProfileId]);
+
   const canConnectSocialGist =
     hasMainSync && hasSocialSession && !hasSocialGist && !connecting && !resolvingSocialGist && legalGateOpen;
   const canSignInGoogle = hasMainSync && !hasSocialSession && !signingIn;
@@ -2312,7 +2348,8 @@ export function useSocialViewModel(options?: {
     savingProfile,
     // Se expone el valor DERIVADO (no el `loadingDirectory` crudo): es el único que cubre la ventana completa, y
     // así ninguna pantalla puede olvidarse de sumarle la parte que falta.
-    loadingDirectory: directoryLoading,
+    // En «Perfiles» cuenta también la consulta de los recientes: sin ella, la sección «Otros» saldría vacía un instante.
+    loadingDirectory: directoryLoading || (activePanel === 'profiles' && discoverLoading),
     hasMainSync,
     hasSocialGist,
     hasSocialSession,

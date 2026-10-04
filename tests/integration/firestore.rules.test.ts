@@ -7,7 +7,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { ADMIN_CLAIM } from '../../src/core/security/admin';
 import {
   PREMIOS_OPPORTUNITIES_BY_TIER,
@@ -299,6 +299,30 @@ describe('firestore.rules', () => {
       // Sin el filtro: denegada, aunque el documento que encontraría fuese perfectamente legible de uno en uno.
       await assertFails(byEmail([where('email', '==', 'yo@example.com')]));
       await assertSucceeds(getDoc(doc(db, 'profiles', 'doc-legacy')));
+    });
+
+    // LAS DOS LECTURAS DEL SOCIAL (docs/plan-directorio-amigos.md). El feed lee a cada amigo por uid con `getDoc`
+    // (legible si tiene el espacio social encendido; si no, denegado, y el cliente lo sintetiza desde la amistad), y
+    // «Perfiles» consulta los recientes con un corte de actividad sobre `updatedAt`. Ese rango no añade nada que la
+    // regla tenga que garantizar: lo que la hace pasar sigue siendo el filtro `social.enabled`.
+    it('el feed lee a un amigo por uid, y «Perfiles» consulta los recientes con el corte de actividad', async () => {
+      await seed('profiles', 'uid-ana', { uid: 'uid-ana', displayName: 'Ana', social: { enabled: true }, updatedAt: Timestamp.now() });
+      await seed('profiles', 'uid-apagado', { uid: 'uid-apagado', displayName: 'Off', social: { enabled: false }, updatedAt: Timestamp.now() });
+      const db = ownerDb('uid-yo');
+
+      await assertSucceeds(getDoc(doc(db, 'profiles', 'uid-ana')));
+      await assertFails(getDoc(doc(db, 'profiles', 'uid-apagado')));
+
+      const corte = Timestamp.fromMillis(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      await assertSucceeds(getDocs(query(
+        collection(db, 'profiles'),
+        where('social.enabled', '==', true),
+        where('updatedAt', '>=', corte),
+        orderBy('updatedAt', 'desc'),
+        limit(34),
+      )));
+      // Sin el filtro de `social.enabled`, el corte solo no basta.
+      await assertFails(getDocs(query(collection(db, 'profiles'), where('updatedAt', '>=', corte), limit(34))));
     });
 
     // CUTOVER DE IDENTIDAD (señal `foreign-doc-id`). Reparto de poderes, que es lo que decide quién hace cada mitad:

@@ -20,7 +20,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { SecretSocialGistResult } from '../../src/model/repository/socialGistRepository';
 import type { SocialAuthUser, SocialProfileReference } from '../../src/model/repository/firebaseClient';
 
-const contador = vi.hoisted(() => ({ gists: [] as string[], directorio: 0 }));
+const contador = vi.hoisted(() => ({ gists: [] as string[], directorio: 0, perfiles: [] as string[] }));
 
 const MUNDO = vi.hoisted(() => {
   const ahora = Date.now();
@@ -43,7 +43,12 @@ const MUNDO = vi.hoisted(() => {
     // De este NO se debe leer nunca: está en el directorio pero no es amigo.
     'gist-ajeno': { profile: perfil('ajeno'), activity: [resena('uid-ajeno', 'ajeno', 4)], posts: [], moves: [], updatedAt: ahora, schemaVersion: 2 },
   };
-  return { ahora, gists };
+  const fila = (uid: string, nombre: string, gist: string) => ({
+    id: uid, uid, displayName: nombre, photoURL: '', socialGistId: gist, gamesGistId: '',
+    updatedAt: ahora, tier: 'bronce', achievementsMirror: '',
+  });
+  const perfiles = [fila('uid-yo', 'Yo', 'gist-yo'), fila('uid-ana', 'ana', 'gist-ana'), fila('uid-bruno', 'bruno', 'gist-bruno'), fila('uid-ajeno', 'ajeno', 'gist-ajeno')];
+  return { ahora, gists, perfiles };
 });
 
 const firebaseMocks = vi.hoisted(() => ({
@@ -60,13 +65,15 @@ const firebaseMocks = vi.hoisted(() => ({
   setPublicConfig: vi.fn(async () => {}),
   getPrivateConfig: vi.fn(async (): Promise<unknown> => ({ socialGistId: 'gist-yo', gamesGistId: 'juegos-yo' })),
   setPrivateConfig: vi.fn(async () => {}),
+  // La consulta de los recientes: es la de «Perfiles». El feed NO debe lanzarla.
   listSocialDirectory: vi.fn(async (): Promise<unknown[]> => {
     contador.directorio += 1;
-    const fila = (uid: string, nombre: string, gist: string) => ({
-      id: uid, uid, displayName: nombre, photoURL: '', socialGistId: gist, gamesGistId: '',
-      updatedAt: MUNDO.ahora, tier: 'bronce', achievementsMirror: '',
-    });
-    return [fila('uid-yo', 'Yo', 'gist-yo'), fila('uid-ana', 'ana', 'gist-ana'), fila('uid-bruno', 'bruno', 'gist-bruno'), fila('uid-ajeno', 'ajeno', 'gist-ajeno')];
+    return MUNDO.perfiles;
+  }),
+  // Lo que sí lee el feed: tus amigos y tú, por uid. Cada uid pedido es una lectura de Firestore.
+  getSocialProfilesByUid: vi.fn(async (uids: string[]): Promise<unknown[]> => {
+    contador.perfiles.push(...uids);
+    return MUNDO.perfiles.filter((perfil) => uids.includes(perfil.uid));
   }),
   signInWithGoogle: vi.fn(async () => null),
   signOutSocialUser: vi.fn(async () => {}),
@@ -183,6 +190,7 @@ describe('presupuesto de llamadas del hub social', () => {
     localStorage.clear();
     contador.gists = [];
     contador.directorio = 0;
+    contador.perfiles = [];
     await invalidateCachedSocialDirectory('gist-yo');
     await patchLocalMeta({
       profileNameRepairedFor: '',
@@ -204,7 +212,10 @@ describe('presupuesto de llamadas del hub social', () => {
     expect(contador.gists).not.toContain('gist-ajeno');
     // Sin lecturas repetidas: cada gist, una vez.
     expect(contador.gists.length).toBe(3);
-    expect(contador.directorio).toBe(1);
+    // Y lo mismo en Firestore: los perfiles que se leen son los tuyos y los de tus amigos (N+1), no los 50 más
+    // recientes de toda la aplicación. La consulta de recientes es de «Perfiles» y el feed no la paga.
+    expect([...contador.perfiles].sort()).toEqual(['uid-ana', 'uid-bruno', 'uid-yo']);
+    expect(contador.directorio).toBe(0);
   });
 
   it('con la caché caliente, volver a abrir no cuesta NI UNA lectura de gist', async () => {
@@ -215,6 +226,7 @@ describe('presupuesto de llamadas del hub social', () => {
 
     contador.gists = [];
     contador.directorio = 0;
+    contador.perfiles = [];
 
     abrirHub();
     await reposar();
@@ -222,6 +234,7 @@ describe('presupuesto de llamadas del hub social', () => {
     // La caché del directorio (IndexedDB, TTL por rango) tiene que absorber la reapertura entera.
     expect(contador.gists).toEqual([]);
     expect(contador.directorio).toBe(0);
+    expect(contador.perfiles).toEqual([]);
   });
 
   it('los saneados de arranque no se repiten al reabrir el hub', async () => {

@@ -112,7 +112,7 @@ export interface RecommendationDoc {
  * Identidad SIEMPRE por `uid` (única verificable en reglas). Los campos `*Name/*Photo/*SocialGistId/*GamesGistId`
  * están DENORMALIZADOS: cada parte escribe SOLO los suyos (requester al crear, recipient al aceptar), de modo que
  * la lista de amigos, la bandeja de solicitudes y el feed se resuelven desde el propio doc sin leer el directorio
- * (evita el tope de `SOCIAL_DIRECTORY_LIMIT` y el choque con las reglas de `profiles`).
+ * (sin depender de leer `profiles` ni de sus reglas).
  */
 export type FriendshipStatus = 'pending' | 'accepted';
 

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, onTestFinished } from 'vitest';
+import { PROFILE_INACTIVITY_MS, SOCIAL_DISCOVER_LIMIT } from '../../src/core/constants/socialActivity';
 import { act, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { SecretSocialGistResult } from '../../src/model/repository/socialGistRepository';
@@ -19,7 +20,13 @@ const firebaseMocks = vi.hoisted(() => ({
   // Fase 0: el gist social propio se recupera de `privateConfig` (owner-only) antes que del perfil público.
   getPrivateConfig: vi.fn(async (): Promise<any> => null),
   setPrivateConfig: vi.fn(async () => {}),
-  listSocialDirectory: vi.fn(async (): Promise<any[]> => []),
+  listSocialDirectory: vi.fn(async (..._args: unknown[]): Promise<any[]> => []),
+  // El feed lee a tus amigos y a ti por uid. Sale del MISMO mundo que el directorio de cada test (lo que devuelve
+  // `listSocialDirectory`), leído sin llamarlo: así las cuentas de esa consulta miden solo «Perfiles».
+  getSocialProfilesByUid: vi.fn(async (uids: string[]): Promise<any[]> => {
+    const world = (await firebaseMocks.listSocialDirectory.getMockImplementation()?.()) ?? [];
+    return (world as Array<{ id: string; uid?: string }>).filter((entry) => uids.includes(entry.uid || entry.id));
+  }),
   signInWithGoogle: vi.fn(async (): Promise<SocialAuthUser | null> => null),
   signOutSocialUser: vi.fn(async () => {}),
   resolveStableProfileId: vi.fn(async (uid: string) => uid), // P1: detección de propiedad por identidad
@@ -552,9 +559,11 @@ describe('SocialHub (componente, post-M3)', () => {
 
     renderHub('/social');
 
-    await waitFor(() => expect(firebaseMocks.listSocialDirectory).toHaveBeenCalled());
+    await waitFor(() => expect(firebaseMocks.getSocialProfilesByUid).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByText(SOCIAL_UI.feed.activityEmptyNoFriends)).toBeInTheDocument());
-    expect(firebaseMocks.listSocialDirectory).toHaveBeenCalledTimes(1);
+    expect(firebaseMocks.getSocialProfilesByUid).toHaveBeenCalledTimes(1);
+    // El feed no paga la consulta de los recientes: esa es de «Perfiles».
+    expect(firebaseMocks.listSocialDirectory).not.toHaveBeenCalled();
 
     // Ya asentado el directorio, llega el perfil y cambia `showPhoto`. Eso NO cambia nada de lo que el directorio
     // contiene (solo la foto propia de respaldo), así que no puede costar otra relectura de ~50 gists.
@@ -572,7 +581,7 @@ describe('SocialHub (componente, post-M3)', () => {
     // Margen para que una segunda pasada llegara a contarse: entre el disparo y la llamada hay un `await` (la
     // lectura de la caché), así que comprobarlo en el mismo tick daría un falso verde.
     await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(firebaseMocks.listSocialDirectory).toHaveBeenCalledTimes(1);
+    expect(firebaseMocks.getSocialProfilesByUid).toHaveBeenCalledTimes(1);
 
     // Ir a "Perfiles" y volver NO cambia nada de lo que el directorio contiene: no debe rehidratarlo.
     fireEvent.click(screen.getByRole('button', { name: SOCIAL_UI.feed.openProfiles }));
@@ -581,7 +590,13 @@ describe('SocialHub (componente, post-M3)', () => {
     await screen.findByText(SOCIAL_UI.feed.title);
     await new Promise((resolve) => setTimeout(resolve, 50));
 
+    expect(firebaseMocks.getSocialProfilesByUid).toHaveBeenCalledTimes(1);
+    // «Perfiles» sí lanza la suya, una vez, con el tope de los recientes y el corte de inactividad.
     expect(firebaseMocks.listSocialDirectory).toHaveBeenCalledTimes(1);
+    expect(firebaseMocks.listSocialDirectory.mock.calls[0]).toEqual([
+      SOCIAL_DISCOVER_LIMIT,
+      expect.objectContaining({ activeWithinMs: PROFILE_INACTIVITY_MS }),
+    ]);
   });
 
   // El TTL de la caché del directorio sale del RANGO de quien mira (30 min bronce … 12 s mithril). Si se hidrata
@@ -615,14 +630,14 @@ describe('SocialHub (componente, post-M3)', () => {
       // La pantalla real: con el esqueleto delante, «no se ha hidratado» sería cierto solo por llegar pronto.
       await findFeedScreen();
       // Sin rango todavía: no se ha hidratado nada (antes se hidrataba con el TTL de bronce).
-      expect(firebaseMocks.listSocialDirectory).not.toHaveBeenCalled();
+      expect(firebaseMocks.getSocialProfilesByUid).not.toHaveBeenCalled();
 
       resolveProfile({ tier, socialEnabled: true, socialGistId: 'my-social', displayName: 'Me' } as never);
 
-      await waitFor(() => expect(firebaseMocks.listSocialDirectory).toHaveBeenCalled());
+      await waitFor(() => expect(firebaseMocks.getSocialProfilesByUid).toHaveBeenCalled());
       // Margen para que una eventual segunda pasada llegara a contarse.
       await waitFor(() => expect(screen.queryByText(SOCIAL_UI.feed.activityEmptyNoFriends)).toBeInTheDocument());
-      expect(firebaseMocks.listSocialDirectory).toHaveBeenCalledTimes(1);
+      expect(firebaseMocks.getSocialProfilesByUid).toHaveBeenCalledTimes(1);
     },
   );
 

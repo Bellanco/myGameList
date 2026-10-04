@@ -2,7 +2,7 @@
 // Sigue el patrón de firebaseSocialRepository (caché de sesión + dedupe in-flight + degradación silenciosa).
 // Identidad SIEMPRE por uid (única verificable en reglas). Los campos de identidad van DENORMALIZADOS en el doc:
 // cada parte escribe SOLO los suyos (requester al crear, recipient al aceptar), así la lista/bandeja/feed se
-// resuelven desde el propio doc sin leer el directorio (evita el tope de SOCIAL_DIRECTORY_LIMIT y las reglas de profiles).
+// resuelven desde el propio doc sin leer el directorio (sin depender de leer `profiles` ni de sus reglas).
 import { collection, deleteDoc, doc, getDoc, getDocs, limit, query, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore/lite';
 import { mapWithConcurrency } from '../../core/utils/concurrency';
 import { initializeFirebaseServices, isPermissionDeniedError } from './firebaseClient';

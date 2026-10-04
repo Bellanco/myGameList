@@ -46,6 +46,7 @@ export { getCurrentSocialAuthUser, onSocialAuthChanged, readAdminClaim, signInWi
 export {
   findSocialProfileByEmail,
   getOwnProfileRef,
+  getSocialProfilesByUid,
   invalidateOwnProfileCache,
   listSocialDirectory,
 } from './firebaseSocialRepository';
@@ -647,7 +648,7 @@ export async function ensureProfileByEmail(input: {
   // (la del feed) la tira quien publica (`invalidateCachedSocialDirectory`). El latido de arriba solo mueve
   // `updatedAt`, que decide el orden del directorio, no lo que pinta.
   if (shouldWriteProfile) {
-    invalidateSocialDirectoryCache();
+    invalidateSocialDirectoryCache(input.user.uid);
   }
 
   return written;
@@ -688,7 +689,7 @@ export async function repairProfileDisplayName(uid: string, nick: string): Promi
     { merge: true },
   );
   invalidateOwnProfileCache(cleanUid);
-  invalidateSocialDirectoryCache();
+  invalidateSocialDirectoryCache(cleanUid);
   return true;
 }
 
@@ -709,7 +710,7 @@ export async function updateProfilePhoto(uid: string, photoURL: string): Promise
     { merge: true },
   );
   invalidateOwnProfileCache(uid);
-  invalidateSocialDirectoryCache();
+  invalidateSocialDirectoryCache(uid);
 }
 
 /**
@@ -740,7 +741,7 @@ export async function publishAchievementMirror(uid: string, list: string): Promi
     { merge: true },
   );
   invalidateOwnProfileCache(uid);
-  invalidateSocialDirectoryCache();
+  invalidateSocialDirectoryCache(uid);
 }
 
 /**
@@ -764,7 +765,7 @@ export async function publishYearSummarySeen(uid: string, year: number): Promise
     { merge: true },
   );
   invalidateOwnProfileCache(uid);
-  invalidateSocialDirectoryCache();
+  invalidateSocialDirectoryCache(uid);
 }
 
 /**
@@ -851,7 +852,7 @@ export async function purgeOwnPublicGistIds(input: {
       { merge: true },
     );
     invalidateOwnProfileCache(uid);
-    invalidateSocialDirectoryCache();
+    invalidateSocialDirectoryCache(uid);
     return true;
   } catch {
     return false;

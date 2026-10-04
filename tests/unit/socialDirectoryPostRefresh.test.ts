@@ -1,12 +1,12 @@
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Publicar un post refresca el feed al momento para que salga, pero la consulta de perfiles del directorio no ha
-// cambiado: forzarla costaba sus 50 lecturas de Firestore por cada post. El botón «Actualizar» sí la sigue forzando.
+// Publicar un post refresca el feed al momento para que salga, pero los perfiles de tus amigos no han cambiado:
+// forzarlos costaba una lectura de Firestore por amigo en cada post. El botón «Actualizar» sí los sigue forzando.
 
-const listSocialDirectory = vi.hoisted(() => vi.fn(async (_limit: number, _options: { forceRefresh?: boolean }) => [] as unknown[]));
+const getSocialProfilesByUid = vi.hoisted(() => vi.fn(async (_uids: string[], _options: { forceRefresh?: boolean }) => [] as unknown[]));
 
-vi.mock('../../src/model/repository/firebaseRepository', () => ({ listSocialDirectory }));
+vi.mock('../../src/model/repository/firebaseRepository', () => ({ getSocialProfilesByUid }));
 vi.mock('../../src/model/repository/indexedDbRepository', () => ({
   getCachedSocialDirectory: vi.fn(async () => null),
   putCachedSocialDirectory: vi.fn(async () => {}),
@@ -41,22 +41,22 @@ function montar() {
 }
 
 beforeEach(() => {
-  listSocialDirectory.mockClear();
+  getSocialProfilesByUid.mockClear();
 });
 
 describe('useSocialDirectory — refresco tras publicar', () => {
-  it('tras un post fuerza el feed pero reutiliza la copia de la consulta de perfiles', async () => {
+  it('tras un post fuerza el feed pero reutiliza la copia de los perfiles', async () => {
     const { result } = montar();
     await result.current.hydrateSocialDirectory(true, { keepDirectoryQuery: true });
 
-    expect(listSocialDirectory).toHaveBeenCalledTimes(1);
-    expect(listSocialDirectory.mock.calls[0][1]).toMatchObject({ forceRefresh: false });
+    expect(getSocialProfilesByUid).toHaveBeenCalledTimes(1);
+    expect(getSocialProfilesByUid.mock.calls[0][1]).toMatchObject({ forceRefresh: false });
   });
 
-  it('el botón «Actualizar» sigue releyendo la consulta', async () => {
+  it('el botón «Actualizar» sigue releyendo los perfiles', async () => {
     const { result } = montar();
     await result.current.hydrateSocialDirectory(true);
 
-    expect(listSocialDirectory.mock.calls[0][1]).toMatchObject({ forceRefresh: true });
+    expect(getSocialProfilesByUid.mock.calls[0][1]).toMatchObject({ forceRefresh: true });
   });
 });

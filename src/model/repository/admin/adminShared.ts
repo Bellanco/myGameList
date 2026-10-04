@@ -7,11 +7,13 @@
 // cualquier otra sesión, cada función responde `permission-denied`: estos módulos no conceden nada por sí mismos,
 // solo hablan con Firestore como el resto de repositorios.
 import { initializeFirebaseServices, isPermissionDeniedError } from '../firebaseClient';
+import { PROFILE_INACTIVITY_MS } from '../../../core/constants/socialActivity';
 
 /** Documento centinela de la colección: ni es un usuario ni las reglas dejan tocarlo. */
 export const PLACEHOLDER_ID = '_placeholder';
 
-export const INACTIVITY_MS = 30 * 24 * 60 * 60 * 1000;
+/** El mismo corte que el feed (ver `core/constants/socialActivity`): el panel avisa de quien el social ya no lee. */
+export const INACTIVITY_MS = PROFILE_INACTIVITY_MS;
 
 /**
  * A partir de cuándo una solicitud ENVIADA y nunca aceptada se considera fosilizada. Son dos umbrales distintos a

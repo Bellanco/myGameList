@@ -398,8 +398,8 @@ export type SocialDirectoryEntry = {
    */
   tier: ProfileTier;
   /**
-   * Cuándo usó esta persona la aplicación por última vez (`profiles.updatedAt`). 0 = no se sabe (un amigo que
-   * cayó fuera del tope del directorio: sus datos salen del documento de amistad, que no lleva esa marca).
+   * Cuándo usó esta persona la aplicación por última vez (`profiles.updatedAt`). 0 = no se sabe (un amigo cuyo
+   * perfil no se deja leer: sus datos salen del documento de amistad, que no lleva esa marca).
    *
    * Sale del hook porque la ORDENACIÓN por uso reciente la necesitan las pantallas, no solo la hidratación: la
    * consulta de Firestore ya pide `orderBy('updatedAt', 'desc')`, pero ese orden se pierde en cuanto una lista se
@@ -438,7 +438,7 @@ export type SocialDirectoryEntry = {
   sharedLists: Partial<Record<TabId, Array<GameItem | SocialSharedGame>>>;
   visibility: SocialProfileVisibility;
   /**
-   * Amigo cuyo gist social NO se leyó por inactividad (corte de FRIEND_ACTIVITY_MAX_AGE_MS): su actividad no
+   * Amigo cuyo gist social NO se leyó por inactividad (corte de PROFILE_INACTIVITY_MS): su actividad no
    * entra al feed, pero al abrir su perfil se hidrata bajo demanda para no mostrarlo a medias.
    */
   socialSkipped?: boolean;

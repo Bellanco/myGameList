@@ -230,7 +230,7 @@ async function startIdentityCutover(
   // equivocado durante lo que le quede de TTL.
   invalidateProfileByEmailCache(email);
   invalidateOwnProfileCache(uid);
-  invalidateSocialDirectoryCache();
+  invalidateSocialDirectoryCache(uid);
 
   console.warn(`[cutover] perfil legacy «${legacy.id}» copiado a profiles/${uid}: queda retirar el huérfano desde /admin`);
 
@@ -362,7 +362,7 @@ export async function healOwnLegacyProfile(uid: string, email = '', sessionName 
     });
 
     invalidateOwnProfileCache(uid);
-    invalidateSocialDirectoryCache();
+    invalidateSocialDirectoryCache(uid);
 
     return result('healed', {
       backedUpToken,

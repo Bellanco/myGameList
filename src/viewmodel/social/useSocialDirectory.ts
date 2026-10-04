@@ -7,7 +7,8 @@ import { normalizeTimestamp as toSafeTimestamp } from '../../core/utils/normaliz
 import { reviewActorsByGame } from '../../core/social/moveActivity';
 import { getCachedSocialDirectory, getLocalMeta, patchLocalMeta, putCachedSocialDirectory } from '../../model/repository/indexedDbRepository';
 import { getSocialSyncConfig, mergeSocialGistData, readPublicSocialGistById, type SocialGistData, type SocialProfileVisibility, type SocialSharedGame } from '../../model/repository/socialGistRepository';
-import { listSocialDirectory, type SocialAuthUser } from '../../model/repository/firebaseRepository';
+import { getSocialProfilesByUid, type SocialAuthUser } from '../../model/repository/firebaseRepository';
+import { PROFILE_INACTIVITY_MS } from '../../core/constants/socialActivity';
 import { isOwnProfileIdentity } from './socialIdentity';
 import type { SocialDirectoryEntry } from './socialFeed';
 import type { TabId } from '../../model/types/game';
@@ -15,15 +16,11 @@ import type { FriendshipView } from '../../model/types/social';
 
 /** Anti-spam del refresco forzado: cada uno relee el directorio y hasta ~50 gists sociales. */
 const FORCED_REFRESH_MIN_MS = 12_000;
-// Tope de perfiles del directorio, ORDENADOS POR USO RECIENTE (`profiles.updatedAt`). Solo los AMIGOS cuestan una
-// lectura de gist; los demás son index-only (nombre/foto de Firestore), así que subir este número cuesta lecturas
-// de Firestore, no rate-limit de GitHub. Tunable.
-const SOCIAL_DIRECTORY_LIMIT = 50;
-// Antigüedad máxima del último uso de un AMIGO para que su actividad entre en el feed. Uno más inactivo sigue en
-// Perfiles y en la lista de amigos, y su perfil y sus reseñas se abren igual (salen de su gist de JUEGOS); lo que
-// no hace es ocupar el feed ni gastar una lectura de su gist social. Sin dato de recencia NO se corta: nunca se
-// oculta contenido por falta de datos. Tunable.
-const FRIEND_ACTIVITY_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+// Antigüedad máxima del último uso de un AMIGO para que su actividad entre en el feed: `PROFILE_INACTIVITY_MS`, el
+// mismo corte con el que avisa el panel. Uno más inactivo sigue en la lista de amigos, y su perfil y sus reseñas se
+// abren igual (salen de su gist de JUEGOS); lo que no hace es ocupar el feed ni gastar una lectura de su gist
+// social, y su perfil de Firestore se relee como mucho una vez al día (`INACTIVE_PROFILE_MAX_AGE_MS`). Sin dato de
+// recencia NO se corta: nunca se oculta contenido por falta de datos.
 // El directorio se hidrata leyendo el gist social de cada perfil. En vez de disparar TODAS las lecturas a la vez
 // —ráfaga que puede activar los "secondary rate limits" de GitHub al crecer el directorio— se limita la
 // concurrencia. Las lecturas son baratas (caché de sesión + revalidación por ETag), así que el coste en latencia
@@ -214,9 +211,15 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
       setLoadingDirectory(true);
       // La CONSULTA de perfiles tiene su propia copia, más larga que la del feed: lo que caduca a menudo es la
       // actividad de los amigos, que sale de sus gists, no el nick o la foto (ver `PROFILE_TIER_DIRECTORY_TTL_MS`).
+      // TUS AMIGOS Y TÚ, leídos por uid: es todo lo que el feed necesita de Firestore (rango, vitrina, palmarés,
+      // resumen del año y recencia). Antes salía de los 50 perfiles más recientes, que costaban 50 lecturas en cada
+      // caducidad con independencia de cuántos amigos hubiera, y dejaban sin todo eso a los que no cabían. Descubrir
+      // gente nueva es cosa de «Perfiles», que hace su propia consulta solo cuando se abre (`useSocialDiscover`).
+      //
       // `keepDirectoryQuery`: el refresco que sigue a publicar un post salta la copia del FEED (tiene que salir el
-      // post) pero no la de la consulta de perfiles, que no ha cambiado: forzarla eran 50 lecturas por post.
-      const dirEntries = await listSocialDirectory(SOCIAL_DIRECTORY_LIMIT, {
+      // post) pero no la de los perfiles, que no han cambiado.
+      const profileUids = [authUser.uid, ...friends.map((friend) => friend.otherUid)];
+      const dirEntries = await getSocialProfilesByUid(profileUids, {
         forceRefresh: forceRefresh && !keepDirectoryQuery,
         maxAgeMs: PROFILE_TIER_DIRECTORY_TTL_MS[ownTier],
       });
@@ -246,11 +249,9 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
           .map((friend) => [friend.otherUid, friend.otherGamesGistId] as const),
       );
 
-      // Escalabilidad (>30 amigos): el directorio de descubrimiento está capado a SOCIAL_DIRECTORY_LIMIT y solo lista
-      // perfiles con `social.enabled`. Para que NINGÚN amigo desaparezca del feed / detalle / gestión por caer fuera
-      // de ese tope (o por desactivar social), se sintetizan entradas para los amigos ausentes usando los datos
-      // DENORMALIZADOS del doc de amistad (nombre/foto/gists). Así los amigos son autosuficientes e independientes del
-      // tope del directorio; los pendientes NO se sintetizan (no son amigos aún).
+      // Un amigo cuyo perfil no se deja leer (ha apagado su espacio social) no puede desaparecer del feed / detalle /
+      // gestión: se sintetiza su entrada con los datos DENORMALIZADOS del doc de amistad (nombre/foto/gists). Los
+      // pendientes NO se sintetizan (no son amigos aún).
       const directoryUids = new Set(dirEntries.map((entry) => entry.uid));
       const friendOnlyEntries = friends
         // No se exige `otherSocialGistId`: sin él el amigo desaparecía por completo del hub (ni perfil ni gestión).
@@ -263,16 +264,14 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
           photoURL: friend.otherPhoto || '',
           socialGistId: friend.otherSocialGistId,
           gamesGistId: friend.otherGamesGistId,
-          // Amigo fuera del directorio: no hay marca de recencia. 0 = desconocida → no se le aplica el corte.
+          // Sin perfil legible no hay marca de recencia. 0 = desconocida → no se le aplica el corte.
           updatedAt: 0,
-          // El doc de amistad no denormaliza el rango, así que un amigo que caiga fuera del tope del directorio
-          // se pinta como bronce. Preferible a una lectura extra por amigo solo para un punto de color.
+          // El doc de amistad no denormaliza el rango, así que se pinta como bronce.
           tier: DEFAULT_PROFILE_TIER,
-          // Y por lo mismo tampoco denormaliza el espejo: un amigo fuera del tope se queda sin vitrina hasta que
-          // vuelva a entrar en el directorio. Vacío es exactamente «no ha publicado» para todo lo que lo lee, así
-          // que se calla en vez de inventarse una.
+          // Y por lo mismo tampoco denormaliza el espejo: sin perfil legible no hay vitrina. Vacío es exactamente
+          // «no ha publicado» para todo lo que lo lee, así que se calla en vez de inventarse una.
           achievementsMirror: '',
-          // Tampoco denormaliza el aviso del resumen del año: fuera del tope, sin tarjeta en el feed.
+          // Tampoco denormaliza el aviso del resumen del año: sin tarjeta en el feed.
           yearSummarySeen: null,
           palmares: undefined,
         }));
@@ -327,7 +326,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
           // gasta una lectura de su gist). Solo se aplica si conocemos su recencia; el perfil propio nunca se corta.
           const lastActiveAt = Number(entry.updatedAt || 0);
           const isInactiveFriend =
-            !isOwnEntry && lastActiveAt > 0 && Date.now() - lastActiveAt > FRIEND_ACTIVITY_MAX_AGE_MS;
+            !isOwnEntry && lastActiveAt > 0 && Date.now() - lastActiveAt > PROFILE_INACTIVITY_MS;
           if (!isOwnEntry && (!isFriend || isInactiveFriend || socialGistCandidates.length === 0)) {
             // Index-only, sin leer su gist. Solo nombre/foto (Firestore); sin actividad ni publicaciones.
             return {
