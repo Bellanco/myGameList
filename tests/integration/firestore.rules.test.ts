@@ -1575,6 +1575,49 @@ describe('firestore.rules', () => {
         await assertSucceeds(setDoc(doc(adminDb(), 'premiosResults', 'x'), { season: 2026 }));
       });
     });
+
+    // LOS VOTOS DE CADA UNO, entre publicar y terminar (docs/plan-premios-votos-a-la-vista.md). Los ve quien votó
+    // en esa edición y nadie más: ni el enlace público ni cualquiera con sesión.
+    describe('votos a la vista', () => {
+      const resumen = {
+        seasonId: 'porra-2026',
+        ballots: [{ rank: 1, profileId: 'p-ana', nickname: 'Ana', points: 3, selections: { cat1: 'cat1_option_0' } }],
+      };
+
+      it('quien votó en la edición los lee', async () => {
+        await seed('premiosReveal', 'porra-2026', resumen);
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a'));
+        await assertSucceeds(getDoc(doc(ownerDb('uid-a'), 'premiosReveal', 'porra-2026')));
+      });
+
+      it('quien no votó no, aunque tenga sesión; sin sesión, tampoco', async () => {
+        await seed('premiosReveal', 'porra-2026', resumen);
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a'));
+        await assertFails(getDoc(doc(ownerDb('uid-b'), 'premiosReveal', 'porra-2026')));
+        await assertFails(getDoc(doc(anonDb(), 'premiosReveal', 'porra-2026')));
+        await assertSucceeds(getDoc(doc(adminDb(), 'premiosReveal', 'porra-2026')));
+      });
+
+      it('solo el administrador lo escribe y lo borra', async () => {
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a'));
+        await assertFails(setDoc(doc(ownerDb('uid-a'), 'premiosReveal', 'porra-2026'), resumen));
+        await assertSucceeds(setDoc(doc(adminDb(), 'premiosReveal', 'porra-2026'), resumen));
+        await assertFails(deleteDoc(doc(ownerDb('uid-a'), 'premiosReveal', 'porra-2026')));
+        await assertSucceeds(deleteDoc(doc(adminDb(), 'premiosReveal', 'porra-2026')));
+      });
+
+      // Publicar con los votos a la vista cierra el voto aunque el interruptor y la fecha lo permitieran: si no,
+      // reabrir a mano dejaría cambiar la papeleta viendo ya las de los demás.
+      it('con los votos a la vista no se vota ni se corrige', async () => {
+        await seed('premiosConfig', 'voting', {
+          isOpen: true,
+          season: 2026,
+          closesAtMillis: AHORA + DIA,
+          votesRevealedAt: new Date(AHORA).toISOString(),
+        });
+        await assertFails(setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a')));
+      });
+    });
   });
 
 
