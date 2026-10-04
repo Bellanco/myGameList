@@ -56,7 +56,11 @@
 // 2026-09-20: los premios. Tres tratamientos nuevos con efectos hacia fuera —archivo de la edición público con su
 // enlace, cuenta mínima creada al votar y trofeo concedido en el perfil—, así que todo el mundo vuelve a pasar por
 // la puerta. Ver `legalContent.ts`, que lo explica en su sitio.
-export const LEGAL_VERSION = '2026-09-20';
+// 2026-10-04: los votos a la vista. En las ediciones abiertas desde entonces, la papeleta —lo que votaste en cada
+// categoría, con el nombre que elegiste— la ven también quienes votaron en la misma edición, desde que se publica
+// hasta que se termina (docs/plan-premios-votos-a-la-vista.md). Hasta ahora la leía solo su dueño: es un dato tuyo
+// que pasa a verlo otra gente, así que todo el mundo vuelve a pasar por la puerta.
+export const LEGAL_VERSION = '2026-10-04';
 
 // Correo de CONTACTO publicado en los documentos. A propósito distinto del de la cuenta de administración de
 // `firestore.rules` (`isAdmin`): son la misma persona, pero separar buzones evita mezclar avisos legales y
