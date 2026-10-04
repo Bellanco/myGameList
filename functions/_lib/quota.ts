@@ -18,6 +18,7 @@ import {
 } from '../../src/core/constants/tiers';
 import { banKey, dailyQuotaKey, drainPages, overrideKey, userSharePrefix, type Env, type KVNamespace, type ShareIndexMetadata } from './keys';
 import type { AuthUser } from './firebaseAuth';
+import { ServiceUnavailableError } from './http';
 
 export interface ShareBan {
   reason?: string;
@@ -90,11 +91,23 @@ export async function tryReadProfileFacts(
   if (appCheckToken) {
     headers['X-Firebase-AppCheck'] = appCheckToken;
   }
+  // «No se pudo leer» tiene dos lecturas, y no se responden igual. Un 404/403 es una RESPUESTA (no hay perfil, o
+  // no se deja leer): `null`, y quien llama degrada a bronce o pide crear el espacio social. Firestore sin cuota
+  // (429), caído (5xx) o sin red NO dicen nada del usuario: se lanza `ServiceUnavailableError` y el cliente oye
+  // «no disponible ahora». Antes salía «Necesitas tener tu espacio social creado» a quien lo tenía.
+  let response: Response;
   try {
-    const response = await fetch(url, { headers });
-    if (!response.ok) {
-      return null;
-    }
+    response = await fetch(url, { headers });
+  } catch {
+    throw new ServiceUnavailableError('Firestore no responde');
+  }
+  if (response.status === 429 || response.status >= 500) {
+    throw new ServiceUnavailableError(`Firestore no atiende (${response.status})`);
+  }
+  if (!response.ok) {
+    return null;
+  }
+  try {
     const body = (await response.json()) as {
       fields?: { tier?: { stringValue?: string }; displayName?: { stringValue?: string } };
     };

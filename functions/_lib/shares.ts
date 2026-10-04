@@ -71,6 +71,14 @@ export interface PublishResult {
  * token con la caducidad nueva. Así no se le gasta cuota por corregir una errata, y el enlace que ya pasó a sus
  * amigos sigue funcionando en vez de morir en silencio mientras uno nuevo circula en paralelo.
  */
+/** El artículo no pasa el esquema: un campo privado o de identidad colado en el cuerpo. Es un 400. */
+export class InvalidShareError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidShareError';
+  }
+}
+
 export async function publishShare(input: {
   kv: KVNamespace;
   uid: string;
@@ -104,8 +112,13 @@ export async function publishShare(input: {
   };
 
   // Segunda validación, la que de verdad cuenta: el cliente es manipulable. Lanza si se coló un campo privado o
-  // de identidad, y quien llama responde 400 sin escribir nada.
-  assertValidSharedReview(article);
+  // de identidad, y quien llama responde 400 sin escribir nada. Con su propia clase: lo que falle DESPUÉS (las
+  // escrituras de KV) no es culpa del cliente y no puede salir como un 400 con el mensaje interno de KV.
+  try {
+    assertValidSharedReview(article);
+  } catch (error) {
+    throw new InvalidShareError(error instanceof Error ? error.message : 'Reseña no publicable');
+  }
 
   const metadata: ShareIndexMetadata = {
     gameId: draft.gameId,

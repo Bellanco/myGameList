@@ -22,6 +22,37 @@ export function fail(status: number, error: string, extra: Record<string, unknow
 }
 
 /**
+ * Un servicio del que dependemos no atiende ahora mismo: KV sin cupo, Firestore sin cuota o caído. Se lanza donde
+ * se detecta y lo convierte en respuesta el middleware de `/api` (`functions/api/_middleware.ts`). No es un error
+ * de la petición, así que no se responde como tal: ver `unavailable`.
+ */
+export class ServiceUnavailableError extends Error {
+  constructor(message = 'Servicio no disponible') {
+    super(message);
+    this.name = 'ServiceUnavailableError';
+  }
+}
+
+/** Segundos hasta las 00:00 UTC, que es cuando Cloudflare reinicia los cupos diarios de Workers y KV. */
+export function secondsUntilUtcMidnight(now: number = Date.now()): number {
+  return Math.max(60, 86_400 - Math.floor(now / 1000) % 86_400);
+}
+
+/**
+ * 503 con `unavailable: true` y `Retry-After`. La marca es lo que el cliente mira para dejar de ofrecer lo que no
+ * puede hacerse ahora (el botón de compartir) en vez de enseñar un error: el ESTADO no basta, porque esta misma API
+ * usa el 429 para un límite de negocio que sí hay que explicar («has compartido demasiadas hoy»). Ver
+ * docs/plan-degradacion-servicios.md, fase 3.
+ */
+export function unavailable(): Response {
+  return json(
+    { error: 'El servicio no está disponible ahora mismo. Inténtalo más tarde.', unavailable: true },
+    503,
+    { 'Retry-After': String(secondsUntilUtcMidnight()) },
+  );
+}
+
+/**
  * El cuerpo JSON de la petición, o `null` si no es JSON válido o excede el tope.
  *
  * El tope se mide en BYTES de verdad, no en `raw.length`: eso último son unidades UTF-16, así que un cuerpo de
