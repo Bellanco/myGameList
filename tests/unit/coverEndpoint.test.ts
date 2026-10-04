@@ -391,6 +391,18 @@ describe('/cover — lo que cuesta', () => {
     expect(kv.datos.has(claveCache('Celeste', [], true))).toBe(true);
   });
 
+  // docs/plan-degradacion-servicios.md, fase 4: si algo lanza (KV sin cupo), 503 sin caché, nunca la página 500 de
+  // Cloudflare, y nunca un 404 que el recorrido pudiera tomar por «no tiene».
+  it('si KV no atiende, responde 503 sin caché y con Retry-After', async () => {
+    const kv = kvFalso();
+    kv.get.mockRejectedValue(new Error('KV GET failed: 429'));
+    const respuesta = await onRequestGet({ request: peticion('n=Celeste&p=Steam'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(503);
+    expect(respuesta.headers.get('Cache-Control')).toBe('no-store');
+    expect(Number(respuesta.headers.get('Retry-After'))).toBeGreaterThan(0);
+  });
+
   it('si no se ha podido preguntar, no se apunta nada en la caché negativa', async () => {
     fetchSimulado.mockImplementation(async (entrada: Request | string) => {
       const url = String(entrada instanceof Request ? entrada.url : entrada);
@@ -451,7 +463,9 @@ describe('/cover — solo caché', () => {
     const respuesta = await onRequestGet({ request: peticion('n=Jotum&c=1'), env: entorno(kv) });
 
     expect(respuesta.status).toBe(404);
-    expect(respuesta.headers.get('X-Cover')).toBeNull();
+    // Su propia firma, distinta del «aún sin resolver»: es lo que el recorrido exige para apuntar un «no tiene»
+    // (un `404.html` de Cloudflare en modo «fail open» no la lleva).
+    expect(respuesta.headers.get('X-Cover')).toBe('no-tiene');
     // Con `no-store`, cada título sin carátula de un amigo costaba una invocación por visita y por fila reciclada.
     // El mismo plazo que el «aún sin resolver»: lo ajeno nunca lo pide su dueño, que pide sin la marca.
     expect(respuesta.headers.get('Cache-Control')).toBe('private, max-age=3600');

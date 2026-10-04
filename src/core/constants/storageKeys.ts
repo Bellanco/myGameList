@@ -221,3 +221,6 @@ export const SHARE_DOWN_UNTIL_KEY = 'mis-listas-share-down-until';
 export const shareLastMineKey = (uid: string): string => `mis-listas-share-last-mine-${uid}`;
 export const SHARE_LAST_MINE_PREFIX = 'mis-listas-share-last-mine-';
 
+/** Hasta cuándo no se vuelve a lanzar el relleno de carátulas tras toparse con el servidor sin atender (fase 4). */
+export const COVER_BACKFILL_PAUSE_KEY = 'mis-listas-cover-backfill-pause-until';
+

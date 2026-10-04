@@ -221,7 +221,25 @@ async function quedaCupo(env: Env, request: Request): Promise<Veredicto> {
 
 interface Env extends EntornoIgdb {}
 
-export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise<Response> = async ({ request, env }) => {
+/**
+ * LA RED DE SEGURIDAD de la Function: si algo lanza (KV sin cupo de lecturas, IGDB o la imagen sin responder),
+ * 503 sin caché y con `Retry-After`, en vez de la página 500 de Cloudflare. Es lo que el recorrido de relleno
+ * (`useCoverBackfill`) entiende como «para y vuelve más tarde», y nunca como «este juego no tiene carátula»
+ * (docs/plan-degradacion-servicios.md, fase 4). Va aquí y no en un `_middleware`: uno en la raíz de `functions/`
+ * haría pasar también los estáticos por Functions.
+ */
+export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise<Response> = async (contexto) => {
+  try {
+    return await atender(contexto);
+  } catch {
+    return new Response('Carátulas no disponibles ahora mismo', {
+      status: 503,
+      headers: { 'Cache-Control': 'no-store', 'Retry-After': '300' },
+    });
+  }
+};
+
+const atender: (contexto: { request: Request; env: Env }) => Promise<Response> = async ({ request, env }) => {
   if (!env.IGDB_CLIENT_ID || !env.IGDB_CLIENT_SECRET || !env.COVERS) {
     // Configuración incompleta: fallo nuestro, no del cliente. 501 y no 500 para distinguirlo de una avería.
     return new Response('Las carátulas no están configuradas en este entorno', { status: 501 });
@@ -334,9 +352,11 @@ export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise
     // título sin carátula de un amigo era una invocación y una lectura de KV por visita a su perfil y por fila
     // reciclada. El incidente de `CACHE_FALLO` no llega aquí: el 429 y el 503 salen antes y con `no-store`, y el
     // dueño pide su biblioteca sin la marca, así que una corrección suya nunca se encuentra esta copia.
+    // `X-Cover: no-tiene` firma que el 404 es ESTE dato y no cualquier 404: con Pages en «fail open», una ruta sin
+    // Function devuelve el `404.html` estático, y el recorrido lo apuntaría como «no tiene» durante noventa días.
     return new Response('Sin carátula', {
       status: 404,
-      headers: { 'Cache-Control': soloMapa ? CACHE_MAPA : soloCache ? CACHE_SIN_RESOLVER : CACHE_FALLO },
+      headers: { 'Cache-Control': soloMapa ? CACHE_MAPA : soloCache ? CACHE_SIN_RESOLVER : CACHE_FALLO, 'X-Cover': 'no-tiene' },
     });
   }
 
