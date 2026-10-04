@@ -23,7 +23,7 @@ persistente y respeta `x-ratelimit-reset`), la puerta legal, `getMyFriendships` 
 fallo), latido, saneados de arranque, espejo de logros, resumen del año, apariencia, IGDB (503 blando) y App Check
 con el cupo agotado (falla abierto).
 
-## Fase 1 — Riesgos de datos · S
+## Fase 1 — Riesgos de datos · S · ✅ hecha (04-10-2026)
 
 1. **Canal social vacío creado solo.** `attachExistingSocialGist` (`useSocialViewModel.ts`) traga el fallo de
    `getPrivateConfig`, y si `resolveOwnProfile` o la lectura del gist fallan devuelve `false`, que el llamador lee
@@ -106,7 +106,10 @@ con el cupo agotado (falla abierto).
 
 ## Checklist
 
-- [ ] Fase 1: canal vacío, posts duplicados, frontera, borrado de cuenta.
+- [x] Fase 1 (04-10-2026): canal vacío (`attachExistingSocialGist` de tres valores y auto-crear cerrado en la
+      sesión), posts sin duplicar (identidad best-effort tras escribir el gist), frontera solo sobre lectura buena
+      y escribiendo la unión, borrado de cuenta que se detiene si el servicio no atiende. Clasificador
+      `isServiceUnavailable` en `core/utils/network.ts`, listo para la Fase 2. Suite, e2e y emulador en verde.
 - [ ] Fase 2: clasificador, estado limitado, social sin bloqueo, feed y perfiles con copias, premios, GitHub.
 - [ ] Fase 3: compartir oculto, servidor 503, página pública.
 - [ ] Fase 4: carátulas; después, «Fail open» en Pages.
