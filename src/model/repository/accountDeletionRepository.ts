@@ -18,6 +18,7 @@ import { forgetOwnAccountMemo } from './firebaseRepository';
 import { signOutSocialUser } from './firebaseAuthRepository';
 import { closeSharedDatabase, SHARED_DB_NAME } from './idbConnectionRepository';
 import { clearSyncConfig } from './gistConfigRepository';
+import { isOffline, isServiceUnavailable } from '../../core/utils/network';
 import { DEVICE_KEY_DB_NAME } from '../../core/security/crypto';
 import {
   GIST_CFG_KEY,
@@ -34,16 +35,44 @@ export interface AccountDeletionResult {
   remoteComplete: boolean;
   /** Motivos de los pasos remotos fallidos, para diagnóstico. */
   failures: string[];
+  /**
+   * El borrado se ha DETENIDO porque el servicio no atiende (cuota agotada, caído, sin red): la sesión y los datos
+   * de este dispositivo siguen intactos, y reintentarlo más tarde lo completa (borrar lo que ya no está no falla).
+   */
+  retryLater?: boolean;
+}
+
+/** Lo que va acumulando el borrado remoto. */
+interface RemoteDeletionOutcome {
+  failures: string[];
+  /** Algún paso falló porque el SERVICIO no atiende, no porque no se pudiera borrar (ver `isServiceUnavailable`). */
+  serviceDown: boolean;
 }
 
 /**
  * Borra los datos remotos del usuario y limpia el dispositivo. Nunca lanza: el resultado indica si quedó algo.
+ *
+ * Con UNA excepción a «se limpia siempre»: si lo que ha fallado es el servicio (Firestore sin cuota o caído, sin
+ * red), no se cierra la sesión ni se borra nada local. Con la sesión y la configuración borradas no habría forma de
+ * reintentarlo desde la app, y los datos se quedarían en Firestore por un fallo que mañana ya no existe (derecho
+ * de supresión, RGPD art. 17; docs/plan-degradacion-servicios.md, fase 1). Un fallo de otra clase (una regla que
+ * no deja borrar) no se arregla esperando: ese sigue el camino de siempre y se informa.
  */
 export async function deleteOwnAccount(uid: string): Promise<AccountDeletionResult> {
-  const failures: string[] = [];
+  const outcome: RemoteDeletionOutcome = { failures: [], serviceDown: false };
+  const { failures } = outcome;
+
+  // Sin red no se empieza siquiera: no se borraría nada remoto y sí todo lo local.
+  if (uid && isOffline()) {
+    return { remoteComplete: false, failures: ['sin conexión'], retryLater: true };
+  }
 
   if (uid) {
-    await deleteRemoteData(uid, failures);
+    await deleteRemoteData(uid, outcome);
+  }
+
+  if (outcome.serviceDown) {
+    return { remoteComplete: false, failures, retryLater: true };
   }
 
   // La sesión se cierra SIEMPRE, aunque el borrado remoto haya fallado a medias: seguir con sesión iniciada tras
@@ -66,7 +95,11 @@ export async function deleteOwnAccount(uid: string): Promise<AccountDeletionResu
  */
 const FRIENDSHIP_DELETION_MAX_PASSES = 20;
 
-async function deleteRemoteData(uid: string, failures: string[]): Promise<void> {
+async function deleteRemoteData(uid: string, outcome: RemoteDeletionOutcome): Promise<void> {
+  const { failures } = outcome;
+  const noteServiceDown = (error: unknown) => {
+    if (isServiceUnavailable(error)) outcome.serviceDown = true;
+  };
   const services = await initializeFirebaseServices().catch(() => null);
   if (!services) {
     // Sin Firebase configurado no hay nada remoto que borrar (uso puramente local): no es un fallo.
@@ -111,6 +144,9 @@ async function deleteRemoteData(uid: string, failures: string[]): Promise<void> 
 
       const results = await Promise.allSettled(all.map((item) => deleteFriendship({ myUid: uid, docId: item.docId })));
       deletedTotal += results.filter((result) => result.status === 'fulfilled').length;
+      results.forEach((result) => {
+        if (result.status === 'rejected') noteServiceDown(result.reason);
+      });
     }
 
     // Se reporta lo que SIGUE EXISTIENDO tras el bucle, no lo que falló en la última pasada: el borrado de cuenta
@@ -119,8 +155,14 @@ async function deleteRemoteData(uid: string, failures: string[]): Promise<void> 
       failures.push(`amistades: ${remaining.length} no se pudieron borrar (${deletedTotal} sí)`);
     }
   } catch (error) {
+    noteServiceDown(error);
     failures.push(`amistades: ${describe(error)}`);
   }
+
+  // Si el servicio no atiende, se para AQUÍ y no se sigue con lo de abajo: el reintento de mañana necesita el
+  // perfil intacto (los enlaces se retiran antes que él, ver el paso 2), y borrar medio usuario para tener que
+  // repetirlo igual no gana nada.
+  if (outcome.serviceDown) return;
 
   // 2) Enlaces públicos de reseñas. VAN ANTES que el borrado del perfil: una vez borrado, la Function ya no
   //    puede leer el rango ni la identidad, y las reseñas se quedarían publicadas hasta caducar solas. Es la
@@ -129,8 +171,11 @@ async function deleteRemoteData(uid: string, failures: string[]): Promise<void> 
     const { removeAllMyShares } = await import('./shareRepository');
     await removeAllMyShares();
   } catch (error) {
+    noteServiceDown(error);
     failures.push(`enlaces compartidos: ${describe(error)}`);
   }
+
+  if (outcome.serviceDown) return;
 
   // 3) Documentos propios. En paralelo: son independientes entre sí y ninguno depende del anterior.
   const docResults = await Promise.allSettled(
@@ -138,6 +183,7 @@ async function deleteRemoteData(uid: string, failures: string[]): Promise<void> 
   );
   docResults.forEach((result, index) => {
     if (result.status === 'rejected') {
+      noteServiceDown(result.reason);
       failures.push(`${OWNED_COLLECTIONS[index]}: ${describe(result.reason)}`);
     }
   });

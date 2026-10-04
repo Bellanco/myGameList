@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // L3 — Borrado de cuenta (RGPD art. 17). Requisitos que fijan estos tests:
 //  - se borran las amistades (aceptadas y pendientes) y los cuatro documentos propios;
 //  - un fallo parcial NO aborta el resto: la sesión se cierra y el dispositivo se limpia igualmente, y el
-//    resultado lo reporta para poder avisar al usuario;
+//    resultado lo reporta para poder avisar al usuario; SALVO que lo que falle sea el servicio (sin cuota, caído,
+//    sin red): entonces se para y no se toca nada local, para poder reintentarlo;
 //  - se borran LAS DOS bases de IndexedDB: la de datos y la de la clave de dispositivo (`mygamelist-secure`,
 //    ver `core/security/crypto`). Están separadas a propósito, así que borrar la primera no se lleva la segunda
 //    y quedaba una clave huérfana tras borrar la cuenta;
@@ -196,6 +197,53 @@ describe('deleteOwnAccount', () => {
     expect(result.remoteComplete).toBe(false);
     expect(result.failures[0]).toContain('amistades');
     expect(deleteDocMock).toHaveBeenCalledTimes(4);
+  });
+
+  /**
+   * EL SERVICIO NO ATIENDE (docs/plan-degradacion-servicios.md, fase 1). Con Firestore sin cuota, caído o sin red,
+   * borrar lo local y cerrar la sesión dejaba los datos en Firestore sin forma de reintentarlo desde la app. Se para
+   * en el paso que falla —el reintento necesita el perfil intacto— y no se toca nada de este dispositivo.
+   */
+  it('con Firestore sin cuota se detiene, no cierra sesión ni borra lo local, y pide reintentar', async () => {
+    const sinCuota = Object.assign(new Error('Quota exceeded.'), { code: 'resource-exhausted' });
+    getMyFriendshipsMock.mockRejectedValue(sinCuota);
+    localStorage.setItem(STORAGE_KEY, '{}');
+
+    const result = await deleteOwnAccount('uid-1');
+
+    expect(result.retryLater).toBe(true);
+    expect(result.remoteComplete).toBe(false);
+    // Ni enlaces ni perfil: sin el perfil, el reintento ya no podría retirar los enlaces.
+    expect(removeAllMySharesMock).not.toHaveBeenCalled();
+    expect(deleteDocMock).not.toHaveBeenCalled();
+    expect(signOutMock).not.toHaveBeenCalled();
+    expect(localStorage.getItem(STORAGE_KEY)).toBe('{}');
+    expect(deletedDatabases).toEqual([]);
+  });
+
+  it('si la cuota se agota a mitad (al borrar los documentos), tampoco limpia lo local', async () => {
+    deleteDocMock.mockRejectedValueOnce(Object.assign(new Error('Quota exceeded.'), { code: 'resource-exhausted' }));
+    localStorage.setItem(STORAGE_KEY, '{}');
+
+    const result = await deleteOwnAccount('uid-1');
+
+    expect(result.retryLater).toBe(true);
+    expect(signOutMock).not.toHaveBeenCalled();
+    expect(localStorage.getItem(STORAGE_KEY)).toBe('{}');
+  });
+
+  it('sin red no empieza: ni borra nada remoto ni nada local', async () => {
+    const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    localStorage.setItem(STORAGE_KEY, '{}');
+
+    const result = await deleteOwnAccount('uid-1');
+    online.mockRestore();
+
+    expect(result.retryLater).toBe(true);
+    expect(getMyFriendshipsMock).not.toHaveBeenCalled();
+    expect(deleteDocMock).not.toHaveBeenCalled();
+    expect(signOutMock).not.toHaveBeenCalled();
+    expect(localStorage.getItem(STORAGE_KEY)).toBe('{}');
   });
 
   it('sin uid (uso puramente local) no toca Firestore pero limpia el dispositivo', async () => {

@@ -52,6 +52,19 @@ describe('DangerZone — resultado del borrado', () => {
     expect(screen.queryByText('LISTAS')).toBeNull();
   });
 
+  // Con el servicio caído no se ha tocado nada: se dice eso, no «borrada con incidencias», y se puede volver a pedir.
+  it('si hay que reintentar más tarde, lo dice, no sale y se puede volver a pedir', async () => {
+    deleteOwnAccountMock.mockResolvedValue({ remoteComplete: false, failures: ['amistades: Quota exceeded.'], retryLater: true });
+    renderZone();
+
+    await borrar();
+
+    expect(await screen.findByText(D.deleteRetryLater)).toBeInTheDocument();
+    expect(screen.queryByText(D.deletedPartial)).toBeNull();
+    expect(screen.queryByText('LISTAS')).toBeNull();
+    expect(screen.getByRole('button', { name: D.deleteBtn })).toBeInTheDocument();
+  });
+
   it('con el borrado completo sale de la cuenta', async () => {
     deleteOwnAccountMock.mockResolvedValue({ remoteComplete: true, failures: [] });
     renderZone();

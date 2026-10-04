@@ -40,6 +40,11 @@ export const DangerZone = memo(function DangerZone() {
       const result = await deleteOwnAccount(String(user?.uid || ''));
       setOpen(false);
       setWord('');
+      // El servicio no atendía y no se ha tocado nada local: se avisa y se puede volver a pedir desde aquí mismo.
+      if (result.retryLater) {
+        setFeedback({ kind: 'warn', text: D.deleteRetryLater });
+        return;
+      }
       if (!result.remoteComplete) {
         // SE QUEDA AQUÍ. El borrado a medias es lo único de este resultado que el usuario tiene que saber —quedan
         // datos suyos fuera y le toca reclamarlos—, y el aviso vive en esta pantalla: navegar la desmontaba en el
