@@ -82,7 +82,7 @@ con el cupo agotado (falla abierto).
 - Página pública: «no se puede cargar ahora» con reintentar, no «caducado o retirado»; `r/[token].ts` devuelve el
   shell si falla KV; el service worker sirve el shell en navegación si la red responde 429/5xx.
 
-## Fase 4 — Carátulas · S
+## Fase 4 — Carátulas · S · ✅ hecha (04-10-2026)
 
 - `useCoverBackfill`: parar ante cualquier estado que no sea 2xx ni 404 (hoy un 500 recorre la biblioteca entera)
   y recordar una pausa según `Retry-After`.
@@ -129,5 +129,10 @@ con el cupo agotado (falla abierto).
       diario—, recordado hasta 1 h; el botón no se ofrece; Ajustes enseña la última lista para copiar (se borra con
       la cuenta); página pública con «no se puede cargar ahora» y reintentar; el service worker sirve el shell si una
       navegación responde 429/5xx.
-- [ ] Fase 4: carátulas; después, «Fail open» en Pages.
+- [x] Fase 4 (04-10-2026): `useCoverBackfill` para ante HTML, 429 o 5xx y guarda una pausa
+      (`COVER_BACKFILL_PAUSE_KEY`, `Retry-After` o 15 min, tope 24 h); otro 4xx se salta sin apuntar; «no tiene»
+      solo con un 404 que no sea HTML (no se exige `X-Cover`, para no desconocer los 404 ya cacheados una semana
+      en el borde, que no la llevan). `/cover` firma su 404 con `X-Cover: no-tiene` y convierte excepciones en 503
+      `no-store` con `Retry-After`.
+- [ ] Poner Pages en «Fail open» (*Settings → Runtime*): ya es seguro. Es un ajuste del panel, lo hace el usuario.
 - [ ] Fase 5: menores.
