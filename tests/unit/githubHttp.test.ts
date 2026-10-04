@@ -1,11 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  GithubRateLimitedError,
   NetworkDeferredError,
   getRetryAfterMs,
+  githubCooldownRemainingMs,
   githubFetch,
   isDeferredNetworkError,
+  isGithubRateLimited,
   parseRetryAfterMs,
+  resetGithubCooldownForTests,
 } from '../../src/model/repository/githubHttp';
+import { buildGithubError } from '../../src/model/repository/githubGistApi';
+import { isServiceUnavailable } from '../../src/core/utils/network';
 
 function responseWith(status: number, headers: Record<string, string>): Response {
   return new Response(null, { status, headers });
@@ -14,6 +20,7 @@ function responseWith(status: number, headers: Record<string, string>): Response
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  resetGithubCooldownForTests();
 });
 
 describe('parseRetryAfterMs', () => {
@@ -160,3 +167,75 @@ describe('githubFetch', () => {
     expect(signal?.aborted).toBe(false);
   });
 });
+
+/**
+ * ESPERA COMPARTIDA (docs/plan-degradacion-servicios.md, fase 2). El token es el mismo para la sync y para el
+ * social: visto un límite, nadie vuelve a llamar a GitHub hasta que pasa, y lo que se pide entretanto falla al
+ * momento con un error que se reconoce como «inténtalo más tarde».
+ */
+describe('githubFetch · límite de GitHub', () => {
+  const enUnaHora = () => String(Math.floor(Date.now() / 1000) + 3600);
+
+  it('tras un 403 con las cabeceras de límite, no vuelve a tocar la red hasta el reset', async () => {
+    vi.stubGlobal('navigator', { onLine: true });
+    const fetchSpy = vi.fn(async () => responseWith(403, { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': enUnaHora() }));
+    vi.stubGlobal('fetch', fetchSpy);
+
+    await githubFetch('https://api.github.com/gists/a');
+    const error = await githubFetch('https://api.github.com/gists/b').catch((e) => e);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(error).toBeInstanceOf(GithubRateLimitedError);
+    expect(isGithubRateLimited(error)).toBe(true);
+    expect(isServiceUnavailable(error)).toBe(true);
+    expect(getRetryAfterMs(error)).toBeGreaterThan(59 * 60_000);
+  });
+
+  it('un 403 SIN cabeceras de límite (token sin permisos) no abre ninguna espera', async () => {
+    vi.stubGlobal('navigator', { onLine: true });
+    vi.stubGlobal('fetch', vi.fn(async () => responseWith(403, {})));
+
+    await githubFetch('https://api.github.com/gists/a');
+
+    expect(githubCooldownRemainingMs()).toBe(0);
+  });
+
+  it('pasada la espera, vuelve a preguntar', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.stubGlobal('navigator', { onLine: true });
+      const fetchSpy = vi.fn(async () => responseWith(429, { 'retry-after': '120' }));
+      vi.stubGlobal('fetch', fetchSpy);
+      await githubFetch('https://api.github.com/gists/a');
+
+      vi.setSystemTime(Date.now() + 121_000);
+      await githubFetch('https://api.github.com/gists/a');
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('buildGithubError · estado y marca de límite', () => {
+  it('lleva el estado aparte del texto', async () => {
+    const error = await buildGithubError(new Response(JSON.stringify({ message: 'Not Found' }), { status: 404 }), 'Read failed');
+    expect((error as { status?: number }).status).toBe(404);
+    expect(isGithubRateLimited(error)).toBe(false);
+  });
+
+  it('un 403 de credenciales NO es un límite', async () => {
+    const error = await buildGithubError(new Response(JSON.stringify({ message: 'Bad credentials' }), { status: 403 }), 'Read failed');
+    expect(isGithubRateLimited(error)).toBe(false);
+    expect(isServiceUnavailable(error)).toBe(false);
+  });
+
+  it('el límite secundario sin cabeceras se reconoce por su texto y abre la espera mínima', async () => {
+    const response = new Response(JSON.stringify({ message: 'You have exceeded a secondary rate limit.' }), { status: 403 });
+    const error = await buildGithubError(response, 'Read failed');
+    expect(isGithubRateLimited(error)).toBe(true);
+    expect(githubCooldownRemainingMs()).toBeGreaterThanOrEqual(59_000);
+  });
+});
+

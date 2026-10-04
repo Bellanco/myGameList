@@ -43,6 +43,54 @@ export function getRetryAfterMs(error: unknown): number {
   return 0;
 }
 
+/**
+ * ESPERA COMPARTIDA ANTE EL LÍMITE DE GITHUB (docs/plan-degradacion-servicios.md, fase 2).
+ *
+ * El token es el MISMO para la sincronización y para el espacio social, pero cada uno llevaba su propia cuenta: la
+ * sync respetaba `x-ratelimit-reset` y el feed seguía lanzando hasta ~50 lecturas contra un límite ya agotado (y
+ * al revés). Aquí, al ver un límite, se anota hasta cuándo dura, y mientras tanto `githubFetch` falla AL MOMENTO
+ * con `GithubRateLimitedError`, sin tocar la red: cada pantalla sirve lo suyo de lo guardado.
+ */
+let githubCooldownUntil = 0;
+/** Sin cabeceras (el límite «secundario» a veces no las manda), GitHub pide esperar al menos un minuto. */
+const MIN_RATE_LIMIT_WAIT_MS = 60_000;
+/** El límite primario se reinicia cada hora: más que eso sería una cabecera rara, no una espera razonable. */
+const MAX_RATE_LIMIT_WAIT_MS = 60 * 60_000;
+
+/** GitHub está limitando y todavía no toca volver a preguntar. Lleva `retryAfterMs` como los errores de límite. */
+export class GithubRateLimitedError extends Error {
+  readonly rateLimited = true as const;
+  readonly status = 429;
+  readonly retryAfterMs: number;
+  constructor(retryAfterMs: number) {
+    const until = new Date(Date.now() + retryAfterMs);
+    super(`GitHub está limitando las peticiones; se reintentará a las ${until.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`);
+    this.name = 'GithubRateLimitedError';
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
+/** Anota un límite de GitHub visto en una respuesta. `ms` 0 = sin cabeceras: se espera el mínimo. */
+export function noteGithubRateLimit(ms: number): void {
+  const wait = Math.min(MAX_RATE_LIMIT_WAIT_MS, Math.max(MIN_RATE_LIMIT_WAIT_MS, ms));
+  githubCooldownUntil = Math.max(githubCooldownUntil, Date.now() + wait);
+}
+
+/** ¿Se está esperando a GitHub? Para pruebas y para quien quiera decidir sin llamar. */
+export function githubCooldownRemainingMs(): number {
+  return Math.max(0, githubCooldownUntil - Date.now());
+}
+
+/** Solo para las pruebas: cada una empieza sin espera pendiente. */
+export function resetGithubCooldownForTests(): void {
+  githubCooldownUntil = 0;
+}
+
+/** ¿Este error es un límite de GitHub (de la espera compartida o de una respuesta 403/429)? */
+export function isGithubRateLimited(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && (error as { rateLimited?: unknown }).rateLimited === true;
+}
+
 /** Reescribe un fallo de red o de timeout a `NetworkDeferredError`; el resto se devuelve tal cual. */
 function toDeferred(error: unknown, timedOut: boolean): unknown {
   if (error instanceof NetworkDeferredError) return error;
@@ -108,6 +156,10 @@ export async function githubFetch(
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
     throw new NetworkDeferredError('offline');
   }
+  const cooldown = githubCooldownRemainingMs();
+  if (cooldown > 0) {
+    throw new GithubRateLimitedError(cooldown);
+  }
   const controller = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {
@@ -120,6 +172,11 @@ export async function githubFetch(
   } catch (error) {
     clearTimeout(timer);
     throw toDeferred(error, timedOut);
+  }
+  // Límite con cabeceras (o un 429, que no tiene otra lectura): se anota para todos los que usan el token.
+  if (response.status === 429 || response.status === 403) {
+    const wait = parseRetryAfterMs(response, Date.now());
+    if (wait > 0 || response.status === 429) noteGithubRateLimit(wait);
   }
   return guardBody(response, timer, () => timedOut);
 }

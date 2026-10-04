@@ -23,7 +23,7 @@ import { clampRating, normalizeTimestamp } from '../../core/utils/normalize';
 import { resolveGrade } from '../../core/utils/scoreScale';
 import { pickLegacyActorId, pickLegacyFromId, pickLegacyReviewText, socialGistNeedsRewrite } from '../migration/legacySocialFormat';
 import { TAB_IDS, type TabId } from '../types/game';
-import { githubFetch } from './githubHttp';
+import { githubFetch, isGithubRateLimited } from './githubHttp';
 import { GIST_API_BASE, buildGithubError, getGithubAuthHeader } from './githubGistApi';
 import {
   assembleChunkedSocial,
@@ -1245,9 +1245,17 @@ export async function readPublicSocialGistById(gistId: string, token: string | n
       baseHeaders['If-None-Match'] = staleCached.etag;
     }
 
-    const response = await githubFetch(`${GIST_API_BASE}/${gistId}`, {
-      headers: baseHeaders,
-    });
+    // Si GitHub está limitando (o falla de su lado) y hay copia de esta sesión, aunque haya caducado, se sirve esa:
+    // mejor la actividad de hace unos minutos que la entrada en blanco (docs/plan-degradacion-servicios.md).
+    let response: Response;
+    try {
+      response = await githubFetch(`${GIST_API_BASE}/${gistId}`, {
+        headers: baseHeaders,
+      });
+    } catch (error) {
+      if (staleCached && isGithubRateLimited(error)) return staleCached.value;
+      throw error;
+    }
 
     if (response.status === 304 && staleCached) {
       savePublicSocialGistCache(gistId, staleCached.value, staleCached.etag || null, token);
@@ -1255,7 +1263,9 @@ export async function readPublicSocialGistById(gistId: string, token: string | n
     }
 
     if (!response.ok) {
-      throw await buildGithubError(response, 'Read public social gist failed');
+      const error = await buildGithubError(response, 'Read public social gist failed');
+      if (staleCached && (isGithubRateLimited(error) || response.status >= 500)) return staleCached.value;
+      throw error;
     }
 
     const body = (await response.json()) as { files?: Record<string, { content: string }> };

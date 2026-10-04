@@ -44,8 +44,15 @@ const SOCIAL_MOVES_PER_PROFILE = 120;
  * pero un 401/403 es "tu token no sirve" y hay que decirlo, o el usuario se queda con un feed vacío sin saber
  * por qué.
  */
-const isGithubCredentialError = (error: unknown): boolean =>
-  error instanceof Error && /\b(401|403)\b/.test(error.message);
+const isGithubCredentialError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) return false;
+  // Un LÍMITE de GitHub también llega como 403, y decirle a alguien que su conexión ha caducado le mandaba a
+  // reconectar algo que funcionaba (docs/plan-degradacion-servicios.md, fase 2).
+  if ((error as { rateLimited?: unknown }).rateLimited === true) return false;
+  const { status } = error as { status?: unknown };
+  if (typeof status === 'number') return status === 401 || status === 403;
+  return /\b(401|403)\b/.test(error.message);
+};
 
 /** Identidad del autor con la que se sella todo lo que sale de un mismo gist social. */
 interface FeedAuthor {
