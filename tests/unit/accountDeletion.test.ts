@@ -153,6 +153,8 @@ describe('deleteOwnAccount', () => {
     localStorage.setItem(SOCIAL_GIST_CFG_KEY, '{}');
     localStorage.setItem(ANALYTICS_CONSENT_KEY, 'denied');
     localStorage.setItem('mis-listas-share-last-mine-uid-1', '{"shares":[]}');
+    localStorage.setItem('mis-listas-own-profile-uid-1', '{"tier":"gold"}');
+    localStorage.setItem('mis-listas-score-scale-uid-1', 'grade');
 
     const result = await deleteOwnAccount('uid-1');
 
@@ -169,6 +171,9 @@ describe('deleteOwnAccount', () => {
     expect(localStorage.getItem(SOCIAL_GIST_CFG_KEY)).toBeNull();
     // La última lista de enlaces que Ajustes guarda para cuando compartir no atiende: dato personal, se va.
     expect(localStorage.getItem('mis-listas-share-last-mine-uid-1')).toBeNull();
+    // Y las copias para cuando Firestore no atiende (fase 5): el perfil propio y la escala de nota.
+    expect(localStorage.getItem('mis-listas-own-profile-uid-1')).toBeNull();
+    expect(localStorage.getItem('mis-listas-score-scale-uid-1')).toBeNull();
     expect(deletedDatabases).toEqual(['myGameList', 'mygamelist-secure']);
     // La Cache Storage del service worker también se limpia: el shell y los assets son públicos y se vuelven a
     // descargar, pero las versiones anteriores del SW llegaron a guardar ahí respuestas de `/api/*`.

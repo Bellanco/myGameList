@@ -23,6 +23,7 @@ import { DEVICE_KEY_DB_NAME } from '../../core/security/crypto';
 import {
   GIST_CFG_KEY,
   IMPORT_FIELDS_KEY,
+  OWN_PROFILE_PREFIX,
   SCORE_SCALE_PREFIX,
   SHARE_DOWN_UNTIL_KEY,
   SHARE_LAST_MINE_PREFIX,
@@ -210,6 +211,8 @@ async function wipeLocalData(): Promise<void> {
   removeLocalByPrefix(SHARE_LAST_MINE_PREFIX);
   // Y la copia de la escala de nota de esta cuenta (fase 5): sin cuenta no hay preferencia que recordar.
   removeLocalByPrefix(SCORE_SCALE_PREFIX);
+  // Y la copia del perfil propio (rango, nick, foto) que se guarda para cuando Firestore no atiende.
+  removeLocalByPrefix(OWN_PROFILE_PREFIX);
 
   // La base contiene juegos, tombstones, cola de sync y cachés sociales: se borra entera, no store a store.
   await closeSharedDatabase();

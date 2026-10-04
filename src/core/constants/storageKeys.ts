@@ -228,3 +228,10 @@ export const COVER_BACKFILL_PAUSE_KEY = 'mis-listas-cover-backfill-pause-until';
 export const SCORE_SCALE_PREFIX = 'mis-listas-score-scale-';
 export const scoreScaleKey = (uid: string): string => `${SCORE_SCALE_PREFIX}${uid}`;
 
+/**
+ * Copia mínima del perfil propio de cada usuario (rango, pseudónimo, nick, foto…), para cuando Firestore no atiende
+ * (fase 5). Dato personal: la borra el borrado de cuenta.
+ */
+export const OWN_PROFILE_PREFIX = 'mis-listas-own-profile-';
+export const ownProfileKey = (uid: string): string => `${OWN_PROFILE_PREFIX}${uid}`;
+

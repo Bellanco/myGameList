@@ -29,6 +29,7 @@ import {
 } from './indexedDbRepository';
 import { mapWithConcurrency } from '../../core/utils/concurrency';
 import { isServiceUnavailable } from '../../core/utils/network';
+import { ownProfileKey } from '../../core/constants/storageKeys';
 import { firestoreQuotaError, isFirestoreQuotaExhausted, noteFirestoreError } from './firestoreQuota';
 import { INACTIVE_PROFILE_MAX_AGE_MS, PROFILE_INACTIVITY_MS } from '../../core/constants/socialActivity';
 
@@ -317,6 +318,14 @@ export async function getOwnProfileRef(uid: string): Promise<SocialProfileRefere
         saveOwnProfileCache(cleanUid, null);
         return null;
       }
+      // EL SERVICIO NO ATIENDE: lo último que se leyó de tu perfil en este navegador, en vez de nada. Sin esto, un
+      // plata o un oro caía a bronce —perdía el compositor de publicaciones y su cupo de correcciones en Premios—
+      // por un cupo diario de Firestore (docs/plan-degradacion-servicios.md, fase 5). No se guarda en la caché
+      // de memoria: en cuanto Firestore vuelva, la siguiente lectura trae el bueno.
+      if (isServiceUnavailable(error)) {
+        const stored = readStoredOwnProfile(cleanUid);
+        if (stored) return stored;
+      }
       throw error;
     }
 
@@ -327,6 +336,7 @@ export async function getOwnProfileRef(uid: string): Promise<SocialProfileRefere
 
     const profile = mapProfileReference(snapshot.id, snapshot.data() as Record<string, unknown>);
     saveOwnProfileCache(cleanUid, profile);
+    storeOwnProfile(cleanUid, profile);
     return profile;
   })();
 
@@ -335,6 +345,56 @@ export async function getOwnProfileRef(uid: string): Promise<SocialProfileRefere
     return await request;
   } finally {
     ownProfileInFlightByUid.delete(cleanUid);
+  }
+}
+
+/**
+ * Copia mínima del perfil propio en este navegador, para cuando Firestore no atiende (ver `getOwnProfileRef`). Solo
+ * lo que la aplicación usa para decidir —rango, pseudónimo, si el canal está publicado, alta, vitrina— y lo que ya
+ * enseña de uno mismo (nick, foto). NUNCA los restos legacy del documento (correo, token en claro): esos se leen
+ * para purgarlos, no para guardarlos en otro sitio.
+ */
+type StoredOwnProfile = Pick<
+  SocialProfileReference,
+  'id' | 'profileId' | 'displayName' | 'photoURL' | 'socialEnabled' | 'tier' | 'createdAt' | 'achievementsMirror' | 'achievementsMirrorAt' | 'palmares'
+>;
+
+function storeOwnProfile(uid: string, profile: SocialProfileReference): void {
+  const stored: StoredOwnProfile = {
+    id: profile.id,
+    profileId: profile.profileId,
+    displayName: profile.displayName,
+    photoURL: profile.photoURL,
+    socialEnabled: profile.socialEnabled,
+    tier: profile.tier,
+    createdAt: profile.createdAt,
+    achievementsMirror: profile.achievementsMirror,
+    achievementsMirrorAt: profile.achievementsMirrorAt,
+    palmares: profile.palmares,
+  };
+  try {
+    localStorage.setItem(ownProfileKey(uid), JSON.stringify(stored));
+  } catch {
+    // best-effort
+  }
+}
+
+function readStoredOwnProfile(uid: string): SocialProfileReference | null {
+  try {
+    const raw = localStorage.getItem(ownProfileKey(uid));
+    if (!raw) return null;
+    const stored = JSON.parse(raw) as StoredOwnProfile;
+    if (!stored || typeof stored.id !== 'string') return null;
+    return {
+      ...stored,
+      tier: normalizeTier(stored.tier),
+      email: '',
+      socialGistId: '',
+      gamesGistId: '',
+      githubToken: '',
+    };
+  } catch {
+    return null;
   }
 }
 
