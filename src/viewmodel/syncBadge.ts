@@ -15,7 +15,10 @@ import type { SyncStatus } from './useSyncViewModel';
  *      informa más que «sin subir», y son verdad las dos;
  *   4. y si no, lo de siempre: sincronizado o sin configurar.
  */
-export function resolveSyncBadge(status: SyncStatus, pendingUpload: boolean): string {
+export function resolveSyncBadge(status: SyncStatus, pendingUpload: boolean, paused = false): string {
+  // En pausa porque GitHub limita: antes salía «Error de sincronización», que tapaba «Cambios sin subir» y hacía
+  // dudar de si lo editado estaba a salvo (lo está: la cola es local y persistente).
+  if (paused && status !== 'syncing') return SYNC_BADGE_TEXT.paused;
   if (status === 'error') return SYNC_BADGE_TEXT.error;
   if (status === 'syncing') return SYNC_BADGE_TEXT.syncing;
   if (pendingUpload) return SYNC_BADGE_TEXT.pending;

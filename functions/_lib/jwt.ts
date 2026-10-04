@@ -73,7 +73,9 @@ const JWKS_FETCH_TIMEOUT_MS = 3000;
 
 /** Claves públicas de Google, cacheadas en KV para no pedirlas en cada petición. */
 export async function loadJwks(kv: KVNamespace, url: string, cacheKey: string, ttlSeconds: number): Promise<Jwk[]> {
-  const cached = await kv.get(cacheKey, 'json');
+  // Si KV no atiende (cupo de lecturas agotado), se sigue sin caché: se piden las claves a Google y la sesión se
+  // verifica igual. Antes el fallo de KV acababa en «Sesión no válida», que mandaba a revisar algo que estaba bien.
+  const cached = await kv.get(cacheKey, 'json').catch(() => null);
   if (cached && Array.isArray((cached as { keys?: Jwk[] }).keys)) {
     return (cached as { keys: Jwk[] }).keys;
   }

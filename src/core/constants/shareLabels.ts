@@ -51,6 +51,9 @@ export const SHARE_UI = {
   renewed: 'Enlace actualizado con la reseña de ahora.',
   screenTitle: 'Reseñas compartidas',
   screenEmpty: 'No has compartido ninguna reseña todavía.',
+  // Ajustes con el servicio de compartir sin atender: lo último que se supo, en solo lectura.
+  screenUnavailable: 'Compartir no está disponible ahora mismo. Esto es lo último que sabíamos de tus enlaces: siguen funcionando y puedes copiarlos.',
+  screenUnavailableEmpty: 'Compartir no está disponible ahora mismo. Vuelve a mirar más tarde.',
   counter: (active: number, max: number) => `${active} de ${max} ${max === 1 ? 'enlace activo' : 'enlaces activos'}`,
   expiresIn: (days: number) => (days <= 0 ? 'Caduca hoy' : `Caduca en ${days} ${days === 1 ? 'día' : 'días'}`),
   bannedTitle: 'No puedes compartir reseñas',
@@ -72,6 +75,10 @@ export const SHARE_UI = {
   publicLoading: 'Cargando la reseña…',
   publicGoneTitle: 'Este enlace ya no está disponible',
   publicGoneBody: 'Puede haber caducado o haberlo retirado quien lo compartió.',
+  // El servicio no atiende ahora (cupo agotado, caído, sin red): el enlace puede seguir existiendo perfectamente.
+  publicUnavailableTitle: 'Ahora mismo no se puede cargar esta reseña',
+  publicUnavailableBody: 'El enlace sigue siendo válido. Vuelve a intentarlo en un rato.',
+  publicRetry: 'Reintentar',
   publicCta: 'Ir a la página principal',
   publicNavAria: 'Navegación',
   // El rótulo del bloque de análisis sugeridos del pie NO está aquí: vive en `SOCIAL_UI.feed` junto al del

@@ -9,7 +9,7 @@ import { requireUser } from '../../_lib/context';
 import { fail, json, readJson } from '../../_lib/http';
 import type { Env } from '../../_lib/keys';
 import { bumpDailyCount, readDailyCount, readShareStatus, shareDailyLimit } from '../../_lib/quota';
-import { draftFromBody, publishShare } from '../../_lib/shares';
+import { draftFromBody, InvalidShareError, publishShare } from '../../_lib/shares';
 
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
   const caller = await requireUser(context.request, context.env);
@@ -79,12 +79,18 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     });
   } catch (error) {
     // Aquí acaba lo que rechaza el esquema: un campo privado o de identidad colado en el cuerpo. Es un fallo del
-    // cliente, no del usuario, y no se escribe nada.
-    return fail(400, error instanceof Error ? error.message : 'Reseña no publicable');
+    // cliente, no del usuario, y no se escribe nada. Lo demás (KV sin cupo) sigue hacia arriba: lo convierte en
+    // «no disponible» el middleware de `/api`, en vez de enseñar «KV PUT failed: 429» como si fuera un 400.
+    if (error instanceof InvalidShareError) {
+      return fail(400, error.message);
+    }
+    throw error;
   }
 
+  // El enlace YA está publicado. Si el contador del freno diario no se puede anotar (KV sin cupo de escrituras), se
+  // pierde una cuenta de un freno anti-abuso; responder error haría creer al usuario que no se ha publicado.
   if (!published.renewed) {
-    await bumpDailyCount(context.env.SHARES, caller.user.uid, now);
+    await bumpDailyCount(context.env.SHARES, caller.user.uid, now).catch(() => 0);
   }
 
   return json({

@@ -8,7 +8,8 @@
 //     navegación, y además cada una es otra página del sitio (tiene que poder abrirse en otra pestaña).
 //  4. Que el bloque no se pinta cuando no hay nada que sugerir, que es el caso normal.
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { SHARE_UI } from '../../src/core/constants/shareLabels';
 import { PublicReviewScreen } from '../../src/view/components/PublicReviewScreen';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import type { SharedReview, SharedReviewSuggestion } from '../../src/model/types/share';
@@ -120,5 +121,32 @@ describe('PublicReviewScreen', () => {
 
     await screen.findByRole('heading', { name: 'Bellanco' });
     await waitFor(() => expect(screen.queryByText(SOCIAL_UI.feed.suggestedTitle)).not.toBeInTheDocument());
+  });
+
+  // docs/plan-degradacion-servicios.md, fase 3: durante un corte (cupo de Cloudflare agotado, API caída) la página
+  // decía «Puede haber caducado o haberlo retirado quien lo compartió». Era falso y definitivo.
+  it('si el servicio no responde, no dice que el enlace ha caducado, y deja reintentar', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/api/share/related/')) return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+      return Promise.resolve(new Response('<html>Error 1027</html>', { status: 429, headers: { 'content-type': 'text/html' } }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<PublicReviewScreen token={TOKEN} standalone />);
+
+    expect(await screen.findByRole('heading', { name: SHARE_UI.publicUnavailableTitle })).toBeInTheDocument();
+    expect(screen.queryByText(SHARE_UI.publicGoneBody)).not.toBeInTheDocument();
+
+    // Vuelve el servicio: reintentar trae la reseña.
+    stubApi([]);
+    fireEvent.click(screen.getByRole('button', { name: SHARE_UI.publicRetry }));
+    expect(await screen.findByRole('heading', { name: 'Bellanco' })).toBeInTheDocument();
+  });
+
+  it('un 404 de la API sí es «ya no está disponible»', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response(JSON.stringify({ error: 'No existe' }), { status: 404, headers: { 'content-type': 'application/json' } }))));
+    render(<PublicReviewScreen token={TOKEN} standalone />);
+
+    expect(await screen.findByRole('heading', { name: SHARE_UI.publicGoneTitle })).toBeInTheDocument();
   });
 });

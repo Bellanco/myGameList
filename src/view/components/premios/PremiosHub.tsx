@@ -12,6 +12,7 @@ import { matchPremiosRoute, panelNeedsSession, PREMIOS_ROUTES } from '../../../v
 import { usePremiosEdition } from '../../../viewmodel/premios/usePremiosEdition';
 import { usePremiosProfiles } from '../../../viewmodel/premios/usePremiosFaces';
 import { usePremiosResult } from '../../../viewmodel/premios/usePremiosResult';
+import { usePremiosReveal } from '../../../viewmodel/premios/usePremiosReveal';
 import { usePremiosVoter } from '../../../viewmodel/premios/usePremiosVoter';
 import { usePremiosVoting } from '../../../viewmodel/premios/usePremiosVoting';
 import { usePalette } from '../../hooks/usePalette';
@@ -72,6 +73,17 @@ export function PremiosHub() {
   // Quién de la clasificación tiene perfil al que enlazar. Cacheado por el repositorio: llegar aquí desde la app
   // no cuesta ninguna lectura.
   const perfiles = usePremiosProfiles(archivo.leaderboard, user?.uid || '');
+  /**
+   * LOS VOTOS DE CADA UNO, mientras la edición publicada no se termina y solo para quien votó en ella. Se miran
+   * en el archivo de ESTA edición: un enlace a una anterior no los tiene.
+   */
+  const idEnVista = route.seasonId || edition.config?.lastPublishedId || '';
+  const conVotos =
+    route.panel === 'resultados' &&
+    edition.stage === SEASON_STAGE.REVEALED &&
+    Boolean(edition.ballot) &&
+    idEnVista === edition.config?.lastPublishedId;
+  const reveal = usePremiosReveal(conVotos ? idEnVista : '');
 
   // Corregir un voto arranca de lo ya enviado, no de cero.
   useEffect(() => {
@@ -258,6 +270,7 @@ export function PremiosHub() {
             leaderboard={archivo.leaderboard}
             ownProfileId={profileId}
             profiles={perfiles}
+            reveal={reveal}
           />
         )
       ) : route.panel === 'votos' ? (

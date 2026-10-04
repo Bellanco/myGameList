@@ -30,6 +30,9 @@ vi.mock('../../src/model/repository/indexedDbRepository', () => ({
   getCachedDirectoryQuery: vi.fn(async () => null),
   putCachedDirectoryQuery: vi.fn(async () => {}),
   invalidateCachedDirectoryQueries: vi.fn(async () => {}),
+  getCachedDirectoryProfiles: vi.fn(async () => ({})),
+  putCachedDirectoryProfiles: vi.fn(async () => {}),
+  invalidateCachedDirectoryProfiles: vi.fn(async () => {}),
 }));
 
 vi.mock('../../src/model/repository/gistRepository', () => ({

@@ -128,12 +128,14 @@ export async function submitBallot(params: BuildBallotParams): Promise<SubmitBal
  * ANTE UN ERROR DEVUELVE `null`, y es deliberado: no se bloquea a nadie por un fallo de red. Quien ya hubiera
  * votado será rechazado igualmente por las reglas, que es donde se cumple de verdad lo de un voto por persona.
  */
-export async function fetchUserBallot(uid: string): Promise<PremiosBallot | null> {
+export async function fetchUserBallot(uid: string, options?: { throwOnError?: boolean }): Promise<PremiosBallot | null> {
   try {
     const { firestore } = await requireServices();
     const snapshot = await getDoc(doc(firestore, BALLOTS_COLLECTION, uid));
     return snapshot.exists() ? ({ ...snapshot.data() } as PremiosBallot) : null;
-  } catch {
+  } catch (error) {
+    // Ver `fetchVotingConfig` en `premiosSeasonRepository`.
+    if (options?.throwOnError) throw error;
     return null;
   }
 }

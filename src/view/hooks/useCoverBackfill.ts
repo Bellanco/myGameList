@@ -12,6 +12,7 @@ import { claveDeJuego, guardarHechos, leerHechos } from '../../core/utils/coverD
 import { pedirCupoDeCaratulasLibre } from '../../model/repository/coverQuotaRepository';
 import { useCovers } from './useCovers';
 import { useIsAdmin } from './useIsAdmin';
+import { COVER_BACKFILL_PAUSE_KEY } from '../../core/constants/storageKeys';
 
 /**
  * EL LLENADO INICIAL DE LAS CARÁTULAS. Recorre la biblioteca entera pidiendo el emparejamiento de cada juego, a
@@ -41,6 +42,30 @@ import { useIsAdmin } from './useIsAdmin';
 /** Espera entre juegos. ~6/s de peticiones nuestras, que por detrás son menos de 4/s contra IGDB. */
 const PAUSA_MS = 160;
 
+/** Sin `Retry-After` (página de error, 5xx), se vuelve a intentar pasado esto. */
+const PAUSA_SIN_PLAZO_MS = 15 * 60 * 1000;
+/** Y nunca más que esto, diga lo que diga la cabecera: el tope del servicio entero se reabre al cambiar el día. */
+const PAUSA_MAXIMA_MS = 24 * 60 * 60 * 1000;
+
+/** Guarda hasta cuándo no se vuelve a recorrer, a partir de lo que diga la respuesta que paró el recorrido. */
+function pausarRecorrido(respuesta: Response): void {
+  const segundos = Number(respuesta.headers.get('retry-after') || 0);
+  const espera = Number.isFinite(segundos) && segundos > 0 ? segundos * 1000 : PAUSA_SIN_PLAZO_MS;
+  try {
+    localStorage.setItem(COVER_BACKFILL_PAUSE_KEY, String(Date.now() + Math.min(PAUSA_MAXIMA_MS, espera)));
+  } catch {
+    // Sin almacenamiento la pausa solo dura esta visita, que es lo que pasaba antes.
+  }
+}
+
+function recorridoEnPausa(): boolean {
+  try {
+    return Date.now() < Number(localStorage.getItem(COVER_BACKFILL_PAUSE_KEY) || 0);
+  } catch {
+    return false;
+  }
+}
+
 export function useCoverBackfill(data: TabData): void {
   const { covers } = useCovers();
   /* EL MISMO MODO QUE PIDE EL LISTADO, y no el normal a secas. El modo ampliado (`x=1`) vive en un espacio de
@@ -65,6 +90,8 @@ export function useCoverBackfill(data: TabData): void {
     const abortar = new AbortController();
 
     const recorrer = async () => {
+      // Una visita anterior topó con el servidor diciendo que no: hasta que pase su plazo, no se pregunta.
+      if (recorridoEnPausa()) return;
       /* LOS PRIVILEGIOS DEL RANGO MÁS ALTO, resueltos justo antes de empezar a gastar y no al montar: aquí ya se
          sabe si hay sesión y el listado está pintado.
            · El cupo del proxy lo levanta el SERVIDOR, que comprueba el rango de verdad (`/api/cover-quota`).
@@ -129,8 +156,14 @@ export function useCoverBackfill(data: TabData): void {
                  topa el cupo a los dos minutos, y el resto del recorrido quedaba marcado como hecho para siempre
                  en ese navegador: esos juegos ya no los calienta nadie y acaban resolviéndose en ráfaga al
                  pintar el mosaico, que es exactamente el escenario que este recorrido existe para evitar. */
-          if (respuesta.status === 429 || respuesta.status === 501 || respuesta.status === 503) {
+          /* Y UNA PÁGINA HTML NUNCA ES UN DATO. Con el cupo de Functions agotado, Cloudflare contesta con su página
+             de error (1027) o, en modo «fail open», con el `404.html` estático: un 404 que no viene de `/cover`.
+             Apuntarlo como «no tiene» escondía las carátulas noventa días (docs/plan-degradacion-servicios.md,
+             fase 4). Para el recorrido igual que los demás fallos de servicio. */
+          const esHtml = (respuesta.headers.get('content-type') || '').includes('text/html');
+          if (esHtml || respuesta.status === 429 || respuesta.status >= 500) {
             noHayNadaQueHacer = true;
+            pausarRecorrido(respuesta);
           } else if (respuesta.status === 404) {
             recordarQueNoTiene(url);
             hechos.add(clave);
@@ -140,6 +173,7 @@ export function useCoverBackfill(data: TabData): void {
             hechos.add(clave);
             nuevos += 1;
           }
+          // Otro 4xx (un título que el servidor no acepta) habla de ESE juego: no se apunta y se sigue.
         } catch {
           if (cancelado) break;
           // Un fallo de red NO se apunta: que se reintente en la próxima visita.
@@ -153,6 +187,9 @@ export function useCoverBackfill(data: TabData): void {
                      una en una con su pausa es gasto puro.
              · 503 — el servidor no ha podido preguntar a IGDB (su tope, su token): el siguiente juego se
                      encontraría lo mismo.
+             · el resto de 5xx y cualquier página HTML — la Function caída o sin cupo de Cloudflare. Antes un 500
+                     seguía y recorría la biblioteca entera a una petición cada 160 ms.
+           Y la pausa queda guardada (`pausarRecorrido`): la siguiente visita no vuelve a empezar hasta que pase.
            Lo andado queda guardado al salir del bucle y la próxima visita sigue por donde iba. */
         if (noHayNadaQueHacer) break;
         /* Se guarda cada poco y no al final: si cierras la pestaña a medias, lo andado no se pierde. Y se mide

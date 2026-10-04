@@ -17,7 +17,7 @@
 // NUNCA LANZA AL LEER. Sin Firebase configurado, sin sesión, sin red o con las reglas denegando, devuelve el
 // mapa vacío y la app cae a lo que dice el código: un logro oculto sigue oculto. El lado seguro es ese, y por eso
 // el fallo es silencioso aquí y ruidoso al ESCRIBIR (donde el admin tiene que saber que no se ha guardado).
-import { doc, getDoc, setDoc } from 'firebase/firestore/lite';
+import { doc, getDoc, setDoc, type Firestore } from 'firebase/firestore/lite';
 import { initializeFirebaseServices } from './firebaseClient';
 import {
   NO_ACHIEVEMENTS_CONFIG,
@@ -27,6 +27,7 @@ import {
 } from '../../core/achievements/visibility';
 import { cachedAchievementsConfig, rememberAchievementsConfig } from '../../core/achievements/configCache';
 import { applyExtraSteps } from '../../core/achievements/catalog';
+import { frontierKey, mergeFrontiers } from '../../core/achievements/frontier';
 import type { ExtraSteps } from '../../core/achievements/types';
 
 const COLLECTION = 'appConfig';
@@ -103,6 +104,28 @@ function sanitizeExtraSteps(raw: unknown): ExtraSteps {
  * `force` la vuelve a pedir aunque esté en caché: lo usa el panel después de guardar, para no quedarse
  * enseñando el estado anterior.
  */
+/**
+ * Lee el documento de Firestore y lo deja en la caché de sesión. LANZA si no puede leerlo: quien necesite saber
+ * que la lectura fue buena (`advanceOpenFrontier`, que escribe a partir de ella) lo usa tal cual, y quien solo
+ * quiere pintar (`loadAchievementsConfig`) traga el fallo y cae al catálogo.
+ */
+async function readAchievementsConfigFromServer(firestore: Firestore): Promise<AchievementsConfig> {
+  const snapshot = await getDoc(doc(firestore, COLLECTION, DOC_ID));
+  const data = snapshot.exists()
+    ? (snapshot.data() as { hidden?: unknown; open?: unknown; extraSteps?: unknown })
+    : {};
+  const leida = rememberAchievementsConfig({
+    hidden: sanitizeHidden(data?.hidden),
+    open: sanitizeOpen(data?.open),
+    extraSteps: sanitizeExtraSteps(data?.extraSteps),
+  });
+  // EL CATÁLOGO SE RECONSTRUYE AQUÍ, y no en cada pantalla: es el único sitio por el que pasa la
+  // configuración, así que es donde se puede garantizar que el catálogo y el documento no divergen nunca.
+  // `applyExtraSteps` es idempotente y barato: una pasada por las 64 escaleras.
+  applyExtraSteps(leida.extraSteps);
+  return leida;
+}
+
 export async function loadAchievementsConfig(force = false): Promise<AchievementsConfig> {
   const cached = cachedAchievementsConfig();
   if (!force && cached) return cached;
@@ -112,20 +135,7 @@ export async function loadAchievementsConfig(force = false): Promise<Achievement
     try {
       const services = await initializeFirebaseServices();
       if (!services) return NO_ACHIEVEMENTS_CONFIG;
-      const snapshot = await getDoc(doc(services.firestore, COLLECTION, DOC_ID));
-      const data = snapshot.exists()
-        ? (snapshot.data() as { hidden?: unknown; open?: unknown; extraSteps?: unknown })
-        : {};
-      const leida = rememberAchievementsConfig({
-        hidden: sanitizeHidden(data?.hidden),
-        open: sanitizeOpen(data?.open),
-        extraSteps: sanitizeExtraSteps(data?.extraSteps),
-      });
-      // EL CATÁLOGO SE RECONSTRUYE AQUÍ, y no en cada pantalla: es el único sitio por el que pasa la
-      // configuración, así que es donde se puede garantizar que el catálogo y el documento no divergen nunca.
-      // `applyExtraSteps` es idempotente y barato: una pasada por las 64 escaleras.
-      applyExtraSteps(leida.extraSteps);
-      return leida;
+      return await readAchievementsConfigFromServer(services.firestore);
     } catch {
       // Sin permisos, sin red o sin documento: el catálogo manda.
       return cachedAchievementsConfig() || NO_ACHIEVEMENTS_CONFIG;
@@ -231,10 +241,18 @@ export async function advanceOpenFrontier(open: OpenFrontier): Promise<void> {
   try {
     const services = await initializeFirebaseServices();
     if (!services) return;
-    const current = await loadAchievementsConfig();
-    await setDoc(doc(services.firestore, COLLECTION, DOC_ID), { open }, { merge: true });
+    // SOLO CON UNA LECTURA BUENA Y RECIENTE, y escribiendo la UNIÓN de lo leído con lo propio. Antes se escribía
+    // `open` tal cual llegaba, y llegaba calculado sobre lo que la pantalla creía publicado: si la lectura había
+    // fallado (Firestore sin cuota de lecturas pero con escrituras, o caído un momento), eso era «nada», y la
+    // escritura PISABA con tu escalón los más altos que la comunidad ya tenía abiertos (el `merge` de Firestore
+    // mezcla escaleras, pero dentro de cada una manda lo último escrito). Ver docs/plan-degradacion-servicios.md.
+    // Si la lectura falla, lanza y no se escribe nada.
+    const current = await readAchievementsConfigFromServer(services.firestore);
+    const merged = mergeFrontiers(current.open, open);
+    if (frontierKey(merged) === frontierKey(current.open)) return;
+    await setDoc(doc(services.firestore, COLLECTION, DOC_ID), { open: merged }, { merge: true });
     // La caché de sesión se pone al día para que la pantalla no vuelva a creer que hay algo que publicar.
-    rememberAchievementsConfig({ ...current, open });
+    rememberAchievementsConfig({ ...current, open: merged });
   } catch {
     // Se queda sin abrir para los demás hasta la próxima. Nadie pierde nada de lo suyo por esto.
   }

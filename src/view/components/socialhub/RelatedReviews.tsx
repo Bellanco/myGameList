@@ -7,6 +7,7 @@ import type { RelatedReview } from '../../../core/social/relatedReviews';
 // Ver `ProfileReviewsList`: este bloque lo pinta también la pantalla pública de un enlace compartido, que se
 // monta SIN el hub.
 import '../../../styles/reviews.scss';
+import { ReviewParagraphs } from '../ReviewParagraphs';
 import { SCORE_UI } from '../../../core/constants/scoreLabels';
 
 /**
@@ -186,7 +187,7 @@ export const RelatedReviews = memo(function RelatedReviews({
               </header>
               {entry.snippet ? (
                 <div className="hub-review-body">
-                  <p className="hub-feed-review-text hub-review-text">{entry.snippet}</p>
+                  <p className="hub-feed-review-text hub-review-text"><ReviewParagraphs text={entry.snippet} /></p>
                 </div>
               ) : null}
             </article>

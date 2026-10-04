@@ -11,7 +11,7 @@ import { useCallback, useState } from 'react';
 import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { PROFILE_TIER_POST_MAX_LENGTH, canPublishPosts, hasPostLengthLimit, type ProfileTier } from '../../core/constants/tiers';
 import { publishPost } from '../../model/repository/socialPublishRepository';
-import { isNetworkFailure, isOffline } from '../../core/utils/network';
+import { isNetworkFailure, isOffline, isServiceUnavailable } from '../../core/utils/network';
 
 type Feedback = (kind: 'ok' | 'warn' | 'err', message: string, duration?: 'short' | 'long') => void;
 
@@ -69,6 +69,9 @@ export function useSocialCompose(options: {
     } catch (error) {
       if (isNetworkFailure(error)) {
         setFeedback('warn', SOCIAL_UI.status.postPublishOffline, 'long');
+      } else if (isServiceUnavailable(error)) {
+        // GitHub limitando o el servicio caído: no es un fallo del texto, y en `err` bloquearía el espacio social.
+        setFeedback('warn', SOCIAL_UI.status.postPublishLimited, 'long');
       } else {
         setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.postPublishFailed);
       }

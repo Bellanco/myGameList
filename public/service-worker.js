@@ -240,6 +240,13 @@ async function handleNavigation(request, url) {
     if (!url.pathname.startsWith('/r/') && isCacheable(response, request)) {
       await cache.put('/', response.clone());
     }
+    // La red ha respondido, pero con la página de ERROR de Cloudflare (cupo de Functions agotado, 1027) o un fallo
+    // del servidor: con el shell guardado, la aplicación arranca igual y cada pantalla dice lo que no puede hacer
+    // ahora. Solo pasa en las rutas con Function (hoy `/r/:token`): el resto de la SPA es estática
+    // (docs/plan-degradacion-servicios.md, fase 3).
+    if (shell && (response.status === 429 || response.status >= 500)) {
+      return shell;
+    }
     return response;
   } catch {
     return shell || offlineResponse();

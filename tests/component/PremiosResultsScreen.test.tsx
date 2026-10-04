@@ -320,4 +320,78 @@ describe('PremiosResultsScreen', () => {
     );
     expect(screen.getByText(L.empty)).toBeInTheDocument();
   });
+
+  // LA CLASIFICACIÓN FINAL (docs/plan-premios-votos-a-la-vista.md): con los votos de cada uno, para quien votó
+  // en la edición mientras no se termina.
+  describe('con los votos a la vista', () => {
+    const conCuatro: PremiosSeasonResult = {
+      ...archivo,
+      leaderboard: [
+        { rank: 1, profileId: 'p-ana', nickname: 'Ana', points: 6 },
+        { rank: 2, profileId: 'p-beto', nickname: 'Beto', points: 3 },
+        { rank: 3, profileId: 'p-cris', nickname: 'Cris', points: 0 },
+        { rank: 3, profileId: 'p-dani', nickname: 'Dani', points: 0 },
+      ],
+    };
+    const reveal = {
+      seasonId: 'reto-2026',
+      ballots: conCuatro.leaderboard.map((entry) => ({
+        ...entry,
+        selections: { goty: entry.points > 0 ? 'goty_option_0' : 'goty_option_1' },
+      })),
+    };
+    const pintar = () =>
+      render(
+        <MemoryRouter>
+          <PremiosResultsScreen
+            result={conCuatro}
+            leaderboard={conCuatro.leaderboard}
+            ownProfileId=""
+            reveal={reveal}
+          />
+        </MemoryRouter>,
+      );
+
+    it('sustituye a la clasificación de siempre y lista a todo el mundo, empates incluidos', () => {
+      pintar();
+      expect(screen.queryByRole('region', { name: L.leaderboard })).not.toBeInTheDocument();
+      const final = screen.getByRole('region', { name: L.finalBoard });
+      expect(final.querySelectorAll('.premios-results__row--final')).toHaveLength(4);
+      expect([...final.querySelectorAll('.premios-results__rank [aria-hidden]')].map((n) => n.textContent)).toEqual([
+        '1',
+        '2',
+        '3',
+        '3',
+      ]);
+    });
+
+    it('empieza plegada y al desplegar dice lo votado, si acertó, el peso y el ganador', async () => {
+      pintar();
+      expect(screen.queryByRole('list', { name: L.votesOf('Cris') })).not.toBeInTheDocument();
+
+      const boton = screen.getByRole('button', { name: L.showVotes('Cris') });
+      await userEvent.click(boton);
+
+      expect(boton).toHaveAttribute('aria-expanded', 'true');
+      const votos = screen.getByRole('list', { name: L.votesOf('Cris') });
+      expect(votos).toHaveTextContent('Hades II');
+      expect(votos).toHaveTextContent(L.miss);
+      expect(votos).toHaveTextContent(L.weight(3));
+      expect(votos).toHaveTextContent(L.winnerWas('Elden Ring'));
+    });
+
+    it('un acierto no repite el ganador', async () => {
+      pintar();
+      await userEvent.click(screen.getByRole('button', { name: L.showVotes('Ana') }));
+      const votos = screen.getByRole('list', { name: L.votesOf('Ana') });
+      expect(votos).toHaveTextContent(L.hit);
+      expect(votos).not.toHaveTextContent(L.winnerWas('Elden Ring'));
+    });
+
+    it('cuenta los aciertos de cada uno', () => {
+      pintar();
+      expect(screen.getAllByText(L.hitsAria(1, 1))).toHaveLength(2);
+      expect(screen.getAllByText(L.hitsAria(0, 1))).toHaveLength(2);
+    });
+  });
 });

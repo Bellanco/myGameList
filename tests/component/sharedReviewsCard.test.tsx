@@ -20,7 +20,14 @@ vi.mock('../../src/model/repository/firebaseGateway', () => ({
   getCurrentSocialAuthUser: async () => ({ uid: 'u1', displayName: 'Cuenta' }),
 }));
 vi.mock('../../src/model/repository/gistConfigRepository', () => ({ getSocialSyncConfig: () => null }));
-vi.mock('../../src/model/repository/shareRepository', () => ({ listMyShares, publishShare, removeShare: vi.fn() }));
+const readLastMyShares = vi.hoisted(() => vi.fn(async (): Promise<unknown> => null));
+vi.mock('../../src/model/repository/shareRepository', () => ({
+  listMyShares,
+  publishShare,
+  removeShare: vi.fn(),
+  readLastMyShares,
+  isShareUnavailable: (error: unknown) => Boolean((error as { unavailable?: boolean } | null)?.unavailable),
+}));
 
 const { SharedReviewsCard } = await import('../../src/view/components/SharedReviewsCard');
 
@@ -55,3 +62,22 @@ describe('la lista de reseñas compartidas de Ajustes', () => {
     expect(within(await fila('Borrado')).getByRole('button', { name: 'Dejar de compartir' })).toBeTruthy();
   });
 });
+
+// docs/plan-degradacion-servicios.md, fase 3: con el servicio de compartir sin atender, Ajustes decía «No has
+// compartido ninguna reseña todavía» (falso) y un error en rojo. Ahora enseña lo último que se supo, para copiar.
+describe('la lista de Ajustes con el servicio de compartir sin atender', () => {
+  it('enseña la última lista conocida, solo para copiar, y lo dice', async () => {
+    listMyShares.mockRejectedValue(Object.assign(new Error('Compartir no está disponible'), { unavailable: true }));
+    readLastMyShares.mockResolvedValue({ shares: [share(1, 'Hades')], quota: { maxActive: 5, ttlDays: 7 } });
+
+    render(<SharedReviewsCard enabled games={biblioteca} />);
+
+    const hades = await fila('Hades');
+    expect(within(hades).getByRole('button', { name: 'Copiar enlace' })).toBeTruthy();
+    expect(within(hades).queryByRole('button', { name: 'Renovar enlace' })).toBeNull();
+    expect(within(hades).queryByRole('button', { name: 'Dejar de compartir' })).toBeNull();
+    expect(screen.getByRole('status')).toHaveTextContent('Compartir no está disponible ahora mismo');
+    expect(screen.queryByText('No has compartido ninguna reseña todavía.')).toBeNull();
+  });
+});
+

@@ -74,7 +74,9 @@ function SocialProfilesScreenBase({
     <HubUserCard
       name={entry.displayName}
       photoURL={entry.photoURL}
-      tier={entry.tier}
+      // El rango, solo de tus amigos: de quien no lo es se enseña el nombre (y la foto, si la regla de
+      // reciprocidad la deja ver) y nada más (decisión del 04-10-2026, docs/plan-directorio-amigos.md).
+      tier={relationshipWith(entry.uid) === 'friends' ? entry.tier : undefined}
       busy={friendshipBusyUid === entry.uid}
       onOpen={() => openProfileDetail(entry.id)}
       openAriaLabel={SOCIAL_UI.profiles.openProfileAria(entry.displayName)}

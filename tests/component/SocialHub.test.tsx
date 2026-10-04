@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, onTestFinished } from 'vitest';
+import { PROFILE_INACTIVITY_MS, SOCIAL_DISCOVER_LIMIT } from '../../src/core/constants/socialActivity';
 import { act, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { SecretSocialGistResult } from '../../src/model/repository/socialGistRepository';
@@ -19,7 +20,13 @@ const firebaseMocks = vi.hoisted(() => ({
   // Fase 0: el gist social propio se recupera de `privateConfig` (owner-only) antes que del perfil público.
   getPrivateConfig: vi.fn(async (): Promise<any> => null),
   setPrivateConfig: vi.fn(async () => {}),
-  listSocialDirectory: vi.fn(async (): Promise<any[]> => []),
+  listSocialDirectory: vi.fn(async (..._args: unknown[]): Promise<any[]> => []),
+  // El feed lee a tus amigos y a ti por uid. Sale del MISMO mundo que el directorio de cada test (lo que devuelve
+  // `listSocialDirectory`), leído sin llamarlo: así las cuentas de esa consulta miden solo «Perfiles».
+  getSocialProfilesByUid: vi.fn(async (uids: string[]): Promise<any[]> => {
+    const world = (await firebaseMocks.listSocialDirectory.getMockImplementation()?.()) ?? [];
+    return (world as Array<{ id: string; uid?: string }>).filter((entry) => uids.includes(entry.uid || entry.id));
+  }),
   signInWithGoogle: vi.fn(async (): Promise<SocialAuthUser | null> => null),
   signOutSocialUser: vi.fn(async () => {}),
   resolveStableProfileId: vi.fn(async (uid: string) => uid), // P1: detección de propiedad por identidad
@@ -552,9 +559,11 @@ describe('SocialHub (componente, post-M3)', () => {
 
     renderHub('/social');
 
-    await waitFor(() => expect(firebaseMocks.listSocialDirectory).toHaveBeenCalled());
+    await waitFor(() => expect(firebaseMocks.getSocialProfilesByUid).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByText(SOCIAL_UI.feed.activityEmptyNoFriends)).toBeInTheDocument());
-    expect(firebaseMocks.listSocialDirectory).toHaveBeenCalledTimes(1);
+    expect(firebaseMocks.getSocialProfilesByUid).toHaveBeenCalledTimes(1);
+    // El feed no paga la consulta de los recientes: esa es de «Perfiles».
+    expect(firebaseMocks.listSocialDirectory).not.toHaveBeenCalled();
 
     // Ya asentado el directorio, llega el perfil y cambia `showPhoto`. Eso NO cambia nada de lo que el directorio
     // contiene (solo la foto propia de respaldo), así que no puede costar otra relectura de ~50 gists.
@@ -572,7 +581,7 @@ describe('SocialHub (componente, post-M3)', () => {
     // Margen para que una segunda pasada llegara a contarse: entre el disparo y la llamada hay un `await` (la
     // lectura de la caché), así que comprobarlo en el mismo tick daría un falso verde.
     await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(firebaseMocks.listSocialDirectory).toHaveBeenCalledTimes(1);
+    expect(firebaseMocks.getSocialProfilesByUid).toHaveBeenCalledTimes(1);
 
     // Ir a "Perfiles" y volver NO cambia nada de lo que el directorio contiene: no debe rehidratarlo.
     fireEvent.click(screen.getByRole('button', { name: SOCIAL_UI.feed.openProfiles }));
@@ -581,7 +590,13 @@ describe('SocialHub (componente, post-M3)', () => {
     await screen.findByText(SOCIAL_UI.feed.title);
     await new Promise((resolve) => setTimeout(resolve, 50));
 
+    expect(firebaseMocks.getSocialProfilesByUid).toHaveBeenCalledTimes(1);
+    // «Perfiles» sí lanza la suya, una vez, con el tope de los recientes y el corte de inactividad.
     expect(firebaseMocks.listSocialDirectory).toHaveBeenCalledTimes(1);
+    expect(firebaseMocks.listSocialDirectory.mock.calls[0]).toEqual([
+      SOCIAL_DISCOVER_LIMIT,
+      expect.objectContaining({ activeWithinMs: PROFILE_INACTIVITY_MS }),
+    ]);
   });
 
   // El TTL de la caché del directorio sale del RANGO de quien mira (30 min bronce … 12 s mithril). Si se hidrata
@@ -615,14 +630,14 @@ describe('SocialHub (componente, post-M3)', () => {
       // La pantalla real: con el esqueleto delante, «no se ha hidratado» sería cierto solo por llegar pronto.
       await findFeedScreen();
       // Sin rango todavía: no se ha hidratado nada (antes se hidrataba con el TTL de bronce).
-      expect(firebaseMocks.listSocialDirectory).not.toHaveBeenCalled();
+      expect(firebaseMocks.getSocialProfilesByUid).not.toHaveBeenCalled();
 
       resolveProfile({ tier, socialEnabled: true, socialGistId: 'my-social', displayName: 'Me' } as never);
 
-      await waitFor(() => expect(firebaseMocks.listSocialDirectory).toHaveBeenCalled());
+      await waitFor(() => expect(firebaseMocks.getSocialProfilesByUid).toHaveBeenCalled());
       // Margen para que una eventual segunda pasada llegara a contarse.
       await waitFor(() => expect(screen.queryByText(SOCIAL_UI.feed.activityEmptyNoFriends)).toBeInTheDocument());
-      expect(firebaseMocks.listSocialDirectory).toHaveBeenCalledTimes(1);
+      expect(firebaseMocks.getSocialProfilesByUid).toHaveBeenCalledTimes(1);
     },
   );
 
@@ -884,6 +899,49 @@ describe('SocialHub (componente, post-M3)', () => {
       expect.objectContaining({ gistId: 'gs-mio-de-siempre' }),
     ));
     // …y NO se crea ninguno: crear aquí deja su historial huérfano y a sus amigos sin su actividad.
+    expect(gistMocks.createSocialGist).not.toHaveBeenCalled();
+  });
+
+  /**
+   * EL MISMO CANAL VACÍO, POR UN FALLO DEL SERVICIO (docs/plan-degradacion-servicios.md, fase 1). Con Firestore sin
+   * cuota la comprobación de «¿ya tiene canal?» fallaba, eso se leía como «no tiene» y el auto-crear fabricaba uno
+   * nuevo sin que nadie tocara nada. GitHub sí responde en ese caso, así que la creación salía bien.
+   */
+  it('con Firestore sin cuota no crea un canal vacío, avisa en suave y no reintenta en bucle', async () => {
+    const sinCuota = Object.assign(new Error('Quota exceeded.'), { code: 'resource-exhausted' });
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: '' });
+    gistMocks.getSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'games', etag: null, lastRemoteUpdatedAt: 0 } as never);
+    gistMocks.getSocialSyncConfig.mockReturnValue(null);
+    firebaseMocks.getPrivateConfig.mockRejectedValue(sinCuota);
+    firebaseMocks.resolveOwnProfile.mockRejectedValue(sinCuota);
+
+    renderHub();
+
+    expect(await screen.findByText(SOCIAL_UI.status.channelCheckUnavailable)).toBeInTheDocument();
+    const preguntas = firebaseMocks.getPrivateConfig.mock.calls.length;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(gistMocks.createSocialGist).not.toHaveBeenCalled();
+    // Una pasada del montaje y una del auto-crear, y ninguna más: el auto-crear se cierra en esta sesión.
+    expect(firebaseMocks.getPrivateConfig.mock.calls.length).toBe(preguntas);
+    expect(screen.queryByText('Quota exceeded.')).not.toBeInTheDocument();
+  });
+
+  it('si GitHub falla al comprobar el canal guardado (no un 404), tampoco crea uno nuevo', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: '' });
+    gistMocks.getSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'games', etag: null, lastRemoteUpdatedAt: 0 } as never);
+    gistMocks.getSocialSyncConfig.mockReturnValue(null);
+    firebaseMocks.getPrivateConfig.mockResolvedValue({ socialGistId: 'gs-mio' });
+    const leerDeVerdad = gistMocks.readSocialGist.getMockImplementation()!;
+    gistMocks.readSocialGist.mockImplementation(async () => {
+      throw new Error('Read failed: 403 - API rate limit exceeded');
+    });
+    onTestFinished(() => { gistMocks.readSocialGist.mockImplementation(leerDeVerdad); });
+
+    renderHub();
+
+    expect(await screen.findByText(SOCIAL_UI.status.channelCheckUnavailable)).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 100));
     expect(gistMocks.createSocialGist).not.toHaveBeenCalled();
   });
 
@@ -1680,6 +1738,49 @@ describe('SocialHub — alta de perfil: exige juegos completados', () => {
 // P3 — el mensaje de estado se borraba con un temporizador por aviso y sin cancelar el anterior, así que dos
 // avisos seguidos se pisaban: el plazo del PRIMERO borraba el texto del SEGUNDO. Con un temporizador único
 // reutilizado, cada aviso dura lo suyo.
+/**
+ * SERVICIO LIMITADO (docs/plan-degradacion-servicios.md, fase 2). Un servicio que no atiende —GitHub limitando, el
+ * cupo de Firestore agotado— salía con su mensaje crudo en inglés y en tono de error, que además bloqueaba el feed y
+ * el editor. Ahora es un aviso propio, persistente, y lo social sigue con lo guardado.
+ */
+describe('SocialHub — servicio limitado', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    firebaseMocks.getPublicConfig.mockResolvedValue({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
+    firebaseMocks.getPrivateConfig.mockResolvedValue(null);
+    firebaseMocks.getMyFriendships.mockResolvedValue({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+    firebaseMocks.listSocialDirectory.mockResolvedValue([]);
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social-limitado', etag: null, lastRemoteUpdatedAt: 0 });
+    gistMocks.ensureSecretSocialGist.mockImplementation(async (_t?: string, gistId?: string) => ({
+      gistId: gistId || '', etag: null, migrated: false, supersededGistIds: [], keptPublicGistIds: [], copiedEntries: 0,
+    }));
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    });
+  });
+
+  it('GitHub limitando al leer tu canal: aviso propio, sin el texto crudo y sin bloquear el feed', async () => {
+    const limitado = Object.assign(new Error('Read failed: 403 - API rate limit exceeded for user ID 1.'), { status: 403, rateLimited: true });
+    const leerDeVerdad = gistMocks.readSocialGist.getMockImplementation()!;
+    gistMocks.readSocialGist.mockImplementation(async () => { throw limitado; });
+    onTestFinished(() => { gistMocks.readSocialGist.mockImplementation(leerDeVerdad); });
+    // Firestore tampoco atiende: el nombre de reserva no puede tumbar la hidratación entera.
+    firebaseMocks.resolveOwnProfile.mockRejectedValue(Object.assign(new Error('Quota exceeded.'), { code: 'resource-exhausted' }));
+
+    renderHub('/social');
+
+    // El aviso breve, con las palabras de la aplicación. El persistente lo retira el feed al cargar bien: lo que se
+    // ve está al día.
+    expect(await screen.findByText(SOCIAL_UI.status.serviceLimited)).toBeInTheDocument();
+    expect(screen.queryByText(/rate limit/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Quota exceeded.')).not.toBeInTheDocument();
+    // El feed sigue a mano: no se ha cerrado el espacio social por un cupo.
+    expect(await findFeedScreen()).toBeInTheDocument();
+  });
+});
+
 describe('SocialHub — el aviso de estado no lo borra el temporizador del aviso anterior', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -2064,6 +2165,22 @@ describe('SocialHub — los logros de otras personas', () => {
     // de pantalla: si el espejo no llegara, la tira no se pintaría en absoluto.
     const medalla = await screen.findByRole('img', { name: new RegExp(`^${ADA_LOGRO_NOMBRE}`) });
     expect(medalla).toBeInTheDocument();
+  });
+
+  /**
+   * DE QUIEN NO ES TU AMIGO, SOLO EL NOMBRE (decisión del 04-10-2026). Su ficha ya escondía la vitrina, pero la ruta
+   * de sus logros se puede abrir a mano y enseñaba su espejo entero. Su espejo sigue contando en el porcentaje de la
+   * comunidad, sin identidad: ver «el porcentaje comparado te cuenta a ti también».
+   */
+  it('los logros de quien no es tu amigo no se enseñan aunque se abra su ruta a mano', async () => {
+    renderHub('/social/profiles/strangerUid/logros');
+
+    // Ya se ha cargado la gente de «Perfiles» (Bob sale entre los recientes) y su pantalla está pintada…
+    await waitFor(() => expect(firebaseMocks.listSocialDirectory).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    // …y su logro no está.
+    expect(screen.queryByRole('img', { name: new RegExp(`^${BOB_LOGRO_NOMBRE}`) })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: new RegExp(`^${BOB_LOGRO_NOMBRE}`) })).not.toBeInTheDocument();
   });
 
   /**

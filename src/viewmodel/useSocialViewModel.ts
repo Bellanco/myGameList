@@ -8,7 +8,8 @@ import { createSocialGist, getSocialSyncConfig, readPublicSocialGistById, readSo
 import { reconcileReviewActivity } from '../model/repository/socialActivityReconcile';
 import { getCachedSocialProfile, getLocalMeta, patchLocalMeta, putCachedSocialProfile, type CachedSocialProfileData } from '../model/repository/indexedDbRepository';
 import { PUBLIC_NAME_MAX_LENGTH, safeTrim } from '../core/security/sanitize';
-import { isNetworkFailure, isOffline } from '../core/utils/network';
+import { isNetworkFailure, isOffline, isServiceUnavailable } from '../core/utils/network';
+import { isPermissionDeniedError } from '../model/repository/firebaseClient';
 import { useOnlineStatus } from '../view/hooks/useOnlineStatus';
 import { resolveViewer, withVisiblePhotos } from '../core/social/photoVisibility';
 import { useGenericPhoto } from '../view/hooks/useGenericPhoto';
@@ -46,6 +47,7 @@ import { isOwnProfileIdentity } from './social/socialIdentity';
 import type { SocialDirectoryEntry } from './social/socialFeed';
 import { buildFriendshipViews } from './social/friendshipViews';
 import { useSocialDirectory } from './social/useSocialDirectory';
+import { useSocialDiscover } from './social/useSocialDiscover';
 import { resolveGateway } from './social/socialGateway';
 import { useSocialFriendships } from './social/useSocialFriendships';
 import { useSocialNavigation } from './social/useSocialNavigation';
@@ -90,6 +92,9 @@ const shouldRequireProfileCreation = (profileExists: boolean, justSavedProfile: 
 const shouldRedirectToProfileEditor = (isProfileEditorLocked: boolean, activePanel: string): boolean => {
   return isProfileEditorLocked && activePanel !== 'profile';
 };
+
+/** Respuesta de `attachExistingSocialGist`: vinculado, no tiene, o no se ha podido saber. */
+type ExistingSocialGist = 'linked' | 'none' | 'unknown';
 
 const isProfileEditorLocked = (mustCreateProfile: boolean, hasBlockingSocialIssue: boolean): boolean => {
   return mustCreateProfile || hasBlockingSocialIssue;
@@ -228,6 +233,8 @@ export function useSocialViewModel(options?: {
    * indicador lo enciende el propio fallo (`reportFailure`) y lo apaga la primera operación que vuelve a funcionar.
    */
   const [networkFailure, setNetworkFailure] = useState(false);
+  /** Algún servicio (Firestore, GitHub) no atiende ahora: se está viendo lo guardado. Ver `reportFailure`. */
+  const [serviceLimited, setServiceLimited] = useState(false);
   const [showSocialSpace, setShowSocialSpace] = useState(false);
   const [hasCreatedProfile, setHasCreatedProfile] = useState(false);
   const [mustCreateProfile, setMustCreateProfile] = useState(false);
@@ -325,6 +332,11 @@ export function useSocialViewModel(options?: {
    * `hasBlockingSocialIssue`, que frena la hidratación del feed y bloquea el editor de perfil —o sea, quedarse sin
    * red dejaba el espacio social cerrado además de sin datos nuevos—.
    *
+   * Un fallo del SERVICIO (Firestore sin cuota o caído, GitHub limitando, 429/5xx) tampoco: no se arregla tocando
+   * nada, solo esperando. Antes salía con su mensaje crudo («Quota exceeded.», en inglés) y en tono `err`, que
+   * cerraba el feed y el editor durante horas por un cupo diario. Ahora enciende `serviceLimited` —el aviso
+   * persistente de «servicio limitado»— y se sigue con lo guardado (docs/plan-degradacion-servicios.md, fase 2).
+   *
    * Lo demás mantiene el comportamiento de siempre (el mensaje del error, que en un 401/403/404 sí dice algo útil,
    * con el texto de la aplicación como respaldo).
    */
@@ -335,8 +347,22 @@ export function useSocialViewModel(options?: {
       return;
     }
     setNetworkFailure(false);
+    if (isServiceUnavailable(error)) {
+      setServiceLimited(true);
+      setFeedback('warn', SOCIAL_UI.status.serviceLimited, 'long');
+      return;
+    }
     setFeedback(kind, error instanceof Error ? error.message : fallback);
   }, [setFeedback]);
+
+  /**
+   * La red y el servicio han respondido: se retiran los dos avisos persistentes. Lo llama la hidratación del feed
+   * cuando termina bien de verdad (no cuando sale de una copia guardada).
+   */
+  const markSocialServiceHealthy = useCallback((failed: boolean) => {
+    setNetworkFailure(failed);
+    if (!failed) setServiceLimited(false);
+  }, []);
 
   const lockProfileEditor = useCallback(() => {
     setMustCreateProfile(true);
@@ -511,7 +537,7 @@ export function useSocialViewModel(options?: {
 
   // Directorio y feed: el estado, la caché y las 350 líneas de hidratación viven en `social/useSocialDirectory`.
   const {
-    rawSocialDirectory,
+    rawSocialDirectory: feedDirectory,
     directoryLoading,
     setDirectorySettled,
     refreshCoolingDown,
@@ -529,8 +555,43 @@ export function useSocialViewModel(options?: {
     defaultSocialVisibility,
     setFeedback,
     reportFailure,
-    setNetworkFailure,
+    setNetworkFailure: markSocialServiceHealthy,
   });
+
+  // «Perfiles» y el porcentaje de logros de la comunidad necesitan también a quien NO es tu amigo, y eso tiene su
+  // propia consulta (los recientes, `useSocialDiscover`) que solo se lanza cuando se abre una de esas pantallas. El
+  // feed no la paga: lo suyo son tus amigos, leídos por uid.
+  const discoverOpen =
+    directoryPanelAllows &&
+    (activePanel === 'profiles' || (activePanel === 'profile-detail' && (profileAchievementsView || profileGlobalsView)));
+  // La ficha de alguien que no está en ninguna de las dos listas (enlace directo): se lee ese perfil suelto. Solo con
+  // el feed ya asentado, o se leería por separado a un amigo que está a punto de llegar con él.
+  const missingProfileId =
+    directoryPanelAllows &&
+    activePanel === 'profile-detail' &&
+    !directoryLoading &&
+    profileDetailId &&
+    profileDetailId !== OWN_PROFILE_ALIAS &&
+    !feedDirectory.some((entry) => entry.id === profileDetailId)
+      ? profileDetailId
+      : '';
+  const { discoverEntries, discoverLoading } = useSocialDiscover({
+    enabled: discoverOpen,
+    missingProfileId,
+    authUid: authUser?.uid || '',
+    ownTier,
+    defaultSocialVisibility,
+    reportFailure,
+  });
+  const rawSocialDirectory = useMemo(() => {
+    if (discoverEntries.length === 0) return feedDirectory;
+    const known = new Set(feedDirectory.map((entry) => entry.uid));
+    const strangers = discoverEntries.filter(
+      (entry) => !known.has(entry.uid) && !isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId),
+    );
+    return strangers.length > 0 ? [...feedDirectory, ...strangers] : feedDirectory;
+  }, [feedDirectory, discoverEntries, authUser?.uid, ownProfileId]);
+
   const canConnectSocialGist =
     hasMainSync && hasSocialSession && !hasSocialGist && !connecting && !resolvingSocialGist && legalGateOpen;
   const canSignInGoogle = hasMainSync && !hasSocialSession && !signingIn;
@@ -550,10 +611,21 @@ export function useSocialViewModel(options?: {
     [hasMainSync, hasSocialSession, hasSocialGist],
   );
 
-  const attachExistingSocialGist = useCallback(async (user: SocialAuthUser): Promise<boolean> => {
+  /** El auto-crear del canal social se cierra en esta sesión si no se ha podido saber si ya existe uno. */
+  const autoCreateSocialGistBlockedRef = useRef(false);
+
+  /**
+   * ¿Tiene ya esta cuenta un canal social? TRES respuestas, y la tercera es la que importa: `unknown`.
+   *
+   * Era un booleano, y cualquier fallo al preguntar (Firestore sin cuota o caído, GitHub limitado) salía como
+   * `false`, que quien llama lee como «no tiene»: el mismo canal vacío del comentario de abajo, pero por un fallo
+   * del servicio en vez de por la migración del campo (docs/plan-degradacion-servicios.md, fase 1). `none` solo
+   * cuando las fuentes RESPONDEN que no hay nada; una regla que no deja leer (`permission-denied`) es una respuesta.
+   */
+  const attachExistingSocialGist = useCallback(async (user: SocialAuthUser): Promise<ExistingSocialGist> => {
     if (!mainSyncConfig?.token) {
       setFeedback('warn', SOCIAL_UI.status.needMainSync);
-      return false;
+      return 'unknown';
     }
 
     try {
@@ -565,20 +637,23 @@ export function useSocialViewModel(options?: {
       // adoptado como propio, el historial real huérfano y el editor de perfil pidiendo el alta otra vez. Y como el
       // saneado de amistades corre al abrir el hub, habría repuntado a los amigos a ese gist vacío, dejándoles sin
       // la actividad de esta cuenta. Aquí NO vale el efecto de recuperación del montaje: ese ya corrió sin sesión.
-      const savedConfig = await getPrivateConfig(user.uid).catch(() => null);
+      const savedConfig = await getPrivateConfig(user.uid).catch((error: unknown) => {
+        if (isPermissionDeniedError(error)) return null;
+        throw error;
+      });
       const savedGistId = String(savedConfig?.socialGistId || '').trim();
       const existingProfile = savedGistId ? null : await resolveOwnProfile(user);
       const existingGistId = savedGistId || (existingProfile?.socialEnabled ? existingProfile.socialGistId.trim() : '');
 
       if (!existingGistId) {
-        return false;
+        return 'none';
       }
 
       try {
         await readSocialGist(mainSyncConfig.token, existingGistId, null);
       } catch (error) {
         if (isNotFoundGistError(error)) {
-          return false;
+          return 'none';
         }
 
         throw error;
@@ -598,10 +673,16 @@ export function useSocialViewModel(options?: {
         void setPrivateConfig(user.uid, { socialGistId: existingGistId }).catch(() => {});
       }
       setFeedback('ok', SOCIAL_UI.status.gistLinkedFromFirestore);
-      return true;
+      return 'linked';
     } catch (error) {
-      reportFailure(error, SOCIAL_UI.status.firestoreCheckFailed);
-      return false;
+      // No se sabe, y entonces no se crea nada. Sin red, el aviso de siempre; con el servicio caído o sin cuota, uno
+      // que no asusta y dice lo que importa: no se ha tocado nada.
+      if (isNetworkFailure(error) || isOffline()) {
+        reportFailure(error, SOCIAL_UI.status.firestoreCheckFailed);
+      } else {
+        setFeedback('warn', SOCIAL_UI.status.channelCheckUnavailable, 'long');
+      }
+      return 'unknown';
     } finally {
       setResolvingSocialGist(false);
     }
@@ -1536,8 +1617,15 @@ export function useSocialViewModel(options?: {
 
     try {
       setConnecting(true);
-      const linkedExisting = await attachExistingSocialGist(authUser);
-      if (linkedExisting) {
+      const existing = await attachExistingSocialGist(authUser);
+      if (existing === 'linked') {
+        return;
+      }
+      if (existing === 'unknown') {
+        // Puede que ya tenga canal: crear otro aquí sería el canal vacío de `attachExistingSocialGist`. Y el
+        // auto-crear no vuelve a intentarlo en esta sesión: su efecto se dispara cada vez que `connecting` vuelve a
+        // `false`, así que sin este cierre preguntaría en bucle a un servicio que no responde.
+        autoCreateSocialGistBlockedRef.current = true;
         return;
       }
 
@@ -1566,7 +1654,7 @@ export function useSocialViewModel(options?: {
       // quedarse en «Entrando...» hasta que Firebase se dé cuenta (ver `core/utils/googleSignIn`).
       const user = await signInWithGoogle({ onAbandoned: () => setSigningIn(false) });
       setAuthUser(user);
-      const linkedExisting = await attachExistingSocialGist(user);
+      const linkedExisting = (await attachExistingSocialGist(user)) === 'linked';
       if (linkedExisting) {
         setShowSocialSpace(true);
         setFeedback('ok', SOCIAL_UI.status.signInAndLinked);
@@ -1631,7 +1719,9 @@ export function useSocialViewModel(options?: {
 
     try {
       setHydratingProfile(true);
-      const existingProfile = await resolveOwnProfile(authUser);
+      // Solo da un respaldo del nombre (abajo): si Firestore no atiende, se sigue con lo del gist en vez de perder la
+      // hidratación entera por un dato de reserva.
+      const existingProfile = await resolveOwnProfile(authUser).catch(() => null);
 
       const socialRead = await readSocialGist(socialConfig.token, socialCfgGistId, socialCfgEtag);
       if (!socialRead.notModified) {
@@ -1715,9 +1805,9 @@ export function useSocialViewModel(options?: {
         return;
       }
 
-      // Fallo de RED: se rescata el perfil guardado aunque su ventana haya expirado. Sin esto, quedarse sin
-      // conexión con la caché caducada equivalía a no tener perfil —y el editor se cerraba encima con un aviso.
-      if (isNetworkFailure(error) || isOffline()) {
+      // Fallo de RED o del SERVICIO (GitHub limitando, por ejemplo): se rescata el perfil guardado aunque su ventana
+      // haya expirado. Sin esto, la caché caducada equivalía a no tener perfil —y el editor se cerraba encima.
+      if (isServiceUnavailable(error) || isOffline()) {
         const stale = await getCachedSocialProfile(socialCfgGistId, { allowExpired: true }).catch(() => null);
         if (stale) {
           applyCachedProfile(stale);
@@ -1832,7 +1922,8 @@ export function useSocialViewModel(options?: {
     showPostCounter,
   } = useSocialCompose({
     ownTier,
-    onPublished: useCallback(() => hydrateSocialDirectory(true), [hydrateSocialDirectory]),
+    // Forzado para que el post salga ya, pero sin releer la consulta de perfiles: publicar no cambia el directorio.
+    onPublished: useCallback(() => hydrateSocialDirectory(true, { keepDirectoryQuery: true }), [hydrateSocialDirectory]),
     setFeedback,
   });
 
@@ -2018,9 +2109,16 @@ export function useSocialViewModel(options?: {
     })();
   }, [authUser?.uid, authUser?.photoURL, ownPhotoIsGeneric, ownPhotoVerdictPending, showPhoto, socialSpaceOpen, socialCfgGistId, patchDirectoryEntries]);
 
-  // Auto-crear gist social si tenemos token + Google pero no gist
+  // Auto-crear gist social si tenemos token + Google pero no gist. Salvo que en esta sesión no se haya podido saber
+  // si ya existe uno (`unknown`): entonces se espera a otra sesión o al botón; nunca se crea a ciegas.
   useEffect(() => {
-    if (hasMainSync && authUser && !hasSocialGist && !connecting && !resolvingSocialGist && !signingIn) {
+    autoCreateSocialGistBlockedRef.current = false;
+  }, [authUser?.uid]);
+  useEffect(() => {
+    if (
+      hasMainSync && authUser && !hasSocialGist && !connecting && !resolvingSocialGist && !signingIn &&
+      !autoCreateSocialGistBlockedRef.current
+    ) {
       void handleCreateSocialGist();
     }
   }, [hasMainSync, authUser, hasSocialGist, connecting, resolvingSocialGist, signingIn, handleCreateSocialGist]);
@@ -2262,6 +2360,11 @@ export function useSocialViewModel(options?: {
      */
     offline: !online || networkFailure,
     /**
+     * Algún servicio no atiende ahora (cuota de Firestore, límite de GitHub): se ve lo guardado y se dice con un
+     * aviso persistente propio, distinto del de sin conexión. El de sin conexión manda si se dan los dos.
+     */
+    serviceLimited: serviceLimited && online && !networkFailure,
+    /**
      * ¿Hay algo guardado que mostrar mientras no hay red? Separa los dos mensajes del aviso: "esto es lo último
      * que se guardó" (hay caché) y "aquí todavía no hay nada" (nunca se abrió el espacio social en este
      * dispositivo). Decirle lo primero a quien no ve nada sería mentirle.
@@ -2311,7 +2414,8 @@ export function useSocialViewModel(options?: {
     savingProfile,
     // Se expone el valor DERIVADO (no el `loadingDirectory` crudo): es el único que cubre la ventana completa, y
     // así ninguna pantalla puede olvidarse de sumarle la parte que falta.
-    loadingDirectory: directoryLoading,
+    // En «Perfiles» cuenta también la consulta de los recientes: sin ella, la sección «Otros» saldría vacía un instante.
+    loadingDirectory: directoryLoading || (activePanel === 'profiles' && discoverLoading),
     hasMainSync,
     hasSocialGist,
     hasSocialSession,

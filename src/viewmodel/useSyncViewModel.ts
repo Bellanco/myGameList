@@ -7,7 +7,9 @@ import { mergeCrdt } from '../model/repository/syncRepository';
    módulos —ligeros los dos— se quedan en el arranque. Lo que habla con la API de gists llega con `await` desde
    el chunk perezoso: quien nunca ha conectado una cuenta no lo descarga. */
 import { clearSyncConfig, ensureSyncConfigLoaded, getSyncConfig, saveSyncConfig, subscribeSyncConfig } from '../model/repository/gistConfigRepository';
-import { getRetryAfterMs, isDeferredNetworkError } from '../model/repository/githubHttp';
+import { getRetryAfterMs, isDeferredNetworkError, isGithubRateLimited } from '../model/repository/githubHttp';
+import { isServiceUnavailable } from '../core/utils/network';
+import { APP_LOCALE } from '../core/constants/locale';
 import { cargarMotorDeSync } from '../model/repository/syncEngine';
 import type { GistReadResponse } from '../model/repository/gistRepository';
 import { hasGithubOAuthRedirect, isGithubOAuthConfigured } from '../model/repository/githubOAuthChecks';
@@ -107,6 +109,10 @@ function broadcastRemoteWrite(etag: string | null): void {
 export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice, persist }: SyncDeps) {
   const [status, setStatus] = useState<SyncStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
+  /** Hasta cuándo GitHub limita las peticiones de este token: la insignia dice «en pausa» mientras tanto. */
+  const [rateLimitedUntil, setRateLimitedUntil] = useState(0);
+  /** Hasta cuándo ya se ha avisado del límite: un aviso por espera, no uno por ciclo. */
+  const rateLimitNoticeUntilRef = useRef(0);
   const [token, setToken] = useState('');
   const [gistId, setGistId] = useState('');
   const [connectedGistId, setConnectedGistId] = useState('');
@@ -151,6 +157,22 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         retryAfterMs: getRetryAfterMs(error) || null,
       });
       setStatus('error');
+      // GITHUB LIMITANDO: no es un error de nada que el usuario tenga que hacer, y sus cambios están a salvo. Un
+      // mensaje propio en tono de aviso (antes, el texto crudo en inglés y en rojo), la insignia en «en pausa», y
+      // un solo aviso por espera: los ciclos automáticos no lo repiten cada minuto (fase 5 del plan de degradación).
+      if (isGithubRateLimited(error)) {
+        const until = Date.now() + Math.max(60_000, getRetryAfterMs(error));
+        const hora = new Date(until).toLocaleTimeString(APP_LOCALE, { hour: '2-digit', minute: '2-digit' });
+        const message = SYNC_MESSAGES.rateLimited(hora);
+        setStatusMessage(message);
+        setRateLimitedUntil(until);
+        if (opts.notify !== false && Date.now() >= rateLimitNoticeUntilRef.current) {
+          rateLimitNoticeUntilRef.current = until;
+          onNotice('warn', message);
+        }
+        if (opts.logName) logSyncError(opts.logName, error);
+        return;
+      }
       const message = deferred ? SYNC_MESSAGES.offline : error instanceof Error ? error.message : opts.fallback;
       setStatusMessage(message);
       if (opts.notify !== false && !deferred) onNotice('err', message);
@@ -158,6 +180,15 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     },
     [onNotice],
   );
+
+  // AL VOLVER A SINCRONIZAR BIEN se retiran el mensaje y la pausa. Antes el mensaje de error se quedaba en la
+  // tarjeta de GitHub aunque todo se hubiera recuperado. Por efecto y no en cada `setStatus('ok')`: son siete sitios.
+  useEffect(() => {
+    if (status === 'ok') {
+      setStatusMessage('');
+      setRateLimitedUntil(0);
+    }
+  }, [status]);
 
   /**
    * `knownRemoteFiles`: el cuerpo del gist que quien llama ACABA de leer, para que `writeGist` no vuelva a
@@ -711,7 +742,18 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       const existingGistId = await findGamesGistId(githubToken); // '' si es su primera conexión
       await connectSyncWithCredentials(githubToken, existingGistId);
     } catch (error) {
-      handleSyncError(error, { fallback: SYNC_MESSAGES.connectError, logName: 'completeGithubLoginFromRedirect' });
+      // Sin sincronización configurada todavía, un fallo al CONECTAR no es un fallo de sincronización: marcarlo así
+      // dejaba la insignia en «Error de sincronización» y la máquina en espera sin nada que sincronizar. Se dice lo
+      // que ha pasado y se vuelve al estado de reposo.
+      if (!getSyncConfig()) {
+        setStatus('idle');
+        const message = error instanceof Error ? error.message : SYNC_MESSAGES.connectError;
+        setStatusMessage(message);
+        onNotice('warn', message);
+        logSyncError('completeGithubLoginFromRedirect', error);
+      } else {
+        handleSyncError(error, { fallback: SYNC_MESSAGES.connectError, logName: 'completeGithubLoginFromRedirect' });
+      }
     } finally {
       lock.release();
       setGithubLoggingIn(false);
@@ -1015,6 +1057,15 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         superseded = true;
         return;
       }
+      // Sin sincronización configurada, el fallo es de la RECUPERACIÓN (Google, Firestore sin cuota), no de una
+      // sincronización que no existe: se dice y no se marca como error de sync (fase 5 del plan de degradación).
+      if (!getSyncConfig()) {
+        setStatus('idle');
+        const message = isServiceUnavailable(error) ? SYNC_MESSAGES.recoverUnavailable : SYNC_MESSAGES.recoverError;
+        setStatusMessage(message);
+        onNotice('warn', message);
+        return;
+      }
       // H3: connectSyncWithCredentials deja la máquina en 'checking'/'merging' si lanza a mitad; sin un
       // transitionTo aquí el sync quedaría bloqueado hasta recargar. Mismo patrón de recuperación que connectSync.
       handleSyncError(error, { fallback: SYNC_MESSAGES.recoverError });
@@ -1072,6 +1123,8 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   return {
     status,
     statusMessage,
+    /** GitHub limita las peticiones ahora: la insignia dice «en pausa» (ver `resolveSyncBadge`). */
+    syncPaused: rateLimitedUntil > Date.now(),
     token,
     setToken,
     gistId,

@@ -203,6 +203,24 @@ export const PREMIOS_UI = {
     /** Una edición de la que solo se sabe el puesto de cada cual (ver `PremiosSeasonResult.unscored`). */
     unscored: 'sin puntuación',
     yourRow: 'Tu posición',
+    // ═══ LA CLASIFICACIÓN FINAL, con lo que votó cada uno ═══════════════════════════════════════════════
+    // Solo mientras la edición publicada no se termina, y solo para quien votó en ella
+    // (docs/plan-premios-votos-a-la-vista.md). Sustituye a la clasificación de siempre.
+    finalBoard: 'Clasificación final',
+    /** Aciertos sobre categorías: explica que alguien con menos aciertos sume más puntos, por los pesos. */
+    hitsShort: (aciertos: number, total: number) => `${aciertos}/${total}`,
+    hitsAria: (aciertos: number, total: number) =>
+      aciertos === 1 ? `1 acierto de ${total}` : `${aciertos} aciertos de ${total}`,
+    showVotes: (nombre: string) => `Ver los votos de ${nombre}`,
+    hideVotes: (nombre: string) => `Ocultar los votos de ${nombre}`,
+    votesOf: (nombre: string) => `Votos de ${nombre}`,
+    hit: 'Acierto',
+    miss: 'Fallo',
+    noVote: 'Sin voto',
+    winnerWas: (nombre: string) => `Ganador: ${nombre}`,
+    /** El peso, solo si no es 1. Con coma decimal, como los puntos: `×0,5`. */
+    weight: (peso: number) => `×${peso.toLocaleString(APP_LOCALE, { maximumFractionDigits: 2 })}`,
+    weightAria: (peso: number) => `vale ${peso.toLocaleString(APP_LOCALE, { maximumFractionDigits: 2 })} puntos`,
     /** EL PODIO: los tres primeros puestos, que es lo que se viene a mirar. */
     podium: 'Podio',
     /** Un puesto compartido: los empatados van juntos en la misma tarjeta. */
@@ -290,7 +308,12 @@ export const PREMIOS_UI = {
           id: 'pending' as const,
           label: 'Cerrada, sin publicar',
           // El fin del ciclo se cuenta AQUÍ, en el paso que lo provoca, en vez de en una frase suelta debajo.
-          hint: 'Hay que marcar el ganador de cada categoría con nominados para poder publicar: al hacerlo pasa al histórico y se vuelve a «Sin edición».',
+          hint: 'Hay que marcar el ganador de cada categoría con nominados para poder publicar: al hacerlo pasa al histórico.',
+        },
+        {
+          id: 'revealed' as const,
+          label: 'Publicada, votos a la vista',
+          hint: 'Quienes votaron ven lo que votó cada uno. Al terminarla se retiran las papeletas y se vuelve a «Sin edición».',
         },
       ],
       stageCurrent: 'Estado actual',
@@ -340,6 +363,12 @@ export const PREMIOS_UI = {
       publishAction: 'Publicar los resultados',
       // Publicar es irreversible y destructivo: retira las papeletas y vacía los nominados.
       publishWarn: 'Al publicar se archiva la clasificación, se retiran las papeletas y se vacían los nominados. No se puede deshacer.',
+      // Las ediciones con los votos a la vista: publicar ya no retira nada, eso lo hace terminar.
+      publishWarnReveal: 'Al publicar se archiva la clasificación y se conceden los trofeos. Las papeletas se quedan para que quienes votaron vean lo que votó cada uno, hasta que termines la edición. No se puede deshacer.',
+      // TERMINAR, el paso destructivo de las ediciones con los votos a la vista.
+      finishAction: 'Terminar la edición',
+      finishWarn: 'Al terminarla se retiran las papeletas y los votos de cada uno, y se vacían los nominados. Los resultados siguen en el histórico. No se puede deshacer.',
+      finishConfirmTitle: '¿Terminar la edición?',
       /**
        * SIN TODOS LOS GANADORES NO SE PUBLICA. La clasificación se calcula cruzando cada voto con el ganador de
        * su categoría: una categoría con nominados y sin ganador no da puntos a nadie, y como al publicar se
@@ -362,6 +391,10 @@ export const PREMIOS_UI = {
         `Edición «${nombre}» abierta. La sección sigue oculta: solo se llega con el enlace.`,
       closed: 'Votación cerrada.',
       published: (nombre: string, votos: number) => `«${nombre}» publicada con ${votos} papeleta(s).`,
+      publishedReveal: (nombre: string, votos: number) =>
+        `«${nombre}» publicada con ${votos} papeleta(s). Quienes votaron ven los votos de todos hasta que la termines.`,
+      finished: (nombre: string, papeletas: number) =>
+        `«${nombre}» terminada: se retiraron ${papeletas} papeleta(s).`,
       errorDay: 'Hace falta un día de cierre que no esté en el pasado.',
       // ═══ EL INTERRUPTOR DE LA ENTRADA ═════════════════════════════════════════════════════════════════
       // Dos estados y no tres. El tercero era «según el calendario» y se leía como una opción cuando en realidad

@@ -127,14 +127,16 @@ describe('listados de otra persona', () => {
     expect(result.current.getGameItemById('perfil-ana', 999)).toBeNull();
   });
 
-  it('el refresco manual invalida la caché y relee forzando', async () => {
+  // Relee forzando, pero SIN borrar antes la copia guardada: si GitHub limita o no hay red, borrarla dejaba a ese
+  // amigo sin listados para la próxima visita. La lectura forzada la sustituye cuando sale bien.
+  it('el refresco manual relee forzando sin borrar antes la copia guardada', async () => {
     const { result } = setup();
     await waitFor(() => expect(result.current.foreignGames['perfil-ana']).toBeTruthy());
     loadForeignProfileGames.mockClear();
 
     await result.current.refreshProfileDetail();
 
-    expect(invalidateProfileGames).toHaveBeenCalledWith('perfil-ana');
+    expect(invalidateProfileGames).not.toHaveBeenCalled();
     expect(loadForeignProfileGames).toHaveBeenCalledWith(expect.objectContaining({ forceRefresh: true }));
   });
 

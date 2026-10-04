@@ -357,7 +357,17 @@ export async function publishPost(input: { text: string; maxLength?: number }): 
   const etag = await commitSocialWrite(ctx, nextPayload);
 
   // SIN `invalidateCachedSocialDirectory`, a diferencia de los dos de arriba: quien publica un post refresca el
-  // feed acto seguido con `hydrateSocialDirectory(true)` (ver `useSocialCompose`), y un refresco forzado se salta
-  // la caché de todas formas. Añadir aquí la invalidación sería una escritura en IndexedDB que nadie leería.
-  await syncPublicIdentity(ctx, etag);
+  // feed acto seguido con un refresco forzado (ver `onPublished` en `useSocialViewModel`), que se salta la caché del
+  // feed de todas formas. Añadir aquí la invalidación sería una escritura en IndexedDB que nadie leería.
+  //
+  // Y BEST-EFFORT: el post YA está publicado (vive en el gist, que acaba de escribirse). Lo que queda es
+  // mantenimiento de Firestore —latido, réplica del perfil, amistades—, y si fallaba (Firestore sin cuota o caído)
+  // el usuario veía un error con el texto todavía en el compositor, lo reenviaba y el post salía DOS veces: cada
+  // publicación lleva un id nuevo (docs/plan-degradacion-servicios.md, fase 1). Se repite solo en la siguiente
+  // publicación y en los saneados de arranque del hub.
+  try {
+    await syncPublicIdentity(ctx, etag);
+  } catch (error) {
+    console.warn('[social] post publicado; la identidad pública se actualizará más tarde:', error instanceof Error ? error.message : error);
+  }
 }

@@ -6,6 +6,7 @@
 // lectura de Firestore es ASÍNCRONA: se hidrata al iniciar sesión; hasta entonces se muestran estrellas (sin flash).
 import { DEFAULT_SCORE_SCALE, type ScoreScale } from '../../core/utils/scoreScale';
 import { getPublicConfig, setPublicConfig } from './firebaseGateway';
+import { scoreScaleKey } from '../../core/constants/storageKeys';
 
 let _scale: ScoreScale = DEFAULT_SCORE_SCALE;
 const listeners = new Set<() => void>();
@@ -33,20 +34,50 @@ export function subscribeScoreScale(cb: () => void): () => void {
   };
 }
 
-/** Hidrata la escala desde Firestore al iniciar sesión. Best-effort: si falla (reglas/offline), se queda en estrellas. */
-export async function hydrateScoreScale(uid: string): Promise<void> {
+/**
+ * COPIA EN ESTE NAVEGADOR, por usuario. La nube manda, pero si no responde (Firestore sin cuota, sin red) quien usa
+ * la nota 0–100 volvía a ver estrellas en sus listas: lo único de Firestore que ensuciaba la pantalla principal
+ * (docs/plan-degradacion-servicios.md, fase 5). Con la copia, se pinta lo último que se supo.
+ */
+function readStoredScale(uid: string): ScoreScale | null {
   try {
-    const cfg = await getPublicConfig(uid);
-    setLocal(cfg?.scoreScale === 'grade' ? 'grade' : DEFAULT_SCORE_SCALE);
+    const raw = localStorage.getItem(scoreScaleKey(uid));
+    return raw === 'grade' || raw === 'stars' ? raw : null;
   } catch {
-    // permission-denied / Firebase ausente → se conserva el valor por defecto (estrellas).
+    return null;
   }
 }
 
-/** Cambia la escala y la persiste en Firestore (requiere uid). Actualiza el local de inmediato (optimista). */
+function storeScale(uid: string, scale: ScoreScale): void {
+  try {
+    localStorage.setItem(scoreScaleKey(uid), scale);
+  } catch {
+    // best-effort
+  }
+}
+
+/** Hidrata la escala al iniciar sesión: primero la copia local (sin parpadeo) y después la de Firestore, si responde. */
+export async function hydrateScoreScale(uid: string): Promise<void> {
+  const stored = readStoredScale(uid);
+  if (stored) setLocal(stored);
+  try {
+    const cfg = await getPublicConfig(uid);
+    const scale = cfg?.scoreScale === 'grade' ? 'grade' : DEFAULT_SCORE_SCALE;
+    setLocal(scale);
+    storeScale(uid, scale);
+  } catch {
+    // permission-denied / Firebase ausente / sin cuota → se conserva la copia local, o estrellas si no la hay.
+  }
+}
+
+/**
+ * Cambia la escala y la persiste (requiere uid). Local de inmediato (optimista) y en la nube best-effort: si
+ * Firestore no atiende, la preferencia sigue valiendo en este navegador y se subirá la próxima vez que se cambie.
+ */
 export async function persistScoreScale(uid: string, scale: ScoreScale): Promise<void> {
   setLocal(scale);
-  await setPublicConfig(uid, { scoreScale: scale });
+  storeScale(uid, scale);
+  await setPublicConfig(uid, { scoreScale: scale }).catch(() => {});
 }
 
 /** Al cerrar sesión: vuelve a estrellas (no hay preferencia sin cuenta asociada). */

@@ -124,16 +124,32 @@ export async function getAppCheckToken(): Promise<string | null> {
   if (!getRecaptchaSiteKey()) {
     return null;
   }
-  await appCheckPromise;
-  if (!appCheckInstance) {
-    return null;
-  }
-  try {
-    const { getToken } = await import('firebase/app-check');
-    return (await getToken(appCheckInstance)).token;
-  } catch {
-    return null;
-  }
+  // CON TOPE DE ESPERA, como todo lo demás de aquí: falla abierto. Si un bloqueador o la red impiden cargar el
+  // script de reCAPTCHA, el SDK espera su inicialización sin plazo y «Compartir» se quedaba colgado sin responder
+  // nunca (docs/plan-degradacion-servicios.md, fase 5). Pasado el tope se sigue sin token, que la Function admite.
+  return withTimeout((async () => {
+    await appCheckPromise;
+    if (!appCheckInstance) {
+      return null;
+    }
+    try {
+      const { getToken } = await import('firebase/app-check');
+      return (await getToken(appCheckInstance)).token;
+    } catch {
+      return null;
+    }
+  })(), APP_CHECK_TOKEN_TIMEOUT_MS);
+}
+
+/** Lo más que se espera al token de App Check antes de seguir sin él. */
+export const APP_CHECK_TOKEN_TIMEOUT_MS = 4000;
+
+function withTimeout<T>(promise: Promise<T | null>, ms: number): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
 /** Solo para pruebas: olvida la inicialización memoizada. */

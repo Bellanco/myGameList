@@ -5,7 +5,7 @@
 // NO se confunde con uno de red. De eso depende que el espacio social muestre el aviso de "sin conexión" en vez de
 // dejar salir `network offline` o `Failed to fetch`, y que un 401 siga diciendo lo que dice.
 import { afterEach, describe, expect, it } from 'vitest';
-import { isNetworkFailure, isOffline } from '../../src/core/utils/network';
+import { isNetworkFailure, isOffline, isServiceUnavailable } from '../../src/core/utils/network';
 import { NetworkDeferredError } from '../../src/model/repository/githubHttp';
 
 function setOnLine(value: boolean | undefined) {
@@ -63,5 +63,33 @@ describe('isNetworkFailure', () => {
     expect(isNetworkFailure(new TypeError("Cannot read properties of undefined (reading 'name')"))).toBe(false);
     expect(isNetworkFailure(null)).toBe(false);
     expect(isNetworkFailure(undefined)).toBe(false);
+  });
+});
+
+// «Inténtalo más tarde» frente a «esto no se puede hacer» (docs/plan-degradacion-servicios.md).
+describe('isServiceUnavailable', () => {
+  it('cuota agotada de Firestore y fallos pasajeros suyos', () => {
+    expect(isServiceUnavailable({ code: 'resource-exhausted', message: 'Quota exceeded.' })).toBe(true);
+    expect(isServiceUnavailable({ code: 'firestore/resource-exhausted' })).toBe(true);
+    expect(isServiceUnavailable({ code: 'internal' })).toBe(true);
+  });
+
+  it('los fallos de red cuentan también', () => {
+    expect(isServiceUnavailable(new TypeError('Failed to fetch'))).toBe(true);
+    expect(isServiceUnavailable({ code: 'unavailable' })).toBe(true);
+  });
+
+  it('respuestas HTTP que dicen lo mismo: 0, 429 y 5xx', () => {
+    expect(isServiceUnavailable({ status: 429 })).toBe(true);
+    expect(isServiceUnavailable({ status: 503 })).toBe(true);
+    expect(isServiceUnavailable({ status: 0 })).toBe(true);
+  });
+
+  it('lo que no se arregla esperando, no', () => {
+    expect(isServiceUnavailable({ code: 'permission-denied' })).toBe(false);
+    expect(isServiceUnavailable({ status: 400 })).toBe(false);
+    expect(isServiceUnavailable({ status: 404 })).toBe(false);
+    expect(isServiceUnavailable(new Error('Reseña no publicable'))).toBe(false);
+    expect(isServiceUnavailable(null)).toBe(false);
   });
 });

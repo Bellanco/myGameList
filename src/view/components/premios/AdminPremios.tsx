@@ -30,6 +30,7 @@ import { samePremiosSnapshot, type PremiosVisibilitySnapshot } from '../../../co
 import {
   closeSeasonNow,
   fetchVotingConfig,
+  finishSeason,
   openSeason,
   publishAndArchiveSeason,
   setPremiosVisible,
@@ -71,6 +72,8 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
   const [cargado, setCargado] = useState(false);
   /** ¿Se está preguntando si abrir con categorías a medias o con la sección oculta? */
   const [pidiendoAbrir, setPidiendoAbrir] = useState(false);
+  /** ¿Se está confirmando terminar la edición? Retira las papeletas: no se hace de un clic. */
+  const [pidiendoTerminar, setPidiendoTerminar] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -110,6 +113,12 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
   }, [recargar]);
 
   const stage = useMemo(() => getSeasonStage(config), [config]);
+  /**
+   * ¿Esta edición enseña los votos al publicarse? Las abiertas antes de existir no (ver `openSeason`): se
+   * publican y se terminan de una vez, y en su ciclo no aparece el paso de los votos a la vista. Sin edición en
+   * marcha la próxima sí los enseñará, así que el paso se ve.
+   */
+  const conVotosALaVista = stage === SEASON_STAGE.NONE || config?.revealVotes === true;
   /**
    * Las que van a archivarse, que son las únicas que pueden tener ganador. El criterio es el de `archivable`,
    * el mismo que aplica `readLiveEdition` al publicar: si aquí se contara alguna que allí se descarta —una sin
@@ -230,7 +239,15 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
         seasonId: config?.seasonId,
         seasonName: config?.seasonName,
       });
-      return L.season.published(result.name, result.totalBallots);
+      return conVotosALaVista
+        ? L.season.publishedReveal(result.name, result.totalBallots)
+        : L.season.published(result.name, result.totalBallots);
+    });
+
+  const terminar = () =>
+    ejecutar(async () => {
+      const result = await finishSeason();
+      return L.season.finished(getSeasonLabel({ name: config?.seasonName, season: config?.season }), result.deleted);
     });
 
 
@@ -287,28 +304,30 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
                 dice dónde estás pero no qué hay ni qué viene después — y con tres estados, un interruptor de
                 visibilidad que depende de ellos y un histórico de por medio, esa frase se quedaba corta. */}
             <ol className="premios-admin__stages" aria-label={L.season.stagesTitle}>
-              {L.season.stages.map((momento) => {
-                const actual = momento.id === stage;
-                // EL PASO ABIERTO DICE LA FECHA DE VERDAD, no la regla general: con una edición en marcha, lo
-                // que hace falta saber es cuándo se cierra ESTA, no a qué hora cierran todas.
-                const detalle =
-                  actual && momento.id === SEASON_STAGE.OPEN && config?.closesAt
-                    ? L.season.closesAt(toVotingZoneDay(config.closesAt))
-                    : momento.hint;
-                return (
-                  <li
-                    key={momento.id}
-                    className={`premios-admin__stage-step${actual ? ' is-current' : ''}`}
-                    aria-current={actual ? 'step' : undefined}
-                  >
-                    <span className="premios-admin__stage-name">
-                      {momento.label}
-                      {actual ? <span className="premios-admin__stage-now">{L.season.stageCurrent}</span> : null}
-                    </span>
-                    <span className="premios-admin__stage-hint">{detalle}</span>
-                  </li>
-                );
-              })}
+              {L.season.stages
+                .filter((momento) => momento.id !== SEASON_STAGE.REVEALED || conVotosALaVista)
+                .map((momento) => {
+                  const actual = momento.id === stage;
+                  // EL PASO ABIERTO DICE LA FECHA DE VERDAD, no la regla general: con una edición en marcha, lo
+                  // que hace falta saber es cuándo se cierra ESTA, no a qué hora cierran todas.
+                  const detalle =
+                    actual && momento.id === SEASON_STAGE.OPEN && config?.closesAt
+                      ? L.season.closesAt(toVotingZoneDay(config.closesAt))
+                      : momento.hint;
+                  return (
+                    <li
+                      key={momento.id}
+                      className={`premios-admin__stage-step${actual ? ' is-current' : ''}`}
+                      aria-current={actual ? 'step' : undefined}
+                    >
+                      <span className="premios-admin__stage-name">
+                        {momento.label}
+                        {actual ? <span className="premios-admin__stage-now">{L.season.stageCurrent}</span> : null}
+                      </span>
+                      <span className="premios-admin__stage-hint">{detalle}</span>
+                    </li>
+                  );
+                })}
             </ol>
 
             {/* EL RESUMEN, EN UNA LÍNEA Y CON SU ACCIÓN AL LADO: qué edición hay y cómo se llama. Antes esto
@@ -483,7 +502,9 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
                     ) : null}
                     {/* Lo irreversible solo se cuenta cuando se puede hacer: encima de un botón apagado sería
                         ruido delante del motivo por el que está apagado. */}
-                    <p className="premios-admin__warn">{L.season.publishWarn}</p>
+                    <p className="premios-admin__warn">
+                      {conVotosALaVista ? L.season.publishWarnReveal : L.season.publishWarn}
+                    </p>
                   </>
                 )}
                 <button
@@ -494,6 +515,15 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
                   onClick={() => void publicar()}
                 >
                   {L.season.publishAction}
+                </button>
+              </div>
+            ) : null}
+
+            {stage === SEASON_STAGE.REVEALED ? (
+              <div className="premios-admin__form">
+                <p className="premios-admin__warn">{L.season.finishWarn}</p>
+                <button type="button" className="btn" disabled={busy} onClick={() => setPidiendoTerminar(true)}>
+                  {L.season.finishAction}
                 </button>
               </div>
             ) : null}
@@ -510,6 +540,18 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
           <AdminPremiosHistorico busy={busy} ejecutar={ejecutar} />
         )}
       </div>
+
+      <ConfirmModal
+        open={pidiendoTerminar}
+        title={L.season.finishConfirmTitle}
+        body={L.season.finishWarn}
+        confirmLabel={L.season.finishAction}
+        onCancel={() => setPidiendoTerminar(false)}
+        onConfirm={() => {
+          setPidiendoTerminar(false);
+          void terminar();
+        }}
+      />
 
       {/* UN SOLO DIÁLOGO PARA LOS DOS AVISOS. Con la sección oculta, la pregunta es esa —y ofrece encenderla ahí
           mismo—, y si además hay categorías a medias se dice debajo. Sin ocultar, es el aviso de siempre. */}

@@ -55,13 +55,14 @@ describe('SocialProfilesScreen — división amigos / no-amigos', () => {
   });
 
   // El punto de rango es la única señal visible del tier en el directorio. Como el color por sí solo no informa
-  // a quien no lo distingue, el nombre del rango tiene que estar en el texto accesible.
+  // a quien no lo distingue, el nombre del rango tiene que estar en el texto accesible. Y es solo de tus AMIGOS:
+  // de quien no lo es se enseña el nombre y nada más (decisión del 04-10-2026).
   describe('punto de rango', () => {
     function renderWithTiers() {
       return render(
         <SocialProfilesScreen
           {...baseProps}
-          relationshipWith={() => 'none'}
+          relationshipWith={() => 'friends'}
           filteredSocialDirectory={[
             { ...entry('ada', 'Ada'), tier: 'gold' },
             { ...entry('bob', 'Bob'), tier: 'mithril' },
@@ -93,7 +94,7 @@ describe('SocialProfilesScreen — división amigos / no-amigos', () => {
       const { container } = render(
         <SocialProfilesScreen
           {...baseProps}
-          relationshipWith={() => 'none'}
+          relationshipWith={() => 'friends'}
           // Rango inventado: el `as` es la prueba. Simula un documento con un valor que el tipo no admite
           // (dato viejo o manipulado) para comprobar que `normalizeTier` lo degrada a bronce en vez de romper.
           filteredSocialDirectory={[{ ...entry('ada', 'Ada'), tier: 'adamantium' as ProfileTier }]}
@@ -101,6 +102,26 @@ describe('SocialProfilesScreen — división amigos / no-amigos', () => {
       );
 
       expect(container.querySelector('.hub-tier-notch.tier-bronze')).toBeInTheDocument();
+    });
+  
+    it('de quien no es tu amigo no se pinta el rango', () => {
+      const { container } = render(
+        <SocialProfilesScreen
+          {...baseProps}
+          relationshipWith={(uid) => (uid === 'ada' ? 'friends' : uid === 'bob' ? 'outgoing' : 'none')}
+          filteredSocialDirectory={[
+            { ...entry('ada', 'Ada'), tier: 'gold' },
+            { ...entry('bob', 'Bob'), tier: 'mithril' },
+            { ...entry('cid', 'Cid'), tier: 'silver' },
+          ]}
+        />,
+      );
+
+      // Solo el de Ada, la amiga. Ni una petición enviada cuenta como amistad.
+      expect(container.querySelectorAll('.hub-tier-notch')).toHaveLength(1);
+      expect(container.querySelector('.hub-tier-notch.tier-gold')).toBeInTheDocument();
+      expect(screen.queryByText(PROFILE_TIER_LABELS.mithril)).not.toBeInTheDocument();
+      expect(screen.queryByText(PROFILE_TIER_LABELS.silver)).not.toBeInTheDocument();
     });
   });
 

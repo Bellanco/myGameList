@@ -237,6 +237,35 @@ describe('service worker — navegación con la red bloqueada', () => {
   });
 });
 
+// docs/plan-degradacion-servicios.md, fase 3: con el cupo de Functions agotado, `/r/:token` (la única navegación
+// que pasa por una Function) respondía con la página de error de Cloudflare, y el worker la servía tal cual aunque
+// tuviera la aplicación guardada.
+describe('service worker — navegación que responde con un error', () => {
+  beforeEach(() => { vi.useRealTimers(); });
+
+  it('con la página de error de Cloudflare (429) sirve la aplicación guardada', async () => {
+    const sw = loadServiceWorker({
+      shell: html('<!DOCTYPE html><title>app guardada</title>'),
+      fetchImpl: async () => new Response('<html>Error 1027</html>', { status: 429, headers: { 'Content-Type': 'text/html' } }),
+    });
+
+    const response = await respondTo(sw, new Request('https://mygamelist.pages.dev/r/TOKEN1234567890abcd', { headers: { accept: 'text/html' } }));
+
+    expect(await response.text()).toContain('app guardada');
+  });
+
+  it('un 404 de verdad (dirección inventada) no se tapa con la aplicación', async () => {
+    const sw = loadServiceWorker({
+      shell: html('<!DOCTYPE html><title>app guardada</title>'),
+      fetchImpl: async () => new Response('<html>no existe</html>', { status: 404, headers: { 'Content-Type': 'text/html' } }),
+    });
+
+    const response = await respondTo(sw, new Request('https://mygamelist.pages.dev/no-existe', { headers: { accept: 'text/html' } }));
+
+    expect(response.status).toBe(404);
+  });
+});
+
 describe('service worker — carátulas', () => {
   const COVER = 'https://mygamelist.pages.dev/cover?n=Hollow%20Knight&p=Steam';
 

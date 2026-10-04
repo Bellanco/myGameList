@@ -2,6 +2,7 @@
 import { Icon } from '../Icon';
 import { ScoreDisplay } from '../ScoreDisplay';
 import { NoScoreMedal } from '../NoScoreMedal';
+import { ReviewParagraphs } from '../ReviewParagraphs';
 import { resolveGrade } from '../../../core/utils/scoreScale';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import type {
@@ -77,7 +78,8 @@ function SocialFeedScreenBase({
   statusKind,
   handleSignOut,
   offline,
-  offlineHasCachedData
+  offlineHasCachedData,
+  serviceLimited = false,
 }: {
   SOCIAL_UI: SocialUiLabels;
   socialDisplayName: string;
@@ -123,6 +125,8 @@ function SocialFeedScreenBase({
   offline: boolean;
   /** ¿Hay algo guardado que enseñar mientras no hay red? Decide cuál de los dos avisos toca. */
   offlineHasCachedData: boolean;
+  /** Hay red pero un servicio no atiende: se avisa con su propio texto (ver `HubOfflineNotice`). */
+  serviceLimited?: boolean;
 }) {
   // El sorteo va en `useState` con inicializador perezoso y no en el cuerpo: así se decide una sola vez por
   // montaje y no cambia en cada repintado (esta pantalla re-renderiza con cualquier cambio del hub).
@@ -178,7 +182,9 @@ function SocialFeedScreenBase({
         </button>
       )}
       actions={{ pendingIncomingCount, onOpenProfiles, onOpenRequests, onSignOut: handleSignOut }}
-      notice={offline ? <HubOfflineNotice hasCachedData={offlineHasCachedData} /> : null}
+      notice={offline
+        ? <HubOfflineNotice hasCachedData={offlineHasCachedData} />
+        : serviceLimited ? <HubOfflineNotice variant="limited" hasCachedData={offlineHasCachedData} /> : null}
       composer={canPublishPosts ? (
         <FeedComposer
           SOCIAL_UI={SOCIAL_UI}
@@ -529,7 +535,7 @@ function SocialFeedScreenBase({
                             ? <ScoreDisplay game={{ score: Number(entry.rating || 0), grade: entry.grade ?? null }} />
                             : <NoScoreMedal />}
                         </div>
-                        {reviewText ? <p className="hub-feed-review-text" title={reviewText}>{reviewText}</p> : null}
+                        {reviewText ? <p className="hub-feed-review-text" title={reviewText}><ReviewParagraphs text={reviewText} /></p> : null}
                       </article>
                     );
                   })}

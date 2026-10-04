@@ -23,6 +23,12 @@ export const BALLOTS_COLLECTION = 'premiosBallots';
 /** Ediciones archivadas. Lectura PÚBLICA (ver `docs/plan-unificar-premios.md` §4.2). */
 export const RESULTS_COLLECTION = 'premiosResults';
 
+/**
+ * Los votos de cada uno de una edición publicada y sin terminar, UN documento por edición. Lo leen solo quienes
+ * votaron en ella (ver `docs/plan-premios-votos-a-la-vista.md`).
+ */
+export const REVEAL_COLLECTION = 'premiosReveal';
+
 /** Documentos que solo toca el administrador: los ganadores antes de publicarse. */
 export const ADMIN_COLLECTION = 'premiosAdmin';
 export const ADMIN_WINNERS_DOC = 'winners';

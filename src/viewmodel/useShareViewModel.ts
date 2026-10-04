@@ -6,7 +6,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { getCurrentSocialAuthUser } from '../model/repository/firebaseGateway';
 import { getSocialSyncConfig } from '../model/repository/gistConfigRepository';
-import { listMyShares, publishShare, removeShare, type PublishedShare, type ShareError } from '../model/repository/shareRepository';
+import { isShareUnavailable, listMyShares, publishShare, readLastMyShares, removeShare, type PublishedShare, type ShareError } from '../model/repository/shareRepository';
 import type { ShareBan, SharedReviewIndexEntry } from '../model/types/share';
 import type { ShareQuota } from '../core/constants/tiers';
 import type { GameItem } from '../model/types/game';
@@ -67,6 +67,12 @@ export interface ShareViewModel {
    */
   nickIsAccountName: boolean;
   loading: boolean;
+  /**
+   * El servicio de compartir no atiende ahora (cupo agotado, caído, sin red). Mientras dure, el botón no se ofrece y
+   * Ajustes enseña la última lista conocida en solo lectura: nada de errores por algo que se arregla esperando
+   * (docs/plan-degradacion-servicios.md, fase 3).
+   */
+  serviceDown: boolean;
   busyToken: string | null;
   error: string;
   /** Detalle del último error (cuota, caducidad del más antiguo…), para poder decir algo útil en pantalla. */
@@ -88,6 +94,7 @@ export function useShareViewModel(): ShareViewModel {
   const [nick, setNick] = useState('');
   const [nickIsAccountName, setNickIsAccountName] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [serviceDown, setServiceDown] = useState(false);
   const [busyToken, setBusyToken] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [errorDetails, setErrorDetails] = useState<Record<string, unknown>>({});
@@ -119,6 +126,7 @@ export function useShareViewModel(): ShareViewModel {
       setAvailable(true);
 
       const data = await listMyShares();
+      setServiceDown(false);
       setShares(data.shares || []);
       setQuota(data.quota || null);
       setBan(data.ban || null);
@@ -129,6 +137,17 @@ export function useShareViewModel(): ShareViewModel {
       setNickIsAccountName(Boolean(accountName) && accountName === String(data.nick || '').trim());
       clearError();
     } catch (problem) {
+      if (isShareUnavailable(problem)) {
+        // Sin error a la vista: se deja de ofrecer y se enseña lo último que se supo.
+        setServiceDown(true);
+        clearError();
+        const last = await readLastMyShares();
+        if (last) {
+          setShares(last.shares || []);
+          setQuota(last.quota || null);
+        }
+        return;
+      }
       fail(problem);
     } finally {
       setLoading(false);
@@ -146,6 +165,9 @@ export function useShareViewModel(): ShareViewModel {
         await refresh();
         return published;
       } catch (problem) {
+        // Con el diálogo abierto se dice en él (el texto es el de «no disponible», no el interno), y al cerrarlo el
+        // botón ya no se ofrece.
+        if (isShareUnavailable(problem)) setServiceDown(true);
         fail(problem);
         return null;
       } finally {
@@ -164,6 +186,7 @@ export function useShareViewModel(): ShareViewModel {
         setShares((current) => current.filter((entry) => entry.token !== token));
         return true;
       } catch (problem) {
+        if (isShareUnavailable(problem)) setServiceDown(true);
         fail(problem);
         return false;
       } finally {
@@ -185,7 +208,7 @@ export function useShareViewModel(): ShareViewModel {
 
   return {
     shares, quota, ban, available, hasSocialSpace, nick, nickIsAccountName,
-    loading, busyToken, error, errorDetails,
+    loading, serviceDown, busyToken, error, errorDetails,
     refresh, share, revoke, shareOf, clearError,
   };
 }

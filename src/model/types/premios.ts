@@ -171,6 +171,18 @@ export interface PremiosVotingConfig {
    * abierta o resultados recientes (ver `core/premios/visibility`).
    */
   visible?: boolean;
+  /**
+   * ESTA EDICIÓN ENSEÑA LOS VOTOS al publicarse: las papeletas se quedan hasta que el administrador la termina,
+   * y quien votó ve lo que votó cada uno (ver `docs/plan-premios-votos-a-la-vista.md`). Lo pone `openSeason` en
+   * las ediciones abiertas desde que existe; sin él, publicar archiva y termina de una vez, como antes —quien
+   * votó lo hizo con la promesa de que nadie más vería su papeleta—.
+   */
+  revealVotes?: boolean;
+  /**
+   * Cuándo se publicó una edición que enseña los votos y todavía no se ha terminado. Es lo que marca el estado
+   * `REVEALED` (ver `getSeasonStage`), y TAMBIÉN cierra el voto en las reglas, que lo miran.
+   */
+  votesRevealedAt?: string | null;
   /** Última escritura del calendario. Publicar una edición la toca, así que hace de fecha de publicación. */
   updatedAt?: string;
 }
@@ -196,6 +208,28 @@ export interface PremiosArchivedEntry {
   profileId: string;
   nickname: string;
   points: number;
+}
+
+/**
+ * LO QUE VOTÓ UNA PERSONA, en el resumen de una edición publicada y sin terminar.
+ *
+ * Una fila de la clasificación más sus elecciones. Ni `userId` ni el nombre de la cuenta de Google: el nombre es
+ * el que eligió para la clasificación, el mismo que sale en el archivo.
+ */
+export interface PremiosRevealedBallot extends PremiosArchivedEntry {
+  /** Categoría → `optionId` elegido. */
+  selections: Record<string, string>;
+}
+
+/**
+ * `premiosReveal/{seasonId}`: los votos de cada uno, en UN documento para que mirarlos cueste una lectura.
+ *
+ * Lo leen solo quienes votaron en esa edición, y desaparece al terminarla. Los nombres de los nominados, los
+ * pesos y los ganadores no van aquí: salen del archivo (`categoriesSnapshot` y `winners`), que la pantalla ya lee.
+ */
+export interface PremiosReveal {
+  seasonId: string;
+  ballots: PremiosRevealedBallot[];
 }
 
 /**

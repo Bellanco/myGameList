@@ -37,6 +37,7 @@ function withViewModel(overrides: Partial<ShareViewModel>) {
     nick: 'Me',
     nickIsAccountName: false,
     loading: false,
+    serviceDown: false,
     busyToken: null,
     error: '',
     errorDetails: {},
@@ -56,6 +57,16 @@ function withViewModel(overrides: Partial<ShareViewModel>) {
  * estaba y no había forma de saber por qué. El síntoma que llegó fue «no me sale el botón de compartir», sin más
  * pistas. Ahora se dice qué falta; solo el estado "aún no se sabe" sigue sin pintar nada.
  */
+// docs/plan-degradacion-servicios.md, fase 3: con el servicio de compartir sin atender (cupo agotado), el botón no
+// se ofrece. Antes seguía ahí y al abrirlo salía un error en rojo, y la marca «Compartida» desaparecía.
+describe('ShareReviewButton — con el servicio de compartir sin atender', () => {
+  it('no ofrece el botón', () => {
+    withViewModel({ serviceDown: true });
+    const { container } = render(<ShareReviewButton game={game} reviewText="Texto" />);
+    expect(container).toBeEmptyDOMElement();
+  });
+});
+
 describe('ShareReviewButton — cuando no se puede compartir', () => {
   beforeEach(() => {
     vi.clearAllMocks();

@@ -98,6 +98,12 @@ export const ShareReviewButton = memo(function ShareReviewButton({ game, reviewT
     ) : null;
   }
 
+  // El servicio de compartir no atiende (cupo agotado, caído): no se ofrece, igual que si no existiera. Con el
+  // diálogo ya abierto se deja, porque es ahí donde se explica que no se ha podido (docs/plan-degradacion-servicios.md).
+  if (vm.serviceDown && !open) {
+    return null;
+  }
+
   if (vm.ban) {
     return (
       <span className="hub-feed-game-chip share-banned" title={SHARE_UI.bannedReason(vm.ban.reason || '')}>

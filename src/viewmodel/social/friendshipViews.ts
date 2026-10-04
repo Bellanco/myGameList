@@ -58,7 +58,9 @@ export function toFriendshipRequestView(view: FriendshipView, deps: FriendshipVi
     docId: view.docId,
     otherUid: view.otherUid,
     name: view.otherName || SOCIAL_UI.requests.unknownUser,
-    tier: fromDirectory?.tier,
+    // El rango, solo de una amistad: quien te escribe o a quien has escrito todavía no lo es, y de un no-amigo solo
+    // se enseña el nombre (y la foto, según la reciprocidad de abajo).
+    tier: deps.friendUids.has(view.otherUid) ? fromDirectory?.tier : undefined,
     profileId: fromDirectory?.id,
     lastActiveAt: Number(fromDirectory?.lastActiveAt || 0),
     photo: photoForViewer({

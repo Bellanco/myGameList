@@ -137,7 +137,7 @@ export interface AdminUserRow {
   anomalies: AdminAnomaly[];
 }
 
-/** Ventana de inactividad del feed (`FRIEND_ACTIVITY_MAX_AGE_MS` en useSocialViewModel): 30 días. */
+/** Ventana de inactividad del feed (`PROFILE_INACTIVITY_MS` en core/constants/socialActivity): 30 días. */
 
 export interface AdminCensus {
   users: AdminUserRow[];

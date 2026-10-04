@@ -1558,6 +1558,101 @@
 
 .premios-results__trophy:hover { color: var(--text); }
 
+/* ─── La clasificación final, con lo que votó cada uno ───────────────────────────────────────────────────
+   Solo mientras la edición publicada no se termina y para quien votó en ella. Sustituye a la clasificación de
+   siempre y va a lo ancho, debajo de los ganadores. Sin un color escrito a mano: acierto y fallo salen de los
+   tokens del tema (`--fg-green`, `--fg-red`), y la diferencia la dicen también el icono y su texto oculto. */
+
+.premios-results__panel--final { grid-column: 1 / -1; }
+
+/* APILADO, DONDE IBA LA CLASIFICACIÓN: primero el listado y después los ganadores (ver el orden de arriba). */
+.premios-results__cols > .premios-results__panel--final { order: 1; }
+
+@media (min-width: 60rem) {
+  .premios-results__cols > .premios-results__panel--final { order: 0; }
+}
+
+/* La fila entera despliega con el ratón, con una capa como la del escalón del podio; el teclado va por el botón
+   del final. El enlace y los botones quedan por encima de la capa. */
+.premios-results__row--final { position: relative; }
+.premios-results__row-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.premios-results__row--final .premios-results__link,
+.premios-results__row--final .btn { position: relative; z-index: 2; }
+.premios-results__row--final:hover,
+.premios-results__row--final.is-open { background: var(--surface-elevated); }
+.premios-results__row--final.is-own:hover,
+.premios-results__row--final.is-own.is-open { background: color-mix(in srgb, var(--steam) 18%, transparent); }
+
+.premios-results__hits {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.premios-results__toggle {
+  display: inline-flex;
+  padding: .2rem .35rem;
+  color: var(--text-muted);
+}
+.premios-results__toggle:hover { color: var(--text); }
+.premios-results__toggle .ui-icon { transition: transform .15s ease; }
+.premios-results__toggle[aria-expanded='true'] .ui-icon { transform: rotate(180deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .premios-results__toggle .ui-icon { transition: none; }
+}
+
+/* El detalle: una ficha por categoría, en rejilla como los ganadores; en el móvil, una columna. */
+.premios-results__picks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: .35rem;
+  list-style: none;
+  margin: 0;
+  padding: .3rem .5rem .6rem;
+}
+
+.premios-results__pick {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .05rem .5rem;
+  align-items: start;
+  padding: .45rem .55rem;
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm);
+  min-width: 0;
+}
+
+.premios-results__pick-mark { grid-row: 1 / span 3; width: 1.1rem; height: 1.1rem; margin-top: .1rem; }
+.premios-results__pick.is-hit .premios-results__pick-mark { color: var(--fg-green); }
+.premios-results__pick.is-miss .premios-results__pick-mark { color: var(--fg-red); }
+/* El fallo no se tiñe entero: la ficha es la misma, la diferencia la dicen el icono y su texto. */
+.premios-results__pick.is-hit { border-color: color-mix(in srgb, var(--fg-green) 35%, var(--hair)); }
+
+.premios-results__pick-head { display: flex; gap: .4rem; align-items: baseline; min-width: 0; }
+.premios-results__pick-cat { font-size: var(--fs-2xs); color: var(--text-muted); flex: 1; min-width: 0; }
+.premios-results__pick-weight {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  color: var(--text);
+  padding: 0 .35rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--hair);
+  background: var(--surface-elevated);
+}
+.premios-results__pick-voted { color: var(--text); font-size: var(--fs-sm); line-height: 1.25; overflow-wrap: anywhere; }
+.premios-results__pick.is-hit .premios-results__pick-voted { color: var(--fg-link); }
+.premios-results__pick-winner { color: var(--text-dim); font-size: var(--fs-2xs); overflow-wrap: anywhere; }
+
 /* LOS NOMINADOS DE GANADORES, CON SU CARÁTULA: las mismas tarjetas de votar (`NomineeCard`) en una rejilla más
    pequeña, a lo ancho de la fila y debajo de «Sin ganador». Aquí no se reparte el alto como en la votación: la
    página se desplaza, así que cada tarjeta conserva su 3:4. */

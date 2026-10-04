@@ -2,7 +2,7 @@
 // Sigue el patrón de firebaseSocialRepository (caché de sesión + dedupe in-flight + degradación silenciosa).
 // Identidad SIEMPRE por uid (única verificable en reglas). Los campos de identidad van DENORMALIZADOS en el doc:
 // cada parte escribe SOLO los suyos (requester al crear, recipient al aceptar), así la lista/bandeja/feed se
-// resuelven desde el propio doc sin leer el directorio (evita el tope de SOCIAL_DIRECTORY_LIMIT y las reglas de profiles).
+// resuelven desde el propio doc sin leer el directorio (sin depender de leer `profiles` ni de sus reglas).
 import { collection, deleteDoc, doc, getDoc, getDocs, limit, query, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore/lite';
 import { mapWithConcurrency } from '../../core/utils/concurrency';
 import { initializeFirebaseServices, isPermissionDeniedError } from './firebaseClient';
@@ -16,6 +16,7 @@ import {
 import { trackAnalyticsEvent } from './telemetryRepository';
 import type { FriendshipDoc } from '../types/firestore';
 import type { FriendshipView, MyFriendships } from '../types/social';
+import { firestoreQuotaError, isFirestoreQuotaExhausted, noteFirestoreError } from './firestoreQuota';
 
 /**
  * CUÁNTO VALE UNA COPIA DE MIS AMISTADES, en memoria o en IndexedDB. La consulta cuesta una lectura de Firestore POR
@@ -272,6 +273,8 @@ export async function getMyFriendships(
 
     let snapshot;
     try {
+      // Con la cuota del día agotada no se pregunta: la copia guardada, directamente (ver `firestoreQuota`).
+      if (isFirestoreQuotaExhausted()) throw firestoreQuotaError();
       snapshot = await getDocs(
         query(
           collection(services.firestore, 'friendships'),
@@ -283,6 +286,7 @@ export async function getMyFriendships(
       if (isPermissionDeniedError(error)) {
         return EMPTY_FRIENDSHIPS;
       }
+      noteFirestoreError(error);
       const stale = await readPersistedFriendships(myUid);
       if (stale) {
         return stale.value;
@@ -622,7 +626,11 @@ export async function healOwnFriendshipIdentity(
     });
   }
 
-  invalidateMyFriendshipsCache(myUid);
+  // Solo si se ha escrito algo. Sin escrituras, las amistades están exactamente como las dejó la última lectura, y
+  // tirar la copia hacía que la revisión semanal costara el doble: N lecturas aquí y otras N al volver al social.
+  if (pending.length > 0) {
+    invalidateMyFriendshipsCache(myUid);
+  }
 }
 
 /**

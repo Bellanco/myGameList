@@ -81,15 +81,26 @@ describe('friendshipViews', () => {
   });
 
   // El rango y la ficha del directorio son OPCIONALES: los amigos salen de los documentos de amistad, así que hay
-  // gente en la bandeja que no está en el directorio (fuera del tope, o con el espacio social cerrado).
-  it('trae el rango y la ficha del directorio cuando esa persona está en él', () => {
+  // gente en la bandeja que no está en el directorio (con el espacio social cerrado).
+  it('trae el rango y la ficha del directorio de un amigo', () => {
+    const row = toFriendshipRequestView(
+      makeView({ state: 'friends' }),
+      deps({ directory: [{ id: 'perfil-b', uid: 'uid-b', photoURL: '', tier: 'gold' }], friendUids: new Set(['uid-b']) }),
+    );
+
+    expect(row.tier).toBe('gold');
+    expect(row.profileId).toBe('perfil-b');
+  });
+
+  // Quien te manda una petición, o a quien se la has mandado, todavía no es tu amigo: de él solo se enseña el
+  // nombre (decisión del 04-10-2026). Aunque su perfil esté en la lista de recientes de «Perfiles».
+  it('de una petición no se enseña el rango, aunque esté en el directorio', () => {
     const row = toFriendshipRequestView(
       makeView(),
       deps({ directory: [{ id: 'perfil-b', uid: 'uid-b', photoURL: '', tier: 'gold' }] }),
     );
 
-    expect(row.tier).toBe('gold');
-    expect(row.profileId).toBe('perfil-b');
+    expect(row.tier).toBeUndefined();
   });
 
   it('deja rango y ficha sin definir para quien no está en el directorio', () => {

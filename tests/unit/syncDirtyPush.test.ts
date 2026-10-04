@@ -36,6 +36,7 @@ vi.mock('../../src/model/repository/gistConfigRepository', () => ({
 vi.mock('../../src/model/repository/githubHttp', () => ({
   getRetryAfterMs: () => 0,
   isDeferredNetworkError: () => false,
+  isGithubRateLimited: () => false,
 }));
 
 vi.mock('../../src/model/repository/gistRepository', () => ({

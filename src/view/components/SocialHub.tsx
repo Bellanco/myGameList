@@ -68,6 +68,7 @@ const SocialHubInner = memo(function SocialHubInner({
     statusKind,
     offline,
     offlineHasCachedData,
+    serviceLimited,
     showSocialSpace,
     hasCreatedProfile,
     profileName,
@@ -305,8 +306,11 @@ const SocialHubInner = memo(function SocialHubInner({
     // entero, así que buscarlo aquí en el filtrado dejaba su espejo en blanco en cuanto el texto del buscador
     // dejaba de casar con su nombre —con la ficha ya abierta delante—.
     const entry = visibleSocialDirectory.find((candidate) => candidate.id === detailId);
-    return entry?.achievementsMirror || '';
-  }, [detailId, visibleSocialDirectory, isOwnProfileDetail, ownAchievementMirror]);
+    // Los logros de alguien, solo si es tu amigo: de quien no lo es se enseña el nombre y nada más, y la ruta de sus
+    // logros se puede abrir a mano. Su espejo sigue contando, sin identidad, en el porcentaje de la comunidad.
+    if (!entry || relationshipWith(entry.uid) !== 'friends') return '';
+    return entry.achievementsMirror || '';
+  }, [detailId, visibleSocialDirectory, isOwnProfileDetail, ownAchievementMirror, relationshipWith]);
 
   /**
    * EL PALMARÉS del perfil abierto: las ediciones de la porra que ha ganado.
@@ -641,6 +645,7 @@ const SocialHubInner = memo(function SocialHubInner({
         handleSignOut={handleSignOut}
         offline={offline}
         offlineHasCachedData={offlineHasCachedData}
+        serviceLimited={serviceLimited}
       />
     );
   }
@@ -707,7 +712,7 @@ const SocialHubInner = memo(function SocialHubInner({
         </p>
         {/* Los dos pasos necesitan red (Google, Firestore, GitHub): sin conexión no se puede dar ninguno, así que
             se dice antes de que el usuario pulse y espere a un timeout. */}
-        {offline ? <HubOfflineNotice hasCachedData={false} /> : null}
+        {offline ? <HubOfflineNotice hasCachedData={false} /> : serviceLimited ? <HubOfflineNotice variant="limited" hasCachedData={false} /> : null}
 
         {/* L4 — puerta de aceptación: con sesión iniciada y sin conformidad vigente, no se entra ni se crea el
             espacio social hasta marcarla. No afecta a las listas propias ni a la sincronización. */}

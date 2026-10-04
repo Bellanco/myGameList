@@ -5,6 +5,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-10-04
+
+La versión que **aguanta los cortes**. La app gasta mucho menos de los servicios gratuitos de los que depende
+(Firestore, Cloudflare, GitHub) y, cuando alguno se agota o se cae, sigue funcionando con lo que tiene guardado en
+vez de enseñar errores. Trae además el **resumen del año** en el perfil y, en Premios, **los votos de cada uno a la
+vista** de quienes votaron hasta que se cierra la edición.
+
 ### Added
 - **Resumen del año en el perfil.** Un cuarto botón en la ficha de cada perfil, «Resumen del año», con el año
   anterior (en diciembre, el que está acabando) contado en tarjetas una debajo de otra: cuántos juegos terminó y
@@ -25,15 +32,52 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - En **tu propio perfil**, el resumen trae además el año día a día y tu día de la semana para terminar. Tus
   amistades ven solo el **mes** de cada fin, nunca el día; los días en que entraron muchos juegos de golpe (una
   importación) no cuentan como fechas. La política de privacidad lo declara.
+- **Premios: los votos de cada uno, a la vista de quienes votaron.** Al publicar los resultados, las papeletas se
+  conservan y quien votó en esa edición ve la clasificación con una fila por persona: al desplegarla, lo que votó en
+  cada categoría y si acertó. Desaparece todo cuando el administrador **termina la edición**, que es un paso nuevo
+  del panel. Solo para ediciones abiertas a partir de esta versión; la política de privacidad lo declara.
+  Reglas de Firestore ya desplegadas (colección `premiosReveal`).
+- **Aviso de «servicio limitado»** en el espacio social: si un servicio no responde (el cupo diario de Firestore
+  agotado, GitHub limitando peticiones), se ve lo último guardado con un aviso propio, en vez del error en inglés.
 
 ### Fixed
 - **Las listas largas en renglones ya no descargan todas sus carátulas al abrirse.** El primer render montaba la
   lista entera antes de recortarla a lo que se ve, y eso bastaba para que cada renglón pidiera su imagen de fondo:
   con 149 completados, 149 carátulas (~10 MB) por visita en vez de las diez de la pantalla.
+- **Cuando un servicio se agota o se cae, la app sigue funcionando con lo guardado:**
+  - el feed, los perfiles de tus amigos, «Perfiles», tu rango, la escala de nota, el aviso del administrador y la
+    edición de Premios salen de su última copia en este navegador;
+  - **compartir se esconde** mientras el servicio no responde, Ajustes enseña tu última lista de enlaces para
+    copiarlos, y el enlace público dice «no se puede cargar ahora» en vez de «caducado»;
+  - la entrada de **Premios ya no desaparece** si su API falla;
+  - con GitHub limitando, la sincronización dice «en pausa» y que tus cambios están a salvo, en vez de «Error de
+    sincronización»; y un límite de GitHub ya no se presenta como «tu conexión ha caducado»;
+  - si el inicio de sesión con GitHub no responde, se propone conectar a mano con un token;
+  - las carátulas paran su relleno ante un fallo del servidor y nunca toman una página de error por «no tiene».
+- **Nunca se crea un espacio social vacío** porque Firestore no responda al comprobar si ya tenías uno.
+- **Un post no se publica dos veces** si Firestore falla justo después de publicarlo.
+- **Borrar la cuenta con el servicio caído ya no deja datos atrás**: se detiene sin tocar nada y pide reintentarlo.
+- El escalón de logros de la comunidad ya no puede retroceder por una lectura fallida.
+- «Compartir» ya no se queda colgado si un bloqueador impide cargar reCAPTCHA.
 
 ### Changed
 - **La franja del renglón es la misma para todo el mundo**: la de 720 px. La de 1080, que era de la cuenta de
   administración, no se distinguía bajo el velo y costaba casi el doble de trabajo al bajar por la lista.
+- **El feed lee solo a tus amigos y a ti**, no los 50 perfiles más recientes de toda la app. Tus amigos conservan
+  su rango, sus logros, su palmarés y su resumen del año aunque no estén entre los más activos, y los que llevan
+  más de 30 días sin entrar no ocupan el feed (el mismo corte con el que avisa el panel).
+- **«Perfiles» enseña hasta 34 usuarios activos en los últimos 30 días**, y solo se cargan al abrir esa pantalla.
+- **De quien no es tu amigo solo se enseña el nombre** (y la foto, según la reciprocidad de siempre): ni rango en
+  «Perfiles» ni en la bandeja, ni sus logros aunque se abra su dirección a mano.
+- **Dar o quitar un premio ya no cuenta como actividad** del premiado.
+- **Las reseñas separan el salto de línea simple** con medio renglón, y la línea en blanco con uno entero.
+
+### Performance
+- **Mucho menos consumo de los servicios gratuitos**, que es lo que fija cuántos usuarios aguanta la app: «mis
+  enlaces» se guarda unos minutos (era el primer límite de la cuenta de Cloudflare), publicar una reseña ya no
+  relee el directorio entero, desaparecen lecturas y escrituras repetidas de la configuración propia, la revisión
+  semanal de amistades no relee lo que no ha cambiado, y las carátulas sin imagen de tus amigos se recuerdan una
+  hora. Con Firestore sin cuota, lo social deja de preguntar hasta que se reinicia.
 
 ## [1.5.0] - 2026-09-30
 

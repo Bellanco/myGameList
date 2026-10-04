@@ -594,7 +594,7 @@ service cloud.firestore {
     // LA PORRA DE PREMIOS («El reto del jugador»)
     // ==========================================
     //
-    // Cinco colecciones, todas prefijadas: `categories`, `config`, `results` o `winners` a secas son nombres que
+    // Seis colecciones, todas prefijadas: `categories`, `config`, `results` o `winners` a secas son nombres que
     // esta app puede querer para lo suyo cualquier día, y una colección mal llamada no se renombra sin migrar.
     // La fuente única de los nombres en el cliente es `model/repository/premios/premiosShared.ts`.
     //
@@ -624,6 +624,8 @@ service cloud.firestore {
     function premiosVotingConfigAllows() {
       let cfg = get(premiosVotingRef()).data;
       return cfg.get('isOpen', true) == true
+        // Publicada con los votos a la vista: ya no se vota, se reabra el interruptor o no (ver `votingSchedule`).
+        && cfg.get('votesRevealedAt', null) == null
         && (cfg.get('opensAtMillis', null) == null
             || request.time.toMillis() >= cfg.get('opensAtMillis', null))
         && (cfg.get('closesAtMillis', null) == null
@@ -813,6 +815,18 @@ service cloud.firestore {
     // esta colección sería pública desde el instante en que se creara.
     match /premiosResults/{seasonId} {
       allow read: if isAdmin() || resource.data.get('closedAt', null) != null;
+      allow write, delete: if isAdmin();
+    }
+
+    // ===== premiosReveal: los votos de cada uno, mientras la edición publicada no se termina =====
+    //
+    // SOLO QUIEN VOTÓ EN ESA EDICIÓN, y se reconoce por tener papeleta: mientras este documento existe, las únicas
+    // papeletas que hay son las de su edición —`openSeason` barre las anteriores y terminar borra las dos cosas—.
+    // Ni el enlace público ni cualquiera con sesión: el archivo de `premiosResults` sigue sin votos individuales
+    // (`docs/plan-premios-votos-a-la-vista.md`). Cuesta la lectura del documento más el `exists()`.
+    match /premiosReveal/{seasonId} {
+      allow read: if isAdmin()
+        || (isSignedIn() && exists(/databases/$(database)/documents/premiosBallots/$(request.auth.uid)));
       allow write, delete: if isAdmin();
     }
 

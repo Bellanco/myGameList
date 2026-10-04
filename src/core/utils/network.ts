@@ -76,3 +76,37 @@ function matchesHint(message: string): boolean {
   const normalized = message.toLowerCase();
   return NETWORK_ERROR_HINTS.some((hint) => normalized.includes(hint));
 }
+
+/**
+ * Códigos de Firebase que significan «el servicio no atiende AHORA», no «tu petición está mal»: cuota diaria
+ * agotada (`resource-exhausted`, el plan gratuito de Firestore) o un fallo pasajero de su lado.
+ */
+const SERVICE_DOWN_CODES = new Set(['resource-exhausted', 'internal', 'aborted']);
+
+/**
+ * ¿Este fallo es del SERVICIO (sin cuota, caído, sin red) y no de la petición? Es lo que distingue «inténtalo más
+ * tarde» de «esto no se puede hacer»: un `permission-denied` o un 400 no se arreglan esperando; estos, sí.
+ *
+ * Cubre los fallos de red de `isNetworkFailure`, los códigos de Firebase de arriba y las respuestas HTTP que dicen
+ * lo mismo (`status` 0, 429 o ≥ 500: cupo de Cloudflare o de GitHub agotado, Function caída). Ver
+ * docs/plan-degradacion-servicios.md.
+ */
+export function isServiceUnavailable(error: unknown): boolean {
+  if (isNetworkFailure(error)) {
+    return true;
+  }
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+  const candidate = error as { code?: unknown; status?: unknown; rateLimited?: unknown };
+  // GitHub limitando peticiones: llega como 403 —el mismo estado que un token sin permisos—, así que lo distingue
+  // la marca que pone `buildGithubError` al ver sus cabeceras, no el estado.
+  if (candidate.rateLimited === true) {
+    return true;
+  }
+  if (typeof candidate.code === 'string' && SERVICE_DOWN_CODES.has(candidate.code.replace(/^firestore\//, ''))) {
+    return true;
+  }
+  const { status } = candidate;
+  return typeof status === 'number' && (status === 0 || status === 429 || status >= 500);
+}

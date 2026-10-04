@@ -33,6 +33,7 @@ async function repo() {
 beforeEach(() => {
   fetchMock.mockReset();
   vi.stubGlobal('fetch', fetchMock);
+  localStorage.clear();
 });
 
 afterEach(() => {
@@ -97,6 +98,31 @@ describe('lectura del aviso', () => {
     expect(await (await repo()).loadAnnouncement()).toBeNull();
 
     fetchMock.mockResolvedValue(ok(null));
+    expect(await (await repo()).loadAnnouncement()).toBeNull();
+  });
+});
+
+// docs/plan-degradacion-servicios.md, fase 5: durante un corte (cupo de Functions agotado, sin red) el aviso
+// desaparecía. Ahora sale el último que se leyó bien en este navegador.
+describe('lectura del aviso durante un corte', () => {
+  it('sirve el último aviso leído bien', async () => {
+    fetchMock.mockResolvedValueOnce(ok(AVISO));
+    await (await repo()).loadAnnouncement();
+
+    fetchMock.mockRejectedValueOnce(new Error('offline'));
+    expect((await (await repo()).loadAnnouncement())?.id).toBe('av-1');
+
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 429, headers: new Headers({ 'content-type': 'text/html' }), json: async () => ({}) });
+    expect((await (await repo()).loadAnnouncement())?.id).toBe('av-1');
+  });
+
+  it('si el último que se supo es que no había ninguno, un corte no lo resucita', async () => {
+    fetchMock.mockResolvedValueOnce(ok(AVISO));
+    await (await repo()).loadAnnouncement();
+    fetchMock.mockResolvedValueOnce(ok(null));
+    await (await repo()).loadAnnouncement();
+
+    fetchMock.mockRejectedValueOnce(new Error('offline'));
     expect(await (await repo()).loadAnnouncement()).toBeNull();
   });
 });

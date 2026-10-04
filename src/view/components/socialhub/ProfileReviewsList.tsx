@@ -8,6 +8,7 @@ import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 // La hoja de la RESEÑA se importa AQUÍ y no desde `social.scss`: esta lista la pintan el hub social y también
 // tus reseñas del panel (`/stats/resenas`), donde el chunk del hub no se carga. Ver `styles/reviews.scss`.
 import '../../../styles/reviews.scss';
+import { ReviewParagraphs } from '../ReviewParagraphs';
 import { APP_LOCALE } from '../../../core/constants/locale';
 import { SCORE_UI } from '../../../core/constants/scoreLabels';
 
@@ -179,7 +180,7 @@ export const ProfileReviewsList = memo(function ProfileReviewsList({
                 </header>
                 {review.reviewText ? (
                   <div className="hub-review-body">
-                    <p className="hub-feed-review-text hub-review-text">{review.reviewText}</p>
+                    <p className="hub-feed-review-text hub-review-text"><ReviewParagraphs text={review.reviewText} /></p>
                   </div>
                 ) : null}
               </article>

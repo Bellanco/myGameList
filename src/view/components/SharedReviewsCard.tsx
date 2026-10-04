@@ -119,10 +119,16 @@ export const SharedReviewsCard = memo(function SharedReviewsCard({ enabled, game
         </div>
       ) : null}
 
-      {vm.quota ? <p className="settings-shares-counter">{SHARE_UI.counter(vm.shares.length, vm.quota.maxActive)}</p> : null}
+      {vm.serviceDown ? (
+        <p className="settings-shares-empty" role="status">
+          {vm.shares.length > 0 ? SHARE_UI.screenUnavailable : SHARE_UI.screenUnavailableEmpty}
+        </p>
+      ) : null}
+
+      {vm.quota && !vm.serviceDown ? <p className="settings-shares-counter">{SHARE_UI.counter(vm.shares.length, vm.quota.maxActive)}</p> : null}
 
       {vm.shares.length === 0 ? (
-        <p className="settings-shares-empty">{SHARE_UI.screenEmpty}</p>
+        vm.serviceDown ? null : <p className="settings-shares-empty">{SHARE_UI.screenEmpty}</p>
       ) : (
         <ul className="settings-shares-list">
           {vm.shares.map((entry) => (
@@ -145,7 +151,7 @@ export const SharedReviewsCard = memo(function SharedReviewsCard({ enabled, game
                   <Icon name="sync-copy" />
                   <span>{copiedToken === entry.token ? SHARE_UI.copied : SHARE_UI.copyLink}</span>
                 </button>
-                {reviews.has(entry.gameId) ? (
+                {reviews.has(entry.gameId) && !vm.serviceDown ? (
                   <button
                     className="btn btn-secondary"
                     type="button"
@@ -156,14 +162,17 @@ export const SharedReviewsCard = memo(function SharedReviewsCard({ enabled, game
                     <span>{renewingToken === entry.token ? SHARE_UI.renewing : SHARE_UI.renew}</span>
                   </button>
                 ) : null}
-                <button
-                  className="btn btn-danger"
-                  type="button"
-                  disabled={vm.busyToken === entry.token || renewingToken === entry.token}
-                  onClick={() => setPending({ token: entry.token, gameName: entry.gameName })}
-                >
-                  {vm.busyToken === entry.token ? SHARE_UI.revoking : SHARE_UI.revoke}
-                </button>
+                {/* Retirar y renovar necesitan el servicio: mientras no atiende, solo se puede copiar. */}
+                {vm.serviceDown ? null : (
+                  <button
+                    className="btn btn-danger"
+                    type="button"
+                    disabled={vm.busyToken === entry.token || renewingToken === entry.token}
+                    onClick={() => setPending({ token: entry.token, gameName: entry.gameName })}
+                  >
+                    {vm.busyToken === entry.token ? SHARE_UI.revoking : SHARE_UI.revoke}
+                  </button>
+                )}
               </div>
             </li>
           ))}

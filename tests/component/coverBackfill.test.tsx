@@ -298,8 +298,17 @@ describe('llenado de carátulas', () => {
     expect(localStorage.getItem('mis-listas-covers-done-v2')).not.toContain('Portal');
     primera.unmount();
 
-    // En la visita siguiente se retoma justo por los dos que quedaron sin preguntar.
+    // Una visita DENTRO de la pausa no pregunta nada: el servidor ya ha dicho que no (fase 4 del plan de
+    // degradación; antes cada visita volvía a chocar con el mismo 429).
+    expect(Number(localStorage.getItem('mis-listas-cover-backfill-pause-until'))).toBeGreaterThan(Date.now());
     fetchSimulado.mockClear();
+    const enPausa = renderHook(() => useCoverBackfill(datos));
+    await new Promise((listo) => setTimeout(listo, 2500));
+    expect(fetchSimulado).not.toHaveBeenCalled();
+    enPausa.unmount();
+
+    // Pasada la pausa, se retoma justo por los dos que quedaron sin preguntar.
+    localStorage.removeItem('mis-listas-cover-backfill-pause-until');
     fetchSimulado.mockImplementation(async () => new Response(null, { status: 204 }));
     renderHook(() => useCoverBackfill(datos));
     await waitFor(() => expect(fetchSimulado).toHaveBeenCalledTimes(2), { timeout: 4000 });
@@ -350,9 +359,36 @@ describe('llenado de carátulas', () => {
     expect(sabemosQueNoTiene(coverUrl('Celeste', ['Steam']))).toBe(false);
     primera.unmount();
 
+    // Pasada la pausa que deja el 500, se vuelve a preguntar por él.
+    localStorage.removeItem('mis-listas-cover-backfill-pause-until');
     fetchSimulado.mockClear();
     renderHook(() => useCoverBackfill(datos));
     await waitFor(() => expect(fetchSimulado).toHaveBeenCalledTimes(1), { timeout: 4000 });
+  });
+
+  /* docs/plan-degradacion-servicios.md, fase 4. Un 500 seguía y recorría la biblioteca entera; y con Pages en
+     «fail open», `/cover` devuelve el `404.html` estático, que se apuntaba como «no tiene» durante noventa días. */
+  it('un 500 para el recorrido en vez de seguir con el resto', async () => {
+    localStorage.setItem('mis-listas-covers', 'on');
+    fetchSimulado.mockImplementation(async () => new Response(null, { status: 500 }));
+    renderHook(() => useCoverBackfill(biblioteca([juego(1, 'Celeste'), juego(2, 'Portal'), juego(3, 'Hades 2')])));
+
+    await waitFor(() => expect(fetchSimulado).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    await new Promise((listo) => setTimeout(listo, 600));
+    expect(fetchSimulado).toHaveBeenCalledTimes(1);
+  });
+
+  it('un 404 que es una página HTML (no la de `/cover`) no se apunta como «no tiene»', async () => {
+    localStorage.setItem('mis-listas-covers', 'on');
+    fetchSimulado.mockImplementation(async () =>
+      new Response('<!DOCTYPE html><title>404</title>', { status: 404, headers: { 'content-type': 'text/html; charset=utf-8' } }));
+    renderHook(() => useCoverBackfill(biblioteca([juego(1, 'Celeste'), juego(2, 'Portal')])));
+
+    await waitFor(() => expect(fetchSimulado).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    await new Promise((listo) => setTimeout(listo, 400));
+    expect(sabemosQueNoTiene(coverUrl('Celeste', ['Steam']))).toBe(false);
+    expect(localStorage.getItem('mis-listas-covers-done-v2') ?? '').not.toContain('Celeste');
+    expect(fetchSimulado).toHaveBeenCalledTimes(1);
   });
 
   /* EL RECORRIDO Y EL LISTADO TIENEN QUE HACER LA MISMA PREGUNTA. El modo ampliado vive en un espacio de claves

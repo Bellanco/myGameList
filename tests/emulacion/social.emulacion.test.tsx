@@ -21,6 +21,7 @@
  *
  * PARA CAMBIAR LA POBLACIÓN, edita `MUNDO`. Si añades un amigo, añade también su gist.
  */
+import { LEGAL_VERSION } from '../../src/core/constants/legal';
 import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
@@ -33,6 +34,7 @@ import type { SocialAuthUser, SocialProfileReference } from '../../src/model/rep
 const contadores = vi.hoisted(() => ({
   lecturasDeGist: [] as string[],
   listadosDeDirectorio: 0,
+  perfilesPorUid: 0,
   consultasDeAmistad: 0,
   cacheAciertos: 0,
   cacheFallos: 0,
@@ -41,6 +43,7 @@ const contadores = vi.hoisted(() => ({
   reset() {
     this.lecturasDeGist = [];
     this.listadosDeDirectorio = 0;
+    this.perfilesPorUid = 0;
     this.consultasDeAmistad = 0;
     this.cacheAciertos = 0;
     this.cacheFallos = 0;
@@ -155,6 +158,17 @@ const MUNDO = vi.hoisted(() => {
 });
 
 // ─── Seams: los mismos que usa el test de componente del hub ─────────────────
+/** Los perfiles de Firestore del mundo emulado, en el orden en que los devolvería la consulta de recientes. */
+function perfilesDelMundo(): any[] {
+  return [
+      { id: 'uid-yo', uid: 'uid-yo', displayName: 'Yo', photoURL: '', socialGistId: 'gist-yo', gamesGistId: 'juegos-yo', updatedAt: MUNDO.ahora, tier: 'bronce', achievementsMirror: '' },
+      ...MUNDO.amigos.map((a) => ({ id: a.uid, uid: a.uid, displayName: a.nombre, photoURL: '', socialGistId: a.gistId, gamesGistId: `juegos-${a.nombre}`, updatedAt: a.updatedAt, tier: 'bronce', achievementsMirror: '' })),
+      { id: MUNDO.inactivo.uid, uid: MUNDO.inactivo.uid, displayName: MUNDO.inactivo.nombre, photoURL: '', socialGistId: MUNDO.inactivo.gistId, gamesGistId: '', updatedAt: MUNDO.inactivo.updatedAt, tier: 'bronce', achievementsMirror: '' },
+      { id: MUNDO.deriva.uid, uid: MUNDO.deriva.uid, displayName: MUNDO.deriva.nombre, photoURL: '', socialGistId: MUNDO.deriva.gistDirectorio, gamesGistId: '', updatedAt: MUNDO.deriva.updatedAt, tier: 'bronce', achievementsMirror: '' },
+      ...MUNDO.desconocidos.map((d) => ({ id: d.uid, uid: d.uid, displayName: d.nombre, photoURL: '', socialGistId: d.gistId, gamesGistId: '', updatedAt: d.updatedAt, tier: 'bronce', achievementsMirror: '' })),
+    ];
+}
+
 const firebaseMocks = vi.hoisted(() => ({
   getCurrentSocialAuthUser: vi.fn(async (): Promise<SocialAuthUser | null> => ({
     uid: 'uid-yo', email: 'yo@example.com', displayName: 'Yo', photoURL: null,
@@ -164,25 +178,28 @@ const firebaseMocks = vi.hoisted(() => ({
     id: 'uid-yo', profileId: 'uid-yo', email: '', displayName: 'Yo', photoURL: '',
     socialGistId: 'gist-yo', gamesGistId: 'juegos-yo', githubToken: '', socialEnabled: true, tier: 'bronce',
   } as never)),
-  getPublicConfig: vi.fn(async (): Promise<any> => ({ consent: { version: '2026-09-07', agreedAt: Date.now() } })),
+  // La versión sale de la CONSTANTE: escrita a mano ('2026-09-07'), la subida de `LEGAL_VERSION` dejó la puerta legal
+  // cerrada y el emulador se quedaba en «Antes de continuar» sin leer nada (igual que pasó en socialHubBudget).
+  getPublicConfig: vi.fn(async (): Promise<any> => ({ consent: { version: LEGAL_VERSION, agreedAt: Date.now() } })),
   setPublicConfig: vi.fn(async () => {}),
   getPrivateConfig: vi.fn(async (): Promise<any> => ({ socialGistId: 'gist-yo', gamesGistId: 'juegos-yo' })),
   setPrivateConfig: vi.fn(async () => {}),
+  // «Perfiles»: la consulta de recientes. El feed no la lanza (ver `getSocialProfilesByUid`).
   listSocialDirectory: vi.fn(async (): Promise<any[]> => {
     contadores.listadosDeDirectorio += 1;
-    return [
-      { id: 'uid-yo', uid: 'uid-yo', displayName: 'Yo', photoURL: '', socialGistId: 'gist-yo', gamesGistId: 'juegos-yo', updatedAt: MUNDO.ahora, tier: 'bronce', achievementsMirror: '' },
-      ...MUNDO.amigos.map((a) => ({ id: a.uid, uid: a.uid, displayName: a.nombre, photoURL: '', socialGistId: a.gistId, gamesGistId: `juegos-${a.nombre}`, updatedAt: a.updatedAt, tier: 'bronce', achievementsMirror: '' })),
-      { id: MUNDO.inactivo.uid, uid: MUNDO.inactivo.uid, displayName: MUNDO.inactivo.nombre, photoURL: '', socialGistId: MUNDO.inactivo.gistId, gamesGistId: '', updatedAt: MUNDO.inactivo.updatedAt, tier: 'bronce', achievementsMirror: '' },
-      { id: MUNDO.deriva.uid, uid: MUNDO.deriva.uid, displayName: MUNDO.deriva.nombre, photoURL: '', socialGistId: MUNDO.deriva.gistDirectorio, gamesGistId: '', updatedAt: MUNDO.deriva.updatedAt, tier: 'bronce', achievementsMirror: '' },
-      ...MUNDO.desconocidos.map((d) => ({ id: d.uid, uid: d.uid, displayName: d.nombre, photoURL: '', socialGistId: d.gistId, gamesGistId: '', updatedAt: d.updatedAt, tier: 'bronce', achievementsMirror: '' })),
-    ];
+    return perfilesDelMundo();
+  }),
+  // El feed: tus amigos y tú, por uid. Una lectura de Firestore por uid pedido.
+  getSocialProfilesByUid: vi.fn(async (uids: string[]): Promise<any[]> => {
+    contadores.perfilesPorUid += uids.length;
+    return perfilesDelMundo().filter((perfil) => uids.includes(perfil.uid));
   }),
   signInWithGoogle: vi.fn(async () => null),
   signOutSocialUser: vi.fn(async () => {}),
   resolveStableProfileId: vi.fn(async (uid: string) => uid),
   updateProfilePhoto: vi.fn(async () => {}),
   publishAchievementMirror: vi.fn(async () => {}),
+  MY_FRIENDSHIPS_REQUESTS_MAX_AGE_MS: 60_000,
   getMyFriendships: vi.fn(async (): Promise<any> => {
     contadores.consultasDeAmistad += 1;
     const amigo = (uid: string, nombre: string, gist: string) => ({
@@ -350,7 +367,7 @@ describe('emulación del espacio social', () => {
 
     const texto = document.body.textContent || '';
     console.warn('\n════ FEED ════');
-    console.warn('listSocialDirectory:', contadores.listadosDeDirectorio, '| getMyFriendships:', contadores.consultasDeAmistad);
+    console.warn('listSocialDirectory:', contadores.listadosDeDirectorio, '| perfiles por uid:', contadores.perfilesPorUid, '| getMyFriendships:', contadores.consultasDeAmistad);
     console.warn('lecturas de gist:', contadores.lecturasDeGist.length);
     console.warn('por gist:', JSON.stringify(cuenta(contadores.lecturasDeGist)));
     console.warn('¿aparece el inactivo (eva)?', texto.includes('eva'));
@@ -374,7 +391,7 @@ describe('emulación del espacio social', () => {
     console.warn('\n════ NAVEGACIÓN ════');
     console.warn('lecturas tras el primer feed:', trasFeed);
     console.warn('lecturas tras volver a entrar:', trasVolver, `(+${trasVolver - trasFeed})`);
-    console.warn('listados de directorio:', contadores.listadosDeDirectorio, '| consultas de amistad:', contadores.consultasDeAmistad);
+    console.warn('listados de directorio:', contadores.listadosDeDirectorio, '| perfiles por uid:', contadores.perfilesPorUid, '| consultas de amistad:', contadores.consultasDeAmistad);
     console.warn('caché del directorio → aciertos:', contadores.cacheAciertos, 'fallos:', contadores.cacheFallos, 'escrituras:', contadores.cacheEscrituras);
     const saneados = {
       healOwnFriendshipIdentity: firebaseMocks.healOwnFriendshipIdentity.mock.calls.length,

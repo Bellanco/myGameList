@@ -25,4 +25,13 @@ describe('texto del estado de sincronización', () => {
     // de que quien llama se acuerde.
     expect(resolveSyncBadge('idle', false)).toBe(SYNC_BADGE_TEXT.idle);
   });
+
+  // Fase 5 del plan de degradación: GitHub limitando no es un error, y lo pendiente sigue a salvo.
+  it('en pausa por el límite de GitHub, lo dice en vez de «error»', () => {
+    expect(resolveSyncBadge('error', true, true)).toBe(SYNC_BADGE_TEXT.paused);
+    expect(resolveSyncBadge('ok', false, true)).toBe(SYNC_BADGE_TEXT.paused);
+    // Mientras sincroniza, manda eso: está pasando algo ahora.
+    expect(resolveSyncBadge('syncing', true, true)).toBe(SYNC_BADGE_TEXT.syncing);
+  });
 });
+

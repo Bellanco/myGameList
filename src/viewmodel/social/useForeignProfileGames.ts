@@ -20,7 +20,7 @@
 //     pantalla deja de esperar y enseña lo que hay, que a partir de ese momento es la verdad.
 import { useCallback, useEffect, useState } from 'react';
 import { getSocialSyncConfig } from '../../model/repository/socialGistRepository';
-import { invalidateProfileGames, loadForeignProfileGames } from '../../model/repository/foreignProfileRepository';
+import { loadForeignProfileGames } from '../../model/repository/foreignProfileRepository';
 import { applyProfileVisibility } from '../../core/utils/profileVisibility';
 import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import type { ProfileTier } from '../../core/constants/tiers';
@@ -145,7 +145,9 @@ export function useForeignProfileGames(options: ForeignProfileGamesOptions): For
     return allGames.find((game) => game.id === gameId) || null;
   }, [foreignGames, localGames, ownProfileId, ownUid]);
 
-  // Refresco manual del perfil abierto: invalida la caché de IndexedDB y relee del gist de listados.
+  // Refresco manual del perfil abierto: relee del gist de listados saltándose el ETag (`forceRefresh`). La copia de
+  // IndexedDB NO se borra antes: la lectura la sustituye si sale bien, y si GitHub limita o no hay red, borrarla
+  // dejaba a ese amigo sin listados guardados para la próxima visita (docs/plan-degradacion-servicios.md).
   const refreshProfileDetail = useCallback(async () => {
     const profileId = profileDetailId;
     const entry = directory.find((item) => item.id === profileId);
@@ -153,7 +155,6 @@ export function useForeignProfileGames(options: ForeignProfileGamesOptions): For
     if (relationshipWith(entry.uid) !== 'friends') return; // solo se refrescan listados de amigos.
     try {
       setLoadingForeignProfile(true);
-      await invalidateProfileGames(profileId);
       const token = getSocialSyncConfig()?.token || fallbackToken || null;
       const games = await loadForeignProfileGames({ profileId, gamesGistId: entry.gamesGistId, token, forceRefresh: true });
       if (games) {

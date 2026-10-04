@@ -4,8 +4,9 @@ import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { hasAward } from '../../../core/premios/awards';
 import { getOptionLabel, tField } from '../../../core/premios/localize';
 import { hasPopularVote } from '../../../core/premios/popularVote';
+import { revealedRows } from '../../../core/premios/revealedVotes';
 import { popularPath, PREMIOS_ROUTES } from '../../../viewmodel/premios/premiosRoutes';
-import type { PremiosArchivedEntry, PremiosSeasonResult } from '../../../model/types/premios';
+import type { PremiosArchivedEntry, PremiosReveal, PremiosSeasonResult } from '../../../model/types/premios';
 import { Icon } from '../Icon';
 import { HubBackButton } from '../socialhub/HubBackButton';
 
@@ -38,6 +39,11 @@ export interface PremiosResultsScreenProps {
   ownProfileId: string;
   /** Pseudónimo → uid, para los que tienen perfil social: su fila lleva a su ficha. */
   profiles?: Map<string, string>;
+  /**
+   * Los votos de cada uno, si quien mira votó en esta edición y todavía no se ha terminado. Con ellos, la
+   * clasificación de siempre deja paso a la final, fila a fila con lo que votó cada cual.
+   */
+  reveal?: PremiosReveal | null;
 }
 
 /**
@@ -63,7 +69,13 @@ export interface PremiosResultsScreenProps {
  * Los cinco primeros PUESTOS van marcados. Puesto, no posición: con dos primeros, quien les sigue es segundo, así
  * que puede haber más de cinco personas marcadas y nunca más de cinco puestos distintos.
  */
-export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profiles }: PremiosResultsScreenProps) {
+export function PremiosResultsScreen({
+  result,
+  leaderboard,
+  ownProfileId,
+  profiles,
+  reveal = null,
+}: PremiosResultsScreenProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -145,6 +157,27 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
 
   /** Del cuarto en adelante. Lo que ya está en el podio no se repite debajo. */
   const resto = useMemo(() => leaderboard.filter((entry) => entry.rank > PODIUM_RANKS), [leaderboard]);
+
+  /**
+   * LA CLASIFICACIÓN FINAL: todo el mundo, podio incluido, con lo que votó. Solo existe mientras la edición
+   * publicada no se termina y para quien votó en ella (ver `usePremiosReveal`).
+   */
+  const finales = useMemo(
+    () => (reveal ? revealedRows(reveal.ballots, result?.categoriesSnapshot) : []),
+    [reveal, result],
+  );
+  /** Las filas desplegadas, por puesto en la lista. Empiezan todas plegadas. */
+  const [desplegadas, setDesplegadas] = useState<ReadonlySet<number>>(() => new Set());
+  const alternar = (indice: number) =>
+    setDesplegadas((actuales) => {
+      const siguientes = new Set(actuales);
+      if (siguientes.has(indice)) siguientes.delete(indice);
+      else siguientes.add(indice);
+      return siguientes;
+    });
+  const conFinal = finales.length > 0;
+  /** ¿Va la clasificación de siempre? No con la final delante, que la contiene entera. */
+  const conTabla = resto.length > 0 && !conFinal;
 
   if (!result) {
     return (
@@ -321,7 +354,7 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
         ) : null}
 
         <section
-          className={`premios-results__panel${resto.length === 0 ? ' premios-results__panel--wide' : ''}`}
+          className={`premios-results__panel${conTabla ? '' : ' premios-results__panel--wide'}`}
           aria-label={L.winners}
         >
           <div className="premios-results__panel-head">
@@ -361,7 +394,7 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
 
         {/* La clasificación solo aparece si queda alguien fuera del podio: con tres participantes, el podio YA es
             la clasificación entera y un panel repitiéndola sería un eco. */}
-        {resto.length > 0 ? (
+        {conTabla ? (
           <section className="premios-results__panel premios-results__panel--board" aria-label={L.leaderboard}>
             {/* Sin contador: «14 participantes» repetía el «14 participaciones» de la cabecera y además mentía
                 un poco, porque en esta lista hay diez —los otros cuatro están en el podio—. */}
@@ -414,6 +447,117 @@ export function PremiosResultsScreen({ result, leaderboard, ownProfileId, profil
                       >
                         <Icon name="trophy" />
                       </button>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+        ) : null}
+
+        {/* LA CLASIFICACIÓN FINAL, a lo ancho y debajo de los ganadores. Una fila por persona, como la de siempre,
+            y al desplegarla lo que votó en cada categoría. LA FILA ENTERA DESPLIEGA con el ratón (una capa, como
+            en el podio); para el teclado y el lector de pantalla el camino es el botón del final. No es un
+            `<details>`: el nombre enlaza al perfil y el trofeo abre su lámina, y dentro de un `<summary>` no puede
+            haber otros controles. */}
+        {conFinal ? (
+          <section className="premios-results__panel premios-results__panel--final" aria-label={L.finalBoard}>
+            <div className="premios-results__panel-head">
+              <h3>{L.finalBoard}</h3>
+            </div>
+
+            <ol className="premios-results__board">
+              {finales.map(({ entry, picks, hits }, index) => {
+                // La misma fila del archivo, para el enlace y el trofeo: resumen y archivo salen del mismo recuento
+                // y en el mismo orden, y si por lo que sea no casaran, la fila se queda sin las dos cosas.
+                const enArchivo =
+                  leaderboard[index]?.nickname === entry.nickname && leaderboard[index]?.points === entry.points
+                    ? leaderboard[index]
+                    : null;
+                const propia = esPropia(entry);
+                const abierta = desplegadas.has(index);
+                const idVotos = `premios-final-${index}`;
+                return (
+                  <li key={`${entry.profileId || entry.nickname}-${index}`} aria-label={propia ? L.yourRow : undefined}>
+                    <div
+                      className={`premios-results__row premios-results__row--final${propia ? ' is-own' : ''}${hasAward(entry.rank) ? ' is-award' : ''}${abierta ? ' is-open' : ''}`}
+                    >
+                      {/* La capa que hace pulsable la fila entera, como la del escalón del podio: fuera del árbol
+                          accesible, debajo del enlace y de los botones. */}
+                      <span className="premios-results__row-hit" aria-hidden="true" onClick={() => alternar(index)} />
+                      <span className={`premios-results__rank ${METAL[entry.rank - 1] || ''}`}>
+                        <span className="sr-only">{L.positionAria(entry.rank)}</span>
+                        <span aria-hidden="true">{entry.rank}</span>
+                      </span>
+
+                      {enArchivo ? (
+                        nombreDe(enArchivo, 'premios-results__name')
+                      ) : (
+                        <span className="premios-results__name">{entry.nickname}</span>
+                      )}
+
+                      <span className="premios-results__hits">
+                        <span className="sr-only">{L.hitsAria(hits, picks.length)}</span>
+                        <span aria-hidden="true">{L.hitsShort(hits, picks.length)}</span>
+                      </span>
+
+                      <span className="premios-results__points">
+                        <span className="sr-only">{L.points(entry.points)}</span>
+                        <span aria-hidden="true">{L.pointsShort(entry.points)}</span>
+                      </span>
+
+                      {enArchivo && hasAward(entry.rank) && ownProfileId ? (
+                        <button
+                          type="button"
+                          className="btn premios-results__trophy"
+                          aria-label={propia ? L.trophy : L.see}
+                          title={propia ? L.trophy : L.see}
+                          aria-pressed={galeria === premiados.indexOf(enArchivo)}
+                          onClick={() => verLamina(premiados.indexOf(enArchivo))}
+                        >
+                          <Icon name="trophy" />
+                        </button>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        className="btn premios-results__toggle"
+                        aria-expanded={abierta}
+                        aria-controls={idVotos}
+                        aria-label={abierta ? L.hideVotes(entry.nickname) : L.showVotes(entry.nickname)}
+                        onClick={() => alternar(index)}
+                      >
+                        <Icon name="chevron-down" />
+                      </button>
+                    </div>
+
+                    {abierta ? (
+                      <ul id={idVotos} className="premios-results__picks" aria-label={L.votesOf(entry.nickname)}>
+                        {picks.map((pick) => (
+                          <li
+                            key={pick.categoryId}
+                            className={`premios-results__pick ${pick.hit ? 'is-hit' : 'is-miss'}`}
+                          >
+                            <Icon name={pick.hit ? 'check' : 'close'} className="ui-icon premios-results__pick-mark" />
+                            <span className="premios-results__pick-head">
+                              <span className="premios-results__pick-cat">{pick.title}</span>
+                              {pick.weight !== 1 ? (
+                                <span className="premios-results__pick-weight">
+                                  <span aria-hidden="true">{L.weight(pick.weight)}</span>
+                                  <span className="sr-only">{L.weightAria(pick.weight)}</span>
+                                </span>
+                              ) : null}
+                            </span>
+                            <span className="premios-results__pick-voted">
+                              <span className="sr-only">{pick.hit ? L.hit : L.miss}: </span>
+                              {pick.voted || L.noVote}
+                            </span>
+                            {pick.hit ? null : (
+                              <span className="premios-results__pick-winner">{L.winnerWas(pick.winner)}</span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
                     ) : null}
                   </li>
                 );

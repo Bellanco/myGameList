@@ -5,7 +5,7 @@
 // en el chunk de ARRANQUE de todo el mundo (el de juegos lo importa `useSyncViewModel`, que es estático desde
 // App), aunque quien nunca abre el hub social no llegue a ejecutar ni una línea.
 import { isValidGistId, isValidGithubToken } from '../../core/security/sanitize';
-import { githubFetch, parseRetryAfterMs } from './githubHttp';
+import { githubFetch, noteGithubRateLimit, parseRetryAfterMs } from './githubHttp';
 
 export const GIST_API_BASE = 'https://api.github.com/gists';
 
@@ -31,10 +31,21 @@ export async function buildGithubError(response: Response, prefix: string): Prom
     message = `${prefix}: ${statusPart}`;
   }
 
-  const error = new Error(message);
+  const error = new Error(message) as Error & { status?: number; rateLimited?: boolean; retryAfterMs?: number };
+  // El estado viaja aparte del texto: quien tenga que distinguir un 403 de permisos de uno de LÍMITE lo necesita
+  // (antes solo se podía buscar «403» en el mensaje, y los dos casos daban lo mismo).
+  error.status = response.status;
   // S3: en 403/429 adjunta cuánto esperar (Retry-After / X-RateLimit-Reset) para que el backoff lo respete.
   const retryAfterMs = parseRetryAfterMs(response, Date.now());
-  if (retryAfterMs > 0) (error as { retryAfterMs?: number }).retryAfterMs = retryAfterMs;
+  if (retryAfterMs > 0) error.retryAfterMs = retryAfterMs;
+  // LÍMITE: con cabeceras, un 429, o el texto de GitHub (el límite secundario a veces llega sin cabeceras). Se marca
+  // para que el error se trate como «inténtalo más tarde» y no como un token sin permisos.
+  const rateLimited = (response.status === 403 || response.status === 429)
+    && (retryAfterMs > 0 || response.status === 429 || /rate limit/i.test(message));
+  if (rateLimited) {
+    error.rateLimited = true;
+    if (retryAfterMs === 0) noteGithubRateLimit(0);
+  }
   return error;
 }
 

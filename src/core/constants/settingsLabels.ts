@@ -58,6 +58,7 @@ export const SETTINGS_UI = {
     deletedOk: 'Cuenta borrada. Se han eliminado tus datos de la nube y de este dispositivo.',
     deletedPartial: 'Cuenta borrada con incidencias: algunos datos remotos no se pudieron eliminar. Vuelve a intentarlo o escribe al contacto de privacidad.',
     deleteError: 'No se pudo completar el borrado. Revisa la conexión e inténtalo de nuevo.',
+    deleteRetryLater: 'Ahora mismo no podemos completar el borrado: el servicio no responde. Tu sesión y los datos de este dispositivo siguen intactos; vuelve a intentarlo más tarde (normalmente basta con esperar a mañana).',
   },
   // L4 — enlaces a los documentos legales.
   legal: {

@@ -658,10 +658,18 @@ export async function putCachedSocialDirectory<T>(ownGistId: string, entries: T[
 // Invalida la caché del directorio. Se llama al cambiar el grafo de amistad (aceptar/eliminar): como el directorio
 // solo lee el gist social de tus AMIGOS, un cambio de amistad altera qué actividad debe aparecer en el feed y hay
 // que releer sin esperar al TTL de 30 min.
+//
+// La MARCA COMO CADUCADA (`cachedAt: 0`) en vez de borrarla: ninguna lectura con TTL la sirve, así que la siguiente
+// apertura relee igual, pero si esa relectura falla (sin red, Firestore sin cuota, GitHub limitando) el rescate de
+// la hidratación (`allowExpired`) todavía tiene algo que enseñar. Borrándola, publicar una reseña justo antes de un
+// corte dejaba el feed en blanco (docs/plan-degradacion-servicios.md, fase 2).
 export async function invalidateCachedSocialDirectory(ownGistId: string): Promise<void> {
   if (!ownGistId) return;
   try {
-    await idbDelete(PROFILE_CACHE_STORE, SOCIAL_DIRECTORY_KEY_PREFIX + ownGistId);
+    const key = SOCIAL_DIRECTORY_KEY_PREFIX + ownGistId;
+    const rec = await idbGet<CachedSocialDirectory<unknown>>(PROFILE_CACHE_STORE, key);
+    if (!rec) return;
+    await idbPut<CachedSocialDirectory<unknown>>(PROFILE_CACHE_STORE, { ...rec, cachedAt: 0 });
   } catch {
     // best-effort.
   }
@@ -746,7 +754,7 @@ async function readDirectoryQueries<T>(): Promise<CachedDirectoryQueries<T> | nu
 }
 
 /** La copia de la consulta con ese tope y cuándo se leyó, sea cual sea su edad. `null` si no hay. */
-export async function getCachedDirectoryQuery<T>(limit: number): Promise<{ entries: T[]; cachedAt: number } | null> {
+export async function getCachedDirectoryQuery<T>(limit: number | string): Promise<{ entries: T[]; cachedAt: number } | null> {
   try {
     const rec = await readDirectoryQueries<T>();
     const hit = rec?.byLimit[String(limit)];
@@ -756,7 +764,7 @@ export async function getCachedDirectoryQuery<T>(limit: number): Promise<{ entri
   }
 }
 
-export async function putCachedDirectoryQuery<T>(limit: number, entries: T[], cachedAt: number): Promise<void> {
+export async function putCachedDirectoryQuery<T>(limit: number | string, entries: T[], cachedAt: number): Promise<void> {
   try {
     const rec = (await readDirectoryQueries<T>()) ?? { profileId: DIRECTORY_QUERY_KEY, version: DIRECTORY_QUERY_CACHE_VERSION, byLimit: {} };
     rec.byLimit[String(limit)] = { cachedAt, entries };
@@ -769,6 +777,78 @@ export async function putCachedDirectoryQuery<T>(limit: number, entries: T[], ca
 export async function invalidateCachedDirectoryQueries(): Promise<void> {
   try {
     await idbDelete(PROFILE_CACHE_STORE, DIRECTORY_QUERY_KEY);
+  } catch {
+    // best-effort.
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Caché persistente de los PERFILES LEÍDOS POR UID (los de tus amigos y el tuyo, ver `getSocialProfilesByUid`).
+// Un registro con una fila por uid y la hora a la que se leyó: la edad aceptable la decide quien pregunta, y no es
+// la misma para todos (un amigo inactivo vale un día). `entry: null` es «no se deja leer» (perfil social apagado):
+// también se guarda, o un amigo así costaría una lectura en cada refresco del feed.
+// ---------------------------------------------------------------------------
+const DIRECTORY_PROFILES_KEY = '__dirprofiles__';
+/** Versión de la FORMA guardada; subirla si cambia `SocialDirectoryEntry`. */
+const DIRECTORY_PROFILES_CACHE_VERSION = 1;
+/** Filas más viejas que esto se tiran al escribir: un ex amigo no se queda en la base para siempre. */
+const DIRECTORY_PROFILES_PRUNE_MS = 7 * 24 * 60 * 60 * 1000;
+
+export interface CachedDirectoryProfile<T> {
+  cachedAt: number;
+  entry: T | null;
+}
+
+interface CachedDirectoryProfiles<T> {
+  profileId: string; // keyPath del store
+  version: number;
+  byUid: Record<string, CachedDirectoryProfile<T>>;
+}
+
+async function readDirectoryProfiles<T>(): Promise<CachedDirectoryProfiles<T> | null> {
+  const rec = await idbGet<CachedDirectoryProfiles<T>>(PROFILE_CACHE_STORE, DIRECTORY_PROFILES_KEY);
+  return rec && rec.version === DIRECTORY_PROFILES_CACHE_VERSION && rec.byUid ? rec : null;
+}
+
+/** Todas las filas guardadas, sea cual sea su edad. Vacío si no hay o si IndexedDB falla. */
+export async function getCachedDirectoryProfiles<T>(): Promise<Record<string, CachedDirectoryProfile<T>>> {
+  try {
+    return (await readDirectoryProfiles<T>())?.byUid ?? {};
+  } catch {
+    return {};
+  }
+}
+
+/** Añade o sustituye filas (las demás se conservan) y poda las que ya no sirven a nadie. */
+export async function putCachedDirectoryProfiles<T>(rows: Record<string, CachedDirectoryProfile<T>>): Promise<void> {
+  try {
+    const rec = (await readDirectoryProfiles<T>()) ?? {
+      profileId: DIRECTORY_PROFILES_KEY,
+      version: DIRECTORY_PROFILES_CACHE_VERSION,
+      byUid: {},
+    };
+    const now = Date.now();
+    for (const [uid, row] of Object.entries(rec.byUid)) {
+      if (now - row.cachedAt > DIRECTORY_PROFILES_PRUNE_MS) delete rec.byUid[uid];
+    }
+    Object.assign(rec.byUid, rows);
+    await idbPut<CachedDirectoryProfiles<T>>(PROFILE_CACHE_STORE, rec);
+  } catch {
+    // best-effort: sin copia se vuelve a leer de Firestore.
+  }
+}
+
+/** Olvida la fila de un uid, o todas sin argumento. */
+export async function invalidateCachedDirectoryProfiles(uid?: string): Promise<void> {
+  try {
+    if (!uid) {
+      await idbDelete(PROFILE_CACHE_STORE, DIRECTORY_PROFILES_KEY);
+      return;
+    }
+    const rec = await readDirectoryProfiles();
+    if (!rec || !(uid in rec.byUid)) return;
+    delete rec.byUid[uid];
+    await idbPut(PROFILE_CACHE_STORE, rec);
   } catch {
     // best-effort.
   }

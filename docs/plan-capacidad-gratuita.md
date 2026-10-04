@@ -33,11 +33,11 @@ Todo se reinicia cada día (KV y Workers a las 00:00 UTC; Firestore a medianoche
 
 | Cupo gratuito | Techo | Quién lo gasta hoy |
 |---|---|---|
-| KV · *list* | **1.000/día** | `/api/share/mine`, publicar (`/api/share/related` ya no lista: lee el índice por autor, Fase 2) |
+| KV · *list* | **1.000/día** | `/api/share/mine` (**cada detalle de reseña propia** y Ajustes → Personalización, sin caché en el cliente), publicar (`/api/share/related` ya no lista: lee el índice por autor, Fase 2) |
 | KV · escrituras | **1.000/día** | Carátulas (tope propio de 700, `COVER_DAILY_BUDGET`) + publicar (5 por enlace desde la Fase 2) |
 | Workers (Functions) | **100.000/día** | `/cover`, `/api/*`, `/r/*` (`/assets/*` y `/fonts/*` ya son estáticos, Fase 3) |
 | KV · lecturas | 100.000/día | `/cover` sin caché, avisos, premios, enlaces |
-| Firestore · lecturas | **50.000/día** | 5–15 por apertura; el social, 60–150 por usuario y día |
+| Firestore · lecturas | **50.000/día** | 3–4 por apertura; el social, ~110–170 por usuario medio y día y ~600–1.000 el intenso (recontado el 04-10-2026) |
 | IGDB | 4 pet./s globales | Llenado inicial de carátulas (falla blando: 503 y reintento) |
 | reCAPTCHA (App Check) | 10.000/mes | ~1 por hora de sesión con cuenta (falla abierto; ver Fase 5) |
 
@@ -261,10 +261,12 @@ No es código: son los números a los que hay que mirar, para apuntarlos en la c
 
 | Perfil | Invocaciones hoy | Tras el plan |
 |---|---|---|
-| Dispositivo nuevo, sin carátulas | ~45–50 | ~5 |
+| Dispositivo nuevo, sin carátulas | ~45–50 | ~2–3 |
 | Usuario habitual, día normal | ~10–30 | ~5 |
 | Usuario habitual, día de despliegue | +25–35 | +0–2 |
-| Visitante anónimo de un enlace | ~40 invocaciones + 1 *list* + ~51 lecturas de KV | 3 invocaciones + 3 lecturas |
+| Visitante anónimo de un enlace | ~40 invocaciones + 1 *list* + ~51 lecturas de KV | 3 invocaciones + 4 lecturas |
+
+*(Recontado el 04-10-2026: ver «Revisión del 04-10-2026» al final; el primer techo resultó ser KV *list*.)*
 
 Con eso, Workers deja de ser el primer techo para el uso normal: pasa a serlo **Firestore** (~5.000 activos al
 día con uso ligero, menos cuanto más social) y, para usuarios nuevos, **las carátulas**.
@@ -283,3 +285,50 @@ día con uso ligero, menos cuanto más social) y, para usuarios nuevos, **las ca
 ## Mediciones
 
 *(Rellenar en la Fase 0 y tras cada fase.)*
+
+## Revisión del 04-10-2026 (recuento sobre `d407ccd9`)
+
+Estimación leyendo el código, como el resto del documento; la Fase 0 sigue pendiente.
+
+**Por usuario y día** (ligero: 1–2 aperturas sin social · medio: social ~1 h, N≈10 amigos, 1 reseña, 5 detalles
+de reseña propia · intenso: social varias horas, N≈30, 3 reseñas + 1 post, premios, perfiles de amigos con carátulas):
+
+| Cupo | Ligero | Medio | Intenso |
+|---|---|---|---|
+| Firestore · lecturas (50.000) | 3–4 | ~110–170 | ~600–1.000 |
+| KV · *list* (1.000) | 0 | ~6 | ~34 |
+| Functions (100.000) | ~8 | ~70–165 | ~2.000 el primer día (carátulas de amigos) |
+| KV · lecturas (100.000) | ~8 | ~95–190 | ~2.150 el primer día |
+
+Con una mezcla 70 % ligeros / 25 % medios / 5 % intensos, el orden de los techos es **KV *list* (~300 activos al
+día)**, Firestore (~650) y Functions/KV lecturas (~700–750). Las escrituras de Firestore no aprietan.
+
+**De dónde sale cada techo** (lo que hay que mirar primero):
+
+- ***list*:** `useShareViewModel.refresh` llama a `/api/share/mine` al montar `ShareReviewButton`, sin caché, y
+  `readShareStatus` (`functions/_lib/quota.ts`) lista el prefijo del usuario en cada llamada.
+- **Firestore:** el directorio (50 lecturas) se vuelve a pagar tras **cada** reseña propia, porque
+  `ensureProfileByEmail` invalida su copia aunque no escriba el perfil (`firebaseRepository.ts`), y un post lo
+  fuerza al momento (`onPublished`). Las amistades cuestan N cada 15 min (60 s en solicitudes), y el saneado semanal
+  las invalida aunque no escriba. `publicConfig` se lee dos veces al arrancar y `privateConfig`/consentimiento en
+  cada montaje del social, sin caché. Publicar hace 4 escrituras incondicionales (`userMap`, `privateConfig` ×2 y
+  el `deleteField` del token legacy).
+- **Functions:** cada carátula de un amigo es una invocación la primera vez, cada tamaño es una URL distinta, y
+  el 404 de «no tiene carátula» sale con `no-store` y nadie lo recuerda para juegos ajenos.
+
+**Cifras de este documento que no cuadraban:** el visitante anónimo son 4 lecturas de KV, no 3; el dispositivo
+nuevo, ~2–3 invocaciones; y las escrituras de KV que deja `COVER_DAILY_BUDGET` son menos de lo que dice su
+comentario en `functions/_lib/keys.ts`, que olvida el contador por IP (~70/día) y las claves JWKS (~28/día):
+quedan ~38 publicaciones al día, no ~57.
+
+**Por comprobar:** `useSocialDirectory` lee los gists de los amigos con `getSocialSyncConfig()?.token` sin esperar
+a `ensureSyncConfigLoaded`; si el descifrado llegara tarde, esas lecturas irían sin token (60/h por IP). En la
+práctica las lecturas de Firestore que preceden al disparo dan tiempo de sobra, pero no está garantizado.
+
+**Tras `docs/plan-directorio-amigos.md` (04-10-2026, mismo método).** El feed lee por uid a los amigos y a uno
+mismo (ya no los 50 más recientes), «Perfiles» pide 34 recientes solo al abrirla, y la caché de «mis enlaces» quita
+el techo de KV *list*. Por usuario y día: medio ~60–100 lecturas de Firestore, intenso ~600–750 (dominado ahora por
+releer las amistades, N cada 15 min y cada 60 s en solicitudes). Con la mezcla 70/25/5, Firestore da para
+**~800–1.000 activos al día** y Cloudflare (carátulas de amigos, cuenta pesimista) para ~700–750: los dos techos
+quedan casi a la par. Siguiente palanca: amistades incrementales (ver ese plan); y antes de nada, la Fase 0.
+

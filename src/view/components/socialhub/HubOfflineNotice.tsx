@@ -13,10 +13,20 @@ import { usePalette } from '../../hooks/usePalette';
  * Es persistente a propósito, no un mensaje de los que se borran a los tres segundos: la condición que lo motiva
  * dura hasta que vuelve la red, así que el aviso también.
  */
-export function HubOfflineNotice({ hasCachedData }: { hasCachedData: boolean }) {
+export function HubOfflineNotice({ hasCachedData, variant = 'offline' }: {
+  hasCachedData: boolean;
+  /**
+   * `limited`: HAY red, pero un servicio no atiende (cupo de Firestore agotado, GitHub limitando). Mismo aviso y
+   * mismo trato —lo guardado se ve, se pondrá al día solo—, con su propio texto: decir «sin conexión» a quien tiene
+   * conexión le mandaría a revisar el wifi.
+   */
+  variant?: 'offline' | 'limited';
+}) {
   // La paleta, del store de preferencias y no del `dataset` del <html>: así el titular cambia con el tema sin
   // esperar a un remontaje (que es lo que hacen los boundaries, donde no hay más render que el del fallback).
   const { palette } = usePalette();
+  const limited = variant === 'limited';
+  const labels = limited ? SOCIAL_UI.limited : SOCIAL_UI.offline;
 
   return (
     <Notice
@@ -24,11 +34,11 @@ export function HubOfflineNotice({ hasCachedData }: { hasCachedData: boolean }) 
       tone="warn"
       icon="cloud-sync"
       role="status"
-      aria-label={SOCIAL_UI.offline.sectionAria}
-      kicker={SOCIAL_UI.offline.badge}
-      title={SOCIAL_UI.offline.leadByPalette[palette]}
+      aria-label={labels.sectionAria}
+      kicker={labels.badge}
+      title={limited ? SOCIAL_UI.limited.title : SOCIAL_UI.offline.leadByPalette[palette]}
     >
-      {hasCachedData ? SOCIAL_UI.offline.body : SOCIAL_UI.offline.bodyEmpty}
+      {hasCachedData ? labels.body : labels.bodyEmpty}
     </Notice>
   );
 }

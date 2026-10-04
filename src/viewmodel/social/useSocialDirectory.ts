@@ -2,12 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { DEFAULT_PROFILE_TIER, PROFILE_TIER_DIRECTORY_TTL_MS, PROFILE_TIER_FEED_TTL_MS, type ProfileTier } from '../../core/constants/tiers';
 import { mapWithConcurrency } from '../../core/utils/concurrency';
-import { isNetworkFailure, isOffline } from '../../core/utils/network';
+import { isOffline, isServiceUnavailable } from '../../core/utils/network';
 import { normalizeTimestamp as toSafeTimestamp } from '../../core/utils/normalize';
 import { reviewActorsByGame } from '../../core/social/moveActivity';
 import { getCachedSocialDirectory, getLocalMeta, patchLocalMeta, putCachedSocialDirectory } from '../../model/repository/indexedDbRepository';
 import { getSocialSyncConfig, mergeSocialGistData, readPublicSocialGistById, type SocialGistData, type SocialProfileVisibility, type SocialSharedGame } from '../../model/repository/socialGistRepository';
-import { listSocialDirectory, type SocialAuthUser } from '../../model/repository/firebaseRepository';
+import { getSocialProfilesByUid, type SocialAuthUser } from '../../model/repository/firebaseRepository';
+import { PROFILE_INACTIVITY_MS } from '../../core/constants/socialActivity';
 import { isOwnProfileIdentity } from './socialIdentity';
 import type { SocialDirectoryEntry } from './socialFeed';
 import type { TabId } from '../../model/types/game';
@@ -15,15 +16,11 @@ import type { FriendshipView } from '../../model/types/social';
 
 /** Anti-spam del refresco forzado: cada uno relee el directorio y hasta ~50 gists sociales. */
 const FORCED_REFRESH_MIN_MS = 12_000;
-// Tope de perfiles del directorio, ORDENADOS POR USO RECIENTE (`profiles.updatedAt`). Solo los AMIGOS cuestan una
-// lectura de gist; los demás son index-only (nombre/foto de Firestore), así que subir este número cuesta lecturas
-// de Firestore, no rate-limit de GitHub. Tunable.
-const SOCIAL_DIRECTORY_LIMIT = 50;
-// Antigüedad máxima del último uso de un AMIGO para que su actividad entre en el feed. Uno más inactivo sigue en
-// Perfiles y en la lista de amigos, y su perfil y sus reseñas se abren igual (salen de su gist de JUEGOS); lo que
-// no hace es ocupar el feed ni gastar una lectura de su gist social. Sin dato de recencia NO se corta: nunca se
-// oculta contenido por falta de datos. Tunable.
-const FRIEND_ACTIVITY_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+// Antigüedad máxima del último uso de un AMIGO para que su actividad entre en el feed: `PROFILE_INACTIVITY_MS`, el
+// mismo corte con el que avisa el panel. Uno más inactivo sigue en la lista de amigos, y su perfil y sus reseñas se
+// abren igual (salen de su gist de JUEGOS); lo que no hace es ocupar el feed ni gastar una lectura de su gist
+// social, y su perfil de Firestore se relee como mucho una vez al día (`INACTIVE_PROFILE_MAX_AGE_MS`). Sin dato de
+// recencia NO se corta: nunca se oculta contenido por falta de datos.
 // El directorio se hidrata leyendo el gist social de cada perfil. En vez de disparar TODAS las lecturas a la vez
 // —ráfaga que puede activar los "secondary rate limits" de GitHub al crecer el directorio— se limita la
 // concurrencia. Las lecturas son baratas (caché de sesión + revalidación por ETag), así que el coste en latencia
@@ -47,8 +44,15 @@ const SOCIAL_MOVES_PER_PROFILE = 120;
  * pero un 401/403 es "tu token no sirve" y hay que decirlo, o el usuario se queda con un feed vacío sin saber
  * por qué.
  */
-const isGithubCredentialError = (error: unknown): boolean =>
-  error instanceof Error && /\b(401|403)\b/.test(error.message);
+const isGithubCredentialError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) return false;
+  // Un LÍMITE de GitHub también llega como 403, y decirle a alguien que su conexión ha caducado le mandaba a
+  // reconectar algo que funcionaba (docs/plan-degradacion-servicios.md, fase 2).
+  if ((error as { rateLimited?: unknown }).rateLimited === true) return false;
+  const { status } = error as { status?: unknown };
+  if (typeof status === 'number') return status === 401 || status === 403;
+  return /\b(401|403)\b/.test(error.message);
+};
 
 /** Identidad del autor con la que se sella todo lo que sale de un mismo gist social. */
 interface FeedAuthor {
@@ -150,7 +154,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
   const lastForcedHydrateRef = useRef(0);
   const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const runDirectoryHydration = useCallback(async (forceRefresh: boolean) => {
+  const runDirectoryHydration = useCallback(async (forceRefresh: boolean, keepDirectoryQuery = false) => {
     if (!directoryPanelAllows || !authUser || !socialCfgGistId) {
       return;
     }
@@ -214,8 +218,16 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
       setLoadingDirectory(true);
       // La CONSULTA de perfiles tiene su propia copia, más larga que la del feed: lo que caduca a menudo es la
       // actividad de los amigos, que sale de sus gists, no el nick o la foto (ver `PROFILE_TIER_DIRECTORY_TTL_MS`).
-      const dirEntries = await listSocialDirectory(SOCIAL_DIRECTORY_LIMIT, {
-        forceRefresh,
+      // TUS AMIGOS Y TÚ, leídos por uid: es todo lo que el feed necesita de Firestore (rango, vitrina, palmarés,
+      // resumen del año y recencia). Antes salía de los 50 perfiles más recientes, que costaban 50 lecturas en cada
+      // caducidad con independencia de cuántos amigos hubiera, y dejaban sin todo eso a los que no cabían. Descubrir
+      // gente nueva es cosa de «Perfiles», que hace su propia consulta solo cuando se abre (`useSocialDiscover`).
+      //
+      // `keepDirectoryQuery`: el refresco que sigue a publicar un post salta la copia del FEED (tiene que salir el
+      // post) pero no la de los perfiles, que no han cambiado.
+      const profileUids = [authUser.uid, ...friends.map((friend) => friend.otherUid)];
+      const dirEntries = await getSocialProfilesByUid(profileUids, {
+        forceRefresh: forceRefresh && !keepDirectoryQuery,
         maxAgeMs: PROFILE_TIER_DIRECTORY_TTL_MS[ownTier],
       });
       const socialConfig = getSocialSyncConfig();
@@ -244,11 +256,9 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
           .map((friend) => [friend.otherUid, friend.otherGamesGistId] as const),
       );
 
-      // Escalabilidad (>30 amigos): el directorio de descubrimiento está capado a SOCIAL_DIRECTORY_LIMIT y solo lista
-      // perfiles con `social.enabled`. Para que NINGÚN amigo desaparezca del feed / detalle / gestión por caer fuera
-      // de ese tope (o por desactivar social), se sintetizan entradas para los amigos ausentes usando los datos
-      // DENORMALIZADOS del doc de amistad (nombre/foto/gists). Así los amigos son autosuficientes e independientes del
-      // tope del directorio; los pendientes NO se sintetizan (no son amigos aún).
+      // Un amigo cuyo perfil no se deja leer (ha apagado su espacio social) no puede desaparecer del feed / detalle /
+      // gestión: se sintetiza su entrada con los datos DENORMALIZADOS del doc de amistad (nombre/foto/gists). Los
+      // pendientes NO se sintetizan (no son amigos aún).
       const directoryUids = new Set(dirEntries.map((entry) => entry.uid));
       const friendOnlyEntries = friends
         // No se exige `otherSocialGistId`: sin él el amigo desaparecía por completo del hub (ni perfil ni gestión).
@@ -261,16 +271,14 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
           photoURL: friend.otherPhoto || '',
           socialGistId: friend.otherSocialGistId,
           gamesGistId: friend.otherGamesGistId,
-          // Amigo fuera del directorio: no hay marca de recencia. 0 = desconocida → no se le aplica el corte.
+          // Sin perfil legible no hay marca de recencia. 0 = desconocida → no se le aplica el corte.
           updatedAt: 0,
-          // El doc de amistad no denormaliza el rango, así que un amigo que caiga fuera del tope del directorio
-          // se pinta como bronce. Preferible a una lectura extra por amigo solo para un punto de color.
+          // El doc de amistad no denormaliza el rango, así que se pinta como bronce.
           tier: DEFAULT_PROFILE_TIER,
-          // Y por lo mismo tampoco denormaliza el espejo: un amigo fuera del tope se queda sin vitrina hasta que
-          // vuelva a entrar en el directorio. Vacío es exactamente «no ha publicado» para todo lo que lo lee, así
-          // que se calla en vez de inventarse una.
+          // Y por lo mismo tampoco denormaliza el espejo: sin perfil legible no hay vitrina. Vacío es exactamente
+          // «no ha publicado» para todo lo que lo lee, así que se calla en vez de inventarse una.
           achievementsMirror: '',
-          // Tampoco denormaliza el aviso del resumen del año: fuera del tope, sin tarjeta en el feed.
+          // Tampoco denormaliza el aviso del resumen del año: sin tarjeta en el feed.
           yearSummarySeen: null,
           palmares: undefined,
         }));
@@ -279,6 +287,16 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
       // Lecturas que fallaron por credencial en esta hidratación. Se cuentan para avisar UNA vez al final, en vez
       // de por cada amigo ilegible.
       let credentialFailures = 0;
+      // Y las que fallaron porque el SERVICIO no atendía (GitHub limitando, sin red a medias). De esos amigos se
+      // enseña su última entrada guardada, y el resultado NO se guarda como copia nueva: guardarlo convertía un corte
+      // de cinco minutos en media hora de feed sin su actividad (docs/plan-degradacion-servicios.md, fase 2).
+      let transientFailure: unknown = null;
+      let previousDirectory: Promise<SocialDirectoryEntry[] | null> | null = null;
+      const previousEntryOf = async (uid: string): Promise<SocialDirectoryEntry | null> => {
+        previousDirectory ??= getCachedSocialDirectory<SocialDirectoryEntry>(socialCfgGistId, 0, { allowExpired: true })
+          .catch(() => null);
+        return (await previousDirectory)?.find((item) => item.uid === uid) ?? null;
+      };
 
       // DERIVA DE CANAL YA RESUELTA (ver `LocalMeta.socialGistWinnerByFriend`). Una lectura de `LocalMeta` por
       // hidratación —al lado de las N lecturas de gist que vienen— para no repetir la lectura doble de cada amigo
@@ -325,7 +343,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
           // gasta una lectura de su gist). Solo se aplica si conocemos su recencia; el perfil propio nunca se corta.
           const lastActiveAt = Number(entry.updatedAt || 0);
           const isInactiveFriend =
-            !isOwnEntry && lastActiveAt > 0 && Date.now() - lastActiveAt > FRIEND_ACTIVITY_MAX_AGE_MS;
+            !isOwnEntry && lastActiveAt > 0 && Date.now() - lastActiveAt > PROFILE_INACTIVITY_MS;
           if (!isOwnEntry && (!isFriend || isInactiveFriend || socialGistCandidates.length === 0)) {
             // Index-only, sin leer su gist. Solo nombre/foto (Firestore); sin actividad ni publicaciones.
             return {
@@ -453,9 +471,24 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
               visibility: socialData.profile.visibility || defaultSocialVisibility,
             };
           } catch (readError) {
+            // Pasajero (el servicio no atiende): lo último guardado de este amigo, con lo de Firestore al día.
+            if (isServiceUnavailable(readError)) {
+              transientFailure ??= readError;
+              const previous = await previousEntryOf(entry.uid);
+              if (previous) {
+                return {
+                  ...previous,
+                  tier: entry.tier,
+                  lastActiveAt,
+                  achievementsMirror: entry.achievementsMirror,
+                  yearSummarySeen: entry.yearSummarySeen,
+                  palmares: entry.palmares,
+                };
+              }
+            }
             // Se distingue "no se pudo leer" de "no se pudo leer POR EL TOKEN": lo segundo no es un gist vacío,
             // es una credencial que ya no vale, y el usuario tiene que enterarse (abajo se avisa una sola vez).
-            if (isGithubCredentialError(readError)) {
+            else if (isGithubCredentialError(readError)) {
               credentialFailures += 1;
             }
             // Si se leyó SOLO el ganador recordado y ha fallado, el recuerdo ha caducado (gist borrado, canal
@@ -489,9 +522,14 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
       );
 
       setSocialDirectory(withProfiles);
-      // La red ha respondido: se retira el aviso de falta de conexión (que pudo encenderlo un fallo anterior con
-      // `navigator.onLine` diciendo que había red).
-      setNetworkFailure(false);
+      if (transientFailure) {
+        // Una parte salió de lo guardado: se dice (aviso de servicio limitado o de sin conexión) y no se retira.
+        reportFailure(transientFailure, SOCIAL_UI.status.firestoreCheckFailed, 'warn');
+      } else {
+        // La red ha respondido: se retira el aviso de falta de conexión (que pudo encenderlo un fallo anterior con
+        // `navigator.onLine` diciendo que había red).
+        setNetworkFailure(false);
+      }
       if (credentialFailures > 0) {
         setFeedback('warn', SOCIAL_UI.status.socialReadUnauthorized);
       }
@@ -507,9 +545,12 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
         void patchLocalMeta({ socialGistWinnerByFriend: nextWinners }).catch(() => {});
       }
 
-      void putCachedSocialDirectory(socialCfgGistId, withProfiles);
+      if (!transientFailure) {
+        void putCachedSocialDirectory(socialCfgGistId, withProfiles);
+      }
     } catch (error) {
-      if (isNetworkFailure(error) || isOffline()) {
+      // También cuando el que no atiende es el SERVICIO (Firestore sin cuota, GitHub limitando), no solo la red.
+      if (isServiceUnavailable(error) || isOffline()) {
         // Fallo de RED: en vez de vaciar el feed, se rescata la caché AUNQUE HAYA CADUCADO. Es el mismo criterio
         // que aplica `getCachedSocialDirectory` cuando el navegador admite estar sin red, y hace falta aquí porque
         // `navigator.onLine` puede decir que la hay (wifi sin salida) y entonces el TTL sí la habría descartado.
@@ -544,14 +585,14 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
    */
   const directoryHydrationRef = useRef<Promise<void> | null>(null);
 
-  const hydrateSocialDirectory = useCallback(async (forceRefresh = false) => {
+  const hydrateSocialDirectory = useCallback(async (forceRefresh = false, options: { keepDirectoryQuery?: boolean } = {}) => {
     const pending = directoryHydrationRef.current;
     // Un refresco FORZADO (botón "Actualizar") sí quiere una pasada nueva: su anti-spam ya lo acota aparte.
     if (pending && !forceRefresh) {
       return pending;
     }
 
-    const run = runDirectoryHydration(forceRefresh);
+    const run = runDirectoryHydration(forceRefresh, Boolean(options.keepDirectoryQuery));
     directoryHydrationRef.current = run;
     try {
       await run;

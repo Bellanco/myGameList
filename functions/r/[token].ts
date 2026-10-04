@@ -39,7 +39,9 @@ export async function onRequestGet(context: {
     return shell;
   }
 
-  const article = (await context.env.SHARES.get(shareKey(token), 'json')) as StoredArticle | null;
+  // Si KV no atiende (cupo agotado), la página sale igual, sin la vista previa: el shell ya está, y la propia página
+  // dirá que no puede cargar la reseña ahora. Sin este `catch` era un 500 de Cloudflare en vez de la aplicación.
+  const article = (await context.env.SHARES.get(shareKey(token), 'json').catch(() => null)) as StoredArticle | null;
   if (!article) {
     return shell;
   }
