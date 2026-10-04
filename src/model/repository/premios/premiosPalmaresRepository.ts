@@ -158,7 +158,10 @@ export async function grantPalmares(
       if (season) entrada.season = season;
       const palmares = [...sinEsta, entrada];
 
-      await setDoc(ref, { palmares, updatedAt: awardedAt }, { merge: true });
+      // SIN `updatedAt`: ese campo mide la actividad de su dueño —ordena el directorio y decide quién cuenta como
+      // reciente en el social—, y esto es una escritura del administrador. Además lo escribía como número, que
+      // Firestore ordena antes que las fechas: el premiado caía al fondo del orden y fuera de un filtro por fecha.
+      await setDoc(ref, { palmares }, { merge: true });
       concedidos += 1;
     } catch {
       // Un trofeo que no se pudo conceder no puede tumbar la publicación.
@@ -211,7 +214,7 @@ export async function revokePalmares(seasonId: string): Promise<PalmaresRecipien
       for (const { ref, palmares } of lote) {
         // `update` y no `set`: estos documentos vienen de listar la colección, así que existen. Si alguno se
         // hubiera borrado entre la lectura y ahora, que falle es lo correcto — no hay que resucitar un perfil.
-        batch.update(ref, { palmares, updatedAt: Date.now() });
+        batch.update(ref, { palmares }); // sin `updatedAt`: ver `grantPalmares`
       }
       await batch.commit();
       retirados.push(...lote.map((entrada) => entrada.premiado));
@@ -221,7 +224,7 @@ export async function revokePalmares(seasonId: string): Promise<PalmaresRecipien
       // conservar esa tolerancia — un trofeo que no se pudo retirar no puede llevarse por delante los otros 499.
       for (const { ref, palmares, premiado } of lote) {
         try {
-          await setDoc(ref, { palmares, updatedAt: Date.now() }, { merge: true });
+          await setDoc(ref, { palmares }, { merge: true });
           retirados.push(premiado);
         } catch {
           /* ese perfil se queda como está; el resto no paga por él. */

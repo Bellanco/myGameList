@@ -335,6 +335,21 @@ describe('el nick no decide nada', () => {
     expect(palmaresDe('uid-1')).toEqual([]);
   });
 
+  // Dar o quitar un trofeo lo hace el administrador, no su dueño: no puede contar como actividad. `updatedAt` es lo
+  // que ordena el directorio social y decide quién es «reciente», y además se escribía como número, que Firestore
+  // ordena antes que las fechas.
+  it('dar y quitar el trofeo no toca la fecha de actividad del perfil', async () => {
+    state.premiosCategories = [category('cat1')];
+    state.premiosBallots = [ballot('uid-1', 'Ana', 'cat1_option_0')];
+    state.profiles = [{ id: 'uid-1', data: { uid: 'uid-1', displayName: 'Ana', updatedAt: 'fecha-del-latido' } }];
+
+    await publishAndArchiveSeason({ season: 2026, seasonId: 'test', seasonName: 'Test' });
+    expect(leer('profiles', 'uid-1')?.data.updatedAt).toBe('fecha-del-latido');
+
+    await revokePalmares('test');
+    expect(leer('profiles', 'uid-1')?.data.updatedAt).toBe('fecha-del-latido');
+  });
+
   it('un perfil que no existe no recibe nada y no rompe la concesión del resto', async () => {
     state.profiles = [{ id: 'uid-2', data: { uid: 'uid-2' } }];
 
