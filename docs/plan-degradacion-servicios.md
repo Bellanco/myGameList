@@ -45,7 +45,7 @@ con el cupo agotado (falla abierto).
    **Arreglo:** si lo que falla es el servicio (cuota, caído, sin red), no tocar lo local ni la sesión y pedir que
    se reintente; el borrado remoto es idempotente.
 
-## Fase 2 — «Modo servicio limitado» · M
+## Fase 2 — «Modo servicio limitado» · M · ✅ hecha (04-10-2026)
 
 - **Clasificador común** (`core/utils/network.ts`): cuota de Firestore (`resource-exhausted`), servicio caído
   (`unavailable`, `deadline-exceeded`, `internal`), límite de GitHub (403/429 con cabeceras o texto «rate limit»;
@@ -110,7 +110,17 @@ con el cupo agotado (falla abierto).
       sesión), posts sin duplicar (identidad best-effort tras escribir el gist), frontera solo sobre lectura buena
       y escribiendo la unión, borrado de cuenta que se detiene si el servicio no atiende. Clasificador
       `isServiceUnavailable` en `core/utils/network.ts`, listo para la Fase 2. Suite, e2e y emulador en verde.
-- [ ] Fase 2: clasificador, estado limitado, social sin bloqueo, feed y perfiles con copias, premios, GitHub.
+- [x] Fase 2 (04-10-2026), en cinco commits:
+      `59c37530` errores de servicio en tono `warn` con texto propio y aviso persistente «servicio limitado»
+      (`HubOfflineNotice variant="limited"`), sin bloquear feed ni editor; `ae71328c` feed y perfiles con copias
+      (`getSocialProfilesByUid` por uid, `listSocialDirectory`, rescate de la hidratación, lecturas parciales que no
+      se guardan, caché del feed marcada como caducada en vez de borrada); `fb48c7e3` + `33e98eec` GitHub: estado y
+      marca `rateLimited` en el error, espera compartida en `githubFetch`, el 403 por límite ya no es «conexión
+      caducada», gist de amigo y listados de amigo con su copia; `e6364155` Premios no se apaga con la API caída;
+      y la cuota de Firestore (`firestoreQuota.ts`): vista una vez, las lecturas sociales van a lo guardado hasta
+      la medianoche del Pacífico.
+      **Ajuste respecto al plan:** el aviso persistente lo retira el feed al cargar bien, aunque el perfil propio
+      haya fallado (de eso avisa el mensaje breve): lo que se ve está al día.
 - [ ] Fase 3: compartir oculto, servidor 503, página pública.
 - [ ] Fase 4: carátulas; después, «Fail open» en Pages.
 - [ ] Fase 5: menores.
