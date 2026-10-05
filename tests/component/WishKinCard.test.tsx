@@ -60,7 +60,7 @@ describe('«Ya lo tienes en casa» en tu panel', () => {
 
     // Carreras se desea y no hay nada esperando: es el hueco.
     expect(card.getByRole('heading', { name: L.gaps })).toBeInTheDocument();
-    expect(card.getByText('Carreras', { selector: '.tag-chip-text' })).toBeInTheDocument();
+    expect(card.getByText('Carreras', { selector: '.kin-gaps .chip-genre .chip-text' })).toBeInTheDocument();
   });
 
   it('con la lista de deseos oculta en Ajustes, el apartado no sale', () => {
