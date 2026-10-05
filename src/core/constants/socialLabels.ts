@@ -175,6 +175,14 @@ export const SOCIAL_UI = {
       p: 'a su biblioteca',
       d: 'a su lista de deseos',
     } as Partial<Record<TabId, string>>,
+    // EL RENGLÓN AGRUPADO (varios juegos a la misma lista el mismo día): «Ada añadió Hades y 3 más…», y la cifra
+    // despliega el resto debajo del primero.
+    moveAnd: ' y ',
+    moveMore: (count: number) => `${count} más`,
+    moveMoreAria: (count: number, expanded: boolean) => {
+      const which = count === 1 ? 'el otro juego' : `los otros ${count} juegos`;
+      return expanded ? `Ocultar ${which}` : `Ver ${which}`;
+    },
     // Solo la HORA en la tarjeta: el día ya lo dice la cabecera del grupo, y repetirlo era la línea que más peso
     // le daba a un mensaje que debe pesar poco. La fecha completa sigue disponible al pasar el ratón.
     movedAtHour: (date: Date) => date.toLocaleTimeString(APP_LOCALE, { hour: '2-digit', minute: '2-digit' }),

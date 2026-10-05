@@ -1,9 +1,10 @@
-// F4 — los movimientos de lista DENTRO del feed: mezcla, orden, filtro de quien mira y CUPO por persona y día.
+// F4 — los movimientos de lista DENTRO del feed: mezcla, orden, filtro de quien mira y AGRUPADO por persona,
+// lista y día.
 //
 // Lo importante que se fija aquí: el filtro se aplica sobre lo que el directorio ya tiene cargado, así que
 // encender o apagar una lista no puede costar ni una lectura de red; los movimientos comparten el orden por
-// fecha con las reseñas y las publicaciones, sin desplazarlas; y ninguna persona puede copar un día, que es lo
-// que el cupo protege (uno solo mueve veinte juegos en una tarde y el feed es de todos).
+// fecha con las reseñas y las publicaciones, sin desplazarlas; y ninguna persona puede copar un día: lo que mueve
+// a una lista en un día es UN renglón (uno solo mueve veinte juegos en una tarde y el feed es de todos).
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -78,6 +79,11 @@ function movedGameIds(items: ReturnType<typeof useSocialFeed>['feedItems']): num
   return items.filter((item) => item.kind === 'move').map((item) => item.gameId);
 }
 
+/** Los renglones de movimiento, cada uno con los ids de sus juegos (del más reciente al más antiguo). */
+function moveGroups(items: ReturnType<typeof useSocialFeed>['feedItems']): number[][] {
+  return items.filter((item) => item.kind === 'move').map((item) => item.games.map((game) => game.gameId));
+}
+
 beforeEach(() => {
   localStorage.clear();
 });
@@ -98,7 +104,6 @@ describe('el feed con movimientos de lista', () => {
   });
 
   it('por defecto se ven los movimientos de las cuatro listas', () => {
-    // Un día por lista: cuatro movimientos del mismo día chocarían con el cupo, que es otra cosa (más abajo).
     const { result } = renderHook(() => useSocialFeed([{
       moves: [move(1, 'c', T), move(2, 'v', T - DIA), move(3, 'e', T - 2 * DIA), move(4, 'p', T - 3 * DIA)],
     }]));
@@ -107,40 +112,48 @@ describe('el feed con movimientos de lista', () => {
     expect(result.current.feedItems.map((item) => item.kind)).toEqual(['move', 'move', 'move', 'move']);
   });
 
-  // ── El cupo por persona y día ────────────────────────────────────────────────────────────────────────────
-  it('de una misma persona se ven TRES movimientos por día: los tres más recientes', () => {
+  // ── El agrupado por persona, lista y día ─────────────────────────────────────────────────────────────────
+  it('lo que una persona mueve a una lista en un día es UN renglón, con todos los juegos del más reciente al más antiguo', () => {
     const { result } = renderHook(() => useSocialFeed([{
-      moves: [move(1, 'c', T), move(2, 'c', T - 1000), move(3, 'c', T - 2000), move(4, 'c', T - 3000), move(5, 'c', T - 4000)],
+      moves: [move(3, 'd', T - 2000), move(1, 'd', T), move(5, 'd', T - 4000), move(2, 'd', T - 1000), move(4, 'd', T - 3000)],
     }]));
-
-    expect(movedGameIds(result.current.feedItems)).toEqual([1, 2, 3]);
-  });
-
-  it('el cupo es de cada persona: dos amistades tienen sus tres el mismo día', () => {
-    const { result } = renderHook(() => useSocialFeed([
-      { moves: [move(1, 'c', T), move(2, 'c', T - 1000), move(3, 'c', T - 2000), move(4, 'c', T - 3000)] },
-      { moves: [move(11, 'e', T - 500, 'pid-2'), move(12, 'e', T - 1500, 'pid-2'), move(13, 'e', T - 2500, 'pid-2'), move(14, 'e', T - 3500, 'pid-2')] },
-    ]));
 
     const items = result.current.feedItems;
-    expect(items.filter((item) => item.profileId === 'pid-1')).toHaveLength(3);
-    expect(items.filter((item) => item.profileId === 'pid-2')).toHaveLength(3);
+    expect(items).toHaveLength(1);
+    // Sin tope: entran los cinco, no los tres últimos.
+    expect(moveGroups(items)).toEqual([[1, 2, 3, 4, 5]]);
+    // El renglón lleva la hora (y el resto de campos) del más reciente.
+    expect(items[0].updatedAt).toBe(T);
+    expect(movedGameIds(items)).toEqual([1]);
   });
 
-  it('el cupo se renueva cada día: lo de ayer no gasta el de hoy', () => {
+  it('cada lista va en su renglón: deseos y finalizados del mismo día no se mezclan', () => {
     const { result } = renderHook(() => useSocialFeed([{
-      moves: [
-        move(1, 'c', T), move(2, 'c', T - 1000), move(3, 'c', T - 2000), move(4, 'c', T - 3000),
-        move(5, 'c', T - DIA), move(6, 'c', T - DIA - 1000), move(7, 'c', T - DIA - 2000), move(8, 'c', T - DIA - 3000),
-      ],
+      moves: [move(1, 'd', T), move(2, 'c', T - 1000), move(3, 'd', T - 2000), move(4, 'c', T - 3000)],
     }]));
 
-    expect(movedGameIds(result.current.feedItems)).toEqual([1, 2, 3, 5, 6, 7]);
+    expect(moveGroups(result.current.feedItems)).toEqual([[1, 3], [2, 4]]);
   });
 
-  it('las reseñas y las publicaciones no cuentan para el cupo, y no tienen tope', () => {
-    // El cupo es de los movimientos y solo de ellos: una reseña se escribe, y quien escribe cinco tiene cinco
-    // cosas que decir.
+  it('cada persona va en su renglón', () => {
+    const { result } = renderHook(() => useSocialFeed([
+      { moves: [move(1, 'c', T), move(2, 'c', T - 1000)] },
+      { moves: [move(11, 'c', T - 500, 'pid-2'), move(12, 'c', T - 1500, 'pid-2')] },
+    ]));
+
+    expect(moveGroups(result.current.feedItems)).toEqual([[1, 2], [11, 12]]);
+  });
+
+  it('cada día va en su renglón: lo de ayer no se suma a lo de hoy', () => {
+    const { result } = renderHook(() => useSocialFeed([{
+      moves: [move(1, 'c', T), move(2, 'c', T - 1000), move(5, 'c', T - DIA), move(6, 'c', T - DIA - 1000)],
+    }]));
+
+    expect(moveGroups(result.current.feedItems)).toEqual([[1, 2], [5, 6]]);
+  });
+
+  it('las reseñas y las publicaciones no se agrupan, y no tienen tope', () => {
+    // Una reseña se escribe, y quien escribe cinco tiene cinco cosas que decir.
     const { result } = renderHook(() => useSocialFeed([{
       activity: [review(1, T), review(2, T - 100), review(3, T - 200), review(4, T - 300), review(5, T - 400)],
       posts: [post('p1', T - 500), post('p2', T - 600), post('p3', T - 700), post('p4', T - 800)],
@@ -150,27 +163,22 @@ describe('el feed con movimientos de lista', () => {
     const items = result.current.feedItems;
     expect(items.filter((item) => item.kind === undefined)).toHaveLength(5);
     expect(items.filter((item) => item.kind === 'post')).toHaveLength(4);
-    expect(items.filter((item) => item.kind === 'move')).toHaveLength(3);
+    expect(moveGroups(items)).toEqual([[6, 7, 8, 9]]);
   });
 
-  it('el cupo se cuenta DESPUÉS del filtro de listas: se ven tres de lo que se mira', () => {
-    // Quien solo quiere ver «finalizó» ve sus tres de ese día, no los tres primeros de un día en el que la
-    // persona movió veinte juegos a otras listas.
+  it('el agrupado va DESPUÉS del filtro de listas: un renglón solo cuenta juegos de lo que se mira', () => {
     localStorage.setItem('mis-listas-feed-move-tabs', 'c');
     const { result } = renderHook(() => useSocialFeed([{
-      moves: [
-        move(1, 'e', T), move(2, 'e', T - 1000), move(3, 'e', T - 2000), move(4, 'e', T - 3000),
-        move(5, 'c', T - 4000), move(6, 'c', T - 5000), move(7, 'c', T - 6000),
-      ],
+      moves: [move(1, 'e', T), move(2, 'e', T - 1000), move(5, 'c', T - 4000), move(6, 'c', T - 5000)],
     }]));
 
-    expect(movedGameIds(result.current.feedItems)).toEqual([5, 6, 7]);
+    expect(moveGroups(result.current.feedItems)).toEqual([[5, 6]]);
   });
 
-  it('el día del cupo es el de QUIEN MIRA, el mismo que titula el grupo', () => {
+  it('el día del agrupado es el de QUIEN MIRA, el mismo que titula el grupo', () => {
     vi.stubEnv('TZ', 'Europe/Madrid');
-    // 00:30 y 00:10 del 12 en Madrid (22:30 y 22:10 del 11 en UTC) y 23:50 del 11 en Madrid (21:50 en UTC): en
-    // UTC los tres caen el día 11 y uno se quedaría fuera con cupo de 2; en Madrid son dos días distintos.
+    // 00:30 y 00:10 del 12 en Madrid (22:30 y 22:10 del 11 en UTC) y 23:50 y 23:40 del 11 en Madrid: en UTC los
+    // cuatro caen el día 11 y saldrían en un solo renglón; en Madrid son dos días distintos.
     const moves = [
       move(1, 'c', Date.parse('2026-08-11T22:30:00.000Z')),
       move(2, 'c', Date.parse('2026-08-11T22:10:00.000Z')),
@@ -179,12 +187,10 @@ describe('el feed con movimientos de lista', () => {
     ];
     const { result } = renderHook(() => useSocialFeed([{ moves }]));
 
-    // Los cuatro entran: contados en UTC serían cuatro del día 11 y el cupo se habría comido uno.
-    expect(result.current.feedItems).toHaveLength(4);
     const grupos = result.current.groupedFeedItems;
     expect(grupos.map((grupo) => grupo.dayHeader)).toEqual(['12 de agosto', '11 de agosto']);
-    expect(movedGameIds(grupos[0].items)).toEqual([1, 2]);
-    expect(movedGameIds(grupos[1].items)).toEqual([3, 4]);
+    expect(moveGroups(grupos[0].items)).toEqual([[1, 2]]);
+    expect(moveGroups(grupos[1].items)).toEqual([[3, 4]]);
     vi.unstubAllEnvs();
   });
 

@@ -62,6 +62,20 @@ export type SocialMoveFeedItem = SocialMoveEntry & SocialFeedAuthor & {
   reviewActorId?: string;
 };
 
+/** Un juego dentro del renglón agrupado: lo justo para nombrarlo y, si tiene reseña, abrirla. */
+export type SocialMoveGroupGame = Pick<SocialMoveFeedItem, 'id' | 'gameId' | 'gameName' | 'reviewActorId' | 'updatedAt'>;
+
+/**
+ * El renglón de movimientos de lista que pinta el feed: los de una persona, a una lista y en un día, JUNTOS (como
+ * los logros). Lleva los campos del más reciente —su hora es la del renglón— y en `games` todos los del grupo, del
+ * más reciente al más antiguo; con uno solo, el renglón es el de siempre.
+ */
+export type SocialMoveFeedGroup = SocialMoveFeedItem & {
+  /** `<profileId>|<lista>|<AAAA-MM-DD>`: estable mientras el grupo crece, para la clave de render. */
+  groupKey: string;
+  games: SocialMoveGroupGame[];
+};
+
 /**
  * Elemento del feed COMBINADO. `kind` es el discriminante: las publicaciones lo llevan a `'post'` y la actividad
  * no lo lleva (declarado `kind?: undefined` para que TypeScript pueda estrechar la unión con `entry.kind === 'post'`).
@@ -69,7 +83,7 @@ export type SocialMoveFeedItem = SocialMoveEntry & SocialFeedAuthor & {
 export type SocialFeedItem =
   | (SocialActivityFeedItem & { kind?: undefined })
   | (SocialPostFeedItem & { kind: 'post' })
-  | (SocialMoveFeedItem & { kind: 'move' })
+  | (SocialMoveFeedGroup & { kind: 'move' })
   | (AchievementFeedEntry & { kind: 'achievements' })
   | (YearSummaryFeedEntry & { kind: 'yearSummary' });
 
@@ -105,19 +119,6 @@ const NO_FRIENDS: ReadonlySet<string> = new Set();
 /** Clave de TU línea base cuando todavía no se sabe tu uid. */
 const OWN_BASELINE_KEY = 'me';
 
-/**
- * Cupo de mensajes de lista por AUTOR y DÍA. Las reseñas y las publicaciones no cuentan para él y no tienen tope:
- * una reseña se escribe, y quien escribe cinco tiene cinco cosas que decir.
- *
- * Existe porque los movimientos son baratos de generar —mover diez juegos en una tarde es un minuto de trabajo— y
- * el feed es común: sin cupo, una sola persona ordenando su biblioteca tapaba el día entero de todas las demás.
- *
- * Es un filtro de LECTURA, como el de listas: recorta lo que el feed pinta, no lo que el canal publica. De ahí que
- * valga desde el primer momento para lo que ya está publicado —el de todo el mundo, sin republicar nada— y que
- * subirlo o bajarlo mañana no obligue a tocar ningún gist.
- */
-const MOVES_PER_AUTHOR_DAY = 3;
-
 /** Tope de elementos que se mezclan y ordenan; más allá, el feed no los pinta ni paginando. */
 const FEED_MAX_ITEMS = 300;
 
@@ -132,36 +133,46 @@ export function hasRenderableTimestamp(value: unknown): boolean {
 }
 
 /**
- * Se queda con los `MOVES_PER_AUTHOR_DAY` mensajes más recientes de cada autor en cada día.
+ * Junta los movimientos de cada persona por LISTA y DÍA en un solo renglón, como los logros: quien añade cinco
+ * juegos a su lista de deseos en una tarde es UNA noticia, no cinco. Entran todos los juegos del día, así que no
+ * hace falta tope: como mucho sale un renglón por lista y persona y día.
+ *
+ * Es de LECTURA, como el filtro de listas: no toca lo que el canal publica, así que vale desde el primer momento
+ * para lo ya publicado —el de todo el mundo— sin republicar nada.
  *
  * El día es el de QUIEN MIRA (`localDayKey`, hora local), el mismo con el que el feed titula sus grupos: contarlo
- * en otro huso dejaría cabeceras con cuatro mensajes de la misma persona o con dos.
+ * en otro huso juntaría bajo la cabecera de hoy un juego de ayer. Se ordena aquí y no se confía en el orden de
+ * entrada porque el directorio llega por perfiles; el desempate por `id` mantiene estable cuál encabeza el grupo
+ * cuando dos comparten instante (dos juegos movidos en la misma operación).
  *
- * Se ordena aquí y no se confía en el orden de entrada porque el directorio llega por perfiles: el recorte tiene
- * que quedarse con los ÚLTIMOS del día, y para eso hay que verlos ordenados. El desempate por `id` mantiene la
- * elección estable entre renders cuando dos mensajes comparten instante (un juego movido en la misma operación).
- *
- * Los mensajes con fecha inválida se dejan pasar: los descarta `hasRenderableTimestamp` al mezclar, y filtrarlos
+ * Los mensajes con fecha inválida se quedan solos: los descarta `hasRenderableTimestamp` al mezclar, y filtrarlos
  * dos veces solo repartiría la misma decisión en dos sitios.
  */
-function capMovesPerAuthorDay(moves: SocialMoveFeedItem[]): SocialMoveFeedItem[] {
-  const perAuthorDay = new Map<string, number>();
+function groupMovesByAuthorTabDay(moves: SocialMoveFeedItem[]): SocialMoveFeedGroup[] {
+  const groups = new Map<string, SocialMoveFeedGroup>();
 
-  return [...moves]
+  [...moves]
     .sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id))
-    .filter((move) => {
+    .forEach((move) => {
       const dayKey = localDayKey(new Date(move.updatedAt));
-      if (!dayKey) {
-        return true;
+      const groupKey = dayKey ? `${move.profileId}|${move.tab}|${dayKey}` : `${move.profileId}|${move.socialGistId}|${move.id}`;
+      const game: SocialMoveGroupGame = {
+        id: move.id,
+        gameId: move.gameId,
+        gameName: move.gameName,
+        reviewActorId: move.reviewActorId,
+        updatedAt: move.updatedAt,
+      };
+      const group = groups.get(groupKey);
+      if (group) {
+        group.games.push(game);
+      } else {
+        // El primero que llega es el más reciente (van ordenados): encabeza el grupo y pone su hora.
+        groups.set(groupKey, { ...move, groupKey, games: [game] });
       }
-      const key = `${move.profileId}|${dayKey}`;
-      const used = perAuthorDay.get(key) || 0;
-      if (used >= MOVES_PER_AUTHOR_DAY) {
-        return false;
-      }
-      perAuthorDay.set(key, used + 1);
-      return true;
     });
+
+  return [...groups.values()];
 }
 
 // Sigue la zona horaria vigente, igual que el agrupado por día (`localDayKey`/`startOfLocalDay`): con un
@@ -266,13 +277,12 @@ export function useSocialFeed(
     const visibleTabs = new Set(moveTabs.filter((tab) => TAB_ORDER.includes(tab)));
     const moves = visibleTabs.size === 0
       ? []
-      : capMovesPerAuthorDay(
+      : groupMovesByAuthorTabDay(
         directory
           .flatMap((entry) => entry.moves || [])
           .filter((move) => visibleTabs.has(move.tab)),
       )
-        // El cupo se aplica DESPUÉS del filtro de listas: quien solo mira «finalizó» ve sus tres de ese día, no
-        // los tres primeros de un día en el que la persona movió veinte juegos a otras listas.
+        // El agrupado va DESPUÉS del filtro de listas: un renglón cuenta solo juegos de una lista que se mira.
         .map((move) => ({ ...move, kind: 'move' as const }));
 
     // LOGROS: una entrada por persona y DÍA, con todos sus logros de ese día dentro (§8.4). No cuesta una
