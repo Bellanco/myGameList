@@ -35,6 +35,10 @@ que se abre la edición siguiente.
   géneros que deseas sin nada esperando. Solo en tu panel, y solo con la lista de deseos a la vista.
 - **Tus publicaciones, desde tu perfil**: un botón «Publicaciones» las lista y, sobre las tuyas, deja editarlas
   (conservan su fecha y llevan la marca «editado») y borrarlas.
+- **El nombre entero de un juego al pasar por encima**, en el mosaico, cuando no cabe en su caja. Se despliega en su
+  sitio, con la letra del tema y sin mover la rejilla; también al llegar con el teclado.
+- **En la ficha de un amigo, sus logros más recientes primero**, y debajo una línea fina con la parte del catálogo
+  que lleva conseguida.
 
 ### Changed
 - **Premios: los votos de cada uno se ven hasta que se abre la edición siguiente**, en vez de hasta que el
@@ -50,6 +54,13 @@ que se abre la edición siguiente.
   sistema grande.
 - **En las mancuernas de Estadísticas, dos valores iguales se ven como un punto partido** en los dos colores, en vez
   de taparse el uno al otro.
+- **Los textos legales, en un registro formal** y sin detalles que caducan solos (cifras, rutas de menú). Dicen lo
+  mismo que antes, así que no hay que volver a aceptarlos.
+- **La foto de la cabecera de un perfil se ve nítida** en las pantallas de alta densidad.
+- **Las estadísticas de un amigo y la portada de Premios ya no enseñan avisos de cupo**: cada uno ve lo que tiene,
+  sin promesas de más.
+- **Las excepciones de la cuenta de administración las decide su permiso de administrador**, en la app y en el
+  servidor, igual que ya hacían las reglas y el panel.
 
 ### Fixed
 - **Estadísticas ya no se sale de ancho en los teléfonos más estrechos**: los globos de «Evolución de tus listas» se
@@ -58,10 +69,19 @@ que se abre la edición siguiente.
 - **El tour de primeros pasos ya no promete lo que no es**: «con el nombre y la nota basta» no era cierto en
   ninguna lista, y «el dado elige por ti» fallaba si el primer juego iba a Deseados (el dado sortea entre tus
   próximos).
+- **«Ajustes de vídeo» se consigue aunque vuelvas al tema de casa**: solo contaba si al mirar tus logros seguías con
+  otro tema puesto.
+- **En la ficha de un amigo, los nombres de sus juegos** salían en una línea cortada en seco, con otro tamaño y en
+  color de enlace.
+- **Panel de administración:** «Enlaces activos» ya no dice «0+» cuando el servicio de enlaces no responde, y el
+  catálogo de logros dice «No se publica» en los primeros pasos en vez de un 0 % que parecía un fallo.
 
 ### Deploy
 - **Las reglas de Firestore de esta versión ya están desplegadas** (05-10-2026): las de la lista de deseos
   (`showWishlist` y `feedMoveTabs` hasta 5 letras) y las de los votos de Premios (`premiosReveal` y la votación).
+  Comprobado el mismo día: las reglas y los índices publicados coinciden con los del repositorio.
+- **`/api/cover-quota` pide ahora el claim `admin`** en vez de leer el perfil: quien levanta el cupo de carátulas
+  tiene que tenerlo en su token (`scripts/set-admin-claim.mjs`).
 - La lista de deseos sale entera en esta versión. Un dispositivo que aún tenga la anterior en caché puede quitar
   los deseos del gist durante un rato; los repone el siguiente ciclo de sincronización de quien los apuntó. Abrir
   cada dispositivo una vez antes de apuntar deseos lo evita (ver `docs/plan-lista-deseos.md`).
