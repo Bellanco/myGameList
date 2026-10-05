@@ -54,11 +54,13 @@ que se abre la edición siguiente.
 - **Estadísticas ya no se sale de ancho en los teléfonos más estrechos**: los globos de «Evolución de tus listas» se
   salían del gráfico y ensanchaban la página a 320 px con el texto grande.
 - **Premios:** cada tarjeta del podio lleva su metal, y la del oro ya no sale transparente.
+- **El tour de primeros pasos ya no promete lo que no es**: «con el nombre y la nota basta» no era cierto en
+  ninguna lista, y «el dado elige por ti» fallaba si el primer juego iba a Deseados (el dado sortea entre tus
+  próximos).
 
 ### Deploy
-- ⚠️ **Hay que desplegar `firestore.rules` antes que la app.** Lo de la lista de deseos (`showWishlist` y
-  `feedMoveTabs` hasta 5 letras) ya está desplegado desde el 05-10-2026, pero el cambio de los votos de Premios
-  (`premiosReveal` y la votación) es posterior y todavía no.
+- **Las reglas de Firestore de esta versión ya están desplegadas** (05-10-2026): las de la lista de deseos
+  (`showWishlist` y `feedMoveTabs` hasta 5 letras) y las de los votos de Premios (`premiosReveal` y la votación).
 - La lista de deseos sale entera en esta versión. Un dispositivo que aún tenga la anterior en caché puede quitar
   los deseos del gist durante un rato; los repone el siguiente ciclo de sincronización de quien los apuntó. Abrir
   cada dispositivo una vez antes de apuntar deseos lo evita (ver `docs/plan-lista-deseos.md`).
