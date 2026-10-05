@@ -615,7 +615,7 @@ function SocialProfileDetailScreenBase({
         </div>
         <article className="hub-feed-card hub-feed-card-detail">
           <div className="hub-profile-hero">
-            <HubAvatar photoURL={activeProfileDetail.photoURL} sizeClass="hub-avatar-lg" />
+            <HubAvatar photoURL={activeProfileDetail.photoURL} sizeClass="hub-avatar-lg" highDensity />
             <h3 className="hub-profile-hero-name">{activeProfileDetail.displayName}</h3>
             {/* AQUÍ NO VA EL SELLO DE RANGO. En el perfil de otra persona el rango no se enseña por ahora; en el
                 directorio sigue estando la muesca de color de la tarjeta, que es la que sirve para recorrer la

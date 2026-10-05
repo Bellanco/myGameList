@@ -5,7 +5,7 @@
 // Lo que sí queda cubierto de ese camino es su efecto visible, en `tests/component/HubAvatar.test.tsx`, con URLs
 // inventadas y la respuesta simulada.
 import { describe, expect, it } from 'vitest';
-import { getKnownPhotoVerdict, isKnownDefaultPhotoURL } from '../../src/core/social/googlePhoto';
+import { getKnownPhotoVerdict, googlePhotoAtSize, isKnownDefaultPhotoURL } from '../../src/core/social/googlePhoto';
 
 describe('isKnownDefaultPhotoURL', () => {
   // Los defaults ANTERIORES al monograma sí se reconocen por la URL, sin pedir nada al servidor.
@@ -37,5 +37,24 @@ describe('getKnownPhotoVerdict', () => {
   // Sin veredicto no se inventa uno: es lo que deja a los saneos esperar en vez de sellar una URL sin mirarla.
   it('sin veredicto responde "no se sabe", no "no es genérica"', () => {
     expect(getKnownPhotoVerdict('https://lh3.googleusercontent.com/a/ACg8ocEJEMPLO=s96-c')).toBeUndefined();
+  });
+});
+
+describe('googlePhotoAtSize', () => {
+  it('cambia solo el lado del sufijo y conserva el recorte', () => {
+    expect(googlePhotoAtSize('https://lh3.googleusercontent.com/a/ACg8ocEJEMPLO=s96-c', 192))
+      .toBe('https://lh3.googleusercontent.com/a/ACg8ocEJEMPLO=s192-c');
+    expect(googlePhotoAtSize('https://lh5.googleusercontent.com/a/ACg8ocEJEMPLO=s96', 288))
+      .toBe('https://lh5.googleusercontent.com/a/ACg8ocEJEMPLO=s288');
+  });
+
+  // Las reglas aceptan cualquier `https` en `photoURL`: inventarle un tamaño a otro servidor pediría una imagen que
+  // no existe, y el avatar caería a la silueta en las pantallas retina.
+  it('no toca lo que no es un avatar de Google con sufijo de tamaño', () => {
+    expect(googlePhotoAtSize('https://avatars.githubusercontent.com/u/1?v=4', 192)).toBeNull();
+    expect(googlePhotoAtSize('https://lh3.googleusercontent.com/a/ACg8ocSinSufijo', 192)).toBeNull();
+    expect(googlePhotoAtSize('https://example.com/lh3.googleusercontent.com/a/x=s96-c', 192)).toBeNull();
+    expect(googlePhotoAtSize('', 192)).toBeNull();
+    expect(googlePhotoAtSize(undefined, 192)).toBeNull();
   });
 });

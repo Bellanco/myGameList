@@ -9,6 +9,11 @@ function iconHref(container: HTMLElement): string | null {
 }
 
 describe('HubAvatar', () => {
+  afterEach(() => {
+    resetPhotoVerdicts();
+    vi.unstubAllGlobals();
+  });
+
   it('muestra la foto cuando hay photoURL válida', () => {
     const { container } = render(<HubAvatar photoURL="https://example.com/a.jpg" />);
     const img = container.querySelector('img.hub-avatar-img') as HTMLImageElement | null;
@@ -40,6 +45,37 @@ describe('HubAvatar', () => {
 
     expect(clases(primera.container.querySelector('.hub-avatar'))).toBe(clases(segunda.container.querySelector('.hub-avatar')));
     expect(clases(primera.container.querySelector('.hub-avatar'))).not.toMatch(/hub-avatar--\d/);
+  });
+
+  // LA FOTO DEL PERFIL EN RETINA: Google la sirve a 96 px y el avatar grande ocupa 144 píxeles reales a densidad
+  // doble. Solo el que lo pide recibe el `srcset`; el resto de avatares sigue con una sola URL.
+  // La detección de genérica pide la foto: se le responde con un JPEG (foto real) para que no salga a la red.
+  const fotoReal = () => {
+    vi.stubGlobal('fetch', () => Promise.resolve({
+      ok: true,
+      headers: new Headers({ 'content-type': 'image/jpeg' }),
+      blob: () => Promise.resolve({ size: 3985 } as Blob),
+    } as unknown as Response));
+  };
+
+  it('con highDensity ofrece 2x y 3x de la misma foto de Google', () => {
+    fotoReal();
+    const foto = 'https://lh3.googleusercontent.com/a/ACg8ocFoto=s96-c';
+    const { container } = render(<HubAvatar photoURL={foto} sizeClass="hub-avatar-lg" highDensity />);
+    const img = container.querySelector('img.hub-avatar-img');
+    expect(img?.getAttribute('src')).toBe(foto);
+    expect(img?.getAttribute('srcset')).toBe(
+      `${foto} 1x, https://lh3.googleusercontent.com/a/ACg8ocFoto=s192-c 2x, https://lh3.googleusercontent.com/a/ACg8ocFoto=s288-c 3x`,
+    );
+  });
+
+  it('sin highDensity, o con una URL que no es de Google, no hay srcset', () => {
+    fotoReal();
+    const google = render(<HubAvatar photoURL="https://lh3.googleusercontent.com/a/ACg8ocFoto=s96-c" />);
+    expect(google.container.querySelector('img.hub-avatar-img')?.hasAttribute('srcset')).toBe(false);
+
+    const ajena = render(<HubAvatar photoURL="https://example.com/a.jpg" highDensity />);
+    expect(ajena.container.querySelector('img.hub-avatar-img')?.hasAttribute('srcset')).toBe(false);
   });
 
   it('aplica el sizeClass a la silueta', () => {
