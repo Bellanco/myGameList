@@ -1,6 +1,6 @@
 # Plan: «Ya lo tienes en casa» — los deseos frente a Próximos
 
-Estado: aprobado, sin empezar (05-10-2026). Documento vivo: si una línea no coincide con el código, manda el código.
+Estado: en curso (05-10-2026). Documento vivo: si una línea no coincide con el código, manda el código.
 Depende de la lista de deseos (`docs/plan-lista-deseos.md`).
 
 ## Qué es
@@ -55,7 +55,7 @@ saga.
 
 ## Fases
 
-- [ ] **1. El cálculo.** Módulo puro `src/core/stats/wishKin.ts` (`computeWishKin(data)` → cifra, parejas,
+- [x] **1. El cálculo.** Módulo puro `src/core/stats/wishKin.ts` (`computeWishKin(data)` → cifra, parejas,
   comparación y huecos), aparte de `computeStats`, que solo recorre la biblioteca (`LIBRARY_TAB_IDS`) y así se
   queda. Se memoiza en `useStatsViewModel`. Tests en `tests/unit/wishKin.test.ts`:
   - saga igual y por prefijo, y el mínimo de la base corta;
