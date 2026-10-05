@@ -115,6 +115,22 @@ export const coverExemptionKey = (ip: string): string => `igdb:cupo-libre:v1:${i
 export const COVER_DAILY_BUDGET = 700;
 
 /**
+ * HASTA DÓNDE DE ESE CUPO PUEDE GASTAR LO AJENO (`c=2` en `/cover`): las carátulas de la biblioteca de OTRA
+ * persona, que se resuelven mientras el contador del día esté por debajo de esto y, por encima, se quedan como
+ * «aún sin resolver».
+ *
+ * Existe porque hay bibliotecas que nadie resuelve nunca: la de quien dejó de entrar antes de que existieran las
+ * carátulas, o la de quien nunca las encendió. Con solo caché, sus juegos se quedaban sin imagen para siempre. Y
+ * resolverlos sale barato a la larga —un acierto no caduca (ver `igdbCover`), así que cada título se paga UNA vez
+ * y lo ve todo el mundo—, pero no en el día: una tarde viendo perfiles grandes son cientos de escrituras.
+ *
+ * Por qué 250 de 700: lo ajeno se resuelve sin que nadie lo haya pedido para sí, así que va DETRÁS de las
+ * bibliotecas propias, a las que siempre les quedan ~450 —más de una biblioteca grande nueva al día—. Un perfil
+ * que no quepa hoy se completa en las visitas de los días siguientes, de quien sea.
+ */
+export const COVER_DAILY_BUDGET_AJENO = 250;
+
+/**
  * Contador del día para ese tope. La fecha va en UTC igual que `dailyQuotaKey`: el día del servicio no depende
  * de dónde esté quien mira sus carátulas.
  *

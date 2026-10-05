@@ -221,8 +221,9 @@ describe('qué carátulas pide el listado', () => {
     );
   });
 
-  /* SOLO LO YA RESUELTO (`cachedOnly`), que es como se pinta la biblioteca de otra persona: la marca `c=1` hace que
-     el servidor no resuelva lo que falte, y así mirar perfiles ajenos no gasta escrituras de KV. */
+  /* LO AJENO (`cachedOnly`), que es como se pinta la biblioteca de otra persona: la marca `c=2` hace que el
+     servidor solo resuelva lo que falte dentro de la parte del cupo del día reservada a lo ajeno, y así mirar
+     perfiles no les quita escrituras de KV a las bibliotecas propias. */
   function pintaAjena(forma: 'grid' | 'list', juegos: GameItem[]) {
     localStorage.setItem('mis-listas-covers', 'on');
     localStorage.setItem('mis-listas-list-shape', forma);
@@ -241,14 +242,14 @@ describe('qué carátulas pide el listado', () => {
     );
   }
 
-  it('lo ajeno se pide con la marca de «solo caché», en todos los tamaños', () => {
+  it('lo ajeno se pide con la marca de lo ajeno, en todos los tamaños', () => {
     const ajeno = { ...juego(1, 'Celeste'), platforms: ['Nintendo Switch'] } as GameItem;
     const { container } = pintaAjena('grid', [ajeno]);
     const img = container.querySelector('.game-cover-img');
 
-    const normal = coverUrl('Celeste', ['Nintendo Switch'], false, 'normal', true);
-    const medio = coverUrl('Celeste', ['Nintendo Switch'], false, 'medio', true);
-    expect(normal).toContain('c=1');
+    const normal = coverUrl('Celeste', ['Nintendo Switch'], false, 'normal', 'ajeno');
+    const medio = coverUrl('Celeste', ['Nintendo Switch'], false, 'medio', 'ajeno');
+    expect(normal).toContain('c=2');
     expect(img?.getAttribute('src')).toBe(normal);
     expect(img?.getAttribute('srcset')).toBe(`${normal} 1x, ${medio} 2x`);
   });
@@ -258,7 +259,7 @@ describe('qué carátulas pide el listado', () => {
     const fila = container.querySelector<HTMLElement>('tr.main-row');
 
     expect(fila?.style.getPropertyValue('--row-cover')).toBe(
-      `url("${coverUrl('Celeste', ['Steam'], false, 'medio', true)}")`,
+      `url("${coverUrl('Celeste', ['Steam'], false, 'medio', 'ajeno')}")`,
     );
   });
 
@@ -274,18 +275,18 @@ describe('qué carátulas pide el listado', () => {
   });
 
   /* LA LENTE DE LA ADMINISTRACIÓN SE QUEDA EN CASA. Su espacio de claves solo lo llena su propia biblioteca, y
-     con `c=1` lo que falta no se resuelve: pedido con `x=1`, lo ajeno salía sin carátula salvo los juegos que la
+     lo ajeno no resuelve con el cupo entero: pedido con `x=1`, salía sin carátula salvo los juegos que la
      administración también tiene, aunque su dueño los viera todos. */
   it('la cuenta de administración pide lo ajeno sin el modo ampliado', () => {
     admin.es = true;
     const ajeno = { ...juego(1, 'Celeste'), platforms: ['Nintendo Switch'] } as GameItem;
     const caja = pintaAjena('grid', [ajeno]).container.querySelector('.game-cover-img');
-    expect(caja?.getAttribute('src')).toBe(coverUrl('Celeste', ['Nintendo Switch'], false, 'normal', true));
+    expect(caja?.getAttribute('src')).toBe(coverUrl('Celeste', ['Nintendo Switch'], false, 'normal', 'ajeno'));
     cleanup();
 
     const fila = pintaAjena('list', [ajeno]).container.querySelector<HTMLElement>('tr.main-row');
     expect(fila?.style.getPropertyValue('--row-cover')).toBe(
-      `url("${coverUrl('Celeste', ['Nintendo Switch'], false, 'medio', true)}")`,
+      `url("${coverUrl('Celeste', ['Nintendo Switch'], false, 'medio', 'ajeno')}")`,
     );
   });
 

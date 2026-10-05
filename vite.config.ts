@@ -15,6 +15,7 @@ import { sanitizePremiosSnapshot } from './src/core/premios/visibilitySnapshot';
 // El MISMO emparejador que usa la Pages Function, no una copia: si el servidor de desarrollo resolviera las
 // carátulas con otras reglas, probar en local no demostraría nada sobre producción.
 import {
+  buscarCandidatos,
   esIdDeCaratula,
   leerCaratulaCacheada,
   MAX_NOMBRE,
@@ -368,6 +369,10 @@ function localPremiosApi(): Plugin {
  *
  * LA CACHÉ VIVE EN UN FICHERO IGNORADO (`.covers.local.json`) en vez de en KV, por lo mismo que el aviso:
  * sobrevive al reinicio del servidor y se limpia borrando el fichero.
+ *
+ * Y ATIENDE TAMBIÉN `/api/igdb-search`, la búsqueda con la que el panel de premios elige la carátula de un nominado,
+ * sin la comprobación de administrador por lo mismo que `localTmdbApi`: aquí quien llama es quien ha levantado el
+ * servidor. Va en este gemelo y no en otro porque necesita las mismas credenciales y la misma caché del token.
  */
 function localCoverApi(): Plugin {
   const RUTA = '/cover';
@@ -437,8 +442,34 @@ function localCoverApi(): Plugin {
 
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (!req.url || req.url.split('?')[0] !== RUTA) {
+        const ruta = req.url?.split('?')[0];
+        if (!req.url || (ruta !== RUTA && ruta !== '/api/igdb-search')) {
           next();
+          return;
+        }
+        const url = new URL(req.url, 'http://localhost');
+
+        // `i=`: la carátula ya elegida, que no necesita credenciales ni caché (ver `functions/cover.ts`).
+        const elegida = ruta === RUTA ? url.searchParams.get('i') : null;
+        if (elegida !== null) {
+          if (!esIdDeCaratula(elegida)) {
+            res.statusCode = 400;
+            res.end('Identificador de carátula no válido');
+            return;
+          }
+          void fetch(urlDeImagen(elegida, tamanoPedido(url.searchParams.get('s'))))
+            .then(async (imagen) => {
+              if (!imagen.ok) throw new Error(String(imagen.status));
+              res.statusCode = 200;
+              res.setHeader('Content-Type', imagen.headers.get('Content-Type') ?? 'image/jpeg');
+              res.setHeader('Cache-Control', 'no-store');
+              res.end(Buffer.from(await imagen.arrayBuffer()));
+            })
+            .catch(() => {
+              res.statusCode = 502;
+              res.setHeader('Cache-Control', 'no-store');
+              res.end('La carátula no se pudo descargar');
+            });
           return;
         }
 
@@ -463,7 +494,28 @@ function localCoverApi(): Plugin {
           return;
         }
 
-        const url = new URL(req.url, 'http://localhost');
+        if (ruta === '/api/igdb-search') {
+          const enviar = (status: number, cuerpo: unknown): void => {
+            res.statusCode = status;
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Cache-Control', 'no-store');
+            res.end(JSON.stringify(cuerpo));
+          };
+          const consulta = (url.searchParams.get('q') ?? '').trim();
+          if (!consulta || consulta.length > MAX_NOMBRE) {
+            enviar(400, { error: 'Falta qué buscar' });
+            return;
+          }
+          void Promise.all([buscarCandidatos(env, consulta), leerCaratulaCacheada(env, consulta, [])])
+            .then(([candidatos, automatica]) =>
+              candidatos === null
+                ? enviar(503, { error: 'No se ha podido consultar IGDB; inténtalo más tarde' })
+                : enviar(200, { results: candidatos, automatic: automatica ?? null }),
+            )
+            .catch(() => enviar(502, { error: 'No se pudo atender la búsqueda en IGDB' }));
+          return;
+        }
+
         const nombre = (url.searchParams.get('n') ?? '').trim();
         if (!nombre || nombre.length > MAX_NOMBRE) {
           res.statusCode = 400;
@@ -474,7 +526,8 @@ function localCoverApi(): Plugin {
         const soloMapa = url.searchParams.get('m') === '1';
         const ampliado = url.searchParams.get('x') === '1';
         const tamano = tamanoPedido(url.searchParams.get('s'));
-        // `c=1`: solo lo ya resuelto, igual que en producción (ver `functions/cover.ts`).
+        // `c=1`: solo lo ya resuelto, igual que en producción (ver `functions/cover.ts`). `c=2`, lo ajeno, resuelve
+        // como siempre: su raya es un trozo del cupo del servicio, y aquí no hay cupo que repartir (ver arriba).
         const soloCache = url.searchParams.get('c') === '1';
 
         void (async () => {

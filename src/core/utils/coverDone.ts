@@ -153,7 +153,7 @@ export function portadaYaPedida(nombre: string): PortadaPedida | null {
   return indice.get(clave) ?? null;
 }
 
-/** Cómo pedir la carátula de un juego: con qué nombre, con qué plataformas y si con la marca de «solo caché». */
+/** Cómo pedir la carátula de un juego: con qué nombre, con qué plataformas y si con la marca de lo ajeno. */
 export interface PeticionDeCaratula {
   nombre: string;
   plataformas: readonly string[];
@@ -165,7 +165,7 @@ export interface PeticionDeCaratula {
  * descargado (`preferirConocidas`) y de ese título consta una petición anterior, se repite AQUELLA —su nombre y
  * sus plataformas—, que es la URL que el navegador tiene guardada.
  *
- * Y entonces se pide sin `c=1` aunque la lista lo pida: esa URL la resolvió el recorrido de tu propia biblioteca,
+ * Y entonces se pide sin la marca aunque la lista la pida: esa URL la resolvió el recorrido de tu propia biblioteca,
  * así que el servidor la tiene y no hay nada que gastar. Salvo en modo ampliado, que vive en otro espacio de
  * claves y del que este índice no dice nada.
  *
@@ -173,7 +173,7 @@ export interface PeticionDeCaratula {
  * agrupa con `gameTitleKey`, que borra el apóstrofe y quita el «The» inicial; la clave del servidor sale de
  * `normalizarTitulo` (`functions/_lib/igdbCover.ts`), que hace otras cosas. Con el nombre ajeno, «Marvel's X»
  * contra tu «Marvels X» era una clave que el servidor no tenía, y sin la marca se resolvía: consulta a IGDB y
- * escritura de KV por mirar una lista ajena, que es justo lo que `c=1` existe para impedir.
+ * escritura de KV por mirar una lista ajena, con el cupo entero, que es justo lo que la marca existe para acotar.
  */
 export function peticionDeCaratula(
   nombre: string,

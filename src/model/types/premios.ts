@@ -51,12 +51,46 @@ export interface PremiosTmdbCandidate {
   knownFor?: string[];
 }
 
+/**
+ * LA CARÁTULA QUE EL ADMINISTRADOR ELIGIÓ para un nominado de una categoría de JUEGOS, cuando la automática no es
+ * la buena. Un nominado es solo un nombre, y entre dos fichas que se llaman igual —el *Ocarina of Time* de N64 y
+ * su remake de Switch 2— el emparejamiento se queda con la más votada. Se elige a mano en el panel (ver
+ * `functions/api/igdb-search.ts`) y se sirve por `/cover?i=`, sin emparejar nada.
+ *
+ * Va en su propio campo y no en `image` para que las dos sobrevivan a un cambio de tipo de la categoría: cada una
+ * se pinta solo en el suyo (ver `nomineeImageUrls`).
+ */
+export interface PremiosNomineeCover {
+  source: 'igdb';
+  /** `image_id` de la carátula en IGDB: es lo que pide `/cover?i=`. */
+  imageId: string;
+  /** Id y nombre de la ficha en IGDB, para saber qué se eligió. */
+  gameId: number;
+  name: string;
+}
+
+/**
+ * Un candidato de la búsqueda de IGDB, tal y como lo enseña el panel para elegir. Es el contrato de
+ * `functions/api/igdb-search.ts` (su `CandidatoIgdb`, en `functions/_lib/igdbCover.ts`).
+ */
+export interface PremiosIgdbCandidate {
+  id: number;
+  name: string;
+  coverId: string;
+  year?: string;
+  platforms: string[];
+  /** El `game_type` de IGDB: 0 juego, 8 remake, 9 remaster, 11 port… */
+  gameType?: number;
+}
+
 /** Un nominado, en su forma actual: id estable + nombre único. */
 export interface PremiosOption {
   id: string;
   name: string;
   /** Solo en las categorías que no son de juegos, y solo si el administrador la eligió. */
   image?: PremiosNomineeImage;
+  /** Solo en las categorías de juegos, y solo si el administrador la eligió en vez de la automática. */
+  cover?: PremiosNomineeCover;
 }
 
 /**

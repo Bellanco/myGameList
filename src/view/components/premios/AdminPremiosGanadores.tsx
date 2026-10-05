@@ -3,7 +3,7 @@ import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { archivableCategories, getValidWinnerId } from '../../../core/premios/archivable';
 import { getCategoryTitle, getOptionId, tField } from '../../../core/premios/localize';
 import { hasGameCovers } from '../../../core/premios/nomineeKind';
-import { nomineeImageOf } from '../../../core/premios/nomineeImage';
+import { nomineeCoverOf, nomineeImageOf } from '../../../core/premios/nomineeImage';
 import { fetchWinners, saveWinners } from '../../../model/repository/premios/premiosWinnersRepository';
 import type { PremiosCategory, PremiosOption, PremiosWinnersMap } from '../../../model/types/premios';
 import { NomineeCard } from './NomineeCard';
@@ -119,10 +119,12 @@ export function AdminPremiosGanadores({ categories, busy, ejecutar }: AdminPremi
 
                     {(category.options || []).map((option, index) => {
                       const image = nomineeImageOf(option);
+                      const cover = nomineeCoverOf(option);
                       const nominado: PremiosOption = {
                         id: getOptionId(option, category.id, index),
                         name: tField(option),
                         ...(image ? { image } : {}),
+                        ...(cover ? { cover } : {}),
                       };
                       const elegido = ganador === nominado.id;
                       return (

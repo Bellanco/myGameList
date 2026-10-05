@@ -5,7 +5,10 @@ import { peticionDeCaratula } from '../../../core/utils/coverDone';
 import { useCovers } from '../../hooks/useCovers';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
 
-/** `true` = pedir como siempre; `'solo-cache'` = solo lo ya resuelto, sin preguntar a IGDB; `false` = nada. */
+/**
+ * `true` = pedir como siempre; `'solo-cache'` = lo ajeno, que se resuelve solo con la parte del cupo del día
+ * reservada a lo ajeno (`c=2`, ver `functions/cover.ts`); `false` = nada.
+ */
 export type CoverAccess = boolean | 'solo-cache';
 
 /**
@@ -20,10 +23,11 @@ export type CoverAccess = boolean | 'solo-cache';
  *  1. La PREFERENCIA de quien mira, que viene apagada de fábrica: encenderla es lo que autoriza a que el
  *     servidor pregunte por títulos a IGDB, y sin ella aquí no sale ni una petición.
  *  2. `acceso`, que es la política del sitio donde se pinta (`CoverAccess`). En TUS reseñas es `true` y manda
- *     solo tu preferencia. En el hub social es `'solo-cache'`: se ve lo que el servidor ya tenga resuelto y lo
- *     que falte se queda sin imagen, porque resolver el catálogo de otra persona es lo que escribe en KV y ese
- *     presupuesto es el de los enlaces compartidos. Es la MISMA regla que sigue su tabla de juegos
- *     (`cachedOnly` en `SocialProfileDetailScreen`).
+ *     solo tu preferencia. En el hub social es `'solo-cache'`: se ve lo que el servidor ya tenga resuelto, y lo
+ *     que falte solo se resuelve mientras quede la parte del cupo del día reservada a lo ajeno; si no, se queda
+ *     sin imagen hasta otro intento. Resolver el catálogo de otra persona es lo que escribe en KV, y ese
+ *     presupuesto lo comparten tu biblioteca y los enlaces compartidos. Es la MISMA regla que sigue su tabla de
+ *     juegos (`cachedOnly` en `SocialProfileDetailScreen`).
  *  3. Que de ese título no conste ya que no tiene carátula (`sabemosQueNoTiene`), para no volver a preguntar.
  *
  * El tamaño es el `ancho`: la franja es apaisada y recorta una banda de una imagen vertical, así que la pequeña
@@ -43,8 +47,8 @@ export function useReviewCover(
   // Solo se pregunta si puede haber carátula: si no, la respuesta no sirve de nada y preguntar no es gratis. La
   // página pública de un enlace compartido no las permite, y ahí la pregunta descargaba Firebase y, en móvil,
   // contactaba con Google en cuanto el navegador tenía el almacenamiento bloqueado (ver `useIsAdmin`).
-  // Y en lo ajeno tampoco: ese espacio aparte solo lo llena la biblioteca propia, y `c=1` no resuelve lo que
-  // falta, así que la lente dejaba sin carátula todo lo que la administración no tiene (ver `GameTable`).
+  // Y en lo ajeno tampoco: ese espacio aparte solo lo llena la biblioteca propia, y lo ajeno no resuelve con el
+  // cupo entero, así que la lente dejaba sin carátula todo lo que la administración no tiene (ver `GameTable`).
   const soloCache = acceso === 'solo-cache';
   const ampliado = useIsAdmin(permitido && !soloCache);
 
@@ -65,6 +69,6 @@ export function useReviewCover(
     // Se pregunta con la URL NORMAL —que es la que guarda el registro de fallos— y se pide la ancha: si de este
     // título no hay carátula, tampoco la habrá en otro tamaño.
     if (sabemosQueNoTiene(coverUrl(nombre, plataformas, ampliado))) return null;
-    return coverUrl(nombre, plataformas, ampliado, tamano, marca);
+    return coverUrl(nombre, plataformas, ampliado, tamano, marca ? 'ajeno' : 'resolver');
   }, [permitido, soloCache, ampliado]);
 }

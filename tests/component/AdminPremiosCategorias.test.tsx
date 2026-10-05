@@ -21,6 +21,13 @@ vi.mock('../../src/model/repository/premios/premiosTmdbRepository', () => ({
   buscarImagenesTmdb: async () => [{ kind: 'tv', id: 100088, title: 'The Last of Us', year: '2023', path: '/tNQWO6cNzQYCyvw36mUcAQQyf5F.jpg' }],
 }));
 
+vi.mock('../../src/model/repository/premios/premiosIgdbRepository', () => ({
+  buscarCaratulasIgdb: async () => ({
+    candidatos: [{ id: 9999, name: 'Elden Ring', coverId: 'co4jni', year: '2022', platforms: ['PC'], gameType: 0 }],
+    automatica: null,
+  }),
+}));
+
 vi.mock('../../src/model/repository/premios/premiosCategoriesRepository', () => ({
   saveCategory: (...args: unknown[]) => saveCategoryMock(...(args as [])),
   deleteCategory: (...args: unknown[]) => deleteCategoryMock(...(args as [])),
@@ -138,6 +145,24 @@ describe('AdminPremiosCategorias', () => {
     pintar();
     await userEvent.click(screen.getAllByRole('button', { name: L.edit })[0]);
     expect(screen.queryByRole('button', { name: L.image.searchAria(1) })).not.toBeInTheDocument();
+  });
+
+  // En las de juegos la carátula sale sola, pero se puede elegir a mano; la elegida viaja con el nominado y ese ya
+  // no se resuelve por el nombre.
+  it('en las de juegos se puede elegir la carátula, y la elegida no se resuelve al guardar', async () => {
+    pintar();
+    saveCategoryMock.mockClear();
+    resolverMock.mockClear();
+    await userEvent.click(screen.getAllByRole('button', { name: L.edit })[0]);
+
+    await userEvent.click(screen.getByRole('button', { name: L.cover.chooseAria(1) }));
+    await userEvent.click(await screen.findByRole('button', { name: /Elegir Elden Ring/ }));
+    await userEvent.click(screen.getByRole('button', { name: L.save }));
+
+    const [params] = saveCategoryMock.mock.calls[0] as unknown as [{ options: Array<{ cover?: unknown }> }];
+    expect(params.options[0].cover).toEqual({ source: 'igdb', imageId: 'co4jni', gameId: 9999, name: 'Elden Ring' });
+    expect(params.options[1].cover).toBeNull();
+    expect(resolverMock).toHaveBeenCalledWith(['Hades II']);
   });
 
   it('cada nominado es un campo propio, y se pueden añadir y quitar', async () => {

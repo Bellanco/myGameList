@@ -34,7 +34,7 @@ Todo se reinicia cada día (KV y Workers a las 00:00 UTC; Firestore a medianoche
 | Cupo gratuito | Techo | Quién lo gasta hoy |
 |---|---|---|
 | KV · *list* | **1.000/día** | `/api/share/mine` (**cada detalle de reseña propia** y Ajustes → Personalización, sin caché en el cliente), publicar (`/api/share/related` ya no lista: lee el índice por autor, Fase 2) |
-| KV · escrituras | **1.000/día** | Carátulas (tope propio de 700, `COVER_DAILY_BUDGET`) + publicar (5 por enlace desde la Fase 2) |
+| KV · escrituras | **1.000/día** | Carátulas (tope propio de 700, `COVER_DAILY_BUDGET`; lo ajeno, `c=2`, solo resuelve por debajo de 250, `COVER_DAILY_BUDGET_AJENO`, desde el 05-10-2026) + publicar (5 por enlace desde la Fase 2) |
 | Workers (Functions) | **100.000/día** | `/cover`, `/api/*`, `/r/*` (`/assets/*` y `/fonts/*` ya son estáticos, Fase 3) |
 | KV · lecturas | 100.000/día | `/cover` sin caché, avisos, premios, enlaces |
 | Firestore · lecturas | **50.000/día** | 3–4 por apertura; el social, ~110–170 por usuario medio y día y ~600–1.000 el intenso (recontado el 04-10-2026) |

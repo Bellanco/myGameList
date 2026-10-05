@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { Icon } from '../Icon';
 import { getCategoryTitle, tField } from '../../../core/premios/localize';
-import { nomineeImageOf } from '../../../core/premios/nomineeImage';
+import { nomineeCoverOf, nomineeImageOf } from '../../../core/premios/nomineeImage';
 import { hasGameCovers, NOMINEE_KINDS, nomineeKindOf } from '../../../core/premios/nomineeKind';
 import type { PremiosOptionForm } from '../../../core/premios/options';
 import {
@@ -12,6 +12,7 @@ import {
 } from '../../../model/repository/premios/premiosCategoriesRepository';
 import { resolverCaratulasDeNominados } from '../../../model/repository/premios/premiosCoversRepository';
 import type { PremiosCategory, PremiosNomineeKind } from '../../../model/types/premios';
+import { AdminPremiosCaratula } from './AdminPremiosCaratula';
 import { AdminPremiosImagen } from './AdminPremiosImagen';
 
 const L = PREMIOS_UI.admin.categories;
@@ -48,6 +49,7 @@ function borradorDe(category: PremiosCategory | null): Borrador {
     id: typeof option === 'object' && option.id ? option.id : null,
     value: tField(option),
     image: nomineeImageOf(option),
+    cover: nomineeCoverOf(option),
   }));
   while (options.length < MIN_NOMINEE_FIELDS) options.push({ id: null, value: '' });
 
@@ -118,8 +120,13 @@ export function AdminPremiosCategorias({ categories, busy, ejecutar }: AdminPrem
       // Lo que no son juegos no se busca en IGDB (ver `core/premios/nomineeKind`): ni se gasta cupo ni hay resumen.
       if (!options.length || !hasGameCovers(borrador)) return aviso;
       // Las carátulas de sus nominados, ya: la votación solo enseña lo resuelto (ver `resolverCaratulasDeNominados`).
-      const caratulas = await resolverCaratulasDeNominados(options.map((option) => option.value));
-      return `${aviso} ${PREMIOS_UI.admin.covers.summary(caratulas.conCaratula, caratulas.sinCaratula, caratulas.fallidas)}`;
+      // Las elegidas a mano no se resuelven: se piden por su id y ya están listas.
+      const elegidas = options.filter((option) => option.cover).length;
+      const caratulas = await resolverCaratulasDeNominados(
+        options.filter((option) => !option.cover).map((option) => option.value),
+      );
+      const listas = caratulas.conCaratula + elegidas;
+      return `${aviso} ${PREMIOS_UI.admin.covers.summary(listas, caratulas.sinCaratula, caratulas.fallidas)}`;
     });
 
   const eliminar = (category: PremiosCategory) => {
@@ -243,10 +250,22 @@ export function AdminPremiosCategorias({ categories, busy, ejecutar }: AdminPrem
                 }))
               }
             />
-            {/* LA IMAGEN SE ELIGE AQUÍ, en las categorías que no son de juegos. En las de juegos no hay nada que
-                elegir: la carátula sale sola de IGDB. Si una categoría vuelve a «Juegos», la imagen elegida se
-                conserva pero deja de pintarse (ver `nomineeImageUrls`). */}
-            {borrador.nomineeKind !== 'game' ? (
+            {/* LA IMAGEN SE ELIGE AQUÍ: en TMDB en las categorías que no son de juegos, y en las de juegos solo
+                si la carátula automática —la de IGDB por el nombre— no es la buena. Cada nominado conserva las
+                dos si la categoría cambia de tipo, y cada una se pinta solo en el suyo (ver `nomineeImageUrls`). */}
+            {borrador.nomineeKind === 'game' ? (
+              <AdminPremiosCaratula
+                nombre={option.value}
+                numero={index + 1}
+                cover={option.cover}
+                onChange={(cover) =>
+                  setBorrador((prev) => ({
+                    ...prev,
+                    options: prev.options.map((o, i) => (i === index ? { ...o, cover } : o)),
+                  }))
+                }
+              />
+            ) : (
               <AdminPremiosImagen
                 kind={borrador.nomineeKind}
                 nombre={option.value}
@@ -259,7 +278,7 @@ export function AdminPremiosCategorias({ categories, busy, ejecutar }: AdminPrem
                   }))
                 }
               />
-            ) : null}
+            )}
             {borrador.options.length > MIN_NOMINEE_FIELDS ? (
               <button
                 type="button"

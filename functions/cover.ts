@@ -16,7 +16,7 @@
 //
 // POR QUÉ EL NOMBRE VA EN LA CADENA DE CONSULTA Y NO EN LA RUTA: hay juegos con barra en el título
 // («Half Life / Black Mesa»), y una barra codificada dentro de una ruta la normalizan los intermediarios.
-import { COVER_DAILY_BUDGET, coverDailyQuotaKey, coverExemptionKey } from './_lib/keys';
+import { COVER_DAILY_BUDGET, COVER_DAILY_BUDGET_AJENO, coverDailyQuotaKey, coverExemptionKey } from './_lib/keys';
 import {
   apuntarSiSePuede,
   emparejarYGuardar,
@@ -42,6 +42,12 @@ const MAX_PLATAFORMAS = 200;
  *     de una visita, y la petición que se paga es una cada mes en vez de una por visita.
  */
 const CACHE_ACIERTO = 'public, max-age=2592000, stale-while-revalidate=31536000';
+
+/**
+ * LA CARÁTULA ELEGIDA (`i=`): un año e inmutable, como `/poster`. Aquí la URL no nombra un juego sino una imagen
+ * concreta de IGDB, así que su respuesta no puede mejorar: si el administrador elige otra, cambia la URL.
+ */
+const CACHE_ELEGIDA = 'public, max-age=31536000, immutable';
 /**
  * Y NADA cuando no hay carátula. Esta línea decía `max-age=3600` y costó media biblioteca: durante una ráfaga de
  * 429 se sirvieron 56 respuestas «sin carátula» falsas, y el navegador se las guardó una hora — así que aunque el
@@ -55,14 +61,15 @@ const CACHE_ACIERTO = 'public, max-age=2592000, stale-while-revalidate=31536000'
 const CACHE_FALLO = 'no-store';
 
 /**
- * «AÚN SIN RESOLVER» (`c=1`, lo ajeno) SÍ se guarda, pero poco y solo en el navegador. Es la excepción a lo de
- * arriba, y por una razón de coste: esa respuesta sale en cada visita a un perfil ajeno por cada título que su
- * dueño aún no ha resuelto, y la tabla virtualizada la vuelve a pedir cada vez que recicla una fila. Con
- * `no-store`, cien títulos pendientes eran cien invocaciones y cien lecturas de KV por visita y por scroll.
+ * «AÚN SIN RESOLVER» (`c=1` y `c=2`, lo ajeno) SÍ se guarda, pero poco y solo en el navegador. Es la excepción a
+ * lo de arriba, y por una razón de coste: esa respuesta sale en cada visita a un perfil ajeno por cada título que
+ * nadie ha resuelto aún, y la tabla virtualizada la vuelve a pedir cada vez que recicla una fila. Con `no-store`,
+ * cien títulos pendientes eran cien invocaciones y cien lecturas de KV por visita y por scroll. Con `c=2`, esa
+ * hora es además el plazo con el que lo que no cupo en el cupo del día se vuelve a intentar.
  *
  * Lo que puede tapar es poco y por poco tiempo: la carátula que el dueño resuelva en esa hora se verá en la
  * siguiente, no al momento. Y no toca a nadie más: `private` la deja fuera de cualquier caché compartida, y la
- * URL lleva `c=1`, así que ni el propio recorrido de quien mira (que pide sin la marca) se la encuentra.
+ * URL lleva la marca, así que ni el propio recorrido de quien mira (que pide sin ella) se la encuentra.
  */
 const CACHE_SIN_RESOLVER = 'private, max-age=3600';
 
@@ -169,13 +176,27 @@ async function tieneSelloDeRango(env: Env, request: Request): Promise<boolean> {
   return Boolean(await env.COVERS?.get(coverExemptionKey(ip)));
 }
 
+/** «Aún sin resolver»: lo que contesta lo ajeno cuando no hay emparejamiento y no toca resolverlo. */
+function sinResolver(): Response {
+  return new Response('Carátula aún sin resolver', {
+    status: 404,
+    headers: { 'Cache-Control': CACHE_SIN_RESOLVER, 'X-Cover': 'sin-resolver' },
+  });
+}
+
 /** Lo gastado en un contador de KV. `0` también cuando la clave no está, que es el primer uso del periodo. */
 async function gastado(env: Env, clave: string): Promise<number> {
   return Number(await env.COVERS?.get(clave)) || 0;
 }
 
-/** ¿Queda cupo para resolver un juego nuevo? Mira las DOS cuentas: la de esta IP y la del servicio entero. */
-async function quedaCupo(env: Env, request: Request): Promise<Veredicto> {
+/**
+ * ¿Queda cupo para resolver un juego nuevo? Mira las DOS cuentas: la de esta IP y la del servicio entero.
+ *
+ * Lo AJENO (`c=2`) topa antes con la del servicio, en `COVER_DAILY_BUDGET_AJENO`, y ahí el sello del rango no
+ * levanta nada: ese margen es lo que se les guarda a las bibliotecas propias, y la administración mirando
+ * perfiles se lo comería igual que cualquiera.
+ */
+async function quedaCupo(env: Env, request: Request, ajeno = false): Promise<Veredicto> {
   const ip = request.headers.get('CF-Connecting-IP') || 'desconocida';
   const hora = new Date().toISOString().slice(0, 13); // «2026-09-15T18»
   const claveIp = `igdb:cupo:v1:${ip}:${hora}`;
@@ -187,8 +208,9 @@ async function quedaCupo(env: Env, request: Request): Promise<Veredicto> {
   const [usadoIp, usadoDia] = await Promise.all([gastado(env, claveIp), gastado(env, claveDia)]);
 
   const topeIp = usadoIp >= MAX_RESOLUCIONES_HORA;
-  const topeDia = usadoDia >= COVER_DAILY_BUDGET;
+  const topeDia = usadoDia >= (ajeno ? COVER_DAILY_BUDGET_AJENO : COVER_DAILY_BUDGET);
   if (topeIp || topeDia) {
+    if (ajeno) return topeDia ? 'tope-global' : 'tope-ip';
     /* Agotado, salvo que esta IP tenga el cupo levantado (ver `/api/cover-quota`). La comprobación va AQUÍ y no
        al principio a propósito: así la lectura de más solo la paga quien ha llegado al tope, y no las miles de
        peticiones que nunca se acercan a él.
@@ -240,12 +262,29 @@ export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise
 };
 
 const atender: (contexto: { request: Request; env: Env }) => Promise<Response> = async ({ request, env }) => {
+  const url = new URL(request.url);
+
+  /* LA CARÁTULA YA ELEGIDA (`i=<image_id>`), la de un nominado de premios cuyo administrador escogió la ficha a mano
+     (ver `functions/api/igdb-search.ts`). No hay nada que emparejar: ni nombre, ni KV, ni consulta a IGDB, ni cupo;
+     solo los bytes de esa imagen, como hace `/poster` con las de TMDB. Por eso va antes que todo lo demás, incluida
+     la comprobación de credenciales, que esto no necesita. Que el id tenga forma de id es lo que impide que la URL
+     se salga de la ruta de imágenes de IGDB. */
+  const elegida = url.searchParams.get('i');
+  if (elegida !== null) {
+    if (!esIdDeCaratula(elegida)) {
+      return new Response('Identificador de carátula no válido', {
+        status: 400,
+        headers: { 'Cache-Control': 'no-store' },
+      });
+    }
+    return servirImagen(elegida, tamanoPedido(url.searchParams.get('s')), CACHE_ELEGIDA);
+  }
+
   if (!env.IGDB_CLIENT_ID || !env.IGDB_CLIENT_SECRET || !env.COVERS) {
     // Configuración incompleta: fallo nuestro, no del cliente. 501 y no 500 para distinguirlo de una avería.
     return new Response('Las carátulas no están configuradas en este entorno', { status: 501 });
   }
 
-  const url = new URL(request.url);
   const nombre = (url.searchParams.get('n') ?? '').trim();
   const plataformas = (url.searchParams.get('p') ?? '').slice(0, MAX_PLATAFORMAS);
 
@@ -284,8 +323,16 @@ const atender: (contexto: { request: Request; env: Env }) => Promise<Response> =
      enlaces de reseñas compartidas. Así, mirar perfiles ajenos no gasta ni una escritura, por muchos que se
      abran; se ve lo que ya resolvió alguien, que en la práctica es casi todo (la biblioteca de cada amigo con
      las carátulas encendidas la resuelve su propio llenado inicial).
-     El parámetro solo RESTRINGE, así que no hace falta comprobar quién lo manda: quitarlo es pedir como siempre. */
+     El parámetro solo RESTRINGE, así que no hace falta comprobar quién lo manda: quitarlo es pedir como siempre.
+     Hoy lo usan los nominados de los premios, que resuelve antes la administración (ver `NomineeCard`). */
   const soloCache = url.searchParams.get('c') === '1';
+  /* MODO «AJENO» (`c=2`), el de la biblioteca y las reseñas de otra persona en el hub social: lo ya emparejado se
+     sirve, y lo que falte se resuelve SOLO mientras el servicio no haya gastado su parte del día para lo ajeno
+     (`COVER_DAILY_BUDGET_AJENO`). Pasada esa raya contesta igual que `c=1`, «aún sin resolver», y el navegador lo
+     vuelve a intentar en una hora. Así se llenan las bibliotecas que nadie resolvió nunca —quien dejó de entrar
+     antes de que hubiera carátulas, o nunca las encendió— sin quitarles sitio a las propias.
+     Como `c=1`, solo restringe: quitarlo es pedir como siempre, con el cupo entero. */
+  const ajeno = url.searchParams.get('c') === '2';
 
   const listaPlataformas = plataformas.split(',').map((p) => p.trim()).filter(Boolean);
 
@@ -298,10 +345,7 @@ const atender: (contexto: { request: Request; env: Env }) => Promise<Response> =
     /* «Aún sin resolver», que NO es «no tiene»: por eso una cabecera que lo distingue y una caché de una hora
        y no de siete días (ver `CACHE_SIN_RESOLVER`). Va antes que el cupo para no gastar ni la lectura de sus
        contadores. */
-    return new Response('Carátula aún sin resolver', {
-      status: 404,
-      headers: { 'Cache-Control': CACHE_SIN_RESOLVER, 'X-Cover': 'sin-resolver' },
-    });
+    return sinResolver();
   }
   if (coverId === undefined) {
     /* De otra web no se RESUELVEN juegos nuevos, y la comprobación va AQUÍ y no al entrar: una carátula ya
@@ -315,7 +359,10 @@ const atender: (contexto: { request: Request; env: Env }) => Promise<Response> =
         headers: { 'Cache-Control': 'no-store' },
       });
     }
-    const veredicto = await quedaCupo(env, request);
+    const veredicto = await quedaCupo(env, request, ajeno);
+    // Lo ajeno sin cupo no es un error que el cliente tenga que gestionar: se queda sin imagen, como con `c=1`,
+    // y su hora de caché es la que espacia el siguiente intento.
+    if (veredicto !== 'adelante' && ajeno) return sinResolver();
     if (veredicto !== 'adelante') {
       /* 429 y `no-store`: es pasajero, y el cliente sabe qué hacer con él —el llenado inicial para el recorrido
          y lo retoma en la visita siguiente (ver `useCoverBackfill`)—. El `Retry-After` dice la verdad de cada
@@ -348,15 +395,19 @@ const atender: (contexto: { request: Request; env: Env }) => Promise<Response> =
     // debajo. Devolver aquí un PNG genérico obligaría a descargarlo para tapar algo que ya está pintado.
     // El plazo depende de QUIÉN pregunta: el recorrido guarda lo aprendido (`CACHE_MAPA`), el mosaico no
     // guarda nada (`CACHE_FALLO`), que es la línea que costó media biblioteca y sigue igual de intacta.
-    // Y lo AJENO (`c=1`) se guarda lo mismo que su «aún sin resolver», por la misma razón de coste: sin esto, cada
-    // título sin carátula de un amigo era una invocación y una lectura de KV por visita a su perfil y por fila
-    // reciclada. El incidente de `CACHE_FALLO` no llega aquí: el 429 y el 503 salen antes y con `no-store`, y el
-    // dueño pide su biblioteca sin la marca, así que una corrección suya nunca se encuentra esta copia.
+    // Y lo AJENO (`c=1` y `c=2`) se guarda lo mismo que su «aún sin resolver», por la misma razón de coste: sin
+    // esto, cada título sin carátula de un amigo era una invocación y una lectura de KV por visita a su perfil y
+    // por fila reciclada. El incidente de `CACHE_FALLO` no llega aquí: el 429 y el 503 salen antes y con
+    // `no-store`, y el dueño pide su biblioteca sin la marca, así que una corrección suya nunca se encuentra esta
+    // copia.
     // `X-Cover: no-tiene` firma que el 404 es ESTE dato y no cualquier 404: con Pages en «fail open», una ruta sin
     // Function devuelve el `404.html` estático, y el recorrido lo apuntaría como «no tiene» durante noventa días.
     return new Response('Sin carátula', {
       status: 404,
-      headers: { 'Cache-Control': soloMapa ? CACHE_MAPA : soloCache ? CACHE_SIN_RESOLVER : CACHE_FALLO, 'X-Cover': 'no-tiene' },
+      headers: {
+        'Cache-Control': soloMapa ? CACHE_MAPA : soloCache || ajeno ? CACHE_SIN_RESOLVER : CACHE_FALLO,
+        'X-Cover': 'no-tiene',
+      },
     });
   }
 
@@ -370,6 +421,11 @@ const atender: (contexto: { request: Request; env: Env }) => Promise<Response> =
     return new Response('Identificador de carátula inesperado', { status: 502 });
   }
 
+  return servirImagen(coverId, tamano, CACHE_ACIERTO);
+};
+
+/** Los bytes de una carátula de IGDB, desde este dominio y con la caché que toque a quien la pide. */
+async function servirImagen(coverId: string, tamano: TamanoCaratula, cacheControl: string): Promise<Response> {
   const imagen = await fetch(urlDeImagen(coverId, tamano), {
     // La respuesta de IGDB se cachea en el borde: la misma carátula la comparten todos los que tengan el juego.
     cf: { cacheTtl: 2592000, cacheEverything: true },
@@ -383,9 +439,9 @@ const atender: (contexto: { request: Request; env: Env }) => Promise<Response> =
     status: 200,
     headers: {
       'Content-Type': imagen.headers.get('Content-Type') ?? 'image/jpeg',
-      'Cache-Control': CACHE_ACIERTO,
-      // Sin `Vary`: la respuesta depende solo de la URL, y la URL ya lleva nombre y plataformas.
+      'Cache-Control': cacheControl,
+      // Sin `Vary`: la respuesta depende solo de la URL, y la URL ya lleva nombre y plataformas (o el id elegido).
       'X-Content-Type-Options': 'nosniff',
     },
   });
-};
+}

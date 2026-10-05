@@ -179,7 +179,7 @@ function CoverCollage({ urls }: { urls: string[] }) {
 
 export const YearSummary = memo(function YearSummary({ summary, voice }: YearSummaryProps) {
   const scale = useScoreScale();
-  // Mismo criterio que sus reseñas: de la estantería de otra persona solo lo que el servidor ya tenga resuelto.
+  // Mismo criterio que sus reseñas: de la estantería de otra persona, con el cupo de lo ajeno (`c=2`).
   const coverOf = useReviewCover(voice.own ? true : 'solo-cache');
   const cover = summary.best ? coverOf(summary.best.name, summary.best.platforms) : null;
   // Mismo tamaño que el renglón del listado: lo que ya viste en tu lista sale de la caché del navegador.

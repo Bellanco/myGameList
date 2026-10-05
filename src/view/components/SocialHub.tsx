@@ -553,8 +553,8 @@ const SocialHubInner = memo(function SocialHubInner({
             ownReviewGame && ownReviewText ? <ShareReviewButton game={ownReviewGame} reviewText={ownReviewText} /> : null
           }
           /* La franja de la carátula, con la misma regla que la tabla de juegos y la lista de reseñas de un
-             perfil: de la estantería de otra persona solo lo ya resuelto, sin gastar escrituras de KV, y encima
-             manda la preferencia de quien mira (ver `useReviewCover`). */
+             perfil: de la estantería de otra persona, lo ya resuelto y lo que quepa en el cupo de lo ajeno, y
+             encima manda la preferencia de quien mira (ver `useReviewCover`). */
           coversAllowed="solo-cache"
           related={(
             <RelatedReviews

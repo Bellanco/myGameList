@@ -22,11 +22,14 @@ export function coverUrl(
    */
   tamano: 'normal' | 'medio' | 'ancho' = 'normal',
   /**
-   * `c=1`: servir SOLO lo que ya esté resuelto, sin preguntarle a IGDB por lo que falte. Es como se piden las
-   * carátulas de lo ajeno en el hub social: resolver un título es lo que escribe en KV, y ese presupuesto es de
-   * la cuenta entera y lo necesitan los enlaces compartidos (ver `functions/cover.ts`).
+   * Qué hace el servidor con un título que aún no tiene emparejado. Resolverlo es lo que escribe en KV, y ese
+   * presupuesto es de la cuenta entera y lo necesitan los enlaces compartidos (ver `functions/cover.ts`):
+   *   · `resolver`: lo resuelve con el cupo entero. Tu biblioteca.
+   *   · `ajeno` (`c=2`): lo resuelve solo mientras quede la parte del cupo del día reservada a lo ajeno, y si
+   *     no, se queda sin imagen hasta otro intento. La biblioteca y las reseñas de otra persona en el hub social.
+   *   · `solo-cache` (`c=1`): nunca, sirve solo lo ya resuelto. Los nominados de los premios.
    */
-  soloCache = false,
+  siNoEstaResuelta: 'resolver' | 'ajeno' | 'solo-cache' = 'resolver',
 ): string {
   const parametros = new URLSearchParams({ n: name });
   const plataformas = platforms.filter(Boolean).join(',');
@@ -36,6 +39,17 @@ export function coverUrl(
      pasa lo mismo: el service worker cachea por URL y sin `Vary`, así que cada tamaño necesita su clave. */
   if (ampliado) parametros.set('x', '1');
   if (tamano !== 'normal') parametros.set('s', tamano);
-  if (soloCache) parametros.set('c', '1');
+  if (siNoEstaResuelta === 'solo-cache') parametros.set('c', '1');
+  if (siNoEstaResuelta === 'ajeno') parametros.set('c', '2');
+  return `/cover?${parametros.toString()}`;
+}
+
+/**
+ * La URL de una carátula ELEGIDA a mano: una imagen concreta de IGDB por su id, sin nombre que emparejar. Es la de
+ * los nominados de premios a los que el administrador les escogió la ficha (ver `PremiosNomineeCover`).
+ */
+export function coverUrlPorId(imageId: string, tamano: 'normal' | 'medio' = 'normal'): string {
+  const parametros = new URLSearchParams({ i: imageId });
+  if (tamano !== 'normal') parametros.set('s', tamano);
   return `/cover?${parametros.toString()}`;
 }

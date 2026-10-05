@@ -603,7 +603,7 @@ function SocialProfileDetailScreenBase({
                   reviews={reviews}
                   onOpenReview={onOpenReview}
                   /* MISMA REGLA QUE SU TABLA DE JUEGOS, unas líneas más abajo: de la estantería de otra persona
-                     se enseña lo que el servidor ya tenga resuelto, sin resolver nada. Encima manda la
+                     se enseña lo ya resuelto y se resuelve solo con el cupo de lo ajeno. Encima manda la
                      preferencia de quien mira, que viene apagada de fábrica (ver `useReviewCover`). */
                   coversAllowed="solo-cache"
                 />
@@ -671,13 +671,14 @@ function SocialProfileDetailScreenBase({
                     // El mismo «Ver análisis» que en tus listas, pero a la reseña de ESTE perfil en el hub: la
                     // que abre también su pestaña de reseñas.
                     reviewLink={reviewLink}
-                    /* LAS CARÁTULAS AJENAS, PARA TODOS Y SIN RESOLVER NADA. Tu biblioteca la calienta el
+                    /* LAS CARÁTULAS AJENAS, PARA TODOS Y CON SU PROPIO CUPO. Tu biblioteca la calienta el
                        recorrido de fondo una vez y ya está resuelta; la de otra persona es un catálogo entero de
-                       juegos que tú no tienes, y se multiplica por cada perfil que abras. Resolverlo gastaría
-                       escrituras de KV, que son de la cuenta entera y las necesitan los enlaces compartidos, así
-                       que aquí solo se enseña lo que el servidor YA tiene (`c=1`, ver `functions/cover.ts`): en
-                       la práctica casi todo, porque cada amigo con las carátulas encendidas resuelve su propia
-                       biblioteca. Lo que falte sale sin imagen, igual que con la preferencia apagada.
+                       juegos que tú no tienes. Resolverlo gasta escrituras de KV, que son de la cuenta entera,
+                       así que lo ajeno (`c=2`, ver `functions/cover.ts`) solo resuelve mientras quede la parte
+                       del cupo del día reservada para ello. Casi todo llega ya resuelto, porque cada amigo con
+                       las carátulas encendidas resuelve su propia biblioteca; lo que no —quien dejó de entrar
+                       antes de que hubiera carátulas, o nunca las encendió— se va resolviendo en las visitas, una
+                       vez y para todos. Lo que no quepa hoy sale sin imagen, igual que con la preferencia apagada.
                        Encima de esto sigue mandando el check de cada uno. */
                     coverPolicy={{
                       cachedOnly: true,
