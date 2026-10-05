@@ -270,6 +270,52 @@ const GRID_GAP_FLAT_PX = 14;
  * Se pregunta SIEMPRE por la normal aunque luego se pida otro tamaño: la memoria se guarda por URL y el «no» de
  * un juego no depende de a qué resolución se le pida (si la normal dio 404, la ancha también lo dará).
  */
+/**
+ * Lo que mediría el nombre SIN el recorte de dos líneas.
+ *
+ * No vale `scrollHeight`: con `-webkit-line-clamp`, Chrome cuenta las líneas escondidas pero Safari y Firefox
+ * devuelven lo mismo que la altura visible, así que allí todo parecía caber y el nombre no se desplegaba nunca.
+ * Se quita el recorte un instante —en línea, sin pintar entre medias— y se mide de verdad.
+ */
+function alturaSinRecorte(nombre: HTMLElement): number {
+  const { display, webkitLineClamp, overflow } = nombre.style;
+  nombre.style.display = 'block';
+  nombre.style.webkitLineClamp = 'unset';
+  nombre.style.overflow = 'visible';
+  const alto = nombre.offsetHeight;
+  nombre.style.display = display;
+  nombre.style.webkitLineClamp = webkitLineClamp;
+  nombre.style.overflow = overflow;
+  return alto;
+}
+
+/**
+ * Al LLEGAR a una caja (ratón o foco): si su nombre no cabe en las dos líneas, se marca para que el CSS lo
+ * despliegue, y se fija la altura de su hueco para que, al desplegarse por encima, la rejilla no se mueva.
+ */
+function marcarNombreCortado(event: { currentTarget: HTMLElement }): void {
+  const caja = event.currentTarget;
+  const nombre = caja.querySelector<HTMLElement>('.game-card-name');
+  const hueco = nombre?.parentElement;
+  if (!nombre || !hueco) return;
+  // EN ESTE ORDEN: primero se mide y luego se marca. Con la marca puesta el CSS ya lo despliega, y medirlo
+  // entonces daría la altura del nombre entero en vez la de sus dos líneas.
+  const alto = nombre.offsetHeight;
+  const cortado = alturaSinRecorte(nombre) > alto + 1 || nombre.scrollWidth > nombre.clientWidth + 1;
+  hueco.style.height = cortado ? `${alto}px` : '';
+  caja.toggleAttribute('data-name-cut', cortado);
+}
+
+/** Al IRSE: el hueco vuelve a medir lo que mida el nombre, que puede cambiar si cambia el ancho de la caja. */
+function soltarNombreCortado(event: { currentTarget: HTMLElement }): void {
+  const caja = event.currentTarget;
+  // Con el foco todavía dentro (se fue el ratón pero sigue enfocada), el nombre sigue desplegado.
+  if (caja.matches(':hover') || caja.contains(document.activeElement)) return;
+  caja.removeAttribute('data-name-cut');
+  const hueco = caja.querySelector<HTMLElement>('.game-card-name-box');
+  if (hueco) hueco.style.height = '';
+}
+
 function coverBase(covers: boolean, peticion: PeticionDeCaratula, ampliado: boolean): string | null {
   if (!covers) return null;
   const url = coverUrl(peticion.nombre, peticion.plataformas, ampliado);
@@ -1182,6 +1228,14 @@ export const GameTable = memo(function GameTable({
                                 // El tono del PRIMER género, para el tema que quiera teñir la caja con él (hoy Forja,
                                 // en el rescoldo del pie).
                                 style={game.genres?.[0] ? ({ '--card-tone': categoryToneVar(game.genres[0]) } as CSSProperties) : undefined}
+                                // ¿No le cabe el nombre? Se mide AL LLEGAR (ratón o foco) y no al pintar: es una
+                                // comparación de alturas y solo se paga en la caja que se mira. Va al DOM y no a un
+                                // estado porque no cambia nada de lo que React pinta, solo si el CSS despliega el
+                                // nombre (ver `.game-card-name.is-full`).
+                                onMouseEnter={marcarNombreCortado}
+                                onFocus={marcarNombreCortado}
+                                onMouseLeave={soltarNombreCortado}
+                                onBlur={soltarNombreCortado}
                               >
                                 {/* Toda la caja abre el detalle; el botón cubre su superficie y se queda con el
                                     foco y el nombre accesible, igual que en el bloque de reseñas del hub. */}
@@ -1226,7 +1280,15 @@ export const GameTable = memo(function GameTable({
                                   {!covers && (nota || insignia) ? (
                                     <div className="game-card-head">{nota}{insignia}</div>
                                   ) : null}
-                                  <h3 className="game-card-name" title={game.name}>{game.name}</h3>
+                                  {/* EL NOMBRE ENTERO, AL PASAR POR ENCIMA. Va a dos líneas y corte; si no cabe, al
+                                      llegar con el ratón o el teclado se despliega EL MISMO título por encima de
+                                      las etiquetas —su hueco se queda con la altura que tenía, así que la rejilla
+                                      no se mueve—. El mismo elemento y no una copia: así lleva exactamente la
+                                      letra y el color del tema. Sustituye al `title`, que tardaba un segundo en
+                                      salir y no seguía el tema. */}
+                                  <div className="game-card-name-box">
+                                    <h3 className="game-card-name">{game.name}</h3>
+                                  </div>
                                   {/* RANURAS FIJAS (plan §3.2): siempre las mismas dos líneas —plataformas y
                                       géneros—, en el mismo sitio y tenga el juego lo que tenga. Cuando le falta
                                       el dato queda el hueco tenue del `renderTags` vacío, no una caja con menos
