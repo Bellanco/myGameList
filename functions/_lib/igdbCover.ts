@@ -280,6 +280,10 @@ const FAMILIAS: Record<string, string[]> = {
   'nintendo switch': ['Switch'],
   'switch': ['Switch'],
   'nintendo switch 2': ['Switch 2'],
+  'nintendo switch2': ['Switch 2'],
+  'switch 2': ['Switch 2'],
+  'switch2': ['Switch 2'],
+  'ns2': ['Switch 2'],
   'wii': ['Wii'],
   'nintendo wii': ['Wii'],
   'wii u': ['WiiU'],
@@ -339,8 +343,23 @@ export interface FichaIgdb {
  */
 export function puntuarFicha(buscado: string, ficha: FichaIgdb): number {
   const objetivo = normalizarTitulo(buscado);
-  return puntuarContra(objetivo, bigramas(objetivo), ficha, baseSinEdicion(buscado));
+  return puntuarContra(objetivo, bigramas(objetivo), ficha, baseSinEdicion(buscado), OTRO_ALFABETO.test(buscado));
 }
+
+/**
+ * UNA LETRA QUE NO ES DEL ALFABETO LATINO. Un nombre que la lleve no se compara, salvo que el título buscado
+ * también la lleve.
+ *
+ * `normalizarTitulo` se queda solo con `a-z` y cifras, así que de un nombre en otro alfabeto BORRA las letras y
+ * deja lo demás. Escrito entero en chino o en cirílico queda vacío y no hace daño; el peligroso es el MIXTO. *Final
+ * Fantasy VII Rebirth* tiene en IGDB el alias «Final Fantasy VII 重生» —«renacer», en chino—, que normalizado es
+ * «final fantasy 7» a secas: un 1 exacto contra el *Final Fantasy VII* de una biblioteca, empatado con el original
+ * y por delante de él por votos. Así salía la carátula de Rebirth en el FF VII de Steam (medido el 05-10-2026).
+ *
+ * Las letras con tilde, la eñe y compañía SÍ son latinas (`Ōkami`, `Pokémon`, `ABZÛ`), y lo que no es letra —™,
+ * los dos puntos, las cifras— no cuenta.
+ */
+const OTRO_ALFABETO = /(?!\p{Script=Latin})\p{L}/u;
 
 /**
  * La misma puntuación, con el título buscado YA normalizado y troceado. Es la que usa el emparejador, que
@@ -353,9 +372,11 @@ function puntuarContra(
   ficha: FichaIgdb,
   /** El mismo título sin su cola de edición, ya normalizado. Ver `baseSinEdicion`. */
   baseObjetivo: string | null = null,
+  /** ¿El título buscado lleva letras de otro alfabeto? Ver `OTRO_ALFABETO`. */
+  buscadoEnOtroAlfabeto = false,
 ): number {
   const candidatos = [ficha.name, ...(ficha.alternative_names ?? []).map((alias) => alias.name)].filter(
-    (nombre): nombre is string => Boolean(nombre),
+    (nombre): nombre is string => !!nombre && (buscadoEnOtroAlfabeto || !OTRO_ALFABETO.test(nombre)),
   );
   let mejor = 0;
   for (const nombre of candidatos) {
@@ -554,6 +575,7 @@ export async function emparejar(
   const objetivo = normalizarTitulo(nombre);
   const bigramasObjetivo = bigramas(objetivo);
   const baseObjetivo = baseSinEdicion(nombre);
+  const buscadoEnOtroAlfabeto = OTRO_ALFABETO.test(nombre);
   let campeona: number[] | null = null;
   let elegida: FichaIgdb | null = null;
 
@@ -567,7 +589,7 @@ export async function emparejar(
     for (const ficha of fichas) {
       const grado = gradoDeTipo(ficha.game_type, ampliado);
       if (grado === null) continue;
-      const nota = puntuarContra(objetivo, bigramasObjetivo, ficha, baseObjetivo);
+      const nota = puntuarContra(objetivo, bigramasObjetivo, ficha, baseObjetivo, buscadoEnOtroAlfabeto);
       if (nota < 0.6) continue;
       const abreviaturas = (ficha.platforms ?? []).map((p) => p.abbreviation).filter(Boolean) as string[];
       const casa = quiero.size > 0 && abreviaturas.some((abbr) => quiero.has(abbr));

@@ -76,6 +76,18 @@ describe('puntuar una ficha contra el título buscado', () => {
     expect(puntuarFicha('Maldita Castilla', ficha)).toBe(1);
   });
 
+  /* «Final Fantasy VII 重生» es un alias de Rebirth: normalizado, las letras chinas desaparecen y queda «final
+     fantasy 7» exacto. Así salía la carátula de Rebirth en el FF VII de Steam. */
+  it('no cuenta un nombre en otro alfabeto que, normalizado, se queda en otro título', () => {
+    const rebirth = { name: 'Final Fantasy VII Rebirth', alternative_names: [{ name: 'Final Fantasy VII 重生' }] };
+    expect(puntuarFicha('Final Fantasy VII', rebirth)).toBeLessThan(1);
+  });
+
+  it('pero las letras latinas con tilde siguen contando, y el otro alfabeto también si lo trae el buscado', () => {
+    expect(puntuarFicha('Okami', { name: 'Ōkami' })).toBe(1);
+    expect(puntuarFicha('Final Fantasy VII 重生', { name: 'Final Fantasy VII 重生' })).toBe(1);
+  });
+
   it('no confunde una secuela con su original: los números no se borran nunca', () => {
     expect(puntuarFicha('Nioh', { name: 'Nioh 2' })).toBeLessThan(0.85);
     expect(puntuarFicha('Hades', { name: 'Hades II' })).toBeLessThan(0.85);
@@ -101,6 +113,12 @@ describe('plataformas', () => {
     expect([...plataformasEsperadas(['Mega Drive'])]).toEqual([...plataformasEsperadas(['Sega Mega Drive'])]);
     expect(plataformasEsperadas(['Nintendo Wii U']).has('WiiU')).toBe(true);
     expect(plataformasEsperadas(['Xbox Series X']).has('Series X')).toBe(true);
+  });
+
+  it('reconoce la Switch 2 escrita a la corta, y no la confunde con la primera', () => {
+    for (const nombre of ['Switch 2', 'switch2', 'NS2', 'Nintendo Switch 2']) {
+      expect([...plataformasEsperadas([nombre])]).toEqual(['Switch 2']);
+    }
   });
 
   it('las tiendas nuevas también son PC', () => {
@@ -238,6 +256,24 @@ describe('elegir entre candidatos', () => {
       juego({ name: 'Hook', total_rating_count: 12, platforms: [{ abbreviation: 'MegaDrive' }], cover: { image_id: 'co-md' } }),
     );
     expect((await emparejar(env(), 'Hook', ['Sega Mega Drive'])).coverId).toBe('co-md');
+  });
+
+  // El remake de Ocarina para Switch 2 se llama igual que el de N64 y aún no lo ha votado nadie: lo que lo
+  // distingue es la plataforma, escrita como la escribe la gente.
+  it('el remake con el mismo nombre gana en su plataforma aunque no tenga votos', async () => {
+    igdbResponde(
+      juego({ name: 'The Legend of Zelda: Ocarina of Time', total_rating_count: 2176, platforms: [{ abbreviation: 'N64' }], cover: { image_id: 'co-n64' } }),
+      juego({ name: 'The Legend of Zelda: Ocarina of Time', game_type: 8, total_rating_count: 0, platforms: [{ abbreviation: 'Switch 2' }], cover: { image_id: 'co-remake' } }),
+    );
+    expect((await emparejar(env(), 'The Legend of Zelda: Ocarina of Time', ['Switch 2'])).coverId).toBe('co-remake');
+  });
+
+  it('un alias en otro alfabeto no le quita el sitio al juego que se llama así', async () => {
+    igdbResponde(
+      juego({ name: 'Final Fantasy VII Rebirth', game_type: 8, total_rating_count: 166, platforms: [{ abbreviation: 'PC' }], alternative_names: [{ name: 'Final Fantasy VII 重生' }], cover: { image_id: 'co-rebirth' } }),
+      juego({ name: 'Final Fantasy VII', game_type: 11, total_rating_count: 42, platforms: [{ abbreviation: 'PC' }], cover: { image_id: 'co-original' } }),
+    );
+    expect((await emparejar(env(), 'FINAL FANTASY VII', ['Steam'])).coverId).toBe('co-original');
   });
 
   // Una expansión que exige el juego base entra (hay quien la lista aparte), pero nunca por delante del juego.
