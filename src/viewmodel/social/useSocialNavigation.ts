@@ -32,6 +32,8 @@ export interface SocialNavigation {
   openProfileDetail: (profileId: string) => void;
   openProfileReviews: (profileId: string) => void;
   closeProfileReviews: (profileId: string) => void;
+  openProfilePosts: (profileId: string) => void;
+  closeProfilePosts: (profileId: string) => void;
   openProfileReviewDetail: (profileId: string, gameId: number) => void;
   openProfileAchievements: (profileId: string) => void;
   openProfileSummary: (profileId: string) => void;
@@ -90,6 +92,13 @@ export function useSocialNavigation(navigate: NavigateFunction, pathname: string
         void navigate(generatePath(SOCIAL_ROUTES.profileReviews, { profileId }));
       },
       closeProfileReviews: (profileId) => {
+        void navigate(generatePath(SOCIAL_ROUTES.profileDetail, { profileId }));
+      },
+      // Publicaciones del perfil: el mismo par que las reseñas, y por el mismo motivo.
+      openProfilePosts: (profileId) => {
+        void navigate(generatePath(SOCIAL_ROUTES.profilePosts, { profileId }));
+      },
+      closeProfilePosts: (profileId) => {
         void navigate(generatePath(SOCIAL_ROUTES.profileDetail, { profileId }));
       },
       openProfileReviewDetail: (profileId, gameId) => {

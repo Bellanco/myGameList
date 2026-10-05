@@ -115,6 +115,7 @@ const SocialHubInner = memo(function SocialHubInner({
     selectedProfileDetail,
     profileDetailId,
     profileReviewsView,
+    profilePostsView,
     profileAchievementsView,
     profileGlobalsView,
     ownAchievements,
@@ -122,6 +123,11 @@ const SocialHubInner = memo(function SocialHubInner({
     activeProfileReview,
     openProfileReviews,
     closeProfileReviews,
+    openProfilePosts,
+    closeProfilePosts,
+    changingPostId,
+    handleEditPost,
+    handleDeletePost,
     openProfileAchievements,
     openProfileSummary,
     markOwnYearSummaryOpened,
@@ -352,6 +358,10 @@ const SocialHubInner = memo(function SocialHubInner({
     () => (profileReviewsView ? closeProfileReviews(detailId) : openProfileReviews(detailId)),
     [profileReviewsView, closeProfileReviews, openProfileReviews, detailId],
   );
+  const toggleDetailPosts = useCallback(
+    () => (profilePostsView ? closeProfilePosts(detailId) : openProfilePosts(detailId)),
+    [profilePostsView, closeProfilePosts, openProfilePosts, detailId],
+  );
   const openDetailAchievements = useCallback(
     () => openProfileAchievements(detailId),
     [openProfileAchievements, detailId],
@@ -505,6 +515,15 @@ const SocialHubInner = memo(function SocialHubInner({
           palmares={detailPalmares}
           onOpenAchievements={openDetailAchievements}
           onToggleReviews={toggleDetailReviews}
+          showPosts={profilePostsView}
+          onTogglePosts={toggleDetailPosts}
+          // Editar exige un rango que publique; borrar, no (ver `useSocialCompose`).
+          canEditPosts={canPublishPosts}
+          postMaxLength={postMaxLength}
+          showPostCounter={showPostCounter}
+          changingPostId={changingPostId}
+          onEditPost={isOwnProfileDetail ? handleEditPost : undefined}
+          onDeletePost={isOwnProfileDetail ? handleDeletePost : undefined}
           onOpenReview={openDetailReview}
           reviewLink={detailReviewLink}
           status={status}

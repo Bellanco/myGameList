@@ -11,7 +11,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // (el texto se queda). Quien comprueba que el cuadro se vacía de verdad es `FeedComposer.test.tsx`.
 
 const publishPost = vi.hoisted(() => vi.fn(async () => {}));
-vi.mock('../../src/model/repository/socialPublishRepository', () => ({ publishPost }));
+const editOwnPost = vi.hoisted(() => vi.fn(async (input: { id: string; text: string }) => ({
+  id: input.id, authorProfileId: 'p1', authorName: 'A', text: input.text, createdAt: 1, updatedAt: 1, editedAt: 99,
+}) as { id: string; text: string; editedAt?: number } | null));
+const deleteOwnPost = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock('../../src/model/repository/socialPublishRepository', () => ({ publishPost, editOwnPost, deleteOwnPost }));
 
 const { useSocialCompose } = await import('../../src/viewmodel/social/useSocialCompose');
 const { SOCIAL_UI } = await import('../../src/core/constants/socialLabels');
@@ -19,9 +23,10 @@ const { PROFILE_TIER_POST_MAX_LENGTH } = await import('../../src/core/constants/
 
 function setup(tier: 'bronze' | 'silver' | 'gold' | 'mithril' = 'silver') {
   const onPublished = vi.fn(async () => {});
+  const onPostChanged = vi.fn();
   const setFeedback = vi.fn();
-  const hook = renderHook(() => useSocialCompose({ ownTier: tier, onPublished, setFeedback }));
-  return { ...hook, onPublished, setFeedback };
+  const hook = renderHook(() => useSocialCompose({ ownTier: tier, onPublished, onPostChanged, setFeedback }));
+  return { ...hook, onPublished, onPostChanged, setFeedback };
 }
 
 beforeEach(() => {
@@ -104,3 +109,56 @@ describe('compositor de publicaciones', () => {
     expect(setup('gold').result.current.postMaxLength).toBe(PROFILE_TIER_POST_MAX_LENGTH.gold);
   });
 });
+
+describe('editar y borrar las publicaciones propias', () => {
+  it('edita con el cupo del rango ACTUAL y refleja el texto guardado sin rehidratar', async () => {
+    const { result, onPublished, onPostChanged, setFeedback } = setup('silver');
+
+    let salio: boolean | undefined;
+    await act(async () => { salio = await result.current.handleEditPost('p1:1', '  Corregido  '); });
+
+    expect(editOwnPost).toHaveBeenCalledWith({ id: 'p1:1', text: 'Corregido', maxLength: PROFILE_TIER_POST_MAX_LENGTH.silver });
+    expect(salio).toBe(true);
+    // El cambio se pinta con lo que devolvió el gist (texto saneado y su `editedAt`), no con lo tecleado.
+    expect(onPostChanged).toHaveBeenCalledWith({ kind: 'edit', id: 'p1:1', text: 'Corregido', editedAt: 99 });
+    // Nada de refresco forzado: tiene un anti-spam de 12 s que dejaría a la vista el segundo cambio seguido.
+    expect(onPublished).not.toHaveBeenCalled();
+    expect(setFeedback).toHaveBeenCalledWith('ok', SOCIAL_UI.status.postEditDone);
+  });
+
+  it('un texto sin cambios no reescribe la pantalla', async () => {
+    editOwnPost.mockResolvedValueOnce(null);
+    const { result, onPostChanged } = setup('gold');
+    await act(async () => { await result.current.handleEditPost('p1:1', 'Igual'); });
+    expect(onPostChanged).not.toHaveBeenCalled();
+  });
+
+  it('bronce no edita, pero SÍ borra lo que publicó', async () => {
+    const { result, onPostChanged } = setup('bronze');
+
+    let editado: boolean | undefined;
+    await act(async () => { editado = await result.current.handleEditPost('p1:1', 'Intento'); });
+    expect(editado).toBe(false);
+    expect(editOwnPost).not.toHaveBeenCalled();
+
+    let borrado: boolean | undefined;
+    await act(async () => { borrado = await result.current.handleDeletePost('p1:1'); });
+    expect(borrado).toBe(true);
+    expect(deleteOwnPost).toHaveBeenCalledWith({ id: 'p1:1' });
+    expect(onPostChanged).toHaveBeenCalledWith({ kind: 'delete', id: 'p1:1' });
+  });
+
+  it('si el borrado falla, avisa y la publicación sigue en pantalla', async () => {
+    deleteOwnPost.mockRejectedValueOnce(new Error('gist 403'));
+    const { result, onPostChanged, setFeedback } = setup('gold');
+
+    let borrado: boolean | undefined;
+    await act(async () => { borrado = await result.current.handleDeletePost('p1:1'); });
+
+    expect(borrado).toBe(false);
+    expect(onPostChanged).not.toHaveBeenCalled();
+    expect(setFeedback).toHaveBeenCalledWith('err', 'gist 403');
+    await waitFor(() => expect(result.current.changingPostId).toBe(''));
+  });
+});
+

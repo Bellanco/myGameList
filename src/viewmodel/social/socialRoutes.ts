@@ -14,6 +14,8 @@ export interface SocialRouteState {
   profileDetailId: string;
   /** ¿Se está en la pestaña de reseñas de ese perfil? */
   profileReviewsView: boolean;
+  /** ¿Y en la de sus publicaciones? Mismo patrón que las reseñas: vista de la ficha, pero con dirección propia. */
+  profilePostsView: boolean;
   /** ¿Se está en el listado de LOGROS de ese perfil? Mismo patrón que las reseñas y por el mismo motivo. */
   profileAchievementsView: boolean;
   /** ¿Y en el catálogo GLOBAL ordenado por rareza, con recuadro en lo que ese perfil tiene? */
@@ -30,6 +32,7 @@ export const SOCIAL_ROUTES = {
   requests: '/social/requests',
   profileDetail: '/social/profiles/:profileId',
   profileReviews: '/social/profiles/:profileId/reviews',
+  profilePosts: '/social/profiles/:profileId/posts',
   // El listado de logros de esa persona. Sub-ruta del hub y no de primer nivel (a diferencia de `/logros`, que es
   // el tuyo): sin el perfil delante, la dirección no diría de quién son.
   profileAchievements: '/social/profiles/:profileId/logros',
@@ -42,6 +45,7 @@ const EMPTY: SocialRouteState = {
   activePanel: 'feed',
   profileDetailId: '',
   profileReviewsView: false,
+  profilePostsView: false,
   profileAchievementsView: false,
   profileGlobalsView: false,
   profileReviewGameId: 0,
@@ -142,6 +146,11 @@ export function matchSocialRoute(pathname: string): SocialRouteState {
   const reviews = matchPath(SOCIAL_ROUTES.profileReviews, pathname);
   if (reviews) {
     return { ...EMPTY, activePanel: 'profile-detail', profileDetailId: decodeParam(reviews.params.profileId), profileReviewsView: true };
+  }
+
+  const posts = matchPath(SOCIAL_ROUTES.profilePosts, pathname);
+  if (posts) {
+    return { ...EMPTY, activePanel: 'profile-detail', profileDetailId: decodeParam(posts.params.profileId), profilePostsView: true };
   }
 
   const profile = matchPath(SOCIAL_ROUTES.profileDetail, pathname);

@@ -225,6 +225,21 @@ export const SOCIAL_UI = {
     reviewsBack: 'Ver perfil',
     reviewsTitle: 'Reseñas',
     reviewsEmptyProfile: 'Este perfil no ha publicado reseñas todavía.',
+    // Las publicaciones del perfil: el mismo par de botón y vuelta que las reseñas. Sobre las tuyas, editar y
+    // borrar; al editar se conserva la fecha, y la marca de «editado» es lo único que lo cuenta.
+    postsButton: 'Publicaciones',
+    postsListTitle: 'Publicaciones',
+    postEdited: 'editado',
+    postEditedTitle: (date: Date) =>
+      `Editado el ${date.toLocaleDateString(APP_LOCALE, { day: 'numeric', month: 'long', year: 'numeric' })} a las ${date.toLocaleTimeString(APP_LOCALE, { hour: 'numeric', minute: '2-digit' })}`,
+    postEdit: 'Editar',
+    postEditLabel: 'Texto de la publicación',
+    postEditSave: 'Guardar',
+    postEditSaving: 'Guardando…',
+    postEditCancel: 'Cancelar',
+    postDelete: 'Eliminar',
+    postDeleteConfirmTitle: '¿Eliminar esta publicación?',
+    postDeleteConfirmBody: 'Desaparece de tu perfil y del feed. Tus amistades pueden seguir viéndola unos minutos, hasta que se actualice su feed.',
     reviewExpand: 'Ver más',
     reviewCollapse: 'Ver menos',
     reviewOpenAria: (gameName: string) => `Abrir la reseña de ${gameName}`,
@@ -431,6 +446,14 @@ export const SOCIAL_UI = {
     // para que nadie lo dé por publicado ni lo escriba otra vez.
     postPublishOffline: 'Sin conexión: la publicación no se ha compartido. El texto sigue aquí, inténtalo al recuperar la red.',
     postPublishLimited: 'Ahora mismo no se puede publicar: el servicio no responde. El texto sigue aquí; inténtalo más tarde.',
+    postEditDone: 'Publicación actualizada.',
+    postEditFailed: 'No se pudo guardar el cambio.',
+    postEditOffline: 'Sin conexión: el cambio no se ha guardado. El texto sigue aquí, inténtalo al recuperar la red.',
+    postDeleteDone: 'Publicación eliminada.',
+    postDeleteFailed: 'No se pudo eliminar la publicación.',
+    postDeleteOffline: 'Sin conexión: la publicación no se ha eliminado. Inténtalo al recuperar la red.',
+    // Mismo caso que al publicar: GitHub limitando o caído no es un fallo de lo que el usuario ha hecho.
+    postChangeLimited: 'Ahora mismo no se puede cambiar la publicación: el servicio no responde. Inténtalo más tarde.',
     profileGamesRefreshFailed: 'No se pudieron actualizar los listados de este perfil.',
     refreshThrottled: 'Espera unos segundos antes de volver a actualizar.',
     friendRequestSent: 'Petición de amistad enviada.',

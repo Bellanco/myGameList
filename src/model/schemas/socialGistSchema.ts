@@ -86,6 +86,9 @@ const post = z.strictObject({
   text: z.string().max(POST_HARD_CEILING),
   createdAt: z.number(),
   updatedAt: z.number(),
+  // Aditivo y opcional: los posts nunca editados no lo llevan, y un cliente viejo lo pierde al reescribir (la
+  // normalización se queda solo con lo que conoce) sin perder el texto editado, que es lo que importa.
+  editedAt: z.number().optional(),
 });
 
 /**

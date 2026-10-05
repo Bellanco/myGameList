@@ -14,6 +14,7 @@ import { RouletteModal } from '../roulette/RouletteModal';
 import { buildProfilePool, profileWeight } from '../../../core/roulette/roulette';
 import { FriendshipButton } from './FriendshipButton';
 import { ProfileReviewsList } from './ProfileReviewsList';
+import { ProfilePostsList, type ProfilePostEntry } from './ProfilePostsList';
 import { ProfileAchievementStrip } from './ProfileAchievements';
 import { TAB_ORDER, UI_MESSAGES } from '../../../core/constants/labels';
 // La vitrina del palmarés: perezosa, porque casi nadie la tiene y su medalla arrastra la hoja de los logros.
@@ -150,6 +151,8 @@ type SocialProfileDetail = {
    * reescribe en bloque y deja al listado mostrando una fecha distinta de la del feed.
    */
   activity?: Array<{ type: string; gameId: number; updatedAt: number }>;
+  /** Sus publicaciones, del directorio (hasta el tope del gist). Sin ninguna, el botón de la ficha no sale. */
+  posts?: ProfilePostEntry[];
 };
 
 /**
@@ -173,6 +176,14 @@ function SocialProfileDetailScreenBase({
   palmares,
   onOpenAchievements,
   onToggleReviews,
+  showPosts = false,
+  onTogglePosts,
+  canEditPosts = false,
+  postMaxLength = 0,
+  showPostCounter = false,
+  changingPostId = '',
+  onEditPost,
+  onDeletePost,
   onOpenReview,
   reviewLink,
   status,
@@ -213,6 +224,16 @@ function SocialProfileDetailScreenBase({
   /** Abrir el listado de logros de este perfil. Es una PANTALLA aparte, no una vista dentro de la ficha. */
   onOpenAchievements?: () => void;
   onToggleReviews: () => void;
+  /** Vista de publicaciones, controlada por la URL (sub-ruta /posts) como la de reseñas. */
+  showPosts?: boolean;
+  onTogglePosts?: () => void;
+  /** Lo que sigue solo cuenta en TU perfil: si tu rango deja editar, con qué cupo, y los dos gestos. */
+  canEditPosts?: boolean;
+  postMaxLength?: number;
+  showPostCounter?: boolean;
+  changingPostId?: string;
+  onEditPost?: (id: string, text: string) => Promise<boolean>;
+  onDeletePost?: (id: string) => Promise<boolean>;
   onOpenReview: (gameId: number) => void;
   /** Destino del «Ver análisis» de la fila expandida del listado: la reseña de este perfil dentro del hub. */
   reviewLink?: (gameId: number) => { to: string; state?: unknown };
@@ -346,6 +367,15 @@ function SocialProfileDetailScreenBase({
     return items.sort((a, b) => b.ts - a.ts);
   }, [activeProfileDetail, publishedDateByGame]);
 
+  // Publicaciones, de la más reciente a la más antigua. Con ninguna, ni botón ni vista: no hay nada que listar.
+  const posts = useMemo(
+    () => [...(activeProfileDetail?.posts || [])].sort((a, b) => b.updatedAt - a.updatedAt),
+    [activeProfileDetail],
+  );
+  const hasPosts = posts.length > 0;
+  // Si se llega a /posts sin ninguna (la última se acaba de borrar, o un enlace viejo), se enseña la ficha.
+  const postsOpen = showPosts && hasPosts;
+
   // Ruleta (perfil social): pool = SOLO la lista de completados de este perfil.
   const roulettePool = useMemo(
     () => buildProfilePool(activeProfileDetail?.sharedLists),
@@ -429,7 +459,7 @@ function SocialProfileDetailScreenBase({
      (una pantalla alta, un lote que no la llena), observarlo de nuevo dispara otro, y no hace falta mover la
      rueda para que aparezca. Y de la vista abierta, porque al volver de las reseñas o las estadísticas el
      botón es otro nodo. */
-  const listsOpen = !showReviews && !showStats && !(showSummary && yearSummary);
+  const listsOpen = !showReviews && !postsOpen && !showStats && !(showSummary && yearSummary);
   useEffect(() => {
     if (!hasMoreGames || !listsOpen) return undefined;
     const node = loadMoreRef.current;
@@ -502,6 +532,21 @@ function SocialProfileDetailScreenBase({
                   <Icon name={showReviews ? 'grav' : 'signature'} />
                   {showReviews ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.reviewsButton}
                 </button>
+                {hasPosts && onTogglePosts ? (
+                  <button
+                    className={`btn btn-secondary ${postsOpen ? 'is-active' : ''}`.trim()}
+                    type="button"
+                    aria-pressed={postsOpen}
+                    onClick={() => {
+                      setShowStats(false);
+                      setShowSummary(false);
+                      onTogglePosts();
+                    }}
+                  >
+                    <Icon name={postsOpen ? 'grav' : 'edit'} />
+                    {postsOpen ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.postsButton}
+                  </button>
+                ) : null}
                 {!isOwnProfile && hasSharedLists ? (
                   <button
                     className={`btn btn-secondary ${showStats ? 'is-active' : ''}`.trim()}
@@ -510,6 +555,7 @@ function SocialProfileDetailScreenBase({
                     onClick={() => {
                       // Las vistas son excluyentes: entrar en una apaga las otras.
                       if (showReviews) onToggleReviews();
+                      if (postsOpen) onTogglePosts?.();
                       setShowSummary(false);
                       setShowStats((open) => !open);
                     }}
@@ -525,6 +571,7 @@ function SocialProfileDetailScreenBase({
                     aria-pressed={showSummary}
                     onClick={() => {
                       if (showReviews) onToggleReviews();
+                      if (postsOpen) onTogglePosts?.();
                       setShowStats(false);
                       setShowSummary((open) => !open);
                     }}
@@ -609,6 +656,23 @@ function SocialProfileDetailScreenBase({
                      se enseña lo ya resuelto y se resuelve solo con el cupo de lo ajeno. Encima manda la
                      preferencia de quien mira, que viene apagada de fábrica (ver `useReviewCover`). */
                   coversAllowed="solo-cache"
+                />
+              </div>
+            </div>
+          ) : postsOpen ? (
+            <div className="hub-detail-metadata">
+              <div className="hub-metadata-section">
+                <strong>{SOCIAL_UI.feed.postsListTitle}</strong>
+                <ProfilePostsList
+                  SOCIAL_UI={SOCIAL_UI}
+                  posts={posts}
+                  own={isOwnProfile && Boolean(onDeletePost)}
+                  canEdit={isOwnProfile && canEditPosts && Boolean(onEditPost)}
+                  maxLength={postMaxLength}
+                  showCounter={showPostCounter}
+                  changingPostId={changingPostId}
+                  onEdit={onEditPost || (async () => false)}
+                  onDelete={onDeletePost || (async () => false)}
                 />
               </div>
             </div>

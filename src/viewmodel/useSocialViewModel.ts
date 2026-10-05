@@ -66,7 +66,7 @@ const EMPTY_LIBRARY = { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedA
 const NO_PUBLISHED_MIRROR = { list: '', at: 0 };
 
 /** Referencia estable: un `new Map()` inline rompería el memo del feed en cada render. */
-import { useSocialCompose } from './social/useSocialCompose';
+import { useSocialCompose, type OwnPostChange } from './social/useSocialCompose';
 import { useSocialLegalConsent } from './social/useSocialLegalConsent';
 import { DEFAULT_SOCIAL_VISIBILITY, normalizeVisibility, useSocialProfileForm } from './social/useSocialProfileForm';
 import { useForeignProfileGames } from './social/useForeignProfileGames';
@@ -168,7 +168,7 @@ export function useSocialViewModel(options?: {
   const online = useOnlineStatus();
 
   const routeState = useMemo(() => matchSocialRoute(location.pathname), [location.pathname]);
-  const { activePanel, profileDetailId, profileReviewsView, profileAchievementsView, profileGlobalsView, profileReviewGameId, detailActorUid, detailGameId, detailEventType } = routeState;
+  const { activePanel, profileDetailId, profileReviewsView, profilePostsView, profileAchievementsView, profileGlobalsView, profileReviewGameId, detailActorUid, detailGameId, detailEventType } = routeState;
 
 
   const [socialCfgGistId, setSocialCfgGistId] = useState<string>('');
@@ -1443,6 +1443,8 @@ export function useSocialViewModel(options?: {
     openProfileDetail,
     openProfileReviews,
     closeProfileReviews,
+    openProfilePosts,
+    closeProfilePosts,
     openProfileReviewDetail,
     openProfileAchievements,
     openProfileSummary,
@@ -1921,10 +1923,26 @@ export function useSocialViewModel(options?: {
     canPublishPosts: canPublish,
     postMaxLength,
     showPostCounter,
+    changingPostId,
+    handleEditPost,
+    handleDeletePost,
   } = useSocialCompose({
     ownTier,
     // Forzado para que el post salga ya, pero sin releer la consulta de perfiles: publicar no cambia el directorio.
     onPublished: useCallback(() => hydrateSocialDirectory(true, { keepDirectoryQuery: true }), [hydrateSocialDirectory]),
+    // Editar o borrar se refleja en TU entrada del directorio, sin releer nada: es la que pintan tu perfil y el feed.
+    onPostChanged: useCallback((change: OwnPostChange) => {
+      patchDirectoryEntries(
+        (entry) => isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId),
+        (entry) => ({
+          posts: change.kind === 'delete'
+            ? (entry.posts || []).filter((post) => post.id !== change.id)
+            : (entry.posts || []).map((post) => (
+              post.id === change.id ? { ...post, text: change.text, editedAt: change.editedAt } : post
+            )),
+        }),
+      );
+    }, [authUser?.uid, ownProfileId, patchDirectoryEntries]),
     setFeedback,
   });
 
@@ -2410,6 +2428,10 @@ export function useSocialViewModel(options?: {
     showPostCounter,
     publishingPost,
     handlePublishPost,
+    // Editar y borrar las tuyas, desde la lista de publicaciones de tu perfil.
+    changingPostId,
+    handleEditPost,
+    handleDeletePost,
     feedItems,
     hydratingProfile,
     savingProfile,
@@ -2432,6 +2454,7 @@ export function useSocialViewModel(options?: {
     selectedProfileDetail,
     profileDetailId,
     profileReviewsView,
+    profilePostsView,
     profileAchievementsView,
     profileGlobalsView,
     ownAchievements,
@@ -2439,6 +2462,8 @@ export function useSocialViewModel(options?: {
     activeProfileReview,
     openProfileReviews,
     closeProfileReviews,
+    openProfilePosts,
+    closeProfilePosts,
     openProfileAchievements,
     openProfileSummary,
     markOwnYearSummaryOpened,

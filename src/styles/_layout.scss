@@ -1911,6 +1911,37 @@
   height: 2.55rem;
 }
 
+/* Las publicaciones del perfil (`ProfilePostsList`): Editar y Eliminar al pie de cada una de las tuyas, y el
+   editor que sustituye al texto mientras se reescribe. El campo usa DOS clases por lo mismo que el compositor:
+   `.ftextarea` se compila después e impone `min-height: 128px` y su tirador. Aquí crece más que en el
+   compositor porque se edita un texto ya escrito, no una primera línea. */
+.hub-post-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .5rem;
+  margin-top: .6rem;
+}
+
+.hub-post-editor .hub-post-input {
+  width: 100%;
+  min-height: 0;
+  resize: none;
+  overflow-y: auto;
+  max-height: 22rem;
+}
+
+.hub-post-editor-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .6rem;
+  margin-top: .5rem;
+}
+
+.hub-post-editor-foot .hub-post-actions { margin-top: 0; }
+
 /* Avatar clicable (feed/detalle): botón sin chrome que envuelve la foto/inicial y navega al perfil. */
 .hub-avatar-link {
   flex: 0 0 auto;

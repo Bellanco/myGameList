@@ -31,8 +31,10 @@ const SOCIAL_DIRECTORY_FETCH_CONCURRENCY = 6;
 // sin fecha publicada y usaban el `_ts` del juego (que una importación sella en bloque), así que el listado
 // mostraba fechas distintas del feed. Se iguala al tope del propio gist.
 const SOCIAL_ACTIVITY_PER_PROFILE = 320;
-// Las publicaciones sí se quedan en el tope del feed: ninguna vista las lista por separado.
-const SOCIAL_POSTS_PER_PROFILE = 40;
+// Las publicaciones, igual: estuvieron en 40, el tope del feed, mientras ninguna vista las listaba por separado.
+// Desde que el perfil enseña TODAS (y deja editar y borrar las tuyas), se iguala al tope del gist: con 40, la
+// publicación 41 de alguien seguía en su canal sin que hubiera forma de verla ni de retirarla.
+const SOCIAL_POSTS_PER_PROFILE = 100;
 // F4 — mensajes de lista por perfil. Más alto que las publicaciones porque son varios por juego y el filtro de
 // quien mira puede dejar visible una sola lista; más bajo que la actividad porque solo los lista el feed.
 const SOCIAL_MOVES_PER_PROFILE = 120;
@@ -614,8 +616,15 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
    * dependencias — que es exactamente el fallo que se cuela al pasar de `setState(prev => …)` a leer el estado.
    */
   const patchDirectoryEntries = useCallback(
-    (match: (entry: SocialDirectoryEntry) => boolean, patch: Partial<SocialDirectoryEntry>) => {
-      setSocialDirectory((prev) => prev.map((item) => (match(item) ? { ...item, ...patch } : item)));
+    (
+      match: (entry: SocialDirectoryEntry) => boolean,
+      // Como función cuando el parche depende de lo que ya tiene la entrada (las publicaciones, al editar o
+      // borrar una): así se calcula sobre la versión vigente y no sobre la del closure de quien llama.
+      patch: Partial<SocialDirectoryEntry> | ((entry: SocialDirectoryEntry) => Partial<SocialDirectoryEntry>),
+    ) => {
+      setSocialDirectory((prev) => prev.map((item) => (
+        match(item) ? { ...item, ...(typeof patch === 'function' ? patch(item) : patch) } : item
+      )));
     },
     [],
   );
