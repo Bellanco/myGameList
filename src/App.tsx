@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_MESSAGES, TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from './core/constants/labels';
+import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_MESSAGES, TAB_ORDER, TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from './core/constants/labels';
 import { LEGAL_ROUTES, type LegalDocId } from './core/constants/legal';
 import { COMPACT_FILTERS_MAX_WIDTH, COMPACT_TABLE_MAX_WIDTH, ROW_EXIT_MS } from './core/constants/uiConfig';
 import { TAB_IDS, type TabData, type TabId } from './model/types/game';
@@ -41,6 +41,7 @@ import { useAppearanceSession } from './view/hooks/useAppearanceSession';
 import { useUppercase } from './view/hooks/useUppercase';
 import { useEffects } from './view/hooks/useEffects';
 import { useShowSteamButton } from './view/hooks/useShowSteamButton';
+import { useShowWishlist } from './view/hooks/useShowWishlist';
 import { useReturnTo } from './view/hooks/useReturnTo';
 import { useLegacyProfileHeal } from './view/hooks/useLegacyProfileHeal';
 import { useScreenTransition } from './view/hooks/useScreenTransition';
@@ -254,6 +255,15 @@ export default function App() {
   useEffects();
   // F1: visibilidad del botón "Steam Deck" (preferencia de cuenta) → se pasa a la Toolbar.
   const { showSteamButton } = useShowSteamButton();
+  // La pestaña de deseos se puede esconder en Ajustes. Sus juegos siguen ahí; solo deja de enseñarse la pestaña
+  // y lo que se añade desde la ruleta de un amigo va a próximos, para no mandarlo a una lista que no se ve.
+  const { showWishlist } = useShowWishlist();
+  const visibleTabs = useMemo(() => (showWishlist ? TAB_ORDER : TAB_ORDER.filter((tab) => tab !== 'd')), [showWishlist]);
+  useEffect(() => {
+    if (!showWishlist && currentTab === 'd' && activeSection === 'lists') {
+      navigate(TAB_ROUTE.p, { replace: true });
+    }
+  }, [showWishlist, currentTab, activeSection, navigate]);
   // El histórico del backlog, el recorrido de carátulas y las estrellas fugaces se montan en idle con `IdleWork`.
   // El scroll al cambiar de pantalla: arriba al entrar, donde estabas al volver (ver el hook).
   useScrollOnNavigate();
@@ -993,8 +1003,8 @@ export default function App() {
       // pinta el propio hub mientras se hidrata, así que el usuario ve una sola escena de carga continua.
       <Suspense fallback={<SocialHubSkeleton />}>
         <SocialHub
-          onAddGame={vm.addGameToWishlist}
-          addTarget="d"
+          onAddGame={showWishlist ? vm.addGameToWishlist : vm.addGameToProximos}
+          addTarget={showWishlist ? 'd' : 'p'}
           gameListOf={vm.gameListOf}
           moveGameToCurrentByName={vm.moveGameToCurrentByName}
           games={vm.data}
@@ -1127,7 +1137,7 @@ export default function App() {
       {activeSection === 'lists' ? (
         <ScreenHeader variant="band" kicker={UI_MESSAGES.screenHeader.lists} title={TAB_TITLES[currentTab]} />
       ) : null}
-      {activeSection === 'lists' ? <TabBar currentTab={currentTab} tabCounts={vm.tabCounts} onTabChange={handleTabChange} /> : null}
+      {activeSection === 'lists' ? <TabBar tabs={visibleTabs} currentTab={currentTab} tabCounts={vm.tabCounts} onTabChange={handleTabChange} /> : null}
       {/* ═══ EL CARRIL DE LOS AVISOS · abajo a la izquierda, sobre la barra inferior ═══════════════════════
           UN SOLO CARRIL PARA LAS TRES CÁPSULAS, y se monta AQUÍ y no dentro de cada una. Antes lo traía cada
           componente, y mientras solo lo usaban el logro y el aviso del administrador daba igual porque son

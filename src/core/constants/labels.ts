@@ -180,6 +180,11 @@ export const APPEARANCE_UI = {
   coversAria: 'Descargar las carátulas de los juegos',
   coversOn: 'Activadas',
   coversOff: 'Desactivadas',
+  wishlistLabel: 'Lista de deseos',
+  wishlistAria: 'Visibilidad de la pestaña de la lista de deseos',
+  wishlistShow: 'Mostrar',
+  wishlistHide: 'Ocultar',
+  wishlistNote: 'Ocultarla no borra sus juegos ni la esconde a tus amigos: eso se decide en tu perfil social.',
 } as const;
 
 export const UI_MESSAGES = {

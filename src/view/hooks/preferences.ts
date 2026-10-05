@@ -6,7 +6,7 @@
 //
 // La lógica de aplicación debe seguir siendo IDÉNTICA a la de `public/theme-init.js`, que corre antes del primer
 // render para evitar el flash de tema/paleta/caja.
-import { COVERS_KEY, EFFECTS_KEY, GRID_SIZE_KEY, LIST_SHAPE_KEY, PALETTE_KEY, PALETTE_LOCK_KEY, STEAM_BUTTON_KEY, THEME_KEY, UPPERCASE_KEY } from '../../core/constants/storageKeys';
+import { COVERS_KEY, EFFECTS_KEY, GRID_SIZE_KEY, LIST_SHAPE_KEY, PALETTE_KEY, PALETTE_LOCK_KEY, STEAM_BUTTON_KEY, THEME_KEY, UPPERCASE_KEY, WISHLIST_KEY } from '../../core/constants/storageKeys';
 import { DEFAULT_PALETTE, paletteBg, parsePaletteId, type PaletteId } from '../../core/constants/palettes';
 import { createPreferenceStore, hydratePreferencesFromCloud } from '../../model/repository/preferenceStore';
 import { loadPaletteSkin } from './paletteSkin';
@@ -208,6 +208,22 @@ export const coversPreference = createPreferenceStore<boolean>({
   parse: (raw) => raw === 'on',
   serialize: onOff.serialize,
   cloudField: 'covers',
+  fromCloud: onOff.fromCloud,
+});
+
+/**
+ * LA PESTAÑA DE LA LISTA DE DESEOS. Visible por defecto —`parse` solo la apaga con un `'off'` explícito, al revés
+ * que el botón de Steam—, porque es una lista como las demás y esconderla es lo que se elige, no lo que se da.
+ *
+ * Esconde la PESTAÑA, no los juegos: siguen guardados y sincronizándose, y volver a encenderla los enseña tal
+ * cual. Tampoco toca lo que ven los demás: eso es la casilla de listas ocultas del perfil social. Viaja con la
+ * cuenta, como el tema: es la misma decisión en el móvil que en el monitor.
+ */
+export const wishlistPreference = createPreferenceStore<boolean>({
+  key: WISHLIST_KEY,
+  parse: (raw) => raw !== 'off',
+  serialize: onOff.serialize,
+  cloudField: 'showWishlist',
   fromCloud: onOff.fromCloud,
 });
 

@@ -79,6 +79,11 @@ describe('firestore.rules', () => {
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { covers: 'on' }));
     });
 
+    it('admite `showWishlist` (pestaña de la lista de deseos) y solo como booleano', async () => {
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { palette: 'persona', showWishlist: false }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { showWishlist: 'off' }));
+    });
+
     it('F4: admite `feedMoveTabs` (filtro de movimientos del feed) y rechaza lo que no sea una cadena corta', async () => {
       await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { feedMoveTabs: 'cvep' }));
       // Las cinco listas, y cuatro con la marca de «deseos apagada a propósito»: los dos valores más largos.

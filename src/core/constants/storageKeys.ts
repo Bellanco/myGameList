@@ -44,6 +44,8 @@ export const STEAM_BUTTON_KEY = 'mis-listas-steam-button';
 export const LIST_SHAPE_KEY = 'mis-listas-list-shape';
 /** Carátulas de los juegos. Ausente = APAGADA: nadie descarga nada sin haberlo pedido. */
 export const COVERS_KEY = 'mis-listas-covers';
+/** Pestaña de la lista de deseos. Ausente = VISIBLE: es una lista más, y se esconde solo si se pide. */
+export const WISHLIST_KEY = 'mis-listas-wishlist';
 
 // TAMAÑO de los cuadros del mosaico: 'sm' | 'md' (por defecto) | 'lg'. Cuánto ocupa cada cuadro es cuestión de
 // gusto y de PANTALLA —ocho por fila en un monitor, dos en un teléfono—, así que vive en este aparato y no en

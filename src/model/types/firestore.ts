@@ -181,6 +181,11 @@ export interface FirestorePublicConfig {
    */
   covers?: boolean;
   /**
+   * Pestaña de la lista de deseos. AUSENTE se lee como visible: esconderla es lo que se elige. Solo esconde la
+   * pestaña de quien la toca; lo que ven los demás lo decide su perfil social.
+   */
+  showWishlist?: boolean;
+  /**
    * F4 — de qué listas ve su dueño los mensajes de actividad, como letras en orden canónico ('cevp' = todas,
    * '' = ninguna). Ajuste de LECTURA: no cambia lo que se publica ni lo que ven los demás. Vive aquí (owner-only)
    * y no en el perfil público por lo mismo que el consentimiento: es dato del dueño, y así le sigue entre

@@ -49,6 +49,6 @@ deseos, ni siquiera podría leerlo. No hay forma de exigir una versión mínima,
   etiquetas), exportar e importar JSON y la marca del filtro del feed.
 - [x] **1. La lista.** Textos, ruta, icono, pestaña, formulario y tabla como Próximos, `d → p`, bandeja de
   Playnite, ruleta del amigo, estilos de los temas y el tour.
-- [ ] **2. El interruptor de Ajustes.**
+- [x] **2. El interruptor de Ajustes.** En Ajustes → Diseño (`wishlistPreference`, campo `showWishlist`). Las reglas con `showWishlist` deben desplegarse antes que esta versión.
 - [ ] **3. Social.** Casilla de ocultar, pestaña en el perfil de un amigo, mensajes del feed, filtro del feed y
   texto de privacidad.

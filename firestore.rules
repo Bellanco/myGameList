@@ -351,7 +351,11 @@ service cloud.firestore {
       // preferencias de cada aparato). Quitarlas sería el mismo fallo del párrafo de arriba con el signo
       // cambiado: se valida el documento RESULTANTE, así que a quien las tenga guardadas de antes se le
       // denegaría la escritura entera de sus preferencias la próxima vez que cambiara de paleta.
-      return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale", "palette", "theme", "uppercase", "showSteamButton", "effects", "consent", "feedMoveTabs", "listShape", "covers", "gridSize"])
+      //
+      // `showWishlist` (pestaña de la lista de deseos) entra ANTES de que ningún cliente la escriba: por lo mismo
+      // de arriba, una clave que la regla no conoce deniega la escritura entera. Estas reglas tienen que estar
+      // desplegadas antes que la versión que la escribe.
+      return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale", "palette", "theme", "uppercase", "showSteamButton", "effects", "consent", "feedMoveTabs", "listShape", "covers", "gridSize", "showWishlist"])
         && (!("scoreScale" in request.resource.data)
             || request.resource.data.scoreScale in ["stars", "grade"])
         && (!("theme" in request.resource.data)
@@ -372,6 +376,8 @@ service cloud.firestore {
             || request.resource.data.gridSize in ["sm", "md", "lg"])
         && (!("covers" in request.resource.data)
             || request.resource.data.covers is bool)
+        && (!("showWishlist" in request.resource.data)
+            || request.resource.data.showWishlist is bool)
         // F4 — listas de las que su dueño ve los mensajes de actividad: letras de lista ('cvepd'), nunca más de
         // cinco. Cinco y no cuatro desde la lista de deseos: o van las cinco letras, o cuatro y la marca '~' de
         // «deseos apagada a propósito» (ver `core/social/moveTabsFilter`). Se acota el tamaño como en `palette`: es
