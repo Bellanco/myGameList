@@ -12,7 +12,7 @@ function makeGame(id: number, name: string): GameItem {
 }
 
 function payload(over: Partial<StoragePayload> = {}): StoragePayload {
-  return { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 1000, etag: null, lastRemoteUpdatedAt: 0, ...over };
+  return { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 1000, etag: null, lastRemoteUpdatedAt: 0, ...over };
 }
 
 function raw(): StoragePayload | null {

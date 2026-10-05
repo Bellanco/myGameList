@@ -1,143 +1,112 @@
-# Premios: los votos de cada uno, a la vista hasta terminar la edición
+# Premios: los votos de cada uno, a la vista hasta la siguiente edición
 
-Estado: **hecho; reglas de Firestore desplegadas el 04-10-2026** (van en la 1.5.1). Falta publicar la app con esa versión.
-Decisiones tomadas con el usuario en la misma fecha.
+Estado (05-10-2026): **hecho en `develop`**, sin publicar en la app. Reglas desplegadas el 05-10-2026. Los votos de
+2025 se cargan con `scripts/premios-2025-votos-por-persona.mjs` (lo lanza el usuario con su clave).
 
 ## Qué se quiere
 
-Hoy publicar una edición hace todo de una vez: archiva, concede trofeos y **borra las papeletas**. Lo que votó
-cada persona no lo vuelve a ver nadie.
+Hasta ahora publicar una edición archivaba, concedía trofeos y **borraba las papeletas**: lo que votó cada persona
+no lo volvía a ver nadie.
 
-Se parte en dos y aparece un estado nuevo entre medias:
+Ahora, al publicar, lo que votó cada uno se copia a un resumen que **quien votó en esa edición** ve en la pantalla
+de resultados como «Clasificación final»: una persona por fila y, al desplegarla, lo que votó en cada categoría, si
+acertó y el peso cuando no es 1 (`×3`, `×0,5`). Dura **hasta que se abre la siguiente edición**, o hasta que el
+administrador lo borra a mano desde el histórico.
 
-| Estado | Acción del admin | Qué pasa |
-|---|---|---|
-| Sin edición | Abrir votación | igual que hoy |
-| Votación abierta | Cerrar ahora | igual que hoy |
-| Cerrada, sin publicar | **Publicar resultados** | archivo + trofeos, como hoy; **las papeletas se quedan** y se escribe el resumen de votos |
-| **Resultados con votos** (nuevo) | **Terminar edición** | se borran papeletas y resumen, se vacían los nominados y se vuelve a «Sin edición» |
+El ciclo sigue siendo de tres pasos (sin edición → votación abierta → cerrada, sin publicar → publicar).
 
-En el estado nuevo, **quien votó en esa edición** ve una clasificación con una persona por fila; al desplegar una
-fila, lo que votó en cada categoría, si acertó y el peso de la categoría cuando no es 1 (`×3`, `×0,5`).
+## Decisiones
 
-## Decisiones (04-10-2026)
+**04-10-2026** (primera versión, publicada en la 1.5.1): un estado intermedio «Publicada, votos a la vista» con
+las papeletas guardadas, y un botón «Terminar» que las retiraba; solo para las ediciones abiertas desde entonces.
 
-- **Solo ediciones abiertas después del despliegue.** Quien votó antes lo hizo con la promesa de que nadie más
-  vería su papeleta. Al comprobarlo no había edición en marcha (`premiosConfig/voting`: sin `closesAt`,
-  `lastPublishedId: '2025'`), así que la próxima ya entra; aun así el régimen queda escrito en la configuración.
-- **Solo lo ven quienes votaron en esa edición.** Ni cualquiera con sesión ni el enlace público: el archivo de
-  `premiosResults` sigue sin votos individuales (`plan-unificar-premios.md` §4.2).
-- **Al terminar desaparece todo**, también el resumen. No queda en el histórico.
-- **Terminar lo hace el admin a mano.** Sin caducidad automática.
-- **Ranking denso, como hoy** (`assignDenseRanks`): empatados comparten puesto, sin huecos.
+**05-10-2026** (la que vale), a petición del usuario:
 
-### Borrar o no: no es cuestión de presupuesto
+- **Hasta la siguiente edición**, no hasta «Terminar». Con eso el estado intermedio y su botón sobran: el resumen
+  dura por su cuenta, y las papeletas se retiran al publicar como siempre. Se quitan.
+- **Lo ven quienes tienen sesión Y votaron en esa edición.** Ni cualquiera con sesión ni el enlace público: el
+  archivo de `premiosResults` sigue sin votos individuales (`plan-unificar-premios.md` §4.2).
+- **2025 también**, con los votos de la hoja (`2025 Game Awards - Resultado.csv`, sin versionar: lleva nicks). De
+  sus 14 participantes, 7 tienen cuenta y son los que lo pueden ver.
+- **Borrado manual** desde el histórico, solo en la edición que los tenga.
+- **Ranking denso, como siempre** (`assignDenseRanks`): empatados comparten puesto, sin huecos.
 
-Medido con la edición 2025 (14 papeletas, 25 categorías): una papeleta ocupa ~2 kB, ~30 kB por edición frente a
-1 GiB de Spark; borrarlas son 14 borrados de 20.000 diarios. Ninguna de las dos cosas pesa.
+### Borrar las papeletas no es cuestión de presupuesto
 
-Se borran por otros dos motivos:
-
-1. **Funcional.** La papeleta es `premiosBallots/{uid}`, sin la edición en la clave, y las reglas de corrección
-   exigen que `season` y `submittedAt` no cambien. Una papeleta vieja impide votar en la siguiente edición; por
-   eso `openSeason` ya barre las que queden.
-2. **Privacidad.** Lleva uid y nombre de la cuenta de Google, y el texto legal promete retirarla.
-
-Lo único que cuesta de verdad es **mirar**, y eso lo resuelve el resumen (abajo): 2 lecturas por visita en vez
-de una por votante.
+Medido con 2025 (14 papeletas, 25 categorías): ~2 kB por papeleta, ~30 kB por edición frente a 1 GiB de Spark;
+borrarlas son 14 borrados de 20.000 diarios. Se borran porque `premiosBallots/{uid}` no lleva la edición en la
+clave —una papeleta vieja impide votar en la siguiente— y porque llevan uid y nombre de Google. El resumen no lleva
+ninguna de las dos cosas, así que puede durar más que ellas.
 
 ## Diseño
 
 ### Datos
 
-- **`premiosConfig/voting.revealVotes: true`** lo pone `openSeason` en las ediciones nuevas. `publishAndArchiveSeason`
-  lo mira: sin él, publica y termina de una vez, como hoy.
-- **Estado nuevo con marca propia: `votesRevealedAt`**, que pone publicar y borra terminar.
-  `closesAtMillis` presente **y** `votesRevealedAt` → `SEASON_STAGE.REVEALED`. Se pensó deducirlo de
-  `lastPublishedId === seasonId`, pero una edición abierta con el mismo nombre que la última publicada nacía ya
-  «publicada». La marca también cierra el voto: `isVotingOpenNow` y la regla `premiosVotingConfigAllows` la miran,
-  así que reabrir el interruptor no deja cambiar la papeleta viendo las de los demás.
-- **Resumen de votos: `premiosReveal/{seasonId}`**, un solo documento escrito al publicar con la misma lectura
-  de `readLiveEdition` que el archivo:
+- **`premiosReveal/{seasonId}`**: el resumen, UN documento por edición (una lectura por visita). Sin uid ni nombre
+  de Google; nombres de nominados, pesos y ganadores salen del archivo, que la pantalla ya lee.
 
   ```ts
-  interface PremiosRevealedBallot {
-    rank: number;        // denso, calculado con computeLeaderboard: el mismo que el archivo
-    profileId: string;   // '' si votó sin perfil: la fila no se identifica por aquí
-    nickname: string;    // el elegido para la clasificación, nunca el de Google
-    points: number;
-    selections: Record<string, string>; // categoría → optionId
-  }
+  interface PremiosRevealedBallot { rank; profileId; nickname; points; selections: Record<categoría, optionId> }
   interface PremiosReveal { seasonId: string; ballots: PremiosRevealedBallot[] }
   ```
 
-  Sin uid ni nombre de Google. Nombres de nominados, pesos y ganadores salen de `categoriesSnapshot` y `winners`
-  del archivo, que la pantalla ya lee: el resumen no los duplica. Tamaño: ~1 kB por votante, lejos del MiB.
-- **No entra en la copia local** de `premiosLocalCopy` (degradación, fase 5): son votos ajenos y desaparecen al
-  terminar.
+- **`premiosAdmin/voters-{seasonId}`**: `{ seasonId, uids }`, quién votó. Es el permiso: lo consultan las reglas y
+  no lo lee nadie más. No puede ser «tiene papeleta», como en la primera versión: las papeletas ya no existen
+  cuando se miran los votos.
+- **`premiosConfig/voting.votesSeasonId`**: qué edición guarda votos (público como el resto del calendario; dice
+  QUE hay, no cuáles). Con él la pantalla no pide un documento que no existe.
+- Publicar escribe los tres antes de retirar las papeletas. Abrir la siguiente edición borra todos los resúmenes y
+  listas (`discardAllSeasonVotes`) y vacía la marca. `deleteSeasonVotes` lo hace con una; borrar una edición del
+  histórico se lleva también sus votos.
+- **No entra en la copia local** de `premiosLocalCopy` (degradación, fase 5): son votos ajenos.
 
-### Reglas (`firestore.rules`)
+### Reglas
 
 ```
 match /premiosReveal/{seasonId} {
   allow read: if isAdmin() || (isSignedIn()
-    && exists(/databases/$(database)/documents/premiosBallots/$(request.auth.uid)));
+    && request.auth.uid in get(/…/premiosAdmin/$('voters-' + seasonId)).data.get('uids', []));
   allow write, delete: if isAdmin();
 }
 ```
 
-«Votó en esta edición» = tiene papeleta: mientras el resumen existe, las únicas papeletas son las de su edición
-(`openSeason` barre las anteriores **y cualquier resumen olvidado**, y terminar borra ambas cosas). Coste: la
-lectura del resumen + el `exists()`.
-
-Tests nuevos en `tests/integration/firestore.rules.test.ts`: votante lee, no votante con sesión no, sin sesión no,
-nadie salvo admin escribe.
-
-### Repositorio (`premiosSeasonRepository.ts`)
-
-- `publishAndArchiveSeason` se queda con los pasos 0–2bis (leer, comprobar ganadores, archivo, trofeos) y, con
-  `revealVotes`, escribe `premiosReveal/{id}` y apunta `lastPublishedId` **sin** pasos 3–5.
-- Los pasos 3–5 pasan a `finishSeason()`: borrar papeletas y resumen, vaciar ganadores y nominados, dejar la
-  configuración sin edición. Sin `revealVotes`, `publishAndArchiveSeason` llama a las dos seguidas.
-- `deleteSeasonResult` se niega con la edición en estado REVEALED: dejaría papeletas sin archivo. Primero terminar.
-
-### Estados y ofrecimiento (`core/premios/votingSchedule.ts`)
-
-- `SEASON_STAGE.REVEALED` y su rama en `getSeasonStage`.
-- `areResultsOffered`: también en REVEALED (hoy solo en NONE, por no enseñar los del año anterior; aquí los
-  resultados sí son de esta edición).
-- Revisar quién pinta según el estado: `AdminPremios` (línea de estados y acción «Terminar edición» con
-  confirmación), `AdminHub` (estado del menú), `PremiosPortada`, `PremiosEstado`, `PremiosHub`, `usePremiosEdition`.
+Coste: la lectura del resumen más la del `get()`. Tests en `tests/integration/firestore.rules.test.ts`: votante
+lee aunque no tenga papeleta, no votante y sin sesión no, la lista de una edición no abre otra, la lista no la lee
+nadie salvo el admin.
 
 ### Pantalla
 
-Panel «Clasificación final» en `PremiosResultsScreen`, solo si hay resumen legible (`usePremiosReveal`: con
-sesión, con papeleta y mirando el archivo de esta edición). **Sustituye a la clasificación de siempre**; el podio
-se queda. Va a lo ancho debajo de los ganadores (en el móvil, antes, donde iba la clasificación).
+Panel «Clasificación final» en `PremiosResultsScreen`. Se pide (`usePremiosReveal`, desde `PremiosHub`) solo si
+hay sesión, quien mira sale en la clasificación por su `profileId` y la configuración dice que esa edición guarda
+votos: así no se gasta una lectura ni sale un `permission-denied` para quien no votó. **Sustituye a la
+clasificación de siempre**; el podio se queda. Va a lo ancho debajo de los ganadores (en el móvil, antes).
 
-- Una fila por persona: puesto (con metal en los tres primeros), nombre, aciertos `12/25`, puntos, trofeo y el
-  botón de desplegar. La fila entera despliega con el ratón (capa `row-hit`, como el escalón del podio); el
-  teclado va por el botón. No es `<details>`: el nombre enlaza y el trofeo es un botón.
+- Una fila por persona: puesto (con metal en los tres primeros), nombre, aciertos `12/25` y puntos. **La fila
+  entera despliega** con un solo control: un `<button>` (`row-hit`) que la cubre, con `aria-expanded`. Ni flecha
+  ni trofeo al final (decisión del usuario, 05-10-2026): la lámina sigue en el podio y en «Tu premio». El nombre solo navega si esa persona tiene perfil; si no, es
+  texto y la pulsación cae en la fila. El enlace y el trofeo van encima del botón, como hermanos: no puede haber
+  controles dentro de otro, y por eso tampoco es `<details>`.
 - **Todas plegadas** al entrar, también la propia.
-- Al desplegar, por categoría: nominado votado, ✓/✗ (con texto oculto «Acierto»/«Fallo»), peso si no es 1
-  (`×3`, `×0,5`) y, en los fallos, «Ganador: X».
-- Sin frase explicativa bajo el título (decisión del usuario).
+- **A la derecha de la lámina**, donde iba la clasificación de siempre, «Resto de premiados»: solo el 4.º y el 5.º,
+  con su trofeo. Tienen lámina y no tienen escalón en el podio, y la final no lleva trofeos (05-10-2026).
+- Al desplegar, por categoría: nominado votado, ✓/✗ (con texto oculto «Acierto»/«Fallo»), peso si no es 1 y, en
+  los fallos, «Ganador: X». Sin frase explicativa bajo el título.
 - La lógica pura, en `core/premios/revealedVotes.ts`.
+
+### Histórico del panel
+
+«Borrar los votos» en la fila de la edición que los guarde (`listSeasonVotes`), con confirmación. La clasificación,
+los ganadores y los trofeos se quedan.
 
 ### Texto legal
 
-- Hecho: la papeleta la leen también quienes votaron en la misma edición, desde que se publica hasta que se
-  termina, y un punto nuevo en «Quién más los ve».
-- `LEGAL_VERSION` sube a `'2026-10-04'`: todo el mundo vuelve a aceptar. Desplegar **antes** de abrir la próxima
-  edición.
+`LEGAL_VERSION '2026-10-04'` (publicada en la 1.5.1) declaró que lo ven quienes votaron «hasta que se termina». El
+05-10-2026 pasa a «hasta que se abre la siguiente, o antes si quien administra lo borra» **sin subir la versión**:
+los mismos ven lo mismo y ahora hay un tope que antes no había (criterio del 2026-08-26, ver `legal.ts`). La lista
+de uid tampoco es un dato nuevo: el registro de trofeos ya guarda el de cada participante desde 2025.
 
-## Pasos
+## Pendiente
 
-1. ~~Tipos + `votingSchedule` (estado nuevo) con tests puros.~~ Hecho.
-2. ~~Reglas + tests de reglas.~~ Hecho.
-3. ~~Repositorio: partir publicar/terminar (`finishSeason`), resumen (`buildRevealSnapshot`, `fetchSeasonReveal`),
-   bloqueo del borrado.~~ Hecho.
-4. ~~Panel de admin: estado y acción nueva (con confirmación).~~ Hecho.
-5. ~~Maqueta en Chrome → panel de la pantalla de resultados.~~ Hecho.
-6. ~~Texto legal y `LEGAL_VERSION`.~~ Hecho.
-7. Checklist de despliegue del README (reglas incluidas: sin ellas el resumen no se puede leer).
+1. Cargar 2025: `node scripts/premios-2025-votos-por-persona.mjs --sdk <node_modules con firebase-admin> --key
+   clave.json` (simulación) y después con `--apply`.
+2. Publicar la app (checklist del README). Hasta entonces producción lleva la 1.5.1, que no sabe pintar esto.

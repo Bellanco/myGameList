@@ -44,6 +44,8 @@ export const STEAM_BUTTON_KEY = 'mis-listas-steam-button';
 export const LIST_SHAPE_KEY = 'mis-listas-list-shape';
 /** Carátulas de los juegos. Ausente = APAGADA: nadie descarga nada sin haberlo pedido. */
 export const COVERS_KEY = 'mis-listas-covers';
+/** Pestaña de la lista de deseos. Ausente = VISIBLE: es una lista más, y se esconde solo si se pide. */
+export const WISHLIST_KEY = 'mis-listas-wishlist';
 
 // TAMAÑO de los cuadros del mosaico: 'sm' | 'md' (por defecto) | 'lg'. Cuánto ocupa cada cuadro es cuestión de
 // gusto y de PANTALLA —ocho por fila en un monitor, dos en un teléfono—, así que vive en este aparato y no en
@@ -145,6 +147,11 @@ export const YEAR_SUMMARY_TOLD_KEY = 'mis-listas-year-summary-told';
 // persiste ni un byte—, así que sin esto no hay forma de saber que alguien la probó. No sube y no se publica
 // (los «primeros pasos» nunca lo hacen).
 export const ROULETTE_USED_KEY = 'mis-listas-roulette-used';
+
+// Logros — sello de la primera vez que se aplicó un tema que no es el de casa. Hace falta por lo mismo que el de la
+// ruleta: «Ajustes de vídeo» miraba solo el tema activo en el instante de evaluar, y quien probaba uno y volvía al
+// de casa sin pasar por la pantalla de logros no lo conseguía nunca. No sube y no se publica.
+export const THEME_CHANGED_KEY = 'mis-listas-theme-changed';
 
 // Borrador de la papeleta de premios: lo votado hasta ahora, para no perderlo al recargar o al salir a mirar algo
 // a las listas. Se borra al enviar.

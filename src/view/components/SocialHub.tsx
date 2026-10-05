@@ -5,7 +5,7 @@ import { Link, generatePath, useLocation } from 'react-router-dom';
 import '../../styles/social.scss';
 import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { LEGAL_CONSENT_UI, LEGAL_ROUTES } from '../../core/constants/legal';
-import type { GameItem, TabData } from '../../model/types/game';
+import type { GameItem, TabData, TabId } from '../../model/types/game';
 import { useSocialViewModel } from '../../viewmodel/useSocialViewModel';
 import { useGithubConnection } from '../../viewmodel/sync/githubConnection';
 import { SOCIAL_ROUTES, matchSocialRoute, wantsYearSummary } from '../../viewmodel/social/socialRoutes';
@@ -42,10 +42,12 @@ import { libraryStart } from '../../core/achievements/metrics';
  * Componente PRESENTACIONAL: toda la lógica vive en `useSocialViewModel` (M3).
  */
 interface SocialHubProps {
-  /** Ruleta (perfil social) — añadir un juego ajeno a mi lista de próximos. */
-  onAddToProximos?: (game: Partial<GameItem>) => 'added' | 'duplicate' | 'invalid';
-  /** Ruleta (perfil social) — ¿ya tengo este juego (por nombre) en alguna de mis listas? */
-  hasGameInLists?: (name: string) => boolean;
+  /** Ruleta (perfil social) — añadir un juego ajeno a una de mis listas (la de `addTarget`). */
+  onAddGame?: (game: Partial<GameItem>) => 'added' | 'duplicate' | 'invalid';
+  /** A qué lista va lo que se añade desde la ruleta: deseados, o próximos si esa lista está oculta. */
+  addTarget?: 'p' | 'd';
+  /** Ruleta (perfil social) — ¿en cuál de mis listas está ya este juego (por nombre)? */
+  gameListOf?: (name: string) => TabId | null;
   /** Ruleta (perfil social) — si ya es mío, llevarlo a "En curso". */
   moveGameToCurrentByName?: (name: string) => void;
   /** Listados VIVOS de la app: con ellos se reconcilia la actividad social publicada (reseñas). */
@@ -53,8 +55,9 @@ interface SocialHubProps {
 }
 
 const SocialHubInner = memo(function SocialHubInner({
-  onAddToProximos,
-  hasGameInLists,
+  onAddGame,
+  addTarget,
+  gameListOf,
   moveGameToCurrentByName,
   games,
 }: SocialHubProps = {}) {
@@ -77,6 +80,8 @@ const SocialHubInner = memo(function SocialHubInner({
     setHiddenTabs,
     // Rango propio: decide cuánto se ve del panel de estadísticas de un amigo.
     ownTier,
+    // Administración (el claim): ve la ficha de un amigo sin las restricciones de visibilidad.
+    isAdmin,
     hideReplayable,
     setHideReplayable,
     hideRetry,
@@ -112,6 +117,7 @@ const SocialHubInner = memo(function SocialHubInner({
     selectedProfileDetail,
     profileDetailId,
     profileReviewsView,
+    profilePostsView,
     profileAchievementsView,
     profileGlobalsView,
     ownAchievements,
@@ -119,6 +125,11 @@ const SocialHubInner = memo(function SocialHubInner({
     activeProfileReview,
     openProfileReviews,
     closeProfileReviews,
+    openProfilePosts,
+    closeProfilePosts,
+    changingPostId,
+    handleEditPost,
+    handleDeletePost,
     openProfileAchievements,
     openProfileSummary,
     markOwnYearSummaryOpened,
@@ -349,6 +360,10 @@ const SocialHubInner = memo(function SocialHubInner({
     () => (profileReviewsView ? closeProfileReviews(detailId) : openProfileReviews(detailId)),
     [profileReviewsView, closeProfileReviews, openProfileReviews, detailId],
   );
+  const toggleDetailPosts = useCallback(
+    () => (profilePostsView ? closeProfilePosts(detailId) : openProfilePosts(detailId)),
+    [profilePostsView, closeProfilePosts, openProfilePosts, detailId],
+  );
   const openDetailAchievements = useCallback(
     () => openProfileAchievements(detailId),
     [openProfileAchievements, detailId],
@@ -392,7 +407,8 @@ const SocialHubInner = memo(function SocialHubInner({
       return (
         <SocialProfileScreen
           SOCIAL_UI={SOCIAL_UI}
-          tier={ownTier}
+          // El sello de rango solo lo ve la administración: al resto no se le nombran los rangos.
+          tier={isAdmin ? ownTier : undefined}
           profileName={profileName}
           setProfileName={setProfileName}
           completedGames={completedGames}
@@ -502,12 +518,22 @@ const SocialHubInner = memo(function SocialHubInner({
           palmares={detailPalmares}
           onOpenAchievements={openDetailAchievements}
           onToggleReviews={toggleDetailReviews}
+          showPosts={profilePostsView}
+          onTogglePosts={toggleDetailPosts}
+          // Editar exige un rango que publique; borrar, no (ver `useSocialCompose`).
+          canEditPosts={canPublishPosts}
+          postMaxLength={postMaxLength}
+          showPostCounter={showPostCounter}
+          changingPostId={changingPostId}
+          onEditPost={isOwnProfileDetail ? handleEditPost : undefined}
+          onDeletePost={isOwnProfileDetail ? handleDeletePost : undefined}
           onOpenReview={openDetailReview}
           reviewLink={detailReviewLink}
           status={status}
           statusKind={statusKind}
-          onAddToProximos={onAddToProximos}
-          hasGameInLists={hasGameInLists}
+          onAddGame={onAddGame}
+          addTarget={addTarget}
+          gameListOf={gameListOf}
           moveGameToCurrentByName={moveGameToCurrentByName}
           friendshipState={selectedProfileDetail ? relationshipWith((selectedProfileDetail as { uid?: string }).uid || '') : 'none'}
           friendshipBusy={Boolean(selectedProfileDetail) && friendshipBusyUid === (selectedProfileDetail as { uid?: string }).uid}
@@ -515,6 +541,7 @@ const SocialHubInner = memo(function SocialHubInner({
           onCancelFriendRequest={cancelDetailFriendRequest}
           onRemoveFriend={removeDetailFriend}
           viewerTier={ownTier}
+          viewerIsAdmin={isAdmin}
           viewerHiddenTabs={hiddenTabs}
           viewerCompleted={games?.c}
           viewerPending={games?.p}
@@ -585,6 +612,7 @@ const SocialHubInner = memo(function SocialHubInner({
             onBack={goToSocial}
             status={status}
             statusKind={statusKind}
+            showTiers={isAdmin}
           />
           {friendActionDialog}
         </>
@@ -608,6 +636,7 @@ const SocialHubInner = memo(function SocialHubInner({
             onBack={goToSocial}
             status={status}
             statusKind={statusKind}
+            showTiers={isAdmin}
           />
           {/* Aquí el botón "Pendiente" retira la petición enviada, y eso ahora se confirma. */}
           {friendActionDialog}

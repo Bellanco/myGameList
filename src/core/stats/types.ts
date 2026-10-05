@@ -122,7 +122,8 @@ export interface TopSummary {
  * de otra persona, y esta es la lista de piezas que puede montar; el orden en que van lo decide la pantalla.
  *
  * Existe como tipo de dominio porque quien recorta la lista no es la vista: en un perfil ajeno la recorta el
- * RANGO de quien mira (ver `friendStatsBlocks`), y esa es una regla de producto, no de pintado.
+ * RANGO de quien mira, o su claim de administración (ver `friendStatsBlocks`), y esa es una regla de producto, no
+ * de pintado.
  */
 export type StatsBlock =
   | 'top'
@@ -135,6 +136,7 @@ export type StatsBlock =
   | 'reviews'
   | 'shame'
   | 'wishlist'
+  | 'kin'
   | 'genreRanks'
   | 'activity'
   | 'replay'
@@ -158,6 +160,9 @@ export const OWN_STATS_BLOCKS: readonly StatsBlock[] = [
   'reviews',
   'shame',
   'wishlist',
+  // Los deseos frente a Próximos: SOLO en tu panel. Ni entra en los bloques del perfil de un amigo ni tendría con
+  // qué —la lista de deseos no viaja en el cálculo de sus estadísticas—.
+  'kin',
 ];
 
 /** Entradas a cada lista en un mes, derivadas de `listedAt`. `m` es `AAAA-MM`. */

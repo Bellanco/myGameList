@@ -11,6 +11,7 @@ import type { SocialActivityEntry, SocialMoveEntry, SocialPostEntry } from '../.
 import type { PalmaresEntry } from '../../model/types/premios';
 import type { YearSummarySeen } from '../../model/repository/firebaseClient';
 import { useFeedMoveTabs } from '../../view/hooks/useFeedMoveTabs';
+import { TAB_ORDER } from '../../core/constants/labels';
 import { achievementFeedEntries, type AchievementFeedEntry } from '../../core/achievements/feed';
 import { yearSummaryFeedEntries, type YearSummaryFeedEntry } from '../../core/social/yearSummaryFeed';
 import { useAchievementBaselines, type AchievementBaselineSource } from './useAchievementBaselines';
@@ -233,10 +234,10 @@ export function useSocialFeed(
   // Paginación: 25 inicial, +25 por "Mostrar más".
   const [feedVisibleCount, setFeedVisibleCount] = useState(FEED_PAGE_SIZE);
 
-  // F4 — de qué listas quiere ver los movimientos QUIEN MIRA. El valor es la cadena canónica ('cvep'), que es un
-  // primitivo estable y por tanto una dependencia honesta de este `useMemo`: cambiar el filtro recalcula la mezcla
-  // y nada más —ni una lectura de red, ni una rehidratación del directorio—.
-  const { moveTabsValue } = useFeedMoveTabs();
+  // F4 — de qué listas quiere ver los movimientos QUIEN MIRA. La lista sale memoizada sobre la cadena canónica
+  // ('cvepd'), que es un primitivo estable y por tanto una dependencia honesta de este `useMemo`: cambiar el
+  // filtro recalcula la mezcla y nada más —ni una lectura de red, ni una rehidratación del directorio—.
+  const { moveTabs } = useFeedMoveTabs();
 
   // F5 — de quién se toma línea base: tus amistades con espejo y tú, cuando lo tuyo ya está leído. La clave es el
   // uid, que es por quien va el grafo de amistad y no se desfasa como el `profileId` del directorio.
@@ -260,7 +261,9 @@ export function useSocialFeed(
     const posts = directory.flatMap((entry) => entry.posts || []).map((post) => ({ ...post, kind: 'post' as const }));
     // El filtro se aplica AQUÍ, sobre lo que el directorio ya tiene cargado, y no al hidratarlo: así encender una
     // lista que estaba apagada es instantáneo y no obliga a releer el gist social de nadie.
-    const visibleTabs = new Set(moveTabsValue.split(''));
+    // Y solo de las listas que esta versión ENSEÑA (`TAB_ORDER`): un amigo con una versión más nueva puede publicar
+    // movimientos de una lista que aquí todavía no tiene ni nombre.
+    const visibleTabs = new Set(moveTabs.filter((tab) => TAB_ORDER.includes(tab)));
     const moves = visibleTabs.size === 0
       ? []
       : capMovesPerAuthorDay(
@@ -329,7 +332,7 @@ export function useSocialFeed(
       .filter((item) => hasRenderableTimestamp(item.updatedAt))
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, FEED_MAX_ITEMS);
-  }, [directory, moveTabsValue, ownAchievements, friendUids, baselines, ownKey]);
+  }, [directory, moveTabs, ownAchievements, friendUids, baselines, ownKey]);
 
   const groupedFeedItems = useMemo<SocialFeedDayGroup[]>(() => {
     const groups: SocialFeedDayGroup[] = [];

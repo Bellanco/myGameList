@@ -351,7 +351,11 @@ service cloud.firestore {
       // preferencias de cada aparato). Quitarlas sería el mismo fallo del párrafo de arriba con el signo
       // cambiado: se valida el documento RESULTANTE, así que a quien las tenga guardadas de antes se le
       // denegaría la escritura entera de sus preferencias la próxima vez que cambiara de paleta.
-      return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale", "palette", "theme", "uppercase", "showSteamButton", "effects", "consent", "feedMoveTabs", "listShape", "covers", "gridSize"])
+      //
+      // `showWishlist` (pestaña de la lista de deseos) entra ANTES de que ningún cliente la escriba: por lo mismo
+      // de arriba, una clave que la regla no conoce deniega la escritura entera. Estas reglas tienen que estar
+      // desplegadas antes que la versión que la escribe.
+      return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale", "palette", "theme", "uppercase", "showSteamButton", "effects", "consent", "feedMoveTabs", "listShape", "covers", "gridSize", "showWishlist"])
         && (!("scoreScale" in request.resource.data)
             || request.resource.data.scoreScale in ["stars", "grade"])
         && (!("theme" in request.resource.data)
@@ -372,10 +376,14 @@ service cloud.firestore {
             || request.resource.data.gridSize in ["sm", "md", "lg"])
         && (!("covers" in request.resource.data)
             || request.resource.data.covers is bool)
-        // F4 — listas de las que su dueño ve los mensajes de actividad: letras de lista ('cevp'), nunca más de
-        // cuatro. Se acota el tamaño como en `palette`: es una preferencia, no un sitio donde guardar texto.
+        && (!("showWishlist" in request.resource.data)
+            || request.resource.data.showWishlist is bool)
+        // F4 — listas de las que su dueño ve los mensajes de actividad: letras de lista ('cvepd'), nunca más de
+        // cinco. Cinco y no cuatro desde la lista de deseos: o van las cinco letras, o cuatro y la marca '~' de
+        // «deseos apagada a propósito» (ver `core/social/moveTabsFilter`). Se acota el tamaño como en `palette`: es
+        // una preferencia, no un sitio donde guardar texto.
         && (!("feedMoveTabs" in request.resource.data)
-            || (request.resource.data.feedMoveTabs is string && request.resource.data.feedMoveTabs.size() <= 4))
+            || (request.resource.data.feedMoveTabs is string && request.resource.data.feedMoveTabs.size() <= 5))
         && (!("consent" in request.resource.data)
             || (request.resource.data.consent.keys().hasOnly(["version", "agreedAt"])
                 && request.resource.data.consent.version is string
@@ -624,8 +632,6 @@ service cloud.firestore {
     function premiosVotingConfigAllows() {
       let cfg = get(premiosVotingRef()).data;
       return cfg.get('isOpen', true) == true
-        // Publicada con los votos a la vista: ya no se vota, se reabra el interruptor o no (ver `votingSchedule`).
-        && cfg.get('votesRevealedAt', null) == null
         && (cfg.get('opensAtMillis', null) == null
             || request.time.toMillis() >= cfg.get('opensAtMillis', null))
         && (cfg.get('closesAtMillis', null) == null
@@ -818,15 +824,19 @@ service cloud.firestore {
       allow write, delete: if isAdmin();
     }
 
-    // ===== premiosReveal: los votos de cada uno, mientras la edición publicada no se termina =====
+    // ===== premiosReveal: los votos de cada uno, hasta que se abre la siguiente edición =====
     //
-    // SOLO QUIEN VOTÓ EN ESA EDICIÓN, y se reconoce por tener papeleta: mientras este documento existe, las únicas
-    // papeletas que hay son las de su edición —`openSeason` barre las anteriores y terminar borra las dos cosas—.
+    // SOLO QUIEN TIENE SESIÓN Y VOTÓ EN ESA EDICIÓN. Quién votó lo dice `premiosAdmin/voters-{seasonId}`, que
+    // escribe el administrador al publicar y que nadie más puede leer: `get()` desde aquí lo consulta igual,
+    // porque las reglas no se aplican a sí mismas. No puede ser «tiene papeleta», como fue: las papeletas se
+    // retiran al publicar y los votos se quedan hasta la edición siguiente.
+    //
     // Ni el enlace público ni cualquiera con sesión: el archivo de `premiosResults` sigue sin votos individuales
-    // (`docs/plan-premios-votos-a-la-vista.md`). Cuesta la lectura del documento más el `exists()`.
+    // (`docs/plan-premios-votos-a-la-vista.md`). Cuesta la lectura del documento más la del `get()`.
     match /premiosReveal/{seasonId} {
       allow read: if isAdmin()
-        || (isSignedIn() && exists(/databases/$(database)/documents/premiosBallots/$(request.auth.uid)));
+        || (isSignedIn()
+            && request.auth.uid in get(/databases/$(database)/documents/premiosAdmin/$('voters-' + seasonId)).data.get('uids', []));
       allow write, delete: if isAdmin();
     }
 

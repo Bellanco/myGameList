@@ -236,10 +236,10 @@ export async function getAllGameRecords(): Promise<GameRecord[]> {
 /** Reconstruye un `TabData` a partir del store `games` (agrupando por `_tab`) + tombstones del store `deleted`. */
 export async function getGamesAsTabData(): Promise<TabData> {
   const records = await getAllGameRecords();
-  const data: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: Date.now() };
+  const data: TabData = { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: Date.now() };
   for (const rec of records) {
     const tab = rec._tab;
-    if (tab !== 'c' && tab !== 'v' && tab !== 'e' && tab !== 'p') continue;
+    if (!tab || !(TAB_IDS as readonly string[]).includes(tab)) continue;
     const clean = { ...rec } as Partial<GameRecord>;
     delete clean._tab;
     data[tab].push(clean as GameItem);
@@ -580,10 +580,10 @@ export async function invalidateProfileGames(profileId: string): Promise<void> {
 // Caché persistente del DIRECTORIO social ya ensamblado (perfiles + actividad + posts). Reutiliza el store
 // `profileCache` con una clave reservada por gist propio (`__dir__:<ownGistId>`), que no colisiona con los
 // profileId (UUID) de la caché de juegos. TTL 30 min: dentro de la ventana, la navegación (feed→detalle→feed) y los
-// re-render sirven de IndexedDB sin releer los ~N gists sociales; el refresco manual (forceRefresh) la reescribe.
+// re-render sirven de IndexedDB sin releer los ~N gists sociales; el refresco forzado tras publicar la reescribe.
 // ---------------------------------------------------------------------------
 // TTL POR DEFECTO (rango bronce). El llamador pasa el suyo según el rango de QUIEN MIRA: plata 15 min, oro 10,
-// mithril 12 s. Ver `PROFILE_TIER_FEED_TTL_MS` en core/constants/tiers.ts.
+// mithril 60 s. Ver `PROFILE_TIER_FEED_TTL_MS` en core/constants/tiers.ts.
 const SOCIAL_DIRECTORY_TTL_MS = 30 * 60 * 1000;
 const SOCIAL_DIRECTORY_KEY_PREFIX = '__dir__:';
 /**

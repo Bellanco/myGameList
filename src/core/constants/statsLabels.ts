@@ -162,7 +162,7 @@ export const STATS_UI = {
     realSubtitle: 'Tamaño de cada lista al cierre de cada mes, según lo registrado en este dispositivo.',
     realNote: 'Histórico real, registrado mes a mes en este dispositivo desde que la función existe.',
     empty: 'Todavía no hay meses que representar.',
-    lists: { c: 'Completados', v: 'Abandonados', e: 'En curso', p: 'Próximos' },
+    lists: { c: 'Completados', v: 'Abandonados', e: 'En curso', p: 'Próximos', d: 'Deseados' },
     colMonth: 'Mes',
     tableAria: 'Datos por mes',
   },
@@ -306,6 +306,28 @@ export const STATS_UI = {
     recent: 'Los últimos en llegar',
     waitingSince: (since: string) => `desde ${since}`,
   },
+  /** Lo que deseas frente a lo que ya tienes en Próximos (`core/stats/wishKin`). Solo en tu panel. */
+  kin: {
+    title: 'Ya lo tienes en casa',
+    // Far Cry 3, Vaas: «¿Te he dicho alguna vez cuál es la definición de locura?».
+    subtitle: 'La definición de locura es comprar lo mismo esperando que sea distinto: mira antes lo que tienes.',
+    tile: 'Con pariente en Próximos',
+    tileUnit: (wishes: number) => `de ${wishes}`,
+    // BioShock Infinite: «siempre hay un faro, siempre hay un hombre, siempre hay una ciudad».
+    tileHint: 'Siempre hay un faro, un hombre… y un juego esperando en Próximos.',
+    pairs: 'Antes de comprar',
+    youHave: 'ya tienes',
+    saga: 'Misma saga',
+    /** Conector que la vista dice con los chips: solo lo oye un lector de pantalla («…, por Metroidvania»). */
+    because: ', por ',
+    noPairs: 'Ninguno de tus deseos tiene pariente en Próximos: lo que quieres, de momento, no lo tienes en casa.',
+    more: (count: number) => `Y ${count} ${count === 1 ? 'deseo más' : 'deseos más'} con pariente.`,
+    genres: 'Lo que deseas frente a lo que esperas',
+    legendWished: 'Deseos',
+    legendWaiting: 'Próximos',
+    gaps: 'Sin nada esperando',
+    gapsHint: 'Géneros que deseas sin ningún juego de ese género en Próximos: ahí un deseo cubre un hueco de verdad.',
+  },
   /** Lo que escribes: la cifra de reseñas, el bloque de puntos fuertes y débiles y las citas del podio. */
   reviews: {
     tile: 'Reseñas',
@@ -348,8 +370,6 @@ export const STATS_UI = {
     /** Reciprocidad: lo que escondes de tus listas, no lo ves de las suyas. */
     blockedAll: 'Escondes todas tus listas, así que no puedes ver las de nadie. Enséñalas en tu perfil y volverán estas cifras.',
     blocked: (lists: string) => `Falta ${lists}: lo escondes en tu perfil, así que tampoco lo ves aquí.`,
-    /** Lo que el rango del que mira no alcanza a ver. */
-    tierMore: 'Tu rango llega hasta aquí. Con uno más alto verías también cómo puntúa y cuánto termina.',
     noHours: 'Las horas no viajan por el canal social: son privadas y aquí no se enseñan.',
     scopeGeneral: 'General',
   },

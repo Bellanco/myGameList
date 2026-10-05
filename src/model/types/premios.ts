@@ -206,17 +206,12 @@ export interface PremiosVotingConfig {
    */
   visible?: boolean;
   /**
-   * ESTA EDICIÓN ENSEÑA LOS VOTOS al publicarse: las papeletas se quedan hasta que el administrador la termina,
-   * y quien votó ve lo que votó cada uno (ver `docs/plan-premios-votos-a-la-vista.md`). Lo pone `openSeason` en
-   * las ediciones abiertas desde que existe; sin él, publicar archiva y termina de una vez, como antes —quien
-   * votó lo hizo con la promesa de que nadie más vería su papeleta—.
+   * LA EDICIÓN CUYOS VOTOS SE PUEDEN VER, o vacío. Publicar la apunta y abrir la siguiente la borra, igual que el
+   * resumen de votos (`premiosReveal`) que señala: quien votó en ella lo ve hasta entonces (ver
+   * `docs/plan-premios-votos-a-la-vista.md`). Es de lectura pública como el resto del calendario, y solo dice QUE
+   * hay votos, no cuáles: así la pantalla no pide un documento que no existe o que las reglas le negarían.
    */
-  revealVotes?: boolean;
-  /**
-   * Cuándo se publicó una edición que enseña los votos y todavía no se ha terminado. Es lo que marca el estado
-   * `REVEALED` (ver `getSeasonStage`), y TAMBIÉN cierra el voto en las reglas, que lo miran.
-   */
-  votesRevealedAt?: string | null;
+  votesSeasonId?: string;
   /** Última escritura del calendario. Publicar una edición la toca, así que hace de fecha de publicación. */
   updatedAt?: string;
 }
@@ -258,7 +253,8 @@ export interface PremiosRevealedBallot extends PremiosArchivedEntry {
 /**
  * `premiosReveal/{seasonId}`: los votos de cada uno, en UN documento para que mirarlos cueste una lectura.
  *
- * Lo leen solo quienes votaron en esa edición, y desaparece al terminarla. Los nombres de los nominados, los
+ * Lo leen solo quienes votaron en esa edición —la lista de quiénes es `premiosAdmin/voters-{seasonId}`, que solo
+ * consultan las reglas— y desaparece al abrir la siguiente o cuando el administrador lo borra a mano. Los nombres de los nominados, los
  * pesos y los ganadores no van aquí: salen del archivo (`categoriesSnapshot` y `winners`), que la pantalla ya lee.
  */
 export interface PremiosReveal {

@@ -2,7 +2,6 @@ import { memo, useMemo, useState } from 'react';
 import { STATS_UI } from '../../../core/constants/statsLabels';
 import { computeStats } from '../../../core/stats/computeStats';
 import {
-  FRIEND_STATS_MAX_BLOCKS,
   friendGamesAreFull,
   friendStatsBlocks,
   friendStatsData,
@@ -13,7 +12,7 @@ import {
 } from '../../../core/stats/friendStats';
 import { useScoreScale } from '../../hooks/useScoreScale';
 import { StatsPanel } from './StatsPanel';
-import { TAB_IDS, type TabId } from '../../../model/types/game';
+import { LIBRARY_TAB_IDS, type TabId } from '../../../model/types/game';
 import type { ProfileTier } from '../../../core/constants/tiers';
 import type { StatsScope, YearMetric } from '../../../viewmodel/useStatsViewModel';
 // Misma hoja que el panel propio: entra en el chunk del hub social, que también es perezoso.
@@ -28,6 +27,8 @@ interface FriendStatsProps {
   sharedLists: Partial<Record<TabId, FriendGame[]>>;
   /** Rango de QUIEN MIRA: es su privilegio y decide cuánto ve. */
   viewerTier: ProfileTier;
+  /** ¿Quien mira tiene el claim `admin`? La administración ve el panel entero, con o sin rango. */
+  viewerIsAdmin: boolean;
   /** Listas que el espectador esconde en su propio perfil. Lo que esconde, no lo ve. */
   viewerHiddenTabs: readonly TabId[];
 }
@@ -39,8 +40,9 @@ interface FriendStatsProps {
  * mismas piezas. Lo único que hace este componente es aplicar las reglas de quién mira, que son tres y viven en
  * `core/stats/friendStats`:
  *
- *  - el RANGO decide qué bloques se ven y si hay pestañas de año (`friendStatsBlocks`),
- *  - el RANGO decide también con qué datos se calcula (`friendStatsData`): la administración usa los juegos del
+ *  - el RANGO decide qué bloques se ven (`friendStatsBlocks`); la administración —el claim, no el rango— los ve
+ *    todos y además tiene pestañas de año,
+ *  - la ADMINISTRACIÓN decide también con qué datos se calcula (`friendStatsData`): ella usa los juegos del
  *    gist de listados que el hub ya bajó —filtrados por los ajustes de privacidad de su dueño—, y el resto se
  *    queda en la proyección pública, aunque los juegos completos estén en memoria,
  *  - la RECIPROCIDAD quita las listas que el propio espectador esconde (`friendVisibleTabs`), de la que la cuenta
@@ -48,28 +50,29 @@ interface FriendStatsProps {
  *
  * Sus RESEÑAS no se pintan aquí en ningún caso: tienen su propio apartado en este mismo perfil.
  */
-export const FriendStats = memo(function FriendStats({ sharedLists, viewerTier, viewerHiddenTabs }: FriendStatsProps) {
+export const FriendStats = memo(function FriendStats({ sharedLists, viewerTier, viewerIsAdmin, viewerHiddenTabs }: FriendStatsProps) {
   const scale = useScoreScale();
   const [scope, setScope] = useState<StatsScope>('general');
   const [yearMetric, setYearMetric] = useState<YearMetric>('games');
 
   const available = useMemo(
-    () => TAB_IDS.filter((tab) => (sharedLists[tab]?.length || 0) > 0),
+    // Las estadísticas son de la biblioteca: la lista de deseos no entra en el panel (ver `computeStats`).
+    () => LIBRARY_TAB_IDS.filter((tab) => (sharedLists[tab]?.length || 0) > 0),
     [sharedLists],
   );
   const { tabs, blockedByViewer } = useMemo(
-    () => friendVisibleTabs(available, viewerHiddenTabs, viewerTier),
-    [available, viewerHiddenTabs, viewerTier],
+    () => friendVisibleTabs(available, viewerHiddenTabs, viewerIsAdmin),
+    [available, viewerHiddenTabs, viewerIsAdmin],
   );
 
-  // El rango dice a qué datos tiene derecho; los datos dicen qué hay. Si el gist de listados no llegó, ni la
+  // El claim dice a qué datos tiene derecho; los datos dicen qué hay. Si el gist de listados no llegó, ni la
   // administración pinta el panel completo: se queda en la proyección pública en vez de enseñar ceros.
-  const level = friendStatsData(viewerTier) === 'full' && friendGamesAreFull(sharedLists) ? 'full' : 'public';
+  const level = friendStatsData(viewerIsAdmin) === 'full' && friendGamesAreFull(sharedLists) ? 'full' : 'public';
   const stats = useMemo(() => computeStats(toFriendTabData(sharedLists, tabs, level)), [sharedLists, tabs, level]);
-  const blocks = friendStatsBlocks(viewerTier);
+  const blocks = friendStatsBlocks(viewerTier, viewerIsAdmin);
   const years = useMemo(() => stats.byYear.map((summary) => summary.year), [stats.byYear]);
   const yearSummary = typeof scope === 'number' ? stats.byYear.find((summary) => summary.year === scope) ?? null : null;
-  const withYears = friendStatsHasYearTabs(viewerTier);
+  const withYears = friendStatsHasYearTabs(viewerIsAdmin);
 
   if (available.length === 0) {
     return <p className="stats-empty">{L.friend.empty}</p>;
@@ -102,8 +105,6 @@ export const FriendStats = memo(function FriendStats({ sharedLists, viewerTier, 
       onOpenReviews={null}
       onOpenReview={null}
       notes={blockedByViewer.length ? <p className="stats-note">{L.friend.blocked(blockedNames)}</p> : null}
-      // Al que no llega su rango se le dice, en vez de dejar que se pregunte si su amigo no tiene más.
-      footNote={blocks.length < FRIEND_STATS_MAX_BLOCKS ? <p className="stats-note">{L.friend.tierMore}</p> : null}
     />
   );
 });

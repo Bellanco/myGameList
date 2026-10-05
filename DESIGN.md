@@ -170,8 +170,9 @@ preparada para un «compacto / cómodo» que no se ha construido.
 - Gutter lateral mínimo de 16 px a cualquier ancho.
 - La app es **headerless**: no hay barra superior fija, sino navegación inferior y un control flotante.
 - **Cabecera de pantalla** (`ScreenHeader`): rótulo en versales y título en la letra de titulares, sin cifras.
-  Pieza neutra, apagada en la base: hoy solo la enciende **Forja**, en las cuatro listas, el panel y Ajustes. Va
-  en el flujo, `aria-hidden` (el `h1` accesible sigue en `main`).
+  Pieza neutra, apagada en la base: hoy solo la enciende **Forja**, en el panel y Ajustes; en las listas se quitó
+  el 05-10-2026 (la pestaña activa ya dice dónde estás). Va en el flujo, `aria-hidden` (el `h1` accesible sigue en
+  `main`).
 
 ### 5.1 · Navegación
 

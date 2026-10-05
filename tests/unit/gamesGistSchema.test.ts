@@ -18,7 +18,7 @@ function game(over: Partial<GameItem> = {}): GameItem {
 }
 
 function tabData(over: Partial<TabData> = {}): TabData {
-  return { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 1_700_000_000_000, ...over };
+  return { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 1_700_000_000_000, ...over };
 }
 
 describe('gamesGistSchema — escritura (falla cerrado)', () => {

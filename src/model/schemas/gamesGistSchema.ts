@@ -58,7 +58,13 @@ const gameItem = z.object({
   // Sellos automáticos. `enteredAt` se valida por clave de lista (no `record`) para que un juego con basura
   // dentro —una clave que no es una lista— se detecte aquí y no llegue al gist.
   enteredAt: z
-    .object({ c: z.number().optional(), v: z.number().optional(), e: z.number().optional(), p: z.number().optional() })
+    .object({
+      c: z.number().optional(),
+      v: z.number().optional(),
+      e: z.number().optional(),
+      p: z.number().optional(),
+      d: z.number().optional(),
+    })
     .optional(),
   gradedAt: z.number().optional(),
 });
@@ -75,6 +81,9 @@ export const gamesGistSchema = z.object({
   v: z.array(gameItem),
   e: z.array(gameItem),
   p: z.array(gameItem),
+  // Deseos llegó después: OPCIONAL, porque un gist escrito por un cliente anterior a la lista no la lleva y
+  // diagnosticarlo como inválido al leer sería ruido. La escritura de este cliente la incluye siempre.
+  d: z.array(gameItem).optional(),
   deleted: z.array(deletedItem),
   updatedAt: z.number(),
 });

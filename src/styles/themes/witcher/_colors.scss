@@ -167,6 +167,8 @@
      de los dos (0,113 y 0,099) sin tocar el color con el que escribe. Igni se corre un punto hacia el
      ámbar para no rozar el coral de los puntos débiles. */
   --cat-1: #ff9a45; --cat-2: #4fc3ff; --cat-3: #2fd9cf; --cat-4: #c795ff; --cat-5: #ff85d8; --cat-6: #ffc62e; --cat-7: #7b8cf5;
+  /* La lista de DESEOS (feed, estadísticas): el tono que más se aparta de los otros avisos; el sexto (el oro de Quen) ES el de los logros. */
+  --wish: var(--cat-5);
   --cat-1-fg: #ff9a45; --cat-2-fg: #4fc3ff; --cat-3-fg: #2fd9cf; --cat-4-fg: #c795ff; --cat-5-fg: #ff85d8; --cat-6-fg: #ffc62e; --cat-7-fg: #9aacff;
 }
 /* witcher (Plata y acero) — los mismos siete a la luz, en su versión honda para leerse sobre el acero claro.

@@ -38,6 +38,15 @@ describe('rutas del hub social', () => {
     expect(state.profileReviewsView).toBe(true);
   });
 
+  it('la pestaña de publicaciones gana a la ficha, y no enciende la de reseñas', () => {
+    const state = matchSocialRoute('/social/profiles/abc123/posts');
+    expect(state.activePanel).toBe('profile-detail');
+    expect(state.profileDetailId).toBe('abc123');
+    expect(state.profilePostsView).toBe(true);
+    expect(state.profileReviewsView).toBe(false);
+    expect(matchSocialRoute('/social/profiles/abc123/reviews').profilePostsView).toBe(false);
+  });
+
   it('la reseña concreta gana a las dos anteriores', () => {
     const state = matchSocialRoute('/social/profiles/abc123/game/42/review');
     expect(state.activePanel).toBe('profile-review');

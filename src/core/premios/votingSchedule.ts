@@ -29,22 +29,20 @@ export const VOTING_STATE = {
 export type VotingState = (typeof VOTING_STATE)[keyof typeof VOTING_STATE];
 
 /**
- * Momento del ciclo de vida de la edición, que es lo que pinta la pestaña de temporada. Son cuatro, y de cada
- * uno sale UNA acción:
+ * Momento del ciclo de vida de la edición, que es lo que pinta la pestaña de temporada. Son tres, y de cada uno
+ * sale UNA acción:
  *
- *   NONE     → no hay edición en marcha                → «Abrir votación»
- *   OPEN     → se está votando                         → «Cerrar ahora»
- *   PENDING  → cerrada y sin publicar                  → «Publicar los resultados»
- *   REVEALED → publicada, con los votos a la vista     → «Terminar la edición»
+ *   NONE    → no hay edición en marcha       → «Abrir votación»
+ *   OPEN    → se está votando                → «Cerrar ahora»
+ *   PENDING → cerrada y sin publicar         → «Publicar los resultados»
  *
- * REVEALED solo existe en las ediciones que enseñan los votos (`revealVotes`): las demás se archivan y se
- * terminan de una vez, y el ciclo vuelve solo a NONE. Terminar deja la edición sin fecha de cierre.
+ * Publicar archiva la edición y la deja sin fecha de cierre, así que el ciclo vuelve solo a NONE. Los votos de
+ * cada uno siguen a la vista de quien votó hasta que se abre la siguiente (ver `votesSeasonId`).
  */
 export const SEASON_STAGE = {
   NONE: 'none',
   OPEN: 'open',
   PENDING: 'pending',
-  REVEALED: 'revealed',
 } as const;
 
 export type SeasonStage = (typeof SEASON_STAGE)[keyof typeof SEASON_STAGE];
@@ -56,8 +54,6 @@ export function isVotingOpenNow(
 ): boolean {
   if (!config) return false;
   if (config.isOpen === false) return false;
-  // Con los votos a la vista no se vota, pase lo que pase con el interruptor: las reglas lo miran igual.
-  if (config.votesRevealedAt) return false;
   if (config.opensAtMillis !== null && config.opensAtMillis !== undefined && now < config.opensAtMillis) return false;
   if (config.closesAtMillis !== null && config.closesAtMillis !== undefined && now >= config.closesAtMillis) return false;
   return true;
@@ -78,19 +74,14 @@ export function getVotingState(
 /**
  * Momento del ciclo de vida de la edición.
  *
- * Lo que distingue «no hay edición» de «hay una» es LA FECHA DE CIERRE: abrir una edición la fija y terminarla la
- * borra.
- *
- * LA PUBLICACIÓN CON VOTOS A LA VISTA SÍ LLEVA MARCA PROPIA (`votesRevealedAt`). Deducirla de que el id de la
- * edición coincida con `lastPublishedId` fallaba con una edición reabierta con el mismo nombre que la última
- * publicada: nacía ya «publicada».
+ * Lo que distingue «no hay edición» de «hay una» es LA FECHA DE CIERRE: abrir una edición la fija y publicarla la
+ * borra. No hace falta ninguna marca aparte, que sería un segundo estado que mantener en sincronía.
  */
 export function getSeasonStage(
   config: PremiosVotingConfig | null | undefined,
   now: number = Date.now(),
 ): SeasonStage {
   if (config?.closesAtMillis === null || config?.closesAtMillis === undefined) return SEASON_STAGE.NONE;
-  if (config.votesRevealedAt) return SEASON_STAGE.REVEALED;
   if (isVotingOpenNow(config, now)) return SEASON_STAGE.OPEN;
   return SEASON_STAGE.PENDING;
 }
@@ -114,9 +105,6 @@ export function areResultsPublished(config: PremiosVotingConfig | null | undefin
  * esto»: enseñaba los del año pasado a quien acababa de votar esta. Los dos casos son el mismo, y lo que los
  * junta es la fecha de cierre, que es lo que distingue «hay edición» de «no la hay».
  *
- * Con una excepción: la edición publicada con los votos a la vista (`REVEALED`). Sigue en marcha hasta que se
- * termina, pero lo archivado ya es SUYO.
- *
  * Decide qué se OFRECE, no a dónde se puede llegar: `/premios/resultados` sigue respondiendo siempre, porque un
  * enlace compartido en enero tiene que funcionar.
  */
@@ -124,8 +112,7 @@ export function areResultsOffered(
   config: PremiosVotingConfig | null | undefined,
   now: number = Date.now(),
 ): boolean {
-  const stage = getSeasonStage(config, now);
-  return areResultsPublished(config) && (stage === SEASON_STAGE.NONE || stage === SEASON_STAGE.REVEALED);
+  return areResultsPublished(config) && getSeasonStage(config, now) === SEASON_STAGE.NONE;
 }
 
 /** Días completos que faltan para un instante, redondeando hacia arriba. `null` si no hay fecha. */

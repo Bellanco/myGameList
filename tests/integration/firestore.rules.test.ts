@@ -79,12 +79,20 @@ describe('firestore.rules', () => {
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { covers: 'on' }));
     });
 
+    it('admite `showWishlist` (pestaña de la lista de deseos) y solo como booleano', async () => {
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { palette: 'persona', showWishlist: false }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { showWishlist: 'off' }));
+    });
+
     it('F4: admite `feedMoveTabs` (filtro de movimientos del feed) y rechaza lo que no sea una cadena corta', async () => {
       await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { feedMoveTabs: 'cvep' }));
+      // Las cinco listas, y cuatro con la marca de «deseos apagada a propósito»: los dos valores más largos.
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { feedMoveTabs: 'cvepd' }));
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { feedMoveTabs: 'cvep~' }));
       // «Ninguna» es una elección legítima, no la ausencia de valor.
       await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { feedMoveTabs: '' }));
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { feedMoveTabs: ['c', 'v'] }));
-      // Es una preferencia, no un sitio donde guardar texto: hay cuatro listas y ese es el tope.
+      // Es una preferencia, no un sitio donde guardar texto: hay cinco listas y ese es el tope.
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { feedMoveTabs: 'cvepcvep' }));
     });
 
@@ -1576,46 +1584,48 @@ describe('firestore.rules', () => {
       });
     });
 
-    // LOS VOTOS DE CADA UNO, entre publicar y terminar (docs/plan-premios-votos-a-la-vista.md). Los ve quien votó
-    // en esa edición y nadie más: ni el enlace público ni cualquiera con sesión.
+    // LOS VOTOS DE CADA UNO, hasta que se abre la siguiente edición (docs/plan-premios-votos-a-la-vista.md). Los ve
+    // quien tiene sesión Y votó en esa edición —lo dice la lista privada `premiosAdmin/voters-{id}`— y nadie más.
     describe('votos a la vista', () => {
       const resumen = {
         seasonId: 'porra-2026',
         ballots: [{ rank: 1, profileId: 'p-ana', nickname: 'Ana', points: 3, selections: { cat1: 'cat1_option_0' } }],
       };
+      const conVotantes = (uids: string[]) => seed('premiosAdmin', 'voters-porra-2026', { uids });
 
-      it('quien votó en la edición los lee', async () => {
+      it('quien votó en la edición los lee, aunque ya no tenga papeleta', async () => {
         await seed('premiosReveal', 'porra-2026', resumen);
-        await seed('premiosBallots', 'uid-a', papeleta('uid-a'));
+        await conVotantes(['uid-a']);
         await assertSucceeds(getDoc(doc(ownerDb('uid-a'), 'premiosReveal', 'porra-2026')));
       });
 
       it('quien no votó no, aunque tenga sesión; sin sesión, tampoco', async () => {
         await seed('premiosReveal', 'porra-2026', resumen);
-        await seed('premiosBallots', 'uid-a', papeleta('uid-a'));
+        await conVotantes(['uid-a']);
         await assertFails(getDoc(doc(ownerDb('uid-b'), 'premiosReveal', 'porra-2026')));
         await assertFails(getDoc(doc(anonDb(), 'premiosReveal', 'porra-2026')));
         await assertSucceeds(getDoc(doc(adminDb(), 'premiosReveal', 'porra-2026')));
       });
 
+      // Votar en OTRA edición no abre esta: la lista es por edición.
+      it('la lista de una edición no abre los votos de otra', async () => {
+        await seed('premiosReveal', 'porra-2026', resumen);
+        await seed('premiosAdmin', 'voters-otra', { uids: ['uid-a'] });
+        await assertFails(getDoc(doc(ownerDb('uid-a'), 'premiosReveal', 'porra-2026')));
+      });
+
+      it('la lista de votantes no la lee nadie más que el administrador', async () => {
+        await conVotantes(['uid-a']);
+        await assertFails(getDoc(doc(ownerDb('uid-a'), 'premiosAdmin', 'voters-porra-2026')));
+        await assertSucceeds(getDoc(doc(adminDb(), 'premiosAdmin', 'voters-porra-2026')));
+      });
+
       it('solo el administrador lo escribe y lo borra', async () => {
-        await seed('premiosBallots', 'uid-a', papeleta('uid-a'));
+        await conVotantes(['uid-a']);
         await assertFails(setDoc(doc(ownerDb('uid-a'), 'premiosReveal', 'porra-2026'), resumen));
         await assertSucceeds(setDoc(doc(adminDb(), 'premiosReveal', 'porra-2026'), resumen));
         await assertFails(deleteDoc(doc(ownerDb('uid-a'), 'premiosReveal', 'porra-2026')));
         await assertSucceeds(deleteDoc(doc(adminDb(), 'premiosReveal', 'porra-2026')));
-      });
-
-      // Publicar con los votos a la vista cierra el voto aunque el interruptor y la fecha lo permitieran: si no,
-      // reabrir a mano dejaría cambiar la papeleta viendo ya las de los demás.
-      it('con los votos a la vista no se vota ni se corrige', async () => {
-        await seed('premiosConfig', 'voting', {
-          isOpen: true,
-          season: 2026,
-          closesAtMillis: AHORA + DIA,
-          votesRevealedAt: new Date(AHORA).toISOString(),
-        });
-        await assertFails(setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a')));
       });
     });
   });

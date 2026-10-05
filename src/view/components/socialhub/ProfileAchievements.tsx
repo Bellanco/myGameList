@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useMemo, type CSSProperties } from 'react';
 import { AchievementStrip, type StripItem } from '../stats/AchievementStrip';
 import { AchievementsScreen, formatUnlockDate } from '../stats/AchievementsScreen';
 import { AchievementSprite } from '../AchievementSprite';
@@ -19,10 +19,13 @@ import { APP_LOCALE } from '../../../core/constants/locale';
  * canal. Si esa persona no publica logros —opt-out, o cliente antiguo—, **la tira no se pinta**: ni marco vacío
  * ni «este usuario no tiene logros», porque no hay nada que decir.
  *
- * SIN DESTACADOS, el orden lo pone la RAREZA y luego el nivel. El orden por familia —que era el anterior— tenía
- * un defecto silencioso: producía la misma vitrina para todo el mundo, siempre encabezada por el mismo logro,
- * porque el catálogo se recorre igual para todos. Con la mayoría de la gente sin tocar nunca los destacados, el
- * orden por defecto ES la vitrina y tiene que decir algo.
+ * EL ORDEN ES LA FECHA, de lo más reciente a lo más antiguo (decisión del 05-10-2026): lo que se viene a ver a
+ * la ficha de alguien es qué ha sacado últimamente. Antes mandaba la rareza (`sortMirror`), y la tira se quedaba
+ * igual durante meses aunque esa persona no parara de conseguir cosas. A igual fecha sigue mandando la rareza,
+ * porque la ordenación es estable sobre `sortMirror`; lo que no trae sello cae al final.
+ *
+ * DEBAJO, EL AVANCE: una línea fina con el porcentaje del catálogo a su derecha. Es la misma cifra que la cabecera
+ * de su listado (`summarizeMirror` con la apertura comunitaria), dicha sin rótulo.
  */
 export const ProfileAchievementStrip = memo(function ProfileAchievementStrip({
   mirror,
@@ -31,8 +34,14 @@ export const ProfileAchievementStrip = memo(function ProfileAchievementStrip({
   mirror: string;
   onOpen: () => void;
 }) {
+  const { open } = useAchievementsConfig();
+  const percent = useMemo(
+    () => summarizeMirror(new Map(parseMirror(mirror).map((item) => [item.id, item.level])), open).percent,
+    [mirror, open],
+  );
   const items = useMemo<StripItem[]>(() => {
-    const mirrored = sortMirror(parseMirror(mirror));
+    // Estable sobre `sortMirror`: a igual fecha queda delante lo más raro.
+    const mirrored = sortMirror(parseMirror(mirror)).sort((a, b) => b.unlockedAt - a.unlockedAt);
     // EL MISMO SUELO QUE EL LISTADO, y por el mismo motivo: la medalla dice su fecha en el rótulo, y dos
     // versiones del mismo dato —fechada en la lista, muda en la tira— es peor que cualquiera de las dos.
     let floor = 0;
@@ -54,6 +63,19 @@ export const ProfileAchievementStrip = memo(function ProfileAchievementStrip({
       {/* Con tope: aquí la tira comparte cabecera con el avatar y el rango, y no puede crecer sin empujarlos.
           Lo que no cabe se cuenta en la baldosa final, que es a la vez el acceso al listado. */}
       <AchievementStrip items={items} limit={11} size="md" onOpen={onOpen} onSeeAll={onOpen} />
+      {/* Un solo nombre accesible para las dos piezas: la línea y la cifra dicen lo mismo. */}
+      <div
+        className="hub-profile-ach-progress"
+        role="meter"
+        aria-label={ACHIEVEMENTS_UI.countLabel}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percent}
+        aria-valuetext={ACHIEVEMENTS_UI.countHint(percent)}
+      >
+        <span className="hub-profile-ach-bar" style={{ '--ach-pct': percent } as CSSProperties} aria-hidden="true" />
+        <span className="hub-profile-ach-pct" aria-hidden="true">{ACHIEVEMENTS_UI.rarityShare(percent)}</span>
+      </div>
     </div>
   );
 });

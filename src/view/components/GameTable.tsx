@@ -10,7 +10,7 @@ import { GameCover } from './GameCover';
 import { coverUrl } from '../../core/utils/coverUrl';
 import { sabemosQueNoTiene } from '../../core/utils/coverMemory';
 import { peticionDeCaratula, type PeticionDeCaratula } from '../../core/utils/coverDone';
-import type { GameItem, TabId, TabSort } from '../../model/types/game';
+import { UNPLAYED_TAB_IDS, type GameItem, type TabId, type TabSort } from '../../model/types/game';
 import type { TabAction } from '../../viewmodel/useGameListViewModel';
 import { hueFromGrade, resolveGrade } from '../../core/utils/scoreScale';
 import { Icon } from './Icon';
@@ -270,6 +270,52 @@ const GRID_GAP_FLAT_PX = 14;
  * Se pregunta SIEMPRE por la normal aunque luego se pida otro tamaño: la memoria se guarda por URL y el «no» de
  * un juego no depende de a qué resolución se le pida (si la normal dio 404, la ancha también lo dará).
  */
+/**
+ * Lo que mediría el nombre SIN el recorte de dos líneas.
+ *
+ * No vale `scrollHeight`: con `-webkit-line-clamp`, Chrome cuenta las líneas escondidas pero Safari y Firefox
+ * devuelven lo mismo que la altura visible, así que allí todo parecía caber y el nombre no se desplegaba nunca.
+ * Se quita el recorte un instante —en línea, sin pintar entre medias— y se mide de verdad.
+ */
+function alturaSinRecorte(nombre: HTMLElement): number {
+  const { display, webkitLineClamp, overflow } = nombre.style;
+  nombre.style.display = 'block';
+  nombre.style.webkitLineClamp = 'unset';
+  nombre.style.overflow = 'visible';
+  const alto = nombre.offsetHeight;
+  nombre.style.display = display;
+  nombre.style.webkitLineClamp = webkitLineClamp;
+  nombre.style.overflow = overflow;
+  return alto;
+}
+
+/**
+ * Al LLEGAR a una caja (ratón o foco): si su nombre no cabe en las dos líneas, se marca para que el CSS lo
+ * despliegue, y se fija la altura de su hueco para que, al desplegarse por encima, la rejilla no se mueva.
+ */
+function marcarNombreCortado(event: { currentTarget: HTMLElement }): void {
+  const caja = event.currentTarget;
+  const nombre = caja.querySelector<HTMLElement>('.game-card-name');
+  const hueco = nombre?.parentElement;
+  if (!nombre || !hueco) return;
+  // EN ESTE ORDEN: primero se mide y luego se marca. Con la marca puesta el CSS ya lo despliega, y medirlo
+  // entonces daría la altura del nombre entero en vez la de sus dos líneas.
+  const alto = nombre.offsetHeight;
+  const cortado = alturaSinRecorte(nombre) > alto + 1 || nombre.scrollWidth > nombre.clientWidth + 1;
+  hueco.style.height = cortado ? `${alto}px` : '';
+  caja.toggleAttribute('data-name-cut', cortado);
+}
+
+/** Al IRSE: el hueco vuelve a medir lo que mida el nombre, que puede cambiar si cambia el ancho de la caja. */
+function soltarNombreCortado(event: { currentTarget: HTMLElement }): void {
+  const caja = event.currentTarget;
+  // Con el foco todavía dentro (se fue el ratón pero sigue enfocada), el nombre sigue desplegado.
+  if (caja.matches(':hover') || caja.contains(document.activeElement)) return;
+  caja.removeAttribute('data-name-cut');
+  const hueco = caja.querySelector<HTMLElement>('.game-card-name-box');
+  if (hueco) hueco.style.height = '';
+}
+
 function coverBase(covers: boolean, peticion: PeticionDeCaratula, ampliado: boolean): string | null {
   if (!covers) return null;
   const url = coverUrl(peticion.nombre, peticion.plataformas, ampliado);
@@ -532,10 +578,11 @@ export const GameTable = memo(function GameTable({
       ];
     }
     if (currentTab === 'e') return ['name', 'platforms', 'genres', 'strengths', 'weaknesses'];
+    // Próximos y deseados: lo que no se ha jugado se ordena por interés.
     return ['name', 'platforms', 'genres', 'interest'];
   };
 
-  const supportsReview = (tab: TabId) => tab !== 'p';
+  const supportsReview = (tab: TabId) => !UNPLAYED_TAB_IDS.includes(tab);
   /* A DÓNDE LLEVA «ver el análisis», el mismo destino desde el detalle del renglón y desde la caja del
      mosaico. `backTo` es de dónde se viene, para que el botón de volver de aquella pantalla devuelva AQUÍ y no
      al listado de reseñas, que es de donde se llega normalmente. */
@@ -559,10 +606,9 @@ export const GameTable = memo(function GameTable({
   const { shape, setShape } = useListShape();
   /* Apagada por defecto: sin encenderla, `src` va vacío, no se pide ninguna imagen y la caja se queda con su
      portada de casa. Es la preferencia la que autoriza a que el servidor consulte los títulos en IGDB.
-     Y la preferencia solo decide DENTRO de lo que esta lista permite (ver `allowCovers`): en la biblioteca de
-     otra persona hoy no se piden carátulas salvo para el rango que las tiene desbloqueadas, porque ahí cada
-     perfil visitado es un catálogo nuevo que resolver. El día que se abra a todos, esta línea no cambia: basta
-     con que quien monta la tabla deje de restringirlo y vuelve a mandar el check. */
+     Y la preferencia solo decide DENTRO de lo que esta lista permite (`coverPolicy`): en la biblioteca de otra
+     persona las carátulas se piden para todos, pero con el cupo de lo ajeno, porque ahí cada perfil visitado es
+     un catálogo nuevo que resolver (ver `SocialProfileDetailScreen`). */
   const { covers: coversPreferidas } = useCovers();
   const covers = coversPreferidas && (coverPolicy?.allowed ?? true);
   const pedidoDePortada: PedidoDePortada = {
@@ -623,9 +669,12 @@ export const GameTable = memo(function GameTable({
      del recuadro y su filete (unos 18 px). */
   const anchoNotaBuena = anchoCol(1.25) - 2;
   const anchoNotaMala = anchoCol(2.55) - 2;
-  /* Próximos es la única lista sin opinión: todavía no se ha jugado a nada, así que el recuadro no existe en
+  /* Próximos y deseados son las listas sin opinión: todavía no se ha jugado a nada, así que el recuadro no existe en
      vez de salir con las dos mitades vacías. En la vergüenza el lado malo son los MOTIVOS de dejarlo. */
   const tieneOpinion = currentTab === 'c' || currentTab === 'v' || currentTab === 'e';
+  /* La lista de deseos se llena A MANO: lo que trae Playnite ya lo tienes, así que su estado vacío no ofrece
+     importar ni la bandeja, solo añadir. */
+  const importHere = onImportLibrary && currentTab !== 'd' ? onImportLibrary : undefined;
 
   // Create virtual rows (main + optionally detail rows)
   const virtualRows = useMemo(() => {
@@ -821,7 +870,7 @@ export const GameTable = memo(function GameTable({
   // decide dos cosas del meta compacto: si se reserva la columna de la nota —se reserva aunque un juego
   // concreto no la tenga, o las filas de la misma lista dejarían de estar alineadas entre sí— y, cuando no la
   // hay, que su sitio lo ocupen los puntos fuertes.
-  const hasScoreColumn = currentTab === 'c' || currentTab === 'p' || (currentTab === 'v' && showShameScore);
+  const hasScoreColumn = currentTab === 'c' || UNPLAYED_TAB_IDS.includes(currentTab) || (currentTab === 'v' && showShameScore);
   // La escala (F2) cambia el ANCHO de esa columna: cinco estrellas ocupan bastante más que el aro de la nota.
   const scoreScale = useScoreScale();
   const tableClass = [
@@ -946,9 +995,10 @@ export const GameTable = memo(function GameTable({
     };
   }, [sortableColumns.length]);
 
-  // Con UNA sola columna ordenable no hay orden que elegir —«En curso» solo ordena por nombre, y la vergüenza
-  // también mientras no haya ningún juego puntuado—: la barra diría «Ordenar: Nombre» y nada más.
-  const showSortBar = Boolean(onSort) && sortableColumns.length > 1 && (cards || shape === 'grid');
+  // Con UNA sola columna ordenable —«En curso» solo ordena por nombre, y la vergüenza también mientras no haya
+  // ningún juego puntuado— la barra se pinta igual. Esconderla dejaba esas listas sin el conmutador de forma, que
+  // vive en la misma cabecera, y un solo chip sigue diciendo algo: el sentido, que se invierte al pulsarlo.
+  const showSortBar = Boolean(onSort) && sortableColumns.length > 0 && (cards || shape === 'grid');
 
   return (
     <div className="table-wrap" ref={parentRef}>
@@ -1081,7 +1131,7 @@ export const GameTable = memo(function GameTable({
                       AQUÍ (antes esto era un enlace a `/integraciones`, que ya no existe), y si quedan juegos
                       sin clasificar de una importación anterior se ofrece también la bandeja.
                       Solo clases globales: esta tabla no carga la hoja del flujo de importación. */}
-                  {!readOnly && (onAddGame || onImportLibrary) ? (
+                  {!readOnly && (onAddGame || importHere) ? (
                     <div className="table-empty-actions">
                       {onAddGame ? (
                         <button type="button" className="btn btn-primary" onClick={onAddGame}>
@@ -1089,17 +1139,17 @@ export const GameTable = memo(function GameTable({
                           <span>{UI_MESSAGES.table.emptyCta}</span>
                         </button>
                       ) : null}
-                      {onImportLibrary ? (
+                      {importHere ? (
                         <FilePickerButton
                           id="import-library-empty"
                           className="btn btn-secondary"
                           label={IMPORT_UI.importBtn}
                           ariaLabel={IMPORT_UI.importAria}
                           accept=".json,application/json"
-                          onPick={onImportLibrary}
+                          onPick={importHere}
                         />
                       ) : null}
-                      {onOpenInbox && inboxCount > 0 ? (
+                      {importHere && onOpenInbox && inboxCount > 0 ? (
                         <button type="button" className="btn btn-secondary btn-accent" onClick={onOpenInbox}>
                           <Icon name={COMMON_ICONS.download} />
                           <span>{IMPORT_UI.viewInbox(inboxCount)}</span>
@@ -1148,7 +1198,7 @@ export const GameTable = memo(function GameTable({
                                la caja, no un número igual para todos (ver `chipsQueCaben`). */
                             const capsPlat = chipsQueCaben(game.platforms, anchoRanuraCaja, metricasChip);
                             const capsGenero = chipsQueCaben(game.genres, anchoRanuraCaja, metricasChip);
-                            const nota = (currentTab === 'c' || currentTab === 'p') || (showShameScore && hasScore(game)) ? (
+                            const nota = (currentTab === 'c' || UNPLAYED_TAB_IDS.includes(currentTab)) || (showShameScore && hasScore(game)) ? (
                               <span className="game-card-score"><ScoreDisplay game={game} /></span>
                             ) : null;
                             /* EL ACCESO A LA RESEÑA, en la esquina que quedaba libre: debajo de la nota y
@@ -1178,6 +1228,14 @@ export const GameTable = memo(function GameTable({
                                 // El tono del PRIMER género, para el tema que quiera teñir la caja con él (hoy Forja,
                                 // en el rescoldo del pie).
                                 style={game.genres?.[0] ? ({ '--card-tone': categoryToneVar(game.genres[0]) } as CSSProperties) : undefined}
+                                // ¿No le cabe el nombre? Se mide AL LLEGAR (ratón o foco) y no al pintar: es una
+                                // comparación de alturas y solo se paga en la caja que se mira. Va al DOM y no a un
+                                // estado porque no cambia nada de lo que React pinta, solo si el CSS despliega el
+                                // nombre (ver `.game-card-name.is-full`).
+                                onMouseEnter={marcarNombreCortado}
+                                onFocus={marcarNombreCortado}
+                                onMouseLeave={soltarNombreCortado}
+                                onBlur={soltarNombreCortado}
                               >
                                 {/* Toda la caja abre el detalle; el botón cubre su superficie y se queda con el
                                     foco y el nombre accesible, igual que en el bloque de reseñas del hub. */}
@@ -1222,7 +1280,15 @@ export const GameTable = memo(function GameTable({
                                   {!covers && (nota || insignia) ? (
                                     <div className="game-card-head">{nota}{insignia}</div>
                                   ) : null}
-                                  <h3 className="game-card-name" title={game.name}>{game.name}</h3>
+                                  {/* EL NOMBRE ENTERO, AL PASAR POR ENCIMA. Va a dos líneas y corte; si no cabe, al
+                                      llegar con el ratón o el teclado se despliega EL MISMO título por encima de
+                                      las etiquetas —su hueco se queda con la altura que tenía, así que la rejilla
+                                      no se mueve—. El mismo elemento y no una copia: así lleva exactamente la
+                                      letra y el color del tema. Sustituye al `title`, que tardaba un segundo en
+                                      salir y no seguía el tema. */}
+                                  <div className="game-card-name-box">
+                                    <h3 className="game-card-name">{game.name}</h3>
+                                  </div>
                                   {/* RANURAS FIJAS (plan §3.2): siempre las mismas dos líneas —plataformas y
                                       géneros—, en el mismo sitio y tenga el juego lo que tenga. Cuando le falta
                                       el dato queda el hueco tenue del `renderTags` vacío, no una caja con menos
@@ -1442,9 +1508,9 @@ export const GameTable = memo(function GameTable({
                             <div>{renderTags(game.reasons, 'chip-pd')}</div>
                           </div>
                         )}
-                        {(currentTab === 'c' || currentTab === 'p' || (currentTab === 'v' && game.scored)) && game.score !== null && (
+                        {(currentTab === 'c' || UNPLAYED_TAB_IDS.includes(currentTab) || (currentTab === 'v' && game.scored)) && game.score !== null && (
                           <div className="detail-box">
-                            <span className="detail-label">{currentTab === 'p' ? UI_MESSAGES.detail.interest : UI_MESSAGES.detail.score}</span>
+                            <span className="detail-label">{UNPLAYED_TAB_IDS.includes(currentTab) ? UI_MESSAGES.detail.interest : UI_MESSAGES.detail.score}</span>
                             <div>
                               <ScoreDisplay game={game} />
                             </div>

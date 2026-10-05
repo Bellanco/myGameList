@@ -32,6 +32,15 @@ interface StepRow {
 }
 
 /** Las filas de siempre: los escalones del catálogo, sin nada que previsualizar. */
+/**
+ * ¿Se queda este logro en el aparato? Los «primeros pasos» no viajan en el espejo del perfil (ver `pack.ts`), así
+ * que la medición nunca los ve: su «alcanzado» no es un 0 % sino «no hay dato», y pintarlo como cero hacía creer
+ * que estaban rotos.
+ */
+function isUnpublished(def: AchievementDef): boolean {
+  return def.family === 'onboarding';
+}
+
 const plainRows = (steps: readonly AchievementDef[]): StepRow[] =>
   steps.map((def) => ({ def, nueva: false, antes: '' }));
 
@@ -329,9 +338,10 @@ export const AdminAchievements = memo(function AdminAchievements({
     const retired = groups.filter((group) => group.ladder.retired).length;
     // Los escalones SIN NADIE solo se pueden contar con muestra; sin ella, la casilla se calla (`null`) en vez de
     // decir que no ha llegado nadie a ninguno, que es lo que saldría de contar ceros.
+    // Los primeros pasos no cuentan: no se publican, así que su cero no dice que no los tenga nadie.
     const asleep = measured
       ? groups.reduce(
-        (sum, group) => sum + group.steps.filter((def) => (measured.percent.get(def.id) ?? 0) === 0).length,
+        (sum, group) => sum + group.steps.filter((def) => !isUnpublished(def) && (measured.percent.get(def.id) ?? 0) === 0).length,
         0,
       )
       : null;
@@ -829,7 +839,9 @@ export const AdminAchievements = memo(function AdminAchievements({
                           {def.retired ? <small className="admin-ach-flag">{A.notOffered}</small> : null}
                         </td>
                         <td role="cell" className="admin-ach-reached">
-                          {measured && !nueva ? (
+                          {measured && !nueva && isUnpublished(def) ? (
+                            <span className="admin-ach-nodata" title={A.notPublishedHint}>{A.notPublished}</span>
+                          ) : measured && !nueva ? (
                             <>
                               <span className={percent === 0 ? 'admin-ach-warn-soft' : undefined}>
                                 {A.reached(percent, holders, measured.sample)}

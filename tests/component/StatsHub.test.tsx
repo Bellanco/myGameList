@@ -30,7 +30,7 @@ function game(overrides: Partial<GameItem> & { name: string }): GameItem {
 }
 
 function tabData(overrides: Partial<TabData> = {}): TabData {
-  return { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0, ...overrides };
+  return { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 0, ...overrides };
 }
 
 // `listedAt` (fecha de llegada a la lista actual) va explícito: es lo que alimenta la curva de evolución, y en

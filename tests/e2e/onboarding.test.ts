@@ -25,7 +25,7 @@ test.describe('guía de primeros pasos', () => {
     await expect(consent).toBeHidden();
 
     await welcome.getByRole('button', { name: 'Empezar' }).click();
-    const lists = page.getByRole('dialog', { name: 'Cuatro listas, una biblioteca' });
+    const lists = page.getByRole('dialog', { name: 'Cinco listas, una biblioteca' });
     await expect(lists).toBeVisible();
     await expect(page.locator('.ob-ring')).toBeVisible();
     await lists.getByRole('button', { name: 'Siguiente' }).click();

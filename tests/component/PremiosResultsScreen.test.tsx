@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { PremiosResultsScreen } from '../../src/view/components/premios/PremiosResultsScreen';
@@ -388,10 +388,158 @@ describe('PremiosResultsScreen', () => {
       expect(votos).not.toHaveTextContent(L.winnerWas('Elden Ring'));
     });
 
+    // LA FILA ENTERA DESPLIEGA, con un solo control por fila: el botón que la cubre. El nombre solo navega si
+    // esa persona tiene perfil.
+    it('un solo botón por fila, el que la despliega: sin flecha ni trofeo al final', () => {
+      render(
+        <MemoryRouter>
+          <PremiosResultsScreen result={conCuatro} leaderboard={conCuatro.leaderboard} ownProfileId="p-ana" reveal={reveal} />
+        </MemoryRouter>,
+      );
+      const final = screen.getByRole('region', { name: L.finalBoard });
+      for (const fila of final.querySelectorAll('.premios-results__row--final')) {
+        const botones = fila.querySelectorAll('button');
+        expect(botones).toHaveLength(1);
+        expect(botones[0]).toHaveAttribute('aria-expanded');
+      }
+      expect(final.querySelector('.premios-results__trophy')).toBeNull();
+    });
+
+    it('el nombre con perfil lleva a su ficha y no despliega; sin perfil es texto', async () => {
+      render(
+        <MemoryRouter>
+          <PremiosResultsScreen
+            result={conCuatro}
+            leaderboard={conCuatro.leaderboard}
+            ownProfileId=""
+            profiles={new Map([['p-ana', 'uid-ana']])}
+            reveal={reveal}
+          />
+        </MemoryRouter>,
+      );
+      const final = screen.getByRole('region', { name: L.finalBoard });
+      const enlace = within(final).getByRole('link', { name: L.avatarAria('Ana') });
+      expect(enlace).toHaveAttribute('href', '/social/profiles/uid-ana');
+      expect(within(final).queryByRole('link', { name: L.avatarAria('Beto') })).not.toBeInTheDocument();
+
+      await userEvent.click(enlace);
+      expect(screen.queryByRole('list', { name: L.votesOf('Ana') })).not.toBeInTheDocument();
+    });
+
+    // El 4.º y el 5.º tienen lámina y no tienen escalón: con la final delante, la columna de la derecha los deja
+    // a ellos solos, con su trofeo, que es desde donde se abre su lámina.
+    it('a la derecha quedan solo los premiados sin podio, con su trofeo', () => {
+      const conSeis: PremiosSeasonResult = {
+        ...archivo,
+        leaderboard: ['Ana', 'Beto', 'Cris', 'Dani', 'Eva', 'Fede'].map((nickname, i) => ({
+          rank: i + 1,
+          profileId: `p-${nickname.toLowerCase()}`,
+          nickname,
+          points: 10 - i,
+        })),
+      };
+      render(
+        <MemoryRouter>
+          <PremiosResultsScreen
+            result={conSeis}
+            leaderboard={conSeis.leaderboard}
+            ownProfileId="p-ana"
+            reveal={{ seasonId: 'reto-2026', ballots: conSeis.leaderboard.map((e) => ({ ...e, selections: {} })) }}
+          />
+        </MemoryRouter>,
+      );
+      const derecha = screen.getByRole('region', { name: L.restOfAwarded });
+      expect([...derecha.querySelectorAll('li')].map((li) => li.textContent)).toEqual([
+        expect.stringContaining('Dani'),
+        expect.stringContaining('Eva'),
+      ]);
+      // La fila entera abre la lámina: un solo botón por fila y ningún trofeo aparte.
+      expect(within(derecha).getAllByRole('button', { name: /^Ver/ })).toHaveLength(2);
+      expect(within(derecha).getByRole('button', { name: L.seeOf('Dani') })).toBeInTheDocument();
+      expect(derecha.querySelector('.premios-results__trophy')).toBeNull();
+      // Sin pegarse al desplazar: son dos filas y se quedaban flotando encima de la final.
+      expect(derecha).toHaveClass('premios-results__panel--awards');
+      expect(screen.queryByRole('region', { name: L.leaderboard })).not.toBeInTheDocument();
+    });
+
     it('cuenta los aciertos de cada uno', () => {
       pintar();
       expect(screen.getAllByText(L.hitsAria(1, 1))).toHaveLength(2);
       expect(screen.getAllByText(L.hitsAria(0, 1))).toHaveLength(2);
+    });
+  });
+
+  // LO MÁS VOTADO, EN EL MISMO PANEL (05-10-2026): antes era una pantalla aparte. La vista la pone la dirección
+  // (`…/votos`) y el botón de la cabecera alterna entre las dos lecturas.
+  describe('lo más votado', () => {
+    const LV = PREMIOS_UI.votos;
+    const conVotos: PremiosSeasonResult = {
+      ...archivo,
+      winners: { goty: 'goty_option_0', arte: 'arte_b' },
+      categoriesSnapshot: [
+        archivo.categoriesSnapshot[0],
+        {
+          id: 'arte',
+          title: { es: 'Mejor arte' },
+          winner: 'arte_b',
+          weight: 1,
+          options: [
+            { id: 'arte_a', name: 'Balatro' },
+            { id: 'arte_b', name: 'Astro Bot' },
+            { id: 'arte_c', name: 'Silksong' },
+          ],
+        },
+      ],
+      votes: { goty: { goty_option_0: 2, goty_option_1: 1 }, arte: { arte_a: 1, arte_c: 1, arte_b: 1 } },
+    };
+    const pintarVista = (popular: boolean, result: PremiosSeasonResult = conVotos) =>
+      render(
+        <MemoryRouter>
+          <PremiosResultsScreen result={result} leaderboard={result.leaderboard} ownProfileId="" popular={popular} />
+        </MemoryRouter>,
+      );
+
+    it('sustituye a los ganadores en el mismo panel, y el botón pasa a decir «Ganadores»', () => {
+      pintarVista(true);
+      const panel = screen.getByRole('region', { name: LV.title });
+      expect(screen.queryByRole('region', { name: L.winners })).not.toBeInTheDocument();
+      const boton = within(panel).getByRole('link', { name: L.winners });
+      expect(boton).toHaveAttribute('href', '/premios/resultados/reto-2026');
+    });
+
+    it('en ganadores, el botón lleva a lo más votado', () => {
+      pintarVista(false);
+      const panel = screen.getByRole('region', { name: L.winners });
+      expect(within(panel).getByRole('link', { name: L.popularLink })).toHaveAttribute(
+        'href',
+        '/premios/resultados/reto-2026/votos',
+      );
+    });
+
+    // El titular se queda: el panel no cambia de forma al alternar, solo de contenido.
+    it('la categoría que más pesa sigue de titular, con sus votos y si coincide con el jurado', () => {
+      const { container } = pintarVista(true);
+      const titular = container.querySelector('.premios-results__headline');
+      expect(titular?.textContent).toContain('Juego del año');
+      expect(titular?.textContent).toContain('Elden Ring');
+      expect(titular?.textContent).toContain(LV.votes(2, 3));
+      expect(titular?.textContent).toContain(LV.matchesJury);
+    });
+
+    // Con los votos iguales no hay uno más votado que otro: salen todos los empatados.
+    it('con empate enseña a todos los empatados y lo dice', () => {
+      const { container } = pintarVista(true);
+      const arte = container.querySelector('.premios-results__winners .premios-popular__card');
+      expect(arte?.textContent).toContain('Balatro');
+      expect(arte?.textContent).toContain('Astro Bot');
+      expect(arte?.textContent).toContain('Silksong');
+      expect(arte?.textContent).toContain(LV.tie);
+    });
+
+    it('una edición sin recuento se queda en ganadores y no ofrece el botón', () => {
+      pintarVista(true, { ...conVotos, votes: undefined });
+      const panel = screen.getByRole('region', { name: L.winners });
+      expect(within(panel).queryByRole('link', { name: L.popularLink })).not.toBeInTheDocument();
     });
   });
 });

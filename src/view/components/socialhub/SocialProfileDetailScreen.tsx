@@ -14,8 +14,9 @@ import { RouletteModal } from '../roulette/RouletteModal';
 import { buildProfilePool, profileWeight } from '../../../core/roulette/roulette';
 import { FriendshipButton } from './FriendshipButton';
 import { ProfileReviewsList } from './ProfileReviewsList';
+import { ProfilePostsList, type ProfilePostEntry } from './ProfilePostsList';
 import { ProfileAchievementStrip } from './ProfileAchievements';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { TAB_ORDER, UI_MESSAGES } from '../../../core/constants/labels';
 // La vitrina del palmarés: perezosa, porque casi nadie la tiene y su medalla arrastra la hoja de los logros.
 const PalmaresStrip = lazy(() => import('../premios/PalmaresStrip').then((m) => ({ default: m.PalmaresStrip })));
 import type { PalmaresEntry } from '../../../model/types/premios';
@@ -32,7 +33,7 @@ import { YEAR_SUMMARY_UI } from '../../../core/constants/yearSummaryLabels';
 import { buildYearSummary, summaryYear } from '../../../core/stats/yearSummary';
 import { withFinishedOn, type FinishedGame } from '../../../core/utils/finishDates';
 import type { ProfileTier } from '../../../core/constants/tiers';
-import { ADMIN_ONLY_TIER, DEFAULT_PROFILE_TIER } from '../../../core/constants/tiers';
+import { DEFAULT_PROFILE_TIER } from '../../../core/constants/tiers';
 import type { RelationshipState } from '../../../model/types/social';
 
 // Paginación de los juegos del perfil: se muestran de 15 en 15 para evitar scroll excesivo al abrir el detalle.
@@ -49,6 +50,7 @@ const TAB_LABELS = {
   v: 'profileListTabVisited',
   e: 'profileListTabPlaying',
   p: 'profileListTabPlanned',
+  d: 'profileListTabWished',
 } as const satisfies Record<TabId, keyof SocialUiLabels['feed']>;
 
 /**
@@ -149,6 +151,8 @@ type SocialProfileDetail = {
    * reescribe en bloque y deja al listado mostrando una fecha distinta de la del feed.
    */
   activity?: Array<{ type: string; gameId: number; updatedAt: number }>;
+  /** Sus publicaciones, del directorio (hasta el tope del gist). Sin ninguna, el botón de la ficha no sale. */
+  posts?: ProfilePostEntry[];
 };
 
 /**
@@ -172,12 +176,21 @@ function SocialProfileDetailScreenBase({
   palmares,
   onOpenAchievements,
   onToggleReviews,
+  showPosts = false,
+  onTogglePosts,
+  canEditPosts = false,
+  postMaxLength = 0,
+  showPostCounter = false,
+  changingPostId = '',
+  onEditPost,
+  onDeletePost,
   onOpenReview,
   reviewLink,
   status,
   statusKind,
-  onAddToProximos,
-  hasGameInLists,
+  onAddGame,
+  addTarget = 'd',
+  gameListOf,
   moveGameToCurrentByName,
   friendshipState = 'none',
   friendshipBusy = false,
@@ -185,6 +198,7 @@ function SocialProfileDetailScreenBase({
   onCancelFriendRequest,
   onRemoveFriend,
   viewerTier = DEFAULT_PROFILE_TIER,
+  viewerIsAdmin = false,
   viewerHiddenTabs = [],
   viewerCompleted,
   viewerPending,
@@ -211,18 +225,31 @@ function SocialProfileDetailScreenBase({
   /** Abrir el listado de logros de este perfil. Es una PANTALLA aparte, no una vista dentro de la ficha. */
   onOpenAchievements?: () => void;
   onToggleReviews: () => void;
+  /** Vista de publicaciones, controlada por la URL (sub-ruta /posts) como la de reseñas. */
+  showPosts?: boolean;
+  onTogglePosts?: () => void;
+  /** Lo que sigue solo cuenta en TU perfil: si tu rango deja editar, con qué cupo, y los dos gestos. */
+  canEditPosts?: boolean;
+  postMaxLength?: number;
+  showPostCounter?: boolean;
+  changingPostId?: string;
+  onEditPost?: (id: string, text: string) => Promise<boolean>;
+  onDeletePost?: (id: string) => Promise<boolean>;
   onOpenReview: (gameId: number) => void;
   /** Destino del «Ver análisis» de la fila expandida del listado: la reseña de este perfil dentro del hub. */
   reviewLink?: (gameId: number) => { to: string; state?: unknown };
   status: string;
   statusKind: string;
-  onAddToProximos?: (game: Partial<GameItem>) => 'added' | 'duplicate' | 'invalid';
-  hasGameInLists?: (name: string) => boolean;
+  onAddGame?: (game: Partial<GameItem>) => 'added' | 'duplicate' | 'invalid';
+  addTarget?: 'p' | 'd';
+  gameListOf?: (name: string) => TabId | null;
   moveGameToCurrentByName?: (name: string) => void;
   friendshipState?: RelationshipState;
   friendshipBusy?: boolean;
   /** Rango de quien mira: decide cuánto enseña el panel de estadísticas del perfil. */
   viewerTier?: ProfileTier;
+  /** ¿Quien mira tiene el claim `admin`? Lo que se exceptúa aquí es de la administración, no de un rango. */
+  viewerIsAdmin?: boolean;
   /** Listas que quien mira esconde en su propio perfil: lo que esconde, tampoco lo ve aquí. */
   viewerHiddenTabs?: TabId[];
   /**
@@ -280,7 +307,7 @@ function SocialProfileDetailScreenBase({
    */
   const yearSummary = useMemo(() => {
     if (!canSeeFullProfile || !activeProfileDetail) return null;
-    const isAdmin = viewerTier === ADMIN_ONLY_TIER;
+    const isAdmin = viewerIsAdmin;
     const year = summaryYear();
     if (isOwnProfile) {
       const own = viewerCompleted ?? ((activeProfileDetail.sharedLists?.c || []) as GameItem[]);
@@ -291,7 +318,7 @@ function SocialProfileDetailScreenBase({
       (game): game is FinishedGame => typeof game === 'object' && game !== null && '_ts' in game,
     );
     return buildYearSummary({ completed: theirs, year, precision: isAdmin ? 'day' : 'month', viewerCompleted: viewerCompleted ?? [], viewerPending, palmares });
-  }, [activeProfileDetail, canSeeFullProfile, isOwnProfile, palmares, viewerCompleted, viewerHiddenTabs, viewerPending, viewerTier]);
+  }, [activeProfileDetail, canSeeFullProfile, isOwnProfile, palmares, viewerCompleted, viewerHiddenTabs, viewerIsAdmin, viewerPending]);
 
   // Abrir TU resumen es lo que puede avisar a tus amistades. Se avisa al pintarse de verdad —desplegado y con
   // datos—, no al pulsar: llegar desde el aviso del 15 también cuenta como haberlo visto.
@@ -343,6 +370,15 @@ function SocialProfileDetailScreenBase({
     return items.sort((a, b) => b.ts - a.ts);
   }, [activeProfileDetail, publishedDateByGame]);
 
+  // Publicaciones, de la más reciente a la más antigua. Con ninguna, ni botón ni vista: no hay nada que listar.
+  const posts = useMemo(
+    () => [...(activeProfileDetail?.posts || [])].sort((a, b) => b.updatedAt - a.updatedAt),
+    [activeProfileDetail],
+  );
+  const hasPosts = posts.length > 0;
+  // Si se llega a /posts sin ninguna (la última se acaba de borrar, o un enlace viejo), se enseña la ficha.
+  const postsOpen = showPosts && hasPosts;
+
   // Ruleta (perfil social): pool = SOLO la lista de completados de este perfil.
   const roulettePool = useMemo(
     () => buildProfilePool(activeProfileDetail?.sharedLists),
@@ -360,13 +396,13 @@ function SocialProfileDetailScreenBase({
   // recibe: el filtro de arriba —`applyProfileVisibility`— la exceptúa igual). Su tiempo de juego es lo único que
   // sigue oculto para todos.
   const visibleTabs = useMemo(() => {
-    if (!activeProfileDetail?.visibility || viewerTier === ADMIN_ONLY_TIER) {
-      return [...TAB_IDS];
+    if (!activeProfileDetail?.visibility || viewerIsAdmin) {
+      return [...TAB_ORDER];
     }
 
     const hidden = new Set(activeProfileDetail.visibility.hiddenTabs || []);
-    return TAB_IDS.filter((tab) => !hidden.has(tab));
-  }, [activeProfileDetail, viewerTier]);
+    return TAB_ORDER.filter((tab) => !hidden.has(tab));
+  }, [activeProfileDetail, viewerIsAdmin]);
 
   const currentTab = visibleTabs.includes(activeListTab) ? activeListTab : visibleTabs[0] || 'c';
 
@@ -426,7 +462,7 @@ function SocialProfileDetailScreenBase({
      (una pantalla alta, un lote que no la llena), observarlo de nuevo dispara otro, y no hace falta mover la
      rueda para que aparezca. Y de la vista abierta, porque al volver de las reseñas o las estadísticas el
      botón es otro nodo. */
-  const listsOpen = !showReviews && !showStats && !(showSummary && yearSummary);
+  const listsOpen = !showReviews && !postsOpen && !showStats && !(showSummary && yearSummary);
   useEffect(() => {
     if (!hasMoreGames || !listsOpen) return undefined;
     const node = loadMoreRef.current;
@@ -499,6 +535,21 @@ function SocialProfileDetailScreenBase({
                   <Icon name={showReviews ? 'grav' : 'signature'} />
                   {showReviews ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.reviewsButton}
                 </button>
+                {hasPosts && onTogglePosts ? (
+                  <button
+                    className={`btn btn-secondary ${postsOpen ? 'is-active' : ''}`.trim()}
+                    type="button"
+                    aria-pressed={postsOpen}
+                    onClick={() => {
+                      setShowStats(false);
+                      setShowSummary(false);
+                      onTogglePosts();
+                    }}
+                  >
+                    <Icon name={postsOpen ? 'grav' : 'edit'} />
+                    {postsOpen ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.postsButton}
+                  </button>
+                ) : null}
                 {!isOwnProfile && hasSharedLists ? (
                   <button
                     className={`btn btn-secondary ${showStats ? 'is-active' : ''}`.trim()}
@@ -507,6 +558,7 @@ function SocialProfileDetailScreenBase({
                     onClick={() => {
                       // Las vistas son excluyentes: entrar en una apaga las otras.
                       if (showReviews) onToggleReviews();
+                      if (postsOpen) onTogglePosts?.();
                       setShowSummary(false);
                       setShowStats((open) => !open);
                     }}
@@ -522,6 +574,7 @@ function SocialProfileDetailScreenBase({
                     aria-pressed={showSummary}
                     onClick={() => {
                       if (showReviews) onToggleReviews();
+                      if (postsOpen) onTogglePosts?.();
                       setShowStats(false);
                       setShowSummary((open) => !open);
                     }}
@@ -565,7 +618,7 @@ function SocialProfileDetailScreenBase({
         </div>
         <article className="hub-feed-card hub-feed-card-detail">
           <div className="hub-profile-hero">
-            <HubAvatar photoURL={activeProfileDetail.photoURL} sizeClass="hub-avatar-lg" />
+            <HubAvatar photoURL={activeProfileDetail.photoURL} sizeClass="hub-avatar-lg" highDensity />
             <h3 className="hub-profile-hero-name">{activeProfileDetail.displayName}</h3>
             {/* AQUÍ NO VA EL SELLO DE RANGO. En el perfil de otra persona el rango no se enseña por ahora; en el
                 directorio sigue estando la muesca de color de la tarjeta, que es la que sirve para recorrer la
@@ -609,6 +662,23 @@ function SocialProfileDetailScreenBase({
                 />
               </div>
             </div>
+          ) : postsOpen ? (
+            <div className="hub-detail-metadata">
+              <div className="hub-metadata-section">
+                <strong>{SOCIAL_UI.feed.postsListTitle}</strong>
+                <ProfilePostsList
+                  SOCIAL_UI={SOCIAL_UI}
+                  posts={posts}
+                  own={isOwnProfile && Boolean(onDeletePost)}
+                  canEdit={isOwnProfile && canEditPosts && Boolean(onEditPost)}
+                  maxLength={postMaxLength}
+                  showCounter={showPostCounter}
+                  changingPostId={changingPostId}
+                  onEdit={onEditPost || (async () => false)}
+                  onDelete={onDeletePost || (async () => false)}
+                />
+              </div>
+            </div>
           ) : showSummary && yearSummary && activeProfileDetail ? (
             <div className="hub-detail-metadata">
               <div className="hub-metadata-section">
@@ -628,6 +698,7 @@ function SocialProfileDetailScreenBase({
                   <FriendStats
                     sharedLists={activeProfileDetail.sharedLists || {}}
                     viewerTier={viewerTier}
+                    viewerIsAdmin={viewerIsAdmin}
                     viewerHiddenTabs={viewerHiddenTabs}
                   />
                 </Suspense>
@@ -732,13 +803,17 @@ function SocialProfileDetailScreenBase({
         weight={profileWeight}
         reviewAuthor={{ name: activeProfileDetail.displayName, photoURL: activeProfileDetail.photoURL }}
         action={
-          onAddToProximos
+          onAddGame
             ? (game) => {
-                // Si ya es tuyo (perfil propio o duplicado por nombre) → llevarlo a "En curso";
-                // si no, añadirlo a tu lista de próximos.
-                const owned = isOwnProfile || (hasGameInLists?.(game.name) ?? false);
+                // Si ya es tuyo (perfil propio o duplicado por nombre) → llevarlo a "En curso"; si no, añadirlo a
+                // tu lista de deseos (o a la de próximos, si escondes la de deseos).
+                const list = isOwnProfile ? 'c' : gameListOf?.(game.name) ?? null;
+                // Ya está en tus deseados: lo quieres pero no lo tienes, así que ni se juega ni se vuelve a añadir.
+                if (list === 'd') return null;
+                const owned = list !== null;
+                const toWishlist = addTarget === 'd';
                 // Aquí no hay lista a la que llevar al usuario (está en el perfil de otra persona): la ruleta se
-                // cierra y el aviso de la app ("… pasa a En curso" / "… añadido a próximos") dice dónde ha ido.
+                // cierra y el aviso de la app ("… pasa a En curso" / "… añadido a deseados") dice dónde ha ido.
                 return owned
                   ? {
                       btnClass: 'btn-complete',
@@ -753,10 +828,12 @@ function SocialProfileDetailScreenBase({
                   : {
                       btnClass: 'btn-accent',
                       icon: 'plus',
-                      label: UI_MESSAGES.rouletteActions.toProximos,
-                      doneLabel: UI_MESSAGES.rouletteActions.toProximosDone,
+                      label: toWishlist ? UI_MESSAGES.rouletteActions.toWishlist : UI_MESSAGES.rouletteActions.toProximos,
+                      doneLabel: toWishlist
+                        ? UI_MESSAGES.rouletteActions.toWishlistDone
+                        : UI_MESSAGES.rouletteActions.toProximosDone,
                       onAct: (candidate) => {
-                        onAddToProximos(candidate.game);
+                        onAddGame(candidate.game);
                         setRouletteOpen(false);
                       },
                     };

@@ -92,14 +92,13 @@ export function useCoverBackfill(data: TabData): void {
     const recorrer = async () => {
       // Una visita anterior topó con el servidor diciendo que no: hasta que pase su plazo, no se pregunta.
       if (recorridoEnPausa()) return;
-      /* LOS PRIVILEGIOS DEL RANGO MÁS ALTO, resueltos justo antes de empezar a gastar y no al montar: aquí ya se
+      /* LOS PRIVILEGIOS DE LA ADMINISTRACIÓN, resueltos justo antes de empezar a gastar y no al montar: aquí ya se
          sabe si hay sesión y el listado está pintado.
-           · El cupo del proxy lo levanta el SERVIDOR, que comprueba el rango de verdad (`/api/cover-quota`).
+           · El cupo del proxy lo levanta el SERVIDOR, que comprueba el claim en el token (`/api/cover-quota`).
              Aquí solo se pregunta, y solo cuando tiene sentido preguntarlo; si dice que no, todo sigue igual.
            · Los topes del propio navegador los levanta el cliente, y solo mientras haya sitio de sobra.
-         `useIsAdmin` es el disparador porque hoy el rango máximo y la cuenta de administración son lo mismo (ver
-         `ADMIN_ONLY_TIER`); si algún día mithril se le concede a alguien más, esta es la línea que hay que
-         cambiar — la comprobación de verdad, la del servidor, ya lee el rango del perfil. */
+         `useIsAdmin` es el disparador, y es el mismo criterio que el del servidor: el claim `admin`, no el
+         rango. */
       if (ampliado) {
         void pedirCupoDeCaratulasLibre();
       }

@@ -2,6 +2,14 @@ import { expect, test } from '@playwright/test';
 import { sembrarBiblioteca } from './seed';
 
 /**
+ * LA PRIMERA ESPERA, LA DE QUE LA LISTA HA CARGADO, CON MARGEN. No es lo que se comprueba aquí: es la puerta de
+ * entrada, el `<h1>` (sr-only) de la lista recién sembrada. Con la suite entera en paralelo —y aquí con la CPU
+ * frenada seis veces— esa primera carga pasó alguna vez de los 5 s por defecto (05-10-2026) y el test caía antes de
+ * empezar. Las comprobaciones de verdad siguen con el plazo de siempre, y sin reintentos (ver la configuración).
+ */
+const LISTA_CARGADA = { timeout: 15_000 };
+
+/**
  * EL SCROLL AL CAMBIAR DE PANTALLA, en el build de producción.
  *
  * QUÉ CUBRE QUE NO CUBRE NADA MÁS. Los de componente prueban el reparto en jsdom —entrar sube, un ancla no
@@ -20,7 +28,7 @@ test.describe('el scroll al cambiar de pantalla', () => {
 
   test('sube al entrar y vuelve a su sitio al salir', async ({ page }) => {
     await page.goto('/completados');
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible(LISTA_CARGADA);
 
     // Bajar por el listado. Se comprueba que de verdad se movió: si la página no tuviera scroll, el resto del
     // test pasaría sin probar nada.
@@ -58,7 +66,7 @@ test.describe('el scroll al cambiar de pantalla', () => {
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 6 });
 
     await page.goto('/completados');
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible(LISTA_CARGADA);
     await page.evaluate(() => window.scrollTo(0, 600));
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(300);
 
@@ -134,7 +142,7 @@ test.describe('el scroll al cambiar de pantalla', () => {
     });
 
     await page.goto('/completados');
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible(LISTA_CARGADA);
     // Un momento de gracia por si algún efecto llegara tarde.
     await page.waitForTimeout(700);
 

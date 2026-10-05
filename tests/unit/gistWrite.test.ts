@@ -81,6 +81,7 @@ describe.skipIf(!ENABLE_GAMES_WRAPPER_WRITE)('writeGist con ENABLE_GAMES_WRAPPER
       v: [makeGame({ id: 2, name: 'Juego V', score: undefined })],
       e: [],
       p: [],
+      d: [],
       deleted: [{ id: 9, _ts: 500, deletedAt: 500 }],
       updatedAt: 1234,
     };
@@ -107,6 +108,7 @@ describe.skipIf(!ENABLE_GAMES_WRAPPER_WRITE)('writeGist con ENABLE_GAMES_WRAPPER
       v: [makeGame({ id: 2, name: 'Celeste', platforms: ['Switch'], score: 5, retry: true })],
       e: [makeGame({ id: 3, name: 'En curso' })],
       p: [makeGame({ id: 4, name: 'Pendiente', score: undefined })],
+      d: [],
       deleted: [{ id: 9, _ts: 500, deletedAt: 500 }],
       updatedAt: 4321,
     };
@@ -139,6 +141,7 @@ describe.skipIf(!ENABLE_GAMES_WRAPPER_WRITE)('writeGist con ENABLE_GAMES_WRAPPER
       v: [],
       e: [],
       p: [],
+      d: [],
       deleted: [],
       updatedAt: 1,
     };
@@ -156,7 +159,7 @@ describe.skipIf(!ENABLE_GAMES_WRAPPER_WRITE)('writeGist con ENABLE_GAMES_WRAPPER
     // presupuesto COMPRIMIDO: main + c1 + c2…
     const c: GameItem[] = [];
     for (let i = 1; i <= 2000; i += 1) c.push(makeGame({ id: i, name: `Juego ${i}`, review: noisyText(i, 2000) }));
-    const data: TabData = { c, v: [], e: [], p: [], deleted: [], updatedAt: 1 };
+    const data: TabData = { c, v: [], e: [], p: [], d: [], deleted: [], updatedAt: 1 };
 
     await writeGist(TOKEN, GIST_ID, data); // 1ª escritura: sube ancla + TODOS los chunks (gist vacío)
     const firstChunks = Object.keys(patchBodies[patchBodies.length - 1].files).filter((n) =>
@@ -195,7 +198,7 @@ describe('una biblioteca con una reseña kilométrica se sube entera', () => {
       const review = i === 42 ? RESENA_LARGA : i <= 38 ? noisyText(i, 1_500) : '';
       c.push(makeGame({ id: i, name: `Juego ${i}`, review }));
     }
-    return { c, v: [], e: [], p: [], deleted: [], updatedAt: 1 };
+    return { c, v: [], e: [], p: [], d: [], deleted: [], updatedAt: 1 };
   }
 
   it('emite el PATCH en vez de abortar la escritura', async () => {

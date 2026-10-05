@@ -109,6 +109,8 @@
    atardecer y azul eléctrico: los siete colores de una máquina encendida */
 :root[data-palette="arcade"] {
   --cat-1: #b23cff; --cat-2: #22e5ff; --cat-3: #ff3d9e; --cat-4: #ffd24a; --cat-5: #2ef0a6; --cat-6: #ff7a3d; --cat-7: #6d8cff;
+  /* La lista de DESEOS (feed, estadísticas): el tono que más se aparta de los otros avisos; el sexto (naranja) era casi el de los logros. */
+  --wish: var(--cat-7);
   --cat-1-fg: #d78bff; --cat-2-fg: #6ceeff; --cat-3-fg: #ff86c4; --cat-4-fg: #ffd96b; --cat-5-fg: #6ef5c0; --cat-6-fg: #ff9d6b; --cat-7-fg: #9fb2ff;
 }
 /* arcade (Inserte moneda) — los mismos siete a la luz: tinta saturada en vez de luz emitida */

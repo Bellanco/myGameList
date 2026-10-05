@@ -31,7 +31,8 @@
 // publicar noticias y con qué longitud) es funcionamiento del servicio, no una obligación de transparencia, y
 // detallarlo además chocaría con la decisión de producto de que un rango sin permiso de publicación no muestre
 // aviso alguno. Pero el dato en sí no puede omitirse: `profiles.tier` vive en un documento que lee cualquier
-// usuario autenticado (Firestore no filtra por campo) y su nombre se expone en la ficha del perfil.
+// usuario autenticado (Firestore no filtra por campo). Desde el 05-10-2026 se declara como «categoría de perfil
+// de uso interno», sin nombrar los rangos: de cara al usuario no se nombran en ningún sitio.
 // 2026-08-12: se declara el alcance de la cuenta de administración sobre los ajustes de visibilidad. El panel de
 // estadísticas pasa a ser UNO para tu perfil y para el de otra persona, y con él la administración ve de sus
 // amistades lo mismo que ve de sí misma, incluidas las listas escondidas y las marcas de «rejugable» y «merece otra
@@ -56,10 +57,18 @@
 // 2026-09-20: los premios. Tres tratamientos nuevos con efectos hacia fuera —archivo de la edición público con su
 // enlace, cuenta mínima creada al votar y trofeo concedido en el perfil—, así que todo el mundo vuelve a pasar por
 // la puerta. Ver `legalContent.ts`, que lo explica en su sitio.
-// 2026-10-04: los votos a la vista. En las ediciones abiertas desde entonces, la papeleta —lo que votaste en cada
-// categoría, con el nombre que elegiste— la ven también quienes votaron en la misma edición, desde que se publica
-// hasta que se termina (docs/plan-premios-votos-a-la-vista.md). Hasta ahora la leía solo su dueño: es un dato tuyo
-// que pasa a verlo otra gente, así que todo el mundo vuelve a pasar por la puerta.
+// 2026-10-04: los votos a la vista. Lo que votaste en cada categoría, con el nombre que elegiste, lo ven también
+// quienes votaron en la misma edición, desde que se publica hasta que se abre la siguiente
+// (docs/plan-premios-votos-a-la-vista.md). Hasta ahora lo leía solo su dueño: es un dato tuyo que pasa a verlo
+// otra gente, así que todo el mundo vuelve a pasar por la puerta.
+// 2026-10-05: el plazo pasa de «hasta que se termina» —un gesto manual, sin tope— a «hasta que se abre la
+// siguiente edición, o antes si quien administra los borra». La versión NO sube: los mismos ven lo mismo, y lo que
+// cambia es que ahora hay un tope que antes no había (mismo criterio que el 2026-08-26). La lista privada de quién
+// votó tampoco es un dato nuevo: el registro de trofeos ya guarda el uid de cada participante desde 2025.
+// 2026-10-05: los documentos se reescriben en registro formal (tercera persona y referencias al RGPD, la LOPDGDD y
+// la LSSI) y sin los detalles que caducan solos —cifras de cupos y plazos, rutas de menú, el nombre de los
+// rangos—; ver la cabecera de `legalContent.ts`. La versión NO sube: dicen lo mismo, ningún tratamiento, dato ni
+// destinatario entra o sale, y reabrir la aceptación por cambiar el estilo sería ruido.
 export const LEGAL_VERSION = '2026-10-04';
 
 // Correo de CONTACTO publicado en los documentos. A propósito distinto del de la cuenta de administración de
@@ -115,9 +124,9 @@ export const LEGAL_CONSENT_UI = {
   title: 'Antes de continuar',
   // La actividad se detalla un poco —«reseñas y movimientos de listas»— porque es lo que más gente lee de todo el
   // aparato legal, y lo segundo es nuevo: quien lo acepte tiene que saber que la app va a contar sola cuándo
-  // empieza o termina un juego, no solo lo que él escriba.
-  body: 'La parte social publica tu nick, tu foto y tus logros —que puede leer cualquier usuario con sesión— y tu actividad —tus reseñas y los movimientos de tus listas, con su fecha— a las personas con las que tengas amistad. Para activarla necesitamos que aceptes las condiciones de uso y la política de privacidad.',
-  checkbox: 'He leído y acepto las condiciones de uso y la política de privacidad',
+  // empieza o termina un juego, no solo lo que él escriba. En el registro formal de los documentos (2026-10-05).
+  body: 'Al activar el espacio social se publican el nombre de perfil, la fotografía y los logros, accesibles para cualquier usuario con sesión iniciada, así como la actividad —las reseñas y los movimientos de listas, con su fecha—, accesible para las personas con las que se mantenga una relación de amistad. Para activarlo es necesario aceptar las Condiciones de uso y la Política de privacidad.',
+  checkbox: 'He leído y acepto las Condiciones de uso y la Política de privacidad',
   termsLink: 'Condiciones de uso',
   privacyLink: 'Política de privacidad',
   pending: 'Guardando...',

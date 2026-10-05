@@ -38,27 +38,51 @@ describe('valor del filtro', () => {
   it('sin nada guardado se ven TODAS las listas', () => {
     expect(parseMoveTabsValue(null)).toBe(ALL_MOVE_TABS);
     expect(parseMoveTabsValue(undefined)).toBe(ALL_MOVE_TABS);
-    expect(moveTabsFromValue(ALL_MOVE_TABS)).toEqual(['c', 'v', 'e', 'p']);
+    expect(moveTabsFromValue(ALL_MOVE_TABS)).toEqual(['c', 'v', 'e', 'p', 'd']);
   });
 
   it('la cadena vacía es una elección legítima (ninguna), no un valor ausente', () => {
-    expect(parseMoveTabsValue('')).toBe('');
+    expect(parseMoveTabsValue('')).toBe('~');
+    expect(parseMoveTabsValue('~')).toBe('~');
     expect(moveTabsFromValue('')).toEqual([]);
+    expect(moveTabsFromValue('~')).toEqual([]);
   });
 
   it('sanea lo que llega de fuera: orden canónico, sin repetidos y sin letras inventadas', () => {
-    expect(parseMoveTabsValue('pe')).toBe('ep');
-    expect(parseMoveTabsValue('ccPP')).toBe('cp');
-    expect(parseMoveTabsValue('xyz')).toBe('');
-    expect(parseMoveTabsValue('vC')).toBe('cv');
+    expect(parseMoveTabsValue('pe~')).toBe('ep~');
+    expect(parseMoveTabsValue('ccPPd')).toBe('cpd');
+    expect(parseMoveTabsValue('xyz~')).toBe('~');
+    expect(parseMoveTabsValue('dvC')).toBe('cvd');
   });
 
   it('el interruptor de una lista enciende, apaga y no toca a las demás', () => {
-    expect(toggleMoveTabValue('cvep', 'v')).toBe('cep');
-    expect(toggleMoveTabValue('cep', 'v')).toBe('cvep');
+    expect(toggleMoveTabValue('cvepd', 'v')).toBe('cepd');
+    expect(toggleMoveTabValue('cepd', 'v')).toBe('cvepd');
     // Dos vueltas devuelven al punto de partida (canónico).
-    expect(toggleMoveTabValue(toggleMoveTabValue('cvep', 'c'), 'c')).toBe('cvep');
-    expect(toggleMoveTabValue('', 'e')).toBe('e');
+    expect(toggleMoveTabValue(toggleMoveTabValue('cvepd', 'c'), 'c')).toBe('cvepd');
+    expect(toggleMoveTabValue('~', 'e')).toBe('e~');
+  });
+
+  it('apagar deseos deja la marca, y con ella se respeta la elección', () => {
+    expect(toggleMoveTabValue('cvepd', 'd')).toBe('cvep~');
+    expect(parseMoveTabsValue('cvep~')).toBe('cvep~');
+    expect(moveTabsFromValue('cvep~')).toEqual(['c', 'v', 'e', 'p']);
+    expect(toggleMoveTabValue('cvep~', 'd')).toBe('cvepd');
+  });
+});
+
+describe('valores guardados antes de la lista de deseos', () => {
+  it('sin `d` y sin marca se le enciende: quien tocó el ajuste no eligió dejar de ver una lista que no existía', () => {
+    expect(parseMoveTabsValue('cvep')).toBe('cvepd');
+    expect(parseMoveTabsValue('pe')).toBe('epd');
+    expect(moveTabsFromValue('ce')).toEqual(['c', 'e', 'd']);
+    // Y al tocar otra lista el valor sale ya migrado y con su marca si procede.
+    expect(toggleMoveTabValue('cvep', 'v')).toBe('cepd');
+  });
+
+  it('la cadena vacía sigue siendo «ninguna»: una lista más no cambia esa elección', () => {
+    expect(parseMoveTabsValue('')).toBe('~');
+    expect(moveTabsFromValue('')).toEqual([]);
   });
 });
 
@@ -66,13 +90,17 @@ describe('la preferencia', () => {
   it('por defecto vale todas, y lo que se guarda se lee saneado', () => {
     expect(feedMoveTabsPreference.get()).toBe(ALL_MOVE_TABS);
 
-    feedMoveTabsPreference.set('ep');
-    expect(localStorage.getItem(FEED_MOVE_TABS_KEY)).toBe('ep');
-    expect(feedMoveTabsPreference.get()).toBe('ep');
+    feedMoveTabsPreference.set('ep~');
+    expect(localStorage.getItem(FEED_MOVE_TABS_KEY)).toBe('ep~');
+    expect(feedMoveTabsPreference.get()).toBe('ep~');
 
     // Un valor manipulado a mano en el almacenamiento no se sirve tal cual.
-    localStorage.setItem(FEED_MOVE_TABS_KEY, 'pXe');
-    expect(feedMoveTabsPreference.get()).toBe('ep');
+    localStorage.setItem(FEED_MOVE_TABS_KEY, 'pXe~');
+    expect(feedMoveTabsPreference.get()).toBe('ep~');
+
+    // Y uno guardado antes de la lista de deseos se lee con ella encendida.
+    localStorage.setItem(FEED_MOVE_TABS_KEY, 'ep');
+    expect(feedMoveTabsPreference.get()).toBe('epd');
   });
 
   it('devuelve un PRIMITIVO estable: dos lecturas seguidas son `Object.is` iguales', () => {
@@ -96,13 +124,13 @@ describe('la preferencia', () => {
 
   it('con sesión se replica a `publicConfig` para que siga al usuario entre dispositivos', async () => {
     setPreferenceUid('uid-1');
-    feedMoveTabsPreference.set('ce');
+    feedMoveTabsPreference.set('ce~');
 
-    expect(gatewayMocks.setPublicConfig).toHaveBeenCalledWith('uid-1', { feedMoveTabs: 'ce' });
+    expect(gatewayMocks.setPublicConfig).toHaveBeenCalledWith('uid-1', { feedMoveTabs: 'ce~' });
 
     // Y «ninguna» también se replica: es una elección, no la ausencia de una.
-    feedMoveTabsPreference.set('');
-    expect(gatewayMocks.setPublicConfig).toHaveBeenLastCalledWith('uid-1', { feedMoveTabs: '' });
+    feedMoveTabsPreference.set('~');
+    expect(gatewayMocks.setPublicConfig).toHaveBeenLastCalledWith('uid-1', { feedMoveTabs: '~' });
   });
 
   it('sin sesión no habla con Firestore', () => {
@@ -116,16 +144,17 @@ describe('la preferencia', () => {
 
     await hydrateAppearance('uid-1');
 
-    expect(feedMoveTabsPreference.get()).toBe('ep'); // saneado al orden canónico
+    // Saneado al orden canónico, y migrado: lo escribió un cliente anterior a la lista de deseos.
+    expect(feedMoveTabsPreference.get()).toBe('epd');
     expect(gatewayMocks.setPublicConfig).not.toHaveBeenCalled(); // venía de la nube: no se devuelve
   });
 
   it('un valor de la nube con forma inesperada no pisa lo local', async () => {
-    feedMoveTabsPreference.set('c');
+    feedMoveTabsPreference.set('c~');
     gatewayMocks.getPublicConfig.mockResolvedValue({ feedMoveTabs: 42 });
 
     await hydrateAppearance('uid-1');
 
-    expect(feedMoveTabsPreference.get()).toBe('c');
+    expect(feedMoveTabsPreference.get()).toBe('c~');
   });
 });

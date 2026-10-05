@@ -541,6 +541,42 @@
 .hub-profile-achievements { margin-top: 8px; width: 100%; }
 .hub-profile-achievements .ach-strip { justify-content: center; }
 
+// EL AVANCE DEL CATÁLOGO, justo bajo la tira: una línea fina y la cifra a su derecha, centradas. Mismo grosor y
+// misma pista que el medidor de la nota de las cajas del listado (`.game-card-meter`), pero rellena con el color
+// del tema: no es una nota, no tiene que ir de rojo a verde. Muy en segundo plano a propósito —la cifra pequeña y
+// en gris—, porque lo que se viene a ver aquí son las medallas.
+.hub-profile-ach-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: min(14rem, 100%);
+  // Separada de las medallas lo justo para leerse como un pie suyo y no como otra fila de la tira.
+  margin: 14px auto 0;
+}
+.hub-profile-ach-bar {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  background: var(--score-track);
+  overflow: hidden;
+}
+.hub-profile-ach-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--ach-pct, 0) * 1%);
+  background: var(--steam);
+}
+.hub-profile-ach-pct {
+  flex: none;
+  font-size: var(--fs-2xs);
+  font-variant-numeric: tabular-nums;
+  // `--text-muted` y no `--text-dim`: lo sutil lo pone el tamaño; el color tiene que seguir llegando a contraste.
+  color: var(--text-muted);
+  line-height: 1;
+}
+
 // ── LA TARJETA DE LOGROS EN EL FEED ──────────────────────────────────────
 // Una entrada por persona y DÍA, con todos sus logros de ese día dentro. Las medallas las pinta la MISMA tira
 // que va bajo el nombre en la ficha; aquí son decorativas, porque la pulsable es la tarjeta entera.

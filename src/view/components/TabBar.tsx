@@ -1,15 +1,17 @@
 import { memo, useLayoutEffect, useRef, useState } from 'react';
-import { TAB_ORDER, TAB_TITLES, TAB_TOOLTIPS, UI_MESSAGES } from '../../core/constants/labels';
+import { TAB_TITLES, TAB_TOOLTIPS, UI_MESSAGES } from '../../core/constants/labels';
 import { TAB_ICONS } from '../../core/constants/icons';
 import type { TabId } from '../../model/types/game';
 
 interface TabBarProps {
+  /** Las pestañas que se enseñan, en orden (la de deseos se puede esconder en Ajustes). */
+  tabs: readonly TabId[];
   currentTab: TabId;
   tabCounts: Record<TabId, number>;
   onTabChange: (tab: TabId) => void;
 }
 
-export const TabBar = memo(function TabBar({ currentTab, tabCounts, onTabChange }: TabBarProps) {
+export const TabBar = memo(function TabBar({ tabs, currentTab, tabCounts, onTabChange }: TabBarProps) {
   const tabsRef = useRef<HTMLDivElement>(null);
   const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
 
@@ -22,11 +24,11 @@ export const TabBar = memo(function TabBar({ currentTab, tabCounts, onTabChange 
     update();
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
-  }, [currentTab, tabCounts]);
+  }, [currentTab, tabCounts, tabs]);
 
   return (
     <div className="tabs" ref={tabsRef} data-tour="tabs">
-      {TAB_ORDER.map((tab) => (
+      {tabs.map((tab) => (
         <button
           key={tab}
           className={`tab-btn ${currentTab === tab ? 'active' : ''}`}

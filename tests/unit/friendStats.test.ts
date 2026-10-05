@@ -17,7 +17,7 @@ function shared(overrides: Partial<SocialSharedGame> & { id: number; name: strin
 
 describe('friendStats · qué ve cada rango', () => {
   it('bronce se queda en el retrato: nada de notas ni de ratio', () => {
-    const blocks = friendStatsBlocks('bronze');
+    const blocks = friendStatsBlocks('bronze', false);
 
     // La evolución del gusto entra en el retrato: es la misma pregunta que el resto de este rango —qué juega—
     // contada en el tiempo, y sale de `genres` y `years`, que el canal social ya publica.
@@ -29,17 +29,20 @@ describe('friendStats · qué ve cada rango', () => {
     expect(blocks).not.toContain('demand');
   });
 
-  it('plata y oro ven lo mismo: todo lo que se puede calcular del canal social', () => {
-    expect(friendStatsBlocks('silver')).toEqual(friendStatsBlocks('gold'));
-    expect(friendStatsBlocks('gold')).toContain('grades');
-    expect(friendStatsBlocks('gold')).toContain('ratio');
+  it('plata, oro y mithril ven lo mismo: todo lo que se puede calcular del canal social', () => {
+    expect(friendStatsBlocks('silver', false)).toEqual(friendStatsBlocks('gold', false));
+    expect(friendStatsBlocks('mithril', false)).toEqual(friendStatsBlocks('gold', false));
+    expect(friendStatsBlocks('gold', false)).toContain('grades');
+    expect(friendStatsBlocks('gold', false)).toContain('ratio');
     // Las listas y el backlog se quedan para la administración.
-    expect(friendStatsBlocks('gold')).not.toContain('shame');
-    expect(friendStatsBlocks('gold')).not.toContain('backlog');
+    expect(friendStatsBlocks('mithril', false)).not.toContain('shame');
+    expect(friendStatsBlocks('mithril', false)).not.toContain('backlog');
   });
 
-  it('mithril ve el panel completo, el mismo que en su perfil', () => {
-    const blocks = friendStatsBlocks('mithril');
+  // El panel completo lo da el CLAIM, no el rango: con él da igual el rango que se lleve.
+  it('la administración ve el panel completo, el mismo que en su perfil', () => {
+    const blocks = friendStatsBlocks('bronze', true);
+    expect(friendStatsBlocks('mithril', true)).toEqual(blocks);
 
     expect(blocks).toContain('shame');
     expect(blocks).toContain('wishlist');
@@ -49,43 +52,40 @@ describe('friendStats · qué ve cada rango', () => {
   });
 
   it('solo la administración calcula con los juegos completos', () => {
-    expect(friendStatsData('mithril')).toBe('full');
-    expect(friendStatsData('gold')).toBe('public');
-    expect(friendStatsData('silver')).toBe('public');
-    expect(friendStatsData('bronze')).toBe('public');
+    expect(friendStatsData(true)).toBe('full');
+    expect(friendStatsData(false)).toBe('public');
   });
 
-  it('solo mithril puede cambiar de periodo', () => {
-    expect(friendStatsHasYearTabs('mithril')).toBe(true);
-    expect(friendStatsHasYearTabs('gold')).toBe(false);
-    expect(friendStatsHasYearTabs('bronze')).toBe(false);
+  it('solo la administración puede cambiar de periodo', () => {
+    expect(friendStatsHasYearTabs(true)).toBe(true);
+    expect(friendStatsHasYearTabs(false)).toBe(false);
   });
 });
 
 describe('friendStats · reciprocidad', () => {
   it('lo que escondes de tus listas tampoco lo ves de las suyas', () => {
-    const { tabs, blockedByViewer } = friendVisibleTabs(['c', 'v', 'p'], ['v'], 'gold');
+    const { tabs, blockedByViewer } = friendVisibleTabs(['c', 'v', 'p'], ['v'], false);
 
     expect(tabs).toEqual(['c', 'p']);
     expect(blockedByViewer).toEqual(['v']);
   });
 
   it('quien lo esconde todo se queda sin panel', () => {
-    const { tabs, blockedByViewer } = friendVisibleTabs(['c', 'v'], ['c', 'v', 'e', 'p'], 'silver');
+    const { tabs, blockedByViewer } = friendVisibleTabs(['c', 'v'], ['c', 'v', 'e', 'p'], false);
 
     expect(tabs).toEqual([]);
     expect(blockedByViewer).toEqual(['c', 'v']);
   });
 
   it('la cuenta de administración ve lo que le llegue, esconda lo que esconda', () => {
-    const { tabs, blockedByViewer } = friendVisibleTabs(['c', 'v'], ['c', 'v'], 'mithril');
+    const { tabs, blockedByViewer } = friendVisibleTabs(['c', 'v'], ['c', 'v'], true);
 
     expect(tabs).toEqual(['c', 'v']);
     expect(blockedByViewer).toEqual([]);
   });
 
-  it('lo que el amigo no comparte no aparece por mucho rango que se tenga', () => {
-    expect(friendVisibleTabs(['c'], [], 'mithril').tabs).toEqual(['c']);
+  it('lo que el amigo no comparte no aparece, ni para la administración', () => {
+    expect(friendVisibleTabs(['c'], [], true).tabs).toEqual(['c']);
   });
 });
 
@@ -139,7 +139,7 @@ describe('friendStats · datos que llegan del canal social', () => {
   });
 
   it('con las listas escondidas por reciprocidad, esas partidas no cuentan', () => {
-    const { tabs } = friendVisibleTabs(['c', 'v'], ['v'], 'silver');
+    const { tabs } = friendVisibleTabs(['c', 'v'], ['v'], false);
     const stats = computeStats(toFriendTabData(lists, tabs));
 
     expect(stats.totalGames).toBe(2);

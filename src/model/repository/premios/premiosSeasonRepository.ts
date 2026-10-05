@@ -3,11 +3,11 @@
  *
  *   `openSeason()`             abrir    → nombre y fecha de cierre, y a votar
  *   `closeSeasonNow()`         cerrar   → adelanta el cierre (la fecha lo haría sola)
- *   `publishAndArchiveSeason()` publicar → archiva y concede los trofeos
- *   `finishSeason()`           terminar → retira los votos y deja listo para la siguiente
+ *   `publishAndArchiveSeason()` publicar → archiva, retira los votos y deja listo para la siguiente
  *
- * Publicar y terminar van SEGUIDOS salvo en las ediciones que enseñan los votos (`revealVotes`): ahí las
- * papeletas se quedan entre medias para que quien votó vea lo que votó cada uno.
+ * LOS VOTOS DE CADA UNO sobreviven a las papeletas: publicar los copia a un resumen (`premiosReveal`) que quien
+ * votó ve hasta que se abre la siguiente edición, o hasta que el administrador lo borra a mano
+ * (`deleteSeasonVotes`). Ver `docs/plan-premios-votos-a-la-vista.md`.
  *
  * PUBLICAR ES LO QUE HACE VISIBLE la edición: mientras está viva no existe ningún archivo público, así que no hay
  * nada que se pueda filtrar. Todo lo que se escribe aquí lo autoriza `isAdmin()` en las reglas.
@@ -45,9 +45,12 @@ import {
   CATEGORIES_COLLECTION,
   CONFIG_COLLECTION,
   CONFIG_VOTING_DOC,
+  ADMIN_COLLECTION,
+  ADMIN_VOTERS_PREFIX,
   RESULTS_COLLECTION,
   REVEAL_COLLECTION,
   requireServices,
+  votersDocId,
 } from './premiosShared';
 import {
   forgetPalmaresRecord,
@@ -99,7 +102,7 @@ export async function fetchSeasonResult(seasonId: string): Promise<PremiosSeason
 }
 
 /**
- * Los votos de cada uno de una edición publicada y sin terminar, o `null`.
+ * Los votos de cada uno de una edición publicada, o `null` si no hay o ya se retiraron.
  *
  * `null` también cuando las reglas lo deniegan, que es lo normal para quien no votó en esa edición: no es un
  * error que contar, es que ese panel no es para él (ver `firestore.rules`, `premiosReveal`).
@@ -113,6 +116,45 @@ export async function fetchSeasonReveal(seasonId: string): Promise<PremiosReveal
   } catch {
     return null;
   }
+}
+
+/**
+ * Las ediciones que guardan los votos de cada uno, por id. Lectura de ADMINISTRADOR, para el histórico: en la
+ * práctica es una como mucho —abrir la siguiente las retira—, pero se lista para no fiarse de la configuración.
+ */
+export async function listSeasonVotes(): Promise<string[]> {
+  const { firestore } = await requireServices();
+  const snapshot = await getDocs(collection(firestore, REVEAL_COLLECTION));
+  return snapshot.docs.map((d) => d.id);
+}
+
+/**
+ * BORRA los votos de cada uno de una edición: el resumen, la lista privada de quién votó y la marca de la
+ * configuración si apunta aquí. El archivo, la clasificación y los trofeos se quedan. Es la opción manual del
+ * histórico; abrir la siguiente edición hace lo mismo con todas.
+ */
+export async function deleteSeasonVotes(seasonId: string): Promise<void> {
+  const id = String(seasonId);
+  const { firestore } = await requireServices();
+  await deleteDoc(doc(firestore, REVEAL_COLLECTION, id));
+  await deleteDoc(doc(firestore, ADMIN_COLLECTION, votersDocId(id)));
+
+  const votingDoc = await votingDocRef();
+  const configSnap = await getDoc(votingDoc);
+  if (configSnap.exists() && (configSnap.data() as PremiosVotingConfig)?.votesSeasonId === id) {
+    await setDoc(votingDoc, { votesSeasonId: '', updatedAt: new Date().toISOString() }, { merge: true });
+  }
+}
+
+/** Retira TODOS los votos guardados, de cualquier edición. Es lo que hace abrir una nueva. Devuelve cuántas. */
+async function discardAllSeasonVotes(): Promise<number> {
+  const { firestore } = await requireServices();
+  const resumenes = (await getDocs(collection(firestore, REVEAL_COLLECTION))).docs;
+  const listas = (await getDocs(collection(firestore, ADMIN_COLLECTION))).docs.filter((d) =>
+    d.id.startsWith(ADMIN_VOTERS_PREFIX),
+  );
+  await discardDocsInBatches([...resumenes, ...listas]);
+  return resumenes.length;
 }
 
 /**
@@ -268,13 +310,12 @@ export async function deleteSeasonResult(seasonId: string): Promise<{
   const { firestore } = await requireServices();
   const votingDoc = await votingDocRef();
 
-  // LA EDICIÓN CON LOS VOTOS A LA VISTA NO SE BORRA DESDE AQUÍ: quedarían sus papeletas y su resumen colgando de
-  // un archivo que ya no existe. Primero se termina.
   const antes = await getDoc(votingDoc);
   const vivo = antes.exists() ? (antes.data() as PremiosVotingConfig) : null;
-  if (vivo?.votesRevealedAt && vivo.lastPublishedId === id) {
-    throw new Error('Esta edición tiene los votos a la vista: termínala antes de borrarla del histórico.');
-  }
+
+  // LOS VOTOS DE CADA UNO SE VAN CON ELLA: sin archivo no hay nombres de nominados ni ganadores con los que
+  // pintarlos, y quedarían guardados sin ningún sitio donde verse.
+  await deleteSeasonVotes(id);
 
   // Antes de borrar el archivo: si esto fallara a mitad, es mejor quedarse con el archivo y sin trofeos —se
   // vuelve a encender el interruptor— que con trofeos colgando de una edición que ya no existe.
@@ -350,9 +391,8 @@ export async function openSeason({ name, closesDay, season, makeVisible = false 
     // Los ganadores marcados también sobran: una edición empieza sin ninguno.
     await clearWinners();
   }
-  // Y LOS VOTOS A LA VISTA de una edición que no se terminó del todo: los leería quien vote en esta, porque el
-  // permiso es «tener papeleta», no «tenerla en esa edición».
-  await discardDocsInBatches((await getDocs(collection(firestore, REVEAL_COLLECTION))).docs);
+  // Y LOS VOTOS DE CADA UNO de la edición anterior: se veían hasta que empezara esta (decisión del 05-10-2026).
+  await discardAllSeasonVotes();
 
   await setDoc(
     await votingDocRef(),
@@ -368,10 +408,7 @@ export async function openSeason({ name, closesDay, season, makeVisible = false 
       opensAtMillis: null,
       resultsAt: null,
       resultsAtMillis: null,
-      // Las ediciones abiertas desde que existe enseñan los votos al publicarse: el texto legal lo dice desde
-      // entonces, y quien vote en ella lo hace sabiéndolo.
-      revealVotes: true,
-      votesRevealedAt: null,
+      votesSeasonId: '',
       updatedAt: new Date().toISOString(),
     },
     { merge: true },
@@ -530,18 +567,16 @@ export function buildRevealSnapshot({
 }
 
 /**
- * PUBLICA la edición: la archiva y concede los trofeos. En orden:
+ * PUBLICA la edición: la archiva y deja el panel listo para la siguiente. Es el último paso y el único
+ * destructivo. En orden:
  *
  * 0. **Lee de Firestore** las papeletas y las categorías. No las recibe de quien llama, por el fallo que explica
  *    `readLiveEdition`. Lo que se archiva y lo que se limpia salen de la MISMA lectura.
  * 1. Calcula ganadores y clasificación.
- * 2. Escribe el archivo con su `closedAt`: publicar es archivar.
- *
- * Y después, según la edición:
- *
- * - **Enseña los votos** (`revealVotes`): escribe el resumen de votos y marca la edición como publicada sin
- *   terminar. Las papeletas se quedan; las retira `finishSeason` cuando el administrador lo decida.
- * - **No los enseña** (las abiertas antes de existir esto): se termina en el acto, como siempre.
+ * 2. Escribe el archivo con su `closedAt`: publicar es archivar. Y concede los trofeos.
+ * 3. Guarda los votos de cada uno —el resumen y la lista privada de quién votó—, que se ven hasta la siguiente
+ *    edición. Tiene que ser aquí: es la última vez que existen las papeletas.
+ * 4–6. Retira las papeletas, vacía los nominados y deja la configuración sin edición (`retireEdition`).
  */
 export async function publishAndArchiveSeason({
   season,
@@ -565,8 +600,6 @@ export async function publishAndArchiveSeason({
 
   // 0. La foto real de la edición, recién leída.
   const { ballots, categories, ballotDocs, categoryDocs } = await readLiveEdition();
-  const configSnap = await getDoc(await votingDocRef());
-  const muestraVotos = configSnap.exists() && (configSnap.data() as PremiosVotingConfig)?.revealVotes === true;
 
   // 1 y 2. Construir y guardar el archivo.
   const resolved = winners || (await fetchWinners(categories));
@@ -608,30 +641,16 @@ export async function publishAndArchiveSeason({
     // Mismo criterio que los trofeos: la edición ya está archivada y esto no puede tumbar la publicación.
   });
 
-  if (muestraVotos) {
-    // 3. Los votos de cada uno, en un documento que solo leen quienes votaron (ver `firestore.rules`).
-    await setDoc(
-      doc(firestore, REVEAL_COLLECTION, snapshot.seasonId),
-      buildRevealSnapshot({ seasonId: snapshot.seasonId, categories, ballots, winners: resolved }),
-    );
-
-    // 4. Publicada y sin terminar. La fecha de cierre SE QUEDA: es lo que dice que la edición sigue en marcha.
-    //    `votesRevealedAt` es lo que la distingue de «cerrada sin publicar», y además cierra el voto en las
-    //    reglas aunque alguien reabriera el interruptor. `lastPublishedId` ya apunta al archivo: los
-    //    resultados que se ofrecen son los de esta edición.
-    await setDoc(
-      await votingDocRef(),
-      {
-        isOpen: false,
-        votesRevealedAt: new Date().toISOString(),
-        lastPublishedId: snapshot.seasonId,
-        updatedAt: new Date().toISOString(),
-      },
-      { merge: true },
-    );
-
-    return { seasonId: snapshot.seasonId, name: snapshot.name, totalBallots: snapshot.totalBallots, deleted: 0, cleared: 0, awarded };
-  }
+  // 3. LOS VOTOS DE CADA UNO, antes de retirar las papeletas, que es de donde salen. El resumen no lleva uid; la
+  //    lista de quién votó sí, y por eso vive aparte, donde solo la consultan las reglas (ver `firestore.rules`).
+  await setDoc(
+    doc(firestore, REVEAL_COLLECTION, snapshot.seasonId),
+    buildRevealSnapshot({ seasonId: snapshot.seasonId, categories, ballots, winners: resolved }),
+  );
+  await setDoc(doc(firestore, ADMIN_COLLECTION, votersDocId(snapshot.seasonId)), {
+    seasonId: snapshot.seasonId,
+    uids: ballots.map((ballot) => ballot.userId).filter(Boolean),
+  });
 
   const { deleted, cleared } = await retireEdition({
     ballotDocs,
@@ -639,6 +658,7 @@ export async function publishAndArchiveSeason({
     categories,
     season,
     lastPublishedId: snapshot.seasonId,
+    votesSeasonId: snapshot.seasonId,
   });
 
   return {
@@ -652,38 +672,10 @@ export async function publishAndArchiveSeason({
 }
 
 /**
- * TERMINA una edición publicada con los votos a la vista: retira las papeletas y el resumen y deja el panel
- * listo para la siguiente. Es el paso destructivo.
- *
- * LEE DE NUEVO lo que hay en Firestore, por el mismo motivo que publicar (`readLiveEdition`): entre publicar y
- * terminar pueden pasar días y el panel puede llevar todo ese tiempo abierto.
- */
-export async function finishSeason(): Promise<{ seasonId: string; deleted: number; cleared: number }> {
-  const configSnap = await getDoc(await votingDocRef());
-  const config = configSnap.exists() ? (configSnap.data() as PremiosVotingConfig) : null;
-  if (!config?.votesRevealedAt) {
-    throw new Error('No hay ninguna edición publicada pendiente de terminar.');
-  }
-
-  const { categories, ballotDocs, categoryDocs } = await readLiveEdition();
-  const lastPublishedId = String(config.lastPublishedId || '');
-  const { deleted, cleared } = await retireEdition({
-    ballotDocs,
-    categoryDocs,
-    categories,
-    season: Number(config.season) || new Date().getFullYear(),
-    lastPublishedId,
-  });
-
-  return { seasonId: lastPublishedId, deleted, cleared };
-}
-
-/**
- * LO QUE CIERRA EL CICLO, sea al publicar o al terminar. En orden:
+ * LO QUE CIERRA EL CICLO al publicar. En orden:
  *
  * 1. Retira las papeletas en lotes. Hace falta para poder abrir otra edición —el bloqueo de re-voto va por
- *    cuenta—, y el detalle por persona no se conserva: en el archivo quedan la clasificación y los ganadores.
- *    Con ellas se va el resumen de votos, si lo había: sin papeletas ya no lo podría leer nadie.
+ *    cuenta—. El detalle por persona ya quedó en el resumen de votos, que dura hasta la siguiente edición.
  * 2. Vacía los nominados de cada categoría SIN borrar los documentos: las categorías se mantienen año a año y
  *    solo cambian sus nominados, que ya quedaron archivados.
  * 3. Deja la configuración sin edición —sin fecha de cierre, que es lo que distingue «hay edición» de «no la
@@ -695,18 +687,19 @@ async function retireEdition({
   categories,
   season,
   lastPublishedId,
+  votesSeasonId,
 }: {
   ballotDocs: QueryDocumentSnapshot[];
   categoryDocs: QueryDocumentSnapshot[];
   categories: PremiosCategory[];
   season: number;
   lastPublishedId: string;
+  votesSeasonId: string;
 }): Promise<{ deleted: number; cleared: number }> {
   const { firestore } = await requireServices();
 
-  // 1. Retirar exactamente las papeletas que entraron en el archivo, y el resumen de votos.
+  // 1. Retirar exactamente las papeletas que entraron en el archivo.
   const deleted = await discardDocsInBatches(ballotDocs);
-  await discardDocsInBatches((await getDocs(collection(firestore, REVEAL_COLLECTION))).docs);
 
   // 2. Vaciar los nominados conservando cada documento. Se recorren TODAS las categorías (también las inválidas,
   //    que no entran en el archivo) para que ninguna se quede con nominados del año anterior.
@@ -745,8 +738,7 @@ async function retireEdition({
       opensAtMillis: null,
       resultsAt: null,
       resultsAtMillis: null,
-      revealVotes: false,
-      votesRevealedAt: null,
+      votesSeasonId,
       lastPublishedId,
       updatedAt: new Date().toISOString(),
     },

@@ -306,7 +306,11 @@ describe('SocialProfileDetailScreen — resumen del año', () => {
     pinta({ activeProfileDetail: lists, viewerHiddenTabs: ['c'] });
     expect(screen.queryByRole('button', { name: YEAR_SUMMARY_UI.button })).not.toBeInTheDocument();
     cleanup();
+    // El rango no exime: mithril sin el claim sigue la regla como cualquiera.
     pinta({ activeProfileDetail: lists, viewerHiddenTabs: ['c'], viewerTier: ADMIN_ONLY_TIER });
+    expect(screen.queryByRole('button', { name: YEAR_SUMMARY_UI.button })).not.toBeInTheDocument();
+    cleanup();
+    pinta({ activeProfileDetail: lists, viewerHiddenTabs: ['c'], viewerIsAdmin: true });
     expect(screen.getByRole('button', { name: YEAR_SUMMARY_UI.button })).toBeInTheDocument();
   });
 

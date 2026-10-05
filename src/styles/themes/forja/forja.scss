@@ -219,31 +219,12 @@
 /* ── §N · LA CABECERA DE PANTALLA ─────────────────────────────────────────────────────────────────────
    Este tema la enciende (`ScreenHeader` es neutra y en la base no se ve): rótulo en versales con el punto del
    acento y título en la letra de titulares. Va en el flujo —se va al bajar, no es
-   fija— y en el teléfono es donde más se nota: allí las pestañas son solo iconos y nada decía en qué lista estás.
-   En las listas va en la banda de las pestañas; en el panel y en Ajustes, como primer hijo de `main`. ── */
+   fija—. Va en el panel y en Ajustes, como primer hijo de `main`. En las listas no: la llevaron en la banda de
+   las pestañas hasta el 05-10-2026, y se quitó porque la pestaña activa ya dice en qué lista estás. ── */
 :root[data-palette="forja"] .screen-header {
   display: block;
   padding-right: calc(42px + 14px);
 }
-:root[data-palette="forja"] .screen-header.is-band {
-  background: var(--surface);
-  padding: 1.25rem 0 .35rem;
-}
-/* El interior sigue la MISMA medida que `main` (1800 px, y 92vw desde 1957 px) para que el rótulo caiga sobre el
-   borde del contenido en cualquier ancho, 4K incluido. */
-:root[data-palette="forja"] .screen-header.is-band .screen-header-inner {
-  max-width: 1800px;
-  margin: 0 auto;
-  padding: 0 1.2rem;
-}
-@media (min-width: 1957px) {
-  :root[data-palette="forja"] .screen-header.is-band .screen-header-inner { max-width: 92vw; }
-}
-/* Mientras el contenido llega cerca del borde, el título libra el botón de tema flotante. */
-@media (max-width: 1940px) {
-  :root[data-palette="forja"] .screen-header.is-band .screen-header-inner { padding-right: calc(42px + 14px + .9rem); }
-}
-:root[data-palette="forja"] .screen-header.is-band + .tabs { padding-top: .35rem; }
 :root[data-palette="forja"] .screen-header-inner {
   display: flex;
   flex-wrap: wrap;

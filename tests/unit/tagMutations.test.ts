@@ -24,6 +24,7 @@ function data(): TabData {
     v: [game(2)],
     e: [game(3)],
     p: [game(4)],
+    d: [],
     deleted: [],
     updatedAt: 1,
   };

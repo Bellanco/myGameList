@@ -19,7 +19,7 @@ const pintar = (scoreScaleUid: string | null, hasSocialProfile = true) =>
       <PersonalizationSettings
         scoreScaleUid={scoreScaleUid}
         hasSocialProfile={hasSocialProfile}
-        games={{ c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 }}
+        games={{ c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 0 }}
       />
     </MemoryRouter>,
   );

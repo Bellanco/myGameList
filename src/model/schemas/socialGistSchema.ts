@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { SOCIAL_NAME_MAX, SOCIAL_SNIPPET_MAX, SOCIAL_TEXT_MAX } from '../../core/constants/socialLimits';
 import { POST_HARD_CEILING } from '../../core/constants/tiers';
 
-const tabId = z.enum(['c', 'v', 'e', 'p']);
+const tabId = z.enum(['c', 'v', 'e', 'p', 'd']);
 
 // ST8 — cotas de longitud/rango (defensa positiva): un bug aguas arriba o un gist construido a mano no puede
 // publicar texto sin límite ni un rating fuera de rango. Viven en `core/constants/socialLimits` porque la
@@ -50,7 +50,7 @@ const profile = z.strictObject({
   favoriteGames: z.array(idName).optional(),
   // ST3: `profile.recommendations` eliminado (código muerto). La lectura tolera gists viejos que lo lleven.
   visibility,
-  // sharedLists es Partial<Record<TabId, SharedGame[]>>: claves 'c'|'v'|'e'|'p', subconjunto permitido.
+  // sharedLists es Partial<Record<TabId, SharedGame[]>>: claves 'c'|'v'|'e'|'p'|'d', subconjunto permitido.
   sharedLists: z.record(z.string(), z.array(sharedGame)),
   // Foto de perfil pública (opcional): solo presente si el usuario la comparte. URL http(s) acotada.
   photoURL: z.string().max(2048).optional(),
@@ -86,6 +86,9 @@ const post = z.strictObject({
   text: z.string().max(POST_HARD_CEILING),
   createdAt: z.number(),
   updatedAt: z.number(),
+  // Aditivo y opcional: los posts nunca editados no lo llevan, y un cliente viejo lo pierde al reescribir (la
+  // normalización se queda solo con lo que conoce) sin perder el texto editado, que es lo que importa.
+  editedAt: z.number().optional(),
 });
 
 /**

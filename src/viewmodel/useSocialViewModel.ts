@@ -13,6 +13,7 @@ import { isPermissionDeniedError } from '../model/repository/firebaseClient';
 import { useOnlineStatus } from '../view/hooks/useOnlineStatus';
 import { resolveViewer, withVisiblePhotos } from '../core/social/photoVisibility';
 import { useGenericPhoto } from '../view/hooks/useGenericPhoto';
+import { useIsAdmin } from '../view/hooks/useIsAdmin';
 import { useAchievementsConfig } from '../view/hooks/useAchievementsConfig';
 import { useOpenFrontier } from '../view/hooks/useOpenFrontier';
 import { SOCIAL_UI } from '../core/constants/socialLabels';
@@ -61,12 +62,12 @@ import { achievementsPublishedKey } from '../core/constants/storageKeys';
 import { useAchievements } from './useAchievements';
 
 /** Biblioteca vacía estable: el hub puede montarse sin `games` y un literal nuevo rompería el memo. */
-const EMPTY_LIBRARY = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 };
+const EMPTY_LIBRARY = { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 0 };
 /** Sin espejo publicado todavía (o sin leer): cadena vacía y sin instante, que es «no hay cota». */
 const NO_PUBLISHED_MIRROR = { list: '', at: 0 };
 
 /** Referencia estable: un `new Map()` inline rompería el memo del feed en cada render. */
-import { useSocialCompose } from './social/useSocialCompose';
+import { useSocialCompose, type OwnPostChange } from './social/useSocialCompose';
 import { useSocialLegalConsent } from './social/useSocialLegalConsent';
 import { DEFAULT_SOCIAL_VISIBILITY, normalizeVisibility, useSocialProfileForm } from './social/useSocialProfileForm';
 import { useForeignProfileGames } from './social/useForeignProfileGames';
@@ -168,7 +169,7 @@ export function useSocialViewModel(options?: {
   const online = useOnlineStatus();
 
   const routeState = useMemo(() => matchSocialRoute(location.pathname), [location.pathname]);
-  const { activePanel, profileDetailId, profileReviewsView, profileAchievementsView, profileGlobalsView, profileReviewGameId, detailActorUid, detailGameId, detailEventType } = routeState;
+  const { activePanel, profileDetailId, profileReviewsView, profilePostsView, profileAchievementsView, profileGlobalsView, profileReviewGameId, detailActorUid, detailGameId, detailEventType } = routeState;
 
 
   const [socialCfgGistId, setSocialCfgGistId] = useState<string>('');
@@ -180,6 +181,12 @@ export function useSocialViewModel(options?: {
    * pasaba por tenerla: publicaba el monograma y, por la reciprocidad, veía las caras de sus amigos sin poner la suya.
    */
   const ownPhotoIsGeneric = useGenericPhoto(authUser?.photoURL);
+  /**
+   * ¿Quien mira es la administración? Lo decide el claim `admin` del token, como en las reglas y en el panel, y NO
+   * el rango: mithril es una etiqueta que puede llevar el administrador, no lo que le da sus excepciones (fotos,
+   * listas ocultas, panel completo de estadísticas de un amigo).
+   */
+  const isAdmin = useIsAdmin();
   // P1: profileId canónico del usuario (6.2a), para detectar propiedad por identidad (no por email). Hoy el id del
   // doc de directorio es el uid; tras el cutover index-only será el profileId → comprobamos ambos (ver isOwnProfileIdentity).
   const [ownProfileId, setOwnProfileId] = useState<string | null>(null);
@@ -283,7 +290,6 @@ export function useSocialViewModel(options?: {
   // es `socialDirectory`, unas líneas más abajo: el mismo directorio con la política de fotos ya aplicada.
   // Los listados de OTRAS personas viven en `useForeignProfileGames` (se invoca más abajo, cuando ya están
   // resueltos el directorio y la relación de amistad que necesita para decidir si puede pedirlos).
-  // Cooldown visible del botón "Actualizar": se deshabilita durante FORCED_REFRESH_MIN_MS tras un refresco forzado.
 
 
   /**
@@ -540,7 +546,6 @@ export function useSocialViewModel(options?: {
     rawSocialDirectory: feedDirectory,
     directoryLoading,
     setDirectorySettled,
-    refreshCoolingDown,
     hydrateSocialDirectory,
     patchDirectoryEntries,
   } = useSocialDirectory({
@@ -903,7 +908,7 @@ export function useSocialViewModel(options?: {
   // en el feed. Se invalida la caché del directorio (feed solo-amigos) y se refresca la amistad; el efecto que
   // depende de `friendships.friends` rehidrata el directorio releyendo los gists de los amigos actuales.
   // RECIPROCIDAD DE LA FOTO (ver core/social/photoVisibility): quien esconde la suya no ve la de nadie, y la de los
-  // demás solo se ve con amistad aceptada. Mithril queda exento.
+  // demás solo se ve con amistad aceptada. La administración (el claim) queda exenta.
   //
   // Se aplica AQUÍ, sobre el directorio ya hidratado, y no al hidratarlo: la hidratación cachea su resultado en
   // IndexedDB con el TTL del rango, así que sellar la política ahí dejaba el ajuste sin efecto hasta que la caché
@@ -912,8 +917,8 @@ export function useSocialViewModel(options?: {
   // `resolveViewer` y no `showPhoto` a secas: quien lleva el interruptor activado pero no tiene foto en su cuenta de
   // Google no publica ninguna, así que tampoco ve las de los demás. Ver la nota del ajuste, que lo explica en su sitio.
   const photoViewer = useMemo(
-    () => resolveViewer({ showPhoto, ownPhotoURL: authUser?.photoURL, ownPhotoIsGeneric, tier: ownTier }),
-    [showPhoto, authUser?.photoURL, ownPhotoIsGeneric, ownTier],
+    () => resolveViewer({ showPhoto, ownPhotoURL: authUser?.photoURL, ownPhotoIsGeneric, isAdmin }),
+    [showPhoto, authUser?.photoURL, ownPhotoIsGeneric, isAdmin],
   );
 
   /**
@@ -1000,7 +1005,7 @@ export function useSocialViewModel(options?: {
   // tienes juegos completados". Confundirlos mandaba al editor a un usuario ya dado de alta, que además leía
   // "Sincronizado" nada más llegar: el diagnóstico y el mensaje se contradecían.
   const libraryPresentLocally =
-    liveLists.c.length > 0 || liveLists.v.length > 0 || liveLists.e.length > 0 || liveLists.p.length > 0;
+    TAB_IDS.some((tab) => (liveLists[tab] || []).length > 0);
   // El requisito de tener un juego completado solo se puede DAR POR INCUMPLIDO si la biblioteca está aquí para
   // comprobarlo. El guardado del perfil lo sigue exigiendo siempre (ahí el usuario está mirando sus propias listas).
   const completedGamesRequirementMet = hasCompletedGames || !libraryPresentLocally;
@@ -1069,7 +1074,6 @@ export function useSocialViewModel(options?: {
     foreignProfileFailed,
     loadingForeignProfile,
     getGameItemById,
-    refreshProfileDetail,
   } = useForeignProfileGames({
     activePanel,
     profileDetailId,
@@ -1079,11 +1083,9 @@ export function useSocialViewModel(options?: {
     directory: socialDirectory,
     relationshipWith,
     localGames: localState,
-    ownTier,
+    isAdmin,
     defaultVisibility: defaultSocialVisibility,
     fallbackToken: mainSyncConfig?.token || null,
-    setFeedback,
-    reportFailure,
   });
 
   const selectedProfileDetail = useMemo(() => {
@@ -1120,6 +1122,7 @@ export function useSocialViewModel(options?: {
         v: localState.v,
         e: localState.e,
         p: localState.p,
+        d: localState.d,
       },
     };
   }, [activePanel, authUser, foreignGames, localState, ownProfileId, profileDetailId, socialDirectory]);
@@ -1442,6 +1445,8 @@ export function useSocialViewModel(options?: {
     openProfileDetail,
     openProfileReviews,
     closeProfileReviews,
+    openProfilePosts,
+    closeProfilePosts,
     openProfileReviewDetail,
     openProfileAchievements,
     openProfileSummary,
@@ -1920,10 +1925,26 @@ export function useSocialViewModel(options?: {
     canPublishPosts: canPublish,
     postMaxLength,
     showPostCounter,
+    changingPostId,
+    handleEditPost,
+    handleDeletePost,
   } = useSocialCompose({
     ownTier,
     // Forzado para que el post salga ya, pero sin releer la consulta de perfiles: publicar no cambia el directorio.
     onPublished: useCallback(() => hydrateSocialDirectory(true, { keepDirectoryQuery: true }), [hydrateSocialDirectory]),
+    // Editar o borrar se refleja en TU entrada del directorio, sin releer nada: es la que pintan tu perfil y el feed.
+    onPostChanged: useCallback((change: OwnPostChange) => {
+      patchDirectoryEntries(
+        (entry) => isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId),
+        (entry) => ({
+          posts: change.kind === 'delete'
+            ? (entry.posts || []).filter((post) => post.id !== change.id)
+            : (entry.posts || []).map((post) => (
+              post.id === change.id ? { ...post, text: change.text, editedAt: change.editedAt } : post
+            )),
+        }),
+      );
+    }, [authUser?.uid, ownProfileId, patchDirectoryEntries]),
     setFeedback,
   });
 
@@ -2404,11 +2425,17 @@ export function useSocialViewModel(options?: {
     setProfileSearch,
     // Rango propio y lo que implica al publicar: si puede, cuánto, y si hay contador que enseñar.
     ownTier,
+    // ¿Es la administración? (el claim, no el rango): exenciones en la ficha de un amigo.
+    isAdmin,
     canPublishPosts: canPublish,
     postMaxLength,
     showPostCounter,
     publishingPost,
     handlePublishPost,
+    // Editar y borrar las tuyas, desde la lista de publicaciones de tu perfil.
+    changingPostId,
+    handleEditPost,
+    handleDeletePost,
     feedItems,
     hydratingProfile,
     savingProfile,
@@ -2431,6 +2458,7 @@ export function useSocialViewModel(options?: {
     selectedProfileDetail,
     profileDetailId,
     profileReviewsView,
+    profilePostsView,
     profileAchievementsView,
     profileGlobalsView,
     ownAchievements,
@@ -2438,15 +2466,15 @@ export function useSocialViewModel(options?: {
     activeProfileReview,
     openProfileReviews,
     closeProfileReviews,
+    openProfilePosts,
+    closeProfilePosts,
     openProfileAchievements,
     openProfileSummary,
     markOwnYearSummaryOpened,
     closeProfileAchievements,
     openProfileGlobals,
     openProfileReviewDetail,
-    refreshProfileDetail,
     loadingForeignProfile,
-    refreshCoolingDown,
     activeDetailEvent,
     // ¿Puede aparecer todavía el evento abierto? (ver arriba: decide esqueleto vs «no se ha encontrado»).
     detailEventLoading,

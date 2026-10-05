@@ -1117,9 +1117,10 @@
   box-shadow: var(--e1);
 }
 
-/* Solo el primero lleva realce, y es sutil: un hilo del metal arriba. Con los tres realzados no habría podio,
-   habría tres tarjetas. */
-.premios-results__step.is-rank-1 {
+/* CADA ESCALÓN, CON SU METAL: un hilo arriba y un velo que se apaga hacia abajo, en oro, plata y bronce. Fue solo
+   del primero —«con los tres realzados no habría podio»— hasta el 05-10-2026, cuando se pidió para los tres: el
+   podio lo siguen haciendo el tamaño del primero (disco y nombre más grandes) y el metal distinto de cada uno. */
+.premios-results__step:is(.is-rank-1, .is-rank-2, .is-rank-3) {
   border-top: 2px solid color-mix(in srgb, var(--tier) 70%, transparent);
   background: linear-gradient(
     180deg,
@@ -1181,20 +1182,26 @@
   color: var(--text-dim);
 }
 
-/* LA CASILLA CAMBIA DE LÁMINA (ver `pulsarEscalon`): una capa transparente cubre el escalón y recoge el clic.
-   Lo que tiene destino propio —el nombre que lleva al perfil y el botón del trofeo— sube por encima de ella y
-   sigue funcionando. Y en un empate se marca de quién es la lámina que se está viendo, subrayada con el acento
-   en texto. */
+/* LA CASILLA CAMBIA DE LÁMINA (ver `pulsarEscalon`): un botón transparente cubre el escalón y es su único control
+   —el del trofeo se quitó el 05-10-2026—. El nombre que lleva al perfil sube por encima y sigue funcionando. Y en
+   un empate se marca de quién es la lámina que se está viendo, subrayada con el acento en texto. */
 .premios-results__step.has-award { position: relative; }
 .premios-results__step-hit {
   position: absolute;
   inset: 0;
   z-index: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
   border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
   cursor: pointer;
+  appearance: none;
 }
-.premios-results__step.has-award .premios-results__link,
-.premios-results__step.has-award .premios-results__step-trophy { position: relative; z-index: 2; }
+.premios-results__step-hit:focus-visible { outline: 2px solid var(--fg-link); outline-offset: 2px; }
+.premios-results__step.has-award .premios-results__link { position: relative; z-index: 2; }
 .premios-results__step-name.is-showing {
   text-decoration: underline;
   text-decoration-color: var(--fg-link);
@@ -1214,12 +1221,6 @@
 }
 
 .premios-results__step-points strong { font-size: var(--fs-md); color: var(--text); }
-
-.premios-results__step-trophy {
-  grid-row: span 2;
-  padding-inline: .5rem;
-  align-self: center;
-}
 
 /* DOS COLUMNAS cuando hay sitio, y no antes: por debajo de esta anchura una de las dos quedaría en una tira de
    texto envuelto. Apiladas, los ganadores van primero, que es el orden con el que se cuenta una edición. */
@@ -1259,10 +1260,43 @@
      comparar. */
   .premios-results__panel--board { position: sticky; top: 1rem; }
 
+  /* SALVO «RESTO DE PREMIADOS» (con la clasificación final delante): son dos filas, no hay nada que acompañar, y
+     pegada se quedaba flotando por encima de la final al bajar (05-10-2026). */
+  .premios-results__panel--awards { position: static; }
+
   /* Sin nadie fuera del podio no hay segundo panel, y los ganadores ocupan las dos columnas en vez de quedarse
      en una tira con la mitad de la pantalla en blanco. Lo dice una clase y no `:only-child`: la lámina también
      vive en esta rejilla, así que los ganadores pueden no ser el único hijo y seguir estando solos. */
   .premios-results__panel--wide { grid-column: 1 / -1; }
+}
+
+/* ─── CON LA CLASIFICACIÓN FINAL, otro reparto (05-10-2026) ───────────────────────────────────────────────
+   Para que no queden huecos: el resto de premiados (4.º y 5.º) en una línea bajo el podio, los ganadores a la
+   izquierda con la lámina a su derecha —o a lo ancho si no hay lámina— y la clasificación final debajo de todo.
+   Apilado, en ese mismo orden con la lámina DEBAJO de los ganadores: a una columna no hay sitio para ponerla al
+   lado. Especificidad (0,3,0) y después de las reglas de siempre, que son las que sustituye. */
+.premios-results__cols.is-final > .premios-results__panel--awards { order: 1; }
+.premios-results__cols.is-final > .premios-results__panel--winners { order: 2; }
+.premios-results__cols.is-final > .premios-award { order: 3; }
+.premios-results__cols.is-final > .premios-results__panel--final { order: 4; }
+
+/* El resto de premiados, en línea: una ficha por persona, una al lado de otra mientras quepan. */
+.premios-results__cols.is-final > .premios-results__panel--awards .premios-results__board {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+}
+
+/* EN ANCHO MANDA EL MISMO ORDEN, y no filas fijas: sin 4.º ni 5.º no hay resto de premiados, y una fila reservada
+   para él dejaría su hueco. La colocación automática pone a los ganadores en la primera columna y la lámina en la
+   casilla de al lado; las reglas de siempre fijaban filas (lámina y clasificación en la 1) y aquí se sueltan. */
+@media (min-width: 60rem) {
+  .premios-results__cols.is-final > .premios-results__panel--awards { grid-column: 1 / -1; grid-row: auto; }
+  .premios-results__cols.is-final > .premios-results__panel--winners {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .premios-results__cols.is-final > .premios-results__panel--winners.premios-results__panel--wide { grid-column: 1 / -1; }
+  .premios-results__cols.is-final > .premios-award { grid-column: 2; grid-row: auto; }
+  .premios-results__cols.is-final > .premios-results__panel--final { grid-column: 1 / -1; grid-row: auto; }
 }
 
 .premios-results__panel {
@@ -1550,13 +1584,16 @@
 
 /* El trofeo de una fila: icono y nada más. Cinco botones con rótulo en cinco renglones seguidos tapaban los
    nombres; su nombre va en el `aria-label` y en el `title`, como los botones de icono del panel. */
-.premios-results__trophy {
-  display: inline-flex;
-  padding: .2rem .45rem;
-  color: var(--text-muted);
-}
-
-.premios-results__trophy:hover { color: var(--text); }
+/* LA FILA DE UN PREMIADO ABRE SU LÁMINA (4.º y 5.º), entera, con el mismo botón que cubre la de la clasificación
+   final (`row-hit`, más abajo). Sin trofeo aparte desde el 05-10-2026. El nombre ocupa lo que mide: siendo un
+   enlace por encima del botón, con `flex: 1` se comería la fila. */
+.premios-results__row.has-hit { position: relative; }
+.premios-results__row.has-hit .premios-results__link { position: relative; z-index: 2; }
+.premios-results__row.has-hit .premios-results__name { flex: 0 1 auto; }
+.premios-results__row.has-hit .premios-results__points { margin-inline-start: auto; }
+.premios-results__row.has-hit:hover,
+.premios-results__row.has-hit.is-showing { background: color-mix(in srgb, var(--fg-link) 10%, var(--surface-elevated)); }
+.premios-results__row.has-hit.is-showing { box-shadow: inset 2px 0 0 var(--fg-link); }
 
 /* ─── La clasificación final, con lo que votó cada uno ───────────────────────────────────────────────────
    Solo mientras la edición publicada no se termina y para quien votó en ella. Sustituye a la clasificación de
@@ -1572,18 +1609,31 @@
   .premios-results__cols > .premios-results__panel--final { order: 0; }
 }
 
-/* La fila entera despliega con el ratón, con una capa como la del escalón del podio; el teclado va por el botón
-   del final. El enlace y los botones quedan por encima de la capa. */
+/* LA FILA ENTERA DESPLIEGA: un botón transparente que la cubre de punta a punta. El enlace del nombre queda por
+   encima; el resto de la fila —puesto, nombre sin perfil, aciertos, puntos— cae en él. */
 .premios-results__row--final { position: relative; }
 .premios-results__row-hit {
   position: absolute;
   inset: 0;
   z-index: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
   border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
   cursor: pointer;
+  appearance: none;
 }
-.premios-results__row--final .premios-results__link,
-.premios-results__row--final .btn { position: relative; z-index: 2; }
+.premios-results__row-hit:focus-visible { outline: 2px solid var(--fg-link); outline-offset: 2px; }
+.premios-results__row--final .premios-results__link { position: relative; z-index: 2; }
+
+/* EL NOMBRE OCUPA LO QUE MIDE, no el hueco de la fila. En la clasificación de siempre lleva `flex: 1` para empujar
+   los puntos a la derecha; aquí, siendo un enlace por encima del botón, se comía casi toda la fila y pulsar en
+   cualquier sitio llevaba al perfil en vez de abrir los votos. El hueco lo empujan los aciertos. */
+.premios-results__row--final .premios-results__name { flex: 0 1 auto; }
+.premios-results__row--final .premios-results__hits { margin-inline-start: auto; }
 .premios-results__row--final:hover,
 .premios-results__row--final.is-open { background: var(--surface-elevated); }
 .premios-results__row--final.is-own:hover,
@@ -1594,19 +1644,6 @@
   font-size: var(--fs-2xs);
   color: var(--text-dim);
   white-space: nowrap;
-}
-
-.premios-results__toggle {
-  display: inline-flex;
-  padding: .2rem .35rem;
-  color: var(--text-muted);
-}
-.premios-results__toggle:hover { color: var(--text); }
-.premios-results__toggle .ui-icon { transition: transform .15s ease; }
-.premios-results__toggle[aria-expanded='true'] .ui-icon { transform: rotate(180deg); }
-
-@media (prefers-reduced-motion: reduce) {
-  .premios-results__toggle .ui-icon { transition: none; }
 }
 
 /* El detalle: una ficha por categoría, en rejilla como los ganadores; en el móvil, una columna. */

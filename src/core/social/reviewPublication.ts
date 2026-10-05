@@ -11,7 +11,7 @@
 // el bug. Aquí solo se responde "qué hay que hacer", no "sobre qué".
 
 import { resolveGrade } from '../utils/scoreScale';
-import type { GameItem, TabId } from '../../model/types/game';
+import { UNPLAYED_TAB_IDS, type GameItem, type TabId } from '../../model/types/game';
 
 /** El juego tal y como estaba antes del guardado. `undefined` = es un alta. */
 export type PreviousReviewState = Pick<GameItem, 'name' | 'review' | 'score' | 'grade'> | undefined;
@@ -49,8 +49,6 @@ export type ReviewPublication =
       };
     };
 
-/** Lista sin reseña publicable: en «próximos» un juego no se ha jugado, así que no hay reseña que publicar. */
-const UNPUBLISHABLE_TAB: TabId = 'p';
 
 const trimmed = (value: string | undefined): string => (value || '').trim();
 
@@ -64,7 +62,8 @@ export function decideReviewPublication(input: {
   const previousReview = trimmed(input.previous?.review);
 
   // Sin reseña publicable: o la lista no admite reseña, o el usuario ha dejado el texto vacío.
-  if (input.tab === UNPUBLISHABLE_TAB || !review) {
+  // En «próximos» y «deseados» el juego no se ha jugado, así que no hay reseña que publicar.
+  if (UNPLAYED_TAB_IDS.includes(input.tab) || !review) {
     // Si el juego TENÍA reseña publicada, se retira: si no, el feed se queda con una entrada fantasma con el
     // título y el fragmento viejos (el caso claro es vaciar el texto y renombrar el juego a la vez). Si nunca la
     // tuvo, no hay nada que retirar y se evita una escritura del gist para nada.

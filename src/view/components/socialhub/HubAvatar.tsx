@@ -1,5 +1,6 @@
 import { memo, useEffect, useState } from 'react';
 import { useGenericPhoto } from '../../hooks/useGenericPhoto';
+import { googlePhotoAtSize } from '../../../core/social/googlePhoto';
 
 /**
  * Avatar del hub social: muestra la foto (`photoURL`) y, si no hay o la imagen falla al cargar (p. ej. una URL de
@@ -22,9 +23,18 @@ import { useGenericPhoto } from '../../hooks/useGenericPhoto';
 export const HubAvatar = memo(function HubAvatar({
   photoURL,
   sizeClass = '',
+  highDensity = false,
 }: {
   photoURL?: string;
   sizeClass?: string;
+  /**
+   * Ofrece la foto a 192 y 288 px a las pantallas de densidad doble y triple. Solo para el avatar GRANDE (el del
+   * perfil, 4,5rem = 72 px): Google la sirve a 96, que en una retina se estira 1,5 veces y sale blanda. Los
+   * pequeños no lo piden porque a 96 ya van sobrados o casi, y el feed pinta decenas: multiplicar el peso de
+   * todos para afinar el único que se nota no compensa. El margen sobre 144 y 216 cubre el texto del sistema
+   * ampliado, que agranda el avatar con el `rem`.
+   */
+  highDensity?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
   const generic = useGenericPhoto(photoURL);
@@ -35,10 +45,14 @@ export const HubAvatar = memo(function HubAvatar({
   }, [photoURL]);
 
   if (photoURL && !failed && !generic) {
+    // La comprobación de genérica (arriba) va sobre `photoURL`, la de 96 px: ver `googlePhotoAtSize`.
+    const double = highDensity ? googlePhotoAtSize(photoURL, 192) : null;
+    const triple = highDensity ? googlePhotoAtSize(photoURL, 288) : null;
     return (
       <img
         className={`hub-avatar hub-avatar-img ${sizeClass}`.trim()}
         src={photoURL}
+        srcSet={double && triple ? `${photoURL} 1x, ${double} 2x, ${triple} 3x` : undefined}
         alt=""
         referrerPolicy="no-referrer"
         // El feed y el directorio pintan muchos avatares a la vez, la mayoría fuera de pantalla: sin `lazy` se
@@ -46,12 +60,12 @@ export const HubAvatar = memo(function HubAvatar({
         // principal.
         loading="lazy"
         decoding="async"
-        // QUIEN RESERVA EL HUECO ES EL CSS, no estos dos números: `.hub-avatar` fija ancho y alto en los tres
-        // tamaños (2,1rem, y 3,1 o 4,5 según `sizeClass`), así que el texto de al lado no salta aunque la foto
-        // tarde. Se quedan como respaldo para el hueco en que la hoja del hub —que viaja en su chunk perezoso—
-        // todavía no ha llegado: ahí un cuadrado es mejor que un elemento sin dimensiones. Por eso son un
-        // cuadrado y no el tamaño de ninguna de las tres variantes, que es lo que serían si reservaran de
-        // verdad.
+        // QUIEN RESERVA EL HUECO ES EL CSS, no estos dos números: `.hub-avatar` fija ancho y alto en todos sus
+        // tamaños (2,1rem de base, 3,1 o 4,5 según `sizeClass`, y 2,5 o 3,2 que fijan la cabecera de identidad y
+        // la del dueño en `_layout.scss`), así que el texto de al lado no salta aunque la foto tarde. Se quedan
+        // como respaldo para el hueco en que la hoja del hub —que viaja en su chunk perezoso— todavía no ha
+        // llegado: ahí un cuadrado es mejor que un elemento sin dimensiones. Por eso son un cuadrado y no el
+        // tamaño de ninguna de las variantes, que es lo que serían si reservaran de verdad.
         width={40}
         height={40}
         onError={() => setFailed(true)}

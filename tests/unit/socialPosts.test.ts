@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 // `?raw` de Vite y no `node:fs`: los tests unitarios corren sin `@types/node` a propósito (ver tsconfig.json).
 import headersFile from '../../public/_headers?raw';
 import { isSteamSharedFilePage, resolvePostMedia } from '../../src/core/social/postMedia';
-import { upsertPost, type SocialGistData } from '../../src/model/repository/socialGistRepository';
+import { editPost, mergeSocialGistData, normalizeSocialGistForTests, removePost, upsertPost, type SocialGistData } from '../../src/model/repository/socialGistRepository';
 import { assertValidSocialGist } from '../../src/model/schemas/socialGistSchema';
 
 function baseGist(): SocialGistData {
@@ -76,6 +76,61 @@ describe('F3 — publicaciones del feed social', () => {
       review: 'fuga',
     }];
     expect(() => assertValidSocialGist(hostile)).toThrow();
+  });
+});
+
+describe('editar y retirar publicaciones propias', () => {
+  function withTwoPosts(): SocialGistData {
+    const one = upsertPost(baseGist(), { authorProfileId: 'p1', authorName: 'A', text: 'Primera', timestamp: 2000 });
+    return upsertPost(one, { authorProfileId: 'p1', authorName: 'A', text: 'Segunda', timestamp: 3000 });
+  }
+
+  it('editar conserva la fecha y el orden, y sella editedAt', () => {
+    const data = withTwoPosts();
+    const next = editPost(data, { id: 'p1:2000', text: 'Primera corregida', timestamp: 9000 });
+    const edited = next.posts?.find((post) => post.id === 'p1:2000');
+
+    expect(edited).toMatchObject({ text: 'Primera corregida', createdAt: 2000, updatedAt: 2000, editedAt: 9000 });
+    // Sigue detrás de la segunda: una corrección no la sube en el feed.
+    expect(next.posts?.map((post) => post.id)).toEqual(['p1:3000', 'p1:2000']);
+    expect(() => assertValidSocialGist(next)).not.toThrow();
+  });
+
+  it('editar es no-op (misma referencia) sin cambios, con id desconocido o con cupo 0', () => {
+    const data = withTwoPosts();
+    expect(editPost(data, { id: 'p1:2000', text: 'Primera' })).toBe(data);
+    expect(editPost(data, { id: 'nadie', text: 'x' })).toBe(data);
+    expect(editPost(data, { id: 'p1:2000', text: 'otra', maxLength: 0 })).toBe(data);
+  });
+
+  it('editar recorta al cupo recibido', () => {
+    const next = editPost(withTwoPosts(), { id: 'p1:2000', text: 'a'.repeat(1_500), maxLength: 1_000 });
+    expect(next.posts?.find((post) => post.id === 'p1:2000')?.text.length).toBe(1_000);
+  });
+
+  it('retirar quita solo esa publicación, y es no-op si no estaba', () => {
+    const data = withTwoPosts();
+    const next = removePost(data, { id: 'p1:3000', timestamp: 9000 });
+    expect(next.posts?.map((post) => post.id)).toEqual(['p1:2000']);
+    expect(removePost(data, { id: 'nadie' })).toBe(data);
+  });
+
+  it('editedAt sobrevive al round-trip, y uno roto no cuelga la marca', () => {
+    const edited = editPost(withTwoPosts(), { id: 'p1:2000', text: 'Corregida', timestamp: 9000 });
+    expect(normalizeSocialGistForTests(edited).posts?.find((post) => post.id === 'p1:2000')?.editedAt).toBe(9000);
+
+    const broken = withTwoPosts();
+    broken.posts = broken.posts?.map((post) => ({ ...post, editedAt: Number.NaN }));
+    expect(normalizeSocialGistForTests(broken).posts?.every((post) => !('editedAt' in post))).toBe(true);
+  });
+
+  it('al fusionar dos copias del canal gana la versión editada, aunque las dos tengan la misma fecha', () => {
+    const original = withTwoPosts();
+    const edited = editPost(original, { id: 'p1:2000', text: 'Corregida', timestamp: 9000 });
+    for (const [a, b] of [[original, edited], [edited, original]]) {
+      const merged = mergeSocialGistData(a, b);
+      expect(merged.posts?.find((post) => post.id === 'p1:2000')?.text).toBe('Corregida');
+    }
   });
 });
 

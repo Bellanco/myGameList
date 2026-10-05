@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { COMMON_ICONS } from '../../core/constants/icons';
 import { FILTER_BOOL, UI_MESSAGES } from '../../core/constants/labels';
 import { HOURS_RANGES } from '../../core/constants/uiConfig';
-import type { TabId, ToolbarFilters } from '../../model/types/game';
+import { UNPLAYED_TAB_IDS, type TabId, type ToolbarFilters } from '../../model/types/game';
 import type { TabOptions } from '../../viewmodel/toolbarFilters';
 import { renderStars } from '../../core/utils/renderStars';
 import { gradeFloorForStars } from '../../core/utils/scoreScale';
@@ -59,7 +59,7 @@ export const Toolbar = memo(function Toolbar({
     };
   }, [searchDraft, filters.search, onFilterChange]);
 
-  const supportsScore = (tab: TabId) => tab === 'c' || tab === 'p';
+  const supportsScore = (tab: TabId) => tab === 'c' || UNPLAYED_TAB_IDS.includes(tab);
   const supportsHours = (tab: TabId) => tab === 'c';
   const config = FILTER_BOOL[currentTab];
 

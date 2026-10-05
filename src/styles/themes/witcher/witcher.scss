@@ -486,12 +486,13 @@
    es demasiado hondo para un sello tan pequeño—. */
 :root[data-palette="witcher"] .chip-pf { --wt-tono: var(--wt-axii); }
 :root[data-palette="witcher"] .chip-pd { --wt-tono: var(--danger); }
-/* Los cuatro carteles de LISTA lacran con la señal de su suceso, la misma que llevan en el feed y en las
+/* Los cinco carteles de LISTA lacran con la señal de su suceso, la misma que llevan en el feed y en las
    estadísticas (§5c): el sello es lo único con color de un cartel de pergamino, así que es donde entra. */
 :root[data-palette="witcher"] .chip-list-c { --wt-tono: var(--wt-axii); }
 :root[data-palette="witcher"] .chip-list-v { --wt-tono: var(--wt-igni); }
 :root[data-palette="witcher"] .chip-list-e { --wt-tono: var(--wt-aard); }
 :root[data-palette="witcher"] .chip-list-p { --wt-tono: var(--wt-yrden); }
+:root[data-palette="witcher"] .chip-list-d { --wt-tono: var(--wt-quen); }
 /* La PLATAFORMA lacra en su familia fría (`--chip-plat-fg`, ver CAPA 2), no en la plata del tema: la plata
    sobre papel crema es casi el mismo valor que el papel, y el sello desaparecía. Es además la familia que el
    sistema le reserva para no chocar con el rojo, el verde y el ámbar de sus vecinos de renglón. */
@@ -712,7 +713,7 @@
    encima no se mueva el renglón. */
 :root[data-palette="witcher"] .hub-name-link,
 :root[data-palette="witcher"] .hub-detail-profile-link,
-:root[data-palette="witcher"] .hub-feed-card h3:not(.hub-feed-game-chip) {
+:root[data-palette="witcher"] .hub-feed-card h3:not(.hub-feed-game-chip, .game-card-name) {
   color: var(--steam-hover);
   border-bottom: 1px solid transparent;
 }

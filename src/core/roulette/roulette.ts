@@ -1,5 +1,6 @@
 import type { GameItem, TabData, TabId } from '../../model/types/game';
 import { clampRating } from '../utils/normalize';
+import { parseSeries } from '../utils/seriesName';
 import { clampGrade, resolveGrade, resolveStars } from '../utils/scoreScale';
 
 /**
@@ -41,8 +42,11 @@ export function gameWeight(game: GameItem): number {
   return score > 0 ? score : BASE_WEIGHT;
 }
 
-/** Multiplicador por lista en LISTADOS: salen más los próximos, luego la vergüenza, luego completados. */
-const TAB_WEIGHT: Record<TabId, number> = { p: 3.5, v: 2, c: 1, e: 1 };
+/**
+ * Multiplicador por lista en LISTADOS: salen más los próximos, luego la vergüenza, luego completados. Deseos no
+ * entra en la ruleta propia (no se puede jugar lo que no se tiene, ver `buildListsPool`): su peso es 0.
+ */
+const TAB_WEIGHT: Record<TabId, number> = { p: 3.5, v: 2, c: 1, e: 1, d: 0 };
 
 /** Nota fina "neutra" (0–100) para la vergüenza, que no se puntúa: compite por prioridad de lista sin quedar atrás. */
 export const NEUTRAL_GRADE = 70;
@@ -67,36 +71,9 @@ export function listsWeight(candidate: RouletteCandidate): number {
 /** Penalización por cada entrega ANTERIOR que tienes y aún no has terminado (y suprime la saga si hay una en curso). */
 export const SEQUEL_DECAY = 0.4;
 
-const ROMAN: Record<string, number> = {
-  i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9, x: 10,
-  xi: 11, xii: 12, xiii: 13, xiv: 14, xv: 15, xvi: 16, xvii: 17, xviii: 18, xix: 19, xx: 20,
-};
-
-/**
- * Descompone un nombre en (base de la saga, ordinal). El ordinal se detecta como número arábigo de 1–3 dígitos
- * (evita años como "2077"), número romano, o número antes de un subtítulo tras ":". Sin número → ordinal 1
- * (la primera entrega). Los números en medio del nombre ("Left 4 Dead") no cuentan.
- */
-export function parseSeries(name: string): { base: string; ordinal: number } {
-  const main = String(name || '').trim().split(':')[0].trim();
-  const tokens = main.split(/\s+/);
-  const last = (tokens[tokens.length - 1] || '').toLowerCase().replace(/[.,]$/, '');
-
-  let ordinal = 1;
-  let baseTokens = tokens;
-  if (/^\d{1,3}$/.test(last)) {
-    ordinal = Number(last);
-    baseTokens = tokens.slice(0, -1);
-  } else if (ROMAN[last] !== undefined) {
-    ordinal = ROMAN[last];
-    baseTokens = tokens.slice(0, -1);
-  }
-
-  const base = baseTokens.join(' ').trim().toLowerCase();
-  // Si al quitar el ordinal no queda base (el número/romano era todo el nombre), trátalo como primera entrega.
-  if (!base) return { base: main.toLowerCase(), ordinal: 1 };
-  return { base, ordinal };
-}
+// `parseSeries` vive en `core/utils/seriesName`: la usan también las estadísticas, y desde aquí se habrían llevado
+// la ruleta entera a su chunk. Se reexporta para quien la importaba de este módulo.
+export { parseSeries } from '../utils/seriesName';
 
 interface SeriesInfo {
   ownedOrdinals: Set<number>; // entregas presentes en cualquier lista

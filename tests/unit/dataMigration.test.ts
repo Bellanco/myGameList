@@ -26,7 +26,7 @@ async function resetStores(): Promise<void> {
 
 function seed(): void {
   const payload: StoragePayload = {
-    c: [makeGame(1)], v: [makeGame(2)], e: [], p: [makeGame(3)],
+    c: [makeGame(1)], v: [makeGame(2)], e: [], p: [makeGame(3)], d: [],
     deleted: [], updatedAt: Date.now(), etag: null, lastRemoteUpdatedAt: 0,
   };
   saveLocalState(payload);

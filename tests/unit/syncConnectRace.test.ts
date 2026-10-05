@@ -128,7 +128,7 @@ function makeGame(over: Partial<GameItem>): GameItem {
 }
 
 function emptyTabData(): TabData {
-  return { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 1_000 };
+  return { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 1_000 };
 }
 
 type Meta = { updatedAt: number; etag: string | null; lastRemoteUpdatedAt: number };

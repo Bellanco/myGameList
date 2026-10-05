@@ -214,6 +214,24 @@ export function isGenericGooglePhoto(url: string | null | undefined): Promise<bo
   return pending;
 }
 
+/** Sufijo de tamaño de los avatares de Google: `=s96-c` (lado en px y, opcional, recorte cuadrado). */
+const GOOGLE_PHOTO_SIZE_SUFFIX = /^(https:\/\/lh\d+\.googleusercontent\.com\/.+)=s\d+(-c)?$/;
+
+/**
+ * La MISMA foto de Google a otro lado, para las pantallas de densidad alta: `=s96-c` → `=s192-c`.
+ *
+ * `null` si la URL no es un avatar de Google con sufijo de tamaño. Las reglas aceptan cualquier `https` en
+ * `photoURL`, y adivinar el formato de otro servidor pediría una imagen que no existe.
+ *
+ * SOLO PARA PINTAR. El veredicto de genérica se sigue pidiendo sobre la URL original de 96 px, que es sobre la que
+ * están calibradas las dos cribas: a 192 px un monograma puede pasar del tope de peso, darse por foto real y abrir
+ * justo el agujero de la reciprocidad que este módulo cierra.
+ */
+export function googlePhotoAtSize(url: string | null | undefined, side: number): string | null {
+  const match = GOOGLE_PHOTO_SIZE_SUFFIX.exec(String(url || '').trim());
+  return match ? `${match[1]}=s${Math.round(side)}${match[2] || ''}` : null;
+}
+
 /** Solo para pruebas: vacía la caché de veredictos. */
 export function resetPhotoVerdicts(): void {
   verdicts.clear();

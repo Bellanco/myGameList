@@ -12,7 +12,9 @@ const gatewayMocks = vi.hoisted(() => ({
 }));
 vi.mock('../../src/model/repository/firebaseGateway', () => gatewayMocks);
 
-import { TAB_TOOLTIPS } from '../../src/core/constants/labels';
+import { TAB_ORDER, TAB_TOOLTIPS } from '../../src/core/constants/labels';
+import { moveTabsFromValue } from '../../src/core/social/moveTabsFilter';
+import type { TabId } from '../../src/model/types/game';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { SocialProfileScreen } from '../../src/view/components/socialhub/SocialProfileScreen';
 import { feedMoveTabsPreference } from '../../src/view/hooks/preferences';
@@ -50,7 +52,7 @@ function renderScreen() {
   );
 }
 
-const toggleOf = (tab: 'c' | 'v' | 'e' | 'p') =>
+const toggleOf = (tab: TabId) =>
   screen.getByLabelText(TAB_TOOLTIPS[tab]) as HTMLInputElement;
 
 beforeEach(() => {
@@ -78,7 +80,7 @@ describe('bloque de movimientos del editor de perfil', () => {
 
     await user.click(toggleOf('v'));
 
-    expect(feedMoveTabsPreference.get()).toBe('cep');
+    expect(feedMoveTabsPreference.get()).toBe('cepd');
     expect(toggleOf('v').checked).toBe(false);
     // El resto sigue igual, y el guardado del perfil no se ha invocado: esto no toca el gist.
     expect(toggleOf('c').checked).toBe(true);
@@ -89,11 +91,12 @@ describe('bloque de movimientos del editor de perfil', () => {
     const user = userEvent.setup();
     renderScreen();
 
-    for (const tab of ['c', 'v', 'e', 'p'] as const) {
+    for (const tab of TAB_ORDER) {
       await user.click(toggleOf(tab));
     }
 
-    expect(feedMoveTabsPreference.get()).toBe('');
+    // Apagadas todas las que se ENSEÑAN: las que la interfaz aún no muestra no cuentan para el aviso.
+    expect(moveTabsFromValue(feedMoveTabsPreference.get()).filter((tab) => TAB_ORDER.includes(tab))).toEqual([]);
     expect(screen.getByText(SOCIAL_UI.profile.moveFeedAllOff)).toBeInTheDocument();
   });
 

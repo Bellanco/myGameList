@@ -31,7 +31,7 @@ function game(partial: Partial<GameItem> & { id: number; name: string }): GameIt
 }
 
 function tabData(partial: Partial<TabData>): TabData {
-  return { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0, ...partial };
+  return { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 0, ...partial };
 }
 
 describe('roulette weighting', () => {

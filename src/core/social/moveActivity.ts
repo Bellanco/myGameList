@@ -143,7 +143,7 @@ function libraryEntryTab(stamps: Partial<Record<TabId, number>> | undefined): Ta
  * quien movió el juego, que es de quien se está contando algo. Dos aparatos en husos distintos pueden discrepar
  * en un juego movido a caballo de la medianoche; el precio es una reescritura del canal, no un mensaje perdido.
  *
- * Empate a milisegundos: gana el primero en `TAB_IDS` (`c`, `v`, `e`, `p`), que va del estado más avanzado al menos
+ * Empate a milisegundos: gana el primero en `TAB_IDS` (`c`, `v`, `e`, `p`, `d`), que va del estado más avanzado al menos
  * avanzado. Guardar y mover en la misma operación estampa el mismo instante, y ahí lo que cuenta es el destino.
  */
 function keepLatestPerDay(entries: SocialMoveEntry[]): SocialMoveEntry[] {
@@ -197,7 +197,8 @@ export interface DeriveMoveActivityOptions {
 /**
  * Proyecta los mensajes de lista de una biblioteca. PURA: sin reloj propio, sin E/S y sin estado.
  *
- * Recorre TODOS los sellos de cada juego menos el de la lista por la que entró, no solo el de la lista en la que
+ * Recorre TODOS los sellos de cada juego menos el de la lista por la que entró (salvo que entrara por la de deseos,
+ * cuya alta sí se cuenta), no solo el de la lista en la que
  * está ahora: un juego apuntado que luego se empezó y se terminó aporta esos dos mensajes con sus dos fechas —el
  * de haberlo apuntado, no, que era su alta—, y eso es lo que hace que la actividad tenga historia el primer día
  * en vez de empezar en blanco. Un juego con un solo sello no aporta nada: acaba de entrar y no se ha movido. Y si
@@ -234,7 +235,9 @@ export function deriveMoveActivity(games: TabData, options: DeriveMoveActivityOp
       const candidates: SocialMoveEntry[] = [];
 
       for (const stampTab of TAB_IDS) {
-        if (hidden.has(stampTab) || stampTab === entryTab) {
+        // El alta no es un movimiento… salvo en la lista de deseos: apuntarse un juego que se quiere ES la noticia
+        // («añadió … a su lista de deseos»), y pasarlo luego a próximos es haberlo conseguido («… a su biblioteca»).
+        if (hidden.has(stampTab) || (stampTab === entryTab && stampTab !== 'd')) {
           continue;
         }
         const at = game.enteredAt?.[stampTab];

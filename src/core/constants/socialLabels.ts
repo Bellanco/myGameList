@@ -160,13 +160,21 @@ export const SOCIAL_UI = {
     //
     // Los verbos son los largos —«comenzó», «finalizó», «abandonó»— y no sus sinónimos cortos: dicen lo mismo con
     // más cuerpo, que es lo que le falta a un renglón de cuatro palabras. Próximos dice «añadió» porque el mensaje
-    // solo sale cuando el juego LLEGA a esa lista desde otra, y eso es añadirlo a la cola, no apuntarlo de nuevas.
+    // solo sale cuando el juego LLEGA a esa lista desde otra —desde la de deseos, que es la única que lleva allí—,
+    // y eso es haberlo conseguido: «añadió X a su biblioteca».
     moveHeadline: {
       c: 'finalizó',
       v: 'abandonó',
       e: 'comenzó',
       p: 'añadió',
-    } as Record<TabId, string>,
+      d: 'añadió',
+    } satisfies Record<TabId, string>,
+    // Lo que va DETRÁS del juego, en las dos listas donde el verbo solo no dice adónde fue: «Ada añadió Hades a su
+    // lista de deseos» / «… a su biblioteca».
+    moveTail: {
+      p: 'a su biblioteca',
+      d: 'a su lista de deseos',
+    } as Partial<Record<TabId, string>>,
     // Solo la HORA en la tarjeta: el día ya lo dice la cabecera del grupo, y repetirlo era la línea que más peso
     // le daba a un mensaje que debe pesar poco. La fecha completa sigue disponible al pasar el ratón.
     movedAtHour: (date: Date) => date.toLocaleTimeString(APP_LOCALE, { hour: '2-digit', minute: '2-digit' }),
@@ -217,6 +225,21 @@ export const SOCIAL_UI = {
     reviewsBack: 'Ver perfil',
     reviewsTitle: 'Reseñas',
     reviewsEmptyProfile: 'Este perfil no ha publicado reseñas todavía.',
+    // Las publicaciones del perfil: el mismo par de botón y vuelta que las reseñas. Sobre las tuyas, editar y
+    // borrar; al editar se conserva la fecha, y la marca de «editado» es lo único que lo cuenta.
+    postsButton: 'Publicaciones',
+    postsListTitle: 'Publicaciones',
+    postEdited: 'editado',
+    postEditedTitle: (date: Date) =>
+      `Editado el ${date.toLocaleDateString(APP_LOCALE, { day: 'numeric', month: 'long', year: 'numeric' })} a las ${date.toLocaleTimeString(APP_LOCALE, { hour: 'numeric', minute: '2-digit' })}`,
+    postEdit: 'Editar',
+    postEditLabel: 'Texto de la publicación',
+    postEditSave: 'Guardar',
+    postEditSaving: 'Guardando…',
+    postEditCancel: 'Cancelar',
+    postDelete: 'Eliminar',
+    postDeleteConfirmTitle: '¿Eliminar esta publicación?',
+    postDeleteConfirmBody: 'Desaparece de tu perfil y del feed. Tus amistades pueden seguir viéndola unos minutos, hasta que se actualice su feed.',
     reviewExpand: 'Ver más',
     reviewCollapse: 'Ver menos',
     reviewOpenAria: (gameName: string) => `Abrir la reseña de ${gameName}`,
@@ -242,6 +265,7 @@ export const SOCIAL_UI = {
     profileListTabVisited: 'Abandonados',
     profileListTabPlaying: 'En curso',
     profileListTabPlanned: 'Próximos',
+    profileListTabWished: 'Deseados',
     backToFeed: 'Volver a la actividad',
     // Rótulos del volver cuando se ha llegado saltando de un análisis a otro por el bloque de relacionados: el
     // botón nombra el sitio al que de verdad se vuelve, no el que la pantalla tiene por defecto.
@@ -361,6 +385,7 @@ export const SOCIAL_UI = {
     hideVisitedList: 'Ocultar lista de abandonados',
     hidePlayingList: 'Ocultar lista de en curso',
     hidePlannedList: 'Ocultar lista de próximos',
+    hideWishlist: 'Ocultar lista de deseos',
     hideFieldSectionTitle: 'Ocultar campos',
     hideReplayableField: 'Rejugar',
     hideRetryField: 'Dar otra oportunidad',
@@ -421,8 +446,14 @@ export const SOCIAL_UI = {
     // para que nadie lo dé por publicado ni lo escriba otra vez.
     postPublishOffline: 'Sin conexión: la publicación no se ha compartido. El texto sigue aquí, inténtalo al recuperar la red.',
     postPublishLimited: 'Ahora mismo no se puede publicar: el servicio no responde. El texto sigue aquí; inténtalo más tarde.',
-    profileGamesRefreshFailed: 'No se pudieron actualizar los listados de este perfil.',
-    refreshThrottled: 'Espera unos segundos antes de volver a actualizar.',
+    postEditDone: 'Publicación actualizada.',
+    postEditFailed: 'No se pudo guardar el cambio.',
+    postEditOffline: 'Sin conexión: el cambio no se ha guardado. El texto sigue aquí, inténtalo al recuperar la red.',
+    postDeleteDone: 'Publicación eliminada.',
+    postDeleteFailed: 'No se pudo eliminar la publicación.',
+    postDeleteOffline: 'Sin conexión: la publicación no se ha eliminado. Inténtalo al recuperar la red.',
+    // Mismo caso que al publicar: GitHub limitando o caído no es un fallo de lo que el usuario ha hecho.
+    postChangeLimited: 'Ahora mismo no se puede cambiar la publicación: el servicio no responde. Inténtalo más tarde.',
     friendRequestSent: 'Petición de amistad enviada.',
     friendRequestAccepted: 'Ahora sois amigos.',
     friendRequestCanceled: 'Petición cancelada.',

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { computeStats } from '../core/stats/computeStats';
+import { computeWishKin, type WishKinSummary } from '../core/stats/wishKin';
 import { loadBacklogHistory } from '../model/repository/statsSnapshotRepository';
 import { useScoreScale } from '../view/hooks/useScoreScale';
 import type { StatsSummary, YearSummary } from '../core/stats/types';
@@ -18,6 +19,8 @@ export const MIN_HISTORY_POINTS = 2;
 
 export interface StatsViewModel {
   stats: StatsSummary;
+  /** Los deseos frente a lo que ya espera en Próximos («Ya lo tienes en casa»). Aparte de `stats`: ver `wishKin`. */
+  wishKin: WishKinSummary;
   /** Escala de puntuación de la cuenta; decide si las notas se etiquetan en estrellas o en nota 0–100. */
   scale: ScoreScale;
   yearMetric: YearMetric;
@@ -48,6 +51,8 @@ export interface StatsViewModel {
  */
 export function useStatsViewModel(data: TabData): StatsViewModel {
   const stats = useMemo(() => computeStats(data), [data]);
+  // Solo depende de dos listas: editar un completado no tiene por qué recalcular el cruce de deseos.
+  const wishKin = useMemo(() => computeWishKin(data), [data.d, data.p]); // eslint-disable-line react-hooks/exhaustive-deps
   const scale = useScoreScale();
   const [yearMetric, setYearMetric] = useState<YearMetric>('games');
   const [scope, setScope] = useState<StatsScope>('general');
@@ -80,6 +85,7 @@ export function useStatsViewModel(data: TabData): StatsViewModel {
 
   return {
     stats,
+    wishKin,
     scale,
     yearMetric,
     setYearMetric,

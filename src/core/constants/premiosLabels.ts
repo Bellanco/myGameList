@@ -55,8 +55,6 @@ export const PREMIOS_UI = {
         : `Tienes ${cuantas} oportunidades: el envío y ${cuantas - 1} correcciones.`,
     opportunitiesLeft: (quedan: number) =>
       quedan === 1 ? 'Te queda 1 oportunidad' : `Te quedan ${quedan} oportunidades`,
-    /** Solo a quien vota con cuenta ligera: es la única diferencia práctica que le hace tener perfil. */
-    moreWithSocial: 'Con cuenta social tendrías entre 5 y 20, según tu rango.',
     // Sin edición abierta ni resultados: es enero y aquí no hay nada. Se dice sin dramatismo.
     empty: 'Ahora mismo no hay ninguna edición en marcha.',
     emptyHint: 'Cuando se abra la siguiente, aparecerá aquí.',
@@ -204,9 +202,11 @@ export const PREMIOS_UI = {
     unscored: 'sin puntuación',
     yourRow: 'Tu posición',
     // ═══ LA CLASIFICACIÓN FINAL, con lo que votó cada uno ═══════════════════════════════════════════════
-    // Solo mientras la edición publicada no se termina, y solo para quien votó en ella
-    // (docs/plan-premios-votos-a-la-vista.md). Sustituye a la clasificación de siempre.
+    // Solo para quien votó en la edición, y hasta que se abre la siguiente (docs/plan-premios-votos-a-la-vista.md).
+    // Sustituye a la clasificación de siempre.
     finalBoard: 'Clasificación final',
+    /** Con la final delante, la columna de la derecha deja solo a los premiados sin escalón: 4.º y 5.º. */
+    restOfAwarded: 'Resto de premiados',
     /** Aciertos sobre categorías: explica que alguien con menos aciertos sume más puntos, por los pesos. */
     hitsShort: (aciertos: number, total: number) => `${aciertos}/${total}`,
     hitsAria: (aciertos: number, total: number) =>
@@ -236,7 +236,7 @@ export const PREMIOS_UI = {
     // La clasificación enseña la cara de una amistad y la inicial del resto: es la misma regla de reciprocidad
     // del espacio social, aplicada aquí (ver §4.1 del plan).
     avatarAria: (nombre: string) => `Perfil de ${nombre}`,
-    /** El enlace a lo que votó la gente, en la cabecera de los ganadores. */
+    /** El botón de la cabecera de los ganadores que pasa a lo que votó la gente (y, desde allí, «Ganadores»). */
     popularLink: 'Lo más votado',
     /**
      * UN ESCALÓN CON EMPATE CAMBIA DE LÁMINA al pulsarlo: cada pulsación pasa a la siguiente persona. El rótulo
@@ -249,16 +249,14 @@ export const PREMIOS_UI = {
    * EL VOTO POPULAR: lo que eligió más gente en cada categoría. Es la otra lectura de una edición —la porra se
    * gana acertando al jurado— y va en su propia pantalla, enlazada desde los resultados.
    */
+  // LO MÁS VOTADO, que desde el 05-10-2026 se ve en el panel de ganadores de la pantalla de resultados.
   votos: {
-    sectionAria: 'Lo más votado',
     title: 'Lo más votado',
-    back: 'Volver a los resultados',
     /** «9 de 14 votos». Con empate, cada uno de los empatados tiene esos votos. */
     votes: (votos: number, total: number) => (total === 1 ? '1 voto' : `${votos} de ${total} votos`),
     tie: 'Empate',
     /** La gente eligió lo mismo que el jurado. Sin esta marca habría que ir y volver entre las dos pantallas. */
     matchesJury: 'Como el jurado',
-    empty: 'Esta edición no guardó el recuento de votos.',
   },
 
   // EL PANEL. Vive dentro del de administración de la app, como una vista más: no hay un segundo `/admin`.
@@ -308,12 +306,7 @@ export const PREMIOS_UI = {
           id: 'pending' as const,
           label: 'Cerrada, sin publicar',
           // El fin del ciclo se cuenta AQUÍ, en el paso que lo provoca, en vez de en una frase suelta debajo.
-          hint: 'Hay que marcar el ganador de cada categoría con nominados para poder publicar: al hacerlo pasa al histórico.',
-        },
-        {
-          id: 'revealed' as const,
-          label: 'Publicada, votos a la vista',
-          hint: 'Quienes votaron ven lo que votó cada uno. Al terminarla se retiran las papeletas y se vuelve a «Sin edición».',
+          hint: 'Hay que marcar el ganador de cada categoría con nominados para poder publicar: al hacerlo pasa al histórico y se vuelve a «Sin edición».',
         },
       ],
       stageCurrent: 'Estado actual',
@@ -362,13 +355,8 @@ export const PREMIOS_UI = {
       // histórico» contaba el efecto secundario —dónde acaba la edición— y dejaba lo principal en la sombra.
       publishAction: 'Publicar los resultados',
       // Publicar es irreversible y destructivo: retira las papeletas y vacía los nominados.
-      publishWarn: 'Al publicar se archiva la clasificación, se retiran las papeletas y se vacían los nominados. No se puede deshacer.',
-      // Las ediciones con los votos a la vista: publicar ya no retira nada, eso lo hace terminar.
-      publishWarnReveal: 'Al publicar se archiva la clasificación y se conceden los trofeos. Las papeletas se quedan para que quienes votaron vean lo que votó cada uno, hasta que termines la edición. No se puede deshacer.',
-      // TERMINAR, el paso destructivo de las ediciones con los votos a la vista.
-      finishAction: 'Terminar la edición',
-      finishWarn: 'Al terminarla se retiran las papeletas y los votos de cada uno, y se vacían los nominados. Los resultados siguen en el histórico. No se puede deshacer.',
-      finishConfirmTitle: '¿Terminar la edición?',
+      // Los votos de cada uno NO se pierden: quedan a la vista de quien votó hasta la siguiente edición.
+      publishWarn: 'Al publicar se archiva la clasificación, se retiran las papeletas y se vacían los nominados. Lo que votó cada uno lo seguirán viendo quienes votaron, hasta que abras la siguiente edición. No se puede deshacer.',
       /**
        * SIN TODOS LOS GANADORES NO SE PUBLICA. La clasificación se calcula cruzando cada voto con el ganador de
        * su categoría: una categoría con nominados y sin ganador no da puntos a nadie, y como al publicar se
@@ -391,10 +379,6 @@ export const PREMIOS_UI = {
         `Edición «${nombre}» abierta. La sección sigue oculta: solo se llega con el enlace.`,
       closed: 'Votación cerrada.',
       published: (nombre: string, votos: number) => `«${nombre}» publicada con ${votos} papeleta(s).`,
-      publishedReveal: (nombre: string, votos: number) =>
-        `«${nombre}» publicada con ${votos} papeleta(s). Quienes votaron ven los votos de todos hasta que la termines.`,
-      finished: (nombre: string, papeletas: number) =>
-        `«${nombre}» terminada: se retiraron ${papeletas} papeleta(s).`,
       errorDay: 'Hace falta un día de cierre que no esté en el pasado.',
       // ═══ EL INTERRUPTOR DE LA ENTRADA ═════════════════════════════════════════════════════════════════
       // Dos estados y no tres. El tercero era «según el calendario» y se leía como una opción cuando en realidad
@@ -468,6 +452,12 @@ export const PREMIOS_UI = {
       // sería una medalla por una porra de la que no queda nada.
       removedAwards: (cuantos: number) =>
         cuantos === 1 ? 'Se ha retirado su logro de 1 perfil.' : `Se ha retirado su logro de ${cuantos} perfiles.`,
+      // LOS VOTOS DE CADA UNO, que se ven hasta la siguiente edición: aquí se pueden retirar antes, a mano. Solo en
+      // la edición que los tenga.
+      removeVotes: 'Borrar los votos',
+      removeVotesConfirm: (nombre: string) =>
+        `¿Borrar lo que votó cada uno en «${nombre}»? Quienes votaron dejarán de verlo. La clasificación, los ganadores y los trofeos se quedan. No se puede recuperar.`,
+      removedVotes: (nombre: string) => `Votos de «${nombre}» borrados. La clasificación sigue en el histórico.`,
       repointed: (nombre: string) => `La pantalla pública pasa a enseñar «${nombre}».`,
       repointedEmpty: 'Ya no queda ninguna edición publicada que enseñar.',
       open: 'Ver resultados',

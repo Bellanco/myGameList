@@ -358,6 +358,7 @@
 :root[data-palette="arcade"] .chip-list-v { background: linear-gradient(160deg, #ff9ecb, #ff3d9e) !important; }
 :root[data-palette="arcade"] .chip-list-e { background: linear-gradient(160deg, #ffd0a8, #ff7a3d) !important; }
 :root[data-palette="arcade"] .chip-list-p { background: linear-gradient(160deg, #b9c8ff, #6d8cff) !important; }
+:root[data-palette="arcade"] .chip-list-d { background: linear-gradient(160deg, #e2c8ff, #b06dff) !important; }
 :root[data-palette="arcade"] .chip-deck { background: linear-gradient(160deg, #e4ecff, #c6d4ee) !important; }
 :root[data-palette="arcade"] .chip-more { background: linear-gradient(160deg, #cdbbe8, #a58ec9) !important; }
 /* PEGADAS DE TRAVÉS, y alternando el lado: todas con la misma inclinación parecen un error de maqueta; con
@@ -403,6 +404,7 @@
 :root[data-palette="arcade"][data-theme="light"] .chip-list-v { background: #fbdde9 !important; color: #a8005a !important; }
 :root[data-palette="arcade"][data-theme="light"] .chip-list-e { background: #fbe2d2 !important; color: #8a3a0c !important; }
 :root[data-palette="arcade"][data-theme="light"] .chip-list-p { background: #dde3fb !important; color: #2f42b5 !important; }
+:root[data-palette="arcade"][data-theme="light"] .chip-list-d { background: #ece0fb !important; color: #5b2aa8 !important; }
 :root[data-palette="arcade"][data-theme="light"] .chip-deck { background: #e2e8f6 !important; color: #3b4a68 !important; }
 :root[data-palette="arcade"][data-theme="light"] .chip-more { background: #ece3f7 !important; }
 

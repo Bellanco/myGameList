@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import { TAB_IDS, type TabId } from '../../../model/types/game';
+import { LIBRARY_TAB_IDS, type TabId } from '../../../model/types/game';
 import type { ImportedGame } from '../../../model/types/import';
 import { TAB_TITLES, TAB_TOOLTIPS, UI_MESSAGES } from '../../../core/constants/labels';
 import { IMPORT_UI } from '../../../core/constants/importLabels';
@@ -9,7 +9,13 @@ import { Icon } from '../Icon';
 const M = IMPORT_UI.inbox;
 
 // Color de la píldora de "ya en tus listas" según la lista, con los mismos colores que los listados.
-const LIST_CHIP_CLASS: Record<TabId, string> = { c: 'chip-list-c', v: 'chip-list-v', e: 'chip-list-e', p: 'chip-list-p' };
+const LIST_CHIP_CLASS: Record<TabId, string> = {
+  c: 'chip-list-c',
+  v: 'chip-list-v',
+  e: 'chip-list-e',
+  p: 'chip-list-p',
+  d: 'chip-list-d',
+};
 
 interface ImportInboxTableProps {
   items: ImportedGame[];
@@ -18,6 +24,7 @@ interface ImportInboxTableProps {
   listOf: (name: string) => TabId | null;
   onClassify: (item: ImportedGame, tab: TabId) => void;
   onEnrich: (item: ImportedGame) => void;
+  onPromote: (item: ImportedGame) => void;
   onDiscard: (id: number) => void;
   /** Copia el nombre del juego al portapapeles (al pulsar sobre él). */
   onCopyName: (name: string) => void;
@@ -44,7 +51,7 @@ function chips(values: string[], className: string) {
  * encendía dentro de `table.is-cards`, y esta tabla nunca ha tenido esa clase. Se ha retirado con el rediseño
  * del renglón, que dejó de tener dos marcados distintos.
  */
-export function ImportInboxTable({ items, isInLists, listOf, onClassify, onEnrich, onDiscard, onCopyName }: ImportInboxTableProps) {
+export function ImportInboxTable({ items, isInLists, listOf, onClassify, onEnrich, onPromote, onDiscard, onCopyName }: ImportInboxTableProps) {
   return (
     <div className="table-wrap import-inbox">
       <table>
@@ -97,13 +104,21 @@ export function ImportInboxTable({ items, isInLists, listOf, onClassify, onEnric
                   <td colSpan={3}>
                     <div className="detail-content">
                       <div className="detail-actions">
-                        {existing ? (
+                        {inListTab === 'd' ? (
+                          // Lo tenías en deseados y Playnite dice que ya es tuyo: el único paso que admite esa lista.
+                          <button type="button" className="btn btn-secondary" title={M.promoteHint} onClick={() => onPromote(item)}>
+                            <Icon name={TAB_ICONS.p} />
+                            <span>{M.promote}</span>
+                          </button>
+                        ) : existing ? (
                           <button type="button" className="btn btn-secondary" title={M.enrichHint} onClick={() => onEnrich(item)}>
                             <Icon name={COMMON_ICONS.edit} />
                             <span>{M.enrich}</span>
                           </button>
                         ) : (
-                          TAB_IDS.map((tab) => {
+                          // Solo las listas de la biblioteca: lo que llega de Playnite ya lo tienes, así que nunca
+                          // es un deseo (esa lista se llena a mano).
+                          LIBRARY_TAB_IDS.map((tab) => {
                             const suggested = item.suggestedTab === tab;
                             return (
                               <button

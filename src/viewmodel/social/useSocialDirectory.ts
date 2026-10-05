@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { DEFAULT_PROFILE_TIER, PROFILE_TIER_DIRECTORY_TTL_MS, PROFILE_TIER_FEED_TTL_MS, type ProfileTier } from '../../core/constants/tiers';
 import { mapWithConcurrency } from '../../core/utils/concurrency';
@@ -14,8 +14,6 @@ import type { SocialDirectoryEntry } from './socialFeed';
 import type { TabId } from '../../model/types/game';
 import type { FriendshipView } from '../../model/types/social';
 
-/** Anti-spam del refresco forzado: cada uno relee el directorio y hasta ~50 gists sociales. */
-const FORCED_REFRESH_MIN_MS = 12_000;
 // Antigüedad máxima del último uso de un AMIGO para que su actividad entre en el feed: `PROFILE_INACTIVITY_MS`, el
 // mismo corte con el que avisa el panel. Uno más inactivo sigue en la lista de amigos, y su perfil y sus reseñas se
 // abren igual (salen de su gist de JUEGOS); lo que no hace es ocupar el feed ni gastar una lectura de su gist
@@ -31,8 +29,10 @@ const SOCIAL_DIRECTORY_FETCH_CONCURRENCY = 6;
 // sin fecha publicada y usaban el `_ts` del juego (que una importación sella en bloque), así que el listado
 // mostraba fechas distintas del feed. Se iguala al tope del propio gist.
 const SOCIAL_ACTIVITY_PER_PROFILE = 320;
-// Las publicaciones sí se quedan en el tope del feed: ninguna vista las lista por separado.
-const SOCIAL_POSTS_PER_PROFILE = 40;
+// Las publicaciones, igual: estuvieron en 40, el tope del feed, mientras ninguna vista las listaba por separado.
+// Desde que el perfil enseña TODAS (y deja editar y borrar las tuyas), se iguala al tope del gist: con 40, la
+// publicación 41 de alguien seguía en su canal sin que hubiera forma de verla ni de retirarla.
+const SOCIAL_POSTS_PER_PROFILE = 100;
 // F4 — mensajes de lista por perfil. Más alto que las publicaciones porque son varios por juego y el filtro de
 // quien mira puede dejar visible una sola lista; más bajo que la actividad porque solo los lista el feed.
 const SOCIAL_MOVES_PER_PROFILE = 120;
@@ -150,9 +150,6 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
    * estado vacío y saltaba después al esqueleto. Con esto la carga se lee como una sola escena.
    */
   const [directorySettled, setDirectorySettled] = useState(false);
-  const [refreshCoolingDown, setRefreshCoolingDown] = useState(false);
-  const lastForcedHydrateRef = useRef(0);
-  const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const runDirectoryHydration = useCallback(async (forceRefresh: boolean, keepDirectoryQuery = false) => {
     if (!directoryPanelAllows || !authUser || !socialCfgGistId) {
@@ -181,21 +178,11 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
       return;
     }
 
-    // Anti-spam del refresco forzado: cada `forceRefresh` relee el directorio + ~50 gists sociales (cuenta contra el
-    // rate-limit del token aunque devuelvan 304). Si se pulsa "Actualizar feed" repetidamente en pocos segundos, se
-    // ignora y se avisa. Las cargas automáticas (forceRefresh=false) usan la caché de sesión y no entran aquí.
-    if (forceRefresh) {
-      const now = Date.now();
-      if (now - lastForcedHydrateRef.current < FORCED_REFRESH_MIN_MS) {
-        setFeedback('warn', SOCIAL_UI.status.refreshThrottled);
-        return;
-      }
-      lastForcedHydrateRef.current = now;
-      // Deshabilita el botón durante el cooldown (en vez de solo avisar al pulsar).
-      setRefreshCoolingDown(true);
-      if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
-      cooldownTimerRef.current = setTimeout(() => setRefreshCoolingDown(false), FORCED_REFRESH_MIN_MS);
-    } else {
+    // EL REFRESCO FORZADO YA NO LO PIDE NADIE DESDE FUERA: el botón «Actualizar feed» se retiró, y con él su
+    // enfriamiento. Lo único que fuerza es la propia app tras publicar (`onPublished`), que conserva la consulta del
+    // directorio (`keepDirectoryQuery`), así que solo relee los gists sociales y al ritmo al que uno publica.
+    // Todo lo demás es carga automática y pasa por la caché.
+    if (!forceRefresh) {
       // Caché persistente: si el directorio sigue fresco (el TTL lo pone el rango), se sirve de IndexedDB sin releer
       // ningún gist social. Evita el coste N+1 al navegar feed→detalle→feed o al re-renderizar.
       //
@@ -614,19 +601,18 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
    * dependencias — que es exactamente el fallo que se cuela al pasar de `setState(prev => …)` a leer el estado.
    */
   const patchDirectoryEntries = useCallback(
-    (match: (entry: SocialDirectoryEntry) => boolean, patch: Partial<SocialDirectoryEntry>) => {
-      setSocialDirectory((prev) => prev.map((item) => (match(item) ? { ...item, ...patch } : item)));
+    (
+      match: (entry: SocialDirectoryEntry) => boolean,
+      // Como función cuando el parche depende de lo que ya tiene la entrada (las publicaciones, al editar o
+      // borrar una): así se calcula sobre la versión vigente y no sobre la del closure de quien llama.
+      patch: Partial<SocialDirectoryEntry> | ((entry: SocialDirectoryEntry) => Partial<SocialDirectoryEntry>),
+    ) => {
+      setSocialDirectory((prev) => prev.map((item) => (
+        match(item) ? { ...item, ...(typeof patch === 'function' ? patch(item) : patch) } : item
+      )));
     },
     [],
   );
-
-  /** El cooldown del refresco forzado no puede sobrevivir al desmontaje del hub. */
-  useEffect(() => () => {
-    if (cooldownTimerRef.current) {
-      clearTimeout(cooldownTimerRef.current);
-      cooldownTimerRef.current = null;
-    }
-  }, []);
 
   /**
    * Lo que las pantallas deben tratar como "el directorio está cargando": la hidratación en vuelo MÁS la ventana
@@ -641,7 +627,6 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
     rawSocialDirectory,
     directoryLoading,
     setDirectorySettled,
-    refreshCoolingDown,
     hydrateSocialDirectory,
     patchDirectoryEntries,
   };

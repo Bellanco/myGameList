@@ -15,6 +15,8 @@ export const DEFAULT_SORT: Record<TabId, TabSort> = {
   v: { col: 'score', asc: false },
   e: { col: 'name', asc: true },
   p: { col: 'score', asc: false },
+  // Deseos, como Próximos: por interés.
+  d: { col: 'score', asc: false },
 };
 
 // Columnas numéricas/booleanas cuyo orden natural al activarlas es descendente (mayor primero).

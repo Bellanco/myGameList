@@ -29,7 +29,7 @@ function makeGame(id: number, ts = 1000): GameItem {
 }
 
 function tabData(partial: Partial<TabData>): TabData {
-  return { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 1, ...partial };
+  return { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 1, ...partial };
 }
 
 async function clearStores(): Promise<void> {

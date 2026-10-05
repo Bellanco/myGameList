@@ -17,7 +17,7 @@ import { describe, expect, it } from 'vitest';
 import { useRelatedReviews } from '../../src/viewmodel/social/useRelatedReviews';
 import type { RelatedReviewAnchor } from '../../src/core/social/relatedReviews';
 import type { SocialActivityFeedItem } from '../../src/viewmodel/social/socialFeed';
-import type { GameItem, TabData } from '../../src/model/types/game';
+import type { GameItem, TabData, TabId } from '../../src/model/types/game';
 
 const T = Date.UTC(2026, 0, 15, 10, 0);
 
@@ -55,14 +55,14 @@ function game(extra: Partial<GameItem> & { id: number; name: string }): GameItem
 }
 
 function lists(games: Partial<Record<'c' | 'v' | 'e' | 'p', GameItem[]>>): TabData {
-  return { c: [], v: [], e: [], p: [], ...games, deleted: [], updatedAt: 0 };
+  return { c: [], v: [], e: [], p: [], d: [], ...games, deleted: [], updatedAt: 0 };
 }
 
 function collect(input: {
   anchor: RelatedReviewAnchor | null;
   directory?: Array<{ id: string; activity?: SocialActivityFeedItem[] }>;
   localGames?: TabData;
-  foreignGames?: Record<string, Record<'c' | 'v' | 'e' | 'p', GameItem[]>>;
+  foreignGames?: Record<string, Record<TabId, GameItem[]>>;
   ownProfileIds?: string[];
 }) {
   const own = new Set(input.ownProfileIds || ['uid-propio']);
@@ -171,7 +171,7 @@ describe('useRelatedReviews — índice de géneros', () => {
     const result = collect({
       anchor: { ...anchorAjena, genres: ['RPG'] },
       directory: [{ id: 'uid-de-ana', activity: [activity({ gameId: 9, gameName: 'Nioh 2' })] }],
-      foreignGames: { 'uid-de-ana': { c: [game({ id: 9, name: 'Nioh 2', genres: ['RPG'] })], v: [], e: [], p: [] } },
+      foreignGames: { 'uid-de-ana': { c: [game({ id: 9, name: 'Nioh 2', genres: ['RPG'] })], v: [], e: [], p: [], d: [] } },
     });
 
     expect(result[0]?.reason).toBe('genre');

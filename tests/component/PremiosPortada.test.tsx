@@ -32,7 +32,6 @@ const base: PremiosPortadaProps = {
   onSignIn: () => {},
   opportunities: 5,
   remainingOpportunities: 5,
-  hasSocialAccount: true,
 };
 
 const pintar = (props: Partial<PremiosPortadaProps> = {}) =>
@@ -78,10 +77,10 @@ describe('PremiosPortada — la puerta de la sección', () => {
    * lo último que queda de su voto antes de que la publicación lo retire: se le ofrece a todo el que votó.
    */
   it('a quien votó le ofrece ver sus votos, tenga cuenta social o no', () => {
-    pintar({ votingOpen: false, hasBallot: true, hasSocialAccount: false });
+    pintar({ votingOpen: false, hasBallot: true, opportunities: 1 });
     expect(screen.getByRole('link', { name: PREMIOS_UI.enviada.see })).toBeInTheDocument();
 
-    pintar({ hasBallot: true, hasSocialAccount: false });
+    pintar({ hasBallot: true, opportunities: 1 });
     expect(screen.getAllByRole('link', { name: PREMIOS_UI.enviada.see })).toHaveLength(2);
   });
 
@@ -91,7 +90,7 @@ describe('PremiosPortada — la puerta de la sección', () => {
    * al enviar lo rechazaban las reglas.
    */
   it('con la papeleta enviada y sin cupo no ofrece votar', () => {
-    pintar({ hasBallot: true, canEdit: false, hasSocialAccount: false, remainingOpportunities: 0 });
+    pintar({ hasBallot: true, canEdit: false, opportunities: 1, remainingOpportunities: 0 });
 
     expect(screen.queryByRole('link', { name: L.start })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: L.resume })).not.toBeInTheDocument();
@@ -143,17 +142,12 @@ describe('PremiosPortada — la puerta de la sección', () => {
     expect(screen.getByText(L.opportunitiesLeft(3))).toBeInTheDocument();
   });
 
-  // Quien vota con cuenta ligera tiene una sola oportunidad: es el único sitio donde enterarse sirve de algo,
-  // porque es antes de gastarla.
-  it('a quien no tiene cuenta social le cuenta qué se gana con ella', () => {
-    pintar({ hasSocialAccount: false, opportunities: 1 });
+  // Se le dice su cupo y nada más: ni cuánto tendría con cuenta social ni que el rango lo cambia. Los rangos no se
+  // nombran de cara al usuario (decisión del 05-10-2026).
+  it('dice el cupo de quien vota sin hablar de rangos ni de cupos mayores', () => {
+    pintar({ opportunities: 1 });
     expect(screen.getByText(L.opportunities(1))).toBeInTheDocument();
-    expect(screen.getByText(L.moreWithSocial)).toBeInTheDocument();
-  });
-
-  it('con cuenta social no se le ofrece nada', () => {
-    pintar();
-    expect(screen.queryByText(L.moreWithSocial)).not.toBeInTheDocument();
+    expect(screen.queryByText(/rango|cuenta social/i)).not.toBeInTheDocument();
   });
 
   it('el fallo al entrar se dice y deja reintentar', () => {

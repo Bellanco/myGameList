@@ -14,14 +14,14 @@
 // reseñas válidas.
 import { deriveMoveActivity, reconcileMoveActivity } from '../../core/social/moveActivity';
 import type { TabData } from '../types/game';
-import { TAB_IDS } from '../types/game';
+import { TAB_IDS, UNPLAYED_TAB_IDS } from '../types/game';
 import { getCurrentSocialAuthUser, resolveStableProfileId } from './firebaseRepository';
 import { readSocialGist, remapSocialActorIds, removeReviewActivity, saveSocialSyncConfig, syncMoveActivity, upsertReviewActivity, writeSocialGist, type SocialGistData } from './socialGistRepository';
 import { getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta } from './indexedDbRepository';
 import { resolveSocialChannel } from './socialChannel';
 
-// Solo estas pestañas publican reseña: 'p' (próximos) nunca lo hace (mismo criterio que `handleSaveDraft`).
-const REVIEWABLE_TABS = TAB_IDS.filter((tab) => tab !== 'p');
+// Solo estas pestañas publican reseña: próximos y deseos nunca lo hacen (mismo criterio que `handleSaveDraft`).
+const REVIEWABLE_TABS = TAB_IDS.filter((tab) => !UNPLAYED_TAB_IDS.includes(tab));
 // Tope de reseñas que se publican en una pasada (las más recientes). Acota el tamaño del gist en bibliotecas
 // grandes; no afecta a la retirada de huérfanas, que sí considera TODOS los listados.
 const DEFAULT_MAX_PUBLISHED = 60;

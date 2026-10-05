@@ -226,6 +226,12 @@ interface SeedOptions {
    * Manda sobre `amplia` si se pasan las dos.
    */
   logros?: boolean;
+  /**
+   * Añade a la biblioteca amplia una lista de Próximos y otra de DESEOS emparentadas entre sí (una saga, géneros en
+   * común y un género deseado sin nada esperando), para que el panel monte «Ya lo tienes en casa». Aparte de
+   * `amplia` porque Próximos cuenta en las cifras del panel y otros recorridos dependen de ellas.
+   */
+  deseos?: boolean;
   /** Siembra la CURVA LARGA (`JUEGOS_CURVA`): veinticuatro años para la gráfica anual en pantalla estrecha. */
   curva?: boolean;
   /** Siembra la biblioteca AL BORDE de un logro, en su variante de uno o de varios (`juegosAlBorde`). */
@@ -241,7 +247,7 @@ interface SeedOptions {
 /** Siembra la biblioteca ANTES de que cargue la app (la clave la fija `core/constants/storageKeys`). */
 export async function sembrarBiblioteca(page: Page, options: SeedOptions = {}): Promise<void> {
   await page.addInitScript(
-    ({ juegos, amplios, amplia, deLogros, logros, deCurva, curva, borde, marca, theme, palette, sinSocial }) => {
+    ({ juegos, amplios, amplia, deseos, deLogros, logros, deCurva, curva, borde, marca, theme, palette, sinSocial }) => {
       const now = Date.now();
       const SEMANA = 7 * 24 * 60 * 60 * 1000;
       if (palette && !sinSocial) {
@@ -344,15 +350,32 @@ export async function sembrarBiblioteca(page: Page, options: SeedOptions = {}): 
             years: [2024], strengths: ['Ritmo'], weaknesses: [], reasons: [], replayable: true, retry: false,
             hours: 20, review: 'Reseña de prueba.',
           }));
+      const ficha = (id: number, name: string, genres: string[], grade: number, lista: 'p' | 'd') => ({
+        id, name, grade, score: Math.round(grade / 20), _ts: now, listedAt: now, genres, platforms: ['PC'],
+        steamDeck: false, review: '', enteredAt: { [lista]: now - (id % 7) * SEMANA },
+      });
+      const proximos = amplia && deseos
+        ? [
+            ficha(400, 'Saga de prueba', ['Acción', 'Plataformas'], 70, 'p'),
+            ficha(401, 'Mazmorra de prueba', ['RPG', 'Roguelike'], 60, 'p'),
+          ]
+        : [];
+      const deseados = amplia && deseos
+        ? [
+            ficha(410, 'Saga de prueba II', ['Acción'], 95, 'd'),
+            ficha(411, 'Otra mazmorra con un nombre largo de verdad', ['RPG', 'Roguelike'], 80, 'd'),
+            ficha(412, 'Carreras de prueba', ['Carreras'], 50, 'd'),
+          ]
+        : [];
       localStorage.setItem('mis-listas-v12-unified', JSON.stringify({
-        c, v: [], e: [], p: [], deleted: [], updatedAt: now, schemaVersion: 1,
+        c, v: [], e: [], p: proximos, d: deseados, deleted: [], updatedAt: now, schemaVersion: 1,
       }));
       // Decidido el consentimiento para que el banner no tape la interfaz durante el test.
       ajustes();
     },
     {
       juegos: JUEGOS, amplios: options.biblioteca ?? JUEGOS_AMPLIOS, deLogros: JUEGOS_LOGROS, deCurva: JUEGOS_CURVA,
-      amplia: Boolean(options.amplia), logros: Boolean(options.logros), curva: Boolean(options.curva),
+      amplia: Boolean(options.amplia), deseos: Boolean(options.deseos), logros: Boolean(options.logros), curva: Boolean(options.curva),
       borde: options.alBorde ? juegosAlBorde(options.alBorde) : null,
       marca: options.marcaPrevia ?? null,
       theme: options.theme, palette: options.palette, sinSocial: options.sinSocial ?? false,

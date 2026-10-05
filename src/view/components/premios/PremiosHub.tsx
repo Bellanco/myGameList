@@ -17,7 +17,6 @@ import { usePremiosVoter } from '../../../viewmodel/premios/usePremiosVoter';
 import { usePremiosVoting } from '../../../viewmodel/premios/usePremiosVoting';
 import { usePalette } from '../../hooks/usePalette';
 import { PremiosCerrada, PremiosEnviada, PremiosIdentificate } from './PremiosEstado';
-import { PremiosPopularScreen } from './PremiosPopularScreen';
 import { PremiosPortada } from './PremiosPortada';
 import { PremiosResultsScreen } from './PremiosResultsScreen';
 import { PremiosReviewScreen } from './PremiosReviewScreen';
@@ -74,15 +73,19 @@ export function PremiosHub() {
   // no cuesta ninguna lectura.
   const perfiles = usePremiosProfiles(archivo.leaderboard, user?.uid || '');
   /**
-   * LOS VOTOS DE CADA UNO, mientras la edición publicada no se termina y solo para quien votó en ella. Se miran
-   * en el archivo de ESTA edición: un enlace a una anterior no los tiene.
+   * LOS VOTOS DE CADA UNO, solo para quien votó en la edición y hasta que se abre la siguiente. Se piden cuando
+   * pueden salir bien: la configuración dice que ESTA edición los guarda (`votesSeasonId`) y quien mira sale en su
+   * clasificación. Las reglas deciden de verdad (lista privada de votantes); esto evita pedirlos en balde, que
+   * sería una lectura gastada y un `permission-denied` en la consola de cada visitante.
    */
   const idEnVista = route.seasonId || edition.config?.lastPublishedId || '';
   const conVotos =
-    route.panel === 'resultados' &&
-    edition.stage === SEASON_STAGE.REVEALED &&
-    Boolean(edition.ballot) &&
-    idEnVista === edition.config?.lastPublishedId;
+    conArchivo &&
+    Boolean(user) &&
+    Boolean(profileId) &&
+    Boolean(idEnVista) &&
+    edition.config?.votesSeasonId === idEnVista &&
+    archivo.leaderboard.some((entry) => entry.profileId === profileId);
   const reveal = usePremiosReveal(conVotos ? idEnVista : '');
 
   // Corregir un voto arranca de lo ya enviado, no de cero.
@@ -246,7 +249,6 @@ export function PremiosHub() {
           onSignIn={() => void handleSignIn()}
           opportunities={edition.opportunities}
           remainingOpportunities={edition.remainingOpportunities}
-          hasSocialAccount={voter.hasSocialAccount}
         />
       ) : route.panel === 'papeleta' || sinCorrecciones ? (
         // LA PAPELETA, EN MODO LECTURA. Se llega de dos maneras y las dos acaban aquí: pidiéndola a propósito
@@ -263,7 +265,9 @@ export function PremiosHub() {
           onSubmit={() => {}}
           readOnly
         />
-      ) : route.panel === 'resultados' ? (
+      ) : conArchivo ? (
+        // LO MÁS VOTADO ES LA MISMA PANTALLA: en `…/votos` el panel de ganadores enseña lo que eligió la gente
+        // (ver `PremiosResultsScreen.popular`). Fue una pantalla aparte hasta el 05-10-2026.
         archivo.loading ? null : (
           <PremiosResultsScreen
             result={archivo.result}
@@ -271,10 +275,9 @@ export function PremiosHub() {
             ownProfileId={profileId}
             profiles={perfiles}
             reveal={reveal}
+            popular={route.panel === 'votos'}
           />
         )
-      ) : route.panel === 'votos' ? (
-        archivo.loading ? null : <PremiosPopularScreen result={archivo.result} />
       ) : route.panel === 'enviada' ? (
         <PremiosEnviada
           displayName={edition.ballot?.userDisplayName || user?.displayName || ''}
@@ -314,7 +317,6 @@ export function PremiosHub() {
           onSignIn={() => void handleSignIn()}
           opportunities={edition.opportunities}
           remainingOpportunities={edition.remainingOpportunities}
-          hasSocialAccount={voter.hasSocialAccount}
         />
       )}
     </div>

@@ -1,4 +1,4 @@
-import { TAB_IDS, type GameItem, type TabData } from '../types/game';
+import { TAB_IDS, type GameItem, type TabData, type TabId } from '../types/game';
 import { normalizeTimestamp } from '../../core/utils/normalize';
 
 /**
@@ -9,7 +9,7 @@ import { normalizeTimestamp } from '../../core/utils/normalize';
  */
 export const TOMBSTONE_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
 
-type MergeItem = GameItem & { _tab: 'c' | 'v' | 'e' | 'p' };
+type MergeItem = GameItem & { _tab: TabId };
 
 /**
  * Clave canónica del contenido de un item. Recorre las claves ORDENADAS para que el resultado no dependa
@@ -61,6 +61,7 @@ function asValidData(data: unknown): TabData {
     v: toValidGames(d.v),
     e: toValidGames(d.e),
     p: toValidGames(d.p),
+    d: toValidGames(d.d),
     deleted,
     updatedAt: normalizeTimestamp((d as any).updatedAt, Date.now()),
   };
@@ -75,8 +76,8 @@ export function mergeCrdt(
   const local = asValidData(localData);
   const remote = asValidData(remoteData);
 
-  const localMap = new Map<number, GameItem & { _tab: 'c' | 'v' | 'e' | 'p' }>();
-  const remoteMap = new Map<number, GameItem & { _tab: 'c' | 'v' | 'e' | 'p' }>();
+  const localMap = new Map<number, MergeItem>();
+  const remoteMap = new Map<number, MergeItem>();
 
   TAB_IDS.forEach((tab) => {
     for (const game of local[tab]) {
@@ -111,7 +112,7 @@ export function mergeCrdt(
   ]);
 
   const now = Date.now();
-  const merged: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: now };
+  const merged: TabData = { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: now };
   let localNeedsUpdate = false;
   let remoteNeedsUpdate = false;
 

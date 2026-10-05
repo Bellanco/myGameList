@@ -5,12 +5,13 @@ import { useUppercase } from '../../hooks/useUppercase';
 import { useShowSteamButton } from '../../hooks/useShowSteamButton';
 import { useEffects } from '../../hooks/useEffects';
 import { useCovers } from '../../hooks/useCovers';
+import { useShowWishlist } from '../../hooks/useShowWishlist';
 
 const A = APPEARANCE_UI;
 
 /**
- * LAS CINCO PREFERENCIAS DE DOS RESPUESTAS: claro u oscuro, versales o no, el botón de Steam Deck, los efectos
- * y las carátulas. Todas viven en este dispositivo (`localStorage`) y solo se copian a la nube si hay sesión,
+ * LAS SEIS PREFERENCIAS DE DOS RESPUESTAS: claro u oscuro, versales o no, el botón de Steam Deck, los efectos,
+ * las carátulas y la pestaña de la lista de deseos. Todas viven en este dispositivo (`localStorage`) y solo se copian a la nube si hay sesión,
  * así que ninguna depende de tener cuenta.
  *
  * Cada una va en su caja: puestas en fila, cinco rótulos con su par de botones se leían como una tira de diez
@@ -22,6 +23,7 @@ export const AppearanceToggles = memo(function AppearanceToggles() {
   const { showSteamButton, setShowSteamButton } = useShowSteamButton();
   const { effects, setEffects } = useEffects();
   const { covers, setCovers } = useCovers();
+  const { showWishlist, setShowWishlist } = useShowWishlist();
 
   return (
       <div className="appearance-grid">
@@ -137,6 +139,29 @@ export const AppearanceToggles = memo(function AppearanceToggles() {
           onClick={() => { if (covers) setCovers(false); }}
         >
           <span>{A.coversOff}</span>
+        </button>
+      </div>
+      </div>
+
+      {/* La lista de deseos: esconde la pestaña, no sus juegos ni lo que ven los demás (eso es el perfil social). */}
+      <div className="appearance-field">
+      <p className="settings-card-sub">{A.wishlistLabel}</p>
+      <div className="theme-mode-row" role="group" aria-label={A.wishlistAria}>
+        <button
+          type="button"
+          className={`btn btn-toggle${showWishlist ? ' active' : ''}`}
+          aria-pressed={showWishlist}
+          onClick={() => { if (!showWishlist) setShowWishlist(true); }}
+        >
+          <span>{A.wishlistShow}</span>
+        </button>
+        <button
+          type="button"
+          className={`btn btn-toggle${!showWishlist ? ' active' : ''}`}
+          aria-pressed={!showWishlist}
+          onClick={() => { if (showWishlist) setShowWishlist(false); }}
+        >
+          <span>{A.wishlistHide}</span>
         </button>
       </div>
       </div>

@@ -31,7 +31,7 @@ function game(partial: Partial<GameItem> & { id: number }): GameItem {
 }
 
 function library(partial: Partial<TabData> = {}): TabData {
-  return { c: [], v: [], e: [], p: [], deleted: [], updatedAt: NOW, ...partial };
+  return { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: NOW, ...partial };
 }
 
 const NO_SOCIAL = { friends: 0, postWeeks: 0, profileCreatedAt: 0 };

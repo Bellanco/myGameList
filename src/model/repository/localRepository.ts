@@ -7,10 +7,10 @@ import { clampRating, normalizeHours } from '../../core/utils/normalize';
 import { clampGrade } from '../../core/utils/scoreScale';
 import { runWhenIdle } from '../../core/utils/idle';
 
-const EMPTY_DATA: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 };
+const EMPTY_DATA: TabData = { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 0 };
 
-function hasStoredData(payload: Pick<StoragePayload, 'c' | 'v' | 'e' | 'p' | 'deleted'>): boolean {
-  return payload.c.length > 0 || payload.v.length > 0 || payload.e.length > 0 || payload.p.length > 0 || payload.deleted.length > 0;
+function hasStoredData(payload: Pick<StoragePayload, TabId | 'deleted'>): boolean {
+  return TAB_IDS.some((tab) => payload[tab].length > 0) || payload.deleted.length > 0;
 }
 
 function buildStoragePayload(parsed: Record<string, unknown>): StoragePayload {
@@ -237,6 +237,7 @@ export function normalizeData(data: TabData, options?: NormalizeDataOptions): Ta
     v: normalizeTab(data.v, 'v'),
     e: normalizeTab(data.e, 'e'),
     p: normalizeTab(data.p, 'p'),
+    d: normalizeTab(data.d, 'd'),
     deleted: (data.deleted || [])
       .filter((item) => item && Number(item.id) > 0)
       .map((entry) => ({ id: Number(entry.id), _ts: forceTimestamp ? ts : Number(entry._ts) || ts })),
@@ -246,8 +247,8 @@ export function normalizeData(data: TabData, options?: NormalizeDataOptions): Ta
   const usedIds = new Set<number>();
   let nextId = 1;
 
-  for (const tab of [normalized.c, normalized.v, normalized.e, normalized.p]) {
-    for (const game of tab) {
+  for (const tab of TAB_IDS) {
+    for (const game of normalized[tab]) {
       const current = Number(game.id || 0);
       if (current > 0 && !usedIds.has(current)) {
         usedIds.add(current);

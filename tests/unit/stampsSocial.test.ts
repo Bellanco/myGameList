@@ -32,7 +32,7 @@ function game(extra: Partial<GameItem> & { id: number }): GameItem {
 }
 
 function tabData(lists: Partial<Record<'c' | 'v' | 'e' | 'p', GameItem[]>>): TabData {
-  return { c: [], v: [], e: [], p: [], ...lists, deleted: [], updatedAt: 0 };
+  return { c: [], v: [], e: [], p: [], d: [], ...lists, deleted: [], updatedAt: 0 };
 }
 
 describe('el canal social no publica los sellos', () => {
@@ -83,37 +83,40 @@ describe('el panel de otra persona', () => {
     expect(stats.activity.weeks).toEqual([]);
   });
 
-  it('la constancia no es un bloque que ningún rango pueda ver', () => {
+  it('la constancia no es un bloque que nadie pueda ver, ni la administración', () => {
     for (const tier of ['bronze', 'silver', 'gold', 'mithril'] as const) {
-      expect(friendStatsBlocks(tier)).not.toContain('activity');
+      expect(friendStatsBlocks(tier, false)).not.toContain('activity');
+      expect(friendStatsBlocks(tier, true)).not.toContain('activity');
     }
   });
 
   it('la rejugabilidad se queda en la administración: `replayable` es privado', () => {
-    expect(friendStatsBlocks('silver')).not.toContain('replay');
-    expect(friendStatsBlocks('gold')).not.toContain('replay');
-    expect(friendStatsBlocks('mithril')).toContain('replay');
+    expect(friendStatsBlocks('silver', false)).not.toContain('replay');
+    expect(friendStatsBlocks('gold', false)).not.toContain('replay');
+    // La da el claim, no el rango: mithril sin claim se queda en lo general.
+    expect(friendStatsBlocks('mithril', false)).not.toContain('replay');
+    expect(friendStatsBlocks('bronze', true)).toContain('replay');
   });
 
   it('la exigencia sí se puede calcular de un amigo: sale de las notas, que el canal publica', () => {
     const stats = computeStats(toFriendTabData({ c: publicGames }, ['c'], 'public'));
     expect(stats.demand.count).toBe(1);
     expect(stats.demand.avgGrade).toBe(90);
-    expect(friendStatsBlocks('silver')).toContain('demand');
+    expect(friendStatsBlocks('silver', false)).toContain('demand');
   });
 
   it('la evolución del gusto también: género y año viajan por el canal', () => {
     const stats = computeStats(toFriendTabData({ c: publicGames }, ['c'], 'public'));
     expect(stats.genreRanks.series.length + stats.genreRanks.years.length).toBeGreaterThanOrEqual(0);
-    expect(friendStatsBlocks('bronze')).toContain('genreRanks');
+    expect(friendStatsBlocks('bronze', false)).toContain('genreRanks');
   });
 
   it('el gist de LISTADOS tampoco los deja pasar, ni siquiera a la administración', () => {
     // Este es el otro camino, y es el que se escapaba: una amistad baja el gist de listados para ver su perfil,
     // y ahí los juegos van completos. El filtro de visibilidad —donde ya se recortan horas y marcas— los quita.
     const visibility = { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true };
-    for (const tier of ['gold', 'mithril'] as const) {
-      const visible = applyProfileVisibility(tabData({ c: [game({ id: 1, years: [2024], grade: 90, score: 5 })] }), visibility, tier);
+    for (const isAdmin of [false, true]) {
+      const visible = applyProfileVisibility(tabData({ c: [game({ id: 1, years: [2024], grade: 90, score: 5 })] }), visibility, isAdmin);
       expect(visible.c[0].enteredAt).toBeUndefined();
       expect(visible.c[0].gradedAt).toBeUndefined();
       // Y lo que sí es del juego sigue llegando.
@@ -129,19 +132,19 @@ describe('el panel de otra persona', () => {
 
     it('una amistad recibe el mes; la administración, el día', () => {
       const lists = tabData({ c: [game({ id: 1, years: [2025], enteredAt: { c: at('2025-05-21') } })] });
-      expect((applyProfileVisibility(lists, visibility, 'gold').c[0] as { finishedOn?: string }).finishedOn).toBe('2025-05');
-      expect((applyProfileVisibility(lists, visibility, 'mithril').c[0] as { finishedOn?: string }).finishedOn).toBe('2025-05-21');
+      expect((applyProfileVisibility(lists, visibility, false).c[0] as { finishedOn?: string }).finishedOn).toBe('2025-05');
+      expect((applyProfileVisibility(lists, visibility, true).c[0] as { finishedOn?: string }).finishedOn).toBe('2025-05-21');
     });
 
     it('solo de completados: las otras listas no llevan fecha', () => {
-      const visible = applyProfileVisibility(tabData({ e: [game({ id: 2 })], p: [game({ id: 3 })] }), visibility, 'gold');
+      const visible = applyProfileVisibility(tabData({ e: [game({ id: 2 })], p: [game({ id: 3 })] }), visibility, false);
       expect('finishedOn' in visible.e[0]).toBe(false);
       expect('finishedOn' in visible.p[0]).toBe(false);
     });
 
     it('un día con cinco o más entradas es una carga en bloque y no da fecha', () => {
       const bulk = Array.from({ length: 5 }, (_, i) => game({ id: 10 + i, years: [2025], enteredAt: { c: at('2025-03-02') } }));
-      const visible = applyProfileVisibility(tabData({ c: [...bulk, game({ id: 20, years: [2025], enteredAt: { c: at('2025-04-11') } })] }), visibility, 'gold');
+      const visible = applyProfileVisibility(tabData({ c: [...bulk, game({ id: 20, years: [2025], enteredAt: { c: at('2025-04-11') } })] }), visibility, false);
       const months = visible.c.map((item) => (item as { finishedOn?: string }).finishedOn);
       expect(months.filter(Boolean)).toEqual(['2025-04']);
     });

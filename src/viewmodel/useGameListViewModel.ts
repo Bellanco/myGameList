@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { TAB_ACTIONS, TAB_ORDER, TAB_TITLES, TAB_TOOLTIPS, UI_MESSAGES, VALIDATION_MESSAGES } from '../core/constants/labels';
+import { TAB_ACTIONS, TAB_TITLES, TAB_TOOLTIPS, UI_MESSAGES, VALIDATION_MESSAGES } from '../core/constants/labels';
 import { compareText, uniqueCaseInsensitive } from '../core/utils/compare';
 import { reabrirLaPregunta } from '../core/utils/coverDone';
 import { tagKey } from '../core/utils/tags';
@@ -18,7 +18,7 @@ import { markDirty } from '../model/repository/syncStateRepository';
 import { trackAnalyticsEvent } from '../model/repository/firebaseGateway';
 import { transitionTo } from '../model/repository/syncMachineRepository';
 import type { TabAction as LabelsTabAction } from '../core/constants/labels';
-import type { GameItem, StatusNotice, TabData, TabId, TabSort, ToolbarFilters } from '../model/types/game';
+import { LIBRARY_TAB_IDS, TAB_IDS, type GameItem, type StatusNotice, type TabData, type TabId, type TabSort, type ToolbarFilters } from '../model/types/game';
 import { filterGames } from './toolbarFilters';
 import { markExternalLibrary } from './libraryOrigin';
 
@@ -99,7 +99,9 @@ function toNormalizedDraft(game?: Partial<GameItem>): GameDraft {
  * incluso cuando SÍ cambió (corta en la primera diferencia).
  */
 function tabGamesEqual(a: TabData, b: TabData): boolean {
-  for (const tab of TAB_ORDER) {
+  // TODAS las listas de los datos, no solo las que enseña la interfaz (`TAB_ORDER`): un cambio en una lista que
+  // aún no se ve —la de deseos llegando por sincronización— también es un cambio, y darlo por igual lo perdería.
+  for (const tab of TAB_IDS) {
     const ga = a[tab] || [];
     const gb = b[tab] || [];
     if (ga.length !== gb.length) return false;
@@ -165,7 +167,7 @@ export function useGameListViewModel() {
   useEffect(() => {
     let cancelled = false;
 
-    const hasData = (d: TabData) => d.c.length > 0 || d.v.length > 0 || d.e.length > 0 || d.p.length > 0 || d.deleted.length > 0;
+    const hasData = (d: TabData) => TAB_IDS.some((tab) => (d[tab] || []).length > 0) || d.deleted.length > 0;
 
     const hydrateFromFallback = async () => {
       const { payload: hydrated, wasLegacy } = await loadLocalStateAsync();
@@ -190,7 +192,7 @@ export function useGameListViewModel() {
       }
 
       setData((prev) => {
-        const currentHasData = prev.c.length > 0 || prev.v.length > 0 || prev.e.length > 0 || prev.p.length > 0 || prev.deleted.length > 0;
+        const currentHasData = hasData(prev);
         if (!hasData(dataSource)) return prev;
         if (currentHasData && dataSource.updatedAt <= (prev.updatedAt || 0)) return prev;
 
@@ -290,11 +292,12 @@ export function useGameListViewModel() {
       v: data.v.length,
       e: data.e.length,
       p: data.p.length,
+      d: data.d.length,
     }),
-    [data.c, data.v, data.e, data.p], // no `[data]`: cambia en cada guardado aunque no cambie ninguna lista
+    [data.c, data.v, data.e, data.p, data.d], // no `[data]`: cambia en cada guardado aunque no cambie ninguna lista
   );
 
-  // Se depende de las CUATRO listas, no del objeto `data` entero: `persist` estrena `data` en cada guardado
+  // Se depende de las LISTAS, no del objeto `data` entero: `persist` estrena `data` en cada guardado
   // (nuevo `updatedAt`), así que con `[data]` esto se recalculaba también cuando lo único que cambiaba era la meta
   // (etag / lastRemoteUpdatedAt de un ciclo de sync), que no aporta ninguna etiqueta. Y se recorren las listas
   // directamente, sin `[...c, ...v, ...e, ...p]`: esa copia duplicaba en memoria la biblioteca completa cada vez.
@@ -304,7 +307,7 @@ export function useGameListViewModel() {
     const strengths = new Set<string>();
     const weaknesses = new Set<string>();
 
-    for (const list of [data.c, data.v, data.e, data.p]) {
+    for (const list of [data.c, data.v, data.e, data.p, data.d]) {
       for (const game of list) {
         game.genres.forEach((value) => genres.add(value));
         game.platforms.forEach((value) => platforms.add(value));
@@ -320,7 +323,7 @@ export function useGameListViewModel() {
       strengths: [...strengths].sort(compareText),
       weaknesses: [...weaknesses].sort(compareText),
     };
-  }, [data.c, data.v, data.e, data.p]);
+  }, [data.c, data.v, data.e, data.p, data.d]);
 
   const tabActions: Record<TabId, TabAction[]> = TAB_ACTIONS;
 
@@ -367,9 +370,11 @@ export function useGameListViewModel() {
 
   // Graduación desde la bandeja de importados: abre el formulario en modo "nuevo" para `tab`, precargado
   // con los metadatos del juego importado (sin id → se creará como GameItem nuevo al guardar).
-  const openImportedDraft = useCallback((tab: TabId, game: Partial<GameItem>) => {
+  // `source` es la lista de la que SALE el juego cuando la importación lo cambia de lista (de deseados a
+  // próximos: Playnite dice que ya lo tienes); sin él, el guardado lo deja donde se abre.
+  const openImportedDraft = useCallback((tab: TabId, game: Partial<GameItem>, source?: { tab: TabId; id: number }) => {
     setEditingTab(tab);
-    setDraft(toNormalizedDraft(game));
+    setDraft({ ...toNormalizedDraft(game), ...(source ? { sourceTab: source.tab, sourceId: source.id } : {}) });
     setFormModalOpen(true);
   }, []);
 
@@ -424,7 +429,7 @@ export function useGameListViewModel() {
     (name: string, ignoreId?: number): { tab: TabId; game: GameItem } | null => {
       const norm = normalizeName(name);
       if (!norm) return null;
-      for (const tab of TAB_ORDER) {
+      for (const tab of TAB_IDS) {
         const game = data[tab].find((item) => item.id !== ignoreId && normalizeName(item.name) === norm);
         if (game) return { tab, game };
       }
@@ -448,7 +453,7 @@ export function useGameListViewModel() {
   const saveDraft = useCallback(
     (tab: TabId, nextDraft: GameDraft): { id: number; previous: GameItem | undefined } | null => {
       const now = Date.now();
-      const id = nextDraft.id || Math.max(0, ...TAB_ORDER.flatMap((key) => data[key].map((item) => item.id))) + 1;
+      const id = nextDraft.id || Math.max(0, ...TAB_IDS.flatMap((key) => data[key].map((item) => item.id))) + 1;
       const existing = data[tab].find((item) => item.id === id);
       /**
        * El juego TAL Y COMO ESTABA, esté donde esté: el de esta lista o, si esto es una migración, el de la lista
@@ -669,10 +674,12 @@ export function useGameListViewModel() {
 
   // Ruleta (perfil social) — ¿ya tengo este juego en alguna de mis listas?
   const hasGameInLists = useCallback((name: string) => findGameByName(name) !== null, [findGameByName]);
+  // …y en cuál: un juego de la lista de deseos está en tus listas, pero no es tuyo.
+  const gameListOf = useCallback((name: string): TabId | null => findGameByName(name)?.tab ?? null, [findGameByName]);
 
-  // Ruleta (perfil social) — añadir un juego ajeno a MI lista de próximos, evitando duplicados.
-  const addGameToProximos = useCallback(
-    (game: Partial<GameItem>): 'added' | 'duplicate' | 'invalid' => {
+  // Ruleta (perfil social) — añadir un juego ajeno a MI lista de deseos (o de próximos), evitando duplicados.
+  const addForeignGame = useCallback(
+    (game: Partial<GameItem>, tab: 'p' | 'd'): 'added' | 'duplicate' | 'invalid' => {
       const name = safeTrim(game.name || '', 120);
       if (!name) {
         notify('warn', UI_MESSAGES.games.noName);
@@ -684,7 +691,7 @@ export function useGameListViewModel() {
       }
 
       const now = Date.now();
-      const id = Math.max(0, ...TAB_ORDER.flatMap((key) => data[key].map((item) => item.id))) + 1;
+      const id = Math.max(0, ...TAB_IDS.flatMap((key) => data[key].map((item) => item.id))) + 1;
       const newGame: GameItem = {
         id,
         _ts: now,
@@ -697,15 +704,17 @@ export function useGameListViewModel() {
         review: '',
         score: 0,
         listedAt: now,
-        // Alta directa desde el perfil de otra persona: entra en próximos ahora, y de ahí arranca su historia.
-        enteredAt: { p: now },
+        // Alta directa desde el perfil de otra persona: entra en la lista ahora, y de ahí arranca su historia.
+        enteredAt: { [tab]: now },
       };
-      persist({ ...data, p: [...data.p, newGame] });
-      notify('ok', UI_MESSAGES.games.addedToProximos(name));
+      persist({ ...data, [tab]: [...data[tab], newGame] });
+      notify('ok', tab === 'd' ? UI_MESSAGES.games.addedToWishlist(name) : UI_MESSAGES.games.addedToProximos(name));
       return 'added';
     },
     [data, hasGameInLists, persist, notify],
   );
+  const addGameToProximos = useCallback((game: Partial<GameItem>) => addForeignGame(game, 'p'), [addForeignGame]);
+  const addGameToWishlist = useCallback((game: Partial<GameItem>) => addForeignGame(game, 'd'), [addForeignGame]);
 
   // Ruleta (perfil social) — si el juego ya es tuyo, llevarlo a "En curso". Busca por nombre normalizado en
   // todas las listas y lo mueve desde donde esté; si ya está en curso, no hace nada (solo avisa).
@@ -713,7 +722,8 @@ export function useGameListViewModel() {
     (name: string) => {
       const norm = normalizeName(name);
       if (!norm) return;
-      for (const tab of TAB_ORDER) {
+      // Solo la biblioteca: un juego de la lista de deseos no se tiene, así que no puede pasar a «En curso».
+      for (const tab of LIBRARY_TAB_IDS) {
         const game = data[tab].find((item) => normalizeName(item.name) === norm);
         if (!game) continue;
         if (tab === 'e') {
@@ -754,7 +764,9 @@ export function useGameListViewModel() {
     moveGameToTab,
     moveGameToCurrentByName,
     addGameToProximos,
+    addGameToWishlist,
     hasGameInLists,
+    gameListOf,
     findGameByName,
     saveDraft,
     deleteGame,

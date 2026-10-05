@@ -160,6 +160,7 @@ export function leanTabData(data: TabData): TabData {
     v: (data.v || []).map(leanGameItem),
     e: (data.e || []).map(leanGameItem),
     p: (data.p || []).map(leanGameItem),
+    d: (data.d || []).map(leanGameItem),
     deleted: data.deleted || [],
     updatedAt: data.updatedAt,
   };

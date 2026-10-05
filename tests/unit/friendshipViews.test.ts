@@ -14,7 +14,7 @@ import type { FriendshipView, MyFriendships } from '../../src/model/types/social
  *  - la foto pasa por la reciprocidad, así que la cara de quien te manda una solicitud NO se ve todavía.
  */
 
-const viewer = { showsOwnPhoto: true, tier: 'silver' as const };
+const viewer = { showsOwnPhoto: true, isAdmin: false };
 
 function makeView(over: Partial<FriendshipView> = {}): FriendshipView {
   return {

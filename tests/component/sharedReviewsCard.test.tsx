@@ -32,7 +32,7 @@ vi.mock('../../src/model/repository/shareRepository', () => ({
 const { SharedReviewsCard } = await import('../../src/view/components/SharedReviewsCard');
 
 const juego = { id: 1, name: 'Hades', review: '  Texto de ahora  ', grade: 90, score: 5, platforms: ['PC'], genres: [], _ts: 10 } as unknown as GameItem;
-const biblioteca: TabData = { c: [juego], v: [], e: [], p: [], deleted: [], updatedAt: 0 };
+const biblioteca: TabData = { c: [juego], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 0 };
 
 beforeEach(() => {
   vi.clearAllMocks();

@@ -10,6 +10,12 @@ export interface TabAction {
   icon: IconName;
 }
 
+/**
+ * Las listas que ENSEÑA la interfaz, en su orden. Hoy son todas; se mantiene como nombre propio porque una lista
+ * nueva entra en los datos una versión ANTES que en pantalla —fue el caso de la de deseos (`d`)—: un cliente
+ * anterior la descarta al leer y reescribe el gist sin sus juegos, así que primero tiene que llegar a todos los
+ * aparatos una versión que sepa conservarla, y solo después otra que deje llenarla. Ver docs/plan-lista-deseos.md.
+ */
 export const TAB_ORDER: TabId[] = [...TAB_IDS];
 
 export const TAB_TITLES: Record<TabId, string> = {
@@ -17,6 +23,7 @@ export const TAB_TITLES: Record<TabId, string> = {
   v: 'Lista de la vergüenza',
   e: 'En curso',
   p: 'Lista de próximos',
+  d: 'Lista de deseos',
 };
 
 export const TAB_TOOLTIPS: Record<TabId, string> = {
@@ -24,6 +31,7 @@ export const TAB_TOOLTIPS: Record<TabId, string> = {
   v: 'Abandonados',
   e: 'En curso',
   p: 'Próximos',
+  d: 'Deseados',
 };
 
 export const TAB_ROUTE: Record<TabId, string> = {
@@ -31,6 +39,7 @@ export const TAB_ROUTE: Record<TabId, string> = {
   v: '/abandonados',
   e: '/en-curso',
   p: '/proximos',
+  d: '/deseados',
 };
 
 export const ROUTE_TAB: Record<string, TabId> = {
@@ -38,6 +47,7 @@ export const ROUTE_TAB: Record<string, TabId> = {
   '/abandonados': 'v',
   '/en-curso': 'e',
   '/proximos': 'p',
+  '/deseados': 'd',
   // Nombre ANTIGUO de la lista de abandonados, que sigue resolviendo por redirección
   // (`LEGACY_ROUTE_REDIRECTS`). Se mantiene aquí para que el fotograma previo al salto pinte ya su pestaña, en
   // vez de asomar «completados» por el `|| 'c'` de `getCurrentTab`.
@@ -55,6 +65,8 @@ export const TAB_ACTIONS: Record<TabId, TabAction[]> = {
     { target: 'v', label: 'Pasar a abandonados', btnCls: 'btn-abandoned', icon: 'abandoned' },
   ],
   p: [{ target: 'e', label: 'Pasar a en curso', btnCls: 'btn-playing', icon: 'play' }],
+  // Deseos solo desemboca en Próximos: conseguir el juego es lo que lo mete en la biblioteca, y nada vuelve atrás.
+  d: [{ target: 'p', label: 'Pasar a próximos', btnCls: 'btn-upcoming', icon: 'rocket' }],
 };
 
 export const FILTER_BOOL: Record<TabId, { field: 'replayable' | 'retry'; label: string } | null> = {
@@ -62,6 +74,7 @@ export const FILTER_BOOL: Record<TabId, { field: 'replayable' | 'retry'; label: 
   v: { field: 'retry', label: '¿Dar otra oportunidad?' },
   e: null,
   p: null,
+  d: null,
 };
 
 export const SYNC_BADGE_TEXT = {
@@ -167,6 +180,10 @@ export const APPEARANCE_UI = {
   coversAria: 'Descargar las carátulas de los juegos',
   coversOn: 'Activadas',
   coversOff: 'Desactivadas',
+  wishlistLabel: 'Lista de deseos',
+  wishlistAria: 'Visibilidad de la pestaña de la lista de deseos',
+  wishlistShow: 'Mostrar',
+  wishlistHide: 'Ocultar',
 } as const;
 
 export const UI_MESSAGES = {
@@ -181,6 +198,7 @@ export const UI_MESSAGES = {
     noName: 'El juego no tiene nombre.',
     alreadyInLists: (name: string) => `"${name}" ya está en tus listas.`,
     addedToProximos: (name: string) => `"${name}" añadido a próximos`,
+    addedToWishlist: (name: string) => `"${name}" añadido a deseados`,
     alreadyCurrent: (name: string) => `"${name}" ya está en curso`,
     reviewPublishDeferred: 'Juego guardado; la actividad social de reseña se actualizará al abrir el hub social.',
   },
@@ -190,6 +208,8 @@ export const UI_MESSAGES = {
     toCurrentDone: '✓ En curso',
     toProximos: 'Añadir a próximos',
     toProximosDone: '✓ Añadido a próximos',
+    toWishlist: 'Añadir a deseados',
+    toWishlistDone: '✓ Añadido a deseados',
   },
   /** El rótulo de la cápsula de estado, según la clase de aviso. */
   statusKind: { ok: 'Correcto', warn: 'Aviso', err: 'Error' },
@@ -214,7 +234,6 @@ export const UI_MESSAGES = {
   // El RÓTULO de la cabecera de pantalla (`ScreenHeader`). Es decorativa —va `aria-hidden` y solo la pinta el tema
   // que la enciende—, así que el encabezado accesible sigue siendo `pageHeading`.
   screenHeader: {
-    lists: 'Biblioteca',
     settings: 'Ajustes',
   },
   skipToContent: 'Saltar al contenido',

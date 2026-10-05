@@ -115,6 +115,15 @@
 
   .count-badge { font-size: var(--fs-2xs); }
 }
+/* CINCO PESTAÑAS EN UN MÓVIL. Con la lista de deseos el relleno fijo de cada pestaña ya no cabía: a 280 px
+   sobraban 40 px, y con el texto grande del sistema (+30 %) la quinta se salía hasta en 412. Aquí se reparten
+   el ancho a partes iguales con el relleno justo, que es lo que deja icono y contador enteros sin scroll. */
+@media (max-width:480px) {
+
+  .tabs { gap: 0; }
+
+  .tab-btn { flex: 1 1 0; min-width: 0; justify-content: center; gap: .3rem; padding-inline: .2rem; }
+}
 @media (max-width:720px) {
 
   thead { display: none; }
@@ -904,7 +913,13 @@
   padding: 0;
 }
 
-.hub-feed-card h3 {
+/* FUERA EL NOMBRE DE LAS CAJAS DEL MOSAICO (`.game-card-name`). Es un `h3` y la biblioteca de un amigo se pinta
+   dentro de su ficha, que es una `.hub-feed-card`: con esta regla —que pesa más que la suya— el nombre salía en
+   UNA línea cortada en seco (en Firefox, sin puntos suspensivos), con otro tamaño y en color de enlace, y no se
+   desplegaba al pasar por encima. Tiene que verse igual que en la biblioteca propia.
+   Va en `:where()` para no sumar especificidad: hay reglas calculadas para ganarle a esta por un pelo (la del
+   nombre de la tarjeta de persona, en `social.scss`), y un `:not()` a secas las habría dejado por debajo. */
+.hub-feed-card h3:where(:not(.game-card-name)) {
   font-size: clamp(.9rem, .84rem + .3vw, 1.02rem);
   font-weight: 700;
   overflow: hidden;
@@ -917,7 +932,7 @@
    viste en su §6—, y esa etiqueta trae su color. Si el azul de enlace se declarara aquí sin más, le ganaría por
    especificidad (0,1,1 contra 0,1,0) y la etiqueta saldría azul en la paleta por defecto y del color del tema en
    las demás: el mismo elemento pintado de dos maneras según la paleta. */
-.hub-feed-card h3:not(.hub-feed-game-chip) {
+.hub-feed-card h3:not(.hub-feed-game-chip, .game-card-name) {
   color: var(--fg-link);
 }
 
@@ -1081,12 +1096,15 @@
   align-items: center;
   margin-right: .1rem;
 }
-/* Cuatro verbos, cuatro colores. Los tres primeros son los semánticos que ya existen; «añadió» toma el cuarto
-   tono de la rampa categórica, que no significa nada por sí mismo y por eso vale para «esto cambió de sitio». */
+/* Cinco listas, cinco colores. Los tres primeros son los semánticos que ya existen; «añadió» toma el cuarto
+   tono de la rampa categórica, que no significa nada por sí mismo y por eso vale para «esto cambió de sitio». La
+   lista de deseos lleva `--wish`: cada tema elige el tono de su rampa que más se aparta de los otros cinco avisos
+   (en varios, el sexto chocaba con los logros), y sin elección queda el sexto. */
 .hub-feed-activity-item.is-move[data-tab="c"] { --evc: var(--success); }
 .hub-feed-activity-item.is-move[data-tab="v"] { --evc: var(--danger); }
 .hub-feed-activity-item.is-move[data-tab="e"] { --evc: var(--steam); }
 .hub-feed-activity-item.is-move[data-tab="p"] { --evc: var(--cat-4); }
+.hub-feed-activity-item.is-move[data-tab="d"] { --evc: var(--wish, var(--cat-6)); }
 /* El logro, en el ámbar del aviso: no es ninguno de los cuatro movimientos y se distingue de un vistazo.
    Marca propia (`--sys-mark-ach`) y puntero, porque este sí abre los logros de quien lo consiguió. */
 .hub-feed-activity-item.is-achievements { --evc: var(--warn); cursor: pointer; }
@@ -1899,6 +1917,37 @@
      una línea del compositor, así que en el caso normal parecen del mismo alto. */
   height: 2.55rem;
 }
+
+/* Las publicaciones del perfil (`ProfilePostsList`): Editar y Eliminar al pie de cada una de las tuyas, y el
+   editor que sustituye al texto mientras se reescribe. El campo usa DOS clases por lo mismo que el compositor:
+   `.ftextarea` se compila después e impone `min-height: 128px` y su tirador. Aquí crece más que en el
+   compositor porque se edita un texto ya escrito, no una primera línea. */
+.hub-post-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .5rem;
+  margin-top: .6rem;
+}
+
+.hub-post-editor .hub-post-input {
+  width: 100%;
+  min-height: 0;
+  resize: none;
+  overflow-y: auto;
+  max-height: 22rem;
+}
+
+.hub-post-editor-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .6rem;
+  margin-top: .5rem;
+}
+
+.hub-post-editor-foot .hub-post-actions { margin-top: 0; }
 
 /* Avatar clicable (feed/detalle): botón sin chrome que envuelve la foto/inicial y navega al perfil. */
 .hub-avatar-link {

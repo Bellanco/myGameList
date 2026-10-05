@@ -4,13 +4,13 @@ import { CUMULATIVE_WINDOW, accumulate, fillMonthGaps } from '../../../core/stat
 import { timeTicks } from '../../../core/stats/timeAxis';
 import { formatCount, formatMonthLabel, formatTick } from './format';
 import type { ArrivalPoint } from '../../../core/stats/types';
-import type { TabId } from '../../../model/types/game';
+import type { LibraryTabId } from '../../../model/types/game';
 
 /**
  * Orden de LECTURA (leyenda, tabla y desglose del mes): el canónico de la app, que además coincide con el orden en
  * que se ven las bandas de arriba abajo.
  */
-const SERIES: TabId[] = ['c', 'v', 'e', 'p'];
+const SERIES: LibraryTabId[] = ['c', 'v', 'e', 'p'];
 
 /**
  * Orden de APILADO, de abajo arriba: próximos al ras del eje, encima en curso, luego abandonados y completados
@@ -20,7 +20,7 @@ const SERIES: TabId[] = ['c', 'v', 'e', 'p'];
  * y acaba en los terminados. Con los completados abajo, lo que se ha cerrado —que es lo que más crece— empujaba
  * hacia arriba a todo lo demás, y la banda de próximos flotaba en lo alto del gráfico sin apoyarse en nada.
  */
-const STACK_ORDER: TabId[] = ['p', 'e', 'v', 'c'];
+const STACK_ORDER: LibraryTabId[] = ['p', 'e', 'v', 'c'];
 
 /** Por debajo de esta cantidad de meses se marcan los puntos uno a uno. */
 const SHORT_SERIES = 15;
@@ -29,21 +29,6 @@ const MAX_TICKS = 8;
 /** Series cortas: sin suavizado. Una curva entre tres puntos se inventa una forma que el dato no tiene. */
 const SMOOTH_FROM = 6;
 
-/**
- * Hacia dónde abre el globo del mes para no salirse del lienzo: el primer cuarto de la serie lo abre a la
- * DERECHA, el último a la IZQUIERDA y todo lo de en medio va CENTRADO sobre su punto.
- *
- * Que un globo se salga no es solo un feo: mide aunque esté oculto (`visibility`, no `display`), así que estira
- * el ancho de scroll de la página. En móvil eso ensancha el viewport de composición y la barra inferior —fija y
- * al 100%— acaba sobresaliendo de la pantalla. Antes solo se volteaba la mitad derecha, y con eso se salían
- * tanto el último punto de una serie de dos meses (`1 > 2 / 2` es falso) como el punto central en pantallas
- * estrechas, donde el globo mide más que el hueco que le queda a su derecha.
- */
-function tipAnchor(index: number, total: number): string {
-  const position = total > 1 ? index / (total - 1) : .5;
-  if (position < .25) return '';
-  return position > .75 ? ' is-left' : ' is-center';
-}
 
 interface BacklogAreaProps {
   points: ArrivalPoint[];
@@ -215,7 +200,8 @@ export const BacklogArea = memo(function BacklogArea({ points, mode }: BacklogAr
           <div className="backlog-hits">
             {series.map((point, index) => (
               <div className="backlog-hit" key={point.m}>
-                <div className={`backlog-tip${tipAnchor(index, series.length)}`}>
+                {/* El globo se centra sobre el punto de SU mes y la hoja lo encaja dentro del lienzo (`.backlog-tip`). */}
+                <div className="backlog-tip" style={{ '--x': `${x(index)}%` } as CSSProperties}>
                   <strong>{formatMonthLabel(point.m)}</strong>
                   {SERIES.map((tab) => (
                     <span key={tab}>

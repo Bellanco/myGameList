@@ -8,7 +8,7 @@ function game(extra: Partial<GameItem> & { id: number }): GameItem {
 }
 
 function tabData(c: GameItem[]): TabData {
-  return { c, v: [], e: [], p: [], deleted: [], updatedAt: 0 };
+  return { c, v: [], e: [], p: [], d: [], deleted: [], updatedAt: 0 };
 }
 
 describe('normalizeData preserva listedAt', () => {

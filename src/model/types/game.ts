@@ -1,5 +1,19 @@
-export const TAB_IDS = ['c', 'v', 'e', 'p'] as const;
+/**
+ * Las listas, del estado más avanzado al menos avanzado (el orden lo usan los desempates, ver `moveActivity`).
+ *
+ * `d` es la lista de DESEOS: juegos que se quieren y todavía no se tienen. Próximos (`p`) es «lo tengo y lo
+ * jugaré»; Deseos solo desemboca en Próximos y nada vuelve a ella. No es una lista jugada ni de la biblioteca:
+ * queda fuera de reseñas, estadísticas, logros, premios y ruleta propia.
+ */
+export const TAB_IDS = ['c', 'v', 'e', 'p', 'd'] as const;
 export type TabId = (typeof TAB_IDS)[number];
+
+/** Listas de juegos que no se han jugado, y por tanto sin reseña que publicar: Próximos y Deseos. */
+export const UNPLAYED_TAB_IDS: readonly TabId[] = ['p', 'd'];
+
+/** Las listas de la BIBLIOTECA (juegos que se tienen): todas menos Deseos. */
+export type LibraryTabId = Exclude<TabId, 'd'>;
+export const LIBRARY_TAB_IDS: readonly LibraryTabId[] = TAB_IDS.filter((tab): tab is LibraryTabId => tab !== 'd');
 
 export interface GameItem {
   id: number;
@@ -72,6 +86,7 @@ export interface TabData {
   v: GameItem[];
   e: GameItem[];
   p: GameItem[];
+  d: GameItem[];
   deleted: DeletedItem[];
   updatedAt: number;
 }
@@ -88,6 +103,7 @@ export interface StoragePayload {
   v: GameItem[];
   e: GameItem[];
   p: GameItem[];
+  d: GameItem[];
   deleted: DeletedItem[];
   updatedAt: number;
   etag: string | null;

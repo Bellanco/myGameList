@@ -9,8 +9,8 @@ import { TAB_ORDER } from '../../src/core/constants/labels';
  * re-hardcodes a different tab list anywhere.
  */
 describe('tab id constants', () => {
-  it('TAB_IDS holds the four canonical tabs in order', () => {
-    expect([...TAB_IDS]).toEqual(['c', 'v', 'e', 'p']);
+  it('TAB_IDS holds the five canonical tabs in order', () => {
+    expect([...TAB_IDS]).toEqual(['c', 'v', 'e', 'p', 'd']);
   });
 
   it('labels.TAB_ORDER stays in sync with TAB_IDS (no duplicated literal)', () => {

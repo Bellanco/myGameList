@@ -109,6 +109,20 @@ describe('renglón de movimiento de lista', () => {
     expect(screen.getByRole('listitem').textContent).toContain('abandonó');
   });
 
+  it('deseos y próximos dicen adónde fue el juego, detrás de su nombre', () => {
+    const hora = SOCIAL_UI.feed.movedAtHour(new Date(AT));
+    const { unmount } = renderFeed([move({ tab: 'd' })]);
+    expect(screen.getByRole('listitem').textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      `Ada añadió Hollow Knight a su lista de deseos ${hora}`,
+    );
+    unmount();
+
+    renderFeed([move({ tab: 'p', id: '7:p' })]);
+    expect(screen.getByRole('listitem').textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      `Ada añadió Hollow Knight a su biblioteca ${hora}`,
+    );
+  });
+
   it('con análisis detrás, el nombre del juego lo abre CON EL ACTOR DE LA RESEÑA', async () => {
     const openMoveReview = vi.fn();
     const user = userEvent.setup();

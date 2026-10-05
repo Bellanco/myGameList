@@ -7,7 +7,7 @@ import { ensureProfileByEmail, getCurrentSocialAuthUser, healOwnFriendshipIdenti
 import { getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta } from './indexedDbRepository';
 import { getSyncConfig } from './gistRepository';
 import { loadLocalState } from './localRepository';
-import { readSocialGist, remapSocialActorIds, removeReviewActivity, saveSocialSyncConfig, syncMoveActivity, upsertPost, upsertReviewActivity, writeSocialGist, type SocialGistData } from './socialGistRepository';
+import { editPost, readSocialGist, remapSocialActorIds, removePost, removeReviewActivity, saveSocialSyncConfig, syncMoveActivity, upsertPost, upsertReviewActivity, writeSocialGist, type SocialGistData, type SocialPostEntry } from './socialGistRepository';
 import { markPendingSocialActivity } from './socialActivityReconcile';
 import { resolveSocialChannel, type SocialChannel } from './socialChannel';
 
@@ -370,4 +370,56 @@ export async function publishPost(input: { text: string; maxLength?: number }): 
   } catch (error) {
     console.warn('[social] post publicado; la identidad pública se actualizará más tarde:', error instanceof Error ? error.message : error);
   }
+}
+
+/** El mismo aviso que `publishPost` cuando no hay canal: al usuario le acaba de fallar un botón que pulsó. */
+function postGateError(reason: 'no-session' | 'no-channel'): Error {
+  return new Error(
+    reason === 'no-session'
+      ? 'Inicia sesión con Google para publicar'
+      : 'No se pudo resolver tu canal social en este dispositivo',
+  );
+}
+
+/**
+ * Cambia el texto de una publicación propia, conservando su fecha (ver `editPost`). Lee el gist RECIÉN, no la
+ * copia del directorio: el post se busca por id en lo que hay de verdad en el canal. No-op si el texto no cambia
+ * o el post ya no está (borrado desde otro dispositivo).
+ *
+ * Devuelve la publicación TAL Y COMO HA QUEDADO (texto ya saneado y con su `editedAt`), para que quien llama
+ * ponga al día la pantalla sin releer ~50 gists; `null` si no había nada que cambiar.
+ *
+ * Lo que sigue es lo mismo que al retirar una reseña: se invalida la caché del directorio —sin eso, al volver a
+ * abrir el hub saldría la versión vieja durante media hora— y NO se toca la identidad pública, que editar un
+ * texto no cambia.
+ */
+export async function editOwnPost(input: { id: string; text: string; maxLength?: number }): Promise<SocialPostEntry | null> {
+  const gate = await openSocialWrite();
+  if (!gate.ok) throw postGateError(gate.reason);
+  const { ctx } = gate;
+
+  const nextPayload = editPost(ctx.migratedData, {
+    id: input.id,
+    text: input.text,
+    maxLength: input.maxLength,
+    timestamp: ctx.now,
+  });
+  if (nextPayload === ctx.migratedData) return null;
+
+  await commitSocialWrite(ctx, nextPayload);
+  await invalidateCachedSocialDirectory(ctx.socialConfig.gistId);
+  return nextPayload.posts?.find((post) => post.id === input.id) || null;
+}
+
+/** Retira una publicación propia del gist social. Mismo flujo y mismas razones que {@link editOwnPost}. */
+export async function deleteOwnPost(input: { id: string }): Promise<void> {
+  const gate = await openSocialWrite();
+  if (!gate.ok) throw postGateError(gate.reason);
+  const { ctx } = gate;
+
+  const nextPayload = removePost(ctx.migratedData, { id: input.id, timestamp: ctx.now });
+  if (nextPayload === ctx.migratedData) return;
+
+  await commitSocialWrite(ctx, nextPayload);
+  await invalidateCachedSocialDirectory(ctx.socialConfig.gistId);
 }

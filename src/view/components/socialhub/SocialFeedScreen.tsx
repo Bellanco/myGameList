@@ -416,7 +416,15 @@ function SocialFeedScreenBase({
                               </h3>
                             </div>
                           </header>
-                          <p className="hub-feed-date">{hasValidDate ? SOCIAL_UI.feed.postedAt(itemDate) : SOCIAL_UI.feed.analyzedRecently}</p>
+                          <p className="hub-feed-date">
+                            {hasValidDate ? SOCIAL_UI.feed.postedAt(itemDate) : SOCIAL_UI.feed.analyzedRecently}
+                            {/* Una edición conserva la fecha y el sitio; esta marca es lo único que la cuenta. */}
+                            {entry.editedAt ? (
+                              <span className="hub-post-edited" title={SOCIAL_UI.feed.postEditedTitle(new Date(entry.editedAt))}>
+                                {' · '}{SOCIAL_UI.feed.postEdited}
+                              </span>
+                            ) : null}
+                          </p>
                           <PostBody
                             text={entry.text}
                             sharedFilePageHint={SOCIAL_UI.feed.postSharedFileHint}
@@ -478,6 +486,12 @@ function SocialFeedScreenBase({
                             ) : (
                               <span className="hub-feed-move-game is-plain">{entry.gameName}</span>
                             )}
+                            {SOCIAL_UI.feed.moveTail[entry.tab] ? (
+                              <>
+                                {' '}
+                                <span className="hub-feed-move-verb">{SOCIAL_UI.feed.moveTail[entry.tab]}</span>
+                              </>
+                            ) : null}
                             {' '}
                             <span className="hub-feed-move-hour" title={fechaCompleta}>
                               {hasValidDate ? SOCIAL_UI.feed.movedAtHour(itemDate) : SOCIAL_UI.feed.moveRecently}

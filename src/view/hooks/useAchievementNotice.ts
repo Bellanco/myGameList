@@ -152,7 +152,7 @@ export function useAchievementNotice(
           // Los contadores sociales no están a mano fuera del hub y llegan a cero. La marca de agua es justo lo
           // que impide que eso RETIRE lo ya conseguido, así que no hace falta ir a buscarlos.
           social: { friends: 0, postWeeks: 0, profileCreatedAt: 0 },
-          device: { hasSync: false, rouletteUsedAt: signals.rouletteUsedAt(), themeChanged: false },
+          device: { hasSync: false, rouletteUsedAt: signals.rouletteUsedAt(), themeChanged: signals.themeChangedAt() > 0 },
           now,
         },
         peak,

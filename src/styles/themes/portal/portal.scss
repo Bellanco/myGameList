@@ -542,6 +542,10 @@
 :root[data-palette="portal"][data-theme="light"] .hub-feed-activity-item.is-move {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 4px 12px rgba(20, 45, 70, .08) !important;
 }
+/* «Añadió … a su biblioteca» deja su rosa (el cuarto tono, el de la casa) a la lista de deseos, que lleva el del cubo
+   de compañía (`--wish`), y toma el azul grisáceo de la rampa: dos avisos que se ven juntos no pueden ser del mismo
+   color. */
+:root[data-palette="portal"] .hub-feed-activity-item.is-move[data-tab="p"] { --evc: var(--cat-7); }
 /* Monoespaciada como el resto de los datos de la paleta: la hora es una lectura de instrumento. */
 :root[data-palette="portal"] .hub-feed-move-hour { font-family: var(--font-mono); }
 

@@ -32,7 +32,8 @@ function SocialProfilesScreenBase({
   onCancelFriendRequest,
   onBack,
   status,
-  statusKind
+  statusKind,
+  showTiers = false,
 }: {
   SOCIAL_UI: SocialUiLabels;
   profileSearch: string;
@@ -48,6 +49,11 @@ function SocialProfilesScreenBase({
   onBack: () => void;
   status: string;
   statusKind: string;
+  /**
+   * ¿Se enseña el rango en las tarjetas? Solo a la administración: de cara al resto de usuarios los rangos no se
+   * nombran en ningún sitio, porque hoy todos son bronce y no hay forma de pedir otro.
+   */
+  showTiers?: boolean;
 }) {
   // Dos listas: amigos y no-amigos. La relación sale de `relationshipWith`.
   //
@@ -75,8 +81,9 @@ function SocialProfilesScreenBase({
       name={entry.displayName}
       photoURL={entry.photoURL}
       // El rango, solo de tus amigos: de quien no lo es se enseña el nombre (y la foto, si la regla de
-      // reciprocidad la deja ver) y nada más (decisión del 04-10-2026, docs/plan-directorio-amigos.md).
-      tier={relationshipWith(entry.uid) === 'friends' ? entry.tier : undefined}
+      // reciprocidad la deja ver) y nada más (decisión del 04-10-2026, docs/plan-directorio-amigos.md). Y solo a la
+      // administración (`showTiers`).
+      tier={showTiers && relationshipWith(entry.uid) === 'friends' ? entry.tier : undefined}
       busy={friendshipBusyUid === entry.uid}
       onOpen={() => openProfileDetail(entry.id)}
       openAriaLabel={SOCIAL_UI.profiles.openProfileAria(entry.displayName)}

@@ -128,6 +128,12 @@ export interface SocialPostEntry {
   text: string;
   createdAt: number;
   updatedAt: number;
+  /**
+   * Cuándo se EDITÓ por última vez. Campo aparte y no `updatedAt` a propósito: el feed ordena y fecha por
+   * `updatedAt`, y la decisión de producto es que una edición conserve la fecha y el sitio del mensaje (corregir
+   * una errata no lo convierte en noticia nueva). Ausente = nunca se ha editado.
+   */
+  editedAt?: number;
 }
 
 /**
@@ -324,7 +330,7 @@ function getEmptySocialGistData(): SocialGistData {
 
 function normalizeTabId(value: unknown): TabId | null {
   const tab = String(value || '').trim() as TabId;
-  if (tab === 'c' || tab === 'v' || tab === 'e' || tab === 'p') {
+  if ((TAB_IDS as readonly string[]).includes(tab)) {
     return tab;
   }
 
@@ -530,6 +536,7 @@ function normalizePostItems(items: unknown): SocialPostEntry[] {
       const text = safePostText(record.text);
       const createdAt = normalizeTimestamp(record.createdAt, Date.now());
       const updatedAt = normalizeTimestamp(record.updatedAt, createdAt);
+      const editedAt = Number(record.editedAt);
 
       if (!authorProfileId || !text) {
         return null;
@@ -542,6 +549,8 @@ function normalizePostItems(items: unknown): SocialPostEntry[] {
         text,
         createdAt,
         updatedAt,
+        // Solo si es una fecha de verdad: un `editedAt` roto no debe colgar la marca de «editado» a nadie.
+        ...(Number.isFinite(editedAt) && editedAt > 0 ? { editedAt } : {}),
       } satisfies SocialPostEntry;
     })
     .filter((entry): entry is SocialPostEntry => Boolean(entry))
@@ -827,6 +836,53 @@ export function upsertPost(data: SocialGistData, input: UpsertPostInput): Social
 }
 
 /**
+ * Cambia el texto de una publicación propia. Conserva `createdAt` y `updatedAt` —la fecha y el sitio en el feed—
+ * y sella `editedAt`. Devuelve la MISMA referencia si no hay nada que cambiar (id desconocido, texto vacío tras
+ * sanear o idéntico al que había), para que el orquestador pueda saltarse la reescritura del gist.
+ *
+ * Con cupo 0 (bronce) el texto queda vacío y la edición es un no-op, igual que en `upsertPost`: borrar sí puede,
+ * editar es publicar.
+ */
+export function editPost(
+  data: SocialGistData,
+  input: { id: string; text: string; maxLength?: number; timestamp?: number },
+): SocialGistData {
+  const text = safePostText(input.text, input.maxLength);
+  const posts = data.posts || [];
+  const index = posts.findIndex((post) => post.id === input.id);
+  if (!input.id || !text || index < 0 || posts[index].text === text) {
+    return data;
+  }
+
+  const now = input.timestamp || Date.now();
+  const next = posts.slice();
+  next[index] = { ...posts[index], text, editedAt: now };
+  return {
+    ...data,
+    posts: next,
+    updatedAt: now,
+  };
+}
+
+/**
+ * Retira una publicación del gist propio. Misma referencia si no estaba (mismo contrato que
+ * `removeReviewActivity`).
+ */
+export function removePost(data: SocialGistData, input: { id: string; timestamp?: number }): SocialGistData {
+  const posts = data.posts || [];
+  const next = posts.filter((post) => post.id !== input.id);
+  if (!input.id || next.length === posts.length) {
+    return data;
+  }
+
+  return {
+    ...data,
+    posts: next,
+    updatedAt: input.timestamp || Date.now(),
+  };
+}
+
+/**
  * Puerta de pruebas de {@link normalizeSocialGistData}. Se exporta SOLO para los tests: es la frontera por la que
  * entra el gist de otra persona, y su comportamiento con datos hostiles no se puede comprobar de otra forma sin
  * simular la red entera.
@@ -916,10 +972,13 @@ export function mergeSocialGistData(a: SocialGistData, b: SocialGistData): Socia
     }
   }
 
+  // Una edición NO toca `updatedAt` (conserva la fecha del mensaje), así que la versión buena se reconoce por
+  // `editedAt`: entre dos copias del mismo post gana la editada más tarde.
+  const postVersion = (entry: SocialPostEntry) => Math.max(entry.updatedAt, entry.editedAt || 0);
   const postsById = new Map<string, SocialPostEntry>();
   for (const entry of [...(a.posts || []), ...(b.posts || [])]) {
     const current = postsById.get(entry.id);
-    if (!current || entry.updatedAt > current.updatedAt) {
+    if (!current || postVersion(entry) > postVersion(current)) {
       postsById.set(entry.id, entry);
     }
   }

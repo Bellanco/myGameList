@@ -129,12 +129,15 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 .chip-pd      { background: rgba(var(--danger-rgb),.15);  color: var(--fg-red-soft); border: 1px solid rgba(var(--danger-rgb),.3); }
 .chip-deck    { background: var(--chip-deck-bg); color: var(--chip-deck-fg); border: 1px solid var(--chip-deck-border); }
 /* Bandeja de importados: la marca de la lista donde ya está el juego se colorea según esa lista, con los
-   mismos tokens que usan los listados (verde=completados, rojo=vergüenza, amarillo=en curso, azul=próximos).
+   mismos tokens que usan los listados (verde=completados, rojo=vergüenza, amarillo=en curso, azul=próximos,
+   índigo=deseados).
    Cuelgan de las variables de tema, así que respetan la paleta clara/oscura activa. */
 .chip-list-c { background: rgba(var(--success-rgb),.15); color: var(--fg-green);    border: 1px solid rgba(var(--success-rgb),.3); }
 .chip-list-v { background: rgba(var(--danger-rgb),.15);  color: var(--fg-red-soft); border: 1px solid rgba(var(--danger-rgb),.3); }
 .chip-list-e { background: rgba(var(--warn-rgb),.16);    color: var(--fg-amber);    border: 1px solid rgba(var(--warn-rgb),.32); }
 .chip-list-p { background: rgba(var(--steam-rgb),.18);   color: var(--fg-sky);      border: 1px solid rgba(var(--steam-rgb),.35); }
+.chip-list-d { background: color-mix(in srgb, var(--fg-indigo) 16%, transparent); color: var(--fg-indigo);
+               border: 1px solid color-mix(in srgb, var(--fg-indigo) 34%, transparent); }
 .chip-rm { background: transparent; border: none; color: inherit; cursor: pointer; opacity: .78; }
 .chip-rm:hover { opacity: 1; }
 
@@ -1020,6 +1023,39 @@ table.is-grid {
   -webkit-line-clamp: 2;
   overflow: hidden;
 }
+
+/* EL NOMBRE ENTERO, AL PASAR POR ENCIMA (o al llegar con el teclado). Solo en las cajas a las que no les cabe
+   —lo marca `data-name-cut`, que se mide al llegar—: a «Hades» no le pasa nada. Se despliega EL MISMO título,
+   no una copia, así que lleva exactamente la letra y el color que el tema le da; su hueco conserva la altura que
+   tenía (la fija el mismo gesto), y por eso crece hacia abajo por encima de las etiquetas sin mover la rejilla.
+   FONDO TRASLÚCIDO Y SIN CANTO: la superficie a media opacidad, sin sombra, y con el borde de abajo fundido. Con
+   una plaquita opaca y con sombra, los chips de debajo parecían cortados a cuchillo; así se siguen viendo a
+   través y el nombre se lee encima como una capa, no como una pieza pegada. */
+.game-card-name-box { position: relative; }
+/* Con ratón, al pasar por encima; sin él (táctil) `:hover` se queda pegado tras un toque, y el nombre se
+   quedaría desplegado tapando las etiquetas. El foco de teclado vale en cualquier aparato. */
+@mixin nombre-desplegado {
+  position: absolute;
+  z-index: 3;
+  top: -.3rem;
+  left: -.4rem;
+  right: -.4rem;
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: none;
+  overflow: visible;
+  overflow-wrap: break-word;
+  /* El relleno compensa el desplazamiento: el texto no se mueve ni un píxel de donde estaba. El de abajo es más
+     largo porque es por donde se funde el fondo, y la letra no tiene que caer en el fundido. */
+  padding: .3rem .4rem .7rem;
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - .55rem), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - .55rem), transparent);
+}
+@media (hover: hover) {
+  .game-card[data-name-cut]:hover .game-card-name { @include nombre-desplegado; }
+}
+.game-card[data-name-cut]:has(.game-card-open:focus-visible) .game-card-name { @include nombre-desplegado; }
 
 /* LA NOTA, FLOTANDO SOBRE EL CANTO DE LA CARÁTULA. En el mosaico la nota es lo primero que se busca, así que
    está siempre en el mismo punto de cada caja en vez de bailar según lo que ocupe el nombre. Lleva su propia

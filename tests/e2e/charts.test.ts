@@ -118,3 +118,41 @@ test.describe('gráfica «Año a año» en pantalla estrecha', () => {
     expect(cifras.at(-1)?.visible).toBe(true);
   });
 });
+
+/**
+ * LOS GLOBOS DE LA EVOLUCIÓN DE LAS LISTAS, en el teléfono más estrecho y con el texto del sistema grande (el
+ * +30 % con el que usa el móvil el dueño de la app). Un globo oculto MIDE igual (`visibility`), así que uno que se
+ * salga del lienzo estira el scroll de la página entera: pasó a 320 px, 14 px de más. Se vigilan las dos cosas, la
+ * página sin scroll lateral y cada globo dentro de su lienzo, abierto o no.
+ */
+test.describe('globos de «Evolución de tus listas» en pantalla estrecha', () => {
+  test('a 320 px con el texto grande, ningún globo se sale ni ensancha la página', async ({ page, context }) => {
+    await page.setViewportSize({ width: 320, height: 900 });
+    const cdp = await context.newCDPSession(page);
+    await cdp.send('Page.enable');
+    await cdp.send('Page.setFontSizes', { fontSizes: { standard: 21, fixed: 17 } });
+    await sembrarBiblioteca(page, { amplia: true });
+    await page.goto('/stats');
+    const lienzo = page.locator('.backlog-canvas').first();
+    await expect(lienzo).toBeAttached();
+    await lienzo.scrollIntoViewIfNeeded();
+
+    const fuera = await page.evaluate(() => {
+      const canvas = document.querySelector('.backlog-canvas')!.getBoundingClientRect();
+      return [...document.querySelectorAll('.backlog-tip')]
+        .map((tip) => tip.getBoundingClientRect())
+        .filter((caja) => caja.left < canvas.left - 0.5 || caja.right > canvas.right + 0.5).length;
+    });
+    expect(fuera).toBe(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
+
+    // Y el de en medio, abierto de verdad, se ve entero.
+    const hits = page.locator('.backlog-hit');
+    await hits.nth(Math.floor((await hits.count()) / 2)).hover();
+    const abierto = page.locator('.backlog-hit:hover .backlog-tip');
+    await expect(abierto).toBeVisible();
+    const [caja, marco] = await Promise.all([abierto.boundingBox(), lienzo.boundingBox()]);
+    expect(caja!.x).toBeGreaterThanOrEqual(marco!.x - 0.5);
+    expect(caja!.x + caja!.width).toBeLessThanOrEqual(marco!.x + marco!.width + 0.5);
+  });
+});
