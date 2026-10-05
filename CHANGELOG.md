@@ -20,6 +20,10 @@ que se abre la edición siguiente.
     un juego que tenías en deseos, la bandeja propone **«Pasar a próximos»**.
   - No es tu biblioteca: no cuenta en reseñas, estadísticas, logros, premios ni en tu ruleta.
   - En la ruleta del perfil de un amigo, lo que no tienes se añade **a deseados**.
+  - **Caben 100 juegos.** Llena, ni se abre el formulario ni se añade nada desde la ruleta de un amigo («Tu lista
+    de deseos está completa»). Lo que ya llega por encima —otro dispositivo, una copia de seguridad— se conserva.
+  - Su recuento, a la izquierda de «Ordenar», se dice **contra el tope**: «37 de 100», con lo filtrado delante si
+    hay filtros, y en ámbar cuando está llena.
 - **Mostrar u ocultar la lista de deseos** en Ajustes → Diseño, visible por defecto y sincronizado entre tus
   dispositivos. Ocultarla esconde la pestaña, no sus juegos.
 - **La lista de deseos en lo social**, como las demás:
@@ -32,7 +36,8 @@ que se abre la edición siguiente.
   listas ya estaba aceptado.
 - **«Ya lo tienes en casa»**, un apartado nuevo de Estadísticas: cuántos de tus deseos tienen un pariente esperando
   en Próximos (misma saga o géneros en común), las parejas, y tus deseos frente a Próximos por género, con los
-  géneros que deseas sin nada esperando. Solo en tu panel, y solo con la lista de deseos a la vista.
+  géneros que deseas sin nada esperando («Aún no te has hecho con todos», en el mismo chip de género que el
+  listado). Solo en tu panel, y solo con la lista de deseos a la vista.
 - **Tus publicaciones, desde tu perfil**: un botón «Publicaciones» las lista y, sobre las tuyas, deja editarlas
   (conservan su fecha y llevan la marca «editado») y borrarlas.
 - **El nombre entero de un juego al pasar por encima**, en el mosaico, cuando no cabe en su caja. Se despliega en su
@@ -41,6 +46,9 @@ que se abre la edición siguiente.
   que lleva conseguida.
 
 ### Changed
+- **Los avisos de lista del feed se agrupan como los logros**: lo que una persona mueve a una lista en un día es un
+  solo renglón («Ada añadió *Hades* y 3 más a su lista de deseos»), y la cifra despliega el resto debajo del
+  primero. Desaparece el cupo de tres avisos por persona y día: con el agrupado entran todos los juegos.
 - **Premios: los votos de cada uno se ven hasta que se abre la edición siguiente**, en vez de hasta que el
   administrador la terminaba. Desaparece el paso «Terminar la edición»; el administrador puede borrarlos antes con
   «Borrar los votos». La política de privacidad lo recoge.
