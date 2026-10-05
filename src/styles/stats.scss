@@ -1034,20 +1034,30 @@
 }
 
 .backlog-hit {
-  position: relative;
   flex: 1 1 0;
 }
 
 .backlog-hit:hover { background: var(--overlay-hover); }
 
+/* EL GLOBO, ENCAJADO DENTRO DEL LIENZO. Se posiciona contra `.backlog-hits` (que cubre el lienzo entero), no
+   contra la franja de su mes: centrado sobre su punto (`--x`) y empujado hacia dentro lo justo para no salirse
+   por ningún lado. Por eso lleva ANCHO FIJO: es lo que deja calcular el empuje sin medir nada.
+
+   Que un globo se salga no es solo un feo: mide aunque esté oculto (`visibility`, no `display`), así que estira
+   el ancho de scroll de la página. En móvil eso ensancha el viewport de composición y la barra inferior —fija y
+   al 100%— acaba sobresaliendo. Antes se elegía hacia qué lado abría según la posición del mes (primer cuarto a
+   la derecha, último a la izquierda, centro centrado), y eso fallaba siempre que el lienzo midiera menos de dos
+   globos: a 320 px con el texto del sistema grande, la página se salía 14 px. */
 .backlog-tip {
+  --tip-w: 9.5rem;
   position: absolute;
-  left: 50%;
+  left: clamp(0px, calc(var(--x, 50%) - var(--tip-w) / 2), calc(100% - var(--tip-w)));
   bottom: calc(100% - 2rem);
   z-index: 2;
   display: grid;
   gap: .15rem;
-  min-width: 9.5rem;
+  width: var(--tip-w);
+  max-width: 100%;
   padding: .5rem .6rem;
   border-radius: var(--stats-radius);
   background: var(--surface-elevated);
@@ -1060,10 +1070,6 @@
   transition: opacity .12s ease;
 }
 
-.backlog-tip.is-left { left: auto; right: 50%; }
-/* Los meses de en medio cuelgan centrados sobre su punto: es donde mejor se lee y, en pantallas estrechas, lo
-   único que cabe (abriendo hacia un lado se saldría del lienzo). Los extremos siguen abriendo hacia dentro. */
-.backlog-tip.is-center { transform: translateX(-50%); }
 
 .backlog-hit:hover .backlog-tip {
   opacity: 1;
