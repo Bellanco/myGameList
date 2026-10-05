@@ -1,0 +1,101 @@
+/* LA PIRÁMIDE DE «QUÉ DESTACAS Y QUÉ TE CHIRRÍA» (`ReviewTraits`), con su hoja propia porque la usan dos pantallas
+   que cargan por separado: el panel de Estadísticas y el resumen del año (que no carga `stats.scss`). La importa
+   el componente, así que va con él a donde vaya.
+
+   Los tokens del panel (`--stats-c`, `--stats-v`, `--stats-bar`, `--stats-ink-2`) los declara `.stats-hub` en
+   `stats.scss` y los retoca cada tema; aquí llevan su valor de la casa como respaldo, para que el resumen —que es
+   `stats-hub` pero puede abrirse sin esa hoja— se vea igual. Las animaciones llevan nombre propio por lo mismo:
+   `slide-in` y `grow-right` viven en `stats.scss`. */
+
+/* ---- Qué destacas y qué te chirría --------------------------------------------------------------------- */
+
+/* Pirámide de población: las dos caras sobre la MISMA escala, así que se ve de un vistazo si celebras más de lo
+   que criticas. El nombre va fuera de la barra; dentro, cualquier etiqueta corta se salía de su relleno. */
+.traits { display: flex; flex-direction: column; gap: .5rem; }
+
+.traits-heads {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+  margin: 0;
+  font-size: var(--fs-2xs);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--stats-ink-2, color-mix(in oklch, var(--text-muted) 45%, var(--text)));
+}
+
+.traits-heads span:first-child { text-align: right; }
+
+.traits-rows {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.traits-rows li {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+  animation: traits-slide-in .45s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 50ms);
+}
+
+.traits-side {
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  min-width: 0;
+}
+
+.traits-side.is-good { align-items: flex-end; text-align: right; }
+
+.traits-name {
+  font-size: var(--fs-xs);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.traits-name b { margin-left: .3rem; font-variant-numeric: tabular-nums; }
+.is-good .traits-name b { color: color-mix(in oklch, var(--stats-c, var(--success)) 62%, var(--text)); }
+.is-bad .traits-name b { color: color-mix(in oklch, var(--stats-v, var(--danger)) 62%, var(--text)); }
+
+.traits-bar {
+  position: relative;
+  width: 100%;
+  height: 10px;
+  border-radius: var(--stats-bar, 2px);
+  background: var(--surface-soft);
+  /* Pista = carril hundido (ver `--sunk`). Se le da a esta y no a las de 3-4 px del panel: en una barra fina,
+     una sombra interior de dos píxeles se come la pista entera y lo único que se ve es suciedad. */
+  box-shadow: var(--sunk);
+}
+
+.traits-bar i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--pct, 0%);
+  border-radius: var(--stats-bar, 2px);
+  transform-origin: inherit;
+  animation: traits-grow .6s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 50ms);
+}
+
+/* Cada lado crece desde su propio filo, hacia el centro de la figura. */
+.is-good .traits-bar i { right: 0; background: color-mix(in oklch, var(--stats-c, var(--success)) 72%, transparent); transform-origin: right center; }
+.is-bad .traits-bar i { left: 0; background: color-mix(in oklch, var(--stats-v, var(--danger)) 72%, transparent); transform-origin: left center; }
+
+@keyframes traits-slide-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes traits-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}

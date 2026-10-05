@@ -7,6 +7,7 @@ import type { YearSummary as YearSummaryData } from '../../../core/stats/yearSum
 import { useScoreScale } from '../../hooks/useScoreScale';
 import { formatDecimal } from '../stats/format';
 import { useReviewCover } from './useReviewCover';
+import { ReviewTraits } from '../stats/ReviewTraits';
 // La hoja va con el componente, que es perezoso: así llega con él a cualquier sitio que lo monte, sin depender de
 // que otra hoja del hub esté cargada (ver `styles/yearSummary.scss`).
 import '../../../styles/yearSummary.scss';
@@ -335,32 +336,27 @@ export const YearSummary = memo(function YearSummary({ summary, voice }: YearSum
   }
 
   if (summary.strengths.length || summary.weaknesses.length) {
-    const max = Math.max(1, ...summary.strengths.map((tag) => tag.count), ...summary.weaknesses.map((tag) => tag.count));
-    const weight = (count: number) => ({ '--ys-w': String(Math.round((count / max) * 4)) }) as CSSProperties;
+    // El titular dice lo que más se repite: su punto fuerte o, si no anotó ninguno, lo que más le chirrió.
+    const lead = summary.strengths[0] ?? summary.weaknesses[0];
+    // SIMÉTRICA: los dos lados con el mismo número de filas, el del más corto. Si un lado no tiene nada, el otro
+    // se queda entero; recortarlo a cero dejaría la tarjeta sin pirámide.
+    const rows = summary.strengths.length && summary.weaknesses.length
+      ? Math.min(summary.strengths.length, summary.weaknesses.length)
+      : Math.max(summary.strengths.length, summary.weaknesses.length);
+    const toBuckets = (tags: typeof summary.strengths) => tags.slice(0, rows).map((tag) => ({ tag: tag.name, games: tag.count, hours: 0 }));
     cards.push({
       key: 'tags',
       icon: ICONS.tags,
       kicker: L.tags.kicker(voice),
       body: (
         <>
-          {summary.strengths.length ? (
-            <ul className="ys-tags" aria-label={L.tags.strengthsAria}>
-              {summary.strengths.map((tag) => (
-                <li key={tag.name} className="ys-tag is-up" style={weight(tag.count)}>
-                  {tag.name} <b>{L.format.tagCount(tag.count)}</b>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          {summary.weaknesses.length ? (
-            <ul className="ys-tags" aria-label={L.tags.weaknessesAria}>
-              {summary.weaknesses.map((tag) => (
-                <li key={tag.name} className="ys-tag is-down" style={weight(tag.count)}>
-                  {tag.name} <b>{L.format.tagCount(tag.count)}</b>
-                </li>
-              ))}
-            </ul>
-          ) : null}
+          <h4 className="ys-title">{L.tags.title(voice, lead.name, lead.count, summary.strengths.length > 0)}</h4>
+          {/* LA MISMA PIRÁMIDE QUE EN ESTADÍSTICAS («Qué destacas y qué te chirría»): las dos caras sobre una escala
+              común, así que se ve de un vistazo si celebró más de lo que criticó. Solo cambian los rótulos, que
+              aquí hablan de quien firma el resumen. */}
+          <div className="ys-traits">
+            <ReviewTraits strengths={toBuckets(summary.strengths)} weaknesses={toBuckets(summary.weaknesses)} heads={L.tags.heads(voice)} />
+          </div>
         </>
       ),
     });

@@ -145,3 +145,37 @@ describe('YearSummary — contigo', () => {
     expect(where).toEqual([YEAR_SUMMARY_UI.common.pickWhere, YEAR_SUMMARY_UI.common.pickWhereWish]);
   });
 });
+
+describe('lo que más valoró, y lo que le chirrió', () => {
+  it('es la pirámide de Estadísticas, con titular y los rótulos en tercera persona', () => {
+    const traits = buildYearSummary({
+      completed: [
+        { ...game(1, 'Uno', 95), strengths: ['Historia', 'Música'], weaknesses: ['Bugs'] },
+        { ...game(2, 'Dos', 90), strengths: ['Historia'] },
+      ],
+      year: 2025,
+      precision: 'month',
+    })!;
+    const { container } = render(<YearSummary summary={traits} voice={voice} />);
+    const card = screen.getByRole('region', { name: YEAR_SUMMARY_UI.tags.kicker(voice) });
+
+    expect(card).toHaveTextContent(YEAR_SUMMARY_UI.tags.title(voice, 'Historia', 2, true));
+    expect(container.querySelector('.traits-heads')?.textContent).toBe(
+      `${YEAR_SUMMARY_UI.tags.heads(voice).strengths}${YEAR_SUMMARY_UI.tags.heads(voice).weaknesses}`,
+    );
+    // Simétrica: tantas filas por lado como el más corto (un débil → un fuerte).
+    expect([...card.querySelectorAll('.traits-side.is-good .traits-name')].map((node) => node.getAttribute('title'))).toEqual(['Historia']);
+    expect([...card.querySelectorAll('.traits-side.is-bad .traits-name')].map((node) => node.getAttribute('title'))).toEqual(['Bugs']);
+  });
+
+  it('con un solo lado, ese lado sale entero', () => {
+    const traits = buildYearSummary({
+      completed: [{ ...game(1, 'Uno', 95), strengths: ['Historia', 'Música', 'Arte'] }],
+      year: 2025,
+      precision: 'month',
+    })!;
+    const { container } = render(<YearSummary summary={traits} voice={voice} />);
+    expect(container.querySelectorAll('.traits-side.is-good .traits-name')).toHaveLength(3);
+    expect(container.querySelectorAll('.traits-side.is-bad .traits-name')).toHaveLength(0);
+  });
+});

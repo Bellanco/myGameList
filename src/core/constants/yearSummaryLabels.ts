@@ -111,8 +111,14 @@ export const YEAR_SUMMARY_UI = {
 
   tags: {
     kicker: (v: SummaryVoice) => (v.own ? 'Lo que más valoraste, y lo que te chirrió' : 'Lo que más valoró, y lo que le chirrió'),
-    strengthsAria: 'Puntos fuertes más repetidos',
-    weaknessesAria: 'Puntos débiles más repetidos',
+    /** El titular: lo que más se repite, su punto fuerte o, si no anotó ninguno, lo que más le chirrió. */
+    title: (v: SummaryVoice, name: string, count: number, strength: boolean) => {
+      const where = count === 1 ? 'en un juego' : `en ${count} juegos`;
+      if (strength) return `${v.own ? 'Tu' : 'Su'} punto fuerte: ${name}, ${where}`;
+      return `Lo que más ${v.own ? 'te' : 'le'} chirrió: ${name}, ${where}`;
+    },
+    /** Los rótulos de los dos lados de la pirámide. */
+    heads: (v: SummaryVoice) => (v.own ? { strengths: 'Lo valoraste', weaknesses: 'Te chirrió' } : { strengths: 'Lo valoró', weaknesses: 'Le chirrió' }),
   },
 
   previous: {
