@@ -316,7 +316,10 @@ export function PremiosResultsScreen({
             return (
               <li
                 key={rank}
-                className={`premios-results__step is-rank-${rank}${mio ? ' is-own' : ''}${conLamina ? ' has-award' : ''}`}
+                // CADA ESCALÓN LLEVA SU METAL TAMBIÉN EN LA TARJETA: su realce se pinta con `--tier`, que solo pone
+                // la clase de metal. Sin ella el navegador descartaba el fondo entero y la tarjeta del oro se quedaba
+                // transparente, enseñando la cuadrícula de la página (05-10-2026).
+                className={`premios-results__step is-rank-${rank}${METAL[rank - 1] ? ` ${METAL[rank - 1]}` : ''}${mio ? ' is-own' : ''}${conLamina ? ' has-award' : ''}`}
                 aria-label={mio ? L.yourRow : undefined}
               >
                 <span className={`premios-results__medal ${METAL[rank - 1] || ''}`}>

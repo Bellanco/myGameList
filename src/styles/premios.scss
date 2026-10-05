@@ -1117,9 +1117,10 @@
   box-shadow: var(--e1);
 }
 
-/* Solo el primero lleva realce, y es sutil: un hilo del metal arriba. Con los tres realzados no habría podio,
-   habría tres tarjetas. */
-.premios-results__step.is-rank-1 {
+/* CADA ESCALÓN, CON SU METAL: un hilo arriba y un velo que se apaga hacia abajo, en oro, plata y bronce. Fue solo
+   del primero —«con los tres realzados no habría podio»— hasta el 05-10-2026, cuando se pidió para los tres: el
+   podio lo siguen haciendo el tamaño del primero (disco y nombre más grandes) y el metal distinto de cada uno. */
+.premios-results__step:is(.is-rank-1, .is-rank-2, .is-rank-3) {
   border-top: 2px solid color-mix(in srgb, var(--tier) 70%, transparent);
   background: linear-gradient(
     180deg,
