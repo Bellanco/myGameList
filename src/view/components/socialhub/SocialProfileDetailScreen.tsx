@@ -240,7 +240,7 @@ function SocialProfileDetailScreenBase({
   reviewLink?: (gameId: number) => { to: string; state?: unknown };
   status: string;
   statusKind: string;
-  onAddGame?: (game: Partial<GameItem>) => 'added' | 'duplicate' | 'invalid';
+  onAddGame?: (game: Partial<GameItem>) => 'added' | 'duplicate' | 'invalid' | 'full';
   addTarget?: 'p' | 'd';
   gameListOf?: (name: string) => TabId | null;
   moveGameToCurrentByName?: (name: string) => void;

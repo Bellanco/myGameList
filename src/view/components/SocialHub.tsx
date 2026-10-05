@@ -43,7 +43,7 @@ import { libraryStart } from '../../core/achievements/metrics';
  */
 interface SocialHubProps {
   /** Ruleta (perfil social) — añadir un juego ajeno a una de mis listas (la de `addTarget`). */
-  onAddGame?: (game: Partial<GameItem>) => 'added' | 'duplicate' | 'invalid';
+  onAddGame?: (game: Partial<GameItem>) => 'added' | 'duplicate' | 'invalid' | 'full';
   /** A qué lista va lo que se añade desde la ruleta: deseados, o próximos si esa lista está oculta. */
   addTarget?: 'p' | 'd';
   /** Ruleta (perfil social) — ¿en cuál de mis listas está ya este juego (por nombre)? */

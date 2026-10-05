@@ -199,6 +199,7 @@ export const UI_MESSAGES = {
     alreadyInLists: (name: string) => `"${name}" ya está en tus listas.`,
     addedToProximos: (name: string) => `"${name}" añadido a próximos`,
     addedToWishlist: (name: string) => `"${name}" añadido a deseados`,
+    wishlistFull: 'Tu lista de deseos está completa',
     alreadyCurrent: (name: string) => `"${name}" ya está en curso`,
     reviewPublishDeferred: 'Juego guardado; la actividad social de reseña se actualizará al abrir el hub social.',
   },
