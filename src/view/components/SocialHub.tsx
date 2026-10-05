@@ -545,6 +545,9 @@ const SocialHubInner = memo(function SocialHubInner({
           viewerHiddenTabs={hiddenTabs}
           viewerCompleted={games?.c}
           viewerPending={games?.p}
+          // `addTarget` es `d` justo cuando la lista de deseos está a la vista (Ajustes → Diseño): oculta, tampoco
+          // se proponen sus juegos en el resumen.
+          viewerWished={addTarget === 'd' ? games?.d : undefined}
           // La tarjeta del feed y el aviso del 15 llegan con el resumen ya desplegado (estado de la navegación).
           openSummaryOnMount={wantsYearSummary(location.state)}
           onOwnSummaryOpened={markOwnYearSummaryOpened}

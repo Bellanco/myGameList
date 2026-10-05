@@ -93,8 +93,10 @@ export interface SummaryPair {
   yours: number;
 }
 
-/** Un juego de su año que tú tienes en Próximos: lo que el resumen te propone. */
+/** Un juego de su año que tú tienes en Próximos (o, si de ahí no salen bastantes, en deseos): lo que te propone. */
 export interface SummaryPick extends SummaryCoverRef {
+  /** Dónde lo tienes tú: en Próximos (`p`) o en la lista de deseos (`d`), que solo rellena lo que Próximos no llega. */
+  from: 'p' | 'd';
   grade: number;
   /** Es su juego del año. */
   best: boolean;
@@ -112,7 +114,7 @@ export interface SummaryCommon {
   near: SummaryPair | null;
   /** 0–100: cien menos la diferencia media de nota. Solo con `AFFINITY_MIN` juegos o más con las dos notas. */
   affinity: number | null;
-  /** Lo de su año que tú tienes en Próximos, de mejor a peor nota suya. */
+  /** Lo de su año que tú tienes en Próximos, de mejor a peor nota suya; si no llegan, completan tus deseos. */
   picks: SummaryPick[];
 }
 
@@ -296,7 +298,14 @@ function buildPrevious(games: FinishedGame[], previousGames: FinishedGame[], yea
   };
 }
 
-function buildCommon(theirs: FinishedGame[], viewer: readonly GameItem[], pending: readonly GameItem[], year: number, bestName: string | null): SummaryCommon {
+function buildCommon(
+  theirs: FinishedGame[],
+  viewer: readonly GameItem[],
+  pending: readonly GameItem[],
+  wished: readonly GameItem[],
+  year: number,
+  bestName: string | null,
+): SummaryCommon {
   const mine = new Map(completedIn(viewer, year).map((game) => [normalizeName(game.name), game]));
   const shared = theirs.filter((game) => mine.has(normalizeName(game.name)));
   const pairs: SummaryPair[] = shared
@@ -312,14 +321,25 @@ function buildCommon(theirs: FinishedGame[], viewer: readonly GameItem[], pendin
   // El MEJOR en común —el de la carátula de fondo— es el que más os gustó a los dos: la media de las dos notas.
   const both = (game: GameItem) => (gradeOf(game) + gradeOf(mine.get(normalizeName(game.name)) as GameItem)) / 2;
   const topGame = [...shared].sort((a, b) => both(b) - both(a) || a.name.localeCompare(b.name, 'es'))[0];
-  // De su año, lo que tú tienes esperando en Próximos: la única parte del resumen que te propone algo.
-  const waiting = new Set(pending.map((game) => normalizeName(game.name)));
+  // De su año, lo que tú tienes esperando en Próximos: la única parte del resumen que te propone algo. Próximos va
+  // PRIMERO —eso ya lo tienes, solo falta jugarlo—, y la lista de deseos solo entra a rellenar los huecos que
+  // Próximos deja: un deseo propuesto por delante de algo que ya tienes sería empujarte a comprar.
   const prefix = `${year}-`;
-  const picks = theirs
-    .filter((game) => waiting.has(normalizeName(game.name)) && gradeOf(game) > 0)
-    .sort((a, b) => gradeOf(b) - gradeOf(a) || a.name.localeCompare(b.name, 'es'))
-    .slice(0, PICKS_MAX)
-    .map((game) => ({
+  const byGrade = (a: FinishedGame, b: FinishedGame) => gradeOf(b) - gradeOf(a) || a.name.localeCompare(b.name, 'es');
+  const from = (list: readonly GameItem[], taken: ReadonlySet<string>) => {
+    const names = new Set(list.map((game) => normalizeName(game.name)));
+    return theirs
+      .filter((game) => names.has(normalizeName(game.name)) && !taken.has(normalizeName(game.name)) && gradeOf(game) > 0)
+      .sort(byGrade);
+  };
+  const fromPending = from(pending, new Set()).slice(0, PICKS_MAX);
+  const fromWished = from(wished, new Set(fromPending.map((game) => normalizeName(game.name)))).slice(0, PICKS_MAX - fromPending.length);
+  const picks = [
+    ...fromPending.map((game) => ({ game, list: 'p' as const })),
+    ...fromWished.map((game) => ({ game, list: 'd' as const })),
+  ]
+    .map(({ game, list }) => ({
+      from: list,
       name: game.name,
       platforms: game.platforms || [],
       grade: gradeOf(game),
@@ -354,11 +374,24 @@ export interface YearSummaryInput {
   viewerCompleted?: readonly GameItem[] | null;
   /** Los Próximos de QUIEN MIRA: de ahí salen las propuestas de «contigo». */
   viewerPending?: readonly GameItem[] | null;
+  /**
+   * La lista de deseos de QUIEN MIRA: completa las propuestas cuando de Próximos no salen bastantes. Sin ella
+   * —o con la lista de deseos oculta en Ajustes— solo se propone lo de Próximos.
+   */
+  viewerWished?: readonly GameItem[] | null;
   palmares?: readonly PalmaresEntry[];
 }
 
 /** El resumen del año, o `null` si ese año no completó nada (y entonces no hay botón que ofrecer). */
-export function buildYearSummary({ completed, year, precision, viewerCompleted = null, viewerPending = null, palmares = [] }: YearSummaryInput): YearSummary | null {
+export function buildYearSummary({
+  completed,
+  year,
+  precision,
+  viewerCompleted = null,
+  viewerPending = null,
+  viewerWished = null,
+  palmares = [],
+}: YearSummaryInput): YearSummary | null {
   const games = completedIn(completed, year) as FinishedGame[];
   if (games.length === 0) return null;
 
@@ -392,7 +425,7 @@ export function buildYearSummary({ completed, year, precision, viewerCompleted =
     strengths: tally(games.map((game) => game.strengths)).slice(0, STRENGTHS_MAX),
     weaknesses: tally(games.map((game) => game.weaknesses)).slice(0, WEAKNESSES_MAX),
     previous: buildPrevious(games, previousGames, year - 1),
-    common: viewerCompleted ? buildCommon(games, viewerCompleted, viewerPending || [], year, top?.name ?? null) : null,
+    common: viewerCompleted ? buildCommon(games, viewerCompleted, viewerPending || [], viewerWished || [], year, top?.name ?? null) : null,
     palmares: buildPalmares(palmares, year),
   };
 }

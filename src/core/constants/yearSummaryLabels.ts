@@ -167,5 +167,6 @@ export const YEAR_SUMMARY_UI = {
     pickBest: 'Su juego del año',
     pickMonth: (month: number) => `Lo terminó en ${MONTHS_LONG[month]}`,
     pickWhere: 'Lo tienes en Próximos',
+    pickWhereWish: 'Lo tienes en tu lista de deseos',
   },
 } as const;

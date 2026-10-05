@@ -482,7 +482,7 @@ export const YearSummary = memo(function YearSummary({ summary, voice }: YearSum
                           <Grade grade={pick.grade} scale={scale} /> {outOf}
                         </span>
                         {pick.quote ? <p className="ys-pick-quote">{L.format.quote(pick.quote)}</p> : null}
-                        <span className="ys-pick-where">{L.common.pickWhere}</span>
+                        <span className="ys-pick-where">{pick.from === 'd' ? L.common.pickWhereWish : L.common.pickWhere}</span>
                       </div>
                     </li>
                   );

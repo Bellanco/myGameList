@@ -130,4 +130,18 @@ describe('YearSummary — contigo', () => {
     expect(card).toHaveTextContent(YEAR_SUMMARY_UI.common.pickBest);
     expect(card).toHaveTextContent(YEAR_SUMMARY_UI.common.pickWhere);
   });
+
+  it('lo que sale de la lista de deseos dice que lo tienes ahí, no en Próximos', () => {
+    const withPicks = buildYearSummary({
+      completed,
+      year: 2025,
+      precision: 'month',
+      viewerCompleted: [game(9, 'Dos', 70)],
+      viewerPending: [game(20, 'Uno', 0)],
+      viewerWished: [game(21, 'Tres', 0)],
+    })!;
+    render(<YearSummary summary={withPicks} voice={voice} />);
+    const where = [...document.querySelectorAll('.ys-pick-where')].map((node) => node.textContent);
+    expect(where).toEqual([YEAR_SUMMARY_UI.common.pickWhere, YEAR_SUMMARY_UI.common.pickWhereWish]);
+  });
 });
