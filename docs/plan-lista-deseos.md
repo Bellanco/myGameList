@@ -33,15 +33,29 @@ quieren y todavía no se tienen.
 - **Filtro del feed:** casilla propia. Los valores guardados antes de la lista la reciben encendida (marca `~`,
   ver `core/social/moveTabsFilter`).
 
-## Por qué hay una fase 0 que se despliega sola
+## Despliegue: todo junto
 
-Un cliente anterior a la lista descarta la clave `d` al leer el gist (`migrateData`, `normalizeData`,
-`unwrapGamesFile`) y en la siguiente subida lo reescribe sin esos juegos. Si el envoltorio solo tuviera
-deseos, ni siquiera podría leerlo. No hay forma de exigir una versión mínima, así que:
+Se planteó desplegar la fase 0 sola y dejarla asentar, y se descartó el 05-10-2026 tras medir el riesgo real.
 
-1. **Fase 0** — la versión que lee y conserva `d` sin enseñarla (`TAB_ORDER` la deja fuera). **Desplegar sola
-   y dejar que se asiente** antes de publicar las demás.
-2. **Fases 1–3** — la lista visible, el interruptor y lo social. Se despliegan juntas.
+**El riesgo.** Un cliente anterior a la lista descarta la clave `d` al leer el gist (`migrateData`,
+`normalizeData`, `unwrapGamesFile`) y en la siguiente subida lo reescribe sin esos juegos. Pasa si un aparato
+con la versión nueva apunta deseos y otro, abierto por primera vez tras el despliegue, sincroniza con la versión
+que tenía en caché antes de actualizarse. No hay forma de exigir una versión mínima.
+
+**Por qué es tolerable.** Todos los ciclos de sincronización FUSIONAN juego a juego (`mergeCrdt`); ninguno
+sustituye lo local por lo remoto, salvo la sobrescritura manual. Y el cliente viejo no deja lápidas, solo omite
+los juegos. Así que el aparato que los apuntó los sigue teniendo y los vuelve a subir en su siguiente ciclo, y el
+otro los recibe en cuanto se actualiza. Solo se perderían si ese aparato perdiera sus datos locales en el
+intervalo. Si el envoltorio del gist solo tuviera deseos, el cliente viejo no podría leerlo: su sincronización
+da error hasta actualizarse, sin perder nada.
+
+**A quién no afecta.** A quien usa un solo aparato (al abrirlo por primera vez tras el despliegue aún no tiene
+deseos) ni a las amistades con la versión vieja, que ignoran la lista y sus mensajes sin romper nada.
+
+**Para dejarlo en cero:** abrir cada aparato una vez tras desplegar, antes de apuntar ningún deseo.
+
+**Reglas de Firestore:** desplegadas el 05-10-2026 (`showWishlist` y `feedMoveTabs` ≤ 5), así que la versión
+nueva no tiene orden que respetar por ese lado.
 
 ## Fases
 
@@ -50,7 +64,7 @@ deseos, ni siquiera podría leerlo. No hay forma de exigir una versión mínima,
   etiquetas), exportar e importar JSON y la marca del filtro del feed.
 - [x] **1. La lista.** Textos, ruta, icono, pestaña, formulario y tabla como Próximos, `d → p`, bandeja de
   Playnite, ruleta del amigo, estilos de los temas y el tour.
-- [x] **2. El interruptor de Ajustes.** En Ajustes → Diseño (`wishlistPreference`, campo `showWishlist`). Las reglas con `showWishlist` deben desplegarse antes que esta versión: **desplegadas el 05-10-2026**.
+- [x] **2. El interruptor de Ajustes.** En Ajustes → Diseño (`wishlistPreference`, campo `showWishlist`). Sus reglas (`showWishlist`) ya están desplegadas (05-10-2026).
 - [x] **3. Social.** Casilla de ocultar, pestaña en el perfil de un amigo, mensajes del feed, filtro del feed y
   texto de privacidad. `LEGAL_VERSION` no sube: un aviso de entrada en una lista ya se aceptó el 2026-08-22 (ver
   el comentario en `legalContent`).
