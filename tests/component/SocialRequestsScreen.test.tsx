@@ -118,6 +118,7 @@ describe('SocialRequestsScreen', () => {
     const { container } = render(
       <SocialRequestsScreen
         {...baseProps}
+        showTiers
         incomingRequests={[{ docId: 'a__me', otherUid: 'a', name: 'Ada', photo: '', tier: 'mithril' }]}
         outgoingRequests={[]}
         friendsList={[{ docId: 'zoe__me', otherUid: 'zoe', name: 'Zoe', photo: '' }]}
@@ -126,6 +127,20 @@ describe('SocialRequestsScreen', () => {
 
     expect(container.querySelectorAll('.hub-tier-notch')).toHaveLength(1);
     expect(container.querySelector('.hub-tier-notch.tier-mithril')).toBeInTheDocument();
+  });
+
+  // De cara al usuario los rangos no se nombran: solo la administración ve la muesca (`showTiers`).
+  it('sin showTiers no pinta el rango aunque la fila lo traiga', () => {
+    const { container } = render(
+      <SocialRequestsScreen
+        {...baseProps}
+        incomingRequests={[{ docId: 'a__me', otherUid: 'a', name: 'Ada', photo: '', tier: 'mithril' }]}
+        outgoingRequests={[]}
+        friendsList={[{ docId: 'zoe__me', otherUid: 'zoe', name: 'Zoe', photo: '', tier: 'gold' }]}
+      />,
+    );
+
+    expect(container.querySelector('.hub-tier-notch')).toBeNull();
   });
 
   it('cancela una petición enviada y deshabilita el botón del uid en curso', () => {

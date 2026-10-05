@@ -48,6 +48,7 @@ export function SocialRequestsScreen({
   onBack,
   status,
   statusKind,
+  showTiers = false,
 }: {
   SOCIAL_UI: SocialUiLabels;
   incomingRequests: RequestView[];
@@ -64,6 +65,11 @@ export function SocialRequestsScreen({
   onBack: () => void;
   status: string;
   statusKind: string;
+  /**
+   * ¿Se enseña el rango en las tarjetas? Solo a la administración: de cara al resto de usuarios los rangos no se
+   * nombran en ningún sitio, porque hoy todos son bronce y no hay forma de pedir otro.
+   */
+  showTiers?: boolean;
 }) {
   const R = SOCIAL_UI.requests;
 
@@ -109,7 +115,7 @@ export function SocialRequestsScreen({
             <HubUserCard
               name={request.name}
               photoURL={request.photo}
-              tier={request.tier}
+              tier={showTiers ? request.tier : undefined}
               busy={busyUid === request.otherUid}
             >
               <button
@@ -149,7 +155,7 @@ export function SocialRequestsScreen({
             <HubUserCard
               name={request.name}
               photoURL={request.photo}
-              tier={request.tier}
+              tier={showTiers ? request.tier : undefined}
               busy={busyUid === request.otherUid}
             >
               <button
@@ -179,7 +185,7 @@ export function SocialRequestsScreen({
             <HubUserCard
               name={friend.name}
               photoURL={friend.photo}
-              tier={friend.tier}
+              tier={showTiers ? friend.tier : undefined}
               busy={busyUid === friend.otherUid}
               onOpen={openFriend(friend)}
               openAriaLabel={R.openFriendAria(friend.name)}

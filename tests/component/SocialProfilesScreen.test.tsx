@@ -58,10 +58,26 @@ describe('SocialProfilesScreen — división amigos / no-amigos', () => {
   // a quien no lo distingue, el nombre del rango tiene que estar en el texto accesible. Y es solo de tus AMIGOS:
   // de quien no lo es se enseña el nombre y nada más (decisión del 04-10-2026).
   describe('punto de rango', () => {
+    // De cara al usuario los rangos no se nombran: solo la administración ve la muesca (`showTiers`).
+    it('sin showTiers no se pinta ningún rango', () => {
+      const { container } = render(
+        <SocialProfilesScreen
+          {...baseProps}
+          relationshipWith={() => 'friends'}
+          filteredSocialDirectory={[{ ...entry('ada', 'Ada'), tier: 'gold' }, entry('cid', 'Cid')]}
+        />,
+      );
+
+      expect(container.querySelector('.hub-tier-notch')).toBeNull();
+      expect(screen.queryByText(PROFILE_TIER_LABELS.gold)).not.toBeInTheDocument();
+      expect(screen.queryByText(PROFILE_TIER_LABELS.bronze)).not.toBeInTheDocument();
+    });
+
     function renderWithTiers() {
       return render(
         <SocialProfilesScreen
           {...baseProps}
+          showTiers
           relationshipWith={() => 'friends'}
           filteredSocialDirectory={[
             { ...entry('ada', 'Ada'), tier: 'gold' },
@@ -94,6 +110,7 @@ describe('SocialProfilesScreen — división amigos / no-amigos', () => {
       const { container } = render(
         <SocialProfilesScreen
           {...baseProps}
+          showTiers
           relationshipWith={() => 'friends'}
           // Rango inventado: el `as` es la prueba. Simula un documento con un valor que el tipo no admite
           // (dato viejo o manipulado) para comprobar que `normalizeTier` lo degrada a bronce en vez de romper.
@@ -108,6 +125,7 @@ describe('SocialProfilesScreen — división amigos / no-amigos', () => {
       const { container } = render(
         <SocialProfilesScreen
           {...baseProps}
+          showTiers
           relationshipWith={(uid) => (uid === 'ada' ? 'friends' : uid === 'bob' ? 'outgoing' : 'none')}
           filteredSocialDirectory={[
             { ...entry('ada', 'Ada'), tier: 'gold' },
