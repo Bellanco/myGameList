@@ -162,6 +162,16 @@ describe('deseos no es la biblioteca', () => {
 
   it('la ruleta de tus listas no lo saca: no se puede jugar lo que no se tiene', () => {
     expect(buildListsPool(biblioteca({ d: [juego()] }))).toEqual([]);
+
+    // Ni mezclado con el resto ni con las marcas que meten un juego en la ruleta («rejugar», «otra oportunidad»).
+    const pool = buildListsPool(biblioteca({
+      c: [juego({ id: 2, name: 'Hades', replayable: true })],
+      v: [juego({ id: 3, name: 'Nioh', retry: true })],
+      p: [juego({ id: 4, name: 'Ori' })],
+      d: [juego({ id: 5, replayable: true, retry: true })],
+    }));
+    expect(pool.map((candidate) => candidate.sourceTab)).toEqual(['c', 'v', 'p']);
+    expect(pool.some((candidate) => candidate.game.id === 5)).toBe(false);
   });
 
   it('no tiene puntos fuertes ni débiles que renombrar', () => {
