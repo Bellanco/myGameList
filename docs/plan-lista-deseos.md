@@ -21,7 +21,7 @@ quieren y todavía no se tienen.
   un juego importado está en Deseos, la bandeja ofrece pasarlo a Próximos.
 - **Ruleta del perfil de un amigo:** si el juego no lo tienes, el botón es «Añadir a deseados».
 - **No es la biblioteca.** Queda fuera de reseñas, estadísticas, logros, premios y de tu propia ruleta.
-  Estadísticas propias de Deseos: fuera por ahora.
+  Estadísticas propias de Deseos: aparte, en `docs/plan-estadisticas-deseos.md`.
 - **Ocultarla en Ajustes:** interruptor sincronizado (`publicConfig`), encendido por defecto. Apagado, la pestaña
   desaparece y `/deseados` lleva a Próximos; los juegos se conservan y siguen sincronizándose. Ocultarla en tu
   navegación **no** la oculta en social: eso lo decide la casilla del perfil.
