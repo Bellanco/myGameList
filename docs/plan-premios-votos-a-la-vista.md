@@ -81,9 +81,11 @@ hay sesión, quien mira sale en la clasificación por su `profileId` y la config
 votos: así no se gasta una lectura ni sale un `permission-denied` para quien no votó. **Sustituye a la
 clasificación de siempre**; el podio se queda. Va a lo ancho debajo de los ganadores (en el móvil, antes).
 
-- Una fila por persona: puesto (con metal en los tres primeros), nombre, aciertos `12/25`, puntos, trofeo y el
-  botón de desplegar. La fila entera despliega con el ratón (capa `row-hit`, como el escalón del podio); el teclado
-  va por el botón. No es `<details>`: el nombre enlaza y el trofeo es un botón.
+- Una fila por persona: puesto (con metal en los tres primeros), nombre, aciertos `12/25` y puntos. **La fila
+  entera despliega** con un solo control: un `<button>` (`row-hit`) que la cubre, con `aria-expanded`. Ni flecha
+  ni trofeo al final (decisión del usuario, 05-10-2026): la lámina sigue en el podio y en «Tu premio». El nombre solo navega si esa persona tiene perfil; si no, es
+  texto y la pulsación cae en la fila. El enlace y el trofeo van encima del botón, como hermanos: no puede haber
+  controles dentro de otro, y por eso tampoco es `<details>`.
 - **Todas plegadas** al entrar, también la propia.
 - Al desplegar, por categoría: nominado votado, ✓/✗ (con texto oculto «Acierto»/«Fallo»), peso si no es 1 y, en
   los fallos, «Ganador: X». Sin frase explicativa bajo el título.

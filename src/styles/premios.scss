@@ -1572,18 +1572,31 @@
   .premios-results__cols > .premios-results__panel--final { order: 0; }
 }
 
-/* La fila entera despliega con el ratón, con una capa como la del escalón del podio; el teclado va por el botón
-   del final. El enlace y los botones quedan por encima de la capa. */
+/* LA FILA ENTERA DESPLIEGA: un botón transparente que la cubre de punta a punta. El enlace del nombre queda por
+   encima; el resto de la fila —puesto, nombre sin perfil, aciertos, puntos— cae en él. */
 .premios-results__row--final { position: relative; }
 .premios-results__row-hit {
   position: absolute;
   inset: 0;
   z-index: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
   border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
   cursor: pointer;
+  appearance: none;
 }
-.premios-results__row--final .premios-results__link,
-.premios-results__row--final .btn { position: relative; z-index: 2; }
+.premios-results__row-hit:focus-visible { outline: 2px solid var(--fg-link); outline-offset: 2px; }
+.premios-results__row--final .premios-results__link { position: relative; z-index: 2; }
+
+/* EL NOMBRE OCUPA LO QUE MIDE, no el hueco de la fila. En la clasificación de siempre lleva `flex: 1` para empujar
+   los puntos a la derecha; aquí, siendo un enlace por encima del botón, se comía casi toda la fila y pulsar en
+   cualquier sitio llevaba al perfil en vez de abrir los votos. El hueco lo empujan los aciertos. */
+.premios-results__row--final .premios-results__name { flex: 0 1 auto; }
+.premios-results__row--final .premios-results__hits { margin-inline-start: auto; }
 .premios-results__row--final:hover,
 .premios-results__row--final.is-open { background: var(--surface-elevated); }
 .premios-results__row--final.is-own:hover,
@@ -1594,19 +1607,6 @@
   font-size: var(--fs-2xs);
   color: var(--text-dim);
   white-space: nowrap;
-}
-
-.premios-results__toggle {
-  display: inline-flex;
-  padding: .2rem .35rem;
-  color: var(--text-muted);
-}
-.premios-results__toggle:hover { color: var(--text); }
-.premios-results__toggle .ui-icon { transition: transform .15s ease; }
-.premios-results__toggle[aria-expanded='true'] .ui-icon { transform: rotate(180deg); }
-
-@media (prefers-reduced-motion: reduce) {
-  .premios-results__toggle .ui-icon { transition: none; }
 }
 
 /* El detalle: una ficha por categoría, en rejilla como los ganadores; en el móvil, una columna. */

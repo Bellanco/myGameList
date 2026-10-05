@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { PremiosResultsScreen } from '../../src/view/components/premios/PremiosResultsScreen';
@@ -386,6 +386,44 @@ describe('PremiosResultsScreen', () => {
       const votos = screen.getByRole('list', { name: L.votesOf('Ana') });
       expect(votos).toHaveTextContent(L.hit);
       expect(votos).not.toHaveTextContent(L.winnerWas('Elden Ring'));
+    });
+
+    // LA FILA ENTERA DESPLIEGA, con un solo control por fila: el botón que la cubre. El nombre solo navega si
+    // esa persona tiene perfil.
+    it('un solo botón por fila, el que la despliega: sin flecha ni trofeo al final', () => {
+      render(
+        <MemoryRouter>
+          <PremiosResultsScreen result={conCuatro} leaderboard={conCuatro.leaderboard} ownProfileId="p-ana" reveal={reveal} />
+        </MemoryRouter>,
+      );
+      const final = screen.getByRole('region', { name: L.finalBoard });
+      for (const fila of final.querySelectorAll('.premios-results__row--final')) {
+        const botones = fila.querySelectorAll('button');
+        expect(botones).toHaveLength(1);
+        expect(botones[0]).toHaveAttribute('aria-expanded');
+      }
+      expect(final.querySelector('.premios-results__trophy')).toBeNull();
+    });
+
+    it('el nombre con perfil lleva a su ficha y no despliega; sin perfil es texto', async () => {
+      render(
+        <MemoryRouter>
+          <PremiosResultsScreen
+            result={conCuatro}
+            leaderboard={conCuatro.leaderboard}
+            ownProfileId=""
+            profiles={new Map([['p-ana', 'uid-ana']])}
+            reveal={reveal}
+          />
+        </MemoryRouter>,
+      );
+      const final = screen.getByRole('region', { name: L.finalBoard });
+      const enlace = within(final).getByRole('link', { name: L.avatarAria('Ana') });
+      expect(enlace).toHaveAttribute('href', '/social/profiles/uid-ana');
+      expect(within(final).queryByRole('link', { name: L.avatarAria('Beto') })).not.toBeInTheDocument();
+
+      await userEvent.click(enlace);
+      expect(screen.queryByRole('list', { name: L.votesOf('Ana') })).not.toBeInTheDocument();
     });
 
     it('cuenta los aciertos de cada uno', () => {

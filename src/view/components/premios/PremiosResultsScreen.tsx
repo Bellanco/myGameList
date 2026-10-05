@@ -456,10 +456,12 @@ export function PremiosResultsScreen({
         ) : null}
 
         {/* LA CLASIFICACIÓN FINAL, a lo ancho y debajo de los ganadores. Una fila por persona, como la de siempre,
-            y al desplegarla lo que votó en cada categoría. LA FILA ENTERA DESPLIEGA con el ratón (una capa, como
-            en el podio); para el teclado y el lector de pantalla el camino es el botón del final. No es un
-            `<details>`: el nombre enlaza al perfil y el trofeo abre su lámina, y dentro de un `<summary>` no puede
-            haber otros controles. */}
+            y al desplegarla lo que votó en cada categoría. LA FILA ENTERA DESPLIEGA, y con un solo control: un
+            botón que la cubre de punta a punta, debajo del nombre. Así el ratón y el teclado hacen lo mismo, y el
+            nombre solo navega cuando esa persona tiene perfil (si no, es texto y la pulsación cae en el botón). Sin
+            trofeo ni flecha al final (decisión del 05-10-2026): la lámina sigue en el podio y en «Tu premio». No es
+            un `<details>`: el nombre enlaza, y dentro de un `<summary>` —o de cualquier botón— no puede haber otro
+            control. Por eso son hermanos y no van uno dentro de otro. */}
         {conFinal ? (
           <section className="premios-results__panel premios-results__panel--final" aria-label={L.finalBoard}>
             <div className="premios-results__panel-head">
@@ -482,9 +484,14 @@ export function PremiosResultsScreen({
                     <div
                       className={`premios-results__row premios-results__row--final${propia ? ' is-own' : ''}${hasAward(entry.rank) ? ' is-award' : ''}${abierta ? ' is-open' : ''}`}
                     >
-                      {/* La capa que hace pulsable la fila entera, como la del escalón del podio: fuera del árbol
-                          accesible, debajo del enlace y de los botones. */}
-                      <span className="premios-results__row-hit" aria-hidden="true" onClick={() => alternar(index)} />
+                      <button
+                        type="button"
+                        className="premios-results__row-hit"
+                        aria-expanded={abierta}
+                        aria-controls={idVotos}
+                        aria-label={abierta ? L.hideVotes(entry.nickname) : L.showVotes(entry.nickname)}
+                        onClick={() => alternar(index)}
+                      />
                       <span className={`premios-results__rank ${METAL[entry.rank - 1] || ''}`}>
                         <span className="sr-only">{L.positionAria(entry.rank)}</span>
                         <span aria-hidden="true">{entry.rank}</span>
@@ -506,29 +513,7 @@ export function PremiosResultsScreen({
                         <span aria-hidden="true">{L.pointsShort(entry.points)}</span>
                       </span>
 
-                      {enArchivo && hasAward(entry.rank) && ownProfileId ? (
-                        <button
-                          type="button"
-                          className="btn premios-results__trophy"
-                          aria-label={propia ? L.trophy : L.see}
-                          title={propia ? L.trophy : L.see}
-                          aria-pressed={galeria === premiados.indexOf(enArchivo)}
-                          onClick={() => verLamina(premiados.indexOf(enArchivo))}
-                        >
-                          <Icon name="trophy" />
-                        </button>
-                      ) : null}
 
-                      <button
-                        type="button"
-                        className="btn premios-results__toggle"
-                        aria-expanded={abierta}
-                        aria-controls={idVotos}
-                        aria-label={abierta ? L.hideVotes(entry.nickname) : L.showVotes(entry.nickname)}
-                        onClick={() => alternar(index)}
-                      >
-                        <Icon name="chevron-down" />
-                      </button>
                     </div>
 
                     {abierta ? (
