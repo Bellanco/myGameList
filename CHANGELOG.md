@@ -61,6 +61,8 @@ que se abre la edición siguiente.
 - **«En curso» enseña el orden por nombre** y, con él, el selector de tarjetas o renglones, que se quedaba fuera
   porque comparten cabecera. Igual en la lista de la vergüenza mientras no haya nada puntuado.
 - **Forja ya no pinta «Biblioteca» y el nombre de la lista** sobre las pestañas.
+- **Sin salida ya no pinta el láser en el fondo de la actividad social** —quedan los dos portales— **ni el «01 / 06»
+  en las tarjetas del resumen del año**.
 - **En el teléfono, las pestañas de las listas se reparten el ancho**: caben las cinco a 280 px y con el texto del
   sistema grande.
 - **En las mancuernas de Estadísticas, dos valores iguales se ven como un punto partido** en los dos colores, en vez
