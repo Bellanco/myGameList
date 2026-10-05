@@ -321,6 +321,8 @@ async function panelDeEstadisticas(page: Page): Promise<void> {
     hub?.querySelectorAll(':scope > *').forEach((card) => card.classList.add('is-in'));
   });
   await expect(page.locator('.genre-bump-svg')).toBeVisible();
+  // «Ya lo tienes en casa» entra en la auditoría: la siembra del panel trae deseos y Próximos emparentados.
+  await expect(page.locator('.stats-card-kin .kin-pair').first()).toBeVisible();
   await animacionesDeEntradaTerminadas(page);
 }
 
@@ -471,9 +473,9 @@ async function contrastesDeLaBarraDeProgreso(page: Page): Promise<Array<{ rareza
   });
 }
 
-const PANTALLAS = [
+const PANTALLAS: ReadonlyArray<{ nombre: string; amplia: boolean; deseos?: boolean; abrir: (page: Page) => Promise<void> }> = [
   { nombre: 'lista', amplia: false, abrir: listaConDetalleAbierto },
-  { nombre: 'panel', amplia: true, abrir: panelDeEstadisticas },
+  { nombre: 'panel', amplia: true, deseos: true, abrir: panelDeEstadisticas },
   { nombre: 'ajustes', amplia: false, abrir: pantallaDeAjustes },
   { nombre: 'menú de ajustes', amplia: false, abrir: menuDeAjustesAbierto },
   { nombre: 'hub social', amplia: false, abrir: puertaDelHubSocial },
@@ -481,13 +483,13 @@ const PANTALLAS = [
   { nombre: 'logros', amplia: true, abrir: listadoDeLogros },
   { nombre: 'premios', amplia: false, abrir: portadaDePremios },
   { nombre: 'premios · resultados', amplia: false, abrir: resultadosDePremios },
-] as const;
+];
 
 for (const palette of PALETAS) {
   for (const theme of TEMAS) {
-    for (const { nombre, amplia, abrir } of PANTALLAS) {
+    for (const { nombre, amplia, deseos, abrir } of PANTALLAS) {
       test(`sin violaciones de accesibilidad · ${nombre} · paleta ${palette} · tema ${theme}`, async ({ page }) => {
-        await sembrarBiblioteca(page, { theme, palette, amplia });
+        await sembrarBiblioteca(page, { theme, palette, amplia, deseos });
         await abrir(page);
         expect(await violacionesDe(page), `Violaciones en ${nombre} con ${palette}/${theme}`).toEqual([]);
       });

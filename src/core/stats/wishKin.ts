@@ -61,8 +61,8 @@ export interface WishKinSummary {
   pairs: WishKinPair[];
   /** Deseos frente a Próximos por género. */
   genres: WishKinGenre[];
-  /** Géneros que deseas sin ningún juego de ese género esperando en Próximos. */
-  gaps: string[];
+  /** Géneros que deseas sin ningún juego de ese género esperando en Próximos, con cuántos deseos tienen. */
+  gaps: Array<{ tag: string; wished: number }>;
 }
 
 interface Prepared {
@@ -211,6 +211,6 @@ export function computeWishKin(data: TabData): WishKinSummary {
       .filter((row) => row.wished > 0 && row.waiting === 0)
       .sort((a, b) => b.wished - a.wished || compareText(a.tag, b.tag))
       .slice(0, WISH_KIN_MAX_GAPS)
-      .map((row) => row.tag),
+      .map((row) => ({ tag: row.tag, wished: row.wished })),
   };
 }

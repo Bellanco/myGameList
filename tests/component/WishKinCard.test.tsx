@@ -92,7 +92,7 @@ describe('la tarjeta', () => {
     withKin: 0,
     pairs: [],
     genres: [{ tag: 'Carreras', wished: 1, waiting: 0 }],
-    gaps: ['Carreras'],
+    gaps: [{ tag: 'Carreras', wished: 1 }],
   };
 
   it('sin parejas lo dice, y la comparación sigue', () => {
@@ -124,6 +124,14 @@ describe('mancuernas con dos series cualesquiera', () => {
     expect(container.querySelector('.dumbbell-rate')).toHaveTextContent('29%');
     expect([...container.querySelectorAll('.stats-legend li')].map((item) => item.textContent)).toEqual(['Terminados', 'Abandonados']);
     expect((container.querySelector('.dumbbell') as HTMLElement).style.getPropertyValue('--db-first')).toBe('var(--stats-v)');
+  });
+
+  it('con los dos valores iguales, un solo punto partido y una sola cifra', () => {
+    const { container } = render(
+      <Dumbbell rows={[{ tag: 'RPG', first: 1, second: 1 }]} series={[{ label: 'Próximos', list: 'p' }, { label: 'Deseos', list: 'd' }]} />,
+    );
+
+    expect(container.querySelector('.dumbbell li')).toHaveClass('is-tied');
   });
 
   it('sin cifra al final, la fila no le reserva hueco', () => {

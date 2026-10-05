@@ -90,7 +90,8 @@ export const WishKinCard = memo(function WishKinCard({ kin }: { kin: WishKinSumm
         <section>
           <h3>{L.gaps}</h3>
           <p className="stats-note">{L.gapsHint}</p>
-          <TagChips tags={kin.gaps.map((tag) => ({ tag, games: 1, hours: 0 }))} />
+          {/* La cifra de cada chip es cuántos deseos tiene ese género: lo que pesa ese hueco. */}
+          <TagChips tags={kin.gaps.map((gap) => ({ tag: gap.tag, games: gap.wished, hours: 0 }))} />
         </section>
       ) : null}
     </>

@@ -53,7 +53,9 @@ export const Dumbbell = memo(function Dumbbell({
     <>
       <ul className={`dumbbell${withNotes ? '' : ' is-plain'}`} style={colors}>
         {rows.map((row, index) => (
-          <li key={row.tag} style={{ '--i': index } as CSSProperties}>
+          // EMPATE: los dos puntos caen en el mismo sitio y el de encima tapaba al otro, así que parecía que una
+          // de las series no tenía nada. Se pinta UN punto partido con los dos colores y una sola cifra.
+          <li key={row.tag} className={row.first === row.second ? 'is-tied' : undefined} style={{ '--i': index } as CSSProperties}>
             <span className="dumbbell-tag" title={row.tag}>{row.tag}</span>
             <span className="dumbbell-track">
               <span

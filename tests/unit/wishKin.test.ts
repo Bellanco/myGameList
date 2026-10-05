@@ -145,7 +145,7 @@ describe('géneros: lo que deseas frente a lo que esperas', () => {
       { tag: 'Carreras', wished: 1, waiting: 0 },
       { tag: 'Estrategia', wished: 0, waiting: 1 },
     ]);
-    expect(kin.gaps).toEqual(['Roguelike', 'Carreras']);
+    expect(kin.gaps).toEqual([{ tag: 'Roguelike', wished: 2 }, { tag: 'Carreras', wished: 1 }]);
   });
 });
 
@@ -157,7 +157,7 @@ describe('listas vacías', () => {
   it('sin Próximos, ningún deseo tiene pariente y todos sus géneros son hueco', () => {
     const kin = computeWishKin(listas([juego('Silksong', { genres: ['Metroidvania'] })], []));
 
-    expect(kin).toMatchObject({ wishes: 1, withKin: 0, pairs: [], gaps: ['Metroidvania'] });
+    expect(kin).toMatchObject({ wishes: 1, withKin: 0, pairs: [], gaps: [{ tag: 'Metroidvania', wished: 1 }] });
   });
 
   it('solo mira Próximos: lo terminado no es «el próximo listo»', () => {

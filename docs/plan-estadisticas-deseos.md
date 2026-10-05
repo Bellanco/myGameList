@@ -1,6 +1,6 @@
 # Plan: «Ya lo tienes en casa» — los deseos frente a Próximos
 
-Estado: en curso (05-10-2026). Documento vivo: si una línea no coincide con el código, manda el código.
+Estado: implementado en `develop` (05-10-2026). Documento vivo: si una línea no coincide con el código, manda el código.
 Depende de la lista de deseos (`docs/plan-lista-deseos.md`).
 
 ## Qué es
@@ -69,8 +69,13 @@ saga.
   - Para la comparación, generalizar `Dumbbell` (hoy atado a terminados/abandonados) a dos series con sus
     rótulos, sin cambiar lo que pinta en la vergüenza. Un test de componente lo fija.
   - Tests de componente: cifra, parejas, estado sin parejas, y que no sale en el panel de un amigo.
-- [ ] **3. Acabado y verificación.**
+- [x] **3. Acabado y verificación.**
   - Colores de las dos series con `--stats-p` y un `--stats-d` nuevo en `stats.scss`, más las sobrescrituras de
     los temas que redefinen los `--stats-*` (Witcher, Cyberpunk…). En claro y en oscuro.
   - Sembrar deseos en `tests/e2e/seed.ts` para que el recorrido de accesibilidad (axe) pase por la tarjeta.
   - Revisar en Chrome los ocho temas a 375, 1280 y 1512 px, con la biblioteca sembrada (`myGames.json`).
+
+  Lo que salió de la revisión (y ya está arreglado):
+  - con los dos valores iguales los puntos de la mancuerna se tapaban: ahora es un punto partido en dos colores;
+  - a 320 px con el texto del sistema grande el carril se quedaba en 40 px: en estrecho el nombre sube encima;
+  - en Grimdark el tono de Deseos (pizarra) se confundía con el verde de Próximos en claro: usa el óxido.

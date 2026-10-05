@@ -1483,8 +1483,33 @@
 .dumbbell-dot.is-first { background: var(--db-first); }
 .dumbbell-dot.is-second { background: var(--db-second); }
 
+/* Empate: un solo punto partido en dos colores (ver `Dumbbell`). El de debajo se esconde y su cifra con él. */
+.dumbbell li.is-tied .dumbbell-dot.is-first { visibility: hidden; }
+.dumbbell li.is-tied .dumbbell-dot.is-second { background: linear-gradient(90deg, var(--db-first) 50%, var(--db-second) 50%); }
+
 /* Sin cifra al final de la fila, la tercera columna sobra: el carril se queda con su ancho. */
 .dumbbell.is-plain li { grid-template-columns: minmax(4.5rem, 8rem) 1fr; }
+
+/* EN ESTRECHO, EL NOMBRE ENCIMA DEL CARRIL. A 320 px y con el texto del sistema grande, la columna del nombre
+   (4,5 rem como mínimo) y el hueco dejaban al carril en unos 40 px: los dos puntos y sus cifras, montados. La
+   lista mide su propio ancho, y el umbral va en `rem` a propósito: con la letra grande el carril necesita más
+   sitio, y así el cambio llega antes. */
+.dumbbell { container-type: inline-size; }
+
+@container (width < 17rem) {
+  .dumbbell li,
+  .dumbbell.is-plain li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 0;
+  }
+
+  .dumbbell.is-plain li { grid-template-columns: minmax(0, 1fr); }
+
+  .dumbbell-tag { grid-column: 1 / -1; }
+
+  /* Sitio para la cifra, que va ENCIMA de su punto y si no se montaba sobre el nombre. */
+  .dumbbell-track { margin-top: .95rem; }
+}
 
 /* La cifra despega del punto: el punto tiene borde, y algún tema le añade además un contorno de tinta o un
    halo de neón, así que pegada al 100% quedaba montada encima de ese anillo. */
