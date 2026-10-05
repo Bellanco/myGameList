@@ -10,6 +10,7 @@ import { COVERS_KEY, EFFECTS_KEY, GRID_SIZE_KEY, LIST_SHAPE_KEY, PALETTE_KEY, PA
 import { DEFAULT_PALETTE, paletteBg, parsePaletteId, type PaletteId } from '../../core/constants/palettes';
 import { createPreferenceStore, hydratePreferencesFromCloud } from '../../model/repository/preferenceStore';
 import { loadPaletteSkin } from './paletteSkin';
+import { markThemeChanged } from '../../core/achievements/deviceSignals';
 
 export type ThemePreference = 'dark' | 'light';
 
@@ -108,6 +109,8 @@ function applyPaletteToDom(): void {
   // bundle base), así que no hace falta preguntar por cuál es cuál.
   loadPaletteSkin(palette);
   document.documentElement.setAttribute('data-palette', palette);
+  // El sello de «Ajustes de vídeo»: un tema estrenado se queda apuntado aunque luego se vuelva al de casa.
+  if (palette !== DEFAULT_PALETTE) markThemeChanged();
   applyThemeColor(themePreference.get());
 }
 

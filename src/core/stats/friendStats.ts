@@ -1,5 +1,5 @@
 import { TAB_IDS, type GameItem, type TabData, type TabId } from '../../model/types/game';
-import { ADMIN_ONLY_TIER, type ProfileTier } from '../constants/tiers';
+import type { ProfileTier } from '../constants/tiers';
 import type { StatsBlock } from './types';
 import type { SocialSharedGame } from '../../model/types/social';
 
@@ -39,8 +39,10 @@ export type FriendStatsBlock = Exclude<StatsBlock, 'reviews' | 'activity'>;
 /**
  * QUÉ VE CADA RANGO. Manda el rango de QUIEN MIRA.
  *
- * Bronce se queda en los cuatro bloques de retrato —quién es en su biblioteca y qué juega—; plata y oro ven
- * además cómo puntúa y cuánto termina; mithril ve EL PANEL COMPLETO, el mismo que tiene en su propio perfil.
+ * Bronce se queda en los bloques de retrato —quién es en su biblioteca y qué juega—; plata, oro y mithril ven
+ * además cómo puntúa y cuánto termina. EL PANEL COMPLETO, el mismo que tiene en su propio perfil, no lo da ningún
+ * rango: es de la cuenta de administración, y lo decide el claim `admin` (ver `friendStatsBlocks`). Mithril se
+ * queda en lo general porque el resto de bloques necesita los datos completos, que solo recibe la administración.
  *
  * Es una regla de PRODUCTO y la aplica el cliente, como la cadencia del feed o el límite de publicación: quien
  * manipule su copia puede saltársela, y lo único que conseguiría es ver datos que su amigo ya le ha publicado.
@@ -67,19 +69,18 @@ const TIER_BLOCKS: Record<ProfileTier, readonly FriendStatsBlock[]> = {
   bronze: ['top', 'years', 'radar', 'genres', 'genreRanks'],
   silver: GENERAL_BLOCKS,
   gold: GENERAL_BLOCKS,
-  mithril: ALL_BLOCKS,
+  mithril: GENERAL_BLOCKS,
 };
 
-/** Cuántos bloques da el rango más alto: sirve para saber si al que mira le queda algo por desbloquear. */
-export const FRIEND_STATS_MAX_BLOCKS = TIER_BLOCKS.mithril.length;
-
-export function friendStatsBlocks(tier: ProfileTier): readonly FriendStatsBlock[] {
+/** Bloques que se pintan: el panel entero para la administración y, para el resto, los de su rango. */
+export function friendStatsBlocks(tier: ProfileTier, isAdmin: boolean): readonly FriendStatsBlock[] {
+  if (isAdmin) return ALL_BLOCKS;
   return TIER_BLOCKS[tier] || TIER_BLOCKS.bronze;
 }
 
-/** ¿Puede este rango cambiar de periodo (General y un año concreto) en el panel de un amigo? */
-export function friendStatsHasYearTabs(tier: ProfileTier): boolean {
-  return tier === ADMIN_ONLY_TIER;
+/** ¿Puede cambiar de periodo (General y un año concreto) en el panel de un amigo? Solo la administración. */
+export function friendStatsHasYearTabs(isAdmin: boolean): boolean {
+  return isAdmin;
 }
 
 /** Nivel de datos con el que se calcula el panel de otra persona (ver la cabecera del módulo). */
@@ -92,8 +93,8 @@ export type FriendStatsData = 'public' | 'full';
  * Que el dato esté cargado no autoriza a pintarlo: el gist de listados se baja para las pestañas de juegos y
  * reseñas del perfil, no para deducir de él las horas de nadie.
  */
-export function friendStatsData(tier: ProfileTier): FriendStatsData {
-  return tier === ADMIN_ONLY_TIER ? 'full' : 'public';
+export function friendStatsData(isAdmin: boolean): FriendStatsData {
+  return isAdmin ? 'full' : 'public';
 }
 
 export interface FriendTabsResult {
@@ -113,15 +114,15 @@ export interface FriendTabsResult {
  * filtrar por su parte—. Sobre esas, el espectador solo ve aquellas que él mismo tiene a la vista: quien
  * esconde sus completados no mira los completados de nadie, y quien lo esconde todo se queda sin panel.
  *
- * La cuenta de administración (mithril) queda fuera de la regla: ve lo que le llegue, esconda lo que esconda.
+ * La cuenta de administración (claim `admin`) queda fuera de la regla: ve lo que le llegue, esconda lo que esconda.
  */
 export function friendVisibleTabs(
   available: TabId[],
   viewerHiddenTabs: readonly TabId[],
-  viewerTier: ProfileTier,
+  viewerIsAdmin: boolean,
 ): FriendTabsResult {
   const ordered = TAB_IDS.filter((tab) => available.includes(tab));
-  if (viewerTier === ADMIN_ONLY_TIER) {
+  if (viewerIsAdmin) {
     return { tabs: ordered, blockedByViewer: [] };
   }
 

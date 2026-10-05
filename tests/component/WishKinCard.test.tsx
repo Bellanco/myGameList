@@ -76,12 +76,14 @@ describe('«Ya lo tienes en casa» en tu panel', () => {
     expect(screen.queryByRole('heading', { name: L.title })).not.toBeInTheDocument();
   });
 
-  it('no es un bloque del perfil de nadie más, en ningún rango', () => {
+  it('no es un bloque del perfil de nadie más, en ningún rango ni para la administración', () => {
     for (const tier of PROFILE_TIERS) {
-      const blocks = friendStatsBlocks(tier);
-      // Que cada rango tenga bloques es lo que hace que esta comprobación pruebe algo.
-      expect(blocks.length).toBeGreaterThan(0);
-      expect(blocks).not.toContain('kin');
+      for (const isAdmin of [false, true]) {
+        const blocks = friendStatsBlocks(tier, isAdmin);
+        // Que cada rango tenga bloques es lo que hace que esta comprobación pruebe algo.
+        expect(blocks.length).toBeGreaterThan(0);
+        expect(blocks).not.toContain('kin');
+      }
     }
   });
 });

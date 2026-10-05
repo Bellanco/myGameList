@@ -33,7 +33,7 @@ import { YEAR_SUMMARY_UI } from '../../../core/constants/yearSummaryLabels';
 import { buildYearSummary, summaryYear } from '../../../core/stats/yearSummary';
 import { withFinishedOn, type FinishedGame } from '../../../core/utils/finishDates';
 import type { ProfileTier } from '../../../core/constants/tiers';
-import { ADMIN_ONLY_TIER, DEFAULT_PROFILE_TIER } from '../../../core/constants/tiers';
+import { DEFAULT_PROFILE_TIER } from '../../../core/constants/tiers';
 import type { RelationshipState } from '../../../model/types/social';
 
 // Paginación de los juegos del perfil: se muestran de 15 en 15 para evitar scroll excesivo al abrir el detalle.
@@ -198,6 +198,7 @@ function SocialProfileDetailScreenBase({
   onCancelFriendRequest,
   onRemoveFriend,
   viewerTier = DEFAULT_PROFILE_TIER,
+  viewerIsAdmin = false,
   viewerHiddenTabs = [],
   viewerCompleted,
   viewerPending,
@@ -247,6 +248,8 @@ function SocialProfileDetailScreenBase({
   friendshipBusy?: boolean;
   /** Rango de quien mira: decide cuánto enseña el panel de estadísticas del perfil. */
   viewerTier?: ProfileTier;
+  /** ¿Quien mira tiene el claim `admin`? Lo que se exceptúa aquí es de la administración, no de un rango. */
+  viewerIsAdmin?: boolean;
   /** Listas que quien mira esconde en su propio perfil: lo que esconde, tampoco lo ve aquí. */
   viewerHiddenTabs?: TabId[];
   /**
@@ -304,7 +307,7 @@ function SocialProfileDetailScreenBase({
    */
   const yearSummary = useMemo(() => {
     if (!canSeeFullProfile || !activeProfileDetail) return null;
-    const isAdmin = viewerTier === ADMIN_ONLY_TIER;
+    const isAdmin = viewerIsAdmin;
     const year = summaryYear();
     if (isOwnProfile) {
       const own = viewerCompleted ?? ((activeProfileDetail.sharedLists?.c || []) as GameItem[]);
@@ -315,7 +318,7 @@ function SocialProfileDetailScreenBase({
       (game): game is FinishedGame => typeof game === 'object' && game !== null && '_ts' in game,
     );
     return buildYearSummary({ completed: theirs, year, precision: isAdmin ? 'day' : 'month', viewerCompleted: viewerCompleted ?? [], viewerPending, palmares });
-  }, [activeProfileDetail, canSeeFullProfile, isOwnProfile, palmares, viewerCompleted, viewerHiddenTabs, viewerPending, viewerTier]);
+  }, [activeProfileDetail, canSeeFullProfile, isOwnProfile, palmares, viewerCompleted, viewerHiddenTabs, viewerIsAdmin, viewerPending]);
 
   // Abrir TU resumen es lo que puede avisar a tus amistades. Se avisa al pintarse de verdad —desplegado y con
   // datos—, no al pulsar: llegar desde el aviso del 15 también cuenta como haberlo visto.
@@ -393,13 +396,13 @@ function SocialProfileDetailScreenBase({
   // recibe: el filtro de arriba —`applyProfileVisibility`— la exceptúa igual). Su tiempo de juego es lo único que
   // sigue oculto para todos.
   const visibleTabs = useMemo(() => {
-    if (!activeProfileDetail?.visibility || viewerTier === ADMIN_ONLY_TIER) {
+    if (!activeProfileDetail?.visibility || viewerIsAdmin) {
       return [...TAB_ORDER];
     }
 
     const hidden = new Set(activeProfileDetail.visibility.hiddenTabs || []);
     return TAB_ORDER.filter((tab) => !hidden.has(tab));
-  }, [activeProfileDetail, viewerTier]);
+  }, [activeProfileDetail, viewerIsAdmin]);
 
   const currentTab = visibleTabs.includes(activeListTab) ? activeListTab : visibleTabs[0] || 'c';
 
@@ -615,7 +618,7 @@ function SocialProfileDetailScreenBase({
         </div>
         <article className="hub-feed-card hub-feed-card-detail">
           <div className="hub-profile-hero">
-            <HubAvatar photoURL={activeProfileDetail.photoURL} sizeClass="hub-avatar-lg" />
+            <HubAvatar photoURL={activeProfileDetail.photoURL} sizeClass="hub-avatar-lg" highDensity />
             <h3 className="hub-profile-hero-name">{activeProfileDetail.displayName}</h3>
             {/* AQUÍ NO VA EL SELLO DE RANGO. En el perfil de otra persona el rango no se enseña por ahora; en el
                 directorio sigue estando la muesca de color de la tarjeta, que es la que sirve para recorrer la
@@ -695,6 +698,7 @@ function SocialProfileDetailScreenBase({
                   <FriendStats
                     sharedLists={activeProfileDetail.sharedLists || {}}
                     viewerTier={viewerTier}
+                    viewerIsAdmin={viewerIsAdmin}
                     viewerHiddenTabs={viewerHiddenTabs}
                   />
                 </Suspense>

@@ -2,10 +2,10 @@
 //
 // Módulo propio y deliberadamente diminuto, por presupuesto de chunk: quien SELLA estas señales es la ruleta,
 // y si el sello viviera en `viewmodel/useAchievements` —que importa el evaluador y el catálogo entero— abrir la
-// ruleta arrastraría todo eso a su chunk sin pintar una sola medalla. Aquí solo hay dos accesos a
-// `localStorage`, que es exactamente lo que ese punto necesita. Mismo criterio que separó `feedMovePreference`
+// ruleta arrastraría todo eso a su chunk sin pintar una sola medalla. Aquí solo hay accesos a `localStorage`, que
+// es exactamente lo que ese punto necesita (y lo mismo para el sello del tema, que lo escribe el arranque). Mismo criterio que separó `feedMovePreference`
 // de `view/hooks/preferences`.
-import { ACHIEVEMENTS_SOCIAL_KEY, ROULETTE_USED_KEY } from '../constants/storageKeys';
+import { ACHIEVEMENTS_SOCIAL_KEY, ROULETTE_USED_KEY, THEME_CHANGED_KEY } from '../constants/storageKeys';
 
 function read(key: string): string {
   try {
@@ -32,6 +32,25 @@ export function markRouletteUsed(now = Date.now()): void {
     localStorage.setItem(ROULETTE_USED_KEY, String(now));
   } catch {
     // Sin persistencia: vale para la sesión en curso y no se recordará.
+  }
+}
+
+/** Sello (ms) de la primera vez que se aplicó un tema que no es el de casa, o 0. */
+export function themeChangedAt(): number {
+  return Number(read(THEME_CHANGED_KEY)) || 0;
+}
+
+/**
+ * Marca que se ha estrenado un tema. Idempotente, como el de la ruleta: solo escribe la PRIMERA vez. Lo llama
+ * quien aplica la paleta al documento, que es el único sitio por el que pasan todos los cambios de tema —el
+ * selector, la preferencia que llega de la nube y el arranque—.
+ */
+export function markThemeChanged(now = Date.now()): void {
+  if (read(THEME_CHANGED_KEY)) return;
+  try {
+    localStorage.setItem(THEME_CHANGED_KEY, String(now));
+  } catch {
+    // Sin persistencia: el logro se sigue derivando del tema activo, que es lo que hacía antes.
   }
 }
 

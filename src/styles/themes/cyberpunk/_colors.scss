@@ -107,10 +107,14 @@
 /* cyberpunk — amarillo ácido, cian, teal, azul de marca, rojo Arasaka, magenta y plata de HUD */
 :root[data-palette="cyberpunk"] {
   --cat-1: #fcee0a; --cat-2: #00f0ff; --cat-3: #43e8c8; --cat-4: #2b7bff; --cat-5: #ff2a4d; --cat-6: #ff2a6d; --cat-7: #b9c6d3;
+  /* La lista de DESEOS (feed, estadísticas): el tono que más se aparta de los otros avisos; el sexto (rosa neón) era casi el de «abandonó». */
+  --wish: var(--cat-3);
   --cat-1-fg: #fcee0a; --cat-2-fg: #00f0ff; --cat-3-fg: #43e8c8; --cat-4-fg: #458bff; --cat-5-fg: #ff4664; --cat-6-fg: #ff417d; --cat-7-fg: #b9c6d3;
 }
 /* cyberpunk — amarillo ácido, cian, teal, azul de marca, rojo Arasaka, magenta y plata de HUD */
 :root[data-palette="cyberpunk"][data-theme="light"] {
   --cat-1: #8a6d00; --cat-2: #00757f; --cat-3: #0c8a72; --cat-4: #1d5fd6; --cat-5: #c5003c; --cat-6: #b3005a; --cat-7: #4c5967;
+  /* En claro, el magenta: el turquesa de noche se acercaba aquí al verde de «finalizó». */
+  --wish: var(--cat-6);
   --cat-1-fg: #785f00; --cat-2-fg: #006e77; --cat-3-fg: #0a705d; --cat-4-fg: #1c5ccf; --cat-5-fg: #c5003c; --cat-6-fg: #b3005a; --cat-7-fg: #4c5967;
 }

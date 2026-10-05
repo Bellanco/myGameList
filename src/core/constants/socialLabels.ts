@@ -454,8 +454,6 @@ export const SOCIAL_UI = {
     postDeleteOffline: 'Sin conexión: la publicación no se ha eliminado. Inténtalo al recuperar la red.',
     // Mismo caso que al publicar: GitHub limitando o caído no es un fallo de lo que el usuario ha hecho.
     postChangeLimited: 'Ahora mismo no se puede cambiar la publicación: el servicio no responde. Inténtalo más tarde.',
-    profileGamesRefreshFailed: 'No se pudieron actualizar los listados de este perfil.',
-    refreshThrottled: 'Espera unos segundos antes de volver a actualizar.',
     friendRequestSent: 'Petición de amistad enviada.',
     friendRequestAccepted: 'Ahora sois amigos.',
     friendRequestCanceled: 'Petición cancelada.',

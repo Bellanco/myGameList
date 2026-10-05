@@ -26,7 +26,6 @@ vi.mock('../../src/core/utils/profileVisibility', () => ({ applyProfileVisibilit
 vi.mock('../../src/model/repository/socialGistRepository', () => ({ getSocialSyncConfig: () => null }));
 
 const { useForeignProfileGames } = await import('../../src/viewmodel/social/useForeignProfileGames');
-const { SOCIAL_UI } = await import('../../src/core/constants/socialLabels');
 
 const LISTAS = { c: [{ id: 7, name: 'Hollow Knight' }], v: [], e: [], p: [] };
 
@@ -46,8 +45,6 @@ function entrada(overrides: Record<string, unknown> = {}) {
  * resolviendo en el reintento. Es decir: pasarlas inestables cambia lo que la prueba mide.
  */
 function setup(opciones: Record<string, unknown> = {}) {
-  const setFeedback = vi.fn();
-  const reportFailure = vi.fn();
   const opts = {
     activePanel: 'profile-detail',
     profileDetailId: 'perfil-ana',
@@ -57,15 +54,13 @@ function setup(opciones: Record<string, unknown> = {}) {
     directory: [entrada()] as never,
     relationshipWith: () => 'friends',
     localGames: { c: [{ id: 1, name: 'Mío' }], v: [], e: [], p: [], deleted: [], updatedAt: 0 } as never,
-    ownTier: 'bronce' as never,
+    isAdmin: false,
     defaultVisibility: {} as never,
     fallbackToken: 'ghp_0123456789abcdefghij',
-    setFeedback,
-    reportFailure,
     ...opciones,
   };
-  const hook = renderHook(() => useForeignProfileGames(opts as never));
-  return { ...hook, setFeedback, reportFailure };
+  const hook = renderHook((props: typeof opts) => useForeignProfileGames(props as never), { initialProps: opts });
+  return { ...hook, opts };
 }
 
 beforeEach(() => {
@@ -83,7 +78,7 @@ describe('listados de otra persona', () => {
       profileId: 'perfil-ana', gamesGistId: 'bbbb2222', token: 'ghp_0123456789abcdefghij',
     });
     // Regla 2: el recorte se aplica AL GUARDAR, con el rango de quien mira dentro.
-    expect(applyProfileVisibility).toHaveBeenCalledWith(LISTAS, expect.objectContaining({ hiddenTabs: [] }), 'bronce');
+    expect(applyProfileVisibility).toHaveBeenCalledWith(LISTAS, expect.objectContaining({ hiddenTabs: [] }), false);
   });
 
   it('de quien NO es amigo no se lee nada, ni para pintar su ficha', async () => {
@@ -113,7 +108,7 @@ describe('listados de otra persona', () => {
     const { result } = setup();
 
     await waitFor(() => expect(result.current.foreignProfileFailed['perfil-ana']).toBe(true));
-    // Y el indicador de «bajando» baja igual: si no, el botón de actualizar se queda colgado.
+    // Y el indicador de «bajando» baja igual: si no, la pantalla se queda esperando.
     await waitFor(() => expect(result.current.loadingForeignProfile).toBe(false));
   });
 
@@ -127,26 +122,17 @@ describe('listados de otra persona', () => {
     expect(result.current.getGameItemById('perfil-ana', 999)).toBeNull();
   });
 
-  // Relee forzando, pero SIN borrar antes la copia guardada: si GitHub limita o no hay red, borrarla dejaba a ese
-  // amigo sin listados para la próxima visita. La lectura forzada la sustituye cuando sale bien.
-  it('el refresco manual relee forzando sin borrar antes la copia guardada', async () => {
-    const { result } = setup();
+  // EL FILTRO LO DECIDE EL CLAIM, y lo bajado se filtró con el de entonces: si cambia con la sesión abierta, lo
+  // guardado se tira y se vuelve a pedir, ya con el nuevo.
+  it('filtra con el claim de administración y vuelve a pedir si cambia', async () => {
+    const { result, rerender, opts } = setup();
     await waitFor(() => expect(result.current.foreignGames['perfil-ana']).toBeTruthy());
+    expect(applyProfileVisibility).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), false);
+
     loadForeignProfileGames.mockClear();
+    rerender({ ...opts, isAdmin: true });
 
-    await result.current.refreshProfileDetail();
-
-    expect(invalidateProfileGames).not.toHaveBeenCalled();
-    expect(loadForeignProfileGames).toHaveBeenCalledWith(expect.objectContaining({ forceRefresh: true }));
-  });
-
-  it('si el refresco no trae nada, avisa en vez de callarse', async () => {
-    const { result, setFeedback } = setup();
-    await waitFor(() => expect(result.current.foreignGames['perfil-ana']).toBeTruthy());
-    loadForeignProfileGames.mockResolvedValueOnce(null);
-
-    await result.current.refreshProfileDetail();
-
-    expect(setFeedback).toHaveBeenCalledWith('warn', SOCIAL_UI.status.profileGamesRefreshFailed);
+    await waitFor(() => expect(loadForeignProfileGames).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(applyProfileVisibility).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), true));
   });
 });

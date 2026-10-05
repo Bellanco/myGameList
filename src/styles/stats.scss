@@ -40,8 +40,8 @@
   --stats-v: var(--danger);
   --stats-e: var(--warn);
   --stats-p: var(--steam);
-  /* Deseos: el sexto tono de la rampa categórica, el mismo que lleva su mensaje en el feed. */
-  --stats-d: var(--cat-6);
+  /* Deseos: el mismo tono que lleva su mensaje en el feed (`--wish`, que elige cada tema). */
+  --stats-d: var(--wish, var(--cat-6));
 
   /* RAMPA SECUENCIAL para los repartos por etiqueta (rosetón, hexágono). Dos tonos del tema entre los que se
      interpola por puesto: con un solo tono, diez géneros casi empatados salían todos del mismo color. Cada
@@ -1608,25 +1608,7 @@
 
 .kin-why {
   grid-area: why;
-  display: flex;
-  flex-wrap: wrap;
-  gap: .3rem;
   margin-top: .15rem;
-}
-
-.kin-why-chip {
-  padding: .1rem .5rem;
-  border-radius: var(--stats-pill);
-  border: 1px solid color-mix(in srgb, var(--stats-d) 40%, transparent);
-  background: color-mix(in srgb, var(--stats-d) 12%, transparent);
-  font-size: var(--fs-2xs);
-  color: var(--text);
-  white-space: nowrap;
-}
-
-.kin-pair.is-saga .kin-why-chip {
-  border-color: color-mix(in srgb, var(--stats-p) 40%, transparent);
-  background: color-mix(in srgb, var(--stats-p) 12%, transparent);
 }
 
 @container (width >= 34rem) {
@@ -1640,7 +1622,7 @@
   .kin-why {
     justify-content: flex-end;
     margin-top: 0;
-    max-width: 16rem;
+    max-width: 18rem;
   }
 }
 

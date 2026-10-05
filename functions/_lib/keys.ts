@@ -81,7 +81,7 @@ export const relatedIndexKey = (uid: string): string => `relidx:${uid}`;
 
 /**
  * CUPO DE CARÁTULAS LEVANTADO para una IP. Lo escribe `/api/cover-quota` cuando quien llama demuestra, con su
- * ID token, que su perfil es del rango más alto; lo lee `/cover` solo cuando esa IP ha agotado su cupo.
+ * ID token, que tiene el claim `admin`; lo lee `/cover` solo cuando esa IP ha agotado su cupo.
  *
  * Va por IP y no por usuario porque las imágenes se piden con `<img src>`, que no puede llevar cabeceras: meter
  * una sesión en la URL la volvería distinta para cada persona y rompería la caché compartida —y la del service

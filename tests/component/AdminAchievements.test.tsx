@@ -104,6 +104,16 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
     expect(primero.querySelector('.admin-ach-meter')).toHaveAttribute('aria-hidden', 'true');
   });
 
+  // LOS PRIMEROS PASOS NO SE PUBLICAN, así que la medición no los ve nunca: su columna dice eso y no un 0 %, que
+  // hacía creer que «Tira el dado» o «Ajustes de vídeo» estaban rotos.
+  it('los primeros pasos dicen que no se publican en vez de un 0 %', () => {
+    render(<AdminAchievements onBack={() => {}} mirrors={[espejo(['completados-10'])]} />);
+    const fila = screen.getAllByText('Tira el dado').map((el) => el.closest('tr')).find(Boolean) as HTMLElement;
+    expect(within(fila).getByText(A.notPublished)).toBeInTheDocument();
+    expect(within(fila).queryByText(/%/)).not.toBeInTheDocument();
+    expect(fila.querySelector('.admin-ach-meter')).toBeNull();
+  });
+
   /** Sin muestra no hay barra: dibujar un canal vacío afirmaría un 0 % que nadie ha medido. */
   it('sin espejos publicados no pinta ninguna barra', () => {
     render(<AdminAchievements onBack={() => {}} />);

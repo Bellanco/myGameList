@@ -13,6 +13,7 @@ import { isPermissionDeniedError } from '../model/repository/firebaseClient';
 import { useOnlineStatus } from '../view/hooks/useOnlineStatus';
 import { resolveViewer, withVisiblePhotos } from '../core/social/photoVisibility';
 import { useGenericPhoto } from '../view/hooks/useGenericPhoto';
+import { useIsAdmin } from '../view/hooks/useIsAdmin';
 import { useAchievementsConfig } from '../view/hooks/useAchievementsConfig';
 import { useOpenFrontier } from '../view/hooks/useOpenFrontier';
 import { SOCIAL_UI } from '../core/constants/socialLabels';
@@ -180,6 +181,12 @@ export function useSocialViewModel(options?: {
    * pasaba por tenerla: publicaba el monograma y, por la reciprocidad, veía las caras de sus amigos sin poner la suya.
    */
   const ownPhotoIsGeneric = useGenericPhoto(authUser?.photoURL);
+  /**
+   * ¿Quien mira es la administración? Lo decide el claim `admin` del token, como en las reglas y en el panel, y NO
+   * el rango: mithril es una etiqueta que puede llevar el administrador, no lo que le da sus excepciones (fotos,
+   * listas ocultas, panel completo de estadísticas de un amigo).
+   */
+  const isAdmin = useIsAdmin();
   // P1: profileId canónico del usuario (6.2a), para detectar propiedad por identidad (no por email). Hoy el id del
   // doc de directorio es el uid; tras el cutover index-only será el profileId → comprobamos ambos (ver isOwnProfileIdentity).
   const [ownProfileId, setOwnProfileId] = useState<string | null>(null);
@@ -283,7 +290,6 @@ export function useSocialViewModel(options?: {
   // es `socialDirectory`, unas líneas más abajo: el mismo directorio con la política de fotos ya aplicada.
   // Los listados de OTRAS personas viven en `useForeignProfileGames` (se invoca más abajo, cuando ya están
   // resueltos el directorio y la relación de amistad que necesita para decidir si puede pedirlos).
-  // Cooldown visible del botón "Actualizar": se deshabilita durante FORCED_REFRESH_MIN_MS tras un refresco forzado.
 
 
   /**
@@ -540,7 +546,6 @@ export function useSocialViewModel(options?: {
     rawSocialDirectory: feedDirectory,
     directoryLoading,
     setDirectorySettled,
-    refreshCoolingDown,
     hydrateSocialDirectory,
     patchDirectoryEntries,
   } = useSocialDirectory({
@@ -903,7 +908,7 @@ export function useSocialViewModel(options?: {
   // en el feed. Se invalida la caché del directorio (feed solo-amigos) y se refresca la amistad; el efecto que
   // depende de `friendships.friends` rehidrata el directorio releyendo los gists de los amigos actuales.
   // RECIPROCIDAD DE LA FOTO (ver core/social/photoVisibility): quien esconde la suya no ve la de nadie, y la de los
-  // demás solo se ve con amistad aceptada. Mithril queda exento.
+  // demás solo se ve con amistad aceptada. La administración (el claim) queda exenta.
   //
   // Se aplica AQUÍ, sobre el directorio ya hidratado, y no al hidratarlo: la hidratación cachea su resultado en
   // IndexedDB con el TTL del rango, así que sellar la política ahí dejaba el ajuste sin efecto hasta que la caché
@@ -912,8 +917,8 @@ export function useSocialViewModel(options?: {
   // `resolveViewer` y no `showPhoto` a secas: quien lleva el interruptor activado pero no tiene foto en su cuenta de
   // Google no publica ninguna, así que tampoco ve las de los demás. Ver la nota del ajuste, que lo explica en su sitio.
   const photoViewer = useMemo(
-    () => resolveViewer({ showPhoto, ownPhotoURL: authUser?.photoURL, ownPhotoIsGeneric, tier: ownTier }),
-    [showPhoto, authUser?.photoURL, ownPhotoIsGeneric, ownTier],
+    () => resolveViewer({ showPhoto, ownPhotoURL: authUser?.photoURL, ownPhotoIsGeneric, isAdmin }),
+    [showPhoto, authUser?.photoURL, ownPhotoIsGeneric, isAdmin],
   );
 
   /**
@@ -1069,7 +1074,6 @@ export function useSocialViewModel(options?: {
     foreignProfileFailed,
     loadingForeignProfile,
     getGameItemById,
-    refreshProfileDetail,
   } = useForeignProfileGames({
     activePanel,
     profileDetailId,
@@ -1079,11 +1083,9 @@ export function useSocialViewModel(options?: {
     directory: socialDirectory,
     relationshipWith,
     localGames: localState,
-    ownTier,
+    isAdmin,
     defaultVisibility: defaultSocialVisibility,
     fallbackToken: mainSyncConfig?.token || null,
-    setFeedback,
-    reportFailure,
   });
 
   const selectedProfileDetail = useMemo(() => {
@@ -2423,6 +2425,8 @@ export function useSocialViewModel(options?: {
     setProfileSearch,
     // Rango propio y lo que implica al publicar: si puede, cuánto, y si hay contador que enseñar.
     ownTier,
+    // ¿Es la administración? (el claim, no el rango): exenciones en la ficha de un amigo.
+    isAdmin,
     canPublishPosts: canPublish,
     postMaxLength,
     showPostCounter,
@@ -2470,9 +2474,7 @@ export function useSocialViewModel(options?: {
     closeProfileAchievements,
     openProfileGlobals,
     openProfileReviewDetail,
-    refreshProfileDetail,
     loadingForeignProfile,
-    refreshCoolingDown,
     activeDetailEvent,
     // ¿Puede aparecer todavía el evento abierto? (ver arriba: decide esqueleto vs «no se ha encontrado»).
     detailEventLoading,

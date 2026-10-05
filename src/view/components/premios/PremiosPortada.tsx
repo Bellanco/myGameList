@@ -28,8 +28,6 @@ export interface PremiosPortadaProps {
   /** Oportunidades totales de esta cuenta y las que le quedan. Solo tienen sentido con sesión. */
   opportunities: number;
   remainingOpportunities: number;
-  /** ¿Tiene canal social? Si no, se dice qué se gana teniéndolo: es su única diferencia práctica aquí. */
-  hasSocialAccount: boolean;
 }
 
 /**
@@ -52,7 +50,6 @@ export function PremiosPortada({
   onSignIn,
   opportunities,
   remainingOpportunities,
-  hasSocialAccount,
 }: PremiosPortadaProps) {
   const dias = daysUntil(config?.closesAtMillis ?? null);
   const nombre = getSeasonLabel({ name: config?.seasonName, season: config?.season }) || PREMIOS_UI.eventName;
@@ -163,7 +160,6 @@ export function PremiosPortada({
           {signedIn ? (
             <>
               {hasBallot ? L.opportunitiesLeft(remainingOpportunities) : L.opportunities(opportunities)}
-              {hasSocialAccount ? null : <span>{L.moreWithSocial}</span>}
             </>
           ) : (
             L.signInHint

@@ -713,7 +713,7 @@
    encima no se mueva el renglón. */
 :root[data-palette="witcher"] .hub-name-link,
 :root[data-palette="witcher"] .hub-detail-profile-link,
-:root[data-palette="witcher"] .hub-feed-card h3:not(.hub-feed-game-chip) {
+:root[data-palette="witcher"] .hub-feed-card h3:not(.hub-feed-game-chip, .game-card-name) {
   color: var(--steam-hover);
   border-bottom: 1px solid transparent;
 }

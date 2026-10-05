@@ -5,15 +5,15 @@
  * un sitio del que nadie se acuerda —la caché del service worker, la memoria de «este juego no tiene» y la lista
  * de lo ya recorrido—. No protegen al servidor de nada; protegen al propio dispositivo.
  *
- * Al rango más alto se le levantan, PERO NO A CIEGAS: se levantan mientras el navegador diga que hay sitio de
- * sobra. Esa condición no es una formalidad. Cuando un origen llega a su cuota, el navegador no desaloja «lo que
+ * A la cuenta de administración se le levantan, PERO NO A CIEGAS: se levantan mientras el navegador diga que hay
+ * sitio de sobra. Esa condición no es una formalidad. Cuando un origen llega a su cuota, el navegador no desaloja «lo que
  * sobra»: puede desalojarlo TODO —el shell, los chunks, la biblioteca guardada para verla sin red—, así que un
  * privilegio sin guarda acabaría costando justo lo que la aplicación promete. Con holgura no se poda; al
  * acercarse al límite vuelven los topes y se recorta, que es exactamente lo que hacía antes.
  *
  * Y se decide AQUÍ, en el cliente, porque es un límite del propio dispositivo: no gobierna ningún recurso del
  * servicio (para eso está el cupo de `/cover`, que se resuelve en el servidor con el token verificado). Quien
- * manipule su copia solo se afecta a sí mismo, que es el mismo criterio de los demás privilegios de rango
+ * manipule su copia solo se afecta a sí mismo, que es el mismo criterio de los privilegios de rango
  * (`PROFILE_TIER_FEED_TTL_MS` y compañía).
  */
 
@@ -50,12 +50,12 @@ export async function hayHolguraDeAlmacenamiento(): Promise<boolean> {
 
 /**
  * Recalcula si los topes se levantan y se lo cuenta al service worker, que tiene el suyo propio (el de la caché
- * de carátulas) y no puede mirar ni el rango ni el almacenamiento por su cuenta.
+ * de carátulas) y no puede mirar ni el claim ni el almacenamiento por su cuenta.
  *
  * Devuelve lo que ha decidido, para quien quiera enseñarlo o probarlo.
  */
-export async function evaluarTopesDeImagenes(esDelRangoMaximo: boolean): Promise<boolean> {
-  levantados = esDelRangoMaximo && (await hayHolguraDeAlmacenamiento());
+export async function evaluarTopesDeImagenes(esAdministracion: boolean): Promise<boolean> {
+  levantados = esAdministracion && (await hayHolguraDeAlmacenamiento());
   try {
     const registro = await navigator.serviceWorker?.ready;
     registro?.active?.postMessage({ tipo: 'covers-sin-tope', valor: levantados });

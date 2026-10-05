@@ -2,6 +2,14 @@ import { expect, test, type Page } from '@playwright/test';
 import { sembrarBiblioteca } from './seed';
 
 /**
+ * LA PRIMERA ESPERA, LA DE QUE LA LISTA HA CARGADO, CON MARGEN. No es lo que se comprueba aquí: es la puerta de
+ * entrada, el `<h1>` (sr-only) de la lista recién sembrada. Con la suite entera en paralelo —y aquí con la CPU
+ * frenada seis veces— esa primera carga pasó alguna vez de los 5 s por defecto (05-10-2026) y el test caía antes de
+ * empezar. Las comprobaciones de verdad siguen con el plazo de siempre, y sin reintentos (ver la configuración).
+ */
+const LISTA_CARGADA = { timeout: 15_000 };
+
+/**
  * EL MENÚ DE AJUSTES — cuatro puntos flotando sobre el contenido, sin panel ni velo.
  *
  * ES UN RECORRIDO END-TO-END Y NO PUEDE SER OTRA COSA: lo que hay que comprobar es un `popover` nativo (capa
@@ -31,7 +39,7 @@ async function esperarOpacidad(page: Page, esperada: number): Promise<void> {
 async function abrir(page: Page): Promise<void> {
   await sembrarBiblioteca(page, { amplia: true, theme: 'dark' });
   await page.goto('/completados');
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible(LISTA_CARGADA);
   await pestana(page).click();
   await expect(menu(page)).toBeVisible();
   // Y SE ESPERA A LA ENTRADA DE HISTORIAL, que se empuja en el evento `toggle` —asíncrono— y no en el clic. Sin
@@ -50,7 +58,7 @@ test.describe('el menú de la pestaña de Ajustes', () => {
     // diciendo que no. No es una comprobación teórica: es el fallo que tuvo esta pantalla.
     await sembrarBiblioteca(page, { theme: 'dark' });
     await page.goto('/completados');
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible(LISTA_CARGADA);
     await expect(menu(page)).toBeHidden();
     await esperarOpacidad(page, 1);
   });

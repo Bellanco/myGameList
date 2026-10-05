@@ -538,6 +538,9 @@ export const ADMIN_ACHIEVEMENTS_UI = {
    * ofrece lo dice el interruptor de la escalera, y nada más.
    */
   asleep: 'Nadie ha llegado',
+  /** Los primeros pasos no se publican en el perfil: su alcance no se puede medir, y un 0 % mentiría. */
+  notPublished: 'No se publica',
+  notPublishedHint: 'Los primeros pasos se quedan en el dispositivo de cada uno: no viajan en el perfil, así que no se pueden contar.',
   gift: 'Casi todos lo tienen',
   /** La caída: del escalón anterior a este se pierde a casi todo el mundo. */
   cliff: 'Aquí se cae la gente',

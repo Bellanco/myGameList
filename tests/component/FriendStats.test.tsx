@@ -51,38 +51,36 @@ const heading = (name: string) => screen.queryByRole('heading', { name });
 
 describe('FriendStats · lo que ve cada rango', () => {
   it('bronce ve el retrato y nada más', () => {
-    render(<FriendStats sharedLists={LISTS} viewerTier="bronze" viewerHiddenTabs={[]} />);
+    render(<FriendStats sharedLists={LISTS} viewerTier="bronze" viewerIsAdmin={false} viewerHiddenTabs={[]} />);
 
     expect(heading(L.top.title)).toBeInTheDocument();
     expect(heading(L.years.title)).toBeInTheDocument();
     expect(heading(L.radar.title)).toBeInTheDocument();
     expect(heading(L.genres.title)).toBeInTheDocument();
-    // Lo que su rango no alcanza, con el aviso de por qué.
+    // Lo que su rango no alcanza no se pinta, y no se le promete un rango más alto: hoy nadie puede pedirlo.
     expect(heading(L.grades.title)).not.toBeInTheDocument();
     expect(heading(L.ratio.title)).not.toBeInTheDocument();
-    expect(screen.getByText(L.friend.tierMore)).toBeInTheDocument();
+    expect(screen.queryByText(/rango/i)).not.toBeInTheDocument();
   });
 
   it('oro añade las notas y el ratio, pero no llega a las listas', () => {
-    render(<FriendStats sharedLists={LISTS} viewerTier="gold" viewerHiddenTabs={[]} />);
+    render(<FriendStats sharedLists={LISTS} viewerTier="gold" viewerIsAdmin={false} viewerHiddenTabs={[]} />);
 
     expect(heading(L.grades.title)).toBeInTheDocument();
     expect(heading(L.ratio.title)).toBeInTheDocument();
     expect(heading(L.shame.title)).not.toBeInTheDocument();
     expect(heading(L.wishlist.title)).not.toBeInTheDocument();
-    expect(screen.getByText(L.friend.tierMore)).toBeInTheDocument();
   });
 
-  it('mithril lo ve todo: también sus abandonos y su lista de próximos, y ya no le falta nada', () => {
-    render(<FriendStats sharedLists={LISTS} viewerTier="mithril" viewerHiddenTabs={[]} />);
+  it('la administración lo ve todo: también sus abandonos y su lista de próximos', () => {
+    render(<FriendStats sharedLists={LISTS} viewerTier="mithril" viewerIsAdmin viewerHiddenTabs={[]} />);
 
     expect(heading(L.shame.title)).toBeInTheDocument();
     expect(heading(L.wishlist.title)).toBeInTheDocument();
-    expect(screen.queryByText(L.friend.tierMore)).not.toBeInTheDocument();
   });
 
   it('habla de la otra persona, no de quien mira', () => {
-    render(<FriendStats sharedLists={LISTS} viewerTier="gold" viewerHiddenTabs={[]} />);
+    render(<FriendStats sharedLists={LISTS} viewerTier="gold" viewerIsAdmin={false} viewerHiddenTabs={[]} />);
 
     // El panel es el mismo, pero no dice «tu biblioteca» de la biblioteca de otro.
     expect(heading('Lo mejor de su biblioteca')).toBeInTheDocument();
@@ -93,7 +91,7 @@ describe('FriendStats · lo que ve cada rango', () => {
   });
 
   it('con solo la proyección pública no se enseña lo que no viaja: ni horas ni razones', () => {
-    render(<FriendStats sharedLists={LISTS} viewerTier="mithril" viewerHiddenTabs={[]} />);
+    render(<FriendStats sharedLists={LISTS} viewerTier="mithril" viewerIsAdmin viewerHiddenTabs={[]} />);
 
     expect(screen.queryByText(L.shame.hours)).not.toBeInTheDocument();
     expect(screen.queryByText(L.shame.retry)).not.toBeInTheDocument();
@@ -102,12 +100,12 @@ describe('FriendStats · lo que ve cada rango', () => {
     expect(screen.queryByText(L.tiles.hours)).not.toBeInTheDocument();
   });
 
-  it('solo mithril puede cambiar de periodo', () => {
-    const { unmount } = render(<FriendStats sharedLists={LISTS} viewerTier="gold" viewerHiddenTabs={[]} />);
+  it('solo la administración puede cambiar de periodo', () => {
+    const { unmount } = render(<FriendStats sharedLists={LISTS} viewerTier="gold" viewerIsAdmin={false} viewerHiddenTabs={[]} />);
     expect(screen.queryByRole('button', { name: L.scope.general })).not.toBeInTheDocument();
     unmount();
 
-    render(<FriendStats sharedLists={LISTS} viewerTier="mithril" viewerHiddenTabs={[]} />);
+    render(<FriendStats sharedLists={LISTS} viewerTier="mithril" viewerIsAdmin viewerHiddenTabs={[]} />);
     expect(screen.getByRole('button', { name: L.scope.general })).toBeInTheDocument();
     // Los años salen de lo publicado: el canal social sí trae `years`.
     expect(screen.getByRole('button', { name: L.scope.yearAria(2024) })).toBeInTheDocument();
@@ -117,8 +115,8 @@ describe('FriendStats · lo que ve cada rango', () => {
 // ── Datos completos: solo para la administración, y solo si el gist de listados ha llegado ──────────────────
 
 describe('FriendStats · con los juegos completos del amigo', () => {
-  it('mithril ve el panel entero: horas, abandonos con razones y evolución del backlog', () => {
-    render(<FriendStats sharedLists={FULL_LISTS} viewerTier="mithril" viewerHiddenTabs={[]} />);
+  it('la administración ve el panel entero: horas, abandonos con razones y evolución del backlog', () => {
+    render(<FriendStats sharedLists={FULL_LISTS} viewerTier="mithril" viewerIsAdmin viewerHiddenTabs={[]} />);
 
     const tiles = within(document.querySelector('.stats-tiles') as HTMLElement);
     expect(tiles.getByText(L.tiles.hours).closest('.stat-tile')).toHaveTextContent('44');
@@ -129,15 +127,15 @@ describe('FriendStats · con los juegos completos del amigo', () => {
   });
 
   it('sus reseñas no se pintan aquí: tienen su propio apartado en el perfil', () => {
-    render(<FriendStats sharedLists={FULL_LISTS} viewerTier="mithril" viewerHiddenTabs={[]} />);
+    render(<FriendStats sharedLists={FULL_LISTS} viewerTier="mithril" viewerIsAdmin viewerHiddenTabs={[]} />);
 
     expect(screen.queryByText(L.reviews.tile)).not.toBeInTheDocument();
     expect(heading(L.reviews.title)).not.toBeInTheDocument();
     expect(document.querySelector('.podium-quote')).toBeNull();
   });
 
-  it('el rango no basta: sin gist de listados, mithril se queda en la proyección pública', () => {
-    render(<FriendStats sharedLists={LISTS} viewerTier="mithril" viewerHiddenTabs={[]} />);
+  it('el claim no basta: sin gist de listados, la administración se queda en la proyección pública', () => {
+    render(<FriendStats sharedLists={LISTS} viewerTier="mithril" viewerIsAdmin viewerHiddenTabs={[]} />);
 
     // Ni un cero disfrazado de dato en las piezas que dependen de los campos privados.
     expect(screen.queryByText(L.tiles.hours)).not.toBeInTheDocument();
@@ -145,7 +143,7 @@ describe('FriendStats · con los juegos completos del amigo', () => {
   });
 
   it('quien no es administración no ve las horas aunque los juegos completos estén cargados', () => {
-    render(<FriendStats sharedLists={FULL_LISTS} viewerTier="gold" viewerHiddenTabs={[]} />);
+    render(<FriendStats sharedLists={FULL_LISTS} viewerTier="gold" viewerIsAdmin={false} viewerHiddenTabs={[]} />);
 
     expect(screen.queryByText(L.tiles.hours)).not.toBeInTheDocument();
     expect(heading(L.backlog.title)).not.toBeInTheDocument();
@@ -158,7 +156,7 @@ describe('FriendStats · con los juegos completos del amigo', () => {
       c: FULL_LISTS.c!.map((game) => ({ ...game, hours: null })),
       v: FULL_LISTS.v!.map((game) => ({ ...game, hours: null })),
     };
-    render(<FriendStats sharedLists={sinHoras} viewerTier="mithril" viewerHiddenTabs={[]} />);
+    render(<FriendStats sharedLists={sinHoras} viewerTier="mithril" viewerIsAdmin viewerHiddenTabs={[]} />);
 
     expect(screen.queryByText(L.tiles.hours)).not.toBeInTheDocument();
     expect(screen.queryByText(L.shame.hours)).not.toBeInTheDocument();
@@ -170,7 +168,7 @@ describe('FriendStats · con los juegos completos del amigo', () => {
 
 describe('FriendStats · reciprocidad', () => {
   it('quien esconde una lista deja de verla, y se le dice', () => {
-    render(<FriendStats sharedLists={LISTS} viewerTier="gold" viewerHiddenTabs={['v']} />);
+    render(<FriendStats sharedLists={LISTS} viewerTier="gold" viewerIsAdmin={false} viewerHiddenTabs={['v']} />);
 
     expect(screen.getByText(L.friend.blocked(OWN.backlog.lists.v.toLowerCase()))).toBeInTheDocument();
     // Sin los abandonados, las cifras cuentan solo los dos completados. Se busca dentro de las cifras
@@ -180,21 +178,21 @@ describe('FriendStats · reciprocidad', () => {
   });
 
   it('quien lo esconde todo se queda sin panel', () => {
-    render(<FriendStats sharedLists={LISTS} viewerTier="silver" viewerHiddenTabs={['c', 'v', 'e', 'p']} />);
+    render(<FriendStats sharedLists={LISTS} viewerTier="silver" viewerIsAdmin={false} viewerHiddenTabs={['c', 'v', 'e', 'p']} />);
 
     expect(screen.getByText(L.friend.blockedAll)).toBeInTheDocument();
     expect(heading(L.top.title)).not.toBeInTheDocument();
   });
 
   it('la cuenta de administración ve el panel aunque lo esconda todo', () => {
-    render(<FriendStats sharedLists={LISTS} viewerTier="mithril" viewerHiddenTabs={['c', 'v', 'e', 'p']} />);
+    render(<FriendStats sharedLists={LISTS} viewerTier="mithril" viewerIsAdmin viewerHiddenTabs={['c', 'v', 'e', 'p']} />);
 
     expect(screen.queryByText(L.friend.blockedAll)).not.toBeInTheDocument();
     expect(heading(L.top.title)).toBeInTheDocument();
   });
 
   it('sin listas compartidas no hay nada que resumir', () => {
-    render(<FriendStats sharedLists={{}} viewerTier="mithril" viewerHiddenTabs={[]} />);
+    render(<FriendStats sharedLists={{}} viewerTier="mithril" viewerIsAdmin viewerHiddenTabs={[]} />);
 
     expect(screen.getByText(L.friend.empty)).toBeInTheDocument();
   });

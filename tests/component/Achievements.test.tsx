@@ -97,6 +97,30 @@ describe('la ficha de una amistad', () => {
     expect(medallas[2]).toHaveAccessibleName(/Créditos finales/);
   });
 
+  // LO ÚLTIMO QUE HA SACADO, PRIMERO (05-10-2026): la rareza solo desempata a igual fecha.
+  it('ordena la tira por fecha, de lo más reciente a lo más antiguo', () => {
+    const states: AchievementState[] = [
+      { id: 'obra-maestra-1', level: 1, value: 0, next: null, unlockedAt: dia(100) },
+      { id: 'completados-10', level: 1, value: 0, next: null, unlockedAt: dia(300) },
+      { id: 'tesis-5', level: 1, value: 0, next: null, unlockedAt: dia(200) },
+    ];
+    render(<ProfileAchievementStrip mirror={packAchievements(states, [])} onOpen={() => {}} />);
+    const medallas = screen.getAllByRole('img');
+    expect(medallas[0]).toHaveAccessibleName(/Créditos finales/);
+    expect(medallas[1]).toHaveAccessibleName(new RegExp(ACHIEVEMENTS_BY_ID.get('tesis-5')!.labels.name));
+    expect(medallas[2]).toHaveAccessibleName(/Obra maestra/);
+  });
+
+  it('debajo, el avance del catálogo: la misma cifra que la cabecera de su listado', () => {
+    render(<ProfileAchievementStrip mirror={ESPEJO} onOpen={() => {}} />);
+    const levels = new Map(['completados-10', 'completados-25', 'completados-50', 'plataformas-3', 'obra-maestra-1', 'tesis-5'].map((id) => [id, 1]));
+    const { percent } = summarizeMirror(levels);
+    const avance = screen.getByRole('meter');
+    expect(avance).toHaveAttribute('aria-valuenow', String(percent));
+    expect(avance).toHaveAttribute('aria-valuetext', ACHIEVEMENTS_UI.countHint(percent));
+    expect(avance).toHaveTextContent(ACHIEVEMENTS_UI.rarityShare(percent));
+  });
+
   it('si esa persona no publica logros, NO se pinta nada', () => {
     // Ni marco vacío ni «este usuario no tiene logros»: no hay nada que decir.
     const { container } = render(<ProfileAchievementStrip mirror="" onOpen={() => {}} />);

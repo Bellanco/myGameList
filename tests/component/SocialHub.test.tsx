@@ -56,6 +56,10 @@ const firebaseMocks = vi.hoisted(() => ({
 
 vi.mock('../../src/model/repository/firebaseRepository', () => firebaseMocks);
 
+// El claim `admin` (no el rango) es lo que exime a la administración. Por defecto nadie lo tiene.
+const adminClaim = vi.hoisted(() => ({ useIsAdmin: vi.fn(() => false) }));
+vi.mock('../../src/view/hooks/useIsAdmin', () => adminClaim);
+
 const gistMocks = vi.hoisted(() => ({
   getSocialSyncConfig: vi.fn(() => null as null | { token: string; gistId: string; etag: string | null; lastRemoteUpdatedAt: number }),
   getSyncConfig: vi.fn(() => null),
@@ -1975,7 +1979,24 @@ describe('SocialHub — reciprocidad de la foto', () => {
     expect(payload.profile.photoURL).toBeUndefined();
   });
 
-  it('mithril está exento: ve las dos aunque esconda la suya', async () => {
+  it('la administración está exenta: ve las dos aunque esconda la suya', async () => {
+    ownProfile(false);
+    adminClaim.useIsAdmin.mockReturnValue(true);
+    try {
+      renderHub('/social/profiles');
+
+      await screen.findByText('Ada');
+      await screen.findByText('Bob');
+
+      await waitFor(() => expect(fotosPintadas()).toContain(ADA_FOTO));
+      await waitFor(() => expect(fotosPintadas()).toContain(BOB_FOTO));
+    } finally {
+      adminClaim.useIsAdmin.mockReturnValue(false);
+    }
+  });
+
+  // El rango ya no exime: mithril sin el claim sigue las dos reglas como cualquiera.
+  it('mithril sin el claim no está exento', async () => {
     ownProfile(false);
     firebaseMocks.resolveOwnProfile.mockResolvedValue({
       id: 'me', profileId: 'p-me', displayName: 'Me', email: '', photoURL: '',
@@ -1986,8 +2007,8 @@ describe('SocialHub — reciprocidad de la foto', () => {
     await screen.findByText('Ada');
     await screen.findByText('Bob');
 
-    await waitFor(() => expect(fotosPintadas()).toContain(ADA_FOTO));
-    await waitFor(() => expect(fotosPintadas()).toContain(BOB_FOTO));
+    expect(fotosPintadas()).not.toContain(ADA_FOTO);
+    expect(fotosPintadas()).not.toContain(BOB_FOTO);
   });
 
   /**

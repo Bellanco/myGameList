@@ -5,7 +5,8 @@ import { CountUp } from './CountUp';
 import { TagChips } from './TagChips';
 import { Dumbbell } from './Dumbbell';
 import { Icon } from '../Icon';
-import type { WishKinPair, WishKinSummary } from '../../../core/stats/wishKin';
+import { categoryToneStyle } from '../../../core/constants/categoryTone';
+import type { WishKinSummary } from '../../../core/stats/wishKin';
 
 /**
  * «Ya lo tienes en casa»: cada deseo frente a lo que ya espera en Próximos (`core/stats/wishKin`).
@@ -16,7 +17,6 @@ import type { WishKinPair, WishKinSummary } from '../../../core/stats/wishKin';
  */
 export const WishKinCard = memo(function WishKinCard({ kin }: { kin: WishKinSummary }) {
   const L = useStatsLabels().kin;
-  const reasonOf = (pair: WishKinPair): string[] => (pair.reason.kind === 'saga' ? [L.saga] : pair.reason.shared);
   const hidden = kin.withKin - kin.pairs.length;
 
   return (
@@ -26,7 +26,7 @@ export const WishKinCard = memo(function WishKinCard({ kin }: { kin: WishKinSumm
           label={L.tile}
           value={<CountUp value={kin.withKin} />}
           unit={L.tileUnit(kin.wishes)}
-          hint={L.tileHint(kin.wishes)}
+          hint={L.tileHint}
           progress={kin.wishes ? (kin.withKin / kin.wishes) * 100 : 0}
         />
       </div>
@@ -37,7 +37,10 @@ export const WishKinCard = memo(function WishKinCard({ kin }: { kin: WishKinSumm
           <>
             <ol className="kin-pairs">
               {kin.pairs.map((pair, index) => {
-                const why = reasonOf(pair);
+                // Los MISMOS chips que en los listados: el género con su tono, y la saga como los años (genérico).
+                const why = pair.reason.kind === 'saga'
+                  ? [{ tag: L.saga, className: 'chip-generic', tone: false }]
+                  : pair.reason.shared.map((tag) => ({ tag, className: 'chip-genre', tone: true }));
                 return (
                   <li
                     key={pair.wish.id}
@@ -54,10 +57,10 @@ export const WishKinCard = memo(function WishKinCard({ kin }: { kin: WishKinSumm
                       <span className="kin-have-name">{pair.kin.name}</span>
                     </span>
                     <span className="sr-only">{L.because}</span>
-                    <span className="kin-why">
-                      {why.map((tag, position) => (
-                        <span key={tag} className="kin-why-chip">
-                          {tag}
+                    <span className="chips kin-why">
+                      {why.map(({ tag, className, tone }, position) => (
+                        <span key={tag} className={`chip ${className}`} style={tone ? categoryToneStyle(tag) : undefined}>
+                          <span className="chip-text">{tag}</span>
                           {position < why.length - 1 ? <span className="sr-only">, </span> : null}
                         </span>
                       ))}

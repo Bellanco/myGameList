@@ -74,8 +74,6 @@ export interface StatsPanelProps {
    * vista; null o sin deseos, el apartado no se monta.
    */
   wishKin?: WishKinSummary | null;
-  /** Aviso de cierre (lo que el rango de quien mira todavía no alcanza). */
-  footNote?: ReactNode;
 }
 
 /**
@@ -110,7 +108,6 @@ export const StatsPanel = memo(function StatsPanel({
   achievements,
   notes,
   wishKin = null,
-  footNote,
 }: StatsPanelProps) {
   const L = STATS_LABELS[voice];
   // Las tarjetas se destapan al llegar a ellas. Se rearma al cambiar de periodo, porque las de la pestaña
@@ -403,8 +400,6 @@ export const StatsPanel = memo(function StatsPanel({
             <WishKinCard kin={wishKin} />
           </div>
         ) : null}
-
-        {footNote}
       </>
     );
   };

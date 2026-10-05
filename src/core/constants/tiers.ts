@@ -5,6 +5,10 @@
  * `mithril` está reservado a la cuenta del administrador: el panel solo ofrece ese valor en la fila del propio
  * admin. Es una decisión de producto, no una barrera de seguridad — quien manda ya puede escribir cualquier tier
  * en cualquier perfil, y no tiene sentido protegerse de uno mismo.
+ *
+ * EL RANGO NO HACE ADMINISTRADOR A NADIE. Las excepciones de la administración (ver fotos y listas ocultas, el panel
+ * completo de un amigo, el cupo de carátulas) las decide el claim `admin` del token (`hasAdminClaim`), en el
+ * cliente, en las Functions y en las reglas. Mithril solo aporta lo que dicen sus filas de las tablas de abajo.
  */
 /**
  * LOS RANGOS, CON NOMBRE. Para referirse a uno concreto en el código se usa esto (`PROFILE_TIER.gold`) y no la
@@ -47,8 +51,8 @@ export const ADMIN_ONLY_TIER: ProfileTier = PROFILE_TIER.mithril;
  * borde del límite y sin margen para el sync. Con 60 s son ~3.060/hora y quedan ~1.900 de margen; sigue siendo
  * 10 veces más fresco que oro. Si hiciera falta más margen, este es el número que hay que subir.
  *
- * Ya NO coincide con el anti-spam del botón "Actualizar feed" (`FORCED_REFRESH_MIN_MS`, 12 s): son cosas
- * distintas —el refresco automático al abrir y el manual a petición— y atarlas obligaba a moverlas juntas.
+ * No hay refresco a petición que se lo salte: el botón «Actualizar feed» se retiró (05-10-2026), y lo único que
+ * fuerza una relectura es la propia app tras publicar. La frescura del feed la pone SOLO esta tabla.
  *
  * Nota: esto lo aplica el cliente, así que es un privilegio NO exigible — quien manipule su copia puede darse la
  * cadencia que quiera. No es un problema: gastaría su propio token.

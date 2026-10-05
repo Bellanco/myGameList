@@ -91,6 +91,8 @@
 /* grimdark — verde de cogitador, oro Retributor, verde claro, hueso Zandri, rojo Mephiston, gris Mechanicus y latón */
 :root[data-palette="grimdark"] {
   --cat-1: #43f558; --cat-2: #c9922f; --cat-3: #58dd6b; --cat-4: #c9bd8e; --cat-5: #e04b46; --cat-6: #7d9396; --cat-7: #c16f45;
+  /* La lista de DESEOS (feed, estadísticas): el tono que más se aparta de los otros avisos; el sexto es una pizarra que en claro se confundía con el verde de Próximos. */
+  --wish: var(--cat-7);
   --cat-1-fg: #43f558; --cat-2-fg: #c9922f; --cat-3-fg: #58dd6b; --cat-4-fg: #c9bd8e; --cat-5-fg: #e66d69; --cat-6-fg: #819799; --cat-7-fg: #c9815c;
 }
 /* grimdark — verde de cogitador, oro Retributor, verde claro, hueso Zandri, rojo Mephiston, gris Mechanicus y latón */

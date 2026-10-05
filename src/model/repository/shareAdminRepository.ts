@@ -22,9 +22,15 @@ const adminHeaders = (): Promise<Record<string, string>> => shareAuthHeaders(() 
 
 async function call(path: string, init: RequestInit = {}): Promise<Record<string, unknown>> {
   const response = await fetch(`${API_BASE}${path}`, { ...init, headers: await adminHeaders() });
-  const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  const body = (await response.json().catch(() => null)) as Record<string, unknown> | null;
   if (!response.ok) {
-    throw new Error(String(body.error || 'La operación no se ha completado'));
+    throw new Error(String(body?.error || 'La operación no se ha completado'));
+  }
+  /* UN 200 QUE NO ES JSON NO ES UNA RESPUESTA DEL WORKER. Pasa en el servidor de desarrollo, que no tiene gemelo
+     de esta Function y contesta a la ruta con `index.html`: antes eso se leía como `{}` y el panel lo pintaba
+     como un censo vacío y a medias («0+»), que es mentir. Sin servicio, el panel no enseña esas cifras. */
+  if (!body) {
+    throw new Error('El servicio de enlaces no ha respondido');
   }
   return body;
 }

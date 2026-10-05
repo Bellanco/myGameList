@@ -869,12 +869,7 @@
   --stats-cap: butt;
   --stats-join: miter;
   --stats-num: var(--font-mono);
-  /* Deseos en el óxido de la rampa y no en su sexto tono: aquí ese tono es una pizarra que, en claro, se confundía
-     con el verde oscuro de Próximos, y las dos son justo las series que «Ya lo tienes en casa» compara. */
-  --stats-d: var(--cat-7);
 }
-/* El mismo óxido para su mensaje en el feed: una lista dice lo mismo en las dos pantallas. */
-:root[data-palette="grimdark"] .hub-feed-activity-item.is-move[data-tab="d"] { --evc: var(--cat-7); }
 
 /* ── §16 · LAS PESTAÑAS DE ESCRITORIO: moldura de oro abajo y la activa encendida en fósforo verde, que es
    como este tema dice «aquí estás» desde la barra del teléfono. El contador se queda sin marco: la lectura
