@@ -24,8 +24,8 @@ export const BALLOTS_COLLECTION = 'premiosBallots';
 export const RESULTS_COLLECTION = 'premiosResults';
 
 /**
- * Los votos de cada uno de una edición publicada y sin terminar, UN documento por edición. Lo leen solo quienes
- * votaron en ella (ver `docs/plan-premios-votos-a-la-vista.md`).
+ * Los votos de cada uno de una edición publicada, UN documento por edición. Lo leen solo quienes votaron en ella
+ * y dura hasta que se abre la siguiente (ver `docs/plan-premios-votos-a-la-vista.md`).
  */
 export const REVEAL_COLLECTION = 'premiosReveal';
 
@@ -41,6 +41,17 @@ export const ADMIN_WINNERS_DOC = 'winners';
  * irreversible: no habría forma de saber a quién devolvérselo.
  */
 export const ADMIN_PALMARES_PREFIX = 'palmares-';
+
+/**
+ * Prefijo de la lista de QUIÉN VOTÓ en cada edición: `premiosAdmin/voters-<seasonId>`, con sus uids. La
+ * consultan las reglas para dejar ver los votos de cada uno (`premiosReveal`) solo a quien votó; nadie más la lee.
+ */
+export const ADMIN_VOTERS_PREFIX = 'voters-';
+
+/** La lista de votantes de una edición. */
+export function votersDocId(seasonId: string): string {
+  return `${ADMIN_VOTERS_PREFIX}${seasonId}`;
+}
 
 /** El documento de registro de una edición. */
 export function palmaresDocId(seasonId: string): string {

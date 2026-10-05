@@ -41,7 +41,6 @@ export const ADMIN_PANEL_UI = {
     announcementNone: 'Ninguno publicado',
     premiosOpen: (day: string) => `Votación abierta · cierra el ${day}`,
     premiosPending: 'Votación cerrada · falta publicar los resultados',
-    premiosRevealed: 'Resultados publicados · votos a la vista hasta terminar la edición',
     premiosNone: 'Sin edición en marcha',
   },
   title: 'Administración',

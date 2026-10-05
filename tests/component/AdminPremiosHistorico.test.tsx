@@ -13,6 +13,9 @@ const L = PREMIOS_UI.admin.history;
  * edición lucen su medalla, y que se puede apagar y encender sin tocar el resultado.
  */
 const registros: { valor: Record<string, PalmaresRecord> } = { valor: {} };
+/** Las ediciones que guardan los votos de cada uno. */
+const conVotos: { valor: string[] } = { valor: [] };
+const deleteVotesMock = vi.fn(async () => {});
 const setGrantedMock = vi.fn(async () => 2);
 const deleteMock = vi.fn(async () => ({
   seasonId: 'test',
@@ -32,6 +35,8 @@ vi.mock('../../src/model/repository/premios/premiosSeasonRepository', () => ({
   ],
   renameSeasonResult: async () => {},
   deleteSeasonResult: (...args: unknown[]) => deleteMock(...(args as [])),
+  listSeasonVotes: async () => conVotos.valor,
+  deleteSeasonVotes: (...args: unknown[]) => deleteVotesMock(...(args as [])),
 }));
 
 /** El panel pasa este envoltorio; aquí solo interesa la acción y lo que devuelve. */
@@ -53,6 +58,8 @@ const interruptor = () => screen.getByRole('button', { name: /logro de «Game Aw
 
 beforeEach(() => {
   registros.valor = {};
+  conVotos.valor = [];
+  deleteVotesMock.mockClear();
   avisos.length = 0;
   setGrantedMock.mockClear();
   deleteMock.mockClear();
@@ -115,5 +122,28 @@ describe('AdminPremiosHistorico', () => {
 
     expect(deleteMock).toHaveBeenCalledWith('game-awards-2025');
     await waitFor(() => expect(avisos.join(' ')).toContain(L.removedAwards(3)));
+  });
+
+  // LOS VOTOS DE CADA UNO se ven hasta la siguiente edición; aquí se pueden retirar antes. Solo donde los haya.
+  describe('borrar los votos', () => {
+    it('solo se ofrece en la edición que los guarda', async () => {
+      await pintar();
+      expect(screen.queryByRole('button', { name: L.removeVotes })).not.toBeInTheDocument();
+    });
+
+    it('pregunta antes y borra solo los votos de esa edición', async () => {
+      conVotos.valor = ['game-awards-2025'];
+      const confirmar = vi.spyOn(window, 'confirm').mockReturnValue(false);
+      await pintar();
+
+      await userEvent.click(await screen.findByRole('button', { name: L.removeVotes }));
+      expect(deleteVotesMock).not.toHaveBeenCalled();
+
+      confirmar.mockReturnValue(true);
+      await userEvent.click(screen.getByRole('button', { name: L.removeVotes }));
+      expect(deleteVotesMock).toHaveBeenCalledWith('game-awards-2025');
+      expect(deleteMock).not.toHaveBeenCalled();
+      await waitFor(() => expect(avisos).toContain(L.removedVotes('Game Awards 2025')));
+    });
   });
 });

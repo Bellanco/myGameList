@@ -1,7 +1,8 @@
 /**
- * Los votos de cada uno de la edición publicada y sin terminar, para quien votó en ella.
+ * Los votos de cada uno de una edición publicada, para quien votó en ella, hasta que se abre la siguiente.
  *
- * SOLO SE PIDE CUANDO PUEDE SALIR BIEN: con sesión, con papeleta propia y mirando el archivo de ESTA edición.
+ * SOLO SE PIDE CUANDO PUEDE SALIR BIEN, y eso lo decide quien llama (`PremiosHub`): con sesión, saliendo en la
+ * clasificación y mirando la edición que guarda los votos.
  * Las reglas lo niegan a cualquier otro (`premiosReveal`), y pedirlo de todos modos sería una lectura gastada y
  * un `permission-denied` en la consola de cada visitante. Ver `docs/plan-premios-votos-a-la-vista.md`.
  */

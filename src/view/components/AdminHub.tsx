@@ -100,7 +100,7 @@ function formatActivity(updatedAt: number): string {
 }
 
 /** Estado de los retos para el menú: solo lo que decide si hay algo que hacer allí. */
-type PremiosStatus = { stage: 'none' | 'open' | 'pending' | 'revealed'; closesAt: number | null };
+type PremiosStatus = { stage: 'none' | 'open' | 'pending'; closesAt: number | null };
 
 /** La línea de estado del aviso, o nada mientras no se ha leído. */
 function describeAnnouncement(announcement: Announcement | null | undefined): string {
@@ -115,7 +115,6 @@ function describePremios(status: PremiosStatus | null): string {
   if (status.stage === 'open') {
     return A.menuStatus.premiosOpen(status.closesAt ? formatDate(status.closesAt) : A.field.none);
   }
-  if (status.stage === 'revealed') return A.menuStatus.premiosRevealed;
   return status.stage === 'pending' ? A.menuStatus.premiosPending : A.menuStatus.premiosNone;
 }
 

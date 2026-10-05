@@ -9,7 +9,9 @@ import {
 } from '../../../model/repository/premios/premiosPalmaresRepository';
 import {
   deleteSeasonResult,
+  deleteSeasonVotes,
   listSeasonResults,
+  listSeasonVotes,
   renameSeasonResult,
 } from '../../../model/repository/premios/premiosSeasonRepository';
 import { resultsPath } from '../../../viewmodel/premios/premiosRoutes';
@@ -23,6 +25,9 @@ const L = PREMIOS_UI.admin.history;
  * DE UN ARCHIVO SOLO SE PUEDE CAMBIAR EL NOMBRE. Los ganadores y la clasificación son el resultado histórico y no
  * se pueden recalcular —los votos de esa edición se retiraron al publicarla—, así que tocarlos dejaría el archivo
  * incoherente.
+ *
+ * LOS VOTOS DE CADA UNO, si esa edición los guarda, se pueden borrar sin tocar nada más: se ven hasta que se abre
+ * la siguiente, y esto es para retirarlos antes (ver `deleteSeasonVotes`).
  *
  * Y se puede BORRAR, que existe para las pruebas: publicar una edición de prueba deja un archivo permanente, y
  * sin esto el histórico se llena de «Test» que no se pueden quitar desde la aplicación. Borrar se lleva también
@@ -42,14 +47,18 @@ export function AdminPremiosHistorico({
 }) {
   const [seasons, setSeasons] = useState<Array<PremiosSeasonResult & { id: string }>>([]);
   const [palmares, setPalmares] = useState<Record<string, PalmaresRecord>>({});
+  /** Las ediciones que guardan los votos de cada uno: solo en ellas se ofrece borrarlos. */
+  const [conVotos, setConVotos] = useState<ReadonlySet<string>>(() => new Set());
 
   const recargar = useCallback(async () => {
-    const [archivos, registros] = await Promise.all([
+    const [archivos, registros, votos] = await Promise.all([
       listSeasonResults().catch(() => []),
       fetchPalmaresRecords().catch(() => ({})),
+      listSeasonVotes().catch(() => [] as string[]),
     ]);
     setSeasons(archivos);
     setPalmares(registros);
+    setConVotos(new Set(votos));
   }, []);
 
   useEffect(() => {
@@ -83,6 +92,16 @@ export function AdminPremiosHistorico({
       await recargar();
       if (cuantos === 0) return L.awardNone;
       return dar ? L.awardGranted(cuantos) : L.awardRevoked(cuantos);
+    });
+  };
+
+  const borrarVotos = (season: PremiosSeasonResult & { id: string }) => {
+    const nombre = season.name || season.id;
+    if (!window.confirm(L.removeVotesConfirm(nombre))) return;
+    void ejecutar(async () => {
+      await deleteSeasonVotes(season.id);
+      await recargar();
+      return L.removedVotes(nombre);
     });
   };
 
@@ -128,6 +147,11 @@ export function AdminPremiosHistorico({
                   <button type="button" className="btn" disabled={busy} onClick={() => renombrar(season)}>
                     {L.rename}
                   </button>
+                  {conVotos.has(season.id) ? (
+                    <button type="button" className="btn" disabled={busy} onClick={() => borrarVotos(season)}>
+                      {L.removeVotes}
+                    </button>
+                  ) : null}
                   <button type="button" className="btn" disabled={busy} onClick={() => borrar(season)}>
                     {L.remove}
                   </button>

@@ -21,6 +21,7 @@ const state: {
   premiosCategories: Registro[];
   premiosResults: Registro[];
   premiosReveal: Registro[];
+  premiosAdmin: Registro[];
   profiles: Registro[];
   config: Record<string, unknown> | null;
   sets: Array<{ path: string; data: Record<string, unknown> }>;
@@ -32,6 +33,7 @@ const state: {
   premiosCategories: [],
   premiosResults: [],
   premiosReveal: [],
+  premiosAdmin: [],
   profiles: [],
   config: null,
   sets: [],
@@ -100,7 +102,7 @@ vi.mock('../../src/model/repository/premios/premiosWinnersRepository', () => ({
   clearLegacyWinnerField: async () => 0,
 }));
 
-const { deleteSeasonResult, finishSeason, openSeason, publishAndArchiveSeason } = await import(
+const { deleteSeasonResult, deleteSeasonVotes, listSeasonVotes, openSeason, publishAndArchiveSeason } = await import(
   '../../src/model/repository/premios/premiosSeasonRepository'
 );
 
@@ -141,6 +143,7 @@ beforeEach(() => {
   state.premiosCategories = [];
   state.premiosResults = [];
   state.premiosReveal = [];
+  state.premiosAdmin = [];
   state.config = null;
   state.sets = [];
   state.updates = [];
@@ -370,62 +373,25 @@ describe('publishAndArchiveSeason', () => {
     });
   });
 
-// LOS VOTOS A LA VISTA (docs/plan-premios-votos-a-la-vista.md): en las ediciones que lo dicen, publicar archiva y
-// premia pero deja las papeletas, y terminar es lo que las retira.
-describe('ediciones con los votos a la vista', () => {
+// LOS VOTOS DE CADA UNO (docs/plan-premios-votos-a-la-vista.md): publicar los copia a un resumen que quien votó ve
+// hasta que se abre la siguiente edición, o hasta que el administrador lo borra a mano.
+describe('votos de cada uno', () => {
   const lastRevealWrite = () => state.sets.filter((s) => s.path.startsWith('premiosReveal/')).pop();
-  const enMarcha = () => ({
-    revealVotes: true,
-    isOpen: false,
-    season: 2026,
-    seasonId: 'test',
-    closesAt: '2026-06-01T21:59:59.999Z',
-    closesAtMillis: 1,
-  });
+  const lastVotersWrite = () => state.sets.filter((s) => s.path.startsWith('premiosAdmin/voters-')).pop();
 
-  it('publicar archiva y premia, pero no retira las papeletas ni vacía los nominados', async () => {
+  it('publicar guarda los votos de cada uno con su puesto, sin uid ni nombre de Google', async () => {
     state.premiosCategories = [category('cat1')];
-    state.premiosBallots = [ballot('uid-1', 'Ana', 'cat1_option_0'), ballot('uid-2', 'Bea', 'cat1_option_1')];
-    state.config = enMarcha();
-
-    const result = await publishAndArchiveSeason({ season: 2026, seasonId: 'test' });
-
-    expect(lastResultsWrite()?.path).toBe('premiosResults/test');
-    expect(result).toMatchObject({ totalBallots: 2, deleted: 0, cleared: 0 });
-    expect(state.deletes).toEqual([]);
-    expect(state.updates.some((u) => u.path.startsWith('premiosCategories/'))).toBe(false);
-    expect(state.clearedWinners).toBe(0);
-    expect(state.sets.some((s) => s.path.startsWith('profiles/'))).toBe(false); // sin perfiles sembrados
-  });
-
-  it('deja la edición en marcha, publicada y con el voto cerrado', async () => {
-    state.premiosCategories = [category('cat1')];
-    state.config = enMarcha();
-
-    await publishAndArchiveSeason({ season: 2026, seasonId: 'test' });
-
-    const config = lastConfigWrite()?.data;
-    expect(config?.votesRevealedAt).toEqual(expect.any(String));
-    expect(config?.lastPublishedId).toBe('test');
-    expect(config?.isOpen).toBe(false);
-    // La fecha de cierre se queda: es lo que dice que la edición sigue en marcha.
-    expect(config).not.toHaveProperty('closesAtMillis');
-  });
-
-  it('escribe los votos de cada uno con su puesto, sin uid ni nombre de Google', async () => {
-    state.premiosCategories = [category('cat1')];
+    const ana = ballot('uid-1', 'Ana', 'cat1_option_0', 'p-ana');
     state.premiosBallots = [
-      { ...ballot('uid-1', 'Ana', 'cat1_option_0', 'p-ana'), data: { ...ballot('uid-1', 'Ana', 'cat1_option_0', 'p-ana').data, userNickname: 'Ana García' } },
+      { ...ana, data: { ...ana.data, userNickname: 'Ana García' } },
       ballot('uid-2', 'Bea', 'cat1_option_1', 'p-bea'),
       ballot('uid-3', 'Cris', 'cat1_option_1', 'p-cris'),
     ];
-    state.config = enMarcha();
 
     await publishAndArchiveSeason({ season: 2026, seasonId: 'test' });
 
     const resumen = lastRevealWrite();
     expect(resumen?.path).toBe('premiosReveal/test');
-    expect(resumen?.data.seasonId).toBe('test');
     // Ranking denso, como el archivo: los dos que fallan empatan en el segundo puesto.
     expect(resumen?.data.ballots).toEqual([
       { rank: 1, profileId: 'p-ana', nickname: 'Ana', points: 1, selections: { cat1: 'cat1_option_0' } },
@@ -436,12 +402,31 @@ describe('ediciones con los votos a la vista', () => {
     expect(JSON.stringify(resumen?.data)).not.toContain('García');
   });
 
+  // El permiso de verlos: quién votó, en la colección que solo lee el administrador (las reglas la consultan).
+  it('apunta quién votó en la lista privada de la edición', async () => {
+    state.premiosCategories = [category('cat1')];
+    state.premiosBallots = [ballot('uid-1', 'Ana', 'cat1_option_0'), ballot('uid-2', 'Bea', 'cat1_option_1')];
+
+    await publishAndArchiveSeason({ season: 2026, seasonId: 'test' });
+
+    expect(lastVotersWrite()).toEqual({ path: 'premiosAdmin/voters-test', data: { seasonId: 'test', uids: ['uid-1', 'uid-2'] } });
+  });
+
+  it('las papeletas se retiran igual, y la configuración dice qué edición guarda los votos', async () => {
+    state.premiosCategories = [category('cat1')];
+    state.premiosBallots = [ballot('uid-1', 'Ana', 'cat1_option_0')];
+
+    await publishAndArchiveSeason({ season: 2026, seasonId: 'test' });
+
+    expect(state.deletes).toEqual(['premiosBallots/uid-1']);
+    expect(lastConfigWrite()?.data).toMatchObject({ votesSeasonId: 'test', lastPublishedId: 'test', closesAtMillis: null });
+  });
+
   it('recorta las elecciones a las categorías archivadas', async () => {
     state.premiosCategories = [category('cat1')];
     state.premiosBallots = [
       { id: 'uid-1', data: { userId: 'uid-1', userDisplayName: 'Ana', selections: { cat1: 'cat1_option_0', borrada: 'x' } } },
     ];
-    state.config = enMarcha();
 
     await publishAndArchiveSeason({ season: 2026, seasonId: 'test' });
 
@@ -449,85 +434,48 @@ describe('ediciones con los votos a la vista', () => {
     expect(fila.selections).toEqual({ cat1: 'cat1_option_0' });
   });
 
-  // Quien votó antes de que existiera esto lo hizo con la promesa de que nadie más vería su papeleta.
-  it('una edición sin la marca se publica y se termina de una vez, como antes', async () => {
-    state.premiosCategories = [category('cat1')];
-    state.premiosBallots = [ballot('uid-1', 'Ana', 'cat1_option_0')];
-    state.config = { ...enMarcha(), revealVotes: undefined };
+  it('abrir la siguiente edición los retira, con su lista de votantes', async () => {
+    state.premiosReveal = [{ id: 'vieja', data: {} }];
+    state.premiosAdmin = [
+      { id: 'voters-vieja', data: {} },
+      { id: 'palmares-vieja', data: {} },
+      { id: 'winners', data: {} },
+    ];
 
-    await publishAndArchiveSeason({ season: 2026, seasonId: 'test' });
+    await openSeason({ name: 'Test', closesDay: '2026-12-31', season: 2026 });
 
-    expect(lastRevealWrite()).toBeUndefined();
-    expect(state.deletes).toEqual(['premiosBallots/uid-1']);
-    expect(lastConfigWrite()?.data.closesAtMillis).toBeNull();
+    expect(state.deletes).toEqual(['premiosReveal/vieja', 'premiosAdmin/voters-vieja']);
+    expect(lastConfigWrite()?.data.votesSeasonId).toBe('');
   });
 
-  describe('finishSeason', () => {
-    const publicada = () => ({ ...enMarcha(), votesRevealedAt: '2026-06-02T10:00:00.000Z', lastPublishedId: 'test' });
+  describe('borrarlos a mano', () => {
+    it('retira el resumen y la lista, y la marca si apuntaba a esa edición', async () => {
+      state.config = { votesSeasonId: 'test', lastPublishedId: 'test' };
 
-    it('retira las papeletas y el resumen, y vacía los nominados', async () => {
-      state.premiosCategories = [category('cat1')];
-      state.premiosBallots = [ballot('uid-1', 'Ana', 'cat1_option_0'), ballot('uid-2', 'Bea', 'cat1_option_1')];
-      state.premiosReveal = [{ id: 'test', data: {} }];
-      state.config = publicada();
+      await deleteSeasonVotes('test');
 
-      const result = await finishSeason();
-
-      expect(result).toEqual({ seasonId: 'test', deleted: 2, cleared: 1 });
-      expect(state.deletes).toEqual(['premiosBallots/uid-1', 'premiosBallots/uid-2', 'premiosReveal/test']);
-      expect(state.clearedWinners).toBe(1);
-      expect(state.updates.some((u) => u.path === 'premiosCategories/cat1')).toBe(true);
+      expect(state.deletes).toEqual(['premiosReveal/test', 'premiosAdmin/voters-test']);
+      expect(lastConfigWrite()?.data.votesSeasonId).toBe('');
+      // El archivo y los trofeos se quedan.
+      expect(state.deletes.some((path) => path.startsWith('premiosResults/'))).toBe(false);
     });
 
-    it('deja la configuración sin edición y apuntando al archivo', async () => {
-      state.premiosCategories = [category('cat1')];
-      state.config = publicada();
+    it('no toca la configuración si la marca apunta a otra edición', async () => {
+      state.config = { votesSeasonId: 'otra' };
 
-      await finishSeason();
+      await deleteSeasonVotes('test');
 
-      const config = lastConfigWrite()?.data;
-      expect(config?.closesAtMillis).toBeNull();
-      expect(config?.votesRevealedAt).toBeNull();
-      expect(config?.revealVotes).toBe(false);
-      expect(config?.lastPublishedId).toBe('test');
-      expect(config?.season).toBe(2027);
+      expect(state.sets.filter((s) => s.path === 'premiosConfig/voting')).toHaveLength(0);
     });
 
-    it('se niega si no hay ninguna edición publicada sin terminar', async () => {
-      state.premiosBallots = [ballot('uid-1', 'Ana', 'cat1_option_0')];
-      state.config = enMarcha();
-
-      await expect(finishSeason()).rejects.toThrow(/pendiente de terminar/);
-      expect(state.deletes).toEqual([]);
+    it('el histórico sabe qué ediciones los guardan', async () => {
+      state.premiosReveal = [{ id: '2025', data: {} }];
+      await expect(listSeasonVotes()).resolves.toEqual(['2025']);
     });
-  });
-
-  it('el histórico no deja borrar la edición mientras tiene los votos a la vista', async () => {
-    state.premiosResults = [{ id: 'test', data: { season: 2026 } }];
-    state.config = { ...enMarcha(), votesRevealedAt: '2026-06-02T10:00:00.000Z', lastPublishedId: 'test' };
-
-    await expect(deleteSeasonResult('test')).rejects.toThrow(/termínala/);
-    expect(state.deletes).toEqual([]);
   });
 });
 
 describe('openSeason', () => {
-  it('abre las ediciones nuevas con los votos a la vista al publicarse', async () => {
-    await openSeason({ name: 'Test', closesDay: '2026-12-31', season: 2026 });
-
-    expect(lastConfigWrite()?.data).toMatchObject({ revealVotes: true, votesRevealedAt: null });
-  });
-
-  // El permiso para leer el resumen es «tener papeleta», no «tenerla en esa edición»: un resumen olvidado lo
-  // leería quien votase en la siguiente.
-  it('retira el resumen de votos que haya quedado de otra edición', async () => {
-    state.premiosReveal = [{ id: 'vieja', data: {} }];
-
-    await openSeason({ name: 'Test', closesDay: '2026-12-31', season: 2026 });
-
-    expect(state.deletes).toEqual(['premiosReveal/vieja']);
-  });
-
   // Solo se abre una edición cuando no hay ninguna en marcha, así que lo que quede es un resto: contaminaría la
   // clasificación nueva y sus dueños no podrían votar por el bloqueo de re-voto.
   it('retira las papeletas sueltas de una edición anterior', async () => {
@@ -593,7 +541,12 @@ describe('deleteSeasonResult', () => {
 
     // El archivo y, con él, el registro privado de a quién se le concedió el trofeo: borrar del histórico borra
     // la edición entera (el logro de los perfiles lo cubre `premiosPalmaresRepository.test`).
-    expect(state.deletes).toEqual(['premiosAdmin/palmares-test', 'premiosResults/test']);
+    expect(state.deletes).toEqual([
+      'premiosReveal/test',
+      'premiosAdmin/voters-test',
+      'premiosAdmin/palmares-test',
+      'premiosResults/test',
+    ]);
     expect(result.wasPublished).toBe(false);
   });
 

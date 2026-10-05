@@ -74,15 +74,19 @@ export function PremiosHub() {
   // no cuesta ninguna lectura.
   const perfiles = usePremiosProfiles(archivo.leaderboard, user?.uid || '');
   /**
-   * LOS VOTOS DE CADA UNO, mientras la edición publicada no se termina y solo para quien votó en ella. Se miran
-   * en el archivo de ESTA edición: un enlace a una anterior no los tiene.
+   * LOS VOTOS DE CADA UNO, solo para quien votó en la edición y hasta que se abre la siguiente. Se piden cuando
+   * pueden salir bien: la configuración dice que ESTA edición los guarda (`votesSeasonId`) y quien mira sale en su
+   * clasificación. Las reglas deciden de verdad (lista privada de votantes); esto evita pedirlos en balde, que
+   * sería una lectura gastada y un `permission-denied` en la consola de cada visitante.
    */
   const idEnVista = route.seasonId || edition.config?.lastPublishedId || '';
   const conVotos =
     route.panel === 'resultados' &&
-    edition.stage === SEASON_STAGE.REVEALED &&
-    Boolean(edition.ballot) &&
-    idEnVista === edition.config?.lastPublishedId;
+    Boolean(user) &&
+    Boolean(profileId) &&
+    Boolean(idEnVista) &&
+    edition.config?.votesSeasonId === idEnVista &&
+    archivo.leaderboard.some((entry) => entry.profileId === profileId);
   const reveal = usePremiosReveal(conVotos ? idEnVista : '');
 
   // Corregir un voto arranca de lo ya enviado, no de cero.

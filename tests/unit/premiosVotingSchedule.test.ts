@@ -133,44 +133,6 @@ describe('getSeasonStage', () => {
     const publicada = config({ closesAtMillis: null, isOpen: false, lastPublishedId: 'porra-2026' });
     expect(getSeasonStage(publicada, NOW)).toBe(SEASON_STAGE.NONE);
   });
-
-  describe('con los votos a la vista', () => {
-    const aLaVista = (overrides: Partial<PremiosVotingConfig> = {}) =>
-      config({
-        closesAtMillis: NOW - HOUR,
-        isOpen: false,
-        revealVotes: true,
-        votesRevealedAt: '2026-06-15T11:00:00.000Z',
-        seasonId: 'porra-2026',
-        lastPublishedId: 'porra-2026',
-        ...overrides,
-      });
-
-    it('publicada y sin terminar es su propio estado', () => {
-      expect(getSeasonStage(aLaVista(), NOW)).toBe(SEASON_STAGE.REVEALED);
-    });
-
-    it('no se vota aunque el interruptor y la fecha lo permitieran', () => {
-      const reabierta = aLaVista({ isOpen: true, closesAtMillis: NOW + DAY });
-      expect(isVotingOpenNow(reabierta, NOW)).toBe(false);
-      expect(getSeasonStage(reabierta, NOW)).toBe(SEASON_STAGE.REVEALED);
-    });
-
-    it('ofrece los resultados, que ya son los de esta edición', () => {
-      expect(areResultsOffered(aLaVista(), NOW)).toBe(true);
-    });
-
-    // El fallo que evita la marca propia: deducirlo del id confundía una edición recién abierta con el mismo
-    // nombre que la última publicada con una ya publicada.
-    it('una edición abierta con el id de la última publicada sigue abierta', () => {
-      const reeditada = config({ closesAtMillis: NOW + DAY, seasonId: 'porra-2026', lastPublishedId: 'porra-2026' });
-      expect(getSeasonStage(reeditada, NOW)).toBe(SEASON_STAGE.OPEN);
-    });
-
-    it('terminar devuelve el ciclo al principio', () => {
-      expect(getSeasonStage(aLaVista({ closesAtMillis: null, votesRevealedAt: null }), NOW)).toBe(SEASON_STAGE.NONE);
-    });
-  });
 });
 
 describe('daysUntil', () => {
