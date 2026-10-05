@@ -61,6 +61,9 @@ que se abre la edición siguiente.
 - **«En curso» enseña el orden por nombre** y, con él, el selector de tarjetas o renglones, que se quedaba fuera
   porque comparten cabecera. Igual en la lista de la vergüenza mientras no haya nada puntuado.
 - **Forja ya no pinta «Biblioteca» y el nombre de la lista** sobre las pestañas.
+- **En el resumen del año, «Lo que más valoró, y lo que le chirrió» es la pirámide de Estadísticas**: lo valorado
+  frente a lo que chirrió sobre una escala común, con titular («Su punto fuerte: …») y el mismo número de filas a
+  cada lado.
 - **Sin salida ya no pinta el láser en el fondo de la actividad social** —quedan los dos portales— **ni el «01 / 06»
   en las tarjetas del resumen del año**.
 - **En el teléfono, las pestañas de las listas se reparten el ancho**: caben las cinco a 280 px y con el texto del
@@ -76,6 +79,8 @@ que se abre la edición siguiente.
   servidor, igual que ya hacían las reglas y el panel.
 
 ### Fixed
+- **Al recargar un perfil ya no sale «No se encontró el perfil» mientras carga**: se ve su esqueleto hasta que
+  llega, y el aviso queda para cuando de verdad no está.
 - **Estadísticas ya no se sale de ancho en los teléfonos más estrechos**: los globos de «Evolución de tus listas» se
   salían del gráfico y ensanchaban la página a 320 px con el texto grande.
 - **Premios:** cada tarjeta del podio lleva su metal, y la del oro ya no sale transparente.
