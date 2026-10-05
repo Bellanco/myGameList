@@ -143,8 +143,7 @@ export const AppearanceToggles = memo(function AppearanceToggles() {
       </div>
       </div>
 
-      {/* La lista de deseos. Con nota, como las carátulas: «ocultar» aquí se confunde fácil con esconderla a los
-          demás, que es otro ajuste y está en el perfil social. */}
+      {/* La lista de deseos: esconde la pestaña, no sus juegos ni lo que ven los demás (eso es el perfil social). */}
       <div className="appearance-field">
       <p className="settings-card-sub">{A.wishlistLabel}</p>
       <div className="theme-mode-row" role="group" aria-label={A.wishlistAria}>
@@ -165,7 +164,6 @@ export const AppearanceToggles = memo(function AppearanceToggles() {
           <span>{A.wishlistHide}</span>
         </button>
       </div>
-      <p className="settings-card-note">{A.wishlistNote}</p>
       </div>
       </div>
   );
