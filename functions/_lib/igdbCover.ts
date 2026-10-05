@@ -325,12 +325,15 @@ export function plataformasEsperadas(plataformas: readonly string[]): Set<string
 }
 
 export interface FichaIgdb {
+  id?: number;
   name?: string;
   game_type?: number;
   total_rating_count?: number;
   cover?: { image_id?: string };
   alternative_names?: { name?: string }[];
   platforms?: { abbreviation?: string }[];
+  /** Segundos desde 1970. Solo lo pide la búsqueda del panel (`buscarCandidatos`), que enseña el año. */
+  first_release_date?: number;
 }
 
 /**
@@ -691,4 +694,66 @@ export async function resolverCaratula(
   const cacheado = await leerCaratulaCacheada(env, nombre, plataformas, ampliado);
   if (cacheado !== undefined) return cacheado;
   return emparejarYGuardar(env, nombre, plataformas, ampliado);
+}
+
+/** Un candidato de la búsqueda del panel de premios, tal y como se enseña para elegir. */
+export interface CandidatoIgdb {
+  /** Id de la ficha en IGDB, para saber qué se eligió. */
+  id: number;
+  name: string;
+  /** `image_id` de su carátula: es lo que se guarda en el nominado y lo que pide `/cover?i=`. */
+  coverId: string;
+  year?: string;
+  platforms: string[];
+  /** El `game_type` de IGDB: el panel dice «remake» o «port», que es justo lo que distingue a dos homónimos. */
+  gameType?: number;
+}
+
+/** Cuántos candidatos se enseñan: los que caben de un vistazo, ordenados por parecido. */
+const MAX_CANDIDATOS = 12;
+
+/**
+ * LOS CANDIDATOS PARA QUE EL ADMINISTRADOR ELIJA LA CARÁTULA DE UN NOMINADO (ver `functions/api/igdb-search.ts`).
+ *
+ * Existe porque en los premios no hay plataforma que desempate: un nominado es solo un nombre, y con dos fichas
+ * que se llaman exactamente igual —el *Ocarina of Time* de N64 y su remake de Switch 2— el emparejamiento se
+ * queda con la más votada, que casi nunca es la nueva. Aquí no se decide nada: se enseñan con su año, sus
+ * plataformas y su tipo, y se elige a mano.
+ *
+ * Las mismas dos preguntas que el emparejador —por prefijo ordenado por votos y la búsqueda libre— y el mismo
+ * filtro de tipos (sin DLC, packs ni mods), pero sin umbral: lo que decide aquí es una persona. Solo entran las
+ * fichas CON carátula, que son las únicas que se pueden elegir. `null` si no se ha podido preguntar.
+ */
+export async function buscarCandidatos(env: EntornoIgdb, consulta: string): Promise<CandidatoIgdb[] | null> {
+  const token = await tokenIgdb(env);
+  if (!token) return null;
+
+  const campos = `${CAMPOS.slice(0, -1)},first_release_date;`;
+  const fichas = new Map<number, FichaIgdb>();
+  for (const cuerpo of [
+    `${campos} where name ~ "${escapar(consulta)}"*; sort total_rating_count desc; limit 30;`,
+    `search "${escapar(consulta)}"; ${campos} limit 30;`,
+  ]) {
+    const respuesta = await consultar(env, token, cuerpo);
+    if (respuesta === null) return null;
+    for (const ficha of respuesta) if (ficha.id !== undefined && !fichas.has(ficha.id)) fichas.set(ficha.id, ficha);
+  }
+
+  const objetivo = normalizarTitulo(consulta);
+  const bigramasObjetivo = bigramas(objetivo);
+  const baseObjetivo = baseSinEdicion(consulta);
+  const enOtroAlfabeto = OTRO_ALFABETO.test(consulta);
+  return [...fichas.values()]
+    .filter((ficha) => esIdDeCaratula(ficha.cover?.image_id ?? '') && gradoDeTipo(ficha.game_type, false) !== null)
+    .map((ficha) => ({ ficha, nota: puntuarContra(objetivo, bigramasObjetivo, ficha, baseObjetivo, enOtroAlfabeto) }))
+    .sort((a, b) => b.nota - a.nota || (b.ficha.total_rating_count ?? 0) - (a.ficha.total_rating_count ?? 0))
+    .slice(0, MAX_CANDIDATOS)
+    .map(({ ficha }) => ({
+      id: ficha.id as number,
+      name: ficha.name ?? '',
+      coverId: ficha.cover?.image_id as string,
+      ...(ficha.first_release_date ? { year: String(new Date(ficha.first_release_date * 1000).getUTCFullYear()) } : {}),
+      platforms: (ficha.platforms ?? []).map((p) => p.abbreviation).filter((abbr): abbr is string => Boolean(abbr)),
+      ...(ficha.game_type !== undefined ? { gameType: ficha.game_type } : {}),
+    }));
 }

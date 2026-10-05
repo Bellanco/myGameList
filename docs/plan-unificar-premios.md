@@ -959,6 +959,13 @@ el principio rector sin discutir de gustos.
    para todo el mundo. Se piden con `c=1` —solo lo ya resuelto— y las resuelve el panel al abrir la edición y al
    guardar cada categoría (`resolverCaratulasDeNominados`), así que votar no consulta IGDB ni escribe en KV.
 
+   *(Revisado el 05-10-2026.)* **La carátula de un juego se puede elegir a mano.** Un nominado es solo un nombre,
+   sin plataforma que desempate, y entre dos fichas que se llaman igual —el *Ocarina of Time* de N64 y su remake
+   de Switch 2— el emparejamiento se queda con la más votada. En el panel, cada nominado de una categoría de juegos
+   tiene «Elegir carátula», que busca en IGDB (`/api/igdb-search`, solo administración) y marca cuál es la
+   automática. La elegida se guarda en el nominado (`cover`, aparte de la `image` de TMDB) y se sirve por
+   `/cover?i=<image_id>`, sin emparejar ni escribir nada; esos nominados ya no se resuelven por el nombre.
+
    *(Revisado el 29-09-2026.)* **Solo en las categorías de juegos.** Cada categoría lleva `nomineeKind`
    (`game` / `person` / `screen`, sin él `game`), y lo marca el administrador en el panel en lugar de deducirlo
    del título. Las de interpretaciones y cine o serie no se buscan en IGDB y salen con la portada de casa: IGDB

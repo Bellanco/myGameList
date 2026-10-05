@@ -42,6 +42,12 @@ const MAX_PLATAFORMAS = 200;
  *     de una visita, y la petición que se paga es una cada mes en vez de una por visita.
  */
 const CACHE_ACIERTO = 'public, max-age=2592000, stale-while-revalidate=31536000';
+
+/**
+ * LA CARÁTULA ELEGIDA (`i=`): un año e inmutable, como `/poster`. Aquí la URL no nombra un juego sino una imagen
+ * concreta de IGDB, así que su respuesta no puede mejorar: si el administrador elige otra, cambia la URL.
+ */
+const CACHE_ELEGIDA = 'public, max-age=31536000, immutable';
 /**
  * Y NADA cuando no hay carátula. Esta línea decía `max-age=3600` y costó media biblioteca: durante una ráfaga de
  * 429 se sirvieron 56 respuestas «sin carátula» falsas, y el navegador se las guardó una hora — así que aunque el
@@ -256,12 +262,29 @@ export const onRequestGet: (contexto: { request: Request; env: Env }) => Promise
 };
 
 const atender: (contexto: { request: Request; env: Env }) => Promise<Response> = async ({ request, env }) => {
+  const url = new URL(request.url);
+
+  /* LA CARÁTULA YA ELEGIDA (`i=<image_id>`), la de un nominado de premios cuyo administrador escogió la ficha a mano
+     (ver `functions/api/igdb-search.ts`). No hay nada que emparejar: ni nombre, ni KV, ni consulta a IGDB, ni cupo;
+     solo los bytes de esa imagen, como hace `/poster` con las de TMDB. Por eso va antes que todo lo demás, incluida
+     la comprobación de credenciales, que esto no necesita. Que el id tenga forma de id es lo que impide que la URL
+     se salga de la ruta de imágenes de IGDB. */
+  const elegida = url.searchParams.get('i');
+  if (elegida !== null) {
+    if (!esIdDeCaratula(elegida)) {
+      return new Response('Identificador de carátula no válido', {
+        status: 400,
+        headers: { 'Cache-Control': 'no-store' },
+      });
+    }
+    return servirImagen(elegida, tamanoPedido(url.searchParams.get('s')), CACHE_ELEGIDA);
+  }
+
   if (!env.IGDB_CLIENT_ID || !env.IGDB_CLIENT_SECRET || !env.COVERS) {
     // Configuración incompleta: fallo nuestro, no del cliente. 501 y no 500 para distinguirlo de una avería.
     return new Response('Las carátulas no están configuradas en este entorno', { status: 501 });
   }
 
-  const url = new URL(request.url);
   const nombre = (url.searchParams.get('n') ?? '').trim();
   const plataformas = (url.searchParams.get('p') ?? '').slice(0, MAX_PLATAFORMAS);
 
@@ -398,6 +421,11 @@ const atender: (contexto: { request: Request; env: Env }) => Promise<Response> =
     return new Response('Identificador de carátula inesperado', { status: 502 });
   }
 
+  return servirImagen(coverId, tamano, CACHE_ACIERTO);
+};
+
+/** Los bytes de una carátula de IGDB, desde este dominio y con la caché que toque a quien la pide. */
+async function servirImagen(coverId: string, tamano: TamanoCaratula, cacheControl: string): Promise<Response> {
   const imagen = await fetch(urlDeImagen(coverId, tamano), {
     // La respuesta de IGDB se cachea en el borde: la misma carátula la comparten todos los que tengan el juego.
     cf: { cacheTtl: 2592000, cacheEverything: true },
@@ -411,9 +439,9 @@ const atender: (contexto: { request: Request; env: Env }) => Promise<Response> =
     status: 200,
     headers: {
       'Content-Type': imagen.headers.get('Content-Type') ?? 'image/jpeg',
-      'Cache-Control': CACHE_ACIERTO,
-      // Sin `Vary`: la respuesta depende solo de la URL, y la URL ya lleva nombre y plataformas.
+      'Cache-Control': cacheControl,
+      // Sin `Vary`: la respuesta depende solo de la URL, y la URL ya lleva nombre y plataformas (o el id elegido).
       'X-Content-Type-Options': 'nosniff',
     },
   });
-};
+}

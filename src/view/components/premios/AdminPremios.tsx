@@ -10,6 +10,7 @@ import { AdminPremiosVotos } from './AdminPremiosVotos';
 import { todayInVotingZone, toVotingZoneDay } from '../../../core/premios/closingDate';
 import { getCategoryTitle, tField } from '../../../core/premios/localize';
 import { hasGameCovers } from '../../../core/premios/nomineeKind';
+import { nomineeCoverOf } from '../../../core/premios/nomineeImage';
 import { getSeasonLabel } from '../../../core/premios/seasonId';
 import { SEASON_STAGE, getSeasonStage, validateClosingDay } from '../../../core/premios/votingSchedule';
 import {
@@ -204,14 +205,19 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
       /* LAS CARÁTULAS DE TODOS LOS NOMINADOS, antes de que entre nadie: la votación solo enseña lo ya resuelto
          (ver `resolverCaratulasDeNominados`). Las que ya lo estaban —las guardadas al editar cada categoría—
          salen de la caché, así que repetirlas aquí no gasta nada y cubre las categorías de ediciones anteriores. */
-      const nombres = archivableCategories(categories)
+      const nominados = archivableCategories(categories)
         // Solo las de juegos: lo demás no se busca en IGDB (ver `core/premios/nomineeKind`).
         .filter(hasGameCovers)
-        .flatMap((category) => (category.options || []).map((option) => tField(option)));
+        .flatMap((category) => category.options || []);
+      // Las elegidas a mano no se resuelven: se piden por su id (ver `nomineeCoverOf`).
+      const elegidas = nominados.filter((option) => nomineeCoverOf(option)).length;
+      const nombres = nominados.filter((option) => !nomineeCoverOf(option)).map((option) => tField(option));
       const caratulas = await resolverCaratulasDeNominados(nombres);
       const partes = [aviso];
       if (result.leftovers > 0) partes.push(L.season.leftovers(result.leftovers));
-      if (nombres.length) partes.push(L.covers.summary(caratulas.conCaratula, caratulas.sinCaratula, caratulas.fallidas));
+      if (nominados.length) {
+        partes.push(L.covers.summary(caratulas.conCaratula + elegidas, caratulas.sinCaratula, caratulas.fallidas));
+      }
       return partes.join(' ');
     });
 

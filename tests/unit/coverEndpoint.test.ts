@@ -563,3 +563,32 @@ describe('/cover — lo ajeno', () => {
     expect(consultasAIgdb()).toHaveLength(0);
   });
 });
+
+/* LA CARÁTULA ELEGIDA (`i=`), la de un nominado de premios cuya ficha escogió el administrador. No hay nada que
+   emparejar: ni KV, ni IGDB, ni cupo; solo los bytes de esa imagen, como `/poster`. */
+describe('/cover — elegida por su id', () => {
+  it('sirve los bytes de esa imagen, inmutables un año, sin tocar KV ni preguntar a IGDB', async () => {
+    const kv = kvFalso();
+    const respuesta = await onRequestGet({ request: peticion('i=cocv5r&s=medio'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(200);
+    expect(respuesta.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
+    expect(kv.get).not.toHaveBeenCalled();
+    expect(consultasAIgdb()).toHaveLength(0);
+    const pedida = String(fetchSimulado.mock.calls[0]?.[0]);
+    expect(pedida).toBe('https://images.igdb.com/igdb/image/upload/t_720p/cocv5r.jpg');
+  });
+
+  it('no necesita las credenciales de IGDB', async () => {
+    const respuesta = await onRequestGet({ request: peticion('i=cocv5r'), env: entorno(kvFalso(), false) });
+    expect(respuesta.status).toBe(200);
+  });
+
+  it('un id sin forma de id no sale a la red', async () => {
+    const respuesta = await onRequestGet({ request: peticion('i=..%2F..%2Fx'), env: entorno(kvFalso()) });
+
+    expect(respuesta.status).toBe(400);
+    expect(fetchSimulado).not.toHaveBeenCalled();
+  });
+});
+

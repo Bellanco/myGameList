@@ -43,3 +43,13 @@ export function coverUrl(
   if (siNoEstaResuelta === 'ajeno') parametros.set('c', '2');
   return `/cover?${parametros.toString()}`;
 }
+
+/**
+ * La URL de una carátula ELEGIDA a mano: una imagen concreta de IGDB por su id, sin nombre que emparejar. Es la de
+ * los nominados de premios a los que el administrador les escogió la ficha (ver `PremiosNomineeCover`).
+ */
+export function coverUrlPorId(imageId: string, tamano: 'normal' | 'medio' = 'normal'): string {
+  const parametros = new URLSearchParams({ i: imageId });
+  if (tamano !== 'normal') parametros.set('s', tamano);
+  return `/cover?${parametros.toString()}`;
+}
