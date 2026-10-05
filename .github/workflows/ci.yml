@@ -69,12 +69,15 @@ jobs:
           path: ~/.cache/firebase/emulators
           key: ${{ runner.os }}-firestore-emulator-${{ steps.firestore-emulator.outputs.version }}
 
+      # firebase-tools no reintenta la descarga y el motivo real (conexión cortada, timeout…) solo lo deja en
+      # `firebase-debug.log`; por eso se vuelca su cola en cada fallo.
       - name: Download Firestore emulator
         if: steps.firestore-emulator-cache.outputs.cache-hit != 'true'
         run: |
           for intento in 1 2 3; do
             npx firebase setup:emulators:firestore && exit 0
             echo "Descarga del emulador fallida (intento $intento); reintentando…"
+            tail -n 40 firebase-debug.log 2>/dev/null || true
             sleep $((intento * 10))
           done
           exit 1
