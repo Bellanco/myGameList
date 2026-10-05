@@ -63,7 +63,7 @@ saga.
   - plataforma solo como desempate;
   - orden por interés, tope de 5 y huecos;
   - Deseos vacía o Próximos vacía.
-- [ ] **2. La tarjeta.**
+- [x] **2. La tarjeta.**
   - Bloque `'kin'` en `StatsBlock` y en `OWN_STATS_BLOCKS`; textos en `statsLabels`.
   - Componente `WishKinCard`, que reutiliza `GameRefList` y `TagChips`.
   - Para la comparación, generalizar `Dumbbell` (hoy atado a terminados/abandonados) a dos series con sus

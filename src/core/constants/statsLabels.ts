@@ -306,6 +306,27 @@ export const STATS_UI = {
     recent: 'Los últimos en llegar',
     waitingSince: (since: string) => `desde ${since}`,
   },
+  /** Lo que deseas frente a lo que ya tienes en Próximos (`core/stats/wishKin`). Solo en tu panel. */
+  kin: {
+    title: 'Ya lo tienes en casa',
+    // Far Cry 3, Vaas: «¿Te he dicho alguna vez cuál es la definición de locura?».
+    subtitle: 'La definición de locura es comprar otro igual esperando que sea distinto: mira antes lo que ya tienes.',
+    tile: 'Con pariente en Próximos',
+    tileUnit: (wishes: number) => `de ${wishes}`,
+    tileHint: (wishes: number) => `${wishes === 1 ? 'tu deseo' : `tus ${wishes} deseos`}, frente a lo que ya tienes sin jugar`,
+    pairs: 'Antes de comprar',
+    youHave: 'ya tienes',
+    saga: 'Misma saga',
+    /** Conector que la vista dice con los chips: solo lo oye un lector de pantalla («…, por Metroidvania»). */
+    because: ', por ',
+    noPairs: 'Ninguno de tus deseos tiene pariente en Próximos: lo que quieres, de momento, no lo tienes en casa.',
+    more: (count: number) => `Y ${count} ${count === 1 ? 'deseo más' : 'deseos más'} con pariente.`,
+    genres: 'Lo que deseas frente a lo que esperas',
+    legendWished: 'Deseos',
+    legendWaiting: 'Próximos',
+    gaps: 'Sin nada esperando',
+    gapsHint: 'Géneros que deseas sin ningún juego de ese género en Próximos: ahí un deseo cubre un hueco de verdad.',
+  },
   /** Lo que escribes: la cifra de reseñas, el bloque de puntos fuertes y débiles y las citas del podio. */
   reviews: {
     tile: 'Reseñas',

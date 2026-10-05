@@ -15,11 +15,13 @@ import { TopGames } from './TopGames';
 import { ReviewTraits } from './ReviewTraits';
 import { ShameCard } from './ShameCard';
 import { WishlistCard } from './WishlistCard';
+import { WishKinCard } from './WishKinCard';
 import { CountUp } from './CountUp';
 import { useRevealOnScroll } from './useRevealOnScroll';
 import { STATS_LABELS, StatsLabelsProvider, type StatsVoice } from './statsVoice';
 import { formatDecimal, formatHours } from './format';
 import type { ArrivalPoint, StatsBlock, StatsSummary, YearSummary } from '../../../core/stats/types';
+import type { WishKinSummary } from '../../../core/stats/wishKin';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
 import type { StatsScope, YearMetric } from '../../../viewmodel/useStatsViewModel';
 
@@ -67,6 +69,11 @@ export interface StatsPanelProps {
   achievements?: ReactNode;
   /** Avisos de la vista bajo las cifras destacadas (reciprocidad de listas, por ejemplo). */
   notes?: ReactNode;
+  /**
+   * Los deseos frente a Próximos («Ya lo tienes en casa»). Solo llega en tu panel y con la lista de deseos a la
+   * vista; null o sin deseos, el apartado no se monta.
+   */
+  wishKin?: WishKinSummary | null;
   /** Aviso de cierre (lo que el rango de quien mira todavía no alcanza). */
   footNote?: ReactNode;
 }
@@ -102,6 +109,7 @@ export const StatsPanel = memo(function StatsPanel({
   onOpenReview,
   achievements,
   notes,
+  wishKin = null,
   footNote,
 }: StatsPanelProps) {
   const L = STATS_LABELS[voice];
@@ -385,6 +393,14 @@ export const StatsPanel = memo(function StatsPanel({
             <h2>{L.wishlist.title}</h2>
             <p className="stats-card-sub">{L.wishlist.subtitle}</p>
             <WishlistCard wishlist={stats.wishlist} scale={scale} publicOnly={!full} />
+          </div>
+        ) : null}
+
+        {has('kin') && wishKin && wishKin.wishes > 0 ? (
+          <div className="stats-card stats-card-kin">
+            <h2>{L.kin.title}</h2>
+            <p className="stats-card-sub">{L.kin.subtitle}</p>
+            <WishKinCard kin={wishKin} />
           </div>
         ) : null}
 

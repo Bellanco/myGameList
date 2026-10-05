@@ -6,7 +6,7 @@ import { TagRanking } from './TagRanking';
 import { TagChips } from './TagChips';
 import { Dumbbell } from './Dumbbell';
 import { GameRefList } from './GameRefList';
-import { formatDecimal, formatHours } from './format';
+import { formatDecimal, formatHours, formatPercent } from './format';
 import type { ShameSummary } from '../../../core/stats/types';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
 
@@ -67,7 +67,18 @@ export const ShameCard = memo(function ShameCard({
         {shame.abandonRate.length ? (
           <>
             <h3>{L.rate}</h3>
-            <Dumbbell rows={shame.abandonRate} />
+            <Dumbbell
+              rows={shame.abandonRate.map((row) => ({
+                tag: row.tag,
+                first: row.abandoned,
+                second: row.completed,
+                note: `${formatPercent(row.percent)}%`,
+              }))}
+              series={[
+                { label: L.legendAbandoned, list: 'v' },
+                { label: L.legendCompleted, list: 'c' },
+              ]}
+            />
           </>
         ) : (
           <>

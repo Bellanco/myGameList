@@ -17,6 +17,7 @@ import { socialCounters } from '../../../core/achievements/deviceSignals';
 import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 import { OWN_STATS_BLOCKS } from '../../../core/stats/types';
 import type { TabData } from '../../../model/types/game';
+import { useShowWishlist } from '../../hooks/useShowWishlist';
 // La hoja del panel se importa AQUÍ y no desde `index.scss`: como el hub entra por `lazy()`, Vite emite su CSS
 // en el mismo chunk perezoso y el arranque no carga ni un byte de estilos de esta pantalla.
 import '../../../styles/stats.scss';
@@ -52,6 +53,8 @@ function reviewIdFrom(pathname: string): number {
  */
 export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
   const vm = useStatsViewModel(games);
+  // Con la pestaña de deseos escondida en Ajustes, su apartado tampoco sale: sería hablar de una lista que no ves.
+  const { showWishlist } = useShowWishlist();
   // Lo que el panel decide para todo el mundo: qué escaleras están ocultas y hasta dónde las ha abierto la
   // comunidad. Llega vacío y se pone al día un instante después: la pantalla no espera a la red para pintarse
   // (ver `useAchievementsConfig`), y vacío significa el comportamiento de siempre.
@@ -177,6 +180,7 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
         }}
         onOpenReviews={openReviews}
         onOpenReview={openReviewFromPanel}
+        wishKin={showWishlist ? vm.wishKin : null}
         achievements={
           ENABLE_ACHIEVEMENTS ? (
             <AchievementsCard

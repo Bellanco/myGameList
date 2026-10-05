@@ -135,6 +135,7 @@ export type StatsBlock =
   | 'reviews'
   | 'shame'
   | 'wishlist'
+  | 'kin'
   | 'genreRanks'
   | 'activity'
   | 'replay'
@@ -158,6 +159,9 @@ export const OWN_STATS_BLOCKS: readonly StatsBlock[] = [
   'reviews',
   'shame',
   'wishlist',
+  // Los deseos frente a Próximos: SOLO en tu panel. Ni entra en los bloques del perfil de un amigo ni tendría con
+  // qué —la lista de deseos no viaja en el cálculo de sus estadísticas—.
+  'kin',
 ];
 
 /** Entradas a cada lista en un mes, derivadas de `listedAt`. `m` es `AAAA-MM`. */

@@ -40,6 +40,8 @@
   --stats-v: var(--danger);
   --stats-e: var(--warn);
   --stats-p: var(--steam);
+  /* Deseos: el sexto tono de la rampa categórica, el mismo que lleva su mensaje en el feed. */
+  --stats-d: var(--cat-6);
 
   /* RAMPA SECUENCIAL para los repartos por etiqueta (rosetón, hexágono). Dos tonos del tema entre los que se
      interpola por puesto: con un solo tono, diez géneros casi empatados salían todos del mismo color. Cada
@@ -920,6 +922,7 @@
 .stats-legend-dot.is-v { background: var(--stats-v); }
 .stats-legend-dot.is-e { background: var(--stats-e); }
 .stats-legend-dot.is-p { background: var(--stats-p); }
+.stats-legend-dot.is-d { background: var(--stats-d); }
 
 .backlog {
   display: flex;
@@ -1406,7 +1409,9 @@
 
 .polar-label-num { fill: var(--stats-ink-2); font-weight: 500; }
 
-/* ---- Mancuernas (terminados frente a abandonados) ------------------------------------------------------ */
+/* ---- Mancuernas (terminados frente a abandonados; deseos frente a próximos) ---------------------------- */
+/* Los dos colores llegan del componente (`--db-first`, `--db-second`) como `var(--stats-<lista>)`: así cada tema
+   los tiñe con sus colores de lista sin que esta hoja sepa qué dos series está pintando. */
 
 .dumbbell {
   display: flex;
@@ -1457,7 +1462,7 @@
   height: 3px;
   margin-top: -1.5px;
   border-radius: var(--stats-pill);
-  background: linear-gradient(90deg, var(--stats-v), var(--stats-c));
+  background: linear-gradient(90deg, var(--db-first), var(--db-second));
   transform-origin: left center;
   animation: grow-right .6s cubic-bezier(.22, 1, .36, 1) both;
   animation-delay: calc(var(--i, 0) * 70ms);
@@ -1475,8 +1480,11 @@
   animation-delay: calc(var(--i, 0) * 70ms + 120ms);
 }
 
-.dumbbell-dot.is-completed { background: var(--stats-c); }
-.dumbbell-dot.is-abandoned { background: var(--stats-v); }
+.dumbbell-dot.is-first { background: var(--db-first); }
+.dumbbell-dot.is-second { background: var(--db-second); }
+
+/* Sin cifra al final de la fila, la tercera columna sobra: el carril se queda con su ancho. */
+.dumbbell.is-plain li { grid-template-columns: minmax(4.5rem, 8rem) 1fr; }
 
 /* La cifra despega del punto: el punto tiene borde, y algún tema le añade además un contorno de tinta o un
    halo de neón, así que pegada al 100% quedaba montada encima de ese anillo. */
@@ -1496,6 +1504,113 @@
   /* Mismo motivo que los deltas de "Dónde brillas": el rojo puro a este cuerpo no llega al 4,5:1 en claro. */
   color: color-mix(in oklch, var(--stats-v) 62%, var(--text));
   font-variant-numeric: tabular-nums;
+}
+
+/* ---- «Ya lo tienes en casa»: parejas deseo → lo que ya espera en Próximos ----------------------------- */
+/* EN EL TELÉFONO, TRES RENGLONES: el deseo, «› ya tienes X» y los motivos. Los nombres de juego son largos («La
+   Tierra Media: Sombras de Mordor») y en 320 px no caben dos en una línea sin cortarse a la mitad; apilados se leen
+   enteros. Con sitio (la propia lista mide su ancho, no la ventana: el panel de escritorio también estrecha) los
+   motivos suben a la derecha y la pareja ocupa dos renglones. */
+.kin-pairs {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  container-type: inline-size;
+}
+
+.kin-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "wish" "have" "why";
+  gap: .2rem;
+  padding: .55rem .65rem;
+  border-radius: 8px;
+  border-left: 3px solid var(--stats-d);
+  background: var(--surface-soft);
+  font-size: var(--fs-sm);
+  animation: fade-in .4s ease-out both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+  transition: background .15s ease;
+}
+
+.kin-pair:hover { background: var(--overlay-hover); }
+
+/* La saga es el parentesco más claro: el filete lo dice con el color de Próximos, que es donde ya está. */
+.kin-pair.is-saga { border-left-color: var(--stats-p); }
+
+.kin-wish {
+  grid-area: wish;
+  min-width: 0;
+  font-weight: 600;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.kin-have {
+  grid-area: have;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 .3rem;
+  min-width: 0;
+  color: var(--stats-ink-2);
+}
+
+.kin-arrow {
+  width: .55rem;
+  height: .55rem;
+  flex: 0 0 auto;
+  fill: currentColor;
+  align-self: center;
+}
+
+.kin-have-label { font-size: var(--fs-xs); }
+
+.kin-have-name {
+  min-width: 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.kin-why {
+  grid-area: why;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .3rem;
+  margin-top: .15rem;
+}
+
+.kin-why-chip {
+  padding: .1rem .5rem;
+  border-radius: var(--stats-pill);
+  border: 1px solid color-mix(in srgb, var(--stats-d) 40%, transparent);
+  background: color-mix(in srgb, var(--stats-d) 12%, transparent);
+  font-size: var(--fs-2xs);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.kin-pair.is-saga .kin-why-chip {
+  border-color: color-mix(in srgb, var(--stats-p) 40%, transparent);
+  background: color-mix(in srgb, var(--stats-p) 12%, transparent);
+}
+
+@container (width >= 34rem) {
+  .kin-pair {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "wish why" "have why";
+    column-gap: 1rem;
+    align-items: center;
+  }
+
+  .kin-why {
+    justify-content: flex-end;
+    margin-top: 0;
+    max-width: 16rem;
+  }
 }
 
 /* ---- Nube de etiquetas (razones de abandono) ----------------------------------------------------------- */
