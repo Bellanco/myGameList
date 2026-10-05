@@ -249,7 +249,6 @@ export function PremiosHub() {
           onSignIn={() => void handleSignIn()}
           opportunities={edition.opportunities}
           remainingOpportunities={edition.remainingOpportunities}
-          hasSocialAccount={voter.hasSocialAccount}
         />
       ) : route.panel === 'papeleta' || sinCorrecciones ? (
         // LA PAPELETA, EN MODO LECTURA. Se llega de dos maneras y las dos acaban aquí: pidiéndola a propósito
@@ -318,7 +317,6 @@ export function PremiosHub() {
           onSignIn={() => void handleSignIn()}
           opportunities={edition.opportunities}
           remainingOpportunities={edition.remainingOpportunities}
-          hasSocialAccount={voter.hasSocialAccount}
         />
       )}
     </div>

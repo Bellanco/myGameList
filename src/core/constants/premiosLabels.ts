@@ -55,8 +55,6 @@ export const PREMIOS_UI = {
         : `Tienes ${cuantas} oportunidades: el envío y ${cuantas - 1} correcciones.`,
     opportunitiesLeft: (quedan: number) =>
       quedan === 1 ? 'Te queda 1 oportunidad' : `Te quedan ${quedan} oportunidades`,
-    /** Solo a quien vota con cuenta ligera: es la única diferencia práctica que le hace tener perfil. */
-    moreWithSocial: 'Con cuenta social tendrías entre 5 y 20, según tu rango.',
     // Sin edición abierta ni resultados: es enero y aquí no hay nada. Se dice sin dramatismo.
     empty: 'Ahora mismo no hay ninguna edición en marcha.',
     emptyHint: 'Cuando se abra la siguiente, aparecerá aquí.',
