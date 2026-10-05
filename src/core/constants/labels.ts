@@ -235,7 +235,6 @@ export const UI_MESSAGES = {
   // El RÓTULO de la cabecera de pantalla (`ScreenHeader`). Es decorativa —va `aria-hidden` y solo la pinta el tema
   // que la enciende—, así que el encabezado accesible sigue siendo `pageHeading`.
   screenHeader: {
-    lists: 'Biblioteca',
     settings: 'Ajustes',
   },
   skipToContent: 'Saltar al contenido',

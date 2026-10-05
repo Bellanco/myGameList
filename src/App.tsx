@@ -1134,9 +1134,6 @@ export default function App() {
           por los controles flotantes y la barra de pestañas en cada carga. Solo se ve al recibir el foco. */}
       <a className="skip-link" href="#contenido">{UI_MESSAGES.skipToContent}</a>
       <FloatingControls activeSection={activeSection} />
-      {activeSection === 'lists' ? (
-        <ScreenHeader variant="band" kicker={UI_MESSAGES.screenHeader.lists} title={TAB_TITLES[currentTab]} />
-      ) : null}
       {activeSection === 'lists' ? <TabBar tabs={visibleTabs} currentTab={currentTab} tabCounts={vm.tabCounts} onTabChange={handleTabChange} /> : null}
       {/* ═══ EL CARRIL DE LOS AVISOS · abajo a la izquierda, sobre la barra inferior ═══════════════════════
           UN SOLO CARRIL PARA LAS TRES CÁPSULAS, y se monta AQUÍ y no dentro de cada una. Antes lo traía cada

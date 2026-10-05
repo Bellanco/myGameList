@@ -9,18 +9,17 @@ import { ScreenHeader } from '../../src/view/components/ScreenHeader';
  */
 describe('ScreenHeader', () => {
   it('no entra en el árbol de accesibilidad ni añade encabezados', () => {
-    const { container } = render(<ScreenHeader kicker="Biblioteca" title="Lista del completista" />);
+    const { container } = render(<ScreenHeader kicker="Ajustes" title="Diseño" />);
 
     expect(container.querySelector('.screen-header')).toHaveAttribute('aria-hidden', 'true');
     expect(screen.queryAllByRole('heading', { hidden: true })).toHaveLength(0);
   });
 
   it('pinta rótulo y título, y nada más', () => {
-    const { container } = render(<ScreenHeader variant="band" kicker="Biblioteca" title="Lista del completista" />);
+    const { container } = render(<ScreenHeader kicker="Ajustes" title="Diseño" />);
 
-    expect(container.querySelector('.screen-header')).toHaveClass('is-band');
-    expect(container.querySelector('.screen-header-kicker')).toHaveTextContent('Biblioteca');
-    expect(container.querySelector('.screen-header-title')).toHaveTextContent('Lista del completista');
-    expect(container.querySelector('.screen-header')).toHaveTextContent(/^BibliotecaLista del completista$/);
+    expect(container.querySelector('.screen-header-kicker')).toHaveTextContent('Ajustes');
+    expect(container.querySelector('.screen-header-title')).toHaveTextContent('Diseño');
+    expect(container.querySelector('.screen-header')).toHaveTextContent(/^AjustesDiseño$/);
   });
 });
