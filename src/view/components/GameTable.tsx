@@ -627,6 +627,9 @@ export const GameTable = memo(function GameTable({
   /* Próximos y deseados son las listas sin opinión: todavía no se ha jugado a nada, así que el recuadro no existe en
      vez de salir con las dos mitades vacías. En la vergüenza el lado malo son los MOTIVOS de dejarlo. */
   const tieneOpinion = currentTab === 'c' || currentTab === 'v' || currentTab === 'e';
+  /* La lista de deseos se llena A MANO: lo que trae Playnite ya lo tienes, así que su estado vacío no ofrece
+     importar ni la bandeja, solo añadir. */
+  const importHere = onImportLibrary && currentTab !== 'd' ? onImportLibrary : undefined;
 
   // Create virtual rows (main + optionally detail rows)
   const virtualRows = useMemo(() => {
@@ -1082,7 +1085,7 @@ export const GameTable = memo(function GameTable({
                       AQUÍ (antes esto era un enlace a `/integraciones`, que ya no existe), y si quedan juegos
                       sin clasificar de una importación anterior se ofrece también la bandeja.
                       Solo clases globales: esta tabla no carga la hoja del flujo de importación. */}
-                  {!readOnly && (onAddGame || onImportLibrary) ? (
+                  {!readOnly && (onAddGame || importHere) ? (
                     <div className="table-empty-actions">
                       {onAddGame ? (
                         <button type="button" className="btn btn-primary" onClick={onAddGame}>
@@ -1090,17 +1093,17 @@ export const GameTable = memo(function GameTable({
                           <span>{UI_MESSAGES.table.emptyCta}</span>
                         </button>
                       ) : null}
-                      {onImportLibrary ? (
+                      {importHere ? (
                         <FilePickerButton
                           id="import-library-empty"
                           className="btn btn-secondary"
                           label={IMPORT_UI.importBtn}
                           ariaLabel={IMPORT_UI.importAria}
                           accept=".json,application/json"
-                          onPick={onImportLibrary}
+                          onPick={importHere}
                         />
                       ) : null}
-                      {onOpenInbox && inboxCount > 0 ? (
+                      {importHere && onOpenInbox && inboxCount > 0 ? (
                         <button type="button" className="btn btn-secondary btn-accent" onClick={onOpenInbox}>
                           <Icon name={COMMON_ICONS.download} />
                           <span>{IMPORT_UI.viewInbox(inboxCount)}</span>
