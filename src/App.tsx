@@ -2,7 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, useS
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_MESSAGES, TAB_ORDER, TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from './core/constants/labels';
 import { LEGAL_ROUTES, type LegalDocId } from './core/constants/legal';
-import { COMPACT_FILTERS_MAX_WIDTH, COMPACT_TABLE_MAX_WIDTH, ROW_EXIT_MS } from './core/constants/uiConfig';
+import { COMPACT_FILTERS_MAX_WIDTH, COMPACT_TABLE_MAX_WIDTH, ROW_EXIT_MS, WISHLIST_MAX_GAMES } from './core/constants/uiConfig';
 import { TAB_IDS, type TabData, type TabId } from './model/types/game';
 import { decideReviewPublication } from './core/social/reviewPublication';
 import { applyReviewPublication } from './viewmodel/applyReviewPublication';
@@ -985,6 +985,7 @@ export default function App() {
           onDelete={vm.deleteGame}
           onMigrate={vm.migrateGame}
           onAddGame={handleAddGame}
+          listCap={currentTab === 'd' ? { total: vm.data.d.length, max: WISHLIST_MAX_GAMES } : undefined}
           onImportLibrary={handleImportLibraryExporter}
           inboxCount={inboxCount}
           onOpenInbox={openInbox}

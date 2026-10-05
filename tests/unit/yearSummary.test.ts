@@ -212,9 +212,38 @@ describe('contigo', () => {
     const pending: GameItem[] = [game(20, { name: 'Solo suyo', years: [] }), game(21, { name: 'animal well', years: [] }), game(22, { name: 'Sin nota', years: [] })];
     const summary = buildYearSummary({ completed, year: 2025, precision: 'month', viewerCompleted: mine, viewerPending: pending })!;
     expect(summary.common?.picks).toEqual([
-      { name: 'Animal Well', platforms: ['PC'], grade: 96, best: true, month: 10, quote: 'Cada vez que creía haberlo visto todo, el pozo tenía otro fondo.' },
-      { name: 'Solo suyo', platforms: ['PC'], grade: 80, best: false, month: null, quote: '' },
+      { from: 'p', name: 'Animal Well', platforms: ['PC'], grade: 96, best: true, month: 10, quote: 'Cada vez que creía haberlo visto todo, el pozo tenía otro fondo.' },
+      { from: 'p', name: 'Solo suyo', platforms: ['PC'], grade: 80, best: false, month: null, quote: '' },
     ]);
+  });
+
+  it('la lista de deseos solo rellena lo que Próximos no llega, y por detrás', () => {
+    const completed = [
+      ...theirs,
+      game(4, { name: 'Animal Well', grade: 96 }),
+      game(6, { name: 'Balatro', grade: 99 }),
+      game(7, { name: 'Celeste', grade: 70 }),
+    ];
+    // Balatro es el mejor de todos pero está en deseos: va DETRÁS del de Próximos, que ya lo tienes.
+    const pending: GameItem[] = [game(21, { name: 'Animal Well', years: [] })];
+    const wished: GameItem[] = [game(30, { name: 'Balatro', years: [] }), game(31, { name: 'Celeste', years: [] })];
+    const summary = buildYearSummary({ completed, year: 2025, precision: 'month', viewerCompleted: mine, viewerPending: pending, viewerWished: wished })!;
+    expect(summary.common?.picks.map((pick) => [pick.from, pick.name])).toEqual([['p', 'Animal Well'], ['d', 'Balatro']]);
+  });
+
+  it('con Próximos llenando las propuestas, la lista de deseos no sale', () => {
+    const completed = [...theirs, game(4, { name: 'Animal Well', grade: 96 }), game(6, { name: 'Balatro', grade: 99 }), game(7, { name: 'Celeste', grade: 70 })];
+    const pending: GameItem[] = [game(21, { name: 'Animal Well', years: [] }), game(22, { name: 'Celeste', years: [] })];
+    const wished: GameItem[] = [game(30, { name: 'Balatro', years: [] })];
+    const summary = buildYearSummary({ completed, year: 2025, precision: 'month', viewerCompleted: mine, viewerPending: pending, viewerWished: wished })!;
+    expect(summary.common?.picks.map((pick) => [pick.from, pick.name])).toEqual([['p', 'Animal Well'], ['p', 'Celeste']]);
+  });
+
+  it('sin nada en Próximos, las dos propuestas salen de la lista de deseos', () => {
+    const completed = [...theirs, game(6, { name: 'Balatro', grade: 99 }), game(7, { name: 'Celeste', grade: 70 })];
+    const wished: GameItem[] = [game(31, { name: 'celeste', years: [] }), game(30, { name: 'Balatro', years: [] })];
+    const summary = buildYearSummary({ completed, year: 2025, precision: 'month', viewerCompleted: mine, viewerPending: [], viewerWished: wished })!;
+    expect(summary.common?.picks.map((pick) => [pick.from, pick.name])).toEqual([['d', 'Balatro'], ['d', 'Celeste']]);
   });
 
   it('en el perfil propio no hay «contigo»', () => {

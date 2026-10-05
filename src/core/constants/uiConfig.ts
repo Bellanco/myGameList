@@ -31,3 +31,10 @@ export const COMPACT_FILTERS_MAX_WIDTH = 1400;
  * Si se toca uno, hay que tocar el otro: de más, la fila ya invisible retrasa el borrado; de menos, se corta.
  */
 export const ROW_EXIT_MS = 220;
+
+/**
+ * Tope de la lista de deseos: pasado este número no se añade nada más, ni desde el formulario ni desde la ruleta
+ * de un amigo. Solo frena las ALTAS: lo que ya llega por encima (otro dispositivo, una copia de seguridad, datos
+ * de antes del tope) se conserva entero, porque recortar en la sincronización sería borrar deseos sin avisar.
+ */
+export const WISHLIST_MAX_GAMES = 100;

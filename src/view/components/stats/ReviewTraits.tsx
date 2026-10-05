@@ -1,6 +1,8 @@
 import { memo, type CSSProperties } from 'react';
 import { STATS_UI } from '../../../core/constants/statsLabels';
 import type { TagBucket } from '../../../core/stats/types';
+// Su hoja va con el componente: también la pinta el resumen del año, que no carga `stats.scss`.
+import '../../../styles/traits.scss';
 
 const L = STATS_UI.reviews;
 
@@ -10,6 +12,9 @@ const MAX_ROWS = 8;
 interface ReviewTraitsProps {
   strengths: TagBucket[];
   weaknesses: TagBucket[];
+  /** Los rótulos de cada lado. Por defecto, los del panel («Lo que más celebras»…); el resumen de un amigo los
+      dice en tercera persona. */
+  heads?: { strengths: string; weaknesses: string };
 }
 
 /**
@@ -21,7 +26,7 @@ interface ReviewTraitsProps {
  *
  * El nombre va FUERA de la barra: dentro, cualquier etiqueta corta con una cuenta baja se salía de su relleno.
  */
-export const ReviewTraits = memo(function ReviewTraits({ strengths, weaknesses }: ReviewTraitsProps) {
+export const ReviewTraits = memo(function ReviewTraits({ strengths, weaknesses, heads }: ReviewTraitsProps) {
   const good = strengths.slice(0, MAX_ROWS);
   const bad = weaknesses.slice(0, MAX_ROWS);
 
@@ -47,8 +52,8 @@ export const ReviewTraits = memo(function ReviewTraits({ strengths, weaknesses }
   return (
     <div className="traits">
       <p className="traits-heads" aria-hidden="true">
-        <span>{L.strengths}</span>
-        <span>{L.weaknesses}</span>
+        <span>{heads?.strengths ?? L.strengths}</span>
+        <span>{heads?.weaknesses ?? L.weaknesses}</span>
       </p>
 
       <ul className="traits-rows">

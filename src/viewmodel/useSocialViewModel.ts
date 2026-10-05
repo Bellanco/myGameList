@@ -1391,6 +1391,14 @@ export function useSocialViewModel(options?: {
   const detailEventLoading = activePanel === 'detail' && !activeDetailEvent && directoryLoading;
 
   /**
+   * ¿EL PERFIL ABIERTO TODAVÍA PUEDE APARECER? Lo mismo que `detailEventLoading`, para `/social/profiles/:id`: el
+   * perfil se resuelve contra el directorio, así que al recargar la página se quedaba en `null` hasta hidratarlo y
+   * la pantalla decía «No se encontró el perfil» —definitivo— durante un estado transitorio.
+   */
+  const profileDetailLoading = (activePanel === 'profile-detail' || activePanel === 'profile-review')
+    && Boolean(profileDetailId) && !selectedProfileDetail && directoryLoading;
+
+  /**
    * ¿EL CUERPO DE LA RESEÑA ABIERTA TODAVÍA VIENE DE CAMINO?
    *
    * El detalle de una actividad se pinta con dos fuentes distintas y no llegan a la vez: la cabecera —juego,
@@ -2478,6 +2486,7 @@ export function useSocialViewModel(options?: {
     activeDetailEvent,
     // ¿Puede aparecer todavía el evento abierto? (ver arriba: decide esqueleto vs «no se ha encontrado»).
     detailEventLoading,
+    profileDetailLoading,
     // ¿Falta todavía el análisis completo de la reseña abierta? (ver arriba: decide esqueleto vs adelanto).
     detailReviewLoading,
     getGameItemById,

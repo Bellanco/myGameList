@@ -560,6 +560,28 @@
 
 .hub-feed-move-game.is-plain:hover { color: var(--text-muted); text-decoration: none; }
 
+/* El cuerpo del aviso: el renglón y, en uno agrupado, los juegos que se despliegan debajo. Ocupa el hueco que
+   antes ocupaba el renglón suelto, para que la burbuja siga abrazando el texto. */
+.hub-feed-move-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* «y 3 más»: se pulsa como un nombre de juego —mismo color y peso— porque es lo que esconde, más nombres. */
+.hub-feed-move-more { white-space: nowrap; }
+
+/* Los que no caben en la frase, uno por línea y SIN VIÑETAS, en columna debajo del primer título (la sangría la
+   mide la tarjeta: `--move-rest-indent`). Es la continuación de la misma frase, no una lista que compita con ella. */
+.hub-feed-move-rest {
+  display: grid;
+  gap: .15rem;
+  margin: .25rem 0 0;
+  padding: 0 0 0 var(--move-rest-indent, 0);
+  list-style: none;
+}
+
+.hub-feed-move-rest[hidden] { display: none; }
+
 
 .hub-avatar-img { object-fit: cover; background: var(--surface-hover); }
 

@@ -2,7 +2,6 @@ import { memo, type CSSProperties } from 'react';
 import { useStatsLabels } from './statsVoice';
 import { StatTile } from './StatTile';
 import { CountUp } from './CountUp';
-import { TagChips } from './TagChips';
 import { Dumbbell } from './Dumbbell';
 import { Icon } from '../Icon';
 import { categoryToneStyle } from '../../../core/constants/categoryTone';
@@ -93,8 +92,15 @@ export const WishKinCard = memo(function WishKinCard({ kin }: { kin: WishKinSumm
         <section>
           <h3>{L.gaps}</h3>
           <p className="stats-note">{L.gapsHint}</p>
-          {/* La cifra de cada chip es cuántos deseos tiene ese género: lo que pesa ese hueco. */}
-          <TagChips tags={kin.gaps.map((gap) => ({ tag: gap.tag, games: gap.wished, hours: 0 }))} />
+          {/* El MISMO chip de género que en los listados, con su tono. El peso de cada hueco lo dice el orden: van
+              de más a menos deseos (`core/stats/wishKin`). */}
+          <ul className="chips kin-gaps">
+            {kin.gaps.map((gap) => (
+              <li key={gap.tag} className="chip chip-genre" style={categoryToneStyle(gap.tag)}>
+                <span className="chip-text">{gap.tag}</span>
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
     </>

@@ -560,14 +560,11 @@
     var(--shadow);
 }
 
-/* ── §14 · LIENZO DE LA ACTIVIDAD SOCIAL: EL LÁSER ENTRE LOS DOS PORTALES ─────────────────────────────────────
+/* ── §14 · LIENZO DE LA ACTIVIDAD SOCIAL: LOS DOS PORTALES ───────────────────────────────────────────────────
    La zona vacía del feed (ver `.hub-feed-lienzo` en `_layout.scss`). Dos resplandores asomando por los cantos
-   —azul a la izquierda, naranja a la derecha— y, a media altura, el rastro del Thermal Discouragement Beam con
-   un punto recorriéndolo: sale del azul, cruza y se disuelve dentro del naranja para volver a salir por el azul.
-   Entra por uno y sale por el otro, que es el gesto del juego.
-
-   ROJO CON NÚCLEO BLANCO, no azul/naranja: el haz del juego es rojo, y además así el punto no se confunde con
-   los dos portales por los que pasa.
+   —azul a la izquierda, naranja a la derecha—, y nada entre ellos. Llevaba además, a media altura, el láser del
+   Thermal Discouragement Beam con un punto rojo cruzando de un portal a otro; se quitó el 05-10-2026 a petición
+   del usuario. Las dos ranuras de `.hub-feed-lienzo-fx` se quedan ocultas, como en los temas que no las usan.
 
    LOS CANTOS VAN EN PORCENTAJE Y NO EN PÍXELES. Con un ancho fijo, en una tarjeta estrecha se comen el lienzo
    entero y en una ancha se quedan en dos pegotes; y, sobre todo, los fotogramas del fundido de abajo dejan de
@@ -579,8 +576,6 @@
 
    EL ALTO ES EL DE LA CAPA, que es una pantalla: ver la nota del `--lz-size`. ── */
 :root[data-palette="portal"] .hub-feed-lienzo {
-  --laser: #ff2d20;
-  --laser-rgb: 255, 45, 32;
   --lz-bg: color-mix(in srgb, var(--bg) 58%, transparent);
   --lz-inset: inset 0 14px 26px -18px rgba(0, 0, 0, .55);
   --lz-edge: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
@@ -596,96 +591,18 @@
   --lz-rep: no-repeat;
 }
 
-/* En claro el rojo del juego se va a un tono más profundo: sobre el pergamino de Aperture el #ff2d20 se lava. */
+/* En claro, la sombra interior y el naranja se templan para el pergamino de Aperture. */
 :root[data-palette="portal"][data-theme="light"] .hub-feed-lienzo {
-  --laser: #cf2117;
-  --laser-rgb: 207, 33, 23;
   --lz-inset: inset 0 12px 22px -18px rgba(60, 45, 20, .32);
   --lz-img:
     radial-gradient(closest-side, rgba(var(--steam-rgb), .16), transparent 76%),
     radial-gradient(closest-side, rgba(194, 92, 0, .15), transparent 76%);
 }
 
-/* Ranura 1 · el rastro del haz, tenue, de centro a centro de los dos cantos. */
-:root[data-palette="portal"] .hub-feed-lienzo-fx > i:first-child {
-  display: block;
-  position: absolute;
-  left: 19%;
-  right: 19%;
-  top: 50%;
-  height: 1px;
-  opacity: .1;
-  background: linear-gradient(90deg, transparent, rgba(var(--laser-rgb), .8) 14%, rgba(var(--laser-rgb), .8) 86%, transparent);
-}
-
-/* Ranura 2 · el punto. Es lo único que se ve viajar; su `::before` es la estela. */
-/* MÁS SUTIL QUE EN LA PRIMERA VERSIÓN. Era un punto de 8 px con núcleo blanco y un halo de 14 px al 55 %:
-   sobre un fondo azul apagado, el rojo saturado se llevaba la mirada por encima del propio contenido del feed,
-   que es justo lo contrario de lo que tiene que hacer un fondo. Ahora mide 6 px, el blanco del núcleo se queda
-   en un cuarto de su intensidad —lo justo para que siga leyéndose como luz y no como un punto pintado— y el
-   halo baja a 9 px al 28 %. La opacidad de trabajo la pone el keyframe, que también bajó. */
-:root[data-palette="portal"] .hub-feed-lienzo-fx > i:last-child {
-  display: block;
-  position: absolute;
-  left: 19%;
-  top: 50%;
-  width: 6px;
-  height: 6px;
-  translate: -50% -50%;
-  border-radius: 50%;
-  opacity: 0;
-  background: radial-gradient(circle, rgba(255, 255, 255, .75) 0 22%, rgba(var(--laser-rgb), .8) 50%, rgba(var(--laser-rgb), .22) 70%, transparent 78%);
-  box-shadow: 0 0 9px 1px rgba(var(--laser-rgb), .28);
-}
-
-:root[data-palette="portal"] .hub-feed-lienzo-fx > i:last-child::before {
-  content: '';
-  position: absolute;
-  right: 60%;
-  top: 50%;
-  translate: 0 -50%;
-  height: 1px;
-  width: 24px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, transparent, rgba(var(--laser-rgb), .42));
-}
-
-/* DE DÓNDE SALEN ESTOS PORCENTAJES. El punto recorre de 19 a 81 (los centros de los dos cantos), o sea 62cqw
-   medidos sobre `.hub-feed-lienzo-fx`, cuya caja es la misma que la del fondo. Salir del azul (38) es el 31 % del
-   recorrido y entrar en el naranja (62) el 69 %:
-     · 0 % → 31 %   emerge del azul, de invisible y encogido a entero.
-     · 31 % → 69 %  el único tramo a plena luz, y es exactamente el hueco libre entre los cantos.
-     · 69 % → 100 % se disuelve dentro del naranja hasta desaparecer.
-   Mientras el punto está SOBRE un color nunca está a plena opacidad: es lo que hace que se lea como entrar y
-   salir de un portal y no como encenderse y apagarse a destiempo.
-
-   Se disuelve con `scale` además de con `opacity` —encogerse al meterse y crecer al salir vende que lo absorbe
-   el portal—, y las dos las resuelve el compositor; `filter: blur()` difuminaría más literalmente, pero repinta
-   en cada fotograma y esto vive detrás de una lista que puede estar desplazándose.
-
-   El `translateX` avanza LINEAL en los cuatro fotogramas (31 % de 62 = 19,22; 69 % = 42,78), así que la velocidad
-   es constante aunque el brillo y el tamaño no lo sean. */
-@media (prefers-reduced-motion: no-preference) {
-  :root[data-effects="on"][data-palette="portal"] .hub-feed-lienzo-fx > i:last-child { animation: lz-portal-ray 5.5s linear infinite; }
-}
-
-@keyframes lz-portal-ray {
-  0% { transform: translateX(0) scale(.25); opacity: 0; }
-  31% { transform: translateX(19.22cqw) scale(1); opacity: .62; }
-  69% { transform: translateX(42.78cqw) scale(1); opacity: .62; }
-  100% { transform: translateX(62cqw) scale(.25); opacity: 0; }
-}
-
-/* Quieto, el punto no puede contar el viaje, así que se queda ENCENDIDO a medio camino: la imagen parada sigue
-   diciendo que hay un láser entre los dos portales, en vez de dejar dos manchas y un renglón rojo sin motivo. */
-@media (prefers-reduced-motion: reduce) {
-  :root[data-palette="portal"] .hub-feed-lienzo-fx > i:last-child { opacity: .62; transform: translateX(31cqw) scale(1); }
-}
-
-:root:not([data-effects="on"])[data-palette="portal"] .hub-feed-lienzo-fx > i:last-child {
-  opacity: .62;
-  transform: translateX(31cqw) scale(1);
-}
+/* ── §14b · RESUMEN DEL AÑO: SIN NÚMERO DE TARJETA ────────────────────────────────────────────────────────────
+   El «01 / 06» de cada tarjeta (`.ys-chap`) se quita aquí, en Sin salida (05-10-2026, a petición del usuario). El
+   resto de temas lo conservan. Se esconde y no se borra del marcado porque ya es `aria-hidden`: no lo lee nadie. ── */
+:root[data-palette="portal"] .ys-chap { display: none; }
 
 /* ══ MOMENTOS · la fila que cambia de lista SALE POR UN PORTAL NARANJA Y ENTRA POR UNO AZUL ═════════════════
    No hace falta un disparador nuevo: el listado ya marca `.is-entering` y `.is-leaving` (ver `_motion.scss`),

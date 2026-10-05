@@ -20,6 +20,13 @@ que se abre la edición siguiente.
     un juego que tenías en deseos, la bandeja propone **«Pasar a próximos»**.
   - No es tu biblioteca: no cuenta en reseñas, estadísticas, logros, premios ni en tu ruleta.
   - En la ruleta del perfil de un amigo, lo que no tienes se añade **a deseados**.
+  - **Caben 100 juegos.** Llena, ni se abre el formulario ni se añade nada desde la ruleta de un amigo («Tu lista
+    de deseos está completa»). Lo que ya llega por encima —otro dispositivo, una copia de seguridad— se conserva.
+  - Su recuento, a la izquierda de «Ordenar», se dice **contra el tope**: «37 de 100», con lo filtrado delante si
+    hay filtros, y en ámbar cuando está llena.
+  - En el resumen del año de un amigo, **«De su año, para ti» completa con tus deseos** cuando de Próximos no
+    salen bastantes propuestas, siempre por detrás de lo que ya tienes y con su rótulo («Lo tienes en tu lista de
+    deseos»). Con la lista oculta, no entra.
 - **Mostrar u ocultar la lista de deseos** en Ajustes → Diseño, visible por defecto y sincronizado entre tus
   dispositivos. Ocultarla esconde la pestaña, no sus juegos.
 - **La lista de deseos en lo social**, como las demás:
@@ -32,7 +39,8 @@ que se abre la edición siguiente.
   listas ya estaba aceptado.
 - **«Ya lo tienes en casa»**, un apartado nuevo de Estadísticas: cuántos de tus deseos tienen un pariente esperando
   en Próximos (misma saga o géneros en común), las parejas, y tus deseos frente a Próximos por género, con los
-  géneros que deseas sin nada esperando. Solo en tu panel, y solo con la lista de deseos a la vista.
+  géneros que deseas sin nada esperando («Aún no te has hecho con todos», en el mismo chip de género que el
+  listado). Solo en tu panel, y solo con la lista de deseos a la vista.
 - **Tus publicaciones, desde tu perfil**: un botón «Publicaciones» las lista y, sobre las tuyas, deja editarlas
   (conservan su fecha y llevan la marca «editado») y borrarlas.
 - **El nombre entero de un juego al pasar por encima**, en el mosaico, cuando no cabe en su caja. Se despliega en su
@@ -41,6 +49,9 @@ que se abre la edición siguiente.
   que lleva conseguida.
 
 ### Changed
+- **Los avisos de lista del feed se agrupan como los logros**: lo que una persona mueve a una lista en un día es un
+  solo renglón («Ada añadió *Hades* y 3 más a su lista de deseos»), y la cifra despliega el resto debajo del
+  primero. Desaparece el cupo de tres avisos por persona y día: con el agrupado entran todos los juegos.
 - **Premios: los votos de cada uno se ven hasta que se abre la edición siguiente**, en vez de hasta que el
   administrador la terminaba. Desaparece el paso «Terminar la edición»; el administrador puede borrarlos antes con
   «Borrar los votos». La política de privacidad lo recoge.
@@ -50,6 +61,11 @@ que se abre la edición siguiente.
 - **«En curso» enseña el orden por nombre** y, con él, el selector de tarjetas o renglones, que se quedaba fuera
   porque comparten cabecera. Igual en la lista de la vergüenza mientras no haya nada puntuado.
 - **Forja ya no pinta «Biblioteca» y el nombre de la lista** sobre las pestañas.
+- **En el resumen del año, «Lo que más valoró, y lo que le chirrió» es la pirámide de Estadísticas**: lo valorado
+  frente a lo que chirrió sobre una escala común, con titular («Su punto fuerte: …») y el mismo número de filas a
+  cada lado.
+- **Sin salida ya no pinta el láser en el fondo de la actividad social** —quedan los dos portales— **ni el «01 / 06»
+  en las tarjetas del resumen del año**.
 - **En el teléfono, las pestañas de las listas se reparten el ancho**: caben las cinco a 280 px y con el texto del
   sistema grande.
 - **En las mancuernas de Estadísticas, dos valores iguales se ven como un punto partido** en los dos colores, en vez
@@ -63,6 +79,8 @@ que se abre la edición siguiente.
   servidor, igual que ya hacían las reglas y el panel.
 
 ### Fixed
+- **Al recargar un perfil ya no sale «No se encontró el perfil» mientras carga**: se ve su esqueleto hasta que
+  llega, y el aviso queda para cuando de verdad no está.
 - **Estadísticas ya no se sale de ancho en los teléfonos más estrechos**: los globos de «Evolución de tus listas» se
   salían del gráfico y ensanchaban la página a 320 px con el texto grande.
 - **Premios:** cada tarjeta del podio lleva su metal, y la del oro ya no sale transparente.

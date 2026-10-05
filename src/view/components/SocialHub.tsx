@@ -43,7 +43,7 @@ import { libraryStart } from '../../core/achievements/metrics';
  */
 interface SocialHubProps {
   /** Ruleta (perfil social) — añadir un juego ajeno a una de mis listas (la de `addTarget`). */
-  onAddGame?: (game: Partial<GameItem>) => 'added' | 'duplicate' | 'invalid';
+  onAddGame?: (game: Partial<GameItem>) => 'added' | 'duplicate' | 'invalid' | 'full';
   /** A qué lista va lo que se añade desde la ruleta: deseados, o próximos si esa lista está oculta. */
   addTarget?: 'p' | 'd';
   /** Ruleta (perfil social) — ¿en cuál de mis listas está ya este juego (por nombre)? */
@@ -139,6 +139,7 @@ const SocialHubInner = memo(function SocialHubInner({
     feedItems,
     activeDetailEvent,
     detailEventLoading,
+    profileDetailLoading,
     detailReviewLoading,
     getGameItemById,
     relatedReviews,
@@ -510,6 +511,7 @@ const SocialHubInner = memo(function SocialHubInner({
         <SocialProfileDetailScreen
           SOCIAL_UI={SOCIAL_UI}
           activeProfileDetail={selectedProfileDetail}
+          profileLoading={profileDetailLoading}
           isOwnProfile={isOwnProfileDetail}
           onEditProfile={goToProfileEdit}
           onBack={goToSocial}
@@ -545,6 +547,9 @@ const SocialHubInner = memo(function SocialHubInner({
           viewerHiddenTabs={hiddenTabs}
           viewerCompleted={games?.c}
           viewerPending={games?.p}
+          // `addTarget` es `d` justo cuando la lista de deseos está a la vista (Ajustes → Diseño): oculta, tampoco
+          // se proponen sus juegos en el resumen.
+          viewerWished={addTarget === 'd' ? games?.d : undefined}
           // La tarjeta del feed y el aviso del 15 llegan con el resumen ya desplegado (estado de la navegación).
           openSummaryOnMount={wantsYearSummary(location.state)}
           onOwnSummaryOpened={markOwnYearSummaryOpened}

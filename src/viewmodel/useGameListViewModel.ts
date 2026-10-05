@@ -11,6 +11,7 @@ import { nextVersion, resolveGradedAt, stampEntry } from '../core/utils/gameStam
 import { mapTabDataTags, type TagCategory } from '../core/utils/tagMutations';
 import { normalizeTag, safeTrim } from '../core/security/sanitize';
 import { normalizeName } from '../core/utils/normalizeName';
+import { WISHLIST_MAX_GAMES } from '../core/constants/uiConfig';
 import { emitMoment } from '../core/effects/moments';
 import { loadLocalState, loadLocalStateAsync, normalizeData, saveLocalState } from '../model/repository/localRepository';
 import { getGamesAsTabData, getLocalMeta, mirrorTabDataToGames } from '../model/repository/indexedDbRepository';
@@ -351,11 +352,20 @@ export function useGameListViewModel() {
 
   useEffect(() => () => window.clearTimeout(noticeTimerRef.current), []);
 
+  // ¿Cabe otro juego en la lista de deseos? Solo cuenta para las altas: editar uno que ya está no añade nada.
+  const wishlistFull = data.d.length >= WISHLIST_MAX_GAMES;
+
   const openNewGame = useCallback((tab: TabId) => {
+    // Con la lista llena ni se abre el formulario: el aviso de la página quedaría tapado por el diálogo, y
+    // rellenar un juego entero para que no se guarde es peor que saberlo antes.
+    if (tab === 'd' && wishlistFull) {
+      notify('warn', UI_MESSAGES.games.wishlistFull);
+      return;
+    }
     setEditingTab(tab);
     setDraft(EMPTY_DRAFT);
     setFormModalOpen(true);
-  }, []);
+  }, [wishlistFull, notify]);
 
   const openEditGame = useCallback(
     (tab: TabId, id: number) => {
@@ -546,6 +556,13 @@ export function useGameListViewModel() {
         return null;
       }
 
+      // Cortafuegos del tope: el formulario ya no se abre con la lista llena, pero mientras está abierto puede
+      // llenarla otro dispositivo al sincronizar.
+      if (tab === 'd' && !existing && wishlistFull) {
+        notify('warn', UI_MESSAGES.games.wishlistFull);
+        return null;
+      }
+
       const nextData: TabData = {
         ...data,
         [tab]: data[tab].some((item) => item.id === base.id)
@@ -574,7 +591,7 @@ export function useGameListViewModel() {
       emitMoment('library-saved');
       return { id: base.id, previous };
     },
-    [data, findGameByName, notify, persist],
+    [data, findGameByName, wishlistFull, notify, persist],
   );
 
   const deleteGame = useCallback(
@@ -679,7 +696,7 @@ export function useGameListViewModel() {
 
   // Ruleta (perfil social) — añadir un juego ajeno a MI lista de deseos (o de próximos), evitando duplicados.
   const addForeignGame = useCallback(
-    (game: Partial<GameItem>, tab: 'p' | 'd'): 'added' | 'duplicate' | 'invalid' => {
+    (game: Partial<GameItem>, tab: 'p' | 'd'): 'added' | 'duplicate' | 'invalid' | 'full' => {
       const name = safeTrim(game.name || '', 120);
       if (!name) {
         notify('warn', UI_MESSAGES.games.noName);
@@ -688,6 +705,10 @@ export function useGameListViewModel() {
       if (hasGameInLists(name)) {
         notify('warn', UI_MESSAGES.games.alreadyInLists(name));
         return 'duplicate';
+      }
+      if (tab === 'd' && wishlistFull) {
+        notify('warn', UI_MESSAGES.games.wishlistFull);
+        return 'full';
       }
 
       const now = Date.now();
@@ -711,7 +732,7 @@ export function useGameListViewModel() {
       notify('ok', tab === 'd' ? UI_MESSAGES.games.addedToWishlist(name) : UI_MESSAGES.games.addedToProximos(name));
       return 'added';
     },
-    [data, hasGameInLists, persist, notify],
+    [data, hasGameInLists, wishlistFull, persist, notify],
   );
   const addGameToProximos = useCallback((game: Partial<GameItem>) => addForeignGame(game, 'p'), [addForeignGame]);
   const addGameToWishlist = useCallback((game: Partial<GameItem>) => addForeignGame(game, 'd'), [addForeignGame]);

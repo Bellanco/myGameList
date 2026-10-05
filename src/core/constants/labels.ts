@@ -199,6 +199,7 @@ export const UI_MESSAGES = {
     alreadyInLists: (name: string) => `"${name}" ya está en tus listas.`,
     addedToProximos: (name: string) => `"${name}" añadido a próximos`,
     addedToWishlist: (name: string) => `"${name}" añadido a deseados`,
+    wishlistFull: 'Tu lista de deseos está completa',
     alreadyCurrent: (name: string) => `"${name}" ya está en curso`,
     reviewPublishDeferred: 'Juego guardado; la actividad social de reseña se actualizará al abrir el hub social.',
   },
@@ -332,6 +333,11 @@ export const UI_MESSAGES = {
     /* Recuento de la barra del listado. Dice lo que se está viendo AHORA —con los filtros puestos—, no el total
        de la lista: es el pie de la decisión que se acaba de tomar en los filtros de arriba. */
     listCount: (count: number) => `${count} ${count === 1 ? 'juego' : 'juegos'}`,
+    /* En la lista de deseos el recuento se dice contra el tope (`WISHLIST_MAX_GAMES`), que cuenta la lista ENTERA
+       y no lo filtrado. La palabra «deseos» solo la oye un lector de pantalla: a la vista, «37 de 100» ya está
+       debajo del título de la lista. */
+    wishlistCount: (total: number, max: number) => `${total} de ${max}`,
+    wishlistCountAria: ' deseos',
     /* Tamaño de las tarjetas. Es un deslizador de tres posiciones, así que además del nombre del control hace
        falta el de la POSICIÓN: un `<input type="range">` se anuncia con su número («2 de 3»), que aquí no dice
        nada, y `aria-valuetext` es lo que lo sustituye por la palabra. */

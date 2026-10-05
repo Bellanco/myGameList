@@ -17,6 +17,7 @@ import { HubAvatar } from './HubAvatar';
 import { HubOfflineNotice } from './HubOfflineNotice';
 import { FeedShell } from './FeedShell';
 import { FeedComposer } from './FeedComposer';
+import { FeedMoveCard } from './FeedMoveCard';
 import { AchievementSprite } from '../AchievementSprite';
 
 /**
@@ -435,69 +436,17 @@ function SocialFeedScreenBase({
                       );
                     }
 
-                    // F4 — MOVIMIENTO DE LISTA. Una línea y se acaba: quién, qué hizo, con qué juego y a qué
-                    // hora. La tarjeta NO es pulsable —no hay pantalla de «movimiento» que abrir— y de ella solo
-                    // llevan a algún sitio dos cosas: el autor (su perfil) y, cuando de verdad existe, el nombre
-                    // del juego (el análisis de ese autor sobre él).
-                    //
-                    // La hora usa su propia clase y no `hub-feed-date`: varias paletas convierten esa clase en
-                    // una cápsula o le cuelgan un prefijo («//», «>»), y aquí tiene que ser un dato al final del
-                    // renglón. El día no se repite: lo dice la cabecera del grupo, y la fecha entera está en el
-                    // `title`.
+                    // F4 — MOVIMIENTO DE LISTA, agrupado por persona, lista y día (`FeedMoveCard`).
                     if (entry.kind === 'move') {
-                      const nombreAutor = entry.profileDisplayName || SOCIAL_UI.requests.unknownUser;
-                      const fechaCompleta = hasValidDate ? SOCIAL_UI.feed.movedAt(itemDate) : SOCIAL_UI.feed.moveRecently;
                       return (
-                        <article
-                          key={`${entry.socialGistId}:${entry.id}`}
-                          className={`hub-feed-card hub-feed-activity-item is-move ${ownershipClass}`}
-                          /* El tipo de lista viaja al CSS para que el aviso lleve el color de lo que pasó:
-                             terminar es verde, abandonar rojo, empezar el acento y añadir el cuarto tono. Es
-                             un dato que ya está aquí; sacarlo evita que la hoja tenga que adivinarlo. */
-                          data-tab={entry.tab}
-                          role="listitem"
-                        >
-                          {/* NI ICONO NI FOTO. El aviso es una FRASE, y la frase ya lo dice todo: quién, qué
-                              hizo y con qué juego. Llevaba las dos cosas —el icono de la lista y el avatar— y
-                              entre las dos ocupaban más que el propio texto; el color del filete ya distingue
-                              terminar de abandonar. El nombre sigue siendo el enlace al perfil. */}
-                          <p className="hub-feed-move-line">
-                            <button
-                              className="hub-name-link hub-feed-move-who"
-                              type="button"
-                              onClick={() => openProfileDetail(entry.profileId)}
-                            >
-                              {nombreAutor}
-                            </button>
-                            {' '}
-                            <span className="hub-feed-move-verb">{SOCIAL_UI.feed.moveHeadline[entry.tab]}</span>
-                            {' '}
-                            {entry.reviewActorId ? (
-                              <button
-                                className="hub-feed-move-game"
-                                type="button"
-                                aria-label={SOCIAL_UI.feed.openMoveReviewAria(nombreAutor, entry.gameName)}
-                                // El actor de la RESEÑA, no el id de la entrada del directorio: el detalle resuelve
-                                // por `actorProfileId` y con el otro id no encontraba nada.
-                                onClick={() => openMoveReview(entry.reviewActorId as string, entry.gameId)}
-                              >
-                                {entry.gameName}
-                              </button>
-                            ) : (
-                              <span className="hub-feed-move-game is-plain">{entry.gameName}</span>
-                            )}
-                            {SOCIAL_UI.feed.moveTail[entry.tab] ? (
-                              <>
-                                {' '}
-                                <span className="hub-feed-move-verb">{SOCIAL_UI.feed.moveTail[entry.tab]}</span>
-                              </>
-                            ) : null}
-                            {' '}
-                            <span className="hub-feed-move-hour" title={fechaCompleta}>
-                              {hasValidDate ? SOCIAL_UI.feed.movedAtHour(itemDate) : SOCIAL_UI.feed.moveRecently}
-                            </span>
-                          </p>
-                        </article>
+                        <FeedMoveCard
+                          key={entry.groupKey}
+                          entry={entry}
+                          SOCIAL_UI={SOCIAL_UI}
+                          ownershipClass={ownershipClass}
+                          openProfileDetail={openProfileDetail}
+                          openMoveReview={openMoveReview}
+                        />
                       );
                     }
 

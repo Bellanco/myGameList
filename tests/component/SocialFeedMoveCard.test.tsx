@@ -10,14 +10,22 @@ import userEvent from '@testing-library/user-event';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { YEAR_SUMMARY_UI } from '../../src/core/constants/yearSummaryLabels';
 import { SocialFeedScreen } from '../../src/view/components/socialhub/SocialFeedScreen';
-import type { SocialFeedDayGroup, SocialFeedItem, SocialMoveFeedItem } from '../../src/viewmodel/social/socialFeed';
+import type {
+  SocialFeedDayGroup,
+  SocialFeedItem,
+  SocialMoveFeedGroup,
+  SocialMoveFeedItem,
+  SocialMoveGroupGame,
+} from '../../src/viewmodel/social/socialFeed';
 import { ACHIEVEMENTS_BY_ID } from '../../src/core/achievements/catalog';
 import type { TabId } from '../../src/model/types/game';
 
 const AT = Date.parse('2026-08-12T16:42:00.000Z');
 
-function move(over: Partial<SocialMoveFeedItem> & { tab: TabId }): SocialMoveFeedItem & { kind: 'move' } {
-  return {
+function move(
+  over: Partial<SocialMoveFeedItem> & { tab: TabId; games?: SocialMoveGroupGame[] },
+): SocialMoveFeedGroup & { kind: 'move' } {
+  const item: SocialMoveFeedItem = {
     id: `7:${over.tab}`,
     gameId: 7,
     gameName: 'Hollow Knight',
@@ -28,8 +36,14 @@ function move(over: Partial<SocialMoveFeedItem> & { tab: TabId }): SocialMoveFee
     socialGistId: 'ffee1122aabb0002',
     photoURL: '',
     ...over,
-    kind: 'move' as const,
   };
+  // Sin `games`, un renglón de un solo juego: el propio movimiento.
+  const games = over.games ?? [{ id: item.id, gameId: item.gameId, gameName: item.gameName, reviewActorId: item.reviewActorId, updatedAt: item.updatedAt }];
+  return { ...item, groupKey: `${item.profileId}|${item.tab}|2026-08-12`, games, kind: 'move' as const };
+}
+
+function game(gameId: number, gameName: string, reviewActorId?: string): SocialMoveGroupGame {
+  return { id: `${gameId}:d`, gameId, gameName, reviewActorId, updatedAt: AT };
 }
 
 function renderFeed(
@@ -330,5 +344,59 @@ describe('SocialFeedScreen — tarjeta del resumen del año', () => {
     renderFeed([resumen(true)]);
     expect(screen.getByText(YEAR_SUMMARY_UI.feed.own(2026))).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Ada' })).not.toBeInTheDocument();
+  });
+});
+
+describe('renglón agrupado: varios juegos a la misma lista el mismo día', () => {
+  const hora = SOCIAL_UI.feed.movedAtHour(new Date(AT));
+
+  it('con dos juegos, nombra el primero y «y 1 más» despliega el otro', () => {
+    renderFeed([move({ tab: 'd', games: [game(1, 'Wolverine'), game(2, 'Onimusha')] })]);
+
+    const line = screen.getByRole('listitem').querySelector('.hub-feed-move-line') as HTMLElement;
+    expect(line.textContent?.replace(/\s+/g, ' ').trim()).toBe(`Ada añadió Wolverine y 1 más a su lista de deseos ${hora}`);
+    expect(screen.getByRole('button', { name: SOCIAL_UI.feed.moveMoreAria(1, false) })).toBeInTheDocument();
+  });
+
+  it('con más, nombra el más reciente y «y N más» despliega el resto debajo', async () => {
+    const user = userEvent.setup();
+    renderFeed([move({
+      tab: 'd',
+      games: [game(1, 'Wolverine'), game(2, 'Onimusha'), game(3, 'Mouse P.I. for Hire'), game(4, 'Hades')],
+    })]);
+
+    const card = screen.getByRole('listitem');
+    const line = card.querySelector('.hub-feed-move-line') as HTMLElement;
+    expect(line.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      `Ada añadió Wolverine y 3 más a su lista de deseos ${hora}`,
+    );
+
+    // Plegado, el resto no se ve; al pulsar la cifra, aparece debajo, y al volver a pulsarla se oculta.
+    const more = within(card).getByRole('button', { name: SOCIAL_UI.feed.moveMoreAria(3, false) });
+    expect(more).toHaveAttribute('aria-expanded', 'false');
+    expect(within(card).queryByText('Hades')).not.toBeVisible();
+
+    await user.click(more);
+    expect(more).toHaveAttribute('aria-expanded', 'true');
+    expect(within(card).getByText('Onimusha')).toBeVisible();
+    expect(within(card).getByText('Mouse P.I. for Hire')).toBeVisible();
+    expect(within(card).getByText('Hades')).toBeVisible();
+
+    await user.click(more);
+    expect(within(card).queryByText('Hades')).not.toBeVisible();
+  });
+
+  it('dentro del grupo, cada juego con análisis sigue abriéndolo', async () => {
+    const openMoveReview = vi.fn();
+    const user = userEvent.setup();
+    renderFeed([move({
+      tab: 'd',
+      games: [game(1, 'Wolverine'), game(2, 'Onimusha'), game(3, 'Hades', 'pseudonimo-del-gist')],
+    })], { openMoveReview });
+
+    await user.click(screen.getByRole('button', { name: SOCIAL_UI.feed.moveMoreAria(2, false) }));
+    await user.click(screen.getByRole('button', { name: SOCIAL_UI.feed.openMoveReviewAria('Ada', 'Hades') }));
+
+    expect(openMoveReview).toHaveBeenCalledWith('pseudonimo-del-gist', 3);
   });
 });

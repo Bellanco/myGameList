@@ -373,20 +373,9 @@
 /* ── 5 · Lo que valoró y lo que le chirrió · 7 · Contigo ─────────────────────────────────────────────────── */
 .ys-tags { list-style: none; margin: .7rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: .45rem; }
 
-.ys-tag {
-  display: inline-flex;
-  align-items: baseline;
-  gap: .4rem;
-  padding: .4rem .75rem;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--border);
-  font-size: calc(var(--fs-sm) + var(--ys-w, 0) * .12rem);
-
-  /* La cifra con el color de su etiqueta: sobre el tinte verde o rojo, el gris tenue no llegaba a 4,5:1. */
-  b { font: 700 var(--fs-xs) / 1 var(--font-mono); color: inherit; }
-  &.is-up { border-color: color-mix(in srgb, var(--success) 45%, var(--border)); background: color-mix(in srgb, var(--success) 10%, transparent); }
-  &.is-down { border-color: color-mix(in srgb, var(--danger) 40%, var(--border)); background: color-mix(in srgb, var(--danger) 8%, transparent); }
-}
+/* La pirámide de Estadísticas (`ReviewTraits`, con su hoja `traits.scss`), con el aire que llevan las demás piezas
+   bajo su titular. */
+.ys-traits { margin-top: .9rem; }
 
 /* La afinidad, debajo del titular que la dice: una barra en el acento, sin cifra propia. */
 .ys-affinity {
@@ -400,7 +389,8 @@
   i { display: block; height: 100%; width: calc(var(--ys-p) * 1%); border-radius: inherit; background: var(--steam); }
 }
 
-/* «De su año, para ti»: lo que terminó y tú tienes en Próximos, en fichas con su carátula pequeña. */
+/* «De su año, para ti»: lo que terminó y tú tienes en Próximos (o, si no llega, en deseos), en fichas con su
+   carátula pequeña. */
 .ys-picks {
   margin-top: 1.3rem;
   padding-top: 1rem;
