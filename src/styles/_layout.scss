@@ -913,7 +913,13 @@
   padding: 0;
 }
 
-.hub-feed-card h3 {
+/* FUERA EL NOMBRE DE LAS CAJAS DEL MOSAICO (`.game-card-name`). Es un `h3` y la biblioteca de un amigo se pinta
+   dentro de su ficha, que es una `.hub-feed-card`: con esta regla —que pesa más que la suya— el nombre salía en
+   UNA línea cortada en seco (en Firefox, sin puntos suspensivos), con otro tamaño y en color de enlace, y no se
+   desplegaba al pasar por encima. Tiene que verse igual que en la biblioteca propia.
+   Va en `:where()` para no sumar especificidad: hay reglas calculadas para ganarle a esta por un pelo (la del
+   nombre de la tarjeta de persona, en `social.scss`), y un `:not()` a secas las habría dejado por debajo. */
+.hub-feed-card h3:where(:not(.game-card-name)) {
   font-size: clamp(.9rem, .84rem + .3vw, 1.02rem);
   font-weight: 700;
   overflow: hidden;
@@ -926,7 +932,7 @@
    viste en su §6—, y esa etiqueta trae su color. Si el azul de enlace se declarara aquí sin más, le ganaría por
    especificidad (0,1,1 contra 0,1,0) y la etiqueta saldría azul en la paleta por defecto y del color del tema en
    las demás: el mismo elemento pintado de dos maneras según la paleta. */
-.hub-feed-card h3:not(.hub-feed-game-chip) {
+.hub-feed-card h3:not(.hub-feed-game-chip, .game-card-name) {
   color: var(--fg-link);
 }
 
