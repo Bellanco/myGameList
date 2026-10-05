@@ -24,6 +24,9 @@ que se abre la edición siguiente.
     de deseos está completa»). Lo que ya llega por encima —otro dispositivo, una copia de seguridad— se conserva.
   - Su recuento, a la izquierda de «Ordenar», se dice **contra el tope**: «37 de 100», con lo filtrado delante si
     hay filtros, y en ámbar cuando está llena.
+  - En el resumen del año de un amigo, **«De su año, para ti» completa con tus deseos** cuando de Próximos no
+    salen bastantes propuestas, siempre por detrás de lo que ya tienes y con su rótulo («Lo tienes en tu lista de
+    deseos»). Con la lista oculta, no entra.
 - **Mostrar u ocultar la lista de deseos** en Ajustes → Diseño, visible por defecto y sincronizado entre tus
   dispositivos. Ocultarla esconde la pestaña, no sus juegos.
 - **La lista de deseos en lo social**, como las demás:
