@@ -43,7 +43,7 @@ vi.mock('../../src/model/repository/firebaseGateway', () => ({
 import { useSyncViewModel } from '../../src/viewmodel/useSyncViewModel';
 
 function montar(onNotice = vi.fn()) {
-  const data: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 1 };
+  const data: TabData = { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 1 };
   const meta = { updatedAt: 1, etag: null, lastRemoteUpdatedAt: 0 };
   return renderHook(() =>
     useSyncViewModel({

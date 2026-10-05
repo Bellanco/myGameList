@@ -47,7 +47,7 @@ vi.mock('../../src/model/repository/gistRepository', () => ({
 import { useSyncViewModel } from '../../src/viewmodel/useSyncViewModel';
 
 function emptyTabData(): TabData {
-  return { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 };
+  return { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 0 };
 }
 
 function renderSync() {

@@ -121,7 +121,7 @@ describe('sellos a lo largo de la vida de un juego', () => {
       id: 7, _ts: 1_700_000_000_000, name: 'Dark Souls', genres: ['RPG'], platforms: ['Steam'], steamDeck: false,
       review: '', score: 4, years: [2019], enteredAt: { c: 1_700_000_000_000 }, listedAt: 1_700_000_000_000,
     } as GameItem;
-    saveLocalState({ c: [legacy], v: [], e: [], p: [], deleted: [], updatedAt: 1, etag: null, lastRemoteUpdatedAt: 0 });
+    saveLocalState({ c: [legacy], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 1, etag: null, lastRemoteUpdatedAt: 0 });
     flushLocalState();
 
     const { result } = renderHook(() => useGameListViewModel());

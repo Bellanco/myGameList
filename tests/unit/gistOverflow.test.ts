@@ -27,7 +27,7 @@ function makeGame(id: number, reviewLen: number): GameItem {
 function makeData(n: number, reviewLen = 900): TabData {
   const c: GameItem[] = [];
   for (let i = 1; i <= n; i += 1) c.push(makeGame(i, reviewLen));
-  return { c, v: [], e: [], p: [], deleted: [], updatedAt: 1 };
+  return { c, v: [], e: [], p: [], d: [], deleted: [], updatedAt: 1 };
 }
 
 /**
@@ -57,7 +57,7 @@ function makeIncompressibleData(n: number, reviewLen = 900): TabData {
     for (let j = 0; j < reviewLen; j += 1) review += alphabet[Math.floor(random() * alphabet.length)];
     c.push({ ...makeGame(i, 0), review });
   }
-  return { c, v: [], e: [], p: [], deleted: [], updatedAt: 1 };
+  return { c, v: [], e: [], p: [], d: [], deleted: [], updatedAt: 1 };
 }
 
 function totalGames(data: TabData): number {

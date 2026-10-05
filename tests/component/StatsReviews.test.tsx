@@ -31,6 +31,7 @@ const GAMES: TabData = {
   v: [game({ id: 5, name: 'Abandonado con nota noventa', grade: 90, score: 5 })],
   e: [],
   p: [],
+  d: [],
   deleted: [],
   updatedAt: 0,
 };

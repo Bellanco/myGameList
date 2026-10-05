@@ -41,7 +41,7 @@ function makeGame(overrides: Partial<GameItem> = {}): GameItem {
 }
 
 function makeTabData(games: GameItem[]): TabData {
-  return { c: games, v: [], e: [], p: [], deleted: [], updatedAt: 1000 };
+  return { c: games, v: [], e: [], p: [], d: [], deleted: [], updatedAt: 1000 };
 }
 
 function fullVisibility(overrides: Partial<SocialProfileVisibility> = {}): SocialProfileVisibility {

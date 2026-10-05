@@ -222,7 +222,7 @@ export async function createGist(token: string): Promise<{ gistId: string; etag:
       public: false,
       files: {
         [GIST_FILENAME]: {
-          content: JSON.stringify({ c: [], v: [], e: [], p: [], deleted: [], updatedAt: Date.now() }),
+          content: JSON.stringify({ c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: Date.now() }),
         },
       },
     }),
@@ -652,7 +652,7 @@ function stripForeignStamps(data: TabData | null): TabData | null {
       return next as GameItem;
     });
 
-  return { ...data, c: clean(data.c), v: clean(data.v), e: clean(data.e), p: clean(data.p) };
+  return { ...data, c: clean(data.c), v: clean(data.v), e: clean(data.e), p: clean(data.p), d: clean(data.d) };
 }
 
 /**

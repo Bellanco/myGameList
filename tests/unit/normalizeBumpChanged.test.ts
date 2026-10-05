@@ -19,7 +19,7 @@ function game(input: Partial<GameItem> & { id: number; name: string }): GameItem
 }
 
 function lists(partial: Partial<TabData>): TabData {
-  return { c: [], v: [], e: [], p: [], deleted: [], updatedAt: VIEJO, ...partial };
+  return { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: VIEJO, ...partial };
 }
 
 describe('normalizeData — bumpChangedAgainst', () => {

@@ -36,7 +36,7 @@ function game(extra: Partial<GameItem> & { id: number }): GameItem {
 }
 
 function tabData(c: GameItem[]): TabData {
-  return { c, v: [], e: [], p: [], deleted: [], updatedAt: 1_780_000_000_000 };
+  return { c, v: [], e: [], p: [], d: [], deleted: [], updatedAt: 1_780_000_000_000 };
 }
 
 /** Un juego tal y como lo dejaría una versión anterior a los sellos: sin ellos, y sin saber que existen. */
@@ -87,7 +87,7 @@ describe('un cliente ANTIGUO con datos de uno nuevo', () => {
     // `asValidData` clona el juego entero (`{ ...g }`), así que lo que el cliente antiguo no entiende viaja
     // igualmente mientras no reescriba ese juego.
     const remote = leanTabData(modern);
-    const local: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 };
+    const local: TabData = { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 0 };
     const { merged } = mergeCrdt(local, 0, remote, remote.updatedAt);
     expect(merged.c[0].enteredAt).toEqual(STAMPS);
     expect(merged.c[0].gradedAt).toBe(STAMPS.c);

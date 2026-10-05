@@ -15,7 +15,7 @@ import { buildProfilePool, profileWeight } from '../../../core/roulette/roulette
 import { FriendshipButton } from './FriendshipButton';
 import { ProfileReviewsList } from './ProfileReviewsList';
 import { ProfileAchievementStrip } from './ProfileAchievements';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { TAB_ORDER, UI_MESSAGES } from '../../../core/constants/labels';
 // La vitrina del palmarés: perezosa, porque casi nadie la tiene y su medalla arrastra la hoja de los logros.
 const PalmaresStrip = lazy(() => import('../premios/PalmaresStrip').then((m) => ({ default: m.PalmaresStrip })));
 import type { PalmaresEntry } from '../../../model/types/premios';
@@ -49,6 +49,7 @@ const TAB_LABELS = {
   v: 'profileListTabVisited',
   e: 'profileListTabPlaying',
   p: 'profileListTabPlanned',
+  d: 'profileListTabWished',
 } as const satisfies Record<TabId, keyof SocialUiLabels['feed']>;
 
 /**
@@ -361,11 +362,11 @@ function SocialProfileDetailScreenBase({
   // sigue oculto para todos.
   const visibleTabs = useMemo(() => {
     if (!activeProfileDetail?.visibility || viewerTier === ADMIN_ONLY_TIER) {
-      return [...TAB_IDS];
+      return [...TAB_ORDER];
     }
 
     const hidden = new Set(activeProfileDetail.visibility.hiddenTabs || []);
-    return TAB_IDS.filter((tab) => !hidden.has(tab));
+    return TAB_ORDER.filter((tab) => !hidden.has(tab));
   }, [activeProfileDetail, viewerTier]);
 
   const currentTab = visibleTabs.includes(activeListTab) ? activeListTab : visibleTabs[0] || 'c';

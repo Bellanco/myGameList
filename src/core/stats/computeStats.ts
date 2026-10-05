@@ -10,7 +10,7 @@
 import { localMonthKey, localWeekKey, mondayOfWeekKey } from '../utils/dateTime';
 import { SCORE_BUCKET_FLOORS, STARS_MAX, GRADE_MAX, resolveGrade, starsFromGrade } from '../utils/scoreScale';
 import { compareText } from '../utils/compare';
-import { TAB_IDS, type GameItem, type TabData, type TabId } from '../../model/types/game';
+import { LIBRARY_TAB_IDS, type GameItem, type TabData, type TabId } from '../../model/types/game';
 import type {
   ActivitySummary,
   ArrivalPoint,
@@ -589,7 +589,7 @@ function closeYear(acc: YearAccumulator, libraryAvg: number): YearSummary {
  * red ni almacenamiento: es O(juegos) y se memoiza en `useStatsViewModel`.
  */
 export function computeStats(data: TabData): StatsSummary {
-  const counts = { c: 0, v: 0, e: 0, p: 0 } as Record<TabId, number>;
+  const counts = { c: 0, v: 0, e: 0, p: 0, d: 0 } as Record<TabId, number>;
   const yearBuckets = new Map<number, YearBucket>();
   const yearSummaries = new Map<number, YearAccumulator>();
   const arrivals = new Map<string, ArrivalPoint>();
@@ -638,7 +638,9 @@ export function computeStats(data: TabData): StatsSummary {
   let wishInterestSum = 0;
   let wishDeck = 0;
 
-  for (const tab of TAB_IDS) {
+  // Solo la BIBLIOTECA: la lista de deseos son juegos que no se tienen, y contarlos movería cada indicador —el
+  // total, las llegadas por mes, la constancia— con algo que no ha pasado. Tendrá su apartado propio si lo merece.
+  for (const tab of LIBRARY_TAB_IDS) {
     const played = PLAYED_TABS.includes(tab);
     const scores = SCORED_TABS.includes(tab);
 

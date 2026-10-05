@@ -22,7 +22,7 @@ function game(id: number, name = `Juego ${id}`): GameItem {
 }
 
 function tabData(overrides: Partial<TabData> = {}): TabData {
-  return { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0, ...overrides };
+  return { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 0, ...overrides };
 }
 
 function point(m: string, c: number, v = 0, e = 0, p = 0): BacklogSnapshot {

@@ -25,7 +25,7 @@ const idbMocks = vi.hoisted(() => {
 vi.mock('../../src/model/repository/indexedDbRepository', () => idbMocks);
 
 const localMocks = vi.hoisted(() => ({
-  loadLocalState: vi.fn((): TabData => ({ c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 })),
+  loadLocalState: vi.fn((): TabData => ({ c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 0 })),
   normalizeData: vi.fn((d: unknown) => d),
 }));
 vi.mock('../../src/model/repository/localRepository', () => localMocks);
@@ -99,7 +99,7 @@ function stubGist(data: SocialGistData) {
  */
 function bibliotecaConSello(): TabData {
   const games = Array.from({ length: 12 }, (_, i) => game(i + 1, `Juego ${i + 1}`, SELLO));
-  return { c: games, v: [], e: [], p: [], deleted: [], updatedAt: SELLO };
+  return { c: games, v: [], e: [], p: [], d: [], deleted: [], updatedAt: SELLO };
 }
 
 // El reparto por día y la fecha ancla se calculan en el calendario LOCAL (igual que los titula el feed), así que
@@ -162,7 +162,7 @@ describe('repairUndatedHistoryDates', () => {
       // 10 juegos con el `_ts` del segundo sello: suficientes para que ese día también se detecte.
       ...Array.from({ length: 10 }, (_, i) => game(100 + i, `Movido ${i + 1}`, SELLO_2)),
     ];
-    localMocks.loadLocalState.mockReturnValue({ c: games, v: [], e: [], p: [], deleted: [], updatedAt: SELLO_2 });
+    localMocks.loadLocalState.mockReturnValue({ c: games, v: [], e: [], p: [], d: [], deleted: [], updatedAt: SELLO_2 });
 
     const store = stubGist(
       socialGist([
@@ -197,7 +197,7 @@ describe('repairUndatedHistoryDates', () => {
     armChannel(gistId);
     localMocks.loadLocalState.mockReturnValue({
       c: [game(1, 'Juego 1', SELLO), game(2, 'Juego 2', SELLO)], // solo 2: por debajo del umbral
-      v: [], e: [], p: [], deleted: [], updatedAt: SELLO,
+      v: [], e: [], p: [], d: [], deleted: [], updatedAt: SELLO,
     });
     const store = stubGist(socialGist([reviewEntry(1, 'Juego 1', SELLO)]));
 

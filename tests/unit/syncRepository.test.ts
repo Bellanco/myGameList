@@ -3,7 +3,7 @@ import { mergeCrdt } from '../../src/model/repository/syncRepository';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
 function empty(): TabData {
-  return { c: [], v: [], e: [], p: [], deleted: [], updatedAt: Date.now() };
+  return { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: Date.now() };
 }
 
 function mkGame(over: Partial<GameItem> & { id: number; _ts: number }): GameItem {

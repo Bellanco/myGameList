@@ -86,6 +86,7 @@ function bibliotecaTroceada(): TabData {
     v: [],
     e: [],
     p: [],
+    d: [],
     deleted: [],
     updatedAt: 1_000,
   };

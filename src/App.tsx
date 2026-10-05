@@ -535,6 +535,7 @@ export default function App() {
       v: vm.data.v,
       e: vm.data.e,
       p: vm.data.p,
+      d: vm.data.d,
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const href = URL.createObjectURL(blob);
@@ -546,7 +547,7 @@ export default function App() {
     // no la completa. Revocar en la misma vuelta funciona en Chrome y Firefox por cómo capturan el blob, pero en
     // Safari es una carrera que puede dejar al usuario sin fichero y sin ningún error que lo explique.
     setTimeout(() => URL.revokeObjectURL(href), 0);
-  }, [vm.data.c, vm.data.v, vm.data.e, vm.data.p]);
+  }, [vm.data.c, vm.data.v, vm.data.e, vm.data.p, vm.data.d]);
 
   const importData = useCallback(async (file: File, overwrite = false) => {
     try {
@@ -557,6 +558,7 @@ export default function App() {
         v: payload.v || [],
         e: payload.e || [],
         p: payload.p || [],
+        d: payload.d || [],
         deleted: payload.deleted || [],
         updatedAt: Date.now(),
       };

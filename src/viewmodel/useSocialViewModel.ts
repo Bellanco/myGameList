@@ -61,7 +61,7 @@ import { achievementsPublishedKey } from '../core/constants/storageKeys';
 import { useAchievements } from './useAchievements';
 
 /** Biblioteca vacía estable: el hub puede montarse sin `games` y un literal nuevo rompería el memo. */
-const EMPTY_LIBRARY = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 };
+const EMPTY_LIBRARY = { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 0 };
 /** Sin espejo publicado todavía (o sin leer): cadena vacía y sin instante, que es «no hay cota». */
 const NO_PUBLISHED_MIRROR = { list: '', at: 0 };
 
@@ -1000,7 +1000,7 @@ export function useSocialViewModel(options?: {
   // tienes juegos completados". Confundirlos mandaba al editor a un usuario ya dado de alta, que además leía
   // "Sincronizado" nada más llegar: el diagnóstico y el mensaje se contradecían.
   const libraryPresentLocally =
-    liveLists.c.length > 0 || liveLists.v.length > 0 || liveLists.e.length > 0 || liveLists.p.length > 0;
+    TAB_IDS.some((tab) => (liveLists[tab] || []).length > 0);
   // El requisito de tener un juego completado solo se puede DAR POR INCUMPLIDO si la biblioteca está aquí para
   // comprobarlo. El guardado del perfil lo sigue exigiendo siempre (ahí el usuario está mirando sus propias listas).
   const completedGamesRequirementMet = hasCompletedGames || !libraryPresentLocally;
@@ -1120,6 +1120,7 @@ export function useSocialViewModel(options?: {
         v: localState.v,
         e: localState.e,
         p: localState.p,
+        d: localState.d,
       },
     };
   }, [activePanel, authUser, foreignGames, localState, ownProfileId, profileDetailId, socialDirectory]);

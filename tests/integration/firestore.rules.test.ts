@@ -81,10 +81,13 @@ describe('firestore.rules', () => {
 
     it('F4: admite `feedMoveTabs` (filtro de movimientos del feed) y rechaza lo que no sea una cadena corta', async () => {
       await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { feedMoveTabs: 'cvep' }));
+      // Las cinco listas, y cuatro con la marca de «deseos apagada a propósito»: los dos valores más largos.
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { feedMoveTabs: 'cvepd' }));
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { feedMoveTabs: 'cvep~' }));
       // «Ninguna» es una elección legítima, no la ausencia de valor.
       await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { feedMoveTabs: '' }));
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { feedMoveTabs: ['c', 'v'] }));
-      // Es una preferencia, no un sitio donde guardar texto: hay cuatro listas y ese es el tope.
+      // Es una preferencia, no un sitio donde guardar texto: hay cinco listas y ese es el tope.
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { feedMoveTabs: 'cvepcvep' }));
     });
 

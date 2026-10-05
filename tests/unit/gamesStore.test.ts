@@ -77,7 +77,7 @@ describe('games store write accessors', () => {
 
   it('replaceGamesStoreFromTabData refleja el TabData (round-trip) y reemplaza, no acumula', async () => {
     const td: TabData = {
-      c: [makeGame(1)], v: [makeGame(2)], e: [], p: [makeGame(3)],
+      c: [makeGame(1)], v: [makeGame(2)], e: [], p: [makeGame(3)], d: [],
       deleted: [{ id: 9, _ts: 50, deletedAt: 50 }], updatedAt: 7,
     };
     await replaceGamesStoreFromTabData(td);
@@ -88,7 +88,7 @@ describe('games store write accessors', () => {
     expect(out.deleted.map((d) => d.id)).toEqual([9]);
 
     // Segunda llamada con menos datos: debe REEMPLAZAR el contenido anterior.
-    await replaceGamesStoreFromTabData({ c: [makeGame(5)], v: [], e: [], p: [], deleted: [], updatedAt: 8 });
+    await replaceGamesStoreFromTabData({ c: [makeGame(5)], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 8 });
     out = await getGamesAsTabData();
     expect(out.c.map((g) => g.id)).toEqual([5]);
     expect(out.v).toEqual([]);
@@ -96,7 +96,7 @@ describe('games store write accessors', () => {
   });
 
   it('mirrorTabDataToGames espeja el contenido y registra gamesUpdatedAt', async () => {
-    await mirrorTabDataToGames({ c: [makeGame(1)], v: [], e: [], p: [], deleted: [], updatedAt: 4242 }, 4242);
+    await mirrorTabDataToGames({ c: [makeGame(1)], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 4242 }, 4242);
     const out = await getGamesAsTabData();
     expect(out.c.map((g) => g.id)).toEqual([1]);
     expect((await getLocalMeta())?.gamesUpdatedAt).toBe(4242);

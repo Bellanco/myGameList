@@ -41,8 +41,11 @@ export function gameWeight(game: GameItem): number {
   return score > 0 ? score : BASE_WEIGHT;
 }
 
-/** Multiplicador por lista en LISTADOS: salen más los próximos, luego la vergüenza, luego completados. */
-const TAB_WEIGHT: Record<TabId, number> = { p: 3.5, v: 2, c: 1, e: 1 };
+/**
+ * Multiplicador por lista en LISTADOS: salen más los próximos, luego la vergüenza, luego completados. Deseos no
+ * entra en la ruleta propia (no se puede jugar lo que no se tiene, ver `buildListsPool`): su peso es 0.
+ */
+const TAB_WEIGHT: Record<TabId, number> = { p: 3.5, v: 2, c: 1, e: 1, d: 0 };
 
 /** Nota fina "neutra" (0–100) para la vergüenza, que no se puntúa: compite por prioridad de lista sin quedar atrás. */
 export const NEUTRAL_GRADE = 70;

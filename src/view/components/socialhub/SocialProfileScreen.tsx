@@ -2,12 +2,12 @@
 import { Notice } from '../Notice';
 import { TierSeal } from '../TierSeal';
 import { HubAvatar } from './HubAvatar';
-import { TAB_TOOLTIPS } from '../../../core/constants/labels';
+import { TAB_ORDER, TAB_TOOLTIPS } from '../../../core/constants/labels';
 import { type SocialUiLabels } from '../../../core/constants/socialLabels';
 import { HubScreen } from './HubScreen';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
-import { TAB_IDS, type TabId } from '../../../model/types/game';
+import type { TabId } from '../../../model/types/game';
 import type { ProfileTier } from '../../../core/constants/tiers';
 import { useFeedMoveTabs } from '../../hooks/useFeedMoveTabs';
 
@@ -318,7 +318,7 @@ export function SocialProfileScreen({
             <div className="visibility-section">
               <span className="visibility-label">{SOCIAL_UI.profile.moveFeedSectionTitle}</span>
               <div className="visibility-group">
-                {TAB_IDS.map((tab) => (
+                {TAB_ORDER.map((tab) => (
                   <label className="visibility-check" htmlFor={`hub-move-feed-${tab}`} key={tab}>
                     <input
                       id={`hub-move-feed-${tab}`}
@@ -333,7 +333,7 @@ export function SocialProfileScreen({
                   </label>
                 ))}
               </div>
-              {visibleMoveTabs.length === 0 ? (
+              {TAB_ORDER.every((tab) => !visibleMoveTabs.includes(tab)) ? (
                 <Notice inline tone="warn" role="status">{SOCIAL_UI.profile.moveFeedAllOff}</Notice>
               ) : null}
             </div>

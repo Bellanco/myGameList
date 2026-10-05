@@ -119,6 +119,7 @@ describe('lectura retrocompatible de gists comprimidos', () => {
     v: [makeGame({ id: 2, name: 'Celeste', platforms: ['Switch'], score: 5, retry: true })],
     e: [makeGame({ id: 3, name: 'En curso' })],
     p: [makeGame({ id: 4, name: 'Pendiente', score: undefined })],
+    d: [],
     deleted: [{ id: 9, _ts: 500, deletedAt: 500 }],
     updatedAt: 4321,
   };
@@ -147,7 +148,7 @@ describe('lectura retrocompatible de gists comprimidos', () => {
     // Dataset grande y POCO compresible → fuerza main + al menos un fichero chunk bajo el presupuesto comprimido.
     const c: GameItem[] = [];
     for (let i = 1; i <= 1500; i += 1) c.push(makeGame({ id: i, name: `Juego ${i}`, review: noisyText(i, 2000) }));
-    const big: TabData = { c, v: [], e: [], p: [], deleted: [], updatedAt: 1 };
+    const big: TabData = { c, v: [], e: [], p: [], d: [], deleted: [], updatedAt: 1 };
 
     await writeGist(TOKEN, GIST_ID, big);
     const chunkFiles = Object.keys(store).filter((n) => /^myGames-chunk-.+\.json$/.test(n));
@@ -194,7 +195,7 @@ describe('lectura retrocompatible de gists comprimidos', () => {
         review: 'Una reseña de longitud media con vocabulario repetido entre juegos.',
       }));
     }
-    await writeGist(TOKEN, GIST_ID, { c, v: [], e: [], p: [], deleted: [], updatedAt: 1 });
+    await writeGist(TOKEN, GIST_ID, { c, v: [], e: [], p: [], d: [], deleted: [], updatedAt: 1 });
 
     // Flag-independiente: normaliza cada fichero a JSON plano (por si el flag ya comprimió) y compara con su forma
     // comprimida. Así el ratio mide siempre plano-vs-comprimido, esté el flag ON u OFF.
@@ -227,6 +228,7 @@ describe.skipIf(!ENABLE_GAMES_COMPRESSION)('escritura comprimida (ENABLE_GAMES_C
       v: [makeGame({ id: 2, name: 'Celeste', retry: true })],
       e: [],
       p: [],
+      d: [],
       deleted: [{ id: 9, _ts: 500, deletedAt: 500 }],
       updatedAt: 1,
     };
@@ -248,7 +250,7 @@ describe.skipIf(!ENABLE_GAMES_COMPRESSION)('escritura comprimida (ENABLE_GAMES_C
     const { store, patchBodies } = stubGistStore();
     const c: GameItem[] = [];
     for (let i = 1; i <= 1500; i += 1) c.push(makeGame({ id: i, name: `Juego ${i}`, review: noisyText(i, 2000) }));
-    const big: TabData = { c, v: [], e: [], p: [], deleted: [], updatedAt: 1 };
+    const big: TabData = { c, v: [], e: [], p: [], d: [], deleted: [], updatedAt: 1 };
 
     await writeGist(TOKEN, GIST_ID, big);
     const chunkNames = chunkNamesOf(store);
@@ -277,7 +279,7 @@ describe.skipIf(!ENABLE_GAMES_COMPRESSION)('escritura comprimida (ENABLE_GAMES_C
     // Dataset grande y compresible de forma realista: en plano supera 800KB varias veces; comprimido cabe en menos ficheros.
     const c: GameItem[] = [];
     for (let i = 1; i <= 2500; i += 1) c.push(makeGame({ id: i, name: `Juego ${i}`, review: wordyText(i, 2000) }));
-    const big: TabData = { c, v: [], e: [], p: [], deleted: [], updatedAt: 1 };
+    const big: TabData = { c, v: [], e: [], p: [], d: [], deleted: [], updatedAt: 1 };
 
     await writeGist(TOKEN, GIST_ID, big);
 

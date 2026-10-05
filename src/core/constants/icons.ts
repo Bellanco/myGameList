@@ -31,6 +31,8 @@ export type IconName =
   | 'abandoned'
   | 'skull'
   | 'rocket'
+  /** Lista de deseos: un regalo, lo que se quiere y aún no se tiene. */
+  | 'gift'
   | 'checkered-flag'
   | 'bottom-lists'
   | 'bottom-settings'
@@ -63,6 +65,7 @@ export const TAB_ICONS: Record<TabId, IconName> = {
   v: 'skull',
   e: 'play',
   p: 'rocket',
+  d: 'gift',
 };
 
 export const COMMON_ICONS = {

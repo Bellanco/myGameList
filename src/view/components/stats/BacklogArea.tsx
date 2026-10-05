@@ -4,13 +4,13 @@ import { CUMULATIVE_WINDOW, accumulate, fillMonthGaps } from '../../../core/stat
 import { timeTicks } from '../../../core/stats/timeAxis';
 import { formatCount, formatMonthLabel, formatTick } from './format';
 import type { ArrivalPoint } from '../../../core/stats/types';
-import type { TabId } from '../../../model/types/game';
+import type { LibraryTabId } from '../../../model/types/game';
 
 /**
  * Orden de LECTURA (leyenda, tabla y desglose del mes): el canónico de la app, que además coincide con el orden en
  * que se ven las bandas de arriba abajo.
  */
-const SERIES: TabId[] = ['c', 'v', 'e', 'p'];
+const SERIES: LibraryTabId[] = ['c', 'v', 'e', 'p'];
 
 /**
  * Orden de APILADO, de abajo arriba: próximos al ras del eje, encima en curso, luego abandonados y completados
@@ -20,7 +20,7 @@ const SERIES: TabId[] = ['c', 'v', 'e', 'p'];
  * y acaba en los terminados. Con los completados abajo, lo que se ha cerrado —que es lo que más crece— empujaba
  * hacia arriba a todo lo demás, y la banda de próximos flotaba en lo alto del gráfico sin apoyarse en nada.
  */
-const STACK_ORDER: TabId[] = ['p', 'e', 'v', 'c'];
+const STACK_ORDER: LibraryTabId[] = ['p', 'e', 'v', 'c'];
 
 /** Por debajo de esta cantidad de meses se marcan los puntos uno a uno. */
 const SHORT_SERIES = 15;

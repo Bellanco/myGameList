@@ -81,7 +81,7 @@ import { acquireSyncLock, resetSyncState, transitionTo } from '../../src/model/r
 const MAS_QUE_LA_ESPERA = 10_000;
 
 function emptyTabData(): TabData {
-  return { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 1_000 };
+  return { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 1_000 };
 }
 
 function mountSync() {

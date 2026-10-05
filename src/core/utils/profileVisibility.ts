@@ -53,7 +53,7 @@ export function applyProfileVisibility(
     delete next.gradedAt;
     return next;
   };
-  const out = { c: [], v: [], e: [], p: [] } as Record<TabId, GameItem[]>;
+  const out = { c: [], v: [], e: [], p: [], d: [] } as Record<TabId, GameItem[]>;
   for (const tab of TAB_IDS) {
     out[tab] = hidden.has(tab) ? [] : (games[tab] || []).map((game) => scrub(game, tab));
   }

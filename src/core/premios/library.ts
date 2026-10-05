@@ -18,7 +18,7 @@
  * pregunta a ningún servicio — un falso positivo diría que terminaste un juego que no has jugado.
  */
 import { normalizeName } from '../utils/normalizeName';
-import { TAB_IDS, type TabData, type TabId } from '../../model/types/game';
+import { LIBRARY_TAB_IDS, type TabData, type TabId } from '../../model/types/game';
 
 export interface LibraryMatch {
   /** En qué lista lo tienes. */
@@ -41,7 +41,9 @@ export function buildLibraryIndex(games: TabData | null | undefined): Map<string
   const index = new Map<string, LibraryMatch>();
   if (!games) return index;
 
-  for (const tab of TAB_IDS) {
+  // La biblioteca, sin la lista de deseos: un juego que se quiere y no se tiene no está «en tus listas» a efectos
+  // de votar, y enseñarlo como tal diría que lo has jugado.
+  for (const tab of LIBRARY_TAB_IDS) {
     for (const game of games[tab] || []) {
       const key = normalizeName(game.name);
       if (!key || index.has(key)) continue;

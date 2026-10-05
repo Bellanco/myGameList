@@ -13,7 +13,7 @@ import {
 } from '../../../core/stats/friendStats';
 import { useScoreScale } from '../../hooks/useScoreScale';
 import { StatsPanel } from './StatsPanel';
-import { TAB_IDS, type TabId } from '../../../model/types/game';
+import { LIBRARY_TAB_IDS, type TabId } from '../../../model/types/game';
 import type { ProfileTier } from '../../../core/constants/tiers';
 import type { StatsScope, YearMetric } from '../../../viewmodel/useStatsViewModel';
 // Misma hoja que el panel propio: entra en el chunk del hub social, que también es perezoso.
@@ -54,7 +54,8 @@ export const FriendStats = memo(function FriendStats({ sharedLists, viewerTier, 
   const [yearMetric, setYearMetric] = useState<YearMetric>('games');
 
   const available = useMemo(
-    () => TAB_IDS.filter((tab) => (sharedLists[tab]?.length || 0) > 0),
+    // Las estadísticas son de la biblioteca: la lista de deseos no entra en el panel (ver `computeStats`).
+    () => LIBRARY_TAB_IDS.filter((tab) => (sharedLists[tab]?.length || 0) > 0),
     [sharedLists],
   );
   const { tabs, blockedByViewer } = useMemo(

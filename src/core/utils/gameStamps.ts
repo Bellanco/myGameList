@@ -83,7 +83,7 @@ export function carryStamps(incoming: TabData, current: TabData): TabData {
       };
     });
 
-  return { ...incoming, c: merge(incoming.c), v: merge(incoming.v), e: merge(incoming.e), p: merge(incoming.p) };
+  return { ...incoming, c: merge(incoming.c), v: merge(incoming.v), e: merge(incoming.e), p: merge(incoming.p), d: merge(incoming.d) };
 }
 
 /**

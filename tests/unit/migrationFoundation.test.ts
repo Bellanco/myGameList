@@ -81,7 +81,7 @@ describe('assertNoSocialPrivateFields', () => {
 
 describe('unwrapGamesFile (lectura retrocompatible)', () => {
   it('deja pasar el formato plano TabData tal cual', () => {
-    const flat: TabData = { c: [makeGame()], v: [], e: [], p: [], deleted: [], updatedAt: 5 };
+    const flat: TabData = { c: [makeGame()], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 5 };
     expect(unwrapGamesFile(flat)).toBe(flat);
   });
 
@@ -108,7 +108,7 @@ describe('unwrapGamesFile (lectura retrocompatible)', () => {
 
 describe('gamesGistNeedsRewrite (condicional de upgrade proactivo)', () => {
   it('false para un gist plano ya en formato actual (campos EN)', () => {
-    const flat: TabData = { c: [makeGame()], v: [], e: [], p: [], deleted: [], updatedAt: 5 };
+    const flat: TabData = { c: [makeGame()], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 5 };
     expect(gamesGistNeedsRewrite(flat)).toBe(false);
   });
 
@@ -237,7 +237,7 @@ describe('E1: leanTabData (serialización magra)', () => {
     const td: TabData = {
       c: [{ id: 1, _ts: 5, name: 'A', platforms: ['PC'], genres: [], steamDeck: false, review: '',
         years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false }],
-      v: [], e: [], p: [], deleted: [], updatedAt: 5,
+      v: [], e: [], p: [], d: [], deleted: [], updatedAt: 5,
     };
     const g = leanTabData(td).c[0] as unknown as Record<string, unknown>;
     expect(g).toMatchObject({ id: 1, _ts: 5, name: 'A', platforms: ['PC'], genres: [] });
@@ -251,7 +251,7 @@ describe('E1: leanTabData (serialización magra)', () => {
     const td: TabData = {
       c: [{ id: 1, _ts: 5, name: 'A', platforms: ['PC'], genres: ['RPG'], steamDeck: true, review: 'r',
         score: 4, years: [2020], strengths: ['x'], replayable: true, retry: true, hours: 12 }],
-      v: [], e: [], p: [], deleted: [], updatedAt: 5,
+      v: [], e: [], p: [], d: [], deleted: [], updatedAt: 5,
     };
     const g = leanTabData(td).c[0] as unknown as Record<string, unknown>;
     expect(g).toMatchObject({ steamDeck: true, review: 'r', score: 4, years: [2020], strengths: ['x'], replayable: true, retry: true, hours: 12 });
@@ -261,7 +261,7 @@ describe('E1: leanTabData (serialización magra)', () => {
     const td: TabData = {
       c: [{ id: 1, _ts: 5, name: 'A', platforms: ['PC'], genres: ['RPG'], steamDeck: false, review: '',
         years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false }],
-      v: [], e: [], p: [], deleted: [], updatedAt: 5,
+      v: [], e: [], p: [], d: [], deleted: [], updatedAt: 5,
     };
     const lean = leanTabData(td);
     // El gist lean ya NO lleva review/steamDeck...
@@ -351,7 +351,7 @@ describe('E1: assertGistSizeWithinLimit (guarda de tamaño)', () => {
 describe('Fase C (aditivo): buildGamesMainFile + distributeIntoChunks', () => {
   it('buildGamesMainFile → unwrapGamesFile reconstruye el TabData (round-trip)', () => {
     const td: TabData = {
-      c: [makeGame({ id: 1 })], v: [makeGame({ id: 2 })], e: [], p: [makeGame({ id: 3 })],
+      c: [makeGame({ id: 1 })], v: [makeGame({ id: 2 })], e: [], p: [makeGame({ id: 3 })], d: [],
       deleted: [{ id: 9, _ts: 50 }], updatedAt: 100,
     };
     const wrapper = buildGamesMainFile(td);
@@ -377,7 +377,7 @@ describe('Fase C (aditivo): buildGamesMainFile + distributeIntoChunks', () => {
         makeGame({ id: 2, genres: ['Acción'], platforms: ['Steam'], strengths: ['Jugabilidad'] }),
         makeGame({ id: 3, genres: ['RPG', 'Acción'], platforms: ['Switch'], strengths: ['Historia'] }),
       ],
-      v: [], e: [], p: [], deleted: [], updatedAt: 1,
+      v: [], e: [], p: [], d: [], deleted: [], updatedAt: 1,
     };
     const wrapper = buildGamesMainFile(td);
     // diccionarios SIN repetición pese a aparecer en varios juegos ([...] para NO mutar el dict con sort)
@@ -426,7 +426,7 @@ describe('cifrado del token (recuperación cross-device)', () => {
 
 describe('F8/E4: chunking multi-fichero del gist de juegos (gated, round-trip)', () => {
   it('con maxChunkKB pequeño reparte en overflow y el round-trip no pierde datos', () => {
-    const data: TabData = { c: [], v: [], e: [], p: [], deleted: [{ id: 999, _ts: 5 }], updatedAt: 100 };
+    const data: TabData = { c: [], v: [], e: [], p: [], d: [], deleted: [{ id: 999, _ts: 5 }], updatedAt: 100 };
     for (let i = 1; i <= 40; i += 1) data.c.push(makeGame({ id: i, name: `C${i}`, review: 'x'.repeat(500) }));
     for (let i = 41; i <= 60; i += 1) data.p.push(makeGame({ id: i, name: `P${i}` }));
 
@@ -450,7 +450,7 @@ describe('F8/E4: chunking multi-fichero del gist de juegos (gated, round-trip)',
   });
 
   it('un chunk del mismo gist ausente o corrupto aborta la lectura en vez de devolverla a medias', () => {
-    const data: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 100 };
+    const data: TabData = { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 100 };
     for (let i = 1; i <= 40; i += 1) data.c.push(makeGame({ id: i, name: `C${i}`, review: 'x'.repeat(500) }));
     const { anchorFile, chunkFiles } = buildGamesFiles(data, 5);
     const [firstChunk, ...rest] = Object.keys(chunkFiles);
@@ -465,7 +465,7 @@ describe('F8/E4: chunking multi-fichero del gist de juegos (gated, round-trip)',
   });
 
   it('con pocos juegos solo hay chunk main (sin ficheros de overflow) y el round-trip funciona', () => {
-    const data: TabData = { c: [makeGame({ id: 1 })], v: [], e: [], p: [], deleted: [], updatedAt: 1 };
+    const data: TabData = { c: [makeGame({ id: 1 })], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 1 };
     const { anchorFile, chunkFiles } = buildGamesFiles(data); // umbral por defecto
     expect(Object.keys(chunkFiles)).toHaveLength(0);
     expect(anchorFile.chunkIndex.chunks).toHaveLength(1);
@@ -509,12 +509,12 @@ describe('gamesGistNeedsUpgradeToWrapper', () => {
    */
   it('un envoltorio sin versión se deja como está', () => {
     expect(gamesGistNeedsUpgradeToWrapper({ fileType: 'games-main', games: {} })).toBe(false);
-    expect(buildGamesMainFile({ c: [], v: [], e: [], p: [], deleted: [], updatedAt: 1 }).schemaVersion).toBeGreaterThanOrEqual(4);
+    expect(buildGamesMainFile({ c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 1 }).schemaVersion).toBeGreaterThanOrEqual(4);
   });
 
   it('un ancla que ya es v4 se queda como está', () => {
     expect(gamesGistNeedsUpgradeToWrapper({ schemaVersion: 4, games: {} })).toBe(false);
-    expect(gamesGistNeedsUpgradeToWrapper(buildGamesMainFile({ c: [makeGame()], v: [], e: [], p: [], deleted: [], updatedAt: 1 }))).toBe(false);
+    expect(gamesGistNeedsUpgradeToWrapper(buildGamesMainFile({ c: [makeGame()], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 1 }))).toBe(false);
   });
 
   it('lo que no es un objeto no es nada: no dispara reescrituras', () => {

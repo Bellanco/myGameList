@@ -1,7 +1,7 @@
 // LEGACY COMPAT — borrar tras migrar (ver .github/prompts/migration/MIGRATION-FORWARD-PLAN.md).
 // Lectura multiformato del gist de juegos: acepta el formato VIEJO (TabData plano) y el NUEVO
 // (envoltorio GamesMainFile). Una vez todo migrado, el lector puede simplificarse a solo-nuevo.
-import type { GameItem, TabData, TabId } from '../types/game';
+import { TAB_IDS, type GameItem, type TabData, type TabId } from '../types/game';
 import type { CategoryDictionaries, CategoryKey } from '../types/gist';
 import { gamesChunkFilename } from '../repository/socialProjection';
 
@@ -39,7 +39,7 @@ export function isGamesMainWrapper(value: unknown): boolean {
 export function isLegacyFlatTabData(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
   const o = value as Record<string, unknown>;
-  return !isGamesMainWrapper(value) && ('c' in o || 'v' in o || 'e' in o || 'p' in o);
+  return !isGamesMainWrapper(value) && TAB_IDS.some((tab) => tab in o);
 }
 
 /**
@@ -58,7 +58,7 @@ export function unwrapGamesFile(parsed: unknown): unknown {
     updatedAt?: number;
   };
 
-  const buckets: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: Number(o.updatedAt) || Date.now() };
+  const buckets: TabData = { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: Number(o.updatedAt) || Date.now() };
   const games = o.games || {};
   let placed = 0;
 
@@ -66,7 +66,7 @@ export function unwrapGamesFile(parsed: unknown): unknown {
     const game = games[key];
     if (!game) continue;
     const tab = game._tab;
-    if (tab !== 'c' && tab !== 'v' && tab !== 'e' && tab !== 'p') continue; // sin tab no se puede ubicar
+    if (!tab || !(TAB_IDS as readonly string[]).includes(tab)) continue; // sin tab no se puede ubicar
     // v4: expandir índices→cadenas con los diccionarios del ancla; v3: ya son cadenas (no-op).
     const decoded = decodeGameCategories(game as unknown as Record<string, unknown>, o.dictionaries);
     const clean = { ...decoded } as unknown as GameItem & { _tab?: TabId };
@@ -151,7 +151,7 @@ export function gamesGistNeedsRewrite(parsed: unknown): boolean {
   if (isGamesMainWrapper(parsed)) return true;
 
   const o = parsed as Record<string, unknown>;
-  for (const tab of ['c', 'v', 'e', 'p'] as const) {
+  for (const tab of TAB_IDS) {
     const arr = o[tab];
     if (!Array.isArray(arr)) continue;
     for (const item of arr) {

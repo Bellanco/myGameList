@@ -372,10 +372,12 @@ service cloud.firestore {
             || request.resource.data.gridSize in ["sm", "md", "lg"])
         && (!("covers" in request.resource.data)
             || request.resource.data.covers is bool)
-        // F4 — listas de las que su dueño ve los mensajes de actividad: letras de lista ('cevp'), nunca más de
-        // cuatro. Se acota el tamaño como en `palette`: es una preferencia, no un sitio donde guardar texto.
+        // F4 — listas de las que su dueño ve los mensajes de actividad: letras de lista ('cvepd'), nunca más de
+        // cinco. Cinco y no cuatro desde la lista de deseos: o van las cinco letras, o cuatro y la marca '~' de
+        // «deseos apagada a propósito» (ver `core/social/moveTabsFilter`). Se acota el tamaño como en `palette`: es
+        // una preferencia, no un sitio donde guardar texto.
         && (!("feedMoveTabs" in request.resource.data)
-            || (request.resource.data.feedMoveTabs is string && request.resource.data.feedMoveTabs.size() <= 4))
+            || (request.resource.data.feedMoveTabs is string && request.resource.data.feedMoveTabs.size() <= 5))
         && (!("consent" in request.resource.data)
             || (request.resource.data.consent.keys().hasOnly(["version", "agreedAt"])
                 && request.resource.data.consent.version is string

@@ -236,10 +236,10 @@ export async function getAllGameRecords(): Promise<GameRecord[]> {
 /** Reconstruye un `TabData` a partir del store `games` (agrupando por `_tab`) + tombstones del store `deleted`. */
 export async function getGamesAsTabData(): Promise<TabData> {
   const records = await getAllGameRecords();
-  const data: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: Date.now() };
+  const data: TabData = { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: Date.now() };
   for (const rec of records) {
     const tab = rec._tab;
-    if (tab !== 'c' && tab !== 'v' && tab !== 'e' && tab !== 'p') continue;
+    if (!tab || !(TAB_IDS as readonly string[]).includes(tab)) continue;
     const clean = { ...rec } as Partial<GameRecord>;
     delete clean._tab;
     data[tab].push(clean as GameItem);

@@ -21,7 +21,7 @@ function game(input: Partial<GameItem> & { id: number; name: string }): GameItem
 }
 
 function lists(partial: Partial<TabData>): TabData {
-  return { c: [], v: [], e: [], p: [], deleted: [], updatedAt: OTRO_DIA, ...partial };
+  return { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: OTRO_DIA, ...partial };
 }
 
 describe('reviewedAt — fecha propia de la reseña', () => {

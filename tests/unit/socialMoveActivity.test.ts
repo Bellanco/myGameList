@@ -42,7 +42,7 @@ function game(extra: Partial<GameItem> & { id: number }): GameItem {
 }
 
 function tabData(lists: Partial<Record<'c' | 'v' | 'e' | 'p', GameItem[]>>): TabData {
-  return { c: [], v: [], e: [], p: [], ...lists, deleted: [], updatedAt: 0 };
+  return { c: [], v: [], e: [], p: [], ...lists, d: [], deleted: [], updatedAt: 0 };
 }
 
 function baseGist(): SocialGistData {

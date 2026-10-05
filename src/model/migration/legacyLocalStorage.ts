@@ -3,6 +3,7 @@
 // actual (STORAGE_KEY). Una vez no queden instalaciones con estas claves, este módulo se puede eliminar.
 
 import { LOCAL_SCHEMA_VERSION } from '../../core/constants/storageKeys';
+import { TAB_IDS } from '../types/game';
 
 export const LEGACY_STORAGE_KEYS = [
   'mis-listas-v11-unified',
@@ -44,7 +45,7 @@ export function localStateNeedsUpgrade(raw: unknown): boolean {
   const o = raw as Record<string, unknown>;
   const source = (o.data && typeof o.data === 'object' ? o.data : o) as Record<string, unknown>;
 
-  const tabs = ['c', 'v', 'e', 'p'] as const;
+  const tabs = TAB_IDS;
   const hasData = tabs.some((tab) => Array.isArray(source[tab]) && (source[tab] as unknown[]).length > 0);
   if (!hasData) return false;
 

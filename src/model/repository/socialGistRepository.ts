@@ -324,7 +324,7 @@ function getEmptySocialGistData(): SocialGistData {
 
 function normalizeTabId(value: unknown): TabId | null {
   const tab = String(value || '').trim() as TabId;
-  if (tab === 'c' || tab === 'v' || tab === 'e' || tab === 'p') {
+  if ((TAB_IDS as readonly string[]).includes(tab)) {
     return tab;
   }
 

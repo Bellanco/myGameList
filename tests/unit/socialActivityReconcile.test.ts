@@ -40,7 +40,7 @@ function game(input: Partial<GameItem> & { id: number; name: string }): GameItem
 }
 
 function lists(partial: Partial<TabData>): TabData {
-  return { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 2_000_000_000_000, ...partial };
+  return { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 2_000_000_000_000, ...partial };
 }
 
 function socialGist(activity: SocialGistData['activity'] = []): SocialGistData {

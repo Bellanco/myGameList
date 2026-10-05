@@ -162,7 +162,7 @@ export const STATS_UI = {
     realSubtitle: 'Tamaño de cada lista al cierre de cada mes, según lo registrado en este dispositivo.',
     realNote: 'Histórico real, registrado mes a mes en este dispositivo desde que la función existe.',
     empty: 'Todavía no hay meses que representar.',
-    lists: { c: 'Completados', v: 'Abandonados', e: 'En curso', p: 'Próximos' },
+    lists: { c: 'Completados', v: 'Abandonados', e: 'En curso', p: 'Próximos', d: 'Deseados' },
     colMonth: 'Mes',
     tableAria: 'Datos por mes',
   },

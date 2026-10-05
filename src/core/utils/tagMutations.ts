@@ -8,14 +8,15 @@ type TagField = 'genres' | 'platforms' | 'strengths' | 'weaknesses' | 'reasons';
  * Campo de `GameItem` que almacena una categoría EN CADA pestaña, o `null` si esa pestaña no la usa.
  * Reglas de dominio (heredadas del comportamiento de remove/renameTagAcrossGames):
  *  - `genres`/`platforms`: presentes en todas las pestañas.
- *  - `strengths`: presente salvo en 'p' (próximos).
- *  - `weaknesses`: en 'c'/'e' es el campo `weaknesses`; en 'v' (abandonados) se almacena en `reasons`; ausente en 'p'.
+ *  - `strengths`: presente salvo en 'p' (próximos) y 'd' (deseados), que no se han jugado.
+ *  - `weaknesses`: en 'c'/'e' es el campo `weaknesses`; en 'v' (abandonados) se almacena en `reasons`; ausente en
+ *    'p' y 'd'.
  */
 export function tagFieldForTab(tab: TabId, category: TagCategory): TagField | null {
   if (category === 'genres' || category === 'platforms') return category;
-  if (category === 'strengths') return tab === 'p' ? null : 'strengths';
+  if (tab === 'p' || tab === 'd') return null;
+  if (category === 'strengths') return 'strengths';
   if (tab === 'v') return 'reasons';
-  if (tab === 'p') return null;
   return 'weaknesses';
 }
 
@@ -56,6 +57,7 @@ export function mapTabDataTags(
     v: mapGames(data.v, 'v'),
     e: mapGames(data.e, 'e'),
     p: mapGames(data.p, 'p'),
+    d: mapGames(data.d || [], 'd'),
     updatedAt: ts,
   };
 }

@@ -9,11 +9,12 @@ import { TAB_ORDER } from '../../src/core/constants/labels';
  * re-hardcodes a different tab list anywhere.
  */
 describe('tab id constants', () => {
-  it('TAB_IDS holds the four canonical tabs in order', () => {
-    expect([...TAB_IDS]).toEqual(['c', 'v', 'e', 'p']);
+  it('TAB_IDS holds the five canonical tabs in order', () => {
+    expect([...TAB_IDS]).toEqual(['c', 'v', 'e', 'p', 'd']);
   });
 
-  it('labels.TAB_ORDER stays in sync with TAB_IDS (no duplicated literal)', () => {
-    expect(TAB_ORDER).toEqual([...TAB_IDS]);
+  it('labels.TAB_ORDER derives from TAB_IDS (no duplicated literal)', () => {
+    // La lista de deseos entra en los datos una versión antes que en pantalla (ver `TAB_ORDER`).
+    expect(TAB_ORDER).toEqual(TAB_IDS.filter((tab) => tab !== 'd'));
   });
 });

@@ -34,6 +34,7 @@ function foreignGist(): TabData {
     v: [],
     e: [],
     p: [],
+    d: [],
     deleted: [],
     updatedAt: 1_780_000_000_000,
   };

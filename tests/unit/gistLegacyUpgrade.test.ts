@@ -28,6 +28,7 @@ const CURRENT_TABDATA: TabData = {
   v: [],
   e: [],
   p: [],
+  d: [],
   deleted: [],
   updatedAt: 1000,
 };

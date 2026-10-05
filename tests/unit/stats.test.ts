@@ -24,7 +24,7 @@ function game(overrides: Partial<GameItem> & { name: string }): GameItem {
 }
 
 function tabData(overrides: Partial<TabData> = {}): TabData {
-  return { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0, ...overrides };
+  return { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 0, ...overrides };
 }
 
 describe('computeStats', () => {
@@ -51,7 +51,23 @@ describe('computeStats', () => {
     expect(stats.totalHours).toBe(28);
     expect(stats.completedHours).toBe(20);
     expect(stats.totalGames).toBe(4);
-    expect(stats.counts).toEqual({ c: 1, v: 1, e: 1, p: 1 });
+    expect(stats.counts).toEqual({ c: 1, v: 1, e: 1, p: 1, d: 0 });
+  });
+
+  it('deja fuera la lista de deseos: no son juegos de la biblioteca', () => {
+    const stats = computeStats(tabData({
+      c: [game({ id: 1, name: 'Completado', hours: 20, years: [2024] })],
+      d: [
+        game({ id: 2, name: 'Deseado', hours: 7, genres: ['Roguelike'], listedAt: Date.UTC(2025, 0, 1) }),
+        game({ id: 3, name: 'Otro deseado', grade: 90 }),
+      ],
+    }));
+
+    expect(stats.totalGames).toBe(1);
+    expect(stats.totalHours).toBe(20);
+    expect(stats.counts.d).toBe(0);
+    expect(stats.wishlist.total).toBe(0);
+    expect(stats.grades.reduce((sum, bucket) => sum + bucket.count, 0)).toBe(0);
   });
 
   it('cuenta un rejugado en todos sus años y atribuye las horas al último', () => {

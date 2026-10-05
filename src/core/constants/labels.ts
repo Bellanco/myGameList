@@ -10,13 +10,20 @@ export interface TabAction {
   icon: IconName;
 }
 
-export const TAB_ORDER: TabId[] = [...TAB_IDS];
+/**
+ * Las listas que ENSEÑA la interfaz, en su orden. Es un subconjunto de `TAB_IDS` y no una copia, por la lista de
+ * deseos (`d`): entra en los datos una versión ANTES que en pantalla. Un cliente anterior a ella la descarta al
+ * leer y reescribe el gist sin sus juegos, así que primero tiene que llegar a todos los aparatos una versión que
+ * sepa leerla y conservarla, y solo después otra que deje llenarla.
+ */
+export const TAB_ORDER: TabId[] = TAB_IDS.filter((tab) => tab !== 'd');
 
 export const TAB_TITLES: Record<TabId, string> = {
   c: 'Lista del completista',
   v: 'Lista de la vergüenza',
   e: 'En curso',
   p: 'Lista de próximos',
+  d: 'Lista de deseos',
 };
 
 export const TAB_TOOLTIPS: Record<TabId, string> = {
@@ -24,6 +31,7 @@ export const TAB_TOOLTIPS: Record<TabId, string> = {
   v: 'Abandonados',
   e: 'En curso',
   p: 'Próximos',
+  d: 'Deseados',
 };
 
 export const TAB_ROUTE: Record<TabId, string> = {
@@ -31,6 +39,7 @@ export const TAB_ROUTE: Record<TabId, string> = {
   v: '/abandonados',
   e: '/en-curso',
   p: '/proximos',
+  d: '/deseados',
 };
 
 export const ROUTE_TAB: Record<string, TabId> = {
@@ -55,6 +64,8 @@ export const TAB_ACTIONS: Record<TabId, TabAction[]> = {
     { target: 'v', label: 'Pasar a abandonados', btnCls: 'btn-abandoned', icon: 'abandoned' },
   ],
   p: [{ target: 'e', label: 'Pasar a en curso', btnCls: 'btn-playing', icon: 'play' }],
+  // Deseos solo desemboca en Próximos: conseguir el juego es lo que lo mete en la biblioteca, y nada vuelve atrás.
+  d: [{ target: 'p', label: 'Pasar a próximos', btnCls: 'btn-upcoming', icon: 'rocket' }],
 };
 
 export const FILTER_BOOL: Record<TabId, { field: 'replayable' | 'retry'; label: string } | null> = {
@@ -62,6 +73,7 @@ export const FILTER_BOOL: Record<TabId, { field: 'replayable' | 'retry'; label: 
   v: { field: 'retry', label: '¿Dar otra oportunidad?' },
   e: null,
   p: null,
+  d: null,
 };
 
 export const SYNC_BADGE_TEXT = {

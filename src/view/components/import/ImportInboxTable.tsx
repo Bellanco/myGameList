@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import { TAB_IDS, type TabId } from '../../../model/types/game';
+import { LIBRARY_TAB_IDS, type TabId } from '../../../model/types/game';
 import type { ImportedGame } from '../../../model/types/import';
 import { TAB_TITLES, TAB_TOOLTIPS, UI_MESSAGES } from '../../../core/constants/labels';
 import { IMPORT_UI } from '../../../core/constants/importLabels';
@@ -9,7 +9,13 @@ import { Icon } from '../Icon';
 const M = IMPORT_UI.inbox;
 
 // Color de la píldora de "ya en tus listas" según la lista, con los mismos colores que los listados.
-const LIST_CHIP_CLASS: Record<TabId, string> = { c: 'chip-list-c', v: 'chip-list-v', e: 'chip-list-e', p: 'chip-list-p' };
+const LIST_CHIP_CLASS: Record<TabId, string> = {
+  c: 'chip-list-c',
+  v: 'chip-list-v',
+  e: 'chip-list-e',
+  p: 'chip-list-p',
+  d: 'chip-list-d',
+};
 
 interface ImportInboxTableProps {
   items: ImportedGame[];
@@ -103,7 +109,9 @@ export function ImportInboxTable({ items, isInLists, listOf, onClassify, onEnric
                             <span>{M.enrich}</span>
                           </button>
                         ) : (
-                          TAB_IDS.map((tab) => {
+                          // Solo las listas de la biblioteca: lo que llega de Playnite ya lo tienes, así que nunca
+                          // es un deseo (esa lista se llena a mano).
+                          LIBRARY_TAB_IDS.map((tab) => {
                             const suggested = item.suggestedTab === tab;
                             return (
                               <button

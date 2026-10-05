@@ -174,7 +174,7 @@ export function toFriendTabData(
   tabs: readonly TabId[],
   level: FriendStatsData = 'public',
 ): TabData {
-  const data: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 };
+  const data: TabData = { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 0 };
 
   for (const tab of tabs) {
     data[tab] = (sharedLists[tab] || []).map((game): GameItem => {

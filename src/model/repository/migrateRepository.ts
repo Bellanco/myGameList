@@ -1,4 +1,4 @@
-import type { GameItem, TabData } from '../types/game';
+import type { GameItem, TabData, TabId } from '../types/game';
 
 type LegacyGame = Record<string, unknown>;
 
@@ -10,7 +10,7 @@ function withRequiredDefaults(out: Record<string, unknown>): Record<string, unkn
   return out;
 }
 
-function migrateGame(game: LegacyGame, tab: 'c' | 'v' | 'e' | 'p'): Record<string, unknown> {
+function migrateGame(game: LegacyGame, tab: TabId): Record<string, unknown> {
   if ('name' in game) {
     const out = { ...game };
 
@@ -77,7 +77,7 @@ export function migrateData(input: unknown): TabData {
   const data = input as Record<string, unknown> | null;
 
   if (!data || typeof data !== 'object') {
-    return { c: [], v: [], e: [], p: [], deleted: [], updatedAt: Date.now() };
+    return { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: Date.now() };
   }
 
   return {
@@ -85,6 +85,8 @@ export function migrateData(input: unknown): TabData {
     v: (Array.isArray(data.v) ? data.v : []).map((g) => migrateGame(g as LegacyGame, 'v') as unknown as GameItem),
     e: (Array.isArray(data.e) ? data.e : []).map((g) => migrateGame(g as LegacyGame, 'e') as unknown as GameItem),
     p: (Array.isArray(data.p) ? data.p : []).map((g) => migrateGame(g as LegacyGame, 'p') as unknown as GameItem),
+    // Deseos no existía en el formato legado (`nombre`, `puntuacion`…): sus juegos ya nacen con el formato actual.
+    d: (Array.isArray(data.d) ? data.d : []).map((g) => migrateGame(g as LegacyGame, 'd') as unknown as GameItem),
     deleted: Array.isArray(data.deleted) ? (data.deleted as TabData['deleted']) : [],
     updatedAt: Number(data.updatedAt ?? (data.meta as Record<string, unknown> | undefined)?.updatedAt ?? 0) || Date.now(),
   };
