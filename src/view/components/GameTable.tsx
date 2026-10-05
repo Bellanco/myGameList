@@ -950,9 +950,10 @@ export const GameTable = memo(function GameTable({
     };
   }, [sortableColumns.length]);
 
-  // Con UNA sola columna ordenable no hay orden que elegir —«En curso» solo ordena por nombre, y la vergüenza
-  // también mientras no haya ningún juego puntuado—: la barra diría «Ordenar: Nombre» y nada más.
-  const showSortBar = Boolean(onSort) && sortableColumns.length > 1 && (cards || shape === 'grid');
+  // Con UNA sola columna ordenable —«En curso» solo ordena por nombre, y la vergüenza también mientras no haya
+  // ningún juego puntuado— la barra se pinta igual. Esconderla dejaba esas listas sin el conmutador de forma, que
+  // vive en la misma cabecera, y un solo chip sigue diciendo algo: el sentido, que se invierte al pulsarlo.
+  const showSortBar = Boolean(onSort) && sortableColumns.length > 0 && (cards || shape === 'grid');
 
   return (
     <div className="table-wrap" ref={parentRef}>

@@ -70,8 +70,15 @@ describe('GameTable — chips de ordenar', () => {
     expect(within(chips).queryByText('Géneros')).toBeNull();
   });
 
-  it('con una sola columna ordenable no hay barra: en curso solo se ordena por nombre', () => {
-    const { container } = renderSortable('e', vi.fn());
-    expect(container.querySelector('.list-sort-chips')).toBeNull();
+  it('con una sola columna ordenable la barra sigue: en curso se ordena por nombre y elige su forma', async () => {
+    const onSort = vi.fn();
+    const { container } = renderSortable('e', onSort);
+    const chips = container.querySelector('.list-sort-chips') as HTMLElement;
+    expect(within(chips).getAllByRole('button').map((chip) => chip.textContent)).toEqual(['Nombre']);
+    // El conmutador de forma vive en la misma cabecera: sin ella, «En curso» se quedaba sin poder elegirla.
+    expect(container.querySelector('.shape-switch')).not.toBeNull();
+
+    await userEvent.click(within(chips).getByText('Nombre'));
+    expect(onSort).toHaveBeenCalledWith('e', 'name');
   });
 });
