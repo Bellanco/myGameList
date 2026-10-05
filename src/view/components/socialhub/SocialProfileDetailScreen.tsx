@@ -186,6 +186,7 @@ function SocialProfileDetailScreenBase({
   onDeletePost,
   onOpenReview,
   reviewLink,
+  profileLoading = false,
   status,
   statusKind,
   onAddGame,
@@ -239,6 +240,8 @@ function SocialProfileDetailScreenBase({
   onOpenReview: (gameId: number) => void;
   /** Destino del «Ver análisis» de la fila expandida del listado: la reseña de este perfil dentro del hub. */
   reviewLink?: (gameId: number) => { to: string; state?: unknown };
+  /** El perfil todavía puede aparecer (el directorio se está hidratando): sin él, se espera en vez de decir que no está. */
+  profileLoading?: boolean;
   status: string;
   statusKind: string;
   onAddGame?: (game: Partial<GameItem>) => 'added' | 'duplicate' | 'invalid' | 'full';
@@ -502,7 +505,19 @@ function SocialProfileDetailScreenBase({
               <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeed} />
             </div>
           </div>
-          <p>{SOCIAL_UI.feed.profileDetailMissing}</p>
+          {profileLoading ? (
+            /* CARGANDO, NO «NO SE ENCONTRÓ»: al recargar, el perfil llega con el directorio. El esqueleto ocupa lo que
+               la cabecera del perfil —avatar grande y nombre— para que no salte al llegar. */
+            <article className="hub-feed-card hub-feed-card-detail">
+              <div className="hub-profile-hero" aria-hidden="true">
+                <span className="hub-avatar hub-avatar-lg hub-skeleton" />
+                <span className="hub-skeleton hub-skeleton-line" style={{ width: '40%' }} />
+              </div>
+              <p className="sr-only" role="status">{SOCIAL_UI.feed.profileDetailLoading}</p>
+            </article>
+          ) : (
+            <p>{SOCIAL_UI.feed.profileDetailMissing}</p>
+          )}
           <HubStatus status={status} statusKind={statusKind} />
         </div>
       </section>

@@ -350,3 +350,32 @@ describe('SocialProfileDetailScreen — resumen del año', () => {
     expect(screen.getByText(YEAR_SUMMARY_UI.cover.finished({ own: true, name: 'Yo' }, 2))).toBeInTheDocument();
   });
 });
+
+describe('SocialProfileDetailScreen — sin perfil todavía', () => {
+  const renderMissing = (profileLoading: boolean) => render(
+    <SocialProfileDetailScreen
+      SOCIAL_UI={SOCIAL_UI}
+      activeProfileDetail={null}
+      profileLoading={profileLoading}
+      onBack={vi.fn()}
+      showReviews={false}
+      onToggleReviews={vi.fn()}
+      onOpenReview={vi.fn()}
+      status=""
+      statusKind=""
+    />,
+  );
+
+  it('mientras el directorio carga, espera: esqueleto y aviso de carga, no «no se encontró»', () => {
+    const { container } = renderMissing(true);
+    expect(screen.getByRole('status')).toHaveTextContent(SOCIAL_UI.feed.profileDetailLoading);
+    expect(container.querySelector('.hub-profile-hero .hub-skeleton')).not.toBeNull();
+    expect(screen.queryByText(SOCIAL_UI.feed.profileDetailMissing)).not.toBeInTheDocument();
+  });
+
+  it('cuando ya ha cargado y no está, lo dice', () => {
+    renderMissing(false);
+    expect(screen.getByText(SOCIAL_UI.feed.profileDetailMissing)).toBeInTheDocument();
+    expect(screen.queryByText(SOCIAL_UI.feed.profileDetailLoading)).not.toBeInTheDocument();
+  });
+});

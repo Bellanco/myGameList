@@ -139,6 +139,7 @@ const SocialHubInner = memo(function SocialHubInner({
     feedItems,
     activeDetailEvent,
     detailEventLoading,
+    profileDetailLoading,
     detailReviewLoading,
     getGameItemById,
     relatedReviews,
@@ -510,6 +511,7 @@ const SocialHubInner = memo(function SocialHubInner({
         <SocialProfileDetailScreen
           SOCIAL_UI={SOCIAL_UI}
           activeProfileDetail={selectedProfileDetail}
+          profileLoading={profileDetailLoading}
           isOwnProfile={isOwnProfileDetail}
           onEditProfile={goToProfileEdit}
           onBack={goToSocial}

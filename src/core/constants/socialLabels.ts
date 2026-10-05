@@ -220,6 +220,7 @@ export const SOCIAL_UI = {
     profileDetailSubtitle: 'Vista pública del perfil seleccionado.',
     profileDetailActionsAria: 'Acciones del detalle de perfil social',
     profileDetailMissing: 'No se encontró el perfil solicitado o ya no está disponible.',
+    profileDetailLoading: 'Cargando el perfil...',
     profileListsTitle: 'Juegos',
     roulettePick: 'Elige tu próximo juego',
     profileListsEmpty: 'Este perfil no ha publicado listados todavía.',
