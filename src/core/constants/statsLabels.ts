@@ -313,7 +313,8 @@ export const STATS_UI = {
     subtitle: 'La definición de locura es comprar lo mismo esperando que sea distinto: mira antes lo que tienes.',
     tile: 'Con pariente en Próximos',
     tileUnit: (wishes: number) => `de ${wishes}`,
-    tileHint: (wishes: number) => `${wishes === 1 ? 'tu deseo' : `tus ${wishes} deseos`}, frente a lo que ya tienes sin jugar`,
+    // BioShock Infinite: «siempre hay un faro, siempre hay un hombre, siempre hay una ciudad».
+    tileHint: 'Siempre hay un faro, un hombre… y un juego esperando en Próximos.',
     pairs: 'Antes de comprar',
     youHave: 'ya tienes',
     saga: 'Misma saga',

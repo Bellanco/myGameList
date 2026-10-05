@@ -26,7 +26,7 @@ export const WishKinCard = memo(function WishKinCard({ kin }: { kin: WishKinSumm
           label={L.tile}
           value={<CountUp value={kin.withKin} />}
           unit={L.tileUnit(kin.wishes)}
-          hint={L.tileHint(kin.wishes)}
+          hint={L.tileHint}
           progress={kin.wishes ? (kin.withKin / kin.wishes) * 100 : 0}
         />
       </div>
