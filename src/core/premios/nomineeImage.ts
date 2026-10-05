@@ -52,7 +52,10 @@ export function nomineeImageUrls(
 ): NomineeImageUrls | null {
   if (withGameCover) {
     // SIN PLATAFORMAS: aquí no hay más dato que el nombre, que es con lo que lo resolvió el panel.
-    return { src: coverUrl(name, [], false, 'normal', true), src2x: coverUrl(name, [], false, 'medio', true) };
+    return {
+      src: coverUrl(name, [], false, 'normal', 'solo-cache'),
+      src2x: coverUrl(name, [], false, 'medio', 'solo-cache'),
+    };
   }
   const image = nomineeImageOf(option);
   return image ? { src: posterUrl(image.path), src2x: posterUrl(image.path, 'medio') } : null;

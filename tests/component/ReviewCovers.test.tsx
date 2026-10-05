@@ -149,11 +149,11 @@ describe('la carátula de fondo de una reseña', () => {
       expect(conCaratula(container, selector)).toBe(true);
     });
 
-    it(`en ${nombre}, lo ajeno se pide con la marca de «solo caché»`, () => {
+    it(`en ${nombre}, lo ajeno se pide con la marca de lo ajeno`, () => {
       localStorage.setItem('mis-listas-covers', 'on');
       const { container } = render(pinta('solo-cache'));
       expect(conCaratula(container, selector)).toBe(true);
-      expect(urlDeLaFranja(container, selector)).toContain('c=1');
+      expect(urlDeLaFranja(container, selector)).toContain('c=2');
     });
 
     it(`en ${nombre}, la cuenta de administración pide lo ajeno sin el modo ampliado`, () => {
@@ -162,7 +162,7 @@ describe('la carátula de fondo de una reseña', () => {
       localStorage.setItem('mis-listas-covers', 'on');
       const { container } = render(pinta('solo-cache'));
       const url = urlDeLaFranja(container, selector);
-      expect(url).toContain('c=1');
+      expect(url).toContain('c=2');
       expect(url).not.toContain('x=1');
     });
 

@@ -6,7 +6,7 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { onRequestGet } from '../../functions/cover';
 import { claveCache } from '../../functions/_lib/igdbCover';
-import { COVER_DAILY_BUDGET, coverDailyQuotaKey, coverExemptionKey } from '../../functions/_lib/keys';
+import { COVER_DAILY_BUDGET, COVER_DAILY_BUDGET_AJENO, coverDailyQuotaKey, coverExemptionKey } from '../../functions/_lib/keys';
 
 /** Remedo de KV: lo mínimo que usa el endpoint, con las llamadas a la vista para poder contarlas. */
 function kvFalso(inicial: Record<string, string> = {}) {
@@ -479,5 +479,87 @@ describe('/cover — solo caché', () => {
     const respuesta = await onRequestGet({ request: peticion('n=Celeste&c=1'), env: entorno(kv) });
 
     expect(respuesta.status).toBe(200);
+  });
+});
+
+/* EL MODO «AJENO» (`c=2`), el de la biblioteca y las reseñas de otra persona en el hub social. Resuelve lo que
+   falte, pero solo con la parte del cupo del día reservada a lo ajeno: así se llenan las bibliotecas que nadie
+   resolvió nunca (quien dejó de entrar antes de las carátulas, o nunca las encendió) sin quitarles sitio a las
+   propias. Pasada la raya contesta como `c=1`. */
+describe('/cover — lo ajeno', () => {
+  const gastadoHoy = (n: number) => ({ [coverDailyQuotaKey(Date.now())]: String(n) });
+
+  it('resuelve lo que falta mientras quede la parte del cupo de lo ajeno, y lo guarda para todos', async () => {
+    const kv = kvFalso(gastadoHoy(COVER_DAILY_BUDGET_AJENO - 1));
+    const respuesta = await onRequestGet({ request: peticion('n=Celeste&p=Steam&c=2'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(200);
+    expect(consultasAIgdb()).toHaveLength(1);
+    // La misma clave que pediría su dueño y sin caducidad: se paga una vez y la ve todo el mundo.
+    expect(kv.datos.get(claveCache('Celeste', ['Steam']))).toBe('co1abc');
+    const escritura = kv.put.mock.calls.find(([clave]) => clave === claveCache('Celeste', ['Steam']));
+    expect(escritura?.[2]).toBeUndefined();
+  });
+
+  it('pasada la raya de lo ajeno no resuelve: «aún sin resolver», una hora y solo en el navegador', async () => {
+    const kv = kvFalso(gastadoHoy(COVER_DAILY_BUDGET_AJENO));
+    const respuesta = await onRequestGet({ request: peticion('n=Celeste&c=2'), env: entorno(kv) });
+
+    // Un 404 y no un 429: la imagen se queda sin pintar, como con `c=1`, y esa hora espacia el siguiente intento.
+    expect(respuesta.status).toBe(404);
+    expect(respuesta.headers.get('X-Cover')).toBe('sin-resolver');
+    expect(respuesta.headers.get('Cache-Control')).toBe('private, max-age=3600');
+    expect(consultasAIgdb()).toHaveLength(0);
+    expect(kv.put).not.toHaveBeenCalled();
+  });
+
+  it('y esa raya no la levanta el sello del rango: es el margen de las bibliotecas propias', async () => {
+    const kv = kvFalso({ ...gastadoHoy(COVER_DAILY_BUDGET_AJENO), [coverExemptionKey('203.0.113.7')]: '1' });
+    const respuesta = await onRequestGet({ request: peticion('n=Celeste&c=2'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(404);
+    expect(consultasAIgdb()).toHaveLength(0);
+  });
+
+  it('mientras tanto, la biblioteca propia sigue resolviendo con el cupo entero', async () => {
+    const kv = kvFalso(gastadoHoy(COVER_DAILY_BUDGET_AJENO));
+    const respuesta = await onRequestGet({ request: peticion('n=Celeste'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(200);
+    expect(consultasAIgdb()).toHaveLength(1);
+  });
+
+  it('con la IP sin cupo, tampoco: lo mismo que pasada la raya, sin 429', async () => {
+    const hora = new Date().toISOString().slice(0, 13);
+    const kv = kvFalso({ [`igdb:cupo:v1:203.0.113.7:${hora}`]: '500' });
+    const respuesta = await onRequestGet({ request: peticion('n=Celeste&c=2'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(404);
+    expect(respuesta.headers.get('X-Cover')).toBe('sin-resolver');
+  });
+
+  it('sirve lo ya emparejado aunque el cupo de lo ajeno esté gastado', async () => {
+    const kv = kvFalso({ ...gastadoHoy(COVER_DAILY_BUDGET), [claveCache('Celeste', [])]: 'co1abc' });
+    const respuesta = await onRequestGet({ request: peticion('n=Celeste&c=2'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(200);
+  });
+
+  it('un «no tiene» recién averiguado se guarda en el navegador lo mismo que el de `c=1`', async () => {
+    fichas = [];
+    const kv = kvFalso();
+    const respuesta = await onRequestGet({ request: peticion('n=Jotum&c=2'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(404);
+    expect(respuesta.headers.get('X-Cover')).toBe('no-tiene');
+    expect(respuesta.headers.get('Cache-Control')).toBe('private, max-age=3600');
+  });
+
+  it('desde otra web no resuelve, igual que sin la marca', async () => {
+    const kv = kvFalso();
+    const respuesta = await onRequestGet({ request: peticionAjena('n=Celeste&c=2'), env: entorno(kv) });
+
+    expect(respuesta.status).toBe(403);
+    expect(consultasAIgdb()).toHaveLength(0);
   });
 });

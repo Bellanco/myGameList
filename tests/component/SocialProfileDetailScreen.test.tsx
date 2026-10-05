@@ -161,18 +161,18 @@ describe('SocialProfileDetailScreen — carátulas ajenas', () => {
     localStorage.clear();
   });
 
-  /* PARA TODOS, PERO SIN RESOLVER NADA. La biblioteca de otra persona se pide con `c=1`: se ve lo que el servidor
-     ya tiene y lo que falte no se pregunta a IGDB, que es lo que escribiría en KV. */
-  it('las pide con el rango de partida, con la marca de «solo caché»', () => {
+  /* PARA TODOS, CON EL CUPO DE LO AJENO. La biblioteca de otra persona se pide con `c=2`: se ve lo que el servidor
+     ya tiene y lo que falte solo se resuelve con la parte del cupo del día reservada a lo ajeno. */
+  it('las pide con el rango de partida, con la marca de lo ajeno', () => {
     const { container } = pintaPerfil();
 
-    expect(container.querySelector('.game-cover-img')?.getAttribute('src')).toContain('c=1');
+    expect(container.querySelector('.game-cover-img')?.getAttribute('src')).toContain('c=2');
   });
 
   it('y con mithril, igual: la regla no depende del rango', () => {
     const { container } = pintaPerfil(ADMIN_ONLY_TIER);
 
-    expect(container.querySelector('.game-cover-img')?.getAttribute('src')).toContain('c=1');
+    expect(container.querySelector('.game-cover-img')?.getAttribute('src')).toContain('c=2');
   });
 
   it('con el check apagado no pide ninguna', () => {

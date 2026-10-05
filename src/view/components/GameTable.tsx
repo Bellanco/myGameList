@@ -48,7 +48,8 @@ interface GameTableProps {
    * que tú no tienes. Abrir el perfil de un amigo con trescientos juegos nuevos son trescientas resoluciones
    * contra IGDB y trescientas escrituras de KV, y eso se multiplica por cada perfil que se visite: es el gasto
    * más grande que puede tener el servicio y el que menos control tiene, porque no lo decide cuánta biblioteca
-   * tienes tú sino a cuánta gente miras. Por eso lo ajeno se pide con `cachedOnly`, que no resuelve nada.
+   * tienes tú sino a cuánta gente miras. Por eso lo ajeno se pide con `cachedOnly`, que solo resuelve con la
+   * parte del cupo del día reservada a lo ajeno.
    */
   coverPolicy?: {
     /**
@@ -65,9 +66,10 @@ interface GameTableProps {
      */
     preferKnown?: boolean;
     /**
-     * Pedir SOLO lo que el servidor ya tenga resuelto (`c=1`, ver `functions/cover.ts`): lo que falte se queda sin
-     * imagen en vez de preguntarse a IGDB. Es lo que hace que mirar la biblioteca de otra persona no gaste
-     * escrituras de KV, que es el presupuesto que necesitan los enlaces compartidos.
+     * Pedir como LO AJENO (`c=2`, ver `functions/cover.ts`): lo ya resuelto se sirve, y lo que falte solo se
+     * resuelve mientras quede la parte del cupo del día reservada a lo ajeno; si no, se queda sin imagen hasta
+     * otro intento. Es lo que hace que mirar la biblioteca de otra persona no les quite escrituras de KV a las
+     * bibliotecas propias ni a los enlaces compartidos. (El nombre viene de cuando no resolvía nada.)
      * Con `preferKnown`, un título que este navegador ya resolvió se pide con su URL de siempre y sin la marca:
      * está resuelto seguro, y así lo sirve la caché del navegador en vez de descargarse otra vez con otra URL.
      */
@@ -303,10 +305,11 @@ function coverDeCaja(
   const base = coverBase(covers, peticion, ampliado);
   if (!base) return { src: null, src2x: null };
   const { nombre, plataformas, soloCache } = peticion;
+  const siNoEstaResuelta = soloCache ? 'ajeno' : 'resolver';
   return {
     // La normal sale ya compuesta de la memoria de «no tiene», que se guarda sin la marca: solo se rehace con ella.
-    src: soloCache ? coverUrl(nombre, plataformas, ampliado, 'normal', true) : base,
-    src2x: coverUrl(nombre, plataformas, ampliado, 'medio', soloCache),
+    src: soloCache ? coverUrl(nombre, plataformas, ampliado, 'normal', siNoEstaResuelta) : base,
+    src2x: coverUrl(nombre, plataformas, ampliado, 'medio', siNoEstaResuelta),
   };
 }
 
@@ -327,7 +330,7 @@ function coverDeRenglon(
 ): string | null {
   const peticion = peticionDeCaratula(game.name, game.platforms, ampliado, pedido);
   if (!coverBase(covers, peticion, ampliado)) return null;
-  return coverUrl(peticion.nombre, peticion.plataformas, ampliado, 'medio', peticion.soloCache);
+  return coverUrl(peticion.nombre, peticion.plataformas, ampliado, 'medio', peticion.soloCache ? 'ajeno' : 'resolver');
 }
 
 function renderTags(values: string[], className: string, maxVisible?: number, tone = false) {
@@ -573,8 +576,8 @@ export const GameTable = memo(function GameTable({
      mods, que dan PEORES emparejamientos— sino una lente para ver qué hay en el catálogo. Su respuesta vive en
      un espacio de caché aparte, así que encenderla no le cambia la carátula a nadie más.
      EN LO AJENO (`cachedOnly`) NO SE ENCIENDE. Ese espacio aparte solo lo llena el recorrido de la biblioteca
-     de la administración, y `c=1` no resuelve lo que falta: con la lente puesta, la estantería de un amigo solo
-     enseñaba los juegos que la administración también tiene, aunque su dueño los viera todos con carátula. */
+     de la administración, y lo ajeno no resuelve con el cupo entero: con la lente puesta, la estantería de un
+     amigo solo enseñaba los juegos que la administración también tiene, aunque su dueño los viera todos. */
   const coversAmpliadas = useIsAdmin(!coverPolicy?.cachedOnly);
   /* El MOSAICO también vale en un teléfono: sus columnas salen del mismo mínimo de caja que en escritorio (a
      412 px caben dos), así que elegir «cajas» en el móvil ya no revierte a renglones sin avisar. */

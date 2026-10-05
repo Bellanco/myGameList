@@ -474,7 +474,8 @@ function localCoverApi(): Plugin {
         const soloMapa = url.searchParams.get('m') === '1';
         const ampliado = url.searchParams.get('x') === '1';
         const tamano = tamanoPedido(url.searchParams.get('s'));
-        // `c=1`: solo lo ya resuelto, igual que en producción (ver `functions/cover.ts`).
+        // `c=1`: solo lo ya resuelto, igual que en producción (ver `functions/cover.ts`). `c=2`, lo ajeno, resuelve
+        // como siempre: su raya es un trozo del cupo del servicio, y aquí no hay cupo que repartir (ver arriba).
         const soloCache = url.searchParams.get('c') === '1';
 
         void (async () => {
