@@ -148,6 +148,11 @@ export const YEAR_SUMMARY_TOLD_KEY = 'mis-listas-year-summary-told';
 // (los «primeros pasos» nunca lo hacen).
 export const ROULETTE_USED_KEY = 'mis-listas-roulette-used';
 
+// Logros — sello de la primera vez que se aplicó un tema que no es el de casa. Hace falta por lo mismo que el de la
+// ruleta: «Ajustes de vídeo» miraba solo el tema activo en el instante de evaluar, y quien probaba uno y volvía al
+// de casa sin pasar por la pantalla de logros no lo conseguía nunca. No sube y no se publica.
+export const THEME_CHANGED_KEY = 'mis-listas-theme-changed';
+
 // Borrador de la papeleta de premios: lo votado hasta ahora, para no perderlo al recargar o al salir a mirar algo
 // a las listas. Se borra al enviar.
 //

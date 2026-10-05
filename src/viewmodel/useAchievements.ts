@@ -3,7 +3,7 @@ import { evaluateAchievements, freezeDates, levelUps, nextPeak } from '../core/a
 import { summarize } from '../core/achievements/summary';
 import { ACHIEVEMENTS, ACHIEVEMENTS_BY_LADDER, catalogEpoch } from '../core/achievements/catalog';
 import { ACHIEVEMENTS_DATES_KEY, ACHIEVEMENTS_PEAK_KEY } from '../core/constants/storageKeys';
-import { rouletteUsedAt } from '../core/achievements/deviceSignals';
+import { rouletteUsedAt, themeChangedAt } from '../core/achievements/deviceSignals';
 import { DEFAULT_PALETTE } from '../core/constants/palettes';
 import { appliedPalette } from '../view/hooks/preferences';
 import { RARITY_POINTS } from '../core/achievements/types';
@@ -91,7 +91,9 @@ export function useAchievements({
         device: {
           hasSync,
           rouletteUsedAt: rouletteUsedAt(),
-          themeChanged: appliedPalette() !== DEFAULT_PALETTE,
+          // El sello cubre a quien probó un tema y volvió al de casa; el tema activo, a quien lo eligió antes de
+          // que existiera el sello.
+          themeChanged: themeChangedAt() > 0 || appliedPalette() !== DEFAULT_PALETTE,
         },
         now,
       },
