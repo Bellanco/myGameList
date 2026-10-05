@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { DEFAULT_PROFILE_TIER, PROFILE_TIER_DIRECTORY_TTL_MS, PROFILE_TIER_FEED_TTL_MS, type ProfileTier } from '../../core/constants/tiers';
 import { mapWithConcurrency } from '../../core/utils/concurrency';
@@ -14,8 +14,6 @@ import type { SocialDirectoryEntry } from './socialFeed';
 import type { TabId } from '../../model/types/game';
 import type { FriendshipView } from '../../model/types/social';
 
-/** Anti-spam del refresco forzado: cada uno relee el directorio y hasta ~50 gists sociales. */
-const FORCED_REFRESH_MIN_MS = 12_000;
 // Antigüedad máxima del último uso de un AMIGO para que su actividad entre en el feed: `PROFILE_INACTIVITY_MS`, el
 // mismo corte con el que avisa el panel. Uno más inactivo sigue en la lista de amigos, y su perfil y sus reseñas se
 // abren igual (salen de su gist de JUEGOS); lo que no hace es ocupar el feed ni gastar una lectura de su gist
@@ -152,9 +150,6 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
    * estado vacío y saltaba después al esqueleto. Con esto la carga se lee como una sola escena.
    */
   const [directorySettled, setDirectorySettled] = useState(false);
-  const [refreshCoolingDown, setRefreshCoolingDown] = useState(false);
-  const lastForcedHydrateRef = useRef(0);
-  const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const runDirectoryHydration = useCallback(async (forceRefresh: boolean, keepDirectoryQuery = false) => {
     if (!directoryPanelAllows || !authUser || !socialCfgGistId) {
@@ -183,21 +178,11 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
       return;
     }
 
-    // Anti-spam del refresco forzado: cada `forceRefresh` relee el directorio + ~50 gists sociales (cuenta contra el
-    // rate-limit del token aunque devuelvan 304). Si se pulsa "Actualizar feed" repetidamente en pocos segundos, se
-    // ignora y se avisa. Las cargas automáticas (forceRefresh=false) usan la caché de sesión y no entran aquí.
-    if (forceRefresh) {
-      const now = Date.now();
-      if (now - lastForcedHydrateRef.current < FORCED_REFRESH_MIN_MS) {
-        setFeedback('warn', SOCIAL_UI.status.refreshThrottled);
-        return;
-      }
-      lastForcedHydrateRef.current = now;
-      // Deshabilita el botón durante el cooldown (en vez de solo avisar al pulsar).
-      setRefreshCoolingDown(true);
-      if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
-      cooldownTimerRef.current = setTimeout(() => setRefreshCoolingDown(false), FORCED_REFRESH_MIN_MS);
-    } else {
+    // EL REFRESCO FORZADO YA NO LO PIDE NADIE DESDE FUERA: el botón «Actualizar feed» se retiró, y con él su
+    // enfriamiento. Lo único que fuerza es la propia app tras publicar (`onPublished`), que conserva la consulta del
+    // directorio (`keepDirectoryQuery`), así que solo relee los gists sociales y al ritmo al que uno publica.
+    // Todo lo demás es carga automática y pasa por la caché.
+    if (!forceRefresh) {
       // Caché persistente: si el directorio sigue fresco (el TTL lo pone el rango), se sirve de IndexedDB sin releer
       // ningún gist social. Evita el coste N+1 al navegar feed→detalle→feed o al re-renderizar.
       //
@@ -629,14 +614,6 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
     [],
   );
 
-  /** El cooldown del refresco forzado no puede sobrevivir al desmontaje del hub. */
-  useEffect(() => () => {
-    if (cooldownTimerRef.current) {
-      clearTimeout(cooldownTimerRef.current);
-      cooldownTimerRef.current = null;
-    }
-  }, []);
-
   /**
    * Lo que las pantallas deben tratar como "el directorio está cargando": la hidratación en vuelo MÁS la ventana
    * previa. Las condiciones replican las guardas que significan "aquí no hay directorio que cargar"; sin ellas,
@@ -650,7 +627,6 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
     rawSocialDirectory,
     directoryLoading,
     setDirectorySettled,
-    refreshCoolingDown,
     hydrateSocialDirectory,
     patchDirectoryEntries,
   };

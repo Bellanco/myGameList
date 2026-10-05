@@ -33,7 +33,7 @@ export async function resolverCaratulasDeNominados(nombres: readonly string[]): 
   const unicos = [...new Set(nombres.map((nombre) => String(nombre || '').trim()).filter(Boolean))];
   if (!unicos.length) return resumen;
 
-  // El panel es de la cuenta de administración, que es mithril: con el cupo levantado, una edición grande no
+  // El panel es de la cuenta de administración, y es ella la que levanta el cupo: con él, una edición grande no
   // topa con el tope por IP. Si no se concede, se sigue con el normal, que a unas decenas de títulos les sobra.
   await pedirCupoDeCaratulasLibre();
 

@@ -154,22 +154,22 @@ describe('applyProfileVisibility', () => {
     const out = applyProfileVisibility(
       makeTabData([makeGame()]),
       fullVisibility({ hiddenTabs: ['c'], hideReplayable: true, hideRetry: true }),
-      'mithril',
+      true,
     );
     expect(out.c).toHaveLength(1);
     expect(out.c[0].replayable).toBe(true);
   });
 
   it('pero las horas se le esconden igual: es el único ajuste que vale contra todos', () => {
-    const out = applyProfileVisibility(makeTabData([makeGame()]), fullVisibility({ hideGameTime: true }), 'mithril');
+    const out = applyProfileVisibility(makeTabData([makeGame()]), fullVisibility({ hideGameTime: true }), true);
     expect(out.c[0].hours).toBeNull();
   });
 
-  it('el resto de rangos no tienen excepción ninguna', () => {
+  it('sin el claim no hay excepción ninguna, sea cual sea el rango', () => {
     const out = applyProfileVisibility(
       makeTabData([makeGame()]),
       fullVisibility({ hiddenTabs: ['c'], hideReplayable: true }),
-      'gold',
+      false,
     );
     expect(out.c).toHaveLength(0);
   });

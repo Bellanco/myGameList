@@ -122,7 +122,8 @@ export interface TopSummary {
  * de otra persona, y esta es la lista de piezas que puede montar; el orden en que van lo decide la pantalla.
  *
  * Existe como tipo de dominio porque quien recorta la lista no es la vista: en un perfil ajeno la recorta el
- * RANGO de quien mira (ver `friendStatsBlocks`), y esa es una regla de producto, no de pintado.
+ * RANGO de quien mira, o su claim de administración (ver `friendStatsBlocks`), y esa es una regla de producto, no
+ * de pintado.
  */
 export type StatsBlock =
   | 'top'

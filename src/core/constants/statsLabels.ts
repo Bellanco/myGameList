@@ -370,8 +370,6 @@ export const STATS_UI = {
     /** Reciprocidad: lo que escondes de tus listas, no lo ves de las suyas. */
     blockedAll: 'Escondes todas tus listas, así que no puedes ver las de nadie. Enséñalas en tu perfil y volverán estas cifras.',
     blocked: (lists: string) => `Falta ${lists}: lo escondes en tu perfil, así que tampoco lo ves aquí.`,
-    /** Lo que el rango del que mira no alcanza a ver. */
-    tierMore: 'Tu rango llega hasta aquí. Con uno más alto verías también cómo puntúa y cuánto termina.',
     noHours: 'Las horas no viajan por el canal social: son privadas y aquí no se enseñan.',
     scopeGeneral: 'General',
   },

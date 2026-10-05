@@ -560,10 +560,9 @@ export const GameTable = memo(function GameTable({
   const { shape, setShape } = useListShape();
   /* Apagada por defecto: sin encenderla, `src` va vacío, no se pide ninguna imagen y la caja se queda con su
      portada de casa. Es la preferencia la que autoriza a que el servidor consulte los títulos en IGDB.
-     Y la preferencia solo decide DENTRO de lo que esta lista permite (ver `allowCovers`): en la biblioteca de
-     otra persona hoy no se piden carátulas salvo para el rango que las tiene desbloqueadas, porque ahí cada
-     perfil visitado es un catálogo nuevo que resolver. El día que se abra a todos, esta línea no cambia: basta
-     con que quien monta la tabla deje de restringirlo y vuelve a mandar el check. */
+     Y la preferencia solo decide DENTRO de lo que esta lista permite (`coverPolicy`): en la biblioteca de otra
+     persona las carátulas se piden para todos, pero con el cupo de lo ajeno, porque ahí cada perfil visitado es
+     un catálogo nuevo que resolver (ver `SocialProfileDetailScreen`). */
   const { covers: coversPreferidas } = useCovers();
   const covers = coversPreferidas && (coverPolicy?.allowed ?? true);
   const pedidoDePortada: PedidoDePortada = {

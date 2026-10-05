@@ -1,35 +1,35 @@
 // Reciprocidad de la foto: quien esconde la suya no ve la de nadie, y la de los demás solo se ve con amistad
-// aceptada. Mithril (la cuenta de administración) queda exento de las dos reglas.
+// aceptada. La cuenta de administración —el claim `admin`, no el rango— queda exenta de las dos reglas.
 import { describe, expect, it } from 'vitest';
 import { canSeeOtherPhotos, isPhotoRuleExempt, photoForViewer, resolveViewer, withVisiblePhotos } from '../../src/core/social/photoVisibility';
 
 const FOTO = 'https://f/ada.png';
 
-const conFoto = { showsOwnPhoto: true, tier: 'bronze' as const };
-const sinFoto = { showsOwnPhoto: false, tier: 'bronze' as const };
-const mithril = { showsOwnPhoto: false, tier: 'mithril' as const };
+const conFoto = { showsOwnPhoto: true, isAdmin: false };
+const sinFoto = { showsOwnPhoto: false, isAdmin: false };
+const admin = { showsOwnPhoto: false, isAdmin: true };
 
 describe('resolveViewer', () => {
   // El interruptor dice lo que QUIERE; la foto de la cuenta dice lo que TIENE. Solo cuenta lo segundo, porque es lo
   // que los demás ven: quien lleva el "sí" activado y no tiene foto en Google no publica ninguna.
   it('querer mostrar la foto no basta: hay que tenerla', () => {
-    expect(resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, ownPhotoIsGeneric: false, tier: 'bronze' }).showsOwnPhoto).toBe(true);
-    expect(resolveViewer({ showPhoto: true, ownPhotoURL: '', ownPhotoIsGeneric: false, tier: 'bronze' }).showsOwnPhoto).toBe(false);
-    expect(resolveViewer({ showPhoto: true, ownPhotoURL: null, ownPhotoIsGeneric: false, tier: 'bronze' }).showsOwnPhoto).toBe(false);
-    expect(resolveViewer({ showPhoto: true, ownPhotoURL: undefined, ownPhotoIsGeneric: false, tier: 'bronze' }).showsOwnPhoto).toBe(false);
-    expect(resolveViewer({ showPhoto: true, ownPhotoURL: '   ', ownPhotoIsGeneric: false, tier: 'bronze' }).showsOwnPhoto).toBe(false);
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, ownPhotoIsGeneric: false, isAdmin: false }).showsOwnPhoto).toBe(true);
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: '', ownPhotoIsGeneric: false, isAdmin: false }).showsOwnPhoto).toBe(false);
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: null, ownPhotoIsGeneric: false, isAdmin: false }).showsOwnPhoto).toBe(false);
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: undefined, ownPhotoIsGeneric: false, isAdmin: false }).showsOwnPhoto).toBe(false);
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: '   ', ownPhotoIsGeneric: false, isAdmin: false }).showsOwnPhoto).toBe(false);
   });
 
   it('tener foto no sirve si la ha escondido', () => {
-    expect(resolveViewer({ showPhoto: false, ownPhotoURL: FOTO, ownPhotoIsGeneric: false, tier: 'bronze' }).showsOwnPhoto).toBe(false);
+    expect(resolveViewer({ showPhoto: false, ownPhotoURL: FOTO, ownPhotoIsGeneric: false, isAdmin: false }).showsOwnPhoto).toBe(false);
   });
 
-  it('conserva el rango, que es lo que exime de la regla', () => {
-    expect(resolveViewer({ showPhoto: false, ownPhotoURL: '', tier: 'mithril' }).tier).toBe('mithril');
+  it('conserva el claim de administración, que es lo que exime de la regla', () => {
+    expect(resolveViewer({ showPhoto: false, ownPhotoURL: '', isAdmin: true }).isAdmin).toBe(true);
   });
 
   it('quien lo tiene activado SIN foto queda igual que quien la esconde: no ve las de los demás', () => {
-    const sinFotoEnGoogle = resolveViewer({ showPhoto: true, ownPhotoURL: '', tier: 'bronze' });
+    const sinFotoEnGoogle = resolveViewer({ showPhoto: true, ownPhotoURL: '', isAdmin: false });
     expect(canSeeOtherPhotos(sinFotoEnGoogle)).toBe(false);
     expect(photoForViewer({ photoURL: FOTO, isOwn: false, isFriend: true, viewer: sinFotoEnGoogle })).toBe('');
   });
@@ -37,7 +37,7 @@ describe('resolveViewer', () => {
   // El agujero que tapa `googlePhoto`: Google no deja a nadie sin `photoURL` —a quien no sube foto le genera un
   // monograma con su inicial—, así que "tener URL" no basta para pasar por "tener cara".
   it('el avatar genérico de Google no cuenta como foto', () => {
-    const conMonograma = resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, ownPhotoIsGeneric: true, tier: 'bronze' });
+    const conMonograma = resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, ownPhotoIsGeneric: true, isAdmin: false });
     expect(conMonograma.showsOwnPhoto).toBe(false);
     expect(canSeeOtherPhotos(conMonograma)).toBe(false);
     expect(photoForViewer({ photoURL: FOTO, isOwn: false, isFriend: true, viewer: conMonograma })).toBe('');
@@ -46,17 +46,17 @@ describe('resolveViewer', () => {
   // El veredicto llega por red. MIENTRAS NO ESTÁ, NO SE APORTA NADA: lo que está en juego no es un parpadeo, es
   // enseñar las caras de los demás a quien todavía no se sabe si esconde la suya, y eso no se deshace una vez visto.
   it('sin veredicto todavía, no se dan por buenas las caras ajenas', () => {
-    expect(resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, tier: 'bronze' }).showsOwnPhoto).toBe(false);
-    expect(resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, ownPhotoIsGeneric: undefined, tier: 'bronze' }).showsOwnPhoto).toBe(false);
-    expect(resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, ownPhotoIsGeneric: false, tier: 'bronze' }).showsOwnPhoto).toBe(true);
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, isAdmin: false }).showsOwnPhoto).toBe(false);
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, ownPhotoIsGeneric: undefined, isAdmin: false }).showsOwnPhoto).toBe(false);
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, ownPhotoIsGeneric: false, isAdmin: false }).showsOwnPhoto).toBe(true);
   });
 
-  // Mithril (la administración) queda exento de la RECIPROCIDAD, no de esto: sigue sin aportar foto, pero su rango le
-  // deja ver las de los demás igualmente.
-  it('el monograma tampoco quita el rango', () => {
-    const admin = resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, ownPhotoIsGeneric: true, tier: 'mithril' });
-    expect(admin.showsOwnPhoto).toBe(false);
-    expect(canSeeOtherPhotos(admin)).toBe(true);
+  // La administración queda exenta de la RECIPROCIDAD, no de esto: sigue sin aportar foto, pero el claim le deja
+  // ver las de los demás igualmente.
+  it('el monograma tampoco quita la exención de la administración', () => {
+    const viewer = resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, ownPhotoIsGeneric: true, isAdmin: true });
+    expect(viewer.showsOwnPhoto).toBe(false);
+    expect(canSeeOtherPhotos(viewer)).toBe(true);
   });
 });
 
@@ -66,9 +66,9 @@ describe('canSeeOtherPhotos', () => {
     expect(canSeeOtherPhotos(sinFoto)).toBe(false);
   });
 
-  it('mithril las ve aunque esconda la suya', () => {
-    expect(canSeeOtherPhotos(mithril)).toBe(true);
-    expect(isPhotoRuleExempt(mithril)).toBe(true);
+  it('la administración las ve aunque esconda la suya', () => {
+    expect(canSeeOtherPhotos(admin)).toBe(true);
+    expect(isPhotoRuleExempt(admin)).toBe(true);
     expect(isPhotoRuleExempt(conFoto)).toBe(false);
   });
 });
@@ -90,8 +90,8 @@ describe('photoForViewer', () => {
     expect(photoForViewer({ photoURL: FOTO, isOwn: true, isFriend: false, viewer: sinFoto })).toBe(FOTO);
   });
 
-  it('mithril ve la de cualquiera: sin amistad y escondiendo la suya', () => {
-    expect(photoForViewer({ photoURL: FOTO, isOwn: false, isFriend: false, viewer: mithril })).toBe(FOTO);
+  it('la administración ve la de cualquiera: sin amistad y escondiendo la suya', () => {
+    expect(photoForViewer({ photoURL: FOTO, isOwn: false, isFriend: false, viewer: admin })).toBe(FOTO);
   });
 
   it('sin foto publicada no hay nada que resolver', () => {
@@ -178,9 +178,9 @@ describe('withVisiblePhotos', () => {
     expect(visible.flatMap((item) => item.moves.map((m) => m.photoURL))).toEqual(['', '']);
   });
 
-  it('mithril recibe el directorio intacto (misma referencia: no invalida los memos)', () => {
+  it('la administración recibe el directorio intacto (misma referencia: no invalida los memos)', () => {
     const entries = [entry('otro')];
-    expect(withVisiblePhotos(entries, { viewer: mithril, friendUids: new Set(), isOwnEntry: noEsPropia })).toBe(entries);
+    expect(withVisiblePhotos(entries, { viewer: admin, friendUids: new Set(), isOwnEntry: noEsPropia })).toBe(entries);
   });
 
   it('sin nada que ocultar devuelve el MISMO array, para no recalcular el feed en cada render', () => {

@@ -1,8 +1,8 @@
-// LOS LISTADOS DE OTRA PERSONA: de quién los tenemos, cómo se piden y cómo se refrescan.
+// LOS LISTADOS DE OTRA PERSONA: de quién los tenemos y cómo se piden.
 //
 // Cuarta pieza que sale de `useSocialViewModel`, y otro dominio cerrado: tres estados que solo se tocan entre
-// ellos (la caché por perfil, los que no se pudieron leer y el indicador de «bajando»), el efecto que los llena
-// y el refresco manual. Sus cuatro consumidores —el detalle de una actividad, la ficha de un perfil, la reseña
+// ellos (la caché por perfil, los que no se pudieron leer y el indicador de «bajando») y el efecto que los
+// llena. Sus cuatro consumidores —el detalle de una actividad, la ficha de un perfil, la reseña
 // dentro de esa ficha y las reseñas relacionadas— solo LEEN.
 //
 // TRES REGLAS QUE NO SON DETALLES DE IMPLEMENTACIÓN, y por eso vienen con el código en vez de quedarse en el
@@ -13,17 +13,15 @@
 //     no-amigo = solo nombre y foto». Y de paso, ni una llamada que no haga falta.
 //  2. FILTRADO POR SU VISIBILIDAD AL GUARDAR, no al pintar. Lo que se guarda en memoria ya viene recortado por
 //     lo que su dueño esconde (`applyProfileVisibility`), así que ninguna pantalla puede enseñar de más por
-//     olvidarse de filtrar. El rango de QUIEN MIRA entra en ese filtro: la cuenta de administración ve las
-//     listas y las marcas que el dueño esconde, pero no sus horas.
+//     olvidarse de filtrar. QUIEN MIRA entra en ese filtro: la cuenta de administración (el claim, no el rango)
+//     ve las listas y las marcas que el dueño esconde, pero no sus horas.
 //  3. UN FALLO SE APUNTA. Sin esa marca, el detalle esperaba para siempre el análisis completo de alguien cuyo
 //     gist no se pudo leer, con el adelanto de 160 caracteres tapado por un esqueleto eterno. Apuntado, la
 //     pantalla deja de esperar y enseña lo que hay, que a partir de ese momento es la verdad.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSocialSyncConfig } from '../../model/repository/socialGistRepository';
 import { loadForeignProfileGames } from '../../model/repository/foreignProfileRepository';
 import { applyProfileVisibility } from '../../core/utils/profileVisibility';
-import { SOCIAL_UI } from '../../core/constants/socialLabels';
-import type { ProfileTier } from '../../core/constants/tiers';
 import type { GameItem, TabData, TabId } from '../../model/types/game';
 import type { SocialProfileVisibility } from '../../model/types/social';
 import { isOwnProfileIdentity } from './socialIdentity';
@@ -41,8 +39,6 @@ export interface ForeignProfileGames {
   loadingForeignProfile: boolean;
   /** Un juego concreto: de los listados bajados si es ajeno, de los locales si es propio. */
   getGameItemById: (profileId: string, gameId: number) => GameItem | null;
-  /** Refresco manual del perfil abierto: invalida la caché en IndexedDB y relee el gist. */
-  refreshProfileDetail: () => Promise<void>;
 }
 
 export interface ForeignProfileGamesOptions {
@@ -58,13 +54,11 @@ export interface ForeignProfileGamesOptions {
   relationshipWith: (otherUid: string) => string;
   /** Listados PROPIOS, para resolver un juego propio sin bajar nada. */
   localGames: TabData;
-  /** Rango de quien mira: entra en el filtro de visibilidad. */
-  ownTier: ProfileTier;
+  /** ¿Quien mira tiene el claim `admin`? Entra en el filtro de visibilidad (ver `applyProfileVisibility`). */
+  isAdmin: boolean;
   defaultVisibility: SocialProfileVisibility;
   /** Token con el que leer el gist ajeno; el del canal social manda sobre el de los listados. */
   fallbackToken: string | null;
-  setFeedback: (kind: 'ok' | 'warn' | 'err', message: string, duration?: 'short' | 'long') => void;
-  reportFailure: (error: unknown, fallback: string, kind?: 'err' | 'warn') => void;
 }
 
 /** Las tres pantallas que piden los listados de otra persona. */
@@ -73,7 +67,7 @@ const PANELS_QUE_PIDEN = ['detail', 'profile-detail', 'profile-review'];
 export function useForeignProfileGames(options: ForeignProfileGamesOptions): ForeignProfileGames {
   const {
     activePanel, profileDetailId, detailProfileId, ownUid, ownProfileId, directory,
-    relationshipWith, localGames, ownTier, defaultVisibility, fallbackToken, setFeedback, reportFailure,
+    relationshipWith, localGames, isAdmin, defaultVisibility, fallbackToken,
   } = options;
 
   const [foreignGames, setForeignGames] = useState<ForeignGames>({});
@@ -85,6 +79,17 @@ export function useForeignProfileGames(options: ForeignProfileGamesOptions): For
    */
   const [foreignProfileFailed, setForeignProfileFailed] = useState<Record<string, true>>({});
   const [loadingForeignProfile, setLoadingForeignProfile] = useState(false);
+
+  /* LO BAJADO SE FILTRÓ CON EL CLAIM DE ENTONCES. El claim llega por su cuenta (se lee del token) y puede cambiar
+     con la sesión abierta, así que lo ya guardado se tira y se vuelve a pedir: cuesta una lectura de IndexedDB,
+     porque la copia del gist está fresca 24 h. SOLO AL CAMBIAR, no al montar: vaciar en el primer render
+     cancelaría la lectura recién lanzada y la repetiría. */
+  const filteredAsAdminRef = useRef(isAdmin);
+  useEffect(() => {
+    if (filteredAsAdminRef.current === isAdmin) return;
+    filteredAsAdminRef.current = isAdmin;
+    setForeignGames({});
+  }, [isAdmin]);
 
   // Al abrir el detalle de una reseña o de un perfil AJENO, baja su lista completa de juegos (cache-first 24 h en
   // IndexedDB; sin red si está fresca) y la guarda filtrada por su visibilidad. El perfil propio no se baja (ya
@@ -105,7 +110,7 @@ export function useForeignProfileGames(options: ForeignProfileGamesOptions): For
     loadForeignProfileGames({ profileId: targetProfileId, gamesGistId: entry.gamesGistId, token })
       .then((games) => {
         if (cancelled || !games) return;
-        const visible = applyProfileVisibility(games, entry.visibility || defaultVisibility, ownTier);
+        const visible = applyProfileVisibility(games, entry.visibility || defaultVisibility, isAdmin);
         setForeignGames((prev) => ({ ...prev, [targetProfileId]: visible }));
       })
       .catch(() => {
@@ -114,14 +119,14 @@ export function useForeignProfileGames(options: ForeignProfileGamesOptions): For
       })
       .finally(() => {
         // Debe bajar SIEMPRE, aunque el efecto se haya cancelado al navegar; si no, un perfil abierto luego desde
-        // caché (return temprano) dejaría el botón «Actualizar listados» colgado.
+        // caché (return temprano) dejaría el indicador de carga colgado.
         setLoadingForeignProfile(false);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [activePanel, defaultVisibility, detailProfileId, directory, fallbackToken, foreignGames, ownProfileId, ownTier, ownUid, profileDetailId, relationshipWith]);
+  }, [activePanel, defaultVisibility, detailProfileId, directory, fallbackToken, foreignGames, isAdmin, ownProfileId, ownUid, profileDetailId, relationshipWith]);
 
   /**
    * Obtiene un `GameItem` para un evento del feed. Para perfiles ajenos usa su lista bajada (ya filtrada por su
@@ -145,30 +150,5 @@ export function useForeignProfileGames(options: ForeignProfileGamesOptions): For
     return allGames.find((game) => game.id === gameId) || null;
   }, [foreignGames, localGames, ownProfileId, ownUid]);
 
-  // Refresco manual del perfil abierto: relee del gist de listados saltándose el ETag (`forceRefresh`). La copia de
-  // IndexedDB NO se borra antes: la lectura la sustituye si sale bien, y si GitHub limita o no hay red, borrarla
-  // dejaba a ese amigo sin listados guardados para la próxima visita (docs/plan-degradacion-servicios.md).
-  const refreshProfileDetail = useCallback(async () => {
-    const profileId = profileDetailId;
-    const entry = directory.find((item) => item.id === profileId);
-    if (!entry || !entry.gamesGistId || isOwnProfileIdentity(profileId, ownUid, ownProfileId)) return;
-    if (relationshipWith(entry.uid) !== 'friends') return; // solo se refrescan listados de amigos.
-    try {
-      setLoadingForeignProfile(true);
-      const token = getSocialSyncConfig()?.token || fallbackToken || null;
-      const games = await loadForeignProfileGames({ profileId, gamesGistId: entry.gamesGistId, token, forceRefresh: true });
-      if (games) {
-        const visible = applyProfileVisibility(games, entry.visibility || defaultVisibility, ownTier);
-        setForeignGames((prev) => ({ ...prev, [profileId]: visible }));
-      } else {
-        setFeedback('warn', SOCIAL_UI.status.profileGamesRefreshFailed);
-      }
-    } catch (error) {
-      reportFailure(error, SOCIAL_UI.status.profileGamesRefreshFailed, 'warn');
-    } finally {
-      setLoadingForeignProfile(false);
-    }
-  }, [defaultVisibility, directory, fallbackToken, ownProfileId, ownTier, ownUid, profileDetailId, relationshipWith, reportFailure, setFeedback]);
-
-  return { foreignGames, foreignProfileFailed, loadingForeignProfile, getGameItemById, refreshProfileDetail };
+  return { foreignGames, foreignProfileFailed, loadingForeignProfile, getGameItemById };
 }

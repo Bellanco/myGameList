@@ -1,4 +1,3 @@
-import { ADMIN_ONLY_TIER, type ProfileTier } from '../constants/tiers';
 import { TAB_IDS, type GameItem, type TabData, type TabId } from '../../model/types/game';
 import type { SocialProfileVisibility } from '../../model/types/social';
 import { finishDays } from './finishDates';
@@ -8,10 +7,11 @@ import { finishDays } from './finishDates';
  * visibilidad del lado cliente): vacía las pestañas ocultas y elimina los campos que no quiere exponer
  * (horas/rejugable/reintentar). PURA. La lista cruda llega del gist de listados; este filtro decide qué se muestra.
  *
- * LA CUENTA DE ADMINISTRACIÓN (mithril) es la excepción, y solo hasta cierto punto: ve las listas que el dueño
- * esconde y sus marcas de rejugable y de "merece otra oportunidad", pero NO sus horas. El tiempo de juego es el
- * único ajuste que se respeta frente a todo el mundo, así que quien lo oculta lo oculta de verdad. Está declarado
- * en la política de privacidad (ver `core/constants/legal`): sin decirlo, no valdría hacerlo.
+ * LA CUENTA DE ADMINISTRACIÓN es la excepción, y solo hasta cierto punto: ve las listas que el dueño esconde y sus
+ * marcas de rejugable y de "merece otra oportunidad", pero NO sus horas. El tiempo de juego es el único ajuste que
+ * se respeta frente a todo el mundo, así que quien lo oculta lo oculta de verdad. Está declarado en la política de
+ * privacidad (ver `core/constants/legal`): sin decirlo, no valdría hacerlo. La decide el claim `admin`
+ * (`hasAdminClaim`), no el rango.
  *
  * EL MES EN QUE TERMINÓ CADA JUEGO sí pasa, como `finishedOn` (`AAAA-MM`), para el resumen del año de su perfil;
  * la cuenta de administración lo recibe con el día (`AAAA-MM-DD`). Se deriva aquí del sello de completados antes
@@ -21,9 +21,8 @@ import { finishDays } from './finishDates';
 export function applyProfileVisibility(
   games: TabData,
   visibility: SocialProfileVisibility,
-  viewerTier: ProfileTier | null = null,
+  isAdmin = false,
 ): Record<TabId, GameItem[]> {
-  const isAdmin = viewerTier === ADMIN_ONLY_TIER;
   const hidden = new Set(isAdmin ? [] : visibility.hiddenTabs || []);
   // Se calcula sobre la lista de completados ENTERA: una carga en bloque solo se distingue viéndolas todas.
   const finished = finishDays(games.c || []);

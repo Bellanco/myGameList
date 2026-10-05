@@ -154,8 +154,8 @@ linealmente y consume rate-limit de GitHub.
 
 **Mitigaciones ya existentes, suficientes a esta escala:** feed solo-amigos (de un no-amigo no se lee el gist),
 concurrencia limitada (`SOCIAL_DIRECTORY_FETCH_CONCURRENCY = 6`), caché persistente en IndexedDB con TTL por
-rango, corte por inactividad (`FRIEND_ACTIVITY_MAX_AGE_MS`) y throttling del refresco manual
-(`FORCED_REFRESH_MIN_MS = 12 s`).
+rango y corte por inactividad (`FRIEND_ACTIVITY_MAX_AGE_MS`). El refresco manual ya no existe: el botón y su
+throttling (`FORCED_REFRESH_MIN_MS`) se retiraron el 05-10-2026, y solo la app fuerza una relectura tras publicar.
 
 **Solución "miles+" (NO implementar ahora):** materializar un documento de "última actividad" por usuario en
 Firestore para el corte visible del feed, leyendo el gist solo al abrir el detalle. Implica reintroducir

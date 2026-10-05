@@ -9,20 +9,20 @@
 //      amistad se pinta con su inicial, igual que ya pasa con su actividad (el feed es solo-amigos) y con sus
 //      listas compartidas (un no-amigo se queda sin ellas).
 //
-// EXENCIÓN: el rango `mithril` está fuera de las dos. Es el rango reservado a la cuenta de administración
-// (`ADMIN_ONLY_TIER`), y quien moderá necesita poder identificar a la gente.
+// EXENCIÓN: la cuenta de administración está fuera de las dos, porque quien modera necesita poder identificar a
+// la gente. La decide el claim `admin` del token (`hasAdminClaim`), no el rango: que el administrador lleve además
+// mithril es una etiqueta, y el rango nunca concede privilegios de administración.
 //
 // ALCANCE, dicho sin adornos: esto es PRESENTACIÓN, no confidencialidad. `profiles` es legible por cualquier
 // usuario autenticado (`firestore.rules`), y la foto de un amigo va además denormalizada en el doc de amistad, así
 // que quien mire la red la encuentra. Lo que la regla garantiza es que la app no la PINTE; convertirla en un
 // permiso de verdad exigiría que las reglas supieran quién es amigo de quién, y eso es otra migración.
-import { ADMIN_ONLY_TIER, type ProfileTier } from '../constants/tiers';
-
-/** Quién mira: su rango y si los demás le ven la cara. */
+/** Quién mira: si es la administración y si los demás le ven la cara. */
 export interface PhotoViewer {
   /** ¿Los demás le ven la cara? Lo resuelve `resolveViewer`: querer mostrarla NO basta, hay que tenerla. */
   showsOwnPhoto: boolean;
-  tier: ProfileTier;
+  /** ¿Tiene el claim `admin`? Es lo único que exime de las dos reglas. */
+  isAdmin: boolean;
 }
 
 /**
@@ -56,12 +56,12 @@ export function resolveViewer(input: {
   ownPhotoURL: string | null | undefined;
   /** ¿Esa URL es el avatar genérico de Google? `undefined` = aún sin resolver, y ante la duda cuenta como genérica. */
   ownPhotoIsGeneric?: boolean;
-  tier: ProfileTier;
+  isAdmin: boolean;
 }): PhotoViewer {
   return {
     showsOwnPhoto:
       input.showPhoto && Boolean(String(input.ownPhotoURL || '').trim()) && input.ownPhotoIsGeneric === false,
-    tier: input.tier,
+    isAdmin: input.isAdmin,
   };
 }
 
@@ -71,12 +71,12 @@ export function resolveViewer(input: {
  * Sirve para no recorrer el directorio entero cuando la respuesta es no: en ese caso ninguna foto se pinta.
  */
 export function canSeeOtherPhotos(viewer: PhotoViewer): boolean {
-  return viewer.tier === ADMIN_ONLY_TIER || viewer.showsOwnPhoto;
+  return viewer.isAdmin || viewer.showsOwnPhoto;
 }
 
 /** ¿El espectador está exento de las dos reglas? */
 export function isPhotoRuleExempt(viewer: PhotoViewer): boolean {
-  return viewer.tier === ADMIN_ONLY_TIER;
+  return viewer.isAdmin;
 }
 
 /**

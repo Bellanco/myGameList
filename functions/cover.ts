@@ -164,14 +164,14 @@ function vieneDeOtroSitio(request: Request): boolean {
 type Veredicto = 'adelante' | 'tope-ip' | 'tope-global';
 
 /**
- * ¿TIENE ESTA IP EL SELLO DEL RANGO MÁS ALTO? Lo escribe `/api/cover-quota` cuando quien llama lo demuestra con
- * su ID token y el rango leído del perfil de verdad; aquí solo se comprueba que está.
+ * ¿TIENE ESTA IP EL SELLO DE LA ADMINISTRACIÓN? Lo escribe `/api/cover-quota` cuando quien llama lo demuestra con
+ * su ID token verificado y el claim `admin` dentro; aquí solo se comprueba que está.
  *
- * Es la única prueba de rango que puede tener una petición de imagen: un `<img src>` no lleva cabeceras, y meter
- * la sesión en la URL la volvería distinta para cada persona y tiraría las dos cachés que hacen que una carátula
- * se descargue una sola vez para todo el mundo (ver `coverExemptionKey`).
+ * Es la única prueba de administración que puede tener una petición de imagen: un `<img src>` no lleva cabeceras,
+ * y meter la sesión en la URL la volvería distinta para cada persona y tiraría las dos cachés que hacen que una
+ * carátula se descargue una sola vez para todo el mundo (ver `coverExemptionKey`).
  */
-async function tieneSelloDeRango(env: Env, request: Request): Promise<boolean> {
+async function tieneSelloDeAdministracion(env: Env, request: Request): Promise<boolean> {
   const ip = request.headers.get('CF-Connecting-IP') || 'desconocida';
   return Boolean(await env.COVERS?.get(coverExemptionKey(ip)));
 }
@@ -192,7 +192,7 @@ async function gastado(env: Env, clave: string): Promise<number> {
 /**
  * ¿Queda cupo para resolver un juego nuevo? Mira las DOS cuentas: la de esta IP y la del servicio entero.
  *
- * Lo AJENO (`c=2`) topa antes con la del servicio, en `COVER_DAILY_BUDGET_AJENO`, y ahí el sello del rango no
+ * Lo AJENO (`c=2`) topa antes con la del servicio, en `COVER_DAILY_BUDGET_AJENO`, y ahí el sello de administración no
  * levanta nada: ese margen es lo que se les guarda a las bibliotecas propias, y la administración mirando
  * perfiles se lo comería igual que cualquiera.
  */
@@ -214,9 +214,9 @@ async function quedaCupo(env: Env, request: Request, ajeno = false): Promise<Ver
     /* Agotado, salvo que esta IP tenga el cupo levantado (ver `/api/cover-quota`). La comprobación va AQUÍ y no
        al principio a propósito: así la lectura de más solo la paga quien ha llegado al tope, y no las miles de
        peticiones que nunca se acercan a él.
-       Y levanta LOS DOS topes, no solo el suyo: si el sello del rango máximo no sirviera el día que el servicio
+       Y levanta LOS DOS topes, no solo el suyo: si el sello de administración no sirviera el día que el servicio
        llena su cupo, no serviría justo el día que hace falta. */
-    if (await tieneSelloDeRango(env, request)) return 'adelante';
+    if (await tieneSelloDeAdministracion(env, request)) return 'adelante';
     // Si topan los dos, manda el del servicio: es el que más tarda en reabrirse, y prometer una espera corta que
     // no va a bastar es peor que decir la verdad.
     return topeDia ? 'tope-global' : 'tope-ip';
@@ -310,7 +310,7 @@ const atender: (contexto: { request: Request; env: Env }) => Promise<Response> =
      renueva en cada arranque, así que un 403 dejaría al administrador sin carátulas por tener la pestaña abierta
      mucho rato. Ignorándolo pierde la lente hasta que recargue, que es justo lo que la lente vale.
      La lectura del sello solo la pagan las peticiones que traen `x=1`, o sea las de una persona. */
-  const ampliado = url.searchParams.get('x') === '1' && (await tieneSelloDeRango(env, request));
+  const ampliado = url.searchParams.get('x') === '1' && (await tieneSelloDeAdministracion(env, request));
 
   /* TAMAÑO (`s=medio` o `s=ancho`). Como `x=1`, viaja en la URL y no en una cabecera: el service worker cachea
      por URL y sin `Vary`, así que cada tamaño tiene que tener su propia clave de caché o el mosaico acabaría

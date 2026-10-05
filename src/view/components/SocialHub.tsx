@@ -80,6 +80,8 @@ const SocialHubInner = memo(function SocialHubInner({
     setHiddenTabs,
     // Rango propio: decide cuánto se ve del panel de estadísticas de un amigo.
     ownTier,
+    // Administración (el claim): ve la ficha de un amigo sin las restricciones de visibilidad.
+    isAdmin,
     hideReplayable,
     setHideReplayable,
     hideRetry,
@@ -405,7 +407,8 @@ const SocialHubInner = memo(function SocialHubInner({
       return (
         <SocialProfileScreen
           SOCIAL_UI={SOCIAL_UI}
-          tier={ownTier}
+          // El sello de rango solo lo ve la administración: al resto no se le nombran los rangos.
+          tier={isAdmin ? ownTier : undefined}
           profileName={profileName}
           setProfileName={setProfileName}
           completedGames={completedGames}
@@ -538,6 +541,7 @@ const SocialHubInner = memo(function SocialHubInner({
           onCancelFriendRequest={cancelDetailFriendRequest}
           onRemoveFriend={removeDetailFriend}
           viewerTier={ownTier}
+          viewerIsAdmin={isAdmin}
           viewerHiddenTabs={hiddenTabs}
           viewerCompleted={games?.c}
           viewerPending={games?.p}
@@ -608,6 +612,7 @@ const SocialHubInner = memo(function SocialHubInner({
             onBack={goToSocial}
             status={status}
             statusKind={statusKind}
+            showTiers={isAdmin}
           />
           {friendActionDialog}
         </>
@@ -631,6 +636,7 @@ const SocialHubInner = memo(function SocialHubInner({
             onBack={goToSocial}
             status={status}
             statusKind={statusKind}
+            showTiers={isAdmin}
           />
           {/* Aquí el botón "Pendiente" retira la petición enviada, y eso ahora se confirma. */}
           {friendActionDialog}
