@@ -59,12 +59,18 @@ export const TOUR_UI = {
     },
     add: {
       title: 'Añade tu primer juego',
-      text: 'Pulsa el «+». Con el nombre y la nota basta; la reseña puede esperar.',
+      // SIN PROMETER QUÉ CAMPOS: lo obligatorio cambia de una lista a otra (Nombre, Géneros y Plataformas siempre; la
+      // nota, solo en Completados) y el formulario ya lo marca. Decía «con el nombre y la nota basta», que no era
+      // cierto en ninguna (05-10-2026).
+      text: 'Pulsa el «+». Rellena lo importante; lo demás puede esperar.',
       tap: 'Tócalo tú: te espero aquí',
     },
     added: {
       title: '¡Empieza la partida!',
-      text: 'Tu primer juego ya está en la lista. Tócalo para editarlo o escribir tu reseña. Y si no sabes a qué jugar, el dado elige por ti.',
+      // CIERTO EN LAS CINCO LISTAS: sin «escribir tu reseña» (Próximos y Deseados no tienen) ni «el dado elige por
+      // ti» a secas, que con el primer juego en Deseados contestaba «no hay juegos elegibles»: el dado sortea entre
+      // los próximos —y los marcados para rejugar o darles otra oportunidad— (`buildListsPool`).
+      text: 'Ya está en tu lista; tócalo para editarlo. ¿Dudas a qué jugar? El dado elige entre tus próximos.',
     },
     'to-settings': { title: 'Rumbo a Ajustes', text: 'Esto se hace en Ajustes › Datos. Toca aquí abajo y te sigo.', tap: 'Toca «Ajustes»' },
     'to-data': { title: 'Aquí, en Datos', text: 'Tus datos viven juntos: importar, exportar y sincronizar.', tap: 'Toca «Datos»' },
