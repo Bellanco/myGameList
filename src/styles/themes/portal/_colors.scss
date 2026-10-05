@@ -99,8 +99,9 @@
 /* portal — azul y naranja de portal, verde de gel, rosa del Cubo, rojo de torreta, oro de señal e hielo */
 :root[data-palette="portal"] {
   --cat-1: #29b6f6; --cat-2: #ff9a00; --cat-3: #a8e63c; --cat-4: #f9b9d0; --cat-5: #ff5140; --cat-6: #fabd20; --cat-7: #9ec9dd;
-  /* La lista de DESEOS (feed, estadísticas): el tono que más se aparta de los otros avisos; el sexto (amarillo) era casi el de los logros. */
-  --wish: var(--cat-7);
+  /* La lista de DESEOS (feed, estadísticas): el rosa del cubo de compañía. Lo llevaba «… a su biblioteca», que pasa
+     al azul grisáceo de la rampa (ver `portal.scss`, F4) para que los dos avisos no se confundan. */
+  --wish: var(--cat-4);
   --cat-1-fg: #29b6f6; --cat-2-fg: #ff9a00; --cat-3-fg: #a8e63c; --cat-4-fg: #f9b9d0; --cat-5-fg: #ff867b; --cat-6-fg: #fabd20; --cat-7-fg: #9ec9dd;
 }
 /* portal — azul y naranja de portal, verde de gel, rosa del Cubo, rojo de torreta, oro de señal e hielo */
