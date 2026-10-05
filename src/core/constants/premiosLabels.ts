@@ -207,6 +207,8 @@ export const PREMIOS_UI = {
     // Solo para quien votó en la edición, y hasta que se abre la siguiente (docs/plan-premios-votos-a-la-vista.md).
     // Sustituye a la clasificación de siempre.
     finalBoard: 'Clasificación final',
+    /** Con la final delante, la columna de la derecha deja solo a los premiados sin escalón: 4.º y 5.º. */
+    restOfAwarded: 'Resto de premiados',
     /** Aciertos sobre categorías: explica que alguien con menos aciertos sume más puntos, por los pesos. */
     hitsShort: (aciertos: number, total: number) => `${aciertos}/${total}`,
     hitsAria: (aciertos: number, total: number) =>
@@ -236,7 +238,7 @@ export const PREMIOS_UI = {
     // La clasificación enseña la cara de una amistad y la inicial del resto: es la misma regla de reciprocidad
     // del espacio social, aplicada aquí (ver §4.1 del plan).
     avatarAria: (nombre: string) => `Perfil de ${nombre}`,
-    /** El enlace a lo que votó la gente, en la cabecera de los ganadores. */
+    /** El botón de la cabecera de los ganadores que pasa a lo que votó la gente (y, desde allí, «Ganadores»). */
     popularLink: 'Lo más votado',
     /**
      * UN ESCALÓN CON EMPATE CAMBIA DE LÁMINA al pulsarlo: cada pulsación pasa a la siguiente persona. El rótulo
@@ -249,16 +251,14 @@ export const PREMIOS_UI = {
    * EL VOTO POPULAR: lo que eligió más gente en cada categoría. Es la otra lectura de una edición —la porra se
    * gana acertando al jurado— y va en su propia pantalla, enlazada desde los resultados.
    */
+  // LO MÁS VOTADO, que desde el 05-10-2026 se ve en el panel de ganadores de la pantalla de resultados.
   votos: {
-    sectionAria: 'Lo más votado',
     title: 'Lo más votado',
-    back: 'Volver a los resultados',
     /** «9 de 14 votos». Con empate, cada uno de los empatados tiene esos votos. */
     votes: (votos: number, total: number) => (total === 1 ? '1 voto' : `${votos} de ${total} votos`),
     tie: 'Empate',
     /** La gente eligió lo mismo que el jurado. Sin esta marca habría que ir y volver entre las dos pantallas. */
     matchesJury: 'Como el jurado',
-    empty: 'Esta edición no guardó el recuento de votos.',
   },
 
   // EL PANEL. Vive dentro del de administración de la app, como una vista más: no hay un segundo `/admin`.

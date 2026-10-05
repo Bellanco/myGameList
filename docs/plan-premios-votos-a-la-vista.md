@@ -87,6 +87,8 @@ clasificación de siempre**; el podio se queda. Va a lo ancho debajo de los gana
   texto y la pulsación cae en la fila. El enlace y el trofeo van encima del botón, como hermanos: no puede haber
   controles dentro de otro, y por eso tampoco es `<details>`.
 - **Todas plegadas** al entrar, también la propia.
+- **A la derecha de la lámina**, donde iba la clasificación de siempre, «Resto de premiados»: solo el 4.º y el 5.º,
+  con su trofeo. Tienen lámina y no tienen escalón en el podio, y la final no lleva trofeos (05-10-2026).
 - Al desplegar, por categoría: nominado votado, ✓/✗ (con texto oculto «Acierto»/«Fallo»), peso si no es 1 y, en
   los fallos, «Ganador: X». Sin frase explicativa bajo el título.
 - La lógica pura, en `core/premios/revealedVotes.ts`.

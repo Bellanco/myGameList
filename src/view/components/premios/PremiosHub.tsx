@@ -17,7 +17,6 @@ import { usePremiosVoter } from '../../../viewmodel/premios/usePremiosVoter';
 import { usePremiosVoting } from '../../../viewmodel/premios/usePremiosVoting';
 import { usePalette } from '../../hooks/usePalette';
 import { PremiosCerrada, PremiosEnviada, PremiosIdentificate } from './PremiosEstado';
-import { PremiosPopularScreen } from './PremiosPopularScreen';
 import { PremiosPortada } from './PremiosPortada';
 import { PremiosResultsScreen } from './PremiosResultsScreen';
 import { PremiosReviewScreen } from './PremiosReviewScreen';
@@ -81,7 +80,7 @@ export function PremiosHub() {
    */
   const idEnVista = route.seasonId || edition.config?.lastPublishedId || '';
   const conVotos =
-    route.panel === 'resultados' &&
+    conArchivo &&
     Boolean(user) &&
     Boolean(profileId) &&
     Boolean(idEnVista) &&
@@ -267,7 +266,9 @@ export function PremiosHub() {
           onSubmit={() => {}}
           readOnly
         />
-      ) : route.panel === 'resultados' ? (
+      ) : conArchivo ? (
+        // LO MÁS VOTADO ES LA MISMA PANTALLA: en `…/votos` el panel de ganadores enseña lo que eligió la gente
+        // (ver `PremiosResultsScreen.popular`). Fue una pantalla aparte hasta el 05-10-2026.
         archivo.loading ? null : (
           <PremiosResultsScreen
             result={archivo.result}
@@ -275,10 +276,9 @@ export function PremiosHub() {
             ownProfileId={profileId}
             profiles={perfiles}
             reveal={reveal}
+            popular={route.panel === 'votos'}
           />
         )
-      ) : route.panel === 'votos' ? (
-        archivo.loading ? null : <PremiosPopularScreen result={archivo.result} />
       ) : route.panel === 'enviada' ? (
         <PremiosEnviada
           displayName={edition.ballot?.userDisplayName || user?.displayName || ''}

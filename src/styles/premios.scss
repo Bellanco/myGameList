@@ -1181,20 +1181,26 @@
   color: var(--text-dim);
 }
 
-/* LA CASILLA CAMBIA DE LÁMINA (ver `pulsarEscalon`): una capa transparente cubre el escalón y recoge el clic.
-   Lo que tiene destino propio —el nombre que lleva al perfil y el botón del trofeo— sube por encima de ella y
-   sigue funcionando. Y en un empate se marca de quién es la lámina que se está viendo, subrayada con el acento
-   en texto. */
+/* LA CASILLA CAMBIA DE LÁMINA (ver `pulsarEscalon`): un botón transparente cubre el escalón y es su único control
+   —el del trofeo se quitó el 05-10-2026—. El nombre que lleva al perfil sube por encima y sigue funcionando. Y en
+   un empate se marca de quién es la lámina que se está viendo, subrayada con el acento en texto. */
 .premios-results__step.has-award { position: relative; }
 .premios-results__step-hit {
   position: absolute;
   inset: 0;
   z-index: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
   border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
   cursor: pointer;
+  appearance: none;
 }
-.premios-results__step.has-award .premios-results__link,
-.premios-results__step.has-award .premios-results__step-trophy { position: relative; z-index: 2; }
+.premios-results__step-hit:focus-visible { outline: 2px solid var(--fg-link); outline-offset: 2px; }
+.premios-results__step.has-award .premios-results__link { position: relative; z-index: 2; }
 .premios-results__step-name.is-showing {
   text-decoration: underline;
   text-decoration-color: var(--fg-link);
@@ -1214,12 +1220,6 @@
 }
 
 .premios-results__step-points strong { font-size: var(--fs-md); color: var(--text); }
-
-.premios-results__step-trophy {
-  grid-row: span 2;
-  padding-inline: .5rem;
-  align-self: center;
-}
 
 /* DOS COLUMNAS cuando hay sitio, y no antes: por debajo de esta anchura una de las dos quedaría en una tira de
    texto envuelto. Apiladas, los ganadores van primero, que es el orden con el que se cuenta una edición. */
@@ -1258,6 +1258,10 @@
   /* La clasificación se queda a la vista mientras se recorren las categorías, que es justo lo que se quiere
      comparar. */
   .premios-results__panel--board { position: sticky; top: 1rem; }
+
+  /* SALVO «RESTO DE PREMIADOS» (con la clasificación final delante): son dos filas, no hay nada que acompañar, y
+     pegada se quedaba flotando por encima de la final al bajar (05-10-2026). */
+  .premios-results__panel--awards { position: static; }
 
   /* Sin nadie fuera del podio no hay segundo panel, y los ganadores ocupan las dos columnas en vez de quedarse
      en una tira con la mitad de la pantalla en blanco. Lo dice una clase y no `:only-child`: la lámina también
@@ -1550,13 +1554,16 @@
 
 /* El trofeo de una fila: icono y nada más. Cinco botones con rótulo en cinco renglones seguidos tapaban los
    nombres; su nombre va en el `aria-label` y en el `title`, como los botones de icono del panel. */
-.premios-results__trophy {
-  display: inline-flex;
-  padding: .2rem .45rem;
-  color: var(--text-muted);
-}
-
-.premios-results__trophy:hover { color: var(--text); }
+/* LA FILA DE UN PREMIADO ABRE SU LÁMINA (4.º y 5.º), entera, con el mismo botón que cubre la de la clasificación
+   final (`row-hit`, más abajo). Sin trofeo aparte desde el 05-10-2026. El nombre ocupa lo que mide: siendo un
+   enlace por encima del botón, con `flex: 1` se comería la fila. */
+.premios-results__row.has-hit { position: relative; }
+.premios-results__row.has-hit .premios-results__link { position: relative; z-index: 2; }
+.premios-results__row.has-hit .premios-results__name { flex: 0 1 auto; }
+.premios-results__row.has-hit .premios-results__points { margin-inline-start: auto; }
+.premios-results__row.has-hit:hover,
+.premios-results__row.has-hit.is-showing { background: color-mix(in srgb, var(--fg-link) 10%, var(--surface-elevated)); }
+.premios-results__row.has-hit.is-showing { box-shadow: inset 2px 0 0 var(--fg-link); }
 
 /* ─── La clasificación final, con lo que votó cada uno ───────────────────────────────────────────────────
    Solo mientras la edición publicada no se termina y para quien votó en ella. Sustituye a la clasificación de

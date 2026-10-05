@@ -3,9 +3,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { hasAward } from '../../../core/premios/awards';
 import { getOptionLabel, tField } from '../../../core/premios/localize';
-import { hasPopularVote } from '../../../core/premios/popularVote';
+import { hasPopularVote, popularWinners, type PopularWinner } from '../../../core/premios/popularVote';
 import { revealedRows } from '../../../core/premios/revealedVotes';
-import { popularPath, PREMIOS_ROUTES } from '../../../viewmodel/premios/premiosRoutes';
+import { popularPath, PREMIOS_ROUTES, resultsPath } from '../../../viewmodel/premios/premiosRoutes';
 import type { PremiosArchivedEntry, PremiosReveal, PremiosSeasonResult } from '../../../model/types/premios';
 import { Icon } from '../Icon';
 import { HubBackButton } from '../socialhub/HubBackButton';
@@ -14,6 +14,7 @@ import { HubBackButton } from '../socialhub/HubBackButton';
 const AwardPanel = lazy(() => import('./AwardPanel').then((m) => ({ default: m.AwardPanel })));
 
 const L = PREMIOS_UI.resultados;
+const LV = PREMIOS_UI.votos;
 
 /**
  * El metal de los tres primeros puestos. Son las MISMAS clases que visten los rangos del perfil
@@ -44,6 +45,11 @@ export interface PremiosResultsScreenProps {
    * clasificación de siempre deja paso a la final, fila a fila con lo que votó cada cual.
    */
   reveal?: PremiosReveal | null;
+  /**
+   * EL PANEL DE GANADORES ENSEÑA LO MÁS VOTADO: qué eligió más gente en cada categoría. Lo pone la dirección
+   * (`…/votos`), así que un enlace a ella abre ya en esta vista. Sin recuento en el archivo se queda en ganadores.
+   */
+  popular?: boolean;
 }
 
 /**
@@ -75,6 +81,7 @@ export function PremiosResultsScreen({
   ownProfileId,
   profiles,
   reveal = null,
+  popular = false,
 }: PremiosResultsScreenProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -176,8 +183,21 @@ export function PremiosResultsScreen({
       return siguientes;
     });
   const conFinal = finales.length > 0;
-  /** ¿Va la clasificación de siempre? No con la final delante, que la contiene entera. */
-  const conTabla = resto.length > 0 && !conFinal;
+
+  /** Lo más votado de cada categoría, en el orden del archivo (ver `popularWinners`). */
+  const masVotados = useMemo(() => popularWinners(result), [result]);
+  const viendoPopular = popular && hasPopularVote(result) && masVotados.length > 0;
+  /**
+   * LA COLUMNA DE LA DERECHA: la clasificación de siempre, o, con la final delante —que ya la contiene entera—,
+   * solo los premiados que no suben al podio (4.º y 5.º). Son los que tienen lámina y no tienen escalón: sin esta
+   * lista no habría desde dónde abrir la suya, y queda a la derecha de la lámina, donde se mira.
+   */
+  const tabla = useMemo(
+    () => (conFinal ? resto.filter((entry) => hasAward(entry.rank)) : resto),
+    [conFinal, resto],
+  );
+  const conTabla = tabla.length > 0;
+  const rotuloTabla = conFinal ? L.restOfAwarded : L.leaderboard;
 
   if (!result) {
     return (
@@ -204,6 +224,36 @@ export function PremiosResultsScreen({
   /** El nombre del ganador de una categoría, resuelto contra sus nominados archivados. */
   const ganadorDe = (category: (typeof ganadores)[number]) =>
     getOptionLabel({ id: category.id, title: category.title, options: category.options }, category.winner || '');
+
+  /** Lo más votado, con el titular aparte como en ganadores: la categoría que más pesa, si es una sola. */
+  const titularPopular = titular ? masVotados.find((winner) => winner.category.id === titular.id) || null : null;
+  const restoPopulares = titularPopular ? masVotados.filter((winner) => winner !== titularPopular) : masVotados;
+
+  /**
+   * El más votado de una categoría con sus votos. UN EMPATE ENSEÑA A TODOS LOS EMPATADOS: con los votos iguales no
+   * hay uno más votado que otro, y elegir el primero de la lista sería inventarse un ganador. Y si la gente eligió
+   * lo mismo que el jurado, se dice: sin la marca habría que ir y volver entre las dos vistas.
+   */
+  const masVotadoDe = (winner: PopularWinner, claseNombre: string) => {
+    const categoria = { id: winner.category.id, title: winner.category.title, options: winner.category.options };
+    const delJurado = Boolean(winner.category.winner) && winner.optionIds.includes(winner.category.winner || '');
+    return (
+      <>
+        <span className="premios-popular__names">
+          {winner.optionIds.map((optionId) => (
+            <strong key={optionId} className={claseNombre}>
+              {getOptionLabel(categoria, optionId)}
+            </strong>
+          ))}
+        </span>
+        <span className="premios-popular__meta">
+          <span className="premios-popular__votes">{LV.votes(winner.votes, winner.total)}</span>
+          {winner.optionIds.length > 1 ? <span className="premios-results__tie">{LV.tie}</span> : null}
+          {delJurado ? <span className="premios-popular__jury">{LV.matchesJury}</span> : null}
+        </span>
+      </>
+    );
+  };
 
   /** El nombre de alguien: enlace a su ficha si tiene perfil visible, y texto si no. */
   const nombreDe = (entry: PremiosArchivedEntry, base: string) => {
@@ -288,31 +338,21 @@ export function PremiosResultsScreen({
                   </p>
                 )}
 
-                {/* LA CASILLA ENTERA CAMBIA DE LÁMINA, no solo el trofeo: con el ratón, el blanco es la tarjeta.
-                    Es una capa transparente encima del escalón y fuera del árbol accesible, porque para el teclado
-                    y el lector de pantalla el camino es el botón de abajo — el mismo gesto, dicho una sola vez.
-                    No es el `::after` del botón estirado: en Witcher ese pseudo es la chapa de acero de cada
-                    `.btn`, y estirarlo pintaría el escalón entero de metal. */}
-                {conLamina ? (
-                  <span
-                    className="premios-results__step-hit"
-                    aria-hidden="true"
-                    onClick={() => pulsarEscalon(entries, destino)}
-                  />
-                ) : null}
-
-                {/* La lámina, solo con sesión: el arte no se enseña en abierto (ver `AwardPanel`). */}
+                {/* LA CASILLA ENTERA CAMBIA DE LÁMINA, y es el único control: un botón transparente que cubre el
+                    escalón. Hubo además un botón con el trofeo al final; se quitó el 05-10-2026 (decisión del
+                    usuario) y la capa pasó de `<span aria-hidden>` a botón de verdad, para que el teclado y el
+                    lector de pantalla tengan el mismo camino que el ratón. El nombre con perfil va por encima y
+                    sigue llevando a su ficha. No es una clase `.btn`: en Witcher su `::after` es la chapa de acero,
+                    y pintaría el escalón entero de metal. La lámina, solo con sesión (ver `AwardPanel`). */}
                 {conLamina ? (
                   <button
                     type="button"
-                    className="btn premios-results__step-trophy"
+                    className="premios-results__step-hit"
                     aria-label={rotulo}
                     title={rotulo}
                     aria-pressed={viendo}
                     onClick={() => pulsarEscalon(entries, destino)}
-                  >
-                    <Icon name="trophy" />
-                  </button>
+                  />
                 ) : null}
               </li>
             );
@@ -355,62 +395,114 @@ export function PremiosResultsScreen({
 
         <section
           className={`premios-results__panel${conTabla ? '' : ' premios-results__panel--wide'}`}
-          aria-label={L.winners}
+          aria-label={viendoPopular ? LV.title : L.winners}
         >
           <div className="premios-results__panel-head">
-            <h3>{L.winners}</h3>
-            <span className="premios-results__panel-count">{L.winnersCount(ganadores.length)}</span>
-            {/* LO QUE VOTÓ LA GENTE, en su propia pantalla. Solo si el archivo guardó el recuento: las ediciones
-                publicadas antes de que existiera no tienen con qué enseñarlo. */}
+            <h3>{viendoPopular ? LV.title : L.winners}</h3>
+            <span className="premios-results__panel-count">
+              {L.winnersCount(viendoPopular ? masVotados.length : ganadores.length)}
+            </span>
+            {/* LO QUE VOTÓ LA GENTE, EN EL MISMO PANEL: el botón cambia entre las dos lecturas de la edición y dice
+                a cuál se pasa. Era un enlace a otra pantalla; desde el 05-10-2026 sustituye a los ganadores aquí
+                mismo. Cambia la dirección SIN apilarla (`replace`): «volver» sale de los resultados en vez de rebotar
+                entre las dos vistas. Solo si el archivo guardó el recuento: las ediciones publicadas antes de que
+                existiera no tienen con qué enseñarlo. */}
             {hasPopularVote(result) ? (
-              <Link className="premios-results__popular-link" to={popularPath(result.seasonId)}>
-                {L.popularLink}
+              <Link
+                className="premios-results__popular-link"
+                to={viendoPopular ? resultsPath(result.seasonId) : popularPath(result.seasonId)}
+                replace
+              >
+                {viendoPopular ? L.winners : L.popularLink}
               </Link>
             ) : null}
           </div>
 
-          {ganadores.length === 0 ? <p className="premios-results__muted">{L.noWinners}</p> : null}
+          {viendoPopular ? (
+            <>
+              {/* El mismo titular que en ganadores, con lo que eligió la gente: el panel no cambia de forma al
+                  alternar, solo de contenido. */}
+              {titularPopular ? (
+                <div className="premios-results__headline premios-popular__card">
+                  <span className="premios-results__cat">{tField(titularPopular.category.title)}</span>
+                  {masVotadoDe(titularPopular, 'premios-results__headline-name')}
+                </div>
+              ) : null}
+              <ul className="premios-results__winners">
+                {restoPopulares.map((winner) => (
+                  <li key={winner.category.id} className="premios-results__winner-card premios-popular__card">
+                    <span className="premios-results__cat">{tField(winner.category.title)}</span>
+                    {masVotadoDe(winner, 'premios-results__winner')}
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <>
+              {ganadores.length === 0 ? <p className="premios-results__muted">{L.noWinners}</p> : null}
 
-          {/* La categoría que más valía, a lo ancho y con el nombre del juego en grande: en una edición hay un
-              titular y veinticinco notas al pie, y la rejilla los daba todos por igual. */}
-          {titular ? (
-            <div className="premios-results__headline">
-              <span className="premios-results__cat">{tField(titular.title)}</span>
-              <strong className="premios-results__headline-name">{ganadorDe(titular)}</strong>
-            </div>
-          ) : null}
+              {/* La categoría que más valía, a lo ancho y con el nombre del juego en grande: en una edición hay un
+                  titular y veinticinco notas al pie, y la rejilla los daba todos por igual. */}
+              {titular ? (
+                <div className="premios-results__headline">
+                  <span className="premios-results__cat">{tField(titular.title)}</span>
+                  <strong className="premios-results__headline-name">{ganadorDe(titular)}</strong>
+                </div>
+              ) : null}
 
-          {restoGanadores.length > 0 ? (
-            <ul className="premios-results__winners">
-              {restoGanadores.map((category) => (
-                <li key={category.id} className="premios-results__winner-card">
-                  <span className="premios-results__cat">{tField(category.title)}</span>
-                  <strong className="premios-results__winner">{ganadorDe(category)}</strong>
-                </li>
-              ))}
-            </ul>
-          ) : null}
+              {restoGanadores.length > 0 ? (
+                <ul className="premios-results__winners">
+                  {restoGanadores.map((category) => (
+                    <li key={category.id} className="premios-results__winner-card">
+                      <span className="premios-results__cat">{tField(category.title)}</span>
+                      <strong className="premios-results__winner">{ganadorDe(category)}</strong>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </>
+          )}
         </section>
 
         {/* La clasificación solo aparece si queda alguien fuera del podio: con tres participantes, el podio YA es
             la clasificación entera y un panel repitiéndola sería un eco. */}
         {conTabla ? (
-          <section className="premios-results__panel premios-results__panel--board" aria-label={L.leaderboard}>
+          <section
+            className={`premios-results__panel premios-results__panel--board${conFinal ? ' premios-results__panel--awards' : ''}`}
+            aria-label={rotuloTabla}
+          >
             {/* Sin contador: «14 participantes» repetía el «14 participaciones» de la cabecera y además mentía
                 un poco, porque en esta lista hay diez —los otros cuatro están en el podio—. */}
             <div className="premios-results__panel-head">
-              <h3>{L.leaderboard}</h3>
+              <h3>{rotuloTabla}</h3>
             </div>
 
             <ol className="premios-results__board">
-              {resto.map((entry, index) => {
+              {tabla.map((entry, index) => {
                 const propia = esPropia(entry);
+                // LA FILA DE UN PREMIADO ABRE SU LÁMINA, entera y sin trofeo aparte, como el escalón del podio.
+                // POR IDENTIDAD, no por pseudónimo: quien vota sin perfil se archiva con `profileId: ''` (ver
+                // `scoring`), así que buscando por ese campo dos premiados sin pseudónimo casaban entre sí y pulsar
+                // en el segundo abría la lámina del primero. `premiados` es un filtrado de `leaderboard`, de modo
+                // que son el mismo objeto.
+                const lamina = hasAward(entry.rank) && ownProfileId ? premiados.indexOf(entry) : -1;
+                const rotulo = propia ? L.trophy : L.seeOf(entry.nickname);
                 return (
                   <li
                     key={`${entry.profileId || entry.nickname}-${index}`}
-                    className={`premios-results__row${propia ? ' is-own' : ''}${hasAward(entry.rank) ? ' is-award' : ''}`}
+                    className={`premios-results__row${propia ? ' is-own' : ''}${hasAward(entry.rank) ? ' is-award' : ''}${lamina >= 0 ? ' has-hit' : ''}${lamina >= 0 && galeria === lamina ? ' is-showing' : ''}`}
                     aria-label={propia ? L.yourRow : undefined}
                   >
+                    {lamina >= 0 ? (
+                      <button
+                        type="button"
+                        className="premios-results__row-hit"
+                        aria-label={rotulo}
+                        title={rotulo}
+                        aria-pressed={galeria === lamina}
+                        onClick={() => verLamina(lamina)}
+                      />
+                    ) : null}
                     {/* EL PUESTO SE DICE SIEMPRE EN TEXTO, aunque se vea como disco: el color del disco lo pone
                         el puesto, y quien no ve el color necesita oírlo igual. */}
                     <span className="premios-results__rank">
@@ -430,24 +522,6 @@ export function PremiosResultsScreen({
                       </span>
                     )}
 
-                    {/* El trofeo, solo para quien tiene sesión, y como icono: cinco botones con rótulo en cinco
-                        renglones seguidos tapaban los nombres, que es lo que se viene a leer. */}
-                    {hasAward(entry.rank) && ownProfileId ? (
-                      <button
-                        type="button"
-                        className="btn premios-results__trophy"
-                        aria-label={propia ? L.trophy : L.see}
-                        title={propia ? L.trophy : L.see}
-                        // POR IDENTIDAD, no por pseudónimo: quien vota sin perfil se archiva con `profileId: ''`
-                        // (ver `scoring`), así que buscando por ese campo dos premiados sin pseudónimo casaban
-                        // entre sí y pulsar en el segundo abría la lámina del primero. `premiados` es un filtrado
-                        // de `leaderboard`, de modo que son el mismo objeto.
-                        aria-pressed={galeria === premiados.indexOf(entry)}
-                        onClick={() => verLamina(premiados.indexOf(entry))}
-                      >
-                        <Icon name="trophy" />
-                      </button>
-                    ) : null}
                   </li>
                 );
               })}
