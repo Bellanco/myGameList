@@ -54,6 +54,31 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:coverage -- --reporter=verbose
 
+      # El emulador es un .jar de ~137 MB que firebase-tools baja de storage.googleapis.com en cada build. Cuando
+      # esa descarga se corta, el CLI solo dice «An unexpected error has occurred» y el fallo parece de las reglas.
+      # Se cachea por VERSIÓN del jar (la fija firebase-tools) y, si no está en la caché, se baja aparte con
+      # reintentos, antes de los tests.
+      - name: Resolve Firestore emulator version
+        id: firestore-emulator
+        run: echo "version=$(node -p "require('firebase-tools/lib/emulator/downloadableEmulatorInfo.json').firestore.version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Firestore emulator
+        id: firestore-emulator-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/firebase/emulators
+          key: ${{ runner.os }}-firestore-emulator-${{ steps.firestore-emulator.outputs.version }}
+
+      - name: Download Firestore emulator
+        if: steps.firestore-emulator-cache.outputs.cache-hit != 'true'
+        run: |
+          for intento in 1 2 3; do
+            npx firebase setup:emulators:firestore && exit 0
+            echo "Descarga del emulador fallida (intento $intento); reintentando…"
+            sleep $((intento * 10))
+          done
+          exit 1
+
       - name: Run Firestore rules tests (emulator)
         run: npm run test:rules
 
