@@ -107,6 +107,8 @@
    por encima del 3:1 que le toca a un relleno: la tabla coge color sin volverse un arcoíris. */
 :root[data-palette="forja"] {
   --cat-1: #ff7a3c; --cat-2: #2fd6c0; --cat-3: #f5c451; --cat-4: #79b4ff; --cat-5: #ff85b8; --cat-6: #8ede6a; --cat-7: #c79bff;
+  /* La lista de DESEOS (feed, estadísticas): el tono que más se aparta de los otros avisos; el sexto (verde) era casi el de «finalizó». */
+  --wish: var(--cat-7);
   --cat-1-fg: #ff8f5c; --cat-2-fg: #2fd6c0; --cat-3-fg: #f5c451; --cat-4-fg: #79b4ff; --cat-5-fg: #ff85b8; --cat-6-fg: #8ede6a; --cat-7-fg: #c79bff;
 }
 /* forja (Forja y temple) — los mismos siete a la luz: tinta honda en vez de metal encendido */

@@ -24,7 +24,8 @@ que se abre la edición siguiente.
   dispositivos. Ocultarla esconde la pestaña, no sus juegos.
 - **La lista de deseos en lo social**, como las demás:
   - una casilla en tu perfil para ocultarla a tus amigos, y su pestaña en el perfil de cada uno;
-  - en el feed, «Ada añadió *Hades II* a su lista de deseos» y, al pasarlo a Próximos, «… a su biblioteca»;
+  - en el feed, «Ada añadió *Hades II* a su lista de deseos» y, al pasarlo a Próximos, «… a su biblioteca», con un
+    color propio en cada tema que no se confunde con el de los demás avisos;
   - su casilla en el filtro de movimientos del feed. Quien ya lo había tocado la recibe encendida.
 
   La política de privacidad lo explica. No hay que volver a aceptarla: un aviso al entrar un juego en una de tus

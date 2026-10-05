@@ -1091,13 +1091,14 @@
   margin-right: .1rem;
 }
 /* Cinco listas, cinco colores. Los tres primeros son los semánticos que ya existen; «añadió» toma el cuarto
-   tono de la rampa categórica, que no significa nada por sí mismo y por eso vale para «esto cambió de sitio», y
-   la lista de deseos el sexto, por lo mismo. */
+   tono de la rampa categórica, que no significa nada por sí mismo y por eso vale para «esto cambió de sitio». La
+   lista de deseos lleva `--wish`: cada tema elige el tono de su rampa que más se aparta de los otros cinco avisos
+   (en varios, el sexto chocaba con los logros), y sin elección queda el sexto. */
 .hub-feed-activity-item.is-move[data-tab="c"] { --evc: var(--success); }
 .hub-feed-activity-item.is-move[data-tab="v"] { --evc: var(--danger); }
 .hub-feed-activity-item.is-move[data-tab="e"] { --evc: var(--steam); }
 .hub-feed-activity-item.is-move[data-tab="p"] { --evc: var(--cat-4); }
-.hub-feed-activity-item.is-move[data-tab="d"] { --evc: var(--cat-6); }
+.hub-feed-activity-item.is-move[data-tab="d"] { --evc: var(--wish, var(--cat-6)); }
 /* El logro, en el ámbar del aviso: no es ninguno de los cuatro movimientos y se distingue de un vistazo.
    Marca propia (`--sys-mark-ach`) y puntero, porque este sí abre los logros de quien lo consiguió. */
 .hub-feed-activity-item.is-achievements { --evc: var(--warn); cursor: pointer; }

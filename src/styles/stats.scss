@@ -40,8 +40,8 @@
   --stats-v: var(--danger);
   --stats-e: var(--warn);
   --stats-p: var(--steam);
-  /* Deseos: el sexto tono de la rampa categórica, el mismo que lleva su mensaje en el feed. */
-  --stats-d: var(--cat-6);
+  /* Deseos: el mismo tono que lleva su mensaje en el feed (`--wish`, que elige cada tema). */
+  --stats-d: var(--wish, var(--cat-6));
 
   /* RAMPA SECUENCIAL para los repartos por etiqueta (rosetón, hexágono). Dos tonos del tema entre los que se
      interpola por puesto: con un solo tono, diez géneros casi empatados salían todos del mismo color. Cada
