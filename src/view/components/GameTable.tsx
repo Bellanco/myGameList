@@ -10,7 +10,7 @@ import { GameCover } from './GameCover';
 import { coverUrl } from '../../core/utils/coverUrl';
 import { sabemosQueNoTiene } from '../../core/utils/coverMemory';
 import { peticionDeCaratula, type PeticionDeCaratula } from '../../core/utils/coverDone';
-import type { GameItem, TabId, TabSort } from '../../model/types/game';
+import { UNPLAYED_TAB_IDS, type GameItem, type TabId, type TabSort } from '../../model/types/game';
 import type { TabAction } from '../../viewmodel/useGameListViewModel';
 import { hueFromGrade, resolveGrade } from '../../core/utils/scoreScale';
 import { Icon } from './Icon';
@@ -532,10 +532,11 @@ export const GameTable = memo(function GameTable({
       ];
     }
     if (currentTab === 'e') return ['name', 'platforms', 'genres', 'strengths', 'weaknesses'];
+    // Próximos y deseados: lo que no se ha jugado se ordena por interés.
     return ['name', 'platforms', 'genres', 'interest'];
   };
 
-  const supportsReview = (tab: TabId) => tab !== 'p';
+  const supportsReview = (tab: TabId) => !UNPLAYED_TAB_IDS.includes(tab);
   /* A DÓNDE LLEVA «ver el análisis», el mismo destino desde el detalle del renglón y desde la caja del
      mosaico. `backTo` es de dónde se viene, para que el botón de volver de aquella pantalla devuelva AQUÍ y no
      al listado de reseñas, que es de donde se llega normalmente. */
@@ -623,7 +624,7 @@ export const GameTable = memo(function GameTable({
      del recuadro y su filete (unos 18 px). */
   const anchoNotaBuena = anchoCol(1.25) - 2;
   const anchoNotaMala = anchoCol(2.55) - 2;
-  /* Próximos es la única lista sin opinión: todavía no se ha jugado a nada, así que el recuadro no existe en
+  /* Próximos y deseados son las listas sin opinión: todavía no se ha jugado a nada, así que el recuadro no existe en
      vez de salir con las dos mitades vacías. En la vergüenza el lado malo son los MOTIVOS de dejarlo. */
   const tieneOpinion = currentTab === 'c' || currentTab === 'v' || currentTab === 'e';
 
@@ -821,7 +822,7 @@ export const GameTable = memo(function GameTable({
   // decide dos cosas del meta compacto: si se reserva la columna de la nota —se reserva aunque un juego
   // concreto no la tenga, o las filas de la misma lista dejarían de estar alineadas entre sí— y, cuando no la
   // hay, que su sitio lo ocupen los puntos fuertes.
-  const hasScoreColumn = currentTab === 'c' || currentTab === 'p' || (currentTab === 'v' && showShameScore);
+  const hasScoreColumn = currentTab === 'c' || UNPLAYED_TAB_IDS.includes(currentTab) || (currentTab === 'v' && showShameScore);
   // La escala (F2) cambia el ANCHO de esa columna: cinco estrellas ocupan bastante más que el aro de la nota.
   const scoreScale = useScoreScale();
   const tableClass = [
@@ -1148,7 +1149,7 @@ export const GameTable = memo(function GameTable({
                                la caja, no un número igual para todos (ver `chipsQueCaben`). */
                             const capsPlat = chipsQueCaben(game.platforms, anchoRanuraCaja, metricasChip);
                             const capsGenero = chipsQueCaben(game.genres, anchoRanuraCaja, metricasChip);
-                            const nota = (currentTab === 'c' || currentTab === 'p') || (showShameScore && hasScore(game)) ? (
+                            const nota = (currentTab === 'c' || UNPLAYED_TAB_IDS.includes(currentTab)) || (showShameScore && hasScore(game)) ? (
                               <span className="game-card-score"><ScoreDisplay game={game} /></span>
                             ) : null;
                             /* EL ACCESO A LA RESEÑA, en la esquina que quedaba libre: debajo de la nota y
@@ -1442,9 +1443,9 @@ export const GameTable = memo(function GameTable({
                             <div>{renderTags(game.reasons, 'chip-pd')}</div>
                           </div>
                         )}
-                        {(currentTab === 'c' || currentTab === 'p' || (currentTab === 'v' && game.scored)) && game.score !== null && (
+                        {(currentTab === 'c' || UNPLAYED_TAB_IDS.includes(currentTab) || (currentTab === 'v' && game.scored)) && game.score !== null && (
                           <div className="detail-box">
-                            <span className="detail-label">{currentTab === 'p' ? UI_MESSAGES.detail.interest : UI_MESSAGES.detail.score}</span>
+                            <span className="detail-label">{UNPLAYED_TAB_IDS.includes(currentTab) ? UI_MESSAGES.detail.interest : UI_MESSAGES.detail.score}</span>
                             <div>
                               <ScoreDisplay game={game} />
                             </div>

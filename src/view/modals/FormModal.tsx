@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { FILTER_BOOL, TAB_TOOLTIPS, VALIDATION_MESSAGES } from '../../core/constants/labels';
 import { FORM_UI } from '../../core/constants/formLabels';
 import { COMMON_ICONS } from '../../core/constants/icons';
-import type { GameItem, TabId } from '../../model/types/game';
+import { UNPLAYED_TAB_IDS, type GameItem, type TabId } from '../../model/types/game';
 import type { GameDraft } from '../../viewmodel/useGameListViewModel';
 import { mergeTags, splitTagInput } from '../../core/utils/tags';
 import { normalizeHours } from '../../core/utils/normalize';
@@ -30,11 +30,13 @@ interface FormModalProps {
   onSave: (draft: GameDraft) => void;
 }
 
-const supportsScore = (tab: TabId) => tab === 'c' || tab === 'p';
+// Próximos y deseados llevan la nota de INTERÉS (no se han jugado): mismos campos en las dos.
+const isUnplayed = (tab: TabId) => UNPLAYED_TAB_IDS.includes(tab);
+const supportsScore = (tab: TabId) => tab === 'c' || isUnplayed(tab);
 // La vergüenza puede registrar horas siempre (no afecta a la ruleta); su puntuación va tras el check `scored`.
 const supportsHours = (tab: TabId) => tab === 'c' || tab === 'v';
 const supportsYears = (tab: TabId) => tab === 'c';
-const supportsReview = (tab: TabId) => tab !== 'p';
+const supportsReview = (tab: TabId) => !isUnplayed(tab);
 const supportsStrengths = (tab: TabId) => tab === 'c' || tab === 'v' || tab === 'e';
 const supportsWeaknesses = (tab: TabId) => tab === 'c' || tab === 'e';
 const supportsReasons = (tab: TabId) => tab === 'v';
@@ -473,7 +475,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
             />
             {supportsScore(currentTab) ? (
               <div className="fg fg-score-field">
-                <label className="flabel">{currentTab === 'p' ? FORM_UI.interestLabel : FORM_UI.scoreLabel} {currentTab === 'c' ? '*' : ''}</label>
+                <label className="flabel">{isUnplayed(currentTab) ? FORM_UI.interestLabel : FORM_UI.scoreLabel} {currentTab === 'c' ? '*' : ''}</label>
                 <div className={`score-input-shell ${fieldErrors.score ? 'has-error' : ''}`.trim()}>
                   {scoreScale === 'grade' ? (
                     <ScoreDial

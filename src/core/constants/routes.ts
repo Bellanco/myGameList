@@ -18,6 +18,7 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
   { path: '/abandonados', section: 'lists' },
   { path: '/en-curso', section: 'lists' },
   { path: '/proximos', section: 'lists' },
+  { path: '/deseados', section: 'lists' },
   // Comodín: las sub-rutas sociales (perfil, directorio, solicitudes, detalle de reseña…) las resuelve el propio
   // hub con `matchSocialRoute`. Declararlas aquí una a una era la causa de la clase de fallo descrita arriba:
   // añadir una pantalla social obligaba a tocar este fichero o la ruta quedaba inaccesible.

@@ -171,8 +171,8 @@ describe('deseos no es la biblioteca', () => {
   });
 });
 
-describe('fase 0: la interfaz todavía no la enseña', () => {
-  it('las pestañas visibles son las cuatro de siempre', () => {
-    expect(TAB_ORDER).toEqual(['c', 'v', 'e', 'p']);
+describe('la interfaz la enseña', () => {
+  it('es la última pestaña, a la derecha de Próximos', () => {
+    expect(TAB_ORDER).toEqual(['c', 'v', 'e', 'p', 'd']);
   });
 });

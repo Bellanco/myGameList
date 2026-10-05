@@ -79,7 +79,7 @@ export interface Mission {
   steps: readonly TourStep[];
 }
 
-const LIST_PATHS = new Set(['/completados', '/abandonados', '/en-curso', '/proximos']);
+const LIST_PATHS = new Set(['/completados', '/abandonados', '/en-curso', '/proximos', '/deseados']);
 const DATA_PATH = '/ajustes/datos';
 
 const isLists = (ctx: TourContext) => LIST_PATHS.has(ctx.path);

@@ -73,6 +73,8 @@ export const IMPORT_UI = {
     search: 'Buscar por nombre',
     enrich: 'Actualizar en tus listas',
     enrichHint: 'Ya lo tienes: añade género/plataforma/horas que falten al juego de tu lista.',
+    promote: 'Pasar a próximos',
+    promoteHint: 'Lo tenías en deseados y ya es tuyo: pásalo a próximos con lo que falte del importado.',
     showing: (shown: number, total: number) => `Mostrando ${shown} de ${total}`,
     copyNameAria: (name: string) => `Copiar «${name}»`,
     copyNameSuccess: (name: string) => `«${name}» copiado`,

@@ -11,12 +11,12 @@ export interface TabAction {
 }
 
 /**
- * Las listas que ENSEÑA la interfaz, en su orden. Es un subconjunto de `TAB_IDS` y no una copia, por la lista de
- * deseos (`d`): entra en los datos una versión ANTES que en pantalla. Un cliente anterior a ella la descarta al
- * leer y reescribe el gist sin sus juegos, así que primero tiene que llegar a todos los aparatos una versión que
- * sepa leerla y conservarla, y solo después otra que deje llenarla.
+ * Las listas que ENSEÑA la interfaz, en su orden. Hoy son todas; se mantiene como nombre propio porque una lista
+ * nueva entra en los datos una versión ANTES que en pantalla —fue el caso de la de deseos (`d`)—: un cliente
+ * anterior la descarta al leer y reescribe el gist sin sus juegos, así que primero tiene que llegar a todos los
+ * aparatos una versión que sepa conservarla, y solo después otra que deje llenarla. Ver docs/plan-lista-deseos.md.
  */
-export const TAB_ORDER: TabId[] = TAB_IDS.filter((tab) => tab !== 'd');
+export const TAB_ORDER: TabId[] = [...TAB_IDS];
 
 export const TAB_TITLES: Record<TabId, string> = {
   c: 'Lista del completista',
@@ -47,6 +47,7 @@ export const ROUTE_TAB: Record<string, TabId> = {
   '/abandonados': 'v',
   '/en-curso': 'e',
   '/proximos': 'p',
+  '/deseados': 'd',
   // Nombre ANTIGUO de la lista de abandonados, que sigue resolviendo por redirección
   // (`LEGACY_ROUTE_REDIRECTS`). Se mantiene aquí para que el fotograma previo al salto pinte ya su pestaña, en
   // vez de asomar «completados» por el `|| 'c'` de `getCurrentTab`.
@@ -193,6 +194,7 @@ export const UI_MESSAGES = {
     noName: 'El juego no tiene nombre.',
     alreadyInLists: (name: string) => `"${name}" ya está en tus listas.`,
     addedToProximos: (name: string) => `"${name}" añadido a próximos`,
+    addedToWishlist: (name: string) => `"${name}" añadido a deseados`,
     alreadyCurrent: (name: string) => `"${name}" ya está en curso`,
     reviewPublishDeferred: 'Juego guardado; la actividad social de reseña se actualizará al abrir el hub social.',
   },
@@ -202,6 +204,8 @@ export const UI_MESSAGES = {
     toCurrentDone: '✓ En curso',
     toProximos: 'Añadir a próximos',
     toProximosDone: '✓ Añadido a próximos',
+    toWishlist: 'Añadir a deseados',
+    toWishlistDone: '✓ Añadido a deseados',
   },
   /** El rótulo de la cápsula de estado, según la clase de aviso. */
   statusKind: { ok: 'Correcto', warn: 'Aviso', err: 'Error' },

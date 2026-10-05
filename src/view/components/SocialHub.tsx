@@ -5,7 +5,7 @@ import { Link, generatePath, useLocation } from 'react-router-dom';
 import '../../styles/social.scss';
 import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { LEGAL_CONSENT_UI, LEGAL_ROUTES } from '../../core/constants/legal';
-import type { GameItem, TabData } from '../../model/types/game';
+import type { GameItem, TabData, TabId } from '../../model/types/game';
 import { useSocialViewModel } from '../../viewmodel/useSocialViewModel';
 import { useGithubConnection } from '../../viewmodel/sync/githubConnection';
 import { SOCIAL_ROUTES, matchSocialRoute, wantsYearSummary } from '../../viewmodel/social/socialRoutes';
@@ -42,10 +42,12 @@ import { libraryStart } from '../../core/achievements/metrics';
  * Componente PRESENTACIONAL: toda la lógica vive en `useSocialViewModel` (M3).
  */
 interface SocialHubProps {
-  /** Ruleta (perfil social) — añadir un juego ajeno a mi lista de próximos. */
-  onAddToProximos?: (game: Partial<GameItem>) => 'added' | 'duplicate' | 'invalid';
-  /** Ruleta (perfil social) — ¿ya tengo este juego (por nombre) en alguna de mis listas? */
-  hasGameInLists?: (name: string) => boolean;
+  /** Ruleta (perfil social) — añadir un juego ajeno a una de mis listas (la de `addTarget`). */
+  onAddGame?: (game: Partial<GameItem>) => 'added' | 'duplicate' | 'invalid';
+  /** A qué lista va lo que se añade desde la ruleta: deseados, o próximos si esa lista está oculta. */
+  addTarget?: 'p' | 'd';
+  /** Ruleta (perfil social) — ¿en cuál de mis listas está ya este juego (por nombre)? */
+  gameListOf?: (name: string) => TabId | null;
   /** Ruleta (perfil social) — si ya es mío, llevarlo a "En curso". */
   moveGameToCurrentByName?: (name: string) => void;
   /** Listados VIVOS de la app: con ellos se reconcilia la actividad social publicada (reseñas). */
@@ -53,8 +55,9 @@ interface SocialHubProps {
 }
 
 const SocialHubInner = memo(function SocialHubInner({
-  onAddToProximos,
-  hasGameInLists,
+  onAddGame,
+  addTarget,
+  gameListOf,
   moveGameToCurrentByName,
   games,
 }: SocialHubProps = {}) {
@@ -506,8 +509,9 @@ const SocialHubInner = memo(function SocialHubInner({
           reviewLink={detailReviewLink}
           status={status}
           statusKind={statusKind}
-          onAddToProximos={onAddToProximos}
-          hasGameInLists={hasGameInLists}
+          onAddGame={onAddGame}
+          addTarget={addTarget}
+          gameListOf={gameListOf}
           moveGameToCurrentByName={moveGameToCurrentByName}
           friendshipState={selectedProfileDetail ? relationshipWith((selectedProfileDetail as { uid?: string }).uid || '') : 'none'}
           friendshipBusy={Boolean(selectedProfileDetail) && friendshipBusyUid === (selectedProfileDetail as { uid?: string }).uid}

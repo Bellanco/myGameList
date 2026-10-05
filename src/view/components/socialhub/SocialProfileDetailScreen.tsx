@@ -177,8 +177,9 @@ function SocialProfileDetailScreenBase({
   reviewLink,
   status,
   statusKind,
-  onAddToProximos,
-  hasGameInLists,
+  onAddGame,
+  addTarget = 'd',
+  gameListOf,
   moveGameToCurrentByName,
   friendshipState = 'none',
   friendshipBusy = false,
@@ -217,8 +218,9 @@ function SocialProfileDetailScreenBase({
   reviewLink?: (gameId: number) => { to: string; state?: unknown };
   status: string;
   statusKind: string;
-  onAddToProximos?: (game: Partial<GameItem>) => 'added' | 'duplicate' | 'invalid';
-  hasGameInLists?: (name: string) => boolean;
+  onAddGame?: (game: Partial<GameItem>) => 'added' | 'duplicate' | 'invalid';
+  addTarget?: 'p' | 'd';
+  gameListOf?: (name: string) => TabId | null;
   moveGameToCurrentByName?: (name: string) => void;
   friendshipState?: RelationshipState;
   friendshipBusy?: boolean;
@@ -733,13 +735,17 @@ function SocialProfileDetailScreenBase({
         weight={profileWeight}
         reviewAuthor={{ name: activeProfileDetail.displayName, photoURL: activeProfileDetail.photoURL }}
         action={
-          onAddToProximos
+          onAddGame
             ? (game) => {
-                // Si ya es tuyo (perfil propio o duplicado por nombre) → llevarlo a "En curso";
-                // si no, añadirlo a tu lista de próximos.
-                const owned = isOwnProfile || (hasGameInLists?.(game.name) ?? false);
+                // Si ya es tuyo (perfil propio o duplicado por nombre) → llevarlo a "En curso"; si no, añadirlo a
+                // tu lista de deseos (o a la de próximos, si escondes la de deseos).
+                const list = isOwnProfile ? 'c' : gameListOf?.(game.name) ?? null;
+                // Ya está en tus deseados: lo quieres pero no lo tienes, así que ni se juega ni se vuelve a añadir.
+                if (list === 'd') return null;
+                const owned = list !== null;
+                const toWishlist = addTarget === 'd';
                 // Aquí no hay lista a la que llevar al usuario (está en el perfil de otra persona): la ruleta se
-                // cierra y el aviso de la app ("… pasa a En curso" / "… añadido a próximos") dice dónde ha ido.
+                // cierra y el aviso de la app ("… pasa a En curso" / "… añadido a deseados") dice dónde ha ido.
                 return owned
                   ? {
                       btnClass: 'btn-complete',
@@ -754,10 +760,12 @@ function SocialProfileDetailScreenBase({
                   : {
                       btnClass: 'btn-accent',
                       icon: 'plus',
-                      label: UI_MESSAGES.rouletteActions.toProximos,
-                      doneLabel: UI_MESSAGES.rouletteActions.toProximosDone,
+                      label: toWishlist ? UI_MESSAGES.rouletteActions.toWishlist : UI_MESSAGES.rouletteActions.toProximos,
+                      doneLabel: toWishlist
+                        ? UI_MESSAGES.rouletteActions.toWishlistDone
+                        : UI_MESSAGES.rouletteActions.toProximosDone,
                       onAct: (candidate) => {
-                        onAddToProximos(candidate.game);
+                        onAddGame(candidate.game);
                         setRouletteOpen(false);
                       },
                     };

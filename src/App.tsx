@@ -415,6 +415,20 @@ export default function App() {
     [findGameByName, importFields.prefs.existingGames, vm],
   );
 
+  // Pasar a próximos: el juego estaba en tus deseados y Playnite dice que ya lo tienes. Es el único movimiento que
+  // admite la lista de deseos, y de paso se le añade lo que traiga el importado (como al actualizar).
+  const handlePromoteImport = useCallback(
+    (item: ImportedGame) => {
+      const match = findGameByName(item.name);
+      if (!match || match.tab !== 'd') return;
+      const game = vm.data.d.find((g) => g.id === match.id);
+      if (!game) return;
+      graduatingIdRef.current = item.id;
+      vm.openImportedDraft('p', { ...game, ...mergeImportedIntoGame(game, item, importFields.prefs.existingGames) }, { tab: 'd', id: game.id });
+    },
+    [findGameByName, importFields.prefs.existingGames, vm],
+  );
+
   const handleDiscardImport = useCallback((id: number) => inboxRemoveItem(id), [inboxRemoveItem]);
   const handleClearInbox = useCallback(() => inboxClear(), [inboxClear]);
 
@@ -979,8 +993,9 @@ export default function App() {
       // pinta el propio hub mientras se hidrata, así que el usuario ve una sola escena de carga continua.
       <Suspense fallback={<SocialHubSkeleton />}>
         <SocialHub
-          onAddToProximos={vm.addGameToProximos}
-          hasGameInLists={vm.hasGameInLists}
+          onAddGame={vm.addGameToWishlist}
+          addTarget="d"
+          gameListOf={vm.gameListOf}
           moveGameToCurrentByName={vm.moveGameToCurrentByName}
           games={vm.data}
         />
@@ -1030,6 +1045,7 @@ export default function App() {
           listOf={listOfName}
           onClassify={handleClassifyImport}
           onEnrich={handleEnrichImport}
+          onPromote={handlePromoteImport}
           onDiscard={handleDiscardImport}
           onClear={handleClearInbox}
           fieldPrefs={importFields.prefs}

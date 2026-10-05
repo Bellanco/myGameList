@@ -24,6 +24,7 @@ interface ImportInboxTableProps {
   listOf: (name: string) => TabId | null;
   onClassify: (item: ImportedGame, tab: TabId) => void;
   onEnrich: (item: ImportedGame) => void;
+  onPromote: (item: ImportedGame) => void;
   onDiscard: (id: number) => void;
   /** Copia el nombre del juego al portapapeles (al pulsar sobre él). */
   onCopyName: (name: string) => void;
@@ -50,7 +51,7 @@ function chips(values: string[], className: string) {
  * encendía dentro de `table.is-cards`, y esta tabla nunca ha tenido esa clase. Se ha retirado con el rediseño
  * del renglón, que dejó de tener dos marcados distintos.
  */
-export function ImportInboxTable({ items, isInLists, listOf, onClassify, onEnrich, onDiscard, onCopyName }: ImportInboxTableProps) {
+export function ImportInboxTable({ items, isInLists, listOf, onClassify, onEnrich, onPromote, onDiscard, onCopyName }: ImportInboxTableProps) {
   return (
     <div className="table-wrap import-inbox">
       <table>
@@ -103,7 +104,13 @@ export function ImportInboxTable({ items, isInLists, listOf, onClassify, onEnric
                   <td colSpan={3}>
                     <div className="detail-content">
                       <div className="detail-actions">
-                        {existing ? (
+                        {inListTab === 'd' ? (
+                          // Lo tenías en deseados y Playnite dice que ya es tuyo: el único paso que admite esa lista.
+                          <button type="button" className="btn btn-secondary" title={M.promoteHint} onClick={() => onPromote(item)}>
+                            <Icon name={TAB_ICONS.p} />
+                            <span>{M.promote}</span>
+                          </button>
+                        ) : existing ? (
                           <button type="button" className="btn btn-secondary" title={M.enrichHint} onClick={() => onEnrich(item)}>
                             <Icon name={COMMON_ICONS.edit} />
                             <span>{M.enrich}</span>

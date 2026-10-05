@@ -370,9 +370,11 @@ export function useGameListViewModel() {
 
   // Graduación desde la bandeja de importados: abre el formulario en modo "nuevo" para `tab`, precargado
   // con los metadatos del juego importado (sin id → se creará como GameItem nuevo al guardar).
-  const openImportedDraft = useCallback((tab: TabId, game: Partial<GameItem>) => {
+  // `source` es la lista de la que SALE el juego cuando la importación lo cambia de lista (de deseados a
+  // próximos: Playnite dice que ya lo tienes); sin él, el guardado lo deja donde se abre.
+  const openImportedDraft = useCallback((tab: TabId, game: Partial<GameItem>, source?: { tab: TabId; id: number }) => {
     setEditingTab(tab);
-    setDraft(toNormalizedDraft(game));
+    setDraft({ ...toNormalizedDraft(game), ...(source ? { sourceTab: source.tab, sourceId: source.id } : {}) });
     setFormModalOpen(true);
   }, []);
 
@@ -672,10 +674,12 @@ export function useGameListViewModel() {
 
   // Ruleta (perfil social) — ¿ya tengo este juego en alguna de mis listas?
   const hasGameInLists = useCallback((name: string) => findGameByName(name) !== null, [findGameByName]);
+  // …y en cuál: un juego de la lista de deseos está en tus listas, pero no es tuyo.
+  const gameListOf = useCallback((name: string): TabId | null => findGameByName(name)?.tab ?? null, [findGameByName]);
 
-  // Ruleta (perfil social) — añadir un juego ajeno a MI lista de próximos, evitando duplicados.
-  const addGameToProximos = useCallback(
-    (game: Partial<GameItem>): 'added' | 'duplicate' | 'invalid' => {
+  // Ruleta (perfil social) — añadir un juego ajeno a MI lista de deseos (o de próximos), evitando duplicados.
+  const addForeignGame = useCallback(
+    (game: Partial<GameItem>, tab: 'p' | 'd'): 'added' | 'duplicate' | 'invalid' => {
       const name = safeTrim(game.name || '', 120);
       if (!name) {
         notify('warn', UI_MESSAGES.games.noName);
@@ -700,15 +704,17 @@ export function useGameListViewModel() {
         review: '',
         score: 0,
         listedAt: now,
-        // Alta directa desde el perfil de otra persona: entra en próximos ahora, y de ahí arranca su historia.
-        enteredAt: { p: now },
+        // Alta directa desde el perfil de otra persona: entra en la lista ahora, y de ahí arranca su historia.
+        enteredAt: { [tab]: now },
       };
-      persist({ ...data, p: [...data.p, newGame] });
-      notify('ok', UI_MESSAGES.games.addedToProximos(name));
+      persist({ ...data, [tab]: [...data[tab], newGame] });
+      notify('ok', tab === 'd' ? UI_MESSAGES.games.addedToWishlist(name) : UI_MESSAGES.games.addedToProximos(name));
       return 'added';
     },
     [data, hasGameInLists, persist, notify],
   );
+  const addGameToProximos = useCallback((game: Partial<GameItem>) => addForeignGame(game, 'p'), [addForeignGame]);
+  const addGameToWishlist = useCallback((game: Partial<GameItem>) => addForeignGame(game, 'd'), [addForeignGame]);
 
   // Ruleta (perfil social) — si el juego ya es tuyo, llevarlo a "En curso". Busca por nombre normalizado en
   // todas las listas y lo mueve desde donde esté; si ya está en curso, no hace nada (solo avisa).
@@ -758,7 +764,9 @@ export function useGameListViewModel() {
     moveGameToTab,
     moveGameToCurrentByName,
     addGameToProximos,
+    addGameToWishlist,
     hasGameInLists,
+    gameListOf,
     findGameByName,
     saveDraft,
     deleteGame,

@@ -24,6 +24,8 @@ interface InboxScreenProps {
   listOf: (name: string) => TabId | null;
   onClassify: (item: ImportedGame, tab: TabId) => void;
   onEnrich: (item: ImportedGame) => void;
+  /** Pasa a próximos un juego que tenías en deseados (ya lo tienes, dice Playnite). */
+  onPromote: (item: ImportedGame) => void;
   onDiscard: (id: number) => void;
   onClear: () => void;
   /** Preferencia global de qué datos traer (nuevos / ya en tus listas). */
@@ -36,7 +38,7 @@ interface InboxScreenProps {
 }
 
 /** Bandeja: buscador por texto + scroll infinito (render incremental). */
-function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, onDiscard, onClear, fieldPrefs, onFieldPrefChange, onBack, onGoSettings }: InboxScreenProps) {
+function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, onPromote, onDiscard, onClear, fieldPrefs, onFieldPrefChange, onBack, onGoSettings }: InboxScreenProps) {
   const [query, setQuery] = useState('');
   const [visible, setVisible] = useState(PAGE);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -136,6 +138,7 @@ function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, on
         listOf={listOf}
         onClassify={onClassify}
         onEnrich={onEnrich}
+        onPromote={onPromote}
         onDiscard={onDiscard}
         onCopyName={copyName}
       />

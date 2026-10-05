@@ -47,7 +47,7 @@ deseos, ni siquiera podría leerlo. No hay forma de exigir una versión mínima,
 - [x] **0. Datos y compatibilidad.** `TAB_IDS`, tipos, normalización, fusión, IndexedDB, envoltorio del gist,
   esquemas (juegos y social), regla de `feedMoveTabs` (≤ 5), exclusiones (reseñas, premios, ruleta, estadísticas,
   etiquetas), exportar e importar JSON y la marca del filtro del feed.
-- [ ] **1. La lista.** Textos, ruta, icono, pestaña, formulario y tabla como Próximos, `d → p`, bandeja de
+- [x] **1. La lista.** Textos, ruta, icono, pestaña, formulario y tabla como Próximos, `d → p`, bandeja de
   Playnite, ruleta del amigo, estilos de los temas y el tour.
 - [ ] **2. El interruptor de Ajustes.**
 - [ ] **3. Social.** Casilla de ocultar, pestaña en el perfil de un amigo, mensajes del feed, filtro del feed y

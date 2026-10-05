@@ -54,8 +54,8 @@ export const TOUR_UI = {
   steps: {
     'to-lists': { title: 'Vuelve a tus listas', text: 'Esta misión se juega en los listados. Toca aquí y seguimos.', tap: 'Toca «Listados»' },
     lists: {
-      title: 'Cuatro listas, una biblioteca',
-      text: 'Completados, abandonados, en curso y próximos. Cada juego vive en una, y cambia de lista cuando cambia su historia.',
+      title: 'Cinco listas, una biblioteca',
+      text: 'Completados, abandonados, en curso y próximos, más los deseados que aún no tienes. Cada juego vive en una, y cambia de lista cuando cambia su historia.',
     },
     add: {
       title: 'Añade tu primer juego',

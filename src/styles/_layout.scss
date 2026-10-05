@@ -115,6 +115,15 @@
 
   .count-badge { font-size: var(--fs-2xs); }
 }
+/* CINCO PESTAÑAS EN UN MÓVIL. Con la lista de deseos el relleno fijo de cada pestaña ya no cabía: a 280 px
+   sobraban 40 px, y con el texto grande del sistema (+30 %) la quinta se salía hasta en 412. Aquí se reparten
+   el ancho a partes iguales con el relleno justo, que es lo que deja icono y contador enteros sin scroll. */
+@media (max-width:480px) {
+
+  .tabs { gap: 0; }
+
+  .tab-btn { flex: 1 1 0; min-width: 0; justify-content: center; gap: .3rem; padding-inline: .2rem; }
+}
 @media (max-width:720px) {
 
   thead { display: none; }
