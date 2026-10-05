@@ -5,6 +5,64 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-10-05
+
+La versión de la **lista de deseos**: una quinta lista para los juegos que quieres y todavía no tienes, que en
+Estadísticas se compara con lo que ya te espera en Próximos para ver si el siguiente ya lo tienes en casa. En el
+perfil, tus **publicaciones** se pueden revisar, editar y borrar, y en Premios **los votos de cada uno** se ven hasta
+que se abre la edición siguiente.
+
+### Added
+- **Lista de deseos**, la quinta pestaña (`/deseados`), a la derecha de Próximos. Próximos pasa a ser «lo tengo y lo
+  jugaré»; Deseos, «lo quiero pero no lo tengo».
+  - Los mismos campos que Próximos, con la nota de interés. Su único paso es **a Próximos**, nunca al revés.
+  - Se llena **a mano**: ni la importación de Playnite clasifica ahí ni su lista vacía ofrece importar. Si importas
+    un juego que tenías en deseos, la bandeja propone **«Pasar a próximos»**.
+  - No es tu biblioteca: no cuenta en reseñas, estadísticas, logros, premios ni en tu ruleta.
+  - En la ruleta del perfil de un amigo, lo que no tienes se añade **a deseados**.
+- **Mostrar u ocultar la lista de deseos** en Ajustes → Diseño, visible por defecto y sincronizado entre tus
+  dispositivos. Ocultarla esconde la pestaña, no sus juegos.
+- **La lista de deseos en lo social**, como las demás:
+  - una casilla en tu perfil para ocultarla a tus amigos, y su pestaña en el perfil de cada uno;
+  - en el feed, «Ada añadió *Hades II* a su lista de deseos» y, al pasarlo a Próximos, «… a su biblioteca»;
+  - su casilla en el filtro de movimientos del feed. Quien ya lo había tocado la recibe encendida.
+
+  La política de privacidad lo explica. No hay que volver a aceptarla: un aviso al entrar un juego en una de tus
+  listas ya estaba aceptado.
+- **«Ya lo tienes en casa»**, un apartado nuevo de Estadísticas: cuántos de tus deseos tienen un pariente esperando
+  en Próximos (misma saga o géneros en común), las parejas, y tus deseos frente a Próximos por género, con los
+  géneros que deseas sin nada esperando. Solo en tu panel, y solo con la lista de deseos a la vista.
+- **Tus publicaciones, desde tu perfil**: un botón «Publicaciones» las lista y, sobre las tuyas, deja editarlas
+  (conservan su fecha y llevan la marca «editado») y borrarlas.
+
+### Changed
+- **Premios: los votos de cada uno se ven hasta que se abre la edición siguiente**, en vez de hasta que el
+  administrador la terminaba. Desaparece el paso «Terminar la edición»; el administrador puede borrarlos antes con
+  «Borrar los votos». La política de privacidad lo recoge.
+- **Premios: los resultados giran alrededor de la clasificación final.** Lo más votado se ve en el panel de
+  ganadores y no en una pantalla aparte, y tanto la tarjeta de un premio como la fila entera de la clasificación
+  abren su detalle.
+- **«En curso» enseña el orden por nombre** y, con él, el selector de tarjetas o renglones, que se quedaba fuera
+  porque comparten cabecera. Igual en la lista de la vergüenza mientras no haya nada puntuado.
+- **Forja ya no pinta «Biblioteca» y el nombre de la lista** sobre las pestañas.
+- **En el teléfono, las pestañas de las listas se reparten el ancho**: caben las cinco a 280 px y con el texto del
+  sistema grande.
+- **En las mancuernas de Estadísticas, dos valores iguales se ven como un punto partido** en los dos colores, en vez
+  de taparse el uno al otro.
+
+### Fixed
+- **Estadísticas ya no se sale de ancho en los teléfonos más estrechos**: los globos de «Evolución de tus listas» se
+  salían del gráfico y ensanchaban la página a 320 px con el texto grande.
+- **Premios:** cada tarjeta del podio lleva su metal, y la del oro ya no sale transparente.
+
+### Deploy
+- ⚠️ **Hay que desplegar `firestore.rules` antes que la app.** Lo de la lista de deseos (`showWishlist` y
+  `feedMoveTabs` hasta 5 letras) ya está desplegado desde el 05-10-2026, pero el cambio de los votos de Premios
+  (`premiosReveal` y la votación) es posterior y todavía no.
+- La lista de deseos sale entera en esta versión. Un dispositivo que aún tenga la anterior en caché puede quitar
+  los deseos del gist durante un rato; los repone el siguiente ciclo de sincronización de quien los apuntó. Abrir
+  cada dispositivo una vez antes de apuntar deseos lo evita (ver `docs/plan-lista-deseos.md`).
+
 ## [1.5.1] - 2026-10-04
 
 La versión que **aguanta los cortes**. La app gasta mucho menos de los servicios gratuitos de los que depende
