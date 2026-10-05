@@ -183,6 +183,8 @@ export function PremiosResultsScreen({
       return siguientes;
     });
   const conFinal = finales.length > 0;
+  /** ¿Se está viendo una lámina? Con la final delante decide si los ganadores van a lo ancho. */
+  const conLamina = galeria !== null && Boolean(premiados[galeria]);
 
   /** Lo más votado de cada categoría, en el orden del archivo (ver `popularWinners`). */
   const masVotados = useMemo(() => popularWinners(result), [result]);
@@ -380,7 +382,10 @@ export function PremiosResultsScreen({
         </div>
       ) : null}
 
-      <div className="premios-results__cols">
+      {/* CON LA CLASIFICACIÓN FINAL, OTRO REPARTO (`is-final`, 05-10-2026): resto de premiados en una línea bajo el
+          podio, ganadores a la izquierda con la lámina a su derecha —o a lo ancho si no hay lámina— y la final
+          debajo de todo. Sin ella, la rejilla de siempre. El orden lo pone el CSS. */}
+      <div className={`premios-results__cols${conFinal ? ' is-final' : ''}`}>
         {/* LA LÁMINA, ENCIMA DE LOS GANADORES y a lo ancho de las dos columnas. En el móvil el orden lo pone el
             CSS: primero la clasificación entera y después esto, para no partir el listado en dos. */}
         {galeria !== null && premiados[galeria] ? (
@@ -394,7 +399,7 @@ export function PremiosResultsScreen({
         ) : null}
 
         <section
-          className={`premios-results__panel${conTabla ? '' : ' premios-results__panel--wide'}`}
+          className={`premios-results__panel premios-results__panel--winners${(conFinal ? !conLamina : !conTabla) ? ' premios-results__panel--wide' : ''}`}
           aria-label={viendoPopular ? LV.title : L.winners}
         >
           <div className="premios-results__panel-head">
