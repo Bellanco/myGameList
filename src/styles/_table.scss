@@ -637,6 +637,8 @@ table.is-cards tbody tr.main-row.has-cover > td:first-child::after {
      (`data-uppercase`, ver `_base.scss`), como el resto de los rótulos de interfaz. */
   color: var(--text-muted);
 }
+/* La lista de deseos, llena: el recuento contra el tope pasa al tono de aviso (`WISHLIST_MAX_GAMES`). */
+.list-head-count.is-full { color: var(--fg-amber); }
 /* El orden se come el hueco libre y empuja los controles de vista al canto derecho.
    EL `margin-left: auto` VA EN LA PIEZA, no en sus partes. Cuando el deslizador y el conmutador eran dos
    hermanos sueltos, el empujón se le daba a cada uno; ahora viven dentro de `.view-controls` y esas reglas

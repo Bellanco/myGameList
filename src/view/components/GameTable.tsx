@@ -31,6 +31,8 @@ interface GameTableProps {
   onDelete: (tab: TabId, id: number) => void;
   onMigrate: (tab: TabId, id: number, target: TabId) => void;
   onAddGame?: () => void;
+  /** Lista con tope (la de deseos): cuántos juegos tiene ENTERA y cuántos caben. El recuento se dice contra él. */
+  listCap?: { total: number; max: number };
   /** Trae la biblioteca desde el JSON de «Playnite Library Exporter» en vez de teclear juego a juego. */
   onImportLibrary?: (file: File) => void;
   /** Nº de juegos esperando en la bandeja; con 0 no se ofrece el acceso. */
@@ -513,6 +515,7 @@ export const GameTable = memo(function GameTable({
   onDelete,
   onMigrate,
   onAddGame,
+  listCap,
   onImportLibrary,
   inboxCount = 0,
   onOpenInbox,
@@ -1010,7 +1013,16 @@ export const GameTable = memo(function GameTable({
           algo apoyado encima. */}
       {showSortBar ? (
         <div className="list-head">
-          <span className="list-head-count">{UI_MESSAGES.toolbar.listCount(games.length)}</span>
+          {listCap ? (
+            <span className={`list-head-count${listCap.total >= listCap.max ? ' is-full' : ''}`}>
+              {/* Con filtros, delante lo que se está viendo: el tope habla de la lista entera, no de lo filtrado. */}
+              {games.length !== listCap.total ? `${UI_MESSAGES.toolbar.listCount(games.length)} · ` : null}
+              {UI_MESSAGES.toolbar.wishlistCount(listCap.total, listCap.max)}
+              <span className="sr-only">{UI_MESSAGES.toolbar.wishlistCountAria}</span>
+            </span>
+          ) : (
+            <span className="list-head-count">{UI_MESSAGES.toolbar.listCount(games.length)}</span>
+          )}
           {/* EL ORDEN, EN CHIPS. Era un desplegable del sistema con un botón de flecha al lado: dos controles
               ajenos al resto de la interfaz para una sola decisión, y había que abrir el uno para saber por
               qué estaba ordenada la lista. Ahora las opciones están A LA VISTA, en las mismas píldoras que ya
