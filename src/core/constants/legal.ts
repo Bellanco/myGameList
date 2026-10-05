@@ -56,10 +56,14 @@
 // 2026-09-20: los premios. Tres tratamientos nuevos con efectos hacia fuera —archivo de la edición público con su
 // enlace, cuenta mínima creada al votar y trofeo concedido en el perfil—, así que todo el mundo vuelve a pasar por
 // la puerta. Ver `legalContent.ts`, que lo explica en su sitio.
-// 2026-10-04: los votos a la vista. En las ediciones abiertas desde entonces, la papeleta —lo que votaste en cada
-// categoría, con el nombre que elegiste— la ven también quienes votaron en la misma edición, desde que se publica
-// hasta que se termina (docs/plan-premios-votos-a-la-vista.md). Hasta ahora la leía solo su dueño: es un dato tuyo
-// que pasa a verlo otra gente, así que todo el mundo vuelve a pasar por la puerta.
+// 2026-10-04: los votos a la vista. Lo que votaste en cada categoría, con el nombre que elegiste, lo ven también
+// quienes votaron en la misma edición, desde que se publica hasta que se abre la siguiente
+// (docs/plan-premios-votos-a-la-vista.md). Hasta ahora lo leía solo su dueño: es un dato tuyo que pasa a verlo
+// otra gente, así que todo el mundo vuelve a pasar por la puerta.
+// 2026-10-05: el plazo pasa de «hasta que se termina» —un gesto manual, sin tope— a «hasta que se abre la
+// siguiente edición, o antes si quien administra los borra». La versión NO sube: los mismos ven lo mismo, y lo que
+// cambia es que ahora hay un tope que antes no había (mismo criterio que el 2026-08-26). La lista privada de quién
+// votó tampoco es un dato nuevo: el registro de trofeos ya guarda el uid de cada participante desde 2025.
 export const LEGAL_VERSION = '2026-10-04';
 
 // Correo de CONTACTO publicado en los documentos. A propósito distinto del de la cuenta de administración de
