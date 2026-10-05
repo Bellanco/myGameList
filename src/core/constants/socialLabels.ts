@@ -160,13 +160,21 @@ export const SOCIAL_UI = {
     //
     // Los verbos son los largos —«comenzó», «finalizó», «abandonó»— y no sus sinónimos cortos: dicen lo mismo con
     // más cuerpo, que es lo que le falta a un renglón de cuatro palabras. Próximos dice «añadió» porque el mensaje
-    // solo sale cuando el juego LLEGA a esa lista desde otra, y eso es añadirlo a la cola, no apuntarlo de nuevas.
+    // solo sale cuando el juego LLEGA a esa lista desde otra —desde la de deseos, que es la única que lleva allí—,
+    // y eso es haberlo conseguido: «añadió X a su biblioteca».
     moveHeadline: {
       c: 'finalizó',
       v: 'abandonó',
       e: 'comenzó',
       p: 'añadió',
-    } as Record<TabId, string>,
+      d: 'añadió',
+    } satisfies Record<TabId, string>,
+    // Lo que va DETRÁS del juego, en las dos listas donde el verbo solo no dice adónde fue: «Ada añadió Hades a su
+    // lista de deseos» / «… a su biblioteca».
+    moveTail: {
+      p: 'a su biblioteca',
+      d: 'a su lista de deseos',
+    } as Partial<Record<TabId, string>>,
     // Solo la HORA en la tarjeta: el día ya lo dice la cabecera del grupo, y repetirlo era la línea que más peso
     // le daba a un mensaje que debe pesar poco. La fecha completa sigue disponible al pasar el ratón.
     movedAtHour: (date: Date) => date.toLocaleTimeString(APP_LOCALE, { hour: '2-digit', minute: '2-digit' }),
@@ -362,6 +370,7 @@ export const SOCIAL_UI = {
     hideVisitedList: 'Ocultar lista de abandonados',
     hidePlayingList: 'Ocultar lista de en curso',
     hidePlannedList: 'Ocultar lista de próximos',
+    hideWishlist: 'Ocultar lista de deseos',
     hideFieldSectionTitle: 'Ocultar campos',
     hideReplayableField: 'Rejugar',
     hideRetryField: 'Dar otra oportunidad',

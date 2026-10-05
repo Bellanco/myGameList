@@ -478,6 +478,12 @@ function SocialFeedScreenBase({
                             ) : (
                               <span className="hub-feed-move-game is-plain">{entry.gameName}</span>
                             )}
+                            {SOCIAL_UI.feed.moveTail[entry.tab] ? (
+                              <>
+                                {' '}
+                                <span className="hub-feed-move-verb">{SOCIAL_UI.feed.moveTail[entry.tab]}</span>
+                              </>
+                            ) : null}
                             {' '}
                             <span className="hub-feed-move-hour" title={fechaCompleta}>
                               {hasValidDate ? SOCIAL_UI.feed.movedAtHour(itemDate) : SOCIAL_UI.feed.moveRecently}

@@ -18,7 +18,7 @@ import {
 } from '../../src/model/repository/socialGistRepository';
 import { assertNoSocialPrivateFields } from '../../src/model/repository/socialProjection';
 import { assertValidSocialGist } from '../../src/model/schemas/socialGistSchema';
-import type { GameItem, TabData } from '../../src/model/types/game';
+import type { GameItem, TabData, TabId } from '../../src/model/types/game';
 
 const P = 1_700_000_000_000; // apuntado
 const E = 1_740_000_000_000; // empezado
@@ -41,8 +41,8 @@ function game(extra: Partial<GameItem> & { id: number }): GameItem {
   };
 }
 
-function tabData(lists: Partial<Record<'c' | 'v' | 'e' | 'p', GameItem[]>>): TabData {
-  return { c: [], v: [], e: [], p: [], ...lists, d: [], deleted: [], updatedAt: 0 };
+function tabData(lists: Partial<Record<TabId, GameItem[]>>): TabData {
+  return { c: [], v: [], e: [], p: [], d: [], ...lists, deleted: [], updatedAt: 0 };
 }
 
 function baseGist(): SocialGistData {
@@ -479,5 +479,43 @@ describe('F4 — integridad del canal', () => {
     expect(merged.moves).toHaveLength(2);
     expect(merged.moves?.find((entry) => entry.id === '1:c')?.at).toBe(P);
     expect(merged.moves?.find((entry) => entry.id === '2:e')?.at).toBe(E);
+  });
+});
+
+describe('lista de deseos — el alta SÍ es la noticia', () => {
+  const D = 1_690_000_000_000; // apuntado en deseos
+
+  it('apuntar un juego en deseos publica su mensaje, aunque sea su alta en la biblioteca', () => {
+    const moves = deriveMoveActivity(tabData({ d: [game({ id: 3, name: 'Silksong', enteredAt: { d: D } })] }));
+
+    expect(moves.map((entry) => [entry.tab, entry.at])).toEqual([['d', D]]);
+  });
+
+  it('pasarlo luego a próximos publica «a su biblioteca», y el deseo sigue en la historia', () => {
+    const moves = deriveMoveActivity(tabData({ p: [game({ id: 3, enteredAt: { d: D, p: P } })] }));
+
+    expect(moves.map((entry) => entry.tab)).toEqual(['p', 'd']);
+  });
+
+  it('el mismo día, solo queda el último: lo consiguió', () => {
+    const moves = deriveMoveActivity(tabData({ p: [game({ id: 3, enteredAt: { d: P, p: P + 60_000 } })] }));
+
+    expect(moves.map((entry) => entry.tab)).toEqual(['p']);
+  });
+
+  it('con la lista de deseos oculta no se publica lo que se apunta en ella, pero sí el paso a próximos', () => {
+    const moves = deriveMoveActivity(tabData({ p: [game({ id: 3, enteredAt: { d: D, p: P } })] }), { hiddenTabs: ['d'] });
+
+    expect(moves.map((entry) => entry.tab)).toEqual(['p']);
+  });
+
+  it('el alta directa en próximos sigue sin publicar nada', () => {
+    expect(deriveMoveActivity(tabData({ p: [game({ id: 4, enteredAt: { p: P } })] }))).toEqual([]);
+  });
+
+  it('el canal acepta los mensajes de deseos', () => {
+    const conDeseos = syncMoveActivity(baseGist(), deriveMoveActivity(tabData({ d: [game({ id: 3, enteredAt: { d: D } })] })), 2000);
+
+    expect(() => assertValidSocialGist(conDeseos)).not.toThrow();
   });
 });

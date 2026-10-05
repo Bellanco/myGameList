@@ -1,6 +1,7 @@
 # Plan: la lista de deseos
 
-Estado: en curso (05-10-2026). Documento vivo: si una línea no coincide con el código, manda el código.
+Estado: implementado en `develop`, pendiente de desplegar (05-10-2026). Documento vivo: si una línea no coincide
+con el código, manda el código.
 
 ## Qué es
 
@@ -50,5 +51,6 @@ deseos, ni siquiera podría leerlo. No hay forma de exigir una versión mínima,
 - [x] **1. La lista.** Textos, ruta, icono, pestaña, formulario y tabla como Próximos, `d → p`, bandeja de
   Playnite, ruleta del amigo, estilos de los temas y el tour.
 - [x] **2. El interruptor de Ajustes.** En Ajustes → Diseño (`wishlistPreference`, campo `showWishlist`). Las reglas con `showWishlist` deben desplegarse antes que esta versión.
-- [ ] **3. Social.** Casilla de ocultar, pestaña en el perfil de un amigo, mensajes del feed, filtro del feed y
-  texto de privacidad.
+- [x] **3. Social.** Casilla de ocultar, pestaña en el perfil de un amigo, mensajes del feed, filtro del feed y
+  texto de privacidad. `LEGAL_VERSION` no sube: un aviso de entrada en una lista ya se aceptó el 2026-08-22 (ver
+  el comentario en `legalContent`).

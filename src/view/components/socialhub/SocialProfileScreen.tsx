@@ -223,6 +223,18 @@ export function SocialProfileScreen({
                   </span>
                   <span>{SOCIAL_UI.profile.hidePlannedList}</span>
                 </label>
+                <label className="visibility-check" htmlFor="hub-hide-list-d">
+                  <input
+                    id="hub-hide-list-d"
+                    type="checkbox"
+                    checked={hiddenTabs.includes('d')}
+                    onChange={() => toggleHiddenTab('d')}
+                  />
+                  <span className="visibility-toggle-track" aria-hidden="true">
+                    <span className="visibility-toggle-thumb" />
+                  </span>
+                  <span>{SOCIAL_UI.profile.hideWishlist}</span>
+                </label>
               </div>
             </div>
 

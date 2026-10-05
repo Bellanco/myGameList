@@ -55,7 +55,7 @@ function game(extra: Partial<GameItem> & { id: number; name: string }): GameItem
 }
 
 function lists(games: Partial<Record<'c' | 'v' | 'e' | 'p', GameItem[]>>): TabData {
-  return { c: [], v: [], e: [], p: [], ...games, d: [], deleted: [], updatedAt: 0 };
+  return { c: [], v: [], e: [], p: [], d: [], ...games, deleted: [], updatedAt: 0 };
 }
 
 function collect(input: {
