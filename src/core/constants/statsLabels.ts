@@ -310,7 +310,7 @@ export const STATS_UI = {
   kin: {
     title: 'Ya lo tienes en casa',
     // Far Cry 3, Vaas: «¿Te he dicho alguna vez cuál es la definición de locura?».
-    subtitle: 'La definición de locura es comprar otro igual esperando que sea distinto: mira antes lo que ya tienes.',
+    subtitle: 'La definición de locura es comprar lo mismo esperando que sea distinto: mira antes lo que tienes.',
     tile: 'Con pariente en Próximos',
     tileUnit: (wishes: number) => `de ${wishes}`,
     tileHint: (wishes: number) => `${wishes === 1 ? 'tu deseo' : `tus ${wishes} deseos`}, frente a lo que ya tienes sin jugar`,

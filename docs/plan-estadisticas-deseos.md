@@ -11,7 +11,7 @@ Y compara los géneros de lo que deseas con los de lo que esperas.
 
 - **Título:** «Ya lo tienes en casa».
 - **Subtítulo** (Far Cry 3, Vaas: «¿Te he dicho alguna vez cuál es la definición de locura?»): *La definición de
-  locura es comprar otro igual esperando que sea distinto: mira antes lo que ya tienes.*
+  locura es comprar lo mismo esperando que sea distinto: mira antes lo que tienes.*
 
 ## Qué enseña
 
