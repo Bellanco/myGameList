@@ -404,3 +404,23 @@ describe('retirar el trofeo a mucha gente', () => {
     expect(palmaresDe('uid-2')).toEqual([]);
   });
 });
+
+describe('el puesto real de quien participó', () => {
+  const perfil = (uid: string, profileId: string, palmares: unknown[]): Registro => ({
+    id: uid,
+    data: { uid, profileId, palmares },
+  });
+  const entradaDe = (uid: string, seasonId: string) =>
+    (leer('profiles', uid)?.data.palmares as Array<Record<string, unknown>>).find((e) => e.seasonId === seasonId);
+
+  it('se concede con el trofeo y sobrevive a apagar y volver a encender', async () => {
+    state.profiles = [perfil('u1', 'p-u1', [])];
+    await grantPalmares([{ uid: 'u1', rank: 0, place: 8 }], '2025', 'Game Awards 2025', 2025);
+    await savePalmaresRecord('2025', true, [{ uid: 'u1', rank: 0, place: 8 }]);
+    expect(entradaDe('u1', '2025')).toMatchObject({ rank: 0, place: 8 });
+
+    await setSeasonPalmaresGranted('2025', 'Game Awards 2025', false, 2025);
+    await setSeasonPalmaresGranted('2025', 'Game Awards 2025', true, 2025);
+    expect(entradaDe('u1', '2025')).toMatchObject({ rank: 0, place: 8 });
+  });
+});

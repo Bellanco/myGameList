@@ -23,10 +23,30 @@ export function isParticipation(entry: Pick<PalmaresEntry, 'rank'>): boolean {
  */
 export function palmaresRecipientsFrom(
   leaderboard: Array<{ userId: string; rank: number }>,
-): Array<{ uid: string; rank: number }> {
+): Array<{ uid: string; rank: number; place?: number }> {
   return leaderboard
     .filter((entry) => entry.userId)
-    .map((entry) => ({ uid: entry.userId, rank: hasAward(entry.rank) ? entry.rank : PALMARES_PARTICIPATION_RANK }));
+    .map((entry) =>
+      hasAward(entry.rank)
+        ? { uid: entry.userId, rank: entry.rank }
+        // La participación guarda además su puesto real: la medalla es la misma para todos, el puesto no.
+        : { uid: entry.userId, rank: PALMARES_PARTICIPATION_RANK, ...(validPlace(entry.rank) ? { place: entry.rank } : {}) },
+    );
+}
+
+/** Un puesto de clasificación con sentido: entero y positivo. */
+export function validPlace(value: unknown): value is number {
+  const place = Number(value);
+  return Number.isInteger(place) && place > 0;
+}
+
+/**
+ * EN QUÉ PUESTO QUEDÓ, sea cual sea su medalla: el del trofeo si lo hay y, si es una participación, el real de la
+ * clasificación. `0` cuando no se sabe (participaciones concedidas antes de guardarlo y aún sin rellenar).
+ */
+export function palmaresPlace(entry: Pick<PalmaresEntry, 'rank' | 'place'>): number {
+  if (!isParticipation(entry)) return Number(entry?.rank) || 0;
+  return validPlace(entry?.place) ? Number(entry.place) : 0;
 }
 
 /** Un año con cuatro cifras razonable para una edición. */
@@ -70,4 +90,13 @@ export function sortPalmares(entries: PalmaresEntry[]): PalmaresEntry[] {
         puesto(a) - puesto(b) ||
         (b.awardedAt || 0) - (a.awardedAt || 0),
     );
+}
+
+/**
+ * EL NOMBRE DE LA COMPETICIÓN, sin el año: «Game Awards 2025» → «Game Awards». El banderín del perfil pone el año
+ * aparte, y con él dentro del nombre saldría dos veces.
+ */
+export function palmaresCompetition(entry: Pick<PalmaresEntry, 'seasonName' | 'seasonId'>): string {
+  const nombre = String(entry?.seasonName || entry?.seasonId || '');
+  return nombre.replace(/\s*(?:^|\b)(?:19|20)\d{2}\b\s*/g, ' ').replace(/\s+/g, ' ').trim() || nombre;
 }

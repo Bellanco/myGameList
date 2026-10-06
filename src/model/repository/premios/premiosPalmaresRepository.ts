@@ -17,13 +17,15 @@
  */
 import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, writeBatch } from 'firebase/firestore/lite';
 import type { PalmaresEntry } from '../../types/premios';
-import { PALMARES_PARTICIPATION_RANK } from '../../../core/premios/palmares';
+import { PALMARES_PARTICIPATION_RANK, validPlace } from '../../../core/premios/palmares';
 import { ADMIN_COLLECTION, BATCH_LIMIT, palmaresDocId, requireServices } from './premiosShared';
 
 /** Quién se llevó trofeo en una edición y en qué puesto. Solo existe en la colección de administración. */
 export interface PalmaresRecipient {
   uid: string;
   rank: number;
+  /** Puesto real en la clasificación, solo en las participaciones (ver `PalmaresEntry.place`). */
+  place?: number;
 }
 
 /** El registro de una edición. */
@@ -47,7 +49,9 @@ function cleanRecipients(raw: unknown): PalmaresRecipient[] {
     const uid = String(entry?.uid || '');
     const rank = Number(entry?.rank ?? -1);
     if (!uid || !Number.isInteger(rank) || rank < PALMARES_PARTICIPATION_RANK) continue;
-    porUid.set(uid, { uid, rank });
+    // El puesto real solo acompaña a la participación: en un trofeo de puesto ya es el `rank`.
+    const place = rank === PALMARES_PARTICIPATION_RANK && validPlace(entry?.place) ? Number(entry.place) : 0;
+    porUid.set(uid, place ? { uid, rank, place } : { uid, rank });
   }
   return [...porUid.values()];
 }
@@ -146,7 +150,7 @@ export async function grantPalmares(
   const awardedAt = Date.now();
   let concedidos = 0;
 
-  for (const { uid, rank } of cleanRecipients(premiados)) {
+  for (const { uid, rank, place } of cleanRecipients(premiados)) {
     try {
       const ref = doc(firestore, 'profiles', uid);
       const snapshot = await getDoc(ref);
@@ -156,6 +160,7 @@ export async function grantPalmares(
       const sinEsta = Array.isArray(previo) ? previo.filter((entry) => entry?.seasonId !== seasonId) : [];
       const entrada: PalmaresEntry = { seasonId, seasonName, rank, awardedAt };
       if (season) entrada.season = season;
+      if (place) entrada.place = place;
       const palmares = [...sinEsta, entrada];
 
       // SIN `updatedAt`: ese campo mide la actividad de su dueño —ordena el directorio y decide quién cuenta como
@@ -197,7 +202,12 @@ export async function revokePalmares(seasonId: string): Promise<PalmaresRecipien
       {
         ref: document.ref,
         palmares: previo.filter((entry) => entry?.seasonId !== seasonId),
-        premiado: { uid: document.id, rank: Number(mio.rank) || 0 } as PalmaresRecipient,
+        // Con su puesto real, si lo tenía: es lo que se le devuelve al volver a encender el interruptor.
+        premiado: {
+          uid: document.id,
+          rank: Number(mio.rank) || 0,
+          ...(validPlace(mio.place) ? { place: Number(mio.place) } : {}),
+        } as PalmaresRecipient,
       },
     ];
   });

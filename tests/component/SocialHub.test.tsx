@@ -2373,13 +2373,15 @@ describe('SocialHub — el palmarés de la ficha', () => {
   it('tu propia ficha enseña tu palmarés', async () => {
     renderHub('/social/profiles/me');
 
-    expect(await screen.findByText(PREMIOS_UI.palmares.entry(1, EDICION.seasonName))).toBeInTheDocument();
+    // La vitrina compacta enseña puesto y año; la edición entera va en el nombre accesible del enlace.
+    expect(await screen.findByRole('link', { name: PREMIOS_UI.palmares.entryAria(1, EDICION.seasonName) })).toBeInTheDocument();
   });
 
   it('la ficha de una amistad enseña el suyo', async () => {
     renderHub('/social/profiles/friendUid');
 
-    expect(await screen.findByText(PREMIOS_UI.palmares.entry(2, EDICION.seasonName))).toBeInTheDocument();
+    // La vitrina compacta enseña puesto y año; la edición entera va en el nombre accesible del enlace.
+    expect(await screen.findByRole('link', { name: PREMIOS_UI.palmares.entryAria(2, EDICION.seasonName) })).toBeInTheDocument();
   });
 
   /* Y EL TROFEO LLEVA AL RESUMEN DE LOS VOTOS de esa edición: es donde está lo que la medalla resume. */

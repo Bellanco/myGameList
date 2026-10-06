@@ -570,9 +570,21 @@ export const PREMIOS_UI = {
     title: 'Palmarés',
     // Se dice «en» y no «ganó»: un empate a primer puesto es de dos, y «ganó» sonaría a que fue el único.
     // El puesto `0` es la PARTICIPACIÓN (ver `core/premios/palmares`).
-    entry: (rank: number, edicion: string) => (rank === 0 ? `Participó en ${edicion}` : `${rank}.º en ${edicion}`),
-    medalAria: (rank: number, edicion: string) =>
-      rank === 0 ? `Trofeo: participación en ${edicion}` : `Trofeo: ${rank}.º puesto en ${edicion}`,
+    // `place` es el puesto real de quien participó (ver `PalmaresEntry.place`): con él se dice igual que un trofeo
+    // de puesto —«6.º en Game Awards 2025»—, y solo sin él queda «Participó en…».
+    entry: (rank: number, edicion: string, place = 0) => {
+      const puesto = rank === 0 ? place : rank;
+      return puesto ? `${puesto}.º en ${edicion}` : `Participó en ${edicion}`;
+    },
+    medalAria: (rank: number, edicion: string, place = 0) =>
+      rank === 0
+        ? `Trofeo: participación en ${edicion}${place ? `, ${place}.º puesto` : ''}`
+        : `Trofeo: ${rank}.º puesto en ${edicion}`,
+    /**
+     * EL PUESTO EN EL BANDERÍN del perfil. La participación lleva su puesto real si se sabe; si no —una fila del
+     * archivo sin perfil con el que casarla—, «Participó».
+     */
+    bandRank: (place: number) => (place ? `${place}.º` : 'Participó'),
     /**
      * La píldora del canto: el PUESTO a secas («3.º»). El año ya lo dice el rótulo de debajo, y los dos juntos
      * («3.º·’25») eran demasiado para una pastilla de 48 px (decisión del 28-09-2026). La participación no tiene
@@ -585,8 +597,10 @@ export const PREMIOS_UI = {
      * sale del perfil. Puesto en el enlace, sustituye a lo que digan la medalla y el rótulo de dentro, que si no
      * se leerían los dos seguidos.
      */
-    entryAria: (rank: number, edicion: string) =>
-      `${rank === 0 ? 'Participó' : `${rank}.º`} en ${edicion}: ver los resultados`,
+    entryAria: (rank: number, edicion: string, place = 0) => {
+      const puesto = rank === 0 ? place : rank;
+      return `${puesto ? `${puesto}.º` : 'Participó'} en ${edicion}: ver los resultados`;
+    },
     rarity: 'Excepcional',
     // Participar lo tiene todo el que votó: su aura es la común, la misma que en el catálogo dice «lo tiene mucha gente».
     rarityParticipation: 'Común',

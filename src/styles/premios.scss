@@ -1496,23 +1496,23 @@
 .premios-palmares {
   display: grid;
   justify-items: center;
-  gap: .4rem;
+  gap: .55rem;
   width: 100%;
-  margin-top: .8rem;
+  margin-top: .7rem;
 }
 
-.premios-palmares__title {
-  font-family: var(--font-label);
-  font-size: var(--fs-2xs);
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  margin: 0;
+/* EL FILETE QUE LA SEPARA de la tira de logros, en lugar del rótulo «Palmarés»: corto y centrado, para que lea como
+   un corte entre dos vitrinas y no como el borde de una caja. */
+.premios-palmares::before {
+  content: '';
+  width: min(12rem, 60%);
+  height: 1px;
+  background: color-mix(in srgb, var(--border) 85%, transparent);
 }
 
 .premios-palmares__list {
   display: flex;
-  gap: .9rem;
+  gap: .4rem .45rem;
   flex-wrap: wrap;
   justify-content: center;
   list-style: none;
@@ -1520,34 +1520,83 @@
   padding: 0;
 }
 
-.premios-palmares__item { display: grid; max-width: 7rem; }
+/* LOS METALES DE LA CINTA, los mismos cinco que las medallas del catálogo y del podio: claro arriba, hondo abajo,
+   y una tinta oscura que cumple sobre los dos extremos. No dependen del tema, igual que el oro de una medalla no
+   cambia con la luz de la sala. */
+.premios-palmares__item {
+  --band-a: #f7e18c; --band-b: #cf9f2e; --band-ink: #2b1d00;
+  display: grid;
+  /* NO ENCOGE: la lista es un `flex` que reparte el ancho, y un elemento que encoge por debajo de su cinta deja que
+     la siguiente se le monte encima —las colas recortadas no ocupan sitio— y se come el año. */
+  flex: none;
+}
+.premios-palmares__item[data-metal='plata'] { --band-a: #f2f4f7; --band-b: #aeb7c4; --band-ink: #1c2330; }
+.premios-palmares__item[data-metal='bronce'] { --band-a: #e6c493; --band-b: #c79a5e; --band-ink: #21140a; }
+.premios-palmares__item[data-metal='cobre'] { --band-a: #f0a582; --band-b: #de8c64; --band-ink: #2a0e04; }
+.premios-palmares__item[data-metal='azul'] { --band-a: #c2d8f6; --band-b: #7ea6e4; --band-ink: #0c1b33; }
 
-/* EL TROFEO ENTERO ES EL ENLACE —medalla y rótulo—, no solo el texto: a 48 px la medalla es lo que se ve y lo
-   que se intenta pulsar, y un enlace de una línea de 10 px sería un blanco imposible en el móvil. Hereda el
-   color en vez de teñirse de enlace: la vitrina se lee como vitrina y es el subrayado del rótulo al pasar lo
-   que dice que se puede pulsar. */
+/* El enlace no se recorta (la cinta va dentro) para que el contorno de foco se vea entero. */
 .premios-palmares__link {
   display: grid;
-  gap: .25rem;
-  justify-items: center;
-  color: inherit;
+  width: max-content;
+  color: var(--band-ink);
   text-decoration: none;
-}
-
-.premios-palmares__link:hover .premios-palmares__caption,
-.premios-palmares__link:focus-visible .premios-palmares__caption { text-decoration: underline; }
-
-.premios-palmares__link:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
 
-.premios-palmares__caption {
-  color: var(--text-muted);
-  font-size: var(--fs-2xs);
-  text-align: center;
-  line-height: 1.2;
+.premios-palmares__link:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+/* LA CINTA: banda de campeonato con las colas en cola de golondrina, recortadas en los dos extremos. La sombra va
+   en `drop-shadow` y no en `box-shadow`, que el recorte se comería. */
+.premios-palmares__band {
+  --tail: 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  height: 28px;
+  padding: 0 calc(var(--tail) + 11px);
+  background: linear-gradient(180deg, var(--band-a), var(--band-b));
+  clip-path: polygon(0 0, 100% 0, calc(100% - var(--tail)) 50%, 100% 100%, 0 100%, var(--tail) 50%);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .35));
+  font-family: var(--font-label);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: .03em;
+  line-height: 1;
+  white-space: nowrap;
+  transition: filter .15s;
+}
+
+.premios-palmares__link:hover .premios-palmares__band { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .35)) brightness(1.06); }
+.premios-palmares__link:hover .premios-palmares__name { text-decoration: underline; text-underline-offset: .15em; }
+
+/* LA TINTA, sobre la cinta y sus textos y con `!important`: la ficha del perfil y varios temas tiñen el texto de
+   sus tarjetas —enlaces en el azul de la paleta, cuerpos en el color del tema—, y heredado del enlace salía claro
+   sobre el metal (1,1:1 en Portal oscuro). La cinta no es texto de la tarjeta: lleva la suya en todos los temas. */
+.premios-palmares .premios-palmares__band,
+.premios-palmares .premios-palmares__band * { color: var(--band-ink) !important; text-shadow: none !important; }
+
+.premios-palmares__rank { font-size: 1.15em; font-weight: 800; }
+.premios-palmares__year { font-variant-numeric: tabular-nums; font-weight: 600; }
+.premios-palmares__year-short { display: none; }
+
+/* EN EL MÓVIL, DIMINUTA: más baja, letra menor, colas cortas y el año a dos cifras. La competición sigue entera —
+   abreviada no se sabe qué se ganó—, y caben dos o tres por línea en vez de una. */
+@media (max-width: 620px) {
+  .premios-palmares__list { gap: .3rem .3rem; }
+  .premios-palmares__band {
+    --tail: 6px;
+    gap: .3rem;
+    height: 21px;
+    padding: 0 calc(var(--tail) + 6px);
+    font-size: var(--fs-2xs);
+    letter-spacing: .02em;
+  }
+  .premios-palmares__year-full { display: none; }
+  .premios-palmares__year-short { display: inline; }
 }
 
 .premios-results__link { color: var(--fg-link); text-decoration: none; }
