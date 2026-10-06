@@ -206,10 +206,14 @@
 /* ── §N · LOS CHIPS, EN HOJA ──────────────────────────────────────────────────────────────────────────────
    La misma hoja que los botones, a la escala de un chip: dos esquinas redondas (10 px) y dos vivas (3 px). Entran
    los de la fila (plataforma, género, año, virtudes y defectos: `.chip`), los del orden del listado, los filtros
-   activos y las etiquetas de las gráficas. Con 15 px un chip de 24 de alto se quedaba en óvalo y dejaba de leerse
+   activos, las etiquetas de las gráficas y los del social (el juego de una reseña, el de amigo y el de
+   sincronización del perfil). Los contadores redondos no: un número solo no es un chip. Con 15 px un chip de 24 de alto se quedaba en óvalo y dejaba de leerse
    como hoja. ── */
 :root[data-palette="tierramedia"] { --tm-chip-radius: 10px; --tm-chip-vivo: 3px; }
-:root[data-palette="tierramedia"] :is(.chip, .list-sort-chip, .active-filter-chip, .tag-chip) {
+:root[data-palette="tierramedia"] :is(
+  .chip, .list-sort-chip, .active-filter-chip, .tag-chip,
+  .hub-feed-game-chip, .hub-friend-chip, .hub-profile-sync-chip
+) {
   border-radius: var(--tm-chip-radius) var(--tm-chip-vivo);
 }
 
@@ -304,3 +308,38 @@
   letter-spacing: .01em;
   color: var(--text);
 }
+
+/* ── §N · LOS AVISOS DEL FEED, EN HOJA Y CON COLOR QUE SE VE ─────────────────────────────────────────────────
+   Los avisos de lista («añadió … a su lista de deseos») y de logro iban en la pastilla de la casa: uno agrupado,
+   con sus juegos desplegados debajo, se volvía un ÓVALO que se comía el texto por las esquinas. Ahora llevan la
+   misma hoja que los botones (`--sys-radius` es la ficha con la que cada tema da forma al aviso).
+
+   Y EL COLOR SE NOTA. El velo al 14 % y el filete a medio tono dejaban el feed de un solo gris verdoso. Ahora el
+   filete va en color pleno, un LOMO de 4 px lo repite a la izquierda —gráfico, le basta 3:1: el peor es 4,56:1—
+   y el velo sube al 18 % en oscuro. En claro se queda en el 12 %: más tinte bajaba la tinta del autor y del juego
+   de 4,5:1. Medido con todas las tintas del aviso sobre el fondo y la superficie: oscuro, peor 4,54:1 (la hora,
+   que va en `--text-muted`); claro, peor 4,59:1 (el nombre del juego).
+
+   EL LOGRO PASA AL ROSA (`--cat-5`). Iba en el naranja de aviso, a 13° del oro de «empezó a jugar»: dos avisos
+   distintos del mismo color. El rosa queda lejos de los cinco movimientos (verde, coral, oro, azul y lila). */
+:root[data-palette="tierramedia"] { --sys-radius: var(--tm-btn-radius) var(--tm-btn-vivo); }
+:root[data-palette="tierramedia"] .hub-feed-activity-item.is-achievements { --evc: var(--cat-5); }
+:root[data-palette="tierramedia"] :is(.hub-feed-activity-item.is-move, .hub-feed-activity-item.is-achievements) {
+  border-color: var(--evc);
+  background: color-mix(in srgb, var(--evc) 18%, transparent);
+  box-shadow: inset 4px 0 0 var(--evc);
+}
+:root[data-palette="tierramedia"][data-theme="light"] :is(.hub-feed-activity-item.is-move, .hub-feed-activity-item.is-achievements) {
+  background: color-mix(in srgb, var(--evc) 12%, transparent);
+}
+/* El autor, en claro, un punto más hondo que el verde de enlace: sobre el velo teñido, el de siempre bajaba a 3,9:1. */
+:root[data-palette="tierramedia"][data-theme="light"] :is(.is-move, .is-achievements) .hub-name-link { color: #275a24; }
+
+/* El separador de día, también en hoja (a la escala de un chip) y con cuerpo: superficie alta, filete de oro y la
+   fecha en el color del texto en vez del gris atenuado. */
+:root[data-palette="tierramedia"] .hub-feed-day-header {
+  border-radius: var(--tm-chip-radius) var(--tm-chip-vivo);
+  background: var(--surface-elevated);
+  border-color: color-mix(in srgb, var(--steam) 55%, var(--border));
+}
+:root[data-palette="tierramedia"] .hub-feed-day-header h4 { color: var(--text); }
