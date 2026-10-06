@@ -1,4 +1,4 @@
-// La voz de «Oro y hoja» en el HUB SOCIAL.
+// La voz de «No puedes pasar» en el HUB SOCIAL.
 //
 // EN UN FICHERO APARTE, y no dentro de `tierramedia.ts`, porque el registro de temas es código de ARRANQUE: si estas
 // frases colgaran de la ficha, el bundler las arrastraría al chunk que descarga todo el mundo (medido: pasó, y

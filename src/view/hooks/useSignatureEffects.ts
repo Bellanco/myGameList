@@ -34,7 +34,7 @@ export function useSignatureEffects(): void {
       // El respaldo es la paleta POR DEFECTO, no una cualquiera: el atributo lo escriben el anti-flash de
       // `index.html` y `preferences.ts`, así que solo falta si a alguien se le va la mano con el `<html>`. Aquí
       // decía `'steam'`, de cuando esa era la de por defecto y además no escribía atributo: con el cambio a
-      // «Oro y hoja» eso habría dado los efectos de otro tema a quien no ha elegido ninguno.
+      // «No puedes pasar» eso habría dado los efectos de otro tema a quien no ha elegido ninguno.
       (root.getAttribute('data-palette') ?? DEFAULT_PALETTE) === palette;
   }, []);
 

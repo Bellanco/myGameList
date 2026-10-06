@@ -1,11 +1,11 @@
-/* COLOR de «Oro y hoja» (`data-palette="tierramedia"`) — CAPA 2 (identidad) y CAPA 2b (rampa categórica).
+/* COLOR de «No puedes pasar» (`data-palette="tierramedia"`) — CAPA 2 (identidad) y CAPA 2b (rampa categórica).
    Va en el BUNDLE BASE: es lo que pinta el primer fotograma de quien tiene este tema elegido, así que no
    puede llegar tarde. Lo que sí llega tarde —y por eso vive en el `<id>.scss` de al lado— es la CAPA 3.
    Las reglas del sistema (qué token hay que definir y qué contraste le toca) están en `../_index.scss`.
    Sustituye a «Forja y temple» (id `forja`) desde el 06-10-2026; quien lo tenía guardado llega aquí por la
    tabla de ids heredados de `constants/palettes.ts`. */
 
-/* ── tierramedia · «Oro y hoja» (el tema de casa) ─────────────────────────────────────────────────────────
+/* ── tierramedia · «No puedes pasar» (el tema de casa) ─────────────────────────────────────────────────────────
    La Tierra Media sin disfraz: un bosque de noche —verde casi negro, no gris— y encima los dos colores del
    viaje. Sigue siendo el tema de quien no ha elegido nada, así que es SOBRIO de fondo y VIVO de color.
 
@@ -101,14 +101,14 @@
   --focus-ring: var(--tm-hoja);
   --fg-link: var(--tm-hoja);
 }
-/* tierramedia (Oro y hoja) — los siete del mapa: oro, hoja, ámbar de otoño, azul de río, rosa de Rivendel, verde
+/* tierramedia («No puedes pasar») — los siete del mapa: oro, hoja, ámbar de otoño, azul de río, rosa de Rivendel, verde
    de Lórien y lila de atardecer élfico. Peor relleno 5,20:1 y peor texto 5,20:1 en los cuatro fondos. */
 :root[data-palette="tierramedia"] {
   --cat-1: #e3b04b; --cat-2: #9bd27c; --cat-3: #f0954b; --cat-4: #86b5f0; --cat-5: #f08aa6; --cat-6: #5fd0c4; --cat-7: #c3a2f2;
   --wish: var(--cat-7);
   --cat-1-fg: #e3b04b; --cat-2-fg: #9bd27c; --cat-3-fg: #f0954b; --cat-4-fg: #86b5f0; --cat-5-fg: #f08aa6; --cat-6-fg: #5fd0c4; --cat-7-fg: #c3a2f2;
 }
-/* tierramedia (Oro y hoja) — los mismos siete a la luz: tinta de mapa. Peor 4,57:1. */
+/* tierramedia («No puedes pasar») — los mismos siete a la luz: tinta de mapa. Peor 4,57:1. */
 :root[data-palette="tierramedia"][data-theme="light"] {
   --cat-1: #7a5410; --cat-2: #2e6a2a; --cat-3: #8f450b; --cat-4: #1d4f91; --cat-5: #9c2552; --cat-6: #0c6560; --cat-7: #6237a6;
   --cat-1-fg: #7a5410; --cat-2-fg: #2e6a2a; --cat-3-fg: #8f450b; --cat-4-fg: #1d4f91; --cat-5-fg: #9c2552; --cat-6-fg: #0c6560; --cat-7-fg: #6237a6;

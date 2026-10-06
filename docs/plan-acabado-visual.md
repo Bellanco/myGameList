@@ -7,7 +7,7 @@ implementarlo se revisó otra vez sobre un prototipo navegable (antes/después l
 cambios respecto a lo aprobado, marcados abajo: **F se retiró**, **A ganó una regla** para rejillas anchas y se
 añadió **S**, el social por dentro. Lo que no entra sigue en §4.
 
-> *Nota del 06-10-2026:* «Forja y temple» (`forja`) ya no existe; lo sustituyó «Oro y hoja» (`tierramedia`) en el
+> *Nota del 06-10-2026:* «Forja y temple» (`forja`) ya no existe; lo sustituyó «No puedes pasar» (`tierramedia`) en el
 > mismo papel de tema de casa. Las piezas «solo Forja» de abajo (cabecera de pantalla, caja sin carátula, canto de
 > los botones) viven ahora en `themes/tierramedia/tierramedia.scss`, con la hoja de Lórien en vez del canto de 15 px.
 

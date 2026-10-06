@@ -1,4 +1,4 @@
-// «Oro y hoja» (tierramedia) — El TEMA DE CASA: la Tierra Media sin disfraz. Es el que ve quien abre la aplicación
+// «No puedes pasar» (tierramedia) — El TEMA DE CASA: la Tierra Media sin disfraz. Es el que ve quien abre la aplicación
 // sin haber elegido nada. Oro que RELLENA y verde de hoja que SEÑALA. Sustituye a «Forja y temple» (id `forja`)
 // desde el 06-10-2026: quien tenía guardado ese id llega aquí por `LEGACY_PALETTE_IDS` (`constants/palettes.ts`).
 //
@@ -8,7 +8,7 @@ import type { ThemeDefinition } from './theme';
 
 export const tierramedia = {
   id: 'tierramedia',
-  label: 'Oro y hoja',
+  label: 'No puedes pasar',
   accent: '#e3b04b',
   accent2: '#9bd27c',
   bg: { dark: '#10140f', light: '#ece3cc' },

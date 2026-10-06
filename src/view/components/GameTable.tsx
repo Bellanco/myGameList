@@ -747,7 +747,7 @@ export const GameTable = memo(function GameTable({
     /* CAMBIAR DE PALETA CAMBIA LA LETRA, y con ella cuántos chips caben en una ranura (`chipsQueCaben` mide el
        texto con la fuente del tema). Ese cambio es un atributo en el `<html>` y no pasa por este componente,
        así que sin esto la lista se quedaba con el reparto de la letra ANTERIOR hasta el siguiente render: al
-       pasar de una condensada a una ancha —de «Oro y hoja» a «Inserte moneda»— se quedaban catorce chips
+       pasar de una condensada a una ancha —de «No puedes pasar» a «Inserte moneda»— se quedaban catorce chips
        sobresaliendo de su ranura. `paletaTick` solo existe para forzar la vuelta. */
     const skinObserver = typeof MutationObserver !== 'undefined'
       ? new MutationObserver(() => setPaletaTick((n) => n + 1))

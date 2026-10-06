@@ -4,7 +4,7 @@
 @use './fonts';
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════
-   TEMA · Oro y hoja (el de casa) — la Tierra Media sin disfraz: bosque de noche, ORO para lo que se rellena
+   TEMA · No puedes pasar (el de casa) — la Tierra Media sin disfraz: bosque de noche, ORO para lo que se rellena
    y VERDE DE HOJA para lo que señala. Identidad de color: CAPA 2 en `_colors.scss`.
 
    ESTE SKIN ES CASI SOLO LA LETRA, Y ES A PROPÓSITO. Los otros siete temas son mundos —la rejilla del
@@ -260,10 +260,21 @@
   border-color: color-mix(in srgb, var(--tm-hoja) 60%, #000);
 }
 
+/* LO QUE ESTÁ ENCENDIDO, EN ORO MACIZO. Un conmutador activo (Rejugar, el alcance «General»/año, Juegos/Horas,
+   Activada/Desactivada…) era antes el cristal de la casa con el texto en verde, y junto a su vecino apagado —la
+   piedra— la diferencia casi no se veía. Ahora se rellena del mismo oro que la pestaña activa: apagado es piedra,
+   encendido es oro. La tinta es la de todo lo que se rellena de oro (6,84:1 en oscuro y 6,77:1 en claro, en el
+   punto más hondo del degradado). */
+:root[data-palette="tierramedia"] :is(.btn-toggle.active, .btn-toggle-deck.active, .btn.is-active):not(.btn-accent) {
+  background: linear-gradient(180deg, var(--steam), color-mix(in srgb, var(--steam) 86%, #000));
+  color: var(--tm-oro-ink);
+  border-color: color-mix(in srgb, var(--steam) 60%, #000);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 6px 14px rgba(var(--steam-rgb),.22);
+}
+
 /* ── §N · LA CABECERA DE PANTALLA ─────────────────────────────────────────────────────────────────────
-   Este tema la enciende (`ScreenHeader` es neutra y en la base no se ve): rótulo en versales con el broche de
-   la HOJA en oro —la misma forma que los botones, dicha en pequeño— y título en Garamond. Va en el flujo —se va al bajar, no es
-   fija—. Va en el panel y en Ajustes, como primer hijo de `main`. En las listas no: la llevaron en la banda de
+   Este tema la enciende (`ScreenHeader` es neutra y en la base no se ve), solo con el título en Garamond: el
+   rótulo en versales de encima se apaga. Va en el flujo —se va al bajar, no es fija—. Va en el panel y en Ajustes, como primer hijo de `main`. En las listas no: la llevaron en la banda de
    las pestañas hasta el 05-10-2026, y se quitó porque la pestaña activa ya dice en qué lista estás. ── */
 :root[data-palette="tierramedia"] .screen-header {
   display: block;
@@ -282,25 +293,9 @@
   gap: .2rem;
   min-width: 0;
 }
-:root[data-palette="tierramedia"] .screen-header-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: .45rem;
-  font-family: var(--font-label);
-  font-size: var(--fs-2xs);
-  font-weight: 600;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-:root[data-palette="tierramedia"] .screen-header-kicker::before {
-  content: "";
-  width: .55rem;
-  height: .55rem;
-  border-radius: 0 100%;
-  transform: rotate(-45deg);
-  background: linear-gradient(135deg, var(--steam), color-mix(in srgb, var(--steam) 60%, var(--tm-hoja)));
-}
+/* SIN RÓTULO: el título ya dice dónde estás, y el rótulo en versales encima era una segunda vez. Se quitó el
+   06-10-2026; la pieza lo sigue pintando (es neutra), así que se apaga aquí. */
+:root[data-palette="tierramedia"] .screen-header-kicker { display: none; }
 :root[data-palette="tierramedia"] .screen-header-title {
   font-family: var(--font-display);
   font-size: var(--fs-3xl);

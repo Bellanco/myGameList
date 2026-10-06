@@ -6,11 +6,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 ## [Unreleased]
 
 ### Changed
-- **El tema de casa pasa a ser «Oro y hoja»**, inspirado en El Señor de los Anillos, y sustituye a «Forja y temple».
+- **El tema de casa pasa a ser «No puedes pasar»**, inspirado en El Señor de los Anillos, y sustituye a «Forja y temple».
   - Oro que rellena (botones principales, pestaña activa) y verde de hoja en enlaces y foco, sobre un bosque de noche
     en oscuro y pergamino en claro. El ámbar de los avisos (el año de un juego) pasa a naranja para no confundirse
     con el oro.
   - Botones, campos y chips con forma de hoja: dos esquinas redondas y dos casi vivas.
+  - Los botones que se encienden (Rejugar, el año en estadísticas, Juegos/Horas…) se rellenan de oro al activarse,
+    para que se distinga a simple vista si están puestos o no.
   - Los titulares van en EB Garamond; rótulos y texto siguen en Atkinson Hyperlegible.
   - De fondo, un mapa a pluma (cordilleras, ríos, bosques y costa) que solo asoma por los márgenes, en lugar de las
     isotermas.

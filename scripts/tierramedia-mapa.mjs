@@ -1,5 +1,5 @@
 /**
- * Genera `src/styles/themes/tierramedia/mapa.svg`, el mapa a pluma del fondo de «Oro y hoja» (§3 de `tierramedia.scss`).
+ * Genera `src/styles/themes/tierramedia/mapa.svg`, el mapa a pluma del fondo de «No puedes pasar» (§3 de `tierramedia.scss`).
  *
  * ES UN SCRIPT DE MANTENIMIENTO, como `vendor-fonts.mjs`: se ejecuta a mano (`node scripts/tierramedia-mapa.mjs`) y su
  * resultado se commitea. La cuenta es fija —sin azar—, así que volver a ejecutarlo da el mismo fichero.

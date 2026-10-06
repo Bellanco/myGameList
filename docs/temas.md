@@ -74,7 +74,7 @@ el que pinta el primer fotograma y no puede llegar tarde.
 | los radios (`--radius-*`) | `themes/<id>/_colors.scss`, junto a la identidad de CAPA 2 |
 | la forma: filetes, texturas, ornamento | `themes/<id>/<id>.scss` |
 | la forma de **las gráficas del panel** | la ficha `--stats-*` en `themes/<id>/<id>.scss` (ver abajo) |
-| encender la **cabecera de pantalla** | `.screen-header` en `themes/<id>/<id>.scss` (apagada en la base; Oro y hoja la trae) |
+| encender la **cabecera de pantalla** | `.screen-header` en `themes/<id>/<id>.scss` (apagada en la base; «No puedes pasar» la trae) |
 | el nombre visible o la muestra del selector | `constants/themes/<id>.ts` |
 | lo que dice al fallar o al quedarse sin red | `constants/themes/<id>.ts` (app) o `<id>.social.ts` (hub) |
 

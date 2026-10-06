@@ -61,7 +61,7 @@ const LEGACY_PALETTE_IDS: ReadonlyMap<string, PaletteId> = new Map([
   // nunca eligió nada: lleva al de por defecto de hoy, no a The Witcher (que heredó el id solo once días). Quien
   // quisiera «Plata y acero» lo vuelve a elegir.
   ['steam', DEFAULT_PALETTE],
-  // `forja` fue «Forja y temple», el tema POR DEFECTO del 14-09-2026 al 06-10-2026, y lo sustituyó «Oro y hoja» en
+  // `forja` fue «Forja y temple», el tema POR DEFECTO del 14-09-2026 al 06-10-2026, y lo sustituyó «No puedes pasar» en
   // el mismo papel: quien lo tenía guardado sigue en el tema de casa, que es lo que había elegido (o no elegido).
   ['forja', DEFAULT_PALETTE],
 ]);
