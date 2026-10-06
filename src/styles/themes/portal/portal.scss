@@ -161,6 +161,12 @@
    4,9:1; el `--portal-orange` del filete se quedaría en 4,4). */
 :root[data-palette="portal"][data-theme="light"] .btn-accent { --cube-c: var(--chip-plat-fg); --cube-ink: #fff; --cube-shine: 0%; --cube-shade: 15%; }
 :root[data-palette="portal"][data-theme="light"] .btn-accent:nth-child(even of .btn-accent) { --cube-c: var(--cat-2); }
+/* Mover de lista en el detalle: los mismos dos portales, pero FIJOS. «Pasar a en curso» lleva el propio del tema
+   (naranja en oscuro, azul en claro) y «Pasar a próximos», el otro. */
+:root[data-palette="portal"] .btn-playing { --cube-c: var(--portal-orange); --cube-ink: #2a1400; --cube-side: color-mix(in srgb, var(--cube-c) 58%, #000); --cube-hi: rgba(255, 255, 255, .2); --cube-lo: rgba(0, 0, 0, .18); }
+:root[data-palette="portal"] .btn-upcoming { --cube-c: var(--steam); --cube-ink: var(--on-accent); --cube-side: color-mix(in srgb, var(--cube-c) 58%, #000); --cube-hi: rgba(255, 255, 255, .2); --cube-lo: rgba(0, 0, 0, .18); }
+:root[data-palette="portal"][data-theme="light"] .btn-playing { --cube-c: var(--chip-plat-fg); --cube-ink: #fff; --cube-shine: 0%; --cube-shade: 15%; }
+:root[data-palette="portal"][data-theme="light"] .btn-upcoming { --cube-c: var(--cat-2); --cube-ink: #fff; --cube-shine: 0%; --cube-shade: 15%; }
 
 :root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost) {
   font-weight: 600; letter-spacing: .05em; border-radius: var(--radius-sm);
