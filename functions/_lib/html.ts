@@ -54,7 +54,7 @@ export function shareTitle(meta: ShareMeta): string {
   const name = plainText(meta.gameName);
   const nick = plainText(meta.authorNick);
   const head = score ? `${name} · ${score}` : name;
-  return nick ? `${head} — reseña de ${nick}` : head;
+  return nick ? `${head} (reseña de ${nick})` : head;
 }
 
 /**

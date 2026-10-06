@@ -19,7 +19,7 @@ export const IMPORT_UI = {
        consolas, qué pasa con un juego repetido— está en las dos guías de abajo, que es donde se busca cuando
        de verdad hace falta. Las tiendas van dentro de la frase y no en fichas sueltas: son siete nombres, se
        leen igual de rápido y no fingen ser botones. */
-    note: 'Trae de una vez los juegos que ya tienes en tus tiendas, sin añadirlos a mano: llegan a la bandeja para que elijas cuáles te quedas.',
+    note: 'Trae de una vez los juegos que ya tienes en tus tiendas. Llegan a la bandeja y ahí eliges cuáles te quedas.',
     sources: 'Funciona con Steam, GOG, Epic, EA, Ubisoft, Amazon y Battle.net, y también con PlayStation y Xbox si les instalas su complemento en Playnite.',
     requires: 'Necesitas Playnite (solo Windows) y su extensión gratuita «Playnite Library Exporter».',
     stepsTitle: 'Cómo traer tu biblioteca, paso a paso',

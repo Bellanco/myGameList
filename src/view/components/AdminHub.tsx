@@ -752,7 +752,7 @@ export const AdminHub = memo(function AdminHub() {
                         return (
                           <option key={tier} value={tier} disabled={reserved}>
                             {PROFILE_TIER_LABELS[tier]}
-                            {reserved ? ` — ${A.tier.reservedHint}` : ''}
+                            {reserved ? ` · ${A.tier.reservedHint}` : ''}
                           </option>
                         );
                       })}
@@ -947,7 +947,7 @@ export const AdminHub = memo(function AdminHub() {
                                     })
                                   }
                                 >
-                                  {`${A.chooseName.btn(option.value)} — ${option.origin}`}
+                                  {`${A.chooseName.btn(option.value)} (${option.origin})`}
                                 </button>
                               ))}
                           </div>
@@ -1062,7 +1062,7 @@ export const AdminHub = memo(function AdminHub() {
                         title={cutoverTargetKnown ? undefined : A.cutover.unknownUid}
                         // Igual que en los restos legacy: el motivo del bloqueo va en el nombre accesible, porque
                         // con `aria-label` presente el `title` no se anuncia.
-                        aria-label={cutoverTargetKnown ? A.cutover.btn : `${A.cutover.btn} — ${A.cutover.unknownUid}`}
+                        aria-label={cutoverTargetKnown ? A.cutover.btn : `${A.cutover.btn}. ${A.cutover.unknownUid}`}
                         onClick={() =>
                           setPending({
                             title: A.cutover.confirm(name),
@@ -1096,7 +1096,7 @@ export const AdminHub = memo(function AdminHub() {
                               // deshabilitado sin explicación para quien usa lector de pantalla.
                               aria-label={
                                 locked
-                                  ? `${A.legacyPurgeAria(tag.label, name)} — ${A.legacyEmailLocked}`
+                                  ? `${A.legacyPurgeAria(tag.label, name)}. ${A.legacyEmailLocked}`
                                   : A.legacyPurgeAria(tag.label, name)
                               }
                               onClick={() =>

@@ -145,8 +145,8 @@ export const SOCIAL_UI = {
     loading: 'Cargando actividad...',
     empty: 'No hay perfiles visibles todavía o faltan permisos de lectura en Firestore.',
     activityEmpty: 'Aún no hay actividad de análisis para mostrar.',
-    activityEmptyNoFriends: 'Tu feed muestra la actividad de tus amigos. Descubre perfiles y añade amigos para empezar a ver sus análisis y publicaciones.',
-    discoverFriends: 'Descubre y añade amigos',
+    activityEmptyNoFriends: 'Aquí verás los análisis y publicaciones de tus amigos. Busca perfiles y añade a alguien para empezar.',
+    discoverFriends: 'Buscar amigos',
     openActivityAria: (name: string, gameName: string) => `Abrir detalle de actividad de ${name} sobre ${gameName}`,
     openProfileAria: (name: string) => `Abrir perfil social de ${name}`,
     analyzedRecently: 'Analizado recientemente',
@@ -209,7 +209,7 @@ export const SOCIAL_UI = {
     // Lo que se anuncia mientras el análisis completo viene de camino (el esqueleto es decorativo). No se
     // confunde con `detailPreviewOnly`: aquello es «esto es todo lo que hay», esto es «todavía no ha llegado».
     detailLoadingReview: 'Cargando el análisis completo...',
-    detailPreviewOnly: 'Esto es solo el adelanto: el texto completo está en los listados de su autor y todavía no ha llegado aquí.',
+    detailPreviewOnly: 'Esto es solo el adelanto. El texto completo está en los listados de su autor y todavía no ha llegado.',
     metadataPlatforms: 'Plataformas:',
     metadataGenres: 'Géneros:',
     metadataStrengths: 'Puntos fuertes:',
@@ -405,7 +405,7 @@ export const SOCIAL_UI = {
     // control de privacidad sería lo peor que podría pasar aquí.
     moveFeedTitle: 'Movimientos en tu actividad',
     moveFeedDescription:
-      'Solo para ti: elige de qué listas quieres ver los avisos de «comenzó», «finalizó», «abandonó» o «añadió» en la actividad. No cambia lo que ven los demás, y se aplica al instante.',
+      'Elige de qué listas quieres ver avisos en la actividad cuando alguien empieza, termina, abandona o añade un juego. Se aplica al momento y no cambia lo que ven los demás.',
     moveFeedSectionTitle: 'Mostrarme movimientos de',
     // Los nombres de las listas NO se repiten aquí: son los de `TAB_TOOLTIPS`, en este mismo módulo. Duplicarlos
     // era además la vía directa a que un día dijeran cosas distintas en dos sitios.

@@ -23,7 +23,7 @@ const PREMIOS_VOICES: Record<PaletteId, ThemePremiosVoice> = {
   /* La fragua: el fuego está encendido, pero no hay nada en el yunque. */
   forja: {
     error: 'El yunque está vacío.',
-    offline: 'El recuento está lejos: no llega el recado.',
+    offline: 'El recuento no llega a la fragua.',
   },
   /* El salón recreativo: la máquina se come la moneda y no arranca la partida. */
   arcade: {
@@ -49,7 +49,7 @@ const PREMIOS_VOICES: Record<PaletteId, ThemePremiosVoice> = {
   /* Night City: el HUD sin datos. */
   cyberpunk: {
     error: 'Sin datos en el recuento.',
-    offline: 'Sin señal con la red.',
+    offline: 'Se ha caído la red.',
   },
   /* Sol y luna: el faro que guarda los votos. */
   seaofstars: {

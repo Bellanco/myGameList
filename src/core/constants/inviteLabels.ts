@@ -11,7 +11,7 @@ export const INVITE_UI = {
   share: 'Compartir',
   copy: 'Copiar enlace',
   copyUrlAria: (url: string) => `Copiar enlace: ${url}`,
-  copied: '¡Copiado! Ahora pásaselo a tus amigos por donde soléis hablar.',
+  copied: 'Enlace copiado. Pásaselo a tus amigos.',
   copyFailed: 'No se pudo copiar: mantén pulsado el enlace para copiarlo.',
   later: 'Ahora no',
   previewAlt: 'Vista previa del enlace: la portada de My Game List',

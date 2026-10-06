@@ -25,7 +25,7 @@ test.describe('guía de primeros pasos', () => {
     await expect(consent).toBeHidden();
 
     await welcome.getByRole('button', { name: 'Empezar' }).click();
-    const lists = page.getByRole('dialog', { name: 'Cinco listas, una biblioteca' });
+    const lists = page.getByRole('dialog', { name: 'Tus cinco listas' });
     await expect(lists).toBeVisible();
     await expect(page.locator('.ob-ring')).toBeVisible();
     await lists.getByRole('button', { name: 'Siguiente' }).click();
@@ -77,7 +77,7 @@ test.describe('guía de primeros pasos', () => {
 
     const card = page.locator('[data-tour="sync-card"]');
     await expect(card.getByRole('button', { name: 'Conectar con GitHub' })).toBeVisible();
-    await expect(card.getByText('Sin tokens ni configuración.')).toBeVisible();
+    await expect(card.getByText('sin tener que crear ningún token.')).toBeVisible();
     await expect(card.getByLabel('Token *')).toHaveCount(0);
 
     const bubble = page.getByRole('dialog', { name: 'Guarda la partida' });

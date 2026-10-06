@@ -19,7 +19,7 @@ export const FORM_UI = {
   platformsPlaceholder: 'Ej: PC',
   scoreLabel: 'Puntuación',
   scoreToggle: 'Puntuar este juego',
-  scoreToggleHint: 'Activa la puntuación de este juego. Si no la activas, no cuenta en la ruleta.',
+  scoreToggleHint: 'Si no lo puntúas, no cuenta en la ruleta.',
   interestLabel: 'Interés',
   yearsLabel: 'Años completado',
   yearsPlaceholder: (year: number) => `Ej: ${year}`,
@@ -33,7 +33,7 @@ export const FORM_UI = {
   reasonsPlaceholder: 'Ej: Falta de tiempo',
   steamDeck: 'Steam Deck',
   reviewLabel: 'Análisis',
-  reviewPlaceholder: 'Ej: Historia sólida, combate excelente y gran ambientación.',
+  reviewPlaceholder: 'Ej: La historia engancha, pero el combate se hace repetitivo.',
   charCount: (count: number, max: number) => `${count.toLocaleString(APP_LOCALE)} / ${max.toLocaleString(APP_LOCALE)} caracteres`,
   // A11y-3: mensajes de umbral para lectores de pantalla (texto constante por banda → se anuncian una vez al
   // cruzar el umbral, no en cada pulsación). El conteo numérico se deja como texto visible SIN aria-live.

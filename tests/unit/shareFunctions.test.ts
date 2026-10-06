@@ -21,7 +21,7 @@ import {
 describe('metadatos de la previsualización', () => {
   it('builds a title with game, score and author', () => {
     const meta = { gameName: 'Hollow Knight', grade: 96, rating: 5, review: '…', authorNick: 'Bellanco' };
-    expect(shareTitle(meta)).toBe('Hollow Knight · 96/100 — reseña de Bellanco');
+    expect(shareTitle(meta)).toBe('Hollow Knight · 96/100 (reseña de Bellanco)');
   });
 
   it('prefers the fine grade over the 0-5 mirror', () => {
@@ -38,7 +38,7 @@ describe('metadatos de la previsualización', () => {
   // escapa al asignar), pero una etiqueta suelta en la tarjeta de un chat se ve como basura.
   it('strips tag-shaped noise from title and description', () => {
     const meta = { gameName: '<b>X</b>', grade: null, rating: null, review: 'a <script>alert(1)</script> b', authorNick: '<i>yo</i>' };
-    expect(shareTitle(meta)).toBe('X — reseña de yo');
+    expect(shareTitle(meta)).toBe('X (reseña de yo)');
     expect(shareDescription(meta.review)).toBe('a alert(1) b');
   });
 

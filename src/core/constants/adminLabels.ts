@@ -98,7 +98,7 @@ export const ADMIN_PANEL_UI = {
     covers: 'Carátulas nuevas hoy',
     coversValue: (spent: number, cap: number) => `${spent} / ${cap}`,
     coversHint:
-      'Juegos resueltos contra IGDB en el día UTC, sobre el tope del servicio. Se apunta por lotes de 50, así que es un promedio con grano grueso, no una cuenta exacta.',
+      'Juegos resueltos contra IGDB en el día UTC, sobre el tope del servicio. Se apunta por lotes de 50, así que la cifra es aproximada.',
   },
   // Ficha completa del usuario: todo lo que las reglas dejan leer de su documento y de sus amistades.
   field: {
@@ -188,7 +188,7 @@ export const ADMIN_PANEL_UI = {
     titleName: 'Sus amigos le ven con otro nombre',
     titlePhoto: 'Sus amigos le ven con otra foto',
     titleBoth: 'Sus amigos le ven con otro nombre y otra foto',
-    hint: 'Sus amigos le ven con el nombre y la foto que se guardaron al hacerse amigos. Su propio cliente los refresca al abrir el espacio social, al guardar el perfil o al publicar, así que quien solo usa sus listas los arrastra indefinidamente. Desde aquí se propagan su nick y su foto actuales —nunca se añade una foto donde sus amigos no tienen ninguna: podría ser una que ha ocultado—; los ids de gist no se tocan.',
+    hint: 'Sus amigos le ven con el nombre y la foto que se guardaron al hacerse amigos. Su propio cliente los refresca al abrir el espacio social, al guardar el perfil o al publicar, así que quien solo usa sus listas los arrastra indefinidamente. Desde aquí se propagan su nick y su foto actuales (nunca se añade una foto donde sus amigos no tienen ninguna, porque podría ser una que ha ocultado); los ids de gist no se tocan.',
     btn: 'Propagar nombre y foto',
     btnPhoto: 'Propagar la foto',
     confirmPhoto: (name: string) => `¿Actualizar la foto de ${name} en sus documentos de amistad? Solo se escriben los que estén desactualizados.`,
@@ -209,7 +209,7 @@ export const ADMIN_PANEL_UI = {
   // decide; el panel no puede decidirlo por él (el nick vigente vive en el gist del usuario).
   chooseName: {
     title: 'Qué nombre es el correcto',
-    hint: 'El perfil y sus amistades no dicen lo mismo, y desde aquí no se puede saber cuál es el vigente: el nick lo escribe su dueño en su gist social, que este panel no lee. Elige uno y se escribirá en su perfil y en sus amistades. Si el gist dice otra cosa, su propio cliente volverá a imponerlo al abrir el espacio social —el nombre es suyo—, así que esto sirve sobre todo para dejar el directorio coherente y para quien ya no vuelve.',
+    hint: 'El perfil y sus amistades no dicen lo mismo, y desde aquí no se puede saber cuál es el vigente: el nick lo escribe su dueño en su gist social, que este panel no lee. Elige uno y se escribirá en su perfil y en sus amistades. Si el gist dice otra cosa, su propio cliente volverá a imponerlo al abrir el espacio social, así que esto sirve sobre todo para dejar el directorio coherente y para quien ya no vuelve.',
     btn: (name: string) => `Usar «${name}»`,
     btnAria: (name: string, user: string) => `Usar «${name}» como nombre de ${user}`,
     current: 'en su perfil',
@@ -381,7 +381,7 @@ export const ADMIN_PANEL_UI = {
    * cuanto vuelva a abrir la app, porque la marca de agua vive en su dispositivo.
    */
   achievementsBtn: 'Borrar sus logros publicados',
-  achievementsConfirm: (name: string) => `¿Borrar el espejo de logros publicado de ${name}? Sus amistades dejarán de verle medallas y su espejo sale de la muestra del porcentaje comparado. NO pierde ningún logro: los suyos se calculan en su dispositivo. Y volverá a publicarlos la próxima vez que abra la app.`,
+  achievementsConfirm: (name: string) => `¿Borrar el espejo de logros publicado de ${name}? Sus amistades dejarán de verle medallas y su espejo sale de la muestra del porcentaje comparado. NO pierde ningún logro (los suyos se calculan en su dispositivo) y volverá a publicarlos la próxima vez que abra la app.`,
   achievementsDone: 'Espejo de logros borrado.',
   disableBtn: 'Desactivar social',
   enableBtn: 'Activar social',
@@ -657,7 +657,7 @@ export const ADMIN_ACHIEVEMENTS_UI = {
   extraEditNote: 'Corregir un umbral cambia el `id` del escalón: es quitar el anterior y añadir otro en un solo guardado.',
   extraSaving: 'Guardando…',
   extraFailed: 'No se ha podido guardar. ¿Sesión de administrador iniciada?',
-  extraNote: 'En vigor para todo el mundo: se puede desbloquear, cuenta en la fracción y viaja en el espejo por su `id`. No añade escaleras nuevas —la métrica de una escalera es código—, solo escalones de las que ya existen.',
+  extraNote: 'En vigor para todo el mundo: se puede desbloquear, cuenta en la fracción y viaja en el espejo por su `id`. No añade escaleras nuevas (la métrica de una escalera es código), solo escalones de las que ya existen.',
   /**
    * QUITAR O CORREGIR UN UMBRAL QUE YA TIENE ALGUIEN RETIRA SU MEDALLA, y eso es lo único que el §6.4 no
    * permite: corregir cambia el `id`, así que por debajo es quitarlo. Los dos botones desaparecen en cuanto la
@@ -679,15 +679,15 @@ export const ADMIN_ACHIEVEMENTS_UI = {
    */
   legendTitle: 'Qué significa cada dato',
   legend: [
-    ['Qué ve cada usuario', 'LO MISMO QUE TODOS. En cuanto un usuario ve un escalón, ese escalón queda abierto para todo el mundo, así que la escalera se enseña igual a quien empieza que a quien va en cabeza. Lo que cambia de una persona a otra es lo que lleva CONSEGUIDO, no la lista. La línea es el primer escalón al que no ha llegado nadie: ese se ofrece (es el reto del que va delante) y de ahí para arriba no se enseña nada todavía. Así nadie se queda sin un reto a la vista y nadie ve una escalera entera de golpe.'],
-    ['Ocultar hasta conseguirlo', 'El interruptor de cada escalera. Ocultarla la retira ENTERA para quien no tiene ningún escalón suyo: ni la escalera, ni el siguiente reto, ni un hueco con un «?». A quien ya tiene un escalón no se le quita nunca, y ni los puntos ni el espejo publicado se mueven. Es la forma de que un logro sea una sorpresa, al precio de que deje de tirar de nadie.'],
+    ['Qué ve cada usuario', 'LO MISMO QUE TODOS. En cuanto un usuario ve un escalón, ese escalón queda abierto para todo el mundo, así que la escalera se enseña igual a quien empieza que a quien va en cabeza. Lo que cambia de una persona a otra es lo que lleva CONSEGUIDO, no la lista. La línea es el primer escalón al que no ha llegado nadie: ese se ofrece (es el reto del que va delante) y de ahí para arriba no se enseña nada todavía.'],
+    ['Ocultar hasta conseguirlo', 'El interruptor de cada escalera. Ocultarla la retira ENTERA para quien no tiene ningún escalón suyo: no ve la escalera, el siguiente reto ni un hueco con «?». A quien ya tiene un escalón no se le quita nunca, y los puntos y el espejo publicado no cambian. Sirve para que un logro sea sorpresa, pero entonces deja de motivar a quien no lo tiene.'],
     ['Escalón', 'El umbral que hay que alcanzar. Es también lo que lleva el `id` del logro (`completados-50`), y por eso no se renombra nunca.'],
     ['Nombre', 'Lo que ve la gente, con su grado en romano. El romano sale de la POSICIÓN dentro de la escalera, así que insertar un escalón renumera los de arriba.'],
     ['No se ofrece', 'El catálogo ya no lo propone: un retirado deja de ofrecerse y de contar en la fracción, y tampoco gasta el turno del siguiente reto. Se sigue pintando a quien ya lo tenga. Solo se marca la excepción; lo normal es que se ofrezca.'],
     ['Quién ha llegado', 'Qué parte de la GENTE lo tiene, medido sobre los espejos publicados del censo. No tiene nada que ver con lo que se le enseña a cada uno. Siempre con su denominador: con 43 espejos, «2 %» es una persona.'],
-    ['Nadie ha llegado', 'El PRIMER escalón de la escalera al que no ha llegado ninguna persona del censo: la frontera de lo que hoy está en juego. Se sigue ofreciendo con normalidad —es el siguiente reto de quien tiene el de debajo—, así que esto no lo esconde.'],
+    ['Nadie ha llegado', 'El PRIMER escalón de la escalera al que no ha llegado ninguna persona del censo: la frontera de lo que hoy está en juego. Se sigue ofreciendo con normalidad (es el siguiente reto de quien tiene el de debajo), así que esto no lo esconde.'],
     ['Cerrado para todos', 'Los escalones POR ENCIMA de esa frontera, marcados con un raíl en el canto de la fila: no se le enseñan a nadie, ni al que va en cabeza. En cuanto alguien alcance el anterior, el primero de ellos se abre para todo el mundo y la línea sube sola. Con la escalera OCULTA son todos los que nadie tiene: ahí no se abre ninguno.'],
-    ['Casi todos lo tienen', 'Lo tiene el 90 % o más de la gente. No mide nada: se consigue por estar aquí.'],
+    ['Casi todos lo tienen', 'Lo tiene el 90 % o más de la gente, así que apenas distingue a nadie.'],
     ['Aquí se cae la gente', 'Del escalón anterior a este se pierde a casi todo el mundo: el paso es demasiado grande y en medio cabe un intermedio.'],
     ['Meta / Hecho', 'Los dos textos del escalón: lo que se pide cuando te falta y lo que se cuenta cuando ya lo tienes.'],
     ['key', 'El prefijo de los `id` de la escalera. Es contrato: no se renombra jamás.'],

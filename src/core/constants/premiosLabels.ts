@@ -51,7 +51,7 @@ export const PREMIOS_UI = {
     // sobre la marcha— y enterarse después de enviar llega tarde.
     opportunities: (cuantas: number) =>
       cuantas === 1
-        ? 'Tienes una oportunidad: lo que envíes queda como esté.'
+        ? 'Tienes una sola oportunidad. Lo que envíes no se podrá corregir.'
         : `Tienes ${cuantas} oportunidades: el envío y ${cuantas - 1} correcciones.`,
     opportunitiesLeft: (quedan: number) =>
       quedan === 1 ? 'Te queda 1 oportunidad' : `Te quedan ${quedan} oportunidades`,
@@ -88,7 +88,7 @@ export const PREMIOS_UI = {
   revisar: {
     sectionAria: 'Revisión de tus elecciones',
     title: 'Revisa tus elecciones',
-    subtitle: 'Puedes cambiar cualquier voto antes de enviarla.',
+    subtitle: 'Puedes cambiar cualquier voto antes de enviarlas.',
     /** La misma pantalla cuando solo se mira: ni se revisa nada ni se va a enviar, así que no se dice. */
     readTitle: 'Tus elecciones',
     nameLabel: 'Nombre para la clasificación',
@@ -101,7 +101,7 @@ export const PREMIOS_UI = {
     pending: (cuantas: number) =>
       cuantas === 1 ? 'Queda 1 categoría por votar' : `Quedan ${cuantas} categorías por votar`,
     /** La papeleta se envía COMPLETA: mientras falte una, el botón no se ofrece y aquí se dice por qué. */
-    mustComplete: 'Hay que votarlas todas para poder enviarla.',
+    mustComplete: 'Tienes que votarlas todas para poder enviar.',
     submit: 'Enviar mis elecciones',
     submitting: 'Enviando…',
     back: 'Volver a votar',
@@ -137,14 +137,14 @@ export const PREMIOS_UI = {
      */
     see: 'Ver mis votos',
     /** Cuando se reenvía sin tocar nada: se dice que no ha costado, porque el contador no se ha movido. */
-    unchanged: 'No habías cambiado nada, así que tus elecciones se quedan como estaban y no te ha costado ninguna oportunidad.',
+    unchanged: 'No habías cambiado nada, así que no has gastado ninguna oportunidad.',
     resultsSoon: 'Los resultados se publicarán al cerrarse la edición.',
     editHint: (quedan: number) =>
       quedan === 0
-        ? 'Has gastado todas tus oportunidades: queda tal y como está.'
+        ? 'Has gastado todas tus oportunidades, así que tu voto ya no se puede corregir.'
         : quedan === 1
-          ? 'Te queda 1 oportunidad para corregirla mientras la votación siga abierta.'
-          : `Te quedan ${quedan} oportunidades para corregirla mientras la votación siga abierta.`,
+          ? 'Te queda 1 oportunidad para corregir tu voto mientras la votación siga abierta.'
+          : `Te quedan ${quedan} oportunidades para corregir tu voto mientras la votación siga abierta.`,
   },
 
   // LAS DOS PUERTAS DE SALIDA del flujo, que antes no tenían pantalla y acababan en la portada sin explicar nada:
@@ -164,11 +164,11 @@ export const PREMIOS_UI = {
   compartir: {
     button: 'Compartir con tus amigos',
     copy: 'Copiar el enlace para tus amigos',
-    copied: '¡Enlace copiado! Reta a tus amigos para ver quién es el mejor.',
+    copied: 'Enlace copiado. Pásaselo a tus amigos y a ver quién acierta más.',
     failed: 'No se ha podido copiar. El enlace es el de la barra del navegador.',
     /** Lo que se manda al invitar a votar. Lleva el nombre de la edición, que es lo que la sitúa en el año. */
     inviteTitle: (edicion: string) => `Vota en ${edicion}`,
-    inviteText: 'Acepta el reto: elige quién crees que gana cada categoría.',
+    inviteText: 'Elige quién crees que va a ganar cada categoría.',
   },
 
   resultados: {
@@ -308,7 +308,7 @@ export const PREMIOS_UI = {
           id: 'pending' as const,
           label: 'Cerrada, sin publicar',
           // El fin del ciclo se cuenta AQUÍ, en el paso que lo provoca, en vez de en una frase suelta debajo.
-          hint: 'Hay que marcar el ganador de cada categoría con nominados para poder publicar: al hacerlo pasa al histórico y se vuelve a «Sin edición».',
+          hint: 'Hay que marcar el ganador de cada categoría con nominados para poder publicar. Al publicar, la edición pasa al histórico y se vuelve a «Sin edición».',
         },
       ],
       stageCurrent: 'Estado actual',
@@ -322,7 +322,7 @@ export const PREMIOS_UI = {
       edited: 'Edición actualizada.',
       nameLabel: 'Nombre de la edición',
       namePlaceholder: 'El reto del jugador 2026',
-      nameHint: 'Hace falta: de aquí sale el identificador con el que se archiva la edición.',
+      nameHint: 'Obligatorio. De aquí sale el identificador con el que se archiva la edición.',
       closesLabel: 'Último día para votar',
       closesHint: 'Se cierra a las 23:59 de ese día, hora peninsular.',
       openAction: 'Abrir votación',
@@ -400,7 +400,7 @@ export const PREMIOS_UI = {
     // la edición, esto no lo ve nadie más.
     winners: {
       title: 'Ganadores',
-      hint: 'Se guardan donde no los ve nadie hasta publicar la edición. Los nominados salen como en la votación: sirve también para comprobar las carátulas antes de abrirla.',
+      hint: 'Se guardan donde no los ve nadie hasta publicar la edición. Los nominados salen como en la votación, así que de paso se pueden comprobar las carátulas antes de abrirla.',
       pick: 'Sin ganador',
       /** Fijo: si está marcado ya lo dice `aria-pressed`. */
       markAria: (nombre: string) => `Marcar ${nombre} como ganador`,

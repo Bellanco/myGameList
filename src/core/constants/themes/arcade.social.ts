@@ -10,5 +10,5 @@ export const arcadeSocial = {
   /* la sala de recreativos, con las máquinas encendidas y nadie delante de ellas. */
   error: 'No queda nadie en la sala de recreativos.',
   /* la sala sigue abierta, pero sin señal no se ve quién hay dentro. */
-  offline: 'La sala está a oscuras: no llega la señal.',
+  offline: 'La sala se ha quedado sin señal.',
 } as const satisfies ThemeSocialVoice;
