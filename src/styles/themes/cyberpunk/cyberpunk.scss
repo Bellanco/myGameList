@@ -611,7 +611,7 @@
    movimiento es una línea de log: se le quita el amarillo y se queda con el cian tenue del resto del marco, sin
    el halo. ── */
 :root[data-palette="cyberpunk"] .hub-feed-activity-item.is-move {
-  border-left-color: var(--cyber-edge) !important;
+  border-left-color: var(--evc) !important;
   box-shadow: none !important;
 }
 /* La hora, en la monoespaciada de la paleta y con el mismo prefijo de dato que usan sus fechas. */
@@ -620,6 +620,18 @@
   letter-spacing: .02em;
 }
 :root[data-palette="cyberpunk"] .hub-feed-move-hour::before { content: '// '; color: var(--cyber-cyan-fg); font-weight: 700; }
+/* EL COLOR DEL SUCESO, con los neones de los botones (§5): empezar en el CIAN de «Pasar a en curso», próximos en el
+   MAGENTA de «Pasar a próximos», la lista de deseos en el VIOLETA de lo elegido y el logro en el AMARILLO de la
+   firma. Antes deseos llevaba el verde agua de la rampa —casi el verde de terminar— y empezar el amarillo, que
+   rozaba el naranja del logro. La línea de log se queda sin halo, pero su filete lleva el color de lo que pasó. */
+:root[data-palette="cyberpunk"] .hub-feed-activity-item.is-move[data-tab="e"] { --evc: var(--cyber-cyan); }
+:root[data-palette="cyberpunk"] .hub-feed-activity-item.is-move[data-tab="p"] { --evc: var(--cyber-btn-magenta); }
+:root[data-palette="cyberpunk"] .hub-feed-activity-item.is-move[data-tab="d"] { --evc: var(--cyber-btn-violet); }
+:root[data-palette="cyberpunk"] .hub-feed-activity-item.is-achievements { --evc: var(--cat-1); }
+/* En claro, el nombre y el juego —los dos en el cian del acento— no llegaban sobre el velo teñido (3,3–3,9:1): el
+   mismo cian, más hondo. */
+:root[data-palette="cyberpunk"][data-theme="light"] :is(.is-move, .is-achievements) .hub-feed-move-who { color: color-mix(in srgb, var(--steam) 60%, #000); }
+:root[data-palette="cyberpunk"][data-theme="light"] :is(.is-move, .is-achievements) .hub-feed-move-game:not(.is-plain) { color: color-mix(in srgb, var(--steam) 64%, #000); }
 
 /* ── El AVISO DE LOGRO · el chaflán del HUD de Night City, el mismo `polygon` que cortan sus botones ──────────
    Y LA MISMA SOLUCIÓN QUE ELLOS, que ya está probada en este tema: recortar el elemento con `clip-path` deja la

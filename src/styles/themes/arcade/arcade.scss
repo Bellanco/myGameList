@@ -767,10 +767,20 @@
    que es como este tema dice «esto ha pasado, pero no es noticia». */
 :root[data-palette="arcade"] .hub-feed-activity-item.is-move {
   border-width: 1px !important;
-  border-color: color-mix(in srgb, var(--border), transparent 30%) !important;
+  border-color: color-mix(in srgb, var(--evc), transparent 30%) !important;
   box-shadow: none !important;
 }
 :root[data-palette="arcade"] .hub-feed-move-hour { font-family: var(--font-mono); }
+/* EL COLOR DEL SUCESO. La chapa apagada iba con el filete violeta del marco, así que los seis avisos se leían del
+   mismo color. Ahora el filete es el del suceso, con las luces de los botones (§5): empezar en el CIAN de «Pasar a
+   en curso», próximos en el ORO de moneda de «Pasar a próximos», y el logro en el VIOLETA del acento, que queda
+   libre —su naranja de aviso y el oro eran casi el mismo—. */
+:root[data-palette="arcade"] .hub-feed-activity-item.is-move[data-tab="e"] { --evc: var(--cat-2); }
+:root[data-palette="arcade"] .hub-feed-activity-item.is-move[data-tab="p"] { --evc: var(--cat-4); }
+:root[data-palette="arcade"] .hub-feed-activity-item.is-achievements { --evc: var(--cat-1); }
+/* El JUEGO del aviso, en el violeta claro del hover y no en el del acento rebajado: sobre el velo de oro se quedaba
+   en 4,45:1. En claro ese mismo token es el violeta hondo. */
+:root[data-palette="arcade"] :is(.is-move, .is-achievements) .hub-feed-move-game:not(.is-plain) { color: var(--steam-hover); }
 /* EL LIENZO DE LA ACTIVIDAD: el horizonte otra vez, ahora dentro de la caja — la retícula en fuga abajo y el
    resplandor del sol violeta entrando por la izquierda, detrás del texto. Las fichas `--lz-*` las declara
    `_layout.scss`; cada tema solo rellena las suyas. */

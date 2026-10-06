@@ -538,6 +538,15 @@
 }
 /* El renglón en la tipografía de la paleta, sin el tratamiento de titular que llevan los nombres del feed. */
 :root[data-palette="persona"] .hub-feed-move-line { letter-spacing: .01em; }
+/* EL COLOR DEL SUCESO, con la pareja de los botones (§5): empezar en el ROJO de «Pasar a en curso» y próximos en el
+   AZUL de Persona 3 de «Pasar a próximos». Próximos llevaba el verde agua de la rampa —casi el verde de terminar—, y
+   la lista de deseos, que tenía ese azul, pasa al BLANCO de la paleta (negro en claro): el tercer color de Persona. */
+:root[data-palette="persona"] .hub-feed-activity-item.is-move[data-tab="p"] { --evc: var(--cat-6); }
+:root[data-palette="persona"] .hub-feed-activity-item.is-move[data-tab="d"] { --evc: var(--cat-7); }
+/* El JUEGO del aviso —el rojo de la casa rebajado hacia el gris— no llegaba sobre los velos de color (3,5–4,3:1): un
+   rojo más claro de noche y el rojo hondo de la pestaña de día. */
+:root[data-palette="persona"] :is(.is-move, .is-achievements) .hub-feed-move-game:not(.is-plain) { color: #ff8a96; }
+:root[data-palette="persona"][data-theme="light"] :is(.is-move, .is-achievements) .hub-feed-move-game:not(.is-plain) { color: var(--steam-hover); }
 
 /* ── §14 · LIENZO DE LA ACTIVIDAD SOCIAL: SEMITONO A CONTRALUZ ────────────────────────────────────────────────
    La zona vacía del feed (ver `.hub-feed-lienzo` en `_layout.scss`). Aquí el semitono del fondo de pantalla,

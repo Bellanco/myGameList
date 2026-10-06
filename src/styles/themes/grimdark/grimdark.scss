@@ -480,12 +480,28 @@
    Toda tarjeta del feed lleva aquí el marco dorado con doble filete interior, que es el sello de documento
    oficial. Una anotación de máquina no lo tiene: filete simple, sin oro, sin halo. ── */
 :root[data-palette="grimdark"] .hub-feed-activity-item.is-move {
-  border-color: var(--border) !important;
+  border-color: color-mix(in srgb, var(--evc), transparent 30%) !important;
   box-shadow: inset 0 0 0 2px var(--surface) !important;
 }
 :root[data-palette="grimdark"][data-theme="light"] .hub-feed-activity-item.is-move {
   box-shadow: inset 0 0 0 2px var(--surface), 0 3px 10px rgba(40, 40, 30, .1) !important;
 }
+/* EL COLOR DEL SUCESO, sin repetirse. «Empezó» llevaba el verde del acento y «terminó» el verde del éxito: dos avisos
+   del mismo color, uno al lado del otro. Empezar toma el NARANJA de alerta de los neutros (§5), próximos el ORO
+   LATÓN de «Pasar a próximos», la lista de deseos el PÚRPURA DE LA DISFORMIDAD —el cobre de la rampa era casi el
+   naranja— y el logro el HUESO de los relicarios (en el códice, pizarra: el hueso no se ve sobre pergamino). El
+   filete de color vuelve: la anotación de cogitador se distingue por no llevar oro, no por no llevar color. */
+:root[data-palette="grimdark"] .hub-feed-activity-item.is-move[data-tab="e"] { --evc: #ff7a1a; }
+:root[data-palette="grimdark"] .hub-feed-activity-item.is-move[data-tab="p"] { --evc: var(--grim-gold); }
+:root[data-palette="grimdark"] .hub-feed-activity-item.is-move[data-tab="d"] { --evc: #a07bd6; }
+:root[data-palette="grimdark"] .hub-feed-activity-item.is-achievements { --evc: #d9cfb0; }
+:root[data-palette="grimdark"][data-theme="light"] .hub-feed-activity-item.is-move[data-tab="e"] { --evc: #c24d00; }
+:root[data-palette="grimdark"][data-theme="light"] .hub-feed-activity-item.is-move[data-tab="p"] { --evc: #8a6210; }
+:root[data-palette="grimdark"][data-theme="light"] .hub-feed-activity-item.is-move[data-tab="d"] { --evc: #5e3d8a; }
+:root[data-palette="grimdark"][data-theme="light"] .hub-feed-activity-item.is-achievements { --evc: var(--cat-6); }
+/* En el códice el velo vuelve a ser el ligero de antes: sobre el pergamino, el velo denso de la casa bajaba toda la
+   línea —nombre, verbo, juego y hora— por debajo de 4,5:1. El color del suceso lo lleva el filete. */
+:root[data-palette="grimdark"][data-theme="light"] :is(.hub-feed-activity-item.is-move, .hub-feed-activity-item.is-achievements) { background: color-mix(in srgb, var(--evc), transparent 96%) !important; }
 /* La hora en la pixelada de la paleta, con su cursor de terminal: el dato lo canta la máquina. */
 :root[data-palette="grimdark"] .hub-feed-move-hour {
   font-family: var(--font-mono);

@@ -450,10 +450,18 @@
    se queda con el recuadro pixelado a secas: mismo mundo, un paso atrás. ── */
 :root[data-palette="seaofstars"] .hub-feed-activity-item.is-move {
   border-width: 1px !important;
+  /* El marco de diálogo (§3) pinta el filete de toda tarjeta en el gris del borde con `!important`: sin devolverle el
+     color del suceso, los seis avisos salían iguales. */
+  border-color: color-mix(in srgb, var(--evc), transparent 30%) !important;
   box-shadow: 0 0 0 2px var(--bg) !important;
 }
 /* El renglón, en la pixelada de los diálogos y algo más grande para que se lea a ese cuerpo. */
 :root[data-palette="seaofstars"] .hub-feed-move-line { font-size: var(--fs-md); }
+/* El LOGRO en el ROSA de la rampa: su naranja de aviso y el oro de «empezó» (el sol) eran casi el mismo color. */
+:root[data-palette="seaofstars"] .hub-feed-activity-item.is-achievements { --evc: var(--cat-7); }
+/* A la luz del día el JUEGO del aviso se quedaba en oro sobre agua turquesa (1,8:1): toma el oro tostado de la pestaña
+   activa un paso más a la sombra, que es el tono que cumple sobre los seis velos. */
+:root[data-palette="seaofstars"][data-theme="light"] :is(.is-move, .is-achievements) .hub-feed-move-game:not(.is-plain) { color: color-mix(in srgb, var(--tab-active) 80%, #000); }
 
 /* ── §16 · LIENZO DE LA ACTIVIDAD SOCIAL: EL CIELO EN LA CAJA ─────────────────────────────────────────────────
    La zona vacía del feed (ver `.hub-feed-lienzo` en `_layout.scss`). Un trozo de campo de estrellas más denso
