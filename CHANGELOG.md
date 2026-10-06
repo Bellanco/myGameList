@@ -5,6 +5,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.6.3] - 2026-10-06
+
+Una versión de **tema**: el de casa deja la fragua y pasa a la Tierra Media. «No puedes pasar» se inspira en El
+Señor de los Anillos sin dejar de ser sencillo: dos colores con papel fijo, botones con forma de hoja y un mapa a
+pluma que solo asoma por los márgenes.
+
 ### Changed
 - **El tema de casa pasa a ser «No puedes pasar»**, inspirado en El Señor de los Anillos, y sustituye a «Forja y temple».
   - Oro que rellena (botones principales, pestaña activa) y verde de hoja en enlaces y foco, sobre un bosque de noche
@@ -20,6 +26,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   - De fondo, un mapa a pluma (cordilleras, ríos, bosques y costa) que solo asoma por los márgenes, en lugar de las
     isotermas.
   - Quien tenía «Forja y temple» elegido pasa solo al tema nuevo.
+
+### Fixed
+- **La barra de navegación inferior, al pasar el ratón**: en Cámara de pruebas, Sin futuro, Solo hay guerra, Sol y
+  luna y Ladrones de corazones el fondo del botón salía como una cápsula redondeada dentro de una barra de esquinas
+  vivas. Ahora tiene la misma forma que el indicador del botón activo.
+
+### Deploy
+- **Sin cambios en Firestore**: esta versión no toca reglas, índices ni funciones, así que no hay nada que
+  desplegar con `firebase deploy`.
+- **Cambia el hash de la CSP** (`public/_headers`), porque el script anti-flash de `index.html` nombra el tema
+  nuevo. Viajan juntos en el mismo despliegue de Pages; si se sirviera uno sin el otro, el navegador bloquearía el
+  anti-flash y la primera carga parpadearía.
 
 ## [1.6.2] - 2026-10-06
 
