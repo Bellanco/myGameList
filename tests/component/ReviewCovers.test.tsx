@@ -74,7 +74,6 @@ const PIEZAS = [
       <ReviewScreen
         SOCIAL_UI={SOCIAL_UI}
         title="Reseña"
-        subtitle="."
         content={{
           gameName: RESENA.gameName,
           reviewText: RESENA.reviewText,

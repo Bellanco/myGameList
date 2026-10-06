@@ -1,6 +1,6 @@
 import { memo, type CSSProperties } from 'react';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
-import { isParticipation, palmaresYear, shortYear } from '../../../core/premios/palmares';
+import { isParticipation, palmaresPlace, palmaresYear, shortYear } from '../../../core/premios/palmares';
 import type { PalmaresEntry } from '../../../model/types/premios';
 // La hoja de las medallas se importa AQUÍ, igual que hace `AchievementMedal`: esta medalla se pinta en chunks
 // perezosos distintos (el perfil social y la sección de premios), y colgar sus estilos de la hoja de uno de los
@@ -61,7 +61,7 @@ export const PalmaresMedal = memo(function PalmaresMedal({ entry, size = 'md' }:
       className={`ach-medal premios-palmares-medal ${clase}`}
       style={{ '--sz': `${side}px` } as CSSProperties}
       role="img"
-      aria-label={L.medalAria(entry.rank, entry.seasonName)}
+      aria-label={L.medalAria(entry.rank, entry.seasonName, palmaresPlace(entry))}
       data-rarity={participa ? L.rarityParticipation : L.rarity}
     >
       <span className="ach-canvas" aria-hidden="true">

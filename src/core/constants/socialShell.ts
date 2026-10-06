@@ -18,7 +18,6 @@ export const SOCIAL_SHELL = {
   feed: {
     sectionAria: 'Social',
     title: 'Actividad social',
-    subtitle: 'Descubre perfiles públicos, análisis y recomendaciones destacadas de otros jugadores.',
     actionsAria: 'Acciones de la actividad',
     openProfiles: 'Ver perfiles',
     openOwnProfile: 'Ver mi perfil',

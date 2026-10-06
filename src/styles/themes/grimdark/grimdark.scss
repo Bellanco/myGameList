@@ -137,9 +137,24 @@
    con texto negro + glow), en ambos temas. Semánticos rellenos; texto tinta en OSCURO y blanco en CLARO
    (regla 10). Sin sesgo ni giro 3D. ── */
 :root[data-palette="grimdark"] .btn:not(.btn-icon):not(.btn-ghost) { font-weight: 600; letter-spacing: .05em; border: 1px solid var(--grim-gold); border-radius: 0; }
-:root[data-palette="grimdark"] .btn-secondary,
-:root[data-palette="grimdark"] .btn-toggle:not(.active) { background: var(--surface-elevated) !important; color: var(--text) !important; }
+/* NEUTRO = NARANJA DE ALERTA: la lámpara de sodio de las forjas del Mechanicus, tan encendida como el fósforo
+   (mismo halo). Es el botón por defecto —Cancelar, Cerrar sesión, las pestañas sin elegir, el `.btn` sin rol— y por
+   eso va en `:where`: (0,2,0) frente al (0,3,0) de los roles, que lo pisan con su propio `!important`. Tinta del
+   fondo encima (7,4:1). Se aparta del oro latón por tono (más rojo, más vivo) y del rojo de peligro por luz. */
+/* FLUORESCENTE y no plano: el naranja liso se quedaba apagado junto al fósforo, que es luz emitida. Aquí es un tubo
+   encendido —el centro arde más claro que los bordes (`inset`) y la luz se derrama fuera en dos halos—, sin subir el
+   matiz hacia el amarillo, que es donde vive el oro latón. La tinta cumple en el punto más claro y en el más hondo
+   del degradado (9,9:1 y 6,7:1). */
+:root[data-palette="grimdark"] :where(.btn:not(.btn-icon):not(.btn-ghost)) {
+  background: radial-gradient(120% 160% at 50% 50%, #ffa45c 0%, #ff7f24 55%, #ff6a10 100%) !important;
+  color: #1a0a00 !important;
+  border-color: #ffb27a !important;
+  box-shadow: inset 0 0 8px rgba(255, 214, 160, .55), 0 0 6px rgba(255, 122, 26, .75), 0 0 18px rgba(255, 106, 16, .5) !important;
+}
+/* En el códice: naranja de minio más hondo con rótulo blanco (4,8:1) y un halo apenas insinuado. */
+:root[data-palette="grimdark"][data-theme="light"] :where(.btn:not(.btn-icon):not(.btn-ghost)) { background: #c24d00 !important; color: #fff !important; box-shadow: 0 0 6px rgba(194, 77, 0, .25) !important; }
 :root[data-palette="grimdark"] .btn-accent,
+:root[data-palette="grimdark"] .btn-playing,
 :root[data-palette="grimdark"] .btn-steam,
 :root[data-palette="grimdark"] .btn-primary,
 :root[data-palette="grimdark"] .btn.is-active,
@@ -148,18 +163,34 @@
    verde de cogitador. Ni relleno ni glow —eso es del comando activo—, solo el borde. */
 :root[data-palette="grimdark"] .scope-tabs > .btn-toggle:first-child:not(.active) { border-color: color-mix(in srgb, var(--grim-green) 55%, var(--grim-gold)); }
 :root[data-palette="grimdark"][data-theme="light"] .btn-accent,
+:root[data-palette="grimdark"][data-theme="light"] .btn-playing,
 :root[data-palette="grimdark"][data-theme="light"] .btn-steam,
 :root[data-palette="grimdark"][data-theme="light"] .btn-primary,
 :root[data-palette="grimdark"][data-theme="light"] .btn.is-active,
 :root[data-palette="grimdark"][data-theme="light"] .btn-toggle.active { color: #fff !important; box-shadow: none !important; }
+/* NAVEGACIÓN: verde de cogitador y ORO LATÓN del sello, alternos dentro de cada fila (`of .btn-accent` cuenta solo
+   los de navegación; sin soporte, todos quedan en verde). «Pasar a próximos» lleva el oro fijo, igual que «Pasar
+   a en curso» lleva el verde. Tinta del fondo sobre el oro (8,9:1); en claro el oro baja un punto para el blanco
+   (#8a6210, 5,5:1: el `--grim-gold` de claro se queda en 4,51, al filo). */
+:root[data-palette="grimdark"] .btn-accent:nth-child(even of .btn-accent),
+:root[data-palette="grimdark"] .btn-upcoming { background: var(--grim-gold) !important; color: var(--on-accent) !important; border-color: var(--grim-gold) !important; box-shadow: 0 0 12px rgba(224, 169, 43, .4) !important; }
+:root[data-palette="grimdark"][data-theme="light"] .btn-accent:nth-child(even of .btn-accent),
+:root[data-palette="grimdark"][data-theme="light"] .btn-upcoming { background: #8a6210 !important; color: #fff !important; border-color: #8a6210 !important; box-shadow: none !important; }
 :root[data-palette="grimdark"] .btn-complete { background: var(--success) !important; color: #04140a !important; border-color: color-mix(in srgb, var(--success) 55%, #000) !important; }
 :root[data-palette="grimdark"] .btn-danger,
 :root[data-palette="grimdark"] .btn-abandoned { background: var(--danger-fill) !important; color: #fff !important; border-color: color-mix(in srgb, var(--danger) 55%, #000) !important; }
 :root[data-palette="grimdark"][data-theme="light"] .btn-complete { color: #fff !important; }
+/* El halo del neutro va con `!important` sobre TODO `.btn` (es el `:where` de arriba), y estos tres roles no ponen
+   sombra propia: sin esto, completar, abandonar y borrar salían con la luz naranja de la lámpara de sodio. Se les
+   devuelve lo que tenían —ninguna en reposo y el fósforo verde al pasar por encima—. */
+:root[data-palette="grimdark"] :is(.btn-complete, .btn-danger, .btn-abandoned) { box-shadow: none !important; }
+:root[data-palette="grimdark"] :is(.btn-complete, .btn-danger, .btn-abandoned):not(:disabled):hover { box-shadow: 0 0 14px rgba(67, 245, 88, .3) !important; }
 :root[data-palette="grimdark"] .btn-ghost { font-family: var(--font-label); font-weight: 600; letter-spacing: .05em; }
 /* Hover: plano + glow de fósforo verde (sin el giro 3D base). */
 :root[data-palette="grimdark"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 14px rgba(67, 245, 88, .3); }
 :root[data-palette="grimdark"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(0); }
+/* Un botón que no se puede pulsar no brilla: sin el halo, que los rellenos ponen con `!important`. */
+:root[data-palette="grimdark"] .btn:not(.btn-icon):not(.btn-ghost):is(:disabled, [aria-disabled='true']) { box-shadow: none !important; }
 
 /* ── §6 · Chips: rectos, Chakra Petch; el color por categoría lo pone la base. El chip del juego = ETIQUETA
    DE DATOS de terminal (filete + texto verde); el chip "Amigos" = placa de oro con CRUZ IMPERIAL. Cada tema
@@ -449,12 +480,28 @@
    Toda tarjeta del feed lleva aquí el marco dorado con doble filete interior, que es el sello de documento
    oficial. Una anotación de máquina no lo tiene: filete simple, sin oro, sin halo. ── */
 :root[data-palette="grimdark"] .hub-feed-activity-item.is-move {
-  border-color: var(--border) !important;
+  border-color: color-mix(in srgb, var(--evc), transparent 30%) !important;
   box-shadow: inset 0 0 0 2px var(--surface) !important;
 }
 :root[data-palette="grimdark"][data-theme="light"] .hub-feed-activity-item.is-move {
   box-shadow: inset 0 0 0 2px var(--surface), 0 3px 10px rgba(40, 40, 30, .1) !important;
 }
+/* EL COLOR DEL SUCESO, sin repetirse. «Empezó» llevaba el verde del acento y «terminó» el verde del éxito: dos avisos
+   del mismo color, uno al lado del otro. Empezar toma el NARANJA de alerta de los neutros (§5), próximos el ORO
+   LATÓN de «Pasar a próximos», la lista de deseos el PÚRPURA DE LA DISFORMIDAD —el cobre de la rampa era casi el
+   naranja— y el logro el HUESO de los relicarios (en el códice, pizarra: el hueso no se ve sobre pergamino). El
+   filete de color vuelve: la anotación de cogitador se distingue por no llevar oro, no por no llevar color. */
+:root[data-palette="grimdark"] .hub-feed-activity-item.is-move[data-tab="e"] { --evc: #ff7a1a; }
+:root[data-palette="grimdark"] .hub-feed-activity-item.is-move[data-tab="p"] { --evc: var(--grim-gold); }
+:root[data-palette="grimdark"] .hub-feed-activity-item.is-move[data-tab="d"] { --evc: #a07bd6; }
+:root[data-palette="grimdark"] .hub-feed-activity-item.is-achievements { --evc: #d9cfb0; }
+:root[data-palette="grimdark"][data-theme="light"] .hub-feed-activity-item.is-move[data-tab="e"] { --evc: #c24d00; }
+:root[data-palette="grimdark"][data-theme="light"] .hub-feed-activity-item.is-move[data-tab="p"] { --evc: #8a6210; }
+:root[data-palette="grimdark"][data-theme="light"] .hub-feed-activity-item.is-move[data-tab="d"] { --evc: #5e3d8a; }
+:root[data-palette="grimdark"][data-theme="light"] .hub-feed-activity-item.is-achievements { --evc: var(--cat-6); }
+/* En el códice el velo vuelve a ser el ligero de antes: sobre el pergamino, el velo denso de la casa bajaba toda la
+   línea —nombre, verbo, juego y hora— por debajo de 4,5:1. El color del suceso lo lleva el filete. */
+:root[data-palette="grimdark"][data-theme="light"] :is(.hub-feed-activity-item.is-move, .hub-feed-activity-item.is-achievements) { background: color-mix(in srgb, var(--evc), transparent 96%) !important; }
 /* La hora en la pixelada de la paleta, con su cursor de terminal: el dato lo canta la máquina. */
 :root[data-palette="grimdark"] .hub-feed-move-hour {
   font-family: var(--font-mono);

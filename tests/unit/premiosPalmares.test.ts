@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   isParticipation,
+  palmaresCompetition,
+  palmaresPlace,
   palmaresRecipientsFrom,
   palmaresYear,
   shortYear,
@@ -25,6 +27,27 @@ describe('palmaresRecipientsFrom', () => {
 
   it('sin cuenta no hay perfil donde ponerlo', () => {
     expect(palmaresRecipientsFrom([{ userId: '', rank: 1 }])).toEqual([]);
+  });
+
+  it('la participación guarda en qué puesto quedó; el trofeo de puesto no lo repite', () => {
+    const tabla = [1, 6, 12].map((rank, i) => ({ userId: `u${i}`, rank }));
+    expect(palmaresRecipientsFrom(tabla)).toEqual([
+      { uid: 'u0', rank: 1 },
+      { uid: 'u1', rank: 0, place: 6 },
+      { uid: 'u2', rank: 0, place: 12 },
+    ]);
+  });
+});
+
+describe('palmaresPlace', () => {
+  it('el puesto del trofeo, o el real de quien participó', () => {
+    expect(palmaresPlace(entrada('2025', 3))).toBe(3);
+    expect(palmaresPlace(entrada('2025', 0, { place: 9 }))).toBe(9);
+  });
+
+  it('una participación concedida antes de guardarlo no inventa ninguno', () => {
+    expect(palmaresPlace(entrada('2025', 0))).toBe(0);
+    expect(palmaresPlace(entrada('2025', 0, { place: -2 }))).toBe(0);
   });
 });
 
@@ -70,5 +93,29 @@ describe('la píldora del canto', () => {
   it('el rótulo distingue participar de quedar en un puesto', () => {
     expect(PREMIOS_UI.palmares.entry(0, 'Game Awards 2025')).toBe('Participó en Game Awards 2025');
     expect(PREMIOS_UI.palmares.entry(3, 'Game Awards 2025')).toBe('3.º en Game Awards 2025');
+  });
+});
+
+describe('el banderín del perfil', () => {
+  const L = PREMIOS_UI.palmares;
+
+  it('el puesto, también el de quien participó; sin él, «Participó»', () => {
+    expect(L.bandRank(1)).toBe('1.º');
+    expect(L.bandRank(12)).toBe('12.º');
+    expect(L.bandRank(0)).toBe('Participó');
+  });
+
+  it('la competición va sin el año, que la cinta pone aparte', () => {
+    expect(palmaresCompetition({ seasonId: 'ga-2025', seasonName: 'Game Awards 2025' })).toBe('Game Awards');
+    expect(palmaresCompetition({ seasonId: 'x', seasonName: 'The Game Awards' })).toBe('The Game Awards');
+    // Un nombre que solo fuera el año no se queda vacío.
+    expect(palmaresCompetition({ seasonId: '2024', seasonName: '2024' })).toBe('2024');
+  });
+
+  it('el rótulo completo de una participación dice su puesto, como un trofeo de puesto', () => {
+    expect(L.entry(0, 'Game Awards 2024', 7)).toBe('7.º en Game Awards 2024');
+    expect(L.entry(0, 'Game Awards 2024')).toBe('Participó en Game Awards 2024');
+    expect(L.entryAria(0, 'Game Awards 2024', 7)).toBe('7.º en Game Awards 2024: ver los resultados');
+    expect(L.medalAria(0, 'Game Awards 2024', 7)).toBe('Trofeo: participación en Game Awards 2024, 7.º puesto');
   });
 });

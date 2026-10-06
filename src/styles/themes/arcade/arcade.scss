@@ -192,7 +192,11 @@
      `:not()`, así que pesa MÁS que la de cada rol (`.btn-danger`, `.btn-complete`…) y, si declarase las fichas,
      ganaría también en ellas — el botón de borrar salía gris. El respaldo dentro del `var()` no compite: lo usa
      quien no trae rol. */
-  background: linear-gradient(180deg, var(--btn-fill-a, #3b2260), var(--btn-fill-b, #241440)) !important;
+  /* El respaldo es la tecla NEUTRA: ROSA NEÓN (`--arc-pink`), la tercera luz de la sala, en vez de la placa malva
+     apagada que se leía como un gris cualquiera. Tinta encima, no blanco: 8,83:1 arriba y 4,94:1 en el extremo
+     hondo. La tinta va SIN `!important` y por ficha: cada rol trae su `color` con `!important` y gana igual. */
+  background: linear-gradient(180deg, var(--btn-fill-a, #ff8be0), var(--btn-fill-b, #e83aa8)) !important;
+  color: var(--btn-ink, #2a0322);
   letter-spacing: .06em;
   font-size: var(--fs-2xs);
   -webkit-backdrop-filter: none;
@@ -217,12 +221,12 @@
   filter: none;
   box-shadow: 0 0 0 var(--arc-ink) !important;
 }
-/* La acción principal es la tecla ILUMINADA. El relleno arranca un paso por debajo del acento puro
-   (#b957ff → #6d1fc9): sobre el violeta a pelo el blanco se queda en 4,21:1 y aquí da 7,81:1 en el extremo
-   hondo, así que el rótulo cumple caiga donde caiga dentro del degradado. */
+/* La acción principal es la tecla ILUMINADA. El relleno arranca por debajo del acento puro (#8f2be6 → #6d1fc9):
+   el #b957ff de antes solo se había medido en el extremo HONDO (7,81:1), y en el claro el blanco se quedaba en
+   3,58:1. Así cumple en los dos extremos y con el brillo del hover (5,74:1 y 4,93:1 en el peor). */
 :root[data-palette="arcade"] .btn-steam,
 :root[data-palette="arcade"] .btn-primary {
-  --btn-fill-a: #b957ff;
+  --btn-fill-a: #8f2be6;
   --btn-fill-b: #6d1fc9;
   color: #fff !important;
 }
@@ -231,17 +235,31 @@
 :root[data-palette="arcade"] .btn-accent,
 :root[data-palette="arcade"] .btn.is-active,
 :root[data-palette="arcade"] .btn-toggle.active,
-:root[data-palette="arcade"] .btn-toggle-deck.active {
+:root[data-palette="arcade"] .btn-toggle-deck.active,
+:root[data-palette="arcade"] .btn-playing {
   --btn-fill-a: #5df3ff;
   --btn-fill-b: #12a8bd;
   color: #062024 !important;
   border-color: var(--arc-ink) !important;
 }
+/* LA NAVEGACIÓN ALTERNA CIAN Y ORO DE MONEDA dentro de cada fila. `of .btn-accent` cuenta solo los de
+   navegación, así que un neutro en medio no descoloca la pareja; un navegador sin `:nth-child(… of …)` descarta
+   la regla y los deja todos en cian. «Pasar a en curso» lleva el cian y «Pasar a próximos», el oro, fijos.
+   Tinta del oro: 13,6:1 arriba y 9,0:1 abajo. */
+:root[data-palette="arcade"] .btn-accent:nth-child(even of .btn-accent),
+:root[data-palette="arcade"] .btn-upcoming {
+  --btn-fill-a: #ffe68f;
+  --btn-fill-b: #f0b400;
+  color: #2a1a00 !important;
+  border-color: var(--arc-ink) !important;
+}
 /* El destructivo es MACIZO (no se deshace); los alternables —abandonar, quitar recomendación— se quedan en
    la tecla apagada con el rótulo teñido, porque se pulsan para volver atrás. */
+/* Mismo caso: el extremo claro (#ff5f86) dejaba el blanco en 2,90:1. Un rosa más hondo arriba: 5,71:1 en reposo y
+   4,86:1 con el hover. */
 :root[data-palette="arcade"] .btn-danger {
-  --btn-fill-a: #ff5f86;
-  --btn-fill-b: #c2004f;
+  --btn-fill-a: #c41f57;
+  --btn-fill-b: #9c0042;
   color: #fff !important;
 }
 :root[data-palette="arcade"] .btn-complete {
@@ -259,16 +277,43 @@
   --btn-fill-b: #e08c00;
   color: #2a1a00 !important;
 }
-/* En claro la tecla apagada es CHAPA CLARA, no el panel oscuro del modo noche. */
+/* En claro la tecla neutra es ROSA HONDO —el neón de noche a la luz del día— con rótulo blanco: 6,00:1 arriba,
+   9,42:1 abajo y 5,16:1 con el brillo del hover. Se separa del borrar por las dos cosas a la vez: el rosa tira
+   a MAGENTA (el borrar es rojo-rosa) y su rótulo es blanco donde el del borrar es tinta.
+
+   La TINTA va por ficha (`--btn-ink`) porque esta regla pesa (0,5,0) con `!important` y pisa el `color` del rol:
+   cada rol pone la suya en la ficha, más abajo. */
 :root[data-palette="arcade"][data-theme="light"] .btn:not(.btn-ghost) {
-  background: linear-gradient(180deg, var(--btn-fill-a, #fff), var(--btn-fill-b, #e6d6fa)) !important;
-  color: var(--text) !important;
+  background: linear-gradient(180deg, var(--btn-fill-a, #b81a80), var(--btn-fill-b, #8a005a)) !important;
+  color: var(--btn-ink, #fff) !important;
 }
+/* Cada rol trae aquí SU tinta. Antes todos recibían `--text` —el violeta casi negro del papel— y el `color` con
+   `!important` de cada rol perdía contra el de arriba: «Guardar» salía en tinta violeta sobre violeta (3,5:1) y
+   «Eliminar» en tinta sobre rosa (2,9:1). Los valores son los que cada rol ya declaraba, más los dos rellenos
+   que no daban la talla con su rótulo (principal y borrar, abajo). */
+:root[data-palette="arcade"][data-theme="light"] .btn-steam,
+:root[data-palette="arcade"][data-theme="light"] .btn-primary,
+:root[data-palette="arcade"][data-theme="light"] .btn-danger { --btn-ink: #fff; }
+:root[data-palette="arcade"][data-theme="light"] .btn-accent,
+:root[data-palette="arcade"][data-theme="light"] .btn.is-active,
+:root[data-palette="arcade"][data-theme="light"] .btn-toggle.active,
+:root[data-palette="arcade"][data-theme="light"] .btn-toggle-deck.active,
+:root[data-palette="arcade"][data-theme="light"] .btn-playing { --btn-ink: #04232a; }
+:root[data-palette="arcade"][data-theme="light"] .btn-complete { --btn-ink: #06251a; }
+:root[data-palette="arcade"][data-theme="light"] .btn-abandoned { --btn-ink: #6b0026; }
+:root[data-palette="arcade"][data-theme="light"] .consent-btn-accept { --btn-ink: #2a1a00; }
+/* El principal arranca un punto más hondo que antes (#9b34f0): con el brillo del hover (×1,1) el blanco bajaba a
+   4,43:1. Así: 5,74:1 en reposo y 4,93:1 al pasar por encima. */
 :root[data-palette="arcade"][data-theme="light"] .btn-steam,
 :root[data-palette="arcade"][data-theme="light"] .btn-primary {
-  --btn-fill-a: #9b34f0;
+  --btn-fill-a: #8f2be6;
   --btn-fill-b: #6b12bd;
-  color: #fff !important;
+}
+/* El borrar a la luz es ROJO macizo y no el rosa de noche: el #ff5f86 dejaba el blanco en 2,9:1, y un rosa hondo
+   se confundía con la tecla neutra, que ahora también lleva rótulo blanco. El rojo se separa de ella por tono. */
+:root[data-palette="arcade"][data-theme="light"] .btn-danger {
+  --btn-fill-a: #c42a30;
+  --btn-fill-b: #8c1018;
 }
 /* La tecla cian a la luz NO baja al teal profundo del gráfico: con la tinta encima se queda en 3,51:1, y con
    blanco en 4,68:1 sobre el extremo hondo pero en 1,3:1 sobre el claro —el rótulo se partiría en dos—. El
@@ -276,16 +321,26 @@
 :root[data-palette="arcade"][data-theme="light"] .btn-accent,
 :root[data-palette="arcade"][data-theme="light"] .btn.is-active,
 :root[data-palette="arcade"][data-theme="light"] .btn-toggle.active,
-:root[data-palette="arcade"][data-theme="light"] .btn-toggle-deck.active {
+:root[data-palette="arcade"][data-theme="light"] .btn-toggle-deck.active,
+:root[data-palette="arcade"][data-theme="light"] .btn-playing {
   --btn-fill-a: #8ff0fb;
   --btn-fill-b: #31b2c9;
-  color: #04232a !important;
+}
+/* El oro a la luz baja un escalón para que no se funda con el papel; tinta encima: 13,0:1 y 6,7:1. */
+:root[data-palette="arcade"][data-theme="light"] .btn-accent:nth-child(even of .btn-accent),
+:root[data-palette="arcade"][data-theme="light"] .btn-upcoming {
+  --btn-fill-a: #ffe07a;
+  --btn-fill-b: #d19a00;
+  --btn-ink: #2a1a00;
 }
 :root[data-palette="arcade"][data-theme="light"] .btn-abandoned {
   --btn-fill-a: #ffd9e2;
   --btn-fill-b: #ffb3c6;
-  color: #6b0026 !important;
 }
+/* Un rosa a media opacidad sigue pareciendo encendido: el desactivado pierde además el color, como una tecla
+   con la luz fundida. */
+:root[data-palette="arcade"] .btn:not(.btn-ghost):is(:disabled, [aria-disabled='true']) { filter: saturate(.25); }
+
 /* El botón fantasma es el ÚNICO sin cuerpo (limpiar filtros): aquí se queda plano a propósito, para que la
    pantalla tenga una acción que no pese. */
 :root[data-palette="arcade"] .btn-ghost { letter-spacing: .06em; font-size: var(--fs-2xs); }
@@ -712,10 +767,20 @@
    que es como este tema dice «esto ha pasado, pero no es noticia». */
 :root[data-palette="arcade"] .hub-feed-activity-item.is-move {
   border-width: 1px !important;
-  border-color: color-mix(in srgb, var(--border), transparent 30%) !important;
+  border-color: color-mix(in srgb, var(--evc), transparent 30%) !important;
   box-shadow: none !important;
 }
 :root[data-palette="arcade"] .hub-feed-move-hour { font-family: var(--font-mono); }
+/* EL COLOR DEL SUCESO. La chapa apagada iba con el filete violeta del marco, así que los seis avisos se leían del
+   mismo color. Ahora el filete es el del suceso, con las luces de los botones (§5): empezar en el CIAN de «Pasar a
+   en curso», próximos en el ORO de moneda de «Pasar a próximos», y el logro en el VIOLETA del acento, que queda
+   libre —su naranja de aviso y el oro eran casi el mismo—. */
+:root[data-palette="arcade"] .hub-feed-activity-item.is-move[data-tab="e"] { --evc: var(--cat-2); }
+:root[data-palette="arcade"] .hub-feed-activity-item.is-move[data-tab="p"] { --evc: var(--cat-4); }
+:root[data-palette="arcade"] .hub-feed-activity-item.is-achievements { --evc: var(--cat-1); }
+/* El JUEGO del aviso, en el violeta claro del hover y no en el del acento rebajado: sobre el velo de oro se quedaba
+   en 4,45:1. En claro ese mismo token es el violeta hondo. */
+:root[data-palette="arcade"] :is(.is-move, .is-achievements) .hub-feed-move-game:not(.is-plain) { color: var(--steam-hover); }
 /* EL LIENZO DE LA ACTIVIDAD: el horizonte otra vez, ahora dentro de la caja — la retícula en fuga abajo y el
    resplandor del sol violeta entrando por la izquierda, detrás del texto. Las fichas `--lz-*` las declara
    `_layout.scss`; cada tema solo rellena las suyas. */

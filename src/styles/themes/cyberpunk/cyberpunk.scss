@@ -165,109 +165,141 @@
 /* ── §4 · Tabla: cabecera HUD (Rajdhani, etiqueta amarilla, filete cian inferior). ── */
 :root[data-palette="cyberpunk"] thead th { background: transparent; letter-spacing: .06em; border-bottom: 1px solid var(--cyber-edge-field); }
 
-/* ── §5 · Botones HUD: angulares (esquina cortada con clip-path — planos, sin borde/sombra recortable).
-   Acento = relleno AMARILLO con texto negro (firma de Cyberpunk), en ambos temas. Semánticos rellenos;
-   texto tinta en OSCURO y claro en CLARO (regla 10). ── */
+/* ── §5 · Botones HUD: angulares (esquina cortada) y TODOS son un TUBO DE NEÓN, como los letreros de Night City:
+   placa oscura teñida de su color, filete de 2px encendido y rótulo con el núcleo más claro que el tubo. El tono
+   dice el rol —amarillo el principal (firma de Cyberpunk), cian y magenta los dos neones de la navegación, verde
+   completar, rojo peligro— y el neutro es un tubo BLANCO, que no se confunde con el cian de la navegación. ── */
 /* La MUESCA del chaflán va por token (`--btn-notch`) y no en duro: un botón pequeño necesita una muesca
    pequeña —a 9 px se comería un tercio de una marca de 28 px—, y así la pide quien la necesite sin que este
-   fichero sepa nada de esa pieza. El valor por defecto es el de siempre. */
-:root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost) { font-weight: 600; letter-spacing: .05em; border: 1px solid var(--border); border-radius: 0; clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--btn-notch, 9px)), calc(100% - var(--btn-notch, 9px)) 100%, 0 100%); }
-/* La muesca (§5) usa `clip-path`, y `clip-path` recorta el `border`/`box-shadow`/`drop-shadow` del PROPIO elemento
-   (regla 2), así que la diagonal se quedaba sin filete (el borde solo se veía en los cantos rectos). Solución
-   robusta e independiente del navegador (sin sombras ni filtros): DOS capas recortadas detrás del contenido —
-   `::before` con el color del borde y `::after` con el relleno 1px más pequeño; el borde asoma 1px en TODOS los
-   cantos, incluida la diagonal, y el corte queda transparente. El botón deja de recortarse (la forma la dan los
-   pseudos) y su fondo pasa a `::after`; `isolation` acota el z-index negativo de las capas. Solo en los botones
-   cuadrados de borde cian (secundario / toggle inactivo); los rellenos definen su canto con el propio relleno.
-   `--hud-edge` centraliza el color (lo reajusta el tema claro), `--hud-cut` el polígono de la muesca (§5). */
-:root[data-palette="cyberpunk"] .btn-secondary,
-:root[data-palette="cyberpunk"] .btn-toggle:not(.active) {
-  color: var(--text) !important;
+   fichero sepa nada de esa pieza. El valor por defecto es el de siempre.
+
+   LA FORMA LA DAN DOS CAPAS, NO EL BOTÓN. `clip-path` recorta el `border`, el `box-shadow` y el `drop-shadow` del
+   PROPIO elemento (regla 2): con la muesca en el botón, la diagonal se quedaba sin filete y el neón no podía
+   salir de la caja. Así que el botón no se recorta, y detrás del rótulo van `::before` con el color del filete y
+   `::after` con el relleno (`--hud-edge-w` más pequeño); el filete asoma en TODOS los cantos, incluida la
+   diagonal, y el corte queda transparente. El resplandor es un `drop-shadow` del botón: sigue la silueta de las
+   capas, chaflán incluido, cosa que un `box-shadow` (rectangular) no hace. `isolation` acota el z-index negativo.
+
+   CÓMO SE COLOREA: cada rol solo fija SU COLOR (`--hud-c`) en selectores de (0,3,0)–(0,4,0); filete, placa,
+   rótulo y resplandor salen de él en una única regla de (0,5,0). Si cada rol pintara por su cuenta con
+   `!important`, el neutro y la navegación se pisarían.
+
+   CONTRASTE, medido rótulo contra placa (el violeta de lo elegido: 5,3:1 en oscuro, 6,6:1 en claro): en OSCURO la placa lleva el 16 % del color sobre casi negro y el rótulo
+   el color con un 8 % de blanco, el núcleo del tubo (el más justo, magenta y rojo: 4,9:1).
+
+   ENCENDIDO, PERO SIN GRITAR: el resplandor es corto y a media intensidad. Un letrero en cada botón —hay
+   pantallas con diez— tiraba de la vista más que el propio contenido. En CLARO el neón no
+   puede ir en la letra —un amarillo sobre blanco no se lee—: placa al 20 % y rótulo en el mismo tono, hondo, rol
+   a rol (el más justo, verde y cian: 4,7:1). */
+:root[data-palette="cyberpunk"] .btn {
+  /* Neutro en OSCURO: tubo blanco-azulado, con menos tinte para que la placa no se vuelva gris. */
+  --hud-c: #dcecff;
+  --hud-tint: 10%;
+  --hud-base: #0b0d12;
+  --hud-ink: color-mix(in srgb, var(--hud-c) 92%, #fff);
+  --hud-glow-a: 40%;
+  --hud-glow-r: 5px;
+  --hud-text-glow-a: 40%;
+  --hud-edge-w: 1.5px;
+  --hud-bright: 1;
+}
+/* `:where` lo deja en (0,3,0), lo mismo que los roles de abajo: con `.btn` a secas pesaría (0,4,0) y el neutro
+   claro pintaría también el principal, la navegación y el peligro del tema claro. */
+:root[data-palette="cyberpunk"][data-theme="light"] :where(.btn) {
+  /* Neutro en CLARO: tubo azul noche sobre placa casi blanca (9,6:1). A la luz el neón es un halo CORTO: uno ancho
+     ensucia la placa y le baja el contraste al rótulo; y sin brillo en la letra. */
+  --hud-c: #1d3557;
+  --hud-tint: 6%;
+  --hud-base: #fff;
+  --hud-ink: var(--hud-c);
+  --hud-glow-a: 35%;
+  --hud-glow-r: 3px;
+  --hud-text-glow-a: 0%;
+}
+/* "General" del panel: el principal se señala con más neón en el filete; el activo sigue siendo el violeta. */
+:root[data-palette="cyberpunk"] .scope-tabs > .btn-toggle:first-child:not(.active) { --hud-glow-r: 9px; }
+:root[data-palette="cyberpunk"][data-theme="light"] .scope-tabs > .btn-toggle:first-child:not(.active) { --hud-c: var(--steam-hover); --hud-ink: var(--steam-hover); --hud-glow-r: 6px; }
+/* Los roles: solo el color del tubo (y, en claro, la tinta honda que cumple en cada uno). Los que cambian de tono
+   con el tema leen su token, así que la misma línea vale para los dos. */
+:root[data-palette="cyberpunk"] .btn-steam,
+:root[data-palette="cyberpunk"] .btn-primary,
+:root[data-palette="cyberpunk"] .consent-btn-accept { --hud-c: var(--cyber-yellow); --hud-tint: 16%; }
+/* LO ELEGIDO (la pestaña activa, el interruptor encendido, los `.is-active`) va en VIOLETA y no en el amarillo del
+   principal: con los dos en amarillo, «Mostrar» encendido se leía como un botón de guardar. No es verde porque el
+   verde es de completar, y tira a azul para no confundirse con el magenta de la navegación, que tira a rosa. */
+:root[data-palette="cyberpunk"] .btn.is-active,
+:root[data-palette="cyberpunk"] .btn-toggle.active { --hud-c: var(--cyber-btn-violet); --hud-tint: 16%; }
+:root[data-palette="cyberpunk"] { --cyber-btn-violet: #b066ff; }
+:root[data-palette="cyberpunk"][data-theme="light"] { --cyber-btn-violet: #7b2ff7; }
+:root[data-palette="cyberpunk"] .btn-complete { --hud-c: var(--success); --hud-tint: 16%; }
+/* LOS DOS NEONES de Night City en la navegación (`.btn-accent`), alternos dentro de cada fila: cian el primero,
+   magenta el siguiente. `of .btn-accent` cuenta solo los de navegación, así que un neutro en medio no descoloca la
+   pareja; un navegador sin `:nth-child(… of …)` descarta la regla y los deja en cian. «Pasar a en curso» y «Pasar a
+   próximos» (mover de lista en el detalle) llevan la misma pareja, pero FIJA. */
+:root[data-palette="cyberpunk"] .btn-accent,
+:root[data-palette="cyberpunk"] .btn-playing { --hud-c: var(--cyber-cyan); --hud-tint: 16%; }
+/* El magenta de botón tira un cuarto hacia el violeta del anuncio de neón: el `--cyber-magenta` a pelo (#ff2a6d) y
+   el rojo de peligro (#ff2e4e) son casi el mismo tono, y aquí van uno al lado del otro. */
+:root[data-palette="cyberpunk"] .btn-accent:nth-child(even of .btn-accent),
+:root[data-palette="cyberpunk"] .btn-upcoming { --hud-c: var(--cyber-btn-magenta); --hud-tint: 16%; }
+:root[data-palette="cyberpunk"] { --cyber-btn-magenta: color-mix(in srgb, var(--cyber-magenta) 75%, #d63cff); }
+:root[data-palette="cyberpunk"][data-theme="light"] { --cyber-btn-magenta: var(--cyber-magenta); }
+/* Peligro (cerrar sesión, abandonar, quitar recomendación): el rojo del HUD del juego, el tubo que dio el modelo. */
+:root[data-palette="cyberpunk"] .btn-danger,
+:root[data-palette="cyberpunk"] .btn-abandoned { --hud-c: var(--danger); --hud-tint: 16%; }
+/* En claro, cada tubo con su tinta: el mismo tono, hondo (al 20 % de placa). */
+:root[data-palette="cyberpunk"][data-theme="light"] :is(.btn-steam, .btn-primary, .consent-btn-accept) { --hud-tint: 20%; --hud-ink: #4d4500; }
+:root[data-palette="cyberpunk"][data-theme="light"] :is(.btn.is-active, .btn-toggle.active) { --hud-tint: 20%; --hud-ink: #5a1db8; }
+:root[data-palette="cyberpunk"][data-theme="light"] .btn-complete { --hud-tint: 20%; --hud-ink: color-mix(in srgb, var(--success) 72%, #000); }
+:root[data-palette="cyberpunk"][data-theme="light"] :is(.btn-accent, .btn-playing) { --hud-tint: 20%; --hud-ink: color-mix(in srgb, var(--cyber-cyan) 72%, #000); }
+:root[data-palette="cyberpunk"][data-theme="light"] :is(.btn-accent:nth-child(even of .btn-accent), .btn-upcoming) { --hud-tint: 20%; --hud-ink: #b0004b; }
+:root[data-palette="cyberpunk"][data-theme="light"] :is(.btn-danger, .btn-abandoned) { --hud-tint: 20%; --hud-ink: color-mix(in srgb, var(--danger) 85%, #000); }
+/* La marca de las tarjetas de estadísticas es un `.btn` con el tinte de su tarjeta: lo conserva, en neón. */
+:root[data-palette="cyberpunk"] .stat-tile-go { --hud-c: var(--tile-go-tint); --hud-ink: var(--tile-go-tint); --hud-tint: 15%; }
+
+:root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost) {
+  --hud-cut: polygon(0 0, 100% 0, 100% calc(100% - var(--btn-notch, 9px)), calc(100% - var(--btn-notch, 9px)) 100%, 0 100%);
+  --hud-glow: color-mix(in srgb, var(--hud-c) var(--hud-glow-a), transparent);
+  font-weight: 600; letter-spacing: .05em; border-radius: 0;
+  color: var(--hud-ink) !important;
   background: transparent !important;
   border-color: transparent !important;
+  box-shadow: none !important;
   clip-path: none !important;
   position: relative;
   isolation: isolate;
-  --hud-edge: var(--cyber-edge);
-  --hud-cut: polygon(0 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%);
+  /* El rótulo encendido: un brillo pegado a la letra y otro que se abre. */
+  text-shadow:
+    0 0 2px color-mix(in srgb, var(--hud-c) var(--hud-text-glow-a), transparent),
+    0 0 10px color-mix(in srgb, var(--hud-c) calc(var(--hud-text-glow-a) * .6), transparent);
+  /* Y el tubo: luz pegada al filete y un halo ancho alrededor. */
+  filter: drop-shadow(0 0 2px var(--hud-glow)) drop-shadow(0 0 var(--hud-glow-r) var(--hud-glow)) brightness(var(--hud-bright));
+  /* La base esmerila TODO botón (`backdrop-filter`), y el esmerilado pinta el rectángulo entero: en la muesca, donde
+     las capas dejan el corte transparente, asomaba un cuadrado de fondo desenfocado. Aquí la placa ya es opaca. */
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
-:root[data-palette="cyberpunk"] .btn-secondary::before,
-:root[data-palette="cyberpunk"] .btn-secondary::after,
-:root[data-palette="cyberpunk"] .btn-toggle:not(.active)::before,
-:root[data-palette="cyberpunk"] .btn-toggle:not(.active)::after,
-:root[data-palette="cyberpunk"] .btn-danger::before,
-:root[data-palette="cyberpunk"] .btn-danger::after,
-:root[data-palette="cyberpunk"] .btn-abandoned::before,
-:root[data-palette="cyberpunk"] .btn-abandoned::after {
+:root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost)::before,
+:root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost)::after {
   content: '';
   position: absolute;
   clip-path: var(--hud-cut);
   pointer-events: none;
 }
 /* Capa de borde (color del filete), a todo el box. */
-:root[data-palette="cyberpunk"] .btn-secondary::before,
-:root[data-palette="cyberpunk"] .btn-toggle:not(.active)::before,
-:root[data-palette="cyberpunk"] .btn-danger::before,
-:root[data-palette="cyberpunk"] .btn-abandoned::before { inset: 0; z-index: -2; background: var(--hud-edge); }
-/* Capa de relleno, 1px más pequeña → deja asomar el borde 1px en todos los cantos (incl. la diagonal).
-   `--hud-fill` permite un relleno distinto por variante (dark elevado en las cian; rojo translúcido en las danger). */
-:root[data-palette="cyberpunk"] .btn-secondary::after,
-:root[data-palette="cyberpunk"] .btn-toggle:not(.active)::after,
-:root[data-palette="cyberpunk"] .btn-danger::after,
-:root[data-palette="cyberpunk"] .btn-abandoned::after { inset: 1px; z-index: -1; background: var(--hud-fill, var(--surface-elevated)); }
-/* En claro el filete es teal más marcado para que se vea sobre fondo claro. */
-:root[data-palette="cyberpunk"][data-theme="light"] .btn-secondary,
-:root[data-palette="cyberpunk"][data-theme="light"] .btn-toggle:not(.active) { --hud-edge: rgba(0, 137, 163, .55); }
-/* "General" del panel: aquí el borde del toggle es transparente (el filete lo pintan las capas HUD), así que
-   destacar el principal se hace subiendo el propio filete y no con `border-color`. Va tras las reglas de §5
-   para ganarlas por orden, y el activo sigue siendo el relleno amarillo. */
-:root[data-palette="cyberpunk"] .scope-tabs > .btn-toggle:first-child:not(.active) { --hud-edge: rgba(0, 240, 255, .8); }
-:root[data-palette="cyberpunk"][data-theme="light"] .scope-tabs > .btn-toggle:first-child:not(.active) { --hud-edge: rgba(0, 137, 163, .95); }
-:root[data-palette="cyberpunk"] .btn-accent,
-:root[data-palette="cyberpunk"] .btn-steam,
-:root[data-palette="cyberpunk"] .btn-primary,
-:root[data-palette="cyberpunk"] .btn.is-active,
-:root[data-palette="cyberpunk"] .btn-toggle.active { background: var(--cyber-yellow) !important; color: var(--on-accent) !important; border-color: var(--cyber-yellow) !important; }
-/* Los botones secundarios "encendidos" —toggle activo (.is-active) y de acento (.btn-accent: Ver perfil/perfiles,
-   Añadir amigo, etc.)— NO deben volverse amarillos: el relleno amarillo de §5 chocaba con la doble capa cian y
-   asomaba un triángulo por la muesca (se veía roto). Se quedan en la familia HUD pero AZUL ELÉCTRICO "encendido":
-   relleno cian tenue + filete y texto cian brillante, como los botones interactivos del juego. Van tras las reglas
-   de §5 (amarillo) para ganar por especificidad/orden. */
-:root[data-palette="cyberpunk"] .btn-secondary.is-active,
-:root[data-palette="cyberpunk"] .btn-secondary.btn-accent {
-  background: transparent !important;
-  border-color: transparent !important;
-  color: var(--cyber-cyan-fg) !important;
-  --hud-edge: var(--cyber-cyan);
-  --hud-fill: color-mix(in srgb, var(--cyber-cyan) 16%, var(--surface));
-}
-:root[data-palette="cyberpunk"] .btn-secondary.btn-accent:hover,
-:root[data-palette="cyberpunk"] .btn-secondary.is-active:hover { box-shadow: 0 0 14px rgba(0, 240, 255, .35) !important; }
-:root[data-palette="cyberpunk"] .btn-complete { background: var(--success) !important; color: #04140b !important; border-color: color-mix(in srgb, var(--success) 55%, #000) !important; }
-/* Botones de peligro (cerrar sesión, abandonar, quitar recomendación): estilo HUD del juego — rojo neón
-   TRANSLÚCIDO en vez de relleno sólido. Misma técnica de doble capa que los cian (filete rojo que sigue la
-   muesca), con relleno rojo tenue (opaco equivalente sobre el fondo oscuro), texto rojo neón y un halo sutil que
-   se intensifica al pasar el ratón. `--danger`/`--danger-rgb` ya se adaptan a claro/oscuro. */
-:root[data-palette="cyberpunk"] .btn-danger,
-:root[data-palette="cyberpunk"] .btn-abandoned {
-  color: var(--danger) !important;
-  background: transparent !important;
-  border-color: transparent !important;
-  clip-path: none !important;
-  position: relative;
-  isolation: isolate;
-  --hud-edge: var(--danger);
-  --hud-fill: color-mix(in srgb, var(--danger) 14%, var(--surface));
-  --hud-cut: polygon(0 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%);
-  box-shadow: 0 0 12px rgba(var(--danger-rgb), .25) !important;
-}
-:root[data-palette="cyberpunk"] .btn-danger:hover,
-:root[data-palette="cyberpunk"] .btn-abandoned:hover { box-shadow: 0 0 16px rgba(var(--danger-rgb), .5) !important; }
-:root[data-palette="cyberpunk"][data-theme="light"] .btn-complete { color: #fff !important; }
+:root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost)::before { inset: 0; z-index: -2; background: var(--hud-c); }
+/* Capa de placa, `--hud-edge-w` más pequeña → deja asomar el filete en todos los cantos (incl. la diagonal). */
+:root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost)::after { inset: var(--hud-edge-w); z-index: -1; background: color-mix(in srgb, var(--hud-c) var(--hud-tint), var(--hud-base)); }
 :root[data-palette="cyberpunk"] .btn-ghost { font-family: var(--font-label); font-weight: 600; letter-spacing: .05em; }
-/* Hover: plano + glow neón cian (sin el giro 3D base). */
-:root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 14px rgba(0, 240, 255, .3); }
+/* Hover: plano (sin el giro 3D base) — el neón se aviva y el botón sube 1px. */
+:root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-1px); --hud-bright: 1.06; --hud-glow-r: 9px; }
+:root[data-palette="cyberpunk"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost):hover { --hud-bright: 1; --hud-glow-r: 5px; }
 :root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(0); }
+/* Un botón que no se puede pulsar está APAGADO: sin neón en el marco ni en el rótulo (la base baja la opacidad). */
+:root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost):is(:disabled, [aria-disabled='true']),
+:root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost):is(:disabled, [aria-disabled='true']):hover {
+  filter: none; text-shadow: none; transform: none;
+}
 
 /* ── §6 · Chips: rectos, Rajdhani; el color por categoría lo pone la base (adaptado a la paleta). Aquí NO se fuerza
    `box-shadow: none` para permitir el halo neón por categoría de abajo. ── */
@@ -579,7 +611,7 @@
    movimiento es una línea de log: se le quita el amarillo y se queda con el cian tenue del resto del marco, sin
    el halo. ── */
 :root[data-palette="cyberpunk"] .hub-feed-activity-item.is-move {
-  border-left-color: var(--cyber-edge) !important;
+  border-left-color: var(--evc) !important;
   box-shadow: none !important;
 }
 /* La hora, en la monoespaciada de la paleta y con el mismo prefijo de dato que usan sus fechas. */
@@ -588,6 +620,18 @@
   letter-spacing: .02em;
 }
 :root[data-palette="cyberpunk"] .hub-feed-move-hour::before { content: '// '; color: var(--cyber-cyan-fg); font-weight: 700; }
+/* EL COLOR DEL SUCESO, con los neones de los botones (§5): empezar en el CIAN de «Pasar a en curso», próximos en el
+   MAGENTA de «Pasar a próximos», la lista de deseos en el VIOLETA de lo elegido y el logro en el AMARILLO de la
+   firma. Antes deseos llevaba el verde agua de la rampa —casi el verde de terminar— y empezar el amarillo, que
+   rozaba el naranja del logro. La línea de log se queda sin halo, pero su filete lleva el color de lo que pasó. */
+:root[data-palette="cyberpunk"] .hub-feed-activity-item.is-move[data-tab="e"] { --evc: var(--cyber-cyan); }
+:root[data-palette="cyberpunk"] .hub-feed-activity-item.is-move[data-tab="p"] { --evc: var(--cyber-btn-magenta); }
+:root[data-palette="cyberpunk"] .hub-feed-activity-item.is-move[data-tab="d"] { --evc: var(--cyber-btn-violet); }
+:root[data-palette="cyberpunk"] .hub-feed-activity-item.is-achievements { --evc: var(--cat-1); }
+/* En claro, el nombre y el juego —los dos en el cian del acento— no llegaban sobre el velo teñido (3,3–3,9:1): el
+   mismo cian, más hondo. */
+:root[data-palette="cyberpunk"][data-theme="light"] :is(.is-move, .is-achievements) .hub-feed-move-who { color: color-mix(in srgb, var(--steam) 60%, #000); }
+:root[data-palette="cyberpunk"][data-theme="light"] :is(.is-move, .is-achievements) .hub-feed-move-game:not(.is-plain) { color: color-mix(in srgb, var(--steam) 64%, #000); }
 
 /* ── El AVISO DE LOGRO · el chaflán del HUD de Night City, el mismo `polygon` que cortan sus botones ──────────
    Y LA MISMA SOLUCIÓN QUE ELLOS, que ya está probada en este tema: recortar el elemento con `clip-path` deja la

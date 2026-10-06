@@ -145,7 +145,6 @@ export const PublicReviewScreen = memo(function PublicReviewScreen({ token, stan
         </svg>
         <h2>{SOCIAL_UI.feed.reviewDetailTitle}</h2>
       </div>
-      <p>{SOCIAL_UI.feed.reviewDetailSubtitle}</p>
     </header>
   );
 

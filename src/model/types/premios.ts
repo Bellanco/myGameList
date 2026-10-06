@@ -319,5 +319,12 @@ export interface PalmaresEntry {
    * concedidos antes de guardarlo; se deduce entonces del id o del nombre (ver `core/premios/palmares`).
    */
   season?: number;
+  /**
+   * EL PUESTO REAL EN LA CLASIFICACIÓN de quien participó (`rank` 0): el 7.º, el 12.º… Comparte medalla azul con
+   * cualquier otra participación, pero la vitrina dice en qué puesto quedó. Solo en participaciones: lo pone la
+   * publicación (`palmaresRecipientsFrom`). Las concedidas antes de existir se rellenaron una vez desde la
+   * clasificación de cada archivo (06-10-2026); si alguna no lo lleva, la vitrina dice «Participó».
+   */
+  place?: number;
   awardedAt: number;
 }

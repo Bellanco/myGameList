@@ -110,7 +110,6 @@ export const SOCIAL_UI = {
     // armazón compartido y la pantalla real podrían acabar diciendo cosas distintas. Ver `socialShell`.
     sectionAria: SOCIAL_SHELL.feed.sectionAria,
     title: SOCIAL_SHELL.feed.title,
-    subtitle: SOCIAL_SHELL.feed.subtitle,
     actionsAria: SOCIAL_SHELL.feed.actionsAria,
     activityListAria: 'Actividad social',
     toolbarAria: 'Búsqueda y filtros de la actividad',
@@ -197,7 +196,6 @@ export const SOCIAL_UI = {
     showMore: 'Más',
     viewDetail: 'Ver detalle',
     detailTitle: 'Análisis',
-    detailSubtitle: 'Contenido completo del análisis seleccionado.',
     detailActionsAria: 'Acciones del detalle social',
     detailMissing: 'No se encontró la actividad solicitada o ya no está disponible.',
     /**
@@ -217,7 +215,6 @@ export const SOCIAL_UI = {
     metadataStrengths: 'Puntos fuertes:',
     metadataWeaknesses: 'Puntos débiles:',
     profileDetailTitle: 'Detalle de perfil social',
-    profileDetailSubtitle: 'Vista pública del perfil seleccionado.',
     profileDetailActionsAria: 'Acciones del detalle de perfil social',
     profileDetailMissing: 'No se encontró el perfil solicitado o ya no está disponible.',
     profileDetailLoading: 'Cargando el perfil...',
@@ -253,7 +250,6 @@ export const SOCIAL_UI = {
     reviewCollapse: 'Ver menos',
     reviewOpenAria: (gameName: string) => `Abrir la reseña de ${gameName}`,
     reviewDetailTitle: 'Análisis',
-    reviewDetailSubtitle: 'Análisis completo de este juego.',
     reviewsBackToList: 'Volver a las reseñas',
     // Reseñas relacionadas, al final de una reseña abierta.
     //
@@ -289,7 +285,6 @@ export const SOCIAL_UI = {
   profiles: {
     sectionAria: 'Perfiles sociales',
     title: 'Perfiles',
-    subtitle: 'Descubre perfiles públicos de otros jugadores.',
     actionsAria: 'Acciones de la pantalla de perfiles',
     toolbarAria: 'Filtro de perfiles por nombre',
     rowAria: 'Perfiles públicos',
@@ -319,7 +314,6 @@ export const SOCIAL_UI = {
   requests: {
     sectionAria: 'Solicitudes de amistad',
     title: 'Solicitudes de amistad',
-    subtitle: 'Gestiona las peticiones que recibes y las que has enviado.',
     actionsAria: 'Acciones de solicitudes de amistad',
     back: 'Volver a la actividad',
     incomingTitle: 'Recibidas',
@@ -371,7 +365,6 @@ export const SOCIAL_UI = {
     sectionAria: 'Social',
     actionsAria: 'Acciones del perfil social',
     title: 'Mi perfil social',
-    subtitle: 'Define tu identidad pública y mantén tu perfil sincronizado.',
     toFeed: 'Ir a la actividad',
     save: 'Guardar perfil',
     saving: 'Guardando perfil...',

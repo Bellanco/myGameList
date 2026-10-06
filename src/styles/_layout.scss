@@ -1070,9 +1070,11 @@
   align-self: center;
   width: fit-content;
   max-width: 100%;
-  border: 1px solid color-mix(in srgb, var(--evc), transparent 62%);
+  /* Con cuerpo: al 62 % de transparencia el filete y al 92 % el velo, el color del suceso existía en la hoja pero no
+     llegaba al ojo, y el feed entero se leía del mismo gris (lo que ya había corregido Plata y acero en su skin). */
+  border: 1px solid color-mix(in srgb, var(--evc), transparent 30%);
   border-radius: var(--sys-radius);
-  background: color-mix(in srgb, var(--evc), transparent 92%);
+  background: color-mix(in srgb, var(--evc), transparent 86%);
   box-shadow: none;
   cursor: default;
   flex-direction: row;
@@ -1110,13 +1112,15 @@
 .hub-feed-activity-item.is-achievements { --evc: var(--warn); cursor: pointer; }
 /* Un aviso no es «tuyo» ni «de otro»: es lo que pasó. Se queda centrado aunque sea propio. */
 .hub-feed-activity-item.is-move.is-own-activity,
-.hub-feed-activity-item.is-achievements.is-own-activity { align-self: center; background: color-mix(in srgb, var(--evc), transparent 88%); }
+.hub-feed-activity-item.is-achievements.is-own-activity { align-self: center; background: color-mix(in srgb, var(--evc), transparent 86%); }
 
 /* La hora, al final del renglón. Clase propia y NO `hub-feed-date`: varias paletas convierten esa clase en una
    cápsula o le cuelgan un prefijo («//», «>»), y aquí tiene que ser el dato más pequeño de la línea. */
 .hub-feed-move-hour {
   font-size: var(--fs-2xs);
-  color: var(--text-dim);
+  /* `--text-muted` y no `--text-dim`: va sobre el velo teñido del aviso, y el gris más tenue se quedaba por debajo de
+     4,5:1 en varias paletas. Sigue siendo el dato más pequeño de la línea por cuerpo, no por apagado. */
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }

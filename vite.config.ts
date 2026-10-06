@@ -752,6 +752,13 @@ export default defineConfig({
         minify: { compress: { dropConsole: true, dropDebugger: true } },
         manualChunks: (id) => {
           // Vendor chunks for better caching and parallelization
+          // `firebase/analytics` en su PROPIO chunk, antes que la regla general: `firebaseClient` lo pide con
+          // `import()` solo con el consentimiento dado, y dentro del grupo `firebase` (que se importa estático)
+          // arrastraba `@firebase/analytics` e `installations` (~5 kB comprimidos): se descargaba siempre, con
+          // consentimiento o sin él.
+          if (id.includes('node_modules/firebase/analytics/')) {
+            return 'firebase-analytics';
+          }
           if (id.includes('node_modules/firebase/')) {
             return 'firebase';
           }

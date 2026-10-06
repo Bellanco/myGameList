@@ -26,7 +26,6 @@ export interface HubScreenProps {
   /** Etiqueta accesible de la sección. */
   ariaLabel: string;
   title: string;
-  subtitle?: string;
   /** Icono del encabezado. `bottom-hub` es el del hub; el detalle de una reseña usa `signature`. */
   icon?: IconName;
   /** Añadido dentro del título, a la derecha (hoy: el chip de estado del perfil propio). */
@@ -39,7 +38,6 @@ export interface HubScreenProps {
 export function HubScreen({
   ariaLabel,
   title,
-  subtitle,
   icon = 'bottom-hub',
   titleExtra,
   cardClassName = 'hub-feed-card-shell',
@@ -54,7 +52,6 @@ export function HubScreen({
             <h2>{title}</h2>
             {titleExtra}
           </div>
-          {subtitle ? <p>{subtitle}</p> : null}
         </header>
         {children}
       </div>

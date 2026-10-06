@@ -91,7 +91,6 @@ export const WishKinCard = memo(function WishKinCard({ kin }: { kin: WishKinSumm
       {kin.gaps.length ? (
         <section>
           <h3>{L.gaps}</h3>
-          <p className="stats-note">{L.gapsHint}</p>
           {/* El MISMO chip de género que en los listados, con su tono. El peso de cada hueco lo dice el orden: van
               de más a menos deseos (`core/stats/wishKin`). */}
           <ul className="chips kin-gaps">

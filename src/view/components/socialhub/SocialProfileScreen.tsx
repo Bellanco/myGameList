@@ -114,7 +114,6 @@ export function SocialProfileScreen({
     <HubScreen
       ariaLabel={SOCIAL_UI.profile.sectionAria}
       title={SOCIAL_UI.profile.title}
-      subtitle={SOCIAL_UI.profile.subtitle}
       cardClassName="hub-profile-card"
       titleExtra={
         <span className={`hub-profile-sync-chip ${hasCreatedProfile ? 'is-synced' : ''}`}>

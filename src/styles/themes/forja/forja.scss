@@ -216,6 +216,56 @@
    tema y no cambian. */
 :root[data-palette="forja"] .input-base { border-radius: var(--forja-btn-radius); }
 
+/* ── §N · LOS COLORES DE LOS BOTONES: ACERO, BRASA Y TEMPLE ───────────────────────────────────────────────
+   La forma no cambia (cristal con el canto de 15 px); lo que cambia es de qué metal es cada uno.
+
+   EL NEUTRO deja de ser grafito: en oscuro es ACERO PAVONADO, el azul profundo que coge el hierro al templarlo
+   en aceite; a la luz es PAJA DE TEMPLE, el primer color que sale al calentar el acero pulido. Va por EXCLUSIÓN
+   —todo `.btn` que no tenga rol— y no por lista de neutros, porque hay `.btn` planos sin clase de rol en una
+   veintena de sitios. Excluir los roles es también lo que impide que el neutro los pise: así no hace falta jugar
+   con la especificidad. Completar y abandonar se quedan fuera A PROPÓSITO: siguen en cristal con su color en
+   texto y borde, como hoy.
+
+   LA NAVEGACIÓN (`.btn-accent`) lleva los DOS METALES alternos dentro de cada fila: brasa el primero, temple el
+   siguiente. `of .btn-accent` cuenta solo los de navegación, así que un «Cerrar sesión» en medio no descoloca
+   la pareja; un navegador sin `:nth-child(… of …)` descarta la regla y los deja todos en brasa. «Pasar a en
+   curso» es brasa y «Pasar a próximos», temple, siempre.
+
+   CONTRASTE en el punto más desfavorable de cada degradado (axe no evalúa degradados): oscuro, neutro 7,53:1 ·
+   brasa 5,59:1 · temple 6,92:1; claro, neutro 11,45:1 · brasa 6,13:1 · temple 6,38:1. ── */
+:root[data-palette="forja"] {
+  --forja-acero-top: #35506c; --forja-acero-bot: #22344a; --forja-acero-ink: #eef4f8; --forja-acero-edge: #4c6c8c;
+  --forja-brasa-ink: #1a0a02; --forja-temple-ink: #03201c;
+}
+:root[data-palette="forja"][data-theme="light"] {
+  --forja-acero-top: #f7edd0; --forja-acero-bot: #ead8a4; --forja-acero-ink: #2a1f08; --forja-acero-edge: #c4ab6c;
+  --forja-brasa-ink: #fff; --forja-temple-ink: #fff;
+}
+:root[data-palette="forja"] .btn:not(
+  .btn-icon, .btn-ghost, .stat-tile-go,
+  .btn-primary, .btn-steam, .btn-accent, .btn-playing, .btn-upcoming,
+  .btn-complete, .btn-abandoned, .btn-danger,
+  .is-active, .active, .consent-btn-accept
+) {
+  background: linear-gradient(160deg, var(--forja-acero-top), var(--forja-acero-bot));
+  color: var(--forja-acero-ink);
+  border-color: var(--forja-acero-edge);
+}
+/* Los dos metales en relleno macizo: el canto de arriba es el color puro y baja un 14 % hacia la base, la misma
+   caída de luz que el principal. */
+:root[data-palette="forja"] .btn-accent,
+:root[data-palette="forja"] .btn-playing {
+  background: linear-gradient(180deg, var(--steam), color-mix(in srgb, var(--steam) 86%, #000));
+  color: var(--forja-brasa-ink);
+  border-color: color-mix(in srgb, var(--steam) 60%, #000);
+}
+:root[data-palette="forja"] .btn-accent:nth-child(even of .btn-accent),
+:root[data-palette="forja"] .btn-upcoming {
+  background: linear-gradient(180deg, var(--forja-temple), color-mix(in srgb, var(--forja-temple) 86%, #000));
+  color: var(--forja-temple-ink);
+  border-color: color-mix(in srgb, var(--forja-temple) 60%, #000);
+}
+
 /* ── §N · LA CABECERA DE PANTALLA ─────────────────────────────────────────────────────────────────────
    Este tema la enciende (`ScreenHeader` es neutra y en la base no se ve): rótulo en versales con el punto del
    acento y título en la letra de titulares. Va en el flujo —se va al bajar, no es

@@ -92,38 +92,119 @@
 /* ── §4 · Tabla: cabecera de señalética (Oswald) con filete NARANJA (gel), otro punto de contraste con el Clásico. ── */
 :root[data-palette="portal"] thead th { background: transparent; color: var(--text-muted); border-bottom: 2px solid var(--portal-orange); }
 
-/* ── §5 · Botones: señalética de Aperture — planos, esquinas suaves, versales condensadas. Acento = azul
-   portal con texto tinta oscura (legible en ambos temas). Variantes semánticas: tinta en OSCURO, blanco en
-   CLARO (regla 10). Sin sesgo ni glow. ── */
-:root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost) { font-weight: 600; letter-spacing: .05em; border: 1px solid var(--border); border-radius: var(--radius-sm); }
-:root[data-palette="portal"] .btn-secondary,
-:root[data-palette="portal"] .btn-toggle:not(.active) { background: var(--surface-elevated) !important; color: var(--text) !important; }
-/* "General" del panel: señalética de Aperture, así que el principal se señala con el filete azul portal a media
-   intensidad. El relleno azul sigue siendo del elegido. */
-:root[data-palette="portal"] .scope-tabs > .btn-toggle:first-child:not(.active) { border-color: color-mix(in srgb, var(--steam) 45%, var(--border)); }
-:root[data-palette="portal"] .btn-accent,
+/* ── §5 · Botones: CUBOS vistos desde arriba, como piezas en el plano de una sala de pruebas. La tapa es un
+   bisel suave —algo abombada, con la luz arriba-izquierda— y debajo asoma la cara lateral (`--cube-h`). Al pulsar,
+   la tapa baja lo que mide esa cara y la cara desaparece: se hunde como un cubo sobre un botón de suelo.
+
+   NADA DE ESTO OCUPA SITIO: la cara y la sombra son `box-shadow` y el abombado es el fondo, así que la caja mide lo
+   mismo que la del resto de temas. Esquinas casi vivas (`--radius-sm`, 3px): un hexaedro, no una pastilla.
+
+   CÓMO SE COLOREA: cada rol solo fija variables (`--cube-*`) en selectores de (0,3,0)–(0,5,0), y una única regla
+   de (0,5,0) las pinta. Si un rol pintara por su cuenta, el `!important` de uno pisaría el `:active` del otro.
+
+   Neutros: BLANCO de los paneles donde se abren portales en la Aperture moderna (oscuro) y NEGRO de los que no
+   los admiten en la antigua (claro). La navegación (`.btn-accent`) lleva los DOS PORTALES alternos en cada fila:
+   el propio del tema y el otro. ── */
+:root[data-palette="portal"] .btn {
+  /* Neutro de la Aperture moderna: panel blanco, tinta del fondo (15,4:1). */
+  --cube-c: #e9eef1; --cube-ink: #12171b; --cube-side: #9aa6ae;
+  --cube-edge: color-mix(in srgb, var(--cube-c) 50%, #000);
+  --cube-hi: rgba(255, 255, 255, .95); --cube-lo: rgba(0, 0, 0, .1);
+  /* El abombado: cuánto blanco lleva el brillo y cuánto negro el borde de la tapa. Con tinta OSCURA el brillo
+     sube el contraste; con tinta CLARA lo bajaría (el naranja de claro caía a 3,97:1), así que ahí el volumen
+     sale oscureciendo el borde y la tapa nunca es más clara que el color plano. */
+  --cube-shine: 12%; --cube-shade: 0%;
+  --cube-h: 4px; --cube-halo: 0 0 0 transparent;
+}
+/* `:where` lo deja en (0,3,0), lo mismo que los roles de abajo: con `.btn` a secas pesaría (0,4,0) y el negro
+   pintaría también los botones de peligro, completar y navegación del tema claro. */
+:root[data-palette="portal"][data-theme="light"] :where(.btn) {
+  /* Neutro de la Aperture antigua: panel negro con el pergamino como tinta (13,3:1). */
+  --cube-c: #2b2520; --cube-ink: #f8f0dd; --cube-side: #120f0c; --cube-edge: #120f0c;
+  --cube-hi: rgba(255, 255, 255, .13); --cube-lo: rgba(0, 0, 0, .4);
+}
+/* "General" del panel: el principal se señala con el filete azul portal a media intensidad. El relleno azul sigue
+   siendo del elegido. */
+:root[data-palette="portal"] .scope-tabs > .btn-toggle:first-child:not(.active) { --cube-edge: color-mix(in srgb, var(--steam) 55%, var(--cube-side)); }
 :root[data-palette="portal"] .btn-steam,
 :root[data-palette="portal"] .btn-primary,
 :root[data-palette="portal"] .btn.is-active,
-:root[data-palette="portal"] .btn-toggle.active { background: var(--steam) !important; color: var(--on-accent) !important; border-color: color-mix(in srgb, var(--steam) 60%, #000) !important; }
-:root[data-palette="portal"] .btn-complete { background: var(--success) !important; color: #04140c !important; border-color: color-mix(in srgb, var(--success) 55%, #000) !important; }
+:root[data-palette="portal"] .btn-toggle.active,
+:root[data-palette="portal"] .consent-btn-accept { --cube-c: var(--steam); --cube-ink: var(--on-accent); --cube-side: color-mix(in srgb, var(--cube-c) 58%, #000); --cube-hi: rgba(255, 255, 255, .2); --cube-lo: rgba(0, 0, 0, .18); }
+:root[data-palette="portal"] .btn-complete { --cube-c: var(--success); --cube-ink: #04140c; --cube-side: color-mix(in srgb, var(--cube-c) 58%, #000); --cube-hi: rgba(255, 255, 255, .2); --cube-lo: rgba(0, 0, 0, .18); }
 /* Acciones destructivas = TORRETA: rojo del ojo/láser + halo tenue de "puntería". */
 :root[data-palette="portal"] .btn-danger,
-:root[data-palette="portal"] .btn-abandoned { background: var(--danger-fill) !important; color: #fff !important; border-color: color-mix(in srgb, var(--portal-turret) 55%, #000) !important; box-shadow: 0 0 10px color-mix(in srgb, var(--portal-turret) 40%, transparent) !important; }
-:root[data-palette="portal"][data-theme="light"] .btn-complete { color: #fff !important; }
+:root[data-palette="portal"] .btn-abandoned {
+  --cube-c: var(--danger-fill); --cube-ink: #fff; --cube-side: color-mix(in srgb, var(--cube-c) 58%, #000);
+  --cube-hi: rgba(255, 255, 255, .2); --cube-lo: rgba(0, 0, 0, .18); --cube-shine: 0%; --cube-shade: 15%;
+  --cube-halo: 0 0 10px color-mix(in srgb, var(--portal-turret) 40%, transparent);
+}
+/* LOS DOS PORTALES. En la Aperture moderna el principal es azul, así que el portal propio de la navegación es el
+   naranja (8,5:1 con su tinta) y el otro, el azul. Se alternan dentro de cada fila con `of .btn-accent`: cuenta
+   solo los de navegación, así que un «Cerrar sesión» en medio no descoloca la pareja. Un navegador sin
+   `:nth-child(… of …)` descarta la regla y los deja todos en naranja. */
+:root[data-palette="portal"] .btn-accent { --cube-c: var(--portal-orange); --cube-ink: #2a1400; --cube-side: color-mix(in srgb, var(--cube-c) 58%, #000); --cube-hi: rgba(255, 255, 255, .2); --cube-lo: rgba(0, 0, 0, .18); }
+:root[data-palette="portal"] .btn-accent:nth-child(even of .btn-accent) { --cube-c: var(--steam); --cube-ink: var(--on-accent); }
 /* En la Aperture ANTIGUA el acento es naranja quemado, no el azul clínico del oscuro: sobre él, la tinta del
-   resto de rellenos se quedaba en 3,89:1. Se le da la vuelta como a los tres botones de arriba —naranja un
-   punto más hondo y rótulo blanco, señalética industrial de la época— y sube a 5,48:1. En el tema oscuro la
-   regla general no cambia: allí el acento es un azul claro y la tinta encima ya da 7:1. */
-:root[data-palette="portal"][data-theme="light"] .btn-accent,
+   resto de rellenos se quedaba en 3,89:1. Se le da la vuelta —naranja un punto más hondo y rótulo blanco,
+   señalética industrial de la época— y sube a 5,48:1. */
 :root[data-palette="portal"][data-theme="light"] .btn-steam,
 :root[data-palette="portal"][data-theme="light"] .btn-primary,
 :root[data-palette="portal"][data-theme="light"] .btn.is-active,
-:root[data-palette="portal"][data-theme="light"] .btn-toggle.active { background: color-mix(in srgb, var(--steam) 85%, #000) !important; color: #fff !important; }
+:root[data-palette="portal"][data-theme="light"] .consent-btn-accept { --cube-c: color-mix(in srgb, var(--steam) 85%, #000); --cube-ink: #fff; --cube-shine: 0%; --cube-shade: 15%; }
+/* La pestaña ACTIVA en claro va al revés: fondo un punto más claro que el ámbar y tinta marrón. El marrón sobre el
+   ámbar puro se queda en 4,01:1, y este es el rótulo que dice qué pestaña está abierta; con la mezcla, 5,1:1. */
+:root[data-palette="portal"][data-theme="light"] .btn-toggle.active { --cube-c: color-mix(in srgb, var(--steam) 85%, #fff); --cube-ink: #2a1a08; }
+:root[data-palette="portal"][data-theme="light"] .btn-complete { --cube-ink: #fff; --cube-shine: 0%; --cube-shade: 15%; }
+/* En claro el principal ya es naranja: lo que falta es el AZUL. El portal propio de la navegación es el azul de
+   época de este tema (el de las plataformas, 6,7:1 con blanco) y el otro, el naranja de su rampa (#b5560c,
+   4,9:1; el `--portal-orange` del filete se quedaría en 4,4). */
+:root[data-palette="portal"][data-theme="light"] .btn-accent { --cube-c: var(--chip-plat-fg); --cube-ink: #fff; --cube-shine: 0%; --cube-shade: 15%; }
+:root[data-palette="portal"][data-theme="light"] .btn-accent:nth-child(even of .btn-accent) { --cube-c: var(--cat-2); }
+/* Mover de lista en el detalle: los mismos dos portales, pero FIJOS. «Pasar a en curso» lleva el propio del tema
+   (naranja en oscuro, azul en claro) y «Pasar a próximos», el otro. */
+:root[data-palette="portal"] .btn-playing { --cube-c: var(--portal-orange); --cube-ink: #2a1400; --cube-side: color-mix(in srgb, var(--cube-c) 58%, #000); --cube-hi: rgba(255, 255, 255, .2); --cube-lo: rgba(0, 0, 0, .18); }
+:root[data-palette="portal"] .btn-upcoming { --cube-c: var(--steam); --cube-ink: var(--on-accent); --cube-side: color-mix(in srgb, var(--cube-c) 58%, #000); --cube-hi: rgba(255, 255, 255, .2); --cube-lo: rgba(0, 0, 0, .18); }
+:root[data-palette="portal"][data-theme="light"] .btn-playing { --cube-c: var(--chip-plat-fg); --cube-ink: #fff; --cube-shine: 0%; --cube-shade: 15%; }
+:root[data-palette="portal"][data-theme="light"] .btn-upcoming { --cube-c: var(--cat-2); --cube-ink: #fff; --cube-shine: 0%; --cube-shade: 15%; }
+
+:root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost) {
+  font-weight: 600; letter-spacing: .05em; border-radius: var(--radius-sm);
+  border: 1px solid var(--cube-edge) !important;
+  color: var(--cube-ink) !important;
+  background: radial-gradient(120% 140% at 35% 20%,
+    color-mix(in srgb, var(--cube-c), #fff var(--cube-shine)) 0%,
+    var(--cube-c) 55%,
+    color-mix(in srgb, var(--cube-c), #000 var(--cube-shade)) 100%) !important;
+  box-shadow:
+    inset 0 1px 1px var(--cube-hi), inset 0 -3px 4px var(--cube-lo),
+    0 var(--cube-h) 0 var(--cube-side),
+    0 calc(var(--cube-h) + 3px) 8px rgba(0, 0, 0, .4),
+    var(--cube-halo) !important;
+  transition: transform .09s ease-out, box-shadow .09s ease-out;
+}
+:root[data-palette="portal"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost) {
+  box-shadow:
+    inset 0 1px 1px var(--cube-hi), inset 0 -3px 4px var(--cube-lo),
+    0 var(--cube-h) 0 var(--cube-side),
+    0 calc(var(--cube-h) + 3px) 8px rgba(70, 50, 20, .28),
+    var(--cube-halo) !important;
+}
+/* Hover: el cubo se levanta 1px y su cara crece lo mismo. Sin `filter`: el titileo fluorescente (§15) lo anima y
+   pisaría cualquier brillo de hover. Sin el giro 3D de la base: aquí el volumen ya es la cara lateral. */
+:root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-1px); --cube-h: 5px; }
+/* Pulsado: la tapa baja hasta el suelo y la cara desaparece. */
+:root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):active {
+  transform: translateY(4px);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, .22), 0 1px 1px rgba(0, 0, 0, .25) !important;
+}
+/* Un botón que no se puede pulsar no tiene volumen: placa plana, sin levantarse ni hundirse (la base solo baja la
+   opacidad, y el `!important` de arriba le devolvería la cara). */
+:root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):is(:disabled, [aria-disabled='true']),
+:root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):is(:disabled, [aria-disabled='true']):is(:hover, :active) {
+  transform: none; box-shadow: none !important;
+}
 :root[data-palette="portal"] .btn-ghost { font-family: var(--font-label); letter-spacing: .05em; }
-/* Hover: plano (sin el giro 3D base) — elevación leve + brillo. */
-:root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-2px); filter: brightness(1.06); box-shadow: 0 6px 16px rgba(0, 0, 0, .28); }
-:root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(0); }
 
 /* ── §6 · Chips: rótulos de señalética (Oswald), esquinas suaves. El COLOR por categoría lo pone la base
    (adaptado a la paleta), como en el resto de temas. El chip "Amigos" se rehace como CUBO DE COMPAÑÍA:
@@ -310,12 +391,6 @@
 /* ── §14 · CLARO = APERTURE ANTIGUA: recolorea los pocos puntos con azul/cian LITERAL (no vía `--steam`) para que
    la zona vieja quede cálida y coherente; el resto ya se calienta solo al cambiar las variables. ── */
 :root[data-palette="portal"][data-theme="light"] .fab { background: radial-gradient(circle at 50% 42%, #ffe3b0, var(--steam) 70%); color: #2a1a08; }
-/* El fondo del activo se aclara un punto: el marrón de Aperture sobre el ámbar puro se queda en 4,01:1, y este
-   es el rótulo que dice qué pestaña está abierta. Con la mezcla pasa de 5:1 sin salirse de la gama cálida. */
-:root[data-palette="portal"][data-theme="light"] .btn-toggle.active {
-  background: color-mix(in srgb, var(--steam) 85%, #fff) !important;
-  color: #2a1a08 !important;
-}
 :root[data-palette="portal"][data-theme="light"] .badge-opp-activo { color: #2a1a08 !important; }
 :root[data-palette="portal"][data-theme="light"] .bottom-nav-inner { border: 1px solid var(--border); border-top: 2px solid var(--portal-orange); }
 
@@ -542,10 +617,39 @@
 :root[data-palette="portal"][data-theme="light"] .hub-feed-activity-item.is-move {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 4px 12px rgba(20, 45, 70, .08) !important;
 }
-/* «Añadió … a su biblioteca» deja su rosa (el cuarto tono, el de la casa) a la lista de deseos, que lleva el del cubo
-   de compañía (`--wish`), y toma el azul grisáceo de la rampa: dos avisos que se ven juntos no pueden ser del mismo
-   color. */
-:root[data-palette="portal"] .hub-feed-activity-item.is-move[data-tab="p"] { --evc: var(--cat-7); }
+/* LOS AVISOS CON LOS COLORES DE LA CÁMARA, y con cuerpo. Con el velo de la casa (8 %) y el rosa pálido de la
+   rampa, «añadió … a su lista de deseos» era una placa gris; y empezar y añadir salían en dos azules casi iguales.
+   Cada lista toma ahora su color de Portal, el MISMO que el botón que mueve a ella (§5): empezar en el naranja del
+   portal de «Pasar a en curso», próximos en el azul de «Pasar a próximos» —al revés en la Aperture antigua—, deseos
+   en el rosa del cubo de compañía, abandonar en el rojo de la torreta.
+
+   Y más presencia, como etiqueta de señalética: filete del color, velo más denso y una franja a la izquierda. El
+   texto sigue en los colores auditados de siempre; el velo solo baja la luz del fondo, y la tinta clara del oscuro
+   y la oscura del claro siguen por encima de 4,5:1 sobre el más denso de los seis. */
+:root[data-palette="portal"] .hub-feed-activity-item.is-move[data-tab="e"] { --evc: var(--portal-orange); }
+:root[data-palette="portal"] .hub-feed-activity-item.is-move[data-tab="p"] { --evc: var(--steam); }
+:root[data-palette="portal"] .hub-feed-activity-item.is-move[data-tab="d"] { --evc: var(--portal-cube); }
+:root[data-palette="portal"] .hub-feed-activity-item.is-move[data-tab="v"] { --evc: var(--portal-turret); }
+:root[data-palette="portal"][data-theme="light"] .hub-feed-activity-item.is-move[data-tab="e"] { --evc: var(--chip-plat-fg); }
+:root[data-palette="portal"][data-theme="light"] .hub-feed-activity-item.is-move[data-tab="p"] { --evc: var(--cat-2); }
+:root[data-palette="portal"] :is(.hub-feed-activity-item.is-move, .hub-feed-activity-item.is-achievements) {
+  border: 1px solid color-mix(in srgb, var(--evc) 70%, transparent) !important;
+  background: color-mix(in srgb, var(--evc) 15%, var(--surface)) !important;
+  box-shadow: inset 3px 0 0 var(--evc), 0 4px 14px rgba(0, 0, 0, .18) !important;
+}
+:root[data-palette="portal"][data-theme="light"] :is(.hub-feed-activity-item.is-move, .hub-feed-activity-item.is-achievements) {
+  background: color-mix(in srgb, var(--evc) 10%, var(--surface)) !important;
+  box-shadow: inset 3px 0 0 var(--evc), 0 4px 12px rgba(20, 45, 70, .08) !important;
+}
+/* El LOGRO en la Aperture moderna va en el BLANCO de sus paneles: su ámbar de aviso y el naranja de «empezó» eran
+   casi el mismo color, uno al lado del otro. En la antigua «empezó» es azul, así que ahí el logro sigue en ámbar. */
+:root[data-palette="portal"] .hub-feed-activity-item.is-achievements { --evc: #e9eef1; }
+:root[data-palette="portal"][data-theme="light"] .hub-feed-activity-item.is-achievements { --evc: var(--warn); }
+/* Sobre el velo teñido, los dos textos más tenues no llegaban: la HORA (en `--text-dim`, 3,3:1 en oscuro sobre el
+   velo blanco) sube al gris de texto atenuado, y el JUEGO en claro —la mezcla de acento y gris de la casa, que ya
+   se quedaba en 3,2:1 sobre el pergamino— toma el marrón de enlace de la paleta. */
+:root[data-palette="portal"] :is(.is-move, .is-achievements) .hub-feed-move-hour { color: var(--text-muted); }
+:root[data-palette="portal"][data-theme="light"] .is-move .hub-feed-move-game:not(.is-plain) { color: var(--fg-link); }
 /* Monoespaciada como el resto de los datos de la paleta: la hora es una lectura de instrumento. */
 :root[data-palette="portal"] .hub-feed-move-hour { font-family: var(--font-mono); }
 

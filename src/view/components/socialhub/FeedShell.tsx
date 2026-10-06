@@ -74,7 +74,6 @@ export function FeedShell({
               <Icon name="bottom-hub" className="hub-hub-icon" />
               <h2>{F.title}</h2>
             </div>
-            <p>{F.subtitle}</p>
           </div>
           {avatar}
         </header>
