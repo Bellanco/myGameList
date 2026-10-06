@@ -257,7 +257,9 @@
 
 /* ── §13 · Barra inferior: caja pixelada; pastilla activa recta. ── */
 :root[data-palette="seaofstars"] .bottom-nav-inner { border: 2px solid var(--border); border-radius: 0; background: var(--surface); box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px color-mix(in srgb, var(--sos-turq) 45%, var(--border)); }
-:root[data-palette="seaofstars"] .bottom-nav-ind { border-radius: 0; }
+/* El fondo del HOVER (`.bottom-nav-btn`) lleva el mismo canto que el indicador del activo: con la pastilla de la
+   casa, al pasar por encima aparecía una cápsula dentro de una barra de esquinas vivas. */
+:root[data-palette="seaofstars"] :is(.bottom-nav-ind, .bottom-nav-btn) { border-radius: 0; }
 
 /* Brillo de agua: latido MUY sutil del título hero (respeta reduced-motion). */
 @media (prefers-reduced-motion: no-preference) {

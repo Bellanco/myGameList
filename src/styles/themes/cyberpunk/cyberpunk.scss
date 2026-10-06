@@ -470,7 +470,9 @@
 
 /* ── §13 · Barra de navegación inferior: HUD — filete cian + barra amarilla lateral, esquinas rectas. ── */
 :root[data-palette="cyberpunk"] .bottom-nav-inner { border: 1px solid var(--cyber-edge); border-left: 3px solid var(--cyber-yellow); border-radius: 0; background: var(--surface); }
-:root[data-palette="cyberpunk"] .bottom-nav-ind { border-radius: 0; }
+/* El fondo del HOVER (`.bottom-nav-btn`) lleva el mismo canto que el indicador del activo: con la pastilla de la
+   casa, al pasar por encima aparecía una cápsula dentro de una barra de esquinas vivas. */
+:root[data-palette="cyberpunk"] :is(.bottom-nav-ind, .bottom-nav-btn) { border-radius: 0; }
 
 /* ══ EFECTOS · subrayado/halo neón en enlaces al hover (se suma al glitch de firma). Solo `data-effects="on"`. ══ */
 :root[data-effects="on"][data-palette="cyberpunk"] .hub-name-link:hover,

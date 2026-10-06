@@ -311,7 +311,9 @@
 
 /* ── §13 · Barra de navegación inferior: moldura de oro con resplandor de pantalla verde, esquinas rectas. ── */
 :root[data-palette="grimdark"] .bottom-nav-inner { border: 1px solid var(--grim-gold); border-radius: 0; background: var(--surface); box-shadow: 0 0 18px rgba(67, 245, 88, .05); }
-:root[data-palette="grimdark"] .bottom-nav-ind { border-radius: 0; }
+/* El fondo del HOVER (`.bottom-nav-btn`) lleva el mismo canto que el indicador del activo: con la pastilla de la
+   casa, al pasar por encima aparecía una cápsula dentro de una barra de esquinas vivas. */
+:root[data-palette="grimdark"] :is(.bottom-nav-ind, .bottom-nav-btn) { border-radius: 0; }
 
 /* ══ EFECTOS · barrido de línea de fósforo del cogitador (CRT) que recorre la pantalla. Solo OSCURO y con
    `data-effects="on"`, bajo reduced-motion. Va en `body::after` (el ::before ya lleva scanlines+vignette). ══ */

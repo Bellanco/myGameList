@@ -386,7 +386,9 @@
 
 /* ── §13 · Barra de navegación inferior: placa Aperture — filete cian + barra naranja superior (gel), como los paneles. ── */
 :root[data-palette="portal"] .bottom-nav-inner { border: 1px solid rgba(0, 240, 255, .35); border-top: 2px solid var(--portal-orange); border-radius: var(--radius-md); background: var(--surface); }
-:root[data-palette="portal"] .bottom-nav-ind { border-radius: var(--radius-sm); }
+/* El fondo del HOVER (`.bottom-nav-btn`) lleva el mismo canto que el indicador del activo: con la pastilla de la
+   casa, al pasar por encima aparecía una cápsula dentro de una barra de esquinas vivas. */
+:root[data-palette="portal"] :is(.bottom-nav-ind, .bottom-nav-btn) { border-radius: var(--radius-sm); }
 
 /* ── §14 · CLARO = APERTURE ANTIGUA: recolorea los pocos puntos con azul/cian LITERAL (no vía `--steam`) para que
    la zona vieja quede cálida y coherente; el resto ya se calienta solo al cambiar las variables. ── */

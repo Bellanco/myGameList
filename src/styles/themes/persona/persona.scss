@@ -429,7 +429,9 @@
 
 /* ── §13 · Barra de navegación inferior: sticker de cómic (contorno grueso + sombra roja), como los paneles (§3). ── */
 :root[data-palette="persona"] .bottom-nav-inner { border: 3px solid var(--pop-line); border-radius: 6px; background: var(--surface); box-shadow: 0 8px 20px rgba(0, 0, 0, .4), 4px 4px 0 rgba(255, 78, 100, .45); }
-:root[data-palette="persona"] .bottom-nav-ind { border-radius: 3px; }
+/* El fondo del HOVER (`.bottom-nav-btn`) lleva el mismo canto que el indicador del activo: con la pastilla de la
+   casa, al pasar por encima aparecía una cápsula dentro de una barra de esquinas vivas. */
+:root[data-palette="persona"] :is(.bottom-nav-ind, .bottom-nav-btn) { border-radius: 3px; }
 :root[data-palette="persona"][data-theme="light"] .fab,
 :root[data-palette="persona"][data-theme="light"] .fab-roulette { color: #fff; box-shadow: 2px 2px 0 #151011; }
 
