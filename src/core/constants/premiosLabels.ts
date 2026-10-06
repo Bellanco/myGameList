@@ -96,8 +96,6 @@ export const PREMIOS_UI = {
     nameHint: 'Es el que verá el resto en la clasificación.',
     /** Con perfil social el nombre es el del perfil: aquí no se cambia, y se dice dónde sí. */
     nameLockedHint: 'Es el nombre de tu perfil. Si lo cambias allí, se cambia también aquí.',
-    /** Sin perfil social, el alias se elige la primera vez que se vota y se conserva en las siguientes ediciones. */
-    nameAliasLockedHint: 'Es el nombre que elegiste la primera vez que votaste. Se conserva de una edición a otra.',
     voted: (votadas: number, total: number) => `${votadas} de ${total} categorías votadas`,
     notVoted: 'Sin votar',
     pending: (cuantas: number) =>

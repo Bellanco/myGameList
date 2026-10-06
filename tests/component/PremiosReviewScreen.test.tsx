@@ -43,6 +43,7 @@ function pintar(
         error=""
         onSubmit={onSubmit}
         readOnly={readOnly}
+        nameLocked={Boolean(nameLockedHint)}
         nameLockedHint={nameLockedHint}
       />
     </MemoryRouter>,

@@ -335,13 +335,8 @@ export function PremiosHub() {
           categories={edition.categories}
           votes={voting.votes}
           defaultName={nombrePropuesto}
-          nameLockedHint={
-            voter.hasSocialAccount
-              ? PREMIOS_UI.revisar.nameLockedHint
-              : nombreBloqueado
-                ? PREMIOS_UI.revisar.nameAliasLockedHint
-                : ''
-          }
+          nameLocked={nombreBloqueado}
+          nameLockedHint={voter.hasSocialAccount ? PREMIOS_UI.revisar.nameLockedHint : ''}
           remainingOpportunities={edition.remainingOpportunities}
           isEdit={Boolean(edition.ballot)}
           submitting={voting.submitting}

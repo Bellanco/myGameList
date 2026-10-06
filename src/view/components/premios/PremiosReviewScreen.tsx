@@ -19,10 +19,11 @@ export interface PremiosReviewScreenProps {
   /** Nombre propuesto: el de su perfil social, el alias que ya usó o el de su cuenta. */
   defaultName: string;
   /**
-   * EL NOMBRE YA ESTÁ DECIDIDO y se enseña sin poder cambiarlo, con este texto debajo diciendo por qué: con perfil
-   * social es el de su perfil (y lo sigue); sin él, el alias que eligió la primera vez que votó. Sin texto, el
-   * nombre se elige aquí.
+   * EL NOMBRE YA ESTÁ DECIDIDO y se enseña sin poder cambiarlo: con perfil social es el de su perfil (y lo sigue);
+   * sin él, el alias que eligió la primera vez que votó.
    */
+  nameLocked?: boolean;
+  /** Texto bajo el nombre bloqueado, en vez del de siempre. Solo el perfil social lo lleva: dice dónde se cambia. */
   nameLockedHint?: string;
   /** Oportunidades que le quedan, esta incluida. */
   remainingOpportunities: number;
@@ -66,9 +67,9 @@ export function PremiosReviewScreen({
   error,
   onSubmit,
   readOnly = false,
+  nameLocked = false,
   nameLockedHint = '',
 }: PremiosReviewScreenProps) {
-  const nameLocked = Boolean(nameLockedHint);
   const [name, setName] = useState(defaultName);
 
   const votadas = categories.filter((category) => Boolean(votes[category.id])).length;
@@ -103,7 +104,7 @@ export function PremiosReviewScreen({
           readOnly={nameLocked}
           onChange={(event) => setName(event.target.value)}
         />
-        <p className="premios-review__hint">{nameLockedHint || L.nameHint}</p>
+        <p className="premios-review__hint">{(nameLocked && nameLockedHint) || L.nameHint}</p>
 
         {pendientes > 0 ? (
           <p className="premios-review__pending">
