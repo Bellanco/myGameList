@@ -5,6 +5,33 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.6.2] - 2026-10-06
+
+Una versión de **nombres**: en Premios, el nombre con el que sales en la clasificación queda ligado al de tu
+perfil, y todos los nombres caben en 35 caracteres. Además, los textos de la app, legales incluidos, se han
+reescrito para que suenen más naturales.
+
+### Changed
+- **El nombre de la papeleta, según tengas o no perfil social.**
+  - Con perfil social, es siempre **el de tu perfil**, y en la papeleta no se puede cambiar. Si te lo cambias en
+    el perfil, cambia también en tu papeleta, sin gastar ninguna oportunidad y aunque la votación esté cerrada,
+    hasta que se publique la edición.
+  - Sin perfil social, la primera vez se propone **el de tu cuenta de Google** y puedes escribir otro. Se guarda, y
+    en las ediciones siguientes sale ese mismo, sin poder cambiarlo.
+  - Las ediciones ya publicadas **conservan el nombre que tenía cada uno**, y siguen enlazadas a su perfil.
+- **Los nombres caben en 35 caracteres**, en la papeleta y en el perfil (antes, 50 y 60). Un nombre de Google más
+  largo se corta.
+- **Textos más naturales en toda la app**: premios, social, guía de primeros pasos, ajustes, estadísticas, logros,
+  temas, panel de administración y textos legales. En los legales solo cambia la redacción: la versión es la
+  misma y no hay que volver a aceptarlos.
+
+### Deploy
+- **Las reglas de Firestore de esta versión ya están desplegadas** (06-10-2026): el tope de 35 caracteres en
+  perfiles, amistades y papeletas, y el cambio de nombre de la papeleta sin gastar oportunidad, solo con perfil
+  social. Se desplegaron sin pasar `audit:rules`; los perfiles se revisaron a mano y ninguno pasa de 13
+  caracteres. Hasta que se sube esta versión, la app anterior deja escribir nombres más largos que las reglas ya
+  rechazan.
+
 ## [1.6.1] - 2026-10-06
 
 Una versión de **acabado**: los botones se visten con cada tema, los avisos del feed se distinguen y se leen en
