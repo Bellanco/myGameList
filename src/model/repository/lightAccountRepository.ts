@@ -22,12 +22,11 @@
  *  2. **`tier`.** En un `create`, `profileTierNotSelfAssigned()` exige que el campo NO esté: el rango lo pone el
  *     administrador, y quien no lo tiene se trata como bronce por el valor por omisión del código.
  */
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore/lite';
+import { doc, getDoc, setDoc } from 'firebase/firestore/lite';
 import { FIRESTORE_SCHEMA_VERSION } from '../../core/constants/schema';
 import { PUBLIC_NAME_MAX_LENGTH, safeTrim } from '../../core/security/sanitize';
 import { initializeFirebaseServices, type SocialAuthUser } from './firebaseClient';
 import { resolveStableProfileId } from './firebaseRepository';
-import { getOwnProfileRef, invalidateOwnProfileCache } from './firebaseSocialRepository';
 
 /**
  * Se asegura de que esta cuenta exista como perfil, y devuelve su pseudónimo público.
@@ -74,38 +73,5 @@ export async function ensureLightAccount(user: SocialAuthUser | null, preferredN
   } catch {
     // Sin perfil se vota igual: el pseudónimo es opcional en la papeleta y en las reglas.
     return '';
-  }
-}
-
-/**
- * EL ALIAS DE LA PAPELETA PASA A LA CUENTA LIGERA, también si ya la tenía con otro nombre.
- *
- * Quien no tenía perfil ya lo estrena con ese nombre (`ensureLightAccount`); esto cubre a quien ya tenía cuenta
- * ligera de otra edición. Sin gist, `displayName` es su único nombre, así que basta con escribirlo ahí.
- *
- * NUNCA toca un perfil social: ahí el nombre de la papeleta ES el de su perfil y no se elige al votar, así que no
- * hay nada que devolverle (el que cambia es al revés, del perfil a la papeleta: ver `renameOwnBallot`).
- *
- * Best-effort, como la cuenta ligera: el voto ya está guardado y un fallo aquí no puede deshacerlo.
- */
-export async function saveBallotNameToProfile(user: SocialAuthUser | null, name: string): Promise<void> {
-  const nombre = safeTrim(name, PUBLIC_NAME_MAX_LENGTH);
-  if (!user?.uid || !nombre) return;
-
-  try {
-    const services = await initializeFirebaseServices();
-    if (!services) return;
-
-    const own = await getOwnProfileRef(user.uid);
-    if (!own || own.socialEnabled || own.displayName === nombre) return;
-
-    await setDoc(
-      doc(services.firestore, 'profiles', user.uid),
-      { uid: user.uid, displayName: nombre, updatedAt: serverTimestamp() },
-      { merge: true },
-    );
-    invalidateOwnProfileCache(user.uid);
-  } catch {
-    // El voto ya está dentro; el nombre de la cuenta se queda como estaba.
   }
 }

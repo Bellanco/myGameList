@@ -5,7 +5,7 @@ import { ballotIsUnchanged, selectionsAreUnchanged } from '../../../core/premios
 import { BALLOT_NAME_MAX_LENGTH } from '../../../core/premios/limits';
 import { safeTrim } from '../../../core/security/sanitize';
 import { renameOwnBallot, votesToSelections } from '../../../model/repository/premios/premiosBallotRepository';
-import { ensureLightAccount, saveBallotNameToProfile } from '../../../model/repository/lightAccountRepository';
+import { ensureLightAccount } from '../../../model/repository/lightAccountRepository';
 import { signInWithGoogle, subscribeSocialAuth } from '../../../model/repository/firebaseGateway';
 import { isSupersededSignIn } from '../../../core/utils/googleSignIn';
 import type { SocialAuthUser } from '../../../model/repository/firebaseClient';
@@ -132,25 +132,28 @@ export function PremiosHub() {
    *
    *  - Con perfil social, SIEMPRE el de su perfil, y no se puede cambiar aquí: si lo cambia en su perfil, la
    *    papeleta lo sigue (ver `renameOwnBallot`).
-   *  - Sin él, se propone el alias que ya eligió —en la papeleta, o en la cuenta ligera que se le creó al votar— y
-   *    si no hay ninguno, el de su cuenta de Google. Puede escribir otro al votar; después, ya no.
+   *  - Sin él, la PRIMERA vez se propone el de su cuenta de Google y puede escribir otro. Ese alias se guarda en
+   *    la cuenta ligera que se le crea al votar y ahí se queda: en las siguientes ediciones sale el mismo y ya no
+   *    se puede cambiar.
    *
    * Recortado al tope de la papeleta ya en el campo: un nombre más largo se vería entero y se guardaría cortado sin
    * que su dueño lo supiera.
    */
-  const alias = edition.ballot?.userDisplayName || '';
+  const aliasGuardado = voter.hasSocialAccount ? '' : voter.displayName;
+  const nombreBloqueado = voter.hasSocialAccount || Boolean(aliasGuardado);
   const nombrePropuesto = safeTrim(
     voter.hasSocialAccount
-      ? voter.displayName || alias || user?.displayName
-      : alias || voter.displayName || user?.displayName,
+      ? voter.displayName || edition.ballot?.userDisplayName || user?.displayName
+      : aliasGuardado || edition.ballot?.userDisplayName || user?.displayName,
     BALLOT_NAME_MAX_LENGTH,
   );
 
   const handleSubmit = useCallback(
     async (nombreEscrito: string) => {
       setError('');
-      // Con perfil social el nombre no se elige: es el de su perfil, pase lo que pase con el campo.
-      const displayName = voter.hasSocialAccount ? nombrePropuesto : nombreEscrito;
+      // Con el nombre ya decidido (su perfil, o el alias de su cuenta ligera) no se elige: pase lo que pase con el
+      // campo, se vota con ese.
+      const displayName = nombreBloqueado ? nombrePropuesto : nombreEscrito;
       const selecciones = votesToSelections(voting.votes);
       try {
         // MIRAR NO CUESTA UNA OPORTUNIDAD. Quien entra a repasar su papeleta, no toca nada y pulsa enviar por
@@ -190,9 +193,6 @@ export function PremiosHub() {
           season: Number(edition.config?.season) || new Date().getFullYear(),
           existing: edition.ballot,
         });
-        // EL ALIAS PASA A LA CUENTA LIGERA, también si ya la tenía con otro (ver `saveBallotNameToProfile`). Al
-        // que no la tenía ya se le ha creado con este nombre arriba, y a un perfil social no se le toca.
-        await saveBallotNameToProfile(user, displayName);
         setJustSubmitted(true);
         await edition.reload();
         navigate(PREMIOS_ROUTES.sent);
@@ -201,7 +201,7 @@ export function PremiosHub() {
         setError(edition.votingOpen ? PREMIOS_UI.errores.submit : PREMIOS_UI.errores.closed);
       }
     },
-    [edition, navigate, nombrePropuesto, profileId, user, voter.hasSocialAccount, voting],
+    [edition, navigate, nombreBloqueado, nombrePropuesto, profileId, user, voter.hasSocialAccount, voting],
   );
 
   // SE ESPERA TAMBIÉN AL PERFIL, y no es cosmético: el cupo sale de él, así que decidir antes de tenerlo le
@@ -335,7 +335,13 @@ export function PremiosHub() {
           categories={edition.categories}
           votes={voting.votes}
           defaultName={nombrePropuesto}
-          nameLocked={voter.hasSocialAccount}
+          nameLockedHint={
+            voter.hasSocialAccount
+              ? PREMIOS_UI.revisar.nameLockedHint
+              : nombreBloqueado
+                ? PREMIOS_UI.revisar.nameAliasLockedHint
+                : ''
+          }
           remainingOpportunities={edition.remainingOpportunities}
           isEdit={Boolean(edition.ballot)}
           submitting={voting.submitting}

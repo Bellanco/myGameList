@@ -29,7 +29,7 @@ function pintar(
   votes: Record<string, { id: string; name: string }>,
   onSubmit = vi.fn(),
   readOnly = false,
-  nameLocked = false,
+  nameLockedHint = '',
 ) {
   render(
     <MemoryRouter>
@@ -43,7 +43,7 @@ function pintar(
         error=""
         onSubmit={onSubmit}
         readOnly={readOnly}
-        nameLocked={nameLocked}
+        nameLockedHint={nameLockedHint}
       />
     </MemoryRouter>,
   );
@@ -166,9 +166,9 @@ describe('PremiosReviewScreen', () => {
     });
   });
 
-  // CON PERFIL SOCIAL EL NOMBRE NO SE ELIGE: es el de su perfil, y la pantalla dice dónde se cambia.
-  it('con perfil social el nombre sale bloqueado y se envía el del perfil', async () => {
-    const onSubmit = pintar(completa, vi.fn(), false, true);
+  // EL NOMBRE YA DECIDIDO no se elige: el de su perfil social, o el alias que eligió la primera vez que votó.
+  it('con el nombre ya decidido sale bloqueado, con su porqué, y se envía ese', async () => {
+    const onSubmit = pintar(completa, vi.fn(), false, L.nameLockedHint);
     const campo = screen.getByLabelText(L.nameLabel);
 
     expect(campo).toHaveAttribute('readonly');
