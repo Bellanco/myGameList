@@ -26,6 +26,9 @@ todos, y el palmarés del perfil dice en qué puesto quedó cada uno. Sin cambio
 
 ### Fixed
 - **Arcade**: la letra de los botones vuelve a leerse en claro y en oscuro.
+- **La analítica ya no se descarga sin tu consentimiento.** Se pedía aparte, solo al aceptarla, pero el troceado
+  del bundle la metía en el mismo fichero que el resto de Firebase: ~5 kB comprimidos que bajaban todos los que
+  usan lo social o la sincronización. Ahora va en su propio fichero y solo llega si la aceptas.
 
 ## [1.6.0] - 2026-10-05
 
