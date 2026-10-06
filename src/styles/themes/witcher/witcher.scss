@@ -63,7 +63,7 @@
 :root[data-palette="witcher"] h3,
 /* Los títulos de modal y de diálogo son `div`, no `h2`: sin nombrarlos se quedaban en Lora mientras los demás
    siete temas los pasan a su letra de titular. `.modal-hd` va aparte porque el modal de alta pone el rótulo
-   suelto, sin `.modal-title` dentro (la misma nota que en `forja.scss`). */
+   suelto, sin `.modal-title` dentro (la misma nota que en `tierramedia.scss`). */
 :root[data-palette="witcher"] .modal-title,
 :root[data-palette="witcher"] .modal-hd,
 :root[data-palette="witcher"] .dialog-title,

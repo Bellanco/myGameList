@@ -3,21 +3,21 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#0f1315">
+    <meta name="theme-color" content="#10140f">
     <title>Maqueta · hub social</title>
     <!-- MAQUETA DESECHABLE, como `docs/logros/demo-globales.html`. Monta las pantallas REALES del hub social
          (feed, directorio, ficha, reseña y bandeja) con datos inventados, para verlas sin sesión de Google ni
          amigos. No entra en el build. Parámetros:
            ?pantalla=feed|amigos|perfil|resena|resena-perfil|solicitudes   (por defecto, feed)
            &vista=resenas            (solo con pantalla=perfil: la vista de reseñas en vez de las listas)
-           &gl-palette=<id>          (forja, arcade, witcher, persona, portal, cyberpunk, seaofstars, grimdark)
+           &gl-palette=<id>          (tierramedia, arcade, witcher, persona, portal, cyberpunk, seaofstars, grimdark)
            &gl-theme=dark|light      (por defecto, dark)
            &gl-effects=off           (apaga los efectos animados de los temas; la app los trae encendidos)
          El bloque de abajo hace lo mismo que el anti-flash de `index.html`, pero leyendo la URL en vez de
          `localStorage`, y sin escribir nada: la maqueta no toca las preferencias guardadas. -->
     <script>(function () {
   var BG = {
-    forja: { dark: '#0f1315', light: '#dee7e9' },
+    tierramedia: { dark: '#10140f', light: '#ece3cc' },
     witcher: { dark: '#141922', light: '#d8e0e7' },
     persona: { dark: '#0d0d0d', light: '#f4f1ee' },
     portal: { dark: '#12171b', light: '#e7dabd' },
@@ -37,7 +37,7 @@
     palette = 'witcher';
   }
   if (!BG[palette]) {
-    palette = 'forja';
+    palette = 'tierramedia';
   }
   root.setAttribute('data-palette', palette);
   // Lo que la app deja escrito al montar sus preferencias con los valores de fábrica (efectos encendidos, listado

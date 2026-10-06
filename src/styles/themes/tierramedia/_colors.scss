@@ -1,0 +1,115 @@
+/* COLOR de «No puedes pasar» (`data-palette="tierramedia"`) — CAPA 2 (identidad) y CAPA 2b (rampa categórica).
+   Va en el BUNDLE BASE: es lo que pinta el primer fotograma de quien tiene este tema elegido, así que no
+   puede llegar tarde. Lo que sí llega tarde —y por eso vive en el `<id>.scss` de al lado— es la CAPA 3.
+   Las reglas del sistema (qué token hay que definir y qué contraste le toca) están en `../_index.scss`.
+   Sustituye a «Forja y temple» (id `forja`) desde el 06-10-2026; quien lo tenía guardado llega aquí por la
+   tabla de ids heredados de `constants/palettes.ts`. */
+
+/* ── tierramedia · «No puedes pasar» (el tema de casa) ─────────────────────────────────────────────────────────
+   La Tierra Media sin disfraz: un bosque de noche —verde casi negro, no gris— y encima los dos colores del
+   viaje. Sigue siendo el tema de quien no ha elegido nada, así que es SOBRIO de fondo y VIVO de color.
+
+   DOS COLORES, repartidos por PAPEL —la misma regla que «Plata y acero»—:
+     · el ORO (`--steam`, el del Anillo y las hojas de mallorn) es lo que se RELLENA: acción principal,
+       pestaña activa, lomo de la fila, botón de alta;
+     · la HOJA (`--tm-hoja`, el verde de la Comarca) es lo que SEÑALA y ESCRIBE: enlaces, anillo de foco,
+       barra inferior activa.
+   Oro cálido y verde vivo: dos temperaturas, sin abrir una tercera familia.
+
+   EL ÁMBAR DE AVISO SE VA AL NARANJA porque el oro ya es el acento —lo mismo que hizo «Sol y luna»—: con los
+   dos en amarillo, el año de un juego se leía como un botón.
+
+   MEDIDAS, peor de los cuatro fondos — oscuro: texto 10,84:1 · atenuado 7,25:1 · pestaña inactiva 7,60:1 ·
+   hoja como tinta 6,96:1 · tinta sobre el relleno de oro 9,25:1. Claro: texto 12,20:1 · atenuado 6,95:1 ·
+   pestaña inactiva 8,59:1 · hoja 4,57:1 · blanco sobre oro viejo 6,77:1. */
+:root[data-palette="tierramedia"] {
+  /* LAS CUATRO CHAPAS: verde de bosque con una gota de calor. 1,12 / 1,27 / 1,52:1 de punta a punta, la misma
+     holgura que piden las demás paletas. */
+  --bg: #10140f;
+  --surface: #182019;
+  --surface-hover: #212b22;
+  --surface-elevated: #2c382d;
+  --border: #4a5a49;
+  /* El texto no es blanco: es el papel de un mapa a la luz de una vela. */
+  --text: #f3f1e6;
+  --text-muted: #c9c8b4;
+  --text-dim: #aeb19c;
+  --steam: #e3b04b;
+  --steam-hover: #f0c66c;
+  --steam-rgb: 227,176,75;
+  --tab-active: #f0c66c;
+  --success: #4fd3a5;
+  --success-rgb: 79,211,165;
+  --warn: #f0954b;
+  --warn-rgb: 240,149,75;
+  --danger: #ff7a70;
+  --danger-rgb: 255,122,112;
+  /* El relleno de peligro (blanco encima) baja un punto más que el de la casa (75 %): con este coral, el 75 %
+     dejaba el blanco en 4,3:1. Al 68 % queda en 5,10:1 y la tinta coral sigue en 4,83:1. */
+  --danger-fill: color-mix(in srgb, var(--danger) 68%, #000);
+  --star-empty: #46523f;
+  --star-full: #f0c35a;
+  /* PLATAFORMA · familia fría: el azul de las aguas del mapa. */
+  --chip-plat-fg: #a9c4ef;
+  --chip-plat-bg: rgba(134,181,240,.14);
+  --chip-plat-border: rgba(134,181,240,.34);
+  --hub-text: #f3f1e6;
+  --hub-text-muted: #c9c8b4;
+  /* El oro es un acento CLARO: encima va tinta de bosque, no blanco (9,25:1). */
+  --on-accent: #1c1303;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  /* LA HOJA · el segundo papel. Escribe (`--fg-link`) y señala (`--focus-ring`); nunca rellena. */
+  --tm-hoja: #9bd27c;
+  --focus-ring: var(--tm-hoja);
+  --fg-link: var(--tm-hoja);
+}
+/* CLARO = EL MAPA EXTENDIDO SOBRE LA MESA: pergamino en vez de bosque, y los dos colores en su versión de
+   tinta —el oro pasa a oro viejo y la hoja a verde de musgo—. En oscuro los dos EMITEN; aquí son TINTA. */
+:root[data-palette="tierramedia"][data-theme="light"] {
+  --bg: #ece3cc;
+  --surface: #fbf7ec;
+  --surface-hover: #e2d7bc;
+  --surface-elevated: #f4eedd;
+  --border: #b9ab88;
+  --text: #1b1a12;
+  --text-muted: #47432f;
+  --text-dim: #4c4834;
+  --steam: #7a5410;
+  --steam-hover: #634410;
+  --steam-rgb: 122,84,16;
+  --tab-active: #634410;
+  --success: #0f6b48;
+  --success-rgb: 15,107,72;
+  --warn: #8f450b;
+  --warn-rgb: 143,69,11;
+  --danger: #ae2727;
+  --danger-rgb: 174,39,39;
+  --danger-fill: var(--danger);
+  --star-empty: #c4b896;
+  --star-full: #7a5410;
+  --chip-plat-fg: #1d4f91;
+  --chip-plat-bg: rgba(29,79,145,.10);
+  --chip-plat-border: rgba(29,79,145,.30);
+  --hub-text: #1b1a12;
+  --hub-text-muted: #47432f;
+  /* Sombras y veladuras en sepia de tinta, no en pizarra: es papel. */
+  --tint-rgb: 58,46,22;
+  --on-accent: #fff;
+  --tm-hoja: #2e6a2a;
+  --focus-ring: var(--tm-hoja);
+  --fg-link: var(--tm-hoja);
+}
+/* tierramedia («No puedes pasar») — los siete del mapa: oro, hoja, ámbar de otoño, azul de río, rosa de Rivendel, verde
+   de Lórien y lila de atardecer élfico. Peor relleno 5,20:1 y peor texto 5,20:1 en los cuatro fondos. */
+:root[data-palette="tierramedia"] {
+  --cat-1: #e3b04b; --cat-2: #9bd27c; --cat-3: #f0954b; --cat-4: #86b5f0; --cat-5: #f08aa6; --cat-6: #5fd0c4; --cat-7: #c3a2f2;
+  --wish: var(--cat-7);
+  --cat-1-fg: #e3b04b; --cat-2-fg: #9bd27c; --cat-3-fg: #f0954b; --cat-4-fg: #86b5f0; --cat-5-fg: #f08aa6; --cat-6-fg: #5fd0c4; --cat-7-fg: #c3a2f2;
+}
+/* tierramedia («No puedes pasar») — los mismos siete a la luz: tinta de mapa. Peor 4,57:1. */
+:root[data-palette="tierramedia"][data-theme="light"] {
+  --cat-1: #7a5410; --cat-2: #2e6a2a; --cat-3: #8f450b; --cat-4: #1d4f91; --cat-5: #9c2552; --cat-6: #0c6560; --cat-7: #6237a6;
+  --cat-1-fg: #7a5410; --cat-2-fg: #2e6a2a; --cat-3-fg: #8f450b; --cat-4-fg: #1d4f91; --cat-5-fg: #9c2552; --cat-6-fg: #0c6560; --cat-7-fg: #6237a6;
+}

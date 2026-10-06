@@ -1576,7 +1576,7 @@
   }
 
   /* El espaciado entre letras es un acabado para el cuerpo de una línea; en el rótulo apilado —11,7px— no se
-     aprecia y cuesta 1,4px justo donde no hay ninguno de sobra (3,3px con el `.02em` de forja).
+     aprecia y cuesta 1,4px justo donde no hay ninguno de sobra (3,3px con el `.02em` de «No puedes pasar»).
      VA EN EL RÓTULO, NO EN EL BOTÓN: los skins ponen su tracking en `.bottom-nav-btn` con (0,3,0) —lo mismo que
      pesaba esta regla— y, cargados después, la anulaban. En el Linux de CI eso dejaba «Estadísticas» apretada
      pidiendo 83px en una columna de 82,97 a 365px: muda por 0,03px. El rótulo hereda del botón, así que

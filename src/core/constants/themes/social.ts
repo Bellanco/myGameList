@@ -6,7 +6,7 @@
 // Lo que sí se comprueba es que las dos listas digan lo mismo: `tests/unit/themes.test.ts` falla si un tema
 // está en `THEMES` y no aquí (o al revés).
 import type { PaletteId } from '../palettes';
-import { forjaSocial } from './forja.social';
+import { tierramediaSocial } from './tierramedia.social';
 import { arcadeSocial } from './arcade.social';
 import { witcherSocial } from './witcher.social';
 import { personaSocial } from './persona.social';
@@ -17,7 +17,7 @@ import { grimdarkSocial } from './grimdark.social';
 import type { ThemeSocialVoice } from './theme';
 
 const SOCIAL_VOICES: Record<PaletteId, ThemeSocialVoice> = {
-  forja: forjaSocial,
+  tierramedia: tierramediaSocial,
   arcade: arcadeSocial,
   witcher: witcherSocial,
   persona: personaSocial,

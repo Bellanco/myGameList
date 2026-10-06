@@ -20,10 +20,10 @@ export interface ThemePremiosVoice {
 }
 
 const PREMIOS_VOICES: Record<PaletteId, ThemePremiosVoice> = {
-  /* La fragua: el fuego está encendido, pero no hay nada en el yunque. */
-  forja: {
-    error: 'El yunque está vacío.',
-    offline: 'El recuento no llega a la fragua.',
+  /* La Tierra Media: el voto se decide en consejo, y el consejo no ha podido sentarse. */
+  tierramedia: {
+    error: 'El Concilio no ha podido reunirse.',
+    offline: 'El recuento no llega al Concilio.',
   },
   /* El salón recreativo: la máquina se come la moneda y no arranca la partida. */
   arcade: {

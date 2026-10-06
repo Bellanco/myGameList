@@ -1,0 +1,345 @@
+/* Fuentes propias de esta paleta. A diferencia de los demás skins, esta hoja NO se carga bajo demanda: entra
+   en el bundle base desde `styles/index.scss` porque es la letra del PRIMER FOTOGRAMA (ver la nota de allí).
+   Servidas desde el propio origen. Generado por `scripts/vendor-fonts.mjs`. */
+@use './fonts';
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   TEMA · No puedes pasar (el de casa) — la Tierra Media sin disfraz: bosque de noche, ORO para lo que se rellena
+   y VERDE DE HOJA para lo que señala. Identidad de color: CAPA 2 en `_colors.scss`.
+
+   ESTE SKIN ES CASI SOLO LA LETRA, Y ES A PROPÓSITO. Los otros siete temas son mundos —la rejilla del
+   horizonte, el pergamino, el cogitador— y pueden permitirse textura, halo y ornamento porque se eligen a
+   posta. Este es el que se encuentra quien no ha elegido nada, así que su carácter sale del COLOR, de la LETRA
+   y de tres gestos pequeños: un mapa a pluma de un píxel que solo asoma por los márgenes (§3), la HOJA de
+   Lórien —dos esquinas redondas y dos vivas— en lo que se pulsa, y el broche en forma de hoja de la cabecera.
+
+   LA LETRA, una familia para leer, otra para contar y una para titular:
+     · ATKINSON HYPERLEGIBLE NEXT en rótulos y cuerpo, igual que antes: es la fuente del primer fotograma y la
+       que no confunde la I, la l y el 1;
+     · ATKINSON HYPERLEGIBLE MONO en las cifras;
+     · EB GARAMOND en los TITULARES (cabecera de pantalla, títulos de modal y diálogo): la letra del libro en
+       papel. Solo titulares —un rótulo de 12 px en Garamond y versales se lee letra a letra—. ═══════════════ */
+
+/* ── §1 · Los papeles de letra: rótulo, titular y cuerpo en Atkinson Next; las cifras, en su Mono ── */
+:root[data-palette="tierramedia"] {
+  --font-body: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
+  --font-label: var(--font-body);
+  --font-display: 'EB Garamond', Georgia, serif;
+  --font-mono: 'Atkinson Hyperlegible Mono', ui-monospace, monospace;
+}
+:root[data-palette="tierramedia"] h3,
+:root[data-palette="tierramedia"] h4,
+:root[data-palette="tierramedia"] .rl-card-name,
+:root[data-palette="tierramedia"] .rl-card-tag,
+:root[data-palette="tierramedia"] .rl-item,
+:root[data-palette="tierramedia"] .btn,
+:root[data-palette="tierramedia"] .hub-seg-btn,
+:root[data-palette="tierramedia"] .tab-btn,
+:root[data-palette="tierramedia"] .bottom-nav-btn,
+:root[data-palette="tierramedia"] thead th,
+:root[data-palette="tierramedia"] .flabel,
+:root[data-palette="tierramedia"] .detail-label,
+:root[data-palette="tierramedia"] .active-filter-chip,
+:root[data-palette="tierramedia"] .chip { font-family: var(--font-label); letter-spacing: .02em; }
+
+/* LOS TITULARES, en Garamond. El rótulo del modal de alta va suelto en `.modal-hd` (sin `.modal-title`
+   dentro), así que se nombra aparte. La Garamond tiene la altura de x más baja que la Atkinson: al mismo
+   cuerpo se ve un número más pequeña, y `font-size-adjust` la iguala sin tocar el tamaño de cada titular. */
+:root[data-palette="tierramedia"] h2,
+:root[data-palette="tierramedia"] .modal-title,
+:root[data-palette="tierramedia"] .modal-hd,
+:root[data-palette="tierramedia"] .dialog-title { font-family: var(--font-display); font-size-adjust: .47; letter-spacing: .005em; }
+
+/* Los rótulos CORTOS en versales son los que más aire piden: ahí el tracking sube al doble. El nombre de un
+   juego (`.row-name`) NO entra en esta lista a propósito —es contenido, no interfaz, y se queda en la letra
+   del cuerpo—, que es lo que mantiene legible una tabla de doscientas filas. */
+:root[data-palette="tierramedia"] thead th,
+:root[data-palette="tierramedia"] .flabel,
+:root[data-palette="tierramedia"] .detail-label { letter-spacing: .05em; }
+
+/* Los rótulos que se pulsan o encabezan van a 600: por encima, los largos (cabeceras de columna, botones de
+   rol, «PUNTOS DÉBILES») se ensanchan y se salen de su caja. */
+:root[data-palette="tierramedia"] .btn,
+:root[data-palette="tierramedia"] .chip,
+:root[data-palette="tierramedia"] .bottom-nav-btn,
+:root[data-palette="tierramedia"] thead th { font-weight: 600; }
+
+/* ── §2 · Las cifras, en la mono. Son las mismas piezas que numeran los demás temas: la nota del aro y del
+   dial, el contador de las pestañas, la medalla de una reseña y las fechas del feed. ── */
+:root[data-palette="tierramedia"] .score-ring-num,
+:root[data-palette="tierramedia"] .score-dial-num,
+:root[data-palette="tierramedia"] .count-badge,
+:root[data-palette="tierramedia"] .hub-review-medal,
+:root[data-palette="tierramedia"] .hub-feed-date,
+:root[data-palette="tierramedia"] .hub-review-date { font-family: var(--font-mono); }
+
+/* ── §3 · EL FONDO: UN MAPA A PLUMA ───────────────────────────────────────────────────────────────────────
+   Cordilleras de picos sombreados, ríos que serpentean, bosques de copas apiñadas y una costa con sus líneas
+   de agua, como en los mapas dibujados a mano. Van pegados a los MÁRGENES, que es lo único que dejan a la vista
+   los paneles. Oro cerca de la costa (abajo a la derecha) y verde de hoja hacia los bosques del otro lado.
+
+   LOS TRAZOS SON UNA MÁSCARA Y EL COLOR ES UN DEGRADADO DE LAS FICHAS. `mapa.svg` solo lleva trazos blancos con
+   su peso; un solo fichero vale para los dos modos y sigue a `--steam` y `--tm-hoja` si cambian. Lo genera
+   `scripts/tierramedia-mapa.mjs`, con una cuenta fija.
+
+   LA CAPA TIENE LA PROPORCIÓN DEL DIBUJO, NO LA DE LA VENTANA: anclada abajo a la derecha y con el lado mayor
+   cubriendo la pantalla. El trazo no engorda al estirarse (`non-scaling-stroke` dentro del SVG). Va detrás de
+   todo (`z-index: -1`) y fija: una capa fija no se repinta al hacer scroll. ── */
+:root[data-palette="tierramedia"] body::before {
+  content: '';
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  pointer-events: none;
+  width: max(100vw, 160vh);
+  aspect-ratio: 1512 / 945;
+  background: radial-gradient(ellipse 120% 150% at 100% 100%,
+    var(--steam) 10%, color-mix(in srgb, var(--steam) 50%, var(--tm-hoja)) 45%, var(--tm-hoja) 80%);
+  -webkit-mask: url('./mapa.svg') 0 0 / 100% 100% no-repeat;
+  mask: url('./mapa.svg') 0 0 / 100% 100% no-repeat;
+  opacity: .5;
+}
+/* A la luz los dos colores son tinta honda sobre pergamino y un trazo al mismo peso pesaba más que en oscuro. */
+:root[data-palette="tierramedia"][data-theme="light"] body::before { opacity: .38; }
+
+/* ── §N · LA CAJA SIN CARÁTULA ────────────────────────────────────────────────────────────
+   El tema de casa no se disfraza de nada, así que su pieza es la más sobria de las ocho: el canto muy
+   rebajado que ya tiene (`--radius-lg`) y una luz de atardecer entrando por el filo de abajo, que toma el
+   color del GÉNERO del juego (`--card-tone`, el primero): es lo que convierte la parrilla en
+   colección. Sin línea a la izquierda: el filete de la caja basta. ── */
+:root[data-palette="tierramedia"] .game-card.is-flat {
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(0deg, color-mix(in srgb, var(--card-tone, var(--steam)) 20%, transparent) 0, transparent 42%),
+    linear-gradient(180deg, color-mix(in srgb, var(--text) 9%, transparent) 0 1px, transparent 1px),
+    var(--surface);
+  box-shadow: var(--e2);
+}
+/* SIN MEDIDOR EN LA CAJA SIN CARÁTULA. El tema de casa es el más sobrio de los ocho y su pieza ya dice la
+   nota con el aro de la cabecera; el filo de abajo era una segunda vez.
+   Y no es solo criterio: el canto de esta caja tiene 16 px de radio, cuatro veces lo que mide un filo, así
+   que ninguna de las dos formas de rematarlo funciona —a sangre se le estrechan las puntas siguiendo la
+   curva y parece mal cortado; retirado hasta donde el borde vuelve a ser recto, deja de ser un canto y se
+   queda en un subrayado suelto a media caja—. Los demás temas sí lo llevan: sus cajas tienen el canto vivo
+   o un marco recto donde un filo se apoya sin pelear con nada. */
+:root[data-palette="tierramedia"] .game-card.is-flat .game-card-meter { display: none; }
+
+/* ── §N · LOS CONTROLES DE VISTA (tamaño de los cuadros + forma), EN UNA PIEZA ──────────────────────────
+   UNA SOLA PLACA. Este tema no se disfraza —su carácter es el color y la letra—, así que la pieza no estrena
+   forma: es la caja de la casa con el CANTO DE ABAJO marcado en verde de hoja. Lo justo para que se lea como una
+   sola cosa y no como dos ajustes sueltos.
+
+   EL CONMUTADOR PIERDE SU CÁPSULA porque el cuerpo ya lo pone la placa: dos cajas concéntricas para tres
+   controles era el ruido que había antes. Y el encendido pasa a la HOJA (`--fg-link`) en vez del relleno de
+   oro: en este tema el oro es lo que se rellena —acción principal, pestaña activa— y el verde lo que señala;
+   esto señala. */
+:root[data-palette="tierramedia"] .view-controls {
+  gap: 0;
+  padding: .25rem .55rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-bottom-color: color-mix(in srgb, var(--fg-link) 45%, var(--border));
+}
+/* Sin deslizador (vista de lista) la placa se aprieta: reservar el hueco de algo que no está deja la pieza
+   descentrada respecto a sus vecinas de la barra. */
+:root[data-palette="tierramedia"] .view-controls:not(:has(.grid-size)) { padding-inline: .3rem; }
+:root[data-palette="tierramedia"] .view-controls .shape-switch {
+  border: 0;
+  background: none;
+  box-shadow: none;
+  padding: 0 0 0 .5rem;
+}
+:root[data-palette="tierramedia"] .view-controls .shape-switch-btn.is-on {
+  background: color-mix(in srgb, var(--fg-link) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg-link) 38%, transparent);
+  color: var(--fg-link);
+}
+
+/* ── §N · LA FICHA DE GRÁFICA ──────────────────────────────────────────────────────────────────────────
+   `stats.scss` declara siete palancas con las que un tema dobla TODAS sus gráficas de una vez —canto de la
+   pieza y de la barra, píldora, punto, remate y vértice de línea, trazo del lienzo y familia de las cifras—.
+   Este tema no cambia de forma (es su regla, arriba), así que solo toma la MONO para las cifras: la misma
+   que ya numera el aro de la nota y la fecha del feed. Una cifra de gráfica es un dato, no texto corrido. ── */
+:root[data-palette="tierramedia"] .stats-hub { --stats-num: var(--font-mono); }
+
+/* ── §N · LA HOJA DE LÓRIEN: DOS ESQUINAS REDONDAS Y DOS VIVAS ──────────────────────────────────────────────
+   La píldora es la forma por defecto de cualquier interfaz, y en el tema de casa hacía que los botones parecieran
+   genéricos. Todo lo que se pulsa y no es un círculo lleva el canto de una HOJA: arriba a la izquierda y abajo a
+   la derecha redondas (15 px), las otras dos casi vivas (4 px). Es la forma del broche de la Compañía dicha con
+   un `border-radius`: no añade textura ni pieza, solo canto. Los INDICADORES que se deslizan bajo el botón activo
+   llevan la misma hoja para casar con él.
+
+   Los CONTENEDORES de varios botones (la barra, el conmutador de listas) suman su relleno al canto, para que las
+   esquinas de dentro y de fuera sean concéntricas.
+
+   Se quedan redondos los círculos (`.btn-icon`, `.fab`, la flecha de la ficha): un icono solo no es una hoja.
+   Los CHIPS llevan la misma hoja a su escala (§ siguiente). ── */
+:root[data-palette="tierramedia"] { --tm-btn-radius: 15px; --tm-btn-vivo: 4px; }
+:root[data-palette="tierramedia"] :is(
+  .btn,
+  .hub-gateway-btn,
+  .hub-seg-btn,
+  .hub-seg-ind,
+  .bottom-nav-btn,
+  .bottom-nav-ind,
+  .sync-help-toggle
+):not(.btn-icon, .fab, .stat-tile-go) {
+  border-radius: var(--tm-btn-radius) var(--tm-btn-vivo);
+}
+:root[data-palette="tierramedia"] .bottom-nav-inner {
+  border-radius: calc(var(--tm-btn-radius) + .4rem) calc(var(--tm-btn-vivo) + .4rem);
+}
+:root[data-palette="tierramedia"] .hub-seg { border-radius: calc(var(--tm-btn-radius) + 4px) calc(var(--tm-btn-vivo) + 4px); }
+/* El segmento ya es de este tema por el canto; lo que no lo era es la TINTA: el blanco de la base sobre el oro se
+   quedaba corto en oscuro. Va con `--on-accent`, la tinta de todo lo que se rellena de acento. */
+:root[data-palette="tierramedia"] .hub-seg-btn.is-active { color: var(--on-accent); }
+/* Y LOS CAMPOS QUE IBAN EN PÍLDORA (`.input-base`: el buscador del listado, los desplegables de filtro y el
+   filtro por título del perfil), con la misma hoja: un buscador en cápsula junto a botones en hoja volvía a
+   decir «interfaz genérica». Los campos de formulario (`.finput`, `.ftextarea`) ya llevan el radio pequeño del
+   tema y no cambian. */
+:root[data-palette="tierramedia"] .input-base { border-radius: var(--tm-btn-radius) var(--tm-btn-vivo); }
+
+/* ── §N · LOS CHIPS, EN HOJA ──────────────────────────────────────────────────────────────────────────────
+   La misma hoja que los botones, a la escala de un chip: dos esquinas redondas (10 px) y dos vivas (3 px). Entran
+   los de la fila (plataforma, género, año, virtudes y defectos: `.chip`), los del orden del listado, los filtros
+   activos, las etiquetas de las gráficas y los del social (el juego de una reseña, el de amigo y el de
+   sincronización del perfil). Los contadores redondos no: un número solo no es un chip. Con 15 px un chip de 24 de alto se quedaba en óvalo y dejaba de leerse
+   como hoja. ── */
+:root[data-palette="tierramedia"] { --tm-chip-radius: 10px; --tm-chip-vivo: 3px; }
+:root[data-palette="tierramedia"] :is(
+  .chip, .list-sort-chip, .active-filter-chip, .tag-chip,
+  .hub-feed-game-chip, .hub-friend-chip, .hub-profile-sync-chip
+) {
+  border-radius: var(--tm-chip-radius) var(--tm-chip-vivo);
+}
+
+/* ── §N · LOS COLORES DE LOS BOTONES: PIEDRA, ORO Y HOJA ──────────────────────────────────────────────────
+   La forma no cambia (la hoja de arriba); lo que cambia es de qué está hecho cada uno.
+
+   EL NEUTRO es PIEDRA DE BOSQUE en oscuro —verde musgo casi negro, la piedra cubierta de liquen— y PERGAMINO
+   TOSTADO a la luz. Va por EXCLUSIÓN —todo `.btn` que no tenga rol— y no por lista de neutros, porque hay `.btn`
+   planos sin clase de rol en una veintena de sitios. Completar y abandonar se quedan fuera A PROPÓSITO: siguen en
+   cristal con su color en texto y borde.
+
+   LA NAVEGACIÓN (`.btn-accent`) lleva los DOS COLORES alternos dentro de cada fila: oro el primero, hoja el
+   siguiente. `of .btn-accent` cuenta solo los de navegación, así que un «Cerrar sesión» en medio no descoloca la
+   pareja. «Pasar a en curso» es oro y «Pasar a próximos», hoja, siempre.
+
+   CONTRASTE en el punto más desfavorable de cada degradado (axe no evalúa degradados): oscuro, neutro 10,16:1 ·
+   oro 6,84:1 · hoja 7,19:1; claro, neutro 11,30:1 · oro 6,77:1 · hoja 6,54:1. ── */
+:root[data-palette="tierramedia"] {
+  --tm-piedra-top: #2f3d2c; --tm-piedra-bot: #1f2a1d; --tm-piedra-ink: #f3f1e6; --tm-piedra-edge: #4f6249;
+  --tm-oro-ink: #1c1303; --tm-hoja-ink: #0d2008;
+}
+:root[data-palette="tierramedia"][data-theme="light"] {
+  --tm-piedra-top: #f6eed8; --tm-piedra-bot: #e6d8b3; --tm-piedra-ink: #2a2010; --tm-piedra-edge: #bba779;
+  --tm-oro-ink: #fff; --tm-hoja-ink: #fff;
+}
+:root[data-palette="tierramedia"] .btn:not(
+  .btn-icon, .btn-ghost, .stat-tile-go,
+  .btn-primary, .btn-steam, .btn-accent, .btn-playing, .btn-upcoming,
+  .btn-complete, .btn-abandoned, .btn-danger,
+  .is-active, .active, .consent-btn-accept
+) {
+  background: linear-gradient(160deg, var(--tm-piedra-top), var(--tm-piedra-bot));
+  color: var(--tm-piedra-ink);
+  border-color: var(--tm-piedra-edge);
+}
+/* Los dos colores en relleno macizo: el canto de arriba es el color puro y baja un 14 % hacia la base, la misma
+   caída de luz que el principal. */
+:root[data-palette="tierramedia"] .btn-accent,
+:root[data-palette="tierramedia"] .btn-playing {
+  background: linear-gradient(180deg, var(--steam), color-mix(in srgb, var(--steam) 86%, #000));
+  color: var(--tm-oro-ink);
+  border-color: color-mix(in srgb, var(--steam) 60%, #000);
+}
+:root[data-palette="tierramedia"] .btn-accent:nth-child(even of .btn-accent),
+:root[data-palette="tierramedia"] .btn-upcoming {
+  background: linear-gradient(180deg, var(--tm-hoja), color-mix(in srgb, var(--tm-hoja) 86%, #000));
+  color: var(--tm-hoja-ink);
+  border-color: color-mix(in srgb, var(--tm-hoja) 60%, #000);
+}
+
+/* LO QUE ESTÁ ENCENDIDO, EN ORO MACIZO. Un conmutador activo (Rejugar, el alcance «General»/año, Juegos/Horas,
+   Activada/Desactivada…) era antes el cristal de la casa con el texto en verde, y junto a su vecino apagado —la
+   piedra— la diferencia casi no se veía. Ahora se rellena del mismo oro que la pestaña activa: apagado es piedra,
+   encendido es oro. La tinta es la de todo lo que se rellena de oro (6,84:1 en oscuro y 6,77:1 en claro, en el
+   punto más hondo del degradado). */
+:root[data-palette="tierramedia"] :is(.btn-toggle.active, .btn-toggle-deck.active, .btn.is-active):not(.btn-accent) {
+  background: linear-gradient(180deg, var(--steam), color-mix(in srgb, var(--steam) 86%, #000));
+  color: var(--tm-oro-ink);
+  border-color: color-mix(in srgb, var(--steam) 60%, #000);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 6px 14px rgba(var(--steam-rgb),.22);
+}
+
+/* ── §N · LA CABECERA DE PANTALLA ─────────────────────────────────────────────────────────────────────
+   Este tema la enciende (`ScreenHeader` es neutra y en la base no se ve), solo con el título en Garamond: el
+   rótulo en versales de encima se apaga. Va en el flujo —se va al bajar, no es fija—. Va en el panel y en Ajustes, como primer hijo de `main`. En las listas no: la llevaron en la banda de
+   las pestañas hasta el 05-10-2026, y se quitó porque la pestaña activa ya dice en qué lista estás. ── */
+:root[data-palette="tierramedia"] .screen-header {
+  display: block;
+  padding-right: calc(42px + 14px);
+}
+:root[data-palette="tierramedia"] .screen-header-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: .5rem 1.5rem;
+}
+:root[data-palette="tierramedia"] .screen-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  min-width: 0;
+}
+/* SIN RÓTULO: el título ya dice dónde estás, y el rótulo en versales encima era una segunda vez. Se quitó el
+   06-10-2026; la pieza lo sigue pintando (es neutra), así que se apaga aquí. */
+:root[data-palette="tierramedia"] .screen-header-kicker { display: none; }
+:root[data-palette="tierramedia"] .screen-header-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-3xl);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: .01em;
+  color: var(--text);
+}
+
+/* ── §N · LOS AVISOS DEL FEED, EN HOJA Y CON COLOR QUE SE VE ─────────────────────────────────────────────────
+   Los avisos de lista («añadió … a su lista de deseos») y de logro iban en la pastilla de la casa: uno agrupado,
+   con sus juegos desplegados debajo, se volvía un ÓVALO que se comía el texto por las esquinas. Ahora llevan la
+   misma hoja que los botones (`--sys-radius` es la ficha con la que cada tema da forma al aviso).
+
+   Y EL COLOR SE NOTA. El velo al 14 % y el filete a medio tono dejaban el feed de un solo gris verdoso. Ahora el
+   filete va en color pleno, un LOMO de 4 px lo repite a la izquierda —gráfico, le basta 3:1: el peor es 4,56:1—
+   y el velo sube al 18 % en oscuro. En claro se queda en el 12 %: más tinte bajaba la tinta del autor y del juego
+   de 4,5:1. Medido con todas las tintas del aviso sobre el fondo y la superficie: oscuro, peor 4,54:1 (la hora,
+   que va en `--text-muted`); claro, peor 4,59:1 (el nombre del juego).
+
+   EL LOGRO PASA AL ROSA (`--cat-5`). Iba en el naranja de aviso, a 13° del oro de «empezó a jugar»: dos avisos
+   distintos del mismo color. El rosa queda lejos de los cinco movimientos (verde, coral, oro, azul y lila). */
+:root[data-palette="tierramedia"] { --sys-radius: var(--tm-btn-radius) var(--tm-btn-vivo); }
+:root[data-palette="tierramedia"] .hub-feed-activity-item.is-achievements { --evc: var(--cat-5); }
+:root[data-palette="tierramedia"] :is(.hub-feed-activity-item.is-move, .hub-feed-activity-item.is-achievements) {
+  border-color: var(--evc);
+  background: color-mix(in srgb, var(--evc) 18%, transparent);
+  box-shadow: inset 4px 0 0 var(--evc);
+}
+:root[data-palette="tierramedia"][data-theme="light"] :is(.hub-feed-activity-item.is-move, .hub-feed-activity-item.is-achievements) {
+  background: color-mix(in srgb, var(--evc) 12%, transparent);
+}
+/* El autor, en claro, un punto más hondo que el verde de enlace: sobre el velo teñido, el de siempre bajaba a 3,9:1. */
+:root[data-palette="tierramedia"][data-theme="light"] :is(.is-move, .is-achievements) .hub-name-link { color: #275a24; }
+
+/* El separador de día, también en hoja (a la escala de un chip) y con cuerpo: superficie alta, filete de oro y la
+   fecha en el color del texto en vez del gris atenuado. */
+:root[data-palette="tierramedia"] .hub-feed-day-header {
+  border-radius: var(--tm-chip-radius) var(--tm-chip-vivo);
+  background: var(--surface-elevated);
+  border-color: color-mix(in srgb, var(--steam) 55%, var(--border));
+}
+:root[data-palette="tierramedia"] .hub-feed-day-header h4 { color: var(--text); }

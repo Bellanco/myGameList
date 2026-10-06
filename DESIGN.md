@@ -67,7 +67,7 @@ Cada tema define los mismos tokens; el resto del sistema se deriva. **Nunca uses
 
 | id | Nombre | Acento oscuro | Fondo oscuro | Mundo |
 |---|---|---|---|---|
-| `forja` | **Forja y temple** (por defecto) | `#ff7a3c` metal al rojo | `#0f1315` | La fragua. El único sin mundo detrás: es el que ve quien no ha elegido nada, y el ÚNICO que ve quien no tiene espacio social (los demás son de la cuenta; ver `paletteLockPreference`). Naranja que **rellena** y turquesa de temple (`#2fd6c0`) que **escribe y señala** |
+| `tierramedia` | **No puedes pasar** (por defecto) | `#e3b04b` oro del Anillo | `#10140f` | La Tierra Media sin disfraz: bosque de noche y, a la luz, pergamino. Es el que ve quien no ha elegido nada, y el ÚNICO que ve quien no tiene espacio social (los demás son de la cuenta; ver `paletteLockPreference`). Oro que **rellena** y verde de la Comarca (`#9bd27c`) que **escribe y señala**. Sustituyó a «Forja y temple» (id `forja`) el 06-10-2026; un `forja` guardado lleva aquí (ver `LEGACY_PALETTE_IDS`) |
 | `arcade` | Inserte moneda | `#b23cff` | `#150a24` | Sala de recreativos de los ochenta: violeta de neón, cian de tubo y rosa de pegatina |
 | `witcher` | Plata y acero | `#c6ced8` plata | `#141922` | The Witcher: acero templado; la plata **rellena** y el fuego de Igni (`#ff8f4a`) **escribe y señala**. Las cinco señales van en la rampa. Hasta la 1.4.4 su id era `steam`, pero un `steam` guardado ya no lleva aquí: era el id de «Clásico», el de por defecto hasta el 14-09-2026, y lleva al de por defecto de hoy (ver `LEGACY_PALETTE_IDS`) |
 | `persona` | Ladrones de corazones | `#ff1f3d` | `#0d0d0d` | Persona 5: rojo, negro, blanco y oro de calendario |
@@ -90,11 +90,11 @@ le toca a cada género. Las reglas y de dónde sale cada rampa están en la cabe
 
 ### Papeles (CAPA 0, reasignados por cada tema)
 
-| Ficha | Papel | Forja y temple | Inserte moneda | Plata y acero | Cámara de pruebas | Sin futuro | Solo hay guerra | Sol y luna |
+| Ficha | Papel | No puedes pasar | Inserte moneda | Plata y acero | Cámara de pruebas | Sin futuro | Solo hay guerra | Sol y luna |
 |---|---|---|---|---|---|---|---|---|
 | `--font-body` | Cuerpo | **Atkinson Hyperlegible Next** | Exo 2 | Lora | Saira | Rajdhani | Chakra Petch | Pixelify Sans |
 | `--font-label` | Rótulos de interfaz | = cuerpo | **Orbitron** | = cuerpo | **Oswald** | Rajdhani | Chakra Petch | = cuerpo |
-| `--font-display` | Titulares | = cuerpo | Orbitron | **Cinzel** | Oswald | Rajdhani | **UnifrakturCook** | = cuerpo |
+| `--font-display` | Titulares | **EB Garamond** | Orbitron | **Cinzel** | Oswald | Rajdhani | **UnifrakturCook** | = cuerpo |
 | `--font-mono` | Cifras y fechas | **Atkinson Hyperlegible Mono** | Share Tech Mono | IBM Plex Mono | Share Tech Mono | Share Tech Mono | **VT323** | SoS Digits |
 
 *Ladrones de corazones* no trae webfont propia: el cuerpo se queda en DM Sans, la letra de la casa, y el
@@ -141,7 +141,7 @@ preparada para un «compacto / cómodo» que no se ha construido.
   inquilinos: el **logro** (disco = medalla, halo = rareza), el **aviso del administrador** (disco = icono, halo =
   acento) y el **aviso de la app** (disco = icono del tono, halo = tono). Los skins de paleta cuelgan de
   `.ach-toast`, así que la forma de cada tema sale sola: siete de ocho la cuadran en su lenguaje (el filete o el
-  marco de sus paneles) y Forja se queda con la cápsula de la casa. La medalla y el anillo + halo de `--glow` no
+  marco de sus paneles) y «No puedes pasar» se queda con la cápsula de la casa. La medalla y el anillo + halo de `--glow` no
   los toca ningún tema: son los que dicen la rareza y, en el aviso, su tono.
 - **Aviso** (`.ach-toast.is-notice`): **uno solo** para los cuatro sitios que avisan (estado, versión nueva, sin
   conexión del hub, requisito del perfil). Los dos primeros viven en el **carril flotante** de abajo a la
@@ -170,8 +170,9 @@ preparada para un «compacto / cómodo» que no se ha construido.
 - Gutter lateral mínimo de 16 px a cualquier ancho.
 - La app es **headerless**: no hay barra superior fija, sino navegación inferior y un control flotante.
 - **Cabecera de pantalla** (`ScreenHeader`): rótulo en versales y título en la letra de titulares, sin cifras.
-  Pieza neutra, apagada en la base: hoy solo la enciende **Forja**, en el panel y Ajustes; en las listas se quitó
-  el 05-10-2026 (la pestaña activa ya dice dónde estás). Va en el flujo, `aria-hidden` (el `h1` accesible sigue en
+  Pieza neutra, apagada en la base: hoy solo la enciende **No puedes pasar**, en el panel y Ajustes, y solo con el
+  título (el rótulo se apagó el 06-10-2026); en las listas se quitó el 05-10-2026 (la pestaña activa ya dice dónde
+  estás). Va en el flujo, `aria-hidden` (el `h1` accesible sigue en
   `main`).
 
 ### 5.1 · Navegación
@@ -227,16 +228,18 @@ están — y sus bordes tampoco, que ahí el marco de oro o el filete cian **son
 
 ## 7 · Formas
 
-- Radios **por tema**, no globales: `--radius-sm/md/lg/pill`. La casa (CAPA 0) 8/12/22; Forja y temple 6/10/16;
+- Radios **por tema**, no globales: `--radius-sm/md/lg/pill`. La casa (CAPA 0) 8/12/22; «No puedes pasar» 6/10/16;
   Inserte moneda y Plata y acero 2/3/4; Cámara de pruebas 3/6/10; Ladrones de corazones 3/4/8; Sin futuro y Sol y
   luna 0/0/2; Solo hay guerra 0/2/3.
 - Un radio de 0 es una decisión, no un olvido: en esos temas la esquina viva **es** la identidad.
-- Pastillas (`--radius-pill`) para chips, botones de filtro y segmentados, salvo en Forja.
-- **Forja no usa píldoras en lo que se pulsa**: botones de acción, filtros y alcances, segmentados, la barra de
-  navegación y los indicadores que se deslizan bajo el botón activo llevan **15 px** (`--forja-btn-radius`, fuera
-  de su escala 6/10/16); sus contenedores suman el relleno para que las esquinas sean concéntricas. Los círculos
-  (`.btn-icon`, `.fab`) siguen redondos y los chips, en pastilla. Los campos que en la casa van en cápsula
-  (`.input-base`: buscador, desplegables de filtro) también van a 15 px.
+- Pastillas (`--radius-pill`) para chips, botones de filtro y segmentados, salvo en «No puedes pasar».
+- **«No puedes pasar» no usa píldoras: usa la HOJA de Lórien**, dos esquinas redondas y dos casi vivas. Botones de
+  acción, filtros y alcances, segmentados, la barra de navegación y los indicadores que se deslizan bajo el botón
+  activo llevan **15 px / 4 px** (`--tm-btn-radius` / `--tm-btn-vivo`, fuera de su escala 6/10/16); sus
+  contenedores suman el relleno para que las esquinas sean concéntricas. Los círculos (`.btn-icon`, `.fab`) siguen
+  redondos. Los campos que en la casa van en cápsula (`.input-base`: buscador, desplegables de filtro) llevan la
+  misma hoja, y los chips (`.chip`, `.list-sort-chip`, `.active-filter-chip`, `.tag-chip`) la llevan a su escala,
+  **10 px / 3 px** (`--tm-chip-*`).
 
 ---
 

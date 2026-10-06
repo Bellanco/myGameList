@@ -16,7 +16,7 @@
 
 import type { ThemePreference } from '../../view/hooks/useTheme';
 import type { ThemeDefinition, ThemeVoice } from './themes/theme';
-import { forja } from './themes/forja';
+import { tierramedia } from './themes/tierramedia';
 import { arcade } from './themes/arcade';
 import { witcher } from './themes/witcher';
 import { persona } from './themes/persona';
@@ -30,7 +30,7 @@ import { grimdark } from './themes/grimdark';
  * El mismo orden se repite en `styles/themes/_index.scss`, que es lo que hace que una lista y otra se
  * lean igual; no es un acoplamiento (entre temas no hay dependencias), es cortesía para quien lee.
  */
-export const THEMES = [forja, arcade, witcher, persona, portal, cyberpunk, seaofstars, grimdark] as const;
+export const THEMES = [tierramedia, arcade, witcher, persona, portal, cyberpunk, seaofstars, grimdark] as const;
 
 /** El `data-palette` de cualquier tema del registro. Se DERIVA de `THEMES`: añadir un tema al array de
  *  arriba es lo único que hace falta para que su id sea válido en todo el TypeScript del proyecto. */
@@ -43,7 +43,7 @@ export type PaletteMeta = ThemeDefinition & { readonly id: PaletteId };
 
 /** El tema que ve quien no ha elegido ninguno. Debe coincidir con el respaldo del anti-flash de
  *  `index.html` y con el skin que carga `styles/index.scss`; lo comprueba el test de temas. */
-export const DEFAULT_PALETTE: PaletteId = forja.id;
+export const DEFAULT_PALETTE: PaletteId = tierramedia.id;
 
 export const PALETTES: readonly PaletteMeta[] = THEMES;
 
@@ -61,6 +61,9 @@ const LEGACY_PALETTE_IDS: ReadonlyMap<string, PaletteId> = new Map([
   // nunca eligió nada: lleva al de por defecto de hoy, no a The Witcher (que heredó el id solo once días). Quien
   // quisiera «Plata y acero» lo vuelve a elegir.
   ['steam', DEFAULT_PALETTE],
+  // `forja` fue «Forja y temple», el tema POR DEFECTO del 14-09-2026 al 06-10-2026, y lo sustituyó «No puedes pasar» en
+  // el mismo papel: quien lo tenía guardado sigue en el tema de casa, que es lo que había elegido (o no elegido).
+  ['forja', DEFAULT_PALETTE],
 ]);
 
 /** Valida un valor arbitrario (p. ej. de localStorage) y cae a la paleta por defecto si no es válido. */
