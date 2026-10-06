@@ -67,7 +67,6 @@ describe('PublicReviewScreen', () => {
     render(<PublicReviewScreen token={TOKEN} standalone />);
 
     expect(await screen.findByRole('heading', { name: SOCIAL_UI.feed.reviewDetailTitle })).toBeInTheDocument();
-    expect(screen.getByText(SOCIAL_UI.feed.reviewDetailSubtitle)).toBeInTheDocument();
   });
 
   // La regla «con firma, titular la persona» de `ReviewDetailHead`: aquí hay un nick que dar, así que él es

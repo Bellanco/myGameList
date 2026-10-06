@@ -51,7 +51,6 @@ export interface ReviewScreenContent {
 export function ReviewScreen({
   SOCIAL_UI,
   title,
-  subtitle,
   icon,
   content,
   author = null,
@@ -71,7 +70,6 @@ export function ReviewScreen({
   SOCIAL_UI: SocialUiLabels;
   /** Encabezado de la cáscara: cada camino nombra la pantalla a su manera. */
   title: string;
-  subtitle: string;
   icon?: IconName;
   /** La reseña. `null` es «todavía no hay»: con `screenLoading` se espera, y sin él se dice que no está. */
   content: ReviewScreenContent | null;
@@ -109,7 +107,7 @@ export function ReviewScreen({
     </div>
   );
 
-  const shell = { ariaLabel: SOCIAL_UI.feed.sectionAria, title, subtitle, ...(icon ? { icon } : {}) };
+  const shell = { ariaLabel: SOCIAL_UI.feed.sectionAria, title, ...(icon ? { icon } : {}) };
 
   if (!content) {
     return (

@@ -91,7 +91,6 @@ export function SocialDetailScreen({
     <ReviewScreen
       SOCIAL_UI={SOCIAL_UI}
       title={SOCIAL_UI.feed.detailTitle}
-      subtitle={SOCIAL_UI.feed.detailSubtitle}
       content={activeDetailEvent ? {
         gameName: activeDetailEvent.gameName,
         reviewText,

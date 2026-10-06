@@ -498,7 +498,6 @@ function SocialProfileDetailScreenBase({
               <Icon name="bottom-hub" className="hub-hub-icon" />
               <h2>{SOCIAL_UI.feed.profileDetailTitle}</h2>
             </div>
-            <p>{SOCIAL_UI.feed.profileDetailSubtitle}</p>
           </header>
           <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.profileDetailActionsAria}>
             <div className="hub-screen-actions-left">
@@ -531,7 +530,6 @@ function SocialProfileDetailScreenBase({
             <Icon name="bottom-hub" className="hub-hub-icon" />
             <h2>{SOCIAL_UI.feed.profileDetailTitle}</h2>
           </div>
-          <p>{SOCIAL_UI.feed.profileDetailSubtitle}</p>
         </header>
         <div className="hub-screen-actions hub-screen-actions-split hub-profile-detail-actions" aria-label={SOCIAL_UI.feed.profileDetailActionsAria}>
           <div className="hub-screen-actions-left">

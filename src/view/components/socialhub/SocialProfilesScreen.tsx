@@ -104,7 +104,6 @@ function SocialProfilesScreenBase({
     <HubScreen
       ariaLabel={SOCIAL_UI.profiles.sectionAria}
       title={SOCIAL_UI.profiles.title}
-      subtitle={SOCIAL_UI.profiles.subtitle}
     >
         <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.profiles.actionsAria}>
           <div className="hub-screen-actions-left">

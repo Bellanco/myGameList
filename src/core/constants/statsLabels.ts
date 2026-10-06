@@ -327,7 +327,6 @@ export const STATS_UI = {
     legendWaiting: 'Próximos',
     // Pokémon, «¡Hazte con todos!»: los géneros que deseas y que tu colección de Próximos aún no tiene.
     gaps: 'Aún no te has hecho con todos',
-    gapsHint: 'Géneros que deseas sin ningún juego de ese género en Próximos: ahí un deseo cubre un hueco de verdad.',
   },
   /** Lo que escribes: la cifra de reseñas, el bloque de puntos fuertes y débiles y las citas del podio. */
   reviews: {

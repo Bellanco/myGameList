@@ -89,7 +89,7 @@ export function SocialRequestsScreen({
   };
 
   return (
-    <HubScreen ariaLabel={R.sectionAria} title={R.title} subtitle={R.subtitle}>
+    <HubScreen ariaLabel={R.sectionAria} title={R.title}>
 
         <div className="hub-screen-actions" aria-label={R.actionsAria}>
           <HubBackButton onBack={onBack} label={R.back} />

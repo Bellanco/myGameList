@@ -21,7 +21,6 @@ describe('armazón de la actividad social — el esqueleto promete lo que llega'
     render(<SocialHubSkeleton />);
 
     expect(screen.getByRole('heading', { name: SOCIAL_SHELL.feed.title })).toBeInTheDocument();
-    expect(screen.getByText(SOCIAL_SHELL.feed.subtitle)).toBeInTheDocument();
     expect(screen.getByText(SOCIAL_SHELL.feed.openProfiles)).toBeInTheDocument();
     expect(screen.getByText(SOCIAL_SHELL.feed.signOut)).toBeInTheDocument();
     expect(screen.getByText(SOCIAL_SHELL.feed.activityTitle)).toBeInTheDocument();

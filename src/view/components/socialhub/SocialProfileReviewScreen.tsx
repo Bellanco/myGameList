@@ -73,7 +73,6 @@ export function SocialProfileReviewScreen({
     <ReviewScreen
       SOCIAL_UI={SOCIAL_UI}
       title={SOCIAL_UI.feed.reviewDetailTitle}
-      subtitle={SOCIAL_UI.feed.reviewDetailSubtitle}
       icon="signature"
       content={review ? {
         gameName: review.name,
