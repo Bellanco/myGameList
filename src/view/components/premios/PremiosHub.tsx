@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
-import { ballotIsUnchanged } from '../../../core/premios/ballotEdits';
-import { votesToSelections } from '../../../model/repository/premios/premiosBallotRepository';
-import { ensureLightAccount } from '../../../model/repository/lightAccountRepository';
+import { ballotIsUnchanged, selectionsAreUnchanged } from '../../../core/premios/ballotEdits';
+import { BALLOT_NAME_MAX_LENGTH } from '../../../core/premios/limits';
+import { safeTrim } from '../../../core/security/sanitize';
+import { renameOwnBallot, votesToSelections } from '../../../model/repository/premios/premiosBallotRepository';
+import { ensureLightAccount, saveBallotNameToProfile } from '../../../model/repository/lightAccountRepository';
 import { signInWithGoogle, subscribeSocialAuth } from '../../../model/repository/firebaseGateway';
 import { isSupersededSignIn } from '../../../core/utils/googleSignIn';
 import type { SocialAuthUser } from '../../../model/repository/firebaseClient';
@@ -51,6 +53,8 @@ export function PremiosHub() {
   const [justSubmitted, setJustSubmitted] = useState(false);
   /** Se reenvió una papeleta idéntica: no se escribió nada, así que la confirmación lo dice. */
   const [sinCambios, setSinCambios] = useState(false);
+  /** El nombre con el que se acaba de enviar. El perfil leído al entrar ya no lo sabe (su lectura no se repite). */
+  const [nombreEnviado, setNombreEnviado] = useState('');
 
   useEffect(() => subscribeSocialAuth(setUser), []);
 
@@ -128,18 +132,31 @@ export function PremiosHub() {
   const handleSubmit = useCallback(
     async (displayName: string) => {
       setError('');
+      const selecciones = votesToSelections(voting.votes);
       try {
         // MIRAR NO CUESTA UNA OPORTUNIDAD. Quien entra a repasar su papeleta, no toca nada y pulsa enviar por
         // inercia no debería gastar una de las veces que le quedan: no hay nada que guardar, así que no se
         // escribe. Las reglas no pueden distinguirlo —para ellas es una escritura más—, de modo que tiene que
         // decidirse aquí, antes de enviarla.
-        if (ballotIsUnchanged(edition.ballot, votesToSelections(voting.votes), displayName)) {
+        if (ballotIsUnchanged(edition.ballot, selecciones, displayName)) {
           setSinCambios(true);
           setJustSubmitted(true);
           navigate(PREMIOS_ROUTES.sent);
           return;
         }
         setSinCambios(false);
+
+        // CAMBIAR SOLO EL NOMBRE TAMPOCO. No es una corrección del voto, y las reglas lo admiten aparte sin tocar el
+        // contador (`premiosBallotRenameIsValid`), igual que cuando el nombre cambia desde el perfil.
+        if (user?.uid && selectionsAreUnchanged(edition.ballot, selecciones)) {
+          await renameOwnBallot(user.uid, displayName);
+          await saveBallotNameToProfile(user, displayName);
+          setNombreEnviado(displayName);
+          setJustSubmitted(true);
+          await edition.reload();
+          navigate(PREMIOS_ROUTES.sent);
+          return;
+        }
 
         // VOTAR DEJA CUENTA. Quien llega por primera vez no tiene perfil —crearlo exige GitHub, y eso aquí sería
         // un muro— así que se le crea una CUENTA LIGERA: nombre, foto y pseudónimo, sin canal y sin salir en el
@@ -154,6 +171,10 @@ export function PremiosHub() {
           season: Number(edition.config?.season) || new Date().getFullYear(),
           existing: edition.ballot,
         });
+        // EL NOMBRE PASA AL PERFIL, también si ya lo había con otro (ver `saveBallotNameToProfile`). Al que no lo
+        // tenía ya se le ha creado con este nombre arriba, así que ahí no hay nada que hacer.
+        await saveBallotNameToProfile(user, displayName);
+        setNombreEnviado(displayName);
         setJustSubmitted(true);
         await edition.reload();
         navigate(PREMIOS_ROUTES.sent);
@@ -163,6 +184,22 @@ export function PremiosHub() {
       }
     },
     [edition, navigate, profileId, user, voting],
+  );
+
+  /**
+   * EL NOMBRE QUE SE PROPONE EN LA PAPELETA.
+   *
+   *  - Con perfil social, el de su perfil: es su nombre en toda la aplicación, y el de la papeleta lo sigue.
+   *  - Sin él, el alias que ya eligió —en la papeleta, o en la cuenta ligera que se le creó al votar—.
+   *  - La primera vez, el de su cuenta de Google.
+   *
+   * Recortado al tope de la papeleta ya en el campo: un nombre de Google más largo se vería entero y se guardaría
+   * cortado sin que su dueño lo supiera.
+   */
+  const alias = edition.ballot?.userDisplayName || '';
+  const nombrePropuesto = safeTrim(
+    nombreEnviado || (voter.hasSocialAccount ? voter.displayName || alias : alias || voter.displayName) || user?.displayName,
+    BALLOT_NAME_MAX_LENGTH,
   );
 
   // SE ESPERA TAMBIÉN AL PERFIL, y no es cosmético: el cupo sale de él, así que decidir antes de tenerlo le
@@ -295,7 +332,7 @@ export function PremiosHub() {
         <PremiosReviewScreen
           categories={edition.categories}
           votes={voting.votes}
-          defaultName={edition.ballot?.userDisplayName || user?.displayName || ''}
+          defaultName={nombrePropuesto}
           remainingOpportunities={edition.remainingOpportunities}
           isEdit={Boolean(edition.ballot)}
           submitting={voting.submitting}

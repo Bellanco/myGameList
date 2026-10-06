@@ -7,6 +7,7 @@ import {
   getMaxBallotEdits,
   getOpportunities,
   getRemainingOpportunities,
+  selectionsAreUnchanged,
   type PremiosVoterStanding,
 } from '../../src/core/premios/ballotEdits';
 import type { PremiosBallot, PremiosVotingConfig } from '../../src/model/types/premios';
@@ -148,5 +149,27 @@ describe('ballotIsUnchanged', () => {
 
   it('sin papeleta previa no hay nada que comparar: es un envío', () => {
     expect(ballotIsUnchanged(null, { goty: 'goty_option_1' }, 'Ana')).toBe(false);
+  });
+});
+
+describe('selectionsAreUnchanged', () => {
+  const guardada = papeleta({
+    selections: { goty: 'goty_option_1', arte: 'arte_option_0' },
+    userDisplayName: 'Ana',
+  });
+
+  // Es lo que manda un cambio de nombre suelto por el camino que no gasta oportunidad.
+  it('mira solo las selecciones: el nombre puede ser otro', () => {
+    expect(selectionsAreUnchanged(guardada, { arte: 'arte_option_0', goty: 'goty_option_1' })).toBe(true);
+  });
+
+  it('un voto distinto, uno de más o uno de menos son una corrección', () => {
+    expect(selectionsAreUnchanged(guardada, { goty: 'goty_option_2', arte: 'arte_option_0' })).toBe(false);
+    expect(selectionsAreUnchanged(guardada, { goty: 'goty_option_1' })).toBe(false);
+    expect(selectionsAreUnchanged(guardada, { goty: 'goty_option_1', arte: 'arte_option_0', otra: 'x' })).toBe(false);
+  });
+
+  it('sin papeleta previa no hay nada que comparar', () => {
+    expect(selectionsAreUnchanged(null, { goty: 'goty_option_1' })).toBe(false);
   });
 });

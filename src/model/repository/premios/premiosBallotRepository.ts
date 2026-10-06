@@ -15,9 +15,9 @@
  *
  * El esquema que se escribe aquí lo valida también el servidor. Si cambia un campo, cambian las reglas.
  */
-import { deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore/lite';
+import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore/lite';
 import { safeTrim } from '../../../core/security/sanitize';
-import { BALLOT_NAME_MAX_LENGTH } from '../../../core/premios/limits';
+import { BALLOT_NAME_MAX_LENGTH, BALLOT_NICKNAME_MAX_LENGTH } from '../../../core/premios/limits';
 import type { PremiosBallot, PremiosOption } from '../../types/premios';
 import { BALLOTS_COLLECTION, requireServices } from './premiosShared';
 
@@ -82,8 +82,8 @@ export function buildBallot({
   return {
     userId: author.uid,
     // El nombre de la cuenta se lee del autor y NUNCA del estado de la pantalla, para que no pueda llegar vacío;
-    // si la cuenta no tiene ninguno, se usa el elegido.
-    userNickname: safeTrim(author.displayName, BALLOT_NAME_MAX_LENGTH) || elegido,
+    // si la cuenta no tiene ninguno, se usa el elegido. Tiene su propio tope, más holgado: si no cabe, se corta.
+    userNickname: safeTrim(author.displayName, BALLOT_NICKNAME_MAX_LENGTH) || elegido,
     userDisplayName: elegido,
     ...(author.profileId ? { profileId: author.profileId } : {}),
     selections,
@@ -138,6 +138,27 @@ export async function fetchUserBallot(uid: string, options?: { throwOnError?: bo
     if (options?.throwOnError) throw error;
     return null;
   }
+}
+
+/**
+ * CAMBIA SOLO EL NOMBRE de la papeleta propia, si la hay y si de verdad es otro.
+ *
+ * El nombre de la papeleta sigue al del perfil, para que la clasificación no publique uno que su dueño ya no usa.
+ * No es una corrección del voto: no toca las selecciones, ni el contador, ni las fechas, y por eso las reglas lo
+ * admiten sin gastar una oportunidad y fuera de plazo (`premiosBallotRenameIsValid`). Vale mientras la papeleta
+ * exista, que es hasta que se publica la edición.
+ *
+ * Devuelve `true` si ha escrito.
+ */
+export async function renameOwnBallot(uid: string, name: string): Promise<boolean> {
+  const nombre = safeTrim(name, BALLOT_NAME_MAX_LENGTH);
+  if (!uid || !nombre) return false;
+  const { firestore } = await requireServices();
+  const ref = doc(firestore, BALLOTS_COLLECTION, uid);
+  const snapshot = await getDoc(ref);
+  if (!snapshot.exists() || (snapshot.data() as PremiosBallot).userDisplayName === nombre) return false;
+  await updateDoc(ref, { userDisplayName: nombre });
+  return true;
 }
 
 /**

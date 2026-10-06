@@ -14,7 +14,7 @@ import {
   PREMIOS_OPPORTUNITIES_WITHOUT_SOCIAL,
   getMaxBallotEdits,
 } from '../../src/core/premios/ballotEdits';
-import { BALLOT_NAME_MAX_LENGTH } from '../../src/core/premios/limits';
+import { BALLOT_NAME_MAX_LENGTH, BALLOT_NICKNAME_MAX_LENGTH } from '../../src/core/premios/limits';
 import { PUBLIC_NAME_MAX_LENGTH } from '../../src/core/security/sanitize';
 import { PROFILE_ALLOWED_KEYS, SOCIAL_ALLOWED_KEYS } from '../../scripts/lib/profile-rules-predicates.mjs';
 
@@ -401,7 +401,7 @@ describe('firestore.rules', () => {
     // números se separan, o el cliente escribe algo que la regla deniega (guardado de perfil roto sin
     // explicación para el usuario) o la regla admite más de lo que el cliente considera válido.
     it('el límite del nombre público del cliente y el de las reglas son el mismo', () => {
-      expect(PUBLIC_NAME_MAX_LENGTH).toBe(120);
+      expect(PUBLIC_NAME_MAX_LENGTH).toBe(35);
       expect(rulesSource).toContain(`request.resource.data.displayName.size() <= ${PUBLIC_NAME_MAX_LENGTH}`);
     });
 
@@ -409,8 +409,8 @@ describe('firestore.rules', () => {
      * Y el MISMO número en las amistades, que es el otro sitio donde el cliente escribe ese nombre.
      *
      * Aquí faltaba el espejo, y el hueco tenía consecuencias: el nick admite hasta 500 en el gist
-     * (`SOCIAL_NAME_MAX`) y el editor de perfil corta en 60, pero entre medias está el nombre de la cuenta de
-     * Google, que entra por el respaldo sin pasar por ninguna pantalla. Con más de 120 caracteres, el saneado de
+     * (`SOCIAL_NAME_MAX`) y el editor de perfil corta en 25, pero entre medias está el nombre de la cuenta de
+     * Google, que entra por el respaldo sin pasar por ninguna pantalla. Con más del tope, el saneado de
      * identidad intentaba una escritura que la regla denegaba —en cada apertura del hub, para siempre— y esa
      * persona no lograba propagar su nombre ni su gist de listados a sus amigos. Ahora el cliente recorta con
      * esta constante antes de escribir (ver `buildFriendshipSelfInfo`), así que los dos números tienen que
@@ -425,7 +425,7 @@ describe('firestore.rules', () => {
         uid: 'uid-a', displayName: 'Ada Lovelace', social: { enabled: true },
       }));
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
-        uid: 'uid-a', displayName: big(121), social: { enabled: true },
+        uid: 'uid-a', displayName: big(PUBLIC_NAME_MAX_LENGTH + 1), social: { enabled: true },
       }));
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
         uid: 'uid-a', displayName: big(200_000), social: { enabled: true },
@@ -460,6 +460,22 @@ describe('firestore.rules', () => {
       await assertFails(write({ social: { enabled: 'sí' } }));
       await assertFails(write({ social: { enabled: true, etag: big(257) } }));
       await assertFails(write({ social: { enabled: true, gistId: big(129) } }));
+    });
+
+    // El nombre elegido en los premios a la espera de llegar al gist: lo escribe el dueño desde la papeleta y lo
+    // retira el hub. Mismo tope que `displayName`, del que es copia.
+    it('pendingName: admite el nombre pendiente y lo acota como displayName', async () => {
+      const write = (extra: Record<string, unknown>) => setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+        uid: 'uid-a', social: { enabled: true }, ...extra,
+      });
+
+      await assertSucceeds(write({ displayName: 'Ana', pendingName: 'Ana' }));
+      await assertSucceeds(
+        setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a', pendingName: deleteField() }, { merge: true }),
+      );
+      await assertFails(write({ pendingName: big(PUBLIC_NAME_MAX_LENGTH + 1) }));
+      await assertFails(write({ pendingName: 7 }));
+      expect(rulesSource).toContain(`request.resource.data.pendingName.size() <= ${PUBLIC_NAME_MAX_LENGTH}`);
     });
 
     // Lo que NO puede pasar es que la validación nueva congele perfiles reales. `serverTimestamp()` llega a las
@@ -1325,8 +1341,8 @@ describe('firestore.rules', () => {
       });
 
       it('el tope del nombre es el mismo aquí y en el cliente', () => {
-        expect(rulesSource).toContain(`d.userDisplayName.size() <= ${BALLOT_NAME_MAX_LENGTH}`);
-        expect(rulesSource).toContain(`d.userNickname.size() <= ${BALLOT_NAME_MAX_LENGTH}`);
+        expect(rulesSource).toContain(`name.size() <= ${BALLOT_NAME_MAX_LENGTH}`);
+        expect(rulesSource).toContain(`d.userNickname.size() <= ${BALLOT_NICKNAME_MAX_LENGTH}`);
       });
     });
 
@@ -1410,6 +1426,30 @@ describe('firestore.rules', () => {
         await assertFails(
           setDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), papeleta('uid-a', { editCount: 1 })),
         );
+      });
+
+      // ═══ CAMBIAR SOLO EL NOMBRE ════════════════════════════════════════════════════════════════════════
+      // El nombre de la papeleta sigue al del perfil. No es una corrección del voto: ni gasta cupo ni depende del
+      // plazo, pero tampoco puede colar nada más que el nombre.
+
+      it('el nombre se cambia sin gastar oportunidad, con el cupo agotado y fuera de plazo', async () => {
+        await conCalendario(false);
+        await conPerfil('uid-a', { social: false });
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a', { editCount: 0 }));
+        await assertSucceeds(updateDoc(doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a'), { userDisplayName: 'Anita' }));
+      });
+
+      it('por esa vía no se cuela nada más que el nombre', async () => {
+        await conCalendario(true);
+        await seed('premiosBallots', 'uid-a', papeleta('uid-a', { editCount: 0 }));
+        const ref = doc(ownerDb('uid-a'), 'premiosBallots', 'uid-a');
+        await assertFails(updateDoc(ref, { userDisplayName: 'Anita', selections: { cat1: 'cat1_option_1' } }));
+        await assertFails(updateDoc(ref, { userDisplayName: 'Anita', updatedAt: '2026-06-02T10:00:00.000Z' }));
+        await assertFails(updateDoc(ref, { userNickname: 'Otra' }));
+        await assertFails(updateDoc(ref, { userDisplayName: '' }));
+        await assertFails(updateDoc(ref, { userDisplayName: 'N'.repeat(BALLOT_NAME_MAX_LENGTH + 1) }));
+        // Ni la papeleta de otro.
+        await assertFails(updateDoc(doc(ownerDb('uid-b'), 'premiosBallots', 'uid-a'), { userDisplayName: 'Anita' }));
       });
 
       it('el rango alarga el cupo: donde bronce se queda, oro sigue', async () => {

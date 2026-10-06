@@ -634,6 +634,57 @@ export async function healOwnFriendshipIdentity(
 }
 
 /**
+ * Cambia SOLO MI NOMBRE en todos mis docs de amistad: el nombre elegido en la papeleta de los premios.
+ *
+ * No es `healOwnFriendshipIdentity` porque desde la papeleta no se sabe lo demás que esa función escribe —la foto
+ * publicable y los ids de gist de este dispositivo—, y mandarlo vacío borraría la foto y los canales que mis
+ * amigos tienen de mí. La lista de amigos pinta el nombre SOLO de aquí (`otherName`), así que sin esto seguirían
+ * viendo el anterior hasta que su dueño abriera el hub en un dispositivo con GitHub.
+ *
+ * Cabe en `friendshipHealOwnFields`, que admite tocar un subconjunto de mis campos. Best-effort, como el saneado.
+ */
+export async function renameOwnFriendships(myUid: string, name: string): Promise<void> {
+  if (!myUid || !name) {
+    return;
+  }
+  const services = await initializeFirebaseServices();
+  if (!services) {
+    return;
+  }
+
+  let snapshot;
+  try {
+    snapshot = await getDocs(
+      query(collection(services.firestore, 'friendships'), where('users', 'array-contains', myUid)),
+    );
+  } catch (error) {
+    if (isPermissionDeniedError(error)) {
+      return;
+    }
+    throw error;
+  }
+
+  const now = Date.now();
+  const pending: Array<{ docId: string; fields: Record<string, unknown> }> = [];
+  snapshot.docs.forEach((entry) => {
+    const data = entry.data() as Partial<FriendshipDoc>;
+    const amRequester = data.requester === myUid;
+    if ((amRequester ? data.requesterName : data.recipientName) === name) {
+      return;
+    }
+    pending.push({
+      docId: entry.id,
+      fields: amRequester ? { requesterName: name, updatedAt: now } : { recipientName: name, updatedAt: now },
+    });
+  });
+
+  await commitHealBatches(services.firestore, pending);
+  if (pending.length > 0) {
+    invalidateMyFriendshipsCache(myUid);
+  }
+}
+
+/**
  * Lee un doc de amistad concreto por par (best-effort). Útil para resolver una carrera de petición simultánea:
  * si al enviar ya existía, el llamador puede releer y decidir aceptar. Devuelve null si no existe o no es legible.
  */

@@ -52,6 +52,15 @@ export interface SocialProfileReference {
    */
   email: string;
   displayName: string;
+  /**
+   * El nombre elegido en la papeleta de los premios que AÚN NO HA LLEGADO al gist social; vacío si no hay ninguno.
+   *
+   * Desde la papeleta no siempre está el token de GitHub, así que el nombre se guarda en Firestore y se marca
+   * aquí. El hub, al abrirse en un dispositivo con el token, lo escribe en el gist y borra la marca. Mientras
+   * tanto manda sobre el del gist: ni el saneado del arranque (`repairProfileDisplayName`) ni quien lea el gist
+   * deben devolver el nombre anterior.
+   */
+  pendingName?: string;
   photoURL: string;
   socialGistId: string;
   /** LEGACY: el id canónico del gist de juegos vive en `privateConfig` (owner-only) y en el doc de amistad. */
@@ -106,6 +115,12 @@ export interface SocialDirectoryEntry {
    */
   profileId?: string;
   displayName: string;
+  /**
+   * ¿Lleva el perfil un nombre elegido en los premios que todavía no ha llegado a su gist social (`pendingName`)?
+   * Entonces `displayName` es el bueno y el `profile.name` de su gist, el anterior: quien lo hidrata tiene que
+   * quedarse con el primero.
+   */
+  namePending?: boolean;
   photoURL: string;
   socialGistId: string;
   /**

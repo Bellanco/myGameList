@@ -50,8 +50,8 @@ service cloud.firestore {
         // código dejó de escribirlo hace tiempo y los documentos que lo arrastraban ya se purgaron
         // (`scripts/purge-profile-pii.js`); esto cierra la puerta para que no pueda volver por una regresión.
         && request.resource.data.keys().hasOnly([
-          "schemaVersion", "uid", "profileId", "displayName", "photoURL", "social", "updatedAt", "tier",
-          "createdAt", "achievements", "palmares", "yearSummary"
+          "schemaVersion", "uid", "profileId", "displayName", "pendingName", "photoURL", "social", "updatedAt",
+          "tier", "createdAt", "achievements", "palmares", "yearSummary"
         ])
         && profileTierNotSelfAssigned()
         && profilePalmaresNotSelfAssigned()
@@ -65,8 +65,8 @@ service cloud.firestore {
     // `photoURL` con `javascript:`, y este documento lo lee todo el directorio social (hasta
     // SOCIAL_DIRECTORY_LIMIT perfiles por apertura del hub). Es decir, un usuario podía inflar o envenenar
     // lo que se descarga y se pinta en el navegador de los demás. Los límites son deliberadamente más
-    // holgados que los del cliente (el editor corta el nick en 60): aquí se trata de acotar el abuso, no de
-    // duplicar la validación de la UI.
+    // holgados que los del cliente (el editor corta el nick en 25; el nombre aquí admite 35 porque también cae
+    // el de la cuenta de Google, cortado): aquí se trata de acotar el abuso, no de duplicar la validación de la UI.
     //
     // Cada campo se valida SOLO SI ESTÁ PRESENTE, y es la parte que no se puede omitir: en un `update` por
     // merge `request.resource.data` es el documento RESULTANTE, así que los perfiles legacy llegan aquí con
@@ -89,7 +89,11 @@ service cloud.firestore {
         && (!("profileId" in request.resource.data)
             || (request.resource.data.profileId is string && request.resource.data.profileId.size() <= 128))
         && (!("displayName" in request.resource.data)
-            || (request.resource.data.displayName is string && request.resource.data.displayName.size() <= 120))
+            || (request.resource.data.displayName is string && request.resource.data.displayName.size() <= 35))
+        // EL NOMBRE ELEGIDO EN LOS PREMIOS, a la espera de llegar al gist social (que necesita el token de GitHub,
+        // y desde la papeleta puede no haberlo). Mismo tope que `displayName`, del que es copia.
+        && (!("pendingName" in request.resource.data)
+            || (request.resource.data.pendingName is string && request.resource.data.pendingName.size() <= 35))
         && profilePhotoUrlIsSafe()
         && (!("social" in request.resource.data) || profileSocialIsSane())
         && (!("updatedAt" in request.resource.data)
@@ -489,7 +493,7 @@ service cloud.firestore {
       // incluye los campos de la OTRA parte, y un doc antiguo pudo guardar un nulo ahí. Denegarlo dejaría la
       // amistad imposible de sanear o de aceptar, que es peor que el dato flojo que se pretende evitar.
       function denormTextIsSane(value) {
-        return value == null || (value is string && value.size() <= 120);
+        return value == null || (value is string && value.size() <= 35);
       }
       function denormPhotoIsSane(value) {
         return value == null
@@ -725,7 +729,8 @@ service cloud.firestore {
     /**
      * Esquema de una papeleta entrante, para crear y para corregir.
      *
-     * El tope de 50 del nombre es PAR DUPLICADO con `BALLOT_NAME_MAX_LENGTH` (`core/premios/limits.ts`).
+     * Los topes de los nombres son PARES DUPLICADOS con `core/premios/limits.ts`: 25 el elegido
+     * (`BALLOT_NAME_MAX_LENGTH`) y 35 el de la cuenta de Google (`BALLOT_NICKNAME_MAX_LENGTH`), que se corta si no cabe.
      */
     function premiosBallotIsValid(userId) {
       let d = request.resource.data;
@@ -733,8 +738,8 @@ service cloud.firestore {
         && d.keys().hasAll(premiosBallotRequiredFields())
         && d.userId == userId
         && (!('profileId' in d) || (d.profileId is string && d.profileId.size() <= 128))
-        && d.userNickname is string && d.userNickname.size() <= 50
-        && d.userDisplayName is string && d.userDisplayName.size() > 0 && d.userDisplayName.size() <= 50
+        && d.userNickname is string && d.userNickname.size() <= 35
+        && premiosBallotNameIsValid(d.userDisplayName)
         && d.selections is map
         && d.selections.size() > 0 && d.selections.size() <= premiosMaxSelections()
         && d.selections.values().join('').size() <= premiosMaxSelectionsTextSize()
@@ -743,6 +748,24 @@ service cloud.firestore {
         && d.updatedAt is string && d.updatedAt.size() <= 40
         && d.editCount is int && d.editCount >= 0
         && d.isActive == true;
+    }
+
+    /** El nombre que se enseña en la clasificación. Lo comparten el envío y el cambio de nombre suelto. */
+    function premiosBallotNameIsValid(name) {
+      return name is string && name.size() > 0 && name.size() <= 25;
+    }
+
+    /**
+     * CAMBIAR SOLO EL NOMBRE, sin gastar una oportunidad.
+     *
+     * El nombre de la papeleta sigue al del perfil: si su dueño se lo cambia, se cambia también aquí, para que la
+     * clasificación no publique un nombre que ya no usa. No es una corrección del voto —las selecciones, el
+     * contador y las fechas no se tocan—, así que no cuenta contra el cupo ni depende del plazo: vale mientras la
+     * papeleta exista, que es hasta que el administrador la retira al publicar la edición.
+     */
+    function premiosBallotRenameIsValid() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userDisplayName'])
+        && premiosBallotNameIsValid(request.resource.data.userDisplayName);
     }
 
     /** Primer envío: el contador arranca a cero. */
@@ -803,8 +826,11 @@ service cloud.firestore {
       allow create: if isOwner(userId) && premiosNewBallotIsValid(userId) && premiosVotingIsOpen();
 
       // Corregir: mientras la votación siga abierta y le queden correcciones. Sigue habiendo un voto por persona:
-      // se reescribe el mismo documento, nunca se crea otro.
-      allow update: if isOwner(userId) && premiosBallotEditIsValid(userId) && premiosVotingIsOpen();
+      // se reescribe el mismo documento, nunca se crea otro. O cambiar solo el nombre, que no es una corrección
+      // (ver `premiosBallotRenameIsValid`); va PRIMERO porque no lee nada y así no paga las lecturas del cupo y
+      // del plazo.
+      allow update: if isOwner(userId)
+        && (premiosBallotRenameIsValid() || (premiosBallotEditIsValid(userId) && premiosVotingIsOpen()));
 
       // Borrar: solo el administrador, que es quien retira las papeletas al publicar la edición.
       allow delete: if isAdmin();

@@ -1,5 +1,6 @@
 /**
- * QUIÉN VOTA, a efectos de la porra: su pseudónimo público y el cupo de oportunidades que le toca.
+ * QUIÉN VOTA, a efectos de la porra: su pseudónimo público, el nombre de su perfil y el cupo de oportunidades que
+ * le toca.
  *
  * Las dos cosas salen del MISMO documento —el perfil propio— y de una sola lectura, además cacheada 60 s por
  * `getOwnProfileRef`: llegar aquí desde el resto de la aplicación no cuesta ninguna consulta nueva.
@@ -19,6 +20,11 @@ import { getOwnProfileRef } from '../../model/repository/firebaseSocialRepositor
 export interface PremiosVoter extends PremiosVoterStanding {
   /** Pseudónimo público de esta cuenta. Vacío mientras no tenga perfil. */
   profileId: string;
+  /**
+   * El nombre de su perfil en la aplicación (el elegido en los premios si aún no ha llegado a su gist). Vacío
+   * mientras no tenga perfil. Es el que se le propone en la papeleta a quien tiene perfil social.
+   */
+  displayName: string;
   /** ¿Sigue pendiente la lectura del perfil? Con sesión, hasta saberlo no se puede decir cuántas le quedan. */
   loading: boolean;
 }
@@ -31,6 +37,7 @@ export interface PremiosVoter extends PremiosVoterStanding {
 const SIN_PERFIL: PremiosVoter = {
   ...NO_SOCIAL_STANDING,
   profileId: '',
+  displayName: '',
   loading: false,
 };
 
@@ -50,6 +57,7 @@ export function usePremiosVoter(uid: string): PremiosVoter {
         if (!vivo) return;
         setVoter({
           profileId: ref?.profileId || '',
+          displayName: ref?.pendingName || ref?.displayName || '',
           // El canal, y no la mera existencia del documento: la cuenta ligera del voto tiene perfil y no tiene
           // canal, y es justo la que se queda con una sola oportunidad.
           hasSocialAccount: Boolean(ref?.socialEnabled),
