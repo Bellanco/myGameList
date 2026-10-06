@@ -5,6 +5,28 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-10-06
+
+Una versión de **acabado**: los botones se visten con cada tema, los avisos del feed se distinguen y se leen en
+todos, y el palmarés del perfil dice en qué puesto quedó cada uno. Sin cambios en las reglas de Firestore.
+
+### Changed
+- **El palmarés del perfil, en banderines**: cada uno con el puesto, la competición y el año, en vez de medallas, y
+  más pequeños en el móvil. Las participaciones dicen **el puesto real en la clasificación** («7.º») en lugar de un
+  «Participó» genérico; las ya concedidas se rellenaron desde la clasificación de cada edición.
+- **Los botones, con el color de cada tema**: neutros propios en Forja, Grimdark, Arcade y Sea of Stars, la
+  navegación alterna dos colores, y «En curso» y «Próximos» llevan el mismo en todos los temas. En Cyberpunk todos
+  son tubos de neón, con lo seleccionado en violeta; en Portal, los botones de texto son cubos vistos desde arriba
+  y los de mover a En curso y Próximos, portales.
+- **Cada aviso del feed tiene su color en cada tema**, distinto del de los demás y con contraste legible.
+- **Las pantallas sociales pierden el subtítulo** bajo el título, y Estadísticas, la nota bajo los géneros que
+  deseas sin nada esperando.
+- Utillaje al día dentro de rango: Vite 8.3.2 → 8.3.3 y typescript-eslint 8.71.0 → 8.71.1. TypeScript 7, ESLint 10
+  y jsdom 30 siguen fuera a propósito.
+
+### Fixed
+- **Arcade**: la letra de los botones vuelve a leerse en claro y en oscuro.
+
 ## [1.6.0] - 2026-10-05
 
 La versión de la **lista de deseos**: una quinta lista para los juegos que quieres y todavía no tienes, que en
