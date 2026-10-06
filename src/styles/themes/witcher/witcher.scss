@@ -285,6 +285,28 @@
   --pz-grosor: 1.5px;
   --wt-canto: linear-gradient(rgba(255,255,255,.6), rgba(255,255,255,.6));
 }
+/* LAS DOS HOJAS DEL BRUJO EN LA NAVEGACIÓN. La de arriba es la PLATA —el acento de siempre, con el filo de
+   Igni— y aquí entra la otra: la hoja al fuego de IGNI, chapa naranja con tinta encima y el filo de plata.
+   Se alternan dentro de cada fila (`of .btn-accent` cuenta solo los de navegación, así que un neutro en medio
+   no descoloca la pareja); un navegador sin `:nth-child(… of …)` descarta la regla y los deja todos en plata.
+   Mover de lista lleva las mismas dos hojas, pero FIJAS: «Pasar a en curso» la plata y «Pasar a próximos» el
+   fuego. Pesa (0,5,0), así que gana a la regla del acento sin tocarla.
+   Contraste del rótulo en el alto MÁS CLARO u OSCURO que le toque: 5,24:1 en el canto hondo (#d86a2c). */
+:root[data-palette="witcher"] .btn-playing {
+  --wt-h1: #e2e8ef; --wt-h2: #c3ccd7; --wt-h3: #92a0af; --wt-h4: #d6dee6;
+  --wt-rotulo: var(--on-accent);
+  --pz-filete: rgba(255,143,74,.85);
+  --pz-grosor: 1.5px;
+  --wt-canto: linear-gradient(rgba(255,255,255,.6), rgba(255,255,255,.6));
+}
+:root[data-palette="witcher"] .btn-accent:nth-child(even of .btn-accent),
+:root[data-palette="witcher"] .btn-upcoming {
+  --wt-h1: #ffbe94; --wt-h2: #ff9d60; --wt-h3: #d86a2c; --wt-h4: #ffae7a;
+  --wt-rotulo: var(--on-accent);
+  --pz-filete: rgba(227,233,240,.85);
+  --pz-grosor: 1.5px;
+  --wt-canto: linear-gradient(rgba(255,255,255,.6), rgba(255,255,255,.6));
+}
 /* El destructivo es la hoja al rojo: brasa dentro del acero, no relleno plano. */
 :root[data-palette="witcher"] .btn-danger {
   --wt-h1: #5a3236; --wt-h2: #43262a; --wt-h3: #2a171a; --wt-h4: #4e2c30;
@@ -316,6 +338,24 @@
   --wt-h1: #566270; --wt-h2: #434d5a; --wt-h3: #333c47; --wt-h4: #4d5765;
   --wt-rotulo: #fff;
   --pz-filete: rgba(143,54,8,.6);
+  --pz-grosor: 1.5px;
+  --wt-canto: linear-gradient(rgba(255,255,255,.16), rgba(255,255,255,.16));
+}
+/* En claro, las dos hojas también se invierten: la plata pasa al acero hondo del activo y el fuego de Igni se
+   ahonda hasta brasa para que el rótulo blanco cumpla (5,96:1 en el alto más claro, #a24a14; el Igni del
+   tema, #ff8f4a, se quedaría en 2,3). El filo de cada una es el color de la otra, como en oscuro. */
+:root[data-palette="witcher"][data-theme="light"] .btn-playing {
+  --wt-h1: #566270; --wt-h2: #434d5a; --wt-h3: #333c47; --wt-h4: #4d5765;
+  --wt-rotulo: #fff;
+  --pz-filete: rgba(143,54,8,.6);
+  --pz-grosor: 1.5px;
+  --wt-canto: linear-gradient(rgba(255,255,255,.16), rgba(255,255,255,.16));
+}
+:root[data-palette="witcher"][data-theme="light"] .btn-accent:nth-child(even of .btn-accent),
+:root[data-palette="witcher"][data-theme="light"] .btn-upcoming {
+  --wt-h1: #a24a14; --wt-h2: #8f3f0f; --wt-h3: #73300a; --wt-h4: #9a4612;
+  --wt-rotulo: #fff;
+  --pz-filete: rgba(71,82,95,.7);
   --pz-grosor: 1.5px;
   --wt-canto: linear-gradient(rgba(255,255,255,.16), rgba(255,255,255,.16));
 }

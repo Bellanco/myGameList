@@ -161,6 +161,30 @@
 :root[data-palette="seaofstars"][data-theme="light"] .btn-complete,
 :root[data-palette="seaofstars"][data-theme="light"] .btn-danger,
 :root[data-palette="seaofstars"][data-theme="light"] .btn-abandoned { color: #fff7d6 !important; }
+/* NEUTRO = LUZ DE ESTRELLA. Antes era el cristal índigo de la base (en claro, turquesa sobre agua turquesa): un
+   gris con otro tinte. Ahora es la placa CREMA del `--sos-line` OSCURO (#fff7d6, literal: en claro esa variable
+   pasa a ser la tinta) con tinta de la noche (17,8:1 en oscuro, 13,9:1 en
+   claro), la misma en los dos temas, como la luz de las estrellas. «Neutro» es un botón SIN ROL: el `:not()` con
+   lista lo deja en (0,4,0) y excluye cada rol con nombre, así que no le pinta encima a ninguno. */
+:root[data-palette="seaofstars"] .btn:not(.btn-icon, .btn-ghost, .btn-primary, .btn-steam, .btn-accent, .is-active, .active, .btn-complete, .btn-danger, .btn-abandoned, .btn-playing, .btn-upcoming, .consent-btn-accept) {
+  background: #fff7d6 !important; background-image: none !important;
+  color: #0e0c24 !important; border-color: color-mix(in srgb, #fff7d6 62%, #7a5000) !important;
+}
+:root[data-palette="seaofstars"][data-theme="light"] .btn:not(.btn-icon, .btn-ghost, .btn-primary, .btn-steam, .btn-accent, .is-active, .active, .btn-complete, .btn-danger, .btn-abandoned, .btn-playing, .btn-upcoming, .consent-btn-accept) {
+  color: #0a2a3a !important;
+}
+/* NAVEGACIÓN = SOL Y LUNA. Los de navegación se alternan dentro de cada fila (`of .btn-accent` cuenta solo los
+   suyos, así que un neutro en medio no descoloca la pareja): el primero, SOL (el oro de arriba); el siguiente,
+   LUNA. Un navegador sin `:nth-child(… of …)` descarta la regla y los deja todos en sol.
+   Luna en oscuro: el violeta del tema con la tinta de la noche (5,6:1). En claro ese violeta no da con ninguna
+   tinta, así que va el violeta hondo de la paleta clara con rótulo crema, como los rojos (5,3:1; 4,7 al hover). */
+:root[data-palette="seaofstars"] .btn-accent:nth-child(even of .btn-accent),
+:root[data-palette="seaofstars"] .btn-upcoming { background: var(--sos-purple) !important; background-image: none !important; color: #0e0c24 !important; border-color: var(--sos-purple) !important; }
+:root[data-palette="seaofstars"][data-theme="light"] .btn-accent:nth-child(even of .btn-accent),
+:root[data-palette="seaofstars"][data-theme="light"] .btn-upcoming { color: #fff7d6 !important; }
+/* Mover de lista en el detalle: los mismos dos astros, pero FIJOS. «Pasar a en curso», el sol; «Pasar a
+   próximos», la luna (arriba, con la segunda de navegación). */
+:root[data-palette="seaofstars"] .btn-playing { background: var(--steam) !important; background-image: none !important; color: var(--on-accent) !important; border-color: var(--steam) !important; }
 :root[data-palette="seaofstars"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 14px color-mix(in srgb, var(--sos-turq) 45%, transparent); }
 :root[data-palette="seaofstars"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(0); }
 

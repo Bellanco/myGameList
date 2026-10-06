@@ -185,6 +185,7 @@
 :root[data-palette="persona"] .btn-secondary,
 :root[data-palette="persona"] .btn-toggle:not(.active) { background: var(--surface-elevated) !important; color: var(--text) !important; }
 :root[data-palette="persona"] .btn-accent,
+:root[data-palette="persona"] .btn-playing,
 :root[data-palette="persona"] .btn-steam,
 :root[data-palette="persona"] .btn-primary,
 :root[data-palette="persona"] .btn.is-active,
@@ -195,6 +196,16 @@
   background: color-mix(in srgb, var(--steam) 85%, #000) !important;
   color: #fff !important;
 }
+/* LA NAVEGACIÓN ALTERNA ROJO Y AZUL: el rojo rebelde de P5 y el azul eléctrico de P3, la otra mitad de la saga.
+   Se alternan dentro de cada fila con `of .btn-accent`, que cuenta solo los de navegación (un «Cerrar sesión» en
+   medio no descoloca la pareja); un navegador sin `:nth-child(… of …)` descarta la regla y los deja en rojo.
+   Pesa (0,4,0), así que gana a la de arriba. «Pasar a en curso» va fijo en rojo y «Pasar a próximos» en azul.
+   El azul no es el #1e6bff de la caja de P3 a pelo: con blanco encima se queda en 4,56:1 y el brillo del hover
+   lo baja a 4,31. Un punto más hondo da 5,65:1 (5,12 en hover); en claro, más hondo aún, 6,75:1 (6,18). */
+:root[data-palette="persona"] .btn-accent:nth-child(even of .btn-accent),
+:root[data-palette="persona"] .btn-upcoming { background: #1a5ce6 !important; color: #fff !important; }
+:root[data-palette="persona"][data-theme="light"] .btn-accent:nth-child(even of .btn-accent),
+:root[data-palette="persona"][data-theme="light"] .btn-upcoming { background: #0f4fd6 !important; }
 /* "General" del panel: aquí el contorno es negro por decreto del tema, así que el principal se distingue por la
    SOMBRA DE BLOQUE, en rojo rebelde en vez de blanca. El relleno rojo sigue siendo del elegido. */
 :root[data-palette="persona"] .scope-tabs > .btn-toggle:first-child:not(.active),
