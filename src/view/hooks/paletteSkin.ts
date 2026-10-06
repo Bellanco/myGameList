@@ -16,7 +16,7 @@ const SKIN_LOADERS: Partial<Record<PaletteId, () => Promise<unknown>>> = {
   cyberpunk: () => import('../../styles/themes/cyberpunk/cyberpunk.scss'),
   grimdark: () => import('../../styles/themes/grimdark/grimdark.scss'),
   seaofstars: () => import('../../styles/themes/seaofstars/seaofstars.scss'),
-  // `forja` NO está aquí a propósito: es la paleta POR DEFECTO y su skin viaja en el bundle base
+  // `tierramedia` NO está aquí a propósito: es la paleta POR DEFECTO y su skin viaja en el bundle base
   // (`styles/index.scss`), porque es la que pinta el primer fotograma. `arcade` sí entra aquí desde que
   // dejó de ser la de por defecto: su skin es de los más pesados (rejilla del horizonte, pegatinas,
   // teclas de consola) y no tiene por qué descargarlo quien nunca elige ese tema.

@@ -35,7 +35,7 @@
    que ya tienen su familia de color con significado —rojo los puntos débiles, verde los fuertes, ámbar el año,
    gris el «+N»—. Si la plataforma cae en cualquiera de esas familias, el renglón deja de poder leerse por
    color. Le toca la familia FRÍA (azul, violeta, cian), y el tono concreto lo sigue poniendo cada paleta de
-   dentro de su propia identidad: el azul de la rampa en «Forja y temple», el yrden en «Plata y acero», el azul
+   dentro de su propia identidad: el azul de río de la rampa en «Oro y hoja», el yrden en «Plata y acero», el azul
    de Aperture en Portal, el índigo de su rampa en Persona. Al añadir una paleta, elige el suyo con esta regla.
 
    `--text-dim` EN LOS BLOQUES OSCUROS: no lo bajes sin medir. Es el color de la pestaña INACTIVA
@@ -54,7 +54,7 @@
    DE DÓNDE SALEN: del mundo de cada tema, no de una paleta genérica — el oro de calendario y el azul de la
    Sala de Terciopelo en «Ladrones de corazones», el rosa del Cubo Compañero y el naranja de portal en
    «Cámara de pruebas», la tabla de pinturas Citadel en «Solo hay guerra», el par sol/luna en «Sol y luna»,
-   las señales del brujo en «Plata y acero» y los dos estados del metal en «Forja y temple».
+   las señales del brujo en «Plata y acero» y los colores del mapa en «Oro y hoja».
 
    DOS PAPELES POR TONO, y esto es lo importante:
      · `--cat-N`    → RELLENO (lomo de fila, barra, punto): es gráfico, así que la 1.4.11 le pide 3:1
@@ -76,7 +76,7 @@
    El orden es el del selector de Ajustes (`PALETTES` en `core/constants/palettes.ts`), no el
    alfabético: así una lista y otra se leen igual. Entre temas no hay dependencias —cada bloque está aislado
    en su `[data-palette]`—, así que este orden no cambia lo que se pinta; cambiarlo tampoco rompe nada. ── */
-@use './forja/colors' as forja;
+@use './tierramedia/colors' as tierramedia;
 @use './arcade/colors' as arcade;
 @use './witcher/colors' as witcher;
 @use './persona/colors' as persona;

@@ -37,8 +37,8 @@ el que pinta el primer fotograma y no puede llegar tarde.
 
 ## 2. Crear un tema
 
-1. **La ficha.** Copia `src/core/constants/themes/forja.ts` a `<id>.ts` y cambia identidad, `accent`, `bg` y las
-   dos frases de `voice`. Copia igual `forja.social.ts` a `<id>.social.ts` con sus dos frases.
+1. **La ficha.** Copia `src/core/constants/themes/tierramedia.ts` a `<id>.ts` y cambia identidad, `accent`, `bg` y las
+   dos frases de `voice`. Copia igual `tierramedia.social.ts` a `<id>.social.ts` con sus dos frases.
    *El guiño va integrado en la frase, sin comillas ni atribución: es el tono de la casa.*
 2. **Los índices de TypeScript.** Añade el id a `THEMES` (`constants/palettes.ts`) y a `SOCIAL_VOICES`
    (`constants/themes/social.ts`), y escribe su entrada de `PREMIOS_VOICES` (`constants/themes/premios.ts`), que
@@ -74,7 +74,7 @@ el que pinta el primer fotograma y no puede llegar tarde.
 | los radios (`--radius-*`) | `themes/<id>/_colors.scss`, junto a la identidad de CAPA 2 |
 | la forma: filetes, texturas, ornamento | `themes/<id>/<id>.scss` |
 | la forma de **las gráficas del panel** | la ficha `--stats-*` en `themes/<id>/<id>.scss` (ver abajo) |
-| encender la **cabecera de pantalla** | `.screen-header` en `themes/<id>/<id>.scss` (apagada en la base; Forja la trae) |
+| encender la **cabecera de pantalla** | `.screen-header` en `themes/<id>/<id>.scss` (apagada en la base; Oro y hoja la trae) |
 | el nombre visible o la muestra del selector | `constants/themes/<id>.ts` |
 | lo que dice al fallar o al quedarse sin red | `constants/themes/<id>.ts` (app) o `<id>.social.ts` (hub) |
 

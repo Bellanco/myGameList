@@ -29,7 +29,7 @@ async function abrirUnaResenaConSugerencias(page: Page) {
   await expect(page.locator('.hub-related-list > *')).not.toHaveCount(1);
 }
 
-for (const palette of ['arcade', 'forja'] as const) {
+for (const palette of ['arcade', 'tierramedia'] as const) {
   test(`las tarjetas sugeridas caben en su contenedor · paleta ${palette}`, async ({ page }) => {
     await sembrarBiblioteca(page, { amplia: true, palette });
     await abrirUnaResenaConSugerencias(page);

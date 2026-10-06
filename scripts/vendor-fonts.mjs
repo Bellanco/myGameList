@@ -75,13 +75,14 @@ const SHEETS = [
     families: ['DM+Sans:wght@400;500;600;700;800'],
   },
   {
-    slug: 'forja',
+    slug: 'tierramedia',
     comment:
-      'Skin de la paleta forja «Forja y temple», la de POR DEFECTO: a diferencia de los demás skins, esta hoja NO se\n'
+      'Skin de la paleta tierramedia «Oro y hoja», la de POR DEFECTO: a diferencia de los demás skins, esta hoja NO se\n'
       + '// carga bajo demanda —entra en el bundle base por `styles/index.scss`— porque es la letra del primer fotograma.\n'
       + '// Atkinson Hyperlegible Next pone rótulos Y cuerpo, así que su `latin` es la fuente crítica: la precarga\n'
-      + '// `index.html` y la precachea el service worker (ver `vite.config.ts`). La Mono, solo las cifras.',
-    families: ['Atkinson+Hyperlegible+Next:wght@400;500;600;700;800', 'Atkinson+Hyperlegible+Mono:wght@500'],
+      + '// `index.html` y la precachea el service worker (ver `vite.config.ts`). La Mono, solo las cifras; EB Garamond,\n'
+      + '// solo los titulares.',
+    families: ['Atkinson+Hyperlegible+Next:wght@400;500;600;700;800', 'Atkinson+Hyperlegible+Mono:wght@500', 'EB+Garamond:wght@500;600;700;800'],
   },
   {
     slug: 'cyberpunk',

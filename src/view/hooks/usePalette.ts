@@ -26,7 +26,7 @@ export function useAppliedPalette(socialStatus: SocialProfileStatus): void {
   }, [socialStatus]);
 }
 
-/** Selector de paleta de color. Default = `DEFAULT_PALETTE` (hoy «Forja y temple»). Devuelve la que SE PINTA,
+/** Selector de paleta de color. Default = `DEFAULT_PALETTE` (hoy «Oro y hoja»). Devuelve la que SE PINTA,
  *  que es la de por defecto mientras los temas estén bloqueados. */
 export function usePalette(): { palette: PaletteId; setPalette: (next: PaletteId) => void } {
   const stored = usePreference(palettePreference);
