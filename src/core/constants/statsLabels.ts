@@ -5,7 +5,7 @@
 // `TAB_TITLES` y `ROUTE_TAB` — y un módulo entra entero en un chunk, o no entra.
 export const STATS_UI = {
   // The Witcher 3: «el destino es solo la mitad; la otra mitad somos nosotros».
-  subtitle: 'El destino es solo la mitad: la otra mitad son tus listas, y esto es lo que cuentan.',
+  subtitle: 'El destino es solo la mitad; la otra mitad la cuentan tus listas.',
   // La cabecera de pantalla del panel (ver `screenHeader` en `labels.ts`): el título sigue al alcance elegido.
   screenHeader: {
     kicker: 'Estadísticas',
@@ -15,7 +15,7 @@ export const STATS_UI = {
   empty: {
     // The Legend of Zelda: «es peligroso ir solo».
     title: 'Es peligroso ir solo',
-    body: 'Añade juegos a tus listas y aquí aparecerán tus horas, tus notas y tus géneros.',
+    body: 'Añade juegos a tus listas y aquí verás tus horas, notas y géneros.',
   },
   tiles: {
     games: 'Juegos',
@@ -34,7 +34,7 @@ export const STATS_UI = {
   years: {
     title: 'Año a año',
     // Imperivm (Roma) con el refrán de siempre: una curva histórica es justo eso, obra de muchos años.
-    subtitle: 'Roma no se construyó en un día: cómo has avanzado año a año.',
+    subtitle: 'Roma no se construyó en un día, y tu historial tampoco.',
     metricAria: 'Métrica del gráfico anual',
     metricGames: 'Juegos',
     metricHours: 'Horas',
@@ -67,7 +67,7 @@ export const STATS_UI = {
     title: 'Distribución de notas',
     // The Witcher III: Geralt siempre acaba eligiendo el mal menor, que es lo que hace una escala de notas.
     // Entran los completados; los abandonados que puntuaste se suman con su botón (ver `Beeswarm`).
-    subtitle: 'Entre el mal menor y la obra maestra: ahí se reparten tus notas.',
+    subtitle: 'Del mal menor a la obra maestra, así se reparten tus notas.',
     empty: 'Todavía no has puntuado ningún juego.',
     starsLabel: (stars: number) => `${stars} ${stars === 1 ? 'estrella' : 'estrellas'}`,
     gradeLabel: (floor: number, ceiling: number) => `${floor}–${ceiling}`,
@@ -146,7 +146,7 @@ export const STATS_UI = {
     title: 'Tus géneros',
     // No es el ranking por cantidad —ese es el rosetón de "Géneros más jugados"—: aquí manda la nota, y un
     // juegazo pesa más que un puñado de juegos correctos.
-    subtitle: 'Elige tu arma: no gana el género que más juegas, sino el que más juegazos te ha dado.',
+    subtitle: 'Elige tu arma. Aquí pesa la nota: un juegazo cuenta más que varios juegos del montón.',
     subtitleYear: (year: number) => `Elige tu arma: los géneros que mejor te trataron en ${year}.`,
     empty: 'Añade géneros a tus juegos para ver esta figura.',
     /** Con menos de tres géneros la figura no se sostiene y se cae al ranking en barras. */
@@ -169,8 +169,8 @@ export const STATS_UI = {
   shame: {
     title: 'Lista de la vergüenza',
     // Skyrim: «antes era un aventurero como tú, hasta que me clavaron una flecha en la rodilla».
-    subtitle: 'Antes eras un aventurero como ellos: qué dejas a medias, por qué y cuánto te ha costado.',
-    empty: 'Ni una flecha en la rodilla: no has abandonado ningún juego. Por ahora.',
+    subtitle: 'Antes eras un aventurero, hasta que dejaste estos juegos a medias.',
+    empty: 'Ni una flecha en la rodilla: todavía no has abandonado ningún juego.',
     total: 'Abandonados',
     hours: 'Horas invertidas',
     avgGrade: 'Nota media',
@@ -209,10 +209,10 @@ export const STATS_UI = {
   activity: {
     title: 'Tu constancia',
     // Animal Crossing va de aparecer cada día; aquí basta con aparecer cada semana.
-    subtitle: 'Aquí no se mide cuánto juegas, sino cada cuánto vuelves a tus listas.',
+    subtitle: 'Cada cuánto vuelves a tus listas a apuntar algo.',
     empty: 'En cuanto muevas juegos entre listas o escribas reseñas, aquí aparecerá tu ritmo.',
     /** Por qué la unidad es la semana y no el día. */
-    why: 'Por semanas, no por días: una lista de juegos no se toca a diario, y un calendario diario sería casi todo huecos.',
+    why: 'Va por semanas porque una lista de juegos no se toca a diario, y por días saldría casi todo vacío.',
     /** Nombre de una semana por su lunes («sem. del 12 may»). */
     weekOf: (monday: string) => `sem. del ${monday}`,
     weekAria: (week: string, total: number) =>
@@ -267,7 +267,7 @@ export const STATS_UI = {
     tileHint: (low: string, high: string) => `la mayoría de tus notas caen entre ${low} y ${high}`,
     title: 'Tu exigencia',
     // Dark Souls otra vez no: esta es de Sekiro, donde la nota justa es la que duele.
-    subtitle: 'Ni indulgente ni implacable: dónde caen tus notas alrededor de tu media.',
+    subtitle: 'Cuánto se alejan tus notas de tu media.',
     empty: 'Puntúa algunos juegos y aquí verás si repartes notas parecidas o vas a los extremos.',
     deviation: 'Desviación',
     deviationHint: 'es lo que se aparta de tu media una nota tuya cualquiera',
@@ -320,7 +320,7 @@ export const STATS_UI = {
     saga: 'Misma saga',
     /** Conector que la vista dice con los chips: solo lo oye un lector de pantalla («…, por Metroidvania»). */
     because: ', por ',
-    noPairs: 'Ninguno de tus deseos tiene pariente en Próximos: lo que quieres, de momento, no lo tienes en casa.',
+    noPairs: 'Por ahora, ninguno de tus deseos tiene pariente en Próximos.',
     more: (count: number) => `Y ${count} ${count === 1 ? 'deseo más' : 'deseos más'} con pariente.`,
     genres: 'Lo que deseas frente a lo que esperas',
     legendWished: 'Deseos',
@@ -365,12 +365,12 @@ export const STATS_UI = {
     /** Botón de la fila de acciones del perfil, entre "Reseñas" y la ruleta. */
     button: 'Estadísticas',
     buttonBack: 'Ver perfil',
-    subtitle: 'Salen de lo que comparte contigo: sus listas, sus notas y sus géneros.',
+    subtitle: 'Salen de las listas, notas y géneros que comparte contigo.',
     empty: 'No comparte ninguna lista, así que no hay nada que resumir.',
     /** Reciprocidad: lo que escondes de tus listas, no lo ves de las suyas. */
     blockedAll: 'Escondes todas tus listas, así que no puedes ver las de nadie. Enséñalas en tu perfil y volverán estas cifras.',
     blocked: (lists: string) => `Falta ${lists}: lo escondes en tu perfil, así que tampoco lo ves aquí.`,
-    noHours: 'Las horas no viajan por el canal social: son privadas y aquí no se enseñan.',
+    noHours: 'Las horas son privadas y no se comparten.',
     scopeGeneral: 'General',
   },
   year: {

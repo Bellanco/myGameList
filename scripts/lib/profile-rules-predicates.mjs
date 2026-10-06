@@ -13,7 +13,7 @@
 // Límites: los MISMOS que exigen las reglas.
 export const LIMITS = {
   profileId: 128,
-  displayName: 120,
+  displayName: 35,
   email: 320,
   photoURL: 512,
   etag: 256,

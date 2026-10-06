@@ -484,9 +484,9 @@ export function useSocialViewModel(options?: {
    * Identidad denormalizada que viaja al documento de amistad: nick público, foto publicable y los dos gists.
    *
    * El nombre va RECORTADO a `PUBLIC_NAME_MAX_LENGTH`, que es lo que aceptan las reglas de `friendships`
-   * (`denormTextIsSane`: 120). El nick del gist admite hasta 500 (`SOCIAL_NAME_MAX`) y el editor de perfil corta
-   * en 60, pero entre medias está el nombre de la cuenta de Google, que entra por el respaldo sin pasar por
-   * ninguna pantalla: con más de 120 caracteres, cada saneado intentaba una escritura que las reglas denegaban
+   * (`denormTextIsSane`: 35). El nick del gist admite hasta 500 (`SOCIAL_NAME_MAX`) y el editor de perfil corta
+   * en ese mismo tope, pero entre medias está el nombre de la cuenta de Google, que entra por el respaldo sin pasar
+   * por ninguna pantalla: con más del tope, cada saneado intentaba una escritura que las reglas denegaban
    * —en cada apertura del hub, para siempre— y su identidad no llegaba nunca a sus amistades. `profiles` ya
    * recorta con esta misma cota (ver `repairProfileDisplayName`), así que los dos canales escriben lo mismo.
    */
@@ -2239,6 +2239,16 @@ export function useSocialViewModel(options?: {
         socialGistId: finalGistId,
         gamesGistId: mainSyncConfig?.gistId || '',
       });
+
+      // Y A LA PAPELETA DE LOS PREMIOS, si la hay: con perfil social, el nombre de la papeleta ES el del perfil (no
+      // se elige al votar), así que la clasificación no debe publicar uno que ya no usa. No gasta ninguna
+      // oportunidad (ver `renameOwnBallot`). El módulo es de la sección de premios, que es perezosa: se trae solo
+      // al guardar. Best-effort, como lo anterior.
+      void import('../model/repository/premios/premiosBallotRepository')
+        .then(({ renameOwnBallot }) => renameOwnBallot(authUser.uid, profile.name))
+        .catch(() => {
+          /* sin papeleta, sin red o sin sesión: el perfil ya está guardado */
+        });
 
       // Refrescar la caché del perfil con lo recién guardado: evita releer el gist al volver a social y mantiene
       // la caché coherente con la edición.

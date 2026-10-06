@@ -29,6 +29,7 @@ function pintar(
   votes: Record<string, { id: string; name: string }>,
   onSubmit = vi.fn(),
   readOnly = false,
+  nameLockedHint = '',
 ) {
   render(
     <MemoryRouter>
@@ -42,6 +43,8 @@ function pintar(
         error=""
         onSubmit={onSubmit}
         readOnly={readOnly}
+        nameLocked={Boolean(nameLockedHint)}
+        nameLockedHint={nameLockedHint}
       />
     </MemoryRouter>,
   );
@@ -162,5 +165,19 @@ describe('PremiosReviewScreen', () => {
       pintar(completa, vi.fn(), true);
       expect(screen.queryByRole('link', { name: L.goToCategory('Juego del año') })).not.toBeInTheDocument();
     });
+  });
+
+  // EL NOMBRE YA DECIDIDO no se elige: el de su perfil social, o el alias que eligió la primera vez que votó.
+  it('con el nombre ya decidido sale bloqueado, con su porqué, y se envía ese', async () => {
+    const onSubmit = pintar(completa, vi.fn(), false, L.nameLockedHint);
+    const campo = screen.getByLabelText(L.nameLabel);
+
+    expect(campo).toHaveAttribute('readonly');
+    await userEvent.type(campo, 'Otro');
+    expect(campo).toHaveValue('Ana');
+    expect(screen.getByText(L.nameLockedHint)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: L.submit }));
+    expect(onSubmit).toHaveBeenCalledWith('Ana');
   });
 });

@@ -16,8 +16,15 @@ const L = PREMIOS_UI.revisar;
 export interface PremiosReviewScreenProps {
   categories: PremiosCategory[];
   votes: PremiosVotes;
-  /** Nombre propuesto: el que ya usó, o el de su cuenta. */
+  /** Nombre propuesto: el de su perfil social, el alias que ya usó o el de su cuenta. */
   defaultName: string;
+  /**
+   * EL NOMBRE YA ESTÁ DECIDIDO y se enseña sin poder cambiarlo: con perfil social es el de su perfil (y lo sigue);
+   * sin él, el alias que eligió la primera vez que votó.
+   */
+  nameLocked?: boolean;
+  /** Texto bajo el nombre bloqueado, en vez del de siempre. Solo el perfil social lo lleva: dice dónde se cambia. */
+  nameLockedHint?: string;
   /** Oportunidades que le quedan, esta incluida. */
   remainingOpportunities: number;
   isEdit: boolean;
@@ -60,6 +67,8 @@ export function PremiosReviewScreen({
   error,
   onSubmit,
   readOnly = false,
+  nameLocked = false,
+  nameLockedHint = '',
 }: PremiosReviewScreenProps) {
   const [name, setName] = useState(defaultName);
 
@@ -89,12 +98,13 @@ export function PremiosReviewScreen({
           id="premios-name"
           className="input"
           type="text"
-          value={name}
+          value={nameLocked ? defaultName : name}
           maxLength={BALLOT_NAME_MAX_LENGTH}
           placeholder={L.namePlaceholder}
+          readOnly={nameLocked}
           onChange={(event) => setName(event.target.value)}
         />
-        <p className="premios-review__hint">{L.nameHint}</p>
+        <p className="premios-review__hint">{(nameLocked && nameLockedHint) || L.nameHint}</p>
 
         {pendientes > 0 ? (
           <p className="premios-review__pending">

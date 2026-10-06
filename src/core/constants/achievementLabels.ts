@@ -49,7 +49,7 @@ export const ACHIEVEMENTS_UI = {
    * huecos no se lee— pero el puntero dice de dónde sale: es el día más antiguo del que hay constancia, y el
    * logro cayó ese día o después. Sin esta línea, la pantalla estaría afirmando un día que no sabe.
    */
-  floorDateTitle: 'Sin sello propio: se enseña el día más antiguo del que hay constancia',
+  floorDateTitle: 'Sin fecha exacta: es el día más antiguo del que hay constancia',
   noDateTitle: 'Conseguido antes de que hubiera con qué fecharlo',
   locked: 'Bloqueado',
   /** Vista global: el recuadro marca lo que tiene el perfil, y el texto lo dice para quien no ve el recuadro. */
@@ -158,7 +158,7 @@ export const ACHIEVEMENTS_UI = {
   empty: {
     // Sea of Stars, uno de los temas: el viaje empieza en alguna parte.
     title: 'Todavía no hay nada que contar',
-    body: 'Añade juegos, ponles nota y escribe alguna reseña: los logros salen solos de lo que ya haces.',
+    body: 'Añade juegos o escribe alguna reseña y los logros irán saliendo solos.',
   },
 } as const;
 

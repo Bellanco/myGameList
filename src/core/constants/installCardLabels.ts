@@ -6,7 +6,7 @@
 export const INSTALL_CARD = {
   title: 'Instalar la aplicación',
   /** Lo que se gana, en una frase: lo mismo que promete el aviso del principio. */
-  lead: 'Ábrela como una app más: con su icono, sin la barra del navegador y aunque no haya conexión.',
+  lead: 'Ábrela con su propio icono y sin la barra del navegador. También funciona sin conexión.',
   /** Hay oferta del navegador: el botón abre su diálogo. */
   add: 'Instalar',
   /** Safari de iOS no ofrece nada que atrapar: se instala a mano desde el menú de compartir. */

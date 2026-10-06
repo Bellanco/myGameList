@@ -28,14 +28,14 @@ export const STATS_LABELS_OTHER: StatsLabels = {
   },
   years: {
     ...STATS_OWN.years,
-    subtitle: 'Roma no se construyó en un día: cómo ha avanzado año a año.',
+    subtitle: 'Roma no se construyó en un día, y su historial tampoco.',
     empty: 'No tiene ningún juego marcado como completado.',
     noYearHint: 'Completados a los que no les registró año.',
     peak: (year: number, value: string, metric: string) => `Su récord: ${year} con ${value} ${metric}`,
   },
   grades: {
     ...STATS_OWN.grades,
-    subtitle: 'Entre el mal menor y la obra maestra: ahí se reparten sus notas.',
+    subtitle: 'Del mal menor a la obra maestra, así se reparten sus notas.',
     empty: 'Todavía no ha puntuado ningún juego.',
   },
   genres: {
@@ -62,7 +62,7 @@ export const STATS_LABELS_OTHER: StatsLabels = {
   radar: {
     ...STATS_OWN.radar,
     title: 'Sus géneros',
-    subtitle: 'Elige tu arma: no gana el género que más juega, sino el que más juegazos le ha dado.',
+    subtitle: 'Elige tu arma. Aquí pesa la nota: un juegazo cuenta más que varios juegos del montón.',
     subtitleYear: (year: number) => `Elige tu arma: los géneros que mejor le trataron en ${year}.`,
     empty: 'Sus juegos no tienen géneros anotados.',
   },
@@ -75,8 +75,8 @@ export const STATS_LABELS_OTHER: StatsLabels = {
   },
   shame: {
     ...STATS_OWN.shame,
-    subtitle: 'Antes eras un aventurero como él: qué deja a medias, por qué y cuánto le ha costado.',
-    empty: 'Ni una flecha en la rodilla: no ha abandonado ningún juego. Por ahora.',
+    subtitle: 'Antes era un aventurero, hasta que dejó estos juegos a medias.',
+    empty: 'Ni una flecha en la rodilla: todavía no ha abandonado ningún juego.',
     noReasons: 'No ha anotado razones de abandono.',
     genres: 'Géneros que más abandona',
     rate: 'Terminados frente a abandonados, por género',
@@ -112,7 +112,7 @@ export const STATS_LABELS_OTHER: StatsLabels = {
     tile: 'Su exigencia',
     tileHint: (low: string, high: string) => `la mayoría de sus notas caen entre ${low} y ${high}`,
     title: 'Su exigencia',
-    subtitle: 'Ni indulgente ni implacable: dónde caen sus notas alrededor de su media.',
+    subtitle: 'Cuánto se alejan sus notas de su media.',
     empty: 'No ha puntuado juegos suficientes.',
     deviationHint: 'es lo que se aparta de su media una nota suya cualquiera',
     band: 'Su zona habitual',

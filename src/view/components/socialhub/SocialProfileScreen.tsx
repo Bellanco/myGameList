@@ -7,6 +7,7 @@ import { type SocialUiLabels } from '../../../core/constants/socialLabels';
 import { HubScreen } from './HubScreen';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
+import { PUBLIC_NAME_MAX_LENGTH } from '../../../core/security/sanitize';
 import type { TabId } from '../../../model/types/game';
 import type { ProfileTier } from '../../../core/constants/tiers';
 import { useFeedMoveTabs } from '../../hooks/useFeedMoveTabs';
@@ -166,7 +167,7 @@ export function SocialProfileScreen({
                 id="hub-profile-name"
                 className="finput"
                 type="text"
-                maxLength={60}
+                maxLength={PUBLIC_NAME_MAX_LENGTH}
                 value={profileName}
                 onChange={(event) => setProfileName(event.target.value)}
                 placeholder={SOCIAL_UI.profile.namePlaceholder}

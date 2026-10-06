@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
-import { ballotIsUnchanged } from '../../../core/premios/ballotEdits';
-import { votesToSelections } from '../../../model/repository/premios/premiosBallotRepository';
+import { ballotIsUnchanged, selectionsAreUnchanged } from '../../../core/premios/ballotEdits';
+import { BALLOT_NAME_MAX_LENGTH } from '../../../core/premios/limits';
+import { safeTrim } from '../../../core/security/sanitize';
+import { renameOwnBallot, votesToSelections } from '../../../model/repository/premios/premiosBallotRepository';
 import { ensureLightAccount } from '../../../model/repository/lightAccountRepository';
 import { signInWithGoogle, subscribeSocialAuth } from '../../../model/repository/firebaseGateway';
 import { isSupersededSignIn } from '../../../core/utils/googleSignIn';
@@ -125,21 +127,58 @@ export function PremiosHub() {
     }
   }, []);
 
+  /**
+   * EL NOMBRE DE LA PAPELETA.
+   *
+   *  - Con perfil social, SIEMPRE el de su perfil, y no se puede cambiar aquí: si lo cambia en su perfil, la
+   *    papeleta lo sigue (ver `renameOwnBallot`).
+   *  - Sin él, la PRIMERA vez se propone el de su cuenta de Google y puede escribir otro. Ese alias se guarda en
+   *    la cuenta ligera que se le crea al votar y ahí se queda: en las siguientes ediciones sale el mismo y ya no
+   *    se puede cambiar.
+   *
+   * Recortado al tope de la papeleta ya en el campo: un nombre más largo se vería entero y se guardaría cortado sin
+   * que su dueño lo supiera.
+   */
+  const aliasGuardado = voter.hasSocialAccount ? '' : voter.displayName;
+  const nombreBloqueado = voter.hasSocialAccount || Boolean(aliasGuardado);
+  const nombrePropuesto = safeTrim(
+    voter.hasSocialAccount
+      ? voter.displayName || edition.ballot?.userDisplayName || user?.displayName
+      : aliasGuardado || edition.ballot?.userDisplayName || user?.displayName,
+    BALLOT_NAME_MAX_LENGTH,
+  );
+
   const handleSubmit = useCallback(
-    async (displayName: string) => {
+    async (nombreEscrito: string) => {
       setError('');
+      // Con el nombre ya decidido (su perfil, o el alias de su cuenta ligera) no se elige: pase lo que pase con el
+      // campo, se vota con ese.
+      const displayName = nombreBloqueado ? nombrePropuesto : nombreEscrito;
+      const selecciones = votesToSelections(voting.votes);
       try {
         // MIRAR NO CUESTA UNA OPORTUNIDAD. Quien entra a repasar su papeleta, no toca nada y pulsa enviar por
         // inercia no debería gastar una de las veces que le quedan: no hay nada que guardar, así que no se
         // escribe. Las reglas no pueden distinguirlo —para ellas es una escritura más—, de modo que tiene que
         // decidirse aquí, antes de enviarla.
-        if (ballotIsUnchanged(edition.ballot, votesToSelections(voting.votes), displayName)) {
+        if (ballotIsUnchanged(edition.ballot, selecciones, displayName)) {
           setSinCambios(true);
           setJustSubmitted(true);
           navigate(PREMIOS_ROUTES.sent);
           return;
         }
         setSinCambios(false);
+
+        // PONER AL DÍA SOLO EL NOMBRE TAMPOCO. Con perfil social, si la papeleta lleva un nombre que ya no es el de
+        // su perfil (votó antes de cambiarlo y no llegó a pasarse), reenviarla con los mismos votos solo lo
+        // actualiza: no es una corrección, y las reglas lo admiten sin tocar el contador
+        // (`premiosBallotRenameIsValid`).
+        if (user?.uid && voter.hasSocialAccount && selectionsAreUnchanged(edition.ballot, selecciones)) {
+          await renameOwnBallot(user.uid, displayName);
+          setJustSubmitted(true);
+          await edition.reload();
+          navigate(PREMIOS_ROUTES.sent);
+          return;
+        }
 
         // VOTAR DEJA CUENTA. Quien llega por primera vez no tiene perfil —crearlo exige GitHub, y eso aquí sería
         // un muro— así que se le crea una CUENTA LIGERA: nombre, foto y pseudónimo, sin canal y sin salir en el
@@ -162,7 +201,7 @@ export function PremiosHub() {
         setError(edition.votingOpen ? PREMIOS_UI.errores.submit : PREMIOS_UI.errores.closed);
       }
     },
-    [edition, navigate, profileId, user, voting],
+    [edition, navigate, nombreBloqueado, nombrePropuesto, profileId, user, voter.hasSocialAccount, voting],
   );
 
   // SE ESPERA TAMBIÉN AL PERFIL, y no es cosmético: el cupo sale de él, así que decidir antes de tenerlo le
@@ -295,7 +334,9 @@ export function PremiosHub() {
         <PremiosReviewScreen
           categories={edition.categories}
           votes={voting.votes}
-          defaultName={edition.ballot?.userDisplayName || user?.displayName || ''}
+          defaultName={nombrePropuesto}
+          nameLocked={nombreBloqueado}
+          nameLockedHint={voter.hasSocialAccount ? PREMIOS_UI.revisar.nameLockedHint : ''}
           remainingOpportunities={edition.remainingOpportunities}
           isEdit={Boolean(edition.ballot)}
           submitting={voting.submitting}

@@ -10,5 +10,5 @@ export const forjaSocial = {
   /* la fragua con el fuego encendido y ningún yunque sonando. */
   error: 'No hay nadie en la fragua.',
   /* la fragua no ha cerrado; lo que no llega es el recado de quién anda dentro. */
-  offline: 'La fragua está lejos: no llega el recado.',
+  offline: 'El recado no llega a la fragua.',
 } as const satisfies ThemeSocialVoice;

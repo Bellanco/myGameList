@@ -125,7 +125,8 @@ Cada arreglo de los grupos 1 y 2 va con un test que reproduce el fallo antes de 
   - `SpeedGauge.tsx:167` — segmento encendido con 0.
   - `DonutShare.tsx:54-57` — denominador distinto al de la tarjeta vecina.
   - `FiltersSettings.tsx:70` — no deja cambiar solo mayúsculas.
-  - `SocialProfileScreen.tsx:168` — `maxLength={60}` en vez de `PUBLIC_NAME_MAX_LENGTH`.
+  - ~~`SocialProfileScreen.tsx:168` — `maxLength={60}` en vez de `PUBLIC_NAME_MAX_LENGTH`.~~ Resuelto el
+    06-10-2026: el campo usa `PUBLIC_NAME_MAX_LENGTH` (35), el mismo tope que el nombre de la papeleta.
   - `coverMemory.ts:134-142` — `set` sin `delete` rompe el orden de poda.
   - `ShareReviewModal.tsx:68-73` — consentimiento reseteado un frame tarde.
   - `useScrollOnNavigate.ts:91-98` — un clic que no navega bloquea `ultima`.

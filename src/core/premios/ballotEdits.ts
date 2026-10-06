@@ -126,13 +126,25 @@ export function ballotIsUnchanged(
   selections: Record<string, string>,
   displayName: string,
 ): boolean {
+  if (!selectionsAreUnchanged(ballot, selections)) return false;
+  return (ballot?.userDisplayName || '').trim() === displayName.trim();
+}
+
+/**
+ * ¿Son las SELECCIONES las mismas que ya están guardadas, cambie o no el nombre?
+ *
+ * Es lo que separa una corrección del voto de un simple cambio de nombre: lo segundo no gasta una oportunidad
+ * (las reglas lo admiten aparte, ver `premiosBallotRenameIsValid`), así que el hub lo envía por otro camino.
+ */
+export function selectionsAreUnchanged(
+  ballot: PremiosBallot | null | undefined,
+  selections: Record<string, string>,
+): boolean {
   if (!ballot) return false;
 
   const previas = ballot.selections || {};
   const clavesPrevias = Object.keys(previas);
   const clavesNuevas = Object.keys(selections);
   if (clavesPrevias.length !== clavesNuevas.length) return false;
-  if (clavesNuevas.some((categoria) => previas[categoria] !== selections[categoria])) return false;
-
-  return (ballot.userDisplayName || '').trim() === displayName.trim();
+  return clavesNuevas.every((categoria) => previas[categoria] === selections[categoria]);
 }

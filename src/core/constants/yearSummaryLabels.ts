@@ -154,11 +154,11 @@ export const YEAR_SUMMARY_UI = {
   notice: {
     kicker: 'Ya está aquí',
     title: (year: number) => `Tu resumen de ${year}`,
-    text: 'Tus juegos del año, tus géneros y lo que compartes con tus amigos. Se irá actualizando hasta el 31.',
+    text: 'Los juegos y géneros de tu año, y lo que compartes con tus amigos. Se actualiza hasta el 31.',
     open: 'Ver mi resumen',
     /** Lo que lee el lector de pantalla al pulsar la cápsula, y lo que anuncia su región viva al salir. */
     aria: (year: number) => `Tu resumen de ${year}. Ver mi resumen`,
-    announce: (year: number) => `Tu resumen de ${year}. Tus juegos del año, tus géneros y lo que compartes con tus amigos.`,
+    announce: (year: number) => `Tu resumen de ${year}. Los juegos y géneros de tu año, y lo que compartes con tus amigos.`,
   },
 
   common: {

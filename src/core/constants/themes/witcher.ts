@@ -13,7 +13,7 @@ export const witcher = {
   bg: { dark: '#141922', light: '#d8e0e7' },
   voice: {
     /* The Witcher: el medallón del brujo vibra cuando hay algo malo cerca. */
-    appError: 'El medallón vibra: algo va mal.',
+    appError: 'El medallón no deja de vibrar.',
     /* The Witcher: Sardinilla, la yegua de Geralt, que aparece donde no debe y se pierde donde menos conviene. */
     appOffline: 'Sardinilla no encuentra el camino.',
   },

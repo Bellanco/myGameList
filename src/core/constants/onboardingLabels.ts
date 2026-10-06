@@ -54,8 +54,8 @@ export const TOUR_UI = {
   steps: {
     'to-lists': { title: 'Vuelve a tus listas', text: 'Esta misión se juega en los listados. Toca aquí y seguimos.', tap: 'Toca «Listados»' },
     lists: {
-      title: 'Cinco listas, una biblioteca',
-      text: 'Completados, abandonados, en curso y próximos, más los deseados que aún no tienes. Cada juego vive en una, y cambia de lista cuando cambia su historia.',
+      title: 'Tus cinco listas',
+      text: 'Completados, abandonados, en curso y próximos, más los deseados que aún no tienes. Cada juego está en una sola, y lo cambias de lista cuando quieras.',
     },
     add: {
       title: 'Añade tu primer juego',
@@ -73,10 +73,10 @@ export const TOUR_UI = {
       text: 'Ya está en tu lista; tócalo para editarlo. ¿Dudas a qué jugar? El dado elige entre tus próximos.',
     },
     'to-settings': { title: 'Rumbo a Ajustes', text: 'Esto se hace en Ajustes › Datos. Toca aquí abajo y te sigo.', tap: 'Toca «Ajustes»' },
-    'to-data': { title: 'Aquí, en Datos', text: 'Tus datos viven juntos: importar, exportar y sincronizar.', tap: 'Toca «Datos»' },
+    'to-data': { title: 'Aquí, en Datos', text: 'Desde aquí importas, exportas y sincronizas tus listas.', tap: 'Toca «Datos»' },
     sync: {
       title: 'Guarda la partida',
-      text: 'Lo que ganas lo tienes en la tarjeta. Conectar es un solo botón: te identificas en GitHub y vuelves aquí. Sin tokens ni configuración.',
+      text: 'En la tarjeta tienes lo que ganas. Pulsa el botón, entra en GitHub y vuelves aquí ya conectado, sin crear ningún token.',
       tap: 'Pulsa «Conectar con GitHub»: te espero a la vuelta',
     },
     synced: {
@@ -104,7 +104,7 @@ export const TOUR_UI = {
     },
     gateway: {
       title: 'Mira qué juegan tus amigos',
-      text: 'Son dos pasos: tu GitHub y entrar con Google. Te falta el primero: te llevo y volvemos aquí.',
+      text: 'Hacen falta dos pasos, conectar GitHub y entrar con Google. Te falta el primero; te llevo y volvemos aquí.',
       tap: 'Toca el botón del paso 1',
     },
     google: {
@@ -118,12 +118,12 @@ export const TOUR_UI = {
     },
     'profile-save': {
       title: 'Guarda tu perfil',
-      text: 'Un toque y listo: tu perfil queda activo y ya puedes buscar a tus amigos.',
+      text: 'Al guardarlo, tu perfil queda activo y ya puedes buscar a tus amigos.',
       tap: 'Pulsa «Guardar perfil»',
     },
     'coop-done': {
       title: '¡Modo cooperativo activado!',
-      text: 'Tu perfil está listo. Ahora falta lo mejor: traer a tu gente.',
+      text: 'Tu perfil está listo. Ahora invita a tus amigos.',
     },
     invite: { title: 'Invita a un amigo', text: 'La partida es mejor a dobles. Mándale el enlace y, cuando entre, buscaos en Amigos para enviaros la solicitud.' },
   } satisfies Record<StepId, StepText>,

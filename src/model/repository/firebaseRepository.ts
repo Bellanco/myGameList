@@ -78,9 +78,9 @@ export {
  * panel (un perfil que sus amigos no pueden identificar). Se prefiere un nombre razonable a un error evitable.
  *
  * C7: se recorta a `PUBLIC_NAME_MAX_LENGTH`, que es el límite que las reglas exigen (`profileFieldsAreSane`). El
- * editor del perfil ya corta el nick en 60, pero el nombre de la cuenta de Google entra por el fallback sin pasar
- * por ningún campo de la UI: sin este recorte, un nombre de Google largo haría que la regla denegara el guardado
- * entero del perfil, y el usuario vería un fallo que no puede explicar ni arreglar.
+ * editor del perfil ya corta el nick a ese mismo tope, pero el nombre de la cuenta de Google entra por el fallback
+ * sin pasar por ningún campo de la UI: sin este recorte, un nombre de Google largo haría que la regla denegara el
+ * guardado entero del perfil, y el usuario vería un fallo que no puede explicar ni arreglar. Si no cabe, se corta.
  */
 function resolvePublicName(...candidates: Array<string | undefined>): string {
   for (const candidate of candidates) {

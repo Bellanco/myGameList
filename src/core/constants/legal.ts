@@ -125,7 +125,7 @@ export const LEGAL_CONSENT_UI = {
   // La actividad se detalla un poco —«reseñas y movimientos de listas»— porque es lo que más gente lee de todo el
   // aparato legal, y lo segundo es nuevo: quien lo acepte tiene que saber que la app va a contar sola cuándo
   // empieza o termina un juego, no solo lo que él escriba. En el registro formal de los documentos (2026-10-05).
-  body: 'Al activar el espacio social se publican el nombre de perfil, la fotografía y los logros, accesibles para cualquier usuario con sesión iniciada, así como la actividad —las reseñas y los movimientos de listas, con su fecha—, accesible para las personas con las que se mantenga una relación de amistad. Para activarlo es necesario aceptar las Condiciones de uso y la Política de privacidad.',
+  body: 'Al activar el espacio social se publican el nombre de perfil, la fotografía y los logros, accesibles para cualquier usuario con sesión iniciada, así como la actividad (las reseñas y los movimientos de listas, con su fecha), accesible para las personas con las que se mantenga una relación de amistad. Para activarlo es necesario aceptar las Condiciones de uso y la Política de privacidad.',
   checkbox: 'He leído y acepto las Condiciones de uso y la Política de privacidad',
   termsLink: 'Condiciones de uso',
   privacyLink: 'Política de privacidad',
