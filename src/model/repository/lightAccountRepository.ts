@@ -24,11 +24,10 @@
  */
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore/lite';
 import { FIRESTORE_SCHEMA_VERSION } from '../../core/constants/schema';
-import { CHOSEN_NAME_MAX_LENGTH, PUBLIC_NAME_MAX_LENGTH, safeTrim } from '../../core/security/sanitize';
+import { PUBLIC_NAME_MAX_LENGTH, safeTrim } from '../../core/security/sanitize';
 import { initializeFirebaseServices, type SocialAuthUser } from './firebaseClient';
-import { renameOwnFriendships } from './firebaseFriendshipRepository';
 import { resolveStableProfileId } from './firebaseRepository';
-import { getOwnProfileRef, invalidateOwnProfileCache, invalidateSocialDirectoryCache } from './firebaseSocialRepository';
+import { getOwnProfileRef, invalidateOwnProfileCache } from './firebaseSocialRepository';
 
 /**
  * Se asegura de que esta cuenta exista como perfil, y devuelve su pseudónimo público.
@@ -79,22 +78,18 @@ export async function ensureLightAccount(user: SocialAuthUser | null, preferredN
 }
 
 /**
- * EL NOMBRE DE LA PAPELETA PASA AL PERFIL, en todos los casos: también si ya lo había y se llamaba de otra forma.
+ * EL ALIAS DE LA PAPELETA PASA A LA CUENTA LIGERA, también si ya la tenía con otro nombre.
  *
- * Quien no tenía perfil ya lo estrena con ese nombre (`ensureLightAccount`); esto cubre a quien lo tenía.
+ * Quien no tenía perfil ya lo estrena con ese nombre (`ensureLightAccount`); esto cubre a quien ya tenía cuenta
+ * ligera de otra edición. Sin gist, `displayName` es su único nombre, así que basta con escribirlo ahí.
  *
- *  - **Cuenta ligera.** Basta con `displayName`: no hay gist, así que ese es su único nombre.
- *  - **Perfil social.** Su nombre de verdad vive en el gist social, y escribirlo exige el token de GitHub, que en
- *    el dispositivo desde el que se vota puede no estar. Así que se guarda en Firestore y se marca como pendiente
- *    (`pendingName`): manda sobre el del gist para quien lo lea, y el hub lo lleva al gist en cuanto se abra en
- *    un dispositivo con el token (ver `hydrateSocialProfile`).
- *
- * Y en los dos, sus documentos de amistad, que es de donde sus amigos sacan el nombre en la lista.
+ * NUNCA toca un perfil social: ahí el nombre de la papeleta ES el de su perfil y no se elige al votar, así que no
+ * hay nada que devolverle (el que cambia es al revés, del perfil a la papeleta: ver `renameOwnBallot`).
  *
  * Best-effort, como la cuenta ligera: el voto ya está guardado y un fallo aquí no puede deshacerlo.
  */
 export async function saveBallotNameToProfile(user: SocialAuthUser | null, name: string): Promise<void> {
-  const nombre = safeTrim(name, CHOSEN_NAME_MAX_LENGTH);
+  const nombre = safeTrim(name, PUBLIC_NAME_MAX_LENGTH);
   if (!user?.uid || !nombre) return;
 
   try {
@@ -102,24 +97,15 @@ export async function saveBallotNameToProfile(user: SocialAuthUser | null, name:
     if (!services) return;
 
     const own = await getOwnProfileRef(user.uid);
-    if (!own) return;
-    const yaEsSuNombre = own.displayName === nombre && (!own.pendingName || own.pendingName === nombre);
-    if (yaEsSuNombre) return;
+    if (!own || own.socialEnabled || own.displayName === nombre) return;
 
     await setDoc(
       doc(services.firestore, 'profiles', user.uid),
-      {
-        uid: user.uid,
-        displayName: nombre,
-        ...(own.socialEnabled ? { pendingName: nombre } : {}),
-        updatedAt: serverTimestamp(),
-      },
+      { uid: user.uid, displayName: nombre, updatedAt: serverTimestamp() },
       { merge: true },
     );
     invalidateOwnProfileCache(user.uid);
-    invalidateSocialDirectoryCache(user.uid);
-    await renameOwnFriendships(user.uid, nombre);
   } catch {
-    // El voto ya está dentro; el nombre del perfil se queda como estaba.
+    // El voto ya está dentro; el nombre de la cuenta se queda como estaba.
   }
 }

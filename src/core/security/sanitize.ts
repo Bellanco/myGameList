@@ -5,18 +5,13 @@ const MAX_TEXT_LENGTH = 5000;
 /**
  * C7 — Longitud máxima del nombre PÚBLICO de un perfil (y de los nombres denormalizados en los documentos de
  * amistad). Es el ESPEJO del límite que exige `profileFieldsAreSane()` en `firestore.rules`: si se cambia aquí,
- * hay que cambiarlo allí (hay un test que lo comprueba). Más holgado que lo que se puede ESCRIBIR
- * (`CHOSEN_NAME_MAX_LENGTH`) porque aquí también cae el nombre de la cuenta de Google, que entra por el fallback
- * sin pasar por la UI: si no cabe, se corta.
+ * hay que cambiarlo allí (hay un test que lo comprueba).
+ *
+ * Es UN SOLO TOPE para todo nombre de persona: el del editor de perfil, el de la papeleta de los premios
+ * (`BALLOT_NAME_MAX_LENGTH`) y el de la cuenta de Google, que entra por el fallback sin pasar por la UI. Todos
+ * vienen de Google, así que con el mismo número su nombre cabe igual en todas partes; si no cabe, se corta.
  */
 export const PUBLIC_NAME_MAX_LENGTH = 35;
-
-/**
- * Longitud máxima de un nombre que la persona ESCRIBE: el nick del editor de perfil y el nombre de la papeleta de
- * los premios. Es el mismo número en los dos sitios porque el nombre de la papeleta se guarda en el perfil, y el
- * del perfil se copia a la papeleta: con topes distintos, uno de los dos viajes recortaría.
- */
-export const CHOSEN_NAME_MAX_LENGTH = 25;
 
 export function safeTrim(input: unknown, maxLength = MAX_TEXT_LENGTH): string {
   return String(input ?? '').trim().slice(0, maxLength);

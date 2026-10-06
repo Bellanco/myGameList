@@ -21,8 +21,8 @@ export interface PremiosVoter extends PremiosVoterStanding {
   /** Pseudónimo público de esta cuenta. Vacío mientras no tenga perfil. */
   profileId: string;
   /**
-   * El nombre de su perfil en la aplicación (el elegido en los premios si aún no ha llegado a su gist). Vacío
-   * mientras no tenga perfil. Es el que se le propone en la papeleta a quien tiene perfil social.
+   * El nombre de su perfil en la aplicación. Vacío mientras no tenga perfil. Con perfil social es el nombre de su
+   * papeleta, sin elección; sin él, el alias que eligió al votar.
    */
   displayName: string;
   /** ¿Sigue pendiente la lectura del perfil? Con sesión, hasta saberlo no se puede decir cuántas le quedan. */
@@ -57,7 +57,7 @@ export function usePremiosVoter(uid: string): PremiosVoter {
         if (!vivo) return;
         setVoter({
           profileId: ref?.profileId || '',
-          displayName: ref?.pendingName || ref?.displayName || '',
+          displayName: ref?.displayName || '',
           // El canal, y no la mera existencia del documento: la cuenta ligera del voto tiene perfil y no tiene
           // canal, y es justo la que se queda con una sola oportunidad.
           hasSocialAccount: Boolean(ref?.socialEnabled),

@@ -53,8 +53,6 @@ export function PremiosHub() {
   const [justSubmitted, setJustSubmitted] = useState(false);
   /** Se reenvió una papeleta idéntica: no se escribió nada, así que la confirmación lo dice. */
   const [sinCambios, setSinCambios] = useState(false);
-  /** El nombre con el que se acaba de enviar. El perfil leído al entrar ya no lo sabe (su lectura no se repite). */
-  const [nombreEnviado, setNombreEnviado] = useState('');
 
   useEffect(() => subscribeSocialAuth(setUser), []);
 
@@ -129,9 +127,30 @@ export function PremiosHub() {
     }
   }, []);
 
+  /**
+   * EL NOMBRE DE LA PAPELETA.
+   *
+   *  - Con perfil social, SIEMPRE el de su perfil, y no se puede cambiar aquí: si lo cambia en su perfil, la
+   *    papeleta lo sigue (ver `renameOwnBallot`).
+   *  - Sin él, se propone el alias que ya eligió —en la papeleta, o en la cuenta ligera que se le creó al votar— y
+   *    si no hay ninguno, el de su cuenta de Google. Puede escribir otro al votar; después, ya no.
+   *
+   * Recortado al tope de la papeleta ya en el campo: un nombre más largo se vería entero y se guardaría cortado sin
+   * que su dueño lo supiera.
+   */
+  const alias = edition.ballot?.userDisplayName || '';
+  const nombrePropuesto = safeTrim(
+    voter.hasSocialAccount
+      ? voter.displayName || alias || user?.displayName
+      : alias || voter.displayName || user?.displayName,
+    BALLOT_NAME_MAX_LENGTH,
+  );
+
   const handleSubmit = useCallback(
-    async (displayName: string) => {
+    async (nombreEscrito: string) => {
       setError('');
+      // Con perfil social el nombre no se elige: es el de su perfil, pase lo que pase con el campo.
+      const displayName = voter.hasSocialAccount ? nombrePropuesto : nombreEscrito;
       const selecciones = votesToSelections(voting.votes);
       try {
         // MIRAR NO CUESTA UNA OPORTUNIDAD. Quien entra a repasar su papeleta, no toca nada y pulsa enviar por
@@ -146,12 +165,12 @@ export function PremiosHub() {
         }
         setSinCambios(false);
 
-        // CAMBIAR SOLO EL NOMBRE TAMPOCO. No es una corrección del voto, y las reglas lo admiten aparte sin tocar el
-        // contador (`premiosBallotRenameIsValid`), igual que cuando el nombre cambia desde el perfil.
-        if (user?.uid && selectionsAreUnchanged(edition.ballot, selecciones)) {
+        // PONER AL DÍA SOLO EL NOMBRE TAMPOCO. Con perfil social, si la papeleta lleva un nombre que ya no es el de
+        // su perfil (votó antes de cambiarlo y no llegó a pasarse), reenviarla con los mismos votos solo lo
+        // actualiza: no es una corrección, y las reglas lo admiten sin tocar el contador
+        // (`premiosBallotRenameIsValid`).
+        if (user?.uid && voter.hasSocialAccount && selectionsAreUnchanged(edition.ballot, selecciones)) {
           await renameOwnBallot(user.uid, displayName);
-          await saveBallotNameToProfile(user, displayName);
-          setNombreEnviado(displayName);
           setJustSubmitted(true);
           await edition.reload();
           navigate(PREMIOS_ROUTES.sent);
@@ -171,10 +190,9 @@ export function PremiosHub() {
           season: Number(edition.config?.season) || new Date().getFullYear(),
           existing: edition.ballot,
         });
-        // EL NOMBRE PASA AL PERFIL, también si ya lo había con otro (ver `saveBallotNameToProfile`). Al que no lo
-        // tenía ya se le ha creado con este nombre arriba, así que ahí no hay nada que hacer.
+        // EL ALIAS PASA A LA CUENTA LIGERA, también si ya la tenía con otro (ver `saveBallotNameToProfile`). Al
+        // que no la tenía ya se le ha creado con este nombre arriba, y a un perfil social no se le toca.
         await saveBallotNameToProfile(user, displayName);
-        setNombreEnviado(displayName);
         setJustSubmitted(true);
         await edition.reload();
         navigate(PREMIOS_ROUTES.sent);
@@ -183,23 +201,7 @@ export function PremiosHub() {
         setError(edition.votingOpen ? PREMIOS_UI.errores.submit : PREMIOS_UI.errores.closed);
       }
     },
-    [edition, navigate, profileId, user, voting],
-  );
-
-  /**
-   * EL NOMBRE QUE SE PROPONE EN LA PAPELETA.
-   *
-   *  - Con perfil social, el de su perfil: es su nombre en toda la aplicación, y el de la papeleta lo sigue.
-   *  - Sin él, el alias que ya eligió —en la papeleta, o en la cuenta ligera que se le creó al votar—.
-   *  - La primera vez, el de su cuenta de Google.
-   *
-   * Recortado al tope de la papeleta ya en el campo: un nombre de Google más largo se vería entero y se guardaría
-   * cortado sin que su dueño lo supiera.
-   */
-  const alias = edition.ballot?.userDisplayName || '';
-  const nombrePropuesto = safeTrim(
-    nombreEnviado || (voter.hasSocialAccount ? voter.displayName || alias : alias || voter.displayName) || user?.displayName,
-    BALLOT_NAME_MAX_LENGTH,
+    [edition, navigate, nombrePropuesto, profileId, user, voter.hasSocialAccount, voting],
   );
 
   // SE ESPERA TAMBIÉN AL PERFIL, y no es cosmético: el cupo sale de él, así que decidir antes de tenerlo le
@@ -333,6 +335,7 @@ export function PremiosHub() {
           categories={edition.categories}
           votes={voting.votes}
           defaultName={nombrePropuesto}
+          nameLocked={voter.hasSocialAccount}
           remainingOpportunities={edition.remainingOpportunities}
           isEdit={Boolean(edition.ballot)}
           submitting={voting.submitting}

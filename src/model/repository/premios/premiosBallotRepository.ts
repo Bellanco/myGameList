@@ -17,7 +17,7 @@
  */
 import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore/lite';
 import { safeTrim } from '../../../core/security/sanitize';
-import { BALLOT_NAME_MAX_LENGTH, BALLOT_NICKNAME_MAX_LENGTH } from '../../../core/premios/limits';
+import { BALLOT_NAME_MAX_LENGTH } from '../../../core/premios/limits';
 import type { PremiosBallot, PremiosOption } from '../../types/premios';
 import { BALLOTS_COLLECTION, requireServices } from './premiosShared';
 
@@ -82,8 +82,8 @@ export function buildBallot({
   return {
     userId: author.uid,
     // El nombre de la cuenta se lee del autor y NUNCA del estado de la pantalla, para que no pueda llegar vacío;
-    // si la cuenta no tiene ninguno, se usa el elegido. Tiene su propio tope, más holgado: si no cabe, se corta.
-    userNickname: safeTrim(author.displayName, BALLOT_NICKNAME_MAX_LENGTH) || elegido,
+    // si la cuenta no tiene ninguno, se usa el elegido. Si no cabe, se corta.
+    userNickname: safeTrim(author.displayName, BALLOT_NAME_MAX_LENGTH) || elegido,
     userDisplayName: elegido,
     ...(author.profileId ? { profileId: author.profileId } : {}),
     selections,
@@ -143,10 +143,11 @@ export async function fetchUserBallot(uid: string, options?: { throwOnError?: bo
 /**
  * CAMBIA SOLO EL NOMBRE de la papeleta propia, si la hay y si de verdad es otro.
  *
- * El nombre de la papeleta sigue al del perfil, para que la clasificación no publique uno que su dueño ya no usa.
- * No es una corrección del voto: no toca las selecciones, ni el contador, ni las fechas, y por eso las reglas lo
- * admiten sin gastar una oportunidad y fuera de plazo (`premiosBallotRenameIsValid`). Vale mientras la papeleta
- * exista, que es hasta que se publica la edición.
+ * Con perfil social, el nombre de la papeleta es el de su perfil y lo sigue: si su dueño lo cambia en el perfil,
+ * la clasificación no debe publicar el anterior. No es una corrección del voto —no toca las selecciones, ni el
+ * contador, ni las fechas—, y por eso las reglas lo admiten sin gastar una oportunidad y fuera de plazo, pero SOLO
+ * con perfil social (`premiosBallotRenameIsValid`): sin él, el nombre se elige al votar y ahí se queda. Vale
+ * mientras la papeleta exista, que es hasta que se publica la edición.
  *
  * Devuelve `true` si ha escrito.
  */

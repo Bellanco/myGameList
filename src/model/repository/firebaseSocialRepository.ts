@@ -85,7 +85,6 @@ type DirectoryDocData = {
   uid?: string;
   profileId?: string;
   displayName?: string;
-  pendingName?: string;
   photoURL?: string;
   tier?: string;
   social?: { gistId?: string; gamesGistId?: string; enabled?: boolean };
@@ -104,8 +103,7 @@ function mapDirectoryEntry(id: string, data: DirectoryDocData): SocialDirectoryE
     id,
     // uid explícito del doc; hoy coincide con el id, pero tras el cutover uid→profileId el id será el profileId.
     uid: String(data.uid || id),
-    displayName: String(data.pendingName || data.displayName || ''),
-    namePending: Boolean(data.pendingName),
+    displayName: String(data.displayName || ''),
     photoURL: String(data.photoURL || ''),
     // Del mismo documento, sin coste: es lo que permite reconocer a alguien desde el archivo de una
     // edición publicada, donde no hay uid.
@@ -135,8 +133,6 @@ function toDirectoryEntry(entry: SocialDirectoryEntry & { enabled?: boolean }): 
     id: entry.id,
     uid: entry.uid,
     displayName: entry.displayName,
-    // Sin ella, quien hidrata el gist volvería a poner el nombre anterior (ver `resolveAuthorName`).
-    namePending: entry.namePending,
     photoURL: entry.photoURL,
     profileId: entry.profileId,
     socialGistId: entry.socialGistId,
@@ -251,7 +247,6 @@ function mapProfileReference(id: string, data: Record<string, unknown>): SocialP
     // que aún lo arrastra y borrarlo en el siguiente guardado (ver `ensureProfileByEmail`).
     email: String(data.email || ''),
     displayName: String(data.displayName || ''),
-    pendingName: String(data.pendingName || ''),
     photoURL: String(data.photoURL || ''),
     socialGistId: String(social.gistId || ''),
     // LEGACY: el id del gist de juegos vive ahora en `privateConfig` (owner-only) y, para los amigos, en el doc de

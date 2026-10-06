@@ -78,10 +78,9 @@ export {
  * panel (un perfil que sus amigos no pueden identificar). Se prefiere un nombre razonable a un error evitable.
  *
  * C7: se recorta a `PUBLIC_NAME_MAX_LENGTH`, que es el límite que las reglas exigen (`profileFieldsAreSane`). El
- * editor del perfil ya corta el nick en `CHOSEN_NAME_MAX_LENGTH`, pero el nombre de la cuenta de Google entra por
- * el fallback sin pasar por ningún campo de la UI: sin este recorte, un nombre de Google largo haría que la regla
- * denegara el guardado entero del perfil, y el usuario vería un fallo que no puede explicar ni arreglar. Si no
- * cabe, se corta.
+ * editor del perfil ya corta el nick a ese mismo tope, pero el nombre de la cuenta de Google entra por el fallback
+ * sin pasar por ningún campo de la UI: sin este recorte, un nombre de Google largo haría que la regla denegara el
+ * guardado entero del perfil, y el usuario vería un fallo que no puede explicar ni arreglar. Si no cabe, se corta.
  */
 function resolvePublicName(...candidates: Array<string | undefined>): string {
   for (const candidate of candidates) {
@@ -478,12 +477,6 @@ export async function ensureProfileByEmail(input: {
   githubToken?: string;
   socialGistEtag: string | null;
   preferredName?: string;
-  /**
-   * ¿Es `preferredName` un nombre que la persona acaba de ESCRIBIR (el editor del perfil)? Solo entonces gana al
-   * elegido en los premios que aún no ha llegado al gist (`pendingName`) y retira esa marca. Publicar una reseña
-   * también pasa por aquí, pero con el nick que lee del gist, que en ese caso es el anterior.
-   */
-  nameChosen?: boolean;
   // Foto a publicar en el doc público (la lee el directorio). '' la borra (opt-out de foto). Si se omite,
   // se conserva la de la sesión de Google (compatibilidad).
   photoURL?: string;
@@ -512,15 +505,7 @@ export async function ensureProfileByEmail(input: {
 
   // PRIVACIDAD: el displayName público es el NICK del perfil social (`preferredName`); si no llega, lo que ya
   // hubiera publicado, y en último término el nombre de la cuenta de Google. El CORREO nunca (ver `resolvePublicName`).
-  //
-  // Con un nombre de los premios pendiente de llegar al gist, ese manda —el del gist es el anterior— salvo que el
-  // nombre lo acabe de escribir su dueño en el editor, que es más nuevo todavía. Solo cuenta la marca del documento
-  // canónico: uno que vive bajo otro id no la puede llevar, porque allí no escribe su dueño.
-  const pendingName = existing?.id === input.user.uid ? existing.pendingName || '' : '';
-  const keepPending = Boolean(pendingName) && !input.nameChosen;
-  const profileName = keepPending
-    ? resolvePublicName(pendingName)
-    : resolvePublicName(input.preferredName, existing?.displayName, input.user.displayName);
+  const profileName = resolvePublicName(input.preferredName, existing?.displayName, input.user.displayName);
   // Un perfil NUEVO sin ningún nombre no se crea: sería la anomalía `no-display-name` del panel, un perfil que sus
   // amigos no pueden identificar. Con el respaldo de arriba esto solo salta si la cuenta de Google tampoco tiene
   // nombre, que es un caso de verdad excepcional. Si el perfil YA existe se respeta lo que tenga.
@@ -552,8 +537,6 @@ export async function ensureProfileByEmail(input: {
     // Perfil que vive bajo otro id: hay que crear el canónico, pase lo que pase con el resto de comparaciones.
     isForeignDoc ||
     existing.displayName.trim() !== profileName ||
-    // El editor ha escrito un nombre nuevo: la marca de los premios ya no vale y hay que retirarla.
-    (Boolean(pendingName) && !keepPending) ||
     (existing.photoURL || '') !== resolvedPhotoURL ||
     // Perfil anterior a la purga: se reescribe una vez para retirarle el email / los ids de gist.
     (canPurgeLegacyFields && hasLegacyPii);
@@ -594,7 +577,6 @@ export async function ensureProfileByEmail(input: {
         // escritura se denegase por completo. La antigüedad real del huérfano la rescata el panel al retirarlo.
         ...(existing && !isForeignDoc ? {} : { createdAt: serverTimestamp() }),
         ...(canPurgeLegacyFields ? { email: deleteField() } : {}),
-        ...(pendingName && !keepPending ? { pendingName: deleteField() } : {}),
       },
       { merge: true },
     );
@@ -634,7 +616,6 @@ export async function ensureProfileByEmail(input: {
     // El documento ya no lo guarda; la referencia en memoria tampoco necesita arrastrarlo.
     email: '',
     displayName: profileName,
-    ...(keepPending ? { pendingName } : {}),
     photoURL: resolvedPhotoURL,
     socialGistId: input.socialGistId,
     gamesGistId,
@@ -700,9 +681,6 @@ export async function repairProfileDisplayName(uid: string, nick: string): Promi
   // Solo el documento CANÓNICO: sobre uno que vive bajo otro id las reglas no dejan escribir al dueño, y ese caso
   // lo retira el panel con el cutover de identidad.
   if (!existing || existing.id !== cleanUid) return false;
-  // Con un nombre de los premios pendiente, el del gist es el ANTERIOR: «repararlo» deshacería el cambio. Lo
-  // resuelve el hub al llevar ese nombre al gist (`clearPendingProfileName`).
-  if (existing.pendingName) return false;
   if (existing.displayName.trim() === cleanNick) return false;
 
   await setDoc(
@@ -713,27 +691,6 @@ export async function repairProfileDisplayName(uid: string, nick: string): Promi
   invalidateOwnProfileCache(cleanUid);
   invalidateSocialDirectoryCache(cleanUid);
   return true;
-}
-
-/**
- * RETIRA LA MARCA del nombre elegido en los premios (`pendingName`) una vez que ese nombre ya está en el gist.
- *
- * Solo si la marca sigue siendo ESE nombre: si entretanto se ha votado otra vez con otro, la marca nueva tiene que
- * quedarse para que llegue también al gist. `displayName` no se toca, porque ya lleva ese mismo nombre.
- */
-export async function clearPendingProfileName(uid: string, name: string): Promise<void> {
-  const cleanUid = String(uid || '').trim();
-  if (!cleanUid || !name) return;
-  const services = await initializeFirebaseServices();
-  if (!services) return;
-
-  invalidateOwnProfileCache(cleanUid);
-  const existing = await resolveOwnProfile({ uid: cleanUid });
-  if (!existing || existing.id !== cleanUid || existing.pendingName !== name) return;
-
-  await setDoc(doc(services.firestore, 'profiles', cleanUid), { uid: cleanUid, pendingName: deleteField() }, { merge: true });
-  invalidateOwnProfileCache(cleanUid);
-  invalidateSocialDirectoryCache(cleanUid);
 }
 
 /**

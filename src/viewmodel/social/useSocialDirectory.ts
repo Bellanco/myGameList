@@ -13,7 +13,6 @@ import { isOwnProfileIdentity } from './socialIdentity';
 import type { SocialDirectoryEntry } from './socialFeed';
 import type { TabId } from '../../model/types/game';
 import type { FriendshipView } from '../../model/types/social';
-import { resolveAuthorName } from '../../core/social/authorName';
 
 // Antigüedad máxima del último uso de un AMIGO para que su actividad entre en el feed: `PROFILE_INACTIVITY_MS`, el
 // mismo corte con el que avisa el panel. Uno más inactivo sigue en la lista de amigos, y su perfil y sus reseñas se
@@ -338,8 +337,6 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
               id: entry.id,
               uid: entry.uid,
               displayName: entry.displayName || SOCIAL_UI.requests.unknownUser,
-              // Su gist se leerá bajo demanda al abrir la ficha, y ahí hace falta saber qué nombre manda.
-              namePending: 'namePending' in entry ? entry.namePending : undefined,
               // El id EFECTIVO (el del doc de amistad), no el del directorio: este último ya no se publica, y
               // dejarlo vacío rompía la hidratación bajo demanda del perfil de un amigo inactivo, que se salta
               // cuando no hay gist al que ir.
@@ -408,7 +405,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
             // de las tres pasadas, con el mismo encadenado de respaldos escrito tres veces).
             const author = {
               profileId: entry.id,
-              profileDisplayName: resolveAuthorName(entry, socialData.profile.name) || SOCIAL_UI.requests.unknownUser,
+              profileDisplayName: socialData.profile.name || entry.displayName || SOCIAL_UI.requests.unknownUser,
               socialGistId: resolvedSocialGistId,
               photoURL: resolvedPhoto,
             };
@@ -441,7 +438,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
             return {
               id: entry.id,
               uid: entry.uid,
-              displayName: resolveAuthorName(entry, socialData.profile.name) || SOCIAL_UI.requests.unknownUser,
+              displayName: socialData.profile.name || entry.displayName || SOCIAL_UI.requests.unknownUser,
               socialGistId: resolvedSocialGistId,
               gamesGistId: effectiveGamesGistId,
               photoURL: resolvedPhoto,

@@ -29,8 +29,8 @@ export const LIMITS = {
  * se despliega ignorándolo.
  */
 export const PROFILE_ALLOWED_KEYS = [
-  'schemaVersion', 'uid', 'profileId', 'displayName', 'pendingName', 'photoURL', 'social', 'updatedAt', 'tier',
-  'createdAt', 'achievements', 'palmares', 'yearSummary',
+  'schemaVersion', 'uid', 'profileId', 'displayName', 'photoURL', 'social', 'updatedAt', 'tier', 'createdAt',
+  'achievements', 'palmares', 'yearSummary',
 ];
 
 /** Subclaves admitidas en `social` (allowlist `hasOnly` de `profileSocialIsSane`). `githubToken` NO está. */
@@ -72,10 +72,6 @@ export function auditProfile(data) {
         typeof data.displayName === 'string' ? data.displayName.length : typeof data.displayName
       })`,
     });
-  }
-  // `pendingName` es copia de `displayName` a la espera de llegar al gist social: mismo tope.
-  if (has('pendingName') && !isStringWithin(data.pendingName, LIMITS.displayName)) {
-    problemas.push({ nuevo: true, motivo: `pendingName inválido o de más de ${LIMITS.displayName} caracteres` });
   }
   if (has('photoURL')) {
     if (!isStringWithin(data.photoURL, LIMITS.photoURL)) {

@@ -25,7 +25,6 @@ import {
 import { TAB_IDS, type GameItem, type SyncConfig, type TabData } from '../model/types/game';
 import {
   clearAnalyticsUser,
-  clearPendingProfileName,
   ensureProfileByEmail,
   getCurrentSocialAuthUser,
   getPrivateConfig,
@@ -86,7 +85,6 @@ export type {
   SocialPostFeedItem,
 } from './social/socialFeed';
 import type { SocialActivityFeedItem } from './social/socialFeed';
-import { resolveAuthorName } from '../core/social/authorName';
 
 const shouldRequireProfileCreation = (profileExists: boolean, justSavedProfile: boolean): boolean => {
   return !profileExists && !justSavedProfile;
@@ -487,8 +485,8 @@ export function useSocialViewModel(options?: {
    *
    * El nombre va RECORTADO a `PUBLIC_NAME_MAX_LENGTH`, que es lo que aceptan las reglas de `friendships`
    * (`denormTextIsSane`: 35). El nick del gist admite hasta 500 (`SOCIAL_NAME_MAX`) y el editor de perfil corta
-   * en `CHOSEN_NAME_MAX_LENGTH`, pero entre medias está el nombre de la cuenta de Google, que entra por el respaldo
-   * sin pasar por ninguna pantalla: con más del tope, cada saneado intentaba una escritura que las reglas denegaban
+   * en ese mismo tope, pero entre medias está el nombre de la cuenta de Google, que entra por el respaldo sin pasar
+   * por ninguna pantalla: con más del tope, cada saneado intentaba una escritura que las reglas denegaban
    * —en cada apertura del hub, para siempre— y su identidad no llegaba nunca a sus amistades. `profiles` ya
    * recorta con esta misma cota (ver `repairProfileDisplayName`), así que los dos canales escriben lo mismo.
    */
@@ -1579,7 +1577,7 @@ export function useSocialViewModel(options?: {
         if (cancelled) return;
         const showsPhoto = socialData.profile.visibility?.showPhoto !== false;
         patchDirectoryEntries((item) => item.id === profileDetailId, {
-          displayName: resolveAuthorName(entry, socialData.profile.name),
+          displayName: socialData.profile.name || entry.displayName,
           photoURL: socialData.profile.photoURL || (showsPhoto ? entry.photoURL : ''),
           visibility: socialData.profile.visibility || defaultSocialVisibility,
           socialSkipped: false,
@@ -1724,16 +1722,9 @@ export function useSocialViewModel(options?: {
       }
     };
 
-    // EL NOMBRE ELEGIDO EN LOS PREMIOS que aún no ha llegado al gist (`pendingName`, ver `saveBallotNameToProfile`).
-    // Lo dice el perfil propio, que el hub ya lee en cada apertura para el rango y está cacheado 60 s: mirarlo aquí
-    // no cuesta otra lectura. Si lo hay, la caché del perfil no vale —trae el nombre anterior— y hay que pasar por
-    // el gist para escribirlo. Ante un fallo, el nombre del perfil es solo un respaldo: se sigue con el del gist.
-    const existingProfile = await resolveOwnProfile(authUser).catch(() => null);
-    const pendingName = existingProfile?.pendingName || '';
-
     // Caché persistente del perfil propio: al volver a la pantalla social dentro de la ventana (<5 min) se sirve de
     // IndexedDB sin releer el gist propio ni consultar Firestore. El guardado del perfil invalida esta caché.
-    const cachedProfile = pendingName ? null : await getCachedSocialProfile(socialCfgGistId);
+    const cachedProfile = await getCachedSocialProfile(socialCfgGistId);
     if (cachedProfile) {
       applyCachedProfile(cachedProfile);
       return;
@@ -1741,6 +1732,9 @@ export function useSocialViewModel(options?: {
 
     try {
       setHydratingProfile(true);
+      // Solo da un respaldo del nombre (abajo): si Firestore no atiende, se sigue con lo del gist en vez de perder la
+      // hidratación entera por un dato de reserva.
+      const existingProfile = await resolveOwnProfile(authUser).catch(() => null);
 
       const socialRead = await readSocialGist(socialConfig.token, socialCfgGistId, socialCfgEtag);
       if (!socialRead.notModified) {
@@ -1748,10 +1742,6 @@ export function useSocialViewModel(options?: {
       }
 
       const hasLegacySharedLists = Object.keys(socialRead.data.profile.sharedLists || {}).length > 0;
-      // Lo que hay ahora mismo en el gist: el upgrade de abajo puede reescribirlo, y el nombre pendiente se escribe
-      // ENCIMA de eso, no de lo leído.
-      let currentGist = socialRead.data;
-      let currentEtag = socialRead.etag || null;
 
       // Upgrade proactivo: reescribir si el remoto conserva texto de reseña legacy (review/reviewText), identidad por
       // uid, sharedLists, o arrays de recomendaciones legacy (ST3) → todo eso lo detecta socialGistNeedsRewrite
@@ -1779,36 +1769,9 @@ export function useSocialViewModel(options?: {
           etag: nextEtag,
           lastRemoteUpdatedAt: Date.now(),
         });
-        currentGist = cleanedPayload;
-        currentEtag = nextEtag;
       }
 
-      // EL NOMBRE DE LOS PREMIOS LLEGA AL GIST. Aquí hay token, que es lo que faltaba al votar. Hecho eso, la marca
-      // sobra: se retira, y con ella deja de mandar sobre el gist para quien lo lea.
-      if (pendingName) {
-        if (currentGist.profile.name !== pendingName) {
-          const renamedPayload = {
-            ...currentGist,
-            profile: { ...currentGist.profile, name: pendingName },
-            updatedAt: Date.now(),
-          };
-          const renamedWrite = await writeSocialGist(socialConfig.token, socialCfgGistId, renamedPayload);
-          const nextEtag = renamedWrite.etag || currentEtag;
-          setSocialCfgEtag(nextEtag);
-          saveSocialSyncConfig({
-            token: socialConfig.token,
-            gistId: socialCfgGistId,
-            etag: nextEtag,
-            lastRemoteUpdatedAt: Date.now(),
-          });
-        }
-        void clearPendingProfileName(authUser.uid, pendingName).catch(() => {
-          /* best-effort: con la marca puesta, la próxima apertura lo vuelve a intentar sin daño. */
-        });
-      }
-      const gistName = pendingName || socialRead.data.profile.name;
-
-      const nextName = gistName || existingProfile?.displayName || authUser.displayName || authUser.email;
+      const nextName = socialRead.data.profile.name || existingProfile?.displayName || authUser.displayName || authUser.email;
       const profileVisibility = socialRead.data.profile.visibility || defaultSocialVisibility;
       // Un perfil se considera COMPLETO (nombre Y al menos un juego completado en local) para el chip de estado y
       // para el guardado. Pero lo que decide MANDAR AL EDITOR es solo si el perfil EXISTE, o sea si tiene nombre.
@@ -1816,7 +1779,7 @@ export function useSocialViewModel(options?: {
       // Lo que cambia respecto a antes es SOLO el caso ambiguo: sin biblioteca en este dispositivo no se puede
       // afirmar que no haya completados (ver `completedGamesRequirementMet`). Con la biblioteca presente y ningún
       // completado, se sigue mandando al editor con el motivo a la vista, que es la regla de alta de siempre.
-      const profileHasIdentity = Boolean(gistName.trim());
+      const profileHasIdentity = Boolean(socialRead.data.profile.name.trim());
       const profileExists = profileHasIdentity && hasCompletedGames;
 
       const normalizedVisibility = normalizeVisibility(profileVisibility);
@@ -2254,8 +2217,6 @@ export function useSocialViewModel(options?: {
         githubToken: mainSyncConfig?.token || socialConfig.token, // audit-allow: ensureProfileByEmail lo cifra en privateConfig (B1)
         socialGistEtag: finalEtag,
         preferredName: profile.name,
-        // Lo acaba de escribir su dueño: gana al nombre elegido en los premios que aún no hubiera llegado al gist.
-        nameChosen: true,
         // Publica la foto en el doc público (la lee el directorio); '' la borra si el usuario desactiva la foto o si
         // lo que tiene es el avatar genérico de Google.
         photoURL: ownPublishablePhoto,
@@ -2279,9 +2240,10 @@ export function useSocialViewModel(options?: {
         gamesGistId: mainSyncConfig?.gistId || '',
       });
 
-      // Y A LA PAPELETA DE LOS PREMIOS, si la hay: la clasificación no debe publicar un nombre que ya no usa. No
-      // gasta ninguna oportunidad (ver `renameOwnBallot`). El módulo es de la sección de premios, que es perezosa:
-      // se trae solo al guardar. Best-effort, como lo anterior.
+      // Y A LA PAPELETA DE LOS PREMIOS, si la hay: con perfil social, el nombre de la papeleta ES el del perfil (no
+      // se elige al votar), así que la clasificación no debe publicar uno que ya no usa. No gasta ninguna
+      // oportunidad (ver `renameOwnBallot`). El módulo es de la sección de premios, que es perezosa: se trae solo
+      // al guardar. Best-effort, como lo anterior.
       void import('../model/repository/premios/premiosBallotRepository')
         .then(({ renameOwnBallot }) => renameOwnBallot(authUser.uid, profile.name))
         .catch(() => {

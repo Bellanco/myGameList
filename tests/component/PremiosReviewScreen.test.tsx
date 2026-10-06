@@ -29,6 +29,7 @@ function pintar(
   votes: Record<string, { id: string; name: string }>,
   onSubmit = vi.fn(),
   readOnly = false,
+  nameLocked = false,
 ) {
   render(
     <MemoryRouter>
@@ -42,6 +43,7 @@ function pintar(
         error=""
         onSubmit={onSubmit}
         readOnly={readOnly}
+        nameLocked={nameLocked}
       />
     </MemoryRouter>,
   );
@@ -162,5 +164,19 @@ describe('PremiosReviewScreen', () => {
       pintar(completa, vi.fn(), true);
       expect(screen.queryByRole('link', { name: L.goToCategory('Juego del año') })).not.toBeInTheDocument();
     });
+  });
+
+  // CON PERFIL SOCIAL EL NOMBRE NO SE ELIGE: es el de su perfil, y la pantalla dice dónde se cambia.
+  it('con perfil social el nombre sale bloqueado y se envía el del perfil', async () => {
+    const onSubmit = pintar(completa, vi.fn(), false, true);
+    const campo = screen.getByLabelText(L.nameLabel);
+
+    expect(campo).toHaveAttribute('readonly');
+    await userEvent.type(campo, 'Otro');
+    expect(campo).toHaveValue('Ana');
+    expect(screen.getByText(L.nameLockedHint)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: L.submit }));
+    expect(onSubmit).toHaveBeenCalledWith('Ana');
   });
 });

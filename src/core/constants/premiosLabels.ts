@@ -94,6 +94,8 @@ export const PREMIOS_UI = {
     nameLabel: 'Nombre para la clasificación',
     namePlaceholder: 'Escribe tu nombre o apodo',
     nameHint: 'Es el que verá el resto en la clasificación.',
+    /** Con perfil social el nombre es el del perfil: aquí no se cambia, y se dice dónde sí. */
+    nameLockedHint: 'Es el nombre de tu perfil. Si lo cambias allí, se cambia también aquí.',
     voted: (votadas: number, total: number) => `${votadas} de ${total} categorías votadas`,
     notVoted: 'Sin votar',
     pending: (cuantas: number) =>

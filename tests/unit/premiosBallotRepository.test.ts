@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { BALLOT_NAME_MAX_LENGTH, BALLOT_NICKNAME_MAX_LENGTH } from '../../src/core/premios/limits';
+import { BALLOT_NAME_MAX_LENGTH } from '../../src/core/premios/limits';
 import { buildBallot } from '../../src/model/repository/premios/premiosBallotRepository';
 import type { PremiosOption } from '../../src/model/types/premios';
 
@@ -69,12 +69,11 @@ describe('buildBallot', () => {
     expect(ballot.userDisplayName?.length).toBe(BALLOT_NAME_MAX_LENGTH);
   });
 
-  // El nombre de Google no lo elige nadie: tiene su propio tope, más holgado, y si no cabe se corta.
-  it('recorta el nombre de la cuenta a su propio tope, no al del elegido', () => {
+  // El nombre de Google no lo elige nadie: si no cabe, se corta, con el mismo tope.
+  it('recorta el nombre de la cuenta al mismo tope', () => {
     const largo = { ...author, displayName: 'G'.repeat(120) };
     const ballot = buildBallot({ author: largo, userVotes, displayName: 'D', season: 2026 });
-    expect(ballot.userNickname.length).toBe(BALLOT_NICKNAME_MAX_LENGTH);
-    expect(BALLOT_NICKNAME_MAX_LENGTH).toBeGreaterThan(BALLOT_NAME_MAX_LENGTH);
+    expect(ballot.userNickname?.length).toBe(BALLOT_NAME_MAX_LENGTH);
   });
 
   it('escribe exactamente el esquema que validan las reglas: ni un campo de más ni de menos', () => {
