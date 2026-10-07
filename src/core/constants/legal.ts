@@ -69,7 +69,14 @@
 // la LSSI) y sin los detalles que caducan solos —cifras de cupos y plazos, rutas de menú, el nombre de los
 // rangos—; ver la cabecera de `legalContent.ts`. La versión NO sube: dicen lo mismo, ningún tratamiento, dato ni
 // destinatario entra o sale, y reabrir la aceptación por cambiar el estilo sería ruido.
-export const LEGAL_VERSION = '2026-10-04';
+// 2026-10-07: vuelven las ALTAS a la actividad de listas. Desde esa fecha, dar de alta un juego en la biblioteca
+// publica su aviso («añadió Hades a su biblioteca», «comenzó…»), y no solo el paso de una lista a otra; las altas
+// de antes siguen sin publicarse (`LIBRARY_ENTRIES_PUBLISHED_FROM`). Es publicar MÁS de lo aceptado el 2026-10-04,
+// que decía expresamente que el alta no se publicaba, así que la versión sube y todo el mundo vuelve a pasar por la
+// puerta (mismo criterio que el 2026-08-22). La agrupación del feed —diez títulos por aviso como mucho— y que la
+// tarjeta ya no enseñe la hora no se mencionan: cambian lo que ves tú, no lo que se publica de ti (el dato del canal
+// sigue llevando día y hora).
+export const LEGAL_VERSION = '2026-10-07';
 
 // Correo de CONTACTO publicado en los documentos. A propósito distinto del de la cuenta de administración de
 // `firestore.rules` (`isAdmin`): son la misma persona, pero separar buzones evita mezclar avisos legales y
