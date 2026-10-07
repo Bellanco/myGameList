@@ -81,6 +81,8 @@
 // su feed, igual que ya veía esas listas en el perfil. Las amistades siguen sin verla. Es publicar algo que el texto
 // aceptado decía expresamente que no se publicaba —y el canal se lee con su identificador, así que «aparte» no es
 // «a salvo»—, así que la versión sube y todo el mundo vuelve a pasar por la puerta.
+// 2026-10-07, también: cada aviso de lista se publica solo durante 30 días (`FEED_RECENT_DAYS`) y luego se retira del
+// canal. Se declara el plazo, pero la versión NO sube por él: es publicar menos (mismo criterio que el 2026-08-26).
 export const LEGAL_VERSION = '2026-10-07b';
 
 // Correo de CONTACTO publicado en los documentos. A propósito distinto del de la cuenta de administración de

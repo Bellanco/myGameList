@@ -13,6 +13,7 @@
 // efecto del hub con una foto de localStorage tomada al montar: si esa foto estaba desfasada, despublicaba
 // reseñas válidas.
 import { deriveMoveActivity, reconcileMoveChannels } from '../../core/social/moveActivity';
+import { feedRecentSince } from '../../core/constants/socialLimits';
 import type { TabData } from '../types/game';
 import { TAB_IDS, UNPLAYED_TAB_IDS } from '../types/game';
 import { getCurrentSocialAuthUser, resolveStableProfileId } from './firebaseRepository';
@@ -51,7 +52,9 @@ const RECONCILE_TTL_MS = 12 * 60 * 60 * 1000;
 //       las altas hechas entre esa fecha y la llegada de esta versión se publiquen en cuanto se abra el hub.
 //   8 = F4: los mensajes de las listas OCULTAS se publican aparte, en `hiddenMoves`, para la administración. Sube
 //       para que los gists que ya existen los lleven en cuanto su dueño abra el hub con esta versión.
-export const RECONCILE_LOGIC_VERSION = 8;
+//   9 = F4: el canal solo guarda los avisos de los últimos 30 días (`FEED_RECENT_DAYS`), en los dos campos. Sube para
+//       que los gists que ya existen suelten lo más viejo en cuanto su dueño abra el hub, no al caducar el sello.
+export const RECONCILE_LOGIC_VERSION = 9;
 
 // Margen para no re-sellar fechas por diferencias de milisegundos: al guardar una reseña, `_ts` del juego y la
 // fecha de la publicación se estampan en la misma operación, con unos ms de diferencia.
@@ -199,7 +202,8 @@ export async function reconcileReviewActivity(input: {
   // F4: el recuento de mensajes de lista se compara igual que el de reseñas, y con las listas ocultas del gist
   // todavía sin leer. Se cuenta sin filtro a propósito: es un número LOCAL para detectar movimientos (barato, sin
   // red), no lo que se va a publicar. Esconder una lista mueve el recuento y fuerza una pasada, que es lo suyo.
-  const localMoveCount = deriveMoveActivity(games).length;
+  // Con la ventana del feed: así un aviso que cumple los 30 días mueve el recuento y fuerza la pasada que lo retira.
+  const localMoveCount = deriveMoveActivity(games, { since: feedRecentSince(Date.now()) }).length;
   const countMatches = meta?.activityReviewCount === localReviews.length && meta?.activityMoveCount === localMoveCount;
   // El sello de una versión anterior no vale: puede haber dejado el gist con entradas que esta versión sabe
   // arreglar (identidad antigua, fechas selladas con "ahora") y que el recuento no detecta.
@@ -338,6 +342,7 @@ export async function reconcileReviewActivity(input: {
     // El reloj de los listados es lo que da (o quita) autoridad para retirar un mensaje huérfano, igual que en
     // las reseñas: con unos listados más viejos que el mensaje, no se retira nada.
     localUpdatedAt,
+    since: feedRecentSince(Date.now()),
   });
   const now = Date.now();
   const withMoves = syncMoveActivity(syncMoveActivity(nextData, target.moves, now), target.hiddenMoves, now, 'hiddenMoves');

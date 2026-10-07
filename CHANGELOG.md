@@ -10,8 +10,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   veía esas listas en el perfil. Las amistades siguen sin verlos, y a la administración le sigue valiendo su propio
   filtro de listas. Los avisos de las listas ocultas viajan en un apartado aparte del canal social, que las
   versiones anteriores no leen.
+- **Los avisos de listas duran 30 días**, como los de logros: el feed no enseña los más antiguos y el canal social
+  los retira, así que ya no se guardan los 400 últimos aunque fueran de hace años.
 - **Política de privacidad y condiciones de uso actualizadas** (versión 2026-10-07b) por ese apartado: hay que
   volver a aceptarlas para seguir usando el espacio social.
+  La privacidad declara además el plazo de 30 días.
 
 ## [1.6.4] - 2026-10-07
 

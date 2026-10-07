@@ -3,6 +3,7 @@
 // la actividad (que se convierte a snippet index-only), reescribe el gist y asegura el perfil en Firestore.
 import { isGenericGooglePhoto } from '../../core/social/googlePhoto';
 import { reconcileMoveChannels } from '../../core/social/moveActivity';
+import { feedRecentSince } from '../../core/constants/socialLimits';
 import { ensureProfileByEmail, getCurrentSocialAuthUser, healOwnFriendshipIdentity, resolveStableProfileId } from './firebaseRepository';
 import { getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta } from './indexedDbRepository';
 import { getSyncConfig } from './gistRepository';
@@ -83,6 +84,8 @@ function withMoveActivity(data: SocialGistData, timestamp: number): SocialGistDa
       hiddenTabs: data.profile.visibility?.hiddenTabs || [],
       knownGameIds: new Set<number>(),
       localUpdatedAt: 0,
+      // La ventana sí se aplica aquí: retirar lo que ha cumplido 30 días no necesita auditar nada.
+      since: feedRecentSince(timestamp),
     });
     return syncMoveActivity(syncMoveActivity(data, target.moves, timestamp), target.hiddenMoves, timestamp, 'hiddenMoves');
   } catch {

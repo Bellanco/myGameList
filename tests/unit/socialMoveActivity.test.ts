@@ -593,15 +593,15 @@ describe('listas ocultas — su actividad va aparte, para la administración', (
   it('ocultar una lista la pasa de un canal al otro en la misma pasada, y mostrarla la devuelve', () => {
     const games = tabData({ v: [game({ id: 5, enteredAt: { p: P, v: C } })] });
     const knownGameIds = new Set([5]);
-    const visible = reconcileMoveChannels({ games, published: {}, hiddenTabs: [], knownGameIds, localUpdatedAt: C });
+    const visible = reconcileMoveChannels({ games, published: {}, hiddenTabs: [], knownGameIds, localUpdatedAt: C, since: 0 });
     expect(visible.moves.map((entry) => entry.id)).toEqual(['5:v']);
     expect(visible.hiddenMoves).toEqual([]);
 
-    const oculta = reconcileMoveChannels({ games, published: visible, hiddenTabs: ['v'], knownGameIds, localUpdatedAt: C });
+    const oculta = reconcileMoveChannels({ games, published: visible, hiddenTabs: ['v'], knownGameIds, localUpdatedAt: C, since: 0 });
     expect(oculta.moves).toEqual([]);
     expect(oculta.hiddenMoves.map((entry) => entry.id)).toEqual(['5:v']);
 
-    const otraVez = reconcileMoveChannels({ games, published: oculta, hiddenTabs: [], knownGameIds, localUpdatedAt: C });
+    const otraVez = reconcileMoveChannels({ games, published: oculta, hiddenTabs: [], knownGameIds, localUpdatedAt: C, since: 0 });
     expect(otraVez).toEqual(visible);
   });
 
@@ -613,6 +613,7 @@ describe('listas ocultas — su actividad va aparte, para la administración', (
       hiddenTabs: ['v'],
       knownGameIds: new Set(),
       localUpdatedAt: 0,
+      since: 0,
     });
 
     expect(result.hiddenMoves).toEqual([]);
@@ -647,6 +648,47 @@ describe('listas ocultas — su actividad va aparte, para la administración', (
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+});
+
+describe('la ventana de 30 días — al publicar', () => {
+  it('lo anterior al corte no se proyecta, en ninguno de los dos campos', () => {
+    const games = tabData({
+      c: [game({ id: 1, enteredAt: { p: P, e: E, c: C } })],
+      v: [game({ id: 2, enteredAt: { p: P, v: C } })],
+    });
+
+    expect(deriveMoveActivity(games, { hiddenTabs: ['v'], since: (E + C) / 2 }).map((entry) => entry.id)).toEqual(['1:c']);
+    expect(deriveHiddenMoveActivity(games, ['v'], C + 1)).toEqual([]);
+    expect(deriveHiddenMoveActivity(games, ['v'], C).map((entry) => entry.id)).toEqual(['2:v']);
+  });
+
+  it('el colapso por día va antes del corte: un «comenzó» tapado no reaparece', () => {
+    const manana = Date.parse('2026-08-20T09:00:00');
+    const tarde = Date.parse('2026-08-20T20:00:00');
+    const games = tabData({ v: [game({ id: 3, enteredAt: { p: P, e: manana, v: tarde } })] });
+
+    // El corte cae entre las dos: el «abandonó» queda dentro y el «comenzó» de esa mañana ya estaba tapado.
+    expect(deriveMoveActivity(games, { since: manana + 1 }).map((entry) => entry.id)).toEqual(['3:v']);
+    // Y si cae después de las dos, no queda nada: no se rescata el «comenzó».
+    expect(deriveMoveActivity(games, { since: tarde + 1 })).toEqual([]);
+  });
+
+  it('la publicación a rebufo, que no audita nada, retira igualmente lo que ha salido de la ventana', () => {
+    const viejo: SocialMoveEntry = { id: '9:e', gameId: 9, gameName: 'De otro aparato', tab: 'e', at: E };
+    const nuevo: SocialMoveEntry = { id: '10:c', gameId: 10, gameName: 'Reciente', tab: 'c', at: C };
+
+    const result = reconcileMoveChannels({
+      games: tabData({}),
+      published: { moves: [viejo, nuevo], hiddenMoves: [{ ...viejo, id: '9:v', tab: 'v' }] },
+      hiddenTabs: ['v'],
+      knownGameIds: new Set(),
+      localUpdatedAt: 0,
+      since: C,
+    });
+
+    expect(result.moves.map((entry) => entry.id)).toEqual(['10:c']);
+    expect(result.hiddenMoves).toEqual([]);
   });
 });
 

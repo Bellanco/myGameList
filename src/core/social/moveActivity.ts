@@ -200,6 +200,11 @@ export interface DeriveMoveActivityOptions {
   hiddenTabs?: readonly TabId[];
   /** Tope de mensajes devueltos (los más recientes). Por defecto `MOVE_ACTIVITY_MAX`. */
   max?: number;
+  /**
+   * Desde cuándo se publica (`feedRecentSince`): lo anterior no sale. Sin él no hay corte, que es lo que piden los
+   * tests con fechas fijas; quien publica pasa siempre el suyo, con su reloj, porque esto es puro.
+   */
+  since?: number;
 }
 
 /**
@@ -219,6 +224,7 @@ export interface DeriveMoveActivityOptions {
 export function deriveMoveActivity(games: TabData, options: DeriveMoveActivityOptions = {}): SocialMoveEntry[] {
   const hidden = new Set(options.hiddenTabs || []);
   const max = Math.max(0, options.max ?? MOVE_ACTIVITY_MAX);
+  const since = options.since ?? 0;
   if (max === 0) {
     return [];
   }
@@ -266,7 +272,9 @@ export function deriveMoveActivity(games: TabData, options: DeriveMoveActivityOp
         candidates.push({ id: buildMoveId(gameId, stampTab), gameId, gameName, tab: stampTab, at: Number(at) });
       }
 
-      for (const entry of keepLatestPerDay(candidates)) {
+      // La ventana va DESPUÉS del colapso por día: un «comenzó» de hace 31 días no puede reaparecer porque el
+      // «abandonó» que lo tapaba ese mismo día haya quedado justo al otro lado del corte.
+      for (const entry of keepLatestPerDay(candidates).filter((candidate) => candidate.at >= since)) {
         const current = byId.get(entry.id);
         if (!current || entry.at < current.at) {
           byId.set(entry.id, entry);
@@ -291,12 +299,12 @@ export function deriveMoveActivity(games: TabData, options: DeriveMoveActivityOp
  * `moves` entero y enseñarían a cualquier amistad lo que su dueño esconde. Un campo que no conocen lo descartan al
  * normalizar.
  */
-export function deriveHiddenMoveActivity(games: TabData, hiddenTabs: readonly TabId[]): SocialMoveEntry[] {
+export function deriveHiddenMoveActivity(games: TabData, hiddenTabs: readonly TabId[], since?: number): SocialMoveEntry[] {
   const hidden = new Set(hiddenTabs);
   if (hidden.size === 0) {
     return [];
   }
-  return deriveMoveActivity(games, { max: Number.MAX_SAFE_INTEGER })
+  return deriveMoveActivity(games, { max: Number.MAX_SAFE_INTEGER, since })
     .filter((entry) => hidden.has(entry.tab))
     .slice(0, MOVE_ACTIVITY_MAX);
 }
@@ -334,6 +342,8 @@ export interface ReconcileMoveChannelsInput {
   hiddenTabs: readonly TabId[];
   knownGameIds: ReadonlySet<number>;
   localUpdatedAt: number;
+  /** Desde cuándo se publica (`feedRecentSince` de ahora). Lo anterior se retira de los dos canales. */
+  since: number;
 }
 
 /**
@@ -342,21 +352,23 @@ export interface ReconcileMoveChannelsInput {
  * no le toca llevar, así que cambiar una lista de oculta a visible la pasa de un canal al otro en la misma pasada.
  */
 export function reconcileMoveChannels(input: ReconcileMoveChannelsInput): { moves: SocialMoveEntry[]; hiddenMoves: SocialMoveEntry[] } {
-  const { games, published, hiddenTabs, knownGameIds, localUpdatedAt } = input;
+  const { games, published, hiddenTabs, knownGameIds, localUpdatedAt, since } = input;
   return {
     moves: reconcileMoveActivity({
-      derived: deriveMoveActivity(games, { hiddenTabs }),
+      derived: deriveMoveActivity(games, { hiddenTabs, since }),
       published: published.moves || [],
       knownGameIds,
       hiddenTabs,
       localUpdatedAt,
+      since,
     }),
     hiddenMoves: reconcileMoveActivity({
-      derived: deriveHiddenMoveActivity(games, hiddenTabs),
+      derived: deriveHiddenMoveActivity(games, hiddenTabs, since),
       published: published.hiddenMoves || [],
       knownGameIds,
       hiddenTabs: tabsShownOf(hiddenTabs),
       localUpdatedAt,
+      since,
     }),
   };
 }
@@ -383,6 +395,11 @@ export interface ReconcileMoveActivityInput {
    * «solo altas» que usa la publicación a rebufo de una reseña, donde no toca auditar nada.
    */
   localUpdatedAt: number;
+  /**
+   * Lo publicado antes de este instante se retira SIEMPRE, como una lista oculta: no hace falta tener el juego
+   * delante para saber que ha salido de la ventana. Por eso vale también en el modo «solo altas».
+   */
+  since?: number;
 }
 
 /**
@@ -393,6 +410,7 @@ export interface ReconcileMoveActivityInput {
  * delante:
  *
  *   · Lista OCULTA → se retira. Es el ajuste del propio usuario y ahí la autoridad es total.
+ *   · Fuera de la ventana del feed (`since`) → se retira. La fecha va en el propio mensaje: no hace falta nada más.
  *   · El juego está en los listados y la proyección NO produce ese mensaje → se retira. Tengo el juego delante,
  *     con sus sellos y sus años: si de ahí no sale este mensaje, no debe seguir publicado. Es lo que limpia los
  *     mensajes que se publicaron ANTES de que existieran los filtros de la proyección —el «finalizó tal cosa» de
@@ -408,17 +426,18 @@ export interface ReconcileMoveActivityInput {
  */
 export function reconcileMoveActivity(input: ReconcileMoveActivityInput): SocialMoveEntry[] {
   const hidden = new Set(input.hiddenTabs || []);
+  const since = input.since ?? 0;
   const byId = new Map<string, SocialMoveEntry>();
 
   for (const entry of input.derived) {
-    if (!hidden.has(entry.tab)) {
+    if (!hidden.has(entry.tab) && entry.at >= since) {
       byId.set(entry.id, entry);
     }
   }
 
   for (const entry of input.published) {
-    if (byId.has(entry.id) || hidden.has(entry.tab)) {
-      continue; // ya lo trae la proyección, o su lista está escondida
+    if (byId.has(entry.id) || hidden.has(entry.tab) || entry.at < since) {
+      continue; // ya lo trae la proyección, su lista está escondida o ha salido de la ventana
     }
     // Con el juego delante, la biblioteca local manda: la proyección no lo ha producido, así que sobra.
     if (input.knownGameIds.has(entry.gameId)) {

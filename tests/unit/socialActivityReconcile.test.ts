@@ -23,6 +23,16 @@ const idbMocks = vi.hoisted(() => {
 });
 vi.mock('../../src/model/repository/indexedDbRepository', () => idbMocks);
 
+// LA VENTANA DEL FEED, APAGADA. Estos tests fijan otras reglas del canal con sellos repartidos entre 2019 y 2023, que
+// ninguna ventana de 30 días contiene. La ventana tiene sus propios tests (ver «la ventana de 30 días»); aquí se
+// sustituye por un corte en 0, que es «sin ventana», y el test que la ejercita lo cambia para sí.
+const windowMocks = vi.hoisted(() => ({ feedRecentSince: vi.fn((_now: number) => 0) }));
+vi.mock('../../src/core/constants/socialLimits', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/core/constants/socialLimits')>()),
+  feedRecentSince: windowMocks.feedRecentSince,
+}));
+
+
 import { RECONCILE_LOGIC_VERSION, reconcileReviewActivity } from '../../src/model/repository/socialActivityReconcile';
 
 const TOKEN = 'ghp_0123456789abcdefghij';
@@ -566,3 +576,33 @@ describe('reconcileReviewActivity', () => {
     expect((written.moves || []).length).toBeGreaterThan(300);
   });
 });
+
+describe('la ventana de 30 días del canal', () => {
+  afterEach(() => {
+    windowMocks.feedRecentSince.mockImplementation(() => 0);
+  });
+
+  it('una pasada retira de los dos campos lo que ha salido de la ventana y conserva lo reciente', async () => {
+    // Corte entre el «comenzó» (1.65e12) y el «finalizó» (1.70e12): el primero ha cumplido sus 30 días.
+    windowMocks.feedRecentSince.mockImplementation(() => 1_680_000_000_000);
+    const gistId = 'aabbcc31dd11ee22';
+    armChannel(gistId);
+    const viejo = socialGist([]);
+    viejo.profile.visibility.hiddenTabs = ['v'];
+    viejo.moves = [{ id: '7:e', gameId: 7, gameName: 'Hollow Knight', tab: 'e', at: 1_650_000_000_000 }];
+    viejo.hiddenMoves = [{ id: '8:v', gameId: 8, gameName: 'Dejado', tab: 'v', at: 1_650_000_000_000 }];
+    const store = stubGistStore(gistId, viejo);
+
+    await reconcileReviewActivity({
+      games: lists({
+        c: [game({ id: 7, name: 'Hollow Knight', review: 'Obra', score: 4, enteredAt: { p: 1_600_000_000_000, e: 1_650_000_000_000, c: 1_700_000_000_000 } })],
+        v: [game({ id: 8, name: 'Dejado', enteredAt: { p: 1_600_000_000_000, v: 1_650_000_000_000 } })],
+      }),
+      force: true,
+    });
+
+    expect((store.current().moves || []).map((entry) => entry.id)).toEqual(['7:c']);
+    expect(store.current().hiddenMoves).toEqual([]);
+  });
+});
+

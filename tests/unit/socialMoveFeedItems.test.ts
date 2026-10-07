@@ -86,9 +86,13 @@ function moveGroups(items: ReturnType<typeof useSocialFeed>['feedItems']): numbe
 
 beforeEach(() => {
   localStorage.clear();
+  // El reloj, en el día de los datos: el feed solo enseña los movimientos de los últimos 30 días.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(T);
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.clearAllMocks();
 });
 
@@ -305,6 +309,30 @@ describe('el feed y los movimientos de las listas ocultas', () => {
     const { result } = renderHook(() => useSocialFeed(dos, undefined, undefined, false, true));
 
     expect(result.current.feedItems.map((item) => (item as { tab?: string }).tab).sort()).toEqual(['e', 'v']);
+  });
+});
+
+describe('la ventana de 30 días — al leer', () => {
+  it('un movimiento de hace más de 30 días no sale, aunque el gist lo traiga', () => {
+    // El gist de quien no se ha actualizado sigue llevando sus 400: el corte lo pone el feed.
+    const { result } = renderHook(() => useSocialFeed([{ moves: [move(1, 'c', T - 29 * DIA), move(2, 'c', T - 31 * DIA)] }]));
+
+    expect(movedGameIds(result.current.feedItems)).toEqual([1]);
+  });
+
+  it('a la administración le vale la misma ventana para los de las listas ocultas', () => {
+    const { result } = renderHook(() => useSocialFeed(
+      [{ moves: [], hiddenMoves: [move(3, 'v', T - DIA), move(4, 'v', T - 40 * DIA)] }],
+      undefined, undefined, false, true,
+    ));
+
+    expect(movedGameIds(result.current.feedItems)).toEqual([3]);
+  });
+
+  it('las reseñas no miran la ventana: son contenido escrito, no un registro', () => {
+    const { result } = renderHook(() => useSocialFeed([{ activity: [review(5, T - 400 * DIA)], moves: [move(6, 'c', T - 400 * DIA)] }]));
+
+    expect(result.current.feedItems.map((item) => item.kind)).toEqual([undefined]);
   });
 });
 
