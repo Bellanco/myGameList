@@ -384,6 +384,9 @@
      el anillo a 5. Con el punto más cerca de la palabra, ese fulgor caía sobre la «l» y emborronaba el final
      del rótulo dos veces cada seis segundos. El aire de aquí es el sitio que necesita el centelleo. */
   vertical-align: .95em;
+  /* Ancla de las dos capas del destello (ver `.is-inactive`). La insignia del modo icono la pisa con su
+     `absolute`, que va después y pesa lo mismo: también ancla. */
+  position: relative;
 }
 
 .bottom-nav-pip.is-active {
@@ -397,11 +400,41 @@
   width: 7px;
   height: 7px;
   background: var(--danger);
-  /* El halo lo sostiene todo en las paletas apagadas, donde `--danger` no destaca por sí solo. El anillo
-     exterior separa el punto del fondo de la pastilla; el resplandor es el que se ve de reojo. */
-  box-shadow: 0 0 0 2px rgba(var(--danger-rgb),.2), 0 0 7px rgba(var(--danger-rgb),.85);
-  animation: navPipAviso 6s ease-in-out infinite;
 }
+
+/* EL HALO VA EN DOS CAPAS Y SOLO SE ANIMA SU OPACIDAD. Antes el propio punto animaba `box-shadow` y `filter`, y
+   eso se pinta en el hilo principal: repintaba la barra en CADA fotograma del ciclo, también en los cinco sextos
+   en que el punto está quieto, y a cualquiera sin perfil social —que lo tiene encendido siempre—. Medido el
+   07-10-2026 (Playwright, Chrome con GPU, 300 juegos): en reposo, 1,8 s de hilo principal cada 18 s en «Plata y
+   acero» y 265 fotogramas perdidos; con las capas, 36 ms y 8. En un móvil con la CPU frenada ×4, «Neón y
+   fichas» perdía el 29-33 % de los fotogramas al hacer scroll y se queda en el 2-7 %. La opacidad la mueve el
+   compositor sin repintar nada.
+   `::before` es el halo de reposo y `::after` el del destello, con el brillo del punto incluido: se funden uno
+   en otro, que a este tamaño se ve igual que el halo creciendo. */
+.bottom-nav-pip.is-inactive::before,
+.bottom-nav-pip.is-inactive::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+/* El halo lo sostiene todo en las paletas apagadas, donde `--danger` no destaca por sí solo. El anillo
+   exterior separa el punto del fondo de la pastilla; el resplandor es el que se ve de reojo. */
+.bottom-nav-pip.is-inactive::before {
+  box-shadow: 0 0 0 2px rgba(var(--danger-rgb),.2), 0 0 7px rgba(var(--danger-rgb),.85);
+}
+.bottom-nav-pip.is-inactive::after {
+  background: var(--danger);
+  box-shadow: 0 0 0 5px rgba(var(--danger-rgb),.3), 0 0 16px rgba(var(--danger-rgb),1);
+  filter: brightness(1.35);
+  opacity: 0;
+}
+/* Y SOLO MIENTRAS DESTELLA: `is-destello` la pone y la quita `BottomNavigation` cada seis segundos. Con una
+   animación infinita el navegador compone la pantalla en cada fotograma también en el tramo quieto, y eso
+   seguía costando en los temas de capas caras; así, fuera del destello no hay nada animándose. */
+.bottom-nav-pip.is-inactive.is-destello::before { animation: navPipReposo 1.92s ease-in-out; }
+.bottom-nav-pip.is-inactive.is-destello::after { animation: navPipAviso 1.92s ease-in-out; }
 
 /* UN DESTELLO DE VEZ EN CUANDO, no un latido constante.
    Late todo el rato lo que se mira todo el rato, y eso tiene dos finales malos: o distrae mientras se usa la
@@ -411,23 +444,18 @@
    seguidos se leen como una señal. Y lo que crece es el HALO, nunca la caja del punto: el tamaño del piloto
    entra en las cuentas de ancho de la barra, y una medida que cambia sesenta veces por segundo no es una
    medida. */
+/* Los fotogramas son el tramo final del ciclo de 6 s de antes (del 68 % al 100 %), estirado a toda la duración:
+   el primer destello cae en lo que era el 76 % y el segundo, en el 90 %. */
 @keyframes navPipAviso {
-  0%, 68%, 100% {
-    box-shadow: 0 0 0 2px rgba(var(--danger-rgb),.2), 0 0 7px rgba(var(--danger-rgb),.85);
-    filter: none;
-  }
-  76% {
-    box-shadow: 0 0 0 5px rgba(var(--danger-rgb),.3), 0 0 16px rgba(var(--danger-rgb),1);
-    filter: brightness(1.35);
-  }
-  83% {
-    box-shadow: 0 0 0 2px rgba(var(--danger-rgb),.2), 0 0 7px rgba(var(--danger-rgb),.85);
-    filter: none;
-  }
-  90% {
-    box-shadow: 0 0 0 4px rgba(var(--danger-rgb),.28), 0 0 13px rgba(var(--danger-rgb),1);
-    filter: brightness(1.25);
-  }
+  0%, 46.9%, 100% { opacity: 0; }
+  25% { opacity: 1; }
+  /* El segundo destello, algo más corto que el primero (antes: anillo de 4px y brillo 1,25 frente a 5px y 1,35). */
+  68.75% { opacity: .75; }
+}
+@keyframes navPipReposo {
+  0%, 46.9%, 100% { opacity: 1; }
+  25% { opacity: 0; }
+  68.75% { opacity: .25; }
 }
 
 /* EN MODO ICONO, la insignia en la esquina del dibujo: es el único escalón sin rótulo al que agarrarse. El
@@ -750,7 +778,8 @@
 
   /* El piloto rojo se queda QUIETO pero no apagado: sin los destellos sigue teniendo el halo, el tamaño y el
      color, que es donde está el aviso. Quitarle la animación no puede costarle el mensaje. */
-  .bottom-nav-pip.is-inactive { animation: none; }
+  .bottom-nav-pip.is-inactive.is-destello::before,
+  .bottom-nav-pip.is-inactive.is-destello::after { animation: none; }
 }
 
 
