@@ -396,7 +396,9 @@ function renderTags(values: string[], className: string, maxVisible?: number, to
     <>
       <div className="chips">
         {visible.map((value) => (
-          <span key={value} className={`chip ${className}`} style={tone ? categoryToneStyle(value) : undefined}>
+          // `data-text`: el texto otra vez, para los temas que pintan una copia encima (el glitch de «Sin futuro»
+          // la enciende y apaga en el compositor en vez de animar `text-shadow`; ver `cyberpunk.scss`).
+          <span key={value} className={`chip ${className}`} style={tone ? categoryToneStyle(value) : undefined} data-text={value}>
             {/* El texto va en su propio span para que los puntos suspensivos recorten SOLO el texto: con el
                 `overflow` en el chip se cortaba también lo que el tema le pinta por fuera (el papel y el lacre
                 de Witcher, las sombras duras de las pegatinas). */}
