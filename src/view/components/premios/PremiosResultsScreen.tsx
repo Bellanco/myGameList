@@ -7,8 +7,8 @@ import { hasPopularVote, popularWinners, type PopularWinner } from '../../../cor
 import { revealedRows } from '../../../core/premios/revealedVotes';
 import { popularPath, PREMIOS_ROUTES, resultsPath } from '../../../viewmodel/premios/premiosRoutes';
 import type { PremiosArchivedEntry, PremiosReveal, PremiosSeasonResult } from '../../../model/types/premios';
-import { Icon } from '../Icon';
 import { HubBackButton } from '../socialhub/HubBackButton';
+import { PremiosFinalBoard } from './PremiosFinalBoard';
 
 // La lámina va aparte y perezosa: son 240 kB de arte y una tipografía que solo necesita quien ha ganado algo.
 const AwardPanel = lazy(() => import('./AwardPanel').then((m) => ({ default: m.AwardPanel })));
@@ -41,8 +41,8 @@ export interface PremiosResultsScreenProps {
   /** Pseudónimo → uid, para los que tienen perfil social: su fila lleva a su ficha. */
   profiles?: Map<string, string>;
   /**
-   * Los votos de cada uno, si quien mira votó en esta edición y todavía no se ha terminado. Con ellos, la
-   * clasificación de siempre deja paso a la final, fila a fila con lo que votó cada cual.
+   * Los votos de cada uno, si quien mira votó en esta edición —o administra— y todavía no se ha abierto la
+   * siguiente. Con ellos, la clasificación de siempre deja paso a la final, fila a fila con lo que votó cada cual.
    */
   reveal?: PremiosReveal | null;
   /**
@@ -173,15 +173,6 @@ export function PremiosResultsScreen({
     () => (reveal ? revealedRows(reveal.ballots, result?.categoriesSnapshot) : []),
     [reveal, result],
   );
-  /** Las filas desplegadas, por puesto en la lista. Empiezan todas plegadas. */
-  const [desplegadas, setDesplegadas] = useState<ReadonlySet<number>>(() => new Set());
-  const alternar = (indice: number) =>
-    setDesplegadas((actuales) => {
-      const siguientes = new Set(actuales);
-      if (siguientes.has(indice)) siguientes.delete(indice);
-      else siguientes.add(indice);
-      return siguientes;
-    });
   const conFinal = finales.length > 0;
   /** ¿Se está viendo una lámina? Con la final delante decide si los ganadores van a lo ancho. */
   const conLamina = galeria !== null && Boolean(premiados[galeria]);
@@ -537,100 +528,26 @@ export function PremiosResultsScreen({
           </section>
         ) : null}
 
-        {/* LA CLASIFICACIÓN FINAL, a lo ancho y debajo de los ganadores. Una fila por persona, como la de siempre,
-            y al desplegarla lo que votó en cada categoría. LA FILA ENTERA DESPLIEGA, y con un solo control: un
-            botón que la cubre de punta a punta, debajo del nombre. Así el ratón y el teclado hacen lo mismo, y el
-            nombre solo navega cuando esa persona tiene perfil (si no, es texto y la pulsación cae en el botón). Sin
-            trofeo ni flecha al final (decisión del 05-10-2026): la lámina sigue en el podio y en «Tu premio». No es
-            un `<details>`: el nombre enlaza, y dentro de un `<summary>` —o de cualquier botón— no puede haber otro
-            control. Por eso son hermanos y no van uno dentro de otro. */}
+        {/* LA CLASIFICACIÓN FINAL, a lo ancho y debajo de los ganadores: una fila por persona, como la de siempre, y
+            al desplegarla lo que votó en cada categoría (ver `PremiosFinalBoard`). */}
         {conFinal ? (
-          <section className="premios-results__panel premios-results__panel--final" aria-label={L.finalBoard}>
-            <div className="premios-results__panel-head">
-              <h3>{L.finalBoard}</h3>
-            </div>
-
-            <ol className="premios-results__board">
-              {finales.map(({ entry, picks, hits }, index) => {
-                // La misma fila del archivo, para el enlace y el trofeo: resumen y archivo salen del mismo recuento
-                // y en el mismo orden, y si por lo que sea no casaran, la fila se queda sin las dos cosas.
-                const enArchivo =
-                  leaderboard[index]?.nickname === entry.nickname && leaderboard[index]?.points === entry.points
-                    ? leaderboard[index]
-                    : null;
-                const propia = esPropia(entry);
-                const abierta = desplegadas.has(index);
-                const idVotos = `premios-final-${index}`;
-                return (
-                  <li key={`${entry.profileId || entry.nickname}-${index}`} aria-label={propia ? L.yourRow : undefined}>
-                    <div
-                      className={`premios-results__row premios-results__row--final${propia ? ' is-own' : ''}${hasAward(entry.rank) ? ' is-award' : ''}${abierta ? ' is-open' : ''}`}
-                    >
-                      <button
-                        type="button"
-                        className="premios-results__row-hit"
-                        aria-expanded={abierta}
-                        aria-controls={idVotos}
-                        aria-label={abierta ? L.hideVotes(entry.nickname) : L.showVotes(entry.nickname)}
-                        onClick={() => alternar(index)}
-                      />
-                      <span className={`premios-results__rank ${METAL[entry.rank - 1] || ''}`}>
-                        <span className="sr-only">{L.positionAria(entry.rank)}</span>
-                        <span aria-hidden="true">{entry.rank}</span>
-                      </span>
-
-                      {enArchivo ? (
-                        nombreDe(enArchivo, 'premios-results__name')
-                      ) : (
-                        <span className="premios-results__name">{entry.nickname}</span>
-                      )}
-
-                      <span className="premios-results__hits">
-                        <span className="sr-only">{L.hitsAria(hits, picks.length)}</span>
-                        <span aria-hidden="true">{L.hitsShort(hits, picks.length)}</span>
-                      </span>
-
-                      <span className="premios-results__points">
-                        <span className="sr-only">{L.points(entry.points)}</span>
-                        <span aria-hidden="true">{L.pointsShort(entry.points)}</span>
-                      </span>
-
-
-                    </div>
-
-                    {abierta ? (
-                      <ul id={idVotos} className="premios-results__picks" aria-label={L.votesOf(entry.nickname)}>
-                        {picks.map((pick) => (
-                          <li
-                            key={pick.categoryId}
-                            className={`premios-results__pick ${pick.hit ? 'is-hit' : 'is-miss'}`}
-                          >
-                            <Icon name={pick.hit ? 'check' : 'close'} className="ui-icon premios-results__pick-mark" />
-                            <span className="premios-results__pick-head">
-                              <span className="premios-results__pick-cat">{pick.title}</span>
-                              {pick.weight !== 1 ? (
-                                <span className="premios-results__pick-weight">
-                                  <span aria-hidden="true">{L.weight(pick.weight)}</span>
-                                  <span className="sr-only">{L.weightAria(pick.weight)}</span>
-                                </span>
-                              ) : null}
-                            </span>
-                            <span className="premios-results__pick-voted">
-                              <span className="sr-only">{pick.hit ? L.hit : L.miss}: </span>
-                              {pick.voted || L.noVote}
-                            </span>
-                            {pick.hit ? null : (
-                              <span className="premios-results__pick-winner">{L.winnerWas(pick.winner)}</span>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </li>
-                );
-              })}
-            </ol>
-          </section>
+          <PremiosFinalBoard
+            rows={finales}
+            isOwn={esPropia}
+            renderName={(entry, index) => {
+              // La misma fila del archivo, para el enlace: resumen y archivo salen del mismo recuento y en el mismo
+              // orden, y si por lo que sea no casaran, la fila se queda sin él.
+              const enArchivo =
+                leaderboard[index]?.nickname === entry.nickname && leaderboard[index]?.points === entry.points
+                  ? leaderboard[index]
+                  : null;
+              return enArchivo ? (
+                nombreDe(enArchivo, 'premios-results__name')
+              ) : (
+                <span className="premios-results__name">{entry.nickname}</span>
+              );
+            }}
+          />
         ) : null}
       </div>
 

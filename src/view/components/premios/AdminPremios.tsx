@@ -511,7 +511,7 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
         ) : tab === 'ballots' ? (
           // Se remonta con cada entrada a la pestaña —clave por pestaña— para que las papeletas sean las de
           // ahora y no las de cuando se abrió el panel.
-          <AdminPremiosVotos key="ballots" categories={categories} />
+          <AdminPremiosVotos key="ballots" categories={categories} stage={stage} />
         ) : (
           <AdminPremiosHistorico busy={busy} ejecutar={ejecutar} />
         )}

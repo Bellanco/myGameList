@@ -1683,6 +1683,29 @@
    cualquier sitio llevaba al perfil en vez de abrir los votos. El hueco lo empujan los aciertos. */
 .premios-results__row--final .premios-results__name { flex: 0 1 auto; }
 .premios-results__row--final .premios-results__hits { margin-inline-start: auto; }
+/* Lo que añade quien usa el tablero (en el panel: correcciones y retirar), POR ENCIMA del botón de la fila, como el
+   enlace del nombre: así se pulsa lo suyo y no despliega. Sin recuento no hay aciertos que empujen, y lo empuja él. */
+.premios-results__row-aside {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  gap: .5rem;
+  align-items: center;
+  font-size: var(--fs-2xs);
+  white-space: nowrap;
+}
+.premios-results__row--final.is-unscored .premios-results__row-aside { margin-inline-start: auto; }
+/* En el móvil no cabe todo en una línea: lo añadido baja a la suya, a la derecha, en vez de partir el nombre. */
+@media (max-width: 40rem) {
+  .premios-results__row--final:has(.premios-results__row-aside) { flex-wrap: wrap; }
+  .premios-results__row--final .premios-results__row-aside {
+    flex-basis: 100%;
+    justify-content: flex-end;
+    margin-inline-start: 0;
+  }
+}
+/* Una categoría sin ganador todavía (solo en el panel): sin marca, así que la ficha no reserva su columna. */
+.premios-results__pick.is-undecided { grid-template-columns: 1fr; }
 .premios-results__row--final:hover,
 .premios-results__row--final.is-open { background: var(--surface-elevated); }
 .premios-results__row--final.is-own:hover,

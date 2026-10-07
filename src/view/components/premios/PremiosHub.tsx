@@ -14,7 +14,7 @@ import { matchPremiosRoute, panelNeedsSession, PREMIOS_ROUTES } from '../../../v
 import { usePremiosEdition } from '../../../viewmodel/premios/usePremiosEdition';
 import { usePremiosProfiles } from '../../../viewmodel/premios/usePremiosFaces';
 import { usePremiosResult } from '../../../viewmodel/premios/usePremiosResult';
-import { usePremiosReveal } from '../../../viewmodel/premios/usePremiosReveal';
+import { shouldRequestReveal, usePremiosReveal } from '../../../viewmodel/premios/usePremiosReveal';
 import { usePremiosVoter } from '../../../viewmodel/premios/usePremiosVoter';
 import { usePremiosVoting } from '../../../viewmodel/premios/usePremiosVoting';
 import { usePalette } from '../../hooks/usePalette';
@@ -23,6 +23,7 @@ import { PremiosPortada } from './PremiosPortada';
 import { PremiosResultsScreen } from './PremiosResultsScreen';
 import { PremiosReviewScreen } from './PremiosReviewScreen';
 import { PremiosVoteScreen } from './PremiosVoteScreen';
+import { useIsAdmin } from '../../hooks/useIsAdmin';
 import '../../../styles/premios.scss';
 
 /**
@@ -81,13 +82,19 @@ export function PremiosHub() {
    * sería una lectura gastada y un `permission-denied` en la consola de cada visitante.
    */
   const idEnVista = route.seasonId || edition.config?.lastPublishedId || '';
+  // LA ADMINISTRACIÓN LOS VE SIEMPRE, haya votado o no (decisión del 07-10-2026): las reglas ya se lo permiten y la
+  // privacidad ya dice que el Responsable accede a las papeletas. Mientras existan, que es hasta la siguiente edición.
+  const esAdmin = useIsAdmin(Boolean(user));
   const conVotos =
     conArchivo &&
-    Boolean(user) &&
-    Boolean(profileId) &&
-    Boolean(idEnVista) &&
-    edition.config?.votesSeasonId === idEnVista &&
-    archivo.leaderboard.some((entry) => entry.profileId === profileId);
+    shouldRequestReveal({
+      signedIn: Boolean(user),
+      isAdmin: esAdmin,
+      profileId: profileId || '',
+      seasonId: idEnVista,
+      votesSeasonId: edition.config?.votesSeasonId,
+      leaderboard: archivo.leaderboard,
+    });
   const reveal = usePremiosReveal(conVotos ? idEnVista : '');
 
   // Corregir un voto arranca de lo ya enviado, no de cero.

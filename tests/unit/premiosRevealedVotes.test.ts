@@ -40,10 +40,11 @@ describe('revealedRows', () => {
     const [ana] = revealedRows([fila(1, 'Ana', 3, { goty: 'goty_option_1', arte: 'arte_option_1' })], categorias);
 
     expect(ana.picks).toEqual([
-      { categoryId: 'goty', title: 'Juego del año', weight: 3, voted: 'Hades II', winner: 'Hades II', hit: true },
-      { categoryId: 'arte', title: 'Mejor arte', weight: 0.5, voted: 'Okami', winner: 'Hollow Knight', hit: false },
+      { categoryId: 'goty', title: 'Juego del año', weight: 3, voted: 'Hades II', winner: 'Hades II', decided: true, hit: true },
+      { categoryId: 'arte', title: 'Mejor arte', weight: 0.5, voted: 'Okami', winner: 'Hollow Knight', decided: true, hit: false },
     ]);
     expect(ana.hits).toBe(1);
+    expect(ana.decided).toBe(2);
   });
 
   it('respeta los puestos del resumen, empates incluidos', () => {
@@ -67,5 +68,26 @@ describe('revealedRows', () => {
   it('acepta un voto guardado por nombre', () => {
     const [ana] = revealedRows([fila(1, 'Ana', 3, { goty: 'Hades II' })], categorias);
     expect(ana.picks[0]).toMatchObject({ voted: 'Hades II', hit: true });
+  });
+
+  // EL PANEL DE ADMINISTRACIÓN enseña la edición antes de publicarla: ahí entran también las que no tienen ganador.
+  it('con `includeUndecided` entran las categorías sin ganador, con el voto y sin acierto ni fallo', () => {
+    const [ana] = revealedRows([fila(1, 'Ana', 3, { goty: 'goty_option_1', desierta: 'd_0' })], categorias, { includeUndecided: true });
+
+    expect(ana.picks.map((pick) => pick.categoryId)).toEqual(['goty', 'arte', 'desierta']);
+    expect(ana.picks[2]).toMatchObject({ voted: 'Nadie', winner: '', decided: false, hit: false });
+    // Los aciertos se cuentan sobre las que tienen ganador, que es contra lo que se puede acertar.
+    expect(ana.hits).toBe(1);
+    expect(ana.decided).toBe(2);
+  });
+
+  it('sin ningún ganador marcado (votación abierta) no hay nada decidido, y cada fila es la papeleta tal cual', () => {
+    const abiertas = categorias.map((categoria) => ({ ...categoria, winner: null }));
+    const entrada = fila(1, 'Ana', 0, { goty: 'goty_option_0' });
+    const [ana] = revealedRows([entrada], abiertas, { includeUndecided: true });
+
+    expect(ana.entry).toBe(entrada); // el mismo objeto: el panel casa cada fila con su papeleta por referencia
+    expect(ana.decided).toBe(0);
+    expect(ana.picks.map((pick) => pick.voted)).toEqual(['Elden Ring', '', '']);
   });
 });
