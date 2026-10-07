@@ -574,17 +574,26 @@
   --lz-rep2: no-repeat;
 }
 
-/* La DERIVA se mueve con `transform` y no con `background-position`: así la resuelve el compositor y no repinta
-   una trama de puntos en cada fotograma. El DESTELLO sí mueve el fondo, pero de una capa sin texto y cada 13 s. */
+/* La DERIVA y el DESTELLO se mueven con `transform` y no con `background-position`: así los resuelve el compositor
+   y no repinta una capa de una pantalla en cada fotograma. El destello movía el fondo hasta el 07-10-2026, y
+   aunque solo se VE cada 13 s, la animación corría entera en bucle: repintaba la capa también en el 72 % quieto.
+   Ahora la capa ES la imagen —260 % de ancho— y se desplaza ella; el recorrido es el mismo al píxel: el canto
+   izquierdo iba de +224 % a -416 % del ancho de la capa ((100 % - 260 %) × -140 % y × 260 %), que en porcentaje
+   de una capa de 260 % son 86,15 % y -160 %. */
 @media (prefers-reduced-motion: no-preference) {
   :root[data-effects="on"][data-palette="persona"] .hub-feed-lienzo-fx::before { animation: lz-pop-drift 9s linear infinite; }
-  :root[data-effects="on"][data-palette="persona"] .hub-feed-lienzo-fx::after { animation: lz-pop-flash 13s cubic-bezier(.5,0,.4,1) infinite; }
+  :root[data-effects="on"][data-palette="persona"] .hub-feed-lienzo-fx::after {
+    right: auto;
+    width: 260%;
+    background-size: 100% 100%;
+    animation: lz-pop-flash 13s cubic-bezier(.5,0,.4,1) infinite;
+  }
 }
 
 @keyframes lz-pop-drift { from { transform: translate(0, 0); } to { transform: translate(9px, -9px); } }
 @keyframes lz-pop-flash {
-  0%, 72% { background-position: -140% 0; }
-  92%, 100% { background-position: 260% 0; }
+  0%, 72% { transform: translateX(86.154%); }
+  92%, 100% { transform: translateX(-160%); }
 }
 
 /* ══ MOMENTOS · EL SELLO DEL LADRÓN al cerrar un juego: la cara de este tema del sello común de
