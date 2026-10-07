@@ -5,13 +5,15 @@
 //     fechas, publicando una vez o cien. Es lo que permite publicar a rebufo de otra escritura.
 //  2. Que el ALTA de un juego anterior al 07-10-2026 no publica mensaje (las de después sí), y que de un mismo
 //     día queda un solo mensaje por juego: el último («lo empecé y lo abandoné» se cuenta abandonado).
-//  3. Que las listas OCULTAS no publican mensaje. Es la misma promesa que el ajuste de visibilidad ya hacía.
+//  3. Que las listas OCULTAS no publican mensaje en `moves`: van aparte, a `hiddenMoves`, que solo enseña la
+//     administración (y que las versiones viejas, que no lo conocen, descartan).
 //  4. Que el campo `enteredAt` en crudo sigue sin poder llegar al gist, por mucho mensaje que se publique.
 //  5. Que los mensajes no le roban el sitio a las reseñas ni se pierden en el round-trip del gist.
-import { describe, expect, it } from 'vitest';
-import { deriveMoveActivity, LIBRARY_ENTRIES_PUBLISHED_FROM, MOVE_ACTIVITY_MAX, reconcileMoveActivity, reviewActorsByGame, type SocialMoveEntry } from '../../src/core/social/moveActivity';
+import { describe, expect, it, vi } from 'vitest';
+import { deriveHiddenMoveActivity, deriveMoveActivity, LIBRARY_ENTRIES_PUBLISHED_FROM, MOVE_ACTIVITY_MAX, reconcileMoveActivity, reconcileMoveChannels, reviewActorsByGame, withHiddenMoves, type SocialMoveEntry } from '../../src/core/social/moveActivity';
 import {
   mergeSocialGistData,
+  readPublicSocialGistById,
   syncMoveActivity,
   upsertReviewActivity,
   type SocialGistData,
@@ -555,3 +557,96 @@ describe('lista de deseos — el alta SÍ es la noticia', () => {
     expect(() => assertValidSocialGist(conDeseos)).not.toThrow();
   });
 });
+
+describe('listas ocultas — su actividad va aparte, para la administración', () => {
+  it('lo que una lista oculta no publica en `moves` sale en `hiddenMoves`, y nada más', () => {
+    const games = tabData({ c: [game({ id: 3, enteredAt: { v: P, c: C } })], e: [game({ id: 4, enteredAt: { p: P, e: E } })] });
+
+    expect(deriveHiddenMoveActivity(games, ['v'])).toEqual([]); // la `v` de 3 fue su alta (anterior al 07-10)
+    const conAlta = tabData({ v: [game({ id: 5, enteredAt: { p: P, v: C } })] });
+    expect(deriveHiddenMoveActivity(conAlta, ['v']).map((entry) => entry.id)).toEqual(['5:v']);
+    expect(deriveMoveActivity(conAlta, { hiddenTabs: ['v'] })).toEqual([]);
+  });
+
+  it('sin listas ocultas no hay nada que publicar aparte', () => {
+    const games = tabData({ v: [game({ id: 5, enteredAt: { p: P, v: C } })] });
+
+    expect(deriveHiddenMoveActivity(games, [])).toEqual([]);
+  });
+
+  it('las dos mitades unidas dan lo mismo que proyectar sin ocultar nada', () => {
+    // Empezado y abandonado el mismo día, con el abandono escondido: `moves` se queda el «comenzó» (la oculta no
+    // cuenta ahí) y `hiddenMoves` el «abandonó»; la unión vuelve a colapsar y queda lo que de verdad pasó.
+    const games = tabData({
+      v: [game({ id: 35, enteredAt: { p: P, e: Date.parse('2026-08-20T09:00:00'), v: Date.parse('2026-08-20T20:00:00') } })],
+      c: [game({ id: 36, enteredAt: { p: P, c: C } })],
+    });
+    const moves = deriveMoveActivity(games, { hiddenTabs: ['v'] });
+    const hidden = deriveHiddenMoveActivity(games, ['v']);
+
+    expect(moves.map((entry) => entry.id).sort()).toEqual(['35:e', '36:c']);
+    expect(hidden.map((entry) => entry.id)).toEqual(['35:v']);
+    expect(withHiddenMoves(moves, hidden).map((entry) => entry.id).sort())
+      .toEqual(deriveMoveActivity(games).map((entry) => entry.id).sort());
+  });
+
+  it('ocultar una lista la pasa de un canal al otro en la misma pasada, y mostrarla la devuelve', () => {
+    const games = tabData({ v: [game({ id: 5, enteredAt: { p: P, v: C } })] });
+    const knownGameIds = new Set([5]);
+    const visible = reconcileMoveChannels({ games, published: {}, hiddenTabs: [], knownGameIds, localUpdatedAt: C });
+    expect(visible.moves.map((entry) => entry.id)).toEqual(['5:v']);
+    expect(visible.hiddenMoves).toEqual([]);
+
+    const oculta = reconcileMoveChannels({ games, published: visible, hiddenTabs: ['v'], knownGameIds, localUpdatedAt: C });
+    expect(oculta.moves).toEqual([]);
+    expect(oculta.hiddenMoves.map((entry) => entry.id)).toEqual(['5:v']);
+
+    const otraVez = reconcileMoveChannels({ games, published: oculta, hiddenTabs: [], knownGameIds, localUpdatedAt: C });
+    expect(otraVez).toEqual(visible);
+  });
+
+  it('un mensaje de lista visible que alguien cuele en `hiddenMoves` se retira siempre', () => {
+    const intruso: SocialMoveEntry = { id: '8:c', gameId: 8, gameName: 'Celeste', tab: 'c', at: C };
+    const result = reconcileMoveChannels({
+      games: tabData({}),
+      published: { hiddenMoves: [intruso] },
+      hiddenTabs: ['v'],
+      knownGameIds: new Set(),
+      localUpdatedAt: 0,
+    });
+
+    expect(result.hiddenMoves).toEqual([]);
+  });
+
+  it('el schema acepta `hiddenMoves` con la misma allowlist estricta que `moves`', () => {
+    const con = syncMoveActivity(baseGist(), [{ id: '5:v', gameId: 5, gameName: 'Tunic', tab: 'v', at: C }], 2000, 'hiddenMoves');
+    expect(con.hiddenMoves).toHaveLength(1);
+    expect(con.moves).toEqual([]);
+    expect(() => assertValidSocialGist(con)).not.toThrow();
+
+    const contaminado = { ...con, hiddenMoves: [{ ...(con.hiddenMoves as SocialMoveEntry[])[0], enteredAt: { v: C } }] };
+    expect(() => assertValidSocialGist(contaminado)).toThrow(/schema/i);
+  });
+
+  it('la fusión de dos lecturas une también `hiddenMoves`, con la fecha más antigua', () => {
+    const a: SocialGistData = { ...baseGist(), updatedAt: 5000, hiddenMoves: [{ id: '1:v', gameId: 1, gameName: 'Celeste', tab: 'v', at: C }] };
+    const b: SocialGistData = { ...baseGist(), updatedAt: 4000, hiddenMoves: [{ id: '1:v', gameId: 1, gameName: 'Celeste', tab: 'v', at: P }] };
+
+    expect(mergeSocialGistData(a, b).hiddenMoves).toEqual([{ id: '1:v', gameId: 1, gameName: 'Celeste', tab: 'v', at: P }]);
+  });
+
+  it('`hiddenMoves` sobrevive a la lectura del gist (la normalización no lo tira)', async () => {
+    const gist = { ...baseGist(), hiddenMoves: [{ id: '5:v', gameId: 5, gameName: 'Tunic', tab: 'v', at: C }] };
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+      files: { 'myGameList.social.json': { content: JSON.stringify(gist) } },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const read = await readPublicSocialGistById('aabbccddeeff00112233');
+      expect(read.hiddenMoves).toEqual(gist.hiddenMoves);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+

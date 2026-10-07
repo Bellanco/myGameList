@@ -30,7 +30,7 @@ import type { SocialSharedGame } from '../../model/types/social';
  * Aunque un rango los tuviera permitidos, el dato no llega, y montar el bloque solo enseñaría un vacío.
  *
  * F4 no cambia esto. El canal publica ahora la actividad de listas, pero es una proyección con recortes por
- * diseño —solo la PRIMERA entrada a cada lista, nunca las ocultas, y con cupo— así que reconstruir con ella un
+ * diseño —solo la PRIMERA entrada a cada lista, las ocultas aparte y con cupo— así que reconstruir con ella un
  * mapa de constancia daría un dibujo incompleto que se leería como inactividad. Un hueco falso es peor que un
  * bloque ausente.
  */

@@ -278,6 +278,89 @@ export function deriveMoveActivity(games: TabData, options: DeriveMoveActivityOp
   return sortMoveEntries([...byId.values()]).slice(0, max);
 }
 
+/**
+ * Los mensajes de las listas OCULTAS, que viajan aparte (`hiddenMoves` del gist) para la cuenta de administración.
+ *
+ * Es la misma proyección sin filtro de listas, quedándose con lo que cae en las ocultas. Proyectar sobre TODAS y
+ * filtrar después, y no al revés, es lo que hace que la unión con `moves` dé lo mismo que proyectar sin ocultas: el
+ * «un juego, un mensaje al día» se decide aquí con todos los sellos, así que un «abandonó» oculto que tapa al
+ * «comenzó» visible del mismo día SÍ está en esta lista. El «comenzó» sigue en `moves`, porque ahí la oculta no
+ * cuenta; quien une las dos (`withHiddenMoves`) vuelve a colapsar por día y lo retira.
+ *
+ * Campo aparte y no un filtro al leer `moves`, porque las versiones que ya están instaladas no saben filtrar: leerían
+ * `moves` entero y enseñarían a cualquier amistad lo que su dueño esconde. Un campo que no conocen lo descartan al
+ * normalizar.
+ */
+export function deriveHiddenMoveActivity(games: TabData, hiddenTabs: readonly TabId[]): SocialMoveEntry[] {
+  const hidden = new Set(hiddenTabs);
+  if (hidden.size === 0) {
+    return [];
+  }
+  return deriveMoveActivity(games, { max: Number.MAX_SAFE_INTEGER })
+    .filter((entry) => hidden.has(entry.tab))
+    .slice(0, MOVE_ACTIVITY_MAX);
+}
+
+/** Las listas que NO están ocultas: las que `hiddenMoves` no lleva nunca, y por eso retira siempre. */
+export function tabsShownOf(hiddenTabs: readonly TabId[]): TabId[] {
+  const hidden = new Set(hiddenTabs);
+  return TAB_IDS.filter((tab) => !hidden.has(tab));
+}
+
+/**
+ * Une los mensajes visibles de UN autor con los de sus listas ocultas, para la cuenta de administración.
+ *
+ * Vuelve a aplicar «un juego, un mensaje al día: el último» sobre la unión, porque cada mitad se colapsó sin ver la
+ * otra (ver `deriveHiddenMoveActivity`). El día aquí es el de quien MIRA, no el del autor —el gist no lleva su huso—;
+ * es el mismo con el que el feed titula los grupos, así que lo que queda junto bajo un día es lo que se ve junto.
+ */
+export function withHiddenMoves<T extends SocialMoveEntry>(moves: readonly T[], hiddenMoves: readonly T[]): T[] {
+  if (hiddenMoves.length === 0) {
+    return [...moves];
+  }
+  const byGame = new Map<number, T[]>();
+  for (const entry of [...moves, ...hiddenMoves]) {
+    const list = byGame.get(entry.gameId);
+    if (list) list.push(entry);
+    else byGame.set(entry.gameId, [entry]);
+  }
+  return [...byGame.values()].flatMap((entries) => keepLatestPerDay(entries) as T[]);
+}
+
+export interface ReconcileMoveChannelsInput {
+  games: TabData;
+  /** Lo publicado ahora en cada canal del gist. */
+  published: { moves?: readonly SocialMoveEntry[]; hiddenMoves?: readonly SocialMoveEntry[] };
+  hiddenTabs: readonly TabId[];
+  knownGameIds: ReadonlySet<number>;
+  localUpdatedAt: number;
+}
+
+/**
+ * Los dos canales de mensajes de lista de una pasada: `moves` (lo que ven las amistades) y `hiddenMoves` (las
+ * listas ocultas, para la administración). Mismas reglas de retirada para los dos; cada uno retira siempre lo que
+ * no le toca llevar, así que cambiar una lista de oculta a visible la pasa de un canal al otro en la misma pasada.
+ */
+export function reconcileMoveChannels(input: ReconcileMoveChannelsInput): { moves: SocialMoveEntry[]; hiddenMoves: SocialMoveEntry[] } {
+  const { games, published, hiddenTabs, knownGameIds, localUpdatedAt } = input;
+  return {
+    moves: reconcileMoveActivity({
+      derived: deriveMoveActivity(games, { hiddenTabs }),
+      published: published.moves || [],
+      knownGameIds,
+      hiddenTabs,
+      localUpdatedAt,
+    }),
+    hiddenMoves: reconcileMoveActivity({
+      derived: deriveHiddenMoveActivity(games, hiddenTabs),
+      published: published.hiddenMoves || [],
+      knownGameIds,
+      hiddenTabs: tabsShownOf(hiddenTabs),
+      localUpdatedAt,
+    }),
+  };
+}
+
 /** Orden del canal: del mensaje más reciente al más antiguo, con la clave como desempate estable. */
 export function sortMoveEntries(entries: SocialMoveEntry[]): SocialMoveEntry[] {
   return [...entries].sort((a, b) => b.at - a.at || a.id.localeCompare(b.id));
@@ -290,7 +373,10 @@ export interface ReconcileMoveActivityInput {
   published: readonly SocialMoveEntry[];
   /** Ids de juego presentes en los listados locales. Lo que no está aquí es candidato a huérfano. */
   knownGameIds: ReadonlySet<number>;
-  /** Listas ocultas: se retiran SIEMPRE, sin importar lo que digan los listados. */
+  /**
+   * Listas que este canal no lleva: se retiran SIEMPRE, sin importar lo que digan los listados. Para `moves` son
+   * las ocultas; para `hiddenMoves`, las que están a la vista (`tabsShownOf`).
+   */
   hiddenTabs?: readonly TabId[];
   /**
    * Reloj de los listados locales (`TabData.updatedAt`). Con `0` no se retira ningún huérfano: es el modo

@@ -5,6 +5,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Changed
+- **La cuenta de administración ve en el feed también los avisos de las listas que cada cual oculta**, igual que ya
+  veía esas listas en el perfil. Las amistades siguen sin verlos, y a la administración le sigue valiendo su propio
+  filtro de listas. Los avisos de las listas ocultas viajan en un apartado aparte del canal social, que las
+  versiones anteriores no leen.
+- **Política de privacidad y condiciones de uso actualizadas** (versión 2026-10-07b) por ese apartado: hay que
+  volver a aceptarlas para seguir usando el espacio social.
+
 ## [1.6.4] - 2026-10-07
 
 Una versión de **fluidez y de actividad social**: los temas dejan de animar en balde entre destello y destello, y el

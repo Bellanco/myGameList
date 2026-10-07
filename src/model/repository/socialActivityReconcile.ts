@@ -12,7 +12,7 @@
 // También retira las entradas huérfanas (juego borrado o reseña vaciada), que antes intentaba adivinar un
 // efecto del hub con una foto de localStorage tomada al montar: si esa foto estaba desfasada, despublicaba
 // reseñas válidas.
-import { deriveMoveActivity, reconcileMoveActivity } from '../../core/social/moveActivity';
+import { deriveMoveActivity, reconcileMoveChannels } from '../../core/social/moveActivity';
 import type { TabData } from '../types/game';
 import { TAB_IDS, UNPLAYED_TAB_IDS } from '../types/game';
 import { getCurrentSocialAuthUser, resolveStableProfileId } from './firebaseRepository';
@@ -49,7 +49,9 @@ const RECONCILE_TTL_MS = 12 * 60 * 60 * 1000;
 //       la que los quita.
 //   7 = F4: vuelven las ALTAS, solo las de desde el 07-10-2026 (`LIBRARY_ENTRIES_PUBLISHED_FROM`). Sube para que
 //       las altas hechas entre esa fecha y la llegada de esta versión se publiquen en cuanto se abra el hub.
-export const RECONCILE_LOGIC_VERSION = 7;
+//   8 = F4: los mensajes de las listas OCULTAS se publican aparte, en `hiddenMoves`, para la administración. Sube
+//       para que los gists que ya existen los lleven en cuanto su dueño abra el hub con esta versión.
+export const RECONCILE_LOGIC_VERSION = 8;
 
 // Margen para no re-sellar fechas por diferencias de milisegundos: al guardar una reseña, `_ts` del juego y la
 // fecha de la publicación se estampan en la misma operación, con unos ms de diferencia.
@@ -326,18 +328,19 @@ export async function reconcileReviewActivity(input: {
 
   // F4 — MENSAJES DE LISTA. Proyección de los sellos `enteredAt` (ver `core/social/moveActivity`), no una cola de
   // eventos: se recalcula entera en cada pasada, así que el histórico de quien ya tenía los sellos entra solo y no
-  // hay nada que se pueda quedar a medias. Las listas que el usuario esconde no publican mensaje.
-  const hiddenTabs = baseData.profile.visibility?.hiddenTabs || [];
-  const targetMoves = reconcileMoveActivity({
-    derived: deriveMoveActivity(games, { hiddenTabs }),
-    published: baseData.moves || [],
+  // hay nada que se pueda quedar a medias. Las listas que el usuario esconde no publican en `moves`: van a
+  // `hiddenMoves`, que solo enseña la administración.
+  const target = reconcileMoveChannels({
+    games,
+    published: baseData,
+    hiddenTabs: baseData.profile.visibility?.hiddenTabs || [],
     knownGameIds: localGameIds,
-    hiddenTabs,
     // El reloj de los listados es lo que da (o quita) autoridad para retirar un mensaje huérfano, igual que en
     // las reseñas: con unos listados más viejos que el mensaje, no se retira nada.
     localUpdatedAt,
   });
-  const withMoves = syncMoveActivity(nextData, targetMoves, Date.now());
+  const now = Date.now();
+  const withMoves = syncMoveActivity(syncMoveActivity(nextData, target.moves, now), target.hiddenMoves, now, 'hiddenMoves');
   const movesChanged = withMoves !== nextData;
   nextData = withMoves;
 

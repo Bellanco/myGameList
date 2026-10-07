@@ -14,6 +14,7 @@ import { useFeedMoveTabs } from '../../view/hooks/useFeedMoveTabs';
 import { TAB_ORDER } from '../../core/constants/labels';
 import { achievementFeedEntries, type AchievementFeedEntry } from '../../core/achievements/feed';
 import { yearSummaryFeedEntries, type YearSummaryFeedEntry } from '../../core/social/yearSummaryFeed';
+import { withHiddenMoves } from '../../core/social/moveActivity';
 import { useAchievementBaselines, type AchievementBaselineSource } from './useAchievementBaselines';
 import { ENABLE_ACHIEVEMENTS } from '../../core/achievements/flags';
 import type { ProfileTier } from '../../core/constants/tiers';
@@ -100,6 +101,8 @@ type FeedSource = {
   activity?: SocialActivityFeedItem[];
   posts?: SocialPostFeedItem[];
   moves?: SocialMoveFeedItem[];
+  /** Los de las listas ocultas: solo entran para la administración (ver `SocialDirectoryEntry.hiddenMoves`). */
+  hiddenMoves?: SocialMoveFeedItem[];
   /** Identidad y espejo de logros, para deducir sus desbloqueos sin publicar ni un byte (§8.4). */
   id?: string;
   /** uid de Firebase, que es por quien va el grafo de amistad (el `id` puede ser un profileId ajeno al uid). */
@@ -236,6 +239,11 @@ export function useSocialFeed(
    * a medio cargar está vacío, y podar contra él las borraría todas.
    */
   friendsResolved = false,
+  /**
+   * ¿Mira la cuenta de administración? Entonces ve también los movimientos de las listas que cada cual oculta (está
+   * declarado en la política de privacidad). Su propio filtro de listas le sigue valiendo, como a todo el mundo.
+   */
+  isAdmin = false,
 ): {
   feedItems: SocialFeedItem[];
   groupedFeedItems: SocialFeedDayGroup[];
@@ -279,7 +287,8 @@ export function useSocialFeed(
       ? []
       : groupMovesByAuthorTabDay(
         directory
-          .flatMap((entry) => entry.moves || [])
+          // La unión va por AUTOR: el colapso por día es por juego, y el mismo juego de dos personas son dos historias.
+          .flatMap((entry) => (isAdmin ? withHiddenMoves(entry.moves || [], entry.hiddenMoves || []) : entry.moves || []))
           .filter((move) => visibleTabs.has(move.tab)),
       )
         // El agrupado va DESPUÉS del filtro de listas: un renglón cuenta solo juegos de una lista que se mira.
@@ -342,7 +351,7 @@ export function useSocialFeed(
       .filter((item) => hasRenderableTimestamp(item.updatedAt))
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, FEED_MAX_ITEMS);
-  }, [directory, moveTabs, ownAchievements, friendUids, baselines, ownKey]);
+  }, [directory, moveTabs, isAdmin, ownAchievements, friendUids, baselines, ownKey]);
 
   const groupedFeedItems = useMemo<SocialFeedDayGroup[]>(() => {
     const groups: SocialFeedDayGroup[] = [];
@@ -447,6 +456,12 @@ export type SocialDirectoryEntry = {
   posts: SocialPostFeedItem[];
   /** F4 — mensajes de lista del perfil, ya enriquecidos con su identidad. */
   moves: SocialMoveFeedItem[];
+  /**
+   * Los de las listas que ese perfil OCULTA (`hiddenMoves` del gist). Se hidratan siempre, y es el feed quien decide:
+   * solo los mezcla para la cuenta de administración. Hidratarlos solo para ella no serviría, porque el claim llega
+   * después del primer render y el directorio, ya cacheado sin ellos, tardaría media hora en traerlos.
+   */
+  hiddenMoves?: SocialMoveFeedItem[];
   // Index-only (SocialSharedGame) para perfiles ajenos; para el perfil PROPIO se repuebla con GameItem completos.
   sharedLists: Partial<Record<TabId, Array<GameItem | SocialSharedGame>>>;
   visibility: SocialProfileVisibility;
