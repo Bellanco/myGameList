@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { PremiosEnviada } from '../../src/view/components/premios/PremiosEstado';
 import { PREMIOS_UI } from '../../src/core/constants/premiosLabels';
@@ -39,3 +40,33 @@ describe('PremiosEnviada — la confirmación del voto', () => {
     expect(screen.getByText(L.unchanged)).toBeInTheDocument();
   });
 });
+
+/**
+ * LA INVITACIÓN A QUEDARSE, a quien no tiene nada más de la aplicación. Quién la ve lo decide el hub; aquí, que se
+ * pinte bien y que su botón sea EL camino: la puerta de la sección pasa a secundaria para no tener dos principales.
+ */
+describe('PremiosEnviada — la invitación al resto de la aplicación', () => {
+  it('sin invitación no hay nada de ella', () => {
+    pintar();
+    expect(screen.queryByRole('region', { name: L.invite.sectionAria })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: PREMIOS_UI.cerrada.toHome })).toHaveClass('btn-primary');
+  });
+
+  it('con invitación: lleva a la lista, se puede aplazar, y volver a Premios pasa a secundario', async () => {
+    const onJoin = vi.fn();
+    const onLater = vi.fn();
+    pintar({ invite: { onJoin, onLater } });
+
+    expect(screen.getByRole('region', { name: L.invite.sectionAria })).toBeInTheDocument();
+    const unirse = screen.getByRole('link', { name: L.invite.join });
+    expect(unirse).toHaveAttribute('href', '/completados');
+    expect(unirse).toHaveClass('btn-primary');
+    expect(screen.getByRole('link', { name: PREMIOS_UI.cerrada.toHome })).not.toHaveClass('btn-primary');
+
+    await userEvent.click(unirse);
+    expect(onJoin).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getByRole('button', { name: L.invite.later }));
+    expect(onLater).toHaveBeenCalledTimes(1);
+  });
+});
+

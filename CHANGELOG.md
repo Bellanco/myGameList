@@ -10,6 +10,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   persona que se despliega con lo que votó en cada categoría. Con la votación abierta van por orden de voto; cerrada,
   con la clasificación provisional de los ganadores marcados. La cuenta de administración ve además la
   «Clasificación final» de la edición publicada aunque no haya votado en ella.
+- **Al terminar de votar, quien no tiene nada más de la aplicación recibe una invitación a quedarse**: empezar su
+  lista de juegos, sin cuenta, con la guía de primeros pasos en marcha. Sale una vez por edición y se puede aplazar.
 
 ### Changed
 - **La cuenta de administración ve en el feed también los avisos de las listas que cada cual oculta**, igual que ya

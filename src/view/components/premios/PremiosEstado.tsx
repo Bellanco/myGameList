@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { PREMIOS_UI } from '../../../core/constants/premiosLabels';
 import { PREMIOS_ROUTES } from '../../../viewmodel/premios/premiosRoutes';
+import { FALLBACK_ROUTE } from '../../../core/constants/routes';
 import { Icon } from '../Icon';
 
 /**
@@ -15,12 +16,15 @@ export function PremiosEnviada({
   displayName,
   remainingOpportunities,
   unchanged = false,
+  invite = null,
 }: {
   /** El nombre con el que ha votado: es a quien se da las gracias. */
   displayName: string;
   remainingOpportunities: number;
   /** Se llegó reenviando una papeleta idéntica: no se ha escrito nada y no ha costado oportunidad. */
   unchanged?: boolean;
+  /** La invitación a quedarse, si toca (ver `usePremiosJoinInvite`). `null` = no se pinta. */
+  invite?: { onJoin: () => void; onLater: () => void } | null;
 }) {
   const L = PREMIOS_UI.enviada;
   return (
@@ -61,8 +65,32 @@ export function PremiosEnviada({
           volver—, que son los mismos que ofrece la portada de la sección según lo que se pueda hacer en cada
           momento: repetirlos en la pantalla de la celebración era mantener dos sitios con las mismas reglas, y
           uno de ellos se quedaba atrás (el de corregir salía sin mirar si quedaban oportunidades). */}
+      {/* LA INVITACIÓN A QUEDARSE, después de lo del voto y antes de la salida: primero se confirma lo que se vino
+          a hacer, y solo entonces se ofrece lo demás. Con ella delante, su botón es el principal y la puerta de la
+          sección pasa a secundaria: dos principales seguidos no dicen cuál es el camino. */}
+      {invite ? (
+        <section className="premios-enviada__invite" aria-label={L.invite.sectionAria}>
+          <span className="premios-enviada__invite-icon" aria-hidden="true">
+            <Icon name="bottom-lists" />
+          </span>
+          <div className="premios-enviada__invite-text">
+            <p className="premios-enviada__invite-title">{L.invite.title}</p>
+            <p>{L.invite.body}</p>
+            <p className="premios-estado__muted">{L.invite.social}</p>
+          </div>
+          <div className="premios-enviada__invite-actions">
+            <Link className="btn btn-primary" to={FALLBACK_ROUTE} onClick={invite.onJoin}>
+              {L.invite.join}
+            </Link>
+            <button type="button" className="btn" onClick={invite.onLater}>
+              {L.invite.later}
+            </button>
+          </div>
+        </section>
+      ) : null}
+
       <div className="premios-estado__actions">
-        <Link className="btn btn-primary" to={PREMIOS_ROUTES.home}>
+        <Link className={`btn${invite ? '' : ' btn-primary'}`} to={PREMIOS_ROUTES.home}>
           {PREMIOS_UI.cerrada.toHome}
         </Link>
       </div>
