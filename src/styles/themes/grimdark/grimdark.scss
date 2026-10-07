@@ -355,8 +355,10 @@
   :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) h2 { animation: grim-glitch-text 12s ease-in-out infinite; }
   :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) .hub-name-link,
   :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) .hub-detail-profile-link { animation: grim-glitch-slice 14s ease-in-out infinite; }
-  :root[data-palette="grimdark"]:not([data-theme="light"]) .hub-name-link:nth-of-type(2n) { animation-delay: -5s; }
-  :root[data-palette="grimdark"]:not([data-theme="light"]) .hub-name-link:nth-of-type(3n) { animation-delay: -8.5s; }
+  /* Por la TARJETA y no por el enlace: el nombre es el único botón de su `<h3>`, así que un `:nth-of-type` sobre
+     él valía siempre 1 y los nombres de todo el feed se cortaban a la vez. */
+  :root[data-palette="grimdark"]:not([data-theme="light"]) .hub-feed-card:nth-of-type(2n) .hub-name-link { animation-delay: -5s; }
+  :root[data-palette="grimdark"]:not([data-theme="light"]) .hub-feed-card:nth-of-type(3n) .hub-name-link { animation-delay: -8.5s; }
   :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) .fab { animation: grim-glitch-jitter 16s ease-in-out infinite; }
   :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) .fab-roulette { animation: grim-glitch-jitter 16s ease-in-out infinite; animation-delay: -6s; }
 }
