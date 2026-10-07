@@ -424,6 +424,25 @@
   :root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):nth-of-type(2n) { animation-delay: -7s; }
   :root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):nth-of-type(3n) { animation-delay: -12s; }
 
+  /* EN EL MOSAICO, UNO DE CADA CUATRO. Sin virtualizar —por debajo de 120 filas— un monitor ancho pinta todas las
+     cajas a la vez, con cuatro chips cada una: con 300 juegos eran 1.204 animaciones de `filter`, que corren en el
+     hilo principal, y se lo comían el 72 % del tiempo EN REPOSO (medido el 07-10-2026). Destella el primer chip de
+     cada grupo en media caja de cada fila, EN DAMERO: las cajas van agrupadas por filas (`.grid-row`), así que un
+     `:nth-child` solo sobre la caja cuenta dentro de cada fila, y con filas de cinco animaba tres de cada cinco.
+     El desfase va por la posición de la CAJA, porque el del chip de arriba (`:nth-of-type`) aquí siempre cae en
+     el primero y titilarían todas a la vez. */
+  :root[data-effects="on"][data-palette="portal"] .game-card .chip { animation: none; }
+  :root[data-effects="on"][data-palette="portal"] .grid-row:nth-child(odd) .game-card:nth-child(odd) .chip:first-child,
+  :root[data-effects="on"][data-palette="portal"] .grid-row:nth-child(even) .game-card:nth-child(even) .chip:first-child {
+    animation: portal-fluoro 17s ease-in-out var(--fluoro-retraso, 0s) infinite;
+  }
+  :root[data-effects="on"][data-palette="portal"] .grid-row:nth-child(odd) .game-card:nth-child(odd) .chip-genre:first-child,
+  :root[data-effects="on"][data-palette="portal"] .grid-row:nth-child(even) .game-card:nth-child(even) .chip-genre:first-child {
+    animation-delay: calc(var(--fluoro-retraso, 0s) - 8.5s);
+  }
+  :root[data-palette="portal"] .game-card:nth-child(3n+2) { --fluoro-retraso: -5.5s; }
+  :root[data-palette="portal"] .game-card:nth-child(3n)   { --fluoro-retraso: -11.5s; }
+
   /* El CARTEL de día lleva el fluorescente ORIGINAL (más marcado y frecuente): un tubo de señal que titilea
      de verdad, no el destello tenue del resto de componentes. */
   @keyframes portal-fluoro-strong {
@@ -647,13 +666,9 @@
    casi el mismo color, uno al lado del otro. En la antigua «empezó» es azul, así que ahí el logro sigue en ámbar. */
 :root[data-palette="portal"] .hub-feed-activity-item.is-achievements { --evc: #e9eef1; }
 :root[data-palette="portal"][data-theme="light"] .hub-feed-activity-item.is-achievements { --evc: var(--warn); }
-/* Sobre el velo teñido, los dos textos más tenues no llegaban: la HORA (en `--text-dim`, 3,3:1 en oscuro sobre el
-   velo blanco) sube al gris de texto atenuado, y el JUEGO en claro —la mezcla de acento y gris de la casa, que ya
-   se quedaba en 3,2:1 sobre el pergamino— toma el marrón de enlace de la paleta. */
-:root[data-palette="portal"] :is(.is-move, .is-achievements) .hub-feed-move-hour { color: var(--text-muted); }
+/* Sobre el velo teñido, el JUEGO en claro —la mezcla de acento y gris de la casa, que ya se quedaba en 3,2:1 sobre
+   el pergamino— no llegaba: toma el marrón de enlace de la paleta. */
 :root[data-palette="portal"][data-theme="light"] .is-move .hub-feed-move-game:not(.is-plain) { color: var(--fg-link); }
-/* Monoespaciada como el resto de los datos de la paleta: la hora es una lectura de instrumento. */
-:root[data-palette="portal"] .hub-feed-move-hour { font-family: var(--font-mono); }
 
 /* El AVISO DE LOGRO · placa de la sala: canto recto y junta clara entre piezas. Sin `clip-path`, así que aquí la
    sombra de rareza se queda como está y solo se suma la junta. */

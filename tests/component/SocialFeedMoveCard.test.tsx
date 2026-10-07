@@ -10,6 +10,7 @@ import userEvent from '@testing-library/user-event';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { YEAR_SUMMARY_UI } from '../../src/core/constants/yearSummaryLabels';
 import { SocialFeedScreen } from '../../src/view/components/socialhub/SocialFeedScreen';
+import { MOVE_GROUP_VISIBLE } from '../../src/view/components/socialhub/FeedMoveCard';
 import type {
   SocialFeedDayGroup,
   SocialFeedItem,
@@ -93,25 +94,14 @@ function renderFeed(
 }
 
 describe('renglón de movimiento de lista', () => {
-  it('lo cuenta en una línea: autor, verbo, juego y hora', () => {
+  it('lo cuenta en una frase: autor, verbo y juego, sin hora', () => {
     renderFeed([move({ tab: 'c' })]);
 
     const card = screen.getByRole('listitem');
-    // Un solo renglón, en este orden y sin nada más. La hora se compone con el mismo formateador que la vista: si se
-    // escribe a mano, el test solo pasa en la zona horaria de quien lo escribió (en CI, que va en UTC, fallaba).
-    expect(card.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      `Ada finalizó Hollow Knight ${SOCIAL_UI.feed.movedAtHour(new Date(AT))}`,
-    );
-  });
-
-  it('la hora sustituye a la fecha completa, que queda al pasar el ratón', () => {
-    renderFeed([move({ tab: 'c' })]);
-
-    const hora = screen.getByText(SOCIAL_UI.feed.movedAtHour(new Date(AT)));
-    expect(hora).toBeInTheDocument();
-    // El día no se repite en la tarjeta (lo da la cabecera del grupo), pero sigue disponible en el título.
-    expect(hora).toHaveAttribute('title', SOCIAL_UI.feed.movedAt(new Date(AT)));
-    expect(screen.queryByText(SOCIAL_UI.feed.movedAt(new Date(AT)))).not.toBeInTheDocument();
+    // Una sola frase, en este orden y sin nada más: desde el 07-10-2026 la tarjeta no lleva hora (el día lo dice la
+    // cabecera del grupo).
+    expect(card.textContent?.replace(/\s+/g, ' ').trim()).toBe('Ada finalizó Hollow Knight');
+    expect(card.querySelector('[title]')).toBeNull();
   });
 
   it('un verbo por lista, en minúscula porque se lee seguido del nombre', () => {
@@ -124,16 +114,15 @@ describe('renglón de movimiento de lista', () => {
   });
 
   it('deseos y próximos dicen adónde fue el juego, detrás de su nombre', () => {
-    const hora = SOCIAL_UI.feed.movedAtHour(new Date(AT));
     const { unmount } = renderFeed([move({ tab: 'd' })]);
     expect(screen.getByRole('listitem').textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      `Ada añadió Hollow Knight a su lista de deseos ${hora}`,
+      'Ada añadió Hollow Knight a su lista de deseos',
     );
     unmount();
 
     renderFeed([move({ tab: 'p', id: '7:p' })]);
     expect(screen.getByRole('listitem').textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      `Ada añadió Hollow Knight a su biblioteca ${hora}`,
+      'Ada añadió Hollow Knight a su biblioteca',
     );
   });
 
@@ -194,10 +183,10 @@ describe('renglón de movimiento de lista', () => {
     expect(screen.getByRole('listitem').className).toContain('is-own-activity');
   });
 
-  it('sin fecha utilizable no inventa una', () => {
+  it('sin fecha utilizable se sigue leyendo igual: la tarjeta no la enseña', () => {
     renderFeed([move({ tab: 'c', updatedAt: Number.NaN })]);
 
-    expect(screen.getByText(SOCIAL_UI.feed.moveRecently)).toBeInTheDocument();
+    expect(screen.getByRole('listitem').textContent?.replace(/\s+/g, ' ').trim()).toBe('Ada finalizó Hollow Knight');
   });
 });
 
@@ -348,30 +337,32 @@ describe('SocialFeedScreen — tarjeta del resumen del año', () => {
 });
 
 describe('renglón agrupado: varios juegos a la misma lista el mismo día', () => {
-  const hora = SOCIAL_UI.feed.movedAtHour(new Date(AT));
+  const texto = (el: Element | null) => el?.textContent?.replace(/\s+/g, ' ').trim();
+  // La tarjeta por su clase: los títulos desplegados también son `listitem`, así que el rol ya no la señala sola.
+  const tarjeta = () => document.querySelector('article.is-move') as HTMLElement;
 
   it('con dos juegos, nombra el primero y «y 1 más» despliega el otro', () => {
     renderFeed([move({ tab: 'd', games: [game(1, 'Wolverine'), game(2, 'Onimusha')] })]);
 
-    const line = screen.getByRole('listitem').querySelector('.hub-feed-move-line') as HTMLElement;
-    expect(line.textContent?.replace(/\s+/g, ' ').trim()).toBe(`Ada añadió Wolverine y 1 más a su lista de deseos ${hora}`);
+    expect(texto(tarjeta().querySelector('p.hub-feed-move-line'))).toBe('Ada añadió Wolverine y 1 más a su lista de deseos');
     expect(screen.getByRole('button', { name: SOCIAL_UI.feed.moveMoreAria(1, false) })).toBeInTheDocument();
   });
 
-  it('con más, nombra el más reciente y «y N más» despliega el resto debajo', async () => {
+  it('las listas sin destino escrito, igual: el primero en la frase y la cifra detrás', () => {
+    renderFeed([move({ tab: 'c', games: [game(1, 'Wolverine'), game(2, 'Onimusha'), game(3, 'Hades')] })]);
+    expect(texto(tarjeta().querySelector('p.hub-feed-move-line'))).toBe('Ada finalizó Wolverine y 2 más');
+  });
+
+  it('cerrado de entrada; al pulsar la cifra, el resto aparece debajo, y al volver a pulsarla se oculta', async () => {
     const user = userEvent.setup();
     renderFeed([move({
       tab: 'd',
       games: [game(1, 'Wolverine'), game(2, 'Onimusha'), game(3, 'Mouse P.I. for Hire'), game(4, 'Hades')],
     })]);
 
-    const card = screen.getByRole('listitem');
-    const line = card.querySelector('.hub-feed-move-line') as HTMLElement;
-    expect(line.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      `Ada añadió Wolverine y 3 más a su lista de deseos ${hora}`,
-    );
+    const card = tarjeta();
+    expect(texto(card.querySelector('p.hub-feed-move-line'))).toBe('Ada añadió Wolverine y 3 más a su lista de deseos');
 
-    // Plegado, el resto no se ve; al pulsar la cifra, aparece debajo, y al volver a pulsarla se oculta.
     const more = within(card).getByRole('button', { name: SOCIAL_UI.feed.moveMoreAria(3, false) });
     expect(more).toHaveAttribute('aria-expanded', 'false');
     expect(within(card).queryByText('Hades')).not.toBeVisible();
@@ -384,6 +375,43 @@ describe('renglón agrupado: varios juegos a la misma lista el mismo día', () =
 
     await user.click(more);
     expect(within(card).queryByText('Hades')).not.toBeVisible();
+  });
+
+  it(`con más de ${MOVE_GROUP_VISIBLE}, desplegado la última fila es la cuenta: tres debajo y «y N más»`, async () => {
+    const user = userEvent.setup();
+    const juegos = Array.from({ length: 9 }, (_unused, i) => game(i + 1, `Juego ${i + 1}`));
+    renderFeed([move({ tab: 'd', games: juegos })]);
+
+    // Cerrado, la cifra es la de TODOS los que quedan: es lo que esconde.
+    const card = tarjeta();
+    expect(texto(card.querySelector('p.hub-feed-move-line'))).toBe('Ada añadió Juego 1 y 8 más a su lista de deseos');
+
+    await user.click(within(card).getByRole('button', { name: SOCIAL_UI.feed.moveMoreAria(8, false) }));
+    // La frase (Juego 1), los tres más recientes debajo y, en la quinta fila, los cinco que no se listan.
+    expect([...card.querySelectorAll('.hub-feed-move-rest li')].map(texto)).toEqual([
+      'Juego 2', 'Juego 3', 'Juego 4', SOCIAL_UI.feed.moveMoreCount(5),
+    ]);
+    expect(within(card).queryByText('Juego 5')).toBeNull();
+  });
+
+  it(`con exactamente ${MOVE_GROUP_VISIBLE}, desplegado salen todos y no hay fila de cuenta`, async () => {
+    const user = userEvent.setup();
+    const juegos = Array.from({ length: MOVE_GROUP_VISIBLE }, (_unused, i) => game(i + 1, `Juego ${i + 1}`));
+    renderFeed([move({ tab: 'd', games: juegos })]);
+
+    await user.click(within(tarjeta()).getByRole('button', { name: SOCIAL_UI.feed.moveMoreAria(MOVE_GROUP_VISIBLE - 1, false) }));
+    expect([...tarjeta().querySelectorAll('.hub-feed-move-rest li')].map(texto)).toEqual(['Juego 2', 'Juego 3', 'Juego 4', 'Juego 5']);
+  });
+
+  it(`con ${MOVE_GROUP_VISIBLE + 1}, el quinto ya no cabe: tres debajo y «y 2 más»`, async () => {
+    const user = userEvent.setup();
+    const juegos = Array.from({ length: MOVE_GROUP_VISIBLE + 1 }, (_unused, i) => game(i + 1, `Juego ${i + 1}`));
+    renderFeed([move({ tab: 'd', games: juegos })]);
+
+    await user.click(within(tarjeta()).getByRole('button', { name: SOCIAL_UI.feed.moveMoreAria(MOVE_GROUP_VISIBLE, false) }));
+    expect([...tarjeta().querySelectorAll('.hub-feed-move-rest li')].map(texto)).toEqual([
+      'Juego 2', 'Juego 3', 'Juego 4', SOCIAL_UI.feed.moveMoreCount(2),
+    ]);
   });
 
   it('dentro del grupo, cada juego con análisis sigue abriéndolo', async () => {

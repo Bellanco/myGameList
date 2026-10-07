@@ -108,11 +108,17 @@
 /* ── §2 · El acero: veta de cepillado en capa propia. El ruido va ANISÓTROPO (la lattice estirada en un
    eje), que es lo que produce la veta; un `repeating-linear-gradient` de 1 px no es metal, es una
    persiana. En `overlay` y a media opacidad para que no ensucie el texto. ── */
+/* LA LUZ DE ARRIBA SUBE CON LA PÁGINA, no se queda fija a la ventana. Con `background-attachment: fixed`, y la
+   veta en `overlay` encima, la GPU tenía que recomponer la página entera en cada fotograma del scroll: medido el
+   07-10-2026 (Playwright, Chrome con GPU real, 300 juegos), 29-48 % de fotogramas perdidos en escritorio y
+   19-29 % en un móvil con la CPU ×4; sin el fijo, 14-35 % y 16-24 %. El tamaño va en `100vh` y sin repetir
+   para que arriba del todo se vea exactamente como antes: es al bajar cuando el brillo se queda atrás. */
 :root[data-palette="witcher"] body {
   background-image:
     linear-gradient(180deg, rgba(255,255,255,.05), transparent 24%),
     radial-gradient(120% 70% at 50% -10%, rgba(198,206,216,.10), transparent 60%);
-  background-attachment: fixed;
+  background-size: 100% 100vh;
+  background-repeat: no-repeat;
 }
 :root[data-palette="witcher"] body::before {
   content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
@@ -908,7 +914,8 @@
      texto queda en 4,55:1 con un pico del 1 % —o sea, para verse tendría que ser invisible— y en 4,16:1
      con el 5 % que hacía falta para notarla. Por detrás solo toca al texto que va directamente sobre el
      fondo, que es el que más holgura tiene: el peor caso se queda en 6,34:1 en oscuro (pico al 10 %) y
-     5,05:1 en claro (pico al 12 %). Diez veces más luz y sigue sobrando margen.
+     5,05:1 en claro (pico al 12 %). Diez veces más luz y sigue sobrando margen. (Hoy los picos van al 6 y al
+     7 %, así que el margen es aún mayor.)
 
      Lo que se ve, entonces, es la chapa DESNUDA de la página —que en este tema es casi media pantalla—
      cogiendo la luz, y los paneles tapándola al pasar por debajo. Es lo que hace una plancha de metal
@@ -928,15 +935,16 @@
     inset: -10% -55%;
     pointer-events: none;
     z-index: -1;
+    /* Más tenue desde el 07-10-2026 (el pico iba al 10 % y los flancos al 4 %): se quería más sutil. */
     background: linear-gradient(102deg,
-      transparent 40%, rgba(255,255,255,.04) 46%, rgba(255,255,255,.10) 50%,
-      rgba(255,255,255,.04) 54%, transparent 60%);
+      transparent 40%, rgba(255,255,255,.025) 46%, rgba(255,255,255,.06) 50%,
+      rgba(255,255,255,.025) 54%, transparent 60%);
     animation: wt-luz-acero 17s ease-in-out infinite;
   }
   :root[data-effects="on"][data-palette="witcher"][data-theme="light"] body::after {
     background: linear-gradient(102deg,
-      transparent 40%, rgba(86,104,124,.05) 46%, rgba(86,104,124,.12) 50%,
-      rgba(86,104,124,.05) 54%, transparent 60%);
+      transparent 40%, rgba(86,104,124,.03) 46%, rgba(86,104,124,.07) 50%,
+      rgba(86,104,124,.03) 54%, transparent 60%);
   }
   /* La pasada ocupa el 15 % del ciclo; el resto la banda está fuera de cuadro, quieta. */
   @keyframes wt-luz-acero {
@@ -947,7 +955,7 @@
   /* ══ §13b · LOS CARTELES GOTEAN ════════════════════════════════════════════════════════════════════
      Un contrato de brujo es papel viejo con sangre encima —el pliego ya la trae seca, en las manchas de
      `--wt-hoja1..3`—. Esto es la que aún está fresca: una gota se forma arriba, resbala por el cartel y
-     se pierde por el canto de abajo, cada trece segundos y cambiada de sitio en cada uno.
+     se pierde por el canto de abajo, cada doce segundos y cambiada de sitio en cada cartel.
 
      VA COMO CAPA DE FONDO DEL PROPIO CHIP, no en un pseudo: los dos están cogidos —`::before` es el
      pliego de papel que asoma por detrás y `::after` el lacre—, y una tercera capa de fondo no cuesta
@@ -979,15 +987,25 @@
     background-size: 3.5px 16px, 260px 260px, auto !important;
     background-repeat: no-repeat, repeat, no-repeat !important;
     background-blend-mode: multiply, soft-light, normal !important;
-    animation: wt-gotear 13s linear infinite;
+    /* Quieta y FUERA del cartel, por encima del canto, mientras no le toca caer. */
+    background-position: var(--wt-gota-x, 27%) -17px, 0 0, 0 0;
   }
-  /* Cada cartel gotea por un sitio distinto y en otro momento: si no, sangran todos a la vez. */
-  :root[data-effects="on"][data-palette="witcher"] .rl-chip:nth-of-type(2n) { --wt-gota-x: 61%; animation-delay: -7s; }
-  :root[data-effects="on"][data-palette="witcher"] .active-filter-chip:nth-of-type(2n) { --wt-gota-x: 72%; animation-delay: -9s; }
+  /* LA CAÍDA, A PULSOS. Era un ciclo de 13 s en bucle con la gota quieta las cuatro quintas partes, pero
+     `background-position` no lo mueve el compositor: con un solo filtro activo, el navegador recalculaba y
+     repintaba el cartel —y su papel con turbulencia— en cada fotograma de la pantalla del listado. Ahora cae lo
+     mismo (el último quinto: 2,6 s) cuando le toca su pulso (`data-pulso`, `view/hooks/useEffectPulses.ts`), una
+     vez cada 12 s, y el resto del tiempo no hay animación. Cada tanda ocupa DOS pulsos seguidos porque la caída
+     dura más que uno: con la misma animación en los dos, no se corta al cambiar. Los carteles pares gotean en
+     otro sitio y en otra tanda, para que no sangren todos a la vez. */
+  :root[data-effects="on"][data-palette="witcher"]:is([data-pulso="4"], [data-pulso="5"], [data-pulso="10"], [data-pulso="11"]) :is(.rl-chip, .active-filter-chip):nth-of-type(2n+1),
+  :root[data-effects="on"][data-palette="witcher"]:is([data-pulso="1"], [data-pulso="2"], [data-pulso="7"], [data-pulso="8"]) :is(.rl-chip, .active-filter-chip):nth-of-type(2n) {
+    animation: wt-gotear 2.6s linear;
+  }
+  :root[data-effects="on"][data-palette="witcher"] .rl-chip:nth-of-type(2n) { --wt-gota-x: 61%; }
+  :root[data-effects="on"][data-palette="witcher"] .active-filter-chip:nth-of-type(2n) { --wt-gota-x: 72%; }
   @keyframes wt-gotear {
-    /* Quieta y fuera del cartel cuatro quintas partes del ciclo; luego cae. */
-    0%, 80%  { background-position: var(--wt-gota-x, 27%) -17px, 0 0, 0 0; }
-    100%     { background-position: var(--wt-gota-x, 27%) calc(100% + 17px), 0 0, 0 0; }
+    0%   { background-position: var(--wt-gota-x, 27%) -17px, 0 0, 0 0; }
+    100% { background-position: var(--wt-gota-x, 27%) calc(100% + 17px), 0 0, 0 0; }
   }
 
   /* ══ §13c · AL GUARDAR, LA LUZ CORRE POR EL FILO ═══════════════════════════════════════════════════

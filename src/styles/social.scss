@@ -571,7 +571,8 @@
 .hub-feed-move-more { white-space: nowrap; }
 
 /* Los que no caben en la frase, uno por línea y SIN VIÑETAS, en columna debajo del primer título (la sangría la
-   mide la tarjeta: `--move-rest-indent`). Es la continuación de la misma frase, no una lista que compita con ella. */
+   mide la tarjeta: `--move-rest-indent`). Es la continuación de la misma frase, no una lista que compita con ella.
+   Como mucho cuatro filas, y si hay más juegos, la última («y 4 más») va en el gris del verbo porque no es un juego. */
 .hub-feed-move-rest {
   display: grid;
   gap: .15rem;

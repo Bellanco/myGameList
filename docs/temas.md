@@ -120,6 +120,26 @@ por qué volver a medirlo todo para saber cuánto margen hay.
 
 ---
 
+## 4 bis. Animaciones: en bucle, solo lo que mueve la GPU
+
+Una animación **infinita** solo puede animar `opacity`, `transform` (y `translate`/`rotate`/`scale`) o `filter`
+sin `drop-shadow`. Basta una sola en bucle de `text-shadow`, `clip-path`, `background-position` o `drop-shadow`
+para que el navegador repinte en cada fotograma, aunque el efecto se vea un instante cada veinte segundos (medido
+el 07-10-2026: hasta 1,9 s de hilo principal cada 10 s en reposo, contra 0,1 s del tema por defecto).
+`tests/unit/compositorAnimations.test.ts` lo comprueba sobre **todo** el CSS, sea de la pantalla que sea.
+
+| Quiero… | Se hace con |
+|---|---|
+| un barrido o una deriva de textura | la capa ES la imagen y se mueve con `transform` (los lienzos del feed) |
+| un destello de sombra en un texto | una copia del texto con el efecto pintado y `opacity` (`data-text`, chips de «Sin futuro») |
+| un glitch o un brillo de vez en cuando | animación de UNA vez colgada de `:root[data-pulso="N"]` (`view/hooks/useEffectPulses.ts`: 12 pulsos de 2 s) |
+
+Y al desfasar elementos repetidos, ojo con `:nth-child`/`:nth-of-type`: cuentan **dentro de su padre**. Sobre el
+nombre o el chip de una tarjeta del feed valen siempre 1 (son únicos en su sitio), y las cajas del mosaico van
+agrupadas por filas (`.grid-row`). Desfasa por la tarjeta o por la fila, no por el elemento.
+
+---
+
 ## 5. Borrar un tema
 
 Borra su carpeta `src/styles/themes/<id>/` y sus dos ficheros de `src/core/constants/themes/`, y quita su línea

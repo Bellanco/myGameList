@@ -5,6 +5,47 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.6.4] - 2026-10-07
+
+Una versión de **fluidez y de actividad social**: los temas dejan de animar en balde entre destello y destello, y el
+feed vuelve a contar los juegos que se añaden a la biblioteca, con avisos agrupados más contenidos y sin hora.
+
+### Added
+- **El feed social cuenta también los juegos que se añaden a la biblioteca**, no solo los que pasan de una lista a
+  otra («Ada añadió Celeste a su biblioteca», «comenzó…»). Solo las altas desde el 7 de octubre de 2026: las de antes
+  no se publican de golpe.
+
+### Changed
+- **Los avisos de listas agrupados ocupan como mucho cinco filas.** Siguen cerrados con el primero y «y N más»; al
+  desplegarlos salen los siguientes, los más recientes, y si son más de cinco, la quinta fila dice cuántos quedan.
+- Los avisos de listas ya no muestran la hora (el día lo dice la cabecera); con ella se van las `//` de «Sin futuro»
+  y el `>` de «Solo hay guerra».
+- En «Ladrones de corazones», «comenzó» pasa a turquesa: el rojo de la casa y el de «abandonó» no se distinguían.
+- **Política de privacidad y condiciones de uso actualizadas** (versión 2026-10-07) por la publicación de las altas:
+  hay que volver a aceptarlas para seguir usando el espacio social.
+- **Los temas pesan menos y van más fluidos.** Los efectos que se ven de vez en cuando (el glitch de «Sin futuro» y
+  «Solo hay guerra», el brillo de «Sol y luna», la gota de «Plata y acero») destellan a su ritmo sin quedarse
+  animando entre destello y destello; el parpadeo de los chips de Portal y Cyberpunk se reparte uno de cada cuatro en
+  el mosaico; el fondo de «Plata y acero» sube con la página y su brillo es más tenue; la barra inferior de «Inserte
+  moneda» deja de dar tirones en el móvil. Los temas que no son el de casa descargan 33 kB menos de tipografía.
+
+### Fixed
+- **En el feed, todos los nombres y todos los chips de juego destellaban a la vez** en «Sin futuro» y «Solo hay
+  guerra»: el escalonado no funcionaba. Ahora se reparten por tarjeta.
+- El brillo de los títulos de «Sol y luna» seguía animándose con los efectos desactivados.
+- En «Sin futuro» claro, los títulos llevaban siempre el desdoble rosa y cian; ahora solo durante el destello.
+- El piloto rojo de «Social» en la barra inferior repintaba la pantalla en cada fotograma, en todos los temas.
+
+### Deploy
+- **Sin cambios en reglas de Firestore**: el filtro de movimientos (`feedMoveTabs`, hasta 5 letras) y la versión del
+  consentimiento ya caben en las reglas desplegadas.
+- **Cambia el hash de la CSP** (`public/_headers`), porque el script anti-flash de `index.html` ahora precarga la
+  tipografía solo con el tema de casa. Viajan juntos en el mismo despliegue de Pages.
+- **Se vuelve a pedir la aceptación legal** (`LEGAL_VERSION` 2026-10-07): al entrar, cada persona con espacio social
+  pasa por la puerta antes de seguir.
+- **La reconciliación sube a la versión 7**: la primera vez que cada persona abre el hub con esta versión se
+  publican sus altas desde el 7 de octubre.
+
 ## [1.6.3] - 2026-10-06
 
 Una versión de **tema**: el de casa deja la fragua y pasa a la Tierra Media. «No puedes pasar» se inspira en El

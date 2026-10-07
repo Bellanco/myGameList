@@ -303,6 +303,40 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
     };
   }, [layout]);
 
+  /**
+   * LOS DESTELLOS DEL PILOTO ROJO, uno cada seis segundos y con la pausa de verdad parada.
+   *
+   * Una animación CSS infinita no descansa nunca: aunque el punto pase cinco sextos del ciclo quieto, el navegador
+   * compone la pantalla sesenta veces por segundo mientras la animación exista. En los temas con capas caras de
+   * componer (la veta de «Plata y acero», la retícula de «Neón y fichas») eso perdía fotogramas al hacer scroll
+   * también en el tramo quieto (medido el 07-10-2026: ~14 % en un móvil con la CPU ×4 frente a ~7 % sin
+   * animación). Así que el destello dura lo que dura (`is-destello`, 1,92 s) y el resto del ciclo no hay nada
+   * animándose. El ritmo es el de siempre: la primera pareja a los 4,08 s y luego cada 6 s.
+   */
+  useEffect(() => {
+    const node = navRef.current;
+    if (!node || socialStatus !== 'inactive') return;
+    if (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const destellar = () => {
+      node.querySelectorAll('.bottom-nav-pip.is-inactive').forEach((pip) => pip.classList.add('is-destello'));
+    };
+    // Se retira al acabar, para que la siguiente pareja vuelva a arrancar desde el principio.
+    const apagar = (event: AnimationEvent) => {
+      if (event.animationName === 'navPipAviso') (event.target as Element).classList.remove('is-destello');
+    };
+    node.addEventListener('animationend', apagar);
+    let intervalo: number | undefined;
+    const primero = window.setTimeout(() => {
+      destellar();
+      intervalo = window.setInterval(destellar, 6000);
+    }, 4080);
+    return () => {
+      window.clearTimeout(primero);
+      window.clearInterval(intervalo);
+      node.removeEventListener('animationend', apagar);
+    };
+  }, [socialStatus, layout]);
+
   return (
     <nav
       ref={navRef}

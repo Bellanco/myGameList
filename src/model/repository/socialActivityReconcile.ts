@@ -47,7 +47,9 @@ const RECONCILE_TTL_MS = 12 * 60 * 60 * 1000;
 //   6 = F4: de cada juego queda un solo mensaje por día, el último (ver `keepLatestPerDay`). Sube por lo mismo que
 //       la 5: los «comenzó» que ese día acabaron en «abandonó» o «finalizó» ya están publicados, y es la retirada
 //       la que los quita.
-export const RECONCILE_LOGIC_VERSION = 6;
+//   7 = F4: vuelven las ALTAS, solo las de desde el 07-10-2026 (`LIBRARY_ENTRIES_PUBLISHED_FROM`). Sube para que
+//       las altas hechas entre esa fecha y la llegada de esta versión se publiquen en cuanto se abra el hub.
+export const RECONCILE_LOGIC_VERSION = 7;
 
 // Margen para no re-sellar fechas por diferencias de milisegundos: al guardar una reseña, `_ts` del juego y la
 // fecha de la publicación se estampan en la misma operación, con unos ms de diferencia.

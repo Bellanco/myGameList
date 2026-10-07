@@ -12,11 +12,12 @@
 //
 // Y dos reglas que no salen del sello sino del sentido común del feed:
 //
-// MOVIMIENTOS, NO ALTAS. La lista por la que el juego ENTRÓ en la biblioteca no publica mensaje: apuntar —o
-// terminar, o abandonar— algo al catalogarlo por primera vez no es actividad, es rellenar una ficha, y quien llega
-// nuevo (o importa su colección) copaba el feed de sus amistades con su alta entera. Solo se cuenta lo que va DE
-// una lista A otra, que es exactamente lo que el sello más antiguo del juego distingue de los demás. Ver
-// `libraryEntryTab`.
+// LAS ALTAS, SOLO DESDE EL 07-10-2026. La lista por la que el juego ENTRÓ en la biblioteca no publicaba mensaje
+// (26-08-2026): quien llegaba nuevo, o importaba su colección, copaba el feed de sus amistades con su alta entera.
+// Desde que el feed agrupa por persona, lista y día y enseña como mucho diez títulos por renglón, ese riesgo ya no
+// existe, y el alta vuelve a contar —«añadió Hades a su biblioteca»—, pero SOLO la que ocurre desde esa fecha
+// (`LIBRARY_ENTRIES_PUBLISHED_FROM`): las de antes ya estaban fuera, y publicarlas de golpe llenaría el feed de
+// juegos catalogados hace meses. Ver `libraryEntryTab`.
 //
 // JUGAR, NO CATALOGAR. Un juego que se TERMINÓ hace años y se mete hoy en la biblioteca no anuncia nada
 // («finalizó tal cosa» sería falso), así que el mensaje de Completados exige que el año de `years` coincida con
@@ -59,6 +60,13 @@ export interface SocialMoveEntry {
 
 /** Tope de mensajes de lista que publica un gist: los más recientes. Acota el peso del canal. */
 export const MOVE_ACTIVITY_MAX = 400;
+
+/**
+ * Desde cuándo se publica el ALTA de un juego (la lista por la que entró en la biblioteca). Las de antes siguen sin
+ * publicarse, como hasta ahora: es la fecha en que se decidió contarlas (07-10-2026), y lo que quedó atrás no es
+ * noticia. La lista de deseos no mira esta fecha: su alta se publicó siempre.
+ */
+export const LIBRARY_ENTRIES_PUBLISHED_FROM = Date.UTC(2026, 9, 7);
 
 /**
  * Rango válido de `Date` en ms (±100M días). Un `at` fuera de rango no es una fecha: es un timestamp en
@@ -197,8 +205,8 @@ export interface DeriveMoveActivityOptions {
 /**
  * Proyecta los mensajes de lista de una biblioteca. PURA: sin reloj propio, sin E/S y sin estado.
  *
- * Recorre TODOS los sellos de cada juego menos el de la lista por la que entró (salvo que entrara por la de deseos,
- * cuya alta sí se cuenta), no solo el de la lista en la que
+ * Recorre TODOS los sellos de cada juego menos el de la lista por la que entró si es anterior al 07-10-2026 (salvo
+ * que entrara por la de deseos, cuya alta se cuenta siempre), no solo el de la lista en la que
  * está ahora: un juego apuntado que luego se empezó y se terminó aporta esos dos mensajes con sus dos fechas —el
  * de haberlo apuntado, no, que era su alta—, y eso es lo que hace que la actividad tenga historia el primer día
  * en vez de empezar en blanco. Un juego con un solo sello no aporta nada: acaba de entrar y no se ha movido. Y si
@@ -235,13 +243,17 @@ export function deriveMoveActivity(games: TabData, options: DeriveMoveActivityOp
       const candidates: SocialMoveEntry[] = [];
 
       for (const stampTab of TAB_IDS) {
-        // El alta no es un movimiento… salvo en la lista de deseos: apuntarse un juego que se quiere ES la noticia
-        // («añadió … a su lista de deseos»), y pasarlo luego a próximos es haberlo conseguido («… a su biblioteca»).
-        if (hidden.has(stampTab) || (stampTab === entryTab && stampTab !== 'd')) {
+        if (hidden.has(stampTab)) {
           continue;
         }
         const at = game.enteredAt?.[stampTab];
         if (!isPublishableTimestamp(at)) {
+          continue;
+        }
+        // El alta cuenta desde `LIBRARY_ENTRIES_PUBLISHED_FROM`… y en la lista de deseos, siempre: apuntarse un juego
+        // que se quiere ES la noticia («añadió … a su lista de deseos»), y pasarlo luego a próximos es haberlo
+        // conseguido («… a su biblioteca»).
+        if (stampTab === entryTab && stampTab !== 'd' && Number(at) < LIBRARY_ENTRIES_PUBLISHED_FROM) {
           continue;
         }
         // Completados es la única lista cuyo hecho tiene fecha propia (`years`), y por tanto la única donde se

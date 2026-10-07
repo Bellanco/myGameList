@@ -540,11 +540,17 @@
 }
 /* El renglón en la tipografía de la paleta, sin el tratamiento de titular que llevan los nombres del feed. */
 :root[data-palette="persona"] .hub-feed-move-line { letter-spacing: .01em; }
-/* EL COLOR DEL SUCESO, con la pareja de los botones (§5): empezar en el ROJO de «Pasar a en curso» y próximos en el
+/* EL COLOR DEL SUCESO, con la pareja de los botones (§5): empezaba en el ROJO de «Pasar a en curso» (ver abajo) y próximos en el
    AZUL de Persona 3 de «Pasar a próximos». Próximos llevaba el verde agua de la rampa —casi el verde de terminar—, y
    la lista de deseos, que tenía ese azul, pasa al BLANCO de la paleta (negro en claro): el tercer color de Persona. */
 :root[data-palette="persona"] .hub-feed-activity-item.is-move[data-tab="p"] { --evc: var(--cat-6); }
 :root[data-palette="persona"] .hub-feed-activity-item.is-move[data-tab="d"] { --evc: var(--cat-7); }
+/* Y EMPEZAR, EN TURQUESA (07-10-2026). El rojo de la casa y el rojo anaranjado de abandonar eran el mismo aviso a la
+   vista: ΔE2000 de 7,1 en claro y 14,2 en oscuro, el par más parecido de los ocho temas. El turquesa de la rampa se
+   lee como «arrancar» frente al rojo de «parar», y su vecino más cercano pasa a ser el verde de terminar con 12,4
+   —el margen de los demás temas, que va de 11,5 a 14—; sobre las tres superficies cumple el 3:1 (9,6 en oscuro y
+   4,4 en claro). Es el turquesa que dejó Próximos por parecerse al verde: aquí la distancia se ha medido. */
+:root[data-palette="persona"] .hub-feed-activity-item.is-move[data-tab="e"] { --evc: var(--cat-4); }
 /* El JUEGO del aviso —el rojo de la casa rebajado hacia el gris— no llegaba sobre los velos de color (3,5–4,3:1): un
    rojo más claro de noche y el rojo hondo de la pestaña de día. */
 :root[data-palette="persona"] :is(.is-move, .is-achievements) .hub-feed-move-game:not(.is-plain) { color: #ff8a96; }
@@ -574,17 +580,26 @@
   --lz-rep2: no-repeat;
 }
 
-/* La DERIVA se mueve con `transform` y no con `background-position`: así la resuelve el compositor y no repinta
-   una trama de puntos en cada fotograma. El DESTELLO sí mueve el fondo, pero de una capa sin texto y cada 13 s. */
+/* La DERIVA y el DESTELLO se mueven con `transform` y no con `background-position`: así los resuelve el compositor
+   y no repinta una capa de una pantalla en cada fotograma. El destello movía el fondo hasta el 07-10-2026, y
+   aunque solo se VE cada 13 s, la animación corría entera en bucle: repintaba la capa también en el 72 % quieto.
+   Ahora la capa ES la imagen —260 % de ancho— y se desplaza ella; el recorrido es el mismo al píxel: el canto
+   izquierdo iba de +224 % a -416 % del ancho de la capa ((100 % - 260 %) × -140 % y × 260 %), que en porcentaje
+   de una capa de 260 % son 86,15 % y -160 %. */
 @media (prefers-reduced-motion: no-preference) {
   :root[data-effects="on"][data-palette="persona"] .hub-feed-lienzo-fx::before { animation: lz-pop-drift 9s linear infinite; }
-  :root[data-effects="on"][data-palette="persona"] .hub-feed-lienzo-fx::after { animation: lz-pop-flash 13s cubic-bezier(.5,0,.4,1) infinite; }
+  :root[data-effects="on"][data-palette="persona"] .hub-feed-lienzo-fx::after {
+    right: auto;
+    width: 260%;
+    background-size: 100% 100%;
+    animation: lz-pop-flash 13s cubic-bezier(.5,0,.4,1) infinite;
+  }
 }
 
 @keyframes lz-pop-drift { from { transform: translate(0, 0); } to { transform: translate(9px, -9px); } }
 @keyframes lz-pop-flash {
-  0%, 72% { background-position: -140% 0; }
-  92%, 100% { background-position: 260% 0; }
+  0%, 72% { transform: translateX(86.154%); }
+  92%, 100% { transform: translateX(-160%); }
 }
 
 /* ══ MOMENTOS · EL SELLO DEL LADRÓN al cerrar un juego: la cara de este tema del sello común de

@@ -57,6 +57,15 @@
       meta.setAttribute('content', BG[palette][theme]);
     }
   } catch (e) {}
+  if (!BG[palette] || palette === 'tierramedia') {
+    var fuente = document.createElement('link');
+    fuente.rel = 'preload';
+    fuente.as = 'font';
+    fuente.type = 'font/woff2';
+    fuente.crossOrigin = 'anonymous';
+    fuente.href = '/fonts/atkinson-hyperlegible-next-latin-1e4cea71.woff2';
+    document.head.appendChild(fuente);
+  }
 })();</script>
     <meta name="description" content="Organiza, puntúa y sincroniza tu colección de videojuegos.">
     <!-- `og:type` y `og:url` los reescribe la Function de `/r/:token` para las reseñas compartidas (pasan a
@@ -101,8 +110,9 @@
          DM Sans (base de las paletas) y la letra de la de por defecto entran por `src/styles/index.scss`; las
          fuentes propias de las demás, por su skin, que se carga bajo demanda (ver src/view/hooks/paletteSkin.ts).
          Se precarga la de la paleta POR DEFECTO, Atkinson Hyperlegible Next: es la del primer fotograma de quien
-         no ha elegido tema, y la única que ve quien no tiene espacio social. -->
-    <link rel="preload" href="/fonts/atkinson-hyperlegible-next-latin-1e4cea71.woff2" as="font" type="font/woff2" crossorigin>
+         no ha elegido tema, y la única que ve quien no tiene espacio social. La precarga la pone el script
+         anti-flash de arriba y SOLO con esa paleta (07-10-2026): con un `<link>` fijo, los otros siete temas
+         descargaban 34 kB de una letra que no usan. -->
     <!-- SIN JAVASCRIPT, el armazón de arranque del `<body>` no es una espera: es una mentira. Nadie va a montar
          nada encima, así que sus barras latirían para siempre por delante del aviso que explica lo que pasa.
          Dentro de un `<noscript>` del `<head>`, que es donde el estándar admite un `<style>`: con JS activado el

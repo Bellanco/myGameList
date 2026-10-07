@@ -1,6 +1,7 @@
 import type { TabData } from '../../model/types/game';
 import { useBacklogSnapshot } from '../hooks/useBacklogSnapshot';
 import { useCoverBackfill } from '../hooks/useCoverBackfill';
+import { useEffectPulses } from '../hooks/useEffectPulses';
 import { useShootingStars } from '../hooks/useShootingStars';
 import { useSignatureEffects } from '../hooks/useSignatureEffects';
 
@@ -11,11 +12,13 @@ interface IdleWorkProps {
 /**
  * LO QUE `App` HACE DE FONDO, en un componente que no pinta nada, para poder sacarlo del chunk de arranque.
  *
- * Son cuatro hooks que no hacen falta para el primer pintado:
+ * Son cinco hooks que no hacen falta para el primer pintado:
  *   · Los EFECTOS DE FIRMA (`useSignatureEffects`) responden a una interacción —un clic en un botón, cerrar un
  *     juego, cambiar de tema—, y ninguna puede ocurrir antes de que la pantalla esté delante.
  *   · Las ESTRELLAS FUGACES de Sea of Stars (`useShootingStars`) salen a ratos y al azar: que la primera llegue
  *     unos milisegundos más tarde no se distingue.
+ *   · El RELOJ DE LOS DESTELLOS (`useEffectPulses`) marca cuándo destellan los glitch y brillos de los temas; el
+ *     primero no toca hasta varios segundos después de montar, así que tampoco corre prisa.
  *   · El HISTÓRICO DEL BACKLOG (`useBacklogSnapshot`) y el RECORRIDO DE CARÁTULAS (`useCoverBackfill`) ya
  *     esperaban a que el navegador quedara ocioso; ahora su código también. Se montan desde `App` y no desde el
  *     panel de estadísticas porque la serie del backlog tiene que acumularse se visite o no esa pantalla
@@ -32,6 +35,7 @@ interface IdleWorkProps {
 export function IdleWork({ data }: IdleWorkProps): null {
   useSignatureEffects();
   useShootingStars();
+  useEffectPulses();
   useBacklogSnapshot(data);
   useCoverBackfill(data);
   return null;

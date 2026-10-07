@@ -103,13 +103,23 @@ describe('el feed con movimientos de lista', () => {
     expect(result.current.feedItems.map((item) => item.kind)).toEqual(['post', 'move', undefined]);
   });
 
-  it('por defecto se ven los movimientos de las cuatro listas', () => {
+  it('por defecto se ven los movimientos de las cinco listas', () => {
     const { result } = renderHook(() => useSocialFeed([{
-      moves: [move(1, 'c', T), move(2, 'v', T - DIA), move(3, 'e', T - 2 * DIA), move(4, 'p', T - 3 * DIA)],
+      moves: [move(1, 'c', T), move(2, 'v', T - DIA), move(3, 'e', T - 2 * DIA), move(4, 'p', T - 3 * DIA), move(5, 'd', T - 4 * DIA)],
     }]));
 
-    expect(result.current.feedItems).toHaveLength(4);
-    expect(result.current.feedItems.map((item) => item.kind)).toEqual(['move', 'move', 'move', 'move']);
+    expect(result.current.feedItems).toHaveLength(5);
+    expect(result.current.feedItems.map((item) => item.kind)).toEqual(['move', 'move', 'move', 'move', 'move']);
+  });
+
+  it('apagar deseos en el perfil retira del feed sus avisos y deja los demás', () => {
+    const directory = [{ moves: [move(1, 'c', T), move(2, 'd', T - 1000)] }];
+    const { result, rerender } = renderHook(() => useSocialFeed(directory));
+    expect(result.current.feedItems).toHaveLength(2);
+
+    act(() => { feedMoveTabsPreference.set('cvep~'); });
+    rerender();
+    expect(result.current.feedItems.map((item) => (item as { tab?: string }).tab)).toEqual(['c']);
   });
 
   // ── El agrupado por persona, lista y día ─────────────────────────────────────────────────────────────────
@@ -217,7 +227,7 @@ describe('el feed con movimientos de lista', () => {
     expect(result.current.feedItems.filter((item) => item.kind === 'move')).toHaveLength(2);
   });
 
-  it('con las cuatro apagadas el feed conserva reseñas y publicaciones', () => {
+  it('con todas apagadas el feed conserva reseñas y publicaciones', () => {
     localStorage.setItem('mis-listas-feed-move-tabs', '');
     const { result } = renderHook(() => useSocialFeed([{
       activity: [review(1, T)],
