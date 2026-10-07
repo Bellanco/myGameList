@@ -5,6 +5,25 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Added
+- **El feed social cuenta también los juegos que se añaden a la biblioteca**, no solo los que pasan de una lista a
+  otra («Ada añadió Celeste a su biblioteca», «comenzó…»). Solo las altas desde el 7 de octubre de 2026: las de antes
+  no se publican de golpe.
+
+### Changed
+- **Los avisos de listas enseñan los juegos a la vista.** Varios juegos de una persona a la misma lista el mismo día
+  salen en un solo aviso, con los títulos en columna debajo de la frase, sin tener que desplegar: como mucho los diez
+  más recientes, y «y N más» si hubo más.
+- Los avisos de listas ya no muestran la hora (el día lo dice la cabecera); con ella se van las `//` de «Sin futuro»
+  y el `>` de «Solo hay guerra».
+- **Política de privacidad y condiciones de uso actualizadas** (versión 2026-10-07) por la publicación de las altas:
+  hay que volver a aceptarlas para seguir usando el espacio social.
+- **Los temas pesan menos y van más fluidos.** Los efectos que se ven de vez en cuando (el glitch de «Sin futuro» y
+  «Solo hay guerra», el brillo de «Sol y luna», la gota de «Plata y acero») destellan a su ritmo sin quedarse
+  animando entre destello y destello; el parpadeo de los chips de Portal y Cyberpunk se reparte uno de cada cuatro en
+  el mosaico; el fondo de «Plata y acero» sube con la página y su brillo es más tenue; la barra inferior de «Inserte
+  moneda» deja de dar tirones en el móvil. Los temas que no son el de casa descargan 33 kB menos de tipografía.
+
 ## [1.6.3] - 2026-10-06
 
 Una versión de **tema**: el de casa deja la fragua y pasa a la Tierra Media. «No puedes pasar» se inspira en El
