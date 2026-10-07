@@ -11,9 +11,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   no se publican de golpe.
 
 ### Changed
-- **Los avisos de listas enseñan los juegos a la vista.** Varios juegos de una persona a la misma lista el mismo día
-  salen en un solo aviso, con los títulos en columna debajo de la frase, sin tener que desplegar: como mucho los diez
-  más recientes, y «y N más» si hubo más.
+- **Los avisos de listas agrupados ocupan como mucho cinco filas.** Siguen cerrados con el primero y «y N más»; al
+  desplegarlos salen los siguientes, los más recientes, y si son más de cinco, la quinta fila dice cuántos quedan.
 - Los avisos de listas ya no muestran la hora (el día lo dice la cabecera); con ella se van las `//` de «Sin futuro»
   y el `>` de «Solo hay guerra».
 - **Política de privacidad y condiciones de uso actualizadas** (versión 2026-10-07) por la publicación de las altas:

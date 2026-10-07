@@ -168,12 +168,20 @@ export const SOCIAL_UI = {
       d: 'añadió',
     } satisfies Record<TabId, string>,
     // Lo que va DETRÁS del juego, en las dos listas donde el verbo solo no dice adónde fue: «Ada añadió Hades a su
-    // lista de deseos» / «… a su biblioteca». En un aviso agrupado va detrás del verbo, y los juegos, en columna debajo.
+    // lista de deseos» / «… a su biblioteca».
     moveTail: {
       p: 'a su biblioteca',
       d: 'a su lista de deseos',
     } as Partial<Record<TabId, string>>,
-    // EL AGRUPADO con más de diez juegos: los diez más recientes en columna y, al final, cuántos más hubo.
+    // EL RENGLÓN AGRUPADO (varios juegos a la misma lista el mismo día): «Ada añadió Hades y 3 más…», y la cifra
+    // despliega el resto debajo del primero.
+    moveAnd: ' y ',
+    moveMore: (count: number) => `${count} más`,
+    moveMoreAria: (count: number, expanded: boolean) => {
+      const which = count === 1 ? 'el otro juego' : `los otros ${count} juegos`;
+      return expanded ? `Ocultar ${which}` : `Ver ${which}`;
+    },
+    // Desplegado ocupa como mucho cinco filas; si hay más juegos, la última dice cuántos quedan sin listar.
     moveMoreCount: (count: number) => `y ${count} más`,
     // El nombre del juego abre el detalle de la reseña de su autor cuando existe; si no, es texto y no se ofrece
     // el gesto. El aria-label lo dice con todas las letras porque el color y el subrayado no llegan a un lector.
