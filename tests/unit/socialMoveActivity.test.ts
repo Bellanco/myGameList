@@ -3,13 +3,13 @@
 // Lo que se comprueba aquí, por orden de importancia:
 //  1. Que la proyección es idempotente y estable: la misma biblioteca da los mismos mensajes con las mismas
 //     fechas, publicando una vez o cien. Es lo que permite publicar a rebufo de otra escritura.
-//  2. Que el ALTA de un juego no publica mensaje: solo se cuenta lo que va de una lista a otra, y que de un mismo
+//  2. Que el ALTA de un juego anterior al 07-10-2026 no publica mensaje (las de después sí), y que de un mismo
 //     día queda un solo mensaje por juego: el último («lo empecé y lo abandoné» se cuenta abandonado).
 //  3. Que las listas OCULTAS no publican mensaje. Es la misma promesa que el ajuste de visibilidad ya hacía.
 //  4. Que el campo `enteredAt` en crudo sigue sin poder llegar al gist, por mucho mensaje que se publique.
 //  5. Que los mensajes no le roban el sitio a las reseñas ni se pierden en el round-trip del gist.
 import { describe, expect, it } from 'vitest';
-import { deriveMoveActivity, MOVE_ACTIVITY_MAX, reconcileMoveActivity, reviewActorsByGame, type SocialMoveEntry } from '../../src/core/social/moveActivity';
+import { deriveMoveActivity, LIBRARY_ENTRIES_PUBLISHED_FROM, MOVE_ACTIVITY_MAX, reconcileMoveActivity, reviewActorsByGame, type SocialMoveEntry } from '../../src/core/social/moveActivity';
 import {
   mergeSocialGistData,
   syncMoveActivity,
@@ -95,6 +95,42 @@ describe('F4 — proyección de los mensajes de lista', () => {
     // El mismo juego, ya empezado: sale el mensaje del movimiento y solo ese.
     const movido = tabData({ e: [game({ id: 5, enteredAt: { p: P, e: E } })] });
     expect(deriveMoveActivity(movido).map((entry) => entry.id)).toEqual(['5:e']);
+  });
+
+  // ── LAS ALTAS, DESDE EL 07-10-2026 ────────────────────────────────────────────────────────────────────────
+  it('el alta de después del corte SÍ se publica; la de antes, no', () => {
+    const despues = LIBRARY_ENTRIES_PUBLISHED_FROM + 3_600_000;
+    const antes = LIBRARY_ENTRIES_PUBLISHED_FROM - 3_600_000;
+    const games = tabData({
+      p: [
+        game({ id: 30, enteredAt: { p: despues } }),
+        game({ id: 31, enteredAt: { p: antes } }),
+      ],
+    });
+    expect(deriveMoveActivity(games).map((entry) => entry.id)).toEqual(['30:p']);
+  });
+
+  it('el alta nueva sigue las demás reglas: lo catalogado como terminado años atrás no anuncia nada', () => {
+    const despues = LIBRARY_ENTRIES_PUBLISHED_FROM + 3_600_000;
+    const anio = new Date(despues).getFullYear();
+    const games = tabData({
+      c: [
+        game({ id: 40, enteredAt: { c: despues }, years: [anio] }),
+        game({ id: 41, enteredAt: { c: despues }, years: [2015] }),
+      ],
+    });
+    expect(deriveMoveActivity(games).map((entry) => entry.id)).toEqual(['40:c']);
+  });
+
+  it('dar de alta y empezar el mismo día cuenta una sola cosa: lo último', () => {
+    const alta = LIBRARY_ENTRIES_PUBLISHED_FROM + 3_600_000;
+    const games = tabData({ e: [game({ id: 50, enteredAt: { p: alta, e: alta + 60_000 } })] });
+    expect(deriveMoveActivity(games).map((entry) => entry.id)).toEqual(['50:e']);
+  });
+
+  it('una lista oculta no publica su alta aunque sea nueva', () => {
+    const games = tabData({ v: [game({ id: 60, enteredAt: { v: LIBRARY_ENTRIES_PUBLISHED_FROM + 1 } })] });
+    expect(deriveMoveActivity(games, { hiddenTabs: ['v'] })).toEqual([]);
   });
 
   // ── UN JUEGO, UN MENSAJE AL DÍA: EL ÚLTIMO ───────────────────────────────────────────────────────────────
