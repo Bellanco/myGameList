@@ -592,13 +592,18 @@
    filete de tinta y sombra dura, y la sección activa como una tecla PULSADA de verdad: violeta macizo,
    hundida contra su propio filete. Es la pieza que más se toca en el teléfono, así que es donde el relieve
    tiene que leerse primero. ── */
+/* EL DESENFOQUE Y LA SOMBRA DIFUSA NO SE VEN, Y ESTÁN A PROPÓSITO. El fondo es opaco, así que el
+   `backdrop-filter` de la base no difumina nada, y la segunda sombra va al 1 %. Pero sin las dos, Chrome dejaba
+   sin presentar casi todos los fotogramas de CUALQUIER animación dentro de la barra —el destello del piloto
+   social, el deslizar de la pestaña—, y con ellas no (medido el 07-10-2026 con Playwright y GPU real: en un
+   móvil con la CPU ×4, scroll del listado con el piloto destellando, 17-20 % de fotogramas perdidos → 1-1,6 %).
+   Hacen falta LAS DOS: con solo una seguía igual. Y la sombra difusa necesita 12 px de radio o más: con 8 no
+   bastaba. No se sabe el porqué dentro del compositor; se encontró bisecando la hoja regla a regla. */
 :root[data-palette="arcade"] .bottom-nav-inner {
   border: 2px solid var(--arc-ink);
   border-radius: var(--radius-sm);
   background: linear-gradient(180deg, #2a1745, #1b0f2e);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-  box-shadow: var(--arc-cast-panel);
+  box-shadow: var(--arc-cast-panel), 0 0 12px rgba(0, 0, 0, .01);
 }
 :root[data-palette="arcade"][data-theme="light"] .bottom-nav-inner {
   background: linear-gradient(180deg, #fff, #eadcfa);
