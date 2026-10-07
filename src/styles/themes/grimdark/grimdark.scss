@@ -511,15 +511,8 @@
 :root[data-palette="grimdark"][data-theme="light"] .hub-feed-activity-item.is-move[data-tab="d"] { --evc: #5e3d8a; }
 :root[data-palette="grimdark"][data-theme="light"] .hub-feed-activity-item.is-achievements { --evc: var(--cat-6); }
 /* En el códice el velo vuelve a ser el ligero de antes: sobre el pergamino, el velo denso de la casa bajaba toda la
-   línea —nombre, verbo, juego y hora— por debajo de 4,5:1. El color del suceso lo lleva el filete. */
+   línea —nombre, verbo y juego— por debajo de 4,5:1. El color del suceso lo lleva el filete. */
 :root[data-palette="grimdark"][data-theme="light"] :is(.hub-feed-activity-item.is-move, .hub-feed-activity-item.is-achievements) { background: color-mix(in srgb, var(--evc), transparent 96%) !important; }
-/* La hora en la pixelada de la paleta, con su cursor de terminal: el dato lo canta la máquina. */
-:root[data-palette="grimdark"] .hub-feed-move-hour {
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  color: var(--grim-green);
-}
-:root[data-palette="grimdark"] .hub-feed-move-hour::before { content: '> '; font-weight: 700; }
 
 /* ── §14 · LIENZO DE LA ACTIVIDAD SOCIAL: COGITADOR EN ESPERA + SELLO CON GLITCH ──────────────────────────────
    La zona vacía del feed (ver `.hub-feed-lienzo` en `_layout.scss`). Un rectángulo de fósforo verde bajo

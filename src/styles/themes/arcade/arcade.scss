@@ -775,7 +775,6 @@
   border-color: color-mix(in srgb, var(--evc), transparent 30%) !important;
   box-shadow: none !important;
 }
-:root[data-palette="arcade"] .hub-feed-move-hour { font-family: var(--font-mono); }
 /* EL COLOR DEL SUCESO. La chapa apagada iba con el filete violeta del marco, así que los seis avisos se leían del
    mismo color. Ahora el filete es el del suceso, con las luces de los botones (§5): empezar en el CIAN de «Pasar a
    en curso», próximos en el ORO de moneda de «Pasar a próximos», y el logro en el VIOLETA del acento, que queda

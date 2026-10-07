@@ -153,14 +153,13 @@ export const SOCIAL_UI = {
     feedLoadMore: 'Mostrar más',
     analyzedAt: (date: Date) =>
       `Analizado el ${date.toLocaleDateString(APP_LOCALE, { day: '2-digit' })} de ${date.toLocaleDateString(APP_LOCALE, { month: 'long' })} a las ${date.toLocaleTimeString(APP_LOCALE, { hour: 'numeric', minute: '2-digit' })}`,
-    // F4 — movimientos de lista. La tarjeta es UNA LÍNEA: nombre, verbo, juego y hora. No lleva nota ni texto, así
-    // que la frase ES la tarjeta, y por eso el verbo va en minúscula: se lee seguido del nombre («Ada finalizó…»),
-    // no como un titular. En pasado, porque cuenta algo que ya pasó.
+    // F4 — movimientos de lista. La tarjeta es una FRASE: nombre, verbo y juego. No lleva nota ni texto, así que la
+    // frase ES la tarjeta, y por eso el verbo va en minúscula: se lee seguido del nombre («Ada finalizó…»), no como
+    // un titular. En pasado, porque cuenta algo que ya pasó. Sin hora (07-10-2026): el día lo dice la cabecera.
     //
     // Los verbos son los largos —«comenzó», «finalizó», «abandonó»— y no sus sinónimos cortos: dicen lo mismo con
-    // más cuerpo, que es lo que le falta a un renglón de cuatro palabras. Próximos dice «añadió» porque el mensaje
-    // solo sale cuando el juego LLEGA a esa lista desde otra —desde la de deseos, que es la única que lleva allí—,
-    // y eso es haberlo conseguido: «añadió X a su biblioteca».
+    // más cuerpo, que es lo que le falta a un renglón de cuatro palabras. Próximos dice «añadió … a su biblioteca»:
+    // el juego llega desde la lista de deseos (haberlo conseguido) o es un alta nueva, y en los dos casos es eso.
     moveHeadline: {
       c: 'finalizó',
       v: 'abandonó',
@@ -169,25 +168,13 @@ export const SOCIAL_UI = {
       d: 'añadió',
     } satisfies Record<TabId, string>,
     // Lo que va DETRÁS del juego, en las dos listas donde el verbo solo no dice adónde fue: «Ada añadió Hades a su
-    // lista de deseos» / «… a su biblioteca».
+    // lista de deseos» / «… a su biblioteca». En un aviso agrupado va detrás del verbo, y los juegos, en columna debajo.
     moveTail: {
       p: 'a su biblioteca',
       d: 'a su lista de deseos',
     } as Partial<Record<TabId, string>>,
-    // EL RENGLÓN AGRUPADO (varios juegos a la misma lista el mismo día): «Ada añadió Hades y 3 más…», y la cifra
-    // despliega el resto debajo del primero.
-    moveAnd: ' y ',
-    moveMore: (count: number) => `${count} más`,
-    moveMoreAria: (count: number, expanded: boolean) => {
-      const which = count === 1 ? 'el otro juego' : `los otros ${count} juegos`;
-      return expanded ? `Ocultar ${which}` : `Ver ${which}`;
-    },
-    // Solo la HORA en la tarjeta: el día ya lo dice la cabecera del grupo, y repetirlo era la línea que más peso
-    // le daba a un mensaje que debe pesar poco. La fecha completa sigue disponible al pasar el ratón.
-    movedAtHour: (date: Date) => date.toLocaleTimeString(APP_LOCALE, { hour: '2-digit', minute: '2-digit' }),
-    movedAt: (date: Date) =>
-      `El ${date.toLocaleDateString(APP_LOCALE, { day: '2-digit' })} de ${date.toLocaleDateString(APP_LOCALE, { month: 'long' })} a las ${date.toLocaleTimeString(APP_LOCALE, { hour: 'numeric', minute: '2-digit' })}`,
-    moveRecently: 'Hace poco',
+    // EL AGRUPADO con más de diez juegos: los diez más recientes en columna y, al final, cuántos más hubo.
+    moveMoreCount: (count: number) => `y ${count} más`,
     // El nombre del juego abre el detalle de la reseña de su autor cuando existe; si no, es texto y no se ofrece
     // el gesto. El aria-label lo dice con todas las letras porque el color y el subrayado no llegan a un lector.
     openMoveReviewAria: (name: string, gameName: string) => `Ver el análisis de ${name} sobre ${gameName}`,

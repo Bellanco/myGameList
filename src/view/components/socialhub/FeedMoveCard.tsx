@@ -1,4 +1,3 @@
-import { useId, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import type { SocialMoveFeedGroup, SocialMoveGroupGame } from '../../../viewmodel/social/socialFeed';
 
@@ -10,50 +9,29 @@ interface FeedMoveCardProps {
   openMoveReview: (actorProfileId: string, gameId: number) => void;
 }
 
+/** Cuántos títulos enseña como mucho un renglón agrupado: los más recientes. El resto se cuenta, no se lista. */
+export const MOVE_GROUP_VISIBLE = 10;
+
 /**
- * F4 — MOVIMIENTO DE LISTA. Una línea y se acaba: quién, qué hizo, con qué juego y a qué hora. La tarjeta NO es
- * pulsable —no hay pantalla de «movimiento» que abrir— y de ella solo llevan a algún sitio el autor (su perfil) y,
- * cuando de verdad existe, el nombre del juego (el análisis de ese autor sobre él).
+ * F4 — MOVIMIENTO DE LISTA. Quién, qué hizo y con qué juegos. La tarjeta NO es pulsable —no hay pantalla de
+ * «movimiento» que abrir— y de ella solo llevan a algún sitio el autor (su perfil) y, cuando de verdad existe, el
+ * nombre del juego (el análisis de ese autor sobre él).
  *
- * AGRUPADA COMO LOS LOGROS: los movimientos de una persona a una lista en un día son un solo renglón. La frase
- * nombra el más reciente y dice cuántos más hay («Ada añadió Hades y 3 más…»); la cifra despliega el resto
- * DEBAJO DEL PRIMERO, alineados con él, como una columna de títulos. Así una tarde ordenando la biblioteca no
- * llena el día de todo el mundo, y no se pierde qué juegos fueron.
+ * AGRUPADA COMO LOS LOGROS: los movimientos de una persona a una lista en un día son una sola tarjeta. Con un juego
+ * es una frase («Ada añadió Hades a su lista de deseos»); con varios, la frase sin juego y debajo los títulos en
+ * columna, siempre a la vista, del más reciente al más antiguo y como mucho diez (`MOVE_GROUP_VISIBLE`): si hubo
+ * más, se cierra con «y N más». Así una tarde ordenando la biblioteca no llena el día de todo el mundo, y se ve qué
+ * juegos fueron sin tener que abrir nada (07-10-2026; antes nombraba uno y escondía el resto tras un botón).
  *
- * La hora usa su propia clase y no `hub-feed-date`: varias paletas convierten esa clase en una cápsula o le
- * cuelgan un prefijo («//», «>»), y aquí tiene que ser un dato al final del renglón. El día no se repite: lo dice
- * la cabecera del grupo, y la fecha entera está en el `title`. Es la del más reciente del grupo.
+ * SIN HORA desde el 07-10-2026: el día ya lo dice la cabecera del grupo, y la hora era el dato que menos contaba
+ * de un aviso que debe pesar poco.
  */
 export function FeedMoveCard({ entry, SOCIAL_UI, ownershipClass, openProfileDetail, openMoveReview }: FeedMoveCardProps) {
-  const [expanded, setExpanded] = useState(false);
-  const restId = useId();
   const nombreAutor = entry.profileDisplayName || SOCIAL_UI.requests.unknownUser;
-  const itemDate = new Date(entry.updatedAt || '');
-  const hasValidDate = !Number.isNaN(itemDate.getTime());
-  const fechaCompleta = hasValidDate ? SOCIAL_UI.feed.movedAt(itemDate) : SOCIAL_UI.feed.moveRecently;
-  const [first, ...rest] = entry.games;
+  const visibles = entry.games.slice(0, MOVE_GROUP_VISIBLE);
+  const ocultos = entry.games.length - visibles.length;
+  const agrupado = entry.games.length > 1;
   const tail = SOCIAL_UI.feed.moveTail[entry.tab];
-  const bodyRef = useRef<HTMLDivElement>(null);
-  const firstRef = useRef<HTMLSpanElement>(null);
-  const [indent, setIndent] = useState(0);
-
-  // LOS DESPLEGADOS, DEBAJO DEL PRIMER TÍTULO: la sangría es donde empieza el primero dentro del cuerpo. Se mide
-  // al abrir y cada vez que el aviso cambia de ancho, porque la frase parte distinto (y el primero se mueve) según
-  // el sitio que haya. Si el primero cae a una línea nueva, su `offsetLeft` es 0 y la columna empieza al canto.
-  useLayoutEffect(() => {
-    if (!expanded) return undefined;
-    const body = bodyRef.current;
-    const medir = () => {
-      const nodo = firstRef.current;
-      if (!body || !nodo) return;
-      setIndent(nodo.getBoundingClientRect().left - body.getBoundingClientRect().left);
-    };
-    medir();
-    if (!body || typeof ResizeObserver === 'undefined') return undefined;
-    const observer = new ResizeObserver(medir);
-    observer.observe(body);
-    return () => observer.disconnect();
-  }, [expanded]);
 
   const gameName = (game: SocialMoveGroupGame) =>
     game.reviewActorId ? (
@@ -73,7 +51,7 @@ export function FeedMoveCard({ entry, SOCIAL_UI, ownershipClass, openProfileDeta
 
   return (
     <article
-      className={`hub-feed-card hub-feed-activity-item is-move ${ownershipClass}${rest.length ? ' is-grouped' : ''}`}
+      className={`hub-feed-card hub-feed-activity-item is-move ${ownershipClass}${agrupado ? ' is-grouped' : ''}`}
       /* El tipo de lista viaja al CSS para que el aviso lleve el color de lo que pasó: terminar es verde, abandonar
          rojo, empezar el acento y añadir el cuarto tono. Es un dato que ya está aquí; sacarlo evita que la hoja
          tenga que adivinarlo. */
@@ -82,53 +60,34 @@ export function FeedMoveCard({ entry, SOCIAL_UI, ownershipClass, openProfileDeta
     >
       {/* NI ICONO NI FOTO. El aviso es una FRASE, y la frase ya lo dice todo: quién, qué hizo y con qué juego. El
           color del filete ya distingue terminar de abandonar. El nombre sigue siendo el enlace al perfil. */}
-      <div className="hub-feed-move-body" ref={bodyRef}>
+      <div className="hub-feed-move-body">
         <p className="hub-feed-move-line">
           <button className="hub-name-link hub-feed-move-who" type="button" onClick={() => openProfileDetail(entry.profileId)}>
             {nombreAutor}
           </button>
           {' '}
           <span className="hub-feed-move-verb">{SOCIAL_UI.feed.moveHeadline[entry.tab]}</span>
-          {' '}
-          <span ref={firstRef}>{gameName(first)}</span>
-          {rest.length ? (
+          {agrupado ? null : (
             <>
-              <span className="hub-feed-move-verb">{SOCIAL_UI.feed.moveAnd}</span>
-              <button
-                className="hub-feed-move-game hub-feed-move-more"
-                type="button"
-                aria-expanded={expanded}
-                aria-controls={restId}
-                aria-label={SOCIAL_UI.feed.moveMoreAria(rest.length, expanded)}
-                onClick={() => setExpanded((open) => !open)}
-              >
-                {SOCIAL_UI.feed.moveMore(rest.length)}
-              </button>
+              {' '}
+              {gameName(entry.games[0])}
             </>
-          ) : null}
+          )}
           {tail ? (
             <>
               {' '}
               <span className="hub-feed-move-verb">{tail}</span>
             </>
           ) : null}
-          {' '}
-          <span className="hub-feed-move-hour" title={fechaCompleta}>
-            {hasValidDate ? SOCIAL_UI.feed.movedAtHour(itemDate) : SOCIAL_UI.feed.moveRecently}
-          </span>
         </p>
-        {rest.length ? (
-          // `hub-feed-move-line` también en la lista: los títulos de debajo tienen que medir lo mismo que el de la
-          // frase, y varias paletas cambian el cuerpo del renglón desde esa clase.
-          <ul
-            className="hub-feed-move-line hub-feed-move-rest"
-            id={restId}
-            hidden={!expanded}
-            style={{ '--move-rest-indent': `${indent}px` } as CSSProperties}
-          >
-            {rest.map((game) => (
+        {agrupado ? (
+          // `hub-feed-move-line` también en la lista: los títulos de debajo tienen que medir lo mismo que la frase, y
+          // varias paletas cambian el cuerpo del renglón desde esa clase.
+          <ul className="hub-feed-move-line hub-feed-move-rest">
+            {visibles.map((game) => (
               <li key={game.id}>{gameName(game)}</li>
             ))}
+            {ocultos > 0 ? <li className="hub-feed-move-verb">{SOCIAL_UI.feed.moveMoreCount(ocultos)}</li> : null}
           </ul>
         ) : null}
       </div>

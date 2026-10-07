@@ -666,13 +666,9 @@
    casi el mismo color, uno al lado del otro. En la antigua «empezó» es azul, así que ahí el logro sigue en ámbar. */
 :root[data-palette="portal"] .hub-feed-activity-item.is-achievements { --evc: #e9eef1; }
 :root[data-palette="portal"][data-theme="light"] .hub-feed-activity-item.is-achievements { --evc: var(--warn); }
-/* Sobre el velo teñido, los dos textos más tenues no llegaban: la HORA (en `--text-dim`, 3,3:1 en oscuro sobre el
-   velo blanco) sube al gris de texto atenuado, y el JUEGO en claro —la mezcla de acento y gris de la casa, que ya
-   se quedaba en 3,2:1 sobre el pergamino— toma el marrón de enlace de la paleta. */
-:root[data-palette="portal"] :is(.is-move, .is-achievements) .hub-feed-move-hour { color: var(--text-muted); }
+/* Sobre el velo teñido, el JUEGO en claro —la mezcla de acento y gris de la casa, que ya se quedaba en 3,2:1 sobre
+   el pergamino— no llegaba: toma el marrón de enlace de la paleta. */
 :root[data-palette="portal"][data-theme="light"] .is-move .hub-feed-move-game:not(.is-plain) { color: var(--fg-link); }
-/* Monoespaciada como el resto de los datos de la paleta: la hora es una lectura de instrumento. */
-:root[data-palette="portal"] .hub-feed-move-hour { font-family: var(--font-mono); }
 
 /* El AVISO DE LOGRO · placa de la sala: canto recto y junta clara entre piezas. Sin `clip-path`, así que aquí la
    sombra de rareza se queda como está y solo se suma la junta. */

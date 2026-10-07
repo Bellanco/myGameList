@@ -696,12 +696,6 @@
   border-left-color: var(--evc) !important;
   box-shadow: none !important;
 }
-/* La hora, en la monoespaciada de la paleta y con el mismo prefijo de dato que usan sus fechas. */
-:root[data-palette="cyberpunk"] .hub-feed-move-hour {
-  font-family: var(--font-mono);
-  letter-spacing: .02em;
-}
-:root[data-palette="cyberpunk"] .hub-feed-move-hour::before { content: '// '; color: var(--cyber-cyan-fg); font-weight: 700; }
 /* EL COLOR DEL SUCESO, con los neones de los botones (§5): empezar en el CIAN de «Pasar a en curso», próximos en el
    MAGENTA de «Pasar a próximos», la lista de deseos en el VIOLETA de lo elegido y el logro en el AMARILLO de la
    firma. Antes deseos llevaba el verde agua de la rampa —casi el verde de terminar— y empezar el amarillo, que

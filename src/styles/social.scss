@@ -560,27 +560,23 @@
 
 .hub-feed-move-game.is-plain:hover { color: var(--text-muted); text-decoration: none; }
 
-/* El cuerpo del aviso: el renglón y, en uno agrupado, los juegos que se despliegan debajo. Ocupa el hueco que
-   antes ocupaba el renglón suelto, para que la burbuja siga abrazando el texto. */
+/* El cuerpo del aviso: la frase y, en uno agrupado, los juegos en columna debajo. Ocupa el hueco que antes ocupaba
+   el renglón suelto, para que la burbuja siga abrazando el texto. */
 .hub-feed-move-body {
   flex: 1 1 auto;
   min-width: 0;
 }
 
-/* «y 3 más»: se pulsa como un nombre de juego —mismo color y peso— porque es lo que esconde, más nombres. */
-.hub-feed-move-more { white-space: nowrap; }
-
-/* Los que no caben en la frase, uno por línea y SIN VIÑETAS, en columna debajo del primer título (la sangría la
-   mide la tarjeta: `--move-rest-indent`). Es la continuación de la misma frase, no una lista que compita con ella. */
+/* Los juegos de un aviso agrupado, uno por línea y SIN VIÑETAS, en columna debajo de la frase y con una sangría
+   corta: son la continuación de la misma frase («Ada añadió a su lista de deseos…»), no una lista que compita con
+   ella. Como mucho diez, y el «y N más» del final va en el gris del verbo porque no es un juego. */
 .hub-feed-move-rest {
   display: grid;
   gap: .15rem;
   margin: .25rem 0 0;
-  padding: 0 0 0 var(--move-rest-indent, 0);
+  padding: 0 0 0 1rem;
   list-style: none;
 }
-
-.hub-feed-move-rest[hidden] { display: none; }
 
 
 .hub-avatar-img { object-fit: cover; background: var(--surface-hover); }

@@ -10,6 +10,7 @@ import userEvent from '@testing-library/user-event';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { YEAR_SUMMARY_UI } from '../../src/core/constants/yearSummaryLabels';
 import { SocialFeedScreen } from '../../src/view/components/socialhub/SocialFeedScreen';
+import { MOVE_GROUP_VISIBLE } from '../../src/view/components/socialhub/FeedMoveCard';
 import type {
   SocialFeedDayGroup,
   SocialFeedItem,
@@ -93,25 +94,14 @@ function renderFeed(
 }
 
 describe('renglón de movimiento de lista', () => {
-  it('lo cuenta en una línea: autor, verbo, juego y hora', () => {
+  it('lo cuenta en una frase: autor, verbo y juego, sin hora', () => {
     renderFeed([move({ tab: 'c' })]);
 
     const card = screen.getByRole('listitem');
-    // Un solo renglón, en este orden y sin nada más. La hora se compone con el mismo formateador que la vista: si se
-    // escribe a mano, el test solo pasa en la zona horaria de quien lo escribió (en CI, que va en UTC, fallaba).
-    expect(card.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      `Ada finalizó Hollow Knight ${SOCIAL_UI.feed.movedAtHour(new Date(AT))}`,
-    );
-  });
-
-  it('la hora sustituye a la fecha completa, que queda al pasar el ratón', () => {
-    renderFeed([move({ tab: 'c' })]);
-
-    const hora = screen.getByText(SOCIAL_UI.feed.movedAtHour(new Date(AT)));
-    expect(hora).toBeInTheDocument();
-    // El día no se repite en la tarjeta (lo da la cabecera del grupo), pero sigue disponible en el título.
-    expect(hora).toHaveAttribute('title', SOCIAL_UI.feed.movedAt(new Date(AT)));
-    expect(screen.queryByText(SOCIAL_UI.feed.movedAt(new Date(AT)))).not.toBeInTheDocument();
+    // Una sola frase, en este orden y sin nada más: desde el 07-10-2026 la tarjeta no lleva hora (el día lo dice la
+    // cabecera del grupo).
+    expect(card.textContent?.replace(/\s+/g, ' ').trim()).toBe('Ada finalizó Hollow Knight');
+    expect(card.querySelector('[title]')).toBeNull();
   });
 
   it('un verbo por lista, en minúscula porque se lee seguido del nombre', () => {
@@ -124,16 +114,15 @@ describe('renglón de movimiento de lista', () => {
   });
 
   it('deseos y próximos dicen adónde fue el juego, detrás de su nombre', () => {
-    const hora = SOCIAL_UI.feed.movedAtHour(new Date(AT));
     const { unmount } = renderFeed([move({ tab: 'd' })]);
     expect(screen.getByRole('listitem').textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      `Ada añadió Hollow Knight a su lista de deseos ${hora}`,
+      'Ada añadió Hollow Knight a su lista de deseos',
     );
     unmount();
 
     renderFeed([move({ tab: 'p', id: '7:p' })]);
     expect(screen.getByRole('listitem').textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      `Ada añadió Hollow Knight a su biblioteca ${hora}`,
+      'Ada añadió Hollow Knight a su biblioteca',
     );
   });
 
@@ -194,10 +183,10 @@ describe('renglón de movimiento de lista', () => {
     expect(screen.getByRole('listitem').className).toContain('is-own-activity');
   });
 
-  it('sin fecha utilizable no inventa una', () => {
+  it('sin fecha utilizable se sigue leyendo igual: la tarjeta no la enseña', () => {
     renderFeed([move({ tab: 'c', updatedAt: Number.NaN })]);
 
-    expect(screen.getByText(SOCIAL_UI.feed.moveRecently)).toBeInTheDocument();
+    expect(screen.getByRole('listitem').textContent?.replace(/\s+/g, ' ').trim()).toBe('Ada finalizó Hollow Knight');
   });
 });
 
@@ -347,43 +336,41 @@ describe('SocialFeedScreen — tarjeta del resumen del año', () => {
   });
 });
 
-describe('renglón agrupado: varios juegos a la misma lista el mismo día', () => {
-  const hora = SOCIAL_UI.feed.movedAtHour(new Date(AT));
+describe('aviso agrupado: varios juegos a la misma lista el mismo día', () => {
+  const texto = (el: Element | null) => el?.textContent?.replace(/\s+/g, ' ').trim();
+  // La tarjeta por su clase: los títulos de la columna también son `listitem`, así que el rol ya no la señala sola.
+  const tarjeta = () => document.querySelector('article.is-move') as HTMLElement;
 
-  it('con dos juegos, nombra el primero y «y 1 más» despliega el otro', () => {
-    renderFeed([move({ tab: 'd', games: [game(1, 'Wolverine'), game(2, 'Onimusha')] })]);
+  it('la frase va sin juego y los juegos, todos a la vista, en columna debajo', () => {
+    renderFeed([move({ tab: 'd', games: [game(1, 'Wolverine'), game(2, 'Onimusha'), game(3, 'Hades')] })]);
 
-    const line = screen.getByRole('listitem').querySelector('.hub-feed-move-line') as HTMLElement;
-    expect(line.textContent?.replace(/\s+/g, ' ').trim()).toBe(`Ada añadió Wolverine y 1 más a su lista de deseos ${hora}`);
-    expect(screen.getByRole('button', { name: SOCIAL_UI.feed.moveMoreAria(1, false) })).toBeInTheDocument();
+    const card = tarjeta();
+    expect(texto(card.querySelector('p.hub-feed-move-line'))).toBe('Ada añadió a su lista de deseos');
+    // Del más reciente al más antiguo, en el orden en que llegan, y sin botón que despliegue: se ven ya.
+    expect([...card.querySelectorAll('.hub-feed-move-rest li')].map(texto)).toEqual(['Wolverine', 'Onimusha', 'Hades']);
+    for (const nombre of ['Wolverine', 'Onimusha', 'Hades']) expect(within(card).getByText(nombre)).toBeVisible();
+    expect(within(card).queryByRole('button', { name: /más/ })).toBeNull();
   });
 
-  it('con más, nombra el más reciente y «y N más» despliega el resto debajo', async () => {
-    const user = userEvent.setup();
-    renderFeed([move({
-      tab: 'd',
-      games: [game(1, 'Wolverine'), game(2, 'Onimusha'), game(3, 'Mouse P.I. for Hire'), game(4, 'Hades')],
-    })]);
+  it('las listas sin destino escrito también: «Ada finalizó» y los juegos debajo', () => {
+    renderFeed([move({ tab: 'c', games: [game(1, 'Wolverine'), game(2, 'Onimusha')] })]);
+    expect(texto(tarjeta().querySelector('p.hub-feed-move-line'))).toBe('Ada finalizó');
+  });
 
-    const card = screen.getByRole('listitem');
-    const line = card.querySelector('.hub-feed-move-line') as HTMLElement;
-    expect(line.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      `Ada añadió Wolverine y 3 más a su lista de deseos ${hora}`,
-    );
+  it(`como mucho ${MOVE_GROUP_VISIBLE}, los más recientes, y «y N más» cuenta el resto sin listarlo`, () => {
+    const juegos = Array.from({ length: MOVE_GROUP_VISIBLE + 4 }, (_unused, i) => game(i + 1, `Juego ${i + 1}`));
+    renderFeed([move({ tab: 'd', games: juegos })]);
 
-    // Plegado, el resto no se ve; al pulsar la cifra, aparece debajo, y al volver a pulsarla se oculta.
-    const more = within(card).getByRole('button', { name: SOCIAL_UI.feed.moveMoreAria(3, false) });
-    expect(more).toHaveAttribute('aria-expanded', 'false');
-    expect(within(card).queryByText('Hades')).not.toBeVisible();
+    const filas = [...tarjeta().querySelectorAll('.hub-feed-move-rest li')].map(texto);
+    expect(filas).toEqual([...juegos.slice(0, MOVE_GROUP_VISIBLE).map((j) => j.gameName), SOCIAL_UI.feed.moveMoreCount(4)]);
+    expect(screen.queryByText(`Juego ${MOVE_GROUP_VISIBLE + 1}`)).toBeNull();
+  });
 
-    await user.click(more);
-    expect(more).toHaveAttribute('aria-expanded', 'true');
-    expect(within(card).getByText('Onimusha')).toBeVisible();
-    expect(within(card).getByText('Mouse P.I. for Hire')).toBeVisible();
-    expect(within(card).getByText('Hades')).toBeVisible();
-
-    await user.click(more);
-    expect(within(card).queryByText('Hades')).not.toBeVisible();
+  it(`con exactamente ${MOVE_GROUP_VISIBLE} no dice «y 0 más»`, () => {
+    const juegos = Array.from({ length: MOVE_GROUP_VISIBLE }, (_unused, i) => game(i + 1, `Juego ${i + 1}`));
+    renderFeed([move({ tab: 'd', games: juegos })]);
+    expect(tarjeta().querySelectorAll('.hub-feed-move-rest li')).toHaveLength(MOVE_GROUP_VISIBLE);
+    expect(screen.queryByText(/más$/)).toBeNull();
   });
 
   it('dentro del grupo, cada juego con análisis sigue abriéndolo', async () => {
@@ -394,7 +381,6 @@ describe('renglón agrupado: varios juegos a la misma lista el mismo día', () =
       games: [game(1, 'Wolverine'), game(2, 'Onimusha'), game(3, 'Hades', 'pseudonimo-del-gist')],
     })], { openMoveReview });
 
-    await user.click(screen.getByRole('button', { name: SOCIAL_UI.feed.moveMoreAria(2, false) }));
     await user.click(screen.getByRole('button', { name: SOCIAL_UI.feed.openMoveReviewAria('Ada', 'Hades') }));
 
     expect(openMoveReview).toHaveBeenCalledWith('pseudonimo-del-gist', 3);

@@ -1143,16 +1143,6 @@
 .hub-feed-activity-item.is-move.is-own-activity,
 .hub-feed-activity-item.is-achievements.is-own-activity { align-self: center; background: color-mix(in srgb, var(--evc), transparent 86%); }
 
-/* La hora, al final del renglón. Clase propia y NO `hub-feed-date`: varias paletas convierten esa clase en una
-   cápsula o le cuelgan un prefijo («//», «>»), y aquí tiene que ser el dato más pequeño de la línea. */
-.hub-feed-move-hour {
-  font-size: var(--fs-2xs);
-  /* `--text-muted` y no `--text-dim`: va sobre el velo teñido del aviso, y el gris más tenue se quedaba por debajo de
-     4,5:1 en varias paletas. Sigue siendo el dato más pequeño de la línea por cuerpo, no por apagado. */
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
 
 /* "Tuyo" = a la derecha, con leve tinte; ajeno = a la izquierda, superficie plana */
 .hub-feed-activity-item.is-own-activity {
