@@ -334,17 +334,20 @@
    mismo recorrido. La sombra verde IDLE del h2 (0 0 9px …) se ancla en los fotogramas apagados para no pisar el
    glow base. ══ */
 @media (prefers-reduced-motion: no-preference) {
+  /* EL DESTELLO, DE UNA VEZ (como el de «Sin futuro», ver allí el porqué): solo el 2 % del ciclo que se veía
+     —240 y 280 ms, los de 12 y 14 s— y lo lanza el pulso que le toca (`data-pulso`,
+     `view/hooks/useEffectPulses.ts`). Los puntos 95,6 / 96,1 / 96,6 % caen en el 10, el 35 y el 60 %. */
   @keyframes grim-glitch-text {
-    0%, 95.4%, 97.4%, 100% { transform: none; clip-path: inset(-3px); text-shadow: 0 0 9px rgba(67, 245, 88, .45); }
-    95.6% { transform: translate(-2px, 1px); clip-path: inset(8% 0 58% 0); text-shadow: -2px 0 rgba(224, 169, 43, .9), 2px 0 rgba(67, 245, 88, .85), 0 0 9px rgba(67, 245, 88, .45); }
-    96.1% { transform: translate(2px, -1px); clip-path: inset(62% 0 10% 0); text-shadow: 2px 0 rgba(224, 169, 43, .85), -2px 0 rgba(67, 245, 88, .8), 0 0 9px rgba(67, 245, 88, .45); }
-    96.6% { transform: translate(-1px, 0); clip-path: inset(34% 0 34% 0); text-shadow: -1px 0 rgba(224, 169, 43, .8), 1px 0 rgba(67, 245, 88, .75), 0 0 9px rgba(67, 245, 88, .45); }
+    0%, 100% { transform: none; clip-path: inset(-3px); text-shadow: 0 0 9px rgba(67, 245, 88, .45); }
+    10% { transform: translate(-2px, 1px); clip-path: inset(8% 0 58% 0); text-shadow: -2px 0 rgba(224, 169, 43, .9), 2px 0 rgba(67, 245, 88, .85), 0 0 9px rgba(67, 245, 88, .45); }
+    35% { transform: translate(2px, -1px); clip-path: inset(62% 0 10% 0); text-shadow: 2px 0 rgba(224, 169, 43, .85), -2px 0 rgba(67, 245, 88, .8), 0 0 9px rgba(67, 245, 88, .45); }
+    60% { transform: translate(-1px, 0); clip-path: inset(34% 0 34% 0); text-shadow: -1px 0 rgba(224, 169, 43, .8), 1px 0 rgba(67, 245, 88, .75), 0 0 9px rgba(67, 245, 88, .45); }
   }
   @keyframes grim-glitch-slice {
-    0%, 95.4%, 97.4%, 100% { transform: none; clip-path: inset(0 0 0 0); }
-    95.6% { transform: translate(-2px, 0); clip-path: inset(10% 0 60% 0); }
-    96.1% { transform: translate(2px, 0); clip-path: inset(64% 0 8% 0); }
-    96.6% { transform: translate(-1px, 0); clip-path: inset(36% 0 36% 0); }
+    0%, 100% { transform: none; clip-path: inset(0 0 0 0); }
+    10% { transform: translate(-2px, 0); clip-path: inset(10% 0 60% 0); }
+    35% { transform: translate(2px, 0); clip-path: inset(64% 0 8% 0); }
+    60% { transform: translate(-1px, 0); clip-path: inset(36% 0 36% 0); }
   }
   @keyframes grim-glitch-jitter {
     0%, 94.6%, 96.2%, 100% { transform: translate(0, 0); }
@@ -352,13 +355,17 @@
     95.3% { transform: translate(2px, -1px); }
     95.8% { transform: translate(-1px, 0); }
   }
-  :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) h2 { animation: grim-glitch-text 12s ease-in-out infinite; }
-  :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) .hub-name-link,
-  :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) .hub-detail-profile-link { animation: grim-glitch-slice 14s ease-in-out infinite; }
-  /* Por la TARJETA y no por el enlace: el nombre es el único botón de su `<h3>`, así que un `:nth-of-type` sobre
-     él valía siempre 1 y los nombres de todo el feed se cortaban a la vez. */
-  :root[data-palette="grimdark"]:not([data-theme="light"]) .hub-feed-card:nth-of-type(2n) .hub-name-link { animation-delay: -5s; }
-  :root[data-palette="grimdark"]:not([data-theme="light"]) .hub-feed-card:nth-of-type(3n) .hub-name-link { animation-delay: -8.5s; }
+  /* Los títulos en el pulso 0 (cada 12 s, como antes); los nombres en tres tandas, cada uno cada 12 s (antes, 14).
+     Por la TARJETA y no por el enlace: el nombre es el único botón de su `<h3>`, así que un `:nth-of-type` sobre él
+     vale siempre 1 —que es como estaba, y los nombres de todo el feed se cortaban a la vez—. */
+  :root[data-effects="on"][data-palette="grimdark"][data-pulso="0"]:not([data-theme="light"]) h2 { animation: grim-glitch-text .24s ease-in-out; }
+  :root[data-effects="on"][data-palette="grimdark"][data-pulso="1"]:not([data-theme="light"]) .hub-feed-card:nth-of-type(3n+1) .hub-name-link,
+  :root[data-effects="on"][data-palette="grimdark"][data-pulso="1"]:not([data-theme="light"]) .hub-name-link:not(.hub-feed-card .hub-name-link),
+  :root[data-effects="on"][data-palette="grimdark"][data-pulso="1"]:not([data-theme="light"]) .hub-detail-profile-link,
+  :root[data-effects="on"][data-palette="grimdark"][data-pulso="3"]:not([data-theme="light"]) .hub-feed-card:nth-of-type(3n+2) .hub-name-link,
+  :root[data-effects="on"][data-palette="grimdark"][data-pulso="5"]:not([data-theme="light"]) .hub-feed-card:nth-of-type(3n) .hub-name-link {
+    animation: grim-glitch-slice .28s ease-in-out;
+  }
   :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) .fab { animation: grim-glitch-jitter 16s ease-in-out infinite; }
   :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) .fab-roulette { animation: grim-glitch-jitter 16s ease-in-out infinite; animation-delay: -6s; }
 }

@@ -70,22 +70,25 @@
    estado base no se pisa: la sombra estática del h2, el notch de los botones, el translateY del hover, etc. quedan
    intactos entre destellos. Todo bajo `prefers-reduced-motion: no-preference` para respetar accesibilidad. ── */
 @media (prefers-reduced-motion: no-preference) {
-  /* CLAVE del confinamiento: cada propiedad animada (transform/clip-path/text-shadow) se ANCLA a su valor
-     "apagado" en 0%/95.4%/97.4%/100%, así el destello queda encerrado en ~2% del ciclo y el resto del tiempo el
-     elemento está idéntico a su base. El h2 conserva su aberración estática (idle text-shadow = ese valor) y no
-     se recorta (idle clip-path = inset(-3px), expandido, no recorta la sombra). */
+  /* EL DESTELLO, DE UNA VEZ. Eran animaciones infinitas de 11 y 13 s con el corte encerrado en el 2 % del ciclo
+     (del 95,4 % al 97,4 %); como recortan con `clip-path` y desdoblan con `text-shadow`, que el compositor no
+     mueve, el navegador las recalculaba en cada fotograma también en el 98 % quieto. Ahora son solo ese 2 % —los
+     mismos fotogramas, a la misma velocidad: 220 y 260 ms— y las lanza el pulso que les toca
+     (`data-pulso`, `view/hooks/useEffectPulses.ts`), así que entre destellos no hay nada animándose. Los puntos
+     intermedios (95,6 / 96,1 / 96,6 %) caen en el 10, el 35 y el 60 % del destello. El h2 empieza y acaba en su
+     aberración estática, la que ya tiene de base. */
   @keyframes cyber-glitch-text {
-    0%, 95.4%, 97.4%, 100% { transform: none; clip-path: inset(-3px); text-shadow: -1px 0 rgba(255, 42, 109, .5), 1px 0 rgba(0, 240, 255, .5); }
-    95.6% { transform: translate(-2px, 1px); clip-path: inset(8% 0 58% 0); text-shadow: -3px 0 rgba(255, 42, 109, .9), 3px 0 rgba(0, 240, 255, .9); }
-    96.1% { transform: translate(2px, -1px); clip-path: inset(62% 0 10% 0); text-shadow: 3px 0 rgba(255, 42, 109, .85), -3px 0 rgba(0, 240, 255, .85); }
-    96.6% { transform: translate(-1px, 0); clip-path: inset(34% 0 34% 0); text-shadow: -2px 0 rgba(255, 42, 109, .8), 2px 0 rgba(0, 240, 255, .8); }
+    0%, 100% { transform: none; clip-path: inset(-3px); text-shadow: -1px 0 rgba(255, 42, 109, .5), 1px 0 rgba(0, 240, 255, .5); }
+    10% { transform: translate(-2px, 1px); clip-path: inset(8% 0 58% 0); text-shadow: -3px 0 rgba(255, 42, 109, .9), 3px 0 rgba(0, 240, 255, .9); }
+    35% { transform: translate(2px, -1px); clip-path: inset(62% 0 10% 0); text-shadow: 3px 0 rgba(255, 42, 109, .85), -3px 0 rgba(0, 240, 255, .85); }
+    60% { transform: translate(-1px, 0); clip-path: inset(34% 0 34% 0); text-shadow: -2px 0 rgba(255, 42, 109, .8), 2px 0 rgba(0, 240, 255, .8); }
   }
   /* Enlaces "ver perfil": solo micro-slice + jitter (sin text-shadow, para conservar el halo cian del hover). */
   @keyframes cyber-glitch-slice {
-    0%, 95.4%, 97.4%, 100% { transform: none; clip-path: inset(0 0 0 0); }
-    95.6% { transform: translate(-2px, 0); clip-path: inset(10% 0 60% 0); }
-    96.1% { transform: translate(2px, 0); clip-path: inset(64% 0 8% 0); }
-    96.6% { transform: translate(-1px, 0); clip-path: inset(36% 0 36% 0); }
+    0%, 100% { transform: none; clip-path: inset(0 0 0 0); }
+    10% { transform: translate(-2px, 0); clip-path: inset(10% 0 60% 0); }
+    35% { transform: translate(2px, 0); clip-path: inset(64% 0 8% 0); }
+    60% { transform: translate(-1px, 0); clip-path: inset(36% 0 36% 0); }
   }
   @keyframes cyber-glitch-jitter {
     0%, 94.6%, 96.2%, 100% { transform: translate(0, 0); }
@@ -101,14 +104,18 @@
     97.1% { transform: translate(2px, 1px); }
     97.6% { transform: translate(-1px, -1px); }
   }
-  :root[data-palette="cyberpunk"] h2 { animation: cyber-glitch-text 11s ease-in-out infinite; }
-  :root[data-palette="cyberpunk"] .hub-name-link,
-  :root[data-palette="cyberpunk"] .hub-detail-profile-link { animation: cyber-glitch-slice 13s ease-in-out infinite; }
-  /* Desincroniza los enlaces repetidos del feed para que no destellen todos a la vez. */
-  /* Por la TARJETA y no por el enlace: el nombre es el único botón de su `<h3>`, así que un `:nth-of-type` sobre
-     él valía siempre 1 y los nombres de todo el feed se cortaban a la vez. */
-  :root[data-palette="cyberpunk"] .hub-feed-card:nth-of-type(2n) .hub-name-link { animation-delay: -5s; }
-  :root[data-palette="cyberpunk"] .hub-feed-card:nth-of-type(3n) .hub-name-link { animation-delay: -8.5s; }
+  /* LOS TÍTULOS, en el pulso 0: uno cada 12 s (antes, 11). */
+  :root[data-effects="on"][data-palette="cyberpunk"][data-pulso="0"] h2 { animation: cyber-glitch-text .22s ease-in-out; }
+  /* LOS NOMBRES, en tres tandas para que no se corten todos a la vez: cada uno, una vez cada 12 s (antes, 13). Van
+     por la TARJETA y no por el enlace: el nombre es el único botón de su `<h3>`, así que un `:nth-of-type` sobre él
+     vale siempre 1 —que es como estaba, y los nombres de todo el feed se cortaban a la vez—. */
+  :root[data-effects="on"][data-palette="cyberpunk"][data-pulso="1"] .hub-feed-card:nth-of-type(3n+1) .hub-name-link,
+  :root[data-effects="on"][data-palette="cyberpunk"][data-pulso="1"] .hub-name-link:not(.hub-feed-card .hub-name-link),
+  :root[data-effects="on"][data-palette="cyberpunk"][data-pulso="1"] .hub-detail-profile-link,
+  :root[data-effects="on"][data-palette="cyberpunk"][data-pulso="3"] .hub-feed-card:nth-of-type(3n+2) .hub-name-link,
+  :root[data-effects="on"][data-palette="cyberpunk"][data-pulso="5"] .hub-feed-card:nth-of-type(3n) .hub-name-link {
+    animation: cyber-glitch-slice .26s ease-in-out;
+  }
   :root[data-palette="cyberpunk"] .fab { animation: cyber-glitch-jitter 15s ease-in-out infinite; }
   :root[data-palette="cyberpunk"] .fab-roulette { animation: cyber-glitch-jitter 15s ease-in-out infinite; animation-delay: -6s; }
   :root[data-palette="cyberpunk"] .btn-secondary::before,
