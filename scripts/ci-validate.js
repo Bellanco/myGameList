@@ -147,16 +147,18 @@ if (!html.includes('type="module"') || !html.includes('/src/main.tsx')) {
 // tercero en la ruta crítica, y la IP del visitante enviada en cada carga). Dos cosas que se pueden romper sin
 // que nadie lo note:
 //  1) el `preload` de `index.html` lleva el nombre CON HASH de la fuente base: si se re-ejecuta
-//     `scripts/vendor-fonts.mjs` y el hash cambia, ese preload apunta a un 404 y se pierde la ventaja;
+//     `scripts/vendor-fonts.mjs` y el hash cambia, ese preload apunta a un 404 y se pierde la ventaja. Desde el
+//     07-10-2026 no es un `<link>` fijo: lo crea el script anti-flash solo con la paleta por defecto, así que se
+//     busca el `href` que ese script asigna;
 //  2) que alguien vuelva a meter una referencia a Google Fonts, que además la CSP ya no permite (fallaría en
 //     producción, pero en silencio: el navegador cae a la fuente de sistema).
 const fontsDir = path.join(publicDir, 'fonts');
 if (!fs.existsSync(fontsDir)) {
   fail('Falta public/fonts/. Ejecuta `node scripts/vendor-fonts.mjs`.');
 }
-const preloadMatch = html.match(/<link rel="preload" href="(\/fonts\/[^"]+)"/);
+const preloadMatch = html.match(/fuente\.href = '(\/fonts\/[^']+\.woff2)'/);
 if (!preloadMatch) {
-  fail('index.html no precarga ninguna fuente propia (se perdió el <link rel="preload"> de la fuente base).');
+  fail('index.html no precarga ninguna fuente propia (se perdió la precarga de la fuente base del script anti-flash).');
 }
 const preloadedFont = path.join(root, 'public', preloadMatch[1]);
 if (!fs.existsSync(preloadedFont)) {

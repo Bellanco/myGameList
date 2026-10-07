@@ -183,8 +183,9 @@ Configuración en el repo:
 - **`public/fonts/`** — tipografías propias (generadas por `scripts/vendor-fonts.mjs`, todas OFL). No se usa
   Google Fonts: la CSP ya no lo permite. Para actualizar una familia, se re-ejecuta el script y se commitea el
   resultado; si cambia el nombre de la fuente crítica (la del tema por defecto, hoy Atkinson Hyperlegible
-  Next), hay que actualizar el `preload` de `index.html` y el filtro del precache de `vite.config.ts`
-  (`npm run validate` avisa del primero; el build, del segundo).
+  Next), hay que actualizar la precarga de `index.html` —el `href` que asigna el script anti-flash, que solo la
+  pide con el tema por defecto; al tocar ese script se recalcula el hash de la CSP en `public/_headers`— y el
+  filtro del precache de `vite.config.ts` (`npm run validate` avisa del primero; el build, del segundo).
 - **`wrangler.toml`** — `pages_build_output_dir = ./dist`, y es la fuente de verdad de las variables y los KV de
   cada entorno (lo que se ponga en el panel no se aplica). Los secretos (`GITHUB_CLIENT_SECRET`,
   `IGDB_CLIENT_SECRET`, `TMDB_READ_TOKEN`) van con `npx wrangler pages secret put`.
