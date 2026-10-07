@@ -404,7 +404,7 @@ export const SOCIAL_UI = {
     moveFeedSectionTitle: 'Mostrarme movimientos de',
     // Los nombres de las listas NO se repiten aquí: son los de `TAB_TOOLTIPS`, en este mismo módulo. Duplicarlos
     // era además la vía directa a que un día dijeran cosas distintas en dos sitios.
-    // Cuando están las cuatro apagadas: el feed sigue ahí (reseñas y publicaciones), solo se van los movimientos.
+    // Cuando están todas apagadas: el feed sigue ahí (reseñas y publicaciones), solo se van los movimientos.
     moveFeedAllOff: 'No verás ningún movimiento de listas en la actividad. Las reseñas y las publicaciones siguen apareciendo.',
   },
   status: {

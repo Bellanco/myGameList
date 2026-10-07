@@ -64,14 +64,26 @@ afterEach(() => {
 });
 
 describe('bloque de movimientos del editor de perfil', () => {
-  it('arranca con las cuatro listas encendidas', () => {
+  it('arranca con las cinco listas encendidas, deseos incluida', () => {
     renderScreen();
 
-    expect(toggleOf('c').checked).toBe(true);
-    expect(toggleOf('v').checked).toBe(true);
-    expect(toggleOf('e').checked).toBe(true);
-    expect(toggleOf('p').checked).toBe(true);
+    for (const tab of TAB_ORDER) expect(toggleOf(tab).checked).toBe(true);
+    expect(TAB_ORDER).toEqual(['c', 'v', 'e', 'p', 'd']);
     expect(screen.queryByText(SOCIAL_UI.profile.moveFeedAllOff)).not.toBeInTheDocument();
+  });
+
+  it('apagar deseos se guarda con la marca, y volver a encenderla la quita', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    await user.click(toggleOf('d'));
+    // La marca es la que distingue «la apagué» de un valor guardado antes de que existiera la lista.
+    expect(feedMoveTabsPreference.get()).toBe('cvep~');
+    expect(toggleOf('d').checked).toBe(false);
+
+    await user.click(toggleOf('d'));
+    expect(feedMoveTabsPreference.get()).toBe('cvepd');
+    expect(toggleOf('d').checked).toBe(true);
   });
 
   it('apagar una lista se guarda al instante, sin pasar por «Guardar»', async () => {
