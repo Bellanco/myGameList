@@ -485,7 +485,9 @@ function SocialFeedScreenBase({
                                 {entry.profileDisplayName}
                               </button>
                             </h3>
-                            {entry.gameName ? <span className="hub-feed-game-chip">{entry.gameName}</span> : null}
+                            {/* `data-text`: el nombre otra vez, para el glitch de «Sin futuro», que enciende una copia en el
+                                compositor en vez de animar `text-shadow` (ver `cyberpunk.scss`). */}
+                            {entry.gameName ? <span className="hub-feed-game-chip" data-text={entry.gameName}>{entry.gameName}</span> : null}
                           </div>
                         </header>
                         {/* LA FECHA Y LA NOTA VAN EN EL MISMO RENGLÓN. La nota tenía una fila entera para ella
