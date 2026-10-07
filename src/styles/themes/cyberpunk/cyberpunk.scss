@@ -104,16 +104,16 @@
     97.1% { transform: translate(2px, 1px); }
     97.6% { transform: translate(-1px, -1px); }
   }
-  /* LOS TÍTULOS, en el pulso 0: uno cada 12 s (antes, 11). */
-  :root[data-effects="on"][data-palette="cyberpunk"][data-pulso="0"] h2 { animation: cyber-glitch-text .22s ease-in-out; }
+  /* LOS TÍTULOS, en los pulsos 0 y 6: uno cada 12 s (antes, 11). */
+  :root[data-effects="on"][data-palette="cyberpunk"]:is([data-pulso="0"], [data-pulso="6"]) h2 { animation: cyber-glitch-text .22s ease-in-out; }
   /* LOS NOMBRES, en tres tandas para que no se corten todos a la vez: cada uno, una vez cada 12 s (antes, 13). Van
      por la TARJETA y no por el enlace: el nombre es el único botón de su `<h3>`, así que un `:nth-of-type` sobre él
      vale siempre 1 —que es como estaba, y los nombres de todo el feed se cortaban a la vez—. */
-  :root[data-effects="on"][data-palette="cyberpunk"][data-pulso="1"] .hub-feed-card:nth-of-type(3n+1) .hub-name-link,
-  :root[data-effects="on"][data-palette="cyberpunk"][data-pulso="1"] .hub-name-link:not(.hub-feed-card .hub-name-link),
-  :root[data-effects="on"][data-palette="cyberpunk"][data-pulso="1"] .hub-detail-profile-link,
-  :root[data-effects="on"][data-palette="cyberpunk"][data-pulso="3"] .hub-feed-card:nth-of-type(3n+2) .hub-name-link,
-  :root[data-effects="on"][data-palette="cyberpunk"][data-pulso="5"] .hub-feed-card:nth-of-type(3n) .hub-name-link {
+  :root[data-effects="on"][data-palette="cyberpunk"]:is([data-pulso="1"], [data-pulso="7"]) .hub-feed-card:nth-of-type(3n+1) .hub-name-link,
+  :root[data-effects="on"][data-palette="cyberpunk"]:is([data-pulso="1"], [data-pulso="7"]) .hub-name-link:not(.hub-feed-card .hub-name-link),
+  :root[data-effects="on"][data-palette="cyberpunk"]:is([data-pulso="1"], [data-pulso="7"]) .hub-detail-profile-link,
+  :root[data-effects="on"][data-palette="cyberpunk"]:is([data-pulso="3"], [data-pulso="9"]) .hub-feed-card:nth-of-type(3n+2) .hub-name-link,
+  :root[data-effects="on"][data-palette="cyberpunk"]:is([data-pulso="5"], [data-pulso="11"]) .hub-feed-card:nth-of-type(3n) .hub-name-link {
     animation: cyber-glitch-slice .26s ease-in-out;
   }
   :root[data-palette="cyberpunk"] .fab { animation: cyber-glitch-jitter 15s ease-in-out infinite; }
@@ -378,14 +378,6 @@
    `data-effects="on"`: la lista de «efectos OFF» de más abajo nombraba el chip del juego pero no `.chip`, y con los
    efectos quitados todos los chips del listado seguían destellando. */
 @media (prefers-reduced-motion: no-preference) {
-  @keyframes cyber-glitch-chip {
-    /* Anclado a `text-shadow: none` fuera del destello (los chips no tienen sombra base), para que la aberración
-       RGB solo aparezca ese instante y no quede un doble-contorno permanente. */
-    0%, 95.9%, 97.6%, 100% { text-shadow: none; }
-    96.2% { text-shadow: -1.5px 0 rgba(255, 42, 109, .85), 1.5px 0 rgba(0, 240, 255, .85); }
-    96.7% { text-shadow: 1.5px 0 rgba(255, 42, 109, .8), -1.5px 0 rgba(0, 240, 255, .8); }
-    97.2% { text-shadow: -1px 0 rgba(255, 42, 109, .7), 1px 0 rgba(0, 240, 255, .7); }
-  }
   /* LOS CHIPS DEL LISTADO Y DEL MOSAICO NO ANIMAN `text-shadow`: encienden y apagan una COPIA del texto que ya
      lleva la aberración pintada. Una animación de `text-shadow` se recalcula en el hilo principal en cada
      fotograma de sus 21 s, también en el 96 % del ciclo en que no hay nada que ver; la de `opacity` la mueve el
@@ -401,12 +393,23 @@
     96.7% { opacity: .45; }
     97.2% { opacity: .8; }
   }
-  /* El detalle se queda con la sombra aunque traiga `data-text`: sus chips pueden partir línea, y la copia es de
-     una sola. */
-  :root[data-effects="on"][data-palette="cyberpunk"] .chip:not([data-text]),
-  :root[data-effects="on"][data-palette="cyberpunk"] .detail-content .chip,
-  :root[data-effects="on"][data-palette="cyberpunk"] .hub-feed-game-chip:not([data-text]) {
-    animation: cyber-glitch-chip 21s ease-in-out var(--glitch-retraso, 0s) infinite;
+  /* LOS CHIPS SIN COPIA —el detalle, que puede partir línea y la copia es de una sola; la importación, el resumen
+     del año…— animan la sombra, pero a PULSOS y no en bucle: el bucle de `text-shadow` es justo lo que sale caro
+     (ver arriba). El destello es el mismo tramo del ciclo de 21 s de antes (del 95,9 al 97,6 %: 357 ms) y cada
+     chip lo da una vez cada 24 s, en cuatro tandas por su posición en el grupo. Si el chip SÍ trae copia y no
+     está en el detalle, quien destella es la copia (abajo). */
+  @keyframes cyber-glitch-chip-pulso {
+    0%, 100% { text-shadow: none; }
+    18% { text-shadow: -1.5px 0 rgba(255, 42, 109, .85), 1.5px 0 rgba(0, 240, 255, .85); }
+    47% { text-shadow: 1.5px 0 rgba(255, 42, 109, .8), -1.5px 0 rgba(0, 240, 255, .8); }
+    76% { text-shadow: -1px 0 rgba(255, 42, 109, .7), 1px 0 rgba(0, 240, 255, .7); }
+  }
+  :root[data-effects="on"][data-palette="cyberpunk"][data-pulso="2"] :is(.chip:not([data-text]), .detail-content .chip):nth-child(4n+1),
+  :root[data-effects="on"][data-palette="cyberpunk"][data-pulso="4"] :is(.chip:not([data-text]), .detail-content .chip):nth-child(4n+2),
+  :root[data-effects="on"][data-palette="cyberpunk"][data-pulso="8"] :is(.chip:not([data-text]), .detail-content .chip):nth-child(4n+3),
+  :root[data-effects="on"][data-palette="cyberpunk"][data-pulso="10"] :is(.chip:not([data-text]), .detail-content .chip):nth-child(4n),
+  :root[data-effects="on"][data-palette="cyberpunk"][data-pulso="2"] .hub-feed-game-chip:not([data-text]) {
+    animation: cyber-glitch-chip-pulso .357s ease-in-out;
   }
   :root[data-palette="cyberpunk"] .chip:nth-child(5n)   { --glitch-retraso: -4s; }
   :root[data-palette="cyberpunk"] .chip:nth-child(5n+1) { --glitch-retraso: -9s; }

@@ -42,7 +42,7 @@ describe('useEffectPulses', () => {
       vi.advanceTimersByTime(PULSE_SLOT_MS);
       vistos.push(root.getAttribute('data-pulso'));
     }
-    expect(vistos).toEqual(['3', '4', '5', '0', '1', '2', '3']);
+    expect(vistos).toEqual(['3', '4', '5', '6', '7', '8', '9', '10', '11', '0', '1', '2', '3']);
   });
 
   it('no marca nada con los efectos apagados, y se para y se reanuda al cambiarlos', async () => {

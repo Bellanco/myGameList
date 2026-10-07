@@ -355,15 +355,15 @@
     95.3% { transform: translate(2px, -1px); }
     95.8% { transform: translate(-1px, 0); }
   }
-  /* Los títulos en el pulso 0 (cada 12 s, como antes); los nombres en tres tandas, cada uno cada 12 s (antes, 14).
+  /* Los títulos en los pulsos 0 y 6 (cada 12 s, como antes); los nombres en tres tandas, cada uno cada 12 s (antes, 14).
      Por la TARJETA y no por el enlace: el nombre es el único botón de su `<h3>`, así que un `:nth-of-type` sobre él
      vale siempre 1 —que es como estaba, y los nombres de todo el feed se cortaban a la vez—. */
-  :root[data-effects="on"][data-palette="grimdark"][data-pulso="0"]:not([data-theme="light"]) h2 { animation: grim-glitch-text .24s ease-in-out; }
-  :root[data-effects="on"][data-palette="grimdark"][data-pulso="1"]:not([data-theme="light"]) .hub-feed-card:nth-of-type(3n+1) .hub-name-link,
-  :root[data-effects="on"][data-palette="grimdark"][data-pulso="1"]:not([data-theme="light"]) .hub-name-link:not(.hub-feed-card .hub-name-link),
-  :root[data-effects="on"][data-palette="grimdark"][data-pulso="1"]:not([data-theme="light"]) .hub-detail-profile-link,
-  :root[data-effects="on"][data-palette="grimdark"][data-pulso="3"]:not([data-theme="light"]) .hub-feed-card:nth-of-type(3n+2) .hub-name-link,
-  :root[data-effects="on"][data-palette="grimdark"][data-pulso="5"]:not([data-theme="light"]) .hub-feed-card:nth-of-type(3n) .hub-name-link {
+  :root[data-effects="on"][data-palette="grimdark"]:is([data-pulso="0"], [data-pulso="6"]):not([data-theme="light"]) h2 { animation: grim-glitch-text .24s ease-in-out; }
+  :root[data-effects="on"][data-palette="grimdark"]:is([data-pulso="1"], [data-pulso="7"]):not([data-theme="light"]) .hub-feed-card:nth-of-type(3n+1) .hub-name-link,
+  :root[data-effects="on"][data-palette="grimdark"]:is([data-pulso="1"], [data-pulso="7"]):not([data-theme="light"]) .hub-name-link:not(.hub-feed-card .hub-name-link),
+  :root[data-effects="on"][data-palette="grimdark"]:is([data-pulso="1"], [data-pulso="7"]):not([data-theme="light"]) .hub-detail-profile-link,
+  :root[data-effects="on"][data-palette="grimdark"]:is([data-pulso="3"], [data-pulso="9"]):not([data-theme="light"]) .hub-feed-card:nth-of-type(3n+2) .hub-name-link,
+  :root[data-effects="on"][data-palette="grimdark"]:is([data-pulso="5"], [data-pulso="11"]):not([data-theme="light"]) .hub-feed-card:nth-of-type(3n) .hub-name-link {
     animation: grim-glitch-slice .28s ease-in-out;
   }
   :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) .fab { animation: grim-glitch-jitter 16s ease-in-out infinite; }
