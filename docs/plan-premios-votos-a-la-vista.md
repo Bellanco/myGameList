@@ -31,6 +31,16 @@ las papeletas guardadas, y un botón «Terminar» que las retiraba; solo para la
 - **Borrado manual** desde el histórico, solo en la edición que los tenga.
 - **Ranking denso, como siempre** (`assignDenseRanks`): empatados comparten puesto, sin huecos.
 
+**07-10-2026**, a petición del usuario:
+
+- **La administración ve la «Clasificación final» siempre**, haya votado o no, mientras exista (hasta la siguiente
+  edición). Las reglas ya se lo permitían; cambia solo que la pantalla la pide (`shouldRequestReveal`).
+- **Y la de la edición EN CURSO, desde el panel.** La pestaña «Votos» usa el mismo tablero (`PremiosFinalBoard`):
+  con la votación abierta, por orden de voto y sin puestos ni puntos; cerrada sin publicar, la clasificación
+  provisional con los ganadores marcados, que es la que se archivará. Las categorías aún sin ganador se enseñan sin
+  acierto ni fallo. Se conservan las correcciones de cada uno y el botón de retirar la papeleta.
+- Sin cambio legal: la privacidad ya dice que el Responsable accede a las papeletas.
+
 ### Borrar las papeletas no es cuestión de presupuesto
 
 Medido con 2025 (14 papeletas, 25 categorías): ~2 kB por papeleta, ~30 kB por edición frente a 1 GiB de Spark;

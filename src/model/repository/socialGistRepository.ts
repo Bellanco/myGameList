@@ -160,6 +160,12 @@ export interface SocialGistData {
    * la pestaña Reseñas—. Con array propio, cupo propio y ni una reseña desplazada.
    */
   moves?: SocialMoveEntry[];
+  /**
+   * Los mensajes de las listas que el autor OCULTA, que solo enseña la cuenta de administración. Campo aparte, y no
+   * mezclado en `moves`, porque las versiones ya instaladas leen `moves` sin filtrar nada y se lo enseñarían a
+   * cualquier amistad; este lo descartan al normalizar. Ver `deriveHiddenMoveActivity`.
+   */
+  hiddenMoves?: SocialMoveEntry[];
   updatedAt: number;
   schemaVersion?: number; // 6.2b: 2 = identidad por profileId (uid fuera del canal público)
 }
@@ -324,6 +330,7 @@ function getEmptySocialGistData(): SocialGistData {
     activity: [],
     posts: [],
     moves: [],
+    hiddenMoves: [],
     updatedAt: Date.now(),
   };
 }
@@ -613,8 +620,13 @@ function normalizeMoveItems(items: unknown): SocialMoveEntry[] {
  * Devuelve la MISMA referencia si no hay nada que cambiar, para que el llamador pueda saltarse la reescritura del
  * gist (mismo contrato que `upsertReviewActivity` / `removeReviewActivity`).
  */
-export function syncMoveActivity(data: SocialGistData, derived: SocialMoveEntry[], timestamp?: number): SocialGistData {
-  const current = data.moves || [];
+export function syncMoveActivity(
+  data: SocialGistData,
+  derived: SocialMoveEntry[],
+  timestamp?: number,
+  field: 'moves' | 'hiddenMoves' = 'moves',
+): SocialGistData {
+  const current = data[field] || [];
   const publishedById = new Map(current.map((entry) => [entry.id, entry] as const));
 
   const next = sortMoveEntries(
@@ -640,7 +652,7 @@ export function syncMoveActivity(data: SocialGistData, derived: SocialMoveEntry[
     return data;
   }
 
-  return { ...data, moves: next, updatedAt: timestamp || Date.now() };
+  return { ...data, [field]: next, updatedAt: timestamp || Date.now() };
 }
 
 /**
@@ -920,6 +932,7 @@ function normalizeSocialGistData(data: unknown): SocialGistData {
     // F4: se preserva en el round-trip igual que `posts`. Un gist sin mensajes queda con el array vacío, que el
     // schema acepta y no ocupa nada.
     moves: normalizeMoveItems(source.moves),
+    hiddenMoves: normalizeMoveItems(source.hiddenMoves),
     updatedAt: Number(source.updatedAt || Date.now()),
     schemaVersion: SOCIAL_GIST_SCHEMA_VERSION,
   };
@@ -986,19 +999,23 @@ export function mergeSocialGistData(a: SocialGistData, b: SocialGistData): Socia
   // F4: unión por clave (juego, lista) conservando el mensaje MÁS ANTIGUO. Al contrario que en la actividad, aquí
   // «más nuevo gana» sería la respuesta equivocada: el sello del que sale el mensaje es la PRIMERA entrada, así que
   // entre dos fechas para el mismo (juego, lista) la antigua es la real y la otra una re-siembra.
-  const movesById = new Map<string, SocialMoveEntry>();
-  for (const entry of [...(a.moves || []), ...(b.moves || [])]) {
-    const current = movesById.get(entry.id);
-    if (!current || entry.at < current.at) {
-      movesById.set(entry.id, entry);
+  const oldestById = (left: SocialMoveEntry[] = [], right: SocialMoveEntry[] = []) => {
+    const byId = new Map<string, SocialMoveEntry>();
+    for (const entry of [...left, ...right]) {
+      const current = byId.get(entry.id);
+      if (!current || entry.at < current.at) {
+        byId.set(entry.id, entry);
+      }
     }
-  }
+    return sortMoveEntries([...byId.values()]).slice(0, MOVE_ACTIVITY_MAX);
+  };
 
   return {
     ...newest,
     activity: [...activityByKey.values()].sort((x, y) => y.updatedAt - x.updatedAt).slice(0, 320),
     posts: [...postsById.values()].sort((x, y) => y.updatedAt - x.updatedAt).slice(0, 100),
-    moves: sortMoveEntries([...movesById.values()]).slice(0, MOVE_ACTIVITY_MAX),
+    moves: oldestById(a.moves, b.moves),
+    hiddenMoves: oldestById(a.hiddenMoves, b.hiddenMoves),
   };
 }
 

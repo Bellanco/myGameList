@@ -171,6 +171,13 @@ export const PREMIOS_DRAFT_KEY = 'mis-listas-premios-borrador';
  */
 export const PREMIOS_VISIBLE_KEY = 'mis-listas-premios-visible';
 
+/**
+ * La invitación a quedarse que sale al enviar la papeleta, a quien no tiene nada más de la aplicación: la edición
+ * en la que se dijo «Ahora no» o se aceptó. Por navegador, como una preferencia de vista: perderla solo hace que
+ * se vuelva a ofrecer una vez.
+ */
+export const PREMIOS_JOIN_INVITE_KEY = 'mis-listas-premios-invitacion';
+
 // Logros — LOS CONTADORES QUE NO SALEN DE LA BIBLIOTECA (amistades, semanas con publicación, alta del perfil y
 // si hay sincronización), recordados del último paso por el hub.
 //

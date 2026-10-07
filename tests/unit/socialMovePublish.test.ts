@@ -29,6 +29,16 @@ const idbMocks = vi.hoisted(() => {
 });
 vi.mock('../../src/model/repository/indexedDbRepository', () => idbMocks);
 
+// LA VENTANA DEL FEED, APAGADA. Estos tests fijan otras reglas del canal con sellos repartidos entre 2019 y 2023, que
+// ninguna ventana de 30 días contiene. La ventana tiene sus propios tests (ver «la ventana de 30 días»); aquí se
+// sustituye por un corte en 0, que es «sin ventana», y el test que la ejercita lo cambia para sí.
+const windowMocks = vi.hoisted(() => ({ feedRecentSince: vi.fn((_now: number) => 0) }));
+vi.mock('../../src/core/constants/socialLimits', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/core/constants/socialLimits')>()),
+  feedRecentSince: windowMocks.feedRecentSince,
+}));
+
+
 import { publishPost, publishReviewActivity } from '../../src/model/repository/socialPublishRepository';
 
 const TOKEN = 'ghp_0123456789abcdefghij';

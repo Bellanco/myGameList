@@ -1023,7 +1023,9 @@ export default function App() {
     premios: (
 
       <Suspense fallback={<ScreenSkeleton />}>
-        <PremiosHub />
+        {/* Sin biblioteca y sin lo social: al terminar de votar se le invita al resto (ver `usePremiosJoinInvite`).
+            `inactive` y no `!active`: mientras el estado social carga (`pending`) no se invita a nadie. */}
+        <PremiosHub canInviteToApp={gameCount === 0 && socialStatus === 'inactive'} />
       </Suspense>
     ),
     admin: (

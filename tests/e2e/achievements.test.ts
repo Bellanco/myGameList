@@ -42,6 +42,39 @@ function fila(page: Page, nombre: string) {
   return page.locator('.ach-row').filter({ has: page.locator('.ach-row-name', { hasText: new RegExp(`^${nombre}$`) }) });
 }
 
+type LecturaFila = { filas: number; conseguido: boolean; condicion: string };
+
+/**
+ * Lo que pintan las filas de varios logros, leído en UNA llamada.
+ *
+ * POR QUÉ NO UN LOCALIZADOR POR FILA. La config guarda la traza de cada test (`retain-on-failure`), y la traza
+ * fotografía el DOM antes de cada llamada: con las 216 filas del listado son ~300 ms por foto en un Mac y varias
+ * veces eso en el runner de Linux. Tres aserciones por logro sobre siete logros se comían los 30 s del tope sin
+ * que fallara ninguna. Una lectura, una foto; y con `expect.poll` alrededor se sigue reintentando.
+ */
+async function leerFilas(page: Page, ids: string[]): Promise<Record<string, LecturaFila>> {
+  const nombres = ids.map((id) => logro(id).nombre);
+  const lecturas = await page.evaluate((nombres) => {
+    const limpio = (texto: string | null | undefined) => (texto || '').replace(/\s+/g, ' ').trim();
+    const filas = [...document.querySelectorAll('.ach-row')];
+    return nombres.map((nombre) => {
+      const suyas = filas.filter((fila) => limpio(fila.querySelector('.ach-row-name')?.textContent) === nombre);
+      return {
+        filas: suyas.length,
+        conseguido: suyas.length > 0 && !suyas[0].classList.contains('is-locked'),
+        condicion: limpio(suyas[0]?.querySelector('.ach-row-condition')?.textContent),
+      };
+    });
+  }, nombres);
+  return Object.fromEntries(ids.map((id, i) => [id, lecturas[i]]));
+}
+
+/** Lo que `leerFilas` debería devolver: conseguido y en pasado, o pendiente y con la meta en imperativo. */
+function esperado(id: string, conseguido: boolean): LecturaFila {
+  const { hecho, meta } = logro(id);
+  return { filas: 1, conseguido, condicion: (conseguido ? hecho : meta).replace(/\s+/g, ' ').trim() };
+}
+
 test.describe('logros · el listado sobre el build', () => {
   test('los techos nuevos se conceden y se dicen en pasado', async ({ page }) => {
     // LA CONSOLA, MENOS UN 403 QUE ESTÁ PREVISTO. `useAchievementsConfig` lee `appConfig/achievements` —las
@@ -59,14 +92,10 @@ test.describe('logros · el listado sobre el build', () => {
     await abrirLogros(page);
 
     // El escalón más alto de cada escalera ampliada, que es lo que la siembra está puesta para alcanzar.
-    for (const id of ['anadas-15', 'otra-oportunidad-10', 'reencuentro-15', 'firma-200', 'mania-75', 'palabra-40', 'vocabulario-75']) {
-      const { nombre, hecho } = logro(id);
-      const row = fila(page, nombre);
-      await expect(row, `${id} debería estar en el listado`).toHaveCount(1);
-      // Conseguido: sin `is-locked` y con la frase EN PASADO, no con la meta en imperativo.
-      await expect(row, `${id} debería estar conseguido`).not.toHaveClass(/is-locked/);
-      await expect(row.locator('.ach-row-condition')).toHaveText(hecho);
-    }
+    // Conseguido: una sola fila, sin `is-locked` y con la frase EN PASADO, no con la meta en imperativo.
+    const ids = ['anadas-15', 'otra-oportunidad-10', 'reencuentro-15', 'firma-200', 'mania-75', 'palabra-40', 'vocabulario-75'];
+    await expect.poll(() => leerFilas(page, ids), { message: 'los techos deberían estar conseguidos y en pasado' })
+      .toEqual(Object.fromEntries(ids.map((id) => [id, esperado(id, true)])));
 
     expect(errores, `la consola no debería decir nada: ${errores.join(' · ')}`).toEqual([]);
   });
@@ -75,20 +104,15 @@ test.describe('logros · el listado sobre el build', () => {
     await sembrarBiblioteca(page, { logros: true });
     await abrirLogros(page);
 
-    // Escaleras de las cincuenta primeras: la ampliación no puede haberse comido el catálogo viejo.
-    for (const id of ['completados-150', 'criterio-200', 'memoria-larga-15', 'resenas-200', 'luces-y-sombras-75']) {
-      const { nombre, hecho } = logro(id);
-      const row = fila(page, nombre);
-      await expect(row, `${id} debería estar en el listado`).toHaveCount(1);
-      await expect(row.locator('.ach-row-condition')).toHaveText(hecho);
-    }
-
-    // Y uno que la siembra NO alcanza: se ofrece bloqueado y con la meta en imperativo, que es la mitad útil
-    // de abajo del listado.
-    const pendiente = logro('completados-250');
-    const row = fila(page, pendiente.nombre);
-    await expect(row).toHaveClass(/is-locked/);
-    await expect(row.locator('.ach-row-condition')).toHaveText(pendiente.meta);
+    // Escaleras de las cincuenta primeras: la ampliación no puede haberse comido el catálogo viejo. Y uno que la
+    // siembra NO alcanza (`completados-250`): se ofrece bloqueado y con la meta en imperativo, que es la mitad
+    // útil de abajo del listado.
+    const conseguidos = ['completados-150', 'criterio-200', 'memoria-larga-15', 'resenas-200', 'luces-y-sombras-75'];
+    await expect.poll(() => leerFilas(page, [...conseguidos, 'completados-250']))
+      .toEqual(Object.fromEntries([
+        ...conseguidos.map((id) => [id, esperado(id, true)]),
+        ['completados-250', esperado('completados-250', false)],
+      ]));
   });
 
   test('cada medalla tiene su dibujo y su cifra: el sprite entra en el chunk', async ({ page }) => {

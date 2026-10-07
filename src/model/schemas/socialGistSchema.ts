@@ -126,6 +126,9 @@ export const socialGistSchema = z.strictObject({
   posts: z.array(post).optional(),
   // F4 (aditivo, mismo patrón): opcional → los gists anteriores a los mensajes de lista siguen validando.
   moves: z.array(move).optional(),
+  // Los de las listas ocultas, que solo enseña la administración. Aparte para que las versiones viejas, que leen
+  // `moves` sin filtrar, no los vean: un campo que no conocen lo tiran al normalizar.
+  hiddenMoves: z.array(move).optional(),
   updatedAt: z.number(),
   schemaVersion: z.number(), // 6.2b: 2 = identidad por profileId
   // A6 (gated): presente solo cuando la escritura multi-fichero está activa y hay overflow de sharedLists.

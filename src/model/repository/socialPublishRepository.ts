@@ -2,7 +2,8 @@
 // Extraído verbatim de App.tsx para sacar la lógica de negocio del componente. Lee el gist social, inserta/actualiza
 // la actividad (que se convierte a snippet index-only), reescribe el gist y asegura el perfil en Firestore.
 import { isGenericGooglePhoto } from '../../core/social/googlePhoto';
-import { deriveMoveActivity, reconcileMoveActivity } from '../../core/social/moveActivity';
+import { reconcileMoveChannels } from '../../core/social/moveActivity';
+import { feedRecentSince } from '../../core/constants/socialLimits';
 import { ensureProfileByEmail, getCurrentSocialAuthUser, healOwnFriendshipIdentity, resolveStableProfileId } from './firebaseRepository';
 import { getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta } from './indexedDbRepository';
 import { getSyncConfig } from './gistRepository';
@@ -69,7 +70,7 @@ async function publicPhotoURL(data: { profile: { photoURL?: string; visibility?:
  *
  * Solo ALTAS: `localUpdatedAt: 0` desactiva la retirada de huérfanos. Guardar una reseña no es el momento de
  * auditar el canal —eso lo hace la reconciliación, que sí sabe si los listados son autoridad—, pero las listas
- * OCULTAS sí se respetan aquí, porque para eso no hace falta auditar nada.
+ * OCULTAS sí se respetan aquí (sus mensajes van a `hiddenMoves`), porque para eso no hace falta auditar nada.
  *
  * Los listados se leen de localStorage y no se reciben por parámetro a propósito: el estado que la pantalla tiene
  * en memoria es el del render ANTERIOR al guardado, así que el sello del juego que se acaba de mover todavía no
@@ -77,16 +78,16 @@ async function publicPhotoURL(data: { profile: { photoURL?: string; visibility?:
  */
 function withMoveActivity(data: SocialGistData, timestamp: number): SocialGistData {
   try {
-    const games = loadLocalState();
-    const hiddenTabs = data.profile.visibility?.hiddenTabs || [];
-    const target = reconcileMoveActivity({
-      derived: deriveMoveActivity(games, { hiddenTabs }),
-      published: data.moves || [],
+    const target = reconcileMoveChannels({
+      games: loadLocalState(),
+      published: data,
+      hiddenTabs: data.profile.visibility?.hiddenTabs || [],
       knownGameIds: new Set<number>(),
-      hiddenTabs,
       localUpdatedAt: 0,
+      // La ventana sí se aplica aquí: retirar lo que ha cumplido 30 días no necesita auditar nada.
+      since: feedRecentSince(timestamp),
     });
-    return syncMoveActivity(data, target, timestamp);
+    return syncMoveActivity(syncMoveActivity(data, target.moves, timestamp), target.hiddenMoves, timestamp, 'hiddenMoves');
   } catch {
     // Los mensajes son un extra del payload: si los listados locales no se pueden leer, se publica lo que se
     // venía a publicar y la reconciliación los pone al día en la próxima apertura del hub.

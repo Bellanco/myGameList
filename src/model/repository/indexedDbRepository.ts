@@ -604,8 +604,10 @@ const SOCIAL_DIRECTORY_KEY_PREFIX = '__dir__:';
  *       hora después de actualizar.
  *   6 = cada entrada trae `yearSummarySeen` (si ya abrió su resumen del año). Sin subirla, la tarjeta del feed
  *       de una amistad tardaría media hora en salir.
+ *   7 = cada entrada trae `hiddenMoves` (los movimientos de las listas ocultas, que el feed enseña solo a la
+ *       administración). Sin subirla, una caché fresca la tendría media hora sin ellos.
  */
-const SOCIAL_DIRECTORY_CACHE_VERSION = 6;
+const SOCIAL_DIRECTORY_CACHE_VERSION = 7;
 
 interface CachedSocialDirectory<T> {
   profileId: string; // keyPath del store

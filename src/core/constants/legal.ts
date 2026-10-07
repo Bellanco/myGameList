@@ -76,7 +76,14 @@
 // puerta (mismo criterio que el 2026-08-22). La agrupación del feed —diez títulos por aviso como mucho— y que la
 // tarjeta ya no enseñe la hora no se mencionan: cambian lo que ves tú, no lo que se publica de ti (el dato del canal
 // sigue llevando día y hora).
-export const LEGAL_VERSION = '2026-10-07';
+// 2026-10-07 (segunda del día, de ahí la `b`: la primera ya salió en la 1.6.4): la actividad de las listas OCULTAS
+// se publica, en un apartado del canal social aparte (`hiddenMoves`), para que la cuenta de administración la vea en
+// su feed, igual que ya veía esas listas en el perfil. Las amistades siguen sin verla. Es publicar algo que el texto
+// aceptado decía expresamente que no se publicaba —y el canal se lee con su identificador, así que «aparte» no es
+// «a salvo»—, así que la versión sube y todo el mundo vuelve a pasar por la puerta.
+// 2026-10-07, también: cada aviso de lista se publica solo durante 30 días (`FEED_RECENT_DAYS`) y luego se retira del
+// canal. Se declara el plazo, pero la versión NO sube por él: es publicar menos (mismo criterio que el 2026-08-26).
+export const LEGAL_VERSION = '2026-10-07b';
 
 // Correo de CONTACTO publicado en los documentos. A propósito distinto del de la cuenta de administración de
 // `firestore.rules` (`isAdmin`): son la misma persona, pero separar buzones evita mezclar avisos legales y

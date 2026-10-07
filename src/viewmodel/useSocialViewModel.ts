@@ -1373,6 +1373,7 @@ export function useSocialViewModel(options?: {
     // leen los gists de los amigos»).
     friendUidSet,
     friendshipsResolved,
+    isAdmin,
   );
 
 

@@ -11,13 +11,17 @@
 // Y EL AGRUPADO ES DE LECTURA, NO DE PUBLICACIÓN: no se escribe nada en ninguna parte, así que agrupar es
 // simplemente cómo el lector presenta la diferencia que acaba de deducir.
 import { localDayKey, noonOfLocalDay } from '../utils/dateTime';
+import { FEED_RECENT_DAYS, feedRecentSince } from '../constants/socialLimits';
 import { ACHIEVEMENTS_BY_ID } from './catalog';
 import { parseMirror } from './pack';
 import { RARITY_POINTS } from './types';
 import type { AchievementDef } from './types';
 
-/** Cuánto hacia atrás se anuncia. Sin este corte, quien lleva un mes sin abrir el hub recibe treinta avisos. */
-export const FEED_RECENT_DAYS = 30;
+/**
+ * Cuánto hacia atrás se anuncia. Sin este corte, quien lleva un mes sin abrir el hub recibe treinta avisos. Es la
+ * misma ventana que la de los movimientos de lista, y vive con ella en `socialLimits`.
+ */
+export { FEED_RECENT_DAYS };
 
 /**
  * Cuántos DÍAS distintos de una misma persona entran en el feed. Con la línea base el volumen normal es cero o un
@@ -82,7 +86,7 @@ export function achievementFeedEntries(
   sources: readonly AchievementFeedSource[],
   now = Date.now(),
 ): AchievementFeedEntry[] {
-  const cutoff = now - FEED_RECENT_DAYS * 24 * 60 * 60 * 1000;
+  const cutoff = feedRecentSince(now);
   const entries: AchievementFeedEntry[] = [];
 
   for (const source of sources) {

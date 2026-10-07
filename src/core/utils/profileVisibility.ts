@@ -40,7 +40,7 @@ export function applyProfileVisibility(
      * es donde se recorta lo que no debe verse de otra persona, se van.
      *
      * Y siguen yéndose después de F4, que publica la actividad de listas: lo que se publica allí es una
-     * proyección acotada y declarada (la primera entrada a cada lista, nunca las ocultas), no el registro
+     * proyección acotada y declarada (la primera entrada a cada lista; las ocultas, aparte), no el registro
      * completo. Dejar pasar el campo aquí daría el historial entero, que es otra cosa.
      *
      * Del de completados se rescata solo el MES (el día, para la administración): es lo que necesita el resumen

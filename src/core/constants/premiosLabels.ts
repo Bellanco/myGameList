@@ -129,6 +129,19 @@ export const PREMIOS_UI = {
     },
     /** Lo último que se lee: esto se juega cada temporada y la gracia está en volver. */
     comeBack: 'El reto se juega cada temporada: vuelve cuando se abra el siguiente.',
+    /**
+     * LA INVITACIÓN A QUEDARSE, solo a quien no tiene nada más de la aplicación (ni lista ni perfil social). Lleva a
+     * la lista y no a lo social: lo social pide GitHub, y para quien solo venía a votar es un muro. A lo social se
+     * llega después, por la guía de primeros pasos, que es la que el botón pone en marcha.
+     */
+    invite: {
+      sectionAria: 'Únete al resto de la aplicación',
+      title: 'Esto es solo una parte',
+      body: 'myGameList es también tu lista de juegos: lo que has terminado, lo que estás jugando y lo que quieres jugar. Sin cuenta: se guarda en tu dispositivo, y una guía te acompaña en los primeros pasos.',
+      social: 'Y cuando quieras, conecta lo social para ver a qué juegan tus amistades y leer sus reseñas.',
+      join: 'Empieza tu lista',
+      later: 'Ahora no',
+    },
     confirmTitle: 'Confirmación',
     /**
      * Repasar lo votado sin tocar nada ni gastar oportunidad: la misma papeleta, en modo lectura. Lo usan la
@@ -415,22 +428,19 @@ export const PREMIOS_UI = {
     // El censo de papeletas de la edición en curso.
     ballots: {
       title: 'Votos',
-      hint: 'Las papeletas de esta edición. Se retiran al publicarla.',
       total: (cuantas: number) => (cuantas === 1 ? '1 papeleta' : `${cuantas} papeletas`),
       none: 'Todavía no ha votado nadie.',
       voted: (cuantas: number, total: number) => `${cuantas}/${total} categorías`,
       edits: (cuantas: number) => (cuantas === 0 ? 'sin correcciones' : `${cuantas} corrección(es)`),
       sentAt: 'Enviada',
-      // QUÉ VOTÓ CADA UNO, y no solo cuántas marcó. Va plegado: con veintiséis categorías por votante, abierto
-      // de serie sepultaría la lista de papeletas y la clasificación que viene debajo.
-      open: 'Ver la papeleta',
-      /** Las categorías que esa persona dejó en blanco: explican el «3/5» de la cabecera. */
-      notVoted: 'Sin votar',
-      /** Coincide con el ganador marcado ahora mismo, que es lo que le dará puntos al publicar. */
-      hit: 'Acierta el ganador marcado',
+      // QUÉ VOTÓ CADA UNO va en la fila de la clasificación (`PremiosFinalBoard`), plegado: con veintiséis
+      // categorías por votante, abierto de serie sepultaría la lista.
       // La clasificación PROVISIONAL, con los ganadores marcados hasta ahora: es lo que se va a publicar.
       preview: 'Clasificación provisional',
       previewHint: 'Con los ganadores marcados ahora mismo. Es lo que se publicará.',
+      // Con la votación abierta no hay recuento: las papeletas van por orden de voto, sin puestos ni puntos.
+      byVoteOrder: 'Por orden de voto',
+      openHint: 'La votación sigue abierta: cada papeleta, tal y como está. Los puntos salen al cerrar y marcar ganadores.',
       // Retirar la papeleta de alguien: para las pruebas y para lo que haya que quitar a mano. No se deshace.
       remove: (nombre: string) => `Retirar la papeleta de ${nombre}`,
       removeConfirm: (nombre: string) =>

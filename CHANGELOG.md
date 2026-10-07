@@ -5,6 +5,40 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.6.5] - 2026-10-07
+
+Una versión de **administración y de premios**: la administración ve en el feed los avisos de las listas ocultas y,
+en el panel, lo que vota cada persona con la misma clasificación de los resultados; los avisos de listas se quedan en
+los últimos 30 días, y quien vota sin tener nada más de la aplicación recibe una invitación a quedarse.
+
+### Added
+- **En el panel, los votos de la edición en curso con la misma clasificación de los resultados**: una fila por
+  persona que se despliega con lo que votó en cada categoría. Con la votación abierta van por orden de voto; cerrada,
+  con la clasificación provisional de los ganadores marcados. La cuenta de administración ve además la
+  «Clasificación final» de la edición publicada aunque no haya votado en ella.
+- **Al terminar de votar, quien no tiene nada más de la aplicación recibe una invitación a quedarse**: empezar su
+  lista de juegos, sin cuenta, con la guía de primeros pasos en marcha. Sale una vez por edición y se puede aplazar.
+
+### Changed
+- **La cuenta de administración ve en el feed también los avisos de las listas que cada cual oculta**, igual que ya
+  veía esas listas en el perfil. Las amistades siguen sin verlos, y a la administración le sigue valiendo su propio
+  filtro de listas. Los avisos de las listas ocultas viajan en un apartado aparte del canal social, que las
+  versiones anteriores no leen.
+- **Los avisos de listas duran 30 días**, como los de logros: el feed no enseña los más antiguos y el canal social
+  los retira, así que ya no se guardan los 400 últimos aunque fueran de hace años.
+- **Política de privacidad y condiciones de uso actualizadas** (versión 2026-10-07b) por ese apartado: hay que
+  volver a aceptarlas para seguir usando el espacio social. La privacidad declara además el plazo de 30 días.
+
+### Deploy
+- **Sin cambios en reglas ni índices de Firestore**: los avisos de las listas ocultas viajan en el gist social
+  (`hiddenMoves`), y la administración ya podía leer las papeletas y el resumen de votos.
+- **Se vuelve a pedir la aceptación legal** (`LEGAL_VERSION` 2026-10-07b): al entrar, cada persona con espacio social
+  pasa por la puerta antes de seguir.
+- **La reconciliación sube a la versión 9**: la primera vez que cada persona abre el hub con esta versión publica
+  aparte los avisos de sus listas ocultas y retira del canal los de más de 30 días. Los avisos ocultos de cada
+  amistad solo aparecen cuando esa persona abre el hub con la 1.6.5.
+- **La caché del directorio social sube a la versión 7**, para que traiga `hiddenMoves` sin esperar a que caduque.
+
 ## [1.6.4] - 2026-10-07
 
 Una versión de **fluidez y de actividad social**: los temas dejan de animar en balde entre destello y destello, y el

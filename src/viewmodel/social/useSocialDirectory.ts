@@ -6,7 +6,7 @@ import { isOffline, isServiceUnavailable } from '../../core/utils/network';
 import { normalizeTimestamp as toSafeTimestamp } from '../../core/utils/normalize';
 import { reviewActorsByGame } from '../../core/social/moveActivity';
 import { getCachedSocialDirectory, getLocalMeta, patchLocalMeta, putCachedSocialDirectory } from '../../model/repository/indexedDbRepository';
-import { getSocialSyncConfig, mergeSocialGistData, readPublicSocialGistById, type SocialGistData, type SocialProfileVisibility, type SocialSharedGame } from '../../model/repository/socialGistRepository';
+import { getSocialSyncConfig, mergeSocialGistData, readPublicSocialGistById, type SocialGistData, type SocialMoveEntry, type SocialProfileVisibility, type SocialSharedGame } from '../../model/repository/socialGistRepository';
 import { getSocialProfilesByUid, type SocialAuthUser } from '../../model/repository/firebaseRepository';
 import { PROFILE_INACTIVITY_MS } from '../../core/constants/socialActivity';
 import { isOwnProfileIdentity } from './socialIdentity';
@@ -424,7 +424,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
             // de esta entrada del directorio: son identificadores distintos de la misma persona y el detalle
             // resuelve por el primero (ver `reviewActorsByGame`).
             const reviewActors = reviewActorsByGame(socialData.activity);
-            const moves = (socialData.moves || [])
+            const toMoveItems = (entries: SocialMoveEntry[] = []) => entries
               .slice(0, SOCIAL_MOVES_PER_PROFILE)
               .map((moveEntry) => ({
                 ...moveEntry,
@@ -434,6 +434,10 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
                 reviewActorId: reviewActors.get(moveEntry.gameId),
                 ...author,
               }));
+            const moves = toMoveItems(socialData.moves);
+            // Los de las listas ocultas, con el mismo cupo y la misma forma. El feed solo los mezcla para la
+            // administración (ver `FeedSource.hiddenMoves`).
+            const hiddenMoves = toMoveItems(socialData.hiddenMoves);
 
             return {
               id: entry.id,
@@ -454,6 +458,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
               activity,
               posts,
               moves,
+              hiddenMoves,
               sharedLists,
               visibility: socialData.profile.visibility || defaultSocialVisibility,
             };

@@ -27,3 +27,18 @@ export const SOCIAL_TEXT_MAX = 5000;
  * React y viajan a la caché de IndexedDB, así que tampoco pueden venir sin tope del gist de otro.
  */
 export const SOCIAL_ID_MAX = 200;
+
+/**
+ * La VENTANA del feed: cuántos días hacia atrás se cuenta lo que la app registra sola (logros y movimientos de
+ * lista). Una sola cifra para los dos, para que el feed no enseñe un mes de logros y dos años de movimientos.
+ *
+ * Los movimientos la aplican dos veces: al PUBLICAR, para que el canal no guarde lo que ya nadie va a ver, y al LEER,
+ * porque el gist de quien aún no se ha actualizado sigue llevando sus 400. Las reseñas y las publicaciones no la
+ * miran: son contenido escrito, no un registro.
+ */
+export const FEED_RECENT_DAYS = 30;
+
+/** El instante desde el que algo entra en la ventana del feed. */
+export function feedRecentSince(now: number): number {
+  return now - FEED_RECENT_DAYS * 24 * 60 * 60 * 1000;
+}

@@ -86,9 +86,13 @@ function moveGroups(items: ReturnType<typeof useSocialFeed>['feedItems']): numbe
 
 beforeEach(() => {
   localStorage.clear();
+  // El reloj, en el día de los datos: el feed solo enseña los movimientos de los últimos 30 días.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(T);
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.clearAllMocks();
 });
 
@@ -259,3 +263,76 @@ describe('el feed con movimientos de lista', () => {
     vi.unstubAllEnvs();
   });
 });
+
+// ── La cuenta de administración ve también las listas ocultas ─────────────────────────────────────────────────
+// `hiddenMoves` llega en todas las entradas del directorio (se hidrata siempre); es el feed quien decide. El
+// resto de la gente no ve nada de ahí, y la administración sigue respetando su propio filtro de listas.
+describe('el feed y los movimientos de las listas ocultas', () => {
+  const directorio = [{ moves: [move(1, 'c', T)], hiddenMoves: [move(2, 'v', T - DIA)] }];
+
+  it('quien no administra no ve ninguno, aunque estén en el directorio', () => {
+    const { result } = renderHook(() => useSocialFeed(directorio));
+
+    expect(movedGameIds(result.current.feedItems)).toEqual([1]);
+  });
+
+  it('la administración los ve junto a los visibles', () => {
+    const { result } = renderHook(() => useSocialFeed(directorio, undefined, undefined, false, true));
+
+    expect(movedGameIds(result.current.feedItems)).toEqual([1, 2]);
+  });
+
+  it('a la administración le sigue valiendo su propio filtro de listas', () => {
+    feedMoveTabsPreference.set('cep~');
+    const { result } = renderHook(() => useSocialFeed(directorio, undefined, undefined, false, true));
+
+    expect(movedGameIds(result.current.feedItems)).toEqual([1]);
+  });
+
+  it('un juego, un aviso al día también en la unión: el «abandonó» oculto tapa al «comenzó» visible', () => {
+    // Cada mitad se colapsó sin ver la otra al publicarse, así que en el gist están los dos.
+    const mismoDia = [{ moves: [move(7, 'e', T)], hiddenMoves: [move(7, 'v', T + 3_600_000)] }];
+
+    const admin = renderHook(() => useSocialFeed(mismoDia, undefined, undefined, false, true));
+    expect(admin.result.current.feedItems.map((item) => (item as { tab?: string }).tab)).toEqual(['v']);
+
+    // Y quien no administra sigue viendo el «comenzó», que es lo único que se le publicó.
+    const amistad = renderHook(() => useSocialFeed(mismoDia));
+    expect(amistad.result.current.feedItems.map((item) => (item as { tab?: string }).tab)).toEqual(['e']);
+  });
+
+  it('la unión es por persona: el mismo juego de dos autores no se tapa entre sí', () => {
+    const dos = [
+      { moves: [move(9, 'e', T, 'pid-1')] },
+      { moves: [], hiddenMoves: [move(9, 'v', T + 1000, 'pid-2')] },
+    ];
+    const { result } = renderHook(() => useSocialFeed(dos, undefined, undefined, false, true));
+
+    expect(result.current.feedItems.map((item) => (item as { tab?: string }).tab).sort()).toEqual(['e', 'v']);
+  });
+});
+
+describe('la ventana de 30 días — al leer', () => {
+  it('un movimiento de hace más de 30 días no sale, aunque el gist lo traiga', () => {
+    // El gist de quien no se ha actualizado sigue llevando sus 400: el corte lo pone el feed.
+    const { result } = renderHook(() => useSocialFeed([{ moves: [move(1, 'c', T - 29 * DIA), move(2, 'c', T - 31 * DIA)] }]));
+
+    expect(movedGameIds(result.current.feedItems)).toEqual([1]);
+  });
+
+  it('a la administración le vale la misma ventana para los de las listas ocultas', () => {
+    const { result } = renderHook(() => useSocialFeed(
+      [{ moves: [], hiddenMoves: [move(3, 'v', T - DIA), move(4, 'v', T - 40 * DIA)] }],
+      undefined, undefined, false, true,
+    ));
+
+    expect(movedGameIds(result.current.feedItems)).toEqual([3]);
+  });
+
+  it('las reseñas no miran la ventana: son contenido escrito, no un registro', () => {
+    const { result } = renderHook(() => useSocialFeed([{ activity: [review(5, T - 400 * DIA)], moves: [move(6, 'c', T - 400 * DIA)] }]));
+
+    expect(result.current.feedItems.map((item) => item.kind)).toEqual([undefined]);
+  });
+});
+
