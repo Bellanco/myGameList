@@ -108,11 +108,17 @@
 /* ── §2 · El acero: veta de cepillado en capa propia. El ruido va ANISÓTROPO (la lattice estirada en un
    eje), que es lo que produce la veta; un `repeating-linear-gradient` de 1 px no es metal, es una
    persiana. En `overlay` y a media opacidad para que no ensucie el texto. ── */
+/* LA LUZ DE ARRIBA SUBE CON LA PÁGINA, no se queda fija a la ventana. Con `background-attachment: fixed`, y la
+   veta en `overlay` encima, la GPU tenía que recomponer la página entera en cada fotograma del scroll: medido el
+   07-10-2026 (Playwright, Chrome con GPU real, 300 juegos), 29-48 % de fotogramas perdidos en escritorio y
+   19-29 % en un móvil con la CPU ×4; sin el fijo, 14-35 % y 16-24 %. El tamaño va en `100vh` y sin repetir
+   para que arriba del todo se vea exactamente como antes: es al bajar cuando el brillo se queda atrás. */
 :root[data-palette="witcher"] body {
   background-image:
     linear-gradient(180deg, rgba(255,255,255,.05), transparent 24%),
     radial-gradient(120% 70% at 50% -10%, rgba(198,206,216,.10), transparent 60%);
-  background-attachment: fixed;
+  background-size: 100% 100vh;
+  background-repeat: no-repeat;
 }
 :root[data-palette="witcher"] body::before {
   content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
@@ -908,7 +914,8 @@
      texto queda en 4,55:1 con un pico del 1 % —o sea, para verse tendría que ser invisible— y en 4,16:1
      con el 5 % que hacía falta para notarla. Por detrás solo toca al texto que va directamente sobre el
      fondo, que es el que más holgura tiene: el peor caso se queda en 6,34:1 en oscuro (pico al 10 %) y
-     5,05:1 en claro (pico al 12 %). Diez veces más luz y sigue sobrando margen.
+     5,05:1 en claro (pico al 12 %). Diez veces más luz y sigue sobrando margen. (Hoy los picos van al 6 y al
+     7 %, así que el margen es aún mayor.)
 
      Lo que se ve, entonces, es la chapa DESNUDA de la página —que en este tema es casi media pantalla—
      cogiendo la luz, y los paneles tapándola al pasar por debajo. Es lo que hace una plancha de metal
@@ -928,15 +935,16 @@
     inset: -10% -55%;
     pointer-events: none;
     z-index: -1;
+    /* Más tenue desde el 07-10-2026 (el pico iba al 10 % y los flancos al 4 %): se quería más sutil. */
     background: linear-gradient(102deg,
-      transparent 40%, rgba(255,255,255,.04) 46%, rgba(255,255,255,.10) 50%,
-      rgba(255,255,255,.04) 54%, transparent 60%);
+      transparent 40%, rgba(255,255,255,.025) 46%, rgba(255,255,255,.06) 50%,
+      rgba(255,255,255,.025) 54%, transparent 60%);
     animation: wt-luz-acero 17s ease-in-out infinite;
   }
   :root[data-effects="on"][data-palette="witcher"][data-theme="light"] body::after {
     background: linear-gradient(102deg,
-      transparent 40%, rgba(86,104,124,.05) 46%, rgba(86,104,124,.12) 50%,
-      rgba(86,104,124,.05) 54%, transparent 60%);
+      transparent 40%, rgba(86,104,124,.03) 46%, rgba(86,104,124,.07) 50%,
+      rgba(86,104,124,.03) 54%, transparent 60%);
   }
   /* La pasada ocupa el 15 % del ciclo; el resto la banda está fuera de cuadro, quieta. */
   @keyframes wt-luz-acero {
