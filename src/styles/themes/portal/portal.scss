@@ -424,6 +424,21 @@
   :root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):nth-of-type(2n) { animation-delay: -7s; }
   :root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):nth-of-type(3n) { animation-delay: -12s; }
 
+  /* EN EL MOSAICO, UNO DE CADA CUATRO. Sin virtualizar —por debajo de 120 filas— un monitor ancho pinta todas las
+     cajas a la vez, con cuatro chips cada una: con 300 juegos eran 1.204 animaciones de `filter`, que corren en el
+     hilo principal, y se lo comían el 72 % del tiempo EN REPOSO (medido el 07-10-2026). Destella el primer chip de
+     cada grupo en una caja de cada dos; el desfase va por la posición de la CAJA, porque el del chip de arriba
+     (`:nth-of-type`) aquí siempre cae en el primero y titilarían todas a la vez. */
+  :root[data-effects="on"][data-palette="portal"] .game-card .chip { animation: none; }
+  :root[data-effects="on"][data-palette="portal"] .game-card:nth-child(odd) .chip:first-child {
+    animation: portal-fluoro 17s ease-in-out var(--fluoro-retraso, 0s) infinite;
+  }
+  :root[data-effects="on"][data-palette="portal"] .game-card:nth-child(odd) .chip-genre:first-child {
+    animation-delay: calc(var(--fluoro-retraso, 0s) - 8.5s);
+  }
+  :root[data-palette="portal"] .game-card:nth-child(6n+3) { --fluoro-retraso: -5.5s; }
+  :root[data-palette="portal"] .game-card:nth-child(6n+5) { --fluoro-retraso: -11.5s; }
+
   /* El CARTEL de día lleva el fluorescente ORIGINAL (más marcado y frecuente): un tubo de señal que titilea
      de verdad, no el destello tenue del resto de componentes. */
   @keyframes portal-fluoro-strong {

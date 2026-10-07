@@ -385,6 +385,21 @@
   :root[data-palette="cyberpunk"] .chip:nth-child(5n+3) { animation-delay: -17s; }
   :root[data-palette="cyberpunk"] .hub-feed-game-chip:nth-of-type(2n) { animation-delay: -11s; }
   :root[data-palette="cyberpunk"] .hub-feed-game-chip:nth-of-type(3n) { animation-delay: -6s; }
+
+  /* EN EL MOSAICO, UNO DE CADA CUATRO. Sin virtualizar —por debajo de 120 filas— un monitor ancho pinta todas las
+     cajas a la vez, con cuatro chips cada una: con 300 juegos eran 1.204 animaciones de `text-shadow`, que corren en
+     el hilo principal, y se lo comían la mitad del tiempo EN REPOSO (medido el 07-10-2026). Falla el primer chip de
+     cada grupo en una caja de cada dos; el desfase va por la posición de la CAJA, porque el del chip de arriba
+     (`:nth-child`) aquí siempre cae en el primero y fallarían todas a la vez. */
+  :root[data-effects="on"][data-palette="cyberpunk"] .game-card .chip { animation: none; }
+  :root[data-effects="on"][data-palette="cyberpunk"] .game-card:nth-child(odd) .chip:first-child {
+    animation: cyber-glitch-chip 21s ease-in-out var(--glitch-retraso, 0s) infinite;
+  }
+  :root[data-effects="on"][data-palette="cyberpunk"] .game-card:nth-child(odd) .chip-genre:first-child {
+    animation-delay: calc(var(--glitch-retraso, 0s) - 10.5s);
+  }
+  :root[data-palette="cyberpunk"] .game-card:nth-child(6n+3) { --glitch-retraso: -7s; }
+  :root[data-palette="cyberpunk"] .game-card:nth-child(6n+5) { --glitch-retraso: -14s; }
 }
 /* Chip del juego (nombre) = etiqueta HUD cian, distinta del amarillo de los géneros. Recto, sin píldora
    genérica (cada tema estiliza su `.hub-feed-game-chip` en §6). */
