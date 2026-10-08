@@ -297,22 +297,10 @@ const atender: (contexto: { request: Request; env: Env }) => Promise<Response> =
      mirando todavía. Cuando luego se pinte el mosaico, cada carátula ya sale de la caché. */
   const soloMapa = url.searchParams.get('m') === '1';
 
-  /* MODO AMPLIADO (`x=1`): admite además DLC, packs y mods. Es una lente de diagnóstico del administrador, no
-     una mejora —esas fichas dan peores emparejamientos, no más—, y va en la URL y no en una cabecera por dos
-     razones que se refuerzan: el service worker cachea por URL y sin `Vary` (su cabecera documenta el estropicio
-     que eso causó con `/api/share/mine`), y la caché de KV es compartida. Con el distintivo en la URL, la
-     respuesta ampliada vive en su propio espacio y no puede acabar servida a otra persona.
-     PERO LA URL NO BASTA PARA CONCEDERLO. Un espacio de claves aparte es un segundo juego de emparejamientos por
-     los MISMOS juegos: sus propias consultas a IGDB y sus propias escrituras de KV. Mientras dependió solo del
-     parámetro, cualquiera que leyera el código —que es público— podía duplicar el gasto del servicio escribiendo
-     cinco caracteres. Ahora hace falta además el sello que `/api/cover-quota` escribe con el token verificado.
-     Y sin sello se IGNORA en vez de rechazarse, a propósito: el sello caduca a las doce horas y la aplicación lo
-     renueva en cada arranque, así que un 403 dejaría al administrador sin carátulas por tener la pestaña abierta
-     mucho rato. Ignorándolo pierde la lente hasta que recargue, que es justo lo que la lente vale.
-     La lectura del sello solo la pagan las peticiones que traen `x=1`, o sea las de una persona. */
-  const ampliado = url.searchParams.get('x') === '1' && (await tieneSelloDeAdministracion(env, request));
+  /* `x=1` (el antiguo modo ampliado de la administración, retirado el 08-10-2026) ya no significa nada: se ignora.
+     Doblaba las consultas a IGDB y las escrituras de KV con un espacio de claves aparte (ver `igdbCover.ts`). */
 
-  /* TAMAÑO (`s=medio` o `s=ancho`). Como `x=1`, viaja en la URL y no en una cabecera: el service worker cachea
+  /* TAMAÑO (`s=medio` o `s=ancho`). Viaja en la URL y no en una cabecera: el service worker cachea
      por URL y sin `Vary`, así que cada tamaño tiene que tener su propia clave de caché o el mosaico acabaría
      pintando la imagen grande —o al revés— según cuál se pidiera primero. */
   const tamano: TamanoCaratula = tamanoPedido(url.searchParams.get('s'));
@@ -340,7 +328,7 @@ const atender: (contexto: { request: Request; env: Env }) => Promise<Response> =
      ya sabido. Así una biblioteca ya llena se navega sin tocar el contador.
      La lectura se hace AQUÍ y la resolución llama a `emparejarYGuardar`, que ya no vuelve a mirar la caché: con
      la función que hacía las dos cosas, cada juego nuevo leía dos veces la misma clave de KV. */
-  let coverId = await leerCaratulaCacheada(env, nombre, listaPlataformas, ampliado);
+  let coverId = await leerCaratulaCacheada(env, nombre, listaPlataformas);
   if (coverId === undefined && soloCache) {
     /* «Aún sin resolver», que NO es «no tiene»: por eso una cabecera que lo distingue y una caché de una hora
        y no de siete días (ver `CACHE_SIN_RESOLVER`). Va antes que el cupo para no gastar ni la lectura de sus
@@ -378,7 +366,7 @@ const atender: (contexto: { request: Request; env: Env }) => Promise<Response> =
         headers: { 'Cache-Control': 'no-store', 'Retry-After': String(restan) },
       });
     }
-    coverId = await emparejarYGuardar(env, nombre, listaPlataformas, ampliado);
+    coverId = await emparejarYGuardar(env, nombre, listaPlataformas);
     if (coverId === undefined) {
       /* No se ha podido preguntar a IGDB (429, token rechazado): no es un dato sobre este juego. 503 y `no-store`,
          nunca el 404 de abajo, que en el modo del recorrido se guarda una semana en el borde y el cliente lo

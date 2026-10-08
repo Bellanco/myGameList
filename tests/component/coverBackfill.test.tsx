@@ -192,8 +192,8 @@ describe('llenado de carátulas', () => {
     // Como si otra sesión lo hubiera preguntado hace tres meses y hubiera dado por recorrida la biblioteca.
     localStorage.setItem('mis-listas-covers-none', JSON.stringify({ [url]: Date.now() - 91 * 24 * 3600 * 1000 }));
     guardarHechos(new Set([
-      claveDeJuego('Max Paine 3', ['Steam'], false),
-      claveDeJuego('Portal', ['Steam'], false),
+      claveDeJuego('Max Paine 3', ['Steam']),
+      claveDeJuego('Portal', ['Steam']),
     ]));
     reiniciarMemoriaDeCaratulas();
 
@@ -391,19 +391,18 @@ describe('llenado de carátulas', () => {
     expect(fetchSimulado).toHaveBeenCalledTimes(1);
   });
 
-  /* EL RECORRIDO Y EL LISTADO TIENEN QUE HACER LA MISMA PREGUNTA. El modo ampliado vive en un espacio de claves
-     aparte —en KV y en la memoria de «este no tiene»—, así que un recorrido hecho en modo normal no calienta lo
-     que el mosaico ampliado va a pedir ni le sirve sus «no»: la cuenta de administración pagaba el recorrido
-     entero para nada y repetía los mismos 404 en cada visita. */
-  it('recorre en el mismo modo en que el listado pide las carátulas', async () => {
+  /* EL RECORRIDO Y EL LISTADO HACEN LA MISMA PREGUNTA, también para la administración. El modo ampliado (`x=1`),
+     retirado el 08-10-2026, era un espacio de claves aparte: un segundo recorrido de la biblioteca entera, con su
+     segunda consulta a IGDB y su segunda escritura de KV por juego. Ser administración solo levanta los topes. */
+  it('la administración recorre con las mismas URL que todo el mundo', async () => {
     admin.manda = true;
     localStorage.setItem('mis-listas-covers', 'on');
     fetchSimulado.mockImplementation(async () => new Response(null, { status: 404 }));
     renderHook(() => useCoverBackfill(biblioteca([juego(1, 'Max Paine 3')])));
 
     await waitFor(() => expect(fetchSimulado).toHaveBeenCalledTimes(1), { timeout: 4000 });
-    expect(String(fetchSimulado.mock.calls[0][0])).toContain('x=1');
-    // Y lo aprendido queda bajo la clave que `coverSrc` consulta para ese mismo modo.
-    await waitFor(() => expect(sabemosQueNoTiene(coverUrl('Max Paine 3', ['Steam'], true))).toBe(true));
+    expect(String(fetchSimulado.mock.calls[0][0])).not.toContain('x=1');
+    // Y lo aprendido queda bajo la clave que consulta el listado.
+    await waitFor(() => expect(sabemosQueNoTiene(coverUrl('Max Paine 3', ['Steam']))).toBe(true));
   });
 });

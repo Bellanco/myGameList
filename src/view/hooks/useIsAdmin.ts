@@ -3,9 +3,12 @@ import { readAdminClaim, subscribeSocialAuth } from '../../model/repository/fire
 
 /**
  * ¿Manda quien está mirando? Igual que `useAdminViewModel`, se apoya en el custom claim `admin` del token, y vale
- * lo mismo que allí: esto es SOLO para la interfaz. La barrera de verdad está en `firestore.rules`, y lo que hay
- * detrás de este `true` —el modo ampliado de las carátulas— no concede acceso a nada: como mucho, peores
- * emparejamientos para quien lo fuerce.
+ * lo mismo que allí: esto es SOLO para la interfaz. La barrera de verdad está en `firestore.rules` y en el borde,
+ * que comprueban el claim con el token verificado.
+ *
+ * EMPIEZA SIEMPRE EN `false` y la respuesta llega tarde (tras bajar el SDK de Auth y leer el token), así que no
+ * debe decidir nada que ya esté pintado. Por eso dejó de elegir la URL de las carátulas (el modo ampliado,
+ * retirado el 08-10-2026): al llegar el claim, todas cambiaban y parpadeaban.
  *
  * Hook aparte y no un campo más de `useScoreScaleSession` porque aquel, además de mirar la sesión, hidrata la
  * escala de puntuación: llamarlo dos veces dispararía esa hidratación dos veces. Aquí solo se escucha.
@@ -19,7 +22,7 @@ import { readAdminClaim, subscribeSocialAuth } from '../../model/repository/fire
  * (cookies bloqueadas en Safari o Chrome), `hasStoredAuthSession` responde que SÍ por prudencia y la suscripción
  * descarga el SDK. En móvil, además, Auth prepara nada más cargar el iframe de Google. Eso le pasaba a la página
  * PÚBLICA de un enlace compartido, que promete no cargar Firebase ni contactar con terceros, solo por montar las
- * sugerencias del pie (ver `useReviewCover`).
+ * sugerencias del pie (cuando las carátulas de las reseñas preguntaban por el modo ampliado).
  *
  * TAMPOCO SE FUERZA EL REFRESCO DEL TOKEN: aquí se pregunta de pasada, en pantallas normales, así que se lee el
  * token que haya. Quien acabe de recibir el claim lo verá en cuanto el token se renueve o vuelva a entrar; el

@@ -3,7 +3,6 @@ import { coverUrl } from '../../../core/utils/coverUrl';
 import { sabemosQueNoTiene } from '../../../core/utils/coverMemory';
 import { peticionDeCaratula } from '../../../core/utils/coverDone';
 import { useCovers } from '../../hooks/useCovers';
-import { useIsAdmin } from '../../hooks/useIsAdmin';
 
 /**
  * `true` = pedir como siempre; `'solo-cache'` = lo ajeno, que se resuelve solo con la parte del cupo del día
@@ -42,15 +41,7 @@ export function useReviewCover(
 ): (name: string, platforms?: readonly string[], tamano?: 'medio' | 'ancho') => string | null {
   const { covers } = useCovers();
   const permitido = covers && acceso !== false;
-  // El modo ampliado (DLC, packs y mods) tiene su propio espacio de caché: se pide con la misma clave con la que
-  // ese navegador ya haya pedido esta carátula en el listado, o la respuesta no se reaprovecha.
-  // Solo se pregunta si puede haber carátula: si no, la respuesta no sirve de nada y preguntar no es gratis. La
-  // página pública de un enlace compartido no las permite, y ahí la pregunta descargaba Firebase y, en móvil,
-  // contactaba con Google en cuanto el navegador tenía el almacenamiento bloqueado (ver `useIsAdmin`).
-  // Y en lo ajeno tampoco: ese espacio aparte solo lo llena la biblioteca propia, y lo ajeno no resuelve con el
-  // cupo entero, así que la lente dejaba sin carátula todo lo que la administración no tiene (ver `GameTable`).
   const soloCache = acceso === 'solo-cache';
-  const ampliado = useIsAdmin(permitido && !soloCache);
 
   return useCallback((name: string, platforms: readonly string[] = [], tamano: 'medio' | 'ancho' = 'ancho') => {
     if (!permitido) return null;
@@ -62,13 +53,13 @@ export function useReviewCover(
        no las llevan). Pedida solo por nombre, la URL no era la del listado: otra descarga de la misma imagen, un
        «no tiene» que la memoria no reconocía y, como la clave del servidor lleva las plataformas
        (`claveCache`), otra resolución contra IGDB por un juego que ya estaba emparejado. */
-    const { nombre, plataformas, soloCache: marca } = peticionDeCaratula(limpio, platforms, ampliado, {
-      preferirConocidas: !ampliado && (soloCache || platforms.length === 0),
+    const { nombre, plataformas, soloCache: marca } = peticionDeCaratula(limpio, platforms, {
+      preferirConocidas: soloCache || platforms.length === 0,
       soloCache,
     });
     // Se pregunta con la URL NORMAL —que es la que guarda el registro de fallos— y se pide la ancha: si de este
     // título no hay carátula, tampoco la habrá en otro tamaño.
-    if (sabemosQueNoTiene(coverUrl(nombre, plataformas, ampliado))) return null;
-    return coverUrl(nombre, plataformas, ampliado, tamano, marca ? 'ajeno' : 'resolver');
-  }, [permitido, soloCache, ampliado]);
+    if (sabemosQueNoTiene(coverUrl(nombre, plataformas))) return null;
+    return coverUrl(nombre, plataformas, tamano, marca ? 'ajeno' : 'resolver');
+  }, [permitido, soloCache]);
 }

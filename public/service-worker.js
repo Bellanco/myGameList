@@ -181,7 +181,9 @@ self.addEventListener('activate', (event) => {
     await Promise.all(names.filter((name) => !conservar.has(name)).map((name) => caches.delete(name)));
     // Y como el cubo de carátulas es el único que NO se tira, este es el momento de recortarlo: un despliegue es
     // el punto fijo que un cubo perpetuo no tiene. El resto del recorte lo hace `handleCover` mientras se llena.
-    await podarCaratulas(await caches.open(COVER_CACHE_NAME)).catch(() => {});
+    const cubo = await caches.open(COVER_CACHE_NAME);
+    await retirarCaratulasAmpliadas(cubo).catch(() => {});
+    await podarCaratulas(cubo).catch(() => {});
     await self.clients.claim();
     // Y SE DICE QUIÉN ES. Tomar el control no significa que las páginas abiertas estén viejas: la primera visita
     // después de un despliegue trae YA el documento nuevo (el HTML va con `no-store` y la navegación es
@@ -363,6 +365,18 @@ self.addEventListener('message', (event) => {
     }
   })());
 });
+
+/**
+ * LO QUE DEJÓ EL MODO AMPLIADO (`x=1`), retirado el 08-10-2026: una segunda copia de cada carátula de la
+ * biblioteca de la administración, que ya no pide nadie. Se tira al activar, antes de podar, para que no ocupe
+ * sitio del tope ni empuje fuera carátulas que sí se usan. Recorrer las claves de un cubo sin ninguna es barato,
+ * y esto puede retirarse cuando ya no quede ningún service worker anterior al cambio.
+ */
+async function retirarCaratulasAmpliadas(cache) {
+  const claves = await cache.keys();
+  const ampliadas = claves.filter((clave) => new URL(clave.url).searchParams.get('x') === '1');
+  await Promise.all(ampliadas.map((clave) => cache.delete(clave)));
+}
 
 /**
  * Deja el cubo de carátulas por debajo de su tope, tirando las más antiguas. Se cuentan las entradas y no los

@@ -16,9 +16,9 @@ import {
 import { reiniciarMemoriaDeCaratulas, sabemosQueNoTiene } from '../../src/core/utils/coverMemory';
 import { coverUrl } from '../../src/core/utils/coverUrl';
 
-function apunta(nombre: string, plataformas: string[], ampliado = false): void {
+function apunta(nombre: string, plataformas: string[]): void {
   const hechos = leerHechos();
-  hechos.add(claveDeJuego(nombre, plataformas, ampliado));
+  hechos.add(claveDeJuego(nombre, plataformas));
   guardarHechos(hechos);
 }
 
@@ -66,10 +66,10 @@ describe('carátulas ya resueltas', () => {
     expect(plataformasYaPedidas('')).toBeNull();
   });
 
-  /* El modo ampliado vive en otro espacio de claves y da PEORES emparejamientos (admite DLC y packs): lo que se
-     resolvió con él no puede servirle de alias a nadie. */
-  it('lo resuelto en modo ampliado no sirve de alias', () => {
-    apunta('Hollow Knight', ['Steam'], true);
+  /* Lo que resolvió el modo ampliado (retirado; admitía DLC y packs, que dan PEORES emparejamientos) no puede
+     servirle de alias a nadie. */
+  it('lo resuelto en el modo ampliado no sirve de alias', () => {
+    localStorage.setItem('mis-listas-covers-done-v2', `Hollow Knight\u0001Steam\u0001x`);
 
     expect(plataformasYaPedidas('Hollow Knight')).toBeNull();
   });
@@ -99,7 +99,7 @@ describe('la petición de una carátula ajena', () => {
   const ajena = { preferirConocidas: true, soloCache: true };
 
   it('un título que no consta se pide con lo suyo y solo de lo ya resuelto', () => {
-    expect(peticionDeCaratula('Celeste', ['Switch'], false, ajena)).toEqual({
+    expect(peticionDeCaratula('Celeste', ['Switch'], ajena)).toEqual({
       nombre: 'Celeste',
       plataformas: ['Switch'],
       soloCache: true,
@@ -109,7 +109,7 @@ describe('la petición de una carátula ajena', () => {
   it('uno que ya resolviste se pide como lo pediste tú, y entonces sin la marca', () => {
     apunta('Hollow Knight', ['Steam']);
 
-    expect(peticionDeCaratula('Hollow Knight', ['Switch'], false, ajena)).toEqual({
+    expect(peticionDeCaratula('Hollow Knight', ['Switch'], ajena)).toEqual({
       nombre: 'Hollow Knight',
       plataformas: ['Steam'],
       soloCache: false,
@@ -121,23 +121,17 @@ describe('la petición de una carátula ajena', () => {
   it('con el título escrito de otra manera, la URL lleva TU nombre, que es el que el servidor tiene', () => {
     apunta('Marvels Spider-Man', ['PC']);
 
-    expect(peticionDeCaratula("Marvel's Spider-Man", ['PS4'], false, ajena)).toEqual({
+    expect(peticionDeCaratula("Marvel's Spider-Man", ['PS4'], ajena)).toEqual({
       nombre: 'Marvels Spider-Man',
       plataformas: ['PC'],
       soloCache: false,
     });
   });
 
-  it('en modo ampliado conserva la marca: ese espacio de claves no lo ha recorrido nadie aquí', () => {
-    apunta('Hollow Knight', ['Steam']);
-
-    expect(peticionDeCaratula('Hollow Knight', ['Switch'], true, ajena).soloCache).toBe(true);
-  });
-
   it('sin `preferirConocidas` no se mira el índice', () => {
     apunta('Hollow Knight', ['Steam']);
 
-    expect(peticionDeCaratula('Hollow Knight', ['Switch'], false, { preferirConocidas: false, soloCache: true }))
+    expect(peticionDeCaratula('Hollow Knight', ['Switch'], { preferirConocidas: false, soloCache: true }))
       .toEqual({ nombre: 'Hollow Knight', plataformas: ['Switch'], soloCache: true });
   });
 });
@@ -153,7 +147,7 @@ describe('reabrir la pregunta al editar un juego', () => {
   function sinPortadaDesdeHace(ms: number): void {
     const url = coverUrl('Jotum', ['Steam']);
     localStorage.setItem(CLAVE_NONE, JSON.stringify({ [url]: Date.now() - ms }));
-    guardarHechos(new Set([claveDeJuego('Jotum', ['Steam'], false)]));
+    guardarHechos(new Set([claveDeJuego('Jotum', ['Steam'])]));
     reiniciarMemoriaDeCaratulas();
     reiniciarIndiceDeCaratulas();
   }
@@ -166,7 +160,7 @@ describe('reabrir la pregunta al editar un juego', () => {
     // Las DOS memorias: sin la primera el listado no pide la imagen, y sin la segunda el recorrido —que es el
     // único que aprende de la respuesta— no vuelve a preguntar por ella.
     expect(sabemosQueNoTiene(coverUrl('Jotum', ['Steam']))).toBe(false);
-    expect(leerHechos().has(claveDeJuego('Jotum', ['Steam'], false))).toBe(false);
+    expect(leerHechos().has(claveDeJuego('Jotum', ['Steam']))).toBe(false);
   });
 
   it('pero el mismo día no toca nada', () => {
@@ -175,33 +169,52 @@ describe('reabrir la pregunta al editar un juego', () => {
     expect(reabrirLaPregunta('Jotum', ['Steam'])).toBe(false);
 
     expect(sabemosQueNoTiene(coverUrl('Jotum', ['Steam']))).toBe(true);
-    expect(leerHechos().has(claveDeJuego('Jotum', ['Steam'], false))).toBe(true);
+    expect(leerHechos().has(claveDeJuego('Jotum', ['Steam']))).toBe(true);
   });
 
   it('y a un juego que ya tiene carátula, editarlo no le cuesta nada', () => {
-    guardarHechos(new Set([claveDeJuego('Celeste', ['Steam'], false)]));
+    guardarHechos(new Set([claveDeJuego('Celeste', ['Steam'])]));
 
     expect(reabrirLaPregunta('Celeste', ['Steam'])).toBe(false);
 
     // Lo ya recorrido sigue intacto: no se ha reabierto ninguna petición por guardar una reseña.
-    expect(leerHechos().has(claveDeJuego('Celeste', ['Steam'], false))).toBe(true);
+    expect(leerHechos().has(claveDeJuego('Celeste', ['Steam']))).toBe(true);
   });
 
   it('no se lía con un juego sin nombre', () => {
     expect(reabrirLaPregunta('', ['Steam'])).toBe(false);
   });
 
-  /* El modo ampliado tiene su propio espacio de claves, y quien edita no tiene por qué saber en cuál está
-     mirando: se reabren los dos o no se reabre ninguno. */
-  it('reabre también el espacio del modo ampliado', () => {
-    const url = coverUrl('Jotum', ['Steam'], true);
-    localStorage.setItem(CLAVE_NONE, JSON.stringify({ [url]: Date.now() - 2 * DIA }));
-    guardarHechos(new Set([claveDeJuego('Jotum', ['Steam'], true)]));
-    reiniciarMemoriaDeCaratulas();
+});
 
-    expect(reabrirLaPregunta('Jotum', ['Steam'])).toBe(true);
+/* EL MODO AMPLIADO (`x=1`) SE RETIRÓ el 08-10-2026: doblaba consultas a IGDB y escrituras de KV, y al llegar el
+   claim de la administración cambiaba la URL de cada carátula pintada. Lo que dejó apuntado en el navegador de
+   quien lo usó no debe volver a contar como trabajo hecho ni como «no tiene». */
+describe('lo que dejó el modo ampliado', () => {
+  const SEP = '\u0001';
 
-    expect(sabemosQueNoTiene(url)).toBe(false);
-    expect(leerHechos().has(claveDeJuego('Jotum', ['Steam'], true))).toBe(false);
+  it('sus apuntes de «hecho» se tiran al leer, y los normales se quedan', () => {
+    localStorage.setItem('mis-listas-covers-done-v2', [`Celeste${SEP}Steam${SEP}x`, `Celeste${SEP}Steam`].join('\n'));
+
+    expect([...leerHechos()]).toEqual([claveDeJuego('Celeste', ['Steam'])]);
+  });
+
+  it('de la lista del formato anterior no se traducen sus URL', () => {
+    localStorage.setItem(
+      'mis-listas-covers-done',
+      JSON.stringify(['/cover?n=Celeste&p=Steam&x=1', coverUrl('Portal', ['Steam'])]),
+    );
+
+    expect([...leerHechos()]).toEqual([claveDeJuego('Portal', ['Steam'])]);
+  });
+
+  it('sus «no tiene» no se cargan: el juego se vuelve a pedir en modo normal', () => {
+    localStorage.setItem(
+      'mis-listas-covers-none',
+      JSON.stringify({ '/cover?n=Jotum&p=Steam&x=1': Date.now(), [coverUrl('Max Paine 3', ['Steam'])]: Date.now() }),
+    );
+
+    expect(sabemosQueNoTiene('/cover?n=Jotum&p=Steam&x=1')).toBe(false);
+    expect(sabemosQueNoTiene(coverUrl('Max Paine 3', ['Steam']))).toBe(true);
   });
 });

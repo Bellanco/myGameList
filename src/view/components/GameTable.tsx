@@ -20,7 +20,6 @@ import { useListShape } from '../hooks/useListShape';
 import { GRID_SIZES, useGridSize } from '../hooks/useGridSize';
 import type { GridSize } from '../hooks/preferences';
 import { useCovers } from '../hooks/useCovers';
-import { useIsAdmin } from '../hooks/useIsAdmin';
 
 interface GameTableProps {
   games: GameItem[];
@@ -318,9 +317,9 @@ function soltarNombreCortado(event: { currentTarget: HTMLElement }): void {
   if (hueco) hueco.style.height = '';
 }
 
-function coverBase(covers: boolean, peticion: PeticionDeCaratula, ampliado: boolean): string | null {
+function coverBase(covers: boolean, peticion: PeticionDeCaratula): string | null {
   if (!covers) return null;
-  const url = coverUrl(peticion.nombre, peticion.plataformas, ampliado);
+  const url = coverUrl(peticion.nombre, peticion.plataformas);
   return sabemosQueNoTiene(url) ? null : url;
 }
 
@@ -346,18 +345,17 @@ interface PedidoDePortada {
 function coverDeCaja(
   covers: boolean,
   game: GameItem,
-  ampliado: boolean,
   pedido: PedidoDePortada,
 ): { src: string | null; src2x: string | null } {
-  const peticion = peticionDeCaratula(game.name, game.platforms, ampliado, pedido);
-  const base = coverBase(covers, peticion, ampliado);
+  const peticion = peticionDeCaratula(game.name, game.platforms, pedido);
+  const base = coverBase(covers, peticion);
   if (!base) return { src: null, src2x: null };
   const { nombre, plataformas, soloCache } = peticion;
   const siNoEstaResuelta = soloCache ? 'ajeno' : 'resolver';
   return {
     // La normal sale ya compuesta de la memoria de «no tiene», que se guarda sin la marca: solo se rehace con ella.
-    src: soloCache ? coverUrl(nombre, plataformas, ampliado, 'normal', siNoEstaResuelta) : base,
-    src2x: coverUrl(nombre, plataformas, ampliado, 'medio', siNoEstaResuelta),
+    src: soloCache ? coverUrl(nombre, plataformas, 'normal', siNoEstaResuelta) : base,
+    src2x: coverUrl(nombre, plataformas, 'medio', siNoEstaResuelta),
   };
 }
 
@@ -373,12 +371,11 @@ function coverDeCaja(
 function coverDeRenglon(
   covers: boolean,
   game: GameItem,
-  ampliado: boolean,
   pedido: PedidoDePortada,
 ): string | null {
-  const peticion = peticionDeCaratula(game.name, game.platforms, ampliado, pedido);
-  if (!coverBase(covers, peticion, ampliado)) return null;
-  return coverUrl(peticion.nombre, peticion.plataformas, ampliado, 'medio', peticion.soloCache ? 'ajeno' : 'resolver');
+  const peticion = peticionDeCaratula(game.name, game.platforms, pedido);
+  if (!coverBase(covers, peticion)) return null;
+  return coverUrl(peticion.nombre, peticion.plataformas, 'medio', peticion.soloCache ? 'ajeno' : 'resolver');
 }
 
 function renderTags(values: string[], className: string, maxVisible?: number, tone = false) {
@@ -623,13 +620,6 @@ export const GameTable = memo(function GameTable({
   /* TAMAÑO DE LOS CUADROS, elegido en la cabecera del listado. Solo cambia cuántas columnas caben; el contenido
      de cada cuadro es el mismo, que es lo que evita tener tres diseños que mantener. */
   const { size: gridSize, setSize: setGridSize } = useGridSize();
-  /* Modo ampliado de las carátulas: solo la cuenta de administración. No es una mejora —admite DLC, packs y
-     mods, que dan PEORES emparejamientos— sino una lente para ver qué hay en el catálogo. Su respuesta vive en
-     un espacio de caché aparte, así que encenderla no le cambia la carátula a nadie más.
-     EN LO AJENO (`cachedOnly`) NO SE ENCIENDE. Ese espacio aparte solo lo llena el recorrido de la biblioteca
-     de la administración, y lo ajeno no resuelve con el cupo entero: con la lente puesta, la estantería de un
-     amigo solo enseñaba los juegos que la administración también tiene, aunque su dueño los viera todos. */
-  const coversAmpliadas = useIsAdmin(!coverPolicy?.cachedOnly);
   /* El MOSAICO también vale en un teléfono: sus columnas salen del mismo mínimo de caja que en escritorio (a
      412 px caben dos), así que elegir «cajas» en el móvil ya no revierte a renglones sin avisar. */
   const cards = shape === 'list';
@@ -1274,7 +1264,7 @@ export const GameTable = memo(function GameTable({
                                     no tenga imagen enseña su portada de casa. */}
                                 {covers ? (
                                   <div className="game-card-art">
-                                    <GameCover name={game.name} {...coverDeCaja(covers, game, coversAmpliadas, pedidoDePortada)} />
+                                    <GameCover name={game.name} {...coverDeCaja(covers, game, pedidoDePortada)} />
                                     {/* La nota, flotando sobre el canto de la carátula: en el mosaico es lo
                                         primero que se busca, y ahí está siempre en el mismo punto de cada caja
                                         en vez de bailar según lo que ocupe el nombre. */}
@@ -1351,7 +1341,7 @@ export const GameTable = memo(function GameTable({
                      no como `<img>` porque aquí no se mira: no necesita alt, ni hueco reservado, ni participar
                      en la medición de la fila. Sin preferencia de carátulas encendida —o sin imagen para ese
                      juego— la pieza se queda en su superficie plana, que es la maqueta §2. */
-                  const rowCover = coverDeRenglon(covers, game, coversAmpliadas, pedidoDePortada);
+                  const rowCover = coverDeRenglon(covers, game, pedidoDePortada);
                   /* El lado malo del renglón: en la vergüenza son los MOTIVOS de dejarlo, no los defectos. */
                   const malos = (currentTab === 'v' ? game.reasons : game.weaknesses) || [];
                   /* Cuántos chips enseña ESTE juego en cada ranura, medidos con el ancho de su columna. */

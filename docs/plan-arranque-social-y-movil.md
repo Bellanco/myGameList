@@ -1,8 +1,7 @@
 # Arranque, view-model social y móvil — plan
 
 Estado: **sin empezar** (escrito el 08-10-2026 sobre `9c343f1d`, la 1.6.5). Reúne los trabajos que se pidieron
-juntos: el parpadeo de las carátulas al abrir (que acaba en retirar el modo ampliado), quitar peso del chunk de
-entrada, partir `useSocialViewModel`, `share_target` y View Transitions. Publicar en Google Play queda escrito pero
+juntos: el parpadeo de las carátulas al abrir (ya hecho), quitar peso del chunk de entrada, partir `useSocialViewModel`, `share_target` y View Transitions. Publicar en Google Play queda escrito pero
 aparcado. Si una cifra no cuadra con el código, manda el
 código: corrígela aquí.
 
@@ -10,7 +9,10 @@ código: corrígela aquí.
 historial de git) y se apunta aquí cuál es la siguiente. Una fase que, al llegar a ella, resulta no tener nada que
 hacer también se borra, con una línea que diga por qué.
 
-**Siguiente:** F0.
+**Siguiente:** F1, pasos 1-2 (precache de lo diferido).
+
+**Hecho:** F0, retirar el modo ampliado de las carátulas (`x=1`), que las hacía parpadear al abrir con la cuenta
+de administración y doblaba consultas a IGDB y escrituras de KV. Hecho el 08-10-2026.
 
 Lo que se descartó en la misma conversación, con la medición delante, y no conviene volver a levantar:
 
@@ -23,82 +25,6 @@ Lo que se descartó en la misma conversación, con la medición delante, y no co
   ya aprietan las carátulas: no caben en el plan gratuito (`docs/plan-capacidad-gratuita.md`).
 - **La build `production` de react-router.** El chunk del router sale de `dist/development/`, pero los dos
   ficheros miden lo mismo (1 byte de diferencia): no hay nada que ganar ahí.
-
----
-
-## F0 · Las carátulas parpadean al abrir · **fallo** → se retira el modo ampliado
-
-**Lo que se ve:** al abrir la app, las carátulas aparecen, desaparecen un instante y vuelven.
-
-**La causa, reproducida.** `GameTable.tsx:632` pide el modo ampliado con `useIsAdmin(...)`, y ese hook empieza
-SIEMPRE en `false`: el claim llega cuando se ha descargado el SDK de Firebase (172 kB, perezoso) y se ha leído el
-token. El primer pintado pide las carátulas sin `x=1` y, al llegar el claim, la URL cambia:
-
-| Forma | Antes del claim | Después |
-|---|---|---|
-| Mosaico | `/cover?n=Celeste&p=Steam` · `data-carga="lista"` | `/cover?n=Celeste&p=Steam&x=1` · **`cargando`** |
-| Renglón | `--row-cover: url("/cover?n=Celeste&p=Steam&s=medio")` | `…&x=1&s=medio` |
-
-Medido con un test de componente temporal que simula el claim llegando tras el montaje. El test que existe,
-`GameTableCovers.test.tsx`, no lo puede ver: su mock de `useIsAdmin` contesta de forma síncrona. `GameCover`
-reinicia su estado al cambiar `src` (hecho a propósito para el reciclado de la rejilla), así que la imagen ya
-pintada se esconde detrás de la portada de casa y vuelve a «entrar» con la animación del tema. En el renglón, al
-cambiar el `background-image`, el fondo desaparece hasta que llega el nuevo.
-
-**A quién afecta:** solo a la cuenta con el claim `admin`. Para los demás `useIsAdmin` no pasa de `false` y la URL
-no cambia. Coste en red casi nulo: `/cover` va con caché primero en el service worker, así que la tanda sin `x=1`
-sale de la Cache Storage. El coste es el parpadeo y descodificar dos veces.
-
-**¿Entra en el chunk de arranque?** Poco: `coverMemory` (0,9 kB min) y `coverDone` (1,4 kB min) van en él;
-`useCoverBackfill` ya es perezoso en idle (`82978f93`). El SDK de Firebase no está en el arranque: se baja al
-haber sesión, y es ese viaje lo que retrasa el claim.
-
-**Y el modo ampliado duplica el gasto.** Medido en el código (`functions/cover.ts`, `functions/_lib/igdbCover.ts`,
-`useCoverBackfill.ts`):
-
-| Dónde | Lo que cuesta `x=1` además de la carátula normal |
-|---|---|
-| IGDB | una segunda consulta por juego: espacio de claves aparte (`igdb:cover:v2x:` frente a `v2:`) |
-| KV | una segunda escritura por juego al emparejar, del cupo diario de la CUENTA que comparten carátulas y enlaces de reseñas; y una lectura más (el sello de administración) en cada petición con `x=1` que llega a la Function |
-| Navegador | una segunda copia de cada imagen en la Cache Storage, y sus apuntes en `coverDone` («hecho») y `coverMemory` («no tiene») |
-| Recorrido de fondo | un segundo recorrido de la biblioteca entera, en modo ampliado |
-
-Y no da nada a cambio: el propio código lo describe como una «lente de diagnóstico» que admite DLC, packs y mods,
-y que da **peores** emparejamientos, no más. El parpadeo aparece también en las reseñas del social, porque
-`useReviewCover.ts:53` hace la misma pregunta.
-
-### Decisión (08-10-2026): retirar el modo ampliado
-
-Solo carátulas normales, para todo el mundo. Así el parpadeo se arregla de raíz, no con un apaño, y se deja de
-duplicar el gasto. Se descarta «recordar la última respuesta de `useIsAdmin`»: quitaría el parpadeo pero dejaría el
-doble gasto.
-
-**Lo que NO se pierde:** los privilegios de la administración en el recorrido de fondo, el cupo libre
-(`pedirCupoDeCaratulasLibre` → `/api/cover-quota`) y los topes del navegador levantados
-(`evaluarTopesDeImagenes`). Hoy cuelgan de la misma variable `ampliado` en `useCoverBackfill.ts:79`, así que hay
-que separarlos: pasan a depender de un `useIsAdmin()` propio que ya no toca ninguna URL. Ese hook sigue llegando
-tarde, y no importa: solo decide cuánto se recorre, no qué se pinta.
-
-**Pasos (un commit):**
-
-1. Cliente: `coverUrl` pierde el parámetro `ampliado`, y con él `GameTable` (`coversAmpliadas`), `coverDeCaja`,
-   `coverDeRenglon`, `useReviewCover`, `peticionDeCaratula`, `claveDeJuego` y `reabrirLaPregunta` (que deja de
-   recorrer los dos modos).
-2. `useCoverBackfill`: la clave del recorrido sin el sufijo `x`, y el cupo y los topes dependiendo del claim aparte.
-3. Servidor: `/cover` deja de mirar `x` (el parámetro se ignora, igual que hoy sin sello) y `igdbCover` pierde
-   `TIPOS_AMPLIADOS` y el espacio `v2x`. **Y el gemelo de desarrollo, en el mismo commit:** `localCoverApi` de
-   `vite.config.ts` también lee `x=1`. Si se toca una sin la otra, desarrollo y producción dejan de coincidir.
-4. Limpieza de lo que ya hay en el navegador, una vez: borrar de `mis-listas-covers-done-v2` los apuntes que acaban
-   en `SEP + 'x'` (`SEP` es `\u0001`, ver `coverDone.ts:50`), de `mis-listas-covers-none` las URL con `x=1`, y de la caché `mygamelist-covers-v1` las entradas con
-   `x=1` (en el `activate` del service worker). Las claves `v2x` de KV se quedan donde están: no cuestan cupo de
-   escritura y no las lee nadie.
-5. Tests: los que fijan el modo ampliado cambian a fijar que **no existe**: `GameTableCovers`, `ReviewCovers`,
-   `coverBackfill`, `coverDone`, `coverEndpoint`. Y una regresión nueva con el claim llegando DESPUÉS del montaje
-   (el mock asíncrono de la reproducción): la URL de la carátula no cambia.
-
-**Verificación:** con sesión de administración en `npm run dev`, abrir el listado (mosaico y renglón) y el feed
-social, y comprobar que ninguna carátula se repinta al llegar el claim. En la pestaña Red no debe salir ninguna
-petición con `x=1`.
 
 ---
 
@@ -160,6 +86,8 @@ queda por la decisión de mantener React.
      virtualización no entra.
 4. **Regla para lo nuevo de este plan:** `share_target` y View Transitions entran por `lazy()`/`import()` o en
    chunks que ya existen. El tope de 190 no se sube.
+
+Medido tras F0: crítico **184,4/190 kB**.
 
 **Criterio de aceptación:** crítico ≤ 180 kB con la funcionalidad de F3 y F5 ya dentro.
 
@@ -324,10 +252,9 @@ Encaja con «evolución, no cambio»: aplicado con moderación y con la forma qu
 
 | # | Trabajo | Por qué en este orden |
 |---|---|---|
-| 1 | **F0** retirar el modo ampliado | fallo visible a diario; además ahorra cupo de IGDB y de KV |
 | 2 | **F1** pasos 1-2 | el precache de lo diferido es la base para meter F3 y F5 sin romper el tope |
 | 3 | **F3** `share_target` → Próximos | barato y útil a diario en Android |
-| 4 | **F1** paso 3 (`GameTable`) | con la medición del corte delante; F0 ya habrá adelgazado las carátulas |
+| 4 | **F1** paso 3 (`GameTable`) | con la medición del corte delante |
 | 5 | **F5** View Transitions | acabado; después de F1 para medir sobre el arranque nuevo |
 | — | **F2** view-model social | independiente; se puede intercalar commit a commit en cualquier momento |
 | ⏸️ | **F4** Google Play | aparcado |

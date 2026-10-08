@@ -4,7 +4,7 @@
 // que elija el navegador, que el renglón pida la suya, y que un juego del que ya se sabe que no tiene carátula
 // no vuelva a pedir NINGUNA de las dos.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { cleanup, render } from '@testing-library/react';
+import { act, cleanup, render } from '@testing-library/react';
 import { GameTable } from '../../src/view/components/GameTable';
 import { coverUrl } from '../../src/core/utils/coverUrl';
 import { recordarQueNoTiene, reiniciarMemoriaDeCaratulas } from '../../src/core/utils/coverMemory';
@@ -16,8 +16,8 @@ vi.mock('../../src/model/repository/firebaseRepository', () => ({
   setPublicConfig: vi.fn(async () => {}),
 }));
 
-/* La cuenta de administración pide sus carátulas en modo ampliado; aquí se finge serlo o no sin pasar por Auth.
-   Como el de verdad, con la pregunta apagada (`enabled = false`) contesta que no. */
+/* Se finge ser la cuenta de administración sin pasar por Auth, para comprobar que NO cambia nada: el modo ampliado
+   (`x=1`) se retiró el 08-10-2026. Como el de verdad, con la pregunta apagada (`enabled = false`) contesta que no. */
 const admin = vi.hoisted(() => ({ es: false }));
 vi.mock('../../src/view/hooks/useIsAdmin', () => ({ useIsAdmin: (enabled = true) => enabled && admin.es }));
 
@@ -66,7 +66,7 @@ describe('qué carátulas pide el listado', () => {
 
     expect(img?.getAttribute('src')).toBe(coverUrl('Celeste', ['Steam']));
     // 1x la de la ranura, 2x la del doble de densidad: en una pantalla normal la segunda ni se pide.
-    expect(img?.getAttribute('srcset')).toBe(`${coverUrl('Celeste', ['Steam'])} 1x, ${coverUrl('Celeste', ['Steam'], false, 'medio')} 2x`);
+    expect(img?.getAttribute('srcset')).toBe(`${coverUrl('Celeste', ['Steam'])} 1x, ${coverUrl('Celeste', ['Steam'], 'medio')} 2x`);
   });
 
   it('del juego que ya se sabe que no tiene no se pide ninguna de las dos', () => {
@@ -84,17 +84,48 @@ describe('qué carátulas pide el listado', () => {
     const fila = container.querySelector<HTMLElement>('tr.main-row');
 
     expect(fila?.className).toContain('has-cover');
-    expect(fila?.style.getPropertyValue('--row-cover')).toBe(`url("${coverUrl('Celeste', ['Steam'], false, 'medio')}")`);
+    expect(fila?.style.getPropertyValue('--row-cover')).toBe(`url("${coverUrl('Celeste', ['Steam'], 'medio')}")`);
   });
 
   /* La `ancho` (762×1080) era de la cuenta de administración, y costaba casi el doble de descodificación al bajar
-     sin que el detalle de más llegara a verse bajo el velo (ver `coverDeRenglon`). */
-  it('la cuenta de administración también pide la de en medio', () => {
+     sin que el detalle de más llegara a verse bajo el velo (ver `coverDeRenglon`). Y el modo ampliado (`x=1`) ya no
+     existe: la administración pide exactamente lo mismo que cualquiera. */
+  it('la cuenta de administración pide la misma franja que todo el mundo', () => {
     admin.es = true;
     const { container } = pinta('list', [juego(1, 'Celeste')]);
     const fila = container.querySelector<HTMLElement>('tr.main-row');
 
-    expect(fila?.style.getPropertyValue('--row-cover')).toBe(`url("${coverUrl('Celeste', ['Steam'], true, 'medio')}")`);
+    expect(fila?.style.getPropertyValue('--row-cover')).toBe(`url("${coverUrl('Celeste', ['Steam'], 'medio')}")`);
+  });
+
+  /* EL PARPADEO AL ABRIR. El claim de la administración llega tarde (tras bajar el SDK de Auth y leer el token) y,
+     mientras decidía el modo ampliado, cambiaba la URL de cada carátula ya pintada: el mosaico volvía a
+     «cargando» y el fondo del renglón se vaciaba hasta que llegaba la otra imagen. */
+  it('si el claim llega después de pintar, ninguna carátula se recarga', () => {
+    const { container, rerender } = pinta('grid', [juego(1, 'Celeste')]);
+    const img = container.querySelector('.game-cover-img');
+    act(() => {
+      img?.dispatchEvent(new Event('load'));
+    });
+    const antes = img?.getAttribute('src');
+
+    admin.es = true;
+    rerender(
+      <GameTable
+        games={[juego(1, 'Celeste')]}
+        currentTab="c"
+        expandedId={null}
+        onExpandedChange={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onMigrate={vi.fn()}
+        tabActions={[]}
+        coverPolicy={{ allowed: true }}
+      />,
+    );
+
+    expect(container.querySelector('.game-cover-img')?.getAttribute('src')).toBe(antes);
+    expect(container.querySelector('.game-cover')?.getAttribute('data-carga')).toBe('lista');
   });
 
   /* EL PRIMER RENDER YA SALE RECORTADO. Si el virtualizador nace sin viewport, la red de seguridad monta la lista
@@ -182,7 +213,7 @@ describe('qué carátulas pide el listado', () => {
      ajena pide la URL que este navegador ya tiene. */
   it('un juego ya resuelto se pide con las plataformas de siempre, no con las de la otra estantería', () => {
     const hechos = leerHechos();
-    hechos.add(claveDeJuego('Celeste', ['Steam'], false));
+    hechos.add(claveDeJuego('Celeste', ['Steam']));
     guardarHechos(hechos);
 
     localStorage.setItem('mis-listas-covers', 'on');
@@ -208,7 +239,7 @@ describe('qué carátulas pide el listado', () => {
 
   it('y sin esa política se piden las plataformas del juego que se tiene delante', () => {
     const hechos = leerHechos();
-    hechos.add(claveDeJuego('Celeste', ['Steam'], false));
+    hechos.add(claveDeJuego('Celeste', ['Steam']));
     guardarHechos(hechos);
 
     const ajeno = { ...juego(1, 'Celeste'), platforms: ['Nintendo Switch'] } as GameItem;
@@ -247,8 +278,8 @@ describe('qué carátulas pide el listado', () => {
     const { container } = pintaAjena('grid', [ajeno]);
     const img = container.querySelector('.game-cover-img');
 
-    const normal = coverUrl('Celeste', ['Nintendo Switch'], false, 'normal', 'ajeno');
-    const medio = coverUrl('Celeste', ['Nintendo Switch'], false, 'medio', 'ajeno');
+    const normal = coverUrl('Celeste', ['Nintendo Switch'], 'normal', 'ajeno');
+    const medio = coverUrl('Celeste', ['Nintendo Switch'], 'medio', 'ajeno');
     expect(normal).toContain('c=2');
     expect(img?.getAttribute('src')).toBe(normal);
     expect(img?.getAttribute('srcset')).toBe(`${normal} 1x, ${medio} 2x`);
@@ -259,14 +290,14 @@ describe('qué carátulas pide el listado', () => {
     const fila = container.querySelector<HTMLElement>('tr.main-row');
 
     expect(fila?.style.getPropertyValue('--row-cover')).toBe(
-      `url("${coverUrl('Celeste', ['Steam'], false, 'medio', 'ajeno')}")`,
+      `url("${coverUrl('Celeste', ['Steam'], 'medio', 'ajeno')}")`,
     );
   });
 
   it('pero un título que tu biblioteca ya resolvió se pide con su URL de siempre, sin la marca', () => {
     // Está resuelto seguro, y con la marca la URL sería otra: otra descarga de la misma imagen.
     const hechos = leerHechos();
-    hechos.add(claveDeJuego('Celeste', ['Steam'], false));
+    hechos.add(claveDeJuego('Celeste', ['Steam']));
     guardarHechos(hechos);
     const ajeno = { ...juego(1, 'Celeste'), platforms: ['Nintendo Switch'] } as GameItem;
     const { container } = pintaAjena('grid', [ajeno]);
@@ -274,19 +305,18 @@ describe('qué carátulas pide el listado', () => {
     expect(container.querySelector('.game-cover-img')?.getAttribute('src')).toBe(coverUrl('Celeste', ['Steam']));
   });
 
-  /* LA LENTE DE LA ADMINISTRACIÓN SE QUEDA EN CASA. Su espacio de claves solo lo llena su propia biblioteca, y
-     lo ajeno no resuelve con el cupo entero: pedido con `x=1`, salía sin carátula salvo los juegos que la
-     administración también tiene, aunque su dueño los viera todos. */
-  it('la cuenta de administración pide lo ajeno sin el modo ampliado', () => {
+  /* Lo ajeno, también igual para la administración: cuando existía el modo ampliado, pedido con `x=1` salía sin
+     carátula salvo los juegos que la administración también tiene. */
+  it('la cuenta de administración pide lo ajeno como todo el mundo', () => {
     admin.es = true;
     const ajeno = { ...juego(1, 'Celeste'), platforms: ['Nintendo Switch'] } as GameItem;
     const caja = pintaAjena('grid', [ajeno]).container.querySelector('.game-cover-img');
-    expect(caja?.getAttribute('src')).toBe(coverUrl('Celeste', ['Nintendo Switch'], false, 'normal', 'ajeno'));
+    expect(caja?.getAttribute('src')).toBe(coverUrl('Celeste', ['Nintendo Switch'], 'normal', 'ajeno'));
     cleanup();
 
     const fila = pintaAjena('list', [ajeno]).container.querySelector<HTMLElement>('tr.main-row');
     expect(fila?.style.getPropertyValue('--row-cover')).toBe(
-      `url("${coverUrl('Celeste', ['Nintendo Switch'], false, 'medio', 'ajeno')}")`,
+      `url("${coverUrl('Celeste', ['Nintendo Switch'], 'medio', 'ajeno')}")`,
     );
   });
 

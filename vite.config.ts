@@ -356,9 +356,9 @@ function localPremiosApi(): Plugin {
  * abren «Mis Listas.command» y «Mis Listas.bat»— esa ruta devolvía el `index.html` del SPA, así que no salía ni
  * una carátula y no había forma de saber si el trabajo estaba bien hecho.
  *
- * ES EL MISMO CONTRATO: se importa el emparejador de VERDAD, con sus mismas reglas, su mismo `m=1` y su mismo
- * modo ampliado. Lo que no tiene son los DOS racionamientos —el cupo (por IP y del servicio) y el sello de rango
- * que en producción hace falta para que `x=1` cuente—, y no es un descuido: los dos reparten un recurso
+ * ES EL MISMO CONTRATO: se importa el emparejador de VERDAD, con sus mismas reglas y su mismo `m=1`. Lo que no
+ * tiene son los DOS racionamientos —el cupo por IP y el del servicio, con el sello de la administración que los
+ * levanta—, y no es un descuido: los dos reparten un recurso
  * compartido entre desconocidos, y aquí quien llama es la persona que ha levantado el servidor en su propia
  * máquina contra su propia caché en un fichero. Lo que se sirve no cambia; lo que cambia es a quién hay que
  * racionárselo.
@@ -524,7 +524,6 @@ function localCoverApi(): Plugin {
         }
         const plataformas = (url.searchParams.get('p') ?? '').split(',').map((p) => p.trim()).filter(Boolean);
         const soloMapa = url.searchParams.get('m') === '1';
-        const ampliado = url.searchParams.get('x') === '1';
         const tamano = tamanoPedido(url.searchParams.get('s'));
         // `c=1`: solo lo ya resuelto, igual que en producción (ver `functions/cover.ts`). `c=2`, lo ajeno, resuelve
         // como siempre: su raya es un trozo del cupo del servicio, y aquí no hay cupo que repartir (ver arriba).
@@ -532,7 +531,7 @@ function localCoverApi(): Plugin {
 
         void (async () => {
           try {
-            const cacheada = soloCache ? await leerCaratulaCacheada(env, nombre, plataformas, ampliado) : null;
+            const cacheada = soloCache ? await leerCaratulaCacheada(env, nombre, plataformas) : null;
             if (soloCache && cacheada === undefined) {
               res.statusCode = 404;
               res.setHeader('Cache-Control', 'private, max-age=3600');
@@ -540,7 +539,7 @@ function localCoverApi(): Plugin {
               res.end('Carátula aún sin resolver');
               return;
             }
-            const coverId = soloCache ? cacheada : await resolverCaratula(env, nombre, plataformas, ampliado);
+            const coverId = soloCache ? cacheada : await resolverCaratula(env, nombre, plataformas);
             // Mismo contrato que producción: no haber podido preguntar a IGDB es 503, no «no tiene».
             if (coverId === undefined) {
               res.statusCode = 503;

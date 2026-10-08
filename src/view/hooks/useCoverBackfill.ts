@@ -68,15 +68,12 @@ function recorridoEnPausa(): boolean {
 
 export function useCoverBackfill(data: TabData): void {
   const { covers } = useCovers();
-  /* EL MISMO MODO QUE PIDE EL LISTADO, y no el normal a secas. El modo ampliado (`x=1`) vive en un espacio de
-     claves aparte —el de KV en el servidor y el de la memoria de «este no tiene» en el navegador—, así que un
-     recorrido hecho en modo normal no le sirve de nada a quien luego pinta el mosaico en modo ampliado: ni
-     calienta las claves que va a pedir, ni sus «no» los reconoce `coverSrc`, que pregunta CON el modo puesto.
-     Con las dos preguntas desalineadas, la cuenta de administración pagaba el recorrido entero para nada y
-     además repetía en cada visita los 404 de los juegos sin carátula, que es justo lo que esto evita.
-     Que se resuelva tarde (la sesión llega después del primer pintado) solo afecta a esa cuenta: para todos los
-     demás es `false` desde el principio y el efecto no se relanza. */
-  const ampliado = useIsAdmin();
+  /* ¿MANDA QUIEN MIRA? Solo decide CUÁNTO se recorre —el cupo libre del servidor y los topes del navegador
+     levantados, ver abajo—, nunca QUÉ se pide: las URL son las mismas para todo el mundo. Por eso da igual que la
+     respuesta llegue tarde (la sesión aparece después del primer pintado): relanza el recorrido, pero no cambia
+     ninguna carátula ya pintada. Hasta el 08-10-2026 sí la cambiaba —el modo ampliado, `x=1`— y las carátulas
+     del listado parpadeaban al llegar el claim. */
+  const esAdministracion = useIsAdmin();
   /* Los datos por referencia y NO como dependencia del efecto: `data` cambia con cada edición, y ponerlo en las
      dependencias reiniciaría el recorrido cada vez que tocas un juego. Los añadidos de esta sesión los resuelve
      la carga perezosa al pintarse, y el recorrido los recoge en la siguiente visita. */
@@ -99,14 +96,14 @@ export function useCoverBackfill(data: TabData): void {
            · Los topes del propio navegador los levanta el cliente, y solo mientras haya sitio de sobra.
          `useIsAdmin` es el disparador, y es el mismo criterio que el del servidor: el claim `admin`, no el
          rango. */
-      if (ampliado) {
+      if (esAdministracion) {
         void pedirCupoDeCaratulasLibre();
       }
       /* Y QUE NO SE LO LLEVE EL NAVEGADOR ya no se pide aquí: lo que está en juego es el origen entero —el
          shell, los chunks, la biblioteca sin red—, no solo las imágenes, así que se pide en el arranque de la
          aplicación (ver `core/utils/durableStorage`). Pedirlo desde aquí dejaba fuera a todo el que no tuviera
          las carátulas encendidas, que es justo quien más depende de que la aplicación arranque sin red. */
-      await evaluarTopesDeImagenes(ampliado);
+      await evaluarTopesDeImagenes(esAdministracion);
 
       const hechos = leerHechos();
       /* ¿HAY ALGÚN «NO TIENE» CUMPLIDO? Se pregunta una sola vez, aquí, porque de la respuesta depende cuánto
@@ -119,10 +116,10 @@ export function useCoverBackfill(data: TabData): void {
       for (const tab of TAB_IDS) {
         for (const juego of datosRef.current[tab] ?? []) {
           if (!juego?.name) continue;
-          const clave = claveDeJuego(juego.name, juego.platforms ?? [], ampliado);
+          const clave = claveDeJuego(juego.name, juego.platforms ?? []);
           const hecho = hechos.has(clave);
           if (hecho && !reintentar) continue;
-          const url = coverUrl(juego.name, juego.platforms ?? [], ampliado);
+          const url = coverUrl(juego.name, juego.platforms ?? []);
           /* LOS «NO TIENE» VUELVEN A LA COLA al cumplir su plazo, aunque estén dados por hechos. Son cuatro
              preguntas al año por juego sin carátula, y son las que impiden que un juego recién salido —el caso
              en que IGDB tarda en tener ficha— se quede sin imagen para siempre en este navegador.
@@ -223,5 +220,5 @@ export function useCoverBackfill(data: TabData): void {
         window.clearTimeout(ocioso);
       }
     };
-  }, [covers, ampliado]);
+  }, [covers, esAdministracion]);
 }
