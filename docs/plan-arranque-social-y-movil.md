@@ -94,7 +94,9 @@ El detalle y la ficha comparten el ancla (`activeReviewAnchor` mezcla `activeDet
    - ✅ `social/useOwnProfileRank.ts`: rango, fecha de alta, si está publicado y el espejo publicado, de una lectura.
      Se llama arriba, donde vivían esos estados, porque los leen el directorio y los logros.
    - ✅ `social/useOwnPhotoHeal.ts`: propagar o retirar la foto propia en los canales públicos.
-   - Hidratar y guardar el perfil, con el formulario y la regla de completados. View-model en 1.592 líneas.
+   - ✅ `social/useOwnProfileEditor.ts` (502 líneas): hidratar y guardar el perfil, la redirección al editor y la
+     regla de completados. Los estados de «tienes que crear tu perfil» se quedan en el view-model (los leen la puerta
+     del directorio y el arranque) y llegan con sus setters. View-model en 1.233 líneas.
 8. Piezas memoizadas (`session`, `feedback`, `profileEditor`, `feed`, `compose`, `reading`, `achievements`,
    `directory`, `friends`, `nav`, `viewer`) y `SocialHub` recibiéndolas por piezas.
    - Verificación: contador de repintados como en la fase 3 (0 por pulsación en el feed).
