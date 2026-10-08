@@ -168,4 +168,29 @@ describe('guía de primeros pasos', () => {
     // Y no escribe nada: no es una guía, es un aviso.
     expect(saved()).toBeNull();
   });
+
+  /**
+   * LA INVITACIÓN DE LOS PREMIOS, centrada y sin ancla: en los premios no hay un control que sea «el resto de la
+   * aplicación». Las respuestas las apuntan los premios; aquí, que cada botón llame a la suya y que el texto cambie
+   * con lo que ya tenga quien mira.
+   */
+  it('la invitación de los premios dice que hay algo más, y cada respuesta llama a la suya', async () => {
+    const accept = vi.fn();
+    const dismiss = vi.fn();
+    const { rerender } = render(
+      <OnboardingTour state={null} ctx={{ ...CTX, path: '/premios/resultados' }} premiosInvite={{ kind: 'list', accept, dismiss }} />,
+    );
+    const bubble = await screen.findByRole('dialog', { name: TOUR_UI.premios.list.title }, { timeout: 3000 });
+    expect(bubble.textContent).toContain(TOUR_UI.premios.kicker);
+    await userEvent.click(within(bubble).getByRole('button', { name: TOUR_UI.premios.yes }));
+    expect(accept).toHaveBeenCalledTimes(1);
+    await userEvent.click(within(bubble).getByRole('button', { name: TOUR_UI.premios.no }));
+    await userEvent.click(within(bubble).getByRole('button', { name: TOUR_UI.buttons.close }));
+    expect(dismiss).toHaveBeenCalledTimes(2);
+
+    rerender(<OnboardingTour state={null} ctx={{ ...CTX, path: '/premios/enviada' }} premiosInvite={{ kind: 'social', accept, dismiss }} />);
+    expect(await screen.findByRole('dialog', { name: TOUR_UI.premios.social.title }, { timeout: 3000 })).toBeTruthy();
+    // No escribe la guía por su cuenta: eso lo hace `accept`, que es de los premios.
+    expect(saved()).toBeNull();
+  });
 });

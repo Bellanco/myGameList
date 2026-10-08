@@ -5,7 +5,7 @@
 // viene escrito: la configuración de la sincronización principal es ESTADO y se fija DESPUÉS de esperar al cifrado
 // (`ensureSyncConfigLoaded`). Leer `getSyncConfig()` antes —en un inicializador o un `useMemo([])`— devolvía
 // `token: ''` al montar, y el hub mandaba a Ajustes o leía con 401.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { NavigateFunction } from 'react-router-dom';
 import { ensureSyncConfigLoaded, getSyncConfig } from '../../model/repository/gistRepository';
 import { getSocialSyncConfig, readSocialGist, saveSocialSyncConfig } from '../../model/repository/socialGistRepository';
@@ -16,6 +16,7 @@ import {
   setPrivateConfig,
   type SocialAuthUser,
 } from '../../model/repository/firebaseRepository';
+import { subscribeSocialAuth } from '../../model/repository/firebaseGateway';
 import type { SyncConfig } from '../../model/types/game';
 import { isNotFoundGistError } from './gistErrors';
 
@@ -37,6 +38,36 @@ export function useSocialSession({ lockProfileEditor, navigate }: SocialSessionI
   // getSyncConfig() devolvía token='' al montar (hasMainSync=false → gateway → /ajustes y lecturas 401).
   const [mainSyncConfig, setMainSyncConfig] = useState<SyncConfig | null>(() => getSyncConfig());
 
+  /**
+   * LA SESIÓN, ESCUCHADA Y NO SOLO LEÍDA. La apertura lee el usuario UNA vez (`getCurrentSocialAuthUser`), y si el
+   * hub se montaba justo cuando la sesión parpadeaba —otra pestaña arrancando, ver `startAuth` en `firebaseClient`—
+   * se quedaba con «nadie» y la pasarela pedía identificarse hasta volver a montar el hub, aunque la sesión hubiera
+   * vuelto un segundo después. Ahora sigue los cambios: si vuelve, se abre el espacio; si se cierra de verdad (en
+   * esta pestaña o en otra), se cierra.
+   *
+   * `latestAuth` es lo último que ha dicho la suscripción y `authEvents` cuántas veces ha hablado. La apertura lee el
+   * usuario cuando la sesión ya está resuelta (`authStateReady`), así que esa lectura manda sobre lo dicho ANTES; lo
+   * que la suscripción diga DESPUÉS es más reciente y manda sobre ella.
+   */
+  const latestAuth = useRef<SocialAuthUser | null>(null);
+  const authEvents = useRef(0);
+  useEffect(() => subscribeSocialAuth((user) => {
+    latestAuth.current = user;
+    authEvents.current += 1;
+    setAuthUser((prev) => (prev?.uid === user?.uid ? prev : user));
+    if (!user) {
+      setShowSocialSpace(false);
+      return;
+    }
+    // Volver con la sesión solo reabre el espacio si este dispositivo ya lo tenía. Crearlo o enlazarlo es cosa de
+    // la pasarela, que lo hace al entrar.
+    const gistId = getSocialSyncConfig()?.gistId?.trim() || '';
+    if (gistId) {
+      setSocialCfgGistId((prev) => prev || gistId);
+      setShowSocialSpace(true);
+    }
+  }), []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -49,6 +80,7 @@ export function useSocialSession({ lockProfileEditor, navigate }: SocialSessionI
       setMainSyncConfig(mainConfig);
       const socialConfig = getSocialSyncConfig();
       const currentUser = await getCurrentSocialAuthUser();
+      const eventsAtRead = authEvents.current;
       let resolvedGistId = socialConfig?.gistId || '';
 
       if (!resolvedGistId && currentUser?.uid && mainConfig?.token) {
@@ -110,10 +142,12 @@ export function useSocialSession({ lockProfileEditor, navigate }: SocialSessionI
         return;
       }
 
+      // Otra vez lo último de la suscripción: entre la lectura del principio y aquí ha habido red de por medio.
+      const finalUser = authEvents.current === eventsAtRead ? currentUser : latestAuth.current;
       setSocialCfgGistId(resolvedGistId);
       setSocialCfgEtag(socialConfig?.etag || null);
-      setAuthUser(currentUser);
-      setShowSocialSpace(Boolean(resolvedGistId && currentUser));
+      setAuthUser(finalUser);
+      setShowSocialSpace(Boolean(resolvedGistId && finalUser));
       setLoading(false);
     };
 

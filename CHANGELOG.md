@@ -5,6 +5,52 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.6.6] - 2026-10-08
+
+Una versión de **sesión social estable y de movimiento**: lo social deja de desconectarse —y el tema de cambiar— al
+pasar de una pestaña a otra, las pantallas se mueven con transiciones, y los premios invitan al resto de la
+aplicación también desde el histórico.
+
+### Added
+- **Transiciones entre pantallas**: cambiar de sección, abrir una reseña o volver se anima en vez de saltar. Al
+  cambiar de lista la pantalla se desliza hacia la pestaña pulsada, y una reseña del feed crece hasta su detalle,
+  como ya hacían las del perfil. La barra inferior y los botones flotantes no se mueven con la pantalla. Los
+  navegadores sin tipos de transición conservan el fundido de antes.
+- **Compartir un juego desde el menú «Compartir» de Android** (con la aplicación instalada): se abre su alta en
+  Próximos con el nombre ya puesto.
+- **Los premios invitan al resto de la aplicación también desde el histórico**, y no solo al terminar de votar, con
+  la burbuja de la guía de primeros pasos («Hay algo más»). Quien no tiene ni un juego empieza su lista con la guía
+  en marcha; quien ya la lleva pero no tiene lo social, entra en lo social. Sale una vez por edición, y «Ahora no»
+  vale para los dos sitios.
+
+### Changed
+- **La invitación al terminar de votar es ahora esa misma burbuja**, en lugar de la tarjeta de la pantalla de
+  confirmación, y le llega a todo el que no tenga lo social, tenga o no juegos.
+- **En el tema de casa, el cambio entre claro y oscuro es instantáneo**: el fundido iba a tirones.
+
+### Fixed
+- **Lo social ya no se desconecta solo al cambiar de pestaña ni con una versión nueva.** Cada arranque de la
+  aplicación borraba un momento la sesión de Google que comparten las pestañas, y las demás, al verla vacía, se daban
+  por desconectadas: el tema volvía al de por defecto (y se quedaba), salía «vuelve a entrar» y la pasarela pedía
+  identificarse. Pasaba sobre todo con una versión nueva, que recarga sola la pestaña que se deja en segundo plano.
+  Si esa pestaña se cerraba a mitad, la sesión se quedaba donde la aplicación no la buscaba y había que volver a
+  entrar; ahora se recupera sola. Además, un corte pasajero de la sesión, un fallo de red al cargar Firebase o una
+  lectura fallida del perfil ya no se toman por un cierre de sesión.
+- **Las carátulas de la cuenta de administración ya no parpadean al abrir la aplicación**: se retira el modo de
+  carátulas ampliadas, que cambiaba su dirección en cuanto llegaba el permiso de administración.
+
+### Deploy
+- **Sin cambios en reglas ni índices de Firestore**, ni en la versión legal.
+- **La sesión de Google se guarda de otra forma** (`initializeAuth` con `localStorage` primero): las sesiones
+  abiertas siguen valiendo, sin volver a entrar. Quien tenga la suya atrapada en IndexedDB descarga Firebase en la
+  primera visita y la recupera. Mientras queden pestañas abiertas con la 1.6.5, todavía pueden provocar un corte; la
+  1.6.6 lo aguanta 8 s sin desconectar.
+- **Para comprobarlo tras desplegar**: dos pestañas con la sesión iniciada, recargar una, y la otra debe conservar
+  el tema y lo social. Las pérdidas de sesión se registran en Analytics como `auth-lost` y `auth-lost-at-boot`.
+- **`/cover` deja de aceptar el modo ampliado (`x=1`)**: va con la Pages Function, en el mismo despliegue.
+- **Ruta nueva `/compartir`** para el menú de Android, en `public/_redirects` y en el `share_target` del
+  manifiesto: los móviles con la aplicación instalada la recogen cuando actualizan el manifiesto.
+
 ## [1.6.5] - 2026-10-07
 
 Una versión de **administración y de premios**: la administración ve en el feed los avisos de las listas ocultas y,

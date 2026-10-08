@@ -26,6 +26,8 @@ import { PremiosVoteScreen } from './PremiosVoteScreen';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { usePremiosJoinInvite } from '../../../viewmodel/premios/usePremiosJoinInvite';
 import { getSeasonId } from '../../../core/premios/seasonId';
+import type { PremiosInvite, PremiosInviteKind } from '../../../core/onboarding/joinFromPremios';
+import { FALLBACK_ROUTE } from '../../../core/constants/routes';
 import '../../../styles/premios.scss';
 
 /**
@@ -40,13 +42,21 @@ import '../../../styles/premios.scss';
  * que esta sección necesitaba la biblioteca entera. El cruce sigue escrito en `core/premios/library` por si
  * vuelve a otro sitio.
  *
- * Lo único que sí recibe de ella es un SÍ O NO: si quien vota no tiene nada más de la aplicación (ni un juego ni
- * perfil social), para invitarle a quedarse al terminar (`canInviteToApp`).
+ * Lo único que sí recibe de ella es A QUÉ SE LE PUEDE INVITAR (`joinInviteKind`): a empezar su lista o a lo social,
+ * según lo que ya tenga, o a nada si ya tiene lo social. La invitación no la pinta esta sección: se la devuelve a
+ * `App` (`onJoinInvite`), y es la guía quien la enseña con su burbuja.
  *
  * El chunk entero es perezoso —lo monta `App` con `lazy`—, así que nada de esto entra en el arranque de quien
  * nunca abre la sección.
  */
-export function PremiosHub({ canInviteToApp = false }: { canInviteToApp?: boolean }) {
+export function PremiosHub({
+  joinInviteKind = null,
+  onJoinInvite,
+}: {
+  joinInviteKind?: PremiosInviteKind | null;
+  /** Recibe la invitación cuando toca enseñarla y `null` cuando deja de tocar. */
+  onJoinInvite?: (invite: PremiosInvite | null) => void;
+}) {
   const location = useLocation();
   const navigate = useNavigate();
   // La frase del titular la pone el TEMA, como en el hub social.
@@ -103,10 +113,30 @@ export function PremiosHub({ canInviteToApp = false }: { canInviteToApp?: boolea
   const reveal = usePremiosReveal(conVotos ? idEnVista : '');
 
   /**
-   * LA INVITACIÓN A QUEDARSE, al terminar de votar: solo a quien no tiene nada más de la aplicación (lo decide
-   * `App`, que es quien sabe de la biblioteca y del perfil social) y una vez por edición.
+   * LA INVITACIÓN AL RESTO DE LA APLICACIÓN, en los dos momentos en que hay ganas de quedarse: al terminar de votar
+   * y al mirar el histórico. Solo a quien no tiene lo social (lo decide `App`, que sabe de la biblioteca y del
+   * perfil) y una vez por edición.
+   *
+   * Con el histórico se espera a que llegue el archivo: la burbuja vela la pantalla, y velar un hueco que aún se
+   * está rellenando se lee como que la invitación es lo que había que ver.
    */
-  const invitacion = usePremiosJoinInvite(getSeasonId(edition.config), canInviteToApp);
+  const invitacion = usePremiosJoinInvite(getSeasonId(edition.config), joinInviteKind);
+  const pantallaDeInvitar = route.panel === 'enviada' || (conArchivo && !archivo.loading);
+  const invitar = invitacion.show && pantallaDeInvitar;
+  const { accept: aceptarInvitacion, dismiss: descartarInvitacion } = invitacion;
+  useEffect(() => {
+    if (!onJoinInvite || !invitar || !joinInviteKind) return undefined;
+    onJoinInvite({
+      kind: joinInviteKind,
+      // Al aceptar se le lleva a donde empieza su misión: sus listas, o Social. La guía le recoge allí.
+      accept: () => {
+        aceptarInvitacion();
+        navigate(joinInviteKind === 'social' ? '/social' : FALLBACK_ROUTE);
+      },
+      dismiss: descartarInvitacion,
+    });
+    return () => onJoinInvite(null);
+  }, [aceptarInvitacion, descartarInvitacion, invitar, joinInviteKind, navigate, onJoinInvite]);
 
   // Corregir un voto arranca de lo ya enviado, no de cero.
   useEffect(() => {
@@ -340,7 +370,6 @@ export function PremiosHub({ canInviteToApp = false }: { canInviteToApp?: boolea
           displayName={edition.ballot?.userDisplayName || user?.displayName || ''}
           remainingOpportunities={edition.remainingOpportunities}
           unchanged={sinCambios}
-          invite={invitacion.show ? { onJoin: invitacion.accept, onLater: invitacion.dismiss } : null}
         />
       ) : route.panel === 'votar' ? (
         <PremiosVoteScreen

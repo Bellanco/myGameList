@@ -145,6 +145,24 @@ export const TOUR_UI = {
     coop: { title: '¿Te enseño a entrar en lo social?', text: 'Son dos pasos y tu nombre: te acompaño en cada uno.' },
     cloud: { title: '¿Te enseño a guardar tus listas en la nube?', text: 'Es un solo botón, sin tokens: te acompaño.' },
   },
+  /**
+   * LA INVITACIÓN DESDE LOS PREMIOS, al terminar de votar y en el histórico: la misma burbuja en los dos sitios. Con la
+   * voz del «¿Te enseño?», pero diciendo que hay ALGO MÁS: quien llega a votar suele no saber que la porra es una
+   * parte de una aplicación. «Ahora no» y no «No, gracias»: se vuelve a ofrecer en la siguiente edición.
+   */
+  premios: {
+    kicker: 'Hay algo más',
+    yes: 'Enséñame',
+    no: 'Ahora no',
+    list: {
+      title: '¿Te enseño el resto de myGameList?',
+      text: 'Los premios son solo una parte: aquí también llevas tu lista de juegos —lo que has terminado, lo que juegas y lo que quieres jugar—, sin cuenta. Te acompaño en los primeros pasos.',
+    },
+    social: {
+      title: '¿Te enseño a entrar en lo social?',
+      text: 'Los premios son solo una parte: en lo social ves a qué juegan tus amistades y lees sus reseñas. Son dos pasos y tu nombre, y te acompaño en cada uno.',
+    },
+  },
   nextMission: 'Siguiente misión',
   missionDoneKicker: 'Misión cumplida',
   optional: 'Opcional',

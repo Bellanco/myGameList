@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { AppErrorBoundary } from './view/components/AppErrorBoundary';
-import { hasStoredAuthSession, initializeFirebaseServices, reportHandledError } from './model/repository/firebaseGateway';
+import { initializeFirebaseServices, mayRestoreAuthSession, reportHandledError } from './model/repository/firebaseGateway';
 import { readPublicShareToken } from './model/repository/publicShareRepository';
 import { runMigration } from './model/repository/dataMigrationRepository';
 import { runWhenIdle } from './core/utils/idle';
@@ -135,7 +135,7 @@ function bootApp(): void {
     // La analítica sí lo necesita, pero solo cuando se ha ACEPTADO (`readAnalyticsConsent`): sin consentimiento
     // no se inicializa igualmente, así que adelantarla no servía de nada. Con sesión o con analítica aceptada,
     // esto sigue ocurriendo exactamente igual que antes, en el mismo hueco ocioso.
-    if (hasStoredAuthSession() || readAnalyticsConsent() === 'granted') {
+    if (mayRestoreAuthSession() || readAnalyticsConsent() === 'granted') {
       void initializeFirebaseServices();
     }
     /* QUE EL NAVEGADOR NO TIRE LO GUARDADO. Se pide aquí y no en el recorrido de las carátulas porque protege

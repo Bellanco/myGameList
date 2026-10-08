@@ -14,6 +14,7 @@
 // suscripción de auth, que replica el contrato síncrono-teardown de `onSocialAuthChanged`.
 import type { FirebaseServices, SocialAuthUser, SocialProfileReference } from './firebaseClient';
 import type { FirestorePrivateConfig, FirestorePublicConfig } from '../types/firestore';
+import { AUTH_SIGNED_OUT_AT_KEY, SOCIAL_GIST_CFG_KEY } from '../../core/constants/storageKeys';
 
 type FacadeModule = typeof import('./firebaseRepository');
 
@@ -35,7 +36,16 @@ function loadFacade(): Promise<FacadeModule> {
         // Los que esperaban sin sesión ya tienen a qué engancharse.
         const waiting = [...pendingAuthSubscribers];
         pendingAuthSubscribers.clear();
-        waiting.forEach((attach) => attach(module));
+        // Uno a uno y a salvo: si engancharse falla, ese suscriptor se queda sin sesión, pero la carga sigue. Sin
+        // esto, el fallo rechazaba la fachada ENTERA y con ella lo que la había pedido (la puerta legal del hub,
+        // un inicio de sesión).
+        waiting.forEach((attach) => {
+          try {
+            attach(module);
+          } catch {
+            // Nada que hacer: el resto de la carga no depende de este suscriptor.
+          }
+        });
         return module;
       })
       .catch((error: unknown) => {
@@ -79,6 +89,56 @@ export function hasStoredAuthSession(): boolean {
   } catch {
     return true;
   }
+}
+
+/**
+ * LA MARCA DE «SALIR»: cuándo se pulsó por última vez, en cualquier pestaña. Distingue un cierre de sesión a
+ * propósito de una sesión que se pierde sola. La escribe la fachada al cerrar sesión y la leen las dos: vive aquí, y
+ * no en un módulo propio, porque uno compartido entre el arranque y la fachada sería un fichero más en cada visita.
+ */
+const SIGNED_OUT_WINDOW_MS = 30_000;
+
+export function markSignedOut(): void {
+  try {
+    localStorage.setItem(AUTH_SIGNED_OUT_AT_KEY, String(Date.now()));
+  } catch {
+    // Sin almacenamiento, la salida se tomaría por una pérdida: se espera la gracia y se registra de más.
+  }
+}
+
+export function signedOutRecently(): boolean {
+  try {
+    return Date.now() - Number(localStorage.getItem(AUTH_SIGNED_OUT_AT_KEY) || 0) < SIGNED_OUT_WINDOW_MS;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * ¿Tiene este dispositivo un espacio social? Se lee la clave tal cual, sin el repositorio de la configuración, para
+ * no traer su descifrado al arranque: aquí solo importa si hay un gist apuntado.
+ */
+function hasLocalSocialSpace(): boolean {
+  try {
+    const raw = localStorage.getItem(SOCIAL_GIST_CFG_KEY);
+    if (!raw) return false;
+    const gistId = (JSON.parse(raw) as { gistId?: unknown } | null)?.gistId;
+    return typeof gistId === 'string' && gistId.trim() !== '';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * ¿HAY QUE CARGAR FIREBASE PARA RESTAURAR LA SESIÓN? Con la clave de la sesión en `localStorage`, sí. Y también con
+ * un espacio social en el dispositivo aunque la clave falte: hasta el 08-10-2026 Auth arrancaba prefiriendo
+ * IndexedDB y en cada arranque pasaba por ahí la sesión (ver `startAuth` en `firebaseClient`), así que una pestaña
+ * que moría a mitad dejaba la sesión SOLO en IndexedDB. Sin mirar esto, esa persona no volvía a cargar el SDK y la
+ * aplicación le pedía identificarse con la sesión intacta. Al cargarlo, el SDK la encuentra y la devuelve a
+ * `localStorage`. Quien tiene espacio y de verdad cerró sesión paga la descarga, y es justo quien va a volver a entrar.
+ */
+export function mayRestoreAuthSession(): boolean {
+  return hasStoredAuthSession() || hasLocalSocialSpace();
 }
 
 /** ¿Ya se ha cargado (o se está cargando) la fachada? Entonces no hay nada que ahorrar. */
@@ -161,43 +221,119 @@ export async function signInWithGoogle(options?: { onAbandoned?: () => void }): 
 }
 
 /**
+ * Cuánto se espera antes de dar por perdida una sesión que se va sin que nadie haya pulsado «salir». Es lo que
+ * tarda en volver si se ha ido por un parpadeo —otra pestaña arrancando, que comprueba la cuenta por red, más la
+ * carga del marco de Google en Safari—, con margen.
+ */
+const SESSION_LOSS_GRACE_MS = 8000;
+
+/**
+ * UNA SESIÓN QUE SE VA SOLA NO SE DA POR PERDIDA AL INSTANTE.
+ *
+ * Cada «nadie» que llega aquí tiene consecuencias que se ven y se guardan: el tema vuelve al de por defecto (y se
+ * apunta el bloqueo), la escala de notas vuelve a estrellas, sale «vuelve a entrar» y Ajustes › Diseño te echa.
+ * Por un parpadeo de la sesión, todo eso pasaba y se quedaba. Así que, si había usuario y nadie ha pulsado «salir»
+ * (en esta pestaña o en otra, ver `markSignedOut`), el «nadie» espera `SESSION_LOSS_GRACE_MS`; si vuelve el mismo
+ * usuario, no ha pasado nada y no se avisa a nadie. Un «salir» de verdad sigue llegando al momento.
+ */
+function withSessionGrace(callback: (user: SocialAuthUser | null) => void): {
+  emit: (user: SocialAuthUser | null) => void;
+  stop: () => void;
+} {
+  let shownUid: string | null = null;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const clear = () => {
+    if (timer !== null) clearTimeout(timer);
+    timer = null;
+  };
+  const emit = (user: SocialAuthUser | null) => {
+    if (user) {
+      const back = timer !== null && user.uid === shownUid;
+      clear();
+      if (back) return;
+      shownUid = user.uid;
+      callback(user);
+      return;
+    }
+    if (!shownUid || signedOutRecently()) {
+      clear();
+      shownUid = null;
+      callback(null);
+      return;
+    }
+    if (timer !== null) return;
+    timer = setTimeout(() => {
+      timer = null;
+      shownUid = null;
+      callback(null);
+    }, SESSION_LOSS_GRACE_MS);
+  };
+  return { emit, stop: clear };
+}
+
+/**
  * Suscripción a los cambios de sesión de Google, cargando la fachada de forma perezosa. Conserva el
  * contrato de `onSocialAuthChanged`: devuelve una función de teardown SÍNCRONA que cancela la carga
- * en curso o desuscribe si ya se resolvió. Best-effort: si la carga falla, emite null una vez.
+ * en curso o desuscribe si ya se resolvió.
+ *
+ * SI LA FACHADA NO SE PUEDE CARGAR, NO SE DICE «NADIE». Con sesión guardada, la respuesta honesta a un chunk que no
+ * baja (sin red, o un despliegue que rotó los hashes) es «aún no lo sé»: emitir `null` desconectaba lo social
+ * —tema incluido— de alguien que seguía teniendo su sesión. Se calla y lo vuelve a intentar cuando vuelve la red o
+ * la pestaña vuelve a estar a la vista.
  */
 export function subscribeSocialAuth(callback: (user: SocialAuthUser | null) => void): () => void {
   let unsubscribe: (() => void) | null = null;
   let cancelled = false;
+  const grace = withSessionGrace(callback);
 
   const attach = (m: FacadeModule): void => {
     if (cancelled) return;
-    unsubscribe = m.onSocialAuthChanged(callback);
+    unsubscribe = m.onSocialAuthChanged(grace.emit);
   };
 
-  // SIN SESIÓN GUARDADA NO SE DESCARGA EL SDK. Se responde «no hay sesión», que es la verdad, y se deja apuntado
-  // que en cuanto alguien cargue la fachada —el botón de iniciar sesión, el hub social, el panel— hay que
+  // SIN SESIÓN QUE RESTAURAR NO SE DESCARGA EL SDK. Se responde «no hay sesión», que es la verdad, y se deja
+  // apuntado que en cuanto alguien cargue la fachada —el botón de iniciar sesión, el hub social, el panel— hay que
   // engancharse a ella. Así quien solo usa sus listas no paga nunca esos kilobytes, y quien inicia sesión no nota
   // ninguna diferencia: el propio flujo de login carga la fachada y este suscriptor entra con él.
-  if (!hasStoredAuthSession() && !isFirebaseFacadeLoaded()) {
+  if (!mayRestoreAuthSession() && !isFirebaseFacadeLoaded()) {
     pendingAuthSubscribers.add(attach);
     // En microtarea, para conservar el contrato asíncrono de siempre (nadie espera un callback síncrono aquí).
     void Promise.resolve().then(() => {
-      if (!cancelled) callback(null);
+      if (!cancelled) grace.emit(null);
     });
     return () => {
       cancelled = true;
+      grace.stop();
       pendingAuthSubscribers.delete(attach);
       if (unsubscribe) unsubscribe();
     };
   }
 
-  void loadFacade()
-    .then(attach)
-    .catch(() => {
-      if (!cancelled) callback(null);
-    });
+  let stopRetrying = () => {};
+  const tryLoad = (): void => {
+    void loadFacade()
+      .then(attach)
+      .catch(() => {
+        if (cancelled) return;
+        const retry = () => {
+          if (document.visibilityState !== 'visible') return;
+          stopRetrying();
+          tryLoad();
+        };
+        window.addEventListener('online', retry);
+        document.addEventListener('visibilitychange', retry);
+        stopRetrying = () => {
+          window.removeEventListener('online', retry);
+          document.removeEventListener('visibilitychange', retry);
+          stopRetrying = () => {};
+        };
+      });
+  };
+  tryLoad();
   return () => {
     cancelled = true;
+    grace.stop();
+    stopRetrying();
     if (unsubscribe) unsubscribe();
   };
 }

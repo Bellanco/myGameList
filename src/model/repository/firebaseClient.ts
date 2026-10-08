@@ -12,7 +12,14 @@
 // CONSECUENCIA a tener presente: `lite` NO tiene `onSnapshot`. Si algún día hace falta un listener en tiempo real,
 // hay que decidirlo a propósito (y quitar la comprobación de `scripts/ci-validate.js`), no colarlo con un import.
 import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
-import { getAuth, setPersistence, browserLocalPersistence, type Auth } from 'firebase/auth';
+import {
+  browserLocalPersistence,
+  browserPopupRedirectResolver,
+  getAuth,
+  indexedDBLocalPersistence,
+  initializeAuth,
+  type Auth,
+} from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore/lite';
 import type { PalmaresEntry } from '../types/premios';
 import type { ProfileTier } from '../../core/constants/tiers';
@@ -315,14 +322,65 @@ async function buildFirebaseServices(): Promise<FirebaseServices | null> {
   }
 
   const app = getFirebaseApp();
-  const auth = getAuth(app);
+  bootHadStoredUser = hasFirebaseAuthKey();
+  const auth = startAuth(app);
   const firestore = getFirestore(app);
 
-  void setPersistence(auth, browserLocalPersistence).catch(() => {
-    // Keep silent: auth persistence can fail in hardened privacy modes.
-  });
-
   return { app, auth, firestore, analytics: await startAnalytics(app) };
+}
+
+/** Prefijo de la clave con la que Auth guarda la sesión en `localStorage` (lo lee también `firebaseGateway`). */
+const AUTH_STORAGE_PREFIX = 'firebase:authUser:';
+
+function hasFirebaseAuthKey(): boolean {
+  try {
+    for (let index = 0; index < localStorage.length; index += 1) {
+      if (localStorage.key(index)?.startsWith(AUTH_STORAGE_PREFIX)) return true;
+    }
+  } catch {
+    // Sin almacenamiento no hay sesión guardada que comparar.
+  }
+  return false;
+}
+
+/**
+ * ¿Había sesión guardada en `localStorage` justo ANTES de iniciar Auth? Si el SDK arranca y la primera respuesta es
+ * «nadie», es que la ha descartado él al restaurarla —un error al comprobar la cuenta que no es de red—, y eso se
+ * registra (ver `firebaseAuthRepository`). `null` = Auth aún no se ha iniciado.
+ */
+let bootHadStoredUser: boolean | null = null;
+
+export function authBootHadStoredUser(): boolean | null {
+  return bootHadStoredUser;
+}
+
+/**
+ * AUTH CON `localStorage` PRIMERO, fijado AL CREARLA y no después.
+ *
+ * Antes era `getAuth` y luego `setPersistence(browserLocalPersistence)`, y eso desconectaba lo social de las DEMÁS
+ * pestañas en cada arranque. `getAuth` prefiere IndexedDB: al arrancar encontraba la sesión en `localStorage`, la
+ * pasaba a IndexedDB y BORRABA la clave de `localStorage`; luego comprobaba la cuenta por red, y solo entonces
+ * `setPersistence` la volvía a escribir. Durante ese hueco, cada pestaña abierta recibía el evento `storage` con la
+ * clave vacía y su SDK la daba por desconectada: el tema volvía al de por defecto, salía «vuelve a entrar» y la
+ * pasarela pedía identificarse. Pasaba sobre todo con una versión nueva, que recarga sola la pestaña que se deja
+ * en segundo plano: cambiabas de pestaña y la que dejabas, al arrancar, desconectaba a la que abrías. Y si esa
+ * pestaña moría en el hueco, la sesión se quedaba solo en IndexedDB, donde `hasStoredAuthSession` no mira.
+ *
+ * Con `localStorage` primero en la jerarquía no hay migración: la sesión se lee donde está y la clave no se toca.
+ * Las que hoy viven solo en IndexedDB vuelven solas a `localStorage` la primera vez (el SDK migra hacia la primera
+ * persistencia de la lista). El resolutor de ventanas es el que `getAuth` ponía por su cuenta: sin él no hay
+ * `signInWithPopup`.
+ */
+function startAuth(app: FirebaseApp): Auth {
+  try {
+    return initializeAuth(app, {
+      persistence: [browserLocalPersistence, indexedDBLocalPersistence],
+      popupRedirectResolver: browserPopupRedirectResolver,
+    });
+  } catch {
+    // Ya iniciada (solo puede pasar si alguien más la creó antes): se usa la que hay.
+    return getAuth(app);
+  }
 }
 
 /**

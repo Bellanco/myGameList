@@ -707,35 +707,6 @@
 
 .premios-enviada__confirm p { margin: 0; }
 
-/* LA INVITACIÓN A QUEDARSE: misma anchura y forma que la confirmación de arriba, pero en el color de la casa y
-   no en el del éxito, porque ya no habla del voto sino de lo que viene. Icono a la izquierda; en el móvil, arriba. */
-.premios-enviada__invite {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: .4rem .8rem;
-  align-items: start;
-  width: min(100%, 52rem);
-  padding: .9rem;
-  margin-top: .4rem;
-  text-align: left;
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-  background: color-mix(in srgb, var(--steam) 8%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--steam) 32%, var(--hair));
-  border-radius: var(--radius-md);
-  box-shadow: var(--e1);
-}
-.premios-enviada__invite-icon .ui-icon { width: 1.6rem; height: 1.6rem; color: var(--steam); }
-.premios-enviada__invite-text { display: grid; gap: .3rem; min-width: 0; }
-.premios-enviada__invite-text p { margin: 0; }
-.premios-enviada__invite-title { color: var(--text); font-weight: 700; font-size: var(--fs-md); }
-.premios-enviada__invite-actions { grid-column: 2; display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .3rem; }
-
-@media (max-width: 30rem) {
-  .premios-enviada__invite { grid-template-columns: 1fr; }
-  .premios-enviada__invite-actions { grid-column: 1; }
-}
-
 /* ─── El panel (vive dentro del de administración) ────────────────────────────────────────────────────── */
 
 /* ─── Las pestañas del panel ──────────────────────────────────────────────────────────────────────────── */
