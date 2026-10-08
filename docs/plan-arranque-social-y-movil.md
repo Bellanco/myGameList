@@ -9,13 +9,17 @@ código: corrígela aquí.
 historial de git) y se apunta aquí cuál es la siguiente. Una fase que, al llegar a ella, resulta no tener nada que
 hacer también se borra, con una línea que diga por qué.
 
-**Siguiente:** F5, View Transitions.
+**Siguiente:** F2, partir `useSocialViewModel`.
 
 **Hecho:** F0, retirar el modo ampliado de las carátulas (`x=1`), que las hacía parpadear al abrir con la cuenta
 de administración y doblaba consultas a IGDB y escrituras de KV. Hecho el 08-10-2026.
 F3, `share_target` → Próximos: «Compartir» en Android abre `/compartir`, que lleva a Próximos con el alta
 rellena; el intérprete va por `import()` (+0,2 kB al arranque, crítico 184,6/190). Hecho el 08-10-2026; queda
 probarlo en un Android real con la PWA instalada después de desplegar.
+F5, View Transitions: el cambio de pantalla funde la vieja mientras entra la nueva, y al abrir una de tus reseñas
+(`/stats/resenas`) la tarjeta crece hasta el detalle. Solo desde el primer gesto (las redirecciones del arranque no
+animan). INP del cambio de pestaña 32 → 48 ms en escritorio, igual en móvil; +0,3 kB (crítico 184,9/190). Hecho el
+08-10-2026. Pendiente: la misma tarjeta que crece en el feed social (necesita sesión para probarla).
 
 Lo que se descartó en la misma conversación, con la medición delante, y no conviene volver a levantar:
 
@@ -32,7 +36,7 @@ Lo que se descartó en la misma conversación, con la medición delante, y no co
   del renglón **0,5 kB**, `crypto` **0,9 kB**. `githubHttp` y `syncRepository` no son candidatos: los usa la sync
   de forma síncrona (revisión, fase 5, punto 16). Cargar perezosa la forma no elegida ahorraría ~1 kB por persona
   a cambio de un `Suspense` al cambiar de forma y de precachear chunks diferidos (el hueco de Chromium). No
-  compensa. Lo que queda de la fase es una regla: lo nuevo (`share_target`, F5) entra por `lazy()`/`import()` y el tope de
+  compensa. Lo que queda de la fase es una regla: lo nuevo entra por `lazy()`/`import()` y el tope de
   190 no se sube.
 - **La build `production` de react-router.** El chunk del router sale de `dist/development/`, pero los dos
   ficheros miden lo mismo (1 byte de diferencia): no hay nada que ganar ahí.
@@ -140,40 +144,11 @@ de qué tipo es y cuándo se creó):
 
 ---
 
-## F5 · View Transitions
-
-**Qué da:** acabado, no velocidad. La app ya tiene un fundido de entrada por ruta (`useScreenTransition`, clase
-`screen-enter` en `<main>`). Lo nuevo de verdad son las **transiciones de elemento compartido**: la carátula o el
-avatar del feed que viaja a su detalle, o el indicador de la pestaña.
-
-**Lo comprobado:**
-- React 19.3 exporta `ViewTransition` y `addTransitionType` estables, y van en el chunk de `react` que ya se carga:
-  no suman bytes de JS.
-- `react-router` 7.18 envuelve sus actualizaciones de navegación en `React.startTransition`, que es lo que hace
-  falta para que `<ViewTransition>` anime. Hay que confirmarlo con `BrowserRouter` en el paso 1.
-- Soporte: Chrome, Safari 18+ y Firefox recientes. Donde no hay soporte, se queda el fundido actual.
-
-**Pasos:**
-
-1. Una prueba en el `<main>`: `<ViewTransition>` alrededor de las rutas, con `useScreenTransition` como reserva
-   donde no hay `document.startViewTransition`. Medir con el script de latencia de este plan (Event Timing, CPU ×4):
-   la captura de la vista antigua añade un instante, y no debe subir la mediana de cambio de pestaña (16 ms hoy).
-2. Elementos compartidos solo en el social (feed → detalle de reseña → perfil), con `name` por id de reseña.
-3. `prefers-reduced-motion`: sin animación (las 69 reglas que ya existen marcan el patrón).
-4. **Raster por tema:** medir Witcher y los temas con filtros SVG (en Witcher, las animaciones sobre papel con filtro SVG ya dejaban ver el fondo al desplazar), porque animar
-   capturas sobre esos fondos es justo lo que ya dio problemas.
-5. Comprobar en claro y oscuro y a 390, 1280, 1512 y 3840 px.
-
-Encaja con «evolución, no cambio»: aplicado con moderación y con la forma que pone cada tema.
-
----
-
 ## Orden propuesto
 
 | # | Trabajo | Por qué en este orden |
 |---|---|---|
-| 1 | **F5** View Transitions | acabado |
-| — | **F2** view-model social | independiente; se puede intercalar commit a commit en cualquier momento |
+| 1 | **F2** view-model social | lo que queda; commit a commit |
 | ⏸️ | **F4** Google Play | aparcado |
 
 Antes de cada despliegue, la checklist del README (versión, `audit:rules`, reglas e índices, suite en verde).

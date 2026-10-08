@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { ViewTransition, memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
 import { useScoreScale } from '../../hooks/useScoreScale';
@@ -10,6 +10,16 @@ import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import '../../../styles/reviews.scss';
 import { ReviewParagraphs } from '../ReviewParagraphs';
 import { APP_LOCALE } from '../../../core/constants/locale';
+
+/**
+ * EL NOMBRE QUE EMPAREJA la tarjeta de una reseña en la lista con la del detalle (`ReviewScreen`, `morphName`):
+ * con el mismo nombre a los dos lados, la View Transition hace crecer una hasta la otra
+ * (`::view-transition-group(.resena)`, `_motion.scss`). Un nombre de transición es un identificador de CSS, así
+ * que lo que no sea letra, cifra, guion o subrayado se cambia por un guion.
+ */
+export function nombreDeResena(id: string | number): string {
+  return `resena-${String(id).replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+}
 import { SCORE_UI } from '../../../core/constants/scoreLabels';
 
 /** Lote inicial; se amplía por scroll infinito para no pintar cien reseñas de golpe. */
@@ -146,44 +156,45 @@ export const ProfileReviewsList = memo(function ProfileReviewsList({
               ...(cover ? { '--row-cover': `url("${cover}")` } : {}),
             } as CSSProperties;
             return (
-              <article
-                key={review.id}
-                className={`hub-feed-card hub-feed-activity-item is-review hub-review-entry ${hasRating ? '' : 'is-noscore'} ${cover ? 'has-cover' : ''}`.replace(/\s+/g, ' ').trim()}
-                role="listitem"
-                style={hasRating || cover ? style : undefined}
-              >
-                {/* Tarjeta pulsable: abre el detalle de la reseña (todo el análisis) con vuelta a esta lista. */}
-                <button
-                  type="button"
-                  className="hub-review-open"
-                  aria-label={SOCIAL_UI.feed.reviewOpenAria(review.gameName || '')}
-                  onClick={() => onOpenReview(review.id)}
-                />
-                <span className="hub-review-medal" aria-hidden="true">
-                  {hasRating ? (scoreScale === 'grade' ? Math.round(resolveGrade({ grade: review.grade, score: rating })) : Math.round(rating)) : SCORE_UI.noScoreSymbol}
-                </span>
-                <header className="hub-review-entry-head">
-                  {review.gameName ? <h4 className="hub-review-game">{review.gameName}</h4> : null}
-                  <div className="hub-review-meta">
-                    {hasRating && scoreScale !== 'grade' ? <StarRating value={rating} /> : null}
-                    {showDate && hasValidDate ? (
-                      <span className="hub-review-date">
-                        {itemDate.toLocaleDateString(APP_LOCALE, { day: 'numeric', month: 'long', year: 'numeric' })}
-                      </span>
-                    ) : null}
-                    {/* Sin fecha, ese hueco lo ocupa el estado del juego: solo se dice cuando NO te lo has pasado
-                        (que es lo que matiza la nota); de lo terminado no hace falta decir nada. */}
-                    {!showDate && unfinished && unfinishedLabel ? (
-                      <span className="hub-review-unfinished">{unfinishedLabel}</span>
-                    ) : null}
-                  </div>
-                </header>
-                {review.reviewText ? (
-                  <div className="hub-review-body">
-                    <p className="hub-feed-review-text hub-review-text"><ReviewParagraphs text={review.reviewText} /></p>
-                  </div>
-                ) : null}
-              </article>
+              <ViewTransition key={review.id} name={nombreDeResena(review.id)} share="resena" default="none">
+                <article
+                  className={`hub-feed-card hub-feed-activity-item is-review hub-review-entry ${hasRating ? '' : 'is-noscore'} ${cover ? 'has-cover' : ''}`.replace(/\s+/g, ' ').trim()}
+                  role="listitem"
+                  style={hasRating || cover ? style : undefined}
+                >
+                  {/* Tarjeta pulsable: abre el detalle de la reseña (todo el análisis) con vuelta a esta lista. */}
+                  <button
+                    type="button"
+                    className="hub-review-open"
+                    aria-label={SOCIAL_UI.feed.reviewOpenAria(review.gameName || '')}
+                    onClick={() => onOpenReview(review.id)}
+                  />
+                  <span className="hub-review-medal" aria-hidden="true">
+                    {hasRating ? (scoreScale === 'grade' ? Math.round(resolveGrade({ grade: review.grade, score: rating })) : Math.round(rating)) : SCORE_UI.noScoreSymbol}
+                  </span>
+                  <header className="hub-review-entry-head">
+                    {review.gameName ? <h4 className="hub-review-game">{review.gameName}</h4> : null}
+                    <div className="hub-review-meta">
+                      {hasRating && scoreScale !== 'grade' ? <StarRating value={rating} /> : null}
+                      {showDate && hasValidDate ? (
+                        <span className="hub-review-date">
+                          {itemDate.toLocaleDateString(APP_LOCALE, { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </span>
+                      ) : null}
+                      {/* Sin fecha, ese hueco lo ocupa el estado del juego: solo se dice cuando NO te lo has pasado
+                          (que es lo que matiza la nota); de lo terminado no hace falta decir nada. */}
+                      {!showDate && unfinished && unfinishedLabel ? (
+                        <span className="hub-review-unfinished">{unfinishedLabel}</span>
+                      ) : null}
+                    </div>
+                  </header>
+                  {review.reviewText ? (
+                    <div className="hub-review-body">
+                      <p className="hub-feed-review-text hub-review-text"><ReviewParagraphs text={review.reviewText} /></p>
+                    </div>
+                  ) : null}
+                </article>
+              </ViewTransition>
             );
           })}
         </div>

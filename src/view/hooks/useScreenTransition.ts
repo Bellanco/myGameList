@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 
 /** Clase que dispara la entrada (`_motion.scss`). Se pone y se quita; nunca se queda puesta. */
 const ENTER_CLASS = 'screen-enter';
@@ -33,7 +33,8 @@ export function useScreenTransition<T extends HTMLElement>(key: string): RefObje
 
   useLayoutEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    // Donde hay View Transitions, la entrada la hace `<ViewTransition>` en `App` (`::view-transition-*(.pantalla)`).
+    if (!el || 'startViewTransition' in document) return;
 
     el.classList.remove(ENTER_CLASS);
     void el.offsetWidth;
@@ -52,4 +53,30 @@ export function useScreenTransition<T extends HTMLElement>(key: string): RefObje
   }, [key]);
 
   return ref;
+}
+
+/**
+ * ¿YA SE PUEDE ANIMAR EL CAMBIO DE PANTALLA? Solo después de que la persona toque algo.
+ *
+ * `<ViewTransition>` (en `App`) anima toda actualización que llegue en una transición, y las navegaciones del
+ * router lo son —también las que no pide nadie—: la redirección de `/` a `/completados` y la de una dirección
+ * vieja a la nueva, al arrancar. Eso fundía la primera pantalla nada más abrir la app. Las navegaciones que se
+ * quieren animar las provoca siempre un gesto (clic, tecla, atrás), así que el primero las enciende.
+ */
+export function useScreenTransitionsReady(): boolean {
+  const [lista, setLista] = useState(false);
+  useEffect(() => {
+    if (lista) return undefined;
+    const encender = (): void => setLista(true);
+    const opciones = { capture: true, once: true, passive: true } as const;
+    window.addEventListener('pointerdown', encender, opciones);
+    window.addEventListener('keydown', encender, opciones);
+    window.addEventListener('popstate', encender, opciones);
+    return () => {
+      window.removeEventListener('pointerdown', encender, opciones);
+      window.removeEventListener('keydown', encender, opciones);
+      window.removeEventListener('popstate', encender, opciones);
+    };
+  }, [lista]);
+  return lista;
 }

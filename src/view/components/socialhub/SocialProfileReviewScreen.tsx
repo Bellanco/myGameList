@@ -1,5 +1,6 @@
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import type { ReviewAuthor } from '../ReviewDetailHead';
+import { nombreDeResena } from './ProfileReviewsList';
 import { ReviewScreen } from './ReviewScreen';
 import type { CoverAccess } from './useReviewCover';
 
@@ -88,6 +89,7 @@ export function SocialProfileReviewScreen({
       dateLabel={hasValidDate && reviewDate ? SOCIAL_UI.feed.analyzedAt(reviewDate) : ''}
       onBack={onBack}
       backLabel={backLabel || SOCIAL_UI.feed.reviewsBackToList}
+      morphName={review ? nombreDeResena(review.id) : undefined}
       status={status}
       statusKind={statusKind}
       actions={actions}

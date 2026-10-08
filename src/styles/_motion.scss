@@ -26,6 +26,26 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* EL CAMBIO DE PANTALLA CON VIEW TRANSITIONS (`<ViewTransition update="pantalla">` alrededor del `<main>` en `App`).
+   La misma entrada de arriba, pero ahora la pantalla que se va también se va: se desvanece deprisa mientras la
+   nueva sube y aparece. El contenedor no se estira entre una altura y otra (`group` sin animación): sería una
+   pantalla deformándose. Donde no hay View Transitions sigue la entrada de arriba (`useScreenTransition`).
+
+   Medido el 08-10-2026 sobre el build, con una biblioteca de 302 juegos y el tema por defecto (Chrome con GPU):
+   INP del cambio de pestaña 32 → 48 ms en escritorio y 48 → 48 ms en móvil (CPU ×4); abrir una reseña, 16 ms
+   en los dos. La captura de la pantalla vieja es el fotograma de más. */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-group(.pantalla) { animation: none; }
+  ::view-transition-old(.pantalla) { animation: vt-salida .12s ease-in both; }
+  ::view-transition-new(.pantalla) { animation: screen-enter .22s ease-out both; }
+  /* LA RESEÑA QUE SE ABRE: la tarjeta de la lista crece hasta ser la del detalle. */
+  ::view-transition-group(.resena) { animation-duration: .28s; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+}
+@keyframes vt-salida { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}
+
 /* ══ 2 · ESPERA DE UN CHUNK PEREZOSO ═══════════════════════════════════════════════════════════════════════
    Casi todas las pantallas llegan por `lazy()`, así que entre el clic y el primer píxel hay una descarga. Lo
    que se enseña mientras son dos cosas a la vez: un HILO DE PROGRESO en el borde de arriba (dice "está pasando
