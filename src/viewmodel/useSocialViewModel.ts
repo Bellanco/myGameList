@@ -3,25 +3,22 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useYearSummarySignal } from './social/useYearSummarySignal';
 import { ensureSyncConfigLoaded, getSyncConfig } from '../model/repository/gistRepository';
 import { writeCanPublishHint } from '../model/repository/socialShellHint';
-import { createSocialGist, getSocialSyncConfig, readSocialGist, remapSocialActorIds, saveSocialSyncConfig, deleteGist, ensureSecretSocialGist, socialGistHasContent, writeSocialGist } from '../model/repository/socialGistRepository';
+import { getSocialSyncConfig, readSocialGist, remapSocialActorIds, saveSocialSyncConfig, writeSocialGist } from '../model/repository/socialGistRepository';
 import { reconcileReviewActivity } from '../model/repository/socialActivityReconcile';
 import { getCachedSocialProfile, getLocalMeta, patchLocalMeta, putCachedSocialProfile, type CachedSocialProfileData } from '../model/repository/indexedDbRepository';
 import { PUBLIC_NAME_MAX_LENGTH, safeTrim } from '../core/security/sanitize';
 import { isNetworkFailure, isOffline, isServiceUnavailable } from '../core/utils/network';
-import { isPermissionDeniedError } from '../model/repository/firebaseClient';
 import { useOnlineStatus } from '../view/hooks/useOnlineStatus';
 import { resolveViewer, withVisiblePhotos } from '../core/social/photoVisibility';
 import { useGenericPhoto } from '../view/hooks/useGenericPhoto';
 import { useIsAdmin } from '../view/hooks/useIsAdmin';
 import { SOCIAL_UI } from '../core/constants/socialLabels';
-import type { IconName } from '../core/constants/icons';
 import {
   DEFAULT_PROFILE_TIER,
   type ProfileTier,
 } from '../core/constants/tiers';
 import { TAB_IDS, type SyncConfig, type TabData } from '../model/types/game';
 import {
-  clearAnalyticsUser,
   ensureProfileByEmail,
   getCurrentSocialAuthUser,
   getPrivateConfig,
@@ -29,8 +26,6 @@ import {
   healOwnFriendshipIdentity,
   resolveOwnProfile,
   resolveStableProfileId,
-  signInWithGoogle,
-  signOutSocialUser,
   updateProfilePhoto,
   type FriendshipSelfInfo,
   type SocialAuthUser,
@@ -45,7 +40,6 @@ import type { SocialDirectoryEntry } from './social/socialFeed';
 import { buildFriendshipViews } from './social/friendshipViews';
 import { useSocialDirectory } from './social/useSocialDirectory';
 import { useSocialDiscover } from './social/useSocialDiscover';
-import { resolveGateway } from './social/socialGateway';
 import { useSocialFriendships } from './social/useSocialFriendships';
 import { useSocialNavigation } from './social/useSocialNavigation';
 import { useSocialStartupTasks } from './social/useSocialStartupTasks';
@@ -61,8 +55,10 @@ import { useSocialLegalConsent } from './social/useSocialLegalConsent';
 import { DEFAULT_SOCIAL_VISIBILITY, normalizeVisibility, useSocialProfileForm } from './social/useSocialProfileForm';
 import { useSocialReading } from './social/useSocialReading';
 import { useOwnAchievements } from './social/useOwnAchievements';
+import { useSocialGateway } from './social/useSocialGateway';
+import { isNotFoundGistError } from './social/gistErrors';
+import { useSecretChannelMigration } from './social/useSecretChannelMigration';
 import { useSocialFeed } from './social/socialFeed';
-import { isSupersededSignIn } from '../core/utils/googleSignIn';
 export type { RelatedReview } from '../core/social/relatedReviews';
 // Re-exportados: las pantallas del hub los importan desde este ViewModel desde antes de la extracción.
 export type {
@@ -82,24 +78,10 @@ const shouldRedirectToProfileEditor = (isProfileEditorLocked: boolean, activePan
   return isProfileEditorLocked && activePanel !== 'profile';
 };
 
-/** Respuesta de `attachExistingSocialGist`: vinculado, no tiene, o no se ha podido saber. */
-type ExistingSocialGist = 'linked' | 'none' | 'unknown';
-
 const isProfileEditorLocked = (mustCreateProfile: boolean, hasBlockingSocialIssue: boolean): boolean => {
   return mustCreateProfile || hasBlockingSocialIssue;
 };
 
-/**
- * ¿El gist no se pudo leer por la CREDENCIAL (401/403), y no porque no exista?
- *
- * Hoy apenas ocurre: el canal social es un gist público y las lecturas funcionan incluso sin cabecera. Cuando
- * pasen a ser secretos, esta será la diferencia entre "este amigo no ha publicado nada" y "tu token de GitHub ya
- * no vale". Degradar en silencio en el segundo caso deja al usuario con un feed vacío y sin pista de por qué.
- */
-
-const isNotFoundGistError = (error: unknown): boolean => {
-  return error instanceof Error && /\b404\b/.test(error.message);
-};
 
 /**
  * Identidad del autor con la que se enriquece cada elemento del feed al hidratar el directorio.
@@ -214,9 +196,6 @@ export function useSocialViewModel(options?: {
    */
   const [tierResolved, setTierResolved] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [resolvingSocialGist, setResolvingSocialGist] = useState(false);
-  const [connecting, setConnecting] = useState(false);
-  const [signingIn, setSigningIn] = useState(false);
   const [status, setStatus] = useState('');
   const [statusKind, setStatusKind] = useState<'ok' | 'warn' | 'err'>('ok');
   const [hasBlockingSocialIssue, setHasBlockingSocialIssue] = useState(false);
@@ -584,9 +563,26 @@ export function useSocialViewModel(options?: {
     return strangers.length > 0 ? [...feedDirectory, ...strangers] : feedDirectory;
   }, [feedDirectory, discoverEntries, authUser?.uid, ownProfileId]);
 
-  const canConnectSocialGist =
-    hasMainSync && hasSocialSession && !hasSocialGist && !connecting && !resolvingSocialGist && legalGateOpen;
-  const canSignInGoogle = hasMainSync && !hasSocialSession && !signingIn;
+
+  /**
+   * LA PASARELA AL ESPACIO SOCIAL: iniciar sesión con Google, adoptar el canal que ya exista o crear uno, y el botón
+   * que lleva al siguiente paso (`social/useSocialGateway`). La sesión y el canal siguen viviendo aquí, porque los
+   * lee todo el hub: la pasarela recibe con qué cambiarlos.
+   */
+  const { gatewaySteps, currentStep, handleSignOut, primaryGatewayCta } = useSocialGateway({
+    mainSyncConfig,
+    hasMainSync,
+    authUser,
+    hasSocialGist,
+    legalGateOpen,
+    setAuthUser,
+    setSocialCfgGistId,
+    setSocialCfgEtag,
+    setShowSocialSpace,
+    setFeedback,
+    reportFailure,
+    navigate,
+  });
 
   useEffect(() => {
     if (!hasReadyAccess || showSocialSpace) {
@@ -597,88 +593,7 @@ export function useSocialViewModel(options?: {
     void navigate('/social');
   }, [hasReadyAccess, showSocialSpace, navigate]);
 
-  // Pasarela (pasos, paso actual y progreso): derivación pura en `social/socialGateway`.
-  const { steps: gatewaySteps, currentStep } = useMemo(
-    () => resolveGateway({ hasMainSync, hasSocialSession, hasSocialGist }),
-    [hasMainSync, hasSocialSession, hasSocialGist],
-  );
 
-  /** El auto-crear del canal social se cierra en esta sesión si no se ha podido saber si ya existe uno. */
-  const autoCreateSocialGistBlockedRef = useRef(false);
-
-  /**
-   * ¿Tiene ya esta cuenta un canal social? TRES respuestas, y la tercera es la que importa: `unknown`.
-   *
-   * Era un booleano, y cualquier fallo al preguntar (Firestore sin cuota o caído, GitHub limitado) salía como
-   * `false`, que quien llama lee como «no tiene»: el mismo canal vacío del comentario de abajo, pero por un fallo
-   * del servicio en vez de por la migración del campo (docs/plan-degradacion-servicios.md, fase 1). `none` solo
-   * cuando las fuentes RESPONDEN que no hay nada; una regla que no deja leer (`permission-denied`) es una respuesta.
-   */
-  const attachExistingSocialGist = useCallback(async (user: SocialAuthUser): Promise<ExistingSocialGist> => {
-    if (!mainSyncConfig?.token) {
-      setFeedback('warn', SOCIAL_UI.status.needMainSync);
-      return 'unknown';
-    }
-
-    try {
-      setResolvingSocialGist(true);
-      // FUENTE DEL CANAL, por orden: `privateConfig` (owner-only, un solo escritor) y solo después el campo LEGACY
-      // del perfil público. Mirando solo el perfil, esta función devolvía SIEMPRE false en cuanto la cuenta migró
-      // —ese campo se purga—, y el camino que la usa (`handleSignInGoogle`, en un navegador sin configuración local:
-      // dispositivo nuevo, almacenamiento limpiado u otro origen) caía en el auto-crear: un canal nuevo y VACÍO
-      // adoptado como propio, el historial real huérfano y el editor de perfil pidiendo el alta otra vez. Y como el
-      // saneado de amistades corre al abrir el hub, habría repuntado a los amigos a ese gist vacío, dejándoles sin
-      // la actividad de esta cuenta. Aquí NO vale el efecto de recuperación del montaje: ese ya corrió sin sesión.
-      const savedConfig = await getPrivateConfig(user.uid).catch((error: unknown) => {
-        if (isPermissionDeniedError(error)) return null;
-        throw error;
-      });
-      const savedGistId = String(savedConfig?.socialGistId || '').trim();
-      const existingProfile = savedGistId ? null : await resolveOwnProfile(user);
-      const existingGistId = savedGistId || (existingProfile?.socialEnabled ? existingProfile.socialGistId.trim() : '');
-
-      if (!existingGistId) {
-        return 'none';
-      }
-
-      try {
-        await readSocialGist(mainSyncConfig.token, existingGistId, null);
-      } catch (error) {
-        if (isNotFoundGistError(error)) {
-          return 'none';
-        }
-
-        throw error;
-      }
-
-      saveSocialSyncConfig({
-        token: mainSyncConfig.token,
-        gistId: existingGistId,
-        etag: null,
-        lastRemoteUpdatedAt: 0,
-      });
-      setSocialCfgGistId(existingGistId);
-      setSocialCfgEtag(null);
-      // Si vino del campo legacy, se copia a su sitio: es lo único que evita que el siguiente dispositivo vuelva a
-      // no encontrarlo cuando ese campo quede purgado.
-      if (!savedGistId) {
-        void setPrivateConfig(user.uid, { socialGistId: existingGistId }).catch(() => {});
-      }
-      setFeedback('ok', SOCIAL_UI.status.gistLinkedFromFirestore);
-      return 'linked';
-    } catch (error) {
-      // No se sabe, y entonces no se crea nada. Sin red, el aviso de siempre; con el servicio caído o sin cuota, uno
-      // que no asusta y dice lo que importa: no se ha tocado nada.
-      if (isNetworkFailure(error) || isOffline()) {
-        reportFailure(error, SOCIAL_UI.status.firestoreCheckFailed);
-      } else {
-        setFeedback('warn', SOCIAL_UI.status.channelCheckUnavailable, 'long');
-      }
-      return 'unknown';
-    } finally {
-      setResolvingSocialGist(false);
-    }
-  }, [mainSyncConfig, reportFailure, setFeedback]);
 
   // Se relee al ABRIR el espacio social, no solo al montar. De aquí sale `hasCompletedGames`, y con la foto del
   // montaje bastaba con que la biblioteca aún no estuviera en localStorage en ese instante (dispositivo nuevo, otro
@@ -729,155 +644,18 @@ export function useSocialViewModel(options?: {
     ownPhotoVerdictPending,
   });
 
-  // FASE 2 — MIGRACIÓN A CANAL SECRETO (una vez por sesión).
-  //
-  // Los canales creados antes de este cambio son gists PÚBLICOS: aparecen listados en el perfil de GitHub de su
-  // dueño y en las búsquedas. GitHub no permite cambiar la visibilidad, así que la única vía es clonar a un id
-  // nuevo, y solo puede hacerlo el propio usuario: su token es owner-only, así que esto NO se puede hacer desde
-  // el panel de administración.
-  //
-  // Tras migrar hay que repuntar las TRES referencias que quedan: la config local, `privateConfig` (owner-only, la
-  // fuente de verdad) y los documentos de amistad (por eso se rearma el saneado de amistades).
-  const secretMigrationRef = useRef(false);
-  useEffect(() => {
-    if (secretMigrationRef.current) return;
-    if (!socialSpaceOpen || !authUser?.uid || !socialCfgGistId) return;
-    const token = getSocialSyncConfig()?.token || mainSyncConfig?.token || '';
-    if (!token) return;
-    // Se fija el usuario aquí: dentro de las funciones anidadas el estado ya no se puede estrechar a no-nulo.
-    const owner = authUser;
-    secretMigrationRef.current = true;
-    let cancelled = false;
-
-    // ¿Migró ya OTRO dispositivo? `privateConfig` es la fuente de verdad de la cuenta y solo la escribe su dueño.
-    // Sin esta comprobación, dos dispositivos abriendo a la vez clonarían cada uno por su lado y recrearían la
-    // deriva que esta migración viene a eliminar. Si ya hay un canal distinto ahí, se adopta en vez de clonar.
-    void (async () => {
-      // La retirada de los ids que el perfil PÚBLICO aún anuncie ESTABA AQUÍ, y se ha ido a
-      // `useSocialStartupTasks`. Estaba dentro de esta cadena porque quien ya migró en otra sesión no vuelve a
-      // entrar en ella y se quedaba publicando un gist borrado; con esta migración ya sellada
-      // (`socialChannelPrivateFor`), quedarse aquí la habría dejado sin correr nunca más. Allí tiene su propio
-      // sello y sigue cubriendo ese caso.
-      //
-      // SELLO DEL CANAL YA SECRETO. `ensureSecretSocialGist` no puede saber si hay algo que migrar sin LISTAR los
-      // gists de la cuenta contra la API de GitHub, y eso pasaba en CADA apertura del hub para descubrir, casi
-      // siempre, que no había nada que hacer. Una vez que consta que este canal es secreto, no puede volver a ser
-      // público (GitHub no permite cambiar la visibilidad), así que el sello es definitivo para ese id.
-      const meta = await getLocalMeta().catch(() => null);
-      if (cancelled) return;
-      if (meta?.socialChannelPrivateFor === socialCfgGistId) return;
-
-      const shared = await getPrivateConfig(owner.uid).catch(() => null);
-      const sharedGistId = String(shared?.socialGistId || '').trim();
-      if (sharedGistId && sharedGistId !== socialCfgGistId) {
-        const currentConfig = getSocialSyncConfig();
-        if (currentConfig) {
-          saveSocialSyncConfig({ ...currentConfig, gistId: sharedGistId, etag: null, lastRemoteUpdatedAt: 0 });
-        }
-        setSocialCfgGistId(sharedGistId);
-        setSocialCfgEtag(null);
-        return;
-      }
-      await runSecretMigration(token);
-    })();
-
-    async function runSecretMigration(activeToken: string) {
-    return ensureSecretSocialGist(activeToken, socialCfgGistId)
-      .then((result) => {
-        // Demasiado grande para leerlo entero por la API: no se migra y se dice. Callarlo dejaría un canal
-        // público para siempre sin que nadie sepa por qué.
-        if (result.tooLarge) {
-          // Sin sellar a propósito: sigue siendo público y hay que reintentarlo (puede adelgazar al rotar la
-          // actividad). Sellarlo aquí lo dejaría público para siempre.
-          setFeedback('warn', SOCIAL_UI.status.socialGistTooLarge);
-          return;
-        }
-        if (!result.migrated) {
-          // Nada que migrar: el canal ya era secreto (o no es de esta cuenta). Se sella para no volver a listar
-          // los gists en la próxima apertura.
-          void patchLocalMeta({ socialChannelPrivateFor: socialCfgGistId }).catch(() => {});
-          return;
-        }
-
-        const currentConfig = getSocialSyncConfig();
-        if (currentConfig) {
-          // ETag y sello remoto son del gist ANTERIOR: se descartan.
-          saveSocialSyncConfig({ ...currentConfig, gistId: result.gistId, etag: result.etag, lastRemoteUpdatedAt: 0 });
-        }
-        setSocialCfgGistId(result.gistId);
-        setSocialCfgEtag(result.etag);
-        // El canal nuevo ya es secreto: se sella su id para que la próxima apertura no vuelva a listar los gists.
-        void patchLocalMeta({ socialChannelPrivateFor: result.gistId }).catch(() => {});
-        // RETIRADA DEL GIST ANTIGUO. Es lo único que quita de circulación lo ya publicado: si se quedara, seguiría
-        // siendo público e indexable para siempre. Se hace AL FINAL y con verificación previa, en este orden:
-        // clonar → repuntar las tres referencias (arriba) → comprobar que el clon tiene el contenido → borrar.
-        // Invertirlo dejaría al usuario apuntando a un gist inexistente si algo fallara a media faena.
-        void (async () => {
-          // Las referencias se repuntan AQUÍ y se ESPERAN, antes de borrar nada. Antes se dejaba que el efecto de
-          // saneado de amistades corriera por su cuenta (rearmando su ref) mientras el borrado seguía adelante:
-          // si el borrado ganaba la carrera, un amigo que hidratara en ese hueco leía un gist ya inexistente y se
-          // quedaba sin su actividad —cacheada 30 minutos— hasta la siguiente rehidratación.
-          //
-          // Y si alguna NO se pudo repuntar, no se borra: el fallo cae en el `catch` de abajo, que conserva los dos
-          // gists y avisa, igual que cuando el clon no convence. Tragárselo y seguir dejaba ese puntero —el de tus
-          // otros dispositivos o el de tus amigos— en un gist que ya no existe; así apunta a uno que sigue vivo.
-          await setPrivateConfig(owner.uid, { socialGistId: result.gistId });
-          // `force`: aquí la garantía manda sobre el ahorro. Lo que viene después BORRA el gist antiguo, así que
-          // un saneado que se saltara por huella dejaría a los amigos apuntando a un id que va a desaparecer.
-          await healOwnFriendshipIdentity(owner.uid, {
-            name: profileName.trim(),
-            photo: ownPublishablePhoto,
-            socialGistId: result.gistId,
-            gamesGistId: mainSyncConfig?.gistId || '',
-          }, { force: true });
-          // Ya está repuntado. Antes había que decírselo al efecto de saneado poniéndole su `ref` a mano; ahora
-          // no hace falta: el saneado con `force` deja escrita la huella nueva, así que la tarea de arranque la
-          // encuentra al día y no repite nada.
-
-          const copied = await socialGistHasContent(token, result.gistId, result.copiedEntries);
-          if (!copied) {
-            // El clon no tiene lo que debía: NO se borra el original. Mejor dos gists que ninguno.
-            setFeedback('warn', SOCIAL_UI.status.socialGistMigratedKept);
-            return;
-          }
-          // Se retiran TODOS los públicos superados, no solo el de la sesión: con deriva puede haber dos, y dejar
-          // el que tiene las reseñas expuesto sería no haber arreglado nada.
-          const results = await Promise.all(
-            result.supersededGistIds.map((id) => deleteGist(token, id).catch(() => false)),
-          );
-          const allDeleted = results.every(Boolean);
-          // Un público con contenido que NO se copió no se borra: se avisa para que decida su dueño.
-          if (result.keptPublicGistIds.length > 0 || !allDeleted) {
-            setFeedback('warn', SOCIAL_UI.status.socialGistMigratedKept);
-            return;
-          }
-          setFeedback('ok', SOCIAL_UI.status.socialGistMigrated);
-        })().catch(() => {
-          // Esta cadena corre suelta (`void`), así que sin este catch cualquier fallo suyo —la verificación del
-          // clon o el borrado, que van contra la red— se convertía en un rechazo NO CAPTURADO: en el navegador
-          // acaba en la consola y en el manejador global de errores, y no en el aviso que le toca. Lo que ya está
-          // hecho no se deshace (el canal nuevo está creado y repuntado), así que el estado seguro es el mismo que
-          // cuando la verificación no convence: se conservan los dos gists y se avisa.
-          setFeedback('warn', SOCIAL_UI.status.socialGistMigratedKept);
-        });
-      })
-      .catch(() => {
-        // Best-effort: si falla (red, rate-limit), se reintenta en la próxima sesión. Nada queda a medias: o se
-        // creó el gist nuevo y se repuntó todo, o no se tocó nada.
-        secretMigrationRef.current = false;
-      });
-    }
-
-    // El desmontaje del hub cancela la cadena: sin esto, cerrar el espacio social mientras la lectura de
-    // `LocalMeta` está en vuelo dejaba que la migración siguiera su curso contra un componente ya desmontado.
-    return () => {
-      cancelled = true;
-    };
-    // Se depende de `authUser?.uid` y NO del objeto `authUser` entero, que es lo que pide ESLint: Firebase
-    // entrega una instancia nueva en cada refresco de token, así que con el objeto esta migración se relanzaría
-    // sola cada hora sin que haya cambiado de usuario. Lo que decide aquí es la identidad, y esa es el uid.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [socialSpaceOpen, authUser?.uid, socialCfgGistId, mainSyncConfig?.token, setFeedback, profileName, ownPublishablePhoto, mainSyncConfig?.gistId]);
+  // FASE 2 — MIGRACIÓN A CANAL SECRETO, una vez por sesión: `social/useSecretChannelMigration`.
+  useSecretChannelMigration({
+    socialSpaceOpen,
+    authUser,
+    socialCfgGistId,
+    mainSyncConfig,
+    profileName,
+    ownPublishablePhoto,
+    setSocialCfgGistId,
+    setSocialCfgEtag,
+    setFeedback,
+  });
 
   // AUTO-HEAL DEL DIRECTORIO: RETIRADO. Su trabajo era mantener `profiles/{uid}.social.gistId` al día, y ese campo
   // ha dejado de publicarse (se purga en cada guardado): volver a escribirlo aquí lo resucitaría en cada apertura
@@ -1162,74 +940,6 @@ export function useSocialViewModel(options?: {
     [openProfileDetail],
   );
 
-  const handleCreateSocialGist = useCallback(async () => {
-    if (!mainSyncConfig?.token) {
-      setFeedback('warn', SOCIAL_UI.status.needMainSync);
-      return;
-    }
-
-    if (!authUser) {
-      setFeedback('warn', SOCIAL_UI.status.needGoogleBeforeCreate);
-      return;
-    }
-
-    try {
-      setConnecting(true);
-      const existing = await attachExistingSocialGist(authUser);
-      if (existing === 'linked') {
-        return;
-      }
-      if (existing === 'unknown') {
-        // Puede que ya tenga canal: crear otro aquí sería el canal vacío de `attachExistingSocialGist`. Y el
-        // auto-crear no vuelve a intentarlo en esta sesión: su efecto se dispara cada vez que `connecting` vuelve a
-        // `false`, así que sin este cierre preguntaría en bucle a un servicio que no responde.
-        autoCreateSocialGistBlockedRef.current = true;
-        return;
-      }
-
-      const created = await createSocialGist(mainSyncConfig.token);
-      saveSocialSyncConfig({
-        token: mainSyncConfig.token,
-        gistId: created.gistId,
-        etag: created.etag,
-        lastRemoteUpdatedAt: 0,
-      });
-      setSocialCfgGistId(created.gistId);
-      setSocialCfgEtag(created.etag);
-      setFeedback('ok', SOCIAL_UI.status.gistNotFoundCreated);
-    } catch (error) {
-      reportFailure(error, SOCIAL_UI.status.createGistFailed);
-    } finally {
-      setConnecting(false);
-    }
-  }, [attachExistingSocialGist, authUser, mainSyncConfig, reportFailure, setFeedback]);
-
-  const handleSignInGoogle = useCallback(async () => {
-    let superseded = false;
-    try {
-      setSigningIn(true);
-      // Si vuelve sin terminar (cerró la ventana, o «atrás» en el móvil), el botón se devuelve enseguida en vez de
-      // quedarse en «Entrando...» hasta que Firebase se dé cuenta (ver `core/utils/googleSignIn`).
-      const user = await signInWithGoogle({ onAbandoned: () => setSigningIn(false) });
-      setAuthUser(user);
-      const linkedExisting = (await attachExistingSocialGist(user)) === 'linked';
-      if (linkedExisting) {
-        setShowSocialSpace(true);
-        setFeedback('ok', SOCIAL_UI.status.signInAndLinked);
-      } else {
-        // No hacer nada aquí; el useEffect automático manejará la creación del gist
-      }
-    } catch (error) {
-      // Volvió a pulsar: este intento lo canceló el nuevo, que es quien lleva el botón ahora.
-      if (isSupersededSignIn(error)) {
-        superseded = true;
-        return;
-      }
-      reportFailure(error, SOCIAL_UI.status.signInFailed);
-    } finally {
-      if (!superseded) setSigningIn(false);
-    }
-  }, [attachExistingSocialGist, reportFailure, setFeedback]);
 
   const hydrateSocialProfile = useCallback(async () => {
     if (!socialSpaceOpen || !authUser || !socialCfgGistId) {
@@ -1683,19 +1393,6 @@ export function useSocialViewModel(options?: {
     })();
   }, [authUser?.uid, authUser?.photoURL, ownPhotoIsGeneric, ownPhotoVerdictPending, showPhoto, socialSpaceOpen, socialCfgGistId, patchDirectoryEntries]);
 
-  // Auto-crear gist social si tenemos token + Google pero no gist. Salvo que en esta sesión no se haya podido saber
-  // si ya existe uno (`unknown`): entonces se espera a otra sesión o al botón; nunca se crea a ciegas.
-  useEffect(() => {
-    autoCreateSocialGistBlockedRef.current = false;
-  }, [authUser?.uid]);
-  useEffect(() => {
-    if (
-      hasMainSync && authUser && !hasSocialGist && !connecting && !resolvingSocialGist && !signingIn &&
-      !autoCreateSocialGistBlockedRef.current
-    ) {
-      void handleCreateSocialGist();
-    }
-  }, [hasMainSync, authUser, hasSocialGist, connecting, resolvingSocialGist, signingIn, handleCreateSocialGist]);
 
   const handleSaveProfile = useCallback(async () => {
     await ensureSyncConfigLoaded(); // C4: igual que en `hydrateSocialProfile`, el token social se descifra async
@@ -1865,69 +1562,11 @@ export function useSocialViewModel(options?: {
     mainSyncConfig?.token,
   ]);
 
-  const handleSignOut = useCallback(async () => {
-    await signOutSocialUser();
-    void clearAnalyticsUser(); // desvincula al usuario de los eventos/errores posteriores (simétrico con setAnalyticsUser en login)
-    setAuthUser(null);
-    setShowSocialSpace(false);
-    setFeedback('ok', SOCIAL_UI.status.signOut, 'long');
-  }, [setFeedback]);
 
   // Datos que YO aporto al doc de amistad (denormalizados): mi nombre/foto (respetando showPhoto) + mis ids de gist.
   // PRIVACIDAD: el nombre es SIEMPRE el nick del perfil social (`profileName`), NUNCA el nombre real de Google
   // (`authUser.displayName`) ni el email. Si el nick aún no está cargado, se guarda vacío (el lector muestra un
   // placeholder) en lugar de filtrar el nombre real.
-  const primaryGatewayCta = useMemo(() => {
-    type GatewayCta = {
-      icon: IconName;
-      label: string;
-      action: () => void;
-      disabled: boolean;
-    };
-
-    // Paso 1: Conectar sincronización principal (token)
-    if (!hasMainSync) {
-      return {
-        icon: 'gear',
-        label: SOCIAL_UI.gateway.connectSync,
-        // El contrato del CTA es `() => void`; `navigate` devuelve promesa, así que la flecha la propagaba y el
-        // consumidor creía tener un manejador síncrono. Llaves + `void`: la intención queda escrita y el tipo cuadra.
-        action: () => { void navigate('/ajustes'); },
-        disabled: false,
-      } satisfies GatewayCta;
-    }
-
-    // Paso 2: Google (si tenemos token pero no sesión)
-    if (resolvingSocialGist) {
-      return {
-        icon: 'cloud-sync',
-        label: SOCIAL_UI.gateway.resolveProfile,
-        action: () => undefined,
-        disabled: true,
-      } satisfies GatewayCta;
-    }
-
-    if (canSignInGoogle) {
-      return {
-        icon: 'bottom-hub',
-        label: signingIn ? SOCIAL_UI.gateway.signingIn : SOCIAL_UI.gateway.signIn,
-        action: () => void handleSignInGoogle(),
-        disabled: signingIn,
-      } satisfies GatewayCta;
-    }
-
-    // Paso 3: Gist social (si tenemos sesión pero no gist) - normalmente automático pero se puede forzar
-    if (canConnectSocialGist) {
-      return {
-        icon: 'cloud-sync',
-        label: connecting ? SOCIAL_UI.gateway.creatingGist : SOCIAL_UI.gateway.createGist,
-        action: () => void handleCreateSocialGist(),
-        disabled: connecting,
-      } satisfies GatewayCta;
-    }
-
-    return null;
-  }, [canConnectSocialGist, canSignInGoogle, connecting, handleCreateSocialGist, handleSignInGoogle, hasMainSync, navigate, resolvingSocialGist, signingIn]);
 
 
   return {

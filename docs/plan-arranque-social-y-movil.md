@@ -85,7 +85,11 @@ El detalle y la ficha comparten el ancla (`activeReviewAnchor` mezcla `activeDet
    y del amigo inactivo (`tests/unit/socialReadingHook.test.ts`, 9). El view-model baja a 2.255 líneas.
 5. ✅ `social/useOwnAchievements.ts` (244 líneas): evaluar, unir a lo publicado y publicar tus logros; devuelve la
    vitrina, el espejo y la tarjeta del feed. El view-model baja a 2.079 líneas.
-6. `social/useSocialChannel.ts`. Es el más delicado: ver «riesgos».
+6. ✅ El canal, en dos piezas y no en una: `social/useSocialGateway.ts` (311 líneas: sesión de Google, adoptar o
+   crear el canal, auto-crear y botón de la pasarela) y `social/useSecretChannelMigration.ts` (190: la migración a
+   secreto, movida sin tocar su orden). El efecto de ARRANQUE que fija sesión y canal se queda en el view-model:
+   lo lee todo el hub, y los dos hooks reciben sus setters. Test nuevo de «nunca se crea un canal a ciegas»
+   (`socialGatewayHook.test.ts`). El view-model baja a 1.718 líneas.
 7. `social/useOwnSocialProfile.ts`.
 8. Piezas memoizadas (`session`, `feedback`, `profileEditor`, `feed`, `compose`, `reading`, `achievements`,
    `directory`, `friends`, `nav`, `viewer`) y `SocialHub` recibiéndolas por piezas.
