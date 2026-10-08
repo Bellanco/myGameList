@@ -134,14 +134,6 @@ export const PREMIOS_UI = {
      * la lista y no a lo social: lo social pide GitHub, y para quien solo venía a votar es un muro. A lo social se
      * llega después, por la guía de primeros pasos, que es la que el botón pone en marcha.
      */
-    invite: {
-      sectionAria: 'Únete al resto de la aplicación',
-      title: 'Esto es solo una parte',
-      body: 'myGameList es también tu lista de juegos: lo que has terminado, lo que estás jugando y lo que quieres jugar. Sin cuenta: se guarda en tu dispositivo, y una guía te acompaña en los primeros pasos.',
-      social: 'Y cuando quieras, conecta lo social para ver a qué juegan tus amistades y leer sus reseñas.',
-      join: 'Empieza tu lista',
-      later: 'Ahora no',
-    },
     confirmTitle: 'Confirmación',
     /**
      * Repasar lo votado sin tocar nada ni gastar oportunidad: la misma papeleta, en modo lectura. Lo usan la

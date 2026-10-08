@@ -172,9 +172,9 @@ export const PREMIOS_DRAFT_KEY = 'mis-listas-premios-borrador';
 export const PREMIOS_VISIBLE_KEY = 'mis-listas-premios-visible';
 
 /**
- * La invitación a quedarse que sale al enviar la papeleta, a quien no tiene nada más de la aplicación: la edición
- * en la que se dijo «Ahora no» o se aceptó. Por navegador, como una preferencia de vista: perderla solo hace que
- * se vuelva a ofrecer una vez.
+ * La invitación al resto de la aplicación que sale al enviar la papeleta y en el histórico, a quien no tiene lo
+ * social: la edición en la que se dijo «Ahora no» o se aceptó, en cualquiera de los dos sitios. Por navegador, como
+ * una preferencia de vista: perderla solo hace que se vuelva a ofrecer una vez.
  */
 export const PREMIOS_JOIN_INVITE_KEY = 'mis-listas-premios-invitacion';
 

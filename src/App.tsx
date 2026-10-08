@@ -59,6 +59,7 @@ import { runWhenIdle } from './core/utils/idle';
 import { carryStamps } from './core/utils/gameStamps';
 import { importedToPartialGame, mergeImportedIntoGame } from './core/import/staging';
 import { canOfferHint, hintTour, isTourVisible, offeredTour, parseTourState } from './core/onboarding/tourState';
+import type { PremiosInvite, PremiosInviteKind } from './core/onboarding/joinFromPremios';
 import type { TourContext } from './core/onboarding/tourSteps';
 import { hadLocalFootprint, onboardingStore, saveTourState } from './model/repository/onboardingStore';
 import { getSocialSyncConfig } from './model/repository/gistConfigRepository';
@@ -937,9 +938,19 @@ export default function App() {
     settingsMenuOpen,
     inboxCount,
   }), [gameCount, hasSocialSpace, inboxCount, location.pathname, settingsMenuOpen, socialSignedIn, socialStatus, syncVm.hasConfig]);
+  /**
+   * LA INVITACIÓN DE LOS PREMIOS (al terminar de votar y en el histórico), a quien no tiene lo social: a empezar su
+   * lista si no tiene ni un juego, y a lo social si ya la lleva. `inactive` y no `!active`: mientras el estado social
+   * carga (`pending`) no se invita a nadie. Y nunca a quien ya tiene espacio: a esa persona le toca «vuelve a entrar».
+   * Cuándo sale lo deciden los premios, que la devuelven aquí (`premiosInvite`) para que la pinte la guía.
+   */
+  const premiosInviteKind: PremiosInviteKind | null = socialStatus === 'inactive' && !hasSocialSpace
+    ? (gameCount === 0 ? 'list' : 'social')
+    : null;
+  const [premiosInvite, setPremiosInvite] = useState<PremiosInvite | null>(null);
   const tourMounted = spriteRestoListo
     && TOUR_SECTIONS.has(activeSection)
-    && ((tourState !== null && isTourVisible(tourState)) || reloginNeeded);
+    && ((tourState !== null && isTourVisible(tourState)) || reloginNeeded || (activeSection === 'premios' && premiosInvite !== null));
 
   const syncBadgeText = resolveSyncBadge(syncVm.status, syncVm.pendingUpload, syncVm.syncPaused);
 
@@ -1066,9 +1077,8 @@ export default function App() {
     premios: (
 
       <Suspense fallback={<ScreenSkeleton />}>
-        {/* Sin biblioteca y sin lo social: al terminar de votar se le invita al resto (ver `usePremiosJoinInvite`).
-            `inactive` y no `!active`: mientras el estado social carga (`pending`) no se invita a nadie. */}
-        <PremiosHub canInviteToApp={gameCount === 0 && socialStatus === 'inactive'} />
+        {/* Sin lo social: al terminar de votar y en el histórico se le invita al resto (ver `premiosInviteKind`). */}
+        <PremiosHub joinInviteKind={premiosInviteKind} onJoinInvite={setPremiosInvite} />
       </Suspense>
     ),
     admin: (
@@ -1313,7 +1323,12 @@ export default function App() {
       {tourMounted ? (
         <SilentBoundary source="onboarding-tour">
           <Suspense fallback={null}>
-            <OnboardingTour state={tourState} ctx={tourContext} relogin={reloginNeeded} />
+            <OnboardingTour
+              state={tourState}
+              ctx={tourContext}
+              relogin={reloginNeeded}
+              premiosInvite={activeSection === 'premios' ? premiosInvite : null}
+            />
           </Suspense>
         </SilentBoundary>
       ) : null}

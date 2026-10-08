@@ -2,6 +2,7 @@ import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type Keyb
 import { createPortal } from 'react-dom';
 import { TOUR_UI, type StepText } from '../../../core/constants/onboardingLabels';
 import { MISSION_IDS, type MissionId, type TourState } from '../../../core/onboarding/tourState';
+import type { PremiosInvite } from '../../../core/onboarding/joinFromPremios';
 import {
   MISSIONS,
   advanceStep,
@@ -31,6 +32,11 @@ export interface OnboardingTourProps {
   ctx: TourContext;
   /** Quien ya tenía lo social ha perdido la sesión y está en Social: manda sobre todo lo demás. */
   relogin?: boolean;
+  /**
+   * La invitación de los premios, si toca. Quién y cuándo lo deciden ellos (`usePremiosJoinInvite`), que ya la
+   * callan con la guía en pantalla; aquí solo se pinta.
+   */
+  premiosInvite?: PremiosInvite | null;
 }
 
 /* ── Iconos ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -147,7 +153,7 @@ function insideFixed(element: Element): boolean {
  * El velo NO bloquea: deja pasar los toques a lo que hay debajo. La guía acompaña, no obliga, y quien quiere ir a
  * otro sitio puede; al llegar, la guía le sigue (`pickStep`).
  */
-export function OnboardingTour({ state, ctx, relogin = false }: OnboardingTourProps) {
+export function OnboardingTour({ state, ctx, relogin = false, premiosInvite = null }: OnboardingTourProps) {
   const dialogOpen = useDialogOpen();
   const mission = state?.status === 'active' && state.mission ? MISSIONS[state.mission] : null;
   const settled = mission && state ? settleStep(mission, state.step, ctx) : state?.step ?? 0;
@@ -175,6 +181,9 @@ export function OnboardingTour({ state, ctx, relogin = false }: OnboardingTourPr
   if (!dialogOpen && relogin) {
     view = <ReloginBubble ctx={ctx} />;
     announce = TOUR_UI.relogin.title;
+  } else if (!dialogOpen && premiosInvite) {
+    view = <PremiosInviteBubble invite={premiosInvite} />;
+    announce = TOUR_UI.premios[premiosInvite.kind].title;
   } else if (!dialogOpen && state) {
     if (state.status === 'hint') {
       view = <HintBubble state={state} ctx={ctx} />;
@@ -479,6 +488,43 @@ function HintBubble({ state, ctx }: { state: TourState; ctx: TourContext }) {
       <div className="ob-foot ob-foot-split ob-foot-even">
         <button type="button" className="btn btn-secondary" onClick={decline}>{H.no}</button>
         <button type="button" className="btn btn-primary" onClick={accept}>{H.yes}</button>
+      </div>
+    </AnchoredBubble>
+  );
+}
+
+/* ── La invitación de los premios ─────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * «HAY ALGO MÁS», al terminar de votar y en el histórico: la misma pregunta que el «¿Te enseño?» de Social, con
+ * otro motivo. No señala nada —en los premios no hay un control que sea «el resto de la aplicación»—, así que va
+ * centrada sobre el velo. «Enséñame» le lleva a donde empieza su misión y pone la guía en marcha; «Ahora no» (o la
+ * X, o Escape) la aparta hasta la siguiente edición. Las dos respuestas las apuntan los premios.
+ */
+function PremiosInviteBubble({ invite }: { invite: PremiosInvite }) {
+  const titleId = useId();
+  const P = TOUR_UI.premios;
+  return (
+    <AnchoredBubble
+      anchorKey={`premios:${invite.kind}`}
+      labelledBy={titleId}
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape') return;
+        event.stopPropagation();
+        invite.dismiss();
+      }}
+    >
+      <div className="ob-kicker">
+        <span>{P.kicker}</span>
+        <button type="button" className="ob-close" aria-label={TOUR_UI.buttons.close} title={TOUR_UI.buttons.close} onClick={invite.dismiss}>
+          <TourIcon name="close" />
+        </button>
+      </div>
+      <h2 className="ob-title" id={titleId}>{P[invite.kind].title}</h2>
+      <p className="ob-text">{P[invite.kind].text}</p>
+      <div className="ob-foot ob-foot-split ob-foot-even">
+        <button type="button" className="btn btn-secondary" onClick={invite.dismiss}>{P.no}</button>
+        <button type="button" className="btn btn-primary" onClick={invite.accept}>{P.yes}</button>
       </div>
     </AnchoredBubble>
   );
