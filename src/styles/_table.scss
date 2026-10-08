@@ -912,6 +912,8 @@ table.is-grid {
      medio, es la carátula instalándose. A medio segundo el gesto pasaba tan rápido que volvía a leerse como un
      salto, que es de donde veníamos. */
   .game-cover[data-carga="lista"] .game-cover-img { animation: coverIn 1.8s ease-out; }
+  /* La que ya estaba descodificada (precarga del cambio de lista) no se instala otra vez: ver `GameCover`. */
+  .game-cover[data-precargada] .game-cover-img { animation: none; }
   @keyframes coverIn {
     from { opacity: 0; transform: scale(1.035); }
     to   { opacity: 1; transform: none; }

@@ -7,7 +7,8 @@ import { sembrarBiblioteca } from './seed';
  *
  * Lo que se vigila es lo que se puede romper sin que nada falle a la vista:
  *  · que al ARRANCAR no se anime nada (las redirecciones del arranque también son transiciones);
- *  · que cambiar de pestaña anime la pantalla (`pantalla`);
+ *  · que cambiar de pantalla la funda (`pantalla`) y que entre listas se deslice hacia el lado de la pestaña
+ *    (`lista-adelante` / `lista-atras`);
  *  · que al abrir una reseña la tarjeta de la lista y la del detalle se emparejen por nombre (`resena-<id>`): si
  *    un lado pierde el nombre, la tarjeta deja de crecer y el detalle entra como cualquier pantalla.
  */
@@ -29,6 +30,9 @@ async function registrarTransiciones(page: Page): Promise<void> {
         for (const animacion of document.getAnimations()) {
           const pseudo = (animacion.effect as KeyframeEffect | null)?.pseudoElement;
           if (pseudo && !pseudos.includes(pseudo)) pseudos.push(pseudo);
+          // Y la animación que le toca a cada uno: es lo que dice hacia dónde se desliza una lista.
+          const nombre = (animacion as CSSAnimation).animationName;
+          if (pseudo && nombre && !nombre.startsWith('-ua-')) pseudos.push(`${pseudo}:${nombre}`);
         }
       }).catch(() => {});
       return transicion;
@@ -54,6 +58,44 @@ test.describe('view transitions del cambio de pantalla', () => {
     await page.locator('.tab-btn').nth(2).click();
     await expect(page).toHaveURL(/\/en-curso$/);
     await expect.poll(async () => (await transiciones(page)).flat()).toContainEqual(expect.stringMatching(/^::view-transition-new\(/));
+  });
+
+  test('entre listas se desliza hacia el lado de la pestaña pulsada', async ({ page }) => {
+    await page.goto('/completados');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible(LISTA_CARGADA);
+
+    await page.locator('.tab-btn').nth(2).click();
+    await expect.poll(async () => (await transiciones(page)).at(-1) ?? []).toContainEqual(expect.stringMatching(/vt-entra-derecha$/));
+
+    await page.locator('.tab-btn').nth(0).click();
+    await expect.poll(async () => (await transiciones(page)).at(-1) ?? []).toContainEqual(expect.stringMatching(/vt-entra-izquierda$/));
+  });
+
+  /* La captura del `<main>` sube por encima de todo lo que no tiene nombre, y mide la lista entera: sin nombre propio,
+     la barra inferior y los botones flotantes desaparecían debajo de la lista mientras se deslizaba. Con nombre
+     suben a su propia capa (quieta, sin animación de grupo, así que no sale en `getAnimations`: se mira el nombre). */
+  test('la barra inferior y los botones flotantes tienen capa propia en la transición', async ({ page }) => {
+    await page.goto('/completados');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible(LISTA_CARGADA);
+
+    const nombres = await page.evaluate(() => Object.fromEntries(
+      ['.bottom-nav', '.fab', '.fab-roulette', '.floating-controls', '.scroll-top-btn'].map((selector) => {
+        const el = document.querySelector(selector);
+        return [selector, el ? getComputedStyle(el).viewTransitionName : null];
+      }),
+    ));
+    expect(nombres).toEqual({
+      '.bottom-nav': 'barra-inferior',
+      '.fab': 'boton-anadir',
+      '.fab-roulette': 'boton-ruleta',
+      '.floating-controls': 'controles-flotantes',
+      // El de subir, oculto arriba del todo, no: capturado aparte pintaba un cuadrado borroso sobre la lista.
+      '.scroll-top-btn': 'none',
+    });
+
+    // Y con ellas la transición sigue arrancando: dos nombres repetidos la cancelarían entera.
+    await page.locator('.tab-btn').nth(2).click();
+    await expect.poll(async () => (await transiciones(page)).at(-1) ?? []).toContainEqual(expect.stringMatching(/vt-entra-derecha$/));
   });
 
   test('al abrir una reseña, la tarjeta de la lista crece hasta la del detalle', async ({ page }) => {

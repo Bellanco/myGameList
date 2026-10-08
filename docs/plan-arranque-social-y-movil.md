@@ -19,7 +19,11 @@ probarlo en un Android real con la PWA instalada después de desplegar.
 F5, View Transitions: el cambio de pantalla funde la vieja mientras entra la nueva, y al abrir una de tus reseñas
 (`/stats/resenas`) la tarjeta crece hasta el detalle. Solo desde el primer gesto (las redirecciones del arranque no
 animan). INP del cambio de pestaña 32 → 48 ms en escritorio, igual en móvil; +0,3 kB (crítico 184,9/190). Hecho el
-08-10-2026. Pendiente: la misma tarjeta que crece en el feed social (necesita sesión para probarla).
+08-10-2026. Ampliado el mismo día: la tarjeta también crece desde el feed social; entre listas la pantalla se
+desliza hacia el lado de la pestaña; la barra inferior y los botones flotantes tienen capa propia (la captura del
+`<main>` los tapaba); las carátulas de arriba se descodifican antes de deslizar (`precargaDeCaratulas`, plazo 160 ms);
+y Firefox 144–146 / Safari < 18.2, que tienen la API sin los tipos, conservan el fundido de antes. Comprobado en
+Safari (escritorio e iPhone) y Chrome Android; Firefox ≥ 147 según su documentación (no arranca automatizado aquí).
 
 Lo que se descartó en la misma conversación, con la medición delante, y no conviene volver a levantar:
 

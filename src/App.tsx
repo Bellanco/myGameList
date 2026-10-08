@@ -1,4 +1,4 @@
-import { Suspense, ViewTransition, lazy, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { Suspense, ViewTransition, addTransitionType, lazy, startTransition, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_MESSAGES, TAB_ORDER, TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from './core/constants/labels';
 import { LEGAL_ROUTES, type LegalDocId } from './core/constants/legal';
@@ -46,6 +46,8 @@ import { useShowWishlist } from './view/hooks/useShowWishlist';
 import { useReturnTo } from './view/hooks/useReturnTo';
 import { useLegacyProfileHeal } from './view/hooks/useLegacyProfileHeal';
 import { useScreenTransition, useScreenTransitionsReady } from './view/hooks/useScreenTransition';
+import { coversPreference, listShapePreference } from './view/hooks/preferences';
+import { caratulasDeArriba, precargarCaratulas } from './core/utils/precargaDeCaratulas';
 import { useAppliedPalette } from './view/hooks/usePalette';
 import { hasGithubOAuthRedirect, takeGithubOAuthOrigin } from './model/repository/githubOAuthChecks';
 import { type RouletteCandidate } from './core/roulette/roulette';
@@ -154,6 +156,12 @@ const TOUR_SECTIONS: ReadonlySet<AppSection> = new Set<AppSection>(['lists', 'so
 const DevAnnouncement = import.meta.env.DEV
   ? lazy(() => import('./dev/DevAnnouncementScreen').then((module) => ({ default: module.DevAnnouncementScreen })))
   : null;
+
+/** Lo más que se espera a las carátulas de la lista nueva antes de cambiar de lista (ver `handleTabChange`). */
+const PLAZO_PRECARGA_MS = 160;
+
+/** Cómo se anima el `<main>` al cambiar de pantalla: por defecto el fundido; entre listas, deslizando. */
+const ANIMACION_DE_PANTALLA = { 'lista-adelante': 'lista-adelante', 'lista-atras': 'lista-atras', default: 'pantalla' };
 
 function getCurrentTab(pathname: string): TabId {
   return ROUTE_TAB[pathname] || 'c';
@@ -639,10 +647,35 @@ export default function App() {
     clearAllFilters();
   }, [clearAllFilters]);
 
+  /* CAMBIAR DE LISTA DESLIZA HACIA EL LADO DE LA PESTAÑA: la lista que se va sale hacia un lado y la nueva entra
+     por el otro, según dónde esté la pestaña pulsada (`lista-adelante` / `lista-atras`, ver `_motion.scss`). Entre
+     dos listas el contenido se parece tanto que el fundido de pantalla no se notaba. La marca va en la misma
+     transición que la navegación (el router ya mete las suyas en `startTransition`). */
+  /* Y CON CARÁTULAS, LA LISTA NUEVA LLEGA CON ELLAS: antes de navegar se descodifican las de las primeras filas
+     (`precargaDeCaratulas`), porque la transición captura la lista en cuanto se pinta y sin esto entraba pelada y
+     las imágenes saltaban al terminar. Con un plazo corto, y solo cuenta el último clic: dos pestañas pulsadas
+     seguidas no pueden acabar en la primera porque su precarga terminó después. */
+  const ultimoCambioDeLista = useRef(0);
   const handleTabChange = useCallback((tab: TabId) => {
-    navigate(TAB_ROUTE[tab]);
+    const desde = TAB_ORDER.indexOf(currentTab);
+    const hasta = TAB_ORDER.indexOf(tab);
+    const turno = ++ultimoCambioDeLista.current;
+    const navegar = () => {
+      if (turno !== ultimoCambioDeLista.current) return;
+      startTransition(() => {
+        if (desde !== hasta) addTransitionType(hasta > desde ? 'lista-adelante' : 'lista-atras');
+        navigate(TAB_ROUTE[tab]);
+      });
+    };
     setExpandedId(null);
-  }, [navigate, setExpandedId]);
+    if (desde === hasta || !coversPreference.get()) {
+      navegar();
+      return;
+    }
+    const forma = listShapePreference.get();
+    const urls = caratulasDeArriba(vm.getFilteredList(tab, filters), forma, forma === 'grid' ? 12 : 6, window.devicePixelRatio || 1);
+    void precargarCaratulas(urls, PLAZO_PRECARGA_MS).then(navegar);
+  }, [currentTab, navigate, setExpandedId, vm.getFilteredList, filters]);
 
   // Ruleta de listados: el juego elegido pasa a "En curso" y la ruleta deja paso a esa lista, que es donde el
   // usuario quiere acabar. El aviso del propio movimiento lo da el viewmodel.
@@ -1190,7 +1223,7 @@ export default function App() {
         <UpdateNotice />
         <StatusBanner notice={vm.notice} remoteChangesApplied={syncVm.lastRemoteChangesApplied} />
       </div>
-      <ViewTransition default="none" update={transicionesDePantalla ? 'pantalla' : 'none'}>
+      <ViewTransition default="none" update={transicionesDePantalla ? ANIMACION_DE_PANTALLA : 'none'}>
         <main
           id="contenido"
           ref={mainRef}

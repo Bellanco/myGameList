@@ -9,17 +9,8 @@ import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 // tus reseñas del panel (`/stats/resenas`), donde el chunk del hub no se carga. Ver `styles/reviews.scss`.
 import '../../../styles/reviews.scss';
 import { ReviewParagraphs } from '../ReviewParagraphs';
+import { nombreDeResena } from './reviewMorph';
 import { APP_LOCALE } from '../../../core/constants/locale';
-
-/**
- * EL NOMBRE QUE EMPAREJA la tarjeta de una reseña en la lista con la del detalle (`ReviewScreen`, `morphName`):
- * con el mismo nombre a los dos lados, la View Transition hace crecer una hasta la otra
- * (`::view-transition-group(.resena)`, `_motion.scss`). Un nombre de transición es un identificador de CSS, así
- * que lo que no sea letra, cifra, guion o subrayado se cambia por un guion.
- */
-export function nombreDeResena(id: string | number): string {
-  return `resena-${String(id).replace(/[^a-zA-Z0-9_-]/g, '-')}`;
-}
 import { SCORE_UI } from '../../../core/constants/scoreLabels';
 
 /** Lote inicial; se amplía por scroll infinito para no pintar cien reseñas de golpe. */

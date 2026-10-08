@@ -1,5 +1,6 @@
 import { memo, useState } from 'react';
 import { categoryToneStyle } from '../../core/constants/categoryTone';
+import { caratulaPrecargada } from '../../core/utils/precargaDeCaratulas';
 
 /**
  * La RANURA de la carátula: un marco de proporción fija (3:4) que siempre ocupa el mismo sitio, tenga imagen o
@@ -57,7 +58,11 @@ export const GameCover = memo(function GameCover({
                       pone cada tema (ver `_table.scss` y las hojas de cada skin).
        · `sin`      — no hay URL (preferencia apagada, o ya se sabía que no tiene) o la petición falló: se queda
                       la portada de casa, que es una portada de verdad y no un hueco. */
-  const [estado, setEstado] = useState<'cargando' | 'lista' | 'sin'>(src ? 'cargando' : 'sin');
+  /* YA DESCODIFICADA (la precarga del cambio de lista, ver `precargaDeCaratulas`): se enseña lista desde el primer
+     pintado y sin el gesto de entrada. La View Transition captura la lista nueva en ese primer pintado, y con el
+     gesto la carátula salía invisible a mitad del deslizamiento para aparecer después. Ya estaba «instalada». */
+  const precargada = caratulaPrecargada(src) || caratulaPrecargada(src2x);
+  const [estado, setEstado] = useState<'cargando' | 'lista' | 'sin'>(src ? (precargada ? 'lista' : 'cargando') : 'sin');
 
   /* Al reciclarse el elemento le cambia el `src` sin desmontarse, así que el estado tiene que volver a empezar:
      sin esto, una caja que ya había cargado enseñaría la imagen ANTERIOR marcada como lista mientras baja la
@@ -71,11 +76,17 @@ export const GameCover = memo(function GameCover({
   const [anterior, setAnterior] = useState(src);
   if (src !== anterior) {
     setAnterior(src);
-    setEstado(src ? 'cargando' : 'sin');
+    setEstado(src ? (precargada ? 'lista' : 'cargando') : 'sin');
   }
 
   return (
-    <div className="game-cover" data-carga={estado} style={categoryToneStyle(name)} aria-hidden="true">
+    <div
+      className="game-cover"
+      data-carga={estado}
+      data-precargada={precargada ? '' : undefined}
+      style={categoryToneStyle(name)}
+      aria-hidden="true"
+    >
       {/* La portada de casa va SIEMPRE debajo, y QUIETA: es lo que hace que mientras se espera no falte nada, y
           que no quede un hueco si la Function responde 404 (juego sin carátula o sin emparejar). El gesto no
           ocurre aquí, ocurre cuando la imagen entra. */}
@@ -90,7 +101,7 @@ export const GameCover = memo(function GameCover({
           src={src}
           srcSet={src2x ? `${src} 1x, ${src2x} 2x` : undefined}
           alt=""
-          loading="lazy"
+          loading={precargada ? 'eager' : 'lazy'}
           decoding="async"
           onLoad={() => setEstado('lista')}
           onError={() => setEstado('sin')}

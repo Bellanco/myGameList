@@ -1,6 +1,6 @@
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import type { ReviewAuthor } from '../ReviewDetailHead';
-import { nombreDeResena } from './ProfileReviewsList';
+import { nombreDeResena } from './reviewMorph';
 import { ReviewScreen } from './ReviewScreen';
 import type { CoverAccess } from './useReviewCover';
 

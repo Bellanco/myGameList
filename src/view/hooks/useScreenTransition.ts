@@ -28,13 +28,23 @@ const ENTER_CLASS = 'screen-enter';
  * `@media (prefers-reduced-motion: no-preference)`, así que con menos movimiento la clase no hace nada y el
  * `animationend` no llega (de ahí el `setTimeout` de seguridad, que es quien la retira en ese caso).
  */
+/**
+ * ¿ANIMA REACT EL CAMBIO DE PANTALLA EN ESTE NAVEGADOR? No basta con que exista `startViewTransition`: React la llama
+ * con un objeto (`{ update, types }`) y, si el navegador solo acepta la forma antigua con una función, la llamada
+ * lanza y React aplica el cambio sin animar. Es lo que pasa en Firefox 144–146 y en Safari anterior al 18.2, que
+ * tienen la API pero no los tipos. Sin esta pregunta, ahí no había ni la entrada de antes ni la nueva.
+ */
+function animaReact(): boolean {
+  return typeof ViewTransition !== 'undefined' && 'types' in ViewTransition.prototype;
+}
+
 export function useScreenTransition<T extends HTMLElement>(key: string): RefObject<T | null> {
   const ref = useRef<T | null>(null);
 
   useLayoutEffect(() => {
     const el = ref.current;
-    // Donde hay View Transitions, la entrada la hace `<ViewTransition>` en `App` (`::view-transition-*(.pantalla)`).
-    if (!el || 'startViewTransition' in document) return;
+    // Donde las View Transitions de React funcionan, la entrada la hace `<ViewTransition>` en `App`.
+    if (!el || animaReact()) return;
 
     el.classList.remove(ENTER_CLASS);
     void el.offsetWidth;
