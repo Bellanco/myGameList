@@ -83,7 +83,8 @@ El detalle y la ficha comparten el ancla (`activeReviewAnchor` mezcla `activeDet
 3–4. ✅ `social/useSocialReading.ts` (387 líneas): la ficha de un perfil ajeno, la actividad abierta del feed, sus
    esperas, el ancla y las relacionadas, con `useForeignProfileGames` dentro. Tests nuevos de las esperas, de `me`
    y del amigo inactivo (`tests/unit/socialReadingHook.test.ts`, 9). El view-model baja a 2.255 líneas.
-5. `social/useOwnAchievements.ts`.
+5. ✅ `social/useOwnAchievements.ts` (244 líneas): evaluar, unir a lo publicado y publicar tus logros; devuelve la
+   vitrina, el espejo y la tarjeta del feed. El view-model baja a 2.079 líneas.
 6. `social/useSocialChannel.ts`. Es el más delicado: ver «riesgos».
 7. `social/useOwnSocialProfile.ts`.
 8. Piezas memoizadas (`session`, `feedback`, `profileEditor`, `feed`, `compose`, `reading`, `achievements`,
