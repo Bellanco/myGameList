@@ -1,25 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useYearSummarySignal } from './social/useYearSummarySignal';
-import { ensureSyncConfigLoaded, getSyncConfig } from '../model/repository/gistRepository';
 import { writeCanPublishHint } from '../model/repository/socialShellHint';
-import { getSocialSyncConfig, readSocialGist, saveSocialSyncConfig } from '../model/repository/socialGistRepository';
 import { reconcileReviewActivity } from '../model/repository/socialActivityReconcile';
 import { PUBLIC_NAME_MAX_LENGTH, safeTrim } from '../core/security/sanitize';
 import { useOnlineStatus } from '../view/hooks/useOnlineStatus';
 import { resolveViewer, withVisiblePhotos } from '../core/social/photoVisibility';
 import { useGenericPhoto } from '../view/hooks/useGenericPhoto';
 import { useIsAdmin } from '../view/hooks/useIsAdmin';
-import type { SyncConfig, TabData } from '../model/types/game';
-import {
-  getCurrentSocialAuthUser,
-  getPrivateConfig,
-  setPrivateConfig,
-  resolveOwnProfile,
-  resolveStableProfileId,
-  type FriendshipSelfInfo,
-  type SocialAuthUser,
-} from '../model/repository/firebaseRepository';
+import type { TabData } from '../model/types/game';
+import { resolveStableProfileId, type FriendshipSelfInfo } from '../model/repository/firebaseRepository';
 // Reexportados: las pantallas del hub y los tests los importan de aquí desde antes de que el ViewModel se
 // partiera, y cambiarles el import no aportaría nada.
 export { isOwnProfileIdentity } from './social/socialIdentity';
@@ -43,12 +33,12 @@ import { DEFAULT_SOCIAL_VISIBILITY, useSocialProfileForm } from './social/useSoc
 import { useSocialReading } from './social/useSocialReading';
 import { useOwnAchievements } from './social/useOwnAchievements';
 import { useSocialGateway } from './social/useSocialGateway';
-import { isNotFoundGistError } from './social/gistErrors';
 import { useSecretChannelMigration } from './social/useSecretChannelMigration';
 import { useOwnProfileRank } from './social/useOwnProfileRank';
 import { useOwnPhotoHeal } from './social/useOwnPhotoHeal';
 import { useOwnProfileEditor } from './social/useOwnProfileEditor';
 import { useSocialFeedback } from './social/useSocialFeedback';
+import { useSocialSession } from './social/useSocialSession';
 import { useSocialFeed } from './social/socialFeed';
 export type { RelatedReview } from '../core/social/relatedReviews';
 // Re-exportados: las pantallas del hub los importan desde este ViewModel desde antes de la extracción.
@@ -124,10 +114,35 @@ export function useSocialViewModel(options?: {
   const routeState = useMemo(() => matchSocialRoute(location.pathname), [location.pathname]);
   const { activePanel, profileDetailId, profileReviewsView, profilePostsView, profileAchievementsView, profileGlobalsView } = routeState;
 
+  // Va ANTES de la sesión porque el arranque la usa: si el canal apuntado ya no existe, se sigue con la sesión pero
+  // con el editor de perfil delante.
+  const [mustCreateProfile, setMustCreateProfile] = useState(false);
+  const lockProfileEditor = useCallback(() => {
+    setMustCreateProfile(true);
 
-  const [socialCfgGistId, setSocialCfgGistId] = useState<string>('');
-  const [socialCfgEtag, setSocialCfgEtag] = useState<string | null>(null);
-  const [authUser, setAuthUser] = useState<SocialAuthUser | null>(null);
+    if (activePanel !== 'profile') {
+      void navigate('/social/profile');
+    }
+  }, [activePanel, navigate]);
+
+  /**
+   * LA SESIÓN Y EL CANAL: quién eres en Google, tu gist social y la configuración de la sincronización principal,
+   * resueltos al montar (`social/useSocialSession`). Lo lee casi todo el hub, por eso va arriba del todo.
+   */
+  const {
+    authUser,
+    setAuthUser,
+    socialCfgGistId,
+    setSocialCfgGistId,
+    socialCfgEtag,
+    setSocialCfgEtag,
+    mainSyncConfig,
+    loading,
+    showSocialSpace,
+    setShowSocialSpace,
+  } = useSocialSession({ lockProfileEditor, navigate });
+
+
   /**
    * ¿La foto de la sesión es el avatar GENÉRICO de Google —el monograma con la inicial— y no una foto de verdad?
    * (ver `core/social/googlePhoto`). Google no deja a nadie sin `photoURL`, así que sin esto una cuenta sin foto
@@ -154,7 +169,6 @@ export function useSocialViewModel(options?: {
    * rango decide la cadencia del feed, y lo publicado es el suelo de tus logros.
    */
   const { ownTier, ownProfileCreatedAt, ownProfilePublished, ownPublishedMirror, tierResolved } = useOwnProfileRank(authUser);
-  const [loading, setLoading] = useState(true);
   /**
    * LOS AVISOS DEL ESPACIO SOCIAL: el mensaje de estado y su tono, el bloqueo por error, y los dos avisos
    * persistentes de sin red y servicio limitado (`social/useSocialFeedback`).
@@ -170,9 +184,7 @@ export function useSocialViewModel(options?: {
     reportFailure,
     markSocialServiceHealthy,
   } = useSocialFeedback();
-  const [showSocialSpace, setShowSocialSpace] = useState(false);
   const [hasCreatedProfile, setHasCreatedProfile] = useState(false);
-  const [mustCreateProfile, setMustCreateProfile] = useState(false);
   const [justSavedProfile, setJustSavedProfile] = useState(false);
   // Estado editable del perfil (nick + visibilidad), agrupado: los seis campos viajan siempre juntos.
   const profileForm = useSocialProfileForm();
@@ -219,105 +231,8 @@ export function useSocialViewModel(options?: {
 
 
 
-  const lockProfileEditor = useCallback(() => {
-    setMustCreateProfile(true);
 
-    if (activePanel !== 'profile') {
-      void navigate('/social/profile');
-    }
-  }, [activePanel, navigate]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const hydrate = async () => {
-      await ensureSyncConfigLoaded(); // C4: garantiza el token descifrado antes de leer la config de sync
-      if (cancelled) {
-        return;
-      }
-      const mainConfig = getSyncConfig();
-      setMainSyncConfig(mainConfig);
-      const socialConfig = getSocialSyncConfig();
-      const currentUser = await getCurrentSocialAuthUser();
-      let resolvedGistId = socialConfig?.gistId || '';
-
-      if (!resolvedGistId && currentUser?.uid && mainConfig?.token) {
-        try {
-          // FUENTE DEL GIST SOCIAL PROPIO, por orden de fiabilidad:
-          //   1. `privateConfig.socialGistId` — owner-only, con UN SOLO escritor (su dueño). Es el sitio donde de
-          //      verdad pertenece este dato, y hasta ahora se escribía sin que nadie lo leyera.
-          //   2. El perfil público, como respaldo LEGACY: es donde se leía antes, pero lo puede ver cualquier
-          //      usuario autenticado y va a dejar de publicarse.
-          // Se consulta `privateConfig` primero para poder retirar el campo del perfil público sin dejar a nadie
-          // sin forma de recuperar su canal en un dispositivo nuevo.
-          const privateConfig = await getPrivateConfig(currentUser.uid).catch(() => null);
-          const privateGistId = String(privateConfig?.socialGistId || '').trim();
-
-          const profile = privateGistId ? null : await resolveOwnProfile(currentUser);
-          const gistId = privateGistId || (profile?.socialEnabled ? profile.socialGistId.trim() : '');
-
-          if (gistId) {
-            let gistExists = true;
-            try {
-              await readSocialGist(mainConfig.token, gistId, null);
-            } catch (error) {
-              if (!isNotFoundGistError(error)) {
-                throw error;
-              }
-              gistExists = false;
-            }
-            if (cancelled) {
-              return;
-            }
-
-            if (!gistExists) {
-              // El canal apuntado ya no existe. Se sigue SIN gist pero CON la sesión: salir aquí antes de fijarla
-              // dejaba el hub como si no hubiera Google, el auto-crear no arrancaba y la pasarela volvía a pedir un
-              // inicio de sesión que ya estaba hecho.
-              lockProfileEditor();
-            } else {
-              saveSocialSyncConfig({
-                token: mainConfig.token,
-                gistId,
-                etag: null,
-                lastRemoteUpdatedAt: 0,
-              });
-              // SIEMBRA: si el id vino del perfil público (perfil anterior a que `privateConfig` se poblara), se
-              // copia a su sitio. Sin esto, retirar el campo del perfil público dejaría a esas cuentas sin ninguna
-              // forma de recuperar su canal. Best-effort: no puede romper la apertura del hub.
-              if (!privateGistId) {
-                void setPrivateConfig(currentUser.uid, { socialGistId: gistId }).catch(() => {});
-              }
-              resolvedGistId = gistId;
-            }
-          }
-        } catch {
-          // Keep gateway usable even if Firestore is unavailable.
-        }
-      }
-
-      if (cancelled) {
-        return;
-      }
-
-      setSocialCfgGistId(resolvedGistId);
-      setSocialCfgEtag(socialConfig?.etag || null);
-      setAuthUser(currentUser);
-      setShowSocialSpace(Boolean(resolvedGistId && currentUser));
-      setLoading(false);
-    };
-
-    void hydrate();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [lockProfileEditor, navigate]);
-
-  // El token del gist de juegos se cifra y se descifra de forma asíncrona (ensureSyncConfigLoaded).
-  // Mantener la config en estado y refrescarla tras la hidratación evita la carrera en la que
-  // getSyncConfig() devolvía token='' al montar (hasMainSync=false → gateway → /ajustes y lecturas 401).
-  const [mainSyncConfig, setMainSyncConfig] = useState<SyncConfig | null>(() => getSyncConfig());
   const hasMainSync = Boolean(mainSyncConfig?.token && mainSyncConfig?.gistId);
   const hasSocialGist = Boolean(socialCfgGistId);
   const hasSocialSession = Boolean(authUser);
@@ -473,7 +388,7 @@ export function useSocialViewModel(options?: {
 
     setShowSocialSpace(true);
     void navigate('/social');
-  }, [hasReadyAccess, showSocialSpace, navigate]);
+  }, [hasReadyAccess, showSocialSpace, navigate, setShowSocialSpace]);
 
 
 
