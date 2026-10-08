@@ -507,7 +507,6 @@ export function useSocialViewModel(options?: {
     friendUidSet,
     pendingIncomingCount,
     relationshipWith,
-    refreshFriendships,
     handleAddOrAcceptFriend,
     handleCancelFriendRequest,
     handleRejectFriendRequest,
@@ -1072,7 +1071,6 @@ export function useSocialViewModel(options?: {
   const {
     foreignGames,
     foreignProfileFailed,
-    loadingForeignProfile,
     getGameItemById,
   } = useForeignProfileGames({
     activePanel,
@@ -2493,7 +2491,6 @@ export function useSocialViewModel(options?: {
     closeProfileAchievements,
     openProfileGlobals,
     openProfileReviewDetail,
-    loadingForeignProfile,
     activeDetailEvent,
     // ¿Puede aparecer todavía el evento abierto? (ver arriba: decide esqueleto vs «no se ha encontrado»).
     detailEventLoading,
@@ -2514,14 +2511,10 @@ export function useSocialViewModel(options?: {
     isOwnDetailEvent,
     handleActivityItemKeyDown,
     handleProfileCardKeyDown,
-    handleCreateSocialGist,
-    handleSignInGoogle,
-    hydrateSocialDirectory,
     handleSaveProfile,
     handleSignOut,
     primaryGatewayCta,
     // Amistad
-    friendships,
     loadingFriendships,
     friendshipBusyUid,
     pendingIncomingCount,
@@ -2529,7 +2522,6 @@ export function useSocialViewModel(options?: {
     outgoingRequests,
     friendsList,
     relationshipWith,
-    refreshFriendships,
     handleAddOrAcceptFriend,
     handleCancelFriendRequest,
     handleRejectFriendRequest,

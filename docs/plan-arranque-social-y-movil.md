@@ -78,8 +78,8 @@ El detalle y la ficha comparten el ancla (`activeReviewAnchor` mezcla `activeDet
 
 ### Pasos (uno por commit)
 
-1. `docs`: poner al día la fase 4 de la revisión con estas cifras.
-2. Quitar las seis claves muertas. Verificación: `tsc`, `SocialHub.test` y `socialHubBudget` en verde.
+1. ✅ `docs`: la fase 4 de la revisión remite a este plan con las cifras nuevas.
+2. ✅ Quitadas las seis claves sin lector (quedan 108).
 3. `social/useSocialReading.ts` con la ficha, que se lleva dentro `useForeignProfileGames`. Test nuevo con
    `renderHook` de `profileDetailLoading` y del efecto `socialSkipped`.
 4. El detalle, en ese mismo hook: evento, las dos esperas y el ancla. **Antes de moverlo**, tests de
