@@ -80,10 +80,9 @@ El detalle y la ficha comparten el ancla (`activeReviewAnchor` mezcla `activeDet
 
 1. ✅ `docs`: la fase 4 de la revisión remite a este plan con las cifras nuevas.
 2. ✅ Quitadas las seis claves sin lector (quedan 108).
-3. `social/useSocialReading.ts` con la ficha, que se lleva dentro `useForeignProfileGames`. Test nuevo con
-   `renderHook` de `profileDetailLoading` y del efecto `socialSkipped`.
-4. El detalle, en ese mismo hook: evento, las dos esperas y el ancla. **Antes de moverlo**, tests de
-   `detailEventLoading`, `detailReviewLoading` y el ancla, que hoy no existen.
+3–4. ✅ `social/useSocialReading.ts` (387 líneas): la ficha de un perfil ajeno, la actividad abierta del feed, sus
+   esperas, el ancla y las relacionadas, con `useForeignProfileGames` dentro. Tests nuevos de las esperas, de `me`
+   y del amigo inactivo (`tests/unit/socialReadingHook.test.ts`, 9). El view-model baja a 2.255 líneas.
 5. `social/useOwnAchievements.ts`.
 6. `social/useSocialChannel.ts`. Es el más delicado: ver «riesgos».
 7. `social/useOwnSocialProfile.ts`.
