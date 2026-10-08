@@ -97,12 +97,21 @@ El detalle y la ficha comparten el ancla (`activeReviewAnchor` mezcla `activeDet
    - ✅ `social/useOwnProfileEditor.ts` (502 líneas): hidratar y guardar el perfil, la redirección al editor y la
      regla de completados. Los estados de «tienes que crear tu perfil» se quedan en el view-model (los leen la puerta
      del directorio y el arranque) y llegan con sus setters. View-model en 1.233 líneas.
-8. Piezas memoizadas (`session`, `feedback`, `profileEditor`, `feed`, `compose`, `reading`, `achievements`,
-   `directory`, `friends`, `nav`, `viewer`) y `SocialHub` recibiéndolas por piezas.
-   - Verificación: contador de repintados como en la fase 3 (0 por pulsación en el feed).
+8. Fuera del plan original, porque al llegar aquí seguían dentro y eran dominios cerrados:
+   - ✅ `social/useSocialFeedback.ts`: el mensaje de estado, el bloqueo por error y los avisos de sin red y servicio
+     limitado, con `setFeedback`, `reportFailure` y `markSocialServiceHealthy`.
+   - ✅ `social/useSocialSession.ts`: la sesión de Google, el canal social y la configuración de sync, con el efecto
+     de arranque. Va arriba del todo; `lockProfileEditor` se adelanta para que el arranque dependa de ella igual que
+     antes.
+9. Pendiente: piezas memoizadas (`session`, `feedback`, `profileEditor`, `feed`, `compose`, `reading`,
+   `achievements`, `directory`, `friends`, `nav`, `viewer`) y `SocialHub` recibiéndolas por piezas. Es el único paso
+   que toca la pantalla (108 claves desestructuradas en `SocialHub.tsx:175`), con el riesgo de repintados escrito
+   abajo. Verificación: contador de repintados como en la fase 3 (0 por pulsación en el feed).
 
-Con 3 a 7 el fichero queda en ~1100 líneas; con el 8, y llevándose también `status`/feedback (295-379) y la
-lectura del perfil propio, en ~800.
+**Medido el 08-10-2026, tras los pasos 1–8:** `useSocialViewModel.ts` pasa de 2.541 a **1.066 líneas** (920 de
+orquestación y 146 del objeto devuelto), repartidas en nueve hooks de `social/` con 6 tests nuevos de hook. Lo que
+queda dentro es la orquestación —el cableado entre directorio, amistades, lectura y perfil, y los efectos que
+deciden cuándo rehidratar y reconciliar—, que es lo que le toca. El criterio de ≤ 800 solo se alcanza con el paso 9.
 
 ### Riesgos (y la red)
 
