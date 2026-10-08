@@ -61,118 +61,52 @@ const SocialHubInner = memo(function SocialHubInner({
   moveGameToCurrentByName,
   games,
 }: SocialHubProps = {}) {
+  // El view-model llega en PIEZAS por dominio (ver su `return`), y se desestructuran aquí mismo: lo que viaja a las
+  // pantallas memoizadas son los mismos valores de siempre, no las piezas.
+  const vm = useSocialViewModel({ games });
   const {
-    navigate,
-    activePanel,
-    socialCfgGistId,
-    authUser,
-    loading,
-    status,
-    statusKind,
-    offline,
-    offlineHasCachedData,
-    serviceLimited,
-    showSocialSpace,
-    hasCreatedProfile,
-    profileName,
-    setProfileName,
-    hiddenTabs,
-    setHiddenTabs,
-    // Rango propio: decide cuánto se ve del panel de estadísticas de un amigo.
-    ownTier,
-    // Administración (el claim): ve la ficha de un amigo sin las restricciones de visibilidad.
-    isAdmin,
-    hideReplayable,
-    setHideReplayable,
-    hideRetry,
-    setHideRetry,
-    hideGameTime,
-    setHideGameTime,
-    showPhoto,
-    setShowPhoto,
-    ownPhotoIsGeneric,
-    ownPublishablePhoto,
-    profileSearch,
-    setProfileSearch,
-    publishingPost,
-    handlePublishPost,
-    canPublishPosts,
-    postMaxLength,
-    showPostCounter,
-    hydratingProfile,
-    savingProfile,
-    loadingDirectory,
-    hasMainSync,
-    hasSocialGist,
-    hasSocialSession,
-    legalConsentRequired,
-    savingConsent,
+    navigate, activePanel, socialCfgGistId, authUser, loading, showSocialSpace, hasMainSync, hasSocialGist,
+    hasSocialSession, offline, serviceLimited, offlineHasCachedData, legalConsentRequired, savingConsent,
     acceptLegalConsent,
-    gatewaySteps,
-    currentStep,
-    completedGames,
-    socialDisplayName,
-    filteredSocialDirectory,
-    visibleSocialDirectory,
-    selectedProfileDetail,
-    profileDetailId,
-    profileReviewsView,
-    profilePostsView,
-    profileAchievementsView,
-    profileGlobalsView,
-    ownAchievements,
-    ownAchievementMirror,
-    activeProfileReview,
-    openProfileReviews,
-    closeProfileReviews,
-    openProfilePosts,
-    closeProfilePosts,
-    changingPostId,
-    handleEditPost,
-    handleDeletePost,
-    openProfileAchievements,
-    openProfileSummary,
+  } = vm.session;
+  const { status, statusKind } = vm.feedback;
+  const { gatewaySteps, currentStep, primaryGatewayCta, handleSignOut } = vm.gateway;
+  const {
+    hasCreatedProfile, profileName, setProfileName, hiddenTabs, setHiddenTabs, hideReplayable, setHideReplayable,
+    hideRetry, setHideRetry, hideGameTime, setHideGameTime, showPhoto, setShowPhoto, ownPhotoIsGeneric,
+    ownPublishablePhoto, hydratingProfile, savingProfile, completedGames, socialDisplayName, handleSaveProfile,
+  } = vm.profileEditor;
+  // Rango propio: decide cuánto se ve del panel de estadísticas de un amigo.
+  // Administración (el claim): ve la ficha de un amigo sin las restricciones de visibilidad.
+  const { ownTier, isAdmin } = vm.viewer;
+  const {
+    canPublishPosts, postMaxLength, showPostCounter, publishingPost, handlePublishPost, changingPostId,
+    handleEditPost, handleDeletePost,
+  } = vm.compose;
+  const {
+    profileSearch, setProfileSearch, loadingDirectory, filteredSocialDirectory, visibleSocialDirectory,
+  } = vm.directory;
+  const {
+    feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed, handleActivityItemKeyDown, handleProfileCardKeyDown,
     markOwnYearSummaryOpened,
-    closeProfileAchievements,
-    openProfileGlobals,
-    openProfileReviewDetail,
-    feedItems,
-    activeDetailEvent,
-    detailEventLoading,
-    profileDetailLoading,
-    detailReviewLoading,
-    getGameItemById,
-    relatedReviews,
-    openRelatedReview,
-    groupedFeedItems,
-    hasMoreFeed,
-    showMoreFeed,
-    openActivityDetail,
-    openMoveReview,
-    openProfileDetail,
-    openOwnProfileDetail,
-    isOwnProfileDetail,
+  } = vm.feed;
+  const {
+    profileDetailId, profileReviewsView, profilePostsView, profileAchievementsView, profileGlobalsView,
+    selectedProfileDetail, activeProfileReview, activeDetailEvent, detailEventLoading, profileDetailLoading,
+    detailReviewLoading, getGameItemById, relatedReviews, openOwnProfileDetail, isOwnProfileDetail,
     isOwnDetailEvent,
-    handleActivityItemKeyDown,
-    handleProfileCardKeyDown,
-    handleSaveProfile,
-    handleSignOut,
-    primaryGatewayCta,
-    pendingIncomingCount,
-    incomingRequests,
-    outgoingRequests,
-    friendsList,
-    loadingFriendships,
-    friendshipBusyUid,
-    relationshipWith,
-    handleAddOrAcceptFriend,
-    handleRejectFriendRequest,
-    handleCancelFriendRequest,
-    handleRemoveFriend,
-    friendActionTarget,
-    confirmFriendAction,
-    cancelFriendAction,
-  } = useSocialViewModel({ games });
+  } = vm.reading;
+  const { ownAchievements, ownAchievementMirror } = vm.achievements;
+  const {
+    openProfileReviews, closeProfileReviews, openProfilePosts, closeProfilePosts, openProfileAchievements,
+    openProfileSummary, closeProfileAchievements, openProfileGlobals, openProfileReviewDetail, openRelatedReview,
+    openActivityDetail, openMoveReview, openProfileDetail,
+  } = vm.nav;
+  const {
+    loadingFriendships, friendshipBusyUid, pendingIncomingCount, incomingRequests, outgoingRequests, friendsList,
+    relationshipWith, handleAddOrAcceptFriend, handleCancelFriendRequest, handleRejectFriendRequest,
+    handleRemoveFriend, friendActionTarget, confirmFriendAction, cancelFriendAction,
+  } = vm.friends;
 
   // El día en que empieza tu biblioteca: el suelo con el que se fecha lo que conseguiste antes de que hubiera
   // con qué fecharlo. Solo tuyo — de otra persona no llega, y su lista saca el suyo de su propia vitrina.

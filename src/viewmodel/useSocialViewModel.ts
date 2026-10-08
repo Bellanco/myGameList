@@ -570,19 +570,7 @@ export function useSocialViewModel(options?: {
    * LO QUE SE ESTÁ LEYENDO: la ficha de un perfil, una reseña dentro de ella o una actividad abierta desde el feed,
    * con sus esperas, el criterio de «esto es mío» y las reseñas relacionadas (`social/useSocialReading`).
    */
-  const {
-    activeDetailEvent,
-    selectedProfileDetail,
-    activeProfileReview,
-    getGameItemById,
-    detailEventLoading,
-    profileDetailLoading,
-    detailReviewLoading,
-    openOwnProfileDetail,
-    isOwnProfileDetail,
-    isOwnDetailEvent,
-    relatedReviews,
-  } = useSocialReading({
+  const reading = useSocialReading({
     route: routeState,
     directory: socialDirectory,
     directoryLoading,
@@ -640,24 +628,14 @@ export function useSocialViewModel(options?: {
 
   /**
    * A DÓNDE LLEVA CADA GESTO: `social/useSocialNavigation`, que construye las direcciones con `SOCIAL_ROUTES` en
-   * vez de repetir aquí las plantillas que ese módulo ya declara para leerlas. Se desestructura —y no se usa
-   * `nav.loquesea`— porque estas funciones viajan por props a pantallas memoizadas y así conservan su identidad.
+   * vez de repetir aquí las plantillas que ese módulo ya declara para leerlas. Viaja ENTERO como la pieza `nav`, y
+   * `SocialHub` lo desestructura: lo que llega a las pantallas memoizadas son sus funciones, que ese hook crea con
+   * `useCallback` y conservan su identidad entre renders (el objeto que las envuelve no viaja a ninguna).
    */
-  const {
-    openActivityDetail,
-    openMoveReview,
-    openProfileDetail,
-    openProfileReviews,
-    closeProfileReviews,
-    openProfilePosts,
-    closeProfilePosts,
-    openProfileReviewDetail,
-    openProfileAchievements,
-    openProfileSummary,
-    closeProfileAchievements,
-    openProfileGlobals,
-    openRelatedReview,
-  } = useSocialNavigation(navigate, location.pathname);
+  const nav = useSocialNavigation(navigate, location.pathname);
+  // Las dos que usan los atajos de teclado de aquí abajo, sueltas: llamadas como `nav.x(...)` la regla de dependencias
+  // pediría el objeto entero, que es nuevo en cada render, y los atajos dejarían de ser estables.
+  const { openActivityDetail, openProfileDetail } = nav;
 
 
   /**
@@ -754,22 +732,10 @@ export function useSocialViewModel(options?: {
     setDirectorySettled(false);
   }, [authUser?.uid, socialCfgGistId, setDirectorySettled]);
 
-
-
-
   // F3 — compositor de publicaciones. Se invoca AQUÍ, y no arriba con el resto del estado, porque necesita
   // `hydrateSocialDirectory` para refrescar el feed tras publicar; el orden de los hooks es estable entre renders,
   // que es lo único que React exige.
-  const {
-    publishingPost,
-    handlePublishPost,
-    canPublishPosts: canPublish,
-    postMaxLength,
-    showPostCounter,
-    changingPostId,
-    handleEditPost,
-    handleDeletePost,
-  } = useSocialCompose({
+  const compose = useSocialCompose({
     ownTier,
     // Forzado para que el post salga ya, pero sin releer la consulta de perfiles: publicar no cambia el directorio.
     onPublished: useCallback(() => hydrateSocialDirectory(true, { keepDirectoryQuery: true }), [hydrateSocialDirectory]),
@@ -803,8 +769,8 @@ export function useSocialViewModel(options?: {
    */
   useEffect(() => {
     if (!tierResolved) return;
-    writeCanPublishHint(canPublish);
-  }, [tierResolved, canPublish]);
+    writeCanPublishHint(compose.canPublishPosts);
+  }, [tierResolved, compose.canPublishPosts]);
 
   // Disparo automático de la hidratación. Depende de DATOS, no de la identidad del callback.
   //
@@ -917,150 +883,146 @@ export function useSocialViewModel(options?: {
   // placeholder) en lugar de filtrar el nombre real.
 
 
+  /*
+   * LO QUE EL HUB NECESITA, EN PIEZAS POR DOMINIO. El único consumidor (`SocialHub`) las desestructura en el acto,
+   * así que son objetos LITERALES y no `useMemo`: su identidad no viaja a ninguna pantalla memoizada. Si alguna vez
+   * se pasa una pieza ENTERA como prop, hay que memoizarla antes o la pantalla se repintará en cada render del hub
+   * (lo vigila `tests/component/socialHubRepaints.test.tsx`).
+   */
   return {
-    navigate,
-    activePanel,
-    socialCfgGistId,
-    authUser,
-    /**
-     * Sin conexión: la pantalla lo dice con sus palabras en vez de dejar salir el error de red de turno.
-     *
-     * Dos señales, porque ninguna basta sola: lo que dice el navegador (`navigator.onLine`, que detecta el modo
-     * avión o el cable fuera antes de intentar nada) y lo que ha pasado de verdad (`networkFailure`, que es lo
-     * único que ve un wifi conectado sin salida a internet).
-     */
-    offline: !online || networkFailure,
-    /**
-     * Algún servicio no atiende ahora (cuota de Firestore, límite de GitHub): se ve lo guardado y se dice con un
-     * aviso persistente propio, distinto del de sin conexión. El de sin conexión manda si se dan los dos.
-     */
-    serviceLimited: serviceLimited && online && !networkFailure,
-    /**
-     * ¿Hay algo guardado que mostrar mientras no hay red? Separa los dos mensajes del aviso: "esto es lo último
-     * que se guardó" (hay caché) y "aquí todavía no hay nada" (nunca se abrió el espacio social en este
-     * dispositivo). Decirle lo primero a quien no ve nada sería mentirle.
-     */
-    offlineHasCachedData: socialDirectory.length > 0,
-    // L4 — puerta de aceptación (solo con sesión y consentimiento no vigente).
-    legalConsentRequired: legalConsent.required,
-    savingConsent: legalConsent.saving,
-    acceptLegalConsent: legalConsent.accept,
-    // Carga = hidratación inicial + comprobación del consentimiento en vuelo (ver `legalConsentPending`).
-    loading: loading || legalConsentPending,
-    status,
-    statusKind,
-    showSocialSpace: socialSpaceOpen,
-    hasCreatedProfile,
-    profileName,
-    setProfileName,
-    hiddenTabs,
-    setHiddenTabs,
-    hideReplayable,
-    setHideReplayable,
-    hideRetry,
-    setHideRetry,
-    hideGameTime,
-    setHideGameTime,
-    showPhoto,
-    setShowPhoto,
-    // Para que la pantalla del perfil pueda decir POR QUÉ el interruptor está bloqueado: no es lo mismo no tener
-    // foto que tener la que Google genera sola.
-    ownPhotoIsGeneric,
-    // La cara propia que SE VE, ya resuelta: es la misma que sale al mundo. Las pantallas que solo pintan el avatar
-    // propio (la cabecera del hub, la ficha del editor) usan esta y no la de la sesión, para que el interruptor
-    // valga igual mirándose uno que mirándole los demás. `ownPhotoURL` crudo sigue haciendo falta donde hay que
-    // distinguir "no tienes foto" de "la has apagado": eso lo decide el propio editor.
-    ownPublishablePhoto,
-    profileSearch,
-    setProfileSearch,
-    // Rango propio y lo que implica al publicar: si puede, cuánto, y si hay contador que enseñar.
-    ownTier,
-    // ¿Es la administración? (el claim, no el rango): exenciones en la ficha de un amigo.
-    isAdmin,
-    canPublishPosts: canPublish,
-    postMaxLength,
-    showPostCounter,
-    publishingPost,
-    handlePublishPost,
-    // Editar y borrar las tuyas, desde la lista de publicaciones de tu perfil.
-    changingPostId,
-    handleEditPost,
-    handleDeletePost,
-    feedItems,
-    hydratingProfile,
-    savingProfile,
-    // Se expone el valor DERIVADO (no el `loadingDirectory` crudo): es el único que cubre la ventana completa, y
-    // así ninguna pantalla puede olvidarse de sumarle la parte que falta.
-    // En «Perfiles» cuenta también la consulta de los recientes: sin ella, la sección «Otros» saldría vacía un instante.
-    loadingDirectory: directoryLoading || (activePanel === 'profiles' && discoverLoading),
-    hasMainSync,
-    hasSocialGist,
-    hasSocialSession,
-    gatewaySteps,
-    currentStep,
-    completedGames,
-    socialDisplayName,
-    filteredSocialDirectory,
-    // EL DIRECTORIO SIN EL BUSCADOR. Sale porque hay dos preguntas distintas y solo estaba la primera: a quién
-    // se le enseña la lista de personas —eso sí lo recorta el buscador— y sobre quién se mide (§6.6bis), que no
-    // puede depender de lo que haya escrito en una caja de texto.
-    visibleSocialDirectory,
-    selectedProfileDetail,
-    profileDetailId,
-    profileReviewsView,
-    profilePostsView,
-    profileAchievementsView,
-    profileGlobalsView,
-    ownAchievements,
-    ownAchievementMirror,
-    activeProfileReview,
-    openProfileReviews,
-    closeProfileReviews,
-    openProfilePosts,
-    closeProfilePosts,
-    openProfileAchievements,
-    openProfileSummary,
-    markOwnYearSummaryOpened,
-    closeProfileAchievements,
-    openProfileGlobals,
-    openProfileReviewDetail,
-    activeDetailEvent,
-    // ¿Puede aparecer todavía el evento abierto? (ver arriba: decide esqueleto vs «no se ha encontrado»).
-    detailEventLoading,
-    profileDetailLoading,
-    // ¿Falta todavía el análisis completo de la reseña abierta? (ver arriba: decide esqueleto vs adelanto).
-    detailReviewLoading,
-    getGameItemById,
-    relatedReviews,
-    openRelatedReview,
-    groupedFeedItems,
-    hasMoreFeed,
-    showMoreFeed,
-    openActivityDetail,
-    openMoveReview,
-    openProfileDetail,
-    openOwnProfileDetail,
-    isOwnProfileDetail,
-    isOwnDetailEvent,
-    handleActivityItemKeyDown,
-    handleProfileCardKeyDown,
-    handleSaveProfile,
-    handleSignOut,
-    primaryGatewayCta,
-    // Amistad
-    loadingFriendships,
-    friendshipBusyUid,
-    pendingIncomingCount,
-    incomingRequests,
-    outgoingRequests,
-    friendsList,
-    relationshipWith,
-    handleAddOrAcceptFriend,
-    handleCancelFriendRequest,
-    handleRejectFriendRequest,
-    handleRemoveFriend,
-    friendActionTarget,
-    confirmFriendAction,
-    cancelFriendAction,
+    session: {
+      navigate,
+      activePanel,
+      socialCfgGistId,
+      authUser,
+      // Carga = hidratación inicial + comprobación del consentimiento en vuelo (ver `legalConsentPending`).
+      loading: loading || legalConsentPending,
+      showSocialSpace: socialSpaceOpen,
+      hasMainSync,
+      hasSocialGist,
+      hasSocialSession,
+      /**
+       * Sin conexión: la pantalla lo dice con sus palabras en vez de dejar salir el error de red de turno.
+       *
+       * Dos señales, porque ninguna basta sola: lo que dice el navegador (`navigator.onLine`, que detecta el modo
+       * avión o el cable fuera antes de intentar nada) y lo que ha pasado de verdad (`networkFailure`, que es lo
+       * único que ve un wifi conectado sin salida a internet).
+       */
+      offline: !online || networkFailure,
+      /**
+       * Algún servicio no atiende ahora (cuota de Firestore, límite de GitHub): se ve lo guardado y se dice con un
+       * aviso persistente propio, distinto del de sin conexión. El de sin conexión manda si se dan los dos.
+       */
+      serviceLimited: serviceLimited && online && !networkFailure,
+      /**
+       * ¿Hay algo guardado que mostrar mientras no hay red? Separa los dos mensajes del aviso: "esto es lo último
+       * que se guardó" (hay caché) y "aquí todavía no hay nada" (nunca se abrió el espacio social en este
+       * dispositivo). Decirle lo primero a quien no ve nada sería mentirle.
+       */
+      offlineHasCachedData: socialDirectory.length > 0,
+      // L4 — puerta de aceptación (solo con sesión y consentimiento no vigente).
+      legalConsentRequired: legalConsent.required,
+      savingConsent: legalConsent.saving,
+      acceptLegalConsent: legalConsent.accept,
+    },
+    feedback: {
+      status,
+      statusKind,
+    },
+    gateway: {
+      gatewaySteps,
+      currentStep,
+      primaryGatewayCta,
+      handleSignOut,
+    },
+    profileEditor: {
+      hasCreatedProfile,
+      profileName,
+      setProfileName,
+      hiddenTabs,
+      setHiddenTabs,
+      hideReplayable,
+      setHideReplayable,
+      hideRetry,
+      setHideRetry,
+      hideGameTime,
+      setHideGameTime,
+      showPhoto,
+      setShowPhoto,
+      // Para que la pantalla del perfil pueda decir POR QUÉ el interruptor está bloqueado: no es lo mismo no tener
+      // foto que tener la que Google genera sola.
+      ownPhotoIsGeneric,
+      // La cara propia que SE VE, ya resuelta: es la misma que sale al mundo. Las pantallas que solo pintan el avatar
+      // propio (la cabecera del hub, la ficha del editor) usan esta y no la de la sesión, para que el interruptor
+      // valga igual mirándose uno que mirándole los demás. `ownPhotoURL` crudo sigue haciendo falta donde hay que
+      // distinguir "no tienes foto" de "la has apagado": eso lo decide el propio editor.
+      ownPublishablePhoto,
+      hydratingProfile,
+      savingProfile,
+      completedGames,
+      socialDisplayName,
+      handleSaveProfile,
+    },
+    viewer: {
+      // Rango propio y lo que implica al publicar: si puede, cuánto, y si hay contador que enseñar.
+      ownTier,
+      // ¿Es la administración? (el claim, no el rango): exenciones en la ficha de un amigo.
+      isAdmin,
+    },
+    compose,
+    directory: {
+      profileSearch,
+      setProfileSearch,
+      // Se expone el valor DERIVADO (no el `loadingDirectory` crudo): es el único que cubre la ventana completa, y
+      // así ninguna pantalla puede olvidarse de sumarle la parte que falta.
+      // En «Perfiles» cuenta también la consulta de los recientes: sin ella, la sección «Otros» saldría vacía un instante.
+      loadingDirectory: directoryLoading || (activePanel === 'profiles' && discoverLoading),
+      filteredSocialDirectory,
+      // EL DIRECTORIO SIN EL BUSCADOR. Sale porque hay dos preguntas distintas y solo estaba la primera: a quién
+      // se le enseña la lista de personas —eso sí lo recorta el buscador— y sobre quién se mide (§6.6bis), que no
+      // puede depender de lo que haya escrito en una caja de texto.
+      visibleSocialDirectory,
+    },
+    feed: {
+      feedItems,
+      groupedFeedItems,
+      hasMoreFeed,
+      showMoreFeed,
+      handleActivityItemKeyDown,
+      handleProfileCardKeyDown,
+      markOwnYearSummaryOpened,
+    },
+    reading: {
+      profileDetailId,
+      profileReviewsView,
+      profilePostsView,
+      profileAchievementsView,
+      profileGlobalsView,
+      // ¿Puede aparecer todavía el evento abierto? (ver arriba: decide esqueleto vs «no se ha encontrado»).
+      // ¿Falta todavía el análisis completo de la reseña abierta? (ver arriba: decide esqueleto vs adelanto).
+      ...reading,
+    },
+    achievements: {
+      ownAchievements,
+      ownAchievementMirror,
+    },
+    nav,
+    friends: {
+      // Amistad
+      loadingFriendships,
+      friendshipBusyUid,
+      pendingIncomingCount,
+      incomingRequests,
+      outgoingRequests,
+      friendsList,
+      relationshipWith,
+      handleAddOrAcceptFriend,
+      handleCancelFriendRequest,
+      handleRejectFriendRequest,
+      handleRemoveFriend,
+      friendActionTarget,
+      confirmFriendAction,
+      cancelFriendAction,
+    },
   };
 }
