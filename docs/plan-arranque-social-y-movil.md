@@ -9,7 +9,7 @@ código: corrígela aquí.
 historial de git) y se apunta aquí cuál es la siguiente. Una fase que, al llegar a ella, resulta no tener nada que
 hacer también se borra, con una línea que diga por qué.
 
-**Siguiente:** F2, partir `useSocialViewModel`.
+**Siguiente:** nada pendiente; solo queda F4 (Google Play), aparcada.
 
 **Hecho:** F0, retirar el modo ampliado de las carátulas (`x=1`), que las hacía parpadear al abrir con la cuenta
 de administración y doblaba consultas a IGDB y escrituras de KV. Hecho el 08-10-2026.
@@ -24,6 +24,13 @@ desliza hacia el lado de la pestaña; la barra inferior y los botones flotantes 
 `<main>` los tapaba); las carátulas de arriba se descodifican antes de deslizar (`precargaDeCaratulas`, plazo 160 ms);
 y Firefox 144–146 / Safari < 18.2, que tienen la API sin los tipos, conservan el fundido de antes. Comprobado en
 Safari (escritorio e iPhone) y Chrome Android; Firefox ≥ 147 según su documentación (no arranca automatizado aquí).
+F2, partir `useSocialViewModel`: de 2.541 a **1.028 líneas**, en once hooks de `viewmodel/social/` (lectura,
+logros propios, pasarela, migración a secreto, rango, foto, editor de perfil, avisos y sesión; más `gistErrors`) y
+devolviendo el hub en doce PIEZAS por dominio que `SocialHub` desestructura. Repintados: 0 al escribir en el
+compositor y 0 al volver a ejecutar el view-model sin datos nuevos, fijado en `socialHubRepaints.test.tsx` (que
+además dice qué prop cambió si falla). El criterio de ≤ 800 líneas NO se alcanza, y no compensa forzarlo: lo que
+queda es la orquestación —el cableado entre directorio, amistades, lectura y perfil, y los efectos que deciden
+cuándo rehidratar y reconciliar— y el contrato de piezas (~150 líneas). Hecho el 08-10-2026.
 
 Lo que se descartó en la misma conversación, con la medición delante, y no conviene volver a levantar:
 
@@ -44,91 +51,6 @@ Lo que se descartó en la misma conversación, con la medición delante, y no co
   190 no se sube.
 - **La build `production` de react-router.** El chunk del router sale de `dist/development/`, pero los dos
   ficheros miden lo mismo (1 byte de diferencia): no hay nada que ganar ahí.
-
----
-
-## F2 · Partir `useSocialViewModel`
-
-Continúa la fase 4 de `docs/revision-general-2026-09.md`, cuyas cifras se han quedado atrás.
-
-### Dónde estamos (medido hoy)
-
-- **2541 líneas** (2370 el 18-09, 2373 el 01-10). Ha subido +168 en 11 commits desde el 01-10, sin un dominio nuevo
-  grande: canal en tres estados, descubrir, `serviceLimited`, publicaciones, resumen del año, papeleta.
-- 97 hooks primitivos y 19 propios; **114 claves** devueltas. El único consumidor es `SocialHub.tsx:175`, que
-  desestructura 108; **seis no las lee nadie**: `friendships`, `handleCreateSocialGist`, `handleSignInGoogle`,
-  `hydrateSocialDirectory`, `loadingForeignProfile`, `refreshFriendships`.
-- Los «tres abridores» que la revisión daba como pendientes ya salieron a `useSocialNavigation` (`3a94e87a`).
-- Por encima de 800 líneas en `src/viewmodel/`: `useSocialViewModel` (2541), `useSyncViewModel` (1150) y
-  `useGameListViewModel` (801). El criterio escrito («ningún fichero por encima de 800») cae también por los otros
-  dos, que no son de esta fase.
-
-### Los bloques, por tamaño
-
-| Bloque | Líneas aprox. | Dónde (hoy) | Cobertura que ya tiene |
-|---|---|---|---|
-| Canal y pasarela (incluida la migración a secreto) | ~470 | 381-466, 630-694, 754-893, 1621-1688, 2144-2154, 2336-2386 | `SocialHub.test` 658-722, `socialHubBudget` |
-| Perfil propio (hidratar, foto, guardar, completados) | ~450 | 983-1011, 1690-1870, 2085-2140, 2156-2322 | `SocialHub.test` 997 y 1685-1956, `ownProfileCacheAfterSave` |
-| Vitrina de logros | ~200 | 1183-1366 + estados 209/221 + 1886-1916 | `SocialHub.test` 212-256 y 2052-2285, `achievementsPublish` |
-| Ficha de un perfil ajeno | ~150 | 1091-1170, 1399, 1469, 1568-1594 | `SocialProfileDetailScreen.test` (17) |
-| Detalle de una actividad | ~140 | 1046-1066, 1392-1436, 1490-1544 | **ninguna a nivel de hook** |
-
-El detalle y la ficha comparten el ancla (`activeReviewAnchor` mezcla `activeDetailEvent`, `activeProfileReview` y
-`selectedProfileDetail`), y `activeDetailEvent` alimenta `useForeignProfileGames`. Por eso van juntos.
-
-### Pasos (uno por commit)
-
-1. ✅ `docs`: la fase 4 de la revisión remite a este plan con las cifras nuevas.
-2. ✅ Quitadas las seis claves sin lector (quedan 108).
-3–4. ✅ `social/useSocialReading.ts` (387 líneas): la ficha de un perfil ajeno, la actividad abierta del feed, sus
-   esperas, el ancla y las relacionadas, con `useForeignProfileGames` dentro. Tests nuevos de las esperas, de `me`
-   y del amigo inactivo (`tests/unit/socialReadingHook.test.ts`, 9). El view-model baja a 2.255 líneas.
-5. ✅ `social/useOwnAchievements.ts` (244 líneas): evaluar, unir a lo publicado y publicar tus logros; devuelve la
-   vitrina, el espejo y la tarjeta del feed. El view-model baja a 2.079 líneas.
-6. ✅ El canal, en dos piezas y no en una: `social/useSocialGateway.ts` (311 líneas: sesión de Google, adoptar o
-   crear el canal, auto-crear y botón de la pasarela) y `social/useSecretChannelMigration.ts` (190: la migración a
-   secreto, movida sin tocar su orden). El efecto de ARRANQUE que fija sesión y canal se queda en el view-model:
-   lo lee todo el hub, y los dos hooks reciben sus setters. Test nuevo de «nunca se crea un canal a ciegas»
-   (`socialGatewayHook.test.ts`). El view-model baja a 1.718 líneas.
-7. El perfil propio, en tres piezas:
-   - ✅ `social/useOwnProfileRank.ts`: rango, fecha de alta, si está publicado y el espejo publicado, de una lectura.
-     Se llama arriba, donde vivían esos estados, porque los leen el directorio y los logros.
-   - ✅ `social/useOwnPhotoHeal.ts`: propagar o retirar la foto propia en los canales públicos.
-   - ✅ `social/useOwnProfileEditor.ts` (502 líneas): hidratar y guardar el perfil, la redirección al editor y la
-     regla de completados. Los estados de «tienes que crear tu perfil» se quedan en el view-model (los leen la puerta
-     del directorio y el arranque) y llegan con sus setters. View-model en 1.233 líneas.
-8. Fuera del plan original, porque al llegar aquí seguían dentro y eran dominios cerrados:
-   - ✅ `social/useSocialFeedback.ts`: el mensaje de estado, el bloqueo por error y los avisos de sin red y servicio
-     limitado, con `setFeedback`, `reportFailure` y `markSocialServiceHealthy`.
-   - ✅ `social/useSocialSession.ts`: la sesión de Google, el canal social y la configuración de sync, con el efecto
-     de arranque. Va arriba del todo; `lockProfileEditor` se adelanta para que el arranque dependa de ella igual que
-     antes.
-9. Pendiente: piezas memoizadas (`session`, `feedback`, `profileEditor`, `feed`, `compose`, `reading`,
-   `achievements`, `directory`, `friends`, `nav`, `viewer`) y `SocialHub` recibiéndolas por piezas. Es el único paso
-   que toca la pantalla (108 claves desestructuradas en `SocialHub.tsx:175`), con el riesgo de repintados escrito
-   abajo. Verificación: contador de repintados como en la fase 3 (0 por pulsación en el feed).
-
-**Medido el 08-10-2026, tras los pasos 1–8:** `useSocialViewModel.ts` pasa de 2.541 a **1.066 líneas** (920 de
-orquestación y 146 del objeto devuelto), repartidas en nueve hooks de `social/` con 6 tests nuevos de hook. Lo que
-queda dentro es la orquestación —el cableado entre directorio, amistades, lectura y perfil, y los efectos que
-deciden cuándo rehidratar y reconciliar—, que es lo que le toca. El criterio de ≤ 800 solo se alcanza con el paso 9.
-
-### Riesgos (y la red)
-
-- **Carrera del token** (el fallo del feed social que mandaba a ajustes con 401): el efecto de 381 espera a `ensureSyncConfigLoaded`
-  antes de `getSyncConfig`. Al extraer el canal no puede volver un `getSyncConfig()` en un inicializador ni en
-  `useMemo([])`. Lo mismo vale para el efecto `socialSkipped` (1575).
-- **Gist del directorio desfasado:** la ficha sigue leyendo `entry.socialGistId` de la entrada ya saneada por
-  `useSocialDirectory`, nunca el gist del perfil.
-- **Orden de efectos que hay que conservar:** `setDirectorySettled(false)` (1921) antes de la hidratación (1986);
-  el reinicio de `autoCreate…Ref` (2144) antes del auto-crear (2147). Hay refs escritas en el render (1985, 2010).
-- **Repintados:** pasar una pieza entera a una pantalla con `memo` sin `useMemo` de dependencias exactas la
-  repinta siempre. Precedente: `useSocialProfileForm` devuelve un literal nuevo en cada render (254-258).
-- `socialHubBudget.test.tsx` solo cubre la apertura del feed (lecturas de gist, `getSocialProfilesByUid`, saneado,
-  `ensureSecretSocialGist` una vez). El detalle y la ficha no tienen red de presupuesto: añadirla en el paso 3.
-
-**Criterio de aceptación (reescrito):** `useSocialViewModel.ts` ≤ 800 líneas y `SocialHub` recibe piezas.
-`useSyncViewModel` y `useGameListViewModel` quedan fuera de esta fase.
 
 ---
 
@@ -171,7 +93,6 @@ de qué tipo es y cuándo se creó):
 
 | # | Trabajo | Por qué en este orden |
 |---|---|---|
-| 1 | **F2** view-model social | lo que queda; commit a commit |
 | ⏸️ | **F4** Google Play | aparcado |
 
 Antes de cada despliegue, la checklist del README (versión, `audit:rules`, reglas e índices, suite en verde).

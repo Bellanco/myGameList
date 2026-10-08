@@ -599,10 +599,10 @@ superficie apenas bajan (eran 109) porque lo extraído sigue **reexportándose**
 hoy, en buena parte, una FACHADA sobre diez hooks de dominio. Adelgazar la fachada es el trabajo del punto 11,
 no el de sacar dominios.
 
-**Remedido el 08-10-2026:** ha vuelto a crecer, a **2541 líneas** y **114 claves** (seis sin lector). Los «tres
-abridores» ya habían salido a `useSocialNavigation` (`3a94e87a`). El plan que sigue está en
-`docs/plan-arranque-social-y-movil.md` (F2), con los bloques medidos y un criterio reescrito: `useSocialViewModel`
-≤ 800 líneas. El de abajo caía también por `useSyncViewModel` (1150) y `useGameListViewModel` (801).
+**Cerrada el 08-10-2026** (`docs/plan-arranque-social-y-movil.md`, F2): había vuelto a crecer a 2.541 líneas y 114
+claves; queda en **1.028 líneas**, once hooks de dominio en `viewmodel/social/` y el hub recibido en doce piezas
+(108 claves, seis sin lector retiradas). Repintado del feed vigilado por `tests/component/socialHubRepaints.test.tsx`.
+El ≤ 800 de abajo no se alcanza: lo que queda es orquestación.
 
 **Criterio de aceptación (sin cumplir todavía):** ningún fichero de `src/viewmodel/` por encima de 800 líneas y
 `SocialHub.tsx` recibiendo piezas en vez de 106 claves.
