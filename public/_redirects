@@ -25,6 +25,9 @@
 /premios          / 200
 /admin            / 200
 
+# La puerta del menú «Compartir» de Android (`share_target` del manifiesto, `SHARE_TARGET_ROUTE`).
+/compartir        / 200
+
 # Nombres retirados: los redirige la propia app (`LEGACY_ROUTE_REDIRECTS`), así que aquí solo tienen que arrancarla.
 /visitados        / 200
 /perfil           / 200

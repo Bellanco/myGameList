@@ -21,11 +21,12 @@ import { useAnnouncement } from './view/hooks/useAnnouncement';
 import { useYearSummaryNotice } from './view/hooks/useYearSummaryNotice';
 import { UpdateNotice } from './view/components/UpdateNotice';
 import { BottomNavigation } from './view/components/BottomNavigation';
-import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, SETTINGS_ROUTES, isKnownRoute, matchAppSection, matchSettingsGroup, type AppSection, type SettingsGroup } from './core/constants/routes';
+import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, SETTINGS_ROUTES, SHARE_TARGET_ROUTE, isKnownRoute, matchAppSection, matchSettingsGroup, type AppSection, type SettingsGroup } from './core/constants/routes';
 import { LegacyTailRedirect } from './view/components/LegacyTailRedirect';
 import { SettingsMenu } from './view/components/SettingsMenu';
 import { ScrollToTop } from './view/components/ScrollToTop';
 import { useScrollOnNavigate } from './view/hooks/useScrollOnNavigate';
+import { ShareTargetEntry } from './view/components/ShareTargetEntry';
 import { LaneBanners } from './view/components/LaneBanners';
 import { SocialHubSkeleton } from './view/components/SocialHubSkeleton';
 import { ScreenSkeleton } from './view/components/ScreenSkeleton';
@@ -403,6 +404,11 @@ export default function App() {
     },
     [importGames, notify],
   );
+
+  // Lo compartido desde el menú «Compartir» de Android: su alta en Próximos, con el nombre puesto (ver
+  // `ShareTargetEntry`).
+  const { openImportedDraft } = vm;
+  const handleSharedGame = useCallback((name: string) => openImportedDraft('p', { name }), [openImportedDraft]);
 
   const handleClassifyImport = useCallback(
     (item: ImportedGame, tab: TabId) => {
@@ -1209,6 +1215,7 @@ export default function App() {
               element={<Suspense fallback={null}><DevAnnouncement /></Suspense>}
             />
           ) : null}
+          <Route path={SHARE_TARGET_ROUTE} element={<ShareTargetEntry onGame={handleSharedGame} />} />
           {/* Nombres retirados: redirigen al actual en vez de caer en el catch-all. Van DESPUÉS de la tabla
               (no hay solape, pero el orden deja claro cuál manda) y ANTES del rebote a `FALLBACK_ROUTE`. */}
           {LEGACY_ROUTE_REDIRECTS.map(({ from, to }) => (

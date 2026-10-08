@@ -175,6 +175,9 @@ Configuración en el repo:
   son un PAR: si una captura cambia de tamaño y el manifest no, el navegador la descarta sin decir nada. Se
   regeneran con `npm run screenshots` (ver `scripts/screenshots.spec.ts`), nunca a mano y nunca con datos
   reales: esas imágenes las sirve cualquiera que abra la app.
+  Lleva también el `share_target`: en Android, con la app instalada, «Compartir» desde Steam o el navegador abre
+  `/compartir`, que lleva a Próximos con el alta del juego ya rellena (`ShareTargetEntry` + `sharedGameName`).
+  iOS no lo soporta.
 - **`public/service-worker.js`** — solo cachea GET same-origin y respuestas válidas; excluye APIs
   externas (GitHub/Firebase) para no cachear datos sensibles. Los marcadores
   `self.__SW_BUILD_ID__` / `self.__PRECACHE_ASSETS__` los sustituye en el build el plugin

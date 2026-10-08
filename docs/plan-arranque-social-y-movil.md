@@ -9,10 +9,13 @@ código: corrígela aquí.
 historial de git) y se apunta aquí cuál es la siguiente. Una fase que, al llegar a ella, resulta no tener nada que
 hacer también se borra, con una línea que diga por qué.
 
-**Siguiente:** F3, `share_target` → Próximos.
+**Siguiente:** F5, View Transitions.
 
 **Hecho:** F0, retirar el modo ampliado de las carátulas (`x=1`), que las hacía parpadear al abrir con la cuenta
 de administración y doblaba consultas a IGDB y escrituras de KV. Hecho el 08-10-2026.
+F3, `share_target` → Próximos: «Compartir» en Android abre `/compartir`, que lleva a Próximos con el alta
+rellena; el intérprete va por `import()` (+0,2 kB al arranque, crítico 184,6/190). Hecho el 08-10-2026; queda
+probarlo en un Android real con la PWA instalada después de desplegar.
 
 Lo que se descartó en la misma conversación, con la medición delante, y no conviene volver a levantar:
 
@@ -29,7 +32,7 @@ Lo que se descartó en la misma conversación, con la medición delante, y no co
   del renglón **0,5 kB**, `crypto` **0,9 kB**. `githubHttp` y `syncRepository` no son candidatos: los usa la sync
   de forma síncrona (revisión, fase 5, punto 16). Cargar perezosa la forma no elegida ahorraría ~1 kB por persona
   a cambio de un `Suspense` al cambiar de forma y de precachear chunks diferidos (el hueco de Chromium). No
-  compensa. Lo que queda de la fase es una regla: lo nuevo (F3, F5) entra por `lazy()`/`import()` y el tope de
+  compensa. Lo que queda de la fase es una regla: lo nuevo (`share_target`, F5) entra por `lazy()`/`import()` y el tope de
   190 no se sube.
 - **La build `production` de react-router.** El chunk del router sale de `dist/development/`, pero los dos
   ficheros miden lo mismo (1 byte de diferencia): no hay nada que ganar ahí.
@@ -102,36 +105,10 @@ lectura del perfil propio, en ~800.
 
 ---
 
-## F3 · `share_target`: compartir un juego hacia la app
-
-**Qué da:** en Android, con la PWA instalada, aparece «Mis Listas» en el menú Compartir.
-Desde Steam o el navegador abre el alta con el nombre ya puesto. **iOS no lo soporta.**
-
-**Cómo:**
-
-1. Manifiesto: `share_target` con `method: GET` a una ruta nueva (p. ej. `/compartir`) con `title`, `text` y
-   `url`. GET para no tener que tocar el service worker con un POST.
-2. La ruta, en los **tres** sitios: `core/constants/routes.ts`, `public/_redirects` (Pages ignoraba el comodín
-   `/* /index.html 200`: van una a una) y el fallback de navegación del service worker. Comprobarlo en una
-   vista previa, no en `localhost` (allí el SW se desregistra).
-3. Un intérprete puro en `core/` (`sharedGameName.ts`): saca el nombre del texto compartido. Ejemplos: Steam
-   («Save 50% on Hades on Steam https://…»), la ficha de la tienda, o un título suelto. Con tests de unidad.
-4. **Destino: la lista de Próximos** (decidido el 08-10-2026; primero se dijo Deseados y se cambió). Se abre el
-   formulario precargado en la pestaña `p` reutilizando el camino de `openImportedDraft` (`useGameListViewModel.ts`),
-   que ya abre el alta con metadatos y sin id, y se navega a `/proximos` para que al guardar se vea dónde ha caído.
-   Todo perezoso: el arranque está a 5,6 kB de su tope.
-   - Próximos no tiene tope (el de 100 es solo de Deseados), así que no hace falta aviso de lista llena.
-   - **Juego que ya está en alguna lista:** no hay que hacer nada nuevo. `FormModal` ya avisa del duplicado al
-     escribir y corta el guardado (`findDuplicate`, `FormModal.tsx:152` y `:330`).
-5. e2e: navegar a `/compartir?text=…` y comprobar que el formulario sale con el nombre en Próximos, y que con un
-   nombre que ya existe sale el aviso de duplicado.
-
----
-
 ## F4 · Publicar en Google Play (TWA) · ⏸️ APARCADO
 
 **Aparcado el 08-10-2026 por decisión del usuario:** la Play Console no se toca por ahora. Queda escrito para
-retomarlo; nada de este plan depende de ello. Al retomarlo, `share_target` (F3) ya funcionará dentro de la TWA.
+retomarlo; nada de este plan depende de ello. `share_target` (hecho) funcionará igual dentro de la TWA.
 
 **Qué da:** presencia en la tienda e instalación de un toque. La app es la misma web: cada despliegue llega sola, y
 solo hay que subir una versión a Play si cambian el manifiesto, los iconos o el paquete.
@@ -195,8 +172,7 @@ Encaja con «evolución, no cambio»: aplicado con moderación y con la forma qu
 
 | # | Trabajo | Por qué en este orden |
 |---|---|---|
-| 1 | **F3** `share_target` → Próximos | barato y útil a diario en Android |
-| 2 | **F5** View Transitions | acabado |
+| 1 | **F5** View Transitions | acabado |
 | — | **F2** view-model social | independiente; se puede intercalar commit a commit en cualquier momento |
 | ⏸️ | **F4** Google Play | aparcado |
 

@@ -8,7 +8,7 @@
 // con un 200 a los chunks de un despliegue anterior, que es el envenenamiento que todo esto evita (ver
 // `docs/plan-capacidad-gratuita.md`, fase 3).
 import { describe, expect, it } from 'vitest';
-import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS } from '../../src/core/constants/routes';
+import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, SHARE_TARGET_ROUTE } from '../../src/core/constants/routes';
 import redirectsFile from '../../public/_redirects?raw';
 
 interface Rule {
@@ -74,5 +74,10 @@ describe('public/_redirects', () => {
 
   it('cubre la ruta a la que rebota lo desconocido', () => {
     expect(isRewritten(FALLBACK_ROUTE)).toBe(true);
+  });
+
+  // Android la abre desde el menú «Compartir», con la app cerrada: sin su línea, el arranque sería el del 404.
+  it('cubre la puerta del menú «Compartir»', () => {
+    expect(isRewritten(SHARE_TARGET_ROUTE)).toBe(true);
   });
 });
