@@ -5,7 +5,7 @@ import { ensureSyncConfigLoaded, getSyncConfig } from '../model/repository/gistR
 import { writeCanPublishHint } from '../model/repository/socialShellHint';
 import { getSocialSyncConfig, readSocialGist, remapSocialActorIds, saveSocialSyncConfig, writeSocialGist } from '../model/repository/socialGistRepository';
 import { reconcileReviewActivity } from '../model/repository/socialActivityReconcile';
-import { getCachedSocialProfile, getLocalMeta, patchLocalMeta, putCachedSocialProfile, type CachedSocialProfileData } from '../model/repository/indexedDbRepository';
+import { getCachedSocialProfile, putCachedSocialProfile, type CachedSocialProfileData } from '../model/repository/indexedDbRepository';
 import { PUBLIC_NAME_MAX_LENGTH, safeTrim } from '../core/security/sanitize';
 import { isNetworkFailure, isOffline, isServiceUnavailable } from '../core/utils/network';
 import { useOnlineStatus } from '../view/hooks/useOnlineStatus';
@@ -13,10 +13,6 @@ import { resolveViewer, withVisiblePhotos } from '../core/social/photoVisibility
 import { useGenericPhoto } from '../view/hooks/useGenericPhoto';
 import { useIsAdmin } from '../view/hooks/useIsAdmin';
 import { SOCIAL_UI } from '../core/constants/socialLabels';
-import {
-  DEFAULT_PROFILE_TIER,
-  type ProfileTier,
-} from '../core/constants/tiers';
 import { TAB_IDS, type SyncConfig, type TabData } from '../model/types/game';
 import {
   ensureProfileByEmail,
@@ -26,7 +22,6 @@ import {
   healOwnFriendshipIdentity,
   resolveOwnProfile,
   resolveStableProfileId,
-  updateProfilePhoto,
   type FriendshipSelfInfo,
   type SocialAuthUser,
 } from '../model/repository/firebaseRepository';
@@ -46,8 +41,6 @@ import { useSocialStartupTasks } from './social/useSocialStartupTasks';
 import { loadLocalState } from '../model/repository/localRepository';
 import { matchSocialRoute, OWN_PROFILE_ALIAS } from './social/socialRoutes';
 
-/** Sin espejo publicado todavía (o sin leer): cadena vacía y sin instante, que es «no hay cota». */
-const NO_PUBLISHED_MIRROR = { list: '', at: 0 };
 
 /** Referencia estable: un `new Map()` inline rompería el memo del feed en cada render. */
 import { useSocialCompose, type OwnPostChange } from './social/useSocialCompose';
@@ -58,6 +51,8 @@ import { useOwnAchievements } from './social/useOwnAchievements';
 import { useSocialGateway } from './social/useSocialGateway';
 import { isNotFoundGistError } from './social/gistErrors';
 import { useSecretChannelMigration } from './social/useSecretChannelMigration';
+import { useOwnProfileRank } from './social/useOwnProfileRank';
+import { useOwnPhotoHeal } from './social/useOwnPhotoHeal';
 import { useSocialFeed } from './social/socialFeed';
 export type { RelatedReview } from '../core/social/relatedReviews';
 // Re-exportados: las pantallas del hub los importan desde este ViewModel desde antes de la extracción.
@@ -166,35 +161,11 @@ export function useSocialViewModel(options?: {
    * gist social de uno mismo. Hidratar antes de saberlo deja la propia actividad fuera del feed.
    */
   const [ownProfileIdResolved, setOwnProfileIdResolved] = useState(false);
-  // Rango del PROPIO usuario: decide cada cuánto se rehidrata el feed (ver PROFILE_TIER_FEED_TTL_MS). Manda el de
-  // quien mira porque las lecturas de gists ajenos van con SU token y cuentan contra SU rate-limit.
-  const [ownTier, setOwnTier] = useState<ProfileTier>(DEFAULT_PROFILE_TIER);
   /**
-   * Tu fecha de alta (ms), del documento de perfil. La necesitan «De la vieja escuela» y «Otro año más», que son
-   * los dos únicos logros del catálogo que miden algo que NO sale de tu biblioteca.
-   *
-   * Viaja con la misma lectura que el rango —una sola, ya cacheada 60 s por `getOwnProfileRef`— así que no cuesta
-   * ni una petición. 0 mientras no se sepa, que es lo que deja los dos logros sin conceder en vez de regalarlos.
+   * TU RANGO Y LO QUE YA ESTÁ PUBLICADO DE TI, de una sola lectura de tu perfil (`social/useOwnProfileRank`): el
+   * rango decide la cadencia del feed, y lo publicado es el suelo de tus logros.
    */
-  const [ownProfileCreatedAt, setOwnProfileCreatedAt] = useState(0);
-  /**
-   * ¿Tiene esta cuenta un perfil PUBLICADO? Es decir, existe `profiles/{uid}` y su social está activo.
-   *
-   * No vale `ownProfileId` para esto, aunque lo parezca: ese id se SIEMBRA en local (`seedProfileIdFromRemote`)
-   * aunque no haya documento en Firestore, así que lo tiene también quien nunca abrió el social. Lo que sí lo
-   * garantiza es haber leído el documento.
-   */
-  const [ownProfilePublished, setOwnProfilePublished] = useState(false);
-  /** Tu espejo tal y como está PUBLICADO. Es el suelo de la próxima publicación: de ahí no se baja. */
-  // El espejo publicado ENTERO —cadena e instante—, no solo la cadena: el `at` es la cota de las fechas que
-  // llegan tarde (ver `mergeForPublish`).
-  const [ownPublishedMirror, setOwnPublishedMirror] = useState<{ list: string; at: number }>(NO_PUBLISHED_MIRROR);
-  /**
-   * ¿Se sabe ya el rango propio? `ownTier` arranca en bronce porque es el valor por defecto real, pero "bronce
-   * porque aún no se ha leído el perfil" y "bronce porque ese es su rango" NO son lo mismo para el directorio: el
-   * primero elegiría el TTL de caché equivocado y obligaría a rehidratarlo entero al conocerse el rango.
-   */
-  const [tierResolved, setTierResolved] = useState(false);
+  const { ownTier, ownProfileCreatedAt, ownProfilePublished, ownPublishedMirror, tierResolved } = useOwnProfileRank(authUser);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
   const [statusKind, setStatusKind] = useState<'ok' | 'warn' | 'err'>('ok');
@@ -1128,46 +1099,6 @@ export function useSocialViewModel(options?: {
   // segundo falla nada lo reintentaba. Allí lleva sello (`profileNameRepairedFor`), así que deja de costar una
   // lectura de Firestore por apertura del hub para descubrir que el nombre ya estaba bien.
 
-  // Rango propio → cadencia del feed. Una sola lectura del perfil propio (ya cacheada 60 s en memoria por
-  // `getOwnProfileRef`). Cualquier fallo deja bronce: degradar es lo seguro.
-  //
-  // `tierResolved` es lo que evita que el privilegio del rango llegue SIEMPRE un paso tarde. Antes se hidrataba con
-  // el bronce por defecto y, al llegar el rango de verdad, la hidratación entera se repetía: medido, un bronce
-  // hidrataba UNA vez y un plata/oro/mithril DOS —la segunda releyendo hasta ~50 gists de amigos—, y con la caché
-  // caliente esa segunda pasada tapaba con el esqueleto un feed ya pintado. Es decir, cuanto más alto el rango,
-  // peor la experiencia: justo lo contrario de lo que el rango promete. Ahora se espera a saberlo, igual que se
-  // espera a `friendshipsResolved`, y la primera evaluación de la caché ya usa el TTL que toca.
-  useEffect(() => {
-    if (!authUser?.uid) {
-      setOwnTier(DEFAULT_PROFILE_TIER);
-      setOwnProfileCreatedAt(0);
-      setOwnProfilePublished(false);
-      setOwnPublishedMirror(NO_PUBLISHED_MIRROR);
-      setTierResolved(false);
-      return;
-    }
-    let cancelled = false;
-    void resolveOwnProfile(authUser)
-      .then((profile) => {
-        if (cancelled) return;
-        setOwnTier(profile?.tier || DEFAULT_PROFILE_TIER);
-        // De paso, la fecha de alta y si el perfil está publicado: es el mismo documento y la misma lectura.
-        setOwnProfileCreatedAt(profile?.createdAt || 0);
-        setOwnProfilePublished(Boolean(profile?.socialEnabled));
-        setOwnPublishedMirror({ list: profile?.achievementsMirror || '', at: profile?.achievementsMirrorAt || 0 });
-      })
-      .catch(() => {
-        /* sin rango conocido → bronce */
-      })
-      .finally(() => {
-        // Resuelto SIEMPRE, también si la lectura falla: sin esto, un Firestore caído dejaría el feed sin hidratar
-        // (y con el esqueleto puesto) en vez de degradar a la cadencia de bronce, que es lo seguro.
-        if (!cancelled) setTierResolved(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [authUser]);
 
   // Cambiar de identidad (otra cuenta, otro canal social) invalida lo asentado: lo que venga es un directorio
   // distinto, así que la pantalla tiene que volver a decir "cargando" y no el vacío del anterior. Declarado ANTES
@@ -1325,73 +1256,16 @@ export function useSocialViewModel(options?: {
     if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
   }, []);
 
-  // Bloque 2 — pone al día la foto propia EN LOS CANALES PÚBLICOS, en los dos sentidos.
-  //
-  // PROPAGAR: la foto solo la ven otros si está en NUESTRO gist social público. Gists creados antes del soporte de
-  // foto (o sin re-guardar el perfil) no la llevan, así que nadie veía la de nadie.
-  //
-  // RETIRAR: si lo que la cuenta tiene es el avatar GENÉRICO de Google, hay que quitarlo de donde ya se publicó. Es
-  // la única vía de saneado: esas URLs se escribieron cuando "tener URL" contaba como tener foto, y ni el gist ni el
-  // doc de directorio se reescriben solos. Filtrarlo al pintar (`HubAvatar`) quita el síntoma en NUESTRA pantalla;
-  // esto lo quita del dato, que es lo que leen los demás.
-  //
-  // Una vez por sesión y best-effort: si falla, se reintenta en la próxima.
-  const photoHealAttemptedRef = useRef(false);
-  useEffect(() => {
-    if (photoHealAttemptedRef.current) return;
-    if (!socialSpaceOpen || !socialCfgGistId) return;
-    const sessionPhoto = authUser?.photoURL || '';
-    if (!sessionPhoto) return;
-    // Sin veredicto no se toca nada: publicar ahora sellaría la genérica y armaría la ref, y no habría otra pasada.
-    if (ownPhotoVerdictPending) return;
-    // Lo que debe quedar publicado: la foto de la sesión, o nada si es el avatar genérico.
-    const target = ownPhotoIsGeneric ? '' : sessionPhoto;
-    // Con la foto apagada a propósito no hay nada que propagar. Pero una genérica ya publicada SÍ se retira: el
-    // opt-out protege lo que el usuario decidió mostrar, no una imagen que nunca fue suya.
-    if (!showPhoto && target) return;
-    const cfg = getSocialSyncConfig();
-    if (!cfg?.token) return;
-    photoHealAttemptedRef.current = true;
-
-    void (async () => {
-      try {
-        // 2b — idempotencia entre sesiones: si ya dejamos el canal en este estado, no releemos ni reescribimos el
-        // gist. Vale para los dos sentidos: `''` marca "ya retirada".
-        const meta = await getLocalMeta();
-        if (meta?.photoHealedFor === target) return;
-
-        const current = await readSocialGist(cfg.token, socialCfgGistId, null);
-        const data = current.data;
-        if (!data) return;
-        // El gist es la fuente de verdad: si el usuario tiene la foto desactivada, NO la republicamos (evita revertir
-        // su opt-out por una carrera con la hidratación del perfil, que arranca con showPhoto=true por defecto). La
-        // retirada de una genérica no se frena aquí: quitarla nunca va contra lo que el usuario quiso.
-        if (data.profile.visibility?.showPhoto === false && target) return;
-
-        if ((data.profile.photoURL || '') !== target) {
-          await writeSocialGist(cfg.token, socialCfgGistId, {
-            // `photoURL: ''` no se publica: el saneado del gist descarta lo que no sea una URL válida, así que el
-            // campo desaparece del canal en vez de quedarse vacío.
-            profile: { ...data.profile, photoURL: target },
-            activity: data.activity,
-            posts: data.posts,
-            updatedAt: Date.now(),
-          });
-          // 2a — sin re-hidratación completa (~30 lecturas). La foto propia ya se ve por el fallback de sesión; solo
-          // parcheamos la entrada propia del directorio en memoria por si acaso, y la del directorio cacheado.
-          patchDirectoryEntries((e) => e.socialGistId === socialCfgGistId, { photoURL: target });
-        }
-        // Propaga (o borra) también la foto en el doc público de Firestore (la lee el directorio), para que los demás
-        // lo vean sin depender de que cada uno reabra la app y re-publique su gist. Best-effort.
-        if (authUser?.uid) {
-          await updateProfilePhoto(authUser.uid, target);
-        }
-        await patchLocalMeta({ photoHealedFor: target });
-      } catch {
-        // best-effort: no bloquea el feed; se reintenta la próxima sesión.
-      }
-    })();
-  }, [authUser?.uid, authUser?.photoURL, ownPhotoIsGeneric, ownPhotoVerdictPending, showPhoto, socialSpaceOpen, socialCfgGistId, patchDirectoryEntries]);
+  // LA FOTO PROPIA EN LOS CANALES PÚBLICOS, propagarla o retirarla (`social/useOwnPhotoHeal`).
+  useOwnPhotoHeal({
+    socialSpaceOpen,
+    socialCfgGistId,
+    authUser,
+    ownPhotoIsGeneric,
+    ownPhotoVerdictPending,
+    showPhoto,
+    patchDirectoryEntries,
+  });
 
 
   const handleSaveProfile = useCallback(async () => {

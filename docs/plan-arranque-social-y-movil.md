@@ -90,7 +90,11 @@ El detalle y la ficha comparten el ancla (`activeReviewAnchor` mezcla `activeDet
    secreto, movida sin tocar su orden). El efecto de ARRANQUE que fija sesión y canal se queda en el view-model:
    lo lee todo el hub, y los dos hooks reciben sus setters. Test nuevo de «nunca se crea un canal a ciegas»
    (`socialGatewayHook.test.ts`). El view-model baja a 1.718 líneas.
-7. `social/useOwnSocialProfile.ts`.
+7. El perfil propio, en tres piezas:
+   - ✅ `social/useOwnProfileRank.ts`: rango, fecha de alta, si está publicado y el espejo publicado, de una lectura.
+     Se llama arriba, donde vivían esos estados, porque los leen el directorio y los logros.
+   - ✅ `social/useOwnPhotoHeal.ts`: propagar o retirar la foto propia en los canales públicos.
+   - Hidratar y guardar el perfil, con el formulario y la regla de completados. View-model en 1.592 líneas.
 8. Piezas memoizadas (`session`, `feedback`, `profileEditor`, `feed`, `compose`, `reading`, `achievements`,
    `directory`, `friends`, `nav`, `viewer`) y `SocialHub` recibiéndolas por piezas.
    - Verificación: contador de repintados como en la fase 3 (0 por pulsación en el feed).
