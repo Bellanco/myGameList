@@ -308,11 +308,17 @@ test.describe('logros · el aviso del instante', () => {
    * Y EN `/logros` HAY UNA TRAMPA APARTE: esa pantalla monta el sprite de las medallas, y la cápsula también.
    * Dos `<symbol>` con el mismo `id` son HTML inválido, así que se comprueba que el reparto de dueño único
    * (`AchievementSprite`) deja exactamente uno.
+   *
+   * EL RATÓN SE POSA EN LA CÁPSULA tras cada pantalla. Vive cinco segundos y el recorrido entero no cabe en
+   * ellos: en un Mac con la traza puesta ya rozaba los 4,6 s, y en el runner de Linux se agotaba antes de llegar
+   * a `/logros`. Posarse la pausa y, al ir a pulsar la siguiente pestaña, el ratón sale y el reloj vuelve a
+   * empezar entero, así que cada tramo solo tiene que caber él solo. Es lo que hace quien la está leyendo.
    */
   test('la cápsula se ve en todas las pantallas, no solo en la que la disparó', async ({ page }) => {
     await sembrarBiblioteca(page, { alBorde: 'uno' });
     await completarElQueCruza(page);
     await expect(toast(page)).toBeVisible();
+    await toast(page).hover();
 
     const secciones: Array<[string, () => Promise<unknown>]> = [
       ['listados', () => page.getByRole('button', { name: /^Listados/ }).first().click()],
@@ -332,6 +338,7 @@ test.describe('logros · el aviso del instante', () => {
         .map((use) => use.getAttribute('href') || '')
         .filter((href) => !href || !document.querySelector(href)));
       expect(huerfanos, `medalla sin dibujo en ${nombre}`).toEqual([]);
+      await toast(page).hover();
     }
 
     /* Y la pantalla de LOGROS, que es la única que monta el sprite por su cuenta. Se llega por la interfaz y no
@@ -339,6 +346,8 @@ test.describe('logros · el aviso del instante', () => {
        correcto, un aviso del instante no sobrevive a un arranque— así que con `goto` este test comprobaría lo
        contrario de lo que quiere. */
     await page.getByRole('button', { name: /^Estadísticas/ }).first().click();
+    await expect(toast(page)).toBeVisible();
+    await toast(page).hover();
     await page.getByRole('button', { name: 'Ver todos tus logros' }).first().click();
     await expect(page.locator('.ach-row').first()).toBeVisible();
     await expect(toast(page)).toBeVisible();
