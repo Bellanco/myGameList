@@ -146,6 +146,17 @@ describe('useSocialProfileStatus — pendiente no es lo mismo que apagado', () =
     await waitFor(() => expect(view.result.current).toBe('active'));
   });
 
+  // Sin canal en local se busca en Firestore, y un fallo ahí (sin red, sin cupo, un 403 pasajero) no dice que no haya
+  // canal: contestar `inactive` apagaba lo social y apuntaba el bloqueo del tema a quien sí lo tenía.
+  it('si buscar el canal en Firestore falla, se queda en `pending`, no en `inactive`', async () => {
+    configMocks.getSocialSyncConfig.mockReturnValue(null as unknown as { gistId: string });
+    gatewayMocks.resolveOwnProfile.mockRejectedValueOnce(new Error('unavailable'));
+    const view = estado();
+    await waitFor(() => expect(gatewayMocks.resolveOwnProfile).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(view.result.current).toBe('pending');
+  });
+
   it('con gist y nombre pero sin un solo juego completado, `inactive`', async () => {
     // Es la misma regla que ya gatea el perfil: sin completados la ficha pública no se sostiene.
     const wrapper = ({ children }: { children: ReactNode }) => <MemoryRouter>{children}</MemoryRouter>;

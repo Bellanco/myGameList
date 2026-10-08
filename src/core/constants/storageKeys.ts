@@ -260,3 +260,9 @@ export const PREMIOS_EDITION_COPY_KEY = 'mis-listas-premios-edition-copy';
 export const PREMIOS_BALLOT_COPY_PREFIX = 'mis-listas-premios-ballot-copy-';
 export const premiosBallotCopyKey = (uid: string): string => `${PREMIOS_BALLOT_COPY_PREFIX}${uid}`;
 
+
+/**
+ * Cuándo se pulsó «salir» de la sesión de Google por última vez, en cualquier pestaña. Solo sirve para no registrar
+ * como pérdida de sesión la que se cerró a propósito (ver `trackSessionLoss` en `firebaseAuthRepository`).
+ */
+export const AUTH_SIGNED_OUT_AT_KEY = 'mis-listas-auth-signed-out-at';

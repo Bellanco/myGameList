@@ -2,16 +2,20 @@
 // Extraído de firebaseRepository.ts (M2) sin cambio de comportamiento.
 import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import {
+  authBootHadStoredUser,
   getFirebaseErrorCode,
   getFirebaseWebConfig,
   initializeFirebaseServices,
   type SocialAuthUser,
 } from './firebaseClient';
+import { reportHandledError } from './telemetryRepository';
 // Único punto de enganche de App Check en toda la app (ver `appCheckRepository`: lleva escrito cómo quitarlo).
 // Va aquí y no en `firebaseClient` porque el criterio es "hay sesión", no "hay servicios": el arranque en idle
 // construye servicios para todo el mundo, y ahí NO debe cargarse reCAPTCHA.
 import { ensureAppCheck } from './appCheckRepository';
 import { hasAdminClaim } from '../../core/security/admin';
+// La pasarela ya está cargada cuando lo está esto (es quien carga la fachada): importarla no trae nada.
+import { markSignedOut, signedOutRecently } from './firebaseGateway';
 import { watchReturnToApp } from '../../core/utils/googleSignIn';
 
 function toSocialAuthUser(user: { uid: string; displayName: string | null; email: string | null; photoURL: string | null }): SocialAuthUser {
@@ -101,6 +105,38 @@ export async function readAdminClaim(forceRefresh = false): Promise<boolean> {
 }
 
 /**
+ * LA SESIÓN QUE SE PIERDE SIN QUE NADIE LA CIERRE, registrada.
+ *
+ * Perder la sesión de Google desconecta lo social entero —tema por defecto, «vuelve a entrar», pasarela— y hasta el
+ * 08-10-2026 pasaba sin dejar rastro: solo se sabía porque el usuario lo contaba. Dos casos:
+ *
+ *  - `auth-lost-at-boot`: había sesión guardada al arrancar y el SDK responde «nadie». La ha descartado él al
+ *    restaurarla: cualquier error al comprobar la cuenta que no sea de red (un 5xx, demasiadas peticiones, token
+ *    caducado) borra al usuario, y no hay opción para evitarlo. Con cada recarga tras un despliegue es un arranque
+ *    más expuesto.
+ *  - `auth-lost`: había usuario en esta visita y deja de haberlo sin haber pulsado «salir», ni aquí ni en otra
+ *    pestaña (ver `markSignedOut`).
+ *
+ * El estado es del MÓDULO y no de cada suscriptor: con varios suscritos, el primero que ve el cambio lo apunta y los
+ * demás ya no ven ninguno, así que se registra una vez.
+ */
+let knownUid: string | null = null;
+let firstEmission = true;
+
+function trackSessionLoss(uid: string | null): void {
+  const wasFirst = firstEmission;
+  firstEmission = false;
+  const previous = knownUid;
+  knownUid = uid;
+  if (uid || signedOutRecently()) return;
+  if (previous) {
+    void reportHandledError(new Error('Sesión de Google perdida sin cerrarla'), false, 'auth-lost');
+  } else if (wasFirst && authBootHadStoredUser()) {
+    void reportHandledError(new Error('Sesión de Google descartada al restaurarla'), false, 'auth-lost-at-boot');
+  }
+}
+
+/**
  * Suscribe a los cambios de sesión de Google (incluida la restauración de sesión al arrancar, que es asíncrona).
  * Emite el usuario actual (o null) y devuelve la función para desuscribir. Best-effort: si Firebase no está
  * configurado, emite null una vez y no suscribe.
@@ -120,6 +156,7 @@ export function onSocialAuthChanged(callback: (user: SocialAuthUser | null) => v
       if (user) {
         void ensureAppCheck(services.app);
       }
+      trackSessionLoss(user?.uid ?? null);
       callback(user ? toSocialAuthUser(user) : null);
     });
   });
@@ -189,5 +226,6 @@ export async function signOutSocialUser(): Promise<void> {
     return;
   }
 
+  markSignedOut();
   await signOut(services.auth);
 }

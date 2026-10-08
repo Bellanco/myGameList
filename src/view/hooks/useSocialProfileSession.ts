@@ -72,9 +72,10 @@ export function useSocialProfileStatus(completedGameIds: ReadonlySet<number>): S
         .then((resolved) => {
           if (!cancelled) setGistId(resolved);
         })
-        .catch(() => {
-          if (!cancelled) setGistId('');
-        });
+        // UN FALLO NO ES UN «NO». Sin red, sin cupo o con un 403 pasajero no se sabe si hay canal social, y
+        // contestar `''` apagaba lo social —y apuntaba el bloqueo del tema— a quien sí lo tiene. Se queda en
+        // `pending`, que no toca nada.
+        .catch(() => undefined);
     });
 
     return () => {
