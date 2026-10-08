@@ -142,19 +142,19 @@ const TIPOS_FUERTES = new Set([0, 4, 8, 9, 10, 11]);
 const TIPOS_DEBILES = new Set([2]);
 
 /**
- * AMPLIADOS — DLC (1), bundle (3), mod (5) y pack (13). Fuera salvo que se pida el modo ampliado, y no por
- * capricho: NO dan más carátulas, dan peores. Son cosas que se llaman casi igual que el juego y compiten con él.
- * Con ellos dentro, *Batman: Arkham Knight* emparejaba con «- PlayStation 4 Exclusive Skins Pack» y *Dishonored:
- * Death of the Outsider* con un «Jewel of the South Pack». Es una lente para mirar qué hay, no una mejora.
+ * Lo demás —DLC (1), bundle (3), mod (5), pack (13)— NO entra, y no por capricho: no dan más carátulas, dan
+ * peores. Son cosas que se llaman casi igual que el juego y compiten con él. Con ellos dentro, *Batman: Arkham
+ * Knight* emparejaba con «- PlayStation 4 Exclusive Skins Pack» y *Dishonored: Death of the Outsider* con un
+ * «Jewel of the South Pack». Hubo un modo «ampliado» (`x=1`) que los admitía para la administración, como lente
+ * de diagnóstico; se retiró el 08-10-2026 porque duplicaba consultas a IGDB y escrituras de KV (un espacio de
+ * claves `v2x` aparte) a cambio de esos peores emparejamientos.
  */
-const TIPOS_AMPLIADOS = new Set([1, 3, 5, 13]);
 
 /** ¿Esta ficha entra, y con qué fuerza? `null` = no entra. */
-function gradoDeTipo(tipo: number | undefined, ampliado: boolean): 1 | 0 | null {
+function gradoDeTipo(tipo: number | undefined): 1 | 0 | null {
   if (tipo === undefined) return 1; // ficha sin tipo declarado: se trata como juego, que es lo habitual
   if (TIPOS_FUERTES.has(tipo)) return 1;
   if (TIPOS_DEBILES.has(tipo)) return 0;
-  if (ampliado && TIPOS_AMPLIADOS.has(tipo)) return 0;
   return null;
 }
 
@@ -567,7 +567,6 @@ export async function emparejar(
   env: EntornoIgdb,
   nombre: string,
   plataformas: readonly string[],
-  ampliado = false,
 ): Promise<Emparejamiento> {
   const token = await tokenIgdb(env);
   if (!token) return { coverId: null, indeciso: true };
@@ -590,7 +589,7 @@ export async function emparejar(
       continue;
     }
     for (const ficha of fichas) {
-      const grado = gradoDeTipo(ficha.game_type, ampliado);
+      const grado = gradoDeTipo(ficha.game_type);
       if (grado === null) continue;
       const nota = puntuarContra(objetivo, bigramasObjetivo, ficha, baseObjetivo, buscadoEnOtroAlfabeto);
       if (nota < 0.6) continue;
@@ -620,14 +619,12 @@ export async function emparejar(
 }
 
 /**
- * Clave de caché. Incluye la plataforma porque es parte de la pregunta —el «Hook» de Mega Drive no es el de
- * móvil— y el modo ampliado en un ESPACIO APARTE, que no es un detalle: esta caché la comparten todos los
- * usuarios, así que sin separarlos la lente de diagnóstico del administrador le pondría a los demás la carátula
- * de un pack de skins.
+ * Clave de caché. Incluye la plataforma porque es parte de la pregunta: el «Hook» de Mega Drive no es el de móvil.
+ * (Las claves `igdb:cover:v2x:` que quedan en KV son del modo ampliado retirado: ya no las lee nadie.)
  */
-export function claveCache(nombre: string, plataformas: readonly string[], ampliado = false): string {
+export function claveCache(nombre: string, plataformas: readonly string[]): string {
   const plats = [...plataformasEsperadas(plataformas)].sort().join('+') || '-';
-  return `igdb:cover:${ampliado ? 'v2x' : 'v2'}:${normalizarTitulo(nombre)}|${plats}`;
+  return `igdb:cover:v2:${normalizarTitulo(nombre)}|${plats}`;
 }
 
 /**
@@ -651,9 +648,8 @@ export async function leerCaratulaCacheada(
   env: EntornoIgdb,
   nombre: string,
   plataformas: readonly string[],
-  ampliado = false,
 ): Promise<string | null | undefined> {
-  const cacheado = await env.COVERS?.get(claveCache(nombre, plataformas, ampliado));
+  const cacheado = await env.COVERS?.get(claveCache(nombre, plataformas));
   if (cacheado === null || cacheado === undefined) return undefined;
   return cacheado === '' ? null : cacheado;
 }
@@ -667,9 +663,8 @@ export async function emparejarYGuardar(
   env: EntornoIgdb,
   nombre: string,
   plataformas: readonly string[],
-  ampliado = false,
 ): Promise<string | null | undefined> {
-  const { coverId, indeciso } = await emparejar(env, nombre, plataformas, ampliado);
+  const { coverId, indeciso } = await emparejar(env, nombre, plataformas);
   if (!coverId && indeciso) return undefined; // no se ha podido preguntar: ni se cachea ni se da por definitivo
   /* El emparejamiento se devuelve se haya podido guardar o no: ya está resuelto y la carátula se puede servir.
      El ACIERTO se guarda sin caducidad y el FALLO por una semana: son dos cosas distintas y el porqué está
@@ -677,7 +672,7 @@ export async function emparejarYGuardar(
      buscarla solo, y que uno que ya la tiene no la pague dos veces. */
   await apuntarSiSePuede(
     env.COVERS,
-    claveCache(nombre, plataformas, ampliado),
+    claveCache(nombre, plataformas),
     coverId ?? '',
     coverId ? undefined : MISS_TTL,
   );
@@ -689,11 +684,10 @@ export async function resolverCaratula(
   env: EntornoIgdb,
   nombre: string,
   plataformas: readonly string[],
-  ampliado = false,
 ): Promise<string | null | undefined> {
-  const cacheado = await leerCaratulaCacheada(env, nombre, plataformas, ampliado);
+  const cacheado = await leerCaratulaCacheada(env, nombre, plataformas);
   if (cacheado !== undefined) return cacheado;
-  return emparejarYGuardar(env, nombre, plataformas, ampliado);
+  return emparejarYGuardar(env, nombre, plataformas);
 }
 
 /** Un candidato de la búsqueda del panel de premios, tal y como se enseña para elegir. */
@@ -744,7 +738,7 @@ export async function buscarCandidatos(env: EntornoIgdb, consulta: string): Prom
   const baseObjetivo = baseSinEdicion(consulta);
   const enOtroAlfabeto = OTRO_ALFABETO.test(consulta);
   return [...fichas.values()]
-    .filter((ficha) => esIdDeCaratula(ficha.cover?.image_id ?? '') && gradoDeTipo(ficha.game_type, false) !== null)
+    .filter((ficha) => esIdDeCaratula(ficha.cover?.image_id ?? '') && gradoDeTipo(ficha.game_type) !== null)
     .map((ficha) => ({ ficha, nota: puntuarContra(objetivo, bigramasObjetivo, ficha, baseObjetivo, enOtroAlfabeto) }))
     .sort((a, b) => b.nota - a.nota || (b.ficha.total_rating_count ?? 0) - (a.ficha.total_rating_count ?? 0))
     .slice(0, MAX_CANDIDATOS)

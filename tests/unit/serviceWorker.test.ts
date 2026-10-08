@@ -389,4 +389,20 @@ describe('service worker — carátulas', () => {
 
     expect(sw.cache.delete).not.toHaveBeenCalled();
   });
+
+  /* El modo ampliado (`x=1`) se retiró el 08-10-2026 y nadie volverá a pedir sus copias: al activar se tiran,
+     aunque el cubo esté por debajo del tope, y las normales del mismo juego se quedan. */
+  it('al activar tira las carátulas del modo ampliado retirado', async () => {
+    const sw = loadServiceWorker();
+    const normal = new Request(`${ORIGIN}/cover?n=Celeste&p=Steam&s=medio`);
+    const ampliada = new Request(`${ORIGIN}/cover?n=Celeste&p=Steam&x=1&s=medio`);
+    sw.cache.keys.mockImplementation(async () => [normal, ampliada]);
+
+    let activated: Promise<unknown> = Promise.resolve();
+    sw.handlers.get('activate')?.({ waitUntil: (value: Promise<unknown>) => { activated = value; } });
+    await activated;
+
+    const borradas = sw.cache.delete.mock.calls.map(([clave]) => String((clave as Request)?.url ?? clave));
+    expect(borradas).toEqual([ampliada.url]);
+  });
 });

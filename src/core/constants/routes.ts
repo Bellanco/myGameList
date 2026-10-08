@@ -140,6 +140,14 @@ export function matchSettingsGroup(pathname: string): SettingsGroup | null {
 export const FALLBACK_ROUTE = '/completados';
 
 /**
+ * LA PUERTA DEL `share_target` del manifiesto: Android abre aquí lo que se comparte con la aplicación desde el menú
+ * «Compartir» (`?title=…&text=…&url=…`). No es una pantalla: lee el juego, abre su alta en Próximos y se va a
+ * `/proximos` (ver `ShareTargetEntry`). Por eso no está en `APP_ROUTES`, que son secciones. Como toda dirección de
+ * la app, tiene su línea en `public/_redirects` (lo vigila `redirectsRoutes.test.ts`).
+ */
+export const SHARE_TARGET_ROUTE = '/compartir';
+
+/**
  * ¿El pathname corresponde a una ruta DECLARADA? `matchAppSection` no sirve para preguntarlo: todo lo que no
  * casa cae en `'lists'`. Lo usa el "Volver" con origen ({@link useReturnTo}) para no fiarse de un `state` que
  * viene del historial del navegador.

@@ -1,5 +1,6 @@
-﻿import React from 'react';
+﻿import React, { ViewTransition } from 'react';
 import { Icon } from '../Icon';
+import { nombreDeResena } from './reviewMorph';
 import { ScoreDisplay } from '../ScoreDisplay';
 import { NoScoreMedal } from '../NoScoreMedal';
 import { ReviewParagraphs } from '../ReviewParagraphs';
@@ -138,6 +139,20 @@ function SocialFeedScreenBase({
   // crece y el centinela sigue en pantalla, hace falta una observación nueva para que vuelva a dispararse (el
   // observador no reemite si el elemento ya estaba intersecando).
   const visibleFeedCount = groupedFeedItems.reduce((total, group) => total + group.items.length, 0);
+  /* Los nombres de transición de las reseñas (ver `reviewMorph`), uno por tarjeta y SIN repetir: dos elementos con
+     el mismo abortan la transición entera. La actividad ya se deduplica por juego dentro de cada perfil, pero el
+     feed mezcla todo el directorio; si alguna vez coincidieran dos, solo la primera crece. */
+  const nombresDeResena = new Map<string, string>();
+  const usados = new Set<string>();
+  for (const group of groupedFeedItems) {
+    for (const item of group.items) {
+      if (!('type' in item) || item.type !== 'review' || !('gameId' in item)) continue;
+      const nombre = nombreDeResena(`${item.profileId}-${item.gameId}`);
+      if (usados.has(nombre)) continue;
+      usados.add(nombre);
+      nombresDeResena.set(item.id, nombre);
+    }
+  }
 
   // Scroll infinito: el botón "mostrar más" del final hace de centinela; cuando entra en viewport, amplía el lote
   // automáticamente (y se mantiene clicable como alternativa accesible). Sin más elementos, no se observa nada.
@@ -456,52 +471,61 @@ function SocialFeedScreenBase({
                       : SOCIAL_UI.feed.analyzedRecently;
                     const cardTypeClass = entry.type === 'review' ? 'is-review' : 'is-recommendation';
                     return (
-                      <article
+                      /* La reseña del feed crece hasta su detalle al abrirla (`SocialDetailScreen`, mismo nombre: perfil
+                         y juego). Las recomendaciones no: el mismo juego puede salir dos veces y un nombre repetido
+                         abortaría la transición. */
+                      <ViewTransition
                         key={entry.id}
-                        className={`hub-feed-card hub-feed-activity-item ${cardTypeClass} ${ownershipClass}`}
-                        role="listitem"
-                        tabIndex={0}
-                        aria-label={SOCIAL_UI.feed.openActivityAria(entry.profileDisplayName, entry.gameName)}
-                        onClick={() => openActivityDetail(entry)}
-                        onKeyDown={(event) => handleActivityItemKeyDown(event, entry)}
+                        name={nombresDeResena.get(entry.id)}
+                        share="resena"
+                        default="none"
                       >
-                        <header className="hub-feed-card-head">
-                          <button
-                            className="hub-avatar-link"
-                            type="button"
-                            aria-label={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName)}
-                            title={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName)}
-                            onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
-                          >
-                            <HubAvatar photoURL={entry.photoURL} />
-                          </button>
-                          <div className="hub-feed-card-head-text">
-                            <h3>
-                              <button
-                                className="hub-name-link"
-                                type="button"
-                                onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
-                              >
-                                {entry.profileDisplayName}
-                              </button>
-                            </h3>
-                            {/* `data-text`: el nombre otra vez, para el glitch de «Sin futuro», que enciende una copia en el
-                                compositor en vez de animar `text-shadow` (ver `cyberpunk.scss`). */}
-                            {entry.gameName ? <span className="hub-feed-game-chip" data-text={entry.gameName}>{entry.gameName}</span> : null}
+                        <article
+                          className={`hub-feed-card hub-feed-activity-item ${cardTypeClass} ${ownershipClass}`}
+                          role="listitem"
+                          tabIndex={0}
+                          aria-label={SOCIAL_UI.feed.openActivityAria(entry.profileDisplayName, entry.gameName)}
+                          onClick={() => openActivityDetail(entry)}
+                          onKeyDown={(event) => handleActivityItemKeyDown(event, entry)}
+                        >
+                          <header className="hub-feed-card-head">
+                            <button
+                              className="hub-avatar-link"
+                              type="button"
+                              aria-label={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName)}
+                              title={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName)}
+                              onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
+                            >
+                              <HubAvatar photoURL={entry.photoURL} />
+                            </button>
+                            <div className="hub-feed-card-head-text">
+                              <h3>
+                                <button
+                                  className="hub-name-link"
+                                  type="button"
+                                  onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
+                                >
+                                  {entry.profileDisplayName}
+                                </button>
+                              </h3>
+                              {/* `data-text`: el nombre otra vez, para el glitch de «Sin futuro», que enciende una copia en el
+                                  compositor en vez de animar `text-shadow` (ver `cyberpunk.scss`). */}
+                              {entry.gameName ? <span className="hub-feed-game-chip" data-text={entry.gameName}>{entry.gameName}</span> : null}
+                            </div>
+                          </header>
+                          {/* LA FECHA Y LA NOTA VAN EN EL MISMO RENGLÓN. La nota tenía una fila entera para ella
+                              sola —un aro de 38 px o cinco estrellas flotando en medio de la tarjeta—, que es el
+                              sitio que necesita la reseña. Al extremo del renglón de la fecha se lee igual de
+                              rápido: son los dos datos de cabecera de lo mismo, cuándo y cuánto. */}
+                          <div className="hub-feed-meta">
+                            <p className="hub-feed-date">{analyzedAtLabel}</p>
+                            {resolveGrade({ score: Number(entry.rating || 0), grade: entry.grade ?? null }) > 0
+                              ? <ScoreDisplay game={{ score: Number(entry.rating || 0), grade: entry.grade ?? null }} />
+                              : <NoScoreMedal />}
                           </div>
-                        </header>
-                        {/* LA FECHA Y LA NOTA VAN EN EL MISMO RENGLÓN. La nota tenía una fila entera para ella
-                            sola —un aro de 38 px o cinco estrellas flotando en medio de la tarjeta—, que es el
-                            sitio que necesita la reseña. Al extremo del renglón de la fecha se lee igual de
-                            rápido: son los dos datos de cabecera de lo mismo, cuándo y cuánto. */}
-                        <div className="hub-feed-meta">
-                          <p className="hub-feed-date">{analyzedAtLabel}</p>
-                          {resolveGrade({ score: Number(entry.rating || 0), grade: entry.grade ?? null }) > 0
-                            ? <ScoreDisplay game={{ score: Number(entry.rating || 0), grade: entry.grade ?? null }} />
-                            : <NoScoreMedal />}
-                        </div>
-                        {reviewText ? <p className="hub-feed-review-text" title={reviewText}><ReviewParagraphs text={reviewText} /></p> : null}
-                      </article>
+                          {reviewText ? <p className="hub-feed-review-text" title={reviewText}><ReviewParagraphs text={reviewText} /></p> : null}
+                        </article>
+                      </ViewTransition>
                     );
                   })}
                 </div>

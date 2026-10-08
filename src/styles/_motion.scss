@@ -26,6 +26,56 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* EL CAMBIO DE PANTALLA CON VIEW TRANSITIONS (`<ViewTransition update="pantalla">` alrededor del `<main>` en `App`).
+   La misma entrada de arriba, pero ahora la pantalla que se va también se va: se desvanece deprisa mientras la
+   nueva sube y aparece. El contenedor no se estira entre una altura y otra (`group` sin animación): sería una
+   pantalla deformándose. Donde no hay View Transitions sigue la entrada de arriba (`useScreenTransition`).
+
+   Medido el 08-10-2026 sobre el build, con una biblioteca de 302 juegos y el tema por defecto (Chrome con GPU):
+   INP del cambio de pestaña 32 → 48 ms en escritorio y 48 → 48 ms en móvil (CPU ×4); abrir una reseña, 16 ms
+   en los dos. La captura de la pantalla vieja es el fotograma de más. */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-group(.pantalla) { animation: none; }
+  ::view-transition-old(.pantalla) { animation: vt-salida .12s ease-in both; }
+  ::view-transition-new(.pantalla) { animation: screen-enter .22s ease-out both; }
+  /* ENTRE LISTAS, DESLIZANDO hacia el lado de la pestaña pulsada (`handleTabChange` en `App`). Poco recorrido: es
+     la misma pieza con otro contenido, no un viaje. */
+  ::view-transition-group(.lista-adelante), ::view-transition-group(.lista-atras) { animation: none; }
+  ::view-transition-old(.lista-adelante) { animation: vt-sale-izquierda .16s ease-in both; }
+  ::view-transition-new(.lista-adelante) { animation: vt-entra-derecha .24s cubic-bezier(.2, .8, .2, 1) both; }
+  ::view-transition-old(.lista-atras) { animation: vt-sale-derecha .16s ease-in both; }
+  ::view-transition-new(.lista-atras) { animation: vt-entra-izquierda .24s cubic-bezier(.2, .8, .2, 1) both; }
+  /* LA RESEÑA QUE SE ABRE: la tarjeta de la lista crece hasta ser la del detalle. */
+  ::view-transition-group(.resena) { animation-duration: .28s; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+}
+/* LO FIJO SE QUEDA ENCIMA Y QUIETO. Durante una View Transition, lo que tiene nombre se pinta en una capa por encima
+   de la captura de la página entera, y el `<main>` lo tiene (`pantalla`): como mide toda la lista, su captura tapaba
+   la barra inferior y los botones flotantes, que se veían desaparecer mientras la lista se deslizaba. Con nombre
+   propio suben también —y quedan delante, porque se pintan después que el `<main>`—, y sin animación de grupo no se
+   mueven: solo funden su propio cambio (la pestaña activa de la barra). Cada nombre tiene que ser único en la
+   página o la transición se cancela: estas cinco piezas solo existen una vez. */
+.bottom-nav { view-transition-name: barra-inferior; }
+.floating-controls { view-transition-name: controles-flotantes; }
+.fab { view-transition-name: boton-anadir; }
+.fab-roulette { view-transition-name: boton-ruleta; }
+/* El de subir, solo cuando se ve: oculto (`opacity: 0`) sigue llevando su `backdrop-filter`, y capturado aparte el
+   navegador lo pintaba como un cuadrado borroso fijo sobre la lista que se deslizaba. */
+.scroll-top-btn.is-visible { view-transition-name: boton-subir; }
+::view-transition-group(barra-inferior),
+::view-transition-group(controles-flotantes),
+::view-transition-group(boton-anadir),
+::view-transition-group(boton-ruleta),
+::view-transition-group(boton-subir) { animation: none; }
+
+@keyframes vt-salida { to { opacity: 0; } }
+@keyframes vt-sale-izquierda { to { opacity: 0; transform: translateX(-28px); } }
+@keyframes vt-sale-derecha { to { opacity: 0; transform: translateX(28px); } }
+@keyframes vt-entra-derecha { from { opacity: 0; transform: translateX(28px); } }
+@keyframes vt-entra-izquierda { from { opacity: 0; transform: translateX(-28px); } }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}
+
 /* ══ 2 · ESPERA DE UN CHUNK PEREZOSO ═══════════════════════════════════════════════════════════════════════
    Casi todas las pantallas llegan por `lazy()`, así que entre el clic y el primer píxel hay una descarga. Lo
    que se enseña mientras son dos cosas a la vez: un HILO DE PROGRESO en el borde de arriba (dice "está pasando

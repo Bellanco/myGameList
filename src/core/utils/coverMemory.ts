@@ -57,6 +57,9 @@ export const MINIMO_TRAS_EDICION = 24 * 60 * 60 * 1000;
 /** URL de la carátula → cuándo se supo que no la tenía. */
 let memoria: Map<string, number> | null = null;
 
+/** Las URL del modo ampliado (`x=1`), retirado el 08-10-2026: ya no las pide nadie y al cargar se dejan fuera. */
+const DEL_MODO_AMPLIADO = /[?&]x=1(?:&|$)/;
+
 function cargar(): Map<string, number> {
   if (memoria) return memoria;
   memoria = new Map();
@@ -69,10 +72,10 @@ function cargar(): Map<string, number> {
          actualizar saliera preguntando por todos los juegos sin carátula a la vez. Con la fecha de hoy, esa
          revisión llega escalonada dentro de tres meses y sin que nadie la note. */
       const ahora = Date.now();
-      for (const url of datos) if (typeof url === 'string') memoria.set(url, ahora);
+      for (const url of datos) if (typeof url === 'string' && !DEL_MODO_AMPLIADO.test(url)) memoria.set(url, ahora);
     } else if (datos && typeof datos === 'object') {
       for (const [url, cuando] of Object.entries(datos as Record<string, unknown>)) {
-        if (typeof cuando === 'number') memoria.set(url, cuando);
+        if (typeof cuando === 'number' && !DEL_MODO_AMPLIADO.test(url)) memoria.set(url, cuando);
       }
     }
   } catch {

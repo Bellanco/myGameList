@@ -103,6 +103,15 @@
 /* A la luz los dos colores son tinta honda sobre pergamino y un trazo al mismo peso pesaba más que en oscuro. */
 :root[data-palette="tierramedia"][data-theme="light"] body::before { opacity: .38; }
 
+/* EL CAMBIO DE CLARO A OSCURO, EN SECO. El fundido común (`.theme-anim`, `_base.scss`) solo funde colores
+   planos, y aquí el salto es el mayor de los ocho temas —de bosque casi negro a pergamino—: durante sus 350 ms
+   el mapa, la franja de abajo y los degradados de los botones ya habían cambiado mientras el resto seguía a
+   medias, y el fundido iba a tirones (~25 fps: recalcula los estilos de unas 1.200 transiciones por
+   fotograma). Se veía roto. Sin él, el primer fotograma ya es el modo nuevo entero (medido el 08-10-2026:
+   30 ms frente a 83). Los demás temas conservan su fundido. */
+:root[data-palette="tierramedia"].theme-anim,
+:root[data-palette="tierramedia"].theme-anim * { transition: none !important; }
+
 /* ── §N · LA CAJA SIN CARÁTULA ────────────────────────────────────────────────────────────
    El tema de casa no se disfraza de nada, así que su pieza es la más sobria de las ocho: el canto muy
    rebajado que ya tiene (`--radius-lg`) y una luz de atardecer entrando por el filo de abajo, que toma el

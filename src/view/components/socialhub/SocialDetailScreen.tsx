@@ -3,6 +3,7 @@ import type { GameItem } from '../../../model/types/game';
 import type { SocialActivityFeedItem } from '../../../viewmodel/useSocialViewModel';
 import { ShareReviewButton } from '../stats/ShareReviewButton';
 import { ReviewScreen } from './ReviewScreen';
+import { nombreDeResena } from './reviewMorph';
 import type { CoverAccess } from './useReviewCover';
 
 /**
@@ -116,6 +117,7 @@ export function SocialDetailScreen({
         : SOCIAL_UI.feed.analyzedRecently}
       onBack={onBack}
       backLabel={backLabel || SOCIAL_UI.feed.backToFeed}
+      morphName={activeDetailEvent ? nombreDeResena(`${activeDetailEvent.profileId}-${activeDetailEvent.gameId}`) : undefined}
       status={status}
       statusKind={statusKind}
       actions={shareable && gameItem && reviewText

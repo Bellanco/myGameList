@@ -22,7 +22,7 @@ const PAUSA_MS = 160;
  * resolución por título, que es lo que cuesta de verdad y no depende de cuántos voten.
  *
  * Con `m=1`, el modo «solo resolver»: deja el emparejamiento en el servidor y no descarga la imagen. Y sin
- * plataformas ni modo ampliado, que es exactamente como la piden los votantes: otra clave sería resolver un
+ * plataformas, que es exactamente como la piden los votantes: otra clave sería resolver un
  * emparejamiento que nadie va a leer.
  *
  * NUNCA LANZA. Lo llama quien acaba de abrir la edición o guardar una categoría, y eso ya está hecho: un fallo

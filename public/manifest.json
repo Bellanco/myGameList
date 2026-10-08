@@ -53,6 +53,15 @@
       "label": "El listado de juegos en una pantalla ancha"
     }
   ],
+  "share_target": {
+    "action": "/compartir",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
   "shortcuts": [
     {
       "name": "En curso",

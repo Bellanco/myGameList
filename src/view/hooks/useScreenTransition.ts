@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 
 /** Clase que dispara la entrada (`_motion.scss`). Se pone y se quita; nunca se queda puesta. */
 const ENTER_CLASS = 'screen-enter';
@@ -28,12 +28,23 @@ const ENTER_CLASS = 'screen-enter';
  * `@media (prefers-reduced-motion: no-preference)`, así que con menos movimiento la clase no hace nada y el
  * `animationend` no llega (de ahí el `setTimeout` de seguridad, que es quien la retira en ese caso).
  */
+/**
+ * ¿ANIMA REACT EL CAMBIO DE PANTALLA EN ESTE NAVEGADOR? No basta con que exista `startViewTransition`: React la llama
+ * con un objeto (`{ update, types }`) y, si el navegador solo acepta la forma antigua con una función, la llamada
+ * lanza y React aplica el cambio sin animar. Es lo que pasa en Firefox 144–146 y en Safari anterior al 18.2, que
+ * tienen la API pero no los tipos. Sin esta pregunta, ahí no había ni la entrada de antes ni la nueva.
+ */
+function animaReact(): boolean {
+  return typeof ViewTransition !== 'undefined' && 'types' in ViewTransition.prototype;
+}
+
 export function useScreenTransition<T extends HTMLElement>(key: string): RefObject<T | null> {
   const ref = useRef<T | null>(null);
 
   useLayoutEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    // Donde las View Transitions de React funcionan, la entrada la hace `<ViewTransition>` en `App`.
+    if (!el || animaReact()) return;
 
     el.classList.remove(ENTER_CLASS);
     void el.offsetWidth;
@@ -52,4 +63,30 @@ export function useScreenTransition<T extends HTMLElement>(key: string): RefObje
   }, [key]);
 
   return ref;
+}
+
+/**
+ * ¿YA SE PUEDE ANIMAR EL CAMBIO DE PANTALLA? Solo después de que la persona toque algo.
+ *
+ * `<ViewTransition>` (en `App`) anima toda actualización que llegue en una transición, y las navegaciones del
+ * router lo son —también las que no pide nadie—: la redirección de `/` a `/completados` y la de una dirección
+ * vieja a la nueva, al arrancar. Eso fundía la primera pantalla nada más abrir la app. Las navegaciones que se
+ * quieren animar las provoca siempre un gesto (clic, tecla, atrás), así que el primero las enciende.
+ */
+export function useScreenTransitionsReady(): boolean {
+  const [lista, setLista] = useState(false);
+  useEffect(() => {
+    if (lista) return undefined;
+    const encender = (): void => setLista(true);
+    const opciones = { capture: true, once: true, passive: true } as const;
+    window.addEventListener('pointerdown', encender, opciones);
+    window.addEventListener('keydown', encender, opciones);
+    window.addEventListener('popstate', encender, opciones);
+    return () => {
+      window.removeEventListener('pointerdown', encender, opciones);
+      window.removeEventListener('keydown', encender, opciones);
+      window.removeEventListener('popstate', encender, opciones);
+    };
+  }, [lista]);
+  return lista;
 }

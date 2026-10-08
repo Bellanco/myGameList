@@ -169,10 +169,10 @@ describe('la carátula de fondo de una reseña', () => {
       localStorage.setItem('mis-listas-covers', 'on');
       const titulo = selector === '.hub-related-entry' ? RELACIONADA.gameName : RESENA.gameName;
       const hechos = leerHechos();
-      hechos.add(claveDeJuego(titulo, ['Steam'], false));
+      hechos.add(claveDeJuego(titulo, ['Steam']));
       guardarHechos(hechos);
       const { container } = render(pinta('solo-cache'));
-      expect(urlDeLaFranja(container, selector)).toBe(coverUrl(titulo, ['Steam'], false, 'ancho'));
+      expect(urlDeLaFranja(container, selector)).toBe(coverUrl(titulo, ['Steam'], 'ancho'));
     });
   }
 
@@ -182,16 +182,16 @@ describe('la carátula de fondo de una reseña', () => {
     it('las relacionadas reaprovechan la URL con la que tu biblioteca ya resolvió el título', () => {
       localStorage.setItem('mis-listas-covers', 'on');
       const hechos = leerHechos();
-      hechos.add(claveDeJuego(RELACIONADA.gameName, ['Steam'], false));
+      hechos.add(claveDeJuego(RELACIONADA.gameName, ['Steam']));
       guardarHechos(hechos);
       const { container } = render(PIEZAS[2].pinta(true));
-      expect(urlDeLaFranja(container, PIEZAS[2].selector)).toBe(coverUrl(RELACIONADA.gameName, ['Steam'], false, 'ancho'));
+      expect(urlDeLaFranja(container, PIEZAS[2].selector)).toBe(coverUrl(RELACIONADA.gameName, ['Steam'], 'ancho'));
     });
 
     it('y reconocen el «no tiene» que se apuntó con esas plataformas', () => {
       localStorage.setItem('mis-listas-covers', 'on');
       const hechos = leerHechos();
-      hechos.add(claveDeJuego(RELACIONADA.gameName, ['Steam'], false));
+      hechos.add(claveDeJuego(RELACIONADA.gameName, ['Steam']));
       guardarHechos(hechos);
       localStorage.setItem('mis-listas-covers-none', JSON.stringify({ [coverUrl(RELACIONADA.gameName, ['Steam'])]: Date.now() }));
       const { container } = render(PIEZAS[2].pinta(true));
@@ -201,10 +201,10 @@ describe('la carátula de fondo de una reseña', () => {
     it('con plataformas propias no se toca: ya son las del listado', () => {
       localStorage.setItem('mis-listas-covers', 'on');
       const hechos = leerHechos();
-      hechos.add(claveDeJuego(RESENA.gameName, ['Switch'], false));
+      hechos.add(claveDeJuego(RESENA.gameName, ['Switch']));
       guardarHechos(hechos);
       const { container } = render(PIEZAS[0].pinta(true));
-      expect(urlDeLaFranja(container, PIEZAS[0].selector)).toBe(coverUrl(RESENA.gameName, ['PC'], false, 'ancho'));
+      expect(urlDeLaFranja(container, PIEZAS[0].selector)).toBe(coverUrl(RESENA.gameName, ['PC'], 'ancho'));
     });
   });
 });

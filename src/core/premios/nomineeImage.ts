@@ -71,8 +71,8 @@ export function nomineeImageUrls(
     if (elegida) return { src: coverUrlPorId(elegida.imageId), src2x: coverUrlPorId(elegida.imageId, 'medio') };
     // SIN PLATAFORMAS: aquí no hay más dato que el nombre, que es con lo que lo resolvió el panel.
     return {
-      src: coverUrl(name, [], false, 'normal', 'solo-cache'),
-      src2x: coverUrl(name, [], false, 'medio', 'solo-cache'),
+      src: coverUrl(name, [], 'normal', 'solo-cache'),
+      src2x: coverUrl(name, [], 'medio', 'solo-cache'),
     };
   }
   const image = nomineeImageOf(option);

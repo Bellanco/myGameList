@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { Suspense, ViewTransition, addTransitionType, lazy, startTransition, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_MESSAGES, TAB_ORDER, TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from './core/constants/labels';
 import { LEGAL_ROUTES, type LegalDocId } from './core/constants/legal';
@@ -21,11 +21,12 @@ import { useAnnouncement } from './view/hooks/useAnnouncement';
 import { useYearSummaryNotice } from './view/hooks/useYearSummaryNotice';
 import { UpdateNotice } from './view/components/UpdateNotice';
 import { BottomNavigation } from './view/components/BottomNavigation';
-import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, SETTINGS_ROUTES, isKnownRoute, matchAppSection, matchSettingsGroup, type AppSection, type SettingsGroup } from './core/constants/routes';
+import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, SETTINGS_ROUTES, SHARE_TARGET_ROUTE, isKnownRoute, matchAppSection, matchSettingsGroup, type AppSection, type SettingsGroup } from './core/constants/routes';
 import { LegacyTailRedirect } from './view/components/LegacyTailRedirect';
 import { SettingsMenu } from './view/components/SettingsMenu';
 import { ScrollToTop } from './view/components/ScrollToTop';
 import { useScrollOnNavigate } from './view/hooks/useScrollOnNavigate';
+import { ShareTargetEntry } from './view/components/ShareTargetEntry';
 import { LaneBanners } from './view/components/LaneBanners';
 import { SocialHubSkeleton } from './view/components/SocialHubSkeleton';
 import { ScreenSkeleton } from './view/components/ScreenSkeleton';
@@ -44,7 +45,9 @@ import { useShowSteamButton } from './view/hooks/useShowSteamButton';
 import { useShowWishlist } from './view/hooks/useShowWishlist';
 import { useReturnTo } from './view/hooks/useReturnTo';
 import { useLegacyProfileHeal } from './view/hooks/useLegacyProfileHeal';
-import { useScreenTransition } from './view/hooks/useScreenTransition';
+import { useScreenTransition, useScreenTransitionsReady } from './view/hooks/useScreenTransition';
+import { coversPreference, listShapePreference } from './view/hooks/preferences';
+import { caratulasDeArriba, precargarCaratulas } from './core/utils/precargaDeCaratulas';
 import { useAppliedPalette } from './view/hooks/usePalette';
 import { hasGithubOAuthRedirect, takeGithubOAuthOrigin } from './model/repository/githubOAuthChecks';
 import { type RouletteCandidate } from './core/roulette/roulette';
@@ -153,6 +156,12 @@ const TOUR_SECTIONS: ReadonlySet<AppSection> = new Set<AppSection>(['lists', 'so
 const DevAnnouncement = import.meta.env.DEV
   ? lazy(() => import('./dev/DevAnnouncementScreen').then((module) => ({ default: module.DevAnnouncementScreen })))
   : null;
+
+/** Lo más que se espera a las carátulas de la lista nueva antes de cambiar de lista (ver `handleTabChange`). */
+const PLAZO_PRECARGA_MS = 160;
+
+/** Cómo se anima el `<main>` al cambiar de pantalla: por defecto el fundido; entre listas, deslizando. */
+const ANIMACION_DE_PANTALLA = { 'lista-adelante': 'lista-adelante', 'lista-atras': 'lista-atras', default: 'pantalla' };
 
 function getCurrentTab(pathname: string): TabId {
   return ROUTE_TAB[pathname] || 'c';
@@ -404,6 +413,11 @@ export default function App() {
     [importGames, notify],
   );
 
+  // Lo compartido desde el menú «Compartir» de Android: su alta en Próximos, con el nombre puesto (ver
+  // `ShareTargetEntry`).
+  const { openImportedDraft } = vm;
+  const handleSharedGame = useCallback((name: string) => openImportedDraft('p', { name }), [openImportedDraft]);
+
   const handleClassifyImport = useCallback(
     (item: ImportedGame, tab: TabId) => {
       graduatingIdRef.current = item.id;
@@ -633,10 +647,35 @@ export default function App() {
     clearAllFilters();
   }, [clearAllFilters]);
 
+  /* CAMBIAR DE LISTA DESLIZA HACIA EL LADO DE LA PESTAÑA: la lista que se va sale hacia un lado y la nueva entra
+     por el otro, según dónde esté la pestaña pulsada (`lista-adelante` / `lista-atras`, ver `_motion.scss`). Entre
+     dos listas el contenido se parece tanto que el fundido de pantalla no se notaba. La marca va en la misma
+     transición que la navegación (el router ya mete las suyas en `startTransition`). */
+  /* Y CON CARÁTULAS, LA LISTA NUEVA LLEGA CON ELLAS: antes de navegar se descodifican las de las primeras filas
+     (`precargaDeCaratulas`), porque la transición captura la lista en cuanto se pinta y sin esto entraba pelada y
+     las imágenes saltaban al terminar. Con un plazo corto, y solo cuenta el último clic: dos pestañas pulsadas
+     seguidas no pueden acabar en la primera porque su precarga terminó después. */
+  const ultimoCambioDeLista = useRef(0);
   const handleTabChange = useCallback((tab: TabId) => {
-    navigate(TAB_ROUTE[tab]);
+    const desde = TAB_ORDER.indexOf(currentTab);
+    const hasta = TAB_ORDER.indexOf(tab);
+    const turno = ++ultimoCambioDeLista.current;
+    const navegar = () => {
+      if (turno !== ultimoCambioDeLista.current) return;
+      startTransition(() => {
+        if (desde !== hasta) addTransitionType(hasta > desde ? 'lista-adelante' : 'lista-atras');
+        navigate(TAB_ROUTE[tab]);
+      });
+    };
     setExpandedId(null);
-  }, [navigate, setExpandedId]);
+    if (desde === hasta || !coversPreference.get()) {
+      navegar();
+      return;
+    }
+    const forma = listShapePreference.get();
+    const urls = caratulasDeArriba(vm.getFilteredList(tab, filters), forma, forma === 'grid' ? 12 : 6, window.devicePixelRatio || 1);
+    void precargarCaratulas(urls, PLAZO_PRECARGA_MS).then(navegar);
+  }, [currentTab, navigate, setExpandedId, vm.getFilteredList, filters]);
 
   // Ruleta de listados: el juego elegido pasa a "En curso" y la ruleta deja paso a esa lista, que es donde el
   // usuario quiere acabar. El aviso del propio movimiento lo da el viewmodel.
@@ -708,7 +747,11 @@ export default function App() {
   // ENTRADA DE PANTALLA: el `<main>` funde su contenido nuevo en cada cambio de camino en vez de sustituirlo en
   // seco. La clave es el `pathname` y no la sección, para que también se note al moverse DENTRO del hub social
   // (feed → perfil → detalle de una reseña), que son pantallas distintas aunque la sección sea la misma.
+  // Donde hay View Transitions, lo hace `<ViewTransition update="pantalla">` alrededor del `<main>` (la vieja se va
+  // mientras entra la nueva, ver `_motion.scss`), y solo desde el primer gesto: las redirecciones del arranque
+  // también son transiciones y fundían la primera pantalla (ver `useScreenTransitionsReady`).
   const mainRef = useScreenTransition<HTMLElement>(location.pathname);
+  const transicionesDePantalla = useScreenTransitionsReady();
 
   // Destello de fila: id del juego recién guardado; se limpia tras la animación.
   const [recentlyChangedId, setRecentlyChangedId] = useState<number | null>(null);
@@ -1180,47 +1223,50 @@ export default function App() {
         <UpdateNotice />
         <StatusBanner notice={vm.notice} remoteChangesApplied={syncVm.lastRemoteChangesApplied} />
       </div>
-      <main
-        id="contenido"
-        ref={mainRef}
-        className={`main ${
-          activeSection === 'lists'
-            ? 'main-lists'
-            : activeSection === 'social'
-              ? 'main-social'
-              : activeSection === 'admin'
-                ? 'main-settings main-admin'
-                : 'main-settings'
-        }`.trim()}
-      >
-        <h1 className="sr-only">{getPageHeading(activeSection, currentTab, settingsGroup)}</h1>
-        {activeSection === 'settings' && settingsGroup ? (
-          <ScreenHeader kicker={UI_MESSAGES.screenHeader.settings} title={UI_MESSAGES.settingsMenu[settingsGroup]} />
-        ) : null}
-        <Routes>
-          {APP_ROUTES.map(({ path, section }) => (
-            <Route key={path} path={path} element={sectionScreens[section]} />
-          ))}
-          {/* Solo en desarrollo, y fuera de `APP_ROUTES` a propósito: esa lista la recorren la navegación y los
-              tests de rutas, y una entrada que no existe en producción no pinta nada ahí. */}
-          {DevAnnouncement ? (
-            <Route
-              path="/dev/aviso"
-              element={<Suspense fallback={null}><DevAnnouncement /></Suspense>}
-            />
+      <ViewTransition default="none" update={transicionesDePantalla ? ANIMACION_DE_PANTALLA : 'none'}>
+        <main
+          id="contenido"
+          ref={mainRef}
+          className={`main ${
+            activeSection === 'lists'
+              ? 'main-lists'
+              : activeSection === 'social'
+                ? 'main-social'
+                : activeSection === 'admin'
+                  ? 'main-settings main-admin'
+                  : 'main-settings'
+          }`.trim()}
+        >
+          <h1 className="sr-only">{getPageHeading(activeSection, currentTab, settingsGroup)}</h1>
+          {activeSection === 'settings' && settingsGroup ? (
+            <ScreenHeader kicker={UI_MESSAGES.screenHeader.settings} title={UI_MESSAGES.settingsMenu[settingsGroup]} />
           ) : null}
-          {/* Nombres retirados: redirigen al actual en vez de caer en el catch-all. Van DESPUÉS de la tabla
-              (no hay solape, pero el orden deja claro cuál manda) y ANTES del rebote a `FALLBACK_ROUTE`. */}
-          {LEGACY_ROUTE_REDIRECTS.map(({ from, to }) => (
-            <Route
-              key={from}
-              path={from}
-              element={from.endsWith('/*') ? <LegacyTailRedirect to={to} /> : <Navigate to={to} replace />}
-            />
-          ))}
-          <Route path="*" element={<Navigate to={FALLBACK_ROUTE} replace />} />
-        </Routes>
-      </main>
+          <Routes>
+            {APP_ROUTES.map(({ path, section }) => (
+              <Route key={path} path={path} element={sectionScreens[section]} />
+            ))}
+            {/* Solo en desarrollo, y fuera de `APP_ROUTES` a propósito: esa lista la recorren la navegación y los
+                tests de rutas, y una entrada que no existe en producción no pinta nada ahí. */}
+            {DevAnnouncement ? (
+              <Route
+                path="/dev/aviso"
+                element={<Suspense fallback={null}><DevAnnouncement /></Suspense>}
+              />
+            ) : null}
+            <Route path={SHARE_TARGET_ROUTE} element={<ShareTargetEntry onGame={handleSharedGame} />} />
+            {/* Nombres retirados: redirigen al actual en vez de caer en el catch-all. Van DESPUÉS de la tabla
+                (no hay solape, pero el orden deja claro cuál manda) y ANTES del rebote a `FALLBACK_ROUTE`. */}
+            {LEGACY_ROUTE_REDIRECTS.map(({ from, to }) => (
+              <Route
+                key={from}
+                path={from}
+                element={from.endsWith('/*') ? <LegacyTailRedirect to={to} /> : <Navigate to={to} replace />}
+              />
+            ))}
+            <Route path="*" element={<Navigate to={FALLBACK_ROUTE} replace />} />
+          </Routes>
+        </main>
+      </ViewTransition>
 
       {activeSection === 'lists' ? (
         <>

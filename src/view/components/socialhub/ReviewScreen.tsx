@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { ViewTransition, type CSSProperties, type ReactNode } from 'react';
 import { ReviewDetailBody } from '../ReviewDetailBody';
 import { ReviewDetailHead, type ReviewAuthor } from '../ReviewDetailHead';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
@@ -66,6 +66,7 @@ export function ReviewScreen({
   bodyLoading = false,
   previewOnly = false,
   missingLabel,
+  morphName,
 }: {
   SOCIAL_UI: SocialUiLabels;
   /** Encabezado de la cáscara: cada camino nombra la pantalla a su manera. */
@@ -93,6 +94,11 @@ export function ReviewScreen({
   previewOnly?: boolean;
   /** Qué decir cuando no hay reseña y ya no va a llegar. */
   missingLabel: string;
+  /**
+   * El nombre de la tarjeta de la lista de la que se viene (`nombreDeResena`): con él, la del detalle crece desde
+   * ella al abrirse y vuelve a ella al cerrarse. Sin él, el detalle entra con el cambio de pantalla normal.
+   */
+  morphName?: string;
 }) {
   const coverOf = useReviewCover(coversAllowed);
   const cover = content ? coverOf(content.gameName, content.platforms) : null;
@@ -138,32 +144,34 @@ export function ReviewScreen({
   return (
     <HubScreen {...shell}>
       {actionsRow}
-      <article
-        className={`hub-feed-card hub-feed-card-detail${cover ? ' has-cover' : ''}`}
-        style={cover ? ({ '--row-cover': `url("${cover}")` } as CSSProperties) : undefined}
-      >
-        <ReviewDetailHead
-          gameName={content.gameName}
-          author={author}
-          dateLabel={dateLabel}
-          score={{ score: content.score, grade: content.grade }}
-        />
-        {bodyLoading ? (
-          <DetailBodySkeleton />
-        ) : (
-          <ReviewDetailBody
-            review={content.reviewText}
-            platforms={content.platforms}
-            genres={content.genres}
-            strengths={content.strengths}
-            weaknesses={content.weaknesses}
+      <ViewTransition name={morphName} share="resena" default="none">
+        <article
+          className={`hub-feed-card hub-feed-card-detail${cover ? ' has-cover' : ''}`}
+          style={cover ? ({ '--row-cover': `url("${cover}")` } as CSSProperties) : undefined}
+        >
+          <ReviewDetailHead
+            gameName={content.gameName}
+            author={author}
+            dateLabel={dateLabel}
             score={{ score: content.score, grade: content.grade }}
           />
-        )}
-        {/* Lo que está pasando, para quien no ve el esqueleto. */}
-        {bodyLoading ? <p className="sr-only" role="status">{SOCIAL_UI.feed.detailLoadingReview}</p> : null}
-        {previewOnly ? <p className="hub-detail-preview-note">{SOCIAL_UI.feed.detailPreviewOnly}</p> : null}
-      </article>
+          {bodyLoading ? (
+            <DetailBodySkeleton />
+          ) : (
+            <ReviewDetailBody
+              review={content.reviewText}
+              platforms={content.platforms}
+              genres={content.genres}
+              strengths={content.strengths}
+              weaknesses={content.weaknesses}
+              score={{ score: content.score, grade: content.grade }}
+            />
+          )}
+          {/* Lo que está pasando, para quien no ve el esqueleto. */}
+          {bodyLoading ? <p className="sr-only" role="status">{SOCIAL_UI.feed.detailLoadingReview}</p> : null}
+          {previewOnly ? <p className="hub-detail-preview-note">{SOCIAL_UI.feed.detailPreviewOnly}</p> : null}
+        </article>
+      </ViewTransition>
       {related}
       <HubStatus status={status} statusKind={statusKind} />
     </HubScreen>

@@ -50,11 +50,19 @@ const MAX_HECHOS = 3000;
 const SEP = '';
 
 /**
- * Lo que identifica a un juego para este recorrido: su nombre, sus plataformas y si se pidió en modo ampliado
- * —lo mismo que distingue una URL de otra, pero sin el envoltorio que no aporta nada aquí—.
+ * Lo que identifica a un juego para este recorrido: su nombre y sus plataformas —lo mismo que distingue una URL de
+ * otra, pero sin el envoltorio que no aporta nada aquí—.
  */
-export function claveDeJuego(nombre: string, plataformas: readonly string[], ampliado: boolean): string {
-  return `${nombre}${SEP}${plataformas.join(',')}${ampliado ? `${SEP}x` : ''}`;
+export function claveDeJuego(nombre: string, plataformas: readonly string[]): string {
+  return `${nombre}${SEP}${plataformas.join(',')}`;
+}
+
+/**
+ * ¿Es un apunte del modo ampliado? Llevaban una tercera parte (`SEP + 'x'`), y ese modo se retiró el 08-10-2026:
+ * ya no los pide nadie, así que al leer la lista se tiran y la siguiente escritura la deja sin ellos.
+ */
+function esDelModoAmpliado(apunte: string): boolean {
+  return apunte.split(SEP).length > 2;
 }
 
 /** La misma clave, a partir de una URL de `/cover`: es como se traduce lo apuntado con el formato anterior. */
@@ -63,14 +71,15 @@ function claveDesdeUrl(url: string): string | null {
   if (!consulta) return null;
   const parametros = new URLSearchParams(consulta);
   const nombre = parametros.get('n');
-  if (!nombre) return null;
-  return claveDeJuego(nombre, parametros.get('p')?.split(',').filter(Boolean) ?? [], parametros.get('x') === '1');
+  // Las del modo ampliado retirado (`x=1`) no se traducen: ya no las pide nadie.
+  if (!nombre || parametros.get('x') === '1') return null;
+  return claveDeJuego(nombre, parametros.get('p')?.split(',').filter(Boolean) ?? []);
 }
 
 export function leerHechos(): Set<string> {
   try {
     const crudo = localStorage.getItem(HECHOS_KEY);
-    if (crudo !== null) return new Set(crudo.split('\n').filter(Boolean));
+    if (crudo !== null) return new Set(crudo.split('\n').filter((apunte) => apunte && !esDelModoAmpliado(apunte)));
 
     // Sin lista nueva: se traduce la vieja, si la hay. Recorrer trescientos juegos otra vez son cinco minutos
     // de peticiones en segundo plano que no hacen falta solo porque haya cambiado cómo se apuntan.
@@ -122,9 +131,8 @@ export interface PortadaPedida {
 function construirIndice(): Map<string, PortadaPedida> {
   const mapa = new Map<string, PortadaPedida>();
   for (const apunte of leerHechos()) {
-    const [nombre, plataformas, ampliado] = apunte.split(SEP);
-    // El modo ampliado vive en otro espacio de claves y da PEORES emparejamientos: no sirve de alias para nadie.
-    if (ampliado || !nombre) continue;
+    const [nombre, plataformas] = apunte.split(SEP);
+    if (!nombre) continue;
     const clave = gameTitleKey(nombre);
     // Se queda la PRIMERA combinación vista de cada título. Cuál gana da igual mientras sea estable: lo que
     // importa es que todas las listas pidan la misma URL, no cuál de ellas.
@@ -166,8 +174,7 @@ export interface PeticionDeCaratula {
  * sus plataformas—, que es la URL que el navegador tiene guardada.
  *
  * Y entonces se pide sin la marca aunque la lista la pida: esa URL la resolvió el recorrido de tu propia biblioteca,
- * así que el servidor la tiene y no hay nada que gastar. Salvo en modo ampliado, que vive en otro espacio de
- * claves y del que este índice no dice nada.
+ * así que el servidor la tiene y no hay nada que gastar.
  *
  * EL NOMBRE TAMBIÉN SE CAMBIA, no solo las plataformas, y es lo que hace segura la regla anterior. El índice
  * agrupa con `gameTitleKey`, que borra el apóstrofe y quita el «The» inicial; la clave del servidor sale de
@@ -178,12 +185,11 @@ export interface PeticionDeCaratula {
 export function peticionDeCaratula(
   nombre: string,
   plataformas: readonly string[],
-  ampliado: boolean,
   { preferirConocidas, soloCache }: { preferirConocidas: boolean; soloCache: boolean },
 ): PeticionDeCaratula {
   const conocida = preferirConocidas ? portadaYaPedida(nombre) : null;
   if (!conocida) return { nombre, plataformas, soloCache };
-  return { nombre: conocida.nombre, plataformas: conocida.plataformas, soloCache: soloCache && ampliado };
+  return { nombre: conocida.nombre, plataformas: conocida.plataformas, soloCache: false };
 }
 
 /** Solo para las pruebas: olvida el índice derivado para que el siguiente acceso relea el almacenamiento. */
@@ -204,25 +210,15 @@ export function reiniciarIndiceDeCaratulas(): void {
  *
  * Borra las DOS memorias —la del «no tiene» y la de lo ya recorrido— porque hacen falta las dos: sin la primera
  * el listado no vuelve a pedir la imagen, y sin la segunda el recorrido de fondo no vuelve a preguntar por ella,
- * que es el único que aprende de la respuesta. Y lo hace en los dos modos, normal y ampliado, porque cada uno
- * tiene su propio espacio de claves y quien edita no tiene por qué saber en cuál está mirando.
+ * que es el único que aprende de la respuesta.
  */
 export function reabrirLaPregunta(nombre: string, plataformas: readonly string[]): boolean {
   if (!nombre) return false;
-  let reabierto = false;
-  for (const ampliado of [false, true]) {
-    const url = coverUrl(nombre, plataformas, ampliado);
-    if (!tocaReintentar(url, MINIMO_TRAS_EDICION)) continue;
-    olvidarQueNoTiene(url);
-    reabierto = true;
-  }
-  if (!reabierto) return false;
+  const url = coverUrl(nombre, plataformas);
+  if (!tocaReintentar(url, MINIMO_TRAS_EDICION)) return false;
+  olvidarQueNoTiene(url);
 
   const hechos = leerHechos();
-  let cambiado = false;
-  for (const ampliado of [false, true]) {
-    if (hechos.delete(claveDeJuego(nombre, plataformas, ampliado))) cambiado = true;
-  }
-  if (cambiado) guardarHechos(hechos);
+  if (hechos.delete(claveDeJuego(nombre, plataformas))) guardarHechos(hechos);
   return true;
 }

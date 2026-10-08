@@ -371,24 +371,19 @@ describe('/cover — lo que cuesta', () => {
     expect(respuesta.status).toBe(200);
   });
 
-  /* EL MODO AMPLIADO NO ES GRATIS: es un segundo juego de emparejamientos por los mismos juegos, con sus
-     consultas a IGDB y sus escrituras de KV. Mientras dependió solo del parámetro de la URL, cualquiera que
-     leyera el código —que es público— podía duplicar el gasto del servicio escribiendo cinco caracteres. */
-  it('sin el sello del rango, `x=1` se atiende como una petición normal', async () => {
-    const kv = kvFalso();
-    const respuesta = await onRequestGet({ request: peticion('n=Celeste&x=1'), env: entorno(kv) });
+  /* EL MODO AMPLIADO SE RETIRÓ (08-10-2026): era un segundo juego de emparejamientos por los mismos juegos, con
+     sus consultas a IGDB y sus escrituras de KV. `x=1` ya no significa nada, ni siquiera con el sello del rango,
+     que solo levanta el cupo. */
+  it('`x=1` se atiende como una petición normal, con sello o sin él', async () => {
+    for (const sello of [false, true]) {
+      const kv = kvFalso(sello ? { [coverExemptionKey('203.0.113.7')]: '1' } : {});
+      const respuesta = await onRequestGet({ request: peticion('n=Celeste&x=1'), env: entorno(kv) });
 
-    expect(respuesta.status).toBe(200);
-    // Lo apuntado va al espacio de siempre, no al del modo ampliado: no se ha abierto un segundo juego de claves.
-    expect(kv.datos.has(claveCache('Celeste', [], false))).toBe(true);
-    expect(kv.datos.has(claveCache('Celeste', [], true))).toBe(false);
-  });
-
-  it('con el sello puesto, `x=1` sí resuelve en su espacio aparte', async () => {
-    const kv = kvFalso({ [coverExemptionKey('203.0.113.7')]: '1' });
-    await onRequestGet({ request: peticion('n=Celeste&x=1'), env: entorno(kv) });
-
-    expect(kv.datos.has(claveCache('Celeste', [], true))).toBe(true);
+      expect(respuesta.status).toBe(200);
+      expect(kv.datos.get(claveCache('Celeste', []))).toBe('co1abc');
+      // Ni una clave del antiguo espacio aparte.
+      expect([...kv.datos.keys()].some((clave) => clave.startsWith('igdb:cover:v2x:'))).toBe(false);
+    }
   });
 
   // docs/plan-degradacion-servicios.md, fase 4: si algo lanza (KV sin cupo), 503 sin caché, nunca la página 500 de
