@@ -1,7 +1,7 @@
 # Arranque, view-model social y móvil — plan
 
 Estado: **sin empezar** (escrito el 08-10-2026 sobre `9c343f1d`, la 1.6.5). Reúne los trabajos que se pidieron
-juntos: el parpadeo de las carátulas al abrir (ya hecho), quitar peso del chunk de entrada, partir `useSocialViewModel`, `share_target` y View Transitions. Publicar en Google Play queda escrito pero
+juntos: el parpadeo de las carátulas al abrir (ya hecho), quitar peso del chunk de entrada (descartado al medirlo), partir `useSocialViewModel`, `share_target` y View Transitions. Publicar en Google Play queda escrito pero
 aparcado. Si una cifra no cuadra con el código, manda el
 código: corrígela aquí.
 
@@ -9,7 +9,7 @@ código: corrígela aquí.
 historial de git) y se apunta aquí cuál es la siguiente. Una fase que, al llegar a ella, resulta no tener nada que
 hacer también se borra, con una línea que diga por qué.
 
-**Siguiente:** F1, pasos 1-2 (precache de lo diferido).
+**Siguiente:** F3, `share_target` → Próximos.
 
 **Hecho:** F0, retirar el modo ampliado de las carátulas (`x=1`), que las hacía parpadear al abrir con la cuenta
 de administración y doblaba consultas a IGDB y escrituras de KV. Hecho el 08-10-2026.
@@ -23,73 +23,16 @@ Lo que se descartó en la misma conversación, con la medición delante, y no co
 - **Preact.** Medido el 25-09 (−57 kB, −21 % en móvil frío), pero se mantiene React por ser lo más común.
 - **Notificaciones push.** Necesitan un emisor (Blaze o una Function que firme) y gastarían escrituras de KV, que
   ya aprietan las carátulas: no caben en el plan gratuito (`docs/plan-capacidad-gratuita.md`).
+- **F1 · Quitar peso del chunk de entrada** (eliminada el 08-10-2026, tras medirla). Crítico 184,4/190 kB; al pintar
+  la lista se ejecuta el 51 % del chunk de entrada, pero lo que sobra son ramas dentro de módulos que sí se usan.
+  Lo que se podía diferir, medido quitándolo en un worktree: el cuerpo del mosaico **1,0 kB** comprimido, el JSX
+  del renglón **0,5 kB**, `crypto` **0,9 kB**. `githubHttp` y `syncRepository` no son candidatos: los usa la sync
+  de forma síncrona (revisión, fase 5, punto 16). Cargar perezosa la forma no elegida ahorraría ~1 kB por persona
+  a cambio de un `Suspense` al cambiar de forma y de precachear chunks diferidos (el hueco de Chromium). No
+  compensa. Lo que queda de la fase es una regla: lo nuevo (F3, F5) entra por `lazy()`/`import()` y el tope de
+  190 no se sube.
 - **La build `production` de react-router.** El chunk del router sale de `dist/development/`, pero los dos
   ficheros miden lo mismo (1 byte de diferencia): no hay nada que ganar ahí.
-
----
-
-## F1 · Peso del chunk de entrada
-
-### Dónde estamos (medido hoy)
-
-`npm run build` + `node scripts/ci-validate.js`: **crítico 184,5/190 kB · total 217,8/240 kB**. El 01-10 quedó en
-180,2: han entrado 4,3 kB en una semana, repartidos entre funcionalidades (`GameTable` +1,2 kB min, `App` +0,8,
-`labels` +0,8, `useSyncViewModel` +0,6, `IconSprite` +0,9).
-
-| Chunk del arranque | min | gzip |
-|---|---|---|
-| `react` | 213,5 kB | 65,7 kB |
-| `index` (entrada) | 195,1 kB | 64,6 kB |
-| `router` | 39,8 kB | 14,1 kB |
-| `virtual` (TanStack) | 25,0 kB | 7,4 kB |
-| resto (9 chunks pequeños) | — | ~5 kB |
-
-**Corrección de lo que se dijo en la conversación:** el «15–20 kB gzip» de crypto, avisos y OAuth es la cifra
-vieja del hallazgo 6. La fase 5 de la revisión ya la corrigió: eran unos 2 kB. OAuth está hecho, y los avisos y
-crypto se descartaron con su motivo.
-
-Cobertura de Chromium al pintar la lista (400 juegos sembrados, 390 px, tras 4 s de idle, sin sesión): del chunk
-de entrada se ejecuta el **51 %**. Lo que más bytes deja sin ejecutar:
-
-| Fuente | min | sin ejecutar | Nota |
-|---|---|---|---|
-| `GameTable.tsx` | 21,4 kB | 11,6 kB | mosaico y renglón conviven; cada persona usa una forma |
-| `useSyncViewModel.ts` | 11,8 kB | 9,0 kB | sin sesión no corre; **con sync conectada sí** (la mayoría) |
-| `App.tsx` | 17,9 kB | 8,0 kB | manejadores de modales y acciones |
-| `useGameListViewModel.ts` | 8,7 kB | 6,0 kB | altas, ediciones y borrados |
-| `indexedDbRepository.ts` | 7,5 kB | 6,0 kB | migraciones y escrituras |
-| `crypto.ts` | 2,6 kB | 2,4 kB | descartado en la fase 5 (16) por el hueco de Chromium |
-| `githubHttp.ts`, `syncRepository.ts` | 4,1 kB | 4,0 kB | sin sesión no corren |
-| `FeedShell` + `SocialHubSkeleton` | 3,3 kB | 3,3 kB | fallback del `Suspense`, a propósito |
-
-Casi todo lo que no se ejecuta son ramas DENTRO de módulos que sí se usan: no se saca con un `import()`. Las dos
-palancas reales son las de abajo, y juntas no van a pasar de **~4–7 kB gzip**. Lo grande (`react` y `router`) se
-queda por la decisión de mantener React.
-
-### Pasos
-
-1. **Precache de lo diferido** (lo que desbloquea el resto). El hueco que tumbó `crypto` en la fase 5 (16) es que
-   Chromium cachea el `import()` fallido y el service worker solo precacheaba el grafo estático. `ci-validate.js`
-   ya distingue CRÍTICO de TOTAL (lo hace con las fuentes), así que el mecanismo es pequeño: una lista explícita de
-   chunks perezosos que el plugin `serviceWorkerPrecache` mete en el precache y `ci-validate` cuenta en el TOTAL
-   (240 kB, holgura 22 kB) y no en el CRÍTICO.
-   - Verificación: la prueba de la fase 5 con `page.route` abortando la primera petición, en los tres motores, ahora
-     sin hueco tras un despliegue sin red.
-2. **Con eso, sacar `crypto` + `githubHttp` + `syncRepository` del arranque.** Antes de mover cada uno, confirmar
-   que ningún camino síncrono del ciclo de sync lo necesita: la cabecera de `syncEngine.ts` dice que
-   `mergeCrdt`, `isDeferredNetworkError` y `getRetryAfterMs` sí. Esperado: ~2–3 kB gzip.
-3. **Partir `GameTable` en `GameGrid` y `GameRows`**, con lo común en `GameTable`, y cargar perezosa la forma que
-   no está elegida, precacheada con el paso 1. Mejora también la lectura: el fichero tiene 1633 líneas.
-   - **Medir antes de comprometerse:** hacer el corte y comprobar cuánto sale de verdad del crítico. Si son menos
-     de 2 kB gzip, se queda el corte por legibilidad y no la carga perezosa.
-   - Red: `tests/e2e/iconos.test.ts` y `GameTableCovers.test.tsx`. Y con biblioteca grande (+120 juegos), o la
-     virtualización no entra.
-4. **Regla para lo nuevo de este plan:** `share_target` y View Transitions entran por `lazy()`/`import()` o en
-   chunks que ya existen. El tope de 190 no se sube.
-
-Medido tras F0: crítico **184,4/190 kB**.
-
-**Criterio de aceptación:** crítico ≤ 180 kB con la funcionalidad de F3 y F5 ya dentro.
 
 ---
 
@@ -176,7 +119,7 @@ Desde Steam o el navegador abre el alta con el nombre ya puesto. **iOS no lo sop
 4. **Destino: la lista de Próximos** (decidido el 08-10-2026; primero se dijo Deseados y se cambió). Se abre el
    formulario precargado en la pestaña `p` reutilizando el camino de `openImportedDraft` (`useGameListViewModel.ts`),
    que ya abre el alta con metadatos y sin id, y se navega a `/proximos` para que al guardar se vea dónde ha caído.
-   Todo perezoso (F1, regla 4).
+   Todo perezoso: el arranque está a 5,6 kB de su tope.
    - Próximos no tiene tope (el de 100 es solo de Deseados), así que no hace falta aviso de lista llena.
    - **Juego que ya está en alguna lista:** no hay que hacer nada nuevo. `FormModal` ya avisa del duplicado al
      escribir y corta el guardado (`findDuplicate`, `FormModal.tsx:152` y `:330`).
@@ -252,10 +195,8 @@ Encaja con «evolución, no cambio»: aplicado con moderación y con la forma qu
 
 | # | Trabajo | Por qué en este orden |
 |---|---|---|
-| 2 | **F1** pasos 1-2 | el precache de lo diferido es la base para meter F3 y F5 sin romper el tope |
-| 3 | **F3** `share_target` → Próximos | barato y útil a diario en Android |
-| 4 | **F1** paso 3 (`GameTable`) | con la medición del corte delante |
-| 5 | **F5** View Transitions | acabado; después de F1 para medir sobre el arranque nuevo |
+| 1 | **F3** `share_target` → Próximos | barato y útil a diario en Android |
+| 2 | **F5** View Transitions | acabado |
 | — | **F2** view-model social | independiente; se puede intercalar commit a commit en cualquier momento |
 | ⏸️ | **F4** Google Play | aparcado |
 
