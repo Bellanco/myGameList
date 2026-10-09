@@ -183,100 +183,102 @@ export function SocialProfileScreen({
               <h3>{SOCIAL_UI.profile.visibilityTitle}</h3>
             </div>
             <p>{SOCIAL_UI.profile.visibilityDescription}</p>
+            {/* Los interruptores dicen lo que SE COMPARTE (encendido = visible); lo guardado sigue siendo lo que se
+                oculta (`hiddenTabs`, `hide*`), así que cada uno se pinta y se escribe negado. */}
             
             <div className="visibility-section">
-              <span className="visibility-label">{SOCIAL_UI.profile.hideListSectionTitle}</span>
+              <span className="visibility-label">{SOCIAL_UI.profile.shareListSectionTitle}</span>
               <div className="visibility-group">
                 <label className="visibility-check" htmlFor="hub-hide-list-v">
                   <input
                     id="hub-hide-list-v"
                     type="checkbox"
-                    checked={hiddenTabs.includes('v')}
+                    checked={!hiddenTabs.includes('v')}
                     onChange={() => toggleHiddenTab('v')}
                   />
                   <span className="visibility-toggle-track" aria-hidden="true">
                     <span className="visibility-toggle-thumb" />
                   </span>
-                  <span>{SOCIAL_UI.profile.hideVisitedList}</span>
+                  <span>{SOCIAL_UI.profile.shareVisitedList}</span>
                 </label>
                 <label className="visibility-check" htmlFor="hub-hide-list-e">
                   <input
                     id="hub-hide-list-e"
                     type="checkbox"
-                    checked={hiddenTabs.includes('e')}
+                    checked={!hiddenTabs.includes('e')}
                     onChange={() => toggleHiddenTab('e')}
                   />
                   <span className="visibility-toggle-track" aria-hidden="true">
                     <span className="visibility-toggle-thumb" />
                   </span>
-                  <span>{SOCIAL_UI.profile.hidePlayingList}</span>
+                  <span>{SOCIAL_UI.profile.sharePlayingList}</span>
                 </label>
                 <label className="visibility-check" htmlFor="hub-hide-list-p">
                   <input
                     id="hub-hide-list-p"
                     type="checkbox"
-                    checked={hiddenTabs.includes('p')}
+                    checked={!hiddenTabs.includes('p')}
                     onChange={() => toggleHiddenTab('p')}
                   />
                   <span className="visibility-toggle-track" aria-hidden="true">
                     <span className="visibility-toggle-thumb" />
                   </span>
-                  <span>{SOCIAL_UI.profile.hidePlannedList}</span>
+                  <span>{SOCIAL_UI.profile.sharePlannedList}</span>
                 </label>
                 <label className="visibility-check" htmlFor="hub-hide-list-d">
                   <input
                     id="hub-hide-list-d"
                     type="checkbox"
-                    checked={hiddenTabs.includes('d')}
+                    checked={!hiddenTabs.includes('d')}
                     onChange={() => toggleHiddenTab('d')}
                   />
                   <span className="visibility-toggle-track" aria-hidden="true">
                     <span className="visibility-toggle-thumb" />
                   </span>
-                  <span>{SOCIAL_UI.profile.hideWishlist}</span>
+                  <span>{SOCIAL_UI.profile.shareWishlist}</span>
                 </label>
               </div>
             </div>
 
             <div className="visibility-section">
-              <span className="visibility-label">{SOCIAL_UI.profile.hideFieldSectionTitle}</span>
+              <span className="visibility-label">{SOCIAL_UI.profile.shareFieldSectionTitle}</span>
               <div className="visibility-group">
                 <label className="visibility-check" htmlFor="hub-hide-field-replayable">
                   <input
                     id="hub-hide-field-replayable"
                     type="checkbox"
-                    checked={hideReplayable}
-                    onChange={(event) => setHideReplayable(event.target.checked)}
+                    checked={!hideReplayable}
+                    onChange={(event) => setHideReplayable(!event.target.checked)}
                   />
                   <span className="visibility-toggle-track" aria-hidden="true">
                     <span className="visibility-toggle-thumb" />
                   </span>
-                  <span>{SOCIAL_UI.profile.hideReplayableField}</span>
+                  <span>{SOCIAL_UI.profile.shareReplayableField}</span>
                 </label>
                 <label className="visibility-check" htmlFor="hub-hide-field-retry">
                   <input
                     id="hub-hide-field-retry"
                     type="checkbox"
-                    checked={hideRetry}
-                    onChange={(event) => setHideRetry(event.target.checked)}
+                    checked={!hideRetry}
+                    onChange={(event) => setHideRetry(!event.target.checked)}
                   />
                   <span className="visibility-toggle-track" aria-hidden="true">
                     <span className="visibility-toggle-thumb" />
                   </span>
-                  <span>{SOCIAL_UI.profile.hideRetryField}</span>
+                  <span>{SOCIAL_UI.profile.shareRetryField}</span>
                 </label>
                 {setHideGameTime ? (
                   <label className="visibility-check" htmlFor="hub-hide-field-gametime">
                     <input
                       id="hub-hide-field-gametime"
                       type="checkbox"
-                      checked={hideGameTime || false}
-                      onChange={(event) => setHideGameTime?.(event.target.checked)}
+                      checked={!hideGameTime}
+                      onChange={(event) => setHideGameTime?.(!event.target.checked)}
                     />
                     <span className="visibility-toggle-track" aria-hidden="true">
                       <span className="visibility-toggle-thumb" />
                     </span>
-                    <span>{SOCIAL_UI.profile.hideGameTimeField}</span>
+                    <span>{SOCIAL_UI.profile.shareGameTimeField}</span>
                   </label>
                 ) : null}
               </div>
