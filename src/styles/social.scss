@@ -467,25 +467,13 @@
   animation: hubSpin .7s linear infinite;
 }
 
-/* PANTALLA ESTRECHA: los botones se quedan en su icono y el rótulo se va (`.btn-label`). El nombre de la acción
-   no se pierde —cada botón lleva su `aria-label` completo—, y a cambio "Dejar de ser amigos" deja de ocupar tres
-   líneas dentro de una tarjeta de 160px. Se mide el CONTENEDOR del hub, no la ventana: 36rem de tarjeta son unos
-   620px de pantalla.
-   "Pendiente" es un rótulo, no un botón (ver `FriendshipButton`): no se colapsa y se sigue leyendo entero. */
+/* PANTALLA ESTRECHA: los botones CONSERVAN SU RÓTULO (09-10-2026). Se quedaban en su icono porque «Dejar de ser
+   amigos» ocupaba tres líneas en una tarjeta de 160px; ese botón ya no vive en las tarjetas (está en la ficha, como
+   «♥ Amigos»), y los que quedan —«Añadir amigo», «Aceptar», «Rechazar», «Retirar»— son cortos. Solo en icono, el ✓ de
+   aceptar y el + de añadir se confundían, y la × de retirar se leía como «cerrar». Se encoge la letra, no la
+   palabra. Se mide el CONTENEDOR del hub, no la ventana: 36rem de tarjeta son unos 620px de pantalla. */
 @container social-card (max-width: 36rem) {
-  .hub-user-card-actions .btn-label { display: none; }
-
-  /* El cuadrado es SOLO para el botón que se ha quedado sin rótulo (`:has(.btn-label)`): los que no lo llevan
-     conservan su texto, y encerrarlos también en 2,2rem les sacaba la palabra fuera del círculo. */
-  .hub-user-card-actions .btn:has(.btn-label) {
-    flex: 0 1 auto;
-    width: 2.2rem;
-    height: 2.2rem;
-    padding: 0;
-  }
-
-  /* Los que conservan texto encogen la letra en vez de la caja. */
-  .hub-user-card-actions .btn { font-size: var(--fs-2xs); }
+  .hub-user-card-actions .btn { font-size: var(--fs-2xs); padding-inline: .45rem; }
 }
 
 /* Recuento junto al título de cada sección. */
@@ -1007,6 +995,21 @@
   .hub-profile-card .hub-screen-actions-split {
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+  }
+
+  /* «GUARDAR PERFIL» Y «CERRAR SESIÓN», CON SU NOMBRE (09-10-2026). En móvil toda fila del hub se queda en iconos, y
+     aquí eran un disquete y una puerta: las dos acciones de más peso de la pantalla, adivinadas. Solo «Volver» sigue
+     siendo flecha, que se entiende sola. Si a 360px no caben en un renglón, «Cerrar sesión» baja al siguiente.
+     (0,6,1) para ganar a los skins que colapsan las filas en móvil (Arcade, Plata y acero). */
+  html:root .hub-profile-card .hub-screen-actions .btn:not(.btn-icon):not(.btn-ghost):not(.btn-back) {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
+    height: 44px;
+    padding-inline: .75rem;
+    font-size: var(--fs-xs);
+    gap: .4rem;
   }
 
   .hub-profile-card .hub-profile-block > p {
