@@ -82,3 +82,5 @@ firebase-adminsdk-*.json
 # Caché de carátulas en LOCAL (el remedo de KV del plugin `local-cover-api`): qué juego empareja con qué portada
 # de IGDB. Se regenera sola y se limpia borrando el fichero.
 /.covers.local.json
+# Salida por defecto de scripts/capturar-maqueta-social.mjs
+capturas-social/

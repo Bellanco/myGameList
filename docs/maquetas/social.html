@@ -5,14 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#10140f">
     <title>Maqueta · hub social</title>
-    <!-- MAQUETA DESECHABLE, como `docs/logros/demo-globales.html`. Monta las pantallas REALES del hub social
-         (feed, directorio, ficha, reseña y bandeja) con datos inventados, para verlas sin sesión de Google ni
-         amigos. No entra en el build. Parámetros:
-           ?pantalla=feed|amigos|perfil|resena|resena-perfil|solicitudes   (por defecto, feed)
-           &vista=resenas            (solo con pantalla=perfil: la vista de reseñas en vez de las listas)
-           &gl-palette=<id>          (tierramedia, arcade, witcher, persona, portal, cyberpunk, seaofstars, grimdark)
-           &gl-theme=dark|light      (por defecto, dark)
-           &gl-effects=off           (apaga los efectos animados de los temas; la app los trae encendidos)
+    <!-- MAQUETA DEL HUB SOCIAL, para verlo SIN SESIÓN. Monta las pantallas REALES del hub (los mismos componentes,
+         con el mismo marco `main.main-social`) con datos inventados y sin red: ni Firebase, ni GitHub, ni carátulas.
+         No entra en el build; la sirve el servidor de desarrollo en `/docs/maquetas/social.html`, y TypeScript la
+         comprueba con el resto (`tsconfig.json` incluye `docs/maquetas`): si un componente cambia de props, la
+         maqueta deja de compilar en vez de quedarse vieja en silencio.
+
+         Una barra flotante (abajo a la derecha) cambia de pantalla, vista, tema y modo. Parámetros:
+           ?pantalla=feed|feed-vacio|amigos|solicitudes|perfil|perfil-propio|ajustes|logros|globales|resena|resena-perfil
+           &vista=resenas|publicaciones   (perfil y perfil-propio: las sub-rutas de la ficha)
+           &abrir=estadisticas|resumen    (perfil y perfil-propio: el panel de estadísticas o el resumen del año)
+           &gl-palette=<id>               (tierramedia, arcade, witcher, persona, portal, cyberpunk, seaofstars, grimdark)
+           &gl-theme=dark|light           (por defecto, dark)
+           &gl-effects=off                (apaga los efectos animados de los temas; la app los trae encendidos)
+           &barra=0                       (sin la barra, para capturas)
+         Para fotografiarla entera en todos los temas: `node scripts/capturar-maqueta-social.mjs` (ver su cabecera).
+         La PUERTA del social (sin sesión) no está aquí: se ve en la app de verdad, en `/social`.
+
          El bloque de abajo hace lo mismo que el anti-flash de `index.html`, pero leyendo la URL en vez de
          `localStorage`, y sin escribir nada: la maqueta no toca las preferencias guardadas. -->
     <script>(function () {

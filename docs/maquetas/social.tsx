@@ -4,7 +4,7 @@
 //
 // Los datos son inventados y no hay red: ni Firebase, ni GitHub, ni carátulas (la preferencia de carátulas viene
 // apagada de fábrica y además se pasa `coversAllowed={false}`), ni fotos (todos los avatares caen a la silueta).
-import { useCallback, useMemo, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import '../../src/styles/index.scss';
@@ -27,6 +27,10 @@ import { SocialDetailScreen } from '../../src/view/components/socialhub/SocialDe
 import { SocialProfileReviewScreen } from '../../src/view/components/socialhub/SocialProfileReviewScreen';
 import { RelatedReviews } from '../../src/view/components/socialhub/RelatedReviews';
 import { SocialRequestsScreen } from '../../src/view/components/socialhub/SocialRequestsScreen';
+import { SocialProfileScreen } from '../../src/view/components/socialhub/SocialProfileScreen';
+import { ProfileAchievementsScreen, ProfileGlobalAchievements } from '../../src/view/components/socialhub/ProfileAchievements';
+import type { ProfilePostEntry } from '../../src/view/components/socialhub/ProfilePostsList';
+import { summaryYear } from '../../src/core/stats/summaryYear';
 import { packAchievements } from '../../src/core/achievements/pack';
 import { LADDERS } from '../../src/core/achievements/catalog';
 import type { AchievementState } from '../../src/core/achievements/types';
@@ -217,9 +221,10 @@ const DIRECTORIO = GENTE.filter((p) => p.relacion === 'friends').map((p) => ({
 }));
 
 // ─── Pantallas ───────────────────────────────────────────────────────────────────────────────────────────────
-function Feed() {
+function Feed({ vacio = false }: { vacio?: boolean }) {
   // El MISMO derivado que usa el hub: mezcla, orden, cupo de movimientos y agrupado por día con sus cabeceras.
-  const { feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed } = useSocialFeed(DIRECTORIO, undefined, AMIGOS);
+  // `vacio`: quien acaba de entrar y aún no tiene amigos (el estado vacío con «Descubrir amigos»).
+  const { feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed } = useSocialFeed(vacio ? [] : DIRECTORIO, undefined, vacio ? new Set<string>() : AMIGOS);
   return (
     <SocialFeedScreen
       SOCIAL_UI={SOCIAL_UI}
@@ -229,10 +234,11 @@ function Feed() {
       loadingDirectory={false}
       openProfileDetail={avisar('abriría la ficha')}
       openProfileAchievements={avisar('abriría sus logros')}
+      openProfileSummary={avisar('abriría su resumen del año')}
       onOpenProfiles={avisar('abriría Perfiles')}
       onOpenOwnProfile={avisar('abriría tu ficha')}
       onOpenRequests={avisar('abriría la bandeja')}
-      pendingIncomingCount={2}
+      pendingIncomingCount={vacio ? 0 : 2}
       groupedFeedItems={groupedFeedItems}
       feedItems={feedItems}
       hasMoreFeed={hasMoreFeed}
@@ -291,8 +297,26 @@ function compartido(gameName: string, grade: number, snippet = '', years: number
   return { id: juego.id, name: gameName, platforms: juego.platforms, genres: juego.genres, rating: Math.round(grade / 20), grade, snippet, years };
 }
 
-const LISTAS_DE_MARTA: Partial<Record<TabId, SocialSharedGame[]>> = {
+/**
+ * Un completado con FECHA, como lo trae una amistad: es lo que necesita el resumen del año (`_ts` dentro del año que
+ * se resume, ver `summaryYear`). Sin fecha, el perfil no ofrece resumen.
+ */
+const ANIO = summaryYear();
+function terminado(gameName: string, grade: number, mes: number, snippet = ''): GameItem {
+  const juego = JUEGOS[gameName];
+  return {
+    id: juego.id, _ts: new Date(ANIO, mes, 12, 21, 0).getTime(), name: gameName, platforms: juego.platforms, genres: juego.genres,
+    steamDeck: false, review: snippet, score: Math.round(grade / 20), grade, years: [ANIO], reasons: [], replayable: false, retry: false,
+  } as GameItem;
+}
+
+const LISTAS_DE_MARTA: Partial<Record<TabId, Array<GameItem | SocialSharedGame>>> = {
   c: [
+    terminado('Elden Ring', 84, 1, 'Me costó entrar, pero cuando hizo clic no pude parar.'),
+    terminado('Hi-Fi Rush', 80, 3),
+    terminado('Tunic', 88, 5, 'El manual escondido es una genialidad.'),
+    terminado('Pentiment', 90, 8),
+    terminado('Slay the Spire', 76, 10),
     compartido('Outer Wilds', 96, ACTIVIDAD[MARTA.id][0].snippet, [2026]),
     compartido('Return of the Obra Dinn', 90, ACTIVIDAD[MARTA.id][1].snippet, [2026]),
     compartido('Hollow Knight', 92, 'Precioso, enorme y cruel en la justa medida. El mapa que compras a trozos es de lo mejor del género.', [2024]),
@@ -302,43 +326,137 @@ const LISTAS_DE_MARTA: Partial<Record<TabId, SocialSharedGame[]>> = {
     compartido('The Witcher 3', 86, '', [2020]),
     compartido('Stardew Valley', 78, '', [2023]),
   ],
-  v: [compartido('Elden Ring', 70, 'Lo dejé en Leyndell. Me encanta explorarlo, pero no tengo paciencia para ciertos jefes.')],
-  e: [compartido('Pentiment', 0), compartido('Slay the Spire', 0)],
-  p: [compartido('Chained Echoes', 0), compartido('Tunic', 0), compartido('Disco Elysium', 0)],
+  v: [compartido('Chained Echoes', 70, 'Lo dejé a mitad. Me gusta, pero el ritmo del segundo acto se me hizo largo.')],
+  e: [compartido('Disco Elysium', 0)],
+  p: [compartido('Portal 2', 0), compartido('Celeste', 0)],
 };
 
-function Perfil() {
+const MIS_PUBLICACIONES: ProfilePostEntry[] = [
+  { id: 'post-yo-1', text: 'Esta semana toca terminar Pentiment. ¿Alguien lo ha jugado en español? La tipografía cambia con cada personaje.', updatedAt: hace(0, 9, 30) },
+  { id: 'post-yo-2', text: 'Recomendación rápida: Hi-Fi Rush es el juego perfecto para una tarde de domingo.', updatedAt: hace(4, 18, 5), editedAt: hace(3, 10, 0) },
+];
+
+/**
+ * La ficha de un perfil. `propio`: la TUYA (con «Editar perfil» y tus publicaciones editables); si no, la de Marta,
+ * amiga. `vista`: `resenas` o `publicaciones` (sub-rutas de la app); `abrir`: `estadisticas` o `resumen`, que en la
+ * app son estado de la pantalla y aquí se abren solos al montar.
+ */
+function Perfil({ propio = false }: { propio?: boolean }) {
+  const abrir = params.get('abrir') || '';
+  useEffect(() => {
+    if (abrir !== 'estadisticas') return;
+    // Las estadísticas son un estado interno de la pantalla (no hay ruta): se pulsa su botón, como haría alguien.
+    // Se busca por su icono, que no cambia con el idioma ni con el rótulo («Estadísticas» / «Volver al perfil»).
+    const boton = document.querySelector('.btn [href="#icon-bottom-stats"]')?.closest('button');
+    boton?.click();
+  }, [abrir]);
   return (
     <SocialProfileDetailScreen
       SOCIAL_UI={SOCIAL_UI}
       activeProfileDetail={{
-        displayName: MARTA.displayName,
+        displayName: propio ? 'Yo' : MARTA.displayName,
         photoURL: '',
-        tier: MARTA.tier,
+        tier: propio ? 'gold' : MARTA.tier,
         visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: true },
         sharedLists: LISTAS_DE_MARTA,
         activity: ACTIVIDAD[MARTA.id].map((a) => ({ type: a.type, gameId: a.gameId, updatedAt: a.updatedAt })),
+        posts: propio ? MIS_PUBLICACIONES : [],
       }}
-      isOwnProfile={false}
+      isOwnProfile={propio}
+      onEditProfile={propio ? avisar('abriría los ajustes de tu perfil (?pantalla=ajustes)') : undefined}
       onBack={avisar('volvería al feed')}
       showReviews={vista === 'resenas'}
+      showPosts={vista === 'publicaciones'}
+      onTogglePosts={avisar('cambiaría a tus publicaciones (?vista=publicaciones)')}
+      canEditPosts
+      postMaxLength={500}
+      showPostCounter
+      onEditPost={propio ? async () => true : undefined}
+      onDeletePost={propio ? async () => true : undefined}
       achievementsMirror={ESPEJOS[MARTA.id]}
       palmares={[]}
-      onOpenAchievements={avisar('abriría sus logros')}
+      onOpenAchievements={avisar('abriría los logros (?pantalla=logros)')}
       onToggleReviews={avisar('cambiaría a la vista de reseñas (?vista=resenas)')}
       onOpenReview={avisar('abriría la reseña')}
       status=""
       statusKind=""
-      onAddToProximos={() => 'added'}
-      hasGameInLists={() => false}
+      onAddGame={() => 'added'}
+      addTarget="p"
+      gameListOf={() => null}
       moveGameToCurrentByName={noop}
-      friendshipState="friends"
+      friendshipState={propio ? 'none' : 'friends'}
       friendshipBusy={false}
       onAddOrAcceptFriend={noop}
       onCancelFriendRequest={noop}
       onRemoveFriend={avisar('pediría confirmación para dejar de ser amigos')}
       viewerTier="gold"
       viewerHiddenTabs={[]}
+      viewerCompleted={[]}
+      openSummaryOnMount={abrir === 'resumen'}
+    />
+  );
+}
+
+/** Los ajustes de TU perfil social: nombre, qué se comparte, la foto y la salida. */
+function Ajustes() {
+  const [nombre, setNombre] = useState('Yo');
+  const [ocultas, setOcultas] = useState<TabId[]>(['d']);
+  const [rejugar, setRejugar] = useState(false);
+  const [reintentar, setReintentar] = useState(true);
+  const [tiempo, setTiempo] = useState(false);
+  const [foto, setFoto] = useState(true);
+  return (
+    <SocialProfileScreen
+      SOCIAL_UI={SOCIAL_UI}
+      profileName={nombre}
+      setProfileName={setNombre}
+      completedGames={[{ id: 101, name: 'Hollow Knight' }]}
+      hydratingProfile={false}
+      savingProfile={false}
+      hasCreatedProfile
+      onSaveProfile={avisar('guardaría el perfil')}
+      onSignOut={avisar('cerraría la sesión')}
+      onBack={avisar('volvería al feed')}
+      status=""
+      statusKind=""
+      hiddenTabs={ocultas}
+      onHiddenTabsChange={setOcultas}
+      hideReplayable={rejugar}
+      setHideReplayable={setRejugar}
+      hideRetry={reintentar}
+      setHideRetry={setReintentar}
+      hideGameTime={tiempo}
+      setHideGameTime={setTiempo}
+      showPhoto={foto}
+      setShowPhoto={setFoto}
+      ownPhotoURL=""
+      ownVisiblePhotoURL=""
+      ownPhotoIsGeneric={false}
+    />
+  );
+}
+
+/** Los logros de Marta (su vitrina) y, con `global`, la vista de rareza entre todos. */
+function Logros({ global = false }: { global?: boolean }) {
+  const espejos = Object.values(ESPEJOS);
+  return global ? (
+    <ProfileGlobalAchievements
+      mirror={ESPEJOS[MARTA.id]}
+      directoryMirrors={espejos}
+      owner={MARTA.displayName}
+      self={false}
+      onBack={avisar('volvería a su ficha')}
+      onToggleGlobals={avisar('volvería a sus logros (?pantalla=logros)')}
+      globalsBackLabel={`Logros de ${MARTA.displayName}`}
+    />
+  ) : (
+    <ProfileAchievementsScreen
+      mirror={ESPEJOS[MARTA.id]}
+      directoryMirrors={espejos}
+      owner={MARTA.displayName}
+      onBack={avisar('volvería a su ficha')}
+      onToggleGlobals={avisar('abriría la vista global (?pantalla=globales)')}
+      globalsBackLabel={`Logros de ${MARTA.displayName}`}
     />
   );
 }
@@ -470,19 +588,75 @@ function Solicitudes() {
   );
 }
 
-const PANTALLAS: Record<string, { ruta: string; pintar: () => ReactElement }> = {
-  feed: { ruta: '/social', pintar: () => <Feed /> },
-  amigos: { ruta: '/social/profiles', pintar: () => <Amigos /> },
-  perfil: {
-    ruta: vista === 'resenas' ? `/social/profiles/${MARTA.id}/reviews` : `/social/profiles/${MARTA.id}`,
-    pintar: () => <Perfil />,
-  },
-  resena: { ruta: `/social/user/${IVAN.actor}/game/${EVENTO.gameId}/review`, pintar: () => <Resena /> },
-  'resena-perfil': { ruta: `/social/profiles/${IVAN.id}/game/${EVENTO.gameId}/review`, pintar: () => <ResenaDePerfil /> },
-  solicitudes: { ruta: '/social/requests', pintar: () => <Solicitudes /> },
+const RUTA_MARTA = `/social/profiles/${MARTA.id}`;
+const RUTA_PROPIA = '/social/profiles/yo';
+const subruta = vista === 'resenas' ? '/reviews' : vista === 'publicaciones' ? '/posts' : '';
+
+/** Todas las pantallas del hub con sesión. La barra flotante (abajo) las recorre; `?barra=0` la quita para capturas. */
+const PANTALLAS: Record<string, { nombre: string; ruta: string; pintar: () => ReactElement }> = {
+  feed: { nombre: 'Feed', ruta: '/social', pintar: () => <Feed /> },
+  'feed-vacio': { nombre: 'Feed sin amigos', ruta: '/social', pintar: () => <Feed vacio /> },
+  amigos: { nombre: 'Perfiles (directorio)', ruta: '/social/profiles', pintar: () => <Amigos /> },
+  solicitudes: { nombre: 'Solicitudes', ruta: '/social/requests', pintar: () => <Solicitudes /> },
+  perfil: { nombre: 'Perfil de una amiga', ruta: RUTA_MARTA + subruta, pintar: () => <Perfil /> },
+  'perfil-propio': { nombre: 'Tu perfil', ruta: RUTA_PROPIA + subruta, pintar: () => <Perfil propio /> },
+  ajustes: { nombre: 'Ajustes del perfil social', ruta: '/social/profile', pintar: () => <Ajustes /> },
+  logros: { nombre: 'Logros de una amiga', ruta: `${RUTA_MARTA}/logros`, pintar: () => <Logros /> },
+  globales: { nombre: 'Logros: vista global', ruta: `${RUTA_MARTA}/globales`, pintar: () => <Logros global /> },
+  resena: { nombre: 'Reseña (desde el feed)', ruta: `/social/user/${IVAN.actor}/game/${EVENTO.gameId}/review`, pintar: () => <Resena /> },
+  'resena-perfil': { nombre: 'Reseña (desde un perfil)', ruta: `/social/profiles/${IVAN.id}/game/${EVENTO.gameId}/review`, pintar: () => <ResenaDePerfil /> },
 };
 
+/** Las combinaciones de `vista` y `abrir` que tienen sentido, para la barra. */
+const VARIANTES: Record<string, Array<{ nombre: string; vista?: string; abrir?: string }>> = {
+  perfil: [{ nombre: 'Listas' }, { nombre: 'Reseñas', vista: 'resenas' }, { nombre: 'Estadísticas', abrir: 'estadisticas' }, { nombre: 'Resumen del año', abrir: 'resumen' }],
+  'perfil-propio': [{ nombre: 'Listas' }, { nombre: 'Reseñas', vista: 'resenas' }, { nombre: 'Publicaciones', vista: 'publicaciones' }, { nombre: 'Estadísticas', abrir: 'estadisticas' }, { nombre: 'Resumen del año', abrir: 'resumen' }],
+};
+
+const TEMAS = ['tierramedia', 'arcade', 'witcher', 'persona', 'portal', 'cyberpunk', 'seaofstars', 'grimdark'];
+
+/**
+ * BARRA DE LA MAQUETA: pantalla, variante, tema y modo, sin escribir URLs a mano. Va con estilos en línea y fuera de
+ * `main`, para que no la toque ningún tema ni salga en una captura de `main`. Cambiar algo recarga la página con los
+ * parámetros nuevos (el tema se aplica antes del primer pintado, como en la app).
+ */
+function Barra() {
+  const ir = (cambios: Record<string, string>) => {
+    const u = new URL(window.location.href);
+    for (const [k, v] of Object.entries(cambios)) {
+      if (v) u.searchParams.set(k, v);
+      else u.searchParams.delete(k);
+    }
+    window.location.href = u.toString();
+  };
+  const raiz = document.documentElement;
+  const tema = raiz.dataset.palette || 'tierramedia';
+  const modo = raiz.dataset.theme === 'light' ? 'light' : 'dark';
+  const variantes = VARIANTES[pantalla] || [];
+  const actual = variantes.findIndex((v) => (v.vista || '') === vista && (v.abrir || '') === (params.get('abrir') || ''));
+  const caja: React.CSSProperties = { font: '12px/1.2 system-ui, sans-serif', padding: '4px 6px', borderRadius: 6, border: '1px solid #555', background: '#1b1d22', color: '#eee' };
+  return (
+    <div style={{ position: 'fixed', right: 12, bottom: 12, zIndex: 2147483000, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', padding: 8, borderRadius: 10, background: 'rgba(15,16,20,.92)', boxShadow: '0 6px 20px rgba(0,0,0,.4)', maxWidth: 'calc(100vw - 24px)' }}>
+      <select aria-label="Pantalla" style={caja} value={pantalla in PANTALLAS ? pantalla : 'feed'} onChange={(e) => ir({ pantalla: e.target.value, vista: '', abrir: '' })}>
+        {Object.entries(PANTALLAS).map(([k, v]) => <option key={k} value={k}>{v.nombre}</option>)}
+      </select>
+      {variantes.length ? (
+        <select aria-label="Vista" style={caja} value={Math.max(actual, 0)} onChange={(e) => { const v = variantes[Number(e.target.value)]; ir({ vista: v.vista || '', abrir: v.abrir || '' }); }}>
+          {variantes.map((v, i) => <option key={v.nombre} value={i}>{v.nombre}</option>)}
+        </select>
+      ) : null}
+      <select aria-label="Tema" style={caja} value={tema} onChange={(e) => ir({ 'gl-palette': e.target.value })}>
+        {TEMAS.map((t) => <option key={t} value={t}>{t}</option>)}
+      </select>
+      <button type="button" style={{ ...caja, cursor: 'pointer' }} onClick={() => ir({ 'gl-theme': modo === 'dark' ? 'light' : 'dark' })}>
+        {modo === 'dark' ? 'Oscuro → claro' : 'Claro → oscuro'}
+      </button>
+    </div>
+  );
+}
+
 const elegida = PANTALLAS[pantalla] || PANTALLAS.feed;
+const conBarra = params.get('barra') !== '0';
 
 createRoot(document.getElementById('root') as HTMLElement).render(
   <MemoryRouter initialEntries={[elegida.ruta]}>
@@ -492,5 +666,6 @@ createRoot(document.getElementById('root') as HTMLElement).render(
       <h1 className="sr-only">Social</h1>
       {elegida.pintar()}
     </main>
+    {conBarra ? <Barra /> : null}
   </MemoryRouter>,
 );
