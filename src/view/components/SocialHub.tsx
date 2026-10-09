@@ -30,6 +30,7 @@ import { SocialErrorBoundary } from './socialhub/SocialErrorBoundary';
 import { HubOfflineNotice } from './socialhub/HubOfflineNotice';
 import { GithubSyncCard } from './sync/GithubSyncCard';
 import { libraryStart } from '../../core/achievements/metrics';
+import { useHubFocusOnNavigate } from '../hooks/useHubFocusOnNavigate';
 
 /**
  * Hub social - Fase 1.
@@ -64,6 +65,8 @@ const SocialHubInner = memo(function SocialHubInner({
   // El view-model llega en PIEZAS por dominio (ver su `return`), y se desestructuran aquí mismo: lo que viaja a las
   // pantallas memoizadas son los mismos valores de siempre, no las piezas.
   const vm = useSocialViewModel({ games });
+  // Al cambiar de pantalla, el foco no se queda en el `body` (ver el hook).
+  useHubFocusOnNavigate();
   const {
     navigate, activePanel, socialCfgGistId, authUser, loading, showSocialSpace, hasMainSync, hasSocialGist,
     hasSocialSession, offline, serviceLimited, offlineHasCachedData, legalConsentRequired, savingConsent,

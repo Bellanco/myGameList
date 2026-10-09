@@ -517,6 +517,12 @@
   max-width: 62ch;
 }
 
+/* El título de cada pantalla recibe el foco al llegar a ella (`useHubFocusOnNavigate`), con `tabindex="-1"`: no es
+   un control, así que no lleva el anillo de los controles. El lector de pantalla lo anuncia igual. */
+.hub-hub h2[tabindex="-1"]:focus {
+  outline: none;
+}
+
 .hub-screen-actions {
   display: flex;
   flex-wrap: wrap;
