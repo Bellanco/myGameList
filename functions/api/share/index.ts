@@ -8,7 +8,7 @@
 import { requireUser } from '../../_lib/context';
 import { fail, json, readJson } from '../../_lib/http';
 import type { Env } from '../../_lib/keys';
-import { bumpDailyCount, readDailyCount, readShareStatus, shareDailyLimit } from '../../_lib/quota';
+import { readDailyCount, readShareStatus, releaseDailySlot, reserveDailySlot, shareDailyLimit, type ShareStatus } from '../../_lib/quota';
 import { draftFromBody, InvalidShareError, publishShare } from '../../_lib/shares';
 
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
@@ -43,25 +43,30 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   // enlace que ya circula por ahí.
   const existing = status.active.find((row) => row.meta?.gameId === draft.gameId) || null;
 
+  let ticket: number | null = null;
   if (!existing) {
     // El techo del día es el mismo número que sus enlaces activos (ver `shareDailyLimit`): frena el ciclo de
     // crear y retirar sin castigar a quien simplemente comparte lo que le toca.
     const dailyLimit = shareDailyLimit(status.quota);
     const daily = await readDailyCount(context.env.SHARES, caller.user.uid, now);
     if (daily >= dailyLimit) {
-      return fail(429, 'Has compartido demasiadas reseñas hoy. Inténtalo mañana.', { dailyLimit });
+      return dailyLimitReached(dailyLimit);
     }
     if (status.active.length >= status.quota.maxActive) {
-      // El mensaje dice QUÉ HACER, no solo que no. `oldestExpiresAt` deja al cliente calcular "dentro de 2 días".
-      const oldestExpiresAt = status.active
-        .map((row) => row.meta?.expiresAt || 0)
-        .filter((value) => value > 0)
-        .sort((a, b) => a - b)[0] || 0;
-      return fail(429, 'Has alcanzado tu número de enlaces activos', {
-        quota: status.quota,
-        active: status.active.length,
-        oldestExpiresAt,
-      });
+      return activeLimitReached(status);
+    }
+    /* RESERVAR ANTES DE PUBLICAR. El contador se anotaba al final, así que varias publicaciones simultáneas veían
+       el mismo contador y el mismo listado y pasaban todas (09-10-2026). Ahora cada una saca número antes de
+       escribir nada, y solo pasan las que caben en lo que quedaba libre: del día y de enlaces activos. */
+    ticket = await reserveDailySlot(context.env.SHARES, caller.user.uid, now);
+    if (ticket !== null) {
+      const dailyRoom = dailyLimit - daily;
+      const activeRoom = status.quota.maxActive - status.active.length;
+      if (ticket - daily > Math.min(dailyRoom, activeRoom)) {
+        // Se devuelve también el número que no ha cabido: si el tope era el de activos, no le cuesta uno del día.
+        await releaseDailySlot(context.env.SHARES, caller.user.uid, now);
+        return dailyRoom <= activeRoom ? dailyLimitReached(dailyLimit) : activeLimitReached(status);
+      }
     }
   }
 
@@ -78,6 +83,10 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
       liveTokens: status.active.map((row) => row.token),
     });
   } catch (error) {
+    // No se ha publicado: el hueco reservado vuelve al día.
+    if (ticket !== null) {
+      await releaseDailySlot(context.env.SHARES, caller.user.uid, now);
+    }
     // Aquí acaba lo que rechaza el esquema: un campo privado o de identidad colado en el cuerpo. Es un fallo del
     // cliente, no del usuario, y no se escribe nada. Lo demás (KV sin cupo) sigue hacia arriba: lo convierte en
     // «no disponible» el middleware de `/api`, en vez de enseñar «KV PUT failed: 429» como si fuera un 400.
@@ -87,12 +96,6 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     throw error;
   }
 
-  // El enlace YA está publicado. Si el contador del freno diario no se puede anotar (KV sin cupo de escrituras), se
-  // pierde una cuenta de un freno anti-abuso; responder error haría creer al usuario que no se ha publicado.
-  if (!published.renewed) {
-    await bumpDailyCount(context.env.SHARES, caller.user.uid, now).catch(() => 0);
-  }
-
   return json({
     token: published.token,
     url: new URL(`/r/${published.token}`, context.request.url).toString(),
@@ -100,5 +103,22 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     renewed: published.renewed,
     quota: status.quota,
     active: published.renewed ? status.active.length : status.active.length + 1,
+  });
+}
+
+function dailyLimitReached(dailyLimit: number): Response {
+  return fail(429, 'Has compartido demasiadas reseñas hoy. Inténtalo mañana.', { dailyLimit });
+}
+
+function activeLimitReached(status: ShareStatus): Response {
+  // El mensaje dice QUÉ HACER, no solo que no. `oldestExpiresAt` deja al cliente calcular "dentro de 2 días".
+  const oldestExpiresAt = status.active
+    .map((row) => row.meta?.expiresAt || 0)
+    .filter((value) => value > 0)
+    .sort((a, b) => a - b)[0] || 0;
+  return fail(429, 'Has alcanzado tu número de enlaces activos', {
+    quota: status.quota,
+    active: status.active.length,
+    oldestExpiresAt,
   });
 }

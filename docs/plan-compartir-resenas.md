@@ -447,9 +447,11 @@ functions/r/[token].ts           SSR de la página pública
 - **El escapado lo hace HTMLRewriter**, que es un parser de verdad, no reemplazos de cadena. La limpieza de
   ángulos que hay encima es de PRESENTACIÓN y solo quita lo que tiene forma de etiqueta: borrarlos todos habría
   destrozado texto legítimo como «se mata en <3 minutos» o «dura 5 < 10 horas».
-- **El contador diario no es atómico** (KV no tiene incremento). Aceptable a propósito: la cuota de producto se
-  calcula contando enlaces vivos, que sí es exacta; el diario es un freno anti-abuso donde fallar por uno no
-  cambia nada.
+- **Ni el contador diario ni el recuento de enlaces vivos son atómicos** (KV no tiene incremento, y el listado es
+  una foto). Varias publicaciones simultáneas leían lo mismo y pasaban las dos barreras. Desde el 09-10-2026 cada
+  publicación reserva su número del día ANTES de escribir —en fila por usuario dentro del aislado— y solo pasan
+  las que caben en el hueco que quedaba de los dos topes; si la publicación falla o no cabe, el número se devuelve.
+  Entre aislados o ubicaciones distintas el hueco sigue abierto: cerrarlo del todo pediría un Durable Object.
 
 **Verificado con `wrangler pages dev` + KV local:** artículo inexistente → 404 con mensaje único (no distingue
 caducado de retirado de inexistente); endpoints autenticados sin configuración → 500 explícito antes de mirar el

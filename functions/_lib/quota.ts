@@ -174,17 +174,46 @@ export async function readShareStatus(
 }
 
 /**
- * Contador diario de creaciones. KV no tiene incremento atómico, así que dos peticiones simultáneas pueden
- * contar una sola vez. Es ACEPTABLE a propósito: esto no es la cuota de producto (esa se calcula contando los
- * enlaces vivos, que sí es exacta), sino un freno anti-abuso donde fallar por uno no cambia nada.
+ * Contador diario de creaciones. KV no tiene incremento atómico: es leer, sumar y escribir. Por eso quien publica
+ * no lo llama directamente, sino a través de `reserveDailySlot`, que pone en fila los de un mismo usuario.
  */
-export async function bumpDailyCount(kv: KVNamespace, uid: string, now: number): Promise<number> {
+export async function bumpDailyCount(kv: KVNamespace, uid: string, now: number, delta = 1): Promise<number> {
   const key = dailyQuotaKey(uid, now);
   const current = Number((await kv.get(key)) || 0);
-  const next = current + 1;
+  const next = Math.max(0, current + delta);
   // 48 h de vida: cubre el día en curso con margen para cualquier desfase de reloj.
   await kv.put(key, String(next), { expirationTtl: 48 * 3_600 });
   return next;
+}
+
+/* EN FILA POR USUARIO, DENTRO DE ESTE AISLADO. Dos publicaciones simultáneas leían el mismo contador y el mismo
+   listado de enlaces vivos, y las dos pasaban los topes (09-10-2026). Con la fila, sus lectura-suma-escritura no se
+   solapan y cada una saca un número distinto. Solo alcanza a las peticiones que caen en el mismo aislado —las de
+   un mismo cliente suelen caer juntas—; entre aislados o ubicaciones distintas sigue sin haber atomicidad, que en
+   KV no existe: cerrarlo del todo pediría un Durable Object. */
+const reservations = new Map<string, Promise<unknown>>();
+
+function inUidQueue<T>(uid: string, task: () => Promise<T>): Promise<T> {
+  const run = (reservations.get(uid) ?? Promise.resolve()).then(task);
+  const tail = run.catch(() => undefined);
+  reservations.set(uid, tail);
+  void tail.then(() => {
+    if (reservations.get(uid) === tail) reservations.delete(uid);
+  });
+  return run;
+}
+
+/**
+ * Reserva un hueco del día ANTES de publicar y devuelve el número que le ha tocado, o `null` si el contador no se
+ * pudo anotar (KV sin cupo de escrituras): es un freno anti-abuso y perder una cuenta no justifica no publicar.
+ */
+export function reserveDailySlot(kv: KVNamespace, uid: string, now: number): Promise<number | null> {
+  return inUidQueue(uid, () => bumpDailyCount(kv, uid, now)).catch(() => null);
+}
+
+/** Devuelve el hueco de una publicación que no ha llegado a escribirse. Sin poder fallar: lo peor es un freno más estricto. */
+export function releaseDailySlot(kv: KVNamespace, uid: string, now: number): Promise<void> {
+  return inUidQueue(uid, () => bumpDailyCount(kv, uid, now, -1)).then(() => undefined, () => undefined);
 }
 
 export async function readDailyCount(kv: KVNamespace, uid: string, now: number): Promise<number> {
