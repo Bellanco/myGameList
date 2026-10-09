@@ -446,6 +446,7 @@ export const SOCIAL_UI = {
     postEditDone: 'Publicación actualizada.',
     postEditFailed: 'No se pudo guardar el cambio.',
     postEditOffline: 'Sin conexión: el cambio no se ha guardado. El texto sigue aquí, inténtalo al recuperar la red.',
+    postEditGone: 'Esa publicación ya no existe: se borró desde otro dispositivo.',
     postDeleteDone: 'Publicación eliminada.',
     postDeleteFailed: 'No se pudo eliminar la publicación.',
     postDeleteOffline: 'Sin conexión: la publicación no se ha eliminado. Inténtalo al recuperar la red.',

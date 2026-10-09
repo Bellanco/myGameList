@@ -11,6 +11,7 @@ import { loadLocalState } from './localRepository';
 import { editPost, readSocialGist, remapSocialActorIds, removePost, removeReviewActivity, saveSocialSyncConfig, syncMoveActivity, upsertPost, upsertReviewActivity, writeSocialGist, type SocialGistData, type SocialPostEntry } from './socialGistRepository';
 import { markPendingSocialActivity } from './socialActivityReconcile';
 import { resolveSocialChannel, type SocialChannel } from './socialChannel';
+import { PostGoneError } from '../../core/social/postErrors';
 
 /**
  * Arma el canal social de este dispositivo para publicar. Devuelve null si no se puede (sin sesión de Google,
@@ -398,6 +399,8 @@ export async function editOwnPost(input: { id: string; text: string; maxLength?:
   const gate = await openSocialWrite();
   if (!gate.ok) throw postGateError(gate.reason);
   const { ctx } = gate;
+  // Borrada desde otro dispositivo: se dice, no se toma por «sin cambios» (ver `PostGoneError`).
+  if (!(ctx.migratedData.posts || []).some((post) => post.id === input.id)) throw new PostGoneError();
 
   const nextPayload = editPost(ctx.migratedData, {
     id: input.id,

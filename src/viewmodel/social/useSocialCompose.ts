@@ -12,6 +12,7 @@ import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { PROFILE_TIER_POST_MAX_LENGTH, canPublishPosts, hasPostLengthLimit, type ProfileTier } from '../../core/constants/tiers';
 import { deleteOwnPost, editOwnPost, publishPost } from '../../model/repository/socialPublishRepository';
 import { isNetworkFailure, isOffline, isServiceUnavailable } from '../../core/utils/network';
+import { isPostGoneError } from '../../core/social/postErrors';
 
 type Feedback = (kind: 'ok' | 'warn' | 'err', message: string, duration?: 'short' | 'long') => void;
 
@@ -124,7 +125,11 @@ export function useSocialCompose(options: {
       setFeedback('ok', labels.done);
       return true;
     } catch (error) {
-      if (isNetworkFailure(error)) {
+      if (isPostGoneError(error)) {
+        // Se borró desde otro dispositivo: se retira también de aquí, en vez de dejar a la vista lo que ya no está.
+        onPostChanged({ kind: 'delete', id });
+        setFeedback('warn', SOCIAL_UI.status.postEditGone, 'long');
+      } else if (isNetworkFailure(error)) {
         setFeedback('warn', labels.offline, 'long');
       } else if (isServiceUnavailable(error)) {
         setFeedback('warn', SOCIAL_UI.status.postChangeLimited, 'long');
