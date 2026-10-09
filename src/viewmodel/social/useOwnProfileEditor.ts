@@ -13,6 +13,7 @@ import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { APP_LOCALE } from '../../core/constants/locale';
 import { isOffline, isServiceUnavailable } from '../../core/utils/network';
 import { ensureSyncConfigLoaded } from '../../model/repository/gistRepository';
+import { useSingleFlight } from '../useSingleFlight';
 import {
   getSocialSyncConfig,
   readSocialGist,
@@ -335,7 +336,7 @@ export function useOwnProfileEditor({
     void hydrateSocialProfile();
   }, [hydrateSocialProfile]);
 
-  const handleSaveProfile = useCallback(async () => {
+  const saveProfile = useCallback(async () => {
     await ensureSyncConfigLoaded(); // C4: igual que en `hydrateSocialProfile`, el token social se descifra async
     const socialConfig = getSocialSyncConfig();
     if (!authUser || !socialConfig?.token || !socialCfgGistId) {
@@ -510,6 +511,10 @@ export function useOwnProfileEditor({
     setSocialCfgEtag,
     setSocialCfgGistId,
   ]);
+
+  // Un doble clic no guarda dos veces: `ensureSyncConfigLoaded` se espera ANTES de marcar el guardado en curso, y en
+  // ese hueco el botón aún no está deshabilitado (ver `useSingleFlight`).
+  const handleSaveProfile = useSingleFlight(saveProfile);
 
   return { completedGames, hasCompletedGames, hydratingProfile, savingProfile, hydrateSocialProfile, handleSaveProfile };
 }
