@@ -14,6 +14,7 @@ import { listOwnSocialGists, readSocialGist, readSocialGistAtRevision, readSocia
 import { getCachedSocialDirectory, invalidateCachedSocialDirectory } from './indexedDbRepository';
 import { loadLocalState } from './localRepository';
 import { resolveSocialChannel } from './socialChannel';
+import { serializeSocialWrite } from './socialWriteQueue';
 
 /** Cuántas revisiones se recorren como máximo POR GIST (1 llamada autenticada por revisión). */
 const DEFAULT_MAX_REVISIONS = 60;
@@ -171,7 +172,12 @@ function anchorFromDay(day: string): number {
  *
  * Por defecto es un SIMULACRO: devuelve el plan sin escribir. Con `apply: true` escribe una vez.
  */
-export async function repairUndatedHistoryDates(options: {
+export function repairUndatedHistoryDates(options: { date: string; apply?: boolean }): Promise<HistoryDateFixPlan | null> {
+  // En fila con el resto de escrituras del canal social (ver `serializeSocialWrite`).
+  return serializeSocialWrite(() => repairUndatedHistoryDatesNow(options));
+}
+
+async function repairUndatedHistoryDatesNow(options: {
   /** Día ancla `AAAA-MM-DD` para el histórico sin fecha. */
   date: string;
   apply?: boolean;

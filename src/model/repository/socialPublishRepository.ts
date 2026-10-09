@@ -12,6 +12,7 @@ import { editPost, readSocialGist, remapSocialActorIds, removePost, removeReview
 import { markPendingSocialActivity } from './socialActivityReconcile';
 import { resolveSocialChannel, type SocialChannel } from './socialChannel';
 import { PostGoneError } from '../../core/social/postErrors';
+import { serializeSocialWrite } from './socialWriteQueue';
 
 /**
  * Arma el canal social de este dispositivo para publicar. Devuelve null si no se puede (sin sesión de Google,
@@ -248,7 +249,7 @@ async function syncPublicIdentity(ctx: SocialWriteContext, etag: string | null):
 }
 
 /** Publica/actualiza la actividad social de una reseña. Sin canal social utilizable la deja como pendiente. */
-export async function publishReviewActivity(input: { id: number; name: string; review: string; score: number; grade?: number | null; reviewChanged?: boolean }): Promise<void> {
+async function publishReviewActivityNow(input: { id: number; name: string; review: string; score: number; grade?: number | null; reviewChanged?: boolean }): Promise<void> {
   const gate = await openSocialWrite();
   if (!gate.ok) {
     // Sin sesión se aplaza en silencio; sin canal no hay nada que aplazar (el hub lo resolverá al abrirse).
@@ -299,7 +300,7 @@ export async function publishReviewActivity(input: { id: number; name: string; r
  * ya no tiene contraparte en sus listados privados (juego borrado/perdido) y se ve vacía; se retira del feed.
  * No-op sin sesión Google ni gist social configurado; NO reescribe el gist si no había nada que quitar.
  */
-export async function unpublishReviewActivity(input: { id: number }): Promise<void> {
+async function unpublishReviewActivityNow(input: { id: number }): Promise<void> {
   const gate = await openSocialWrite();
   if (!gate.ok) {
     if (gate.reason === 'no-session') {
@@ -332,7 +333,7 @@ export async function unpublishReviewActivity(input: { id: number }): Promise<vo
  * reseña: lee el gist, remapea identidad legacy, inserta el post, reescribe y asegura el perfil. No-op sin sesión
  * Google ni gist social configurado. Los hipervínculos se derivan del texto al renderizar (no se publican como HTML).
  */
-export async function publishPost(input: { text: string; maxLength?: number }): Promise<void> {
+async function publishPostNow(input: { text: string; maxLength?: number }): Promise<void> {
   const gate = await openSocialWrite();
   if (!gate.ok) {
     // Aquí SÍ se lanza: al usuario le acaba de fallar un botón que pulsó, y el compositor conserva su texto.
@@ -395,7 +396,7 @@ function postGateError(reason: 'no-session' | 'no-channel'): Error {
  * abrir el hub saldría la versión vieja durante media hora— y NO se toca la identidad pública, que editar un
  * texto no cambia.
  */
-export async function editOwnPost(input: { id: string; text: string; maxLength?: number }): Promise<SocialPostEntry | null> {
+async function editOwnPostNow(input: { id: string; text: string; maxLength?: number }): Promise<SocialPostEntry | null> {
   const gate = await openSocialWrite();
   if (!gate.ok) throw postGateError(gate.reason);
   const { ctx } = gate;
@@ -416,7 +417,7 @@ export async function editOwnPost(input: { id: string; text: string; maxLength?:
 }
 
 /** Retira una publicación propia del gist social. Mismo flujo y mismas razones que {@link editOwnPost}. */
-export async function deleteOwnPost(input: { id: string }): Promise<void> {
+async function deleteOwnPostNow(input: { id: string }): Promise<void> {
   const gate = await openSocialWrite();
   if (!gate.ok) throw postGateError(gate.reason);
   const { ctx } = gate;
@@ -426,4 +427,29 @@ export async function deleteOwnPost(input: { id: string }): Promise<void> {
 
   await commitSocialWrite(ctx, nextPayload);
   await invalidateCachedSocialDirectory(ctx.socialConfig.gistId);
+}
+
+/** Ver `publishReviewActivityNow`. En fila con el resto de escrituras del canal social (ver `serializeSocialWrite`). */
+export function publishReviewActivity(input: { id: number; name: string; review: string; score: number; grade?: number | null; reviewChanged?: boolean }): Promise<void> {
+  return serializeSocialWrite(() => publishReviewActivityNow(input));
+}
+
+/** Ver `unpublishReviewActivityNow`. En fila con el resto de escrituras del canal social (ver `serializeSocialWrite`). */
+export function unpublishReviewActivity(input: { id: number }): Promise<void> {
+  return serializeSocialWrite(() => unpublishReviewActivityNow(input));
+}
+
+/** Ver `publishPostNow`. En fila con el resto de escrituras del canal social (ver `serializeSocialWrite`). */
+export function publishPost(input: { text: string; maxLength?: number }): Promise<void> {
+  return serializeSocialWrite(() => publishPostNow(input));
+}
+
+/** Ver `editOwnPostNow`. En fila con el resto de escrituras del canal social (ver `serializeSocialWrite`). */
+export function editOwnPost(input: { id: string; text: string; maxLength?: number }): Promise<SocialPostEntry | null> {
+  return serializeSocialWrite(() => editOwnPostNow(input));
+}
+
+/** Ver `deleteOwnPostNow`. En fila con el resto de escrituras del canal social (ver `serializeSocialWrite`). */
+export function deleteOwnPost(input: { id: string }): Promise<void> {
+  return serializeSocialWrite(() => deleteOwnPostNow(input));
 }

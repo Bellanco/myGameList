@@ -287,3 +287,18 @@ describe('editar una publicación que se borró en otro dispositivo', () => {
     expect(store.writes()).toBe(0);
   });
 });
+
+// EN FILA (09-10-2026): dos publicaciones a la vez leían el mismo gist y la última pisaba a la primera.
+describe('dos escrituras del canal a la vez', () => {
+  it('dos publicaciones simultáneas acaban las dos en el canal', async () => {
+    armChannel('f4aa00000000000a');
+    const store = stubGistStore(socialGist({ posts: [] }));
+
+    await Promise.all([
+      publishPost({ text: 'Primera publicación' }),
+      publishPost({ text: 'Segunda publicación' }),
+    ]);
+
+    expect((store.current().posts || []).map((post) => post.text).sort()).toEqual(['Primera publicación', 'Segunda publicación']);
+  });
+});

@@ -35,6 +35,7 @@ import type { SocialProfileVisibility } from '../../model/types/social';
 import { normalizeVisibility, type SocialProfileForm } from './useSocialProfileForm';
 import type { SocialPanel } from './socialRoutes';
 import { isNotFoundGistError } from './gistErrors';
+import { serializeSocialWrite } from '../../model/repository/socialWriteQueue';
 
 const shouldRequireProfileCreation = (profileExists: boolean, justSavedProfile: boolean): boolean => {
   return !profileExists && !justSavedProfile;
@@ -215,17 +216,20 @@ export function useOwnProfileEditor({
         // 6.2b: al reescribir el gist propio, remapea la identidad legacy (miUid → miProfileId) para sacar
         // el uid del canal público; el resto de la limpieza (snippet-only, sin sharedLists) sigue igual.
         const myProfileId = await resolveStableProfileId(authUser.uid);
-        const remapped = remapSocialActorIds(socialRead.data, { [authUser.uid]: myProfileId });
-        const cleanedPayload = {
-          ...remapped,
-          profile: {
-            ...remapped.profile,
-            sharedLists: {},
-          },
-          updatedAt: Date.now(),
-        };
-
-        const cleanedWrite = await writeSocialGist(socialConfig.token, socialCfgGistId, cleanedPayload);
+        // EN FILA y RELEYENDO dentro: lo leído arriba puede haberse quedado viejo si otra escritura del canal estaba
+        // en curso (ver `serializeSocialWrite`). Se reescribe sobre el gist de este instante.
+        const cleanedWrite = await serializeSocialWrite(async () => {
+          const fresh = await readSocialGist(socialConfig.token, socialCfgGistId, null);
+          const remapped = remapSocialActorIds(fresh.data, { [authUser.uid]: myProfileId });
+          return writeSocialGist(socialConfig.token, socialCfgGistId, {
+            ...remapped,
+            profile: {
+              ...remapped.profile,
+              sharedLists: {},
+            },
+            updatedAt: Date.now(),
+          });
+        });
         const nextEtag = cleanedWrite.etag || socialRead.etag || null;
         setSocialCfgEtag(nextEtag);
         saveSocialSyncConfig({
@@ -379,17 +383,20 @@ export function useOwnProfileEditor({
         ...(ownPublishablePhoto ? { photoURL: ownPublishablePhoto } : {}),
       };
 
-      const currentGistResult = await readSocialGist(socialConfig.token, socialCfgGistId, null);
-      const currentGistData = currentGistResult.data;
-
-      // TODO EL CANAL SE CONSERVA y solo se cambia el perfil. Se copiaban a mano `activity` y `posts`, y el resto
-      // —los avisos de lista (`moves`, `hiddenMoves`), el consentimiento— se caía: el saneado del gist rellena con
-      // `[]` lo que falta, así que tus amigos dejaban de ver tus avisos hasta la siguiente reconciliación, que con
-      // su sello fresco podía tardar 12 h (09-10-2026). Es la forma de las demás escrituras del canal.
-      const writeResult = await writeSocialGist(socialConfig.token, socialCfgGistId, {
-        ...currentGistData,
-        profile,
-        updatedAt: Date.now(),
+      // Leer y escribir EN FILA con el resto de escrituras del canal (ver `serializeSocialWrite`). Solo este tramo:
+      // la reconciliación que se lanza después escribe por su cuenta y va en fila sola.
+      const { currentGistData, writeResult } = await serializeSocialWrite(async () => {
+        const currentGistResult = await readSocialGist(socialConfig.token, socialCfgGistId, null);
+        // TODO EL CANAL SE CONSERVA y solo se cambia el perfil. Se copiaban a mano `activity` y `posts`, y el resto
+        // —los avisos de lista (`moves`, `hiddenMoves`), el consentimiento— se caía: el saneado del gist rellena con
+        // `[]` lo que falta, así que tus amigos dejaban de ver tus avisos hasta la siguiente reconciliación, que con
+        // su sello fresco podía tardar 12 h (09-10-2026). Es la forma de las demás escrituras del canal.
+        const written = await writeSocialGist(socialConfig.token, socialCfgGistId, {
+          ...currentGistResult.data,
+          profile,
+          updatedAt: Date.now(),
+        });
+        return { currentGistData: currentGistResult.data, writeResult: written };
       });
 
       // Ya NO se fuerza el gist a público. GitHub no permite cambiar la visibilidad, así que aquello CLONABA el
