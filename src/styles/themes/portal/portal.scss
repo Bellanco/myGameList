@@ -122,9 +122,12 @@
 /* `:where` lo deja en (0,3,0), lo mismo que los roles de abajo: con `.btn` a secas pesaría (0,4,0) y el negro
    pintaría también los botones de peligro, completar y navegación del tema claro. */
 :root[data-palette="portal"][data-theme="light"] :where(.btn) {
-  /* Neutro de la Aperture antigua: panel negro con el pergamino como tinta (13,3:1). */
-  --cube-c: #2b2520; --cube-ink: #f8f0dd; --cube-side: #120f0c; --cube-edge: #120f0c;
-  --cube-hi: rgba(255, 255, 255, .13); --cube-lo: rgba(0, 0, 0, .4);
+  /* Neutro de la Aperture antigua, DE DÍA: panel de pergamino con la tinta de la casa. Era el panel negro de las
+     salas que no admiten portales (13,3:1), y en el modo claro esa placa de noche era lo único oscuro de la
+     pantalla —«Volver», «Logros globales»—, pesando más que cualquier botón con función (09-10-2026). El volumen lo
+     siguen dando el canto y la sombra tostados. */
+  --cube-c: #fbf5e8; --cube-ink: #2b2520; --cube-side: #b9a27c; --cube-edge: #8f7a57;
+  --cube-hi: rgba(255, 255, 255, .9); --cube-lo: rgba(60, 40, 10, .12);
 }
 /* "General" del panel: el principal se señala con el filete azul portal a media intensidad. El relleno azul sigue
    siendo del elegido. */
