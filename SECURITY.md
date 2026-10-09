@@ -49,6 +49,16 @@ el del canal **social** (actividad y publicaciones) y el de tu gist de **listado
 biblioteca completa **con las reseñas enteras, las notas y las horas**. Solo lo leen las dos partes, y esa parte
 está bien cerrada por reglas.
 
+**Solo cuando la amistad está aceptada.** Una petición de amistad sale **sin** tus identificadores: el destinatario
+puede leer la petición aunque nunca la acepte, y con ellos se quedaría con tu biblioteca al rechazarte. Se escriben
+cuando ves la amistad aceptada, y las peticiones antiguas que aún los llevaban se limpian en el siguiente saneado
+(09-10-2026).
+
+**Lo que tu amistad esconde se respeta también cuando no se sabe.** Si no se ha podido leer su canal social —donde
+dice qué listas oculta—, sus listados se tratan como si lo ocultara todo hasta leerlo, en lugar de enseñarlos
+enteros. La cuenta de administración sigue viendo las listas, como declara la política de privacidad, pero no las
+horas mientras no se sepa si su dueño las oculta.
+
 **Lo que hay que saber al eliminar a alguien:** se borra el documento de amistad, así que deja de ver tu perfil
 en la aplicación y deja de recibir novedades por ella. Pero si esa persona guardó los identificadores mientras
 erais amigos —basta con haberlos leído una vez—, **puede seguir leyendo esos dos gists en GitHub**, también lo
@@ -176,7 +186,9 @@ inventárselo; el nombre del claim vive en dos sitios a propósito —`firestore
 ## Recomendaciones para el usuario
 
 1. Usa siempre **HTTPS**.
-2. **Cierra sesión** en navegadores públicos o compartidos.
+2. **Cierra sesión** en navegadores públicos o compartidos. Al cerrarla, la aplicación borra de ese navegador lo que
+   guardó de otras personas (los listados de tus amistades, tus amistades y el directorio); tu biblioteca y tu
+   configuración se quedan, porque son tuyas y la aplicación las usa sin sesión.
 3. Mantén tus **Gists privados** si contienen tu biblioteca completa.
 4. **No compartas tu token**; usa un PAT *fine-grained* con el mínimo scope y con expiración.
 
