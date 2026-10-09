@@ -25,7 +25,8 @@ import { APP_LOCALE } from '../../../core/constants/locale';
  * porque la ordenación es estable sobre `sortMirror`; lo que no trae sello cae al final.
  *
  * DEBAJO, EL AVANCE: una línea fina con el porcentaje del catálogo a su derecha. Es la misma cifra que la cabecera
- * de su listado (`summarizeMirror` con la apertura comunitaria), dicha sin rótulo.
+ * de su listado (`summarizeMirror` con la apertura comunitaria), con su «del catálogo»: la cifra sola no decía de
+ * qué era.
  */
 export const ProfileAchievementStrip = memo(function ProfileAchievementStrip({
   mirror,
@@ -74,7 +75,7 @@ export const ProfileAchievementStrip = memo(function ProfileAchievementStrip({
         aria-valuetext={ACHIEVEMENTS_UI.countHint(percent)}
       >
         <span className="hub-profile-ach-bar" style={{ '--ach-pct': percent } as CSSProperties} aria-hidden="true" />
-        <span className="hub-profile-ach-pct" aria-hidden="true">{ACHIEVEMENTS_UI.rarityShare(percent)}</span>
+        <span className="hub-profile-ach-pct" aria-hidden="true">{ACHIEVEMENTS_UI.catalogShare(percent)}</span>
       </div>
     </div>
   );

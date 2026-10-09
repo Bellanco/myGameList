@@ -118,7 +118,7 @@ describe('la ficha de una amistad', () => {
     const avance = screen.getByRole('meter');
     expect(avance).toHaveAttribute('aria-valuenow', String(percent));
     expect(avance).toHaveAttribute('aria-valuetext', ACHIEVEMENTS_UI.countHint(percent));
-    expect(avance).toHaveTextContent(ACHIEVEMENTS_UI.rarityShare(percent));
+    expect(avance).toHaveTextContent(ACHIEVEMENTS_UI.catalogShare(percent));
   });
 
   it('si esa persona no publica logros, NO se pinta nada', () => {
