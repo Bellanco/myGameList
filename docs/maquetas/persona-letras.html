@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Letras de Persona</title>
+<!--
+  OPCIONES DE LETRA PARA PERSONA (punto C2, 09-10-2026). Persona usa Arial Black/Impact DEL SISTEMA, que no existe en
+  Android ni iOS: en el móvil el tema cae a la letra del sistema. Esta página monta las pantallas REALES de la maqueta
+  del social en tema Persona y les cambia la letra por CSS. Las fuentes se cargan de Google Fonts SOLO aquí, para
+  comparar; la elegida se serviría desde el propio dominio, como las demás. Necesita el servidor de desarrollo.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo+Black&family=Archivo:wght@400;600;700&family=Barlow:wght@400;500;600;700&family=Bebas+Neue&family=Big+Shoulders+Display:wght@800;900&family=DM+Sans:wght@400;500;700&family=Dela+Gothic+One&family=Noto+Sans:wght@400;600;700&family=Oswald:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #141012; --fg: #f4f2f5; --dim: #a99da9; --line: #3a2a30; --acc: #ff1f3d; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); padding: 10px 16px; display: grid; gap: 8px; }
+  h1 { font-size: 15px; margin: 0; }
+  .fila { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+  .fila > span { color: var(--dim); min-width: 6.5rem; }
+  button, select { font: inherit; color: var(--fg); background: #241c20; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  button[aria-pressed="true"] { border-color: var(--acc); color: #fff; background: #3a0d18; }
+  button .muestra { display: block; font-size: 18px; line-height: 1.1; margin-bottom: 2px; }
+  button small { color: var(--dim); }
+  #nota { color: var(--dim); margin: 0; max-width: 120ch; }
+  #nota b { color: var(--fg); }
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px; }
+  figure { margin: 0; min-width: 0; }
+  figcaption { color: var(--dim); margin-bottom: 6px; }
+  figcaption b { color: var(--fg); }
+  .marco { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: #000; }
+  iframe { border: 0; display: block; transform-origin: 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Letras de Persona: títulos y descripciones</h1>
+  <div class="fila" id="titulos"><span>Títulos</span></div>
+  <div class="fila" id="textos"><span>Descripciones</span></div>
+  <div class="fila" id="estilos"><span>Estilo de título</span></div>
+  <div class="fila"><span>Ver</span>
+    <select id="pantalla">
+      <option value="perfil">Perfil de un amigo</option><option value="feed">Feed</option>
+      <option value="resena">Reseña</option><option value="perfil&abrir=resumen">Resumen del año</option>
+      <option value="logros">Logros</option><option value="ajustes">Ajustes</option><option value="amigos">Perfiles</option>
+    </select>
+    <select id="modo"><option value="dark">Oscuro</option><option value="light">Claro</option></select>
+    <select id="ancho"><option value="1280">1280</option><option value="390">390 (móvil)</option></select>
+    <button id="movil" type="button" aria-pressed="false">«Ahora», como en el móvil (sin Arial Black)</button>
+  </div>
+  <p id="nota"></p>
+</header>
+<main>
+  <figure><figcaption><b id="t-antes">Ahora</b></figcaption><div class="marco"><iframe id="antes" title="Persona ahora"></iframe></div></figure>
+  <figure><figcaption><b id="t-despues"></b></figcaption><div class="marco"><iframe id="despues" title="Persona con la propuesta"></iframe></div></figure>
+</main>
+<script>
+/* Cada opción: la familia, su peso y una frase de por qué encaja con Persona 5. */
+const TITULOS = {
+  anton: { familia: "'Anton'", peso: 400, nombre: 'Anton', por: 'La que más se cita como la más cercana al juego: mayúsculas altas y condensadas de cartel, las de «TAKE YOUR HEART» y los rótulos de menú. Cabe más texto en la misma anchura.' },
+  archivo: { familia: "'Archivo Black'", peso: 400, nombre: 'Archivo Black', por: 'Ancha y muy gruesa, casi la Arial Black de hoy: el tema se queda como lo conoces, pero con la letra servida desde la app, así que el móvil la ve igual que el ordenador. Es la que más se parece al logotipo (Arial en negrita cursiva).' },
+  oswald: { familia: "'Oswald'", peso: 700, nombre: 'Oswald', por: 'Condensada como Anton pero menos extrema, con varios pesos: la que se recomienda para las cabeceras de la interfaz del juego. Más legible en rótulos pequeños.' },
+  bebas: { familia: "'Bebas Neue'", peso: 400, nombre: 'Bebas Neue', por: 'Solo mayúsculas, condensada y limpia: la de los rótulos de sección del juego. Ojo: no tiene minúsculas, así que todo título sale en versal.' },
+  shoulders: { familia: "'Big Shoulders Display'", peso: 900, nombre: 'Big Shoulders Display', por: 'Condensada e industrial, con cortes rectos: recuerda a las letras recortadas de la tarjeta de aviso.' },
+  dela: { familia: "'Dela Gothic One'", peso: 400, nombre: 'Dela Gothic One', por: 'Muy gruesa y cuadrada, con aire de los menús en japonés del juego. La que más grita: perfecta en titulares, pesada en rótulos pequeños.' },
+};
+const TEXTOS = {
+  dmsans: { familia: "'DM Sans'", nombre: 'DM Sans (la de ahora)', por: 'La de la casa: no cambia nada en el texto corrido.' },
+  noto: { familia: "'Noto Sans'", nombre: 'Noto Sans', por: 'La sans limpia y neutra que se propone para los diálogos y textos del juego: legible, sin personalidad que compita con los titulares.' },
+  source: { familia: "'Source Sans 3'", nombre: 'Source Sans 3', por: 'También propuesta para el texto del juego: algo más estrecha y humana que Noto; cabe más por renglón.' },
+  barlow: { familia: "'Barlow'", nombre: 'Barlow', por: 'Ligeramente estrecha y de rótulo de carretera: acompaña bien a Anton, Oswald y Bebas sin competir con ellas.' },
+  archivo: { familia: "'Archivo'", nombre: 'Archivo', por: 'La familia de Archivo Black en texto: títulos y descripciones de la misma casa. Algo más ancha que DM Sans.' },
+};
+
+/* ESTILOS DE TÍTULO DEL JUEGO, sobre el título de cada pantalla. «Del tema» es lo que hace el skin hoy. */
+const ESTILOS = {
+  tema: { nombre: 'Del tema (ahora)', por: 'El rótulo tal como lo pinta hoy el skin: rojo, cursiva y sesgado.' },
+  recorte: { nombre: 'Tarjeta de aviso (recorte)', por: 'Cada letra en su recuadro —negro, blanco o rojo— y un pelo girada, como las letras recortadas de las tarjetas de aviso de los Ladrones. Solo en el título de pantalla: en todo lo demás sería ilegible.' },
+  menu: { nombre: 'Rótulo de menú', por: 'Letra blanca sobre una banda negra inclinada con sombra roja dura, como los rótulos del menú del juego.' },
+};
+const params = new URLSearchParams(location.search);
+const estado = {
+  estilo: ESTILOS[params.get('e')] ? params.get('e') : 'tema',
+  titulo: TITULOS[params.get('t')] ? params.get('t') : 'anton',
+  texto: TEXTOS[params.get('x')] ? params.get('x') : 'dmsans',
+  pantalla: params.get('p') || 'perfil',
+  modo: params.get('m') || 'dark',
+  ancho: Number(params.get('w')) || 1280,
+  movil: params.get('movil') === '1',
+};
+const antes = document.getElementById('antes');
+const despues = document.getElementById('despues');
+const GF = document.querySelector('link[href*="fonts.googleapis"]').href;
+
+function url() {
+  return `social.html?pantalla=${estado.pantalla}&gl-palette=persona&gl-theme=${estado.modo}&gl-effects=off&barra=0`;
+}
+
+function inyectar(frame, css) {
+  const doc = frame.contentDocument;
+  if (!doc || !doc.head) return;
+  if (!doc.getElementById('gf')) {
+    const l = doc.createElement('link'); l.id = 'gf'; l.rel = 'stylesheet'; l.href = GF; doc.head.appendChild(l);
+  }
+  let s = doc.getElementById('letra');
+  if (!s) { s = doc.createElement('style'); s.id = 'letra'; doc.head.appendChild(s); }
+  s.textContent = css;
+}
+
+function cssPropuesta() {
+  const t = TITULOS[estado.titulo]; const x = TEXTOS[estado.texto];
+  let css = `html:root:root[data-palette="persona"] { --font-display: ${t.familia}, Impact, system-ui, sans-serif; --font-body: ${x.familia}, system-ui, sans-serif; }
+html:root:root[data-palette="persona"] body { font-family: var(--font-body); }
+html:root:root[data-palette="persona"] :is(h1, h2, h3, h4, .flabel) { font-weight: ${t.peso}; }`;
+  if (estado.estilo === 'menu') css += `
+html:root:root[data-palette="persona"] .hub-hub-title-wrap h2 { display: inline-block; padding: .1em .7em .12em .5em; background: #0a0a0a; color: #fff !important; transform: skewX(-12deg) rotate(-2deg); box-shadow: 5px 5px 0 var(--steam); letter-spacing: .03em; text-transform: uppercase; }`;
+  if (estado.estilo === 'recorte') css += `
+html:root:root[data-palette="persona"] .hub-hub-title-wrap h2 { display: inline-flex; flex-wrap: wrap; gap: 2px; font-style: normal; transform: none; }
+.rc { display: inline-block; padding: .02em .16em; line-height: 1.05; text-transform: uppercase; }
+.rc.n { background: #0a0a0a; color: #fff; } .rc.b { background: #fff; color: #0a0a0a; box-shadow: inset 0 0 0 2px #0a0a0a; } .rc.r { background: var(--steam); color: #0a0a0a; }
+.rc.sp { width: .35em; background: none; box-shadow: none; }`;
+  return css;
+}
+
+/* El recorte: cada letra del título de pantalla en su recuadro, con color, tamaño y giro que varían. */
+function recortar(doc) {
+  const h = doc.querySelector('.hub-hub-title-wrap h2');
+  if (!h) return;
+  if (!h.dataset.orig) h.dataset.orig = h.textContent;
+  if (estado.estilo !== 'recorte') { if (h.dataset.rc) { h.textContent = h.dataset.orig; delete h.dataset.rc; } return; }
+  const tonos = ['n', 'b', 'r', 'n', 'b'];
+  h.innerHTML = [...h.dataset.orig].map((c, i) => c === ' ' ? '<span class="rc sp"></span>'
+    : `<span class="rc ${tonos[(i * 7) % 5]}" style="transform: rotate(${((i * 37) % 9) - 4}deg); font-size: ${[1, 1.12, .92, 1.05][i % 4]}em">${c}</span>`).join('');
+  h.dataset.rc = '1';
+}
+
+/* «Ahora en el móvil»: la cadena de hoy sin Arial Black ni Impact, que es lo que ve Android. */
+function cssAntes() {
+  return estado.movil ? `html:root:root[data-palette="persona"] { --font-display: system-ui, sans-serif; }` : '';
+}
+
+function encajar() {
+  for (const frame of [antes, despues]) {
+    const hueco = frame.parentElement.clientWidth;
+    const escala = Math.min(1, hueco / estado.ancho);
+    const doc = frame.contentDocument;
+    const alto = doc && doc.documentElement ? Math.max(900, doc.documentElement.scrollHeight) : 900;
+    frame.style.width = `${estado.ancho}px`;
+    frame.style.height = `${alto}px`;
+    frame.style.transform = `scale(${escala})`;
+    frame.parentElement.style.height = `${alto * escala}px`;
+  }
+}
+
+/* La altura de x de cada opción frente a DM Sans, al mismo tamaño: es lo que hace que una letra «se vea más
+   pequeña» aunque el `font-size` sea el mismo. */
+async function alturasDeX() {
+  await document.fonts.ready;
+  const c = document.createElement('canvas').getContext('2d');
+  const medir = (familia, peso) => { c.font = `${peso} 100px ${familia}`; const m = c.measureText('x'); return m.actualBoundingBoxAscent; };
+  const base = medir("'DM Sans'", 400);
+  const r = {};
+  for (const [k, t] of Object.entries(TITULOS)) r['t-' + k] = Math.round(medir(t.familia, t.peso) / base * 100);
+  for (const [k, x] of Object.entries(TEXTOS)) r['x-' + k] = Math.round(medir(x.familia, 400) / base * 100);
+  return r;
+}
+
+let alturas = {};
+function pintar() {
+  const tt = document.getElementById('titulos'); tt.querySelectorAll('button').forEach((b) => b.remove());
+  for (const [k, t] of Object.entries(TITULOS)) {
+    const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-pressed', String(k === estado.titulo));
+    b.innerHTML = `<span class="muestra" style="font-family:${t.familia};font-weight:${t.peso};font-style:italic">Perfil de Marta</span><small>${t.nombre}${alturas['t-' + k] ? ` · x ${alturas['t-' + k]} %` : ''}</small>`;
+    b.onclick = () => { estado.titulo = k; aplicar(); };
+    tt.appendChild(b);
+  }
+  const xx = document.getElementById('textos'); xx.querySelectorAll('button').forEach((b) => b.remove());
+  for (const [k, x] of Object.entries(TEXTOS)) {
+    const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-pressed', String(k === estado.texto));
+    b.innerHTML = `<span class="muestra" style="font-family:${x.familia};font-size:15px">La mejor escritura que he visto.</span><small>${x.nombre}${alturas['x-' + k] ? ` · x ${alturas['x-' + k]} %` : ''}</small>`;
+    b.onclick = () => { estado.texto = k; aplicar(); };
+    xx.appendChild(b);
+  }
+  const ee = document.getElementById('estilos'); ee.querySelectorAll('button').forEach((b) => b.remove());
+  for (const [k, e] of Object.entries(ESTILOS)) {
+    const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-pressed', String(k === estado.estilo));
+    b.textContent = e.nombre; b.onclick = () => { estado.estilo = k; aplicar(); };
+    ee.appendChild(b);
+  }
+  const t = TITULOS[estado.titulo]; const x = TEXTOS[estado.texto]; const e = ESTILOS[estado.estilo];
+  document.getElementById('nota').innerHTML = `<b>${t.nombre}</b>: ${t.por}<br><b>${x.nombre}</b>: ${x.por}<br><b>${e.nombre}</b>: ${e.por}<br>Atlus no ha publicado las letras del juego; estas son las alternativas libres que más se le acercan. La «x %» es la altura de x frente a DM Sans al mismo tamaño.`;
+  document.getElementById('t-despues').textContent = `${t.nombre} + ${x.nombre} · ${e.nombre}`;
+  document.getElementById('t-antes').textContent = estado.movil ? 'Ahora, en el móvil (sin Arial Black)' : 'Ahora (Arial Black del sistema + DM Sans)';
+  document.getElementById('movil').setAttribute('aria-pressed', String(estado.movil));
+  for (const id of ['pantalla', 'modo', 'ancho']) document.getElementById(id).value = String(estado[id]);
+  history.replaceState(null, '', `?e=${estado.estilo}&t=${estado.titulo}&x=${estado.texto}&p=${encodeURIComponent(estado.pantalla)}&m=${estado.modo}&w=${estado.ancho}&movil=${estado.movil ? 1 : 0}`);
+  document.querySelector('main').style.gridTemplateColumns = estado.ancho <= 420 ? 'repeat(2, 420px)' : '1fr 1fr';
+  document.querySelector('main').style.justifyContent = 'center';
+}
+
+function aplicar() { inyectar(antes, cssAntes()); inyectar(despues, cssPropuesta()); if (despues.contentDocument) recortar(despues.contentDocument); pintar(); setTimeout(encajar, 300); }
+function cargar() { for (const f of [antes, despues]) f.src = url(); pintar(); }
+
+for (const f of [antes, despues]) f.addEventListener('load', () => { aplicar(); setTimeout(encajar, 800); setTimeout(encajar, 2000); });
+addEventListener('resize', encajar);
+document.getElementById('pantalla').onchange = (e) => { estado.pantalla = e.target.value; cargar(); };
+document.getElementById('modo').onchange = (e) => { estado.modo = e.target.value; cargar(); };
+document.getElementById('ancho').onchange = (e) => { estado.ancho = Number(e.target.value); cargar(); };
+document.getElementById('movil').onclick = () => { estado.movil = !estado.movil; aplicar(); };
+
+cargar();
+alturasDeX().then((r) => { alturas = r; pintar(); });
+</script>
+</body>
+</html>

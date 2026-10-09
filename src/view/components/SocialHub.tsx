@@ -31,6 +31,7 @@ import { HubOfflineNotice } from './socialhub/HubOfflineNotice';
 import { GithubSyncCard } from './sync/GithubSyncCard';
 import { libraryStart } from '../../core/achievements/metrics';
 import { useHubFocusOnNavigate } from '../hooks/useHubFocusOnNavigate';
+import { ScreenTitle } from './socialhub/ScreenTitle';
 
 /**
  * Hub social - Fase 1.
@@ -673,7 +674,7 @@ const SocialHubInner = memo(function SocialHubInner({
       <div className="hub-hub-card hub-hub-gateway-card">
         <div className="hub-hub-title-wrap">
           <Icon name="bottom-hub" className="hub-hub-icon" />
-          <h2>{SOCIAL_UI.hubTitle}</h2>
+          <h2><ScreenTitle text={SOCIAL_UI.hubTitle} /></h2>
         </div>
         <p className="hub-gateway-lead">
           {SOCIAL_UI.gateway.lead}

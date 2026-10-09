@@ -974,6 +974,9 @@
   color: var(--fg-link);
 }
 
+/* Las letras recortadas del título (`ScreenTitle`) solo las enseña el tema que las usa (Persona). */
+.rc-letters { display: none; }
+
 .hub-hub-card p {
   color: var(--text-muted);
   line-height: 1.5;

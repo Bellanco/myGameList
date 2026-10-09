@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { IconName } from '../../../core/constants/icons';
 import { Icon } from '../Icon';
+import { ScreenTitle } from './ScreenTitle';
 
 /**
  * Cáscara de una pantalla del hub social: la sección, su tarjeta y el encabezado con icono, título y subtítulo.
@@ -49,7 +50,7 @@ export function HubScreen({
         <header className="hub-screen-header">
           <div className="hub-hub-title-wrap">
             <Icon name={icon} className="hub-hub-icon" />
-            <h2>{title}</h2>
+            <h2><ScreenTitle text={title} /></h2>
             {titleExtra}
           </div>
         </header>

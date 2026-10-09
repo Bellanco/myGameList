@@ -8,6 +8,7 @@ import { Icon } from '../Icon';
 import type { RarityMeasure } from '../../../core/achievements/pack';
 import type { AchievementItem, AchievementSummary } from '../../../core/achievements/types';
 import { APP_LOCALE } from '../../../core/constants/locale';
+import { ScreenTitle } from '../socialhub/ScreenTitle';
 
 /** Fecha corta y legible. Sin hora: el día basta, y el minuto diría a qué horas usas la app (§5.3). */
 export function formatUnlockDate(ms: number): string {
@@ -126,7 +127,7 @@ export const AchievementsScreen = memo(function AchievementsScreen({
         <header className="hub-screen-header">
           <div className="hub-hub-title-wrap">
             <Icon name="chess-knight" className="hub-hub-icon" />
-            <h2>{title}</h2>
+            <h2><ScreenTitle text={title} /></h2>
           </div>
           <p>{subtitle}</p>
         </header>

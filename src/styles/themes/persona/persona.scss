@@ -1,3 +1,7 @@
+/* Fuentes propias de esta paleta (fuera de la ruta crítica; solo cargan con este skin). Anton y Noto Sans, servidas
+   desde el propio origen. Generado por `scripts/vendor-fonts.mjs`. */
+@use './fonts';
+
 /* F1 — CAPA 3 · DIRECCIÓN DE ARTE POR TEMA (skins fuertes sobre los componentes reales).
    Cada tema debe leerse como un mundo distinto, no como el mismo recoloreado. Solo se activan con
    `[data-palette="…"]`, y cada skin es un chunk perezoso que carga `paletteSkin.ts` al elegir su tema (salvo el
@@ -53,16 +57,25 @@
 /* PAPELES DE LETRA de este tema. CAPA 0 (`_base.scss`) declara los cuatro papeles y todas las hojas
    los usan por ficha; aquí es donde este tema decide qué familia va en cada uno. Cambiar la letra del
    tema es cambiar ESTE bloque, no buscar `font-family` por el fichero.
-   `--font-label` va TAMBIÉN a la Arial Black: es lo que leen por ficha el chip del orden del listado, el
+   `--font-label` va TAMBIÉN a la de titulares: es lo que leen por ficha el chip del orden del listado, el
    contador de la cabecera y el sello de rango, y sin él esas tres piezas eran las únicas de la pantalla
    que seguían en la letra de la casa. Sin cursiva: la pide cada regla que la quiera, porque `--font-*`
    solo transporta la FAMILIA. */
 :root[data-palette="persona"] {
-  --font-display: 'Arial Black', 'Arial Narrow', Impact, system-ui, sans-serif;
+  /* ANTON Y NOTO SANS, SERVIDAS POR LA APP (09-10-2026). Era la Arial Black del SISTEMA, que no existe en Android ni
+     iOS: en el móvil el tema caía a la letra del sistema. Anton es la libre más cercana a las mayúsculas
+     condensadas de cartel del juego; Noto Sans, la sans limpia de sus textos. Elegidas con
+     `docs/maquetas/persona-letras.html`. Impact queda detrás, por si la de la app no ha llegado aún. */
+  --font-display: 'Anton', Impact, 'Arial Narrow', system-ui, sans-serif;
   --font-label: var(--font-display);
+  --font-body: 'Noto Sans', system-ui, sans-serif;
+  /* Anton solo tiene un peso: sin esto, las reglas del tema que piden 800–900 la ENGORDAN a mano, y una negrita
+     falsa sobre una letra ya tan gruesa emborrona el rótulo. La cursiva sí se sintetiza: es la del tema. */
+  font-synthesis-weight: none;
 }
+:root[data-palette="persona"] body { font-family: var(--font-body); }
 
-/* ── §1 · Tipografía: Arial Black en cursiva y versalitas para titulares, etiquetas y nombres.
+/* ── §1 · Tipografía: Anton en cursiva y versalitas para titulares, etiquetas y nombres.
    OJO AL PUNTO Y COMA DE ESTA LISTA: estuvo cosida al bloque de arriba por una coma —la lista entera
    acababa en `,` y enganchaba con `:root[data-palette="persona"] { --font-display: … }`—, así que los
    diecisiete selectores se quedaron SIN `font-family` y solo declaraban la variable. Titulares, botones,
@@ -803,3 +816,27 @@
 /* La pestaña de día a la luz: la tinta negra sobre el rojo hondo de claro (#e60012) se quedaba en 4,1:1
    (09-10-2026). La placa sube un punto hacia el rojo de noche y la tinta llega a 5:1. */
 :root[data-palette="persona"][data-theme="light"] .hub-feed-day-header { background: color-mix(in srgb, var(--steam) 80%, #fff); }
+
+/* ── EL TÍTULO DE PANTALLA, TARJETA DE AVISO (09-10-2026) ────────────────────────────────────────────────────────
+   Cada letra recortada en su recuadro —negro, blanco o del rojo del tema—, con su tamaño y un pelo girada, como las
+   cartas de los Ladrones Fantasma. Las letras las pinta `ScreenTitle`; aquí se enseñan y se viste cada recorte. El
+   texto de siempre se queda solo para el lector de pantalla. Elegido con `docs/maquetas/persona-letras.html`. */
+:root[data-palette="persona"] .rc-plain {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+:root[data-palette="persona"] .rc-letters { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .1em .4em; }
+:root[data-palette="persona"] h2:has(> .rc-letters) { font-style: normal; transform: none; letter-spacing: 0; line-height: 1.25; }
+:root[data-palette="persona"] .rc-word { display: inline-flex; gap: 2px; white-space: nowrap; }
+:root[data-palette="persona"] .rc {
+  display: inline-block;
+  padding: .04em .16em;
+  line-height: 1.05;
+  text-transform: uppercase;
+  font-style: normal;
+}
+:root[data-palette="persona"] .rc-n { background: #0a0a0a; color: #fff; box-shadow: 0 0 0 1px rgba(255, 255, 255, .55); }
+:root[data-palette="persona"] .rc-b { background: #fff; color: #0a0a0a; box-shadow: inset 0 0 0 2px #0a0a0a; }
+:root[data-palette="persona"] .rc-r { background: var(--steam); color: #0a0a0a; }
+:root[data-palette="persona"][data-theme="light"] .rc-n { box-shadow: none; }
+

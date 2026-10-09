@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { SOCIAL_SHELL } from '../../../core/constants/socialShell';
 import { Icon } from '../Icon';
+import { ScreenTitle } from './ScreenTitle';
 
 /**
  * EL ARMAZÓN DE LA ACTIVIDAD SOCIAL, uno solo para la pantalla real y para su esqueleto.
@@ -71,7 +72,7 @@ export function FeedShell({
           <div className="hub-feed-header-text">
             <div className="hub-hub-title-wrap">
               <Icon name="bottom-hub" className="hub-hub-icon" />
-              <h2>{F.title}</h2>
+              <h2><ScreenTitle text={F.title} /></h2>
             </div>
           </div>
           {avatar}

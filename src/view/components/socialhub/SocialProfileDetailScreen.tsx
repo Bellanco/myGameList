@@ -35,6 +35,7 @@ import { withFinishedOn, type FinishedGame } from '../../../core/utils/finishDat
 import type { ProfileTier } from '../../../core/constants/tiers';
 import { DEFAULT_PROFILE_TIER } from '../../../core/constants/tiers';
 import type { RelationshipState } from '../../../model/types/social';
+import { ScreenTitle } from './ScreenTitle';
 
 // Paginación de los juegos del perfil: se muestran de 15 en 15 para evitar scroll excesivo al abrir el detalle.
 const LIST_PAGE_SIZE = 15;
@@ -496,7 +497,7 @@ function SocialProfileDetailScreenBase({
           <header className="hub-screen-header">
             <div className="hub-hub-title-wrap">
               <Icon name="bottom-hub" className="hub-hub-icon" />
-              <h2>{SOCIAL_UI.feed.profileDetailTitle}</h2>
+              <h2><ScreenTitle text={SOCIAL_UI.feed.profileDetailTitle} /></h2>
             </div>
           </header>
           <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.profileDetailActionsAria}>
@@ -529,9 +530,11 @@ function SocialProfileDetailScreenBase({
           <div className="hub-hub-title-wrap">
             <Icon name="bottom-hub" className="hub-hub-icon" />
             <h2>
-              {isOwnProfile
-                ? SOCIAL_UI.feed.profileDetailTitleOwn
-                : SOCIAL_UI.feed.profileDetailTitleOf(activeProfileDetail.displayName)}
+              <ScreenTitle
+                text={isOwnProfile
+                  ? SOCIAL_UI.feed.profileDetailTitleOwn
+                  : SOCIAL_UI.feed.profileDetailTitleOf(activeProfileDetail.displayName)}
+              />
             </h2>
           </div>
         </header>
