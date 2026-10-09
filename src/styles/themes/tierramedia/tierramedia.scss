@@ -341,17 +341,34 @@
    Un gesto del juego en el título de cada pantalla del hub (`.hub-hub-title-wrap h2`), elegido con
    `docs/maquetas/titulos-temas.html`. Sin `text-transform`: las mayúsculas las pone la casilla de Apariencia, y
    cualquier animación se queda quieta con los efectos apagados o si el sistema pide menos movimiento. ── */
-/* CAPITULAR ILUMINADA: la primera letra en oro dentro de un cuadro verde con filete, como el Libro Rojo de la
-   Frontera; el resto, en Garamond. */
-:root[data-palette="tierramedia"] .hub-hub-title-wrap h2 { font-family: 'EB Garamond', serif; font-size: 1.6rem; }
-:root[data-palette="tierramedia"] .hub-hub-title-wrap h2 .rc-plain { display: inline-block; }
+/* PORTADILLA DE LIBRO: versalitas de Garamond como los títulos de las ediciones de Tolkien, la inicial en oro y,
+   debajo, un filete dorado que se desvanece y acaba en una hoja (la familia de la orla élfica). Sustituye a la
+   capitular en caja del primer intento, que se leía como un botón pegado al título. */
+:root[data-palette="tierramedia"] .hub-hub-title-wrap h2 {
+  display: inline-flex;
+  flex-direction: column;
+  gap: .2rem;
+  padding-right: 1.6rem;
+  font-family: 'EB Garamond', serif;
+  font-size: 1.75rem;
+  font-weight: 500;
+  font-variant: small-caps;
+  letter-spacing: .06em;
+}
 :root[data-palette="tierramedia"] .hub-hub-title-wrap h2 .rc-plain::first-letter {
-  float: left;
-  margin: .05em .25em 0 0;
-  padding: .02em .22em;
-  font-size: 1.45em;
+  font-size: 1.4em;
+  font-weight: 600;
+  line-height: .8;
+  color: #d9b45a;
+}
+:root[data-palette="tierramedia"][data-theme="light"] .hub-hub-title-wrap h2 .rc-plain::first-letter { color: #8a5a00; }
+:root[data-palette="tierramedia"] .hub-hub-title-wrap h2 .rc-plain { display: inline-block; }
+:root[data-palette="tierramedia"] .hub-hub-title-wrap h2::after {
+  content: '❦';
+  font-size: .55em;
   line-height: 1;
-  color: #f2d27a;
-  background: #23421f;
-  box-shadow: inset 0 0 0 2px #c9a24a, inset 0 0 0 4px #23421f, inset 0 0 0 5px #c9a24a;
+  letter-spacing: 0;
+  color: #c9a24a;
+  text-indent: calc(100% - 1.1em);
+  background: linear-gradient(90deg, #c9a24a, rgba(201, 162, 74, .15)) left 50% / calc(100% - 1.4em) 1px no-repeat;
 }
