@@ -135,6 +135,7 @@
 :root[data-palette="witcher"] .hub-feed-card,
 :root[data-palette="witcher"] .hub-hub-card,
 :root[data-palette="witcher"] .modal,
+:root[data-palette="witcher"] .consent-banner,
 :root[data-palette="witcher"] .alert-dialog {
   border: 1px solid var(--border) !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.10), var(--e2) !important;
@@ -296,7 +297,7 @@
   --pz-grosor: 1.5px;
   --wt-canto: linear-gradient(rgba(255,255,255,.6), rgba(255,255,255,.6));
 }
-:root[data-palette="witcher"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
+:root[data-palette="witcher"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend, .consent-btn-accept) {
   --role-t: color-mix(in srgb, var(--role-c) 45%, #fff);
   --wt-rotulo: var(--role-t);
   --pz-filete: color-mix(in srgb, var(--role-c) 85%, transparent);
@@ -342,7 +343,7 @@
   --pz-filete: rgba(20,27,35,.35);
   --wt-canto: linear-gradient(rgba(255,255,255,.16), rgba(255,255,255,.16));
 }
-:root[data-palette="witcher"][data-theme="light"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
+:root[data-palette="witcher"][data-theme="light"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend, .consent-btn-accept) {
   --role-t: var(--role-c);
 }
 :root[data-palette="witcher"][data-theme="light"] .btn-danger {
@@ -1258,3 +1259,7 @@
 /* A la luz, el magenta sobre la placa de acero claro se quedaba en 3,5:1: se oscurece hasta el 4,5:1. */
 :root[data-palette="witcher"][data-theme="light"] .btn-friend { --role-t: color-mix(in srgb, var(--role-c) 70%, #000); }
 :root[data-palette="witcher"][data-theme="light"] { --btn-friend: var(--cat-5); }
+
+/* «Más información» del aviso de analítica, de noche: el azul de enlace sobre la placa elevada se quedaba en 4,4:1
+   (09-10-2026); un punto hacia el blanco. */
+:root[data-palette="witcher"]:not([data-theme="light"]) .consent-banner-text a { color: color-mix(in srgb, var(--fg-link) 85%, #fff); }

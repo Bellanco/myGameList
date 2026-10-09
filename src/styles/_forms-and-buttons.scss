@@ -593,8 +593,13 @@ html:root .btn.btn-friend > .ui-icon {
    costar lo mismo que aceptar o el consentimiento no es válido. La diferencia es solo de color, para que la
    acción principal se lea de un vistazo. */
 .consent-btn { min-width: 7.5rem; justify-content: center; }
+/* Es un TEÑIDO ámbar a efectos de los temas: los que construyen sus teñidos aparte (Plata y acero, Solo hay guerra,
+   Mar de estrellas) lo llevan en su lista, porque su botón genérico le quitaba el color y «Aceptar» quedaba igual que
+   «Rechazar» —o, en Mar de estrellas, más apagado que él— (09-10-2026). */
 .consent-btn-accept {
-  color: var(--fg-amber);
+  --role-c: var(--warn); --role-t: var(--fg-amber);
+  /* Un cuarto hacia el texto: el ámbar puro sobre su velo se quedaba en 4,0:1 en «No puedes pasar» claro. */
+  color: color-mix(in srgb, var(--fg-amber), var(--text) 25%);
   border-color: color-mix(in srgb, var(--warn) 60%, transparent);
   background: color-mix(in srgb, var(--warn) 16%, transparent);
   font-weight: 600;

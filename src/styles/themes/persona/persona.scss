@@ -128,6 +128,7 @@
 :root[data-palette="persona"] .hub-feed-card,
 :root[data-palette="persona"] .hub-hub-card,
 :root[data-palette="persona"] .modal,
+:root[data-palette="persona"] .consent-banner,
 :root[data-palette="persona"] .alert-dialog { border: 3px solid var(--pop-line) !important; box-shadow: 7px 7px 0 rgba(255, 78, 100, .5) !important; border-radius: 6px !important; }
 
 /* EL AVISO (logro, aviso de estado y anuncio: la misma `.ach-toast`) · la TARJETA DE VISITA de los Ladrones, el
@@ -158,6 +159,7 @@
 :root[data-palette="persona"][data-theme="light"] .hub-feed-card,
 :root[data-palette="persona"][data-theme="light"] .hub-hub-card,
 :root[data-palette="persona"][data-theme="light"] .modal,
+:root[data-palette="persona"][data-theme="light"] .consent-banner,
 :root[data-palette="persona"][data-theme="light"] .alert-dialog { border-color: #151011 !important; box-shadow: 7px 7px 0 rgba(230, 0, 18, .22) !important; }
 
 /* ── §4 · Tabla: cabecera como barra negra con texto de acento. ── */

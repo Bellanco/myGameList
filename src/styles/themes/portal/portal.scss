@@ -74,6 +74,7 @@
 :root[data-palette="portal"] .hub-feed-card,
 :root[data-palette="portal"] .hub-hub-card,
 :root[data-palette="portal"] .modal,
+:root[data-palette="portal"] .consent-banner,
 :root[data-palette="portal"] .alert-dialog { border: 1px solid var(--border) !important; border-top: 2px solid var(--portal-orange) !important; border-radius: var(--radius-md) !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), inset 0 0 46px rgba(41, 182, 246, .05), 0 8px 26px rgba(0, 0, 0, .26) !important; }
 
 /* Muesca de rango: aquí el borde superior es el filete naranja de 2px, así que el cateto de arriba mide 2px y lo
@@ -87,6 +88,7 @@
 :root[data-palette="portal"][data-theme="light"] .hub-feed-card,
 :root[data-palette="portal"][data-theme="light"] .hub-hub-card,
 :root[data-palette="portal"][data-theme="light"] .modal,
+:root[data-palette="portal"][data-theme="light"] .consent-banner,
 :root[data-palette="portal"][data-theme="light"] .alert-dialog { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), inset 0 0 46px rgba(41, 182, 246, .05), 0 8px 22px rgba(20, 45, 70, .12) !important; }
 
 /* ── §4 · Tabla: cabecera de señalética (Oswald) con filete NARANJA (gel), otro punto de contraste con el Clásico. ── */

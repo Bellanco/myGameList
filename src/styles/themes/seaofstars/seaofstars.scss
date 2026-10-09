@@ -123,6 +123,7 @@
 :root[data-palette="seaofstars"] .hub-feed-card,
 :root[data-palette="seaofstars"] .hub-hub-card,
 :root[data-palette="seaofstars"] .modal,
+:root[data-palette="seaofstars"] .consent-banner,
 :root[data-palette="seaofstars"] .alert-dialog { border: 2px solid var(--border) !important; border-radius: 0 !important; box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px color-mix(in srgb, var(--sos-turq) 55%, var(--border)) !important; }
 
 /* EL AVISO (logro, aviso de estado y anuncio) · la CAJA DE DIÁLOGO del juego, el mismo marco de 16 bits que los
@@ -181,11 +182,11 @@
   background: var(--role-c) !important; background-image: none !important;
   color: var(--role-ink) !important; border-color: var(--role-c) !important;
 }
-:root[data-palette="seaofstars"] .btn:not(.btn-icon):not(.btn-ghost):is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
+:root[data-palette="seaofstars"] .btn:not(.btn-icon):not(.btn-ghost):is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend, .consent-btn-accept) {
   background: var(--surface-elevated) !important; background-image: none !important;
   color: var(--role-t) !important; border: 2px solid var(--role-c) !important;
 }
-:root[data-palette="seaofstars"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost):is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
+:root[data-palette="seaofstars"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost):is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend, .consent-btn-accept) {
   background: #e9fbfc !important;
 }
 :root[data-palette="seaofstars"][data-theme="light"] .btn-social,

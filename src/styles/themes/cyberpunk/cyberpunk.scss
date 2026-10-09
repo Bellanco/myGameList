@@ -141,6 +141,7 @@
 :root[data-palette="cyberpunk"] .hub-feed-card,
 :root[data-palette="cyberpunk"] .hub-hub-card,
 :root[data-palette="cyberpunk"] .modal,
+:root[data-palette="cyberpunk"] .consent-banner,
 :root[data-palette="cyberpunk"] .alert-dialog { border: 1px solid var(--cyber-edge) !important; border-left: 3px solid var(--cyber-yellow) !important; border-radius: 0 !important; box-shadow: 0 0 18px rgba(0, 240, 255, .06), inset 0 0 0 1px rgba(0, 240, 255, .05) !important; }
 
 /* UNA SOLA BARRA AMARILLA POR BLOQUE, y esto es lo que la hace una marca. La regla de arriba se la da a cada

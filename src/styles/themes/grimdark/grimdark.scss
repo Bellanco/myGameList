@@ -105,6 +105,7 @@
 :root[data-palette="grimdark"] .hub-feed-card,
 :root[data-palette="grimdark"] .hub-hub-card,
 :root[data-palette="grimdark"] .modal,
+:root[data-palette="grimdark"] .consent-banner,
 :root[data-palette="grimdark"] .alert-dialog { border: 1px solid var(--grim-gold) !important; border-radius: 0 !important; box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px rgba(224, 169, 43, .4), 0 0 22px rgba(67, 245, 88, .05) !important; }
 :root[data-palette="grimdark"][data-theme="light"] .toolbar,
 :root[data-palette="grimdark"][data-theme="light"] .table-wrap,
@@ -113,6 +114,7 @@
 :root[data-palette="grimdark"][data-theme="light"] .hub-feed-card,
 :root[data-palette="grimdark"][data-theme="light"] .hub-hub-card,
 :root[data-palette="grimdark"][data-theme="light"] .modal,
+:root[data-palette="grimdark"][data-theme="light"] .consent-banner,
 :root[data-palette="grimdark"][data-theme="light"] .alert-dialog { box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px rgba(154, 111, 20, .5), 0 6px 16px rgba(40, 40, 30, .14) !important; }
 
 /* EL AVISO (logro, aviso de estado y anuncio) · la PLACA DEL COGITADOR, como los paneles: moldura de oro a canto
@@ -185,13 +187,13 @@
 /* «General» del panel: el principal se distingue de los años por el filete, mezclando el verde de cogitador. */
 :root[data-palette="grimdark"] .scope-tabs > .btn-toggle:first-child:not(.active) { border-color: color-mix(in srgb, var(--grim-green) 55%, var(--grim-gold)) !important; }
 /* Los teñidos: placa con el filete, el texto y un halo corto de su color. */
-:root[data-palette="grimdark"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
+:root[data-palette="grimdark"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend, .consent-btn-accept) {
   background: color-mix(in srgb, var(--role-c) 10%, var(--surface)) !important;
   color: var(--role-t) !important;
   border-color: var(--role-c) !important;
   box-shadow: 0 0 8px color-mix(in srgb, var(--role-c) 35%, transparent) !important;
 }
-:root[data-palette="grimdark"][data-theme="light"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
+:root[data-palette="grimdark"][data-theme="light"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend, .consent-btn-accept) {
   --role-t: color-mix(in srgb, var(--role-c) 68%, #000);
   background: color-mix(in srgb, var(--role-c) 8%, #fffaf0) !important;
   box-shadow: none !important;
