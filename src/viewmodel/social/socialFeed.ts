@@ -474,4 +474,14 @@ export type SocialDirectoryEntry = {
    * entra al feed, pero al abrir su perfil se hidrata bajo demanda para no mostrarlo a medias.
    */
   socialSkipped?: boolean;
+  /**
+   * Su gist social NO se pudo leer (404, credenciales, red). Como `socialSkipped`, deja la visibilidad SIN CONOCER:
+   * quien filtre sus listados debe tomarla como todo oculto (`LOCKED_VISIBILITY`), y al abrir su perfil se reintenta.
+   */
+  socialUnreadable?: boolean;
 };
+
+/** ¿Se conoce lo que esta persona esconde? Solo si su canal social se ha leído (ver `socialUnreadable`). */
+export function isVisibilityKnown(entry: Pick<SocialDirectoryEntry, 'socialSkipped' | 'socialUnreadable'>): boolean {
+  return !entry.socialSkipped && !entry.socialUnreadable;
+}

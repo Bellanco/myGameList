@@ -11,21 +11,25 @@
 //  1. SOLO DE AMISTADES. El gist de listados lleva la biblioteca completa: reseñas enteras, notas y horas. De un
 //     no-amigo no se lee nada —ni para pintar su ficha—, que es lo que sostiene la promesa de «perfil de
 //     no-amigo = solo nombre y foto». Y de paso, ni una llamada que no haga falta.
-//  2. FILTRADO POR SU VISIBILIDAD AL GUARDAR, no al pintar. Lo que se guarda en memoria ya viene recortado por
-//     lo que su dueño esconde (`applyProfileVisibility`), así que ninguna pantalla puede enseñar de más por
-//     olvidarse de filtrar. QUIEN MIRA entra en ese filtro: la cuenta de administración (el claim, no el rango)
-//     ve las listas y las marcas que el dueño esconde, pero no sus horas.
+//  2. FILTRADO POR SU VISIBILIDAD VIGENTE, AQUÍ y no en cada pantalla. En memoria se guarda el gist CRUDO y lo que
+//     sale del hook (`foreignGames`) se recorta con lo que su dueño esconde AHORA (`applyProfileVisibility`), así
+//     que ninguna pantalla puede enseñar de más por olvidarse de filtrar. Se filtraba AL GUARDAR, con la
+//     visibilidad de ese momento, y no se volvía a filtrar: de un amigo inactivo o con el gist social ilegible
+//     esa visibilidad era la de fábrica —nada oculto— y sus listas ocultas salían en su ficha (09-10-2026). Si no
+//     se conoce lo que esconde (`isVisibilityKnown`), falla CERRADO: todo oculto (`LOCKED_VISIBILITY`) hasta que
+//     se lea. QUIEN MIRA entra en el filtro: la cuenta de administración (el claim, no el rango) ve las listas y
+//     las marcas que el dueño esconde, pero no sus horas.
 //  3. UN FALLO SE APUNTA. Sin esa marca, el detalle esperaba para siempre el análisis completo de alguien cuyo
 //     gist no se pudo leer, con el adelanto de 160 caracteres tapado por un esqueleto eterno. Apuntado, la
 //     pantalla deja de esperar y enseña lo que hay, que a partir de ese momento es la verdad.
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSocialSyncConfig } from '../../model/repository/socialGistRepository';
 import { loadForeignProfileGames } from '../../model/repository/foreignProfileRepository';
-import { applyProfileVisibility } from '../../core/utils/profileVisibility';
+import { LOCKED_VISIBILITY, applyProfileVisibility } from '../../core/utils/profileVisibility';
 import type { GameItem, TabData, TabId } from '../../model/types/game';
 import type { SocialProfileVisibility } from '../../model/types/social';
 import { isOwnProfileIdentity } from './socialIdentity';
-import type { SocialDirectoryEntry } from './socialFeed';
+import { isVisibilityKnown, type SocialDirectoryEntry } from './socialFeed';
 
 /** Los listados de un perfil ajeno, ya filtrados por su visibilidad. */
 export type ForeignGames = Record<string, Record<TabId, GameItem[]>>;
@@ -70,7 +74,8 @@ export function useForeignProfileGames(options: ForeignProfileGamesOptions): For
     relationshipWith, localGames, isAdmin, defaultVisibility, fallbackToken,
   } = options;
 
-  const [foreignGames, setForeignGames] = useState<ForeignGames>({});
+  /** Los gists de listados TAL CUAL llegan. Nunca salen del hook sin pasar por el filtro de abajo. */
+  const [rawForeignGames, setRawForeignGames] = useState<Record<string, TabData>>({});
   /**
    * Perfiles cuyo gist de listados no se pudo leer en ESTA sesión de hub.
    *
@@ -80,26 +85,28 @@ export function useForeignProfileGames(options: ForeignProfileGamesOptions): For
   const [foreignProfileFailed, setForeignProfileFailed] = useState<Record<string, true>>({});
   const [loadingForeignProfile, setLoadingForeignProfile] = useState(false);
 
-  /* LO BAJADO SE FILTRÓ CON EL CLAIM DE ENTONCES. El claim llega por su cuenta (se lee del token) y puede cambiar
-     con la sesión abierta, así que lo ya guardado se tira y se vuelve a pedir: cuesta una lectura de IndexedDB,
-     porque la copia del gist está fresca 24 h. SOLO AL CAMBIAR, no al montar: vaciar en el primer render
-     cancelaría la lectura recién lanzada y la repetiría. */
-  const filteredAsAdminRef = useRef(isAdmin);
-  useEffect(() => {
-    if (filteredAsAdminRef.current === isAdmin) return;
-    filteredAsAdminRef.current = isAdmin;
-    setForeignGames({});
-  }, [isAdmin]);
+  /* LO QUE SALE, FILTRADO CON LO VIGENTE (regla 2). Se recalcula cuando cambia el directorio —llega la visibilidad
+     real de alguien, o cambia— o el claim de quien mira, sin volver a pedir nada: el crudo sigue en memoria. */
+  const foreignGames = useMemo<ForeignGames>(() => {
+    const out: ForeignGames = {};
+    for (const [profileId, games] of Object.entries(rawForeignGames)) {
+      const entry = directory.find((item) => item.id === profileId);
+      const visibility = entry && isVisibilityKnown(entry) ? entry.visibility || defaultVisibility : LOCKED_VISIBILITY;
+      out[profileId] = applyProfileVisibility(games, visibility, isAdmin);
+    }
+    return out;
+  }, [defaultVisibility, directory, isAdmin, rawForeignGames]);
 
   // Al abrir el detalle de una reseña o de un perfil AJENO, baja su lista completa de juegos (cache-first 24 h en
-  // IndexedDB; sin red si está fresca) y la guarda filtrada por su visibilidad. El perfil propio no se baja (ya
-  // tiene datos locales). Sin token o ante fallo de red se queda index-only (adelanto del evento).
+  // IndexedDB; sin red si está fresca) y la guarda en crudo; el filtro por su visibilidad se aplica al derivar
+  // `foreignGames`. El perfil propio no se baja (ya tiene datos locales). Sin token o ante fallo de red se queda
+  // index-only (adelanto del evento).
   useEffect(() => {
     if (!PANELS_QUE_PIDEN.includes(activePanel)) return;
     const targetProfileId = (activePanel === 'profile-detail' || activePanel === 'profile-review') ? profileDetailId : detailProfileId;
     if (!targetProfileId) return;
     if (isOwnProfileIdentity(targetProfileId, ownUid, ownProfileId)) return;
-    if (foreignGames[targetProfileId]) return;
+    if (rawForeignGames[targetProfileId]) return;
     const entry = directory.find((item) => item.id === targetProfileId);
     if (!entry || !entry.gamesGistId) return;
     if (relationshipWith(entry.uid) !== 'friends') return; // regla 1: solo de amistades.
@@ -110,8 +117,7 @@ export function useForeignProfileGames(options: ForeignProfileGamesOptions): For
     loadForeignProfileGames({ profileId: targetProfileId, gamesGistId: entry.gamesGistId, token })
       .then((games) => {
         if (cancelled || !games) return;
-        const visible = applyProfileVisibility(games, entry.visibility || defaultVisibility, isAdmin);
-        setForeignGames((prev) => ({ ...prev, [targetProfileId]: visible }));
+        setRawForeignGames((prev) => ({ ...prev, [targetProfileId]: games }));
       })
       .catch(() => {
         /* Regla 3: se apunta para que la pantalla deje de esperar y enseñe el adelanto. */
@@ -126,7 +132,7 @@ export function useForeignProfileGames(options: ForeignProfileGamesOptions): For
     return () => {
       cancelled = true;
     };
-  }, [activePanel, defaultVisibility, detailProfileId, directory, fallbackToken, foreignGames, isAdmin, ownProfileId, ownUid, profileDetailId, relationshipWith]);
+  }, [activePanel, detailProfileId, directory, fallbackToken, ownProfileId, ownUid, profileDetailId, rawForeignGames, relationshipWith]);
 
   /**
    * Obtiene un `GameItem` para un evento del feed. Para perfiles ajenos usa su lista bajada (ya filtrada por su

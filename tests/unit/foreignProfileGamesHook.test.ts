@@ -11,7 +11,7 @@
  *
  *  1. Solo de amistades. El gist de listados lleva la biblioteca completa (reseñas, notas, horas): de un
  *     no-amigo no se pide NADA, ni para pintar su ficha.
- *  2. Lo que se guarda ya viene filtrado por la visibilidad de su dueño, no al pintar.
+ *  2. Lo que sale ya viene filtrado por la visibilidad VIGENTE de su dueño, y CERRADO si aún no se conoce.
  *  3. Un fallo se apunta, para que la pantalla deje de esperar un cuerpo que no va a llegar.
  */
 import { renderHook, waitFor } from '@testing-library/react';
@@ -22,7 +22,11 @@ const invalidateProfileGames = vi.hoisted(() => vi.fn(async () => {}));
 const applyProfileVisibility = vi.hoisted(() => vi.fn((games: unknown) => games));
 
 vi.mock('../../src/model/repository/foreignProfileRepository', () => ({ loadForeignProfileGames, invalidateProfileGames }));
-vi.mock('../../src/core/utils/profileVisibility', () => ({ applyProfileVisibility }));
+vi.mock('../../src/core/utils/profileVisibility', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/core/utils/profileVisibility')>()),
+  applyProfileVisibility,
+}));
+const { LOCKED_VISIBILITY } = await import('../../src/core/utils/profileVisibility');
 vi.mock('../../src/model/repository/socialGistRepository', () => ({ getSocialSyncConfig: () => null }));
 
 const { useForeignProfileGames } = await import('../../src/viewmodel/social/useForeignProfileGames');
@@ -70,14 +74,14 @@ beforeEach(() => {
 });
 
 describe('listados de otra persona', () => {
-  it('baja el gist de un AMIGO y lo guarda ya filtrado por la visibilidad de su dueño', async () => {
+  it('baja el gist de un AMIGO y lo da filtrado por la visibilidad de su dueño', async () => {
     const { result } = setup();
 
     await waitFor(() => expect(result.current.foreignGames['perfil-ana']).toBeTruthy());
     expect(loadForeignProfileGames).toHaveBeenCalledWith({
       profileId: 'perfil-ana', gamesGistId: 'bbbb2222', token: 'ghp_0123456789abcdefghij',
     });
-    // Regla 2: el recorte se aplica AL GUARDAR, con el rango de quien mira dentro.
+    // Regla 2: el recorte se aplica antes de salir del hook, con el rango de quien mira dentro.
     expect(applyProfileVisibility).toHaveBeenCalledWith(LISTAS, expect.objectContaining({ hiddenTabs: [] }), false);
   });
 
@@ -122,9 +126,9 @@ describe('listados de otra persona', () => {
     expect(result.current.getGameItemById('perfil-ana', 999)).toBeNull();
   });
 
-  // EL FILTRO LO DECIDE EL CLAIM, y lo bajado se filtró con el de entonces: si cambia con la sesión abierta, lo
-  // guardado se tira y se vuelve a pedir, ya con el nuevo.
-  it('filtra con el claim de administración y vuelve a pedir si cambia', async () => {
+  // EL FILTRO LO DECIDE EL CLAIM DE QUIEN MIRA. Si cambia con la sesión abierta, se vuelve a filtrar lo que ya hay en
+  // memoria (el gist se guarda crudo): no hace falta pedirlo otra vez.
+  it('filtra con el claim de administración y, si cambia, refiltra sin volver a pedir', async () => {
     const { result, rerender, opts } = setup();
     await waitFor(() => expect(result.current.foreignGames['perfil-ana']).toBeTruthy());
     expect(applyProfileVisibility).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), false);
@@ -132,7 +136,39 @@ describe('listados de otra persona', () => {
     loadForeignProfileGames.mockClear();
     rerender({ ...opts, isAdmin: true });
 
-    await waitFor(() => expect(loadForeignProfileGames).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(applyProfileVisibility).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), true));
+    expect(loadForeignProfileGames).not.toHaveBeenCalled();
+  });
+
+  // FALLA CERRADO (09-10-2026). De un amigo inactivo (`socialSkipped`) o con el gist social ilegible
+  // (`socialUnreadable`) no se sabe qué esconde: sus listados salen como si lo escondiera todo, y no con la
+  // visibilidad de fábrica («nada oculto»), que es como sus listas ocultas acababan en su ficha.
+  it.each([['inactivo', { socialSkipped: true }], ['con el gist social ilegible', { socialUnreadable: true }]])(
+    'de un amigo %s filtra con todo oculto hasta conocer lo que esconde',
+    async (_caso, marca) => {
+      const { result } = setup({ directory: [entrada(marca)] as never });
+      await waitFor(() => expect(result.current.foreignGames['perfil-ana']).toBeTruthy());
+      expect(applyProfileVisibility).toHaveBeenLastCalledWith(LISTAS, LOCKED_VISIBILITY, false);
+    },
+  );
+
+  it('cuando llega lo que esconde, refiltra con eso sin volver a pedir el gist', async () => {
+    const { result, rerender, opts } = setup({ directory: [entrada({ socialSkipped: true })] as never });
+    await waitFor(() => expect(result.current.foreignGames['perfil-ana']).toBeTruthy());
+    loadForeignProfileGames.mockClear();
+
+    const real = { hiddenTabs: ['v'], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true };
+    rerender({ ...opts, directory: [entrada({ socialSkipped: false, visibility: real })] as never });
+
+    await waitFor(() => expect(applyProfileVisibility).toHaveBeenLastCalledWith(LISTAS, real, false));
+    expect(loadForeignProfileGames).not.toHaveBeenCalled();
+  });
+
+  // La cuenta de administración ve las listas que su dueño esconde (también sin conocerlas): el filtro recibe su
+  // claim y, con él, no vacía pestañas. Las horas sí se ocultan mientras no se sepa (lo decide `applyProfileVisibility`).
+  it('la administración recibe el filtro cerrado con su claim, que le deja ver las listas', async () => {
+    const { result } = setup({ isAdmin: true, directory: [entrada({ socialUnreadable: true })] as never });
+    await waitFor(() => expect(result.current.foreignGames['perfil-ana']).toBeTruthy());
+    expect(applyProfileVisibility).toHaveBeenLastCalledWith(LISTAS, LOCKED_VISIBILITY, true);
   });
 });

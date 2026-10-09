@@ -508,6 +508,8 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
               moves: [],
               sharedLists: {},
               visibility: defaultSocialVisibility,
+              // Lo que esconde vive en ese gist: sin él, NO se sabe, y sus listados se filtran como todo oculto.
+              socialUnreadable: true,
             };
           }
         },
