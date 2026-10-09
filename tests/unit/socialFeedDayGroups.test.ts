@@ -103,6 +103,18 @@ describe('useSocialFeed — agrupado por día', () => {
     expect(groups.map((group) => group.dayHeader)).toEqual(['12 de agosto', '9 de agosto', '31 de julio']);
   });
 
+  // Una fecha futura (reloj adelantado, gist editado a mano) se quedaba la primera del feed para siempre.
+  it('deja fuera lo fechado más de un día en el futuro, y tolera el desfase de unas horas', () => {
+    const ahora = Date.now();
+    const groups = agrupar([
+      review(1, ahora - 60_000),
+      review(2, ahora + 3 * 60 * 60 * 1000),
+      review(3, Date.parse('2099-01-01T00:00:00.000Z')),
+    ]);
+
+    expect(groups.flatMap(juegosDe).sort()).toEqual([1, 2]);
+  });
+
   it('descarta los timestamps inválidos sin crear un grupo fantasma', () => {
     vi.stubEnv('TZ', 'Europe/Madrid');
     const groups = agrupar([review(1, TARDE_DEL_12), review(2, 8.64e15 * 10), review(3, 0)]);
