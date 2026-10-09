@@ -1048,3 +1048,7 @@
 /* El botón «Amigos» de la ficha (`.btn-friend`): el rosa del cubo de compañía. */
 :root[data-palette="portal"] { --btn-friend: var(--portal-cube); }
 :root[data-palette="portal"][data-theme="light"] { --btn-friend: var(--portal-cube); }
+
+/* LAS ETIQUETAS DE GÉNERO, LEGIBLES A LA LUZ (09-10-2026). Los siete tonos de la rampa se quedaban entre 4,08 y
+   4,32:1 sobre su propio velo (el 18 % del tono encima de la fila): el texto se lleva un poco hacia la tinta. */
+:root[data-palette="portal"][data-theme="light"] .chip-genre { color: color-mix(in srgb, var(--cat-fg, var(--fg-sky)) 84%, #000); }

@@ -788,3 +788,7 @@
 /* El botón «Amigos» de la ficha (`.btn-friend`): un rosa encendido junto al rojo del Velvet. */
 :root[data-palette="persona"] { --btn-friend: #ff5c93; }
 :root[data-palette="persona"][data-theme="light"] { --btn-friend: #c2124f; }
+
+/* LAS ETIQUETAS DE GÉNERO, LEGIBLES A LA LUZ (09-10-2026). El rojo y el naranja de la rampa (tonos 1 y 5) se
+   quedaban en 4,14 y 4,4:1 sobre su propio velo: el texto se lleva un poco hacia la tinta. */
+:root[data-palette="persona"][data-theme="light"] .chip-genre { color: color-mix(in srgb, var(--cat-fg, var(--fg-sky)) 84%, #000); }

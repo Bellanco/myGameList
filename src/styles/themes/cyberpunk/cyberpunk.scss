@@ -354,8 +354,10 @@
 :root[data-palette="cyberpunk"] .chip-generic { --chipc: #ff2a6d; }
 /* Tema CLARO: el fondo es claro, así que los tonos neón puros no se distinguían (y el amarillo puro es ilegible).
    Se usan versiones OSCURAS y saturadas de cada tono para que el chip destaque y el texto se lea. */
-:root[data-palette="cyberpunk"][data-theme="light"] .chip-plat    { --chipc: #0079a3; }
-:root[data-palette="cyberpunk"][data-theme="light"] .chip-genre   { --chipc: #8a6d00; }
+/* Plataforma y género, un punto más hondos que al principio (#0079a3, #8a6d00): sobre su propio velo se quedaban en
+   3,8:1 (09-10-2026). */
+:root[data-palette="cyberpunk"][data-theme="light"] .chip-plat    { --chipc: #00658a; }
+:root[data-palette="cyberpunk"][data-theme="light"] .chip-genre   { --chipc: #6f5700; }
 :root[data-palette="cyberpunk"][data-theme="light"] .chip-pf      { --chipc: #0c8a72; }
 :root[data-palette="cyberpunk"][data-theme="light"] .chip-pd      { --chipc: #c5003c; }
 :root[data-palette="cyberpunk"][data-theme="light"] .chip-generic { --chipc: #b3005a; }

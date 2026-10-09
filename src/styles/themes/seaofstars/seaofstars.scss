@@ -732,3 +732,9 @@
 /* El botón «Amigos» de la ficha (`.btn-friend`): el magenta de atardecer. */
 :root[data-palette="seaofstars"] { --btn-friend: var(--sos-pink); }
 :root[data-palette="seaofstars"][data-theme="light"] { --btn-friend: #b0245e; }
+
+/* LAS ETIQUETAS DE GÉNERO, LEGIBLES (09-10-2026). A la luz, los siete tonos se quedaban entre 3,7 y 4,1:1 sobre su
+   velo encima de las turquesas (el peor fondo de la casa): el texto va hacia la tinta. De noche, el violeta y el
+   magenta (tonos 4 y 7) se quedaban en 4,2: van hacia el blanco. */
+:root[data-palette="seaofstars"][data-theme="light"] .chip-genre { color: color-mix(in srgb, var(--cat-fg, #6e4700) 70%, #000); }
+:root[data-palette="seaofstars"]:not([data-theme="light"]) .chip-genre { color: color-mix(in srgb, var(--cat-fg, var(--fg-sky)) 80%, #fff); }
