@@ -1393,14 +1393,37 @@ html:root .hub-screen-card .hub-feed-card-detail:not(.has-cover) {
   max-width: 65ch;
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  line-clamp: 4;
-  -webkit-line-clamp: 4;
+  /* DOS RENGLONES Y SUS PUNTOS SUSPENSIVOS (09-10-2026). Con cuatro, el extracto publicado —los primeros 160
+     caracteres de la reseña, cortados a mitad de palabra— casi siempre cabía entero y acababa en seco, sin «…».
+     Con dos no cabe, y el recorte pone los puntos. */
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
   overflow: hidden;
   white-space: pre-line;
   overflow-wrap: anywhere;
   font-size: clamp(.88rem, .7rem + .75vw, 1.05rem);
   line-height: 1.3;
   color: var(--text);
+}
+
+/* En el adelanto, los párrafos van seguidos: como bloques con margen, el recorte por renglones contaba el hueco
+   entre ellos, cortaba a media altura y no ponía los puntos suspensivos. El detalle los recupera (abajo). */
+.hub-feed-review-text .review-par,
+.hub-feed-review-text .review-line {
+  display: inline;
+}
+
+.hub-feed-review-text .review-par + .review-par::before,
+.hub-feed-review-text .review-line + .review-line::before {
+  content: ' ';
+}
+
+.hub-feed-card-detail .hub-feed-review-text :is(.review-par, .review-line) {
+  display: block;
+}
+
+.hub-feed-card-detail .hub-feed-review-text :is(.review-par, .review-line)::before {
+  content: none;
 }
 
 .hub-feed-card-detail .hub-feed-review-text {
