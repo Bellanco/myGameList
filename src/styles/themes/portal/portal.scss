@@ -154,7 +154,7 @@
 }
 /* Los teñidos son un CUBO PÁLIDO con la tinta honda de su color: se leen como piezas, pero no compiten con los
    cubos de color pleno. */
-:root[data-palette="portal"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+:root[data-palette="portal"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
   --cube-c: color-mix(in srgb, var(--role-c) 22%, #eef2f4); --cube-ink: color-mix(in srgb, var(--role-c) 50%, #000);
   --cube-side: color-mix(in srgb, var(--role-c) 45%, #7f8a92); --cube-edge: color-mix(in srgb, var(--role-c) 45%, #000);
   --cube-hi: rgba(255, 255, 255, .9); --cube-lo: rgba(0, 0, 0, .08);
@@ -166,7 +166,7 @@
 :root[data-palette="portal"][data-theme="light"] .btn-primary,
 :root[data-palette="portal"][data-theme="light"] .consent-btn-accept { --cube-c: color-mix(in srgb, var(--steam) 85%, #000); --cube-ink: #fff; --cube-shine: 0%; --cube-shade: 15%; }
 :root[data-palette="portal"][data-theme="light"] :is(.btn-open, .btn.is-active, .btn-toggle.active, .btn-toggle-deck.active) { --cube-shine: 0%; --cube-shade: 15%; }
-:root[data-palette="portal"][data-theme="light"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+:root[data-palette="portal"][data-theme="light"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
   --cube-c: color-mix(in srgb, var(--role-c) 16%, #fbf6ea); --cube-ink: color-mix(in srgb, var(--role-c) 68%, #000);
   --cube-side: color-mix(in srgb, var(--role-c) 40%, #8a7a60); --cube-hi: rgba(255, 255, 255, .7); --cube-lo: rgba(0, 0, 0, .08);
 }
@@ -1044,3 +1044,7 @@
 :root[data-palette="portal"] .star-inp button.f {
   text-shadow: 0 0 8px color-mix(in srgb, var(--star-full) 45%, transparent);
 }
+
+/* El botón «Amigos» de la ficha (`.btn-friend`): el rosa del cubo de compañía. */
+:root[data-palette="portal"] { --btn-friend: var(--portal-cube); }
+:root[data-palette="portal"][data-theme="light"] { --btn-friend: var(--portal-cube); }

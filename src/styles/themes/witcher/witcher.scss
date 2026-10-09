@@ -296,7 +296,7 @@
   --pz-grosor: 1.5px;
   --wt-canto: linear-gradient(rgba(255,255,255,.6), rgba(255,255,255,.6));
 }
-:root[data-palette="witcher"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+:root[data-palette="witcher"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
   --role-t: color-mix(in srgb, var(--role-c) 45%, #fff);
   --wt-rotulo: var(--role-t);
   --pz-filete: color-mix(in srgb, var(--role-c) 85%, transparent);
@@ -342,7 +342,7 @@
   --pz-filete: rgba(20,27,35,.35);
   --wt-canto: linear-gradient(rgba(255,255,255,.16), rgba(255,255,255,.16));
 }
-:root[data-palette="witcher"][data-theme="light"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+:root[data-palette="witcher"][data-theme="light"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
   --role-t: var(--role-c);
 }
 :root[data-palette="witcher"][data-theme="light"] .btn-danger {
@@ -1250,3 +1250,11 @@
   --deco-avatar-stroke: 1.6;
   --deco-avatar-cap: butt;
 }
+
+/* El botón «Amigos» de la ficha (`.btn-friend`): el magenta de la tinta de los contratos. */
+:root[data-palette="witcher"] { --btn-friend: var(--cat-5); }
+/* El rótulo de los teñidos va casi blanco sobre el acero (45 %); en este, el rosa ES el mensaje, así que lleva más. */
+:root[data-palette="witcher"]:not([data-theme="light"]) .btn-friend { --role-t: color-mix(in srgb, var(--role-c) 75%, #fff); }
+/* A la luz, el magenta sobre la placa de acero claro se quedaba en 3,5:1: se oscurece hasta el 4,5:1. */
+:root[data-palette="witcher"][data-theme="light"] .btn-friend { --role-t: color-mix(in srgb, var(--role-c) 70%, #000); }
+:root[data-palette="witcher"][data-theme="light"] { --btn-friend: var(--cat-5); }

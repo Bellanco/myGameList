@@ -208,13 +208,13 @@
   background: var(--role-c) !important;
   color: var(--role-ink) !important;
 }
-:root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost):is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+:root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost):is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
   background: #0a0a0a !important;
   color: var(--role-t) !important;
   border-color: var(--role-c) !important;
   box-shadow: var(--btn-cast, 5px) var(--btn-cast, 5px) 0 color-mix(in srgb, var(--role-c) 55%, transparent) !important;
 }
-:root[data-palette="persona"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost):is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+:root[data-palette="persona"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost):is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
   --role-t: color-mix(in srgb, var(--role-c) 68%, #000);
   background: #fff !important;
   border-color: #151011 !important;
@@ -784,3 +784,7 @@
 :root[data-palette="persona"] .star-inp button.f {
   text-shadow: 1px 1px 0 color-mix(in srgb, var(--pop-line) 45%, transparent);
 }
+
+/* El botón «Amigos» de la ficha (`.btn-friend`): un rosa encendido junto al rojo del Velvet. */
+:root[data-palette="persona"] { --btn-friend: #ff5c93; }
+:root[data-palette="persona"][data-theme="light"] { --btn-friend: #c2124f; }

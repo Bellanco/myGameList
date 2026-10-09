@@ -253,7 +253,7 @@
 :root[data-palette="tierramedia"] .btn:not(
   .btn-icon, .btn-ghost, .btn-quiet, .stat-tile-go,
   .btn-primary, .btn-steam, .btn-open, .btn-social, .btn-exit, .btn-done,
-  .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-danger,
+  .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend, .btn-danger,
   .is-active, .active, .consent-btn-accept
 ) {
   background: linear-gradient(160deg, var(--tm-piedra-top), var(--tm-piedra-bot));
@@ -332,3 +332,7 @@
   border-color: color-mix(in srgb, var(--steam) 55%, var(--border));
 }
 :root[data-palette="tierramedia"] .hub-feed-day-header h4 { color: var(--text); }
+
+/* El botón «Amigos» de la ficha (`.btn-friend`): el rosa de Rivendel del mapa. */
+:root[data-palette="tierramedia"] { --btn-friend: var(--cat-5); }
+:root[data-palette="tierramedia"][data-theme="light"] { --btn-friend: var(--cat-5); }

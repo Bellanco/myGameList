@@ -192,15 +192,24 @@
 }
 
 
-/* FILA DE ACCIONES DEL DETALLE DE PERFIL: volver, las vistas y la ruleta. Es la más cargada del hub y con la regla
-   común de la fila partida se rompía en la franja media: sus botones se estrujaban hasta partir el rótulo en dos o
-   tres renglones (y entre ~630 y 740px la fila se salía de la tarjeta). Aquí envuelve botón a botón y sin partir
-   rótulos. La acción de relación —amistad o «Editar mi perfil»— ya no va en esta fila sino al pie de la cabecera
-   (`.hub-profile-hero-actions`). Va con clase propia y no en `.hub-screen-actions` porque esa la comparten cinco
-   pantallas más. */
+/* FILA DE ACCIONES DEL DETALLE DE PERFIL: volver, las vistas, la ruleta y, al extremo, la relación con esa persona
+   (o «Editar mi perfil» en el tuyo). Con la regla común de la fila partida se rompía en la franja media: el lado
+   izquierdo no envolvía, sus botones se estrujaban hasta partir el rótulo y entre ~630 y 740px la fila se salía de
+   la tarjeta. Aquí la fila no envuelve, el lado izquierdo ocupa lo que sobra y es ÉL quien baja de línea, botón a
+   botón y sin partir rótulos, y el derecho se queda arriba, alineado con el primer renglón.
+   Va con clase propia y no en `.hub-screen-actions-split` porque esa la comparten cinco pantallas más. */
+.hub-profile-detail-actions {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+
 .hub-profile-detail-actions .hub-screen-actions-left {
   flex: 1 1 auto;
   flex-wrap: wrap;
+}
+
+.hub-profile-detail-actions .hub-screen-actions-right {
+  flex: 0 0 auto;
 }
 
 .hub-profile-detail-actions .btn {
@@ -226,17 +235,20 @@
     flex: 0 1 44px;
     min-width: 36px;
   }
-}
 
-/* LA ACCIÓN DE RELACIÓN, al pie de la cabecera del perfil y centrada con ella: siempre con rótulo, también en
-   móvil, porque es la única de la pantalla que cambia algo fuera de ella. */
-.hub-profile-hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: .5rem;
-  margin-top: .45rem;
+  /* MENOS LA DE LA RELACIÓN, QUE CONSERVA SU RÓTULO. En icono, «Amigos» sería un corazón suelto, «Añadir» un + y
+     la × de antes arriba a la derecha se pulsaba creyendo que cerraba. Con su palabra cabe igual en la fila: los
+     cuadrados de la izquierda ceden lo que haga falta (arriba). (0,7,1) para ganar a los skins que también colapsan
+     esta fila en móvil (Arcade, Plata y acero). */
+  html:root .hub-profile-detail-actions .hub-screen-actions-right.is-relationship .btn:not(.btn-icon):not(.btn-ghost) {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
+    height: 44px;
+    padding-inline: .7rem;
+    font-size: var(--fs-xs);
+    gap: .35rem;
+  }
 }
 
 

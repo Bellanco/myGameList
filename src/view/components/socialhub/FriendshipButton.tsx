@@ -8,8 +8,8 @@ import type { SocialUiLabels } from '../../../core/constants/socialLabels';
  * - none     → "Añadir amigo"
  * - incoming → "Aceptar"
  * - outgoing → rótulo de estado "Pendiente" + acción callada "Retirar" (pide confirmación)
- * - friends  → chip "Amigos" en la tarjeta; con onRemove (el detalle), solo "Eliminar amistad": ahí el chip no
- *               añadía nada —el propio botón ya dice que sois amigos— y le quitaba sitio a la fila de botones
+ * - friends  → chip "Amigos" en la tarjeta; con onRemove (el detalle), un botón rosa "♥ Amigos" que pide
+ *               confirmación para dejar de serlo
  *
  * El rótulo de los botones con icono va envuelto en `.btn-label` porque en la tarjeta de persona, y en pantalla
  * estrecha, se oculta y queda solo el icono (el `aria-label` sigue diciendo la acción entera). "Pendiente" es un
@@ -37,17 +37,21 @@ export function FriendshipButton({
 
   if (state === 'friends') {
     if (!onRemove) return <span className="hub-friend-chip">{F.friends}</span>;
+    /* EL ESTADO, NO LA RUPTURA (09-10-2026). Era «× Dejar de ser amigos» en rojo: en la fila de la ficha se pulsaba
+       por error y, al pie de la cabecera, alargaba la pantalla. Ahora dice lo que hay —«Amigos»—, en el rosa de la
+       amistad de cada tema (`.btn-friend`), y al pulsarlo la confirmación de siempre pregunta si se quiere dejar de
+       serlo. */
     return (
       <button
-        className="btn btn-exit btn-sm"
+        className="btn btn-friend btn-sm"
         type="button"
         disabled={busy}
         aria-label={F.removeAria(name)}
         title={F.removeAria(name)}
         onClick={onRemove}
       >
-        <Icon name="close" />
-        <span className="btn-label">{F.remove}</span>
+        <Icon name="heart" />
+        <span className="btn-label">{F.friends}</span>
       </button>
     );
   }

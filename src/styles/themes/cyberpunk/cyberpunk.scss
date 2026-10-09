@@ -253,7 +253,7 @@
   --hud-edge-w: 2.5px; --hud-glow-a: 75%; --hud-glow-r: 10px; --hud-text-glow-a: 70%;
 }
 :root[data-palette="cyberpunk"] .btn-danger { --role-c: var(--danger); }
-:root[data-palette="cyberpunk"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+:root[data-palette="cyberpunk"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
   --hud-c: var(--role-c); --hud-tint: 16%; --hud-ink: var(--role-t);
 }
 /* Descartar: el contorno del tubo, apagado. */
@@ -266,7 +266,7 @@
 :root[data-palette="cyberpunk"][data-theme="light"] :is(.btn-open, .btn.is-active, .btn-toggle.active, .btn-toggle-deck.active, .btn-danger) {
   --hud-tint: 18%; --hud-ink: color-mix(in srgb, var(--hud-c) 72%, #000); --hud-glow-a: 50%; --hud-glow-r: 6px; --hud-text-glow-a: 0%;
 }
-:root[data-palette="cyberpunk"][data-theme="light"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+:root[data-palette="cyberpunk"][data-theme="light"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
   --hud-tint: 12%; --hud-ink: color-mix(in srgb, var(--role-c) 55%, #000);
 }
 /* La marca de las tarjetas de estadísticas es un `.btn` con el tinte de su tarjeta: lo conserva, en neón. */
@@ -977,3 +977,7 @@
 :root[data-palette="cyberpunk"] .star-inp button.f {
   text-shadow: 0 0 10px color-mix(in srgb, var(--star-full) 60%, transparent);
 }
+
+/* El botón «Amigos» de la ficha (`.btn-friend`): el magenta del HUD. */
+:root[data-palette="cyberpunk"] { --btn-friend: var(--cyber-magenta); }
+:root[data-palette="cyberpunk"][data-theme="light"] { --btn-friend: var(--cyber-magenta); }

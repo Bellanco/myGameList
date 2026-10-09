@@ -270,6 +270,9 @@ export const SOCIAL_UI = {
     profileListTabPlanned: 'Próximos',
     profileListTabWished: 'Deseados',
     backToFeed: 'Volver a la actividad',
+    // En la fila de la ficha va corto: con «Volver a la actividad» Persona no cabía en una línea a 1280 junto a
+    // «Amigos». El nombre accesible sigue siendo el largo (`backToFeed`).
+    backToFeedShort: 'Volver',
     // Rótulos del volver cuando se ha llegado saltando de un análisis a otro por el bloque de relacionados: el
     // botón nombra el sitio al que de verdad se vuelve, no el que la pantalla tiene por defecto.
     backToReview: 'Volver al análisis',
@@ -334,11 +337,12 @@ export const SOCIAL_UI = {
     pending: 'Pendiente',
     withdraw: 'Retirar',
     friends: 'Amigos',
-    remove: 'Dejar de ser amigos',
     addAria: (name: string) => `Enviar petición de amistad a ${name}`,
     acceptAria: (name: string) => `Aceptar la petición de ${name}`,
     cancelAria: (name: string) => `Cancelar la petición enviada a ${name}`,
-    removeAria: (name: string) => `Dejar de ser amigo de ${name}`,
+    // El botón dice el ESTADO («Amigos») y lo que hace va en su nombre accesible, que empieza por lo que se ve
+    // (WCAG 2.5.3): quien lo dicta por voz dice «Amigos» y lo encuentra.
+    removeAria: (name: string) => `Amigos: dejar de ser amigo de ${name}`,
     removeConfirmTitle: (name: string) => `¿Dejar de ser amigo de ${name}?`,
     removeConfirmAction: 'Dejar de ser amigos',
     // Rechazar y retirar tampoco se deshacen —borran el documento de amistad—, así que pasan por la misma

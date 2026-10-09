@@ -58,7 +58,9 @@ export type IconName =
   | 'view-list'
   | 'view-grid'
   /** Tres barras (Font Awesome «chart-simple»): el acceso a la reseña desde la caja del mosaico. */
-  | 'chart-simple';
+  | 'chart-simple'
+  /** Corazón (Font Awesome «heart»): el botón «Amigos» de la ficha de alguien. */
+  | 'heart';
 
 export const TAB_ICONS: Record<TabId, IconName> = {
   c: 'trophy',

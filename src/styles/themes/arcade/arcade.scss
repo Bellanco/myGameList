@@ -248,16 +248,16 @@
   color: var(--btn-ink) !important;
 }
 :root[data-palette="arcade"] :is(.btn-back, .btn-toggle:not(.active), .btn-toggle-deck:not(.active),
-  .btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+  .btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
   --btn-fill-a: #3b2260;
   --btn-fill-b: #241440;
   --btn-ink: var(--text);
 }
-:root[data-palette="arcade"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+:root[data-palette="arcade"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
   --role-t: color-mix(in srgb, var(--role-c) 60%, #fff);
   --btn-ink: var(--role-t);
 }
-:root[data-palette="arcade"] .btn:is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned):not(.btn-ghost) {
+:root[data-palette="arcade"] .btn:is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend):not(.btn-ghost) {
   border-color: var(--role-c) !important;
 }
 /* Descartar: ni tecla ni sombra, solo el contorno. Pesa (0,6,0) para ganar también a la tecla rosa de claro. */
@@ -320,11 +320,11 @@
 }
 /* La chapa a la luz es papel con un velo lila; el texto de los teñidos, su color tal cual (ya es hondo de día). */
 :root[data-palette="arcade"][data-theme="light"] :is(.btn-back, .btn-toggle:not(.active), .btn-toggle-deck:not(.active),
-  .btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+  .btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
   --btn-fill-a: #fff;
   --btn-fill-b: #efe3fc;
 }
-:root[data-palette="arcade"][data-theme="light"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+:root[data-palette="arcade"][data-theme="light"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
   --role-t: var(--role-c);
 }
 /* Un rosa a media opacidad sigue pareciendo encendido: el desactivado pierde además el color, como una tecla
@@ -1018,3 +1018,7 @@
   box-shadow: 6px 6px 0 var(--arc-ink);
 }
 :root[data-palette="arcade"] .fx-seal-label { font-size: 15px; letter-spacing: .12em; }
+
+/* El botón «Amigos» de la ficha (`.btn-friend`): el rosa chicle de pegatina. */
+:root[data-palette="arcade"] { --btn-friend: var(--arc-pink); }
+:root[data-palette="arcade"][data-theme="light"] { --btn-friend: var(--arc-pink); }

@@ -185,13 +185,13 @@
 /* «General» del panel: el principal se distingue de los años por el filete, mezclando el verde de cogitador. */
 :root[data-palette="grimdark"] .scope-tabs > .btn-toggle:first-child:not(.active) { border-color: color-mix(in srgb, var(--grim-green) 55%, var(--grim-gold)) !important; }
 /* Los teñidos: placa con el filete, el texto y un halo corto de su color. */
-:root[data-palette="grimdark"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+:root[data-palette="grimdark"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
   background: color-mix(in srgb, var(--role-c) 10%, var(--surface)) !important;
   color: var(--role-t) !important;
   border-color: var(--role-c) !important;
   box-shadow: 0 0 8px color-mix(in srgb, var(--role-c) 35%, transparent) !important;
 }
-:root[data-palette="grimdark"][data-theme="light"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+:root[data-palette="grimdark"][data-theme="light"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
   --role-t: color-mix(in srgb, var(--role-c) 68%, #000);
   background: color-mix(in srgb, var(--role-c) 8%, #fffaf0) !important;
   box-shadow: none !important;
@@ -973,3 +973,8 @@
 }
 :root[data-palette="grimdark"][data-theme="light"] .stars .f,
 :root[data-palette="grimdark"][data-theme="light"] .star-inp button.f { text-shadow: none; }
+
+/* El botón «Amigos» de la ficha (`.btn-friend`): un rosa de vidriera, encendido como el verde de cogitador; con uno
+   apagado, sobre la placa casi negra no se leía como rosa. */
+:root[data-palette="grimdark"] { --btn-friend: #ec5c98; }
+:root[data-palette="grimdark"][data-theme="light"] { --btn-friend: #8a2c4f; }

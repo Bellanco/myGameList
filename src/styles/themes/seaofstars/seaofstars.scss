@@ -156,11 +156,11 @@
 /* NEUTRO = LUZ DE ESTRELLA: la placa CREMA del `--sos-line` OSCURO (#fff7d6, literal: en claro esa variable pasa a
    ser la tinta) con tinta de la noche (17,8:1 en oscuro, 13,9:1 en claro), la misma en los dos temas, como la luz
    de las estrellas. Va por EXCLUSIÓN de cada función con color, así que no le pinta encima a ninguna. */
-:root[data-palette="seaofstars"] .btn:not(.btn-icon, .btn-ghost, .btn-quiet, .btn-primary, .btn-steam, .btn-open, .is-active, .active, .btn-social, .btn-done, .btn-exit, .btn-complete, .btn-danger, .btn-abandoned, .btn-playing, .btn-upcoming, .consent-btn-accept) {
+:root[data-palette="seaofstars"] .btn:not(.btn-icon, .btn-ghost, .btn-quiet, .btn-primary, .btn-steam, .btn-open, .is-active, .active, .btn-social, .btn-done, .btn-exit, .btn-complete, .btn-danger, .btn-abandoned, .btn-friend, .btn-playing, .btn-upcoming, .consent-btn-accept) {
   background: #fff7d6 !important; background-image: none !important;
   color: #0e0c24 !important; border-color: color-mix(in srgb, #fff7d6 62%, #7a5000) !important;
 }
-:root[data-palette="seaofstars"][data-theme="light"] .btn:not(.btn-icon, .btn-ghost, .btn-quiet, .btn-primary, .btn-steam, .btn-open, .is-active, .active, .btn-social, .btn-done, .btn-exit, .btn-complete, .btn-danger, .btn-abandoned, .btn-playing, .btn-upcoming, .consent-btn-accept) {
+:root[data-palette="seaofstars"][data-theme="light"] .btn:not(.btn-icon, .btn-ghost, .btn-quiet, .btn-primary, .btn-steam, .btn-open, .is-active, .active, .btn-social, .btn-done, .btn-exit, .btn-complete, .btn-danger, .btn-abandoned, .btn-friend, .btn-playing, .btn-upcoming, .consent-btn-accept) {
   color: #0a2a3a !important;
 }
 /* ── LOS BOTONES POR FUNCIÓN (ver `_forms-and-buttons.scss`) ──────────────────────────────────────────────
@@ -181,11 +181,11 @@
   background: var(--role-c) !important; background-image: none !important;
   color: var(--role-ink) !important; border-color: var(--role-c) !important;
 }
-:root[data-palette="seaofstars"] .btn:not(.btn-icon):not(.btn-ghost):is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+:root[data-palette="seaofstars"] .btn:not(.btn-icon):not(.btn-ghost):is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
   background: var(--surface-elevated) !important; background-image: none !important;
   color: var(--role-t) !important; border: 2px solid var(--role-c) !important;
 }
-:root[data-palette="seaofstars"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost):is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+:root[data-palette="seaofstars"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost):is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
   background: #e9fbfc !important;
 }
 :root[data-palette="seaofstars"][data-theme="light"] .btn-social,
@@ -728,3 +728,7 @@
 :root[data-palette="seaofstars"] .star-inp button.f {
   text-shadow: 1px 1px 0 color-mix(in srgb, var(--sos-turq) 50%, transparent);
 }
+
+/* El botón «Amigos» de la ficha (`.btn-friend`): el magenta de atardecer. */
+:root[data-palette="seaofstars"] { --btn-friend: var(--sos-pink); }
+:root[data-palette="seaofstars"][data-theme="light"] { --btn-friend: #b0245e; }

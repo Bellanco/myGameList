@@ -535,9 +535,9 @@ function SocialProfileDetailScreenBase({
             </h2>
           </div>
         </header>
-        <div className="hub-screen-actions hub-profile-detail-actions" aria-label={SOCIAL_UI.feed.profileDetailActionsAria}>
+        <div className="hub-screen-actions hub-screen-actions-split hub-profile-detail-actions" aria-label={SOCIAL_UI.feed.profileDetailActionsAria}>
           <div className="hub-screen-actions-left">
-            <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeed} />
+            <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeedShort} ariaLabel={SOCIAL_UI.feed.backToFeed} />
             {canSeeFullProfile ? (
               <>
                 <button
@@ -615,6 +615,32 @@ function SocialProfileDetailScreenBase({
               </>
             ) : null}
           </div>
+          {/* LA RELACIÓN, AL EXTREMO DE LA FILA. Estuvo al pie de la cabecera (09-10-2026) y se volvió aquí el mismo
+              día: allí alargaba la pantalla y seguía siendo fácil de pulsar sin querer. Lo que la hace segura ahora es
+              la forma, no el sitio: con una amistad dice «Amigos», en rosa y corto —cabe en una línea a 1280 en los
+              ocho temas—, y dejar de serlo pasa por la confirmación. En móvil conserva su rótulo (`is-relationship`):
+              una × suelta arriba a la derecha se leía como «cerrar». */}
+          {isOwnProfile && onEditProfile ? (
+            <div className="hub-screen-actions-right">
+              <button className="btn btn-open" type="button" onClick={onEditProfile}>
+                <Icon name="edit" />
+                {SOCIAL_UI.feed.profile}
+                <Icon name="angle-right" className="ui-icon btn-open-go" />
+              </button>
+            </div>
+          ) : !isOwnProfile && onAddOrAcceptFriend ? (
+            <div className="hub-screen-actions-right is-relationship">
+              <FriendshipButton
+                SOCIAL_UI={SOCIAL_UI}
+                state={friendshipState}
+                name={activeProfileDetail.displayName}
+                busy={friendshipBusy}
+                onAddOrAccept={onAddOrAcceptFriend}
+                onCancel={onCancelFriendRequest || (() => undefined)}
+                onRemove={onRemoveFriend}
+              />
+            </div>
+          ) : null}
         </div>
         <article className="hub-feed-card hub-feed-card-detail">
           <div className="hub-profile-hero">
@@ -638,31 +664,6 @@ function SocialProfileDetailScreenBase({
               <Suspense fallback={null}>
                 <PalmaresStrip entries={palmares} />
               </Suspense>
-            ) : null}
-            {/* LA RELACIÓN, CON LA PERSONA Y NO CON LA NAVEGACIÓN. Iba al extremo derecho de la fila de botones, donde
-                competía con «Volver» y las vistas, empujaba «Elige tu próximo juego» a un renglón suelto a 1280 px
-                y en móvil se quedaba en una × justo donde se busca «cerrar» (09-10-2026). Al pie de la cabecera se
-                lee junto al nombre al que se refiere, y con rótulo en cualquier ancho. */}
-            {isOwnProfile && onEditProfile ? (
-              <div className="hub-profile-hero-actions">
-                <button className="btn btn-open" type="button" onClick={onEditProfile}>
-                  <Icon name="edit" />
-                  {SOCIAL_UI.feed.profile}
-                  <Icon name="angle-right" className="ui-icon btn-open-go" />
-                </button>
-              </div>
-            ) : !isOwnProfile && onAddOrAcceptFriend ? (
-              <div className="hub-profile-hero-actions">
-                <FriendshipButton
-                  SOCIAL_UI={SOCIAL_UI}
-                  state={friendshipState}
-                  name={activeProfileDetail.displayName}
-                  busy={friendshipBusy}
-                  onAddOrAccept={onAddOrAcceptFriend}
-                  onCancel={onCancelFriendRequest || (() => undefined)}
-                  onRemove={onRemoveFriend}
-                />
-              </div>
             ) : null}
           </div>
           {!canSeeFullProfile ? (
