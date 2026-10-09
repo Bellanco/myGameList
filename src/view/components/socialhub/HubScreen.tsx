@@ -1,10 +1,8 @@
 import type { ReactNode } from 'react';
-import type { IconName } from '../../../core/constants/icons';
-import { Icon } from '../Icon';
 import { ScreenTitle } from './ScreenTitle';
 
 /**
- * Cáscara de una pantalla del hub social: la sección, su tarjeta y el encabezado con icono, título y subtítulo.
+ * Cáscara de una pantalla del hub social: la sección, su tarjeta y el encabezado con título y subtítulo.
  *
  * Existe porque ese armazón estaba escrito a mano en todas las pantallas del hub —y DOS veces dentro de varias
  * de ellas, una para el estado vacío y otra para el estado con datos—, siempre con el mismo marcado y la misma
@@ -27,8 +25,6 @@ export interface HubScreenProps {
   /** Etiqueta accesible de la sección. */
   ariaLabel: string;
   title: string;
-  /** Icono del encabezado. `bottom-hub` es el del hub; el detalle de una reseña usa `signature`. */
-  icon?: IconName;
   /** Añadido dentro del título, a la derecha (hoy: el chip de estado del perfil propio). */
   titleExtra?: ReactNode;
   /** Clase extra de la tarjeta. Casi todas usan la del feed; el perfil propio tiene la suya. */
@@ -39,7 +35,6 @@ export interface HubScreenProps {
 export function HubScreen({
   ariaLabel,
   title,
-  icon = 'bottom-hub',
   titleExtra,
   cardClassName = 'hub-feed-card-shell',
   children,
@@ -49,7 +44,6 @@ export function HubScreen({
       <div className={`hub-hub-card hub-screen-card ${cardClassName}`.trim()}>
         <header className="hub-screen-header">
           <div className="hub-hub-title-wrap">
-            <Icon name={icon} className="hub-hub-icon" />
             <h2><ScreenTitle text={title} /></h2>
             {titleExtra}
           </div>

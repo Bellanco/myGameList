@@ -673,7 +673,6 @@ const SocialHubInner = memo(function SocialHubInner({
     <section className="hub-hub hub-hub-gateway" aria-label={SOCIAL_UI.screenAria}>
       <div className="hub-hub-card hub-hub-gateway-card">
         <div className="hub-hub-title-wrap">
-          <Icon name="bottom-hub" className="hub-hub-icon" />
           <h2><ScreenTitle text={SOCIAL_UI.hubTitle} /></h2>
         </div>
         <p className="hub-gateway-lead">

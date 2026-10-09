@@ -496,7 +496,6 @@ function SocialProfileDetailScreenBase({
         <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
           <header className="hub-screen-header">
             <div className="hub-hub-title-wrap">
-              <Icon name="bottom-hub" className="hub-hub-icon" />
               <h2><ScreenTitle text={SOCIAL_UI.feed.profileDetailTitle} /></h2>
             </div>
           </header>
@@ -528,7 +527,6 @@ function SocialProfileDetailScreenBase({
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
         <header className="hub-screen-header">
           <div className="hub-hub-title-wrap">
-            <Icon name="bottom-hub" className="hub-hub-icon" />
             <h2>
               <ScreenTitle
                 text={isOwnProfile

@@ -71,7 +71,6 @@ export function FeedShell({
         <header className="hub-screen-header hub-feed-header">
           <div className="hub-feed-header-text">
             <div className="hub-hub-title-wrap">
-              <Icon name="bottom-hub" className="hub-hub-icon" />
               <h2><ScreenTitle text={F.title} /></h2>
             </div>
           </div>

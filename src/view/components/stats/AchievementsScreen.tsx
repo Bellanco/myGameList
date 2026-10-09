@@ -129,7 +129,6 @@ export const AchievementsScreen = memo(function AchievementsScreen({
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
         <header className="hub-screen-header">
           <div className="hub-hub-title-wrap">
-            <Icon name="chess-knight" className="hub-hub-icon" />
             <h2><ScreenTitle text={title} /></h2>
           </div>
           <p>{subtitle}</p>
