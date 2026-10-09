@@ -610,7 +610,6 @@ const SocialHubInner = memo(function SocialHubInner({
         showPostCounter={showPostCounter}
         status={status}
         statusKind={statusKind}
-        handleSignOut={handleSignOut}
         offline={offline}
         offlineHasCachedData={offlineHasCachedData}
         serviceLimited={serviceLimited}

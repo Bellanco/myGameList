@@ -253,7 +253,6 @@ function Feed({ vacio = false }: { vacio?: boolean }) {
       showPostCounter
       status=""
       statusKind=""
-      handleSignOut={avisar('cerraría la sesión')}
       offline={false}
       offlineHasCachedData={false}
     />

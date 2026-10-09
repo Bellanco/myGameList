@@ -78,7 +78,6 @@ function SocialFeedScreenBase({
   showPostCounter,
   status,
   statusKind,
-  handleSignOut,
   offline,
   offlineHasCachedData,
   serviceLimited = false,
@@ -122,7 +121,6 @@ function SocialFeedScreenBase({
   showPostCounter: boolean;
   status: string;
   statusKind: string;
-  handleSignOut: () => void;
   /** Sin conexión: se avisa arriba y el estado vacío deja de culpar a la falta de amigos. */
   offline: boolean;
   /** ¿Hay algo guardado que enseñar mientras no hay red? Decide cuál de los dos avisos toca. */
@@ -197,7 +195,7 @@ function SocialFeedScreenBase({
           <HubAvatar photoURL={ownVisiblePhotoURL} />
         </button>
       )}
-      actions={{ pendingIncomingCount, onOpenProfiles, onOpenRequests, onSignOut: handleSignOut }}
+      actions={{ pendingIncomingCount, onOpenProfiles, onOpenRequests }}
       notice={offline
         ? <HubOfflineNotice hasCachedData={offlineHasCachedData} />
         : serviceLimited ? <HubOfflineNotice variant="limited" hasCachedData={offlineHasCachedData} /> : null}

@@ -49,7 +49,6 @@ function renderFeed(over: { offline?: boolean; offlineHasCachedData?: boolean; i
       showPostCounter
       status=""
       statusKind="ok"
-      handleSignOut={() => {}}
       offline={over.offline ?? false}
       offlineHasCachedData={over.offlineHasCachedData ?? false}
     />,

@@ -17,12 +17,13 @@ describe('armazón de la actividad social — el esqueleto promete lo que llega'
     localStorage.clear();
   });
 
-  it('pinta la cabecera, los tres botones y el rótulo de actividad, igual que la pantalla real', () => {
+  it('pinta la cabecera, los botones y el rótulo de actividad, igual que la pantalla real', () => {
     render(<SocialHubSkeleton />);
 
     expect(screen.getByRole('heading', { name: SOCIAL_SHELL.feed.title })).toBeInTheDocument();
     expect(screen.getByText(SOCIAL_SHELL.feed.openProfiles)).toBeInTheDocument();
-    expect(screen.getByText(SOCIAL_SHELL.feed.signOut)).toBeInTheDocument();
+    // «Cerrar sesión» ya no está en el feed: vive en «Mi perfil social» (09-10-2026).
+    expect(screen.queryByText('Cerrar sesión')).not.toBeInTheDocument();
     expect(screen.getByText(SOCIAL_SHELL.feed.activityTitle)).toBeInTheDocument();
   });
 

@@ -24,7 +24,6 @@ export const SOCIAL_SHELL = {
     openRequests: 'Solicitudes',
     openRequestsAria: (count: number) =>
       count > 0 ? `Solicitudes de amistad, ${count} pendiente${count === 1 ? '' : 's'}` : 'Solicitudes de amistad',
-    signOut: 'Cerrar sesión',
     activityTitle: 'Actividad',
     postsTitle: 'Publicaciones',
     postComposerLabel: 'Comparte una noticia o un enlace',

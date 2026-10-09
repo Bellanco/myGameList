@@ -121,7 +121,6 @@ export const SOCIAL_UI = {
     openRequestsAria: SOCIAL_SHELL.feed.openRequestsAria,
     refresh: 'Actualizar',
     refreshing: 'Actualizando...',
-    signOut: SOCIAL_SHELL.feed.signOut,
     statsProfiles: 'Perfiles visibles',
     statsActivities: 'Eventos de actividad',
     sectionTitle: 'Actividad de perfiles',

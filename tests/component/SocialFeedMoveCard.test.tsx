@@ -86,7 +86,6 @@ function renderFeed(
       showPostCounter
       status=""
       statusKind="ok"
-      handleSignOut={() => {}}
       offline={false}
       offlineHasCachedData={false}
     />,

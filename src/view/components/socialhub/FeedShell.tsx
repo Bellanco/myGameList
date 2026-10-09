@@ -37,7 +37,6 @@ export interface FeedShellActions {
   pendingIncomingCount: number;
   onOpenProfiles: () => void;
   onOpenRequests: () => void;
-  onSignOut: () => void;
 }
 
 export function FeedShell({
@@ -113,12 +112,8 @@ export function FeedShell({
               ) : null}
             </button>
           </div>
-          <div className="hub-screen-actions-right">
-            <button className="btn btn-exit" type="button" disabled={inert} onClick={actions?.onSignOut}>
-              <Icon name="logout" />
-              {F.signOut}
-            </button>
-          </div>
+          {/* SIN «CERRAR SESIÓN» AQUÍ. Era el botón más llamativo de la pantalla que más se abre, y es la acción que
+              menos se busca en ella: vive en «Mi perfil social», con el resto de lo que es de la cuenta (09-10-2026). */}
         </div>
         {notice}
         {composer}
