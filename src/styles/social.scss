@@ -1167,3 +1167,15 @@
   text-transform: uppercase;
   white-space: nowrap;
 }
+
+/* EN LA LISTA DE OTRA PERSONA, EL «NO» SE CALLA. La insignia de «no rejugable» / «sin otra oportunidad» es un candado
+   sobre placa de color, y en la lista de un amigo que no marca ninguno salía en TODAS las filas (09-10-2026): ahí
+   se lee como «esto está oculto», que es justo lo que no significa. Se queda el candado —sigue diciendo «no» a
+   quien lo busque, y el lector de pantalla lo anuncia igual—, pero sin placa ni color: lo que destaca es la
+   excepción. En tus propias listas no cambia nada. (0,4,1) para ganar a los skins que pintan la placa, (0,4,0). */
+html:root:root .hub-feed-card-detail :is(.badge-rejugar-inactivo, .badge-opp-inactivo) {
+  background: transparent !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: none !important;
+  color: var(--text-muted) !important;
+}
