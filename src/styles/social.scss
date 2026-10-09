@@ -925,6 +925,14 @@
   flex-direction: column;
 }
 
+/* Las tarjetas del día, en su propia lista (ver `SocialFeedScreen`): la MISMA columna y el mismo hueco que el grupo,
+   para que las burbujas se sigan alineando igual (`align-self`) y la separación con la cabecera no cambie. */
+.hub-feed-day-items {
+  display: flex;
+  flex-direction: column;
+  gap: .7rem;
+}
+
 .hub-feed-day-header {
   align-self: center;
   position: sticky;
