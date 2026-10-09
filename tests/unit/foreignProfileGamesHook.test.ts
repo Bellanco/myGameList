@@ -116,6 +116,25 @@ describe('listados de otra persona', () => {
     await waitFor(() => expect(result.current.loadingForeignProfile).toBe(false));
   });
 
+  it('sin token y sin caché la carga no falla pero no trae nada: también deja de esperar', async () => {
+    loadForeignProfileGames.mockResolvedValueOnce(null);
+    const { result } = setup({ fallbackToken: null });
+
+    await waitFor(() => expect(result.current.foreignProfileFailed['perfil-ana']).toBe(true));
+    expect(loadForeignProfileGames).toHaveBeenCalledWith(expect.objectContaining({ token: null }));
+    expect(result.current.foreignGames['perfil-ana']).toBeUndefined();
+  });
+
+  it('si después llega el token, lo vuelve a pedir y lo bajado manda', async () => {
+    loadForeignProfileGames.mockResolvedValueOnce(null);
+    const { result, rerender, opts } = setup({ fallbackToken: null });
+    await waitFor(() => expect(result.current.foreignProfileFailed['perfil-ana']).toBe(true));
+
+    rerender({ ...opts, fallbackToken: 'ghp_0123456789abcdefghij' });
+
+    await waitFor(() => expect(result.current.foreignGames['perfil-ana']).toBeTruthy());
+  });
+
   it('un juego ajeno sale de la lista bajada; uno propio, de los listados locales', async () => {
     const { result } = setup();
 

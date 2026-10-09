@@ -77,7 +77,7 @@ export function useForeignProfileGames(options: ForeignProfileGamesOptions): For
   /** Los gists de listados TAL CUAL llegan. Nunca salen del hook sin pasar por el filtro de abajo. */
   const [rawForeignGames, setRawForeignGames] = useState<Record<string, TabData>>({});
   /**
-   * Perfiles cuyo gist de listados no se pudo leer en ESTA sesión de hub.
+   * Perfiles cuyo gist de listados no se pudo leer en ESTA sesión de hub, o que sin token no tenían nada en caché.
    *
    * NO bloquea el reintento: quien decide si se vuelve a pedir es `foreignGames`, que sigue sin la clave. Esto
    * solo sirve para que el detalle deje de esperar un cuerpo que no va a llegar.
@@ -123,16 +123,24 @@ export function useForeignProfileGames(options: ForeignProfileGamesOptions): For
 
     let cancelled = false;
     const token = getSocialSyncConfig()?.token || fallbackToken || null;
+    /* Regla 3: se apunta para que la pantalla deje de esperar y enseñe el adelanto. */
+    const markFailed = () => {
+      if (!cancelled) setForeignProfileFailed((prev) => (prev[targetProfileId] ? prev : { ...prev, [targetProfileId]: true }));
+    };
     setLoadingForeignProfile(true);
     loadForeignProfileGames({ profileId: targetProfileId, gamesGistId: entry.gamesGistId, token })
       .then((games) => {
-        if (cancelled || !games) return;
+        if (cancelled) return;
+        /* SIN NADA QUE ENSEÑAR TAMBIÉN ES UN FINAL. Sin token y sin caché la carga no falla: devuelve `null`. Antes
+           eso no se apuntaba y la reseña se quedaba en esqueleto para siempre (09-10-2026). Si luego llega el
+           token, el efecto vuelve a correr —depende de `fallbackToken`— y lo bajado gana al apunte. */
+        if (!games) {
+          markFailed();
+          return;
+        }
         setRawForeignGames((prev) => ({ ...prev, [targetProfileId]: games }));
       })
-      .catch(() => {
-        /* Regla 3: se apunta para que la pantalla deje de esperar y enseñe el adelanto. */
-        if (!cancelled) setForeignProfileFailed((prev) => (prev[targetProfileId] ? prev : { ...prev, [targetProfileId]: true }));
-      })
+      .catch(markFailed)
       .finally(() => {
         // Debe bajar SIEMPRE, aunque el efecto se haya cancelado al navegar; si no, un perfil abierto luego desde
         // caché (return temprano) dejaría el indicador de carga colgado.
