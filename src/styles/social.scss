@@ -192,26 +192,15 @@
 }
 
 
-/* FILA DE ACCIONES DEL DETALLE DE PERFIL. Es la más cargada del hub —volver, tres vistas, la ruleta y, en el de
-   una amistad, «Dejar de ser amigos»— y con la regla común de la fila partida se rompía en la franja media:
-   · el lado izquierdo no envuelve, así que sus botones se estrujaban hasta partir el rótulo en dos o tres
-     renglones (y entre ~630 y 740px la fila se salía de la tarjeta, con scroll horizontal en la página);
-   · el que pasaba de línea era el lado derecho entero, y el botón rojo se quedaba solo debajo de «Volver».
-   Aquí es al revés: la fila no envuelve, el lado izquierdo ocupa lo que sobra y es ÉL quien baja de línea,
-   botón a botón y sin partir rótulos, y el derecho se queda arriba, alineado con el primer renglón.
-   Va con clase propia y no en `.hub-screen-actions-split` porque esa la comparten cinco pantallas más. */
-.hub-profile-detail-actions {
-  flex-wrap: nowrap;
-  align-items: flex-start;
-}
-
+/* FILA DE ACCIONES DEL DETALLE DE PERFIL: volver, las vistas y la ruleta. Es la más cargada del hub y con la regla
+   común de la fila partida se rompía en la franja media: sus botones se estrujaban hasta partir el rótulo en dos o
+   tres renglones (y entre ~630 y 740px la fila se salía de la tarjeta). Aquí envuelve botón a botón y sin partir
+   rótulos. La acción de relación —amistad o «Editar mi perfil»— ya no va en esta fila sino al pie de la cabecera
+   (`.hub-profile-hero-actions`). Va con clase propia y no en `.hub-screen-actions` porque esa la comparten cinco
+   pantallas más. */
 .hub-profile-detail-actions .hub-screen-actions-left {
   flex: 1 1 auto;
   flex-wrap: wrap;
-}
-
-.hub-profile-detail-actions .hub-screen-actions-right {
-  flex: 0 0 auto;
 }
 
 .hub-profile-detail-actions .btn {
@@ -227,8 +216,8 @@
 }
 
 @media (max-width: 620px) {
-  /* En móvil son cuadrados de icono en un solo renglón; con las seis acciones de una amistad no caben por debajo
-     de ~350px (o ~380px con el texto del sistema ampliado), así que ceden un poco de ancho en vez de desbordar. */
+  /* En móvil son cuadrados de icono en un solo renglón; en los anchos más estrechos ceden un poco de ancho en vez
+     de desbordar. */
   .hub-profile-detail-actions .hub-screen-actions-left {
     flex-wrap: nowrap;
   }
@@ -237,31 +226,17 @@
     flex: 0 1 44px;
     min-width: 36px;
   }
+}
 
-  /* LA ACCIÓN DE LA DERECHA BAJA A SU RENGLÓN, Y CON RÓTULO. En móvil toda la fila se queda en iconos, y la de la
-     derecha de una amistad —«Dejar de ser amigos»— se quedaba en una × arriba a la derecha, justo donde se busca
-     «cerrar»: se pulsaba por error (09-10-2026). Ahora va sola debajo, alineada a la derecha y con su nombre. En tu
-     propio perfil es «Editar mi perfil», que gana lo mismo: un destino que se lee en vez de adivinarse.
-     (0,6,1) para ganar a los skins que también colapsan esta fila en móvil (Arcade, Plata y acero). */
-  .hub-profile-detail-actions {
-    flex-wrap: wrap;
-  }
-
-  .hub-profile-detail-actions .hub-screen-actions-right {
-    order: 2;
-    flex: 1 1 100%;
-    justify-content: flex-end;
-  }
-
-  html:root .hub-profile-detail-actions .hub-screen-actions-right .btn:not(.btn-icon):not(.btn-ghost) {
-    flex: 0 0 auto;
-    width: auto;
-    min-height: 40px;
-    height: auto;
-    padding-inline: .9rem;
-    font-size: var(--fs-xs);
-    gap: .4rem;
-  }
+/* LA ACCIÓN DE RELACIÓN, al pie de la cabecera del perfil y centrada con ella: siempre con rótulo, también en
+   móvil, porque es la única de la pantalla que cambia algo fuera de ella. */
+.hub-profile-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: .5rem;
+  margin-top: .45rem;
 }
 
 
