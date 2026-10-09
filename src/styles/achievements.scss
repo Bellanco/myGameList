@@ -696,6 +696,18 @@
 .ach-strip-all .ui-icon { width: calc(var(--sz) * .42); height: calc(var(--sz) * .42); }
 @media (prefers-reduced-motion: reduce) { .ach-strip-all { transition: none; } }
 
+// DE DÍA, LA BALDOSA Y EL «+N» SON DE PERGAMINO (09-10-2026). La penumbra de arriba es la de la MEDALLA, y la medalla
+// la conserva en los dos modos porque es un objeto (`docs/logros/receta-medalla.md`); pero estas dos piezas no son
+// logros —una cuenta, la otra lleva al listado— y en el modo claro eran lo único negro de la ficha, una placa de
+// noche. Se quedan en la familia del bronce: pergamino tostado, filete en el mismo tono y la cifra en tinta.
+:root[data-theme="light"] :is(.ach-strip-all, .ach-strip-more) {
+  background: radial-gradient(72% 66% at 27% 17%, #fffaf0 0%, #f1e6d0 58%, #e2d0ad 100%);
+  color: #5a3e12;
+}
+:root[data-theme="light"] .ach-strip-all { border-color: rgba(122, 86, 30, .55); }
+:root[data-theme="light"] .ach-strip-more { box-shadow: inset 0 0 0 max(1px, calc(var(--sz) * .03)) rgba(122, 86, 30, .45); }
+:root[data-theme="light"] .ach-strip-all:is(:hover, :focus-visible) { border-color: rgba(122, 86, 30, .9); color: #2b1d06; }
+
 .ach-toast.is-comun       { --glow: 150, 162, 178; }
 .ach-toast.is-infrecuente { --glow: 63, 190, 114; }
 .ach-toast.is-raro        { --glow: 168, 85, 247; }
