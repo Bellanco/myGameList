@@ -337,6 +337,7 @@ export const SOCIAL_UI = {
     add: 'Añadir amigo',
     accept: 'Aceptar',
     pending: 'Pendiente',
+    withdraw: 'Retirar',
     friends: 'Amigos',
     remove: 'Dejar de ser amigos',
     addAria: (name: string) => `Enviar petición de amistad a ${name}`,

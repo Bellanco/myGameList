@@ -783,6 +783,21 @@
 }
 
 
+/* «Pendiente»: la petición que enviaste y espera respuesta. Es un ESTADO, no un botón (la acción, «Retirar», va al
+   lado): por eso lleva la forma del rótulo de «Amigos», pero en el ámbar de espera y con el filete discontinuo de lo
+   que aún no se ha cerrado. Clase propia porque los temas decoran `.hub-friend-chip` como amistad hecha. */
+.hub-pending-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: .25rem .55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  color: var(--fg-amber);
+  border: 1px dashed color-mix(in srgb, var(--warn) 55%, transparent);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
 .hub-friend-chip {
   display: inline-flex;
   align-items: center;

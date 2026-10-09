@@ -24,10 +24,17 @@ describe('FriendshipButton', () => {
     expect(screen.getByLabelText(SOCIAL_UI.friendship.acceptAria('Ada'))).toBeInTheDocument();
   });
 
-  it('estado outgoing: "Pendiente" cancela al pulsar', () => {
+  // El estado y la acción por separado (09-10-2026): «Pendiente» es un rótulo, no un botón, y retirar la petición
+  // es una acción con su propio nombre.
+  it('estado outgoing: «Pendiente» es un rótulo y «Retirar» la acción que la retira', () => {
     const onCancel = vi.fn();
     render(<FriendshipButton {...base} state="outgoing" onCancel={onCancel} />);
-    fireEvent.click(screen.getByLabelText(SOCIAL_UI.friendship.cancelAria('Ada')));
+    expect(screen.queryByRole('button', { name: SOCIAL_UI.friendship.pending })).toBeNull();
+    expect(screen.getByText(SOCIAL_UI.friendship.pending).tagName).toBe('SPAN');
+
+    const retirar = screen.getByRole('button', { name: SOCIAL_UI.friendship.cancelAria('Ada') });
+    expect(retirar).toHaveTextContent(SOCIAL_UI.friendship.withdraw);
+    fireEvent.click(retirar);
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 

@@ -452,7 +452,7 @@
 
 .hub-user-card-actions .btn .ui-icon { width: var(--ico-sm); height: var(--ico-sm); }
 
-.hub-user-card-actions .hub-friend-chip { font-size: var(--fs-2xs); }
+.hub-user-card-actions :is(.hub-friend-chip, .hub-pending-chip) { font-size: var(--fs-2xs); }
 
 /* Tarjeta con una acción en curso (aceptar / rechazar / retirar / dejar de ser amigos): se atenúa y muestra un
    spinner, feedback uniforme para las cinco listas. Sustituye a `.hub-request-item.is-busy`, que solo existía en
@@ -476,12 +476,12 @@
    no se pierde —cada botón lleva su `aria-label` completo—, y a cambio "Dejar de ser amigos" deja de ocupar tres
    líneas dentro de una tarjeta de 160px. Se mide el CONTENEDOR del hub, no la ventana: 36rem de tarjeta son unos
    620px de pantalla.
-   "Pendiente" no lleva `.btn-label` a propósito (ver `FriendshipButton`): no tiene icono, y nombra un estado. */
+   "Pendiente" es un rótulo, no un botón (ver `FriendshipButton`): no se colapsa y se sigue leyendo entero. */
 @container social-card (max-width: 36rem) {
   .hub-user-card-actions .btn-label { display: none; }
 
-  /* El cuadrado es SOLO para el botón que se ha quedado sin rótulo (`:has(.btn-label)`). "Pendiente" no lo lleva,
-     y encerrarlo también en 2,2rem le sacaba la palabra fuera del círculo. */
+  /* El cuadrado es SOLO para el botón que se ha quedado sin rótulo (`:has(.btn-label)`): los que no lo llevan
+     conservan su texto, y encerrarlos también en 2,2rem les sacaba la palabra fuera del círculo. */
   .hub-user-card-actions .btn:has(.btn-label) {
     flex: 0 1 auto;
     width: 2.2rem;
