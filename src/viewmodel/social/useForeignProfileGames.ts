@@ -22,7 +22,7 @@
 //  3. UN FALLO SE APUNTA. Sin esa marca, el detalle esperaba para siempre el análisis completo de alguien cuyo
 //     gist no se pudo leer, con el adelanto de 160 caracteres tapado por un esqueleto eterno. Apuntado, la
 //     pantalla deja de esperar y enseña lo que hay, que a partir de ese momento es la verdad.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getSocialSyncConfig } from '../../model/repository/socialGistRepository';
 import { loadForeignProfileGames } from '../../model/repository/foreignProfileRepository';
 import { LOCKED_VISIBILITY, applyProfileVisibility } from '../../core/utils/profileVisibility';
@@ -84,6 +84,16 @@ export function useForeignProfileGames(options: ForeignProfileGamesOptions): For
    */
   const [foreignProfileFailed, setForeignProfileFailed] = useState<Record<string, true>>({});
   const [loadingForeignProfile, setLoadingForeignProfile] = useState(false);
+
+  /* OTRA CUENTA, OTRAS AMISTADES. Lo bajado es de las amistades de quien tenía la sesión: si cambia (cerrar sesión y
+     entrar con otra cuenta en el mismo navegador), se olvida. SOLO AL CAMBIAR, no al montar. */
+  const listsOwnerRef = useRef(ownUid);
+  useEffect(() => {
+    if (listsOwnerRef.current === ownUid) return;
+    listsOwnerRef.current = ownUid;
+    setRawForeignGames({});
+    setForeignProfileFailed({});
+  }, [ownUid]);
 
   /* LO QUE SALE, FILTRADO CON LO VIGENTE (regla 2). Se recalcula cuando cambia el directorio —llega la visibilidad
      real de alguien, o cambia— o el claim de quien mira, sin volver a pedir nada: el crudo sigue en memoria. */
