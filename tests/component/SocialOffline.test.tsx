@@ -16,7 +16,7 @@ vi.mock('../../src/model/repository/firebaseRepository', () => ({
   reportHandledError: vi.fn(async () => {}),
 }));
 
-function renderFeed(over: { offline?: boolean; offlineHasCachedData?: boolean; items?: SocialFeedItem[] } = {}) {
+function renderFeed(over: { offline?: boolean; offlineHasCachedData?: boolean; items?: SocialFeedItem[]; hasFriends?: boolean } = {}) {
   const items = over.items ?? [];
   const groups: SocialFeedDayGroup[] = items.length
     ? [{ dayHeader: 'hoy', dayDate: new Date(), items }]
@@ -51,6 +51,7 @@ function renderFeed(over: { offline?: boolean; offlineHasCachedData?: boolean; i
       statusKind="ok"
       offline={over.offline ?? false}
       offlineHasCachedData={over.offlineHasCachedData ?? false}
+      hasFriends={over.hasFriends ?? false}
     />,
   );
 }
@@ -82,13 +83,24 @@ describe('feed social sin conexión', () => {
     renderFeed({ offline: true });
 
     expect(screen.queryByText(SOCIAL_UI.feed.activityEmptyNoFriends)).toBeNull();
-    expect(screen.queryByText(SOCIAL_UI.feed.discoverFriends)).toBeNull();
+    expect(screen.queryByText(SOCIAL_UI.feed.activityEmptyTitle)).toBeNull();
   });
 
-  it('con red, el vacío sigue siendo el de siempre (sin amigos → descubrir perfiles)', () => {
-    renderFeed({ offline: false });
+  // El vacío con red: título y frase, sin un segundo botón hacia Perfiles (ya está en la cabecera).
+  it('con red y sin amigos, el vacío invita a buscar gente desde «Ver perfiles», sin botón propio', () => {
+    const { container } = renderFeed({ offline: false });
 
+    expect(screen.getByRole('heading', { name: SOCIAL_UI.feed.activityEmptyTitle })).toBeTruthy();
     expect(screen.getByText(SOCIAL_UI.feed.activityEmptyNoFriends)).toBeTruthy();
+    expect(container.querySelector('.hub-feed-empty button')).toBeNull();
+  });
+
+  it('con amigos que aún no han compartido nada, no dice «busca gente»', () => {
+    renderFeed({ offline: false, hasFriends: true });
+
+    expect(screen.getByRole('heading', { name: SOCIAL_UI.feed.activityEmptyQuietTitle })).toBeTruthy();
+    expect(screen.getByText(SOCIAL_UI.feed.activityEmptyQuiet)).toBeTruthy();
+    expect(screen.queryByText(SOCIAL_UI.feed.activityEmptyNoFriends)).toBeNull();
   });
 });
 

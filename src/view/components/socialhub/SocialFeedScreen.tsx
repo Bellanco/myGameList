@@ -81,6 +81,7 @@ function SocialFeedScreenBase({
   offline,
   offlineHasCachedData,
   serviceLimited = false,
+  hasFriends = false,
 }: {
   SOCIAL_UI: SocialUiLabels;
   socialDisplayName: string;
@@ -127,6 +128,8 @@ function SocialFeedScreenBase({
   offlineHasCachedData: boolean;
   /** Hay red pero un servicio no atiende: se avisa con su propio texto (ver `HubOfflineNotice`). */
   serviceLimited?: boolean;
+  /** ¿Tiene ya alguna amistad? Decide qué dice el vacío: «busca gente» o «aún no han compartido nada». */
+  hasFriends?: boolean;
 }) {
   // El sorteo va en `useState` con inicializador perezoso y no en el cuerpo: así se decide una sola vez por
   // montaje y no cambia en cada repintado (esta pantalla re-renderiza con cualquier cambio del hub).
@@ -252,14 +255,19 @@ function SocialFeedScreenBase({
               <p>{SOCIAL_UI.offline.bodyEmpty}</p>
             </div>
           ) : null}
+          {/* EL VACÍO TIENE CARA, Y UN SOLO CAMINO (09-10-2026). Era una línea y un «Buscar amigos» que llevaba a donde
+              ya lleva «Ver perfiles», justo encima: dos botones con el mismo destino. Ahora es un icono, un título y la
+              frase, y el camino es el de la cabecera. Con amigos que aún no han publicado, el texto lo dice: «añade a
+              alguien» no era verdad. */}
           {!loadingDirectory && feedItems.length === 0 && !offline ? (
             <div className="hub-feed-empty">
-              <p>{SOCIAL_UI.feed.activityEmptyNoFriends}</p>
-              <button className="btn btn-open" type="button" onClick={onOpenProfiles}>
+              <span className="hub-feed-empty-icon" aria-hidden="true">
                 <Icon name="bottom-hub" />
-                {SOCIAL_UI.feed.discoverFriends}
-                <Icon name="angle-right" className="ui-icon btn-open-go" />
-              </button>
+              </span>
+              <h3 className="hub-feed-empty-title">
+                {hasFriends ? SOCIAL_UI.feed.activityEmptyQuietTitle : SOCIAL_UI.feed.activityEmptyTitle}
+              </h3>
+              <p>{hasFriends ? SOCIAL_UI.feed.activityEmptyQuiet : SOCIAL_UI.feed.activityEmptyNoFriends}</p>
             </div>
           ) : null}
           {!loadingDirectory && feedItems.length > 0 ? (

@@ -144,8 +144,12 @@ export const SOCIAL_UI = {
     loading: 'Cargando actividad...',
     empty: 'No hay perfiles visibles todavía o faltan permisos de lectura en Firestore.',
     activityEmpty: 'Aún no hay actividad de análisis para mostrar.',
-    activityEmptyNoFriends: 'Aquí verás los análisis y publicaciones de tus amigos. Busca perfiles y añade a alguien para empezar.',
-    discoverFriends: 'Buscar amigos',
+    // El vacío del feed (09-10-2026): título y frase, SIN botón —«Ver perfiles» ya está justo encima, en la
+    // cabecera— y con dos casos, porque «añade a alguien» no es verdad si ya tienes amigos que aún no han publicado.
+    activityEmptyTitle: 'Aquí se verá lo que juegan tus amigos',
+    activityEmptyNoFriends: 'Sus análisis, publicaciones y cambios de lista saldrán aquí. Empieza buscando gente en «Ver perfiles».',
+    activityEmptyQuietTitle: 'Todo tranquilo por ahora',
+    activityEmptyQuiet: 'Tus amigos aún no han compartido nada. En cuanto analicen o publiquen algo, saldrá aquí.',
     openActivityAria: (name: string, gameName: string) => `Abrir detalle de actividad de ${name} sobre ${gameName}`,
     openProfileAria: (name: string) => `Abrir perfil social de ${name}`,
     analyzedRecently: 'Analizado recientemente',
