@@ -1263,3 +1263,16 @@
 /* «Más información» del aviso de analítica, de noche: el azul de enlace sobre la placa elevada se quedaba en 4,4:1
    (09-10-2026); un punto hacia el blanco. */
 :root[data-palette="witcher"]:not([data-theme="light"]) .consent-banner-text a { color: color-mix(in srgb, var(--fg-link) 85%, #fff); }
+
+/* EL INTERRUPTOR ENCENDIDO, EN EL PÚRPURA DEL TEMPLE (09-10-2026). La base lo pinta con `--steam`, que aquí es el gris
+   del acero: encendido y apagado se distinguían solo por dónde estaba el mando. Va con la misma hoja que los botones
+   marcados (`.btn-toggle.active`): en esta app, «encendido» se dice en púrpura. */
+:root[data-palette="witcher"] .visibility-check input:checked + .visibility-toggle-track {
+  background: linear-gradient(180deg, #b399d6, #7f60ad);
+  border-color: #7f60ad;
+}
+:root[data-palette="witcher"][data-theme="light"] .visibility-check input:checked + .visibility-toggle-track {
+  background: linear-gradient(180deg, #6f539a, #47316a);
+  border-color: #47316a;
+}
+
