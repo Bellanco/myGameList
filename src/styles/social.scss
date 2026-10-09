@@ -229,6 +229,31 @@
     flex: 0 1 44px;
     min-width: 36px;
   }
+
+  /* LA ACCIÓN DE LA DERECHA BAJA A SU RENGLÓN, Y CON RÓTULO. En móvil toda la fila se queda en iconos, y la de la
+     derecha de una amistad —«Dejar de ser amigos»— se quedaba en una × arriba a la derecha, justo donde se busca
+     «cerrar»: se pulsaba por error (09-10-2026). Ahora va sola debajo, alineada a la derecha y con su nombre. En tu
+     propio perfil es «Editar mi perfil», que gana lo mismo: un destino que se lee en vez de adivinarse.
+     (0,6,1) para ganar a los skins que también colapsan esta fila en móvil (Arcade, Plata y acero). */
+  .hub-profile-detail-actions {
+    flex-wrap: wrap;
+  }
+
+  .hub-profile-detail-actions .hub-screen-actions-right {
+    order: 2;
+    flex: 1 1 100%;
+    justify-content: flex-end;
+  }
+
+  html:root .hub-profile-detail-actions .hub-screen-actions-right .btn:not(.btn-icon):not(.btn-ghost) {
+    flex: 0 0 auto;
+    width: auto;
+    min-height: 40px;
+    height: auto;
+    padding-inline: .9rem;
+    font-size: var(--fs-xs);
+    gap: .4rem;
+  }
 }
 
 
