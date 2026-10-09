@@ -273,53 +273,48 @@
   --wt-h1: #e9eff6; --wt-h2: #c3cdd9; --wt-h3: #8e9baa; --wt-h4: #dde4ec;
   --wt-rotulo: var(--on-accent);
 }
-/* Lo que señala toma el fuego de Igni en el rótulo, sobre la misma hoja. */
-:root[data-palette="witcher"] .btn-accent,
-:root[data-palette="witcher"] .btn.is-active,
-:root[data-palette="witcher"] .btn-toggle.active,
-:root[data-palette="witcher"] .btn-toggle-deck.active {
-  /* EL ACTIVO SE INVIERTE, también en oscuro: pasa a acero PULIDO con tinta encima. Un botón hundido y
-     más oscuro que el panel no se veía (1,13:1 contra el fondo) y todo el trabajo lo hacía el color del
-     rótulo; invertir la luminancia se lee de un vistazo y sin distinguir colores. El filo de Igni se
-     queda como confirmación, no como única señal. */
-  --wt-h1: #e2e8ef; --wt-h2: #c3ccd7; --wt-h3: #92a0af; --wt-h4: #d6dee6;
-  --wt-rotulo: var(--on-accent);
-  /* El filo de Igni ya no es un `box-shadow` rectangular —que el recorte partía por la mitad— sino EL
-     FILETE de la pieza (§4b): así sigue la hoja entera, puntas incluidas, y de paso puede ser más gordo
-     sin que se note el corte. El canto de luz de arriba viaja como capa de la chapa. */
-  --pz-filete: rgba(255,143,74,.85);
+/* ── LOS BOTONES POR FUNCIÓN (ver `_forms-and-buttons.scss`): LOS COLORES DE TEMPLE ────────────────────────
+   Confirmar es la plata pulida (arriba). Lo que tiene color propio sale de los COLORES DE TEMPLE —los que toma el
+   acero al calentarlo para templarlo—, apagados, de hoja y no de señal: ABRIR / IR es el AZUL DE TEMPLE y LO
+   ENCENDIDO el PÚRPURA DE TEMPLE, los dos con tinta encima. Los teñidos son la hoja pavonada de siempre con el
+   rótulo y el filete de su color; las listas llevan las SEÑALES que ya pintan sus gráficas (Aard en curso, Yrden
+   próximos, Axii completados, Igni abandonados).
+   Rótulo sobre el alto más hondo de cada hoja: azul 4,9:1 · púrpura 5,1:1. */
+:root[data-palette="witcher"] {
+  --move-e: var(--wt-aard); --move-p: var(--wt-yrden); --move-c: var(--wt-axii); --move-v: var(--wt-igni);
+}
+:root[data-palette="witcher"] .btn-open {
+  --wt-h1: #b9cfec; --wt-h2: #8fb0dc; --wt-h3: #5b7fb4; --wt-h4: #a6c1e6;
+  --wt-rotulo: #0d1520;
+}
+:root[data-palette="witcher"] :is(.btn.is-active, .btn-toggle.active, .btn-toggle-deck.active) {
+  --wt-h1: #d2c0e8; --wt-h2: #b399d6; --wt-h3: #7f60ad; --wt-h4: #c4ade0;
+  --wt-rotulo: #140d1d;
+}
+:root[data-palette="witcher"] :is(.btn-open, .btn.is-active, .btn-toggle.active, .btn-toggle-deck.active) {
+  --pz-filete: rgba(255,255,255,.55);
   --pz-grosor: 1.5px;
   --wt-canto: linear-gradient(rgba(255,255,255,.6), rgba(255,255,255,.6));
 }
-/* LAS DOS HOJAS DEL BRUJO EN LA NAVEGACIÓN. La de arriba es la PLATA —el acento de siempre, con el filo de
-   Igni— y aquí entra la otra: la hoja al fuego de IGNI, chapa naranja con tinta encima y el filo de plata.
-   Se alternan dentro de cada fila (`of .btn-accent` cuenta solo los de navegación, así que un neutro en medio
-   no descoloca la pareja); un navegador sin `:nth-child(… of …)` descarta la regla y los deja todos en plata.
-   Mover de lista lleva las mismas dos hojas, pero FIJAS: «Pasar a en curso» la plata y «Pasar a próximos» el
-   fuego. Pesa (0,5,0), así que gana a la regla del acento sin tocarla.
-   Contraste del rótulo en el alto MÁS CLARO u OSCURO que le toque: 5,24:1 en el canto hondo (#d86a2c). */
-:root[data-palette="witcher"] .btn-playing {
-  --wt-h1: #e2e8ef; --wt-h2: #c3ccd7; --wt-h3: #92a0af; --wt-h4: #d6dee6;
-  --wt-rotulo: var(--on-accent);
-  --pz-filete: rgba(255,143,74,.85);
+:root[data-palette="witcher"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+  --role-t: color-mix(in srgb, var(--role-c) 45%, #fff);
+  --wt-rotulo: var(--role-t);
+  --pz-filete: color-mix(in srgb, var(--role-c) 85%, transparent);
   --pz-grosor: 1.5px;
-  --wt-canto: linear-gradient(rgba(255,255,255,.6), rgba(255,255,255,.6));
 }
-:root[data-palette="witcher"] .btn-accent:nth-child(even of .btn-accent),
-:root[data-palette="witcher"] .btn-upcoming {
-  --wt-h1: #ffbe94; --wt-h2: #ff9d60; --wt-h3: #d86a2c; --wt-h4: #ffae7a;
-  --wt-rotulo: var(--on-accent);
-  --pz-filete: rgba(227,233,240,.85);
-  --pz-grosor: 1.5px;
-  --wt-canto: linear-gradient(rgba(255,255,255,.6), rgba(255,255,255,.6));
+/* Descartar: la silueta de la hoja sin el metal. La chapa (`::after`) se pinta del color del panel y no
+   transparente: debajo está el filete (`::before`) a tamaño completo, y sin tapa asomaría entero. */
+:root[data-palette="witcher"] .btn-quiet {
+  --wt-h1: var(--surface); --wt-h2: var(--surface); --wt-h3: var(--surface); --wt-h4: var(--surface);
+  --wt-surco: none;
+  --wt-rotulo: var(--text-muted);
+  --pz-filete: color-mix(in srgb, var(--text) 25%, transparent);
 }
 /* El destructivo es la hoja al rojo: brasa dentro del acero, no relleno plano. */
 :root[data-palette="witcher"] .btn-danger {
   --wt-h1: #5a3236; --wt-h2: #43262a; --wt-h3: #2a171a; --wt-h4: #4e2c30;
   --wt-rotulo: #ffb0a8;
 }
-:root[data-palette="witcher"] .btn-complete { --wt-rotulo: var(--success); }
-:root[data-palette="witcher"] .btn-abandoned { --wt-rotulo: var(--fg-red); }
 /* En claro los cuatro altos van otra vez COMO RESPALDO dentro del `var()`, no declarados: esta regla
    lleva `:not()` y pesa más que la de cada rol, así que declararlos aquí volvía a pisar al activo y al
    destructivo — el mismo fallo que ya había en la variante oscura. */
@@ -333,37 +328,22 @@
   --wt-h1: #67727f; --wt-h2: #4c5764; --wt-h3: #333c47; --wt-h4: #5d6875;
   --wt-rotulo: #fff;
 }
-:root[data-palette="witcher"][data-theme="light"] .btn-accent,
-:root[data-palette="witcher"][data-theme="light"] .btn.is-active,
-:root[data-palette="witcher"][data-theme="light"] .btn-toggle.active,
-:root[data-palette="witcher"][data-theme="light"] .btn-toggle-deck.active {
-  /* EN CLARO, EL ACTIVO SE INVIERTE. Una chapa clara con la tinta encendida se distinguía poco de la
-     chapa clara de al lado; invertir el par (acero hondo + rótulo claro) es la señal que se lee de
-     lejos, y además sube el contraste del propio control contra su fondo, que es lo que pide la 1.4.11
-     para las partes no textuales. */
-  --wt-h1: #566270; --wt-h2: #434d5a; --wt-h3: #333c47; --wt-h4: #4d5765;
+/* En claro las dos hojas de temple se ahondan para el rótulo blanco (azul 6,4:1 · púrpura 8,1:1 en el alto más
+   claro), y el texto de los teñidos es su color tal cual, que de día ya es hondo. */
+:root[data-palette="witcher"][data-theme="light"] .btn-open {
+  --wt-h1: #4f73a6; --wt-h2: #3f6293; --wt-h3: #2e4b75; --wt-h4: #476b9e;
   --wt-rotulo: #fff;
-  --pz-filete: rgba(143,54,8,.6);
-  --pz-grosor: 1.5px;
+}
+:root[data-palette="witcher"][data-theme="light"] :is(.btn.is-active, .btn-toggle.active, .btn-toggle-deck.active) {
+  --wt-h1: #6f539a; --wt-h2: #5d4386; --wt-h3: #47316a; --wt-h4: #674c92;
+  --wt-rotulo: #fff;
+}
+:root[data-palette="witcher"][data-theme="light"] :is(.btn-open, .btn.is-active, .btn-toggle.active, .btn-toggle-deck.active) {
+  --pz-filete: rgba(20,27,35,.35);
   --wt-canto: linear-gradient(rgba(255,255,255,.16), rgba(255,255,255,.16));
 }
-/* En claro, las dos hojas también se invierten: la plata pasa al acero hondo del activo y el fuego de Igni se
-   ahonda hasta brasa para que el rótulo blanco cumpla (5,96:1 en el alto más claro, #a24a14; el Igni del
-   tema, #ff8f4a, se quedaría en 2,3). El filo de cada una es el color de la otra, como en oscuro. */
-:root[data-palette="witcher"][data-theme="light"] .btn-playing {
-  --wt-h1: #566270; --wt-h2: #434d5a; --wt-h3: #333c47; --wt-h4: #4d5765;
-  --wt-rotulo: #fff;
-  --pz-filete: rgba(143,54,8,.6);
-  --pz-grosor: 1.5px;
-  --wt-canto: linear-gradient(rgba(255,255,255,.16), rgba(255,255,255,.16));
-}
-:root[data-palette="witcher"][data-theme="light"] .btn-accent:nth-child(even of .btn-accent),
-:root[data-palette="witcher"][data-theme="light"] .btn-upcoming {
-  --wt-h1: #a24a14; --wt-h2: #8f3f0f; --wt-h3: #73300a; --wt-h4: #9a4612;
-  --wt-rotulo: #fff;
-  --pz-filete: rgba(71,82,95,.7);
-  --pz-grosor: 1.5px;
-  --wt-canto: linear-gradient(rgba(255,255,255,.16), rgba(255,255,255,.16));
+:root[data-palette="witcher"][data-theme="light"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+  --role-t: var(--role-c);
 }
 :root[data-palette="witcher"][data-theme="light"] .btn-danger {
   --wt-h1: #f5d9d6; --wt-h2: #e8bcb8; --wt-h3: #cf9691; --wt-h4: #f0cecb;

@@ -139,7 +139,7 @@ export const FiltersSettings = memo(function FiltersSettings({ lookups, onEditTa
                         }}
                       />
                       <div className="row-actions">
-                        <button className="btn btn-secondary btn-icon-text admin-action-btn" type="button" onClick={cancelEdit}>
+                        <button className="btn btn-quiet btn-icon-text admin-action-btn" type="button" onClick={cancelEdit}>
                           <Icon name={COMMON_ICONS.close} />
                           <span>{SETTINGS_UI.admin.editCancelBtn}</span>
                         </button>

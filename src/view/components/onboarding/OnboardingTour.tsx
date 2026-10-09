@@ -486,7 +486,7 @@ function HintBubble({ state, ctx }: { state: TourState; ctx: TourContext }) {
       <h2 className="ob-title" id={titleId}>{H[mission].title}</h2>
       <p className="ob-text">{H[mission].text}</p>
       <div className="ob-foot ob-foot-split ob-foot-even">
-        <button type="button" className="btn btn-secondary" onClick={decline}>{H.no}</button>
+        <button type="button" className="btn btn-quiet" onClick={decline}>{H.no}</button>
         <button type="button" className="btn btn-primary" onClick={accept}>{H.yes}</button>
       </div>
     </AnchoredBubble>
@@ -523,7 +523,7 @@ function PremiosInviteBubble({ invite }: { invite: PremiosInvite }) {
       <h2 className="ob-title" id={titleId}>{P[invite.kind].title}</h2>
       <p className="ob-text">{P[invite.kind].text}</p>
       <div className="ob-foot ob-foot-split ob-foot-even">
-        <button type="button" className="btn btn-secondary" onClick={invite.dismiss}>{P.no}</button>
+        <button type="button" className="btn btn-quiet" onClick={invite.dismiss}>{P.no}</button>
         <button type="button" className="btn btn-primary" onClick={invite.accept}>{P.yes}</button>
       </div>
     </AnchoredBubble>
@@ -609,7 +609,7 @@ function StepFooter({ state, mission, index, step }: { state: TourState; mission
     };
     buttons = (
       <>
-        <button type="button" className="btn btn-secondary" onClick={skip}>{B.noPlaynite}</button>
+        <button type="button" className="btn btn-quiet" onClick={skip}>{B.noPlaynite}</button>
         <button type="button" className="btn btn-primary" onClick={openGuide}>{B.openGuide}</button>
       </>
     );
@@ -618,7 +618,7 @@ function StepFooter({ state, mission, index, step }: { state: TourState; mission
   } else if (step.id === 'added') {
     buttons = (
       <>
-        <button type="button" className="btn btn-secondary" onClick={() => completeAndFold(state)}>{B.later}</button>
+        <button type="button" className="btn btn-quiet" onClick={() => completeAndFold(state)}>{B.later}</button>
         <button type="button" className="btn btn-primary" onClick={next}>{B.go}</button>
       </>
     );
@@ -627,12 +627,12 @@ function StepFooter({ state, mission, index, step }: { state: TourState; mission
   } else if (step.kind === 'info') {
     buttons = (
       <>
-        <button type="button" className="btn btn-secondary" onClick={skip}>{B.skip}</button>
+        <button type="button" className="btn btn-quiet" onClick={skip}>{B.skip}</button>
         <button type="button" className="btn btn-primary" onClick={next}>{B.next}</button>
       </>
     );
   } else {
-    buttons = <button type="button" className="btn btn-secondary" onClick={skip}>{B.skipMission}</button>;
+    buttons = <button type="button" className="btn btn-quiet" onClick={skip}>{B.skipMission}</button>;
   }
 
   return (
@@ -723,13 +723,13 @@ function MissionsCard({ state }: { state: TourState }) {
         <div className="ob-foot ob-foot-split">
           {isOffer ? (
             <>
-              <button type="button" className="btn btn-secondary" onClick={() => fold(state)}>{TOUR_UI.welcome.later}</button>
+              <button type="button" className="btn btn-quiet" onClick={() => fold(state)}>{TOUR_UI.welcome.later}</button>
               <button type="button" className="btn btn-primary" onClick={() => saveTourState(startTour(state))}>{TOUR_UI.welcome.start}</button>
             </>
           ) : (
             <>
               {/* Salir de la guía es decir que no a TODO: tampoco se ofrecerá sola ninguna misión en su pantalla. */}
-              <button type="button" className="btn btn-secondary" onClick={() => saveTourState({ ...state, status: 'dismissed', declined: [...MISSION_IDS] })}>{TOUR_UI.menu.exit}</button>
+              <button type="button" className="btn btn-quiet" onClick={() => saveTourState({ ...state, status: 'dismissed', declined: [...MISSION_IDS] })}>{TOUR_UI.menu.exit}</button>
               <button type="button" className="btn btn-primary" onClick={() => saveTourState(startTour(state))}>{TOUR_UI.menu.resume}</button>
             </>
           )}

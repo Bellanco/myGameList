@@ -119,7 +119,7 @@ export function SocialRequestsScreen({
               busy={busyUid === request.otherUid}
             >
               <button
-                className="btn btn-secondary btn-accent"
+                className="btn btn-social"
                 type="button"
                 disabled={busyUid === request.otherUid}
                 aria-label={R.acceptAria(request.name)}
@@ -130,7 +130,7 @@ export function SocialRequestsScreen({
                 <span className="btn-label">{R.accept}</span>
               </button>
               <button
-                className="btn btn-danger"
+                className="btn btn-exit"
                 type="button"
                 disabled={busyUid === request.otherUid}
                 aria-label={R.rejectAria(request.name)}
@@ -159,7 +159,7 @@ export function SocialRequestsScreen({
               busy={busyUid === request.otherUid}
             >
               <button
-                className="btn btn-secondary"
+                className="btn btn-exit"
                 type="button"
                 disabled={busyUid === request.otherUid}
                 aria-label={R.cancelAria(request.name)}
@@ -192,7 +192,7 @@ export function SocialRequestsScreen({
               onKeyDown={openOnKey(friend)}
             >
               <button
-                className="btn btn-danger"
+                className="btn btn-exit"
                 type="button"
                 disabled={busyUid === friend.otherUid}
                 aria-label={R.removeAria(friend.name)}

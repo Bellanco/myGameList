@@ -255,9 +255,10 @@ function SocialFeedScreenBase({
           {!loadingDirectory && feedItems.length === 0 && !offline ? (
             <div className="hub-feed-empty">
               <p>{SOCIAL_UI.feed.activityEmptyNoFriends}</p>
-              <button className="btn btn-secondary btn-accent" type="button" onClick={onOpenProfiles}>
+              <button className="btn btn-open" type="button" onClick={onOpenProfiles}>
                 <Icon name="bottom-hub" />
                 {SOCIAL_UI.feed.discoverFriends}
+                <Icon name="angle-right" className="ui-icon btn-open-go" />
               </button>
             </div>
           ) : null}

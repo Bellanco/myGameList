@@ -106,7 +106,7 @@ function PostEditor({
           </small>
         ) : <span />}
         <div className="hub-post-actions">
-          <button className="btn btn-secondary" type="button" onClick={onCancel} disabled={saving}>
+          <button className="btn btn-quiet" type="button" onClick={onCancel} disabled={saving}>
             {SOCIAL_UI.feed.postEditCancel}
           </button>
           <button className="btn btn-steam" type="button" onClick={() => onSave(text)} disabled={!canSave}>

@@ -88,13 +88,14 @@ export function FeedShell({
         >
           <div className="hub-screen-actions-left">
             <button
-              className="btn btn-secondary btn-accent"
+              className="btn btn-open"
               type="button"
               disabled={inert}
               onClick={actions?.onOpenProfiles}
             >
               <Icon name="bottom-hub" />
               {F.openProfiles}
+              <Icon name="angle-right" className="ui-icon btn-open-go" />
             </button>
             <button
               className="btn btn-secondary hub-requests-btn"
@@ -113,7 +114,7 @@ export function FeedShell({
             </button>
           </div>
           <div className="hub-screen-actions-right">
-            <button className="btn btn-danger" type="button" disabled={inert} onClick={actions?.onSignOut}>
+            <button className="btn btn-exit" type="button" disabled={inert} onClick={actions?.onSignOut}>
               <Icon name="logout" />
               {F.signOut}
             </button>

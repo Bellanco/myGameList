@@ -80,9 +80,10 @@ export const SettingsHub = memo(function SettingsHub({
             onPick={onImportLibrary}
           />
           {inboxCount > 0 ? (
-            <button type="button" className="btn btn-secondary btn-accent" onClick={onOpenInbox}>
+            <button type="button" className="btn btn-open" onClick={onOpenInbox}>
               <Icon name={COMMON_ICONS.download} />
               <span>{IMPORT_BUTTON.viewInbox(inboxCount)}</span>
+              <Icon name="angle-right" className="ui-icon btn-open-go" />
             </button>
           ) : null}
         </div>

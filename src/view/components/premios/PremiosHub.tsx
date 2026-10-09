@@ -268,7 +268,7 @@ export function PremiosHub({
         <h2>{(sinRed ? PREMIOS_UI.errores.offlineByPalette : PREMIOS_UI.errores.leadByPalette)[palette]}</h2>
         <p className="premios-estado__muted">{sinRed ? PREMIOS_UI.errores.offline : PREMIOS_UI.errores.load}</p>
         <div className="premios-estado__actions">
-          <button type="button" className="btn" onClick={() => void edition.reload()}>
+          <button type="button" className="btn btn-secondary" onClick={() => void edition.reload()}>
             {PREMIOS_UI.errores.retry}
           </button>
         </div>

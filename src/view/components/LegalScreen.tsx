@@ -39,7 +39,7 @@ export const LegalScreen = memo(function LegalScreen({ docId }: LegalScreenProps
   return (
     <section className="legal-hub" aria-label={document.title}>
       <div className="legal-actions">
-        <button type="button" className="btn btn-secondary" onClick={goBack}>
+        <button type="button" className="btn btn-secondary btn-back" onClick={goBack}>
           <Icon name={COMMON_ICONS.arrowBack} />
           <span>{L.back}</span>
         </button>

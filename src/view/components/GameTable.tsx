@@ -1091,9 +1091,10 @@ export const GameTable = memo(function GameTable({
                         />
                       ) : null}
                       {importHere && onOpenInbox && inboxCount > 0 ? (
-                        <button type="button" className="btn btn-secondary btn-accent" onClick={onOpenInbox}>
+                        <button type="button" className="btn btn-open" onClick={onOpenInbox}>
                           <Icon name={COMMON_ICONS.download} />
                           <span>{IMPORT_UI.viewInbox(inboxCount)}</span>
+                          <Icon name="angle-right" className="ui-icon btn-open-go" />
                         </button>
                       ) : null}
                     </div>
@@ -1482,7 +1483,7 @@ export const GameTable = memo(function GameTable({
                             <span className="detail-label">{UI_MESSAGES.detail.review}</span>
                             <div>
                               <Link
-                                className="btn btn-secondary"
+                                className="btn btn-open"
                                 /* Con su `backTo` (ver `reviewTarget`): el panel ya usaba este mismo estado
                                    para distinguir sus dos orígenes; esta es la tercera puerta. */
                                 {...reviewTarget(game.id)}
@@ -1491,6 +1492,7 @@ export const GameTable = memo(function GameTable({
                               >
                                 <Icon name={COMMON_ICONS.arrowsToEye} />
                                 <span>{UI_MESSAGES.detail.reviewLink}</span>
+                                <Icon name="angle-right" className="ui-icon btn-open-go" />
                               </Link>
                             </div>
                           </div>

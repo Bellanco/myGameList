@@ -137,54 +137,68 @@
    con texto negro + glow), en ambos temas. Semánticos rellenos; texto tinta en OSCURO y blanco en CLARO
    (regla 10). Sin sesgo ni giro 3D. ── */
 :root[data-palette="grimdark"] .btn:not(.btn-icon):not(.btn-ghost) { font-weight: 600; letter-spacing: .05em; border: 1px solid var(--grim-gold); border-radius: 0; }
-/* NEUTRO = NARANJA DE ALERTA: la lámpara de sodio de las forjas del Mechanicus, tan encendida como el fósforo
-   (mismo halo). Es el botón por defecto —Cancelar, Cerrar sesión, las pestañas sin elegir, el `.btn` sin rol— y por
-   eso va en `:where`: (0,2,0) frente al (0,3,0) de los roles, que lo pisan con su propio `!important`. Tinta del
-   fondo encima (7,4:1). Se aparta del oro latón por tono (más rojo, más vivo) y del rojo de peligro por luz. */
-/* FLUORESCENTE y no plano: el naranja liso se quedaba apagado junto al fósforo, que es luz emitida. Aquí es un tubo
-   encendido —el centro arde más claro que los bordes (`inset`) y la luz se derrama fuera en dos halos—, sin subir el
-   matiz hacia el amarillo, que es donde vive el oro latón. La tinta cumple en el punto más claro y en el más hondo
-   del degradado (9,9:1 y 6,7:1). */
+/* ── LOS BOTONES POR FUNCIÓN (ver `_forms-and-buttons.scss`) ──────────────────────────────────────────────
+   Tema de pocos tonos —fósforo, latón, la lámpara de sodio y el rojo—, así que cada uno tiene UNA función:
+   CONFIRMAR es el FÓSFORO; ABRIR / IR, la LÁMPARA DE SODIO —el naranja fluorescente que antes era el neutro, con
+   su tubo encendido tal cual—; LO ENCENDIDO, el ORO LATÓN del sello. El neutro baja a PLACA DE COGITADOR con filete
+   de latón, y descartar se queda en el filete. Las listas: En curso toma el naranja de sodio (teñido, no compite
+   con el macizo de abrir) y Próximos el latón, porque el fósforo de su gráfica y el verde de completar son, en un
+   botón teñido, el mismo verde.
+
+   Tintas: sodio 9,9:1 en el centro y 6,7:1 en el borde · latón 8,9:1 · fósforo de siempre. En el códice (claro):
+   sodio de minio con blanco 4,8:1 · latón ahondado #8a6210 con blanco 5,5:1. */
+:root[data-palette="grimdark"] {
+  --btn-sel: var(--grim-gold); --btn-sel-ink: var(--on-accent);
+  --move-e: #ff8a3d; --move-p: var(--grim-gold);
+}
+:root[data-palette="grimdark"][data-theme="light"] {
+  --btn-sel: #8a6210; --btn-sel-ink: #fff;
+  --move-e: #b84a00; --move-p: #8a6210;
+}
+/* El neutro: placa de cogitador con filete de latón. `:where` lo deja en (0,2,0) para que cualquier función lo pise. */
 :root[data-palette="grimdark"] :where(.btn:not(.btn-icon):not(.btn-ghost)) {
+  background: var(--surface-elevated) !important;
+  color: var(--text) !important;
+  border-color: var(--grim-gold) !important;
+  box-shadow: none !important;
+}
+:root[data-palette="grimdark"][data-theme="light"] :where(.btn:not(.btn-icon):not(.btn-ghost)) { background: #f9f4e6 !important; color: #1b1e1a !important; border-color: #9a6f14 !important; }
+:root[data-palette="grimdark"] .btn-steam,
+:root[data-palette="grimdark"] .btn-primary { background: var(--grim-green) !important; color: var(--on-accent) !important; border-color: var(--grim-green) !important; box-shadow: 0 0 12px rgba(67, 245, 88, .4) !important; }
+:root[data-palette="grimdark"][data-theme="light"] .btn-steam,
+:root[data-palette="grimdark"][data-theme="light"] .btn-primary { color: #fff !important; box-shadow: none !important; }
+/* ABRIR: la lámpara de sodio encendida —el centro arde más claro que los bordes (`inset`) y la luz se derrama en dos
+   halos—, sin subir el matiz hacia el amarillo, que es donde vive el latón. */
+:root[data-palette="grimdark"] .btn-open {
   background: radial-gradient(120% 160% at 50% 50%, #ffa45c 0%, #ff7f24 55%, #ff6a10 100%) !important;
   color: #1a0a00 !important;
   border-color: #ffb27a !important;
   box-shadow: inset 0 0 8px rgba(255, 214, 160, .55), 0 0 6px rgba(255, 122, 26, .75), 0 0 18px rgba(255, 106, 16, .5) !important;
 }
-/* En el códice: naranja de minio más hondo con rótulo blanco (4,8:1) y un halo apenas insinuado. */
-:root[data-palette="grimdark"][data-theme="light"] :where(.btn:not(.btn-icon):not(.btn-ghost)) { background: #c24d00 !important; color: #fff !important; box-shadow: 0 0 6px rgba(194, 77, 0, .25) !important; }
-:root[data-palette="grimdark"] .btn-accent,
-:root[data-palette="grimdark"] .btn-playing,
-:root[data-palette="grimdark"] .btn-steam,
-:root[data-palette="grimdark"] .btn-primary,
-:root[data-palette="grimdark"] .btn.is-active,
-:root[data-palette="grimdark"] .btn-toggle.active { background: var(--grim-green) !important; color: var(--on-accent) !important; border-color: var(--grim-green) !important; box-shadow: 0 0 12px rgba(67, 245, 88, .4) !important; }
-/* "General" del panel: el sello imperial es de oro, así que el principal se marca tirando ese filete hacia el
-   verde de cogitador. Ni relleno ni glow —eso es del comando activo—, solo el borde. */
-:root[data-palette="grimdark"] .scope-tabs > .btn-toggle:first-child:not(.active) { border-color: color-mix(in srgb, var(--grim-green) 55%, var(--grim-gold)); }
-:root[data-palette="grimdark"][data-theme="light"] .btn-accent,
-:root[data-palette="grimdark"][data-theme="light"] .btn-playing,
-:root[data-palette="grimdark"][data-theme="light"] .btn-steam,
-:root[data-palette="grimdark"][data-theme="light"] .btn-primary,
-:root[data-palette="grimdark"][data-theme="light"] .btn.is-active,
-:root[data-palette="grimdark"][data-theme="light"] .btn-toggle.active { color: #fff !important; box-shadow: none !important; }
-/* NAVEGACIÓN: verde de cogitador y ORO LATÓN del sello, alternos dentro de cada fila (`of .btn-accent` cuenta solo
-   los de navegación; sin soporte, todos quedan en verde). «Pasar a próximos» lleva el oro fijo, igual que «Pasar
-   a en curso» lleva el verde. Tinta del fondo sobre el oro (8,9:1); en claro el oro baja un punto para el blanco
-   (#8a6210, 5,5:1: el `--grim-gold` de claro se queda en 4,51, al filo). */
-:root[data-palette="grimdark"] .btn-accent:nth-child(even of .btn-accent),
-:root[data-palette="grimdark"] .btn-upcoming { background: var(--grim-gold) !important; color: var(--on-accent) !important; border-color: var(--grim-gold) !important; box-shadow: 0 0 12px rgba(224, 169, 43, .4) !important; }
-:root[data-palette="grimdark"][data-theme="light"] .btn-accent:nth-child(even of .btn-accent),
-:root[data-palette="grimdark"][data-theme="light"] .btn-upcoming { background: #8a6210 !important; color: #fff !important; border-color: #8a6210 !important; box-shadow: none !important; }
-:root[data-palette="grimdark"] .btn-complete { background: var(--success) !important; color: #04140a !important; border-color: color-mix(in srgb, var(--success) 55%, #000) !important; }
-:root[data-palette="grimdark"] .btn-danger,
-:root[data-palette="grimdark"] .btn-abandoned { background: var(--danger-fill) !important; color: #fff !important; border-color: color-mix(in srgb, var(--danger) 55%, #000) !important; }
-:root[data-palette="grimdark"][data-theme="light"] .btn-complete { color: #fff !important; }
-/* El halo del neutro va con `!important` sobre TODO `.btn` (es el `:where` de arriba), y estos tres roles no ponen
-   sombra propia: sin esto, completar, abandonar y borrar salían con la luz naranja de la lámpara de sodio. Se les
-   devuelve lo que tenían —ninguna en reposo y el fósforo verde al pasar por encima—. */
-:root[data-palette="grimdark"] :is(.btn-complete, .btn-danger, .btn-abandoned) { box-shadow: none !important; }
-:root[data-palette="grimdark"] :is(.btn-complete, .btn-danger, .btn-abandoned):not(:disabled):hover { box-shadow: 0 0 14px rgba(67, 245, 88, .3) !important; }
+/* En el códice: naranja de minio más hondo con rótulo blanco y un halo apenas insinuado. */
+:root[data-palette="grimdark"][data-theme="light"] .btn-open { background: #c24d00 !important; color: #fff !important; box-shadow: 0 0 6px rgba(194, 77, 0, .25) !important; }
+:root[data-palette="grimdark"] :is(.btn.is-active, .btn-toggle.active, .btn-toggle-deck.active) {
+  background: var(--role-c) !important; color: var(--role-ink) !important; border-color: var(--role-c) !important;
+  box-shadow: 0 0 12px rgba(224, 169, 43, .4) !important;
+}
+:root[data-palette="grimdark"][data-theme="light"] :is(.btn.is-active, .btn-toggle.active, .btn-toggle-deck.active) { box-shadow: none !important; }
+/* «General» del panel: el principal se distingue de los años por el filete, mezclando el verde de cogitador. */
+:root[data-palette="grimdark"] .scope-tabs > .btn-toggle:first-child:not(.active) { border-color: color-mix(in srgb, var(--grim-green) 55%, var(--grim-gold)) !important; }
+/* Los teñidos: placa con el filete, el texto y un halo corto de su color. */
+:root[data-palette="grimdark"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+  background: color-mix(in srgb, var(--role-c) 10%, var(--surface)) !important;
+  color: var(--role-t) !important;
+  border-color: var(--role-c) !important;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--role-c) 35%, transparent) !important;
+}
+:root[data-palette="grimdark"][data-theme="light"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+  --role-t: color-mix(in srgb, var(--role-c) 68%, #000);
+  background: color-mix(in srgb, var(--role-c) 8%, #fffaf0) !important;
+  box-shadow: none !important;
+}
+:root[data-palette="grimdark"] .btn-danger { background: var(--danger-fill) !important; color: #fff !important; border-color: color-mix(in srgb, var(--danger) 55%, #000) !important; box-shadow: none !important; }
+/* Descartar: solo el filete de latón. */
+:root[data-palette="grimdark"] .btn-quiet { background: transparent !important; color: var(--text-muted) !important; border-color: color-mix(in srgb, var(--grim-gold) 55%, transparent) !important; }
 :root[data-palette="grimdark"] .btn-ghost { font-family: var(--font-label); font-weight: 600; letter-spacing: .05em; }
 /* Hover: plano + glow de fósforo verde (sin el giro 3D base). */
 :root[data-palette="grimdark"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 14px rgba(67, 245, 88, .3); }

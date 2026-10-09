@@ -10,6 +10,7 @@ import type { PremiosCategory } from '../../../model/types/premios';
 import type { PremiosVotes } from '../../../viewmodel/premios/usePremiosVoting';
 import { GameCover } from '../GameCover';
 import { PremiosProgress } from './PremiosProgress';
+import { Icon } from '../Icon';
 
 const L = PREMIOS_UI.revisar;
 
@@ -130,7 +131,8 @@ export function PremiosReviewScreen({
         ) : null}
 
         <div className="premios-review__actions">
-          <Link className="btn" to={destinoSeguir}>
+          <Link className="btn btn-secondary btn-back" to={destinoSeguir}>
+            <Icon name="arrow-back" />
             {L.editVotes}
           </Link>
           <button

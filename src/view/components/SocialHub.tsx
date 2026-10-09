@@ -741,7 +741,7 @@ const SocialHubInner = memo(function SocialHubInner({
 
         {hasSocialSession ? (
           <div className="hub-gateway-actions" aria-label={SOCIAL_UI.gateway.actionsAria}>
-            <button className="btn btn-danger hub-gateway-btn" type="button" onClick={handleSignOut}>
+            <button className="btn btn-exit hub-gateway-btn" type="button" onClick={handleSignOut}>
               <Icon name="logout" />
               <span>{SOCIAL_UI.gateway.signOut}</span>
             </button>

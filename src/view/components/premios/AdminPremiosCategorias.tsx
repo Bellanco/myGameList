@@ -310,7 +310,7 @@ export function AdminPremiosCategorias({ categories, busy, ejecutar }: AdminPrem
           <Icon name="save" />
           <span>{busy ? L.saving : L.save}</span>
         </button>
-        <button type="button" className="btn" disabled={busy} onClick={cerrar}>
+        <button type="button" className="btn btn-quiet" disabled={busy} onClick={cerrar}>
           <Icon name="close" />
           <span>{L.cancel}</span>
         </button>

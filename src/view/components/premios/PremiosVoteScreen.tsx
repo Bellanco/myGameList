@@ -11,6 +11,7 @@ import type { PremiosVotes } from '../../../viewmodel/premios/usePremiosVoting';
 import { NomineeCard } from './NomineeCard';
 import { usePosicionSuperior } from './usePosicionSuperior';
 import { PremiosProgress } from './PremiosProgress';
+import { Icon } from '../Icon';
 
 const L = PREMIOS_UI.votar;
 
@@ -162,10 +163,11 @@ export function PremiosVoteScreen({
         <div className="premios-vote__steps">
           <button
             type="button"
-            className="btn"
+            className="btn btn-secondary btn-back"
             disabled={indice === 0}
             onClick={() => irA(votePath(indice))}
           >
+            <Icon name="arrow-back" />
             {L.previous}
           </button>
           <button
@@ -179,8 +181,9 @@ export function PremiosVoteScreen({
         </div>
         {/* FINALIZAR ESTÁ SIEMPRE, y no solo en la última: se puede enviar con categorías sin votar (lo dice la
             revisión), así que obligar a recorrerlas todas para llegar al final sería un muro inventado. */}
-        <button type="button" className="btn premios-vote__finish" onClick={() => irA(PREMIOS_ROUTES.review)}>
+        <button type="button" className="btn btn-open premios-vote__finish" onClick={() => irA(PREMIOS_ROUTES.review)}>
           {L.finish}
+          <Icon name="angle-right" className="ui-icon btn-open-go" />
         </button>
       </nav>
     </section>

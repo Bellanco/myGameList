@@ -687,7 +687,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
               </ul>
             </div>
           ) : null}
-          <button className="btn btn-secondary" type="button" onClick={onClose}>
+          <button className="btn btn-quiet" type="button" onClick={onClose}>
             {FORM_UI.cancel}
           </button>
           <button className="btn btn-steam" type="button" onClick={runSave}>

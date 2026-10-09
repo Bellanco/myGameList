@@ -504,34 +504,77 @@ a.btn, a.btn:hover { text-decoration: none; }
 .btn-steam:hover,
 .btn-primary:hover { background: linear-gradient(180deg, color-mix(in srgb, var(--steam) 77%, #000), color-mix(in srgb, var(--steam) 63%, #000)); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 16px 26px rgba(var(--steam-rgb),.22); }
 
-/* Acento azul de la app (texto/icono/borde) sobre el cristal: navegación principal y toggles activos. */
-.btn-accent, .btn.is-active, .btn-toggle.active, .btn-toggle-deck.active {
-  color: var(--fg-link); border-color: color-mix(in srgb, var(--steam) 55%, transparent);
+/* ── BOTONES POR FUNCIÓN ──────────────────────────────────────────────────────────────────────────────────
+   El color de un botón dice PARA QUÉ es, no dónde está. Antes «navegar», «en curso», «encendido» y a menudo el
+   principal salían del mismo color, y la navegación alternaba dos tonos según la POSICIÓN en la fila (medido el
+   09-10-2026: entre 6 y 9 aspectos distintos de 15 variantes, según el tema). Cada función lleva un MATERIAL:
+
+     MACIZO   confirmar (`.btn-primary`) · abrir / ir (`.btn-open`, con su › detrás) · encendido
+              (`.btn-toggle.active`, `.btn.is-active`) · destruir (`.btn-danger`)
+     TEÑIDO   mover de lista (`.btn-playing/-upcoming/-complete/-abandoned`, el color de su lista) · positivo social
+              (`.btn-social`) · salir, que se deshace (`.btn-exit`) · lo ya hecho, «Copiado» (`.btn-done`)
+     NEUTRO   utilidad (`.btn-secondary`) · volver (`.btn-back`) · apagado
+     CALLADO  descartar (`.btn-quiet`): Cancelar, Ahora no, No gracias
+
+   Cada tema rellena las fichas de abajo con colores de su mundo y pinta los materiales con la construcción de su
+   skin; aquí van los valores de la casa. `--role-c` es el color de la función; `--role-ink`, la tinta sobre el
+   macizo; `--role-t`, el texto del teñido (el color llevado hacia la tinta del modo, para el 4,5:1). */
+:root {
+  --btn-open: var(--fg-link);  --btn-open-ink: var(--bg);
+  --btn-sel: var(--steam);     --btn-sel-ink: var(--on-accent);
+  --move-e: var(--warn); --move-p: var(--steam); --move-c: var(--success); --move-v: var(--danger);
 }
-.btn-accent:hover, .btn.is-active:hover { border-color: color-mix(in srgb, var(--steam) 60%, transparent); }
+.btn-open { --role-c: var(--btn-open); --role-ink: var(--btn-open-ink); }
+.btn.is-active, .btn-toggle.active, .btn-toggle-deck.active { --role-c: var(--btn-sel); --role-ink: var(--btn-sel-ink); }
+.btn-social, .btn-done { --role-c: var(--success); }
+.btn-exit { --role-c: var(--danger); }
+.btn-playing { --role-c: var(--move-e); }
+.btn-upcoming { --role-c: var(--move-p); }
+.btn-complete { --role-c: var(--move-c); }
+.btn-abandoned { --role-c: var(--move-v); }
+:is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+  --role-t: color-mix(in srgb, var(--role-c) 70%, #fff);
+}
+[data-theme="light"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+  --role-t: var(--role-c);
+}
+
+/* Macizo: el mismo degradado corto que el principal, con el color de la función. */
+.btn-open, .btn.is-active, .btn-toggle.active, .btn-toggle-deck.active {
+  background: linear-gradient(180deg, var(--role-c), color-mix(in srgb, var(--role-c) 86%, #000));
+  color: var(--role-ink); border-color: color-mix(in srgb, var(--role-c) 60%, #000);
+}
+/* El › de «abrir» va detrás del rótulo y se aparta un pelo al pasar por encima: dice «te llevo». */
+.btn-open > .btn-open-go { width: 1em; height: 1em; margin-inline-start: -.15rem; transition: transform .15s ease; }
+.btn-open:not(:disabled):hover > .btn-open-go { transform: translateX(2px); }
+
+/* Teñido: el color en el filete y el texto, sobre un velo suyo. */
+:is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned) {
+  background: color-mix(in srgb, var(--role-c) 14%, var(--surface-elevated));
+  color: var(--role-t); border-color: color-mix(in srgb, var(--role-c) 60%, transparent);
+}
 
 /* Neutro */
 .btn-secondary { color: var(--text); }
 
+/* Callado: lo que solo cierra o aplaza. Sin relleno ni relieve, para que no compita con lo que sí hace algo. */
+.btn-quiet {
+  background: transparent; color: var(--text-muted); border-color: var(--border); box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.btn-quiet:not(:disabled):hover { color: var(--text); background: var(--overlay-hover); box-shadow: none; }
+
 /* Los botones de «Plata y acero» (witcher) ya NO viven aquí: esa paleta pasó a tener skin propio
    (`themes/witcher/witcher.scss`), que es donde se forjan sus hojas de acero. */
 
-/* Roles: el color va en texto + borde; la superficie es el mismo cristal (sin rellenos planos). */
-
-/* MENOS EL DESTRUCTIVO, QUE ES MACIZO. Los cinco skins ya lo rellenaban cada uno por su cuenta, así que la
-   paleta Clásico era la única de las seis donde borrar era un botón de contorno como cualquier otro rol. Y no
-   es un rol como los demás: `.btn-abandoned` se queda en contorno a propósito —es alternable, se deshace—
-   mientras que este no se deshace. `--danger-fill` es el relleno con tinta encima. */
+/* DESTRUIR, QUE ES MACIZO. Lo que no se deshace (borrar, eliminar la cuenta) se rellena; lo que se deshace (salir,
+   desconectar, rechazar, mover a abandonados) se queda teñido. `--danger-fill` es el relleno con tinta encima. */
 .btn-danger {
   background: var(--danger-fill); color: #fff;
   border-color: color-mix(in srgb, var(--danger) 55%, #000);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 8px 18px rgba(var(--danger-rgb),.16);
 }
 .btn-danger:hover { border-color: color-mix(in srgb, var(--danger) 70%, #000); }
-.btn-complete { color: var(--fg-green-soft); border-color: color-mix(in srgb, var(--success) 42%, transparent); }
-.btn-complete:hover { border-color: color-mix(in srgb, var(--success) 58%, transparent); }
-.btn-abandoned { color: var(--fg-red-pink); border-color: color-mix(in srgb, var(--danger) 38%, transparent); }
-.btn-abandoned:hover { border-color: color-mix(in srgb, var(--danger) 52%, transparent); }
 
 /* L2 — botones del aviso de analítica. MISMO tamaño los dos y al mismo nivel (un clic cada uno): rechazar debe
    costar lo mismo que aceptar o el consentimiento no es válido. La diferencia es solo de color, para que la
@@ -564,7 +607,6 @@ a.btn, a.btn:hover { text-decoration: none; }
 }
 .theme-toggle-btn .ui-icon { width: var(--ico-lg); height: var(--ico-lg); transition: transform .25s; }
 .theme-toggle-btn:hover .ui-icon { transform: rotate(12deg) scale(1.08); }
-.btn-toggle-deck.active { background: rgba(var(--steam-rgb),.15); color: var(--fg-sky); border-color: rgba(var(--steam-rgb),.4); }
 .btn-icon {
   width: 42px; height: 42px; border-radius: 50%; background: transparent;
   border: 1px solid transparent; color: var(--text-muted); cursor: pointer;

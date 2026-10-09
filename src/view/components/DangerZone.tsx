@@ -102,7 +102,7 @@ export const DangerZone = memo(function DangerZone() {
               />
             </label>
             <div className="dialog-actions">
-              <button className="btn btn-secondary" type="button" onClick={close} disabled={busy}>
+              <button className="btn btn-quiet" type="button" onClick={close} disabled={busy}>
                 {DIALOG_MESSAGES.cancel}
               </button>
               <button

@@ -141,7 +141,7 @@ export function SocialProfileScreen({
             </button>
           </div>
           <div className="hub-screen-actions-right">
-            <button className="btn btn-danger" type="button" onClick={onSignOut}>
+            <button className="btn btn-exit" type="button" onClick={onSignOut}>
               <Icon name="logout" />
               {SOCIAL_UI.profile.signOut}
             </button>

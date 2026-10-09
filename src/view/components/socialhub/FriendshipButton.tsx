@@ -39,7 +39,7 @@ export function FriendshipButton({
     if (!onRemove) return <span className="hub-friend-chip">{F.friends}</span>;
     return (
       <button
-        className="btn btn-danger btn-sm"
+        className="btn btn-exit btn-sm"
         type="button"
         disabled={busy}
         aria-label={F.removeAria(name)}
@@ -55,7 +55,7 @@ export function FriendshipButton({
   if (state === 'incoming') {
     return (
       <button
-        className="btn btn-secondary btn-accent"
+        className="btn btn-social"
         type="button"
         disabled={busy}
         aria-label={F.acceptAria(name)}
@@ -85,7 +85,7 @@ export function FriendshipButton({
 
   return (
     <button
-      className="btn btn-secondary btn-accent"
+      className="btn btn-social"
       type="button"
       disabled={busy}
       aria-label={F.addAria(name)}

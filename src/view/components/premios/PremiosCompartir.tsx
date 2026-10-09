@@ -71,7 +71,11 @@ export function PremiosCompartir({ path, title, text }: PremiosCompartirProps) {
 
   return (
     <div className="premios-compartir">
-      <button type="button" className="btn premios-compartir__btn" onClick={() => void compartir()}>
+      <button
+        type="button"
+        className={`btn ${aviso === 'copiado' ? 'btn-done' : 'btn-secondary'} premios-compartir__btn`}
+        onClick={() => void compartir()}
+      >
         <Icon name="share-nodes" />
         <span>{nativo ? L.button : L.copy}</span>
       </button>

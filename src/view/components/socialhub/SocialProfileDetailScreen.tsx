@@ -613,9 +613,10 @@ function SocialProfileDetailScreenBase({
           </div>
           {isOwnProfile && onEditProfile ? (
             <div className="hub-screen-actions-right">
-              <button className="btn btn-secondary btn-accent" type="button" onClick={onEditProfile}>
+              <button className="btn btn-open" type="button" onClick={onEditProfile}>
                 <Icon name="edit" />
                 {SOCIAL_UI.feed.profile}
+                <Icon name="angle-right" className="ui-icon btn-open-go" />
               </button>
             </div>
           ) : !isOwnProfile && onAddOrAcceptFriend ? (
@@ -842,7 +843,7 @@ function SocialProfileDetailScreenBase({
                       },
                     }
                   : {
-                      btnClass: 'btn-accent',
+                      btnClass: 'btn-upcoming',
                       icon: 'plus',
                       label: toWishlist ? UI_MESSAGES.rouletteActions.toWishlist : UI_MESSAGES.rouletteActions.toProximos,
                       doneLabel: toWishlist
