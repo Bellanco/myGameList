@@ -933,12 +933,19 @@
 
 /* UNA CAJA POR NIVEL: la ficha de un perfil y el detalle de una reseña se asientan en la tarjeta de pantalla, que ya
    es la caja, en vez de abrir otra dentro. En el perfil había cuatro niveles —pantalla, ficha, tabla, renglón—.
-   Con carátula (`has-cover`) se queda la caja: es el marco de la portada que va de fondo. */
-.hub-screen-card .hub-feed-card-detail:not(.has-cover) {
-  border: 0;
-  border-radius: 0;
-  background: none;
-  box-shadow: none;
+   Con carátula (`has-cover`) se queda la caja: es el marco de la portada que va de fondo.
+
+   CON `!important` Y (0,4,1), A PROPÓSITO. Los skins pintan `.hub-feed-card` como panel con `!important`
+   (`:root[data-palette] .hub-feed-card`, (0,3,0), y sus variantes claras con (0,4,0)), y su hoja llega después
+   que esta: la neutralización perdía y el detalle volvía a ser una caja —con `padding: 0`, así que el contenido
+   quedaba pegado a su filete— en siete de ocho temas (logros, perfil, reseña, resumen del año; 09-10-2026).
+   `html:root` suma lo justo para ganar a todas sin nombrar ningún tema. */
+html:root .hub-screen-card .hub-feed-card-detail:not(.has-cover) {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+  clip-path: none !important;
   padding: 0;
 }
 
