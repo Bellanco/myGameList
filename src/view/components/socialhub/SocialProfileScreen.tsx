@@ -1,4 +1,6 @@
-﻿import { Icon } from '../Icon';
+﻿import { useEffect, useState } from 'react';
+import { Icon } from '../Icon';
+import { ConfirmModal } from '../../modals/ConfirmModal';
 import { Notice } from '../Notice';
 import { TierSeal } from '../TierSeal';
 import { HubAvatar } from './HubAvatar';
@@ -40,6 +42,7 @@ export function SocialProfileScreen({
   ownPhotoURL,
   ownVisiblePhotoURL,
   ownPhotoIsGeneric,
+  hasUnsavedChanges = false,
 }: {
   SOCIAL_UI: SocialUiLabels;
   /** Rango propio. Lo asigna el administrador; aquí solo se enseña, que es donde nunca se veía. */
@@ -78,6 +81,8 @@ export function SocialProfileScreen({
   ownVisiblePhotoURL?: string;
   /** ¿Esa foto es el avatar genérico de Google (el monograma)? Ver `core/social/googlePhoto`. */
   ownPhotoIsGeneric?: boolean;
+  /** ¿Hay cambios del perfil sin guardar? Cambia el chip de estado y pide confirmación al salir por «Ir a la actividad». */
+  hasUnsavedChanges?: boolean;
 }) {
   /**
    * ¿Hay foto en la cuenta de Google? Es lo que decide si el interruptor tiene algo que encender.
@@ -111,22 +116,49 @@ export function SocialProfileScreen({
   // Se avisa junto al nombre para que el botón deshabilitado no quede sin explicación.
   const missingCompletedGames = completedGames.length === 0;
 
+  /* CAMBIOS SIN GUARDAR (09-10-2026). Los interruptores de este bloque se guardan con «Guardar perfil» y los de
+     movimientos, al momento; salir sin guardar perdía los primeros sin decir nada. Ahora el chip lo dice, «Ir a la
+     actividad» pregunta antes de irse y cerrar o recargar la pestaña pide confirmación al navegador. */
+  const [leaveAsked, setLeaveAsked] = useState(false);
+  const handleBack = () => {
+    if (hasUnsavedChanges) {
+      setLeaveAsked(true);
+      return;
+    }
+    onBack();
+  };
+  useEffect(() => {
+    if (!hasUnsavedChanges) return undefined;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      // Navegadores antiguos solo avisan si se escribe `returnValue`; el texto lo pone siempre el navegador.
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [hasUnsavedChanges]);
+
   return (
     <HubScreen
       ariaLabel={SOCIAL_UI.profile.sectionAria}
       title={SOCIAL_UI.profile.title}
       cardClassName="hub-profile-card"
       titleExtra={
-        <span className={`hub-profile-sync-chip ${hasCreatedProfile ? 'is-synced' : ''}`}>
+        // Sin perfil creado manda «Sin publicar»: todo lo escrito está, por definición, sin guardar.
+        <span
+          className={`hub-profile-sync-chip ${!hasCreatedProfile ? '' : hasUnsavedChanges ? 'is-unsaved' : 'is-synced'}`.trim()}
+        >
           <span className="dot" aria-hidden="true" />
-          {hasCreatedProfile ? SOCIAL_UI.profile.statusSynced : SOCIAL_UI.profile.statusUnpublished}
+          {!hasCreatedProfile
+            ? SOCIAL_UI.profile.statusUnpublished
+            : hasUnsavedChanges ? SOCIAL_UI.profile.statusUnsaved : SOCIAL_UI.profile.statusSynced}
         </span>
       }
     >
         <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.profile.actionsAria}>
           <div className="hub-screen-actions-left">
             {hasCreatedProfile ? (
-              <HubBackButton onBack={onBack} label={SOCIAL_UI.profile.toFeed} />
+              <HubBackButton onBack={handleBack} label={SOCIAL_UI.profile.toFeed} />
             ) : null}
             <button
               className="btn btn-primary"
@@ -355,6 +387,17 @@ export function SocialProfileScreen({
           {hydratingProfile ? <p>{SOCIAL_UI.profile.hydrating}</p> : null}
         </div>
       <HubStatus status={status} statusKind={statusKind} />
+        <ConfirmModal
+          open={leaveAsked}
+          title={SOCIAL_UI.profile.leaveUnsavedTitle}
+          body={SOCIAL_UI.profile.leaveUnsavedBody}
+          confirmLabel={SOCIAL_UI.profile.leaveUnsavedConfirm}
+          onCancel={() => setLeaveAsked(false)}
+          onConfirm={() => {
+            setLeaveAsked(false);
+            onBack();
+          }}
+        />
     </HubScreen>
   );
 }

@@ -75,6 +75,7 @@ const SocialHubInner = memo(function SocialHubInner({
     hasCreatedProfile, profileName, setProfileName, hiddenTabs, setHiddenTabs, hideReplayable, setHideReplayable,
     hideRetry, setHideRetry, hideGameTime, setHideGameTime, showPhoto, setShowPhoto, ownPhotoIsGeneric,
     ownPublishablePhoto, hydratingProfile, savingProfile, completedGames, socialDisplayName, handleSaveProfile,
+    hasUnsavedChanges,
   } = vm.profileEditor;
   // Rango propio: decide cuánto se ve del panel de estadísticas de un amigo.
   // Administración (el claim): ve la ficha de un amigo sin las restricciones de visibilidad.
@@ -350,6 +351,7 @@ const SocialHubInner = memo(function SocialHubInner({
           hydratingProfile={hydratingProfile}
           savingProfile={savingProfile}
           hasCreatedProfile={hasCreatedProfile}
+          hasUnsavedChanges={hasUnsavedChanges}
           onSaveProfile={handleSaveProfile}
           onSignOut={handleSignOut}
           onBack={goToSocial}

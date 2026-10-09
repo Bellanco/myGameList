@@ -65,6 +65,14 @@ export interface SocialProfileForm {
   visibility: SocialProfileVisibility;
   /** Vuelca un perfil ya leído (de la caché o del gist) al formulario, normalizando de paso. */
   hydrate: (profile: { name: string; visibility?: Partial<SocialProfileVisibility> | null }) => void;
+  /**
+   * Lo último que se sabe GUARDADO: lo leído al hidratar o lo escrito al guardar. Es la referencia de los «cambios
+   * sin guardar»; la comparación la hace el ViewModel, que es quien sabe si la cuenta tiene foto (ver
+   * `hasUnsavedProfileChanges`).
+   */
+  saved: { name: string; visibility: SocialProfileVisibility };
+  /** Toma lo que se acaba de escribir como lo guardado. */
+  markSaved: (profile: { name: string; visibility: SocialProfileVisibility }) => void;
 }
 
 /**
@@ -89,6 +97,10 @@ export function useSocialProfileForm(): SocialProfileForm {
   const [hideReplayable, setHideReplayable] = useState(false);
   const [hideRetry, setHideRetry] = useState(false);
   const [hideGameTime, setHideGameTime] = useState(false);
+  const [saved, setSaved] = useState<{ name: string; visibility: SocialProfileVisibility }>({
+    name: '',
+    visibility: DEFAULT_SOCIAL_VISIBILITY,
+  });
 
   const visibility = useMemo<SocialProfileVisibility>(() => ({
     hiddenTabs: getOrderedUniqueTabs(hiddenTabs),
@@ -106,6 +118,11 @@ export function useSocialProfileForm(): SocialProfileForm {
     setHideRetry(next.hideRetry);
     setHideGameTime(next.hideGameTime);
     setShowPhoto(next.showPhoto);
+    setSaved({ name: profile.name, visibility: next });
+  }, []);
+
+  const markSaved = useCallback((profile: { name: string; visibility: SocialProfileVisibility }) => {
+    setSaved({ name: profile.name, visibility: normalizeVisibility(profile.visibility) });
   }, []);
 
   return {
@@ -123,5 +140,30 @@ export function useSocialProfileForm(): SocialProfileForm {
     setHideGameTime,
     visibility,
     hydrate,
+    saved,
+    markSaved,
   };
+}
+
+/**
+ * ¿Hay cambios en el perfil que no se han guardado? Nombre y las cinco opciones, comparados con lo último guardado.
+ * La foto se compara EFECTIVA (`hasRealPhoto`): sin foto de verdad en la cuenta, el interruptor se apaga solo y eso
+ * no es un cambio del usuario.
+ */
+export function hasUnsavedProfileChanges(
+  current: { name: string; visibility: SocialProfileVisibility },
+  saved: { name: string; visibility: SocialProfileVisibility },
+  hasRealPhoto: boolean,
+): boolean {
+  const effective = (visibility: SocialProfileVisibility) => ({
+    hiddenTabs: [...visibility.hiddenTabs].sort().join(','),
+    hideReplayable: visibility.hideReplayable,
+    hideRetry: visibility.hideRetry,
+    hideGameTime: visibility.hideGameTime,
+    showPhoto: visibility.showPhoto && hasRealPhoto,
+  });
+  if (current.name.trim() !== saved.name.trim()) return true;
+  const a = effective(current.visibility);
+  const b = effective(saved.visibility);
+  return (Object.keys(a) as Array<keyof typeof a>).some((key) => a[key] !== b[key]);
 }

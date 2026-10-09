@@ -107,6 +107,14 @@
   color: var(--fg-green);
 }
 
+.hub-profile-sync-chip.is-unsaved {
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+  border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+  color: var(--fg-amber);
+}
+
+.hub-profile-sync-chip.is-unsaved .dot { background: var(--warn); }
+
 .hub-profile-sync-chip.is-synced .dot { background: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 22%, transparent); }
 
 /* ── Detalle de perfil · Juegos: control segmentado con pastilla deslizante; encabezado si hay una sola categoría ── */

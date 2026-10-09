@@ -106,6 +106,8 @@ export function useOwnProfileEditor({
   setFeedback,
   reportFailure,
 }: OwnProfileEditorInput) {
+  // Suelta, como `hydrateProfileForm`: es estable (`useCallback([])`), y el objeto del formulario no lo es.
+  const { markSaved: markProfileSaved } = profileForm;
   const [hydratingProfile, setHydratingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
 
@@ -455,6 +457,8 @@ export function useOwnProfileEditor({
       setHasCreatedProfile(true);
       setMustCreateProfile(false);
       setJustSavedProfile(true);
+      // Lo escrito pasa a ser lo guardado: el aviso de «cambios sin guardar» se apaga con esto.
+      markProfileSaved({ name: profile.name, visibility });
 
       // Momento clave del usuario nuevo: acaba de completar su perfil, así que sus reseñas ANTERIORES al alta
       // (que nunca pasaron por `publishReviewActivity`) entran ahora al feed. Forzado: ignora sello y recuento.
@@ -478,6 +482,7 @@ export function useOwnProfileEditor({
   }, [
     authUser,
     hasCompletedGames,
+    markProfileSaved,
     // Memoizada sobre los cinco interruptores (`useSocialProfileForm`), así que su identidad solo cambia cuando
     // cambia uno de ellos. Es LO QUE SE ESCRIBE en el gist, y cubre el que faltaba: `hiddenTabs`,
     // `hideReplayable`, `hideRetry` y `hideGameTime` estaban enumerados sueltos, `showPhoto` no. Los tres de

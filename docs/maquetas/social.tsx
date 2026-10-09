@@ -404,8 +404,11 @@ function Ajustes() {
   const [reintentar, setReintentar] = useState(true);
   const [tiempo, setTiempo] = useState(false);
   const [foto, setFoto] = useState(true);
+  // Lo de arriba es «lo guardado»: cualquier diferencia enciende el aviso de cambios sin guardar.
+  const sinGuardar = nombre !== 'Yo' || ocultas.join() !== 'd' || rejugar || !reintentar || tiempo;
   return (
     <SocialProfileScreen
+      hasUnsavedChanges={sinGuardar}
       SOCIAL_UI={SOCIAL_UI}
       profileName={nombre}
       setProfileName={setNombre}

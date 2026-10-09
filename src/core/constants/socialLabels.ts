@@ -366,6 +366,11 @@ export const SOCIAL_UI = {
     signOut: 'Cerrar sesión',
     statusSynced: 'Sincronizado',
     statusUnpublished: 'Sin publicar',
+    // Cambios del perfil que aún no se han guardado con «Guardar perfil» (09-10-2026).
+    statusUnsaved: 'Cambios sin guardar',
+    leaveUnsavedTitle: '¿Salir sin guardar los cambios?',
+    leaveUnsavedBody: 'Lo que has cambiado en tu perfil no se ha guardado: si sales ahora, se pierde.',
+    leaveUnsavedConfirm: 'Salir sin guardar',
     identityTitle: 'Identidad visible',
     identityDescription: 'Este nombre se mostrará en la actividad social y en análisis compartidos.',
     nameLabel: 'Nombre social',
