@@ -431,6 +431,13 @@ export function useSocialViewModel(options?: {
   // de los ids públicos y latido de uso—, cada uno con su `useRef` de una vez. Ese `useRef` moría con el
   // desmontaje del hub, así que abrir el espacio social varias veces en una sesión los repetía todos. Ahora la
   // política vive escrita una vez, con sello persistente por dispositivo: ver `useSocialStartupTasks`.
+  // Amistades aceptadas que pedí yo y aún no llevan mis ids de gist: la petición sale sin ellos y el arranque los
+  // escribe en cuanto la ve aceptada (ver `useSocialStartupTasks`, tarea `friendshipIdsAfterAccept`).
+  const acceptedWithoutMyIds = useMemo(
+    () => friendships.friends.filter((view) => view.ownGistIdsMissing).map((view) => view.docId),
+    [friendships.friends],
+  );
+
   useSocialStartupTasks({
     socialSpaceOpen,
     uid: authUser?.uid,
@@ -439,6 +446,7 @@ export function useSocialViewModel(options?: {
     profileName,
     ownPublishablePhoto,
     ownPhotoVerdictPending,
+    acceptedWithoutMyIds,
   });
 
   // FASE 2 — MIGRACIÓN A CANAL SECRETO, una vez por sesión: `social/useSecretChannelMigration`.

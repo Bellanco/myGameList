@@ -178,6 +178,7 @@ function toFriendshipView(docId: string, data: Partial<FriendshipDoc>, myUid: st
     state,
     createdAt: typeof data.createdAt === 'number' ? data.createdAt : 0,
     updatedAt: typeof data.updatedAt === 'number' ? data.updatedAt : 0,
+    ...(amRequester && status === 'accepted' && !str(data.requesterSocialGistId) ? { ownGistIdsMissing: true } : {}),
   };
 }
 
@@ -384,6 +385,11 @@ export async function sendFriendRequest(input: {
   const now = Date.now();
   const ref = doc(services.firestore, 'friendships', friendshipDocId(myUid, otherUid));
   // create-only (no merge): los campos del recipient NO se escriben aquí (la regla `create` no los permite).
+  //
+  // NI MIS IDS DE GIST. Son la llave de mi biblioteca —el de listados lleva reseñas enteras, notas y horas—, y el
+  // destinatario lee este documento aunque nunca acepte: se quedaba con ellos al rechazarme (09-10-2026). Se
+  // escriben cuando la amistad está aceptada, con el saneado de identidad (ver `ownGistIdsMissing`, que lo dispara
+  // en cuanto lo veo aceptado). `self.socialGistId`/`gamesGistId` se ignoran aquí a propósito.
   await setDoc(ref, {
     users: sortedPair(myUid, otherUid),
     requester: myUid,
@@ -393,8 +399,6 @@ export async function sendFriendRequest(input: {
     updatedAt: now,
     requesterName: self.name,
     requesterPhoto: self.photo,
-    requesterSocialGistId: self.socialGistId,
-    requesterGamesGistId: self.gamesGistId,
   });
 
   // Hay una arista NUEVA con lo que se supiera en este instante (que puede ser un id vacío). El próximo saneado
@@ -581,16 +585,22 @@ export async function healOwnFriendshipIdentity(
      * explícito con respaldo comprobado (ver `purgeOwnPublicGistIds`), nunca el efecto colateral de no saberlo.
      */
     const keepKnown = (next: string, stored: string | undefined): string => next || str(stored);
-    const socialGistId = keepKnown(self.socialGistId, amRequester ? data.requesterSocialGistId : data.recipientSocialGistId);
-    const gamesGistId = keepKnown(self.gamesGistId, amRequester ? data.requesterGamesGistId : data.recipientGamesGistId);
+    /**
+     * EN UNA PETICIÓN QUE AÚN NO SE HA ACEPTADO, mis ids de gist NO van: el destinatario la lee aunque me rechace, y
+     * son la llave de mi biblioteca. Se escriben vacíos, que además limpia las peticiones que los llevaban antes
+     * de este arreglo (09-10-2026); al aceptarse, este mismo saneado los pone (ver `ownGistIdsMissing`).
+     */
+    const pendingOwnRequest = amRequester && data.status !== 'accepted';
+    const socialGistId = pendingOwnRequest ? '' : keepKnown(self.socialGistId, amRequester ? data.requesterSocialGistId : data.recipientSocialGistId);
+    const gamesGistId = pendingOwnRequest ? '' : keepKnown(self.gamesGistId, amRequester ? data.requesterGamesGistId : data.recipientGamesGistId);
 
     // Solo escribir si algún campo denormalizado DIVERGE del valor actual (evita N writes/cuota en cada
     // apertura de social o guardado de perfil cuando nada ha cambiado).
     const diverges = amRequester
       ? data.requesterName !== self.name ||
         data.requesterPhoto !== self.photo ||
-        data.requesterSocialGistId !== socialGistId ||
-        data.requesterGamesGistId !== gamesGistId
+        str(data.requesterSocialGistId) !== socialGistId ||
+        str(data.requesterGamesGistId) !== gamesGistId
       : data.recipientName !== self.name ||
         data.recipientPhoto !== self.photo ||
         data.recipientSocialGistId !== socialGistId ||

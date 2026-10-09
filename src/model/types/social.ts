@@ -93,6 +93,11 @@ export interface FriendshipView {
   state: Exclude<RelationshipState, 'none'>;
   createdAt: number;
   updatedAt: number;
+  /**
+   * Amistad ya aceptada que pedí YO y que aún no lleva mis ids de gist: la petición sale sin ellos (ver
+   * `sendFriendRequest`) y se escriben al aceptarse. Mientras falten, mi amistad no puede leer mis listas.
+   */
+  ownGistIdsMissing?: boolean;
 }
 
 /** Todo el estado de amistad del usuario actual, derivado de UNA sola query `array-contains`. */

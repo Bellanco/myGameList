@@ -326,6 +326,72 @@ describe('huella tras crear o aceptar una amistad', () => {
   });
 });
 
+// MIS IDS DE GIST NO VIAJAN EN UNA PETICIÓN (09-10-2026). Son la llave de mi biblioteca, y el destinatario lee la
+// petición aunque me rechace. Se escriben cuando la amistad está aceptada.
+describe('ids de gist en una petición de amistad', () => {
+  beforeEach(resetAll);
+
+  it('la petición sale SIN mis ids de gist', async () => {
+    await sendFriendRequest({ myUid: 'me', otherUid: 'x', self: { name: 'N', photo: 'p', socialGistId: 'gs', gamesGistId: 'gg' } });
+    const escrito = setDocMock.mock.calls[0][1] as Record<string, unknown>;
+    expect(escrito).toMatchObject({ requester: 'me', status: 'pending', requesterName: 'N' });
+    expect(escrito).not.toHaveProperty('requesterSocialGistId');
+    expect(escrito).not.toHaveProperty('requesterGamesGistId');
+  });
+
+  it('el saneado deja vacíos mis ids en una petición mía pendiente, y limpia los que llevara de antes', async () => {
+    getDocsMock.mockResolvedValueOnce(snapshot([{
+      id: 'me__x',
+      data: {
+        users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'pending',
+        requesterName: 'N', requesterPhoto: 'p', requesterSocialGistId: 'gs', requesterGamesGistId: 'gg',
+      },
+    }]));
+
+    await healOwnFriendshipIdentity('me', { name: 'N', photo: 'p', socialGistId: 'gs', gamesGistId: 'gg' }, { force: true });
+
+    expect(batchedOps()).toHaveLength(1);
+    expect(batchedOps()[0].fields).toMatchObject({ requesterSocialGistId: '', requesterGamesGistId: '' });
+  });
+
+  it('una petición mía pendiente y ya sin ids no se reescribe', async () => {
+    getDocsMock.mockResolvedValueOnce(snapshot([{
+      id: 'me__x',
+      data: { users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'pending', requesterName: 'N', requesterPhoto: 'p' },
+    }]));
+
+    await healOwnFriendshipIdentity('me', { name: 'N', photo: 'p', socialGistId: 'gs', gamesGistId: 'gg' }, { force: true });
+
+    expect(batchUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it('aceptada, el saneado sí escribe mis ids', async () => {
+    getDocsMock.mockResolvedValueOnce(snapshot([{
+      id: 'me__x',
+      data: { users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'accepted', requesterName: 'N', requesterPhoto: 'p' },
+    }]));
+
+    await healOwnFriendshipIdentity('me', { name: 'N', photo: 'p', socialGistId: 'gs', gamesGistId: 'gg' }, { force: true });
+
+    expect(batchedOps()[0].fields).toMatchObject({ requesterSocialGistId: 'gs', requesterGamesGistId: 'gg' });
+  });
+
+  it('la vista marca la amistad aceptada que pedí yo y aún no lleva mis ids', async () => {
+    getDocsMock.mockResolvedValueOnce(snapshot([
+      { id: 'me__x', data: { users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'accepted' } },
+      { id: 'me__y', data: { users: ['me', 'y'], requester: 'me', recipient: 'y', status: 'accepted', requesterSocialGistId: 'gs' } },
+      { id: 'me__z', data: { users: ['me', 'z'], requester: 'z', recipient: 'me', status: 'accepted' } },
+    ]));
+
+    const mias = await getMyFriendships('me');
+
+    expect(mias.byOtherUid.x.ownGistIdsMissing).toBe(true);
+    expect(mias.byOtherUid.y.ownGistIdsMissing).toBeUndefined();
+    // Si la pidió el otro, mis ids los escribí yo al aceptar: no falta nada mío.
+    expect(mias.byOtherUid.z.ownGistIdsMissing).toBeUndefined();
+  });
+});
+
 describe('healOwnFriendshipIdentity', () => {
   beforeEach(resetAll);
 
