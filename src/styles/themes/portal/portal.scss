@@ -1056,3 +1056,7 @@
 /* El rótulo del juego a la luz: el naranja del gel sobre su propio velo se quedaba en 3,3:1 (09-10-2026). El filete
    sigue en el naranja de siempre; el texto, en uno más hondo. */
 :root[data-palette="portal"][data-theme="light"] .hub-feed-game-chip { color: color-mix(in srgb, var(--portal-orange) 72%, #000); }
+
+/* «Amigos» de noche: el rosa del cubo sobre la placa se quedaba en 3,3:1 (09-10-2026); el rótulo va más claro, el
+   filete y el corazón siguen en el rosa de siempre. */
+:root[data-palette="portal"]:not([data-theme="light"]) .hub-friend-chip { color: color-mix(in srgb, var(--portal-cube) 70%, #fff); }

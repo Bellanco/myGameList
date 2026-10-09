@@ -978,3 +978,7 @@
    apagado, sobre la placa casi negra no se leía como rosa. */
 :root[data-palette="grimdark"] { --btn-friend: #ec5c98; }
 :root[data-palette="grimdark"][data-theme="light"] { --btn-friend: #8a2c4f; }
+
+/* «Amigos» a la luz: el latón sobre el pergamino se quedaba en 4,1:1 (09-10-2026); el rótulo va más hondo, el filete
+   y la cruz siguen en el latón. */
+:root[data-palette="grimdark"][data-theme="light"] .hub-friend-chip { color: color-mix(in srgb, var(--grim-gold) 80%, #000); }

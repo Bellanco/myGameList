@@ -810,7 +810,8 @@
   padding: .25rem .55rem;
   border-radius: 999px;
   background: color-mix(in srgb, var(--warn) 12%, transparent);
-  color: var(--fg-amber);
+  /* Un 30 % hacia el texto del modo: el ámbar puro sobre su velo se quedaba en 3,8–4,3:1 en tres temas claros. */
+  color: color-mix(in srgb, var(--fg-amber), var(--text) 30%);
   border: 1px dashed color-mix(in srgb, var(--warn) 55%, transparent);
   font-size: var(--fs-xs);
   font-weight: 600;
@@ -822,7 +823,8 @@
   padding: .25rem .55rem;
   border-radius: 999px;
   background: rgba(var(--success-rgb),.16);
-  color: var(--fg-green);
+  /* Igual que «Pendiente»: el verde puro sobre su velo se quedaba en 3,3–4,3:1 en cuatro temas claros (09-10-2026). */
+  color: color-mix(in srgb, var(--fg-green), var(--text) 30%);
   border: 1px solid rgba(var(--success-rgb),.3);
   font-size: var(--fs-xs);
   font-weight: 600;
