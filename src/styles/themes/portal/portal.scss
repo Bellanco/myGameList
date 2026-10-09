@@ -1052,3 +1052,7 @@
 /* LAS ETIQUETAS DE GÉNERO, LEGIBLES A LA LUZ (09-10-2026). Los siete tonos de la rampa se quedaban entre 4,08 y
    4,32:1 sobre su propio velo (el 18 % del tono encima de la fila): el texto se lleva un poco hacia la tinta. */
 :root[data-palette="portal"][data-theme="light"] .chip-genre { color: color-mix(in srgb, var(--cat-fg, var(--fg-sky)) 84%, #000); }
+
+/* El rótulo del juego a la luz: el naranja del gel sobre su propio velo se quedaba en 3,3:1 (09-10-2026). El filete
+   sigue en el naranja de siempre; el texto, en uno más hondo. */
+:root[data-palette="portal"][data-theme="light"] .hub-feed-game-chip { color: color-mix(in srgb, var(--portal-orange) 72%, #000); }

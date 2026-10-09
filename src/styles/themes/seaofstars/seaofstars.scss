@@ -738,3 +738,7 @@
    magenta (tonos 4 y 7) se quedaban en 4,2: van hacia el blanco. */
 :root[data-palette="seaofstars"][data-theme="light"] .chip-genre { color: color-mix(in srgb, var(--cat-fg, #6e4700) 70%, #000); }
 :root[data-palette="seaofstars"]:not([data-theme="light"]) .chip-genre { color: color-mix(in srgb, var(--cat-fg, var(--fg-sky)) 80%, #fff); }
+
+/* El rótulo del juego a la luz: el ámbar de `--tab-active` sobre su velo encima de las turquesas se quedaba en 4,4:1
+   (09-10-2026). El texto, un pelo más hondo; el filete, igual. */
+:root[data-palette="seaofstars"][data-theme="light"] .hub-feed-game-chip { color: color-mix(in srgb, var(--tab-active) 85%, #000); }
