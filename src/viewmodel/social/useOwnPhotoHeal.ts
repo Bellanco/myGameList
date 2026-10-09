@@ -73,11 +73,12 @@ export function useOwnPhotoHeal({
 
         if ((data.profile.photoURL || '') !== target) {
           await writeSocialGist(cfg.token, socialCfgGistId, {
+            // TODO EL CANAL SE CONSERVA y solo cambia la foto: copiar a mano `activity` y `posts` dejaba fuera los
+            // avisos de lista (`moves`, `hiddenMoves`), que el saneado rellenaba con `[]` (ver `useOwnProfileEditor`).
+            ...data,
             // `photoURL: ''` no se publica: el saneado del gist descarta lo que no sea una URL válida, así que el
             // campo desaparece del canal en vez de quedarse vacío.
             profile: { ...data.profile, photoURL: target },
-            activity: data.activity,
-            posts: data.posts,
             updatedAt: Date.now(),
           });
           // 2a — sin re-hidratación completa (~30 lecturas). La foto propia ya se ve por el fallback de sesión; solo

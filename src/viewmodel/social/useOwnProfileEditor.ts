@@ -379,10 +379,13 @@ export function useOwnProfileEditor({
       const currentGistResult = await readSocialGist(socialConfig.token, socialCfgGistId, null);
       const currentGistData = currentGistResult.data;
 
+      // TODO EL CANAL SE CONSERVA y solo se cambia el perfil. Se copiaban a mano `activity` y `posts`, y el resto
+      // —los avisos de lista (`moves`, `hiddenMoves`), el consentimiento— se caía: el saneado del gist rellena con
+      // `[]` lo que falta, así que tus amigos dejaban de ver tus avisos hasta la siguiente reconciliación, que con
+      // su sello fresco podía tardar 12 h (09-10-2026). Es la forma de las demás escrituras del canal.
       const writeResult = await writeSocialGist(socialConfig.token, socialCfgGistId, {
+        ...currentGistData,
         profile,
-        activity: currentGistData.activity,
-        posts: currentGistData.posts, // preservar las publicaciones al guardar el perfil
         updatedAt: Date.now(),
       });
 
