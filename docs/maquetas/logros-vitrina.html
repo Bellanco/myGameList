@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vitrina de logros</title>
+<!--
+  PROPUESTAS PARA LA VITRINA DE LOGROS DE UN AMIGO (punto A6, 09-10-2026). Hoy es una lista plana: cada escalón de una
+  misma escalera en su fila («Solsticio a solsticio I, II, III…»), con medallas de 34 px. Esta página monta la pantalla
+  REAL de la maqueta del social y reagrupa sus medallas —las de verdad, clonadas— por escalera, con el catálogo real
+  (`src/core/achievements/catalog.ts`, que el servidor de desarrollo sirve como módulo). Nada de esto toca la app.
+-->
+<style>
+  :root { --bg: #15171a; --fg: #e8e6e1; --dim: #9a978f; --line: #2c2f34; --acc: #d8b45a; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+  h1 { font-size: 15px; margin: 0 8px 0 0; }
+  .grupo { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+  .grupo span { color: var(--dim); margin-right: 4px; }
+  button, select { font: inherit; color: var(--fg); background: #22252a; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  button[aria-pressed="true"] { border-color: var(--acc); color: var(--acc); }
+  #nota { flex-basis: 100%; color: var(--dim); margin: 2px 0 0; max-width: 120ch; }
+  #nota b { color: var(--fg); }
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px; }
+  figure { margin: 0; min-width: 0; }
+  figcaption { color: var(--dim); margin-bottom: 6px; }
+  figcaption b { color: var(--fg); }
+  .marco { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: #000; }
+  iframe { border: 0; display: block; transform-origin: 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Vitrina de logros de un amigo</h1>
+  <div class="grupo" id="variantes"><span>Propuesta</span></div>
+  <div class="grupo"><span>Tema</span>
+    <select id="tema">
+      <option value="tierramedia">No puedes pasar</option><option value="arcade">Arcade</option>
+      <option value="witcher">Plata y acero</option><option value="persona">Persona</option>
+      <option value="portal">Portal</option><option value="cyberpunk">Sin futuro</option>
+      <option value="seaofstars">Mar de estrellas</option><option value="grimdark">Solo hay guerra</option>
+    </select>
+    <select id="modo"><option value="dark">Oscuro</option><option value="light">Claro</option></select>
+    <select id="ancho"><option value="1280">1280</option><option value="1512">1512</option><option value="390">390 (móvil)</option></select>
+  </div>
+  <p id="nota"></p>
+</header>
+<main>
+  <figure><figcaption><b>Ahora</b></figcaption><div class="marco"><iframe id="antes" title="Vitrina actual"></iframe></div></figure>
+  <figure><figcaption><b id="titulo-propuesta"></b></figcaption><div class="marco"><iframe id="despues" title="Vitrina propuesta"></iframe></div></figure>
+</main>
+<script type="module">
+const { ACHIEVEMENTS_BY_ID, LADDERS_BY_KEY } = await import('/src/core/achievements/catalog.ts');
+
+const ROMANOS = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV'];
+const porNombre = new Map([...ACHIEVEMENTS_BY_ID.values()].map((d) => [d.labels.name, d]));
+
+/* Del DOM real de la pantalla: un grupo por escalera, en el orden en que aparece su primera medalla (la lista ya
+   viene por fecha), con el escalón MÁS ALTO conseguido como cara del grupo. */
+function agrupar(doc) {
+  const grupos = new Map();
+  for (const li of doc.querySelectorAll('.ach-list > li.ach-row')) {
+    const nombre = li.querySelector('.ach-row-name')?.textContent.trim() || '';
+    const def = porNombre.get(nombre);
+    const clave = def ? def.ladder : nombre;
+    const ladder = def ? LADDERS_BY_KEY.get(def.ladder) : null;
+    const base = nombre.replace(/\s+[IVXL]+$/, '');
+    const g = grupos.get(clave) || { clave, nombre: base, total: def ? def.grades : 1, conseguidos: 0, cara: null, grado: 0, fecha: '', condicion: '', rareza: '' };
+    g.conseguidos += 1;
+    const grado = def ? def.grade : 1;
+    if (grado >= g.grado) {
+      g.grado = grado; g.cara = li.querySelector('.ach-medal'); g.fecha = li.querySelector('.ach-row-date')?.textContent || '';
+      g.condicion = li.querySelector('.ach-row-condition')?.textContent || ''; g.rareza = li.dataset.r || '';
+    }
+    grupos.set(clave, g);
+    void ladder;
+  }
+  return [...grupos.values()];
+}
+
+const pips = (g) => g.total > 1
+  ? `<span class="vt-pips" aria-hidden="true">${Array.from({ length: g.total }, (_, i) => `<i class="${i < g.grado ? 'on' : ''}"></i>`).join('')}</span>`
+  : '';
+const escalon = (g) => g.total > 1 ? `Escalón ${ROMANOS[g.grado] || g.grado} de ${ROMANOS[g.total] || g.total}` : 'Logro único';
+function medalla(g, sz) {
+  const m = g.cara.cloneNode(true);
+  m.style.setProperty('--sz', `${sz}px`);
+  return m.outerHTML;
+}
+
+const VARIANTES = {
+  a: {
+    nombre: 'A · Vitrina por escaleras',
+    nota: '<b>Una tarjeta por escalera</b>, con su escalón más alto como medalla grande (64 px), el nombre sin número, «Escalón III de V», una tira de pasos y la fecha. De 186 filas pasa a unas 50 tarjetas en rejilla: se ve de un vistazo qué ha subido más.',
+    pintar: (gs) => `<div class="vt-a">${gs.map((g) => `
+      <article class="vt-card" data-r="${g.rareza}">
+        ${medalla(g, 64)}
+        <div class="vt-txt"><h3>${g.nombre}</h3><p class="vt-esc">${escalon(g)}</p>${pips(g)}<p class="vt-fecha">${g.fecha}</p></div>
+      </article>`).join('')}</div>`,
+    css: `
+      .vt-a { display: grid; grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr)); gap: .7rem; }
+      .vt-card { display: flex; gap: .85rem; align-items: center; padding: .75rem .85rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
+      .vt-txt { min-width: 0; display: grid; gap: .2rem; }
+      .vt-txt h3 { margin: 0; font-size: var(--fs-sm); color: var(--text); overflow-wrap: anywhere; }
+      .vt-esc, .vt-fecha { margin: 0; font-size: var(--fs-2xs); color: var(--text-muted); }`,
+  },
+  b: {
+    nombre: 'B · Lista por escaleras',
+    nota: '<b>La lista de hoy, una fila por escalera</b>: medalla de 44 px, nombre, la condición del escalón alcanzado, la tira de pasos y la fecha a la derecha. Es el cambio más pequeño: misma lectura de arriba abajo, sin repetir cinco veces la misma escalera.',
+    pintar: (gs) => `<ul class="vt-b">${gs.map((g) => `
+      <li data-r="${g.rareza}">
+        ${medalla(g, 44)}
+        <div class="vt-txt"><h3>${g.nombre} <small>${g.total > 1 ? `${ROMANOS[g.grado] || g.grado}/${ROMANOS[g.total] || g.total}` : ''}</small></h3><p>${g.condicion}</p>${pips(g)}</div>
+        <span class="vt-fecha">${g.fecha}</span>
+      </li>`).join('')}</ul>`,
+    css: `
+      .vt-b { list-style: none; margin: 0; padding: 0; display: grid; }
+      .vt-b li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: .85rem; align-items: center; padding: .6rem .2rem; border-top: 1px solid var(--border); }
+      .vt-b li:first-child { border-top: 0; }
+      .vt-txt { min-width: 0; display: grid; gap: .2rem; }
+      .vt-txt h3 { margin: 0; font-size: var(--fs-sm); color: var(--text); }
+      .vt-txt h3 small { color: var(--text-muted); font-weight: 600; margin-left: .3rem; }
+      .vt-txt p { margin: 0; font-size: var(--fs-xs); color: var(--text-muted); }
+      .vt-fecha { font-size: var(--fs-2xs); color: var(--text-muted); white-space: nowrap; }`,
+  },
+  c: {
+    nombre: 'C · Estantería de medallas',
+    nota: '<b>Solo las medallas, grandes (72 px)</b>, una por escalera, con el nombre debajo y la tira de pasos: una vitrina de trofeos. Lo más visual y lo que más se parece a la tira del perfil; la condición y la fecha salen al pasar por encima o al pulsar.',
+    pintar: (gs) => `<div class="vt-c">${gs.map((g) => `
+      <figure title="${g.condicion} · ${g.fecha}" data-r="${g.rareza}">
+        ${medalla(g, 72)}
+        <figcaption>${g.nombre}</figcaption>${pips(g)}
+      </figure>`).join('')}</div>`,
+    css: `
+      .vt-c { display: grid; grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); gap: 1.1rem .6rem; }
+      .vt-c figure { margin: 0; display: grid; justify-items: center; gap: .35rem; text-align: center; }
+      .vt-c figcaption { font-size: var(--fs-2xs); color: var(--text); line-height: 1.25; overflow-wrap: anywhere; }`,
+  },
+};
+const CSS_COMUN = `
+  .ach-list { display: none !important; }
+  .vt-pips { display: flex; gap: 3px; flex-wrap: wrap; }
+  .vt-pips i { width: 9px; height: 4px; border-radius: 2px; background: var(--score-track, var(--border)); }
+  .vt-pips i.on { background: var(--steam); }
+  .vt-c .vt-pips { justify-content: center; }`;
+
+const params = new URLSearchParams(location.search);
+const estado = {
+  v: VARIANTES[params.get('v')] ? params.get('v') : 'a',
+  tema: params.get('tema') || 'tierramedia',
+  modo: params.get('modo') || 'dark',
+  ancho: Number(params.get('w')) || 1280,
+};
+const antes = document.getElementById('antes');
+const despues = document.getElementById('despues');
+const url = () => `social.html?pantalla=logros&gl-palette=${estado.tema}&gl-theme=${estado.modo}&gl-effects=off&barra=0`;
+
+function transformar() {
+  const doc = despues.contentDocument;
+  if (!doc || !doc.querySelector('.ach-list')) return false;
+  const gs = agrupar(doc);
+  doc.getElementById('vt-css')?.remove(); doc.getElementById('vt-raiz')?.remove();
+  const s = doc.createElement('style'); s.id = 'vt-css'; s.textContent = CSS_COMUN + VARIANTES[estado.v].css; doc.head.appendChild(s);
+  const raiz = doc.createElement('div'); raiz.id = 'vt-raiz'; raiz.innerHTML = VARIANTES[estado.v].pintar(gs);
+  doc.querySelector('.ach-list').after(raiz);
+  document.getElementById('titulo-propuesta').textContent = `${VARIANTES[estado.v].nombre} · ${gs.length} escaleras`;
+  return true;
+}
+
+function encajar() {
+  for (const frame of [antes, despues]) {
+    const hueco = frame.parentElement.clientWidth;
+    const escala = Math.min(1, hueco / estado.ancho);
+    const doc = frame.contentDocument;
+    const alto = doc && doc.documentElement ? Math.max(900, doc.documentElement.scrollHeight) : 900;
+    frame.style.width = `${estado.ancho}px`; frame.style.height = `${alto}px`;
+    frame.style.transform = `scale(${escala})`; frame.parentElement.style.height = `${alto * escala}px`;
+  }
+}
+
+function pintarControles() {
+  const box = document.getElementById('variantes'); box.querySelectorAll('button').forEach((b) => b.remove());
+  for (const [k, v] of Object.entries(VARIANTES)) {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = v.nombre; b.setAttribute('aria-pressed', String(k === estado.v));
+    b.onclick = () => { estado.v = k; transformar(); pintarControles(); setTimeout(encajar, 100); };
+    box.appendChild(b);
+  }
+  document.getElementById('nota').innerHTML = VARIANTES[estado.v].nota;
+  for (const id of ['tema', 'modo']) document.getElementById(id).value = estado[id];
+  document.getElementById('ancho').value = String(estado.ancho);
+  history.replaceState(null, '', `?v=${estado.v}&tema=${estado.tema}&modo=${estado.modo}&w=${estado.ancho}`);
+  document.querySelector('main').style.gridTemplateColumns = estado.ancho <= 420 ? 'repeat(2, 420px)' : '1fr 1fr';
+  document.querySelector('main').style.justifyContent = 'center';
+}
+
+function cargar() { for (const f of [antes, despues]) f.src = url(); pintarControles(); }
+despues.addEventListener('load', () => {
+  // La pantalla pinta con React después del `load`: se reintenta hasta que la lista exista.
+  let n = 0; const t = setInterval(() => { if (transformar() || ++n > 30) { clearInterval(t); setTimeout(encajar, 300); } }, 150);
+});
+antes.addEventListener('load', () => { setTimeout(encajar, 800); setTimeout(encajar, 2000); });
+addEventListener('resize', encajar);
+document.getElementById('tema').onchange = (e) => { estado.tema = e.target.value; cargar(); };
+document.getElementById('modo').onchange = (e) => { estado.modo = e.target.value; cargar(); };
+document.getElementById('ancho').onchange = (e) => { estado.ancho = Number(e.target.value); cargar(); };
+cargar();
+</script>
+</body>
+</html>

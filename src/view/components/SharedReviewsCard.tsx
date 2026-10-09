@@ -144,7 +144,7 @@ export const SharedReviewsCard = memo(function SharedReviewsCard({ enabled, game
               </div>
               <div className="settings-shares-item-actions">
                 <button
-                  className="btn btn-secondary"
+                  className={`btn ${copiedToken === entry.token ? 'btn-done' : 'btn-secondary'}`}
                   type="button"
                   onClick={() => void copyLink(entry.token)}
                 >

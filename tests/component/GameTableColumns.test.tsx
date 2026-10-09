@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { GameTable } from '../../src/view/components/GameTable';
 import type { GameItem, TabId } from '../../src/model/types/game';
 
@@ -78,10 +78,10 @@ describe('GameTable — una sola columna', () => {
   });
 
   it('la tabla conserva su nombre accesible: con cuatro listas es lo único que las distingue', () => {
-    // Se fue la cabecera, no la semántica. `<caption>` es lo que hace que un lector de pantalla no anuncie
-    // «tabla» a secas al recorrer la página.
-    const { container } = renderTable('c', 3);
-    expect(container.querySelector('caption')?.textContent).toContain('3');
+    // Se fue la cabecera, no la semántica. El nombre (hoy en `aria-label`, antes en un `<caption>` que dejaba una
+    // franja vacía) es lo que hace que un lector de pantalla no anuncie «tabla» a secas al recorrer la página.
+    renderTable('c', 3);
+    expect(screen.getByRole('table', { name: /3/ })).toBeInTheDocument();
   });
 
   // El meta compacto se pinta como una REJILLA de columnas fijas, y quién decide si existe la columna de la

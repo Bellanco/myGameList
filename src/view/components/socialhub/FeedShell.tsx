@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { SOCIAL_SHELL } from '../../../core/constants/socialShell';
 import { Icon } from '../Icon';
+import { ScreenTitle } from './ScreenTitle';
 
 /**
  * EL ARMAZÓN DE LA ACTIVIDAD SOCIAL, uno solo para la pantalla real y para su esqueleto.
@@ -37,7 +38,6 @@ export interface FeedShellActions {
   pendingIncomingCount: number;
   onOpenProfiles: () => void;
   onOpenRequests: () => void;
-  onSignOut: () => void;
 }
 
 export function FeedShell({
@@ -71,8 +71,7 @@ export function FeedShell({
         <header className="hub-screen-header hub-feed-header">
           <div className="hub-feed-header-text">
             <div className="hub-hub-title-wrap">
-              <Icon name="bottom-hub" className="hub-hub-icon" />
-              <h2>{F.title}</h2>
+              <h2><ScreenTitle text={F.title} /></h2>
             </div>
           </div>
           {avatar}
@@ -88,36 +87,35 @@ export function FeedShell({
         >
           <div className="hub-screen-actions-left">
             <button
-              className="btn btn-secondary btn-accent"
+              className="btn btn-open"
               type="button"
               disabled={inert}
               onClick={actions?.onOpenProfiles}
             >
               <Icon name="bottom-hub" />
               {F.openProfiles}
+              <Icon name="angle-right" className="ui-icon btn-open-go" />
             </button>
-            <button
-              className="btn btn-secondary hub-requests-btn"
-              type="button"
-              disabled={inert}
-              onClick={actions?.onOpenRequests}
-              aria-label={inert ? undefined : F.openRequestsAria(actions.pendingIncomingCount)}
-              title={F.openRequests}
-            >
-              <Icon name="bell" />
-              {actions && actions.pendingIncomingCount > 0 ? (
+            {/* LA CAMPANA SOLO CON ALGO QUE CONTESTAR (09-10-2026). Dentro ya solo están las peticiones que te han hecho;
+                sin ninguna, el botón llevaba a una pantalla vacía. Tampoco sale en el esqueleto, donde aún no se sabe
+                cuántas hay: aparece a la derecha de «Ver perfiles» y no desplaza nada al llegar. */}
+            {!inert && actions && actions.pendingIncomingCount > 0 ? (
+              <button
+                className="btn btn-secondary hub-requests-btn"
+                type="button"
+                onClick={actions.onOpenRequests}
+                aria-label={F.openRequestsAria(actions.pendingIncomingCount)}
+                title={F.openRequests}
+              >
+                <Icon name="bell" />
                 <span className="hub-requests-count is-active" aria-hidden="true">
                   {actions.pendingIncomingCount}
                 </span>
-              ) : null}
-            </button>
+              </button>
+            ) : null}
           </div>
-          <div className="hub-screen-actions-right">
-            <button className="btn btn-danger" type="button" disabled={inert} onClick={actions?.onSignOut}>
-              <Icon name="logout" />
-              {F.signOut}
-            </button>
-          </div>
+          {/* SIN «CERRAR SESIÓN» AQUÍ. Era el botón más llamativo de la pantalla que más se abre, y es la acción que
+              menos se busca en ella: vive en «Mi perfil social», con el resto de lo que es de la cuenta (09-10-2026). */}
         </div>
         {notice}
         {composer}

@@ -25,7 +25,8 @@ import { APP_LOCALE } from '../../../core/constants/locale';
  * porque la ordenación es estable sobre `sortMirror`; lo que no trae sello cae al final.
  *
  * DEBAJO, EL AVANCE: una línea fina con el porcentaje del catálogo a su derecha. Es la misma cifra que la cabecera
- * de su listado (`summarizeMirror` con la apertura comunitaria), dicha sin rótulo.
+ * de su listado (`summarizeMirror` con la apertura comunitaria), con su «del catálogo»: la cifra sola no decía de
+ * qué era.
  */
 export const ProfileAchievementStrip = memo(function ProfileAchievementStrip({
   mirror,
@@ -74,7 +75,7 @@ export const ProfileAchievementStrip = memo(function ProfileAchievementStrip({
         aria-valuetext={ACHIEVEMENTS_UI.countHint(percent)}
       >
         <span className="hub-profile-ach-bar" style={{ '--ach-pct': percent } as CSSProperties} aria-hidden="true" />
-        <span className="hub-profile-ach-pct" aria-hidden="true">{ACHIEVEMENTS_UI.rarityShare(percent)}</span>
+        <span className="hub-profile-ach-pct" aria-hidden="true">{ACHIEVEMENTS_UI.catalogShare(percent)}</span>
       </div>
     </div>
   );
@@ -164,7 +165,7 @@ export const ProfileAchievementsScreen = memo(function ProfileAchievementsScreen
     const items = sortMirror(parseMirror(mirror));
     const levels = new Map(items.map((item) => [item.id, item.level]));
 
-    const entries = items
+    const all = items
       .map((item) => {
         const def = ACHIEVEMENTS_BY_ID.get(item.id);
         if (!def) return null; // `id` desconocido: se ignora en silencio, nunca es un error de parseo
@@ -178,10 +179,13 @@ export const ProfileAchievementsScreen = memo(function ProfileAchievementsScreen
         };
         return { def, state };
       })
-      .filter((entry): entry is AchievementItem => entry !== null)
+      .filter((entry): entry is AchievementItem => entry !== null);
+
+    const entries = all
       // Por fecha, de lo más reciente a lo más antiguo. `sortMirror` ordenaba por rareza declarada porque es el
       // orden de la VITRINA —once medallas para enseñar—, y en una lista larga eso deja el sello, que es la
       // columna que se lee, saltando de un año a otro sin orden aparente. Lo que no trae fecha cae al final.
+      // La agrupación por escaleras la hace la pantalla común, igual que en tus logros.
       .sort(compareEarned);
 
     return {

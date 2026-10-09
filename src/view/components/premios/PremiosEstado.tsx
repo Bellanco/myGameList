@@ -62,7 +62,8 @@ export function PremiosEnviada({
           momento: repetirlos en la pantalla de la celebración era mantener dos sitios con las mismas reglas, y
           uno de ellos se quedaba atrás (el de corregir salía sin mirar si quedaban oportunidades). */}
       <div className="premios-estado__actions">
-        <Link className="btn btn-primary" to={PREMIOS_ROUTES.home}>
+        <Link className="btn btn-secondary btn-back" to={PREMIOS_ROUTES.home}>
+          <Icon name="arrow-back" />
           {PREMIOS_UI.cerrada.toHome}
         </Link>
       </div>
@@ -97,18 +98,21 @@ export function PremiosCerrada({
       {!scheduled && !hasResults ? <p className="premios-estado__muted">{L.bodyPending}</p> : null}
       <div className="premios-estado__actions">
         {hasResults ? (
-          <Link className="btn btn-primary" to={PREMIOS_ROUTES.results}>
+          <Link className="btn btn-open" to={PREMIOS_ROUTES.results}>
             {L.toResults}
+            <Icon name="angle-right" className="ui-icon btn-open-go" />
           </Link>
         ) : null}
         {/* LO SUYO SIGUE AHÍ. Cerrar la votación cierra votar y corregir, no mirar: quien llegue tarde al menos
             se lleva lo que votó, que es lo que viene a buscar mientras espera los resultados. */}
         {hasBallot && !scheduled ? (
-          <Link className={`btn${hasResults ? '' : ' btn-primary'}`} to={PREMIOS_ROUTES.ballot}>
+          <Link className="btn btn-open" to={PREMIOS_ROUTES.ballot}>
             {PREMIOS_UI.enviada.see}
+            <Icon name="angle-right" className="ui-icon btn-open-go" />
           </Link>
         ) : null}
-        <Link className="btn" to={PREMIOS_ROUTES.home}>
+        <Link className="btn btn-secondary btn-back" to={PREMIOS_ROUTES.home}>
+          <Icon name="arrow-back" />
           {L.toHome}
         </Link>
       </div>
@@ -152,7 +156,8 @@ export function PremiosIdentificate({
         <button type="button" className="btn btn-primary" disabled={signingIn} onClick={onSignIn}>
           {signingIn ? PREMIOS_UI.portada.signingIn : PREMIOS_UI.portada.signIn}
         </button>
-        <Link className="btn" to={PREMIOS_ROUTES.home}>
+        <Link className="btn btn-secondary btn-back" to={PREMIOS_ROUTES.home}>
+          <Icon name="arrow-back" />
           {PREMIOS_UI.cerrada.toHome}
         </Link>
       </div>

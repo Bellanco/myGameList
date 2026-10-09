@@ -33,6 +33,8 @@ export const ACHIEVEMENTS_UI = {
   count: (earned: number, total: number) => `${earned}/${total}`,
   countHint: (percent: number) => `${percent}% del catálogo actual`,
   countLabel: 'Logros',
+  /** Pie de la tira de la ficha: la cifra sola («77 %») no decía de qué era (09-10-2026). */
+  catalogShare: (percent: number) => `${percent} % del catálogo`,
   // LOS TEXTOS DEL NIVEL DE PERFIL SE RETIRAN AQUÍ Y NO EN EL NÚCLEO. Los puntos por rareza y la curva por
   // tramos siguen calculándose y probándose (`core/achievements/summary`), pero no se enseñan mientras no esté
   // decidido cómo se presentan. Cuando lo esté, estos cuatro textos son lo que hace falta:
@@ -72,6 +74,9 @@ export const ACHIEVEMENTS_UI = {
   progress: (value: number, next: number) => `${value} de ${next}`,
   progressPercent: (value: number, next: number) => `${value} % de ${next} %`,
   maxed: 'Al máximo',
+  /** Escalón alcanzado de una escalera, en la vitrina de otra persona agrupada por escaleras («III/V»). */
+  ladderStepShort: (grade: string, grades: string) => `${grade}/${grades}`,
+  ladderStep: (grade: number, grades: number) => `Escalón ${grade} de ${grades}`,
   hiddenName: 'Logro oculto',
   hiddenCondition: 'Se revela al conseguirlo.',
 

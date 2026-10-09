@@ -18,6 +18,21 @@ import { finishDays } from './finishDates';
  * de tirarlo, sin los días de carga en bloque (ver `core/utils/finishDates`), y también está declarado en la
  * política de privacidad.
  */
+/**
+ * LA VISIBILIDAD QUE SE APLICA CUANDO NO SE CONOCE LA DE VERDAD: todo oculto. Se usa mientras no se ha podido leer
+ * el canal social de esa persona —amigo inactivo cuyo gist no se lee al hidratar, o gist ilegible—, que es donde
+ * vive lo que esconde. Sin ella el filtro tomaba «nada oculto» y las listas que su dueño esconde salían en su
+ * ficha: falla CERRADO. La cuenta de administración sigue viendo las listas (es la excepción de arriba), pero no las
+ * horas, que solo se le enseñan si su dueño no las oculta, y aquí no se sabe.
+ */
+export const LOCKED_VISIBILITY: SocialProfileVisibility = {
+  hiddenTabs: [...TAB_IDS],
+  hideReplayable: true,
+  hideRetry: true,
+  hideGameTime: true,
+  showPhoto: false,
+};
+
 export function applyProfileVisibility(
   games: TabData,
   visibility: SocialProfileVisibility,

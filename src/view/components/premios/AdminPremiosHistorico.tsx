@@ -141,18 +141,19 @@ export function AdminPremiosHistorico({
                   {`${season.season} · ${L.ballots(season.totalBallots || 0)}`}
                 </span>
                 <span className="premios-admin__cat-actions">
-                  <Link className="btn" to={resultsPath(season.id)}>
+                  <Link className="btn btn-open" to={resultsPath(season.id)}>
                     {L.open}
+                    <Icon name="angle-right" className="ui-icon btn-open-go" />
                   </Link>
                   <button type="button" className="btn" disabled={busy} onClick={() => renombrar(season)}>
                     {L.rename}
                   </button>
                   {conVotos.has(season.id) ? (
-                    <button type="button" className="btn" disabled={busy} onClick={() => borrarVotos(season)}>
+                    <button type="button" className="btn btn-danger" disabled={busy} onClick={() => borrarVotos(season)}>
                       {L.removeVotes}
                     </button>
                   ) : null}
-                  <button type="button" className="btn" disabled={busy} onClick={() => borrar(season)}>
+                  <button type="button" className="btn btn-danger" disabled={busy} onClick={() => borrar(season)}>
                     {L.remove}
                   </button>
                   {/* AL FINAL DE TODO, y solo el icono: el trofeo dice de qué va y encendido o apagado dice cómo

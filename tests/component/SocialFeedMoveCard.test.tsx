@@ -86,12 +86,25 @@ function renderFeed(
       showPostCounter
       status=""
       statusKind="ok"
-      handleSignOut={() => {}}
       offline={false}
       offlineHasCachedData={false}
     />,
   );
 }
+
+// La estructura que leen los lectores de pantalla (09-10-2026): cada día es su cabecera y una lista NOMBRADA por
+// ella, con solo elementos dentro. Antes las cabeceras iban dentro de una única lista (axe: aria-required-children).
+describe('estructura del feed', () => {
+  it('cada día tiene su propia lista, nombrada por su fecha y sin la cabecera dentro', () => {
+    renderFeed([move({ tab: 'c' }), move({ tab: 'v', id: '8:v', gameId: 8 })]);
+
+    const lista = screen.getByRole('list', { name: '12 de agosto' });
+    expect(within(lista).getAllByRole('listitem')).toHaveLength(2);
+    expect(within(lista).queryByRole('heading')).toBeNull();
+    expect([...lista.children].every((child) => child.getAttribute('role') === 'listitem')).toBe(true);
+    expect(screen.getByRole('group', { name: SOCIAL_UI.feed.activityListAria })).toContainElement(lista);
+  });
+});
 
 describe('renglón de movimiento de lista', () => {
   it('lo cuenta en una frase: autor, verbo y juego, sin hora', () => {

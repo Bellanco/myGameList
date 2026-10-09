@@ -56,7 +56,6 @@ function renderFeed(items: SocialFeedItem[] = []) {
       showPostCounter
       status=""
       statusKind="ok"
-      handleSignOut={() => {}}
       offline={false}
       offlineHasCachedData={false}
     />,

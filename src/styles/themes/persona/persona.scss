@@ -1,3 +1,7 @@
+/* Fuentes propias de esta paleta (fuera de la ruta crítica; solo cargan con este skin). Anton y Noto Sans, servidas
+   desde el propio origen. Generado por `scripts/vendor-fonts.mjs`. */
+@use './fonts';
+
 /* F1 — CAPA 3 · DIRECCIÓN DE ARTE POR TEMA (skins fuertes sobre los componentes reales).
    Cada tema debe leerse como un mundo distinto, no como el mismo recoloreado. Solo se activan con
    `[data-palette="…"]`, y cada skin es un chunk perezoso que carga `paletteSkin.ts` al elegir su tema (salvo el
@@ -53,16 +57,25 @@
 /* PAPELES DE LETRA de este tema. CAPA 0 (`_base.scss`) declara los cuatro papeles y todas las hojas
    los usan por ficha; aquí es donde este tema decide qué familia va en cada uno. Cambiar la letra del
    tema es cambiar ESTE bloque, no buscar `font-family` por el fichero.
-   `--font-label` va TAMBIÉN a la Arial Black: es lo que leen por ficha el chip del orden del listado, el
+   `--font-label` va TAMBIÉN a la de titulares: es lo que leen por ficha el chip del orden del listado, el
    contador de la cabecera y el sello de rango, y sin él esas tres piezas eran las únicas de la pantalla
    que seguían en la letra de la casa. Sin cursiva: la pide cada regla que la quiera, porque `--font-*`
    solo transporta la FAMILIA. */
 :root[data-palette="persona"] {
-  --font-display: 'Arial Black', 'Arial Narrow', Impact, system-ui, sans-serif;
+  /* ANTON Y NOTO SANS, SERVIDAS POR LA APP (09-10-2026). Era la Arial Black del SISTEMA, que no existe en Android ni
+     iOS: en el móvil el tema caía a la letra del sistema. Anton es la libre más cercana a las mayúsculas
+     condensadas de cartel del juego; Noto Sans, la sans limpia de sus textos. Elegidas con
+     `docs/maquetas/persona-letras.html`. Impact queda detrás, por si la de la app no ha llegado aún. */
+  --font-display: 'Anton', Impact, 'Arial Narrow', system-ui, sans-serif;
   --font-label: var(--font-display);
+  --font-body: 'Noto Sans', system-ui, sans-serif;
+  /* Anton solo tiene un peso: sin esto, las reglas del tema que piden 800–900 la ENGORDAN a mano, y una negrita
+     falsa sobre una letra ya tan gruesa emborrona el rótulo. La cursiva sí se sintetiza: es la del tema. */
+  font-synthesis-weight: none;
 }
+:root[data-palette="persona"] body { font-family: var(--font-body); }
 
-/* ── §1 · Tipografía: Arial Black en cursiva y versalitas para titulares, etiquetas y nombres.
+/* ── §1 · Tipografía: Anton en cursiva y versalitas para titulares, etiquetas y nombres.
    OJO AL PUNTO Y COMA DE ESTA LISTA: estuvo cosida al bloque de arriba por una coma —la lista entera
    acababa en `,` y enganchaba con `:root[data-palette="persona"] { --font-display: … }`—, así que los
    diecisiete selectores se quedaron SIN `font-family` y solo declaraban la variable. Titulares, botones,
@@ -128,6 +141,7 @@
 :root[data-palette="persona"] .hub-feed-card,
 :root[data-palette="persona"] .hub-hub-card,
 :root[data-palette="persona"] .modal,
+:root[data-palette="persona"] .consent-banner,
 :root[data-palette="persona"] .alert-dialog { border: 3px solid var(--pop-line) !important; box-shadow: 7px 7px 0 rgba(255, 78, 100, .5) !important; border-radius: 6px !important; }
 
 /* EL AVISO (logro, aviso de estado y anuncio: la misma `.ach-toast`) · la TARJETA DE VISITA de los Ladrones, el
@@ -158,6 +172,7 @@
 :root[data-palette="persona"][data-theme="light"] .hub-feed-card,
 :root[data-palette="persona"][data-theme="light"] .hub-hub-card,
 :root[data-palette="persona"][data-theme="light"] .modal,
+:root[data-palette="persona"][data-theme="light"] .consent-banner,
 :root[data-palette="persona"][data-theme="light"] .alert-dialog { border-color: #151011 !important; box-shadow: 7px 7px 0 rgba(230, 0, 18, .22) !important; }
 
 /* ── §4 · Tabla: cabecera como barra negra con texto de acento. ── */
@@ -183,39 +198,58 @@
 /* Relleno sólido por variante → la sombra de bloque se ve en TODOS los botones, no solo el contorno.
    Se fija el color de texto por contraste (regla 10). */
 :root[data-palette="persona"] .btn-secondary,
+:root[data-palette="persona"] .btn-back,
 :root[data-palette="persona"] .btn-toggle:not(.active) { background: var(--surface-elevated) !important; color: var(--text) !important; }
-:root[data-palette="persona"] .btn-accent,
-:root[data-palette="persona"] .btn-playing,
+/* El fondo del principal va un punto más oscuro que `--steam` a secas: el blanco sobre el rojo puro se queda en
+   3,81:1. Con la mezcla sube a 5,06:1 y sigue siendo el mismo rojo de la paleta. */
 :root[data-palette="persona"] .btn-steam,
-:root[data-palette="persona"] .btn-primary,
-:root[data-palette="persona"] .btn.is-active,
-/* El fondo del activo va un punto más oscuro que `--steam` a secas: el blanco sobre el rojo puro se queda en
-   3,81:1 y este es el rótulo que dice qué pestaña está abierta. Con la mezcla sube a 5,06:1 y sigue siendo el
-   mismo rojo de la paleta. */
-:root[data-palette="persona"] .btn-toggle.active {
+:root[data-palette="persona"] .btn-primary {
   background: color-mix(in srgb, var(--steam) 85%, #000) !important;
   color: #fff !important;
 }
-/* LA NAVEGACIÓN ALTERNA ROJO Y AZUL: el rojo rebelde de P5 y el azul eléctrico de P3, la otra mitad de la saga.
-   Se alternan dentro de cada fila con `of .btn-accent`, que cuenta solo los de navegación (un «Cerrar sesión» en
-   medio no descoloca la pareja); un navegador sin `:nth-child(… of …)` descarta la regla y los deja en rojo.
-   Pesa (0,4,0), así que gana a la de arriba. «Pasar a en curso» va fijo en rojo y «Pasar a próximos» en azul.
-   El azul no es el #1e6bff de la caja de P3 a pelo: con blanco encima se queda en 4,56:1 y el brillo del hover
-   lo baja a 4,31. Un punto más hondo da 5,65:1 (5,12 en hover); en claro, más hondo aún, 6,75:1 (6,18). */
-:root[data-palette="persona"] .btn-accent:nth-child(even of .btn-accent),
-:root[data-palette="persona"] .btn-upcoming { background: #1a5ce6 !important; color: #fff !important; }
-:root[data-palette="persona"][data-theme="light"] .btn-accent:nth-child(even of .btn-accent),
-:root[data-palette="persona"][data-theme="light"] .btn-upcoming { background: #0f4fd6 !important; }
+/* ── LOS BOTONES POR FUNCIÓN (ver `_forms-and-buttons.scss`) ──────────────────────────────────────────────
+   El rojo rebelde es CONFIRMAR. ABRIR / IR es el AZUL DE LA SALA DE TERCIOPELO —Igor, Lavenza: el azul que la
+   saga entera reserva al sitio al que se va—, más hondo que el azul eléctrico de antes (blanco encima 8,6:1; en
+   claro 10,4:1). LO ENCENDIDO es el AMARILLO de bocadillo con tinta negra (13,9:1). Los teñidos son la viñeta
+   negra (blanca de día) con el texto y la sombra de bloque de su color; Próximos toma el índigo de las gráficas
+   de deseos, que el rojo ya es del principal. */
+:root[data-palette="persona"] {
+  --btn-open: #2a3cb8; --btn-open-ink: #fff;
+  --btn-sel: #ffcf33; --btn-sel-ink: #0a0a0a;
+  --move-e: #ffcf33; --move-p: #8f9bff;
+}
+:root[data-palette="persona"][data-theme="light"] { --btn-open: #1f2e9e; --move-e: #c79200; --move-p: #2f3ea8; }
+:root[data-palette="persona"] :is(.btn-open, .btn.is-active, .btn-toggle.active, .btn-toggle-deck.active) {
+  background: var(--role-c) !important;
+  color: var(--role-ink) !important;
+}
+:root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost):is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
+  background: #0a0a0a !important;
+  color: var(--role-t) !important;
+  border-color: var(--role-c) !important;
+  box-shadow: var(--btn-cast, 5px) var(--btn-cast, 5px) 0 color-mix(in srgb, var(--role-c) 55%, transparent) !important;
+}
+:root[data-palette="persona"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost):is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
+  --role-t: color-mix(in srgb, var(--role-c) 68%, #000);
+  background: #fff !important;
+  border-color: #151011 !important;
+  box-shadow: var(--btn-cast, 5px) var(--btn-cast, 5px) 0 var(--role-c) !important;
+}
+/* Descartar: el contorno de la viñeta, sin relleno ni sombra de bloque. */
+:root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost).btn-quiet {
+  background: transparent !important;
+  color: var(--text-muted) !important;
+  box-shadow: none !important;
+  border-color: color-mix(in srgb, var(--text) 35%, transparent) !important;
+}
 /* "General" del panel: aquí el contorno es negro por decreto del tema, así que el principal se distingue por la
-   SOMBRA DE BLOQUE, en rojo rebelde en vez de blanca. El relleno rojo sigue siendo del elegido. */
+   SOMBRA DE BLOQUE, en rojo rebelde en vez de blanca. */
 :root[data-palette="persona"] .scope-tabs > .btn-toggle:first-child:not(.active),
 :root[data-palette="persona"][data-theme="light"] .scope-tabs > .btn-toggle:first-child:not(.active) { box-shadow: 5px 5px 0 var(--steam) !important; }
-:root[data-palette="persona"] .btn-complete { background: var(--success) !important; color: #08130c !important; }
 /* EL DESTRUCTIVO NO ES NARANJA. Salía de `--danger-fill`, que en esta paleta parte de un naranja (#ff6b3d), así
    que el botón de BORRAR se leía más suave que el de añadir —que es rojo puro— y la jerarquía quedaba del revés.
    Atlus lo dijo de P5: rojo, negro y blanco mandan y no hay sub-colores. Así que el que destruye se va al NEGRO
-   con filete y rótulo rojos, y el rojo macizo se queda para el que actúa. `.btn-abandoned` sigue con su
-   relleno: se deshace, no destruye. */
+   con filete y rótulo rojos, y el rojo macizo se queda para el que actúa. */
 :root[data-palette="persona"] .btn-danger {
   background: #0a0a0a !important;
   color: var(--steam-hover) !important;
@@ -227,7 +261,6 @@
   color: #ff8a94 !important;
   box-shadow: var(--btn-cast, 5px) var(--btn-cast, 5px) 0 rgba(230, 0, 18, .3) !important;
 }
-:root[data-palette="persona"] .btn-abandoned { background: var(--danger-fill) !important; color: #fff !important; }
 /* Botones fantasma (p. ej. "Limpiar filtros"): limpios, sin corte/sombra/sesgo. */
 :root[data-palette="persona"] .btn-ghost { font-style: italic; filter: none; clip-path: none; transform: none; }
 /* Hover: el hover base hace un giro 3D que rompe el sesgo P5; aquí se mantiene el sesgo + elevación leve. */
@@ -296,6 +329,7 @@
   box-shadow: 3px 3px 0 #151011;
 }
 :root[data-palette="persona"] .input-base,
+:root[data-palette="persona"] .tag-inp-wrap,
 :root[data-palette="persona"] .finput,
 :root[data-palette="persona"] .ftextarea,
 :root[data-palette="persona"] .search-input { border: 2px solid var(--pop-line) !important; border-radius: 0 !important; }
@@ -374,12 +408,15 @@
    trata como una CITA de cómic — cursiva, algo más de peso y un lomo rojo a la izquierda — legible pero P5. */
 :root[data-palette="persona"] .hub-feed-review-text,
 :root[data-palette="persona"] .hub-review-text {
-  font-style: italic;
   font-weight: 500;
   border-left: 3px solid var(--steam);
   padding-left: .7rem;
   color: var(--text);
 }
+/* LA CURSIVA, SOLO EN EL EXTRACTO DEL FEED: cuatro líneas que se leen como una cita. En la reseña entera —el
+   detalle y la lista de reseñas de un perfil— eran párrafos largos en cursiva, que cansa (09-10-2026). */
+:root[data-palette="persona"] .hub-feed-activity-item .hub-feed-review-text { font-style: italic; }
+:root[data-palette="persona"] .hub-feed-card-detail .hub-feed-review-text { font-style: normal; }
 
 /* ── §11 · Ruleta = tragaperras de cómic. Tambor y tarjetas como stickers negros con sombra roja de
    bloque; visor de selección rojo grueso; nombres que giran en la tipografía del tema (§1). ── */
@@ -763,3 +800,43 @@
 :root[data-palette="persona"] .star-inp button.f {
   text-shadow: 1px 1px 0 color-mix(in srgb, var(--pop-line) 45%, transparent);
 }
+
+/* El botón «Amigos» de la ficha (`.btn-friend`): un rosa encendido junto al rojo del Velvet. */
+:root[data-palette="persona"] { --btn-friend: #ff5c93; }
+:root[data-palette="persona"][data-theme="light"] { --btn-friend: #c2124f; }
+
+/* LAS ETIQUETAS DE GÉNERO, LEGIBLES A LA LUZ (09-10-2026). El rojo y el naranja de la rampa (tonos 1 y 5) se
+   quedaban en 4,14 y 4,4:1 sobre su propio velo: el texto se lleva un poco hacia la tinta. */
+:root[data-palette="persona"][data-theme="light"] .chip-genre { color: color-mix(in srgb, var(--cat-fg, var(--fg-sky)) 84%, #000); }
+
+/* El rótulo del juego de noche: el blanco sobre el rojo vivo de la paleta se quedaba en 3,8:1 (09-10-2026). El rojo
+   del relleno baja un punto, hacia el de la tinta del Velvet, y el rótulo llega a 5:1. */
+:root[data-palette="persona"]:not([data-theme="light"]) .hub-feed-game-chip { background: color-mix(in srgb, var(--steam) 80%, #000); }
+
+/* La pestaña de día a la luz: la tinta negra sobre el rojo hondo de claro (#e60012) se quedaba en 4,1:1
+   (09-10-2026). La placa sube un punto hacia el rojo de noche y la tinta llega a 5:1. */
+:root[data-palette="persona"][data-theme="light"] .hub-feed-day-header { background: color-mix(in srgb, var(--steam) 80%, #fff); }
+
+/* ── EL TÍTULO DE PANTALLA, TARJETA DE AVISO (09-10-2026) ────────────────────────────────────────────────────────
+   Cada letra recortada en su recuadro —negro, blanco o del rojo del tema—, con su tamaño y un pelo girada, como las
+   cartas de los Ladrones Fantasma. Las letras las pinta `ScreenTitle`; aquí se enseñan y se viste cada recorte. El
+   texto de siempre se queda solo para el lector de pantalla. Elegido con `docs/maquetas/persona-letras.html`. */
+:root[data-palette="persona"] .rc-plain {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+:root[data-palette="persona"] .rc-letters { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .1em .4em; }
+:root[data-palette="persona"] h2:has(> .rc-letters) { font-style: normal; transform: none; letter-spacing: 0; line-height: 1.25; }
+:root[data-palette="persona"] .rc-word { display: inline-flex; gap: 2px; white-space: nowrap; }
+:root[data-palette="persona"] .rc {
+  display: inline-block;
+  padding: .04em .16em;
+  line-height: 1.05;
+  text-transform: uppercase;
+  font-style: normal;
+}
+:root[data-palette="persona"] .rc-n { background: #0a0a0a; color: #fff; box-shadow: 0 0 0 1px rgba(255, 255, 255, .55); }
+:root[data-palette="persona"] .rc-b { background: #fff; color: #0a0a0a; box-shadow: inset 0 0 0 2px #0a0a0a; }
+:root[data-palette="persona"] .rc-r { background: var(--steam); color: #0a0a0a; }
+:root[data-palette="persona"][data-theme="light"] .rc-n { box-shadow: none; }
+

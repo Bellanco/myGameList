@@ -37,9 +37,23 @@ async function abrirLogros(page: Page): Promise<void> {
   await expect(page.locator('.ach-row').first()).toBeVisible();
 }
 
-/** La fila de un logro, localizada por su nombre visible dentro del listado. */
-function fila(page: Page, nombre: string) {
-  return page.locator('.ach-row').filter({ has: page.locator('.ach-row-name', { hasText: new RegExp(`^${nombre}$`) }) });
+/**
+ * La fila de una ESCALERA. El listado va por escaleras (09-10-2026): una fila por escalera, con el escalón más
+ * alto conseguido de cara, así que el rótulo ya no lleva el número del escalón y la fila se busca por su escalera.
+ */
+function filaDe(page: Page, ladder: string) {
+  return page.locator(`.ach-row[data-ladder="${ladder}"]`);
+}
+
+/** Lo que pinta el listado de cada fila: el escalón que hace de cara, si está conseguida y su condición. */
+async function leerListado(page: Page): Promise<Array<{ id: string; ladder: string; hecha: boolean; condicion: string; primerPaso: boolean }>> {
+  return page.evaluate(() => [...document.querySelectorAll('.ach-row')].map((fila) => ({
+    id: fila.getAttribute('data-id') || '',
+    ladder: fila.getAttribute('data-ladder') || '',
+    hecha: !fila.classList.contains('is-locked'),
+    condicion: (fila.querySelector('.ach-row-condition')?.textContent || '').replace(/\s+/g, ' ').trim(),
+    primerPaso: (fila.querySelector('use')?.getAttribute('href') || '').startsWith('#ach-paso-'),
+  })));
 }
 
 type LecturaFila = { filas: number; conseguido: boolean; condicion: string };
@@ -53,19 +67,19 @@ type LecturaFila = { filas: number; conseguido: boolean; condicion: string };
  * que fallara ninguna. Una lectura, una foto; y con `expect.poll` alrededor se sigue reintentando.
  */
 async function leerFilas(page: Page, ids: string[]): Promise<Record<string, LecturaFila>> {
-  const nombres = ids.map((id) => logro(id).nombre);
-  const lecturas = await page.evaluate((nombres) => {
+  const lecturas = await page.evaluate((ids) => {
     const limpio = (texto: string | null | undefined) => (texto || '').replace(/\s+/g, ' ').trim();
     const filas = [...document.querySelectorAll('.ach-row')];
-    return nombres.map((nombre) => {
-      const suyas = filas.filter((fila) => limpio(fila.querySelector('.ach-row-name')?.textContent) === nombre);
+    return ids.map((id) => {
+      // La fila cuya CARA es ese escalón: por escaleras, es la del escalón más alto conseguido.
+      const suyas = filas.filter((fila) => fila.getAttribute('data-id') === id);
       return {
         filas: suyas.length,
         conseguido: suyas.length > 0 && !suyas[0].classList.contains('is-locked'),
         condicion: limpio(suyas[0]?.querySelector('.ach-row-condition')?.textContent),
       };
     });
-  }, nombres);
+  }, ids);
   return Object.fromEntries(ids.map((id, i) => [id, lecturas[i]]));
 }
 
@@ -104,15 +118,32 @@ test.describe('logros · el listado sobre el build', () => {
     await sembrarBiblioteca(page, { logros: true });
     await abrirLogros(page);
 
-    // Escaleras de las cincuenta primeras: la ampliación no puede haberse comido el catálogo viejo. Y uno que la
-    // siembra NO alcanza (`completados-250`): se ofrece bloqueado y con la meta en imperativo, que es la mitad
-    // útil de abajo del listado.
+    // Escaleras de las cincuenta primeras: la ampliación no puede haberse comido el catálogo viejo.
+    // Por escaleras, la fila de cada una está conseguida con un escalón IGUAL O MAYOR que ese, y lo cuenta en
+    // pasado con el texto de su cara.
     const conseguidos = ['completados-150', 'criterio-200', 'memoria-larga-15', 'resenas-200', 'luces-y-sombras-75'];
-    await expect.poll(() => leerFilas(page, [...conseguidos, 'completados-250']))
-      .toEqual(Object.fromEntries([
-        ...conseguidos.map((id) => [id, esperado(id, true)]),
-        ['completados-250', esperado('completados-250', false)],
-      ]));
+    const lectura = async () => {
+      const listado = await leerListado(page);
+      return conseguidos.map((id) => {
+        const def = ACHIEVEMENTS_BY_ID.get(id)!;
+        const filaDeLaEscalera = listado.filter((f) => f.ladder === def.ladder);
+        const cara = filaDeLaEscalera[0] && ACHIEVEMENTS_BY_ID.get(filaDeLaEscalera[0].id);
+        return {
+          id,
+          filas: filaDeLaEscalera.length,
+          hecha: Boolean(filaDeLaEscalera[0]?.hecha),
+          alMenos: Boolean(cara && cara.grade >= def.grade),
+          enPasado: Boolean(cara && filaDeLaEscalera[0].condicion === cara.labels.done.replace(/\s+/g, ' ').trim()),
+        };
+      });
+    };
+    await expect.poll(lectura).toEqual(conseguidos.map((id) => ({ id, filas: 1, hecha: true, alMenos: true, enPasado: true })));
+
+    // Y lo que falta, con la meta en imperativo: por escaleras, las que no tienen ningún escalón salen apagadas
+    // con el primero que se ve. Cada una dice SU meta, no el texto de lo conseguido.
+    const apagadas = (await leerListado(page)).filter((f) => !f.hecha);
+    expect(apagadas.length).toBeGreaterThan(0);
+    for (const f of apagadas) expect(f.condicion, f.id).toBe(logro(f.id).meta.replace(/\s+/g, ' ').trim());
   });
 
   test('cada medalla tiene su dibujo y su cifra: el sprite entra en el chunk', async ({ page }) => {
@@ -131,11 +162,11 @@ test.describe('logros · el listado sobre el build', () => {
     expect(caja?.width).toBeGreaterThan(24);
 
     // La píldora del índice cuadrado dice «15×15», que es el nombre que tiene la cosa.
-    const cosechas = fila(page, logro('anadas-15').nombre);
+    const cosechas = filaDe(page, ACHIEVEMENTS_BY_ID.get('anadas-15')!.ladder);
     await expect(cosechas.locator('.ach-step')).toHaveText('15×15');
-    // Y la de una magnitud va sin aspa, que en un total mentiría.
-    const horas = fila(page, logro('horas-totales-5000').nombre);
-    await expect(horas.locator('.ach-step')).toHaveText('5000');
+    // Y la de una magnitud va sin aspa, que en un total mentiría (sea cual sea el escalón que hace de cara).
+    const horas = filaDe(page, 'horas-totales');
+    await expect(horas.locator('.ach-step')).toHaveText(/^\d+$/);
   });
 
   /**
@@ -175,15 +206,13 @@ test.describe('logros · el listado sobre el build', () => {
 
     const cabecera = await page.locator('.ach-figures').first().innerText();
     const [conseguidos] = cabecera.match(/\d+/g) || [];
-    const cuenta = await page.evaluate(() => {
-      const filas = [...document.querySelectorAll('.ach-row')];
-      const esPrimerPaso = (fila: Element) => (fila.querySelector('use')?.getAttribute('href') || '').startsWith('#ach-paso-');
-      const hechas = filas.filter((f) => !f.classList.contains('is-locked'));
-      return { hechas: hechas.length, hechasSinPasos: hechas.filter((f) => !esPrimerPaso(f)).length };
-    });
-    expect(Number(conseguidos)).toBe(cuenta.hechasSinPasos);
-    expect(cuenta.hechas).toBeGreaterThan(cuenta.hechasSinPasos); // los primeros pasos están, y no cuentan
-    expect(cuenta.hechasSinPasos).toBeGreaterThan(40);
+    // Por escaleras, cada fila conseguida vale tantos logros como escalones tiene su cara (su grado).
+    const hechas = (await leerListado(page)).filter((f) => f.hecha);
+    const escalones = (filas: typeof hechas) => filas.reduce((n, f) => n + (ACHIEVEMENTS_BY_ID.get(f.id)?.grade ?? 0), 0);
+    const sinPasos = hechas.filter((f) => !f.primerPaso);
+    expect(Number(conseguidos)).toBe(escalones(sinPasos));
+    expect(hechas.length).toBeGreaterThan(sinPasos.length); // los primeros pasos están, y no cuentan
+    expect(escalones(sinPasos)).toBeGreaterThan(40);
   });
 });
 
@@ -511,7 +540,9 @@ test.describe('logros · bibliotecas grandes y avalanchas', () => {
     await page.getByRole('button', { name: /^Estadísticas/ }).first().click();
     await page.getByRole('button', { name: 'Ver todos tus logros' }).first().click();
     await expect(page.locator('.ach-row').first()).toBeVisible();
-    expect(await page.locator('.ach-row:not(.is-locked)').count()).toBeGreaterThan(100);
+    // Por escaleras: los escalones conseguidos son la suma de los grados de las filas hechas.
+    const hechas = (await leerListado(page)).filter((f) => f.hecha);
+    expect(hechas.reduce((n, f) => n + (ACHIEVEMENTS_BY_ID.get(f.id)?.grade ?? 0), 0)).toBeGreaterThan(100);
   });
 
   /** Mete un JSON por el input de importación de Ajustes, como haría cualquiera con su copia de seguridad. */
@@ -737,8 +768,7 @@ test.describe('logros · las esquinas del aviso', () => {
     await expect(page.locator('.ach-row').first()).toBeVisible();
     await expect(toast(page)).toHaveCount(0);
     // Y el logro recién conseguido está ahí, en su fila.
-    const { nombre } = logro('completados-10');
-    await expect(page.locator('.ach-row').filter({ hasText: nombre }).first()).toBeVisible();
+    await expect(page.locator('.ach-row[data-id="completados-10"]')).toBeVisible();
   });
 });
 

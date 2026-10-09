@@ -2,6 +2,7 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup, configure } from '@testing-library/react';
 import { afterAll, afterEach } from 'vitest';
+import { resetSocialWriteQueueForTests } from '../src/model/repository/socialWriteQueue';
 
 /**
  * CUÁNTO ESPERA UN `findBy*` ANTES DE RENDIRSE, y por qué no es el `testTimeout` de vitest.
@@ -114,6 +115,9 @@ for (const nivel of ['log', 'info', 'warn'] as const) {
 
 afterEach(() => {
   cleanup();
+  // La fila de escrituras del canal social es del módulo: un test que deja una escritura colgada a propósito (una
+  // lectura del gist que no responde) retendría las de los tests siguientes del mismo fichero.
+  resetSocialWriteQueueForTests();
 });
 
 /**

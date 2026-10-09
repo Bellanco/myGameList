@@ -89,14 +89,18 @@ function SocialProfilesScreenBase({
       openAriaLabel={SOCIAL_UI.profiles.openProfileAria(entry.displayName)}
       onKeyDown={(event) => handleProfileCardKeyDown(event, entry.id)}
     >
-      <FriendshipButton
-        SOCIAL_UI={SOCIAL_UI}
-        state={relationshipWith(entry.uid)}
-        name={entry.displayName}
-        busy={friendshipBusyUid === entry.uid}
-        onAddOrAccept={() => onAddOrAcceptFriend(entry.uid)}
-        onCancel={() => onCancelFriendRequest(entry.uid)}
-      />
+      {/* EN LA SECCIÓN DE AMIGOS NO SE REPITE «AMIGOS» (09-10-2026): el título de la sección ya lo dice, y la misma
+          etiqueta en cada tarjeta era ruido. Las demás tarjetas siguen con su acción (añadir, aceptar, retirar). */}
+      {relationshipWith(entry.uid) === 'friends' ? null : (
+        <FriendshipButton
+          SOCIAL_UI={SOCIAL_UI}
+          state={relationshipWith(entry.uid)}
+          name={entry.displayName}
+          busy={friendshipBusyUid === entry.uid}
+          onAddOrAccept={() => onAddOrAcceptFriend(entry.uid)}
+          onCancel={() => onCancelFriendRequest(entry.uid)}
+        />
+      )}
     </HubUserCard>
   );
 

@@ -39,7 +39,7 @@ vi.mock('../../src/core/constants/socialLimits', async (importOriginal) => ({
 }));
 
 
-import { publishPost, publishReviewActivity } from '../../src/model/repository/socialPublishRepository';
+import { editOwnPost, publishPost, publishReviewActivity } from '../../src/model/repository/socialPublishRepository';
 
 const TOKEN = 'ghp_0123456789abcdefghij';
 const SOCIAL_GIST_FILENAME = 'myGameList.social.json';
@@ -273,5 +273,32 @@ describe('F4 — los mensajes de lista viajan en la escritura que ya iba a ocurr
 
     expect(store.writes()).toBe(1);
     expect(store.current().activity).toHaveLength(1);
+  });
+});
+
+// EDITAR LO QUE YA NO ESTÁ (09-10-2026). Una publicación borrada desde otro dispositivo no es «sin cambios»: se dice
+// con su propio error, y no se reescribe el canal.
+describe('editar una publicación que se borró en otro dispositivo', () => {
+  it('lanza PostGoneError y no escribe el canal', async () => {
+    armChannel('f4aa000000000009');
+    const store = stubGistStore(socialGist({ posts: [] }));
+
+    await expect(editOwnPost({ id: 'post-desaparecido', text: 'Corregido' })).rejects.toMatchObject({ name: 'PostGoneError' });
+    expect(store.writes()).toBe(0);
+  });
+});
+
+// EN FILA (09-10-2026): dos publicaciones a la vez leían el mismo gist y la última pisaba a la primera.
+describe('dos escrituras del canal a la vez', () => {
+  it('dos publicaciones simultáneas acaban las dos en el canal', async () => {
+    armChannel('f4aa00000000000a');
+    const store = stubGistStore(socialGist({ posts: [] }));
+
+    await Promise.all([
+      publishPost({ text: 'Primera publicación' }),
+      publishPost({ text: 'Segunda publicación' }),
+    ]);
+
+    expect((store.current().posts || []).map((post) => post.text).sort()).toEqual(['Primera publicación', 'Segunda publicación']);
   });
 });

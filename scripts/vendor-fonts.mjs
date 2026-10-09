@@ -110,6 +110,14 @@ const SHEETS = [
     families: ['Orbitron:wght@500;600;700;800', 'Exo+2:wght@400;500;600;700', 'Share+Tech+Mono'],
   },
   {
+    slug: 'persona',
+    comment:
+      'Skin de la paleta persona (carga diferida). Anton para titulares y rótulos —la libre más cercana a las mayúsculas\n'
+      + '// condensadas del juego— y Noto Sans para el texto. Sustituyen a la Arial Black del SISTEMA, que no existe en\n'
+      + '// Android ni iOS: en el móvil el tema perdía su letra (elegidas el 09-10-2026 con `docs/maquetas/persona-letras.html`).',
+    families: ['Anton', 'Noto+Sans:wght@400;500;600;700'],
+  },
+  {
     slug: 'seaofstars',
     comment: 'Skin de la paleta seaofstars (carga diferida). Los dígitos, en Silkscreen recortada a 0-9.',
     families: [

@@ -509,21 +509,24 @@ export const AdminHub = memo(function AdminHub() {
             logros no lleva línea: no tiene un estado que pida atención. */}
         <ul className="admin-menu-links">
           <li>
-            <button type="button" className="btn btn-secondary" onClick={() => setView('achievements')}>
+            <button type="button" className="btn btn-open" onClick={() => setView('achievements')}>
               {ADMIN_ACHIEVEMENTS_UI.open}
+              <Icon name="angle-right" className="ui-icon btn-open-go" />
             </button>
           </li>
           <li>
-            <button type="button" className="btn btn-secondary" onClick={() => setView('announcement')}>
+            <button type="button" className="btn btn-open" onClick={() => setView('announcement')}>
               {ADMIN_ANNOUNCEMENT_UI.open}
+              <Icon name="angle-right" className="ui-icon btn-open-go" />
             </button>
             {describeAnnouncement(announcement) ? (
               <span className="admin-menu-status">{describeAnnouncement(announcement)}</span>
             ) : null}
           </li>
           <li>
-            <button type="button" className="btn btn-secondary" onClick={() => setView('premios')}>
+            <button type="button" className="btn btn-open" onClick={() => setView('premios')}>
               {PREMIOS_ADMIN_OPEN}
+              <Icon name="angle-right" className="ui-icon btn-open-go" />
             </button>
             {premiosStatus ? (
               <span className={`admin-menu-status${premiosStatus.stage === 'pending' ? ' is-pending' : ''}`}>

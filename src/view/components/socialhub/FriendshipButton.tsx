@@ -7,13 +7,13 @@ import type { SocialUiLabels } from '../../../core/constants/socialLabels';
  * Presentacional: recibe el estado ya calculado y callbacks ya ligados al uid del "otro".
  * - none     → "Añadir amigo"
  * - incoming → "Aceptar"
- * - outgoing → "Pendiente" (al pulsar, retira la petición enviada)
- * - friends  → chip "Amigos" en la tarjeta; con onRemove (el detalle), solo "Eliminar amistad": ahí el chip no
- *               añadía nada —el propio botón ya dice que sois amigos— y le quitaba sitio a la fila de botones
+ * - outgoing → rótulo de estado "Pendiente" + acción callada "Retirar" (pide confirmación)
+ * - friends  → chip "Amigos" en la tarjeta; con onRemove (el detalle), un botón rosa "♥ Amigos" que pide
+ *               confirmación para dejar de serlo
  *
  * El rótulo de los botones con icono va envuelto en `.btn-label` porque en la tarjeta de persona, y en pantalla
- * estrecha, se oculta y queda solo el icono (el `aria-label` sigue diciendo la acción entera). "Pendiente" no lo
- * lleva a propósito: no tiene icono que lo sustituya, y además nombra un ESTADO, que es lo que hay que poder leer.
+ * estrecha, se oculta y queda solo el icono (el `aria-label` sigue diciendo la acción entera). "Pendiente" es un
+ * rótulo y no un botón: nombra un ESTADO, que es lo que hay que poder leer siempre.
  * Todos llevan además `title`: con el rótulo oculto, es lo que descubre la acción al pasar por encima.
  */
 export function FriendshipButton({
@@ -37,17 +37,21 @@ export function FriendshipButton({
 
   if (state === 'friends') {
     if (!onRemove) return <span className="hub-friend-chip">{F.friends}</span>;
+    /* EL ESTADO, NO LA RUPTURA (09-10-2026). Era «× Dejar de ser amigos» en rojo: en la fila de la ficha se pulsaba
+       por error y, al pie de la cabecera, alargaba la pantalla. Ahora dice lo que hay —«Amigos»—, en el rosa de la
+       amistad de cada tema (`.btn-friend`), y al pulsarlo la confirmación de siempre pregunta si se quiere dejar de
+       serlo. */
     return (
       <button
-        className="btn btn-danger btn-sm"
+        className="btn btn-friend btn-sm"
         type="button"
         disabled={busy}
         aria-label={F.removeAria(name)}
         title={F.removeAria(name)}
         onClick={onRemove}
       >
-        <Icon name="close" />
-        <span className="btn-label">{F.remove}</span>
+        <Icon name="heart" />
+        <span className="btn-label">{F.friends}</span>
       </button>
     );
   }
@@ -55,7 +59,7 @@ export function FriendshipButton({
   if (state === 'incoming') {
     return (
       <button
-        className="btn btn-secondary btn-accent"
+        className="btn btn-social"
         type="button"
         disabled={busy}
         aria-label={F.acceptAria(name)}
@@ -69,23 +73,30 @@ export function FriendshipButton({
   }
 
   if (state === 'outgoing') {
+    /* EL ESTADO Y LA ACCIÓN, POR SEPARADO. Era un solo botón que decía «Pendiente» y, al pulsarlo, retiraba la
+       petición: se leía como un estado, y en varios temas era además lo más llamativo de la tarjeta (09-10-2026).
+       Ahora el estado es un rótulo y retirarla, una acción callada con su nombre. */
     return (
-      <button
-        className="btn btn-secondary"
-        type="button"
-        disabled={busy}
-        aria-label={F.cancelAria(name)}
-        title={F.cancelAria(name)}
-        onClick={onCancel}
-      >
-        {F.pending}
-      </button>
+      <>
+        <span className="hub-pending-chip">{F.pending}</span>
+        <button
+          className="btn btn-quiet btn-sm"
+          type="button"
+          disabled={busy}
+          aria-label={F.cancelAria(name)}
+          title={F.cancelAria(name)}
+          onClick={onCancel}
+        >
+          <Icon name="close" />
+          <span className="btn-label">{F.withdraw}</span>
+        </button>
+      </>
     );
   }
 
   return (
     <button
-      className="btn btn-secondary btn-accent"
+      className="btn btn-social"
       type="button"
       disabled={busy}
       aria-label={F.addAria(name)}

@@ -64,6 +64,14 @@ const publicSocialGistCacheById = new Map<string, SessionCachedValue<SocialGistD
 const socialGistInFlightByKey = new Map<string, Promise<{ data: SocialGistData; etag: string | null; notModified?: boolean; wasLegacy?: boolean }>>();
 const publicSocialGistInFlightById = new Map<string, Promise<SocialGistData>>();
 
+/** Olvida los gists sociales leídos en esta sesión (el tuyo y los de tus amistades). Lo llama el cierre de sesión. */
+export function forgetSocialGistSessionCache(): void {
+  socialGistCacheById.clear();
+  publicSocialGistCacheById.clear();
+  socialGistInFlightByKey.clear();
+  publicSocialGistInFlightById.clear();
+}
+
 export interface SocialGistProfile {
   name: string;
   private: boolean;

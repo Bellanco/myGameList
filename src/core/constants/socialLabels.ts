@@ -121,7 +121,6 @@ export const SOCIAL_UI = {
     openRequestsAria: SOCIAL_SHELL.feed.openRequestsAria,
     refresh: 'Actualizar',
     refreshing: 'Actualizando...',
-    signOut: SOCIAL_SHELL.feed.signOut,
     statsProfiles: 'Perfiles visibles',
     statsActivities: 'Eventos de actividad',
     sectionTitle: 'Actividad de perfiles',
@@ -145,8 +144,12 @@ export const SOCIAL_UI = {
     loading: 'Cargando actividad...',
     empty: 'No hay perfiles visibles todavía o faltan permisos de lectura en Firestore.',
     activityEmpty: 'Aún no hay actividad de análisis para mostrar.',
-    activityEmptyNoFriends: 'Aquí verás los análisis y publicaciones de tus amigos. Busca perfiles y añade a alguien para empezar.',
-    discoverFriends: 'Buscar amigos',
+    // El vacío del feed (09-10-2026): título y frase, SIN botón —«Ver perfiles» ya está justo encima, en la
+    // cabecera— y con dos casos, porque «añade a alguien» no es verdad si ya tienes amigos que aún no han publicado.
+    activityEmptyTitle: 'Aquí se verá lo que juegan tus amigos',
+    activityEmptyNoFriends: 'Sus análisis, publicaciones y cambios de lista saldrán aquí. Empieza buscando gente en «Ver perfiles».',
+    activityEmptyQuietTitle: 'Todo tranquilo por ahora',
+    activityEmptyQuiet: 'Tus amigos aún no han compartido nada. En cuanto analicen o publiquen algo, saldrá aquí.',
     openActivityAria: (name: string, gameName: string) => `Abrir detalle de actividad de ${name} sobre ${gameName}`,
     openProfileAria: (name: string) => `Abrir perfil social de ${name}`,
     analyzedRecently: 'Analizado recientemente',
@@ -209,7 +212,11 @@ export const SOCIAL_UI = {
     metadataGenres: 'Géneros:',
     metadataStrengths: 'Puntos fuertes:',
     metadataWeaknesses: 'Puntos débiles:',
-    profileDetailTitle: 'Detalle de perfil social',
+    // El título NOMBRA el perfil: «Detalle de perfil social» era el mismo en todos, y es lo primero que anuncia el
+    // lector de pantalla al llegar (el foco va al título). El genérico queda para cuando aún no se sabe de quién es.
+    profileDetailTitle: 'Perfil social',
+    profileDetailTitleOwn: 'Tu perfil social',
+    profileDetailTitleOf: (name: string) => `Perfil de ${name}`,
     profileDetailActionsAria: 'Acciones del detalle de perfil social',
     profileDetailMissing: 'No se encontró el perfil solicitado o ya no está disponible.',
     profileDetailLoading: 'Cargando el perfil...',
@@ -267,6 +274,9 @@ export const SOCIAL_UI = {
     profileListTabPlanned: 'Próximos',
     profileListTabWished: 'Deseados',
     backToFeed: 'Volver a la actividad',
+    // En la fila de la ficha va corto: con «Volver a la actividad» Persona no cabía en una línea a 1280 junto a
+    // «Amigos». El nombre accesible sigue siendo el largo (`backToFeed`).
+    backToFeedShort: 'Volver',
     // Rótulos del volver cuando se ha llegado saltando de un análisis a otro por el bloque de relacionados: el
     // botón nombra el sitio al que de verdad se vuelve, no el que la pantalla tiene por defecto.
     backToReview: 'Volver al análisis',
@@ -312,38 +322,31 @@ export const SOCIAL_UI = {
     actionsAria: 'Acciones de solicitudes de amistad',
     back: 'Volver a la actividad',
     incomingTitle: 'Recibidas',
-    outgoingTitle: 'Enviadas',
-    friendsTitle: 'Amigos',
-    // Recibidas y enviadas NO tienen texto de vacío: sin peticiones, su bloque no se pinta (ver
-    // `SocialRequestsScreen`). Amigos sí lo tiene, porque ahí el vacío dice dónde se piden.
-    friendsEmpty: 'Aún no tienes amigos. Envía peticiones desde Perfiles.',
+    // Solo se ve si entras sin nada pendiente o contestas la última: la campana no aparece sin peticiones.
+    empty: 'No tienes solicitudes pendientes.',
     loading: 'Cargando solicitudes...',
     accept: 'Aceptar',
     reject: 'Rechazar',
-    cancel: 'Cancelar',
-    remove: 'Dejar de ser amigos',
     acceptAria: (name: string) => `Aceptar la petición de ${name}`,
     rejectAria: (name: string) => `Rechazar la petición de ${name}`,
-    cancelAria: (name: string) => `Cancelar la petición enviada a ${name}`,
-    removeAria: (name: string) => `Dejar de ser amigo de ${name}`,
     unknownUser: 'Usuario',
-    // Los tres bloques se pintan como rejilla paginada (mismo componente que el directorio), así que necesitan lo
-    // mismo que él: nombrar el grupo y decir cuánta gente queda por mostrar.
+    // El bloque se pinta como rejilla paginada (mismo componente que el directorio), así que necesita lo mismo que
+    // él: nombrar el grupo y decir cuánta gente queda por mostrar.
     sectionGroupAria: (title: string, count: number) => `${title}: ${count} personas`,
     showMore: (remaining: number) => `Mostrar más (quedan ${remaining})`,
-    // Solo se puede abrir el perfil de un AMIGO: en recibidas y enviadas todavía no hay relación aceptada.
-    openFriendAria: (name: string) => `Abrir perfil social de ${name}`,
   },
   friendship: {
     add: 'Añadir amigo',
     accept: 'Aceptar',
     pending: 'Pendiente',
+    withdraw: 'Retirar',
     friends: 'Amigos',
-    remove: 'Dejar de ser amigos',
     addAria: (name: string) => `Enviar petición de amistad a ${name}`,
     acceptAria: (name: string) => `Aceptar la petición de ${name}`,
     cancelAria: (name: string) => `Cancelar la petición enviada a ${name}`,
-    removeAria: (name: string) => `Dejar de ser amigo de ${name}`,
+    // El botón dice el ESTADO («Amigos») y lo que hace va en su nombre accesible, que empieza por lo que se ve
+    // (WCAG 2.5.3): quien lo dicta por voz dice «Amigos» y lo encuentra.
+    removeAria: (name: string) => `Amigos: dejar de ser amigo de ${name}`,
     removeConfirmTitle: (name: string) => `¿Dejar de ser amigo de ${name}?`,
     removeConfirmAction: 'Dejar de ser amigos',
     // Rechazar y retirar tampoco se deshacen —borran el documento de amistad—, así que pasan por la misma
@@ -366,6 +369,11 @@ export const SOCIAL_UI = {
     signOut: 'Cerrar sesión',
     statusSynced: 'Sincronizado',
     statusUnpublished: 'Sin publicar',
+    // Cambios del perfil que aún no se han guardado con «Guardar perfil» (09-10-2026).
+    statusUnsaved: 'Cambios sin guardar',
+    leaveUnsavedTitle: '¿Salir sin guardar los cambios?',
+    leaveUnsavedBody: 'Lo que has cambiado en tu perfil no se ha guardado: si sales ahora, se pierde.',
+    leaveUnsavedConfirm: 'Salir sin guardar',
     identityTitle: 'Identidad visible',
     identityDescription: 'Este nombre se mostrará en la actividad social y en análisis compartidos.',
     nameLabel: 'Nombre social',
@@ -377,16 +385,18 @@ export const SOCIAL_UI = {
     privacyPublic: 'Tu perfil es público. Otros usuarios podrán encontrarte por email.',
     hydrating: 'Cargando datos de perfil desde gist social...',
     visibilityTitle: 'Visibilidad del perfil',
-    visibilityDescription: 'Configura qué partes de tus listados se comparten públicamente en el detalle social.',
-    hideListSectionTitle: 'Ocultar listados',
-    hideVisitedList: 'Ocultar lista de abandonados',
-    hidePlayingList: 'Ocultar lista de en curso',
-    hidePlannedList: 'Ocultar lista de próximos',
-    hideWishlist: 'Ocultar lista de deseos',
-    hideFieldSectionTitle: 'Ocultar campos',
-    hideReplayableField: 'Rejugar',
-    hideRetryField: 'Dar otra oportunidad',
-    hideGameTimeField: 'Tiempo jugado',
+    // EN POSITIVO, como la foto y los movimientos de abajo: encendido = se comparte. Decían «Ocultar…» (encendido =
+    // oculto) en la misma pantalla que «Mostrarme…», y un mismo gesto significaba cosas contrarias (09-10-2026).
+    visibilityDescription: 'Elige qué partes de tus listados se comparten en tu perfil social. Los completados se comparten siempre.',
+    shareListSectionTitle: 'Listados que compartes',
+    shareVisitedList: 'Lista de abandonados',
+    sharePlayingList: 'Lista de en curso',
+    sharePlannedList: 'Lista de próximos',
+    shareWishlist: 'Lista de deseos',
+    shareFieldSectionTitle: 'Datos que compartes',
+    shareReplayableField: 'Rejugar',
+    shareRetryField: 'Dar otra oportunidad',
+    shareGameTimeField: 'Tiempo jugado',
     photoSectionTitle: 'Foto de perfil',
     showPhotoField: 'Mostrar mi foto de perfil',
     // Por qué el interruptor está apagado y bloqueado. Una línea: el estado del interruptor ya dice lo demás, y la
@@ -446,6 +456,7 @@ export const SOCIAL_UI = {
     postEditDone: 'Publicación actualizada.',
     postEditFailed: 'No se pudo guardar el cambio.',
     postEditOffline: 'Sin conexión: el cambio no se ha guardado. El texto sigue aquí, inténtalo al recuperar la red.',
+    postEditGone: 'Esa publicación ya no existe: se borró desde otro dispositivo.',
     postDeleteDone: 'Publicación eliminada.',
     postDeleteFailed: 'No se pudo eliminar la publicación.',
     postDeleteOffline: 'Sin conexión: la publicación no se ha eliminado. Inténtalo al recuperar la red.',

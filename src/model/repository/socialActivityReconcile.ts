@@ -20,6 +20,7 @@ import { getCurrentSocialAuthUser, resolveStableProfileId } from './firebaseRepo
 import { readSocialGist, remapSocialActorIds, removeReviewActivity, saveSocialSyncConfig, syncMoveActivity, upsertReviewActivity, writeSocialGist, type SocialGistData } from './socialGistRepository';
 import { getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta } from './indexedDbRepository';
 import { resolveSocialChannel } from './socialChannel';
+import { serializeSocialWrite } from './socialWriteQueue';
 
 // Solo estas pestañas publican reseña: próximos y deseos nunca lo hacen (mismo criterio que `handleSaveDraft`).
 const REVIEWABLE_TABS = TAB_IDS.filter((tab) => !UNPLAYED_TAB_IDS.includes(tab));
@@ -179,7 +180,12 @@ function collectLocalGameIds(games: TabData): Set<number> {
  * de los listados locales (`games.updatedAt`), que es el caso de una reseña escrita en otro dispositivo cuyo
  * sync de juegos todavía no ha llegado aquí.
  */
-export async function reconcileReviewActivity(input: {
+export function reconcileReviewActivity(input: Parameters<typeof reconcileReviewActivityNow>[0]): Promise<ReconcileOutcome> {
+  // En fila con el resto de escrituras del canal social (ver `serializeSocialWrite`).
+  return serializeSocialWrite(() => reconcileReviewActivityNow(input));
+}
+
+async function reconcileReviewActivityNow(input: {
   games: TabData;
   max?: number;
   /** Ignora el sello y el recuento (refresco manual / tras guardar el perfil). */

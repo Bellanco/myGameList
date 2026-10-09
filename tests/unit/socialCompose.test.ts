@@ -126,6 +126,21 @@ describe('editar y borrar las publicaciones propias', () => {
     expect(setFeedback).toHaveBeenCalledWith('ok', SOCIAL_UI.status.postEditDone);
   });
 
+  // Borrada en otro dispositivo (09-10-2026): antes respondía «Publicación actualizada» y dejaba el texto viejo.
+  it('si la publicación se borró en otro dispositivo, lo dice y la quita de la vista', async () => {
+    const { PostGoneError } = await import('../../src/core/social/postErrors');
+    editOwnPost.mockRejectedValueOnce(new PostGoneError());
+    const { result, onPostChanged, setFeedback } = setup('silver');
+
+    let ok = true;
+    await act(async () => { ok = await result.current.handleEditPost('p1:1', 'Corregido'); });
+
+    expect(ok).toBe(false);
+    expect(onPostChanged).toHaveBeenCalledWith({ kind: 'delete', id: 'p1:1' });
+    expect(setFeedback).toHaveBeenCalledWith('warn', SOCIAL_UI.status.postEditGone, 'long');
+    expect(setFeedback).not.toHaveBeenCalledWith('ok', SOCIAL_UI.status.postEditDone);
+  });
+
   it('un texto sin cambios no reescribe la pantalla', async () => {
     editOwnPost.mockResolvedValueOnce(null);
     const { result, onPostChanged } = setup('gold');

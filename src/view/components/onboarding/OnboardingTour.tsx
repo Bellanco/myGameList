@@ -267,7 +267,7 @@ interface AnchoredBubbleProps {
 
 /**
  * EL VELO CON SU HUECO, EL ANILLO Y LA BURBUJA CON SU FLECHA, colocados junto al control que se señala. Lo usan el
- * paso de una misión, el ofrecimiento de una misión («¿Te enseño?») y el «vuelve a entrar» de lo social: los tres
+ * paso de una misión, el ofrecimiento de una misión («¿Quieres…?») y el «vuelve a entrar» de lo social: los tres
  * señalan algo de la pantalla y cambian solo lo que dicen.
  */
 function AnchoredBubble({ anchorKey, anchor: anchorSpec, focus, tone = '', pulse = false, labelledBy, onKeyDown, children }: AnchoredBubbleProps) {
@@ -447,7 +447,7 @@ const HINTS: Partial<Record<MissionId, { screen: (ctx: TourContext) => boolean; 
 
 /**
  * «¿TE ENSEÑO?», para quien ya usaba la aplicación y llega a una pantalla sin tener lo que se hace en ella. Una
- * pregunta y dos respuestas: «Enséñame» arranca SOLO esa misión, y «No, gracias» (o la X) la aparta para siempre
+ * pregunta y dos respuestas: «Sí, vamos» arranca SOLO esa misión, y «No, gracias» (o la X) la aparta para siempre
  * —queda en Ajustes › Datos—. Fuera de su pantalla no se pinta nada: no es una guía que te siga, es una oferta.
  */
 function HintBubble({ state, ctx }: { state: TourState; ctx: TourContext }) {
@@ -486,7 +486,7 @@ function HintBubble({ state, ctx }: { state: TourState; ctx: TourContext }) {
       <h2 className="ob-title" id={titleId}>{H[mission].title}</h2>
       <p className="ob-text">{H[mission].text}</p>
       <div className="ob-foot ob-foot-split ob-foot-even">
-        <button type="button" className="btn btn-secondary" onClick={decline}>{H.no}</button>
+        <button type="button" className="btn btn-quiet" onClick={decline}>{H.no}</button>
         <button type="button" className="btn btn-primary" onClick={accept}>{H.yes}</button>
       </div>
     </AnchoredBubble>
@@ -496,9 +496,9 @@ function HintBubble({ state, ctx }: { state: TourState; ctx: TourContext }) {
 /* ── La invitación de los premios ─────────────────────────────────────────────────────────────────────────── */
 
 /**
- * «HAY ALGO MÁS», al terminar de votar y en el histórico: la misma pregunta que el «¿Te enseño?» de Social, con
+ * «HAY ALGO MÁS», al terminar de votar y en el histórico: la misma pregunta que el «¿Quieres…?» de Social, con
  * otro motivo. No señala nada —en los premios no hay un control que sea «el resto de la aplicación»—, así que va
- * centrada sobre el velo. «Enséñame» le lleva a donde empieza su misión y pone la guía en marcha; «Ahora no» (o la
+ * centrada sobre el velo. «Sí, vamos» le lleva a donde empieza su misión y pone la guía en marcha; «Ahora no» (o la
  * X, o Escape) la aparta hasta la siguiente edición. Las dos respuestas las apuntan los premios.
  */
 function PremiosInviteBubble({ invite }: { invite: PremiosInvite }) {
@@ -523,7 +523,7 @@ function PremiosInviteBubble({ invite }: { invite: PremiosInvite }) {
       <h2 className="ob-title" id={titleId}>{P[invite.kind].title}</h2>
       <p className="ob-text">{P[invite.kind].text}</p>
       <div className="ob-foot ob-foot-split ob-foot-even">
-        <button type="button" className="btn btn-secondary" onClick={invite.dismiss}>{P.no}</button>
+        <button type="button" className="btn btn-quiet" onClick={invite.dismiss}>{P.no}</button>
         <button type="button" className="btn btn-primary" onClick={invite.accept}>{P.yes}</button>
       </div>
     </AnchoredBubble>
@@ -609,7 +609,7 @@ function StepFooter({ state, mission, index, step }: { state: TourState; mission
     };
     buttons = (
       <>
-        <button type="button" className="btn btn-secondary" onClick={skip}>{B.noPlaynite}</button>
+        <button type="button" className="btn btn-quiet" onClick={skip}>{B.noPlaynite}</button>
         <button type="button" className="btn btn-primary" onClick={openGuide}>{B.openGuide}</button>
       </>
     );
@@ -618,7 +618,7 @@ function StepFooter({ state, mission, index, step }: { state: TourState; mission
   } else if (step.id === 'added') {
     buttons = (
       <>
-        <button type="button" className="btn btn-secondary" onClick={() => completeAndFold(state)}>{B.later}</button>
+        <button type="button" className="btn btn-quiet" onClick={() => completeAndFold(state)}>{B.later}</button>
         <button type="button" className="btn btn-primary" onClick={next}>{B.go}</button>
       </>
     );
@@ -627,12 +627,12 @@ function StepFooter({ state, mission, index, step }: { state: TourState; mission
   } else if (step.kind === 'info') {
     buttons = (
       <>
-        <button type="button" className="btn btn-secondary" onClick={skip}>{B.skip}</button>
+        <button type="button" className="btn btn-quiet" onClick={skip}>{B.skip}</button>
         <button type="button" className="btn btn-primary" onClick={next}>{B.next}</button>
       </>
     );
   } else {
-    buttons = <button type="button" className="btn btn-secondary" onClick={skip}>{B.skipMission}</button>;
+    buttons = <button type="button" className="btn btn-quiet" onClick={skip}>{B.skipMission}</button>;
   }
 
   return (
@@ -723,13 +723,13 @@ function MissionsCard({ state }: { state: TourState }) {
         <div className="ob-foot ob-foot-split">
           {isOffer ? (
             <>
-              <button type="button" className="btn btn-secondary" onClick={() => fold(state)}>{TOUR_UI.welcome.later}</button>
+              <button type="button" className="btn btn-quiet" onClick={() => fold(state)}>{TOUR_UI.welcome.later}</button>
               <button type="button" className="btn btn-primary" onClick={() => saveTourState(startTour(state))}>{TOUR_UI.welcome.start}</button>
             </>
           ) : (
             <>
               {/* Salir de la guía es decir que no a TODO: tampoco se ofrecerá sola ninguna misión en su pantalla. */}
-              <button type="button" className="btn btn-secondary" onClick={() => saveTourState({ ...state, status: 'dismissed', declined: [...MISSION_IDS] })}>{TOUR_UI.menu.exit}</button>
+              <button type="button" className="btn btn-quiet" onClick={() => saveTourState({ ...state, status: 'dismissed', declined: [...MISSION_IDS] })}>{TOUR_UI.menu.exit}</button>
               <button type="button" className="btn btn-primary" onClick={() => saveTourState(startTour(state))}>{TOUR_UI.menu.resume}</button>
             </>
           )}

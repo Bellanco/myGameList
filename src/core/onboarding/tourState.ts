@@ -14,7 +14,7 @@
  * - `paused`: plegada en el botón flotante de la izquierda, para retomarla cuando se quiera.
  * - `menu`: la lista de misiones abierta desde ese botón.
  * - `finale`: la tarjeta del final, una sola vez.
- * - `hint`: el OFRECIMIENTO de una sola misión en la pantalla donde se hace («¿Te enseño?»), para quien ya usaba
+ * - `hint`: el OFRECIMIENTO de una sola misión en la pantalla donde se hace («¿Quieres…?»), para quien ya usaba
  *   la aplicación y no tiene lo social o la nube. Ver `canOfferHint`.
  * - `dismissed` / `done`: no se pinta nada. Solo se vuelve a ver pidiéndola desde Ajustes, o con un ofrecimiento
  *   de una misión que todavía no se haya rechazado.

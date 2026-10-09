@@ -7,9 +7,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const getSocialProfilesByUid = vi.hoisted(() => vi.fn(async (_uids: string[], _options: { forceRefresh?: boolean }) => [] as unknown[]));
 
 vi.mock('../../src/model/repository/firebaseRepository', () => ({ getSocialProfilesByUid }));
+const putCachedSocialDirectory = vi.hoisted(() => vi.fn(async (_gist: string, _entries: unknown[]) => {}));
 vi.mock('../../src/model/repository/indexedDbRepository', () => ({
   getCachedSocialDirectory: vi.fn(async () => null),
-  putCachedSocialDirectory: vi.fn(async () => {}),
+  putCachedSocialDirectory,
   getLocalMeta: vi.fn(async () => null),
   patchLocalMeta: vi.fn(async () => {}),
 }));
@@ -20,6 +21,7 @@ vi.mock('../../src/model/repository/socialGistRepository', () => ({
 }));
 
 const { useSocialDirectory } = await import('../../src/viewmodel/social/useSocialDirectory');
+const { act, waitFor } = await import('@testing-library/react');
 
 function montar() {
   return renderHook(() =>
@@ -41,7 +43,9 @@ function montar() {
 }
 
 beforeEach(() => {
-  getSocialProfilesByUid.mockClear();
+  getSocialProfilesByUid.mockReset();
+  getSocialProfilesByUid.mockImplementation(async () => []);
+  putCachedSocialDirectory.mockClear();
 });
 
 describe('useSocialDirectory — refresco tras publicar', () => {
@@ -58,5 +62,29 @@ describe('useSocialDirectory — refresco tras publicar', () => {
     await result.current.hydrateSocialDirectory(true);
 
     expect(getSocialProfilesByUid.mock.calls[0][1]).toMatchObject({ forceRefresh: true });
+  });
+});
+
+// UNA PASADA VIEJA NO PISA A LA NUEVA (09-10-2026). La forzada de después de publicar no espera a la que estuviera
+// en vuelo; si la vieja terminaba DESPUÉS, escribía su directorio —sin el post— encima del nuevo y en la caché.
+describe('useSocialDirectory — pasada superada', () => {
+  const perfil = (displayName: string) => ({ id: 'uid-yo', uid: 'uid-yo', displayName, photoURL: '', socialGistId: '' });
+
+  it('la pasada vieja que termina después no escribe ni en pantalla ni en caché', async () => {
+    let soltarVieja: (value: unknown[]) => void = () => {};
+    getSocialProfilesByUid
+      .mockImplementationOnce(() => new Promise((resolve) => { soltarVieja = resolve; }))
+      .mockImplementationOnce(async () => [perfil('Nuevo')]);
+    const { result } = montar();
+
+    let vieja: Promise<void> = Promise.resolve();
+    act(() => { vieja = result.current.hydrateSocialDirectory(false); });
+    await waitFor(() => expect(getSocialProfilesByUid).toHaveBeenCalledTimes(1));
+    await act(async () => { await result.current.hydrateSocialDirectory(true, { keepDirectoryQuery: true }); });
+    await act(async () => { soltarVieja([perfil('Viejo')]); await vieja; });
+
+    expect(result.current.rawSocialDirectory.map((entry) => entry.displayName)).toEqual(['Nuevo']);
+    expect(putCachedSocialDirectory).toHaveBeenCalledTimes(1);
+    expect((putCachedSocialDirectory.mock.calls[0][1] as Array<{ displayName: string }>)[0].displayName).toBe('Nuevo');
   });
 });

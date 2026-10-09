@@ -146,6 +146,13 @@ export function auditFriendship(data) {
       problemas.push({ nuevo: true, motivo: `${k} inválido o de más de ${LIMITS.gistId} caracteres` });
     }
   }
+  // `friendshipFieldsAreSane()`: las fechas, número o timestamp (desde el 09-10-2026). Aquí `null` no vale: la regla
+  // solo admite que falten.
+  for (const k of ['createdAt', 'updatedAt']) {
+    if (has(k) && !isNumberOrTimestamp(data[k])) {
+      problemas.push({ nuevo: true, motivo: `${k} no es número ni timestamp (${typeof data[k]})` });
+    }
+  }
 
   return problemas;
 }

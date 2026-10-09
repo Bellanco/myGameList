@@ -109,6 +109,9 @@ describe('auditoría previa al despliegue de reglas', () => {
       expect(motivos({ requesterName: big(121) })).toMatch(/requesterName/);
       expect(motivos({ recipientSocialGistId: big(129) })).toMatch(/recipientSocialGistId/);
       expect(motivos({ requesterGamesGistId: 42 })).toMatch(/requesterGamesGistId/);
+      expect(motivos({ createdAt: 'x'.repeat(10) })).toMatch(/createdAt no es número/);
+      expect(motivos({ updatedAt: null })).toMatch(/updatedAt no es número/);
+      expect(auditFriendship({ createdAt: 1_700_000_000_000, updatedAt: { toMillis: () => 1, seconds: 1, nanoseconds: 0 } })).toEqual([]);
     });
   });
 });

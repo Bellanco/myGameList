@@ -62,6 +62,18 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
   padding: .55rem; min-height: 48px; transition: border-color .2s, box-shadow .2s;
 }
 .tag-inp-wrap input { background: transparent; border: none; color: var(--text); outline: none; flex: 1 1 14ch; min-width: 10ch; }
+/* EL CAMPO ES LA CAJA, NO LO DE DENTRO (09-10-2026). Los temas visten `.finput` con `!important` y le devolvían al
+   campo interior su marco: salían dos marcos anidados, la caja y otro campo dentro de ella. Ahora la caja lleva la
+   forma de campo del tema (cada skin la incluye junto a `.finput`) y el de dentro va desnudo; el foco lo enseña la
+   caja entera. `html:root` para ganar a los skins. */
+html:root .tag-inp-wrap .finput {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: .2rem .3rem;
+}
+.tag-inp-wrap:focus-within { border-color: var(--focus-ring); box-shadow: var(--sunk), var(--ring-accent-soft); }
 
 /* Mensaje de error DEBAJO de un campo del formulario (ocupa el mismo hueco que el `tag-hint`, en rojo). */
 .tag-hint.is-error { color: var(--fg-red); }

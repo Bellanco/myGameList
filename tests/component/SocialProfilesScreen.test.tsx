@@ -54,6 +54,22 @@ describe('SocialProfilesScreen — división amigos / no-amigos', () => {
     expect(within(others).queryByText('Ada')).not.toBeInTheDocument();
   });
 
+  // En la sección de amigos no se repite «Amigos» en cada tarjeta: ya lo dice su título (09-10-2026).
+  it('las tarjetas de amigos no llevan la etiqueta «Amigos»; las de descubrir, su acción', () => {
+    render(
+      <SocialProfilesScreen
+        {...baseProps}
+        relationshipWith={relationshipWith}
+        filteredSocialDirectory={[entry('ada', 'Ada'), entry('bob', 'Bob')]}
+      />,
+    );
+
+    const friends = screen.getByRole('group', { name: SOCIAL_UI.profiles.sectionGroupAria(SOCIAL_UI.profiles.friendsTitle, 1) });
+    expect(within(friends).queryByText(SOCIAL_UI.friendship.friends)).not.toBeInTheDocument();
+    const others = screen.getByRole('group', { name: SOCIAL_UI.profiles.sectionGroupAria(SOCIAL_UI.profiles.othersTitle, 1) });
+    expect(within(others).getByLabelText(SOCIAL_UI.friendship.addAria('Bob'))).toBeInTheDocument();
+  });
+
   // El punto de rango es la única señal visible del tier en el directorio. Como el color por sí solo no informa
   // a quien no lo distingue, el nombre del rango tiene que estar en el texto accesible. Y es solo de tus AMIGOS:
   // de quien no lo es se enseña el nombre y nada más (decisión del 04-10-2026).

@@ -180,7 +180,9 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
   border: 2px solid var(--noscore);
 }
 .score-ring.is-noscore::after { display: none; }
-.score-ring.is-noscore .score-ring-num { color: var(--noscore); }
+/* El «¿?», un tercio hacia el texto del modo: con el `--noscore` puro sobre su velo se quedaba entre 2 y 4,2:1 en
+   Mar de estrellas y Portal claros, Sin futuro claro y Persona de noche (09-10-2026). El aro sigue en `--noscore`. */
+.score-ring.is-noscore .score-ring-num { color: color-mix(in srgb, var(--noscore), var(--text) 35%); }
 .score-ring-num {
   position: relative; z-index: 1;
   font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1;

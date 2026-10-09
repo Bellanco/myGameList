@@ -142,7 +142,7 @@ export const PostText = memo(PostTextBase);
  *
  * El cupo de caracteres lo decide el rango del autor (plata 1.000, oro 10.000, mithril 100.000), así que sin
  * recorte una sola publicación de rango alto ocupaba el feed entero y empujaba fuera de la pantalla todo lo demás
- * —mientras que las reseñas sí se recortaban (`.hub-feed-review-text`, 4 líneas)—. Aquí no se pierde nada: el
+ * —mientras que las reseñas sí se recortaban (`.hub-feed-review-text`, hoy 2 líneas)—. Aquí no se pierde nada: el
  * texto completo se despliega en la propia tarjeta.
  *
  * POR QUÉ SE MIDE Y NO SE CUENTAN CARACTERES: el texto va con `white-space: pre-wrap`, así que un texto corto con

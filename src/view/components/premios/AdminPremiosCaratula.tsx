@@ -114,7 +114,7 @@ export function AdminPremiosCaratula({ nombre, numero, cover, onChange }: AdminP
             {cover ? (
               <button
                 type="button"
-                className="btn btn-danger"
+                className="btn btn-secondary"
                 onClick={() => {
                   onChange(null);
                   setAbierto(false);

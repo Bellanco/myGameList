@@ -7,6 +7,7 @@ import { PREMIOS_ROUTES, votePath } from '../../../viewmodel/premios/premiosRout
 import { PremiosCompartir } from './PremiosCompartir';
 import { usePosicionSuperior } from './usePosicionSuperior';
 import type { PremiosVotingConfig } from '../../../model/types/premios';
+import { Icon } from '../Icon';
 
 const L = PREMIOS_UI.portada;
 
@@ -117,13 +118,15 @@ export function PremiosPortada({
             —la pantalla no lleva ni nombre ni botón de enviar—, y para quien votó con cuenta ligera es lo único
             que puede hacer aquí, además de lo último que queda de su papeleta antes de que se publique. */}
         {hasBallot ? (
-          <Link className="btn" to={PREMIOS_ROUTES.ballot}>
+          <Link className="btn btn-open" to={PREMIOS_ROUTES.ballot}>
             {PREMIOS_UI.enviada.see}
+            <Icon name="angle-right" className="ui-icon btn-open-go" />
           </Link>
         ) : null}
         {hasResults && !votingOpen ? (
-          <Link className="btn" to={PREMIOS_ROUTES.results}>
+          <Link className="btn btn-open" to={PREMIOS_ROUTES.results}>
             {L.seeResults}
+            <Icon name="angle-right" className="ui-icon btn-open-go" />
           </Link>
         ) : null}
       </div>

@@ -123,6 +123,7 @@
 :root[data-palette="seaofstars"] .hub-feed-card,
 :root[data-palette="seaofstars"] .hub-hub-card,
 :root[data-palette="seaofstars"] .modal,
+:root[data-palette="seaofstars"] .consent-banner,
 :root[data-palette="seaofstars"] .alert-dialog { border: 2px solid var(--border) !important; border-radius: 0 !important; box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px color-mix(in srgb, var(--sos-turq) 55%, var(--border)) !important; }
 
 /* EL AVISO (logro, aviso de estado y anuncio) · la CAJA DE DIÁLOGO del juego, el mismo marco de 16 bits que los
@@ -149,42 +150,53 @@
    texto legible. Hover: sube + brillo de agua turquesa (sin el giro 3D de base). ── */
 :root[data-palette="seaofstars"] .btn:not(.btn-icon):not(.btn-ghost) { border-radius: 0 !important; font-weight: 600; }
 :root[data-palette="seaofstars"] .btn-primary,
-:root[data-palette="seaofstars"] .btn-accent,
-:root[data-palette="seaofstars"] .btn-steam,
-:root[data-palette="seaofstars"] .btn.is-active,
-:root[data-palette="seaofstars"] .btn-toggle.active { background: var(--steam) !important; background-image: none !important; color: var(--on-accent) !important; border-color: var(--steam) !important; }
-:root[data-palette="seaofstars"] .btn-complete { background: var(--success) !important; color: #06180a !important; }
-/* Botones de peligro: relleno rojo un poco MÁS PROFUNDO + texto CREMA (el texto oscuro sobre el rojo no se
-   distinguía). Cream sobre el rojo profundo pasa AA en oscuro y en claro. */
-:root[data-palette="seaofstars"] .btn-danger,
-:root[data-palette="seaofstars"] .btn-abandoned { background: color-mix(in srgb, var(--danger) 85%, #000) !important; color: #fff7d6 !important; }
-:root[data-palette="seaofstars"][data-theme="light"] .btn-complete,
-:root[data-palette="seaofstars"][data-theme="light"] .btn-danger,
-:root[data-palette="seaofstars"][data-theme="light"] .btn-abandoned { color: #fff7d6 !important; }
-/* NEUTRO = LUZ DE ESTRELLA. Antes era el cristal índigo de la base (en claro, turquesa sobre agua turquesa): un
-   gris con otro tinte. Ahora es la placa CREMA del `--sos-line` OSCURO (#fff7d6, literal: en claro esa variable
-   pasa a ser la tinta) con tinta de la noche (17,8:1 en oscuro, 13,9:1 en
-   claro), la misma en los dos temas, como la luz de las estrellas. «Neutro» es un botón SIN ROL: el `:not()` con
-   lista lo deja en (0,4,0) y excluye cada rol con nombre, así que no le pinta encima a ninguno. */
-:root[data-palette="seaofstars"] .btn:not(.btn-icon, .btn-ghost, .btn-primary, .btn-steam, .btn-accent, .is-active, .active, .btn-complete, .btn-danger, .btn-abandoned, .btn-playing, .btn-upcoming, .consent-btn-accept) {
+:root[data-palette="seaofstars"] .btn-steam { background: var(--steam) !important; background-image: none !important; color: var(--on-accent) !important; border-color: var(--steam) !important; }
+/* Destruir: relleno rojo un poco MÁS PROFUNDO + texto CREMA (el texto oscuro sobre el rojo no se distinguía).
+   Crema sobre el rojo profundo pasa AA en oscuro y en claro. */
+:root[data-palette="seaofstars"] .btn-danger { background: color-mix(in srgb, var(--danger) 85%, #000) !important; color: #fff7d6 !important; }
+/* NEUTRO = LUZ DE ESTRELLA: la placa CREMA del `--sos-line` OSCURO (#fff7d6, literal: en claro esa variable pasa a
+   ser la tinta) con tinta de la noche (17,8:1 en oscuro, 13,9:1 en claro), la misma en los dos temas, como la luz
+   de las estrellas. Va por EXCLUSIÓN de cada función con color, así que no le pinta encima a ninguna. */
+:root[data-palette="seaofstars"] .btn:not(.btn-icon, .btn-ghost, .btn-quiet, .btn-primary, .btn-steam, .btn-open, .is-active, .active, .btn-social, .btn-done, .btn-exit, .btn-complete, .btn-danger, .btn-abandoned, .btn-friend, .btn-playing, .btn-upcoming, .consent-btn-accept) {
   background: #fff7d6 !important; background-image: none !important;
   color: #0e0c24 !important; border-color: color-mix(in srgb, #fff7d6 62%, #7a5000) !important;
 }
-:root[data-palette="seaofstars"][data-theme="light"] .btn:not(.btn-icon, .btn-ghost, .btn-primary, .btn-steam, .btn-accent, .is-active, .active, .btn-complete, .btn-danger, .btn-abandoned, .btn-playing, .btn-upcoming, .consent-btn-accept) {
+:root[data-palette="seaofstars"][data-theme="light"] .btn:not(.btn-icon, .btn-ghost, .btn-quiet, .btn-primary, .btn-steam, .btn-open, .is-active, .active, .btn-social, .btn-done, .btn-exit, .btn-complete, .btn-danger, .btn-abandoned, .btn-friend, .btn-playing, .btn-upcoming, .consent-btn-accept) {
   color: #0a2a3a !important;
 }
-/* NAVEGACIÓN = SOL Y LUNA. Los de navegación se alternan dentro de cada fila (`of .btn-accent` cuenta solo los
-   suyos, así que un neutro en medio no descoloca la pareja): el primero, SOL (el oro de arriba); el siguiente,
-   LUNA. Un navegador sin `:nth-child(… of …)` descarta la regla y los deja todos en sol.
-   Luna en oscuro: el violeta del tema con la tinta de la noche (5,6:1). En claro ese violeta no da con ninguna
-   tinta, así que va el violeta hondo de la paleta clara con rótulo crema, como los rojos (5,3:1; 4,7 al hover). */
-:root[data-palette="seaofstars"] .btn-accent:nth-child(even of .btn-accent),
-:root[data-palette="seaofstars"] .btn-upcoming { background: var(--sos-purple) !important; background-image: none !important; color: #0e0c24 !important; border-color: var(--sos-purple) !important; }
-:root[data-palette="seaofstars"][data-theme="light"] .btn-accent:nth-child(even of .btn-accent),
-:root[data-palette="seaofstars"][data-theme="light"] .btn-upcoming { color: #fff7d6 !important; }
-/* Mover de lista en el detalle: los mismos dos astros, pero FIJOS. «Pasar a en curso», el sol; «Pasar a
-   próximos», la luna (arriba, con la segunda de navegación). */
-:root[data-palette="seaofstars"] .btn-playing { background: var(--steam) !important; background-image: none !important; color: var(--on-accent) !important; border-color: var(--steam) !important; }
+/* ── LOS BOTONES POR FUNCIÓN (ver `_forms-and-buttons.scss`) ──────────────────────────────────────────────
+   El SOL (oro) es confirmar. ABRIR / IR es la TURQUESA DEL MAR, con tinta de la noche (6,9:1); LO ENCENDIDO, la
+   LUNA (el púrpura del tema, 5,6:1). En claro los dos se ahondan y llevan rótulo crema (7,4:1 y 5,3:1). Los teñidos
+   son la placa de la noche con el filete de 2 px y el texto de su color. */
+:root[data-palette="seaofstars"] {
+  --btn-open: var(--sos-turq); --btn-open-ink: #0e0c24;
+  --btn-sel: var(--sos-purple); --btn-sel-ink: #0e0c24;
+  --move-e: var(--sos-pink);
+}
+:root[data-palette="seaofstars"][data-theme="light"] {
+  --btn-open: #00606f; --btn-open-ink: #fff7d6;
+  --btn-sel: #7a3fe4; --btn-sel-ink: #fff7d6;
+  --move-e: #b0245e; --move-p: #8a5a00; --move-c: #1d6b28; --move-v: #a3201b;
+}
+:root[data-palette="seaofstars"] :is(.btn-open, .btn.is-active, .btn-toggle.active, .btn-toggle-deck.active) {
+  background: var(--role-c) !important; background-image: none !important;
+  color: var(--role-ink) !important; border-color: var(--role-c) !important;
+}
+:root[data-palette="seaofstars"] .btn:not(.btn-icon):not(.btn-ghost):is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend, .consent-btn-accept) {
+  background: var(--surface-elevated) !important; background-image: none !important;
+  color: var(--role-t) !important; border: 2px solid var(--role-c) !important;
+}
+:root[data-palette="seaofstars"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost):is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend, .consent-btn-accept) {
+  background: #e9fbfc !important;
+}
+:root[data-palette="seaofstars"][data-theme="light"] .btn-social,
+:root[data-palette="seaofstars"][data-theme="light"] .btn-done { --role-c: #1d6b28; }
+:root[data-palette="seaofstars"][data-theme="light"] .btn-exit { --role-c: #a3201b; }
+/* Descartar: solo el contorno. */
+:root[data-palette="seaofstars"] .btn:not(.btn-icon):not(.btn-ghost).btn-quiet {
+  background: transparent !important; background-image: none !important;
+  color: var(--text-muted) !important; border-color: color-mix(in srgb, var(--text) 35%, transparent) !important;
+}
 :root[data-palette="seaofstars"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 14px color-mix(in srgb, var(--sos-turq) 45%, transparent); }
 :root[data-palette="seaofstars"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(0); }
 
@@ -224,6 +236,7 @@
   box-shadow: 2px 2px 0 color-mix(in srgb, var(--sos-turq) 55%, transparent);
 }
 :root[data-palette="seaofstars"] .input-base,
+:root[data-palette="seaofstars"] .tag-inp-wrap,
 :root[data-palette="seaofstars"] .finput,
 :root[data-palette="seaofstars"] .ftextarea,
 :root[data-palette="seaofstars"] .search-input { border-radius: 0 !important; }
@@ -717,3 +730,50 @@
 :root[data-palette="seaofstars"] .star-inp button.f {
   text-shadow: 1px 1px 0 color-mix(in srgb, var(--sos-turq) 50%, transparent);
 }
+
+/* El botón «Amigos» de la ficha (`.btn-friend`): el magenta de atardecer. */
+:root[data-palette="seaofstars"] { --btn-friend: var(--sos-pink); }
+:root[data-palette="seaofstars"][data-theme="light"] { --btn-friend: #b0245e; }
+
+/* LAS ETIQUETAS DE GÉNERO, LEGIBLES (09-10-2026). A la luz, los siete tonos se quedaban entre 3,7 y 4,1:1 sobre su
+   velo encima de las turquesas (el peor fondo de la casa): el texto va hacia la tinta. De noche, el violeta y el
+   magenta (tonos 4 y 7) se quedaban en 4,2: van hacia el blanco. */
+:root[data-palette="seaofstars"][data-theme="light"] .chip-genre { color: color-mix(in srgb, var(--cat-fg, #6e4700) 70%, #000); }
+:root[data-palette="seaofstars"]:not([data-theme="light"]) .chip-genre { color: color-mix(in srgb, var(--cat-fg, var(--fg-sky)) 80%, #fff); }
+
+/* El rótulo del juego a la luz: el ámbar de `--tab-active` sobre su velo encima de las turquesas se quedaba en 4,4:1
+   (09-10-2026). El texto, un pelo más hondo; el filete, igual. */
+:root[data-palette="seaofstars"][data-theme="light"] .hub-feed-game-chip { color: color-mix(in srgb, var(--tab-active) 85%, #000); }
+
+/* El «¿?» a la luz: el tercio hacia el texto de la base (`_table.scss`) se quedaba en 3,4:1 sobre las turquesas
+   (09-10-2026); aquí va a la mitad, hacia la tinta. */
+:root[data-palette="seaofstars"][data-theme="light"] .score-ring.is-noscore .score-ring-num { color: color-mix(in srgb, var(--noscore), #000 50%); }
+
+/* EL INTERRUPTOR APAGADO, HUECO (09-10-2026). El neutro del tema es la placa crema maciza, y un «Steam Deck» apagado
+   con ella se veía tan encendido como el «Rejugar» de al lado. Apagado = superficie con filete; encendido = el
+   bloque de color de siempre. */
+:root[data-palette="seaofstars"] .btn.btn-toggle:not(.active):not(.btn-ghost) {
+  background: var(--surface-elevated) !important;
+  background-image: none !important;
+  color: var(--text) !important;
+  border: 2px solid var(--border) !important;
+  box-shadow: none !important;
+}
+
+/* ── EL TÍTULO DE PANTALLA (09-10-2026) ───────────────────────────────────────────────────────────────────────────
+   Un gesto del juego en el título de cada pantalla del hub (`.hub-hub-title-wrap h2`), elegido con
+   `docs/maquetas/titulos-temas.html`. Sin `text-transform`: las mayúsculas las pone la casilla de Apariencia, y
+   cualquier animación se queda quieta con los efectos apagados o si el sistema pide menos movimiento. ── */
+/* PLACA DE ORO CON SOL Y LUNA: letra de píxel dorada con contorno, entre el sol de Zale y la luna de Valere. */
+:root[data-palette="seaofstars"] .hub-hub-title-wrap h2 {
+  font-family: 'Pixelify Sans', sans-serif;
+  letter-spacing: .04em;
+  color: #ffc01f !important;
+  text-shadow: 1px 0 #3a2400, -1px 0 #3a2400, 0 1px #3a2400, 0 -1px #3a2400, 2px 2px 0 #3a2400;
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+}
+:root[data-palette="seaofstars"] .hub-hub-title-wrap h2::before { content: '☀'; color: #ffc01f; }
+:root[data-palette="seaofstars"] .hub-hub-title-wrap h2::after { content: '☾'; color: #a472e8; text-shadow: 2px 2px 0 #1c1a3a; }
+:root[data-palette="seaofstars"][data-theme="light"] .hub-hub-title-wrap h2::after { color: #5a23b8; text-shadow: none; }

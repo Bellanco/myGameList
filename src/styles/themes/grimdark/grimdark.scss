@@ -105,6 +105,7 @@
 :root[data-palette="grimdark"] .hub-feed-card,
 :root[data-palette="grimdark"] .hub-hub-card,
 :root[data-palette="grimdark"] .modal,
+:root[data-palette="grimdark"] .consent-banner,
 :root[data-palette="grimdark"] .alert-dialog { border: 1px solid var(--grim-gold) !important; border-radius: 0 !important; box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px rgba(224, 169, 43, .4), 0 0 22px rgba(67, 245, 88, .05) !important; }
 :root[data-palette="grimdark"][data-theme="light"] .toolbar,
 :root[data-palette="grimdark"][data-theme="light"] .table-wrap,
@@ -113,6 +114,7 @@
 :root[data-palette="grimdark"][data-theme="light"] .hub-feed-card,
 :root[data-palette="grimdark"][data-theme="light"] .hub-hub-card,
 :root[data-palette="grimdark"][data-theme="light"] .modal,
+:root[data-palette="grimdark"][data-theme="light"] .consent-banner,
 :root[data-palette="grimdark"][data-theme="light"] .alert-dialog { box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px rgba(154, 111, 20, .5), 0 6px 16px rgba(40, 40, 30, .14) !important; }
 
 /* EL AVISO (logro, aviso de estado y anuncio) · la PLACA DEL COGITADOR, como los paneles: moldura de oro a canto
@@ -137,54 +139,68 @@
    con texto negro + glow), en ambos temas. Semánticos rellenos; texto tinta en OSCURO y blanco en CLARO
    (regla 10). Sin sesgo ni giro 3D. ── */
 :root[data-palette="grimdark"] .btn:not(.btn-icon):not(.btn-ghost) { font-weight: 600; letter-spacing: .05em; border: 1px solid var(--grim-gold); border-radius: 0; }
-/* NEUTRO = NARANJA DE ALERTA: la lámpara de sodio de las forjas del Mechanicus, tan encendida como el fósforo
-   (mismo halo). Es el botón por defecto —Cancelar, Cerrar sesión, las pestañas sin elegir, el `.btn` sin rol— y por
-   eso va en `:where`: (0,2,0) frente al (0,3,0) de los roles, que lo pisan con su propio `!important`. Tinta del
-   fondo encima (7,4:1). Se aparta del oro latón por tono (más rojo, más vivo) y del rojo de peligro por luz. */
-/* FLUORESCENTE y no plano: el naranja liso se quedaba apagado junto al fósforo, que es luz emitida. Aquí es un tubo
-   encendido —el centro arde más claro que los bordes (`inset`) y la luz se derrama fuera en dos halos—, sin subir el
-   matiz hacia el amarillo, que es donde vive el oro latón. La tinta cumple en el punto más claro y en el más hondo
-   del degradado (9,9:1 y 6,7:1). */
+/* ── LOS BOTONES POR FUNCIÓN (ver `_forms-and-buttons.scss`) ──────────────────────────────────────────────
+   Tema de pocos tonos —fósforo, latón, la lámpara de sodio y el rojo—, así que cada uno tiene UNA función:
+   CONFIRMAR es el FÓSFORO; ABRIR / IR, la LÁMPARA DE SODIO —el naranja fluorescente que antes era el neutro, con
+   su tubo encendido tal cual—; LO ENCENDIDO, el ORO LATÓN del sello. El neutro baja a PLACA DE COGITADOR con filete
+   de latón, y descartar se queda en el filete. Las listas: En curso toma el naranja de sodio (teñido, no compite
+   con el macizo de abrir) y Próximos el latón, porque el fósforo de su gráfica y el verde de completar son, en un
+   botón teñido, el mismo verde.
+
+   Tintas: sodio 9,9:1 en el centro y 6,7:1 en el borde · latón 8,9:1 · fósforo de siempre. En el códice (claro):
+   sodio de minio con blanco 4,8:1 · latón ahondado #8a6210 con blanco 5,5:1. */
+:root[data-palette="grimdark"] {
+  --btn-sel: var(--grim-gold); --btn-sel-ink: var(--on-accent);
+  --move-e: #ff8a3d; --move-p: var(--grim-gold);
+}
+:root[data-palette="grimdark"][data-theme="light"] {
+  --btn-sel: #8a6210; --btn-sel-ink: #fff;
+  --move-e: #b84a00; --move-p: #8a6210;
+}
+/* El neutro: placa de cogitador con filete de latón. `:where` lo deja en (0,2,0) para que cualquier función lo pise. */
 :root[data-palette="grimdark"] :where(.btn:not(.btn-icon):not(.btn-ghost)) {
+  background: var(--surface-elevated) !important;
+  color: var(--text) !important;
+  border-color: var(--grim-gold) !important;
+  box-shadow: none !important;
+}
+:root[data-palette="grimdark"][data-theme="light"] :where(.btn:not(.btn-icon):not(.btn-ghost)) { background: #f9f4e6 !important; color: #1b1e1a !important; border-color: #9a6f14 !important; }
+:root[data-palette="grimdark"] .btn-steam,
+:root[data-palette="grimdark"] .btn-primary { background: var(--grim-green) !important; color: var(--on-accent) !important; border-color: var(--grim-green) !important; box-shadow: 0 0 12px rgba(67, 245, 88, .4) !important; }
+:root[data-palette="grimdark"][data-theme="light"] .btn-steam,
+:root[data-palette="grimdark"][data-theme="light"] .btn-primary { color: #fff !important; box-shadow: none !important; }
+/* ABRIR: la lámpara de sodio encendida —el centro arde más claro que los bordes (`inset`) y la luz se derrama en dos
+   halos—, sin subir el matiz hacia el amarillo, que es donde vive el latón. */
+:root[data-palette="grimdark"] .btn-open {
   background: radial-gradient(120% 160% at 50% 50%, #ffa45c 0%, #ff7f24 55%, #ff6a10 100%) !important;
   color: #1a0a00 !important;
   border-color: #ffb27a !important;
   box-shadow: inset 0 0 8px rgba(255, 214, 160, .55), 0 0 6px rgba(255, 122, 26, .75), 0 0 18px rgba(255, 106, 16, .5) !important;
 }
-/* En el códice: naranja de minio más hondo con rótulo blanco (4,8:1) y un halo apenas insinuado. */
-:root[data-palette="grimdark"][data-theme="light"] :where(.btn:not(.btn-icon):not(.btn-ghost)) { background: #c24d00 !important; color: #fff !important; box-shadow: 0 0 6px rgba(194, 77, 0, .25) !important; }
-:root[data-palette="grimdark"] .btn-accent,
-:root[data-palette="grimdark"] .btn-playing,
-:root[data-palette="grimdark"] .btn-steam,
-:root[data-palette="grimdark"] .btn-primary,
-:root[data-palette="grimdark"] .btn.is-active,
-:root[data-palette="grimdark"] .btn-toggle.active { background: var(--grim-green) !important; color: var(--on-accent) !important; border-color: var(--grim-green) !important; box-shadow: 0 0 12px rgba(67, 245, 88, .4) !important; }
-/* "General" del panel: el sello imperial es de oro, así que el principal se marca tirando ese filete hacia el
-   verde de cogitador. Ni relleno ni glow —eso es del comando activo—, solo el borde. */
-:root[data-palette="grimdark"] .scope-tabs > .btn-toggle:first-child:not(.active) { border-color: color-mix(in srgb, var(--grim-green) 55%, var(--grim-gold)); }
-:root[data-palette="grimdark"][data-theme="light"] .btn-accent,
-:root[data-palette="grimdark"][data-theme="light"] .btn-playing,
-:root[data-palette="grimdark"][data-theme="light"] .btn-steam,
-:root[data-palette="grimdark"][data-theme="light"] .btn-primary,
-:root[data-palette="grimdark"][data-theme="light"] .btn.is-active,
-:root[data-palette="grimdark"][data-theme="light"] .btn-toggle.active { color: #fff !important; box-shadow: none !important; }
-/* NAVEGACIÓN: verde de cogitador y ORO LATÓN del sello, alternos dentro de cada fila (`of .btn-accent` cuenta solo
-   los de navegación; sin soporte, todos quedan en verde). «Pasar a próximos» lleva el oro fijo, igual que «Pasar
-   a en curso» lleva el verde. Tinta del fondo sobre el oro (8,9:1); en claro el oro baja un punto para el blanco
-   (#8a6210, 5,5:1: el `--grim-gold` de claro se queda en 4,51, al filo). */
-:root[data-palette="grimdark"] .btn-accent:nth-child(even of .btn-accent),
-:root[data-palette="grimdark"] .btn-upcoming { background: var(--grim-gold) !important; color: var(--on-accent) !important; border-color: var(--grim-gold) !important; box-shadow: 0 0 12px rgba(224, 169, 43, .4) !important; }
-:root[data-palette="grimdark"][data-theme="light"] .btn-accent:nth-child(even of .btn-accent),
-:root[data-palette="grimdark"][data-theme="light"] .btn-upcoming { background: #8a6210 !important; color: #fff !important; border-color: #8a6210 !important; box-shadow: none !important; }
-:root[data-palette="grimdark"] .btn-complete { background: var(--success) !important; color: #04140a !important; border-color: color-mix(in srgb, var(--success) 55%, #000) !important; }
-:root[data-palette="grimdark"] .btn-danger,
-:root[data-palette="grimdark"] .btn-abandoned { background: var(--danger-fill) !important; color: #fff !important; border-color: color-mix(in srgb, var(--danger) 55%, #000) !important; }
-:root[data-palette="grimdark"][data-theme="light"] .btn-complete { color: #fff !important; }
-/* El halo del neutro va con `!important` sobre TODO `.btn` (es el `:where` de arriba), y estos tres roles no ponen
-   sombra propia: sin esto, completar, abandonar y borrar salían con la luz naranja de la lámpara de sodio. Se les
-   devuelve lo que tenían —ninguna en reposo y el fósforo verde al pasar por encima—. */
-:root[data-palette="grimdark"] :is(.btn-complete, .btn-danger, .btn-abandoned) { box-shadow: none !important; }
-:root[data-palette="grimdark"] :is(.btn-complete, .btn-danger, .btn-abandoned):not(:disabled):hover { box-shadow: 0 0 14px rgba(67, 245, 88, .3) !important; }
+/* En el códice: naranja de minio más hondo con rótulo blanco y un halo apenas insinuado. */
+:root[data-palette="grimdark"][data-theme="light"] .btn-open { background: #c24d00 !important; color: #fff !important; box-shadow: 0 0 6px rgba(194, 77, 0, .25) !important; }
+:root[data-palette="grimdark"] :is(.btn.is-active, .btn-toggle.active, .btn-toggle-deck.active) {
+  background: var(--role-c) !important; color: var(--role-ink) !important; border-color: var(--role-c) !important;
+  box-shadow: 0 0 12px rgba(224, 169, 43, .4) !important;
+}
+:root[data-palette="grimdark"][data-theme="light"] :is(.btn.is-active, .btn-toggle.active, .btn-toggle-deck.active) { box-shadow: none !important; }
+/* «General» del panel: el principal se distingue de los años por el filete, mezclando el verde de cogitador. */
+:root[data-palette="grimdark"] .scope-tabs > .btn-toggle:first-child:not(.active) { border-color: color-mix(in srgb, var(--grim-green) 55%, var(--grim-gold)) !important; }
+/* Los teñidos: placa con el filete, el texto y un halo corto de su color. */
+:root[data-palette="grimdark"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend, .consent-btn-accept) {
+  background: color-mix(in srgb, var(--role-c) 10%, var(--surface)) !important;
+  color: var(--role-t) !important;
+  border-color: var(--role-c) !important;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--role-c) 35%, transparent) !important;
+}
+:root[data-palette="grimdark"][data-theme="light"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend, .consent-btn-accept) {
+  --role-t: color-mix(in srgb, var(--role-c) 68%, #000);
+  background: color-mix(in srgb, var(--role-c) 8%, #fffaf0) !important;
+  box-shadow: none !important;
+}
+:root[data-palette="grimdark"] .btn-danger { background: var(--danger-fill) !important; color: #fff !important; border-color: color-mix(in srgb, var(--danger) 55%, #000) !important; box-shadow: none !important; }
+/* Descartar: solo el filete de latón. */
+:root[data-palette="grimdark"] .btn-quiet { background: transparent !important; color: var(--text-muted) !important; border-color: color-mix(in srgb, var(--grim-gold) 55%, transparent) !important; }
 :root[data-palette="grimdark"] .btn-ghost { font-family: var(--font-label); font-weight: 600; letter-spacing: .05em; }
 /* Hover: plano + glow de fósforo verde (sin el giro 3D base). */
 :root[data-palette="grimdark"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 14px rgba(67, 245, 88, .3); }
@@ -236,10 +252,12 @@
   box-shadow: inset 0 0 0 1px var(--grim-green);
 }
 :root[data-palette="grimdark"] .input-base,
+:root[data-palette="grimdark"] .tag-inp-wrap,
 :root[data-palette="grimdark"] .finput,
 :root[data-palette="grimdark"] .ftextarea,
 :root[data-palette="grimdark"] .search-input { border: 1px solid rgba(67, 245, 88, .35) !important; border-radius: 0 !important; }
 :root[data-palette="grimdark"][data-theme="light"] .input-base,
+:root[data-palette="grimdark"][data-theme="light"] .tag-inp-wrap,
 :root[data-palette="grimdark"][data-theme="light"] .finput,
 :root[data-palette="grimdark"][data-theme="light"] .ftextarea,
 :root[data-palette="grimdark"][data-theme="light"] .search-input { border-color: rgba(21, 122, 55, .45) !important; }
@@ -279,11 +297,14 @@
 :root[data-palette="grimdark"] .hub-review-date::before { content: '>'; color: var(--grim-green); font-weight: 700; }
 :root[data-palette="grimdark"] .hub-feed-review-text,
 :root[data-palette="grimdark"] .hub-review-text {
-  font-style: italic;
   border-left: 3px solid var(--grim-green);
   padding-left: .7rem;
   color: var(--text);
 }
+/* LA CURSIVA, SOLO EN EL EXTRACTO DEL FEED: cuatro líneas que se leen como una cita. En la reseña entera —el
+   detalle y la lista de reseñas de un perfil— eran párrafos largos en cursiva, que cansa (09-10-2026). */
+:root[data-palette="grimdark"] .hub-feed-activity-item .hub-feed-review-text { font-style: italic; }
+:root[data-palette="grimdark"] .hub-feed-card-detail .hub-feed-review-text { font-style: normal; }
 
 /* ── §11 · Ruleta = PANTALLA DE COGITADOR. Tambor = pantalla con scanlines verdes y marco de oro; el visor de
    selección es un marco VERDE luminoso; nombres en blackletter (§1); etiqueta en oro. ── */
@@ -956,3 +977,61 @@
 }
 :root[data-palette="grimdark"][data-theme="light"] .stars .f,
 :root[data-palette="grimdark"][data-theme="light"] .star-inp button.f { text-shadow: none; }
+
+/* El botón «Amigos» de la ficha (`.btn-friend`): un rosa de vidriera, encendido como el verde de cogitador; con uno
+   apagado, sobre la placa casi negra no se leía como rosa. */
+:root[data-palette="grimdark"] { --btn-friend: #ec5c98; }
+:root[data-palette="grimdark"][data-theme="light"] { --btn-friend: #8a2c4f; }
+
+/* «Amigos» a la luz: el latón sobre el pergamino se quedaba en 4,1:1 (09-10-2026); el rótulo va más hondo, el filete
+   y la cruz siguen en el latón. */
+:root[data-palette="grimdark"][data-theme="light"] .hub-friend-chip { color: color-mix(in srgb, var(--grim-gold) 80%, #000); }
+
+/* La fecha del día a la luz: el latón sobre el pergamino se quedaba en 3,3:1 (09-10-2026); el rótulo, más hondo. */
+:root[data-palette="grimdark"][data-theme="light"] .hub-feed-day-header h4 { color: color-mix(in srgb, var(--grim-gold) 72%, #000); }
+
+/* ── EL TÍTULO DE PANTALLA (09-10-2026) ───────────────────────────────────────────────────────────────────────────
+   Un gesto del juego en el título de cada pantalla del hub (`.hub-hub-title-wrap h2`), elegido con
+   `docs/maquetas/titulos-temas.html`. Sin `text-transform`: las mayúsculas las pone la casilla de Apariencia, y
+   cualquier animación se queda quieta con los efectos apagados o si el sistema pide menos movimiento. ── */
+/* PERGAMINO DE JURAMENTO: el título sobre una tira de pergamino, como las letanías que cuelgan de los tanques, con un
+   SELLO DE PUREZA en el extremo. El sello está hecho como el lacre de «Plata y acero» (`witcher.scss`): la silueta
+   irregular de la cera, un relieve con el emblema ESTAMPADO —la calavera, hundida en la propia cera, roja sobre
+   roja, como los sellos de los Marines— y un brillo; las capas se funden en `soft-light` sobre el rojo. */
+:root[data-palette="grimdark"] {
+  --gd-lacre-sil: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Cpath%20d%3D%27M90.9%2C50.0L90.7%2C50.9L90.3%2C51.7L89.7%2C52.5L89.0%2C53.3L88.3%2C54.0L87.7%2C54.8L87.5%2C55.5L87.6%2C56.4L88.2%2C57.3L89.0%2C58.3L89.9%2C59.4L90.7%2C60.4L91.2%2C61.5L91.3%2C62.5L91.3%2C63.4L91.0%2C64.3L90.7%2C65.2L90.5%2C66.0L90.3%2C67.0L90.1%2C67.9L89.8%2C68.7L89.1%2C69.4L88.2%2C70.0L87.0%2C70.3L85.6%2C70.6L84.3%2C70.8L83.3%2C71.1L82.5%2C71.6L82.0%2C72.3L81.9%2C73.2L81.8%2C74.2L81.8%2C75.2L81.6%2C76.1L81.2%2C77.0L80.8%2C77.7L80.3%2C78.5L79.9%2C79.3L79.6%2C80.2L79.3%2C81.2L79.0%2C82.3L78.6%2C83.2L78.0%2C83.9L77.1%2C84.2L76.0%2C84.3L74.7%2C84.0L73.4%2C83.7L72.2%2C83.4L71.1%2C83.3L70.2%2C83.4L69.5%2C83.7L68.8%2C84.2L68.1%2C84.7L67.4%2C85.1L66.6%2C85.4L65.9%2C85.7L65.1%2C86.0L64.5%2C86.6L63.9%2C87.4L63.4%2C88.4L62.9%2C89.6L62.3%2C90.8L61.6%2C91.7L60.8%2C92.2L59.9%2C92.3L58.9%2C92.0L57.9%2C91.5L56.9%2C90.9L56.0%2C90.5L55.1%2C90.2L54.2%2C90.0L53.3%2C89.8L52.5%2C89.6L51.6%2C89.2L50.8%2C88.6L50.0%2C88.0L49.2%2C87.4L48.4%2C87.2L47.7%2C87.3L46.8%2C87.8L45.9%2C88.6L45.0%2C89.5L44.1%2C90.2L43.1%2C90.7L42.2%2C90.8L41.4%2C90.5L40.6%2C90.1L39.8%2C89.6L39.1%2C89.2L38.3%2C88.8L37.5%2C88.5L36.7%2C88.1L36.0%2C87.5L35.5%2C86.7L35.0%2C85.8L34.5%2C84.7L34.1%2C83.8L33.6%2C83.1L32.9%2C82.8L31.9%2C82.9L30.8%2C83.3L29.4%2C83.9L28.1%2C84.6L26.7%2C85.1L25.4%2C85.3L24.3%2C85.4L23.1%2C85.4L22.0%2C85.4L20.7%2C85.4L19.4%2C85.4L18.1%2C85.4L16.9%2C85.2L15.9%2C84.8L15.3%2C84.0L14.9%2C82.9L14.9%2C81.6L15.1%2C80.1L15.2%2C78.8L15.2%2C77.6L14.9%2C76.6L14.4%2C75.9L13.7%2C75.2L13.0%2C74.6L12.4%2C73.9L11.8%2C73.1L11.3%2C72.3L10.8%2C71.5L10.2%2C70.8L9.4%2C70.2L8.3%2C69.6L7.2%2C69.1L6.0%2C68.5L5.1%2C67.8L4.6%2C66.9L4.5%2C65.8L4.8%2C64.7L5.3%2C63.5L5.9%2C62.3L6.3%2C61.2L6.6%2C60.2L6.7%2C59.2L6.8%2C58.2L6.9%2C57.3L7.1%2C56.3L7.5%2C55.4L8.0%2C54.4L8.4%2C53.5L8.6%2C52.6L8.4%2C51.7L7.9%2C50.9L7.2%2C50.0L6.4%2C49.1L5.6%2C48.1L5.2%2C47.2L5.2%2C46.2L5.5%2C45.3L6.1%2C44.5L6.8%2C43.6L7.4%2C42.8L7.9%2C42.0L8.3%2C41.1L8.7%2C40.3L9.2%2C39.5L9.8%2C38.8L10.7%2C38.1L11.6%2C37.5L12.5%2C37.0L13.2%2C36.3L13.5%2C35.5L13.4%2C34.6L12.9%2C33.5L12.2%2C32.2L11.5%2C30.9L11.0%2C29.6L10.7%2C28.4L10.7%2C27.3L10.9%2C26.3L11.1%2C25.3L11.3%2C24.3L11.4%2C23.2L11.6%2C22.1L11.9%2C21.0L12.4%2C20.2L13.2%2C19.5L14.3%2C19.2L15.7%2C19.1L17.1%2C19.1L18.5%2C19.2L19.7%2C19.0L20.6%2C18.7L21.2%2C18.0L21.7%2C17.2L22.2%2C16.4L22.7%2C15.5L23.3%2C14.8L23.9%2C14.1L24.7%2C13.5L25.3%2C12.9L25.9%2C12.1L26.4%2C11.1L26.9%2C10.0L27.4%2C8.9L28.1%2C8.1L28.9%2C7.6L30.0%2C7.4L31.2%2C7.7L32.4%2C8.2L33.7%2C8.7L34.8%2C9.2L35.9%2C9.4L36.8%2C9.4L37.7%2C9.4L38.6%2C9.2L39.5%2C9.2L40.4%2C9.3L41.4%2C9.4L42.3%2C9.6L43.2%2C9.6L44.0%2C9.3L44.8%2C8.7L45.6%2C7.8L46.4%2C6.8L47.2%2C6.0L48.1%2C5.4L49.1%2C5.3L50.0%2C5.6L50.9%2C6.1L51.8%2C6.8L52.7%2C7.5L53.5%2C8.0L54.4%2C8.4L55.2%2C8.7L56.0%2C9.1L56.8%2C9.6L57.6%2C10.2L58.3%2C10.9L59.0%2C11.6L59.7%2C12.1L60.5%2C12.2L61.5%2C12.0L62.6%2C11.3L63.8%2C10.5L65.0%2C9.6L66.3%2C8.9L67.5%2C8.5L68.5%2C8.3L69.5%2C8.5L70.5%2C8.7L71.4%2C9.0L72.4%2C9.3L73.4%2C9.5L74.4%2C9.8L75.2%2C10.3L75.9%2C11.1L76.3%2C12.2L76.5%2C13.5L76.6%2C15.0L76.6%2C16.5L76.7%2C17.7L77.0%2C18.7L77.6%2C19.4L78.3%2C19.9L79.0%2C20.3L79.8%2C20.8L80.4%2C21.4L80.9%2C22.2L81.3%2C23.0L81.7%2C23.8L82.2%2C24.5L82.8%2C25.1L83.5%2C25.7L84.2%2C26.3L84.7%2C26.9L85.0%2C27.8L85.0%2C28.8L84.7%2C30.0L84.1%2C31.2L83.6%2C32.4L83.2%2C33.5L83.0%2C34.5L83.1%2C35.3L83.5%2C35.9L83.9%2C36.6L84.4%2C37.2L84.9%2C37.9L85.2%2C38.6L85.6%2C39.3L86.0%2C39.9L86.7%2C40.6L87.7%2C41.2L89.0%2C41.7L90.3%2C42.3L91.5%2C43.0L92.4%2C43.7L92.8%2C44.6L92.8%2C45.5L92.5%2C46.4L91.9%2C47.4L91.3%2C48.3L90.9%2C49.1Z%27%20fill%3D%27%23fff%27%2F%3E%3C%2Fsvg%3E");
+  --gd-lacre-rel: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Cfilter%20id%3D%27c%27%20x%3D%270%27%20y%3D%270%27%20width%3D%27100%25%27%20height%3D%27100%25%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%271.15%27%20numOctaves%3D%273%27%20seed%3D%279%27%20result%3D%27n%27%2F%3E%3CfeDiffuseLighting%20in%3D%27n%27%20surfaceScale%3D%271.1%27%20diffuseConstant%3D%27.92%27%20lighting-color%3D%27%23c8c8c8%27%3E%3CfeDistantLight%20azimuth%3D%27228%27%20elevation%3D%2758%27%2F%3E%3C%2FfeDiffuseLighting%3E%3C%2Ffilter%3E%3Crect%20width%3D%27100%27%20height%3D%27100%27%20filter%3D%27url%28%23c%29%27%2F%3E%3Ccircle%20cx%3D%2750%27%20cy%3D%2750%27%20r%3D%2736%27%20fill%3D%27none%27%20stroke%3D%27%237a7a7a%27%20stroke-width%3D%272.6%27%2F%3E%3Ccircle%20cx%3D%2750%27%20cy%3D%2751%27%20r%3D%2736%27%20fill%3D%27none%27%20stroke%3D%27%23fff%27%20stroke-opacity%3D%27.3%27%20stroke-width%3D%271%27%2F%3E%3Cg%20transform%3D%27translate%2823%2024%29%20scale%282.25%29%27%3E%3Cpath%20fill-rule%3D%27evenodd%27%20clip-rule%3D%27evenodd%27%20d%3D%27M12%202.2C7.4%202.2%203.6%205.8%203.6%2010.4c0%202.6%201.3%204.8%203.3%206.3.6.4%201%201.2%201%201.9v.6c0%201%20.8%201.8%201.8%201.8h.1v-1.6c0-.4.3-.7.7-.7s.7.3.7.7v1.6h1.4v-1.6c0-.4.3-.7.7-.7s.7.3.7.7v1.6h.1c1%200%201.8-.8%201.8-1.8v-.6c0-.7.4-1.5%201-1.9%202-1.5%203.3-3.7%203.3-6.3%200-4.6-3.8-8.2-8.4-8.2Zm-3.4%206.2c1.3%200%202.3%201.1%202.3%202.4S9.8%2013.2%208.6%2013.2%206.3%2012.1%206.3%2010.8%207.3%208.4%208.6%208.4Zm6.8%200c1.3%200%202.3%201.1%202.3%202.4s-1%202.4-2.3%202.4-2.3-1.1-2.3-2.4%201-2.4%202.3-2.4ZM12%2013.2l1.1%202.3h-2.2L12%2013.2Z%27%20fill%3D%27%23fff%27%20fill-opacity%3D%27.35%27%20transform%3D%27translate%28.35%20.45%29%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate%2823%2024%29%20scale%282.25%29%27%3E%3Cpath%20fill-rule%3D%27evenodd%27%20clip-rule%3D%27evenodd%27%20d%3D%27M12%202.2C7.4%202.2%203.6%205.8%203.6%2010.4c0%202.6%201.3%204.8%203.3%206.3.6.4%201%201.2%201%201.9v.6c0%201%20.8%201.8%201.8%201.8h.1v-1.6c0-.4.3-.7.7-.7s.7.3.7.7v1.6h1.4v-1.6c0-.4.3-.7.7-.7s.7.3.7.7v1.6h.1c1%200%201.8-.8%201.8-1.8v-.6c0-.7.4-1.5%201-1.9%202-1.5%203.3-3.7%203.3-6.3%200-4.6-3.8-8.2-8.4-8.2Zm-3.4%206.2c1.3%200%202.3%201.1%202.3%202.4S9.8%2013.2%208.6%2013.2%206.3%2012.1%206.3%2010.8%207.3%208.4%208.6%208.4Zm6.8%200c1.3%200%202.3%201.1%202.3%202.4s-1%202.4-2.3%202.4-2.3-1.1-2.3-2.4%201-2.4%202.3-2.4ZM12%2013.2l1.1%202.3h-2.2L12%2013.2Z%27%20fill%3D%27%235c5c5c%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+}
+:root[data-palette="grimdark"] .hub-hub-title-wrap h2 {
+  position: relative;
+  font-family: 'UnifrakturCook', serif;
+  color: #2a1a0a !important;
+  text-shadow: none !important;
+  margin-left: .9rem;
+  padding: .2rem 1rem .25rem 1.9rem;
+  background: linear-gradient(180deg, #efe2bd, #d8c48e);
+  clip-path: polygon(0 0, 100% 0, calc(100% - .5rem) 50%, 100% 100%, 0 100%);
+}
+/* El sello va FUERA del recorte del pergamino (el `clip-path` lo cortaría): en la caja de título, a caballo del
+   borde izquierdo de la tira. */
+:root[data-palette="grimdark"] .hub-hub-title-wrap { position: relative; }
+:root[data-palette="grimdark"] .hub-hub-title-wrap::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  top: 50%;
+  width: 2.2rem;
+  height: 2.2rem;
+  margin-top: -1.1rem;
+  transform: rotate(-8deg);
+  -webkit-mask-image: var(--gd-lacre-sil); mask-image: var(--gd-lacre-sil);
+  -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  background-image: var(--gd-lacre-rel),
+    radial-gradient(60% 60% at 40% 32%, rgba(255, 255, 255, .22) 0%, transparent 58%),
+    linear-gradient(166deg, #d2392b 0%, #9e1a12 46%, #5e0c08 100%);
+  background-size: 100% 100%, auto, auto;
+  background-blend-mode: soft-light, soft-light, normal;
+  filter: drop-shadow(0 1.5px 1.5px rgba(18, 10, 4, .8));
+}

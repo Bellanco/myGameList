@@ -193,8 +193,12 @@
    El `:root` y el `h5` del selector no son adorno: los temas llegan a (0,3,0) desde
    `:root[data-palette="…"] .hub-review-game`, así que hay que sumar (0,3,1) para ganarles — el mismo truco, y por
    el mismo motivo, que `.hub-review-detail-game` unas líneas más arriba. Lo demás se les deja pasar a propósito:
-   el color, el relleno y la forma son cosa del tema; esta regla solo discute el ANCHO. */
-:root .hub-related-entry h5.hub-review-game {
+   el color, el relleno y la forma son cosa del tema; esta regla solo discute el ANCHO.
+   LO MISMO EN LA LISTA DE RESEÑAS DE UN PERFIL (09-10-2026): allí la tarjeta es ancha, y en Arcade el título era
+   una barra cian de lado a lado; en Plata y acero, una tira de pergamino con el nombre diminuto al principio. En
+   los temas que no visten el título de etiqueta no cambia nada: sin fondo, medir lo que mide el nombre no se ve. */
+:root .hub-related-entry h5.hub-review-game,
+:root .hub-review-entry h4.hub-review-game {
   align-self: start;
   max-width: 100%;
 }

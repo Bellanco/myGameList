@@ -121,6 +121,23 @@ export async function idbDelete(storeName: string, key: IDBValidKey): Promise<vo
   });
 }
 
+/**
+ * VACÍA el almacén `profileCache` entero. Solo guarda datos del espacio social: los listados de tus amistades (en
+ * crudo, con lo que esconden), el directorio, tus amistades con sus ids de gist, las consultas y tu propio perfil.
+ * Lo llama el cierre de sesión (ver `forgetSocialDataOnDevice`): en un navegador compartido, nada de eso debe
+ * quedarse para quien venga después.
+ */
+export async function clearProfileCacheStore(): Promise<void> {
+  const db = await openSharedDatabase();
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(PROFILE_CACHE_STORE, 'readwrite');
+    tx.objectStore(PROFILE_CACHE_STORE).clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error(`clear failed: ${PROFILE_CACHE_STORE}`));
+    tx.onabort = () => reject(tx.error || new Error(`clear aborted: ${PROFILE_CACHE_STORE}`));
+  });
+}
+
 // LocalMeta (store `meta`, keyPath '_key', único registro 'singleton').
 export async function getLocalMeta(): Promise<LocalMeta | null> {
   try {

@@ -17,7 +17,8 @@ import { TAB_IDS, type GameItem, type TabData } from '../../model/types/game';
 import type { RelationshipState, SocialProfileVisibility } from '../../model/types/social';
 import type { RelatedReviewAnchor } from '../../core/social/relatedReviews';
 import { isOwnProfileIdentity } from './socialIdentity';
-import type { SocialActivityFeedItem, SocialDirectoryEntry } from './socialFeed';
+import { isVisibilityKnown, type SocialActivityFeedItem, type SocialDirectoryEntry } from './socialFeed';
+import { LOCKED_VISIBILITY } from '../../core/utils/profileVisibility';
 import { OWN_PROFILE_ALIAS, type SocialRouteState } from './socialRoutes';
 import { useForeignProfileGames } from './useForeignProfileGames';
 import { useRelatedReviews } from './useRelatedReviews';
@@ -137,9 +138,12 @@ export function useSocialReading({
     if (!isOwn) {
       // Perfiles ajenos: si ya bajamos su lista completa (gist de listados, filtrada por su visibilidad) la
       // mostramos; mientras llega (o si no hay token/datos) se queda index-only y el componente muestra el vacío.
+      // Si aún no se sabe lo que esconde, la ficha lo pinta como todo oculto: es lo mismo con lo que se filtran sus
+      // listados (ver `useForeignProfileGames`, regla 2).
+      const shown = isVisibilityKnown(entry) ? entry : { ...entry, visibility: LOCKED_VISIBILITY };
       const foreign = foreignGames[entry.id];
-      if (foreign) return { ...entry, sharedLists: foreign };
-      return entry;
+      if (foreign) return { ...shown, sharedLists: foreign };
+      return shown;
     }
 
     return {
@@ -341,13 +345,14 @@ export function useSocialReading({
   });
 
   // Amigo inactivo (su gist social no se leyó al hidratar el directorio, para no ocupar el feed ni gastar la
-  // llamada): al ABRIR su perfil sí se lee, para que su hero no salga a medias (nombre/visibilidad/foto).
-  // La actividad se deja fuera a propósito: el corte por inactividad es sobre el feed, no sobre su perfil.
+  // llamada) o cuyo gist no se pudo leer: al ABRIR su perfil sí se lee, para que su hero no salga a medias
+  // (nombre/visibilidad/foto) y, sobre todo, para conocer lo que esconde: hasta entonces sus listados se filtran
+  // como todo oculto. La actividad se deja fuera a propósito: el corte por inactividad es sobre el feed.
   useEffect(() => {
     if (activePanel !== 'profile-detail' && activePanel !== 'profile-review') return;
     if (!profileDetailId) return;
     const entry = directory.find((item) => item.id === profileDetailId);
-    if (!entry?.socialSkipped || !entry.socialGistId) return;
+    if (!(entry?.socialSkipped || entry?.socialUnreadable) || !entry.socialGistId) return;
 
     let cancelled = false;
     const token = getSocialSyncConfig()?.token || fallbackToken;
@@ -360,6 +365,7 @@ export function useSocialReading({
           photoURL: socialData.profile.photoURL || (showsPhoto ? entry.photoURL : ''),
           visibility: socialData.profile.visibility || defaultVisibility,
           socialSkipped: false,
+          socialUnreadable: false,
         });
       })
       .catch(() => {

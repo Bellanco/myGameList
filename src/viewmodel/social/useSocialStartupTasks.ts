@@ -87,6 +87,12 @@ export interface SocialStartupTasksOptions {
   ownPublishablePhoto: string;
   /** ¿Sigue sin resolverse si la foto es genérica? Mientras lo esté, no se sella nada que lleve foto. */
   ownPhotoVerdictPending: boolean;
+  /**
+   * Amistades aceptadas que pedí yo y aún no llevan mis ids de gist (`FriendshipView.ownGistIdsMissing`), por id de
+   * documento. La petición sale sin ellos; en cuanto la veo aceptada hay que escribirlos, o esa amistad no puede
+   * leer mis listas hasta la revisión semanal del saneado.
+   */
+  acceptedWithoutMyIds?: string[];
 }
 
 export function useSocialStartupTasks(options: SocialStartupTasksOptions): void {
@@ -98,6 +104,7 @@ export function useSocialStartupTasks(options: SocialStartupTasksOptions): void 
     profileName,
     ownPublishablePhoto,
     ownPhotoVerdictPending,
+    acceptedWithoutMyIds = [],
   } = options;
 
   /**
@@ -108,6 +115,9 @@ export function useSocialStartupTasks(options: SocialStartupTasksOptions): void 
   const launchedRef = useRef(new Set<string>());
 
   const nick = profileName.trim();
+  // Clave estable de las amistades aceptadas sin mis ids: es lo que entra en la huella y en las dependencias (la
+  // lista llega como array nuevo en cada cambio de amistades; la clave solo cambia si cambian los documentos).
+  const acceptedWithoutMyIdsKey = [...acceptedWithoutMyIds].sort().join(',');
 
   useEffect(() => {
     if (!socialSpaceOpen || !uid || !socialGistId) {
@@ -129,6 +139,21 @@ export function useSocialStartupTasks(options: SocialStartupTasksOptions): void 
           socialGistId,
           gamesGistId,
         }),
+      },
+      {
+        // MIS IDS DE GIST, AL ACEPTARSE UNA PETICIÓN MÍA. Salen vacíos de la petición (privacidad: el destinatario
+        // la lee aunque no acepte), así que aquí se escriben en cuanto la veo aceptada. FORZADO: la huella de mi
+        // identidad no ha cambiado, y sin forzar el saneado no leería nada hasta la revisión semanal.
+        name: 'friendshipIdsAfterAccept',
+        fingerprint: acceptedWithoutMyIdsKey && nick && !ownPhotoVerdictPending
+          ? `${acceptedWithoutMyIdsKey}|${socialGistId}|${gamesGistId}`
+          : '',
+        run: () => healOwnFriendshipIdentity(uid, {
+          name: nick,
+          photo: ownPublishablePhoto,
+          socialGistId,
+          gamesGistId,
+        }, { force: true }),
       },
       {
         // La réplica del nick en `profiles` (la que lee el directorio) puede quedar desacordada con el gist, que
@@ -197,5 +222,5 @@ export function useSocialStartupTasks(options: SocialStartupTasksOptions): void 
     return () => {
       cancelled = true;
     };
-  }, [socialSpaceOpen, uid, socialGistId, gamesGistId, nick, ownPublishablePhoto, ownPhotoVerdictPending]);
+  }, [socialSpaceOpen, uid, socialGistId, gamesGistId, nick, ownPublishablePhoto, ownPhotoVerdictPending, acceptedWithoutMyIdsKey]);
 }

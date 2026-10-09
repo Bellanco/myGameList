@@ -73,7 +73,7 @@
     background: radial-gradient(60% 120% at 100% 0%, rgb(255 255 255 / .16), transparent 70%);
   }
 
-  .ys-kicker, .ys-chap, .ys-lead, .ys-avg span { color: color-mix(in srgb, var(--on-accent) 82%, transparent); }
+  .ys-kicker, .ys-lead, .ys-avg span { color: color-mix(in srgb, var(--on-accent) 82%, transparent); }
 }
 
 /* LA COMPOSICIÓN DE LA PORTADA: un mosaico inclinado de carátulas en la mitad derecha, que se funde con el acento
@@ -106,15 +106,7 @@
   }
 }
 
-/* La nota media y el número de capítulo caen sobre las carátulas: llevan una placa del acento para leerse, sin
-   añadir alto a su fila. */
-.ys-card.is-accent .ys-chap {
-  margin: -.25rem -.45rem;
-  padding: .25rem .45rem;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--steam) 82%, transparent);
-}
-
+/* La nota media cae sobre las carátulas: lleva una placa del acento para leerse, sin añadir alto a su fila. */
 .ys-card.is-accent .ys-avg {
   margin: -.3rem -.6rem;
   padding: .3rem .6rem;
@@ -166,14 +158,6 @@
 
 .ys-kicker-icon { width: 1.15em; height: 1.15em; flex: none; color: var(--steam); }
 .ys-card.is-accent .ys-kicker-icon { color: inherit; }
-
-.ys-chap {
-  flex: none;
-  white-space: nowrap;
-  font: 700 var(--fs-xs) / 1 var(--font-mono);
-  letter-spacing: .08em;
-  color: var(--text-muted);
-}
 
 .ys-dim { color: var(--text-muted); }
 .ys-note { margin: 1rem 0 0; font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.45; }

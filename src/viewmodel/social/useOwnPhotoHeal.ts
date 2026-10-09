@@ -5,6 +5,7 @@ import { getSocialSyncConfig, readSocialGist, writeSocialGist } from '../../mode
 import { getLocalMeta, patchLocalMeta } from '../../model/repository/indexedDbRepository';
 import { updateProfilePhoto, type SocialAuthUser } from '../../model/repository/firebaseRepository';
 import type { SocialDirectoryEntry } from './socialFeed';
+import { serializeSocialWrite } from '../../model/repository/socialWriteQueue';
 
 export interface OwnPhotoHealInput {
   socialSpaceOpen: boolean;
@@ -63,27 +64,33 @@ export function useOwnPhotoHeal({
         const meta = await getLocalMeta();
         if (meta?.photoHealedFor === target) return;
 
-        const current = await readSocialGist(cfg.token, socialCfgGistId, null);
-        const data = current.data;
-        if (!data) return;
-        // El gist es la fuente de verdad: si el usuario tiene la foto desactivada, NO la republicamos (evita revertir
-        // su opt-out por una carrera con la hidratación del perfil, que arranca con showPhoto=true por defecto). La
-        // retirada de una genérica no se frena aquí: quitarla nunca va contra lo que el usuario quiso.
-        if (data.profile.visibility?.showPhoto === false && target) return;
+        // Leer y escribir EN FILA con el resto de escrituras del canal (ver `serializeSocialWrite`).
+        const outcome = await serializeSocialWrite(async (): Promise<'skip' | 'done'> => {
+          const current = await readSocialGist(cfg.token, socialCfgGistId, null);
+          const data = current.data;
+          if (!data) return 'skip';
+          // El gist es la fuente de verdad: si el usuario tiene la foto desactivada, NO la republicamos (evita revertir
+          // su opt-out por una carrera con la hidratación del perfil, que arranca con showPhoto=true por defecto). La
+          // retirada de una genérica no se frena aquí: quitarla nunca va contra lo que el usuario quiso.
+          if (data.profile.visibility?.showPhoto === false && target) return 'skip';
 
-        if ((data.profile.photoURL || '') !== target) {
-          await writeSocialGist(cfg.token, socialCfgGistId, {
-            // `photoURL: ''` no se publica: el saneado del gist descarta lo que no sea una URL válida, así que el
-            // campo desaparece del canal en vez de quedarse vacío.
-            profile: { ...data.profile, photoURL: target },
-            activity: data.activity,
-            posts: data.posts,
-            updatedAt: Date.now(),
-          });
-          // 2a — sin re-hidratación completa (~30 lecturas). La foto propia ya se ve por el fallback de sesión; solo
-          // parcheamos la entrada propia del directorio en memoria por si acaso, y la del directorio cacheado.
-          patchDirectoryEntries((e) => e.socialGistId === socialCfgGistId, { photoURL: target });
-        }
+          if ((data.profile.photoURL || '') !== target) {
+            await writeSocialGist(cfg.token, socialCfgGistId, {
+              // TODO EL CANAL SE CONSERVA y solo cambia la foto: copiar a mano `activity` y `posts` dejaba fuera los
+              // avisos de lista (`moves`, `hiddenMoves`), que el saneado rellenaba con `[]` (ver `useOwnProfileEditor`).
+              ...data,
+              // `photoURL: ''` no se publica: el saneado del gist descarta lo que no sea una URL válida, así que el
+              // campo desaparece del canal en vez de quedarse vacío.
+              profile: { ...data.profile, photoURL: target },
+              updatedAt: Date.now(),
+            });
+            // 2a — sin re-hidratación completa (~30 lecturas). La foto propia ya se ve por el fallback de sesión; solo
+            // parcheamos la entrada propia del directorio en memoria por si acaso, y la del directorio cacheado.
+            patchDirectoryEntries((e) => e.socialGistId === socialCfgGistId, { photoURL: target });
+          }
+          return 'done';
+        });
+        if (outcome === 'skip') return;
         // Propaga (o borra) también la foto en el doc público de Firestore (la lee el directorio), para que los demás
         // lo vean sin depender de que cada uno reabra la app y re-publique su gist. Best-effort.
         if (authUser?.uid) {

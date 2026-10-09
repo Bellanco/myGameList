@@ -29,7 +29,7 @@ import { matchSocialRoute, OWN_PROFILE_ALIAS } from './social/socialRoutes';
 /** Referencia estable: un `new Map()` inline rompería el memo del feed en cada render. */
 import { useSocialCompose, type OwnPostChange } from './social/useSocialCompose';
 import { useSocialLegalConsent } from './social/useSocialLegalConsent';
-import { DEFAULT_SOCIAL_VISIBILITY, useSocialProfileForm } from './social/useSocialProfileForm';
+import { DEFAULT_SOCIAL_VISIBILITY, hasUnsavedProfileChanges, useSocialProfileForm } from './social/useSocialProfileForm';
 import { useSocialReading } from './social/useSocialReading';
 import { useOwnAchievements } from './social/useOwnAchievements';
 import { useSocialGateway } from './social/useSocialGateway';
@@ -196,6 +196,8 @@ export function useSocialViewModel(options?: {
     // render — depender de él recrearía los callbacks siempre y traería de vuelta las hidrataciones repetidas que
     // el resto del fichero evita. Desestructurada es una referencia estable (`useCallback([])`).
     hydrate: hydrateProfileForm,
+    saved: savedProfile,
+    visibility: profileVisibility,
   } = profileForm;
   /**
    * La foto propia que SE PUEDE PUBLICAR, ya filtrada por las dos condiciones: que el usuario quiera mostrarla
@@ -260,6 +262,16 @@ export function useSocialViewModel(options?: {
     socialGistId: socialCfgGistId,
     gamesGistId: mainSyncConfig?.gistId || '',
   }), [ownPublishablePhoto, mainSyncConfig?.gistId, profileName, socialCfgGistId]);
+
+  // ¿Cambios del perfil sin guardar? Contra lo último guardado, con la foto EFECTIVA (ver la función).
+  const profileHasUnsavedChanges = useMemo(
+    () => hasUnsavedProfileChanges(
+      { name: profileName, visibility: profileVisibility },
+      savedProfile,
+      Boolean(authUser?.photoURL) && !ownPhotoIsGeneric,
+    ),
+    [authUser?.photoURL, ownPhotoIsGeneric, profileName, profileVisibility, savedProfile],
+  );
 
   // Amistades: estado, derivados y mutaciones (ver `social/useSocialFriendships`). Se monta AQUÍ y no más abajo
   // porque `friendUidSet` lo necesita la política de fotos del directorio, que se calcula a continuación.
@@ -431,6 +443,13 @@ export function useSocialViewModel(options?: {
   // de los ids públicos y latido de uso—, cada uno con su `useRef` de una vez. Ese `useRef` moría con el
   // desmontaje del hub, así que abrir el espacio social varias veces en una sesión los repetía todos. Ahora la
   // política vive escrita una vez, con sello persistente por dispositivo: ver `useSocialStartupTasks`.
+  // Amistades aceptadas que pedí yo y aún no llevan mis ids de gist: la petición sale sin ellos y el arranque los
+  // escribe en cuanto la ve aceptada (ver `useSocialStartupTasks`, tarea `friendshipIdsAfterAccept`).
+  const acceptedWithoutMyIds = useMemo(
+    () => friendships.friends.filter((view) => view.ownGistIdsMissing).map((view) => view.docId),
+    [friendships.friends],
+  );
+
   useSocialStartupTasks({
     socialSpaceOpen,
     uid: authUser?.uid,
@@ -439,6 +458,7 @@ export function useSocialViewModel(options?: {
     profileName,
     ownPublishablePhoto,
     ownPhotoVerdictPending,
+    acceptedWithoutMyIds,
   });
 
   // FASE 2 — MIGRACIÓN A CANAL SECRETO, una vez por sesión: `social/useSecretChannelMigration`.
@@ -937,6 +957,7 @@ export function useSocialViewModel(options?: {
     },
     profileEditor: {
       hasCreatedProfile,
+      hasUnsavedChanges: profileHasUnsavedChanges,
       profileName,
       setProfileName,
       hiddenTabs,

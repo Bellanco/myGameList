@@ -75,7 +75,7 @@ function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, on
 
   const backRow = (
     <div className="import-actions">
-      <button type="button" className="btn btn-secondary" onClick={onBack}>
+      <button type="button" className="btn btn-secondary btn-back" onClick={onBack}>
         <Icon name={COMMON_ICONS.arrowBack} />
         <span>{IMPORT_UI.back}</span>
       </button>
@@ -91,9 +91,10 @@ function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, on
             <h2>{M.title}</h2>
             <p className="settings-card-note">{M.empty}</p>
           </div>
-          <button type="button" className="btn btn-secondary import-card-action" onClick={onGoSettings}>
+          <button type="button" className="btn btn-open import-card-action" onClick={onGoSettings}>
             <Icon name={COMMON_ICONS.upload} />
             <span>{M.goSettings}</span>
+            <Icon name="angle-right" className="ui-icon btn-open-go" />
           </button>
         </div>
       </div>
@@ -113,7 +114,7 @@ function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, on
           <p className="settings-card-note">{M.note}</p>
         </div>
         <div className="import-toolbar">
-          <button type="button" className="btn btn-secondary" onClick={onClear}>
+          <button type="button" className="btn btn-danger" onClick={onClear}>
             <Icon name={COMMON_ICONS.trash} />
             <span>{M.clear}</span>
           </button>

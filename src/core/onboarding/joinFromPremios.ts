@@ -32,11 +32,11 @@ export function isGuideShowing(state: TourState | null): boolean {
 }
 
 /**
- * QUIEN ACEPTA LA INVITACIÓN DE LOS PREMIOS («Enséñame»).
+ * QUIEN ACEPTA LA INVITACIÓN DE LOS PREMIOS («Sí, vamos»).
  *
  *  - Sin juegos (`list`), la guía ENTERA desde el primer juego —no una misión suelta—, porque viene de fuera y lo
  *    que se quiere es que acabe en lo social, que es la última misión.
- *  - Con su lista ya hecha (`social`), SOLO el modo cooperativo, como el «¿Te enseño?» de Social: vino a hacer eso.
+ *  - Con su lista ya hecha (`social`), SOLO el modo cooperativo, como el «¿Quieres…?» de Social: vino a hacer eso.
  *
  * No hace falta la tarjeta de bienvenida: el sí ya lo ha dado al pulsar. Y con una guía en marcha, plegada o
  * abierta en su lista, no se toca nada (`null`): ahí manda ella.

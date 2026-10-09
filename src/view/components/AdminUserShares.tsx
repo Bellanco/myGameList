@@ -113,7 +113,7 @@ export const AdminUserShares = memo(function AdminUserShares({
                     </span>
                   </div>
                   <div className="admin-user-shares-item-actions">
-                    <a className="btn btn-secondary" href={`/r/${row.token}`} target="_blank" rel="noreferrer">
+                    <a className="btn btn-open" href={`/r/${row.token}`} target="_blank" rel="noreferrer">
                       {ADMIN_SHARES_UI.open}
                     </a>
                     <button

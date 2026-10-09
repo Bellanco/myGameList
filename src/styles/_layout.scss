@@ -517,6 +517,12 @@
   max-width: 62ch;
 }
 
+/* El título de cada pantalla recibe el foco al llegar a ella (`useHubFocusOnNavigate`), con `tabindex="-1"`: no es
+   un control, así que no lleva el anillo de los controles. El lector de pantalla lo anuncia igual. */
+.hub-hub h2[tabindex="-1"]:focus {
+  outline: none;
+}
+
 .hub-screen-actions {
   display: flex;
   flex-wrap: wrap;
@@ -573,13 +579,40 @@
   }
 }
 
-// Estado vacío del feed (sin amigos): mensaje + CTA para descubrir perfiles.
+// Estado vacío del feed: icono, título y frase, centrados sobre el lienzo. Sin botón: el camino es «Ver perfiles»,
+// en la cabecera (ver `SocialFeedScreen`).
 .hub-feed-empty {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: .7rem;
+  align-items: center;
+  text-align: center;
+  gap: .5rem;
+  max-width: 34rem;
+  margin-inline: auto;
+  padding-block: 1.5rem;
 }
+
+.hub-feed-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 3.4rem;
+  height: 3.4rem;
+  margin-bottom: .3rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--steam) 14%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--steam) 40%, transparent);
+  color: var(--fg-link);
+}
+
+.hub-feed-empty-icon .ui-icon { width: 1.6rem; height: 1.6rem; }
+
+.hub-feed-empty-title {
+  margin: 0;
+  font-size: var(--fs-lg);
+  color: var(--text);
+}
+
+.hub-feed-empty p { margin: 0; }
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════
    EL LIENZO DE LA ACTIVIDAD — la superficie sobre la que se posa el feed.
@@ -752,6 +785,18 @@
 
 .hub-feed-activity-list .hub-feed-activity-item:nth-child(n+6) { animation-delay: .28s; }
 
+/* En el feed las tarjetas van en la lista de su día, sin la cabecera delante: la primera ya es `:nth-child(1)`. Se
+   corre un puesto para que el escalonado sea el de siempre (la primera, a .06 s). */
+.hub-feed-day-items > .hub-feed-activity-item:nth-child(1) { animation-delay: .06s; }
+
+.hub-feed-day-items > .hub-feed-activity-item:nth-child(2) { animation-delay: .12s; }
+
+.hub-feed-day-items > .hub-feed-activity-item:nth-child(3) { animation-delay: .18s; }
+
+.hub-feed-day-items > .hub-feed-activity-item:nth-child(4) { animation-delay: .24s; }
+
+.hub-feed-day-items > .hub-feed-activity-item:nth-child(n+5) { animation-delay: .28s; }
+
 @keyframes feedItemIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
 /* Contador de peticiones: "pop" al volverse activo (llega una petición). */
@@ -783,13 +828,30 @@
 }
 
 
+/* «Pendiente»: la petición que enviaste y espera respuesta. Es un ESTADO, no un botón (la acción, «Retirar», va al
+   lado): por eso lleva la forma del rótulo de «Amigos», pero en el ámbar de espera y con el filete discontinuo de lo
+   que aún no se ha cerrado. Clase propia porque los temas decoran `.hub-friend-chip` como amistad hecha. */
+.hub-pending-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: .25rem .55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  /* Un 30 % hacia el texto del modo: el ámbar puro sobre su velo se quedaba en 3,8–4,3:1 en tres temas claros. */
+  color: color-mix(in srgb, var(--fg-amber), var(--text) 30%);
+  border: 1px dashed color-mix(in srgb, var(--warn) 55%, transparent);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
 .hub-friend-chip {
   display: inline-flex;
   align-items: center;
   padding: .25rem .55rem;
   border-radius: 999px;
   background: rgba(var(--success-rgb),.16);
-  color: var(--fg-green);
+  /* Igual que «Pendiente»: el verde puro sobre su velo se quedaba en 3,3–4,3:1 en cuatro temas claros (09-10-2026). */
+  color: color-mix(in srgb, var(--fg-green), var(--text) 30%);
   border: 1px solid rgba(var(--success-rgb),.3);
   font-size: var(--fs-xs);
   font-weight: 600;
@@ -818,6 +880,9 @@
 .visibility-group {
   display: flex;
   flex-direction: column;
+  /* Rótulo e interruptor, juntos: a todo el ancho de la tarjeta el interruptor quedaba a más de 1000 px de lo que
+     encendía en escritorio (09-10-2026), y el ojo tenía que cruzar la pantalla para saber qué fila era. */
+  max-width: 40rem;
 }
 
 .visibility-check {
@@ -909,6 +974,9 @@
   color: var(--fg-link);
 }
 
+/* Las letras recortadas del título (`ScreenTitle`) solo las enseña el tema que las usa (Persona). */
+.rc-letters { display: none; }
+
 .hub-hub-card p {
   color: var(--text-muted);
   line-height: 1.5;
@@ -933,12 +1001,19 @@
 
 /* UNA CAJA POR NIVEL: la ficha de un perfil y el detalle de una reseña se asientan en la tarjeta de pantalla, que ya
    es la caja, en vez de abrir otra dentro. En el perfil había cuatro niveles —pantalla, ficha, tabla, renglón—.
-   Con carátula (`has-cover`) se queda la caja: es el marco de la portada que va de fondo. */
-.hub-screen-card .hub-feed-card-detail:not(.has-cover) {
-  border: 0;
-  border-radius: 0;
-  background: none;
-  box-shadow: none;
+   Con carátula (`has-cover`) se queda la caja: es el marco de la portada que va de fondo.
+
+   CON `!important` Y (0,4,1), A PROPÓSITO. Los skins pintan `.hub-feed-card` como panel con `!important`
+   (`:root[data-palette] .hub-feed-card`, (0,3,0), y sus variantes claras con (0,4,0)), y su hoja llega después
+   que esta: la neutralización perdía y el detalle volvía a ser una caja —con `padding: 0`, así que el contenido
+   quedaba pegado a su filete— en siete de ocho temas (logros, perfil, reseña, resumen del año; 09-10-2026).
+   `html:root` suma lo justo para ganar a todas sin nombrar ningún tema. */
+html:root .hub-screen-card .hub-feed-card-detail:not(.has-cover) {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+  clip-path: none !important;
   padding: 0;
 }
 
@@ -1360,19 +1435,61 @@
   font-size: var(--fs-sm);
 }
 
+/* EN MÓVIL, LA NOTA ARRIBA Y LA FECHA EN SU RENGLÓN (09-10-2026). En la mono de la fecha, «Analizado el 09 de octubre
+   a las 11:24» no cabe junto a las estrellas en una burbuja de 300px y se partía en tres renglones. Las estrellas
+   (o el aro) suben encima, alineadas al texto, y la fecha ocupa el ancho entero: dos renglones limpios. */
+@media (max-width: 620px) {
+  .hub-feed-meta {
+    flex-wrap: wrap;
+    row-gap: .3rem;
+  }
+
+  .hub-feed-meta > :is(.stars, .score-ring) {
+    order: -1;
+    margin-left: 0;
+  }
+
+  .hub-feed-meta > .hub-feed-date {
+    flex-basis: 100%;
+  }
+}
+
 .hub-feed-review-text {
   margin: 0;
   max-width: 65ch;
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  line-clamp: 4;
-  -webkit-line-clamp: 4;
+  /* DOS RENGLONES Y SUS PUNTOS SUSPENSIVOS (09-10-2026). Con cuatro, el extracto publicado —los primeros 160
+     caracteres de la reseña, cortados a mitad de palabra— casi siempre cabía entero y acababa en seco, sin «…».
+     Con dos no cabe, y el recorte pone los puntos. */
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
   overflow: hidden;
   white-space: pre-line;
   overflow-wrap: anywhere;
   font-size: clamp(.88rem, .7rem + .75vw, 1.05rem);
   line-height: 1.3;
   color: var(--text);
+}
+
+/* En el adelanto, los párrafos van seguidos: como bloques con margen, el recorte por renglones contaba el hueco
+   entre ellos, cortaba a media altura y no ponía los puntos suspensivos. El detalle los recupera (abajo). */
+.hub-feed-review-text .review-par,
+.hub-feed-review-text .review-line {
+  display: inline;
+}
+
+.hub-feed-review-text .review-par + .review-par::before,
+.hub-feed-review-text .review-line + .review-line::before {
+  content: ' ';
+}
+
+.hub-feed-card-detail .hub-feed-review-text :is(.review-par, .review-line) {
+  display: block;
+}
+
+.hub-feed-card-detail .hub-feed-review-text :is(.review-par, .review-line)::before {
+  content: none;
 }
 
 .hub-feed-card-detail .hub-feed-review-text {
@@ -1400,21 +1517,6 @@
   overflow: hidden;
 }
 
-.hub-hub-icon {
-  width: 1.6rem;
-  height: 1.6rem;
-  color: var(--fg-link);
-  /* El `fill` hay que decirlo aquí: `<Icon>` SUSTITUYE la clase, así que estos iconos no llevan `ui-icon` y no
-     heredan su `fill: currentColor`. Con los símbolos que traen `fill="currentColor"` en su propio trazado
-     (`bottom-hub`) no se notaba, pero los que no lo traen —`signature`, el de las reseñas— se pintaban con el
-     relleno por defecto del navegador, es decir, NEGROS: así se veía el icono de `/stats/resenas` y el del
-     detalle de cualquier análisis, mientras el título de al lado sí salía azul. */
-  fill: currentColor;
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
 @keyframes socialCtaIn {
   from {
@@ -1494,7 +1596,9 @@
 
   .hub-detail-body .hub-feed-review-text {
     flex: 1 1 0;
-    /* En el detalle la reseña llena el hueco hasta los metadatos (sin el tope de 65ch global). */
+    /* En el detalle la reseña llena el hueco hasta los metadatos (sin el tope de 65ch global). Se probó acotarla a
+       una medida de lectura (~72 caracteres) y se deshizo el mismo día (09-10-2026): las reseñas largas se iban a
+       varias pantallas de scroll, y aquí pesa más ver la reseña entera que el renglón corto. */
     max-width: none;
   }
 

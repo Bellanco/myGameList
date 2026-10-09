@@ -122,6 +122,20 @@ describe('YearSummary — contigo', () => {
     expect(chips.every((chip) => chip.classList.contains('hub-feed-game-chip'))).toBe(true);
   });
 
+  it('sin nada en común ni nada que proponer, no hay capítulo «contigo»', () => {
+    const apart = buildYearSummary({ completed, year: 2025, precision: 'month', viewerCompleted: [game(9, 'Otro', 70)] })!;
+    render(<YearSummary summary={apart} voice={voice} />);
+    expect(screen.queryByRole('region', { name: YEAR_SUMMARY_UI.common.kicker })).toBeNull();
+  });
+
+  it('sin juegos en común pero con algo que proponer, el capítulo sale con la propuesta', () => {
+    const picksOnly = buildYearSummary({ completed, year: 2025, precision: 'month', viewerCompleted: [game(9, 'Otro', 70)], viewerPending: [game(20, 'Uno', 0)] })!;
+    render(<YearSummary summary={picksOnly} voice={voice} />);
+    const card = screen.getByRole('region', { name: YEAR_SUMMARY_UI.common.kicker });
+    expect(card).toHaveTextContent(YEAR_SUMMARY_UI.common.picksTitle);
+    expect(card.querySelector('.ys-common-games')).toBeNull();
+  });
+
   it('propone lo de su año que tienes en Próximos', () => {
     const withPicks = buildYearSummary({ completed, year: 2025, precision: 'month', viewerCompleted: [game(9, 'Dos', 70)], viewerPending: [game(20, 'Uno', 0)] })!;
     render(<YearSummary summary={withPicks} voice={voice} />);

@@ -35,6 +35,7 @@ import { withFinishedOn, type FinishedGame } from '../../../core/utils/finishDat
 import type { ProfileTier } from '../../../core/constants/tiers';
 import { DEFAULT_PROFILE_TIER } from '../../../core/constants/tiers';
 import type { RelationshipState } from '../../../model/types/social';
+import { ScreenTitle } from './ScreenTitle';
 
 // Paginación de los juegos del perfil: se muestran de 15 en 15 para evitar scroll excesivo al abrir el detalle.
 const LIST_PAGE_SIZE = 15;
@@ -495,8 +496,7 @@ function SocialProfileDetailScreenBase({
         <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
           <header className="hub-screen-header">
             <div className="hub-hub-title-wrap">
-              <Icon name="bottom-hub" className="hub-hub-icon" />
-              <h2>{SOCIAL_UI.feed.profileDetailTitle}</h2>
+              <h2><ScreenTitle text={SOCIAL_UI.feed.profileDetailTitle} /></h2>
             </div>
           </header>
           <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.profileDetailActionsAria}>
@@ -527,13 +527,18 @@ function SocialProfileDetailScreenBase({
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
         <header className="hub-screen-header">
           <div className="hub-hub-title-wrap">
-            <Icon name="bottom-hub" className="hub-hub-icon" />
-            <h2>{SOCIAL_UI.feed.profileDetailTitle}</h2>
+            <h2>
+              <ScreenTitle
+                text={isOwnProfile
+                  ? SOCIAL_UI.feed.profileDetailTitleOwn
+                  : SOCIAL_UI.feed.profileDetailTitleOf(activeProfileDetail.displayName)}
+              />
+            </h2>
           </div>
         </header>
         <div className="hub-screen-actions hub-screen-actions-split hub-profile-detail-actions" aria-label={SOCIAL_UI.feed.profileDetailActionsAria}>
           <div className="hub-screen-actions-left">
-            <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeed} />
+            <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeedShort} ariaLabel={SOCIAL_UI.feed.backToFeed} />
             {canSeeFullProfile ? (
               <>
                 <button
@@ -611,15 +616,21 @@ function SocialProfileDetailScreenBase({
               </>
             ) : null}
           </div>
+          {/* LA RELACIÓN, AL EXTREMO DE LA FILA. Estuvo al pie de la cabecera (09-10-2026) y se volvió aquí el mismo
+              día: allí alargaba la pantalla y seguía siendo fácil de pulsar sin querer. Lo que la hace segura ahora es
+              la forma, no el sitio: con una amistad dice «Amigos», en rosa y corto —cabe en una línea a 1280 en los
+              ocho temas—, y dejar de serlo pasa por la confirmación. En móvil conserva su rótulo (`is-relationship`):
+              una × suelta arriba a la derecha se leía como «cerrar». */}
           {isOwnProfile && onEditProfile ? (
             <div className="hub-screen-actions-right">
-              <button className="btn btn-secondary btn-accent" type="button" onClick={onEditProfile}>
+              <button className="btn btn-open" type="button" onClick={onEditProfile}>
                 <Icon name="edit" />
                 {SOCIAL_UI.feed.profile}
+                <Icon name="angle-right" className="ui-icon btn-open-go" />
               </button>
             </div>
           ) : !isOwnProfile && onAddOrAcceptFriend ? (
-            <div className="hub-screen-actions-right">
+            <div className="hub-screen-actions-right is-relationship">
               <FriendshipButton
                 SOCIAL_UI={SOCIAL_UI}
                 state={friendshipState}
@@ -842,7 +853,7 @@ function SocialProfileDetailScreenBase({
                       },
                     }
                   : {
-                      btnClass: 'btn-accent',
+                      btnClass: 'btn-upcoming',
                       icon: 'plus',
                       label: toWishlist ? UI_MESSAGES.rouletteActions.toWishlist : UI_MESSAGES.rouletteActions.toProximos,
                       doneLabel: toWishlist

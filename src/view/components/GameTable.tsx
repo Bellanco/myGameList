@@ -1053,11 +1053,12 @@ export const GameTable = memo(function GameTable({
           con las columnas es su cabecera: `<thead>` y `<colgroup>` estaban ahí para repartir un ancho entre 6-8
           columnas que hoy no existen, y sus botones de ordenar llevaban tiempo sin poder pulsarse (el orden se
           dice con los chips de la cabecera del listado). */}
-      <table className={tableClass}>
-        {/* A11y-4: la tabla no se anunciaba con ningún nombre, así que en la lista de tablas de un lector de
-            pantalla aparecía como "tabla" sin más. Con varias listas (completados, vergüenza, en curso…) el
-            nombre es lo único que las distingue. */}
-        <caption className="sr-only">{UI_MESSAGES.table.caption(TAB_TITLES[currentTab], games.length)}</caption>
+      {/* A11y-4: la tabla no se anunciaba con ningún nombre, así que en la lista de tablas de un lector de
+          pantalla aparecía como "tabla" sin más. Con varias listas (completados, vergüenza, en curso…) el nombre es
+          lo único que las distingue. Va en `aria-label` y no en un `<caption>` oculto (09-10-2026): con las filas
+          separadas por `border-spacing`, el caption —aunque fuera `sr-only`— sumaba en Chrome otro espaciado de fila
+          y dejaba una franja vacía entre la barra de la lista y la primera fila. */}
+      <table className={tableClass} aria-label={UI_MESSAGES.table.caption(TAB_TITLES[currentTab], games.length)}>
         <tbody>
           {!games.length ? (
             <tr>
@@ -1091,9 +1092,10 @@ export const GameTable = memo(function GameTable({
                         />
                       ) : null}
                       {importHere && onOpenInbox && inboxCount > 0 ? (
-                        <button type="button" className="btn btn-secondary btn-accent" onClick={onOpenInbox}>
+                        <button type="button" className="btn btn-open" onClick={onOpenInbox}>
                           <Icon name={COMMON_ICONS.download} />
                           <span>{IMPORT_UI.viewInbox(inboxCount)}</span>
+                          <Icon name="angle-right" className="ui-icon btn-open-go" />
                         </button>
                       ) : null}
                     </div>
@@ -1482,7 +1484,7 @@ export const GameTable = memo(function GameTable({
                             <span className="detail-label">{UI_MESSAGES.detail.review}</span>
                             <div>
                               <Link
-                                className="btn btn-secondary"
+                                className="btn btn-open"
                                 /* Con su `backTo` (ver `reviewTarget`): el panel ya usaba este mismo estado
                                    para distinguir sus dos orígenes; esta es la tercera puerta. */
                                 {...reviewTarget(game.id)}
@@ -1491,6 +1493,7 @@ export const GameTable = memo(function GameTable({
                               >
                                 <Icon name={COMMON_ICONS.arrowsToEye} />
                                 <span>{UI_MESSAGES.detail.reviewLink}</span>
+                                <Icon name="angle-right" className="ui-icon btn-open-go" />
                               </Link>
                             </div>
                           </div>

@@ -13,6 +13,7 @@ import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { APP_LOCALE } from '../../core/constants/locale';
 import { isOffline, isServiceUnavailable } from '../../core/utils/network';
 import { ensureSyncConfigLoaded } from '../../model/repository/gistRepository';
+import { useSingleFlight } from '../useSingleFlight';
 import {
   getSocialSyncConfig,
   readSocialGist,
@@ -34,6 +35,7 @@ import type { SocialProfileVisibility } from '../../model/types/social';
 import { normalizeVisibility, type SocialProfileForm } from './useSocialProfileForm';
 import type { SocialPanel } from './socialRoutes';
 import { isNotFoundGistError } from './gistErrors';
+import { serializeSocialWrite } from '../../model/repository/socialWriteQueue';
 
 const shouldRequireProfileCreation = (profileExists: boolean, justSavedProfile: boolean): boolean => {
   return !profileExists && !justSavedProfile;
@@ -105,6 +107,8 @@ export function useOwnProfileEditor({
   setFeedback,
   reportFailure,
 }: OwnProfileEditorInput) {
+  // Suelta, como `hydrateProfileForm`: es estable (`useCallback([])`), y el objeto del formulario no lo es.
+  const { markSaved: markProfileSaved } = profileForm;
   const [hydratingProfile, setHydratingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
 
@@ -212,17 +216,20 @@ export function useOwnProfileEditor({
         // 6.2b: al reescribir el gist propio, remapea la identidad legacy (miUid → miProfileId) para sacar
         // el uid del canal público; el resto de la limpieza (snippet-only, sin sharedLists) sigue igual.
         const myProfileId = await resolveStableProfileId(authUser.uid);
-        const remapped = remapSocialActorIds(socialRead.data, { [authUser.uid]: myProfileId });
-        const cleanedPayload = {
-          ...remapped,
-          profile: {
-            ...remapped.profile,
-            sharedLists: {},
-          },
-          updatedAt: Date.now(),
-        };
-
-        const cleanedWrite = await writeSocialGist(socialConfig.token, socialCfgGistId, cleanedPayload);
+        // EN FILA y RELEYENDO dentro: lo leído arriba puede haberse quedado viejo si otra escritura del canal estaba
+        // en curso (ver `serializeSocialWrite`). Se reescribe sobre el gist de este instante.
+        const cleanedWrite = await serializeSocialWrite(async () => {
+          const fresh = await readSocialGist(socialConfig.token, socialCfgGistId, null);
+          const remapped = remapSocialActorIds(fresh.data, { [authUser.uid]: myProfileId });
+          return writeSocialGist(socialConfig.token, socialCfgGistId, {
+            ...remapped,
+            profile: {
+              ...remapped.profile,
+              sharedLists: {},
+            },
+            updatedAt: Date.now(),
+          });
+        });
         const nextEtag = cleanedWrite.etag || socialRead.etag || null;
         setSocialCfgEtag(nextEtag);
         saveSocialSyncConfig({
@@ -335,7 +342,7 @@ export function useOwnProfileEditor({
     void hydrateSocialProfile();
   }, [hydrateSocialProfile]);
 
-  const handleSaveProfile = useCallback(async () => {
+  const saveProfile = useCallback(async () => {
     await ensureSyncConfigLoaded(); // C4: igual que en `hydrateSocialProfile`, el token social se descifra async
     const socialConfig = getSocialSyncConfig();
     if (!authUser || !socialConfig?.token || !socialCfgGistId) {
@@ -376,14 +383,20 @@ export function useOwnProfileEditor({
         ...(ownPublishablePhoto ? { photoURL: ownPublishablePhoto } : {}),
       };
 
-      const currentGistResult = await readSocialGist(socialConfig.token, socialCfgGistId, null);
-      const currentGistData = currentGistResult.data;
-
-      const writeResult = await writeSocialGist(socialConfig.token, socialCfgGistId, {
-        profile,
-        activity: currentGistData.activity,
-        posts: currentGistData.posts, // preservar las publicaciones al guardar el perfil
-        updatedAt: Date.now(),
+      // Leer y escribir EN FILA con el resto de escrituras del canal (ver `serializeSocialWrite`). Solo este tramo:
+      // la reconciliación que se lanza después escribe por su cuenta y va en fila sola.
+      const { currentGistData, writeResult } = await serializeSocialWrite(async () => {
+        const currentGistResult = await readSocialGist(socialConfig.token, socialCfgGistId, null);
+        // TODO EL CANAL SE CONSERVA y solo se cambia el perfil. Se copiaban a mano `activity` y `posts`, y el resto
+        // —los avisos de lista (`moves`, `hiddenMoves`), el consentimiento— se caía: el saneado del gist rellena con
+        // `[]` lo que falta, así que tus amigos dejaban de ver tus avisos hasta la siguiente reconciliación, que con
+        // su sello fresco podía tardar 12 h (09-10-2026). Es la forma de las demás escrituras del canal.
+        const written = await writeSocialGist(socialConfig.token, socialCfgGistId, {
+          ...currentGistResult.data,
+          profile,
+          updatedAt: Date.now(),
+        });
+        return { currentGistData: currentGistResult.data, writeResult: written };
       });
 
       // Ya NO se fuerza el gist a público. GitHub no permite cambiar la visibilidad, así que aquello CLONABA el
@@ -451,6 +464,8 @@ export function useOwnProfileEditor({
       setHasCreatedProfile(true);
       setMustCreateProfile(false);
       setJustSavedProfile(true);
+      // Lo escrito pasa a ser lo guardado: el aviso de «cambios sin guardar» se apaga con esto.
+      markProfileSaved({ name: profile.name, visibility });
 
       // Momento clave del usuario nuevo: acaba de completar su perfil, así que sus reseñas ANTERIORES al alta
       // (que nunca pasaron por `publishReviewActivity`) entran ahora al feed. Forzado: ignora sello y recuento.
@@ -474,6 +489,7 @@ export function useOwnProfileEditor({
   }, [
     authUser,
     hasCompletedGames,
+    markProfileSaved,
     // Memoizada sobre los cinco interruptores (`useSocialProfileForm`), así que su identidad solo cambia cuando
     // cambia uno de ellos. Es LO QUE SE ESCRIBE en el gist, y cubre el que faltaba: `hiddenTabs`,
     // `hideReplayable`, `hideRetry` y `hideGameTime` estaban enumerados sueltos, `showPhoto` no. Los tres de
@@ -507,6 +523,10 @@ export function useOwnProfileEditor({
     setSocialCfgEtag,
     setSocialCfgGistId,
   ]);
+
+  // Un doble clic no guarda dos veces: `ensureSyncConfigLoaded` se espera ANTES de marcar el guardado en curso, y en
+  // ese hueco el botón aún no está deshabilitado (ver `useSingleFlight`).
+  const handleSaveProfile = useSingleFlight(saveProfile);
 
   return { completedGames, hasCompletedGames, hydratingProfile, savingProfile, hydrateSocialProfile, handleSaveProfile };
 }

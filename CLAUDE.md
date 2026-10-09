@@ -20,6 +20,10 @@ documentada a propósito.
 - **Documentos vivos.** `DESIGN.md`, `docs/plan-*.md` y `docs/revision-general-2026-09.md` describen intención y
   estado medido en una fecha. Si una línea no coincide con el código, manda el código; corrige el documento en
   la misma pasada.
+- **Ver el social sin sesión.** Las pantallas del hub exigen Google y GitHub, así que no se pueden recorrer con un
+  navegador automático. Para revisar su diseño: `docs/maquetas/social.html` en el servidor de desarrollo (pantallas
+  reales, datos inventados, barra para cambiar pantalla, tema y modo) y `node scripts/capturar-maqueta-social.mjs`
+  para fotografiarlas todas. Si añades una pantalla o una vista al hub, añádela también a la maqueta.
 - **Estado de la revisión general** (hallazgos abiertos, plan por fases y lo que ya se comprobó que está bien):
   `docs/revision-general-2026-09.md`. Consúltalo antes de proponer una limpieza: puede estar ya descartada con
   la medición delante.

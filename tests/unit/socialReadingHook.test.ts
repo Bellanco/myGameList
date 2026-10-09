@@ -135,7 +135,18 @@ describe('la ficha de un perfil', () => {
     await waitFor(() => expect(opts.patchDirectoryEntries).toHaveBeenCalled());
     expect(readPublicSocialGistById).toHaveBeenCalledWith('aaaa1111', 'ghp_0123456789abcdefghij');
     const [, parche] = (opts.patchDirectoryEntries as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(parche).toEqual({ displayName: 'Ana', photoURL: 'https://foto', visibility: VISIBLE, socialSkipped: false });
+    expect(parche).toEqual({ displayName: 'Ana', photoURL: 'https://foto', visibility: VISIBLE, socialSkipped: false, socialUnreadable: false });
+  });
+
+  /* Un gist social ILEGIBLE deja sin saber lo que esa persona esconde: al abrir su ficha se reintenta, y mientras
+     tanto la ficha la pinta como todo oculto (fallar cerrado, 09-10-2026). */
+  it('de un amigo con el gist social ilegible reintenta al abrir y, mientras, lo pinta todo oculto', async () => {
+    readPublicSocialGistById.mockReturnValue(new Promise(() => {}));
+    const { result } = setup({ route: FICHA, directory: [entrada({ socialUnreadable: true })] });
+
+    await waitFor(() => expect(readPublicSocialGistById).toHaveBeenCalledWith('aaaa1111', 'ghp_0123456789abcdefghij'));
+    expect(result.current.selectedProfileDetail?.visibility?.hiddenTabs).toEqual(['c', 'v', 'e', 'p', 'd']);
+    expect(result.current.selectedProfileDetail?.visibility?.hideGameTime).toBe(true);
   });
 
   it('a mi propia ficha se va por identidad; sin entrada propia, al editor', () => {

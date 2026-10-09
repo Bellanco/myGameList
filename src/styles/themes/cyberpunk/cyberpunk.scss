@@ -141,6 +141,7 @@
 :root[data-palette="cyberpunk"] .hub-feed-card,
 :root[data-palette="cyberpunk"] .hub-hub-card,
 :root[data-palette="cyberpunk"] .modal,
+:root[data-palette="cyberpunk"] .consent-banner,
 :root[data-palette="cyberpunk"] .alert-dialog { border: 1px solid var(--cyber-edge) !important; border-left: 3px solid var(--cyber-yellow) !important; border-radius: 0 !important; box-shadow: 0 0 18px rgba(0, 240, 255, .06), inset 0 0 0 1px rgba(0, 240, 255, .05) !important; }
 
 /* UNA SOLA BARRA AMARILLA POR BLOQUE, y esto es lo que la hace una marca. La regla de arriba se la da a cada
@@ -233,36 +234,42 @@
 :root[data-palette="cyberpunk"] .btn-steam,
 :root[data-palette="cyberpunk"] .btn-primary,
 :root[data-palette="cyberpunk"] .consent-btn-accept { --hud-c: var(--cyber-yellow); --hud-tint: 16%; }
-/* LO ELEGIDO (la pestaña activa, el interruptor encendido, los `.is-active`) va en VIOLETA y no en el amarillo del
-   principal: con los dos en amarillo, «Mostrar» encendido se leía como un botón de guardar. No es verde porque el
-   verde es de completar, y tira a azul para no confundirse con el magenta de la navegación, que tira a rosa. */
-:root[data-palette="cyberpunk"] .btn.is-active,
-:root[data-palette="cyberpunk"] .btn-toggle.active { --hud-c: var(--cyber-btn-violet); --hud-tint: 16%; }
-:root[data-palette="cyberpunk"] { --cyber-btn-violet: #b066ff; }
-:root[data-palette="cyberpunk"][data-theme="light"] { --cyber-btn-violet: #7b2ff7; }
-:root[data-palette="cyberpunk"] .btn-complete { --hud-c: var(--success); --hud-tint: 16%; }
-/* LOS DOS NEONES de Night City en la navegación (`.btn-accent`), alternos dentro de cada fila: cian el primero,
-   magenta el siguiente. `of .btn-accent` cuenta solo los de navegación, así que un neutro en medio no descoloca la
-   pareja; un navegador sin `:nth-child(… of …)` descarta la regla y los deja en cian. «Pasar a en curso» y «Pasar a
-   próximos» (mover de lista en el detalle) llevan la misma pareja, pero FIJA. */
-:root[data-palette="cyberpunk"] .btn-accent,
-:root[data-palette="cyberpunk"] .btn-playing { --hud-c: var(--cyber-cyan); --hud-tint: 16%; }
-/* El magenta de botón tira un cuarto hacia el violeta del anuncio de neón: el `--cyber-magenta` a pelo (#ff2a6d) y
-   el rojo de peligro (#ff2e4e) son casi el mismo tono, y aquí van uno al lado del otro. */
-:root[data-palette="cyberpunk"] .btn-accent:nth-child(even of .btn-accent),
-:root[data-palette="cyberpunk"] .btn-upcoming { --hud-c: var(--cyber-btn-magenta); --hud-tint: 16%; }
-:root[data-palette="cyberpunk"] { --cyber-btn-magenta: color-mix(in srgb, var(--cyber-magenta) 75%, #d63cff); }
-:root[data-palette="cyberpunk"][data-theme="light"] { --cyber-btn-magenta: var(--cyber-magenta); }
-/* Peligro (cerrar sesión, abandonar, quitar recomendación): el rojo del HUD del juego, el tubo que dio el modelo. */
-:root[data-palette="cyberpunk"] .btn-danger,
-:root[data-palette="cyberpunk"] .btn-abandoned { --hud-c: var(--danger); --hud-tint: 16%; }
-/* En claro, cada tubo con su tinta: el mismo tono, hondo (al 20 % de placa). */
+/* ── LOS BOTONES POR FUNCIÓN (ver `_forms-and-buttons.scss`) ──────────────────────────────────────────────
+   Aquí NO HAY MACIZO: todo es tubo de neón, y rellenar uno rompía el tema. Lo que en otros temas se rellena
+   (abrir / ir, lo encendido, destruir) es aquí el tubo ENCENDIDO —filete doble, más placa y más halo— y los teñidos
+   (mover de lista, social, salir) son el tubo de siempre.
+
+   ABRIR / IR es el CIAN de Night City. LO ELEGIDO va en VIOLETA y no en el amarillo del principal: con los dos en
+   amarillo, «Mostrar» encendido se leía como un botón de guardar; no es verde porque el verde es de completar.
+   Las listas: En curso MAGENTA y Próximos VERDE AGUA, que el amarillo de sus gráficas es el del principal. */
+:root[data-palette="cyberpunk"] { --cyber-btn-violet: #b066ff; --cyber-btn-magenta: color-mix(in srgb, var(--cyber-magenta) 75%, #d63cff); }
+:root[data-palette="cyberpunk"][data-theme="light"] { --cyber-btn-violet: #7b2ff7; --cyber-btn-magenta: var(--cyber-magenta); }
+:root[data-palette="cyberpunk"] {
+  --btn-open: var(--cyber-cyan); --btn-sel: var(--cyber-btn-violet);
+  --move-e: #ff4fd8; --move-p: #43e8c8;
+}
+:root[data-palette="cyberpunk"][data-theme="light"] { --move-e: #b0007a; --move-p: #00796b; }
+:root[data-palette="cyberpunk"] :is(.btn-open, .btn.is-active, .btn-toggle.active, .btn-toggle-deck.active, .btn-danger) {
+  --hud-c: var(--role-c); --hud-tint: 30%; --hud-ink: color-mix(in srgb, var(--hud-c) 35%, #fff);
+  --hud-edge-w: 2.5px; --hud-glow-a: 75%; --hud-glow-r: 10px; --hud-text-glow-a: 70%;
+}
+:root[data-palette="cyberpunk"] .btn-danger { --role-c: var(--danger); }
+:root[data-palette="cyberpunk"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
+  --hud-c: var(--role-c); --hud-tint: 16%; --hud-ink: var(--role-t);
+}
+/* Descartar: el contorno del tubo, apagado. */
+:root[data-palette="cyberpunk"] .btn-quiet {
+  --hud-c: color-mix(in srgb, var(--text) 35%, transparent); --hud-tint: 0%; --hud-ink: var(--text-muted);
+  --hud-glow-a: 0%; --hud-text-glow-a: 0%; --hud-edge-w: 1px;
+}
+/* En claro, cada tubo con su tinta honda: el encendido al 18 % de placa y halo corto, el teñido al 12 %. */
 :root[data-palette="cyberpunk"][data-theme="light"] :is(.btn-steam, .btn-primary, .consent-btn-accept) { --hud-tint: 20%; --hud-ink: #4d4500; }
-:root[data-palette="cyberpunk"][data-theme="light"] :is(.btn.is-active, .btn-toggle.active) { --hud-tint: 20%; --hud-ink: #5a1db8; }
-:root[data-palette="cyberpunk"][data-theme="light"] .btn-complete { --hud-tint: 20%; --hud-ink: color-mix(in srgb, var(--success) 72%, #000); }
-:root[data-palette="cyberpunk"][data-theme="light"] :is(.btn-accent, .btn-playing) { --hud-tint: 20%; --hud-ink: color-mix(in srgb, var(--cyber-cyan) 72%, #000); }
-:root[data-palette="cyberpunk"][data-theme="light"] :is(.btn-accent:nth-child(even of .btn-accent), .btn-upcoming) { --hud-tint: 20%; --hud-ink: #b0004b; }
-:root[data-palette="cyberpunk"][data-theme="light"] :is(.btn-danger, .btn-abandoned) { --hud-tint: 20%; --hud-ink: color-mix(in srgb, var(--danger) 85%, #000); }
+:root[data-palette="cyberpunk"][data-theme="light"] :is(.btn-open, .btn.is-active, .btn-toggle.active, .btn-toggle-deck.active, .btn-danger) {
+  --hud-tint: 18%; --hud-ink: color-mix(in srgb, var(--hud-c) 72%, #000); --hud-glow-a: 50%; --hud-glow-r: 6px; --hud-text-glow-a: 0%;
+}
+:root[data-palette="cyberpunk"][data-theme="light"] :is(.btn-social, .btn-done, .btn-exit, .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend) {
+  --hud-tint: 12%; --hud-ink: color-mix(in srgb, var(--role-c) 55%, #000);
+}
 /* La marca de las tarjetas de estadísticas es un `.btn` con el tinte de su tarjeta: lo conserva, en neón. */
 :root[data-palette="cyberpunk"] .stat-tile-go { --hud-c: var(--tile-go-tint); --hud-ink: var(--tile-go-tint); --hud-tint: 15%; }
 
@@ -348,8 +355,10 @@
 :root[data-palette="cyberpunk"] .chip-generic { --chipc: #ff2a6d; }
 /* Tema CLARO: el fondo es claro, así que los tonos neón puros no se distinguían (y el amarillo puro es ilegible).
    Se usan versiones OSCURAS y saturadas de cada tono para que el chip destaque y el texto se lea. */
-:root[data-palette="cyberpunk"][data-theme="light"] .chip-plat    { --chipc: #0079a3; }
-:root[data-palette="cyberpunk"][data-theme="light"] .chip-genre   { --chipc: #8a6d00; }
+/* Plataforma y género, un punto más hondos que al principio (#0079a3, #8a6d00): sobre su propio velo se quedaban en
+   3,8:1 (09-10-2026). */
+:root[data-palette="cyberpunk"][data-theme="light"] .chip-plat    { --chipc: #00658a; }
+:root[data-palette="cyberpunk"][data-theme="light"] .chip-genre   { --chipc: #6f5700; }
 :root[data-palette="cyberpunk"][data-theme="light"] .chip-pf      { --chipc: #0c8a72; }
 :root[data-palette="cyberpunk"][data-theme="light"] .chip-pd      { --chipc: #c5003c; }
 :root[data-palette="cyberpunk"][data-theme="light"] .chip-generic { --chipc: #b3005a; }
@@ -495,6 +504,7 @@
   box-shadow: inset 0 0 0 1px var(--cyber-yellow-fg), inset 3px 0 0 var(--cyber-yellow);
 }
 :root[data-palette="cyberpunk"] .input-base,
+:root[data-palette="cyberpunk"] .tag-inp-wrap,
 :root[data-palette="cyberpunk"] .finput,
 :root[data-palette="cyberpunk"] .ftextarea,
 :root[data-palette="cyberpunk"] .search-input { border: 1px solid var(--cyber-edge-field) !important; border-radius: 0 !important; }
@@ -971,3 +981,26 @@
 :root[data-palette="cyberpunk"] .star-inp button.f {
   text-shadow: 0 0 10px color-mix(in srgb, var(--star-full) 60%, transparent);
 }
+
+/* El botón «Amigos» de la ficha (`.btn-friend`): el magenta del HUD. */
+:root[data-palette="cyberpunk"] { --btn-friend: var(--cyber-magenta); }
+:root[data-palette="cyberpunk"][data-theme="light"] { --btn-friend: var(--cyber-magenta); }
+
+/* ── EL TÍTULO DE PANTALLA (09-10-2026) ───────────────────────────────────────────────────────────────────────────
+   Un gesto del juego en el título de cada pantalla del hub (`.hub-hub-title-wrap h2`), elegido con
+   `docs/maquetas/titulos-temas.html`. Sin `text-transform`: las mayúsculas las pone la casilla de Apariencia, y
+   cualquier animación se queda quieta con los efectos apagados o si el sistema pide menos movimiento. ── */
+/* NEÓN QUE FALLA: el letrero magenta de Night City con un tubo que parpadea de vez en cuando (solo con efectos). */
+:root[data-palette="cyberpunk"] .hub-hub-title-wrap h2 {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  font-size: 1.5rem;
+  letter-spacing: .12em;
+  color: #ffd1e3 !important;
+  text-shadow: 0 0 4px #ff2a6d, 0 0 12px #ff2a6d, 0 0 26px rgba(255, 42, 109, .65);
+}
+:root[data-palette="cyberpunk"][data-theme="light"] .hub-hub-title-wrap h2 { color: #b0004d !important; text-shadow: 0 0 6px rgba(255, 42, 109, .45); }
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-effects="on"][data-palette="cyberpunk"] .hub-hub-title-wrap h2 { animation: cyber-neon-falla 5s infinite; }
+}
+@keyframes cyber-neon-falla { 0%, 86%, 92%, 100% { opacity: 1; } 87% { opacity: .35; } 89% { opacity: .9; } 90% { opacity: .2; } }

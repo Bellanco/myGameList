@@ -107,6 +107,14 @@
   color: var(--fg-green);
 }
 
+.hub-profile-sync-chip.is-unsaved {
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+  border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+  color: var(--fg-amber);
+}
+
+.hub-profile-sync-chip.is-unsaved .dot { background: var(--warn); }
+
 .hub-profile-sync-chip.is-synced .dot { background: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 22%, transparent); }
 
 /* ── Detalle de perfil · Juegos: control segmentado con pastilla deslizante; encabezado si hay una sola categoría ── */
@@ -184,13 +192,11 @@
 }
 
 
-/* FILA DE ACCIONES DEL DETALLE DE PERFIL. Es la más cargada del hub —volver, tres vistas, la ruleta y, en el de
-   una amistad, «Dejar de ser amigos»— y con la regla común de la fila partida se rompía en la franja media:
-   · el lado izquierdo no envuelve, así que sus botones se estrujaban hasta partir el rótulo en dos o tres
-     renglones (y entre ~630 y 740px la fila se salía de la tarjeta, con scroll horizontal en la página);
-   · el que pasaba de línea era el lado derecho entero, y el botón rojo se quedaba solo debajo de «Volver».
-   Aquí es al revés: la fila no envuelve, el lado izquierdo ocupa lo que sobra y es ÉL quien baja de línea,
-   botón a botón y sin partir rótulos, y el derecho se queda arriba, alineado con el primer renglón.
+/* FILA DE ACCIONES DEL DETALLE DE PERFIL: volver, las vistas, la ruleta y, al extremo, la relación con esa persona
+   (o «Editar mi perfil» en el tuyo). Con la regla común de la fila partida se rompía en la franja media: el lado
+   izquierdo no envolvía, sus botones se estrujaban hasta partir el rótulo y entre ~630 y 740px la fila se salía de
+   la tarjeta. Aquí la fila no envuelve, el lado izquierdo ocupa lo que sobra y es ÉL quien baja de línea, botón a
+   botón y sin partir rótulos, y el derecho se queda arriba, alineado con el primer renglón.
    Va con clase propia y no en `.hub-screen-actions-split` porque esa la comparten cinco pantallas más. */
 .hub-profile-detail-actions {
   flex-wrap: nowrap;
@@ -219,8 +225,8 @@
 }
 
 @media (max-width: 620px) {
-  /* En móvil son cuadrados de icono en un solo renglón; con las seis acciones de una amistad no caben por debajo
-     de ~350px (o ~380px con el texto del sistema ampliado), así que ceden un poco de ancho en vez de desbordar. */
+  /* En móvil son cuadrados de icono en un solo renglón; en los anchos más estrechos ceden un poco de ancho en vez
+     de desbordar. */
   .hub-profile-detail-actions .hub-screen-actions-left {
     flex-wrap: nowrap;
   }
@@ -228,6 +234,20 @@
   .hub-profile-detail-actions .btn {
     flex: 0 1 44px;
     min-width: 36px;
+  }
+
+  /* MENOS LA DE LA RELACIÓN, QUE CONSERVA SU RÓTULO. En icono, «Amigos» sería un corazón suelto, «Añadir» un + y
+     la × de antes arriba a la derecha se pulsaba creyendo que cerraba. Con su palabra cabe igual en la fila: los
+     cuadrados de la izquierda ceden lo que haga falta (arriba). (0,7,1) para ganar a los skins que también colapsan
+     esta fila en móvil (Arcade, Plata y acero). */
+  html:root .hub-profile-detail-actions .hub-screen-actions-right.is-relationship .btn:not(.btn-icon):not(.btn-ghost) {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
+    height: 44px;
+    padding-inline: .7rem;
+    font-size: var(--fs-xs);
+    gap: .35rem;
   }
 }
 
@@ -427,7 +447,7 @@
 
 .hub-user-card-actions .btn .ui-icon { width: var(--ico-sm); height: var(--ico-sm); }
 
-.hub-user-card-actions .hub-friend-chip { font-size: var(--fs-2xs); }
+.hub-user-card-actions :is(.hub-friend-chip, .hub-pending-chip) { font-size: var(--fs-2xs); }
 
 /* Tarjeta con una acción en curso (aceptar / rechazar / retirar / dejar de ser amigos): se atenúa y muestra un
    spinner, feedback uniforme para las cinco listas. Sustituye a `.hub-request-item.is-busy`, que solo existía en
@@ -447,25 +467,13 @@
   animation: hubSpin .7s linear infinite;
 }
 
-/* PANTALLA ESTRECHA: los botones se quedan en su icono y el rótulo se va (`.btn-label`). El nombre de la acción
-   no se pierde —cada botón lleva su `aria-label` completo—, y a cambio "Dejar de ser amigos" deja de ocupar tres
-   líneas dentro de una tarjeta de 160px. Se mide el CONTENEDOR del hub, no la ventana: 36rem de tarjeta son unos
-   620px de pantalla.
-   "Pendiente" no lleva `.btn-label` a propósito (ver `FriendshipButton`): no tiene icono, y nombra un estado. */
+/* PANTALLA ESTRECHA: los botones CONSERVAN SU RÓTULO (09-10-2026). Se quedaban en su icono porque «Dejar de ser
+   amigos» ocupaba tres líneas en una tarjeta de 160px; ese botón ya no vive en las tarjetas (está en la ficha, como
+   «♥ Amigos»), y los que quedan —«Añadir amigo», «Aceptar», «Rechazar», «Retirar»— son cortos. Solo en icono, el ✓ de
+   aceptar y el + de añadir se confundían, y la × de retirar se leía como «cerrar». Se encoge la letra, no la
+   palabra. Se mide el CONTENEDOR del hub, no la ventana: 36rem de tarjeta son unos 620px de pantalla. */
 @container social-card (max-width: 36rem) {
-  .hub-user-card-actions .btn-label { display: none; }
-
-  /* El cuadrado es SOLO para el botón que se ha quedado sin rótulo (`:has(.btn-label)`). "Pendiente" no lo lleva,
-     y encerrarlo también en 2,2rem le sacaba la palabra fuera del círculo. */
-  .hub-user-card-actions .btn:has(.btn-label) {
-    flex: 0 1 auto;
-    width: 2.2rem;
-    height: 2.2rem;
-    padding: 0;
-  }
-
-  /* Los que conservan texto encogen la letra en vez de la caja. */
-  .hub-user-card-actions .btn { font-size: var(--fs-2xs); }
+  .hub-user-card-actions .btn { font-size: var(--fs-2xs); padding-inline: .45rem; }
 }
 
 /* Recuento junto al título de cada sección. */
@@ -917,6 +925,14 @@
   flex-direction: column;
 }
 
+/* Las tarjetas del día, en su propia lista (ver `SocialFeedScreen`): la MISMA columna y el mismo hueco que el grupo,
+   para que las burbujas se sigan alineando igual (`align-self`) y la separación con la cabecera no cambie. */
+.hub-feed-day-items {
+  display: flex;
+  flex-direction: column;
+  gap: .7rem;
+}
+
 .hub-feed-day-header {
   align-self: center;
   position: sticky;
@@ -979,6 +995,21 @@
   .hub-profile-card .hub-screen-actions-split {
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+  }
+
+  /* «GUARDAR PERFIL» Y «CERRAR SESIÓN», CON SU NOMBRE (09-10-2026). En móvil toda fila del hub se queda en iconos, y
+     aquí eran un disquete y una puerta: las dos acciones de más peso de la pantalla, adivinadas. Solo «Volver» sigue
+     siendo flecha, que se entiende sola. Si a 360px no caben en un renglón, «Cerrar sesión» baja al siguiente.
+     (0,6,1) para ganar a los skins que colapsan las filas en móvil (Arcade, Plata y acero). */
+  html:root .hub-profile-card .hub-screen-actions .btn:not(.btn-icon):not(.btn-ghost):not(.btn-back) {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
+    height: 44px;
+    padding-inline: .75rem;
+    font-size: var(--fs-xs);
+    gap: .4rem;
   }
 
   .hub-profile-card .hub-profile-block > p {
@@ -1158,4 +1189,16 @@
   letter-spacing: .1em;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+/* EN LA LISTA DE OTRA PERSONA, EL «NO» SE CALLA. La insignia de «no rejugable» / «sin otra oportunidad» es un candado
+   sobre placa de color, y en la lista de un amigo que no marca ninguno salía en TODAS las filas (09-10-2026): ahí
+   se lee como «esto está oculto», que es justo lo que no significa. Se queda el candado —sigue diciendo «no» a
+   quien lo busque, y el lector de pantalla lo anuncia igual—, pero sin placa ni color: lo que destaca es la
+   excepción. En tus propias listas no cambia nada. (0,4,1) para ganar a los skins que pintan la placa, (0,4,0). */
+html:root:root .hub-feed-card-detail :is(.badge-rejugar-inactivo, .badge-opp-inactivo) {
+  background: transparent !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: none !important;
+  color: var(--text-muted) !important;
 }

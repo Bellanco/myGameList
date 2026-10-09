@@ -54,7 +54,7 @@ export const ConfirmModal = memo(function ConfirmModal({
           <div className="dialog-title">{title}</div>
           {body ? <p className="dialog-body">{body}</p> : null}
           <div className="dialog-actions">
-            <button className="btn btn-secondary" type="button" onClick={onCancel}>
+            <button className="btn btn-quiet" type="button" onClick={onCancel}>
               {DIALOG_MESSAGES.cancel}
             </button>
             {secondaryLabel && onSecondary ? (

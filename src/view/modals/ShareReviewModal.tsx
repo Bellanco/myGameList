@@ -195,7 +195,7 @@ export const ShareReviewModal = memo(function ShareReviewModal({
                 </p>
               ) : null}
               <div className="dialog-actions">
-                <button className="btn btn-secondary" type="button" onClick={onCancel}>
+                <button className="btn btn-quiet" type="button" onClick={onCancel}>
                   {SHARE_UI.cancel}
                 </button>
                 <button

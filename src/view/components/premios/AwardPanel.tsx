@@ -98,7 +98,7 @@ export function AwardPanel({ rank, nickname, seasonName }: AwardPanelProps) {
         <p className="premios-award__who">
           <strong>{PREMIOS_UI.palmares.entry(rank, nickname)}</strong>
         </p>
-        <button type="button" className="btn btn-primary" disabled={!listo} onClick={descargar}>
+        <button type="button" className="btn btn-secondary" disabled={!listo} onClick={descargar}>
           {L.download}
         </button>
       </div>

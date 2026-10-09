@@ -303,7 +303,7 @@ export const GithubSyncCard = memo(function GithubSyncCard({
           sería poner la salida de emergencia en mitad del camino de entrada. */}
       {hasConfig && (
         <div className="sync-card-actions">
-          <button className="btn btn-danger" type="button" onClick={onDisconnect}>
+          <button className="btn btn-exit" type="button" onClick={onDisconnect}>
             <Icon name={COMMON_ICONS.close} />
             <span>{SETTINGS_UI.sync.disconnectBtn}</span>
           </button>

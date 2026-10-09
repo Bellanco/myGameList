@@ -1,7 +1,6 @@
 import { memo, useMemo } from 'react';
 import { STATS_UI } from '../../../core/constants/statsLabels';
 import { SOCIAL_UI } from '../../../core/constants/socialLabels';
-import { Icon } from '../Icon';
 import { HubBackButton } from '../socialhub/HubBackButton';
 import { ProfileReviewsList, type ReviewEntry } from '../socialhub/ProfileReviewsList';
 import { SocialProfileReviewScreen } from '../socialhub/SocialProfileReviewScreen';
@@ -187,7 +186,6 @@ export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, 
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
         <header className="hub-screen-header">
           <div className="hub-hub-title-wrap">
-            <Icon name="signature" className="hub-hub-icon" />
             <h2>{L.screenTitle}</h2>
           </div>
           <p>{L.screenSubtitle}</p>

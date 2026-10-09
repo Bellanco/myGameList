@@ -406,7 +406,10 @@ export const YearSummary = memo(function YearSummary({ summary, voice }: YearSum
     });
   }
 
-  if (common) {
+  /* SIN NADA EN COMÚN NI NADA QUE RECOMENDAR, NO HAY CAPÍTULO. Era una tarjeta entera —y la última, «04 / 04»— con
+     una sola línea, «Este año no coincidisteis en ninguno» (09-10-2026): el resumen acababa en nada. Como la tira de
+     logros de quien no los publica, lo que no tiene nada que decir no se pinta. */
+  if (common && (common.names.length > 0 || common.picks.length > 0)) {
     const { near, gap, affinity, picks } = common;
     cards.push({
       key: 'common',
@@ -452,9 +455,7 @@ export const YearSummary = memo(function YearSummary({ summary, voice }: YearSum
                 </div>
               ) : null}
             </>
-          ) : (
-            <p className="ys-dim">{L.common.none}</p>
-          )}
+          ) : null}
           {picks.length ? (
             <div className="ys-picks">
               <h5 className="ys-picks-title">{L.common.picksTitle}</h5>
@@ -497,7 +498,7 @@ export const YearSummary = memo(function YearSummary({ summary, voice }: YearSum
        como las del panel sin enumerarlas en ocho skins. Y la tarjeta es la social (`hub-feed-card`), que cada tema
        ya viste —placa, tinta, pergamino—; la portada se queda con la suya, que es la del acento. */
     <div className="ys stats-hub">
-      {cards.map((card, index) => (
+      {cards.map((card) => (
         <section
           key={card.key}
           className={[card.accent ? null : 'hub-feed-card', 'ys-card', card.className].filter(Boolean).join(' ')}
@@ -507,9 +508,6 @@ export const YearSummary = memo(function YearSummary({ summary, voice }: YearSum
             <span className="ys-kicker">
               <Icon name={card.icon} className="ui-icon ys-kicker-icon" />
               {card.kicker}
-            </span>
-            <span className="ys-chap" aria-hidden="true">
-              {L.chapter(index + 1, cards.length)}
             </span>
           </div>
           {card.body}

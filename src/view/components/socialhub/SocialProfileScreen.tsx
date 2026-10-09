@@ -1,4 +1,6 @@
-﻿import { Icon } from '../Icon';
+﻿import { useEffect, useState } from 'react';
+import { Icon } from '../Icon';
+import { ConfirmModal } from '../../modals/ConfirmModal';
 import { Notice } from '../Notice';
 import { TierSeal } from '../TierSeal';
 import { HubAvatar } from './HubAvatar';
@@ -40,6 +42,7 @@ export function SocialProfileScreen({
   ownPhotoURL,
   ownVisiblePhotoURL,
   ownPhotoIsGeneric,
+  hasUnsavedChanges = false,
 }: {
   SOCIAL_UI: SocialUiLabels;
   /** Rango propio. Lo asigna el administrador; aquí solo se enseña, que es donde nunca se veía. */
@@ -78,6 +81,8 @@ export function SocialProfileScreen({
   ownVisiblePhotoURL?: string;
   /** ¿Esa foto es el avatar genérico de Google (el monograma)? Ver `core/social/googlePhoto`. */
   ownPhotoIsGeneric?: boolean;
+  /** ¿Hay cambios del perfil sin guardar? Cambia el chip de estado y pide confirmación al salir por «Ir a la actividad». */
+  hasUnsavedChanges?: boolean;
 }) {
   /**
    * ¿Hay foto en la cuenta de Google? Es lo que decide si el interruptor tiene algo que encender.
@@ -111,22 +116,49 @@ export function SocialProfileScreen({
   // Se avisa junto al nombre para que el botón deshabilitado no quede sin explicación.
   const missingCompletedGames = completedGames.length === 0;
 
+  /* CAMBIOS SIN GUARDAR (09-10-2026). Los interruptores de este bloque se guardan con «Guardar perfil» y los de
+     movimientos, al momento; salir sin guardar perdía los primeros sin decir nada. Ahora el chip lo dice, «Ir a la
+     actividad» pregunta antes de irse y cerrar o recargar la pestaña pide confirmación al navegador. */
+  const [leaveAsked, setLeaveAsked] = useState(false);
+  const handleBack = () => {
+    if (hasUnsavedChanges) {
+      setLeaveAsked(true);
+      return;
+    }
+    onBack();
+  };
+  useEffect(() => {
+    if (!hasUnsavedChanges) return undefined;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      // Navegadores antiguos solo avisan si se escribe `returnValue`; el texto lo pone siempre el navegador.
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [hasUnsavedChanges]);
+
   return (
     <HubScreen
       ariaLabel={SOCIAL_UI.profile.sectionAria}
       title={SOCIAL_UI.profile.title}
       cardClassName="hub-profile-card"
       titleExtra={
-        <span className={`hub-profile-sync-chip ${hasCreatedProfile ? 'is-synced' : ''}`}>
+        // Sin perfil creado manda «Sin publicar»: todo lo escrito está, por definición, sin guardar.
+        <span
+          className={`hub-profile-sync-chip ${!hasCreatedProfile ? '' : hasUnsavedChanges ? 'is-unsaved' : 'is-synced'}`.trim()}
+        >
           <span className="dot" aria-hidden="true" />
-          {hasCreatedProfile ? SOCIAL_UI.profile.statusSynced : SOCIAL_UI.profile.statusUnpublished}
+          {!hasCreatedProfile
+            ? SOCIAL_UI.profile.statusUnpublished
+            : hasUnsavedChanges ? SOCIAL_UI.profile.statusUnsaved : SOCIAL_UI.profile.statusSynced}
         </span>
       }
     >
         <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.profile.actionsAria}>
           <div className="hub-screen-actions-left">
             {hasCreatedProfile ? (
-              <HubBackButton onBack={onBack} label={SOCIAL_UI.profile.toFeed} />
+              <HubBackButton onBack={handleBack} label={SOCIAL_UI.profile.toFeed} />
             ) : null}
             <button
               className="btn btn-primary"
@@ -141,7 +173,7 @@ export function SocialProfileScreen({
             </button>
           </div>
           <div className="hub-screen-actions-right">
-            <button className="btn btn-danger" type="button" onClick={onSignOut}>
+            <button className="btn btn-exit" type="button" onClick={onSignOut}>
               <Icon name="logout" />
               {SOCIAL_UI.profile.signOut}
             </button>
@@ -183,100 +215,102 @@ export function SocialProfileScreen({
               <h3>{SOCIAL_UI.profile.visibilityTitle}</h3>
             </div>
             <p>{SOCIAL_UI.profile.visibilityDescription}</p>
+            {/* Los interruptores dicen lo que SE COMPARTE (encendido = visible); lo guardado sigue siendo lo que se
+                oculta (`hiddenTabs`, `hide*`), así que cada uno se pinta y se escribe negado. */}
             
             <div className="visibility-section">
-              <span className="visibility-label">{SOCIAL_UI.profile.hideListSectionTitle}</span>
+              <span className="visibility-label">{SOCIAL_UI.profile.shareListSectionTitle}</span>
               <div className="visibility-group">
                 <label className="visibility-check" htmlFor="hub-hide-list-v">
                   <input
                     id="hub-hide-list-v"
                     type="checkbox"
-                    checked={hiddenTabs.includes('v')}
+                    checked={!hiddenTabs.includes('v')}
                     onChange={() => toggleHiddenTab('v')}
                   />
                   <span className="visibility-toggle-track" aria-hidden="true">
                     <span className="visibility-toggle-thumb" />
                   </span>
-                  <span>{SOCIAL_UI.profile.hideVisitedList}</span>
+                  <span>{SOCIAL_UI.profile.shareVisitedList}</span>
                 </label>
                 <label className="visibility-check" htmlFor="hub-hide-list-e">
                   <input
                     id="hub-hide-list-e"
                     type="checkbox"
-                    checked={hiddenTabs.includes('e')}
+                    checked={!hiddenTabs.includes('e')}
                     onChange={() => toggleHiddenTab('e')}
                   />
                   <span className="visibility-toggle-track" aria-hidden="true">
                     <span className="visibility-toggle-thumb" />
                   </span>
-                  <span>{SOCIAL_UI.profile.hidePlayingList}</span>
+                  <span>{SOCIAL_UI.profile.sharePlayingList}</span>
                 </label>
                 <label className="visibility-check" htmlFor="hub-hide-list-p">
                   <input
                     id="hub-hide-list-p"
                     type="checkbox"
-                    checked={hiddenTabs.includes('p')}
+                    checked={!hiddenTabs.includes('p')}
                     onChange={() => toggleHiddenTab('p')}
                   />
                   <span className="visibility-toggle-track" aria-hidden="true">
                     <span className="visibility-toggle-thumb" />
                   </span>
-                  <span>{SOCIAL_UI.profile.hidePlannedList}</span>
+                  <span>{SOCIAL_UI.profile.sharePlannedList}</span>
                 </label>
                 <label className="visibility-check" htmlFor="hub-hide-list-d">
                   <input
                     id="hub-hide-list-d"
                     type="checkbox"
-                    checked={hiddenTabs.includes('d')}
+                    checked={!hiddenTabs.includes('d')}
                     onChange={() => toggleHiddenTab('d')}
                   />
                   <span className="visibility-toggle-track" aria-hidden="true">
                     <span className="visibility-toggle-thumb" />
                   </span>
-                  <span>{SOCIAL_UI.profile.hideWishlist}</span>
+                  <span>{SOCIAL_UI.profile.shareWishlist}</span>
                 </label>
               </div>
             </div>
 
             <div className="visibility-section">
-              <span className="visibility-label">{SOCIAL_UI.profile.hideFieldSectionTitle}</span>
+              <span className="visibility-label">{SOCIAL_UI.profile.shareFieldSectionTitle}</span>
               <div className="visibility-group">
                 <label className="visibility-check" htmlFor="hub-hide-field-replayable">
                   <input
                     id="hub-hide-field-replayable"
                     type="checkbox"
-                    checked={hideReplayable}
-                    onChange={(event) => setHideReplayable(event.target.checked)}
+                    checked={!hideReplayable}
+                    onChange={(event) => setHideReplayable(!event.target.checked)}
                   />
                   <span className="visibility-toggle-track" aria-hidden="true">
                     <span className="visibility-toggle-thumb" />
                   </span>
-                  <span>{SOCIAL_UI.profile.hideReplayableField}</span>
+                  <span>{SOCIAL_UI.profile.shareReplayableField}</span>
                 </label>
                 <label className="visibility-check" htmlFor="hub-hide-field-retry">
                   <input
                     id="hub-hide-field-retry"
                     type="checkbox"
-                    checked={hideRetry}
-                    onChange={(event) => setHideRetry(event.target.checked)}
+                    checked={!hideRetry}
+                    onChange={(event) => setHideRetry(!event.target.checked)}
                   />
                   <span className="visibility-toggle-track" aria-hidden="true">
                     <span className="visibility-toggle-thumb" />
                   </span>
-                  <span>{SOCIAL_UI.profile.hideRetryField}</span>
+                  <span>{SOCIAL_UI.profile.shareRetryField}</span>
                 </label>
                 {setHideGameTime ? (
                   <label className="visibility-check" htmlFor="hub-hide-field-gametime">
                     <input
                       id="hub-hide-field-gametime"
                       type="checkbox"
-                      checked={hideGameTime || false}
-                      onChange={(event) => setHideGameTime?.(event.target.checked)}
+                      checked={!hideGameTime}
+                      onChange={(event) => setHideGameTime?.(!event.target.checked)}
                     />
                     <span className="visibility-toggle-track" aria-hidden="true">
                       <span className="visibility-toggle-thumb" />
                     </span>
-                    <span>{SOCIAL_UI.profile.hideGameTimeField}</span>
+                    <span>{SOCIAL_UI.profile.shareGameTimeField}</span>
                   </label>
                 ) : null}
               </div>
@@ -353,6 +387,17 @@ export function SocialProfileScreen({
           {hydratingProfile ? <p>{SOCIAL_UI.profile.hydrating}</p> : null}
         </div>
       <HubStatus status={status} statusKind={statusKind} />
+        <ConfirmModal
+          open={leaveAsked}
+          title={SOCIAL_UI.profile.leaveUnsavedTitle}
+          body={SOCIAL_UI.profile.leaveUnsavedBody}
+          confirmLabel={SOCIAL_UI.profile.leaveUnsavedConfirm}
+          onCancel={() => setLeaveAsked(false)}
+          onConfirm={() => {
+            setLeaveAsked(false);
+            onBack();
+          }}
+        />
     </HubScreen>
   );
 }

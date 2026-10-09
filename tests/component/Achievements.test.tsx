@@ -118,7 +118,7 @@ describe('la ficha de una amistad', () => {
     const avance = screen.getByRole('meter');
     expect(avance).toHaveAttribute('aria-valuenow', String(percent));
     expect(avance).toHaveAttribute('aria-valuetext', ACHIEVEMENTS_UI.countHint(percent));
-    expect(avance).toHaveTextContent(ACHIEVEMENTS_UI.rarityShare(percent));
+    expect(avance).toHaveTextContent(ACHIEVEMENTS_UI.catalogShare(percent));
   });
 
   it('si esa persona no publica logros, NO se pinta nada', () => {
@@ -152,9 +152,21 @@ describe('la ficha de una amistad', () => {
     // `h2`, como el título de cualquier otra pantalla de la app: el armazón es el mismo (`hub-screen`).
     expect(screen.getByRole('heading', { name: 'Logros de Fulano', level: 2 })).toBeInTheDocument();
     // Seis conseguidos y ni un bloqueado: el progreso de otra persona hacia lo que no tiene no es asunto de nadie.
-    expect(screen.getAllByRole('listitem')).toHaveLength(6);
+    // Y UNA FILA POR ESCALERA (09-10-2026): los tres escalones de «Créditos finales» son una fila, con el más alto.
+    expect(screen.getAllByRole('listitem')).toHaveLength(4);
     expect(screen.queryByText('Bloqueado')).not.toBeInTheDocument();
-    expect(screen.getAllByText('30 abr 2026').length).toBe(6);
+    expect(screen.getAllByText('30 abr 2026').length).toBe(4);
+  });
+
+  it('agrupa por escalera: el nombre sin número, el escalón alcanzado y su tira de pasos', () => {
+    render(<ProfileAchievementsScreen mirror={ESPEJO} directoryMirrors={[]} owner="Fulano" onBack={() => {}} />);
+
+    const fila = screen.getByText('Créditos finales').closest('li') as HTMLElement;
+    expect(fila.querySelector('.ach-row-step')?.textContent).toBe('III/XI');
+    expect(within(fila).getByText(/Escalón 3 de 11/)).toBeInTheDocument();
+    expect(fila.querySelectorAll('.ach-row-pips i')).toHaveLength(11);
+    expect(fila.querySelectorAll('.ach-row-pips i.is-on')).toHaveLength(3);
+    expect(screen.queryByText('Créditos finales I')).not.toBeInTheDocument();
   });
 
   /** La MISMA pantalla sirve para lo tuyo y para lo de otra persona, así que la voz la decide de quién es. */
@@ -176,7 +188,7 @@ describe('la ficha de una amistad', () => {
     expect(screen.queryByText(/lo tiene el/)).not.toBeInTheDocument();
     expect(document.querySelectorAll('.ach-row-share')).toHaveLength(0);
     // Y lo que sí lleva cada fila: el día y el tipo de logro.
-    const fila = screen.getByText('Créditos finales I').closest('li') as HTMLElement;
+    const fila = screen.getByText('Créditos finales').closest('li') as HTMLElement;
     expect(within(fila).getByText('30 abr 2026')).toBeInTheDocument();
     expect(fila.querySelector('.ach-row-rarity')).toBeInTheDocument();
   });
@@ -195,8 +207,9 @@ describe('la ficha de una amistad', () => {
     ]);
     render(<ProfileAchievementsScreen mirror={conFechas} directoryMirrors={[]} owner="Fulano" onBack={() => {}} />);
 
-    const nombres = screen.getAllByRole('listitem').map((fila) => fila.querySelector('.ach-row-name')?.textContent);
-    expect(nombres).toEqual(['El contador de horas I', 'Créditos finales I', 'Guerra de consolas I']);
+    // El nombre de la escalera es el primer texto de la fila; detrás va el escalón («I/XI»).
+    const nombres = screen.getAllByRole('listitem').map((fila) => fila.querySelector('.ach-row-name')?.firstChild?.textContent);
+    expect(nombres).toEqual(['El contador de horas', 'Créditos finales', 'Guerra de consolas']);
   });
 
   /**
@@ -213,7 +226,7 @@ describe('la ficha de una amistad', () => {
     ]);
     render(<ProfileAchievementsScreen mirror={conHuecos} directoryMirrors={[]} owner="Fulano" onBack={() => {}} />);
 
-    const sinSello = screen.getByText('Guerra de consolas I').closest('li') as HTMLElement;
+    const sinSello = screen.getByText('Guerra de consolas').closest('li') as HTMLElement;
     const fecha = sinSello.querySelector('.ach-row-date') as HTMLElement;
     // El más viejo de su vitrina: el 9 de enero de 2026, no el 30 de abril.
     expect(fecha.textContent).toBe(formatUnlockDate(dia(2200)));
@@ -237,7 +250,7 @@ describe('la ficha de una amistad', () => {
         onBack={() => {}}
       />,
     );
-    const fila = screen.getByText('Créditos finales I').closest('li') as HTMLElement;
+    const fila = screen.getByText('Créditos finales').closest('li') as HTMLElement;
     expect((fila.querySelector('.ach-row-date') as HTMLElement).textContent).toBe(formatUnlockDate(dia(1000)));
   });
 
@@ -251,6 +264,8 @@ describe('la ficha de una amistad', () => {
     const estados = new Map([
       ['completados-10', { id: 'completados-10', level: 1, value: 12, next: null, unlockedAt: dia(2311) }],
       ['completados-25', { id: 'completados-25', level: 0, value: 12, next: 25, unlockedAt: 0 }],
+      // Una escalera sin nada conseguido: su fila es la que va sin día.
+      ['horas-10', { id: 'horas-10', level: 0, value: 3, next: 10, unlockedAt: 0 }],
     ]);
     render(
       <ProfileAchievementsScreen
@@ -263,10 +278,10 @@ describe('la ficha de una amistad', () => {
     );
 
     expect(screen.queryByText(ACHIEVEMENTS_UI.locked)).not.toBeInTheDocument();
-    const pendiente = screen.getByText('Créditos finales II').closest('li') as HTMLElement;
+    const pendiente = screen.getByText('El contador de horas').closest('li') as HTMLElement;
     expect(pendiente.querySelector('.ach-row-date')).toBeNull();
     // Y lo conseguido sí lleva su día, que es de lo que va esa columna.
-    const hecho = screen.getByText('Créditos finales I').closest('li') as HTMLElement;
+    const hecho = screen.getByText('Créditos finales').closest('li') as HTMLElement;
     expect(hecho.querySelector('.ach-row-date')?.textContent).toBe(formatUnlockDate(dia(2311)));
   });
 
@@ -289,6 +304,7 @@ describe('la ficha de una amistad', () => {
     const estados = new Map([
       ['completados-10', { id: 'completados-10', level: 1, value: 12, next: null, unlockedAt: dia(2311) }],
       ['completados-25', { id: 'completados-25', level: 0, value: 12, next: 25, unlockedAt: 0 }],
+      ['horas-10', { id: 'horas-10', level: 0, value: 3, next: 10, unlockedAt: 0 }],
     ]);
     render(
       <ProfileAchievementsScreen
@@ -300,9 +316,13 @@ describe('la ficha de una amistad', () => {
       />,
     );
 
-    // El escalón siguiente, con lo que llevas y lo que hace falta.
-    const pendiente = screen.getByText('Créditos finales II').closest('li') as HTMLElement;
-    expect(within(pendiente).getByText('12 de 25')).toBeInTheDocument();
+    // Por escaleras: la conseguida lleva el camino hacia su escalón siguiente…
+    const hecha = screen.getByText('Créditos finales').closest('li') as HTMLElement;
+    expect(within(hecha).getByText('12 de 25')).toBeInTheDocument();
+    expect(hecha.className).not.toContain('is-locked');
+    // …y la que no tiene ninguno sale apagada, con lo que llevas hacia el primero.
+    const pendiente = screen.getByText('El contador de horas').closest('li') as HTMLElement;
+    expect(within(pendiente).getByText('3 de 10')).toBeInTheDocument();
     expect(pendiente.className).toContain('is-locked');
   });
 });
@@ -325,7 +345,7 @@ describe('el listado propio', () => {
 
   it('cada fila lleva imagen, nombre, condición y día', () => {
     render(<AchievementsScreen items={lista} summary={summarize([])} rarity={null} />);
-    const fila = screen.getByText('Créditos finales II').closest('li') as HTMLElement;
+    const fila = screen.getByText('Créditos finales').closest('li') as HTMLElement;
     expect(within(fila).getByRole('img')).toBeInTheDocument();
     expect(within(fila).getByText('Has terminado 25 juegos')).toBeInTheDocument();
     expect(within(fila).getByText('12 mar 2026')).toBeInTheDocument();
@@ -337,11 +357,11 @@ describe('el listado propio', () => {
    */
   it('lo conseguido se cuenta en pasado y lo que falta se pide en imperativo', () => {
     render(<AchievementsScreen items={lista} summary={summarize([])} rarity={null} />);
-    const hecho = screen.getByText('Créditos finales II').closest('li') as HTMLElement;
+    const hecho = screen.getByText('Créditos finales').closest('li') as HTMLElement;
     expect(within(hecho).getByText('Has terminado 25 juegos')).toBeInTheDocument();
     expect(within(hecho).queryByText('Termina 25 juegos')).not.toBeInTheDocument();
 
-    const falta = screen.getByText('Ya iba siendo hora I').closest('li') as HTMLElement;
+    const falta = screen.getByText('Ya iba siendo hora').closest('li') as HTMLElement;
     expect(within(falta).getByText(/^Termina un juego que llevaba/)).toBeInTheDocument();
   });
 
@@ -352,7 +372,7 @@ describe('el listado propio', () => {
    */
   it('en la ficha de otra persona NO se dice «te has»: se describe el logro', () => {
     render(<AchievementsScreen items={lista} summary={summarize([])} rarity={null} owner="Ana" />);
-    const fila = screen.getByText('Créditos finales II').closest('li') as HTMLElement;
+    const fila = screen.getByText('Créditos finales').closest('li') as HTMLElement;
     expect(within(fila).getByText('Termina 25 juegos')).toBeInTheDocument();
     expect(within(fila).queryByText('Has terminado 25 juegos')).not.toBeInTheDocument();
   });
@@ -377,7 +397,7 @@ describe('el listado propio', () => {
   it('el oculto CONSEGUIDO sale con su nombre: es la sorpresa que venía a ser', () => {
     const estados = new Map([['obra-maestra-1', { id: 'obra-maestra-1', level: 1, value: 1, next: null, unlockedAt: dia(2311) }]]);
     render(<AchievementsScreen items={listForScreen(estados)} summary={summarize([])} rarity={null} />);
-    expect(screen.getByText('Obra maestra I')).toBeInTheDocument();
+    expect(screen.getByText('Obra maestra')).toBeInTheDocument();
   });
 
   /**
@@ -393,7 +413,7 @@ describe('el listado propio', () => {
         rarity={null}
       />,
     );
-    expect(screen.getByText('Obra maestra I')).toBeInTheDocument();
+    expect(screen.getByText('Obra maestra')).toBeInTheDocument();
     expect(screen.getByText('Ponle un 100 a un juego')).toBeInTheDocument();
   });
 
@@ -780,7 +800,7 @@ describe('/logros — un solo listado, conseguidos primero', () => {
     // escalera. Sale del ESCALÓN, que es un dato del catálogo, y no del progreso: por eso un bloqueado también
     // lo tiene. Lo que no tiene es el metal —el filo va en peltre— para que no se lea como conseguido.
     render(<AchievementsScreen items={lista} summary={summarize([])} rarity={null} />);
-    const fila = screen.getByText('Ya iba siendo hora I').closest('li') as HTMLElement;
+    const fila = screen.getByText('Ya iba siendo hora').closest('li') as HTMLElement;
     const medalla = within(fila).getByRole('img');
     expect(medalla.className).toContain('is-locked');
     expect(medalla.querySelector('.ach-art')).not.toBeNull();
@@ -1099,7 +1119,7 @@ describe('la medalla a la que se venía', () => {
 
     const destacadas = document.querySelectorAll('.ach-row.is-destacado');
     expect(destacadas).toHaveLength(1);
-    expect(within(destacadas[0] as HTMLElement).getByText('Créditos finales I')).toBeInTheDocument();
+    expect(within(destacadas[0] as HTMLElement).getByText('Créditos finales')).toBeInTheDocument();
   });
 
   it('y sin ancla no se resalta ninguna', () => {

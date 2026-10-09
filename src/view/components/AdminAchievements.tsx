@@ -653,7 +653,7 @@ export const AdminAchievements = memo(function AdminAchievements({
                     >
                       {A.resetAll}
                     </button>
-                    <button type="button" className="btn btn-secondary" onClick={() => setResetting(null)}>
+                    <button type="button" className="btn btn-quiet" onClick={() => setResetting(null)}>
                       {A.prepareClose}
                     </button>
                   </p>
@@ -949,7 +949,7 @@ export const AdminAchievements = memo(function AdminAchievements({
                     </button>
                     <button
                       type="button"
-                      className="btn btn-secondary"
+                      className="btn btn-quiet"
                       onClick={() => {
                         setDraft(null);
                         setEditing(null);
@@ -1029,7 +1029,7 @@ export const AdminAchievements = memo(function AdminAchievements({
                                   </button>
                                   <button
                                     type="button"
-                                    className="btn btn-secondary"
+                                    className="btn btn-quiet"
                                     onClick={() => setEditing(null)}
                                   >
                                     {A.extraEditCancel}
@@ -1053,7 +1053,7 @@ export const AdminAchievements = memo(function AdminAchievements({
                                   </button>
                                   <button
                                     type="button"
-                                    className="btn btn-secondary"
+                                    className="btn btn-danger"
                                     onClick={() => removeExtra(ladder.key, step)}
                                     disabled={guardando === 'saving'}
                                   >

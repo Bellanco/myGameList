@@ -29,6 +29,7 @@ import {
 import type { SyncConfig } from '../../model/types/game';
 import { resolveGateway } from './socialGateway';
 import { isNotFoundGistError } from './gistErrors';
+import { forgetSocialDataOnDevice } from '../../model/repository/socialSignOutCleanup';
 
 /** Respuesta de `attachExistingSocialGist`: vinculado, no tiene, o no se ha podido saber. */
 type ExistingSocialGist = 'linked' | 'none' | 'unknown';
@@ -239,6 +240,9 @@ export function useSocialGateway({
 
   const handleSignOut = useCallback(async () => {
     await signOutSocialUser();
+    // Lo de los demás se va del dispositivo: listados de amistades, amistades, directorio (ver la cabecera de
+    // `socialSignOutCleanup`). Antes de soltar la sesión en la interfaz, para que nada lo vuelva a pintar.
+    await forgetSocialDataOnDevice();
     void clearAnalyticsUser(); // desvincula al usuario de los eventos/errores posteriores (simétrico con setAnalyticsUser en login)
     setAuthUser(null);
     setShowSocialSpace(false);

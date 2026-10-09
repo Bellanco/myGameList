@@ -226,63 +226,43 @@
   border-radius: var(--tm-chip-radius) var(--tm-chip-vivo);
 }
 
-/* ── §N · LOS COLORES DE LOS BOTONES: PIEDRA, ORO Y HOJA ──────────────────────────────────────────────────
-   La forma no cambia (la hoja de arriba); lo que cambia es de qué está hecho cada uno.
+/* ── §N · LOS COLORES DE LOS BOTONES: PIEDRA, ORO, HOJA Y MITHRIL ───────────────────────────────────────
+   La forma no cambia (la hoja de arriba); lo que cambia es de qué está hecho cada uno, y eso lo decide su FUNCIÓN
+   (ver «Botones por función» en `_forms-and-buttons.scss`).
 
    EL NEUTRO es PIEDRA DE BOSQUE en oscuro —verde musgo casi negro, la piedra cubierta de liquen— y PERGAMINO
-   TOSTADO a la luz. Va por EXCLUSIÓN —todo `.btn` que no tenga rol— y no por lista de neutros, porque hay `.btn`
-   planos sin clase de rol en una veintena de sitios. Completar y abandonar se quedan fuera A PROPÓSITO: siguen en
-   cristal con su color en texto y borde.
+   TOSTADO a la luz. Va por EXCLUSIÓN —todo `.btn` que no tenga función con color— y no por lista de neutros, porque
+   hay `.btn` planos sin clase de rol en una veintena de sitios.
 
-   LA NAVEGACIÓN (`.btn-accent`) lleva los DOS COLORES alternos dentro de cada fila: oro el primero, hoja el
-   siguiente. `of .btn-accent` cuenta solo los de navegación, así que un «Cerrar sesión» en medio no descoloca la
-   pareja. «Pasar a en curso» es oro y «Pasar a próximos», hoja, siempre.
+   CONFIRMAR es ORO (el acento). ABRIR / IR es HOJA, el verde de la Comarca que ya «escribe y señala» en el tema.
+   LO ENCENDIDO es MITHRIL: plata con brillo frío, que se separa del oro y de la hoja por luz y por temperatura. Los
+   teñidos (mover de lista, social, salir) son los de la casa: el velo y el texto de su color sobre la piedra.
 
-   CONTRASTE en el punto más desfavorable de cada degradado (axe no evalúa degradados): oscuro, neutro 10,16:1 ·
-   oro 6,84:1 · hoja 7,19:1; claro, neutro 11,30:1 · oro 6,77:1 · hoja 6,54:1. ── */
+   CONTRASTE en el punto más hondo de cada degradado: oscuro, neutro 10,16:1 · oro 6,84:1 · hoja 7,19:1 · mithril
+   11,9:1; claro, neutro 11,30:1 · oro 6,77:1 · hoja 6,54:1 · mithril (pizarra) 5,4:1. ── */
 :root[data-palette="tierramedia"] {
   --tm-piedra-top: #2f3d2c; --tm-piedra-bot: #1f2a1d; --tm-piedra-ink: #f3f1e6; --tm-piedra-edge: #4f6249;
-  --tm-oro-ink: #1c1303; --tm-hoja-ink: #0d2008;
+  --btn-open: var(--tm-hoja); --btn-open-ink: #0d2008;
+  --btn-sel: #cfdbe3; --btn-sel-ink: #18222a;
 }
 :root[data-palette="tierramedia"][data-theme="light"] {
   --tm-piedra-top: #f6eed8; --tm-piedra-bot: #e6d8b3; --tm-piedra-ink: #2a2010; --tm-piedra-edge: #bba779;
-  --tm-oro-ink: #fff; --tm-hoja-ink: #fff;
+  --btn-open-ink: #fff;
+  --btn-sel: #4c6475; --btn-sel-ink: #fff;
 }
 :root[data-palette="tierramedia"] .btn:not(
-  .btn-icon, .btn-ghost, .stat-tile-go,
-  .btn-primary, .btn-steam, .btn-accent, .btn-playing, .btn-upcoming,
-  .btn-complete, .btn-abandoned, .btn-danger,
+  .btn-icon, .btn-ghost, .btn-quiet, .stat-tile-go,
+  .btn-primary, .btn-steam, .btn-open, .btn-social, .btn-exit, .btn-done,
+  .btn-playing, .btn-upcoming, .btn-complete, .btn-abandoned, .btn-friend, .btn-danger,
   .is-active, .active, .consent-btn-accept
 ) {
   background: linear-gradient(160deg, var(--tm-piedra-top), var(--tm-piedra-bot));
   color: var(--tm-piedra-ink);
   border-color: var(--tm-piedra-edge);
 }
-/* Los dos colores en relleno macizo: el canto de arriba es el color puro y baja un 14 % hacia la base, la misma
-   caída de luz que el principal. */
-:root[data-palette="tierramedia"] .btn-accent,
-:root[data-palette="tierramedia"] .btn-playing {
-  background: linear-gradient(180deg, var(--steam), color-mix(in srgb, var(--steam) 86%, #000));
-  color: var(--tm-oro-ink);
-  border-color: color-mix(in srgb, var(--steam) 60%, #000);
-}
-:root[data-palette="tierramedia"] .btn-accent:nth-child(even of .btn-accent),
-:root[data-palette="tierramedia"] .btn-upcoming {
-  background: linear-gradient(180deg, var(--tm-hoja), color-mix(in srgb, var(--tm-hoja) 86%, #000));
-  color: var(--tm-hoja-ink);
-  border-color: color-mix(in srgb, var(--tm-hoja) 60%, #000);
-}
-
-/* LO QUE ESTÁ ENCENDIDO, EN ORO MACIZO. Un conmutador activo (Rejugar, el alcance «General»/año, Juegos/Horas,
-   Activada/Desactivada…) era antes el cristal de la casa con el texto en verde, y junto a su vecino apagado —la
-   piedra— la diferencia casi no se veía. Ahora se rellena del mismo oro que la pestaña activa: apagado es piedra,
-   encendido es oro. La tinta es la de todo lo que se rellena de oro (6,84:1 en oscuro y 6,77:1 en claro, en el
-   punto más hondo del degradado). */
-:root[data-palette="tierramedia"] :is(.btn-toggle.active, .btn-toggle-deck.active, .btn.is-active):not(.btn-accent) {
-  background: linear-gradient(180deg, var(--steam), color-mix(in srgb, var(--steam) 86%, #000));
-  color: var(--tm-oro-ink);
-  border-color: color-mix(in srgb, var(--steam) 60%, #000);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 6px 14px rgba(var(--steam-rgb),.22);
+/* El encendido lleva además la sombra del principal: es una pieza levantada, no un rótulo. */
+:root[data-palette="tierramedia"] :is(.btn-toggle.active, .btn-toggle-deck.active, .btn.is-active) {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 6px 14px rgba(0,0,0,.22);
 }
 
 /* ── §N · LA CABECERA DE PANTALLA ─────────────────────────────────────────────────────────────────────
@@ -352,3 +332,43 @@
   border-color: color-mix(in srgb, var(--steam) 55%, var(--border));
 }
 :root[data-palette="tierramedia"] .hub-feed-day-header h4 { color: var(--text); }
+
+/* El botón «Amigos» de la ficha (`.btn-friend`): el rosa de Rivendel del mapa. */
+:root[data-palette="tierramedia"] { --btn-friend: var(--cat-5); }
+:root[data-palette="tierramedia"][data-theme="light"] { --btn-friend: var(--cat-5); }
+
+/* ── EL TÍTULO DE PANTALLA (09-10-2026) ───────────────────────────────────────────────────────────────────────────
+   Un gesto del juego en el título de cada pantalla del hub (`.hub-hub-title-wrap h2`), elegido con
+   `docs/maquetas/titulos-temas.html`. Sin `text-transform`: las mayúsculas las pone la casilla de Apariencia, y
+   cualquier animación se queda quieta con los efectos apagados o si el sistema pide menos movimiento. ── */
+/* PORTADILLA DE LIBRO: versalitas de Garamond como los títulos de las ediciones de Tolkien, la inicial en oro y,
+   debajo, un filete dorado que se desvanece y acaba en una hoja (la familia de la orla élfica). Sustituye a la
+   capitular en caja del primer intento, que se leía como un botón pegado al título. */
+:root[data-palette="tierramedia"] .hub-hub-title-wrap h2 {
+  display: inline-flex;
+  flex-direction: column;
+  gap: .2rem;
+  padding-right: 1.6rem;
+  font-family: 'EB Garamond', serif;
+  font-size: 1.75rem;
+  font-weight: 500;
+  font-variant: small-caps;
+  letter-spacing: .06em;
+}
+:root[data-palette="tierramedia"] .hub-hub-title-wrap h2 .rc-plain::first-letter {
+  font-size: 1.4em;
+  font-weight: 600;
+  line-height: .8;
+  color: #d9b45a;
+}
+:root[data-palette="tierramedia"][data-theme="light"] .hub-hub-title-wrap h2 .rc-plain::first-letter { color: #8a5a00; }
+:root[data-palette="tierramedia"] .hub-hub-title-wrap h2 .rc-plain { display: inline-block; }
+:root[data-palette="tierramedia"] .hub-hub-title-wrap h2::after {
+  content: '❦';
+  font-size: .55em;
+  line-height: 1;
+  letter-spacing: 0;
+  color: #c9a24a;
+  text-indent: calc(100% - 1.1em);
+  background: linear-gradient(90deg, #c9a24a, rgba(201, 162, 74, .15)) left 50% / calc(100% - 1.4em) 1px no-repeat;
+}

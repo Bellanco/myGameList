@@ -30,6 +30,8 @@ import { SocialErrorBoundary } from './socialhub/SocialErrorBoundary';
 import { HubOfflineNotice } from './socialhub/HubOfflineNotice';
 import { GithubSyncCard } from './sync/GithubSyncCard';
 import { libraryStart } from '../../core/achievements/metrics';
+import { useHubFocusOnNavigate } from '../hooks/useHubFocusOnNavigate';
+import { ScreenTitle } from './socialhub/ScreenTitle';
 
 /**
  * Hub social - Fase 1.
@@ -64,6 +66,8 @@ const SocialHubInner = memo(function SocialHubInner({
   // El view-model llega en PIEZAS por dominio (ver su `return`), y se desestructuran aquí mismo: lo que viaja a las
   // pantallas memoizadas son los mismos valores de siempre, no las piezas.
   const vm = useSocialViewModel({ games });
+  // Al cambiar de pantalla, el foco no se queda en el `body` (ver el hook).
+  useHubFocusOnNavigate();
   const {
     navigate, activePanel, socialCfgGistId, authUser, loading, showSocialSpace, hasMainSync, hasSocialGist,
     hasSocialSession, offline, serviceLimited, offlineHasCachedData, legalConsentRequired, savingConsent,
@@ -75,6 +79,7 @@ const SocialHubInner = memo(function SocialHubInner({
     hasCreatedProfile, profileName, setProfileName, hiddenTabs, setHiddenTabs, hideReplayable, setHideReplayable,
     hideRetry, setHideRetry, hideGameTime, setHideGameTime, showPhoto, setShowPhoto, ownPhotoIsGeneric,
     ownPublishablePhoto, hydratingProfile, savingProfile, completedGames, socialDisplayName, handleSaveProfile,
+    hasUnsavedChanges,
   } = vm.profileEditor;
   // Rango propio: decide cuánto se ve del panel de estadísticas de un amigo.
   // Administración (el claim): ve la ficha de un amigo sin las restricciones de visibilidad.
@@ -103,7 +108,7 @@ const SocialHubInner = memo(function SocialHubInner({
     openActivityDetail, openMoveReview, openProfileDetail,
   } = vm.nav;
   const {
-    loadingFriendships, friendshipBusyUid, pendingIncomingCount, incomingRequests, outgoingRequests, friendsList,
+    loadingFriendships, friendshipBusyUid, pendingIncomingCount, incomingRequests, friendsList,
     relationshipWith, handleAddOrAcceptFriend, handleCancelFriendRequest, handleRejectFriendRequest,
     handleRemoveFriend, friendActionTarget, confirmFriendAction, cancelFriendAction,
   } = vm.friends;
@@ -350,6 +355,7 @@ const SocialHubInner = memo(function SocialHubInner({
           hydratingProfile={hydratingProfile}
           savingProfile={savingProfile}
           hasCreatedProfile={hasCreatedProfile}
+          hasUnsavedChanges={hasUnsavedChanges}
           onSaveProfile={handleSaveProfile}
           onSignOut={handleSignOut}
           onBack={goToSocial}
@@ -539,15 +545,10 @@ const SocialHubInner = memo(function SocialHubInner({
           <SocialRequestsScreen
             SOCIAL_UI={SOCIAL_UI}
             incomingRequests={incomingRequests}
-            outgoingRequests={outgoingRequests}
-            friendsList={friendsList}
             loading={loadingFriendships}
             busyUid={friendshipBusyUid}
             onAccept={handleAddOrAcceptFriend}
             onReject={handleRejectFriendRequest}
-            onCancel={handleCancelFriendRequest}
-            onRemove={handleRemoveFriend}
-            onOpenProfile={openDirectoryProfile}
             onBack={goToSocial}
             status={status}
             statusKind={statusKind}
@@ -585,6 +586,7 @@ const SocialHubInner = memo(function SocialHubInner({
     return (
       <SocialFeedScreen
         SOCIAL_UI={SOCIAL_UI}
+        hasFriends={friendsList.length > 0}
         socialDisplayName={socialDisplayName}
         ownVisiblePhotoURL={ownPublishablePhoto}
         currentSocialGistId={socialCfgGistId}
@@ -610,7 +612,6 @@ const SocialHubInner = memo(function SocialHubInner({
         showPostCounter={showPostCounter}
         status={status}
         statusKind={statusKind}
-        handleSignOut={handleSignOut}
         offline={offline}
         offlineHasCachedData={offlineHasCachedData}
         serviceLimited={serviceLimited}
@@ -672,8 +673,7 @@ const SocialHubInner = memo(function SocialHubInner({
     <section className="hub-hub hub-hub-gateway" aria-label={SOCIAL_UI.screenAria}>
       <div className="hub-hub-card hub-hub-gateway-card">
         <div className="hub-hub-title-wrap">
-          <Icon name="bottom-hub" className="hub-hub-icon" />
-          <h2>{SOCIAL_UI.hubTitle}</h2>
+          <h2><ScreenTitle text={SOCIAL_UI.hubTitle} /></h2>
         </div>
         <p className="hub-gateway-lead">
           {SOCIAL_UI.gateway.lead}
@@ -741,7 +741,7 @@ const SocialHubInner = memo(function SocialHubInner({
 
         {hasSocialSession ? (
           <div className="hub-gateway-actions" aria-label={SOCIAL_UI.gateway.actionsAria}>
-            <button className="btn btn-danger hub-gateway-btn" type="button" onClick={handleSignOut}>
+            <button className="btn btn-exit hub-gateway-btn" type="button" onClick={handleSignOut}>
               <Icon name="logout" />
               <span>{SOCIAL_UI.gateway.signOut}</span>
             </button>

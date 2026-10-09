@@ -48,7 +48,6 @@ export const YEAR_SUMMARY_UI = {
   button: 'Resumen del año',
   buttonBack: 'Ver perfil',
   title: (year: number) => `Resumen de ${year}`,
-  chapter: (index: number, total: number) => `${String(index).padStart(2, '0')} / ${String(total).padStart(2, '0')}`,
   monthsShort: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'] as const,
   monthLong: (month: number) => MONTHS_LONG[month] || '',
   dateLong: (month: number, day?: number) => (day ? `el ${day} de ${MONTHS_LONG[month]}` : `en ${MONTHS_LONG[month]}`),
@@ -166,7 +165,6 @@ export const YEAR_SUMMARY_UI = {
     title: (count: number) => (count === 1 ? 'Un juego que terminasteis los dos' : `${count} juegos que terminasteis los dos`),
     /** El titular con la afinidad, que solo existe con dos o más juegos en común con nota. */
     titleAffinity: (count: number, affinity: number) => `${count} juegos en común y un ${affinity} % de afinidad`,
-    none: 'Este año no coincidisteis en ninguno.',
     near: (v: SummaryVoice, yours: string, theirs: string) => `donde más coincidís: ${yours} tú, ${theirs} ${v.name}`,
     gap: (v: SummaryVoice, yours: string, theirs: string) => `donde más chocáis: ${yours} tú, ${theirs} ${v.name}`,
     picksTitle: 'De su año, para ti',

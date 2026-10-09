@@ -127,6 +127,7 @@ describe('bloque de movimientos del editor de perfil', () => {
     await user.click(toggleOf('e'));
 
     expect(setHideGameTime).not.toHaveBeenCalled();
-    expect((screen.getByLabelText(SOCIAL_UI.profile.hidePlayingList) as HTMLInputElement).checked).toBe(false);
+    // Sigue compartida: el interruptor de visibilidad dice lo que SE COMPARTE (encendido = visible).
+    expect((screen.getByLabelText(SOCIAL_UI.profile.sharePlayingList) as HTMLInputElement).checked).toBe(true);
   });
 });

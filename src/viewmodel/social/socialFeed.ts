@@ -131,9 +131,17 @@ const FEED_MAX_ITEMS = 300;
 // Si esos ítems ordenan arriba y copan el corte visible, el feed quedaría EN BLANCO. Se saca del feed en origen.
 const MAX_VALID_DATE_MS = 8.64e15;
 
-export function hasRenderableTimestamp(value: unknown): boolean {
+/**
+ * LO FECHADO EN EL FUTURO TAMPOCO ENTRA. El feed se ordena por fecha, así que una entrada de 2099 —un reloj
+ * adelantado o un gist editado a mano— se quedaba la primera en el feed de todas tus amistades para siempre
+ * (09-10-2026). Recortarla a «ahora» no sirve: cada lectura la volvería a poner arriba. Se deja fuera, con un
+ * margen de un día para el desfase de reloj honrado entre dispositivos (zona horaria mal puesta, hora de verano).
+ */
+const MAX_FUTURE_SKEW_MS = 24 * 60 * 60 * 1000;
+
+export function hasRenderableTimestamp(value: unknown, now: number = Date.now()): boolean {
   const numeric = Number(value);
-  return Number.isFinite(numeric) && numeric > 0 && numeric <= MAX_VALID_DATE_MS;
+  return Number.isFinite(numeric) && numeric > 0 && numeric <= MAX_VALID_DATE_MS && numeric <= now + MAX_FUTURE_SKEW_MS;
 }
 
 /**
@@ -349,10 +357,11 @@ export function useSocialFeed(
         })),
     ).map((entry) => ({ ...entry, kind: 'yearSummary' as const }));
 
+    const now = Date.now();
     return [...activity, ...posts, ...moves, ...achievements, ...yearSummaries]
       // Descarta ítems con timestamp inválido/fuera de rango ANTES de ordenar y cortar: si no, ordenarían arriba,
       // coparían el corte visible y el agrupado por día los eliminaría, dejando el feed en blanco (ver bug del 2º amigo).
-      .filter((item) => hasRenderableTimestamp(item.updatedAt))
+      .filter((item) => hasRenderableTimestamp(item.updatedAt, now))
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, FEED_MAX_ITEMS);
   }, [directory, moveTabs, isAdmin, ownAchievements, friendUids, baselines, ownKey]);
@@ -474,4 +483,14 @@ export type SocialDirectoryEntry = {
    * entra al feed, pero al abrir su perfil se hidrata bajo demanda para no mostrarlo a medias.
    */
   socialSkipped?: boolean;
+  /**
+   * Su gist social NO se pudo leer (404, credenciales, red). Como `socialSkipped`, deja la visibilidad SIN CONOCER:
+   * quien filtre sus listados debe tomarla como todo oculto (`LOCKED_VISIBILITY`), y al abrir su perfil se reintenta.
+   */
+  socialUnreadable?: boolean;
 };
+
+/** ¿Se conoce lo que esta persona esconde? Solo si su canal social se ha leído (ver `socialUnreadable`). */
+export function isVisibilityKnown(entry: Pick<SocialDirectoryEntry, 'socialSkipped' | 'socialUnreadable'>): boolean {
+  return !entry.socialSkipped && !entry.socialUnreadable;
+}

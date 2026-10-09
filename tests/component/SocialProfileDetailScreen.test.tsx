@@ -368,7 +368,8 @@ describe('SocialProfileDetailScreen — sin perfil todavía', () => {
 
   it('mientras el directorio carga, espera: esqueleto y aviso de carga, no «no se encontró»', () => {
     const { container } = renderMissing(true);
-    expect(screen.getByRole('status')).toHaveTextContent(SOCIAL_UI.feed.profileDetailLoading);
+    // Dos regiones vivas en la ficha: la de carga y la del aviso del hub (`HubStatus`, vacía aquí).
+    expect(screen.getAllByRole('status').some((region) => region.textContent === SOCIAL_UI.feed.profileDetailLoading)).toBe(true);
     expect(container.querySelector('.hub-profile-hero .hub-skeleton')).not.toBeNull();
     expect(screen.queryByText(SOCIAL_UI.feed.profileDetailMissing)).not.toBeInTheDocument();
   });
