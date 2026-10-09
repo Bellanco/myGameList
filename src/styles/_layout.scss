@@ -853,6 +853,9 @@
 .visibility-group {
   display: flex;
   flex-direction: column;
+  /* Rótulo e interruptor, juntos: a todo el ancho de la tarjeta el interruptor quedaba a más de 1000 px de lo que
+     encendía en escritorio (09-10-2026), y el ojo tenía que cruzar la pantalla para saber qué fila era. */
+  max-width: 40rem;
 }
 
 .visibility-check {
