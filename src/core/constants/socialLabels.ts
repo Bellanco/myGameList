@@ -315,27 +315,18 @@ export const SOCIAL_UI = {
     actionsAria: 'Acciones de solicitudes de amistad',
     back: 'Volver a la actividad',
     incomingTitle: 'Recibidas',
-    outgoingTitle: 'Enviadas',
-    friendsTitle: 'Amigos',
-    // Recibidas y enviadas NO tienen texto de vacío: sin peticiones, su bloque no se pinta (ver
-    // `SocialRequestsScreen`). Amigos sí lo tiene, porque ahí el vacío dice dónde se piden.
-    friendsEmpty: 'Aún no tienes amigos. Envía peticiones desde Perfiles.',
+    // Solo se ve si entras sin nada pendiente o contestas la última: la campana no aparece sin peticiones.
+    empty: 'No tienes solicitudes pendientes.',
     loading: 'Cargando solicitudes...',
     accept: 'Aceptar',
     reject: 'Rechazar',
-    cancel: 'Cancelar',
-    remove: 'Dejar de ser amigos',
     acceptAria: (name: string) => `Aceptar la petición de ${name}`,
     rejectAria: (name: string) => `Rechazar la petición de ${name}`,
-    cancelAria: (name: string) => `Cancelar la petición enviada a ${name}`,
-    removeAria: (name: string) => `Dejar de ser amigo de ${name}`,
     unknownUser: 'Usuario',
-    // Los tres bloques se pintan como rejilla paginada (mismo componente que el directorio), así que necesitan lo
-    // mismo que él: nombrar el grupo y decir cuánta gente queda por mostrar.
+    // El bloque se pinta como rejilla paginada (mismo componente que el directorio), así que necesita lo mismo que
+    // él: nombrar el grupo y decir cuánta gente queda por mostrar.
     sectionGroupAria: (title: string, count: number) => `${title}: ${count} personas`,
     showMore: (remaining: number) => `Mostrar más (quedan ${remaining})`,
-    // Solo se puede abrir el perfil de un AMIGO: en recibidas y enviadas todavía no hay relación aceptada.
-    openFriendAria: (name: string) => `Abrir perfil social de ${name}`,
   },
   friendship: {
     add: 'Añadir amigo',

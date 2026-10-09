@@ -107,7 +107,7 @@ const SocialHubInner = memo(function SocialHubInner({
     openActivityDetail, openMoveReview, openProfileDetail,
   } = vm.nav;
   const {
-    loadingFriendships, friendshipBusyUid, pendingIncomingCount, incomingRequests, outgoingRequests, friendsList,
+    loadingFriendships, friendshipBusyUid, pendingIncomingCount, incomingRequests,
     relationshipWith, handleAddOrAcceptFriend, handleCancelFriendRequest, handleRejectFriendRequest,
     handleRemoveFriend, friendActionTarget, confirmFriendAction, cancelFriendAction,
   } = vm.friends;
@@ -544,15 +544,10 @@ const SocialHubInner = memo(function SocialHubInner({
           <SocialRequestsScreen
             SOCIAL_UI={SOCIAL_UI}
             incomingRequests={incomingRequests}
-            outgoingRequests={outgoingRequests}
-            friendsList={friendsList}
             loading={loadingFriendships}
             busyUid={friendshipBusyUid}
             onAccept={handleAddOrAcceptFriend}
             onReject={handleRejectFriendRequest}
-            onCancel={handleCancelFriendRequest}
-            onRemove={handleRemoveFriend}
-            onOpenProfile={openDirectoryProfile}
             onBack={goToSocial}
             status={status}
             statusKind={statusKind}

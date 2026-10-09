@@ -1,4 +1,3 @@
-import React from 'react';
 import { Icon } from '../Icon';
 import { HubUserCard, HubUserCardSkeleton } from './HubUserCard';
 import { HubUserSection } from './HubUserSection';
@@ -9,11 +8,15 @@ import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
 
 /**
- * Bandeja de solicitudes de amistad (recibidas / enviadas) y gestión de amigos.
+ * Bandeja de solicitudes de amistad: SOLO las que te han hecho a ti, que son lo único que pide algo de tu parte.
  *
- * Los bloques de peticiones solo existen cuando hay peticiones: sin `emptyText`, `HubUserSection` no pinta nada.
- * Lo normal es no tener ninguna, y el estado habitual de esta pantalla no debería ser dos frases diciendo que no
- * hay nada. El bloque de AMIGOS sí conserva el suyo: ahí el vacío explica dónde se piden.
+ * Aquí estaban también las que has enviado y la lista de amigos (09-10-2026), y las dos se repetían en «Perfiles»:
+ * allí cada amigo sale con su tarjeta (también los que no están en el directorio, que entran por el documento de
+ * amistad) y quien tiene tu petición lleva «Pendiente · Retirar». Dejar de ser amigos está en su ficha. Con eso
+ * fuera, la campana del feed solo aparece cuando hay algo que contestar (ver `FeedShell`).
+ *
+ * Si contestas la última estando dentro, la pantalla se queda con su aviso de vacío y el botón de volver: no te
+ * saca de ella sin pedirlo, y así ves que se ha hecho.
  */
 type RequestView = {
   docId: string;
@@ -22,29 +25,18 @@ type RequestView = {
   photo: string;
   /** Solo de quien esté en el directorio; sin él la tarjeta va sin punto de rango. */
   tier?: ProfileTier;
-  /** Ficha del directorio, para poder abrir el perfil desde la sección de amigos. */
-  profileId?: string;
 };
 
-/**
- * Filas por página en cada bloque. Dos y no más porque aquí hay TRES bloques apilados: con dos filas por bloque,
- * los tres caben de un vistazo y lo accionable —las peticiones recibidas— nunca queda debajo de una lista larga
- * de amigos.
- */
-const REQUEST_ROWS_PER_PAGE = 2;
+/** Filas por página: con muchas peticiones a la vez, la lista crece a tandas en vez de empujar la pantalla. */
+const REQUEST_ROWS_PER_PAGE = 4;
 
 export function SocialRequestsScreen({
   SOCIAL_UI,
   incomingRequests,
-  outgoingRequests,
-  friendsList,
   loading,
   busyUid,
   onAccept,
   onReject,
-  onCancel,
-  onRemove,
-  onOpenProfile,
   onBack,
   status,
   statusKind,
@@ -52,16 +44,10 @@ export function SocialRequestsScreen({
 }: {
   SOCIAL_UI: SocialUiLabels;
   incomingRequests: RequestView[];
-  outgoingRequests: RequestView[];
-  friendsList: RequestView[];
   loading: boolean;
   busyUid: string;
   onAccept: (otherUid: string) => void;
   onReject: (otherUid: string) => void;
-  onCancel: (otherUid: string) => void;
-  onRemove: (otherUid: string) => void;
-  /** Abrir el perfil de un AMIGO. Opcional: sin él las tarjetas de amigos son de solo lectura. */
-  onOpenProfile?: (profileId: string) => void;
   onBack: () => void;
   status: string;
   statusKind: string;
@@ -72,21 +58,6 @@ export function SocialRequestsScreen({
   showTiers?: boolean;
 }) {
   const R = SOCIAL_UI.requests;
-
-  /**
-   * Solo las tarjetas de AMIGOS abren perfil. En recibidas y enviadas todavía no hay amistad aceptada, así que
-   * ni la foto se enseña (política de fotos) ni hay nada que enseñar al otro lado.
-   */
-  const openFriend = (friend: RequestView) =>
-    onOpenProfile && friend.profileId ? () => onOpenProfile(friend.profileId as string) : undefined;
-
-  // Enter/Espacio abren el perfil igual que el clic: la tarjeta es enfocable y tiene que responder al teclado.
-  const openOnKey = (friend: RequestView) => (event: React.KeyboardEvent<HTMLElement>) => {
-    const open = openFriend(friend);
-    if (!open || (event.key !== 'Enter' && event.key !== ' ')) return;
-    event.preventDefault();
-    open();
-  };
 
   return (
     <HubScreen ariaLabel={R.sectionAria} title={R.title}>
@@ -144,67 +115,7 @@ export function SocialRequestsScreen({
           )}
         />
 
-        <HubUserSection
-          title={R.outgoingTitle}
-          items={outgoingRequests}
-          keyOf={(request) => request.docId}
-          groupAriaLabel={R.sectionGroupAria}
-          showMoreLabel={R.showMore}
-          rowsPerPage={REQUEST_ROWS_PER_PAGE}
-          renderItem={(request) => (
-            <HubUserCard
-              name={request.name}
-              photoURL={request.photo}
-              tier={showTiers ? request.tier : undefined}
-              busy={busyUid === request.otherUid}
-            >
-              <button
-                className="btn btn-exit"
-                type="button"
-                disabled={busyUid === request.otherUid}
-                aria-label={R.cancelAria(request.name)}
-                title={R.cancelAria(request.name)}
-                onClick={() => onCancel(request.otherUid)}
-              >
-                <Icon name="close" />
-                <span className="btn-label">{R.cancel}</span>
-              </button>
-            </HubUserCard>
-          )}
-        />
-
-        <HubUserSection
-          title={R.friendsTitle}
-          items={friendsList}
-          keyOf={(friend) => friend.docId}
-          emptyText={R.friendsEmpty}
-          groupAriaLabel={R.sectionGroupAria}
-          showMoreLabel={R.showMore}
-          rowsPerPage={REQUEST_ROWS_PER_PAGE}
-          renderItem={(friend) => (
-            <HubUserCard
-              name={friend.name}
-              photoURL={friend.photo}
-              tier={showTiers ? friend.tier : undefined}
-              busy={busyUid === friend.otherUid}
-              onOpen={openFriend(friend)}
-              openAriaLabel={R.openFriendAria(friend.name)}
-              onKeyDown={openOnKey(friend)}
-            >
-              <button
-                className="btn btn-exit"
-                type="button"
-                disabled={busyUid === friend.otherUid}
-                aria-label={R.removeAria(friend.name)}
-                title={R.removeAria(friend.name)}
-                onClick={() => onRemove(friend.otherUid)}
-              >
-                <Icon name="close" />
-                <span className="btn-label">{R.remove}</span>
-              </button>
-            </HubUserCard>
-          )}
-        />
+        {!loading && incomingRequests.length === 0 ? <p>{R.empty}</p> : null}
 
         <HubStatus status={status} statusKind={statusKind} />
     </HubScreen>

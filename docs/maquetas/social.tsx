@@ -579,24 +579,20 @@ function ResenaDePerfil() {
   );
 }
 
-function vistaDeSolicitud(p: Persona, conPerfil = false) {
-  return { docId: `doc-${p.uid}`, otherUid: p.uid, name: p.displayName, photo: '', tier: p.tier, ...(conPerfil ? { profileId: p.id } : {}) };
+function vistaDeSolicitud(p: Persona) {
+  return { docId: `doc-${p.uid}`, otherUid: p.uid, name: p.displayName, photo: '', tier: p.tier };
 }
 
-function Solicitudes() {
+/** `vacia`: lo que se ve al contestar la última estando dentro (sin peticiones, la campana del feed no sale). */
+function Solicitudes({ vacia = false }: { vacia?: boolean }) {
   return (
     <SocialRequestsScreen
       SOCIAL_UI={SOCIAL_UI}
-      incomingRequests={[vistaDeSolicitud(CARMEN), vistaDeSolicitud(ALEX)]}
-      outgoingRequests={[vistaDeSolicitud(SERGIO)]}
-      friendsList={[MARTA, IVAN, LUCIA, NACHO, PAULA].map((p) => vistaDeSolicitud(p, true))}
+      incomingRequests={vacia ? [] : [vistaDeSolicitud(CARMEN), vistaDeSolicitud(ALEX)]}
       loading={false}
       busyUid=""
       onAccept={avisar('aceptaría la petición')}
       onReject={avisar('pediría confirmación para rechazar')}
-      onCancel={avisar('pediría confirmación para retirar')}
-      onRemove={avisar('pediría confirmación para dejar de ser amigos')}
-      onOpenProfile={avisar('abriría la ficha')}
       onBack={avisar('volvería al feed')}
       status=""
       statusKind=""
@@ -614,6 +610,7 @@ const PANTALLAS: Record<string, { nombre: string; ruta: string; pintar: () => Re
   'feed-vacio': { nombre: 'Feed sin amigos', ruta: '/social', pintar: () => <Feed vacio /> },
   amigos: { nombre: 'Perfiles (directorio)', ruta: '/social/profiles', pintar: () => <Amigos /> },
   solicitudes: { nombre: 'Solicitudes', ruta: '/social/requests', pintar: () => <Solicitudes /> },
+  'solicitudes-vacia': { nombre: 'Solicitudes (ninguna)', ruta: '/social/requests', pintar: () => <Solicitudes vacia /> },
   perfil: { nombre: 'Perfil de una amiga', ruta: RUTA_MARTA + subruta, pintar: () => <Perfil /> },
   'perfil-propio': { nombre: 'Tu perfil', ruta: RUTA_PROPIA + subruta, pintar: () => <Perfil propio /> },
   ajustes: { nombre: 'Ajustes del perfil social', ruta: '/social/profile', pintar: () => <Ajustes /> },

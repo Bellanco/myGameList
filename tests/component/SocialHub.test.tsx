@@ -1268,9 +1268,10 @@ describe('SocialHub (componente, post-M3)', () => {
     const adaView = { docId: 'ada__me', otherUid: 'ada', otherName: 'Ada', otherPhoto: '', otherSocialGistId: 'ada-social', otherGamesGistId: 'ada-games', state: 'friends', createdAt: 0, updatedAt: 1 };
     firebaseMocks.getMyFriendships.mockResolvedValue({ friends: [adaView], incoming: [], outgoing: [], byOtherUid: { ada: adaView } });
 
-    renderHub('/social/requests');
+    // Desde su ficha: la bandeja ya no lista amigos (09-10-2026). Ada no está en el directorio, así que entra por el
+    // documento de amistad con su uid como id.
+    renderHub('/social/profiles/ada');
 
-    // El amigo aparece en la lista de gestión.
     fireEvent.click(await screen.findByLabelText(SOCIAL_UI.friendship.removeAria('Ada')));
 
     // Se abre la confirmación y NO se borra todavía.

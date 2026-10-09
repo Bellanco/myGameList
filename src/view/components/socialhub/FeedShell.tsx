@@ -96,21 +96,23 @@ export function FeedShell({
               {F.openProfiles}
               <Icon name="angle-right" className="ui-icon btn-open-go" />
             </button>
-            <button
-              className="btn btn-secondary hub-requests-btn"
-              type="button"
-              disabled={inert}
-              onClick={actions?.onOpenRequests}
-              aria-label={inert ? undefined : F.openRequestsAria(actions.pendingIncomingCount)}
-              title={F.openRequests}
-            >
-              <Icon name="bell" />
-              {actions && actions.pendingIncomingCount > 0 ? (
+            {/* LA CAMPANA SOLO CON ALGO QUE CONTESTAR (09-10-2026). Dentro ya solo están las peticiones que te han hecho;
+                sin ninguna, el botón llevaba a una pantalla vacía. Tampoco sale en el esqueleto, donde aún no se sabe
+                cuántas hay: aparece a la derecha de «Ver perfiles» y no desplaza nada al llegar. */}
+            {!inert && actions && actions.pendingIncomingCount > 0 ? (
+              <button
+                className="btn btn-secondary hub-requests-btn"
+                type="button"
+                onClick={actions.onOpenRequests}
+                aria-label={F.openRequestsAria(actions.pendingIncomingCount)}
+                title={F.openRequests}
+              >
+                <Icon name="bell" />
                 <span className="hub-requests-count is-active" aria-hidden="true">
                   {actions.pendingIncomingCount}
                 </span>
-              ) : null}
-            </button>
+              </button>
+            ) : null}
           </div>
           {/* SIN «CERRAR SESIÓN» AQUÍ. Era el botón más llamativo de la pantalla que más se abre, y es la acción que
               menos se busca en ella: vive en «Mi perfil social», con el resto de lo que es de la cuenta (09-10-2026). */}
