@@ -133,7 +133,8 @@ preparada para un «compacto / cómodo» que no se ha construido.
   **macizo** para confirmar (`.btn-primary`), abrir / ir (`.btn-open`, con un `angle-right` detrás), lo encendido
   (`.btn-toggle.active`, `.btn.is-active`) y destruir (`.btn-danger`); **teñido** para mover de lista
   (`.btn-playing/-upcoming/-complete/-abandoned`, el color de su lista), positivo social (`.btn-social`), salir, que
-  se deshace (`.btn-exit`), y lo ya hecho (`.btn-done`, «Copiado»); **neutro** para utilidad (`.btn-secondary`) y
+  se deshace (`.btn-exit`), lo ya hecho (`.btn-done`, «Copiado») y la amistad que ya hay (`.btn-friend`, «♥ Amigos»
+  en la ficha, en el rosa de cada tema con `--btn-friend`, y que pide confirmación para dejar de serlo); **neutro** para utilidad (`.btn-secondary`) y
   volver (`.btn-back`); **callado** para descartar (`.btn-quiet`). Cada tema rellena `--btn-open`, `--btn-sel` y
   `--move-e/p/c/v` con colores de su mundo (hoja y mithril; cian y ámbar; temple azul y púrpura; Sala de Terciopelo
   y bocadillo; el otro portal y el cubo de compañía; neón cian y violeta; turquesa y luna; sodio y latón) y pinta
