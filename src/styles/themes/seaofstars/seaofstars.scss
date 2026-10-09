@@ -742,3 +742,7 @@
 /* El rótulo del juego a la luz: el ámbar de `--tab-active` sobre su velo encima de las turquesas se quedaba en 4,4:1
    (09-10-2026). El texto, un pelo más hondo; el filete, igual. */
 :root[data-palette="seaofstars"][data-theme="light"] .hub-feed-game-chip { color: color-mix(in srgb, var(--tab-active) 85%, #000); }
+
+/* El «¿?» a la luz: el tercio hacia el texto de la base (`_table.scss`) se quedaba en 3,4:1 sobre las turquesas
+   (09-10-2026); aquí va a la mitad, hacia la tinta. */
+:root[data-palette="seaofstars"][data-theme="light"] .score-ring.is-noscore .score-ring-num { color: color-mix(in srgb, var(--noscore), #000 50%); }
