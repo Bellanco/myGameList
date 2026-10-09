@@ -1432,6 +1432,25 @@ html:root .hub-screen-card .hub-feed-card-detail:not(.has-cover) {
   font-size: var(--fs-sm);
 }
 
+/* EN MÓVIL, LA NOTA ARRIBA Y LA FECHA EN SU RENGLÓN (09-10-2026). En la mono de la fecha, «Analizado el 09 de octubre
+   a las 11:24» no cabe junto a las estrellas en una burbuja de 300px y se partía en tres renglones. Las estrellas
+   (o el aro) suben encima, alineadas al texto, y la fecha ocupa el ancho entero: dos renglones limpios. */
+@media (max-width: 620px) {
+  .hub-feed-meta {
+    flex-wrap: wrap;
+    row-gap: .3rem;
+  }
+
+  .hub-feed-meta > :is(.stars, .score-ring) {
+    order: -1;
+    margin-left: 0;
+  }
+
+  .hub-feed-meta > .hub-feed-date {
+    flex-basis: 100%;
+  }
+}
+
 .hub-feed-review-text {
   margin: 0;
   max-width: 65ch;
