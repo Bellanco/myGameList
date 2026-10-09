@@ -916,6 +916,24 @@ describe('firestore.rules', () => {
       }));
     });
 
+    // Las fechas estaban en la allowlist sin tipo: una petición podía llevar casi 1 MiB en `createdAt`, que cada
+    // destinatario descargaba en cada relectura (09-10-2026).
+    it('create y update: las fechas tienen que ser número o timestamp', async () => {
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'friendships', DOC_ID), {
+        ...pendingFromAtoB(), createdAt: 'x'.repeat(10_000),
+      }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'friendships', DOC_ID), {
+        ...pendingFromAtoB(), updatedAt: { basura: true },
+      }));
+      await seed('friendships', DOC_ID, { ...pendingFromAtoB(), status: 'accepted' });
+      await assertFails(updateDoc(doc(ownerDb('uid-a'), 'friendships', DOC_ID), {
+        requesterName: 'Ada', updatedAt: 'x'.repeat(10_000),
+      }));
+      await assertSucceeds(updateDoc(doc(ownerDb('uid-a'), 'friendships', DOC_ID), {
+        requesterName: 'Ada', updatedAt: 3,
+      }));
+    });
+
     it('accept: el recipient no puede colar una foto no-https al aceptar', async () => {
       await seed('friendships', DOC_ID, pendingFromAtoB());
       await assertFails(updateDoc(doc(ownerDb('uid-b'), 'friendships', DOC_ID), {
