@@ -982,3 +982,6 @@
 /* «Amigos» a la luz: el latón sobre el pergamino se quedaba en 4,1:1 (09-10-2026); el rótulo va más hondo, el filete
    y la cruz siguen en el latón. */
 :root[data-palette="grimdark"][data-theme="light"] .hub-friend-chip { color: color-mix(in srgb, var(--grim-gold) 80%, #000); }
+
+/* La fecha del día a la luz: el latón sobre el pergamino se quedaba en 3,3:1 (09-10-2026); el rótulo, más hondo. */
+:root[data-palette="grimdark"][data-theme="light"] .hub-feed-day-header h4 { color: color-mix(in srgb, var(--grim-gold) 72%, #000); }

@@ -129,4 +129,6 @@
 /* Sin título, la descripción hereda la tinta del tono. Es el caso del requisito del perfil («necesitas un juego
    completado»), que es una sola frase: con el rótulo y el nombre ausentes, la tinta es la única señal que le
    queda y sin esto se leía como una caja gris más del formulario, que es justo lo que no es. */
-.ach-toast.is-notice.is-compact .ach-toast-desc:only-child { color: var(--notice-ink); }
+/* Un 30 % hacia el texto del modo: con la tinta pura sobre el velo de su tono, el ámbar del aviso de la foto se
+   quedaba en 3,6–4,4:1 en Portal y Mar de estrellas claros (09-10-2026). Sigue leyéndose del color del aviso. */
+.ach-toast.is-notice.is-compact .ach-toast-desc:only-child { color: color-mix(in srgb, var(--notice-ink), var(--text) 30%); }

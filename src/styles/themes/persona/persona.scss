@@ -796,3 +796,7 @@
 /* El rótulo del juego de noche: el blanco sobre el rojo vivo de la paleta se quedaba en 3,8:1 (09-10-2026). El rojo
    del relleno baja un punto, hacia el de la tinta del Velvet, y el rótulo llega a 5:1. */
 :root[data-palette="persona"]:not([data-theme="light"]) .hub-feed-game-chip { background: color-mix(in srgb, var(--steam) 80%, #000); }
+
+/* La pestaña de día a la luz: la tinta negra sobre el rojo hondo de claro (#e60012) se quedaba en 4,1:1
+   (09-10-2026). La placa sube un punto hacia el rojo de noche y la tinta llega a 5:1. */
+:root[data-palette="persona"][data-theme="light"] .hub-feed-day-header { background: color-mix(in srgb, var(--steam) 80%, #fff); }
