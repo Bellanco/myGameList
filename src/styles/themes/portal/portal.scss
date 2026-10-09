@@ -1069,3 +1069,17 @@
 /* «Amigos» de noche: el rosa del cubo sobre la placa se quedaba en 3,3:1 (09-10-2026); el rótulo va más claro, el
    filete y el corazón siguen en el rosa de siempre. */
 :root[data-palette="portal"]:not([data-theme="light"]) .hub-friend-chip { color: color-mix(in srgb, var(--portal-cube) 70%, #fff); }
+
+/* ── EL TÍTULO DE PANTALLA (09-10-2026) ───────────────────────────────────────────────────────────────────────────
+   Un gesto del juego en el título de cada pantalla del hub (`.hub-hub-title-wrap h2`), elegido con
+   `docs/maquetas/titulos-temas.html`. Sin `text-transform`: las mayúsculas las pone la casilla de Apariencia, y
+   cualquier animación se queda quieta con los efectos apagados o si el sistema pide menos movimiento. ── */
+/* TERMINAL DE GLaDOS: monoespaciada naranja de la consola de Aperture y un cursor que parpadea (solo con efectos).
+   A la luz, el naranja de la Aperture antigua, más hondo. */
+:root[data-palette="portal"] .hub-hub-title-wrap h2 { font-family: 'Share Tech Mono', monospace; letter-spacing: .04em; color: #ff9e1b !important; }
+:root[data-palette="portal"] .hub-hub-title-wrap h2::after { content: '▮'; margin-left: .2em; }
+:root[data-palette="portal"][data-theme="light"] .hub-hub-title-wrap h2 { color: #9a4a08 !important; }
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-effects="on"][data-palette="portal"] .hub-hub-title-wrap h2::after { animation: portal-cursor 1s steps(1) infinite; }
+}
+@keyframes portal-cursor { 50% { opacity: 0; } }

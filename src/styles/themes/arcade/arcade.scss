@@ -1026,3 +1026,24 @@
 /* El botón «Amigos» de la ficha (`.btn-friend`): el rosa chicle de pegatina. */
 :root[data-palette="arcade"] { --btn-friend: var(--arc-pink); }
 :root[data-palette="arcade"][data-theme="light"] { --btn-friend: var(--arc-pink); }
+
+/* ── EL TÍTULO DE PANTALLA (09-10-2026) ───────────────────────────────────────────────────────────────────────────
+   Un gesto del juego en el título de cada pantalla del hub (`.hub-hub-title-wrap h2`), elegido con
+   `docs/maquetas/titulos-temas.html`. Sin `text-transform`: las mayúsculas las pone la casilla de Apariencia, y
+   cualquier animación se queda quieta con los efectos apagados o si el sistema pide menos movimiento. ── */
+/* DEGRADADO SYNTHWAVE: el rótulo de la carcasa, de rosa a cian sobre letras cromadas. A la luz, los mismos tonos
+   hondos (el cian claro desaparecía sobre el fondo lila). */
+:root[data-palette="arcade"] .hub-hub-title-wrap h2 {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 800;
+  letter-spacing: .06em;
+  background: linear-gradient(180deg, #ff6ad5 0%, #ff3d9e 45%, #22e5ff 55%, #b9fbff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  filter: drop-shadow(0 2px 0 #0a0614);
+}
+:root[data-palette="arcade"][data-theme="light"] .hub-hub-title-wrap h2 {
+  background-image: linear-gradient(180deg, #c2005f 0%, #9b1fd0 50%, #065c6b 100%);
+  filter: none;
+}

@@ -985,3 +985,22 @@
 /* El botón «Amigos» de la ficha (`.btn-friend`): el magenta del HUD. */
 :root[data-palette="cyberpunk"] { --btn-friend: var(--cyber-magenta); }
 :root[data-palette="cyberpunk"][data-theme="light"] { --btn-friend: var(--cyber-magenta); }
+
+/* ── EL TÍTULO DE PANTALLA (09-10-2026) ───────────────────────────────────────────────────────────────────────────
+   Un gesto del juego en el título de cada pantalla del hub (`.hub-hub-title-wrap h2`), elegido con
+   `docs/maquetas/titulos-temas.html`. Sin `text-transform`: las mayúsculas las pone la casilla de Apariencia, y
+   cualquier animación se queda quieta con los efectos apagados o si el sistema pide menos movimiento. ── */
+/* NEÓN QUE FALLA: el letrero magenta de Night City con un tubo que parpadea de vez en cuando (solo con efectos). */
+:root[data-palette="cyberpunk"] .hub-hub-title-wrap h2 {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  font-size: 1.5rem;
+  letter-spacing: .12em;
+  color: #ffd1e3 !important;
+  text-shadow: 0 0 4px #ff2a6d, 0 0 12px #ff2a6d, 0 0 26px rgba(255, 42, 109, .65);
+}
+:root[data-palette="cyberpunk"][data-theme="light"] .hub-hub-title-wrap h2 { color: #b0004d !important; text-shadow: 0 0 6px rgba(255, 42, 109, .45); }
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-effects="on"][data-palette="cyberpunk"] .hub-hub-title-wrap h2 { animation: cyber-neon-falla 5s infinite; }
+}
+@keyframes cyber-neon-falla { 0%, 86%, 92%, 100% { opacity: 1; } 87% { opacity: .35; } 89% { opacity: .9; } 90% { opacity: .2; } }

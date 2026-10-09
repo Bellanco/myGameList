@@ -760,3 +760,20 @@
   box-shadow: none !important;
 }
 
+/* ── EL TÍTULO DE PANTALLA (09-10-2026) ───────────────────────────────────────────────────────────────────────────
+   Un gesto del juego en el título de cada pantalla del hub (`.hub-hub-title-wrap h2`), elegido con
+   `docs/maquetas/titulos-temas.html`. Sin `text-transform`: las mayúsculas las pone la casilla de Apariencia, y
+   cualquier animación se queda quieta con los efectos apagados o si el sistema pide menos movimiento. ── */
+/* PLACA DE ORO CON SOL Y LUNA: letra de píxel dorada con contorno, entre el sol de Zale y la luna de Valere. */
+:root[data-palette="seaofstars"] .hub-hub-title-wrap h2 {
+  font-family: 'Pixelify Sans', sans-serif;
+  letter-spacing: .04em;
+  color: #ffc01f !important;
+  text-shadow: 1px 0 #3a2400, -1px 0 #3a2400, 0 1px #3a2400, 0 -1px #3a2400, 2px 2px 0 #3a2400;
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+}
+:root[data-palette="seaofstars"] .hub-hub-title-wrap h2::before { content: '☀'; color: #ffc01f; }
+:root[data-palette="seaofstars"] .hub-hub-title-wrap h2::after { content: '☾'; color: #a472e8; text-shadow: 2px 2px 0 #1c1a3a; }
+:root[data-palette="seaofstars"][data-theme="light"] .hub-hub-title-wrap h2::after { color: #5a23b8; text-shadow: none; }

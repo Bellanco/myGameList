@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Títulos por tema</title>
+<!--
+  OPCIONES DE TÍTULO DE PANTALLA POR TEMA (09-10-2026). Como la «tarjeta de aviso» de Persona, un gesto del juego de
+  cada tema para el título de pantalla del hub. Monta la pantalla REAL de la maqueta del social (perfil de un amigo)
+  una vez por opción y le inyecta el CSS de esa opción; solo cambia el título. Usa las letras que cada tema ya sirve.
+  Necesita el servidor de desarrollo.
+-->
+<style>
+  :root { --bg: #15171a; --fg: #e8e6e1; --dim: #9a978f; --line: #2c2f34; --acc: #d8b45a; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+  h1 { font-size: 15px; margin: 0 8px 0 0; }
+  .grupo { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+  .grupo span { color: var(--dim); margin-right: 4px; }
+  button, select { font: inherit; color: var(--fg); background: #22252a; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  button[aria-pressed="true"] { border-color: var(--acc); color: var(--acc); }
+  main { display: grid; grid-template-columns: repeat(auto-fill, minmax(560px, 1fr)); gap: 18px; padding: 16px; }
+  figure { margin: 0; }
+  figcaption { margin-bottom: 6px; color: var(--dim); }
+  figcaption b { color: var(--fg); font-size: 15px; margin-right: .4rem; }
+  .elegida { display: inline-block; margin-right: .5rem; padding: 1px 8px; border-radius: 99px; background: #d8b45a; color: #1a1406; font-size: 12px; font-weight: 700; }
+  .marco { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; height: 175px; background: #000; }
+  iframe { border: 0; display: block; width: 820px; height: 260px; transform-origin: 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Títulos de pantalla por tema</h1>
+  <div class="grupo" id="temas"><span>Tema</span></div>
+  <div class="grupo"><span>Modo</span>
+    <select id="modo"><option value="dark">Oscuro</option><option value="light">Claro</option></select>
+  </div>
+</header>
+<main id="opciones"></main>
+<script>
+/* Cada opción es CSS sobre el título de pantalla (`.hub-hub-title-wrap h2`). `T` es su selector, ya con la paleta. */
+const T = (p) => `:root[data-palette="${p}"] .hub-hub-title-wrap h2`;
+const TEMAS = {
+  tierramedia: {
+    nombre: 'No puedes pasar',
+    opciones: [
+      { elegida: true, nombre: 'Orla élfica', por: 'El título entre dos hojas de Lórien: la orla de un libro élfico, en el verde hoja de la casa.',
+        css: (p) => `${T(p)} { font-family: 'EB Garamond', serif; font-size: 1.6rem; letter-spacing: .04em; display: inline-flex; align-items: center; gap: .6rem; }
+          ${T(p)}::before, ${T(p)}::after { content: '❧'; color: var(--steam); font-size: .8em; }
+          ${T(p)}::before { transform: scaleX(-1); }` },
+      { nombre: 'Puerta de Durin', por: 'Letras de ithildin, la plata que solo brilla a la luz de la luna: trazo claro con halo frío y el arco de la puerta de Moria encima.',
+        css: (p) => `${T(p)} { font-family: 'EB Garamond', serif; font-variant: small-caps; letter-spacing: .14em; font-size: 1.6rem; color: #eef4ff; text-shadow: 0 0 4px #bcd6ff, 0 0 12px rgba(150,190,255,.6); position: relative; padding: .7rem 1.6rem .1rem; }
+          ${T(p)}::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 1.6rem; border: 2px solid rgba(200,220,255,.75); border-bottom: 0; border-radius: 50% 50% 0 0 / 100% 100% 0 0; box-shadow: 0 -2px 10px rgba(150,190,255,.45); }
+          :root[data-palette="${p}"][data-theme="light"] .hub-hub-title-wrap h2 { color: #2f4a78; text-shadow: none; }
+          :root[data-palette="${p}"][data-theme="light"] .hub-hub-title-wrap h2::before { border-color: #2f4a78; box-shadow: none; }` },
+      { nombre: 'Capitular iluminada', por: 'La primera letra en oro dentro de un cuadro verde con filete, como el Libro Rojo de la Frontera; el resto en tinta.',
+        css: (p) => `${T(p)} { font-family: 'EB Garamond', serif; font-size: 1.6rem; }
+          ${T(p)} .rc-plain { display: inline-block; }
+          ${T(p)} .rc-plain::first-letter { float: left; margin: .05em .25em 0 0; padding: .02em .22em; font-size: 1.45em; line-height: 1; color: #f2d27a; background: #23421f; box-shadow: inset 0 0 0 2px #c9a24a, inset 0 0 0 4px #23421f, inset 0 0 0 5px #c9a24a; }` },
+    ],
+  },
+  arcade: {
+    nombre: 'Inserte moneda',
+    opciones: [
+      { elegida: true, nombre: 'Degradado synthwave', por: 'El rótulo de la carcasa: degradado de rosa a cian sobre letras cromadas.',
+        css: (p) => `${T(p)} { font-family: 'Orbitron', sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; background: linear-gradient(180deg, #ff6ad5 0%, #ff3d9e 45%, #22e5ff 55%, #b9fbff 100%); -webkit-background-clip: text; background-clip: text; color: transparent !important; filter: drop-shadow(0 2px 0 #0a0614); }` },
+      { nombre: 'Logotipo de cabina en 3D', por: 'Letras extruidas con varias capas de sombra rosa y violeta, como el logo pintado en el lateral de una recreativa.',
+        css: (p) => `${T(p)} { font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 1.6rem; text-transform: uppercase; letter-spacing: .04em; color: #ffe680; transform: skewX(-8deg); text-shadow: 1px 1px 0 #ff3d9e, 2px 2px 0 #ff3d9e, 3px 3px 0 #b23cff, 4px 4px 0 #b23cff, 5px 5px 0 #3b1166, 6px 6px 8px rgba(0,0,0,.5); }` },
+      { nombre: 'Marquesina retroiluminada', por: 'El cartel de arriba de la máquina: panel con degradado de atardecer, marco cromado, líneas de barrido y el título en negro.',
+        css: (p) => `${T(p)} { font-family: 'Orbitron', sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; padding: .3rem 1.4rem; color: #1a0630 !important; background: repeating-linear-gradient(0deg, rgba(0,0,0,.12) 0 2px, transparent 2px 4px), linear-gradient(90deg, #ff6ad5, #ffd84a 50%, #22e5ff); border: 3px solid #d9d9e8; border-radius: 6px; box-shadow: 0 0 0 2px #0a0614, 0 0 18px rgba(255,106,213,.55); }` },
+    ],
+  },
+  witcher: {
+    nombre: 'Plata y acero',
+    opciones: [
+      { elegida: true, nombre: 'Señal de Igni', por: 'El brillo naranja de la señal de fuego: Cinzel con resplandor de brasa y la runa delante.',
+        css: (p) => `${T(p)} { font-family: 'Cinzel', serif; letter-spacing: .1em; color: #ffb27a; text-shadow: 0 0 8px rgba(255,120,40,.55); }
+          ${T(p)}::before { content: '△ '; color: #ff8f4a; }` },
+      { nombre: 'Igni encendida', por: 'Igni llevada más lejos: letras de brasa que se avivan despacio, con la runa dentro de un círculo de fuego.',
+        css: (p) => `${T(p)} { font-family: 'Cinzel', serif; font-size: 1.5rem; letter-spacing: .12em; text-transform: uppercase; color: #ffd2a8; text-shadow: 0 0 6px #ff7a1a, 0 0 16px rgba(255,90,20,.6); display: inline-flex; align-items: center; gap: .6rem; animation: ttl-brasa 3s ease-in-out infinite; }
+          ${T(p)}::before { content: '△'; display: grid; place-items: center; width: 1.5em; height: 1.5em; border-radius: 50%; font-size: .75em; color: #ffd2a8; border: 2px solid #ff8f4a; box-shadow: 0 0 10px rgba(255,120,40,.7), inset 0 0 8px rgba(255,120,40,.5); }
+          @keyframes ttl-brasa { 50% { text-shadow: 0 0 10px #ff7a1a, 0 0 26px rgba(255,90,20,.8); } }` },
+      { nombre: 'Medallón de la Escuela del Lobo', por: 'El título junto a un medallón de plata que vibra con la magia, y una hoja de acero por debajo.',
+        css: (p) => `${T(p)} { font-family: 'Cinzel', serif; font-size: 1.45rem; letter-spacing: .1em; color: #dfe6ee; display: inline-flex; align-items: center; gap: .7rem; padding-bottom: .35rem; background: linear-gradient(90deg, #c9d2dc, #c9d2dc) left bottom / 100% 2px no-repeat; }
+          ${T(p)}::before { content: 'ᛟ'; display: grid; place-items: center; width: 1.7em; height: 1.7em; border-radius: 50%; font-size: .8em; color: #1d242c; background: radial-gradient(circle at 35% 30%, #f4f7fa, #8e9aa8 70%, #4d5866); box-shadow: 0 0 0 2px #2a323b, 0 0 10px rgba(200,215,230,.5); animation: ttl-vibra 4s ease-in-out infinite; }
+          @keyframes ttl-vibra { 0%, 90%, 100% { transform: none; } 92% { transform: translateX(-1px) rotate(-3deg); } 94% { transform: translateX(1px) rotate(3deg); } 96% { transform: translateX(-1px); } }` },
+    ],
+  },
+  portal: {
+    nombre: 'Cámara de pruebas',
+    opciones: [
+      { elegida: true, nombre: 'Entre dos portales', por: 'El título entre un portal azul y uno naranja.',
+        css: (p) => `${T(p)} { font-family: 'Oswald', sans-serif; display: inline-flex; align-items: center; gap: .7rem; }
+          ${T(p)}::before, ${T(p)}::after { content: ''; width: .55em; height: 1.2em; border-radius: 50%; }
+          ${T(p)}::before { background: radial-gradient(ellipse, #fff 10%, #29b6f6 45%, transparent 75%); box-shadow: 0 0 10px #29b6f6; }
+          ${T(p)}::after { background: radial-gradient(ellipse, #fff 10%, #ff9e1b 45%, transparent 75%); box-shadow: 0 0 10px #ff9e1b; }` },
+      { elegida: true, nombre: 'Terminal de GLaDOS', por: 'El texto de la consola de Aperture: monoespaciada naranja y un cursor que parpadea.',
+        css: (p) => `${T(p)} { font-family: 'Share Tech Mono', monospace; color: #ff9e1b; letter-spacing: .04em; }
+          ${T(p)}::after { content: '▮'; margin-left: .2em; animation: ttl-blink 1s steps(1) infinite; }
+          @keyframes ttl-blink { 50% { opacity: 0; } }` },
+      { nombre: 'Terminal entre portales', por: 'Las dos juntas: el texto de la consola sale por el portal azul y entra por el naranja.',
+        css: (p) => `${T(p)} { font-family: 'Share Tech Mono', monospace; color: #ff9e1b; letter-spacing: .04em; display: inline-flex; align-items: center; gap: .7rem; }
+          ${T(p)}::before, ${T(p)}::after { content: ''; width: .55em; height: 1.2em; border-radius: 50%; }
+          ${T(p)}::before { background: radial-gradient(ellipse, #fff 10%, #29b6f6 45%, transparent 75%); box-shadow: 0 0 10px #29b6f6; }
+          ${T(p)}::after { background: radial-gradient(ellipse, #fff 10%, #ff9e1b 45%, transparent 75%); box-shadow: 0 0 10px #ff9e1b; }` },
+      { nombre: 'Monitor de observación', por: 'La pantalla de la sala de observación: fósforo naranja en un monitor redondeado, con líneas de barrido y el cursor.',
+        css: (p) => `${T(p)} { font-family: 'Share Tech Mono', monospace; color: #ffb347; text-shadow: 0 0 6px rgba(255,158,27,.7); padding: .3rem .9rem; border-radius: 10px; background: repeating-linear-gradient(0deg, rgba(255,158,27,.07) 0 2px, transparent 2px 4px), #1b1206; box-shadow: inset 0 0 18px rgba(0,0,0,.8), 0 0 0 3px #3a3f44, 0 0 0 5px #12171b; }
+          ${T(p)}::after { content: '▮'; margin-left: .2em; animation: ttl-blink 1s steps(1) infinite; }
+          @keyframes ttl-blink { 50% { opacity: 0; } }` },
+    ],
+  },
+  cyberpunk: {
+    nombre: 'Sin futuro',
+    opciones: [
+      { elegida: true, nombre: 'Neón de Night City', por: 'Letrero magenta encendido, el de los anuncios de la ciudad.',
+        css: (p) => `${T(p)} { font-family: 'Rajdhani', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #ffd1e3; text-shadow: 0 0 4px #ff2a6d, 0 0 12px #ff2a6d, 0 0 24px rgba(255,42,109,.6); }
+          :root[data-palette="${p}"][data-theme="light"] .hub-hub-title-wrap h2 { color: #cc0057; text-shadow: 0 0 6px rgba(255,42,109,.45); }` },
+      { nombre: 'Neón que falla', por: 'El mismo letrero con un tubo que parpadea de vez en cuando, como los de los callejones de Watson.',
+        css: (p) => `${T(p)} { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.5rem; text-transform: uppercase; letter-spacing: .12em; color: #ffd1e3; text-shadow: 0 0 4px #ff2a6d, 0 0 12px #ff2a6d, 0 0 26px rgba(255,42,109,.65); animation: ttl-falla 5s infinite; }
+          @keyframes ttl-falla { 0%, 86%, 92%, 100% { opacity: 1; } 87% { opacity: .35; } 89% { opacity: .9; } 90% { opacity: .2; } }` },
+      { nombre: 'Neón en marco de HUD', por: 'El letrero magenta dentro de un marco amarillo con las esquinas cortadas, como una ventana del implante.',
+        css: (p) => `${T(p)} { font-family: 'Rajdhani', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; padding: .25rem 1rem; color: #ffd1e3; text-shadow: 0 0 4px #ff2a6d, 0 0 12px #ff2a6d; background: linear-gradient(#fcee0a, #fcee0a) top left / 14px 2px no-repeat, linear-gradient(#fcee0a, #fcee0a) top left / 2px 14px no-repeat, linear-gradient(#fcee0a, #fcee0a) bottom right / 14px 2px no-repeat, linear-gradient(#fcee0a, #fcee0a) bottom right / 2px 14px no-repeat, rgba(255,42,109,.08); }` },
+    ],
+  },
+  seaofstars: {
+    nombre: 'Mar de estrellas',
+    opciones: [
+      { elegida: true, nombre: 'Placa de oro con sol y luna', por: 'Las dos que elegiste juntas: letra de píxel dorada con contorno, entre el sol de Zale y la luna de Valere.',
+        css: (p) => `${T(p)} { font-family: 'Pixelify Sans', sans-serif; color: #ffc01f; text-shadow: 1px 0 #3a2400, -1px 0 #3a2400, 0 1px #3a2400, 0 -1px #3a2400, 2px 2px 0 #3a2400; letter-spacing: .04em; display: inline-flex; align-items: center; gap: .55rem; }
+          ${T(p)}::before { content: '☀'; color: #ffc01f; }
+          ${T(p)}::after { content: '☾'; color: #a472e8; text-shadow: 2px 2px 0 #1c1a3a; }` },
+      { nombre: 'Eclipse', por: 'El momento del eclipse que da nombre a los Guerreros del Solsticio: el título del oro al morado y un eclipse de anillo delante.',
+        css: (p) => `${T(p)} { font-family: 'Pixelify Sans', sans-serif; font-size: 1.5rem; display: inline-flex; align-items: center; gap: .6rem; background: linear-gradient(90deg, #ffc01f, #ff8a3d 45%, #a472e8); -webkit-background-clip: text; background-clip: text; color: transparent !important; }
+          ${T(p)}::before { content: ''; width: 1.1em; height: 1.1em; border-radius: 50%; background: #1c1a3a; box-shadow: 0 0 0 3px #ffc01f, 0 0 12px 4px rgba(255,192,31,.6); }` },
+      { nombre: 'Rótulo de lugar', por: 'Como el nombre de cada zona al llegar: placa de oro con sol y luna, sobre una cinta azul con los extremos en pico.',
+        css: (p) => `${T(p)} { font-family: 'Pixelify Sans', sans-serif; display: inline-flex; align-items: center; gap: .5rem; padding: .2rem 1.6rem; color: #ffc01f; text-shadow: 2px 2px 0 #3a2400; background: #1c3a5a; clip-path: polygon(0 50%, .8rem 0, calc(100% - .8rem) 0, 100% 50%, calc(100% - .8rem) 100%, .8rem 100%); box-shadow: inset 0 2px 0 #2bb3c4, inset 0 -2px 0 #2bb3c4; }
+          ${T(p)}::before { content: '☀'; } ${T(p)}::after { content: '☾'; color: #c9a8ff; }` },
+    ],
+  },
+  grimdark: {
+    nombre: 'Solo hay guerra',
+    opciones: [
+      { elegida: true, nombre: 'Sello de pureza', por: 'Un sello de lacre rojo con su tira de pergamino, el de las armaduras del Imperio.',
+        css: (p) => `${T(p)} { font-family: 'UnifrakturCook', serif; display: inline-flex; align-items: center; gap: .6rem; }
+          ${T(p)}::before { content: '✠'; display: grid; place-items: center; width: 1.5em; height: 1.5em; border-radius: 50%; font-family: serif; font-size: .8em; color: #e8d3a0; background: radial-gradient(circle at 35% 30%, #b3261e, #5e0e0a); box-shadow: 0 1.1em 0 -.55em #e3d4ac; }` },
+      { nombre: 'Sello de pureza grande', por: 'El sello más grande, con dos tiras de pergamino colgando y la letra gótica en oro, como uno de verdad sobre una armadura.',
+        css: (p) => `${T(p)} { font-family: 'UnifrakturCook', serif; font-size: 1.6rem; color: var(--grim-gold, #e0a92b); display: inline-flex; align-items: center; gap: .8rem; position: relative; padding-bottom: 1.1rem; }
+          ${T(p)}::before { content: '✠'; position: relative; z-index: 1; display: grid; place-items: center; width: 1.9em; height: 1.9em; border-radius: 50%; font-family: serif; font-size: .75em; color: #f1dfb0; background: radial-gradient(circle at 35% 30%, #c93a2c, #6e130d 70%); box-shadow: 0 0 0 2px #4a0a07; }
+          ${T(p)}::after { content: ''; position: absolute; z-index: 0; left: .4rem; top: 1.75rem; width: 1.15rem; height: 1.35rem; background: linear-gradient(#e9dbb2, #cdb984) left top / .48rem 100% no-repeat, linear-gradient(#ddcc9f, #bfa86f) right top / .48rem 85% no-repeat; transform: rotate(-8deg); filter: drop-shadow(0 1px 1px rgba(0,0,0,.5)); }` },
+      { nombre: 'Pergamino de juramento', por: 'El título sobre una tira de pergamino con un sello en el extremo: las letanías que cuelgan de los tanques.',
+        css: (p) => `${T(p)} { font-family: 'UnifrakturCook', serif; color: #2a1a0a !important; padding: .2rem 1rem .25rem 2.2rem; background: linear-gradient(180deg, #efe2bd, #d8c48e); position: relative; clip-path: polygon(0 0, 100% 0, calc(100% - .5rem) 50%, 100% 100%, 0 100%); }
+          ${T(p)}::before { content: ''; position: absolute; left: .45rem; top: 50%; width: 1.2rem; height: 1.2rem; margin-top: -.6rem; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #c93a2c, #6e130d 70%); }` },
+    ],
+  },
+};
+
+const params = new URLSearchParams(location.search);
+const estado = { tema: TEMAS[params.get('tema')] ? params.get('tema') : 'tierramedia', modo: params.get('modo') === 'light' ? 'light' : 'dark' };
+const url = () => `social.html?pantalla=perfil&gl-palette=${estado.tema}&gl-theme=${estado.modo}&gl-effects=on&barra=0`;
+
+function marco(titulo, por, css, elegida = false) {
+  const fig = document.createElement('figure');
+  fig.innerHTML = `<figcaption>${elegida ? '<span class="elegida">Elegida</span>' : ''}<b>${titulo}</b>${por}</figcaption><div class="marco"><iframe title="${titulo}"></iframe></div>`;
+  const frame = fig.querySelector('iframe');
+  frame.addEventListener('load', () => {
+    const aplicar = () => {
+      const doc = frame.contentDocument;
+      if (!doc || !doc.querySelector('.hub-hub-title-wrap h2')) return false;
+      if (css) { const s = doc.createElement('style'); s.textContent = css; doc.head.appendChild(s); }
+      return true;
+    };
+    let n = 0; const t = setInterval(() => { if (aplicar() || ++n > 30) clearInterval(t); }, 150);
+  });
+  frame.src = url();
+  const escala = () => { frame.style.transform = `scale(${fig.querySelector('.marco').clientWidth / 820})`; };
+  requestAnimationFrame(escala); addEventListener('resize', escala);
+  return fig;
+}
+
+function pintar() {
+  const box = document.getElementById('temas'); box.querySelectorAll('button').forEach((b) => b.remove());
+  for (const [k, t] of Object.entries(TEMAS)) {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = t.nombre; b.setAttribute('aria-pressed', String(k === estado.tema));
+    b.onclick = () => { estado.tema = k; pintar(); };
+    box.appendChild(b);
+  }
+  document.getElementById('modo').value = estado.modo;
+  history.replaceState(null, '', `?tema=${estado.tema}&modo=${estado.modo}`);
+  const main = document.getElementById('opciones'); main.textContent = '';
+  main.appendChild(marco('Ahora', 'el título tal como está hoy, sin icono.', ''));
+  for (const o of TEMAS[estado.tema].opciones) main.appendChild(marco(o.nombre, o.por, o.css(estado.tema), o.elegida));
+}
+document.getElementById('modo').onchange = (e) => { estado.modo = e.target.value; pintar(); };
+pintar();
+</script>
+</body>
+</html>

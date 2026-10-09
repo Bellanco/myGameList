@@ -336,3 +336,22 @@
 /* El botón «Amigos» de la ficha (`.btn-friend`): el rosa de Rivendel del mapa. */
 :root[data-palette="tierramedia"] { --btn-friend: var(--cat-5); }
 :root[data-palette="tierramedia"][data-theme="light"] { --btn-friend: var(--cat-5); }
+
+/* ── EL TÍTULO DE PANTALLA (09-10-2026) ───────────────────────────────────────────────────────────────────────────
+   Un gesto del juego en el título de cada pantalla del hub (`.hub-hub-title-wrap h2`), elegido con
+   `docs/maquetas/titulos-temas.html`. Sin `text-transform`: las mayúsculas las pone la casilla de Apariencia, y
+   cualquier animación se queda quieta con los efectos apagados o si el sistema pide menos movimiento. ── */
+/* CAPITULAR ILUMINADA: la primera letra en oro dentro de un cuadro verde con filete, como el Libro Rojo de la
+   Frontera; el resto, en Garamond. */
+:root[data-palette="tierramedia"] .hub-hub-title-wrap h2 { font-family: 'EB Garamond', serif; font-size: 1.6rem; }
+:root[data-palette="tierramedia"] .hub-hub-title-wrap h2 .rc-plain { display: inline-block; }
+:root[data-palette="tierramedia"] .hub-hub-title-wrap h2 .rc-plain::first-letter {
+  float: left;
+  margin: .05em .25em 0 0;
+  padding: .02em .22em;
+  font-size: 1.45em;
+  line-height: 1;
+  color: #f2d27a;
+  background: #23421f;
+  box-shadow: inset 0 0 0 2px #c9a24a, inset 0 0 0 4px #23421f, inset 0 0 0 5px #c9a24a;
+}
