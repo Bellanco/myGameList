@@ -140,27 +140,33 @@ export const TOUR_UI = {
   /** El ofrecimiento de UNA misión en su pantalla, para quien ya usaba la aplicación. */
   hints: {
     kicker: 'Primeros pasos',
-    yes: 'Enséñame',
+    yes: 'Sí, vamos',
     no: 'No, gracias',
-    coop: { title: '¿Te enseño a entrar en lo social?', text: 'Son dos pasos y tu nombre: te acompaño en cada uno.' },
-    cloud: { title: '¿Te enseño a guardar tus listas en la nube?', text: 'Es un solo botón, sin tokens: te acompaño.' },
+    coop: {
+      title: '¿Quieres entrar en la parte social?',
+      text: 'Comparte con tus amigos lo que juegas y tus reseñas, y descubre a qué juegan ellos. Solo son dos pasos y tu nombre, y te guiamos en los dos.',
+    },
+    cloud: {
+      title: '¿Quieres guardar tus listas en la nube?',
+      text: 'Con un solo botón tendrás tus listas a salvo y al día en todos tus dispositivos. Te guiamos en el proceso.',
+    },
   },
   /**
    * LA INVITACIÓN DESDE LOS PREMIOS, al terminar de votar y en el histórico: la misma burbuja en los dos sitios. Con la
-   * voz del «¿Te enseño?», pero diciendo que hay ALGO MÁS: quien llega a votar suele no saber que la porra es una
+   * voz del «¿Quieres…?», pero diciendo que hay ALGO MÁS: quien llega a votar suele no saber que la porra es una
    * parte de una aplicación. «Ahora no» y no «No, gracias»: se vuelve a ofrecer en la siguiente edición.
    */
   premios: {
     kicker: 'Hay algo más',
-    yes: 'Enséñame',
+    yes: 'Sí, vamos',
     no: 'Ahora no',
     list: {
-      title: '¿Te enseño el resto de myGameList?',
-      text: 'Los premios son solo una parte: aquí también llevas tu lista de juegos —lo que has terminado, lo que juegas y lo que quieres jugar—, sin cuenta. Te acompaño en los primeros pasos.',
+      title: '¿Quieres ver qué más puedes hacer?',
+      text: 'Además de los premios, aquí puedes llevar tu lista de juegos: los que has terminado, los que juegas y los que te quedan por jugar. Si te apetece, te guiamos paso a paso.',
     },
     social: {
-      title: '¿Te enseño a entrar en lo social?',
-      text: 'Los premios son solo una parte: en lo social ves a qué juegan tus amistades y lees sus reseñas. Son dos pasos y tu nombre, y te acompaño en cada uno.',
+      title: '¿Quieres ver qué hacen tus amigos?',
+      text: 'Además de los premios, en la parte social ves a qué juegan tus amigos y lees sus reseñas. Solo son dos pasos y te guiamos en los dos.',
     },
   },
   nextMission: 'Siguiente misión',

@@ -127,7 +127,7 @@ test.describe('guía de primeros pasos', () => {
   test('a quien ya usaba la app se le ofrece lo social en Social, y «No, gracias» no vuelve', async ({ page }) => {
     await sembrarBiblioteca(page);
     await page.goto('/social');
-    const hint = page.getByRole('dialog', { name: '¿Te enseño a entrar en lo social?' });
+    const hint = page.getByRole('dialog', { name: '¿Quieres entrar en la parte social?' });
     await expect(hint).toBeVisible();
     const { violations } = await new AxeBuilder({ page }).include('.ob-bubble').withTags(WCAG).analyze();
     expect(violations.map((violation) => violation.id)).toEqual([]);
@@ -137,15 +137,15 @@ test.describe('guía de primeros pasos', () => {
     await page.reload();
     await expect(page.locator('.hub-gateway-stage').first()).toBeVisible();
     await page.waitForTimeout(1500);
-    await expect(page.getByRole('dialog', { name: '¿Te enseño a entrar en lo social?' })).toHaveCount(0);
+    await expect(page.getByRole('dialog', { name: '¿Quieres entrar en la parte social?' })).toHaveCount(0);
   });
 
   test('sin sincronización, en Ajustes › Datos se ofrece la nube y lleva a su tarjeta', async ({ page }) => {
     await sembrarBiblioteca(page);
     await page.goto('/ajustes/datos');
-    const hint = page.getByRole('dialog', { name: '¿Te enseño a guardar tus listas en la nube?' });
+    const hint = page.getByRole('dialog', { name: '¿Quieres guardar tus listas en la nube?' });
     await expect(hint).toBeVisible();
-    await hint.getByRole('button', { name: 'Enséñame' }).click();
+    await hint.getByRole('button', { name: 'Sí, vamos' }).click();
     await expect(page.getByRole('dialog', { name: 'Guarda la partida' })).toBeVisible();
   });
 
@@ -158,7 +158,7 @@ test.describe('guía de primeros pasos', () => {
     const relogin = page.getByRole('dialog', { name: 'Vuelve a entrar' });
     await expect(relogin).toBeVisible();
     await expect(relogin).toContainText('siguen ahí');
-    await expect(page.getByRole('dialog', { name: '¿Te enseño a entrar en lo social?' })).toHaveCount(0);
+    await expect(page.getByRole('dialog', { name: '¿Quieres entrar en la parte social?' })).toHaveCount(0);
     // No es una guía: no deja nada guardado.
     expect(await page.evaluate(() => localStorage.getItem('mis-listas-onboarding'))).toBeNull();
   });
@@ -212,7 +212,7 @@ test.describe('guía de primeros pasos', () => {
     await page.goto('/ajustes/datos');
     await expect(page.locator('[data-tour="sync-card"]')).toBeVisible();
     await page.waitForTimeout(1500);
-    await expect(page.getByRole('dialog', { name: '¿Te enseño a guardar tus listas en la nube?' })).toHaveCount(0);
+    await expect(page.getByRole('dialog', { name: '¿Quieres guardar tus listas en la nube?' })).toHaveCount(0);
     await expect(page.locator('[data-tour="sync-connect"]')).toHaveCount(0);
 
     // Y quien llega con la misión de la nube en marcha la ve cumplida sin que salga nada.

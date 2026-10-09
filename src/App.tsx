@@ -914,7 +914,7 @@ export default function App() {
   const reloginNeeded = authReady && !socialSignedIn && hasSocialSpace && activeSection === 'social';
 
   /**
-   * LOS OFRECIMIENTOS DE UNA MISIÓN («¿Te enseño?»), para quien ya usaba la aplicación: al llegar a Social sin lo
+   * LOS OFRECIMIENTOS DE UNA MISIÓN («¿Quieres…?»), para quien ya usaba la aplicación: al llegar a Social sin lo
    * social, o a Ajustes › Datos sin sincronización. Quién puede recibirlos lo decide `canOfferHint` (nadie con una
    * guía en marcha, y nunca lo ya rechazado). Lo social espera a que su estado se sepa —`pending` no cuenta— y
    * nunca se ofrece a quien ya tiene espacio: a esa persona le toca «vuelve a entrar».

@@ -136,7 +136,7 @@ describe('guía de primeros pasos', () => {
     expect(saved()).toMatchObject({ status: 'paused', mission: 'first-game' });
   });
 
-  it('el ofrecimiento de lo social: «Enséñame» arranca solo esa misión y «No, gracias» no vuelve', async () => {
+  it('el ofrecimiento de lo social: «Sí, vamos» arranca solo esa misión y «No, gracias» no vuelve', async () => {
     const hint: TourState = { ...offeredTour(), status: 'hint', mission: 'coop', single: true };
     const { rerender } = render(<OnboardingTour state={hint} ctx={{ ...CTX, path: '/social' }} />);
     const bubble = await screen.findByRole('dialog', { name: TOUR_UI.hints.coop.title }, { timeout: 3000 });

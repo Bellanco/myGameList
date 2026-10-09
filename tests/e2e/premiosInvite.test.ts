@@ -23,7 +23,7 @@ async function abrirHistorico(page: Page): Promise<void> {
 }
 
 test.describe('premios · la invitación en el histórico', () => {
-  test('sin juegos, invita a empezar la lista y «Enséñame» arranca la guía allí', async ({ page }) => {
+  test('sin juegos, invita a empezar la lista y «Sí, vamos» arranca la guía allí', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('mis-listas-analytics-consent', 'denied'));
     await abrirHistorico(page);
 
