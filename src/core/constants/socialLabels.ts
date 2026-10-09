@@ -208,7 +208,11 @@ export const SOCIAL_UI = {
     metadataGenres: 'Géneros:',
     metadataStrengths: 'Puntos fuertes:',
     metadataWeaknesses: 'Puntos débiles:',
-    profileDetailTitle: 'Detalle de perfil social',
+    // El título NOMBRA el perfil: «Detalle de perfil social» era el mismo en todos, y es lo primero que anuncia el
+    // lector de pantalla al llegar (el foco va al título). El genérico queda para cuando aún no se sabe de quién es.
+    profileDetailTitle: 'Perfil social',
+    profileDetailTitleOwn: 'Tu perfil social',
+    profileDetailTitleOf: (name: string) => `Perfil de ${name}`,
     profileDetailActionsAria: 'Acciones del detalle de perfil social',
     profileDetailMissing: 'No se encontró el perfil solicitado o ya no está disponible.',
     profileDetailLoading: 'Cargando el perfil...',

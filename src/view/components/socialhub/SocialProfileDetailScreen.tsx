@@ -528,7 +528,11 @@ function SocialProfileDetailScreenBase({
         <header className="hub-screen-header">
           <div className="hub-hub-title-wrap">
             <Icon name="bottom-hub" className="hub-hub-icon" />
-            <h2>{SOCIAL_UI.feed.profileDetailTitle}</h2>
+            <h2>
+              {isOwnProfile
+                ? SOCIAL_UI.feed.profileDetailTitleOwn
+                : SOCIAL_UI.feed.profileDetailTitleOf(activeProfileDetail.displayName)}
+            </h2>
           </div>
         </header>
         <div className="hub-screen-actions hub-profile-detail-actions" aria-label={SOCIAL_UI.feed.profileDetailActionsAria}>
