@@ -151,7 +151,16 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
    */
   const [directorySettled, setDirectorySettled] = useState(false);
 
-  const runDirectoryHydration = useCallback(async (forceRefresh: boolean, keepDirectoryQuery = false) => {
+  /**
+   * `isCurrent`: ¿sigue siendo esta la pasada más reciente? Una forzada (tras publicar) no espera a la que estuviera
+   * en vuelo, y si la vieja terminaba DESPUÉS escribía su directorio —sin el post recién publicado— encima del nuevo,
+   * en pantalla y en la caché, durante todo su TTL (09-10-2026). Una pasada superada no escribe nada.
+   */
+  const runDirectoryHydration = useCallback(async (
+    forceRefresh: boolean,
+    keepDirectoryQuery = false,
+    isCurrent: () => boolean = () => true,
+  ) => {
     if (!directoryPanelAllows || !authUser || !socialCfgGistId) {
       return;
     }
@@ -195,6 +204,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
         PROFILE_TIER_FEED_TTL_MS[ownTier],
       ).catch(() => null);
       if (cachedDirectory) {
+        if (!isCurrent()) return;
         setSocialDirectory(cachedDirectory);
         setDirectorySettled(true);
         return;
@@ -515,6 +525,8 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
         },
       );
 
+      // Superada por una pasada más nueva: lo suyo ya está viejo, y no se pinta ni se guarda (ver `isCurrent`).
+      if (!isCurrent()) return;
       setSocialDirectory(withProfiles);
       if (transientFailure) {
         // Una parte salió de lo guardado: se dice (aviso de servicio limitado o de sin conexión) y no se retira.
@@ -543,6 +555,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
         void putCachedSocialDirectory(socialCfgGistId, withProfiles);
       }
     } catch (error) {
+      if (!isCurrent()) return;
       // También cuando el que no atiende es el SERVICIO (Firestore sin cuota, GitHub limitando), no solo la red.
       if (isServiceUnavailable(error) || isOffline()) {
         // Fallo de RED: en vez de vaciar el feed, se rescata la caché AUNQUE HAYA CADUCADO. Es el mismo criterio
@@ -559,10 +572,14 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
       }
       reportFailure(error, SOCIAL_UI.status.firestoreCheckFailed, 'warn');
     } finally {
-      setLoadingDirectory(false);
-      // También en el camino de error: un fallo de red deja el directorio vacío DE VERDAD (con su aviso), y dejarlo
-      // sin asentar mantendría el esqueleto girando para siempre.
-      setDirectorySettled(true);
+      // Solo la pasada vigente apaga la carga: una superada que terminara antes dejaría la pantalla sin esqueleto
+      // mientras la nueva sigue leyendo.
+      if (isCurrent()) {
+        setLoadingDirectory(false);
+        // También en el camino de error: un fallo de red deja el directorio vacío DE VERDAD (con su aviso), y dejarlo
+        // sin asentar mantendría el esqueleto girando para siempre.
+        setDirectorySettled(true);
+      }
     }
     // `mainSyncConfig?.token` ESTUVO aquí y no lo usa nadie en el cuerpo (el token sale de `getSocialSyncConfig()`
     // en el momento de leer): lo único que hacía era rehidratar el directorio entero cuando la configuración de
@@ -578,6 +595,8 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
    * caché de IndexedDB) y, sobre todo, la que acaba primero apaga el esqueleto mientras la otra sigue corriendo.
    */
   const directoryHydrationRef = useRef<Promise<void> | null>(null);
+  /** Número de la pasada más reciente: cada una sabe así si la ha superado otra (ver `isCurrent`). */
+  const directoryGenerationRef = useRef(0);
 
   const hydrateSocialDirectory = useCallback(async (forceRefresh = false, options: { keepDirectoryQuery?: boolean } = {}) => {
     const pending = directoryHydrationRef.current;
@@ -586,7 +605,12 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
       return pending;
     }
 
-    const run = runDirectoryHydration(forceRefresh, Boolean(options.keepDirectoryQuery));
+    const generation = ++directoryGenerationRef.current;
+    const run = runDirectoryHydration(
+      forceRefresh,
+      Boolean(options.keepDirectoryQuery),
+      () => directoryGenerationRef.current === generation,
+    );
     directoryHydrationRef.current = run;
     try {
       await run;
