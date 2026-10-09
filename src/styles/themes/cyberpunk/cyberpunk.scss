@@ -504,6 +504,7 @@
   box-shadow: inset 0 0 0 1px var(--cyber-yellow-fg), inset 3px 0 0 var(--cyber-yellow);
 }
 :root[data-palette="cyberpunk"] .input-base,
+:root[data-palette="cyberpunk"] .tag-inp-wrap,
 :root[data-palette="cyberpunk"] .finput,
 :root[data-palette="cyberpunk"] .ftextarea,
 :root[data-palette="cyberpunk"] .search-input { border: 1px solid var(--cyber-edge-field) !important; border-radius: 0 !important; }

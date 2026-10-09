@@ -266,6 +266,7 @@
   box-shadow: inset 0 -2px 0 var(--steam), 0 6px 12px -6px color-mix(in srgb, var(--steam) 70%, transparent);
 }
 :root[data-palette="portal"] .input-base,
+:root[data-palette="portal"] .tag-inp-wrap,
 :root[data-palette="portal"] .finput,
 :root[data-palette="portal"] .ftextarea,
 :root[data-palette="portal"] .search-input { border: 1px solid var(--border) !important; border-radius: var(--radius-sm) !important; }

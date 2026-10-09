@@ -252,10 +252,12 @@
   box-shadow: inset 0 0 0 1px var(--grim-green);
 }
 :root[data-palette="grimdark"] .input-base,
+:root[data-palette="grimdark"] .tag-inp-wrap,
 :root[data-palette="grimdark"] .finput,
 :root[data-palette="grimdark"] .ftextarea,
 :root[data-palette="grimdark"] .search-input { border: 1px solid rgba(67, 245, 88, .35) !important; border-radius: 0 !important; }
 :root[data-palette="grimdark"][data-theme="light"] .input-base,
+:root[data-palette="grimdark"][data-theme="light"] .tag-inp-wrap,
 :root[data-palette="grimdark"][data-theme="light"] .finput,
 :root[data-palette="grimdark"][data-theme="light"] .ftextarea,
 :root[data-palette="grimdark"][data-theme="light"] .search-input { border-color: rgba(21, 122, 55, .45) !important; }

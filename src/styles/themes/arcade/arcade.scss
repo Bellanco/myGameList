@@ -461,6 +461,7 @@
    Los cuatro desplegables de la barra de filtros (género, plataforma, puntuación, horas) son `.input-base`,
    así que entran por aquí: eran lo más plano de la pantalla porque un `<select>` nativo no hereda nada. ── */
 :root[data-palette="arcade"] .input-base,
+:root[data-palette="arcade"] .tag-inp-wrap,
 :root[data-palette="arcade"] .finput,
 :root[data-palette="arcade"] .ftextarea,
 :root[data-palette="arcade"] .search-input,
@@ -471,6 +472,7 @@
   box-shadow: inset 3px 3px 0 rgba(0, 0, 0, .45) !important;
 }
 :root[data-palette="arcade"][data-theme="light"] .input-base,
+:root[data-palette="arcade"][data-theme="light"] .tag-inp-wrap,
 :root[data-palette="arcade"][data-theme="light"] .finput,
 :root[data-palette="arcade"][data-theme="light"] .ftextarea,
 :root[data-palette="arcade"][data-theme="light"] .search-input,
@@ -478,6 +480,7 @@
   box-shadow: inset 3px 3px 0 rgba(58, 24, 92, .14) !important;
 }
 :root[data-palette="arcade"] .input-base:focus,
+:root[data-palette="arcade"] .tag-inp-wrap:focus-within,
 :root[data-palette="arcade"] .finput:focus,
 :root[data-palette="arcade"] .ftextarea:focus,
 :root[data-palette="arcade"] .search-input:focus {

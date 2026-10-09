@@ -236,6 +236,7 @@
   box-shadow: 2px 2px 0 color-mix(in srgb, var(--sos-turq) 55%, transparent);
 }
 :root[data-palette="seaofstars"] .input-base,
+:root[data-palette="seaofstars"] .tag-inp-wrap,
 :root[data-palette="seaofstars"] .finput,
 :root[data-palette="seaofstars"] .ftextarea,
 :root[data-palette="seaofstars"] .search-input { border-radius: 0 !important; }
@@ -747,3 +748,15 @@
 /* El «¿?» a la luz: el tercio hacia el texto de la base (`_table.scss`) se quedaba en 3,4:1 sobre las turquesas
    (09-10-2026); aquí va a la mitad, hacia la tinta. */
 :root[data-palette="seaofstars"][data-theme="light"] .score-ring.is-noscore .score-ring-num { color: color-mix(in srgb, var(--noscore), #000 50%); }
+
+/* EL INTERRUPTOR APAGADO, HUECO (09-10-2026). El neutro del tema es la placa crema maciza, y un «Steam Deck» apagado
+   con ella se veía tan encendido como el «Rejugar» de al lado. Apagado = superficie con filete; encendido = el
+   bloque de color de siempre. */
+:root[data-palette="seaofstars"] .btn.btn-toggle:not(.active):not(.btn-ghost) {
+  background: var(--surface-elevated) !important;
+  background-image: none !important;
+  color: var(--text) !important;
+  border: 2px solid var(--border) !important;
+  box-shadow: none !important;
+}
+
