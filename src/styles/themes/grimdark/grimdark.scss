@@ -293,11 +293,14 @@
 :root[data-palette="grimdark"] .hub-review-date::before { content: '>'; color: var(--grim-green); font-weight: 700; }
 :root[data-palette="grimdark"] .hub-feed-review-text,
 :root[data-palette="grimdark"] .hub-review-text {
-  font-style: italic;
   border-left: 3px solid var(--grim-green);
   padding-left: .7rem;
   color: var(--text);
 }
+/* LA CURSIVA, SOLO EN EL EXTRACTO DEL FEED: cuatro líneas que se leen como una cita. En la reseña entera —el
+   detalle y la lista de reseñas de un perfil— eran párrafos largos en cursiva, que cansa (09-10-2026). */
+:root[data-palette="grimdark"] .hub-feed-activity-item .hub-feed-review-text { font-style: italic; }
+:root[data-palette="grimdark"] .hub-feed-card-detail .hub-feed-review-text { font-style: normal; }
 
 /* ── §11 · Ruleta = PANTALLA DE COGITADOR. Tambor = pantalla con scanlines verdes y marco de oro; el visor de
    selección es un marco VERDE luminoso; nombres en blackletter (§1); etiqueta en oro. ── */

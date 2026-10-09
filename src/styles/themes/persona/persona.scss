@@ -392,12 +392,15 @@
    trata como una CITA de cómic — cursiva, algo más de peso y un lomo rojo a la izquierda — legible pero P5. */
 :root[data-palette="persona"] .hub-feed-review-text,
 :root[data-palette="persona"] .hub-review-text {
-  font-style: italic;
   font-weight: 500;
   border-left: 3px solid var(--steam);
   padding-left: .7rem;
   color: var(--text);
 }
+/* LA CURSIVA, SOLO EN EL EXTRACTO DEL FEED: cuatro líneas que se leen como una cita. En la reseña entera —el
+   detalle y la lista de reseñas de un perfil— eran párrafos largos en cursiva, que cansa (09-10-2026). */
+:root[data-palette="persona"] .hub-feed-activity-item .hub-feed-review-text { font-style: italic; }
+:root[data-palette="persona"] .hub-feed-card-detail .hub-feed-review-text { font-style: normal; }
 
 /* ── §11 · Ruleta = tragaperras de cómic. Tambor y tarjetas como stickers negros con sombra roja de
    bloque; visor de selección rojo grueso; nombres que giran en la tipografía del tema (§1). ── */

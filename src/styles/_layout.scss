@@ -1079,7 +1079,8 @@ html:root .hub-screen-card .hub-feed-card-detail:not(.has-cover) {
   line-clamp: 3;
   overflow: hidden;
   white-space: pre-line;
-  max-width: none; /* ocupa todo el ancho de la tarjeta (anula el 65ch de .hub-feed-review-text) */
+  /* Medida de lectura: a todo el ancho de la tarjeta pasaba de 150 caracteres por renglón en escritorio. */
+  max-width: 56ch;
   margin: .15rem 0 0;
   font-size: clamp(.92rem, .88rem + .25vw, 1rem);
   line-height: 1.6;
@@ -1517,17 +1518,21 @@ html:root .hub-screen-card .hub-feed-card-detail:not(.has-cover) {
   .hub-detail-body {
     flex-direction: row;
     align-items: flex-start;
+    /* Con la reseña a su medida de lectura sobra ancho: el bloque va centrado, como la cabecera de encima. */
+    justify-content: center;
     gap: 1.1rem;
   }
 
   .hub-detail-body .hub-feed-review-text {
     flex: 1 1 0;
-    /* En el detalle la reseña llena el hueco hasta los metadatos (sin el tope de 65ch global). */
-    max-width: none;
+    /* Medida de lectura, no el hueco entero: a todo el ancho llegaba a ~140 caracteres por renglón a 1512 px
+       (09-10-2026). Lo que sobra se lo quedan los metadatos, que crecen hasta su tope. */
+    max-width: 56ch;
   }
 
   .hub-detail-body .hub-detail-metadata {
-    flex: 0 0 17rem;
+    flex: 1 0 17rem;
+    max-width: 26rem;
     margin-top: 0;
     padding-top: 0;
     border-top: none;
