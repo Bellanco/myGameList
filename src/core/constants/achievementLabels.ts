@@ -74,6 +74,9 @@ export const ACHIEVEMENTS_UI = {
   progress: (value: number, next: number) => `${value} de ${next}`,
   progressPercent: (value: number, next: number) => `${value} % de ${next} %`,
   maxed: 'Al máximo',
+  /** Escalón alcanzado de una escalera, en la vitrina de otra persona agrupada por escaleras («III/V»). */
+  ladderStepShort: (grade: string, grades: string) => `${grade}/${grades}`,
+  ladderStep: (grade: number, grades: number) => `Escalón ${grade} de ${grades}`,
   hiddenName: 'Logro oculto',
   hiddenCondition: 'Se revela al conseguirlo.',
 

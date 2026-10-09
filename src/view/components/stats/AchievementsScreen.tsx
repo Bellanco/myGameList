@@ -35,6 +35,8 @@ interface AchievementsScreenProps {
    * se mide a nadie, se mide al catálogo.
    */
   global?: { self: boolean };
+  /** Cada fila es una escalera (ver `AchievementRow`). Solo la vitrina de otra persona. */
+  byLadder?: boolean;
   /**
    * EL SUELO DE LAS FECHAS: el día más antiguo del que hay constancia (el primer juego que entró en la
    * biblioteca; en una vitrina ajena, su logro fechado más viejo). Lo conseguido SIN sello propio se fecha con
@@ -86,6 +88,7 @@ interface AchievementsScreenProps {
  */
 export const AchievementsScreen = memo(function AchievementsScreen({
   items,
+  byLadder = false,
   summary,
   rarity,
   owner,
@@ -199,6 +202,7 @@ export const AchievementsScreen = memo(function AchievementsScreen({
                     date={formatUnlockDate(fromFloor ? since : state.unlockedAt)}
                     dateFromFloor={fromFloor}
                     global={global}
+                    byLadder={byLadder}
                     // De quién es la lista decide la voz de lo conseguido. `owner` vacío = tuya; en la vista
                     // global lo dice `self`, que es el dato que esa vista sí tiene.
                     mine={global ? global.self : !owner}

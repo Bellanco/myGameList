@@ -605,6 +605,21 @@
 .hub-feed-ach-name { font-weight: 700; }
 
 // EL CANTO CONTRARIO AL AVATAR. `margin-left: auto` las empuja al final de la fila; con `flex-wrap` en la
+// ── LA VITRINA POR ESCALERAS (09-10-2026) ────────────────────────────────
+// Una fila por escalera en la vitrina de otra persona: la medalla del escalón más alto, un punto mayor (48 px), el
+// escalón alcanzado junto al nombre («III/V») y una tira de pasos bajo la condición. La tira es del color del
+// tema; los pasos sin alcanzar, la pista de las barras.
+.ach-row-step {
+  margin-left: .4rem;
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.ach-row-pips { display: flex; flex-wrap: wrap; gap: 3px; margin-top: .3rem; }
+.ach-row-pips i { width: 10px; height: 4px; border-radius: 2px; background: var(--score-track, var(--border)); }
+.ach-row-pips i.is-on { background: var(--steam); }
+
 // ── LOGROS GLOBALES · el catálogo por lo común que es cada logro ─────────
 // El RECUADRO marca lo conseguido, como en la pantalla de logros globales de Steam en móvil. Y no es la única
 // señal: el texto de la derecha lo dice con palabras, porque un recuadro es forma y color, y en una lista de

@@ -152,9 +152,21 @@ describe('la ficha de una amistad', () => {
     // `h2`, como el título de cualquier otra pantalla de la app: el armazón es el mismo (`hub-screen`).
     expect(screen.getByRole('heading', { name: 'Logros de Fulano', level: 2 })).toBeInTheDocument();
     // Seis conseguidos y ni un bloqueado: el progreso de otra persona hacia lo que no tiene no es asunto de nadie.
-    expect(screen.getAllByRole('listitem')).toHaveLength(6);
+    // Y UNA FILA POR ESCALERA (09-10-2026): los tres escalones de «Créditos finales» son una fila, con el más alto.
+    expect(screen.getAllByRole('listitem')).toHaveLength(4);
     expect(screen.queryByText('Bloqueado')).not.toBeInTheDocument();
-    expect(screen.getAllByText('30 abr 2026').length).toBe(6);
+    expect(screen.getAllByText('30 abr 2026').length).toBe(4);
+  });
+
+  it('agrupa por escalera: el nombre sin número, el escalón alcanzado y su tira de pasos', () => {
+    render(<ProfileAchievementsScreen mirror={ESPEJO} directoryMirrors={[]} owner="Fulano" onBack={() => {}} />);
+
+    const fila = screen.getByText('Créditos finales').closest('li') as HTMLElement;
+    expect(fila.querySelector('.ach-row-step')?.textContent).toBe('III/XI');
+    expect(within(fila).getByText(/Escalón 3 de 11/)).toBeInTheDocument();
+    expect(fila.querySelectorAll('.ach-row-pips i')).toHaveLength(11);
+    expect(fila.querySelectorAll('.ach-row-pips i.is-on')).toHaveLength(3);
+    expect(screen.queryByText('Créditos finales I')).not.toBeInTheDocument();
   });
 
   /** La MISMA pantalla sirve para lo tuyo y para lo de otra persona, así que la voz la decide de quién es. */
@@ -176,7 +188,7 @@ describe('la ficha de una amistad', () => {
     expect(screen.queryByText(/lo tiene el/)).not.toBeInTheDocument();
     expect(document.querySelectorAll('.ach-row-share')).toHaveLength(0);
     // Y lo que sí lleva cada fila: el día y el tipo de logro.
-    const fila = screen.getByText('Créditos finales I').closest('li') as HTMLElement;
+    const fila = screen.getByText('Créditos finales').closest('li') as HTMLElement;
     expect(within(fila).getByText('30 abr 2026')).toBeInTheDocument();
     expect(fila.querySelector('.ach-row-rarity')).toBeInTheDocument();
   });
@@ -195,8 +207,9 @@ describe('la ficha de una amistad', () => {
     ]);
     render(<ProfileAchievementsScreen mirror={conFechas} directoryMirrors={[]} owner="Fulano" onBack={() => {}} />);
 
-    const nombres = screen.getAllByRole('listitem').map((fila) => fila.querySelector('.ach-row-name')?.textContent);
-    expect(nombres).toEqual(['El contador de horas I', 'Créditos finales I', 'Guerra de consolas I']);
+    // El nombre de la escalera es el primer texto de la fila; detrás va el escalón («I/XI»).
+    const nombres = screen.getAllByRole('listitem').map((fila) => fila.querySelector('.ach-row-name')?.firstChild?.textContent);
+    expect(nombres).toEqual(['El contador de horas', 'Créditos finales', 'Guerra de consolas']);
   });
 
   /**
@@ -213,7 +226,7 @@ describe('la ficha de una amistad', () => {
     ]);
     render(<ProfileAchievementsScreen mirror={conHuecos} directoryMirrors={[]} owner="Fulano" onBack={() => {}} />);
 
-    const sinSello = screen.getByText('Guerra de consolas I').closest('li') as HTMLElement;
+    const sinSello = screen.getByText('Guerra de consolas').closest('li') as HTMLElement;
     const fecha = sinSello.querySelector('.ach-row-date') as HTMLElement;
     // El más viejo de su vitrina: el 9 de enero de 2026, no el 30 de abril.
     expect(fecha.textContent).toBe(formatUnlockDate(dia(2200)));
