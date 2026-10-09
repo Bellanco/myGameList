@@ -100,6 +100,9 @@ export const AchievementRow = memo(function AchievementRow({
   const ladderName = byLadder ? LADDERS_BY_KEY.get(def.ladder)?.labels.name : undefined;
   const name = ladderName ?? def.labels.name;
   const showSteps = byLadder && def.grades > 1;
+  // Escalones encendidos: los conseguidos. Una escalera sin ninguno enseña su primer escalón apagado, con la tira
+  // entera vacía y sin «I/V», que diría que ya tiene uno.
+  const stepsOn = earned ? def.grade : 0;
   // DOS TEXTOS, Y EL QUE TOCA: lo conseguido se cuenta en pasado («Te has terminado 100 juegos») y lo que falta
   // se pide en imperativo («Termina 100 juegos»). Con un solo texto, una de las dos mitades de la lista se leía
   // mal: en imperativo, una medalla ya ganada parecía una tarea pendiente.
@@ -120,7 +123,8 @@ export const AchievementRow = memo(function AchievementRow({
   // EL PROGRESO SALE DEL CUERPO Y SE VA A SU PROPIO RENGLÓN. Iba pegado bajo la condición y compartía columna con
   // ella, así que en una fila apretada el «31 de 50 · 62 %» quedaba encajado entre el texto y la fecha. Ahora
   // arranca a MEDIO CAMINO de la fila (lo coloca la hoja) y respira: el texto manda arriba, el avance abajo.
-  const showProgress = (!isGlobal || global?.self) && !earned && next !== null && value > 0;
+  // Por escaleras, lo conseguido también lleva su camino: el que va hacia el escalón SIGUIENTE (`groupByLadder`).
+  const showProgress = (!isGlobal || global?.self) && (byLadder || !earned) && next !== null && value > 0;
 
   // EL FONDO DE LA FILA GLOBAL SE LLENA CON EL PORCENTAJE. Es la lista ordenada por esa cifra, así que el relleno
   // convierte el orden en algo que se ve sin leer: la escalera baja sola de arriba abajo. Sutil a propósito —es
@@ -131,7 +135,9 @@ export const AchievementRow = memo(function AchievementRow({
     // `data-r` EN LA FILA y no solo en su rótulo: de ahí sale `--rc`, el color de la rareza con el que la hoja
     // pinta el canto templado del borde izquierdo y el progreso. La dificultad dejó de ser un adorno de la
     // esquina derecha para ser el canto de la fila, y eso lo tiene que saber la fila entera.
-    <li ref={fila} className={classes} data-r={def.rarity} style={fill ? ({ '--fill': fill } as CSSProperties) : undefined}>
+    // `data-id` y `data-ladder`: el escalón que hace de cara y su escalera, para localizar la fila sin depender del
+    // rótulo (que por escaleras ya no lleva el número del escalón).
+    <li ref={fila} className={classes} data-r={def.rarity} data-id={def.id} data-ladder={def.ladder} style={fill ? ({ '--fill': fill } as CSSProperties) : undefined}>
       {/* `list` (34 px) en LAS DOS VISTAS. La medalla manda en la altura de la fila: a 48 la lista de 334 entradas
           se estiraba a quince pantallas, y a 34 sigue teniendo dibujo, filo y píldora legibles. El tamaño se
           decide aquí y no en la hoja, para que no haya dos sitios donde cambiarlo. */}
@@ -140,7 +146,7 @@ export const AchievementRow = memo(function AchievementRow({
       <div className="ach-row-body">
         <p className="ach-row-name">
           {name}
-          {showSteps ? (
+          {showSteps && earned ? (
             <>
               <small className="ach-row-step" aria-hidden="true">{ACHIEVEMENTS_UI.ladderStepShort(romano(def.grade), romano(def.grades))}</small>
               <span className="sr-only">, {ACHIEVEMENTS_UI.ladderStep(def.grade, def.grades)}</span>
@@ -150,7 +156,7 @@ export const AchievementRow = memo(function AchievementRow({
         <p className="ach-row-condition">{condition}</p>
         {showSteps ? (
           <span className="ach-row-pips" aria-hidden="true">
-            {Array.from({ length: def.grades }, (_, i) => <i key={i} className={i < def.grade ? 'is-on' : undefined} />)}
+            {Array.from({ length: def.grades }, (_, i) => <i key={i} className={i < stepsOn ? 'is-on' : undefined} />)}
           </span>
         ) : null}
       </div>

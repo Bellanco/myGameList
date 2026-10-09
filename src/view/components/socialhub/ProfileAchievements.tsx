@@ -181,34 +181,24 @@ export const ProfileAchievementsScreen = memo(function ProfileAchievementsScreen
       })
       .filter((entry): entry is AchievementItem => entry !== null);
 
-    /* UNA FILA POR ESCALERA (09-10-2026). Cada escalón iba en su fila —«Solsticio a solsticio I, II, III, IV, V»—
-       y la vitrina pasaba de 180 filas casi iguales. Se queda el escalón MÁS ALTO de cada escalera, que es el que
-       dice hasta dónde ha llegado; la fila pone el resto («III/V» y la tira de pasos). El recuento de arriba no
-       cambia: sigue contando escalones, que es lo que mide el catálogo. */
-    const top = new Map<string, AchievementItem>();
-    for (const entry of all) {
-      const seen = top.get(entry.def.ladder);
-      if (!seen || entry.def.grade > seen.def.grade) top.set(entry.def.ladder, entry);
-    }
-    const entries = [...top.values()]
+    const entries = all
       // Por fecha, de lo más reciente a lo más antiguo. `sortMirror` ordenaba por rareza declarada porque es el
       // orden de la VITRINA —once medallas para enseñar—, y en una lista larga eso deja el sello, que es la
       // columna que se lee, saltando de un año a otro sin orden aparente. Lo que no trae fecha cae al final.
+      // La agrupación por escaleras la hace la pantalla común, igual que en tus logros.
       .sort(compareEarned);
 
     return {
       entries,
       summary: summarizeMirror(levels, config.open),
       rarity,
-      floor: floorOf(all),
+      floor: floorOf(entries),
     };
   }, [mirror, directoryMirrors, ownStates, since, config]);
 
   return (
     <AchievementsScreen
       items={entries}
-      // La vitrina de otra persona va por escaleras; tu ficha es el catálogo, con su progreso escalón a escalón.
-      byLadder={!ownStates}
       summary={summary}
       // El porcentaje comparado NO se pinta aquí, aunque se mida: la medición sigue haciendo falta para saber si
       // hay algo detrás del botón de los globales, que es donde esa cifra sí es el asunto de la pantalla.

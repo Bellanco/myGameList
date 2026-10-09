@@ -1,4 +1,4 @@
-import { memo, useEffect, useState, type ReactNode } from 'react';
+import { memo, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AchievementRow } from './AchievementRow';
 import { AchievementFigures } from './AchievementFigures';
 import { AchievementSprite } from '../AchievementSprite';
@@ -9,6 +9,8 @@ import type { RarityMeasure } from '../../../core/achievements/pack';
 import type { AchievementItem, AchievementSummary } from '../../../core/achievements/types';
 import { APP_LOCALE } from '../../../core/constants/locale';
 import { ScreenTitle } from '../socialhub/ScreenTitle';
+import { groupByLadder } from '../../../core/achievements/ladderRows';
+import { ACHIEVEMENTS_BY_ID } from '../../../core/achievements/catalog';
 
 /** Fecha corta y legible. Sin hora: el día basta, y el minuto diría a qué horas usas la app (§5.3). */
 export function formatUnlockDate(ms: number): string {
@@ -35,8 +37,6 @@ interface AchievementsScreenProps {
    * se mide a nadie, se mide al catálogo.
    */
   global?: { self: boolean };
-  /** Cada fila es una escalera (ver `AchievementRow`). Solo la vitrina de otra persona. */
-  byLadder?: boolean;
   /**
    * EL SUELO DE LAS FECHAS: el día más antiguo del que hay constancia (el primer juego que entró en la
    * biblioteca; en una vitrina ajena, su logro fechado más viejo). Lo conseguido SIN sello propio se fecha con
@@ -88,7 +88,6 @@ interface AchievementsScreenProps {
  */
 export const AchievementsScreen = memo(function AchievementsScreen({
   items,
-  byLadder = false,
   summary,
   rarity,
   owner,
@@ -116,6 +115,11 @@ export const AchievementsScreen = memo(function AchievementsScreen({
     return () => clearTimeout(id);
   }, [anclaje]);
 
+  /* LA MISMA FORMA PARA TODOS (09-10-2026): tus logros y los de otra persona, una fila por escalera
+     (`groupByLadder`). Los globales no: allí cada escalón tiene su porcentaje y la fila es el escalón. */
+  const rows = useMemo(() => (global ? items : groupByLadder(items)), [global, items]);
+  // El logro al que se venía (el aviso de uno recién conseguido) enciende la fila de SU escalera.
+  const destacadoLadder = destacado ? ACHIEVEMENTS_BY_ID.get(destacado)?.ladder : undefined;
   const title = heading || (owner ? ACHIEVEMENTS_UI.titleOf(owner) : ACHIEVEMENTS_UI.title);
   // La voz la decide DE QUIÉN es la lista, igual que el título: en la de otra persona, el texto de siempre
   // —«lo que llevas hecho con tus juegos»— hablaba de los juegos de quien mira.
@@ -179,7 +183,7 @@ export const AchievementsScreen = memo(function AchievementsScreen({
             ) : null}
 
             <ul className="ach-list">
-              {items.map(({ def, state }) => {
+              {rows.map(({ def, state }) => {
                 // AUSENTE DEL MAPA ES CERO, NO «NO SE SABE», y de ahí el `?? 0`: `measureRarity` solo apunta a
                 // quien tiene tenedores, así que un logro que no tiene nadie no aparecía en él y la fila se
                 // quedaba sin su cifra. Eso dejaba media lista global —justo la mitad de abajo, la de las
@@ -193,7 +197,7 @@ export const AchievementsScreen = memo(function AchievementsScreen({
                 return (
                   <AchievementRow
                     key={def.id}
-                    destacado={def.id === destacado}
+                    destacado={global ? def.id === destacado : def.ladder === destacadoLadder}
                     def={def}
                     level={state.level}
                     value={state.value}
@@ -201,7 +205,7 @@ export const AchievementsScreen = memo(function AchievementsScreen({
                     date={formatUnlockDate(fromFloor ? since : state.unlockedAt)}
                     dateFromFloor={fromFloor}
                     global={global}
-                    byLadder={byLadder}
+                    byLadder={!global}
                     // De quién es la lista decide la voz de lo conseguido. `owner` vacío = tuya; en la vista
                     // global lo dice `self`, que es el dato que esa vista sí tiene.
                     mine={global ? global.self : !owner}
