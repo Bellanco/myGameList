@@ -5,6 +5,70 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.6.7] - 2026-10-09
+
+Una versión de **revisión de lo social**: las peticiones de amistad y el cierre de sesión guardan mejor lo de cada
+uno, el hub se entiende y se recorre mejor (también con lector de pantalla y en el móvil), y cada tema estrena su
+propio título de pantalla y botones con color por función.
+
+### Added
+- **Cada tema tiene su propio título de pantalla**: en Persona, cada letra recortada en su recuadro; en el tema de
+  casa, como la portada de un libro.
+- **Persona conserva su letra en el móvil**: Anton y Noto Sans, servidas desde la propia aplicación, sustituyen a la
+  Arial Black del sistema, que Android e iOS no tienen.
+- **Los botones se colorean por lo que hacen**, igual en todos los temas: el principal, el neutro, el de borrar y el
+  de amistad se distinguen de un vistazo.
+- **Aviso al salir del perfil con cambios sin guardar.**
+- **El feed vacío tiene cara**: explica qué falta y lleva a los perfiles por un único camino.
+
+### Changed
+- **Peticiones de amistad**: la campana solo cuenta las recibidas y desaparece cuando no hay ninguna. Una petición
+  enviada se ve como un estado, con «Retirar» aparte.
+- **La acción de amistad vuelve a la fila del perfil**, como un botón rosa «Amigos», debajo de la cabecera.
+- **Cerrar sesión sale de la cabecera del feed**, y los interruptores de visibilidad del perfil dicen qué compartes.
+- **Logros: una escalera por fila** en todas las listas, también en el escaparate de una amistad.
+- **Reseñas en el feed recortadas a dos líneas**; la reseña completa vuelve a usar el ancho de la tarjeta, en letra
+  recta.
+- **El resumen del año** pierde el contador de capítulos y el capítulo «contigo» cuando está vacío.
+- Las ofertas de la guía de primeros pasos, con un tono más cercano.
+
+### Fixed
+- **Una petición de amistad ya no lleva tus identificadores de gist.** El destinatario la puede leer aunque no la
+  acepte; ahora se escriben al verla aceptada, y las peticiones antiguas que aún los llevaban se limpian en el
+  siguiente saneado.
+- **Las listas de una amistad se tratan como ocultas mientras no se sepa qué oculta**, en lugar de enseñarse enteras.
+- **Al cerrar sesión se borra de ese navegador lo guardado de otras personas** (listados de amistades, amistades y
+  directorio); tu biblioteca y tu configuración se quedan.
+- **Guardar el perfil o curar la foto ya no se come los avisos de listas**, las escrituras al gist social van en fila
+  para no pisarse, y un doble clic guarda una sola vez.
+- **Un enlace compartido ya no se salta el cupo** con varias publicaciones a la vez: cada una reserva su hueco antes
+  de publicar.
+- Lo social ya no espera las listas de una amistad sin token ni caché, ignora resultados del directorio que ya no
+  tocan, avisa si una publicación que editabas se borró en otro dispositivo y deja fuera del feed las entradas con
+  fecha futura.
+- **Accesibilidad**: los mensajes de estado del hub se anuncian, el foco del teclado se conserva al navegar por él,
+  cada día del feed es su propia lista, el progreso de logros del perfil tiene nombre, la acción de dejar la amistad
+  también en pantallas estrechas, y el título de un perfil nombra a la persona.
+- **Contraste** de los chips de género y plataforma, de juego en el feed, de amistad y pendiente, de la marca «sin
+  nota», de la etiqueta del día y del aviso de foto; aceptar y rechazar se distinguen en el aviso de cookies, que se
+  enmarca según el tema.
+- **Temas**: Portal recupera su azul en los interruptores activos y tiene placas de día en modo claro; los
+  interruptores de Witcher se encienden en el morado del temple, los apagados de Sea of Stars van huecos, los campos
+  de etiquetas se enmarcan como el resto de campos de cada tema y los temas ya no vuelven a encajar la tarjeta del
+  detalle social.
+- **En el móvil**: las acciones conservan su texto, la nota del feed va encima de la fecha, los interruptores del
+  perfil siguen junto a su etiqueta y el título de un juego en las reseñas del perfil se ajusta a su nombre.
+- Sin franja vacía encima de las filas de las listas, filas globales de logros legibles sobre su barra y la ficha
+  «más» de la tira de logros con cara de día.
+
+### Deploy
+- **Cambian las reglas de Firestore**: las fechas de las amistades (`createdAt`, `updatedAt`) tienen que ser número o
+  timestamp. Antes de desplegarlas, `npm run audit:rules` contra producción, que ya revisa esas fechas como las
+  reglas; después, `firebase deploy --only firestore:rules`. **Sin cambios en índices** ni en la versión legal.
+- **`/api/share` reserva el cupo antes de publicar**: va con la Pages Function, en el mismo despliegue, sin cambios
+  en KV.
+- **Tipografías nuevas en `/fonts/`** (Anton y Noto Sans), que solo descarga el tema Persona.
+
 ## [1.6.6] - 2026-10-08
 
 Una versión de **sesión social estable y de movimiento**: lo social deja de desconectarse —y el tema de cambiar— al
