@@ -100,6 +100,9 @@ const TOMAS = persona(10, 'Tomás', 'bronze', 'none', 15);
 
 const GENTE = [MARTA, IVAN, LUCIA, NACHO, PAULA, SERGIO, CARMEN, ALEX, BEA, TOMAS];
 const YO_GIST = 'aaaabbbbccccffff';
+/** Tú, solo para el feed: lo tuyo va al otro lado del chat (`is-own-activity`), y sin ello no se veía. Su gist es
+    `YO_GIST` porque es lo que el feed compara para decidir qué es propio. */
+const YO = persona(0xffff, 'Yo', 'gold', 'none', 0);
 
 // ─── Juegos ──────────────────────────────────────────────────────────────────────────────────────────────────
 const JUEGOS: Record<string, { id: number; platforms: string[]; genres: string[] }> = {
@@ -219,12 +222,23 @@ const DIRECTORIO = GENTE.filter((p) => p.relacion === 'friends').map((p) => ({
   posts: PUBLICACIONES[p.id] || [],
   moves: MOVIMIENTOS[p.id] || [],
 }));
+const MI_ACTIVIDAD = {
+  id: YO.id,
+  uid: YO.uid,
+  displayName: YO.displayName,
+  photoURL: '',
+  achievementsMirror: '',
+  activity: [resena(YO, 'Hades', 92, 'Cada intento fallido te cuenta algo más de la familia. Nunca un bucle de muerte había tenido tanta historia detrás.', hace(1, 22, 40))],
+  posts: [publicacion(YO, 'Este finde, maratón de Hades con quien se apunte. Traed snacks.', hace(0, 10, 2))],
+  moves: [movimiento(YO, 'Hades', 'c', hace(1, 22, 30))],
+};
+
 
 // ─── Pantallas ───────────────────────────────────────────────────────────────────────────────────────────────
 function Feed({ vacio = false }: { vacio?: boolean }) {
   // El MISMO derivado que usa el hub: mezcla, orden, cupo de movimientos y agrupado por día con sus cabeceras.
   // `vacio`: quien acaba de entrar y aún no tiene amigos (el estado vacío con «Descubrir amigos»).
-  const { feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed } = useSocialFeed(vacio ? [] : DIRECTORIO, undefined, vacio ? new Set<string>() : AMIGOS);
+  const { feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed } = useSocialFeed(vacio ? [] : [...DIRECTORIO, MI_ACTIVIDAD], undefined, vacio ? new Set<string>() : AMIGOS);
   return (
     <SocialFeedScreen
       SOCIAL_UI={SOCIAL_UI}
