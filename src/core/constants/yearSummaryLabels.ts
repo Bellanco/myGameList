@@ -48,7 +48,6 @@ export const YEAR_SUMMARY_UI = {
   button: 'Resumen del año',
   buttonBack: 'Ver perfil',
   title: (year: number) => `Resumen de ${year}`,
-  chapter: (index: number, total: number) => `${String(index).padStart(2, '0')} / ${String(total).padStart(2, '0')}`,
   monthsShort: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'] as const,
   monthLong: (month: number) => MONTHS_LONG[month] || '',
   dateLong: (month: number, day?: number) => (day ? `el ${day} de ${MONTHS_LONG[month]}` : `en ${MONTHS_LONG[month]}`),

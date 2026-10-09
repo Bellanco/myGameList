@@ -498,7 +498,7 @@ export const YearSummary = memo(function YearSummary({ summary, voice }: YearSum
        como las del panel sin enumerarlas en ocho skins. Y la tarjeta es la social (`hub-feed-card`), que cada tema
        ya viste —placa, tinta, pergamino—; la portada se queda con la suya, que es la del acento. */
     <div className="ys stats-hub">
-      {cards.map((card, index) => (
+      {cards.map((card) => (
         <section
           key={card.key}
           className={[card.accent ? null : 'hub-feed-card', 'ys-card', card.className].filter(Boolean).join(' ')}
@@ -508,9 +508,6 @@ export const YearSummary = memo(function YearSummary({ summary, voice }: YearSum
             <span className="ys-kicker">
               <Icon name={card.icon} className="ui-icon ys-kicker-icon" />
               {card.kicker}
-            </span>
-            <span className="ys-chap" aria-hidden="true">
-              {L.chapter(index + 1, cards.length)}
             </span>
           </div>
           {card.body}

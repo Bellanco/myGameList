@@ -729,11 +729,6 @@
     radial-gradient(closest-side, rgba(194, 92, 0, .15), transparent 76%);
 }
 
-/* ── §14b · RESUMEN DEL AÑO: SIN NÚMERO DE TARJETA ────────────────────────────────────────────────────────────
-   El «01 / 06» de cada tarjeta (`.ys-chap`) se quita aquí, en Sin salida (05-10-2026, a petición del usuario). El
-   resto de temas lo conservan. Se esconde y no se borra del marcado porque ya es `aria-hidden`: no lo lee nadie. ── */
-:root[data-palette="portal"] .ys-chap { display: none; }
-
 /* ══ MOMENTOS · la fila que cambia de lista SALE POR UN PORTAL NARANJA Y ENTRA POR UNO AZUL ═════════════════
    No hace falta un disparador nuevo: el listado ya marca `.is-entering` y `.is-leaving` (ver `_motion.scss`),
    que es exactamente el momento en el que un juego llega o se va. Aquí solo se cambia POR DÓNDE: en vez de
