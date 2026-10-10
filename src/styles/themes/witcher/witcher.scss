@@ -1018,16 +1018,74 @@
   }
 }
 
-/* ── §13d · EL LACRE: la cara de este tema del sello que cae al cerrar un juego (la pieza —golpe, tamaño,
-   icono— es común y vive en `_effects.scss`). La misma gota de cera del contrato —sangre seca— pero con el
-   filo de PLATA, que es el metal del tema. No va bajo `data-effects` ni `reduced-motion` porque ya los mira el
-   hook antes de crear el sello: si no se cumplen, el elemento no existe. ── */
-:root[data-palette="witcher"] .fx-seal {
-  color: #f0e2c4;
-  background: radial-gradient(circle at 36% 30%, #a6241b, #7a1610 62%, #55100c);
-  box-shadow: inset 0 2px 0 rgba(255,255,255,.22), inset 0 -6px 14px rgba(0,0,0,.45), 0 14px 30px rgba(0,0,0,.45);
-  border: 2px solid #c6ced8;
+/* ── §13d · CONTRATO CERRADO Y LAS CORONAS: lo que pasa al cerrar un juego. Era un lacre de cera —la cara de este
+   tema del sello común—, luego la franja de The Witcher 3 al terminar una misión con dos espadas cruzadas, y el
+   10-10-2026 la franja se quedó y las espadas y «Recompensa cobrada» se cambiaron por la recompensa DE VERDAD: un
+   contador de coronas que sube mientras salta un puñado de monedas girando. Elegido con la maqueta de las
+   alternativas de este tema. El número es CSS puro (`@property` + `counter()`, como la victoria de Sol y luna); el
+   vuelo de cada moneda lo sortea el hook en tres variables (`--dx` lateral, `--alto` el pico, `--cae` dónde acaba) y
+   aquí se hace parábola: X lineal en una capa, Y que frena al subir y acelera al caer en la de dentro, y el giro en
+   la tercera. No va bajo `data-effects` ni `reduced-motion` porque ya los mira el hook antes de crearla: si no se
+   cumplen, el elemento no existe. Es una franja de juego, oscura en los dos modos. ── */
+@property --wt-coronas { syntax: '<integer>'; initial-value: 0; inherits: false; }
+:root[data-palette="witcher"] .fx-wt-mision {
+  position: fixed; z-index: 9997; pointer-events: none;
+  left: 0; right: 0; top: 42%; transform: translateY(-50%);
+  padding: 1rem 0 .9rem; text-align: center;
+  background: linear-gradient(90deg, transparent, rgba(6, 8, 12, .88) 18%, rgba(6, 8, 12, .88) 82%, transparent);
+  animation: wt-mision 3.4s forwards;
 }
+/* Los dos filos de la franja, arriba y abajo: una línea de plata que se apaga hacia los extremos. */
+:root[data-palette="witcher"] .fx-wt-mision::before,
+:root[data-palette="witcher"] .fx-wt-mision::after {
+  content: ""; position: absolute; left: 10%; right: 10%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(198, 206, 216, .55) 25%, rgba(198, 206, 216, .55) 75%, transparent);
+}
+:root[data-palette="witcher"] .fx-wt-mision::before { top: 0; }
+:root[data-palette="witcher"] .fx-wt-mision::after { bottom: 0; }
+:root[data-palette="witcher"] .fx-wt-mision b {
+  display: block;
+  font: 700 clamp(18px, 5vw, 26px)/1.15 var(--font-display); letter-spacing: .2em; white-space: nowrap;
+  /* PLATA BRUÑIDA: un degradado de metal en la letra, al que le pasa un destello cuando ya se ha asentado. */
+  color: transparent;
+  background: linear-gradient(100deg, #b9c2cc 0 40%, #ffffff 50%, #b9c2cc 60% 100%) 100% 0 / 300% 100% no-repeat,
+    linear-gradient(180deg, #f4f1ea, #c9cfd6 55%, #9aa5b1);
+  -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .85)) drop-shadow(0 0 10px rgba(198, 206, 216, .3));
+  opacity: 0; animation: wt-letras .9s .15s ease-out forwards, wt-destello 1s 1s ease-in-out forwards;
+}
+/* La recompensa: la moneda, el número que sube y «coronas». La moneda es el ORIGEN de las que saltan. */
+:root[data-palette="witcher"] .fx-wt-cuenta {
+  position: relative; display: inline-flex; align-items: center; gap: 9px; margin-top: .45rem;
+  font: 700 19px/1 var(--font-display); letter-spacing: .06em; color: #f1d38a;
+  text-shadow: 0 1px 0 #000, 0 0 12px rgba(241, 211, 138, .35);
+  opacity: 0; animation: wt-asoma .3s .55s forwards, wt-golpe .25s 1.7s;
+}
+:root[data-palette="witcher"] .fx-wt-cuenta small { font: italic 400 15px var(--font-body); letter-spacing: 0; color: #b9c2cc; text-shadow: none; }
+:root[data-palette="witcher"] .fx-wt-n { counter-reset: wt-n var(--wt-coronas); animation: wt-cuenta 1.1s .6s cubic-bezier(.2, .7, .3, 1) forwards; }
+:root[data-palette="witcher"] .fx-wt-n::after { content: "+" counter(wt-n); }
+:root[data-palette="witcher"] .fx-wt-defs { position: absolute; width: 0; height: 0; }
+:root[data-palette="witcher"] .fx-wt-moneda { display: block; width: 22px; height: 22px; flex: none; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, .7)); }
+/* Las que saltan: tres capas (X, Y y giro), invisibles hasta su turno para no amontonarse en la de la cuenta. */
+:root[data-palette="witcher"] .fx-wt-corona {
+  position: absolute; left: 1px; top: 50%; margin-top: -10px;
+  opacity: 0; animation: wt-corona-x 1.25s var(--t, 0s) linear both;
+}
+:root[data-palette="witcher"] .fx-wt-corona > i { display: block; animation: wt-corona-y 1.25s var(--t, 0s) both; }
+:root[data-palette="witcher"] .fx-wt-corona .fx-wt-moneda { width: 20px; height: 20px; animation: wt-gira var(--g, .45s) linear infinite; }
+@keyframes wt-letras { 0% { opacity: 0; letter-spacing: .6em; } 100% { opacity: 1; letter-spacing: .2em; } }
+@keyframes wt-destello { to { background-position: 0 0, 0 0; } }
+@keyframes wt-asoma { to { opacity: 1; } }
+@keyframes wt-mision { 0% { opacity: 0; } 8%, 86% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes wt-cuenta { to { --wt-coronas: 250; } }
+@keyframes wt-golpe { 50% { transform: scale(1.14); } }
+@keyframes wt-corona-x { 0% { opacity: 0; transform: none; } 3%, 75% { opacity: 1; } 100% { opacity: 0; transform: translateX(var(--dx)); } }
+@keyframes wt-corona-y {
+  0% { transform: none; animation-timing-function: cubic-bezier(.33, .66, .66, 1); }
+  30% { transform: translateY(var(--alto)); animation-timing-function: cubic-bezier(.33, 0, .66, .33); }
+  100% { transform: translateY(var(--cae)); }
+}
+@keyframes wt-gira { 50% { transform: scaleX(.12); } }
 
 /* ── §N · LA CAJA SIN CARÁTULA = LA PLACA INSCRITA EN LA HOJA ──────────────────────────────────────────
    Los dos materiales del tema, cada uno en su sitio: el PAPEL solo en los cantos —un pliego rasgado que

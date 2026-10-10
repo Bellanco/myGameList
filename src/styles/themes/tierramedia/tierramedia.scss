@@ -374,3 +374,46 @@
   text-indent: calc(100% - 1.1em);
   background: linear-gradient(90deg, #c9a24a, rgba(201, 162, 74, .15)) left 50% / calc(100% - 1.4em) 1px no-repeat;
 }
+
+/* ── LA FIRMA · JUEGO TERMINADO (10-10-2026) ──────────────────────────────────────────────────────────────────────
+   Al cerrar un juego, «Juego Terminado» con letra de título de las películas. Esa letra no existe como fuente (la
+   dibujó Alan Lee a mano) y sus imitaciones son de uso no comercial, así que va en CINZEL DECORATIVE: mayúscula
+   romana con las capitales adornadas, la libre más cercana. Como en el logotipo («THE LORD OF THE RINGS»), las
+   iniciales van más grandes que el resto (`.fx-tm-cap`). Se entinta de izquierda a derecha, le pasa
+   una luz y debajo se tira la raya con la hoja. Sobria, como todo este skin: ni marco ni ornamento más, y un velo del
+   color del fondo para que se lea encima del listado. El hook ya mira efectos y `reduced-motion`. ── */
+:root[data-palette="tierramedia"] .fx-tm-fin {
+  position: fixed; z-index: 9997; pointer-events: none;
+  left: 50%; top: 42%; transform: translate(-50%, -50%);
+  display: grid; justify-items: center; gap: .35rem;
+  width: min(760px, 96vw); padding: 2.4rem 2rem 2.2rem; text-align: center;
+  /* El velo es un rectángulo que se difumina arriba y abajo, y solo un poco por los lados (la máscara): con un
+     degradado radial, en el móvil los bordes del velo caían bajo las letras y asomaban las filas por detrás. */
+  background: linear-gradient(180deg, transparent, var(--bg) 24%, var(--bg) 76%, transparent);
+  -webkit-mask: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  animation: tm-fin 3.2s forwards;
+}
+:root[data-palette="tierramedia"] .fx-tm-fin b {
+  font: 700 clamp(30px, 8vw, 56px)/1.1 'Cinzel Decorative', var(--font-display); letter-spacing: .04em;
+  /* En el móvil parte en dos líneas («Juego» / «Terminado») en vez de salirse por el lado. El relleno es para las
+     iniciales grandes: el oro se pinta solo dentro de la caja, y sin él se cortaba el palo de la T. */
+  text-wrap: balance; padding: .12em .1em 0;
+  color: transparent;
+  background: linear-gradient(100deg, var(--steam) 0 42%, #fff3cf 50%, var(--steam) 58% 100%) 100% 0 / 300% 100% no-repeat;
+  -webkit-background-clip: text; background-clip: text;
+  text-shadow: 0 0 22px rgba(227, 176, 75, .35);
+  -webkit-mask: linear-gradient(90deg, #000 40%, transparent 60%) 100% 0 / 260% 100% no-repeat;
+  mask: linear-gradient(90deg, #000 40%, transparent 60%) 100% 0 / 260% 100% no-repeat;
+  animation: tm-fin-tinta .9s .15s ease-out forwards, tm-fin-luz 1.2s 1.1s ease-in-out forwards;
+}
+:root[data-palette="tierramedia"] .fx-tm-fin-raya { width: min(300px, 70vw); height: 14px; overflow: visible; }
+:root[data-palette="tierramedia"] .fx-tm-fin-raya path { fill: none; stroke: var(--steam); stroke-width: 1; transform-origin: 150px 7px; transform: scaleX(0); animation: tm-fin-raya .7s .8s cubic-bezier(.2, .8, .3, 1) forwards; }
+:root[data-palette="tierramedia"] .fx-tm-fin-raya .fx-tm-fin-hoja { fill: var(--tm-hoja); stroke: none; transform: scale(0); animation: tm-fin-raya .4s 1.3s ease-out forwards; }
+:root[data-palette="tierramedia"] .fx-tm-cap { font-size: 1.3em; line-height: 1; }
+/* A la luz no hay halo: el oro es tinta sobre pergamino. */
+:root[data-palette="tierramedia"][data-theme="light"] .fx-tm-fin b { text-shadow: none; background-image: linear-gradient(100deg, var(--steam) 0 42%, #c8962e 50%, var(--steam) 58% 100%); }
+@keyframes tm-fin-tinta { to { -webkit-mask-position: 0 0; mask-position: 0 0; } }
+@keyframes tm-fin-luz { to { background-position: 0 0; } }
+@keyframes tm-fin-raya { to { transform: none; } }
+@keyframes tm-fin { 0% { opacity: 0; } 5%, 88% { opacity: 1; } 100% { opacity: 0; } }

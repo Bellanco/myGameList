@@ -1093,3 +1093,74 @@
   :root[data-effects="on"][data-palette="portal"] .hub-hub-title-wrap h2::after { animation: portal-cursor 2.6s ease-in-out infinite; }
 }
 @keyframes portal-cursor { 50% { opacity: .15; } }
+
+/* ── LA FIRMA · PRUEBA SUPERADA (10-10-2026) ──────────────────────────────────────────────────────────────────────
+   Al cerrar un juego sale, al azar, una de las dos maneras que tiene Portal de decir «has terminado»: el CARTEL DE
+   LA CÁMARA, que baja del techo como un panel, enciende en naranja la línea de indicadores (el botón se ha activado)
+   y se recoge; o la TERMINAL ÁMBAR de los créditos tecleando el veredicto de GLaDOS. Elegidas con la maqueta de los
+   Game Clear. Las crea `useSignatureEffects`, que ya mira los efectos y el `reduced-motion`: si no tocan, no existen.
+   El cartel es blanco de señalética en los dos modos, y la terminal es una terminal: no tienen versión de día. ── */
+:root[data-palette="portal"] .fx-ap-sign {
+  position: fixed; z-index: 9997; pointer-events: none;
+  left: 50%; top: 40%;
+  display: flex;
+  background: #eef1f2; color: #1b1f22; border-radius: 3px;
+  font-family: var(--font-label);
+  box-shadow: 0 2px 0 #b9c2c8, 0 22px 40px -12px rgba(0, 0, 0, .65);
+  transform: translate(-50%, -50%) translateY(-60vh);
+  animation: ap-sign 1.9s cubic-bezier(.3, 1.3, .5, 1) forwards;
+}
+:root[data-palette="portal"] .fx-ap-num {
+  display: grid; align-content: center;
+  padding: .55rem .85rem .45rem; border-right: 3px solid #1b1f22;
+  font-size: 66px; font-weight: 700; line-height: 1;
+}
+:root[data-palette="portal"] .fx-ap-num small,
+:root[data-palette="portal"] .fx-ap-txt small { font-size: 10px; font-weight: 500; letter-spacing: .24em; color: #5b666e; text-align: center; }
+:root[data-palette="portal"] .fx-ap-txt { display: grid; align-content: center; gap: .25rem; padding: .5rem 1.1rem .5rem 1rem; white-space: nowrap; }
+:root[data-palette="portal"] .fx-ap-txt small { text-align: left; }
+:root[data-palette="portal"] .fx-ap-txt b { font-size: 23px; font-weight: 600; letter-spacing: .06em; }
+:root[data-palette="portal"] .fx-ap-pict { display: flex; gap: 5px; }
+:root[data-palette="portal"] .fx-ap-pict i { width: 15px; height: 15px; border-radius: 2px; background: #c3cbd0; }
+:root[data-palette="portal"] .fx-ap-pict i.on { background: #1b1f22; }
+/* La línea de indicadores: azul mientras baja, naranja cuando el botón «se activa». */
+:root[data-palette="portal"] .fx-ap-luces {
+  position: absolute; left: 6px; right: 6px; bottom: -12px; height: 5px;
+  background: radial-gradient(circle, #29b6f6 2.2px, transparent 2.6px) 0 0 / 11px 5px repeat-x;
+  filter: drop-shadow(0 0 3px #29b6f6);
+  animation: ap-luces 1.9s steps(1) forwards;
+}
+@keyframes ap-sign {
+  0% { transform: translate(-50%, -50%) translateY(-60vh); }
+  24% { transform: translate(-50%, -50%); }
+  80% { transform: translate(-50%, -50%); animation-timing-function: cubic-bezier(.6, 0, .9, .4); }
+  100% { transform: translate(-50%, -50%) translateY(-60vh); }
+}
+@keyframes ap-luces {
+  0%, 34% { background-image: radial-gradient(circle, #29b6f6 2.2px, transparent 2.6px); filter: drop-shadow(0 0 3px #29b6f6); }
+  35%, 100% { background-image: radial-gradient(circle, #ff9a00 2.2px, transparent 2.6px); filter: drop-shadow(0 0 4px #ff9a00); }
+}
+
+/* La terminal: cada línea se teclea con `steps()` sobre su ancho en `ch` (`--n` caracteres, `--d` de retardo), que
+   en monoespaciada es exacto. */
+:root[data-palette="portal"] .fx-glados {
+  position: fixed; z-index: 9997; pointer-events: none;
+  left: 50%; top: 44%; transform: translate(-50%, -50%);
+  width: max-content; min-width: 300px; padding: 1rem 1.4rem;
+  background: #140d02 repeating-linear-gradient(0deg, rgba(255, 176, 46, .05) 0 1px, transparent 1px 3px);
+  border: 1px solid rgba(255, 176, 46, .4);
+  box-shadow: 0 0 30px -8px rgba(255, 154, 0, .45), 0 20px 40px -14px #000;
+  font: 17px/1.55 var(--font-mono); color: #ffb02e; text-shadow: 0 0 6px rgba(255, 176, 46, .6);
+  animation: gl-panel 2.6s forwards;
+}
+:root[data-palette="portal"] .fx-glados p {
+  margin: 0; width: 0; overflow: hidden; white-space: nowrap;
+  animation: gl-type calc(var(--n) * 28ms) steps(var(--n)) var(--d) forwards;
+}
+:root[data-palette="portal"] .fx-glados-cur {
+  display: inline-block; width: .6ch; height: 1em; vertical-align: -2px; background: #ffb02e;
+  animation: gl-blink .5s steps(1) infinite;
+}
+@keyframes gl-type { to { width: calc(var(--n) * 1ch + .7ch); } }
+@keyframes gl-blink { 50% { opacity: 0; } }
+@keyframes gl-panel { 0% { opacity: 0; } 6%, 90% { opacity: 1; } 100% { opacity: 0; } }

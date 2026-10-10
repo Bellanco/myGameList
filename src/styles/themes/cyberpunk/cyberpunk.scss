@@ -1004,3 +1004,33 @@
   :root[data-effects="on"][data-palette="cyberpunk"] .hub-hub-title-wrap h2 { animation: cyber-neon-falla 5s infinite; }
 }
 @keyframes cyber-neon-falla { 0%, 86%, 92%, 100% { opacity: 1; } 87% { opacity: .35; } 89% { opacity: .9; } 90% { opacity: .2; } }
+
+/* ── LA FIRMA · PROTOCOLO DE BRECHA (10-10-2026) ──────────────────────────────────────────────────────────────────
+   Al cerrar un juego, la matriz de códigos del minijuego de hackeo: la secuencia se ilumina fila-columna-fila y una
+   banda amarilla sella «BRECHA COMPLETADA». El marcado lo monta `useSignatureEffects` (que ya mira efectos y
+   `reduced-motion`); aquí va solo la cara. Es un panel del HUD, oscuro en los dos modos, como el resto del HUD. ── */
+:root[data-palette="cyberpunk"] .fx-cp-breach {
+  position: fixed; z-index: 9997; pointer-events: none;
+  left: 50%; top: 45%; transform: translate(-50%, -50%);
+  width: max-content; padding: .55rem .7rem .7rem;
+  background: rgba(8, 9, 13, .95); border: 1px solid rgba(252, 238, 10, .45);
+  animation: cp-br-panel 2.4s forwards;
+}
+:root[data-palette="cyberpunk"] .fx-cp-breach-hd {
+  display: flex; justify-content: space-between; gap: 1rem; margin-bottom: .4rem;
+  font: 600 13px var(--font-label); letter-spacing: .12em; color: #fcee0a; white-space: nowrap;
+}
+:root[data-palette="cyberpunk"] .fx-cp-breach-hd span { font: 12px var(--font-mono); color: #00f0ff; letter-spacing: .05em; }
+:root[data-palette="cyberpunk"] .fx-cp-breach-m { display: grid; grid-template-columns: repeat(5, 36px); gap: 2px; }
+:root[data-palette="cyberpunk"] .fx-cp-breach-m i { font: normal 15px/26px var(--font-mono); text-align: center; color: #cfe67a; }
+:root[data-palette="cyberpunk"] .fx-cp-breach-m i.is-paso { animation: cp-cell .25s var(--d) forwards; }
+:root[data-palette="cyberpunk"] .fx-cp-breach-ok {
+  position: absolute; left: -12px; right: -12px; top: 50%; padding: .55rem 0;
+  transform: translateY(-50%) scaleY(0);
+  background: #fcee0a; color: #08090d; box-shadow: -3px 0 #ff2a6d, 3px 0 #00f0ff;
+  font: 700 22px/1 var(--font-label); letter-spacing: .12em; text-align: center; white-space: nowrap;
+  animation: cp-ok 2.4s forwards;
+}
+@keyframes cp-cell { to { background: #fcee0a; color: #08090d; } }
+@keyframes cp-ok { 0%, 56% { transform: translateY(-50%) scaleY(0); } 60%, 90% { transform: translateY(-50%) scaleY(1); } 100% { transform: translateY(-50%) scaleY(0); } }
+@keyframes cp-br-panel { 0% { opacity: 0; } 5%, 92% { opacity: 1; } 100% { opacity: 0; } }

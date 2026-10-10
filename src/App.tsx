@@ -661,6 +661,7 @@ export default function App() {
      las imágenes saltaban al terminar. Con un plazo corto, y solo cuenta el último clic: dos pestañas pulsadas
      seguidas no pueden acabar en la primera porque su precarga terminó después. */
   const ultimoCambioDeLista = useRef(0);
+  const { getFilteredList } = vm;
   const handleTabChange = useCallback((tab: TabId) => {
     const desde = TAB_ORDER.indexOf(currentTab);
     const hasta = TAB_ORDER.indexOf(tab);
@@ -678,9 +679,9 @@ export default function App() {
       return;
     }
     const forma = listShapePreference.get();
-    const urls = caratulasDeArriba(vm.getFilteredList(tab, filters), forma, forma === 'grid' ? 12 : 6, window.devicePixelRatio || 1);
+    const urls = caratulasDeArriba(getFilteredList(tab, filters), forma, forma === 'grid' ? 12 : 6, window.devicePixelRatio || 1);
     void precargarCaratulas(urls, PLAZO_PRECARGA_MS).then(navegar);
-  }, [currentTab, navigate, setExpandedId, vm.getFilteredList, filters]);
+  }, [currentTab, navigate, setExpandedId, getFilteredList, filters]);
 
   // Ruleta de listados: el juego elegido pasa a "En curso" y la ruleta deja paso a esa lista, que es donde el
   // usuario quiere acabar. El aviso del propio movimiento lo da el viewmodel.

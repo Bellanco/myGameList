@@ -69,11 +69,12 @@
    aquí, y los emite `core/effects/moments`. Mismas reglas: los inyecta el hook solo con su paleta activa,
    `data-effects="on"` y sin `prefers-reduced-motion`, así que tampoco necesitan guarda propia. */
 
-/* ── EL SELLO · cuatro temas piden el mismo gesto al cerrar un juego, así que es UNA pieza con cuatro caras.
-      Cae de arriba, golpea y se va: un sello se estampa, no aparece. Aquí vive solo la PIEZA —el golpe, el
-      tamaño, el icono y el rótulo—; cada CARA (color, forma, contorno) está en el skin de su tema, que es lo
-      único que la ve: el lacre en «Plata y acero», el sello del ladrón en «Ladrones de corazones», el lacre
-      imperial en «Solo hay guerra» y la marquesina en «Inserte moneda». ── */
+/* ── EL SELLO · dos temas piden el mismo gesto al cerrar un juego, así que es UNA pieza con dos caras. Cae de
+      arriba, golpea y se va: un sello se estampa, no aparece. Aquí vive solo la PIEZA —el golpe, el tamaño, el
+      icono y el rótulo—; cada CARA (color, forma, contorno) está en el skin de su tema, que es lo único que la ve:
+      el sello del ladrón en «Ladrones de corazones» y el lacre imperial con su escudo en «Solo hay guerra». Los
+      otros seis temas tienen escena propia (la franja del contrato, la recreativa, el cartel o la terminal, la
+      brecha, la victoria; el de casa, de momento, nada), y viven enteras en su skin. ── */
 .fx-seal {
   position: fixed; z-index: 9997; pointer-events: none;
   left: 50%; top: 42%;

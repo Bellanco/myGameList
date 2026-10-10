@@ -395,13 +395,44 @@
 :root:not([data-effects="on"])[data-palette="grimdark"] body::before { animation: none !important; }
 
 /* ══ MOMENTOS · LACRE IMPERIAL al cerrar un juego: la cara de este tema del sello común de `_effects.scss`. Oro
-   sobre verde de cogitador, con la corona de laurel que pone el hook. La guarda de efectos la pone él. ══ */
+   sobre verde de cogitador, con un escudo imperial que sortea el hook. La guarda de efectos la pone él. ══ */
 :root[data-palette="grimdark"] .fx-seal {
   color: #e0a92b; border-radius: 2px;
   background: linear-gradient(160deg, #14281c, #060b08);
   border: 2px solid #e0a92b;
   box-shadow: inset 0 0 0 3px rgba(224,169,43,.18), 0 0 26px -6px rgba(67,245,88,.5);
 }
+/* EL ESCUDO (10-10-2026): en vez de la corona de laurel del sprite común, uno de los escudos que el tema ya trae
+   para el feed (§ «EL SELLO ROTA», más abajo), sorteado por el hook en `data-fx`. Solo los OCHO IMPERIALES: en el
+   feed la marca herética tiene su lectura, en «deber cumplido» no. Son los mismos ficheros, así que no añaden
+   descarga. El valor por defecto es la reserva, por si el hook sortea un número que aquí no está. */
+:root[data-palette="grimdark"] .fx-seal { --crest: url('./seals/aquila.svg'); --crest-w: 118px; --crest-h: 50px; }
+:root[data-palette="grimdark"] .fx-seal:has(.fx-seal-crest) { width: 158px; height: 158px; }
+:root[data-palette="grimdark"] .fx-seal-crest {
+  width: var(--crest-w, 70px); height: var(--crest-h, 70px);
+  background: currentColor;
+  -webkit-mask: var(--crest) center / contain no-repeat;
+  mask: var(--crest) center / contain no-repeat;
+}
+:root[data-palette="grimdark"] .fx-seal[data-fx="1"] { --crest: url('./seals/mechanicus.svg'); --crest-w: 70px; --crest-h: 70px; }
+:root[data-palette="grimdark"] .fx-seal[data-fx="2"] { --crest: url('./seals/custodes.svg'); --crest-w: 70px; --crest-h: 70px; }
+:root[data-palette="grimdark"] .fx-seal[data-fx="3"] { --crest: url('./seals/dark-angels.svg'); --crest-w: 70px; --crest-h: 70px; }
+:root[data-palette="grimdark"] .fx-seal[data-fx="4"] { --crest: url('./seals/raven-guard.svg'); --crest-w: 70px; --crest-h: 70px; }
+:root[data-palette="grimdark"] .fx-seal[data-fx="5"] { --crest: url('./seals/salamanders.svg'); --crest-w: 70px; --crest-h: 70px; }
+:root[data-palette="grimdark"] .fx-seal[data-fx="6"] { --crest: url('./seals/space-wolves.svg'); --crest-w: 70px; --crest-h: 70px; }
+:root[data-palette="grimdark"] .fx-seal[data-fx="7"] { --crest: url('./seals/blood-ravens.svg'); --crest-w: 100px; --crest-h: 52px; }
+/* EL CANTO (10-10-2026): con el escudo, el lacre deja de ser un cuadrado con borde y pasa a PLACA IMPERIAL: esquinas
+   cortadas, filo de oro, un filete interior más fino y cuatro remaches a media arista. La dibuja un SVG que pone el
+   hook debajo del escudo (un `border` no sabe cortar esquinas), y el halo de fósforo va como `drop-shadow` para que
+   siga la forma; es de una sola vez, no un bucle. */
+:root[data-palette="grimdark"] .fx-seal:has(.fx-seal-canto) { background: none; border: 0; box-shadow: none; }
+:root[data-palette="grimdark"] .fx-seal-canto {
+  position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; overflow: visible;
+  filter: drop-shadow(0 0 14px rgba(67, 245, 88, .4)) drop-shadow(0 10px 18px rgba(0, 0, 0, .55));
+}
+:root[data-palette="grimdark"] .fx-seal-canto .is-cuerpo { fill: #0d1c13; stroke: #e0a92b; stroke-width: 2.5px; }
+:root[data-palette="grimdark"] .fx-seal-canto .is-filete { fill: none; stroke: rgba(224, 169, 43, .55); stroke-width: 1px; }
+:root[data-palette="grimdark"] .fx-seal-canto .is-remache { fill: #e0a92b; }
 
 /* ── §12 · Panel "Perfil": lectura de cogitador. La rampa de los repartos va del FÓSFORO VERDE al ORO
    imperial, los datos brillan como un tubo de rayos catódicos y las cifras se leen en VT323, igual que el

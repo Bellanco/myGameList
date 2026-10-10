@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game Clear: todos</title>
+<!--
+  EL PORTAL DE LOS GAME CLEAR (10-10-2026): los ocho temas a la vista a la vez, cada uno en su marco con la página
+  real (`game-clear.html?tema=…&solo=1`) y su botón, más uno que los lanza todos juntos. Necesita el servidor de
+  desarrollo.
+-->
+<style>
+  :root { --bg: #15171a; --fg: #e8e6e1; --dim: #9a978f; --line: #2c2f34; --acc: #d8b45a; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+  h1 { font-size: 15px; margin: 0 8px 0 0; }
+  button, select { font: inherit; color: var(--fg); background: #22252a; border: 1px solid var(--line); border-radius: 6px; padding: 5px 12px; cursor: pointer; }
+  button:hover { border-color: var(--acc); }
+  #todos { border-color: var(--acc); color: var(--acc); font-weight: 600; }
+  main { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 560px), 1fr)); gap: 16px; padding: 16px; }
+  figure { margin: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #1b1d21; }
+  figcaption { padding: 8px 12px; display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap; }
+  figcaption b { font-size: 15px; }
+  figcaption span { color: var(--dim); }
+  figure iframe { display: block; width: 100%; height: 360px; border: 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Game Clear · todos los temas</h1>
+  <button id="todos">▶ Cerrar un juego en todos</button>
+  <select id="modo" aria-label="Modo"><option value="dark">Oscuro</option><option value="light">Claro</option></select>
+  <span style="color:var(--dim)">Cada marco tiene su propio botón. Los que sortean sacan una escena distinta cada vez.</span>
+</header>
+<main id="rejilla"></main>
+<script>
+  const TEMAS = [
+    ['tierramedia', 'No puedes pasar', 'juego terminado'],
+    ['arcade', 'Inserte moneda', 'récord o synthwave, al azar'],
+    ['witcher', 'Plata y acero', 'contrato cerrado, con las coronas'],
+    ['persona', 'Ladrones de corazones', 'objetivo cumplido, recortado'],
+    ['portal', 'Cámara de pruebas', 'cartel o GLaDOS, al azar'],
+    ['cyberpunk', 'Sin futuro', 'protocolo de brecha'],
+    ['seaofstars', 'Sol y luna', '¡Victoria!'],
+    ['grimdark', 'Solo hay guerra', 'deber cumplido, con escudo al azar'],
+  ];
+  const rejilla = document.getElementById('rejilla');
+  const modo = document.getElementById('modo');
+  const pinta = () => {
+    rejilla.innerHTML = TEMAS.map(([id, nombre, que]) =>
+      `<figure><figcaption><b>${nombre}</b><span>${que}</span></figcaption>` +
+      `<iframe src="/docs/maquetas/game-clear.html?tema=${id}&modo=${modo.value}&solo=1" title="${nombre}"></iframe></figure>`).join('');
+  };
+  modo.addEventListener('change', pinta);
+  pinta();
+  document.getElementById('todos').addEventListener('click', () => {
+    rejilla.querySelectorAll('iframe').forEach((f) => f.contentWindow?.cerrarUnJuego?.());
+  });
+</script>
+</body>
+</html>
