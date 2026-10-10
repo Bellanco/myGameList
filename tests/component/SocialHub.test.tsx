@@ -2061,18 +2061,10 @@ describe('SocialHub — los logros de otras personas', () => {
   const espejoDe = (id: string) =>
     packAchievements([{ id, level: 1, value: 0, next: null, unlockedAt: Date.now() }]);
 
-  /**
-   * LA LÍNEA BASE de este dispositivo: el espejo de cada persona tal y como estaba la primera vez que se vio. Aquí,
-   * VACÍO para todos: los logros de hoy aparecieron después de esa foto y por eso son noticia (F5, §8.4).
-   */
-  const lineaBaseVacia = (...uids: string[]) => ({
-    achievementsPeerSeen: Object.fromEntries(uids.map((uid) => [uid, packAchievements([])])),
-  });
-
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    metaMocks.getLocalMeta.mockResolvedValue(lineaBaseVacia('friendUid', 'strangerUid', 'me'));
+    metaMocks.getLocalMeta.mockResolvedValue(null);
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
     firebaseMocks.getPublicConfig.mockResolvedValue({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
     firebaseMocks.resolveOwnProfile.mockResolvedValue(null);
@@ -2138,28 +2130,21 @@ describe('SocialHub — los logros de otras personas', () => {
   });
 
   /**
-   * F5 — LA PRIMERA FOTO CALLA. Sin línea base, lo que ya estaba en el espejo de una amistad no es noticia, traiga
-   * la fecha que traiga: así se callan también las fechas «de hoy» que se publicaron mal antes de fijarlas. Lo que
-   * sí pasa es que se SIEMBRA, y eso es lo que se espera aquí antes de mirar el feed.
+   * UNA AMISTAD VISTA POR PRIMERA VEZ (amistad nueva, móvil nuevo, datos borrados): sus logros del último mes salen
+   * YA. Antes la «primera foto» los callaba para siempre (docs/plan-feed-sin-vacio.md, Fase 5). Con LocalMeta vacía,
+   * que es exactamente el dispositivo que nunca la ha visto.
    */
-  it('sin línea base, el espejo de una amistad se siembra y no se anuncia', async () => {
-    metaMocks.getLocalMeta.mockResolvedValue(null);
+  it('una amistad vista por primera vez en este dispositivo: sus logros recientes salen ya', async () => {
     renderHub('/social');
 
-    await waitFor(() => expect(metaMocks.seedAchievementsPeerSeen).toHaveBeenCalledWith(
-      expect.objectContaining({ friendUid: espejoDe(ADA_LOGRO) }),
-      expect.anything(),
-    ));
-    expect(screen.queryByLabelText(`${SOCIAL_UI.feed.openProfileAria('Ada')}. ${ADA_LOGRO_NOMBRE}`)).not.toBeInTheDocument();
-    // Y al desconocido no se le toma línea base: su espejo no entra en el feed de ningún modo.
-    for (const [additions] of metaMocks.seedAchievementsPeerSeen.mock.calls) expect(additions).not.toHaveProperty('strangerUid');
+    expect(await screen.findByLabelText(`${SOCIAL_UI.feed.openProfileAria('Ada')}. ${ADA_LOGRO_NOMBRE}`)).toBeInTheDocument();
   });
 
   /**
-   * LO QUE YA ESTABA NO SE ANUNCIA, AUNQUE TRAIGA FECHA DE HOY; lo que apareció después, sí. Es la diferencia entre
-   * «reciente» y «nuevo», y la que hacía que logros viejos salieran como conseguidos hoy.
+   * LO FECHADO ANTES DEL 29-09-2026 NO SALE: hasta la 1.4.7 la fecha se recalculaba y algunos logros viejos se
+   * publicaron con fecha de septiembre. En la vitrina se siguen viendo; en el feed no hasta que salen de la ventana.
    */
-  it('anuncia lo que apareció después de la línea base, y no lo que ya estaba', async () => {
+  it('un logro fechado antes del 29-09-2026 no sale en el feed; el de hoy, sí', async () => {
     const VIEJO = 'resenas-50';
     const VIEJO_NOMBRE = ACHIEVEMENTS_BY_ID.get(VIEJO)!.labels.name;
     const hoy = Date.now();
@@ -2167,17 +2152,15 @@ describe('SocialHub — los logros de otras personas', () => {
       id: 'friendUid', uid: 'friendUid', displayName: 'Ada', photoURL: '',
       socialGistId: 'ada-social', gamesGistId: '', updatedAt: hoy, tier: 'bronce',
       achievementsMirror: packAchievements([
-        { id: VIEJO, level: 1, value: 0, next: null, unlockedAt: hoy },
+        { id: VIEJO, level: 1, value: 0, next: null, unlockedAt: new Date(2026, 8, 28, 12).getTime() },
         { id: ADA_LOGRO, level: 1, value: 0, next: null, unlockedAt: hoy },
       ]),
     }]);
-    metaMocks.getLocalMeta.mockResolvedValue({
-      achievementsPeerSeen: { friendUid: packAchievements([{ id: VIEJO, level: 1, value: 0, next: null, unlockedAt: 0 }]), me: packAchievements([]) },
-    });
     renderHub('/social');
 
     const tarjeta = await screen.findByLabelText(`${SOCIAL_UI.feed.openProfileAria('Ada')}. ${ADA_LOGRO_NOMBRE}`);
     expect(tarjeta.textContent).not.toContain(VIEJO_NOMBRE);
+    expect(screen.queryByText(VIEJO_NOMBRE)).not.toBeInTheDocument();
   });
 
   it('la ficha de una amistad pinta su vitrina', async () => {

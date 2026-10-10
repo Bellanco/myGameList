@@ -1,53 +1,58 @@
-// F5 — NOVEDADES DE LOGROS EN EL FEED, contra una línea base (plan-logros §5.4 y §8.4).
+// LOGROS EN EL FEED (plan-logros §8.4; docs/plan-feed-sin-vacio.md, Fase 5).
 //
-// Fija las reglas que separan «reciente» de «nuevo»: sin ellas, cualquier fecha reciente que llegara a un espejo
-// salía como un logro de ese día, y una entrada desaparecía en cuanto su dueño conseguía algo al día siguiente.
+// Hasta el 10-10-2026 un logro solo salía si no estaba en la «primera foto» que este dispositivo tomó del espejo de
+// esa persona: con una amistad nueva o un móvil nuevo no salía ninguno. Ahora sale todo lo de los últimos 30 días,
+// salvo lo fechado antes del 29-09-2026 (`ACHIEVEMENT_DATES_RELIABLE_FROM`): hasta la 1.4.7 la fecha se recalculaba y
+// algunos logros viejos se publicaron con fecha de septiembre. Esas fechas salen solas de la ventana el 28-10-2026.
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
-import { achievementFeedEntries, FEED_DAYS_PER_PERSON } from '../../src/core/achievements/feed';
+import { ACHIEVEMENT_DATES_RELIABLE_FROM, achievementFeedEntries, FEED_DAYS_PER_PERSON } from '../../src/core/achievements/feed';
 import { packAchievements } from '../../src/core/achievements/pack';
 import { getLocalMeta, seedAchievementsPeerSeen } from '../../src/model/repository/indexedDbRepository';
 import type { AchievementState } from '../../src/core/achievements/types';
 
-const NOW = Date.parse('2026-09-28T12:00:00.000Z');
+const NOW = new Date(2026, 9, 10, 12).getTime();
 const DAY = 24 * 60 * 60 * 1000;
 const got = (id: string, unlockedAt: number): AchievementState => ({ id, level: 1, value: 0, next: null, unlockedAt });
 const idsOf = (entries: ReturnType<typeof achievementFeedEntries>) =>
   entries.flatMap((entry) => entry.items.map((item) => item.def.id)).sort();
 
-describe('el feed de logros contra la línea base', () => {
-  it('lo que ya estaba en la línea base no se anuncia, aunque su fecha sea de hoy', () => {
-    const mirror = packAchievements([got('completados-10', NOW), got('resenas-5', NOW)]);
-    const seen = packAchievements([got('completados-10', 0)]);
-    expect(idsOf(achievementFeedEntries([{ id: 'ada', mirror, seen }], NOW))).toEqual(['resenas-5']);
+describe('el feed de logros', () => {
+  it('sale todo lo de los últimos 30 días, aunque sea la primera vez que este dispositivo ve a esa persona', () => {
+    const mirror = packAchievements([got('completados-10', NOW - 3 * DAY), got('resenas-5', NOW)]);
+    expect(idsOf(achievementFeedEntries([{ id: 'ada', mirror }], NOW))).toEqual(['completados-10', 'resenas-5']);
   });
 
-  it('sin línea base (`undefined`) no filtra: esa decisión es del llamante', () => {
-    const mirror = packAchievements([got('completados-10', NOW)]);
-    expect(idsOf(achievementFeedEntries([{ id: 'ada', mirror }], NOW))).toEqual(['completados-10']);
+  it('lo de hace más de 30 días no sale', () => {
+    const mirror = packAchievements([got('completados-10', NOW - 31 * DAY)]);
+    expect(achievementFeedEntries([{ id: 'ada', mirror }], NOW)).toEqual([]);
   });
 
-  it('una línea base VACÍA deja pasar todo lo reciente', () => {
-    const mirror = packAchievements([got('completados-10', NOW)]);
-    expect(idsOf(achievementFeedEntries([{ id: 'ada', mirror, seen: packAchievements([]) }], NOW))).toEqual(['completados-10']);
+  it('lo fechado antes del 29-09-2026 no sale: puede ser una fecha mala de antes de la 1.4.7', () => {
+    expect(ACHIEVEMENT_DATES_RELIABLE_FROM).toBe(new Date(2026, 8, 29).getTime());
+    const mirror = packAchievements([
+      got('completados-10', ACHIEVEMENT_DATES_RELIABLE_FROM - 1),
+      got('resenas-5', ACHIEVEMENT_DATES_RELIABLE_FROM),
+    ]);
+    expect(idsOf(achievementFeedEntries([{ id: 'ada', mirror }], NOW))).toEqual(['resenas-5']);
   });
 
   it('una entrada por persona y DÍA, y no solo la del día más reciente', () => {
     // Antes, conseguir algo el miércoles hacía desaparecer del feed la entrada del lunes.
     const mirror = packAchievements([got('completados-10', NOW - 2 * DAY), got('resenas-5', NOW)]);
-    const entries = achievementFeedEntries([{ id: 'ada', mirror, seen: packAchievements([]) }], NOW);
-    expect(entries).toHaveLength(2);
+    expect(achievementFeedEntries([{ id: 'ada', mirror }], NOW)).toHaveLength(2);
   });
 
   it(`como mucho ${FEED_DAYS_PER_PERSON} días por persona, los más recientes`, () => {
     const ids = ['completados-10', 'completados-25', 'resenas-5', 'resenas-10', 'resenas-25', 'volvere-3', 'volvere-10'];
     const mirror = packAchievements(ids.map((id, index) => got(id, NOW - index * DAY)));
-    const entries = achievementFeedEntries([{ id: 'ada', mirror, seen: packAchievements([]) }], NOW);
+    const entries = achievementFeedEntries([{ id: 'ada', mirror }], NOW);
     expect(entries).toHaveLength(FEED_DAYS_PER_PERSON);
     expect(idsOf(entries)).not.toContain('volvere-10');
   });
 });
 
+// El guardado de la línea base sigue en el repositorio (zona de staging, ver CLAUDE.md) aunque el feed ya no la use.
 describe('la línea base guardada', () => {
   it('siembra lo que falta y NO reescribe lo que ya había: es la primera foto', async () => {
     await seedAchievementsPeerSeen({ ada: 'primera' });

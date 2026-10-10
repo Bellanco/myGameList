@@ -1,6 +1,6 @@
 # Plan: que el feed no parezca vacío cuando hay amistades activas
 
-> **Estado (10-10-2026): Fases 1 a 4 hechas en `develop` (sin push); Fases 5 y 6 pendientes.** Diagnóstico hecho leyendo
+> **Estado (10-10-2026): Fases 1 a 5 hechas en `develop` (sin push); Fase 6 pendiente.** Diagnóstico hecho leyendo
 > el código de `develop` (después de `4e178363`). Cada fase empieza escribiendo el test que demuestra el fallo.
 >
 > Fase 1, dónde quedó: `useSocialDirectory.ts` (`readToken`, `REJECTED_TOKEN`, `rejectedTokenRef`,
@@ -32,6 +32,11 @@
 > desplegar; el caso está en `tests/integration/firestore.rules.test.ts` (emulador: 145 en verde). Tests:
 > `friendshipReturnSignal.test.ts`, `socialProfilesByUid.test.ts`, `socialDirectoryFriendsKey.test.ts`. Arranque sin
 > cambios (187,4 kB).
+>
+> Fase 5, dónde quedó: `ACHIEVEMENT_DATES_RELIABLE_FROM` y la retirada de `seen` en `core/achievements/feed.ts`;
+> `useSocialFeed` sin línea base (pierde el parámetro `friendsResolved`); `useAchievementBaselines.ts` BORRADO (era del
+> ViewModel). La tarjeta PROPIA sigue esperando a `ready` (lo publicado leído), para no salir en un día más tardío y
+> saltar. Anotado en la revisión general (hallazgo 15) y en `plan-logros.md` §8.4.
 
 > ⚠️ **Documento vivo.** Si una línea no coincide con el código, manda el código: corrige esto en la misma pasada.
 

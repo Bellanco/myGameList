@@ -652,7 +652,6 @@ export function useSocialViewModel(options?: {
     // cualquier autenticado puede leer, así que aquí no vale la garantía implícita del resto del feed («solo se
     // leen los gists de los amigos»).
     friendUidSet,
-    friendshipsResolved,
     isAdmin,
   );
 

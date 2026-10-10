@@ -504,6 +504,14 @@ Lo que se ve, y lo que falta por medir:
 `lazy()`/`import()`; con 4,5 kB, una tarjeta más en el grafo de arranque rompe el build. No se sube el tope: está
 puesto para que esto se note.
 
+### 15 · Cota temporal de fechas de logros · Baja · ⏳ RETIRAR A PARTIR DEL 28-10-2026
+
+`ACHIEVEMENT_DATES_RELIABLE_FROM` (`core/achievements/feed.ts`) deja fuera del feed los logros fechados antes del
+29-09-2026, que pueden traer una fecha mala de antes de la 1.4.7 (docs/plan-feed-sin-vacio.md, Fase 5). La peor es
+del 28-09, así que desde el 28-10-2026 la ventana de 30 días ya la deja fuera sola y la cota no recorta nada: se
+retira con su test. Quedan también sin uso `seedAchievementsPeerSeen` y `LocalMeta.achievementsPeerSeen`, que están en
+la zona de staging del repositorio: preguntar antes de borrarlos.
+
 ## Lo que se comprobó y está bien
 
 Para no repetir el trabajo en la próxima pasada:
