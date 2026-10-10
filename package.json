@@ -69,6 +69,14 @@
     "vitest": "^5.0.2"
   },
   "overrides": {
-    "@grpc/grpc-js": "^1.14.5"
+    "@grpc/grpc-js": "^1.14.5",
+    "firebase-tools": {
+      "chokidar": "^4.0.3",
+      "@opentelemetry/core": "^2.8.0",
+      "basic-ftp": "^6.2.3",
+      "gaxios": {
+        "uuid": "^11.1.1"
+      }
+    }
   }
 }
