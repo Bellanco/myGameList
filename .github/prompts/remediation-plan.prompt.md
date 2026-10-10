@@ -1,9 +1,22 @@
 ---
-mode: agent
-description: "Plan de remediación global por fases (seguridad, datos, rendimiento, reusabilidad) para myGameList"
+agent: agent
+description: "HISTÓRICO (junio 2026) — plan de remediación por fases de myGameList; el vigente es docs/revision-general-2026-09.md"
 ---
 
 # Remediación global de myGameList — ejecutar POR FASES
+
+> ⚠️ **DOCUMENTO HISTÓRICO (auditoría del 19-06-2026). No lo ejecutes tal cual.** El código ha cambiado mucho
+> desde entonces y buena parte del plan ya está hecho; las referencias `fichero:línea` de abajo ya no apuntan
+> a lo que dicen. Ejemplos comprobados el 10-10-2026: `firestore.rules` y `firebase.json` existen y el perfil
+> ya no admite `githubToken` ni `email` (1.1/1.2); el token se cifra en reposo con `core/security/crypto.ts`
+> (1.5); `createSocialGist` crea el gist secreto (1.3); H1/H2 están corregidos y no queda ningún `it.fails` en
+> `tests/unit/syncRepository.test.ts` (2.4/2.5); existe `githubFetch` en `githubHttp.ts` (4.1); `AdminModal` ya
+> no existe (5.x). Otros puntos siguen abiertos o se decidieron de otra forma (p. ej. los ids siguen siendo
+> numéricos, 2.1).
+>
+> **Hallazgos abiertos, plan vigente y lo que ya se comprobó que está bien:**
+> [`docs/revision-general-2026-09.md`](../../docs/revision-general-2026-09.md). Arquitectura real:
+> `.github/copilot-instructions.md`. Si retomas un punto de aquí, verifícalo primero contra el código.
 
 ## Cómo usar este prompt
 Eres el agente de desarrollo de **myGameList**. Antes de tocar nada, lee

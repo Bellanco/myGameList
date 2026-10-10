@@ -199,7 +199,7 @@ Ajustes en el dashboard de Cloudflare Pages:
 - **Node.js**: lo decide `.nvmrc` (`24`). ⚠️ El sistema de build v3 de Pages **NO lee el campo `engines` de
   `package.json`** —lo dice su documentación—, así que sin `.nvmrc` construiría con su versión por defecto, que
   hoy es **22.16.0**. Las otras dos formas de fijarlo son la variable `NODE_VERSION` del panel y `.node-version`;
-  se eligió `.nvmrc` porque además sirve en local
+  se eligió `.nvmrc` porque además sirve en local y en el CI (`node-version-file` en `ci.yml`)
 - Variables `VITE_FIREBASE_*` en Production y Preview · Auto-deploy activado
 
 ### Antes de desplegar
