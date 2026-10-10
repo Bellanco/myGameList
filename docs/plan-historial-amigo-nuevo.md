@@ -1,9 +1,10 @@
 # Plan: el historial de un amigo nuevo, al momento
 
-> **Estado (10-10-2026): Fases 0, 1 y 2 implementadas en `develop`, sin desplegar. La 3 (aviso) no se ha hecho.**
-> Desplegar **primero las reglas** (`friendshipKeys` y `friendshipCopyRequesterKeys`) y después el cliente. Con el
-> cliente viejo no cambia nada; con el nuevo sin las reglas, la petición sale sola (sin depósito) y todo funciona
-> como en la 1.6.7.
+> **Estado (10-10-2026): Fases 0, 1 y 2 en `develop` (`4e178363`). Reglas DESPLEGADAS en producción el
+> 10-10-2026; falta el cliente. La 3 (aviso) se descarta: con el depósito, quien acepta ve el historial al momento.**
+> Las reglas desplegadas eran exactamente las de la 1.6.7, y el cambio solo añade permisos (ninguna validación de
+> contenido cambia), así que `audit:rules` no podía encontrar nada nuevo; no se pasó por falta de credenciales.
+> Con el cliente viejo y las reglas nuevas no cambia nada.
 >
 > Dónde quedó cada pieza: depósito, recogida y limpieza en `firebaseFriendshipRepository.ts`
 > (`sendFriendRequest`, `claimRequesterKeys`, `writeOwnPendingKeys`, `deleteOwnFriendshipKeys`,
