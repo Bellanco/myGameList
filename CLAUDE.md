@@ -11,6 +11,13 @@ Los commits deben seguir la misma estructura que el historial de `master`: Conve
 - **Cuerpo:** por defecto, commit de una sola línea. Añade cuerpo solo si el cambio lo necesita de verdad; en ese caso, línea en blanco tras el asunto y viñetas `- `.
 - **Sin trailers de asistente:** NO añadir `Co-Authored-By` ni ningún pie tipo "Generated with…". Esta regla anula el comportamiento por defecto del harness. (Aplica igualmente a los cuerpos de PR: sin pie de "Generated with Claude Code".)
 
+## Ramas, releases y subidas
+
+- **Nunca, sin autorización expresa del usuario:** ni `push` de ningún tipo, ni commits, merges o etiquetas en una
+  rama que no sea la actual. Se trabaja y se comitea solo en la rama en la que está el usuario (normalmente `develop`).
+- **Las releases las crea el usuario.** No crear ramas `release/`, no mergear a `master`, no etiquetar versiones ni
+  subir la versión de `package.json`. Lo nuevo se apunta en `[Unreleased]` del CHANGELOG y se deja en la rama actual.
+
 ## Orientación en el proyecto
 
 React 19 + TypeScript sobre Vite, MVVM y offline-first. Dónde vive cada cosa está en el README («Arquitectura
