@@ -3,7 +3,8 @@
 // carga bajo demanda —entra en el bundle base por `styles/index.scss`— porque es la letra del primer fotograma.
 // Atkinson Hyperlegible Next pone rótulos Y cuerpo, así que su `latin` es la fuente crítica: la precarga
 // `index.html` y la precachea el service worker (ver `vite.config.ts`). La Mono, solo las cifras; EB Garamond,
-// solo los titulares.
+// solo los titulares. Cinzel Decorative, solo el «Juego terminado» al cerrar un juego: es la libre más parecida
+// a la letra del título de las películas, y solo se descarga cuando sale (declararla aquí no la pide).
 // Se sirven desde el propio origen (public/fonts/): sin peticiones a terceros, sin los dos saltos de red de
 // Google Fonts y disponibles sin conexión. Para actualizar: `node scripts/vendor-fonts.mjs` y commitear.
 
@@ -64,5 +65,25 @@
   font-weight: 500 800;
   font-display: swap;
   src: url('/fonts/eb-garamond-latin-68fd4b24.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* latin-ext */
+@font-face {
+  font-family: 'Cinzel Decorative';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/cinzel-decorative-latin-ext-5cb06f3b.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Cinzel Decorative';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/cinzel-decorative-latin-9f36288a.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }

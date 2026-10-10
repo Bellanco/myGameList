@@ -81,8 +81,9 @@ const SHEETS = [
       + '// carga bajo demanda —entra en el bundle base por `styles/index.scss`— porque es la letra del primer fotograma.\n'
       + '// Atkinson Hyperlegible Next pone rótulos Y cuerpo, así que su `latin` es la fuente crítica: la precarga\n'
       + '// `index.html` y la precachea el service worker (ver `vite.config.ts`). La Mono, solo las cifras; EB Garamond,\n'
-      + '// solo los titulares.',
-    families: ['Atkinson+Hyperlegible+Next:wght@400;500;600;700;800', 'Atkinson+Hyperlegible+Mono:wght@500', 'EB+Garamond:wght@500;600;700;800'],
+      + '// solo los titulares. Cinzel Decorative, solo el «Juego terminado» al cerrar un juego: es la libre más parecida\n'
+      + '// a la letra del título de las películas, y solo se descarga cuando sale (declararla aquí no la pide).',
+    families: ['Atkinson+Hyperlegible+Next:wght@400;500;600;700;800', 'Atkinson+Hyperlegible+Mono:wght@500', 'EB+Garamond:wght@500;600;700;800', 'Cinzel+Decorative:wght@700'],
   },
   {
     slug: 'cyberpunk',
@@ -106,8 +107,10 @@ const SHEETS = [
   },
   {
     slug: 'arcade',
-    comment: 'Skin de la paleta arcade (carga diferida). Share Tech Mono la comparte con cyberpunk y portal.',
-    families: ['Orbitron:wght@500;600;700;800', 'Exo+2:wght@400;500;600;700', 'Share+Tech+Mono'],
+    comment:
+      'Skin de la paleta arcade (carga diferida). Share Tech Mono la comparte con cyberpunk y portal, y VT323 con grimdark:\n'
+      + '// es la de la pantalla de récord del Game Clear (el mismo fichero, así que quien tenga los dos temas la baja una vez).',
+    families: ['Orbitron:wght@500;600;700;800', 'Exo+2:wght@400;500;600;700', 'Share+Tech+Mono', 'VT323'],
   },
   {
     slug: 'persona',
