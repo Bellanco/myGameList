@@ -2007,7 +2007,7 @@ html:root .hub-screen-card .hub-feed-card-detail:not(.has-cover) {
 
 /* F3 — Publicaciones (texto libre + enlaces). Compositor de una línea que CRECE con el contenido: el textarea
    arranca a la altura del campo de antes y se estira al saltar de línea o desbordar (la altura la calcula
-   `SocialFeedScreen` con `scrollHeight`). */
+   `useAutoGrowTextarea`). */
 .hub-post-composer {
   display: flex;
   /* Centrado y no `stretch`: con el campo creciendo, estirar el botón lo convertiría en una columna enorme.
@@ -2024,7 +2024,7 @@ html:root .hub-screen-card .hub-feed-card-detail:not(.has-cover) {
 .hub-post-composer .hub-post-input {
   flex: 1 1 auto;
   min-width: 0;
-  /* Arranca en UNA línea; la altura real la calcula `SocialFeedScreen` con `scrollHeight`. */
+  /* Arranca en UNA línea; la altura real la calcula `useAutoGrowTextarea`. */
   min-height: 0;
   resize: none;
   overflow-y: auto;
