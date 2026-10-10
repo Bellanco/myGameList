@@ -3,10 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // LECTURAS Y ESCRITURAS QUE SE REPETÍAN SIN QUE NADA CAMBIARA (recuento del 04-10-2026, docs/plan-capacidad-gratuita.md):
 //   · `publicConfig` se leía dos veces al arrancar y otra en cada montaje del social;
 //   · `privateConfig` se releía para el pseudónimo en cada montaje y en cada publicación;
-//   · publicar escribía siempre la identidad (`userMap` + `privateConfig`) y el respaldo del token;
+//   · publicar escribía siempre la identidad (`privateConfig`) y el respaldo del token;
 //   · y tiraba la copia del directorio aunque el perfil no se hubiera reescrito, con 50 lecturas en la siguiente visita.
 
 const setDocMock = vi.fn<(...a: unknown[]) => Promise<void>>(async () => {});
+const deleteDocMock = vi.fn<(...a: unknown[]) => Promise<void>>(async () => {});
+const getLocalMetaMock = vi.hoisted(() => vi.fn<() => Promise<Record<string, unknown>>>());
 const getDocMock = vi.fn<(...a: unknown[]) => Promise<unknown>>(async () => ({ exists: () => false, data: () => undefined }));
 const getOwnProfileRefMock = vi.fn<(...a: unknown[]) => unknown>(async () => null);
 const invalidateSocialDirectoryCache = vi.hoisted(() => vi.fn());
@@ -30,8 +32,7 @@ vi.mock('../../src/model/repository/firebaseSocialRepository', () => ({
 
 vi.mock('../../src/model/repository/indexedDbRepository', () => ({
   seedProfileIdFromRemote: vi.fn(async (remote: string | null) => remote || 'pid-local'),
-  // Latido reciente: no escribe, para que las cuentas de escrituras sean solo las que se prueban.
-  getLocalMeta: vi.fn(async () => ({ profileTouchedAt: Date.now() })),
+  getLocalMeta: () => getLocalMetaMock(),
   patchLocalMeta: vi.fn(async () => {}),
 }));
 
@@ -46,6 +47,7 @@ vi.mock('firebase/firestore/lite', () => ({
   doc: (_fs: unknown, collection: string, id: string) => ({ collection, id }),
   getDoc: (...a: unknown[]) => getDocMock(...a),
   setDoc: (...a: unknown[]) => setDocMock(...a),
+  deleteDoc: (...a: unknown[]) => deleteDocMock(...a),
   deleteField: () => '__del__',
   serverTimestamp: () => '__ts__',
   writeBatch: () => ({ set: vi.fn(), commit: vi.fn(async () => {}) }),
@@ -63,6 +65,15 @@ function writesOf(collection: string): Array<Record<string, unknown>> {
   return setDocMock.mock.calls
     .filter((call) => (call[0] as { collection?: string })?.collection === collection)
     .map((call) => call[1] as Record<string, unknown>);
+}
+
+/** La identidad es la escritura de `privateConfig` que lleva el pseudónimo (la otra es el respaldo del token). */
+function identityWrites(): Array<Record<string, unknown>> {
+  return writesOf('privateConfig').filter((w) => 'profileId' in w);
+}
+
+function userMapDeletes(): number {
+  return deleteDocMock.mock.calls.filter((call) => (call[0] as { collection?: string })?.collection === 'userMap').length;
 }
 
 function perfilAlDia(overrides: Record<string, unknown> = {}) {
@@ -95,6 +106,10 @@ function privateConfigConPseudonimo() {
 beforeEach(() => {
   repo.forgetOwnAccountMemo();
   setDocMock.mockClear();
+  deleteDocMock.mockClear();
+  // Latido reciente: no escribe, para que las cuentas de escrituras sean solo las que se prueban.
+  getLocalMetaMock.mockReset();
+  getLocalMetaMock.mockResolvedValue({ profileTouchedAt: Date.now() });
   getDocMock.mockReset();
   getDocMock.mockImplementation(async () => ({ exists: () => false, data: () => undefined }));
   getOwnProfileRefMock.mockReset();
@@ -157,8 +172,9 @@ describe('ensureProfileByEmail — escrituras que no se repiten en cada reseña'
     await publicar();
     await publicar();
 
-    expect(writesOf('userMap')).toHaveLength(1);
+    expect(identityWrites()).toHaveLength(1);
     // Una de la identidad y otra del token cifrado; la segunda publicación no añade ninguna.
+    expect(writesOf('userMap')).toHaveLength(0);
     expect(writesOf('privateConfig')).toHaveLength(2);
     expect(writesOf('profiles').filter((w) => 'social' in w && Object.keys(w).length === 1)).toHaveLength(1);
   });
@@ -168,7 +184,7 @@ describe('ensureProfileByEmail — escrituras que no se repiten en cada reseña'
     await publicar();
     await publicar({ socialGistId: 'social-nuevo' });
 
-    expect(writesOf('userMap')).toHaveLength(2);
+    expect(identityWrites()).toHaveLength(2);
   });
 
   it('si cambia el token, se vuelve a respaldar', async () => {
@@ -179,13 +195,13 @@ describe('ensureProfileByEmail — escrituras que no se repiten en cada reseña'
     expect(writesOf('privateConfig').filter((w) => 'encryptedGithubToken' in w)).toHaveLength(2);
   });
 
-  it('el borrado de cuenta lo olvida: volver a activar lo social reescribe el userMap', async () => {
+  it('el borrado de cuenta lo olvida: volver a activar lo social reescribe la identidad', async () => {
     privateConfigConPseudonimo();
     await publicar();
     repo.forgetOwnAccountMemo();
     await publicar();
 
-    expect(writesOf('userMap')).toHaveLength(2);
+    expect(identityWrites()).toHaveLength(2);
   });
 
   it('si la identidad falla, la siguiente publicación lo reintenta', async () => {
@@ -196,7 +212,35 @@ describe('ensureProfileByEmail — escrituras que no se repiten en cada reseña'
     await publicar();
     await publicar();
 
-    expect(writesOf('userMap')).toHaveLength(2);
+    expect(identityWrites()).toHaveLength(2);
+  });
+});
+
+describe('userMap — se borra y no se vuelve a escribir', () => {
+  it('tras guardar la identidad, borra el userMap heredado una vez y lo sella', async () => {
+    privateConfigConPseudonimo();
+    await publicar();
+
+    expect(userMapDeletes()).toBe(1);
+    expect(writesOf('userMap')).toHaveLength(0);
+  });
+
+  it('con el sello puesto, no lo vuelve a borrar', async () => {
+    getLocalMetaMock.mockResolvedValue({ profileTouchedAt: Date.now(), userMapDroppedFor: UID });
+    privateConfigConPseudonimo();
+    await publicar();
+
+    expect(userMapDeletes()).toBe(0);
+  });
+
+  it('si la identidad no llega a privateConfig, no toca el userMap', async () => {
+    privateConfigConPseudonimo();
+    setDocMock.mockImplementationOnce(async () => {
+      throw new Error('red');
+    });
+    await publicar();
+
+    expect(userMapDeletes()).toBe(0);
   });
 });
 

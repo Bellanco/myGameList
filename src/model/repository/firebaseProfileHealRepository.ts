@@ -6,7 +6,7 @@
 //     pueden borrar sin más, porque para algunos usuarios son la ÚNICA copia que queda de su token y del id de su
 //     gist. Ponerlos a salvo significa escribir en `privateConfig`, que es owner-only: ni el administrador puede.
 //  2. Identidad pseudónima ausente (`profileId` vacío: señal `no-profile-id` del panel). Su copia CANÓNICA vive en
-//     `userMap/{uid}` y `privateConfig/{uid}`, owner-only las dos, y es de donde la leen todos los dispositivos del
+//     `privateConfig/{uid}`, owner-only, y es de donde la leen todos los dispositivos del
 //     usuario (`resolveStableProfileId`). Un pseudónimo inventado desde el panel solo llegaría al doc público, así
 //     que el cliente lo pisaría en su siguiente guardado y sus publicaciones quedarían atribuidas a otro.
 //  3. Marca de esquema atrasada (`schemaVersion`: señal `stale-schema`). Sellarla desde el panel sería mentir: el
@@ -36,7 +36,6 @@ import {
   getPrivateConfig,
   resolveStableProfileId,
   setPrivateConfig,
-  setUserMap,
 } from './firebaseRepository';
 import {
   findSocialProfileByEmail,
@@ -79,7 +78,7 @@ export type LegacyHealDeferralStep =
   | 'respaldo-token'
   /** Falló sembrar el id del gist de juegos en `privateConfig`. */
   | 'siembra-gist'
-  /** Falló escribir la copia canónica del pseudónimo (`userMap` / `privateConfig`). */
+  /** Falló escribir la copia canónica del pseudónimo (`privateConfig`). */
   | 'identidad'
   /** Falló la primera mitad del cutover: crear `profiles/{uid}` a partir del perfil legacy. */
   | 'cutover-identidad'
@@ -98,7 +97,7 @@ export interface LegacyHealResult {
   seededGamesGistId: boolean;
   /** El id del canal social se sembró en `privateConfig` durante esta pasada. */
   seededSocialGistId: boolean;
-  /** Se estableció la identidad pseudónima que faltaba (`userMap` + `privateConfig` + doc público). */
+  /** Se estableció la identidad pseudónima que faltaba (`privateConfig` + doc público). */
   establishedProfileId: boolean;
   /** Se volvió a sellar la marca de esquema del documento público. */
   stampedSchema: boolean;
@@ -195,7 +194,6 @@ async function startIdentityCutover(
   // Identidad pseudónima, con su copia canónica antes que nada (mismo criterio que el saneado normal).
   const profileId = await resolveStableProfileId(uid);
   if (profileId) {
-    await setUserMap(uid, profileId);
     if (String(privateConfig?.profileId || '').trim() !== profileId) {
       await setPrivateConfig(uid, { profileId });
     }
@@ -319,7 +317,7 @@ export async function healOwnLegacyProfile(uid: string, email = '', sessionName 
     const seededSocialGistId = Boolean(rescuedIds.socialGistId);
 
     // Identidad pseudónima: mismo criterio de orden. `resolveStableProfileId` reconcilia primero con el remoto
-    // canónico (`privateConfig`/`userMap`) y solo genera uno nuevo si no hay rastro en ninguna parte, así que un
+    // canónico (`privateConfig`) y solo genera uno nuevo si no hay rastro en ninguna parte, así que un
     // dispositivo que ya publica con su pseudónimo local conserva EL SUYO en vez de estrenar otro y partir en dos la
     // atribución de sus reseñas.
     //
@@ -331,7 +329,6 @@ export async function healOwnLegacyProfile(uid: string, email = '', sessionName 
       step = 'identidad';
       const profileId = await resolveStableProfileId(uid);
       if (profileId) {
-        await setUserMap(uid, profileId);
         // Si la configuración privada ya lo tiene (el caso de quien estableció su identidad pero cuyo documento
         // público es anterior a que se publicara el pseudónimo), no se reescribe: no hay nada que preservar.
         if (String(privateConfig?.profileId || '').trim() !== profileId) {

@@ -32,7 +32,11 @@ import {
   STORAGE_KEY,
 } from '../../core/constants/storageKeys';
 
-/** Colecciones con un documento por uid que pertenecen íntegramente al usuario. */
+/**
+ * Colecciones con un documento por uid que pertenecen íntegramente al usuario. `userMap` ya no se escribe (ver
+ * `dropLegacyUserMap`), pero sigue aquí mientras queden documentos: una cuenta antigua puede darse de baja sin haber
+ * pasado por la versión que lo borra.
+ */
 const OWNED_COLLECTIONS = ['profiles', 'privateConfig', 'publicConfig', 'userMap'] as const;
 
 export interface AccountDeletionResult {

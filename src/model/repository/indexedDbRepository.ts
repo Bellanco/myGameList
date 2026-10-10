@@ -180,7 +180,7 @@ export async function getOrCreateProfileId(): Promise<string> {
 
 /**
  * 6.2a — Estabiliza el `profileId` entre dispositivos. Dado el `profileId` canónico recuperado de
- * Firestore (`privateConfig`/`userMap`), lo siembra en `meta` ANTES de que se genere uno local nuevo.
+ * Firestore (`privateConfig`), lo siembra en `meta` ANTES de que se genere uno local nuevo.
  * El remoto canónico SIEMPRE gana: si existe y difiere del local, reconcilia (sana dispositivos que ya
  * hubieran divergido con un UUID aleatorio propio). Como `privateConfig` es un doc único por `uid`, todos
  * los dispositivos convergen al mismo valor. Si no hay remoto, conserva el local o crea el primero.

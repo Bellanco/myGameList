@@ -101,6 +101,8 @@ export interface LocalMeta {
   profileNameRepairedAt?: number;
   /** `<socialGistId>|<gamesGistId>` ya retirados del perfil público. */
   publicGistIdsPurgedFor?: string;
+  /** uid cuyo `userMap/{uid}` ya se borró desde este dispositivo (docs/plan-firestore-sin-sobrantes.md, Fase 2). */
+  userMapDroppedFor?: string;
   /**
    * Cuándo se selló esa purga, por lo mismo que `profileNameRepairedAt`: `purgeOwnPublicGistIds` también
    * devuelve `false` sin lanzar cuando NO pudo purgar —típicamente porque aún no había respaldo en

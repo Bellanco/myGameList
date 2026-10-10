@@ -1,6 +1,6 @@
 # Plan 1.6.9: la amistad nueva, Firestore sin sobrantes y la fecha de alta
 
-> **Estado (10-10-2026): Fase 1 hecha en `develop` (sin push); reglas del depósito cambiadas, SIN desplegar.** Medido leyendo producción (MCP de Firebase, solo lectura) y el código de
+> **Estado (10-10-2026): Fases 1 y 2 hechas en `develop` (sin push); reglas del depósito cambiadas, SIN desplegar.** Medido leyendo producción (MCP de Firebase, solo lectura) y el código de
 > `develop`. Los casos ya rotos y los datos sobrantes que ya existen se arreglan **cuando su dueño entra**, sin
 > scripts. La única excepción es la fecha de alta (Fase 3): entrar la sellaría con la fecha de ese día, así que se
 > rellena una vez con su fecha real.
@@ -71,6 +71,10 @@ Cada escritura que ya toca el documento borra a la vez el dato muerto (`deleteFi
 - `upsertProfileSocialReferences` (`firebaseRepository.ts`) no tiene llamadores y escribe tres de estos datos: se borra.
 
 ### Fase 2 — Fuera `userMap`
+
+> Hecha. El borrado del documento heredado (`dropLegacyUserMap`) va detrás de la escritura de `privateConfig` en
+> `establishProfileIdentity`, y lleva sello por dispositivo en `LocalMeta.userMapDroppedFor` para no repetir el borrado
+> en cada carga. Los dos saneados de `firebaseProfileHealRepository.ts` escriben solo `privateConfig`.
 
 **No tiene sentido que exista.** Guarda solo `profileId`, que ya está en `privateConfig/{uid}`; las dos colecciones son
 del dueño y nadie más las lee; se escriben siempre juntas (el lote de alta, `establishProfileIdentity` y los dos

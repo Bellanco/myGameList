@@ -5,7 +5,7 @@
 //  - firebaseSocialRepository: directorio, índice público, recomendaciones (+ sus cachés).
 // Este fichero conserva el NÚCLEO de perfil/identidad/token y RE-EXPORTA la API pública para que ningún
 // consumidor cambie sus imports.
-import { deleteField, doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore/lite';
+import { deleteDoc, deleteField, doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore/lite';
 import { decryptFromString, encryptToString } from '../../core/security/crypto';
 import { PUBLIC_NAME_MAX_LENGTH, safeTrim } from '../../core/security/sanitize';
 import { getLocalMeta, patchLocalMeta, seedProfileIdFromRemote } from './indexedDbRepository';
@@ -240,21 +240,31 @@ export async function recoverGithubToken(uid: string): Promise<string | null> {
   }
 }
 
-/** userMap/{uid} → { profileId }. Mapa privado uid→profileId (reglas: nunca legible por clientes). */
-export async function setUserMap(uid: string, profileId: string): Promise<void> {
-  const services = await initializeFirebaseServices();
-  if (!services) throw new Error('Firebase no está configurado en este entorno');
-  await setDoc(doc(services.firestore, 'userMap', uid), { profileId, schemaVersion: FIRESTORE_SCHEMA_VERSION }, { merge: true });
+/**
+ * `userMap/{uid}` ya no se usa: guardaba solo el `profileId`, que ya está en `privateConfig/{uid}`, las dos del dueño
+ * y escritas siempre a la vez (docs/plan-firestore-sin-sobrantes.md, Fase 2). Se borra una vez por cuenta y
+ * dispositivo, DESPUÉS de dejar el `profileId` en `privateConfig`, para que nunca quede sin ninguna de las dos copias.
+ * Best-effort: si falla, se reintenta en la siguiente pasada.
+ */
+async function dropLegacyUserMap(uid: string): Promise<void> {
+  try {
+    const meta = await getLocalMeta();
+    if (meta?.userMapDroppedFor === uid) return;
+    const services = await initializeFirebaseServices();
+    if (!services) return;
+    await deleteDoc(doc(services.firestore, 'userMap', uid));
+    await patchLocalMeta({ userMapDroppedFor: uid });
+  } catch {
+    // best-effort
+  }
 }
 
 /**
- * B2: establece la identidad pseudónima al activar lo social — genera/recupera `profileId`,
- * escribe `userMap/{uid}` y guarda los ids en `privateConfig` (merge, conserva el token cifrado).
- * Best-effort: no rompe el guardado social si falla.
+ * B2: establece la identidad pseudónima al activar lo social — genera/recupera `profileId` y guarda los ids en
+ * `privateConfig` (merge, conserva el token cifrado). Best-effort: no rompe el guardado social si falla.
  */
 export async function establishProfileIdentity(uid: string, profileId: string, gamesGistId: string, socialGistId: string): Promise<boolean> {
   try {
-    await setUserMap(uid, profileId);
     // Los ids VACÍOS no se escriben. `setPrivateConfig` hace merge, así que mandar `gamesGistId: ''` no es "no
     // tocarlo": lo BORRA. Guardar el perfil social desde un dispositivo sin la sincronización principal
     // configurada dejaba a cero el id del gist de juegos guardado, y con él la recuperación en otros
@@ -264,42 +274,28 @@ export async function establishProfileIdentity(uid: string, profileId: string, g
       ...(gamesGistId ? { gamesGistId } : {}),
       ...(socialGistId ? { socialGistId } : {}),
     });
+    await dropLegacyUserMap(uid);
     return true;
   } catch (error) {
-    console.warn('[firebase] No se pudo establecer profileId/userMap:', error instanceof Error ? error.message : error);
+    console.warn('[firebase] No se pudo establecer profileId:', error instanceof Error ? error.message : error);
     return false;
   }
 }
 
-/** Lee `userMap/{uid}.profileId` (owner-only). Resiliente: cualquier fallo/ausencia → null. */
-export async function getUserMapProfileId(uid: string): Promise<string | null> {
-  try {
-    const services = await initializeFirebaseServices();
-    if (!services || !uid) return null;
-    const snap = await getDoc(doc(services.firestore, 'userMap', uid));
-    if (!snap.exists()) return null;
-    const pid = String((snap.data() as { profileId?: string }).profileId || '').trim();
-    return pid || null;
-  } catch {
-    return null;
-  }
-}
-
 /**
- * 6.2a — Recupera el `profileId` canónico desde Firestore: primero `privateConfig/{uid}` (donde lo
- * deja `establishProfileIdentity`), con fallback a `userMap/{uid}`. Resiliente: permission-denied / offline
- * / ausencia → null para que el llamador caiga al comportamiento local.
+ * 6.2a — Recupera el `profileId` canónico desde Firestore: `privateConfig/{uid}`, donde lo deja
+ * `establishProfileIdentity`. Resiliente: permission-denied / offline / ausencia → null para que el llamador caiga
+ * al comportamiento local.
  */
 export async function recoverRemoteProfileId(uid: string): Promise<string | null> {
   if (!uid) return null;
   try {
     const cfg = await getPrivateConfig(uid);
     const pid = String(cfg?.profileId || '').trim();
-    if (pid) return pid;
+    return pid || null;
   } catch {
-    // sigue al fallback de userMap
+    return null;
   }
-  return getUserMapProfileId(uid);
 }
 
 /**
@@ -326,7 +322,7 @@ let resolvedProfileId: { uid: string; profileId: string } | null = null;
 
 /**
  * Lo que ya se escribió en esta carga de la página y no hace falta repetir en cada publicación: la identidad
- * (`userMap` + ids en `privateConfig`) y el respaldo cifrado del token con la purga del token en claro legacy.
+ * (pseudónimo e ids en `privateConfig`) y el respaldo cifrado del token con la purga del token en claro legacy.
  * Antes eran cuatro escrituras por reseña publicada aunque nada hubiera cambiado.
  */
 let identityWrittenStamp = '';
@@ -345,7 +341,7 @@ function tokenFingerprint(token: string): string {
 /**
  * Olvida todo lo que este módulo recuerda de la cuenta propia: la copia de `publicConfig`, el pseudónimo resuelto
  * y las escrituras ya hechas. Lo llama el borrado de cuenta, que no recarga la página: sin esto, volver a activar
- * lo social en la misma sesión se saltaría el `userMap` que se acaba de borrar.
+ * lo social en la misma sesión se saltaría la identidad de `privateConfig` que se acaba de borrar.
  */
 export function forgetOwnAccountMemo(): void {
   invalidatePublicConfigCache();
@@ -427,7 +423,7 @@ export async function ensureProfileByEmail(input: {
     // Perfil anterior a la purga: se reescribe una vez para retirarle el email / los ids de gist.
     (canPurgeLegacyFields && hasLegacyPii);
 
-  // B2 — PRIMERO se guardan los ids en `privateConfig`/`userMap`, y solo DESPUÉS se purgan del perfil público.
+  // B2 — PRIMERO se guardan los ids en `privateConfig`, y solo DESPUÉS se purgan del perfil público.
   // El orden importa: la escritura de abajo borra `social.gistId` y `social.gamesGistId` del documento público, y
   // este guardado es best-effort (se traga sus errores). Con el orden inverso, un fallo de red entre ambos dejaba
   // al usuario purgado y SIN guardar: ni podía recuperar su canal social ni su gist de juegos en otro
