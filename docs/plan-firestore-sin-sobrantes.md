@@ -1,7 +1,9 @@
 # Plan 1.6.9: la amistad nueva, Firestore sin sobrantes y la fecha de alta
 
-> **Estado (10-10-2026): Fases 1 y 2 hechas en `develop` (sin push); reglas del depósito cambiadas, SIN desplegar.** Medido leyendo producción (MCP de Firebase, solo lectura) y el código de
-> `develop`. Los casos ya rotos y los datos sobrantes que ya existen se arreglan **cuando su dueño entra**, sin
+> **Estado (10-10-2026): Fases 1–4 hechas en `develop`, sin push y sin release (la rama de release la crea el
+> usuario; el CHANGELOG queda en `[Unreleased]`). Reglas del depósito cambiadas, SIN desplegar. Relleno de
+> `createdAt` HECHO en los 12 perfiles de producción (comprobado con el MCP).** Medido leyendo producción (MCP de
+> Firebase) y el código de `develop`. Los casos ya rotos y los datos sobrantes que ya existen se arreglan **cuando su dueño entra**, sin
 > scripts. La única excepción es la fecha de alta (Fase 3): entrar la sellaría con la fecha de ese día, así que se
 > rellena una vez con su fecha real.
 
@@ -95,6 +97,10 @@ respaldo no salva nada que no se salve igual. Decisión del usuario (10-10-2026)
 
 ### Fase 3 — La fecha de alta (`profiles.createdAt`)
 
+> Hecha en el código. Contrastadas con la primera amistad de cada uno, las 12 fechas de la tabla son anteriores, así que
+> se quedan tal cual. Escritas las 12 con el MCP el 10-10-2026 (solo `createdAt`, con precondición de que el documento
+> exista), y comprobadas después: ningún perfil de producción queda sin fecha.
+
 **El fallo.** Ningún perfil de producción la tiene, ni los creados después de que existiera (`185096f8`, 02-08-2026),
 como el del usuario nuevo del apartado 1 (10-10). Se lee para los logros de antigüedad («De la vieja escuela», «Otro año más»), que hoy no se
 pueden conseguir, y para la fecha de alta del panel.
@@ -144,6 +150,9 @@ dejan sellarla más tarde si falta (`profileCreatedAtIsImmutable`); simplemente 
   y se toma la más antigua de las dos.
 
 ### Fase 4 — Ningún depósito sobrevive a la aceptación
+
+> Hecha. El borrado va en el mismo lote que la escritura de los ids (`commitHealBatches` cuenta dos operaciones por
+> amistad cuando lo lleva) y, si el lote cae, en la degradación doc a doc.
 
 Si quien acepta usa todavía un cliente viejo, el depósito no se recoge y se queda para siempre, sin que nadie lo lea.
 Cuando quien pidió escribe sus ids en una amistad ya aceptada (saneado), borra su depósito en el **mismo lote**.

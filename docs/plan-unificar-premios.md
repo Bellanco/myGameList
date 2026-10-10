@@ -382,7 +382,7 @@ perezosa, los dos consumidores (`useIsAdmin`, `useAdminViewModel`), los tests de
 
 **Hecho en producción** (20-09-2026), en este orden:
 
-1. Claim concedido a `bellanco3@gmail.com` (uid `Yh7LuEKhrvYT2LrkIRuT8b9THYe2`), verificado con `--check` →
+1. Claim concedido a la cuenta de administración, verificado con `--check` →
    `{"admin":true}`. Antes no lo tenía ninguna de las 12 cuentas del proyecto, así que desplegar primero habría
    dejado el panel sin nadie dentro: se comprobó antes de tocar nada.
 2. `firestore.rules` desplegado en `mylists-f7313`. El único cambio funcional es la línea de `isAdmin()`.
