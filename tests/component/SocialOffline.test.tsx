@@ -5,7 +5,7 @@
 // sostienen lo que lo sustituye: un aviso con las palabras del tema, y un vacío que dice la verdad —no hay red—
 // en vez de mandar a "descubrir perfiles", que ahí no puede funcionar.
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { SocialFeedScreen } from '../../src/view/components/socialhub/SocialFeedScreen';
 import { SocialErrorBoundary } from '../../src/view/components/socialhub/SocialErrorBoundary';
@@ -16,7 +16,14 @@ vi.mock('../../src/model/repository/firebaseRepository', () => ({
   reportHandledError: vi.fn(async () => {}),
 }));
 
-function renderFeed(over: { offline?: boolean; offlineHasCachedData?: boolean; items?: SocialFeedItem[]; hasFriends?: boolean } = {}) {
+function renderFeed(over: {
+  offline?: boolean;
+  offlineHasCachedData?: boolean;
+  items?: SocialFeedItem[];
+  hasFriends?: boolean;
+  feedReadFailed?: boolean;
+  githubReconnect?: { onReconnect: () => void; busy: boolean } | null;
+} = {}) {
   const items = over.items ?? [];
   const groups: SocialFeedDayGroup[] = items.length
     ? [{ dayHeader: 'hoy', dayDate: new Date(), items }]
@@ -52,6 +59,8 @@ function renderFeed(over: { offline?: boolean; offlineHasCachedData?: boolean; i
       offline={over.offline ?? false}
       offlineHasCachedData={over.offlineHasCachedData ?? false}
       hasFriends={over.hasFriends ?? false}
+      feedReadFailed={over.feedReadFailed ?? false}
+      githubReconnect={over.githubReconnect ?? null}
     />,
   );
 }
@@ -101,6 +110,58 @@ describe('feed social sin conexión', () => {
     expect(screen.getByRole('heading', { name: SOCIAL_UI.feed.activityEmptyQuietTitle })).toBeTruthy();
     expect(screen.getByText(SOCIAL_UI.feed.activityEmptyQuiet)).toBeTruthy();
     expect(screen.queryByText(SOCIAL_UI.feed.activityEmptyNoFriends)).toBeNull();
+  });
+});
+
+// LECTURA FALLIDA Y TOKEN CADUCADO (docs/plan-feed-sin-vacio.md, Fase 1).
+describe('SocialFeedScreen — lo que no se ha podido leer', () => {
+  const unaResena = { id: 'r1', type: 'review', gameId: 1, gameName: 'Halo', profileId: 'ana', profileDisplayName: 'Ana', updatedAt: Date.now(), createdAt: Date.now(), rating: 4, snippet: 'Bien' } as unknown as SocialFeedItem;
+
+  it('vacío por un fallo sin copia: error genérico, ni «todo tranquilo» ni «busca gente»', () => {
+    renderFeed({ hasFriends: true, feedReadFailed: true });
+
+    expect(screen.getByRole('heading', { name: SOCIAL_UI.feed.readFailedTitle })).toBeTruthy();
+    expect(screen.getByText(SOCIAL_UI.feed.readFailed)).toBeTruthy();
+    expect(screen.queryByText(SOCIAL_UI.feed.activityEmptyQuiet)).toBeNull();
+    expect(screen.queryByText(SOCIAL_UI.feed.activityEmptyNoFriends)).toBeNull();
+  });
+
+  it('las amistades no cargan (hasFriends falso por el fallo): tampoco dice «busca gente»', () => {
+    renderFeed({ hasFriends: false, feedReadFailed: true });
+
+    expect(screen.queryByText(SOCIAL_UI.feed.activityEmptyNoFriends)).toBeNull();
+    expect(screen.getByText(SOCIAL_UI.feed.readFailed)).toBeTruthy();
+  });
+
+  it('con actividad a la vista, el error sale arriba y la actividad se queda', () => {
+    renderFeed({ hasFriends: true, feedReadFailed: true, items: [unaResena] });
+
+    expect(screen.getByLabelText(SOCIAL_UI.feed.readFailedTitle).textContent).toContain(SOCIAL_UI.feed.readFailed);
+    expect(screen.getByText('Halo')).toBeTruthy();
+  });
+
+  it('token caducado: aviso fijo con el botón de volver a conectar, que llama al de Ajustes', () => {
+    const onReconnect = vi.fn();
+    renderFeed({ hasFriends: true, items: [unaResena], githubReconnect: { onReconnect, busy: false } });
+
+    const notice = screen.getByLabelText(SOCIAL_UI.githubReconnect.sectionAria);
+    expect(notice.textContent).toContain(SOCIAL_UI.githubReconnect.title);
+    fireEvent.click(screen.getByRole('button', { name: SOCIAL_UI.githubReconnect.action }));
+    expect(onReconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('mientras conecta, el botón lo dice y no se puede pulsar dos veces', () => {
+    renderFeed({ githubReconnect: { onReconnect: vi.fn(), busy: true } });
+
+    const button = screen.getByRole('button', { name: SOCIAL_UI.githubReconnect.actionBusy }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+  });
+
+  it('sin red manda el aviso de sin conexión, no el de reconectar', () => {
+    renderFeed({ offline: true, githubReconnect: { onReconnect: vi.fn(), busy: false } });
+
+    expect(screen.getByLabelText(SOCIAL_UI.offline.sectionAria)).toBeTruthy();
+    expect(screen.queryByLabelText(SOCIAL_UI.githubReconnect.sectionAria)).toBeNull();
   });
 });
 

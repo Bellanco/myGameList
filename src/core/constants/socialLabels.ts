@@ -45,6 +45,17 @@ export const SOCIAL_UI = {
     bodyEmpty: 'Aquí todavía no hay nada guardado. En cuanto vuelva la red aparecerá la actividad.',
     badge: 'Sin conexión',
   },
+  // Aviso PERSISTENTE de la conexión con GitHub CADUCADA: el token con el que se leen los gists de tus amigos ya no
+  // vale. Lo guardado se sigue viendo, pero no se pondrá al día —ni podrás publicar— hasta reconectar, así que el
+  // aviso lleva el mismo botón que Ajustes (docs/plan-feed-sin-vacio.md, Fase 1).
+  githubReconnect: {
+    sectionAria: 'Conexión con GitHub caducada',
+    badge: 'GitHub',
+    title: 'Tu conexión con GitHub ha caducado',
+    body: 'Vuelve a conectarla para ver lo nuevo de tus amigos y seguir publicando.',
+    action: 'Volver a conectar',
+    actionBusy: 'Conectando…',
+  },
   // Aviso PERSISTENTE de SERVICIO LIMITADO: hay red, pero un servicio no atiende (el cupo diario de Firestore
   // agotado, GitHub limitando peticiones). Mismo trato que el de sin conexión: se ve lo guardado y se dice que se
   // pondrá al día solo, sin el error de librería (docs/plan-degradacion-servicios.md).
@@ -150,6 +161,12 @@ export const SOCIAL_UI = {
     activityEmptyNoFriends: 'Sus análisis, publicaciones y cambios de lista saldrán aquí. Empieza buscando gente en «Ver perfiles».',
     activityEmptyQuietTitle: 'Todo tranquilo por ahora',
     activityEmptyQuiet: 'Tus amigos aún no han compartido nada. En cuanto analicen o publiquen algo, saldrá aquí.',
+    // Lo que no se ha podido leer y no tiene copia en este dispositivo (docs/plan-feed-sin-vacio.md, Fase 1). Es
+    // GENÉRICO a propósito: «todo tranquilo» o «busca gente» serían mentira, y el motivo concreto (cuota, límite,
+    // caída) no le sirve a nadie para hacer nada distinto de esperar.
+    readFailedTitle: 'No hemos podido cargar la actividad',
+    readFailed: 'No hemos podido cargar la actividad de tus amigos. Inténtalo de nuevo en un rato.',
+    readFailedBadge: 'Error',
     openActivityAria: (name: string, gameName: string) => `Abrir detalle de actividad de ${name} sobre ${gameName}`,
     openProfileAria: (name: string) => `Abrir perfil social de ${name}`,
     analyzedRecently: 'Analizado recientemente',
@@ -441,7 +458,6 @@ export const SOCIAL_UI = {
     saveProfileFailed: 'No se pudo guardar tu perfil social.',
     profileIncomplete: 'Para guardar tu perfil necesitas un nombre y al menos un juego completado.',
     // Fallo por credencial al leer el canal de un amigo: no es que no haya publicado, es que el token no vale.
-    socialReadUnauthorized: 'No se pudo leer la actividad de alguna de tus amistades: tu conexión con GitHub ha caducado. Vuelve a conectarla en Ajustes.',
     // Migración del canal a gist secreto, con retirada del antiguo (ver condiciones de uso).
     socialGistMigrated: 'Tu canal social se ha movido a un Gist no listado y se ha retirado el anterior, que era público. Tus reseñas y publicaciones siguen intactas.',
     // El clon no pasó la verificación: se conservan LOS DOS. Mejor dos gists que ninguno.

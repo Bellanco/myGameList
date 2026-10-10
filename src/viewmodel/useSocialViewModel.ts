@@ -279,6 +279,7 @@ export function useSocialViewModel(options?: {
     friendships,
     loadingFriendships,
     friendshipsResolved,
+    friendshipsFailed,
     friendshipBusyUid,
     friendUidSet,
     pendingIncomingCount,
@@ -318,9 +319,16 @@ export function useSocialViewModel(options?: {
   const directoryInputsReady = friendshipsResolved && tierResolved && ownProfileIdResolved;
 
   // Directorio y feed: el estado, la caché y las 350 líneas de hidratación viven en `social/useSocialDirectory`.
+  // El token PRINCIPAL para leer los gists ajenos, pedido en el momento de leer (ver `readToken` en el hook): tras
+  // reconectar GitHub es el bueno, mientras que la copia del canal social sigue siendo la caducada.
+  const mainTokenRef = useRef<string | null>(null);
+  mainTokenRef.current = mainSyncConfig?.token || null;
+  const readMainToken = useCallback(() => mainTokenRef.current, []);
   const {
     rawSocialDirectory: feedDirectory,
     directoryLoading,
+    feedReadFailed: directoryReadFailed,
+    githubReconnectNeeded,
     setDirectorySettled,
     hydrateSocialDirectory,
     patchDirectoryEntries,
@@ -337,6 +345,7 @@ export function useSocialViewModel(options?: {
     setFeedback,
     reportFailure,
     setNetworkFailure: markSocialServiceHealthy,
+    readToken: readMainToken,
   });
 
   // «Perfiles» y el porcentaje de logros de la comunidad necesitan también a quien NO es tu amigo, y eso tiene su
@@ -1018,6 +1027,11 @@ export function useSocialViewModel(options?: {
     feed: {
       feedItems,
       groupedFeedItems,
+      // Lecturas fallidas SIN copia (amigos o la propia lista de amistades): error genérico en vez de «todo
+      // tranquilo». Con copia no cuenta (docs/plan-feed-sin-vacio.md, Fase 1).
+      feedReadFailed: directoryReadFailed || friendshipsFailed,
+      // GitHub ha rechazado el token: aviso fijo con el botón de volver a conectar.
+      githubReconnectNeeded,
       hasMoreFeed,
       showMoreFeed,
       handleActivityItemKeyDown,

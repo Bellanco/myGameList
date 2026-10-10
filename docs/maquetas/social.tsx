@@ -235,10 +235,13 @@ const MI_ACTIVIDAD = {
 
 
 // ─── Pantallas ───────────────────────────────────────────────────────────────────────────────────────────────
-function Feed({ vacio = false }: { vacio?: boolean }) {
+function Feed({ vacio = false, fallo = false, caducado = false }: { vacio?: boolean; fallo?: boolean; caducado?: boolean }) {
   // El MISMO derivado que usa el hub: mezcla, orden, cupo de movimientos y agrupado por día con sus cabeceras.
   // `vacio`: quien acaba de entrar y aún no tiene amigos (el estado vacío con «Descubrir amigos»).
+  // `fallo`: no se ha podido leer nada y no hay copia (el vacío con el error genérico; con `vacio` falso y actividad,
+  // el aviso de arriba). `caducado`: GitHub ha rechazado el token (el aviso fijo con «Volver a conectar»).
   const { feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed } = useSocialFeed(vacio ? [] : [...DIRECTORIO, MI_ACTIVIDAD], undefined, vacio ? new Set<string>() : AMIGOS);
+  const reconectar = useMemo(() => (caducado ? { onReconnect: avisar('abriría GitHub para volver a conectar'), busy: false } : null), [caducado]);
   return (
     <SocialFeedScreen
       SOCIAL_UI={SOCIAL_UI}
@@ -269,6 +272,9 @@ function Feed({ vacio = false }: { vacio?: boolean }) {
       statusKind=""
       offline={false}
       offlineHasCachedData={false}
+      hasFriends={!vacio || fallo}
+      feedReadFailed={fallo}
+      githubReconnect={reconectar}
     />
   );
 }
@@ -608,6 +614,9 @@ const subruta = vista === 'resenas' ? '/reviews' : vista === 'publicaciones' ? '
 const PANTALLAS: Record<string, { nombre: string; ruta: string; pintar: () => ReactElement }> = {
   feed: { nombre: 'Feed', ruta: '/social', pintar: () => <Feed /> },
   'feed-vacio': { nombre: 'Feed sin amigos', ruta: '/social', pintar: () => <Feed vacio /> },
+  'feed-fallo': { nombre: 'Feed: no se pudo leer (sin copia)', ruta: '/social', pintar: () => <Feed vacio fallo /> },
+  'feed-fallo-parcial': { nombre: 'Feed: un amigo sin leer', ruta: '/social', pintar: () => <Feed fallo /> },
+  'feed-github': { nombre: 'Feed: GitHub caducado', ruta: '/social', pintar: () => <Feed caducado /> },
   amigos: { nombre: 'Perfiles (directorio)', ruta: '/social/profiles', pintar: () => <Amigos /> },
   solicitudes: { nombre: 'Solicitudes', ruta: '/social/requests', pintar: () => <Solicitudes /> },
   'solicitudes-vacia': { nombre: 'Solicitudes (ninguna)', ruta: '/social/requests', pintar: () => <Solicitudes vacia /> },

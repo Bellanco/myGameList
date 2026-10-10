@@ -100,3 +100,19 @@ describe('useSocialFriendships — aristas pendientes', () => {
     await waitFor(() => expect(haveFriendshipEdgesChanged).toHaveBeenCalledTimes(2));
   });
 });
+
+// docs/plan-feed-sin-vacio.md, Fase 1: una lista de amistades que no se ha podido leer (sin copia) no es una lista
+// vacía. El feed decía «empieza buscando gente» a quien tenía amigos.
+describe('useSocialFriendships — lectura fallida', () => {
+  it('si la lectura falla sin copia, lo marca; y una lectura buena lo retira', async () => {
+    getMyFriendships.mockRejectedValueOnce(Object.assign(new Error('Quota exceeded.'), { code: 'resource-exhausted' }));
+    const { result } = montar();
+    await waitFor(() => expect(result.current.friendshipsResolved).toBe(true));
+    expect(result.current.friendshipsFailed).toBe(true);
+
+    getMyFriendships.mockResolvedValue(lista({ friends: [vista('amigo', 'friends', { otherSocialGistId: 'g' })] }));
+    await result.current.refreshFriendships(true);
+
+    await waitFor(() => expect(result.current.friendshipsFailed).toBe(false));
+  });
+});

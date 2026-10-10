@@ -29,7 +29,7 @@ const TEMAS = (args.temas || 'tierramedia,arcade,witcher,persona,portal,cyberpun
 const MODOS = (args.modos || 'dark,light').split(',');
 // Las mismas claves que `PANTALLAS` y `VARIANTES` de `docs/maquetas/social.tsx`.
 const TODAS = [
-  'feed', 'feed-vacio', 'amigos', 'solicitudes', 'solicitudes-vacia',
+  'feed', 'feed-vacio', 'feed-fallo', 'feed-fallo-parcial', 'feed-github', 'amigos', 'solicitudes', 'solicitudes-vacia',
   'perfil', 'perfil&vista=resenas', 'perfil&abrir=estadisticas', 'perfil&abrir=resumen',
   'perfil-propio', 'perfil-propio&vista=publicaciones', 'ajustes', 'logros', 'globales', 'resena', 'resena-perfil',
 ];

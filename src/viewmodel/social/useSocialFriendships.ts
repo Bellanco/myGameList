@@ -35,6 +35,8 @@ export interface SocialFriendships {
    * actividad) y el feed quedaría en blanco hasta invalidar la caché. Quien hidrata espera a esta marca.
    */
   friendshipsResolved: boolean;
+  /** La última lectura falló sin copia: la lista está vacía por un fallo, no porque no haya amigos. */
+  friendshipsFailed: boolean;
   /** uid del "otro" con una mutación en curso: deshabilita SU botón sin bloquear el resto de la pantalla. */
   friendshipBusyUid: string;
   /** uids con amistad aceptada. Lo consumen la política de fotos y el feed. */
@@ -129,6 +131,12 @@ export function useSocialFriendships(options: SocialFriendshipsOptions): SocialF
   const [friendships, setFriendships] = useState<MyFriendships>(EMPTY);
   const [loadingFriendships, setLoadingFriendships] = useState(false);
   const [friendshipsResolved, setFriendshipsResolved] = useState(false);
+  /**
+   * ¿Ha fallado la última lectura de amistades SIN copia que servir? Entonces la lista está vacía por un fallo, no
+   * porque no haya amigos, y el feed no puede decir «empieza buscando gente» (docs/plan-feed-sin-vacio.md, Fase 1).
+   * Con copia no llega a fallar: `getMyFriendships` la sirve sola.
+   */
+  const [friendshipsFailed, setFriendshipsFailed] = useState(false);
   const [friendshipBusyUid, setFriendshipBusyUid] = useState<string>('');
   const [friendActionTarget, setFriendActionTarget] = useState<FriendActionTarget | null>(null);
 
@@ -141,8 +149,10 @@ export function useSocialFriendships(options: SocialFriendshipsOptions): SocialF
     try {
       setLoadingFriendships(true);
       setFriendships(await getMyFriendships(myUid, { forceRefresh, maxAgeMs }));
+      setFriendshipsFailed(false);
     } catch {
-      /* best-effort: sin amistad el resto del social sigue usable. */
+      // El resto del social sigue usable; lo que cambia es que el feed lo cuenta como un fallo de lectura.
+      setFriendshipsFailed(true);
     } finally {
       setLoadingFriendships(false);
       // Resuelto SIEMPRE, incluso si Firestore falló: degrada a feed sin amigos en vez de bloquearlo para siempre.
@@ -321,6 +331,7 @@ export function useSocialFriendships(options: SocialFriendshipsOptions): SocialF
     friendships,
     loadingFriendships,
     friendshipsResolved,
+    friendshipsFailed,
     friendshipBusyUid,
     friendUidSet,
     pendingIncomingCount: friendships.incoming.length,

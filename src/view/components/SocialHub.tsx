@@ -93,7 +93,7 @@ const SocialHubInner = memo(function SocialHubInner({
   } = vm.directory;
   const {
     feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed, handleActivityItemKeyDown, handleProfileCardKeyDown,
-    markOwnYearSummaryOpened,
+    markOwnYearSummaryOpened, feedReadFailed, githubReconnectNeeded,
   } = vm.feed;
   const {
     profileDetailId, profileReviewsView, profilePostsView, profileAchievementsView, profileGlobalsView,
@@ -165,6 +165,20 @@ const SocialHubInner = memo(function SocialHubInner({
    */
   const githubConnection = useGithubConnection();
   const showSyncCard = !hasMainSync && Boolean(githubConnection?.oauthEnabled);
+
+  /**
+   * EL BOTÓN DE VOLVER A CONECTAR GITHUB del feed: el MISMO de Ajustes (`onOAuthLogin`), que al terminar devuelve a
+   * la pantalla de la que se salió. Sin OAuth en el build (o sin proveedor), lleva a Ajustes, que es donde se pega
+   * un token a mano. Memoizado: el feed es un `memo` y un objeto nuevo por render lo repintaría entero.
+   */
+  const oauthLogin = githubConnection?.oauthEnabled ? githubConnection.onOAuthLogin : null;
+  const oauthBusy = Boolean(githubConnection?.oauthLoggingIn);
+  const githubReconnect = useMemo(
+    () => (githubReconnectNeeded
+      ? { onReconnect: oauthLogin || (() => { void navigate('/ajustes'); }), busy: oauthBusy }
+      : null),
+    [githubReconnectNeeded, oauthLogin, oauthBusy, navigate],
+  );
 
   const goToProfileEdit = useCallback(() => navigate('/social/profile'), [navigate]);
   const goToProfiles = useCallback(() => navigate('/social/profiles'), [navigate]);
@@ -587,6 +601,8 @@ const SocialHubInner = memo(function SocialHubInner({
       <SocialFeedScreen
         SOCIAL_UI={SOCIAL_UI}
         hasFriends={friendsList.length > 0}
+        feedReadFailed={feedReadFailed}
+        githubReconnect={githubReconnect}
         socialDisplayName={socialDisplayName}
         ownVisiblePhotoURL={ownPublishablePhoto}
         currentSocialGistId={socialCfgGistId}
