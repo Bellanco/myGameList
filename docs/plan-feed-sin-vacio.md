@@ -1,6 +1,6 @@
 # Plan: que el feed no parezca vacío cuando hay amistades activas
 
-> **Estado (10-10-2026): Fases 1, 2 y 3 hechas en `develop` (sin push); Fases 4–6 pendientes.** Diagnóstico hecho leyendo
+> **Estado (10-10-2026): Fases 1 a 4 hechas en `develop` (sin push); Fases 5 y 6 pendientes.** Diagnóstico hecho leyendo
 > el código de `develop` (después de `4e178363`). Cada fase empieza escribiendo el test que demuestra el fallo.
 >
 > Fase 1, dónde quedó: `useSocialDirectory.ts` (`readToken`, `REJECTED_TOKEN`, `rejectedTokenRef`,
@@ -24,6 +24,14 @@
 > extra: sin sesión de Google guardada (`hasStoredAuthSession`) no se carga el SDK. Medido: arranque crítico 187,4 de
 > 190 kB (+0,1); el chunk de `IdleWork` no importa Firebase de forma estática. Texto legal revisado: no dice cuándo
 > se publica, así que no cambia. Tests: `backgroundSocialPass.test.ts` y `backgroundSocialPassHook.test.ts`.
+>
+> Fase 4, dónde quedó: `stampOwnFriendshipsOnReturn` (`firebaseFriendshipRepository.ts`), `signalReturnIfAsleep` en
+> `firebaseRepository.ts` (desde `touchOwnProfileActivity` y, además de lo planeado, desde la reescritura de perfil de
+> `ensureProfileByEmail`, que mueve `updatedAt` sin pasar por el latido), `friendshipStamps` en
+> `getSocialProfilesByUid`/`directoryProfileIsFresh` y el sello en `socialDirectoryFriendsKey`. Sin reglas que
+> desplegar; el caso está en `tests/integration/firestore.rules.test.ts` (emulador: 145 en verde). Tests:
+> `friendshipReturnSignal.test.ts`, `socialProfilesByUid.test.ts`, `socialDirectoryFriendsKey.test.ts`. Arranque sin
+> cambios (187,4 kB).
 
 > ⚠️ **Documento vivo.** Si una línea no coincide con el código, manda el código: corrige esto en la misma pasada.
 

@@ -117,6 +117,34 @@ describe('getSocialProfilesByUid — lo que el feed lee de Firestore', () => {
     expect(leidos()).toEqual(['dormido', 'dormido']);
   });
 
+  // LA SEÑAL DE REGRESO (docs/plan-feed-sin-vacio.md, Fase 4): quien vuelve sella el `updatedAt` de sus amistades, y
+  // eso basta para que su copia de dormido deje de valer, sin esperar el día entero.
+  it('un amigo dormido que vuelve se relee en cuanto su amistad lo dice, no al día siguiente', async () => {
+    world = { dormido: perfil('dormido', AHORA - PROFILE_INACTIVITY_MS - 1) };
+    await repo.getSocialProfilesByUid(['dormido'], { maxAgeMs: MEDIA_HORA });
+
+    // Vuelve dos horas después: su perfil ya está al día y su amistad lleva el sello del regreso.
+    vi.setSystemTime(AHORA + 4 * MEDIA_HORA);
+    world = { dormido: perfil('dormido', AHORA + 4 * MEDIA_HORA) };
+    const [entrada] = await repo.getSocialProfilesByUid(['dormido'], {
+      maxAgeMs: MEDIA_HORA,
+      friendshipStamps: { dormido: AHORA + 3 * MEDIA_HORA },
+    });
+
+    expect(leidos()).toEqual(['dormido', 'dormido']);
+    expect(entrada.updatedAt).toBe(AHORA + 4 * MEDIA_HORA);
+  });
+
+  it('un sello de amistad ANTERIOR a la copia no la tira: ya estaba vista', async () => {
+    world = { dormido: perfil('dormido', AHORA - PROFILE_INACTIVITY_MS - 1) };
+    await repo.getSocialProfilesByUid(['dormido'], { maxAgeMs: MEDIA_HORA, friendshipStamps: { dormido: AHORA - 1000 } });
+
+    vi.setSystemTime(AHORA + 4 * MEDIA_HORA);
+    await repo.getSocialProfilesByUid(['dormido'], { maxAgeMs: MEDIA_HORA, friendshipStamps: { dormido: AHORA - 1000 } });
+
+    expect(leidos()).toEqual(['dormido']);
+  });
+
   it('un perfil con el espacio social apagado no sale, y tampoco se relee en cada refresco', async () => {
     world = { apagado: 'denied', viejo: perfil('viejo', AHORA, { social: { enabled: false } }) };
 

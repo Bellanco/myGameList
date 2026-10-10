@@ -52,6 +52,13 @@ describe('socialDirectoryFriendsKey', () => {
     expect(socialDirectoryFriendsKey([amigo('a', 'g1', 'j1')], 'yo')).not.toBe(base);
     expect(socialDirectoryFriendsKey([amigo('a', 'g1')], 'otro')).not.toBe(base);
   });
+
+  // docs/plan-feed-sin-vacio.md, Fase 4: el sello de regreso de un amigo dormido tiene que tirar también la copia del
+  // feed, o su actividad seguiría fuera hasta que caducara (30 min en bronce).
+  it('cambia cuando la amistad trae un sello nuevo (un amigo que vuelve)', () => {
+    const base = socialDirectoryFriendsKey([amigo('a', 'g1')], 'yo');
+    expect(socialDirectoryFriendsKey([{ ...amigo('a', 'g1'), updatedAt: 2 }], 'yo')).not.toBe(base);
+  });
 });
 
 describe('caché del directorio con huella de amistades', () => {

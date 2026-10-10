@@ -69,7 +69,10 @@ const REJECTED_TOKEN = new Error('401: token de GitHub rechazado');
  */
 export function socialDirectoryFriendsKey(friends: readonly FriendshipView[], ownProfileId: string | null): string {
   const edges = friends
-    .map((friend) => [friend.otherUid, friend.otherSocialGistId || '', friend.otherGamesGistId || ''].join(':'))
+    // Con el sello de la amistad: es la señal de regreso de un amigo dormido (docs/plan-feed-sin-vacio.md, Fase 4), y
+    // sin él la copia del feed lo seguiría dejando fuera hasta caducar. Lo mueve también un saneado de identidad
+    // (nick, foto), que es raro y solo cuesta una rehidratación.
+    .map((friend) => [friend.otherUid, friend.otherSocialGistId || '', friend.otherGamesGistId || '', friend.updatedAt || 0].join(':'))
     .sort();
   return [ownProfileId || '', ...edges].join('|');
 }
@@ -275,6 +278,8 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
       const dirEntries = await getSocialProfilesByUid(profileUids, {
         forceRefresh: forceRefresh && !keepDirectoryQuery,
         maxAgeMs: PROFILE_TIER_DIRECTORY_TTL_MS[ownTier],
+        // La señal de regreso: el perfil de un amigo cuya amistad es más nueva que su copia se relee.
+        friendshipStamps: Object.fromEntries(friends.map((friend) => [friend.otherUid, Number(friend.updatedAt || 0)])),
       });
       const socialConfig = getSocialSyncConfig();
       const token = readToken?.() || socialConfig?.token || null;

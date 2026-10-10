@@ -956,6 +956,17 @@ describe('firestore.rules', () => {
       }));
     });
 
+    // LA SEÑAL DE REGRESO (docs/plan-feed-sin-vacio.md, Fase 4): quien vuelve tras más de 30 días sella SOLO el
+    // `updatedAt` de sus amistades, para que la otra parte relea su perfil y lo saque del corte de inactividad. Las dos
+    // partes pueden; un tercero, no; y no vale para colar otro campo.
+    it('update: cualquiera de las dos partes puede sellar solo `updatedAt` en su amistad', async () => {
+      await seed('friendships', DOC_ID, { ...pendingFromAtoB(), status: 'accepted' });
+      await assertSucceeds(updateDoc(doc(ownerDb('uid-a'), 'friendships', DOC_ID), { updatedAt: 10 }));
+      await assertSucceeds(updateDoc(doc(ownerDb('uid-b'), 'friendships', DOC_ID), { updatedAt: 11 }));
+      await assertFails(updateDoc(doc(ownerDb('uid-c'), 'friendships', DOC_ID), { updatedAt: 12 }));
+      await assertFails(updateDoc(doc(ownerDb('uid-a'), 'friendships', DOC_ID), { updatedAt: 13, recipientName: 'Otro' }));
+    });
+
     it('create: rechaza si el requester no es quien escribe', async () => {
       // uid-b intenta crear una petición diciendo que la envía uid-a.
       await assertFails(setDoc(doc(ownerDb('uid-b'), 'friendships', DOC_ID), pendingFromAtoB()));

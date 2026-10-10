@@ -29,7 +29,8 @@ import { DEFAULT_PROFILE_TIER } from '../../core/constants/tiers';
 import { FIRESTORE_SCHEMA_VERSION } from '../../core/constants/schema';
 import { buildMirror } from '../../core/achievements/pack';
 import type { FirestorePrivateConfig, FirestorePublicConfig } from '../types/firestore';
-import { PROFILE_TOUCH_MIN_INTERVAL_MS } from '../../core/constants/socialActivity';
+import { PROFILE_INACTIVITY_MS, PROFILE_TOUCH_MIN_INTERVAL_MS } from '../../core/constants/socialActivity';
+import { stampOwnFriendshipsOnReturn } from './firebaseFriendshipRepository';
 
 // --- RE-EXPORTS: API pública estable (los consumidores siguen importando desde firebaseRepository) ---
 export { enableAnalyticsAfterConsent, initializeFirebaseServices } from './firebaseClient';
@@ -557,6 +558,15 @@ export async function ensureProfileByEmail(input: {
   }
 
   if (shouldWriteProfile) {
+    // La recencia ANTERIOR, para la señal de regreso (ver `signalReturnIfAsleep`): esta reescritura mueve `updatedAt`
+    // sin pasar por `touchOwnProfileActivity`, y quien vuelve tras un mes cambiando de nick o de foto se quedaría sin
+    // avisar a sus amigos. Solo cuando ya había perfil propio: uno nuevo no viene de dormir. Una lectura más, y solo
+    // en este camino, que es el raro (el normal es el `else`, que pasa por el latido).
+    const previousUpdatedAt = existing && !isForeignDoc
+      ? await getDoc(doc(services.firestore, 'profiles', targetId))
+        .then((snap) => (snap.data() as { updatedAt?: unknown } | undefined)?.updatedAt)
+        .catch(() => undefined)
+      : undefined;
     await setDoc(
       doc(services.firestore, 'profiles', targetId),
       {
@@ -583,6 +593,7 @@ export async function ensureProfileByEmail(input: {
       },
       { merge: true },
     );
+    await signalReturnIfAsleep(input.user.uid, previousUpdatedAt);
   } else {
     // El perfil no cambia, pero publicar ES actividad y `updatedAt` es lo que la mide: con él parado, el amigo que
     // publica desde la ficha del juego sin abrir nunca el espacio social (el latido del hub no le llega) cruzaría
@@ -771,6 +782,25 @@ export async function publishYearSummarySeen(uid: string, year: number): Promise
   invalidateSocialDirectoryCache(uid);
 }
 
+/** `updatedAt` de un perfil como ms: Timestamp de Firestore o número (docs de clientes antiguos); 0 si no hay. */
+function profileStampMillis(value: unknown): number {
+  if (typeof value === 'number') return value;
+  const toMillis = (value as { toMillis?: () => number } | null | undefined)?.toMillis;
+  return typeof toMillis === 'function' ? Number(toMillis.call(value)) || 0 : 0;
+}
+
+/**
+ * LA SEÑAL DE REGRESO (docs/plan-feed-sin-vacio.md, Fase 4): si la recencia ANTERIOR del perfil propio tenía más de 30
+ * días, quien vuelve sella sus amistades para que sus amigos lo saquen ya del corte de inactividad. Sin marca anterior
+ * no se da por regreso. Best-effort: la recencia ya está escrita, y sin el sello sus amigos lo verán al caducar la
+ * copia (como antes).
+ */
+async function signalReturnIfAsleep(uid: string, previousUpdatedAt: unknown): Promise<void> {
+  const previous = profileStampMillis(previousUpdatedAt);
+  if (previous <= 0 || Date.now() - previous <= PROFILE_INACTIVITY_MS) return;
+  await stampOwnFriendshipsOnReturn(uid).catch(() => 0);
+}
+
 /**
  * Latido de "uso reciente": refresca `profiles/{uid}.updatedAt`. El directorio social ordena por ese campo, de
  * modo que se muestran (y se leen) los perfiles de quien de verdad sigue usando la app en vez de los primeros
@@ -795,7 +825,10 @@ export async function touchOwnProfileActivity(uid: string): Promise<void> {
     // Sin doc no se crea nada: un perfil a medias (sin `social`) no debe aparecer en el directorio. Se creará
     // al publicar el perfil.
     if (!snap.exists()) return;
+    const previous = (snap.data() as { updatedAt?: unknown } | undefined)?.updatedAt;
     await setDoc(ref, { uid, updatedAt: serverTimestamp() }, { merge: true });
+    // Después de la recencia, y no antes: quien relea el perfil por el sello tiene que encontrarlo ya despierto.
+    await signalReturnIfAsleep(uid, previous);
   } catch {
     // best-effort: la recencia es una mejora de orden, no puede romper la apertura del hub.
   }

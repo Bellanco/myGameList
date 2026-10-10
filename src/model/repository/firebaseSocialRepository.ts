@@ -465,8 +465,18 @@ function directoryProfileInvalidatedFor(uid: string): number {
  * sin aparecer: a ese se le acepta hasta un día (`INACTIVE_PROFILE_MAX_AGE_MS`), porque mientras siga dormido no
  * cambia nada de lo que se pinta de él.
  */
-function directoryProfileIsFresh(uid: string, row: CachedDirectoryProfile<SocialDirectoryEntry>, maxAgeMs: number, now: number): boolean {
+function directoryProfileIsFresh(
+  uid: string,
+  row: CachedDirectoryProfile<SocialDirectoryEntry>,
+  maxAgeMs: number,
+  now: number,
+  friendshipStamp = 0,
+): boolean {
   if (row.cachedAt < directoryProfileInvalidatedFor(uid)) return false;
+  // LA SEÑAL DE REGRESO (docs/plan-feed-sin-vacio.md, Fase 4): quien vuelve tras más de 30 días sella el `updatedAt`
+  // de sus amistades. Si la amistad es más nueva que esta copia, la copia no vale: es lo que saca a un amigo del
+  // corte de inactividad en cuanto vuelve, y no al caducar su copia de dormido un día después.
+  if (friendshipStamp > row.cachedAt) return false;
   const lastActiveAt = row.entry?.updatedAt || 0;
   const asleep = lastActiveAt > 0 && now - lastActiveAt > PROFILE_INACTIVITY_MS;
   return now - row.cachedAt < (asleep ? Math.max(maxAgeMs, INACTIVE_PROFILE_MAX_AGE_MS) : maxAgeMs);
@@ -486,7 +496,12 @@ function directoryProfileIsFresh(uid: string, row: CachedDirectoryProfile<Social
  */
 export async function getSocialProfilesByUid(
   uids: string[],
-  options?: { forceRefresh?: boolean; maxAgeMs?: number },
+  options?: {
+    forceRefresh?: boolean;
+    maxAgeMs?: number;
+    /** `updatedAt` del documento de amistad de cada uid: una copia anterior a él no vale (ver `directoryProfileIsFresh`). */
+    friendshipStamps?: Readonly<Record<string, number>>;
+  },
 ): Promise<SocialDirectoryEntry[]> {
   const services = await initializeFirebaseServices();
   if (!services) {
@@ -505,14 +520,15 @@ export async function getSocialProfilesByUid(
   if (!forceRefresh) {
     let persisted: Record<string, CachedDirectoryProfile<SocialDirectoryEntry>> | null = null;
     for (const uid of wanted) {
+      const stamp = Number(options?.friendshipStamps?.[uid] || 0);
       const inMemory = directoryProfileMemory.get(uid);
-      if (inMemory && directoryProfileIsFresh(uid, inMemory, maxAgeMs, now)) {
+      if (inMemory && directoryProfileIsFresh(uid, inMemory, maxAgeMs, now, stamp)) {
         rows.set(uid, inMemory);
         continue;
       }
       persisted ??= await getCachedDirectoryProfiles<SocialDirectoryEntry>();
       const stored = persisted[uid];
-      if (stored && directoryProfileIsFresh(uid, stored, maxAgeMs, now)) {
+      if (stored && directoryProfileIsFresh(uid, stored, maxAgeMs, now, stamp)) {
         directoryProfileMemory.set(uid, stored);
         rows.set(uid, stored);
       }

@@ -608,6 +608,32 @@ async function commitHealBatches(
 }
 
 /**
+ * LA SEÑAL DE REGRESO (docs/plan-feed-sin-vacio.md, Fase 4): sella el `updatedAt` de mis amistades ACEPTADAS, y nada
+ * más. Quien lleva más de 30 días sin aparecer queda fuera del feed de los demás y su copia de dormido vale un día
+ * (`INACTIVE_PROFILE_MAX_AGE_MS`); con este sello, la otra parte sabe que ha vuelto en cuanto relee las amistades y
+ * relee su perfil (`directoryProfileIsFresh`). Lo llama `touchOwnProfileActivity` al ver que venía de dormir.
+ *
+ * Las reglas ya lo admiten (`friendshipHealOwnFields`: cada parte puede tocar `updatedAt`). Una escritura por amistad,
+ * una vez por regreso. Las pendientes no: no hay feed que desbloquear. Devuelve cuántas ha sellado.
+ */
+export async function stampOwnFriendshipsOnReturn(myUid: string): Promise<number> {
+  if (!myUid) return 0;
+  const services = await initializeFirebaseServices();
+  if (!services) return 0;
+  const snapshot = await getDocs(
+    query(collection(services.firestore, 'friendships'), where('users', 'array-contains', myUid)),
+  );
+  const now = Date.now();
+  const pending = snapshot.docs
+    .filter((entry) => (entry.data() as Partial<FriendshipDoc>).status === 'accepted')
+    .map((entry) => ({ docId: entry.id, fields: { updatedAt: now } }));
+  if (pending.length > 0) {
+    await commitHealBatches(services.firestore, pending);
+  }
+  return pending.length;
+}
+
+/**
  * "Sanea" MI identidad denormalizada (nick/foto/ids) en TODOS mis docs de amistad. Se llama al guardar el perfil:
  * si cambié el nick, mis amigos/solicitudes deben reflejar el nick nuevo (privacidad: nunca queda el nombre real
  * de un doc antiguo). Solo toca MIS campos (requester* si soy requester, recipient* si soy recipient) → lo permite
