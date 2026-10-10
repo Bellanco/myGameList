@@ -5,6 +5,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.6.9] - 2026-10-10
+
 Una versión de **Firestore sin sobrantes**: deja de guardarse lo que nadie lee y lo que repetía otro dato, y la fecha
 de alta de los perfiles, que no se escribía nunca, por fin se sella.
 
