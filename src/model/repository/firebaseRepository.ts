@@ -5,7 +5,7 @@
 //  - firebaseSocialRepository: directorio, índice público, recomendaciones (+ sus cachés).
 // Este fichero conserva el NÚCLEO de perfil/identidad/token y RE-EXPORTA la API pública para que ningún
 // consumidor cambie sus imports.
-import { deleteDoc, deleteField, doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore/lite';
+import { deleteDoc, deleteField, doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore/lite';
 import { decryptFromString, encryptToString } from '../../core/security/crypto';
 import { PUBLIC_NAME_MAX_LENGTH, safeTrim } from '../../core/security/sanitize';
 import { getLocalMeta, patchLocalMeta, seedProfileIdFromRemote } from './indexedDbRepository';
@@ -327,6 +327,8 @@ let resolvedProfileId: { uid: string; profileId: string } | null = null;
  */
 let identityWrittenStamp = '';
 let tokenBackedUpStamp = '';
+/** uid al que ya se le intentó sellar la fecha de alta que faltaba en esta carga (ver `ensureProfileByEmail`). */
+let createdAtSealStamp = '';
 
 /** Huella del token para comparar sin guardar otra copia suya en memoria. */
 function tokenFingerprint(token: string): string {
@@ -348,6 +350,7 @@ export function forgetOwnAccountMemo(): void {
   resolvedProfileId = null;
   identityWrittenStamp = '';
   tokenBackedUpStamp = '';
+  createdAtSealStamp = '';
 }
 
 /**
@@ -502,6 +505,27 @@ export async function ensureProfileByEmail(input: {
     }
   }
 
+  // LA FECHA DE ALTA QUE FALTA (docs/plan-firestore-sin-sobrantes.md, Fase 3). Arriba solo se sella al CREAR el
+  // documento, pero hasta la 1.6.9 la foto, la vitrina y el resumen del año podían crearlo antes y sin ella; y un
+  // cliente viejo en caché aún puede. Si el perfil propio no la tiene, se sella aquí: las reglas lo permiten mientras
+  // falte. En una escritura APARTE y tragándose el fallo, porque si la copia leída fuera vieja y la fecha ya
+  // existiera, la regla de inmutabilidad la denegaría, y no debe arrastrar con ella el guardado del perfil. Una vez
+  // por carga: si falló, la siguiente lo vuelve a intentar.
+  let sealedCreatedAt = 0;
+  if (existing && !isForeignDoc && !existing.createdAt && createdAtSealStamp !== input.user.uid) {
+    createdAtSealStamp = input.user.uid;
+    try {
+      await setDoc(
+        doc(services.firestore, 'profiles', targetId),
+        { uid: input.user.uid, createdAt: serverTimestamp() },
+        { merge: true },
+      );
+      sealedCreatedAt = Date.now();
+    } catch (error) {
+      console.warn('[firebase] No se pudo sellar la fecha de alta:', error instanceof Error ? error.message : error);
+    }
+  }
+
   const written: SocialProfileReference = {
     id: targetId,
     profileId,
@@ -523,7 +547,7 @@ export async function ensureProfileByEmail(input: {
     // otros (ver `mergeForPublish`). El canónico que nace de un documento ajeno no tiene nada de esto todavía.
     ...(existing && !isForeignDoc
       ? {
-        createdAt: existing.createdAt,
+        createdAt: existing.createdAt || sealedCreatedAt,
         achievementsMirror: existing.achievementsMirror,
         achievementsMirrorAt: existing.achievementsMirrorAt,
         palmares: existing.palmares,
@@ -589,21 +613,35 @@ export async function repairProfileDisplayName(uid: string, nick: string): Promi
 }
 
 /**
+ * ¿La escritura falló porque el documento no existe? Es lo que devuelve `updateDoc` sobre un perfil sin crear.
+ */
+function isNotFoundError(error: unknown): boolean {
+  return (error as { code?: unknown } | null)?.code === 'not-found';
+}
+
+/**
  * Actualización ligera de la foto del doc público de perfil (la lee el directorio social). Cumple las reglas:
  * incluye `uid` y solo toca `photoURL`. `''` borra la foto (opt-out). El doc del dueño vive en `profiles/{uid}`.
  * Best-effort: no lanza si Firebase no está configurado.
+ *
+ * NO CREA EL PERFIL (`updateDoc`, no `setDoc` + `merge`). Lo creaba, sin fecha de alta, cuando el saneado de la
+ * foto genérica corría antes que el alta; luego el alta lo encontraba hecho y no sellaba `createdAt` nunca
+ * (docs/plan-firestore-sin-sobrantes.md, Fase 3). Si aún no existe no hay nada que hacer: el alta escribe la foto.
  */
 export async function updateProfilePhoto(uid: string, photoURL: string): Promise<void> {
   if (!uid) return;
   const services = await initializeFirebaseServices();
   if (!services) return;
-  await setDoc(
-    doc(services.firestore, 'profiles', uid),
-    // `updatedAt` es obligatorio de facto: el directorio ordena por él y un doc sin el campo NO saldría en la
-    // consulta. Este merge puede crear el doc si aún no existía, así que lo estampa también aquí.
-    { uid, photoURL: photoURL || '', updatedAt: serverTimestamp() },
-    { merge: true },
-  );
+  try {
+    await updateDoc(
+      doc(services.firestore, 'profiles', uid),
+      // `updatedAt` es obligatorio de facto: el directorio ordena por él y un doc sin el campo NO saldría en la consulta.
+      { uid, photoURL: photoURL || '', updatedAt: serverTimestamp() },
+    );
+  } catch (error) {
+    if (isNotFoundError(error)) return;
+    throw error;
+  }
   invalidateOwnProfileCache(uid);
   invalidateSocialDirectoryCache(uid);
 }
@@ -620,22 +658,22 @@ export async function updateProfilePhoto(uid: string, photoURL: string): Promise
  * LA FORMA LA DECIDE `buildMirror`, que es quien sabe qué versión de gramática lleva la cadena. Aquí solo se
  * escribe.
  *
- * `uid` y `updatedAt` van en el merge por lo mismo que en `updateProfilePhoto`: las reglas exigen el primero y el
+ * `uid` y `updatedAt` van en la escritura por lo mismo que en `updateProfilePhoto`: las reglas exigen el primero y el
  * directorio ordena por el segundo, de modo que un documento sin él no saldría en la consulta.
  *
- * Best-effort: no lanza. Un espejo que no se publica se vuelve a intentar en la sesión siguiente, y mientras
- * tanto lo único que pasa es que las amistades ven tu vitrina un poco desactualizada.
+ * Best-effort: si falla, lanza y quien llama no lo da por publicado, así que se vuelve a intentar en la sesión
+ * siguiente. Mientras tanto lo único que pasa es que las amistades ven tu vitrina un poco desactualizada.
  */
 export async function publishAchievementMirror(uid: string, list: string): Promise<void> {
   if (!uid || !list) return;
   const services = await initializeFirebaseServices();
   if (!services) return;
-  await setDoc(
+  // `updateDoc` y no `setDoc` + `merge`, por dos cosas: no crea un perfil que aún no existe (lo creaba sin fecha de
+  // alta, ver `updateProfilePhoto`; si falla, quien llama no lo da por publicado y lo reintenta), y sustituye el mapa
+  // entero, así que la versión suelta que guardaban los espejos antiguos (`v`) se va sola (ver `AchievementMirror`).
+  await updateDoc(
     doc(services.firestore, 'profiles', uid),
-    // `v: deleteField()`: el `merge` funde el mapa campo a campo, así que la versión suelta que guardaban los espejos
-    // antiguos se quedaría para siempre si no se borra aquí (ver `AchievementMirror`).
-    { uid, achievements: { ...buildMirror(list, Date.now()), v: deleteField() }, updatedAt: serverTimestamp() },
-    { merge: true },
+    { uid, achievements: buildMirror(list, Date.now()), updatedAt: serverTimestamp() },
   );
   invalidateOwnProfileCache(uid);
   invalidateSocialDirectoryCache(uid);
@@ -649,17 +687,17 @@ export async function publishAchievementMirror(uid: string, list: string): Promi
  * calcula con lo que ya puede ver. Solo se llama en temporada (del 15 al 31 de diciembre) y una vez por año; la
  * guarda la lleva quien llama (`useYearSummarySignal`).
  *
- * `uid` y `updatedAt` van en el merge por lo mismo que en el espejo de logros: las reglas exigen el primero y el
+ * `uid` y `updatedAt` van en la escritura por lo mismo que en el espejo de logros: las reglas exigen el primero y el
  * directorio ordena por el segundo. Lanza si falla, para que quien llama no lo dé por publicado y lo reintente.
  */
 export async function publishYearSummarySeen(uid: string, year: number): Promise<void> {
   if (!uid || !Number.isInteger(year)) return;
   const services = await initializeFirebaseServices();
   if (!services) throw new Error('Firebase no disponible');
-  await setDoc(
+  // `updateDoc`: no crea un perfil que aún no existe (ver `updateProfilePhoto`). El mapa se escribe entero igualmente.
+  await updateDoc(
     doc(services.firestore, 'profiles', uid),
     { uid, yearSummary: { year, at: Date.now() }, updatedAt: serverTimestamp() },
-    { merge: true },
   );
   invalidateOwnProfileCache(uid);
   invalidateSocialDirectoryCache(uid);
