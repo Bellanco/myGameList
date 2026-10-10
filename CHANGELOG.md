@@ -5,6 +5,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.6.10] - 2026-10-10
+
+Una versión de **Game Clear**: cerrar un juego tiene escena propia en los ocho temas.
+
 ### Added
 - **Cerrar un juego tiene su «Game Clear» en los ocho temas.** No puedes pasar enseña «Juego Terminado» en Cinzel
   Decorative, la letra libre más cercana a la del título de las películas, con las iniciales grandes como el
