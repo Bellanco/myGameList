@@ -1044,7 +1044,7 @@ export async function createSocialGist(token: string): Promise<{ gistId: string;
 
 async function createSocialGistWithData(token: string, data: SocialGistData, isPublic: boolean): Promise<{ gistId: string; etag: string | null }> {
   if (!isValidGithubToken(token)) {
-    throw new Error('Formato de token inválido');
+    throw new Error('El token no tiene el formato de GitHub. Revisa que lo hayas copiado entero.');
   }
 
   const normalized = normalizeSocialGistData(data);
@@ -1068,7 +1068,7 @@ async function createSocialGistWithData(token: string, data: SocialGistData, isP
   });
 
   if (!response.ok) {
-    throw await buildGithubError(response, 'Create social gist failed');
+    throw await buildGithubError(response, 'No se ha podido crear el gist social');
   }
 
   const body = (await response.json()) as { id: string };
@@ -1095,7 +1095,7 @@ function parseSocialGistBody(gistId: string, body: SocialGistBody, etag: string 
   try {
     parsed = JSON.parse(file.content || '');
   } catch {
-    throw new Error(`Gist social ${gistId} ilegible${file.truncated ? ' (recortado por GitHub)' : ''}: se aborta para no perder datos`);
+    throw new Error(`No se puede leer tu gist social (${gistId})${file.truncated ? ': GitHub lo ha recortado' : ''}. No se ha cambiado nada para no perder datos.`);
   }
   // A6: si el ancla referencia chunks de overflow de `sharedLists` (mismo gist), se fusionan antes de normalizar.
   const normalized = normalizeSocialGistData(assembleChunkedSocial(parsed, body.files, { strict: true }));
@@ -1105,11 +1105,11 @@ function parseSocialGistBody(gistId: string, body: SocialGistBody, etag: string 
 
 export async function readSocialGist(token: string, gistId: string, etag: string | null = null): Promise<{ data: SocialGistData; etag: string | null; notModified?: boolean; wasLegacy?: boolean }> {
   if (!isValidGithubToken(token)) {
-    throw new Error('Formato de token inválido');
+    throw new Error('El token no tiene el formato de GitHub. Revisa que lo hayas copiado entero.');
   }
 
   if (!isValidGistId(gistId)) {
-    throw new Error('Gist ID inválido');
+    throw new Error('El ID del gist no es válido. Revisa que lo hayas copiado entero.');
   }
 
   const cached = readSocialGistCache(gistId);
@@ -1156,14 +1156,14 @@ export async function readSocialGist(token: string, gistId: string, etag: string
       };
       const freshResp = await githubFetch(`${GIST_API_BASE}/${gistId}`, { headers: freshHeaders });
       if (!freshResp.ok) {
-        throw await buildGithubError(freshResp, 'Read social gist fallback failed');
+        throw await buildGithubError(freshResp, 'No se ha podido leer el gist social');
       }
       const freshBody = (await freshResp.json()) as SocialGistBody;
       return parseSocialGistBody(gistId, freshBody, freshResp.headers.get('etag'));
     }
 
     if (!response.ok) {
-      throw await buildGithubError(response, 'Read social gist failed');
+      throw await buildGithubError(response, 'No se ha podido leer el gist social');
     }
 
     const body = (await response.json()) as SocialGistBody;
@@ -1195,7 +1195,7 @@ export interface OwnSocialGist {
  */
 export async function listOwnSocialGists(token: string): Promise<OwnSocialGist[]> {
   if (!isValidGithubToken(token)) {
-    throw new Error('Formato de token inválido');
+    throw new Error('El token no tiene el formato de GitHub. Revisa que lo hayas copiado entero.');
   }
 
   const response = await githubFetch(`${GIST_API_BASE}?per_page=100`, {
@@ -1205,7 +1205,7 @@ export async function listOwnSocialGists(token: string): Promise<OwnSocialGist[]
     },
   });
   if (!response.ok) {
-    throw await buildGithubError(response, 'List own gists failed');
+    throw await buildGithubError(response, 'No se han podido buscar tus gists');
   }
 
   const body = (await response.json()) as Array<{
@@ -1242,10 +1242,10 @@ export interface SocialGistRevision {
  */
 export async function readSocialGistHistory(token: string, gistId: string): Promise<SocialGistRevision[]> {
   if (!isValidGithubToken(token)) {
-    throw new Error('Formato de token inválido');
+    throw new Error('El token no tiene el formato de GitHub. Revisa que lo hayas copiado entero.');
   }
   if (!isValidGistId(gistId)) {
-    throw new Error('Gist ID inválido');
+    throw new Error('El ID del gist no es válido. Revisa que lo hayas copiado entero.');
   }
 
   const response = await githubFetch(`${GIST_API_BASE}/${gistId}`, {
@@ -1255,7 +1255,7 @@ export async function readSocialGistHistory(token: string, gistId: string): Prom
     },
   });
   if (!response.ok) {
-    throw await buildGithubError(response, 'Read social gist history failed');
+    throw await buildGithubError(response, 'No se ha podido leer el historial del gist social');
   }
 
   const body = (await response.json()) as { history?: Array<{ version?: string; committed_at?: string }> };
@@ -1271,7 +1271,7 @@ export async function readSocialGistHistory(token: string, gistId: string): Prom
 /** Lee el contenido del gist social EN una revisión concreta. Solo lectura y sin caché. */
 export async function readSocialGistAtRevision(token: string, gistId: string, version: string): Promise<SocialGistData> {
   if (!isValidGithubToken(token)) {
-    throw new Error('Formato de token inválido');
+    throw new Error('El token no tiene el formato de GitHub. Revisa que lo hayas copiado entero.');
   }
   if (!isValidGistId(gistId) || !/^[a-fA-F0-9]{7,}$/.test(version)) {
     throw new Error('Revisión inválida');
@@ -1284,7 +1284,7 @@ export async function readSocialGistAtRevision(token: string, gistId: string, ve
     },
   });
   if (!response.ok) {
-    throw await buildGithubError(response, 'Read social gist revision failed');
+    throw await buildGithubError(response, 'No se ha podido leer una versión anterior del gist social');
   }
 
   const body = (await response.json()) as { files?: Record<string, { content: string }> };
@@ -1301,7 +1301,7 @@ export async function readSocialGistAtRevision(token: string, gistId: string, ve
 
 export async function readPublicSocialGistById(gistId: string, token: string | null = null): Promise<SocialGistData> {
   if (!isValidGistId(gistId)) {
-    throw new Error('Gist ID inválido');
+    throw new Error('El ID del gist no es válido. Revisa que lo hayas copiado entero.');
   }
 
   const cached = readPublicSocialGistCache(gistId, token);
@@ -1347,7 +1347,7 @@ export async function readPublicSocialGistById(gistId: string, token: string | n
     }
 
     if (!response.ok) {
-      const error = await buildGithubError(response, 'Read public social gist failed');
+      const error = await buildGithubError(response, 'No se ha podido leer el gist social');
       if (staleCached && (isGithubRateLimited(error) || response.status >= 500)) return staleCached.value;
       throw error;
     }
@@ -1393,11 +1393,11 @@ async function loadSocialGistValidator(): Promise<(data: unknown) => void> {
 
 export async function writeSocialGist(token: string, gistId: string, payload: SocialGistData): Promise<{ etag: string | null }> {
   if (!isValidGithubToken(token)) {
-    throw new Error('Formato de token inválido');
+    throw new Error('El token no tiene el formato de GitHub. Revisa que lo hayas copiado entero.');
   }
 
   if (!isValidGistId(gistId)) {
-    throw new Error('Gist ID inválido');
+    throw new Error('El ID del gist no es válido. Revisa que lo hayas copiado entero.');
   }
 
   const normalized = normalizeSocialGistData({
@@ -1422,7 +1422,7 @@ export async function writeSocialGist(token: string, gistId: string, payload: So
     const { anchor, chunkFiles } = buildSocialFiles(normalized);
     const anchorContent = JSON.stringify(anchor);
     assertValidSocialGist(anchor); // el ancla (con chunkIndex + main slice) sigue cumpliendo la allowlist estricta
-    assertGistSizeWithinLimit(anchorContent, 'gist social (ancla)');
+    assertGistSizeWithinLimit(anchorContent, 'gist social');
     files = { [SOCIAL_GIST_FILENAME]: { content: anchorContent } };
 
     // A7 (incremental): lee el estado actual UNA vez para omitir chunks sin cambios y borrar obsoletos. El ancla
@@ -1466,7 +1466,7 @@ export async function writeSocialGist(token: string, gistId: string, payload: So
   });
 
   if (!response.ok) {
-    throw await buildGithubError(response, 'Write social gist failed');
+    throw await buildGithubError(response, 'No se ha podido guardar el gist social');
   }
 
   const etag = response.headers.get('etag');

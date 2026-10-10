@@ -140,6 +140,6 @@ export function assertValidSocialGist(data: unknown): void {
   const result = socialGistSchema.safeParse(data);
   if (!result.success) {
     const issues = result.error.issues.map((i) => `${i.path.join('.') || 'root'}: ${i.message}`).join('; ');
-    throw new Error(`Gist social inválido (schema): ${issues}`);
+    throw new Error(`No se ha subido tu gist social: hay datos con un formato inesperado. Detalle: ${issues}`);
   }
 }

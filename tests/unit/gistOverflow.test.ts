@@ -116,7 +116,7 @@ describe('Fase B — lectura de chunks en otros gists (overflow)', () => {
   it('LANZA (lectura incompleta) si el gist de overflow no es accesible — nunca devuelve datos parciales', async () => {
     const { mainFiles } = buildSplitLayout(makeData(2500));
     stubSplitGists(mainFiles, null); // overflow → 404
-    await expect(readGist(TOKEN, MAIN_ID)).rejects.toThrow(/overflow|incompleta/i);
+    await expect(readGist(TOKEN, MAIN_ID)).rejects.toThrow(/no se puede leer una parte/i);
   });
 
   it('LANZA si falta un fichero chunk referenciado en el gist de overflow', async () => {
@@ -124,7 +124,7 @@ describe('Fase B — lectura de chunks en otros gists (overflow)', () => {
     const firstChunk = Object.keys(overflowFiles)[0];
     delete overflowFiles[firstChunk]; // el ancla lo referencia pero ya no está
     stubSplitGists(mainFiles, overflowFiles);
-    await expect(readGist(TOKEN, MAIN_ID)).rejects.toThrow(/ausente|incompleta/i);
+    await expect(readGist(TOKEN, MAIN_ID)).rejects.toThrow(/falta una parte/i);
   });
 
   it('no hace fetch extra cuando ningún chunk vive en otro gist (no-op para un único gist)', async () => {

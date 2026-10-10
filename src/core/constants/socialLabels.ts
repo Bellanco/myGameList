@@ -85,7 +85,7 @@ export const SOCIAL_UI = {
     cardsAria: (title: string) => `${title} cards`,
   },
   gateway: {
-    actionsAria: 'Acciones principales social',
+    actionsAria: 'Acciones del espacio social',
     stepsAria: 'Pasos para entrar al espacio social',
     stateAria: 'Estado de configuración social',
     lead: 'Mira lo que juegan tus amigos y que ellos vean lo tuyo. Son dos pasos.',
@@ -212,7 +212,7 @@ export const SOCIAL_UI = {
     viewDetail: 'Ver detalle',
     detailTitle: 'Análisis',
     detailActionsAria: 'Acciones del detalle social',
-    detailMissing: 'No se encontró la actividad solicitada o ya no está disponible.',
+    detailMissing: 'Esta actividad ya no está disponible.',
     /**
      * El texto que se enseña es el ADELANTO del canal social (≤160 caracteres), no la reseña.
      *
@@ -235,7 +235,7 @@ export const SOCIAL_UI = {
     profileDetailTitleOwn: 'Tu perfil social',
     profileDetailTitleOf: (name: string) => `Perfil de ${name}`,
     profileDetailActionsAria: 'Acciones del detalle de perfil social',
-    profileDetailMissing: 'No se encontró el perfil solicitado o ya no está disponible.',
+    profileDetailMissing: 'Este perfil ya no está disponible.',
     profileDetailLoading: 'Cargando el perfil...',
     profileListsTitle: 'Juegos',
     roulettePick: 'Elige tu próximo juego',
@@ -264,7 +264,7 @@ export const SOCIAL_UI = {
     postEditCancel: 'Cancelar',
     postDelete: 'Eliminar',
     postDeleteConfirmTitle: '¿Eliminar esta publicación?',
-    postDeleteConfirmBody: 'Desaparece de tu perfil y del feed. Tus amistades pueden seguir viéndola unos minutos, hasta que se actualice su feed.',
+    postDeleteConfirmBody: 'Desaparece de tu perfil y de la actividad. Tus amistades pueden seguir viéndola unos minutos, hasta que se les actualice.',
     reviewExpand: 'Ver más',
     reviewCollapse: 'Ver menos',
     reviewOpenAria: (gameName: string) => `Abrir la reseña de ${gameName}`,
@@ -315,19 +315,19 @@ export const SOCIAL_UI = {
     refreshing: 'Actualizando...',
     searchLabel: 'Buscar por nombre',
     searchPlaceholder: 'Filtrar perfiles por nombre',
-    resultCount: (count: number) => `${count} perfiles visibles`,
+    resultCount: (count: number) => (count === 1 ? '1 perfil visible' : `${count} perfiles visibles`),
     loading: 'Cargando perfiles...',
-    empty: 'No hay perfiles visibles todavía o faltan permisos de lectura en Firestore.',
+    empty: 'No hay perfiles que mostrar.',
     openProfileAria: (name: string) => `Abrir perfil social de ${name}`,
     friendsTitle: 'Amigos',
     othersTitle: 'Descubrir',
     // El recuento por sección se muestra porque con muchos amigos es la única forma de saber a qué te enfrentas
     // antes de empezar a bajar: la rejilla, al no tener scroll propio, no da ninguna pista de su tamaño.
     sectionLabel: (title: string, count: number) => `${title} · ${count}`,
-    sectionGroupAria: (title: string, count: number) => `${title}: ${count} perfiles`,
+    sectionGroupAria: (title: string, count: number) => `${title}: ${count} ${count === 1 ? 'perfil' : 'perfiles'}`,
     // Paginación: se muestra cuánto queda, no solo que hay más. "Mostrar más" a secas obliga a pulsar para
     // averiguar si quedan 3 o 300.
-    showMore: (remaining: number) => `Mostrar más (quedan ${remaining})`,
+    showMore: (remaining: number) => `Mostrar más (${remaining === 1 ? 'queda 1' : `quedan ${remaining}`})`,
     friendsEmpty: 'Aún no tienes amigos. Envía una petición desde la lista de abajo.',
     othersEmpty: 'No hay más perfiles que mostrar.',
     inviteAria: 'Invitar a un amigo',
@@ -349,8 +349,8 @@ export const SOCIAL_UI = {
     unknownUser: 'Usuario',
     // El bloque se pinta como rejilla paginada (mismo componente que el directorio), así que necesita lo mismo que
     // él: nombrar el grupo y decir cuánta gente queda por mostrar.
-    sectionGroupAria: (title: string, count: number) => `${title}: ${count} personas`,
-    showMore: (remaining: number) => `Mostrar más (quedan ${remaining})`,
+    sectionGroupAria: (title: string, count: number) => `${title}: ${count} ${count === 1 ? 'persona' : 'personas'}`,
+    showMore: (remaining: number) => `Mostrar más (${remaining === 1 ? 'queda 1' : `quedan ${remaining}`})`,
   },
   friendship: {
     add: 'Añadir amigo',
@@ -400,7 +400,7 @@ export const SOCIAL_UI = {
     privacyLabel: 'Perfil privado',
     privacyPrivate: 'Tu perfil es privado. Solo usuarios autorizados podrán verlo.',
     privacyPublic: 'Tu perfil es público. Otros usuarios podrán encontrarte por email.',
-    hydrating: 'Cargando datos de perfil desde gist social...',
+    hydrating: 'Cargando tu perfil...',
     visibilityTitle: 'Visibilidad del perfil',
     // EN POSITIVO, como la foto y los movimientos de abajo: encendido = se comparte. Decían «Ocultar…» (encendido =
     // oculto) en la misma pantalla que «Mostrarme…», y un mismo gesto significaba cosas contrarias (09-10-2026).
@@ -440,11 +440,11 @@ export const SOCIAL_UI = {
     offline: 'Sin conexión: la actividad social se actualizará al recuperar la red.',
     needMainSync: 'Activa la sincronización principal para continuar.',
     needGoogleBeforeCreate: 'Inicia sesión con Google para continuar.',
-    gistLinkedFromFirestore: 'Tu espacio social quedó vinculado automáticamente.',
-    gistNotFoundCreated: 'Tu espacio social se creó correctamente.',
-    signInAndLinked: 'Sesión iniciada correctamente.',
+    gistLinkedFromFirestore: 'Tu espacio social ya está enlazado.',
+    gistNotFoundCreated: 'Tu espacio social está listo.',
+    signInAndLinked: 'Has entrado con Google.',
     profileMissing: 'Completa tu perfil para empezar en la actividad social.',
-    profileSaved: 'Perfil social guardado correctamente.',
+    profileSaved: 'Perfil guardado.',
     signOut: 'Sesión social cerrada.',
     invalidSaveContext: 'No se pudo guardar ahora mismo. Inténtalo de nuevo.',
     missingSocialToken: 'No se pudo cargar tu espacio social. Vuelve a intentarlo.',

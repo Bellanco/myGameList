@@ -489,7 +489,7 @@ describe('F4 — integridad del canal', () => {
       ...conMoves,
       moves: [{ ...(conMoves.moves as SocialMoveEntry[])[0], enteredAt: { c: C } }],
     };
-    expect(() => assertValidSocialGist(contaminado)).toThrow(/schema/i);
+    expect(() => assertValidSocialGist(contaminado)).toThrow(/formato inesperado/i);
   });
 
   it('la guarda de privacidad sigue rechazando el sello en crudo dentro del gist', () => {
@@ -626,7 +626,7 @@ describe('listas ocultas — su actividad va aparte, para la administración', (
     expect(() => assertValidSocialGist(con)).not.toThrow();
 
     const contaminado = { ...con, hiddenMoves: [{ ...(con.hiddenMoves as SocialMoveEntry[])[0], enteredAt: { v: C } }] };
-    expect(() => assertValidSocialGist(contaminado)).toThrow(/schema/i);
+    expect(() => assertValidSocialGist(contaminado)).toThrow(/formato inesperado/i);
   });
 
   it('la fusión de dos lecturas une también `hiddenMoves`, con la fecha más antigua', () => {

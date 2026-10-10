@@ -103,8 +103,8 @@ export function assertGistSizeWithinLimit(content: string, label: string): numbe
   const kb = Math.round(bytes / 1024);
   if (bytes >= GIST_SIZE_BLOCK_BYTES) {
     throw new Error(
-      `El ${label} ocupa ${kb} KB y supera el límite seguro de gist (~${Math.round(GIST_SIZE_BLOCK_BYTES / 1024)} KB). ` +
-        'No se ha subido para no fallar contra GitHub. Reduce datos (o espera al particionado por tamaño).',
+      `El ${label} ocupa ${kb} KB y pasa del límite seguro de GitHub (~${Math.round(GIST_SIZE_BLOCK_BYTES / 1024)} KB), ` +
+        'así que no se ha subido. Tus datos siguen guardados en este dispositivo.',
     );
   }
   if (bytes >= GIST_SIZE_WARN_BYTES) {
@@ -442,14 +442,14 @@ export function assembleChunkedSocial(
     const chunkId = String(ref.chunkId);
     const content = files[socialChunkFilename(chunkId)]?.content;
     if (!content) {
-      if (strict) throw new Error(`Chunk social ${chunkId} ausente en el gist (lectura incompleta; se aborta para no perder datos)`);
+      if (strict) throw new Error(`Falta una parte de tu gist social (${socialChunkFilename(chunkId)}). No se ha cambiado nada para no perder datos.`);
       continue; // solo lectura: se conserva lo disponible
     }
     let chunk: { sharedLists?: Record<string, unknown[]> };
     try {
       chunk = JSON.parse(content) as { sharedLists?: Record<string, unknown[]> };
     } catch {
-      if (strict) throw new Error(`Chunk social ${chunkId} corrupto en el gist (se aborta para no perder datos)`);
+      if (strict) throw new Error(`Una parte de tu gist social (${socialChunkFilename(chunkId)}) está dañada. No se ha cambiado nada para no perder datos.`);
       continue; // solo lectura: el chunk corrupto se ignora
     }
     for (const tab of TAB_IDS) {

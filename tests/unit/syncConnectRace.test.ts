@@ -318,7 +318,7 @@ describe('contrato de avisos del ciclo de sync', () => {
     });
 
     const messages = deps.onNotice.mock.calls.map((call) => String(call[1]));
-    expect(messages.some((message) => message.includes('Sincronización inicial'))).toBe(false);
+    expect(messages.some((message) => message.includes('Datos sincronizados'))).toBe(false);
 
     unmount();
   });
@@ -337,7 +337,7 @@ describe('contrato de avisos del ciclo de sync', () => {
     });
 
     const messages = deps.onNotice.mock.calls.map((call) => String(call[1]));
-    expect(messages.some((message) => message.includes('Fusión sincronizada'))).toBe(true);
+    expect(messages.some((message) => message.includes('Datos sincronizados'))).toBe(true);
 
     unmount();
   });

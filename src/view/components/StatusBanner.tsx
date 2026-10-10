@@ -4,7 +4,6 @@ import { UI_MESSAGES } from '../../core/constants/labels';
 
 interface StatusBannerProps {
   notice: { kind: 'ok' | 'warn' | 'err'; message: string } | null;
-  remoteChangesApplied?: number | null;
 }
 
 const KIND_LABEL = UI_MESSAGES.statusKind;
@@ -22,15 +21,12 @@ const KIND_LABEL = UI_MESSAGES.statusKind;
  * duplicados o a destiempo por re-render) y a su lado va un texto solo-para-lectores con `role="status"`.
  * `role="status"` (y no `alert`) porque es información de cortesía: no debe interrumpir lo que se esté leyendo.
  */
-export const StatusBanner = memo(function StatusBanner({ notice, remoteChangesApplied = null }: StatusBannerProps) {
-  const remoteSuffix =
-    notice?.kind === 'ok' && remoteChangesApplied !== null ? ` Cambios remotos aplicados: ${remoteChangesApplied}` : '';
-
+export const StatusBanner = memo(function StatusBanner({ notice }: StatusBannerProps) {
   return (
     <>
       {/* SIEMPRE montada: es la que anuncia. Vacía no ocupa ni se ve. */}
       <div className="sr-only" role="status" aria-live="polite">
-        {notice ? `${KIND_LABEL[notice.kind]}: ${notice.message}${remoteSuffix}` : ''}
+        {notice ? `${KIND_LABEL[notice.kind]}: ${notice.message}` : ''}
       </div>
 
       {/* VA AL CARRIL FLOTANTE de abajo a la izquierda, el mismo del aviso de logro y del administrador: lo monta
@@ -41,11 +37,7 @@ export const StatusBanner = memo(function StatusBanner({ notice, remoteChangesAp
           El reparto de las tres filas: el rótulo dice QUÉ CLASE de aviso es, el nombre lo que ha pasado y la
           descripción el detalle que no siempre hay. */}
       {notice ? (
-        <Notice tone={notice.kind} kicker={KIND_LABEL[notice.kind]} title={notice.message}>
-          {notice.kind === 'ok' && remoteChangesApplied !== null
-            ? `Cambios remotos aplicados: ${remoteChangesApplied}`
-            : null}
-        </Notice>
+        <Notice tone={notice.kind} kicker={KIND_LABEL[notice.kind]} title={notice.message} />
       ) : null}
     </>
   );

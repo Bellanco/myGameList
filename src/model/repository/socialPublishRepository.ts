@@ -351,7 +351,7 @@ async function publishPostNow(input: { text: string; maxLength?: number }): Prom
     throw new Error(
       gate.reason === 'no-session'
         ? 'Inicia sesión con Google para publicar'
-        : 'No se pudo resolver tu canal social en este dispositivo',
+        : 'Tu espacio social aún no está listo en este dispositivo. Vuelve a intentarlo en un momento.',
     );
   }
   const { ctx } = gate;
@@ -394,7 +394,7 @@ function postGateError(reason: 'no-session' | 'no-channel' | 'no-consent'): Erro
       // Las publicaciones salen del hub, que ya ha pasado su puerta legal: este caso no debería darse.
       : reason === 'no-consent'
         ? 'Acepta las condiciones vigentes del espacio social para publicar'
-        : 'No se pudo resolver tu canal social en este dispositivo',
+        : 'Tu espacio social aún no está listo en este dispositivo. Vuelve a intentarlo en un momento.',
   );
 }
 

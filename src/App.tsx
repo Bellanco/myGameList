@@ -1241,7 +1241,7 @@ export default function App() {
           </Suspense>
         ) : null}
         <UpdateNotice />
-        <StatusBanner notice={vm.notice} remoteChangesApplied={syncVm.lastRemoteChangesApplied} />
+        <StatusBanner notice={vm.notice} />
       </div>
       <ViewTransition default="none" update={transicionesDePantalla ? ANIMACION_DE_PANTALLA : 'none'}>
         <main

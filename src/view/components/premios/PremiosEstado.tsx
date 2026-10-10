@@ -54,7 +54,6 @@ export function PremiosEnviada({
             es justo lo que quien la ha reenviado por inercia teme haber gastado. */}
         {unchanged ? <p>{L.unchanged}</p> : null}
         <p>{L.editHint(remainingOpportunities)}</p>
-        <p className="premios-estado__muted">{L.resultsSoon}</p>
       </div>
 
       {/* UNA SOLA SALIDA, Y ES LA PUERTA. Aquí hubo cuatro botones —corregir, ver los votos, los resultados y

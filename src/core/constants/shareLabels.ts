@@ -14,7 +14,7 @@
 export const SHARE_UI = {
   action: 'Compartir',
   // Cuando el fallo no trae mensaje propio.
-  genericError: 'No se ha podido completar la operación',
+  genericError: 'Algo ha fallado. Inténtalo de nuevo.',
   actionAria: 'Compartir esta reseña con un enlace público',
   shared: 'Compartida',
   dialogTitle: 'Compartir esta reseña',
@@ -61,7 +61,7 @@ export const SHARE_UI = {
   // Sin sesión de Google no se puede ofrecer el botón (publicar exige identidad), pero antes se quitaba sin decir
   // nada y quien lo buscaba no tenía forma de saber por qué no estaba. Se dice qué falta y dónde se resuelve.
   signInRequired: 'Entra con Google para compartir',
-  signInRequiredHint: 'El enlace lleva tu nombre, así que primero tienes que entrar con Google. Puedes hacerlo en el Espacio social.',
+  signInRequiredHint: 'El enlace lleva tu nombre, así que primero tienes que entrar con Google. Puedes hacerlo en el espacio social.',
   // El servidor dice QUÉ pasa y adjunta los datos; estos dos dicen QUÉ HACER, que es lo que convierte un error
   // en algo accionable. Solo se pintan cuando la respuesta trae el detalle de la cuota.
   quotaReached: (max: number) => `Tienes ${max} de ${max} enlaces activos.`,

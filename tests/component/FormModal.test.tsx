@@ -345,7 +345,7 @@ describe('FormModal — mensajes de error', () => {
     expect(screen.getAllByText('Añade al menos un género.').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Añade al menos una plataforma.').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Añade al menos un año de finalización.').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Selecciona una puntuación').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Selecciona una puntuación.').length).toBeGreaterThan(0);
     expect(document.activeElement).toBe(screen.getByPlaceholderText('Ej: The Witcher 3'));
   });
 

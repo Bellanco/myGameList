@@ -49,13 +49,13 @@ export async function migrateForeignProfileDoc(legacyDocId: string, uid: string)
   const cleanUid = String(uid || '').trim();
 
   if (!cleanLegacyId || cleanLegacyId === PLACEHOLDER_ID) {
-    throw new Error('Identificador de perfil no válido');
+    throw new Error('Identificador de perfil no válido.');
   }
   if (!cleanUid) {
-    throw new Error('No se conoce el uid de destino: sin él no hay a dónde mover el perfil');
+    throw new Error('No se conoce el uid de destino: sin él no hay a dónde mover el perfil.');
   }
   if (cleanLegacyId === cleanUid) {
-    throw new Error('Este perfil ya vive en `profiles/{uid}`: no hay nada que migrar');
+    throw new Error('Este perfil ya vive en `profiles/{uid}`: no hay nada que migrar.');
   }
 
   const services = await requireServices();
@@ -72,7 +72,7 @@ export async function migrateForeignProfileDoc(legacyDocId: string, uid: string)
   }
 
   if (!legacySnapshot.exists()) {
-    throw new Error('El perfil legacy ya no existe: recarga el censo');
+    throw new Error('El perfil legacy ya no existe: recarga el censo.');
   }
 
   const legacyData = legacySnapshot.data() as Record<string, unknown>;

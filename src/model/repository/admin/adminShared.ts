@@ -62,7 +62,7 @@ export function toAdminError(error: unknown, what: string): Error {
 export async function requireServices() {
   const services = await initializeFirebaseServices();
   if (!services) {
-    throw new Error('Firebase no está configurado en este entorno');
+    throw new Error('Firebase no está configurado en este entorno.');
   }
   return services;
 }

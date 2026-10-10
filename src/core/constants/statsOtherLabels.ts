@@ -90,7 +90,7 @@ export const STATS_LABELS_OTHER: StatsLabels = {
   genreRanks: {
     ...STATS_OWN.genreRanks,
     title: 'Cómo cambia su gusto',
-    subtitle: 'Él también fue un aventurero: qué géneros termina más y cuáles se le caen del podio.',
+    subtitle: 'También fue un aventurero: qué géneros termina más y cuáles se le caen del podio.',
     empty: 'No tiene años suficientes para ver hacia dónde se mueve su gusto.',
     hint: 'Señala un género para seguir su línea.',
   },

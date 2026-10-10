@@ -75,7 +75,7 @@ export const ADMIN_PANEL_UI = {
   scopeNote: 'Solo aparece quien tiene perfil social. Quien usa la app sin crearlo no es visible desde aquí: sus documentos son owner-only y las reglas no dejan leerlos ni al administrador.',
   // El saneado automático hace innecesaria la purga manual en cuanto el usuario vuelve a entrar. Conviene que se
   // vea, para que la purga manual se use solo donde de verdad aporta: en quien ya no vuelve.
-  legacyNote: 'Los restos legacy se migran solos: cuando el usuario inicia sesión, su propio navegador pone a salvo el token y el id del gist en su configuración privada y limpia el perfil público. Purga a mano solo a quien lleve mucho sin entrar.',
+  legacyNote: 'Los restos legacy se migran solos: cuando el usuario inicia sesión, su propio navegador pone a salvo el token y el ID del gist en su configuración privada y limpia el perfil público. Purga a mano solo a quien lleve mucho sin entrar.',
   truncated: (limitCount: number) => `Se alcanzó el tope de ${limitCount} perfiles: la lista puede estar incompleta.`,
   totals: {
     aria: 'Resumen',
@@ -188,7 +188,7 @@ export const ADMIN_PANEL_UI = {
     titleName: 'Sus amigos le ven con otro nombre',
     titlePhoto: 'Sus amigos le ven con otra foto',
     titleBoth: 'Sus amigos le ven con otro nombre y otra foto',
-    hint: 'Sus amigos le ven con el nombre y la foto que se guardaron al hacerse amigos. Su propio cliente los refresca al abrir el espacio social, al guardar el perfil o al publicar, así que quien solo usa sus listas los arrastra indefinidamente. Desde aquí se propagan su nick y su foto actuales (nunca se añade una foto donde sus amigos no tienen ninguna, porque podría ser una que ha ocultado); los ids de gist no se tocan.',
+    hint: 'Sus amigos le ven con el nombre y la foto que se guardaron al hacerse amigos. Su propio cliente los refresca al abrir el espacio social, al guardar el perfil o al publicar, así que quien solo usa sus listas los arrastra indefinidamente. Desde aquí se propagan su nick y su foto actuales (nunca se añade una foto donde sus amigos no tienen ninguna, porque podría ser una que ha ocultado); los ID de gist no se tocan.',
     btn: 'Propagar nombre y foto',
     btnPhoto: 'Propagar la foto',
     confirmPhoto: (name: string) => `¿Actualizar la foto de ${name} en sus documentos de amistad? Solo se escriben los que estén desactualizados.`,
@@ -202,8 +202,10 @@ export const ADMIN_PANEL_UI = {
     ok: (touched: number) =>
       touched === 0
         ? 'Sus amistades ya estaban al día: no se ha escrito nada.'
-        : `Identidad propagada a ${touched} amistad(es).`,
-    partial: 'Propagación incompleta: revisa la consola para el detalle.',
+        : touched === 1
+          ? 'Identidad propagada a 1 amistad.'
+          : `Identidad propagada a ${touched} amistades.`,
+    partial: 'No se ha podido actualizar en todas sus amistades: revisa la consola para el detalle.',
   },
   // Desempate del nombre cuando el perfil y las amistades no coinciden. El administrador ve los dos valores y
   // decide; el panel no puede decidirlo por él (el nick vigente vive en el gist del usuario).
@@ -218,7 +220,7 @@ export const ADMIN_PANEL_UI = {
       `¿Fijar «${name}» como nombre de ${user}? Se escribe en su perfil y en sus documentos de amistad.`,
     ok: (name: string, touched: number) =>
       touched > 0
-        ? `Nombre fijado en «${name}» (perfil + ${touched} amistad(es)).`
+        ? `Nombre fijado en «${name}» en su perfil y en ${touched === 1 ? '1 amistad' : `${touched} amistades`}.`
         : `Nombre fijado en «${name}» en su perfil; sus amistades ya estaban de acuerdo.`,
     partial: 'No se pudo fijar el nombre del todo: revisa la consola para el detalle.',
   },
@@ -226,11 +228,14 @@ export const ADMIN_PANEL_UI = {
   fossil: {
     title: 'Solicitudes fosilizadas',
     hint: 'Solicitudes que envió y que nadie ha aceptado en más de 180 días. Borrarlas las retira también de la bandeja de quien las recibió, y cualquiera de los dos puede volver a enviarlas. No se tocan las amistades aceptadas, ni las que él ha recibido (esas salen en la ficha de quien las mandó), ni las que no tienen fecha.',
-    btn: (count: number) => `Purgar ${count} solicitud(es)`,
+    btn: (count: number) => (count === 1 ? 'Purgar 1 solicitud' : `Purgar ${count} solicitudes`),
     confirm: (name: string, count: number) =>
-      `¿Borrar ${count} solicitud(es) que ${name} envió y llevan más de 180 días sin aceptar? Desaparecen también de la bandeja de sus destinatarios.`,
-    ok: (touched: number) => `${touched} solicitud(es) fosilizada(s) borrada(s).`,
-    partial: 'Purga incompleta: revisa la consola para el detalle.',
+      count === 1
+        ? `¿Borrar 1 solicitud que ${name} envió y lleva más de 180 días sin aceptar? Desaparece también de la bandeja de su destinatario.`
+        : `¿Borrar ${count} solicitudes que ${name} envió y llevan más de 180 días sin aceptar? Desaparecen también de la bandeja de sus destinatarios.`,
+    ok: (touched: number) =>
+      touched === 1 ? '1 solicitud fosilizada borrada.' : `${touched} solicitudes fosilizadas borradas.`,
+    partial: 'No se han podido borrar todas las solicitudes: revisa la consola para el detalle.',
   },
   // Cutover de identidad: mover un perfil legacy a `profiles/{uid}` y retirar el huérfano.
   cutover: {
@@ -244,8 +249,8 @@ export const ADMIN_PANEL_UI = {
     targetCanonical: 'Su documento canónico',
     // Qué va a pasar de verdad al pulsar: son dos operaciones distintas y hasta ahora no se sabía cuál tocaba.
     outcomeLabel: 'Qué hará',
-    outcomeMove: 'MOVER el documento entero (no hay perfil canónico todavía) y borrar este.',
-    outcomeMerge: 'FUSIONAR: ya existe su perfil canónico y manda el vivo. Solo se le rescata lo que le falte (rango, alta más antigua, restos por cifrar) y este se borra.',
+    outcomeMove: 'Mover el documento entero (no hay perfil canónico todavía) y borrar este.',
+    outcomeMerge: 'Fusionar: ya existe su perfil canónico y manda el vivo. Solo se le rescata lo que le falte (rango, alta más antigua, restos por cifrar) y este se borra.',
     // Con el censo recortado, no haber visto el gemelo no prueba que no exista.
     outcomeUnknown: 'No se puede anticipar: el censo viene recortado, así que puede existir un perfil canónico que no se ha listado.',
     btn: 'Migrar identidad',
@@ -295,7 +300,7 @@ export const ADMIN_PANEL_UI = {
     },
     'legacy-fields': {
       label: 'restos legacy',
-      hint: 'Arrastra email o id del gist de juegos en un documento que lee cualquier usuario autenticado.',
+      hint: 'Arrastra email o ID del gist de juegos en un documento que lee cualquier usuario autenticado.',
     },
     'legacy-token': {
       label: 'token en claro',
@@ -372,7 +377,7 @@ export const ADMIN_PANEL_UI = {
   legacyEmailLocked: 'Este perfil no se identifica por el uid: su email es la única forma de que su dueño lo recupere, así que no se purga.',
   legacyConfirm: {
     email: (name: string) => `¿Borrar el email del perfil público de ${name}? Deja de ser legible por el resto de usuarios. Su dueño no lo nota: su perfil se localiza por el uid.`,
-    gamesGistId: (name: string) => `¿Borrar el id del gist de juegos del perfil público de ${name}? No es un secreto (es un gist público), pero es el respaldo que usa "Recuperar Gist ID": si su configuración privada no lo tiene, tendrá que reintroducirlo a mano en un dispositivo nuevo.`,
+    gamesGistId: (name: string) => `¿Borrar el ID del gist de juegos del perfil público de ${name}? No es un secreto (es un gist público), pero es el respaldo del botón «Recuperar de Google» de Ajustes: si su configuración privada no lo tiene, tendrá que reintroducirlo a mano en un dispositivo nuevo.`,
     token: (name: string) => `¿Borrar el token de GitHub en claro de ${name}? Hoy lo puede leer cualquier usuario autenticado, así que conviene. Si aún no tiene el respaldo cifrado, la próxima vez que entre en un dispositivo nuevo tendrá que volver a conectar GitHub.`,
   },
   /**
@@ -381,12 +386,12 @@ export const ADMIN_PANEL_UI = {
    * cuanto vuelva a abrir la app, porque la marca de agua vive en su dispositivo.
    */
   achievementsBtn: 'Borrar sus logros publicados',
-  achievementsConfirm: (name: string) => `¿Borrar el espejo de logros publicado de ${name}? Sus amistades dejarán de verle medallas y su espejo sale de la muestra del porcentaje comparado. NO pierde ningún logro (los suyos se calculan en su dispositivo) y volverá a publicarlos la próxima vez que abra la app.`,
+  achievementsConfirm: (name: string) => `¿Borrar el espejo de logros publicado de ${name}? Sus amistades dejarán de verle medallas y su espejo sale de la muestra del porcentaje comparado. No pierde ningún logro (los suyos se calculan en su dispositivo) y volverá a publicarlos la próxima vez que abra la app.`,
   achievementsDone: 'Espejo de logros borrado.',
   disableBtn: 'Desactivar social',
   enableBtn: 'Activar social',
   deleteBtn: 'Borrar perfil',
-  working: 'Trabajando...',
+  working: 'Un momento…',
   confirmDisable: (name: string) => `¿Desactivar el social de ${name}? Sale del directorio y del feed, pero conserva su perfil y sus amistades.`,
   confirmEnable: (name: string) => `¿Reactivar el social de ${name}?`,
   confirmDelete: (name: string) => `¿Borrar el perfil de ${name}, todas sus amistades y su espejo de logros? No se puede deshacer.`,
@@ -402,8 +407,8 @@ export const ADMIN_PANEL_UI = {
   okEnabled: 'Social reactivado.',
   okPurged: 'Campos legacy purgados.',
   okDeleted: 'Perfil y amistades borrados.',
-  partialDeleted: 'Borrado incompleto: revisa la consola para el detalle.',
-  errorGeneric: 'No se pudo completar la acción.',
+  partialDeleted: 'No se ha podido borrar todo: revisa la consola para el detalle.',
+  errorGeneric: 'No se ha podido aplicar el cambio. Vuelve a intentarlo.',
 } as const;
 
 /** Moderación de enlaces compartidos, dentro de la ficha de cada usuario en `/admin` (ver §6 del plan). */
@@ -437,18 +442,23 @@ export const ADMIN_SHARES_UI = {
   quota: 'Aplicar cuota',
   confirmRemove: (gameName: string) => `Retirar el enlace de «${gameName}»`,
   confirmBan: 'Vetar a este usuario (sus enlaces actuales seguirán activos)',
-  confirmBanPurge: 'Vetar a este usuario Y retirar todos sus enlaces',
+  confirmBanPurge: 'Vetar a este usuario y retirar todos sus enlaces',
   confirmUnban: 'Levantar el veto de este usuario',
   // Con los valores a la vista: es lo que se va a escribir, y el campo venía relleno con otra cosa.
   confirmQuota: (maxActive: number, ttlDays: number) =>
     `Dejar la cuota de este usuario en ${maxActive} ${maxActive === 1 ? 'reseña compartida' : 'reseñas compartidas'} a la vez y ${ttlDays} ${ttlDays === 1 ? 'día' : 'días'} de duración`,
   confirmQuotaClear: 'Devolver a este usuario la cuota de su rango',
   removed: 'Enlace retirado.',
-  banned: (purged: number) => (purged > 0 ? `Usuario vetado y ${purged} enlace(s) retirado(s).` : 'Usuario vetado.'),
+  banned: (purged: number) =>
+    purged === 0
+      ? 'Usuario vetado.'
+      : purged === 1
+        ? 'Usuario vetado y 1 enlace retirado.'
+        : `Usuario vetado y ${purged} enlaces retirados.`,
   unbanned: 'Veto levantado.',
   quotaSet: 'Cuota ajustada.',
   quotaCleared: 'Ajuste retirado: vuelve a la cuota de su rango.',
-  failed: 'La operación no se ha completado.',
+  failed: 'No se ha podido aplicar el cambio. Vuelve a intentarlo.',
 } as const;
 
 /**
@@ -573,7 +583,7 @@ export const ADMIN_ACHIEVEMENTS_UI = {
    * así que el texto dice qué se lleva por delante y qué NO: nadie pierde un logro, se pierde lo publicado.
    */
   resetAll: 'Borrar todos los logros publicados',
-  resetAllConfirm: (profiles: number) => `¿Borrar el espejo de logros de los ${profiles} perfiles del censo y la apertura publicada? Las vitrinas se vacían para todo el mundo y el porcentaje comparado se queda sin muestra. NADIE pierde un logro: los de cada cual se calculan en su dispositivo, y cada uno volverá a publicar el suyo la próxima vez que abra la app.`,
+  resetAllConfirm: (profiles: number) => `¿Borrar el espejo de logros de los ${profiles} perfiles del censo y la apertura publicada? Las vitrinas se vacían para todo el mundo y el porcentaje comparado se queda sin muestra. Nadie pierde un logro: los de cada cual se calculan en su dispositivo, y cada uno volverá a publicar el suyo la próxima vez que abra la app.`,
   resetAllDone: (cleared: number) => `Borrados ${cleared} espejos y la apertura publicada.`,
   resetAllFailed: 'No se ha podido borrar. ¿Sesión de administrador iniciada?',
   resetAllWorking: 'Borrando…',
@@ -679,14 +689,14 @@ export const ADMIN_ACHIEVEMENTS_UI = {
    */
   legendTitle: 'Qué significa cada dato',
   legend: [
-    ['Qué ve cada usuario', 'LO MISMO QUE TODOS. En cuanto un usuario ve un escalón, ese escalón queda abierto para todo el mundo, así que la escalera se enseña igual a quien empieza que a quien va en cabeza. Lo que cambia de una persona a otra es lo que lleva CONSEGUIDO, no la lista. La línea es el primer escalón al que no ha llegado nadie: ese se ofrece (es el reto del que va delante) y de ahí para arriba no se enseña nada todavía.'],
-    ['Ocultar hasta conseguirlo', 'El interruptor de cada escalera. Ocultarla la retira ENTERA para quien no tiene ningún escalón suyo: no ve la escalera, el siguiente reto ni un hueco con «?». A quien ya tiene un escalón no se le quita nunca, y los puntos y el espejo publicado no cambian. Sirve para que un logro sea sorpresa, pero entonces deja de motivar a quien no lo tiene.'],
+    ['Qué ve cada usuario', 'Lo mismo que todos. En cuanto un usuario ve un escalón, ese escalón queda abierto para todo el mundo, así que la escalera se enseña igual a quien empieza que a quien va en cabeza. Lo que cambia de una persona a otra es lo que lleva conseguido, no la lista. La línea es el primer escalón al que no ha llegado nadie: ese se ofrece (es el reto del que va delante) y de ahí para arriba no se enseña nada todavía.'],
+    ['Ocultar hasta conseguirlo', 'El interruptor de cada escalera. Ocultarla la retira entera para quien no tiene ningún escalón suyo: no ve la escalera, el siguiente reto ni un hueco con «?». A quien ya tiene un escalón no se le quita nunca, y los puntos y el espejo publicado no cambian. Sirve para que un logro sea sorpresa, pero entonces deja de motivar a quien no lo tiene.'],
     ['Escalón', 'El umbral que hay que alcanzar. Es también lo que lleva el `id` del logro (`completados-50`), y por eso no se renombra nunca.'],
-    ['Nombre', 'Lo que ve la gente, con su grado en romano. El romano sale de la POSICIÓN dentro de la escalera, así que insertar un escalón renumera los de arriba.'],
+    ['Nombre', 'Lo que ve la gente, con su grado en romano. El romano sale de la posición dentro de la escalera, así que insertar un escalón renumera los de arriba.'],
     ['No se ofrece', 'El catálogo ya no lo propone: un retirado deja de ofrecerse y de contar en la fracción, y tampoco gasta el turno del siguiente reto. Se sigue pintando a quien ya lo tenga. Solo se marca la excepción; lo normal es que se ofrezca.'],
-    ['Quién ha llegado', 'Qué parte de la GENTE lo tiene, medido sobre los espejos publicados del censo. No tiene nada que ver con lo que se le enseña a cada uno. Siempre con su denominador: con 43 espejos, «2 %» es una persona.'],
-    ['Nadie ha llegado', 'El PRIMER escalón de la escalera al que no ha llegado ninguna persona del censo: la frontera de lo que hoy está en juego. Se sigue ofreciendo con normalidad (es el siguiente reto de quien tiene el de debajo), así que esto no lo esconde.'],
-    ['Cerrado para todos', 'Los escalones POR ENCIMA de esa frontera, marcados con un raíl en el canto de la fila: no se le enseñan a nadie, ni al que va en cabeza. En cuanto alguien alcance el anterior, el primero de ellos se abre para todo el mundo y la línea sube sola. Con la escalera OCULTA son todos los que nadie tiene: ahí no se abre ninguno.'],
+    ['Quién ha llegado', 'Qué parte de la gente lo tiene, medido sobre los espejos publicados del censo. No tiene nada que ver con lo que se le enseña a cada uno. Siempre con su denominador: con 43 espejos, «2 %» es una persona.'],
+    ['Nadie ha llegado', 'El primer escalón de la escalera al que no ha llegado ninguna persona del censo: la frontera de lo que hoy está en juego. Se sigue ofreciendo con normalidad (es el siguiente reto de quien tiene el de debajo), así que esto no lo esconde.'],
+    ['Cerrado para todos', 'Los escalones por encima de esa frontera, marcados con un raíl en el canto de la fila: no se le enseñan a nadie, ni al que va en cabeza. En cuanto alguien alcance el anterior, el primero de ellos se abre para todo el mundo y la línea sube sola. Con la escalera oculta son todos los que nadie tiene: ahí no se abre ninguno.'],
     ['Casi todos lo tienen', 'Lo tiene el 90 % o más de la gente, así que apenas distingue a nadie.'],
     ['Aquí se cae la gente', 'Del escalón anterior a este se pierde a casi todo el mundo: el paso es demasiado grande y en medio cabe un intermedio.'],
     ['Meta / Hecho', 'Los dos textos del escalón: lo que se pide cuando te falta y lo que se cuenta cuando ya lo tienes.'],

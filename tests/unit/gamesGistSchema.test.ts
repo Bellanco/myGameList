@@ -40,18 +40,18 @@ describe('gamesGistSchema — escritura (falla cerrado)', () => {
 
   it('rejects a corrupted id: publishing it would poison every other device', () => {
     const roto = { ...tabData({ c: [game()] }), c: [{ ...game(), id: 'uno' }] };
-    expect(() => assertValidGamesGist(roto)).toThrow(/schema/);
+    expect(() => assertValidGamesGist(roto)).toThrow(/formato inesperado/);
   });
 
   it('rejects a grade outside 0–100 and a missing merge clock', () => {
-    expect(() => assertValidGamesGist({ ...tabData(), c: [{ ...game(), grade: 900 }] })).toThrow(/schema/);
+    expect(() => assertValidGamesGist({ ...tabData(), c: [{ ...game(), grade: 900 }] })).toThrow(/formato inesperado/);
     const sinReloj = { ...game() } as Partial<GameItem>;
     delete sinReloj._ts;
-    expect(() => assertValidGamesGist({ ...tabData(), c: [sinReloj] })).toThrow(/schema/);
+    expect(() => assertValidGamesGist({ ...tabData(), c: [sinReloj] })).toThrow(/formato inesperado/);
   });
 
   it('rejects a tombstone without its clock: the merge decides with `_ts`', () => {
-    expect(() => assertValidGamesGist({ ...tabData(), deleted: [{ id: 3 }] })).toThrow(/schema/);
+    expect(() => assertValidGamesGist({ ...tabData(), deleted: [{ id: 3 }] })).toThrow(/formato inesperado/);
   });
 
   // La asimetría deliberada frente al gist social: allí un campo extra ABORTA (canal público, riesgo de filtrar);
@@ -130,7 +130,7 @@ describe('gamesGistSchema — datos remotos sucios no pueden bloquear el sync', 
     } as unknown as TabData;
 
     // Tal cual, la validación lo rechaza (es su trabajo).
-    expect(() => assertValidGamesGist(leanTabData(sucio))).toThrow(/schema/);
+    expect(() => assertValidGamesGist(leanTabData(sucio))).toThrow(/formato inesperado/);
 
     // Pasado por la normalización —que es lo que hace `writeGist`— se publica sin problema.
     expect(() => assertValidGamesGist(leanTabData(normalizeData(sucio)))).not.toThrow();

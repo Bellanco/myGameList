@@ -205,9 +205,8 @@ export async function signInWithGoogle(options?: { onAbandoned?: () => void }): 
     }
 
     if (code === 'auth/internal-error') {
-      const context = getAuthRuntimeContext();
       throw new Error(
-        `Firebase devolvió auth/internal-error en ${context.hostname} usando el proyecto ${context.projectId} (${context.authDomain}). Suele deberse a bloqueo de popup/cookies/extensiones o a configuración OAuth del proveedor Google.`,
+        'No se ha podido abrir el inicio de sesión de Google. Suele pasar cuando el navegador o una extensión bloquean las ventanas emergentes o las cookies: revísalo y vuelve a intentarlo.',
       );
     }
 
