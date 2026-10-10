@@ -777,3 +777,53 @@
 :root[data-palette="seaofstars"] .hub-hub-title-wrap h2::before { content: '☀'; color: #ffc01f; }
 :root[data-palette="seaofstars"] .hub-hub-title-wrap h2::after { content: '☾'; color: #a472e8; text-shadow: 2px 2px 0 #1c1a3a; }
 :root[data-palette="seaofstars"][data-theme="light"] .hub-hub-title-wrap h2::after { color: #5a23b8; text-shadow: none; }
+
+/* ── LA FIRMA · ¡VICTORIA! (10-10-2026) ───────────────────────────────────────────────────────────────────────────
+   Al cerrar un juego, la ventana de fin de combate de un JRPG: el marco de diálogo de píxel salta en cuatro pasos,
+   la EXP y el oro suben solos y titilan estrellas de cuatro puntas. Los números son CSS puro: `@property` deja
+   animar un entero y `counter()` lo escribe. La crea `useSignatureEffects` (efectos y `reduced-motion` ya
+   mirados). Es la ventana de diálogo del juego: noche en los dos modos, como la del combate. ── */
+@property --sos-exp { syntax: '<integer>'; initial-value: 0; inherits: false; }
+@property --sos-oro { syntax: '<integer>'; initial-value: 0; inherits: false; }
+:root[data-palette="seaofstars"] .fx-sos-win {
+  position: fixed; z-index: 9997; pointer-events: none;
+  left: 50%; top: 43%; transform: translate(-50%, -50%) scale(0);
+  width: max-content; min-width: 230px; padding: .7rem 1.4rem .8rem;
+  background: #0b1b3a; border: 3px solid #fff7d6;
+  box-shadow: 0 0 0 3px #0b1b3a, 0 0 0 6px #f5c13e, 8px 10px 0 6px rgba(0, 0, 0, .35);
+  font-family: var(--font-body); color: #fff7d6;
+  animation: sos-win 2.3s steps(1) forwards;
+}
+:root[data-palette="seaofstars"] .fx-sos-win b {
+  display: block; text-align: center; white-space: nowrap;
+  font-size: 30px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  color: #f5c13e; text-shadow: 3px 3px 0 #7a3d00;
+}
+:root[data-palette="seaofstars"] .fx-sos-win-dl { display: grid; grid-template-columns: 1fr auto; gap: .1rem 1.4rem; margin-top: .45rem; font-size: 18px; color: #9fb0d8; }
+:root[data-palette="seaofstars"] .fx-sos-win-dl .is-exp,
+:root[data-palette="seaofstars"] .fx-sos-win-dl .is-oro { text-align: right; color: #2bb3c4; }
+:root[data-palette="seaofstars"] .fx-sos-win-dl .is-exp { counter-reset: sos-n var(--sos-exp); animation: sos-exp .8s .55s steps(24) forwards; }
+:root[data-palette="seaofstars"] .fx-sos-win-dl .is-oro { counter-reset: sos-n var(--sos-oro); animation: sos-oro .8s .6s steps(15) forwards; }
+:root[data-palette="seaofstars"] .fx-sos-win-dl .is-exp::after,
+:root[data-palette="seaofstars"] .fx-sos-win-dl .is-oro::after { content: "+" counter(sos-n); }
+/* Las cuatro estrellas, una por esquina por fuera del marco. */
+:root[data-palette="seaofstars"] .fx-sos-win > i {
+  position: absolute; width: 14px; height: 14px; background: #f5c13e; opacity: 0;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  animation: sos-tw 1s var(--d) steps(4) 2;
+}
+:root[data-palette="seaofstars"] .fx-sos-win > i:nth-of-type(1) { left: -26px; top: -18px; }
+:root[data-palette="seaofstars"] .fx-sos-win > i:nth-of-type(2) { right: -28px; top: -10px; }
+:root[data-palette="seaofstars"] .fx-sos-win > i:nth-of-type(3) { left: -20px; bottom: -22px; }
+:root[data-palette="seaofstars"] .fx-sos-win > i:nth-of-type(4) { right: -24px; bottom: -16px; }
+@keyframes sos-exp { to { --sos-exp: 120; } }
+@keyframes sos-oro { to { --sos-oro: 45; } }
+@keyframes sos-tw { 0% { opacity: 0; transform: scale(.3); } 50% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0; transform: scale(.3); } }
+@keyframes sos-win {
+  0% { transform: translate(-50%, -50%) scale(.2); }
+  4% { transform: translate(-50%, -50%) scale(.6); }
+  8% { transform: translate(-50%, -50%) scale(1.1); }
+  12%, 88% { transform: translate(-50%, -50%) scale(1); }
+  92% { transform: translate(-50%, -50%) scale(1, .5); }
+  96%, 100% { transform: translate(-50%, -50%) scale(1, 0); }
+}

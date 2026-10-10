@@ -5,6 +5,26 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Added
+- **Cerrar un juego tiene su «Game Clear» en los ocho temas.** No puedes pasar enseña «Juego Terminado» en Cinzel
+  Decorative, la letra libre más cercana a la del título de las películas, con las iniciales grandes como el
+  logotipo; Cámara de pruebas saca al azar el cartel de la cámara o la terminal de GLaDOS; Sin futuro, el protocolo
+  de brecha; Sol y luna, la ventana de «¡Victoria!» con la EXP y el oro subiendo. Inserte moneda cambia la marquesina
+  por dos escenas al azar (pantalla de récord y atardecer synthwave) y Plata y acero cambia el lacre por la franja de
+  «Contrato cerrado» con las dos espadas cruzadas y el rótulo en plata bruñida. Elegidos con
+  `docs/maquetas/game-clear-todos.html`, que enseña los ocho a la vez con las hojas reales.
+
+### Changed
+- **El sello de Ladrones de corazones lleva el rótulo en letras recortadas**, las mismas del título de pantalla (la
+  receta vive ahora en `recortes.ts` y la comparten los dos), sin la marca de verificación y con el canto de las
+  tarjetas del juego: cuadrilátero torcido, filo blanco y negro y sombra de bloque.
+- **El lacre de Solo hay guerra lleva un escudo imperial al azar** en vez de la corona de laurel (los mismos ficheros
+  que rotan en el feed, sin los del Caos ni el orko) y pasa a placa de esquinas cortadas con filete y remaches.
+
+### Fixed
+- **Una escena de efecto con varias partes ya no se borra al acabar la primera**: el `animationend` de un hijo subía
+  hasta la pieza y la retiraba entera. Y la red de seguridad dura lo que dura cada escena, no dos segundos fijos.
+
 ## [1.6.9] - 2026-10-10
 
 Una versión de **Firestore sin sobrantes**: deja de guardarse lo que nadie lee y lo que repetía otro dato, y la fecha

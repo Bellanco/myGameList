@@ -649,6 +649,22 @@
   box-shadow: 8px 8px 0 rgba(10,10,10,.9);
 }
 :root[data-palette="persona"] .fx-seal-label { font-size: 15px; }
+/* EL RÓTULO, EN LETRAS RECORTADAS (10-10-2026): las mismas del título de pantalla (`.rc-*`, más abajo), con la
+   receta compartida de `recortes.ts`. Sobre la tarjeta roja, el recorte rojo se fundía con el fondo y la letra se
+   quedaba sin papel: dentro del sello pasa a papel blanco con letra roja. */
+:root[data-palette="persona"] .fx-seal.is-recortes { padding: .85rem 1.3rem 1rem; }
+:root[data-palette="persona"] .fx-seal.is-recortes .fx-seal-label { font-size: 21px; font-weight: 400; letter-spacing: 0; }
+:root[data-palette="persona"] .fx-seal.is-recortes .rc-letters { flex-wrap: nowrap; }
+:root[data-palette="persona"] .fx-seal .rc-r { background: #fff; color: #ff1f3d; box-shadow: inset 0 0 0 2px #0a0a0a; }
+/* EL CANTO (10-10-2026): la tarjeta deja de ser un rectángulo con borde. El hook le pone debajo un SVG con la forma
+   de las tarjetas del juego —un cuadrilátero torcido— en tres capas: la sombra de bloque negra, un filo negro por
+   fuera y uno blanco por dentro, como los recuadros de la interfaz de Persona 5. Por eso la tarjeta pierde aquí su
+   fondo, su borde y su sombra: los pone el SVG. */
+:root[data-palette="persona"] .fx-seal.is-recortes { background: none; border: 0; box-shadow: none; padding: 1.15rem 1.7rem 1.3rem; }
+:root[data-palette="persona"] .fx-seal-canto { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; overflow: visible; }
+:root[data-palette="persona"] .fx-seal-canto .is-sombra { fill: #0a0a0a; transform: translate(3px, 9px); }
+:root[data-palette="persona"] .fx-seal-canto .is-filo { fill: none; stroke: #0a0a0a; stroke-width: 12px; stroke-linejoin: miter; }
+:root[data-palette="persona"] .fx-seal-canto .is-cara { fill: #ff1f3d; stroke: #fff; stroke-width: 5px; stroke-linejoin: miter; }
 
 /* ══ MOMENTOS · EL CORTE DE TIJERA: la fila eliminada se recorta como una pieza de collage ══════════════════
    El listado ya marca `.is-leaving` cuando un juego se va (ver `_motion.scss`), así que no hace falta ningún

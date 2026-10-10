@@ -1018,16 +1018,57 @@
   }
 }
 
-/* ── §13d · EL LACRE: la cara de este tema del sello que cae al cerrar un juego (la pieza —golpe, tamaño,
-   icono— es común y vive en `_effects.scss`). La misma gota de cera del contrato —sangre seca— pero con el
-   filo de PLATA, que es el metal del tema. No va bajo `data-effects` ni `reduced-motion` porque ya los mira el
-   hook antes de crear el sello: si no se cumplen, el elemento no existe. ── */
-:root[data-palette="witcher"] .fx-seal {
-  color: #f0e2c4;
-  background: radial-gradient(circle at 36% 30%, #a6241b, #7a1610 62%, #55100c);
-  box-shadow: inset 0 2px 0 rgba(255,255,255,.22), inset 0 -6px 14px rgba(0,0,0,.45), 0 14px 30px rgba(0,0,0,.45);
-  border: 2px solid #c6ced8;
+/* ── §13d · CONTRATO CERRADO: lo que pasa al cerrar un juego (10-10-2026). Era un lacre de cera —la cara de este
+   tema del sello común— y se cambió por la franja de The Witcher 3 al terminar una misión: banda oscura de lado a
+   lado, filigrana de plata que crece desde el centro y el rótulo en Cinzel que se cierra de espaciado. Elegido con
+   la maqueta de los Game Clear. No va bajo `data-effects` ni `reduced-motion` porque ya los mira el hook antes de
+   crearla: si no se cumplen, el elemento no existe. Es una franja de juego, oscura en los dos modos. ── */
+:root[data-palette="witcher"] .fx-wt-mision {
+  position: fixed; z-index: 9997; pointer-events: none;
+  left: 0; right: 0; top: 42%; transform: translateY(-50%);
+  padding: 1rem 0 .95rem; text-align: center;
+  background: linear-gradient(90deg, transparent, rgba(6, 8, 12, .86) 18%, rgba(6, 8, 12, .86) 82%, transparent);
+  animation: wt-mision 2.9s forwards;
 }
+:root[data-palette="witcher"] .fx-wt-fil {
+  display: block; width: 300px; max-width: 80vw; height: 12px; margin: 0 auto;
+  transform: scaleX(0); animation: wt-fil .7s .15s cubic-bezier(.2, .8, .3, 1) forwards;
+}
+:root[data-palette="witcher"] .fx-wt-fil path { fill: none; stroke: #c6ced8; stroke-width: 1; }
+:root[data-palette="witcher"] .fx-wt-fil .fx-wt-rombo { fill: #c6ced8; stroke: none; }
+/* Las dos espadas cruzadas de arriba: la hoja en plata clara, la guarda y el pomo en acero. */
+:root[data-palette="witcher"] .fx-wt-fil.is-espadas { height: 30px; }
+:root[data-palette="witcher"] .fx-wt-fil .fx-wt-hoja { stroke: #eef2f6; stroke-width: 1.6; stroke-linecap: round; filter: drop-shadow(0 0 3px rgba(220, 232, 245, .7)); }
+:root[data-palette="witcher"] .fx-wt-fil .fx-wt-guarda { stroke: #8e99a6; stroke-width: 2; stroke-linecap: round; }
+/* Los dos filos de la franja, arriba y abajo: una línea de plata que se apaga hacia los extremos. */
+:root[data-palette="witcher"] .fx-wt-mision::before,
+:root[data-palette="witcher"] .fx-wt-mision::after {
+  content: ""; position: absolute; left: 10%; right: 10%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(198, 206, 216, .55) 25%, rgba(198, 206, 216, .55) 75%, transparent);
+}
+:root[data-palette="witcher"] .fx-wt-mision::before { top: 0; }
+:root[data-palette="witcher"] .fx-wt-mision::after { bottom: 0; }
+:root[data-palette="witcher"] .fx-wt-mision b {
+  display: block; margin: .3rem 0 .1rem;
+  font: 700 clamp(18px, 5vw, 25px)/1.15 var(--font-display); letter-spacing: .2em; white-space: nowrap;
+  /* PLATA BRUÑIDA: un degradado de metal en la letra, al que le pasa un destello cuando ya se ha asentado. */
+  color: transparent;
+  background: linear-gradient(100deg, #b9c2cc 0 40%, #ffffff 50%, #b9c2cc 60% 100%) 100% 0 / 300% 100% no-repeat,
+    linear-gradient(180deg, #f4f1ea, #c9cfd6 55%, #9aa5b1);
+  -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .8)) drop-shadow(0 0 10px rgba(198, 206, 216, .3));
+  opacity: 0; animation: wt-letras 1s .35s ease-out forwards, wt-destello 1.1s 1.3s ease-in-out forwards;
+}
+:root[data-palette="witcher"] .fx-wt-mision em {
+  display: block; margin-bottom: .35rem;
+  font: italic 400 15px var(--font-body); color: #b9c2cc;
+  opacity: 0; animation: wt-asoma .5s .8s forwards;
+}
+@keyframes wt-fil { to { transform: scaleX(1); } }
+@keyframes wt-letras { 0% { opacity: 0; letter-spacing: .6em; } 100% { opacity: 1; letter-spacing: .2em; } }
+@keyframes wt-destello { to { background-position: 0 0, 0 0; } }
+@keyframes wt-asoma { to { opacity: 1; } }
+@keyframes wt-mision { 0% { opacity: 0; } 8%, 86% { opacity: 1; } 100% { opacity: 0; } }
 
 /* ── §N · LA CAJA SIN CARÁTULA = LA PLACA INSCRITA EN LA HOJA ──────────────────────────────────────────
    Los dos materiales del tema, cada uno en su sitio: el PAPEL solo en los cantos —un pliego rasgado que

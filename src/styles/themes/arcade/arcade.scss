@@ -1006,22 +1006,93 @@
 :root[data-palette="arcade"] .star-inp button.f { text-shadow: 2px 2px 0 var(--arc-ink); }
 
 /* ── §22 · LA FIRMA · GAME CLEAR ───────────────────────────────────────────────────────────────────────
-   Era el único mundo sin efecto propio: los otros seis tienen su lacre, su portal, su astro, su barrido o su
-   arranque de cogitador. El gesto que le toca a una recreativa no es un destello más —es CANTAR lo que
-   acabas de hacer—, así que al cerrar un juego cae la marquesina con la bandera a cuadros. La pieza es la
-   misma `.fx-seal` de `_effects.scss`; aquí va solo su cara, como en los otros tres temas que la usan, y el TS
-   que la dispara está en `useSignatureEffects`. ── */
-:root[data-palette="arcade"] .fx-seal {
-  width: auto;
-  height: auto;
-  padding: .85rem 1.5rem;
-  border-radius: 0;
-  color: #2a1a00;
-  background: linear-gradient(180deg, #ffd24a, #f0a81e);
-  border: 3px solid var(--arc-ink);
-  box-shadow: 6px 6px 0 var(--arc-ink);
+   Era el único mundo sin efecto propio, y el gesto que le toca a una recreativa no es un destello más —es CANTAR
+   lo que acabas de hacer—. Empezó como una marquesina con la bandera a cuadros (la cara de este tema del sello
+   común) y el 10-10-2026 pasó a DOS escenas que el hook sortea, elegidas con la maqueta de los Game Clear: la
+   PANTALLA DE RÉCORD de un CRT y el ATARDECER SYNTHWAVE. (Hubo una tercera, letras en ola, que se descartó.) El hook ya mira
+   efectos y `reduced-motion`: si no tocan, no existen. Son pantallas de recreativa, de noche en los dos modos. ── */
+:root[data-palette="arcade"] {
+  /* La paleta que rota en los rótulos, como un letrero de los 80. */
+  --arc-ciclo-1: #ffd24a; --arc-ciclo-2: #ff3d9e; --arc-ciclo-3: #22e5ff; --arc-ciclo-4: #7dff6a;
 }
-:root[data-palette="arcade"] .fx-seal-label { font-size: 15px; letter-spacing: .12em; }
+/* Vueltas CONTADAS y no `infinite` en todo lo que mueve color o fondo: la escena se borra sola a los 2,6 s, y una
+   animación en bucle de algo que el compositor no mueve repinta cada fotograma (`compositorAnimations.test.ts`). */
+@keyframes arc-ciclo {
+  0% { color: var(--arc-ciclo-1); } 25% { color: var(--arc-ciclo-2); } 50% { color: var(--arc-ciclo-3); } 75% { color: var(--arc-ciclo-4); }
+}
+
+/* 1 · PANTALLA DE RÉCORD: el monitor se enciende en una raya, enseña 1UP / HI, el rótulo, el bonus que sube solo
+   (`@property` + `counter()`) e INSERT COIN parpadeando, y se apaga en un punto. La letra es VT323. */
+@property --arc-bonus { syntax: '<integer>'; initial-value: 0; inherits: false; }
+:root[data-palette="arcade"] .fx-ar-crt {
+  position: fixed; z-index: 9997; pointer-events: none;
+  left: 50%; top: 45%; transform: translate(-50%, -50%);
+  width: 330px; max-width: 90vw; padding: .8rem 1rem .9rem; overflow: hidden;
+  border-radius: 18px / 14px;
+  background: radial-gradient(ellipse at 50% 45%, #1b1030, #07040d 75%);
+  box-shadow: 0 0 0 4px #2b1747, 0 0 0 7px #0a0614, 0 0 40px -6px rgba(255, 61, 158, .55), inset 0 0 40px rgba(0, 0, 0, .8);
+  font-family: 'VT323', var(--font-mono); color: #fff; text-align: center;
+  animation: ar-crt 2.6s forwards;
+}
+:root[data-palette="arcade"] .fx-ar-crt::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .35) 0 1px, transparent 1px 3px);
+}
+:root[data-palette="arcade"] .fx-ar-crt-top { display: flex; justify-content: space-between; font-size: 18px; color: #ff3d9e; }
+:root[data-palette="arcade"] .fx-ar-crt-top span:last-child { color: #22e5ff; }
+:root[data-palette="arcade"] .fx-ar-crt b {
+  display: block; margin: .35rem 0 .15rem;
+  font-weight: 400; font-size: 54px; line-height: 1; letter-spacing: .06em; white-space: nowrap;
+  text-shadow: 3px 3px 0 #3a0a52; animation: arc-ciclo .36s steps(1) 8;
+}
+:root[data-palette="arcade"] .fx-ar-crt-bonus { display: block; font-size: 22px; color: #ffd24a; counter-reset: arc-b var(--arc-bonus); animation: ar-bonus .9s .55s steps(20) forwards; }
+:root[data-palette="arcade"] .fx-ar-crt-bonus::after { content: counter(arc-b) "0"; }
+:root[data-palette="arcade"] .fx-ar-crt-coin { display: block; margin-top: .25rem; font-size: 17px; color: #b9fbff; animation: ar-blink .5s steps(1) infinite; }
+@keyframes ar-bonus { to { --arc-bonus: 1000; } }
+@keyframes ar-blink { 50% { opacity: 0; } }
+@keyframes ar-crt {
+  0%, 7% { transform: translate(-50%, -50%) scale(1, .008); filter: brightness(4); }
+  14%, 86% { transform: translate(-50%, -50%) scale(1, 1); filter: brightness(1); }
+  92% { transform: translate(-50%, -50%) scale(1, .008); filter: brightness(3); }
+  97% { transform: translate(-50%, -50%) scale(.02, .008); filter: brightness(4); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(0, 0); opacity: 0; }
+}
+
+/* 2 · ATARDECER SYNTHWAVE: sale el sol a rayas sobre la rejilla de neón que corre hacia ti, y el rótulo cromado de
+   la carcasa —el mismo degradado del título de pantalla del tema— se planta delante con un brillo. Ocupa la
+   ventana: es un paisaje, no una pieza. */
+:root[data-palette="arcade"] .fx-ar-sunset { position: fixed; inset: 0; z-index: 9997; pointer-events: none; overflow: hidden; animation: ar-sunset 2.6s forwards; }
+:root[data-palette="arcade"] .fx-ar-cielo { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(21, 10, 36, 0), rgba(21, 10, 36, .92) 30%, #2a0b4a 62%, #120626 63%); }
+:root[data-palette="arcade"] .fx-ar-sol {
+  position: absolute; left: 50%; top: 62%; width: 170px; height: 170px; margin-left: -85px; border-radius: 50%;
+  background: linear-gradient(180deg, #ffe46b, #ff9e3d 40%, #ff3d9e 75%);
+  -webkit-mask: linear-gradient(#000 0 52%, transparent 52% 56%, #000 56% 63%, transparent 63% 68%, #000 68% 74%, transparent 74% 80%, #000 80% 85%, transparent 85%);
+  mask: linear-gradient(#000 0 52%, transparent 52% 56%, #000 56% 63%, transparent 63% 68%, #000 68% 74%, transparent 74% 80%, #000 80% 85%, transparent 85%);
+  filter: drop-shadow(0 0 22px rgba(255, 61, 158, .7));
+  animation: ar-sol 2.6s cubic-bezier(.2, .8, .3, 1) forwards;
+}
+:root[data-palette="arcade"] .fx-ar-suelo {
+  position: absolute; left: -40%; right: -40%; bottom: 0; height: 37%;
+  transform-origin: 50% 0; transform: perspective(160px) rotateX(58deg);
+  background:
+    linear-gradient(90deg, rgba(255, 61, 158, .85) 1.5px, transparent 1.5px) 50% 0 / 34px 100%,
+    linear-gradient(0deg, rgba(34, 229, 255, .85) 1.5px, transparent 1.5px) 0 0 / 100% 22px,
+    #120626;
+  animation: ar-suelo .5s linear 6;
+}
+:root[data-palette="arcade"] .fx-ar-sunset b {
+  position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%);
+  font: 800 clamp(28px, 9vw, 44px)/1 var(--font-display); letter-spacing: .06em; white-space: nowrap;
+  background: linear-gradient(180deg, #e9f6ff 0%, #8fb8ff 46%, #2a1060 50%, #ff6ad5 54%, #ffd0f0 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 2px 0 #0a0614) drop-shadow(0 0 10px rgba(255, 106, 213, .6));
+  opacity: 0; animation: ar-cromo 2.6s forwards;
+}
+@keyframes ar-sol { 0% { transform: translateY(60px); } 40%, 100% { transform: translateY(-112px); } }
+@keyframes ar-suelo { to { background-position: 50% 0, 0 22px, 0 0; } }
+@keyframes ar-cromo { 0%, 30% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); } 40%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes ar-sunset { 0% { opacity: 0; } 8%, 88% { opacity: 1; } 100% { opacity: 0; } }
+
 
 /* El botón «Amigos» de la ficha (`.btn-friend`): el rosa chicle de pegatina. */
 :root[data-palette="arcade"] { --btn-friend: var(--arc-pink); }
