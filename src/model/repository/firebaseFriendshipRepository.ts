@@ -575,16 +575,44 @@ const HEAL_RETRY_CONCURRENCY = 12;
  *
  * @returns `true` si TODO se escribió. Es lo que decide si se sella la huella.
  */
+interface HealWrite {
+  docId: string;
+  fields: Record<string, unknown>;
+  /** Borrar también mi depósito de esa amistad, en el MISMO lote (ver `healOwnFriendshipIdentity`). */
+  dropKeys?: boolean;
+}
+
+/** Trozos de `pending` que caben en un lote: cada borrado de depósito es una operación más. */
+function healSlices(pending: ReadonlyArray<HealWrite>): HealWrite[][] {
+  const slices: HealWrite[][] = [];
+  let current: HealWrite[] = [];
+  let ops = 0;
+  for (const item of pending) {
+    const cost = item.dropKeys ? 2 : 1;
+    if (ops + cost > HEAL_BATCH_MAX_OPS && current.length > 0) {
+      slices.push(current);
+      current = [];
+      ops = 0;
+    }
+    current.push(item);
+    ops += cost;
+  }
+  if (current.length > 0) slices.push(current);
+  return slices;
+}
+
 async function commitHealBatches(
   firestore: Parameters<typeof writeBatch>[0],
-  pending: ReadonlyArray<{ docId: string; fields: Record<string, unknown> }>,
+  pending: ReadonlyArray<HealWrite>,
 ): Promise<boolean> {
   let allWritten = true;
 
-  for (let index = 0; index < pending.length; index += HEAL_BATCH_MAX_OPS) {
-    const slice = pending.slice(index, index + HEAL_BATCH_MAX_OPS);
+  for (const slice of healSlices(pending)) {
     const batch = writeBatch(firestore);
-    slice.forEach((item) => batch.update(doc(firestore, 'friendships', item.docId), item.fields));
+    slice.forEach((item) => {
+      batch.update(doc(firestore, 'friendships', item.docId), item.fields);
+      if (item.dropKeys) batch.delete(doc(firestore, FRIENDSHIP_KEYS_COLLECTION, item.docId));
+    });
 
     try {
       await batch.commit();
@@ -594,7 +622,10 @@ async function commitHealBatches(
       // responder con una ráfaga de 450 escrituras simultáneas es la peor forma de reaccionar.
       const results = await mapWithConcurrency(slice, HEAL_RETRY_CONCURRENCY, (item) =>
         updateDoc(doc(firestore, 'friendships', item.docId), item.fields).then(
-          () => true,
+          async () => {
+            if (item.dropKeys) await deleteDoc(doc(firestore, FRIENDSHIP_KEYS_COLLECTION, item.docId)).catch(() => undefined);
+            return true;
+          },
           () => false,
         ),
       );
@@ -688,7 +719,7 @@ export async function healOwnFriendshipIdentity(
   }
 
   const now = Date.now();
-  const pending: Array<{ docId: string; fields: Record<string, unknown> }> = [];
+  const pending: HealWrite[] = [];
   /** Mis peticiones pendientes: sus depósitos se (re)escriben con mis ids actuales (ver `FRIENDSHIP_KEYS_COLLECTION`). */
   const pendingOwnDocIds: string[] = [];
 
@@ -748,7 +779,13 @@ export async function healOwnFriendshipIdentity(
           recipientGamesGistId: gamesGistId,
           updatedAt: now,
         };
-    pending.push({ docId: entry.id, fields });
+    /**
+     * NINGÚN DEPÓSITO SOBREVIVE A LA ACEPTACIÓN (docs/plan-firestore-sin-sobrantes.md, Fase 4). Si la amistad está
+     * aceptada y aún le faltan mis ids, quien aceptó no recogió mi depósito (un cliente anterior a la 1.6.8): ahora
+     * que los escribo yo, ya no lo va a leer nadie. Se borra en el mismo lote; si no existía, el borrado no falla.
+     */
+    const dropKeys = amRequester && data.status === 'accepted' && !str(data.requesterSocialGistId) && Boolean(socialGistId);
+    pending.push({ docId: entry.id, fields, ...(dropKeys ? { dropKeys } : {}) });
   });
 
   const committed = await commitHealBatches(services.firestore, pending);
