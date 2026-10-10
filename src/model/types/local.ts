@@ -97,6 +97,14 @@ export interface LocalMeta {
    * `privateConfig`—, y ese no es un estado definitivo: en cuanto el respaldo existe, sí se puede.
    */
   publicGistIdsPurgedAt?: number;
+  /**
+   * Amistades aceptadas por mí, sin los ids de quien las pidió, cuyo depósito ya se intentó recoger (ids de documento
+   * ordenados). Sin depósito (peticiones de la 1.6.7) no hay nada que recoger hasta que quien pidió vuelva a entrar,
+   * y sin sello se gastaría una lectura por amistad en cada apertura del hub.
+   */
+  friendshipKeysClaimedFor?: string;
+  /** Cuándo se selló, para reintentarlo a la semana como el resto de sellos de arranque. */
+  friendshipKeysClaimedAt?: number;
   /** Gist social del que ya consta que es SECRETO: evita un listado de gists contra GitHub por apertura. */
   socialChannelPrivateFor?: string;
   /**

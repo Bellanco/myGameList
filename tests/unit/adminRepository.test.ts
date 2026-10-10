@@ -357,8 +357,10 @@ describe('firebaseAdminRepository — moderación', () => {
     const result = await deleteUserProfile('a', 'a');
 
     expect(result.ok).toBe(true);
-    // 2 amistades + el propio perfil.
-    expect(deleteDocMock).toHaveBeenCalledTimes(3);
+    // 2 amistades + sus 2 depósitos de ids + el propio perfil.
+    expect(deleteDocMock).toHaveBeenCalledTimes(5);
+    const borrados = deleteDocMock.mock.calls.map((call) => call[0] as { collection?: string; id: string });
+    expect(borrados.filter((ref) => ref.collection === 'friendshipKeys').map((ref) => ref.id)).toEqual(['a__b', 'a__c']);
     const lastCall = deleteDocMock.mock.calls[deleteDocMock.mock.calls.length - 1];
     expect(lastCall[0]).toEqual({ collection: 'profiles', id: 'a' });
   });
@@ -371,8 +373,8 @@ describe('firebaseAdminRepository — moderación', () => {
 
     expect(result.ok).toBe(false);
     expect(result.failures[0]).toMatch(/amistades/);
-    // El perfil se intenta igualmente: abortar dejaría al usuario a medio borrar.
-    expect(deleteDocMock).toHaveBeenCalledTimes(2);
+    // El perfil se intenta igualmente: abortar dejaría al usuario a medio borrar (amistad, su depósito y perfil).
+    expect(deleteDocMock).toHaveBeenCalledTimes(3);
   });
 });
 
@@ -761,8 +763,10 @@ describe('purgeFossilFriendshipRequests', () => {
 
     expect(result.ok).toBe(true);
     expect(result.touched).toBe(1);
-    expect(deleteDocMock).toHaveBeenCalledTimes(1);
+    // La petición y su depósito de ids.
+    expect(deleteDocMock).toHaveBeenCalledTimes(2);
     expect((deleteDocMock.mock.calls[0][0] as { id: string }).id).toBe('vieja-suya');
+    expect(deleteDocMock.mock.calls[1][0]).toMatchObject({ collection: 'friendshipKeys', id: 'vieja-suya' });
   });
 
   it('justo en el umbral no se borra: hace falta PASAR de los 180 días', async () => {

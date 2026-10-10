@@ -167,6 +167,8 @@ export async function deleteUserProfile(profileDocId: string, uid: string): Prom
       query(collection(services.firestore, 'friendships'), where('users', 'array-contains', targetUid)),
     );
     const results = await Promise.allSettled(snapshot.docs.map((entry) => deleteDoc(entry.ref)));
+    // Y sus depósitos de ids (ver `friendshipKeys` en las reglas), best-effort.
+    await Promise.allSettled(snapshot.docs.map((entry) => deleteDoc(doc(services.firestore, 'friendshipKeys', entry.id))));
     const failed = results.filter((result) => result.status === 'rejected').length;
     if (failed > 0) {
       failures.push(`amistades: ${failed} de ${snapshot.size} no se pudieron borrar`);

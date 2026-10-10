@@ -53,9 +53,11 @@ export {
 // Amistad (aceptación mutua): un doc por par, id canónico, denormalización de identidad. Ver firebaseFriendshipRepository.
 export {
   acceptFriendRequest,
+  claimRequesterKeys,
   deleteFriendship,
   friendshipDocId,
   getMyFriendships,
+  haveFriendshipEdgesChanged,
   healOwnFriendshipIdentity,
   invalidateMyFriendshipsCache,
   MY_FRIENDSHIPS_REQUESTS_MAX_AGE_MS,

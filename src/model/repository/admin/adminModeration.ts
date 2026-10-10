@@ -306,6 +306,9 @@ export async function purgeFossilFriendshipRequests(
       touched += 1;
     }
   });
+  // Y el depósito de ids de cada una (ver `friendshipKeys` en las reglas). Best-effort: sin amistad aceptada nadie
+  // más que su dueño puede leerlo.
+  await Promise.allSettled(fossils.map((entry) => deleteDoc(doc(services.firestore, 'friendshipKeys', entry.id))));
 
   invalidateMyFriendshipsCache();
 

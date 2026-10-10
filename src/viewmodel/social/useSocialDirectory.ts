@@ -54,6 +54,19 @@ const isGithubCredentialError = (error: unknown): boolean => {
   return /\b(401|403)\b/.test(error.message);
 };
 
+/**
+ * Huella del grafo con el que se hidrata el directorio: cada amigo con los ids de gist de los que se leerá, y el
+ * profileId propio (decide cuál es la entrada propia). La copia de IndexedDB se guarda con ella y solo se sirve
+ * si coincide, así que un amigo nuevo, uno que se va o unos ids que llegan van a red sin esperar al TTL
+ * (docs/plan-historial-amigo-nuevo.md, Fase 1). Ordenada: el orden en que llegan las amistades no es un cambio.
+ */
+export function socialDirectoryFriendsKey(friends: readonly FriendshipView[], ownProfileId: string | null): string {
+  const edges = friends
+    .map((friend) => [friend.otherUid, friend.otherSocialGistId || '', friend.otherGamesGistId || ''].join(':'))
+    .sort();
+  return [ownProfileId || '', ...edges].join('|');
+}
+
 /** Identidad del autor con la que se sella todo lo que sale de un mismo gist social. */
 interface FeedAuthor {
   profileId: string;
@@ -191,6 +204,8 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
     // enfriamiento. Lo único que fuerza es la propia app tras publicar (`onPublished`), que conserva la consulta del
     // directorio (`keepDirectoryQuery`), así que solo relee los gists sociales y al ritmo al que uno publica.
     // Todo lo demás es carga automática y pasa por la caché.
+    const friendsKey = socialDirectoryFriendsKey(friends, ownProfileId);
+
     if (!forceRefresh) {
       // Caché persistente: si el directorio sigue fresco (el TTL lo pone el rango), se sirve de IndexedDB sin releer
       // ningún gist social. Evita el coste N+1 al navegar feed→detalle→feed o al re-renderizar.
@@ -199,9 +214,13 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
       // (modo privado, cuota, base corrupta) hacía que la función entera rechazara antes de asentar el directorio
       // —y con el esqueleto atado a ese asentamiento, la pantalla se quedaba cargando para siempre—. Sin caché
       // utilizable lo correcto es seguir por la vía de red, que es justo lo que hace tratarla como un fallo.
+      //
+      // Y solo si se hidrató con las MISMAS amistades (`friendsKey`): con un amigo nuevo, la copia de antes no lo
+      // tiene, y servirla dejaba su historial fuera del feed hasta que caducara.
       const cachedDirectory = await getCachedSocialDirectory<SocialDirectoryEntry>(
         socialCfgGistId,
         PROFILE_TIER_FEED_TTL_MS[ownTier],
+        { friendsKey },
       ).catch(() => null);
       if (cachedDirectory) {
         if (!isCurrent()) return;
@@ -552,7 +571,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
       }
 
       if (!transientFailure) {
-        void putCachedSocialDirectory(socialCfgGistId, withProfiles);
+        void putCachedSocialDirectory(socialCfgGistId, withProfiles, friendsKey);
       }
     } catch (error) {
       if (!isCurrent()) return;

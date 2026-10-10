@@ -98,6 +98,12 @@ export interface FriendshipView {
    * `sendFriendRequest`) y se escriben al aceptarse. Mientras falten, mi amistad no puede leer mis listas.
    */
   ownGistIdsMissing?: boolean;
+  /**
+   * La gemela del otro lado: amistad que ACEPTÉ yo y en la que aún faltan los ids de quien la pidió. Quien acepta
+   * los recoge del depósito (`friendshipKeys`, ver `claimRequesterKeys`); si no hay depósito (petición de la 1.6.7),
+   * llegan cuando quien pidió vuelva a entrar.
+   */
+  otherGistIdsMissing?: boolean;
 }
 
 /** Todo el estado de amistad del usuario actual, derivado de UNA sola query `array-contains`. */

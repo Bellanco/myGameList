@@ -563,10 +563,75 @@ service cloud.firestore {
       // Lectura: admin, o participante. Sin `!isPlaceholder(docId)` (en `list` el docId no está ligado y romper el
       // acceso a `resource.data` da "Null value error" que deniega TODA la consulta del feed/bandeja). El placeholder
       // no tiene `users`, así que la consulta `array-contains` nunca lo devuelve.
+      // Copiar a la amistad los ids que quien pidió dejó en depósito (`friendshipKeys`). Lo hace QUIEN ACEPTA, con la
+      // amistad ya aceptada, y solo con los valores IDÉNTICOS a los del depósito: no puede inventarse los ids de
+      // la otra parte, solo trasladar los que ella misma dejó al pedir.
+      function friendshipCopyRequesterKeys() {
+        return request.auth.uid == resource.data.recipient
+          && resource.data.status == "accepted"
+          && request.resource.data.status == "accepted"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "requesterSocialGistId", "requesterGamesGistId", "updatedAt"])
+          && exists(/databases/$(database)/documents/friendshipKeys/$(docId))
+          && get(/databases/$(database)/documents/friendshipKeys/$(docId)).data.requester == resource.data.requester
+          && request.resource.data.get("requesterSocialGistId", "")
+            == get(/databases/$(database)/documents/friendshipKeys/$(docId)).data.socialGistId
+          && request.resource.data.get("requesterGamesGistId", "")
+            == get(/databases/$(database)/documents/friendshipKeys/$(docId)).data.gamesGistId;
+      }
+
       allow read:   if isAdmin() || (isSignedIn() && request.auth.uid in resource.data.users);
       allow create: if !isPlaceholder(docId) && (isAdmin() || newFriendshipIsValid());
-      allow update: if !isPlaceholder(docId) && (isAdmin() || (isFriendshipParticipant() && friendshipFieldsAreSane() && (friendshipAcceptTransition() || friendshipHealOwnFields())));
+      allow update: if !isPlaceholder(docId) && (isAdmin() || (isFriendshipParticipant() && friendshipFieldsAreSane() && (friendshipAcceptTransition() || friendshipHealOwnFields() || friendshipCopyRequesterKeys())));
       allow delete: if !isPlaceholder(docId) && (isAdmin() || isFriendshipParticipant()); // cancelar / rechazar / eliminar
+    }
+
+    // ==========================================
+    // COLECCION: FRIENDSHIP KEYS (depósito de los ids de gist de quien pide una amistad)
+    // Mismo id que la amistad. La petición sale SIN los ids de quien pide (el destinatario la lee aunque rechace, y
+    // son la llave de su biblioteca), pero al pedirla ya consintió que, si se la aceptan, el otro lea sus listas.
+    // Aquí quedan guardados hasta entonces: el destinatario SOLO puede leerlos con la amistad ya aceptada, y quien
+    // acepta los copia a la amistad (`friendshipCopyRequesterKeys`) y borra el depósito.
+    // docs/plan-historial-amigo-nuevo.md, Fase 0.
+    // ==========================================
+
+    match /friendshipKeys/{docId} {
+      function keysFriendshipPath() {
+        return /databases/$(database)/documents/friendships/$(docId);
+      }
+      function keysPairIncludes(uid) {
+        return uid in docId.split("__");
+      }
+      function keysWriteIsValid() {
+        return request.resource.data.keys().hasOnly(["requester", "socialGistId", "gamesGistId", "updatedAt"])
+          && request.resource.data.requester == request.auth.uid
+          && request.resource.data.socialGistId is string && request.resource.data.socialGistId.size() <= 128
+          && request.resource.data.gamesGistId is string && request.resource.data.gamesGistId.size() <= 128
+          && request.resource.data.updatedAt is number;
+      }
+
+      // El orden de la disyunción importa: la rama de quien pide es la que valida la consulta de la baja de cuenta
+      // (`where requester == uid`) sin tocar `get()`.
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.requester == request.auth.uid)
+        || (isSignedIn()
+          && exists(keysFriendshipPath())
+          && get(keysFriendshipPath()).data.status == "accepted"
+          && get(keysFriendshipPath()).data.recipient == request.auth.uid
+          && get(keysFriendshipPath()).data.requester == resource.data.requester);
+
+      // Solo quien pide, sobre SU petición y mientras siga pendiente. `getAfter` deja crearlo en el mismo lote que
+      // la petición; fuera de un lote ve el estado actual, que es lo que necesita la reescritura (cambio de canal).
+      allow create, update: if !isPlaceholder(docId)
+        && isSignedIn()
+        && keysPairIncludes(request.auth.uid)
+        && keysWriteIsValid()
+        && getAfter(keysFriendshipPath()) != null
+        && getAfter(keysFriendshipPath()).data.requester == request.auth.uid
+        && getAfter(keysFriendshipPath()).data.status == "pending";
+
+      // Cualquiera de las dos partes, exista o no la amistad: cancelar, rechazar y eliminar limpian el depósito.
+      allow delete: if !isPlaceholder(docId) && (isAdmin() || (isSignedIn() && keysPairIncludes(request.auth.uid)));
     }
 
     // ==========================================

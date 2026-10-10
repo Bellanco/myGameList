@@ -630,6 +630,13 @@ interface CachedSocialDirectory<T> {
   profileId: string; // keyPath del store
   cachedAt: number;
   version?: number;
+  /**
+   * Huella de las amistades con las que se hidrató (ver `socialDirectoryFriendsKey`). La copia solo vale para ESE
+   * grafo: con un amigo nuevo, uno que se va o unos ids de gist que llegan, el directorio guardado no los refleja,
+   * y servirlo durante su TTL dejaba el historial de un amigo nuevo sin aparecer hasta media hora
+   * (docs/plan-historial-amigo-nuevo.md, Fase 1).
+   */
+  friendsKey?: string;
   entries: T[];
 }
 
@@ -640,7 +647,15 @@ interface CachedSocialDirectory<T> {
 export async function getCachedSocialDirectory<T>(
   ownGistId: string,
   ttlMs: number = SOCIAL_DIRECTORY_TTL_MS,
-  options?: { allowExpired?: boolean },
+  options?: {
+    allowExpired?: boolean;
+    /**
+     * Huella de las amistades actuales. Si se pasa y no coincide con la de la copia (o la copia no lleva, como todas
+     * las guardadas antes de existir), la copia no se sirve. Los rescates (`allowExpired`, sin red) la ignoran:
+     * ahí vale más el directorio de antes que ninguno, igual que con el TTL.
+     */
+    friendsKey?: string;
+  },
 ): Promise<T[] | null> {
   if (!ownGistId) return null;
   try {
@@ -654,19 +669,23 @@ export async function getCachedSocialDirectory<T>(
     // `allowExpired` es la otra mitad de lo mismo: `navigator.onLine` puede decir que hay red y no haberla (wifi
     // sin salida, portal cautivo), y en ese caso quien se come el fallo es el llamador, que pide la caché igual.
     if (!options?.allowExpired && !isOffline() && Date.now() - rec.cachedAt >= Math.max(0, ttlMs)) return null;
+    if (options?.friendsKey !== undefined && !options.allowExpired && !isOffline() && rec.friendsKey !== options.friendsKey) {
+      return null;
+    }
     return rec.entries;
   } catch {
     return null;
   }
 }
 
-export async function putCachedSocialDirectory<T>(ownGistId: string, entries: T[]): Promise<void> {
+export async function putCachedSocialDirectory<T>(ownGistId: string, entries: T[], friendsKey?: string): Promise<void> {
   if (!ownGistId) return;
   try {
     await idbPut<CachedSocialDirectory<T>>(PROFILE_CACHE_STORE, {
       profileId: SOCIAL_DIRECTORY_KEY_PREFIX + ownGistId,
       cachedAt: Date.now(),
       version: SOCIAL_DIRECTORY_CACHE_VERSION,
+      ...(friendsKey !== undefined ? { friendsKey } : {}),
       entries,
     });
   } catch {

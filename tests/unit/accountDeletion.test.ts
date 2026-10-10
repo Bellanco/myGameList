@@ -14,6 +14,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const deleteDocMock = vi.fn(async () => {});
 const getMyFriendshipsMock = vi.fn(async () => ({ friends: [], incoming: [], outgoing: [], byOtherUid: {} }));
 const deleteFriendshipMock = vi.fn(async () => {});
+const deleteOwnFriendshipKeysMock = vi.fn(async () => 0);
 const signOutMock = vi.fn(async () => {});
 const closeSharedDatabaseMock = vi.fn(async () => {});
 const clearSyncConfigMock = vi.fn();
@@ -31,6 +32,7 @@ vi.mock('../../src/model/repository/firebaseClient', () => ({
 vi.mock('../../src/model/repository/firebaseFriendshipRepository', () => ({
   getMyFriendships: (...args: unknown[]) => getMyFriendshipsMock(...(args as [])),
   deleteFriendship: (...args: unknown[]) => deleteFriendshipMock(...(args as [])),
+  deleteOwnFriendshipKeys: (...args: unknown[]) => deleteOwnFriendshipKeysMock(...(args as [])),
   invalidateMyFriendshipsCache: vi.fn(),
 }));
 
@@ -163,6 +165,8 @@ describe('deleteOwnAccount', () => {
     // identidad ni rango, y las reseñas se quedarían publicadas hasta caducar solas.
     expect(removeAllMySharesMock).toHaveBeenCalled();
     expect(deleteFriendshipMock).toHaveBeenCalledTimes(3);
+    // Y los depósitos de mis ids que hubieran quedado huérfanos (los de las amistades se van con ellas).
+    expect(deleteOwnFriendshipKeysMock).toHaveBeenCalledWith('uid-1');
     expect(deleteDocMock).toHaveBeenCalledTimes(4);
     expect(signOutMock).toHaveBeenCalled();
     expect(clearSyncConfigMock).toHaveBeenCalled();
@@ -181,6 +185,17 @@ describe('deleteOwnAccount', () => {
     // La decisión sobre la analítica es una preferencia de privacidad del NAVEGADOR: no se resetea, porque volver
     // a preguntar a quien acaba de rechazarla sería lo contrario de respetarla.
     expect(localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBe('denied');
+  });
+
+  it('un depósito de ids que no se deja borrar se informa, sin abortar el resto', async () => {
+    deleteOwnFriendshipKeysMock.mockResolvedValueOnce(2);
+
+    const result = await deleteOwnAccount('uid-1');
+
+    expect(result.remoteComplete).toBe(false);
+    expect(result.failures).toEqual([expect.stringContaining('depósitos de amistad: 2')]);
+    expect(deleteDocMock).toHaveBeenCalledTimes(4);
+    expect(signOutMock).toHaveBeenCalled();
   });
 
   it('un documento que falla no aborta el resto: se informa y aun así se cierra sesión y se limpia', async () => {

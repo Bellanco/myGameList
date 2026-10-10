@@ -283,6 +283,7 @@ export function useSocialViewModel(options?: {
     friendUidSet,
     pendingIncomingCount,
     relationshipWith,
+    refreshAfterFriendshipChange,
     handleAddOrAcceptFriend,
     handleCancelFriendRequest,
     handleRejectFriendRequest,
@@ -449,6 +450,14 @@ export function useSocialViewModel(options?: {
     () => friendships.friends.filter((view) => view.ownGistIdsMissing).map((view) => view.docId),
     [friendships.friends],
   );
+  // Y las que acepté yo sin los ids de quien me pidió: se recogen de su depósito (tarea `friendshipKeysAfterAccept`).
+  const acceptedWithoutTheirIds = useMemo(
+    () => friendships.friends.filter((view) => view.otherGistIdsMissing).map((view) => view.docId),
+    [friendships.friends],
+  );
+  const onFriendshipsChanged = useCallback(() => {
+    void refreshAfterFriendshipChange();
+  }, [refreshAfterFriendshipChange]);
 
   useSocialStartupTasks({
     socialSpaceOpen,
@@ -459,6 +468,8 @@ export function useSocialViewModel(options?: {
     ownPublishablePhoto,
     ownPhotoVerdictPending,
     acceptedWithoutMyIds,
+    acceptedWithoutTheirIds,
+    onFriendshipsChanged,
   });
 
   // FASE 2 — MIGRACIÓN A CANAL SECRETO, una vez por sesión: `social/useSecretChannelMigration`.

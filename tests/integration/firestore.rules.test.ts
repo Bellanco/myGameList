@@ -1083,6 +1083,114 @@ describe('firestore.rules', () => {
   });
 
   /**
+   * DEPÓSITO DE LOS IDS DE QUIEN PIDE (docs/plan-historial-amigo-nuevo.md, Fase 0). La petición sale sin ellos
+   * porque el destinatario la lee aunque rechace; aquí esperan hasta que acepte. Lo que hay que fijar es justo
+   * eso: que el destinatario NO pueda leerlos antes, y que al copiarlos a la amistad no pueda poner otros.
+   */
+  describe('friendshipKeys (depósito de ids de quien pide)', () => {
+    const DOC_ID = 'uid-a__uid-b';
+    const peticion = () => ({
+      users: ['uid-a', 'uid-b'],
+      requester: 'uid-a',
+      recipient: 'uid-b',
+      status: 'pending',
+      createdAt: 1,
+      updatedAt: 1,
+      requesterName: 'A',
+      requesterPhoto: '',
+    });
+    const deposito = () => ({ requester: 'uid-a', socialGistId: 'gsA', gamesGistId: 'ggA', updatedAt: 1 });
+    const aceptar = () => ({
+      status: 'accepted', updatedAt: 2, recipientName: 'B', recipientPhoto: '', recipientSocialGistId: 'gsB', recipientGamesGistId: 'ggB',
+    });
+
+    it('quien pide crea la petición y el depósito en el mismo lote', async () => {
+      const dbA = ownerDb('uid-a');
+      const batch = writeBatch(dbA);
+      batch.set(doc(dbA, 'friendships', DOC_ID), peticion());
+      batch.set(doc(dbA, 'friendshipKeys', DOC_ID), deposito());
+      await assertSucceeds(batch.commit());
+    });
+
+    it('nadie más puede crear el depósito: ni el destinatario, ni un tercero, ni a nombre de otro', async () => {
+      await seed('friendships', DOC_ID, peticion());
+      await assertFails(setDoc(doc(ownerDb('uid-b'), 'friendshipKeys', DOC_ID), { ...deposito(), requester: 'uid-b' }));
+      await assertFails(setDoc(doc(ownerDb('uid-b'), 'friendshipKeys', DOC_ID), deposito()));
+      await assertFails(setDoc(doc(ownerDb('uid-c'), 'friendshipKeys', DOC_ID), { ...deposito(), requester: 'uid-c' }));
+      // Sin petición detrás, tampoco quien la pediría.
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'friendshipKeys', 'uid-a__uid-c'), deposito()));
+    });
+
+    it('solo mientras está pendiente, y con su forma', async () => {
+      await seed('friendships', DOC_ID, peticion());
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'friendshipKeys', DOC_ID), deposito()));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'friendshipKeys', DOC_ID), { ...deposito(), extra: 'x' }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'friendshipKeys', DOC_ID), { ...deposito(), socialGistId: 'x'.repeat(129) }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'friendshipKeys', DOC_ID), { ...deposito(), updatedAt: 'ayer' }));
+      await seed('friendships', DOC_ID, { ...peticion(), status: 'accepted' });
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'friendshipKeys', DOC_ID), deposito()));
+    });
+
+    it('el destinatario NO lo lee con la petición pendiente; aceptada, sí', async () => {
+      await seed('friendships', DOC_ID, peticion());
+      await seed('friendshipKeys', DOC_ID, deposito());
+      await assertFails(getDoc(doc(ownerDb('uid-b'), 'friendshipKeys', DOC_ID)));
+      await assertSucceeds(getDoc(doc(ownerDb('uid-a'), 'friendshipKeys', DOC_ID)));
+      await assertFails(getDoc(doc(ownerDb('uid-c'), 'friendshipKeys', DOC_ID)));
+
+      await assertSucceeds(updateDoc(doc(ownerDb('uid-b'), 'friendships', DOC_ID), aceptar()));
+      await assertSucceeds(getDoc(doc(ownerDb('uid-b'), 'friendshipKeys', DOC_ID)));
+      await assertFails(getDoc(doc(ownerDb('uid-c'), 'friendshipKeys', DOC_ID)));
+    });
+
+    it('rechazada (la amistad ya no existe), el destinatario tampoco lo lee', async () => {
+      await seed('friendshipKeys', DOC_ID, deposito());
+      await assertFails(getDoc(doc(ownerDb('uid-b'), 'friendshipKeys', DOC_ID)));
+    });
+
+    it('quien acepta copia a la amistad SOLO los ids depositados, y solo él', async () => {
+      await seed('friendships', DOC_ID, { ...peticion(), ...aceptar() });
+      await seed('friendshipKeys', DOC_ID, deposito());
+      const dbB = ownerDb('uid-b');
+      // Otros valores: no.
+      await assertFails(updateDoc(doc(dbB, 'friendships', DOC_ID), { requesterSocialGistId: 'otro', requesterGamesGistId: 'ggA', updatedAt: 3 }));
+      // Colando otro campo de quien pidió: no.
+      await assertFails(updateDoc(doc(dbB, 'friendships', DOC_ID), {
+        requesterSocialGistId: 'gsA', requesterGamesGistId: 'ggA', requesterName: 'hack', updatedAt: 3,
+      }));
+      // Un tercero, aunque copie lo de verdad: no (ni siquiera participa).
+      await assertFails(updateDoc(doc(ownerDb('uid-c'), 'friendships', DOC_ID), { requesterSocialGistId: 'gsA', requesterGamesGistId: 'ggA', updatedAt: 3 }));
+      // Los depositados, por quien aceptó: sí.
+      await assertSucceeds(updateDoc(doc(dbB, 'friendships', DOC_ID), { requesterSocialGistId: 'gsA', requesterGamesGistId: 'ggA', updatedAt: 3 }));
+    });
+
+    it('sin depósito, o con la amistad pendiente, no hay copia', async () => {
+      await seed('friendships', DOC_ID, { ...peticion(), ...aceptar() });
+      await assertFails(updateDoc(doc(ownerDb('uid-b'), 'friendships', DOC_ID), { requesterSocialGistId: 'gsA', requesterGamesGistId: 'ggA', updatedAt: 3 }));
+
+      await seed('friendships', DOC_ID, peticion());
+      await seed('friendshipKeys', DOC_ID, deposito());
+      await assertFails(updateDoc(doc(ownerDb('uid-b'), 'friendships', DOC_ID), { requesterSocialGistId: 'gsA', requesterGamesGistId: 'ggA', updatedAt: 3 }));
+    });
+
+    it('lo borra cualquiera de las dos partes (exista o no la amistad) y el admin; un tercero no', async () => {
+      await seed('friendshipKeys', DOC_ID, deposito());
+      await assertFails(deleteDoc(doc(ownerDb('uid-c'), 'friendshipKeys', DOC_ID)));
+      await assertSucceeds(deleteDoc(doc(ownerDb('uid-b'), 'friendshipKeys', DOC_ID)));
+      await seed('friendshipKeys', DOC_ID, deposito());
+      await assertSucceeds(deleteDoc(doc(ownerDb('uid-a'), 'friendshipKeys', DOC_ID)));
+      await seed('friendshipKeys', DOC_ID, deposito());
+      await assertSucceeds(deleteDoc(doc(adminDb(), 'friendshipKeys', DOC_ID)));
+    });
+
+    it('quien pide lista los suyos (baja de cuenta) y nadie lista los ajenos', async () => {
+      await seed('friendshipKeys', DOC_ID, deposito());
+      await assertSucceeds(getDocs(query(collection(ownerDb('uid-a'), 'friendshipKeys'), where('requester', '==', 'uid-a'))));
+      await assertFails(getDocs(query(collection(ownerDb('uid-b'), 'friendshipKeys'), where('requester', '==', 'uid-a'))));
+    });
+  });
+
+  /**
    * CONFIGURACIÓN DEL CATÁLOGO DE LOGROS. El panel la escribe y la app la lee para saber qué escaleras están
    * ocultas. Es el único documento del proyecto que escribe el admin y lee todo el mundo, así que lo que hay que
    * fijar es justo eso: que NADIE más lo pueda escribir.

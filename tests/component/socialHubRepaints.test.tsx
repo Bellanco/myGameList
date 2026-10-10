@@ -94,6 +94,10 @@ const firebaseMocks = vi.hoisted(() => ({
   deleteFriendship: vi.fn(async () => {}),
   sendFriendRequest: vi.fn(async () => {}),
   readFriendship: vi.fn(async (): Promise<unknown> => null),
+  // Fase 2 de docs/plan-historial-amigo-nuevo.md: aquí no hay aristas pendientes, así que no se llega a llamar.
+  haveFriendshipEdgesChanged: vi.fn(async () => false),
+  claimRequesterKeys: vi.fn(async () => 0),
+  MY_FRIENDSHIPS_REQUESTS_MAX_AGE_MS: 60_000,
   healOwnFriendshipIdentity: vi.fn(async () => {}),
   healOwnDirectoryGist: vi.fn(async () => ({ healed: false, adoptGistId: '' })),
   invalidateMyFriendshipsCache: vi.fn(),
