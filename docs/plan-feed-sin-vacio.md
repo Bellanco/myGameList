@@ -203,8 +203,8 @@ puede escribir solo `updatedAt` en su amistad.
    siguen congeladas en los espejos, y la cota las tapa hasta que salen solas de la ventana el 28-10-2026. **A
    partir de ese día la cota no recorta nada** y se retira en una limpieza (anotar en la revisión general).
 3. `useSocialFeed` deja de usar `useAchievementBaselines`. Su guardado en `src/model/repository/`
-   (`seedAchievementsPeerSeen`) y el campo de `LocalMeta` **no se borran sin preguntar** (regla de staging del
-   repositorio).
+   (`seedAchievementsPeerSeen`) y el campo de `LocalMeta` se borraron después, con el visto bueno del usuario
+   (regla de staging del repositorio).
 4. Corregir `docs/plan-logros.md` §8.4 (la línea base deja de existir en el feed).
 
 **Tests.** Amistad nueva con un logro de hace 3 días → sale; logro fechado el 20-09 → no sale (cota); logro de hace

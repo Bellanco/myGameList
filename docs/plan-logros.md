@@ -1671,7 +1671,8 @@ Es la misma idea que sostiene todo el documento —derivar en vez de registrar�
 > y el feed parecía vacío. Decisión del usuario: los logros de las amistades son solo visibles, sin «visto / no
 > visto». Ahora sale todo lo de los últimos 30 días, salvo lo fechado antes del 29-09-2026
 > (`ACHIEVEMENT_DATES_RELIABLE_FROM`, temporal hasta el 28-10-2026). El guardado (`seedAchievementsPeerSeen`, el campo
-> de `LocalMeta`) sigue en el repositorio sin uso. Ver docs/plan-feed-sin-vacio.md, Fase 5.
+> de `LocalMeta`) también se borró. Las tablas y notas de más abajo que los nombran son historia. Ver
+> docs/plan-feed-sin-vacio.md, Fase 5.
 
 > ⚑ **Revisión — la foto anterior NO puede ser la caché del directorio, y esto tumbaba F5 entero.** El plan decía
 > «el hub ya cachea el directorio en IndexedDB, así que el lector compara […] con el que tenía guardado». Esa

@@ -509,8 +509,8 @@ puesto para que esto se note.
 `ACHIEVEMENT_DATES_RELIABLE_FROM` (`core/achievements/feed.ts`) deja fuera del feed los logros fechados antes del
 29-09-2026, que pueden traer una fecha mala de antes de la 1.4.7 (docs/plan-feed-sin-vacio.md, Fase 5). La peor es
 del 28-09, así que desde el 28-10-2026 la ventana de 30 días ya la deja fuera sola y la cota no recorta nada: se
-retira con su test. Quedan también sin uso `seedAchievementsPeerSeen` y `LocalMeta.achievementsPeerSeen`, que están en
-la zona de staging del repositorio: preguntar antes de borrarlos.
+retira con su test. (`seedAchievementsPeerSeen` y `LocalMeta.achievementsPeerSeen`, que quedaron sin uso, se borraron
+el mismo 10-10-2026 con el visto bueno del usuario.)
 
 ## Lo que se comprobó y está bien
 

@@ -110,23 +110,14 @@ const localMocks = vi.hoisted(() => ({
 
 vi.mock('../../src/model/repository/localRepository', () => localMocks);
 
-// F5 — las líneas base del feed de logros viven en `LocalMeta` (IndexedDB), que jsdom no tiene: sin tocar nada,
-// `getLocalMeta` da `null` como siempre. Los tests de logros ajenos la sobrescriben para partir de una línea base
-// ya tomada, que es el caso normal a partir del segundo día (la primera foto calla).
+// `LocalMeta` vive en IndexedDB, que jsdom no tiene: sin tocar nada, `getLocalMeta` da `null` como siempre, y los
+// tests que lo necesitan lo sobrescriben.
 const metaMocks = vi.hoisted(() => ({
   getLocalMeta: vi.fn(async (): Promise<unknown> => null),
-  // Como la escritura real: añade lo que falte sin pisar lo que había y poda lo que no esté en `keep`.
-  seedAchievementsPeerSeen: vi.fn(async (additions: Record<string, string>, keep?: ReadonlySet<string>) => {
-    const meta = (await metaMocks.getLocalMeta()) as { achievementsPeerSeen?: Record<string, string> } | null;
-    const seen: Record<string, string> = { ...additions, ...(meta?.achievementsPeerSeen || {}) };
-    if (keep) for (const key of Object.keys(seen)) if (!keep.has(key)) delete seen[key];
-    return seen;
-  }),
 }));
 vi.mock('../../src/model/repository/indexedDbRepository', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/model/repository/indexedDbRepository')>()),
   getLocalMeta: metaMocks.getLocalMeta,
-  seedAchievementsPeerSeen: metaMocks.seedAchievementsPeerSeen,
 }));
 
 // El botón de compartir trae su propio view-model, que habla con `/api/share` y con Firebase. Aquí interesa DÓNDE

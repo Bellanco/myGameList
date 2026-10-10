@@ -4,11 +4,9 @@
 // esa persona: con una amistad nueva o un móvil nuevo no salía ninguno. Ahora sale todo lo de los últimos 30 días,
 // salvo lo fechado antes del 29-09-2026 (`ACHIEVEMENT_DATES_RELIABLE_FROM`): hasta la 1.4.7 la fecha se recalculaba y
 // algunos logros viejos se publicaron con fecha de septiembre. Esas fechas salen solas de la ventana el 28-10-2026.
-import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
 import { ACHIEVEMENT_DATES_RELIABLE_FROM, achievementFeedEntries, FEED_DAYS_PER_PERSON } from '../../src/core/achievements/feed';
 import { packAchievements } from '../../src/core/achievements/pack';
-import { getLocalMeta, seedAchievementsPeerSeen } from '../../src/model/repository/indexedDbRepository';
 import type { AchievementState } from '../../src/core/achievements/types';
 
 const NOW = new Date(2026, 9, 10, 12).getTime();
@@ -49,20 +47,5 @@ describe('el feed de logros', () => {
     const entries = achievementFeedEntries([{ id: 'ada', mirror }], NOW);
     expect(entries).toHaveLength(FEED_DAYS_PER_PERSON);
     expect(idsOf(entries)).not.toContain('volvere-10');
-  });
-});
-
-// El guardado de la línea base sigue en el repositorio (zona de staging, ver CLAUDE.md) aunque el feed ya no la use.
-describe('la línea base guardada', () => {
-  it('siembra lo que falta y NO reescribe lo que ya había: es la primera foto', async () => {
-    await seedAchievementsPeerSeen({ ada: 'primera' });
-    const next = await seedAchievementsPeerSeen({ ada: 'segunda', bob: 'bob' });
-    expect(next).toEqual({ ada: 'primera', bob: 'bob' });
-    expect((await getLocalMeta())?.achievementsPeerSeen).toEqual({ ada: 'primera', bob: 'bob' });
-  });
-
-  it('poda a quien ya no es amistad, y solo cuando se le pide', async () => {
-    await seedAchievementsPeerSeen({ carla: 'carla' });
-    expect(await seedAchievementsPeerSeen({}, new Set(['ada', 'carla']))).toEqual({ ada: 'primera', carla: 'carla' });
   });
 });
