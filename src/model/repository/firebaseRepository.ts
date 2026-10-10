@@ -29,6 +29,7 @@ import { DEFAULT_PROFILE_TIER } from '../../core/constants/tiers';
 import { FIRESTORE_SCHEMA_VERSION } from '../../core/constants/schema';
 import { buildMirror } from '../../core/achievements/pack';
 import type { FirestorePrivateConfig, FirestorePublicConfig } from '../types/firestore';
+import { PROFILE_TOUCH_MIN_INTERVAL_MS } from '../../core/constants/socialActivity';
 
 // --- RE-EXPORTS: API pública estable (los consumidores siguen importando desde firebaseRepository) ---
 export { enableAnalyticsAfterConsent, initializeFirebaseServices } from './firebaseClient';
@@ -861,8 +862,9 @@ export async function purgeOwnPublicGistIds(input: {
   }
 }
 
-/** Cada cuánto, como mucho, se refresca la recencia desde un mismo dispositivo: una escritura al día. */
-export const PROFILE_TOUCH_MIN_INTERVAL_MS = 20 * 60 * 60 * 1000;
+// Cada cuánto, como mucho, se refresca la recencia desde un mismo dispositivo. Vive en `core/constants/socialActivity`
+// porque la pasada de fondo de la app principal la consulta sin cargar este módulo; se reexporta desde aquí.
+export { PROFILE_TOUCH_MIN_INTERVAL_MS };
 
 /**
  * `touchOwnProfileActivity` con el acotado que exige su contrato: una vez cada 20 h por dispositivo. Es el único

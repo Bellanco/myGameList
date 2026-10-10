@@ -57,6 +57,11 @@ export interface LocalMeta {
    * dispositivo puede cambiar de cuenta (docs/plan-feed-sin-vacio.md, Fase 2).
    */
   legalConsent?: { uid: string; version: string; checkedAt: number };
+  /**
+   * Cuándo publicó por última vez la pasada social de la app principal (`runBackgroundSocialPass`). Entre dos pasadas
+   * que publican van 8 h como mínimo; solo se sella cuando ha publicado de verdad (docs/plan-feed-sin-vacio.md, Fase 3).
+   */
+  backgroundSocialPassAt?: number;
   // Último gist social ya propagado a MIS docs de amistad DESDE LA RUTA DE PUBLICACIÓN. Sigue vivo junto a
   // `friendshipIdentityFingerprint` porque acota una ruta que la huella no puede acotar: la publicación no sabe
   // descartar el monograma genérico de Google, así que se le fija a una pasada por id de gist para que no se

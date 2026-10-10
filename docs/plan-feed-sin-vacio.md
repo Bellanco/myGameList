@@ -1,6 +1,6 @@
 # Plan: que el feed no parezca vacío cuando hay amistades activas
 
-> **Estado (10-10-2026): Fases 1 y 2 hechas en `develop` (sin push); Fases 3–6 pendientes.** Diagnóstico hecho leyendo
+> **Estado (10-10-2026): Fases 1, 2 y 3 hechas en `develop` (sin push); Fases 4–6 pendientes.** Diagnóstico hecho leyendo
 > el código de `develop` (después de `4e178363`). Cada fase empieza escribiendo el test que demuestra el fallo.
 >
 > Fase 1, dónde quedó: `useSocialDirectory.ts` (`readToken`, `REJECTED_TOKEN`, `rejectedTokenRef`,
@@ -15,6 +15,15 @@
 > aceptar en `useSocialLegalConsent.ts`. Test: `socialPublishConsent.test.ts`. Dos cambios sobre lo planeado: el hub
 > **no sella al comprobar** (era una escritura de IndexedDB más en cada apertura; la puerta sella lo que lee), y
 > **retirar una reseña no exige la aceptación** (es publicar menos).
+>
+> Fase 3, dónde quedó: `viewmodel/social/backgroundSocialPass.ts` (`runBackgroundSocialPass`,
+> `useBackgroundSocialPass`, montado en `IdleWork`), `LocalMeta.backgroundSocialPassAt`. Lo que decide si hay algo
+> nuevo salió a `core/social/activityStamp.ts` (`localActivityChanged`, `collectLocalReviews` y
+> `RECONCILE_LOGIC_VERSION`, reexportada desde `socialActivityReconcile`) para no cargar Firebase al preguntarlo, y
+> `PROFILE_TOUCH_MIN_INTERVAL_MS` a `core/constants/socialActivity.ts` (reexportada desde `firebaseRepository`). Guarda
+> extra: sin sesión de Google guardada (`hasStoredAuthSession`) no se carga el SDK. Medido: arranque crítico 187,4 de
+> 190 kB (+0,1); el chunk de `IdleWork` no importa Firebase de forma estática. Texto legal revisado: no dice cuándo
+> se publica, así que no cambia. Tests: `backgroundSocialPass.test.ts` y `backgroundSocialPassHook.test.ts`.
 
 > ⚠️ **Documento vivo.** Si una línea no coincide con el código, manda el código: corrige esto en la misma pasada.
 
