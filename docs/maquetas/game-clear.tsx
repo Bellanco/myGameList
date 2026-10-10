@@ -20,7 +20,7 @@ import { emitMoment } from '../../src/core/effects/moments';
 const QUE_HACE: Record<PaletteId, string> = {
   tierramedia: '«Juego terminado» con letra de título de las películas.',
   arcade: 'Al azar: pantalla de récord o atardecer synthwave.',
-  witcher: 'La franja de «Contrato cerrado» con las dos espadas.',
+  witcher: 'La franja de «Contrato cerrado» con las coronas de la recompensa.',
   persona: '«Objetivo cumplido» en letras recortadas.',
   portal: 'Al azar: el cartel de la cámara o la terminal de GLaDOS.',
   cyberpunk: 'El protocolo de brecha.',

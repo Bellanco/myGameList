@@ -19,9 +19,10 @@ import { recorte } from '../components/socialhub/recortes';
  *  - CERRAR UN JUEGO → un SELLO que cae en el centro en dos temas: «objetivo cumplido» en letras recortadas
  *    (Ladrones de corazones) y el lacre con un escudo imperial (Solo hay guerra). Los demás tienen escena propia: la
  *    «Juego terminado» con letra de título de las películas (No puedes pasar); la franja de «contrato cerrado» con
- *    las dos espadas (Plata y acero); la pantalla de récord o el atardecer synthwave, al azar (Inserte moneda); el
- *    cartel de la cámara o la terminal de GLaDOS, al azar (Cámara de pruebas); el protocolo de brecha (Sin futuro), y
- *    la ventana de «¡Victoria!» (Sol y luna). Elegidos con la maqueta de los Game Clear (10-10-2026).
+ *    las coronas de la recompensa saltando (Plata y acero); la pantalla de récord o el atardecer synthwave, al azar
+ *    (Inserte moneda); el cartel de la cámara o la terminal de GLaDOS, al azar (Cámara de pruebas); el protocolo de
+ *    brecha (Sin futuro), y la ventana de «¡Victoria!» (Sol y luna). Elegidos con la maqueta de los Game Clear
+ *    (10-10-2026).
  *  - GUARDAR → la luz corre por el filete de acero bajo las pestañas, de izquierda a derecha (Plata y acero).
  *  - FILTRAR → barrido de escáner sobre la lista (Sin futuro).
  *  - LOGRO DESBLOQUEADO → estrella fugaz que cruza (Sol y luna).
@@ -229,19 +230,50 @@ export function useSignatureEffects(): void {
       '<circle class="is-remache" cx="50" cy="2.8" r="1.6"/><circle class="is-remache" cx="50" cy="97.2" r="1.6"/>' +
       '<circle class="is-remache" cx="2.8" cy="50" r="1.6"/><circle class="is-remache" cx="97.2" cy="50" r="1.6"/>';
 
-    /** Plata y acero: la franja de The Witcher 3 al cerrar una misión, con la filigrana de plata. */
+    /**
+     * Plata y acero: la franja de The Witcher 3 al cerrar una misión, con la recompensa en coronas. La moneda va UNA
+     * vez en un `<symbol>` y las demás la citan; el vuelo de cada una se sortea aquí y la hoja lo hace parábola.
+     */
+    const MONEDA_DEFS =
+      '<svg class="fx-wt-defs" aria-hidden="true"><defs>' +
+      '<radialGradient id="fx-wt-oro" cx=".36" cy=".3" r=".75"><stop offset="0" stop-color="#fff6d2"/><stop offset=".3" stop-color="#f3cd68"/>' +
+      '<stop offset=".68" stop-color="#c3922e"/><stop offset="1" stop-color="#7a5410"/></radialGradient>' +
+      '<linearGradient id="fx-wt-relieve" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0b0"/>' +
+      '<stop offset=".55" stop-color="#e2b54e"/><stop offset="1" stop-color="#a77a22"/></linearGradient>' +
+      // El canto moleteado, la corona de cinco puntas en relieve (sombra debajo, luz encima), las gemas y el brillo.
+      '<symbol id="fx-wt-moneda" viewBox="0 0 32 32">' +
+      '<circle cx="16" cy="16" r="15.2" fill="#6a480c"/><circle cx="16" cy="16" r="14.4" fill="url(#fx-wt-oro)"/>' +
+      '<circle cx="16" cy="16" r="13.3" fill="none" stroke="#8a6118" stroke-width="1.3" stroke-dasharray=".9 1.1" opacity=".85"/>' +
+      '<circle cx="16" cy="16" r="11.4" fill="none" stroke="#fff1bf" stroke-opacity=".55" stroke-width=".8"/>' +
+      '<circle cx="16" cy="16.4" r="11" fill="none" stroke="#7d570f" stroke-width=".7"/>' +
+      '<g transform="translate(0 .7)" fill="#5e3f0a" opacity=".8"><path id="fx-wt-forma" d="M8.8 20.4 L7.4 12.6 L10.4 16.2 L11.9 11.2 ' +
+      'L14 15.8 L16 9.4 L18 15.8 L20.1 11.2 L21.6 16.2 L24.6 12.6 L23.2 20.4 Z"/><rect x="8.6" y="20.8" width="14.8" height="2.6" rx=".7"/></g>' +
+      '<g fill="url(#fx-wt-relieve)"><use href="#fx-wt-forma"/><rect x="8.6" y="20.8" width="14.8" height="2.6" rx=".7"/></g>' +
+      '<path d="M9.2 19.6 H22.8" stroke="#8a6118" stroke-width=".5"/>' +
+      '<g fill="#fff1c0"><circle cx="7.4" cy="12.3" r=".85"/><circle cx="11.9" cy="10.9" r=".8"/><circle cx="16" cy="9" r=".95"/>' +
+      '<circle cx="20.1" cy="10.9" r=".8"/><circle cx="24.6" cy="12.3" r=".85"/></g>' +
+      '<circle cx="16" cy="22.1" r=".95" fill="#a3281a"/><circle cx="12" cy="22.1" r=".7" fill="#2f5a7a"/><circle cx="20" cy="22.1" r=".7" fill="#2f5a7a"/>' +
+      '<ellipse cx="11.3" cy="9.2" rx="5" ry="2.2" transform="rotate(-32 11.3 9.2)" fill="#fff" opacity=".38"/>' +
+      '</symbol></defs></svg>';
+    const MONEDA = '<svg class="fx-wt-moneda" viewBox="0 0 32 32" aria-hidden="true"><use href="#fx-wt-moneda"/></svg>';
     const contratoCerrado = (): HTMLElement => {
-      // Arriba, las DOS ESPADAS cruzadas —la de plata y la de acero, el nombre del tema— entre filigranas; abajo, el
-      // filete con su rombo.
-      const espadas =
-        '<svg class="fx-wt-fil is-espadas" viewBox="0 0 300 30" aria-hidden="true">' +
-        '<path d="M0 15 H118 M182 15 H300 M106 15 q12 -7 24 0 q-12 7 -24 0 M170 15 q12 -7 24 0 q-12 7 -24 0"/>' +
-        '<path class="fx-wt-hoja" d="M139 26 L161 4 M161 26 L139 4"/>' +
-        '<path class="fx-wt-guarda" d="M141 18 l6 6 M153 24 l6 -6 M138 27 l3 -3 M162 27 l-3 -3"/></svg>';
-      const filete =
-        '<svg class="fx-wt-fil" viewBox="0 0 300 12" aria-hidden="true"><path d="M0 6 H132 M168 6 H300"/>' +
-        '<path class="fx-wt-rombo" d="M150 1 l5 5 l-5 5 l-5 -5z"/></svg>';
-      return escena('fx-wt-mision', `${espadas}<b>CONTRATO CERRADO</b><em>Recompensa cobrada</em>${filete}`);
+      // 22 coronas, una cada 45 ms desde que asoma la cuenta: lanzadas hacia arriba y a los lados, caen fuera de la
+      // franja. `--alto` es el pico (40–105 px) y `--cae` dónde acaban (365–615 px), la misma parábola en todas.
+      let coronas = '';
+      for (let i = 0; i < 22; i++) {
+        const dx = Math.round((Math.random() * 2 - 1) * 325);
+        const alto = -Math.round(40 + Math.random() * 65);
+        const cae = Math.round(365 + Math.random() * 250);
+        const giro = (0.3 + Math.random() * 0.3).toFixed(2);
+        coronas +=
+          `<i class="fx-wt-corona" style="--t:${600 + i * 45}ms;--dx:${dx}px;--alto:${alto}px;--cae:${cae}px;--g:${giro}s">` +
+          `<i>${MONEDA}</i></i>`;
+      }
+      return escena(
+        'fx-wt-mision',
+        `${MONEDA_DEFS}<b>CONTRATO CERRADO</b><span class="fx-wt-cuenta">${MONEDA}<span class="fx-wt-n"></span>` +
+          `<small>coronas</small>${coronas}</span>`,
+      );
     };
 
     /** Inserte moneda: el monitor CRT que se enciende en una raya, enseña la puntuación y se apaga en un punto. */
@@ -316,7 +348,7 @@ export function useSignatureEffects(): void {
         // El sello del ladrón y el lacre imperial son el mismo gesto con dos caras (`.fx-seal`). El lacre de
         // contrato de «Plata y acero» y la marquesina de «Inserte moneda» también lo eran, hasta que cada uno pasó
         // a su escena (10-10-2026): la franja de The Witcher 3 y una recreativa que CANTA lo que acabas de hacer.
-        if (fxRef.current('witcher')) spawn(contratoCerrado(), 2900);
+        if (fxRef.current('witcher')) spawn(contratoCerrado(), 3400);
         else if (fxRef.current('tierramedia')) spawn(juegoTerminado(), 3200);
         else if (fxRef.current('persona')) {
           // Sin icono: el rótulo recortado ya dice lo que pasa, y con la marca encima la tarjeta se leía doble.

@@ -11,7 +11,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   logotipo; Cámara de pruebas saca al azar el cartel de la cámara o la terminal de GLaDOS; Sin futuro, el protocolo
   de brecha; Sol y luna, la ventana de «¡Victoria!» con la EXP y el oro subiendo. Inserte moneda cambia la marquesina
   por dos escenas al azar (pantalla de récord y atardecer synthwave) y Plata y acero cambia el lacre por la franja de
-  «Contrato cerrado» con las dos espadas cruzadas y el rótulo en plata bruñida. Elegidos con
+  «Contrato cerrado» en plata bruñida, con la recompensa subiendo en coronas mientras salta un puñado de monedas de
+  oro con la corona en relieve. Elegidos con
   `docs/maquetas/game-clear-todos.html`, que enseña los ocho a la vez con las hojas reales.
 
 ### Changed
