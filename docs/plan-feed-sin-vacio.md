@@ -1,6 +1,6 @@
 # Plan: que el feed no parezca vacío cuando hay amistades activas
 
-> **Estado (10-10-2026): Fases 1 a 5 hechas en `develop` (sin push); Fase 6 pendiente.** Diagnóstico hecho leyendo
+> **Estado (10-10-2026): las seis fases hechas en `develop` (sin push).** Pendiente solo retirar la cota de logros a partir del 28-10-2026 (hallazgo 15 de la revisión general). Diagnóstico hecho leyendo
 > el código de `develop` (después de `4e178363`). Cada fase empieza escribiendo el test que demuestra el fallo.
 >
 > Fase 1, dónde quedó: `useSocialDirectory.ts` (`readToken`, `REJECTED_TOKEN`, `rejectedTokenRef`,
@@ -37,6 +37,13 @@
 > `useSocialFeed` sin línea base (pierde el parámetro `friendsResolved`); `useAchievementBaselines.ts` BORRADO (era del
 > ViewModel). La tarjeta PROPIA sigue esperando a `ready` (lo publicado leído), para no salir en un día más tardío y
 > saltar. Anotado en la revisión general (hallazgo 15) y en `plan-logros.md` §8.4.
+>
+> Fase 6, dónde quedó: `LegalConsentToast.tsx` (+ `styles/legalNotice.scss`), `useLegalConsentNotice` (lee el sello de
+> la puerta en `LocalMeta`, sin Firestore; se entera por el evento que emite `sealLegalConsent` y al volver a la
+> pestaña), textos en `core/constants/legalNoticeLabels.ts` (no en `legal.ts`, que viaja en el arranque) y
+> `LEGAL_NOTICE_TOLD_KEY`. En `App`, detrás del logro y delante del resumen del año, y no dentro del hub (allí ya sale
+> la pantalla de aceptar). Medido: arranque crítico 187,6 de 190 kB (+0,2). En la maqueta como `aviso-legal`, revisada
+> en los ocho temas y los dos modos. Test: `tests/component/LegalConsentToast.test.tsx`.
 
 > ⚠️ **Documento vivo.** Si una línea no coincide con el código, manda el código: corrige esto en la misma pasada.
 

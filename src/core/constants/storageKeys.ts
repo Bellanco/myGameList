@@ -90,6 +90,10 @@ export const IMPORT_FIELDS_KEY = 'mis-listas-import-fields';
 // lo que se publica, `LEGAL_VERSION` cambia y el aviso vuelve a mostrarse completo.
 export const SHARE_CONSENT_KEY = 'mis-listas-share-consent';
 
+// La cápsula del aviso legal (condiciones nuevas por aceptar) ya se enseñó para esta versión: valor, la
+// `LEGAL_VERSION` de entonces. Una vez por versión y navegador, como el aviso del resumen del año.
+export const LEGAL_NOTICE_TOLD_KEY = 'mis-listas-legal-notice-told';
+
 // Logros — marca de agua (§5.5 del plan) y lo que su dueño ya ha visto (§7.3), en el formato compacto
 // `id.nivel,id.nivel`. Es estado de DISPOSITIVO, como `friendshipHealedForGist`, y por eso no sube a ningún
 // canal. Vive en localStorage y no en `LocalMeta` MIENTRAS la publicación esté apagada

@@ -15,12 +15,20 @@ import { getLocalMeta, patchLocalMeta } from './indexedDbRepository';
 export const LEGAL_CONSENT_RECHECK_MS = 24 * 60 * 60 * 1000;
 
 /**
+ * Se emite en `window` cada vez que se sella la versión: la cápsula del aviso legal (`useLegalConsentNotice`) lo
+ * escucha para aparecer en cuanto se sabe que falta la aceptación, y para irse en cuanto se acepta. El nombre lo
+ * define el hook, que es quien lo escucha; aquí se repite para no importar la vista desde el modelo.
+ */
+const LEGAL_CONSENT_SEALED_EVENT = 'mis-listas:legal-consent-sealed';
+
+/**
  * Sella en este dispositivo la versión que consta aceptada por esa cuenta (cadena vacía = ninguna). Best-effort: sin
  * IndexedDB no hay sello y la puerta preguntará a Firestore, que es lo seguro.
  */
 export async function sealLegalConsent(uid: string, version: string): Promise<void> {
   if (!uid) return;
   await patchLocalMeta({ legalConsent: { uid, version, checkedAt: Date.now() } }).catch(() => {});
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(LEGAL_CONSENT_SEALED_EVENT));
 }
 
 /** ¿Puede salir algo del canal social sin pasar por el hub? Solo con la versión vigente aceptada y comprobada. */

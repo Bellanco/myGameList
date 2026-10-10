@@ -21,6 +21,7 @@ import type {
   SocialPostFeedItem,
 } from '../../src/viewmodel/social/socialFeed';
 import { SocialFeedScreen } from '../../src/view/components/socialhub/SocialFeedScreen';
+import { LegalConsentToast } from '../../src/view/components/LegalConsentToast';
 import { SocialProfilesScreen } from '../../src/view/components/socialhub/SocialProfilesScreen';
 import { SocialProfileDetailScreen } from '../../src/view/components/socialhub/SocialProfileDetailScreen';
 import { SocialDetailScreen } from '../../src/view/components/socialhub/SocialDetailScreen';
@@ -617,6 +618,19 @@ const PANTALLAS: Record<string, { nombre: string; ruta: string; pintar: () => Re
   'feed-fallo': { nombre: 'Feed: no se pudo leer (sin copia)', ruta: '/social', pintar: () => <Feed vacio fallo /> },
   'feed-fallo-parcial': { nombre: 'Feed: un amigo sin leer', ruta: '/social', pintar: () => <Feed fallo /> },
   'feed-github': { nombre: 'Feed: GitHub caducado', ruta: '/social', pintar: () => <Feed caducado /> },
+  // No es del hub —vive en el carril de `App`, fuera del espacio social—, pero así se ve en los ocho temas sin sesión.
+  'aviso-legal': {
+    nombre: 'Carril: condiciones nuevas',
+    ruta: '/',
+    pintar: () => (
+      <>
+        <Feed vacio />
+        <div className="ach-toast-stack">
+          <LegalConsentToast onDone={noop} />
+        </div>
+      </>
+    ),
+  },
   amigos: { nombre: 'Perfiles (directorio)', ruta: '/social/profiles', pintar: () => <Amigos /> },
   solicitudes: { nombre: 'Solicitudes', ruta: '/social/requests', pintar: () => <Solicitudes /> },
   'solicitudes-vacia': { nombre: 'Solicitudes (ninguna)', ruta: '/social/requests', pintar: () => <Solicitudes vacia /> },
