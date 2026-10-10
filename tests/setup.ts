@@ -104,6 +104,8 @@ const PREFIJOS_DE_TRAZA = [
   '[App]', '[IndexedDB]', '[SocialHub]', '[admin]', '[cuenta]', '[cutover]',
   '[dev]', '[firebase]', '[gist]', '[saneado]', '[social]', '[sync]', '[estado local]',
 ];
+// Envolver `console.log` e `info` es justo lo que hace esto, no una traza olvidada: de ahí la excepción.
+/* eslint-disable no-console */
 for (const nivel of ['log', 'info', 'warn'] as const) {
   const original = console[nivel].bind(console);
   console[nivel] = (...args: unknown[]): void => {
@@ -112,6 +114,7 @@ for (const nivel of ['log', 'info', 'warn'] as const) {
     original(...args);
   };
 }
+/* eslint-enable no-console */
 
 afterEach(() => {
   cleanup();

@@ -5,6 +5,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Internal
+- **La auditoría de dependencias de desarrollo vuelve a 0.** Las once vulnerabilidades venían todas de
+  `firebase-tools` (chokidar 3 → braces, pubsub → `@opentelemetry/core` 1, proxy-agent → `basic-ftp` 5, gaxios 6 →
+  `uuid` 9), y el arreglo que proponía `npm audit fix --force` era bajar `firebase-tools` de la 15.33 a la 14.23. Van
+  por `overrides` acotados a su árbol; el emulador de Firestore sigue pasando las reglas. Y ESLint queda sin avisos.
+
+## [1.6.10] - 2026-10-10
+
+Una versión de **Game Clear**: cerrar un juego tiene escena propia en los ocho temas.
+
 ### Added
 - **Cerrar un juego tiene su «Game Clear» en los ocho temas.** No puedes pasar enseña «Juego Terminado» en Cinzel
   Decorative, la letra libre más cercana a la del título de las películas, con las iniciales grandes como el
