@@ -15,6 +15,11 @@ const gistConfig = vi.hoisted(() => ({
   getSocialSyncConfig: vi.fn((): unknown => null),
 }));
 vi.mock('../../src/model/repository/gistConfigRepository', () => gistConfig);
+// Con una sesión de Google guardada: sin ella la pasada sale antes de mirar el canal, que es lo que estos tests cuentan.
+vi.mock('../../src/model/repository/firebaseGateway', () => ({
+  hasStoredAuthSession: () => true,
+  getCurrentSocialAuthUser: vi.fn(async () => null),
+}));
 vi.mock('../../src/model/repository/indexedDbRepository', () => ({
   getLocalMeta: vi.fn(async () => null),
   patchLocalMeta: vi.fn(async () => {}),

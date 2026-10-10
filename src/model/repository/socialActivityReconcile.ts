@@ -21,7 +21,7 @@ import { readSocialGist, remapSocialActorIds, removeReviewActivity, saveSocialSy
 import { getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta } from './indexedDbRepository';
 import { resolveSocialChannel } from './socialChannel';
 import { serializeSocialWrite } from './socialWriteQueue';
-import { collectLocalReviews, localActivityChanged, localActivityCounts, RECONCILE_LOGIC_VERSION } from '../../core/social/activityStamp';
+import { activityStampChanged, collectLocalReviews, countLocalMoves, RECONCILE_LOGIC_VERSION } from '../../core/social/activityStamp';
 
 // La versión de la lógica vive con el resto del sello (`core/social/activityStamp`); se reexporta desde aquí, que es
 // donde la buscaba todo el mundo.
@@ -139,8 +139,8 @@ async function reconcileReviewActivityNow(input: {
   const stampFresh = Boolean(meta?.activityReconciledAt && Date.now() - meta.activityReconciledAt < RECONCILE_TTL_MS);
   // Lo que decide si hay algo nuevo (recuentos, versión y pendiente) vive en `core/social/activityStamp`, porque lo
   // pregunta también la pasada de fondo de la app principal, que no puede cargar este módulo para saberlo.
-  const { moveCount: localMoveCount } = localActivityCounts(games);
-  if (!force && stampFresh && !localActivityChanged(games, meta)) {
+  const localMoveCount = countLocalMoves(games);
+  if (!force && stampFresh && !activityStampChanged(meta, { reviewCount: localReviews.length, moveCount: localMoveCount })) {
     return skip('sello-fresco');
   }
 

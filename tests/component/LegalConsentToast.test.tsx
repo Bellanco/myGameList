@@ -1,7 +1,7 @@
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { LEGAL_VERSION } from '../../src/core/constants/legal';
+import { LEGAL_CONSENT_SEALED_EVENT, LEGAL_VERSION } from '../../src/core/constants/legal';
 import { LEGAL_NOTICE_UI } from '../../src/core/constants/legalNoticeLabels';
 import { LEGAL_NOTICE_TOLD_KEY } from '../../src/core/constants/storageKeys';
 
@@ -17,7 +17,7 @@ vi.mock('../../src/model/repository/indexedDbRepository', () => ({
 }));
 
 const { LegalConsentToast } = await import('../../src/view/components/LegalConsentToast');
-const { useLegalConsentNotice, LEGAL_CONSENT_SEALED_EVENT } = await import('../../src/view/hooks/useLegalConsentNotice');
+const { useLegalConsentNotice } = await import('../../src/view/hooks/useLegalConsentNotice');
 
 const sello = (version: string) => ({ legalConsent: { uid: 'uid-1', version, checkedAt: Date.now() } });
 
@@ -81,6 +81,24 @@ describe('useLegalConsentNotice', () => {
     meta.value = sello(LEGAL_VERSION);
     act(() => { window.dispatchEvent(new Event(LEGAL_CONSENT_SEALED_EVENT)); });
     await waitFor(() => expect(result.current.show).toBe(false));
+  });
+});
+
+describe('useLegalConsentNotice · el espacio social', () => {
+  // Dentro del hub ya sale la pantalla de aceptar: entrar cuenta como dicho. Si no, al volver a las listas sin
+  // aceptar, la cápsula reaparecía en la misma sesión aunque es «una vez por versión».
+  it('dentro del espacio social no sale, y entrar en él la da por dicha', async () => {
+    meta.value = sello('2020-01-01');
+    const { result, rerender } = renderHook(({ inSocial }) => useLegalConsentNotice(true, inSocial), { initialProps: { inSocial: false } });
+    await waitFor(() => expect(result.current.show).toBe(true));
+
+    rerender({ inSocial: true });
+    await waitFor(() => expect(result.current.show).toBe(false));
+    expect(localStorage.getItem(LEGAL_NOTICE_TOLD_KEY)).toBe(LEGAL_VERSION);
+
+    rerender({ inSocial: false });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(result.current.show).toBe(false);
   });
 });
 

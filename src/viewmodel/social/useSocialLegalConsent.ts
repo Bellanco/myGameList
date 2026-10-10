@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LEGAL_CONSENT_UI, LEGAL_VERSION } from '../../core/constants/legal';
 import { getPublicConfig, setPublicConfig } from '../../model/repository/firebaseGateway';
-import { sealLegalConsent } from '../../model/repository/socialConsentGate';
+import { refreshLegalConsentSeal, sealLegalConsent } from '../../model/repository/socialConsentGate';
 
 type Feedback = (kind: 'ok' | 'warn' | 'err', message: string, duration?: 'short' | 'long') => void;
 
@@ -55,11 +55,13 @@ export function useSocialLegalConsent(uid: string | null | undefined, setFeedbac
     let cancelled = false;
     void getPublicConfig(uid)
       .then((cfg) => {
-        // Aquí NO se sella la versión en el dispositivo: lo hace la propia puerta de lo que sale sin pasar por el hub
-        // (`canPublishSocialInBackground`) la primera vez que la necesita, con la misma lectura. Sellar en cada
-        // apertura del hub era una escritura de IndexedDB más en el arranque, justo donde compite con los saneados.
+        // Lo comprobado se lleva al sello del dispositivo SOLO si ya había uno distinto (`refreshLegalConsentSeal`): sin
+        // sello lo pone la propia puerta cuando lo necesita, y sellar en cada apertura del hub era una escritura de
+        // IndexedDB más en el arranque, justo donde compite con los saneados.
+        const version = String(cfg?.consent?.version || '');
+        void refreshLegalConsentSeal(uid, version);
         if (cancelled) return;
-        setCheck({ uid, status: cfg?.consent?.version === LEGAL_VERSION ? 'accepted' : 'required' });
+        setCheck({ uid, status: version === LEGAL_VERSION ? 'accepted' : 'required' });
       })
       .catch(() => {
         if (!cancelled) setCheck({ uid, status: 'unknown' });

@@ -67,7 +67,7 @@ vi.mock('firebase/firestore/lite', () => ({
   }),
 }));
 
-const { ensureProfileByEmail, touchOwnProfileActivity } = await import('../../src/model/repository/firebaseRepository');
+const { ensureProfileByEmail, touchOwnProfileActivity, touchOwnProfileActivityThrottled } = await import('../../src/model/repository/firebaseRepository');
 
 function conPerfil(updatedAt: number | null) {
   getDocMock.mockImplementation(async (ref: unknown) => {
@@ -141,6 +141,20 @@ describe('ensureProfileByEmail · señal de regreso al reescribir el perfil', ()
       photoURL: '',
     });
 
+    expect(batchUpdates.map((u) => u.ref.id).sort()).toEqual(['a__uid-1', 'c__uid-1']);
+  });
+});
+
+describe('touchOwnProfileActivityThrottled · sin solaparse', () => {
+  // El hub y la pasada de fondo de la app principal pueden pedirla en el mismo arranque: con las dos leyendo la
+  // recencia vieja, eran dos escrituras y, si venía de dormir, dos sellos de regreso en cada amistad.
+  it('dos peticiones a la vez hacen UNA escritura y UN sello de regreso', async () => {
+    conPerfil(Date.now() - PROFILE_INACTIVITY_MS - DIA);
+
+    await Promise.all([touchOwnProfileActivityThrottled('uid-1'), touchOwnProfileActivityThrottled('uid-1')]);
+
+    const recencias = setDocMock.mock.calls.filter((call) => (call[0] as { collection?: string }).collection === 'profiles');
+    expect(recencias).toHaveLength(1);
     expect(batchUpdates.map((u) => u.ref.id).sort()).toEqual(['a__uid-1', 'c__uid-1']);
   });
 });

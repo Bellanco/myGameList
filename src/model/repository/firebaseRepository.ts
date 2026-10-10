@@ -31,6 +31,7 @@ import { buildMirror } from '../../core/achievements/pack';
 import type { FirestorePrivateConfig, FirestorePublicConfig } from '../types/firestore';
 import { PROFILE_INACTIVITY_MS, PROFILE_TOUCH_MIN_INTERVAL_MS } from '../../core/constants/socialActivity';
 import { stampOwnFriendshipsOnReturn } from './firebaseFriendshipRepository';
+import { toMillis } from '../../core/utils/firestoreTime';
 
 // --- RE-EXPORTS: API pública estable (los consumidores siguen importando desde firebaseRepository) ---
 export { enableAnalyticsAfterConsent, initializeFirebaseServices } from './firebaseClient';
@@ -782,13 +783,6 @@ export async function publishYearSummarySeen(uid: string, year: number): Promise
   invalidateSocialDirectoryCache(uid);
 }
 
-/** `updatedAt` de un perfil como ms: Timestamp de Firestore o número (docs de clientes antiguos); 0 si no hay. */
-function profileStampMillis(value: unknown): number {
-  if (typeof value === 'number') return value;
-  const toMillis = (value as { toMillis?: () => number } | null | undefined)?.toMillis;
-  return typeof toMillis === 'function' ? Number(toMillis.call(value)) || 0 : 0;
-}
-
 /**
  * LA SEÑAL DE REGRESO (docs/plan-feed-sin-vacio.md, Fase 4): si la recencia ANTERIOR del perfil propio tenía más de 30
  * días, quien vuelve sella sus amistades para que sus amigos lo saquen ya del corte de inactividad. Sin marca anterior
@@ -796,7 +790,7 @@ function profileStampMillis(value: unknown): number {
  * copia (como antes).
  */
 async function signalReturnIfAsleep(uid: string, previousUpdatedAt: unknown): Promise<void> {
-  const previous = profileStampMillis(previousUpdatedAt);
+  const previous = toMillis(previousUpdatedAt as Parameters<typeof toMillis>[0]);
   if (previous <= 0 || Date.now() - previous <= PROFILE_INACTIVITY_MS) return;
   await stampOwnFriendshipsOnReturn(uid).catch(() => 0);
 }
@@ -905,8 +899,21 @@ export { PROFILE_TOUCH_MIN_INTERVAL_MS };
  *
  * Best-effort de principio a fin: si IndexedDB no responde, no se refresca la recencia y no pasa nada más.
  */
-export async function touchOwnProfileActivityThrottled(uid: string): Promise<void> {
-  if (!uid) return;
+export function touchOwnProfileActivityThrottled(uid: string): Promise<void> {
+  if (!uid) return Promise.resolve();
+  // UNA a la vez: el hub y la pasada de fondo de la app principal pueden pedirla en el mismo arranque, y las dos
+  // leerían la recencia vieja —dos escrituras y, si venía de dormir, dos sellos de regreso en cada amistad—.
+  if (!touchInFlight) {
+    touchInFlight = touchOwnProfileActivityThrottledNow(uid).finally(() => {
+      touchInFlight = null;
+    });
+  }
+  return touchInFlight;
+}
+
+let touchInFlight: Promise<void> | null = null;
+
+async function touchOwnProfileActivityThrottledNow(uid: string): Promise<void> {
   try {
     const meta = await getLocalMeta();
     const last = Number(meta?.profileTouchedAt || 0);

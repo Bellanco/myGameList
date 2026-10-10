@@ -192,6 +192,33 @@ describe('useSocialDirectory · token de GitHub caducado', () => {
     expect(idb.putCachedSocialDirectory).not.toHaveBeenCalled();
   });
 
+  // Un 401 lo ha contestado GitHub: hay red. Si un fallo anterior (wifi sin salida) dejó puesto el aviso de sin
+  // conexión, tiene que irse, o tapa el de reconectar y el usuario no ve nunca el botón.
+  it('un 401 demuestra que hay red: retira el aviso de sin conexión aunque los amigos salgan de la copia', async () => {
+    idb.stale = [guardada('ana', 'Juego guardado')];
+    readPublicSocialGistById.mockRejectedValue(caducado());
+    const { result, setNetworkFailure } = montar(['ana']);
+
+    await result.current.hydrateSocialDirectory();
+
+    await waitFor(() => expect(result.current.githubReconnectNeeded).toBe(true));
+    expect(setNetworkFailure).toHaveBeenCalledWith(false);
+  });
+
+  it('un fallo de RED de un amigo no da la red por buena', async () => {
+    idb.stale = [guardada('ana', 'Juego guardado')];
+    readPublicSocialGistById.mockImplementation(async (gistId: string) => {
+      if (gistId === 'ana-social') throw new TypeError('Failed to fetch');
+      return gistVacio;
+    });
+    const { result, setNetworkFailure } = montar(['ana']);
+
+    await result.current.hydrateSocialDirectory();
+
+    await waitFor(() => expect(result.current.rawSocialDirectory.length).toBe(2));
+    expect(setNetworkFailure).not.toHaveBeenCalledWith(false);
+  });
+
   it('con el mismo token, la pasada siguiente no vuelve a preguntar a GitHub', async () => {
     readPublicSocialGistById.mockRejectedValue(caducado());
     const { result } = montar(['ana']);

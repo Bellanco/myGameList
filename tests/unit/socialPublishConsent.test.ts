@@ -170,6 +170,19 @@ describe('useSocialLegalConsent sella la versión en este dispositivo', () => {
     expect(idbMocks.patchLocalMeta).not.toHaveBeenCalled();
   });
 
+  // Aceptó en otro dispositivo: el hub lo ve, y la puerta, con su sello viejo de hace un rato, tardaría un día en
+  // volver a preguntar. Se sella aquí, pero solo si había un sello distinto (sin sello, la puerta pregunta sola).
+  it('al comprobar que está aceptada con un sello viejo en el dispositivo, lo pone al día', async () => {
+    idbMocks.__setMeta(sello('2020-01-01'));
+    gatewayMocks.getPublicConfig.mockResolvedValue({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
+    renderHook(() => useSocialLegalConsent('uid-1', vi.fn()));
+
+    await waitFor(() => expect((idbMocks.__getMeta()?.legalConsent as { version: string }).version).toBe(LEGAL_VERSION));
+    gatewayMocks.getPublicConfig.mockClear();
+    expect(await canPublishSocialInBackground('uid-1')).toBe(true);
+    expect(gatewayMocks.getPublicConfig).not.toHaveBeenCalled();
+  });
+
   it('al aceptar, aunque la puerta tuviera sellada la versión vieja de hace un rato', async () => {
     idbMocks.__setMeta(sello('2020-01-01'));
     gatewayMocks.getPublicConfig.mockResolvedValue(null);

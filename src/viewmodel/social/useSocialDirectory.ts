@@ -346,6 +346,10 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
       // actividad (docs/plan-degradacion-servicios.md, fase 2). Y no se avisa: lo guardado se enseña tal cual
       // (docs/plan-feed-sin-vacio.md, Fase 1).
       let servedFromCopy = false;
+      // ¿Ha fallado alguna lectura porque el SERVICIO no atendía (sin red, GitHub limitando)? Es lo único que impide
+      // dar la red por buena al final. Un 401 no cuenta: lo ha contestado GitHub, así que hay red, y dejar puesto un
+      // «sin conexión» de antes taparía el aviso de reconectar.
+      let serviceFailed = false;
       // ¿Se ha quedado alguno sin lectura y sin copia? Es lo único que la pantalla cuenta, con un error genérico.
       let unreadWithoutCopy = false;
       let previousDirectory: Promise<SocialDirectoryEntry[] | null> | null = null;
@@ -542,7 +546,9 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
             }
             // Pasajero (el servicio no atiende) o el token rechazado: lo último guardado de este amigo, con lo de
             // Firestore al día, y sin avisar de nada. Sin copia, cuenta para el error genérico.
-            if (credential || isServiceUnavailable(readError)) {
+            const unavailable = isServiceUnavailable(readError);
+            if (unavailable) serviceFailed = true;
+            if (credential || unavailable) {
               servedFromCopy = true;
               const previous = await previousEntryOf(entry.uid);
               if (previous) {
@@ -596,9 +602,10 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
       setFeedReadFailed(unreadWithoutCopy);
       setGithubReconnectNeeded(credentialFailure);
       rejectedTokenRef.current = credentialFailure ? token : null;
-      // La red ha respondido entera: se retira el aviso de falta de conexión (que pudo encenderlo un fallo anterior
-      // con `navigator.onLine` diciendo que había red). Si una parte salió de lo guardado, no se da por buena.
-      if (!servedFromCopy) {
+      // La red y el servicio han respondido (aunque fuera con un 401): se retira el aviso de falta de conexión, que
+      // pudo encenderlo un fallo anterior con `navigator.onLine` diciendo que había red. Si alguna lectura no llegó a
+      // contestarse, no se da por buena.
+      if (!serviceFailed) {
         setNetworkFailure(false);
       }
 

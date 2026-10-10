@@ -7,19 +7,12 @@
 // Es MÁS ESTRICTA que la del hub, y a propósito: el hub deja pasar si no puede comprobarlo (bloquear el espacio
 // social por un fallo de red convertiría un requisito legal en una avería, y la persona está delante). Aquí nadie
 // está viendo las condiciones, así que ante la duda no se publica: queda pendiente y sale al aceptar en el hub.
-import { LEGAL_VERSION } from '../../core/constants/legal';
+import { LEGAL_CONSENT_SEALED_EVENT, LEGAL_VERSION } from '../../core/constants/legal';
 import { getPublicConfig } from './firebaseGateway';
 import { getLocalMeta, patchLocalMeta } from './indexedDbRepository';
 
 /** Cada cuánto se vuelve a preguntar a Firestore si lo sellado es una versión vieja (pudo aceptar en otro equipo). */
 export const LEGAL_CONSENT_RECHECK_MS = 24 * 60 * 60 * 1000;
-
-/**
- * Se emite en `window` cada vez que se sella la versión: la cápsula del aviso legal (`useLegalConsentNotice`) lo
- * escucha para aparecer en cuanto se sabe que falta la aceptación, y para irse en cuanto se acepta. El nombre lo
- * define el hook, que es quien lo escucha; aquí se repite para no importar la vista desde el modelo.
- */
-const LEGAL_CONSENT_SEALED_EVENT = 'mis-listas:legal-consent-sealed';
 
 /**
  * Sella en este dispositivo la versión que consta aceptada por esa cuenta (cadena vacía = ninguna). Best-effort: sin
@@ -29,6 +22,18 @@ export async function sealLegalConsent(uid: string, version: string): Promise<vo
   if (!uid) return;
   await patchLocalMeta({ legalConsent: { uid, version, checkedAt: Date.now() } }).catch(() => {});
   if (typeof window !== 'undefined') window.dispatchEvent(new Event(LEGAL_CONSENT_SEALED_EVENT));
+}
+
+/**
+ * El hub acaba de COMPROBAR la versión aceptada: si este dispositivo tenía sellada otra (aceptó en otro equipo, o es
+ * otra cuenta), se pone al día. Sin eso, la puerta seguiría con su sello viejo hasta un día entero, sin publicar nada,
+ * con la aceptación ya hecha. Sin sello no escribe nada: la puerta preguntará sola cuando lo necesite, y así abrir el
+ * hub no cuesta una escritura en IndexedDB en cada apertura.
+ */
+export async function refreshLegalConsentSeal(uid: string, version: string): Promise<void> {
+  if (!uid) return;
+  const seal = (await getLocalMeta().catch(() => null))?.legalConsent;
+  if (seal && (seal.uid !== uid || seal.version !== version)) await sealLegalConsent(uid, version);
 }
 
 /** ¿Puede salir algo del canal social sin pasar por el hub? Solo con la versión vigente aceptada y comprobada. */

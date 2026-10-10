@@ -15,8 +15,7 @@ import { AchievementStrip } from '../stats/AchievementStrip';
 import { HubStatus } from './HubStatus';
 import { PostBody } from './PostText';
 import { HubAvatar } from './HubAvatar';
-import { HubOfflineNotice } from './HubOfflineNotice';
-import { Notice } from '../Notice';
+import { FeedNotice } from './FeedNotice';
 import { FeedShell } from './FeedShell';
 import { FeedComposer } from './FeedComposer';
 import { FeedMoveCard } from './FeedMoveCard';
@@ -190,6 +189,14 @@ function SocialFeedScreenBase({
     return () => observer.disconnect();
   }, [loadingDirectory, hasMoreFeed, showMoreFeed, visibleFeedCount]);
 
+  // Qué dice el vacío con red. Por un fallo de lectura sin copia, el error genérico: «todo tranquilo» o «busca gente»
+  // serían mentira (docs/plan-feed-sin-vacio.md, Fase 1). Si no, depende de si ya tiene amigos.
+  const emptyState = feedReadFailed
+    ? { title: SOCIAL_UI.feed.readFailedTitle, text: SOCIAL_UI.feed.readFailed }
+    : hasFriends
+      ? { title: SOCIAL_UI.feed.activityEmptyQuietTitle, text: SOCIAL_UI.feed.activityEmptyQuiet }
+      : { title: SOCIAL_UI.feed.activityEmptyTitle, text: SOCIAL_UI.feed.activityEmptyNoFriends };
+
   return (
     /* El ARMAZÓN —cabecera, fila de botones y hueco del compositor— lo pinta `FeedShell`, que es el MISMO
        componente que usa el esqueleto de carga (`SocialHubSkeleton`). Vivía aquí escrito a mano, y el esqueleto
@@ -212,35 +219,16 @@ function SocialFeedScreenBase({
         </button>
       )}
       actions={{ pendingIncomingCount, onOpenProfiles, onOpenRequests }}
-      /* UN AVISO A LA VEZ, por lo que más pide al usuario: sin red no se puede ni reconectar; reconectar es lo único
-         que él puede arreglar; el servicio limitado se arregla solo; y el error de lectura, con el feed vacío, ya lo
-         dice el propio vacío (abajo), así que arriba solo sale si hay actividad que lo tape. */
-      notice={offline
-        ? <HubOfflineNotice hasCachedData={offlineHasCachedData} />
-        : githubReconnect ? (
-          <Notice
-            inline
-            tone="warn"
-            icon="cloud-sync"
-            role="status"
-            aria-label={SOCIAL_UI.githubReconnect.sectionAria}
-            kicker={SOCIAL_UI.githubReconnect.badge}
-            title={SOCIAL_UI.githubReconnect.title}
-            actions={(
-              <button type="button" className="btn" onClick={githubReconnect.onReconnect} disabled={githubReconnect.busy}>
-                {githubReconnect.busy ? SOCIAL_UI.githubReconnect.actionBusy : SOCIAL_UI.githubReconnect.action}
-              </button>
-            )}
-          >
-            {SOCIAL_UI.githubReconnect.body}
-          </Notice>
-        )
-          : serviceLimited ? <HubOfflineNotice variant="limited" hasCachedData={offlineHasCachedData} />
-            : feedReadFailed && !loadingDirectory && feedItems.length > 0 ? (
-              <Notice inline tone="err" role="status" aria-label={SOCIAL_UI.feed.readFailedTitle} kicker={SOCIAL_UI.feed.readFailedBadge}>
-                {SOCIAL_UI.feed.readFailed}
-              </Notice>
-            ) : null}
+      notice={(
+        <FeedNotice
+          SOCIAL_UI={SOCIAL_UI}
+          offline={offline}
+          offlineHasCachedData={offlineHasCachedData}
+          serviceLimited={serviceLimited}
+          githubReconnect={githubReconnect}
+          readFailed={feedReadFailed && !loadingDirectory && feedItems.length > 0}
+        />
+      )}
       composer={canPublishPosts ? (
         <FeedComposer
           SOCIAL_UI={SOCIAL_UI}
@@ -296,25 +284,13 @@ function SocialFeedScreenBase({
               ya lleva «Ver perfiles», justo encima: dos botones con el mismo destino. Ahora es un icono, un título y la
               frase, y el camino es el de la cabecera. Con amigos que aún no han publicado, el texto lo dice: «añade a
               alguien» no era verdad. */}
-          {/* Vacío POR UN FALLO sin copia: ni «todo tranquilo» ni «busca gente», que serían mentira. */}
-          {!loadingDirectory && feedItems.length === 0 && !offline && feedReadFailed ? (
+          {!loadingDirectory && feedItems.length === 0 && !offline ? (
             <div className="hub-feed-empty">
               <span className="hub-feed-empty-icon" aria-hidden="true">
                 <Icon name="bottom-hub" />
               </span>
-              <h3 className="hub-feed-empty-title">{SOCIAL_UI.feed.readFailedTitle}</h3>
-              <p>{SOCIAL_UI.feed.readFailed}</p>
-            </div>
-          ) : null}
-          {!loadingDirectory && feedItems.length === 0 && !offline && !feedReadFailed ? (
-            <div className="hub-feed-empty">
-              <span className="hub-feed-empty-icon" aria-hidden="true">
-                <Icon name="bottom-hub" />
-              </span>
-              <h3 className="hub-feed-empty-title">
-                {hasFriends ? SOCIAL_UI.feed.activityEmptyQuietTitle : SOCIAL_UI.feed.activityEmptyTitle}
-              </h3>
-              <p>{hasFriends ? SOCIAL_UI.feed.activityEmptyQuiet : SOCIAL_UI.feed.activityEmptyNoFriends}</p>
+              <h3 className="hub-feed-empty-title">{emptyState.title}</h3>
+              <p>{emptyState.text}</p>
             </div>
           ) : null}
           {!loadingDirectory && feedItems.length > 0 ? (

@@ -85,17 +85,22 @@ export function collectLocalReviews(games: TabData): LocalReview[] {
   return [...byId.values()].sort((a, b) => b.ts - a.ts);
 }
 
+/**
+ * Cuántos avisos de lista saldrían de los listados LOCALES dentro de la ventana del feed.
+ *
+ * F4: se compara igual que el de reseñas, y con las listas ocultas del gist todavía sin leer. Se cuenta sin filtro a
+ * propósito: es un número LOCAL para detectar movimientos (barato, sin red), no lo que se va a publicar. Esconder una
+ * lista mueve el recuento y fuerza una pasada, que es lo suyo. Con la ventana del feed: así un aviso que cumple los
+ * 30 días mueve el recuento y fuerza la pasada que lo retira.
+ */
+export function countLocalMoves(games: TabData, now = Date.now()): number {
+  return deriveMoveActivity(games, { since: feedRecentSince(now) }).length;
+}
 
-/** Los recuentos LOCALES con los que se sella la pasada: reseñas publicables y avisos de lista dentro de la ventana. */
-export function localActivityCounts(games: TabData, now = Date.now()): { reviewCount: number; moveCount: number } {
-  return {
-    reviewCount: collectLocalReviews(games).length,
-    // F4: el recuento de mensajes de lista se compara igual que el de reseñas, y con las listas ocultas del gist
-    // todavía sin leer. Se cuenta sin filtro a propósito: es un número LOCAL para detectar movimientos (barato, sin
-    // red), no lo que se va a publicar. Esconder una lista mueve el recuento y fuerza una pasada, que es lo suyo.
-    // Con la ventana del feed: así un aviso que cumple los 30 días mueve el recuento y fuerza la pasada que lo retira.
-    moveCount: deriveMoveActivity(games, { since: feedRecentSince(now) }).length,
-  };
+/** Los recuentos LOCALES con los que se sella la pasada. */
+export interface LocalActivityCounts {
+  reviewCount: number;
+  moveCount: number;
 }
 
 /**
@@ -104,10 +109,16 @@ export function localActivityCounts(games: TabData, now = Date.now()): { reviewC
  * antigua, fechas selladas con «ahora») y que el recuento no detecta—. No mira la edad del sello: eso lo decide quien
  * pregunta.
  */
-export function localActivityChanged(games: TabData, meta: LocalMeta | null | undefined, now = Date.now()): boolean {
-  if (meta?.pendingSocialActivity) return true;
-  const { reviewCount, moveCount } = localActivityCounts(games, now);
-  return meta?.activityReviewCount !== reviewCount
-    || meta?.activityMoveCount !== moveCount
+export function activityStampChanged(meta: LocalMeta | null | undefined, counts: LocalActivityCounts): boolean {
+  return Boolean(meta?.pendingSocialActivity)
+    || meta?.activityReviewCount !== counts.reviewCount
+    || meta?.activityMoveCount !== counts.moveCount
     || meta?.activityReconcileVersion !== RECONCILE_LOGIC_VERSION;
+}
+
+/** `activityStampChanged` contando desde los listados; para quien no tiene ya los recuentos a mano. */
+export function localActivityChanged(games: TabData, meta: LocalMeta | null | undefined, now = Date.now()): boolean {
+  // Lo pendiente decide sin contar nada: es lo más barato y lo más habitual de las causas.
+  if (meta?.pendingSocialActivity) return true;
+  return activityStampChanged(meta, { reviewCount: collectLocalReviews(games).length, moveCount: countLocalMoves(games, now) });
 }

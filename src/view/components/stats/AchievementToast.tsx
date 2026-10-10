@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
 import { AchievementMedal } from './AchievementMedal';
 import { AchievementSprite } from '../AchievementSprite';
 import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 import { RARITY_POINTS } from '../../../core/achievements/types';
-import { usePageVisible } from '../../hooks/usePageVisible';
+import { useToastLife } from '../../hooks/useLaneToast';
 import type { AchievementDef } from '../../../core/achievements/types';
 import { APP_LOCALE } from '../../../core/constants/locale';
 
@@ -69,12 +68,6 @@ const MEDALS_MAX = 3;
 const NEAR_PERCENT = 85;
 
 export function AchievementToast({ flash, onDone, onOpen }: AchievementToastProps) {
-  const [paused, setPaused] = useState(false);
-  // Y con la pestaña de fondo, igual que con el ratón encima: el reloj no corre si nadie puede leerla.
-  const visible = usePageVisible();
-  const doneRef = useRef(onDone);
-  doneRef.current = onDone;
-
   // La clave del `flash` reinicia el reloj: una cápsula que se funde con otra vuelve a tener sus cinco segundos.
   const key = flash === null
     ? ''
@@ -82,11 +75,9 @@ export function AchievementToast({ flash, onDone, onOpen }: AchievementToastProp
       ? `${flash.def.id}:${flash.value}`
       : flash.defs.map((def) => def.id).join(',');
 
-  useEffect(() => {
-    if (!key || paused || !visible) return;
-    const reloj = window.setTimeout(() => doneRef.current(), LIFE_MS);
-    return () => window.clearTimeout(reloj);
-  }, [key, paused, visible]);
+  // La vida, como en el resto de cápsulas del carril (`useLaneToast`): en pausa con el ratón o el foco encima y con
+  // la pestaña de fondo, porque el reloj no corre si nadie puede leerla.
+  const pause = useToastLife(onDone, { lifeMs: LIFE_MS, resetKey: key, active: Boolean(key) });
 
   if (flash === null) return null;
 
@@ -155,10 +146,7 @@ export function AchievementToast({ flash, onDone, onOpen }: AchievementToastProp
           className="ach-toast-body"
           onClick={onOpen}
           aria-label={ACHIEVEMENTS_UI.toastLink}
-          onMouseEnter={() => setPaused(true)}
-          onMouseLeave={() => setPaused(false)}
-          onFocus={() => setPaused(true)}
-          onBlur={() => setPaused(false)}
+          {...pause}
         >
           <span className="ach-toast-medals">
             {medallas.map((def) => (

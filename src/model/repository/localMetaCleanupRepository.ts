@@ -1,9 +1,6 @@
 // LIMPIEZA DE `LocalMeta`: lo que se retiró y los dispositivos siguen guardando. Módulo aparte de
 // `indexedDbRepository` porque ese viaja en el arranque y esto solo lo carga `IdleWork`, una vez por dispositivo.
-import { META_STORE, openSharedDatabase } from './idbConnectionRepository';
-
-/** El único registro de `LocalMeta` (el mismo que usa `indexedDbRepository`). */
-const META_KEY = 'singleton';
+import { META_KEY, META_STORE, openSharedDatabase } from './idbConnectionRepository';
 
 /**
  * Claves de `LocalMeta` que ya no usa nadie y que los dispositivos siguen guardando: `patchLocalMeta` solo añade, así

@@ -52,9 +52,10 @@ export interface LocalMeta {
   /**
    * La versión de las condiciones que consta aceptada por esta cuenta, vista desde ESTE dispositivo, y cuándo se
    * comprobó. Es la puerta de todo lo social que sale fuera del hub (`canPublishSocialInBackground`): el hub la
-   * comprueba al entrar, pero una reseña guardada desde la app principal no pasa por él. La sella el propio hub al
-   * comprobarla o al aceptar; sin ella, una lectura de `publicConfig` como mucho al día. Con el `uid`, porque el
-   * dispositivo puede cambiar de cuenta (docs/plan-feed-sin-vacio.md, Fase 2).
+   * comprueba al entrar, pero una reseña guardada desde la app principal no pasa por él. La sella la propia puerta
+   * con lo que lee de `publicConfig` (como mucho una lectura al día si es una versión vieja), y el hub al aceptar. Con
+   * el `uid`, porque el dispositivo puede cambiar de cuenta (docs/plan-feed-sin-vacio.md, Fase 2). La lee también la
+   * cápsula del aviso legal (`useLegalConsentNotice`).
    */
   legalConsent?: { uid: string; version: string; checkedAt: number };
   /**

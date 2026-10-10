@@ -45,13 +45,16 @@ describe('runBackgroundSocialPass · lo que NO hace', () => {
     const d = deps({ channel: false, changed: true });
     expect(await runBackgroundSocialPass(JUEGOS, d)).toBe('sin-canal');
     expect(d.getUid).not.toHaveBeenCalled();
+    expect(d.localActivityChanged).not.toHaveBeenCalled();
     expect(d.reconcile).not.toHaveBeenCalled();
   });
 
-  it('sin sesión de Google guardada no hace nada, ni carga Firebase', async () => {
+  it('sin sesión de Google guardada no hace nada, ni carga Firebase, ni recuenta la biblioteca', async () => {
     const d = deps({ session: false, changed: true });
     expect(await runBackgroundSocialPass(JUEGOS, d)).toBe('sin-sesion');
     expect(d.getUid).not.toHaveBeenCalled();
+    expect(d.hasSocialChannel).not.toHaveBeenCalled();
+    expect(d.localActivityChanged).not.toHaveBeenCalled();
   });
 
   it('sin cambios y con la recencia de hoy: nada que hacer, y sin Firebase', async () => {

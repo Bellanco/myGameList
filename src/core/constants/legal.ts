@@ -85,6 +85,13 @@
 // canal. Se declara el plazo, pero la versión NO sube por él: es publicar menos (mismo criterio que el 2026-08-26).
 export const LEGAL_VERSION = '2026-10-07b';
 
+/**
+ * Se emite en `window` cada vez que este dispositivo sella la versión aceptada (`sealLegalConsent`). Lo escucha la
+ * cápsula del aviso legal (`useLegalConsentNotice`) para salir en cuanto se sabe que falta la aceptación y para irse en
+ * cuanto se acepta (docs/plan-feed-sin-vacio.md, Fase 6).
+ */
+export const LEGAL_CONSENT_SEALED_EVENT = 'mygamelist:legal-consent-sealed';
+
 // Correo de CONTACTO publicado en los documentos. A propósito distinto del de la cuenta de administración de
 // `firestore.rules` (`isAdmin`): son la misma persona, pero separar buzones evita mezclar avisos legales y
 // solicitudes de usuarios con el correo que da acceso a la base de datos. No unificar sin querer.

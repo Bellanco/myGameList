@@ -253,7 +253,7 @@ export default function App() {
   // El aviso del resumen del año (15–31 de diciembre): solo con perfil social, que es donde vive el resumen.
   const yearSummaryNotice = useYearSummaryNotice(hasSocialProfile, vm.data.c);
   // Condiciones nuevas por aceptar: sin ellas no sale nada de la actividad (docs/plan-feed-sin-vacio.md, Fase 6).
-  const legalNotice = useLegalConsentNotice(hasSocialProfile);
+  const legalNotice = useLegalConsentNotice(hasSocialProfile, activeSection === 'social');
   // F1: enlaza la sesión con la apariencia (paleta + claro/oscuro) → hidrata/replica en Firestore.
   useAppearanceSession();
   // Al iniciar sesión, migra y limpia los restos legacy del perfil público (email / id del gist de juegos /
@@ -1218,9 +1218,9 @@ export default function App() {
               onOpen={openAchievements}
             />
           </Suspense>
-        ) : legalNotice.show && activeSection !== 'social' ? (
+        ) : legalNotice.show ? (
           // CONDICIONES NUEVAS: detrás del logro y delante del resumen del año, porque sin aceptarlas tu actividad
-          // deja de llegar a tus amigos. Dentro del espacio social no hace falta: allí ya sale la pantalla de aceptar.
+          // deja de llegar a tus amigos. Dentro del espacio social no sale: allí ya está la pantalla de aceptar.
           <Suspense fallback={null}>
             <LegalConsentToast onShown={legalNotice.markShown} onDone={legalNotice.dismiss} />
           </Suspense>

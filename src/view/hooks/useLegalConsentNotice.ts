@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { LEGAL_VERSION } from '../../core/constants/legal';
+import { LEGAL_CONSENT_SEALED_EVENT, LEGAL_VERSION } from '../../core/constants/legal';
 import { LEGAL_NOTICE_TOLD_KEY } from '../../core/constants/storageKeys';
 import { getLocalMeta } from '../../model/repository/indexedDbRepository';
-
-/** Lo emite `sealLegalConsent` (`socialConsentGate`) al sellar la versión aceptada. Mismo nombre allí. */
-export const LEGAL_CONSENT_SEALED_EVENT = 'mis-listas:legal-consent-sealed';
 
 function readTold(): string {
   try {
@@ -31,9 +28,14 @@ function writeTold(): void {
  * si no se le ha dicho ya para esta versión. Sin nada sellado no se sabe, y no se avisa. Se vuelve a mirar cuando la
  * puerta sella (aparece en cuanto se sabe, se va en cuanto se acepta) y al volver a la pestaña.
  *
- * Se apunta como dado al MONTARSE la cápsula (`markShown`), como el resumen del año y el aviso del administrador.
+ * Se apunta como dado al MONTARSE la cápsula (`markShown`), como el resumen del año y el aviso del administrador. Y
+ * también al entrar en el espacio social (`inSocialSpace`): allí ya sale la pantalla de aceptar, y si no contara, al
+ * volver a las listas sin aceptar la cápsula reaparecía en la misma sesión.
  */
-export function useLegalConsentNotice(hasSocialProfile: boolean): { show: boolean; markShown: () => void; dismiss: () => void } {
+export function useLegalConsentNotice(
+  hasSocialProfile: boolean,
+  inSocialSpace = false,
+): { show: boolean; markShown: () => void; dismiss: () => void } {
   const [pending, setPending] = useState(false);
   const [closed, setClosed] = useState(() => readTold() === LEGAL_VERSION);
 
@@ -69,5 +71,11 @@ export function useLegalConsentNotice(hasSocialProfile: boolean): { show: boolea
     writeTold();
     setClosed(true);
   }, []);
-  return { show: hasSocialProfile && pending && !closed, markShown, dismiss };
+
+  const due = hasSocialProfile && pending && !closed;
+  useEffect(() => {
+    if (due && inSocialSpace) dismiss();
+  }, [due, inSocialSpace, dismiss]);
+
+  return { show: due && !inSocialSpace, markShown, dismiss };
 }

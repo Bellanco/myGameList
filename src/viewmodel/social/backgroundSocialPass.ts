@@ -81,16 +81,18 @@ async function runPass(games: TabData, deps: BackgroundSocialPassDeps): Promise<
   // Listados sin cargar: no hay con qué comparar (y la reconciliación, sobre todo, no debe retirar nada).
   if (!hasAnyGame(games)) return 'sin-listados';
 
-  // TODO lo que sigue hasta la sesión es local: lo normal es salir aquí sin haber tocado la red.
+  // TODO lo que sigue hasta la sesión de Firebase es local, y va de lo más barato a lo más caro: lo normal es salir
+  // aquí sin haber tocado la red, y quien no usa lo social en este dispositivo, sin haber recontado la biblioteca.
   const meta = await deps.getLocalMeta().catch(() => null);
   const now = Date.now();
   const touchDue = now - Number(meta?.profileTouchedAt || 0) >= PROFILE_TOUCH_MIN_INTERVAL_MS;
   const passDue = now - Number(meta?.backgroundSocialPassAt || 0) >= BACKGROUND_SOCIAL_PASS_MIN_INTERVAL_MS;
+  if (!touchDue && !passDue) return 'nada';
+
+  if (!deps.hasStoredSession()) return 'sin-sesion';
+  if (!(await deps.hasSocialChannel())) return 'sin-canal';
   const publishDue = passDue && deps.localActivityChanged(games, meta);
   if (!touchDue && !publishDue) return 'nada';
-
-  if (!(await deps.hasSocialChannel())) return 'sin-canal';
-  if (!deps.hasStoredSession()) return 'sin-sesion';
 
   // A partir de aquí ya hay algo que hacer, y sí se carga Firebase.
   const uid = await deps.getUid();

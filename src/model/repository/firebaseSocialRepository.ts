@@ -10,6 +10,7 @@
 // fallback para perfiles legacy cuyo id de documento no es el uid.
 import { collection, doc, getDoc, getDocs, limit, orderBy, query, Timestamp, where } from 'firebase/firestore/lite';
 import type { PalmaresEntry } from '../types/premios';
+import { toMillis } from '../../core/utils/firestoreTime';
 import { DEFAULT_PROFILE_TIER, normalizeTier, type ProfileTier } from '../../core/constants/tiers';
 import {
   initializeFirebaseServices,
@@ -72,13 +73,6 @@ function readYearSummarySeen(raw: unknown): YearSummarySeen | null {
   return Number.isInteger(year) && millis > 0 ? { year: year as number, at: millis } : null;
 }
 
-function toMillis(value: { toMillis?: () => number } | number | undefined): number {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : 0;
-  }
-  const millis = value?.toMillis?.();
-  return typeof millis === 'number' && Number.isFinite(millis) ? millis : 0;
-}
 
 /** Lo que se lee de un documento de `profiles` para el directorio. */
 type DirectoryDocData = {
@@ -473,12 +467,14 @@ function directoryProfileIsFresh(
   friendshipStamp = 0,
 ): boolean {
   if (row.cachedAt < directoryProfileInvalidatedFor(uid)) return false;
-  // LA SEÑAL DE REGRESO (docs/plan-feed-sin-vacio.md, Fase 4): quien vuelve tras más de 30 días sella el `updatedAt`
-  // de sus amistades. Si la amistad es más nueva que esta copia, la copia no vale: es lo que saca a un amigo del
-  // corte de inactividad en cuanto vuelve, y no al caducar su copia de dormido un día después.
-  if (friendshipStamp > row.cachedAt) return false;
   const lastActiveAt = row.entry?.updatedAt || 0;
   const asleep = lastActiveAt > 0 && now - lastActiveAt > PROFILE_INACTIVITY_MS;
+  // LA SEÑAL DE REGRESO (docs/plan-feed-sin-vacio.md, Fase 4): quien vuelve tras más de 30 días sella el `updatedAt`
+  // de sus amistades. Si la amistad es más nueva que la copia de un DORMIDO, la copia no vale: es lo que lo saca del
+  // corte de inactividad en cuanto vuelve, y no al caducar su copia un día después. Solo para dormidos: el sello lo
+  // pone el reloj del otro, y si va adelantado sería «más nuevo» que cada copia durante horas. Tras releerlo sale
+  // despierto y vuelve a la edad normal, así que tampoco se repite.
+  if (asleep && friendshipStamp > row.cachedAt) return false;
   return now - row.cachedAt < (asleep ? Math.max(maxAgeMs, INACTIVE_PROFILE_MAX_AGE_MS) : maxAgeMs);
 }
 

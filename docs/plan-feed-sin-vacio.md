@@ -38,12 +38,23 @@
 > ViewModel). La tarjeta PROPIA sigue esperando a `ready` (lo publicado leído), para no salir en un día más tardío y
 > saltar. Anotado en la revisión general (hallazgo 15) y en `plan-logros.md` §8.4.
 >
-> Fase 6, dónde quedó: `LegalConsentToast.tsx` (+ `styles/legalNotice.scss`), `useLegalConsentNotice` (lee el sello de
-> la puerta en `LocalMeta`, sin Firestore; se entera por el evento que emite `sealLegalConsent` y al volver a la
+> Fase 6, dónde quedó: `LegalConsentToast.tsx`, `useLegalConsentNotice` (lee el sello de la puerta en `LocalMeta`, sin
+> Firestore; se entera por `LEGAL_CONSENT_SEALED_EVENT` de `legal.ts`, que emite `sealLegalConsent`, y al volver a la
 > pestaña), textos en `core/constants/legalNoticeLabels.ts` (no en `legal.ts`, que viaja en el arranque) y
-> `LEGAL_NOTICE_TOLD_KEY`. En `App`, detrás del logro y delante del resumen del año, y no dentro del hub (allí ya sale
-> la pantalla de aceptar). Medido: arranque crítico 187,6 de 190 kB (+0,2). En la maqueta como `aviso-legal`, revisada
-> en los ocho temas y los dos modos. Test: `tests/component/LegalConsentToast.test.tsx`.
+> `LEGAL_NOTICE_TOLD_KEY`. En `App`, detrás del logro y delante del resumen del año; entrar en el espacio social la da
+> por dicha (allí ya sale la pantalla de aceptar). Medido: arranque crítico 187,6 de 190 kB (+0,2). En la maqueta como
+> `aviso-legal`, revisada en los ocho temas y los dos modos. Test: `tests/component/LegalConsentToast.test.tsx`.
+>
+> Revisión del código (10-10-2026): las cuatro cápsulas del carril comparten ahora la vida, la pausa y el anuncio
+> (`view/hooks/useLaneToast.ts`), y la legal y la del resumen del año el botón y la hoja (`LaneCapsuleButton.tsx`,
+> `styles/laneCapsule.scss`); el aviso de arriba del feed está en `socialhub/FeedNotice.tsx`; el conversor de fechas de
+> Firestore, una sola copia en `core/utils/firestoreTime.ts`; la recencia no se solapa (`touchOwnProfileActivityThrottled`);
+> y la reconciliación cuenta reseñas y avisos una sola vez (`activityStampChanged`). Tres fallos corregidos de una
+> revisión independiente: un 401 ya no deja puesto un «sin conexión» anterior que tapaba el aviso de reconectar
+> (`serviceFailed` en la hidratación); el hub pone al día el sello legal si el dispositivo tenía otra versión
+> (`refreshLegalConsentSeal`: aceptar en otro equipo bloqueaba la puerta hasta un día); y la señal de regreso solo tira
+> copias de DORMIDOS (con un reloj adelantado del otro, tiraba cada copia durante horas). Arranque crítico tras la
+> revisión: 187,7 de 190 kB.
 
 > ⚠️ **Documento vivo.** Si una línea no coincide con el código, manda el código: corrige esto en la misma pasada.
 

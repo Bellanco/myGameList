@@ -135,6 +135,18 @@ describe('getSocialProfilesByUid — lo que el feed lee de Firestore', () => {
     expect(entrada.updatedAt).toBe(AHORA + 4 * MEDIA_HORA);
   });
 
+  // El sello lo pone el reloj del OTRO: si va adelantado, quedaría «más nuevo» que cada copia durante horas. Por eso
+  // solo vale para las copias de dormido, que es para lo que existe; una despierta sigue con su edad normal.
+  it('el sello no tira la copia de un amigo DESPIERTO (aunque venga de un reloj adelantado)', async () => {
+    world = { activo: perfil('activo', AHORA - 1000) };
+    await repo.getSocialProfilesByUid(['activo'], { maxAgeMs: MEDIA_HORA });
+
+    vi.setSystemTime(AHORA + 60_000);
+    await repo.getSocialProfilesByUid(['activo'], { maxAgeMs: MEDIA_HORA, friendshipStamps: { activo: AHORA + 6 * 60 * 60 * 1000 } });
+
+    expect(leidos()).toEqual(['activo']);
+  });
+
   it('un sello de amistad ANTERIOR a la copia no la tira: ya estaba vista', async () => {
     world = { dormido: perfil('dormido', AHORA - PROFILE_INACTIVITY_MS - 1) };
     await repo.getSocialProfilesByUid(['dormido'], { maxAgeMs: MEDIA_HORA, friendshipStamps: { dormido: AHORA - 1000 } });
