@@ -94,6 +94,10 @@ export const SHARE_CONSENT_KEY = 'mis-listas-share-consent';
 // `LEGAL_VERSION` de entonces. Una vez por versión y navegador, como el aviso del resumen del año.
 export const LEGAL_NOTICE_TOLD_KEY = 'mis-listas-legal-notice-told';
 
+// Ya se quitaron de `LocalMeta` las claves retiradas (`removeLegacyLocalMetaKeys`): valor '1'. Si un día se retira
+// otra, se cambia el valor esperado para que los dispositivos ya limpios vuelvan a pasar una vez.
+export const LEGACY_META_CLEANUP_KEY = 'mis-listas-legacy-meta-cleanup';
+
 // Logros — marca de agua (§5.5 del plan) y lo que su dueño ya ha visto (§7.3), en el formato compacto
 // `id.nivel,id.nivel`. Es estado de DISPOSITIVO, como `friendshipHealedForGist`, y por eso no sube a ningún
 // canal. Vive en localStorage y no en `LocalMeta` MIENTRAS la publicación esté apagada
