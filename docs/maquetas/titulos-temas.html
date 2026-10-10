@@ -95,10 +95,10 @@ const TEMAS = {
           ${T(p)}::before, ${T(p)}::after { content: ''; width: .55em; height: 1.2em; border-radius: 50%; }
           ${T(p)}::before { background: radial-gradient(ellipse, #fff 10%, #29b6f6 45%, transparent 75%); box-shadow: 0 0 10px #29b6f6; }
           ${T(p)}::after { background: radial-gradient(ellipse, #fff 10%, #ff9e1b 45%, transparent 75%); box-shadow: 0 0 10px #ff9e1b; }` },
-      { elegida: true, nombre: 'Terminal de GLaDOS', por: 'El texto de la consola de Aperture: monoespaciada naranja y un cursor que parpadea.',
+      { elegida: true, nombre: 'Terminal de GLaDOS', por: 'El texto de la consola de Aperture: monoespaciada naranja y un cursor que late despacio.',
         css: (p) => `${T(p)} { font-family: 'Share Tech Mono', monospace; color: #ff9e1b; letter-spacing: .04em; }
-          ${T(p)}::after { content: '▮'; margin-left: .2em; animation: ttl-blink 1s steps(1) infinite; }
-          @keyframes ttl-blink { 50% { opacity: 0; } }` },
+          ${T(p)}::after { content: ''; display: inline-block; width: max(2px, .09em); height: .9em; margin-left: .25em; vertical-align: -.1em; background: currentColor; animation: ttl-latido 2.6s ease-in-out infinite; }
+          @keyframes ttl-latido { 50% { opacity: .15; } }` },
       { nombre: 'Terminal entre portales', por: 'Las dos juntas: el texto de la consola sale por el portal azul y entra por el naranja.',
         css: (p) => `${T(p)} { font-family: 'Share Tech Mono', monospace; color: #ff9e1b; letter-spacing: .04em; display: inline-flex; align-items: center; gap: .7rem; }
           ${T(p)}::before, ${T(p)}::after { content: ''; width: .55em; height: 1.2em; border-radius: 50%; }

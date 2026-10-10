@@ -1074,12 +1074,22 @@
    Un gesto del juego en el título de cada pantalla del hub (`.hub-hub-title-wrap h2`), elegido con
    `docs/maquetas/titulos-temas.html`. Sin `text-transform`: las mayúsculas las pone la casilla de Apariencia, y
    cualquier animación se queda quieta con los efectos apagados o si el sistema pide menos movimiento. ── */
-/* TERMINAL DE GLaDOS: monoespaciada naranja de la consola de Aperture y un cursor que parpadea (solo con efectos).
-   A la luz, el naranja de la Aperture antigua, más hondo. */
+/* TERMINAL DE GLaDOS: monoespaciada naranja de la consola de Aperture y un cursor que late despacio (solo con
+   efectos). A la luz, el naranja de la Aperture antigua, más hondo.
+   EL CURSOR VA DIBUJADO, NO ESCRITO (10-10-2026): Share Tech Mono no trae `▮` y Firefox lo sacaba de otra fuente,
+   un bloque ancho que parecía una letra seleccionada. Una barra fina de `currentColor` mide lo mismo en todos. */
 :root[data-palette="portal"] .hub-hub-title-wrap h2 { font-family: 'Share Tech Mono', monospace; letter-spacing: .04em; color: #ff9e1b !important; }
-:root[data-palette="portal"] .hub-hub-title-wrap h2::after { content: '▮'; margin-left: .2em; }
+:root[data-palette="portal"] .hub-hub-title-wrap h2::after {
+  content: '';
+  display: inline-block;
+  width: max(2px, .09em);
+  height: .9em;
+  margin-left: .25em;
+  vertical-align: -.1em;
+  background: currentColor;
+}
 :root[data-palette="portal"][data-theme="light"] .hub-hub-title-wrap h2 { color: #9a4a08 !important; }
 @media (prefers-reduced-motion: no-preference) {
-  :root[data-effects="on"][data-palette="portal"] .hub-hub-title-wrap h2::after { animation: portal-cursor 1s steps(1) infinite; }
+  :root[data-effects="on"][data-palette="portal"] .hub-hub-title-wrap h2::after { animation: portal-cursor 2.6s ease-in-out infinite; }
 }
-@keyframes portal-cursor { 50% { opacity: 0; } }
+@keyframes portal-cursor { 50% { opacity: .15; } }

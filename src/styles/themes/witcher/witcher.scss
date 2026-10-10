@@ -1283,8 +1283,11 @@
    Un gesto del juego en el título de cada pantalla del hub (`.hub-hub-title-wrap h2`), elegido con
    `docs/maquetas/titulos-temas.html`. Sin `text-transform`: las mayúsculas las pone la casilla de Apariencia, y
    cualquier animación se queda quieta con los efectos apagados o si el sistema pide menos movimiento. ── */
-/* SEÑAL DE IGNI: Cinzel con el resplandor de la señal de fuego y su runa delante. */
-:root[data-palette="witcher"] .hub-hub-title-wrap h2 { font-family: 'Cinzel', serif; letter-spacing: .1em; color: #ffb27a !important; text-shadow: 0 0 8px rgba(255, 120, 40, .55); }
+/* SEÑAL DE IGNI: el resplandor de la señal de fuego y su runa delante. La letra sigue a «Texto» de /cuenta como los
+   nombres de §1b (10-10-2026): Cinzel solo tiene capitales, así que en caja normal el título va en la letra de
+   cuerpo y vuelve a Cinzel, con su tracking, cuando se piden versales. */
+:root[data-palette="witcher"] .hub-hub-title-wrap h2 { font-family: var(--font-label); letter-spacing: .02em; color: #ffb27a !important; text-shadow: 0 0 8px rgba(255, 120, 40, .55); }
+:root[data-palette="witcher"][data-uppercase="on"] .hub-hub-title-wrap h2 { font-family: var(--font-display); letter-spacing: .1em; }
 :root[data-palette="witcher"] .hub-hub-title-wrap h2::before { content: '△ '; color: #ff8f4a; }
 :root[data-palette="witcher"][data-theme="light"] .hub-hub-title-wrap h2 { color: #a3420a !important; text-shadow: 0 0 6px rgba(255, 120, 40, .3); }
 :root[data-palette="witcher"][data-theme="light"] .hub-hub-title-wrap h2::before { color: #c2560f; }

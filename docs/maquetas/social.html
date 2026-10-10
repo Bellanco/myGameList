@@ -54,6 +54,10 @@
   if (params.get('gl-effects') !== 'off') {
     root.setAttribute('data-effects', 'on');
   }
+  // «Texto» de /cuenta en mayúsculas (`data-uppercase`): de fábrica va apagado; `gl-uppercase=on` lo enciende.
+  if (params.get('gl-uppercase') === 'on') {
+    root.setAttribute('data-uppercase', 'on');
+  }
   root.setAttribute('data-list-shape', 'list');
   root.setAttribute('data-grid-size', 'md');
   var meta = document.querySelector('meta[name="theme-color"]');
