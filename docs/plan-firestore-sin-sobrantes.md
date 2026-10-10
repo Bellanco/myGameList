@@ -1,7 +1,7 @@
 # Plan 1.6.9: la amistad nueva, Firestore sin sobrantes y la fecha de alta
 
 > **Estado (10-10-2026): Fases 1–4 hechas en `develop`, sin push y sin release (la rama de release la crea el
-> usuario; el CHANGELOG queda en `[Unreleased]`). Reglas del depósito cambiadas, SIN desplegar. Relleno de
+> usuario; el CHANGELOG queda en `[Unreleased]`). Reglas del depósito DESPLEGADAS (10-10-2026). Relleno de
 > `createdAt` HECHO en los 12 perfiles de producción (comprobado con el MCP).** Medido leyendo producción (MCP de
 > Firebase) y el código de `develop`. Los casos ya rotos y los datos sobrantes que ya existen se arreglan **cuando su dueño entra**, sin
 > scripts. La única excepción es la fecha de alta (Fase 3): entrar la sellaría con la fecha de ese día, así que se
@@ -163,8 +163,8 @@ Borrar un documento que no existe no falla, y la regla ya lo permite.
 Se aceptan los campos viejos mientras queden documentos que los lleven (un `hasOnly` que no cuadra rechaza la
 escritura **entera**, y la de borrarlos también tiene que pasar):
 
-- `friendshipKeys`: `updatedAt` pasa de obligatorio a opcional. Es lo único que hay que **desplegar antes** que el
-  cliente.
+- `friendshipKeys`: `updatedAt` pasa de obligatorio a opcional. Era lo único que había que desplegar antes que el
+  cliente, y está desplegado (10-10-2026; producción coincidía con `origin/develop`, así que salió solo este cambio).
 - `profiles` (`etag`, `achievements.v`), `privateConfig`/`publicConfig` (`schemaVersion`), `publicConfig`
   (`listShape`, `gridSize`) y `userMap`: sin cambios ahora. Se retiran de las reglas en una versión posterior,
   cuando el MCP confirme que no queda ninguno.

@@ -5,6 +5,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.6.9] - 2026-10-10
+
 Una versión de **Firestore sin sobrantes**: deja de guardarse lo que nadie lee y lo que repetía otro dato, y la fecha
 de alta de los perfiles, que no se escribía nunca, por fin se sella.
 
@@ -29,8 +31,10 @@ de alta de los perfiles, que no se escribía nunca, por fin se sella.
 - Plan y medición en `docs/plan-firestore-sin-sobrantes.md`.
 
 ### Deploy
-- **Reglas de Firestore, ANTES que el cliente**: `friendshipKeys.updatedAt` pasa a opcional. `npm run audit:rules`
-  antes. **Sin cambios en índices**, en Pages Functions ni en la versión legal.
+- **Reglas de Firestore ya desplegadas** (10-10-2026): `friendshipKeys.updatedAt` pasa a opcional. Sin
+  `audit:rules` (no había credenciales de cuenta de servicio): se comprobó que las reglas de producción eran
+  idénticas a las de `origin/develop`, así que solo salió ese cambio, que únicamente afloja una validación. **Sin
+  cambios en índices**, en Pages Functions ni en la versión legal.
 - **`createdAt` ya está rellenado** con su fecha real en los 12 perfiles de producción (10-10-2026, ver el plan,
   Fase 3). Era lo que tenía que ir antes que el cliente: si no, la sellaría con la fecha de su próxima entrada.
 
