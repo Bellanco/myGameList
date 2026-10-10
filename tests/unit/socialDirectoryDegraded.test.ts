@@ -89,7 +89,8 @@ describe('useSocialDirectory con el servicio limitado', () => {
     await result.current.hydrateSocialDirectory();
 
     await waitFor(() => expect(result.current.rawSocialDirectory).toEqual(idb.stale));
-    expect(reportFailure).toHaveBeenCalled();
+    // Con copia, sin aviso (docs/plan-feed-sin-vacio.md, Fase 1): lo guardado se enseña tal cual.
+    expect(reportFailure).not.toHaveBeenCalled();
     expect(idb.putCachedSocialDirectory).not.toHaveBeenCalled();
   });
 
@@ -112,7 +113,7 @@ describe('useSocialDirectory con el servicio limitado', () => {
     // Lo de Firestore, al día aunque la actividad sea de antes.
     expect(ana?.tier).toBe('gold');
     expect(idb.putCachedSocialDirectory).not.toHaveBeenCalled();
-    expect(reportFailure).toHaveBeenCalledWith(expect.objectContaining({ rateLimited: true }), expect.any(String), 'warn');
+    expect(reportFailure).not.toHaveBeenCalled();
   });
 
   it('con todo bien, guarda la copia y retira los avisos', async () => {

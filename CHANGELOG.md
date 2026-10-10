@@ -5,6 +5,48 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.6.8] - 2026-10-10
+
+Una versión de **feed que no se queda vacío**: lo que haces fuera del hub se publica sin abrirlo, una amistad nueva
+enseña su historial en cuanto se acepta, y quien vuelve tras un tiempo aparece sin esperar un día. Además, el CI
+corre en paralelo.
+
+### Added
+- **Los movimientos de listas y la actividad se publican desde la aplicación principal**, sin entrar en el hub: al
+  abrirla y al volver a la pestaña, como mucho cada 8 horas y solo si hay cambios.
+- **Logros recientes de tus amistades** de los últimos 30 días, también con una amistad o un dispositivo nuevos.
+- **Aviso de condiciones nuevas desde la aplicación principal**: una cápsula, una vez por versión legal, lleva a la
+  pantalla de aceptación del hub sin gastar lecturas de Firestore.
+
+### Changed
+- **Nada sale de tu dispositivo sin aceptar las condiciones vigentes**: las reseñas guardadas fuera del hub esperan
+  como pendientes hasta aceptarlas. La versión aceptada se sella en el dispositivo, con una comprobación al día como
+  mucho.
+- Textos de la interfaz reescritos para que suenen menos a máquina.
+
+### Fixed
+- **El historial de una amistad nueva sale nada más aceptarla**, en lugar de esperar a que caduque la caché del
+  directorio.
+- **Quien vuelve tras más de 30 días se ve al momento** en el feed de sus amistades, sin esperar un día.
+- **Una amistad que no se puede leer se enseña con su copia guardada, sin avisos**; sin copia, un error genérico
+  sustituye a los estados vacíos, y un token de GitHub caducado deja de leer al primer 401 y ofrece reconectar.
+- La sincronización ya no lanza dos hidrataciones del token a la vez en el mismo canal.
+- El compositor de publicaciones vacío ya no muestra barra de desplazamiento.
+- **Temas**: las letras del título de Persona van siempre en mayúsculas, y Portal pinta su cursor en el título y
+  respeta las mayúsculas en los títulos del hub.
+
+### Internal
+- **CI en paralelo**: comprobaciones, suite con cobertura, reglas de Firestore y e2e (en 3 fragmentos) van en jobs
+  separados; Node se toma de `.nvmrc`, el e2e solo descarga el `chromium-headless-shell` y sube sus trazas si algo
+  falla, y una PR cancela su run anterior.
+- Dependencias al día dentro de su rango (Playwright 1.64, Vite 8.3.4, firebase-tools 15.33…) y jsdom 30 en los
+  tests. TypeScript 7 y ESLint 10 esperan a typescript-eslint y a los plugins de React; firebase 13, a madurar.
+
+### Deploy
+- **Reglas de Firestore**: el depósito `friendshipKeys` ya está desplegado (10-10-2026). Aun así, `npm run
+  audit:rules` antes de volver a desplegarlas. **Sin cambios en índices**, en Pages Functions ni en la versión legal.
+- La cota del 29-09-2026 a los logros del feed se retira el 28-10-2026, cuando salga de la ventana de 30 días.
+
 ## [1.6.7] - 2026-10-09
 
 Una versión de **revisión de lo social**: las peticiones de amistad y el cierre de sesión guardan mejor lo de cada

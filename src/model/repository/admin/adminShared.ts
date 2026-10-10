@@ -48,14 +48,8 @@ export function describe(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** `updatedAt` puede venir como Timestamp de Firestore o como número (docs de clientes antiguos). */
-export function toMillis(value: { toMillis?: () => number } | number | undefined): number {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : 0;
-  }
-  const millis = value?.toMillis?.();
-  return typeof millis === 'number' && Number.isFinite(millis) ? millis : 0;
-}
+/** `updatedAt` puede venir como Timestamp de Firestore o como número (docs de clientes antiguos). Vive en `core`. */
+export { toMillis } from '../../../core/utils/firestoreTime';
 
 /** Traduce el `permission-denied` de las reglas al lenguaje del panel (la causa siempre es la misma: no eres admin). */
 export function toAdminError(error: unknown, what: string): Error {
@@ -68,7 +62,7 @@ export function toAdminError(error: unknown, what: string): Error {
 export async function requireServices() {
   const services = await initializeFirebaseServices();
   if (!services) {
-    throw new Error('Firebase no está configurado en este entorno');
+    throw new Error('Firebase no está configurado en este entorno.');
   }
   return services;
 }

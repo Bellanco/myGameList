@@ -160,7 +160,7 @@ export const STATS_UI = {
     // Cyberpunk 2077 (uno de los temas): «despierta, samurái».
     derivedSubtitle: 'Despierta, samurái: así ha ido creciendo lo que hoy tienes en cada lista.',
     realSubtitle: 'Tamaño de cada lista al cierre de cada mes, según lo registrado en este dispositivo.',
-    realNote: 'Histórico real, registrado mes a mes en este dispositivo desde que la función existe.',
+    realNote: 'La curva empieza en el primer mes que registró este dispositivo.',
     empty: 'Todavía no hay meses que representar.',
     lists: { c: 'Completados', v: 'Abandonados', e: 'En curso', p: 'Próximos', d: 'Deseados' },
     colMonth: 'Mes',

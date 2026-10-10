@@ -169,7 +169,7 @@ export function useOwnAchievements({
       mirror: ownMergedMirror,
       uid: ownUid || '',
       // `tierResolved` se da al terminar de leer tu perfil, que es de donde sale lo PUBLICADO: antes de eso el
-      // espejo es solo el de este dispositivo y no vale como línea base (ver `useSocialFeed`).
+      // espejo es solo el de este dispositivo y tu tarjeta podría salir en un día más tardío (ver `useSocialFeed`).
       ready: tierResolved,
     };
   }, [ownAchievementStates, ownMergedMirror, ownDirectoryProfileId, ownDisplayName, ownPhotoURL, ownUid, tierResolved]);

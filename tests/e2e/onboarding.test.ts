@@ -90,7 +90,7 @@ test.describe('guía de primeros pasos', () => {
     expect(violations.map((violation) => violation.id)).toEqual([]);
 
     // La conexión manual sigue ahí para quien la busca.
-    await card.getByRole('button', { name: 'Conectar a mano, con token y Gist ID' }).click();
+    await card.getByRole('button', { name: 'Conectar a mano, con token e ID del gist' }).click();
     await expect(card.getByLabel('Token *')).toBeVisible();
   });
 

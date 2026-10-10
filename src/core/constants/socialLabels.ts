@@ -45,6 +45,17 @@ export const SOCIAL_UI = {
     bodyEmpty: 'Aquí todavía no hay nada guardado. En cuanto vuelva la red aparecerá la actividad.',
     badge: 'Sin conexión',
   },
+  // Aviso PERSISTENTE de la conexión con GitHub CADUCADA: el token con el que se leen los gists de tus amigos ya no
+  // vale. Lo guardado se sigue viendo, pero no se pondrá al día —ni podrás publicar— hasta reconectar, así que el
+  // aviso lleva el mismo botón que Ajustes (docs/plan-feed-sin-vacio.md, Fase 1).
+  githubReconnect: {
+    sectionAria: 'Conexión con GitHub caducada',
+    badge: 'GitHub',
+    title: 'Tu conexión con GitHub ha caducado',
+    body: 'Vuelve a conectarla para ver lo nuevo de tus amigos y seguir publicando.',
+    action: 'Volver a conectar',
+    actionBusy: 'Conectando…',
+  },
   // Aviso PERSISTENTE de SERVICIO LIMITADO: hay red, pero un servicio no atiende (el cupo diario de Firestore
   // agotado, GitHub limitando peticiones). Mismo trato que el de sin conexión: se ve lo guardado y se dice que se
   // pondrá al día solo, sin el error de librería (docs/plan-degradacion-servicios.md).
@@ -74,7 +85,7 @@ export const SOCIAL_UI = {
     cardsAria: (title: string) => `${title} cards`,
   },
   gateway: {
-    actionsAria: 'Acciones principales social',
+    actionsAria: 'Acciones del espacio social',
     stepsAria: 'Pasos para entrar al espacio social',
     stateAria: 'Estado de configuración social',
     lead: 'Mira lo que juegan tus amigos y que ellos vean lo tuyo. Son dos pasos.',
@@ -150,6 +161,12 @@ export const SOCIAL_UI = {
     activityEmptyNoFriends: 'Sus análisis, publicaciones y cambios de lista saldrán aquí. Empieza buscando gente en «Ver perfiles».',
     activityEmptyQuietTitle: 'Todo tranquilo por ahora',
     activityEmptyQuiet: 'Tus amigos aún no han compartido nada. En cuanto analicen o publiquen algo, saldrá aquí.',
+    // Lo que no se ha podido leer y no tiene copia en este dispositivo (docs/plan-feed-sin-vacio.md, Fase 1). Es
+    // GENÉRICO a propósito: «todo tranquilo» o «busca gente» serían mentira, y el motivo concreto (cuota, límite,
+    // caída) no le sirve a nadie para hacer nada distinto de esperar.
+    readFailedTitle: 'No hemos podido cargar la actividad',
+    readFailed: 'No hemos podido cargar la actividad de tus amigos. Inténtalo de nuevo en un rato.',
+    readFailedBadge: 'Error',
     openActivityAria: (name: string, gameName: string) => `Abrir detalle de actividad de ${name} sobre ${gameName}`,
     openProfileAria: (name: string) => `Abrir perfil social de ${name}`,
     analyzedRecently: 'Analizado recientemente',
@@ -195,7 +212,7 @@ export const SOCIAL_UI = {
     viewDetail: 'Ver detalle',
     detailTitle: 'Análisis',
     detailActionsAria: 'Acciones del detalle social',
-    detailMissing: 'No se encontró la actividad solicitada o ya no está disponible.',
+    detailMissing: 'Esta actividad ya no está disponible.',
     /**
      * El texto que se enseña es el ADELANTO del canal social (≤160 caracteres), no la reseña.
      *
@@ -218,7 +235,7 @@ export const SOCIAL_UI = {
     profileDetailTitleOwn: 'Tu perfil social',
     profileDetailTitleOf: (name: string) => `Perfil de ${name}`,
     profileDetailActionsAria: 'Acciones del detalle de perfil social',
-    profileDetailMissing: 'No se encontró el perfil solicitado o ya no está disponible.',
+    profileDetailMissing: 'Este perfil ya no está disponible.',
     profileDetailLoading: 'Cargando el perfil...',
     profileListsTitle: 'Juegos',
     roulettePick: 'Elige tu próximo juego',
@@ -247,7 +264,7 @@ export const SOCIAL_UI = {
     postEditCancel: 'Cancelar',
     postDelete: 'Eliminar',
     postDeleteConfirmTitle: '¿Eliminar esta publicación?',
-    postDeleteConfirmBody: 'Desaparece de tu perfil y del feed. Tus amistades pueden seguir viéndola unos minutos, hasta que se actualice su feed.',
+    postDeleteConfirmBody: 'Desaparece de tu perfil y de la actividad. Tus amistades pueden seguir viéndola unos minutos, hasta que se les actualice.',
     reviewExpand: 'Ver más',
     reviewCollapse: 'Ver menos',
     reviewOpenAria: (gameName: string) => `Abrir la reseña de ${gameName}`,
@@ -298,19 +315,19 @@ export const SOCIAL_UI = {
     refreshing: 'Actualizando...',
     searchLabel: 'Buscar por nombre',
     searchPlaceholder: 'Filtrar perfiles por nombre',
-    resultCount: (count: number) => `${count} perfiles visibles`,
+    resultCount: (count: number) => (count === 1 ? '1 perfil visible' : `${count} perfiles visibles`),
     loading: 'Cargando perfiles...',
-    empty: 'No hay perfiles visibles todavía o faltan permisos de lectura en Firestore.',
+    empty: 'No hay perfiles que mostrar.',
     openProfileAria: (name: string) => `Abrir perfil social de ${name}`,
     friendsTitle: 'Amigos',
     othersTitle: 'Descubrir',
     // El recuento por sección se muestra porque con muchos amigos es la única forma de saber a qué te enfrentas
     // antes de empezar a bajar: la rejilla, al no tener scroll propio, no da ninguna pista de su tamaño.
     sectionLabel: (title: string, count: number) => `${title} · ${count}`,
-    sectionGroupAria: (title: string, count: number) => `${title}: ${count} perfiles`,
+    sectionGroupAria: (title: string, count: number) => `${title}: ${count} ${count === 1 ? 'perfil' : 'perfiles'}`,
     // Paginación: se muestra cuánto queda, no solo que hay más. "Mostrar más" a secas obliga a pulsar para
     // averiguar si quedan 3 o 300.
-    showMore: (remaining: number) => `Mostrar más (quedan ${remaining})`,
+    showMore: (remaining: number) => `Mostrar más (${remaining === 1 ? 'queda 1' : `quedan ${remaining}`})`,
     friendsEmpty: 'Aún no tienes amigos. Envía una petición desde la lista de abajo.',
     othersEmpty: 'No hay más perfiles que mostrar.',
     inviteAria: 'Invitar a un amigo',
@@ -332,8 +349,8 @@ export const SOCIAL_UI = {
     unknownUser: 'Usuario',
     // El bloque se pinta como rejilla paginada (mismo componente que el directorio), así que necesita lo mismo que
     // él: nombrar el grupo y decir cuánta gente queda por mostrar.
-    sectionGroupAria: (title: string, count: number) => `${title}: ${count} personas`,
-    showMore: (remaining: number) => `Mostrar más (quedan ${remaining})`,
+    sectionGroupAria: (title: string, count: number) => `${title}: ${count} ${count === 1 ? 'persona' : 'personas'}`,
+    showMore: (remaining: number) => `Mostrar más (${remaining === 1 ? 'queda 1' : `quedan ${remaining}`})`,
   },
   friendship: {
     add: 'Añadir amigo',
@@ -383,7 +400,7 @@ export const SOCIAL_UI = {
     privacyLabel: 'Perfil privado',
     privacyPrivate: 'Tu perfil es privado. Solo usuarios autorizados podrán verlo.',
     privacyPublic: 'Tu perfil es público. Otros usuarios podrán encontrarte por email.',
-    hydrating: 'Cargando datos de perfil desde gist social...',
+    hydrating: 'Cargando tu perfil...',
     visibilityTitle: 'Visibilidad del perfil',
     // EN POSITIVO, como la foto y los movimientos de abajo: encendido = se comparte. Decían «Ocultar…» (encendido =
     // oculto) en la misma pantalla que «Mostrarme…», y un mismo gesto significaba cosas contrarias (09-10-2026).
@@ -423,11 +440,11 @@ export const SOCIAL_UI = {
     offline: 'Sin conexión: la actividad social se actualizará al recuperar la red.',
     needMainSync: 'Activa la sincronización principal para continuar.',
     needGoogleBeforeCreate: 'Inicia sesión con Google para continuar.',
-    gistLinkedFromFirestore: 'Tu espacio social quedó vinculado automáticamente.',
-    gistNotFoundCreated: 'Tu espacio social se creó correctamente.',
-    signInAndLinked: 'Sesión iniciada correctamente.',
+    gistLinkedFromFirestore: 'Tu espacio social ya está enlazado.',
+    gistNotFoundCreated: 'Tu espacio social está listo.',
+    signInAndLinked: 'Has entrado con Google.',
     profileMissing: 'Completa tu perfil para empezar en la actividad social.',
-    profileSaved: 'Perfil social guardado correctamente.',
+    profileSaved: 'Perfil guardado.',
     signOut: 'Sesión social cerrada.',
     invalidSaveContext: 'No se pudo guardar ahora mismo. Inténtalo de nuevo.',
     missingSocialToken: 'No se pudo cargar tu espacio social. Vuelve a intentarlo.',
@@ -441,7 +458,6 @@ export const SOCIAL_UI = {
     saveProfileFailed: 'No se pudo guardar tu perfil social.',
     profileIncomplete: 'Para guardar tu perfil necesitas un nombre y al menos un juego completado.',
     // Fallo por credencial al leer el canal de un amigo: no es que no haya publicado, es que el token no vale.
-    socialReadUnauthorized: 'No se pudo leer la actividad de alguna de tus amistades: tu conexión con GitHub ha caducado. Vuelve a conectarla en Ajustes.',
     // Migración del canal a gist secreto, con retirada del antiguo (ver condiciones de uso).
     socialGistMigrated: 'Tu canal social se ha movido a un Gist no listado y se ha retirado el anterior, que era público. Tus reseñas y publicaciones siguen intactas.',
     // El clon no pasó la verificación: se conservan LOS DOS. Mejor dos gists que ninguno.

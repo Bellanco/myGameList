@@ -8,6 +8,8 @@ const CRYPTO_STORE_NAME = 'cryptoKeys';
 // Stores destino añadidos en v3 (vacíos hasta que los pasos posteriores los pueblen).
 export const GAMES_STORE = 'games';
 export const META_STORE = 'meta';
+/** El único registro de `META_STORE` (`LocalMeta`): lo leen `indexedDbRepository` y la limpieza de lo retirado. */
+export const META_KEY = 'singleton';
 export const SYNC_QUEUE_STORE = 'syncQueue';
 export const CHUNK_CACHE_STORE = 'chunkCache';
 export const PROFILE_CACHE_STORE = 'profileCache';

@@ -32,13 +32,17 @@ interface StoredGistConfig {
 interface ChannelTokenState {
   token: string | null;
   loaded: boolean;
+  /** Hidratación en vuelo: la comparten quienes la pidan mientras dura (ver `hydrateChannelToken`). */
+  hydrating: Promise<void> | null;
+  /** Se incrementa en cada escritura o borrado del canal: una hidratación que la ve cambiar no aplica lo suyo. */
+  writes: number;
 }
 
 // Un estado por canal: los dos guardan el mismo PAT, pero cada uno con su propio ciclo de vida (el social
 // sobrevive a desconectar la sync de juegos).
 const tokenStates: Record<string, ChannelTokenState> = {
-  [GIST_CFG_KEY]: { token: null, loaded: false },
-  [SOCIAL_GIST_CFG_KEY]: { token: null, loaded: false },
+  [GIST_CFG_KEY]: { token: null, loaded: false, hydrating: null, writes: 0 },
+  [SOCIAL_GIST_CFG_KEY]: { token: null, loaded: false, hydrating: null, writes: 0 },
 };
 
 function readStored(key: string): StoredGistConfig | null {
@@ -74,10 +78,31 @@ function readChannelConfig(key: string): SyncConfig | null {
   };
 }
 
-/** Descifra el blob device-key de un canal, o migra su token legacy en claro a cifrado. Idempotente. */
-async function hydrateChannelToken(key: string): Promise<void> {
+/**
+ * Descifra el blob device-key de un canal, o migra su token legacy en claro a cifrado. Idempotente.
+ *
+ * UNA SOLA HIDRATACIÓN A LA VEZ POR CANAL. El módulo la lanza al importarse y casi todos los caminos la vuelven a
+ * pedir con `ensureSyncConfigLoaded()`; como `loaded` solo se marca al final, la segunda arrancaba otra en paralelo.
+ * Dos migraciones del token legacy cifrando a la vez, y la que terminaba última escribía cuando ya nadie la
+ * esperaba (así fallaba de vez en cuando `gistConfig.test.ts`: la migración de un test aterrizaba en el siguiente).
+ *
+ * Y NO PISA UNA ESCRITURA POSTERIOR. Cifrar y descifrar son asíncronos: si mientras tanto se guarda o se borra la
+ * configuración (`writes` cambia), lo que traiga esta hidratación ya es viejo, y escribirlo o asignarlo devolvería
+ * el token anterior encima del nuevo.
+ */
+function hydrateChannelToken(key: string): Promise<void> {
   const state = tokenStates[key];
-  if (state.loaded) return;
+  if (state.loaded) return Promise.resolve();
+  state.hydrating ??= runChannelHydration(key).finally(() => {
+    state.hydrating = null;
+  });
+  return state.hydrating;
+}
+
+async function runChannelHydration(key: string): Promise<void> {
+  const state = tokenStates[key];
+  const writesAtStart = state.writes;
+  const superseded = () => state.writes !== writesAtStart;
   const stored = readStored(key);
   if (!stored) {
     state.loaded = true;
@@ -88,6 +113,7 @@ async function hydrateChannelToken(key: string): Promise<void> {
     state.token = stored.token;
     try {
       const encToken = await encryptWithDeviceKey(stored.token);
+      if (superseded()) return; // la escritura posterior ya marcó el canal como cargado, con su token
       writeStored(key, {
         gistId: stored.gistId,
         etag: stored.etag ?? null,
@@ -98,11 +124,14 @@ async function hydrateChannelToken(key: string): Promise<void> {
       // Si el cifrado falla, se conserva el legacy para no perder el token.
     }
   } else if (stored.encToken) {
+    let token: string | null;
     try {
-      state.token = await decryptWithDeviceKey(stored.encToken);
+      token = await decryptWithDeviceKey(stored.encToken);
     } catch {
-      state.token = null; // clave de dispositivo ausente/incompatible → recuperar token por otro canal
+      token = null; // clave de dispositivo ausente/incompatible → recuperar token por otro canal
     }
+    if (superseded()) return;
+    state.token = token;
   }
   state.loaded = true;
 }
@@ -133,6 +162,7 @@ function notifyConfigChanged(key: string): void {
 
 function writeChannelConfig(key: string, config: SyncConfig): void {
   const state = tokenStates[key];
+  state.writes += 1;
   const previousToken = state.loaded ? state.token : null;
   state.token = config.token || null;
   state.loaded = true;
@@ -169,6 +199,7 @@ function writeChannelConfig(key: string, config: SyncConfig): void {
 
 function clearChannelConfig(key: string): void {
   const state = tokenStates[key];
+  state.writes += 1;
   state.token = null;
   state.loaded = true;
   localStorage.removeItem(key);

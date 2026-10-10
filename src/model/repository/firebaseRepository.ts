@@ -29,6 +29,9 @@ import { DEFAULT_PROFILE_TIER } from '../../core/constants/tiers';
 import { FIRESTORE_SCHEMA_VERSION } from '../../core/constants/schema';
 import { buildMirror } from '../../core/achievements/pack';
 import type { FirestorePrivateConfig, FirestorePublicConfig } from '../types/firestore';
+import { PROFILE_INACTIVITY_MS, PROFILE_TOUCH_MIN_INTERVAL_MS } from '../../core/constants/socialActivity';
+import { stampOwnFriendshipsOnReturn } from './firebaseFriendshipRepository';
+import { toMillis } from '../../core/utils/firestoreTime';
 
 // --- RE-EXPORTS: API pública estable (los consumidores siguen importando desde firebaseRepository) ---
 export { enableAnalyticsAfterConsent, initializeFirebaseServices } from './firebaseClient';
@@ -53,9 +56,11 @@ export {
 // Amistad (aceptación mutua): un doc por par, id canónico, denormalización de identidad. Ver firebaseFriendshipRepository.
 export {
   acceptFriendRequest,
+  claimRequesterKeys,
   deleteFriendship,
   friendshipDocId,
   getMyFriendships,
+  haveFriendshipEdgesChanged,
   healOwnFriendshipIdentity,
   invalidateMyFriendshipsCache,
   MY_FRIENDSHIPS_REQUESTS_MAX_AGE_MS,
@@ -554,6 +559,15 @@ export async function ensureProfileByEmail(input: {
   }
 
   if (shouldWriteProfile) {
+    // La recencia ANTERIOR, para la señal de regreso (ver `signalReturnIfAsleep`): esta reescritura mueve `updatedAt`
+    // sin pasar por `touchOwnProfileActivity`, y quien vuelve tras un mes cambiando de nick o de foto se quedaría sin
+    // avisar a sus amigos. Solo cuando ya había perfil propio: uno nuevo no viene de dormir. Una lectura más, y solo
+    // en este camino, que es el raro (el normal es el `else`, que pasa por el latido).
+    const previousUpdatedAt = existing && !isForeignDoc
+      ? await getDoc(doc(services.firestore, 'profiles', targetId))
+        .then((snap) => (snap.data() as { updatedAt?: unknown } | undefined)?.updatedAt)
+        .catch(() => undefined)
+      : undefined;
     await setDoc(
       doc(services.firestore, 'profiles', targetId),
       {
@@ -580,6 +594,7 @@ export async function ensureProfileByEmail(input: {
       },
       { merge: true },
     );
+    await signalReturnIfAsleep(input.user.uid, previousUpdatedAt);
   } else {
     // El perfil no cambia, pero publicar ES actividad y `updatedAt` es lo que la mide: con él parado, el amigo que
     // publica desde la ficha del juego sin abrir nunca el espacio social (el latido del hub no le llega) cruzaría
@@ -769,6 +784,18 @@ export async function publishYearSummarySeen(uid: string, year: number): Promise
 }
 
 /**
+ * LA SEÑAL DE REGRESO (docs/plan-feed-sin-vacio.md, Fase 4): si la recencia ANTERIOR del perfil propio tenía más de 30
+ * días, quien vuelve sella sus amistades para que sus amigos lo saquen ya del corte de inactividad. Sin marca anterior
+ * no se da por regreso. Best-effort: la recencia ya está escrita, y sin el sello sus amigos lo verán al caducar la
+ * copia (como antes).
+ */
+async function signalReturnIfAsleep(uid: string, previousUpdatedAt: unknown): Promise<void> {
+  const previous = toMillis(previousUpdatedAt as Parameters<typeof toMillis>[0]);
+  if (previous <= 0 || Date.now() - previous <= PROFILE_INACTIVITY_MS) return;
+  await stampOwnFriendshipsOnReturn(uid).catch(() => 0);
+}
+
+/**
  * Latido de "uso reciente": refresca `profiles/{uid}.updatedAt`. El directorio social ordena por ese campo, de
  * modo que se muestran (y se leen) los perfiles de quien de verdad sigue usando la app en vez de los primeros
  * por uid. Publicar una reseña o un post ya lo refresca vía `ensureProfileByEmail`; esto cubre al usuario que
@@ -792,7 +819,10 @@ export async function touchOwnProfileActivity(uid: string): Promise<void> {
     // Sin doc no se crea nada: un perfil a medias (sin `social`) no debe aparecer en el directorio. Se creará
     // al publicar el perfil.
     if (!snap.exists()) return;
+    const previous = (snap.data() as { updatedAt?: unknown } | undefined)?.updatedAt;
     await setDoc(ref, { uid, updatedAt: serverTimestamp() }, { merge: true });
+    // Después de la recencia, y no antes: quien relea el perfil por el sello tiene que encontrarlo ya despierto.
+    await signalReturnIfAsleep(uid, previous);
   } catch {
     // best-effort: la recencia es una mejora de orden, no puede romper la apertura del hub.
   }
@@ -859,8 +889,9 @@ export async function purgeOwnPublicGistIds(input: {
   }
 }
 
-/** Cada cuánto, como mucho, se refresca la recencia desde un mismo dispositivo: una escritura al día. */
-export const PROFILE_TOUCH_MIN_INTERVAL_MS = 20 * 60 * 60 * 1000;
+// Cada cuánto, como mucho, se refresca la recencia desde un mismo dispositivo. Vive en `core/constants/socialActivity`
+// porque la pasada de fondo de la app principal la consulta sin cargar este módulo; se reexporta desde aquí.
+export { PROFILE_TOUCH_MIN_INTERVAL_MS };
 
 /**
  * `touchOwnProfileActivity` con el acotado que exige su contrato: una vez cada 20 h por dispositivo. Es el único
@@ -868,8 +899,21 @@ export const PROFILE_TOUCH_MIN_INTERVAL_MS = 20 * 60 * 60 * 1000;
  *
  * Best-effort de principio a fin: si IndexedDB no responde, no se refresca la recencia y no pasa nada más.
  */
-export async function touchOwnProfileActivityThrottled(uid: string): Promise<void> {
-  if (!uid) return;
+export function touchOwnProfileActivityThrottled(uid: string): Promise<void> {
+  if (!uid) return Promise.resolve();
+  // UNA a la vez: el hub y la pasada de fondo de la app principal pueden pedirla en el mismo arranque, y las dos
+  // leerían la recencia vieja —dos escrituras y, si venía de dormir, dos sellos de regreso en cada amistad—.
+  if (!touchInFlight) {
+    touchInFlight = touchOwnProfileActivityThrottledNow(uid).finally(() => {
+      touchInFlight = null;
+    });
+  }
+  return touchInFlight;
+}
+
+let touchInFlight: Promise<void> | null = null;
+
+async function touchOwnProfileActivityThrottledNow(uid: string): Promise<void> {
   try {
     const meta = await getLocalMeta();
     const last = Number(meta?.profileTouchedAt || 0);

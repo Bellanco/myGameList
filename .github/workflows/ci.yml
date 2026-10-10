@@ -8,16 +8,27 @@ on:
   release:
     types: [ published ]
 
-env:
-  NODE_VERSION: '24'
+# Un push nuevo a la misma PR deja obsoleto el run anterior: se cancela. En las ramas (push) y en las releases NO,
+# para que cada commit de master/develop conserve su resultado.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# Ningún paso escribe en GitHub: el reporter `github` de Playwright usa anotaciones del log, no la API de checks.
+permissions:
+  contents: read
+
+# EN PARALELO. Hasta la 1.6.7 todo iba en un único job en serie (8,5–11,5 min medidos en los runs del 08 y 09-10-2026),
+# del que el e2e se llevaba 5,5–6,5 min y la suite con cobertura 2–3 min. Ahora cada verja es su propio job y el e2e
+# se reparte en fragmentos: el reloj lo marca el más lento, no la suma. Cada job paga su `npm ci` (~10–20 s con la
+# caché de npm), que es mucho menos de lo que se gana. Las tareas son las mismas que antes, una vez cada una.
+#
+# La versión de Node sale de `.nvmrc`, la misma que usa el desarrollo: un solo sitio que cambiar.
 jobs:
-  test-and-validate:
-    name: Test, Validate, Coverage & Security
+  checks:
+    name: Typecheck, validate & audits
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      checks: write
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository
@@ -26,18 +37,13 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: .nvmrc
           cache: 'npm'
 
-      - name: Set up Java (Firestore emulator)
-        uses: actions/setup-java@v6
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
+      # `npm run validate` mide el presupuesto del arranque y el service worker sobre `dist/`: necesita el build.
       - name: Build project
         run: npm run build
 
@@ -48,11 +54,80 @@ jobs:
       - name: TypeScript check (src/tests + functions)
         run: npm run typecheck
 
+      - name: Run validation (bundle budget, ESLint + html-validate)
+        run: npm run validate
+
+      - name: Privacy audit (no private data in public channels)
+        run: npm run audit:privacy
+
+      - name: Security audit (dependencias de producción)
+        run: npm audit --omit=dev --audit-level=moderate
+
+      - name: Security audit (dependencias de desarrollo, informativo)
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+  unit:
+    name: Unit & component tests (coverage)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
       # UNA SOLA PASADA DE LA SUITE. Antes había dos pasos (`npm run test` y `npm run test:coverage`) que
       # ejecutaban los MISMOS casos: se pagaba el doble de tiempo y se doblaba la exposición a un fallo
       # intermitente por contención. La cobertura ya reporta igual y lleva `reportOnFailure: true`.
       - name: Run tests with coverage
         run: npm run test:coverage -- --reporter=verbose
+
+      # Sin el secreto `CODECOV_TOKEN` la acción intenta la subida sin token; si Codecov la rechaza, no tumba el CI.
+      # Fijada por SHA y no por etiqueta: es de un tercero y recibe un secreto, y una etiqueta se puede mover.
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: coverage
+          fail_ci_if_error: false
+          verbose: true
+        continue-on-error: true
+
+  rules:
+    name: Firestore rules (emulator)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: 'npm'
+
+      # Solo este job arranca el emulador, y firebase-tools >= 15 exige Java 21 o superior.
+      - name: Set up Java (Firestore emulator)
+        uses: actions/setup-java@v6
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
 
       # El emulador es un .jar de ~137 MB que firebase-tools baja de storage.googleapis.com en cada build. Cuando
       # esa descarga se corta, el CLI solo dice «An unexpected error has occurred» y el fallo parece de las reglas.
@@ -85,6 +160,35 @@ jobs:
       - name: Run Firestore rules tests (emulator)
         run: npm run test:rules
 
+  # EL E2E EN FRAGMENTOS. Con `fullyParallel: true` Playwright reparte los CASOS (no los ficheros) entre fragmentos,
+  # así que la auditoría de accesibilidad —un fichero con la mayoría de los casos— también se divide. Cada fragmento
+  # construye su propio `dist` (el build tarda segundos; subirlo como artefacto costaría más).
+  e2e:
+    name: E2E smoke (shard ${{ matrix.shard }}/${{ strategy.job-total }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      # Que un fragmento falle no cancela los demás: se ven todos los casos rotos en una sola pasada.
+      fail-fast: false
+      matrix:
+        shard: [ 1, 2, 3 ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build project
+        run: npm run build
+
       # El navegador se cachea por VERSIÓN de @playwright/test: al actualizar el paquete, la clave cambia y se
       # descarga el que le toca. Sin esto se bajaba Chromium entero en cada build.
       - name: Resolve Playwright version
@@ -95,38 +199,27 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
+          key: ${{ runner.os }}-playwright-shell-${{ steps.playwright-version.outputs.version }}
 
       # `--with-deps` se mantiene aunque el navegador venga de la caché: las dependencias de sistema se
       # instalan con apt y ésas no se cachean. Si el binario ya está, Playwright se salta la descarga.
+      # `--only-shell`: la suite corre en headless y sin `channel`, que usa `chromium-headless-shell`; el Chromium
+      # completo no se abre nunca en CI y era la mitad de la descarga y de la caché.
       - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps --only-shell chromium
 
       - name: Run e2e smoke test (production build)
-        run: npm run test:e2e
+        run: npm run test:e2e -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v7
+      # `trace: 'retain-on-failure'` guarda la traza de cada caso roto en `test-results/`, pero en CI se perdía con
+      # el runner. Se sube solo si algo falla.
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v7
         with:
-          files: ./coverage/lcov.info
-          flags: unittests
-          name: coverage
-          fail_ci_if_error: false
-          verbose: true
-        continue-on-error: true
-
-      - name: Run validation (ESLint + html-validate)
-        run: npm run validate
-
-      - name: Privacy audit (no private data in public channels)
-        run: npm run audit:privacy
-
-      - name: Security audit (dependencias de producción)
-        run: npm audit --omit=dev --audit-level=moderate
-
-      - name: Security audit (dependencias de desarrollo, informativo)
-        run: npm audit --audit-level=moderate
-        continue-on-error: true
+          name: playwright-traces-${{ matrix.shard }}
+          path: test-results/
+          retention-days: 7
 
   # ── LA VÁLVULA DE DESBORDE DEL GIST, CON EL FLAG ENCENDIDO ────────────────────────────────────────────────
   #
@@ -139,11 +232,12 @@ jobs:
   # único que ve su dueño es que sus listas dejaron de actualizarse, sin error. Es la misma avería que costó un
   # mes de sincronización con una reseña de 21.265 caracteres.
   #
-  # Este job enciende el flag sobre una copia desechable del repositorio y corre solo esa batería. Va aparte para
-  # no alargar el job principal y para que su fallo señale a una sola cosa.
+  # Este job enciende el flag sobre una copia desechable del repositorio y corre solo esa batería. Va aparte porque
+  # el flag cambia el código bajo prueba, y así su fallo señala a una sola cosa.
   overflow-flag:
     name: Gist overflow valve (flag on)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository
@@ -152,11 +246,11 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: .nvmrc
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
       # El `grep` no es adorno: si alguien reformatea esa línea, el `perl` no casa, el flag se queda apagado y la
       # batería se saltaría en silencio — el job pasaría en verde sin haber probado nada. Así falla y se ve.

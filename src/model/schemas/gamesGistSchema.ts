@@ -102,7 +102,7 @@ function describeIssues(issues: readonly z.core.$ZodIssue[], max = 5): string {
 export function assertValidGamesGist(data: unknown): void {
   const result = gamesGistSchema.safeParse(data);
   if (!result.success) {
-    throw new Error(`Gist de juegos inválido (schema): ${describeIssues(result.error.issues)}`);
+    throw new Error(`No se han subido tus juegos: hay datos con un formato inesperado. Siguen guardados en este dispositivo. Detalle: ${describeIssues(result.error.issues)}`);
   }
 }
 

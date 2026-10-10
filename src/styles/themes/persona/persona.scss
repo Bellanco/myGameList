@@ -820,7 +820,8 @@
 /* ── EL TÍTULO DE PANTALLA, TARJETA DE AVISO (09-10-2026) ────────────────────────────────────────────────────────
    Cada letra recortada en su recuadro —negro, blanco o del rojo del tema—, con su tamaño y un pelo girada, como las
    cartas de los Ladrones Fantasma. Las letras las pinta `ScreenTitle`; aquí se enseñan y se viste cada recorte. El
-   texto de siempre se queda solo para el lector de pantalla. Elegido con `docs/maquetas/persona-letras.html`. */
+   texto de siempre se queda solo para el lector de pantalla. Elegido con `docs/maquetas/persona-letras.html`. Siempre
+   en mayúsculas, sea cual sea «Texto» de /cuenta: es una excepción del tema decidida por el usuario (10-10-2026). */
 :root[data-palette="persona"] .rc-plain {
   position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
   clip: rect(0 0 0 0); white-space: nowrap; border: 0;

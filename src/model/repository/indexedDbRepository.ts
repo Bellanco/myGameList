@@ -1,12 +1,11 @@
 import { TAB_IDS, type DeletedItem, type GameItem, type StoragePayload, type TabData, type TabId } from '../types/game';
 import type { LocalMeta, SyncOp } from '../types/local';
 import type { SocialActivityEntry } from './socialGistRepository';
-import { DELETED_STORE, GAMES_STORE, META_STORE, PROFILE_CACHE_STORE, SYNC_QUEUE_STORE, openSharedDatabase } from './idbConnectionRepository';
+import { DELETED_STORE, GAMES_STORE, META_KEY, META_STORE, PROFILE_CACHE_STORE, SYNC_QUEUE_STORE, openSharedDatabase } from './idbConnectionRepository';
 import { isOffline } from '../../core/utils/network';
 
 const STORE_NAME = 'appState';
 const STATE_KEY = 'latest';
-const META_KEY = 'singleton';
 
 export async function loadIndexedDbState(): Promise<StoragePayload | null> {
   try {
@@ -146,42 +145,6 @@ export async function getLocalMeta(): Promise<LocalMeta | null> {
   } catch {
     return null;
   }
-}
-
-/**
- * F5 — SIEMBRA la línea base del feed de logros (`achievementsPeerSeen`) y devuelve el mapa resultante.
- *
- * Añade SOLO lo que no esté: la línea base es la primera foto y no se reescribe nunca (ver `achievementFeedEntries`).
- * Y lo hace DENTRO de la transacción, leyendo el mapa en el mismo paso en que se escribe, en vez de con un
- * `patchLocalMeta` del mapa entero: con dos pestañas abiertas, la segunda pisaría las siembras de la primera.
- *
- * `keep`, si llega, poda lo que no esté dentro: las amistades que ya no lo son. Solo se debe pasar con el grafo de
- * amistad RESUELTO — un grafo a medio cargar está vacío, y podar contra él borraría todas las líneas base.
- */
-export async function seedAchievementsPeerSeen(
-  additions: Readonly<Record<string, string>>,
-  keep?: ReadonlySet<string>,
-): Promise<Record<string, string>> {
-  const db = await openSharedDatabase();
-  return new Promise<Record<string, string>>((resolve, reject) => {
-    const tx = db.transaction(META_STORE, 'readwrite');
-    const store = tx.objectStore(META_STORE);
-    const getReq = store.get(META_KEY);
-    let result: Record<string, string> = {};
-    getReq.onsuccess = () => {
-      const current = (getReq.result as LocalMeta | undefined) ?? null;
-      const seen: Record<string, string> = { ...(current?.achievementsPeerSeen || {}) };
-      for (const [key, mirror] of Object.entries(additions)) {
-        if (key && mirror && seen[key] === undefined) seen[key] = mirror;
-      }
-      if (keep) for (const key of Object.keys(seen)) if (!keep.has(key)) delete seen[key];
-      result = seen;
-      store.put({ ...(current || {}), achievementsPeerSeen: seen, _key: META_KEY } as LocalMeta);
-    };
-    tx.oncomplete = () => resolve(result);
-    tx.onerror = () => reject(tx.error || new Error('seedAchievementsPeerSeen failed'));
-    tx.onabort = () => reject(tx.error || new Error('seedAchievementsPeerSeen aborted'));
-  });
 }
 
 export async function setLocalMeta(meta: LocalMeta): Promise<void> {
@@ -630,6 +593,13 @@ interface CachedSocialDirectory<T> {
   profileId: string; // keyPath del store
   cachedAt: number;
   version?: number;
+  /**
+   * Huella de las amistades con las que se hidrató (ver `socialDirectoryFriendsKey`). La copia solo vale para ESE
+   * grafo: con un amigo nuevo, uno que se va o unos ids de gist que llegan, el directorio guardado no los refleja,
+   * y servirlo durante su TTL dejaba el historial de un amigo nuevo sin aparecer hasta media hora
+   * (docs/plan-historial-amigo-nuevo.md, Fase 1).
+   */
+  friendsKey?: string;
   entries: T[];
 }
 
@@ -640,7 +610,15 @@ interface CachedSocialDirectory<T> {
 export async function getCachedSocialDirectory<T>(
   ownGistId: string,
   ttlMs: number = SOCIAL_DIRECTORY_TTL_MS,
-  options?: { allowExpired?: boolean },
+  options?: {
+    allowExpired?: boolean;
+    /**
+     * Huella de las amistades actuales. Si se pasa y no coincide con la de la copia (o la copia no lleva, como todas
+     * las guardadas antes de existir), la copia no se sirve. Los rescates (`allowExpired`, sin red) la ignoran:
+     * ahí vale más el directorio de antes que ninguno, igual que con el TTL.
+     */
+    friendsKey?: string;
+  },
 ): Promise<T[] | null> {
   if (!ownGistId) return null;
   try {
@@ -654,19 +632,23 @@ export async function getCachedSocialDirectory<T>(
     // `allowExpired` es la otra mitad de lo mismo: `navigator.onLine` puede decir que hay red y no haberla (wifi
     // sin salida, portal cautivo), y en ese caso quien se come el fallo es el llamador, que pide la caché igual.
     if (!options?.allowExpired && !isOffline() && Date.now() - rec.cachedAt >= Math.max(0, ttlMs)) return null;
+    if (options?.friendsKey !== undefined && !options.allowExpired && !isOffline() && rec.friendsKey !== options.friendsKey) {
+      return null;
+    }
     return rec.entries;
   } catch {
     return null;
   }
 }
 
-export async function putCachedSocialDirectory<T>(ownGistId: string, entries: T[]): Promise<void> {
+export async function putCachedSocialDirectory<T>(ownGistId: string, entries: T[], friendsKey?: string): Promise<void> {
   if (!ownGistId) return;
   try {
     await idbPut<CachedSocialDirectory<T>>(PROFILE_CACHE_STORE, {
       profileId: SOCIAL_DIRECTORY_KEY_PREFIX + ownGistId,
       cachedAt: Date.now(),
       version: SOCIAL_DIRECTORY_CACHE_VERSION,
+      ...(friendsKey !== undefined ? { friendsKey } : {}),
       entries,
     });
   } catch {

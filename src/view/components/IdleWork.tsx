@@ -4,6 +4,8 @@ import { useCoverBackfill } from '../hooks/useCoverBackfill';
 import { useEffectPulses } from '../hooks/useEffectPulses';
 import { useShootingStars } from '../hooks/useShootingStars';
 import { useSignatureEffects } from '../hooks/useSignatureEffects';
+import { useBackgroundSocialPass } from '../../viewmodel/social/backgroundSocialPass';
+import { useLegacyLocalMetaCleanup } from '../hooks/useLegacyLocalMetaCleanup';
 
 interface IdleWorkProps {
   data: TabData;
@@ -12,7 +14,7 @@ interface IdleWorkProps {
 /**
  * LO QUE `App` HACE DE FONDO, en un componente que no pinta nada, para poder sacarlo del chunk de arranque.
  *
- * Son cinco hooks que no hacen falta para el primer pintado:
+ * Son siete hooks que no hacen falta para el primer pintado:
  *   · Los EFECTOS DE FIRMA (`useSignatureEffects`) responden a una interacción —un clic en un botón, cerrar un
  *     juego, cambiar de tema—, y ninguna puede ocurrir antes de que la pantalla esté delante.
  *   · Las ESTRELLAS FUGACES de Sea of Stars (`useShootingStars`) salen a ratos y al azar: que la primera llegue
@@ -23,6 +25,11 @@ interface IdleWorkProps {
  *     esperaban a que el navegador quedara ocioso; ahora su código también. Se montan desde `App` y no desde el
  *     panel de estadísticas porque la serie del backlog tiene que acumularse se visite o no esa pantalla
  *     (`listedAt` se reescribe al mover de lista: sin este registro no hay forma de saber cómo evoluciona).
+ *
+ *   · La PASADA SOCIAL (`useBackgroundSocialPass`) publica los movimientos de lista y refresca la «última vez activo»
+ *     de quien usa la app sin abrir el hub (docs/plan-feed-sin-vacio.md, Fase 3). Casi siempre sale sin tocar la
+ *     red: solo carga Firebase cuando hay algo que hacer.
+ *   · La LIMPIEZA de `LocalMeta` (`useLegacyLocalMetaCleanup`) quita, una vez por dispositivo, lo que ya no se usa.
  *
  * Como hooks llamados desde `App` entraban en el arranque (~1,6 kB comprimidos los tres últimos, medido el
  * 01-10-2026); envueltos así, `lazy()` se los lleva a UN chunk —uno y no cuatro: una sola petición— y `App` lo
@@ -38,5 +45,7 @@ export function IdleWork({ data }: IdleWorkProps): null {
   useEffectPulses();
   useBacklogSnapshot(data);
   useCoverBackfill(data);
+  useBackgroundSocialPass(data);
+  useLegacyLocalMetaCleanup();
   return null;
 }

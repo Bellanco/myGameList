@@ -279,10 +279,12 @@ export function useSocialViewModel(options?: {
     friendships,
     loadingFriendships,
     friendshipsResolved,
+    friendshipsFailed,
     friendshipBusyUid,
     friendUidSet,
     pendingIncomingCount,
     relationshipWith,
+    refreshAfterFriendshipChange,
     handleAddOrAcceptFriend,
     handleCancelFriendRequest,
     handleRejectFriendRequest,
@@ -317,9 +319,16 @@ export function useSocialViewModel(options?: {
   const directoryInputsReady = friendshipsResolved && tierResolved && ownProfileIdResolved;
 
   // Directorio y feed: el estado, la caché y las 350 líneas de hidratación viven en `social/useSocialDirectory`.
+  // El token PRINCIPAL para leer los gists ajenos, pedido en el momento de leer (ver `readToken` en el hook): tras
+  // reconectar GitHub es el bueno, mientras que la copia del canal social sigue siendo la caducada.
+  const mainTokenRef = useRef<string | null>(null);
+  mainTokenRef.current = mainSyncConfig?.token || null;
+  const readMainToken = useCallback(() => mainTokenRef.current, []);
   const {
     rawSocialDirectory: feedDirectory,
     directoryLoading,
+    feedReadFailed: directoryReadFailed,
+    githubReconnectNeeded,
     setDirectorySettled,
     hydrateSocialDirectory,
     patchDirectoryEntries,
@@ -336,6 +345,7 @@ export function useSocialViewModel(options?: {
     setFeedback,
     reportFailure,
     setNetworkFailure: markSocialServiceHealthy,
+    readToken: readMainToken,
   });
 
   // «Perfiles» y el porcentaje de logros de la comunidad necesitan también a quien NO es tu amigo, y eso tiene su
@@ -449,6 +459,14 @@ export function useSocialViewModel(options?: {
     () => friendships.friends.filter((view) => view.ownGistIdsMissing).map((view) => view.docId),
     [friendships.friends],
   );
+  // Y las que acepté yo sin los ids de quien me pidió: se recogen de su depósito (tarea `friendshipKeysAfterAccept`).
+  const acceptedWithoutTheirIds = useMemo(
+    () => friendships.friends.filter((view) => view.otherGistIdsMissing).map((view) => view.docId),
+    [friendships.friends],
+  );
+  const onFriendshipsChanged = useCallback(() => {
+    void refreshAfterFriendshipChange();
+  }, [refreshAfterFriendshipChange]);
 
   useSocialStartupTasks({
     socialSpaceOpen,
@@ -459,6 +477,8 @@ export function useSocialViewModel(options?: {
     ownPublishablePhoto,
     ownPhotoVerdictPending,
     acceptedWithoutMyIds,
+    acceptedWithoutTheirIds,
+    onFriendshipsChanged,
   });
 
   // FASE 2 — MIGRACIÓN A CANAL SECRETO, una vez por sesión: `social/useSecretChannelMigration`.
@@ -632,7 +652,6 @@ export function useSocialViewModel(options?: {
     // cualquier autenticado puede leer, así que aquí no vale la garantía implícita del resto del feed («solo se
     // leen los gists de los amigos»).
     friendUidSet,
-    friendshipsResolved,
     isAdmin,
   );
 
@@ -1007,6 +1026,11 @@ export function useSocialViewModel(options?: {
     feed: {
       feedItems,
       groupedFeedItems,
+      // Lecturas fallidas SIN copia (amigos o la propia lista de amistades): error genérico en vez de «todo
+      // tranquilo». Con copia no cuenta (docs/plan-feed-sin-vacio.md, Fase 1).
+      feedReadFailed: directoryReadFailed || friendshipsFailed,
+      // GitHub ha rechazado el token: aviso fijo con el botón de volver a conectar.
+      githubReconnectNeeded,
       hasMoreFeed,
       showMoreFeed,
       handleActivityItemKeyDown,

@@ -1,16 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { invalidateCachedSocialDirectory } from '../../model/repository/indexedDbRepository';
 import {
   acceptFriendRequest,
   deleteFriendship,
   getMyFriendships,
+  haveFriendshipEdgesChanged,
   MY_FRIENDSHIPS_REQUESTS_MAX_AGE_MS,
   readFriendship,
   sendFriendRequest,
   type FriendshipSelfInfo,
 } from '../../model/repository/firebaseRepository';
-import type { MyFriendships, RelationshipState } from '../../model/types/social';
+import type { FriendshipView, MyFriendships, RelationshipState } from '../../model/types/social';
 
 /**
  * Amistades: el estado, sus derivados y las cuatro mutaciones (pedir, aceptar, cancelar/rechazar, eliminar).
@@ -34,6 +35,8 @@ export interface SocialFriendships {
    * actividad) y el feed quedaría en blanco hasta invalidar la caché. Quien hidrata espera a esta marca.
    */
   friendshipsResolved: boolean;
+  /** La última lectura falló sin copia: la lista está vacía por un fallo, no porque no haya amigos. */
+  friendshipsFailed: boolean;
   /** uid del "otro" con una mutación en curso: deshabilita SU botón sin bloquear el resto de la pantalla. */
   friendshipBusyUid: string;
   /** uids con amistad aceptada. Lo consumen la política de fotos y el feed. */
@@ -88,12 +91,52 @@ export interface SocialFriendshipsOptions {
 
 const EMPTY: MyFriendships = { friends: [], incoming: [], outgoing: [], byOtherUid: {} };
 
+/**
+ * ARISTAS PENDIENTES (docs/plan-historial-amigo-nuevo.md, Fase 2). La copia de amistades vale 15 min, y con el hub
+ * abierto no se relee nunca: quien pidió una amistad tardaba eso (o más) en enterarse de que se la habían aceptado,
+ * y con ello en ver el historial del otro. Las aristas en las que se espera algo de la otra parte se miran una a una
+ * (1 lectura cada una) al abrir el hub y al volver a la pestaña; solo si alguna ha cambiado se relee la lista.
+ *
+ * Como mucho una vez por minuto, la misma frescura que la pantalla de solicitudes
+ * (`MY_FRIENDSHIPS_REQUESTS_MAX_AGE_MS`, que se lee al comprobar y no al cargar el módulo). Y a nivel de módulo, no
+ * de hook: el hub se desmonta al salir, y abrirlo y cerrarlo seguido no debe pagar la comprobación en cada vuelta.
+ */
+/**
+ * Una arista que lleva una semana igual ya no se mira: una petición que nadie contesta, o una amistad de la 1.6.7
+ * cuyo solicitante no vuelve, gastaría una lectura en cada visita indefinidamente. La relectura normal de 15 min
+ * las sigue cubriendo.
+ */
+const EDGE_CHECK_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+let lastEdgeCheckAt = 0;
+
+/** Las aristas que merece la pena mirar ahora (ver `EDGE_CHECK_MAX_AGE_MS`). */
+export function edgesAwaitingOtherSide(friendships: MyFriendships, now: number): FriendshipView[] {
+  const recent = (at: number) => at > 0 && now - at < EDGE_CHECK_MAX_AGE_MS;
+  return [
+    // Peticiones mías sin contestar: ¿me han aceptado (o rechazado)?
+    ...friendships.outgoing.filter((view) => recent(view.createdAt)),
+    // Amigos sin los ids del otro: ¿han llegado ya?
+    ...friendships.friends.filter((view) => !view.otherSocialGistId && recent(view.updatedAt)),
+  ];
+}
+
+/** Solo para tests: olvida la última comprobación. */
+export function resetFriendshipEdgeCheckForTests(): void {
+  lastEdgeCheckAt = 0;
+}
+
 export function useSocialFriendships(options: SocialFriendshipsOptions): SocialFriendships {
   const { myUid, socialGistId, socialSpaceOpen, requestsPanelOpen = false, buildSelfInfo, setFeedback, reportFailure } = options;
 
   const [friendships, setFriendships] = useState<MyFriendships>(EMPTY);
   const [loadingFriendships, setLoadingFriendships] = useState(false);
   const [friendshipsResolved, setFriendshipsResolved] = useState(false);
+  /**
+   * ¿Ha fallado la última lectura de amistades SIN copia que servir? Entonces la lista está vacía por un fallo, no
+   * porque no haya amigos, y el feed no puede decir «empieza buscando gente» (docs/plan-feed-sin-vacio.md, Fase 1).
+   * Con copia no llega a fallar: `getMyFriendships` la sirve sola.
+   */
+  const [friendshipsFailed, setFriendshipsFailed] = useState(false);
   const [friendshipBusyUid, setFriendshipBusyUid] = useState<string>('');
   const [friendActionTarget, setFriendActionTarget] = useState<FriendActionTarget | null>(null);
 
@@ -106,8 +149,10 @@ export function useSocialFriendships(options: SocialFriendshipsOptions): SocialF
     try {
       setLoadingFriendships(true);
       setFriendships(await getMyFriendships(myUid, { forceRefresh, maxAgeMs }));
+      setFriendshipsFailed(false);
     } catch {
-      /* best-effort: sin amistad el resto del social sigue usable. */
+      // El resto del social sigue usable; lo que cambia es que el feed lo cuenta como un fallo de lectura.
+      setFriendshipsFailed(true);
     } finally {
       setLoadingFriendships(false);
       // Resuelto SIEMPRE, incluso si Firestore falló: degrada a feed sin amigos en vez de bloquearlo para siempre.
@@ -130,6 +175,37 @@ export function useSocialFriendships(options: SocialFriendshipsOptions): SocialF
     }
     await refreshFriendships(true);
   }, [refreshFriendships, socialGistId]);
+
+  // Fase 2: mirar las aristas pendientes al abrir el hub y al volver a la pestaña. Por ref, para que el listener de
+  // visibilidad no se reinstale con cada lectura de amistades.
+  const friendshipsRef = useRef(friendships);
+  friendshipsRef.current = friendships;
+  const checkPendingEdges = useCallback(async () => {
+    if (!myUid) return;
+    const now = Date.now();
+    if (now - lastEdgeCheckAt < MY_FRIENDSHIPS_REQUESTS_MAX_AGE_MS) return;
+    const watched = edgesAwaitingOtherSide(friendshipsRef.current, now);
+    if (watched.length === 0) return;
+    lastEdgeCheckAt = now;
+    let changed = false;
+    try {
+      changed = await haveFriendshipEdgesChanged(myUid, watched);
+    } catch {
+      /* best-effort: sin red se queda como estaba, y la relectura normal de 15 min lo cubre igual. */
+    }
+    // Con la lista nueva cambia `friends`, y la huella del directorio (Fase 1) hace que se relea al momento.
+    if (changed) await refreshFriendships(true);
+  }, [myUid, refreshFriendships]);
+
+  useEffect(() => {
+    if (!socialSpaceOpen || !myUid || !friendshipsResolved) return;
+    void checkPendingEdges();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void checkPendingEdges();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [socialSpaceOpen, myUid, friendshipsResolved, checkPendingEdges]);
 
   const relationshipWith = useCallback((otherUid: string): RelationshipState => {
     if (!otherUid) return 'none';
@@ -255,6 +331,7 @@ export function useSocialFriendships(options: SocialFriendshipsOptions): SocialF
     friendships,
     loadingFriendships,
     friendshipsResolved,
+    friendshipsFailed,
     friendshipBusyUid,
     friendUidSet,
     pendingIncomingCount: friendships.incoming.length,

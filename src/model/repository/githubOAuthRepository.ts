@@ -89,7 +89,7 @@ function stripOAuthParamsFromUrl(): void {
 
 /** El canje con GitHub no está disponible ahora: se ofrece la conexión manual, que no pasa por nuestra Function. */
 export const GITHUB_OAUTH_UNAVAILABLE =
-  'Ahora mismo no se puede conectar con GitHub desde aquí. Puedes conectar a mano con un token y el Gist ID en Ajustes → Integración, o volver a intentarlo más tarde.';
+  'Ahora mismo no se puede conectar con GitHub desde aquí. Puedes conectar a mano con un token y el ID del gist en Ajustes → Datos, o volver a intentarlo más tarde.';
 
 /**
  * Completa el retorno de OAuth: valida el `state`, canjea el `code` por un token vía la Function del edge y
@@ -124,23 +124,23 @@ export async function completeGithubOAuth(): Promise<string> {
   stripOAuthParamsFromUrl();
 
   if (oauthError) {
-    throw new Error('Autorización de GitHub cancelada o denegada');
+    throw new Error('No has dado permiso en GitHub, así que no se ha conectado. Puedes volver a intentarlo.');
   }
   if (!code) {
-    throw new Error('Falta el código de autorización de GitHub');
+    throw new Error('GitHub no ha devuelto lo necesario para conectar. Inicia la conexión otra vez.');
   }
   /* DEFENSA CSRF, y aquí se para de verdad. Antes, cuando no había nada guardado con qué comparar, bastaba con
      que el `state` viniera informado para seguir adelante y canjear el `code`: o sea, cualquier valor servía, que
      es tanto como no tener defensa. Lo que se protege no es un detalle —el `code` se canjea por un token con
      permiso sobre TUS gists—, así que sin state guardado no se canjea nada. */
   if (!returnedState) {
-    throw new Error('Falta el parámetro de seguridad (state)');
+    throw new Error('No se pudo verificar la vuelta de GitHub. Inicia la conexión otra vez.');
   }
   if (!storedState) {
-    throw new Error('No se pudo verificar la vuelta de GitHub (el parámetro de seguridad se perdió o caducó). Inicia la conexión otra vez.');
+    throw new Error('No se pudo verificar la vuelta de GitHub. Inicia la conexión otra vez.');
   }
   if (returnedState !== storedState) {
-    throw new Error('El parámetro de seguridad (state) no coincide');
+    throw new Error('La vuelta de GitHub no coincide con la conexión que iniciaste. Inicia la conexión otra vez.');
   }
 
   // SI EL SERVICIO NO RESPONDE —sin red, el cupo de Functions de Cloudflare agotado (su página de error, HTML), un

@@ -27,9 +27,9 @@ describe('lectura del gist social propio ilegible', () => {
     const gistId = 'aabbccddeeff00112233445566778801';
     const fetchMock = stubGist({ [SOCIAL_FILE]: { content: '{"profile":{"name":"Ada"', truncated: true } });
 
-    await expect(readSocialGist(TOKEN, gistId, null)).rejects.toThrow(/ilegible/);
+    await expect(readSocialGist(TOKEN, gistId, null)).rejects.toThrow(/no se puede leer/i);
     // Sin caché: la siguiente lectura vuelve a la red en vez de servir el vacío.
-    await expect(readSocialGist(TOKEN, gistId, null)).rejects.toThrow(/ilegible/);
+    await expect(readSocialGist(TOKEN, gistId, null)).rejects.toThrow(/no se puede leer/i);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
@@ -42,7 +42,7 @@ describe('lectura del gist social propio ilegible', () => {
     };
     stubGist({ [SOCIAL_FILE]: { content: JSON.stringify(anchor) } });
 
-    await expect(readSocialGist(TOKEN, gistId, null)).rejects.toThrow(/ausente/);
+    await expect(readSocialGist(TOKEN, gistId, null)).rejects.toThrow(/falta una parte/i);
   });
 
   it('sin el fichero sigue siendo un canal vacío de verdad (recién creado)', async () => {

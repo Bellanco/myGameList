@@ -110,6 +110,96 @@ describe('gistConfigRepository (C4) — token cifrado en reposo', () => {
 });
 
 /**
+ * CARRERAS DE LA HIDRATACIÓN. El módulo hidrata al importarse y casi todo vuelve a pedirlo con
+ * `ensureSyncConfigLoaded()`. Antes eran dos hidrataciones en paralelo, y la que no esperaba nadie terminaba más
+ * tarde: en la suite, la migración de «migra un token legacy» escribía su `encToken` dentro del test siguiente, que
+ * acababa leyendo `ghp_legacy`. Y cualquiera de las dos podía devolver el token anterior encima de uno recién
+ * guardado.
+ */
+describe('gistConfigRepository — hidratación en vuelo', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('una migración legacy en vuelo no pisa la configuración guardada mientras tanto', async () => {
+    localStorage.setItem(
+      GIST_CFG_KEY,
+      JSON.stringify({ token: 'ghp_legacy', gistId: 'gid-viejo', etag: 'e9', lastRemoteUpdatedAt: 1 }),
+    );
+    const mod = await freshModule(); // al importarse ya está cifrando el legacy
+    mod.saveSyncConfig({ token: 'ghp_nuevo', gistId: 'gid-nuevo', etag: null, lastRemoteUpdatedAt: 0 });
+    await mod.ensureSyncConfigLoaded();
+    await esperarTokenCifrado();
+
+    expect(JSON.parse(localStorage.getItem(GIST_CFG_KEY) || '{}').gistId).toBe('gid-nuevo');
+    expect(mod.getSyncConfig()?.token).toBe('ghp_nuevo');
+    const next = await freshModule();
+    await next.ensureSyncConfigLoaded();
+    expect(next.getSyncConfig()?.token).toBe('ghp_nuevo');
+  });
+
+  it('un descifrado en vuelo no devuelve el token anterior encima del recién guardado', async () => {
+    const first = await freshModule();
+    first.saveSyncConfig({ token: 'ghp_anterior', gistId: 'gid', etag: null, lastRemoteUpdatedAt: 0 });
+    await esperarTokenCifrado();
+
+    // El descifrado se retiene hasta DESPUÉS de guardar el token nuevo, que es justo la ventana de la carrera.
+    let soltar: () => void = () => {};
+    const retenido = new Promise<void>((resolve) => { soltar = resolve; });
+    let terminado: Promise<unknown> = Promise.resolve();
+    vi.doMock('../../src/core/security/crypto', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('../../src/core/security/crypto')>();
+      return {
+        ...actual,
+        decryptWithDeviceKey: (blob: string) => {
+          terminado = retenido.then(() => actual.decryptWithDeviceKey(blob));
+          return terminado;
+        },
+      };
+    });
+    try {
+      const mod = await freshModule(); // al importarse ya está descifrando `ghp_anterior`
+      mod.saveSyncConfig({ token: 'ghp_nuevo', gistId: 'gid', etag: null, lastRemoteUpdatedAt: 0 });
+      soltar();
+      await terminado;
+      await mod.ensureSyncConfigLoaded();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mod.getSyncConfig()?.token).toBe('ghp_nuevo');
+    } finally {
+      vi.doUnmock('../../src/core/security/crypto');
+    }
+  });
+
+  it('pedirla otra vez mientras está en vuelo no lanza una segunda: una sola migración', async () => {
+    localStorage.setItem(
+      GIST_CFG_KEY,
+      JSON.stringify({ token: 'ghp_legacy', gistId: 'gid3', etag: 'e9', lastRemoteUpdatedAt: 1 }),
+    );
+    const cifrados: string[] = [];
+    vi.doMock('../../src/core/security/crypto', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('../../src/core/security/crypto')>();
+      return {
+        ...actual,
+        encryptWithDeviceKey: (token: string) => {
+          cifrados.push(token);
+          return actual.encryptWithDeviceKey(token);
+        },
+      };
+    });
+    try {
+      const mod = await freshModule(); // la del import ya está en vuelo
+      await Promise.all([mod.ensureSyncConfigLoaded(), mod.ensureSyncConfigLoaded()]);
+
+      // Con la del import y las dos pedidas eran TRES migraciones cifrando a la vez.
+      expect(cifrados).toEqual(['ghp_legacy']);
+    } finally {
+      vi.doUnmock('../../src/core/security/crypto');
+    }
+  });
+});
+
+/**
  * El canal SOCIAL guarda una copia del MISMO PAT (la hace `socialChannel.resolveSocialChannel`), y durante un
  * tiempo la guardó en claro: el cifrado del canal de juegos quedaba anulado, porque el mismo secreto era legible
  * en la clave de al lado. Estos tests fijan que los dos canales se tratan igual.

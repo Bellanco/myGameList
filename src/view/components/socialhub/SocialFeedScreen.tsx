@@ -15,7 +15,7 @@ import { AchievementStrip } from '../stats/AchievementStrip';
 import { HubStatus } from './HubStatus';
 import { PostBody } from './PostText';
 import { HubAvatar } from './HubAvatar';
-import { HubOfflineNotice } from './HubOfflineNotice';
+import { FeedNotice } from './FeedNotice';
 import { FeedShell } from './FeedShell';
 import { FeedComposer } from './FeedComposer';
 import { FeedMoveCard } from './FeedMoveCard';
@@ -82,6 +82,8 @@ function SocialFeedScreenBase({
   offlineHasCachedData,
   serviceLimited = false,
   hasFriends = false,
+  feedReadFailed = false,
+  githubReconnect = null,
 }: {
   SOCIAL_UI: SocialUiLabels;
   socialDisplayName: string;
@@ -130,6 +132,14 @@ function SocialFeedScreenBase({
   serviceLimited?: boolean;
   /** ¿Tiene ya alguna amistad? Decide qué dice el vacío: «busca gente» o «aún no han compartido nada». */
   hasFriends?: boolean;
+  /**
+   * Algo no se ha podido leer y no tiene copia en este dispositivo (un amigo, o la propia lista de amistades). El
+   * vacío deja de decir «todo tranquilo» o «busca gente», que serían mentira, y con actividad a la vista se avisa
+   * arriba. Con copia no llega aquí: lo guardado se enseña sin avisar (docs/plan-feed-sin-vacio.md, Fase 1).
+   */
+  feedReadFailed?: boolean;
+  /** GitHub ha rechazado el token de lectura: aviso fijo con el botón de volver a conectar. `null` = no toca. */
+  githubReconnect?: { onReconnect: () => void; busy: boolean } | null;
 }) {
   // El sorteo va en `useState` con inicializador perezoso y no en el cuerpo: así se decide una sola vez por
   // montaje y no cambia en cada repintado (esta pantalla re-renderiza con cualquier cambio del hub).
@@ -179,6 +189,14 @@ function SocialFeedScreenBase({
     return () => observer.disconnect();
   }, [loadingDirectory, hasMoreFeed, showMoreFeed, visibleFeedCount]);
 
+  // Qué dice el vacío con red. Por un fallo de lectura sin copia, el error genérico: «todo tranquilo» o «busca gente»
+  // serían mentira (docs/plan-feed-sin-vacio.md, Fase 1). Si no, depende de si ya tiene amigos.
+  const emptyState = feedReadFailed
+    ? { title: SOCIAL_UI.feed.readFailedTitle, text: SOCIAL_UI.feed.readFailed }
+    : hasFriends
+      ? { title: SOCIAL_UI.feed.activityEmptyQuietTitle, text: SOCIAL_UI.feed.activityEmptyQuiet }
+      : { title: SOCIAL_UI.feed.activityEmptyTitle, text: SOCIAL_UI.feed.activityEmptyNoFriends };
+
   return (
     /* El ARMAZÓN —cabecera, fila de botones y hueco del compositor— lo pinta `FeedShell`, que es el MISMO
        componente que usa el esqueleto de carga (`SocialHubSkeleton`). Vivía aquí escrito a mano, y el esqueleto
@@ -201,9 +219,16 @@ function SocialFeedScreenBase({
         </button>
       )}
       actions={{ pendingIncomingCount, onOpenProfiles, onOpenRequests }}
-      notice={offline
-        ? <HubOfflineNotice hasCachedData={offlineHasCachedData} />
-        : serviceLimited ? <HubOfflineNotice variant="limited" hasCachedData={offlineHasCachedData} /> : null}
+      notice={(
+        <FeedNotice
+          SOCIAL_UI={SOCIAL_UI}
+          offline={offline}
+          offlineHasCachedData={offlineHasCachedData}
+          serviceLimited={serviceLimited}
+          githubReconnect={githubReconnect}
+          readFailed={feedReadFailed && !loadingDirectory && feedItems.length > 0}
+        />
+      )}
       composer={canPublishPosts ? (
         <FeedComposer
           SOCIAL_UI={SOCIAL_UI}
@@ -264,10 +289,8 @@ function SocialFeedScreenBase({
               <span className="hub-feed-empty-icon" aria-hidden="true">
                 <Icon name="bottom-hub" />
               </span>
-              <h3 className="hub-feed-empty-title">
-                {hasFriends ? SOCIAL_UI.feed.activityEmptyQuietTitle : SOCIAL_UI.feed.activityEmptyTitle}
-              </h3>
-              <p>{hasFriends ? SOCIAL_UI.feed.activityEmptyQuiet : SOCIAL_UI.feed.activityEmptyNoFriends}</p>
+              <h3 className="hub-feed-empty-title">{emptyState.title}</h3>
+              <p>{emptyState.text}</p>
             </div>
           ) : null}
           {!loadingDirectory && feedItems.length > 0 ? (

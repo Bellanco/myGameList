@@ -297,8 +297,8 @@ describe('F6.1: assertValidSocialGist (allowlist estricta Zod)', () => {
   });
 
   it('ST3: rechaza el array `recommendations` legacy (top-level o en profile) — ya fuera de la allowlist', () => {
-    expect(() => assertValidSocialGist({ ...emptySocial, recommendations: [] })).toThrow(/schema/);
-    expect(() => assertValidSocialGist({ ...emptySocial, profile: { ...emptySocial.profile, recommendations: [] } })).toThrow(/schema/);
+    expect(() => assertValidSocialGist({ ...emptySocial, recommendations: [] })).toThrow(/formato inesperado/);
+    expect(() => assertValidSocialGist({ ...emptySocial, profile: { ...emptySocial.profile, recommendations: [] } })).toThrow(/formato inesperado/);
   });
 
   it('ST3: socialGistNeedsRewrite detecta arrays de recomendaciones legacy con contenido (auto-upgrade)', () => {
@@ -325,7 +325,7 @@ describe('F6.1: assertValidSocialGist (allowlist estricta Zod)', () => {
       ...emptySocial,
       activity: [{ id: 'p:1:review', key: 'p:1:review', type: 'review', actorProfileId: 'p', actorName: 'N', gameId: 1, gameName: 'G', rating: 5, recommendationText: '', snippet: 's', createdAt: 1, updatedAt: 1, review: 'FUGA' }],
     };
-    expect(() => assertValidSocialGist(leaked)).toThrow(/schema/);
+    expect(() => assertValidSocialGist(leaked)).toThrow(/formato inesperado/);
   });
 
   it('rechaza el campo legacy actorUid (ya no permitido en el canal público)', () => {
@@ -333,7 +333,7 @@ describe('F6.1: assertValidSocialGist (allowlist estricta Zod)', () => {
       ...emptySocial,
       activity: [{ id: 'u:1:review', key: 'u:1:review', type: 'review', actorUid: 'u', actorName: 'N', gameId: 1, gameName: 'G', rating: 5, recommendationText: '', snippet: 's', createdAt: 1, updatedAt: 1 }],
     };
-    expect(() => assertValidSocialGist(legacy)).toThrow(/schema/);
+    expect(() => assertValidSocialGist(legacy)).toThrow(/formato inesperado/);
   });
 });
 

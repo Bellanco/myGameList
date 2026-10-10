@@ -10,6 +10,7 @@
 // fallback para perfiles legacy cuyo id de documento no es el uid.
 import { collection, doc, getDoc, getDocs, limit, orderBy, query, Timestamp, where } from 'firebase/firestore/lite';
 import type { PalmaresEntry } from '../types/premios';
+import { toMillis } from '../../core/utils/firestoreTime';
 import { DEFAULT_PROFILE_TIER, normalizeTier, type ProfileTier } from '../../core/constants/tiers';
 import {
   initializeFirebaseServices,
@@ -72,13 +73,6 @@ function readYearSummarySeen(raw: unknown): YearSummarySeen | null {
   return Number.isInteger(year) && millis > 0 ? { year: year as number, at: millis } : null;
 }
 
-function toMillis(value: { toMillis?: () => number } | number | undefined): number {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : 0;
-  }
-  const millis = value?.toMillis?.();
-  return typeof millis === 'number' && Number.isFinite(millis) ? millis : 0;
-}
 
 /** Lo que se lee de un documento de `profiles` para el directorio. */
 type DirectoryDocData = {
@@ -465,10 +459,22 @@ function directoryProfileInvalidatedFor(uid: string): number {
  * sin aparecer: a ese se le acepta hasta un día (`INACTIVE_PROFILE_MAX_AGE_MS`), porque mientras siga dormido no
  * cambia nada de lo que se pinta de él.
  */
-function directoryProfileIsFresh(uid: string, row: CachedDirectoryProfile<SocialDirectoryEntry>, maxAgeMs: number, now: number): boolean {
+function directoryProfileIsFresh(
+  uid: string,
+  row: CachedDirectoryProfile<SocialDirectoryEntry>,
+  maxAgeMs: number,
+  now: number,
+  friendshipStamp = 0,
+): boolean {
   if (row.cachedAt < directoryProfileInvalidatedFor(uid)) return false;
   const lastActiveAt = row.entry?.updatedAt || 0;
   const asleep = lastActiveAt > 0 && now - lastActiveAt > PROFILE_INACTIVITY_MS;
+  // LA SEÑAL DE REGRESO (docs/plan-feed-sin-vacio.md, Fase 4): quien vuelve tras más de 30 días sella el `updatedAt`
+  // de sus amistades. Si la amistad es más nueva que la copia de un DORMIDO, la copia no vale: es lo que lo saca del
+  // corte de inactividad en cuanto vuelve, y no al caducar su copia un día después. Solo para dormidos: el sello lo
+  // pone el reloj del otro, y si va adelantado sería «más nuevo» que cada copia durante horas. Tras releerlo sale
+  // despierto y vuelve a la edad normal, así que tampoco se repite.
+  if (asleep && friendshipStamp > row.cachedAt) return false;
   return now - row.cachedAt < (asleep ? Math.max(maxAgeMs, INACTIVE_PROFILE_MAX_AGE_MS) : maxAgeMs);
 }
 
@@ -486,7 +492,12 @@ function directoryProfileIsFresh(uid: string, row: CachedDirectoryProfile<Social
  */
 export async function getSocialProfilesByUid(
   uids: string[],
-  options?: { forceRefresh?: boolean; maxAgeMs?: number },
+  options?: {
+    forceRefresh?: boolean;
+    maxAgeMs?: number;
+    /** `updatedAt` del documento de amistad de cada uid: una copia anterior a él no vale (ver `directoryProfileIsFresh`). */
+    friendshipStamps?: Readonly<Record<string, number>>;
+  },
 ): Promise<SocialDirectoryEntry[]> {
   const services = await initializeFirebaseServices();
   if (!services) {
@@ -505,14 +516,15 @@ export async function getSocialProfilesByUid(
   if (!forceRefresh) {
     let persisted: Record<string, CachedDirectoryProfile<SocialDirectoryEntry>> | null = null;
     for (const uid of wanted) {
+      const stamp = Number(options?.friendshipStamps?.[uid] || 0);
       const inMemory = directoryProfileMemory.get(uid);
-      if (inMemory && directoryProfileIsFresh(uid, inMemory, maxAgeMs, now)) {
+      if (inMemory && directoryProfileIsFresh(uid, inMemory, maxAgeMs, now, stamp)) {
         rows.set(uid, inMemory);
         continue;
       }
       persisted ??= await getCachedDirectoryProfiles<SocialDirectoryEntry>();
       const stored = persisted[uid];
-      if (stored && directoryProfileIsFresh(uid, stored, maxAgeMs, now)) {
+      if (stored && directoryProfileIsFresh(uid, stored, maxAgeMs, now, stamp)) {
         directoryProfileMemory.set(uid, stored);
         rows.set(uid, stored);
       }

@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { ANNOUNCEMENT_UI } from '../../core/constants/announcementLabels';
 import type { Announcement } from '../../core/announcement/announcement';
 import { AnnouncementIcon, AnnouncementSprite } from './AnnouncementSprite';
-import { usePageVisible } from '../hooks/usePageVisible';
+import { useToastAnnouncement, useToastLife } from '../hooks/useLaneToast';
 // La hoja se importa AQUÍ, atada al componente, por lo mismo que la de la medalla: esta cápsula se pinta desde un
 // chunk perezoso y colgarla de `index.scss` la haría viajar en el arranque de todo el mundo por algo que casi
 // nunca hay. La forma común con el aviso de logro vive en `styles/_capsule.scss`, que esta hoja `@use`.
@@ -36,15 +36,6 @@ import '../../styles/announcement.scss';
 /** Vida de la cápsula. En pausa mientras se lee. */
 const LIFE_MS = 8000;
 
-/**
- * Lo que se espera para escribir dentro de la región viva.
- *
- * ⚑ NO ES UN ADORNO: una región viva solo anuncia los cambios que ocurren MIENTRAS ella existe, así que montarla
- * con el texto ya dentro no anuncia nada (es la misma razón por la que `StatusBanner` y `UpdateNotice` la tienen
- * siempre montada y vacía). Aquí la cápsula entera nace con el aviso, así que la región se monta vacía y el
- * texto entra un tick después.
- */
-const ANNOUNCE_DELAY_MS = 120;
 
 interface AnnouncementToastProps {
   announcement: Announcement;
@@ -69,12 +60,6 @@ export function AnnouncementToast({
   onDone,
   preview = false,
 }: AnnouncementToastProps) {
-  const [paused, setPaused] = useState(false);
-  const [announced, setAnnounced] = useState('');
-  // Con la pestaña de fondo el reloj se para: al volver, la cápsula sigue ahí y estrena sus ocho segundos.
-  const visible = usePageVisible();
-  const doneRef = useRef(onDone);
-  doneRef.current = onDone;
   const shownRef = useRef(onShown);
   shownRef.current = onShown;
 
@@ -85,17 +70,10 @@ export function AnnouncementToast({
     shownRef.current?.();
   }, [preview, id]);
 
-  useEffect(() => {
-    if (preview || paused || !visible) return;
-    const reloj = window.setTimeout(() => doneRef.current?.(), LIFE_MS);
-    return () => window.clearTimeout(reloj);
-  }, [preview, paused, visible, id]);
-
-  useEffect(() => {
-    if (preview) return;
-    const reloj = window.setTimeout(() => setAnnounced(ANNOUNCEMENT_UI.linkAria(title, body)), ANNOUNCE_DELAY_MS);
-    return () => window.clearTimeout(reloj);
-  }, [preview, title, body]);
+  // La vida y el anuncio, como en el resto de cápsulas del carril (`useLaneToast`): con la pestaña de fondo el reloj
+  // se para, y al volver la cápsula sigue ahí. En la vista previa del panel ni corre ni se anuncia.
+  const pause = useToastLife(onDone, { lifeMs: LIFE_MS, resetKey: id, active: !preview });
+  const announced = useToastAnnouncement(ANNOUNCEMENT_UI.linkAria(title, body), !preview);
 
   const capsule = (
     <div className="ach-toast is-announce">
@@ -113,10 +91,7 @@ export function AnnouncementToast({
         rel="noopener noreferrer"
         aria-label={ANNOUNCEMENT_UI.linkAria(title, body)}
         onClick={() => onOpen?.()}
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
-        onFocus={() => setPaused(true)}
-        onBlur={() => setPaused(false)}
+        {...pause}
       >
         <span className="ach-toast-disc" aria-hidden="true">
           <AnnouncementIcon name={icon} />

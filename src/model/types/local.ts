@@ -49,6 +49,20 @@ export interface LocalMeta {
   // corrección alcanza a los gists que tocó una versión anterior sin esperar a que caduque).
   activityReconcileVersion?: number;
   pendingSocialActivity?: boolean;
+  /**
+   * La versión de las condiciones que consta aceptada por esta cuenta, vista desde ESTE dispositivo, y cuándo se
+   * comprobó. Es la puerta de todo lo social que sale fuera del hub (`canPublishSocialInBackground`): el hub la
+   * comprueba al entrar, pero una reseña guardada desde la app principal no pasa por él. La sella la propia puerta
+   * con lo que lee de `publicConfig` (como mucho una lectura al día si es una versión vieja), y el hub al aceptar. Con
+   * el `uid`, porque el dispositivo puede cambiar de cuenta (docs/plan-feed-sin-vacio.md, Fase 2). La lee también la
+   * cápsula del aviso legal (`useLegalConsentNotice`).
+   */
+  legalConsent?: { uid: string; version: string; checkedAt: number };
+  /**
+   * Cuándo publicó por última vez la pasada social de la app principal (`runBackgroundSocialPass`). Entre dos pasadas
+   * que publican van 8 h como mínimo; solo se sella cuando ha publicado de verdad (docs/plan-feed-sin-vacio.md, Fase 3).
+   */
+  backgroundSocialPassAt?: number;
   // Último gist social ya propagado a MIS docs de amistad DESDE LA RUTA DE PUBLICACIÓN. Sigue vivo junto a
   // `friendshipIdentityFingerprint` porque acota una ruta que la huella no puede acotar: la publicación no sabe
   // descartar el monograma genérico de Google, así que se le fija a una pasada por id de gist para que no se
@@ -69,10 +83,6 @@ export interface LocalMeta {
   friendshipIdentityHealedAt?: number;
   // Último latido de uso enviado a `profiles.updatedAt` desde este dispositivo (acota a una escritura diaria).
   profileTouchedAt?: number;
-  // F5 — LÍNEA BASE del feed de logros (plan-logros §5.4 y §8.4): `uid → espejo` tal y como estaba la PRIMERA vez
-  // que este dispositivo lo vio. Lo que ya estaba ahí no se anuncia. Sin TTL y sin invalidación —no es un caché,
-  // es una foto—, y por eso no puede ser la caché del directorio. Solo se poda cuando la amistad desaparece.
-  achievementsPeerSeen?: Record<string, string>;
   // Sellos de los SANEADOS DE ARRANQUE del espacio social (ver `viewmodel/social/useSocialStartupTasks`). Cada uno
   // guarda la huella de las entradas con las que su tarea terminó bien; mientras no cambie, la tarea no se
   // ejecuta. Sustituyen a un `useRef` por tarea, que moría con el desmontaje del hub y hacía que abrir el espacio
@@ -97,6 +107,14 @@ export interface LocalMeta {
    * `privateConfig`—, y ese no es un estado definitivo: en cuanto el respaldo existe, sí se puede.
    */
   publicGistIdsPurgedAt?: number;
+  /**
+   * Amistades aceptadas por mí, sin los ids de quien las pidió, cuyo depósito ya se intentó recoger (ids de documento
+   * ordenados). Sin depósito (peticiones de la 1.6.7) no hay nada que recoger hasta que quien pidió vuelva a entrar,
+   * y sin sello se gastaría una lectura por amistad en cada apertura del hub.
+   */
+  friendshipKeysClaimedFor?: string;
+  /** Cuándo se selló, para reintentarlo a la semana como el resto de sellos de arranque. */
+  friendshipKeysClaimedAt?: number;
   /** Gist social del que ya consta que es SECRETO: evita un listado de gists contra GitHub por apertura. */
   socialChannelPrivateFor?: string;
   /**

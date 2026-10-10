@@ -108,13 +108,13 @@ export const VALIDATION_MESSAGES = {
   fieldsInvalid: 'Revisa los campos marcados antes de guardar.',
   tagExists: 'Ya existe. Pulsa Guardar otra vez para fusionar.',
   duplicateName: (name: string, list: string) => `Ya tienes "${name}" en ${list}.`,
-  tagMerged: 'Fusionado correctamente',
-  tagUpdated: 'Actualizado correctamente',
+  tagMerged: 'Etiquetas fusionadas',
+  tagUpdated: 'Etiqueta actualizada',
   nameRequired: 'Escribe el nombre del juego.',
   genresRequired: 'Añade al menos un género.',
   platformsRequired: 'Añade al menos una plataforma.',
   yearsRequired: 'Añade al menos un año de finalización.',
-  scoreRequired: 'Selecciona una puntuación',
+  scoreRequired: 'Selecciona una puntuación.',
   hoursInvalid: 'Escribe las horas como un número, con decimales si hace falta (ej: 12,5).',
   hoursNegative: 'Las horas jugadas no pueden ser negativas.',
   /** Cabecera del resumen del pie del modal; debajo va la lista de lo que falta. */
@@ -122,34 +122,40 @@ export const VALIDATION_MESSAGES = {
     count === 1 ? 'Falta 1 cosa para poder guardar:' : `Faltan ${count} cosas para poder guardar:`,
 } as const;
 
+/** Cuántos cambios ha traído el gist en un ciclo de sincronización, con el plural resuelto. */
+const remoteChangesArrived = (changes: number) =>
+  changes === 1 ? 'Ha llegado 1 cambio de tu gist.' : `Han llegado ${changes} cambios de tu gist.`;
+
 export const SYNC_MESSAGES = {
   needsConfiguration: 'Primero configura la sincronización.',
   connectSuccess: 'Sincronización configurada',
-  connectError: 'Error al conectar sincronización',
+  connectError: 'No se ha podido conectar la sincronización. Inténtalo de nuevo.',
   /** El módulo de conexión no llegó (red que ni responde ni falla): ver `beginGithubLogin`. */
   oauthModuleTimeout: 'No se ha podido preparar la conexión con GitHub. Revisa la red e inténtalo de nuevo.',
   /** Se pidió ir a GitHub y la página sigue aquí: navegación colgada o abortada, o el móvil abrió la app de GitHub. */
   oauthDidNotOpen: 'GitHub no llegó a abrirse. Vuelve a intentarlo; si se abre la app de GitHub, vuelve aquí y prueba de nuevo.',
   syncSuccess: 'Datos sincronizados',
-  syncError: 'Error al sincronizar',
-  initError: 'Error de sincronización',
-  offline: 'Sin conexión: se reintentará al recuperar la red',
+  syncError: 'No se ha podido sincronizar. Inténtalo de nuevo.',
+  initError: 'No se ha podido sincronizar. Inténtalo de nuevo.',
+  offline: 'Sin conexión. Se sincronizará cuando vuelva la red.',
   /** GitHub limita las peticiones de este token (docs/plan-degradacion-servicios.md, fase 5). Nada se ha perdido. */
   rateLimited: (hora: string) =>
     `GitHub está limitando las peticiones. Tus cambios están guardados en este dispositivo y se subirán a partir de las ${hora}.`,
   syncInProgress: 'Sincronización ya en curso',
   disconnectSuccess: 'Sincronización desconectada',
-  copySuccess: 'Gist ID copiado al portapapeles',
-  copyError: 'No se pudo copiar el Gist ID',
-  copyMissing: 'No hay Gist ID disponible para copiar',
-  recoverSuccess: 'Gist ID recuperado desde Google',
-  recoverMissingInProfile: 'No se encontró gamesGistId en tu perfil de Google/Firestore',
-  recoverMissingTokenInProfile: 'No se encontró el token en tu perfil de Google/Firestore',
-  recoverError: 'No se pudo recuperar el Gist ID desde Google',
-  recoverUnavailable: 'Ahora mismo no se puede recuperar la configuración desde Google. Inténtalo más tarde o conecta a mano con un token y el Gist ID.',
-  mergeSynced: (changes: number) => `Fusión sincronizada correctamente: ${changes} cambios remotos aplicados`,
-  connectSynced: (changes: number) => `Sincronización configurada: ${changes} cambios remotos aplicados`,
-  initialSynced: (changes: number) => `Sincronización inicial completada: ${changes} cambios remotos aplicados`,
+  copySuccess: 'ID del gist copiado al portapapeles',
+  copyError: 'No se pudo copiar el ID del gist',
+  copyMissing: 'No hay ningún ID del gist que copiar',
+  recoverSuccess: 'ID del gist recuperado desde Google',
+  recoverMissingInProfile: 'Tu cuenta de Google no tiene ningún gist guardado. Conecta a mano con un token y el ID del gist.',
+  recoverMissingTokenInProfile: 'Tu cuenta de Google no tiene ningún token guardado. Conecta a mano con un token y el ID del gist.',
+  recoverError: 'No se pudo recuperar el ID del gist desde Google',
+  recoverUnavailable: 'Ahora mismo no se puede recuperar la configuración desde Google. Inténtalo más tarde o conecta a mano con un token y el ID del gist.',
+  /** Con cero cambios, `syncNow` sigue confirmando: dice lo mismo que `syncSuccess`. */
+  mergeSynced: (changes: number) =>
+    changes > 0 ? `Datos sincronizados. ${remoteChangesArrived(changes)}` : 'Datos sincronizados',
+  connectSynced: (changes: number) => `Sincronización configurada. ${remoteChangesArrived(changes)}`,
+  initialSynced: (changes: number) => `Datos sincronizados. ${remoteChangesArrived(changes)}`,
 } as const;
 
 /**
@@ -190,8 +196,8 @@ export const UI_MESSAGES = {
   /** Lo que la app cuenta al guardar, borrar o mover un juego (el banner de estado de la página). */
   games: {
     fieldsRequired: 'Revisa los campos obligatorios antes de guardar.',
-    completedYearRequired: 'Debes añadir al menos un año para completados.',
-    saved: 'Juego guardado correctamente',
+    completedYearRequired: 'Añade al menos un año de finalización.',
+    saved: 'Juego guardado',
     deleted: 'Juego eliminado',
     deleteConfirm: (name: string) => `¿Eliminar "${name}"?`,
     tagDeleted: 'Etiqueta eliminada',
@@ -201,7 +207,7 @@ export const UI_MESSAGES = {
     addedToWishlist: (name: string) => `"${name}" añadido a deseados`,
     wishlistFull: 'Tu lista de deseos está completa',
     alreadyCurrent: (name: string) => `"${name}" ya está en curso`,
-    reviewPublishDeferred: 'Juego guardado; la actividad social de reseña se actualizará al abrir el hub social.',
+    reviewPublishDeferred: 'Juego guardado. Tu reseña se actualizará en Social más tarde.',
   },
   /** El botón de la tarjeta de la ruleta: qué se hace con el juego que ha salido. */
   rouletteActions: {
@@ -302,9 +308,9 @@ export const UI_MESSAGES = {
    */
   import: {
     // Importar un JSON de copia desde Ajustes.
-    fileDone: 'Datos importados correctamente',
-    fileDoneOverwritten: 'Datos importados y Gist sobrescrito correctamente',
-    fileDoneLocalOnly: 'Datos importados localmente, pero no hay Gist configurado para sobrescribir.',
+    fileDone: 'Datos importados',
+    fileDoneOverwritten: 'Datos importados y gist sobrescrito',
+    fileDoneLocalOnly: 'Datos importados en este dispositivo. No se han subido porque no hay ningún gist configurado.',
     fileInvalid: 'Archivo JSON no válido',
     integrations: {
       importBtn: 'Importar de Playnite',
@@ -313,9 +319,9 @@ export const UI_MESSAGES = {
       parseError: 'No se pudo leer el fichero. Comprueba que es el JSON exportado por «Playnite Library Exporter».',
     },
     notice: (added: number, merged: number, duplicates: number) =>
-      `${added} añadido(s)` +
-      (merged ? `, ${merged} fusionado(s)` : '') +
-      (duplicates ? `, ${duplicates} duplicado(s) omitido(s)` : ''),
+      `${added} ${added === 1 ? 'juego añadido' : 'juegos añadidos'}` +
+      (merged ? `, ${merged} ${merged === 1 ? 'fusionado' : 'fusionados'}` : '') +
+      (duplicates ? `, ${duplicates} ${duplicates === 1 ? 'duplicado omitido' : 'duplicados omitidos'}` : ''),
   },
   toolbar: {
     searchPlaceholder: 'Buscar',

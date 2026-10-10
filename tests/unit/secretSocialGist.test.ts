@@ -184,7 +184,7 @@ describe('ensureSecretSocialGist', () => {
     const OTRO_ID = '234567890abcdef1234567890abcdef1';
     stubCanal(OTRO_ID, 50_000, '{"roto');
 
-    await expect(ensureSecretSocialGist(TOKEN, OTRO_ID)).rejects.toThrow(/ilegible/);
+    await expect(ensureSecretSocialGist(TOKEN, OTRO_ID)).rejects.toThrow(/no se puede leer/i);
     expect(created).toBeNull();
   });
 

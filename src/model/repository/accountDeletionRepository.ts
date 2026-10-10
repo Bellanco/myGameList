@@ -12,7 +12,7 @@
 // locales intactos porque una amistad no se pudo borrar sería el peor resultado posible para el usuario.
 import { deleteDoc, doc } from 'firebase/firestore/lite';
 import { initializeFirebaseServices } from './firebaseClient';
-import { deleteFriendship, getMyFriendships, invalidateMyFriendshipsCache } from './firebaseFriendshipRepository';
+import { deleteFriendship, deleteOwnFriendshipKeys, getMyFriendships, invalidateMyFriendshipsCache } from './firebaseFriendshipRepository';
 import { invalidateOwnProfileCache, invalidateSocialDirectoryCache } from './firebaseSocialRepository';
 import { forgetOwnAccountMemo } from './firebaseRepository';
 import { signOutSocialUser } from './firebaseAuthRepository';
@@ -162,6 +162,16 @@ async function deleteRemoteData(uid: string, outcome: RemoteDeletionOutcome): Pr
   } catch (error) {
     noteServiceDown(error);
     failures.push(`amistades: ${describe(error)}`);
+  }
+
+  // 1b) Los depósitos de mis ids que hayan quedado huérfanos (ver `deleteOwnFriendshipKeys`). Los de las amistades
+  //     que se acaban de borrar ya se fueron con ellas.
+  try {
+    const left = await deleteOwnFriendshipKeys(uid);
+    if (left > 0) failures.push(`depósitos de amistad: ${left} no se pudieron borrar`);
+  } catch (error) {
+    noteServiceDown(error);
+    failures.push(`depósitos de amistad: ${describe(error)}`);
   }
 
   // Si el servicio no atiende, se para AQUÍ y no se sigue con lo de abajo: el reintento de mañana necesita el

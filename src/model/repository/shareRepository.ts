@@ -146,7 +146,7 @@ async function parse(response: Response): Promise<Record<string, unknown>> {
       throw unavailableError(Number.isFinite(retryAfterSeconds) ? retryAfterSeconds * 1000 : 0);
     }
     const { error, ...details } = body;
-    throw shareError(response.status, String(error || 'No se ha podido completar la operación'), details);
+    throw shareError(response.status, String(error || 'Algo ha fallado. Inténtalo de nuevo.'), details);
   }
   clearShareServiceDown();
   return body;

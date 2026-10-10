@@ -1,6 +1,7 @@
-import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { Icon } from '../Icon';
 import { PostBody } from './PostText';
+import { useAutoGrowTextarea } from '../../hooks/useAutoGrowTextarea';
 import { ConfirmModal } from '../../modals/ConfirmModal';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 
@@ -61,12 +62,7 @@ function PostEditor({
   const ref = useRef<HTMLTextAreaElement>(null);
 
   // El mismo autocrecimiento que el compositor, con su tope en el CSS.
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight}px`;
-  }, [text]);
+  useAutoGrowTextarea(ref, text);
 
   useEffect(() => {
     ref.current?.focus();

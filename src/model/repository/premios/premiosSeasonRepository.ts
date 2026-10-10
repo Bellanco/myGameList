@@ -612,7 +612,9 @@ export async function publishAndArchiveSeason({
   const sinGanador = categoriesMissingWinner(categories, resolved);
   if (sinGanador.length > 0) {
     throw new Error(
-      `No se puede publicar: ${sinGanador.length} categoría(s) con nominados y sin ganador marcado.`,
+      sinGanador.length === 1
+        ? 'No se puede publicar: hay 1 categoría con nominados sin ganador marcado.'
+        : `No se puede publicar: hay ${sinGanador.length} categorías con nominados sin ganador marcado.`,
     );
   }
 

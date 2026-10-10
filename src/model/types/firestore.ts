@@ -134,6 +134,18 @@ export interface FriendshipDoc {
 }
 
 /**
+ * friendshipKeys/{docId} — los ids de gist de QUIEN PIDE una amistad, en depósito hasta que se acepte. Mismo id que
+ * la amistad. El destinatario solo puede leerlo con la amistad aceptada (reglas), y al aceptar los copia a la
+ * amistad y lo borra. docs/plan-historial-amigo-nuevo.md, Fase 0.
+ */
+export interface FriendshipKeysDoc {
+  requester: string;
+  socialGistId: string;
+  gamesGistId: string;
+  updatedAt: number;
+}
+
+/**
  * privateConfig/{uid} — solo el dueño (request.auth.uid == uid). Permite recuperar la config tras reinstalar.
  * El token de GitHub se guarda "cifrado" con una clave DERIVADA del uid (estable cross-device para poder
  * recuperarlo en otro dispositivo). Como el uid no es secreto, esto es OFUSCACIÓN: la confidencialidad real la

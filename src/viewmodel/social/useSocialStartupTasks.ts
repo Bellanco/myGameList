@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { getLocalMeta, patchLocalMeta } from '../../model/repository/indexedDbRepository';
 import {
+  claimRequesterKeys,
   healOwnFriendshipIdentity,
   purgeOwnPublicGistIds,
   repairProfileDisplayName,
@@ -93,6 +94,14 @@ export interface SocialStartupTasksOptions {
    * leer mis listas hasta la revisión semanal del saneado.
    */
   acceptedWithoutMyIds?: string[];
+  /**
+   * La gemela del otro lado (`FriendshipView.otherGistIdsMissing`): amistades que acepté yo y a las que aún les faltan
+   * los ids de quien pidió. Se recogen de su depósito; normalmente ya lo hizo `acceptFriendRequest`, y esto cubre
+   * un fallo a medias o una aceptación hecha con una versión anterior.
+   */
+  acceptedWithoutTheirIds?: string[];
+  /** Se llama si se ha recogido algún depósito: las amistades han cambiado y hay que releerlas. */
+  onFriendshipsChanged?: () => void;
 }
 
 export function useSocialStartupTasks(options: SocialStartupTasksOptions): void {
@@ -105,7 +114,12 @@ export function useSocialStartupTasks(options: SocialStartupTasksOptions): void 
     ownPublishablePhoto,
     ownPhotoVerdictPending,
     acceptedWithoutMyIds = [],
+    acceptedWithoutTheirIds = [],
+    onFriendshipsChanged,
   } = options;
+  // En ref: es un callback del compositor, y meterlo en las dependencias relanzaría el efecto en cada render.
+  const onFriendshipsChangedRef = useRef(onFriendshipsChanged);
+  onFriendshipsChangedRef.current = onFriendshipsChanged;
 
   /**
    * Tareas ya lanzadas EN ESTE MONTAJE. Sigue haciendo falta además del sello persistente, y no es redundante: el
@@ -118,6 +132,7 @@ export function useSocialStartupTasks(options: SocialStartupTasksOptions): void 
   // Clave estable de las amistades aceptadas sin mis ids: es lo que entra en la huella y en las dependencias (la
   // lista llega como array nuevo en cada cambio de amistades; la clave solo cambia si cambian los documentos).
   const acceptedWithoutMyIdsKey = [...acceptedWithoutMyIds].sort().join(',');
+  const acceptedWithoutTheirIdsKey = [...acceptedWithoutTheirIds].sort().join(',');
 
   useEffect(() => {
     if (!socialSpaceOpen || !uid || !socialGistId) {
@@ -154,6 +169,18 @@ export function useSocialStartupTasks(options: SocialStartupTasksOptions): void 
           socialGistId,
           gamesGistId,
         }, { force: true }),
+      },
+      {
+        // LOS IDS DE QUIEN ME PIDIÓ LA AMISTAD, de su depósito. Con sello: una amistad de la 1.6.7 no tiene depósito,
+        // y sin él cada apertura gastaría una lectura por amistad para volver a descubrirlo.
+        name: 'friendshipKeysAfterAccept',
+        fingerprint: acceptedWithoutTheirIdsKey,
+        stamp: 'friendshipKeysClaimedFor',
+        stampAt: 'friendshipKeysClaimedAt',
+        run: async () => {
+          const claimed = await claimRequesterKeys({ myUid: uid, docIds: acceptedWithoutTheirIds });
+          if (claimed > 0) onFriendshipsChangedRef.current?.();
+        },
       },
       {
         // La réplica del nick en `profiles` (la que lee el directorio) puede quedar desacordada con el gist, que
@@ -222,5 +249,7 @@ export function useSocialStartupTasks(options: SocialStartupTasksOptions): void 
     return () => {
       cancelled = true;
     };
-  }, [socialSpaceOpen, uid, socialGistId, gamesGistId, nick, ownPublishablePhoto, ownPhotoVerdictPending, acceptedWithoutMyIdsKey]);
+    // `acceptedWithoutTheirIds` entra por su clave: la lista llega como array nuevo en cada cambio de amistades.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socialSpaceOpen, uid, socialGistId, gamesGistId, nick, ownPublishablePhoto, ownPhotoVerdictPending, acceptedWithoutMyIdsKey, acceptedWithoutTheirIdsKey]);
 }

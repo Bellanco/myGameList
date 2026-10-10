@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { DEFAULT_PROFILE_TIER, PROFILE_TIER_DIRECTORY_TTL_MS, PROFILE_TIER_FEED_TTL_MS, type ProfileTier } from '../../core/constants/tiers';
 import { mapWithConcurrency } from '../../core/utils/concurrency';
-import { isOffline, isServiceUnavailable } from '../../core/utils/network';
+import { isNetworkFailure, isOffline, isServiceUnavailable } from '../../core/utils/network';
 import { normalizeTimestamp as toSafeTimestamp } from '../../core/utils/normalize';
 import { reviewActorsByGame } from '../../core/social/moveActivity';
 import { getCachedSocialDirectory, getLocalMeta, patchLocalMeta, putCachedSocialDirectory } from '../../model/repository/indexedDbRepository';
@@ -45,6 +45,7 @@ const SOCIAL_MOVES_PER_PROFILE = 120;
  * por qué.
  */
 const isGithubCredentialError = (error: unknown): boolean => {
+  if (error === REJECTED_TOKEN) return true;
   if (!(error instanceof Error)) return false;
   // Un LÍMITE de GitHub también llega como 403, y decirle a alguien que su conexión ha caducado le mandaba a
   // reconectar algo que funcionaba (docs/plan-degradacion-servicios.md, fase 2).
@@ -53,6 +54,28 @@ const isGithubCredentialError = (error: unknown): boolean => {
   if (typeof status === 'number') return status === 401 || status === 403;
   return /\b(401|403)\b/.test(error.message);
 };
+
+/**
+ * Lo que «lanza» la lectura de un amigo cuando el token ya fue rechazado en esta pasada o en una anterior: se trata
+ * igual que el 401 de verdad (copia si la hay), pero sin haber llegado a preguntar a GitHub.
+ */
+const REJECTED_TOKEN = new Error('401: token de GitHub rechazado');
+
+/**
+ * Huella del grafo con el que se hidrata el directorio: cada amigo con los ids de gist de los que se leerá, y el
+ * profileId propio (decide cuál es la entrada propia). La copia de IndexedDB se guarda con ella y solo se sirve
+ * si coincide, así que un amigo nuevo, uno que se va o unos ids que llegan van a red sin esperar al TTL
+ * (docs/plan-historial-amigo-nuevo.md, Fase 1). Ordenada: el orden en que llegan las amistades no es un cambio.
+ */
+export function socialDirectoryFriendsKey(friends: readonly FriendshipView[], ownProfileId: string | null): string {
+  const edges = friends
+    // Con el sello de la amistad: es la señal de regreso de un amigo dormido (docs/plan-feed-sin-vacio.md, Fase 4), y
+    // sin él la copia del feed lo seguiría dejando fuera hasta caducar. Lo mueve también un saneado de identidad
+    // (nick, foto), que es raro y solo cuesta una rehidratación.
+    .map((friend) => [friend.otherUid, friend.otherSocialGistId || '', friend.otherGamesGistId || '', friend.updatedAt || 0].join(':'))
+    .sort();
+  return [ownProfileId || '', ...edges].join('|');
+}
 
 /** Identidad del autor con la que se sella todo lo que sale de un mismo gist social. */
 interface FeedAuthor {
@@ -122,6 +145,14 @@ export interface SocialDirectoryOptions {
    * compositor: `navigator.onLine` no ve un wifi conectado sin salida, y esta es la única señal que sí.
    */
   setNetworkFailure: (failed: boolean) => void;
+  /**
+   * El token con el que se leen los gists ajenos, pedido en el momento de leer: el PRINCIPAL. El del canal social es
+   * una copia que solo se renueva al publicar (`resolveSocialChannel`), así que tras reconectar GitHub seguía siendo
+   * el caducado y el aviso de reconectar no se iba nunca. Función y no valor para que descifrar la configuración no
+   * relance la hidratación entera (ver la nota de dependencias al final de `runDirectoryHydration`). Sin principal,
+   * o si no se pasa, se lee con la copia del canal.
+   */
+  readToken?: () => string | null;
 }
 
 export function useSocialDirectory(options: SocialDirectoryOptions) {
@@ -140,6 +171,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
     setFeedback,
     reportFailure,
     setNetworkFailure,
+    readToken,
   } = options;
 
   const [rawSocialDirectory, setSocialDirectory] = useState<SocialDirectoryEntry[]>([]);
@@ -150,6 +182,20 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
    * estado vacío y saltaba después al esqueleto. Con esto la carga se lee como una sola escena.
    */
   const [directorySettled, setDirectorySettled] = useState(false);
+  /**
+   * ¿Se ha quedado algún amigo SIN leer y SIN copia en este dispositivo? Entonces el feed puede estar vacío o cojo por
+   * un fallo y no porque nadie publique, y la pantalla lo dice con un error genérico en vez de «todo tranquilo»
+   * (docs/plan-feed-sin-vacio.md, Fase 1). Con copia no cuenta: lo guardado se enseña sin avisar de nada.
+   */
+  const [feedReadFailed, setFeedReadFailed] = useState(false);
+  /** GitHub ha rechazado el token con el que se lee: hay que reconectar. Lo pinta un aviso fijo con botón. */
+  const [githubReconnectNeeded, setGithubReconnectNeeded] = useState(false);
+  /**
+   * El token que GitHub ya rechazó en esta sesión. Mientras sea el mismo no se le vuelve a preguntar con él: cada
+   * hidratación lanzaría otra ráfaga de 401, y muchos fallos de credencial seguidos desde una IP hacen que GitHub la
+   * bloquee un rato. Con uno nuevo (se ha reconectado) se vuelve a leer.
+   */
+  const rejectedTokenRef = useRef<string | null>(null);
 
   /**
    * `isCurrent`: ¿sigue siendo esta la pasada más reciente? Una forzada (tras publicar) no espera a la que estuviera
@@ -191,6 +237,8 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
     // enfriamiento. Lo único que fuerza es la propia app tras publicar (`onPublished`), que conserva la consulta del
     // directorio (`keepDirectoryQuery`), así que solo relee los gists sociales y al ritmo al que uno publica.
     // Todo lo demás es carga automática y pasa por la caché.
+    const friendsKey = socialDirectoryFriendsKey(friends, ownProfileId);
+
     if (!forceRefresh) {
       // Caché persistente: si el directorio sigue fresco (el TTL lo pone el rango), se sirve de IndexedDB sin releer
       // ningún gist social. Evita el coste N+1 al navegar feed→detalle→feed o al re-renderizar.
@@ -199,9 +247,13 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
       // (modo privado, cuota, base corrupta) hacía que la función entera rechazara antes de asentar el directorio
       // —y con el esqueleto atado a ese asentamiento, la pantalla se quedaba cargando para siempre—. Sin caché
       // utilizable lo correcto es seguir por la vía de red, que es justo lo que hace tratarla como un fallo.
+      //
+      // Y solo si se hidrató con las MISMAS amistades (`friendsKey`): con un amigo nuevo, la copia de antes no lo
+      // tiene, y servirla dejaba su historial fuera del feed hasta que caducara.
       const cachedDirectory = await getCachedSocialDirectory<SocialDirectoryEntry>(
         socialCfgGistId,
         PROFILE_TIER_FEED_TTL_MS[ownTier],
+        { friendsKey },
       ).catch(() => null);
       if (cachedDirectory) {
         if (!isCurrent()) return;
@@ -226,8 +278,14 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
       const dirEntries = await getSocialProfilesByUid(profileUids, {
         forceRefresh: forceRefresh && !keepDirectoryQuery,
         maxAgeMs: PROFILE_TIER_DIRECTORY_TTL_MS[ownTier],
+        // La señal de regreso: el perfil de un amigo cuya amistad es más nueva que su copia se relee.
+        friendshipStamps: Object.fromEntries(friends.map((friend) => [friend.otherUid, Number(friend.updatedAt || 0)])),
       });
       const socialConfig = getSocialSyncConfig();
+      const token = readToken?.() || socialConfig?.token || null;
+      // Con el token que GitHub ya rechazó no se pregunta: ni en esta pasada a partir del primer 401, ni en las
+      // siguientes mientras no cambie (ver `rejectedTokenRef`).
+      let tokenRejected = Boolean(token) && rejectedTokenRef.current === token;
       // Foto propia inmediata (de la sesión Google) aunque aún no se haya re-guardado el perfil; respeta showPhoto y
       // descarta el avatar genérico de Google.
       const ownPhotoURL = ownPublishablePhoto;
@@ -281,13 +339,19 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
         }));
       const entries = [...dirEntries, ...friendOnlyEntries];
 
-      // Lecturas que fallaron por credencial en esta hidratación. Se cuentan para avisar UNA vez al final, en vez
-      // de por cada amigo ilegible.
-      let credentialFailures = 0;
-      // Y las que fallaron porque el SERVICIO no atendía (GitHub limitando, sin red a medias). De esos amigos se
-      // enseña su última entrada guardada, y el resultado NO se guarda como copia nueva: guardarlo convertía un corte
-      // de cinco minutos en media hora de feed sin su actividad (docs/plan-degradacion-servicios.md, fase 2).
-      let transientFailure: unknown = null;
+      // ¿Ha rechazado GitHub el token en esta pasada? Decide el aviso de reconectar, que es uno para todos.
+      let credentialFailure = false;
+      // ¿Ha salido algún amigo de lo guardado (servicio que no atiende o token rechazado)? Entonces el resultado NO
+      // se guarda como copia nueva: guardarlo convertía un corte de cinco minutos en media hora de feed sin su
+      // actividad (docs/plan-degradacion-servicios.md, fase 2). Y no se avisa: lo guardado se enseña tal cual
+      // (docs/plan-feed-sin-vacio.md, Fase 1).
+      let servedFromCopy = false;
+      // ¿Ha fallado alguna lectura porque el SERVICIO no atendía (sin red, GitHub limitando)? Es lo único que impide
+      // dar la red por buena al final. Un 401 no cuenta: lo ha contestado GitHub, así que hay red, y dejar puesto un
+      // «sin conexión» de antes taparía el aviso de reconectar.
+      let serviceFailed = false;
+      // ¿Se ha quedado alguno sin lectura y sin copia? Es lo único que la pantalla cuenta, con un error genérico.
+      let unreadWithoutCopy = false;
       let previousDirectory: Promise<SocialDirectoryEntry[] | null> | null = null;
       const previousEntryOf = async (uid: string): Promise<SocialDirectoryEntry | null> => {
         previousDirectory ??= getCachedSocialDirectory<SocialDirectoryEntry>(socialCfgGistId, 0, { allowExpired: true })
@@ -378,8 +442,9 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
             // Lectura de los candidatos (normalmente uno). Con varios, se fusiona: perfil del más reciente y
             // unión de actividad/publicaciones. Un candidato ilegible (gist borrado) no invalida al otro; si
             // fallan todos, se propaga para caer en el `catch` de degradación index-only.
+            if (tokenRejected) throw REJECTED_TOKEN;
             const reads = await Promise.allSettled(
-              socialGistCandidates.map((id) => readPublicSocialGistById(id, socialConfig?.token || null)),
+              socialGistCandidates.map((id) => readPublicSocialGistById(id, token)),
             );
             const readable = reads
               .map((result, index) => ({ result, gistId: socialGistCandidates[index] }))
@@ -473,9 +538,18 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
               visibility: socialData.profile.visibility || defaultSocialVisibility,
             };
           } catch (readError) {
-            // Pasajero (el servicio no atiende): lo último guardado de este amigo, con lo de Firestore al día.
-            if (isServiceUnavailable(readError)) {
-              transientFailure ??= readError;
+            const credential = isGithubCredentialError(readError);
+            if (credential) {
+              credentialFailure = true;
+              // Corta la pasada: los amigos que aún no han salido ya no preguntan (las lecturas en vuelo terminan).
+              tokenRejected = true;
+            }
+            // Pasajero (el servicio no atiende) o el token rechazado: lo último guardado de este amigo, con lo de
+            // Firestore al día, y sin avisar de nada. Sin copia, cuenta para el error genérico.
+            const unavailable = isServiceUnavailable(readError);
+            if (unavailable) serviceFailed = true;
+            if (credential || unavailable) {
+              servedFromCopy = true;
               const previous = await previousEntryOf(entry.uid);
               if (previous) {
                 return {
@@ -487,16 +561,13 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
                   palmares: entry.palmares,
                 };
               }
+              unreadWithoutCopy = true;
             }
-            // Se distingue "no se pudo leer" de "no se pudo leer POR EL TOKEN": lo segundo no es un gist vacío,
-            // es una credencial que ya no vale, y el usuario tiene que enterarse (abajo se avisa una sola vez).
-            else if (isGithubCredentialError(readError)) {
-              credentialFailures += 1;
-            }
-            // Si se leyó SOLO el ganador recordado y ha fallado, el recuerdo ha caducado (gist borrado, canal
-            // cambiado): se olvida para que la pasada siguiente vuelva a aprender de las dos fuentes. Sin esto, un
-            // ganador que deja de existir dejaría al amigo sin actividad para siempre.
-            if (remembered && socialGistCandidates.length === 1) {
+            // Si se leyó SOLO el ganador recordado y ha fallado él (no el servicio ni el token, que no dicen nada
+            // de ese gist), el recuerdo ha caducado (gist borrado, canal cambiado): se olvida para que la pasada
+            // siguiente vuelva a aprender de las dos fuentes. Sin esto, un ganador que deja de existir dejaría al
+            // amigo sin actividad para siempre.
+            else if (remembered && socialGistCandidates.length === 1) {
               forgottenWinners.add(entry.uid);
             }
             return {
@@ -528,16 +599,14 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
       // Superada por una pasada más nueva: lo suyo ya está viejo, y no se pinta ni se guarda (ver `isCurrent`).
       if (!isCurrent()) return;
       setSocialDirectory(withProfiles);
-      if (transientFailure) {
-        // Una parte salió de lo guardado: se dice (aviso de servicio limitado o de sin conexión) y no se retira.
-        reportFailure(transientFailure, SOCIAL_UI.status.firestoreCheckFailed, 'warn');
-      } else {
-        // La red ha respondido: se retira el aviso de falta de conexión (que pudo encenderlo un fallo anterior con
-        // `navigator.onLine` diciendo que había red).
+      setFeedReadFailed(unreadWithoutCopy);
+      setGithubReconnectNeeded(credentialFailure);
+      rejectedTokenRef.current = credentialFailure ? token : null;
+      // La red y el servicio han respondido (aunque fuera con un 401): se retira el aviso de falta de conexión, que
+      // pudo encenderlo un fallo anterior con `navigator.onLine` diciendo que había red. Si alguna lectura no llegó a
+      // contestarse, no se da por buena.
+      if (!serviceFailed) {
         setNetworkFailure(false);
-      }
-      if (credentialFailures > 0) {
-        setFeedback('warn', SOCIAL_UI.status.socialReadUnauthorized);
       }
 
       // Lo aprendido (y lo olvidado) sobre la deriva de canal, en UNA escritura al final. Solo si hay algo que
@@ -551,26 +620,28 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
         void patchLocalMeta({ socialGistWinnerByFriend: nextWinners }).catch(() => {});
       }
 
-      if (!transientFailure) {
-        void putCachedSocialDirectory(socialCfgGistId, withProfiles);
+      if (!servedFromCopy) {
+        void putCachedSocialDirectory(socialCfgGistId, withProfiles, friendsKey);
       }
     } catch (error) {
       if (!isCurrent()) return;
-      // También cuando el que no atiende es el SERVICIO (Firestore sin cuota, GitHub limitando), no solo la red.
-      if (isServiceUnavailable(error) || isOffline()) {
-        // Fallo de RED: en vez de vaciar el feed, se rescata la caché AUNQUE HAYA CADUCADO. Es el mismo criterio
-        // que aplica `getCachedSocialDirectory` cuando el navegador admite estar sin red, y hace falta aquí porque
-        // `navigator.onLine` puede decir que la hay (wifi sin salida) y entonces el TTL sí la habría descartado.
-        // Con caché o sin ella, lo que NO se hace es cambiar "esto es de hace un rato" por "aquí no hay nada".
-        const stale = await getCachedSocialDirectory<SocialDirectoryEntry>(socialCfgGistId, 0, { allowExpired: true })
-          .catch(() => null);
-        if (stale && stale.length > 0) {
-          setSocialDirectory(stale);
-        }
+      // Lo que no se ha podido leer —los perfiles de Firestore, casi siempre: cuota, servicio caído o sin red— no
+      // convierte «esto es de hace un rato» en «aquí no hay nada». Se rescata la copia AUNQUE HAYA CADUCADO, que es
+      // el mismo criterio que aplica `getCachedSocialDirectory` cuando el navegador admite estar sin red, y hace
+      // falta aquí porque `navigator.onLine` puede decir que la hay (wifi sin salida). Con copia, sin avisar.
+      const stale = await getCachedSocialDirectory<SocialDirectoryEntry>(socialCfgGistId, 0, { allowExpired: true })
+        .catch(() => null);
+      if (!isCurrent()) return;
+      if (stale && stale.length > 0) {
+        setSocialDirectory(stale);
+        setFeedReadFailed(false);
+      } else if (isNetworkFailure(error) || isOffline()) {
+        // Sin red y sin nada guardado: el aviso de sin conexión, que ya dice que aquí aún no hay nada.
+        reportFailure(error, SOCIAL_UI.status.firestoreCheckFailed, 'warn');
       } else {
         setSocialDirectory([]);
+        setFeedReadFailed(true);
       }
-      reportFailure(error, SOCIAL_UI.status.firestoreCheckFailed, 'warn');
     } finally {
       // Solo la pasada vigente apaga la carga: una superada que terminara antes dejaría la pantalla sin esqueleto
       // mientras la nueva sigue leyendo.
@@ -584,7 +655,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
     // `mainSyncConfig?.token` ESTUVO aquí y no lo usa nadie en el cuerpo (el token sale de `getSocialSyncConfig()`
     // en el momento de leer): lo único que hacía era rehidratar el directorio entero cuando la configuración de
     // sync terminaba de descifrarse. Se retira.
-  }, [directoryPanelAllows, directoryInputsReady, authUser, ownProfileId, defaultSocialVisibility, friends, ownTier, reportFailure, setFeedback, socialCfgGistId, ownPublishablePhoto, setNetworkFailure]);
+  }, [directoryPanelAllows, directoryInputsReady, authUser, ownProfileId, defaultSocialVisibility, friends, ownTier, reportFailure, setFeedback, socialCfgGistId, ownPublishablePhoto, setNetworkFailure, readToken]);
 
   /**
    * Pasada en vuelo, para que dos disparos no se solapen.
@@ -657,6 +728,8 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
   return {
     rawSocialDirectory,
     directoryLoading,
+    feedReadFailed,
+    githubReconnectNeeded,
     setDirectorySettled,
     hydrateSocialDirectory,
     patchDirectoryEntries,

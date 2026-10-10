@@ -5,14 +5,16 @@ const getDocsMock = vi.fn();
 const deleteDocMock = vi.fn();
 const updateDocMock = vi.fn((..._args: unknown[]) => Promise.resolve());
 const setDocMock = vi.fn((..._args: unknown[]) => Promise.resolve());
-const docMock = vi.fn((...args: unknown[]) => ({ id: String(args[2] ?? '') }));
+const docMock = vi.fn((...args: unknown[]) => ({ id: String(args[2] ?? ''), collection: String(args[1] ?? '') }));
+const getDocMock = vi.fn();
 const limitMock = vi.fn((value: number) => ({ limit: value }));
 
 // El saneado escribe en LOTES. El mock registra las operaciones para poder afirmar sobre ellas igual que antes se
 // afirmaba sobre `updateDoc`, y `batchCommitMock` permite simular un lote que las reglas rechazan.
 const batchUpdateMock = vi.fn((..._args: unknown[]) => undefined);
+const batchSetMock = vi.fn((..._args: unknown[]) => undefined);
 const batchCommitMock = vi.fn(() => Promise.resolve());
-const writeBatchMock = vi.fn(() => ({ update: batchUpdateMock, commit: batchCommitMock }));
+const writeBatchMock = vi.fn(() => ({ update: batchUpdateMock, set: batchSetMock, commit: batchCommitMock }));
 
 vi.mock('../../src/model/repository/firebaseClient', () => ({
   initializeFirebaseServices: vi.fn(async () => ({ firestore: {} })),
@@ -52,7 +54,7 @@ vi.mock('firebase/firestore/lite', () => ({
   limit: (value: number) => limitMock(value),
   getDocs: (...args: unknown[]) => getDocsMock(...args),
   doc: (...args: unknown[]) => docMock(...args),
-  getDoc: vi.fn(),
+  getDoc: (...args: unknown[]) => getDocMock(...args),
   setDoc: (...args: unknown[]) => setDocMock(...args),
   updateDoc: (...args: unknown[]) => updateDocMock(...args),
   deleteDoc: (...args: unknown[]) => deleteDocMock(...args),
@@ -61,17 +63,29 @@ vi.mock('firebase/firestore/lite', () => ({
 
 import {
   acceptFriendRequest,
+  claimRequesterKeys,
   deleteFriendship,
   friendshipDocId,
   getMyFriendships,
+  haveFriendshipEdgesChanged,
   healOwnFriendshipIdentity,
   invalidateMyFriendshipsCache,
   MY_FRIENDSHIPS_REQUESTS_MAX_AGE_MS,
   sendFriendRequest,
 } from '../../src/model/repository/firebaseFriendshipRepository';
+import type { FriendshipView } from '../../src/model/types/social';
 
 function snapshot(docs: Array<{ id: string; data: Record<string, unknown> }>) {
   return { docs: docs.map((d) => ({ id: d.id, data: () => d.data })) };
+}
+
+/** Lo que se escribió con `batch.set`, en la forma `{ collection, docId, data }`. */
+function batchedSets(): Array<{ collection: string; docId: string; data: Record<string, unknown> }> {
+  return batchSetMock.mock.calls.map((call) => ({
+    collection: (call[0] as { collection: string }).collection,
+    docId: (call[0] as { id: string }).id,
+    data: call[1] as Record<string, unknown>,
+  }));
 }
 
 /** Operaciones que el saneado envió en lotes, en la forma `{ docId, fields }`. */
@@ -87,7 +101,11 @@ function resetAll() {
   updateDocMock.mockClear();
   setDocMock.mockClear();
   deleteDocMock.mockReset();
+  deleteDocMock.mockImplementation(() => Promise.resolve());
+  getDocMock.mockReset();
+  getDocMock.mockResolvedValue({ exists: () => false, data: () => undefined });
   batchUpdateMock.mockClear();
+  batchSetMock.mockClear();
   batchCommitMock.mockClear();
   batchCommitMock.mockImplementation(() => Promise.resolve());
   writeBatchMock.mockClear();
@@ -305,6 +323,18 @@ describe('deleteFriendship', () => {
     deleteDocMock.mockRejectedValueOnce(new Error('network'));
     await expect(deleteFriendship({ myUid: 'me', docId: 'me__x' })).rejects.toThrow('network');
   });
+
+  it('borra también el depósito de ids, y que no esté no es un error', async () => {
+    deleteDocMock
+      .mockImplementationOnce(() => Promise.resolve())
+      .mockImplementationOnce(() => Promise.reject({ code: 'permission-denied' }));
+    await expect(deleteFriendship({ myUid: 'me', docId: 'me__x' })).resolves.toBeUndefined();
+    const borrados = deleteDocMock.mock.calls.map((call) => call[0] as { collection: string; id: string });
+    expect(borrados).toEqual([
+      { collection: 'friendships', id: 'me__x' },
+      { collection: 'friendshipKeys', id: 'me__x' },
+    ]);
+  });
 });
 
 // Una arista NUEVA nace con lo que se supiera EN ESE INSTANTE, y varios llamantes pasan `gamesGistId: '' ` sobre
@@ -331,12 +361,41 @@ describe('huella tras crear o aceptar una amistad', () => {
 describe('ids de gist en una petición de amistad', () => {
   beforeEach(resetAll);
 
-  it('la petición sale SIN mis ids de gist', async () => {
+  it('la petición sale SIN mis ids de gist, y los ids van al depósito en el mismo lote', async () => {
     await sendFriendRequest({ myUid: 'me', otherUid: 'x', self: { name: 'N', photo: 'p', socialGistId: 'gs', gamesGistId: 'gg' } });
-    const escrito = setDocMock.mock.calls[0][1] as Record<string, unknown>;
-    expect(escrito).toMatchObject({ requester: 'me', status: 'pending', requesterName: 'N' });
-    expect(escrito).not.toHaveProperty('requesterSocialGistId');
-    expect(escrito).not.toHaveProperty('requesterGamesGistId');
+    const [peticion, deposito] = batchedSets();
+    expect(peticion.collection).toBe('friendships');
+    expect(peticion.data).toMatchObject({ requester: 'me', status: 'pending', requesterName: 'N' });
+    expect(peticion.data).not.toHaveProperty('requesterSocialGistId');
+    expect(peticion.data).not.toHaveProperty('requesterGamesGistId');
+    expect(deposito).toMatchObject({
+      collection: 'friendshipKeys',
+      docId: 'me__x',
+      data: { requester: 'me', socialGistId: 'gs', gamesGistId: 'gg' },
+    });
+    expect(batchCommitMock).toHaveBeenCalledTimes(1);
+    expect(setDocMock).not.toHaveBeenCalled();
+  });
+
+  it('sin la regla del depósito desplegada, la petición sale sola', async () => {
+    batchCommitMock.mockImplementationOnce(() => Promise.reject({ code: 'permission-denied' }));
+    await sendFriendRequest({ myUid: 'me', otherUid: 'x', self: { name: 'N', photo: 'p', socialGistId: 'gs', gamesGistId: 'gg' } });
+    expect(setDocMock).toHaveBeenCalledTimes(1);
+    expect(setDocMock.mock.calls[0][1]).not.toHaveProperty('requesterSocialGistId');
+  });
+
+  it('un fallo que no es de permisos no se disfraza: llega a quien llama', async () => {
+    batchCommitMock.mockImplementationOnce(() => Promise.reject(new Error('network')));
+    await expect(
+      sendFriendRequest({ myUid: 'me', otherUid: 'x', self: { name: 'N', photo: 'p', socialGistId: 'gs', gamesGistId: 'gg' } }),
+    ).rejects.toThrow('network');
+    expect(setDocMock).not.toHaveBeenCalled();
+  });
+
+  it('sin gist social en ese instante no hay depósito que dejar', async () => {
+    await sendFriendRequest({ myUid: 'me', otherUid: 'x', self: { name: 'N', photo: 'p', socialGistId: '', gamesGistId: '' } });
+    expect(batchSetMock).not.toHaveBeenCalled();
+    expect(setDocMock).toHaveBeenCalledTimes(1);
   });
 
   it('el saneado deja vacíos mis ids en una petición mía pendiente, y limpia los que llevara de antes', async () => {
@@ -365,6 +424,45 @@ describe('ids de gist en una petición de amistad', () => {
     expect(batchUpdateMock).not.toHaveBeenCalled();
   });
 
+  it('el saneado deja el depósito de mis peticiones pendientes (las de la 1.6.7 salieron sin él)', async () => {
+    getDocsMock.mockResolvedValueOnce(snapshot([
+      { id: 'me__x', data: { users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'pending', requesterName: 'N', requesterPhoto: 'p' } },
+      { id: 'me__y', data: { users: ['me', 'y'], requester: 'me', recipient: 'y', status: 'accepted', requesterName: 'N', requesterPhoto: 'p', requesterSocialGistId: 'gs', requesterGamesGistId: 'gg' } },
+      { id: 'me__z', data: { users: ['me', 'z'], requester: 'z', recipient: 'me', status: 'pending' } },
+    ]));
+
+    await healOwnFriendshipIdentity('me', { name: 'N', photo: 'p', socialGistId: 'gs', gamesGistId: 'gg' }, { force: true });
+
+    // Solo la pendiente MÍA: la aceptada ya lleva los ids, y la que me pidieron a mí no es mía.
+    expect(batchedSets()).toEqual([{
+      collection: 'friendshipKeys',
+      docId: 'me__x',
+      data: expect.objectContaining({ requester: 'me', socialGistId: 'gs', gamesGistId: 'gg' }),
+    }]);
+  });
+
+  it('sin gist social conocido, el saneado no pisa el depósito con vacío', async () => {
+    getDocsMock.mockResolvedValueOnce(snapshot([
+      { id: 'me__x', data: { users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'pending', requesterName: 'N', requesterPhoto: 'p' } },
+    ]));
+
+    await healOwnFriendshipIdentity('me', { name: 'N', photo: 'p', socialGistId: '', gamesGistId: '' }, { force: true });
+
+    expect(batchSetMock).not.toHaveBeenCalled();
+  });
+
+  it('un depósito rechazado no impide sellar el saneado', async () => {
+    getDocsMock.mockResolvedValueOnce(snapshot([
+      { id: 'me__x', data: { users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'pending', requesterName: 'N', requesterPhoto: 'p' } },
+    ]));
+    // El de la amistad no se envía (no diverge); el único lote es el del depósito, y las reglas lo rechazan.
+    batchCommitMock.mockImplementationOnce(() => Promise.reject({ code: 'permission-denied' }));
+
+    await healOwnFriendshipIdentity('me', { name: 'N', photo: 'p', socialGistId: 'gs', gamesGistId: 'gg' }, { force: true });
+
+    expect(localMeta).toMatchObject({ friendshipIdentityFingerprint: expect.stringContaining('gs') });
+  });
+
   it('aceptada, el saneado sí escribe mis ids', async () => {
     getDocsMock.mockResolvedValueOnce(snapshot([{
       id: 'me__x',
@@ -389,6 +487,83 @@ describe('ids de gist en una petición de amistad', () => {
     expect(mias.byOtherUid.y.ownGistIdsMissing).toBeUndefined();
     // Si la pidió el otro, mis ids los escribí yo al aceptar: no falta nada mío.
     expect(mias.byOtherUid.z.ownGistIdsMissing).toBeUndefined();
+  });
+
+  it('y la gemela: la amistad que acepté yo sin los ids de quien me la pidió', async () => {
+    getDocsMock.mockResolvedValueOnce(snapshot([
+      { id: 'me__x', data: { users: ['me', 'x'], requester: 'x', recipient: 'me', status: 'accepted' } },
+      { id: 'me__y', data: { users: ['me', 'y'], requester: 'y', recipient: 'me', status: 'accepted', requesterSocialGistId: 'gsY' } },
+      { id: 'me__z', data: { users: ['me', 'z'], requester: 'z', recipient: 'me', status: 'pending' } },
+    ]));
+
+    const mias = await getMyFriendships('me');
+
+    expect(mias.byOtherUid.x.otherGistIdsMissing).toBe(true);
+    expect(mias.byOtherUid.y.otherGistIdsMissing).toBeUndefined();
+    // Pendiente: no le faltan, es que todavía no le tocan.
+    expect(mias.byOtherUid.z.otherGistIdsMissing).toBeUndefined();
+  });
+});
+
+// Fase 0 de docs/plan-historial-amigo-nuevo.md: quien acepta recoge del depósito los ids de quien pidió, así ve su
+// historial al momento en vez de esperar a que la otra parte vuelva a entrar.
+describe('recogida del depósito al aceptar', () => {
+  beforeEach(resetAll);
+
+  const deposito = (data: Record<string, unknown>) => ({ exists: () => true, data: () => data });
+
+  it('aceptar copia a la amistad los ids depositados y borra el depósito', async () => {
+    getDocMock.mockResolvedValueOnce(deposito({ requester: 'x', socialGistId: 'gsX', gamesGistId: 'ggX', updatedAt: 1 }));
+
+    await acceptFriendRequest({ myUid: 'me', docId: 'me__x', self: { name: 'N', photo: 'p', socialGistId: 'gs', gamesGistId: 'gg' } });
+
+    const [aceptar, copiar] = updateDocMock.mock.calls;
+    expect(aceptar[1]).toMatchObject({ status: 'accepted', recipientSocialGistId: 'gs' });
+    expect(copiar[0]).toMatchObject({ collection: 'friendships', id: 'me__x' });
+    expect(copiar[1]).toMatchObject({ requesterSocialGistId: 'gsX', requesterGamesGistId: 'ggX' });
+    expect(deleteDocMock).toHaveBeenCalledWith({ collection: 'friendshipKeys', id: 'me__x' });
+  });
+
+  it('sin depósito legible (petición de la 1.6.7), aceptar sigue funcionando y no copia nada', async () => {
+    getDocMock.mockRejectedValueOnce({ code: 'permission-denied' });
+
+    await expect(
+      acceptFriendRequest({ myUid: 'me', docId: 'me__x', self: { name: 'N', photo: 'p', socialGistId: 'gs', gamesGistId: 'gg' } }),
+    ).resolves.toBeUndefined();
+
+    expect(updateDocMock).toHaveBeenCalledTimes(1); // solo la aceptación
+    expect(deleteDocMock).not.toHaveBeenCalled();
+  });
+
+  it('un fallo al copiar no tumba la aceptación: lo reintenta la tarea de arranque', async () => {
+    getDocMock.mockResolvedValueOnce(deposito({ requester: 'x', socialGistId: 'gsX', gamesGistId: 'ggX', updatedAt: 1 }));
+    updateDocMock
+      .mockImplementationOnce(() => Promise.resolve())
+      .mockImplementationOnce(() => Promise.reject(new Error('network')));
+
+    await expect(
+      acceptFriendRequest({ myUid: 'me', docId: 'me__x', self: { name: 'N', photo: 'p', socialGistId: 'gs', gamesGistId: 'gg' } }),
+    ).resolves.toBeUndefined();
+    // El depósito se conserva para el reintento.
+    expect(deleteDocMock).not.toHaveBeenCalled();
+  });
+
+  it('claimRequesterKeys cuenta solo las amistades completadas', async () => {
+    getDocMock
+      .mockResolvedValueOnce(deposito({ requester: 'x', socialGistId: 'gsX', gamesGistId: '', updatedAt: 1 }))
+      .mockResolvedValueOnce({ exists: () => false, data: () => undefined })
+      .mockResolvedValueOnce(deposito({ requester: 'z', socialGistId: '', gamesGistId: '', updatedAt: 1 }));
+
+    const recogidas = await claimRequesterKeys({ myUid: 'me', docIds: ['me__x', 'me__y', 'me__z'] });
+
+    expect(recogidas).toBe(1);
+    expect(updateDocMock).toHaveBeenCalledTimes(1);
+    expect(updateDocMock.mock.calls[0][1]).toMatchObject({ requesterSocialGistId: 'gsX', requesterGamesGistId: '' });
+  });
+
+  it('propaga un error que no es de permisos', async () => {
+    getDocMock.mockRejectedValueOnce(new Error('network'));
+    await expect(claimRequesterKeys({ myUid: 'me', docIds: ['me__x'] })).rejects.toThrow('network');
   });
 });
 
@@ -631,5 +806,48 @@ describe('healOwnFriendshipIdentity', () => {
       requesterSocialGistId: 'gs2',
       requesterGamesGistId: 'gg2',
     });
+  });
+});
+
+// Fase 2 de docs/plan-historial-amigo-nuevo.md: mirar una a una las aristas en las que se espera algo del otro.
+describe('haveFriendshipEdgesChanged', () => {
+  beforeEach(resetAll);
+
+  const enviada: FriendshipView = {
+    docId: 'me__x', otherUid: 'x', otherName: 'X', otherPhoto: '', otherSocialGistId: '', otherGamesGistId: '',
+    state: 'outgoing', createdAt: 1, updatedAt: 1,
+  };
+  const leido = (data: Record<string, unknown>) => ({ id: 'me__x', exists: () => true, data: () => data });
+
+  it('sigue pendiente: sin cambios, y 1 lectura por arista (no la consulta entera)', async () => {
+    getDocMock.mockResolvedValueOnce(leido({ users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'pending' }));
+    await expect(haveFriendshipEdgesChanged('me', [enviada])).resolves.toBe(false);
+    expect(getDocMock).toHaveBeenCalledTimes(1);
+    expect(getDocsMock).not.toHaveBeenCalled();
+  });
+
+  it('aceptada: cambio', async () => {
+    getDocMock.mockResolvedValueOnce(leido({
+      users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'accepted', recipientSocialGistId: 'gsX',
+    }));
+    await expect(haveFriendshipEdgesChanged('me', [enviada])).resolves.toBe(true);
+  });
+
+  it('rechazada (ya no se deja leer): cambio', async () => {
+    getDocMock.mockRejectedValueOnce({ code: 'permission-denied' });
+    await expect(haveFriendshipEdgesChanged('me', [enviada])).resolves.toBe(true);
+  });
+
+  it('un amigo al que le llegan los ids: cambio', async () => {
+    const amigo: FriendshipView = { ...enviada, state: 'friends' };
+    getDocMock.mockResolvedValueOnce(leido({
+      users: ['me', 'x'], requester: 'x', recipient: 'me', status: 'accepted', requesterSocialGistId: 'gsX',
+    }));
+    await expect(haveFriendshipEdgesChanged('me', [amigo])).resolves.toBe(true);
+  });
+
+  it('sin aristas no lee nada', async () => {
+    await expect(haveFriendshipEdgesChanged('me', [])).resolves.toBe(false);
+    expect(getDocMock).not.toHaveBeenCalled();
   });
 });

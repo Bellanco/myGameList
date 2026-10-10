@@ -19,6 +19,7 @@ import { StatusBanner } from './view/components/StatusBanner';
 import { useAchievementNotice } from './view/hooks/useAchievementNotice';
 import { useAnnouncement } from './view/hooks/useAnnouncement';
 import { useYearSummaryNotice } from './view/hooks/useYearSummaryNotice';
+import { useLegalConsentNotice } from './view/hooks/useLegalConsentNotice';
 import { UpdateNotice } from './view/components/UpdateNotice';
 import { BottomNavigation } from './view/components/BottomNavigation';
 import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, SETTINGS_ROUTES, SHARE_TARGET_ROUTE, isKnownRoute, matchAppSection, matchSettingsGroup, type AppSection, type SettingsGroup } from './core/constants/routes';
@@ -120,6 +121,7 @@ const IconSpriteRest = lazy(() => import('./view/components/IconSpriteRest').the
  */
 const AnnouncementToast = lazy(() => import('./view/components/AnnouncementToast').then((module) => ({ default: module.AnnouncementToast })));
 const YearSummaryToast = lazy(() => import('./view/components/YearSummaryToast').then((module) => ({ default: module.YearSummaryToast })));
+const LegalConsentToast = lazy(() => import('./view/components/LegalConsentToast').then((module) => ({ default: module.LegalConsentToast })));
 
 /**
  * EL TRABAJO DE FONDO (ver `IdleWork`): efectos de firma, estrellas fugaces, histórico del backlog y recorrido de
@@ -250,6 +252,8 @@ export default function App() {
   const hasSocialProfile = socialStatus === 'active';
   // El aviso del resumen del año (15–31 de diciembre): solo con perfil social, que es donde vive el resumen.
   const yearSummaryNotice = useYearSummaryNotice(hasSocialProfile, vm.data.c);
+  // Condiciones nuevas por aceptar: sin ellas no sale nada de la actividad (docs/plan-feed-sin-vacio.md, Fase 6).
+  const legalNotice = useLegalConsentNotice(hasSocialProfile, activeSection === 'social');
   // F1: enlaza la sesión con la apariencia (paleta + claro/oscuro) → hidrata/replica en Firestore.
   useAppearanceSession();
   // Al iniciar sesión, migra y limpia los restos legacy del perfil público (email / id del gist de juegos /
@@ -1214,6 +1218,12 @@ export default function App() {
               onOpen={openAchievements}
             />
           </Suspense>
+        ) : legalNotice.show ? (
+          // CONDICIONES NUEVAS: detrás del logro y delante del resumen del año, porque sin aceptarlas tu actividad
+          // deja de llegar a tus amigos. Dentro del espacio social no sale: allí ya está la pantalla de aceptar.
+          <Suspense fallback={null}>
+            <LegalConsentToast onShown={legalNotice.markShown} onDone={legalNotice.dismiss} />
+          </Suspense>
         ) : yearSummaryNotice.year !== null ? (
           // EL RESUMEN DEL AÑO, del 15 al 31 de diciembre: detrás del logro (lo que acabas de conseguir manda) y
           // delante del anuncio, que puede esperar a otra visita.
@@ -1231,7 +1241,7 @@ export default function App() {
           </Suspense>
         ) : null}
         <UpdateNotice />
-        <StatusBanner notice={vm.notice} remoteChangesApplied={syncVm.lastRemoteChangesApplied} />
+        <StatusBanner notice={vm.notice} />
       </div>
       <ViewTransition default="none" update={transicionesDePantalla ? ANIMACION_DE_PANTALLA : 'none'}>
         <main

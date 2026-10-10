@@ -1,5 +1,6 @@
 import React from 'react';
 import { Icon } from '../Icon';
+import { useAutoGrowTextarea } from '../../hooks/useAutoGrowTextarea';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 
 /**
@@ -37,15 +38,8 @@ export const FeedComposer = React.memo(function FeedComposer({
   const [text, setText] = React.useState('');
   const composerRef = React.useRef<HTMLTextAreaElement>(null);
 
-  // Autocrecimiento: parte de una línea (el tamaño del campo de antes) y se estira con el contenido, tanto al
-  // saltar de línea con Enter como al desbordar por ancho. Se hace midiendo `scrollHeight` con la altura
-  // reseteada; el tope lo pone el CSS (`max-height`), que a partir de ahí saca su propio scroll.
-  React.useLayoutEffect(() => {
-    const el = composerRef.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight}px`;
-  }, [text]);
+  // Autocrecimiento desde una línea; el tope lo pone el CSS (`max-height`).
+  useAutoGrowTextarea(composerRef, text);
 
   const publish = React.useCallback(async () => {
     if (publishing || !text.trim()) return;

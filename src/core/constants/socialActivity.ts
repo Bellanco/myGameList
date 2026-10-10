@@ -10,6 +10,13 @@
 export const PROFILE_INACTIVITY_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
+ * Cada cuánto, como mucho, se refresca la recencia (`profiles.updatedAt`) desde un mismo dispositivo: una escritura
+ * al día. El grano diario es parte de la política de privacidad: dice «qué día», no «a qué hora» (ver
+ * `touchOwnProfileActivity`).
+ */
+export const PROFILE_TOUCH_MIN_INTERVAL_MS = 20 * 60 * 60 * 1000;
+
+/**
  * Edad que se le acepta a la copia del perfil de un amigo INACTIVO. Quien lleva un mes sin abrir la app no cambia
  * de nick ni de vitrina cada hora, y releerlo con la edad del rango de quien mira (hasta 30 min) era pagar una
  * lectura por amigo dormido varias veces al día. Si vuelve, su latido lo pone al día y se le ve al día siguiente.

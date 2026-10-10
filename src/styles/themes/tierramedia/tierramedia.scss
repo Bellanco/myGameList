@@ -341,7 +341,7 @@
    Un gesto del juego en el título de cada pantalla del hub (`.hub-hub-title-wrap h2`), elegido con
    `docs/maquetas/titulos-temas.html`. Sin `text-transform`: las mayúsculas las pone la casilla de Apariencia, y
    cualquier animación se queda quieta con los efectos apagados o si el sistema pide menos movimiento. ── */
-/* PORTADILLA DE LIBRO: versalitas de Garamond como los títulos de las ediciones de Tolkien, la inicial en oro y,
+/* PORTADILLA DE LIBRO: Garamond como los títulos de las ediciones de Tolkien, la inicial en oro y,
    debajo, un filete dorado que se desvanece y acaba en una hoja (la familia de la orla élfica). Sustituye a la
    capitular en caja del primer intento, que se leía como un botón pegado al título. */
 :root[data-palette="tierramedia"] .hub-hub-title-wrap h2 {
@@ -352,9 +352,11 @@
   font-family: 'EB Garamond', serif;
   font-size: 1.75rem;
   font-weight: 500;
-  font-variant: small-caps;
   letter-spacing: .06em;
 }
+/* Las versalitas solo cuando «Texto» de /cuenta pide mayúsculas (10-10-2026): en caja normal convertían el título en
+   capitales igualmente. Con el interruptor encendido sustituyen al `uppercase` de la base, que las aplastaría. */
+:root[data-palette="tierramedia"][data-uppercase="on"] .hub-hub-title-wrap h2 { font-variant: small-caps; text-transform: none; }
 :root[data-palette="tierramedia"] .hub-hub-title-wrap h2 .rc-plain::first-letter {
   font-size: 1.4em;
   font-weight: 600;

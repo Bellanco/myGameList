@@ -14,7 +14,7 @@ import {
   putCachedMyFriendships,
 } from './indexedDbRepository';
 import { trackAnalyticsEvent } from './telemetryRepository';
-import type { FriendshipDoc } from '../types/firestore';
+import type { FriendshipDoc, FriendshipKeysDoc } from '../types/firestore';
 import type { FriendshipView, MyFriendships } from '../types/social';
 import { firestoreQuotaError, isFirestoreQuotaExhausted, noteFirestoreError } from './firestoreQuota';
 
@@ -104,7 +104,21 @@ function str(value: unknown): string {
  * Sustituye a `friendshipHealedForGist`, que solo miraba el id del gist social: un cambio de nick o de foto —el
  * caso que de verdad importa para la privacidad— se le escapaba entero.
  */
-const IDENTITY_FINGERPRINT_VERSION = 1;
+//
+// Versión 2 (10-10-2026): el saneado pasó a dejar también el DEPÓSITO de mis peticiones pendientes (ver
+// `FRIENDSHIP_KEYS_COLLECTION`). Subirla hace que cada dispositivo vuelva a sanear una vez, y así las peticiones
+// que salieron con la 1.6.7, sin depósito, lo ganan sin esperar a la revisión semanal.
+const IDENTITY_FINGERPRINT_VERSION = 2;
+
+/**
+ * DEPÓSITO DE MIS IDS DE GIST mientras una petición mía está pendiente (docs/plan-historial-amigo-nuevo.md, Fase 0).
+ *
+ * La petición sale sin ellos (el destinatario la lee aunque rechace), y antes se escribían cuando YO veía la amistad
+ * aceptada: quien aceptaba se quedaba sin ver mis listas hasta que yo volviera a entrar, aunque al pedirla ya hubiera
+ * consentido justo eso. El depósito lo guarda aparte, en un documento con el mismo id que la amistad que las reglas
+ * solo dejan leer al destinatario cuando la ha aceptado. Al aceptar, él mismo los copia a la amistad y lo borra.
+ */
+const FRIENDSHIP_KEYS_COLLECTION = 'friendshipKeys';
 
 /**
  * Cada cuánto se revisan las amistades AUNQUE la huella no haya cambiado.
@@ -179,6 +193,7 @@ function toFriendshipView(docId: string, data: Partial<FriendshipDoc>, myUid: st
     createdAt: typeof data.createdAt === 'number' ? data.createdAt : 0,
     updatedAt: typeof data.updatedAt === 'number' ? data.updatedAt : 0,
     ...(amRequester && status === 'accepted' && !str(data.requesterSocialGistId) ? { ownGistIdsMissing: true } : {}),
+    ...(amRecipient && status === 'accepted' && !str(data.requesterSocialGistId) ? { otherGistIdsMissing: true } : {}),
   };
 }
 
@@ -389,8 +404,9 @@ export async function sendFriendRequest(input: {
   // NI MIS IDS DE GIST. Son la llave de mi biblioteca —el de listados lleva reseñas enteras, notas y horas—, y el
   // destinatario lee este documento aunque nunca acepte: se quedaba con ellos al rechazarme (09-10-2026). Se
   // escriben cuando la amistad está aceptada, con el saneado de identidad (ver `ownGistIdsMissing`, que lo dispara
-  // en cuanto lo veo aceptado). `self.socialGistId`/`gamesGistId` se ignoran aquí a propósito.
-  await setDoc(ref, {
+  // en cuanto lo veo aceptado). `self.socialGistId`/`gamesGistId` no van en la petición: van al DEPÓSITO, en el
+  // mismo lote, que el destinatario solo puede leer cuando acepte (ver `FRIENDSHIP_KEYS_COLLECTION`).
+  const request = {
     users: sortedPair(myUid, otherUid),
     requester: myUid,
     recipient: otherUid,
@@ -399,7 +415,24 @@ export async function sendFriendRequest(input: {
     updatedAt: now,
     requesterName: self.name,
     requesterPhoto: self.photo,
-  });
+  };
+  if (self.socialGistId) {
+    const batch = writeBatch(services.firestore);
+    batch.set(ref, request);
+    batch.set(doc(services.firestore, FRIENDSHIP_KEYS_COLLECTION, ref.id), keysFor(myUid, self, now));
+    try {
+      await batch.commit();
+    } catch (error) {
+      // Sin la regla del depósito desplegada el lote entero se rechaza: la petición sale sola, como antes, y mis
+      // ids llegarán por la vía de siempre (`ownGistIdsMissing`). Si lo que falla es la propia petición (ya
+      // existía, la carrera de peticiones simultáneas), este `setDoc` lo repite y el error llega igual a quien llama.
+      if (!isPermissionDeniedError(error)) throw error;
+      await setDoc(ref, request);
+    }
+  } else {
+    // Sin gist social en este instante no hay nada que depositar: el saneado lo hará en cuanto lo sepa.
+    await setDoc(ref, request);
+  }
 
   // Hay una arista NUEVA con lo que se supiera en este instante (que puede ser un id vacío). El próximo saneado
   // tiene que verla; ver `forgetIdentityFingerprint`.
@@ -432,9 +465,67 @@ export async function acceptFriendRequest(input: {
     recipientGamesGistId: self.gamesGistId,
   });
 
+  // Y ahora que la amistad está aceptada, los ids de quien la pidió: sin esto no veo su historial hasta que vuelva
+  // a entrar. Best-effort: si falla, la tarea de arranque `friendshipKeysAfterAccept` lo reintenta.
+  await claimRequesterKeys({ myUid, docIds: [docId] }).catch(() => 0);
+
   // Mismo motivo que al crear: acabo de estrenar mis campos en esta arista con lo que supiera ahora mismo.
   await forgetIdentityFingerprint();
   invalidateMyFriendshipsCache(myUid);
+}
+
+/** El depósito de mis ids para una petición mía (ver `FRIENDSHIP_KEYS_COLLECTION`). */
+function keysFor(myUid: string, self: FriendshipSelfInfo, now: number): FriendshipKeysDoc {
+  return { requester: myUid, socialGistId: self.socialGistId, gamesGistId: self.gamesGistId, updatedAt: now };
+}
+
+/**
+ * Recoge los ids de quien pidió cada amistad (que yo ya he aceptado) de su depósito, los copia a la amistad y borra
+ * el depósito. La regla `friendshipCopyRequesterKeys` solo admite los valores idénticos a los depositados.
+ *
+ * Sin depósito (petición de la 1.6.7, o ya recogido) la lectura se deniega o no encuentra nada, y esa amistad se
+ * salta sin error: sus ids llegarán cuando quien pidió vuelva a entrar.
+ *
+ * @returns cuántas amistades han quedado completas.
+ */
+export async function claimRequesterKeys(input: { myUid: string; docIds: readonly string[] }): Promise<number> {
+  const { myUid, docIds } = input;
+  if (!myUid || docIds.length === 0) {
+    return 0;
+  }
+  const services = await initializeFirebaseServices();
+  if (!services) {
+    return 0;
+  }
+  const { firestore } = services;
+
+  const results = await mapWithConcurrency([...docIds], HEAL_RETRY_CONCURRENCY, async (docId) => {
+    const keysRef = doc(firestore, FRIENDSHIP_KEYS_COLLECTION, docId);
+    let keys: Partial<FriendshipKeysDoc>;
+    try {
+      const snap = await getDoc(keysRef);
+      if (!snap.exists()) return false;
+      keys = snap.data() as Partial<FriendshipKeysDoc>;
+    } catch (error) {
+      if (isPermissionDeniedError(error)) return false; // sin depósito, o la amistad no está aceptada
+      throw error;
+    }
+    if (!str(keys.socialGistId)) return false;
+    await updateDoc(doc(firestore, 'friendships', docId), {
+      requesterSocialGistId: str(keys.socialGistId),
+      requesterGamesGistId: str(keys.gamesGistId),
+      updatedAt: Date.now(),
+    });
+    // Ya está en la amistad: el depósito sobra, y si se quedara podría quedar viejo frente a lo que sanee quien pidió.
+    await deleteDoc(keysRef).catch(() => undefined);
+    return true;
+  });
+
+  const claimed = results.filter(Boolean).length;
+  if (claimed > 0) {
+    invalidateMyFriendshipsCache(myUid);
+  }
+  return claimed;
 }
 
 /**
@@ -458,6 +549,9 @@ export async function deleteFriendship(input: { myUid: string; docId: string }):
       throw error;
     }
   }
+  // Y el depósito, si quedaba (petición sin aceptar, o aceptada sin recoger). Best-effort: sin amistad aceptada nadie
+  // más que su dueño puede leerlo, así que uno huérfano no filtra nada; solo se limpia.
+  await deleteDoc(doc(services.firestore, FRIENDSHIP_KEYS_COLLECTION, docId)).catch(() => undefined);
   invalidateMyFriendshipsCache(myUid);
 }
 
@@ -511,6 +605,32 @@ async function commitHealBatches(
   }
 
   return allWritten;
+}
+
+/**
+ * LA SEÑAL DE REGRESO (docs/plan-feed-sin-vacio.md, Fase 4): sella el `updatedAt` de mis amistades ACEPTADAS, y nada
+ * más. Quien lleva más de 30 días sin aparecer queda fuera del feed de los demás y su copia de dormido vale un día
+ * (`INACTIVE_PROFILE_MAX_AGE_MS`); con este sello, la otra parte sabe que ha vuelto en cuanto relee las amistades y
+ * relee su perfil (`directoryProfileIsFresh`). Lo llama `touchOwnProfileActivity` al ver que venía de dormir.
+ *
+ * Las reglas ya lo admiten (`friendshipHealOwnFields`: cada parte puede tocar `updatedAt`). Una escritura por amistad,
+ * una vez por regreso. Las pendientes no: no hay feed que desbloquear. Devuelve cuántas ha sellado.
+ */
+export async function stampOwnFriendshipsOnReturn(myUid: string): Promise<number> {
+  if (!myUid) return 0;
+  const services = await initializeFirebaseServices();
+  if (!services) return 0;
+  const snapshot = await getDocs(
+    query(collection(services.firestore, 'friendships'), where('users', 'array-contains', myUid)),
+  );
+  const now = Date.now();
+  const pending = snapshot.docs
+    .filter((entry) => (entry.data() as Partial<FriendshipDoc>).status === 'accepted')
+    .map((entry) => ({ docId: entry.id, fields: { updatedAt: now } }));
+  if (pending.length > 0) {
+    await commitHealBatches(services.firestore, pending);
+  }
+  return pending.length;
 }
 
 /**
@@ -569,6 +689,8 @@ export async function healOwnFriendshipIdentity(
 
   const now = Date.now();
   const pending: Array<{ docId: string; fields: Record<string, unknown> }> = [];
+  /** Mis peticiones pendientes: sus depósitos se (re)escriben con mis ids actuales (ver `FRIENDSHIP_KEYS_COLLECTION`). */
+  const pendingOwnDocIds: string[] = [];
 
   snapshot.docs.forEach((entry) => {
     const data = entry.data() as Partial<FriendshipDoc>;
@@ -588,9 +710,12 @@ export async function healOwnFriendshipIdentity(
     /**
      * EN UNA PETICIÓN QUE AÚN NO SE HA ACEPTADO, mis ids de gist NO van: el destinatario la lee aunque me rechace, y
      * son la llave de mi biblioteca. Se escriben vacíos, que además limpia las peticiones que los llevaban antes
-     * de este arreglo (09-10-2026); al aceptarse, este mismo saneado los pone (ver `ownGistIdsMissing`).
+     * de este arreglo (09-10-2026). Van al depósito, que el destinatario solo lee al aceptar.
      */
     const pendingOwnRequest = amRequester && data.status !== 'accepted';
+    if (pendingOwnRequest) {
+      pendingOwnDocIds.push(entry.id);
+    }
     const socialGistId = pendingOwnRequest ? '' : keepKnown(self.socialGistId, amRequester ? data.requesterSocialGistId : data.recipientSocialGistId);
     const gamesGistId = pendingOwnRequest ? '' : keepKnown(self.gamesGistId, amRequester ? data.requesterGamesGistId : data.recipientGamesGistId);
 
@@ -627,6 +752,7 @@ export async function healOwnFriendshipIdentity(
   });
 
   const committed = await commitHealBatches(services.firestore, pending);
+  await writeOwnPendingKeys(services.firestore, myUid, self, pendingOwnDocIds);
 
   // El sello SOLO se pone si todo se escribió. Si algo falló (red, una regla que denegó), dejarlo sin sellar es
   // lo que hace que el próximo disparo lo reintente en vez de dar por propagado lo que no llegó.
@@ -641,6 +767,85 @@ export async function healOwnFriendshipIdentity(
   if (pending.length > 0) {
     invalidateMyFriendshipsCache(myUid);
   }
+}
+
+/**
+ * Borra TODOS mis depósitos de ids (baja de cuenta, L3). `deleteFriendship` ya borra el de cada amistad que se
+ * borra, pero uno puede haber quedado huérfano (la otra parte rechazó con una versión anterior): sin amistad nadie
+ * más puede leerlo, pero son mis ids y el derecho de supresión no admite «nadie lo ve».
+ *
+ * @returns cuántos quedan sin borrar.
+ */
+export async function deleteOwnFriendshipKeys(myUid: string): Promise<number> {
+  const services = await initializeFirebaseServices();
+  if (!myUid || !services) {
+    return 0;
+  }
+  const snapshot = await getDocs(
+    query(collection(services.firestore, FRIENDSHIP_KEYS_COLLECTION), where('requester', '==', myUid)),
+  );
+  const results = await Promise.allSettled(snapshot.docs.map((entry) => deleteDoc(entry.ref)));
+  return results.filter((result) => result.status === 'rejected').length;
+}
+
+/**
+ * Deja (o pone al día) el depósito de mis ids en mis peticiones pendientes. Cubre las que salieron sin él (1.6.7, o
+ * sin gist social en ese instante) y las que se quedarían con un canal viejo tras rotarlo.
+ *
+ * Sin gist social conocido no se escribe nada: un depósito vacío no sirve, y pisaría uno bueno con el vacío (mismo
+ * criterio que `keepKnown`). Y es best-effort, sin afectar al sello del saneado: si la regla del depósito aún no está
+ * desplegada, la vía de siempre (`ownGistIdsMissing`) sigue funcionando, y reintentarlo en cada apertura costaría una
+ * relectura completa de amistades cada vez.
+ */
+async function writeOwnPendingKeys(
+  firestore: Parameters<typeof writeBatch>[0],
+  myUid: string,
+  self: FriendshipSelfInfo,
+  docIds: readonly string[],
+): Promise<void> {
+  if (!self.socialGistId || docIds.length === 0) {
+    return;
+  }
+  const now = Date.now();
+  for (let index = 0; index < docIds.length; index += HEAL_BATCH_MAX_OPS) {
+    const batch = writeBatch(firestore);
+    docIds
+      .slice(index, index + HEAL_BATCH_MAX_OPS)
+      .forEach((docId) => batch.set(doc(firestore, FRIENDSHIP_KEYS_COLLECTION, docId), keysFor(myUid, self, now)));
+    await batch.commit().catch(() => undefined);
+  }
+}
+
+/**
+ * ¿Ha cambiado alguna de estas amistades desde que se leyeron? Comprobación DIRIGIDA para las aristas en las que se
+ * espera algo de la otra parte (una petición mía sin contestar, un amigo al que le faltan los ids): 1 lectura por
+ * documento, en vez de la consulta entera, que cuesta 1 por amistad (docs/plan-historial-amigo-nuevo.md, Fase 2).
+ *
+ * Cuenta como cambio que el estado sea otro, que el documento ya no se pueda leer (borrado: rechazo o retirada) o
+ * que hayan llegado los ids de gist del otro. Quien llama decide qué hacer: normalmente, releer la lista entera.
+ */
+export async function haveFriendshipEdgesChanged(myUid: string, views: readonly FriendshipView[]): Promise<boolean> {
+  if (!myUid || views.length === 0) {
+    return false;
+  }
+  const services = await initializeFirebaseServices();
+  if (!services) {
+    return false;
+  }
+  const changes = await mapWithConcurrency([...views], HEAL_RETRY_CONCURRENCY, async (view) => {
+    let snap;
+    try {
+      snap = await getDoc(doc(services.firestore, 'friendships', view.docId));
+    } catch (error) {
+      // Borrado: la regla de lectura no tiene `users` que mirar y deniega. Es un cambio (rechazo o retirada).
+      if (isPermissionDeniedError(error)) return true;
+      throw error;
+    }
+    if (!snap.exists()) return true;
+    const fresh = toFriendshipView(snap.id, snap.data() as Partial<FriendshipDoc>, myUid);
+    return !fresh || fresh.state !== view.state || fresh.otherSocialGistId !== view.otherSocialGistId;
+  });
+  return changes.some(Boolean);
 }
 
 /**

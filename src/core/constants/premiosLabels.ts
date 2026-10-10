@@ -143,7 +143,6 @@ export const PREMIOS_UI = {
     see: 'Ver mis votos',
     /** Cuando se reenvía sin tocar nada: se dice que no ha costado, porque el contador no se ha movido. */
     unchanged: 'No habías cambiado nada, así que no has gastado ninguna oportunidad.',
-    resultsSoon: 'Los resultados se publicarán al cerrarse la edición.',
     editHint: (quedan: number) =>
       quedan === 0
         ? 'Has gastado todas tus oportunidades, así que tu voto ya no se puede corregir.'
@@ -284,7 +283,7 @@ export const PREMIOS_UI = {
      */
     covers: {
       summary: (con: number, sin: number, fallidas: number) => {
-        const partes = [`Carátulas: ${con} lista(s)`];
+        const partes = [con === 1 ? 'Carátulas: 1 lista' : `Carátulas: ${con} listas`];
         if (sin) partes.push(`${sin} sin carátula en IGDB`);
         if (fallidas) partes.push(`${fallidas} sin poder resolver (vuelve a guardar la categoría para reintentarlo)`);
         return `${partes.join(', ')}.`;
@@ -318,7 +317,7 @@ export const PREMIOS_UI = {
       ],
       stageCurrent: 'Estado actual',
       /** El pie del bloque: las dos notas de una línea, juntas y atenuadas. */
-      offeredYes: 'Se ofrece en Ajustes y en el espacio social',
+      offeredYes: 'Se ofrece en Ajustes',
       offeredNo: 'No se ofrece: solo se llega con el enlace',
       lastPublished: (id: string) => `última publicada: ${id}`,
       // Corregir la edición en marcha sin cerrarla: una errata en el nombre o un día de cierre mal puesto.
@@ -352,7 +351,7 @@ export const PREMIOS_UI = {
        */
       openHiddenTitle: 'La sección está oculta',
       openHiddenBody:
-        'Nadie la encontrará en el menú ni en el espacio social: solo con el enlace. Actívala para que se pueda votar.',
+        'Nadie la encontrará en el menú de Ajustes: solo con el enlace. Actívala para que se pueda votar.',
       openMakeVisible: 'Abrir y hacer visible',
       openKeepHidden: 'Abrir oculta',
       /** Esto SÍ impide abrir: sin una sola categoría con nominados no hay nada que votar. */
@@ -380,12 +379,16 @@ export const PREMIOS_UI = {
        */
       publishNoCategories: 'No hay ninguna categoría con nominados: se archivaría una edición sin resultados.',
       closesAt: (fecha: string) => `Se cierra el ${fecha}`,
-      leftovers: (cuantas: number) => `Se retiraron ${cuantas} papeleta(s) sueltas de una edición anterior.`,
+      leftovers: (cuantas: number) =>
+        cuantas === 1
+          ? 'Se retiró 1 papeleta suelta de una edición anterior.'
+          : `Se retiraron ${cuantas} papeletas sueltas de una edición anterior.`,
       opened: (nombre: string) => `Edición «${nombre}» abierta y a la vista.`,
       openedHidden: (nombre: string) =>
         `Edición «${nombre}» abierta. La sección sigue oculta: solo se llega con el enlace.`,
       closed: 'Votación cerrada.',
-      published: (nombre: string, votos: number) => `«${nombre}» publicada con ${votos} papeleta(s).`,
+      published: (nombre: string, votos: number) =>
+        `«${nombre}» publicada con ${votos === 1 ? '1 papeleta' : `${votos} papeletas`}.`,
       errorDay: 'Hace falta un día de cierre que no esté en el pasado.',
       // ═══ EL INTERRUPTOR DE LA ENTRADA ═════════════════════════════════════════════════════════════════
       // Dos estados y no tres. El tercero era «según el calendario» y se leía como una opción cuando en realidad
@@ -398,7 +401,7 @@ export const PREMIOS_UI = {
       visibilitySaved: 'Guardado dónde se ve la sección.',
       /** DÓNDE aparece, que es lo único que este bloque tiene que responder. */
       visibilityHint:
-        'Visible, la sección aparece en el menú de Ajustes y en el espacio social. Oculta, solo se llega con el enlace. Solo cambia desde aquí: abrir o publicar una edición no la toca.',
+        'Visible, la sección aparece en el menú de Ajustes. Oculta, solo se llega con el enlace. Solo cambia desde aquí: abrir o publicar una edición no la toca.',
     },
 
     // Marcar quién ganó cada categoría. Vive en un documento que solo lee el administrador: hasta que se publica
@@ -410,9 +413,15 @@ export const PREMIOS_UI = {
       /** Fijo: si está marcado ya lo dice `aria-pressed`. */
       markAria: (nombre: string) => `Marcar ${nombre} como ganador`,
       save: 'Guardar ganadores',
-      saved: (cuantos: number) => `${cuantos} ganador(es) guardado(s).`,
-      skipped: (cuantas: number) => `${cuantas} categoría(s) sin nominados se han omitido.`,
-      migrated: (cuantas: number) => `${cuantas} categoría(s) dejan de exponer su ganador.`,
+      saved: (cuantos: number) => (cuantos === 1 ? '1 ganador guardado.' : `${cuantos} ganadores guardados.`),
+      skipped: (cuantas: number) =>
+        cuantas === 1
+          ? 'Se ha omitido 1 categoría sin nominados.'
+          : `Se han omitido ${cuantas} categorías sin nominados.`,
+      migrated: (cuantas: number) =>
+        cuantas === 1
+          ? '1 categoría deja de exponer su ganador.'
+          : `${cuantas} categorías dejan de exponer su ganador.`,
       empty: 'No hay categorías con nominados: ponlos antes de marcar ganadores.',
       count: (marcados: number, total: number) => `${marcados} de ${total} categorías con ganador`,
     },
@@ -423,7 +432,8 @@ export const PREMIOS_UI = {
       total: (cuantas: number) => (cuantas === 1 ? '1 papeleta' : `${cuantas} papeletas`),
       none: 'Todavía no ha votado nadie.',
       voted: (cuantas: number, total: number) => `${cuantas}/${total} categorías`,
-      edits: (cuantas: number) => (cuantas === 0 ? 'sin correcciones' : `${cuantas} corrección(es)`),
+      edits: (cuantas: number) =>
+        cuantas === 0 ? 'sin correcciones' : cuantas === 1 ? '1 corrección' : `${cuantas} correcciones`,
       sentAt: 'Enviada',
       // QUÉ VOTÓ CADA UNO va en la fila de la clasificación (`PremiosFinalBoard`), plegado: con veintiséis
       // categorías por votante, abierto de serie sepultaría la lista.
@@ -444,7 +454,7 @@ export const PREMIOS_UI = {
       title: 'Histórico',
       hint: 'Ediciones publicadas. De un archivo solo se puede cambiar el nombre.',
       empty: 'Todavía no se ha publicado ninguna edición.',
-      ballots: (cuantas: number) => `${cuantas} papeleta(s)`,
+      ballots: (cuantas: number) => (cuantas === 1 ? '1 papeleta' : `${cuantas} papeletas`),
       rename: 'Renombrar',
       renamed: (nombre: string) => `Renombrada a «${nombre}».`,
       remove: 'Borrar del histórico',

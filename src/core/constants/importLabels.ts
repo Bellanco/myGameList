@@ -72,7 +72,7 @@ export const IMPORT_UI = {
     game: 'Nombre',
     search: 'Buscar por nombre',
     enrich: 'Actualizar en tus listas',
-    enrichHint: 'Ya lo tienes: añade género/plataforma/horas que falten al juego de tu lista.',
+    enrichHint: 'Ya lo tienes: añade al juego de tu lista los géneros, plataformas u horas que le falten.',
     promote: 'Pasar a próximos',
     promoteHint: 'Lo tenías en deseados y ya es tuyo: pásalo a próximos con lo que falte del importado.',
     showing: (shown: number, total: number) => `Mostrando ${shown} de ${total}`,
@@ -81,12 +81,12 @@ export const IMPORT_UI = {
     copyNameError: 'No se pudo copiar el nombre',
     fields: {
       title: 'Qué datos traer',
-      note: 'Se aplica a TODOS los juegos de la bandeja. El nombre siempre se traslada; lo que desmarques aquí no se copiará (podrás rellenarlo a mano en el formulario).',
+      note: 'Se aplica a todos los juegos de la bandeja. El nombre se trae siempre; lo que desmarques aquí no se copia y podrás rellenarlo a mano en el formulario.',
       toggleShow: 'Ver qué datos traer',
       toggleHide: 'Ocultar qué datos traer',
       newGames: 'Al clasificar un juego nuevo',
       existingGames: 'Al actualizar uno que ya tienes',
-      existingHint: 'Las plataformas y los géneros se SUMAN a los que ya tenga el juego (no se quita nada); las horas y la nota solo se rellenan si las tienes vacías.',
+      existingHint: 'Las plataformas y los géneros se suman a los que ya tenga el juego, sin quitar ninguno; las horas y la nota solo se rellenan si las tienes vacías.',
       labels: {
         platforms: 'Plataformas',
         genres: 'Géneros',

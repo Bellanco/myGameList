@@ -306,6 +306,9 @@ export async function purgeFossilFriendshipRequests(
       touched += 1;
     }
   });
+  // Y el depósito de ids de cada una (ver `friendshipKeys` en las reglas). Best-effort: sin amistad aceptada nadie
+  // más que su dueño puede leerlo.
+  await Promise.allSettled(fossils.map((entry) => deleteDoc(doc(services.firestore, 'friendshipKeys', entry.id))));
 
   invalidateMyFriendshipsCache();
 
@@ -320,7 +323,7 @@ export async function purgeFossilFriendshipRequests(
  */
 export async function setUserTier(profileDocId: string, tier: ProfileTier): Promise<void> {
   if (!profileDocId || profileDocId === PLACEHOLDER_ID) {
-    throw new Error('Identificador de perfil no válido');
+    throw new Error('Identificador de perfil no válido.');
   }
 
   const services = await requireServices();
@@ -346,7 +349,7 @@ export async function setUserTier(profileDocId: string, tier: ProfileTier): Prom
  */
 export async function setUserSocialEnabled(profileDocId: string, enabled: boolean): Promise<void> {
   if (!profileDocId || profileDocId === PLACEHOLDER_ID) {
-    throw new Error('Identificador de perfil no válido');
+    throw new Error('Identificador de perfil no válido.');
   }
 
   const services = await requireServices();
@@ -382,10 +385,10 @@ export async function purgeLegacyProfileFields(
   fields: readonly LegacyProfileField[],
 ): Promise<void> {
   if (!profileDocId || profileDocId === PLACEHOLDER_ID) {
-    throw new Error('Identificador de perfil no válido');
+    throw new Error('Identificador de perfil no válido.');
   }
   if (fields.length === 0) {
-    throw new Error('No se indicó ningún campo que purgar');
+    throw new Error('No se indicó ningún campo que purgar.');
   }
 
   // deleteField() ELIMINA el campo; no escribe ningún valor en el documento.
@@ -419,7 +422,7 @@ export async function purgeLegacyProfileFields(
  */
 export async function clearProfileAchievements(profileDocId: string): Promise<void> {
   if (!profileDocId || profileDocId === PLACEHOLDER_ID) {
-    throw new Error('Identificador de perfil no válido');
+    throw new Error('Identificador de perfil no válido.');
   }
 
   const services = await requireServices();

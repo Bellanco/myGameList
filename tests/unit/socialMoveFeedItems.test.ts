@@ -277,14 +277,14 @@ describe('el feed y los movimientos de las listas ocultas', () => {
   });
 
   it('la administración los ve junto a los visibles', () => {
-    const { result } = renderHook(() => useSocialFeed(directorio, undefined, undefined, false, true));
+    const { result } = renderHook(() => useSocialFeed(directorio, undefined, undefined, true));
 
     expect(movedGameIds(result.current.feedItems)).toEqual([1, 2]);
   });
 
   it('a la administración le sigue valiendo su propio filtro de listas', () => {
     feedMoveTabsPreference.set('cep~');
-    const { result } = renderHook(() => useSocialFeed(directorio, undefined, undefined, false, true));
+    const { result } = renderHook(() => useSocialFeed(directorio, undefined, undefined, true));
 
     expect(movedGameIds(result.current.feedItems)).toEqual([1]);
   });
@@ -293,7 +293,7 @@ describe('el feed y los movimientos de las listas ocultas', () => {
     // Cada mitad se colapsó sin ver la otra al publicarse, así que en el gist están los dos.
     const mismoDia = [{ moves: [move(7, 'e', T)], hiddenMoves: [move(7, 'v', T + 3_600_000)] }];
 
-    const admin = renderHook(() => useSocialFeed(mismoDia, undefined, undefined, false, true));
+    const admin = renderHook(() => useSocialFeed(mismoDia, undefined, undefined, true));
     expect(admin.result.current.feedItems.map((item) => (item as { tab?: string }).tab)).toEqual(['v']);
 
     // Y quien no administra sigue viendo el «comenzó», que es lo único que se le publicó.
@@ -306,7 +306,7 @@ describe('el feed y los movimientos de las listas ocultas', () => {
       { moves: [move(9, 'e', T, 'pid-1')] },
       { moves: [], hiddenMoves: [move(9, 'v', T + 1000, 'pid-2')] },
     ];
-    const { result } = renderHook(() => useSocialFeed(dos, undefined, undefined, false, true));
+    const { result } = renderHook(() => useSocialFeed(dos, undefined, undefined, true));
 
     expect(result.current.feedItems.map((item) => (item as { tab?: string }).tab).sort()).toEqual(['e', 'v']);
   });
@@ -323,7 +323,7 @@ describe('la ventana de 30 días — al leer', () => {
   it('a la administración le vale la misma ventana para los de las listas ocultas', () => {
     const { result } = renderHook(() => useSocialFeed(
       [{ moves: [], hiddenMoves: [move(3, 'v', T - DIA), move(4, 'v', T - 40 * DIA)] }],
-      undefined, undefined, false, true,
+      undefined, undefined, true,
     ));
 
     expect(movedGameIds(result.current.feedItems)).toEqual([3]);

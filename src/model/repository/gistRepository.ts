@@ -188,7 +188,7 @@ export interface GistReadResponse {
 
 export async function whoAmI(token: string): Promise<{ login: string }> {
   if (!isValidGithubToken(token)) {
-    throw new Error('Formato de token inválido');
+    throw new Error('El token no tiene el formato de GitHub. Revisa que lo hayas copiado entero.');
   }
 
   const response = await githubFetch('https://api.github.com/user', {
@@ -199,7 +199,7 @@ export async function whoAmI(token: string): Promise<{ login: string }> {
   });
 
   if (!response.ok) {
-    throw await buildGithubError(response, 'Auth failed');
+    throw await buildGithubError(response, 'GitHub no ha aceptado el token');
   }
 
   return (await response.json()) as { login: string };
@@ -207,7 +207,7 @@ export async function whoAmI(token: string): Promise<{ login: string }> {
 
 export async function createGist(token: string): Promise<{ gistId: string; etag: string | null }> {
   if (!isValidGithubToken(token)) {
-    throw new Error('Formato de token inválido');
+    throw new Error('El token no tiene el formato de GitHub. Revisa que lo hayas copiado entero.');
   }
 
   const response = await githubFetch(GIST_API_BASE, {
@@ -229,7 +229,7 @@ export async function createGist(token: string): Promise<{ gistId: string; etag:
   });
 
   if (!response.ok) {
-    throw await buildGithubError(response, 'Create failed');
+    throw await buildGithubError(response, 'No se ha podido crear el gist');
   }
 
   const body = (await response.json()) as { id: string };
@@ -243,7 +243,7 @@ export async function createGist(token: string): Promise<{ gistId: string; etag:
  */
 export async function findGamesGistId(token: string): Promise<string> {
   if (!isValidGithubToken(token)) {
-    throw new Error('Formato de token inválido');
+    throw new Error('El token no tiene el formato de GitHub. Revisa que lo hayas copiado entero.');
   }
 
   // 100 por página cubre de sobra el caso real (un usuario tiene pocos gists). No paginamos para mantenerlo simple.
@@ -255,7 +255,7 @@ export async function findGamesGistId(token: string): Promise<string> {
   });
 
   if (!response.ok) {
-    throw await buildGithubError(response, 'List gists failed');
+    throw await buildGithubError(response, 'No se han podido buscar tus gists');
   }
 
   const gists = (await response.json()) as Array<{ id: string; files?: Record<string, unknown> }>;
@@ -298,7 +298,7 @@ async function mergeOverflowGistChunks(anchor: unknown, token: string | null): P
     if (token && isValidGithubToken(token)) headers['Authorization'] = getGithubAuthHeader(token);
     const resp = await githubFetch(`${GIST_API_BASE}/${overflowGistId}`, { headers });
     if (!resp.ok) {
-      throw new Error(`Gist de overflow ${overflowGistId} no accesible (lectura incompleta; se aborta para no perder datos)`);
+      throw new Error(`No se puede leer una parte de los juegos guardados en GitHub (gist ${overflowGistId}). No se ha cambiado nada; vuelve a intentarlo más tarde.`);
     }
     const b = (await resp.json()) as { files?: Record<string, { content?: string } | undefined> };
     return { overflowGistId, files: b.files || {} };
@@ -309,14 +309,14 @@ async function mergeOverflowGistChunks(anchor: unknown, token: string | null): P
     for (const chunkId of chunkIdsByGist.get(overflowGistId)!) {
       const content = files[gamesChunkFilename(chunkId)]?.content;
       if (!content) {
-        throw new Error(`Chunk ${chunkId} ausente en el gist de overflow ${overflowGistId} (lectura incompleta; se aborta)`);
+        throw new Error(`Falta una parte de los juegos guardados en GitHub (gist ${overflowGistId}). No se ha cambiado nada; vuelve a intentarlo más tarde.`);
       }
       try {
         const { content: plain } = await decodeGistContent(content); // Fase 1: descomprime si viene el sobre `enc`.
         const chunkParsed = JSON.parse(plain) as { games?: Record<string, unknown> };
         Object.assign(mergedGames, chunkParsed.games || {});
       } catch {
-        throw new Error(`Chunk ${chunkId} corrupto en el gist de overflow ${overflowGistId} (se aborta)`);
+        throw new Error(`Una parte de los juegos guardados en GitHub está dañada (gist ${overflowGistId}). No se ha cambiado nada.`);
       }
     }
   }
@@ -496,14 +496,14 @@ async function buildGistReadResponse(
   const raw = decodedFiles[GIST_FILENAME]?.content;
 
   if (!raw) {
-    throw new Error('Gist file not found');
+    throw new Error('Ese gist no tiene una lista de juegos. Revisa el ID del gist.');
   }
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new Error('Invalid JSON in Gist');
+    throw new Error('El gist de juegos está dañado y no se puede leer. No se ha cambiado nada.');
   }
 
   // E4: chunks de overflow en el MISMO gist (vienen en esta respuesta). No-op para gist plano/un solo fichero.
@@ -524,11 +524,11 @@ async function buildGistReadResponse(
 
 export async function readGist(token: string, gistId: string, etag: string | null = null): Promise<GistReadResponse> {
   if (!isValidGithubToken(token)) {
-    throw new Error('Formato de token inválido');
+    throw new Error('El token no tiene el formato de GitHub. Revisa que lo hayas copiado entero.');
   }
 
   if (!isValidGistId(gistId)) {
-    throw new Error('Gist ID inválido');
+    throw new Error('El ID del gist no es válido. Revisa que lo hayas copiado entero.');
   }
 
   const headers: Record<string, string> = {
@@ -579,7 +579,7 @@ export async function readGist(token: string, gistId: string, etag: string | nul
   }
 
   if (!response.ok) {
-    throw await buildGithubError(response, 'Read failed');
+    throw await buildGithubError(response, 'No se ha podido leer el gist');
   }
 
   const body = (await response.json()) as { files?: Record<string, { content: string }> };
@@ -601,7 +601,7 @@ export async function readForeignGamesGist(
   etag: string | null = null,
 ): Promise<{ data: TabData | null; etag: string | null; notModified?: boolean }> {
   if (!isValidGistId(gamesGistId)) {
-    throw new Error('Gist ID inválido');
+    throw new Error('El ID del gist no es válido. Revisa que lo hayas copiado entero.');
   }
 
   const headers: Record<string, string> = {
@@ -622,7 +622,7 @@ export async function readForeignGamesGist(
     return { data: null, etag: response.headers.get('etag') || etag, notModified: true };
   }
   if (!response.ok) {
-    throw await buildGithubError(response, 'Read foreign games gist failed');
+    throw await buildGithubError(response, 'No se ha podido leer el gist de juegos');
   }
 
   const body = (await response.json()) as { files?: Record<string, { content: string } | undefined> };
@@ -692,7 +692,7 @@ async function createOverflowGist(token: string, filesContent: Record<string, { 
     headers: { Authorization: getGithubAuthHeader(token), 'Content-Type': 'application/json', 'X-GitHub-Api-Version': '2022-11-28' },
     body: JSON.stringify({ description: 'Mi Lista de Juegos - Overflow', public: false, files: filesContent }),
   });
-  if (!resp.ok) throw await buildGithubError(resp, 'Create overflow gist failed');
+  if (!resp.ok) throw await buildGithubError(resp, 'No se ha podido crear el gist adicional');
   const body = (await resp.json()) as { id: string };
   return body.id;
 }
@@ -734,7 +734,7 @@ async function assignAndWriteOverflowGists(
     const batchContents: Record<string, { content: string }> = {};
     for (const name of batch) {
       const content = await encodeGamesContent(JSON.stringify({ ...chunkFiles[name], mainGistId }));
-      assertGistSizeWithinLimit(content, `gist de overflow (${name})`);
+      assertGistSizeWithinLimit(content, `gist de juegos (${name})`);
       batchContents[name] = { content };
     }
     let overflowId = existingOverflowGistIds[i];
@@ -754,7 +754,7 @@ async function assignAndWriteOverflowGists(
           headers: { Authorization: getGithubAuthHeader(token), 'Content-Type': 'application/json', 'X-GitHub-Api-Version': '2022-11-28' },
           body: JSON.stringify({ files: toPatch }),
         });
-        if (!resp.ok) throw await buildGithubError(resp, 'Write overflow gist failed');
+        if (!resp.ok) throw await buildGithubError(resp, 'No se ha podido guardar el gist adicional');
       }
     } else {
       overflowId = await createOverflowGist(token, batchContents);
@@ -792,11 +792,11 @@ export async function writeGist(
   options: WriteGistOptions = {},
 ): Promise<{ etag: string | null; updatedAt: number }> {
   if (!isValidGithubToken(token)) {
-    throw new Error('Formato de token inválido');
+    throw new Error('El token no tiene el formato de GitHub. Revisa que lo hayas copiado entero.');
   }
 
   if (!isValidGistId(gistId)) {
-    throw new Error('Gist ID inválido');
+    throw new Error('El ID del gist no es válido. Revisa que lo hayas copiado entero.');
   }
 
   // NORMALIZAR ANTES DE VALIDAR, y no es un detalle: la ruta de recuperación de conflicto escribe el resultado
@@ -855,7 +855,7 @@ export async function writeGist(
     // El ancla se serializa DESPUÉS de fijar los `gistId` (manifiesto correcto) y se escribe en el gist principal
     // junto al PATCH de abajo — es decir, AL FINAL, cuando los chunks de overflow ya están persistidos.
     const anchorContent = await encodeGamesContent(JSON.stringify(anchorFile));
-    assertGistSizeWithinLimit(anchorContent, 'gist de juegos (ancla)');
+    assertGistSizeWithinLimit(anchorContent, 'gist de juegos');
     files[GIST_FILENAME] = { content: anchorContent };
 
     for (const name of mainChunkNames) {
