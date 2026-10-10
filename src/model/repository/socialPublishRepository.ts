@@ -210,8 +210,8 @@ async function openSocialWrite(options: { requireConsent?: boolean } = {}): Prom
   };
 }
 
-/** Escribe el gist y sella la configuración local con el etag nuevo. Devuelve el etag resultante. */
-async function commitSocialWrite(ctx: SocialWriteContext, nextPayload: SocialGistData): Promise<string | null> {
+/** Escribe el gist y sella la configuración local con el etag nuevo. */
+async function commitSocialWrite(ctx: SocialWriteContext, nextPayload: SocialGistData): Promise<void> {
   const writeResult = await writeSocialGist(ctx.socialConfig.token, ctx.socialConfig.gistId, nextPayload);
   const etag = writeResult.etag || ctx.socialConfig.etag || null;
 
@@ -221,8 +221,6 @@ async function commitSocialWrite(ctx: SocialWriteContext, nextPayload: SocialGis
     etag,
     lastRemoteUpdatedAt: ctx.now,
   });
-
-  return etag;
 }
 
 /**
@@ -230,7 +228,7 @@ async function commitSocialWrite(ctx: SocialWriteContext, nextPayload: SocialGis
  * documentos de amistad. Va aparte del `commit` porque RETIRAR una reseña no lo necesita —no cambia quién eres—,
  * y meterlo dentro obligaría a una bandera para apagarlo en ese único caso.
  */
-async function syncPublicIdentity(ctx: SocialWriteContext, etag: string | null): Promise<void> {
+async function syncPublicIdentity(ctx: SocialWriteContext): Promise<void> {
   const mainSyncConfig = getSyncConfig();
   // La MISMA foto para el perfil y para las amistades (ver `publicPhotoURL`).
   const photoURL = await publicPhotoURL(ctx.socialRead.data, ctx.authUser.photoURL);
@@ -240,7 +238,6 @@ async function syncPublicIdentity(ctx: SocialWriteContext, etag: string | null):
     socialGistId: ctx.socialConfig.gistId,
     gamesGistId: mainSyncConfig?.gistId || '',
     githubToken: mainSyncConfig?.token || ctx.socialConfig.token, // audit-allow: ensureProfileByEmail lo cifra en privateConfig (B1)
-    socialGistEtag: etag,
     // Si el gist no tiene nick, `ensureProfileByEmail` cae al nombre de la cuenta de Google (nunca al correo): más
     // vale un nombre razonable que un perfil sin nombre —la anomalía `no-display-name`— o un guardado abortado.
     preferredName: ctx.socialNick,
@@ -296,14 +293,14 @@ async function publishReviewActivityNow(input: { id: number; name: string; revie
     return;
   }
 
-  const etag = await commitSocialWrite(ctx, nextPayload);
+  await commitSocialWrite(ctx, nextPayload);
 
   // El feed sirve `gameName` desde la caché IndexedDB del directorio (TTL 30 min), una capa por delante de la caché
   // de sesión del gist. Sin invalidarla, tras publicar/renombrar una reseña el propio autor seguiría viendo el
   // título viejo en su feed hasta 30 min. La invalidamos para que el próximo montaje del hub relea el directorio.
   await invalidateCachedSocialDirectory(ctx.socialConfig.gistId);
 
-  await syncPublicIdentity(ctx, etag);
+  await syncPublicIdentity(ctx);
 }
 
 /**
@@ -368,7 +365,7 @@ async function publishPostNow(input: { text: string; maxLength?: number }): Prom
     ctx.now, // F4: los mensajes de lista pendientes se suben con la publicación, sin escritura propia.
   );
 
-  const etag = await commitSocialWrite(ctx, nextPayload);
+  await commitSocialWrite(ctx, nextPayload);
 
   // SIN `invalidateCachedSocialDirectory`, a diferencia de los dos de arriba: quien publica un post refresca el
   // feed acto seguido con un refresco forzado (ver `onPublished` en `useSocialViewModel`), que se salta la caché del
@@ -380,7 +377,7 @@ async function publishPostNow(input: { text: string; maxLength?: number }): Prom
   // publicación lleva un id nuevo (docs/plan-degradacion-servicios.md, fase 1). Se repite solo en la siguiente
   // publicación y en los saneados de arranque del hub.
   try {
-    await syncPublicIdentity(ctx, etag);
+    await syncPublicIdentity(ctx);
   } catch (error) {
     console.warn('[social] post publicado; la identidad pública se actualizará más tarde:', error instanceof Error ? error.message : error);
   }

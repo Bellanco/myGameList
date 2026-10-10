@@ -5,6 +5,39 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.6.9] - 2026-10-10
+
+Una versión de **Firestore sin sobrantes**: deja de guardarse lo que nadie lee y lo que repetía otro dato, y la fecha
+de alta de los perfiles, que no se escribía nunca, por fin se sella.
+
+### Fixed
+- **La fecha de alta del perfil (`createdAt`) se sella siempre.** La foto, la vitrina de logros y el resumen del año
+  creaban el perfil antes del alta y sin ella, y el alta, al encontrarlo hecho, ya no la ponía: ningún perfil la
+  tenía y los logros de antigüedad no se podían conseguir. Ahora esas escrituras no crean el perfil, y el alta sella
+  la fecha si falta.
+- **Ningún depósito de amistad sobrevive a la aceptación**: si quien aceptó no lo recogió (un cliente anterior a la
+  1.6.8), lo borra quien pidió al escribir sus ids en la amistad.
+
+### Changed
+- **Se dejan de guardar datos que nadie lee**, y los que ya hay se borran en la siguiente escritura de su dueño: el
+  ETag del gist social y la versión suelta de la vitrina en el perfil público, `schemaVersion` en las
+  configuraciones, la forma y el tamaño del listado en `publicConfig` y la fecha del depósito de amistad.
+- **Fuera `userMap`**: repetía el pseudónimo que ya guarda `privateConfig`. Cada dueño borra el suyo al pasar por el
+  alta.
+
+### Internal
+- Código muerto retirado: `upsertProfileSocialReferences`, `peekOwnProfileTier`, el parámetro del ETag de
+  `ensureProfileByEmail` y `hasSocialEtag` en el censo del panel.
+- Plan y medición en `docs/plan-firestore-sin-sobrantes.md`.
+
+### Deploy
+- **Reglas de Firestore ya desplegadas** (10-10-2026): `friendshipKeys.updatedAt` pasa a opcional. Sin
+  `audit:rules` (no había credenciales de cuenta de servicio): se comprobó que las reglas de producción eran
+  idénticas a las de `origin/develop`, así que solo salió ese cambio, que únicamente afloja una validación. **Sin
+  cambios en índices**, en Pages Functions ni en la versión legal.
+- **`createdAt` ya está rellenado** con su fecha real en los 12 perfiles de producción (10-10-2026, ver el plan,
+  Fase 3). Era lo que tenía que ir antes que el cliente: si no, la sellaría con la fecha de su próxima entrada.
+
 ## [1.6.8] - 2026-10-10
 
 Una versión de **feed que no se queda vacío**: lo que haces fuera del hub se publica sin abrirlo, una amistad nueva

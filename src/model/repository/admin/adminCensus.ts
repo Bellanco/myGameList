@@ -83,8 +83,6 @@ export interface AdminUserRow {
   schemaVersion: number;
   /** ¿Tiene foto publicada? Solo la presencia: la URL no aporta nada en una tabla. */
   hasPhoto: boolean;
-  /** ¿El perfil guarda el ETag de su gist social? Su ausencia obliga a releer el gist entero. */
-  hasSocialEtag: boolean;
 
   // --- Fechas ---
   /** Alta sellada en el documento (`createdAt`), en ms. 0 si el perfil es anterior a que se registrara. */
@@ -448,7 +446,6 @@ function buildRow(
     profileId: String(data.profileId || ''),
     schemaVersion: Number(data.schemaVersion || 0),
     hasPhoto: Boolean(data.photoURL),
-    hasSocialEtag: Boolean(social.etag),
     createdAt: toMillis(data.createdAt),
     estimatedFirstSeenAt: facts.firstAt,
     lastFriendshipAt: facts.lastAt,

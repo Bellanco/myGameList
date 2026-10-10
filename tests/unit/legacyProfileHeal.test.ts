@@ -1,13 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Auto-saneado del perfil al iniciar sesión. Lo que se verifica aquí es sobre todo el ORDEN: preservar (token
-// cifrado, id del gist, pseudónimo canónico en `privateConfig`/`userMap`) y solo entonces escribir el documento
+// cifrado, id del gist, pseudónimo canónico en `privateConfig`) y solo entonces escribir el documento
 // público. Si algo de la preservación falla, no se toca el documento.
 const getOwnProfileRefMock = vi.fn<(...a: unknown[]) => unknown>();
 const getPrivateConfigMock = vi.fn<(...a: unknown[]) => unknown>();
 const setPrivateConfigMock = vi.fn<(...a: unknown[]) => Promise<void>>(async () => {});
 const backupGithubTokenMock = vi.fn<(...a: unknown[]) => Promise<void>>(async () => {});
-const setUserMapMock = vi.fn<(...a: unknown[]) => Promise<void>>(async () => {});
 const resolveStableProfileIdMock = vi.fn<(...a: unknown[]) => Promise<string>>(async () => 'pid-nuevo');
 const updateDocMock = vi.fn<(...a: unknown[]) => Promise<void>>(async () => {});
 const invalidateOwnProfileCacheMock = vi.fn();
@@ -29,7 +28,6 @@ vi.mock('../../src/model/repository/firebaseRepository', () => ({
   getPrivateConfig: (...a: unknown[]) => getPrivateConfigMock(...a),
   setPrivateConfig: (...a: unknown[]) => setPrivateConfigMock(...a),
   backupGithubToken: (...a: unknown[]) => backupGithubTokenMock(...a),
-  setUserMap: (...a: unknown[]) => setUserMapMock(...a),
   resolveStableProfileId: (...a: unknown[]) => resolveStableProfileIdMock(...a),
 }));
 
@@ -81,8 +79,6 @@ describe('healOwnLegacyProfile', () => {
     setPrivateConfigMock.mockResolvedValue(undefined);
     backupGithubTokenMock.mockClear();
     backupGithubTokenMock.mockResolvedValue(undefined);
-    setUserMapMock.mockClear();
-    setUserMapMock.mockResolvedValue(undefined);
     resolveStableProfileIdMock.mockClear();
     resolveStableProfileIdMock.mockResolvedValue('pid-nuevo');
     updateDocMock.mockClear();
@@ -240,15 +236,13 @@ describe('healOwnLegacyProfile', () => {
   it('establece la copia CANÓNICA del pseudónimo antes de sellarlo en el documento público', async () => {
     getOwnProfileRefMock.mockResolvedValue(profile({ profileId: '' }));
     const order: string[] = [];
-    setUserMapMock.mockImplementation(async () => { order.push('userMap'); });
     setPrivateConfigMock.mockImplementation(async () => { order.push('privateConfig'); });
     updateDocMock.mockImplementation(async () => { order.push('public'); });
 
     const healResult = await healOwnLegacyProfile('uid-a');
 
     expect(healResult).toMatchObject({ status: 'healed', establishedProfileId: true });
-    expect(order).toEqual(['userMap', 'privateConfig', 'public']);
-    expect(setUserMapMock).toHaveBeenCalledWith('uid-a', 'pid-nuevo');
+    expect(order).toEqual(['privateConfig', 'public']);
     // Solo el pseudónimo: `setPrivateConfig` hace merge y mandar ids de gist vacíos los BORRARÍA.
     expect(setPrivateConfigMock).toHaveBeenCalledWith('uid-a', { profileId: 'pid-nuevo' });
     expect(updateDocMock.mock.calls[0][1]).toMatchObject({ uid: 'uid-a', profileId: 'pid-nuevo' });
@@ -274,7 +268,7 @@ describe('healOwnLegacyProfile', () => {
     await healOwnLegacyProfile('uid-a');
 
     expect(resolveStableProfileIdMock).toHaveBeenCalledWith('uid-a');
-    expect(setUserMapMock).toHaveBeenCalledWith('uid-a', 'pid-remoto-canonico');
+    expect(setPrivateConfigMock).toHaveBeenCalledWith('uid-a', { profileId: 'pid-remoto-canonico' });
     expect(updateDocMock.mock.calls[0][1]).toMatchObject({ profileId: 'pid-remoto-canonico' });
   });
 
@@ -282,7 +276,7 @@ describe('healOwnLegacyProfile', () => {
   // justo la deriva que este saneado viene a evitar (el cliente lo pisaría en su siguiente guardado).
   it('si la copia canónica del pseudónimo falla, NO escribe el documento público', async () => {
     getOwnProfileRefMock.mockResolvedValue(profile({ profileId: '' }));
-    setUserMapMock.mockRejectedValue(new Error('permission-denied'));
+    setPrivateConfigMock.mockRejectedValue(new Error('permission-denied'));
 
     const healResult = await healOwnLegacyProfile('uid-a');
 
@@ -307,7 +301,7 @@ describe('healOwnLegacyProfile', () => {
     await healOwnLegacyProfile('uid-a');
 
     expect(resolveStableProfileIdMock).not.toHaveBeenCalled();
-    expect(setUserMapMock).not.toHaveBeenCalled();
+    expect(setPrivateConfigMock).not.toHaveBeenCalledWith('uid-a', expect.objectContaining({ profileId: expect.anything() }));
     expect(updateDocMock.mock.calls[0][1]).not.toHaveProperty('profileId');
   });
 
@@ -388,7 +382,8 @@ describe('healOwnLegacyProfile', () => {
       expect(written).toMatchObject({ uid: 'uid-a', displayName: 'Ada', schemaVersion: 1, profileId: 'pid-nuevo' });
       expect(written).not.toHaveProperty('email');
       expect(written).not.toHaveProperty('tier'); // las reglas prohíben al dueño estrenarse un rango
-      expect((written?.social as Record<string, unknown>)).toEqual({ enabled: true, etag: null });
+      // El ETag del gist social ya no se guarda: si el documento apareciera entre medias con él, se borra.
+      expect((written?.social as Record<string, unknown>)).toEqual({ enabled: true, etag: '__del__' });
       // `updatedAt` es obligatorio: el directorio ordena por él y excluye los documentos que no lo traen.
       expect(written).toHaveProperty('updatedAt', '__ts__');
 

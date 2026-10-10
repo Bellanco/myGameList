@@ -8,16 +8,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // producción y sin haberse probado nunca. Aquí se prueba la función directamente, que sí es alcanzable.
 //
 // Lo que fijan:
-//  - la FORMA de lo que se escribe: `{ v, at, list }` bajo `achievements`, más `uid` (lo exigen las reglas) y
+//  - la FORMA de lo que se escribe: `{ at, list }` bajo `achievements`, más `uid` (lo exigen las reglas) y
 //    `updatedAt` (el directorio ordena por él y un doc sin el campo no saldría en la consulta);
-//  - que el `merge` no arrase el resto del perfil;
+//  - que sea un `updateDoc`: no arrasa el resto del perfil ni crea uno que no existe;
 //  - y que sin uid o sin espejo no se escriba nada, que es lo que evita crear un perfil a quien no lo tiene.
 
-const setDocMock = vi.fn(async () => {});
+const updateDocMock = vi.fn(async () => {});
 
 vi.mock('firebase/firestore/lite', () => ({
   doc: vi.fn((_db: unknown, path: string, id: string) => ({ path, id })),
-  setDoc: (...args: unknown[]) => setDocMock(...(args as [])),
+  setDoc: vi.fn(),
+  updateDoc: (...args: unknown[]) => updateDocMock(...(args as [])),
   serverTimestamp: vi.fn(() => '<<serverTimestamp>>'),
   deleteField: vi.fn(() => '<<deleteField>>'),
   getDoc: vi.fn(),
@@ -46,7 +47,6 @@ vi.mock('../../src/model/repository/indexedDbRepository', () => ({
 import { publishAchievementMirror } from '../../src/model/repository/firebaseRepository';
 import {
   ACHIEVEMENTS_LIST_MAX,
-  MIRROR_VERSION,
   mergeForPublish,
   packAchievements,
   parseMirror,
@@ -60,26 +60,25 @@ const ids = (mirror: string) => parseMirror(mirror).map((item) => item.id).sort(
 
 describe('publicación del espejo de logros', () => {
   beforeEach(() => {
-    setDocMock.mockClear();
+    updateDocMock.mockClear();
   });
 
   it('escribe el espejo en el perfil, con su versión de gramática y su sello', async () => {
     await publishAchievementMirror('uid-1', '2:AAAA~1.2');
 
-    expect(setDocMock).toHaveBeenCalledTimes(1);
-    const [ref, payload, options] = setDocMock.mock.calls[0] as unknown as [
+    expect(updateDocMock).toHaveBeenCalledTimes(1);
+    const [ref, payload] = updateDocMock.mock.calls[0] as unknown as [
       { path: string; id: string },
-      Record<string, unknown>,
       Record<string, unknown>,
     ];
     expect(ref).toEqual({ path: 'profiles', id: 'uid-1' });
-    // MERGE, siempre: este documento lleva el nick, la foto y el rango de su dueño, y publicar la vitrina no
-    // puede llevárselos por delante.
-    expect(options).toEqual({ merge: true });
+    // `updateDoc`, no `setDoc` + `merge`: toca solo estos campos (el nick, la foto y el rango siguen ahí) y no crea
+    // un perfil que aún no existe, que nacería sin fecha de alta.
 
-    const mirror = payload.achievements as { v: number; at: number; list: string };
+    const mirror = payload.achievements as { at: number; list: string };
     expect(mirror.list).toBe('2:AAAA~1.2');
-    expect(mirror.v).toBe(MIRROR_VERSION);
+    // La versión va dentro de `list`; el mapa se sustituye entero, así que la suelta de los espejos antiguos se va.
+    expect(mirror).not.toHaveProperty('v');
     expect(mirror.at).toBeGreaterThan(0);
     // `uid` lo exige la regla; `updatedAt` es de facto obligatorio o el perfil se cae de la consulta.
     expect(payload.uid).toBe('uid-1');
@@ -93,7 +92,7 @@ describe('publicación del espejo de logros', () => {
   it('no escribe sin uid ni con el espejo vacío', async () => {
     await publishAchievementMirror('', '2:AAAA');
     await publishAchievementMirror('uid-1', '');
-    expect(setDocMock).not.toHaveBeenCalled();
+    expect(updateDocMock).not.toHaveBeenCalled();
   });
 
   /**
@@ -161,7 +160,7 @@ describe('el espejo publicado nunca encoge', () => {
   it('una fecha posterior a cuando ya estaba publicado sin fecha no entra', () => {
     const dia = (ms: number) => new Date(ms).toISOString().slice(0, 10);
     const publicadoEn = Date.UTC(2026, 5, 1);
-    const publicado = { v: MIRROR_VERSION, at: publicadoEn, list: packAchievements([estado('completados-10', 0)]) };
+    const publicado = { at: publicadoEn, list: packAchievements([estado('completados-10', 0)]) };
 
     const tarde = mergeForPublish(publicado, [estado('completados-10', Date.UTC(2026, 8, 28)), estado('horas-10', Date.UTC(2026, 8, 28))]);
     expect(parseMirror(tarde).find((item) => item.id === 'completados-10')?.unlockedAt).toBe(0);

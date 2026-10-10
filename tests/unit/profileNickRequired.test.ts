@@ -11,8 +11,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const setDocMock = vi.fn<(...a: unknown[]) => Promise<void>>(async () => {});
 const getDocMock = vi.fn<(...a: unknown[]) => unknown>(async () => ({ exists: () => false, data: () => undefined }));
-const batchSetMock = vi.fn();
-const batchCommitMock = vi.fn(async () => {});
 const getOwnProfileRefMock = vi.fn<(...a: unknown[]) => unknown>(async () => null);
 const findSocialProfileByEmailMock = vi.fn<(...a: unknown[]) => unknown>(async () => null);
 
@@ -26,7 +24,6 @@ vi.mock('../../src/model/repository/firebaseSocialRepository', () => ({
   getOwnProfileRef: (...a: unknown[]) => getOwnProfileRefMock(...a),
   invalidateOwnProfileCache: vi.fn(),
   invalidateSocialDirectoryCache: vi.fn(),
-  peekOwnProfileTier: () => 'bronze',
   peekOwnProfileCache: () => null,
   saveOwnProfileCache: vi.fn(),
   saveProfileByEmailCache: vi.fn(),
@@ -44,10 +41,9 @@ vi.mock('firebase/firestore/lite', () => ({
   setDoc: (...a: unknown[]) => setDocMock(...a),
   deleteField: () => '__del__',
   serverTimestamp: () => '__ts__',
-  writeBatch: () => ({ set: batchSetMock, commit: batchCommitMock }),
 }));
 
-import { ensureProfileByEmail, upsertProfileSocialReferences } from '../../src/model/repository/firebaseRepository';
+import { ensureProfileByEmail } from '../../src/model/repository/firebaseRepository';
 
 // Una sesión de Google con nombre real y correo: justo lo que NO debe acabar en el perfil público.
 const GOOGLE_USER = { uid: 'uid-1', email: 'nombre.real@example.com', displayName: 'Nombre Real', photoURL: '' };
@@ -61,7 +57,6 @@ function profileWrites() {
 beforeEach(() => {
   setDocMock.mockClear();
   getDocMock.mockClear();
-  batchSetMock.mockClear();
   getOwnProfileRefMock.mockClear();
   getOwnProfileRefMock.mockResolvedValue(null);
   findSocialProfileByEmailMock.mockClear();
@@ -73,7 +68,6 @@ describe('ensureProfileByEmail — el nombre público nunca es el correo', () =>
     await ensureProfileByEmail({
       user: GOOGLE_USER,
       socialGistId: 'social-222',
-      socialGistEtag: null,
       preferredName: '   ', // solo espacios: cuenta como vacío
     });
 
@@ -87,7 +81,6 @@ describe('ensureProfileByEmail — el nombre público nunca es el correo', () =>
     await expect(ensureProfileByEmail({
       user: { ...GOOGLE_USER, displayName: '' },
       socialGistId: 'social-222',
-      socialGistEtag: null,
     })).rejects.toThrow(/sin nombre público/);
 
     expect(profileWrites()).toHaveLength(0);
@@ -97,7 +90,6 @@ describe('ensureProfileByEmail — el nombre público nunca es el correo', () =>
     await ensureProfileByEmail({
       user: GOOGLE_USER,
       socialGistId: 'social-222',
-      socialGistEtag: null,
       preferredName: 'Nick',
     });
 
@@ -115,44 +107,7 @@ describe('ensureProfileByEmail — el nombre público nunca es el correo', () =>
     await expect(ensureProfileByEmail({
       user: GOOGLE_USER,
       socialGistId: 'social-222',
-      socialGistEtag: null,
     })).resolves.toMatchObject({ displayName: 'Nombre Real' });
   });
 });
 
-describe('upsertProfileSocialReferences — mismo criterio de nombre', () => {
-  it('sin nick usa el de Google; sin ninguno de los dos, lanza y no escribe', async () => {
-    await upsertProfileSocialReferences({
-      user: GOOGLE_USER,
-      socialGistId: 'social-222',
-      socialGistEtag: null,
-    });
-    const written = batchSetMock.mock.calls
-      .map((call) => call[1] as Record<string, unknown>)
-      .find((payload) => 'displayName' in payload);
-    expect(written).toMatchObject({ displayName: 'Nombre Real' });
-    expect(written?.displayName).not.toBe(GOOGLE_USER.email);
-
-    batchSetMock.mockClear();
-    await expect(upsertProfileSocialReferences({
-      user: { ...GOOGLE_USER, displayName: '' },
-      socialGistId: 'social-222',
-      socialGistEtag: null,
-    })).rejects.toThrow(/sin nombre público/);
-    expect(batchSetMock).not.toHaveBeenCalled();
-  });
-
-  it('con nick sí escribe, y el nombre público es el nick', async () => {
-    await upsertProfileSocialReferences({
-      user: GOOGLE_USER,
-      socialGistId: 'social-222',
-      socialGistEtag: null,
-      preferredName: 'Nick',
-    });
-
-    const profileBatch = batchSetMock.mock.calls
-      .map((call) => call[1] as Record<string, unknown>)
-      .find((payload) => 'displayName' in payload);
-    expect(profileBatch).toMatchObject({ displayName: 'Nick' });
-  });
-});

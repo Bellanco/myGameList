@@ -866,10 +866,10 @@ describe('el espejo — mapa de bits y lectura defensiva', () => {
     expect(parseMirror(list, NOW)).toHaveLength(MIRROR_ORDER.length);
   });
 
-  it('el documento que se escribiría lleva versión, sello y cadena', () => {
+  it('el documento que se escribiría lleva sello y cadena (la versión va dentro de la cadena)', () => {
     // La escritura sigue apagada (`ENABLE_ACHIEVEMENTS_PUBLISH`), pero la FORMA del documento se fija ya: es lo
     // que valida la regla de Firestore, y descubrirla mal el día del corte sería descubrirla en producción.
-    expect(buildMirror('2:AAAA', NOW)).toEqual({ v: 2, at: NOW, list: '2:AAAA' });
+    expect(buildMirror('2:AAAA', NOW)).toEqual({ at: NOW, list: '2:AAAA' });
   });
 
   it('el parser aguanta lo que le echen sin lanzar', () => {

@@ -761,6 +761,20 @@ describe('firestore.rules', () => {
         );
       });
 
+      // El sello tardío de `ensureProfileByEmail` (docs/plan-firestore-sin-sobrantes.md, Fase 3): hasta la 1.6.9 la
+      // foto, la vitrina y el resumen del año creaban el perfil sin fecha, y el alta ya no la ponía.
+      it('si el perfil existe sin fecha, el dueño puede sellarla después (merge de uid + createdAt)', async () => {
+        await seed('profiles', 'uid-a', { uid: 'uid-a', displayName: 'Ada', social: { enabled: true }, updatedAt: 1 });
+
+        await assertSucceeds(
+          setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a', createdAt: serverTimestamp() }, { merge: true }),
+        );
+        // Y una vez puesta, ese mismo sello repetido ya no pasa.
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a', createdAt: serverTimestamp() }, { merge: true }),
+        );
+      });
+
       it('una vez sellada, el dueño NO puede cambiarla ni borrarla', async () => {
         await seed('profiles', 'uid-a', { uid: 'uid-a', createdAt: 1000, social: { enabled: true } });
 
@@ -1110,7 +1124,7 @@ describe('firestore.rules', () => {
       requesterName: 'A',
       requesterPhoto: '',
     });
-    const deposito = () => ({ requester: 'uid-a', socialGistId: 'gsA', gamesGistId: 'ggA', updatedAt: 1 });
+    const deposito = () => ({ requester: 'uid-a', socialGistId: 'gsA', gamesGistId: 'ggA' });
     const aceptar = () => ({
       status: 'accepted', updatedAt: 2, recipientName: 'B', recipientPhoto: '', recipientSocialGistId: 'gsB', recipientGamesGistId: 'ggB',
     });
@@ -1137,6 +1151,8 @@ describe('firestore.rules', () => {
       await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'friendshipKeys', DOC_ID), deposito()));
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'friendshipKeys', DOC_ID), { ...deposito(), extra: 'x' }));
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'friendshipKeys', DOC_ID), { ...deposito(), socialGistId: 'x'.repeat(129) }));
+      // `updatedAt` ya no se escribe; el de un cliente 1.6.8 en caché se admite, pero con su tipo.
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'friendshipKeys', DOC_ID), { ...deposito(), updatedAt: 1 }));
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'friendshipKeys', DOC_ID), { ...deposito(), updatedAt: 'ayer' }));
       await seed('friendships', DOC_ID, { ...peticion(), status: 'accepted' });
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'friendshipKeys', DOC_ID), deposito()));

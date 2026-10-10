@@ -142,7 +142,6 @@ export interface FriendshipKeysDoc {
   requester: string;
   socialGistId: string;
   gamesGistId: string;
-  updatedAt: number;
 }
 
 /**

@@ -140,7 +140,6 @@ function user(overrides: Record<string, unknown> = {}) {
     profileId: 'p-ada',
     schemaVersion: 1,
     hasPhoto: false,
-    hasSocialEtag: true,
     createdAt: 1_690_000_000_000,
     estimatedFirstSeenAt: 0,
     lastFriendshipAt: 1_695_000_000_000,

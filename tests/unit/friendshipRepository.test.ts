@@ -13,8 +13,9 @@ const limitMock = vi.fn((value: number) => ({ limit: value }));
 // afirmaba sobre `updateDoc`, y `batchCommitMock` permite simular un lote que las reglas rechazan.
 const batchUpdateMock = vi.fn((..._args: unknown[]) => undefined);
 const batchSetMock = vi.fn((..._args: unknown[]) => undefined);
+const batchDeleteMock = vi.fn((..._args: unknown[]) => undefined);
 const batchCommitMock = vi.fn(() => Promise.resolve());
-const writeBatchMock = vi.fn(() => ({ update: batchUpdateMock, set: batchSetMock, commit: batchCommitMock }));
+const writeBatchMock = vi.fn(() => ({ update: batchUpdateMock, set: batchSetMock, delete: batchDeleteMock, commit: batchCommitMock }));
 
 vi.mock('../../src/model/repository/firebaseClient', () => ({
   initializeFirebaseServices: vi.fn(async () => ({ firestore: {} })),
@@ -106,6 +107,7 @@ function resetAll() {
   getDocMock.mockResolvedValue({ exists: () => false, data: () => undefined });
   batchUpdateMock.mockClear();
   batchSetMock.mockClear();
+  batchDeleteMock.mockClear();
   batchCommitMock.mockClear();
   batchCommitMock.mockImplementation(() => Promise.resolve());
   writeBatchMock.mockClear();
@@ -472,6 +474,35 @@ describe('ids de gist en una petición de amistad', () => {
     await healOwnFriendshipIdentity('me', { name: 'N', photo: 'p', socialGistId: 'gs', gamesGistId: 'gg' }, { force: true });
 
     expect(batchedOps()[0].fields).toMatchObject({ requesterSocialGistId: 'gs', requesterGamesGistId: 'gg' });
+  });
+
+  // Si quien aceptó usaba un cliente anterior al depósito, no lo recogió: al escribir yo mis ids, el depósito ya no lo
+  // va a leer nadie y se borra en el mismo lote (docs/plan-firestore-sin-sobrantes.md, Fase 4).
+  it('aceptada sin mis ids: borra mi depósito en el mismo lote', async () => {
+    getDocsMock.mockResolvedValueOnce(snapshot([{
+      id: 'me__x',
+      data: { users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'accepted', requesterName: 'N', requesterPhoto: 'p' },
+    }]));
+
+    await healOwnFriendshipIdentity('me', { name: 'N', photo: 'p', socialGistId: 'gs', gamesGistId: 'gg' }, { force: true });
+
+    const borrados = batchDeleteMock.mock.calls.map((call) => call[0] as { collection: string; id: string });
+    expect(borrados).toEqual([{ collection: 'friendshipKeys', id: 'me__x' }]);
+  });
+
+  it('con mis ids ya puestos (lo recogió quien aceptó), no toca el depósito', async () => {
+    getDocsMock.mockResolvedValueOnce(snapshot([{
+      id: 'me__x',
+      data: {
+        users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'accepted', requesterName: 'Viejo', requesterPhoto: 'p',
+        requesterSocialGistId: 'gs', requesterGamesGistId: 'gg',
+      },
+    }]));
+
+    await healOwnFriendshipIdentity('me', { name: 'N', photo: 'p', socialGistId: 'gs', gamesGistId: 'gg' }, { force: true });
+
+    expect(batchedOps()).toHaveLength(1);
+    expect(batchDeleteMock).not.toHaveBeenCalled();
   });
 
   it('la vista marca la amistad aceptada que pedí yo y aún no lleva mis ids', async () => {

@@ -28,7 +28,6 @@ vi.mock('../../src/model/repository/firebaseSocialRepository', () => ({
   })),
   invalidateOwnProfileCache: vi.fn(),
   invalidateSocialDirectoryCache: vi.fn(),
-  peekOwnProfileTier: () => 'bronze',
   peekOwnProfileCache: () => null,
   saveOwnProfileCache: vi.fn(),
   saveProfileByEmailCache: vi.fn(),
@@ -136,7 +135,6 @@ describe('ensureProfileByEmail · señal de regreso al reescribir el perfil', ()
     await ensureProfileByEmail({
       user: { uid: 'uid-1', email: 'yo@example.com', displayName: 'Yo', photoURL: null } as never,
       socialGistId: 'social-1',
-      socialGistEtag: null,
       preferredName: 'Nick nuevo',
       photoURL: '',
     });

@@ -20,7 +20,6 @@ vi.mock('../../src/model/repository/firebaseSocialRepository', () => ({
   invalidateOwnProfileCache: vi.fn(),
   invalidateSocialDirectoryCache: vi.fn(),
   invalidateProfileByEmailCache: vi.fn(),
-  peekOwnProfileTier: () => 'bronze',
   peekOwnProfileCache: () => null,
   saveOwnProfileCache: vi.fn(),
   saveProfileByEmailCache: vi.fn(),
@@ -104,7 +103,6 @@ describe('ensureProfileByEmail — orden de guardado y purga', () => {
       user: { uid: 'uid-1', email: 'yo@example.com', displayName: 'Yo', photoURL: '' },
       socialGistId: 'social-222',
       gamesGistId: 'games-111',
-      socialGistEtag: null,
       preferredName: 'Nick',
     });
 
@@ -138,7 +136,6 @@ describe('ensureProfileByEmail — perfil legacy bajo otro id', () => {
     const written = await ensureProfileByEmail({
       user: { uid: 'uid-1', email: 'yo@example.com', displayName: 'Yo', photoURL: '' },
       socialGistId: 'social-222',
-      socialGistEtag: null,
     });
 
     const destinos = setDocMock.mock.calls

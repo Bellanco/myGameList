@@ -607,7 +607,10 @@ service cloud.firestore {
           && request.resource.data.requester == request.auth.uid
           && request.resource.data.socialGistId is string && request.resource.data.socialGistId.size() <= 128
           && request.resource.data.gamesGistId is string && request.resource.data.gamesGistId.size() <= 128
-          && request.resource.data.updatedAt is number;
+          // `updatedAt` no lo lee nadie y el cliente ya no lo escribe (docs/plan-firestore-sin-sobrantes.md). Sigue
+          // admitido, opcional, mientras quede algún cliente 1.6.8 en caché que lo mande: un `hasOnly` que no cuadra
+          // le rechazaría el depósito entero.
+          && (!("updatedAt" in request.resource.data) || request.resource.data.updatedAt is number);
       }
 
       // El orden de la disyunción importa: la rama de quien pide es la que valida la consulta de la baja de cuenta
