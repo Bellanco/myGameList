@@ -11,7 +11,7 @@
 import { collection, doc, getDoc, getDocs, limit, orderBy, query, Timestamp, where } from 'firebase/firestore/lite';
 import type { PalmaresEntry } from '../types/premios';
 import { toMillis } from '../../core/utils/firestoreTime';
-import { DEFAULT_PROFILE_TIER, normalizeTier, type ProfileTier } from '../../core/constants/tiers';
+import { normalizeTier } from '../../core/constants/tiers';
 import {
   initializeFirebaseServices,
   isPermissionDeniedError,
@@ -187,16 +187,6 @@ function readOwnProfileCache(uid: string): SocialProfileReference | null | undef
   }
 
   return cached.value;
-}
-
-/**
- * Rango que ya se conocía del perfil propio, leído de la caché en memoria (sin red). Lo usan los caminos que
- * REESCRIBEN esa caché tras guardar el perfil: el `tier` no es suyo (lo asigna el admin y esas escrituras no lo
- * tocan), así que sembrar bronce a ciegas degradaría a un usuario de rango alto durante la vida de la caché.
- * Si no hay nada cacheado devuelve bronce, que es el valor por defecto real.
- */
-export function peekOwnProfileTier(uid: string): ProfileTier {
-  return ownProfileCacheByUid.get(uid.trim())?.value?.tier || DEFAULT_PROFILE_TIER;
 }
 
 /**

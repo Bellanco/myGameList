@@ -20,7 +20,6 @@ vi.mock('../../src/model/repository/firebaseSocialRepository', () => ({
   invalidateOwnProfileCache: vi.fn(),
   invalidateSocialDirectoryCache: vi.fn(),
   invalidateProfileByEmailCache: vi.fn(),
-  peekOwnProfileTier: () => 'bronze',
   peekOwnProfileCache: () => null,
   saveOwnProfileCache: vi.fn(),
   saveProfileByEmailCache: vi.fn(),
