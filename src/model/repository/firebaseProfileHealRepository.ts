@@ -218,7 +218,9 @@ async function startIdentityCutover(
       photoURL: legacy.photoURL,
       social: {
         enabled: legacy.socialEnabled,
-        etag: null,
+        // El ETag del gist social ya no se guarda (no lo lee nadie): si el documento apareciera entre medias con él,
+        // se va (docs/plan-firestore-sin-sobrantes.md).
+        etag: deleteField(),
       },
       updatedAt: serverTimestamp(),
       createdAt: serverTimestamp(),
@@ -353,7 +355,7 @@ export async function healOwnLegacyProfile(uid: string, email = '', sessionName 
       email: deleteField(), // audit-allow: deleteField() ELIMINA el email legacy, no lo escribe
       'social.gamesGistId': deleteField(),
       // El id del CANAL SOCIAL también sale del documento público. Faltaba: se purgaba por la otra vía
-      // (`upsertProfileSocialReferences`, al guardar el perfil), así que quien no volvía a guardarlo lo
+      // (`ensureProfileByEmail`, al guardar el perfil), así que quien no volvía a guardarlo lo
       // conservaba indefinidamente — y era justo lo que el cutover deposita aquí para que este saneado lo mueva.
       'social.gistId': deleteField(),
       'social.githubToken': deleteField(), // audit-allow: deleteField() ELIMINA el token en claro legacy, no lo almacena

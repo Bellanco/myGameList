@@ -54,7 +54,7 @@ vi.mock('firebase/firestore/lite', () => ({
   writeBatch: () => ({ set: vi.fn(), commit: vi.fn(async () => {}) }),
 }));
 
-const { ensureProfileByEmail, upsertProfileSocialReferences } = await import('../../src/model/repository/firebaseRepository');
+const { ensureProfileByEmail } = await import('../../src/model/repository/firebaseRepository');
 const { getOwnProfileRef, invalidateOwnProfileCache } = await import('../../src/model/repository/firebaseSocialRepository');
 
 const USER = { uid: 'uid-1', email: 'yo@example.com', displayName: 'Yo', photoURL: 'https://x/foto.png' };
@@ -66,7 +66,7 @@ beforeEach(() => {
 
 describe('caché del perfil propio tras guardarlo', () => {
   it('ensureProfileByEmail conserva la vitrina, el palmarés y la fecha de alta', async () => {
-    await ensureProfileByEmail({ user: USER, socialGistId: 's-1', socialGistEtag: null, preferredName: 'Otro nick' });
+    await ensureProfileByEmail({ user: USER, socialGistId: 's-1', preferredName: 'Otro nick' });
 
     const reads = getDocMock.mock.calls.length;
     const cached = await getOwnProfileRef('uid-1');
@@ -79,13 +79,5 @@ describe('caché del perfil propio tras guardarlo', () => {
       achievementsMirror: '2:ABCD',
       palmares: PROFILE_DOC.palmares,
     });
-  });
-
-  it('upsertProfileSocialReferences no deja en caché un perfil sin vitrina', async () => {
-    await upsertProfileSocialReferences({ user: USER, socialGistId: 's-1', socialGistEtag: null, preferredName: 'Nick' });
-
-    const cached = await getOwnProfileRef('uid-1');
-    expect(cached?.achievementsMirror).toBe('2:ABCD');
-    expect(cached?.createdAt).toBe(PROFILE_DOC.createdAt);
   });
 });

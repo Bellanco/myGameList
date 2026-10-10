@@ -69,9 +69,15 @@ function perfilAlDia(overrides: Record<string, unknown> = {}) {
   };
 }
 
-/** El latido de recencia también escribe en `profiles`, pero con una forma inconfundible: solo uid + updatedAt. */
+/**
+ * El latido de recencia también escribe en `profiles`, pero con una forma inconfundible: uid + updatedAt, y de paso el
+ * borrado del ETag que guardaban los perfiles antiguos (`social.etag`).
+ */
 function esLatido(payload: Record<string, unknown>): boolean {
-  return Boolean(payload) && Object.keys(payload).length === 2 && 'uid' in payload && 'updatedAt' in payload;
+  if (!payload || !('uid' in payload) || !('updatedAt' in payload)) return false;
+  const social = payload.social as Record<string, unknown> | undefined;
+  const extra = Object.keys(payload).filter((key) => key !== 'uid' && key !== 'updatedAt');
+  return extra.length === 0 || (extra.length === 1 && Boolean(social) && Object.keys(social!).join() === 'etag');
 }
 
 /** Guardados COMPLETOS del perfil (los que el chequeo de cambios debe evitar), sin contar el latido. */
@@ -92,7 +98,6 @@ async function guardar() {
     user: { uid: UID, email: 'yo@example.com', displayName: 'Yo', photoURL: 'https://x/foto.png' },
     socialGistId: SOCIAL_GIST,
     gamesGistId: 'games-111',
-    socialGistEtag: null,
     preferredName: 'Nick',
   });
 }

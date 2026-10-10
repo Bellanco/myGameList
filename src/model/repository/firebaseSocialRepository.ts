@@ -166,7 +166,7 @@ function readProfileByEmailCache(email: string): SocialProfileReference | null |
   return cached.value;
 }
 
-// Exportado para que la fachada (ensureProfileByEmail/upsertProfileSocialReferences) refresque la caché
+// Exportado para que la fachada (ensureProfileByEmail) refresque la caché
 // tras escribir el perfil, sin duplicar el estado de caché.
 export function saveProfileByEmailCache(email: string, value: SocialProfileReference | null): void {
   socialProfileByEmailCache.set(email, {

@@ -388,7 +388,8 @@ describe('healOwnLegacyProfile', () => {
       expect(written).toMatchObject({ uid: 'uid-a', displayName: 'Ada', schemaVersion: 1, profileId: 'pid-nuevo' });
       expect(written).not.toHaveProperty('email');
       expect(written).not.toHaveProperty('tier'); // las reglas prohíben al dueño estrenarse un rango
-      expect((written?.social as Record<string, unknown>)).toEqual({ enabled: true, etag: null });
+      // El ETag del gist social ya no se guarda: si el documento apareciera entre medias con él, se borra.
+      expect((written?.social as Record<string, unknown>)).toEqual({ enabled: true, etag: '__del__' });
       // `updatedAt` es obligatorio: el directorio ordena por él y excluye los documentos que no lo traen.
       expect(written).toHaveProperty('updatedAt', '__ts__');
 

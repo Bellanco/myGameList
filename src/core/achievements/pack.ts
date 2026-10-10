@@ -64,8 +64,11 @@ export const MIRROR_VERSION = 2;
  */
 export const MIRROR_ORDER: readonly string[] = MIRROR_IDS;
 
+/**
+ * La versión de la gramática NO va aparte: viaja al principio de `list` (`"2:…"`) y es lo único que mira
+ * `parseMirror`. El campo `v` que llevaban los espejos antiguos no lo leía nadie y se borra al republicar.
+ */
 export interface AchievementMirror {
-  v: number;
   at: number;
   list: string;
 }
@@ -222,7 +225,7 @@ export function packAchievements(states: readonly AchievementState[], featured: 
  * gramática lleva.
  */
 export function buildMirror(list: string, now: number): AchievementMirror {
-  return { v: MIRROR_VERSION, at: now, list };
+  return { at: now, list };
 }
 
 /**

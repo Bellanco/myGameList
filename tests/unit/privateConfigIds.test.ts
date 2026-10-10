@@ -104,7 +104,6 @@ describe('ensureProfileByEmail — orden de guardado y purga', () => {
       user: { uid: 'uid-1', email: 'yo@example.com', displayName: 'Yo', photoURL: '' },
       socialGistId: 'social-222',
       gamesGistId: 'games-111',
-      socialGistEtag: null,
       preferredName: 'Nick',
     });
 
@@ -138,7 +137,6 @@ describe('ensureProfileByEmail — perfil legacy bajo otro id', () => {
     const written = await ensureProfileByEmail({
       user: { uid: 'uid-1', email: 'yo@example.com', displayName: 'Yo', photoURL: '' },
       socialGistId: 'social-222',
-      socialGistEtag: null,
     });
 
     const destinos = setDocMock.mock.calls

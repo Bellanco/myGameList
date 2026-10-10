@@ -419,7 +419,7 @@ export async function sendFriendRequest(input: {
   if (self.socialGistId) {
     const batch = writeBatch(services.firestore);
     batch.set(ref, request);
-    batch.set(doc(services.firestore, FRIENDSHIP_KEYS_COLLECTION, ref.id), keysFor(myUid, self, now));
+    batch.set(doc(services.firestore, FRIENDSHIP_KEYS_COLLECTION, ref.id), keysFor(myUid, self));
     try {
       await batch.commit();
     } catch (error) {
@@ -475,8 +475,8 @@ export async function acceptFriendRequest(input: {
 }
 
 /** El depósito de mis ids para una petición mía (ver `FRIENDSHIP_KEYS_COLLECTION`). */
-function keysFor(myUid: string, self: FriendshipSelfInfo, now: number): FriendshipKeysDoc {
-  return { requester: myUid, socialGistId: self.socialGistId, gamesGistId: self.gamesGistId, updatedAt: now };
+function keysFor(myUid: string, self: FriendshipSelfInfo): FriendshipKeysDoc {
+  return { requester: myUid, socialGistId: self.socialGistId, gamesGistId: self.gamesGistId };
 }
 
 /**
@@ -806,12 +806,11 @@ async function writeOwnPendingKeys(
   if (!self.socialGistId || docIds.length === 0) {
     return;
   }
-  const now = Date.now();
   for (let index = 0; index < docIds.length; index += HEAL_BATCH_MAX_OPS) {
     const batch = writeBatch(firestore);
     docIds
       .slice(index, index + HEAL_BATCH_MAX_OPS)
-      .forEach((docId) => batch.set(doc(firestore, FRIENDSHIP_KEYS_COLLECTION, docId), keysFor(myUid, self, now)));
+      .forEach((docId) => batch.set(doc(firestore, FRIENDSHIP_KEYS_COLLECTION, docId), keysFor(myUid, self)));
     await batch.commit().catch(() => undefined);
   }
 }

@@ -1110,7 +1110,7 @@ describe('firestore.rules', () => {
       requesterName: 'A',
       requesterPhoto: '',
     });
-    const deposito = () => ({ requester: 'uid-a', socialGistId: 'gsA', gamesGistId: 'ggA', updatedAt: 1 });
+    const deposito = () => ({ requester: 'uid-a', socialGistId: 'gsA', gamesGistId: 'ggA' });
     const aceptar = () => ({
       status: 'accepted', updatedAt: 2, recipientName: 'B', recipientPhoto: '', recipientSocialGistId: 'gsB', recipientGamesGistId: 'ggB',
     });
@@ -1137,6 +1137,8 @@ describe('firestore.rules', () => {
       await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'friendshipKeys', DOC_ID), deposito()));
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'friendshipKeys', DOC_ID), { ...deposito(), extra: 'x' }));
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'friendshipKeys', DOC_ID), { ...deposito(), socialGistId: 'x'.repeat(129) }));
+      // `updatedAt` ya no se escribe; el de un cliente 1.6.8 en caché se admite, pero con su tipo.
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'friendshipKeys', DOC_ID), { ...deposito(), updatedAt: 1 }));
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'friendshipKeys', DOC_ID), { ...deposito(), updatedAt: 'ayer' }));
       await seed('friendships', DOC_ID, { ...peticion(), status: 'accepted' });
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'friendshipKeys', DOC_ID), deposito()));

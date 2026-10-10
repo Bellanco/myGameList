@@ -5,7 +5,7 @@
 //  - firebaseSocialRepository: directorio, índice público, recomendaciones (+ sus cachés).
 // Este fichero conserva el NÚCLEO de perfil/identidad/token y RE-EXPORTA la API pública para que ningún
 // consumidor cambie sus imports.
-import { deleteField, doc, getDoc, serverTimestamp, setDoc, writeBatch } from 'firebase/firestore/lite';
+import { deleteField, doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore/lite';
 import { decryptFromString, encryptToString } from '../../core/security/crypto';
 import { PUBLIC_NAME_MAX_LENGTH, safeTrim } from '../../core/security/sanitize';
 import { getLocalMeta, patchLocalMeta, seedProfileIdFromRemote } from './indexedDbRepository';
@@ -20,8 +20,6 @@ import {
   getOwnProfileRef,
   invalidateOwnProfileCache,
   invalidateSocialDirectoryCache,
-  peekOwnProfileCache,
-  peekOwnProfileTier,
   saveOwnProfileCache,
   invalidateProfileByEmailCache,
 } from './firebaseSocialRepository';
@@ -116,131 +114,6 @@ export async function resolveOwnProfile(user: { uid: string; email?: string }): 
   return email ? findSocialProfileByEmail(email) : null;
 }
 
-/**
- * Guarda referencia mínima de perfil en Firestore.
- * No lee ni elimina documentos de placeholder en colecciones sociales.
- */
-export async function upsertProfileSocialReferences(input: {
-  user: SocialAuthUser;
-  socialGistId: string;
-  gamesGistId?: string;
-  githubToken?: string;
-  socialGistEtag: string | null;
-  preferredName?: string;
-}): Promise<void> {
-  const services = await initializeFirebaseServices();
-  if (!services) {
-    throw new Error('Firebase no está configurado en este entorno');
-  }
-
-  // PRIVACIDAD: el nick es el del perfil social y, si no llega, el nombre de la cuenta de Google. El CORREO nunca:
-  // es el único de los tres que el usuario no ha elegido mostrar y que no querría ver publicado. Que el nick
-  // coincida con el nombre de Google es perfectamente normal (mucha gente se pone el suyo).
-  const profileName = resolvePublicName(input.preferredName, input.user.displayName);
-  if (!profileName) {
-    throw new Error('No se puede publicar un perfil social sin nombre público');
-  }
-  const profileId = await resolveStableProfileId(input.user.uid);
-  const gamesGistId = String(input.gamesGistId || '');
-
-  // ST11: el token se cifra ANTES de construir el batch (paso async). Si el cifrado falla, se guarda el resto
-  // sin token (best-effort) en vez de romper todo el guardado social.
-  let encryptedGithubToken: string | null = null;
-  if (input.githubToken) {
-    try {
-      encryptedGithubToken = await encryptToString(input.githubToken, input.user.uid);
-    } catch (error) {
-      console.warn('[firebase] No se pudo cifrar el token:', error instanceof Error ? error.message : error);
-    }
-  }
-
-  // ST11: una sola escritura ATÓMICA (1 RTT) agrupa profiles + privateConfig + userMap. Antes eran hasta 5 setDoc
-  // secuenciales (perfil, backup token, borrado token legacy, userMap, ids). Una operación por documento (sin dobles
-  // escrituras al mismo doc): el borrado del token legacy y las referencias van fusionados en sus respectivos set/merge.
-  const batch = writeBatch(services.firestore);
-
-  // L1: el doc público NO lleva `email` ni `social.gamesGistId` (los lee cualquier usuario autenticado). El email
-  // ya no se necesita para nada (el perfil propio se resuelve por uid) y el gist de juegos vive en `privateConfig`
-  // (abajo, en el mismo batch) y en el doc de amistad. `deleteField()` los purga de los perfiles ya existentes.
-  batch.set(
-    doc(services.firestore, 'profiles', input.user.uid),
-    {
-      schemaVersion: FIRESTORE_SCHEMA_VERSION,
-      uid: input.user.uid,
-      profileId,
-      email: deleteField(),
-      displayName: profileName,
-      photoURL: input.user.photoURL,
-      social: {
-        // El id del canal social YA NO se publica: lo lee cualquier usuario autenticado, y con él se puede leer
-        // el gist entero (un gist secreto no es privado). Vive en `privateConfig` (owner-only, abajo en este mismo
-        // batch) para su dueño, y denormalizado en los documentos de amistad para sus amistades, que son los
-        // únicos que necesitan leerlo. `deleteField()` lo purga de los perfiles que ya lo llevaban.
-        gistId: deleteField(),
-        gamesGistId: deleteField(),
-        etag: input.socialGistEtag,
-        enabled: true,
-        // Upgrade proactivo: al respaldar el token CIFRADO, borra el token en claro LEGACY del doc público.
-        ...(encryptedGithubToken ? { githubToken: deleteField() } : {}), // audit-allow: deleteField() ELIMINA el token legacy, no lo almacena
-      },
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true },
-  );
-
-  // B1/B2: privateConfig agrupa ids + token cifrado en una sola escritura (antes dos setDoc).
-  batch.set(
-    doc(services.firestore, 'privateConfig', input.user.uid),
-    {
-      schemaVersion: FIRESTORE_SCHEMA_VERSION,
-      profileId,
-      gamesGistId,
-      socialGistId: input.socialGistId,
-      ...(encryptedGithubToken ? { encryptedGithubToken } : {}),
-    },
-    { merge: true },
-  );
-
-  // userMap: mapa privado uid→profileId.
-  batch.set(
-    doc(services.firestore, 'userMap', input.user.uid),
-    { profileId, schemaVersion: FIRESTORE_SCHEMA_VERSION },
-    { merge: true },
-  );
-
-  await batch.commit();
-
-  // Este guardado no lee el documento, así que la vitrina, el palmarés y la fecha de alta solo se conocen si ya
-  // estaban en caché. Sin ellos no se cachea nada: una copia sin vitrina haría publicar la de este dispositivo como
-  // reemplazo (ver `ensureProfileByEmail`), y la siguiente lectura cuesta un `getDoc`.
-  const known = peekOwnProfileCache(input.user.uid);
-  if (!known) {
-    invalidateOwnProfileCache(input.user.uid);
-    return;
-  }
-  saveOwnProfileCache(input.user.uid, {
-    id: input.user.uid,
-    profileId,
-    // El documento se acaba de escribir con la versión vigente: sin esto, el saneado del arranque leería la caché,
-    // vería 0 y volvería a sellar un perfil que ya está al día.
-    schemaVersion: FIRESTORE_SCHEMA_VERSION,
-    email: '', // ya no vive en el documento
-    displayName: profileName,
-    photoURL: String(input.user.photoURL || ''),
-    socialGistId: input.socialGistId,
-    gamesGistId: String(input.gamesGistId || ''),
-    // El rango no lo escribe este camino (lo asigna el admin): se conserva el que ya se conocía en vez de
-    // sembrar bronce, que degradaría a un usuario de rango alto mientras viva la caché.
-    tier: peekOwnProfileTier(input.user.uid),
-    githubToken: String(input.githubToken || ''), // audit-allow: caché en MEMORIA (no Firestore); el token va cifrado a privateConfig
-    socialEnabled: true,
-    createdAt: known.createdAt,
-    achievementsMirror: known.achievementsMirror,
-    achievementsMirrorAt: known.achievementsMirrorAt,
-    palmares: known.palmares,
-  });
-}
-
 // ---------------------------------------------------------------------------
 // privateConfig/{uid} — solo lectura/escritura del dueño (ver firestore.rules destino).
 // Guarda ids de gist/chunks y el token de GitHub CIFRADO (recuperación tras reinstalar).
@@ -260,7 +133,9 @@ export async function setPrivateConfig(uid: string, config: Partial<FirestorePri
   if (!services) {
     throw new Error('Firebase no está configurado en este entorno');
   }
-  await setDoc(doc(services.firestore, 'privateConfig', uid), { ...config, schemaVersion: FIRESTORE_SCHEMA_VERSION }, { merge: true });
+  // Sin `schemaVersion`: no lo leía nadie (el de `profiles` sí, y se queda). El de los documentos antiguos se borra en
+  // la siguiente escritura (docs/plan-firestore-sin-sobrantes.md).
+  await setDoc(doc(services.firestore, 'privateConfig', uid), { ...config, schemaVersion: deleteField() }, { merge: true });
 }
 
 // ---------------------------------------------------------------------------
@@ -325,7 +200,14 @@ export async function setPublicConfig(uid: string, config: Partial<FirestorePubl
     throw new Error('Firebase no está configurado en este entorno');
   }
   try {
-    await setDoc(doc(services.firestore, 'publicConfig', uid), { ...config, schemaVersion: FIRESTORE_SCHEMA_VERSION }, { merge: true });
+    // Fuera lo que no lee nadie: `schemaVersion`, y la forma y el tamaño del listado, que desde el 20-09-2026 son del
+    // dispositivo y no se suben. Lo de los documentos antiguos se va en esta misma escritura
+    // (docs/plan-firestore-sin-sobrantes.md).
+    await setDoc(
+      doc(services.firestore, 'publicConfig', uid),
+      { ...config, schemaVersion: deleteField(), listShape: deleteField(), gridSize: deleteField() },
+      { merge: true },
+    );
   } finally {
     invalidatePublicConfigCache();
   }
@@ -480,7 +362,6 @@ export async function ensureProfileByEmail(input: {
   socialGistId: string;
   gamesGistId?: string;
   githubToken?: string;
-  socialGistEtag: string | null;
   preferredName?: string;
   // Foto a publicar en el doc público (la lee el directorio). '' la borra (opt-out de foto). Si se omite,
   // se conserva la de la sesión de Google (compatibilidad).
@@ -577,10 +458,13 @@ export async function ensureProfileByEmail(input: {
         displayName: profileName,
         photoURL: resolvedPhotoURL,
         social: {
-          // Ver la nota de `upsertProfileSocialReferences`: el id del canal deja de publicarse y se purga de los
-          // perfiles existentes. Sus amistades lo tienen denormalizado; su dueño, en `privateConfig`.
+          // El id del canal ya no se publica: con él cualquier usuario autenticado podría leer el gist entero (un
+          // gist secreto no es privado). Se purga de los perfiles que aún lo llevan. Sus amistades lo tienen
+          // denormalizado; su dueño, en `privateConfig`.
           gistId: deleteField(),
-          etag: input.socialGistEtag,
+          // El ETag del gist social tampoco: no lo leía nadie, ni el panel, y lo descargaba todo el que cargaba el
+          // directorio (docs/plan-firestore-sin-sobrantes.md).
+          etag: deleteField(),
           enabled: true,
           ...(canPurgeLegacyFields ? { gamesGistId: deleteField() } : {}),
         },
@@ -752,7 +636,9 @@ export async function publishAchievementMirror(uid: string, list: string): Promi
   if (!services) return;
   await setDoc(
     doc(services.firestore, 'profiles', uid),
-    { uid, achievements: buildMirror(list, Date.now()), updatedAt: serverTimestamp() },
+    // `v: deleteField()`: el `merge` funde el mapa campo a campo, así que la versión suelta que guardaban los espejos
+    // antiguos se quedaría para siempre si no se borra aquí (ver `AchievementMirror`).
+    { uid, achievements: { ...buildMirror(list, Date.now()), v: deleteField() }, updatedAt: serverTimestamp() },
     { merge: true },
   );
   invalidateOwnProfileCache(uid);
@@ -820,7 +706,9 @@ export async function touchOwnProfileActivity(uid: string): Promise<void> {
     // al publicar el perfil.
     if (!snap.exists()) return;
     const previous = (snap.data() as { updatedAt?: unknown } | undefined)?.updatedAt;
-    await setDoc(ref, { uid, updatedAt: serverTimestamp() }, { merge: true });
+    // De paso se va el ETag del gist social que guardaban los perfiles de antes: no lo lee nadie, y el latido es la
+    // única escritura que alcanza a quien no vuelve a guardar su perfil (docs/plan-firestore-sin-sobrantes.md).
+    await setDoc(ref, { uid, updatedAt: serverTimestamp(), social: { etag: deleteField() } }, { merge: true });
     // Después de la recencia, y no antes: quien relea el perfil por el sello tiene que encontrarlo ya despierto.
     await signalReturnIfAsleep(uid, previous);
   } catch {

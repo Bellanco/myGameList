@@ -79,7 +79,6 @@ async function publicar(overrides: Record<string, unknown> = {}) {
     socialGistId: 'social-222',
     gamesGistId: 'games-111',
     githubToken: 'ghp_token',
-    socialGistEtag: null,
     preferredName: 'Nick',
     ...overrides,
   });

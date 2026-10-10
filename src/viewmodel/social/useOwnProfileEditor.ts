@@ -411,7 +411,6 @@ export function useOwnProfileEditor({
         socialGistId: finalGistId,
         gamesGistId: mainSyncConfig?.gistId || '',
         githubToken: mainSyncConfig?.token || socialConfig.token, // audit-allow: ensureProfileByEmail lo cifra en privateConfig (B1)
-        socialGistEtag: finalEtag,
         preferredName: profile.name,
         // Publica la foto en el doc público (la lee el directorio); '' la borra si el usuario desactiva la foto o si
         // lo que tiene es el avatar genérico de Google.

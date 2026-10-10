@@ -46,7 +46,6 @@ vi.mock('../../src/model/repository/indexedDbRepository', () => ({
 import { publishAchievementMirror } from '../../src/model/repository/firebaseRepository';
 import {
   ACHIEVEMENTS_LIST_MAX,
-  MIRROR_VERSION,
   mergeForPublish,
   packAchievements,
   parseMirror,
@@ -77,9 +76,10 @@ describe('publicación del espejo de logros', () => {
     // puede llevárselos por delante.
     expect(options).toEqual({ merge: true });
 
-    const mirror = payload.achievements as { v: number; at: number; list: string };
+    const mirror = payload.achievements as { v: unknown; at: number; list: string };
     expect(mirror.list).toBe('2:AAAA~1.2');
-    expect(mirror.v).toBe(MIRROR_VERSION);
+    // La versión va dentro de `list`; la suelta de los espejos antiguos se borra al republicar.
+    expect(mirror.v).toBe('<<deleteField>>');
     expect(mirror.at).toBeGreaterThan(0);
     // `uid` lo exige la regla; `updatedAt` es de facto obligatorio o el perfil se cae de la consulta.
     expect(payload.uid).toBe('uid-1');
@@ -161,7 +161,7 @@ describe('el espejo publicado nunca encoge', () => {
   it('una fecha posterior a cuando ya estaba publicado sin fecha no entra', () => {
     const dia = (ms: number) => new Date(ms).toISOString().slice(0, 10);
     const publicadoEn = Date.UTC(2026, 5, 1);
-    const publicado = { v: MIRROR_VERSION, at: publicadoEn, list: packAchievements([estado('completados-10', 0)]) };
+    const publicado = { at: publicadoEn, list: packAchievements([estado('completados-10', 0)]) };
 
     const tarde = mergeForPublish(publicado, [estado('completados-10', Date.UTC(2026, 8, 28)), estado('horas-10', Date.UTC(2026, 8, 28))]);
     expect(parseMirror(tarde).find((item) => item.id === 'completados-10')?.unlockedAt).toBe(0);
