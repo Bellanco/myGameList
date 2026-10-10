@@ -28,6 +28,8 @@ const idbMocks = vi.hoisted(() => {
   };
 });
 vi.mock('../../src/model/repository/indexedDbRepository', () => idbMocks);
+// La puerta legal tiene su propio test (`socialPublishConsent.test.ts`); aquí se da por pasada.
+vi.mock('../../src/model/repository/socialConsentGate', () => ({ canPublishSocialInBackground: vi.fn(async () => true) }));
 
 // LA VENTANA DEL FEED, APAGADA. Estos tests fijan otras reglas del canal con sellos repartidos entre 2019 y 2023, que
 // ninguna ventana de 30 días contiene. La ventana tiene sus propios tests (ver «la ventana de 30 días»); aquí se

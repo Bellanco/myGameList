@@ -1,6 +1,6 @@
 # Plan: que el feed no parezca vacío cuando hay amistades activas
 
-> **Estado (10-10-2026): Fase 1 hecha en `develop` (sin push); Fases 2–6 pendientes.** Diagnóstico hecho leyendo
+> **Estado (10-10-2026): Fases 1 y 2 hechas en `develop` (sin push); Fases 3–6 pendientes.** Diagnóstico hecho leyendo
 > el código de `develop` (después de `4e178363`). Cada fase empieza escribiendo el test que demuestra el fallo.
 >
 > Fase 1, dónde quedó: `useSocialDirectory.ts` (`readToken`, `REJECTED_TOKEN`, `rejectedTokenRef`,
@@ -9,6 +9,12 @@
 > Tests: `socialDirectoryReadFailures.test.ts`, `SocialOffline.test.tsx`, `socialFriendshipEdges.test.ts`. Maqueta:
 > `feed-fallo`, `feed-fallo-parcial`, `feed-github`. El token de lectura es el PRINCIPAL (`readToken`), así que el
 > punto 5 no necesitó pasar por `resolveSocialChannel`. Se retiró `SOCIAL_UI.status.socialReadUnauthorized`.
+>
+> Fase 2, dónde quedó: `socialConsentGate.ts` (`canPublishSocialInBackground`, `sealLegalConsent`),
+> `LocalMeta.legalConsent`, `openSocialWrite({ requireConsent })` en `socialPublishRepository.ts` y el sellado al
+> aceptar en `useSocialLegalConsent.ts`. Test: `socialPublishConsent.test.ts`. Dos cambios sobre lo planeado: el hub
+> **no sella al comprobar** (era una escritura de IndexedDB más en cada apertura; la puerta sella lo que lee), y
+> **retirar una reseña no exige la aceptación** (es publicar menos).
 
 > ⚠️ **Documento vivo.** Si una línea no coincide con el código, manda el código: corrige esto en la misma pasada.
 
@@ -86,8 +92,8 @@ Requisito de la Fase 3, y arregla de paso que **la publicación de reseñas desd
 (`applyReviewPublication`, llamada desde `App.tsx`) **no comprueba hoy la aceptación vigente**.
 
 **Cambios.**
-1. **Versión aceptada en local**: `LocalMeta.legalConsentVersion` (con su fecha). Se sella cuando el hub la
-   verifica (`useSocialLegalConsent`, estado `accepted`) y al aceptar.
+1. **Versión aceptada en local**: `LocalMeta.legalConsent` (`uid`, versión y fecha). La sella la propia puerta con
+   lo que lee de Firestore, y el hub al aceptar.
 2. **`canPublishSocialInBackground(uid)`**: cierto solo si la versión sellada es `LEGAL_VERSION`. Sin sello, una
    lectura de `publicConfig/{uid}` como mucho al día. **Si la lectura falla, no se publica** (más estricto que el
    hub, que deja pasar con el estado `unknown`: publicar en segundo plano sin que la persona vea las condiciones es
@@ -95,8 +101,8 @@ Requisito de la Fase 3, y arregla de paso que **la publicación de reseñas desd
 3. Sin aceptación: **no sale nada**, ni la «última vez activo», ni reseñas, ni movimientos. Se marca
    `markPendingSocialActivity()` y, al aceptar en el hub, la reconciliación publica lo que falte (las reseñas
    todas; los movimientos, dentro de los 30 días).
-4. Se aplica a `publishReviewActivity` y `unpublishReviewActivity` cuando vienen de la app principal, y a la pasada
-   de la Fase 3.
+4. Se aplica a `publishReviewActivity` y a la pasada de la Fase 3. `unpublishReviewActivity` no la pide: retirar una
+   reseña es publicar menos, y bloquearlo dejaría a la vista algo que la persona quiere quitar.
 
 **Tests.** Unitario de la puerta (sellado, sin sello con lectura buena o fallida, versión vieja). Publicación de
 reseña con versión vieja → no escribe y deja la marca de pendiente.

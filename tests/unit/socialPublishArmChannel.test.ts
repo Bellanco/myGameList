@@ -26,6 +26,8 @@ const idbMocks = vi.hoisted(() => {
   };
 });
 vi.mock('../../src/model/repository/indexedDbRepository', () => idbMocks);
+// La puerta legal tiene su propio test (`socialPublishConsent.test.ts`); aquí se da por pasada.
+vi.mock('../../src/model/repository/socialConsentGate', () => ({ canPublishSocialInBackground: vi.fn(async () => true) }));
 
 import { publishReviewActivity } from '../../src/model/repository/socialPublishRepository';
 import { getSocialSyncConfig } from '../../src/model/repository/gistConfigRepository';

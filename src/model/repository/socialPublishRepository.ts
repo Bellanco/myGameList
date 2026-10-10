@@ -10,6 +10,7 @@ import { getSyncConfig } from './gistRepository';
 import { loadLocalState } from './localRepository';
 import { editPost, readSocialGist, remapSocialActorIds, removePost, removeReviewActivity, saveSocialSyncConfig, syncMoveActivity, upsertPost, upsertReviewActivity, writeSocialGist, type SocialGistData, type SocialPostEntry } from './socialGistRepository';
 import { markPendingSocialActivity } from './socialActivityReconcile';
+import { canPublishSocialInBackground } from './socialConsentGate';
 import { resolveSocialChannel, type SocialChannel } from './socialChannel';
 import { PostGoneError } from '../../core/social/postErrors';
 import { serializeSocialWrite } from './socialWriteQueue';
@@ -165,12 +166,21 @@ interface SocialWriteContext {
  */
 type SocialWriteGate =
   | { ok: true; ctx: SocialWriteContext }
-  | { ok: false; reason: 'no-session' | 'no-channel' };
+  | { ok: false; reason: 'no-session' | 'no-channel' | 'no-consent' };
 
-async function openSocialWrite(): Promise<SocialWriteGate> {
+/**
+ * `requireConsent`: la escritura NO viene del hub (la reseña guardada desde la app principal), así que nadie ha
+ * comprobado la aceptación de las condiciones vigentes; se exige aquí (`canPublishSocialInBackground`). Lo que sale
+ * del hub ya pasó por su puerta, y retirar una reseña es publicar menos: ninguno de los dos la pide.
+ */
+async function openSocialWrite(options: { requireConsent?: boolean } = {}): Promise<SocialWriteGate> {
   const authUser = await getCurrentSocialAuthUser();
   if (!authUser) {
     return { ok: false, reason: 'no-session' };
+  }
+
+  if (options.requireConsent && !(await canPublishSocialInBackground(authUser.uid))) {
+    return { ok: false, reason: 'no-consent' };
   }
 
   const socialConfig = await armSocialChannel(authUser.email);
@@ -250,10 +260,11 @@ async function syncPublicIdentity(ctx: SocialWriteContext, etag: string | null):
 
 /** Publica/actualiza la actividad social de una reseña. Sin canal social utilizable la deja como pendiente. */
 async function publishReviewActivityNow(input: { id: number; name: string; review: string; score: number; grade?: number | null; reviewChanged?: boolean }): Promise<void> {
-  const gate = await openSocialWrite();
+  const gate = await openSocialWrite({ requireConsent: true });
   if (!gate.ok) {
-    // Sin sesión se aplaza en silencio; sin canal no hay nada que aplazar (el hub lo resolverá al abrirse).
-    if (gate.reason === 'no-session') {
+    // Sin sesión, o sin la aceptación vigente, se aplaza en silencio: la reconciliación la publica cuando el hub se
+    // abra con la puerta legal pasada. Sin canal no hay nada que aplazar (el hub lo resolverá al abrirse).
+    if (gate.reason === 'no-session' || gate.reason === 'no-consent') {
       await markPendingSocialActivity();
     }
     return;
@@ -376,11 +387,14 @@ async function publishPostNow(input: { text: string; maxLength?: number }): Prom
 }
 
 /** El mismo aviso que `publishPost` cuando no hay canal: al usuario le acaba de fallar un botón que pulsó. */
-function postGateError(reason: 'no-session' | 'no-channel'): Error {
+function postGateError(reason: 'no-session' | 'no-channel' | 'no-consent'): Error {
   return new Error(
     reason === 'no-session'
       ? 'Inicia sesión con Google para publicar'
-      : 'No se pudo resolver tu canal social en este dispositivo',
+      // Las publicaciones salen del hub, que ya ha pasado su puerta legal: este caso no debería darse.
+      : reason === 'no-consent'
+        ? 'Acepta las condiciones vigentes del espacio social para publicar'
+        : 'No se pudo resolver tu canal social en este dispositivo',
   );
 }
 

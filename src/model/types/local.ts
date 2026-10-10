@@ -49,6 +49,14 @@ export interface LocalMeta {
   // corrección alcanza a los gists que tocó una versión anterior sin esperar a que caduque).
   activityReconcileVersion?: number;
   pendingSocialActivity?: boolean;
+  /**
+   * La versión de las condiciones que consta aceptada por esta cuenta, vista desde ESTE dispositivo, y cuándo se
+   * comprobó. Es la puerta de todo lo social que sale fuera del hub (`canPublishSocialInBackground`): el hub la
+   * comprueba al entrar, pero una reseña guardada desde la app principal no pasa por él. La sella el propio hub al
+   * comprobarla o al aceptar; sin ella, una lectura de `publicConfig` como mucho al día. Con el `uid`, porque el
+   * dispositivo puede cambiar de cuenta (docs/plan-feed-sin-vacio.md, Fase 2).
+   */
+  legalConsent?: { uid: string; version: string; checkedAt: number };
   // Último gist social ya propagado a MIS docs de amistad DESDE LA RUTA DE PUBLICACIÓN. Sigue vivo junto a
   // `friendshipIdentityFingerprint` porque acota una ruta que la huella no puede acotar: la publicación no sabe
   // descartar el monograma genérico de Google, así que se le fija a una pasada por id de gist para que no se
