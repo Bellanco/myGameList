@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es" data-palette="arcade" data-theme="dark" data-effects="on">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Game Clear por tema</title>
+    <!--
+      LOS GAME CLEAR, DE VERDAD (10-10-2026): las hojas reales de los temas y el hook real, con un botón que emite el
+      momento de cerrar un juego. Ver la cabecera de `game-clear.tsx`. Necesita el servidor de desarrollo.
+    -->
+    <style>
+      [hidden] { display: none !important; }
+      body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font-family: var(--font-body); }
+      .gc-barra { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border); }
+      .gc-temas { display: flex; flex-wrap: wrap; gap: 4px; }
+      .gc-barra button, .gc-barra select { font: 13px system-ui, sans-serif; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 99px; padding: 4px 10px; cursor: pointer; }
+      .gc-barra button[aria-pressed="true"] { border-color: var(--steam); color: var(--steam); }
+      .gc-mando { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; padding: 18px 16px 8px; }
+      .gc-play { font-size: 16px; padding: .6rem 1.2rem; }
+      .gc-lista { display: grid; gap: 8px; padding: 12px 16px; max-width: 900px; }
+      .gc-fila { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md, 8px); }
+      .gc-fila .row-name { flex: 1; font-weight: 600; }
+      .gc-estrellas { color: var(--star-full); letter-spacing: 1px; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/docs/maquetas/game-clear.tsx"></script>
+  </body>
+</html>
