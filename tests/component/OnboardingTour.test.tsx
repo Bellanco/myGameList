@@ -140,6 +140,8 @@ describe('guía de primeros pasos', () => {
     const hint: TourState = { ...offeredTour(), status: 'hint', mission: 'coop', single: true };
     const { rerender } = render(<OnboardingTour state={hint} ctx={{ ...CTX, path: '/social' }} />);
     const bubble = await screen.findByRole('dialog', { name: TOUR_UI.hints.coop.title }, { timeout: 3000 });
+    // Cuenta lo que se gana: sin lo social, «Diseño» y «Compartir» ni se ven, y esta es la única forma de saberlo.
+    for (const perk of TOUR_UI.perks) expect(bubble.textContent).toContain(perk.text);
     await userEvent.click(within(bubble).getByRole('button', { name: TOUR_UI.hints.yes }));
     expect(saved()).toMatchObject({ status: 'active', mission: 'coop', step: 0, single: true });
 
@@ -192,5 +194,37 @@ describe('guía de primeros pasos', () => {
     expect(await screen.findByRole('dialog', { name: TOUR_UI.premios.social.title }, { timeout: 3000 })).toBeTruthy();
     // No escribe la guía por su cuenta: eso lo hace `accept`, que es de los premios.
     expect(saved()).toBeNull();
+  });
+
+  /**
+   * «COMPARTIR» SIN LO SOCIAL: la burbuja señala el botón que se ha pulsado y dice por qué no se puede. «Enséñame»
+   * arranca solo el modo cooperativo y lleva a Social; «Ahora no» solo cierra, sin apuntar nada en la guía.
+   */
+  it('compartir sin lo social explica por qué y «Enséñame» arranca el modo cooperativo', async () => {
+    plantAnchor('share-review');
+    const close = vi.fn();
+    const goSocial = vi.fn();
+    const ctx = { ...CTX, path: '/stats/resenas/99', gameCount: 3 };
+    const { rerender } = render(<OnboardingTour state={null} ctx={ctx} shareInvite={{ close, goSocial }} />);
+    const bubble = await screen.findByRole('dialog', { name: TOUR_UI.share.title }, { timeout: 3000 });
+    await userEvent.click(within(bubble).getByRole('button', { name: TOUR_UI.share.no }));
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(goSocial).not.toHaveBeenCalled();
+    expect(saved()).toBeNull();
+
+    rerender(<OnboardingTour state={null} ctx={ctx} shareInvite={{ close, goSocial }} />);
+    await userEvent.click(within(bubble).getByRole('button', { name: TOUR_UI.share.yes }));
+    expect(saved()).toMatchObject({ status: 'active', mission: 'coop', step: 0, single: true });
+    expect(close).toHaveBeenCalledTimes(2);
+    expect(goSocial).toHaveBeenCalledTimes(1);
+  });
+
+  it('compartir sin lo social con la guía plegada a medias la lleva al modo cooperativo, sin perder lo hecho', async () => {
+    plantAnchor('share-review');
+    const paused: TourState = { ...offeredTour(), status: 'paused', mission: 'cloud', completed: ['first-game'] };
+    render(<OnboardingTour state={paused} ctx={{ ...CTX, path: '/stats/resenas/99', gameCount: 3 }} shareInvite={{ close: vi.fn(), goSocial: vi.fn() }} />);
+    const bubble = await screen.findByRole('dialog', { name: TOUR_UI.share.title }, { timeout: 3000 });
+    await userEvent.click(within(bubble).getByRole('button', { name: TOUR_UI.share.yes }));
+    expect(saved()).toMatchObject({ status: 'active', mission: 'coop', completed: ['first-game'], single: false });
   });
 });

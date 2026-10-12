@@ -15,8 +15,19 @@ import type { GameItem } from '../../../model/types/game';
  *
  * El estado del enlace se pide al abrir el detalle, no al arrancar la app: quien nunca comparte no hace ni una
  * petición.
+ *
+ * `onSocialInvite`: quien lo monta sabe enseñar por qué compartir es de lo social (la burbuja de la guía). Sin él,
+ * a quien no tiene lo social no se le ofrece nada.
  */
-export const ShareReviewButton = memo(function ShareReviewButton({ game, reviewText }: { game: GameItem; reviewText: string }) {
+export const ShareReviewButton = memo(function ShareReviewButton({
+  game,
+  reviewText,
+  onSocialInvite,
+}: {
+  game: GameItem;
+  reviewText: string;
+  onSocialInvite?: () => void;
+}) {
   const vm = useShareViewModel();
   const [open, setOpen] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState('');
@@ -87,14 +98,22 @@ export const ShareReviewButton = memo(function ShareReviewButton({ game, reviewT
   // desaparecer en silencio dejaba al usuario buscando un botón que no está —el síntoma que se reportó—, así que
   // se dice qué falta. Mismo tratamiento visual que el veto: un distintivo, no un botón que no lleva a nada.
   //
-  // Solo a quien YA usa el espacio social en este navegador (`hasSocialSpace`). Quien nunca lo ha abierto no está
-  // echando en falta ningún botón: para esa persona el aviso sería ruido en su panel de reseñas sobre algo que no
-  // ha pedido, así que sigue sin ver nada.
+  // A quien nunca ha abierto el espacio social (`hasSocialSpace` falso) un distintivo de «falta la sesión» le
+  // hablaría de algo que no conoce. A esa persona se le ofrece el botón de siempre, y al pulsarlo la guía le cuenta
+  // que compartir es de lo social y le ofrece el camino (12-10-2026): sin él, no había forma de saber que existía.
   if (vm.available === false) {
-    return vm.hasSocialSpace ? (
-      <span className="hub-feed-game-chip share-unavailable" title={SHARE_UI.signInRequiredHint}>
-        {SHARE_UI.signInRequired}
-      </span>
+    if (vm.hasSocialSpace) {
+      return (
+        <span className="hub-feed-game-chip share-unavailable" title={SHARE_UI.signInRequiredHint}>
+          {SHARE_UI.signInRequired}
+        </span>
+      );
+    }
+    return onSocialInvite ? (
+      <button className="btn btn-secondary" type="button" data-tour="share-review" onClick={onSocialInvite} aria-label={SHARE_UI.actionAria}>
+        <Icon name="share-nodes" />
+        <span>{SHARE_UI.action}</span>
+      </button>
     ) : null;
   }
 

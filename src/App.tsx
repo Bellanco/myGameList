@@ -953,9 +953,22 @@ export default function App() {
     ? (gameCount === 0 ? 'list' : 'social')
     : null;
   const [premiosInvite, setPremiosInvite] = useState<PremiosInvite | null>(null);
+  /**
+   * «COMPARTIR» PULSADO SIN LO SOCIAL, en el detalle de una reseña del panel (ver `ShareReviewButton`): la guía
+   * señala el botón y cuenta por qué. Se guarda la pantalla en la que se pulsó y no un sí o un no, para que la burbuja
+   * se vaya sola al cambiar de reseña o de sección sin tener que cerrarla en cada salida.
+   */
+  const [shareInvitePath, setShareInvitePath] = useState<string | null>(null);
+  const openShareInvite = useCallback(() => setShareInvitePath(window.location.pathname), []);
+  const shareInvite = useMemo(() => ({
+    close: () => setShareInvitePath(null),
+    goSocial: () => navigate('/social'),
+  }), [navigate]);
+  const shareInviteOpen = shareInvitePath === location.pathname;
   const tourMounted = spriteRestoListo
     && TOUR_SECTIONS.has(activeSection)
-    && ((tourState !== null && isTourVisible(tourState)) || reloginNeeded || (activeSection === 'premios' && premiosInvite !== null));
+    && ((tourState !== null && isTourVisible(tourState)) || reloginNeeded || shareInviteOpen
+      || (activeSection === 'premios' && premiosInvite !== null));
 
   const syncBadgeText = resolveSyncBadge(syncVm.status, syncVm.pendingUpload, syncVm.syncPaused);
 
@@ -1074,7 +1087,7 @@ export default function App() {
     stats: (
 
       <Suspense fallback={<ScreenSkeleton />}>
-        <StatsHub games={vm.data} />
+        <StatsHub games={vm.data} onSocialInvite={openShareInvite} />
       </Suspense>
     ),
     // LA PORRA. Ya no recibe la biblioteca: la cruzaba con los nominados para decir en cada tarjeta en qué lista
@@ -1339,6 +1352,7 @@ export default function App() {
               ctx={tourContext}
               relogin={reloginNeeded}
               premiosInvite={activeSection === 'premios' ? premiosInvite : null}
+              shareInvite={shareInviteOpen ? shareInvite : null}
             />
           </Suspense>
         </SilentBoundary>

@@ -161,6 +161,19 @@
   color: var(--text-muted);
 }
 
+/* Lo que se gana entrando en lo social: va antes del texto, que cierra con «son dos pasos». */
+.ob-perks {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 10px;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-md);
+  line-height: 1.35;
+}
+.ob-perks li { display: flex; align-items: flex-start; gap: 8px; }
+.ob-perks .ob-icon { margin-top: 2px; color: var(--steam); }
+
 .ob-icon {
   width: 18px;
   height: 18px;

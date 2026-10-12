@@ -51,7 +51,7 @@ function reviewIdFrom(pathname: string): number {
  * escritura. La única lectura extra es el histórico mensual del backlog, que vive en el meta local porque no se
  * puede deducir de los datos.
  */
-export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
+export const StatsHub = memo(function StatsHub({ games, onSocialInvite }: { games: TabData; onSocialInvite?: () => void }) {
   const vm = useStatsViewModel(games);
   // Con la pestaña de deseos escondida en Ajustes, su apartado tampoco sale: sería hablar de una lista que no ves.
   const { showWishlist } = useShowWishlist();
@@ -150,6 +150,7 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
         onOpenReview={openReviewFromList}
         onBackToList={backFromReview}
         backLabel={reviewBackLabel}
+        onSocialInvite={onSocialInvite}
       />
     );
   }

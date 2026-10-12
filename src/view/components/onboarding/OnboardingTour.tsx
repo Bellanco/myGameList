@@ -2,7 +2,7 @@ import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type Keyb
 import { createPortal } from 'react-dom';
 import { TOUR_UI, type StepText } from '../../../core/constants/onboardingLabels';
 import { MISSION_IDS, type MissionId, type TourState } from '../../../core/onboarding/tourState';
-import type { PremiosInvite } from '../../../core/onboarding/joinFromPremios';
+import { joinFromPremios, type PremiosInvite } from '../../../core/onboarding/joinFromPremios';
 import {
   MISSIONS,
   advanceStep,
@@ -37,6 +37,18 @@ export interface OnboardingTourProps {
    * callan con la guía en pantalla; aquí solo se pinta.
    */
   premiosInvite?: PremiosInvite | null;
+  /**
+   * Se ha pulsado «Compartir» en una reseña sin tener lo social (ver `ShareInviteBubble`). Cuándo sale lo decide
+   * quien la monta; aquí se pinta y, al aceptar, se pone en marcha la misión.
+   */
+  shareInvite?: ShareInvite | null;
+}
+
+export interface ShareInvite {
+  /** Cierra la burbuja, se acepte o no. */
+  close: () => void;
+  /** Lleva a Social, donde empieza la misión. */
+  goSocial: () => void;
 }
 
 /* ── Iconos ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -49,6 +61,8 @@ const PATHS = {
   pad: 'M6 12h4M8 10v4M15 13h.01M18 11h.01M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z',
   cloud: 'M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z',
   users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
+  share: 'M18 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6zM6 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6zM18 16a3 3 0 1 1 0 6 3 3 0 0 1 0-6zM8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98',
+  palette: 'M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.65-.75 1.65-1.69 0-.44-.18-.84-.44-1.13-.29-.29-.44-.65-.44-1.13a1.64 1.64 0 0 1 1.67-1.67h2c3.05 0 5.55-2.5 5.55-5.55C21.97 6.01 17.46 2 12 2zM13.5 6.5h.01M17.5 10.5h.01M8.5 7.5h.01M6.5 12.5h.01',
   library: 'm16 6 4 14M12 6v14M8 8v12M4 4v16',
   lock: 'M5 11h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2zM7 11V7a5 5 0 0 1 10 0v4',
   trophy: 'M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2Z',
@@ -67,6 +81,23 @@ function TourIcon({ name, className = 'ob-icon' }: { name: IconName; className?:
 }
 
 const MISSION_ICON: Record<MissionId, IconName> = { 'first-game': 'pad', cloud: 'cloud', library: 'library', coop: 'users' };
+
+type PerkId = (typeof TOUR_UI.perks)[number]['id'];
+const PERK_ICON: Record<PerkId, IconName> = { friends: 'users', share: 'share', design: 'palette', profile: 'trophy' };
+
+/** Lo que se gana entrando en lo social (ver `TOUR_UI.perks`). */
+function PerkList() {
+  return (
+    <ul className="ob-perks">
+      {TOUR_UI.perks.map((perk) => (
+        <li key={perk.id}>
+          <TourIcon name={PERK_ICON[perk.id]} className="ob-icon ob-icon-sm" />
+          <span>{perk.text}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 /* ── Acciones ─────────────────────────────────────────────────────────────────────────────────────────────── */
 
@@ -153,7 +184,7 @@ function insideFixed(element: Element): boolean {
  * El velo NO bloquea: deja pasar los toques a lo que hay debajo. La guía acompaña, no obliga, y quien quiere ir a
  * otro sitio puede; al llegar, la guía le sigue (`pickStep`).
  */
-export function OnboardingTour({ state, ctx, relogin = false, premiosInvite = null }: OnboardingTourProps) {
+export function OnboardingTour({ state, ctx, relogin = false, premiosInvite = null, shareInvite = null }: OnboardingTourProps) {
   const dialogOpen = useDialogOpen();
   const mission = state?.status === 'active' && state.mission ? MISSIONS[state.mission] : null;
   const settled = mission && state ? settleStep(mission, state.step, ctx) : state?.step ?? 0;
@@ -181,6 +212,9 @@ export function OnboardingTour({ state, ctx, relogin = false, premiosInvite = nu
   if (!dialogOpen && relogin) {
     view = <ReloginBubble ctx={ctx} />;
     announce = TOUR_UI.relogin.title;
+  } else if (!dialogOpen && shareInvite) {
+    view = <ShareInviteBubble invite={shareInvite} state={state} />;
+    announce = TOUR_UI.share.title;
   } else if (!dialogOpen && premiosInvite) {
     view = <PremiosInviteBubble invite={premiosInvite} />;
     announce = TOUR_UI.premios[premiosInvite.kind].title;
@@ -484,6 +518,7 @@ function HintBubble({ state, ctx }: { state: TourState; ctx: TourContext }) {
         </button>
       </div>
       <h2 className="ob-title" id={titleId}>{H[mission].title}</h2>
+      {'perks' in H[mission] ? <PerkList /> : null}
       <p className="ob-text">{H[mission].text}</p>
       <div className="ob-foot ob-foot-split ob-foot-even">
         <button type="button" className="btn btn-quiet" onClick={decline}>{H.no}</button>
@@ -521,10 +556,55 @@ function PremiosInviteBubble({ invite }: { invite: PremiosInvite }) {
         </button>
       </div>
       <h2 className="ob-title" id={titleId}>{P[invite.kind].title}</h2>
+      {'perks' in P[invite.kind] ? <PerkList /> : null}
       <p className="ob-text">{P[invite.kind].text}</p>
       <div className="ob-foot ob-foot-split ob-foot-even">
         <button type="button" className="btn btn-quiet" onClick={invite.dismiss}>{P.no}</button>
         <button type="button" className="btn btn-primary" onClick={invite.accept}>{P.yes}</button>
+      </div>
+    </AnchoredBubble>
+  );
+}
+
+/* ── «Compartir» sin lo social ──────────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * QUIEN PULSA «COMPARTIR» EN UNA RESEÑA SIN TENER LO SOCIAL: la burbuja señala el propio botón y dice por qué no
+ * se puede. «Enséñame» pone en marcha SOLO el modo cooperativo, como la invitación de los premios, y le lleva a
+ * Social; con una guía ya en marcha no la pisa entera: se cambia a esa misión, que es lo que acaba de pedir.
+ */
+function ShareInviteBubble({ invite, state }: { invite: ShareInvite; state: TourState | null }) {
+  const titleId = useId();
+  const S = TOUR_UI.share;
+  const accept = () => {
+    const next = joinFromPremios(state, 'social') ?? (state ? chooseMission(state, 'coop') : null);
+    if (next) saveTourState(next);
+    invite.close();
+    invite.goSocial();
+  };
+  return (
+    <AnchoredBubble
+      anchorKey="share-invite"
+      anchor='[data-tour="share-review"]'
+      labelledBy={titleId}
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape') return;
+        event.stopPropagation();
+        invite.close();
+      }}
+    >
+      <div className="ob-kicker">
+        <TourIcon name="lock" className="ob-icon ob-icon-sm" />
+        <span>{S.kicker}</span>
+        <button type="button" className="ob-close" aria-label={TOUR_UI.buttons.close} title={TOUR_UI.buttons.close} onClick={invite.close}>
+          <TourIcon name="close" />
+        </button>
+      </div>
+      <h2 className="ob-title" id={titleId}>{S.title}</h2>
+      <p className="ob-text">{S.text}</p>
+      <div className="ob-foot ob-foot-split ob-foot-even">
+        <button type="button" className="btn btn-quiet" onClick={invite.close}>{S.no}</button>
+        <button type="button" className="btn btn-primary" onClick={accept}>{S.yes}</button>
       </div>
     </AnchoredBubble>
   );

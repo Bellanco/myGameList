@@ -65,6 +65,8 @@ interface StatsReviewsProps {
    * Sin rótulo, el de por defecto de `ReviewDetailHead`: «Volver a las reseñas».
    */
   backLabel?: string;
+  /** «Compartir» pulsado sin tener lo social: que la guía cuente por qué (ver `ShareReviewButton`). */
+  onSocialInvite?: () => void;
 }
 
 /**
@@ -78,7 +80,7 @@ interface StatsReviewsProps {
  * Va por ruta propia y no enlazando al hub social porque tus reseñas son tuyas: enlazar allí las habría dejado
  * detrás del asistente de configuración del espacio social para quien no lo tenga montado.
  */
-export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, onOpenReview, onBackToList, backLabel }: StatsReviewsProps) {
+export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, onOpenReview, onBackToList, backLabel, onSocialInvite }: StatsReviewsProps) {
   const reviews = useMemo(() => collectReviews(games), [games]);
   const open = gameId > 0 ? reviews.find((entry) => entry.id === gameId) : undefined;
 
@@ -163,7 +165,7 @@ export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, 
         statusKind=""
         // El botón de compartir solo aparece aquí, sobre TUS reseñas. La misma pantalla se usa en el hub social
         // para las de otras personas, y allí no se pasa nada.
-        actions={<ShareReviewButton game={game} reviewText={open.reviewText} />}
+        actions={<ShareReviewButton game={game} reviewText={open.reviewText} onSocialInvite={onSocialInvite} />}
         // Análisis sugeridos: los tuyos, relacionados por juego, saga o género. Salen de las listas que ya están
         // en memoria, sin tocar el canal social —esta pantalla funciona sin tenerlo montado— y abren dentro del
         // panel, no en el hub.

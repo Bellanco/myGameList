@@ -5,6 +5,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Changed
+- **La invitación a lo social cuenta lo que se gana.** El «¿Quieres entrar en la parte social?» y la invitación de
+  los premios enumeran las ventajas: ver a qué juegan tus amigos y leer sus reseñas, compartir tus reseñas con un
+  enlace, elegir tema y escala de nota, y el perfil con logros y publicaciones. Sin lo social, «Diseño» y
+  «Compartir» ni se ven, así que hasta ahora no había forma de saber que existían.
+- **«Compartir» sale también sin lo social.** En el detalle de una reseña de Estadísticas, quien no tiene espacio
+  social ve el botón; al pulsarlo, la guía le explica que compartir con enlace es de la parte social y con
+  «Enséñame» le lleva a Social con el modo cooperativo en marcha.
+
 ### Internal
 - **La auditoría de dependencias de desarrollo vuelve a 0.** Las once vulnerabilidades venían todas de
   `firebase-tools` (chokidar 3 → braces, pubsub → `@opentelemetry/core` 1, proxy-agent → `basic-ftp` 5, gaxios 6 →

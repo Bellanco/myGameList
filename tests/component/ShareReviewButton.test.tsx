@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { GameItem } from '../../src/model/types/game';
 import type { ShareViewModel } from '../../src/viewmodel/useShareViewModel';
 
@@ -82,9 +83,22 @@ describe('ShareReviewButton — cuando no se puede compartir', () => {
     expect(screen.queryByRole('button', { name: SHARE_UI.actionAria })).not.toBeInTheDocument();
   });
 
-  it('a quien nunca ha abierto el espacio social no le dice nada', () => {
-    // Esa persona no echa en falta ningún botón: el aviso sería ruido en su panel de reseñas sobre algo que no ha
-    // pedido. Sin espacio social en este navegador, el componente sigue callado.
+  it('a quien nunca ha abierto el espacio social le ofrece el botón, y pulsarlo pide que se le explique', async () => {
+    // Sin el botón no había forma de saber que compartir existe (12-10-2026). Al pulsarlo no se abre el diálogo de
+    // publicar —sin identidad acabaría en un 401—: quien lo monta pide a la guía que cuente por qué.
+    withViewModel({ available: false, hasSocialSpace: false });
+    const onSocialInvite = vi.fn();
+    render(<ShareReviewButton game={game} reviewText="Enorme de principio a fin" onSocialInvite={onSocialInvite} />);
+
+    const button = screen.getByRole('button', { name: SHARE_UI.actionAria });
+    expect(button).toHaveAttribute('data-tour', 'share-review');
+    await userEvent.click(button);
+    expect(onSocialInvite).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByText(SHARE_UI.signInRequired)).not.toBeInTheDocument();
+  });
+
+  it('sin quien explique por qué, a quien nunca ha abierto el espacio social no le ofrece nada', () => {
     withViewModel({ available: false, hasSocialSpace: false });
     const { container } = render(<ShareReviewButton game={game} reviewText="Enorme de principio a fin" />);
 
