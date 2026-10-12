@@ -17,7 +17,7 @@ const gatewayMocks = vi.hoisted(() => ({
 }));
 vi.mock('../../src/model/repository/firebaseGateway', () => gatewayMocks);
 
-const ROTULO = 'Escenas al empezar y cerrar un juego';
+const ROTULO = 'Animaciones al cambiar de lista';
 
 /** Monta la casilla con una sesión cuyo perfil tiene este rango. */
 const conRango = async (tier: string) => {
