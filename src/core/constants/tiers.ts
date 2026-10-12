@@ -129,6 +129,26 @@ export function hasPostLengthLimit(tier: ProfileTier): boolean {
   return canPublishPosts(tier) && PROFILE_TIER_POST_MAX_LENGTH[tier] < POST_HARD_CEILING;
 }
 
+/**
+ * LAS ESCENAS DE EMPEZAR Y CERRAR UN JUEGO (decisión del usuario, 12-10-2026): qué rangos ven su casilla en Diseño.
+ * Bronce no: a quien no la tiene no se le enseña ni la casilla, y nada en pantalla dice por qué (los rangos no se
+ * nombran ante quien no administra).
+ *
+ * Como la cadencia del feed, lo aplica el cliente y no es exigible: quien manipule su copia puede encenderla, y lo
+ * único que consigue es una animación en su propia pantalla.
+ */
+export const PROFILE_TIER_GAME_SCENES: Record<ProfileTier, boolean> = {
+  bronze: false,
+  silver: true,
+  gold: true,
+  mithril: true,
+};
+
+/** ¿Este rango puede encender las escenas de empezar y cerrar un juego? */
+export function canUseGameScenes(tier: ProfileTier): boolean {
+  return PROFILE_TIER_GAME_SCENES[tier];
+}
+
 export const PROFILE_TIER_LABELS: Record<ProfileTier, string> = {
   bronze: 'Bronce',
   silver: 'Plata',

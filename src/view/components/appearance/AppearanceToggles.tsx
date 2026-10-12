@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useEffect } from 'react';
 import { APPEARANCE_UI } from '../../../core/constants/labels';
 import { useTheme } from '../../hooks/useTheme';
 import { useUppercase } from '../../hooks/useUppercase';
@@ -6,13 +6,15 @@ import { useShowSteamButton } from '../../hooks/useShowSteamButton';
 import { useEffects } from '../../hooks/useEffects';
 import { useCovers } from '../../hooks/useCovers';
 import { useGameScenes } from '../../hooks/useGameScenes';
+import { useOwnTier } from '../../../viewmodel/useOwnTier';
+import { canUseGameScenes } from '../../../core/constants/tiers';
 import { useShowWishlist } from '../../hooks/useShowWishlist';
 
 const A = APPEARANCE_UI;
 
 /**
  * LAS SIETE PREFERENCIAS DE DOS RESPUESTAS: claro u oscuro, versales o no, el botón de Steam Deck, los efectos,
- * las escenas de empezar y cerrar un juego, las carátulas y la pestaña de la lista de deseos. Todas viven en este dispositivo (`localStorage`) y solo se copian a la nube si hay sesión,
+ * las escenas de empezar y cerrar un juego (de plata para arriba), las carátulas y la pestaña de la lista de deseos. Todas viven en este dispositivo (`localStorage`) y solo se copian a la nube si hay sesión,
  * así que ninguna depende de tener cuenta.
  *
  * Cada una va en su caja: puestas en fila, cinco rótulos con su par de botones se leían como una tira de diez
@@ -25,6 +27,15 @@ export const AppearanceToggles = memo(function AppearanceToggles() {
   const { effects, setEffects } = useEffects();
   const { covers, setCovers } = useCovers();
   const { gameScenes, setGameScenes } = useGameScenes();
+  // Las escenas son de plata para arriba (`PROFILE_TIER_GAME_SCENES`). Mientras no se sabe el rango no se pinta la
+  // casilla: enseñarla y quitarla al llegar la respuesta sería peor que esperar.
+  const ownTier = useOwnTier();
+  const scenesAllowed = ownTier !== null && canUseGameScenes(ownTier);
+  // Quien las encendió y ya no tiene el rango las pierde aquí, al entrar en Diseño: sin la casilla no podría
+  // apagarlas. Se apagan con la preferencia, así que viaja a sus otros aparatos.
+  useEffect(() => {
+    if (ownTier !== null && !canUseGameScenes(ownTier) && gameScenes) setGameScenes(false);
+  }, [ownTier, gameScenes, setGameScenes]);
   const { showWishlist, setShowWishlist } = useShowWishlist();
 
   return (
@@ -122,7 +133,8 @@ export const AppearanceToggles = memo(function AppearanceToggles() {
       </div>
 
       {/* Las escenas de empezar y cerrar un juego. Van detrás de los efectos porque cuelgan de ellos: con los
-          efectos apagados no salen aunque estén encendidas. */}
+          efectos apagados no salen aunque estén encendidas. Solo de plata para arriba, y sin decir por qué. */}
+      {scenesAllowed && (
       <div className="appearance-field">
       <p className="settings-card-sub">{A.gameScenesLabel}</p>
       <div className="theme-mode-row" role="group" aria-label={A.gameScenesAria}>
@@ -144,6 +156,7 @@ export const AppearanceToggles = memo(function AppearanceToggles() {
         </button>
       </div>
       </div>
+      )}
 
       {/* Carátulas. Lleva explicación y las demás no, a propósito: es la única de esta pantalla que hace que
           salgan peticiones a la red, así que quien la enciende tiene que saber qué está encendiendo. */}

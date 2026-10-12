@@ -221,7 +221,8 @@ export const coversPreference = createPreferenceStore<boolean>({
  * el `'on'` explícito.
  *
  * Cuelgan además de los efectos visuales: con los efectos apagados (o con el sistema pidiendo menos movimiento)
- * no salen aunque estén encendidas. Viajan con la cuenta, como el resto de la apariencia.
+ * no salen aunque estén encendidas. Viajan con la cuenta, como el resto de la apariencia. La casilla solo la ve
+ * plata para arriba (`PROFILE_TIER_GAME_SCENES`), y Diseño las apaga a quien ya no tiene el rango.
  */
 export const gameScenesPreference = createPreferenceStore<boolean>({
   key: GAME_SCENES_KEY,
