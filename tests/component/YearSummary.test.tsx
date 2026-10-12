@@ -202,6 +202,23 @@ describe('lo que más valoró, y lo que le chirrió', () => {
   });
 });
 
+describe('YearSummary — juego del año', () => {
+  it('sin carátulas no hay caja: ni con la preferencia apagada ni sin acceso', () => {
+    const { container } = render(<YearSummary summary={summary} voice={voice} />);
+    expect(container.querySelector('.ys-boxart')).toBeNull();
+    cleanup();
+    localStorage.setItem('mis-listas-covers', 'on');
+    const sinAcceso = render(<YearSummary summary={summary} voice={voice} coverAccess={false} />);
+    expect(sinAcceso.container.querySelector('.ys-boxart')).toBeNull();
+  });
+
+  it('con carátula, la caja lleva la imagen', () => {
+    localStorage.setItem('mis-listas-covers', 'on');
+    const { container } = render(<YearSummary summary={summary} voice={voice} />);
+    expect(container.querySelector('.ys-boxart.has-cover')).not.toBeNull();
+  });
+});
+
 describe('YearSummary — el que se comparte por enlace', () => {
   it('sin cita no dice «Sin reseña»: la cita se queda fuera a propósito, no es que no la haya', () => {
     render(<YearSummary summary={summary} voice={voice} quotes={false} />);

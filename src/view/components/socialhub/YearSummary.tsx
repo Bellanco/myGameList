@@ -248,10 +248,14 @@ export const YearSummary = memo(function YearSummary({ summary, voice, coverAcce
       icon: ICONS.best,
       kicker: L.best.kicker,
       body: (
-        <div className="ys-two">
-          <div className={`ys-boxart ${cover ? 'has-cover' : ''}`.trim()} style={cover ? ({ '--ys-cover': `url("${cover}")` } as CSSProperties) : undefined}>
-            <span>{best.name}</span>
-          </div>
+        // Sin carátula —preferencia apagada, o la página pública sin cuenta social— no hay caja: un hueco con el
+        // nombre repetía el título de al lado y se leía como una imagen que no ha cargado.
+        <div className={cover ? 'ys-two' : undefined}>
+          {cover ? (
+            <div className="ys-boxart has-cover" style={{ '--ys-cover': `url("${cover}")` } as CSSProperties}>
+              <span>{best.name}</span>
+            </div>
+          ) : null}
           <div>
             <h4 className="ys-title">{best.name}</h4>
             <div className="ys-meta">
