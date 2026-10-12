@@ -29,8 +29,12 @@ import { ENABLE_ACHIEVEMENTS } from '../../../core/achievements/flags';
 const FriendStats = lazy(() => import('../stats/FriendStats').then((m) => ({ default: m.FriendStats })));
 /** El resumen del año, perezoso por lo mismo: su marcado y su hoja solo hacen falta al abrirlo. */
 const YearSummary = lazy(() => import('./YearSummary').then((m) => ({ default: m.YearSummary })));
+// Compartir tu resumen solo existe en temporada: fuera de ella, ni se descarga.
+const YearSummaryShare = lazy(() => import('./YearSummaryShare').then((m) => ({ default: m.YearSummaryShare })));
 import { YEAR_SUMMARY_UI } from '../../../core/constants/yearSummaryLabels';
 import { buildYearSummary, summaryYear } from '../../../core/stats/yearSummary';
+import { isShareSeason } from '../../../core/stats/summaryYear';
+import { publicYearSummary } from '../../../core/stats/publicYearSummary';
 import { withFinishedOn, type FinishedGame } from '../../../core/utils/finishDates';
 import type { ProfileTier } from '../../../core/constants/tiers';
 import { DEFAULT_PROFILE_TIER } from '../../../core/constants/tiers';
@@ -207,6 +211,7 @@ function SocialProfileDetailScreenBase({
   viewerPending,
   viewerWished,
   openSummaryOnMount = false,
+  yearSummarySignal,
 }: {
   SOCIAL_UI: SocialUiLabels;
   activeProfileDetail: SocialProfileDetail | null;
@@ -326,6 +331,18 @@ function SocialProfileDetailScreenBase({
     );
     return buildYearSummary({ completed: theirs, year, precision: isAdmin ? 'day' : 'month', viewerCompleted: viewerCompleted ?? [], viewerPending, viewerWished, palmares });
   }, [activeProfileDetail, canSeeFullProfile, isOwnProfile, palmares, viewerCompleted, viewerHiddenTabs, viewerIsAdmin, viewerPending, viewerWished]);
+
+  /**
+   * Lo que publicaría el enlace de TU resumen: solo en tu perfil, con el resumen abierto y en temporada. Se calcula
+   * aparte con precisión de MES, y no recortando el de arriba: con el día, «el primero que terminaste» puede ser
+   * otro juego que con el mes, y el enlace tiene que contar lo mismo que ven tus amistades.
+   */
+  const shareableSummary = useMemo(() => {
+    if (!isOwnProfile || !showSummary || !yearSummary || !isShareSeason()) return null;
+    const own = viewerCompleted ?? ((activeProfileDetail?.sharedLists?.c || []) as GameItem[]);
+    const monthly = buildYearSummary({ completed: withFinishedOn(own, 'month'), year: yearSummary.year, precision: 'month', palmares });
+    return monthly ? publicYearSummary(monthly) : null;
+  }, [activeProfileDetail, isOwnProfile, palmares, showSummary, viewerCompleted, yearSummary]);
 
 
   // Fecha de PUBLICACIÓN por juego, tomada de la actividad social del perfil: es la misma que muestra el feed.
@@ -705,6 +722,7 @@ function SocialProfileDetailScreenBase({
               <div className="hub-metadata-section">
                 <strong>{YEAR_SUMMARY_UI.title(yearSummary.year)}</strong>
                 <Suspense fallback={null}>
+                  {shareableSummary ? <YearSummaryShare year={shareableSummary.year} summary={shareableSummary} signal={yearSummarySignal} /> : null}
                   <YearSummary summary={yearSummary} voice={{ own: isOwnProfile, name: activeProfileDetail.displayName }} />
                 </Suspense>
               </div>

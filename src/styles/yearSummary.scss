@@ -529,3 +529,68 @@
   .ys-collage { transition: opacity .5s ease; }
 }
 
+
+/* ══ COMPARTIR TU RESUMEN (del 15 de diciembre al 15 de enero) ════════════════════════════════════════════════
+   Encima del resumen y plegado de entrada. Solo fichas y los botones por función de la casa: cada tema lo viste
+   sin un selector con su nombre. */
+.ys-share-toggle {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 1rem;
+}
+
+.ys-share {
+  display: grid;
+  gap: .7rem;
+  margin: 0 0 1.1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.ys-share-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+}
+
+.ys-share-title {
+  margin: 0;
+  font: 800 1.1rem / 1.2 var(--font-display);
+}
+
+.ys-share-text {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: .92rem;
+}
+
+.ys-share-done {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.ys-share-error {
+  color: var(--danger);
+}
+
+.ys-share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+}
+
+.ys-share-link {
+  display: grid;
+  gap: .55rem;
+}
+
+.ys-share-url {
+  flex: 1 1 16rem;
+  min-width: 0;
+  font: inherit;
+}
