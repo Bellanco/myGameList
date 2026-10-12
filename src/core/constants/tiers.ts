@@ -172,6 +172,18 @@ export const PROFILE_TIER_SHARE_MAX_ACTIVE: Record<ProfileTier, number> = {
   mithril: 50,
 };
 
+/**
+ * Días de espera entre dos actualizaciones del enlace del RESUMEN DEL AÑO, por rango (decisión del usuario,
+ * 12-10-2026; ver docs/plan-resumen-del-ano.md). Actualizar reescribe el mismo artículo, así que lo que protege es
+ * el cupo de escrituras de KV, no el número de enlaces. Lo aplica la Function; el cliente solo enseña la fecha, y
+ * nunca el rango (los rangos no se nombran ante quien no administra).
+ */
+export const PROFILE_TIER_YEAR_SHARE_UPDATE_DAYS: Record<ProfileTier, number> = {
+  bronze: 5,
+  silver: 3,
+  gold: 2,
+  mithril: 1,
+};
 
 /** Techos absolutos: ningún ajuste individual puede superar lo que da el rango más alto. */
 export const SHARE_TTL_DAYS_CEILING = PROFILE_TIER_SHARE_TTL_DAYS.mithril;
