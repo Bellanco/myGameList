@@ -27,7 +27,7 @@ const QUE_HACE: Record<PaletteId, string> = {
   portal: 'La terminal de GLaDOS.',
   cyberpunk: 'El protocolo de brecha.',
   seaofstars: 'La ventana de «¡Victoria!».',
-  grimdark: 'El estandarte imperial que baja y ondea: «Deber cumplido».',
+  grimdark: 'El sello de pureza con sus tiras de pergamino: «Deber cumplido».',
 };
 
 /** Qué hace al EMPEZAR un juego. */

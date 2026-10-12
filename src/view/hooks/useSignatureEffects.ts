@@ -21,7 +21,7 @@ import { gameScenesPreference } from './preferences';
  *    «contrato cerrado» con las coronas de la recompensa saltando (Plata y acero); «objetivo cumplido» en letras
  *    recortadas estampado sobre una franja negra (Ladrones de corazones); la pantalla de récord (Inserte moneda); la
  *    terminal de GLaDOS (Cámara de pruebas); el protocolo de brecha (Sin futuro); la ventana de «¡Victoria!» (Sol y
- *    luna), y el estandarte imperial que baja y ondea (Solo hay guerra). Elegidos con la maqueta de los Game Clear
+ *    luna), y el sello de pureza con sus tiras de pergamino (Solo hay guerra). Elegidos con la maqueta de los Game Clear
  *    (10-10-2026); Ladrones y Solo hay guerra eran un sello común hasta el 12-10-2026.
  *  - EMPEZAR UN JUEGO (pasa a En curso) → la puerta redonda de Bolsón Cerrado (No puedes pasar); el atardecer synthwave
  *    con «STAGE 1» (Inserte moneda); la franja de «nuevo contrato» con el cartel de la tabla (Plata y acero); la
@@ -346,16 +346,36 @@ export function useSignatureEffects(): void {
     };
 
     /**
-     * Solo hay guerra, al cerrar: el estandarte. La tela granate con ribete de oro baja con su asta, ondea, las borlas
-     * se balancean y se queda quieta con el águila (la máscara `seals/aquila.svg` del tema), «Deber cumplido» en
-     * gótica y «AVE IMPERATOR».
+     * Solo hay guerra, al cerrar: el sello de pureza. El lacre rojo con el águila en relieve (la máscara
+     * `seals/aquila.svg` del tema) cae y se aplasta, y de él se desenrollan tres tiras de pergamino escritas que se
+     * mecen y se paran; debajo, «Deber cumplido» en gótica. El borde de la cera se derrama en ondas que salen de un
+     * azar con semilla: torcido, pero siempre el mismo. Se calcula una vez.
      */
-    const estandarteImperial = (): HTMLElement =>
+    const CERA = (() => {
+      let semilla = 5;
+      const azar = (): number => ((semilla = (semilla * 16807) % 2147483647) - 1) / 2147483646;
+      const n = 22;
+      const puntos = Array.from({ length: n }, (_, i) => {
+        const a = (Math.PI * 2 * i) / n;
+        const r = 50 + (azar() - 0.5) * 7 + (i % 5 === 0 ? 4 : 0);
+        return [60 + Math.cos(a) * r, 60 + Math.sin(a) * r];
+      });
+      let d = `M${puntos[0][0].toFixed(1)} ${puntos[0][1].toFixed(1)}`;
+      for (let i = 0; i < n; i++) {
+        const [qx, qy] = puntos[i];
+        const [px, py] = puntos[(i + 1) % n];
+        d += ` Q${((qx + px) / 2 + (azar() - 0.5) * 4).toFixed(1)} ${((qy + py) / 2 + (azar() - 0.5) * 4).toFixed(1)} ${px.toFixed(1)} ${py.toFixed(1)}`;
+      }
+      return `${d}Z`;
+    })();
+    const selloDePureza = (): HTMLElement =>
       escena(
-        'fx-grim-est',
-        '<span class="fx-grim-est-pieza"><span class="fx-grim-est-asta"></span><span class="fx-grim-est-tela">' +
-          '<span class="fx-grim-est-aquila"></span><b>Deber<br>cumplido</b><small>AVE IMPERATOR</small></span>' +
-          '<i class="fx-grim-est-borla is-izq"></i><i class="fx-grim-est-borla is-der"></i></span>',
+        'fx-grim-pureza',
+        '<span class="fx-grim-pureza-pieza"><span class="fx-grim-pureza-tiras">' +
+          '<i style="--g:-11deg;--h:122px;--d:.5s"></i><i style="--g:1deg;--h:158px;--d:.62s"></i><i style="--g:10deg;--h:104px;--d:.74s"></i></span>' +
+          `<span class="fx-grim-pureza-cera"><svg viewBox="0 0 120 120" aria-hidden="true"><path class="is-cera" d="${CERA}"/>` +
+          '<circle class="is-anillo" cx="60" cy="60" r="38"/><ellipse class="is-brillo" cx="42" cy="34" rx="13" ry="6" transform="rotate(-30 42 34)"/></svg>' +
+          '<span class="fx-grim-pureza-aquila"></span></span></span><b>Deber cumplido</b>',
       );
 
     // ── Las escenas de EMPEZAR un juego (12-10-2026), elegidas con la maqueta de propuestas. ──
@@ -561,7 +581,7 @@ export function useSignatureEffects(): void {
         if (fxRef.current('witcher')) spawn(contratoCerrado(), 3400);
         else if (fxRef.current('tierramedia')) spawn(juegoTerminado(), 3200);
         else if (fxRef.current('persona')) spawn(objetivoCumplido(), 2150);
-        else if (fxRef.current('grimdark')) spawn(estandarteImperial(), 2800);
+        else if (fxRef.current('grimdark')) spawn(selloDePureza(), 2800);
         else if (fxRef.current('arcade')) spawn(pantallaDeRecord(), 2600);
         else if (fxRef.current('portal')) spawn(terminalGlados(), 2600);
         else if (fxRef.current('cyberpunk')) spawn(protocoloDeBrecha(), 2400);

@@ -394,61 +394,57 @@
 /* Preferencia de efectos OFF: detén el PARPADEO CRT (la textura de scanlines/vignette se conserva). */
 :root:not([data-effects="on"])[data-palette="grimdark"] body::before { animation: none !important; }
 
-/* ══ MOMENTOS · EL ESTANDARTE al cerrar un juego (12-10-2026). Era el lacre imperial, el sello común de
+/* ══ MOMENTOS · EL SELLO DE PUREZA al cerrar un juego (12-10-2026). Era el lacre imperial, el sello común de
    `_effects.scss` con una placa de esquinas cortadas y un escudo al azar, y pasó a escena propia con la maqueta de
-   propuestas: un estandarte de tela granate con ribete de oro baja con su asta, ondea, las borlas se balancean y se
-   queda quieto con el águila (la misma máscara que el feed, `seals/aquila.svg`: no añade descarga), «Deber
-   cumplido» en la gótica del tema y «AVE IMPERATOR». Es un objeto: la tela y el oro no cambian con el modo. La
-   guarda de efectos la pone el hook. ══ */
-:root[data-palette="grimdark"] .fx-grim-est {
+   propuestas: el lacre rojo cae y se aplasta, con el águila en relieve (la misma máscara que el feed,
+   `seals/aquila.svg`: no añade descarga), y de él se desenrollan tres tiras de pergamino escritas que se mecen y se
+   paran. Debajo, «Deber cumplido» en la gótica del tema. La cera y el pergamino son objetos: solo cambian de tono
+   con el modo. La guarda de efectos la pone el hook. ══ */
+:root[data-palette="grimdark"] .fx-grim-pureza { --grim-papel: #e6d8b3; --grim-tinta: #2a2116; --grim-rotulo: #e0a92b; }
+:root[data-palette="grimdark"][data-theme="light"] .fx-grim-pureza { --grim-papel: #f6edd4; --grim-rotulo: #8a5f0e; }
+:root[data-palette="grimdark"] .fx-grim-pureza {
   position: fixed; inset: 0; z-index: 9997; pointer-events: none;
-  display: grid; place-items: center;
-  background: radial-gradient(ellipse 60% 66% at 50% 50%, color-mix(in srgb, var(--bg) 85%, transparent) 40%, transparent 75%);
-  animation: grim-est-vida 2.8s forwards;
+  display: grid; place-content: center; justify-items: center; gap: .6rem;
+  background: radial-gradient(ellipse 60% 66% at 50% 50%, color-mix(in srgb, var(--bg) 90%, transparent) 45%, transparent 78%);
+  animation: grim-pureza-vida 2.8s forwards;
 }
-:root[data-palette="grimdark"] .fx-grim-est-pieza {
-  position: relative; width: 210px; height: 290px;
-  transform: translateY(-140%); animation: grim-est-baja .6s .1s cubic-bezier(.3, 1.25, .5, 1) forwards;
+:root[data-palette="grimdark"] .fx-grim-pureza-pieza { position: relative; width: 170px; height: 236px; }
+:root[data-palette="grimdark"] .fx-grim-pureza-cera {
+  position: absolute; left: 50%; top: 0; width: 132px; height: 132px; margin-left: -66px; color: #6d0f0c;
+  transform: scale(1.9); opacity: 0; animation: grim-pureza-cae .5s .1s cubic-bezier(.3, 1.4, .5, 1) forwards;
 }
-:root[data-palette="grimdark"] .fx-grim-est-asta {
-  position: absolute; left: 0; right: 0; top: 0; height: 9px; border-radius: 5px;
-  background: linear-gradient(#f3cd68, #a77a22); box-shadow: 0 2px 3px rgba(0, 0, 0, .4);
-}
-:root[data-palette="grimdark"] .fx-grim-est-asta::before,
-:root[data-palette="grimdark"] .fx-grim-est-asta::after {
-  content: ""; position: absolute; top: -4px; width: 16px; height: 16px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #fff0b0, #c3922e 60%, #7a5410);
-}
-:root[data-palette="grimdark"] .fx-grim-est-asta::before { left: -10px; }
-:root[data-palette="grimdark"] .fx-grim-est-asta::after { right: -10px; }
-/* La tela: pliegues verticales, doble ribete de oro con `box-shadow` y la cola de golondrina con `clip-path`. */
-:root[data-palette="grimdark"] .fx-grim-est-tela {
-  position: absolute; left: 14px; right: 14px; top: 7px; bottom: 0; transform-origin: 50% 0;
-  display: grid; justify-items: center; align-content: start; gap: 10px; padding-top: 28px; text-align: center; color: #e2b54e;
-  background: repeating-linear-gradient(90deg, rgba(0, 0, 0, .16) 0 8px, rgba(255, 255, 255, .04) 14px 22px, rgba(0, 0, 0, .12) 30px 36px), #5c0f0e;
-  box-shadow: inset 0 0 0 3px #5c0f0e, inset 0 0 0 5px #c3922e, inset 0 0 0 9px #5c0f0e, inset 0 0 0 10px rgba(195, 146, 46, .6);
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 86%, 0 100%);
-  animation: grim-est-ondea 1.6s .55s ease-in-out forwards;
-}
-:root[data-palette="grimdark"] .fx-grim-est-aquila {
-  width: 120px; height: 52px; background: currentColor;
+:root[data-palette="grimdark"] .fx-grim-pureza-cera svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 6px 6px rgba(0, 0, 0, .45)); }
+:root[data-palette="grimdark"] .fx-grim-pureza-cera .is-cera { fill: #9c1c17; }
+:root[data-palette="grimdark"] .fx-grim-pureza-cera .is-anillo { fill: none; stroke: #74120e; stroke-width: 3; }
+:root[data-palette="grimdark"] .fx-grim-pureza-cera .is-brillo { fill: #fff; opacity: .16; }
+/* El águila en relieve: hundida en un tono más oscuro de la cera, con el canto de luz debajo. */
+:root[data-palette="grimdark"] .fx-grim-pureza-aquila {
+  position: absolute; left: 50%; top: 50%; width: 84px; height: 36px; margin: -18px 0 0 -42px;
+  background: currentColor; filter: drop-shadow(0 1px 0 rgba(255, 140, 120, .45));
   -webkit-mask: url('./seals/aquila.svg') center / contain no-repeat;
   mask: url('./seals/aquila.svg') center / contain no-repeat;
 }
-:root[data-palette="grimdark"] .fx-grim-est-tela b { font: 700 34px/1 'UnifrakturCook', var(--font-display); }
-:root[data-palette="grimdark"] .fx-grim-est-tela small { font: 600 10px var(--font-body); letter-spacing: .3em; opacity: .85; }
-:root[data-palette="grimdark"] .fx-grim-est-borla {
-  position: absolute; bottom: -14px; width: 6px; height: 22px; border-radius: 0 0 3px 3px;
-  background: linear-gradient(#e2b54e, #8a6118); transform-origin: 50% 0;
-  animation: grim-est-borla 1.6s .55s ease-in-out forwards;
+:root[data-palette="grimdark"] .fx-grim-pureza-tiras { position: absolute; left: 0; right: 0; top: 70px; display: flex; justify-content: center; gap: 2px; }
+:root[data-palette="grimdark"] .fx-grim-pureza-tiras i {
+  width: 46px; height: var(--h); transform-origin: 50% 0; transform: rotate(var(--g)) scaleY(0);
+  /* La letra menuda de la plegaria: renglones de tinta cortados en «palabras» por huecos del color del papel. */
+  background:
+    repeating-linear-gradient(90deg, var(--grim-papel) 0 2px, transparent 2px 9px, var(--grim-papel) 9px 11px, transparent 11px 21px, var(--grim-papel) 21px 24px, transparent 24px 30px) 7px 56px / calc(100% - 14px) calc(100% - 74px) no-repeat,
+    repeating-linear-gradient(180deg, transparent 0 7px, color-mix(in srgb, var(--grim-tinta) 70%, transparent) 7px 8.5px) 7px 56px / calc(100% - 14px) calc(100% - 74px) no-repeat,
+    var(--grim-papel);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 12px), 0 100%);
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .3));
+  animation: grim-pureza-tira .45s var(--d) cubic-bezier(.3, .8, .4, 1) forwards, grim-pureza-mece 1.2s calc(var(--d) + .45s) ease-in-out forwards;
 }
-:root[data-palette="grimdark"] .fx-grim-est-borla::before { content: ""; position: absolute; top: -5px; left: -2px; width: 10px; height: 8px; border-radius: 50%; background: #c3922e; }
-:root[data-palette="grimdark"] .fx-grim-est-borla.is-izq { left: 16px; }
-:root[data-palette="grimdark"] .fx-grim-est-borla.is-der { right: 16px; }
-@keyframes grim-est-vida { 0% { opacity: 0; } 4%, 88% { opacity: 1; } 100% { opacity: 0; } }
-@keyframes grim-est-baja { to { transform: none; } }
-@keyframes grim-est-ondea { 25% { transform: skewX(4deg); } 55% { transform: skewX(-2.5deg); } 80% { transform: skewX(1deg); } 100% { transform: none; } }
-@keyframes grim-est-borla { 25% { transform: rotate(-12deg); } 55% { transform: rotate(8deg); } 80% { transform: rotate(-3deg); } 100% { transform: none; } }
+:root[data-palette="grimdark"] .fx-grim-pureza b {
+  font: 700 clamp(30px, 7vw, 46px)/1 'UnifrakturCook', var(--font-display); color: var(--grim-rotulo);
+  opacity: 0; transform: translateY(6px); animation: grim-pureza-sube .5s 1.15s ease-out forwards;
+}
+@keyframes grim-pureza-vida { 0% { opacity: 0; } 4%, 88% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes grim-pureza-cae { 0% { opacity: 0; } 55% { opacity: 1; transform: scale(.94, .9); } 100% { opacity: 1; transform: none; } }
+@keyframes grim-pureza-tira { to { transform: rotate(var(--g)) scaleY(1); } }
+@keyframes grim-pureza-mece { 30% { transform: rotate(calc(var(--g) + 3deg)); } 65% { transform: rotate(calc(var(--g) - 1.5deg)); } 100% { transform: rotate(var(--g)); } }
+@keyframes grim-pureza-sube { to { opacity: 1; transform: none; } }
 
 /* ── §12 · Panel "Perfil": lectura de cogitador. La rampa de los repartos va del FÓSFORO VERDE al ORO
    imperial, los datos brillan como un tubo de rayos catódicos y las cifras se leen en VT323, igual que el

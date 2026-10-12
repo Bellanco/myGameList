@@ -33,8 +33,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   GLaDOS se quedan solas, y el atardecer y el cartel pasan a la escena de empezar.
 - **Ladrones de corazones y Solo hay guerra estrenan escena al cerrar un juego.** En vez del sello que caía en el
   centro y se iba en menos de un segundo: «Objetivo cumplido» se estampa sobre una franja negra, las letras
-  recortadas saltan una a una y cae «Tesoro robado» (Ladrones de corazones), y un estandarte imperial baja, ondea y
-  se queda quieto con el águila y «Deber cumplido» (Solo hay guerra).
+  recortadas saltan una a una y cae «Tesoro robado» (Ladrones de corazones), y cae un sello de pureza con el águila
+  en relieve del que se desenrollan tiras de pergamino, con «Deber cumplido» debajo (Solo hay guerra).
 
 ### Fixed
 - **El número de juegos de la ficha de un perfil contaba solo los cargados.** La lista va de 15 en 15 al bajar, y al
