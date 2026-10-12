@@ -28,8 +28,8 @@ describe('rangos de perfil', () => {
     expect(new Set(ttls).size).toBe(PROFILE_TIERS.length); // sin empates: cada rango se nota
   });
 
-  it('las cadencias acordadas: 30 / 15 / 10 min y mithril con suelo de 60 s', () => {
-    expect(PROFILE_TIER_FEED_TTL_MS.silver).toBe(15 * 60 * 1000);
+  it('las cadencias acordadas: 30 / 20 / 10 min y mithril con suelo de 60 s', () => {
+    expect(PROFILE_TIER_FEED_TTL_MS.silver).toBe(20 * 60 * 1000);
     expect(PROFILE_TIER_FEED_TTL_MS.gold).toBe(10 * 60 * 1000);
     // El suelo de mithril lo fija el RATE-LIMIT de GitHub, no el gusto: cada hidratación son ~51 peticiones
     // (1 Firestore + hasta 50 gists de amigos) contra un cupo de 5.000/hora que se comparte con el sync de la

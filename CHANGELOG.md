@@ -5,6 +5,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-12
+
+Una versión para **sentirse leído**: «Me gusta» en lo que escriben tus amigos, los textos legales en lenguaje claro,
+volver al espacio social solo con Google y una escena de cada tema al empezar y al cerrar un juego.
+
 ### Added
 - **«Me gusta» en las reseñas y publicaciones de tus amigos**, en el feed, en el detalle de una reseña y en las
   reseñas que abres desde la pestaña «Reseñas» de un perfil. Un solo botón, con un pulgar, y debajo quién: «A
@@ -35,6 +40,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   puerta del espacio social hablan de tú, con frases cortas y sin contar cómo funciona la app por dentro. Dicen lo
   mismo que antes, más los «me gusta»: por eso **la versión legal sube a 2026-10-12b** y todo el mundo vuelve a
   aceptar al entrar en el espacio social.
+- **El feed de plata relee los gists de sus amistades cada 20 minutos** (antes, 15). Bronce sigue en 30, oro en 10 y
+  mithril en 1.
 - **Inserte moneda y Cámara de pruebas ya no sortean al cerrar un juego**: la pantalla de récord y la terminal de
   GLaDOS se quedan solas, y el atardecer y el cartel pasan a la escena de empezar.
 - **Ladrones de corazones y Solo hay guerra estrenan escena al cerrar un juego.** En vez del sello que caía en el
