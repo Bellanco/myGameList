@@ -115,6 +115,9 @@ En la práctica:
   - No llama a `syncPublicIdentity`.
   - La puerta legal es `canPublishSocialInBackground`, sellada en local: cero lecturas de Firestore en el caso normal.
   - El canal se resuelve en local si ya hay gist.
+- **La cola lleva dueño** (`LocalMeta.pendingReactionsUid`, añadido el 12-10-2026 al repasar el plan). La cola vive
+  en el dispositivo: sin esto, lo que una cuenta dejó sin subir se subiría al gist de la siguiente que entrara en el
+  mismo navegador. Si entra otra cuenta, se descarta; si vuelve la misma, se sube. Tests en `socialLikesWrite.test.ts`.
 - **La migración del canal** (`ensureSecretSocialGist`) crea el gist nuevo con el fichero copiado tal cual, en la
   misma petición (`createSocialGistWithData`, parámetro `extraFiles`). Si no se puede leer, migra sin él.
 - **Cambio sobre lo planeado.** Retirar los «me gusta» al dejar de ser amigos necesita el pseudónimo de la otra
@@ -227,6 +230,23 @@ llegaba a revalidarse con ETag.
 - **`writeSocialReactions`** pasa también la denylist (`assertNoSocialPrivateFields`) antes del esquema, con su test.
 - **`npm run audit:privacy`** cubre el fichero nuevo (lo detecta por el `PATCH`): sale con 0, y los dos avisos
   informativos del correo están marcados con `audit-allow`.
+
+## Despliegue
+
+- **Los «me gusta» no tocan Firestore:** ni reglas ni índices nuevos. Viven en el gist de cada cual.
+- **Sí hay que publicar a la vez el cliente y la versión legal** (`LEGAL_VERSION` 2026-10-12), que van en el mismo
+  código.
+- **Lo que SÍ pide reglas en esta release no es de este plan:** el ajuste `gameScenes` de `publicConfig` (animaciones al
+  cambiar de lista, `6677824f`).
+  - Comprobado el 12-10-2026: producción no lo tiene.
+  - `publicConfig` exige una lista cerrada de claves, así que con las reglas viejas el cliente nuevo vería rechazada
+    toda escritura de preferencias que lo lleve.
+  - **Reglas antes que cliente.** `npm run test:rules` en verde con las de `develop`.
+  - **Desplegadas el 12-10-2026** (`firebase deploy --only firestore:rules`, a petición del usuario). Producción ==
+    `develop`, comprobado leyéndolas después.
+  - Sin `audit:rules` (no está `firebase-admin`): el cambio solo AÑADE una clave opcional a la lista permitida, así que
+    ningún documento existente puede quedar rechazado.
+  - Índices sin tocar: no cambian desde la 1.6.10, y desplegarlos borra los que no estén en el fichero.
 
 ## Verificación
 

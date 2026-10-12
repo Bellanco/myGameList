@@ -40,6 +40,12 @@ export const FLUSH_DELAY_MS = 4000;
 let pending: SocialReactionEntry[] | null = null;
 /** Perfiles cuyos «me gusta» hay que retirar (al dejar de ser amigos). */
 let pendingPurges: string[] = [];
+/**
+ * De QUIÉN es la cola (uid de Firebase). La cola vive en el dispositivo, no en la cuenta: sin esto, los «me gusta» que
+ * alguien dejó sin subir (sin red, o cerrando la pestaña) se subirían al gist de la siguiente cuenta que entrara en el
+ * mismo navegador. Si entra otra cuenta, la cola se descarta; si vuelve la misma, se sube.
+ */
+let pendingOwner: string | null = null;
 let loading: Promise<void> | null = null;
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let onlineListener = false;
@@ -51,6 +57,7 @@ async function ensurePendingLoaded(): Promise<SocialReactionEntry[]> {
     // Lo guardado pasa por la misma lectura defensiva que el gist ajeno: IndexedDB también se puede corromper.
     pending = normalizeReactions({ items: meta?.pendingReactions }, Date.now());
     pendingPurges = (meta?.pendingReactionPurges ?? []).filter((id) => typeof id === 'string' && id.trim() !== '');
+    pendingOwner = typeof meta?.pendingReactionsUid === 'string' && meta.pendingReactionsUid ? meta.pendingReactionsUid : null;
   })().finally(() => {
     loading = null;
   });
@@ -59,7 +66,26 @@ async function ensurePendingLoaded(): Promise<SocialReactionEntry[]> {
 }
 
 function persistPending(): Promise<void> {
-  return patchLocalMeta({ pendingReactions: pending ?? [], pendingReactionPurges: pendingPurges }).catch(() => {});
+  return patchLocalMeta({
+    pendingReactions: pending ?? [],
+    pendingReactionPurges: pendingPurges,
+    pendingReactionsUid: pendingOwner ?? '',
+  }).catch(() => {});
+}
+
+/** ¿Es de otra cuenta lo que hay en la cola? Una cola sin dueño (vacía, o anterior a existir el campo) es de quien llegue. */
+function queueBelongsToOther(uid: string): boolean {
+  return Boolean(pendingOwner) && pendingOwner !== uid;
+}
+
+/** Deja la cola lista para `uid`: si era de otra cuenta, la vacía (lo suyo no puede subir a este gist). */
+async function claimQueueFor(uid: string): Promise<void> {
+  await ensurePendingLoaded();
+  if (queueBelongsToOther(uid)) {
+    pending = [];
+    pendingPurges = [];
+  }
+  pendingOwner = uid;
 }
 
 /** Los «me gusta» pulsados que aún no han subido, para que la interfaz los pinte ya puestos (o ya quitados). */
@@ -86,7 +112,10 @@ export function scheduleSocialLikesFlush(delayMs: number = FLUSH_DELAY_MS): void
  * va después, agrupada.
  */
 export async function setSocialLike(target: Pick<SocialReactionEntry, 'on' | 'to' | 'item'>, liked: boolean): Promise<void> {
-  const current = await ensurePendingLoaded();
+  const authUser = await getCurrentSocialAuthUser();
+  if (!authUser) return; // sin sesión no hay a quién apuntárselo (el botón solo existe dentro del hub, con sesión)
+  await claimQueueFor(authUser.uid);
+  const current = pending ?? [];
   const key = reactionTargetKey(target);
   // Una INTENCIÓN se apunta siempre, aunque no cambie nada en la cola: quitar un «me gusta» que solo está en el gist
   // (no en la cola) tiene que llegar allí como lápida.
@@ -105,7 +134,9 @@ export async function setSocialLike(target: Pick<SocialReactionEntry, 'on' | 'to
 export async function retireSocialLikesTo(profileId: string): Promise<void> {
   const id = String(profileId || '').trim();
   if (!id) return;
-  await ensurePendingLoaded();
+  const authUser = await getCurrentSocialAuthUser();
+  if (!authUser) return;
+  await claimQueueFor(authUser.uid);
   if (!pendingPurges.includes(id)) pendingPurges = [...pendingPurges, id];
   await persistPending();
   scheduleSocialLikesFlush();
@@ -121,10 +152,12 @@ export async function retireSocialLikesTo(profileId: string): Promise<void> {
  * que no abre.
  */
 export async function getOwnSocialLikes(): Promise<SocialReactionEntry[]> {
-  const queued = await ensurePendingLoaded();
+  let queued = await ensurePendingLoaded();
   let published: SocialReactionEntry[] = [];
   try {
     const authUser = await getCurrentSocialAuthUser();
+    // La cola de otra cuenta no se pinta como tuya.
+    if (!authUser || queueBelongsToOther(authUser.uid)) queued = [];
     const resolved = authUser ? await resolveSocialChannel({ email: authUser.email }) : null; // audit-allow: el correo solo resuelve el canal en local; no se escribe
     if (resolved?.status === 'ready') {
       published = normalizeReactions(await readSocialReactionsRaw(resolved.channel.token, resolved.channel.gistId), Date.now());
@@ -163,6 +196,14 @@ export function flushSocialLikes(): Promise<SocialLikesFlushResult> {
 
     const authUser = await getCurrentSocialAuthUser();
     if (!authUser) return 'no-session';
+    if (queueBelongsToOther(authUser.uid)) {
+      // Lo dejó sin subir OTRA cuenta en este navegador: no puede ir a este gist, y a la suya ya no llegará desde aquí.
+      pending = [];
+      pendingPurges = [];
+      pendingOwner = authUser.uid;
+      await persistPending();
+      return 'nothing';
+    }
     if (!(await canPublishSocialInBackground(authUser.uid))) return 'no-consent';
     const resolved = await resolveSocialChannel({ email: authUser.email }); // audit-allow: el correo solo resuelve el canal en local; no se escribe
     if (resolved.status !== 'ready') return 'no-channel';
@@ -203,6 +244,7 @@ export function flushSocialLikes(): Promise<SocialLikesFlushResult> {
 export function resetSocialLikesForTests(): void {
   pending = null;
   pendingPurges = [];
+  pendingOwner = null;
   loading = null;
   if (flushTimer) clearTimeout(flushTimer);
   flushTimer = null;

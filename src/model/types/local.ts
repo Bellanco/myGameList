@@ -71,6 +71,8 @@ export interface LocalMeta {
    */
   pendingReactions?: SocialReactionEntry[];
   pendingReactionPurges?: string[];
+  /** De qué cuenta (uid) es esa cola: si entra otra en este navegador, se descarta en vez de subirla a su gist. */
+  pendingReactionsUid?: string;
   // Último gist social ya propagado a MIS docs de amistad DESDE LA RUTA DE PUBLICACIÓN. Sigue vivo junto a
   // `friendshipIdentityFingerprint` porque acota una ruta que la huella no puede acotar: la publicación no sabe
   // descartar el monograma genérico de Google, así que se le fija a una pasada por id de gist para que no se

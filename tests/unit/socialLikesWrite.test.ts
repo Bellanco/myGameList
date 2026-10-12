@@ -261,3 +261,45 @@ describe('lo que NO se sube', () => {
     expect(gist.fetchMock).not.toHaveBeenCalled();
   });
 });
+
+// La cola vive en el DISPOSITIVO, no en la cuenta: lo que una cuenta dejó sin subir no puede acabar en el gist de otra.
+describe('cambio de cuenta en el mismo navegador', () => {
+  it('si entra otra cuenta, la cola de la anterior se descarta: ni se sube ni se pinta', async () => {
+    const gist = stubGist();
+    await setSocialLike(REVIEW, true); // uid-yo, sin subir todavía
+    resetSocialLikesForTests(); // se cierra la pestaña; la cola queda en IndexedDB
+
+    deps.authUser = { uid: 'uid-otra', email: 'otra@example.com' };
+    expect(await flushSocialLikes()).toBe('nothing');
+    expect(gist.patches).toHaveLength(0);
+    expect(deps.meta.pendingReactions).toEqual([]);
+    expect(deps.meta.pendingReactionsUid).toBe('uid-otra');
+  });
+
+  it('pulsar con otra cuenta empieza una cola nueva, sin lo de la anterior', async () => {
+    const gist = stubGist();
+    await setSocialLike(REVIEW, true);
+
+    deps.authUser = { uid: 'uid-otra', email: 'otra@example.com' };
+    await setSocialLike(POST, true);
+    expect((await getPendingSocialLikes()).map((entry) => entry.item)).toEqual([POST.item]);
+
+    expect(await flushSocialLikes()).toBe('written');
+    expect(gist.reactions()?.items.map((entry) => entry.item)).toEqual([POST.item]);
+  });
+
+  it('si vuelve la misma cuenta, lo que dejó pendiente se sube', async () => {
+    const gist = stubGist();
+    await setSocialLike(REVIEW, true);
+    resetSocialLikesForTests();
+
+    expect(await flushSocialLikes()).toBe('written');
+    expect(gist.reactions()?.items.map((entry) => entry.item)).toEqual([REVIEW.item]);
+  });
+
+  it('sin sesión no se apunta nada', async () => {
+    deps.authUser = null;
+    await setSocialLike(REVIEW, true);
+    expect(await getPendingSocialLikes()).toEqual([]);
+  });
+});
