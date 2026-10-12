@@ -722,8 +722,9 @@ function SocialProfileDetailScreenBase({
               <div className="hub-metadata-section">
                 <strong>{YEAR_SUMMARY_UI.title(yearSummary.year)}</strong>
                 <Suspense fallback={null}>
-                  {shareableSummary ? <YearSummaryShare year={shareableSummary.year} summary={shareableSummary} signal={yearSummarySignal} /> : null}
                   <YearSummary summary={yearSummary} voice={{ own: isOwnProfile, name: activeProfileDetail.displayName }} />
+                  {/* Al final de todo: primero se ve lo que se va a compartir. */}
+                  {shareableSummary ? <YearSummaryShare year={shareableSummary.year} summary={shareableSummary} signal={yearSummarySignal} /> : null}
                 </Suspense>
               </div>
             </div>

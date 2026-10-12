@@ -8,15 +8,13 @@ import '../../../styles/yearSummary.scss';
 const S = YEAR_SUMMARY_UI.share;
 
 /**
- * COMPARTIR TU RESUMEN DEL AÑO, encima del resumen y solo en temporada (del 15 de diciembre al 15 de enero, ver
- * docs/plan-resumen-del-ano.md). Plegado de entrada: abrir tu resumen no cuesta ni una petición; desplegarlo
- * pregunta una vez si ya lo compartiste.
- *
- * Dos gestos y un enlace:
- *  - «Avisar a mis amistades»: la tarjeta en su feed, una vez por año (va por Firestore, sin cupo de KV);
- *  - «Crear enlace público»: avisa también, y deja un enlace que cualquiera puede abrir;
- *  - «Actualizar enlace», A MANO: solo si tu resumen ha cambiado desde que lo compartiste, y con la fecha a partir
- *    de la cual se puede si aún no toca. La espera es por rango, pero aquí solo se dice la fecha.
+ * COMPARTIR TU RESUMEN DEL AÑO, al final del resumen y solo en temporada (del 15 de diciembre al 15 de enero, ver
+ * docs/plan-resumen-del-ano.md). UN botón, el que toque (decisión del usuario, 12-10-2026):
+ *  - sin enlace: «Crear enlace», que además avisa a tus amistades (la tarjeta del feed, una vez por año);
+ *  - con enlace y el resumen cambiado: «Actualizar enlace», sobre la misma dirección;
+ *  - con enlace al día (o cuando aún no toca actualizar): «Compartir», que abre el menú de compartir del sistema o,
+ *    donde no lo hay, copia el enlace.
+ * Nada de retirar: el enlace desaparece solo el 16 de enero.
  *
  * Perezoso: fuera de temporada no se descarga.
  */
@@ -34,116 +32,47 @@ export const YearSummaryShare = memo(function YearSummaryShare({
   return <YearSummarySharePanel year={year} vm={vm} />;
 });
 
-/**
- * Lo que se pinta, con el modelo de vista ya hecho. Aparte para que la maqueta del social
- * (`docs/maquetas/social.tsx`) enseñe cada estado sin red; `initiallyOpen` es para eso mismo.
- */
-export const YearSummarySharePanel = memo(function YearSummarySharePanel({
-  year,
-  vm,
-  initiallyOpen = false,
-}: {
-  year: number;
-  vm: YearShareViewModel;
-  initiallyOpen?: boolean;
-}) {
-  const [open, setOpen] = useState(initiallyOpen);
+/** Lo que se pinta, con el modelo de vista ya hecho. Aparte para que la maqueta del social enseñe cada estado sin red. */
+export const YearSummarySharePanel = memo(function YearSummarySharePanel({ year, vm }: { year: number; vm: YearShareViewModel }) {
   const [copied, setCopied] = useState(false);
   const { load } = vm;
 
   useEffect(() => {
-    if (open) void load();
-  }, [load, open]);
+    void load();
+  }, [load]);
 
-  const copy = useCallback(() => {
+  const share = useCallback(() => {
     if (!vm.link) return;
-    void navigator.clipboard?.writeText(vm.link.url).then(
+    const url = vm.link.url;
+    if (typeof navigator.share === 'function') {
+      void navigator.share({ title: S.nativeTitle(year), url }).catch(() => undefined);
+      return;
+    }
+    void navigator.clipboard?.writeText(url).then(
       () => setCopied(true),
       () => setCopied(false),
     );
-  }, [vm.link]);
-
-  const nativeShare = useCallback(() => {
-    if (!vm.link || typeof navigator.share !== 'function') return;
-    void navigator.share({ title: S.nativeTitle(year), url: vm.link.url }).catch(() => undefined);
   }, [vm.link, year]);
 
-  if (!open) {
-    return (
-      <div className="ys-share-toggle">
-        <button className="btn btn-secondary" type="button" aria-expanded={false} onClick={() => setOpen(true)}>
-          {S.open}
-        </button>
-      </div>
-    );
-  }
-
-  const lastDay = S.date(new Date(year + 1, 0, 15).getTime());
   const waiting = vm.nextUpdateAt !== null && vm.nextUpdateAt > Date.now();
+  const canUpdate = Boolean(vm.link) && vm.changed && !waiting;
 
   return (
-    <section className="ys-share" aria-label={S.title}>
-      <div className="ys-share-head">
-        <h4 className="ys-share-title">{S.title}</h4>
-        <button className="btn btn-quiet" type="button" aria-expanded onClick={() => setOpen(false)}>
-          {S.close}
+    <div className="ys-share" aria-busy={vm.loading || vm.busy}>
+      {vm.loading ? null : !vm.link ? (
+        <button className="btn btn-primary" type="button" disabled={vm.busy || vm.serviceDown} onClick={() => void vm.publish()}>
+          {vm.busy ? S.busy : S.create}
         </button>
-      </div>
-      <p className="ys-share-text">{S.intro(lastDay)}</p>
-
-      <div className="ys-share-actions">
-        {vm.announced ? (
-          <p className="ys-share-text ys-share-done">{S.announced}</p>
-        ) : (
-          <button className="btn btn-social" type="button" disabled={vm.busy} onClick={() => void vm.announce()}>
-            {S.announce}
-          </button>
-        )}
-        {vm.loading ? (
-          <p className="ys-share-text">{S.loading}</p>
-        ) : !vm.link ? (
-          <button className="btn btn-primary" type="button" disabled={vm.busy || vm.serviceDown} onClick={() => void vm.publish()}>
-            {vm.busy ? S.busy : S.create}
-          </button>
-        ) : null}
-      </div>
-
-      {vm.link ? (
-        <div className="ys-share-link">
-          <label className="ys-share-text" htmlFor="ys-share-url">
-            {S.urlLabel}
-          </label>
-          <div className="ys-share-actions">
-            <input id="ys-share-url" className="finput ys-share-url" type="text" readOnly value={vm.link.url} onFocus={(event) => event.currentTarget.select()} />
-            <button className={`btn ${copied ? 'btn-done' : 'btn-secondary'}`} type="button" onClick={copy}>
-              {copied ? S.copied : S.copy}
-            </button>
-            {typeof navigator.share === 'function' ? (
-              <button className="btn btn-secondary" type="button" onClick={nativeShare}>
-                {S.native}
-              </button>
-            ) : null}
-          </div>
-          {vm.changed ? (
-            <div className="ys-share-actions">
-              <p className="ys-share-text">{S.changed}</p>
-              <button className="btn btn-primary" type="button" disabled={vm.busy || waiting || vm.serviceDown} onClick={() => void vm.publish()}>
-                {vm.busy ? S.busy : S.update}
-              </button>
-            </div>
-          ) : (
-            <p className="ys-share-text">{S.upToDate}</p>
-          )}
-          {vm.changed && waiting && vm.nextUpdateAt ? <p className="ys-share-text">{S.waitUntil(S.date(vm.nextUpdateAt))}</p> : null}
-          <div className="ys-share-actions">
-            <p className="ys-share-text">{S.expires(S.date(vm.link.expiresAt))}</p>
-            <button className="btn btn-exit" type="button" disabled={vm.busy} onClick={() => void vm.remove()}>
-              {S.remove}
-            </button>
-          </div>
-        </div>
-      ) : null}
-
+      ) : canUpdate ? (
+        <button className="btn btn-primary" type="button" disabled={vm.busy || vm.serviceDown} onClick={() => void vm.publish()}>
+          {vm.busy ? S.busy : S.update}
+        </button>
+      ) : (
+        <button className={`btn ${copied ? 'btn-done' : 'btn-social'}`} type="button" onClick={share}>
+          {copied ? S.copied : S.share}
+        </button>
+      )}
+      {vm.link && vm.changed && waiting && vm.nextUpdateAt ? <p className="ys-share-text">{S.waitUntil(S.date(vm.nextUpdateAt))}</p> : null}
       {vm.serviceDown ? (
         <p className="ys-share-text" role="status">
           {S.unavailable}
@@ -153,6 +82,6 @@ export const YearSummarySharePanel = memo(function YearSummarySharePanel({
           {vm.error}
         </p>
       ) : null}
-    </section>
+    </div>
   );
 });

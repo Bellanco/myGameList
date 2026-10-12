@@ -1,15 +1,16 @@
-// Compartir el RESUMEN DEL AÑO (docs/plan-resumen-del-ano.md, Fase 5): avisar a tus amistades (la tarjeta del
-// feed) y el enlace público, que se crea una vez y se actualiza a mano sobre la misma dirección.
+// Compartir el RESUMEN DEL AÑO (docs/plan-resumen-del-ano.md, Fase 5): el enlace público, que se crea una vez y se
+// actualiza a mano sobre la misma dirección. Crearlo avisa también a tus amistades (la tarjeta del feed). No se
+// retira a mano: caduca solo al cerrar la temporada.
 //
 // Como `useShareViewModel`, NO decide nada que importe: la ventana, la caducidad y la espera entre actualizaciones
 // las aplica la Function. Lo que aquí se calcula (si el resumen ha cambiado, desde cuándo se puede actualizar) es
 // solo para pintar el botón como toca; si se equivoca, el servidor responde con la fecha buena y se corrige.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { normalizeTier } from '../core/constants/tiers';
 import { PROFILE_TIER_YEAR_SHARE_UPDATE_DAYS, nextYearShareUpdateAt } from '../core/social/yearShareWindow';
 import type { YearSummary } from '../core/stats/yearSummary';
 import { isSharedYearSummary, lookupSharedReview } from '../model/repository/publicShareRepository';
-import { isShareUnavailable, listMyShares, publishYearShare, removeShare, type ShareError } from '../model/repository/shareRepository';
+import { isShareUnavailable, listMyShares, publishYearShare, type ShareError } from '../model/repository/shareRepository';
 import type { YearSummarySignal } from './social/useYearSummarySignal';
 
 export interface YearShareLink {
@@ -19,23 +20,20 @@ export interface YearShareLink {
 }
 
 export interface YearShareViewModel {
-  /** Mientras se pregunta si ya hay enlace (solo la primera vez que se despliega). */
+  /** Mientras se pregunta si ya hay enlace: entonces no se ofrece ningún botón, para no enseñar uno que no toca. */
   loading: boolean;
   link: YearShareLink | null;
   /** El resumen ha cambiado desde que se compartió: hay algo que actualizar. */
   changed: boolean;
   /** Desde cuándo se puede volver a actualizar; `null` si ya se puede o no se sabe. */
   nextUpdateAt: number | null;
-  announced: boolean;
   busy: boolean;
-  /** El servicio de compartir no atiende ahora (cupo, caída, red). Avisar sigue funcionando: va por Firestore. */
+  /** El servicio de compartir no atiende ahora (cupo, caída, red). */
   serviceDown: boolean;
   error: string;
   load: () => Promise<void>;
   /** Crea el enlace o lo actualiza, y avisa a tus amistades si aún no lo estaban. */
   publish: () => Promise<boolean>;
-  announce: () => Promise<boolean>;
-  remove: () => Promise<boolean>;
 }
 
 const linkUrl = (token: string) => `${window.location.origin}/r/${token}`;
@@ -51,19 +49,14 @@ export function useYearShareViewModel({
   summary: YearSummary;
   signal?: YearSummarySignal;
 }): YearShareViewModel {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [link, setLink] = useState<YearShareLink | null>(null);
   const [published, setPublished] = useState<YearSummary | null>(null);
   const [nextUpdateAt, setNextUpdateAt] = useState<number | null>(null);
-  const [announced, setAnnounced] = useState(() => Boolean(signal?.isAnnounced(year)));
   const [busy, setBusy] = useState(false);
   const [serviceDown, setServiceDown] = useState(false);
   const [error, setError] = useState('');
   const loaded = useRef(false);
-
-  useEffect(() => {
-    setAnnounced(Boolean(signal?.isAnnounced(year)));
-  }, [signal, year]);
 
   const fail = useCallback((problem: unknown) => {
     if (isShareUnavailable(problem)) setServiceDown(true);
@@ -72,8 +65,8 @@ export function useYearShareViewModel({
 
   /**
    * ¿Ya hay enlace este año? Sale de «mis enlaces» (con caché de cinco minutos: un `list` de KV) y, si lo hay, se lee
-   * el artículo publicado para saber si tu resumen ha cambiado desde entonces. Solo al desplegar la hoja: abrir tu
-   * resumen no cuesta ni una petición.
+   * el artículo publicado para saber si tu resumen ha cambiado desde entonces. Solo con tu resumen abierto y en
+   * temporada, que es cuando se monta el botón.
    */
   const load = useCallback(async () => {
     if (loaded.current) return;
@@ -99,13 +92,6 @@ export function useYearShareViewModel({
     }
   }, [fail, year]);
 
-  const announce = useCallback(async () => {
-    if (!signal) return false;
-    const done = await signal.announce(year);
-    setAnnounced(done);
-    return done;
-  }, [signal, year]);
-
   const publish = useCallback(async () => {
     setError('');
     setBusy(true);
@@ -116,7 +102,7 @@ export function useYearShareViewModel({
       setPublished(summary);
       setNextUpdateAt(result.nextUpdateAt > Date.now() ? result.nextUpdateAt : null);
       // Compartir con enlace es también compartir con tus amistades (la tarjeta, una vez por año).
-      void announce();
+      void signal?.announce(year);
       return true;
     } catch (problem) {
       const details = (problem as Partial<ShareError>).details || {};
@@ -128,27 +114,9 @@ export function useYearShareViewModel({
     } finally {
       setBusy(false);
     }
-  }, [announce, fail, summary, year]);
-
-  const remove = useCallback(async () => {
-    if (!link) return true;
-    setError('');
-    setBusy(true);
-    try {
-      await removeShare(link.token);
-      setLink(null);
-      setPublished(null);
-      setNextUpdateAt(null);
-      return true;
-    } catch (problem) {
-      fail(problem);
-      return false;
-    } finally {
-      setBusy(false);
-    }
-  }, [fail, link]);
+  }, [fail, signal, summary, year]);
 
   const changed = useMemo(() => Boolean(link) && published !== null && !sameSummary(published, summary), [link, published, summary]);
 
-  return { loading, link, changed, nextUpdateAt, announced, busy, serviceDown, error, load, publish, announce, remove };
+  return { loading, link, changed, nextUpdateAt, busy, serviceDown, error, load, publish };
 }

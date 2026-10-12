@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { SocialProfileDetailScreen } from '../../src/view/components/socialhub/SocialProfileDetailScreen';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { ADMIN_ONLY_TIER } from '../../src/core/constants/tiers';
@@ -333,24 +333,28 @@ describe('SocialProfileDetailScreen — resumen del año', () => {
     expect(yearSummarySignal.announce).not.toHaveBeenCalled();
   });
 
-  it('en temporada, tu resumen ofrece compartirlo; fuera de ella y en el de otra persona, no', async () => {
+  it('en temporada, tu resumen lleva el botón de compartir al final; fuera de ella y en el de otra persona, no', async () => {
     const own = {
       isOwnProfile: true,
       activeProfileDetail: { displayName: 'Yo', visibility, sharedLists: { c: [], v: [], e: [], p: [] } },
       viewerCompleted: [of2025(1, 'Halo')],
       openSummaryOnMount: true,
     };
-    pinta(own, new Date(2026, 0, 10));
-    expect(await screen.findByRole('button', { name: YEAR_SUMMARY_UI.share.open })).toBeInTheDocument();
+    const { container } = pinta(own, new Date(2026, 0, 10));
+    await waitFor(() => expect(container.querySelector('.ys-share')).not.toBeNull());
+    // Al final de todo: detrás del resumen, no encima.
+    const summary = container.querySelector('.ys') as HTMLElement;
+    expect(summary.compareDocumentPosition(container.querySelector('.ys-share') as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     cleanup();
-    pinta(own, new Date(2026, 0, 20));
+    const fuera = pinta(own, new Date(2026, 0, 20));
     await screen.findByText(YEAR_SUMMARY_UI.title(2025));
-    expect(screen.queryByRole('button', { name: YEAR_SUMMARY_UI.share.open })).toBeNull();
+    expect(fuera.container.querySelector('.ys-share')).toBeNull();
     cleanup();
-    pinta({ activeProfileDetail: friend([of2025(1, 'Halo')]), openSummaryOnMount: true }, new Date(2026, 0, 10));
+    const ajeno = pinta({ activeProfileDetail: friend([of2025(1, 'Halo')]), openSummaryOnMount: true }, new Date(2026, 0, 10));
     await screen.findByText(YEAR_SUMMARY_UI.title(2025));
-    expect(screen.queryByRole('button', { name: YEAR_SUMMARY_UI.share.open })).toBeNull();
+    expect(ajeno.container.querySelector('.ys-share')).toBeNull();
   });
+
 
 
   it('en tu perfil, con el día de cada fin', async () => {

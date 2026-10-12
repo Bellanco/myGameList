@@ -162,33 +162,19 @@ export const YEAR_SUMMARY_UI = {
   },
 
   /**
-   * Compartir tu resumen, del 15 de diciembre al 15 de enero: avisar a tus amistades y el enlace público. Nunca
-   * nombra el rango: la espera entre actualizaciones se dice con su fecha, no con su motivo.
+   * Compartir tu resumen, del 15 de diciembre al 15 de enero: un solo botón al final del resumen. Nunca nombra el
+   * rango: la espera entre actualizaciones se dice con su fecha, no con su motivo.
    */
   share: {
-    open: 'Compartir mi resumen',
-    close: 'Cerrar',
-    title: 'Comparte tu resumen',
-    intro: (lastDay: string) =>
-      `Hasta el ${lastDay}. El enlace enseña tus juegos, notas, géneros y meses; no lleva tus reseñas ni los días.`,
-    announce: 'Avisar a mis amistades',
-    announced: 'Tus amistades ya lo tienen en su feed.',
-    create: 'Crear enlace público',
+    create: 'Crear enlace',
     update: 'Actualizar enlace',
+    share: 'Compartir',
+    copied: 'Enlace copiado',
     busy: 'Un momento…',
-    loading: 'Mirando si ya lo compartiste…',
-    changed: 'Tu resumen ha cambiado desde que lo compartiste. El enlace enseña cómo era entonces.',
-    upToDate: 'El enlace enseña tu resumen tal y como está ahora.',
-    waitUntil: (date: string) => `Podrás actualizarlo el ${date}.`,
-    expires: (date: string) => `El enlace deja de funcionar el ${date}.`,
-    urlLabel: 'Enlace de tu resumen',
-    copy: 'Copiar enlace',
-    copied: 'Copiado',
-    native: 'Compartir…',
+    waitUntil: (date: string) => `Tu resumen ha cambiado: podrás actualizar el enlace el ${date}.`,
     nativeTitle: (year: number) => `Mi resumen de ${year}`,
-    remove: 'Retirar enlace',
-    unavailable: 'El enlace público no está disponible ahora mismo. Avisar a tus amistades sí funciona.',
-    /** «15 de enero»: las fechas del panel, sin año (todas caen en la temporada). */
+    unavailable: 'Compartir no está disponible ahora mismo. Inténtalo más tarde.',
+    /** «15 de enero»: las fechas del botón, sin año (todas caen en la temporada). */
     date: (at: number) => {
       const date = new Date(at);
       return `${date.getDate()} de ${MONTHS_LONG[date.getMonth()]}`;

@@ -35,7 +35,8 @@ import { summaryYear } from '../../src/core/stats/summaryYear';
 import { buildYearSummary } from '../../src/core/stats/yearSummary';
 import { publicYearSummary } from '../../src/core/stats/publicYearSummary';
 import { YearSummarySharePanel } from '../../src/view/components/socialhub/YearSummaryShare';
-import { PublicYearSummary } from '../../src/view/components/PublicYearSummary';
+import { PublicReviewScreen } from '../../src/view/components/PublicReviewScreen';
+import { YearSummary } from '../../src/view/components/socialhub/YearSummary';
 import type { YearShareViewModel } from '../../src/viewmodel/useYearShareViewModel';
 import type { SharedYearSummary } from '../../src/model/types/share';
 import type { FinishedGame } from '../../src/core/utils/finishDates';
@@ -424,35 +425,40 @@ function Perfil({ propio = false }: { propio?: boolean }) {
   );
 }
 
+/** El resumen de Marta como lo publicaría su enlace: el mismo para tu resumen (en la maqueta) y para la página pública. */
+function resumenDeMarta() {
+  return buildYearSummary({ completed: LISTAS_DE_MARTA.c as FinishedGame[], year: ANIO, precision: 'month' });
+}
+
 /**
- * COMPARTIR TU RESUMEN (del 15 de diciembre al 15 de enero), con el panel en cada estado y sin red: el modelo de
- * vista es inventado. `abrir`: vacío (plegado), `sin-enlace`, `al-dia` o `cambiado` (con la espera del rango).
+ * COMPARTIR TU RESUMEN (del 15 de diciembre al 15 de enero): tu resumen y, al final de todo, el botón que toque. El
+ * modelo de vista es inventado y no hay red. `abrir`: vacío (sin enlace: «Crear enlace»), `al-dia` («Compartir»),
+ * `cambiado` («Actualizar enlace») o `espera` (cambiado, pero aún no toca: «Compartir» con la fecha).
  */
 function CompartirResumen() {
   const abrir = params.get('abrir') || '';
   const dia = 24 * 60 * 60 * 1000;
-  const enlace = { token: 'AbCdEfGhIjKlMnOpQrStUv', url: `${window.location.origin}/r/AbCdEfGhIjKlMnOpQrStUv`, expiresAt: Date.UTC(ANIO + 1, 0, 16, 12) };
+  const resumen = resumenDeMarta();
   const vm: YearShareViewModel = {
     loading: false,
-    link: abrir === 'al-dia' || abrir === 'cambiado' ? enlace : null,
-    changed: abrir === 'cambiado',
-    nextUpdateAt: abrir === 'cambiado' ? Date.now() + 2 * dia : null,
-    announced: abrir === 'al-dia' || abrir === 'cambiado',
+    link: abrir ? { token: 'AbCdEfGhIjKlMnOpQrStUv', url: `${window.location.origin}/r/AbCdEfGhIjKlMnOpQrStUv`, expiresAt: Date.UTC(ANIO + 1, 0, 16, 12) } : null,
+    changed: abrir === 'cambiado' || abrir === 'espera',
+    nextUpdateAt: abrir === 'espera' ? Date.now() + 2 * dia : null,
     busy: false,
     serviceDown: false,
     error: '',
     load: async () => {},
-    publish: async () => { avisar('crearía o actualizaría el enlace')(); return true; },
-    announce: async () => { avisar('avisaría a tus amistades')(); return true; },
-    remove: async () => { avisar('retiraría el enlace')(); return true; },
+    publish: async () => { avisar('crearía o actualizaría el enlace, y avisaría a tus amistades')(); return true; },
   };
+  if (!resumen) return null;
   return (
     <section className="hub-hub hub-screen">
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
         <div className="hub-detail-metadata">
           <div className="hub-metadata-section">
             <strong>{`Resumen de ${ANIO}`}</strong>
-            <YearSummarySharePanel key={abrir} year={ANIO} vm={vm} initiallyOpen={abrir !== ''} />
+            <YearSummary summary={resumen} voice={{ own: true, name: 'Yo' }} coverAccess={false} />
+            <YearSummarySharePanel year={ANIO} vm={vm} />
           </div>
         </div>
       </div>
@@ -460,21 +466,30 @@ function CompartirResumen() {
   );
 }
 
-/** La página pública de un resumen compartido (`/r/`), como la ve quien no tiene la app: sin carátulas. */
+/**
+ * LA PÁGINA DE UN RESUMEN COMPARTIDO (`/r/`), la de verdad (`PublicReviewScreen`), con la API simulada.
+ * `abrir=sin-app`: quien no tiene la app (modo artículo: sin carátulas, sin la app alrededor, solo la salida a la
+ * página principal). Vacío: alguien con la parte social en ese navegador, dentro de la app y con carátulas si tiene
+ * la preferencia encendida (`?caratulas=1` la enciende; necesita el servidor de desarrollo con `/cover`).
+ */
 function ResumenPublico() {
-  const resumen = buildYearSummary({ completed: LISTAS_DE_MARTA.c as FinishedGame[], year: ANIO, precision: 'month' });
-  if (!resumen) return null;
-  const articulo: SharedYearSummary = {
-    v: 1, kind: 'year', year: ANIO, summary: publicYearSummary(resumen), authorNick: MARTA.displayName,
-    createdAt: Date.now(), updatedAt: Date.now(), expiresAt: Date.UTC(ANIO + 1, 0, 16, 12),
-  };
-  return (
-    <section className="hub-hub hub-screen">
-      <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
-        <PublicYearSummary article={articulo} coverAccess={false} standalone={false} />
-      </div>
-    </section>
-  );
+  const sinApp = params.get('abrir') === 'sin-app';
+  const resumen = resumenDeMarta();
+  const token = 'AbCdEfGhIjKlMnOpQrStUv';
+  if (resumen && !(window as { __apiSimulada?: boolean }).__apiSimulada) {
+    const articulo: SharedYearSummary = {
+      v: 1, kind: 'year', year: ANIO, summary: publicYearSummary(resumen), authorNick: MARTA.displayName,
+      createdAt: Date.now(), updatedAt: Date.now(), expiresAt: Date.UTC(ANIO + 1, 0, 16, 12),
+    };
+    const real = window.fetch.bind(window);
+    window.fetch = (input, init) =>
+      String(input).endsWith(`/api/share/${token}`)
+        ? Promise.resolve(new Response(JSON.stringify(articulo), { status: 200, headers: { 'content-type': 'application/json' } }))
+        : real(input, init);
+    (window as { __apiSimulada?: boolean }).__apiSimulada = true;
+  }
+  if (params.get('caratulas') === '1') localStorage.setItem('mis-listas-covers', 'on');
+  return <PublicReviewScreen token={token} standalone={sinApp} coverAccess={sinApp ? false : 'solo-cache'} />;
 }
 
 /** Los ajustes de TU perfil social: nombre, qué se comparte, la foto y la salida. */
@@ -710,11 +725,12 @@ const PANTALLAS: Record<string, { nombre: string; ruta: string; pintar: () => Re
 const VARIANTES: Record<string, Array<{ nombre: string; vista?: string; abrir?: string }>> = {
   perfil: [{ nombre: 'Listas' }, { nombre: 'Reseñas', vista: 'resenas' }, { nombre: 'Estadísticas', abrir: 'estadisticas' }, { nombre: 'Resumen del año', abrir: 'resumen' }],
   'compartir-resumen': [
-    { nombre: 'Plegado' },
-    { nombre: 'Sin enlace', abrir: 'sin-enlace' },
+    { nombre: 'Sin enlace' },
     { nombre: 'Enlace al día', abrir: 'al-dia' },
-    { nombre: 'Ha cambiado (con espera)', abrir: 'cambiado' },
+    { nombre: 'Ha cambiado', abrir: 'cambiado' },
+    { nombre: 'Ha cambiado, con espera', abrir: 'espera' },
   ],
+  'resumen-publico': [{ nombre: 'Con la parte social' }, { nombre: 'Sin la app', abrir: 'sin-app' }],
   'perfil-propio': [{ nombre: 'Listas' }, { nombre: 'Reseñas', vista: 'resenas' }, { nombre: 'Publicaciones', vista: 'publicaciones' }, { nombre: 'Estadísticas', abrir: 'estadisticas' }, { nombre: 'Resumen del año', abrir: 'resumen' }],
 };
 
@@ -762,15 +778,24 @@ function Barra() {
 
 const elegida = PANTALLAS[pantalla] || PANTALLAS.feed;
 const conBarra = params.get('barra') !== '0';
+// La página de un enlace abierta sin la app (modo artículo) trae su propio marco —su `main` y la salida a la página
+// principal— y su propio sprite, como en `main.tsx`: no va dentro del `main` del social ni con el sprite de la app.
+const modoArticulo = pantalla === 'resumen-publico' && params.get('abrir') === 'sin-app';
 
 createRoot(document.getElementById('root') as HTMLElement).render(
   <MemoryRouter initialEntries={[elegida.ruta]}>
-    <IconSprite />
-    <IconSpriteRest />
-    <main id="contenido" className="main main-social">
-      <h1 className="sr-only">Social</h1>
-      {elegida.pintar()}
-    </main>
+    {modoArticulo ? (
+      elegida.pintar()
+    ) : (
+      <>
+        <IconSprite />
+        <IconSpriteRest />
+        <main id="contenido" className="main main-social">
+          <h1 className="sr-only">Social</h1>
+          {elegida.pintar()}
+        </main>
+      </>
+    )}
     {conBarra ? <Barra /> : null}
   </MemoryRouter>,
 );
