@@ -95,6 +95,9 @@
 // ha salido en ninguna release (la 1.6.10 lleva la 2026-10-07b), así que nadie la ha aceptado todavía con el texto
 // anterior, y las dos novedades juntas cuestan a cada persona una sola vuelta por la puerta. La `b` se usó cuando la
 // primera del día ya había salido (2026-10-07); si esta llegara a salir antes que los «me gusta», tocaría subirla.
+// 2026-10-12, y por último: los documentos y la puerta pasan a LENGUAJE CLARO (de tú, frases cortas, sin contar cómo
+// funciona la app por dentro). Dicen lo mismo: ningún dato, tratamiento ni destinatario entra o sale, así que esto
+// por sí solo no la subiría (mismo criterio que la redacción formal del 2026-10-05). Ver `legalContent.ts`.
 export const LEGAL_VERSION = '2026-10-12';
 
 /**
@@ -155,10 +158,9 @@ export interface LegalDocument {
 /** Textos de la puerta de aceptación previa al espacio social. */
 export const LEGAL_CONSENT_UI = {
   title: 'Antes de continuar',
-  // La actividad se detalla un poco —reseñas, movimientos de listas y «me gusta»— porque es lo que más gente lee de todo el
-  // aparato legal, y lo segundo es nuevo: quien lo acepte tiene que saber que la app va a contar sola cuándo
-  // empieza o termina un juego, no solo lo que él escriba. En el registro formal de los documentos (2026-10-05).
-  body: 'Al activar el espacio social se publican el nombre de perfil, la fotografía y los logros, accesibles para cualquier usuario con sesión iniciada, así como la actividad (las reseñas, los movimientos de listas y los «me gusta» a lo que publican las amistades, con su fecha), accesible para las personas con las que se mantenga una relación de amistad. Para activarlo es necesario aceptar las Condiciones de uso y la Política de privacidad.',
+  // Lo que más gente lee de todo lo legal: dice en dos frases qué ve cualquiera y qué ven tus amigos, incluido lo
+  // que la app publica sola (cambios de lista, «me gusta»). Lenguaje claro desde el 2026-10-12, como los documentos.
+  body: 'Al activar el espacio social, cualquier persona con sesión en la app podrá ver tu nombre de perfil, tu foto y tus logros. Tus amigos verán además tu actividad: reseñas, publicaciones, cambios en tus listas y los «me gusta» que das. Para seguir, acepta las condiciones de uso y la política de privacidad.',
   checkbox: 'He leído y acepto las Condiciones de uso y la Política de privacidad',
   termsLink: 'Condiciones de uso',
   privacyLink: 'Política de privacidad',

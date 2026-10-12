@@ -48,8 +48,8 @@ Las tres palancas con más rendimiento por esfuerzo, encajadas en lo que ya hay:
 - Push y correo.
 - Sugerencias de amistad.
 - Bloqueo o denuncia (punto «R», pendiente de decisión).
-- Búsqueda fuera de tus listas. El directorio dice «Buscar por nombre, email o juego»
-  (`socialLabels.ts`, `searchPlaceholder`), pero solo filtra por nombre.
+- Búsqueda fuera de tus listas. El directorio filtra por nombre («Filtrar perfiles por nombre»); había una constante
+  sin usar que prometía «nombre, email o juego», corregida el 12-10-2026.
 - Página de un juego, identificador común de juego y desarrolladora.
 
 ## 2. Lo que decide qué cabe
@@ -232,7 +232,7 @@ Para un resumen semanal eso es poco. Por eso la cápsula debe ser solo el aviso:
 - Ojo: coordinarlo con `docs/plan-resumen-del-ano.md`, que otra sesión está escribiendo.
 
 **C4 · Búsqueda de verdad · S el arreglo, M la global.**
-- Ya: que el texto del directorio diga lo que hace («Buscar por nombre»). Hoy promete email y juego.
+- Ya hecho: el texto del directorio dice lo que hace («Filtrar perfiles por nombre»).
 - Después: una sola caja de búsqueda (atajo `/` en escritorio) que encuentre tus juegos, las fichas de juego
   (C2), tus amistades y las reseñas de tus amistades.
 - Todo es local, porque ya está cargado o indexado.

@@ -343,7 +343,7 @@ export const SOCIAL_UI = {
     backToProfile: 'Volver al perfil',
     backGeneric: 'Volver',
     searchLabel: 'Buscar perfiles',
-    searchPlaceholder: 'Buscar por nombre, email o juego',
+    searchPlaceholder: 'Buscar perfiles por nombre',
     filterAll: 'Todos',
     resultCount: (count: number) => `${count} perfiles visibles`,
   },
@@ -435,7 +435,7 @@ export const SOCIAL_UI = {
     leaveUnsavedBody: 'Lo que has cambiado en tu perfil no se ha guardado: si sales ahora, se pierde.',
     leaveUnsavedConfirm: 'Salir sin guardar',
     identityTitle: 'Identidad visible',
-    identityDescription: 'Este nombre se mostrará en la actividad social y en análisis compartidos.',
+    identityDescription: 'Es el nombre que ven los demás en tu perfil, en tu actividad y en lo que compartas con un enlace.',
     nameLabel: 'Nombre social',
     namePlaceholder: 'Escribe tu nombre visible',
     needsCompletedGames: 'Necesitas al menos un juego completado en tus listas para poder crear tu perfil social.',
@@ -447,7 +447,7 @@ export const SOCIAL_UI = {
     visibilityTitle: 'Visibilidad del perfil',
     // EN POSITIVO, como la foto y los movimientos de abajo: encendido = se comparte. Decían «Ocultar…» (encendido =
     // oculto) en la misma pantalla que «Mostrarme…», y un mismo gesto significaba cosas contrarias (09-10-2026).
-    visibilityDescription: 'Elige qué partes de tus listados se comparten en tu perfil social. Los completados se comparten siempre.',
+    visibilityDescription: 'Elige qué ven tus amigos de tus listas. Los completados se ven siempre.',
     shareListSectionTitle: 'Listados que compartes',
     shareVisitedList: 'Lista de abandonados',
     sharePlayingList: 'Lista de en curso',
@@ -502,10 +502,10 @@ export const SOCIAL_UI = {
     profileIncomplete: 'Para guardar tu perfil necesitas un nombre y al menos un juego completado.',
     // Fallo por credencial al leer el canal de un amigo: no es que no haya publicado, es que el token no vale.
     // Migración del canal a gist secreto, con retirada del antiguo (ver condiciones de uso).
-    socialGistMigrated: 'Tu canal social se ha movido a un Gist no listado y se ha retirado el anterior, que era público. Tus reseñas y publicaciones siguen intactas.',
+    socialGistMigrated: 'Hemos movido tu canal social a un gist secreto y hemos borrado el antiguo, que era público. Tus reseñas y publicaciones siguen igual.',
     // El clon no pasó la verificación: se conservan LOS DOS. Mejor dos gists que ninguno.
-    socialGistMigratedKept: 'Tu canal social se ha movido a un Gist no listado, pero el anterior no se ha podido retirar y sigue siendo público. Puedes borrarlo tú en gist.github.com.',
-    socialGistTooLarge: 'Tu canal social es demasiado grande para moverlo automáticamente y sigue siendo público. Escríbenos y lo migramos a mano.',
+    socialGistMigratedKept: 'Hemos movido tu canal social a un gist secreto, pero el antiguo no se ha podido borrar y sigue siendo público. Puedes borrarlo tú en gist.github.com.',
+    socialGistTooLarge: 'Tu canal social es demasiado grande para moverlo solo y sigue siendo público. Escríbenos y lo movemos a mano.',
     postPublished: 'Publicación compartida.',
     postPublishFailed: 'No se pudo compartir la publicación.',
     // Sin red la publicación NO se ha ido a ninguna parte, y el texto sigue en el compositor: se dice explícitamente
