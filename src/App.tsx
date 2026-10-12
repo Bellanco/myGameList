@@ -917,6 +917,13 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const hasSocialSpace = useMemo(() => Boolean(getSocialSyncConfig()?.gistId?.trim()), [location.pathname, scoreScaleUid]);
   const reloginNeeded = authReady && !socialSignedIn && hasSocialSpace && activeSection === 'social';
+  /**
+   * ¿NO HAY LO SOCIAL, NI SIQUIERA UN ESPACIO EN ESTE DISPOSITIVO? Se le pasa al hub para las reseñas abiertas desde
+   * una dirección copiada (ver `useUnavailableReviewRedirect`): así no hay forma de verlas, y se lleva a la página
+   * principal en vez de a la pasarela. Quien tiene espacio y solo ha perdido la sesión no cuenta: al volver a entrar
+   * sí puede verla. La redirección vive en el hub, que es perezoso, para no cargar el arranque con sus rutas.
+   */
+  const withoutSocial = authReady && socialStatus === 'inactive' && !hasSocialSpace;
 
   /**
    * LOS OFRECIMIENTOS DE UNA MISIÓN («¿Quieres…?»), para quien ya usaba la aplicación: al llegar a Social sin lo
@@ -1081,13 +1088,14 @@ export default function App() {
           gameListOf={vm.gameListOf}
           moveGameToCurrentByName={vm.moveGameToCurrentByName}
           games={vm.data}
+          withoutSocial={withoutSocial}
         />
       </Suspense>
     ),
     stats: (
 
       <Suspense fallback={<ScreenSkeleton />}>
-        <StatsHub games={vm.data} onSocialInvite={openShareInvite} />
+        <StatsHub games={vm.data} libraryReady={vm.libraryReady} onSocialInvite={openShareInvite} />
       </Suspense>
     ),
     // LA PORRA. Ya no recibe la biblioteca: la cruzaba con los nominados para decir en cada tarjeta en qué lista

@@ -11,6 +11,7 @@ import { gameTitleKey } from '../../../core/utils/gameTitleKey';
 import { resolveGrade, starsFromGrade } from '../../../core/utils/scoreScale';
 import { TAB_IDS, type GameItem, type TabData } from '../../../model/types/game';
 import { APP_LOCALE } from '../../../core/constants/locale';
+import { useUnavailableReviewRedirect } from '../../hooks/useUnavailableReviewRedirect';
 
 const L = STATS_UI.reviews;
 
@@ -67,6 +68,8 @@ interface StatsReviewsProps {
   backLabel?: string;
   /** «Compartir» pulsado sin tener lo social: que la guía cuente por qué (ver `ShareReviewButton`). */
   onSocialInvite?: () => void;
+  /** ¿Terminó la carga inicial de la biblioteca? Sin ella, una reseña que no está aún puede llegar. */
+  libraryReady?: boolean;
 }
 
 /**
@@ -80,9 +83,14 @@ interface StatsReviewsProps {
  * Va por ruta propia y no enlazando al hub social porque tus reseñas son tuyas: enlazar allí las habría dejado
  * detrás del asistente de configuración del espacio social para quien no lo tenga montado.
  */
-export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, onOpenReview, onBackToList, backLabel, onSocialInvite }: StatsReviewsProps) {
+export const StatsReviews = memo(function StatsReviews({
+  games, gameId, onBack, onOpenReview, onBackToList, backLabel, onSocialInvite, libraryReady = false,
+}: StatsReviewsProps) {
   const reviews = useMemo(() => collectReviews(games), [games]);
   const open = gameId > 0 ? reviews.find((entry) => entry.id === gameId) : undefined;
+  // La dirección de una reseña copiada de la barra y abierta en OTRO navegador: allí no hay juego con ese número
+  // (o no tiene reseña), y en vez de enseñarle sus propias reseñas se le lleva a la página principal.
+  useUnavailableReviewRedirect(gameId > 0 && !open && libraryReady);
 
   /**
    * Los análisis que se sugieren al pie del que está abierto. Todos TUYOS: aquí no hay más biblioteca que la

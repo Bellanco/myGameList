@@ -31,6 +31,7 @@ import { HubOfflineNotice } from './socialhub/HubOfflineNotice';
 import { GithubSyncCard } from './sync/GithubSyncCard';
 import { libraryStart } from '../../core/achievements/metrics';
 import { useHubFocusOnNavigate } from '../hooks/useHubFocusOnNavigate';
+import { useUnavailableReviewRedirect } from '../hooks/useUnavailableReviewRedirect';
 import { ScreenTitle } from './socialhub/ScreenTitle';
 
 /**
@@ -54,6 +55,11 @@ interface SocialHubProps {
   moveGameToCurrentByName?: (name: string) => void;
   /** Listados VIVOS de la app: con ellos se reconcilia la actividad social publicada (reseñas). */
   games?: TabData;
+  /**
+   * Sin lo social y sin espacio en este dispositivo (lo decide `App`). Con esto, una reseña abierta desde una
+   * dirección copiada lleva a la página principal en vez de a la pasarela.
+   */
+  withoutSocial?: boolean;
 }
 
 const SocialHubInner = memo(function SocialHubInner({
@@ -62,6 +68,7 @@ const SocialHubInner = memo(function SocialHubInner({
   gameListOf,
   moveGameToCurrentByName,
   games,
+  withoutSocial = false,
 }: SocialHubProps = {}) {
   // El view-model llega en PIEZAS por dominio (ver su `return`), y se desestructuran aquí mismo: lo que viaja a las
   // pantallas memoizadas son los mismos valores de siempre, no las piezas.
@@ -98,10 +105,25 @@ const SocialHubInner = memo(function SocialHubInner({
   const {
     profileDetailId, profileReviewsView, profilePostsView, profileAchievementsView, profileGlobalsView,
     selectedProfileDetail, activeProfileReview, activeDetailEvent, detailEventLoading, profileDetailLoading,
-    detailReviewLoading, getGameItemById, relatedReviews, openOwnProfileDetail, isOwnProfileDetail,
-    isOwnDetailEvent,
+    detailReviewLoading, profileReviewLoading, getGameItemById, relatedReviews, openOwnProfileDetail,
+    isOwnProfileDetail, isOwnDetailEvent,
   } = vm.reading;
   const { ownAchievements, ownAchievementMirror } = vm.achievements;
+  /**
+   * UNA RESEÑA QUE ESTA PERSONA NO PUEDE VER, abierta desde una dirección copiada (ver
+   * `useUnavailableReviewRedirect`). Solo cuenta lo DEFINITIVO: con el espacio abierto y todo cargado. Sin red, con
+   * el servicio limitado o con las condiciones nuevas por aceptar, no encontrarla es culpa de lo que falta, no de que
+   * no pueda verla, y se le deja donde está.
+   */
+  const reviewUnavailable = !loading && showSocialSpace && Boolean(authUser) && !offline && !serviceLimited
+    && !legalConsentRequired
+    && (
+      (activePanel === 'detail' && !activeDetailEvent && !detailEventLoading)
+      || (activePanel === 'profile-review' && !activeProfileReview && !profileDetailLoading && !profileReviewLoading)
+    );
+  // Sin lo social, cualquier reseña: no hay forma de verla, y la pasarela no es lo que se vino a buscar.
+  const reviewWithoutSocial = withoutSocial && (activePanel === 'detail' || activePanel === 'profile-review');
+  useUnavailableReviewRedirect(reviewUnavailable || reviewWithoutSocial);
   const {
     openProfileReviews, closeProfileReviews, openProfilePosts, closeProfilePosts, openProfileAchievements,
     openProfileSummary, closeProfileAchievements, openProfileGlobals, openProfileReviewDetail, openRelatedReview,

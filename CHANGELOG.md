@@ -12,7 +12,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   «Compartir» ni se ven, así que hasta ahora no había forma de saber que existían.
 - **«Compartir» sale también sin lo social.** En el detalle de una reseña de Estadísticas, quien no tiene espacio
   social ve el botón; al pulsarlo, la guía le explica que compartir con enlace es de la parte social y con
-  «Enséñame» le lleva a Social con el modo cooperativo en marcha.
+  «Enséñame» le lleva a Social con el modo cooperativo en marcha; con «Ahora no», el botón se retira de ese
+  dispositivo, porque sin lo social no hace nada.
+- **La dirección de una reseña copiada de la barra lleva a la página principal.** Abierta en frío en otro navegador
+  —la de Estadísticas sin ese juego, o una del social sin lo social o sin poder verla—, ya no deja a nadie en sus
+  propias reseñas, en la pasarela o en «ya no está disponible». El dueño sigue viendo la suya, y dentro de la
+  aplicación una actividad borrada se sigue diciendo donde se pulsó.
 - **La temporada del resumen del año llega hasta el 15 de enero.** Se sigue estrenando el 15 de diciembre, pero
   el aviso y la tarjeta en el feed de tus amistades ya no se cortan el 31: quien no abre la app en las fiestas lo
   recibe a la vuelta, con el año que se estrenó. Es la ventana en la que, más adelante, se podrá compartir.

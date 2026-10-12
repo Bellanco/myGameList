@@ -258,6 +258,30 @@ export function useSocialReading({
     foreignGames, foreignProfileFailed, directory, relationshipWith,
   ]);
 
+  /**
+   * ¿LA RESEÑA ABIERTA DESDE UN PERFIL TODAVÍA PUEDE APARECER? (`/social/profiles/:id/game/:gameId/review`). Es el
+   * `detailEventLoading` de esta otra pantalla: la reseña se busca en los listados del perfil, que para una amistad
+   * llegan aparte (su gist de listados), así que mientras el directorio se hidrata o esos listados vienen de camino,
+   * no encontrarla no quiere decir nada. Con las mismas condiciones que `detailReviewLoading`, y por lo mismo.
+   *
+   * Lo usa la redirección de las direcciones copiadas (ver `useUnavailableReviewRedirect`): sin esto, a un amigo que
+   * abre el enlace se le echaría a la página principal antes de que llegasen los listados.
+   */
+  const profileReviewLoading = useMemo(() => {
+    if (activePanel !== 'profile-review' || activeProfileReview) return false;
+    if (directoryLoading) return true;
+    if (!selectedProfileDetail) return false;
+    const profileId = selectedProfileDetail.id;
+    if (isOwnProfileIdentity(profileId, ownUid, ownProfileId)) return false;
+    if (foreignGames[profileId] || foreignProfileFailed[profileId]) return false;
+    const entry = directory.find((item) => item.id === profileId);
+    if (!entry?.gamesGistId || relationshipWith(entry.uid) !== 'friends') return false;
+    return true;
+  }, [
+    activePanel, activeProfileReview, directoryLoading, selectedProfileDetail, ownUid, ownProfileId,
+    foreignGames, foreignProfileFailed, directory, relationshipWith,
+  ]);
+
   // Abre el DETALLE del perfil propio (vista pública con sus listados), no el editor. Si aún no existe entrada
   // propia en el directorio, cae al editor para que el usuario complete su perfil.
   const openOwnProfileDetail = useCallback(() => {
@@ -385,6 +409,7 @@ export function useSocialReading({
     detailEventLoading,
     profileDetailLoading,
     detailReviewLoading,
+    profileReviewLoading,
     openOwnProfileDetail,
     isOwnProfileDetail,
     isOwnDetailEvent,
