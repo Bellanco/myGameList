@@ -16,7 +16,8 @@ import { libraryStart } from '../../../core/achievements/metrics';
 import { socialCounters } from '../../../core/achievements/deviceSignals';
 import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 import { OWN_STATS_BLOCKS } from '../../../core/stats/types';
-import type { TabData } from '../../../model/types/game';
+import { TAB_IDS, type TabData } from '../../../model/types/game';
+import { STATS_REVIEWS_ROUTE, parseStatsReviewPath, statsReviewPath } from '../../../core/utils/reviewPath';
 import { useShowWishlist } from '../../hooks/useShowWishlist';
 // La hoja del panel se importa AQUÍ y no desde `index.scss`: como el hub entra por `lazy()`, Vite emite su CSS
 // en el mismo chunk perezoso y el arranque no carga ni un byte de estilos de esta pantalla.
@@ -29,19 +30,12 @@ import '../../../styles/stats.scss';
  * reseña propia no depende de eso.
  */
 const PANEL_ROUTE = '/stats';
-const REVIEWS_ROUTE = '/stats/resenas';
+const REVIEWS_ROUTE = STATS_REVIEWS_ROUTE;
 /**
  * Los LOGROS son de primer nivel: `/logros`, no `/stats/logros`. Está declarada en `core/constants/routes` con
  * `section: 'stats'`, así que el cromo es el mismo y la resuelve este hub, igual que las reseñas.
  */
 const ACHIEVEMENTS_ROUTE = '/logros';
-const reviewRoute = (gameId: number) => `${REVIEWS_ROUTE}/${gameId}`;
-
-/** Id del juego cuya reseña se abre, leído de la ruta; 0 = el listado. */
-function reviewIdFrom(pathname: string): number {
-  const match = /^\/stats\/resenas\/(\d+)$/.exec(pathname);
-  return match ? Number(match[1]) : 0;
-}
 
 /**
  * Panel de estadísticas: la biblioteca en números, con una vista general y una pestaña por año.
@@ -99,9 +93,16 @@ export const StatsHub = memo(function StatsHub({
    * volver al panel, y quien la abre desde el listado, al listado. El origen viaja en el estado de la ruta, así
    * que el atrás del navegador y el botón de la pantalla llevan al mismo sitio.
    */
+  const nameById = useMemo(() => {
+    const names = new Map<number, string>();
+    for (const tab of TAB_IDS) for (const game of games[tab] || []) names.set(game.id, game.name);
+    return names;
+  }, [games]);
   const openReviewFrom = useCallback(
-    (gameId: number, backTo: string) => { void navigate(reviewRoute(gameId), { state: { backTo } }); },
-    [navigate],
+    (gameId: number, backTo: string) => {
+      void navigate(statsReviewPath(gameId, nameById.get(gameId) || ''), { state: { backTo } });
+    },
+    [navigate, nameById],
   );
   const openReviewFromPanel = useCallback((gameId: number) => openReviewFrom(gameId, PANEL_ROUTE), [openReviewFrom]);
   const openReviewFromList = useCallback((gameId: number) => openReviewFrom(gameId, REVIEWS_ROUTE), [openReviewFrom]);
@@ -125,6 +126,7 @@ export const StatsHub = memo(function StatsHub({
     ? STATS_UI.reviews.backToStats
     : desdeLista ? STATS_UI.reviews.backToList : undefined;
   const onReviewsRoute = location.pathname.startsWith(REVIEWS_ROUTE);
+  const requested = parseStatsReviewPath(location.pathname);
 
   if (ENABLE_ACHIEVEMENTS && location.pathname.startsWith(ACHIEVEMENTS_ROUTE)) {
     return (
@@ -153,7 +155,8 @@ export const StatsHub = memo(function StatsHub({
     return (
       <StatsReviews
         games={games}
-        gameId={reviewIdFrom(location.pathname)}
+        gameId={requested.gameId}
+        fingerprint={requested.fingerprint}
         onBack={backToPanel}
         onOpenReview={openReviewFromList}
         onBackToList={backFromReview}

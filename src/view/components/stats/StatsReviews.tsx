@@ -12,6 +12,7 @@ import { resolveGrade, starsFromGrade } from '../../../core/utils/scoreScale';
 import { TAB_IDS, type GameItem, type TabData } from '../../../model/types/game';
 import { APP_LOCALE } from '../../../core/constants/locale';
 import { useUnavailableReviewRedirect } from '../../hooks/useUnavailableReviewRedirect';
+import { matchesReviewFingerprint } from '../../../core/utils/reviewPath';
 
 const L = STATS_UI.reviews;
 
@@ -55,6 +56,8 @@ interface StatsReviewsProps {
   games: TabData;
   /** Juego cuya reseña se abre a pantalla completa; 0 = la lista. */
   gameId: number;
+  /** Huella del nombre que trae la dirección (ver `reviewPath`); vacía en la forma vieja, sin huella. */
+  fingerprint?: string;
   onBack: () => void;
   onOpenReview: (gameId: number) => void;
   /** Volver de una reseña concreta a donde se abrió. */
@@ -84,12 +87,15 @@ interface StatsReviewsProps {
  * detrás del asistente de configuración del espacio social para quien no lo tenga montado.
  */
 export const StatsReviews = memo(function StatsReviews({
-  games, gameId, onBack, onOpenReview, onBackToList, backLabel, onSocialInvite, libraryReady = false,
+  games, gameId, fingerprint = '', onBack, onOpenReview, onBackToList, backLabel, onSocialInvite, libraryReady = false,
 }: StatsReviewsProps) {
   const reviews = useMemo(() => collectReviews(games), [games]);
-  const open = gameId > 0 ? reviews.find((entry) => entry.id === gameId) : undefined;
-  // La dirección de una reseña copiada de la barra y abierta en OTRO navegador: allí no hay juego con ese número
-  // (o no tiene reseña), y en vez de enseñarle sus propias reseñas se le lleva a la página principal.
+  // Con huella, el juego tiene que ser ESE y no solo tener ese número: el 7 de otra biblioteca es otro juego.
+  const open = gameId > 0
+    ? reviews.find((entry) => entry.id === gameId && matchesReviewFingerprint(fingerprint, entry.gameName))
+    : undefined;
+  // La dirección de una reseña copiada de la barra y abierta en OTRO navegador: allí no hay juego con ese número,
+  // es otro juego o no tiene reseña, y en vez de enseñarle sus propias reseñas se le lleva a la página principal.
   useUnavailableReviewRedirect(gameId > 0 && !open && libraryReady);
 
   /**

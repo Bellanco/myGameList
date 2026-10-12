@@ -18,6 +18,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   —la de Estadísticas sin ese juego, o una del social sin lo social o sin poder verla—, ya no deja a nadie en sus
   propias reseñas, en la pasarela o en «ya no está disponible». El dueño sigue viendo la suya, y dentro de la
   aplicación una actividad borrada se sigue diciendo donde se pulsó.
+- **La dirección de una reseña del panel lleva una huella del juego** (`/stats/resenas/7-z6ayj6`). El número es
+  el del juego en cada biblioteca, y el 7 de una persona es otro juego en la de otra: abierta fuera, enseñaba la
+  reseña de otro juego. La huella sale del nombre, mide siempre seis caracteres y no lo deja a la vista (la ruta
+  viaja a la analítica). Las direcciones de antes, sin huella, se siguen abriendo como siempre.
 - **La temporada del resumen del año llega hasta el 15 de enero.** Se sigue estrenando el 15 de diciembre, pero
   el aviso y la tarjeta en el feed de tus amistades ya no se cortan el 31: quien no abre la app en las fiestas lo
   recibe a la vuelta, con el año que se estrenó. Es la ventana en la que, más adelante, se podrá compartir.

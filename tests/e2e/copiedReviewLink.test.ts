@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { sembrarBiblioteca } from './seed';
+import { reviewFingerprint } from '../../src/core/utils/reviewPath';
 
 /**
  * LA DIRECCIÓN DE UNA RESEÑA COPIADA DE LA BARRA (12-10-2026). La forma buena de compartir es el enlace público
@@ -31,6 +32,22 @@ test.describe('dirección de una reseña copiada de la barra', () => {
     await expect(page.locator('.hub-feed-card-detail')).toContainText('Hades');
     await page.waitForTimeout(1000);
     await expect(page).toHaveURL(/\/stats\/resenas\/3$/);
+  });
+
+  test('con la huella, el 3 de otra biblioteca no abre el Hades de esta: lleva a la página principal', async ({ page }) => {
+    // En esta biblioteca el 3 es Hades; la dirección viene de una en la que el 3 es Celeste.
+    await sembrarBiblioteca(page);
+    await page.goto(`/stats/resenas/3-${reviewFingerprint('Celeste')}`);
+    await expect(page).toHaveURL(/\/completados$/);
+  });
+
+  test('con la huella buena, el dueño ve la suya; y el enlace del panel ya la lleva', async ({ page }) => {
+    await sembrarBiblioteca(page);
+    await page.goto(`/stats/resenas/3-${reviewFingerprint('Hades')}`);
+    await expect(page.locator('.hub-feed-card-detail')).toContainText('Hades');
+    await page.goto('/stats/resenas');
+    await page.locator('.hub-review-open').first().click();
+    await expect(page).toHaveURL(/\/stats\/resenas\/\d+-[0-9a-z]{6}$/);
   });
 
   test('una del social, sin lo social, lleva a la página principal y no a la pasarela', async ({ page }) => {
