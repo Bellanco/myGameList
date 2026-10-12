@@ -40,6 +40,7 @@ import { YearSummary } from '../../src/view/components/socialhub/YearSummary';
 import type { YearShareViewModel } from '../../src/viewmodel/useYearShareViewModel';
 import type { SharedYearSummary } from '../../src/model/types/share';
 import type { FinishedGame } from '../../src/core/utils/finishDates';
+import { YearSummaryToast } from '../../src/view/components/YearSummaryToast';
 import { packAchievements } from '../../src/core/achievements/pack';
 import { LADDERS } from '../../src/core/achievements/catalog';
 import type { AchievementState } from '../../src/core/achievements/types';
@@ -425,9 +426,13 @@ function Perfil({ propio = false }: { propio?: boolean }) {
   );
 }
 
-/** El resumen de Marta como lo publicaría su enlace: el mismo para tu resumen (en la maqueta) y para la página pública. */
+/**
+ * El resumen de Marta como lo publicaría su enlace: el mismo para tu resumen (en la maqueta) y para la página
+ * pública. Jugó el reto del jugador de ese año y quedó segunda, para que salga su capítulo.
+ */
 function resumenDeMarta() {
-  return buildYearSummary({ completed: LISTAS_DE_MARTA.c as FinishedGame[], year: ANIO, precision: 'month' });
+  const reto = { seasonId: `reto-${ANIO}`, seasonName: `El reto del jugador ${ANIO}`, rank: 2, season: ANIO, awardedAt: Date.now() };
+  return buildYearSummary({ completed: LISTAS_DE_MARTA.c as FinishedGame[], year: ANIO, precision: 'month', palmares: [reto] });
 }
 
 /**
@@ -702,6 +707,19 @@ const PANTALLAS: Record<string, { nombre: string; ruta: string; pintar: () => Re
         <Feed vacio />
         <div className="ach-toast-stack">
           <LegalConsentToast onDone={noop} />
+        </div>
+      </>
+    ),
+  },
+  // Tampoco es del hub: es el aviso del 15 de diciembre en el carril de `App`, el mismo que el de las condiciones.
+  'aviso-resumen': {
+    nombre: 'Carril: tu resumen ya está aquí (15 de diciembre)',
+    ruta: '/',
+    pintar: () => (
+      <>
+        <Feed />
+        <div className="ach-toast-stack">
+          <YearSummaryToast year={ANIO} onDone={noop} />
         </div>
       </>
     ),
