@@ -64,6 +64,22 @@ describe('la señal al abrir tu resumen', () => {
     expect(publish).not.toHaveBeenCalled();
   });
 
+  it('hasta el 15 de enero sigue publicando el año que se estrenó en diciembre', async () => {
+    vi.setSystemTime(new Date(2027, 0, 15, 22));
+    const { result } = renderHook(() => useYearSummarySignal(props));
+    await act(async () => result.current(2027));
+    await act(async () => result.current(2026));
+    expect(publish).toHaveBeenCalledTimes(1);
+    expect(publish).toHaveBeenCalledWith('uid-a', 2026);
+  });
+
+  it('desde el 16 de enero ya no publica', async () => {
+    vi.setSystemTime(new Date(2027, 0, 16));
+    const { result } = renderHook(() => useYearSummarySignal(props));
+    await act(async () => result.current(2026));
+    expect(publish).not.toHaveBeenCalled();
+  });
+
   it('sin perfil publicado, o con el año ya en el directorio, tampoco', async () => {
     vi.setSystemTime(new Date(2026, 11, 16));
     const sinPerfil = renderHook(() => useYearSummarySignal({ ...props, published: false }));
@@ -93,6 +109,21 @@ describe('el aviso del 15', () => {
     expect(result.current.year).toBeNull();
     expect(localStorage.getItem(YEAR_SUMMARY_TOLD_KEY)).toBe('2026');
     // Otra visita el mismo año: ya dicho.
+    expect(renderHook(() => useYearSummaryNotice(true, [game([2026])])).result.current.year).toBeNull();
+  });
+
+  it('quien no lo vio en diciembre lo recibe hasta el 15 de enero, con el año que se estrenó', () => {
+    vi.setSystemTime(new Date(2027, 0, 10));
+    expect(renderHook(() => useYearSummaryNotice(true, [game([2026])])).result.current.year).toBe(2026);
+    vi.setSystemTime(new Date(2027, 0, 16));
+    expect(renderHook(() => useYearSummaryNotice(true, [game([2026])])).result.current.year).toBeNull();
+  });
+
+  it('dado en diciembre, no se repite en enero', () => {
+    vi.setSystemTime(new Date(2026, 11, 20));
+    const { result } = renderHook(() => useYearSummaryNotice(true, [game([2026])]));
+    act(() => result.current.markShown());
+    vi.setSystemTime(new Date(2027, 0, 5));
     expect(renderHook(() => useYearSummaryNotice(true, [game([2026])])).result.current.year).toBeNull();
   });
 

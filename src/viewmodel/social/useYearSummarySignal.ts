@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import { isSummarySeason, summaryYear } from '../../core/stats/summaryYear';
+import { isShareSeason, summaryYear } from '../../core/stats/summaryYear';
 import { yearSummaryPublishedKey } from '../../core/constants/storageKeys';
 import { publishYearSummarySeen } from '../../model/repository/firebaseRepository';
 
@@ -24,7 +24,7 @@ function writePublished(uid: string, year: number): void {
  * les salga la tarjeta destacada en el feed.
  *
  * Solo publica si se cumple todo:
- *  - es TEMPORADA (del 15 al 31 de diciembre) y el resumen abierto es el del año que se estrena;
+ *  - es TEMPORADA (del 15 de diciembre al 15 de enero) y el resumen abierto es el del año que se estrenó;
  *  - tu perfil está publicado (sin él no hay documento que leer ni amistades a las que avisar);
  *  - ese año no está ya publicado: ni en tu entrada del directorio (`alreadySeenYear`), ni en la caché local.
  *
@@ -45,7 +45,7 @@ export function useYearSummarySignal({
   return useCallback(
     (year: number) => {
       const now = new Date();
-      if (!uid || !published || !isSummarySeason(now) || year !== summaryYear(now)) return;
+      if (!uid || !published || !isShareSeason(now) || year !== summaryYear(now)) return;
       if (alreadySeenYear === year || readPublished(uid) === year || inFlight.current) return;
       inFlight.current = true;
       publishYearSummarySeen(uid, year)

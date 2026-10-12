@@ -684,8 +684,8 @@ export async function publishAchievementMirror(uid: string, list: string): Promi
  * leen en el directorio y les sale la tarjeta destacada en el feed (ver `core/social/yearSummaryFeed.ts`).
  *
  * Lo que se publica es eso y nada más: qué año y cuándo se abrió. Ni una cifra del resumen, que cada amistad
- * calcula con lo que ya puede ver. Solo se llama en temporada (del 15 al 31 de diciembre) y una vez por año; la
- * guarda la lleva quien llama (`useYearSummarySignal`).
+ * calcula con lo que ya puede ver. Solo se llama en temporada (del 15 de diciembre al 15 de enero) y una vez por
+ * año; la guarda la lleva quien llama (`useYearSummarySignal`).
  *
  * `uid` y `updatedAt` van en la escritura por lo mismo que en el espejo de logros: las reglas exigen el primero y el
  * directorio ordena por el segundo. Lanza si falla, para que quien llama no lo dé por publicado y lo reintente.

@@ -1,10 +1,10 @@
 /**
  * LA TARJETA DEL RESUMEN DEL AÑO en el feed. Pura.
  *
- * Cuando alguien abre su resumen en temporada (del 15 al 31 de diciembre) se publica en su perfil `{ year, at }`
- * (ver `publishYearSummarySeen`), y a sus amistades les sale una tarjeta destacada: «Lucía ya tiene su resumen de
- * 2026», que abre ese resumen. Una por persona y año —la guarda es de quien publica—, en su sitio por fecha (la
- * de cuando lo abrió) y durante `YEAR_SUMMARY_FEED_DAYS`, como los logros.
+ * Cuando alguien abre su resumen en temporada (del 15 de diciembre al 15 de enero) se publica en su perfil
+ * `{ year, at }` (ver `publishYearSummarySeen`), y a sus amistades les sale una tarjeta destacada: «Lucía ya tiene
+ * su resumen de 2026», que abre ese resumen. Una por persona y año —la guarda es de quien publica—, en su sitio por
+ * fecha (la de cuando lo abrió) y durante `YEAR_SUMMARY_FEED_DAYS`, como los logros.
  *
  * No se publica ningún evento en ningún canal: sale del directorio que el feed ya trae, como el espejo de logros.
  */

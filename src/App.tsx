@@ -250,7 +250,7 @@ export default function App() {
   // él, y el piloto de la barra necesita además distinguir el tramo en el que todavía no se sabe.
   const socialStatus = useSocialProfileStatus(completedGameIds);
   const hasSocialProfile = socialStatus === 'active';
-  // El aviso del resumen del año (15–31 de diciembre): solo con perfil social, que es donde vive el resumen.
+  // El aviso del resumen del año (15 de diciembre – 15 de enero): solo con perfil social, que es donde vive el resumen.
   const yearSummaryNotice = useYearSummaryNotice(hasSocialProfile, vm.data.c);
   // Condiciones nuevas por aceptar: sin ellas no sale nada de la actividad (docs/plan-feed-sin-vacio.md, Fase 6).
   const legalNotice = useLegalConsentNotice(hasSocialProfile, activeSection === 'social');
@@ -1239,7 +1239,7 @@ export default function App() {
             <LegalConsentToast onShown={legalNotice.markShown} onDone={legalNotice.dismiss} />
           </Suspense>
         ) : yearSummaryNotice.year !== null ? (
-          // EL RESUMEN DEL AÑO, del 15 al 31 de diciembre: detrás del logro (lo que acabas de conseguir manda) y
+          // EL RESUMEN DEL AÑO, del 15 de diciembre al 15 de enero: detrás del logro (lo que acabas de conseguir manda) y
           // delante del anuncio, que puede esperar a otra visita.
           <Suspense fallback={null}>
             <YearSummaryToast year={yearSummaryNotice.year} onShown={yearSummaryNotice.markShown} onDone={yearSummaryNotice.dismiss} />
