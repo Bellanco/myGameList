@@ -100,3 +100,66 @@ describe('los «me gusta» viajan en la lectura del gist', () => {
     expect(getPublicSocialReactions(gist, TOKEN)).toEqual([LIKE]);
   });
 });
+
+// La copia caducada se borraba al mirar si había una viva, y la revalidación ya no la encontraba: nunca se enviaba el
+// ETag y cada relectura bajaba el gist entero (hallazgo de la Fase 3, arreglado el 12-10-2026).
+describe('revalidación de la copia de un gist ajeno', () => {
+  const caducar = () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(Date.now() + 60_000);
+  };
+
+  it('pasada su vida, relee con If-None-Match; un 304 sirve la copia con sus «me gusta»', async () => {
+    const gist = nextGist();
+    const fetchMock = stubFetch([
+      () => gistBody({ [MAIN]: JSON.stringify(socialData()), [REACTIONS]: JSON.stringify({ v: 1, updatedAt: 1, items: [LIKE] }) }, 'W/"v1"'),
+      () => new Response(null, { status: 304 }),
+    ]);
+    await readPublicSocialGistById(gist, TOKEN);
+
+    caducar();
+    const data = await readPublicSocialGistById(gist, TOKEN);
+    vi.useRealTimers();
+
+    const headers = (fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1].headers as Record<string, string>;
+    expect(headers['If-None-Match']).toBe('W/"v1"');
+    expect(data.profile.name).toBe('Marta');
+    expect(getPublicSocialReactions(gist, TOKEN)).toEqual([LIKE]);
+  });
+
+  it('también tras recargar: la copia caducada de sessionStorage sigue sirviendo para revalidar', async () => {
+    const gist = nextGist();
+    const fetchMock = stubFetch([
+      () => gistBody({ [MAIN]: JSON.stringify(socialData()) }, 'W/"v1"'),
+      () => new Response(null, { status: 304 }),
+    ]);
+    await readPublicSocialGistById(gist, TOKEN);
+    vi.resetModules();
+    const fresh = await import('../../src/model/repository/socialGistRepository'); // «recarga»: memoria vacía
+
+    caducar();
+    await fresh.readPublicSocialGistById(gist, TOKEN);
+    vi.useRealTimers();
+
+    const headers = (fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1].headers as Record<string, string>;
+    expect(headers['If-None-Match']).toBe('W/"v1"');
+  });
+
+  it('si GitHub limita, se sirve la copia caducada en vez de fallar', async () => {
+    const gist = nextGist();
+    stubFetch([
+      () => gistBody({ [MAIN]: JSON.stringify(socialData('Copia')) }, 'W/"v1"'),
+      () => new Response(JSON.stringify({ message: 'API rate limit exceeded' }), {
+        status: 403,
+        headers: { 'x-ratelimit-remaining': '0' },
+      }),
+    ]);
+    await readPublicSocialGistById(gist, TOKEN);
+
+    caducar();
+    const data = await readPublicSocialGistById(gist, TOKEN);
+    vi.useRealTimers();
+
+    expect(data.profile.name).toBe('Copia');
+  });
+});

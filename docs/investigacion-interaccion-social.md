@@ -106,7 +106,7 @@ Esfuerzo: S (días), M (una o dos semanas), L (más). Coste: lo que gasta de los
 |---|---|---|
 | Firestore | **0 lecturas, 0 escrituras** en el caso normal | El pseudónimo (`resolveStableProfileId`) ya está en memoria al abrir el hub, y la reacción **no** llama a `syncPublicIdentity`, que es lo que escribe en Firestore al publicar una reseña |
 | GitHub, quien reacciona | 1 GET condicional, normalmente 304 desde la caché de sesión de 20 s, y 1 PATCH **por ráfaga** | `openSocialWrite` y `commitSocialWrite`, en la cola `serializeSocialWrite` |
-| GitHub, quien lee | **0 peticiones nuevas**: viaja dentro del gist social que ya se relee | `useSocialDirectory`. Ojo: hoy esa relectura NO llega a ser condicional (ver el hallazgo de la Fase 3 en `plan-reacciones.md`), así que baja el gist entero |
+| GitHub, quien lee | **0 peticiones nuevas**: viaja dentro del gist social que ya se relee con ETag | `useSocialDirectory`; un 304 autenticado no gasta cupo primario (la revalidación se arregló el 12-10-2026: ver el hallazgo de la Fase 3 en `plan-reacciones.md`) |
 | Cloudflare (Functions y KV) | 0 | — |
 | Tamaño | ~86 bytes. Con un tope de 300 y una ventana de 30 días, ~26 KB más como mucho por amistad en lectura en frío | El gist social va sin comprimir; el precedente son los 400 avisos de `MOVE_ACTIVITY_MAX` |
 | Arranque crítico | 0, si todo vive en el chunk perezoso del social | Hoy 187,7 de 190 kB |

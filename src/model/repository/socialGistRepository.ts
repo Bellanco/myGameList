@@ -301,22 +301,31 @@ function saveSocialGistCache(gistId: string, data: SocialGistData, etag: string 
   writeSessionCachedValue(buildSessionCacheKey(SESSION_CACHE_SOCIAL_GIST_PREFIX, gistId), cached);
 }
 
+/**
+ * La copia de sesión de un gist social ajeno. Sin `includeExpired`, solo si sigue viva; con él, también la caducada.
+ *
+ * LA CADUCADA NO SE BORRA AL MIRAR. Es la que lleva el ETag con el que se revalida (`If-None-Match`) y la que se sirve
+ * si GitHub limita. `readPublicSocialGistById` pregunta primero por la viva y después por la caducada: cuando la
+ * primera consulta borraba lo caducado, la segunda ya no lo encontraba, así que nunca se enviaba el ETag y cada
+ * relectura bajaba el gist entero y gastaba cupo de GitHub (12-10-2026). La sustituye la siguiente lectura buena.
+ */
 function readPublicSocialGistCache(gistId: string, token: string | null = null, options?: { includeExpired?: boolean }): PublicSocialCachedValue | null {
   const cacheKey = `${gistId}:${shortTokenDiscriminant(token)}`;
+  const isUsable = (value: PublicSocialCachedValue) => Boolean(options?.includeExpired) || value.expiresAt > Date.now();
+
   const memory = publicSocialGistCacheById.get(cacheKey);
-  if (memory && (options?.includeExpired || memory.expiresAt > Date.now())) {
-    return memory;
+  if (memory) {
+    return isUsable(memory) ? memory : null;
   }
 
   const key = buildSessionCacheKey(SESSION_CACHE_PUBLIC_SOCIAL_GIST_PREFIX, cacheKey);
-  const sessionValue: PublicSocialCachedValue | null = readSessionCachedValue<SocialGistData>(key, { includeExpired: options?.includeExpired });
+  const sessionValue: PublicSocialCachedValue | null = readSessionCachedValue<SocialGistData>(key, { includeExpired: true });
   if (!sessionValue) {
-    publicSocialGistCacheById.delete(cacheKey);
     return null;
   }
 
   publicSocialGistCacheById.set(cacheKey, sessionValue);
-  return sessionValue;
+  return isUsable(sessionValue) ? sessionValue : null;
 }
 
 /**

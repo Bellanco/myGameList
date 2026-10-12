@@ -166,16 +166,16 @@ En la práctica:
 - **Medido:** arranque crítico 189,6 de 190 kB, sin cambios. `npm run emulate:social` en verde, sin errores de
   consola.
 
-**Hallazgo previo (no de esta fase), sin arreglar:** la copia de sesión de un gist social ajeno nunca llega a
-revalidarse con ETag.
+**Hallazgo previo (no de esta fase), arreglado el 12-10-2026:** la copia de sesión de un gist social ajeno nunca
+llegaba a revalidarse con ETag.
 
-- `readPublicSocialGistById` consulta primero la copia NO caducada. Al encontrarla caducada, `readPublicSocialGistCache`
-  la BORRA, de memoria y de `sessionStorage`.
-- Así, la segunda consulta (`includeExpired`) ya no la encuentra. No se envía `If-None-Match` y GitHub devuelve el
-  gist entero: el camino del 304 no se usa nunca, y tampoco el de servir la copia si GitHub limita.
-- No rompe nada (el directorio tiene su propia copia en IndexedDB), pero cada relectura descarga los gists completos y
-  gasta cupo de GitHub.
-- Arreglo propuesto: que la primera consulta no borre lo caducado.
+- `readPublicSocialGistById` consultaba primero la copia NO caducada, y al encontrarla caducada,
+  `readPublicSocialGistCache` la BORRABA, de memoria y de `sessionStorage`.
+- La segunda consulta (`includeExpired`) ya no la encontraba: nunca se enviaba `If-None-Match`, cada relectura bajaba
+  el gist entero y gastaba cupo, y tampoco se servía la copia si GitHub limitaba.
+- **Ahora mirar no borra nada.** La copia caducada se queda hasta que la sustituye la siguiente lectura buena.
+- **Tests** en `socialReactionsRead.test.ts`: relectura con `If-None-Match`, también tras recargar, y servir la copia
+  si GitHub limita. Los tres fallan sin el arreglo.
 
 ## Fase 4 · Interfaz · M
 
