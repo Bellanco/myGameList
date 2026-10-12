@@ -639,32 +639,69 @@
   92%, 100% { transform: translateX(-160%); }
 }
 
-/* ══ MOMENTOS · EL SELLO DEL LADRÓN al cerrar un juego: la cara de este tema del sello común de
-   `_effects.scss`. Sin disco: tarjeta ladeada con contorno negro y sombra de bloque, la tarjeta de visita de los
-   Ladrones. La guarda de efectos la pone el hook, que no crea el sello si no toca. ══ */
-:root[data-palette="persona"] .fx-seal {
-  width: auto; height: auto; padding: .9rem 1.6rem; border-radius: 0;
-  color: #f4f2f5; background: #ff1f3d;
-  border: 3px solid #0a0a0a;
-  box-shadow: 8px 8px 0 rgba(10,10,10,.9);
+/* ══ MOMENTOS · «OBJETIVO CUMPLIDO» al cerrar un juego (12-10-2026). Era el sello común de `_effects.scss` (la
+   tarjeta caía, rebotaba y se iba en menos de un segundo) y pasó a escena propia con la maqueta de propuestas: una
+   franja negra de trama roja cruza la pantalla, encima se estampa la tarjeta torcida de los Ladrones, las letras
+   recortadas saltan una a una, cae «TESORO ROBADO» con tres destellos y la tarjeta se va cortada en diagonal, la
+   tijera del tema. La guarda de efectos la pone el hook. ══ */
+:root[data-palette="persona"] .fx-p5-golpe {
+  position: fixed; inset: 0; z-index: 9997; pointer-events: none; overflow: hidden;
+  display: grid; place-items: center;
+  animation: p5g-vida 2.15s forwards;
 }
-:root[data-palette="persona"] .fx-seal-label { font-size: 15px; }
-/* EL RÓTULO, EN LETRAS RECORTADAS (10-10-2026): las mismas del título de pantalla (`.rc-*`, más abajo), con la
-   receta compartida de `recortes.ts`. Sobre la tarjeta roja, el recorte rojo se fundía con el fondo y la letra se
-   quedaba sin papel: dentro del sello pasa a papel blanco con letra roja. */
-:root[data-palette="persona"] .fx-seal.is-recortes { padding: .85rem 1.3rem 1rem; }
-:root[data-palette="persona"] .fx-seal.is-recortes .fx-seal-label { font-size: 21px; font-weight: 400; letter-spacing: 0; }
-:root[data-palette="persona"] .fx-seal.is-recortes .rc-letters { flex-wrap: nowrap; }
-:root[data-palette="persona"] .fx-seal .rc-r { background: #fff; color: #ff1f3d; box-shadow: inset 0 0 0 2px #0a0a0a; }
-/* EL CANTO (10-10-2026): la tarjeta deja de ser un rectángulo con borde. El hook le pone debajo un SVG con la forma
-   de las tarjetas del juego —un cuadrilátero torcido— en tres capas: la sombra de bloque negra, un filo negro por
-   fuera y uno blanco por dentro, como los recuadros de la interfaz de Persona 5. Por eso la tarjeta pierde aquí su
-   fondo, su borde y su sombra: los pone el SVG. */
-:root[data-palette="persona"] .fx-seal.is-recortes { background: none; border: 0; box-shadow: none; padding: 1.15rem 1.7rem 1.3rem; }
-:root[data-palette="persona"] .fx-seal-canto { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; overflow: visible; }
-:root[data-palette="persona"] .fx-seal-canto .is-sombra { fill: #0a0a0a; transform: translate(3px, 9px); }
-:root[data-palette="persona"] .fx-seal-canto .is-filo { fill: none; stroke: #0a0a0a; stroke-width: 12px; stroke-linejoin: miter; }
-:root[data-palette="persona"] .fx-seal-canto .is-cara { fill: #ff1f3d; stroke: #fff; stroke-width: 5px; stroke-linejoin: miter; }
+:root[data-palette="persona"] .fx-p5-golpe-banda {
+  position: absolute; left: -10%; right: -10%; top: 50%; height: 168px; margin-top: -84px;
+  transform: rotate(-7deg) translateX(-110%);
+  background: radial-gradient(circle, rgba(255, 31, 61, .35) 1.3px, transparent 1.7px) 0 0 / 8px 8px, #0d0d0d;
+  border-block: 6px solid #ff1f3d; box-shadow: 0 0 0 3px #0d0d0d;
+  animation: p5g-banda-entra .22s cubic-bezier(.2, .9, .3, 1) forwards, p5g-banda-sale .26s 1.75s cubic-bezier(.6, 0, .9, .4) forwards;
+}
+/* El corte (fuera) y el golpe (dentro) van en dos cajas: las dos animan la opacidad y en una sola se pisarían. */
+:root[data-palette="persona"] .fx-p5-golpe-corte { position: relative; animation: p5g-corte 2.05s forwards; }
+:root[data-palette="persona"] .fx-p5-golpe-tarjeta {
+  position: relative; display: inline-flex; padding: 1.15rem 1.7rem 1.3rem;
+  font: 400 21px/1 'Anton', var(--font-display); white-space: nowrap;
+  transform: rotate(-7deg) scale(2.2); opacity: 0;
+  animation: p5g-golpe .4s .14s cubic-bezier(.2, 1.5, .35, 1) forwards;
+}
+:root[data-palette="persona"] .fx-p5-golpe-tarjeta .rc-letters { flex-wrap: nowrap; }
+:root[data-palette="persona"] .fx-p5-golpe-tarjeta .rc { box-shadow: 2px 2px 0 rgba(0, 0, 0, .55); scale: 0; animation: p5g-letra .32s calc(.3s + var(--d, 0ms)) cubic-bezier(.3, 1.8, .5, 1) forwards; }
+/* Sobre la tarjeta roja, el recorte rojo se fundía con el fondo: aquí pasa a papel blanco con letra roja. */
+:root[data-palette="persona"] .fx-p5-golpe-tarjeta .rc-r { background: #fff; color: #ff1f3d; box-shadow: inset 0 0 0 2px #0a0a0a, 2px 2px 0 rgba(0, 0, 0, .55); }
+/* EL CANTO: la forma de las tarjetas del juego, un cuadrilátero torcido, en tres capas: la sombra de bloque negra,
+   un filo negro por fuera y uno blanco por dentro, como los recuadros de la interfaz de Persona 5. */
+:root[data-palette="persona"] .fx-p5-golpe-canto { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; overflow: visible; }
+:root[data-palette="persona"] .fx-p5-golpe-canto .is-sombra { fill: #0a0a0a; transform: translate(3px, 9px); }
+:root[data-palette="persona"] .fx-p5-golpe-canto .is-filo { fill: none; stroke: #0a0a0a; stroke-width: 12px; stroke-linejoin: miter; }
+:root[data-palette="persona"] .fx-p5-golpe-canto .is-cara { fill: #ff1f3d; stroke: #fff; stroke-width: 5px; stroke-linejoin: miter; }
+:root[data-palette="persona"] .fx-p5-golpe-tesoro {
+  position: absolute; left: 50%; top: calc(50% + 62px); padding: .2rem .8rem .25rem;
+  font: 400 15px/1 'Anton', var(--font-display); letter-spacing: .12em;
+  color: #fff; background: #0d0d0d; border: 2px solid #fff;
+  transform: translateX(-50%) rotate(-7deg) skewX(-12deg); opacity: 0;
+  animation: p5g-tesoro .22s .95s ease-out forwards;
+}
+:root[data-palette="persona"] .fx-p5-chispa {
+  position: absolute; width: calc(26px * var(--s)); height: calc(26px * var(--s)); fill: #fff;
+  transform: translate(-50%, -50%) scale(0); animation: p5g-chispa .5s var(--d) ease-out forwards;
+}
+@media (max-width: 480px) {
+  :root[data-palette="persona"] .fx-p5-golpe-tarjeta { font-size: 17px; padding: 1rem 1.2rem 1.1rem; }
+}
+@keyframes p5g-vida { 0%, 90% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes p5g-banda-entra { to { transform: rotate(-7deg) translateX(0); } }
+@keyframes p5g-banda-sale { to { transform: rotate(-7deg) translateX(110%); } }
+@keyframes p5g-golpe { 0% { opacity: 0; } 60% { opacity: 1; transform: rotate(-4deg) scale(.95); } 100% { opacity: 1; transform: rotate(-5deg) scale(1); } }
+@keyframes p5g-corte {
+  0%, 82% { clip-path: polygon(-10% -30%, 110% -30%, 110% 130%, -10% 130%); translate: 0 0; opacity: 1; }
+  100% { clip-path: polygon(-10% -30%, 110% -30%, 110% -30%, -10% 130%); translate: -60px -30px; opacity: 0; }
+}
+@keyframes p5g-letra { to { scale: 1; } }
+@keyframes p5g-tesoro { from { opacity: 0; translate: -30px 0; } to { opacity: 1; translate: 0 0; } }
+@keyframes p5g-chispa {
+  50% { transform: translate(-50%, -50%) scale(1) rotate(20deg); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(.2) rotate(45deg); opacity: 0; }
+}
 
 /* ══ MOMENTOS · EL CORTE DE TIJERA: la fila eliminada se recorta como una pieza de collage ══════════════════
    El listado ya marca `.is-leaving` cuando un juego se va (ver `_motion.scss`), así que no hace falta ningún
@@ -857,3 +894,62 @@
 :root[data-palette="persona"] .rc-r { background: var(--steam); color: #0a0a0a; }
 :root[data-palette="persona"][data-theme="light"] .rc-n { box-shadow: none; }
 
+
+/* ══ MOMENTOS · EL CALENDARIO, al EMPEZAR un juego (12-10-2026) ═════════════════════════════════════════════════
+   La contraparte de «OBJETIVO CUMPLIDO»: la transición de día de Persona 5. Una franja roja cruza en diagonal, el
+   número de AYER salta hacia arriba y cae el de HOY, con el mes encima («10/»), el día de la semana en su recuadro
+   negro sesgado y el sol que gira; remata «HOY EMPIEZA» en las letras recortadas de siempre (`.rc-*`, la receta de
+   `recortes.ts`). La fecha es la del momento en que se lanza: la pone el hook, no esta hoja. Elegido con la página
+   de propuestas de «empezar un juego». A la luz, el velo es de papel y no de tinta. ══ */
+:root[data-palette="persona"] .fx-p5-cal { position: fixed; inset: 0; z-index: 9997; pointer-events: none; overflow: hidden; animation: p5cal-fuera 2.9s forwards; }
+:root[data-palette="persona"] .fx-p5-cal::before { content: ""; position: absolute; inset: 0; background: rgba(13, 13, 13, .72); animation: p5cal-velo .25s both; }
+:root[data-palette="persona"][data-theme="light"] .fx-p5-cal::before { background: rgba(244, 241, 238, .78); }
+:root[data-palette="persona"] .fx-p5-cal-franja {
+  position: absolute; left: -20%; right: -20%; top: 38%; height: 120px; background: #ff1f3d;
+  transform: rotate(-14deg); box-shadow: 0 0 0 6px #0d0d0d, 0 0 0 9px #fff;
+  animation: p5cal-franja .35s cubic-bezier(.2, .8, .2, 1) both;
+}
+:root[data-palette="persona"] .fx-p5-cal-bloque {
+  position: absolute; left: 50%; top: 44%; display: grid; grid-template-columns: auto auto; align-items: end; gap: 0 10px;
+  transform: translate(-50%, -50%) rotate(-8deg); color: #fff;
+}
+:root[data-palette="persona"] .fx-p5-cal-mes {
+  grid-column: 1 / -1; font: 400 26px/1 'Anton', var(--font-display); letter-spacing: .04em; color: #fff; text-shadow: 3px 3px 0 #0d0d0d;
+  animation: p5cal-cae .3s .15s both;
+}
+:root[data-palette="persona"][data-theme="light"] .fx-p5-cal-mes { color: #0d0d0d; text-shadow: 3px 3px 0 #ff1f3d; }
+:root[data-palette="persona"] .fx-p5-cal-num { position: relative; height: 150px; width: 2.1ch; overflow: hidden; font: 400 150px/1 'Anton', var(--font-display); }
+:root[data-palette="persona"] .fx-p5-cal-num span {
+  position: absolute; inset: 0; text-align: center; color: #fff;
+  -webkit-text-stroke: 4px #0d0d0d; paint-order: stroke fill; text-shadow: 7px 7px 0 #0d0d0d;
+}
+:root[data-palette="persona"] .fx-p5-cal-num .is-ayer { animation: p5cal-ayer .4s .55s cubic-bezier(.6, 0, .8, .3) forwards; }
+:root[data-palette="persona"] .fx-p5-cal-num .is-hoy { transform: translateY(105%) rotate(18deg); animation: p5cal-hoy .42s .78s cubic-bezier(.2, 1.4, .4, 1) forwards; }
+:root[data-palette="persona"] .fx-p5-cal-lado { display: grid; gap: 8px; padding-bottom: 14px; }
+:root[data-palette="persona"] .fx-p5-cal-dia {
+  font: 400 30px/1 'Anton', var(--font-display); padding: 4px 12px 2px; background: #0d0d0d; color: #fff;
+  transform: skewX(-14deg) rotate(4deg); box-shadow: 4px 4px 0 #fff;
+}
+:root[data-palette="persona"] .fx-p5-cal-dia span { display: inline-block; transform: skewX(14deg); }
+:root[data-palette="persona"] .fx-p5-cal-sol {
+  width: 44px; height: 44px; background: #fff; border-radius: 50%; padding: 3px; box-shadow: 3px 3px 0 #0d0d0d;
+  animation: p5cal-gira 2.4s .3s linear both;
+}
+:root[data-palette="persona"] .fx-p5-cal-hoy {
+  position: absolute; left: 50%; top: 74%; transform: translate(-50%, -50%) rotate(-6deg);
+  font: 400 30px/1 'Anton', var(--font-display); white-space: nowrap;
+}
+:root[data-palette="persona"] .fx-p5-cal-hoy .rc-letters { flex-wrap: nowrap; }
+:root[data-palette="persona"] .fx-p5-cal-hoy .rc { box-shadow: 2px 2px 0 rgba(0, 0, 0, .55); animation: p5cal-letra .18s both; animation-delay: calc(1.25s + var(--d, 0ms)); }
+@media (max-width: 480px) {
+  :root[data-palette="persona"] .fx-p5-cal-num { height: 120px; font-size: 120px; }
+  :root[data-palette="persona"] .fx-p5-cal-hoy { font-size: 26px; }
+}
+@keyframes p5cal-fuera { 0%, 86% { opacity: 1; } 100% { opacity: 0; transform: scale(1.04); } }
+@keyframes p5cal-velo { from { opacity: 0; } }
+@keyframes p5cal-franja { from { transform: rotate(-14deg) translateX(-110%); } }
+@keyframes p5cal-cae { from { opacity: 0; transform: translateY(-20px); } }
+@keyframes p5cal-ayer { to { transform: translateY(-110%) rotate(-12deg); opacity: .3; } }
+@keyframes p5cal-hoy { to { transform: none; } }
+@keyframes p5cal-gira { to { transform: rotate(180deg); } }
+@keyframes p5cal-letra { from { opacity: 0; transform: scale(1.8) rotate(0); } }

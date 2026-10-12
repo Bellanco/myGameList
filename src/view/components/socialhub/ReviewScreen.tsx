@@ -60,6 +60,7 @@ export function ReviewScreen({
   status,
   statusKind,
   actions = null,
+  footer = null,
   related = null,
   coversAllowed = false,
   screenLoading = false,
@@ -82,6 +83,8 @@ export function ReviewScreen({
   statusKind: string;
   /** Fila de la derecha bajo el encabezado (hoy, compartir la reseña si es tuya). */
   actions?: ReactNode;
+  /** Al pie de la reseña, dentro de su tarjeta: el «Me gusta» (docs/plan-reacciones.md). */
+  footer?: ReactNode;
   /** Bloque de relacionadas al pie, que monta quien tiene con qué relacionarla. */
   related?: ReactNode;
   /** ¿Se puede pedir la carátula del juego para el fondo? Ver `useReviewCover`. */
@@ -170,6 +173,7 @@ export function ReviewScreen({
           {/* Lo que está pasando, para quien no ve el esqueleto. */}
           {bodyLoading ? <p className="sr-only" role="status">{SOCIAL_UI.feed.detailLoadingReview}</p> : null}
           {previewOnly ? <p className="hub-detail-preview-note">{SOCIAL_UI.feed.detailPreviewOnly}</p> : null}
+          {footer}
         </article>
       </ViewTransition>
       {related}

@@ -735,6 +735,10 @@
 :root[data-palette="seaofstars"] { --btn-friend: var(--sos-pink); }
 :root[data-palette="seaofstars"][data-theme="light"] { --btn-friend: #b0245e; }
 
+/* El «Me gusta» activado (`.hub-like-button`) de día: el oro del acento sobre el turquesa se quedaba en 1,05:1, es
+   decir, invisible. El violeta del «encendido», más hondo: 6,8:1. De noche el oro sí funciona. */
+:root[data-palette="seaofstars"][data-theme="light"] { --like: #4a1f9e; }
+
 /* LAS ETIQUETAS DE GÉNERO, LEGIBLES (09-10-2026). A la luz, los siete tonos se quedaban entre 3,7 y 4,1:1 sobre su
    velo encima de las turquesas (el peor fondo de la casa): el texto va hacia la tinta. De noche, el violeta y el
    magenta (tonos 4 y 7) se quedaban en 4,2: van hacia el blanco. */
@@ -827,3 +831,40 @@
   92% { transform: translate(-50%, -50%) scale(1, .5); }
   96%, 100% { transform: translate(-50%, -50%) scale(1, 0); }
 }
+
+/* ── LA FIRMA · EL CARTEL DE ZONA (12-10-2026) ───────────────────────────────────────────────────────────────────
+   Al EMPEZAR un juego, el cartel que sale al llegar a un sitio nuevo: se abre de lado a lado una franja azul noche
+   con ribete de puntos dorados, se teclea «NUEVA AVENTURA» letra a letra, sale «— capítulo 1 —» y titilan dos
+   estrellas en los extremos. Sustituyó la misma tarde a la entrada al combate (rombos en espiral, que se leían como
+   un mosaico roto), elegido con la maqueta de propuestas. Todo va a `steps()`, que es como se mueve el píxel. La
+   franja es la ventana del juego, así que es la misma de día. ── */
+:root[data-palette="seaofstars"] .fx-sos-zona {
+  position: fixed; left: 0; right: 0; top: 46%; z-index: 9997; pointer-events: none;
+  transform: translateY(-50%); display: grid; justify-items: center; gap: 6px; padding: 18px 0 16px;
+  animation: sos-zona-vida 2.5s steps(1) forwards;
+}
+:root[data-palette="seaofstars"] .fx-sos-zona::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(90deg, transparent, rgba(11, 27, 58, .92) 18%, rgba(11, 27, 58, .92) 82%, transparent);
+  border-block: 3px dotted #f5c13e; transform: scaleX(0); animation: sos-zona-abre .45s .05s steps(9) forwards;
+}
+/* El tecleo recorta la línea letra a letra (`--n` = letras): con `width` en `ch` se comería las letras anchas. */
+:root[data-palette="seaofstars"] .fx-sos-zona b {
+  font: 700 clamp(28px, 6vw, 40px)/1 var(--font-body); letter-spacing: .08em; white-space: nowrap;
+  color: #fff7d6; text-shadow: 3px 3px 0 #0b1b3a;
+  clip-path: inset(-10% 100% -10% 0); animation: sos-zona-teclea .7s .5s steps(var(--n)) forwards;
+}
+:root[data-palette="seaofstars"] .fx-sos-zona small {
+  font: 400 17px/1 var(--font-body); color: #2bb3c4; letter-spacing: .1em;
+  opacity: 0; animation: sos-zona-on .2s 1.3s steps(2) forwards;
+}
+:root[data-palette="seaofstars"] .fx-sos-zona i {
+  position: absolute; top: 50%; width: 16px; height: 16px; margin-top: -8px; background: #f5c13e; opacity: 0;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  animation: sos-zona-tw .9s calc(.6s + var(--d)) steps(4) 2;
+}
+@keyframes sos-zona-vida { 0%, 92% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes sos-zona-abre { to { transform: scaleX(1); } }
+@keyframes sos-zona-teclea { to { clip-path: inset(-10% 0 -10% 0); } }
+@keyframes sos-zona-on { to { opacity: 1; } }
+@keyframes sos-zona-tw { 0%, 100% { opacity: 0; transform: scale(.4); } 50% { opacity: 1; transform: scale(1.1); } }

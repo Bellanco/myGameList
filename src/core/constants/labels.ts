@@ -151,6 +151,9 @@ export const SYNC_MESSAGES = {
   recoverMissingTokenInProfile: 'Tu cuenta de Google no tiene ningún token guardado. Conecta a mano con un token y el ID del gist.',
   recoverError: 'No se pudo recuperar el ID del gist desde Google',
   recoverUnavailable: 'Ahora mismo no se puede recuperar la configuración desde Google. Inténtalo más tarde o conecta a mano con un token y el ID del gist.',
+  /** Lo mismo, dicho desde la pasarela del social: allí no hay conexión manual, el camino es el botón de GitHub. */
+  recoverErrorSocial: 'No se pudo recuperar tu cuenta desde Google. Conecta GitHub para seguir.',
+  recoverUnavailableSocial: 'Ahora mismo no se puede recuperar tu cuenta desde Google. Inténtalo más tarde o conecta GitHub.',
   /** Con cero cambios, `syncNow` sigue confirmando: dice lo mismo que `syncSuccess`. */
   mergeSynced: (changes: number) =>
     changes > 0 ? `Datos sincronizados. ${remoteChangesArrived(changes)}` : 'Datos sincronizados',
@@ -186,6 +189,10 @@ export const APPEARANCE_UI = {
   coversAria: 'Descargar las carátulas de los juegos',
   coversOn: 'Activadas',
   coversOff: 'Desactivadas',
+  gameScenesLabel: 'Animaciones al cambiar de lista',
+  gameScenesAria: 'Animación del tema al pasar un juego a En curso o a Completados',
+  gameScenesOn: 'Activadas',
+  gameScenesOff: 'Desactivadas',
   wishlistLabel: 'Lista de deseos',
   wishlistAria: 'Visibilidad de la pestaña de la lista de deseos',
   wishlistShow: 'Mostrar',

@@ -12,6 +12,9 @@ import '../../src/styles/social.scss';
 import { IconSprite } from '../../src/view/components/IconSprite';
 import { IconSpriteRest } from '../../src/view/components/IconSpriteRest';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
+import { SocialGateway } from '../../src/view/components/socialhub/SocialGateway';
+import { resolveGateway } from '../../src/viewmodel/social/socialGateway';
+import type { GithubConnection } from '../../src/viewmodel/sync/githubConnection';
 import { parsePaletteId } from '../../src/core/constants/palettes';
 import { loadPaletteSkin } from '../../src/view/hooks/paletteSkin';
 import { useSocialFeed } from '../../src/viewmodel/social/socialFeed';
@@ -21,6 +24,9 @@ import type {
   SocialPostFeedItem,
 } from '../../src/viewmodel/social/socialFeed';
 import { SocialFeedScreen } from '../../src/view/components/socialhub/SocialFeedScreen';
+import { FeedLikeBar } from '../../src/view/components/socialhub/FeedLikeBar';
+import { buildFeedLikes, likeTargetOf, type FeedLiker, type LikeableFeedItem } from '../../src/core/social/feedLikes';
+import { reactionTargetKey, setReaction, type SocialReactionEntry } from '../../src/core/social/reactions';
 import { LegalConsentToast } from '../../src/view/components/LegalConsentToast';
 import { SocialProfilesScreen } from '../../src/view/components/socialhub/SocialProfilesScreen';
 import { SocialProfileDetailScreen } from '../../src/view/components/socialhub/SocialProfileDetailScreen';
@@ -244,6 +250,42 @@ const MI_ACTIVIDAD = {
 };
 
 
+// ─── «Me gusta» (docs/plan-reacciones.md) ──────────────────────────────────────────────────────────────────────
+// Los de tus amistades, con el MISMO cruce que el hub (`buildFeedLikes`). Fechas distintas para que el orden de los
+// nombres (del más reciente al más antiguo) se vea; el de Iván ya lo tienes dado, para ver el botón pulsado.
+function gustan(items: readonly LikeableFeedItem[], desde: number): SocialReactionEntry[] {
+  return items.flatMap((item, index) => {
+    const target = likeTargetOf(item);
+    return target ? [{ ...target, kind: 'like' as const, at: desde - index }] : [];
+  });
+}
+const RESENA_IVAN = ACTIVIDAD[IVAN.id][0];
+const LIKERS: FeedLiker[] = [
+  { key: MARTA.uid, name: MARTA.displayName, reactions: gustan([MI_ACTIVIDAD.activity[0], RESENA_IVAN], hace(0, 9, 0)) },
+  { key: NACHO.uid, name: NACHO.displayName, reactions: gustan([MI_ACTIVIDAD.activity[0], RESENA_IVAN], hace(0, 8, 0)) },
+  // Las publicaciones, con su `kind`: es el que les pone el feed al mezclarlas, y lo que las distingue de una reseña.
+  { key: LUCIA.uid, name: LUCIA.displayName, reactions: gustan([{ ...MI_ACTIVIDAD.posts[0], kind: 'post' }, RESENA_IVAN], hace(0, 7, 0)) },
+  { key: PAULA.uid, name: PAULA.displayName, reactions: gustan([{ ...PUBLICACIONES[NACHO.id][0], kind: 'post' }, RESENA_IVAN], hace(0, 6, 0)) },
+  // Un nombre al tope de 35 caracteres, el más reciente en la publicación de Nacho: la frase solo usa la primera palabra
+  // («Maximiliano»), así que sigue cabiendo; el nombre entero queda en el `title`.
+  { key: 'uid-maqueta-largo', name: 'Maximiliano Fernández-Villaverde', reactions: gustan([{ ...PUBLICACIONES[NACHO.id][0], kind: 'post' }], hace(0, 10, 0)) },
+];
+
+/** El estado de tus «me gusta» de la maqueta: pulsar cambia de verdad, sin red. */
+function useMaquetaLikes() {
+  const [own, setOwn] = useState<SocialReactionEntry[]>(() => gustan([RESENA_IVAN], hace(0, 5, 0)));
+  const likesFor = useMemo(() => buildFeedLikes(LIKERS, own), [own]);
+  const toggleLike = useCallback((item: LikeableFeedItem) => {
+    const target = likeTargetOf(item);
+    if (!target) return;
+    const key = reactionTargetKey(target);
+    setOwn((current) => setReaction(current, target, !current.some((entry) => reactionTargetKey(entry) === key), Date.now())
+      .filter((entry) => !entry.del));
+  }, []);
+  return { likesFor, toggleLike };
+}
+
+
 // ─── Pantallas ───────────────────────────────────────────────────────────────────────────────────────────────
 function Feed({ vacio = false, fallo = false, caducado = false }: { vacio?: boolean; fallo?: boolean; caducado?: boolean }) {
   // El MISMO derivado que usa el hub: mezcla, orden, cupo de movimientos y agrupado por día con sus cabeceras.
@@ -252,6 +294,7 @@ function Feed({ vacio = false, fallo = false, caducado = false }: { vacio?: bool
   // el aviso de arriba). `caducado`: GitHub ha rechazado el token (el aviso fijo con «Volver a conectar»).
   const { feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed } = useSocialFeed(vacio ? [] : [...DIRECTORIO, MI_ACTIVIDAD], undefined, vacio ? new Set<string>() : AMIGOS);
   const reconectar = useMemo(() => (caducado ? { onReconnect: avisar('abriría GitHub para volver a conectar'), busy: false } : null), [caducado]);
+  const { likesFor, toggleLike } = useMaquetaLikes();
   return (
     <SocialFeedScreen
       SOCIAL_UI={SOCIAL_UI}
@@ -272,6 +315,8 @@ function Feed({ vacio = false, fallo = false, caducado = false }: { vacio?: bool
       showMoreFeed={showMoreFeed}
       openActivityDetail={avisar('abriría la reseña')}
       openMoveReview={avisar('abriría la reseña')}
+      likesFor={likesFor}
+      toggleLike={toggleLike}
       handleActivityItemKeyDown={noop}
       publishingPost={false}
       handlePublishPost={async () => false}
@@ -620,6 +665,7 @@ const RELACIONADAS: RelatedReview[] = [
 const EVENTO = ACTIVIDAD[IVAN.id][0];
 
 function Resena() {
+  const { likesFor, toggleLike } = useMaquetaLikes();
   return (
     <SocialDetailScreen
       SOCIAL_UI={SOCIAL_UI}
@@ -633,12 +679,14 @@ function Resena() {
       eventLoading={false}
       reviewLoading={false}
       coversAllowed={false}
+      likeBar={<FeedLikeBar SOCIAL_UI={SOCIAL_UI} likes={likesFor(EVENTO)} own={false} author={EVENTO.profileDisplayName} onToggle={() => toggleLike(EVENTO)} />}
       related={<RelatedReviews SOCIAL_UI={SOCIAL_UI} items={RELACIONADAS} onOpen={avisar('abriría esa reseña')} coversAllowed={false} />}
     />
   );
 }
 
 function ResenaDePerfil() {
+  const { likesFor, toggleLike } = useMaquetaLikes();
   return (
     <SocialProfileReviewScreen
       SOCIAL_UI={SOCIAL_UI}
@@ -661,6 +709,8 @@ function ResenaDePerfil() {
       status=""
       statusKind=""
       coversAllowed={false}
+      // La misma reseña que el detalle del feed (`EVENTO`): su «me gusta» es el mismo.
+      likeBar={<FeedLikeBar SOCIAL_UI={SOCIAL_UI} likes={likesFor(EVENTO)} own={false} author={IVAN.displayName} onToggle={() => toggleLike(EVENTO)} />}
       related={<RelatedReviews SOCIAL_UI={SOCIAL_UI} items={RELACIONADAS} onOpen={avisar('abriría esa reseña')} coversAllowed={false} />}
     />
   );
@@ -687,12 +737,70 @@ function Solicitudes({ vacia = false }: { vacia?: boolean }) {
   );
 }
 
+// ─── La pasarela (sin el espacio abierto) ────────────────────────────────────────────────────────────────────
+// La pasarela REAL (`SocialGateway`) en sus estados, con una conexión de GitHub inventada (OAuth encendido).
+// Variantes (`abrir`): `` dispositivo nuevo, con el atajo de Google · `recuperando` tras pulsarlo · `sin-nada` la
+// cuenta de Google no tenía nada guardado · `vuelves` este dispositivo ya tenía GitHub y el espacio.
+const CONEXION_GITHUB: GithubConnection = {
+  statusText: 'No sincronizado',
+  hasConfig: false,
+  connectedGistId: '',
+  token: '',
+  gistId: '',
+  errorMessage: '',
+  recoveringGistId: false,
+  oauthEnabled: true,
+  oauthLoggingIn: false,
+  onOAuthLogin: avisar('abriría la autorización de GitHub'),
+  onTokenChange: noop,
+  onGistIdChange: noop,
+  onConnect: noop,
+  onDisconnect: noop,
+  onCopyGistId: noop,
+  onRecoverGistId: noop,
+  recoverFromGoogle: async () => ({ outcome: 'superseded', uid: '' }),
+};
+
+function Pasarela({ caso }: { caso: string }) {
+  const github = caso === 'vuelves';
+  const sesion = caso === 'sin-nada';
+  const recuperando = caso === 'recuperando';
+  const { steps, currentStep } = resolveGateway({ hasMainSync: github, hasSocialSession: sesion, hasSocialGist: github });
+  return (
+    <SocialGateway
+      steps={steps}
+      currentStep={currentStep}
+      hasMainSync={github}
+      hasSocialSession={sesion}
+      hasSocialGist={github}
+      sessionName={sesion ? 'Ana P.' : ''}
+      primaryCta={github ? { icon: 'bottom-hub', label: SOCIAL_UI.gateway.signIn, action: avisar('entraría con Google'), disabled: false } : null}
+      githubConnection={{ ...CONEXION_GITHUB, hasConfig: github, recoveringGistId: recuperando }}
+      recovery={{
+        available: !github && !sesion,
+        accountHasNothing: sesion,
+        recovering: recuperando,
+        recover: avisar('entraría con Google y recuperaría GitHub y tu espacio'),
+      }}
+      offline={false}
+      serviceLimited={false}
+      legalConsentRequired={false}
+      savingConsent={false}
+      onAcceptLegalConsent={noop}
+      onSignOut={avisar('cerraría la sesión de Google')}
+      status=""
+      statusKind=""
+    />
+  );
+}
+
 const RUTA_MARTA = `/social/profiles/${MARTA.id}`;
 const RUTA_PROPIA = '/social/profiles/yo';
 const subruta = vista === 'resenas' ? '/reviews' : vista === 'publicaciones' ? '/posts' : '';
 
 /** Todas las pantallas del hub con sesión. La barra flotante (abajo) las recorre; `?barra=0` la quita para capturas. */
 const PANTALLAS: Record<string, { nombre: string; ruta: string; pintar: () => ReactElement }> = {
+  pasarela: { nombre: 'Pasarela (sin el espacio abierto)', ruta: '/social', pintar: () => <Pasarela caso={params.get('abrir') || ''} /> },
   feed: { nombre: 'Feed', ruta: '/social', pintar: () => <Feed /> },
   'feed-vacio': { nombre: 'Feed sin amigos', ruta: '/social', pintar: () => <Feed vacio /> },
   'feed-fallo': { nombre: 'Feed: no se pudo leer (sin copia)', ruta: '/social', pintar: () => <Feed vacio fallo /> },
@@ -741,6 +849,12 @@ const PANTALLAS: Record<string, { nombre: string; ruta: string; pintar: () => Re
 
 /** Las combinaciones de `vista` y `abrir` que tienen sentido, para la barra. */
 const VARIANTES: Record<string, Array<{ nombre: string; vista?: string; abrir?: string }>> = {
+  pasarela: [
+    { nombre: 'Dispositivo nuevo' },
+    { nombre: 'Recuperando desde Google', abrir: 'recuperando' },
+    { nombre: 'La cuenta no tenía nada', abrir: 'sin-nada' },
+    { nombre: 'Este dispositivo ya lo tenía', abrir: 'vuelves' },
+  ],
   perfil: [{ nombre: 'Listas' }, { nombre: 'Reseñas', vista: 'resenas' }, { nombre: 'Estadísticas', abrir: 'estadisticas' }, { nombre: 'Resumen del año', abrir: 'resumen' }],
   'compartir-resumen': [
     { nombre: 'Sin enlace' },

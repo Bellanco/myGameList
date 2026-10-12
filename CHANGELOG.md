@@ -5,6 +5,62 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-12
+
+Una versión para **sentirse leído**: «Me gusta» en lo que escriben tus amigos, los textos legales en lenguaje claro,
+volver al espacio social solo con Google y una escena de cada tema al empezar y al cerrar un juego.
+
+### Added
+- **«Me gusta» en las reseñas y publicaciones de tus amigos**, en el feed, en el detalle de una reseña y en las
+  reseñas que abres desde la pestaña «Reseñas» de un perfil. Un solo botón, con un pulgar, y debajo quién: «A
+  Marta le gusta», «A Marta y a Nacho les gusta» o, con tres o más, «A Nacho y a 5 más les gusta» (solo el primer
+  nombre de cada persona, para que no ocupe más de un renglón). Al pulsar cambia al momento, aunque se envíe después,
+  y la frase te cuenta: «A ti y a 5 más os gusta». En lo tuyo no hay botón, solo la frase. Se guarda en tu propio
+  gist, así que no gasta Firestore; las versiones anteriores de la app no lo ven ni lo borran. El estado activado se
+  distingue en todos los temas (píldora y pulgar relleno), con color propio en Plata y acero, Inserte moneda y Mar
+  de estrellas de día.
+- **Cada tema tiene escena al EMPEZAR un juego**, además de la de cerrarlo: salta cuando un juego llega a En curso.
+  La puerta redonda de Bolsón Cerrado (No puedes pasar), el atardecer synthwave con «STAGE 1» (Inserte moneda), «Nuevo
+  contrato» con el cartel de la tabla en rojo vivo (Plata y acero), el calendario con la fecha de hoy (Ladrones de
+  corazones), el cartel de la cámara con «PRUEBA EN CURSO» (Cámara de pruebas), el escáner óptico (Sin futuro), el
+  cartel de zona «Nueva aventura» (Sol y luna) y la transmisión astropática con el águila imperial (Solo hay guerra).
+- **Casilla «Animaciones al cambiar de lista» en Diseño, apagada por defecto y solo de plata para arriba.** Las
+  escenas tapan la pantalla un par de segundos, así que se encienden a mano, como las carátulas. Bronce no ve la
+  casilla, y a quien la encendió y ya no tiene el rango se le apaga al entrar en Diseño. Viaja con la cuenta (`publicConfig.gameScenes`):
+  **las reglas de Firestore tienen que desplegarse antes que el cliente** o se deniega la escritura de toda la
+  apariencia. Ya desplegadas el 12-10-2026.
+- **Volver al espacio social solo con Google.** En un dispositivo o navegador sin GitHub conectado, el primer paso
+  de la puerta ofrece, debajo de «Conectar con GitHub», «¿Ya tienes espacio social? Entrar con Google»: recupera de
+  tu cuenta el token y el gist guardados, conecta la sincronización y abre tu espacio, sin volver a autorizar
+  GitHub. Si la cuenta no tenía nada guardado, el paso lo dice y queda el botón de GitHub. Antes ese atajo solo
+  existía en Ajustes, plegado dentro de la conexión manual.
+
+### Changed
+- **Los textos legales y de privacidad, en lenguaje claro.** Las condiciones, la privacidad, las cookies y la
+  puerta del espacio social hablan de tú, con frases cortas y sin contar cómo funciona la app por dentro. Dicen lo
+  mismo que antes, más los «me gusta»: por eso **la versión legal sube a 2026-10-12b** y todo el mundo vuelve a
+  aceptar al entrar en el espacio social.
+- **El feed de plata relee los gists de sus amistades cada 20 minutos** (antes, 15). Bronce sigue en 30, oro en 10 y
+  mithril en 1.
+- **Inserte moneda y Cámara de pruebas ya no sortean al cerrar un juego**: la pantalla de récord y la terminal de
+  GLaDOS se quedan solas, y el atardecer y el cartel pasan a la escena de empezar.
+- **Ladrones de corazones y Solo hay guerra estrenan escena al cerrar un juego.** En vez del sello que caía en el
+  centro y se iba en menos de un segundo: «Objetivo cumplido» se estampa sobre una franja negra, las letras
+  recortadas saltan una a una y cae «Tesoro robado» (Ladrones de corazones), y cae un sello de pureza con el águila
+  en relieve del que se desenrollan tiras de pergamino, con «Deber cumplido» debajo (Solo hay guerra).
+- **No puedes pasar cierra un juego con el Anillo**: cae, gira sobre el canto como una moneda y se tumba, con la frase
+  de Gandalf encima y «Juego Terminado» debajo. Antes salía solo el rótulo.
+
+### Fixed
+- **El número de juegos de la ficha de un perfil contaba solo los cargados.** La lista va de 15 en 15 al bajar, y al
+  lado de «Ordenar» ponía «15 juegos» aunque hubiera doscientos. Ahora cuenta todos (o todos los que casan con la
+  búsqueda).
+- **El feed volvía a descargar entero el gist de cada amigo cada vez.** La copia guardada se borraba justo antes de
+  poder preguntar a GitHub si había cambiado, así que nunca se aprovechaba la respuesta «sin cambios» y se gastaba
+  cupo de GitHub de más.
+- **Una escena con un `::before` o `::after` animado se borraba al acabar el del pseudoelemento**, no al acabar ella:
+  el evento llega con la escena como destino. El calendario de los Ladrones desaparecía a los 0,25 s.
+
 ## [1.6.11] - 2026-10-12
 
 Una versión de **compartir**: el resumen del año tiene enlace propio y temporada hasta el 15 de enero, «Compartir»

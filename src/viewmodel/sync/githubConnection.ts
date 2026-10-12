@@ -1,5 +1,20 @@
 import { createContext, useContext } from 'react';
 
+/** Quién pide recuperar la sincronización desde Google: cambia lo que se dice, no lo que se hace. */
+export type GoogleRecoveryOrigin = 'settings' | 'social';
+
+/**
+ * Qué salió de recuperar desde Google, y con qué cuenta (`uid`, vacío si no se llegó a entrar).
+ *  - `connected`: la cuenta tenía token y gist de juegos, y la sincronización ya está conectada.
+ *  - `missing`: la cuenta respondió, pero no tiene las dos cosas guardadas. Toca conectar GitHub.
+ *  - `failed`: no se pudo (Google, Firestore o un token guardado que GitHub ya no acepta). Ya se ha avisado.
+ *  - `superseded`: otro intento lo relevó; el que vale es ese.
+ */
+export interface GoogleRecovery {
+  outcome: 'connected' | 'missing' | 'failed' | 'superseded';
+  uid: string;
+}
+
 /**
  * LA CONEXIÓN CON GITHUB, dicha en una sola interfaz.
  *
@@ -35,6 +50,8 @@ export interface GithubConnection {
   onDisconnect: () => void;
   onCopyGistId: () => void;
   onRecoverGistId: () => void;
+  /** La misma recuperación, con su resultado: la usa la pasarela del social para su atajo de Google. */
+  recoverFromGoogle: (from: GoogleRecoveryOrigin) => Promise<GoogleRecovery>;
 }
 
 /**

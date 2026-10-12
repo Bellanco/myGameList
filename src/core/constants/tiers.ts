@@ -59,7 +59,7 @@ export const ADMIN_ONLY_TIER: ProfileTier = PROFILE_TIER.mithril;
  */
 export const PROFILE_TIER_FEED_TTL_MS: Record<ProfileTier, number> = {
   bronze: 30 * 60 * 1000, // lo mismo que antes de existir los rangos
-  silver: 15 * 60 * 1000,
+  silver: 20 * 60 * 1000, // 15 min hasta el 12-10-2026, decisión del usuario
   gold: 10 * 60 * 1000,
   mithril: 60_000,
 };
@@ -127,6 +127,26 @@ export function canPublishPosts(tier: ProfileTier): boolean {
 /** ¿Se le enseña contador de caracteres? Mithril no: no tiene límite que mostrar. */
 export function hasPostLengthLimit(tier: ProfileTier): boolean {
   return canPublishPosts(tier) && PROFILE_TIER_POST_MAX_LENGTH[tier] < POST_HARD_CEILING;
+}
+
+/**
+ * LAS ESCENAS DE EMPEZAR Y CERRAR UN JUEGO (decisión del usuario, 12-10-2026): qué rangos ven su casilla en Diseño.
+ * Bronce no: a quien no la tiene no se le enseña ni la casilla, y nada en pantalla dice por qué (los rangos no se
+ * nombran ante quien no administra).
+ *
+ * Como la cadencia del feed, lo aplica el cliente y no es exigible: quien manipule su copia puede encenderla, y lo
+ * único que consigue es una animación en su propia pantalla.
+ */
+export const PROFILE_TIER_GAME_SCENES: Record<ProfileTier, boolean> = {
+  bronze: false,
+  silver: true,
+  gold: true,
+  mithril: true,
+};
+
+/** ¿Este rango puede encender las escenas de empezar y cerrar un juego? */
+export function canUseGameScenes(tier: ProfileTier): boolean {
+  return PROFILE_TIER_GAME_SCENES[tier];
 }
 
 export const PROFILE_TIER_LABELS: Record<ProfileTier, string> = {

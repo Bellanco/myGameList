@@ -1679,7 +1679,7 @@ Es la misma idea que sostiene todo el documento —derivar en vez de registrar�
 > caché (`getCachedSocialDirectory`) es un **caché con TTL, no un registro**, y las tres propiedades que la hacen
 > buena para su trabajo la inhabilitan para este:
 >
-> 1. **Caduca, y el TTL lo pone el rango de quien mira** (`PROFILE_TIER_FEED_TTL_MS`: 30 min bronce, 15 plata, 10
+> 1. **Caduca, y el TTL lo pone el rango de quien mira** (`PROFILE_TIER_FEED_TTL_MS`: 30 min bronce, 20 plata, 10
 >    oro, **60 s mithril**). Pasado el TTL devuelve `null`, que para el §8.4 significa «no hay foto previa» y por
 >    tanto «sembrar y callar». El resultado sería exactamente el revés de lo que el rango promete: **cuanto más
 >    alto el rango, menos logros de amigos se anuncian**, y un mithril no vería ninguno jamás.

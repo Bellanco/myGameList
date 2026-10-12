@@ -89,7 +89,15 @@
 // datos que lo aceptado no contemplaba en público, así que la versión sube y todo el mundo vuelve a pasar por la
 // puerta (mismo criterio que con los enlaces de reseñas). A la vez, el aviso a tus amistades deja de salir al
 // consultar tu resumen y sale al compartirlo: eso es publicar menos y no la subiría por sí solo.
-export const LEGAL_VERSION = '2026-10-12';
+// 2026-10-12b (la `b` porque la 2026-10-12 ya salió en la 1.6.11): los «ME GUSTA» (docs/plan-reacciones.md). El canal
+// social publica a qué reseñas y publicaciones de tus amistades les das «me gusta» y cuándo; lo ven tus amistades que
+// pueden ver lo mismo. Es un dato nuevo sobre ti, así que la versión sube y todo el mundo vuelve a pasar por la puerta.
+// Se pensó meterlo en la 2026-10-12 para ahorrar una vuelta, pero esa salió antes (1.6.11, con el texto sin «me gusta»)
+// y quien la aceptó no aceptó esto.
+// En la misma versión, los documentos y la puerta pasan a LENGUAJE CLARO (de tú, frases cortas, sin contar cómo
+// funciona la app por dentro). Dicen lo mismo: eso por sí solo no la subiría (mismo criterio que la redacción formal
+// del 2026-10-05). Ver `legalContent.ts`.
+export const LEGAL_VERSION = '2026-10-12b';
 
 /**
  * Se emite en `window` cada vez que este dispositivo sella la versión aceptada (`sealLegalConsent`). Lo escucha la
@@ -149,10 +157,9 @@ export interface LegalDocument {
 /** Textos de la puerta de aceptación previa al espacio social. */
 export const LEGAL_CONSENT_UI = {
   title: 'Antes de continuar',
-  // La actividad se detalla un poco —«reseñas y movimientos de listas»— porque es lo que más gente lee de todo el
-  // aparato legal, y lo segundo es nuevo: quien lo acepte tiene que saber que la app va a contar sola cuándo
-  // empieza o termina un juego, no solo lo que él escriba. En el registro formal de los documentos (2026-10-05).
-  body: 'Al activar el espacio social se publican el nombre de perfil, la fotografía y los logros, accesibles para cualquier usuario con sesión iniciada, así como la actividad (las reseñas y los movimientos de listas, con su fecha), accesible para las personas con las que se mantenga una relación de amistad. Para activarlo es necesario aceptar las Condiciones de uso y la Política de privacidad.',
+  // Lo que más gente lee de todo lo legal: dice en dos frases qué ve cualquiera y qué ven tus amigos, incluido lo
+  // que la app publica sola (cambios de lista, «me gusta»). Lenguaje claro desde el 2026-10-12, como los documentos.
+  body: 'Al activar el espacio social, cualquier persona con sesión en la app podrá ver tu nombre de perfil, tu foto y tus logros. Tus amigos verán además tu actividad: reseñas, publicaciones, cambios en tus listas y los «me gusta» que das. Para seguir, acepta las condiciones de uso y la política de privacidad.',
   checkbox: 'He leído y acepto las Condiciones de uso y la Política de privacidad',
   termsLink: 'Condiciones de uso',
   privacyLink: 'Política de privacidad',

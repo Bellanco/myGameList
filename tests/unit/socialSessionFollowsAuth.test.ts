@@ -8,9 +8,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * arrancando—, se quedaba con «nadie» y la pasarela pedía identificarse hasta volver a montar el hub, aunque la sesión
  * hubiera vuelto un segundo después.
  */
-const { auth, lectura } = vi.hoisted(() => ({
+const { auth, lectura, sync } = vi.hoisted(() => ({
   auth: { cb: null as null | ((user: unknown) => void) },
   lectura: { user: null as unknown },
+  sync: { cb: null as null | ((config: unknown) => void) },
 }));
 
 vi.mock('../../src/model/repository/firebaseGateway', () => ({
@@ -28,6 +29,10 @@ vi.mock('../../src/model/repository/firebaseRepository', () => ({
 vi.mock('../../src/model/repository/gistRepository', () => ({
   ensureSyncConfigLoaded: async () => {},
   getSyncConfig: () => ({ token: 't', gistId: 'main', etag: null, lastRemoteUpdatedAt: 0 }),
+  subscribeSyncConfig: (cb: (config: unknown) => void) => {
+    sync.cb = cb;
+    return () => {};
+  },
 }));
 vi.mock('../../src/model/repository/socialGistRepository', () => ({
   getSocialSyncConfig: () => ({ token: 't', gistId: 'social-gist', etag: null, lastRemoteUpdatedAt: 0 }),
@@ -42,6 +47,7 @@ const montar = () => renderHook(() => useSocialSession({ lockProfileEditor: () =
 
 beforeEach(() => {
   auth.cb = null;
+  sync.cb = null;
   lectura.user = null;
 });
 
@@ -76,5 +82,24 @@ describe('useSocialSession sigue la sesión', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.authUser).toEqual(USUARIO);
     expect(result.current.showSocialSpace).toBe(true);
+  });
+});
+
+/**
+ * Y SIGUE LA SINCRONIZACIÓN (12-10-2026). El atajo de Google de la pasarela conecta GitHub SIN recargar la página
+ * (recupera el token y el gist de la cuenta). Con la configuración leída solo al montar, el hub seguía en el paso de
+ * GitHub con la sincronización ya conectada, y no enlazaba el espacio.
+ */
+describe('useSocialSession sigue la sincronización', () => {
+  it('ve la sincronización que se conecta con el hub ya montado, y la que se desconecta', async () => {
+    const { result } = montar();
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const recuperada = { token: 'nuevo', gistId: 'juegos', etag: null, lastRemoteUpdatedAt: 0 };
+    act(() => sync.cb?.(recuperada));
+    expect(result.current.mainSyncConfig).toEqual(recuperada);
+
+    act(() => sync.cb?.(null));
+    expect(result.current.mainSyncConfig).toBeNull();
   });
 });

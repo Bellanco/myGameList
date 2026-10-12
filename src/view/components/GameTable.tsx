@@ -31,6 +31,11 @@ interface GameTableProps {
   onAddGame?: () => void;
   /** Lista con tope (la de deseos): cuántos juegos tiene ENTERA y cuántos caben. El recuento se dice contra él. */
   listCap?: { total: number; max: number };
+  /**
+   * Cuántos juegos hay DE VERDAD cuando `games` es solo un lote: la ficha de un perfil pinta de 15 en 15, y el
+   * recuento decía 15 aunque la lista tuviera 200. Sin él, se cuentan los que llegan.
+   */
+  totalCount?: number;
   /** Trae la biblioteca desde el JSON de «Playnite Library Exporter» en vez de teclear juego a juego. */
   onImportLibrary?: (file: File) => void;
   /** Nº de juegos esperando en la bandeja; con 0 no se ofrece el acceso. */
@@ -453,6 +458,7 @@ export const GameTable = memo(function GameTable({
   onMigrate,
   onAddGame,
   listCap,
+  totalCount,
   onImportLibrary,
   inboxCount = 0,
   onOpenInbox,
@@ -466,6 +472,8 @@ export const GameTable = memo(function GameTable({
   recentlyChangedId = null,
   removingId = null,
 }: GameTableProps) {
+  /** Los juegos que se cuentan: los de verdad si `games` es un lote, y si no, los que llegan. */
+  const shownCount = totalCount ?? games.length;
   const enteringIds = useEnteringRows(games, currentTab);
   const showYears = visibility?.showYears ?? true;
   const showReplayable = visibility?.showReplayable ?? true;
@@ -946,12 +954,12 @@ export const GameTable = memo(function GameTable({
           {listCap ? (
             <span className={`list-head-count${listCap.total >= listCap.max ? ' is-full' : ''}`}>
               {/* Con filtros, delante lo que se está viendo: el tope habla de la lista entera, no de lo filtrado. */}
-              {games.length !== listCap.total ? `${UI_MESSAGES.toolbar.listCount(games.length)} · ` : null}
+              {shownCount !== listCap.total ? `${UI_MESSAGES.toolbar.listCount(shownCount)} · ` : null}
               {UI_MESSAGES.toolbar.wishlistCount(listCap.total, listCap.max)}
               <span className="sr-only">{UI_MESSAGES.toolbar.wishlistCountAria}</span>
             </span>
           ) : (
-            <span className="list-head-count">{UI_MESSAGES.toolbar.listCount(games.length)}</span>
+            <span className="list-head-count">{UI_MESSAGES.toolbar.listCount(shownCount)}</span>
           )}
           {/* EL ORDEN, EN CHIPS. Era un desplegable del sistema con un botón de flecha al lado: dos controles
               ajenos al resto de la interfaz para una sola decisión, y había que abrir el uno para saber por
@@ -1059,7 +1067,7 @@ export const GameTable = memo(function GameTable({
           lo único que las distingue. Va en `aria-label` y no en un `<caption>` oculto (09-10-2026): con las filas
           separadas por `border-spacing`, el caption —aunque fuera `sr-only`— sumaba en Chrome otro espaciado de fila
           y dejaba una franja vacía entre la barra de la lista y la primera fila. */}
-      <table className={tableClass} aria-label={UI_MESSAGES.table.caption(TAB_TITLES[currentTab], games.length)}>
+      <table className={tableClass} aria-label={UI_MESSAGES.table.caption(TAB_TITLES[currentTab], shownCount)}>
         <tbody>
           {!games.length ? (
             <tr>

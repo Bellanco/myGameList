@@ -1034,3 +1034,77 @@
 @keyframes cp-cell { to { background: #fcee0a; color: #08090d; } }
 @keyframes cp-ok { 0%, 56% { transform: translateY(-50%) scaleY(0); } 60%, 90% { transform: translateY(-50%) scaleY(1); } 100% { transform: translateY(-50%) scaleY(0); } }
 @keyframes cp-br-panel { 0% { opacity: 0; } 5%, 92% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ── LA FIRMA · MISIÓN ACTIVA (12-10-2026) ──────────────────────────────────────────────────────────────────────────
+   Al EMPEZAR un juego, el ESCÁNER ÓPTICO: la retícula se abre en el centro, barre, los datos se teclean a su lado,
+   los corchetes se cierran sobre el objetivo y salta «MISIÓN ACTIVA». Es la otra cara del protocolo de brecha: al
+   cerrar se rompe el sistema; al empezar, se marca el objetivo. Elegido con la maqueta de las escenas de empezar.
+   Ocupa la ventana porque es lo que ve el ojo, no una pieza. De día cambia el amarillo por el cian de la casa y el
+   cian por magenta (el amarillo no se lee sobre gris claro). Nada en bucle: todo acaba con la escena. ── */
+:root[data-palette="cyberpunk"] .fx-cp-scan {
+  --sc-fg: #eef3f7; --sc-acc: #fcee0a; --sc-cy: #00f0ff; --sc-red: #ff003c; --sc-veil: rgba(4, 5, 8, .62); --sc-ink: #08090d;
+  position: fixed; inset: 0; z-index: 9997; pointer-events: none;
+  font-family: var(--font-mono);
+  animation: cp-sc-fundido 2.8s forwards;
+}
+:root[data-palette="cyberpunk"][data-theme="light"] .fx-cp-scan {
+  --sc-fg: #0d1319; --sc-acc: #0089a3; --sc-cy: #c4007a; --sc-red: #d1002f; --sc-veil: rgba(231, 234, 238, .6); --sc-ink: #ffffff;
+}
+:root[data-palette="cyberpunk"] .fx-cp-scan-veil {
+  position: absolute; inset: 0;
+  background:
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--sc-cy) 6%, transparent) 0 1px, transparent 1px 4px),
+    radial-gradient(circle at 50% 44%, transparent 0 120px, var(--sc-veil) 300px);
+}
+:root[data-palette="cyberpunk"] .fx-cp-scan-core { position: absolute; left: 50%; top: 44%; width: 220px; height: 220px; transform: translate(-50%, -50%); }
+:root[data-palette="cyberpunk"] .fx-cp-ret { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--sc-cy); overflow: visible; animation: cp-sc-abre .45s cubic-bezier(.2, .9, .3, 1.2) both; }
+:root[data-palette="cyberpunk"] .fx-cp-ret .is-gira { transform-origin: 100px 100px; animation: cp-sc-gira 2.8s linear forwards; }
+:root[data-palette="cyberpunk"] .fx-cp-ret .is-contra { transform-origin: 100px 100px; animation: cp-sc-gira 2.8s linear reverse forwards; }
+:root[data-palette="cyberpunk"] .fx-cp-ret .is-punto { fill: var(--sc-red); animation: cp-sc-parpadeo .3s steps(1) .2s 6; }
+/* Los corchetes llegan de fuera, se quedan y se CIERRAN sobre el objetivo, con un golpe en rojo al fijarlo. */
+:root[data-palette="cyberpunk"] .fx-cp-br { position: absolute; width: 30px; height: 30px; border: 0 solid var(--sc-acc); opacity: 0; animation: cp-sc-cierra 1.7s cubic-bezier(.7, 0, .2, 1) .15s forwards; }
+:root[data-palette="cyberpunk"] .fx-cp-br.is-tl { left: 0; top: 0; border-width: 3px 0 0 3px; --x: -46px; --y: -46px; }
+:root[data-palette="cyberpunk"] .fx-cp-br.is-tr { right: 0; top: 0; border-width: 3px 3px 0 0; --x: 46px; --y: -46px; }
+:root[data-palette="cyberpunk"] .fx-cp-br.is-bl { left: 0; bottom: 0; border-width: 0 0 3px 3px; --x: -46px; --y: 46px; }
+:root[data-palette="cyberpunk"] .fx-cp-br.is-br { right: 0; bottom: 0; border-width: 0 3px 3px 0; --x: 46px; --y: 46px; }
+:root[data-palette="cyberpunk"] .fx-cp-sweep { position: absolute; left: -10px; right: -10px; height: 3px; top: 0; background: linear-gradient(90deg, transparent, var(--sc-cy), transparent); box-shadow: 0 0 12px var(--sc-cy); opacity: 0; animation: cp-sc-barre .7s ease-in-out .4s 2; }
+/* Los datos se teclean con `steps()` sobre su ancho en `ch` (`--n` caracteres, `--d` de retardo): en monoespaciada
+   es exacto, igual que la terminal de GLaDOS. */
+:root[data-palette="cyberpunk"] .fx-cp-scan-data { position: absolute; left: calc(100% + 22px); top: 18px; display: grid; gap: 4px; font-size: 14px; color: var(--sc-fg); }
+:root[data-palette="cyberpunk"] .fx-cp-scan-data::before { content: ""; position: absolute; right: calc(100% + 4px); top: 9px; width: 16px; height: 1px; background: var(--sc-acc); }
+:root[data-palette="cyberpunk"] .fx-cp-scan-data p { margin: 0; width: 0; overflow: hidden; white-space: nowrap; animation: cp-sc-teclea calc(var(--n) * 30ms) steps(var(--n)) var(--d) forwards; }
+:root[data-palette="cyberpunk"] .fx-cp-scan-data p.is-hd { color: var(--sc-acc); }
+:root[data-palette="cyberpunk"] .fx-cp-scan-data b { font-weight: 400; color: var(--sc-cy); }
+:root[data-palette="cyberpunk"] .fx-cp-scan-data p.is-fin b { color: var(--sc-red); }
+:root[data-palette="cyberpunk"] .fx-cp-scan-ok {
+  position: absolute; left: 50%; top: calc(44% + 142px); transform: translateX(-50%);
+  padding: 6px 22px 5px; background: var(--sc-acc); color: var(--sc-ink);
+  font: 700 22px var(--font-display); letter-spacing: .22em; white-space: nowrap;
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  opacity: 0; animation: cp-sc-ok .5s steps(1) 1.85s forwards;
+}
+/* En el móvil no caben los datos al lado: bajan bajo la retícula y el rótulo se va al pie. */
+@media (max-width: 560px) {
+  :root[data-palette="cyberpunk"] .fx-cp-scan-core { top: 34%; width: 200px; height: 200px; }
+  :root[data-palette="cyberpunk"] .fx-cp-scan-data { left: 50%; top: calc(100% + 16px); transform: translateX(-50%); justify-items: center; }
+  :root[data-palette="cyberpunk"] .fx-cp-scan-data::before { display: none; }
+  :root[data-palette="cyberpunk"] .fx-cp-scan-ok { top: auto; bottom: 34px; }
+}
+@keyframes cp-sc-fundido { 0% { opacity: 0; } 5%, 90% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes cp-sc-abre { from { transform: scale(.15) rotate(-90deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes cp-sc-gira { to { transform: rotate(180deg); } }
+@keyframes cp-sc-parpadeo { 50% { opacity: .15; } }
+@keyframes cp-sc-cierra {
+  0% { opacity: 0; transform: translate(var(--x), var(--y)); }
+  10%, 70% { opacity: 1; transform: translate(var(--x), var(--y)); }
+  86% { transform: translate(calc(var(--x) * -.12), calc(var(--y) * -.12)); border-color: var(--sc-red); }
+  100% { opacity: 1; transform: none; border-color: var(--sc-acc); }
+}
+@keyframes cp-sc-barre { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(220px); opacity: 1; } }
+@keyframes cp-sc-teclea { to { width: calc(var(--n) * 1ch + .6ch); } }
+@keyframes cp-sc-ok {
+  0% { opacity: 1; transform: translateX(calc(-50% + 12px)); }
+  15% { transform: translateX(calc(-50% - 7px)); }
+  30% { transform: translateX(calc(-50% + 3px)); }
+  45%, 100% { opacity: 1; transform: translateX(-50%); }
+}

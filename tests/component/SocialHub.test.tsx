@@ -75,6 +75,8 @@ const gistMocks = vi.hoisted(() => ({
     etag: null,
   })),
   readPublicSocialGistById: vi.fn(async (_gistId?: string): Promise<any> => ({})),
+  // Los «me gusta» que llegaron con esa lectura (docs/plan-reacciones.md): aquí, ninguno.
+  getPublicSocialReactions: vi.fn(() => []),
   // Fase 2: migración del canal a gist secreto. Por defecto, nada que migrar.
   // Tipado con el contrato REAL a propósito: con `Promise<any>` un mock que se quedara atrás (le faltaba
   // `supersededGistIds`) pasaba el typecheck y reventaba en ejecución como rechazo no capturado.
@@ -2393,6 +2395,7 @@ describe('SocialHub — el alta social conecta GitHub sin salir de la pantalla',
     onDisconnect: vi.fn(),
     onCopyGistId: vi.fn(),
     onRecoverGistId: vi.fn(),
+    recoverFromGoogle: vi.fn(async () => ({ outcome: 'missing' as const, uid: '' })),
     ...overrides,
   });
 
@@ -2459,5 +2462,60 @@ describe('SocialHub — el alta social conecta GitHub sin salir de la pantalla',
 
     expect(await screen.findByText(SOCIAL_UI.gateway.connectSync)).toBeInTheDocument();
     expect(screen.queryByText(SETTINGS_UI.sync.oauthConnectBtn)).not.toBeInTheDocument();
+  });
+
+  /**
+   * EL ATAJO DE GOOGLE (12-10-2026). Quien ya tiene espacio social y llega a un dispositivo sin GitHub no tiene por
+   * qué volver a autorizar GitHub: su cuenta de Google guarda el token y el gist. Debajo del botón de GitHub, y por
+   * debajo de él en peso: GitHub sigue siendo el camino de quien empieza.
+   */
+  it('sin GitHub, el paso 1 ofrece entrar con Google para recuperar lo que la cuenta guarda', async () => {
+    const conn = conexion();
+    const { container } = renderHub('/social', undefined, conn);
+
+    const atajo = await screen.findByRole('button', { name: SOCIAL_UI.gateway.recoverSignIn });
+    expect(screen.getByText(SOCIAL_UI.gateway.recoverPrompt)).toBeInTheDocument();
+    expect(container.querySelector('.hub-gateway-stage.is-current')?.contains(atajo)).toBe(true);
+    expect(atajo).not.toHaveClass('hub-gateway-btn-primary');
+
+    fireEvent.click(atajo);
+    expect(conn.recoverFromGoogle).toHaveBeenCalledWith('social');
+  });
+
+  it('mientras recupera, los dos botones del paso esperan', async () => {
+    renderHub('/social', undefined, conexion({ recoveringGistId: true }));
+
+    expect(await screen.findByRole('button', { name: SOCIAL_UI.gateway.recovering })).toBeDisabled();
+    expect(screen.getByRole('button', { name: SETTINGS_UI.sync.oauthConnectBtn })).toBeDisabled();
+  });
+
+  it('con la sincronización ya conectada no hay atajo: el paso de GitHub está hecho', async () => {
+    gistMocks.getSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'games', etag: null, lastRemoteUpdatedAt: 0 } as never);
+
+    renderHub('/social', undefined, conexion({ hasConfig: true, connectedGistId: 'games' }));
+
+    expect(await screen.findByText(SOCIAL_UI.gateway.signIn)).toBeInTheDocument();
+    expect(screen.queryByText(SOCIAL_UI.gateway.recoverPrompt)).not.toBeInTheDocument();
+  });
+
+  /**
+   * UNA CUENTA SIN NADA GUARDADO: el atajo se va —ya ha respondido— y el paso dice que toca GitHub. El segundo ya no
+   * pide «preparar el espacio», que sin GitHub no se puede: dice que ya se ha entrado y que el espacio vendrá solo.
+   */
+  it('si la cuenta no tenía nada, el atajo se va y el paso 1 manda a GitHub', async () => {
+    const usuario = { uid: 'uid-vacio', displayName: 'Ana', email: 'ana@example.com', photoURL: '' };
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue(usuario as never);
+    const conn = conexion({ recoverFromGoogle: vi.fn(async () => ({ outcome: 'missing' as const, uid: 'uid-vacio' })) });
+
+    renderHub('/social', undefined, conn);
+    // Con la sesión ya abierta no se «entra»: se recupera.
+    const atajo = await screen.findByRole('button', { name: SOCIAL_UI.gateway.recoverWithSession });
+    expect(screen.getByText(SOCIAL_UI.gateway.signedInAwaitingSync)).toBeInTheDocument();
+
+    fireEvent.click(atajo);
+
+    expect(await screen.findByText(SOCIAL_UI.gateway.recoverNothingSaved)).toBeInTheDocument();
+    expect(screen.queryByText(SOCIAL_UI.gateway.recoverPrompt)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: SETTINGS_UI.sync.oauthConnectBtn })).toBeEnabled();
   });
 });

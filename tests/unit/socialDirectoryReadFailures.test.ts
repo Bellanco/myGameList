@@ -27,6 +27,7 @@ vi.mock('../../src/model/repository/socialGistRepository', () => ({
   getSocialSyncConfig: () => ({ token: 'token-social', gistId: 'gist-yo' }),
   mergeSocialGistData: (a: unknown) => a,
   readPublicSocialGistById,
+  getPublicSocialReactions: () => [],
 }));
 
 const { useSocialDirectory } = await import('../../src/viewmodel/social/useSocialDirectory');

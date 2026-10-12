@@ -1,16 +1,15 @@
 import { memo, useCallback, useMemo } from 'react';
-import { Link, generatePath, useLocation } from 'react-router-dom';
+import { generatePath, useLocation } from 'react-router-dom';
 // La hoja del hub se importa AQUÍ y no desde `index.scss`: como el hub entra por `lazy()`, Vite emite su CSS en
 // el mismo chunk perezoso y el arranque no carga ni un byte de estilos de estas pantallas (igual que `stats.scss`).
 import '../../styles/social.scss';
 import { SOCIAL_UI } from '../../core/constants/socialLabels';
-import { LEGAL_CONSENT_UI, LEGAL_ROUTES } from '../../core/constants/legal';
 import type { GameItem, TabData, TabId } from '../../model/types/game';
 import { useSocialViewModel } from '../../viewmodel/useSocialViewModel';
 import { useGithubConnection } from '../../viewmodel/sync/githubConnection';
+import { useGatewayRecovery } from '../../viewmodel/social/useGatewayRecovery';
 import { SOCIAL_ROUTES, matchSocialRoute, wantsYearSummary } from '../../viewmodel/social/socialRoutes';
 import { ENABLE_ACHIEVEMENTS } from '../../core/achievements/flags';
-import { Icon } from './Icon';
 import { SocialHubSkeleton } from './SocialHubSkeleton';
 
 import { SocialProfileScreen } from './socialhub/SocialProfileScreen';
@@ -22,17 +21,15 @@ import { SocialProfileReviewScreen } from './socialhub/SocialProfileReviewScreen
 import { RelatedReviews } from './socialhub/RelatedReviews';
 import { SocialProfilesScreen } from './socialhub/SocialProfilesScreen';
 import { SocialFeedScreen } from './socialhub/SocialFeedScreen';
+import { FeedLikeBar } from './socialhub/FeedLikeBar';
 import { SocialRequestsScreen } from './socialhub/SocialRequestsScreen';
 import { ShareReviewButton } from './stats/ShareReviewButton';
-import { HubStatus } from './socialhub/HubStatus';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { SocialErrorBoundary } from './socialhub/SocialErrorBoundary';
-import { HubOfflineNotice } from './socialhub/HubOfflineNotice';
-import { GithubSyncCard } from './sync/GithubSyncCard';
+import { SocialGateway } from './socialhub/SocialGateway';
 import { libraryStart } from '../../core/achievements/metrics';
 import { useHubFocusOnNavigate } from '../hooks/useHubFocusOnNavigate';
 import { useUnavailableReviewRedirect } from '../hooks/useUnavailableReviewRedirect';
-import { ScreenTitle } from './socialhub/ScreenTitle';
 
 /**
  * Hub social - Fase 1.
@@ -100,13 +97,13 @@ const SocialHubInner = memo(function SocialHubInner({
   } = vm.directory;
   const {
     feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed, handleActivityItemKeyDown, handleProfileCardKeyDown,
-    yearSummarySignal, feedReadFailed, githubReconnectNeeded,
+    yearSummarySignal, feedReadFailed, githubReconnectNeeded, likesFor, toggleLike,
   } = vm.feed;
   const {
     profileDetailId, profileReviewsView, profilePostsView, profileAchievementsView, profileGlobalsView,
-    selectedProfileDetail, activeProfileReview, activeDetailEvent, detailEventLoading, profileDetailLoading,
-    detailReviewLoading, profileReviewLoading, getGameItemById, relatedReviews, openOwnProfileDetail,
-    isOwnProfileDetail, isOwnDetailEvent,
+    selectedProfileDetail, activeProfileReview, activeProfileReviewEvent, activeDetailEvent, detailEventLoading,
+    profileDetailLoading, detailReviewLoading, profileReviewLoading, getGameItemById, relatedReviews,
+    openOwnProfileDetail, isOwnProfileDetail, isOwnDetailEvent,
   } = vm.reading;
   const { ownAchievements, ownAchievementMirror } = vm.achievements;
   /**
@@ -173,20 +170,13 @@ const SocialHubInner = memo(function SocialHubInner({
     // feed de verdad por su camino y no por el panel.
     return backTo.startsWith('/social') ? SOCIAL_UI.feed.backToFeed : SOCIAL_UI.feed.backGeneric;
   }, [backTo]);
-  /**
-   * EL PRIMER PASO SE DA AQUÍ, no en otra pantalla. La conexión con GitHub es la misma que ofrece Integración
-   * —el componente y el viewmodel son los mismos, ver `GithubSyncCard`—, así que la pasarela ya no manda a
-   * Ajustes a quien viene a montar su espacio social y luego no sabe volver.
-   *
-   * DOS CONDICIONES, y las dos por el mismo motivo: que el paso 1 se vea tan sencillo como el 2.
-   *  - Sin proveedor (`null`): el hub se monta suelto en las pruebas de componente y no puede exigir el árbol
-   *    entero de `App`.
-   *  - Sin OAuth en el build: lo único que quedaría por ofrecer aquí es pegar un token a mano, que es
-   *    exactamente lo que esta pantalla no debe pedir.
-   * En ambos casos el paso 1 vuelve a ser el botón de siempre, que lleva a Integración: allí sí se explica.
-   */
+  // La conexión con GitHub de la aplicación: la pasarela la ofrece en su primer paso (ver `SocialGateway`) y el feed
+  // la usa para volver a conectar. `null` cuando el hub se monta suelto (pruebas de componente).
   const githubConnection = useGithubConnection();
-  const showSyncCard = !hasMainSync && Boolean(githubConnection?.oauthEnabled);
+  // El atajo de Google del primer paso: recuperar GitHub y el espacio desde la cuenta (ver el hook).
+  const gatewayRecovery = useGatewayRecovery(githubConnection, hasMainSync, authUser?.uid);
+  const handleAcceptLegalConsent = useCallback(() => { void acceptLegalConsent(); }, [acceptLegalConsent]);
+  const handleGatewaySignOut = useCallback(() => { void handleSignOut(); }, [handleSignOut]);
 
   /**
    * EL BOTÓN DE VOLVER A CONECTAR GITHUB del feed: el MISMO de Ajustes (`onOAuthLogin`), que al terminar devuelve a
@@ -430,6 +420,15 @@ const SocialHubInner = memo(function SocialHubInner({
           /* La misma regla que la reseña leída desde el perfil, unas líneas más abajo: son el mismo detalle por
              dos caminos, y la franja tiene que salir en los dos. */
           coversAllowed="solo-cache"
+          likeBar={activeDetailEvent && activeDetailEvent.type === 'review' ? (
+            <FeedLikeBar
+              SOCIAL_UI={SOCIAL_UI}
+              likes={likesFor(activeDetailEvent)}
+              own={isOwnDetailEvent}
+              author={activeDetailEvent.profileDisplayName}
+              onToggle={() => toggleLike(activeDetailEvent)}
+            />
+          ) : null}
           related={(
             <RelatedReviews
               SOCIAL_UI={SOCIAL_UI}
@@ -564,6 +563,17 @@ const SocialHubInner = memo(function SocialHubInner({
              perfil: de la estantería de otra persona, lo ya resuelto y lo que quepa en el cupo de lo ajeno, y
              encima manda la preferencia de quien mira (ver `useReviewCover`). */
           coversAllowed="solo-cache"
+          // El mismo «Me gusta» que en el feed, porque es la misma reseña: va a su entrada en el gist social. Si no
+          // está publicada en lo social no hay entrada, y no hay botón.
+          likeBar={activeProfileReviewEvent ? (
+            <FeedLikeBar
+              SOCIAL_UI={SOCIAL_UI}
+              likes={likesFor(activeProfileReviewEvent)}
+              own={isOwnProfileDetail}
+              author={(selectedProfileDetail as { displayName?: string })?.displayName || activeProfileReviewEvent.profileDisplayName}
+              onToggle={() => toggleLike(activeProfileReviewEvent)}
+            />
+          ) : null}
           related={(
             <RelatedReviews
               SOCIAL_UI={SOCIAL_UI}
@@ -642,6 +652,8 @@ const SocialHubInner = memo(function SocialHubInner({
         showMoreFeed={showMoreFeed}
         openActivityDetail={openActivityDetail}
         openMoveReview={openMoveReview}
+        likesFor={likesFor}
+        toggleLike={toggleLike}
         handleActivityItemKeyDown={handleActivityItemKeyDown}
         publishingPost={publishingPost}
         handlePublishPost={handlePublishPost}
@@ -657,167 +669,26 @@ const SocialHubInner = memo(function SocialHubInner({
     );
   }
 
-  /**
-   * LO QUE DICE CADA PASO, en el orden de `gatewaySteps`.
-   *
-   * Lo normal es la explicación del propio paso; el segundo tiene DOS situaciones que piden otra cosa, y las dos
-   * son estados reales en los que se ha quedado gente: entrar con Google y que el espacio social no llegue a
-   * crearse, y volver a una instalación nueva cuando el espacio ya existía. Antes se decían en párrafos sueltos
-   * al pie de la pantalla, lejos del paso al que se referían.
-   */
-  const stageNotes = gatewaySteps.map((step) => {
-    if (step.id !== 'google') return step.subtitle;
-    if (hasSocialSession && !hasSocialGist) return SOCIAL_UI.gateway.gistRequired;
-    if (!hasSocialSession && hasSocialGist) return SOCIAL_UI.gateway.gistReadySignIn;
-    return step.subtitle;
-  });
-
-  /**
-   * LA ACCIÓN DE CADA PASO, dentro de su paso.
-   *
-   * Solo hay una a la vez —la del paso que toca—, y es la misma que antes vivía suelta en una fila aparte: el
-   * primero conecta GitHub (la tarjeta compartida con Integración, o su botón de respaldo hacia Ajustes si este
-   * build no trae OAuth) y el segundo entra con Google y, si hace falta, reintenta la creación del espacio.
-   * `primaryGatewayCta` ya resuelve cuál toca; aquí solo se decide bajo qué paso cuelga.
-   */
-  const ctaStageIndex = hasMainSync ? 1 : 0;
-  const stageActions = gatewaySteps.map((_step, index) => {
-    if (index === 0 && showSyncCard && githubConnection) {
-      return (
-        <GithubSyncCard
-          key="github"
-          connection={githubConnection}
-          variant="gateway"
-          ctaClassName="btn btn-primary hub-gateway-btn hub-gateway-btn-primary"
-        />
-      );
-    }
-    if (index !== ctaStageIndex || !primaryGatewayCta) return null;
-    return (
-      <button
-        key="cta"
-        className="btn btn-primary hub-gateway-btn hub-gateway-btn-primary"
-        type="button"
-        onClick={primaryGatewayCta.action}
-        disabled={primaryGatewayCta.disabled}
-      >
-        <Icon name={primaryGatewayCta.icon} />
-        <span>{primaryGatewayCta.label}</span>
-      </button>
-    );
-  });
-
   return (
-    <section className="hub-hub hub-hub-gateway" aria-label={SOCIAL_UI.screenAria}>
-      <div className="hub-hub-card hub-hub-gateway-card">
-        <div className="hub-hub-title-wrap">
-          <h2><ScreenTitle text={SOCIAL_UI.hubTitle} /></h2>
-        </div>
-        <p className="hub-gateway-lead">
-          {SOCIAL_UI.gateway.lead}
-        </p>
-        {/* Los dos pasos necesitan red (Google, Firestore, GitHub): sin conexión no se puede dar ninguno, así que
-            se dice antes de que el usuario pulse y espere a un timeout. */}
-        {offline ? <HubOfflineNotice hasCachedData={false} /> : serviceLimited ? <HubOfflineNotice variant="limited" hasCachedData={false} /> : null}
-
-        {/* L4 — puerta de aceptación: con sesión iniciada y sin conformidad vigente, no se entra ni se crea el
-            espacio social hasta marcarla. No afecta a las listas propias ni a la sincronización. */}
-        {legalConsentRequired ? (
-          <div className="hub-gateway-consent">
-            <strong>{LEGAL_CONSENT_UI.title}</strong>
-            <p>{LEGAL_CONSENT_UI.body}</p>
-            <div className="hub-legal-links">
-              <Link to={LEGAL_ROUTES.terms}>{LEGAL_CONSENT_UI.termsLink}</Link>
-              <Link to={LEGAL_ROUTES.privacy}>{LEGAL_CONSENT_UI.privacyLink}</Link>
-            </div>
-            <label className="hub-gateway-consent-check">
-              <input
-                type="checkbox"
-                checked={false}
-                disabled={savingConsent}
-                onChange={() => void acceptLegalConsent()}
-              />
-              <span>{savingConsent ? LEGAL_CONSENT_UI.pending : LEGAL_CONSENT_UI.checkbox}</span>
-            </label>
-          </div>
-        ) : null}
-
-        {/* ═══ LOS DOS PASOS, Y LA ACCIÓN DENTRO DE SU PASO ═══════════════════════════════════════════════
-            Antes esto eran cuatro piezas diciendo lo mismo: un rótulo («paso 1 de 3»), una barra de progreso,
-            tres fichas con el nombre de cada paso y —lejos de todas ellas— un botón suelto que no decía a cuál
-            pertenecía. Con dos pasos eso no se sostiene: la lista ES el progreso, y cada paso lleva su propio
-            botón, así que no hay que emparejar nada con la vista.
-            `<ol>` y no `<div>`: son pasos en orden, y así se leen también sin ver la pantalla. */}
-        <ol className="hub-gateway-path" aria-label={SOCIAL_UI.gateway.stepsAria}>
-          {gatewaySteps.map((step, index) => {
-            const stepNumber = index + 1;
-            const isCurrent = stepNumber === currentStep && !step.done;
-            return (
-              <li
-                key={step.id}
-                className={`hub-gateway-stage ${step.done ? 'is-done' : ''} ${isCurrent ? 'is-current' : ''}`.trim()}
-              >
-                <span className="hub-gateway-stage-mark">
-                  {step.done ? (
-                    <>
-                      <Icon name="check" />
-                      <span className="sr-only">{SOCIAL_UI.gateway.stageDone}</span>
-                    </>
-                  ) : (
-                    stepNumber
-                  )}
-                </span>
-                <div className="hub-gateway-stage-body">
-                  <h3 className="hub-gateway-stage-title">{step.title}</h3>
-                  <p className="hub-gateway-stage-note">{stageNotes[index]}</p>
-                  {stageActions[index]}
-                </div>
-              </li>
-            );
-          })}
-        </ol>
-
-        {hasSocialSession ? (
-          <div className="hub-gateway-actions" aria-label={SOCIAL_UI.gateway.actionsAria}>
-            <button className="btn btn-exit hub-gateway-btn" type="button" onClick={handleSignOut}>
-              <Icon name="logout" />
-              <span>{SOCIAL_UI.gateway.signOut}</span>
-            </button>
-          </div>
-        ) : null}
-
-        {/* EL ESTADO POR DENTRO. No es letra pequeña ni un apéndice: es lo que se mira cuando algo no cuadra —los
-            TRES requisitos de verdad, uno de ellos el espacio social, que no es un paso pero sí una condición—,
-            así que se queda con el peso que tenía y abierto. Lo que ha cambiado es que ahora dice la verdad: el
-            flujo de abajo anunciaba cuatro etapas de un alta que son dos. */}
-        <details className="hub-gateway-details" open>
-          <summary>{SOCIAL_UI.gateway.detailsSummary}</summary>
-          <div className="hub-status-grid" aria-label={SOCIAL_UI.gateway.stateAria}>
-            <article className={`hub-status-card ${hasMainSync ? 'is-ok' : 'is-pending'}`}>
-              <span className="hub-status-label">{SOCIAL_UI.gateway.stateSync}</span>
-              <strong>{hasMainSync ? SOCIAL_UI.gateway.stateConnected : SOCIAL_UI.gateway.stateNotConnected}</strong>
-            </article>
-            {/* EL ESPACIO SOCIAL, SOLO CUANDO PUEDE DECIR ALGO. No se crea hasta que hay sesión de Google —lo
-                hace solo, ver el efecto de auto-creación—, así que antes de ese paso «No enlazado» no es un
-                estado: es lo único que podía poner, y colado entre los otros dos parecía un tercer pendiente en
-                una pantalla que promete dos pasos. Con sesión ya iniciada sí informa, y es además la ÚNICA señal
-                de que el espacio no llegó a prepararse, que es el caso con el que se viene aquí a mirar. */}
-            {hasSocialSession || hasSocialGist ? (
-              <article className={`hub-status-card ${hasSocialGist ? 'is-ok' : 'is-pending'}`}>
-                <span className="hub-status-label">{SOCIAL_UI.gateway.stateGist}</span>
-                <strong>{hasSocialGist ? SOCIAL_UI.gateway.stateLinked : SOCIAL_UI.gateway.stateNotLinked}</strong>
-              </article>
-            ) : null}
-            <article className={`hub-status-card ${hasSocialSession ? 'is-ok' : 'is-pending'}`}>
-              <span className="hub-status-label">{SOCIAL_UI.gateway.stateSession}</span>
-              <strong>{hasSocialSession ? (authUser?.displayName || authUser?.email || SOCIAL_UI.gateway.stateActive) : SOCIAL_UI.gateway.stateNotStarted}</strong>
-            </article>
-          </div>
-        </details>
-
-        <HubStatus status={status} statusKind={statusKind} />
-      </div>
-    </section>
+    <SocialGateway
+      steps={gatewaySteps}
+      currentStep={currentStep}
+      hasMainSync={hasMainSync}
+      hasSocialSession={hasSocialSession}
+      hasSocialGist={hasSocialGist}
+      sessionName={authUser?.displayName || authUser?.email || ''}
+      primaryCta={primaryGatewayCta}
+      githubConnection={githubConnection}
+      recovery={gatewayRecovery}
+      offline={offline}
+      serviceLimited={serviceLimited}
+      legalConsentRequired={legalConsentRequired}
+      savingConsent={savingConsent}
+      onAcceptLegalConsent={handleAcceptLegalConsent}
+      onSignOut={handleGatewaySignOut}
+      status={status}
+      statusKind={statusKind}
+    />
   );
 });
 

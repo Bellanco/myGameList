@@ -590,10 +590,12 @@ export function useGameListViewModel() {
       setDraft(EMPTY_DRAFT);
       notify('ok', UI_MESSAGES.games.saved);
       void trackAnalyticsEvent('game_saved', { tab, is_edit: Boolean(existing), has_review: Boolean(base.review) });
-      /* Los dos momentos que cada tema celebra a su manera (ver `core/effects/moments`). CERRAR un juego es
-         llegar a la lista del completista desde fuera: guardar uno que YA estaba ahí es una edición, no un
-         final, y celebrarlo cada vez que se corrige una falta de la reseña lo convertiría en ruido. */
+      /* Los momentos que cada tema celebra a su manera (ver `core/effects/moments`). CERRAR un juego es llegar
+         a la lista del completista desde fuera, y EMPEZARLO es llegar igual a En curso: guardar uno que YA estaba
+         ahí es una edición, no un final ni un principio, y celebrarlo cada vez que se corrige una falta de la
+         reseña lo convertiría en ruido. */
       if (tab === 'c' && !existing) emitMoment('game-closed');
+      if (tab === 'e' && !existing) emitMoment('game-started');
       emitMoment('library-saved');
       return { id: base.id, previous };
     },
@@ -690,6 +692,7 @@ export function useGameListViewModel() {
       notify('ok', `"${moved.name}" pasa a ${TAB_TITLES[targetTab]}`);
       void trackAnalyticsEvent('game_moved', { from: sourceTab, to: targetTab });
       if (targetTab === 'c') emitMoment('game-closed');
+      if (targetTab === 'e') emitMoment('game-started');
       emitMoment('library-saved');
     },
     [data, persist, notify],

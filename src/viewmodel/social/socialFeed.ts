@@ -9,6 +9,7 @@ import { createLocalDateFormat, localDayKey, startOfLocalDay } from '../../core/
 import { normalizeTimestamp as toSafeTimestamp } from '../../core/utils/normalize';
 import type { SocialActivityEntry, SocialMoveEntry, SocialPostEntry } from '../../model/repository/socialGistRepository';
 import type { PalmaresEntry } from '../../model/types/premios';
+import type { SocialReactionEntry } from '../../core/social/reactions';
 import type { YearSummarySeen } from '../../model/repository/firebaseClient';
 import { useFeedMoveTabs } from '../../view/hooks/useFeedMoveTabs';
 import { TAB_ORDER } from '../../core/constants/labels';
@@ -446,6 +447,12 @@ export type SocialDirectoryEntry = {
    * después del primer render y el directorio, ya cacheado sin ellos, tardaría media hora en traerlos.
    */
   hiddenMoves?: SocialMoveFeedItem[];
+  /**
+   * Los «me gusta» VIVOS que ha dado esta persona (el fichero de reacciones de su gist social). Opcional: las entradas
+   * que no leen su gist (inactivos, no amigos, ilegibles) no los tienen. Los PROPIOS no se toman de aquí, sino del
+   * fichero y la cola de este dispositivo (`useSocialLikes`), que van por delante de esta copia.
+   */
+  reactions?: SocialReactionEntry[];
   // Index-only (SocialSharedGame) para perfiles ajenos; para el perfil PROPIO se repuebla con GameItem completos.
   sharedLists: Partial<Record<TabId, Array<GameItem | SocialSharedGame>>>;
   visibility: SocialProfileVisibility;

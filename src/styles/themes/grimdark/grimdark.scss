@@ -394,45 +394,57 @@
 /* Preferencia de efectos OFF: detén el PARPADEO CRT (la textura de scanlines/vignette se conserva). */
 :root:not([data-effects="on"])[data-palette="grimdark"] body::before { animation: none !important; }
 
-/* ══ MOMENTOS · LACRE IMPERIAL al cerrar un juego: la cara de este tema del sello común de `_effects.scss`. Oro
-   sobre verde de cogitador, con un escudo imperial que sortea el hook. La guarda de efectos la pone él. ══ */
-:root[data-palette="grimdark"] .fx-seal {
-  color: #e0a92b; border-radius: 2px;
-  background: linear-gradient(160deg, #14281c, #060b08);
-  border: 2px solid #e0a92b;
-  box-shadow: inset 0 0 0 3px rgba(224,169,43,.18), 0 0 26px -6px rgba(67,245,88,.5);
+/* ══ MOMENTOS · EL SELLO DE PUREZA al cerrar un juego (12-10-2026). Era el lacre imperial, el sello común de
+   `_effects.scss` con una placa de esquinas cortadas y un escudo al azar, y pasó a escena propia con la maqueta de
+   propuestas: el lacre rojo cae y se aplasta, con el águila en relieve (la misma máscara que el feed,
+   `seals/aquila.svg`: no añade descarga), y de él se desenrollan tres tiras de pergamino escritas que se mecen y se
+   paran. Debajo, «Deber cumplido» en la gótica del tema. La cera y el pergamino son objetos: solo cambian de tono
+   con el modo. La guarda de efectos la pone el hook. ══ */
+:root[data-palette="grimdark"] .fx-grim-pureza { --grim-papel: #e6d8b3; --grim-tinta: #2a2116; --grim-rotulo: #e0a92b; }
+:root[data-palette="grimdark"][data-theme="light"] .fx-grim-pureza { --grim-papel: #f6edd4; --grim-rotulo: #8a5f0e; }
+:root[data-palette="grimdark"] .fx-grim-pureza {
+  position: fixed; inset: 0; z-index: 9997; pointer-events: none;
+  display: grid; place-content: center; justify-items: center; gap: .6rem;
+  background: radial-gradient(ellipse 60% 66% at 50% 50%, color-mix(in srgb, var(--bg) 90%, transparent) 45%, transparent 78%);
+  animation: grim-pureza-vida 2.8s forwards;
 }
-/* EL ESCUDO (10-10-2026): en vez de la corona de laurel del sprite común, uno de los escudos que el tema ya trae
-   para el feed (§ «EL SELLO ROTA», más abajo), sorteado por el hook en `data-fx`. Solo los OCHO IMPERIALES: en el
-   feed la marca herética tiene su lectura, en «deber cumplido» no. Son los mismos ficheros, así que no añaden
-   descarga. El valor por defecto es la reserva, por si el hook sortea un número que aquí no está. */
-:root[data-palette="grimdark"] .fx-seal { --crest: url('./seals/aquila.svg'); --crest-w: 118px; --crest-h: 50px; }
-:root[data-palette="grimdark"] .fx-seal:has(.fx-seal-crest) { width: 158px; height: 158px; }
-:root[data-palette="grimdark"] .fx-seal-crest {
-  width: var(--crest-w, 70px); height: var(--crest-h, 70px);
-  background: currentColor;
-  -webkit-mask: var(--crest) center / contain no-repeat;
-  mask: var(--crest) center / contain no-repeat;
+:root[data-palette="grimdark"] .fx-grim-pureza-pieza { position: relative; width: 170px; height: 236px; }
+:root[data-palette="grimdark"] .fx-grim-pureza-cera {
+  position: absolute; left: 50%; top: 0; width: 132px; height: 132px; margin-left: -66px; color: #6d0f0c;
+  transform: scale(1.9); opacity: 0; animation: grim-pureza-cae .5s .1s cubic-bezier(.3, 1.4, .5, 1) forwards;
 }
-:root[data-palette="grimdark"] .fx-seal[data-fx="1"] { --crest: url('./seals/mechanicus.svg'); --crest-w: 70px; --crest-h: 70px; }
-:root[data-palette="grimdark"] .fx-seal[data-fx="2"] { --crest: url('./seals/custodes.svg'); --crest-w: 70px; --crest-h: 70px; }
-:root[data-palette="grimdark"] .fx-seal[data-fx="3"] { --crest: url('./seals/dark-angels.svg'); --crest-w: 70px; --crest-h: 70px; }
-:root[data-palette="grimdark"] .fx-seal[data-fx="4"] { --crest: url('./seals/raven-guard.svg'); --crest-w: 70px; --crest-h: 70px; }
-:root[data-palette="grimdark"] .fx-seal[data-fx="5"] { --crest: url('./seals/salamanders.svg'); --crest-w: 70px; --crest-h: 70px; }
-:root[data-palette="grimdark"] .fx-seal[data-fx="6"] { --crest: url('./seals/space-wolves.svg'); --crest-w: 70px; --crest-h: 70px; }
-:root[data-palette="grimdark"] .fx-seal[data-fx="7"] { --crest: url('./seals/blood-ravens.svg'); --crest-w: 100px; --crest-h: 52px; }
-/* EL CANTO (10-10-2026): con el escudo, el lacre deja de ser un cuadrado con borde y pasa a PLACA IMPERIAL: esquinas
-   cortadas, filo de oro, un filete interior más fino y cuatro remaches a media arista. La dibuja un SVG que pone el
-   hook debajo del escudo (un `border` no sabe cortar esquinas), y el halo de fósforo va como `drop-shadow` para que
-   siga la forma; es de una sola vez, no un bucle. */
-:root[data-palette="grimdark"] .fx-seal:has(.fx-seal-canto) { background: none; border: 0; box-shadow: none; }
-:root[data-palette="grimdark"] .fx-seal-canto {
-  position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; overflow: visible;
-  filter: drop-shadow(0 0 14px rgba(67, 245, 88, .4)) drop-shadow(0 10px 18px rgba(0, 0, 0, .55));
+:root[data-palette="grimdark"] .fx-grim-pureza-cera svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 6px 6px rgba(0, 0, 0, .45)); }
+:root[data-palette="grimdark"] .fx-grim-pureza-cera .is-cera { fill: #9c1c17; }
+:root[data-palette="grimdark"] .fx-grim-pureza-cera .is-anillo { fill: none; stroke: #74120e; stroke-width: 3; }
+:root[data-palette="grimdark"] .fx-grim-pureza-cera .is-brillo { fill: #fff; opacity: .16; }
+/* El águila en relieve: hundida en un tono más oscuro de la cera, con el canto de luz debajo. */
+:root[data-palette="grimdark"] .fx-grim-pureza-aquila {
+  position: absolute; left: 50%; top: 50%; width: 84px; height: 36px; margin: -18px 0 0 -42px;
+  background: currentColor; filter: drop-shadow(0 1px 0 rgba(255, 140, 120, .45));
+  -webkit-mask: url('./seals/aquila.svg') center / contain no-repeat;
+  mask: url('./seals/aquila.svg') center / contain no-repeat;
 }
-:root[data-palette="grimdark"] .fx-seal-canto .is-cuerpo { fill: #0d1c13; stroke: #e0a92b; stroke-width: 2.5px; }
-:root[data-palette="grimdark"] .fx-seal-canto .is-filete { fill: none; stroke: rgba(224, 169, 43, .55); stroke-width: 1px; }
-:root[data-palette="grimdark"] .fx-seal-canto .is-remache { fill: #e0a92b; }
+:root[data-palette="grimdark"] .fx-grim-pureza-tiras { position: absolute; left: 0; right: 0; top: 70px; display: flex; justify-content: center; gap: 2px; }
+:root[data-palette="grimdark"] .fx-grim-pureza-tiras i {
+  width: 46px; height: var(--h); transform-origin: 50% 0; transform: rotate(var(--g)) scaleY(0);
+  /* La letra menuda de la plegaria: renglones de tinta cortados en «palabras» por huecos del color del papel. */
+  background:
+    repeating-linear-gradient(90deg, var(--grim-papel) 0 2px, transparent 2px 9px, var(--grim-papel) 9px 11px, transparent 11px 21px, var(--grim-papel) 21px 24px, transparent 24px 30px) 7px 56px / calc(100% - 14px) calc(100% - 74px) no-repeat,
+    repeating-linear-gradient(180deg, transparent 0 7px, color-mix(in srgb, var(--grim-tinta) 70%, transparent) 7px 8.5px) 7px 56px / calc(100% - 14px) calc(100% - 74px) no-repeat,
+    var(--grim-papel);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 12px), 0 100%);
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .3));
+  animation: grim-pureza-tira .45s var(--d) cubic-bezier(.3, .8, .4, 1) forwards, grim-pureza-mece 1.2s calc(var(--d) + .45s) ease-in-out forwards;
+}
+:root[data-palette="grimdark"] .fx-grim-pureza b {
+  font: 700 clamp(30px, 7vw, 46px)/1 'UnifrakturCook', var(--font-display); color: var(--grim-rotulo);
+  opacity: 0; transform: translateY(6px); animation: grim-pureza-sube .5s 1.15s ease-out forwards;
+}
+@keyframes grim-pureza-vida { 0% { opacity: 0; } 4%, 88% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes grim-pureza-cae { 0% { opacity: 0; } 55% { opacity: 1; transform: scale(.94, .9); } 100% { opacity: 1; transform: none; } }
+@keyframes grim-pureza-tira { to { transform: rotate(var(--g)) scaleY(1); } }
+@keyframes grim-pureza-mece { 30% { transform: rotate(calc(var(--g) + 3deg)); } 65% { transform: rotate(calc(var(--g) - 1.5deg)); } 100% { transform: rotate(var(--g)); } }
+@keyframes grim-pureza-sube { to { opacity: 1; transform: none; } }
 
 /* ── §12 · Panel "Perfil": lectura de cogitador. La rampa de los repartos va del FÓSFORO VERDE al ORO
    imperial, los datos brillan como un tubo de rayos catódicos y las cifras se leen en VT323, igual que el
@@ -1066,3 +1078,67 @@
   background-blend-mode: soft-light, soft-light, normal;
   filter: drop-shadow(0 1.5px 1.5px rgba(18, 10, 4, .8));
 }
+
+/* ── LA FIRMA · TRANSMISIÓN ASTROPÁTICA, al EMPEZAR un juego (12-10-2026) ─────────────────────────────────────────
+   La contraparte de «DEBER CUMPLIDO»: antes de la batalla llega la orden. La pantalla del cogitador se enciende en una
+   raya, «+++ TRANSMISIÓN ENTRANTE +++» parpadea, aparece el águila imperial y la orden se teclea línea a línea hasta
+   «EL EMPERADOR PROTEGE». Elegida con la página de propuestas de «empezar un juego».
+   EL ÁGUILA es la de los escudos del tema (`seals/aquila.svg`, la misma del sello de pureza, sin descarga nueva) como
+   máscara en el verde del fósforo. Sustituyó el 12-10-2026 a una calavera alada en píxeles: el usuario quería el
+   dibujo de W40K que ya tiene el tema. Va por ENCIMA de la trama del monitor: con la trama de 3 px encima salía
+   rayada. A la luz, la misma pantalla en placa de datos impresa: tinta sin resplandor. En pantallas estrechas el
+   águila sube encima del texto, que si no se cortaba. ── */
+:root[data-palette="grimdark"] .fx-grim-tx {
+  position: fixed; z-index: 9997; pointer-events: none;
+  left: 50%; top: 46%; width: 450px; max-width: 94vw; transform: translate(-50%, -50%);
+  padding: 14px 16px 16px; overflow: hidden;
+  background: #04100a; color: #43f558; font: 20px/1.15 'VT323', var(--font-mono); text-shadow: 0 0 6px rgba(67, 245, 88, .7);
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+  box-shadow: inset 0 0 0 2px #2f5240, inset 0 0 40px rgba(67, 245, 88, .12);
+  animation: grimtx-enciende 3s forwards;
+}
+:root[data-palette="grimdark"] .fx-grim-tx::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .4) 0 1px, transparent 1px 3px);
+}
+:root[data-palette="grimdark"] .fx-grim-tx-hd { display: block; text-align: center; letter-spacing: .06em; animation: grimtx-parpadeo .36s .15s steps(1) 4; }
+:root[data-palette="grimdark"] .fx-grim-tx-cuerpo { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; margin-top: 10px; }
+:root[data-palette="grimdark"] .fx-grim-tx-aquila {
+  position: relative; z-index: 1; display: block; width: 96px; height: 41px; opacity: 0;
+  background: currentColor; filter: drop-shadow(0 0 2px rgba(67, 245, 88, .75));
+  -webkit-mask: url('./seals/aquila.svg') center / contain no-repeat;
+  mask: url('./seals/aquila.svg') center / contain no-repeat;
+  animation: grimtx-aparece .1s .45s steps(1) forwards;
+}
+:root[data-palette="grimdark"] .fx-grim-tx p {
+  margin: 0 0 3px; width: 0; overflow: hidden; white-space: nowrap; font-size: 17px;
+  animation: grimtx-teclea calc(var(--n) * 22ms) steps(var(--n)) var(--d) forwards;
+}
+:root[data-palette="grimdark"] .fx-grim-tx p:last-child { color: #c9ffcf; }
+:root[data-palette="grimdark"] .fx-grim-tx-cur {
+  display: inline-block; width: .55ch; height: .9em; vertical-align: -1px; background: currentColor;
+  animation: grimtx-parpadeo .5s 2.3s steps(1) 2;
+}
+:root[data-palette="grimdark"][data-theme="light"] .fx-grim-tx {
+  background: #efe6cc; color: #136b30; text-shadow: none;
+  box-shadow: inset 0 0 0 2px #8f8460, 0 10px 24px -10px rgba(40, 30, 10, .5);
+}
+:root[data-palette="grimdark"][data-theme="light"] .fx-grim-tx::after { background: repeating-linear-gradient(0deg, rgba(60, 50, 20, .08) 0 1px, transparent 1px 3px); }
+:root[data-palette="grimdark"][data-theme="light"] .fx-grim-tx p:last-child { color: #0b4a1f; }
+:root[data-palette="grimdark"][data-theme="light"] .fx-grim-tx-aquila { filter: none; }
+@media (max-width: 480px) {
+  :root[data-palette="grimdark"] .fx-grim-tx-cuerpo { grid-template-columns: 1fr; justify-items: center; gap: 8px; }
+  :root[data-palette="grimdark"] .fx-grim-tx-cuerpo > span { justify-self: stretch; }
+  :root[data-palette="grimdark"] .fx-grim-tx-cuerpo > .fx-grim-tx-aquila { justify-self: center; }
+}
+@keyframes grimtx-enciende {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(1, .02); filter: brightness(3); }
+  6% { opacity: 1; transform: translate(-50%, -50%) scale(1, .02); }
+  12%, 88% { opacity: 1; transform: translate(-50%, -50%) scale(1, 1); filter: brightness(1); }
+  91% { opacity: .5; }
+  93% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1, 1); }
+}
+@keyframes grimtx-parpadeo { 50% { opacity: 0; } }
+@keyframes grimtx-aparece { to { opacity: 1; } }
+@keyframes grimtx-teclea { to { width: calc(var(--n) * 1ch + .6ch); } }

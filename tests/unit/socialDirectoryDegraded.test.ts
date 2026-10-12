@@ -10,6 +10,7 @@ import type { SocialDirectoryEntry } from '../../src/viewmodel/social/socialFeed
 
 const getSocialProfilesByUid = vi.hoisted(() => vi.fn());
 const readPublicSocialGistById = vi.hoisted(() => vi.fn());
+const getPublicSocialReactions = vi.hoisted(() => vi.fn((_gistId: string, _token?: string | null): unknown[] => []));
 const idb = vi.hoisted(() => ({
   stale: null as unknown[] | null,
   getCachedSocialDirectory: vi.fn(),
@@ -27,6 +28,7 @@ vi.mock('../../src/model/repository/socialGistRepository', () => ({
   getSocialSyncConfig: () => ({ token: 't', gistId: 'gist-yo' }),
   mergeSocialGistData: (a: unknown) => a,
   readPublicSocialGistById,
+  getPublicSocialReactions,
 }));
 
 const { useSocialDirectory } = await import('../../src/viewmodel/social/useSocialDirectory');
@@ -125,5 +127,24 @@ describe('useSocialDirectory con el servicio limitado', () => {
 
     await waitFor(() => expect(idb.putCachedSocialDirectory).toHaveBeenCalled());
     expect(setNetworkFailure).toHaveBeenCalledWith(false);
+  });
+});
+
+// FASE 3 de docs/plan-reacciones.md: los «me gusta» de una amistad llegan con la lectura de su gist y se guardan en su
+// entrada, para que el feed los cruce y la copia de IndexedDB los conserve.
+describe('useSocialDirectory y los «me gusta»', () => {
+  it('la entrada del amigo lleva sus «me gusta» vivos, sin lápidas', async () => {
+    const vivo = { on: 'activity', to: 'pb', item: 'pb:1:review', kind: 'like', at: 2 };
+    const lapida = { on: 'post', to: 'pb', item: 'pb:9', kind: 'like', at: 1, del: true };
+    getSocialProfilesByUid.mockResolvedValue([perfil('yo'), perfil('ana')]);
+    readPublicSocialGistById.mockResolvedValue({ profile: { name: 'x', visibility: VISIBILIDAD }, activity: [], posts: [], moves: [], updatedAt: 1 });
+    getPublicSocialReactions.mockImplementation((gistId: string) => (gistId === 'ana-social' ? [vivo, lapida] : []));
+    const { result } = montar(['ana']);
+
+    await result.current.hydrateSocialDirectory();
+
+    // Se espera a la ENTRADA, no a que se guarde la copia: guardar puede ir por delante del estado de React, y bajo
+    // carga (la suite entera) la entrada aún no estaba al leerla.
+    await waitFor(() => expect(result.current.rawSocialDirectory.find((entry) => entry.uid === 'ana')?.reactions).toEqual([vivo]));
   });
 });

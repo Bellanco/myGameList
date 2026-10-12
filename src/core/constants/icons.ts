@@ -60,7 +60,9 @@ export type IconName =
   /** Tres barras (Font Awesome «chart-simple»): el acceso a la reseña desde la caja del mosaico. */
   | 'chart-simple'
   /** Corazón (Font Awesome «heart»): el botón «Amigos» de la ficha de alguien. */
-  | 'heart';
+  | 'heart'
+  /** Pulgar arriba (Lucide «thumbs-up»): el «Me gusta» de reseñas y publicaciones del feed. */
+  | 'thumbs-up';
 
 export const TAB_ICONS: Record<TabId, IconName> = {
   c: 'trophy',

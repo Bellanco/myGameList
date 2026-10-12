@@ -149,6 +149,37 @@ describe('la ficha de un perfil', () => {
     expect(result.current.selectedProfileDetail?.visibility?.hideGameTime).toBe(true);
   });
 
+  /* El «me gusta» de una reseña va a su entrada del feed, no al juego: abierta desde un perfil, la reseña tiene que
+     encontrar esa entrada en la actividad de su autor, o el botón del perfil y el del feed marcarían cosas distintas. */
+  describe('la reseña abierta desde un perfil y su entrada del feed', () => {
+    const RESENA = { ...RUTA_VACIA, activePanel: 'profile-review', profileDetailId: 'me', profileReviewGameId: 7 };
+    const LOCALES = {
+      c: [{ id: 7, name: 'Hollow Knight', review: 'Muy bueno de principio a fin', score: 5 }],
+      v: [], e: [], p: [], d: [], deleted: [], updatedAt: 0,
+    };
+
+    it('es la de ese juego en su actividad, la misma que pinta el feed', () => {
+      const propia = actividad({ profileId: 'perfil-yo', actorProfileId: 'actor-yo' });
+      const { result } = setup({
+        route: RESENA,
+        localGames: LOCALES,
+        directory: [entrada({ id: 'perfil-yo', uid: 'uid-yo', activity: [actividad({ gameId: 8 }), propia] })],
+      });
+      expect(result.current.activeProfileReview?.id).toBe(7);
+      expect(result.current.activeProfileReviewEvent).toBe(propia);
+    });
+
+    it('sin la reseña publicada en lo social no hay entrada, y no hay a qué darle «me gusta»', () => {
+      const { result } = setup({
+        route: RESENA,
+        localGames: LOCALES,
+        directory: [entrada({ id: 'perfil-yo', uid: 'uid-yo', activity: [actividad({ gameId: 8 })] })],
+      });
+      expect(result.current.activeProfileReview?.id).toBe(7);
+      expect(result.current.activeProfileReviewEvent).toBeNull();
+    });
+  });
+
   it('a mi propia ficha se va por identidad; sin entrada propia, al editor', () => {
     const navigate = vi.fn();
     const { result, rerender, opts } = setup({ navigate, directory: [entrada({ id: 'perfil-yo', uid: 'uid-yo' })] });

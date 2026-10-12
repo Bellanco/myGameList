@@ -325,6 +325,19 @@ export function useSocialReading({
    * entrada; en la reseña de un perfil hay que buscarlo en su actividad, porque lo que la pantalla tiene a mano
    * es el id de la entrada del directorio —que para una amistad es su uid de Firebase— y son cosas distintas.
    */
+  /**
+   * La reseña abierta desde un perfil, tal y como está en el FEED: su entrada en la actividad del gist social de esa
+   * persona. Es el destino de su «me gusta», que va atado a esa entrada y no al juego, así que el botón del perfil y el
+   * del feed marcan lo mismo. `null` si la reseña no está publicada en lo social, o si su actividad no se ha leído (una
+   * amistad inactiva llega sin ella): entonces no hay a qué darle «me gusta».
+   */
+  const activeProfileReviewEvent = useMemo(() => {
+    if (activePanel !== 'profile-review' || !activeProfileReview || !selectedProfileDetail) return null;
+    return (selectedProfileDetail.activity || []).find(
+      (entry) => entry.type === 'review' && entry.gameId === activeProfileReview.id,
+    ) ?? null;
+  }, [activePanel, activeProfileReview, selectedProfileDetail]);
+
   const activeReviewAnchor = useMemo<RelatedReviewAnchor | null>(() => {
     if (activePanel === 'detail' && activeDetailEvent) {
       return {
@@ -338,9 +351,7 @@ export function useSocialReading({
       };
     }
     if (activePanel === 'profile-review' && activeProfileReview && selectedProfileDetail) {
-      const actorProfileId = (selectedProfileDetail.activity || []).find(
-        (entry) => entry.type === 'review' && entry.gameId === activeProfileReview.id,
-      )?.actorProfileId;
+      const actorProfileId = activeProfileReviewEvent?.actorProfileId;
       return {
         gameName: activeProfileReview.name,
         authorId: String(actorProfileId || selectedProfileDetail.id || ''),
@@ -353,6 +364,7 @@ export function useSocialReading({
     activeDetailEvent,
     activePanel,
     activeProfileReview,
+    activeProfileReviewEvent,
     getGameItemById,
     isOwnDetailEvent,
     isOwnProfileDetail,
@@ -405,6 +417,7 @@ export function useSocialReading({
     activeDetailEvent,
     selectedProfileDetail,
     activeProfileReview,
+    activeProfileReviewEvent,
     getGameItemById,
     detailEventLoading,
     profileDetailLoading,

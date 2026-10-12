@@ -48,8 +48,8 @@ Las tres palancas con más rendimiento por esfuerzo, encajadas en lo que ya hay:
 - Push y correo.
 - Sugerencias de amistad.
 - Bloqueo o denuncia (punto «R», pendiente de decisión).
-- Búsqueda fuera de tus listas. El directorio dice «Buscar por nombre, email o juego»
-  (`socialLabels.ts`, `searchPlaceholder`), pero solo filtra por nombre.
+- Búsqueda fuera de tus listas. El directorio filtra por nombre («Filtrar perfiles por nombre»); había una constante
+  sin usar que prometía «nombre, email o juego», corregida el 12-10-2026.
 - Página de un juego, identificador común de juego y desarrolladora.
 
 ## 2. Lo que decide qué cabe
@@ -78,8 +78,7 @@ Consecuencias que hay que aceptar:
 
 - **Coste:** no hay lecturas nuevas de Firestore. Es una escritura en GitHub por ráfaga de reacciones, agrupada
   con lo que ya se publica.
-- **Retraso:** llega con la frescura del directorio (la copia caduca a las 24 h, o antes con la señal de regreso
-  de `plan-feed-sin-vacio.md`), y no al instante.
+- **Retraso:** llega con la frescura del feed (`PROFILE_TIER_FEED_TTL_MS`: 30 min en bronce), y no al instante.
 - **Visibilidad parcial:** cada cual ve las interacciones de **sus** amistades, no todas. Es coherente con la
   promesa de privacidad, y el texto debe decirlo: «3 amigos tuyos», no «3 personas».
 - **Tamaño:** hace falta una ventana (30 días, como los avisos) y un tope, como `moves`.
@@ -100,6 +99,37 @@ Esfuerzo: S (días), M (una o dos semanas), L (más). Coste: lo que gasta de los
 - Por qué funciona: es la interacción más barata para quien la hace, y hace que publicar compense, porque alguien
   contesta. Es lo que Letterboxd y Backloggd usan para sostener la publicación.
 - Riesgo: es poco (no hay texto libre), pero un «Discrepo» sin poder explicarse puede escocer. Decidir si entra.
+
+**Coste de A1, leído en el código (12-10-2026):**
+
+| Concepto | Por reacción | De dónde sale |
+|---|---|---|
+| Firestore | **0 lecturas, 0 escrituras** en el caso normal | El pseudónimo (`resolveStableProfileId`) ya está en memoria al abrir el hub, y la reacción **no** llama a `syncPublicIdentity`, que es lo que escribe en Firestore al publicar una reseña |
+| GitHub, quien reacciona | 1 GET condicional, normalmente 304 desde la caché de sesión de 20 s, y 1 PATCH **por ráfaga** | `openSocialWrite` y `commitSocialWrite`, en la cola `serializeSocialWrite` |
+| GitHub, quien lee | **0 peticiones nuevas**: viaja dentro del gist social que ya se relee con ETag | `useSocialDirectory`; un 304 autenticado no gasta cupo primario (la revalidación se arregló el 12-10-2026: ver el hallazgo de la Fase 3 en `plan-reacciones.md`) |
+| Cloudflare (Functions y KV) | 0 | — |
+| Tamaño | ~86 bytes. Con un tope de 300 y una ventana de 30 días, ~26 KB más como mucho por amistad en lectura en frío | El gist social va sin comprimir; el precedente son los 400 avisos de `MOVE_ACTIVITY_MAX` |
+| Arranque crítico | 0, si todo vive en el chunk perezoso del social | Hoy 187,7 de 190 kB |
+
+Lo que hay que respetar:
+- **Agrupar las reacciones** varios segundos antes de escribir. GitHub tiene límites secundarios para escrituras
+  (del orden de 80 por minuto) y quien reacciona a diez cosas seguidas no debe hacer diez PATCH.
+- **El destino es estable.** El `id` de una reseña es `perfil + juego + tipo` (`buildActivityKey`), así que
+  editarla no deja huérfanas sus reacciones. Contrapartida: un «De acuerdo» sigue pegado aunque la reseña se
+  reescriba entera.
+
+Lo que de verdad cuesta:
+- **Una nueva aceptación legal.** El texto legal (`legal.ts`) enumera lo que se publica («las reseñas y los
+  movimientos de listas»). Las reacciones son una categoría nueva, así que sube `LEGAL_VERSION` y todo el mundo
+  vuelve a pasar por la puerta; hasta aceptar, no sale nada en segundo plano. Conviene juntarlo con A2, que
+  también lo exige.
+- **Los clientes viejos.** El esquema es `strictObject` y un cliente sin el campo lo tira al normalizar. Si
+  alguien publica desde una versión antigua, borra sus propias reacciones del gist; es el mismo trato que ya
+  tienen `hiddenMoves` y `editedAt`. A diferencia de los avisos de lista, las reacciones no se pueden volver a
+  sacar de los datos locales, así que se pierden.
+- **Esfuerzo.** Unas 1–1,5 semanas: esquema y normalización, escritura agrupada y retirar una reacción, lectura
+  y cruce en el feed, interfaz en la tarjeta y el detalle, «Me lo apunto» → Deseados, texto legal, maqueta del
+  social en 8 temas × 2 modos, y tests.
 
 **A2 · «Te lo recomiendo» dirigido a una amistad · M · coste ≈ 0.**
 - Qué: desde un juego de tus listas, eliges a una o varias amistades y, opcionalmente, añades una línea.
@@ -147,6 +177,16 @@ Es la base de la que dependen A1 y A2: sin aviso, una reacción no se descubre.
 **B4 · Tu semana · S–M · coste 0.** Una cápsula los lunes en el carril (el mismo armazón de `useLaneToast`) con
 «esta semana tus amistades terminaron 4 juegos; Luis puso un 92 a *Astro Bot*». Todo sale del feed ya cargado.
 
+Cómo se comportan hoy las cápsulas (`useToastLife`, montadas en `App.tsx` dentro de `.ach-toast-stack`):
+- **Cambiar de pestaña del navegador** no la gasta: el reloj se para con la página oculta (`usePageVisible`).
+- **Moverse por la app** (listas, estadísticas, ajustes) tampoco la quita: vive fuera del `main`.
+- **Lo que sí la quita** son 10 s de vida con la página delante, sin el ratón ni el foco encima.
+- **Se da por dicha al montarse** (`markShown`). Si pasa sin que se lea, no vuelve hasta la semana siguiente.
+- **Hace cola** detrás del logro, las condiciones nuevas, el resumen del año y el aviso del administrador.
+
+Para un resumen semanal eso es poco. Por eso la cápsula debe ser solo el aviso: el contenido vive en una tarjeta
+«Tu semana» arriba del feed hasta el lunes siguiente, y sigue ahí aunque la cápsula se haya ido.
+
 **B5 · Invitación personal · M · coste: 1 escritura de KV por invitación.**
 - Qué: un enlace `/i/:token` que, al registrarse, deja creada la solicitud de amistad con quien invitó.
 - Por qué: hoy la invitación es un enlace a la portada, y el que llega tiene que buscar a quien le invitó en un
@@ -192,7 +232,7 @@ Es la base de la que dependen A1 y A2: sin aviso, una reacción no se descubre.
 - Ojo: coordinarlo con `docs/plan-resumen-del-ano.md`, que otra sesión está escribiendo.
 
 **C4 · Búsqueda de verdad · S el arreglo, M la global.**
-- Ya: que el texto del directorio diga lo que hace («Buscar por nombre»). Hoy promete email y juego.
+- Ya hecho: el texto del directorio dice lo que hace («Filtrar perfiles por nombre»).
 - Después: una sola caja de búsqueda (atajo `/` en escritorio) que encuentre tus juegos, las fichas de juego
   (C2), tus amistades y las reseñas de tus amistades.
 - Todo es local, porque ya está cargado o indexado.

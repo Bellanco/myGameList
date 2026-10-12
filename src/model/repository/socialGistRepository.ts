@@ -19,13 +19,16 @@ import {
   sortMoveEntries,
   type SocialMoveEntry,
 } from '../../core/social/moveActivity';
+import { normalizeReactions, type SocialReactionEntry } from '../../core/social/reactions';
 import { clampRating, normalizeTimestamp } from '../../core/utils/normalize';
 import { resolveGrade } from '../../core/utils/scoreScale';
 import { pickLegacyActorId, pickLegacyFromId, pickLegacyReviewText, socialGistNeedsRewrite } from '../migration/legacySocialFormat';
 import { TAB_IDS, type TabId } from '../types/game';
 import { githubFetch, isGithubRateLimited } from './githubHttp';
+import { readSocialReactionsContent } from './socialReactionsGist';
 import { GIST_API_BASE, buildGithubError, getGithubAuthHeader } from './githubGistApi';
 import {
+  SOCIAL_REACTIONS_FILENAME,
   assembleChunkedSocial,
   assertGistSizeWithinLimit,
   assertNoSocialPrivateFields,
@@ -58,11 +61,18 @@ type SessionCachedValue<T> = {
   expiresAt: number;
 };
 
+/**
+ * La copia de un gist social AJENO lleva también sus «me gusta» (el fichero `SOCIAL_REACTIONS_FILENAME` del mismo
+ * gist), ya normalizados. Van en la misma entrada porque comparten ETag: un 304 sirve los dos o ninguno, y guardarlos
+ * aparte dejaría a quien recarga con los datos de la copia y sin sus «me gusta».
+ */
+type PublicSocialCachedValue = SessionCachedValue<SocialGistData> & { reactions?: SocialReactionEntry[] };
+
 const socialGistCacheById = new Map<string, SessionCachedValue<SocialGistData>>();
-const publicSocialGistCacheById = new Map<string, SessionCachedValue<SocialGistData>>();
+const publicSocialGistCacheById = new Map<string, PublicSocialCachedValue>();
 
 const socialGistInFlightByKey = new Map<string, Promise<{ data: SocialGistData; etag: string | null; notModified?: boolean; wasLegacy?: boolean }>>();
-const publicSocialGistInFlightById = new Map<string, Promise<SocialGistData>>();
+const publicSocialGistInFlightById = new Map<string, Promise<PublicSocialRead>>();
 
 /** Olvida los gists sociales leídos en esta sesión (el tuyo y los de tus amistades). Lo llama el cierre de sesión. */
 export function forgetSocialGistSessionCache(): void {
@@ -291,30 +301,52 @@ function saveSocialGistCache(gistId: string, data: SocialGistData, etag: string 
   writeSessionCachedValue(buildSessionCacheKey(SESSION_CACHE_SOCIAL_GIST_PREFIX, gistId), cached);
 }
 
-function readPublicSocialGistCache(gistId: string, token: string | null = null, options?: { includeExpired?: boolean }): SessionCachedValue<SocialGistData> | null {
+/**
+ * La copia de sesión de un gist social ajeno. Sin `includeExpired`, solo si sigue viva; con él, también la caducada.
+ *
+ * LA CADUCADA NO SE BORRA AL MIRAR. Es la que lleva el ETag con el que se revalida (`If-None-Match`) y la que se sirve
+ * si GitHub limita. `readPublicSocialGistById` pregunta primero por la viva y después por la caducada: cuando la
+ * primera consulta borraba lo caducado, la segunda ya no lo encontraba, así que nunca se enviaba el ETag y cada
+ * relectura bajaba el gist entero y gastaba cupo de GitHub (12-10-2026). La sustituye la siguiente lectura buena.
+ */
+function readPublicSocialGistCache(gistId: string, token: string | null = null, options?: { includeExpired?: boolean }): PublicSocialCachedValue | null {
   const cacheKey = `${gistId}:${shortTokenDiscriminant(token)}`;
+  const isUsable = (value: PublicSocialCachedValue) => Boolean(options?.includeExpired) || value.expiresAt > Date.now();
+
   const memory = publicSocialGistCacheById.get(cacheKey);
-  if (memory && (options?.includeExpired || memory.expiresAt > Date.now())) {
-    return memory;
+  if (memory) {
+    return isUsable(memory) ? memory : null;
   }
 
   const key = buildSessionCacheKey(SESSION_CACHE_PUBLIC_SOCIAL_GIST_PREFIX, cacheKey);
-  const sessionValue = readSessionCachedValue<SocialGistData>(key, { includeExpired: options?.includeExpired });
+  const sessionValue: PublicSocialCachedValue | null = readSessionCachedValue<SocialGistData>(key, { includeExpired: true });
   if (!sessionValue) {
-    publicSocialGistCacheById.delete(cacheKey);
     return null;
   }
 
   publicSocialGistCacheById.set(cacheKey, sessionValue);
-  return sessionValue;
+  return isUsable(sessionValue) ? sessionValue : null;
 }
 
-function savePublicSocialGistCache(gistId: string, data: SocialGistData, etag: string | null = null, token: string | null = null): void {
+/**
+ * `reactions` ausente = no se sabe nada nuevo de ellos: se CONSERVAN los de la copia anterior. Es el caso de la
+ * escritura del fichero principal (`writeSocialGist`), que refresca esta copia sin haber leído el de reacciones; sin
+ * conservarlos, publicar una reseña dejaría a uno mismo sin los «me gusta» de su gist durante 45 s.
+ */
+function savePublicSocialGistCache(
+  gistId: string,
+  data: SocialGistData,
+  etag: string | null = null,
+  token: string | null = null,
+  reactions?: SocialReactionEntry[],
+): void {
   const cacheKey = `${gistId}:${shortTokenDiscriminant(token)}`;
-  const cached: SessionCachedValue<SocialGistData> = {
+  const previous = reactions === undefined ? readPublicSocialGistCache(gistId, token, { includeExpired: true }) : null;
+  const cached: PublicSocialCachedValue = {
     value: data,
     etag,
     expiresAt: Date.now() + PUBLIC_SOCIAL_GIST_CACHE_TTL_MS,
+    reactions: reactions ?? previous?.reactions ?? [],
   };
 
   publicSocialGistCacheById.set(cacheKey, cached);
@@ -1042,7 +1074,16 @@ export async function createSocialGist(token: string): Promise<{ gistId: string;
   return createSocialGistWithData(token, getEmptySocialGistData(), false);
 }
 
-async function createSocialGistWithData(token: string, data: SocialGistData, isPublic: boolean): Promise<{ gistId: string; etag: string | null }> {
+/**
+ * `extraFiles`: ficheros del gist de origen que se copian TAL CUAL al migrar de canal (hoy, el de «me gusta»). Van en
+ * la misma petición que crea el gist: no hay un instante en que el canal nuevo exista sin ellos.
+ */
+async function createSocialGistWithData(
+  token: string,
+  data: SocialGistData,
+  isPublic: boolean,
+  extraFiles: Record<string, { content: string }> = {},
+): Promise<{ gistId: string; etag: string | null }> {
   if (!isValidGithubToken(token)) {
     throw new Error('El token no tiene el formato de GitHub. Revisa que lo hayas copiado entero.');
   }
@@ -1060,6 +1101,7 @@ async function createSocialGistWithData(token: string, data: SocialGistData, isP
       description: 'myGameList - Social Sync',
       public: isPublic,
       files: {
+        ...extraFiles,
         [SOCIAL_GIST_FILENAME]: {
           content: JSON.stringify(normalized),
         },
@@ -1299,14 +1341,42 @@ export async function readSocialGistAtRevision(token: string, gistId: string, ve
   }
 }
 
+/** El gist social de otra persona: sus datos y sus «me gusta». */
+interface PublicSocialRead {
+  data: SocialGistData;
+  /** Los «me gusta» que ha dado esa persona (`SOCIAL_REACTIONS_FILENAME`), normalizados. Vacío si no tiene. */
+  reactions: SocialReactionEntry[];
+}
+
+function publicReadOf(cached: PublicSocialCachedValue): PublicSocialRead {
+  return { data: cached.value, reactions: cached.reactions ?? [] };
+}
+
+/**
+ * Lee el gist social de otra persona. Sus «me gusta» llegan en la MISMA petición (el `GET` de un gist trae todos sus
+ * ficheros) y se quedan en la copia de esta lectura: se piden después con `getPublicSocialReactions`. Un fichero de
+ * reacciones que no se entiende es una lista vacía, nunca un fallo de la lectura (`normalizeReactions`).
+ */
 export async function readPublicSocialGistById(gistId: string, token: string | null = null): Promise<SocialGistData> {
+  return (await readPublicSocial(gistId, token)).data;
+}
+
+/**
+ * Los «me gusta» que ha dado la dueña de un gist social, de la copia que dejó la última `readPublicSocialGistById` con
+ * el mismo token. Síncrono y sin red: llamarlo antes de leer el gist da una lista vacía.
+ */
+export function getPublicSocialReactions(gistId: string, token: string | null = null): SocialReactionEntry[] {
+  return readPublicSocialGistCache(gistId, token, { includeExpired: true })?.reactions ?? [];
+}
+
+async function readPublicSocial(gistId: string, token: string | null = null): Promise<PublicSocialRead> {
   if (!isValidGistId(gistId)) {
     throw new Error('El ID del gist no es válido. Revisa que lo hayas copiado entero.');
   }
 
   const cached = readPublicSocialGistCache(gistId, token);
   if (cached) {
-    return cached.value;
+    return publicReadOf(cached);
   }
 
   const staleCached = readPublicSocialGistCache(gistId, token, { includeExpired: true });
@@ -1337,18 +1407,18 @@ export async function readPublicSocialGistById(gistId: string, token: string | n
         headers: baseHeaders,
       });
     } catch (error) {
-      if (staleCached && isGithubRateLimited(error)) return staleCached.value;
+      if (staleCached && isGithubRateLimited(error)) return publicReadOf(staleCached);
       throw error;
     }
 
     if (response.status === 304 && staleCached) {
-      savePublicSocialGistCache(gistId, staleCached.value, staleCached.etag || null, token);
-      return staleCached.value;
+      savePublicSocialGistCache(gistId, staleCached.value, staleCached.etag || null, token, staleCached.reactions ?? []);
+      return publicReadOf(staleCached);
     }
 
     if (!response.ok) {
       const error = await buildGithubError(response, 'No se ha podido leer el gist social');
-      if (staleCached && (isGithubRateLimited(error) || response.status >= 500)) return staleCached.value;
+      if (staleCached && (isGithubRateLimited(error) || response.status >= 500)) return publicReadOf(staleCached);
       throw error;
     }
 
@@ -1365,8 +1435,18 @@ export async function readPublicSocialGistById(gistId: string, token: string | n
       }
     }
 
-    savePublicSocialGistCache(gistId, normalized, responseEtag, token);
-    return normalized;
+    let reactions: SocialReactionEntry[] = [];
+    const reactionsRaw = body.files?.[SOCIAL_REACTIONS_FILENAME]?.content;
+    if (reactionsRaw) {
+      try {
+        reactions = normalizeReactions(JSON.parse(reactionsRaw), Date.now());
+      } catch {
+        reactions = [];
+      }
+    }
+
+    savePublicSocialGistCache(gistId, normalized, responseEtag, token, reactions);
+    return { data: normalized, reactions };
   })();
 
   publicSocialGistInFlightById.set(gistId, request);
@@ -1601,7 +1681,16 @@ export async function ensureSecretSocialGist(token: string, gistId: string): Pro
     return { ...unchanged, tooLarge: true };
   }
 
-  const migration = await createSocialGistWithData(token, payload.data, false);
+  // Los «me gusta» viven en otro fichero del mismo gist (`SOCIAL_REACTIONS_FILENAME`): se copian tal cual, sin
+  // interpretarlos, para no perder nada que haya escrito una versión más nueva. Si no se pueden leer, la migración
+  // sigue sin ellos: el canal vale más que los «me gusta», y retenerla por ellos dejaría el gist público expuesto.
+  const reactionsContent = await readSocialReactionsContent(token, sourceGistId).catch(() => null);
+  const migration = await createSocialGistWithData(
+    token,
+    payload.data,
+    false,
+    reactionsContent ? { [SOCIAL_REACTIONS_FILENAME]: { content: reactionsContent } } : {},
+  );
 
   // QUÉ SE PUEDE RETIRAR. El clon se hace de UN gist, pero una cuenta con deriva puede tener dos públicos, y
   // borrar el equivocado deja expuesto precisamente el que tiene las reseñas (o pierde lo que solo esté ahí).

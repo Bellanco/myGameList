@@ -45,6 +45,7 @@ vi.mock('../../src/model/repository/gistRepository', () => ({
 }));
 
 import { useSyncViewModel } from '../../src/viewmodel/useSyncViewModel';
+import { readGist } from '../../src/model/repository/gistRepository';
 
 function emptyTabData(): TabData {
   return { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: 0 };
@@ -106,5 +107,53 @@ describe('recuperación del gist de juegos tras iniciar sesión con Google', () 
 
     await waitFor(() => expect(result.current.status).toBe('error'));
     expect(result.current.gistId).toBe('');
+  });
+});
+
+/**
+ * DESDE LA PASARELA SOCIAL (12-10-2026): el atajo «¿Ya tienes espacio social?» usa esta misma recuperación, pero
+ * necesita saber qué pasó —y con qué cuenta— para decidir el paso, y una cuenta sin nada guardado no es un error:
+ * es la respuesta que manda a conectar GitHub. Ni se marca la sincronización en error ni se manda a la conexión a
+ * mano, que esa pantalla no ofrece.
+ */
+describe('recuperación desde la pasarela social', () => {
+  it('con token y gist guardados, conecta y lo dice', async () => {
+    getPrivateConfigMock.mockResolvedValue({ gamesGistId: 'games-privado' });
+    // Conectar lee el gist de verdad: con «sin cambios» no hay nada que fusionar y el ciclo no arranca.
+    vi.mocked(readGist).mockResolvedValueOnce({ notModified: false, data: emptyTabData(), etag: 'etag-remoto' });
+
+    const { result } = renderSync();
+    let salida: unknown;
+    await act(async () => {
+      salida = await result.current.recoverGistIdFromGoogle('social');
+    });
+
+    expect(salida).toEqual({ outcome: 'connected', uid: 'uid-1' });
+  });
+
+  it('una cuenta sin nada guardado responde «missing» sin dejar la sincronización en error', async () => {
+    const { result } = renderSync();
+    let salida: unknown;
+    await act(async () => {
+      salida = await result.current.recoverGistIdFromGoogle('social');
+    });
+
+    expect(salida).toEqual({ outcome: 'missing', uid: 'uid-1' });
+    expect(result.current.status).not.toBe('error');
+    expect(result.current.statusMessage).toBe('');
+  });
+
+  it('con el gist pero sin el token también es «missing»: sin token no hay nada que conectar', async () => {
+    getPrivateConfigMock.mockResolvedValue({ gamesGistId: 'games-privado' });
+    recoverGithubTokenMock.mockResolvedValue(null);
+
+    const { result } = renderSync();
+    let salida: unknown;
+    await act(async () => {
+      salida = await result.current.recoverGistIdFromGoogle('social');
+    });
+
+    expect(salida).toEqual({ outcome: 'missing', uid: 'uid-1' });
+    expect(result.current.status).not.toBe('error');
   });
 });
