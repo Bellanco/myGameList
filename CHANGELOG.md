@@ -14,7 +14,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   distingue en todos los temas (píldora y pulgar relleno), con color propio en Plata y acero, Inserte moneda y Mar
   de estrellas de día.
 - **Cada tema tiene escena al EMPEZAR un juego**, además de la de cerrarlo: salta cuando un juego llega a En curso.
-  Las Puertas de Durin que se abren (No puedes pasar), el atardecer synthwave con «STAGE 1» (Inserte moneda), «Nuevo
+  La puerta redonda de Bolsón Cerrado (No puedes pasar), el atardecer synthwave con «STAGE 1» (Inserte moneda), «Nuevo
   contrato» con el cartel de la tabla en rojo vivo (Plata y acero), el calendario con la fecha de hoy (Ladrones de
   corazones), el cartel de la cámara con «PRUEBA EN CURSO» (Cámara de pruebas), el escáner óptico (Sin futuro), la
   entrada al combate (Sol y luna) y la transmisión astropática con la calavera alada (Solo hay guerra).
@@ -31,6 +31,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   aceptar al entrar en el espacio social.
 - **Inserte moneda y Cámara de pruebas ya no sortean al cerrar un juego**: la pantalla de récord y la terminal de
   GLaDOS se quedan solas, y el atardecer y el cartel pasan a la escena de empezar.
+- **Ladrones de corazones y Solo hay guerra estrenan escena al cerrar un juego.** En vez del sello que caía en el
+  centro y se iba en menos de un segundo: «Objetivo cumplido» se estampa sobre una franja negra, las letras
+  recortadas saltan una a una y cae «Tesoro robado» (Ladrones de corazones), y un estandarte imperial baja, ondea y
+  se queda quieto con el águila y «Deber cumplido» (Solo hay guerra).
 
 ### Fixed
 - **El número de juegos de la ficha de un perfil contaba solo los cargados.** La lista va de 15 en 15 al bajar, y al

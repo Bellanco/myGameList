@@ -23,16 +23,16 @@ const QUE_HACE: Record<PaletteId, string> = {
   tierramedia: '«Juego terminado» con letra de título de las películas.',
   arcade: 'La pantalla de récord.',
   witcher: 'La franja de «Contrato cerrado» con las coronas de la recompensa.',
-  persona: '«Objetivo cumplido» en letras recortadas.',
+  persona: '«Objetivo cumplido» en letras recortadas, estampado sobre una franja negra.',
   portal: 'La terminal de GLaDOS.',
   cyberpunk: 'El protocolo de brecha.',
   seaofstars: 'La ventana de «¡Victoria!».',
-  grimdark: '«Deber cumplido» con un escudo imperial al azar.',
+  grimdark: 'El estandarte imperial que baja y ondea: «Deber cumplido».',
 };
 
 /** Qué hace al EMPEZAR un juego. */
 const AL_EMPEZAR: Record<PaletteId, string> = {
-  tierramedia: 'Al empezar: las Puertas de Durin se abren.',
+  tierramedia: 'Al empezar: la puerta redonda de Bolsón Cerrado.',
   arcade: 'Al empezar: el atardecer synthwave con «STAGE 1».',
   witcher: 'Al empezar: «Nuevo contrato», con el cartel en rojo vivo.',
   persona: 'Al empezar: el calendario con la fecha de hoy.',
