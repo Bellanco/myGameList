@@ -77,6 +77,12 @@ describe('el resumen que sale por enlace', () => {
     expect(shared).not.toContain('Una reseña larga');
   });
 
+  it('el reto del jugador sale con su puesto', () => {
+    const own = summaryOf(games);
+    const shared = publicYearSummary({ ...own, palmares: { rank: 0, seasonName: 'El reto 2026', place: 7 } });
+    expect(shared.palmares).toEqual({ rank: 0, seasonName: 'El reto 2026', place: 7 });
+  });
+
   it('acota los listados', () => {
     const many = Array.from({ length: 40 }, (_, index) =>
       game(index + 1, { platforms: [`Plataforma ${index}`], genres: [`Género ${index}`] }),

@@ -235,7 +235,6 @@ export const YearSummary = memo(function YearSummary({ summary, voice, coverAcce
               {L.format.chip(platform.name, platform.count)}
             </span>
           ))}
-          {summary.palmares ? <span className="ys-chip is-trophy">{L.cover.palmares(summary.palmares.rank, summary.palmares.seasonName)}</span> : null}
         </div>
       </>
     ),
@@ -424,9 +423,27 @@ export const YearSummary = memo(function YearSummary({ summary, voice, coverAcce
     });
   }
 
+  // EL RETO DEL JUGADOR (los premios): solo si jugó la edición de ese año. Antes era una pastilla en la portada;
+  // ahora es su capítulo, detrás de «frente al año anterior» y antes de lo que tenéis en común.
+  if (summary.palmares) {
+    const { rank, place, seasonName } = summary.palmares;
+    cards.push({
+      key: 'premios',
+      icon: ICONS.premios,
+      kicker: L.premios.kicker,
+      body: (
+        <>
+          <h4 className="ys-title">{L.premios.title(voice, seasonName, rank, place)}</h4>
+          <p className="ys-dim">{L.premios.text(voice, rank)}</p>
+        </>
+      ),
+    });
+  }
+
   /* SIN NADA EN COMÚN NI NADA QUE RECOMENDAR, NO HAY CAPÍTULO. Era una tarjeta entera —y la última, «04 / 04»— con
      una sola línea, «Este año no coincidisteis en ninguno» (09-10-2026): el resumen acababa en nada. Como la tira de
      logros de quien no los publica, lo que no tiene nada que decir no se pinta. */
+
   if (common && (common.names.length > 0 || common.picks.length > 0)) {
     const { near, gap, affinity, picks } = common;
     cards.push({

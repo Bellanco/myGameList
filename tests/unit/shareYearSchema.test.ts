@@ -64,6 +64,12 @@ describe('el resumen del año compartido', () => {
     expect(() => assertValidSharedYearSummary({ ...article(), summary: { ...article().summary, hours: 10 } })).toThrow(/hours/);
   });
 
+  it('acepta el reto del jugador con su puesto', () => {
+    const conReto = article();
+    conReto.summary.palmares = { rank: 0, seasonName: 'El reto 2026', place: 7 };
+    expect(() => assertValidSharedYearSummary(conReto)).not.toThrow();
+  });
+
   it('rechaza listados sin acotar', () => {
     const largo = article();
     largo.summary.platforms = Array.from({ length: 31 }, (_, index) => ({ name: `P${index}`, count: 1 }));

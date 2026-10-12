@@ -202,6 +202,31 @@ describe('lo que más valoró, y lo que le chirrió', () => {
   });
 });
 
+describe('YearSummary — el reto del jugador', () => {
+  const own = { own: true, name: 'Yo' };
+  const conReto = (palmares: NonNullable<typeof summary.palmares>) => ({ ...summary, palmares });
+
+  it('sin edición jugada ese año, no hay capítulo', () => {
+    render(<YearSummary summary={summary} voice={voice} />);
+    expect(screen.queryByText(YEAR_SUMMARY_UI.premios.kicker)).toBeNull();
+  });
+
+  it('con puesto de trofeo, el puesto y el trofeo', () => {
+    render(<YearSummary summary={conReto({ rank: 2, seasonName: 'El reto 2025', place: null })} voice={own} />);
+    expect(screen.getByText(YEAR_SUMMARY_UI.premios.kicker)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Quedaste 2.º en El reto 2025' })).toBeInTheDocument();
+    expect(screen.getByText(YEAR_SUMMARY_UI.premios.text(own, 2))).toBeInTheDocument();
+  });
+
+  it('con participación, su puesto real si se sabe; si no, que jugó', () => {
+    render(<YearSummary summary={conReto({ rank: 0, seasonName: 'El reto 2025', place: 7 })} voice={voice} />);
+    expect(screen.getByRole('heading', { name: 'Ada quedó 7.º en El reto 2025' })).toBeInTheDocument();
+    cleanup();
+    render(<YearSummary summary={conReto({ rank: 0, seasonName: 'El reto 2025', place: null })} voice={voice} />);
+    expect(screen.getByRole('heading', { name: 'Ada jugó El reto 2025' })).toBeInTheDocument();
+  });
+});
+
 describe('YearSummary — juego del año', () => {
   it('sin carátulas no hay caja: ni con la preferencia apagada ni sin acceso', () => {
     const { container } = render(<YearSummary summary={summary} voice={voice} />);

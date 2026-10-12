@@ -74,6 +74,6 @@ export function publicYearSummary(summary: YearSummary): YearSummary {
         }
       : null,
     common: null,
-    palmares: palmares ? { rank: palmares.rank, seasonName: palmares.seasonName } : null,
+    palmares: palmares ? { rank: palmares.rank, seasonName: palmares.seasonName, place: palmares.place } : null,
   };
 }

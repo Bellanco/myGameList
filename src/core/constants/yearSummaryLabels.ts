@@ -13,13 +13,14 @@ import type { IconName } from './icons';
  * mismos dibujos que el resto de la app ya enseña para esas ideas (el trofeo de los premios, la bandera a cuadros
  * de terminar un juego, las dos personas de lo social).
  */
-export const YEAR_SUMMARY_ICONS: Record<'cover' | 'best' | 'when' | 'genres' | 'tags' | 'previous' | 'common', IconName> = {
+export const YEAR_SUMMARY_ICONS: Record<'cover' | 'best' | 'when' | 'genres' | 'tags' | 'previous' | 'premios' | 'common', IconName> = {
   cover: 'star',
   best: 'trophy',
   when: 'checkered-flag',
   genres: 'chart-simple',
   tags: 'signature',
   previous: 'repeat',
+  premios: 'star-olive-branches',
   common: 'bottom-hub',
 };
 
@@ -70,7 +71,6 @@ export const YEAR_SUMMARY_UI = {
     finished: (v: SummaryVoice, count: number) => (v.own ? `Terminaste ${games(count)}` : `${v.name} terminó ${games(count)}`),
     withReview: (count: number) => (count === 0 ? '' : count === 1 ? ', uno con reseña' : `, ${count} con reseña`),
     avg: 'nota media',
-    palmares: (rank: number, season: string) => (rank > 0 ? `${season} · ${rank}.º puesto` : `${season} · participación`),
     platformsAria: 'Plataformas del año',
   },
 
@@ -118,6 +118,23 @@ export const YEAR_SUMMARY_UI = {
     },
     /** Los rótulos de los dos lados de la pirámide. */
     heads: (v: SummaryVoice) => (v.own ? { strengths: 'Lo valoraste', weaknesses: 'Te chirrió' } : { strengths: 'Lo valoró', weaknesses: 'Le chirrió' }),
+  },
+
+  /**
+   * EL RETO DEL JUGADOR de ese año (los premios), si jugó esa edición. Nunca «Game Awards»: es una marca ajena (ver
+   * `premiosLabels.ts`). El nombre de la edición sale tal cual está en su archivo.
+   */
+  premios: {
+    kicker: 'El reto del jugador',
+    title: (v: SummaryVoice, edition: string, rank: number, place: number | null) => {
+      const puesto = rank > 0 ? rank : place;
+      if (!puesto) return v.own ? `Jugaste ${edition}` : `${v.name} jugó ${edition}`;
+      return v.own ? `Quedaste ${puesto}.º en ${edition}` : `${v.name} quedó ${puesto}.º en ${edition}`;
+    },
+    text: (v: SummaryVoice, rank: number) =>
+      rank > 0
+        ? `Entre los cinco primeros: ${v.own ? 'tienes' : 'tiene'} su trofeo en el palmarés.`
+        : `${v.own ? 'Participaste' : 'Participó'} en la votación: la medalla de participación ya está en ${v.own ? 'tu' : 'su'} palmarés.`,
   },
 
   previous: {

@@ -258,11 +258,12 @@ describe('contigo', () => {
 });
 
 describe('el palmarés de ese año', () => {
-  const entry = (rank: number, season: number): PalmaresEntry => ({ seasonId: `s${season}`, seasonName: `El reto ${season}`, rank, season, awardedAt: 1 });
+  const entry = (rank: number, season: number, place?: number): PalmaresEntry => ({ seasonId: `s${season}`, seasonName: `El reto ${season}`, rank, season, place, awardedAt: 1 });
 
-  it('se queda con el puesto de ese año, o con la participación', () => {
-    expect(buildYearSummary({ completed: [game(1)], year: 2025, precision: 'month', palmares: [entry(2, 2025), entry(1, 2024)] })?.palmares).toEqual({ rank: 2, seasonName: 'El reto 2025' });
-    expect(buildYearSummary({ completed: [game(1)], year: 2025, precision: 'month', palmares: [entry(0, 2025)] })?.palmares).toEqual({ rank: 0, seasonName: 'El reto 2025' });
+  it('se queda con el puesto de ese año, o con la participación y su puesto real', () => {
+    expect(buildYearSummary({ completed: [game(1)], year: 2025, precision: 'month', palmares: [entry(2, 2025), entry(1, 2024)] })?.palmares).toEqual({ rank: 2, seasonName: 'El reto 2025', place: null });
+    expect(buildYearSummary({ completed: [game(1)], year: 2025, precision: 'month', palmares: [entry(0, 2025)] })?.palmares).toEqual({ rank: 0, seasonName: 'El reto 2025', place: null });
+    expect(buildYearSummary({ completed: [game(1)], year: 2025, precision: 'month', palmares: [entry(0, 2025, 7)] })?.palmares).toEqual({ rank: 0, seasonName: 'El reto 2025', place: 7 });
     expect(buildYearSummary({ completed: [game(1)], year: 2025, precision: 'month', palmares: [entry(1, 2024)] })?.palmares).toBeNull();
   });
 });

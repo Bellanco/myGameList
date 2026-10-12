@@ -104,7 +104,9 @@ export const publicYearSummarySchema = z.strictObject({
     })
     .nullable(),
   common: z.null(),
-  palmares: z.strictObject({ rank: z.number().int().min(0).max(5), seasonName: name }).nullable(),
+  palmares: z
+    .strictObject({ rank: z.number().int().min(0).max(5), seasonName: name, place: z.number().int().positive().max(100_000).nullable() })
+    .nullable(),
 });
 
 export const sharedYearSummarySchema = z.strictObject({
