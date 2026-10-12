@@ -100,7 +100,7 @@ const SocialHubInner = memo(function SocialHubInner({
   } = vm.directory;
   const {
     feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed, handleActivityItemKeyDown, handleProfileCardKeyDown,
-    markOwnYearSummaryOpened, feedReadFailed, githubReconnectNeeded,
+    yearSummarySignal, feedReadFailed, githubReconnectNeeded,
   } = vm.feed;
   const {
     profileDetailId, profileReviewsView, profilePostsView, profileAchievementsView, profileGlobalsView,
@@ -528,7 +528,7 @@ const SocialHubInner = memo(function SocialHubInner({
           viewerWished={addTarget === 'd' ? games?.d : undefined}
           // La tarjeta del feed y el aviso del 15 llegan con el resumen ya desplegado (estado de la navegación).
           openSummaryOnMount={wantsYearSummary(location.state)}
-          onOwnSummaryOpened={markOwnYearSummaryOpened}
+          yearSummarySignal={yearSummarySignal}
         />
         {friendActionDialog}
         </>

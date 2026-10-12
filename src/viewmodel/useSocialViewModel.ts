@@ -552,13 +552,13 @@ export function useSocialViewModel(options?: {
     [rawSocialDirectory, photoViewer, friendUidSet, authUser?.uid, ownProfileId],
   );
 
-  // El RESUMEN DEL AÑO: abrir el tuyo en temporada publica en tu perfil que ya lo has visto, y eso es lo que pinta
-  // la tarjeta destacada en el feed de tus amistades. Lo ya publicado se lee de tu propia entrada del directorio.
+  // El RESUMEN DEL AÑO: compartir el tuyo en temporada publica en tu perfil que ya está, y eso es lo que pinta la
+  // tarjeta destacada en el feed de tus amistades. Lo ya publicado se lee de tu propia entrada del directorio.
   const ownYearSummarySeenYear = useMemo(() => {
     const own = socialDirectory.find((entry) => isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId));
     return own?.yearSummarySeen?.year ?? null;
   }, [socialDirectory, authUser?.uid, ownProfileId]);
-  const markOwnYearSummaryOpened = useYearSummarySignal({
+  const yearSummarySignal = useYearSummarySignal({
     uid: authUser?.uid || '',
     published: ownProfilePublished,
     alreadySeenYear: ownYearSummarySeenYear,
@@ -1035,7 +1035,7 @@ export function useSocialViewModel(options?: {
       showMoreFeed,
       handleActivityItemKeyDown,
       handleProfileCardKeyDown,
-      markOwnYearSummaryOpened,
+      yearSummarySignal,
     },
     reading: {
       profileDetailId,

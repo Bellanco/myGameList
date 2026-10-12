@@ -35,6 +35,7 @@ import { withFinishedOn, type FinishedGame } from '../../../core/utils/finishDat
 import type { ProfileTier } from '../../../core/constants/tiers';
 import { DEFAULT_PROFILE_TIER } from '../../../core/constants/tiers';
 import type { RelationshipState } from '../../../model/types/social';
+import type { YearSummarySignal } from '../../../viewmodel/social/useYearSummarySignal';
 import { ScreenTitle } from './ScreenTitle';
 
 // Paginación de los juegos del perfil: se muestran de 15 en 15 para evitar scroll excesivo al abrir el detalle.
@@ -206,7 +207,6 @@ function SocialProfileDetailScreenBase({
   viewerPending,
   viewerWished,
   openSummaryOnMount = false,
-  onOwnSummaryOpened,
 }: {
   SOCIAL_UI: SocialUiLabels;
   activeProfileDetail: SocialProfileDetail | null;
@@ -269,10 +269,10 @@ function SocialProfileDetailScreenBase({
   /** Llegar con el resumen del año ya desplegado: desde su tarjeta del feed o desde el aviso del 15. */
   openSummaryOnMount?: boolean;
   /**
-   * Se ha abierto TU resumen. Quien escucha decide si toca publicarlo a tus amistades (solo en temporada y una vez
-   * por año, ver `useYearSummarySignal`); la ficha solo avisa.
+   * Avisar a tus amistades de TU resumen (la tarjeta del feed). Lo usa la hoja de compartir; solo en temporada y una
+   * vez por año, ver `useYearSummarySignal`.
    */
-  onOwnSummaryOpened?: (year: number) => void;
+  yearSummarySignal?: YearSummarySignal;
   onAddOrAcceptFriend?: () => void;
   onCancelFriendRequest?: () => void;
   onRemoveFriend?: () => void;
@@ -327,12 +327,6 @@ function SocialProfileDetailScreenBase({
     return buildYearSummary({ completed: theirs, year, precision: isAdmin ? 'day' : 'month', viewerCompleted: viewerCompleted ?? [], viewerPending, viewerWished, palmares });
   }, [activeProfileDetail, canSeeFullProfile, isOwnProfile, palmares, viewerCompleted, viewerHiddenTabs, viewerIsAdmin, viewerPending, viewerWished]);
 
-  // Abrir TU resumen es lo que puede avisar a tus amistades. Se avisa al pintarse de verdad —desplegado y con
-  // datos—, no al pulsar: llegar desde el aviso del 15 también cuenta como haberlo visto.
-  const ownSummaryYear = isOwnProfile && showSummary && yearSummary ? yearSummary.year : null;
-  useEffect(() => {
-    if (ownSummaryYear !== null) onOwnSummaryOpened?.(ownSummaryYear);
-  }, [ownSummaryYear, onOwnSummaryOpened]);
 
   // Fecha de PUBLICACIÓN por juego, tomada de la actividad social del perfil: es la misma que muestra el feed.
   // Unifica ambas vistas — antes esta pantalla usaba el `_ts` del juego (última modificación), que una
