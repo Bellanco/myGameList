@@ -32,6 +32,13 @@ import { SocialProfileScreen } from '../../src/view/components/socialhub/SocialP
 import { ProfileAchievementsScreen, ProfileGlobalAchievements } from '../../src/view/components/socialhub/ProfileAchievements';
 import type { ProfilePostEntry } from '../../src/view/components/socialhub/ProfilePostsList';
 import { summaryYear } from '../../src/core/stats/summaryYear';
+import { buildYearSummary } from '../../src/core/stats/yearSummary';
+import { publicYearSummary } from '../../src/core/stats/publicYearSummary';
+import { YearSummarySharePanel } from '../../src/view/components/socialhub/YearSummaryShare';
+import { PublicYearSummary } from '../../src/view/components/PublicYearSummary';
+import type { YearShareViewModel } from '../../src/viewmodel/useYearShareViewModel';
+import type { SharedYearSummary } from '../../src/model/types/share';
+import type { FinishedGame } from '../../src/core/utils/finishDates';
 import { packAchievements } from '../../src/core/achievements/pack';
 import { LADDERS } from '../../src/core/achievements/catalog';
 import type { AchievementState } from '../../src/core/achievements/types';
@@ -417,6 +424,59 @@ function Perfil({ propio = false }: { propio?: boolean }) {
   );
 }
 
+/**
+ * COMPARTIR TU RESUMEN (del 15 de diciembre al 15 de enero), con el panel en cada estado y sin red: el modelo de
+ * vista es inventado. `abrir`: vacío (plegado), `sin-enlace`, `al-dia` o `cambiado` (con la espera del rango).
+ */
+function CompartirResumen() {
+  const abrir = params.get('abrir') || '';
+  const dia = 24 * 60 * 60 * 1000;
+  const enlace = { token: 'AbCdEfGhIjKlMnOpQrStUv', url: `${window.location.origin}/r/AbCdEfGhIjKlMnOpQrStUv`, expiresAt: Date.UTC(ANIO + 1, 0, 16, 12) };
+  const vm: YearShareViewModel = {
+    loading: false,
+    link: abrir === 'al-dia' || abrir === 'cambiado' ? enlace : null,
+    changed: abrir === 'cambiado',
+    nextUpdateAt: abrir === 'cambiado' ? Date.now() + 2 * dia : null,
+    announced: abrir === 'al-dia' || abrir === 'cambiado',
+    busy: false,
+    serviceDown: false,
+    error: '',
+    load: async () => {},
+    publish: async () => { avisar('crearía o actualizaría el enlace')(); return true; },
+    announce: async () => { avisar('avisaría a tus amistades')(); return true; },
+    remove: async () => { avisar('retiraría el enlace')(); return true; },
+  };
+  return (
+    <section className="hub-hub hub-screen">
+      <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
+        <div className="hub-detail-metadata">
+          <div className="hub-metadata-section">
+            <strong>{`Resumen de ${ANIO}`}</strong>
+            <YearSummarySharePanel key={abrir} year={ANIO} vm={vm} initiallyOpen={abrir !== ''} />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** La página pública de un resumen compartido (`/r/`), como la ve quien no tiene la app: sin carátulas. */
+function ResumenPublico() {
+  const resumen = buildYearSummary({ completed: LISTAS_DE_MARTA.c as FinishedGame[], year: ANIO, precision: 'month' });
+  if (!resumen) return null;
+  const articulo: SharedYearSummary = {
+    v: 1, kind: 'year', year: ANIO, summary: publicYearSummary(resumen), authorNick: MARTA.displayName,
+    createdAt: Date.now(), updatedAt: Date.now(), expiresAt: Date.UTC(ANIO + 1, 0, 16, 12),
+  };
+  return (
+    <section className="hub-hub hub-screen">
+      <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
+        <PublicYearSummary article={articulo} coverAccess={false} standalone={false} />
+      </div>
+    </section>
+  );
+}
+
 /** Los ajustes de TU perfil social: nombre, qué se comparte, la foto y la salida. */
 function Ajustes() {
   const [nombre, setNombre] = useState('Yo');
@@ -636,6 +696,9 @@ const PANTALLAS: Record<string, { nombre: string; ruta: string; pintar: () => Re
   'solicitudes-vacia': { nombre: 'Solicitudes (ninguna)', ruta: '/social/requests', pintar: () => <Solicitudes vacia /> },
   perfil: { nombre: 'Perfil de una amiga', ruta: RUTA_MARTA + subruta, pintar: () => <Perfil /> },
   'perfil-propio': { nombre: 'Tu perfil', ruta: RUTA_PROPIA + subruta, pintar: () => <Perfil propio /> },
+  'compartir-resumen': { nombre: 'Compartir tu resumen (temporada)', ruta: RUTA_PROPIA, pintar: () => <CompartirResumen /> },
+  // No es del hub —es la página de `/r/`—, pero así se ve en los ocho temas sin sesión.
+  'resumen-publico': { nombre: 'Resumen compartido (enlace)', ruta: '/r/AbCdEfGhIjKlMnOpQrStUv', pintar: () => <ResumenPublico /> },
   ajustes: { nombre: 'Ajustes del perfil social', ruta: '/social/profile', pintar: () => <Ajustes /> },
   logros: { nombre: 'Logros de una amiga', ruta: `${RUTA_MARTA}/logros`, pintar: () => <Logros /> },
   globales: { nombre: 'Logros: vista global', ruta: `${RUTA_MARTA}/globales`, pintar: () => <Logros global /> },
@@ -646,6 +709,12 @@ const PANTALLAS: Record<string, { nombre: string; ruta: string; pintar: () => Re
 /** Las combinaciones de `vista` y `abrir` que tienen sentido, para la barra. */
 const VARIANTES: Record<string, Array<{ nombre: string; vista?: string; abrir?: string }>> = {
   perfil: [{ nombre: 'Listas' }, { nombre: 'Reseñas', vista: 'resenas' }, { nombre: 'Estadísticas', abrir: 'estadisticas' }, { nombre: 'Resumen del año', abrir: 'resumen' }],
+  'compartir-resumen': [
+    { nombre: 'Plegado' },
+    { nombre: 'Sin enlace', abrir: 'sin-enlace' },
+    { nombre: 'Enlace al día', abrir: 'al-dia' },
+    { nombre: 'Ha cambiado (con espera)', abrir: 'cambiado' },
+  ],
   'perfil-propio': [{ nombre: 'Listas' }, { nombre: 'Reseñas', vista: 'resenas' }, { nombre: 'Publicaciones', vista: 'publicaciones' }, { nombre: 'Estadísticas', abrir: 'estadisticas' }, { nombre: 'Resumen del año', abrir: 'resumen' }],
 };
 

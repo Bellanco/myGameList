@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useState } from 'react';
 import { YEAR_SUMMARY_UI } from '../../../core/constants/yearSummaryLabels';
 import type { YearSummary } from '../../../core/stats/yearSummary';
-import { useYearShareViewModel } from '../../../viewmodel/useYearShareViewModel';
+import { useYearShareViewModel, type YearShareViewModel } from '../../../viewmodel/useYearShareViewModel';
 import type { YearSummarySignal } from '../../../viewmodel/social/useYearSummarySignal';
 import '../../../styles/yearSummary.scss';
 
@@ -30,9 +30,25 @@ export const YearSummaryShare = memo(function YearSummaryShare({
   summary: YearSummary;
   signal?: YearSummarySignal;
 }) {
-  const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
   const vm = useYearShareViewModel({ year, summary, signal });
+  return <YearSummarySharePanel year={year} vm={vm} />;
+});
+
+/**
+ * Lo que se pinta, con el modelo de vista ya hecho. Aparte para que la maqueta del social
+ * (`docs/maquetas/social.tsx`) enseñe cada estado sin red; `initiallyOpen` es para eso mismo.
+ */
+export const YearSummarySharePanel = memo(function YearSummarySharePanel({
+  year,
+  vm,
+  initiallyOpen = false,
+}: {
+  year: number;
+  vm: YearShareViewModel;
+  initiallyOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(initiallyOpen);
+  const [copied, setCopied] = useState(false);
   const { load } = vm;
 
   useEffect(() => {
@@ -98,7 +114,7 @@ export const YearSummaryShare = memo(function YearSummaryShare({
             {S.urlLabel}
           </label>
           <div className="ys-share-actions">
-            <input id="ys-share-url" className="ys-share-url" type="text" readOnly value={vm.link.url} onFocus={(event) => event.currentTarget.select()} />
+            <input id="ys-share-url" className="finput ys-share-url" type="text" readOnly value={vm.link.url} onFocus={(event) => event.currentTarget.select()} />
             <button className={`btn ${copied ? 'btn-done' : 'btn-secondary'}`} type="button" onClick={copy}>
               {copied ? S.copied : S.copy}
             </button>

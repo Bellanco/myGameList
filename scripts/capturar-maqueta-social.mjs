@@ -32,6 +32,8 @@ const TODAS = [
   'feed', 'feed-vacio', 'feed-fallo', 'feed-fallo-parcial', 'feed-github', 'aviso-legal', 'amigos', 'solicitudes', 'solicitudes-vacia',
   'perfil', 'perfil&vista=resenas', 'perfil&abrir=estadisticas', 'perfil&abrir=resumen',
   'perfil-propio', 'perfil-propio&vista=publicaciones', 'ajustes', 'logros', 'globales', 'resena', 'resena-perfil',
+  'compartir-resumen', 'compartir-resumen&abrir=sin-enlace', 'compartir-resumen&abrir=al-dia', 'compartir-resumen&abrir=cambiado',
+  'resumen-publico',
 ];
 const PANTALLAS = args.pantallas ? args.pantallas.split(',') : TODAS;
 
