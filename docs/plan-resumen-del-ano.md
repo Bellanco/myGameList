@@ -64,7 +64,7 @@ sale el aviso).
 | Borde | Coste | Cómo se queda dentro |
 |---|---|---|
 | Arranque | Solo cambia `summaryYear.ts` (unas líneas: dos comparaciones de fecha y `isShareSeason`) | Todo lo demás —botón, hoja de compartir, esquema, página pública— va en chunks perezosos que ya existen (`YearSummary`, `PublicReviewScreen`, social). **Objetivo: ≤ +0,2 kB**, medido tras la Fase 1 y al final |
-| KV · escrituras | **3 por enlace de resumen** (artículo, propietario, índice), frente a 5 de una reseña: sin contador diario (el tope es «uno por año», que ya se sabe con el listado) y sin índice de sugeridos (el resumen no tiene «otras reseñas»). Renovar reescribe las mismas 3 | Con ~200 libres, **~65 enlaces nuevos al día** en el peor caso (carátulas al tope). Si la Fase 0 dice que el pico esperado supera ~40, se aplica el freno de temporada de la Fase 4 |
+| KV · escrituras | **3 por enlace de resumen** (artículo, propietario, índice), frente a 5 de una reseña: sin contador diario (el tope es «uno por año», que ya se sabe con el listado) y sin índice de sugeridos (el resumen no tiene «otras reseñas»). Renovar reescribe las mismas 3 | Medido en la Fase 0: ~830 libres un día medio (~275 enlaces) y ~185 el peor (~60). Freno de temporada descartado; se vigila |
 | KV · *list* | 1 por publicación (el `listActiveShares` de `readShareStatus`, como hoy) | Una vez por persona y año, salvo renovaciones (máx. 1 al día) |
 | Visita al enlace | `/r/:token` (1 invocación + 1 lectura) + `/api/share/:token` (1 invocación + 1–2 lecturas) | Una visita sin carátulas = 2 invocaciones y ~3 lecturas; 1.000 visitas en un día = 2 % de Functions. Las visitas anónimas, que son las que pueden ser muchas, nunca piden carátulas |
 | Carátulas al visitar | Solo quien tiene el feed social y las carátulas encendidas: hasta 9 `/cover` (`COLLAGE_MAX`), en modo `'solo-cache'` (`c=2`) | Es la regla de lo ajeno del hub: resolver solo mientras el contador del día esté por debajo de `COVER_DAILY_BUDGET_AJENO` (250), **dentro** de los 700 de carátulas, así que no resta escrituras a los enlaces. La URL es la de `medio`, la misma del renglón: lo ya visto sale de la caché del navegador y del service worker |
@@ -138,8 +138,11 @@ Pendiente, sin bloquear: el número de perfiles sociales activos, para afinar la
   `SocialProfileDetailScreen` (todos dicen «del 15 al 31»).
 - **Etiqueta de provisional** (en `yearSummaryLabels`, perezoso): del 15 de julio al 31 de diciembre, el título lleva
   «en curso», para que un año a medias no se lea como un año flojo.
-- **Aviso del 15 de diciembre**: mismo momento, texto nuevo («ya puedes compartir tu resumen de Y»); sale en toda la
-  ventana de compartir, no solo hasta el 31. No se añade aviso el 15 de julio (no pedido).
+- **Aviso del 15 de diciembre**: mismo momento; sale en toda la ventana (hasta el 15 de enero), no solo hasta el 31.
+  El texto no habla de compartir hasta que exista el botón (Fase 5): «tu resumen de Y ya está completo». No se añade
+  aviso el 15 de julio (no pedido).
+- **Mientras no llegue la Fase 2**, la tarjeta del feed sigue saliendo al abrir el resumen, ahora en la ventana del 15
+  de diciembre al 15 de enero. Así la Fase 1 se puede publicar sola sin dejar nada a medias.
 - Tests: `yearSummarySignal.test.ts`, `yearSummary.test.ts` y uno nuevo de fronteras (14/15 de julio, 14/15 de
   diciembre, 15/16 de enero, 31 de diciembre → 1 de enero).
 - **Efecto al desplegar hoy (octubre):** el resumen visible pasa de 2025 a **2026 en curso**. Es lo pedido; avisarlo
