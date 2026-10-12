@@ -6,6 +6,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 ## [Unreleased]
 
 ### Added
+- **«Me gusta» en las reseñas y publicaciones de tus amigos.** Un solo botón, con un pulgar, y debajo quién: «A
+  Marta le gusta», «A Marta y a Nacho les gusta» o, con tres o más, «A Nacho y a 5 más les gusta» (solo el primer
+  nombre de cada persona, para que no ocupe más de un renglón). Al pulsar cambia al momento, aunque se envíe después,
+  y la frase te cuenta: «A ti y a 5 más os gusta». En lo tuyo no hay botón, solo la frase. Se guarda en tu propio
+  gist, así que no gasta Firestore; las versiones anteriores de la app no lo ven ni lo borran. El estado activado se
+  distingue en todos los temas (píldora y pulgar relleno), con color propio en Plata y acero, Inserte moneda y Mar
+  de estrellas de día.
 - **Cada tema tiene escena al EMPEZAR un juego**, además de la de cerrarlo: salta cuando un juego llega a En curso.
   Las Puertas de Durin que se abren (No puedes pasar), el atardecer synthwave con «STAGE 1» (Inserte moneda), «Nuevo
   contrato» con el cartel de la tabla en rojo vivo (Plata y acero), el calendario con la fecha de hoy (Ladrones de
@@ -15,13 +22,23 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   escenas tapan la pantalla un par de segundos, así que se encienden a mano, como las carátulas. Bronce no ve la
   casilla, y a quien la encendió y ya no tiene el rango se le apaga al entrar en Diseño. Viaja con la cuenta (`publicConfig.gameScenes`):
   **las reglas de Firestore tienen que desplegarse antes que el cliente** o se deniega la escritura de toda la
-  apariencia.
+  apariencia. Ya desplegadas el 12-10-2026.
 
 ### Changed
+- **Los textos legales y de privacidad, en lenguaje claro.** Las condiciones, la privacidad, las cookies y la
+  puerta del espacio social hablan de tú, con frases cortas y sin contar cómo funciona la app por dentro. Dicen lo
+  mismo que antes, más los «me gusta»: por eso **la versión legal sube a 2026-10-12b** y todo el mundo vuelve a
+  aceptar al entrar en el espacio social.
 - **Inserte moneda y Cámara de pruebas ya no sortean al cerrar un juego**: la pantalla de récord y la terminal de
   GLaDOS se quedan solas, y el atardecer y el cartel pasan a la escena de empezar.
 
 ### Fixed
+- **El número de juegos de la ficha de un perfil contaba solo los cargados.** La lista va de 15 en 15 al bajar, y al
+  lado de «Ordenar» ponía «15 juegos» aunque hubiera doscientos. Ahora cuenta todos (o todos los que casan con la
+  búsqueda).
+- **El feed volvía a descargar entero el gist de cada amigo cada vez.** La copia guardada se borraba justo antes de
+  poder preguntar a GitHub si había cambiado, así que nunca se aprovechaba la respuesta «sin cambios» y se gastaba
+  cupo de GitHub de más.
 - **Una escena con un `::before` o `::after` animado se borraba al acabar el del pseudoelemento**, no al acabar ella:
   el evento llega con la escena como destino. El calendario de los Ladrones desaparecía a los 0,25 s.
 

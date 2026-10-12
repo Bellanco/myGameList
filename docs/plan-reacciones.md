@@ -224,9 +224,9 @@ llegaba a revalidarse con ETag.
 - **La puerta de aceptación** (`LEGAL_CONSENT_UI.body`, `legal.ts`) nombra los «me gusta» en lo que se publica.
 - **La política de privacidad** (`legalContent.ts`) dice qué se publica, quién lo ve y cuándo se retira.
 - **Los créditos** de los iconos citan a Lucide también para el pulgar.
-- **`LEGAL_VERSION` NO sube:** la 2026-10-12, del resumen anual por enlace, aún no ha salido en ninguna release (la
-  1.6.10 lleva la 2026-10-07b). Así, las dos novedades cuestan una sola vuelta por la puerta. Si el resumen saliera
-  antes que esto, habría que subirla. Está escrito junto a la constante.
+- **`LEGAL_VERSION` sube a 2026-10-12b.** Se pensó meter los «me gusta» en la 2026-10-12, del resumen anual, para
+  ahorrar una vuelta por la puerta, pero esa salió antes en la 1.6.11, con el texto sin «me gusta». Quien la aceptó no
+  aceptó esto, así que sube (mismo criterio que la 2026-10-07b).
 - **`writeSocialReactions`** pasa también la denylist (`assertNoSocialPrivateFields`) antes del esquema, con su test.
 - **`npm run audit:privacy`** cubre el fichero nuevo (lo detecta por el `PATCH`): sale con 0, y los dos avisos
   informativos del correo están marcados con `audit-allow`.
@@ -234,7 +234,7 @@ llegaba a revalidarse con ETag.
 ## Despliegue
 
 - **Los «me gusta» no tocan Firestore:** ni reglas ni índices nuevos. Viven en el gist de cada cual.
-- **Sí hay que publicar a la vez el cliente y la versión legal** (`LEGAL_VERSION` 2026-10-12), que van en el mismo
+- **Sí hay que publicar a la vez el cliente y la versión legal** (`LEGAL_VERSION` 2026-10-12b), que van en el mismo
   código.
 - **Lo que SÍ pide reglas en esta release no es de este plan:** el ajuste `gameScenes` de `publicConfig` (animaciones al
   cambiar de lista, `6677824f`).

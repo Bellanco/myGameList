@@ -89,16 +89,15 @@
 // datos que lo aceptado no contemplaba en público, así que la versión sube y todo el mundo vuelve a pasar por la
 // puerta (mismo criterio que con los enlaces de reseñas). A la vez, el aviso a tus amistades deja de salir al
 // consultar tu resumen y sale al compartirlo: eso es publicar menos y no la subiría por sí solo.
-// 2026-10-12, también: los «ME GUSTA» (docs/plan-reacciones.md). El canal social publica, en un fichero aparte, a qué
-// reseñas y publicaciones de tus amistades les das «me gusta» y cuándo; lo ven tus amistades que pueden ver lo mismo.
-// Es un dato nuevo sobre ti, así que pediría subir la versión, pero va en ESTA y no en una `b`: la 2026-10-12 aún no
-// ha salido en ninguna release (la 1.6.10 lleva la 2026-10-07b), así que nadie la ha aceptado todavía con el texto
-// anterior, y las dos novedades juntas cuestan a cada persona una sola vuelta por la puerta. La `b` se usó cuando la
-// primera del día ya había salido (2026-10-07); si esta llegara a salir antes que los «me gusta», tocaría subirla.
-// 2026-10-12, y por último: los documentos y la puerta pasan a LENGUAJE CLARO (de tú, frases cortas, sin contar cómo
-// funciona la app por dentro). Dicen lo mismo: ningún dato, tratamiento ni destinatario entra o sale, así que esto
-// por sí solo no la subiría (mismo criterio que la redacción formal del 2026-10-05). Ver `legalContent.ts`.
-export const LEGAL_VERSION = '2026-10-12';
+// 2026-10-12b (la `b` porque la 2026-10-12 ya salió en la 1.6.11): los «ME GUSTA» (docs/plan-reacciones.md). El canal
+// social publica a qué reseñas y publicaciones de tus amistades les das «me gusta» y cuándo; lo ven tus amistades que
+// pueden ver lo mismo. Es un dato nuevo sobre ti, así que la versión sube y todo el mundo vuelve a pasar por la puerta.
+// Se pensó meterlo en la 2026-10-12 para ahorrar una vuelta, pero esa salió antes (1.6.11, con el texto sin «me gusta»)
+// y quien la aceptó no aceptó esto.
+// En la misma versión, los documentos y la puerta pasan a LENGUAJE CLARO (de tú, frases cortas, sin contar cómo
+// funciona la app por dentro). Dicen lo mismo: eso por sí solo no la subiría (mismo criterio que la redacción formal
+// del 2026-10-05). Ver `legalContent.ts`.
+export const LEGAL_VERSION = '2026-10-12b';
 
 /**
  * Se emite en `window` cada vez que este dispositivo sella la versión aceptada (`sealLegalConsent`). Lo escucha la
