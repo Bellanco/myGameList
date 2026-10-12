@@ -106,6 +106,21 @@ export const ShareReviewButton = memo(function ShareReviewButton({
     vm.clearError();
   }, [vm]);
 
+  /**
+   * «PUEDES COMPARTIRLA», una sola vez por dispositivo, a quien ya tenía lo social y nunca ha compartido: no pasó
+   * por la guía, y nada le señalaba el botón. Con la lista de sus enlaces ya cargada (`quota`), para no enseñársela
+   * un instante a quien sí tiene alguno; y nunca con la guía pintando algo, que entonces manda ella.
+   */
+  // Solo junto al botón de verdad (con sesión, sin veto y con el servicio atendiendo): sin él no hay nada que señalar.
+  const showTip = vm.available === true && !vm.ban && !vm.serviceDown
+    && tipPending && !open && vm.quota !== null && vm.shares.length === 0 && !existing
+    && !isGuideShowing(parseTourState(onboardingStore.get() || null));
+  // UNA SOLA VEZ DE VERDAD: se da por vista en cuanto sale, no al cerrarla. Quien la ignora y se va a otra pantalla
+  // también la ha visto, y no se le vuelve a enseñar en la siguiente reseña. Aquí sigue a la vista hasta cerrarla.
+  useEffect(() => {
+    if (showTip) markShareTipSeen();
+  }, [showTip]);
+
   // Mientras no se sabe si hay sesión (`null`) no se pinta nada: enseñar el botón y quitarlo medio segundo
   // después es peor que esperar.
   if (vm.available === null) {
@@ -151,13 +166,6 @@ export const ShareReviewButton = memo(function ShareReviewButton({
     );
   }
 
-  /**
-   * «PUEDES COMPARTIRLA», una sola vez por dispositivo, a quien ya tenía lo social y nunca ha compartido: no pasó
-   * por la guía, y nada le señalaba el botón. Con la lista de sus enlaces ya cargada (`quota`), para no enseñársela
-   * un instante a quien sí tiene alguno; y nunca con la guía pintando algo, que entonces manda ella.
-   */
-  const showTip = tipPending && !open && vm.quota !== null && vm.shares.length === 0 && !existing
-    && !isGuideShowing(parseTourState(onboardingStore.get() || null));
 
   return (
     <>

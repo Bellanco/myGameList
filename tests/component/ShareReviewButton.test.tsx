@@ -197,6 +197,33 @@ describe('ShareReviewButton — la burbuja que señala el botón', () => {
     expect(localStorage.getItem(SHARE_TIP_SEEN_KEY)).toBeNull();
   });
 
+  it('una vez que ha salido no vuelve, aunque se ignore y se salga sin cerrarla', async () => {
+    withViewModel({});
+    const { unmount } = render(<ShareReviewButton game={game} reviewText="Texto" />);
+    await screen.findByRole('dialog', { name: TOUR_UI.shareTip.title }, { timeout: 3000 });
+    expect(localStorage.getItem(SHARE_TIP_SEEN_KEY)).toBe('on');
+    // Se va a otra reseña sin tocarla.
+    unmount();
+    render(<ShareReviewButton game={{ ...game, id: 100, name: 'Otro' } as GameItem} reviewText="Otro texto" />);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(screen.queryByRole('dialog', { name: TOUR_UI.shareTip.title })).toBeNull();
+  });
+
+  it('sin el botón de verdad (sin sesión, vetado o sin servicio) ni sale ni se gasta', async () => {
+    for (const estado of [{ available: false, hasSocialSpace: true }, { ban: { bannedAt: 1, by: 'admin', reason: 'x' } }, { serviceDown: true }]) {
+      withViewModel(estado);
+      const { unmount } = render(<ShareReviewButton game={game} reviewText="Texto" />);
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 30));
+      });
+      expect(screen.queryByRole('dialog', { name: TOUR_UI.shareTip.title })).toBeNull();
+      unmount();
+    }
+    expect(localStorage.getItem(SHARE_TIP_SEEN_KEY)).toBeNull();
+  });
+
   it('pulsar «Compartir» la da por vista', async () => {
     withViewModel({});
     render(<ShareReviewButton game={game} reviewText="Texto" />);
