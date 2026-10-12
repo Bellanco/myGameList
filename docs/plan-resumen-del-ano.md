@@ -69,7 +69,7 @@ sale el aviso).
 | Borde | Coste | Cómo se queda dentro |
 |---|---|---|
 | Arranque | Solo cambia `summaryYear.ts` (`isShareSeason` sustituye a `isSummarySeason`: una comparación más) | Todo lo demás —botón, hoja de compartir, esquema, página pública— va en chunks perezosos que ya existen (`YearSummary`, `PublicReviewScreen`, social). **Objetivo: ≤ +0,2 kB**, medido tras la Fase 1 y al final |
-| KV · escrituras | **3 por enlace de resumen** (artículo, propietario, índice), frente a 5 de una reseña: sin contador diario (el tope es «uno por año», que ya se sabe con el listado) y sin índice de sugeridos (el resumen no tiene «otras reseñas»). Renovar reescribe las mismas 3 | Medido en la Fase 0: ~830 libres un día medio (~275 enlaces) y ~185 el peor (~60). Freno de temporada descartado; se vigila |
+| KV · escrituras | **3 por enlace de resumen** (artículo, propietario, índice), frente a 5 de una reseña: sin contador diario (el tope es «uno por año», que ya se sabe con el listado) y sin índice de sugeridos (el resumen no tiene «otras reseñas»). **Actualizar cuesta 1**: la caducidad es fija (16 de enero), así que propietario e índice no cambian y solo se reescribe el artículo | Medido en la Fase 0: ~830 libres un día medio (~275 enlaces) y ~185 el peor (~60). Freno de temporada descartado; se vigila |
 | KV · *list* | 1 por publicación (el `listActiveShares` de `readShareStatus`, como hoy) | Una vez por persona y año, salvo renovaciones (máx. 1 al día) |
 | Visita al enlace | `/r/:token` (1 invocación + 1 lectura) + `/api/share/:token` (1 invocación + 1–2 lecturas) | Una visita sin carátulas = 2 invocaciones y ~3 lecturas; 1.000 visitas en un día = 2 % de Functions. Las visitas anónimas, que son las que pueden ser muchas, nunca piden carátulas |
 | Carátulas al visitar | Solo quien tiene el feed social y las carátulas encendidas: hasta 9 `/cover` (`COLLAGE_MAX`), en modo `'solo-cache'` (`c=2`) | Es la regla de lo ajeno del hub: resolver solo mientras el contador del día esté por debajo de `COVER_DAILY_BUDGET_AJENO` (250), **dentro** de los 700 de carátulas, así que no resta escrituras a los enlaces. La URL es la de `medio`, la misma del renglón: lo ya visto sale de la caché del navegador y del service worker |
@@ -183,7 +183,10 @@ Puro, en `src/core/stats/` (p. ej. `publicYearSummary.ts`), testeado como la pro
   - **Ventana en el servidor**, con holgura de husos: del 14-12 12:00 UTC al 16-01 12:00 UTC, y `year` debe ser el
     de esa temporada. Fuera, 409 con mensaje claro.
   - **Uno por persona y año**: si en el listado ya hay una fila `kind: 'year'` de ese año, se renueva sobre el mismo
-    token. Renovar, como mucho una vez cada 24 h (se mira `createdAt` de la fila: 0 escrituras más).
+    token: **el enlace no cambia nunca** y solo se reescribe el artículo (1 escritura). Como mucho una vez cada
+    24 h, mirando el `updatedAt` del propio artículo (1 lectura).
+  - El enlace es una **foto** del momento en que se comparte: lo que completes después no entra hasta que lo
+    actualices. Dentro de la app, las amistades ven siempre el resumen vivo (sale de tu gist).
   - No cuenta para `maxActive` ni para el contador diario de reseñas.
   - Caduca al cerrar la ventana (16 de enero, 12:00 UTC): `expirationTtl` hasta esa fecha, mínimo 60 s.
 - `GET /api/share/:token` y `functions/r/[token].ts`: rama por `kind`. Vista previa: «El 2026 de {nick}: 34 juegos
@@ -197,7 +200,7 @@ Puro, en `src/core/stats/` (p. ej. `publicYearSummary.ts`), testeado como la pro
 - Actualizar el comentario de `COVER_DAILY_BUDGET` (la cuenta de lo que queda para compartir) y
   `plan-capacidad-gratuita.md`.
 - Pruebas con `wrangler pages dev` y KV local, como la Fase 2 de capacidad: contar escrituras con un KV espía
-  (3 al crear, 3 al renovar, 0 al rechazar fuera de ventana).
+  (3 al crear, 1 al actualizar, 0 al rechazar fuera de ventana).
 
 ### Fase 5 — Cliente · M
 
