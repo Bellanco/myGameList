@@ -5,6 +5,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-12
+
+Una versión para **sentirse leído**: «Me gusta» en lo que escriben tus amigos, los textos legales en lenguaje claro,
+volver al espacio social solo con Google y una escena de cada tema al empezar y al cerrar un juego.
+
 ### Added
 - **«Me gusta» en las reseñas y publicaciones de tus amigos**, en el feed, en el detalle de una reseña y en las
   reseñas que abres desde la pestaña «Reseñas» de un perfil. Un solo botón, con un pulgar, y debajo quién: «A
