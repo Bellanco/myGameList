@@ -1,7 +1,7 @@
 # Plan: resumen del año — calendario nuevo y compartirlo en fin de año
 
-> Objetivo: que el resumen del año en curso se pueda ver desde el **15 de julio** hasta el 14 de julio siguiente, y
-> que en la **temporada de fin de año (15 de diciembre – 15 de enero)** se pueda compartir: con un **enlace público
+> Objetivo: que el resumen del año se estrene el **15 de diciembre**, como hoy, y que en la **temporada de fin de
+> año (15 de diciembre – 15 de enero)** se pueda compartir: con un **enlace público
 > `/r/`** y con la **tarjeta del feed** a las amistades. Todo sin pasarse de los bordes que ya están medidos
 > (arranque 190 kB, cupos gratuitos de Cloudflare y Firebase).
 
@@ -12,7 +12,7 @@
 
 | Decisión | Valor |
 |---|---|
-| Qué resumen se ve | El del año Y **del 15 de julio de Y al 14 de julio de Y+1**. Del 15 de julio al 31 de diciembre es el año en curso (se va completando); del 1 de enero al 14 de julio, el año recién cerrado |
+| Qué resumen se ve | El del año Y **del 15 de diciembre de Y al 14 de diciembre de Y+1**: se estrena el 15 y se ve todo el año siguiente. Es el calendario de hoy, sin cambios |
 | Cuándo se puede compartir | **Del 15 de diciembre al 15 de enero** (ambos incluidos). Fuera de esa ventana se ve, pero no se comparte |
 | Cómo se comparte | **Enlace público en `/r/`** (como las reseñas) **y la tarjeta del feed** a las amistades |
 | Cuándo sale la tarjeta del feed | **Al compartir**, no al abrir el resumen (hoy se publica sola al abrirlo del 15 al 31 de diciembre) |
@@ -22,6 +22,11 @@
 
 La ventana de compartir empieza el 15 de **diciembre** (confirmado: en la primera respuesta se coló un
 «septiembre»).
+
+**Cambio de calendario (12-10-2026, usuario):** se propuso que el resumen se viera desde el 15 de julio, pero se
+descartó: con cinco meses viéndolo a medias, el 15 de diciembre deja de ser un estreno y el aviso pierde fuerza.
+El año en curso ya se sigue en Estadísticas (panel del año, `YearPanel`). Estrenarlo y poder compartirlo es el
+mismo día.
 
 ---
 
@@ -63,7 +68,7 @@ sale el aviso).
 
 | Borde | Coste | Cómo se queda dentro |
 |---|---|---|
-| Arranque | Solo cambia `summaryYear.ts` (unas líneas: dos comparaciones de fecha y `isShareSeason`) | Todo lo demás —botón, hoja de compartir, esquema, página pública— va en chunks perezosos que ya existen (`YearSummary`, `PublicReviewScreen`, social). **Objetivo: ≤ +0,2 kB**, medido tras la Fase 1 y al final |
+| Arranque | Solo cambia `summaryYear.ts` (`isShareSeason` sustituye a `isSummarySeason`: una comparación más) | Todo lo demás —botón, hoja de compartir, esquema, página pública— va en chunks perezosos que ya existen (`YearSummary`, `PublicReviewScreen`, social). **Objetivo: ≤ +0,2 kB**, medido tras la Fase 1 y al final |
 | KV · escrituras | **3 por enlace de resumen** (artículo, propietario, índice), frente a 5 de una reseña: sin contador diario (el tope es «uno por año», que ya se sabe con el listado) y sin índice de sugeridos (el resumen no tiene «otras reseñas»). Renovar reescribe las mismas 3 | Medido en la Fase 0: ~830 libres un día medio (~275 enlaces) y ~185 el peor (~60). Freno de temporada descartado; se vigila |
 | KV · *list* | 1 por publicación (el `listActiveShares` de `readShareStatus`, como hoy) | Una vez por persona y año, salvo renovaciones (máx. 1 al día) |
 | Visita al enlace | `/r/:token` (1 invocación + 1 lectura) + `/api/share/:token` (1 invocación + 1–2 lecturas) | Una visita sin carátulas = 2 invocaciones y ~3 lecturas; 1.000 visitas en un día = 2 % de Functions. Las visitas anónimas, que son las que pueden ser muchas, nunca piden carátulas |
@@ -127,27 +132,19 @@ Pendiente, sin bloquear: el número de perfiles sociales activos, para afinar la
 
 ### Fase 1 — Calendario · S
 
-`src/core/stats/summaryYear.ts` (arranque):
+El estreno sigue el 15 de diciembre; lo que cambia es que la **temporada** (aviso y tarjeta del feed) se alarga
+hasta el 15 de enero, que será también la ventana de compartir.
 
-- `SUMMARY_SWITCH = { month: 6, day: 15 }` (15 de julio). `summaryYear(now)`: el año en curso desde el 15 de julio,
-  el anterior antes.
-- `isShareSeason(now)`: 15–31 de diciembre **o** 1–15 de enero. El año que se comparte es `summaryYear(now)` (en
-  diciembre, Y; en enero, Y−1), así que no hace falta otra función.
-- `isSummarySeason` desaparece como concepto: sus usos pasan a `isShareSeason` (aviso, señal) o a nada (ver).
-- Comentarios del fichero, de `yearSummaryFeed.ts`, `useYearSummarySignal`, `useYearSummaryNotice` y
-  `SocialProfileDetailScreen` (todos dicen «del 15 al 31»).
-- **Etiqueta de provisional** (en `yearSummaryLabels`, perezoso): del 15 de julio al 31 de diciembre, el título lleva
-  «en curso», para que un año a medias no se lea como un año flojo.
-- **Aviso del 15 de diciembre**: mismo momento; sale en toda la ventana (hasta el 15 de enero), no solo hasta el 31.
-  El texto no habla de compartir hasta que exista el botón (Fase 5): «tu resumen de Y ya está completo». No se añade
-  aviso el 15 de julio (no pedido).
-- **Mientras no llegue la Fase 2**, la tarjeta del feed sigue saliendo al abrir el resumen, ahora en la ventana del 15
-  de diciembre al 15 de enero. Así la Fase 1 se puede publicar sola sin dejar nada a medias.
-- Tests: `yearSummarySignal.test.ts`, `yearSummary.test.ts` y uno nuevo de fronteras (14/15 de julio, 14/15 de
-  diciembre, 15/16 de enero, 31 de diciembre → 1 de enero).
-- **Efecto al desplegar hoy (octubre):** el resumen visible pasa de 2025 a **2026 en curso**. Es lo pedido; avisarlo
-  en el CHANGELOG.
-- **Medir:** `npm run build && npm run validate`. Si el crítico pasa de 188,6 kB, algo perezoso se ha colado.
+1. `src/core/stats/summaryYear.ts` (arranque): `isShareSeason(now)` = 15–31 de diciembre **o** 1–15 de enero.
+   `summaryYear` no cambia: en enero sigue dando Y−1, que es justo el año que se comparte. Tests de fronteras
+   (14/15 de diciembre, 31 de diciembre → 1 de enero, 15/16 de enero).
+2. Usos: `useYearSummaryNotice` y `useYearSummarySignal` pasan a `isShareSeason` y desaparece `isSummarySeason`.
+   Comentarios que dicen «del 15 al 31» (`yearSummaryFeed.ts`, `firebaseRepository.ts`, `firestore.rules`, `App.tsx`).
+   **Mientras no llegue la Fase 2**, la tarjeta del feed sigue saliendo al abrir el resumen, ahora hasta el 15 de
+   enero: la Fase 1 se puede publicar sola.
+3. Texto del aviso: quitar «Se actualiza hasta el 31», que en enero sería falso. No habla de compartir hasta que
+   exista el botón (Fase 5).
+4. Cierre: `npm run build && npm run validate` (el crítico no debe subir de 188,6 kB), suite y CHANGELOG.
 
 ### Fase 2 — La tarjeta del feed sale al compartir · S
 
@@ -235,13 +232,14 @@ Puro, en `src/core/stats/` (p. ej. `publicYearSummary.ts`), testeado como la pro
   reseñas). El contenido lo afirma el cliente y lo acota el esquema, como el texto de una reseña.
 - **Carátulas para visitantes sin cuenta social.** Ni por política (nada de arte de terceros a quien no tiene la app)
   ni por cupo (son las visitas que pueden ser miles).
-- **Aviso el 15 de julio.** No pedido; el resumen en curso aparece sin anunciarse.
+- **Ver el resumen del año en curso desde julio.** Descartado: el estreno del 15 de diciembre pierde fuerza (ver
+  «Cambio de calendario»).
 
 ## Checklist
 
 - [x] Fase 0: línea base de KV (12-10-2026); freno descartado, vigilancia al 60 %. Falta el número de perfiles.
 - [x] Decisiones confirmadas (12-10-2026).
-- [ ] Fase 1: calendario; crítico ≤ 188,6 kB.
+- [ ] Fase 1: temporada hasta el 15 de enero; crítico ≤ 188,6 kB.
 - [ ] Fase 2: tarjeta al compartir.
 - [ ] Fase 3: proyección + esquema + auditoría de privacidad.
 - [ ] Fase 4: servidor con 3 escrituras, ventana y renovación; probado con KV espía.
