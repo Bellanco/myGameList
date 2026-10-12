@@ -5,6 +5,7 @@ import { OnboardingTour } from '../../src/view/components/onboarding/OnboardingT
 import { offeredTour, parseTourState, type TourState } from '../../src/core/onboarding/tourState';
 import { MISSIONS, type TourContext } from '../../src/core/onboarding/tourSteps';
 import { onboardingStore } from '../../src/model/repository/onboardingStore';
+import { shareInviteStore } from '../../src/model/repository/shareInviteStore';
 import { TOUR_UI } from '../../src/core/constants/onboardingLabels';
 import { INVITE_UI } from '../../src/core/constants/inviteLabels';
 
@@ -211,6 +212,8 @@ describe('guía de primeros pasos', () => {
     expect(close).toHaveBeenCalledTimes(1);
     expect(goSocial).not.toHaveBeenCalled();
     expect(saved()).toBeNull();
+    // Y el botón se retira de este dispositivo: sin lo social no hace nada.
+    expect(shareInviteStore.get()).toBe(true);
 
     rerender(<OnboardingTour state={null} ctx={ctx} shareInvite={{ close, goSocial }} />);
     await userEvent.click(within(bubble).getByRole('button', { name: TOUR_UI.share.yes }));

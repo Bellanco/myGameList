@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { GameItem } from '../../src/model/types/game';
 import type { ShareViewModel } from '../../src/viewmodel/useShareViewModel';
@@ -12,6 +12,8 @@ vi.mock('../../src/viewmodel/useShareViewModel', () => shareMocks);
 
 import { ShareReviewButton } from '../../src/view/components/stats/ShareReviewButton';
 import { SHARE_UI } from '../../src/core/constants/shareLabels';
+import { SHARE_INVITE_DECLINED_KEY } from '../../src/core/constants/storageKeys';
+import { declineShareInvite } from '../../src/model/repository/shareInviteStore';
 
 const game = {
   id: 99,
@@ -71,6 +73,7 @@ describe('ShareReviewButton — con el servicio de compartir sin atender', () =>
 describe('ShareReviewButton — cuando no se puede compartir', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
   });
 
   it('a quien usa el espacio social y no tiene sesión le explica qué falta en vez de desaparecer', () => {
@@ -96,6 +99,23 @@ describe('ShareReviewButton — cuando no se puede compartir', () => {
     expect(onSocialInvite).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.queryByText(SHARE_UI.signInRequired)).not.toBeInTheDocument();
+  });
+
+  it('tras contestar «Ahora no» a la explicación, el botón se va: sin lo social no hace nada', async () => {
+    withViewModel({ available: false, hasSocialSpace: false });
+    render(<ShareReviewButton game={game} reviewText="Enorme de principio a fin" onSocialInvite={vi.fn()} />);
+    expect(screen.getByRole('button', { name: SHARE_UI.actionAria })).toBeInTheDocument();
+
+    act(() => declineShareInvite());
+    expect(screen.queryByRole('button', { name: SHARE_UI.actionAria })).not.toBeInTheDocument();
+    expect(localStorage.getItem(SHARE_INVITE_DECLINED_KEY)).toBe('on');
+  });
+
+  it('con lo social, la respuesta de antes no esconde el botón de verdad', () => {
+    localStorage.setItem(SHARE_INVITE_DECLINED_KEY, 'on');
+    withViewModel({});
+    render(<ShareReviewButton game={game} reviewText="Enorme de principio a fin" onSocialInvite={vi.fn()} />);
+    expect(screen.getByRole('button', { name: SHARE_UI.actionAria })).toBeInTheDocument();
   });
 
   it('sin quien explique por qué, a quien nunca ha abierto el espacio social no le ofrece nada', () => {

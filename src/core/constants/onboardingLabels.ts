@@ -185,8 +185,8 @@ export const TOUR_UI = {
   ],
   /**
    * QUIEN PULSA «COMPARTIR» EN UNA RESEÑA SIN TENER LO SOCIAL. El enlace público exige identidad, así que en vez del
-   * diálogo de publicar se le dice por qué no se puede y se le ofrece el camino. Sale cada vez que lo pulse: es él
-   * quien lo pide, no una oferta que se le cuela.
+   * diálogo de publicar se le dice por qué no se puede y se le ofrece el camino. «Ahora no» retira el botón de este
+   * dispositivo (ver `shareInviteStore`).
    */
   share: {
     kicker: 'Espacio social',

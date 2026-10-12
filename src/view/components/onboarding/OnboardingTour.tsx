@@ -20,6 +20,7 @@ import {
 } from '../../../core/onboarding/tourSteps';
 import { INVITE_UI } from '../../../core/constants/inviteLabels';
 import { saveTourState } from '../../../model/repository/onboardingStore';
+import { declineShareInvite } from '../../../model/repository/shareInviteStore';
 import { InviteLink } from '../invite/InviteLink';
 import { placeBubble, type Box } from './placement';
 import { useDialogOpen, useTourAnchor } from './useTourAnchor';
@@ -572,10 +573,15 @@ function PremiosInviteBubble({ invite }: { invite: PremiosInvite }) {
  * QUIEN PULSA «COMPARTIR» EN UNA RESEÑA SIN TENER LO SOCIAL: la burbuja señala el propio botón y dice por qué no
  * se puede. «Enséñame» pone en marcha SOLO el modo cooperativo, como la invitación de los premios, y le lleva a
  * Social; con una guía ya en marcha no la pisa entera: se cambia a esa misión, que es lo que acaba de pedir.
+ * «Ahora no» (o la X, o Escape) retira el botón de este dispositivo: sin lo social no hace nada.
  */
 function ShareInviteBubble({ invite, state }: { invite: ShareInvite; state: TourState | null }) {
   const titleId = useId();
   const S = TOUR_UI.share;
+  const decline = () => {
+    declineShareInvite();
+    invite.close();
+  };
   const accept = () => {
     const next = joinFromPremios(state, 'social') ?? (state ? chooseMission(state, 'coop') : null);
     if (next) saveTourState(next);
@@ -590,20 +596,20 @@ function ShareInviteBubble({ invite, state }: { invite: ShareInvite; state: Tour
       onKeyDown={(event) => {
         if (event.key !== 'Escape') return;
         event.stopPropagation();
-        invite.close();
+        decline();
       }}
     >
       <div className="ob-kicker">
         <TourIcon name="lock" className="ob-icon ob-icon-sm" />
         <span>{S.kicker}</span>
-        <button type="button" className="ob-close" aria-label={TOUR_UI.buttons.close} title={TOUR_UI.buttons.close} onClick={invite.close}>
+        <button type="button" className="ob-close" aria-label={TOUR_UI.buttons.close} title={TOUR_UI.buttons.close} onClick={decline}>
           <TourIcon name="close" />
         </button>
       </div>
       <h2 className="ob-title" id={titleId}>{S.title}</h2>
       <p className="ob-text">{S.text}</p>
       <div className="ob-foot ob-foot-split ob-foot-even">
-        <button type="button" className="btn btn-quiet" onClick={invite.close}>{S.no}</button>
+        <button type="button" className="btn btn-quiet" onClick={decline}>{S.no}</button>
         <button type="button" className="btn btn-primary" onClick={accept}>{S.yes}</button>
       </div>
     </AnchoredBubble>

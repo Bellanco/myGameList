@@ -1,8 +1,9 @@
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { SHARE_UI } from '../../../core/constants/shareLabels';
 import { Icon } from '../Icon';
 import { ShareReviewModal } from '../../modals/ShareReviewModal';
 import { shareDraftOf, useShareViewModel } from '../../../viewmodel/useShareViewModel';
+import { shareInviteStore } from '../../../model/repository/shareInviteStore';
 import type { GameItem } from '../../../model/types/game';
 
 /**
@@ -29,6 +30,7 @@ export const ShareReviewButton = memo(function ShareReviewButton({
   onSocialInvite?: () => void;
 }) {
   const vm = useShareViewModel();
+  const inviteDeclined = useSyncExternalStore(shareInviteStore.subscribe, shareInviteStore.get, shareInviteStore.get);
   const [open, setOpen] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState('');
   const [renewed, setRenewed] = useState(false);
@@ -101,6 +103,8 @@ export const ShareReviewButton = memo(function ShareReviewButton({
   // A quien nunca ha abierto el espacio social (`hasSocialSpace` falso) un distintivo de «falta la sesión» le
   // hablaría de algo que no conoce. A esa persona se le ofrece el botón de siempre, y al pulsarlo la guía le cuenta
   // que compartir es de lo social y le ofrece el camino (12-10-2026): sin él, no había forma de saber que existía.
+  // Si a eso contesta «Ahora no», el botón se va de este dispositivo (`shareInviteStore`): sin lo social no hace
+  // nada, y quedarse a la vista tras un no es dejar un botón inservible.
   if (vm.available === false) {
     if (vm.hasSocialSpace) {
       return (
@@ -109,7 +113,7 @@ export const ShareReviewButton = memo(function ShareReviewButton({
         </span>
       );
     }
-    return onSocialInvite ? (
+    return onSocialInvite && !inviteDeclined ? (
       <button className="btn btn-secondary" type="button" data-tour="share-review" onClick={onSocialInvite} aria-label={SHARE_UI.actionAria}>
         <Icon name="share-nodes" />
         <span>{SHARE_UI.action}</span>
