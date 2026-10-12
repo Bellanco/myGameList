@@ -9,6 +9,7 @@
 // los amigos en cada hidratación del feed) ni en Firestore (un documento de lectura pública entrega TODOS sus
 // campos, así que no podría llevar el uid sin filtrar identidad).
 import type { ShareQuota } from '../../core/constants/tiers';
+import type { YearSummary } from '../../core/stats/yearSummary';
 
 /**
  * El artículo público, tal cual se guarda en `share:{token}` y se sirve a quien abre el enlace.
@@ -35,6 +36,33 @@ export interface SharedReview {
   reviewedAt: number; // fecha de la reseña
   createdAt: number; // cuándo se compartió
   expiresAt: number; // cuándo deja de estar accesible
+}
+
+/**
+ * El resumen del año compartido con enlace (`share:{token}` con `kind: 'year'`, ver docs/plan-resumen-del-ano.md).
+ *
+ * `summary` es lo que deja salir `core/stats/publicYearSummary`: sin la comparación con quien mira, sin cita y con
+ * el mes de cada fin, nunca el día. Igual que la reseña, sin identidad ni foto: solo el nick.
+ *
+ * Es una FOTO del día en que se compartió. Actualizarla reescribe este mismo artículo (mismo token, misma
+ * caducidad) y mueve `updatedAt`, que es también lo que mide la espera entre actualizaciones.
+ */
+export interface SharedYearSummary {
+  v: 1;
+  kind: 'year';
+  year: number;
+  summary: YearSummary;
+  authorNick: string;
+  createdAt: number;
+  updatedAt: number;
+  expiresAt: number;
+}
+
+/** Lo que puede haber detrás de un enlace `/r/`: una reseña (sin `kind`, la forma original) o un resumen del año. */
+export type SharedArticle = SharedReview | SharedYearSummary;
+
+export function isSharedYearSummary(article: SharedArticle | null | undefined): article is SharedYearSummary {
+  return Boolean(article && (article as Partial<SharedYearSummary>).kind === 'year');
 }
 
 /**
