@@ -104,10 +104,12 @@ export const coverExemptionKey = (ip: string): string => `igdb:cupo-libre:v1:${i
  * unidad del recurso que protege.
  *
  * Por qué 700. Resolver un juego nuevo cuesta una escritura (el emparejamiento), más las del contador: con el
- * lote de 50 son ~14 al día, o sea ~714 en total. Quedan ~285 para compartir —unas 57 publicaciones diarias a
- * cinco escrituras cada una (artículo, propietario, índice, contador e índice de sugeridos), muy por encima del
- * uso real— y aun así caben DOS bibliotecas grandes nuevas en un mismo día, que es el caso legítimo más caro que
- * existe (la de referencia tiene 302 juegos).
+ * lote de 50 son ~14 al día, o sea ~714 en total. De lo que queda, el contador por IP (~70) y las claves JWKS
+ * (~28) se llevan ~100, y quedan ~185 para compartir: unas 37 reseñas a cinco escrituras cada una (artículo,
+ * propietario, índice, contador e índice de sugeridos), o unos 60 resúmenes del año nuevos a tres (artículo,
+ * propietario e índice; actualizarlo es una). Muy por encima del uso real —medido en octubre de 2026, todo KV gasta
+ * ~68 escrituras al día (docs/plan-resumen-del-ano.md, Fase 0)— y aun así caben DOS bibliotecas grandes nuevas en
+ * un mismo día, que es el caso legítimo más caro que existe (la de referencia tiene 302 juegos).
  *
  * Sigue siendo un tope BLANDO, por lo mismo que el de IP: KV no tiene incremento atómico y sus lecturas llegan
  * con retraso. Acota el gasto sostenido, que es lo que vacía el presupuesto; no el segundo exacto en que corta.
