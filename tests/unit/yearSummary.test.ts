@@ -3,7 +3,7 @@
 // resume, qué juego tiene fecha y cuál no, y que nunca aparezcan horas.
 import { describe, expect, it } from 'vitest';
 import { buildYearSummary, quoteFromReview, summaryYear, GAP_MIN, QUOTE_MAX_CHARS } from '../../src/core/stats/yearSummary';
-import { hasCompletedIn, isSummarySeason } from '../../src/core/stats/summaryYear';
+import { hasCompletedIn, isShareSeason, isSummarySeason } from '../../src/core/stats/summaryYear';
 import { BULK_DAY_MIN, finishDays, withFinishedOn, type FinishedGame } from '../../src/core/utils/finishDates';
 import type { GameItem } from '../../src/model/types/game';
 import type { PalmaresEntry } from '../../src/model/types/premios';
@@ -38,6 +38,18 @@ describe('qué año se resume', () => {
     expect(isSummarySeason(new Date(2026, 11, 15))).toBe(true);
     expect(isSummarySeason(new Date(2026, 11, 14))).toBe(false);
     expect(isSummarySeason(new Date(2027, 0, 2))).toBe(false);
+  });
+
+  it('la temporada de compartir va del 15 de diciembre al 15 de enero, cruzando el cambio de año', () => {
+    expect(isShareSeason(new Date(2026, 11, 14, 23, 59))).toBe(false);
+    expect(isShareSeason(new Date(2026, 11, 15))).toBe(true);
+    expect(isShareSeason(new Date(2026, 11, 31, 23, 59))).toBe(true);
+    expect(isShareSeason(new Date(2027, 0, 1))).toBe(true);
+    expect(isShareSeason(new Date(2027, 0, 15, 23, 59))).toBe(true);
+    expect(isShareSeason(new Date(2027, 0, 16))).toBe(false);
+    expect(isShareSeason(new Date(2027, 6, 1))).toBe(false);
+    // En enero se comparte el año que se estrenó en diciembre.
+    expect(summaryYear(new Date(2027, 0, 15))).toBe(2026);
   });
 
   it('hay resumen si completó algo ese año', () => {

@@ -16,6 +16,17 @@ export function isSummarySeason(now: Date = new Date()): boolean {
   return now.getMonth() === 11 && now.getDate() >= SUMMARY_RELEASE_DAY;
 }
 
+/** Último día de enero en que sigue la temporada que se abrió el 15 de diciembre. */
+export const SHARE_SEASON_LAST_JANUARY_DAY = 15;
+
+/**
+ * ¿Estamos en la TEMPORADA de compartir (del 15 de diciembre al 15 de enero)? Abarca el cambio de año: en enero,
+ * `summaryYear` sigue dando el año que se estrenó en diciembre, que es el que se comparte.
+ */
+export function isShareSeason(now: Date = new Date()): boolean {
+  return isSummarySeason(now) || (now.getMonth() === 0 && now.getDate() <= SHARE_SEASON_LAST_JANUARY_DAY);
+}
+
 /** El año que se resume: en temporada, el que está acabando; el resto del año, el anterior. */
 export function summaryYear(now: Date = new Date()): number {
   return isSummarySeason(now) ? now.getFullYear() : now.getFullYear() - 1;
