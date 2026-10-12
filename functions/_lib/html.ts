@@ -1,4 +1,4 @@
-// Metadatos de previsualización para la página pública de una reseña compartida.
+// Metadatos de previsualización para la página pública de una reseña (o un resumen del año) compartida.
 //
 // AQUÍ ESTÁ EL ÚNICO PUNTO PELIGROSO DE TODA LA FUNCIONALIDAD: el texto lo escribe un usuario y acaba dentro de
 // atributos HTML que leen X, WhatsApp y compañía. Por eso la sustitución se hace con **HTMLRewriter**, que es un
@@ -71,10 +71,40 @@ export function shareDescription(review: string): string {
   return `${(lastSpace > DESCRIPTION_MAX * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
 }
 
+/** Lo justo del resumen del año compartido para su tarjeta en un chat. */
+export interface YearShareMeta {
+  year: number;
+  count: number;
+  authorNick: string;
+  best: { name: string; grade: number } | null;
+}
+
+/** Título de la tarjeta de un resumen: de quién, qué año y cuántos juegos. */
+export function yearShareTitle(meta: YearShareMeta): string {
+  const nick = plainText(meta.authorNick);
+  const games = meta.count === 1 ? '1 juego terminado' : `${meta.count} juegos terminados`;
+  return nick ? `El ${meta.year} de ${nick}: ${games}` : `Resumen de ${meta.year}: ${games}`;
+}
+
+/** Descripción de la tarjeta de un resumen: su juego del año, que es lo que invita a abrirlo. */
+export function yearShareDescription(meta: YearShareMeta): string {
+  if (!meta.best) {
+    return `Los juegos, géneros y meses de su ${meta.year} en ${SITE_NAME}.`;
+  }
+  return `Su juego del año: ${plainText(meta.best.name)} · ${Math.round(meta.best.grade)}/100. Los juegos, géneros y meses de su ${meta.year}.`;
+}
+
 /** Reescribe los metadatos del shell con los de esta reseña. Devuelve una respuesta HTML lista para servir. */
 export function withShareMeta(shell: Response, meta: ShareMeta, url: string): Response {
-  const title = shareTitle(meta);
-  const description = shareDescription(meta.review);
+  return withPreviewMeta(shell, { title: shareTitle(meta), description: shareDescription(meta.review) }, url);
+}
+
+/** Lo mismo para un resumen del año compartido. */
+export function withYearShareMeta(shell: Response, meta: YearShareMeta, url: string): Response {
+  return withPreviewMeta(shell, { title: yearShareTitle(meta), description: yearShareDescription(meta) }, url);
+}
+
+function withPreviewMeta(shell: Response, { title, description }: { title: string; description: string }, url: string): Response {
 
   const setContent = (value: string) => ({
     element(element: { setAttribute(name: string, value: string): void }) {
