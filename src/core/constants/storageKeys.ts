@@ -240,6 +240,11 @@ export const ONBOARDING_KEY = 'mis-listas-onboarding';
 // mira esta marca. Por dispositivo, como la guía: perderla solo hace que el botón vuelva a salir.
 export const SHARE_INVITE_DECLINED_KEY = 'mis-listas-share-invite-declined';
 
+// «COMPARTIR» CON LO SOCIAL — 'on' cuando ya se enseñó, una vez, la burbuja que señala el botón a quien nunca ha
+// compartido. Es para quien ya tenía lo social y por eso no pasó por la guía: nada más le decía que el botón existe.
+// Por dispositivo: perderla solo hace que se enseñe una vez más.
+export const SHARE_TIP_SEEN_KEY = 'mis-listas-share-tip-seen';
+
 /**
  * COMPARTIR SIN SERVICIO (docs/plan-degradacion-servicios.md, fase 3). Hasta cuándo no se vuelve a preguntar a
  * `/api/share` tras una respuesta de «no disponible», y la última lista de enlaces de cada usuario, para que Ajustes

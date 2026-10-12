@@ -188,6 +188,16 @@ export const TOUR_UI = {
    * diálogo de publicar se le dice por qué no se puede y se le ofrece el camino. «Ahora no» retira el botón de este
    * dispositivo (ver `shareInviteStore`).
    */
+  /**
+   * «PUEDES COMPARTIRLA», para quien ya tenía lo social y nunca ha compartido: no pasó por la guía, y el botón está
+   * en el detalle de la reseña sin que nada lo señale. Una sola vez por dispositivo.
+   */
+  shareTip: {
+    kicker: 'Compartir',
+    title: '¿Sabías que puedes compartirla?',
+    text: 'Crea un enlace a tu reseña y mándaselo a quien quieras: se abre sin cuenta y sin instalar nada.',
+    ok: 'Entendido',
+  },
   share: {
     kicker: 'Espacio social',
     title: 'Compartir es de la parte social',

@@ -14,6 +14,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   social ve el botón; al pulsarlo, la guía le explica que compartir con enlace es de la parte social y con
   «Enséñame» le lleva a Social con el modo cooperativo en marcha; con «Ahora no», el botón se retira de ese
   dispositivo, porque sin lo social no hace nada.
+- **Quien ya tenía lo social descubre «Compartir».** No pasó por la guía y nada le señalaba el botón: la primera vez
+  que abre una reseña suya sin tener nada compartido, una burbuja se lo señala, una sola vez por dispositivo. Se
+  comparta desde el panel o desde el social, el enlace de una reseña es siempre el mismo (lo fija ahora una prueba).
 - **La dirección de una reseña copiada de la barra lleva a la página principal.** Abierta en frío en otro navegador
   —la de Estadísticas sin ese juego, o una del social sin lo social o sin poder verla—, ya no deja a nadie en sus
   propias reseñas, en la pasarela o en «ya no está disponible». El dueño sigue viendo la suya, y dentro de la

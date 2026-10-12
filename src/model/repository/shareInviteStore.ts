@@ -2,7 +2,7 @@
 //
 // Con forma de almacén (`get` / `subscribe`) para `useSyncExternalStore`: la respuesta se da en la burbuja de la
 // guía y el botón, que vive en otra parte del árbol, tiene que irse en ese mismo momento.
-import { SHARE_INVITE_DECLINED_KEY } from '../../core/constants/storageKeys';
+import { SHARE_INVITE_DECLINED_KEY, SHARE_TIP_SEEN_KEY } from '../../core/constants/storageKeys';
 
 const listeners = new Set<() => void>();
 /** Sin almacenamiento la respuesta vale para esta visita: el botón se va igual y vuelve al recargar. */
@@ -31,4 +31,22 @@ export function declineShareInvite(): void {
     declinedInMemory = true;
   }
   for (const listener of listeners) listener();
+}
+
+/** ¿Se enseñó ya en este dispositivo la burbuja de «puedes compartirla» (ver `SHARE_TIP_SEEN_KEY`)? */
+export function readShareTipSeen(): boolean {
+  try {
+    return localStorage.getItem(SHARE_TIP_SEEN_KEY) === 'on';
+  } catch {
+    // Sin almacenamiento no se puede recordar: mejor no enseñarla que enseñarla en cada visita.
+    return true;
+  }
+}
+
+export function markShareTipSeen(): void {
+  try {
+    localStorage.setItem(SHARE_TIP_SEEN_KEY, 'on');
+  } catch {
+    // Ver `readShareTipSeen`.
+  }
 }
