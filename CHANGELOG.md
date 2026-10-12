@@ -16,8 +16,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - **Cada tema tiene escena al EMPEZAR un juego**, además de la de cerrarlo: salta cuando un juego llega a En curso.
   La puerta redonda de Bolsón Cerrado (No puedes pasar), el atardecer synthwave con «STAGE 1» (Inserte moneda), «Nuevo
   contrato» con el cartel de la tabla en rojo vivo (Plata y acero), el calendario con la fecha de hoy (Ladrones de
-  corazones), el cartel de la cámara con «PRUEBA EN CURSO» (Cámara de pruebas), el escáner óptico (Sin futuro), la
-  entrada al combate (Sol y luna) y la transmisión astropática con la calavera alada (Solo hay guerra).
+  corazones), el cartel de la cámara con «PRUEBA EN CURSO» (Cámara de pruebas), el escáner óptico (Sin futuro), el
+  cartel de zona «Nueva aventura» (Sol y luna) y la transmisión astropática con la calavera alada (Solo hay guerra).
 - **Casilla «Animaciones al cambiar de lista» en Diseño, apagada por defecto y solo de plata para arriba.** Las
   escenas tapan la pantalla un par de segundos, así que se encienden a mano, como las carátulas. Bronce no ve la
   casilla, y a quien la encendió y ya no tiene el rango se le apaga al entrar en Diseño. Viaja con la cuenta (`publicConfig.gameScenes`):
@@ -40,6 +40,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   centro y se iba en menos de un segundo: «Objetivo cumplido» se estampa sobre una franja negra, las letras
   recortadas saltan una a una y cae «Tesoro robado» (Ladrones de corazones), y cae un sello de pureza con el águila
   en relieve del que se desenrollan tiras de pergamino, con «Deber cumplido» debajo (Solo hay guerra).
+- **No puedes pasar cierra un juego con el Anillo**: cae, gira sobre el canto como una moneda y se tumba, con la frase
+  de Gandalf encima y «Juego Terminado» debajo. Antes salía solo el rótulo.
 
 ### Fixed
 - **El número de juegos de la ficha de un perfil contaba solo los cargados.** La lista va de 15 en 15 al bajar, y al

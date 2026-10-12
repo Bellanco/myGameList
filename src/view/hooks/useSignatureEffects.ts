@@ -17,7 +17,7 @@ import { gameScenesPreference } from './preferences';
  *  - Inserte moneda (arcade): GAME CLEAR al cerrar un juego (abajo, en los momentos).
  *
  * Y LOS QUE RESPONDEN A LO QUE PASA EN LA APLICACIÓN, no a lo que pasa en el DOM (ver `core/effects/moments`):
- *  - CERRAR UN JUEGO → «Juego terminado» con letra de título de las películas (No puedes pasar); la franja de
+ *  - CERRAR UN JUEGO → el Anillo que gira y se tumba sobre «Juego terminado» (No puedes pasar); la franja de
  *    «contrato cerrado» con las coronas de la recompensa saltando (Plata y acero); «objetivo cumplido» en letras
  *    recortadas estampado sobre una franja negra (Ladrones de corazones); la pantalla de récord (Inserte moneda); la
  *    terminal de GLaDOS (Cámara de pruebas); el protocolo de brecha (Sin futuro); la ventana de «¡Victoria!» (Sol y
@@ -26,7 +26,7 @@ import { gameScenesPreference } from './preferences';
  *  - EMPEZAR UN JUEGO (pasa a En curso) → la puerta redonda de Bolsón Cerrado (No puedes pasar); el atardecer synthwave
  *    con «STAGE 1» (Inserte moneda); la franja de «nuevo contrato» con el cartel de la tabla (Plata y acero); la
  *    transición de día del calendario con la fecha de hoy (Ladrones de corazones); el cartel de la cámara que baja
- *    del techo (Cámara de pruebas); el escáner óptico (Sin futuro); la entrada al combate (Sol y luna), y la
+ *    del techo (Cámara de pruebas); el escáner óptico (Sin futuro); el cartel de zona «Nueva aventura» (Sol y luna), y la
  *    transmisión astropática con la calavera alada (Solo hay guerra). El atardecer y el cartel se sorteaban con los de
  *    cerrar hasta el 12-10-2026; los demás se eligieron ese día con la maqueta de propuestas (la puerta redonda
  *    sustituyó esa misma tarde a las Puertas de Durin, que se leían a dibujo generado).
@@ -189,11 +189,20 @@ export function useSignatureEffects(): void {
       return letras;
     };
 
-    /** No puedes pasar: «Juego terminado» con letra de título de las películas, la rúbrica y la luz que lo recorre. */
-    const juegoTerminado = (): HTMLElement =>
+    /**
+     * No puedes pasar, al cerrar: el Anillo cae, gira sobre el canto cada vez más despacio, como una moneda, y se
+     * tumba con un último cabeceo; oro plano con un filo de luz, dibujado como la puerta redonda de empezar. Encima,
+     * Gandalf: «Todo lo que tenemos que decidir es qué hacer con el tiempo que se nos ha dado». Debajo, «Juego
+     * Terminado» con letra de título de las películas, la rúbrica y la luz que lo recorre.
+     */
+    const elAnillo = (): HTMLElement =>
       escena(
         'fx-tm-fin',
-        '<b><span class="fx-tm-cap">J</span>uego <span class="fx-tm-cap">T</span>erminado</b><svg class="fx-tm-fin-raya" viewBox="0 0 300 14" aria-hidden="true">' +
+        '<span class="fx-tm-dicho">«Todo lo que tenemos que decidir es qué hacer con el tiempo que se nos ha dado»</span>' +
+          '<svg class="fx-tm-anillo" viewBox="-60 -50 120 90" aria-hidden="true"><g class="fx-tm-anillo-cae"><g class="fx-tm-anillo-gira">' +
+          '<path class="fx-tm-oro" fill-rule="evenodd" d="M-30 0 A30 30 0 1 0 30 0 A30 30 0 1 0 -30 0 Z M-22 0 A22 22 0 1 1 22 0 A22 22 0 1 1 -22 0 Z"/>' +
+          '<path class="fx-tm-oro-luz" d="M-25 -9 A27 27 0 0 1 9 -26"/></g></g></svg>' +
+          '<b><span class="fx-tm-cap">J</span>uego <span class="fx-tm-cap">T</span>erminado</b><svg class="fx-tm-fin-raya" viewBox="0 0 300 14" aria-hidden="true">' +
           '<path d="M6 7 H128 M172 7 H294"/><path class="fx-tm-fin-hoja" d="M150 1 Q160 7 150 13 Q140 7 150 1 Z"/></svg>',
       );
 
@@ -525,48 +534,17 @@ export function useSignatureEffects(): void {
     };
 
     /**
-     * Sol y luna: la entrada al combate al empezar un juego. Los rombos se reparten en espiral cuadrada desde el
-     * centro (por anillo y, dentro del anillo, por ángulo) y cada uno entra con su retardo. El lado de la celda
-     * crece con la ventana para no pasar de ~300 celdas: con el de 48 px fijo, una pantalla 4K pedía 3.700.
+     * Sol y luna, al empezar: el cartel de zona, como al llegar a un sitio nuevo en el juego. Se abre una franja azul
+     * de lado a lado con ribete de puntos dorados, se teclea «NUEVA AVENTURA» letra a letra (`--n` = letras), sale
+     * «— capítulo 1 —» y titilan dos estrellas en los extremos.
      */
-    const entradaAlCombate = (): HTMLElement => {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      const lado = Math.max(48, Math.ceil(Math.sqrt((w * h) / 300)));
-      const cols = Math.ceil(w / lado) + 1;
-      const filas = Math.ceil(h / lado) + 1;
-      const cx = (cols - 1) / 2;
-      const cy = (filas - 1) / 2;
-      const ox = (w - (cols - 1) * lado) / 2 - lado / 2;
-      const oy = (h - (filas - 1) * lado) / 2 - lado / 2;
-      const celdas: { x: number; y: number; k: number }[] = [];
-      for (let y = 0; y < filas; y++) {
-        for (let x = 0; x < cols; x++) {
-          const anillo = Math.round(Math.max(Math.abs(x - cx), Math.abs(y - cy)));
-          const angulo = (Math.atan2(y - cy, x - cx) + Math.PI) / (2 * Math.PI);
-          celdas.push({ x, y, k: anillo + angulo });
-        }
-      }
-      celdas.sort((a, b) => a.k - b.k);
-      const rombos = celdas
-        .map(
-          (c, i) =>
-            `<span class="fx-sos-ba-dia" style="left:${c.x * lado + ox}px;top:${c.y * lado + oy}px">` +
-            `<i style="--d:${Math.round((i / celdas.length) * 700)}ms;--c:var(${(c.x + c.y) % 2 ? '--ba-c1' : '--ba-c2'})"></i></span>`,
-        )
-        .join('');
-      const chispas = [[-34, -46, 1.15], [104, -40, 1.3], [-24, 112, 1.45], [112, 104, 1.2]]
-        .map(([x, y, d]) => `<span class="fx-sos-ba-chispa" style="left:${x}%;top:${y}%;--d:${d}s"></span>`)
-        .join('');
-      const el = escena(
-        'fx-sos-ba',
-        `${rombos}<span class="fx-sos-ba-flash"></span>` +
-          `<span class="fx-sos-ba-go"><span class="fx-sos-ba-caja"><span>¡Adelante!</span></span>` +
-          `<span style="position:absolute;inset:0">${chispas}</span></span>`,
+    const ZONA_NUEVA = 'NUEVA AVENTURA';
+    const cartelDeZona = (): HTMLElement =>
+      escena(
+        'fx-sos-zona',
+        `<b style="--n:${ZONA_NUEVA.length}">${ZONA_NUEVA}</b><small>— capítulo 1 —</small>` +
+          '<i style="left:14%;--d:0s"></i><i style="right:14%;--d:.25s"></i>',
       );
-      el.style.setProperty('--l', `${lado}px`);
-      return el;
-    };
 
     const onMoment = (e: Event): void => {
       const { moment } = (e as CustomEvent<MomentDetail>).detail;
@@ -579,7 +557,7 @@ export function useSignatureEffects(): void {
         // Cada tema, su escena. Ladrones y Solo hay guerra compartían un sello que caía en el centro hasta el
         // 12-10-2026; Inserte moneda y Portal sorteaban dos cada uno hasta que la segunda pasó a empezar.
         if (fxRef.current('witcher')) spawn(contratoCerrado(), 3400);
-        else if (fxRef.current('tierramedia')) spawn(juegoTerminado(), 3200);
+        else if (fxRef.current('tierramedia')) spawn(elAnillo(), 3600);
         else if (fxRef.current('persona')) spawn(objetivoCumplido(), 2150);
         else if (fxRef.current('grimdark')) spawn(selloDePureza(), 2800);
         else if (fxRef.current('arcade')) spawn(pantallaDeRecord(), 2600);
@@ -596,7 +574,7 @@ export function useSignatureEffects(): void {
         else if (fxRef.current('persona')) spawn(calendario(), 2900);
         else if (fxRef.current('portal')) spawn(cartelDeCamara(), 1900);
         else if (fxRef.current('cyberpunk')) spawn(escanerOptico(), 2800);
-        else if (fxRef.current('seaofstars')) spawn(entradaAlCombate(), 2800);
+        else if (fxRef.current('seaofstars')) spawn(cartelDeZona(), 2500);
         else if (fxRef.current('grimdark')) spawn(transmisionAstropatica(), 3000);
         return;
       }

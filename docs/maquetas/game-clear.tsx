@@ -20,7 +20,7 @@ import { IconSprite } from '../../src/view/components/IconSprite';
 
 /** Qué hace cada tema, en una línea, para leerlo junto al botón. */
 const QUE_HACE: Record<PaletteId, string> = {
-  tierramedia: '«Juego terminado» con letra de título de las películas.',
+  tierramedia: 'El Anillo gira y se tumba sobre «Juego terminado».',
   arcade: 'La pantalla de récord.',
   witcher: 'La franja de «Contrato cerrado» con las coronas de la recompensa.',
   persona: '«Objetivo cumplido» en letras recortadas, estampado sobre una franja negra.',
@@ -38,7 +38,7 @@ const AL_EMPEZAR: Record<PaletteId, string> = {
   persona: 'Al empezar: el calendario con la fecha de hoy.',
   portal: 'Al empezar: el cartel de la cámara, «PRUEBA EN CURSO».',
   cyberpunk: 'Al empezar: el escáner óptico.',
-  seaofstars: 'Al empezar: la entrada al combate.',
+  seaofstars: 'Al empezar: el cartel de zona, «Nueva aventura».',
   grimdark: 'Al empezar: la transmisión astropática.',
 };
 
