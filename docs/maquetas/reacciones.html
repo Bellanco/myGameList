@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reacciones en el feed</title>
+<!--
+  PROPUESTAS DE REACCIONES PARA EL FEED (docs/plan-reacciones.md, Fase 0, 12-10-2026). Monta el feed REAL de la
+  maqueta del social (`social.html?pantalla=feed`) y le añade debajo de cada tarjeta la barra de reacciones de cada
+  variante, con los tokens del tema activo. Los iconos son de Lucide, en línea (en la app irían al sprite). Las
+  reacciones son inventadas y deterministas; pulsar una cambia la tuya («Yo») para ver el estado activo.
+  Nada de esto toca la app. Se sirve con el servidor de desarrollo: /docs/maquetas/reacciones.html
+-->
+<style>
+  :root { --bg: #15171a; --fg: #e8e6e1; --dim: #9a978f; --line: #2c2f34; --acc: #d8b45a; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+  h1 { font-size: 15px; margin: 0 8px 0 0; }
+  .grupo { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+  .grupo span { color: var(--dim); margin-right: 4px; }
+  button, select { font: inherit; color: var(--fg); background: #22252a; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  button[aria-pressed="true"] { border-color: var(--acc); color: var(--acc); }
+  #nota { flex-basis: 100%; color: var(--dim); margin: 2px 0 0; max-width: 130ch; }
+  #nota b { color: var(--fg); }
+  main { display: grid; gap: 16px; padding: 16px; justify-content: center; }
+  figure { margin: 0; min-width: 0; }
+  figcaption { color: var(--dim); margin-bottom: 6px; }
+  figcaption b { color: var(--fg); }
+  .marco { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: #000; }
+  iframe { border: 0; display: block; transform-origin: 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Reacciones en el feed</h1>
+  <div class="grupo" id="variantes"><span>Propuesta</span></div>
+  <div class="grupo"><span>Tema</span>
+    <select id="tema">
+      <option value="tierramedia">No puedes pasar</option><option value="arcade">Arcade</option>
+      <option value="witcher">Plata y acero</option><option value="persona">Persona</option>
+      <option value="portal">Portal</option><option value="cyberpunk">Sin futuro</option>
+      <option value="seaofstars">Mar de estrellas</option><option value="grimdark">Solo hay guerra</option>
+    </select>
+    <select id="modo"><option value="dark">Oscuro</option><option value="light">Claro</option></select>
+    <select id="ancho"><option value="1280">1280</option><option value="1512">1512</option><option value="390">390 (móvil)</option></select>
+  </div>
+  <p id="nota"></p>
+</header>
+<main id="lienzo"></main>
+<script type="module">
+// ─── Iconos (Lucide, trazo) ──────────────────────────────────────────────────────────────────────────────────────
+const SVG = (d) => `<svg class="rx-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const ICONO = {
+  acuerdo: SVG('<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>'),
+  apunto: SVG('<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/><line x1="12" x2="12" y1="7" y2="13"/><line x1="15" x2="9" y1="10" y2="10"/>'),
+  discrepo: SVG('<path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>'),
+  animo: SVG('<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>'),
+  mas: SVG('<path d="M22 11v1a10 10 0 1 1-9-10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/><path d="M16 5h6"/><path d="M19 2v6"/>'),
+};
+const NOMBRE = { acuerdo: 'De acuerdo', apunto: 'Me lo apunto', discrepo: 'Discrepo', animo: 'Ánimo' };
+// Frase en tercera persona, para la variante C.
+const FRASE = {
+  acuerdo: (q) => `${q} ${q.includes(' y ') ? 'están' : 'está'} de acuerdo`,
+  apunto: (q) => `${q} se lo ${q.includes(' y ') ? 'apuntan' : 'apunta'}`,
+  discrepo: (q) => `${q} ${q.includes(' y ') ? 'discrepan' : 'discrepa'}`,
+  animo: (q) => `${q} te ${q.includes(' y ') ? 'dan' : 'da'} ánimo`,
+};
+
+// ─── Qué reacciones se ofrecen en cada tipo de tarjeta ───────────────────────────────────────────────────────────
+const JUEGO = {
+  todas: { resena: ['acuerdo', 'apunto', 'discrepo', 'animo'], post: ['acuerdo', 'discrepo'], move: ['animo', 'apunto'] },
+  contexto: { resena: ['acuerdo', 'apunto'], post: ['acuerdo'], move: ['animo'] },
+};
+
+// ─── Datos inventados y deterministas ────────────────────────────────────────────────────────────────────────────
+const MUESTRAS = [
+  [['Marta', 'acuerdo'], ['Nacho', 'acuerdo'], ['Iván', 'apunto']],
+  [['Lucía R.', 'apunto']],
+  [],
+  [['Paula G.', 'discrepo'], ['Marta', 'acuerdo']],
+  [['Iván', 'animo'], ['Lucía R.', 'animo'], ['Nacho', 'animo'], ['Marta', 'animo']],
+  [['Nacho', 'apunto'], ['Paula G.', 'apunto']],
+];
+
+function tipoDe(card) {
+  if (card.classList.contains('is-move')) return 'move';
+  if (card.classList.contains('is-post')) return 'post';
+  return 'resena';
+}
+
+/** Reparte las muestras y las adapta al juego de la tarjeta (una reacción fuera del juego pasa a la primera). */
+function estadoInicial(i, tipo, juego) {
+  const ofrecidas = JUEGO[juego][tipo];
+  const otros = MUESTRAS[i % MUESTRAS.length].map(([q, k]) => [q, ofrecidas.includes(k) ? k : ofrecidas[0]]);
+  return { otros, mia: i % 4 === 0 ? ofrecidas[0] : null };
+}
+
+/** Todas las reacciones de la tarjeta, la tuya incluida, agrupadas por tipo y en el orden del juego. */
+function agrupadas(st, ofrecidas) {
+  const todas = st.mia ? [['Tú', st.mia], ...st.otros] : st.otros;
+  return ofrecidas.map((k) => ({ k, quien: todas.filter(([, kk]) => kk === k).map(([q]) => q) })).filter((g) => g.quien.length);
+}
+function quienes(lista, max = 2) {
+  if (lista.length <= max) return lista.join(' y ').replace(/ y (?=.* y )/g, ', ');
+  return `${lista.slice(0, max).join(', ')} y ${lista.length - max} más`;
+}
+const total = (st) => st.otros.length + (st.mia ? 1 : 0);
+
+// ─── Variantes ──────────────────────────────────────────────────────────────────────────────────────────────────
+const VARIANTES = {
+  a: {
+    nombre: 'A · Chips con contador',
+    juego: 'todas',
+    nota: '<b>Una fila de chips siempre a la vista</b>, cada uno con su icono, su nombre y cuántos lo han puesto (el tuyo, resaltado). Es lo más directo: se reacciona de un toque y se ve todo sin abrir nada. En contra, ocupa una línea en cada tarjeta aunque nadie haya reaccionado, y el número engaña un poco: son solo las reacciones de <i>tus</i> amistades.',
+    pintar(st, ofrecidas, propia) {
+      const g = new Map(agrupadas(st, ofrecidas).map((x) => [x.k, x.quien]));
+      return `<div class="rx rx-a" role="group" aria-label="Reacciones">${ofrecidas.map((k) => {
+        const n = (g.get(k) || []).length;
+        return `<button type="button" class="rx-chip" data-k="${k}" aria-pressed="${st.mia === k}" ${propia ? 'disabled' : ''} title="${g.get(k) ? g.get(k).join(', ') : NOMBRE[k]}">${ICONO[k]}<span class="rx-l">${NOMBRE[k]}</span>${n ? `<span class="rx-n">${n}</span>` : ''}</button>`;
+      }).join('')}</div>`;
+    },
+    css: `
+      .rx-a { display: flex; flex-wrap: wrap; gap: .4rem; }
+      .rx-chip { display: inline-flex; align-items: center; gap: .35rem; padding: .28rem .65rem; border-radius: var(--radius-pill, 999px);
+        border: 1px solid var(--border); background: transparent; color: var(--text-muted); font: inherit; font-size: var(--fs-xs); cursor: pointer; }
+      .rx-chip:hover:not(:disabled) { background: var(--surface-hover); color: var(--text); }
+      .rx-chip[aria-pressed="true"] { color: var(--rx-c); border-color: var(--rx-c); background: color-mix(in srgb, var(--rx-c) 14%, transparent); }
+      .rx-chip:disabled { cursor: default; }
+      .rx-n { font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+      @media (max-width: 520px) { .rx-chip:not([aria-pressed="true"]) .rx-l { display: none; } }`,
+  },
+  b: {
+    nombre: 'B · Un botón y resumen',
+    juego: 'todas',
+    nota: '<b>Un solo botón «Reaccionar»</b> que abre una paleta pequeña (la primera tarjeta la enseña abierta), y a la izquierda un resumen: los iconos usados, apilados, y quién. La tarjeta sin reacciones solo lleva el botón, así que el feed queda casi como hoy. En contra, reaccionar cuesta dos toques y «Me lo apunto» se esconde dentro.',
+    pintar(st, ofrecidas, propia, i) {
+      const g = agrupadas(st, ofrecidas);
+      const todos = g.flatMap((x) => x.quien);
+      const resumen = g.length
+        ? `<span class="rx-stack">${g.map((x) => `<span class="rx-dot" data-k="${x.k}">${ICONO[x.k]}</span>`).join('')}</span><span class="rx-who">${quienes(todos)}</span>`
+        : '';
+      const pal = !propia && i === 0
+        ? `<div class="rx-pal" role="menu">${ofrecidas.map((k) => `<button type="button" role="menuitemradio" class="rx-pick" data-k="${k}" aria-checked="${st.mia === k}" title="${NOMBRE[k]}">${ICONO[k]}<span>${NOMBRE[k]}</span></button>`).join('')}</div>`
+        : '';
+      const boton = propia ? '' : `<button type="button" class="rx-add" data-k="${st.mia || ofrecidas[0]}" aria-pressed="${Boolean(st.mia)}" aria-haspopup="menu">${st.mia ? ICONO[st.mia] : ICONO.mas}<span>${st.mia ? NOMBRE[st.mia] : 'Reaccionar'}</span></button>`;
+      return `<div class="rx rx-b">${resumen}<span class="rx-sp"></span><span class="rx-anchor">${pal}${boton}</span></div>`;
+    },
+    css: `
+      .rx-b { display: flex; align-items: center; gap: .5rem; min-height: 1.9rem; }
+      .rx-sp { flex: 1; }
+      .rx-stack { display: inline-flex; }
+      .rx-dot { width: 1.45rem; height: 1.45rem; border-radius: 50%; display: grid; place-items: center; color: var(--rx-c);
+        background: color-mix(in srgb, var(--rx-c) 18%, var(--surface)); border: 2px solid var(--surface); margin-left: -.4rem; }
+      .rx-dot:first-child { margin-left: 0; }
+      .rx-dot .rx-ico { width: .8rem; height: .8rem; }
+      .rx-who { font-size: var(--fs-xs); color: var(--text-muted); }
+      .rx-anchor { position: relative; }
+      .rx-add { display: inline-flex; align-items: center; gap: .35rem; padding: .3rem .55rem; border-radius: var(--radius-sm); border: 0; background: transparent;
+        color: var(--text-muted); font: inherit; font-size: var(--fs-xs); cursor: pointer; }
+      .rx-add:hover { background: var(--surface-hover); color: var(--text); }
+      .rx-add[aria-pressed="true"] { color: var(--rx-c); font-weight: 600; }
+      .rx-pal { position: absolute; right: 0; bottom: calc(100% + .35rem); display: flex; gap: .25rem; padding: .3rem; z-index: 3;
+        border-radius: var(--radius-pill, 999px); background: var(--surface-elevated, var(--surface)); border: 1px solid var(--border); box-shadow: 0 6px 18px rgb(0 0 0 / .28); }
+      .rx-pick { width: 2.3rem; height: 2.3rem; border-radius: 50%; border: 0; display: grid; place-items: center; background: transparent; color: var(--rx-c); cursor: pointer; }
+      .rx-pick span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+      .rx-pick:hover, .rx-pick[aria-checked="true"] { background: color-mix(in srgb, var(--rx-c) 18%, transparent); }
+      .rx-pick .rx-ico { width: 1.15rem; height: 1.15rem; }`,
+  },
+  c: {
+    nombre: 'C · Dos verbos y nombres',
+    juego: 'contexto',
+    nota: '<b>Pocas reacciones y según lo que sea</b>: en una reseña, «De acuerdo» y «Me lo apunto»; en una publicación, «De acuerdo»; en un aviso de lista, «Ánimo». Sin números: una frase con nombres («Marta y Nacho están de acuerdo»), que es honesto con que solo ves a tus amistades. Es la más sobria y la que mejor casa con un feed de amigos. Deja fuera «Discrepo».',
+    pintar(st, ofrecidas, propia) {
+      const g = agrupadas(st, ofrecidas);
+      // Lo tuyo ya lo dice el botón pulsado: la frase habla solo de tus amistades.
+      const ajenas = g.map((x) => ({ ...x, quien: x.quien.filter((q) => q !== 'Tú') })).filter((x) => x.quien.length);
+      const frase = ajenas.length ? `<p class="rx-frase">${ajenas.map((x) => FRASE[x.k](quienes(x.quien))).join(' · ')}</p>` : '';
+      const botones = propia ? '' : `<div class="rx-verbs">${ofrecidas.map((k) => `<button type="button" class="rx-verb" data-k="${k}" aria-pressed="${st.mia === k}">${ICONO[k]}<span>${NOMBRE[k]}</span></button>`).join('')}</div>`;
+      return `<div class="rx rx-c">${botones}${frase}</div>`;
+    },
+    css: `
+      .rx-c { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem 1rem; }
+      .rx-verbs { display: flex; gap: .2rem; }
+      .rx-verb { display: inline-flex; align-items: center; gap: .35rem; padding: .25rem .45rem; border: 0; border-radius: var(--radius-sm);
+        background: transparent; color: var(--text-muted); font: inherit; font-size: var(--fs-xs); cursor: pointer; }
+      .rx-verb:hover { color: var(--text); background: var(--surface-hover); }
+      .rx-verb[aria-pressed="true"] { color: var(--rx-c); font-weight: 600; }
+      .rx-verb[aria-pressed="true"] .rx-ico { fill: color-mix(in srgb, var(--rx-c) 30%, transparent); }
+      .rx-frase { margin: 0; font-size: var(--fs-xs); color: var(--text-muted); }`,
+  },
+  d: {
+    nombre: 'D · Caras de tus amistades',
+    juego: 'todas',
+    nota: '<b>Quién antes que cuántos</b>: una fila de iniciales de las amistades que han reaccionado, cada una con su reacción en un sello pequeño, y un «+» para añadir la tuya. En un feed de amistades, ver la cara de Marta dice más que un «3». En contra, con muchas reacciones la fila crece (se corta a cinco caras y «+N»), y hay que pasar por encima para saber qué puso cada una.',
+    pintar(st, ofrecidas, propia, i) {
+      const todas = st.mia ? [['Tú', st.mia], ...st.otros] : st.otros;
+      const caras = todas.slice(0, 5).map(([q, k]) => `<span class="rx-face" data-k="${k}" title="${q}: ${NOMBRE[k]}" data-yo="${q === 'Tú'}">${q === 'Tú' ? 'Tú' : q.slice(0, 1)}<span class="rx-seal">${ICONO[k]}</span></span>`).join('');
+      const extra = todas.length > 5 ? `<span class="rx-more">+${todas.length - 5}</span>` : '';
+      const pal = !propia && i === 0 ? `<div class="rx-pal">${ofrecidas.map((k) => `<button type="button" class="rx-pick" data-k="${k}" aria-checked="${st.mia === k}" title="${NOMBRE[k]}">${ICONO[k]}</button>`).join('')}</div>` : '';
+      const mas = propia ? '' : `<span class="rx-anchor">${pal}<button type="button" class="rx-plus" data-k="${st.mia || ofrecidas[0]}" aria-label="Reaccionar" title="Reaccionar">${ICONO.mas}</button></span>`;
+      return `<div class="rx rx-d">${caras}${extra}${mas}</div>`;
+    },
+    css: `
+      .rx-d { display: flex; align-items: center; gap: .3rem; flex-wrap: wrap; }
+      .rx-face { position: relative; width: 1.85rem; height: 1.85rem; border-radius: 50%; display: grid; place-items: center; font-size: var(--fs-2xs); font-weight: 700;
+        color: var(--text); background: var(--surface-hover); border: 1px solid var(--border); }
+      .rx-face[data-yo="true"] { border-color: var(--rx-c); }
+      .rx-seal { position: absolute; right: -.3rem; bottom: -.25rem; width: 1.05rem; height: 1.05rem; border-radius: 50%; display: grid; place-items: center;
+        color: var(--on-accent, #fff); background: var(--rx-c); border: 2px solid var(--surface); }
+      .rx-seal .rx-ico { width: .6rem; height: .6rem; }
+      .rx-more { font-size: var(--fs-xs); color: var(--text-muted); margin-left: .2rem; }
+      .rx-anchor { position: relative; margin-left: .25rem; }
+      .rx-plus { width: 1.85rem; height: 1.85rem; border-radius: 50%; border: 1px dashed var(--border); background: transparent; color: var(--text-muted); display: grid; place-items: center; cursor: pointer; }
+      .rx-plus:hover { color: var(--text); border-style: solid; }
+      .rx-pal { position: absolute; left: 0; bottom: calc(100% + .35rem); display: flex; gap: .25rem; padding: .3rem; z-index: 3;
+        border-radius: var(--radius-pill, 999px); background: var(--surface-elevated, var(--surface)); border: 1px solid var(--border); box-shadow: 0 6px 18px rgb(0 0 0 / .28); }
+      .rx-pick { width: 2.3rem; height: 2.3rem; border-radius: 50%; border: 0; display: grid; place-items: center; background: transparent; color: var(--rx-c); cursor: pointer; }
+      .rx-pick:hover, .rx-pick[aria-checked="true"] { background: color-mix(in srgb, var(--rx-c) 18%, transparent); }
+      .rx-pick .rx-ico { width: 1.15rem; height: 1.15rem; }`,
+  },
+};
+
+const CSS_COMUN = `
+  .rx { margin-top: .7rem; padding-top: .55rem; border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+  .hub-feed-card.is-move { flex-wrap: wrap; }
+  .hub-feed-card.is-move > .rx { flex-basis: 100%; margin-top: .45rem; padding-top: .4rem; }
+  /* Cada tema viste los botones a su manera (altura mínima, sombras, versalitas, recortes): aquí se neutraliza para
+     comparar las variantes en igualdad. En la app, la forma por tema se decide aparte (ver plan, Fase 4). */
+  .rx button { white-space: nowrap; min-height: 0 !important; min-width: 0 !important; height: auto !important; line-height: 1.2 !important;
+    box-shadow: none !important; text-transform: none !important; letter-spacing: normal !important; transform: none !important;
+    clip-path: none !important; font-family: inherit !important; }
+  .rx-ico { width: 1rem; height: 1rem; flex: none; }
+  [data-k="acuerdo"] { --rx-c: var(--success); }
+  [data-k="apunto"] { --rx-c: var(--wish, var(--steam)); }
+  [data-k="discrepo"] { --rx-c: var(--danger); }
+  [data-k="animo"] { --rx-c: var(--warn); }
+  .rx button:focus-visible { outline: 2px solid var(--focus-ring, var(--steam)); outline-offset: 2px; }`;
+
+// ─── Montaje ─────────────────────────────────────────────────────────────────────────────────────────────────────
+const params = new URLSearchParams(location.search);
+const estado = {
+  v: VARIANTES[params.get('v')] || params.get('v') === 'todas' ? params.get('v') : 'a',
+  tema: params.get('tema') || 'tierramedia',
+  modo: params.get('modo') || 'dark',
+  ancho: Number(params.get('w')) || 1280,
+};
+const url = () => `social.html?pantalla=feed&gl-palette=${estado.tema}&gl-theme=${estado.modo}&gl-effects=off&barra=0`;
+
+/** Pinta (o repinta) las barras de una variante dentro de un iframe. Devuelve false si el feed aún no está. */
+function transformar(frame, v) {
+  const doc = frame.contentDocument;
+  const cards = doc ? [...doc.querySelectorAll('.hub-feed-activity-list .hub-feed-card:not(.hub-skeleton-card):not(.is-achievements):not(.is-year-summary)')] : [];
+  if (!cards.length) return false;
+  const variante = VARIANTES[v];
+  if (!doc.getElementById('rx-css')) {
+    // Anidado bajo un prefijo de especificidad (0,3,2) para ganar a los skins de paleta, que pesan (0,3,0).
+    const s = doc.createElement('style'); s.id = 'rx-css'; s.textContent = `html:root[data-palette] body .hub-feed-activity-list { ${CSS_COMUN + variante.css} }`; doc.head.appendChild(s);
+  }
+  frame._rx = frame._rx || new Map();
+  cards.forEach((card, i) => {
+    const tipo = tipoDe(card);
+    const ofrecidas = JUEGO[variante.juego][tipo];
+    const propia = card.classList.contains('is-own-activity');
+    if (!frame._rx.has(i)) frame._rx.set(i, estadoInicial(i, tipo, variante.juego));
+    const st = frame._rx.get(i);
+    card.querySelector(':scope > .rx')?.remove();
+    card.insertAdjacentHTML('beforeend', variante.pintar(st, ofrecidas, propia, i));
+    card.dataset.rxI = String(i);
+  });
+  if (!doc._rxClick) {
+    doc._rxClick = true;
+    doc.addEventListener('click', (e) => {
+      const b = e.target.closest('.rx button[data-k]');
+      if (!b || b.disabled) return;
+      const card = b.closest('.hub-feed-card'); const st = frame._rx.get(Number(card.dataset.rxI));
+      st.mia = st.mia === b.dataset.k ? null : b.dataset.k;
+      transformar(frame, v);
+    });
+  }
+  return true;
+}
+
+function encajar() {
+  for (const frame of document.querySelectorAll('iframe')) {
+    const ancho = Number(frame.dataset.ancho);
+    const hueco = frame.parentElement.clientWidth;
+    const escala = Math.min(1, hueco / ancho);
+    const doc = frame.contentDocument;
+    const alto = doc && doc.documentElement ? Math.max(900, doc.documentElement.scrollHeight) : 900;
+    frame.style.width = `${ancho}px`; frame.style.height = `${alto}px`;
+    frame.style.transform = `scale(${escala})`; frame.parentElement.style.height = `${alto * escala}px`;
+  }
+}
+
+function montar() {
+  const lienzo = document.getElementById('lienzo'); lienzo.innerHTML = '';
+  const todas = estado.v === 'todas';
+  const lista = todas ? Object.keys(VARIANTES) : [estado.v];
+  const ancho = todas ? 390 : estado.ancho;
+  lienzo.style.gridTemplateColumns = todas ? 'repeat(4, minmax(0, 390px))' : `minmax(0, ${Math.min(estado.ancho, 1400)}px)`;
+  for (const v of lista) {
+    const fig = document.createElement('figure');
+    fig.innerHTML = `<figcaption><b>${VARIANTES[v].nombre}</b></figcaption><div class="marco"><iframe title="${VARIANTES[v].nombre}"></iframe></div>`;
+    lienzo.appendChild(fig);
+    const frame = fig.querySelector('iframe'); frame.dataset.ancho = String(ancho);
+    frame.addEventListener('load', () => {
+      // El feed lo pinta React después del `load`: se reintenta hasta que existan las tarjetas, y se vigila por si
+      // un repintado se lleva las barras.
+      let n = 0; const t = setInterval(() => { if (transformar(frame, v) || ++n > 40) { clearInterval(t); setTimeout(encajar, 300); } }, 150);
+      setInterval(() => { const d = frame.contentDocument; if (d && d.querySelector('.hub-feed-card') && !d.querySelector('.rx')) transformar(frame, v); }, 1000);
+    });
+    frame.src = url();
+  }
+  pintarControles();
+}
+
+function pintarControles() {
+  const box = document.getElementById('variantes'); box.querySelectorAll('button').forEach((b) => b.remove());
+  for (const [k, nombre] of [...Object.entries(VARIANTES).map(([k, v]) => [k, v.nombre]), ['todas', 'Las cuatro en móvil']]) {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = nombre; b.setAttribute('aria-pressed', String(k === estado.v));
+    b.onclick = () => { estado.v = k; montar(); };
+    box.appendChild(b);
+  }
+  document.getElementById('nota').innerHTML = estado.v === 'todas'
+    ? '<b>Las cuatro a 390 px</b>, una al lado de otra, para comparar cuánto ocupan en el móvil. Pulsa una reacción para ver tu estado activo.'
+    : VARIANTES[estado.v].nota;
+  for (const id of ['tema', 'modo']) document.getElementById(id).value = estado[id];
+  document.getElementById('ancho').value = String(estado.ancho);
+  document.getElementById('ancho').disabled = estado.v === 'todas';
+  history.replaceState(null, '', `?v=${estado.v}&tema=${estado.tema}&modo=${estado.modo}&w=${estado.ancho}`);
+}
+
+addEventListener('resize', encajar);
+document.getElementById('tema').onchange = (e) => { estado.tema = e.target.value; montar(); };
+document.getElementById('modo').onchange = (e) => { estado.modo = e.target.value; montar(); };
+document.getElementById('ancho').onchange = (e) => { estado.ancho = Number(e.target.value); montar(); };
+montar();
+</script>
+</body>
+</html>
