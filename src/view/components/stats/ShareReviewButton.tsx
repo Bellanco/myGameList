@@ -160,11 +160,19 @@ export const ShareReviewButton = memo(function ShareReviewButton({
 
   return (
     <>
-      <button className="btn btn-secondary" type="button" data-tour="share-review" onClick={openDialog} aria-label={SHARE_UI.actionAria}>
-        <Icon name="share-nodes" />
-        <span>{existing ? SHARE_UI.shared : SHARE_UI.action}</span>
-      </button>
-      {showTip ? <span className="hub-feed-game-chip share-new">{SHARE_UI.newBadge}</span> : null}
+      {/* Envuelto SIEMPRE, con marca o sin ella: si el envoltorio apareciera y se fuera con la marca, el botón se
+          volvería a montar al pulsarlo y el foco no tendría a dónde volver al cerrar el diálogo. */}
+      <span className="share-action">
+        <button className="btn btn-secondary" type="button" data-tour="share-review" onClick={openDialog} aria-label={SHARE_UI.actionAria}>
+          <Icon name="share-nodes" />
+          <span>{existing ? SHARE_UI.shared : SHARE_UI.action}</span>
+        </button>
+        {showTip ? (
+          <span className="share-new-slot">
+            <span className="hub-feed-game-chip share-new">{SHARE_UI.newBadge}</span>
+          </span>
+        ) : null}
+      </span>
       {existing ? <span className="share-expiry">{SHARE_UI.expiresIn(daysLeft)}</span> : null}
       <ShareReviewModal
         open={open}
