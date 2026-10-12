@@ -266,7 +266,22 @@ esquema), `f73bbf2f`, `3d03e9e0`, `aa2b5dda` y `562a0761` (servidor), `231542eb`
 (`App.tsx`, `publicShareRepository.ts`). Holgura que queda: **1,2 kB**. Suite: 342 ficheros, 3.810 tests en verde;
 e2e de `sharedLink` en verde (5).
 
-### Fase 6 — Textos legales y cierre · S
+### Revisión del panel (12-10-2026, usuario)
+
+Un solo botón **al final del resumen**, sin panel ni opciones sueltas (`b9e0499f`): «Crear enlace» si no lo hay (avisa
+también a tus amistades), «Actualizar enlace» si el resumen cambió y ya toca, y «Compartir» en cualquier otro caso
+(menú de compartir del sistema o, sin él, copiar). Si cambió pero aún no toca, «Compartir» y debajo la fecha. Fuera
+«Avisar a mis amistades», copiar aparte y «Retirar enlace»: el enlace caduca solo el 16 de enero. La retirada sigue
+existiendo para la administración (censo) y en el borrado de cuenta. Como el botón ya no está plegado, abrir tu
+resumen en temporada pide «mis enlaces» (caché de 5 min) y, si hay enlace, su artículo.
+
+### Fase 6 — Textos legales y cierre · S · ✅ hecha el 12-10-2026
+
+`LEGAL_VERSION` sube a `2026-10-12` (mismo criterio que con los enlaces de reseñas: lo que veían tus amistades lo
+puede leer cualquiera con el enlace). Condiciones: un párrafo nuevo con lo que se publica, la actualización y la
+caducidad. Privacidad: la copia en Cloudflare, el destinatario «cualquier persona», el aviso a tus amistades al
+compartir (no al consultar) y el borrado de cuenta. Fechas de los dos documentos al 12-10-2026.
+
 
 - `legalContent.ts`: el resumen del año como contenido que se puede publicar por enlace (qué datos, caducidad,
   retirada). Decidir con el usuario si sube `LEGAL_VERSION` (como al estrenar los enlaces de reseñas).
@@ -297,4 +312,4 @@ e2e de `sharedLink` en verde (5).
 - [x] Fase 4: servidor con 3 escrituras, ventana y renovación; probado con KV espía.
 - [x] Fase 5: panel, página pública (carátulas solo con social + preferencia; modo artículo sin carátulas ni Firebase); maqueta.
 - [ ] Probar el servidor con `wrangler pages dev` y KV local antes de desplegar (las pruebas usan un KV falso).
-- [ ] Fase 6: legal, CHANGELOG, medición final.
+- [x] Fase 6: legal (`LEGAL_VERSION` 2026-10-12), CHANGELOG.
