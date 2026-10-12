@@ -26,6 +26,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   el del juego en cada biblioteca, y el 7 de una persona es otro juego en la de otra: abierta fuera, enseñaba la
   reseña de otro juego. La huella sale del nombre, mide siempre seis caracteres y no lo deja a la vista (la ruta
   viaja a la analítica). Las direcciones de antes, sin huella, se siguen abriendo como siempre.
+- **El resumen del año se comparte.** Del 15 de diciembre al 15 de enero, «Compartir mi resumen» (encima de tu
+  resumen) avisa a tus amistades —la tarjeta del feed ya no sale sola al abrirlo— y crea un enlace público con tu
+  año: juegos, notas, géneros y meses, sin reseñas ni días. El enlace es siempre el mismo; si tu resumen cambia, lo
+  actualizas a mano (con unos días de espera entre una vez y otra) y se puede retirar. Quien lo abre sin la app lo
+  ve sin carátulas; con la parte social, con las que ya estén resueltas.
 - **La temporada del resumen del año llega hasta el 15 de enero.** Se sigue estrenando el 15 de diciembre, pero
   el aviso y la tarjeta en el feed de tus amistades ya no se cortan el 31: quien no abre la app en las fiestas lo
   recibe a la vuelta, con el año que se estrenó. Es la ventana en la que, más adelante, se podrá compartir.

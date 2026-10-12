@@ -228,6 +228,44 @@ Puro, en `src/core/stats/` (p. ej. `publicYearSummary.ts`), testeado como la pro
   `node scripts/capturar-maqueta-social.mjs`. La página pública, en local con datos sembrados.
 - Revisar en los temas con skin de paleta y en claro/oscuro (la hoja es nueva: sin piezas de noche en claro).
 
+### Fases 2 a 5 — hechas el 12-10-2026
+
+Commits en `develop` (sin push): `23fb4fa6` (tarjeta al compartir), `8276316b` y `26287f29` (proyección y
+esquema), `f73bbf2f`, `3d03e9e0`, `aa2b5dda` y `562a0761` (servidor), `231542eb`, `9fcf469e`, `e514f1e9`,
+`4b8cca67`, `85be8da8`, `09d7d3bf` y `9b98d353` (cliente, e2e, maqueta y peso).
+
+**Lo que cambió respecto al plan, y por qué:**
+
+- **Índice compartido con las reseñas.** La fila del enlace de resumen vive en `user:{uid}:{token}` como las de
+  reseñas, marcada con `kind: 'year'` (`gameId: 0`, `gameName: «Resumen de 2026»`). Así el censo del admin, el veto
+  con purga, el borrado de cuenta y `DELETE /api/share/:token` lo alcanzan sin código aparte. `readShareStatus` lo
+  separa (`active` = reseñas, `yearShares` = resúmenes): no cuenta para la cuota, no entra en el índice de
+  sugeridos, y `GET /api/share/mine` lo devuelve en `yearShares`.
+- **Endpoint propio**, `POST /api/share/year`. Crear: 3 escrituras; actualizar: 1 (más 1 lectura del artículo para
+  la espera); fuera de ventana o antes de la espera: 0, y fuera de ventana ni una lectura (probado con KV espía en
+  `tests/unit/shareYearFunction.test.ts`).
+- **Ventana del servidor de 10:00 UTC del 14-12 a 12:00 UTC del 16-01**, no de 12:00: a mediodía se quedaban fuera
+  las dos primeras horas del día 15 en UTC+13 y UTC+14.
+- **Panel en línea, no hoja.** «Compartir mi resumen» encima del resumen, plegado: abrir tu resumen no cuesta ni una
+  petición; desplegarlo pide «mis enlaces» (caché de 5 min) y, si ya hay enlace, su artículo para saber si ha
+  cambiado. Lleva además **«Retirar enlace»** (el enlace es revocable como el de una reseña).
+- **La página pública no pide sugerencias** para un resumen: se piden cuando ya se sabe que el artículo es una
+  reseña. Ahorra 1 invocación y 2 lecturas de KV por visita.
+- **Carátulas**: `coverAccess` en `PublicReviewScreen` → `'solo-cache'` si quien abre tiene perfil social en ese
+  navegador (`App.tsx`), y siempre `false` en modo artículo. La preferencia de carátulas la sigue aplicando
+  `useReviewCover`. El e2e comprueba que en modo artículo no sale ni una petición a `/cover`.
+- **La espera por rango no vive en `constants/tiers.ts`** sino en `core/social/yearShareWindow.ts`: `tiers.ts` va
+  en el arranque.
+- **No se tocaron** `firestore.rules` (la acotación del año era opcional) ni `scripts/audit-privacy.js`: esa
+  auditoría no cubre lo que se publica en KV (tampoco las reseñas). Lo que protege el artículo es el esquema
+  estricto con denylist (`assertValidSharedYearSummary`) y sus pruebas.
+
+**Medido** (worktrees limpios, `vite build` + `ci-validate.js`): crítico 188,5 → 188,8/190 kB entre `8d652e3e` y
+`9b98d353`. Atribución por sourcemap del chunk de entrada: de +768 B minificados, ~480 B son de
+`core/utils/reviewPath.ts` y `main.tsx` (trabajo de otra sesión en esas fechas); lo de este plan son ~170 B
+(`App.tsx`, `publicShareRepository.ts`). Holgura que queda: **1,2 kB**. Suite: 342 ficheros, 3.810 tests en verde;
+e2e de `sharedLink` en verde (5).
+
 ### Fase 6 — Textos legales y cierre · S
 
 - `legalContent.ts`: el resumen del año como contenido que se puede publicar por enlace (qué datos, caducidad,
@@ -254,8 +292,9 @@ Puro, en `src/core/stats/` (p. ej. `publicYearSummary.ts`), testeado como la pro
 - [x] Fase 0: línea base de KV (12-10-2026); freno descartado, vigilancia al 60 %. Falta el número de perfiles.
 - [x] Decisiones confirmadas (12-10-2026).
 - [x] Fase 1: temporada hasta el 15 de enero (`0780111d`, `fca12888`, `9a55b2c4`); crítico 188,4 → 188,5 kB.
-- [ ] Fase 2: tarjeta al compartir.
-- [ ] Fase 3: proyección + esquema + auditoría de privacidad.
-- [ ] Fase 4: servidor con 3 escrituras, ventana y renovación; probado con KV espía.
-- [ ] Fase 5: botón, hoja, página pública (carátulas solo con social + preferencia; modo artículo sin carátulas ni Firebase); maqueta.
+- [x] Fase 2: tarjeta al compartir.
+- [x] Fase 3: proyección + esquema (la auditoría estática no cubre KV: ver «Fases 2 a 5»).
+- [x] Fase 4: servidor con 3 escrituras, ventana y renovación; probado con KV espía.
+- [x] Fase 5: panel, página pública (carátulas solo con social + preferencia; modo artículo sin carátulas ni Firebase); maqueta.
+- [ ] Probar el servidor con `wrangler pages dev` y KV local antes de desplegar (las pruebas usan un KV falso).
 - [ ] Fase 6: legal, CHANGELOG, medición final.
