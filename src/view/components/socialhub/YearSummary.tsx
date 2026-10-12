@@ -6,7 +6,7 @@ import { hueFromGrade, type ScoreScale } from '../../../core/utils/scoreScale';
 import type { YearSummary as YearSummaryData } from '../../../core/stats/yearSummary';
 import { useScoreScale } from '../../hooks/useScoreScale';
 import { formatDecimal } from '../stats/format';
-import { useReviewCover } from './useReviewCover';
+import { useReviewCover, type CoverAccess } from './useReviewCover';
 import { ReviewTraits } from '../stats/ReviewTraits';
 // La hoja va con el componente, que es perezoso: así llega con él a cualquier sitio que lo monte, sin depender de
 // que otra hoja del hub esté cargada (ver `styles/yearSummary.scss`).
@@ -27,6 +27,16 @@ const COLLAGE_MIN = 3;
 interface YearSummaryProps {
   summary: YearSummaryData;
   voice: SummaryVoice;
+  /**
+   * Qué carátulas se piden. Por omisión, las del propio perfil como siempre y las de otra persona con el cupo de lo
+   * ajeno. La página pública de un enlace lo decide ella: nada sin cuenta social (ver `PublicYearSummary`).
+   */
+  coverAccess?: CoverAccess;
+  /**
+   * ¿Este resumen PUEDE traer cita? El que se comparte por enlace nunca la lleva (se queda fuera a propósito), y
+   * entonces un «Sin reseña» diría algo falso de su autor: la línea simplemente no se pinta.
+   */
+  quotes?: boolean;
 }
 
 function gradeText(grade: number, scale: ScoreScale): string {
@@ -178,10 +188,10 @@ function CoverCollage({ urls }: { urls: string[] }) {
   );
 }
 
-export const YearSummary = memo(function YearSummary({ summary, voice }: YearSummaryProps) {
+export const YearSummary = memo(function YearSummary({ summary, voice, coverAccess, quotes = true }: YearSummaryProps) {
   const scale = useScoreScale();
   // Mismo criterio que sus reseñas: de la estantería de otra persona, con el cupo de lo ajeno (`c=2`).
-  const coverOf = useReviewCover(voice.own ? true : 'solo-cache');
+  const coverOf = useReviewCover(coverAccess ?? (voice.own ? true : 'solo-cache'));
   const cover = summary.best ? coverOf(summary.best.name, summary.best.platforms) : null;
   // Mismo tamaño que el renglón del listado: lo que ya viste en tu lista sale de la caché del navegador.
   const collage = useMemo(
@@ -247,7 +257,11 @@ export const YearSummary = memo(function YearSummary({ summary, voice }: YearSum
             <div className="ys-meta">
               <Grade grade={best.grade} scale={scale} /> <span className="ys-dim">{L.format.meta([outOf, best.genre, best.platform])}</span>
             </div>
-            {best.quote ? <blockquote className="ys-quote">{L.format.quote(best.quote)}</blockquote> : <p className="ys-dim">{L.best.noQuote(voice)}</p>}
+            {best.quote ? (
+              <blockquote className="ys-quote">{L.format.quote(best.quote)}</blockquote>
+            ) : quotes ? (
+              <p className="ys-dim">{L.best.noQuote(voice)}</p>
+            ) : null}
             {summary.podium.length ? (
               <ol className="ys-podium" start={2} aria-label={L.best.podiumAria}>
                 {summary.podium.map((entry) => (

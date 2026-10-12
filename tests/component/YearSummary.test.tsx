@@ -57,6 +57,14 @@ describe('YearSummary — composición de la portada', () => {
     expect(container.querySelector('.ys-collage')).toBeNull();
   });
 
+  it('la página pública sin cuenta social no pide ni una carátula, aunque la preferencia esté encendida', () => {
+    localStorage.setItem('mis-listas-covers', 'on');
+    const { container } = render(<YearSummary summary={summary} voice={voice} coverAccess={false} />);
+    expect(container.querySelector('.ys-collage')).toBeNull();
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.querySelector('.has-cover')).toBeNull();
+  });
+
   it('«contigo» lleva de fondo la carátula del mejor juego en común', () => {
     localStorage.setItem('mis-listas-covers', 'on');
     const { container } = render(<YearSummary summary={summary} voice={voice} />);
@@ -191,5 +199,15 @@ describe('lo que más valoró, y lo que le chirrió', () => {
     const { container } = render(<YearSummary summary={traits} voice={voice} />);
     expect(container.querySelectorAll('.traits-side.is-good .traits-name')).toHaveLength(3);
     expect(container.querySelectorAll('.traits-side.is-bad .traits-name')).toHaveLength(0);
+  });
+});
+
+describe('YearSummary — el que se comparte por enlace', () => {
+  it('sin cita no dice «Sin reseña»: la cita se queda fuera a propósito, no es que no la haya', () => {
+    render(<YearSummary summary={summary} voice={voice} quotes={false} />);
+    expect(screen.queryByText(YEAR_SUMMARY_UI.best.noQuote(voice))).toBeNull();
+    cleanup();
+    render(<YearSummary summary={summary} voice={voice} />);
+    expect(screen.getByText(YEAR_SUMMARY_UI.best.noQuote(voice))).toBeInTheDocument();
   });
 });
