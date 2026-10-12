@@ -18,6 +18,7 @@
 | Cuándo sale la tarjeta del feed | **Al compartir**, no al abrir el resumen (hoy se publica sola al abrirlo del 15 al 31 de diciembre) |
 | Caducidad del enlace | **Al cerrar la ventana**: 16 de enero, 12:00 UTC, sea cual sea el rango |
 | Cita de la mejor reseña | **Fuera.** El enlace no lleva `best.quote` (la propuesta de incluirla no se aceptó) |
+| Actualizar el enlace | **Manual**: botón «Actualizar enlace» cuando tu resumen ha cambiado desde que lo compartiste. Mismo enlace siempre. Espera entre actualizaciones **por rango: mithril 1 día, oro 2, plata 3, bronce 5** |
 | Carátulas en la página pública | **Solo para quien tenga el feed social activado y las carátulas encendidas** en ese navegador. Sin cuenta (modo artículo) o con las carátulas apagadas, no sale ninguna imagen |
 
 La ventana de compartir empieza el 15 de **diciembre** (confirmado: en la primera respuesta se coló un
@@ -183,8 +184,10 @@ Puro, en `src/core/stats/` (p. ej. `publicYearSummary.ts`), testeado como la pro
   - **Ventana en el servidor**, con holgura de husos: del 14-12 12:00 UTC al 16-01 12:00 UTC, y `year` debe ser el
     de esa temporada. Fuera, 409 con mensaje claro.
   - **Uno por persona y año**: si en el listado ya hay una fila `kind: 'year'` de ese año, se renueva sobre el mismo
-    token: **el enlace no cambia nunca** y solo se reescribe el artículo (1 escritura). Como mucho una vez cada
-    24 h, mirando el `updatedAt` del propio artículo (1 lectura).
+    token: **el enlace no cambia nunca** y solo se reescribe el artículo (1 escritura). Espera mínima entre
+    actualizaciones **por rango**, `PROFILE_TIER_YEAR_SHARE_UPDATE_DAYS` en `src/core/constants/tiers.ts`
+    (mithril 1, oro 2, plata 3, bronce 5 días), mirando el `updatedAt` del propio artículo (1 lectura). Si aún no
+    toca, 429 con `nextUpdateAt` para que el cliente diga «podrás actualizarlo el día X».
   - El enlace es una **foto** del momento en que se comparte: lo que completes después no entra hasta que lo
     actualices. Dentro de la app, las amistades ven siempre el resumen vivo (sale de tu gist).
   - No cuenta para `maxActive` ni para el contador diario de reseñas.
@@ -200,14 +203,17 @@ Puro, en `src/core/stats/` (p. ej. `publicYearSummary.ts`), testeado como la pro
 - Actualizar el comentario de `COVER_DAILY_BUDGET` (la cuenta de lo que queda para compartir) y
   `plan-capacidad-gratuita.md`.
 - Pruebas con `wrangler pages dev` y KV local, como la Fase 2 de capacidad: contar escrituras con un KV espía
-  (3 al crear, 1 al actualizar, 0 al rechazar fuera de ventana).
+  (3 al crear, 1 al actualizar, 0 al rechazar fuera de ventana o antes de la espera del rango).
 
 ### Fase 5 — Cliente · M
 
 - **Botón «Compartir»** en la cabecera del resumen propio, solo con `isShareSeason` y perfil publicado. Abre una hoja
   con la vista previa de lo que se publica (la proyección de la Fase 3 pintada) y dos acciones:
   - «Avisar a mis amistades» → tarjeta del feed (Fase 2). 0 KV.
-  - «Crear enlace público» → `POST` + avisar también + copiar / `navigator.share`. Si KV no tiene cupo (503 del
+  - «Crear enlace público» → `POST` + avisar también + copiar / `navigator.share`.
+  - **«Actualizar enlace»**, manual: sale solo si el resumen ha cambiado desde que se compartió (el cliente guarda
+    una huella de la proyección publicada y la compara; 0 peticiones) y deshabilitado con la fecha mientras no toque
+    por rango. **Sin nombrar el rango** (ver «rangos ocultos al usuario»): «podrás actualizarlo el 3 de enero». Si KV no tiene cupo (503 del
     middleware), se dice «inténtalo mañana» **y la tarjeta del feed sale igualmente**.
 - **Página pública**: `PublicReviewScreen` mira `kind` y, para `year`, monta `YearSummary` (ya perezoso) con voz en
   tercera persona con el nick y una prop de acceso a carátulas (`CoverAccess`):
