@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FriendshipView, MyFriendships } from '../../src/model/types/social';
 
@@ -114,5 +114,40 @@ describe('useSocialFriendships — lectura fallida', () => {
     await result.current.refreshFriendships(true);
 
     await waitFor(() => expect(result.current.friendshipsFailed).toBe(false));
+  });
+});
+
+// docs/plan-reacciones.md, Fase 3: dejar de ser amigos retira tus «me gusta» a esa persona. Rechazar o retirar una
+// petición, no: con quien no ha sido amistad no hay nada que retirar.
+describe('useSocialFriendships — aviso al dejar de ser amigos', () => {
+  const montarConAviso = (onFriendRemoved: (uid: string) => void) => renderHook(() => useSocialFriendships({
+    myUid: 'yo',
+    socialGistId: 'gist-yo',
+    socialSpaceOpen: true,
+    buildSelfInfo: () => ({ name: 'Yo', photo: '', socialGistId: 'gist-yo', gamesGistId: '' }),
+    setFeedback: vi.fn(),
+    reportFailure: vi.fn(),
+    onFriendRemoved,
+  }));
+
+  it('avisa solo al dejar de ser amigos, y después de borrar la amistad', async () => {
+    const amiga = vista('marta', 'friends', { otherSocialGistId: 'g' });
+    const recibida = vista('nacho', 'incoming');
+    getMyFriendships.mockResolvedValue(lista({
+      friends: [amiga],
+      incoming: [recibida],
+      byOtherUid: { marta: amiga, nacho: recibida },
+    }));
+    const onFriendRemoved = vi.fn();
+    const { result } = montarConAviso(onFriendRemoved);
+    await waitFor(() => expect(result.current.friendshipsResolved).toBe(true));
+
+    act(() => result.current.handleRejectFriendRequest('nacho'));
+    await act(async () => result.current.confirmFriendAction());
+    expect(onFriendRemoved).not.toHaveBeenCalled();
+
+    act(() => result.current.handleRemoveFriend('marta'));
+    await act(async () => result.current.confirmFriendAction());
+    expect(onFriendRemoved).toHaveBeenCalledWith('marta');
   });
 });

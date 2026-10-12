@@ -114,6 +114,8 @@ const gistMocks = vi.hoisted(() => ({
   ensureSyncConfigLoaded: vi.fn(async () => {}),
   createSocialGist: vi.fn(async () => ({ gistId: 'gist-yo', etag: null })),
   readSocialGist: vi.fn(async (): Promise<unknown> => ({ data: MUNDO.gists['gist-yo'], etag: null })),
+  // Los «me gusta» llegan dentro de la MISMA lectura: no son una llamada más que contar.
+  getPublicSocialReactions: vi.fn(() => []),
   readPublicSocialGistById: vi.fn(async (gistId?: string): Promise<unknown> => {
     contador.gists.push(String(gistId || ''));
     const encontrado = MUNDO.gists[String(gistId || '')];

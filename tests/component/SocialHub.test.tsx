@@ -75,6 +75,8 @@ const gistMocks = vi.hoisted(() => ({
     etag: null,
   })),
   readPublicSocialGistById: vi.fn(async (_gistId?: string): Promise<any> => ({})),
+  // Los «me gusta» que llegaron con esa lectura (docs/plan-reacciones.md): aquí, ninguno.
+  getPublicSocialReactions: vi.fn(() => []),
   // Fase 2: migración del canal a gist secreto. Por defecto, nada que migrar.
   // Tipado con el contrato REAL a propósito: con `Promise<any>` un mock que se quedara atrás (le faltaba
   // `supersededGistIds`) pasaba el typecheck y reventaba en ejecución como rechazo no capturado.

@@ -6,7 +6,8 @@ import { isNetworkFailure, isOffline, isServiceUnavailable } from '../../core/ut
 import { normalizeTimestamp as toSafeTimestamp } from '../../core/utils/normalize';
 import { reviewActorsByGame } from '../../core/social/moveActivity';
 import { getCachedSocialDirectory, getLocalMeta, patchLocalMeta, putCachedSocialDirectory } from '../../model/repository/indexedDbRepository';
-import { getSocialSyncConfig, mergeSocialGistData, readPublicSocialGistById, type SocialGistData, type SocialMoveEntry, type SocialProfileVisibility, type SocialSharedGame } from '../../model/repository/socialGistRepository';
+import { mergeReactions, type SocialReactionEntry } from '../../core/social/reactions';
+import { getSocialSyncConfig, mergeSocialGistData, getPublicSocialReactions, readPublicSocialGistById, type SocialGistData, type SocialMoveEntry, type SocialProfileVisibility, type SocialSharedGame } from '../../model/repository/socialGistRepository';
 import { getSocialProfilesByUid, type SocialAuthUser } from '../../model/repository/firebaseRepository';
 import { PROFILE_INACTIVITY_MS } from '../../core/constants/socialActivity';
 import { isOwnProfileIdentity } from './socialIdentity';
@@ -460,6 +461,12 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
             const resolvedSocialGistId = readable
               .reduce((best, item) => (item.result.value.updatedAt > best.result.value.updatedAt ? item : best))
               .gistId;
+            // Sus «me gusta», de todos los candidatos legibles (llegaron en la misma lectura): si hay deriva, cada gist
+            // puede llevar los suyos. Solo los vivos; las lápidas sirven a quien escribe, no a quien lee.
+            const reactions = readable
+              .map((item) => getPublicSocialReactions(item.gistId, token))
+              .reduce((merged, current) => mergeReactions(merged, current, Date.now()), [] as SocialReactionEntry[])
+              .filter((reaction) => !reaction.del);
             // Se recuerda el ganador solo cuando había DE VERDAD más de un candidato: con uno solo no hay deriva
             // que resolver, y sellarlo convertiría el recuerdo en una copia del dato que ya está en la amistad.
             if (allSocialGistCandidates.length > 1 && rememberedWinners[entry.uid] !== resolvedSocialGistId) {
@@ -534,6 +541,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
               posts,
               moves,
               hiddenMoves,
+              reactions,
               sharedLists,
               visibility: socialData.profile.visibility || defaultSocialVisibility,
             };

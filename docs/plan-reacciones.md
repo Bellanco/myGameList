@@ -1,6 +1,6 @@
 # Plan: «Me gusta» en el feed
 
-> **Estado (12-10-2026): Fases 0, 1 y 2 hechas (sin push); sigue la Fase 3.** Sale de la idea A1 de
+> **Estado (12-10-2026): Fases 0 a 3 hechas (sin push); sigue la Fase 4.** Sale de la idea A1 de
 > `docs/investigacion-interaccion-social.md`. Las alternativas visuales que se compararon están en
 > `docs/maquetas/reacciones.html` (con el servidor de desarrollo); la elegida es la C, reducida a una sola reacción.
 >
@@ -127,14 +127,55 @@ En la práctica:
 - **Medido:** arranque crítico 189,6 de 190 kB, igual que HEAD sin la fase (worktree aparte). El margen estrecho ya
   venía de antes; la Fase 4 tiene que vigilarlo.
 
-## Fase 3 · Lectura · M
+## Fase 3 · Lectura · M · ✅ hecha (12-10-2026)
 
-- Que los lectores del gist ajeno (`readPublicSocialGistById` y compañía) devuelvan también el fichero de reacciones,
-  pasado por `normalizeReactions`. Si no se entiende, lista vacía; nunca un fallo de lectura del perfil.
-- `useSocialDirectory` guarda los «me gusta» por perfil.
-- El feed cruza el índice con sus elementos por `(on, perfil del autor, id)`. Los que apuntan a algo que quien mira
-  no ve se descartan.
-- Los tuyos salen de tu propio fichero.
+**Dónde quedó:**
+
+- **Los «me gusta» de tus amistades viajan dentro de la lectura de su gist**, sin una petición más:
+  - `readPublicSocialGistById` (`socialGistRepository.ts`) normaliza también el fichero de reacciones y lo guarda en
+    la MISMA entrada de la caché de sesión. Comparten ETag: o se sirven los dos o ninguno.
+  - Se piden con el accesor síncrono `getPublicSocialReactions`.
+  - **Por qué un accesor y no otro valor de vuelta:** los tests del presupuesto de lecturas cuentan las llamadas a
+    `readPublicSocialGistById`, y así siguen valiendo tal cual.
+  - Escribir el fichero principal (`writeSocialGist`) conserva en esa copia los «me gusta» ya leídos.
+- **El directorio** (`useSocialDirectory`) guarda en cada entrada sus `reactions` vivos, fundidos de todos los
+  candidatos legibles si hay deriva. `SOCIAL_DIRECTORY_CACHE_VERSION` sube a 8.
+- **El cruce**, en `core/social/feedLikes.ts`:
+  - `likeTargetOf`: solo reseñas (`type: 'review'`) y publicaciones; el destino es el `actorProfileId` /
+    `authorProfileId` del elemento, nunca el id del directorio, que para una amistad es su uid.
+  - `buildFeedLikes`: nombres del más reciente al más antiguo, sin repetidos ni lápidas; lo tuyo va aparte (`mine`).
+- **El hook** `viewmodel/social/useSocialLikes.ts` expone `likesFor`, `canLike` y `toggleLike` en el bloque `feed`
+  del view-model.
+  - Tus «me gusta» salen de tu fichero más la cola (`getOwnSocialLikes`), no de tu entrada del directorio, que se
+    guarda media hora.
+  - **Coste:** 1 `GET` condicional a GitHub por apertura del hub; con ETag en memoria, normalmente un 304. Cero
+    Firestore.
+  - Lo tocado en la visita manda sobre una lectura que llegue tarde.
+  - Al abrir el hub se reintenta la cola.
+- **Dejar de ser amigos** retira tus «me gusta» a esa persona:
+  - `useSocialFriendships` llama a `onFriendRemoved` solo con «dejar de ser amigos»; no al rechazar ni al retirar una
+    petición.
+  - El view-model lo pasa a `retireLikesOf`, que busca los pseudónimos con que firma en su gist.
+- **Tests:**
+  - `feedLikes.test.ts`.
+  - `socialReactionsRead.test.ts`: misma petición, fichero roto, copia viva, la escritura del principal no los borra.
+  - `useSocialLikes.test.ts`: lectura tardía en los dos sentidos, purga.
+  - El caso del directorio en `socialDirectoryDegraded.test.ts`.
+  - El aviso solo al dejar de ser amigos en `socialFriendshipEdges.test.ts`.
+  - Los cuatro mocks del gist social, con el accesor nuevo.
+- **Medido:** arranque crítico 189,6 de 190 kB, sin cambios. `npm run emulate:social` en verde, sin errores de
+  consola.
+
+**Hallazgo previo (no de esta fase), sin arreglar:** la copia de sesión de un gist social ajeno nunca llega a
+revalidarse con ETag.
+
+- `readPublicSocialGistById` consulta primero la copia NO caducada. Al encontrarla caducada, `readPublicSocialGistCache`
+  la BORRA, de memoria y de `sessionStorage`.
+- Así, la segunda consulta (`includeExpired`) ya no la encuentra. No se envía `If-None-Match` y GitHub devuelve el
+  gist entero: el camino del 304 no se usa nunca, y tampoco el de servir la copia si GitHub limita.
+- No rompe nada (el directorio tiene su propia copia en IndexedDB), pero cada relectura descarga los gists completos y
+  gasta cupo de GitHub.
+- Arreglo propuesto: que la primera consulta no borre lo caducado.
 
 ## Fase 4 · Interfaz · M
 

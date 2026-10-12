@@ -37,6 +37,7 @@ import { useSecretChannelMigration } from './social/useSecretChannelMigration';
 import { useOwnProfileRank } from './social/useOwnProfileRank';
 import { useOwnPhotoHeal } from './social/useOwnPhotoHeal';
 import { useOwnProfileEditor } from './social/useOwnProfileEditor';
+import { useSocialLikes } from './social/useSocialLikes';
 import { useSocialFeedback } from './social/useSocialFeedback';
 import { useSocialSession } from './social/useSocialSession';
 import { useSocialFeed } from './social/socialFeed';
@@ -273,6 +274,11 @@ export function useSocialViewModel(options?: {
     [authUser?.photoURL, ownPhotoIsGeneric, profileName, profileVisibility, savedProfile],
   );
 
+  // Dejar de ser amigos retira tus «me gusta» a esa persona. Va por ref porque quien sabe con qué pseudónimos firma
+  // (`useSocialLikes`, que mira el directorio) se monta más abajo que las amistades.
+  const retireLikesRef = useRef<(uid: string) => void>(() => {});
+  const retireLikesOfRemovedFriend = useCallback((uid: string) => retireLikesRef.current(uid), []);
+
   // Amistades: estado, derivados y mutaciones (ver `social/useSocialFriendships`). Se monta AQUÍ y no más abajo
   // porque `friendUidSet` lo necesita la política de fotos del directorio, que se calcula a continuación.
   const {
@@ -300,6 +306,7 @@ export function useSocialViewModel(options?: {
     buildSelfInfo: buildFriendshipSelfInfo,
     setFeedback,
     reportFailure,
+    onFriendRemoved: retireLikesOfRemovedFriend,
   });
   const legalConsentPending = legalConsent.pending;
   const hasReadyAccess = hasSocialSession && hasSocialGist && legalGateOpen;
@@ -585,6 +592,13 @@ export function useSocialViewModel(options?: {
     // usuario nuevo abría el espacio social y no encontraba a nadie a quien pedir amistad.
     return socialDirectory.filter((entry) => !isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId));
   }, [authUser?.uid, ownProfileId, socialDirectory]);
+
+  // «Me gusta»: los de tus amistades salen del directorio; los tuyos, de tu fichero y de la cola (ver el hook).
+  const { likesFor, canLike, toggleLike, retireLikesOf } = useSocialLikes({
+    enabled: hasReadyAccess && socialSpaceOpen,
+    others: visibleSocialDirectory,
+  });
+  retireLikesRef.current = retireLikesOf;
 
   const socialDisplayName = useMemo(() => {
     const preferred = profileName.trim();
@@ -1033,6 +1047,10 @@ export function useSocialViewModel(options?: {
       githubReconnectNeeded,
       hasMoreFeed,
       showMoreFeed,
+      // «Me gusta» (docs/plan-reacciones.md): quién y si tú, si el elemento admite, y el gesto.
+      likesFor,
+      canLike,
+      toggleLike,
       handleActivityItemKeyDown,
       handleProfileCardKeyDown,
       yearSummarySignal,

@@ -586,8 +586,10 @@ const SOCIAL_DIRECTORY_KEY_PREFIX = '__dir__:';
  *       de una amistad tardaría media hora en salir.
  *   7 = cada entrada trae `hiddenMoves` (los movimientos de las listas ocultas, que el feed enseña solo a la
  *       administración). Sin subirla, una caché fresca la tendría media hora sin ellos.
+ *   8 = cada entrada trae `reactions` (los «me gusta» que ha dado esa persona). Sin subirla, una caché fresca
+ *       serviría media hora el feed sin ningún «me gusta».
  */
-const SOCIAL_DIRECTORY_CACHE_VERSION = 7;
+const SOCIAL_DIRECTORY_CACHE_VERSION = 8;
 
 interface CachedSocialDirectory<T> {
   profileId: string; // keyPath del store

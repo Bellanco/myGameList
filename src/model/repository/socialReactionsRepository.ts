@@ -111,6 +111,30 @@ export async function retireSocialLikesTo(profileId: string): Promise<void> {
   scheduleSocialLikesFlush();
 }
 
+/**
+ * Tus «me gusta» VIVOS: los del fichero de tu gist, con lo que hay en la cola por encima (lo pulsado gana, porque es
+ * más reciente). Sin sesión o sin canal, solo la cola.
+ *
+ * Lee tu fichero y no la copia del directorio a propósito: el directorio se guarda media hora, y tras subir un «me
+ * gusta» seguiría sin él, así que el botón volvería a salir sin marcar. La lectura es condicional (ETag): sin cambios
+ * es un 304, que GitHub no descuenta del cupo. Si falla, se queda con la cola: mejor un botón sin marcar que un hub
+ * que no abre.
+ */
+export async function getOwnSocialLikes(): Promise<SocialReactionEntry[]> {
+  const queued = await ensurePendingLoaded();
+  let published: SocialReactionEntry[] = [];
+  try {
+    const authUser = await getCurrentSocialAuthUser();
+    const resolved = authUser ? await resolveSocialChannel({ email: authUser.email }) : null;
+    if (resolved?.status === 'ready') {
+      published = normalizeReactions(await readSocialReactionsRaw(resolved.channel.token, resolved.channel.gistId), Date.now());
+    }
+  } catch {
+    published = [];
+  }
+  return mergeReactions(published, queued, Date.now()).filter((entry) => !entry.del);
+}
+
 export type SocialLikesFlushResult =
   | 'nothing'
   | 'written'

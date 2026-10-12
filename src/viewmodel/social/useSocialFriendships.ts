@@ -87,6 +87,8 @@ export interface SocialFriendshipsOptions {
   buildSelfInfo: () => FriendshipSelfInfo;
   setFeedback: (kind: 'ok' | 'warn' | 'err', message: string, duration?: 'short' | 'long') => void;
   reportFailure: (error: unknown, fallback: string, kind?: 'err' | 'warn') => void;
+  /** Se ha dejado de ser amigos (no rechazar ni retirar una petición): para retirar lo que se dio a esa persona. */
+  onFriendRemoved?: (otherUid: string) => void;
 }
 
 const EMPTY: MyFriendships = { friends: [], incoming: [], outgoing: [], byOtherUid: {} };
@@ -126,7 +128,7 @@ export function resetFriendshipEdgeCheckForTests(): void {
 }
 
 export function useSocialFriendships(options: SocialFriendshipsOptions): SocialFriendships {
-  const { myUid, socialGistId, socialSpaceOpen, requestsPanelOpen = false, buildSelfInfo, setFeedback, reportFailure } = options;
+  const { myUid, socialGistId, socialSpaceOpen, requestsPanelOpen = false, buildSelfInfo, setFeedback, reportFailure, onFriendRemoved } = options;
 
   const [friendships, setFriendships] = useState<MyFriendships>(EMPTY);
   const [loadingFriendships, setLoadingFriendships] = useState(false);
@@ -267,7 +269,7 @@ export function useSocialFriendships(options: SocialFriendshipsOptions): SocialF
   }, [myUid, buildSelfInfo, friendships, refreshAfterFriendshipChange, relationshipWith, reportFailure, setFeedback]);
 
   /** Borra el documento de amistad (cancelar enviada / rechazar recibida / eliminar), con su propio mensaje. */
-  const deleteRelationship = useCallback(async (otherUid: string, successMsg: string) => {
+  const deleteRelationship = useCallback(async (otherUid: string, successMsg: string, removedFriend = false) => {
     const docId = friendships.byOtherUid[otherUid]?.docId;
     if (!myUid || !docId) {
       return;
@@ -275,6 +277,7 @@ export function useSocialFriendships(options: SocialFriendshipsOptions): SocialF
     try {
       setFriendshipBusyUid(otherUid);
       await deleteFriendship({ myUid, docId });
+      if (removedFriend) onFriendRemoved?.(otherUid);
       await refreshAfterFriendshipChange();
       setFeedback('ok', successMsg);
     } catch (error) {
@@ -282,7 +285,7 @@ export function useSocialFriendships(options: SocialFriendshipsOptions): SocialF
     } finally {
       setFriendshipBusyUid('');
     }
-  }, [myUid, friendships, refreshAfterFriendshipChange, reportFailure, setFeedback]);
+  }, [myUid, friendships, onFriendRemoved, refreshAfterFriendshipChange, reportFailure, setFeedback]);
 
   /**
    * Rechazar, retirar y dejar de ser amigos NO borran de inmediato: piden confirmación, porque ninguna de las tres
@@ -324,7 +327,7 @@ export function useSocialFriendships(options: SocialFriendshipsOptions): SocialF
       : target.action === 'cancel'
         ? SOCIAL_UI.status.friendRequestCanceled
         : SOCIAL_UI.status.friendRemoved;
-    await deleteRelationship(target.uid, message);
+    await deleteRelationship(target.uid, message, target.action === 'remove');
   }, [friendActionTarget, deleteRelationship]);
 
   return {
