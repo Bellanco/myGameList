@@ -13,6 +13,10 @@ import { SHARE_UI } from '../../src/core/constants/shareLabels';
 import { PublicReviewScreen } from '../../src/view/components/PublicReviewScreen';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import type { SharedReview, SharedReviewSuggestion } from '../../src/model/types/share';
+import { YEAR_SUMMARY_UI } from '../../src/core/constants/yearSummaryLabels';
+import { buildYearSummary } from '../../src/core/stats/yearSummary';
+import { publicYearSummary } from '../../src/core/stats/publicYearSummary';
+import type { FinishedGame } from '../../src/core/utils/finishDates';
 
 const TOKEN = 'TOKENDEPRUEBA0001';
 
@@ -147,5 +151,54 @@ describe('PublicReviewScreen', () => {
     render(<PublicReviewScreen token={TOKEN} standalone />);
 
     expect(await screen.findByRole('heading', { name: SHARE_UI.publicGoneTitle })).toBeInTheDocument();
+  });
+});
+
+describe('PublicReviewScreen — un resumen del año compartido', () => {
+  const games: FinishedGame[] = [1, 2, 3].map((id) => ({
+    id, _ts: 1, name: `Juego ${id}`, platforms: ['PC'], genres: ['RPG'], steamDeck: false, review: '', years: [2026], grade: 80 + id,
+  }));
+  const YEAR_ARTICLE = {
+    v: 1,
+    kind: 'year',
+    year: 2026,
+    summary: publicYearSummary(buildYearSummary({ completed: games, year: 2026, precision: 'month' })!),
+    authorNick: 'Bellanco',
+    createdAt: 1_800_000_000_000,
+    updatedAt: 1_800_000_000_000,
+    expiresAt: 4_102_444_800_000,
+  };
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    localStorage.setItem('mis-listas-covers', 'on');
+    fetchMock = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve(YEAR_ARTICLE) } as Response));
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it('pinta el resumen con su autor, sin cita ni «Sin reseña»', async () => {
+    render(<PublicReviewScreen token={TOKEN} standalone />);
+    expect(await screen.findByRole('heading', { name: YEAR_SUMMARY_UI.title(2026) })).toBeInTheDocument();
+    expect(screen.getByText(YEAR_SUMMARY_UI.publicPage.by('Bellanco'))).toBeInTheDocument();
+    expect(screen.queryByText(YEAR_SUMMARY_UI.best.noQuote({ own: false, name: 'Bellanco' }))).toBeNull();
+  });
+
+  it('sin cuenta: ni sugerencias ni carátulas, aunque la preferencia esté encendida', async () => {
+    const { container } = render(<PublicReviewScreen token={TOKEN} standalone coverAccess="solo-cache" />);
+    await screen.findByRole('heading', { name: YEAR_SUMMARY_UI.title(2026) });
+    const urls = fetchMock.mock.calls.map(([input]) => String(input));
+    expect(urls).toEqual([`/api/share/${TOKEN}`]);
+    expect(container.querySelector('img')).toBeNull();
+  });
+
+  it('con cuenta social, las carátulas del collage con el cupo de lo ajeno', async () => {
+    const { container } = render(<PublicReviewScreen token={TOKEN} coverAccess="solo-cache" />);
+    await screen.findByRole('heading', { name: YEAR_SUMMARY_UI.title(2026) });
+    await waitFor(() => expect(container.querySelectorAll('.ys-collage img').length).toBe(3));
+    expect(fetchMock.mock.calls.map(([input]) => String(input))).not.toContain(`/api/share/related/${TOKEN}`);
   });
 });

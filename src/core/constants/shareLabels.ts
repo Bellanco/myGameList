@@ -72,6 +72,7 @@ export const SHARE_UI = {
   // Página pública: la lee alguien que puede no conocer la app ni tener cuenta. Nada de jerga interna, y el
   // aviso deja claro que esto lo publica una persona y puede dejar de estar.
   publicAria: 'Reseña compartida',
+  publicYearAria: 'Resumen del año compartido',
   publicLoading: 'Cargando la reseña…',
   publicGoneTitle: 'Este enlace ya no está disponible',
   publicGoneBody: 'Puede haber caducado o haberlo retirado quien lo compartió.',

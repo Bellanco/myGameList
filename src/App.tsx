@@ -191,9 +191,16 @@ function getPageHeading(section: AppSection, currentTab: TabId, settingsGroup: S
  * El token se saca del `pathname` en lugar de con `useParams` porque esta pantalla se monta desde el mapa de
  * secciones, que no está dentro del `<Route>` que lo captura.
  */
-function SharedReviewRoute(): ReactNode {
+function SharedReviewRoute({ hasSocialProfile }: { hasSocialProfile: boolean }): ReactNode {
   const location = useLocation();
-  return <PublicReviewScreen token={location.pathname.replace(/^\/r\//, '').replace(/\/$/, '')} />;
+  // Las carátulas de un resumen del año compartido, solo con cuenta social (y con la preferencia encendida, que
+  // la aplica el propio componente): con el cupo de lo ajeno, como en el hub.
+  return (
+    <PublicReviewScreen
+      token={location.pathname.replace(/^\/r\//, '').replace(/\/$/, '')}
+      coverAccess={hasSocialProfile ? 'solo-cache' : false}
+    />
+  );
 }
 
 /** L4 — documento legal correspondiente a la ruta (`/legal/*`). Por defecto, el aviso legal. */
@@ -1119,7 +1126,7 @@ export default function App() {
     'shared-review': (
 
       <Suspense fallback={<ScreenSkeleton />}>
-        <SharedReviewRoute />
+        <SharedReviewRoute hasSocialProfile={hasSocialProfile} />
       </Suspense>
     ),
     legal: (

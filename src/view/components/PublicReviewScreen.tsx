@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from 'react';
+import { lazy, memo, Suspense, useEffect, useMemo, useState } from 'react';
 import { SHARE_UI } from '../../core/constants/shareLabels';
 import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { ReviewDetailBody } from './ReviewDetailBody';
@@ -6,7 +6,8 @@ import { ReviewDetailHead } from './ReviewDetailHead';
 import { RelatedReviews } from './socialhub/RelatedReviews';
 import { isSharedYearSummary, lookupSharedReview, readSharedReviewSuggestions } from '../../model/repository/publicShareRepository';
 import type { RelatedReview } from '../../core/social/relatedReviews';
-import type { SharedReview, SharedReviewSuggestion } from '../../model/types/share';
+import type { SharedReview, SharedReviewSuggestion, SharedYearSummary } from '../../model/types/share';
+import type { CoverAccess } from './socialhub/useReviewCover';
 // La hoja de la RESEÑA. Esta pantalla la pinta sin el hub social —en modo artículo no hay hub—, así que sin
 // esto se quedaba sin el medallón y sin el bloque del pie. Ver `styles/reviews.scss`.
 import '../../styles/reviews.scss';
@@ -25,11 +26,27 @@ import '../../styles/reviews.scss';
  * Los tres finales malos —no existe, caducado, retirado— comparten pantalla y texto: ante un desconocido no hay
  * motivo para distinguirlos, y saber "esto existió" ya es información.
  */
-export const PublicReviewScreen = memo(function PublicReviewScreen({ token, standalone = false }: { token: string; standalone?: boolean }) {
+// El resumen del año compartido arrastra su vista entera: solo la descarga quien abre uno.
+const PublicYearSummary = lazy(() => import('./PublicYearSummary').then((module) => ({ default: module.PublicYearSummary })));
+
+export const PublicReviewScreen = memo(function PublicReviewScreen({
+  token,
+  standalone = false,
+  coverAccess = false,
+}: {
+  token: string;
+  standalone?: boolean;
+  /**
+   * Carátulas del resumen del año compartido: solo para quien tiene cuenta social en este navegador. Por omisión
+   * ninguna, que es lo que corresponde en modo artículo.
+   */
+  coverAccess?: CoverAccess;
+}) {
   // `unavailable`: ahora mismo no se puede saber (servicio sin cupo, caído o sin red). NO es «caducado»: decir eso
   // durante un corte era falso y definitivo (docs/plan-degradacion-servicios.md, fase 3).
   const [state, setState] = useState<'loading' | 'ready' | 'gone' | 'unavailable'>('loading');
   const [review, setReview] = useState<SharedReview | null>(null);
+  const [yearSummary, setYearSummary] = useState<SharedYearSummary | null>(null);
   const [suggestions, setSuggestions] = useState<SharedReviewSuggestion[]>([]);
   /** Sube con «Reintentar»: vuelve a pedir el artículo. */
   const [attempt, setAttempt] = useState(0);
@@ -41,7 +58,9 @@ export const PublicReviewScreen = memo(function PublicReviewScreen({ token, stan
       if (!alive) {
         return;
       }
-      setReview(result.status === 'ready' && !isSharedYearSummary(result.article) ? result.article : null);
+      const article = result.status === 'ready' ? result.article : null;
+      setReview(article && !isSharedYearSummary(article) ? article : null);
+      setYearSummary(article && isSharedYearSummary(article) ? article : null);
       setState(result.status);
     });
     return () => {
@@ -53,7 +72,14 @@ export const PublicReviewScreen = memo(function PublicReviewScreen({ token, stan
   // abre el enlace la ve en cuanto llega, y el bloque aparece después (o no aparece, que es lo normal cuando el
   // autor no tiene nada más publicado que se parezca). Empieza vacío y termina vacío si algo falla: no hay
   // "cargando" ni "no hay sugerencias" porque un hueco anunciando que no hay nada sería peor que el silencio.
+  //
+  // Se piden cuando ya se sabe que es una RESEÑA: un resumen del año no sugiere nada, y preguntar igualmente era
+  // una invocación y dos lecturas de KV por visita para recibir una lista vacía.
+  const hasReview = review !== null;
   useEffect(() => {
+    if (!hasReview) {
+      return undefined;
+    }
     let alive = true;
     void readSharedReviewSuggestions(token).then((items) => {
       if (alive) {
@@ -63,7 +89,7 @@ export const PublicReviewScreen = memo(function PublicReviewScreen({ token, stan
     return () => {
       alive = false;
     };
-  }, [token]);
+  }, [hasReview, token]);
 
   /**
    * Las sugerencias con la forma que pinta `RelatedReviews`, que es el MISMO bloque del hub social: la tarjeta,
@@ -181,6 +207,18 @@ export const PublicReviewScreen = memo(function PublicReviewScreen({ token, stan
           <button className="btn btn-secondary" type="button" onClick={() => setAttempt((value) => value + 1)}>
             {SHARE_UI.publicRetry}
           </button>
+        </div>
+      </section>,
+    );
+  }
+
+  if (state === 'ready' && yearSummary) {
+    return frame(
+      <section className="hub-hub hub-screen" aria-label={SHARE_UI.publicYearAria}>
+        <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
+          <Suspense fallback={<p>{SHARE_UI.publicLoading}</p>}>
+            <PublicYearSummary article={yearSummary} coverAccess={standalone ? false : coverAccess} standalone={standalone} />
+          </Suspense>
         </div>
       </section>,
     );
