@@ -1,17 +1,9 @@
-import { lazy, memo, Suspense, useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { memo, useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { SHARE_UI } from '../../../core/constants/shareLabels';
 import { Icon } from '../Icon';
 import { ShareReviewModal } from '../../modals/ShareReviewModal';
 import { shareDraftOf, useShareViewModel } from '../../../viewmodel/useShareViewModel';
 import { markShareTipSeen, readShareTipSeen, shareInviteStore } from '../../../model/repository/shareInviteStore';
-import { onboardingStore } from '../../../model/repository/onboardingStore';
-import { parseTourState } from '../../../core/onboarding/tourState';
-import { isGuideShowing } from '../../../core/onboarding/joinFromPremios';
-
-/** La burbuja de «puedes compartirla» llega con el chunk de la guía: solo la descarga quien la va a ver. */
-const ShareTipBubble = lazy(() =>
-  import('../onboarding/OnboardingTour').then((module) => ({ default: module.ShareTipBubble })),
-);
 import type { GameItem } from '../../../model/types/game';
 
 /**
@@ -39,7 +31,7 @@ export const ShareReviewButton = memo(function ShareReviewButton({
 }) {
   const vm = useShareViewModel();
   const inviteDeclined = useSyncExternalStore(shareInviteStore.subscribe, shareInviteStore.get, shareInviteStore.get);
-  /** ¿Toca la burbuja de «puedes compartirla»? Se decide una vez, al montar: es de una sola vez por dispositivo. */
+  /** ¿Toca la marca «Nuevo»? Se decide una vez, al montar: es de una sola vez por dispositivo. */
   const [tipPending, setTipPending] = useState(() => !readShareTipSeen());
   const closeTip = useCallback(() => {
     markShareTipSeen();
@@ -89,7 +81,7 @@ export const ShareReviewButton = memo(function ShareReviewButton({
    * más, no el camino por defecto.
    */
   const openDialog = useCallback(() => {
-    // Quien pulsa ya lo ha descubierto: la burbuja que lo señala sobra.
+    // Quien pulsa ya lo ha descubierto: la marca que lo señala sobra.
     if (tipPending) closeTip();
     const current = vm.shareOf(game.id);
     setPublishedUrl(current ? `${window.location.origin}/r/${current.token}` : '');
@@ -107,16 +99,15 @@ export const ShareReviewButton = memo(function ShareReviewButton({
   }, [vm]);
 
   /**
-   * «PUEDES COMPARTIRLA», una sola vez por dispositivo, a quien ya tenía lo social y nunca ha compartido: no pasó
-   * por la guía, y nada le señalaba el botón. Con la lista de sus enlaces ya cargada (`quota`), para no enseñársela
-   * un instante a quien sí tiene alguno; y nunca con la guía pintando algo, que entonces manda ella.
+   * LA MARCA «NUEVO», una sola vez por dispositivo, a quien ya tenía lo social y nunca ha compartido: no pasó por la
+   * guía, y nada le señalaba el botón. Es el chip de cada tema (`hub-feed-game-chip`) y no una burbuja de la guía,
+   * que tiene una forma propia y genérica (decisión del 12-10-2026). Con la lista de sus enlaces ya cargada
+   * (`quota`), para no enseñársela un instante a quien sí tiene alguno, y solo junto al botón de verdad.
    */
-  // Solo junto al botón de verdad (con sesión, sin veto y con el servicio atendiendo): sin él no hay nada que señalar.
   const showTip = vm.available === true && !vm.ban && !vm.serviceDown
-    && tipPending && !open && vm.quota !== null && vm.shares.length === 0 && !existing
-    && !isGuideShowing(parseTourState(onboardingStore.get() || null));
-  // UNA SOLA VEZ DE VERDAD: se da por vista en cuanto sale, no al cerrarla. Quien la ignora y se va a otra pantalla
-  // también la ha visto, y no se le vuelve a enseñar en la siguiente reseña. Aquí sigue a la vista hasta cerrarla.
+    && tipPending && !open && vm.quota !== null && vm.shares.length === 0 && !existing;
+  // UNA SOLA VEZ DE VERDAD: se da por vista en cuanto sale. Quien no la pulsa y se va a otra reseña ya la ha visto,
+  // y no se le vuelve a enseñar; en esta se queda hasta que pulse el botón.
   useEffect(() => {
     if (showTip) markShareTipSeen();
   }, [showTip]);
@@ -169,15 +160,11 @@ export const ShareReviewButton = memo(function ShareReviewButton({
 
   return (
     <>
-      {showTip ? (
-        <Suspense fallback={null}>
-          <ShareTipBubble onClose={closeTip} />
-        </Suspense>
-      ) : null}
       <button className="btn btn-secondary" type="button" data-tour="share-review" onClick={openDialog} aria-label={SHARE_UI.actionAria}>
         <Icon name="share-nodes" />
         <span>{existing ? SHARE_UI.shared : SHARE_UI.action}</span>
       </button>
+      {showTip ? <span className="hub-feed-game-chip share-new">{SHARE_UI.newBadge}</span> : null}
       {existing ? <span className="share-expiry">{SHARE_UI.expiresIn(daysLeft)}</span> : null}
       <ShareReviewModal
         open={open}

@@ -240,9 +240,9 @@ export const ONBOARDING_KEY = 'mis-listas-onboarding';
 // mira esta marca. Por dispositivo, como la guía: perderla solo hace que el botón vuelva a salir.
 export const SHARE_INVITE_DECLINED_KEY = 'mis-listas-share-invite-declined';
 
-// «COMPARTIR» CON LO SOCIAL — 'on' cuando ya se enseñó, una vez, la burbuja que señala el botón a quien nunca ha
-// compartido. Es para quien ya tenía lo social y por eso no pasó por la guía: nada más le decía que el botón existe.
-// Por dispositivo: perderla solo hace que se enseñe una vez más.
+// «COMPARTIR» CON LO SOCIAL — 'on' cuando ya se vio, una vez, la marca «Nuevo» junto al botón, que sale a quien
+// nunca ha compartido. Es para quien ya tenía lo social y por eso no pasó por la guía: nada más le decía que el botón
+// existe. Por dispositivo: perderla solo hace que se enseñe una vez más.
 export const SHARE_TIP_SEEN_KEY = 'mis-listas-share-tip-seen';
 
 /**

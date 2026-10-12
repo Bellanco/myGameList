@@ -33,7 +33,7 @@ export function declineShareInvite(): void {
   for (const listener of listeners) listener();
 }
 
-/** ¿Se enseñó ya en este dispositivo la burbuja de «puedes compartirla» (ver `SHARE_TIP_SEEN_KEY`)? */
+/** ¿Se vio ya en este dispositivo la marca «Nuevo» del botón de compartir (ver `SHARE_TIP_SEEN_KEY`)? */
 export function readShareTipSeen(): boolean {
   try {
     return localStorage.getItem(SHARE_TIP_SEEN_KEY) === 'on';

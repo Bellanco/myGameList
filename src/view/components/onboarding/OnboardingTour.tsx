@@ -616,49 +616,6 @@ function ShareInviteBubble({ invite, state }: { invite: ShareInvite; state: Tour
   );
 }
 
-/* ── «Puedes compartirla» ────────────────────────────────────────────────────────────────────────────────────── */
-
-/**
- * LA BURBUJA QUE SEÑALA «COMPARTIR» a quien ya tenía lo social y nunca ha compartido (ver `TOUR_UI.shareTip`). No
- * la pinta la guía, sino el propio botón (`ShareReviewButton`), que es quien sabe si hay algo compartido y si el
- * servicio atiende; por eso va en un portal al `body`, fuera de la tarjeta de la reseña. Con un diálogo abierto se
- * aparta, como la guía.
- */
-export function ShareTipBubble({ onClose }: { onClose: () => void }) {
-  const titleId = useId();
-  const dialogOpen = useDialogOpen();
-  const T = TOUR_UI.shareTip;
-  if (dialogOpen || typeof document === 'undefined') return null;
-  return createPortal(
-    <div className="ob-root">
-      <AnchoredBubble
-        anchorKey="share-tip"
-        anchor='[data-tour="share-review"]'
-        labelledBy={titleId}
-        onKeyDown={(event) => {
-          if (event.key !== 'Escape') return;
-          event.stopPropagation();
-          onClose();
-        }}
-      >
-        <div className="ob-kicker">
-          <TourIcon name="share" className="ob-icon ob-icon-sm" />
-          <span>{T.kicker}</span>
-          <button type="button" className="ob-close" aria-label={TOUR_UI.buttons.close} title={TOUR_UI.buttons.close} onClick={onClose}>
-            <TourIcon name="close" />
-          </button>
-        </div>
-        <h2 className="ob-title" id={titleId}>{T.title}</h2>
-        <p className="ob-text">{T.text}</p>
-        <div className="ob-foot ob-foot-split ob-foot-even">
-          <button type="button" className="btn btn-primary" onClick={onClose}>{T.ok}</button>
-        </div>
-      </AnchoredBubble>
-    </div>,
-    document.body,
-  );
-}
-
 /* ── «Vuelve a entrar» ────────────────────────────────────────────────────────────────────────────────────── */
 
 /**

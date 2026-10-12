@@ -17,6 +17,8 @@ export const SHARE_UI = {
   genericError: 'Algo ha fallado. Inténtalo de nuevo.',
   actionAria: 'Compartir esta reseña con un enlace público',
   shared: 'Compartida',
+  /** La marca de novedad junto al botón, una vez, para quien ya tenía lo social (ver `ShareReviewButton`). */
+  newBadge: 'Nuevo',
   dialogTitle: 'Compartir esta reseña',
   consentTitle: 'Vas a publicar esta reseña en internet',
   consentPublished: 'Se publica: el juego, tu nota, el texto completo de la reseña, sus plataformas, géneros y puntos fuertes y débiles, tu nick y la fecha.',
