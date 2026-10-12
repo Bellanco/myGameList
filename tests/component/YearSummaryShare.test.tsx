@@ -1,6 +1,6 @@
 // Compartir tu resumen del año (docs/plan-resumen-del-ano.md, Fase 5): UN botón al final del resumen, el que toque.
-// Sin enlace, «Crear enlace» (que avisa también a tus amistades); con el resumen cambiado, «Actualizar enlace»; si
-// no hay nada que actualizar (o aún no toca), «Compartir». Nada de retirar: caduca solo el 16 de enero.
+// «Compartir», que crea el enlace si no lo hay (y avisa a tus amistades) y abre el menú de compartir; o «Actualizar
+// enlace» si el resumen cambió y ya toca. Nada más: ni retirar ni la fecha de la espera.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { YEAR_SUMMARY_UI } from '../../src/core/constants/yearSummaryLabels';
@@ -71,16 +71,20 @@ async function pinta(sig = signal()) {
 const buttons = () => screen.queryAllByRole('button').map((button) => button.textContent);
 
 describe('compartir tu resumen', () => {
-  it('sin enlace, un solo botón: «Crear enlace», que publica y avisa a tus amistades', async () => {
+  it('sin enlace, un solo botón: «Compartir», que lo crea, avisa a tus amistades y abre el menú en el mismo gesto', async () => {
     const sig = signal();
+    const share = vi.fn(async () => {});
+    vi.stubGlobal('navigator', { ...navigator, share });
     publishYearShare.mockResolvedValue(published());
     await pinta(sig);
-    expect(buttons()).toEqual([S.create]);
+    expect(buttons()).toEqual([S.share]);
+    expect(screen.getByRole('button', { name: S.share }).querySelector('use')?.getAttribute('href')).toBe('#icon-share-nodes');
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: S.create }));
+      fireEvent.click(screen.getByRole('button', { name: S.share }));
     });
     expect(publishYearShare).toHaveBeenCalledWith(2026, summary);
     expect(sig.announce).toHaveBeenCalledWith(2026);
+    expect(share).toHaveBeenCalledWith({ title: S.nativeTitle(2026), url: 'https://app.test/r/TOK' });
     expect(buttons()).toEqual([S.share]);
   });
 
@@ -121,16 +125,16 @@ describe('compartir tu resumen', () => {
     expect(buttons()).toEqual([S.share]);
   });
 
-  it('si cambió pero aún no toca por la espera, «Compartir» y la fecha, sin nombrar el rango', async () => {
+  it('si cambió pero aún no toca por la espera, solo «Compartir», sin fecha ni rango', async () => {
     listMyShares.mockResolvedValue(row(now - DAY));
     lookupSharedReview.mockResolvedValue(article(summaryOf([game(1, 90)])));
     await pinta();
+    // Oro espera 2 días: actualizado ayer, toca mañana. No se dice.
     expect(buttons()).toEqual([S.share]);
-    // Oro espera 2 días: actualizado ayer, toca mañana.
-    expect(screen.getByText(S.waitUntil(S.date(now + DAY)))).toBeInTheDocument();
+    expect(document.querySelector('.ys-share-text')).toBeNull();
   });
 
-  it('si el servidor dice que aún no toca, pasa a «Compartir» con su fecha', async () => {
+  it('si el servidor dice que aún no toca, pasa a «Compartir» sin mensaje', async () => {
     listMyShares.mockResolvedValue(row(now - 3 * DAY));
     lookupSharedReview.mockResolvedValue(article(summaryOf([game(1, 90)]), now - 3 * DAY));
     publishYearShare.mockRejectedValue(Object.assign(new Error('Todavía no puedes actualizar este enlace'), { status: 429, details: { nextUpdateAt: now + DAY } }));
@@ -139,6 +143,6 @@ describe('compartir tu resumen', () => {
       fireEvent.click(screen.getByRole('button', { name: S.update }));
     });
     expect(buttons()).toEqual([S.share]);
-    expect(screen.getByText(S.waitUntil(S.date(now + DAY)))).toBeInTheDocument();
+    expect(document.querySelector('.ys-share-text')).toBeNull();
   });
 });

@@ -432,8 +432,8 @@ function resumenDeMarta() {
 
 /**
  * COMPARTIR TU RESUMEN (del 15 de diciembre al 15 de enero): tu resumen y, al final de todo, el botón que toque. El
- * modelo de vista es inventado y no hay red. `abrir`: vacío (sin enlace: «Crear enlace»), `al-dia` («Compartir»),
- * `cambiado` («Actualizar enlace») o `espera` (cambiado, pero aún no toca: «Compartir» con la fecha).
+ * modelo de vista es inventado y no hay red. `abrir`: vacío (sin enlace: «Compartir», que lo crea), `al-dia`
+ * («Compartir»), `cambiado` («Actualizar enlace») o `espera` (cambiado, pero aún no toca: «Compartir»).
  */
 function CompartirResumen() {
   const abrir = params.get('abrir') || '';
@@ -448,7 +448,7 @@ function CompartirResumen() {
     serviceDown: false,
     error: '',
     load: async () => {},
-    publish: async () => { avisar('crearía o actualizaría el enlace, y avisaría a tus amistades')(); return true; },
+    publish: async () => { avisar('crearía o actualizaría el enlace, y avisaría a tus amistades')(); return null; },
   };
   if (!resumen) return null;
   return (

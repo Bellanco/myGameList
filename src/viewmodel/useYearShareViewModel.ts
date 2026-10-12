@@ -32,8 +32,11 @@ export interface YearShareViewModel {
   serviceDown: boolean;
   error: string;
   load: () => Promise<void>;
-  /** Crea el enlace o lo actualiza, y avisa a tus amistades si aún no lo estaban. */
-  publish: () => Promise<boolean>;
+  /**
+   * Crea el enlace o lo actualiza, y avisa a tus amistades si aún no lo estaban. Devuelve el enlace publicado (para
+   * abrir el menú de compartir en el mismo gesto), o `null` si no se pudo.
+   */
+  publish: () => Promise<YearShareLink | null>;
 }
 
 const linkUrl = (token: string) => `${window.location.origin}/r/${token}`;
@@ -97,20 +100,23 @@ export function useYearShareViewModel({
     setBusy(true);
     try {
       const result = await publishYearShare(year, summary);
+      const shared: YearShareLink = { token: result.token, url: result.url || linkUrl(result.token), expiresAt: result.expiresAt };
       setServiceDown(false);
-      setLink({ token: result.token, url: result.url || linkUrl(result.token), expiresAt: result.expiresAt });
+      setLink(shared);
       setPublished(summary);
       setNextUpdateAt(result.nextUpdateAt > Date.now() ? result.nextUpdateAt : null);
       // Compartir con enlace es también compartir con tus amistades (la tarjeta, una vez por año).
       void signal?.announce(year);
-      return true;
+      return shared;
     } catch (problem) {
       const details = (problem as Partial<ShareError>).details || {};
       if ((problem as Partial<ShareError>).status === 429 && Number(details.nextUpdateAt) > 0) {
+        // Aún no toca actualizar: el botón vuelve a ser «Compartir», sin mensaje (la espera no se enseña).
         setNextUpdateAt(Number(details.nextUpdateAt));
+        return null;
       }
       fail(problem);
-      return false;
+      return null;
     } finally {
       setBusy(false);
     }

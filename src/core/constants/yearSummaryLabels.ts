@@ -163,22 +163,15 @@ export const YEAR_SUMMARY_UI = {
 
   /**
    * Compartir tu resumen, del 15 de diciembre al 15 de enero: un solo botón al final del resumen. Nunca nombra el
-   * rango: la espera entre actualizaciones se dice con su fecha, no con su motivo.
+   * rango, y la espera entre actualizaciones no se dice: mientras dure, el botón es «Compartir».
    */
   share: {
-    create: 'Crear enlace',
     update: 'Actualizar enlace',
     share: 'Compartir',
     copied: 'Enlace copiado',
     busy: 'Un momento…',
-    waitUntil: (date: string) => `Tu resumen ha cambiado: podrás actualizar el enlace el ${date}.`,
     nativeTitle: (year: number) => `Mi resumen de ${year}`,
     unavailable: 'Compartir no está disponible ahora mismo. Inténtalo más tarde.',
-    /** «15 de enero»: las fechas del botón, sin año (todas caen en la temporada). */
-    date: (at: number) => {
-      const date = new Date(at);
-      return `${date.getDate()} de ${MONTHS_LONG[date.getMonth()]}`;
-    },
   },
 
   /** La página pública del enlace (`/r/`): de quién es, porque quien la abre no viene del perfil. */
