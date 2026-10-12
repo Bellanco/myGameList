@@ -11,6 +11,8 @@ import { gameTitleKey } from '../../../core/utils/gameTitleKey';
 import { resolveGrade, starsFromGrade } from '../../../core/utils/scoreScale';
 import { TAB_IDS, type GameItem, type TabData } from '../../../model/types/game';
 import { APP_LOCALE } from '../../../core/constants/locale';
+import { useUnavailableReviewRedirect } from '../../hooks/useUnavailableReviewRedirect';
+import { matchesReviewFingerprint } from '../../../core/utils/reviewPath';
 
 const L = STATS_UI.reviews;
 
@@ -54,6 +56,8 @@ interface StatsReviewsProps {
   games: TabData;
   /** Juego cuya reseña se abre a pantalla completa; 0 = la lista. */
   gameId: number;
+  /** Huella del nombre que trae la dirección (ver `reviewPath`); vacía en la forma vieja, sin huella. */
+  fingerprint?: string;
   onBack: () => void;
   onOpenReview: (gameId: number) => void;
   /** Volver de una reseña concreta a donde se abrió. */
@@ -65,6 +69,10 @@ interface StatsReviewsProps {
    * Sin rótulo, el de por defecto de `ReviewDetailHead`: «Volver a las reseñas».
    */
   backLabel?: string;
+  /** «Compartir» pulsado sin tener lo social: que la guía cuente por qué (ver `ShareReviewButton`). */
+  onSocialInvite?: () => void;
+  /** ¿Terminó la carga inicial de la biblioteca? Sin ella, una reseña que no está aún puede llegar. */
+  libraryReady?: boolean;
 }
 
 /**
@@ -78,9 +86,17 @@ interface StatsReviewsProps {
  * Va por ruta propia y no enlazando al hub social porque tus reseñas son tuyas: enlazar allí las habría dejado
  * detrás del asistente de configuración del espacio social para quien no lo tenga montado.
  */
-export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, onOpenReview, onBackToList, backLabel }: StatsReviewsProps) {
+export const StatsReviews = memo(function StatsReviews({
+  games, gameId, fingerprint = '', onBack, onOpenReview, onBackToList, backLabel, onSocialInvite, libraryReady = false,
+}: StatsReviewsProps) {
   const reviews = useMemo(() => collectReviews(games), [games]);
-  const open = gameId > 0 ? reviews.find((entry) => entry.id === gameId) : undefined;
+  // Con huella, el juego tiene que ser ESE y no solo tener ese número: el 7 de otra biblioteca es otro juego.
+  const open = gameId > 0
+    ? reviews.find((entry) => entry.id === gameId && matchesReviewFingerprint(fingerprint, entry.gameName))
+    : undefined;
+  // La dirección de una reseña copiada de la barra y abierta en OTRO navegador: allí no hay juego con ese número,
+  // es otro juego o no tiene reseña, y en vez de enseñarle sus propias reseñas se le lleva a la página principal.
+  useUnavailableReviewRedirect(gameId > 0 && !open && libraryReady);
 
   /**
    * Los análisis que se sugieren al pie del que está abierto. Todos TUYOS: aquí no hay más biblioteca que la
@@ -163,7 +179,7 @@ export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, 
         statusKind=""
         // El botón de compartir solo aparece aquí, sobre TUS reseñas. La misma pantalla se usa en el hub social
         // para las de otras personas, y allí no se pasa nada.
-        actions={<ShareReviewButton game={game} reviewText={open.reviewText} />}
+        actions={<ShareReviewButton game={game} reviewText={open.reviewText} onSocialInvite={onSocialInvite} />}
         // Análisis sugeridos: los tuyos, relacionados por juego, saga o género. Salen de las listas que ya están
         // en memoria, sin tocar el canal social —esta pantalla funciona sin tenerlo montado— y abren dentro del
         // panel, no en el hub.

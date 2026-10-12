@@ -5,11 +5,78 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.6.11] - 2026-10-12
+
+Una versión de **compartir**: el resumen del año tiene enlace propio y temporada hasta el 15 de enero, «Compartir»
+se descubre también sin lo social y la dirección de una reseña copiada lleva siempre a algún sitio que tenga sentido.
+
+### Added
+- **El resumen del año tiene capítulo para el reto del jugador.** Si jugaste la edición de ese año, el resumen lo
+  cuenta en su propia tarjeta —«Quedaste 3.º en …», o «Jugaste …» si no hay puesto—, detrás de «Frente a» el año
+  anterior y antes de lo que tenéis en común. Antes era una pastilla en la portada. Si entraste en la votación sin
+  quedar entre los cinco primeros, sale tu puesto real en la clasificación cuando se sabe.
+
+### Changed
+- **La invitación a lo social cuenta lo que se gana.** El «¿Quieres entrar en la parte social?» y la invitación de
+  los premios enumeran las ventajas: ver a qué juegan tus amigos y leer sus reseñas, compartir tus reseñas con un
+  enlace, elegir tema y escala de nota, y el perfil con logros y publicaciones. Sin lo social, «Diseño» y
+  «Compartir» ni se ven, así que hasta ahora no había forma de saber que existían.
+- **«Compartir» sale también sin lo social.** En el detalle de una reseña de Estadísticas, quien no tiene espacio
+  social ve el botón; al pulsarlo, la guía le explica que compartir con enlace es de la parte social y con
+  «Enséñame» le lleva a Social con el modo cooperativo en marcha; con «Ahora no», el botón se retira de ese
+  dispositivo, porque sin lo social no hace nada.
+- **Quien ya tenía lo social descubre «Compartir».** No pasó por la guía y nada le señalaba el botón: la primera vez
+  que abre una reseña suya sin tener nada compartido, el botón lleva una etiqueta «Nuevo» con el chip de su tema.
+  En cuanto se ve, no vuelve a salir en ese dispositivo. Se comparta desde el panel o desde el social, el enlace de
+  una reseña es siempre el mismo (lo fija ahora una prueba).
+- **La dirección de una reseña copiada de la barra lleva a la página principal.** Abierta en frío en otro navegador
+  —la de Estadísticas sin ese juego, o una del social sin lo social o sin poder verla—, ya no deja a nadie en sus
+  propias reseñas, en la pasarela o en «ya no está disponible». El dueño sigue viendo la suya, y dentro de la
+  aplicación una actividad borrada se sigue diciendo donde se pulsó.
+- **La dirección de una reseña del panel lleva una huella del juego** (`/stats/resenas/7-z6ayj6`). El número es
+  el del juego en cada biblioteca, y el 7 de una persona es otro juego en la de otra: abierta fuera, enseñaba la
+  reseña de otro juego. La huella sale del nombre, mide siempre seis caracteres y no lo deja a la vista (la ruta
+  viaja a la analítica). Las direcciones de antes, sin huella, se siguen abriendo como siempre.
+- **El resumen del año se comparte.** Del 15 de diciembre al 15 de enero, al final de tu resumen hay un solo botón,
+  «Compartir», con el icono de compartir de la app: la primera vez crea el enlace en el mismo gesto (y eso avisa a
+  tus amistades: la tarjeta del feed ya no sale sola al abrirlo) y abre el menú de compartir del sistema o, donde no
+  lo hay, copia el enlace. Solo si tu resumen ha cambiado desde entonces y ya ha pasado la espera, el botón pasa a
+  «Actualizar enlace»; la espera no se enseña. El enlace es siempre el mismo, enseña tus juegos, notas, géneros y
+  meses —sin reseñas ni días— y caduca solo el 16 de enero. Quien lo abre sin la app lo ve sin carátulas; con la
+  parte social, con las que ya estén resueltas. Como no lleva reseñas, tampoco dice «Sin reseña» de su autor.
+- **Condiciones y privacidad nuevas (`LEGAL_VERSION` 2026-10-12).** Declaran el enlace público del resumen anual y
+  que el aviso a tus amistades sale al compartirlo, no al consultarlo. Todo el mundo vuelve a pasar por la puerta
+  del social.
+- **La temporada del resumen del año llega hasta el 15 de enero.** Se sigue estrenando el 15 de diciembre, pero
+  el aviso y la tarjeta en el feed de tus amistades ya no se cortan el 31: quien no abre la app en las fiestas lo
+  recibe a la vuelta, con el año que se estrenó. Es la misma ventana en la que se puede compartir.
+
+### Fixed
+- **«El mejor del año» sin carátula ya no enseña una caja vacía.** Con las carátulas apagadas, o en la página
+  pública sin cuenta social, el hueco con el nombre repetía el título de al lado y parecía una imagen sin cargar.
+- **La etiqueta «Nuevo» va debajo del botón «Compartir»**, en vez de montarse encima.
+
 ### Internal
 - **La auditoría de dependencias de desarrollo vuelve a 0.** Las once vulnerabilidades venían todas de
   `firebase-tools` (chokidar 3 → braces, pubsub → `@opentelemetry/core` 1, proxy-agent → `basic-ftp` 5, gaxios 6 →
   `uuid` 9), y el arreglo que proponía `npm audit fix --force` era bajar `firebase-tools` de la 15.33 a la 14.23. Van
   por `overrides` acotados a su árbol; el emulador de Firestore sigue pasando las reglas. Y ESLint queda sin avisos.
+- **La espera entre actualizaciones del enlace del resumen no entra en el arranque**: vive con la ventana de
+  compartir (`yearShareWindow.ts`), fuera de `tiers.ts`.
+- Plan y medición del cupo de KV en `docs/plan-resumen-del-ano.md`; la maqueta del social enseña el botón de
+  compartir, el aviso de diciembre y el capítulo del reto.
+
+### Deploy
+- **Pages Functions nuevas o cambiadas**: `/api/share/year` (publicar y actualizar el enlace del resumen), `/r/:token`
+  (la página pública del resumen y su vista previa en los chats) y `/api/share/mine`. Usan el mismo KV `SHARES`, sin
+  bindings nuevos; un enlace de resumen cuesta 3 escrituras y actualizarlo, 1. Probado con `wrangler pages dev` y
+  KV local (12-10-2026) con un artículo sembrado: lectura, vista previa del chat, sugerencias vacías, enlace
+  inexistente y rechazo sin sesión. Crear y actualizar de verdad no se pudo (hace falta sesión de Google y la
+  ventana abre el 14-12): eso lo cubren las pruebas con KV espía.
+- **Se vuelve a pedir la aceptación legal** (`LEGAL_VERSION` 2026-10-12): cada persona con espacio social pasa por la
+  puerta antes de seguir.
+- **Sin cambios efectivos en reglas ni índices de Firestore**: en `firestore.rules` solo cambia un comentario (la
+  temporada hasta el 15 de enero), así que no hace falta desplegarlas.
 
 ## [1.6.10] - 2026-10-10
 

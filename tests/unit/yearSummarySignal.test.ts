@@ -1,5 +1,5 @@
 // La TEMPORADA del resumen del año y lo que pasa en ella: la tarjeta del feed (`core/social/yearSummaryFeed`), la
-// señal que se publica al abrir tu resumen (`useYearSummarySignal`) y el aviso propio del 15 (`useYearSummaryNotice`).
+// señal que se publica al compartir tu resumen (`useYearSummarySignal`) y el aviso propio del 15 (`useYearSummaryNotice`).
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { yearSummaryFeedEntries, YEAR_SUMMARY_FEED_DAYS } from '../../src/core/social/yearSummaryFeed';
@@ -42,44 +42,87 @@ describe('la tarjeta del feed', () => {
   });
 });
 
-describe('la señal al abrir tu resumen', () => {
+describe('la señal al compartir tu resumen', () => {
   const props = { uid: 'uid-a', published: true, alreadySeenYear: null as number | null };
 
   it('en temporada, publica el año una sola vez', async () => {
     vi.setSystemTime(new Date(2026, 11, 16));
     const { result } = renderHook(() => useYearSummarySignal(props));
-    await act(async () => result.current(2026));
+    await act(async () => result.current.announce(2026));
     expect(publish).toHaveBeenCalledWith('uid-a', 2026);
     expect(localStorage.getItem(yearSummaryPublishedKey('uid-a'))).toBe('2026');
-    await act(async () => result.current(2026));
+    await act(async () => result.current.announce(2026));
     expect(publish).toHaveBeenCalledTimes(1);
   });
 
   it('fuera de temporada, o con el resumen de otro año, no publica', async () => {
     vi.setSystemTime(new Date(2026, 9, 1));
     const { result } = renderHook(() => useYearSummarySignal(props));
-    await act(async () => result.current(2025));
+    await act(async () => result.current.announce(2025));
     vi.setSystemTime(new Date(2026, 11, 16));
-    await act(async () => result.current(2025));
+    await act(async () => result.current.announce(2025));
+    expect(publish).not.toHaveBeenCalled();
+  });
+
+  it('hasta el 15 de enero sigue publicando el año que se estrenó en diciembre', async () => {
+    vi.setSystemTime(new Date(2027, 0, 15, 22));
+    const { result } = renderHook(() => useYearSummarySignal(props));
+    await act(async () => result.current.announce(2027));
+    await act(async () => result.current.announce(2026));
+    expect(publish).toHaveBeenCalledTimes(1);
+    expect(publish).toHaveBeenCalledWith('uid-a', 2026);
+  });
+
+  it('desde el 16 de enero ya no publica', async () => {
+    vi.setSystemTime(new Date(2027, 0, 16));
+    const { result } = renderHook(() => useYearSummarySignal(props));
+    await act(async () => result.current.announce(2026));
     expect(publish).not.toHaveBeenCalled();
   });
 
   it('sin perfil publicado, o con el año ya en el directorio, tampoco', async () => {
     vi.setSystemTime(new Date(2026, 11, 16));
     const sinPerfil = renderHook(() => useYearSummarySignal({ ...props, published: false }));
-    await act(async () => sinPerfil.result.current(2026));
+    await act(async () => sinPerfil.result.current.announce(2026));
     const yaVisto = renderHook(() => useYearSummarySignal({ ...props, alreadySeenYear: 2026 }));
-    await act(async () => yaVisto.result.current(2026));
+    await act(async () => yaVisto.result.current.announce(2026));
     expect(publish).not.toHaveBeenCalled();
+  });
+
+  it('dice si ya está avisado, y entonces anunciar no vuelve a escribir', async () => {
+    vi.setSystemTime(new Date(2026, 11, 16));
+    const { result } = renderHook(() => useYearSummarySignal(props));
+    expect(result.current.isAnnounced(2026)).toBe(false);
+    await act(async () => {
+      expect(await result.current.announce(2026)).toBe(true);
+    });
+    expect(result.current.isAnnounced(2026)).toBe(true);
+    const yaVisto = renderHook(() => useYearSummarySignal({ ...props, alreadySeenYear: 2026 }));
+    expect(yaVisto.result.current.isAnnounced(2026)).toBe(true);
+    await act(async () => {
+      expect(await yaVisto.result.current.announce(2026)).toBe(true);
+    });
+    expect(publish).toHaveBeenCalledTimes(1);
+  });
+
+  it('dos toques seguidos escriben una sola vez', async () => {
+    vi.setSystemTime(new Date(2026, 11, 16));
+    const { result } = renderHook(() => useYearSummarySignal(props));
+    await act(async () => {
+      await Promise.all([result.current.announce(2026), result.current.announce(2026)]);
+    });
+    expect(publish).toHaveBeenCalledTimes(1);
   });
 
   it('si la escritura falla, no lo da por publicado y lo reintenta', async () => {
     vi.setSystemTime(new Date(2026, 11, 16));
     publish.mockRejectedValueOnce(new Error('sin red'));
     const { result } = renderHook(() => useYearSummarySignal(props));
-    await act(async () => result.current(2026));
+    await act(async () => {
+      expect(await result.current.announce(2026)).toBe(false);
+    });
     expect(localStorage.getItem(yearSummaryPublishedKey('uid-a'))).toBeNull();
-    await act(async () => result.current(2026));
+    await act(async () => result.current.announce(2026));
     expect(publish).toHaveBeenCalledTimes(2);
   });
 });
@@ -93,6 +136,21 @@ describe('el aviso del 15', () => {
     expect(result.current.year).toBeNull();
     expect(localStorage.getItem(YEAR_SUMMARY_TOLD_KEY)).toBe('2026');
     // Otra visita el mismo año: ya dicho.
+    expect(renderHook(() => useYearSummaryNotice(true, [game([2026])])).result.current.year).toBeNull();
+  });
+
+  it('quien no lo vio en diciembre lo recibe hasta el 15 de enero, con el año que se estrenó', () => {
+    vi.setSystemTime(new Date(2027, 0, 10));
+    expect(renderHook(() => useYearSummaryNotice(true, [game([2026])])).result.current.year).toBe(2026);
+    vi.setSystemTime(new Date(2027, 0, 16));
+    expect(renderHook(() => useYearSummaryNotice(true, [game([2026])])).result.current.year).toBeNull();
+  });
+
+  it('dado en diciembre, no se repite en enero', () => {
+    vi.setSystemTime(new Date(2026, 11, 20));
+    const { result } = renderHook(() => useYearSummaryNotice(true, [game([2026])]));
+    act(() => result.current.markShown());
+    vi.setSystemTime(new Date(2027, 0, 5));
     expect(renderHook(() => useYearSummaryNotice(true, [game([2026])])).result.current.year).toBeNull();
   });
 

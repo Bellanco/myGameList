@@ -103,8 +103,8 @@ service cloud.firestore {
 
     /**
      * EL AVISO DEL RESUMEN DEL AÑO (`profiles/{uid}.yearSummary`): `{ year, at }`, el año del resumen que su dueño
-     * ya ha abierto y cuándo. Lo escribe el propio dueño al abrirlo en temporada (del 15 al 31 de diciembre) y lo
-     * leen sus amistades para pintar la tarjeta del feed (ver `core/social/yearSummaryFeed.ts`).
+     * ya ha abierto y cuándo. Lo escribe el propio dueño al abrirlo en temporada (del 15 de diciembre al 15 de
+     * enero) y lo leen sus amistades para pintar la tarjeta del feed (ver `core/social/yearSummaryFeed.ts`).
      *
      * Forma cerrada y acotada, como el espejo de logros: un mapa con esas dos claves, un año entero razonable y una
      * fecha. Nada que se pueda usar como almacén.

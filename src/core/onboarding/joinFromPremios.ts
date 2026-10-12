@@ -40,6 +40,9 @@ export function isGuideShowing(state: TourState | null): boolean {
  *
  * No hace falta la tarjeta de bienvenida: el sí ya lo ha dado al pulsar. Y con una guía en marcha, plegada o
  * abierta en su lista, no se toca nada (`null`): ahí manda ella.
+ *
+ * Lo usa también el «Compartir» de una reseña sin lo social (`social`), que es la misma situación: alguien de fuera
+ * de lo social dice que sí desde una pantalla que no es la suya.
  */
 export function joinFromPremios(state: TourState | null, kind: PremiosInviteKind = 'list'): TourState | null {
   if (state && RUNNING.includes(state.status)) return null;

@@ -139,8 +139,11 @@ export interface YearSummary {
   previous: SummaryPrevious | null;
   /** Solo al mirar a OTRA persona: lo que completasteis los dos ese año. */
   common: SummaryCommon | null;
-  /** Su resultado en la porra de ese año: puesto 1–5, o 0 si participó sin entrar en los cinco. */
-  palmares: { rank: number; seasonName: string } | null;
+  /**
+   * Su resultado en el reto del jugador (los premios) de ese año: puesto 1–5, o 0 si participó sin entrar en los
+   * cinco; `place` es entonces su puesto real en la clasificación, si se sabe. `null` si no jugó esa edición.
+   */
+  palmares: { rank: number; seasonName: string; place: number | null } | null;
 }
 
 const STRENGTHS_MAX = 8;
@@ -362,7 +365,8 @@ function buildPalmares(entries: readonly PalmaresEntry[], year: number): YearSum
   if (ofYear.length === 0) return null;
   const placed = ofYear.filter((entry) => !isParticipation(entry)).sort((a, b) => a.rank - b.rank)[0];
   const entry = placed || ofYear[0];
-  return { rank: placed ? entry.rank : 0, seasonName: entry.seasonName };
+  const place = !placed && Number(entry.place) > 0 ? Number(entry.place) : null;
+  return { rank: placed ? entry.rank : 0, seasonName: entry.seasonName, place };
 }
 
 export interface YearSummaryInput {

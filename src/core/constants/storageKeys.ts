@@ -234,6 +234,17 @@ export const SOCIAL_CAN_POST_KEY = 'mis-listas-social-can-post';
 // aplicación: para esa persona la guía no existe hasta que la pide desde Ajustes › Datos.
 export const ONBOARDING_KEY = 'mis-listas-onboarding';
 
+// «COMPARTIR» SIN LO SOCIAL — 'on' cuando se contestó «Ahora no» (o la X) a la burbuja que explica que compartir es
+// de la parte social. Desde entonces el botón no se ofrece en ESTE dispositivo: sin lo social no hace nada, y
+// dejarlo a la vista tras decir que no es un botón inservible. Si llega lo social, sale el botón de verdad, que no
+// mira esta marca. Por dispositivo, como la guía: perderla solo hace que el botón vuelva a salir.
+export const SHARE_INVITE_DECLINED_KEY = 'mis-listas-share-invite-declined';
+
+// «COMPARTIR» CON LO SOCIAL — 'on' cuando ya se vio, una vez, la marca «Nuevo» junto al botón, que sale a quien
+// nunca ha compartido. Es para quien ya tenía lo social y por eso no pasó por la guía: nada más le decía que el botón
+// existe. Por dispositivo: perderla solo hace que se enseñe una vez más.
+export const SHARE_TIP_SEEN_KEY = 'mis-listas-share-tip-seen';
+
 /**
  * COMPARTIR SIN SERVICIO (docs/plan-degradacion-servicios.md, fase 3). Hasta cuándo no se vuelve a preguntar a
  * `/api/share` tras una respuesta de «no disponible», y la última lista de enlaces de cada usuario, para que Ajustes

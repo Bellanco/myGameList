@@ -1,8 +1,9 @@
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { SHARE_UI } from '../../../core/constants/shareLabels';
 import { Icon } from '../Icon';
 import { ShareReviewModal } from '../../modals/ShareReviewModal';
 import { shareDraftOf, useShareViewModel } from '../../../viewmodel/useShareViewModel';
+import { markShareTipSeen, readShareTipSeen, shareInviteStore } from '../../../model/repository/shareInviteStore';
 import type { GameItem } from '../../../model/types/game';
 
 /**
@@ -15,9 +16,27 @@ import type { GameItem } from '../../../model/types/game';
  *
  * El estado del enlace se pide al abrir el detalle, no al arrancar la app: quien nunca comparte no hace ni una
  * petición.
+ *
+ * `onSocialInvite`: quien lo monta sabe enseñar por qué compartir es de lo social (la burbuja de la guía). Sin él,
+ * a quien no tiene lo social no se le ofrece nada.
  */
-export const ShareReviewButton = memo(function ShareReviewButton({ game, reviewText }: { game: GameItem; reviewText: string }) {
+export const ShareReviewButton = memo(function ShareReviewButton({
+  game,
+  reviewText,
+  onSocialInvite,
+}: {
+  game: GameItem;
+  reviewText: string;
+  onSocialInvite?: () => void;
+}) {
   const vm = useShareViewModel();
+  const inviteDeclined = useSyncExternalStore(shareInviteStore.subscribe, shareInviteStore.get, shareInviteStore.get);
+  /** ¿Toca la marca «Nuevo»? Se decide una vez, al montar: es de una sola vez por dispositivo. */
+  const [tipPending, setTipPending] = useState(() => !readShareTipSeen());
+  const closeTip = useCallback(() => {
+    markShareTipSeen();
+    setTipPending(false);
+  }, []);
   const [open, setOpen] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState('');
   const [renewed, setRenewed] = useState(false);
@@ -62,12 +81,14 @@ export const ShareReviewButton = memo(function ShareReviewButton({ game, reviewT
    * más, no el camino por defecto.
    */
   const openDialog = useCallback(() => {
+    // Quien pulsa ya lo ha descubierto: la marca que lo señala sobra.
+    if (tipPending) closeTip();
     const current = vm.shareOf(game.id);
     setPublishedUrl(current ? `${window.location.origin}/r/${current.token}` : '');
     setPublishedExpiresAt(current?.expiresAt || 0);
     setRenewed(false);
     setOpen(true);
-  }, [game.id, vm]);
+  }, [closeTip, game.id, tipPending, vm]);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -76,6 +97,20 @@ export const ShareReviewButton = memo(function ShareReviewButton({ game, reviewT
     setRenewed(false);
     vm.clearError();
   }, [vm]);
+
+  /**
+   * LA MARCA «NUEVO», una sola vez por dispositivo, a quien ya tenía lo social y nunca ha compartido: no pasó por la
+   * guía, y nada le señalaba el botón. Es el chip de cada tema (`hub-feed-game-chip`) y no una burbuja de la guía,
+   * que tiene una forma propia y genérica (decisión del 12-10-2026). Con la lista de sus enlaces ya cargada
+   * (`quota`), para no enseñársela un instante a quien sí tiene alguno, y solo junto al botón de verdad.
+   */
+  const showTip = vm.available === true && !vm.ban && !vm.serviceDown
+    && tipPending && !open && vm.quota !== null && vm.shares.length === 0 && !existing;
+  // UNA SOLA VEZ DE VERDAD: se da por vista en cuanto sale. Quien no la pulsa y se va a otra reseña ya la ha visto,
+  // y no se le vuelve a enseñar; en esta se queda hasta que pulse el botón.
+  useEffect(() => {
+    if (showTip) markShareTipSeen();
+  }, [showTip]);
 
   // Mientras no se sabe si hay sesión (`null`) no se pinta nada: enseñar el botón y quitarlo medio segundo
   // después es peor que esperar.
@@ -87,14 +122,24 @@ export const ShareReviewButton = memo(function ShareReviewButton({ game, reviewT
   // desaparecer en silencio dejaba al usuario buscando un botón que no está —el síntoma que se reportó—, así que
   // se dice qué falta. Mismo tratamiento visual que el veto: un distintivo, no un botón que no lleva a nada.
   //
-  // Solo a quien YA usa el espacio social en este navegador (`hasSocialSpace`). Quien nunca lo ha abierto no está
-  // echando en falta ningún botón: para esa persona el aviso sería ruido en su panel de reseñas sobre algo que no
-  // ha pedido, así que sigue sin ver nada.
+  // A quien nunca ha abierto el espacio social (`hasSocialSpace` falso) un distintivo de «falta la sesión» le
+  // hablaría de algo que no conoce. A esa persona se le ofrece el botón de siempre, y al pulsarlo la guía le cuenta
+  // que compartir es de lo social y le ofrece el camino (12-10-2026): sin él, no había forma de saber que existía.
+  // Si a eso contesta «Ahora no», el botón se va de este dispositivo (`shareInviteStore`): sin lo social no hace
+  // nada, y quedarse a la vista tras un no es dejar un botón inservible.
   if (vm.available === false) {
-    return vm.hasSocialSpace ? (
-      <span className="hub-feed-game-chip share-unavailable" title={SHARE_UI.signInRequiredHint}>
-        {SHARE_UI.signInRequired}
-      </span>
+    if (vm.hasSocialSpace) {
+      return (
+        <span className="hub-feed-game-chip share-unavailable" title={SHARE_UI.signInRequiredHint}>
+          {SHARE_UI.signInRequired}
+        </span>
+      );
+    }
+    return onSocialInvite && !inviteDeclined ? (
+      <button className="btn btn-secondary" type="button" data-tour="share-review" onClick={onSocialInvite} aria-label={SHARE_UI.actionAria}>
+        <Icon name="share-nodes" />
+        <span>{SHARE_UI.action}</span>
+      </button>
     ) : null;
   }
 
@@ -112,12 +157,22 @@ export const ShareReviewButton = memo(function ShareReviewButton({ game, reviewT
     );
   }
 
+
   return (
     <>
-      <button className="btn btn-secondary" type="button" onClick={openDialog} aria-label={SHARE_UI.actionAria}>
-        <Icon name="share-nodes" />
-        <span>{existing ? SHARE_UI.shared : SHARE_UI.action}</span>
-      </button>
+      {/* Envuelto SIEMPRE, con marca o sin ella: si el envoltorio apareciera y se fuera con la marca, el botón se
+          volvería a montar al pulsarlo y el foco no tendría a dónde volver al cerrar el diálogo. */}
+      <span className="share-action">
+        <button className="btn btn-secondary" type="button" data-tour="share-review" onClick={openDialog} aria-label={SHARE_UI.actionAria}>
+          <Icon name="share-nodes" />
+          <span>{existing ? SHARE_UI.shared : SHARE_UI.action}</span>
+        </button>
+        {showTip ? (
+          <span className="share-new-slot">
+            <span className="hub-feed-game-chip share-new">{SHARE_UI.newBadge}</span>
+          </span>
+        ) : null}
+      </span>
       {existing ? <span className="share-expiry">{SHARE_UI.expiresIn(daysLeft)}</span> : null}
       <ShareReviewModal
         open={open}

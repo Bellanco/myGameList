@@ -59,6 +59,11 @@ Antes de tocar nada, apuntar **una semana** de consumo real para poder comparar:
 
 Apuntar los números al pie de este documento (sección «Mediciones»).
 
+**Medición parcial de KV (12-10-2026, panel de Cloudflare, del 1 al 12 de octubre):** `mygamelist-covers`
+660 escrituras (~55/día), 27.650 lecturas (~2.300/día), 0 *list*; `mygamelist-shares` 159 escrituras (~13/día),
+2.300 lecturas, 195 *list* (~16/día). Juntos, ~7 % del cupo de escrituras y ~2,5 % del de lecturas. Siguen sin
+medir Functions y Firestore. Detalle en `docs/plan-resumen-del-ano.md`, Fase 0.
+
 ---
 
 ## Fase 1 — Frenar la reconsulta de premios · S · ✅ hecha (30-09-2026)

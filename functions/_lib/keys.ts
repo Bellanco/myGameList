@@ -104,10 +104,12 @@ export const coverExemptionKey = (ip: string): string => `igdb:cupo-libre:v1:${i
  * unidad del recurso que protege.
  *
  * Por qué 700. Resolver un juego nuevo cuesta una escritura (el emparejamiento), más las del contador: con el
- * lote de 50 son ~14 al día, o sea ~714 en total. Quedan ~285 para compartir —unas 57 publicaciones diarias a
- * cinco escrituras cada una (artículo, propietario, índice, contador e índice de sugeridos), muy por encima del
- * uso real— y aun así caben DOS bibliotecas grandes nuevas en un mismo día, que es el caso legítimo más caro que
- * existe (la de referencia tiene 302 juegos).
+ * lote de 50 son ~14 al día, o sea ~714 en total. De lo que queda, el contador por IP (~70) y las claves JWKS
+ * (~28) se llevan ~100, y quedan ~185 para compartir: unas 37 reseñas a cinco escrituras cada una (artículo,
+ * propietario, índice, contador e índice de sugeridos), o unos 60 resúmenes del año nuevos a tres (artículo,
+ * propietario e índice; actualizarlo es una). Muy por encima del uso real —medido en octubre de 2026, todo KV gasta
+ * ~68 escrituras al día (docs/plan-resumen-del-ano.md, Fase 0)— y aun así caben DOS bibliotecas grandes nuevas en
+ * un mismo día, que es el caso legítimo más caro que existe (la de referencia tiene 302 juegos).
  *
  * Sigue siendo un tope BLANDO, por lo mismo que el de IP: KV no tiene incremento atómico y sus lecturas llegan
  * con retraso. Acota el gasto sostenido, que es lo que vacía el presupuesto; no el segundo exacto en que corta.
@@ -147,10 +149,24 @@ export function dailyQuotaKey(uid: string, now: number): string {
   return `quota:${uid}:${new Date(now).toISOString().slice(0, 10)}`;
 }
 
-/** Lo que viaja en la `metadata` de `user:{uid}:{token}`: lo justo para pintar una fila y contar cuota. */
+/**
+ * Lo que viaja en la `metadata` de `user:{uid}:{token}`: lo justo para pintar una fila y contar cuota.
+ *
+ * El enlace del RESUMEN DEL AÑO comparte índice con las reseñas —así el censo, el veto con purga y el borrado de
+ * cuenta lo alcanzan sin código aparte— y se distingue por `kind: 'year'`. Lleva `gameId: 0` y un `gameName`
+ * legible («Resumen de 2026») para que cualquier pantalla que pinte filas sepa qué enseñar; NO cuenta para la cuota
+ * de reseñas (ver `readShareStatus`).
+ */
 export interface ShareIndexMetadata {
   gameId: number;
   gameName: string;
   createdAt: number;
   expiresAt: number;
+  kind?: 'year';
+  year?: number;
+}
+
+/** ¿Es la fila del enlace de un resumen del año? */
+export function isYearShareMeta(meta: ShareIndexMetadata | null | undefined): boolean {
+  return meta?.kind === 'year';
 }

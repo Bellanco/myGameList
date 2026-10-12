@@ -47,6 +47,17 @@ const root = path.join(__dirname, '..');
 // tipografía base puede servirse con menos pesos. Subir el número otra vez es lo último, y exige volver a hacer
 // estas tres mediciones y escribir el resultado aquí.
 //
+// OJO CON LA (1), REMEDIDA EL 12-10-2026 sobre `8dbc10db`: NO ADELGAZA NADA. Lo que queda en el arranque de
+// `IconSprite` (39 símbolos, tras partirlo con `IconSpriteRest`) pesa 7,8 kB comprimidos como JS minificado y
+// 7,6 kB como `.svg` (cada uno comprimido por separado con gzip -9): gzip ya se come el sobrecoste del JSX. Los
+// ~7 kB que suelta del CRÍTICO salen solo de que el `.svg` deja de bloquear el primer pintado —y habría que
+// clasificarlo aquí abajo como las fuentes—, no de que se descargue menos. Lo que sí gana: ~20 kB menos de JS
+// que procesar al arrancar. Lo que cuesta: los iconos llegan DESPUÉS del primer pintado (en la primera visita, un
+// instante tarde; con caché, posiblemente un fotograma sin ellos, sin medir), que es el mismo tipo de coste por
+// el que abajo se descarta separar los tokens de los temas. Y para no perder el modo sin red, el `.svg` tiene que
+// entrar a mano en el precache: el plugin `serviceWorkerPrecache` de `vite.config.ts` solo recoge chunks y su CSS.
+// Sigue siendo la palanca para cuando algo no quepa, pero compra margen en el presupuesto, no velocidad.
+//
 // Y HAY UNA TERCERA, seis veces más grande que la primera, que se midió el 17-09-2026 y NO se aplicó: sacar la
 // tipografía base del precache. Son 36 kB, el 17 % del presupuesto, y no se perdería del todo —`/fonts/` cae en
 // `handleStaleWhileRevalidate`, así que entraría en caché en la primera visita que la use—. Lo que sí se pierde
@@ -65,6 +76,7 @@ const root = path.join(__dirname, '..');
 // Tres conclusiones:
 //   · `IconSprite` es el mayor con diferencia, el 15 % del chunk. Confirma con datos que la palanca (1) de
 //     arriba es la buena: sacarlo a un `.svg` externo son ~6 kB comprimidos, y subiría el margen de ~5 a ~11 kB.
+//     (Corregido el 12-10-2026: esos kB salen del crítico, no de la descarga; ver «OJO CON LA (1)» arriba.)
 //   · La RULETA se colaba en el arranque y ya no: el modal era perezoso, pero `App` importaba `buildListsPool`
 //     y `buildListsWeigher` de forma estática para dos `useMemo`. El cálculo se mudó a `ListsRouletteModal`
 //     (envoltorio dentro del chunk perezoso). OJO, LA LECCIÓN: eso SOLO no cambió ni un byte, porque
@@ -89,8 +101,8 @@ const root = path.join(__dirname, '..');
 //
 // NO se cargan por separado, y no es pereza: esos tokens son lo que pinta el PRIMER FOTOGRAMA. Sacarlos a un
 // fichero aparte obliga a elegir entre bloquear el render hasta descargarlo o enseñar la aplicación sin color
-// un instante, y cambiar de tema pasaría a ser asíncrono. Cuatro kilobytes no pagan eso: la palanca (1) da más
-// del doble sin tocar el primer fotograma.
+// un instante, y cambiar de tema pasaría a ser asíncrono. Cuatro kilobytes no pagan eso. (La palanca (1) no es
+// la salida limpia que aquí se suponía: también saca algo del primer fotograma —los iconos—; ver arriba.)
 // ══════════════════════════════════════════════════════════════════════════════════════════════════════════
 // DOS NÚMEROS Y NO UNO, desde el 17-09-2026. El de antes (220 kB para todo el precache) mezclaba dos cosas que
 // no se parecen, y eso tenía un agujero: la tipografía son 36 kB con `font-display: swap`, o sea que NO retrasa

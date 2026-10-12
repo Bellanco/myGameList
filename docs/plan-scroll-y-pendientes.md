@@ -80,7 +80,10 @@ contador `legacy` del panel estaba a cero al cerrarlo.
 28,4 kB sin comprimir, el 15 % del chunk de arranque y el mayor con diferencia. *(Cifra anterior a `873f7e78`, que
 partió el sprite en dos y dejó los extras perezosos en `IconSpriteRest`: hoy son 20,5 kB minificados en el chunk de
 entrada, medido el 01-10-2026. El margen y el ahorro de abajo hay que volver a medirlos.)* Sacarlo con
-`<use href="/sprite.svg#icon-x">` da ~6 kB comprimidos y subiría el margen de 5,7 a unos 11 kB.
+`<use href="/sprite.svg#icon-x">` da ~6 kB comprimidos y subiría el margen de 5,7 a unos 11 kB. *(Remedido el
+12-10-2026 sobre `8dbc10db`: 7,8 kB comprimidos como JS y 7,6 como `.svg`, así que la descarga no baja; los ~7 kB
+salen del presupuesto crítico solo si `ci-validate.js` clasifica el `.svg` como no bloqueante. El detalle, en el
+comentario de esa palanca.)*
 
 Coste: una petición más (precacheable, así que solo la primera visita), toca el componente `Icon` que usa toda
 la aplicación, y en esa primera visita los iconos pueden entrar con un instante de retraso.

@@ -144,7 +144,8 @@ export const TOUR_UI = {
     no: 'No, gracias',
     coop: {
       title: '¿Quieres entrar en la parte social?',
-      text: 'Comparte con tus amigos lo que juegas y tus reseñas, y descubre a qué juegan ellos. Solo son dos pasos y tu nombre, y te guiamos en los dos.',
+      perks: true,
+      text: 'Solo son dos pasos y tu nombre, y te guiamos en los dos.',
     },
     cloud: {
       title: '¿Quieres guardar tus listas en la nube?',
@@ -166,8 +167,33 @@ export const TOUR_UI = {
     },
     social: {
       title: '¿Quieres ver qué hacen tus amigos?',
-      text: 'Además de los premios, en la parte social ves a qué juegan tus amigos y lees sus reseñas. Solo son dos pasos y te guiamos en los dos.',
+      perks: true,
+      text: 'Además de los premios, la parte social te da todo esto. Solo son dos pasos y te guiamos en los dos.',
     },
+  },
+  /**
+   * LO QUE GANA QUIEN ENTRA EN LO SOCIAL, en el «¿Quieres…?» de Social y en la invitación de los premios. Sin lo
+   * social nada de esto se ve —«Diseño» no sale en Ajustes y «Compartir» no sale en las reseñas—, así que si no se
+   * dice aquí no hay forma de saber que existe. Cada línea tiene que ser CIERTA para quien acaba de entrar: nada
+   * que dependa del rango.
+   */
+  perks: [
+    { id: 'friends', text: 'Mira a qué juegan tus amigos y lee sus reseñas' },
+    { id: 'share', text: 'Comparte tus reseñas con un enlace, también fuera de la aplicación' },
+    { id: 'design', text: 'Elige el tema de la aplicación y tu escala de nota' },
+    { id: 'profile', text: 'Tu perfil, con tus logros y tus publicaciones' },
+  ],
+  /**
+   * QUIEN PULSA «COMPARTIR» EN UNA RESEÑA SIN TENER LO SOCIAL. El enlace público exige identidad, así que en vez del
+   * diálogo de publicar se le dice por qué no se puede y se le ofrece el camino. «Ahora no» retira el botón de este
+   * dispositivo (ver `shareInviteStore`).
+   */
+  share: {
+    kicker: 'Espacio social',
+    title: 'Compartir es de la parte social',
+    text: 'Para compartir tu reseña con un enlace hace falta el espacio social. Son dos pasos, GitHub y Google, y te guiamos en los dos.',
+    yes: 'Enséñame',
+    no: 'Ahora no',
   },
   nextMission: 'Siguiente misión',
   missionDoneKicker: 'Misión cumplida',

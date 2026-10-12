@@ -83,7 +83,13 @@
 // «a salvo»—, así que la versión sube y todo el mundo vuelve a pasar por la puerta.
 // 2026-10-07, también: cada aviso de lista se publica solo durante 30 días (`FEED_RECENT_DAYS`) y luego se retira del
 // canal. Se declara el plazo, pero la versión NO sube por él: es publicar menos (mismo criterio que el 2026-08-26).
-export const LEGAL_VERSION = '2026-10-07b';
+// 2026-10-12: el RESUMEN ANUAL POR ENLACE (docs/plan-resumen-del-ano.md). Del 15 de diciembre al 15 de enero, quien
+// quiera puede publicar su resumen del año con un enlace público: lo que hasta ahora veían solo sus amistades (y con
+// sesión) lo puede leer cualquiera que tenga el enlace. Es una acción voluntaria, como compartir una reseña, pero con
+// datos que lo aceptado no contemplaba en público, así que la versión sube y todo el mundo vuelve a pasar por la
+// puerta (mismo criterio que con los enlaces de reseñas). A la vez, el aviso a tus amistades deja de salir al
+// consultar tu resumen y sale al compartirlo: eso es publicar menos y no la subiría por sí solo.
+export const LEGAL_VERSION = '2026-10-12';
 
 /**
  * Se emite en `window` cada vez que este dispositivo sella la versión aceptada (`sealLegalConsent`). Lo escucha la

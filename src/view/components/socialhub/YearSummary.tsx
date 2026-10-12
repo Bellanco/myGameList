@@ -6,7 +6,7 @@ import { hueFromGrade, type ScoreScale } from '../../../core/utils/scoreScale';
 import type { YearSummary as YearSummaryData } from '../../../core/stats/yearSummary';
 import { useScoreScale } from '../../hooks/useScoreScale';
 import { formatDecimal } from '../stats/format';
-import { useReviewCover } from './useReviewCover';
+import { useReviewCover, type CoverAccess } from './useReviewCover';
 import { ReviewTraits } from '../stats/ReviewTraits';
 // La hoja va con el componente, que es perezoso: así llega con él a cualquier sitio que lo monte, sin depender de
 // que otra hoja del hub esté cargada (ver `styles/yearSummary.scss`).
@@ -27,6 +27,16 @@ const COLLAGE_MIN = 3;
 interface YearSummaryProps {
   summary: YearSummaryData;
   voice: SummaryVoice;
+  /**
+   * Qué carátulas se piden. Por omisión, las del propio perfil como siempre y las de otra persona con el cupo de lo
+   * ajeno. La página pública de un enlace lo decide ella: nada sin cuenta social (ver `PublicYearSummary`).
+   */
+  coverAccess?: CoverAccess;
+  /**
+   * ¿Este resumen PUEDE traer cita? El que se comparte por enlace nunca la lleva (se queda fuera a propósito), y
+   * entonces un «Sin reseña» diría algo falso de su autor: la línea simplemente no se pinta.
+   */
+  quotes?: boolean;
 }
 
 function gradeText(grade: number, scale: ScoreScale): string {
@@ -178,10 +188,10 @@ function CoverCollage({ urls }: { urls: string[] }) {
   );
 }
 
-export const YearSummary = memo(function YearSummary({ summary, voice }: YearSummaryProps) {
+export const YearSummary = memo(function YearSummary({ summary, voice, coverAccess, quotes = true }: YearSummaryProps) {
   const scale = useScoreScale();
   // Mismo criterio que sus reseñas: de la estantería de otra persona, con el cupo de lo ajeno (`c=2`).
-  const coverOf = useReviewCover(voice.own ? true : 'solo-cache');
+  const coverOf = useReviewCover(coverAccess ?? (voice.own ? true : 'solo-cache'));
   const cover = summary.best ? coverOf(summary.best.name, summary.best.platforms) : null;
   // Mismo tamaño que el renglón del listado: lo que ya viste en tu lista sale de la caché del navegador.
   const collage = useMemo(
@@ -225,7 +235,6 @@ export const YearSummary = memo(function YearSummary({ summary, voice }: YearSum
               {L.format.chip(platform.name, platform.count)}
             </span>
           ))}
-          {summary.palmares ? <span className="ys-chip is-trophy">{L.cover.palmares(summary.palmares.rank, summary.palmares.seasonName)}</span> : null}
         </div>
       </>
     ),
@@ -238,16 +247,24 @@ export const YearSummary = memo(function YearSummary({ summary, voice }: YearSum
       icon: ICONS.best,
       kicker: L.best.kicker,
       body: (
-        <div className="ys-two">
-          <div className={`ys-boxart ${cover ? 'has-cover' : ''}`.trim()} style={cover ? ({ '--ys-cover': `url("${cover}")` } as CSSProperties) : undefined}>
-            <span>{best.name}</span>
-          </div>
+        // Sin carátula —preferencia apagada, o la página pública sin cuenta social— no hay caja: un hueco con el
+        // nombre repetía el título de al lado y se leía como una imagen que no ha cargado.
+        <div className={cover ? 'ys-two' : undefined}>
+          {cover ? (
+            <div className="ys-boxart has-cover" style={{ '--ys-cover': `url("${cover}")` } as CSSProperties}>
+              <span>{best.name}</span>
+            </div>
+          ) : null}
           <div>
             <h4 className="ys-title">{best.name}</h4>
             <div className="ys-meta">
               <Grade grade={best.grade} scale={scale} /> <span className="ys-dim">{L.format.meta([outOf, best.genre, best.platform])}</span>
             </div>
-            {best.quote ? <blockquote className="ys-quote">{L.format.quote(best.quote)}</blockquote> : <p className="ys-dim">{L.best.noQuote(voice)}</p>}
+            {best.quote ? (
+              <blockquote className="ys-quote">{L.format.quote(best.quote)}</blockquote>
+            ) : quotes ? (
+              <p className="ys-dim">{L.best.noQuote(voice)}</p>
+            ) : null}
             {summary.podium.length ? (
               <ol className="ys-podium" start={2} aria-label={L.best.podiumAria}>
                 {summary.podium.map((entry) => (
@@ -406,9 +423,24 @@ export const YearSummary = memo(function YearSummary({ summary, voice }: YearSum
     });
   }
 
+  // EL RETO DEL JUGADOR (los premios): solo si jugó la edición de ese año. Antes era una pastilla en la portada;
+  // ahora es su capítulo, detrás de «frente al año anterior» y antes de lo que tenéis en común.
+  if (summary.palmares) {
+    const { rank, place, seasonName } = summary.palmares;
+    cards.push({
+      key: 'premios',
+      icon: ICONS.premios,
+      kicker: L.premios.kicker,
+      body: (
+        <h4 className="ys-title">{L.premios.title(voice, seasonName, rank, place)}</h4>
+      ),
+    });
+  }
+
   /* SIN NADA EN COMÚN NI NADA QUE RECOMENDAR, NO HAY CAPÍTULO. Era una tarjeta entera —y la última, «04 / 04»— con
      una sola línea, «Este año no coincidisteis en ninguno» (09-10-2026): el resumen acababa en nada. Como la tira de
      logros de quien no los publica, lo que no tiene nada que decir no se pinta. */
+
   if (common && (common.names.length > 0 || common.picks.length > 0)) {
     const { near, gap, affinity, picks } = common;
     cards.push({

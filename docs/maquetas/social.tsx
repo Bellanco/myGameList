@@ -32,6 +32,15 @@ import { SocialProfileScreen } from '../../src/view/components/socialhub/SocialP
 import { ProfileAchievementsScreen, ProfileGlobalAchievements } from '../../src/view/components/socialhub/ProfileAchievements';
 import type { ProfilePostEntry } from '../../src/view/components/socialhub/ProfilePostsList';
 import { summaryYear } from '../../src/core/stats/summaryYear';
+import { buildYearSummary } from '../../src/core/stats/yearSummary';
+import { publicYearSummary } from '../../src/core/stats/publicYearSummary';
+import { YearSummarySharePanel } from '../../src/view/components/socialhub/YearSummaryShare';
+import { PublicReviewScreen } from '../../src/view/components/PublicReviewScreen';
+import { YearSummary } from '../../src/view/components/socialhub/YearSummary';
+import type { YearShareViewModel } from '../../src/viewmodel/useYearShareViewModel';
+import type { SharedYearSummary } from '../../src/model/types/share';
+import type { FinishedGame } from '../../src/core/utils/finishDates';
+import { YearSummaryToast } from '../../src/view/components/YearSummaryToast';
 import { packAchievements } from '../../src/core/achievements/pack';
 import { LADDERS } from '../../src/core/achievements/catalog';
 import type { AchievementState } from '../../src/core/achievements/types';
@@ -417,6 +426,77 @@ function Perfil({ propio = false }: { propio?: boolean }) {
   );
 }
 
+/**
+ * El resumen de Marta como lo publicaría su enlace: el mismo para tu resumen (en la maqueta) y para la página
+ * pública. Jugó el reto del jugador de ese año y quedó segunda, para que salga su capítulo.
+ */
+function resumenDeMarta() {
+  const reto = { seasonId: `reto-${ANIO}`, seasonName: `El reto del jugador ${ANIO}`, rank: 2, season: ANIO, awardedAt: Date.now() };
+  return buildYearSummary({ completed: LISTAS_DE_MARTA.c as FinishedGame[], year: ANIO, precision: 'month', palmares: [reto] });
+}
+
+/**
+ * COMPARTIR TU RESUMEN (del 15 de diciembre al 15 de enero): tu resumen y, al final de todo, el botón que toque. El
+ * modelo de vista es inventado y no hay red. `abrir`: vacío (sin enlace: «Compartir», que lo crea), `al-dia`
+ * («Compartir»), `cambiado` («Actualizar enlace») o `espera` (cambiado, pero aún no toca: «Compartir»).
+ */
+function CompartirResumen() {
+  const abrir = params.get('abrir') || '';
+  const dia = 24 * 60 * 60 * 1000;
+  const resumen = resumenDeMarta();
+  const vm: YearShareViewModel = {
+    loading: false,
+    link: abrir ? { token: 'AbCdEfGhIjKlMnOpQrStUv', url: `${window.location.origin}/r/AbCdEfGhIjKlMnOpQrStUv`, expiresAt: Date.UTC(ANIO + 1, 0, 16, 12) } : null,
+    changed: abrir === 'cambiado' || abrir === 'espera',
+    nextUpdateAt: abrir === 'espera' ? Date.now() + 2 * dia : null,
+    busy: false,
+    serviceDown: false,
+    error: '',
+    load: async () => {},
+    publish: async () => { avisar('crearía o actualizaría el enlace, y avisaría a tus amistades')(); return null; },
+  };
+  if (!resumen) return null;
+  return (
+    <section className="hub-hub hub-screen">
+      <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
+        <div className="hub-detail-metadata">
+          <div className="hub-metadata-section">
+            <strong>{`Resumen de ${ANIO}`}</strong>
+            <YearSummary summary={resumen} voice={{ own: true, name: 'Yo' }} coverAccess={false} />
+            <YearSummarySharePanel year={ANIO} vm={vm} />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * LA PÁGINA DE UN RESUMEN COMPARTIDO (`/r/`), la de verdad (`PublicReviewScreen`), con la API simulada.
+ * `abrir=sin-app`: quien no tiene la app (modo artículo: sin carátulas, sin la app alrededor, solo la salida a la
+ * página principal). Vacío: alguien con la parte social en ese navegador, dentro de la app y con carátulas si tiene
+ * la preferencia encendida (`?caratulas=1` la enciende; necesita el servidor de desarrollo con `/cover`).
+ */
+function ResumenPublico() {
+  const sinApp = params.get('abrir') === 'sin-app';
+  const resumen = resumenDeMarta();
+  const token = 'AbCdEfGhIjKlMnOpQrStUv';
+  if (resumen && !(window as { __apiSimulada?: boolean }).__apiSimulada) {
+    const articulo: SharedYearSummary = {
+      v: 1, kind: 'year', year: ANIO, summary: publicYearSummary(resumen), authorNick: MARTA.displayName,
+      createdAt: Date.now(), updatedAt: Date.now(), expiresAt: Date.UTC(ANIO + 1, 0, 16, 12),
+    };
+    const real = window.fetch.bind(window);
+    window.fetch = (input, init) =>
+      String(input).endsWith(`/api/share/${token}`)
+        ? Promise.resolve(new Response(JSON.stringify(articulo), { status: 200, headers: { 'content-type': 'application/json' } }))
+        : real(input, init);
+    (window as { __apiSimulada?: boolean }).__apiSimulada = true;
+  }
+  if (params.get('caratulas') === '1') localStorage.setItem('mis-listas-covers', 'on');
+  return <PublicReviewScreen token={token} standalone={sinApp} coverAccess={sinApp ? false : 'solo-cache'} />;
+}
+
 /** Los ajustes de TU perfil social: nombre, qué se comparte, la foto y la salida. */
 function Ajustes() {
   const [nombre, setNombre] = useState('Yo');
@@ -631,11 +711,27 @@ const PANTALLAS: Record<string, { nombre: string; ruta: string; pintar: () => Re
       </>
     ),
   },
+  // Tampoco es del hub: es el aviso del 15 de diciembre en el carril de `App`, el mismo que el de las condiciones.
+  'aviso-resumen': {
+    nombre: 'Carril: tu resumen ya está aquí (15 de diciembre)',
+    ruta: '/',
+    pintar: () => (
+      <>
+        <Feed />
+        <div className="ach-toast-stack">
+          <YearSummaryToast year={ANIO} onDone={noop} />
+        </div>
+      </>
+    ),
+  },
   amigos: { nombre: 'Perfiles (directorio)', ruta: '/social/profiles', pintar: () => <Amigos /> },
   solicitudes: { nombre: 'Solicitudes', ruta: '/social/requests', pintar: () => <Solicitudes /> },
   'solicitudes-vacia': { nombre: 'Solicitudes (ninguna)', ruta: '/social/requests', pintar: () => <Solicitudes vacia /> },
   perfil: { nombre: 'Perfil de una amiga', ruta: RUTA_MARTA + subruta, pintar: () => <Perfil /> },
   'perfil-propio': { nombre: 'Tu perfil', ruta: RUTA_PROPIA + subruta, pintar: () => <Perfil propio /> },
+  'compartir-resumen': { nombre: 'Compartir tu resumen (temporada)', ruta: RUTA_PROPIA, pintar: () => <CompartirResumen /> },
+  // No es del hub —es la página de `/r/`—, pero así se ve en los ocho temas sin sesión.
+  'resumen-publico': { nombre: 'Resumen compartido (enlace)', ruta: '/r/AbCdEfGhIjKlMnOpQrStUv', pintar: () => <ResumenPublico /> },
   ajustes: { nombre: 'Ajustes del perfil social', ruta: '/social/profile', pintar: () => <Ajustes /> },
   logros: { nombre: 'Logros de una amiga', ruta: `${RUTA_MARTA}/logros`, pintar: () => <Logros /> },
   globales: { nombre: 'Logros: vista global', ruta: `${RUTA_MARTA}/globales`, pintar: () => <Logros global /> },
@@ -646,6 +742,13 @@ const PANTALLAS: Record<string, { nombre: string; ruta: string; pintar: () => Re
 /** Las combinaciones de `vista` y `abrir` que tienen sentido, para la barra. */
 const VARIANTES: Record<string, Array<{ nombre: string; vista?: string; abrir?: string }>> = {
   perfil: [{ nombre: 'Listas' }, { nombre: 'Reseñas', vista: 'resenas' }, { nombre: 'Estadísticas', abrir: 'estadisticas' }, { nombre: 'Resumen del año', abrir: 'resumen' }],
+  'compartir-resumen': [
+    { nombre: 'Sin enlace' },
+    { nombre: 'Enlace al día', abrir: 'al-dia' },
+    { nombre: 'Ha cambiado', abrir: 'cambiado' },
+    { nombre: 'Ha cambiado, con espera', abrir: 'espera' },
+  ],
+  'resumen-publico': [{ nombre: 'Con la parte social' }, { nombre: 'Sin la app', abrir: 'sin-app' }],
   'perfil-propio': [{ nombre: 'Listas' }, { nombre: 'Reseñas', vista: 'resenas' }, { nombre: 'Publicaciones', vista: 'publicaciones' }, { nombre: 'Estadísticas', abrir: 'estadisticas' }, { nombre: 'Resumen del año', abrir: 'resumen' }],
 };
 
@@ -693,15 +796,24 @@ function Barra() {
 
 const elegida = PANTALLAS[pantalla] || PANTALLAS.feed;
 const conBarra = params.get('barra') !== '0';
+// La página de un enlace abierta sin la app (modo artículo) trae su propio marco —su `main` y la salida a la página
+// principal— y su propio sprite, como en `main.tsx`: no va dentro del `main` del social ni con el sprite de la app.
+const modoArticulo = pantalla === 'resumen-publico' && params.get('abrir') === 'sin-app';
 
 createRoot(document.getElementById('root') as HTMLElement).render(
   <MemoryRouter initialEntries={[elegida.ruta]}>
-    <IconSprite />
-    <IconSpriteRest />
-    <main id="contenido" className="main main-social">
-      <h1 className="sr-only">Social</h1>
-      {elegida.pintar()}
-    </main>
+    {modoArticulo ? (
+      elegida.pintar()
+    ) : (
+      <>
+        <IconSprite />
+        <IconSpriteRest />
+        <main id="contenido" className="main main-social">
+          <h1 className="sr-only">Social</h1>
+          {elegida.pintar()}
+        </main>
+      </>
+    )}
     {conBarra ? <Barra /> : null}
   </MemoryRouter>,
 );

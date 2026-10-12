@@ -57,6 +57,14 @@ describe('YearSummary — composición de la portada', () => {
     expect(container.querySelector('.ys-collage')).toBeNull();
   });
 
+  it('la página pública sin cuenta social no pide ni una carátula, aunque la preferencia esté encendida', () => {
+    localStorage.setItem('mis-listas-covers', 'on');
+    const { container } = render(<YearSummary summary={summary} voice={voice} coverAccess={false} />);
+    expect(container.querySelector('.ys-collage')).toBeNull();
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.querySelector('.has-cover')).toBeNull();
+  });
+
   it('«contigo» lleva de fondo la carátula del mejor juego en común', () => {
     localStorage.setItem('mis-listas-covers', 'on');
     const { container } = render(<YearSummary summary={summary} voice={voice} />);
@@ -191,5 +199,58 @@ describe('lo que más valoró, y lo que le chirrió', () => {
     const { container } = render(<YearSummary summary={traits} voice={voice} />);
     expect(container.querySelectorAll('.traits-side.is-good .traits-name')).toHaveLength(3);
     expect(container.querySelectorAll('.traits-side.is-bad .traits-name')).toHaveLength(0);
+  });
+});
+
+describe('YearSummary — el reto del jugador', () => {
+  const own = { own: true, name: 'Yo' };
+  const conReto = (palmares: NonNullable<typeof summary.palmares>) => ({ ...summary, palmares });
+
+  it('sin edición jugada ese año, no hay capítulo', () => {
+    render(<YearSummary summary={summary} voice={voice} />);
+    expect(screen.queryByText(YEAR_SUMMARY_UI.premios.kicker)).toBeNull();
+  });
+
+  it('con puesto de trofeo, solo el puesto', () => {
+    const { container } = render(<YearSummary summary={conReto({ rank: 2, seasonName: 'El reto 2025', place: null })} voice={own} />);
+    expect(screen.getByText(YEAR_SUMMARY_UI.premios.kicker)).toBeInTheDocument();
+    const title = screen.getByRole('heading', { name: 'Quedaste 2.º en El reto 2025' });
+    expect(title.nextElementSibling).toBeNull();
+    expect(container.textContent).not.toMatch(/palmarés/);
+  });
+
+  it('con participación, su puesto real si se sabe; si no, que jugó', () => {
+    render(<YearSummary summary={conReto({ rank: 0, seasonName: 'El reto 2025', place: 7 })} voice={voice} />);
+    expect(screen.getByRole('heading', { name: 'Ada quedó 7.º en El reto 2025' })).toBeInTheDocument();
+    cleanup();
+    render(<YearSummary summary={conReto({ rank: 0, seasonName: 'El reto 2025', place: null })} voice={voice} />);
+    expect(screen.getByRole('heading', { name: 'Ada jugó El reto 2025' })).toBeInTheDocument();
+  });
+});
+
+describe('YearSummary — juego del año', () => {
+  it('sin carátulas no hay caja: ni con la preferencia apagada ni sin acceso', () => {
+    const { container } = render(<YearSummary summary={summary} voice={voice} />);
+    expect(container.querySelector('.ys-boxart')).toBeNull();
+    cleanup();
+    localStorage.setItem('mis-listas-covers', 'on');
+    const sinAcceso = render(<YearSummary summary={summary} voice={voice} coverAccess={false} />);
+    expect(sinAcceso.container.querySelector('.ys-boxart')).toBeNull();
+  });
+
+  it('con carátula, la caja lleva la imagen', () => {
+    localStorage.setItem('mis-listas-covers', 'on');
+    const { container } = render(<YearSummary summary={summary} voice={voice} />);
+    expect(container.querySelector('.ys-boxart.has-cover')).not.toBeNull();
+  });
+});
+
+describe('YearSummary — el que se comparte por enlace', () => {
+  it('sin cita no dice «Sin reseña»: la cita se queda fuera a propósito, no es que no la haya', () => {
+    render(<YearSummary summary={summary} voice={voice} quotes={false} />);
+    expect(screen.queryByText(YEAR_SUMMARY_UI.best.noQuote(voice))).toBeNull();
+    cleanup();
+    render(<YearSummary summary={summary} voice={voice} />);
+    expect(screen.getByText(YEAR_SUMMARY_UI.best.noQuote(voice))).toBeInTheDocument();
   });
 });

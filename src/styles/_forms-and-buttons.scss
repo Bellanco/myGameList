@@ -350,6 +350,31 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   opacity: 0.8;
   align-self: center;
 }
+/* La marca «Nuevo», DEBAJO del botón de compartir y centrada con él. Cuelga fuera de la fila (absoluta) para no
+   hacerla crecer ni mover el botón de volver. La posición va en un hueco propio y no en el chip, porque el chip de
+   cada tema trae la suya (Sin futuro lo hace `relative` para su muesca) y ganaría por especificidad. */
+.share-action {
+  position: relative;
+  display: inline-flex;
+}
+.share-new-slot {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  translate: -50% 0;
+  z-index: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* Con la fila en solo iconos (el mismo corte de 620 px de `_layout.scss`), el botón es un cuadrado pegado al borde
+   derecho y la marca, más ancha que él: centrada se salía de la tarjeta. Ahí se alinea a su borde derecho. */
+@media (max-width: 620px) {
+  .share-new-slot {
+    left: auto;
+    right: 0;
+    translate: none;
+  }
+}
 .share-banned,
 .share-unavailable {
   opacity: 0.9;

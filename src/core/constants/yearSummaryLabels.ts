@@ -13,13 +13,14 @@ import type { IconName } from './icons';
  * mismos dibujos que el resto de la app ya enseña para esas ideas (el trofeo de los premios, la bandera a cuadros
  * de terminar un juego, las dos personas de lo social).
  */
-export const YEAR_SUMMARY_ICONS: Record<'cover' | 'best' | 'when' | 'genres' | 'tags' | 'previous' | 'common', IconName> = {
+export const YEAR_SUMMARY_ICONS: Record<'cover' | 'best' | 'when' | 'genres' | 'tags' | 'previous' | 'premios' | 'common', IconName> = {
   cover: 'star',
   best: 'trophy',
   when: 'checkered-flag',
   genres: 'chart-simple',
   tags: 'signature',
   previous: 'repeat',
+  premios: 'star-olive-branches',
   common: 'bottom-hub',
 };
 
@@ -70,7 +71,6 @@ export const YEAR_SUMMARY_UI = {
     finished: (v: SummaryVoice, count: number) => (v.own ? `Terminaste ${games(count)}` : `${v.name} terminó ${games(count)}`),
     withReview: (count: number) => (count === 0 ? '' : count === 1 ? ', uno con reseña' : `, ${count} con reseña`),
     avg: 'nota media',
-    palmares: (rank: number, season: string) => (rank > 0 ? `${season} · ${rank}.º puesto` : `${season} · participación`),
     platformsAria: 'Plataformas del año',
   },
 
@@ -120,6 +120,19 @@ export const YEAR_SUMMARY_UI = {
     heads: (v: SummaryVoice) => (v.own ? { strengths: 'Lo valoraste', weaknesses: 'Te chirrió' } : { strengths: 'Lo valoró', weaknesses: 'Le chirrió' }),
   },
 
+  /**
+   * EL RETO DEL JUGADOR de ese año (los premios), si jugó esa edición. Nunca «Game Awards»: es una marca ajena (ver
+   * `premiosLabels.ts`). El nombre de la edición sale tal cual está en su archivo.
+   */
+  premios: {
+    kicker: 'El reto del jugador',
+    title: (v: SummaryVoice, edition: string, rank: number, place: number | null) => {
+      const puesto = rank > 0 ? rank : place;
+      if (!puesto) return v.own ? `Jugaste ${edition}` : `${v.name} jugó ${edition}`;
+      return v.own ? `Quedaste ${puesto}.º en ${edition}` : `${v.name} quedó ${puesto}.º en ${edition}`;
+    },
+  },
+
   previous: {
     kicker: (year: number) => `Frente a ${year}`,
     /** El titular cuando la carrera cuenta el mes en que ya había más juegos que en todo el año anterior. */
@@ -153,11 +166,30 @@ export const YEAR_SUMMARY_UI = {
   notice: {
     kicker: 'Ya está aquí',
     title: (year: number) => `Tu resumen de ${year}`,
-    text: 'Los juegos y géneros de tu año, y lo que compartes con tus amigos. Se actualiza hasta el 31.',
+    // Sin «se actualiza hasta el 31»: el aviso sale hasta el 15 de enero, y entonces ya sería falso.
+    text: 'Los juegos y géneros de tu año, y lo que compartes con tus amigos.',
     open: 'Ver mi resumen',
     /** Lo que lee el lector de pantalla al pulsar la cápsula, y lo que anuncia su región viva al salir. */
     aria: (year: number) => `Tu resumen de ${year}. Ver mi resumen`,
     announce: (year: number) => `Tu resumen de ${year}. Los juegos y géneros de tu año, y lo que compartes con tus amigos.`,
+  },
+
+  /**
+   * Compartir tu resumen, del 15 de diciembre al 15 de enero: un solo botón al final del resumen. Nunca nombra el
+   * rango, y la espera entre actualizaciones no se dice: mientras dure, el botón es «Compartir».
+   */
+  share: {
+    update: 'Actualizar enlace',
+    share: 'Compartir',
+    copied: 'Enlace copiado',
+    busy: 'Un momento…',
+    nativeTitle: (year: number) => `Mi resumen de ${year}`,
+    unavailable: 'Compartir no está disponible ahora mismo. Inténtalo más tarde.',
+  },
+
+  /** La página pública del enlace (`/r/`): de quién es, porque quien la abre no viene del perfil. */
+  publicPage: {
+    by: (nick: string) => `De ${nick}`,
   },
 
   common: {

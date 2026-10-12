@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { YEAR_SUMMARY_TOLD_KEY } from '../../core/constants/storageKeys';
-import { hasCompletedIn, isSummarySeason, summaryYear } from '../../core/stats/summaryYear';
+import { hasCompletedIn, isShareSeason, summaryYear } from '../../core/stats/summaryYear';
 import type { GameItem } from '../../model/types/game';
 
 function readTold(): number {
@@ -22,8 +22,9 @@ function writeTold(year: number): void {
 /**
  * EL AVISO DEL 15 DE DICIEMBRE: «tu resumen de 2026 ya está aquí», en el carril de abajo a la izquierda.
  *
- * Sale una vez por año y navegador, la primera vez que se abre la app en TEMPORADA (del 15 al 31), y solo si
- * hay dónde verlo: un perfil social (el resumen vive en él) y algo completado ese año (si no, no hay resumen).
+ * Sale una vez por año y navegador, la primera vez que se abre la app en TEMPORADA (del 15 de diciembre al 15 de
+ * enero), y solo si hay dónde verlo: un perfil social (el resumen vive en él) y algo completado ese año (si no, no
+ * hay resumen).
  * Se apunta como dado al MONTARSE la cápsula (`markShown`), como el aviso del administrador: si un logro se queda
  * el carril, este no se ha dicho todavía y espera su turno.
  */
@@ -34,7 +35,7 @@ export function useYearSummaryNotice(
   const [closedYear, setClosedYear] = useState(readTold);
   const now = new Date();
   const year = summaryYear(now);
-  const show = hasSocialProfile && isSummarySeason(now) && closedYear !== year && hasCompletedIn(completed, year);
+  const show = hasSocialProfile && isShareSeason(now) && closedYear !== year && hasCompletedIn(completed, year);
   const markShown = useCallback(() => writeTold(year), [year]);
   const dismiss = useCallback(() => {
     writeTold(year);

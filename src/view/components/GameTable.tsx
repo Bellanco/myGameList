@@ -4,6 +4,7 @@ import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import { COMMON_ICONS, TAB_ICONS } from '../../core/constants/icons';
 import { categoryToneStyle, categoryToneVar } from '../../core/constants/categoryTone';
 import { TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from '../../core/constants/labels';
+import { statsReviewPath } from '../../core/utils/reviewPath';
 import { COMPACT_TABLE_MAX_WIDTH } from '../../core/constants/uiConfig';
 import { FilePickerButton } from './FilePickerButton';
 import { GameCover } from './GameCover';
@@ -91,7 +92,7 @@ interface GameTableProps {
   };
   /**
    * A DÓNDE LLEVA el enlace «Ver análisis» de la fila expandida. Por defecto, a tu reseña en
-   * `/stats/resenas/:id`; el perfil social lo apunta a la reseña de ESE perfil dentro del hub, que es donde se
+   * `/stats/resenas/:id-huella` (ver `reviewPath`); el perfil social lo apunta a la reseña de ESE perfil dentro del hub, que es donde se
    * lee la de otra persona. `state` viaja con la navegación (el `backTo` del botón de volver).
    */
   reviewLink?: (gameId: number) => { to: string; state?: unknown };
@@ -525,8 +526,8 @@ export const GameTable = memo(function GameTable({
   /* A DÓNDE LLEVA «ver el análisis», el mismo destino desde el detalle del renglón y desde la caja del
      mosaico. `backTo` es de dónde se viene, para que el botón de volver de aquella pantalla devuelva AQUÍ y no
      al listado de reseñas, que es de donde se llega normalmente. */
-  const reviewTarget = (gameId: number) =>
-    reviewLink?.(gameId) ?? { to: `/stats/resenas/${gameId}`, state: { backTo: TAB_ROUTE[currentTab] } };
+  const reviewTarget = (game: GameItem) =>
+    reviewLink?.(game.id) ?? { to: statsReviewPath(game.id, game.name), state: { backTo: TAB_ROUTE[currentTab] } };
 
   // Por debajo de `COMPACT_TABLE_MAX_WIDTH` no cabe una fila de tabla, se pinte lo que se pinte. Se calcula
   // aquí y no con un listener propio porque este efecto ya escucha `resize` y observa el `<body>`: es
@@ -1151,7 +1152,7 @@ export const GameTable = memo(function GameTable({
                             const resena = covers && showReview && supportsReview(currentTab) && game.review ? (
                               <Link
                                 className="game-card-review"
-                                {...reviewTarget(game.id)}
+                                {...reviewTarget(game)}
                                 aria-label={UI_MESSAGES.detail.reviewLinkAria(game.name)}
                                 title={UI_MESSAGES.detail.reviewLinkAria(game.name)}
                                 onClick={(event) => event.stopPropagation()}
@@ -1474,7 +1475,7 @@ export const GameTable = memo(function GameTable({
                         {/* EL ANÁLISIS NO SE VUELCA AQUÍ: se va a leer a su pantalla. Volcado ocupaba el detalle
                             entero —hay reseñas de veinte mil caracteres— y empujaba fuera de la vista todo lo
                             demás, que es lo que se abre el detalle para ver. El enlace lleva a
-                            `/stats/resenas/:id` (o a donde diga `reviewLink`), donde ya se lee con su ancho de
+                            `/stats/resenas/:id-huella` (o a donde diga `reviewLink`), donde ya se lee con su ancho de
                             lectura y su medallón.
                             Es un ENLACE y no un botón porque es navegación: así se puede abrir en otra pestaña,
                             copiar la dirección o volver con el botón de atrás. Y ocupa una celda de la rejilla
@@ -1487,7 +1488,7 @@ export const GameTable = memo(function GameTable({
                                 className="btn btn-open"
                                 /* Con su `backTo` (ver `reviewTarget`): el panel ya usaba este mismo estado
                                    para distinguir sus dos orígenes; esta es la tercera puerta. */
-                                {...reviewTarget(game.id)}
+                                {...reviewTarget(game)}
                                 aria-label={UI_MESSAGES.detail.reviewLinkAria(game.name)}
                                 onClick={(event) => event.stopPropagation()}
                               >

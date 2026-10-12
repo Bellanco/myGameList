@@ -140,6 +140,56 @@ test.describe('guía de primeros pasos', () => {
     await expect(page.getByRole('dialog', { name: '¿Quieres entrar en la parte social?' })).toHaveCount(0);
   });
 
+  test('el ofrecimiento de lo social cuenta lo que se gana', async ({ page }) => {
+    await sembrarBiblioteca(page);
+    await page.goto('/social');
+    const hint = page.getByRole('dialog', { name: '¿Quieres entrar en la parte social?' });
+    await expect(hint).toBeVisible();
+    await expect(hint.locator('.ob-perks li')).toHaveCount(4);
+    await expect(hint).toContainText('Comparte tus reseñas con un enlace');
+    await expect(hint).toContainText('Elige el tema');
+  });
+
+  /**
+   * «COMPARTIR» SIN LO SOCIAL (12-10-2026). Antes el botón no salía y no había forma de saber que existía; ahora sale
+   * y, al pulsarlo, la guía dice por qué no se puede y lleva al modo cooperativo.
+   */
+  test('compartir una reseña sin lo social lo explica y «Enséñame» lleva a Social con la misión en marcha', async ({ page }) => {
+    await sembrarBiblioteca(page, { amplia: true });
+    await page.goto('/stats/resenas');
+    const abrir = page.locator('.hub-review-open').first();
+    await abrir.waitFor({ timeout: 15_000 });
+    await abrir.click();
+
+    const compartir = page.locator('[data-tour="share-review"]');
+    await expect(compartir).toBeVisible();
+    await compartir.click();
+    const burbuja = page.getByRole('dialog', { name: 'Compartir es de la parte social' });
+    await expect(burbuja).toBeVisible();
+    // Ni el diálogo de publicar, que sin identidad solo llevaría a un error.
+    await expect(page.locator('dialog[open]')).toHaveCount(0);
+    const { violations } = await new AxeBuilder({ page }).include('.ob-bubble').withTags(WCAG).analyze();
+    expect(violations.map((violation) => violation.id)).toEqual([]);
+
+    await burbuja.getByRole('button', { name: 'Ahora no' }).click();
+    await expect(burbuja).toBeHidden();
+    expect(await page.evaluate(() => localStorage.getItem('mis-listas-onboarding'))).toBeNull();
+    // Tras el «no», el botón se retira: sin lo social no hace nada.
+    await expect(compartir).toHaveCount(0);
+    await page.reload();
+    await expect(page.locator('.hub-feed-card-detail')).toBeVisible();
+    await expect(compartir).toHaveCount(0);
+
+    // Sin esa respuesta, «Enséñame» lleva a Social con la misión en marcha.
+    await page.evaluate(() => localStorage.removeItem('mis-listas-share-invite-declined'));
+    await page.reload();
+    await compartir.click();
+    await burbuja.getByRole('button', { name: 'Enséñame' }).click();
+    await expect(page).toHaveURL(/\/social$/);
+    const guardada = JSON.parse(await page.evaluate(() => localStorage.getItem('mis-listas-onboarding') ?? 'null'));
+    expect(guardada).toMatchObject({ status: 'active', mission: 'coop', single: true });
+  });
+
   test('sin sincronización, en Ajustes › Datos se ofrece la nube y lleva a su tarjeta', async ({ page }) => {
     await sembrarBiblioteca(page);
     await page.goto('/ajustes/datos');

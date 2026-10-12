@@ -529,3 +529,25 @@
   .ys-collage { transition: opacity .5s ease; }
 }
 
+
+/* ══ COMPARTIR TU RESUMEN (del 15 de diciembre al 15 de enero) ════════════════════════════════════════════════
+   Al final del resumen: un solo botón, el que toque, y debajo una línea solo si hay algo que decir (la fecha de la
+   próxima actualización o que el servicio no atiende). Solo fichas y los botones por función de la casa. */
+.ys-share {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .5rem;
+  margin: 1.1rem 0 0;
+  text-align: center;
+}
+
+.ys-share-text {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: .92rem;
+}
+
+.ys-share-error {
+  color: var(--danger);
+}

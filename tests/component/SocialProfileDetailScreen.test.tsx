@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { SocialProfileDetailScreen } from '../../src/view/components/socialhub/SocialProfileDetailScreen';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { ADMIN_ONLY_TIER } from '../../src/core/constants/tiers';
@@ -258,9 +258,9 @@ describe('SocialProfileDetailScreen — resumen del año', () => {
   // Los juegos de prueba mezclan las dos formas (completa y pública) a propósito: el tipo no admite el cruce.
   const friend = (c: object[]) => ({ displayName: 'Ada', visibility, sharedLists: { c: c as never[], v: [], e: [], p: [] } });
 
-  function pinta(props: Record<string, unknown>) {
+  function pinta(props: Record<string, unknown>, today = new Date(2026, 9, 1)) {
     vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(new Date(2026, 9, 1));
+    vi.setSystemTime(today);
     return render(
       <SocialProfileDetailScreen
         SOCIAL_UI={SOCIAL_UI}
@@ -320,23 +320,42 @@ describe('SocialProfileDetailScreen — resumen del año', () => {
     expect(screen.getByRole('button', { name: YEAR_SUMMARY_UI.buttonBack })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('abrir TU resumen avisa con su año; el de otra persona, no', async () => {
-    const onOwnSummaryOpened = vi.fn();
-    pinta({ activeProfileDetail: friend([of2025(1, 'Halo')]), onOwnSummaryOpened, openSummaryOnMount: true });
-    await screen.findByText(YEAR_SUMMARY_UI.title(2025));
-    expect(onOwnSummaryOpened).not.toHaveBeenCalled();
-    cleanup();
+  it('abrir TU resumen ya no avisa a tus amistades: eso lo hace compartir', async () => {
+    const yearSummarySignal = { isAnnounced: vi.fn(() => false), announce: vi.fn(async () => true) };
     pinta({
       isOwnProfile: true,
       activeProfileDetail: { displayName: 'Yo', visibility, sharedLists: { c: [], v: [], e: [], p: [] } },
       viewerCompleted: [of2025(1, 'Halo')],
-      onOwnSummaryOpened,
+      yearSummarySignal,
     });
-    expect(onOwnSummaryOpened).not.toHaveBeenCalled();
     screen.getByRole('button', { name: YEAR_SUMMARY_UI.button }).click();
     await screen.findByText(YEAR_SUMMARY_UI.title(2025));
-    expect(onOwnSummaryOpened).toHaveBeenCalledWith(2025);
+    expect(yearSummarySignal.announce).not.toHaveBeenCalled();
   });
+
+  it('en temporada, tu resumen lleva el botón de compartir al final; fuera de ella y en el de otra persona, no', async () => {
+    const own = {
+      isOwnProfile: true,
+      activeProfileDetail: { displayName: 'Yo', visibility, sharedLists: { c: [], v: [], e: [], p: [] } },
+      viewerCompleted: [of2025(1, 'Halo')],
+      openSummaryOnMount: true,
+    };
+    const { container } = pinta(own, new Date(2026, 0, 10));
+    await waitFor(() => expect(container.querySelector('.ys-share')).not.toBeNull());
+    // Al final de todo: detrás del resumen, no encima.
+    const summary = container.querySelector('.ys') as HTMLElement;
+    expect(summary.compareDocumentPosition(container.querySelector('.ys-share') as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    cleanup();
+    const fuera = pinta(own, new Date(2026, 0, 20));
+    await screen.findByText(YEAR_SUMMARY_UI.title(2025));
+    expect(fuera.container.querySelector('.ys-share')).toBeNull();
+    cleanup();
+    const ajeno = pinta({ activeProfileDetail: friend([of2025(1, 'Halo')]), openSummaryOnMount: true }, new Date(2026, 0, 10));
+    await screen.findByText(YEAR_SUMMARY_UI.title(2025));
+    expect(ajeno.container.querySelector('.ys-share')).toBeNull();
+  });
+
+
 
   it('en tu perfil, con el día de cada fin', async () => {
     const at = (iso: string) => new Date(`${iso}T18:00:00`).getTime();

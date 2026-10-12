@@ -191,9 +191,16 @@ function getPageHeading(section: AppSection, currentTab: TabId, settingsGroup: S
  * El token se saca del `pathname` en lugar de con `useParams` porque esta pantalla se monta desde el mapa de
  * secciones, que no está dentro del `<Route>` que lo captura.
  */
-function SharedReviewRoute(): ReactNode {
+function SharedReviewRoute({ hasSocialProfile }: { hasSocialProfile: boolean }): ReactNode {
   const location = useLocation();
-  return <PublicReviewScreen token={location.pathname.replace(/^\/r\//, '').replace(/\/$/, '')} />;
+  // Las carátulas de un resumen del año compartido, solo con cuenta social (y con la preferencia encendida, que
+  // la aplica el propio componente): con el cupo de lo ajeno, como en el hub.
+  return (
+    <PublicReviewScreen
+      token={location.pathname.replace(/^\/r\//, '').replace(/\/$/, '')}
+      coverAccess={hasSocialProfile ? 'solo-cache' : false}
+    />
+  );
 }
 
 /** L4 — documento legal correspondiente a la ruta (`/legal/*`). Por defecto, el aviso legal. */
@@ -250,7 +257,7 @@ export default function App() {
   // él, y el piloto de la barra necesita además distinguir el tramo en el que todavía no se sabe.
   const socialStatus = useSocialProfileStatus(completedGameIds);
   const hasSocialProfile = socialStatus === 'active';
-  // El aviso del resumen del año (15–31 de diciembre): solo con perfil social, que es donde vive el resumen.
+  // El aviso del resumen del año (15 de diciembre – 15 de enero): solo con perfil social, que es donde vive el resumen.
   const yearSummaryNotice = useYearSummaryNotice(hasSocialProfile, vm.data.c);
   // Condiciones nuevas por aceptar: sin ellas no sale nada de la actividad (docs/plan-feed-sin-vacio.md, Fase 6).
   const legalNotice = useLegalConsentNotice(hasSocialProfile, activeSection === 'social');
@@ -917,6 +924,13 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const hasSocialSpace = useMemo(() => Boolean(getSocialSyncConfig()?.gistId?.trim()), [location.pathname, scoreScaleUid]);
   const reloginNeeded = authReady && !socialSignedIn && hasSocialSpace && activeSection === 'social';
+  /**
+   * ¿NO HAY LO SOCIAL, NI SIQUIERA UN ESPACIO EN ESTE DISPOSITIVO? Se le pasa al hub para las reseñas abiertas desde
+   * una dirección copiada (ver `useUnavailableReviewRedirect`): así no hay forma de verlas, y se lleva a la página
+   * principal en vez de a la pasarela. Quien tiene espacio y solo ha perdido la sesión no cuenta: al volver a entrar
+   * sí puede verla. La redirección vive en el hub, que es perezoso, para no cargar el arranque con sus rutas.
+   */
+  const withoutSocial = authReady && socialStatus === 'inactive' && !hasSocialSpace;
 
   /**
    * LOS OFRECIMIENTOS DE UNA MISIÓN («¿Quieres…?»), para quien ya usaba la aplicación: al llegar a Social sin lo
@@ -953,9 +967,22 @@ export default function App() {
     ? (gameCount === 0 ? 'list' : 'social')
     : null;
   const [premiosInvite, setPremiosInvite] = useState<PremiosInvite | null>(null);
+  /**
+   * «COMPARTIR» PULSADO SIN LO SOCIAL, en el detalle de una reseña del panel (ver `ShareReviewButton`): la guía
+   * señala el botón y cuenta por qué. Se guarda la pantalla en la que se pulsó y no un sí o un no, para que la burbuja
+   * se vaya sola al cambiar de reseña o de sección sin tener que cerrarla en cada salida.
+   */
+  const [shareInvitePath, setShareInvitePath] = useState<string | null>(null);
+  const openShareInvite = useCallback(() => setShareInvitePath(window.location.pathname), []);
+  const shareInvite = useMemo(() => ({
+    close: () => setShareInvitePath(null),
+    goSocial: () => navigate('/social'),
+  }), [navigate]);
+  const shareInviteOpen = shareInvitePath === location.pathname;
   const tourMounted = spriteRestoListo
     && TOUR_SECTIONS.has(activeSection)
-    && ((tourState !== null && isTourVisible(tourState)) || reloginNeeded || (activeSection === 'premios' && premiosInvite !== null));
+    && ((tourState !== null && isTourVisible(tourState)) || reloginNeeded || shareInviteOpen
+      || (activeSection === 'premios' && premiosInvite !== null));
 
   const syncBadgeText = resolveSyncBadge(syncVm.status, syncVm.pendingUpload, syncVm.syncPaused);
 
@@ -1068,13 +1095,14 @@ export default function App() {
           gameListOf={vm.gameListOf}
           moveGameToCurrentByName={vm.moveGameToCurrentByName}
           games={vm.data}
+          withoutSocial={withoutSocial}
         />
       </Suspense>
     ),
     stats: (
 
       <Suspense fallback={<ScreenSkeleton />}>
-        <StatsHub games={vm.data} />
+        <StatsHub games={vm.data} libraryReady={vm.libraryReady} onSocialInvite={openShareInvite} />
       </Suspense>
     ),
     // LA PORRA. Ya no recibe la biblioteca: la cruzaba con los nominados para decir en cada tarjeta en qué lista
@@ -1098,7 +1126,7 @@ export default function App() {
     'shared-review': (
 
       <Suspense fallback={<ScreenSkeleton />}>
-        <SharedReviewRoute />
+        <SharedReviewRoute hasSocialProfile={hasSocialProfile} />
       </Suspense>
     ),
     legal: (
@@ -1226,7 +1254,7 @@ export default function App() {
             <LegalConsentToast onShown={legalNotice.markShown} onDone={legalNotice.dismiss} />
           </Suspense>
         ) : yearSummaryNotice.year !== null ? (
-          // EL RESUMEN DEL AÑO, del 15 al 31 de diciembre: detrás del logro (lo que acabas de conseguir manda) y
+          // EL RESUMEN DEL AÑO, del 15 de diciembre al 15 de enero: detrás del logro (lo que acabas de conseguir manda) y
           // delante del anuncio, que puede esperar a otra visita.
           <Suspense fallback={null}>
             <YearSummaryToast year={yearSummaryNotice.year} onShown={yearSummaryNotice.markShown} onDone={yearSummaryNotice.dismiss} />
@@ -1339,6 +1367,7 @@ export default function App() {
               ctx={tourContext}
               relogin={reloginNeeded}
               premiosInvite={activeSection === 'premios' ? premiosInvite : null}
+              shareInvite={shareInviteOpen ? shareInvite : null}
             />
           </Suspense>
         </SilentBoundary>

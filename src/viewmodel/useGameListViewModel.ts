@@ -164,6 +164,11 @@ export function useGameListViewModel() {
   const [confirmState, setConfirmState] = useState<{ title: string; action: () => void; subjectId?: number } | null>(null);
   const [editingTab, setEditingTab] = useState<TabId>('c');
   const [draft, setDraft] = useState<GameDraft>(EMPTY_DRAFT);
+  /**
+   * ¿Ha terminado la carga inicial de la biblioteca (localStorage e IndexedDB)? Hasta entonces, que un juego no
+   * esté no quiere decir que no exista: lo que solo vive en IndexedDB llega un instante después del primer pintado.
+   */
+  const [libraryReady, setLibraryReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -212,6 +217,7 @@ export function useGameListViewModel() {
           lastRemoteUpdatedAt: hydrated.lastRemoteUpdatedAt,
         };
       });
+      setLibraryReady(true);
 
       // Auto-upgrade del estado local: si venía en forma vieja (campos legacy o sin `schemaVersion`),
       // reescribir UNA vez en formato nuevo. Conserva `updatedAt` y NO marca dirty: el disco queda en
@@ -760,6 +766,7 @@ export function useGameListViewModel() {
 
   return {
     data,
+    libraryReady,
     meta,
     setMeta,
     sort,

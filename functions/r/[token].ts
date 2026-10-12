@@ -1,4 +1,4 @@
-// GET /r/:token — página pública de una reseña compartida.
+// GET /r/:token — página pública de una reseña compartida (o de un resumen del año, `kind: 'year'`).
 //
 // QUÉ HACE Y QUÉ NO: no pinta la reseña (eso es cosa de la SPA, que la pide a `/api/share/:token`). Lo único que
 // aporta esta Function es reescribir los metadatos del shell para que la previsualización del enlace en un chat
@@ -8,11 +8,14 @@
 // Se responde SIEMPRE con el shell, también cuando el enlace no existe o ha caducado: la SPA se encarga de
 // enseñar "este enlace ya no está disponible". Devolver un 404 dejaría al visitante ante la página de error de
 // Cloudflare, que no explica nada y parece que la app está rota.
-import { withShareMeta, type ShareMeta } from '../_lib/html';
+import { withShareMeta, withYearShareMeta, type ShareMeta } from '../_lib/html';
 import { isValidToken } from '../_lib/http';
 import { shareKey, type Env } from '../_lib/keys';
 
 interface StoredArticle {
+  kind?: unknown;
+  year?: unknown;
+  summary?: { count?: unknown; best?: { name?: unknown; grade?: unknown } | null } | null;
   gameName?: unknown;
   grade?: unknown;
   rating?: unknown;
@@ -50,6 +53,21 @@ export async function onRequestGet(context: {
     return shell;
   }
 
+  const url = new URL(context.request.url);
+  const pageUrl = `${url.origin}${url.pathname}`;
+  const response = article.kind === 'year' ? yearPreview(shell, article, pageUrl) : reviewPreview(shell, article, pageUrl);
+  if (!response) {
+    return shell;
+  }
+
+  // Caché corta y explícita aquí además de en `_headers`: retirar un enlace tiene que notarse enseguida, y no
+  // conviene depender de que una regla de fichero se aplique también a las respuestas de las Functions.
+  const headers = new Headers(response.headers);
+  headers.set('Cache-Control', 'public, max-age=60');
+  return new Response(response.body, { status: response.status, headers });
+}
+
+function reviewPreview(shell: Response, article: StoredArticle, url: string): Response | null {
   const meta: ShareMeta = {
     gameName: typeof article.gameName === 'string' ? article.gameName : '',
     grade: asNumber(article.grade),
@@ -57,16 +75,26 @@ export async function onRequestGet(context: {
     review: typeof article.review === 'string' ? article.review : '',
     authorNick: typeof article.authorNick === 'string' ? article.authorNick : '',
   };
-  if (!meta.gameName) {
-    return shell;
+  return meta.gameName ? withShareMeta(shell, meta, url) : null;
+}
+
+/** El resumen del año: de quién, qué año, cuántos y su juego del año. Ni una cifra más en la tarjeta del chat. */
+function yearPreview(shell: Response, article: StoredArticle, url: string): Response | null {
+  const year = asNumber(article.year);
+  const count = asNumber(article.summary?.count);
+  if (year === null || count === null) {
+    return null;
   }
-
-  const url = new URL(context.request.url);
-  const response = withShareMeta(shell, meta, `${url.origin}${url.pathname}`);
-
-  // Caché corta y explícita aquí además de en `_headers`: retirar un enlace tiene que notarse enseguida, y no
-  // conviene depender de que una regla de fichero se aplique también a las respuestas de las Functions.
-  const headers = new Headers(response.headers);
-  headers.set('Cache-Control', 'public, max-age=60');
-  return new Response(response.body, { status: response.status, headers });
+  const best = article.summary?.best;
+  const bestGrade = asNumber(best?.grade);
+  return withYearShareMeta(
+    shell,
+    {
+      year,
+      count,
+      authorNick: typeof article.authorNick === 'string' ? article.authorNick : '',
+      best: best && typeof best.name === 'string' && bestGrade !== null ? { name: best.name, grade: bestGrade } : null,
+    },
+    url,
+  );
 }

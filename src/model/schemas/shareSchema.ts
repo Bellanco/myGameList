@@ -45,6 +45,81 @@ export const sharedReviewSchema = z.strictObject({
   expiresAt: timestamp,
 });
 
+// EL RESUMEN DEL AÑO COMPARTIDO (`kind: 'year'`, ver docs/plan-resumen-del-ano.md). Lo que publica
+// `core/stats/publicYearSummary`, cerrado igual de estricto: sin la comparación con quien mira (`common: null`), sin
+// cita (`quote` vacía), con precisión de mes (los extremos no llevan día y no hay `days`) y con listados acotados.
+const YEAR_LIST_MAX = 30; // `PUBLIC_YEAR_SUMMARY_LIMITS.ranked`, con la misma holgura que el resto de cotas
+const name = z.string().max(NAME_MAX);
+const grade = z.number().min(0).max(100);
+const count = z.number().int().nonnegative();
+const month = z.number().int().min(0).max(11);
+const months = z.array(count).length(12);
+const ranked = z.array(z.strictObject({ name: z.string().max(TAG_MAX), count })).max(YEAR_LIST_MAX);
+const year = z.number().int().min(2000).max(2100);
+const edge = z.strictObject({ month, names: z.array(name).max(10) });
+
+export const publicYearSummarySchema = z.strictObject({
+  year,
+  count,
+  covers: z.array(z.strictObject({ name, platforms: tagList })).max(9),
+  avgGrade: grade.nullable(),
+  withReview: count,
+  platforms: ranked,
+  best: z
+    .strictObject({
+      name,
+      grade,
+      genre: z.string().max(TAG_MAX).nullable(),
+      platform: z.string().max(TAG_MAX).nullable(),
+      platforms: tagList,
+      quote: z.literal(''),
+    })
+    .nullable(),
+  podium: z.array(z.strictObject({ name, grade })).max(2),
+  genres: z
+    .array(z.strictObject({ name: z.string().max(TAG_MAX), count, avgGrade: grade.nullable(), bestName: name }))
+    .max(YEAR_LIST_MAX),
+  when: z
+    .strictObject({
+      precision: z.literal('month'),
+      months,
+      topMonths: z.array(month).max(12),
+      topCount: count,
+      dated: count,
+      undated: count,
+      first: edge,
+      last: edge,
+    })
+    .nullable(),
+  strengths: ranked,
+  weaknesses: ranked,
+  previous: z
+    .strictObject({
+      year,
+      count,
+      avgGrade: grade.nullable(),
+      months: months.nullable(),
+      undated: count,
+      genreRise: z.strictObject({ name: z.string().max(TAG_MAX), from: count, to: count }).nullable(),
+    })
+    .nullable(),
+  common: z.null(),
+  palmares: z
+    .strictObject({ rank: z.number().int().min(0).max(5), seasonName: name, place: z.number().int().positive().max(100_000).nullable() })
+    .nullable(),
+});
+
+export const sharedYearSummarySchema = z.strictObject({
+  v: z.literal(1),
+  kind: z.literal('year'),
+  year,
+  summary: publicYearSummarySchema,
+  authorNick: z.string().max(NICK_MAX),
+  createdAt: timestamp,
+  updatedAt: timestamp,
+  expiresAt: timestamp,
+});
+
 /**
  * Campos que NO pueden aparecer jamás en un artículo público, ni en la raíz ni anidados.
  *
@@ -84,6 +159,16 @@ export function assertValidSharedReview(data: unknown): void {
   if (!result.success) {
     const issues = result.error.issues.map((i) => `${i.path.join('.') || 'root'}: ${i.message}`).join('; ');
     throw new Error(`Artículo compartido inválido (schema): ${issues}`);
+  }
+}
+
+/** Valida el resumen del año antes de publicarlo. Misma doble guarda que la reseña: denylist y esquema estricto. */
+export function assertValidSharedYearSummary(data: unknown): void {
+  assertNoShareForbiddenFields(data);
+  const result = sharedYearSummarySchema.safeParse(data);
+  if (!result.success) {
+    const issues = result.error.issues.map((i) => `${i.path.join('.') || 'root'}: ${i.message}`).join('; ');
+    throw new Error(`Resumen compartido inválido (schema): ${issues}`);
   }
 }
 

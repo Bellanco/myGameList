@@ -16,7 +16,7 @@ import {
   type ShareQuota,
   type ShareQuotaOverride,
 } from '../../src/core/constants/tiers';
-import { banKey, dailyQuotaKey, drainPages, overrideKey, userSharePrefix, type Env, type KVNamespace, type ShareIndexMetadata } from './keys';
+import { banKey, dailyQuotaKey, drainPages, isYearShareMeta, overrideKey, userSharePrefix, type Env, type KVNamespace, type ShareIndexMetadata } from './keys';
 import type { AuthUser } from './firebaseAuth';
 import { ServiceUnavailableError } from './http';
 
@@ -32,7 +32,10 @@ export interface ShareStatus {
   nick: string;
   quota: ShareQuota;
   ban: ShareBan | null;
+  /** Enlaces de RESEÑAS vivos: los que cuentan para la cuota y el índice de sugeridos. */
   active: ShareRow[];
+  /** Enlaces de resumen del año (uno por año como mucho): ni cuentan para la cuota ni dan sugerencias. */
+  yearShares: ShareRow[];
 }
 
 export async function readBan(kv: KVNamespace, uid: string): Promise<ShareBan | null> {
@@ -170,7 +173,14 @@ export async function readShareStatus(
     readProfileFacts(user, projectId, appCheckToken),
     listActiveShares(env.SHARES, user.uid),
   ]);
-  return { tier: profile.tier, nick: profile.nick, quota: resolveShareQuota(profile.tier, override), ban, active };
+  return {
+    tier: profile.tier,
+    nick: profile.nick,
+    quota: resolveShareQuota(profile.tier, override),
+    ban,
+    active: active.filter((row) => !isYearShareMeta(row.meta)),
+    yearShares: active.filter((row) => isYearShareMeta(row.meta)),
+  };
 }
 
 /**

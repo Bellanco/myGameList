@@ -172,7 +172,6 @@ export const PROFILE_TIER_SHARE_MAX_ACTIVE: Record<ProfileTier, number> = {
   mithril: 50,
 };
 
-
 /** Techos absolutos: ningún ajuste individual puede superar lo que da el rango más alto. */
 export const SHARE_TTL_DAYS_CEILING = PROFILE_TIER_SHARE_TTL_DAYS.mithril;
 export const SHARE_MAX_ACTIVE_CEILING = PROFILE_TIER_SHARE_MAX_ACTIVE.mithril;

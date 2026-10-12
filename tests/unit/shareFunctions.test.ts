@@ -6,7 +6,7 @@
 // prueba con `wrangler pages dev`, no con mocks: simular el almacén no demostraría nada.
 import { describe, it, expect, vi } from 'vitest';
 import { JWKS_URL } from '../../functions/_lib/firebaseAuth';
-import { shareDescription, shareTitle } from '../../functions/_lib/html';
+import { shareDescription, shareTitle, yearShareDescription, yearShareTitle } from '../../functions/_lib/html';
 import { isValidToken, newToken } from '../../functions/_lib/http';
 import {
   COVER_DAILY_BUDGET,
@@ -65,6 +65,21 @@ describe('metadatos de la previsualización', () => {
 
   it('does not leave a dangling space before the ellipsis', () => {
     expect(shareDescription(`${'a'.repeat(150)} ${'b'.repeat(150)}`)).not.toMatch(/ …$/);
+  });
+});
+
+describe('metadatos de la previsualización de un resumen del año', () => {
+  const meta = { year: 2026, count: 34, authorNick: 'Bellanco', best: { name: 'Hollow Knight', grade: 95.6 } };
+
+  it('de quién, qué año y cuántos; el juego del año en la descripción', () => {
+    expect(yearShareTitle(meta)).toBe('El 2026 de Bellanco: 34 juegos terminados');
+    expect(yearShareTitle({ ...meta, count: 1, authorNick: '' })).toBe('Resumen de 2026: 1 juego terminado');
+    expect(yearShareDescription(meta)).toBe('Su juego del año: Hollow Knight · 96/100. Los juegos, géneros y meses de su 2026.');
+    expect(yearShareDescription({ ...meta, best: null })).toBe('Los juegos, géneros y meses de su 2026 en My Game List.');
+  });
+
+  it('sin etiquetas en lo que escribe el usuario', () => {
+    expect(yearShareTitle({ ...meta, authorNick: '<b>Yo</b>' })).toBe('El 2026 de Yo: 34 juegos terminados');
   });
 });
 

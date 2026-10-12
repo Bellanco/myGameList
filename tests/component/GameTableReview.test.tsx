@@ -9,6 +9,7 @@
 // en silencio: sin él, React lanza «useHref() may be used only in the context of a <Router>» y la pantalla se
 // queda en blanco. Ningún otro test despliega un detalle CON análisis, así que este fichero es lo único que
 // separa ese fallo de producción.
+import { statsReviewPath } from '../../src/core/utils/reviewPath';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -61,7 +62,7 @@ describe('GameTable — el análisis, en el detalle', () => {
     abrir();
     const enlace = screen.getByRole('link', { name: /Ver análisis de Rise of Nations/i });
 
-    expect(enlace).toHaveAttribute('href', '/stats/resenas/7');
+    expect(enlace).toHaveAttribute('href', statsReviewPath(7, 'Rise of Nations'));
     // Lo que NO puede pasar: que el texto siga ahí ocupando el detalle.
     expect(screen.queryByText(/Con dos párrafos/)).toBeNull();
   });
@@ -193,7 +194,7 @@ describe('GameTable — el análisis, en la caja del mosaico', () => {
     const enlace = container.querySelector('.game-card-art .game-card-review');
 
     expect(enlace).not.toBeNull();
-    expect(enlace).toHaveAttribute('href', '/stats/resenas/7');
+    expect(enlace).toHaveAttribute('href', statsReviewPath(7, 'Rise of Nations'));
     expect(enlace).toHaveAccessibleName('Ver análisis de Rise of Nations');
   });
 
