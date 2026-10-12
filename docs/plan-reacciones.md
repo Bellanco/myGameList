@@ -233,10 +233,12 @@ llegaba a revalidarse con ETag.
 
 ## Despliegue
 
+Sale en la **1.7.0** (la crea el usuario), junto con todo lo que no salió en la 1.6.11.
+
 - **Los «me gusta» no tocan Firestore:** ni reglas ni índices nuevos. Viven en el gist de cada cual.
 - **Sí hay que publicar a la vez el cliente y la versión legal** (`LEGAL_VERSION` 2026-10-12b), que van en el mismo
   código.
-- **Lo que SÍ pide reglas en esta release no es de este plan:** el ajuste `gameScenes` de `publicConfig` (animaciones al
+- **Lo que SÍ pide reglas en la 1.7.0 no es de este plan:** el ajuste `gameScenes` de `publicConfig` (animaciones al
   cambiar de lista, `6677824f`).
   - Comprobado el 12-10-2026: producción no lo tiene.
   - `publicConfig` exige una lista cerrada de claves, así que con las reglas viejas el cliente nuevo vería rechazada
