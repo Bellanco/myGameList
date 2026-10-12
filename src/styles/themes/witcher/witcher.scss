@@ -1349,3 +1349,48 @@
 :root[data-palette="witcher"] .hub-hub-title-wrap h2::before { content: '△ '; color: #ff8f4a; }
 :root[data-palette="witcher"][data-theme="light"] .hub-hub-title-wrap h2 { color: #a3420a !important; text-shadow: 0 0 6px rgba(255, 120, 40, .3); }
 :root[data-palette="witcher"][data-theme="light"] .hub-hub-title-wrap h2::before { color: #c2560f; }
+
+/* ── §13e · NUEVO CONTRATO: lo que pasa al EMPEZAR un juego (12-10-2026). La franja gemela de «Contrato cerrado»
+   —los mismos filos de plata y la misma letra bruñida con su destello—, pero lo que cae encima no son coronas sino
+   EL CARTEL: un `.chip` de verdad, «En curso», con el pergamino desgarrado y el lacre que ya le pone §6, para que
+   lo que anuncia la franja sea lo mismo que luego se ve en la tabla. El lacre va en ROJO VIVO, más grande que en
+   la tabla para que se lea a la distancia de una franja, y SIN el pardo que §6 mezcla en la cera: aquí es el único
+   color de la escena y tiene que saltar. Elegida con la maqueta de las propuestas de inicio. Como la de cerrar, la
+   crea el hook solo con efectos y sin `reduced-motion`, y es una franja de juego: oscura en los dos modos. ── */
+:root[data-palette="witcher"] .fx-wt-nuevo {
+  position: fixed; z-index: 9997; pointer-events: none;
+  left: 0; right: 0; top: 42%; transform: translateY(-50%);
+  display: grid; justify-items: center; gap: .3rem; padding: .9rem 0 .85rem; text-align: center;
+  background: linear-gradient(90deg, transparent, rgba(6, 8, 12, .88) 18%, rgba(6, 8, 12, .88) 82%, transparent);
+  animation: wt-mision 2.8s forwards;
+}
+:root[data-palette="witcher"] .fx-wt-nuevo::before,
+:root[data-palette="witcher"] .fx-wt-nuevo::after {
+  content: ""; position: absolute; left: 10%; right: 10%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(198, 206, 216, .55) 25%, rgba(198, 206, 216, .55) 75%, transparent);
+  transform: scaleX(0); animation: wt-nuevo-filo .6s .05s cubic-bezier(.2, .8, .3, 1) forwards;
+}
+:root[data-palette="witcher"] .fx-wt-nuevo::before { top: 0; }
+:root[data-palette="witcher"] .fx-wt-nuevo::after { bottom: 0; }
+/* El cartel: el mismo de la tabla a otra escala (la letra y el lacre; el asomo del pliego sube con ellos). */
+:root[data-palette="witcher"] .fx-wt-nuevo .fx-wt-chip-nuevo {
+  --wt-lacre: 19px; --wt-asomo: 4px;
+  font-size: 15px; padding: 2px 8px 3px !important; margin: calc(var(--wt-asomo) + var(--wt-lacre) / 2 + 2px) 0 .2rem;
+  opacity: 0; transform: rotate(-4deg);
+  animation: wt-nuevo-cae .5s .15s cubic-bezier(.3, 1.5, .5, 1) forwards;
+}
+:root[data-palette="witcher"] .fx-wt-nuevo .fx-wt-chip-nuevo::after { --wt-cera: #ec2a1c; left: 50%; margin-left: calc(var(--wt-lacre) / -2); }
+:root[data-palette="witcher"] .fx-wt-nuevo b {
+  display: block;
+  font: 700 clamp(17px, 4.8vw, 25px)/1.15 var(--font-display); letter-spacing: .2em; white-space: nowrap;
+  color: transparent;
+  background: linear-gradient(100deg, #b9c2cc 0 40%, #ffffff 50%, #b9c2cc 60% 100%) 100% 0 / 300% 100% no-repeat,
+    linear-gradient(180deg, #f4f1ea, #c9cfd6 55%, #9aa5b1);
+  -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .85)) drop-shadow(0 0 10px rgba(198, 206, 216, .3));
+  opacity: 0; animation: wt-nuevo-asoma .8s .3s ease-out forwards, wt-destello 1s 1.1s ease-in-out forwards;
+}
+:root[data-palette="witcher"] .fx-wt-nuevo small { display: block; font: italic 400 15px/1.3 var(--font-body); color: #b9c2cc; opacity: 0; animation: wt-nuevo-asoma .5s .8s forwards; }
+@keyframes wt-nuevo-filo { to { transform: none; } }
+@keyframes wt-nuevo-asoma { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+@keyframes wt-nuevo-cae { from { opacity: 0; transform: translateY(-14px) rotate(-16deg); } to { opacity: 1; transform: rotate(-4deg); } }

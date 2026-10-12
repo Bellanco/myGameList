@@ -1094,11 +1094,11 @@
 }
 @keyframes portal-cursor { 50% { opacity: .15; } }
 
-/* ── LA FIRMA · PRUEBA SUPERADA (10-10-2026) ──────────────────────────────────────────────────────────────────────
-   Al cerrar un juego sale, al azar, una de las dos maneras que tiene Portal de decir «has terminado»: el CARTEL DE
-   LA CÁMARA, que baja del techo como un panel, enciende en naranja la línea de indicadores (el botón se ha activado)
-   y se recoge; o la TERMINAL ÁMBAR de los créditos tecleando el veredicto de GLaDOS. Elegidas con la maqueta de los
-   Game Clear. Las crea `useSignatureEffects`, que ya mira los efectos y el `reduced-motion`: si no tocan, no existen.
+/* ── LA FIRMA · NUEVA PRUEBA Y PRUEBA SUPERADA (10-10-2026, separadas el 12-10-2026) ─────────────────────────────
+   Al EMPEZAR un juego, el CARTEL DE LA CÁMARA que te recibe a la puerta: baja del techo como un panel con su número,
+   «PRUEBA EN CURSO» y la barra «NN/19», enciende en naranja la línea de indicadores (la cámara se activa) y se recoge. Al CERRARLO, la
+   TERMINAL ÁMBAR de los créditos tecleando el veredicto de GLaDOS. Hasta el 12-10-2026 las dos se sorteaban al
+   cerrar. Las crea `useSignatureEffects`, que ya mira los efectos y el `reduced-motion`: si no tocan, no existen.
    El cartel es blanco de señalética en los dos modos, y la terminal es una terminal: no tienen versión de día. ── */
 :root[data-palette="portal"] .fx-ap-sign {
   position: fixed; z-index: 9997; pointer-events: none;
@@ -1121,6 +1121,10 @@
 :root[data-palette="portal"] .fx-ap-txt small { text-align: left; }
 :root[data-palette="portal"] .fx-ap-txt b { font-size: 23px; font-weight: 600; letter-spacing: .06em; }
 :root[data-palette="portal"] .fx-ap-pict { display: flex; gap: 5px; }
+/* La barra de progreso del cartel: cuánto llevas de las 19 cámaras (`--p`, de 0 a 1). */
+:root[data-palette="portal"] .fx-ap-progreso { display: flex; align-items: center; gap: .5rem; }
+:root[data-palette="portal"] .fx-ap-progreso i { flex: 1; height: 5px; background: linear-gradient(90deg, #1b1f22 calc(var(--p) * 100%), #c3cbd0 0); }
+:root[data-palette="portal"] .fx-ap-progreso small { letter-spacing: .08em; color: #1b1f22; }
 :root[data-palette="portal"] .fx-ap-pict i { width: 15px; height: 15px; border-radius: 2px; background: #c3cbd0; }
 :root[data-palette="portal"] .fx-ap-pict i.on { background: #1b1f22; }
 /* La línea de indicadores: azul mientras baja, naranja cuando el botón «se activa». */

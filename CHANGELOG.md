@@ -5,6 +5,25 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Added
+- **Cada tema tiene escena al EMPEZAR un juego**, además de la de cerrarlo: salta cuando un juego llega a En curso.
+  Las Puertas de Durin que se abren (No puedes pasar), el atardecer synthwave con «STAGE 1» (Inserte moneda), «Nuevo
+  contrato» con el cartel de la tabla en rojo vivo (Plata y acero), el calendario con la fecha de hoy (Ladrones de
+  corazones), el cartel de la cámara con «PRUEBA EN CURSO» (Cámara de pruebas), el escáner óptico (Sin futuro), la
+  entrada al combate (Sol y luna) y la transmisión astropática con la calavera alada (Solo hay guerra).
+- **Casilla «Escenas al empezar y cerrar un juego» en Diseño, apagada por defecto.** Las escenas tapan la pantalla
+  un par de segundos, así que se encienden a mano, como las carátulas. Viaja con la cuenta (`publicConfig.gameScenes`):
+  **las reglas de Firestore tienen que desplegarse antes que el cliente** o se deniega la escritura de toda la
+  apariencia.
+
+### Changed
+- **Inserte moneda y Cámara de pruebas ya no sortean al cerrar un juego**: la pantalla de récord y la terminal de
+  GLaDOS se quedan solas, y el atardecer y el cartel pasan a la escena de empezar.
+
+### Fixed
+- **Una escena con un `::before` o `::after` animado se borraba al acabar el del pseudoelemento**, no al acabar ella:
+  el evento llega con la escena como destino. El calendario de los Ladrones desaparecía a los 0,25 s.
+
 ## [1.6.11] - 2026-10-12
 
 Una versión de **compartir**: el resumen del año tiene enlace propio y temporada hasta el 15 de enero, «Compartir»

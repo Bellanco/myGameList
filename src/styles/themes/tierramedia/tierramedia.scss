@@ -417,3 +417,70 @@
 @keyframes tm-fin-luz { to { background-position: 0 0; } }
 @keyframes tm-fin-raya { to { transform: none; } }
 @keyframes tm-fin { 0% { opacity: 0; } 5%, 88% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ── LA FIRMA · «HABLA, AMIGO, Y ENTRA» (12-10-2026) ──────────────────────────────────────────────────────────────
+   Al EMPEZAR un juego, la contraparte de «Juego Terminado»: las Puertas de Durin. El contorno se dibuja en ithildin
+   (el trazo plateado que solo se ve a la luz de la luna, `stroke-dashoffset` sobre `pathLength=1`), las dos hojas se
+   abren hacia dentro estrechándose contra su gozne, sale la luz de dentro y debajo se escribe «Comienza el Viaje»
+   con la misma letra, la misma tinta y el mismo destello que el cierre. Elegida con la maqueta de las propuestas de
+   inicio. El velo es el fondo del tema, para que el trazo fino se lea encima de la tabla. A la luz el ithildin es
+   tinta azul sobre piedra clara: un brillo de luna en el modo de día no se lee. ── */
+:root[data-palette="tierramedia"] .fx-tm-durin {
+  position: fixed; inset: 0; z-index: 9997; pointer-events: none;
+  display: grid; place-content: center; justify-items: center; gap: .35rem; text-align: center;
+  animation: tm-fin 3s forwards;
+}
+:root[data-palette="tierramedia"] .fx-tm-durin-velo {
+  position: absolute; inset: 0; z-index: -1;
+  background: radial-gradient(ellipse 70% 62% at 50% 48%, var(--bg) 55%, color-mix(in srgb, var(--bg) 70%, transparent));
+}
+:root[data-palette="tierramedia"] .fx-tm-dicho {
+  font: italic 400 clamp(15px, 3.6vw, 19px)/1.2 'EB Garamond', var(--font-display); letter-spacing: .02em;
+  color: color-mix(in srgb, var(--text) 78%, transparent);
+  opacity: 0; animation: tm-durin-asoma .5s .1s forwards, tm-durin-sale .4s 1.35s forwards;
+}
+:root[data-palette="tierramedia"] .fx-tm-durin-svg { width: min(220px, 52vw); height: auto; overflow: visible; }
+:root[data-palette="tierramedia"] .fx-tm-piedra { fill: url(#fx-tm-roca); }
+:root[data-palette="tierramedia"][data-theme="light"] .fx-tm-piedra { fill: #d9cdae; }
+:root[data-palette="tierramedia"] .fx-tm-trazo * {
+  fill: none; stroke: #e4eefb; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 1; stroke-dashoffset: 1; animation: tm-durin-traza 1.1s .15s ease-in-out forwards;
+}
+/* El ithildin se aviva dos veces al terminar de dibujarse: vueltas contadas, que `drop-shadow` no lo compone la GPU. */
+:root[data-palette="tierramedia"] .fx-tm-trazo {
+  filter: drop-shadow(0 0 2px #a9c9ff) drop-shadow(0 0 6px rgba(140, 180, 255, .55));
+  animation: tm-durin-ithildin .5s 1.2s ease-in-out 2 alternate;
+}
+:root[data-palette="tierramedia"][data-theme="light"] .fx-tm-trazo * { stroke: #3d5f88; }
+:root[data-palette="tierramedia"][data-theme="light"] .fx-tm-trazo { filter: none; animation: none; }
+/* La banda de la inscripción: trazos cortos de ancho desigual, como letra élfica vista de lejos. */
+:root[data-palette="tierramedia"] .fx-tm-trazo .fx-tm-letra {
+  stroke-width: 4; stroke-dasharray: .012 .006 .02 .008 .009 .006; stroke-dashoffset: 0;
+  opacity: 0; animation: tm-durin-letra .6s .7s forwards;
+}
+:root[data-palette="tierramedia"] .fx-tm-puerta-izq,
+:root[data-palette="tierramedia"] .fx-tm-puerta-der { animation: tm-durin-abre .8s 1.55s cubic-bezier(.5, 0, .3, 1) forwards; }
+:root[data-palette="tierramedia"] .fx-tm-puerta-izq { transform-origin: 56px 0; }
+:root[data-palette="tierramedia"] .fx-tm-puerta-der { transform-origin: 184px 0; }
+:root[data-palette="tierramedia"] .fx-tm-durin-luz { opacity: 0; animation: tm-durin-luz .8s 1.6s ease-out forwards; }
+/* «Comienza el Viaje»: la letra, el oro y el destello de «Juego Terminado» (`tm-fin-tinta`, `tm-fin-luz`). La
+   máscara empieza corrida, así que hasta que le toca la tinta no se ve. */
+:root[data-palette="tierramedia"] .fx-tm-durin b {
+  font: 700 clamp(26px, 7vw, 46px)/1.1 'Cinzel Decorative', var(--font-display); letter-spacing: .04em;
+  text-wrap: balance; padding: .12em .1em 0;
+  color: transparent;
+  background: linear-gradient(100deg, var(--steam) 0 42%, #fff3cf 50%, var(--steam) 58% 100%) 100% 0 / 300% 100% no-repeat;
+  -webkit-background-clip: text; background-clip: text;
+  text-shadow: 0 0 22px rgba(227, 176, 75, .35);
+  -webkit-mask: linear-gradient(90deg, #000 40%, transparent 60%) 100% 0 / 260% 100% no-repeat;
+  mask: linear-gradient(90deg, #000 40%, transparent 60%) 100% 0 / 260% 100% no-repeat;
+  animation: tm-fin-tinta .8s 1.85s ease-out forwards, tm-fin-luz 1s 2.2s ease-in-out forwards;
+}
+:root[data-palette="tierramedia"][data-theme="light"] .fx-tm-durin b { text-shadow: none; background-image: linear-gradient(100deg, var(--steam) 0 42%, #c8962e 50%, var(--steam) 58% 100%); }
+@keyframes tm-durin-asoma { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes tm-durin-sale { to { opacity: 0; } }
+@keyframes tm-durin-luz { to { opacity: 1; } }
+@keyframes tm-durin-traza { to { stroke-dashoffset: 0; } }
+@keyframes tm-durin-letra { to { opacity: .85; } }
+@keyframes tm-durin-ithildin { to { filter: drop-shadow(0 0 3px #cfe2ff) drop-shadow(0 0 12px rgba(160, 200, 255, .9)); } }
+@keyframes tm-durin-abre { to { transform: scaleX(.16); opacity: .55; } }

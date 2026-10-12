@@ -1009,8 +1009,9 @@
    Era el único mundo sin efecto propio, y el gesto que le toca a una recreativa no es un destello más —es CANTAR
    lo que acabas de hacer—. Empezó como una marquesina con la bandera a cuadros (la cara de este tema del sello
    común) y el 10-10-2026 pasó a DOS escenas que el hook sortea, elegidas con la maqueta de los Game Clear: la
-   PANTALLA DE RÉCORD de un CRT y el ATARDECER SYNTHWAVE. (Hubo una tercera, letras en ola, que se descartó.) El hook ya mira
-   efectos y `reduced-motion`: si no tocan, no existen. Son pantallas de recreativa, de noche en los dos modos. ── */
+   PANTALLA DE RÉCORD de un CRT y el ATARDECER SYNTHWAVE. (Hubo una tercera, letras en ola, que se descartó.) El
+   12-10-2026 el atardecer pasó a EMPEZAR un juego, con «STAGE 1»: es la pantalla de título, no la del final. El hook
+   ya mira efectos y `reduced-motion`: si no tocan, no existen. Son pantallas de recreativa, de noche en los dos modos. ── */
 :root[data-palette="arcade"] {
   /* La paleta que rota en los rótulos, como un letrero de los 80. */
   --arc-ciclo-1: #ffd24a; --arc-ciclo-2: #ff3d9e; --arc-ciclo-3: #22e5ff; --arc-ciclo-4: #7dff6a;
@@ -1058,7 +1059,7 @@
   100% { transform: translate(-50%, -50%) scale(0, 0); opacity: 0; }
 }
 
-/* 2 · ATARDECER SYNTHWAVE: sale el sol a rayas sobre la rejilla de neón que corre hacia ti, y el rótulo cromado de
+/* 2 · ATARDECER SYNTHWAVE (al empezar un juego): sale el sol a rayas sobre la rejilla de neón que corre hacia ti, y el rótulo cromado de
    la carcasa —el mismo degradado del título de pantalla del tema— se planta delante con un brillo. Ocupa la
    ventana: es un paisaje, no una pieza. */
 :root[data-palette="arcade"] .fx-ar-sunset { position: fixed; inset: 0; z-index: 9997; pointer-events: none; overflow: hidden; animation: ar-sunset 2.6s forwards; }

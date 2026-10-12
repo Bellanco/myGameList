@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { MOMENT_EVENT, type MomentDetail } from '../../core/effects/moments';
 import { DEFAULT_PALETTE } from '../../core/constants/palettes';
 import { recorte } from '../components/socialhub/recortes';
+import { gameScenesPreference } from './preferences';
 
 /**
  * Efectos de FIRMA disparados por interacción (los ambientales/hover viven en CSS bajo `data-effects="on"`).
@@ -19,10 +20,17 @@ import { recorte } from '../components/socialhub/recortes';
  *  - CERRAR UN JUEGO → un SELLO que cae en el centro en dos temas: «objetivo cumplido» en letras recortadas
  *    (Ladrones de corazones) y el lacre con un escudo imperial (Solo hay guerra). Los demás tienen escena propia: la
  *    «Juego terminado» con letra de título de las películas (No puedes pasar); la franja de «contrato cerrado» con
- *    las coronas de la recompensa saltando (Plata y acero); la pantalla de récord o el atardecer synthwave, al azar
- *    (Inserte moneda); el cartel de la cámara o la terminal de GLaDOS, al azar (Cámara de pruebas); el protocolo de
- *    brecha (Sin futuro), y la ventana de «¡Victoria!» (Sol y luna). Elegidos con la maqueta de los Game Clear
- *    (10-10-2026).
+ *    las coronas de la recompensa saltando (Plata y acero); la pantalla de récord (Inserte moneda); la terminal de
+ *    GLaDOS (Cámara de pruebas); el protocolo de brecha (Sin futuro), y la ventana de «¡Victoria!» (Sol y luna).
+ *    Elegidos con la maqueta de los Game Clear (10-10-2026).
+ *  - EMPEZAR UN JUEGO (pasa a En curso) → las Puertas de Durin que se abren (No puedes pasar); el atardecer synthwave
+ *    con «STAGE 1» (Inserte moneda); la franja de «nuevo contrato» con el cartel de la tabla (Plata y acero); la
+ *    transición de día del calendario con la fecha de hoy (Ladrones de corazones); el cartel de la cámara que baja
+ *    del techo (Cámara de pruebas); el escáner óptico (Sin futuro); la entrada al combate (Sol y luna), y la
+ *    transmisión astropática con la calavera alada (Solo hay guerra). El atardecer y el cartel se sorteaban con los de
+ *    cerrar hasta el 12-10-2026; los demás se eligieron ese día con la maqueta de propuestas.
+ *  Las escenas de empezar y cerrar van ADEMÁS detrás de su propia casilla de Diseño, apagada por defecto
+ *  (`gameScenesPreference`).
  *  - GUARDAR → la luz corre por el filete de acero bajo las pestañas, de izquierda a derecha (Plata y acero).
  *  - FILTRAR → barrido de escáner sobre la lista (Sin futuro).
  *  - LOGRO DESBLOQUEADO → estrella fugaz que cruza (Sol y luna).
@@ -53,9 +61,11 @@ export function useSignatureEffects(): void {
     const clean = (): void => el.remove();
     // Solo cuenta el final de la PIEZA, no el de sus hijos: en una escena con varias partes (la terminal que teclea
     // línea a línea, la matriz que se ilumina celda a celda), el `animationend` de la primera subía hasta aquí y se
-    // llevaba la escena entera por delante.
+    // llevaba la escena entera por delante. Y lo mismo con sus `::before`/`::after`: el evento de un pseudoelemento
+    // llega con la pieza como `target` (y `pseudoElement` relleno), así que el velo de 0,25 s del calendario de los
+    // Ladrones borraba la escena nada más empezar.
     const onEnd = (e: AnimationEvent): void => {
-      if (e.target !== el) return;
+      if (e.target !== el || e.pseudoElement) return;
       el.removeEventListener('animationend', onEnd);
       clean();
     };
@@ -284,22 +294,29 @@ export function useSignatureEffects(): void {
           '<span class="fx-ar-crt-bonus">BONUS </span><span class="fx-ar-crt-coin">INSERT COIN</span>',
       );
 
-    /** Inserte moneda: el sol a rayas sobre la rejilla de neón, y el rótulo cromado delante. */
+    /** Inserte moneda: el sol a rayas sobre la rejilla de neón, y el rótulo cromado delante. Es la pantalla de título. */
     const atardecerSynthwave = (): HTMLElement =>
       escena(
         'fx-ar-sunset',
-        '<span class="fx-ar-cielo"></span><span class="fx-ar-sol"></span><span class="fx-ar-suelo"></span><b>GAME CLEAR</b>',
+        '<span class="fx-ar-cielo"></span><span class="fx-ar-sol"></span><span class="fx-ar-suelo"></span><b>STAGE 1</b>',
       );
 
-    /** Cámara de pruebas: el cartel de la cámara que baja del techo. */
-    const cartelDeCamara = (): HTMLElement =>
-      escena(
+    /**
+     * Cámara de pruebas: el cartel que te recibe a la puerta de la cámara y baja del techo. El número se sortea, y
+     * la barra de progreso «NN/19» es la de los carteles del juego.
+     */
+    const cartelDeCamara = (): HTMLElement => {
+      const n = 1 + Math.floor(Math.random() * 19);
+      const nn = String(n).padStart(2, '0');
+      return escena(
         'fx-ap-sign',
-        '<span class="fx-ap-num">19<small>CÁMARA</small></span>' +
-          '<span class="fx-ap-txt"><small>APERTURE SCIENCE</small><b>PRUEBA SUPERADA</b>' +
+        `<span class="fx-ap-num">${nn}<small>CÁMARA</small></span>` +
+          '<span class="fx-ap-txt"><small>APERTURE SCIENCE</small><b>PRUEBA EN CURSO</b>' +
+          `<span class="fx-ap-progreso" style="--p:${(n / 19).toFixed(3)}"><i></i><small>${nn}/19</small></span>` +
           '<span class="fx-ap-pict"><i class="on"></i><i class="on"></i><i></i><i class="on"></i><i></i></span></span>' +
           '<span class="fx-ap-luces"></span>',
       );
+    };
 
     /** Cámara de pruebas: la terminal ámbar de los créditos, tecleando el veredicto. `--n` = caracteres. */
     const terminalGlados = (): HTMLElement =>
@@ -341,8 +358,236 @@ export function useSignatureEffects(): void {
           '<i style="--d:.2s"></i><i style="--d:.5s"></i><i style="--d:.7s"></i><i style="--d:.35s"></i>',
       );
 
+    // ── Las escenas de EMPEZAR un juego (12-10-2026), elegidas con la maqueta de propuestas. ──
+
+    /**
+     * No puedes pasar, al empezar: las Puertas de Durin. El marco (columnas, doble arco, umbral y la banda de la
+     * inscripción) va en el muro; los árboles, la corona y la estrella, en las hojas, que se parten por el centro y
+     * se abren. Todo con `pathLength=1` para dibujar el trazo con `stroke-dashoffset`. Se calcula una vez.
+     */
+    const DURIN_ESTRELLA = (() => {
+      // Ocho rayos largos con ocho cortos entre medias.
+      let d = '';
+      for (let i = 0; i < 16; i++) {
+        const a = (Math.PI / 8) * i - Math.PI / 2;
+        const r = i % 2 ? 6 : i % 4 === 0 ? 24 : 16;
+        d += `${i ? 'L' : 'M'}${(120 + Math.cos(a) * r).toFixed(1)} ${(178 + Math.sin(a) * r).toFixed(1)} `;
+      }
+      return `<path pathLength="1" d="${d}Z"/>`;
+    })();
+    const DURIN_CORONA = [0, 1, 2, 3, 4, 5, 6]
+      .map((i) => {
+        const a = Math.PI + (Math.PI / 6) * i;
+        return `<circle pathLength="1" cx="${(120 + Math.cos(a) * 30).toFixed(1)}" cy="${(116 + Math.sin(a) * 18).toFixed(1)}" r="1.8"/>`;
+      })
+      .join('');
+    const DURIN_HOJAS =
+      // Los dos árboles, que suben por los lados y entrelazan las ramas bajo el arco.
+      '<path pathLength="1" d="M78 298 C76 260 82 230 74 200 C68 176 72 150 86 132 C96 120 108 112 118 108"/>' +
+      '<path pathLength="1" d="M74 200 C64 190 60 178 62 166 M78 236 C68 228 64 216 66 206 M86 132 C80 126 78 116 82 106"/>' +
+      '<path pathLength="1" d="M162 298 C164 260 158 230 166 200 C172 176 168 150 154 132 C144 120 132 112 122 108"/>' +
+      '<path pathLength="1" d="M166 200 C176 190 180 178 178 166 M162 236 C172 228 176 216 174 206 M154 132 C160 126 162 116 158 106"/>' +
+      // La corona y sus siete estrellas, el yunque y el martillo, y la estrella de Fëanor.
+      '<path pathLength="1" d="M108 142 L106 130 L113 135 L120 126 L127 135 L134 130 L132 142 Z"/>' +
+      DURIN_CORONA +
+      '<path pathLength="1" d="M108 222 H132 L128 228 H124 V234 H130 V237 H110 V234 H116 V228 H112 Z"/>' +
+      DURIN_ESTRELLA;
+    const DURIN_MARCO =
+      '<path pathLength="1" d="M42 298 V132 A78 78 0 0 1 198 132 V298"/>' +
+      '<path pathLength="1" d="M56 298 V132 A64 64 0 0 1 184 132 V298"/>' +
+      '<path pathLength="1" d="M30 298 H210"/>' +
+      '<path class="fx-tm-letra" pathLength="1" d="M49 140 A71 71 0 0 1 191 140"/>' +
+      '<path pathLength="1" d="M36 168 H62 M178 168 H204"/>' +
+      '<path pathLength="1" d="M42 158 A7 7 0 1 0 56 158 M184 158 A7 7 0 1 0 198 158"/>';
+    const puertasDeDurin = (): HTMLElement =>
+      escena(
+        'fx-tm-durin',
+        '<i class="fx-tm-durin-velo"></i><span class="fx-tm-dicho">Habla, amigo, y entra</span>' +
+          '<svg class="fx-tm-durin-svg" viewBox="20 40 200 262" aria-hidden="true"><defs>' +
+          '<clipPath id="fx-tm-hueco"><path d="M56 298 V132 A64 64 0 0 1 184 132 V298 Z"/></clipPath>' +
+          '<clipPath id="fx-tm-izq"><rect x="0" y="0" width="120" height="300"/></clipPath>' +
+          '<clipPath id="fx-tm-der"><rect x="120" y="0" width="120" height="300"/></clipPath>' +
+          '<radialGradient id="fx-tm-luz" cx=".5" cy=".62" r=".7"><stop offset="0" stop-color="#fff7dc"/>' +
+          '<stop offset=".35" stop-color="#f3d68a"/><stop offset="1" stop-color="#b88324" stop-opacity="0"/></radialGradient>' +
+          '<linearGradient id="fx-tm-roca" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d231f"/>' +
+          '<stop offset="1" stop-color="#121612"/></linearGradient></defs>' +
+          '<g clip-path="url(#fx-tm-hueco)"><rect class="fx-tm-durin-luz" x="56" y="60" width="128" height="240" fill="url(#fx-tm-luz)"/>' +
+          `<g class="fx-tm-puerta-izq" clip-path="url(#fx-tm-izq)"><rect class="fx-tm-piedra" x="56" y="60" width="64" height="240"/><g class="fx-tm-trazo">${DURIN_HOJAS}</g></g>` +
+          `<g class="fx-tm-puerta-der" clip-path="url(#fx-tm-der)"><rect class="fx-tm-piedra" x="120" y="60" width="64" height="240"/><g class="fx-tm-trazo">${DURIN_HOJAS}</g></g>` +
+          `</g><g class="fx-tm-trazo">${DURIN_MARCO}</g></svg>` +
+          '<b><span class="fx-tm-cap">C</span>omienza el <span class="fx-tm-cap">V</span>iaje</b>',
+      );
+
+    /**
+     * Plata y acero, al empezar: la franja gemela de «Contrato cerrado» con el cartel de la tabla cayendo encima. El
+     * cartel es un `.chip` de verdad, así que el pergamino y el lacre los pone el tema (§6); la franja solo lo agranda
+     * y le pone la cera en rojo vivo.
+     */
+    const nuevoContrato = (): HTMLElement =>
+      escena(
+        'fx-wt-nuevo',
+        '<span class="chip fx-wt-chip-nuevo">En curso</span><b>NUEVO CONTRATO</b><small>Se busca brujo</small>',
+      );
+
+    /** El sol del calendario de los Ladrones: el icono del tiempo que acompaña al día de la semana. */
+    const SOL_P5 =
+      '<svg class="fx-p5-cal-sol" viewBox="0 0 40 40" aria-hidden="true"><g fill="#ff1f3d" stroke="#0d0d0d" stroke-width="2">' +
+      '<circle cx="20" cy="20" r="8"/>' +
+      [0, 45, 90, 135, 180, 225, 270, 315].map((a) => `<path d="M18 3 L22 3 L20 9 Z" transform="rotate(${a} 20 20)"/>`).join('') +
+      '</g></svg>';
+
+    /**
+     * Ladrones de corazones: la transición de día de Persona 5. La fecha es la de HOY al lanzarla (mes encima, número
+     * grande y el día de la semana en su recuadro); el número que salta es el de ayer. Remata en letras recortadas.
+     */
+    const calendario = (): HTMLElement => {
+      const hoy = new Date();
+      const ayer = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - 1);
+      // «lun», «mié», «sáb»… en mayúsculas y sin el punto de abreviatura que algunos motores añaden.
+      const dia = new Intl.DateTimeFormat('es-ES', { weekday: 'short' }).format(hoy).replace('.', '').toLocaleUpperCase('es-ES');
+      const el = escena(
+        'fx-p5-cal',
+        '<span class="fx-p5-cal-franja"></span>' +
+          `<span class="fx-p5-cal-bloque"><span class="fx-p5-cal-mes">${hoy.getMonth() + 1}/</span>` +
+          `<span class="fx-p5-cal-num"><span class="is-ayer">${ayer.getDate()}</span><span class="is-hoy">${hoy.getDate()}</span></span>` +
+          `<span class="fx-p5-cal-lado"><span class="fx-p5-cal-dia"><span>${dia}</span></span>${SOL_P5}</span></span>` +
+          '<span class="fx-p5-cal-hoy"></span>',
+      );
+      const rotulo = letrasRecortadas('HOY EMPIEZA');
+      // Cada recorte cae un poco después del anterior: el retardo va por letra y la hoja lo suma al de la escena.
+      rotulo.querySelectorAll<HTMLElement>('.rc').forEach((rc, k) => rc.style.setProperty('--d', `${k * 35}ms`));
+      el.querySelector('.fx-p5-cal-hoy')?.appendChild(rotulo);
+      return el;
+    };
+
+    /**
+     * Solo hay guerra: la calavera alada del cogitador, en píxeles. `#` es hueso y `o` la lente roja del servocráneo;
+     * cada racha de una fila se vuelve un rectángulo, así que sale un `path` por color, nítido con `crispEdges`.
+     */
+    const CALAVERA = [
+      '.............#####.............',
+      '...........#########...........',
+      '...######.###########.######...',
+      '###############################',
+      '.....######...###...######.....',
+      '.##########.o.###.o.##########.',
+      '......######.##.##.######......',
+      '...###########...###########...',
+      '........#..#########..#........',
+      '.....####..#.#.#.#.#..####.....',
+      '............#.#.#.#............',
+      '............#######............',
+      '.............#####.............',
+    ];
+    const rachas = (c: string): string =>
+      CALAVERA.map((fila, y) => {
+        let d = '';
+        for (const m of fila.matchAll(new RegExp(`${c}+`, 'g'))) d += `M${m.index} ${y}h${m[0].length}v1h-${m[0].length}z`;
+        return d;
+      }).join('');
+    const CALAVERA_SVG =
+      `<svg class="fx-grim-tx-craneo" viewBox="0 0 ${CALAVERA[0].length} ${CALAVERA.length}" width="${CALAVERA[0].length * 3}" ` +
+      `height="${CALAVERA.length * 3}" shape-rendering="crispEdges" aria-hidden="true">` +
+      `<path class="is-hueso" d="${rachas('#')}"/><path class="is-lente" d="${rachas('o')}"/></svg>`;
+
+    /** Solo hay guerra: la orden llega por el cogitador y se teclea línea a línea. `--n` = caracteres con el «> ». */
+    const ORDEN_DE_CRUZADA = ['ORIGEN: CORO ASTROPÁTICO VII', 'ORDEN DE CRUZADA... RECIBIDA', 'OBJETIVO ASIGNADO.', 'EL EMPERADOR PROTEGE.'];
+    const RETARDOS_DE_LA_ORDEN = [0.75, 1.15, 1.6, 2.0];
+    const transmisionAstropatica = (): HTMLElement =>
+      escena(
+        'fx-grim-tx',
+        '<span class="fx-grim-tx-hd">+++ TRANSMISIÓN ENTRANTE +++</span>' +
+          `<span class="fx-grim-tx-cuerpo">${CALAVERA_SVG}<span>` +
+          ORDEN_DE_CRUZADA.map(
+            (t, i) =>
+              `<p style="--n:${t.length + 2};--d:${RETARDOS_DE_LA_ORDEN[i]}s">&gt; ${t}` +
+              `${i === ORDEN_DE_CRUZADA.length - 1 ? '<i class="fx-grim-tx-cur"></i>' : ''}</p>`,
+          ).join('') +
+          '</span></span>',
+      );
+
+    /**
+     * Sin futuro: el escáner óptico al empezar un juego. La retícula gira, los corchetes se cierran sobre el objetivo
+     * y los datos se teclean a su lado. `--n` = caracteres de cada línea, `--d` = cuándo empieza a teclearse.
+     */
+    const escanerOptico = (): HTMLElement => {
+      let marcas = '';
+      for (let a = 0; a < 360; a += 30) marcas += `<path d="M100 6 V16" transform="rotate(${a} 100 100)"/>`;
+      return escena(
+        'fx-cp-scan',
+        '<span class="fx-cp-scan-veil"></span><span class="fx-cp-scan-core">' +
+          '<svg class="fx-cp-ret" viewBox="0 0 200 200" fill="none" stroke="currentColor" aria-hidden="true">' +
+          '<g class="is-gira"><circle cx="100" cy="100" r="92" stroke-width="1.5" stroke-dasharray="22 8 4 8" opacity=".85"/>' +
+          `<g stroke-width="2">${marcas}</g></g>` +
+          '<g class="is-contra"><circle cx="100" cy="100" r="68" stroke-width="1" stroke-dasharray="3 5" opacity=".7"/>' +
+          '<path d="M100 26 v10 M100 164 v10 M26 100 h10 M164 100 h10" stroke-width="2"/></g>' +
+          '<circle cx="100" cy="100" r="34" stroke-width="1.2" opacity=".55"/>' +
+          '<path d="M100 82 v10 M100 108 v10 M82 100 h10 M108 100 h10" stroke-width="1.5"/>' +
+          '<circle class="is-punto" cx="100" cy="100" r="3.5" stroke="none"/></svg>' +
+          '<span class="fx-cp-br is-tl"></span><span class="fx-cp-br is-tr"></span>' +
+          '<span class="fx-cp-br is-bl"></span><span class="fx-cp-br is-br"></span>' +
+          '<span class="fx-cp-sweep"></span>' +
+          '<span class="fx-cp-scan-data">' +
+          '<p class="is-hd" style="--n:17;--d:.35s">ÓPTICA // ESCÁNER</p>' +
+          '<p style="--n:11;--d:.75s">ANALIZANDO…</p>' +
+          '<p style="--n:16;--d:1.05s">ID: <b>PARTIDA_NUEVA</b></p>' +
+          '<p style="--n:13;--d:1.35s">AMENAZA: <b>BAJA</b></p>' +
+          '<p class="is-fin" style="--n:16;--d:1.6s">OBJETIVO <b>MARCADO</b></p>' +
+          '</span></span>' +
+          '<span class="fx-cp-scan-ok">MISIÓN ACTIVA</span>',
+      );
+    };
+
+    /**
+     * Sol y luna: la entrada al combate al empezar un juego. Los rombos se reparten en espiral cuadrada desde el
+     * centro (por anillo y, dentro del anillo, por ángulo) y cada uno entra con su retardo. El lado de la celda
+     * crece con la ventana para no pasar de ~300 celdas: con el de 48 px fijo, una pantalla 4K pedía 3.700.
+     */
+    const entradaAlCombate = (): HTMLElement => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const lado = Math.max(48, Math.ceil(Math.sqrt((w * h) / 300)));
+      const cols = Math.ceil(w / lado) + 1;
+      const filas = Math.ceil(h / lado) + 1;
+      const cx = (cols - 1) / 2;
+      const cy = (filas - 1) / 2;
+      const ox = (w - (cols - 1) * lado) / 2 - lado / 2;
+      const oy = (h - (filas - 1) * lado) / 2 - lado / 2;
+      const celdas: { x: number; y: number; k: number }[] = [];
+      for (let y = 0; y < filas; y++) {
+        for (let x = 0; x < cols; x++) {
+          const anillo = Math.round(Math.max(Math.abs(x - cx), Math.abs(y - cy)));
+          const angulo = (Math.atan2(y - cy, x - cx) + Math.PI) / (2 * Math.PI);
+          celdas.push({ x, y, k: anillo + angulo });
+        }
+      }
+      celdas.sort((a, b) => a.k - b.k);
+      const rombos = celdas
+        .map(
+          (c, i) =>
+            `<span class="fx-sos-ba-dia" style="left:${c.x * lado + ox}px;top:${c.y * lado + oy}px">` +
+            `<i style="--d:${Math.round((i / celdas.length) * 700)}ms;--c:var(${(c.x + c.y) % 2 ? '--ba-c1' : '--ba-c2'})"></i></span>`,
+        )
+        .join('');
+      const chispas = [[-34, -46, 1.15], [104, -40, 1.3], [-24, 112, 1.45], [112, 104, 1.2]]
+        .map(([x, y, d]) => `<span class="fx-sos-ba-chispa" style="left:${x}%;top:${y}%;--d:${d}s"></span>`)
+        .join('');
+      const el = escena(
+        'fx-sos-ba',
+        `${rombos}<span class="fx-sos-ba-flash"></span>` +
+          `<span class="fx-sos-ba-go"><span class="fx-sos-ba-caja"><span>¡Adelante!</span></span>` +
+          `<span style="position:absolute;inset:0">${chispas}</span></span>`,
+      );
+      el.style.setProperty('--l', `${lado}px`);
+      return el;
+    };
+
     const onMoment = (e: Event): void => {
       const { moment } = (e as CustomEvent<MomentDetail>).detail;
+
+      // Las escenas de empezar y cerrar un juego tapan la pantalla un par de segundos: salen solo si se han
+      // encendido en Diseño (`gameScenesPreference`, apagada por defecto), además de los efectos.
+      if ((moment === 'game-closed' || moment === 'game-started') && !gameScenesPreference.get()) return;
 
       if (moment === 'game-closed') {
         // El sello del ladrón y el lacre imperial son el mismo gesto con dos caras (`.fx-seal`). El lacre de
@@ -370,16 +615,23 @@ export function useSignatureEffects(): void {
           sello.prepend(canto(CANTO_IMPERIAL));
           spawn(sello);
         }
-        // Los de escena propia. Las de Inserte moneda y Portal se sortean: son el mismo «has terminado» dicho de
-        // varias maneras del mismo mundo, y que no salga siempre igual es parte de la gracia de cerrar un juego.
-        else if (fxRef.current('arcade')) {
-          if (Math.random() < 0.5) spawn(pantallaDeRecord(), 2600);
-          else spawn(atardecerSynthwave(), 2600);
-        } else if (fxRef.current('portal')) {
-          if (Math.random() < 0.5) spawn(cartelDeCamara(), 1900);
-          else spawn(terminalGlados(), 2600);
-        } else if (fxRef.current('cyberpunk')) spawn(protocoloDeBrecha(), 2400);
+        // Los de escena propia. Inserte moneda y Portal sorteaban dos cada uno hasta que la segunda pasó a empezar.
+        else if (fxRef.current('arcade')) spawn(pantallaDeRecord(), 2600);
+        else if (fxRef.current('portal')) spawn(terminalGlados(), 2600);
+        else if (fxRef.current('cyberpunk')) spawn(protocoloDeBrecha(), 2400);
         else if (fxRef.current('seaofstars')) spawn(ventanaDeVictoria(), 2300);
+        return;
+      }
+
+      if (moment === 'game-started') {
+        if (fxRef.current('tierramedia')) spawn(puertasDeDurin(), 3000);
+        else if (fxRef.current('arcade')) spawn(atardecerSynthwave(), 2600);
+        else if (fxRef.current('witcher')) spawn(nuevoContrato(), 2800);
+        else if (fxRef.current('persona')) spawn(calendario(), 2900);
+        else if (fxRef.current('portal')) spawn(cartelDeCamara(), 1900);
+        else if (fxRef.current('cyberpunk')) spawn(escanerOptico(), 2800);
+        else if (fxRef.current('seaofstars')) spawn(entradaAlCombate(), 2800);
+        else if (fxRef.current('grimdark')) spawn(transmisionAstropatica(), 3000);
         return;
       }
 

@@ -857,3 +857,62 @@
 :root[data-palette="persona"] .rc-r { background: var(--steam); color: #0a0a0a; }
 :root[data-palette="persona"][data-theme="light"] .rc-n { box-shadow: none; }
 
+
+/* ══ MOMENTOS · EL CALENDARIO, al EMPEZAR un juego (12-10-2026) ═════════════════════════════════════════════════
+   La contraparte de «OBJETIVO CUMPLIDO»: la transición de día de Persona 5. Una franja roja cruza en diagonal, el
+   número de AYER salta hacia arriba y cae el de HOY, con el mes encima («10/»), el día de la semana en su recuadro
+   negro sesgado y el sol que gira; remata «HOY EMPIEZA» en las letras recortadas de siempre (`.rc-*`, la receta de
+   `recortes.ts`). La fecha es la del momento en que se lanza: la pone el hook, no esta hoja. Elegido con la página
+   de propuestas de «empezar un juego». A la luz, el velo es de papel y no de tinta. ══ */
+:root[data-palette="persona"] .fx-p5-cal { position: fixed; inset: 0; z-index: 9997; pointer-events: none; overflow: hidden; animation: p5cal-fuera 2.9s forwards; }
+:root[data-palette="persona"] .fx-p5-cal::before { content: ""; position: absolute; inset: 0; background: rgba(13, 13, 13, .72); animation: p5cal-velo .25s both; }
+:root[data-palette="persona"][data-theme="light"] .fx-p5-cal::before { background: rgba(244, 241, 238, .78); }
+:root[data-palette="persona"] .fx-p5-cal-franja {
+  position: absolute; left: -20%; right: -20%; top: 38%; height: 120px; background: #ff1f3d;
+  transform: rotate(-14deg); box-shadow: 0 0 0 6px #0d0d0d, 0 0 0 9px #fff;
+  animation: p5cal-franja .35s cubic-bezier(.2, .8, .2, 1) both;
+}
+:root[data-palette="persona"] .fx-p5-cal-bloque {
+  position: absolute; left: 50%; top: 44%; display: grid; grid-template-columns: auto auto; align-items: end; gap: 0 10px;
+  transform: translate(-50%, -50%) rotate(-8deg); color: #fff;
+}
+:root[data-palette="persona"] .fx-p5-cal-mes {
+  grid-column: 1 / -1; font: 400 26px/1 'Anton', var(--font-display); letter-spacing: .04em; color: #fff; text-shadow: 3px 3px 0 #0d0d0d;
+  animation: p5cal-cae .3s .15s both;
+}
+:root[data-palette="persona"][data-theme="light"] .fx-p5-cal-mes { color: #0d0d0d; text-shadow: 3px 3px 0 #ff1f3d; }
+:root[data-palette="persona"] .fx-p5-cal-num { position: relative; height: 150px; width: 2.1ch; overflow: hidden; font: 400 150px/1 'Anton', var(--font-display); }
+:root[data-palette="persona"] .fx-p5-cal-num span {
+  position: absolute; inset: 0; text-align: center; color: #fff;
+  -webkit-text-stroke: 4px #0d0d0d; paint-order: stroke fill; text-shadow: 7px 7px 0 #0d0d0d;
+}
+:root[data-palette="persona"] .fx-p5-cal-num .is-ayer { animation: p5cal-ayer .4s .55s cubic-bezier(.6, 0, .8, .3) forwards; }
+:root[data-palette="persona"] .fx-p5-cal-num .is-hoy { transform: translateY(105%) rotate(18deg); animation: p5cal-hoy .42s .78s cubic-bezier(.2, 1.4, .4, 1) forwards; }
+:root[data-palette="persona"] .fx-p5-cal-lado { display: grid; gap: 8px; padding-bottom: 14px; }
+:root[data-palette="persona"] .fx-p5-cal-dia {
+  font: 400 30px/1 'Anton', var(--font-display); padding: 4px 12px 2px; background: #0d0d0d; color: #fff;
+  transform: skewX(-14deg) rotate(4deg); box-shadow: 4px 4px 0 #fff;
+}
+:root[data-palette="persona"] .fx-p5-cal-dia span { display: inline-block; transform: skewX(14deg); }
+:root[data-palette="persona"] .fx-p5-cal-sol {
+  width: 44px; height: 44px; background: #fff; border-radius: 50%; padding: 3px; box-shadow: 3px 3px 0 #0d0d0d;
+  animation: p5cal-gira 2.4s .3s linear both;
+}
+:root[data-palette="persona"] .fx-p5-cal-hoy {
+  position: absolute; left: 50%; top: 74%; transform: translate(-50%, -50%) rotate(-6deg);
+  font: 400 30px/1 'Anton', var(--font-display); white-space: nowrap;
+}
+:root[data-palette="persona"] .fx-p5-cal-hoy .rc-letters { flex-wrap: nowrap; }
+:root[data-palette="persona"] .fx-p5-cal-hoy .rc { box-shadow: 2px 2px 0 rgba(0, 0, 0, .55); animation: p5cal-letra .18s both; animation-delay: calc(1.25s + var(--d, 0ms)); }
+@media (max-width: 480px) {
+  :root[data-palette="persona"] .fx-p5-cal-num { height: 120px; font-size: 120px; }
+  :root[data-palette="persona"] .fx-p5-cal-hoy { font-size: 26px; }
+}
+@keyframes p5cal-fuera { 0%, 86% { opacity: 1; } 100% { opacity: 0; transform: scale(1.04); } }
+@keyframes p5cal-velo { from { opacity: 0; } }
+@keyframes p5cal-franja { from { transform: rotate(-14deg) translateX(-110%); } }
+@keyframes p5cal-cae { from { opacity: 0; transform: translateY(-20px); } }
+@keyframes p5cal-ayer { to { transform: translateY(-110%) rotate(-12deg); opacity: .3; } }
+@keyframes p5cal-hoy { to { transform: none; } }
+@keyframes p5cal-gira { to { transform: rotate(180deg); } }
+@keyframes p5cal-letra { from { opacity: 0; transform: scale(1.8) rotate(0); } }

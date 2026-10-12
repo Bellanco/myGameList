@@ -20,6 +20,8 @@
 export type AppMoment =
   /** Un juego pasa a la lista del completista: se acabó. */
   | 'game-closed'
+  /** Un juego pasa a En curso desde otra lista (o entra directamente ahí): empieza la partida. */
+  | 'game-started'
   /** La biblioteca se ha escrito (alta, edición o cambio de lista). */
   | 'library-saved'
   /** Han cambiado los filtros del listado. */

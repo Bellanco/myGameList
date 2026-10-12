@@ -1066,3 +1066,69 @@
   background-blend-mode: soft-light, soft-light, normal;
   filter: drop-shadow(0 1.5px 1.5px rgba(18, 10, 4, .8));
 }
+
+/* ── LA FIRMA · TRANSMISIÓN ASTROPÁTICA, al EMPEZAR un juego (12-10-2026) ─────────────────────────────────────────
+   La contraparte de «DEBER CUMPLIDO»: antes de la batalla llega la orden. La pantalla del cogitador se enciende en una
+   raya, «+++ TRANSMISIÓN ENTRANTE +++» parpadea, aparece la calavera alada y la orden se teclea línea a línea hasta
+   «EL EMPERADOR PROTEGE». Elegida con la página de propuestas de «empezar un juego».
+   LA CALAVERA ES UN DIBUJO DE PÍXELES, NO CARACTERES. La primera versión era un `<pre>` de almohadillas y el usuario
+   pidió mejor diseño: ahora es un mapa de 31×13 (cuencas hondas, pómulos, nariz en V invertida, dientes, mandíbula y
+   cuatro plumas escalonadas por ala) que el hook convierte en un `path` por color con `crispEdges`, a 3 px el píxel.
+   Va por ENCIMA de la trama del monitor: con la trama de 3 px encima, cada fila de píxeles salía rayada. La lente
+   roja del servocráneo se enciende después del hueso. A la luz, la misma pantalla en placa de datos impresa: tinta
+   sin resplandor. En pantallas estrechas la calavera sube encima del texto, que si no se cortaba. ── */
+:root[data-palette="grimdark"] .fx-grim-tx {
+  position: fixed; z-index: 9997; pointer-events: none;
+  left: 50%; top: 46%; width: 450px; max-width: 94vw; transform: translate(-50%, -50%);
+  padding: 14px 16px 16px; overflow: hidden;
+  background: #04100a; color: #43f558; font: 20px/1.15 'VT323', var(--font-mono); text-shadow: 0 0 6px rgba(67, 245, 88, .7);
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+  box-shadow: inset 0 0 0 2px #2f5240, inset 0 0 40px rgba(67, 245, 88, .12);
+  animation: grimtx-enciende 3s forwards;
+}
+:root[data-palette="grimdark"] .fx-grim-tx::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .4) 0 1px, transparent 1px 3px);
+}
+:root[data-palette="grimdark"] .fx-grim-tx-hd { display: block; text-align: center; letter-spacing: .06em; animation: grimtx-parpadeo .36s .15s steps(1) 4; }
+:root[data-palette="grimdark"] .fx-grim-tx-cuerpo { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; margin-top: 10px; }
+:root[data-palette="grimdark"] .fx-grim-tx-craneo {
+  position: relative; z-index: 1; display: block; opacity: 0;
+  filter: drop-shadow(0 0 2px rgba(67, 245, 88, .75));
+  animation: grimtx-aparece .1s .45s steps(1) forwards;
+}
+:root[data-palette="grimdark"] .fx-grim-tx-craneo .is-hueso { fill: currentColor; }
+:root[data-palette="grimdark"] .fx-grim-tx-craneo .is-lente { fill: #ff3b2f; opacity: 0; animation: grimtx-lente .5s .95s steps(1) forwards; }
+:root[data-palette="grimdark"] .fx-grim-tx p {
+  margin: 0 0 3px; width: 0; overflow: hidden; white-space: nowrap; font-size: 17px;
+  animation: grimtx-teclea calc(var(--n) * 22ms) steps(var(--n)) var(--d) forwards;
+}
+:root[data-palette="grimdark"] .fx-grim-tx p:last-child { color: #c9ffcf; }
+:root[data-palette="grimdark"] .fx-grim-tx-cur {
+  display: inline-block; width: .55ch; height: .9em; vertical-align: -1px; background: currentColor;
+  animation: grimtx-parpadeo .5s 2.3s steps(1) 2;
+}
+:root[data-palette="grimdark"][data-theme="light"] .fx-grim-tx {
+  background: #efe6cc; color: #136b30; text-shadow: none;
+  box-shadow: inset 0 0 0 2px #8f8460, 0 10px 24px -10px rgba(40, 30, 10, .5);
+}
+:root[data-palette="grimdark"][data-theme="light"] .fx-grim-tx::after { background: repeating-linear-gradient(0deg, rgba(60, 50, 20, .08) 0 1px, transparent 1px 3px); }
+:root[data-palette="grimdark"][data-theme="light"] .fx-grim-tx p:last-child { color: #0b4a1f; }
+:root[data-palette="grimdark"][data-theme="light"] .fx-grim-tx-craneo { filter: none; }
+:root[data-palette="grimdark"][data-theme="light"] .fx-grim-tx-craneo .is-lente { fill: #c4170e; }
+@media (max-width: 480px) {
+  :root[data-palette="grimdark"] .fx-grim-tx-cuerpo { grid-template-columns: 1fr; justify-items: center; gap: 8px; }
+  :root[data-palette="grimdark"] .fx-grim-tx-cuerpo > span { justify-self: stretch; }
+}
+@keyframes grimtx-enciende {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(1, .02); filter: brightness(3); }
+  6% { opacity: 1; transform: translate(-50%, -50%) scale(1, .02); }
+  12%, 88% { opacity: 1; transform: translate(-50%, -50%) scale(1, 1); filter: brightness(1); }
+  91% { opacity: .5; }
+  93% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1, 1); }
+}
+@keyframes grimtx-parpadeo { 50% { opacity: 0; } }
+@keyframes grimtx-aparece { to { opacity: 1; } }
+@keyframes grimtx-lente { 0% { opacity: 1; } 20% { opacity: 0; } 40%, 100% { opacity: 1; } }
+@keyframes grimtx-teclea { to { width: calc(var(--n) * 1ch + .6ch); } }
