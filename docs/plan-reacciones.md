@@ -1,6 +1,6 @@
 # Plan: «Me gusta» en el feed
 
-> **Estado (12-10-2026): Fase 0 cerrada; Fase 1 en curso.** Sale de la idea A1 de
+> **Estado (12-10-2026): Fases 0, 1 y 2 hechas (sin push); sigue la Fase 3.** Sale de la idea A1 de
 > `docs/investigacion-interaccion-social.md`. Las alternativas visuales que se compararon están en
 > `docs/maquetas/reacciones.html` (con el servidor de desarrollo); la elegida es la C, reducida a una sola reacción.
 >
@@ -95,16 +95,37 @@ En la práctica:
   - Fusión con lápidas, desempate, topes y caducidad de las lápidas.
   - Lectura defensiva y guarda de versión.
 
-## Fase 2 · Escritura · M
+## Fase 2 · Escritura · M · ✅ hecha (12-10-2026)
 
-- `likeItem` / `unlikeItem` en `socialPublishRepository.ts`:
-  - Pasan por `serializeSocialWrite` y escriben **solo** el fichero de reacciones.
-  - **Sin** `syncPublicIdentity`: es lo que mantiene a cero el coste en Firestore.
-- Agrupar unos 4 s: varios «me gusta» seguidos son un solo `PATCH`, por los límites secundarios de GitHub.
-- Sin red, quedan pendientes en `LocalMeta` y se envían al volver; la interfaz los enseña ya puestos.
-- La puerta legal es la del hub: solo se da «me gusta» desde dentro.
-- Al **dejar de ser amigos**, se retiran los «me gusta» a esa persona en la siguiente escritura.
-- La migración del canal copia el fichero (hueco 1). Con un fichero de versión mayor, no se escribe (hueco 3).
+**Dónde quedó:**
+
+- **La E/S del fichero** está en `model/repository/socialReactionsGist.ts`: `readSocialReactionsContent`,
+  `readSocialReactionsRaw` y `writeSocialReactions`.
+  - Va aparte de la cola para que el gist social pueda copiarlo al migrar sin una importación circular.
+  - Lee con su propio ETag.
+  - Si el fichero llega recortado o con el JSON roto, lanza en vez de sobrescribirlo.
+- **La cola y la subida** están en `model/repository/socialReactionsRepository.ts`:
+  - `setSocialLike` y `retireSocialLikesTo` apuntan la intención y la guardan en
+    `LocalMeta.pendingReactions` / `pendingReactionPurges`.
+  - `scheduleSocialLikesFlush` agrupa durante 4 s (`FLUSH_DELAY_MS`) y reintenta al volver la conexión (`online`).
+  - `flushSocialLikes` va por `serializeSocialWrite` y escribe solo el fichero de reacciones.
+  - `getPendingSocialLikes` es para que la interfaz pinte lo pulsado antes de que suba.
+- **Lo que NO toca:**
+  - No llama a `syncPublicIdentity`.
+  - La puerta legal es `canPublishSocialInBackground`, sellada en local: cero lecturas de Firestore en el caso normal.
+  - El canal se resuelve en local si ya hay gist.
+- **La migración del canal** (`ensureSecretSocialGist`) crea el gist nuevo con el fichero copiado tal cual, en la
+  misma petición (`createSocialGistWithData`, parámetro `extraFiles`). Si no se puede leer, migra sin él.
+- **Cambio sobre lo planeado.** Retirar los «me gusta» al dejar de ser amigos necesita el pseudónimo de la otra
+  persona, y `deleteRelationship` (`useSocialFriendships`) solo conoce su uid. La API ya existe
+  (`retireSocialLikesTo`); la llamada se conecta en la **Fase 3**, donde el directorio cruza uid y pseudónimo.
+- **Tests:**
+  - `tests/unit/socialLikesWrite.test.ts`: ráfaga en un solo `PATCH`, solo el fichero de reacciones, lápida de lo
+    que solo estaba en el gist, fusión con otro dispositivo, lo pulsado mientras sube, purga, versión más nueva,
+    fichero ilegible, sin red, cerrar la pestaña y las tres puertas.
+  - `tests/unit/secretSocialGist.test.ts`: la copia al migrar.
+- **Medido:** arranque crítico 189,6 de 190 kB, igual que HEAD sin la fase (worktree aparte). El margen estrecho ya
+  venía de antes; la Fase 4 tiene que vigilarlo.
 
 ## Fase 3 · Lectura · M
 

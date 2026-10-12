@@ -24,8 +24,10 @@ import { resolveGrade } from '../../core/utils/scoreScale';
 import { pickLegacyActorId, pickLegacyFromId, pickLegacyReviewText, socialGistNeedsRewrite } from '../migration/legacySocialFormat';
 import { TAB_IDS, type TabId } from '../types/game';
 import { githubFetch, isGithubRateLimited } from './githubHttp';
+import { readSocialReactionsContent } from './socialReactionsGist';
 import { GIST_API_BASE, buildGithubError, getGithubAuthHeader } from './githubGistApi';
 import {
+  SOCIAL_REACTIONS_FILENAME,
   assembleChunkedSocial,
   assertGistSizeWithinLimit,
   assertNoSocialPrivateFields,
@@ -1042,7 +1044,16 @@ export async function createSocialGist(token: string): Promise<{ gistId: string;
   return createSocialGistWithData(token, getEmptySocialGistData(), false);
 }
 
-async function createSocialGistWithData(token: string, data: SocialGistData, isPublic: boolean): Promise<{ gistId: string; etag: string | null }> {
+/**
+ * `extraFiles`: ficheros del gist de origen que se copian TAL CUAL al migrar de canal (hoy, el de «me gusta»). Van en
+ * la misma petición que crea el gist: no hay un instante en que el canal nuevo exista sin ellos.
+ */
+async function createSocialGistWithData(
+  token: string,
+  data: SocialGistData,
+  isPublic: boolean,
+  extraFiles: Record<string, { content: string }> = {},
+): Promise<{ gistId: string; etag: string | null }> {
   if (!isValidGithubToken(token)) {
     throw new Error('El token no tiene el formato de GitHub. Revisa que lo hayas copiado entero.');
   }
@@ -1060,6 +1071,7 @@ async function createSocialGistWithData(token: string, data: SocialGistData, isP
       description: 'myGameList - Social Sync',
       public: isPublic,
       files: {
+        ...extraFiles,
         [SOCIAL_GIST_FILENAME]: {
           content: JSON.stringify(normalized),
         },
@@ -1601,7 +1613,16 @@ export async function ensureSecretSocialGist(token: string, gistId: string): Pro
     return { ...unchanged, tooLarge: true };
   }
 
-  const migration = await createSocialGistWithData(token, payload.data, false);
+  // Los «me gusta» viven en otro fichero del mismo gist (`SOCIAL_REACTIONS_FILENAME`): se copian tal cual, sin
+  // interpretarlos, para no perder nada que haya escrito una versión más nueva. Si no se pueden leer, la migración
+  // sigue sin ellos: el canal vale más que los «me gusta», y retenerla por ellos dejaría el gist público expuesto.
+  const reactionsContent = await readSocialReactionsContent(token, sourceGistId).catch(() => null);
+  const migration = await createSocialGistWithData(
+    token,
+    payload.data,
+    false,
+    reactionsContent ? { [SOCIAL_REACTIONS_FILENAME]: { content: reactionsContent } } : {},
+  );
 
   // QUÉ SE PUEDE RETIRAR. El clon se hace de UN gist, pero una cuenta con deriva puede tener dos públicos, y
   // borrar el equivocado deja expuesto precisamente el que tiene las reseñas (o pierde lo que solo esté ahí).

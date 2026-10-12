@@ -1,4 +1,5 @@
 import type { ChunkRef } from './gist';
+import type { SocialReactionEntry } from '../../core/social/reactions';
 
 /**
  * Metadatos que viven SOLO en IndexedDB, nunca se suben. Evolución de `SyncConfig`.
@@ -63,6 +64,13 @@ export interface LocalMeta {
    * que publican van 8 h como mínimo; solo se sella cuando ha publicado de verdad (docs/plan-feed-sin-vacio.md, Fase 3).
    */
   backgroundSocialPassAt?: number;
+  /**
+   * «Me gusta» pulsados que aún no han subido al gist social, y perfiles cuyos «me gusta» hay que retirar. Aquí para
+   * que sobrevivan a cerrar la pestaña o a quedarse sin red; ver `socialReactionsRepository`
+   * (docs/plan-reacciones.md, Fase 2).
+   */
+  pendingReactions?: SocialReactionEntry[];
+  pendingReactionPurges?: string[];
   // Último gist social ya propagado a MIS docs de amistad DESDE LA RUTA DE PUBLICACIÓN. Sigue vivo junto a
   // `friendshipIdentityFingerprint` porque acota una ruta que la huella no puede acotar: la publicación no sabe
   // descartar el monograma genérico de Google, así que se le fija a una pasada por id de gist para que no se

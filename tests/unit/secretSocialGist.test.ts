@@ -12,6 +12,7 @@ const GIST_ID = 'aabbccddeeff00112233445566778899';
 const NUEVO_ID = '99887766554433221100ffeeddccbbaa';
 
 const SOCIAL_FILE = 'myGameList.social.json';
+const REACTIONS_FILE = 'myGameList.social-reactions.json';
 
 function payload() {
   return {
@@ -42,11 +43,14 @@ function payload() {
 
 /** Respuestas de la API de GitHub, controladas por test. */
 let listResponse: unknown[];
-let created: { public?: boolean; content?: string } | null;
+let created: { public?: boolean; content?: string; files?: Record<string, { content: string }> } | null;
+/** Contenido del fichero de «me gusta» en el gist de origen (`null`: no lo tiene). */
+let sourceReactions: string | null;
 
 beforeEach(() => {
   listResponse = [];
   created = null;
+  sourceReactions = null;
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
     const target = String(url);
     const method = String(init?.method || 'GET').toUpperCase();
@@ -58,12 +62,14 @@ beforeEach(() => {
     // Creación (el clon secreto).
     if (method === 'POST') {
       const body = JSON.parse(String(init?.body || '{}'));
-      created = { public: body.public, content: body.files?.[SOCIAL_FILE]?.content };
+      created = { public: body.public, content: body.files?.[SOCIAL_FILE]?.content, files: body.files };
       return new Response(JSON.stringify({ id: NUEVO_ID }), { status: 201, headers: { etag: 'W/"nuevo"', 'content-type': 'application/json' } });
     }
     // Lectura del gist actual.
+    const files: Record<string, { content: string }> = { [SOCIAL_FILE]: { content: JSON.stringify(payload()) } };
+    if (sourceReactions !== null) files[REACTIONS_FILE] = { content: sourceReactions };
     return new Response(
-      JSON.stringify({ files: { [SOCIAL_FILE]: { content: JSON.stringify(payload()) } } }),
+      JSON.stringify({ files }),
       { status: 200, headers: { etag: 'W/"actual"', 'content-type': 'application/json' } },
     );
   }));
@@ -95,6 +101,26 @@ describe('ensureSecretSocialGist', () => {
     expect(created?.public).toBe(false);
     // El contenido viaja entero: la actividad no se pierde en la migración.
     expect(JSON.parse(created?.content || '{}').activity).toHaveLength(1);
+  });
+
+  // Los «me gusta» viven en otro fichero del mismo gist: si el clon no lo lleva, se pierden al retirar el original.
+  it('copia TAL CUAL el fichero de «me gusta» al canal nuevo, en la misma creación', async () => {
+    listResponse = [ownGist(GIST_ID, true)];
+    // Una versión del formato más nueva que la de esta app: se copia sin interpretarla, así que no se pierde nada.
+    sourceReactions = JSON.stringify({ v: 9, updatedAt: 1, items: [{ futuro: true }] });
+
+    await ensureSecretSocialGist(TOKEN, GIST_ID);
+
+    expect(created?.files?.[REACTIONS_FILE]?.content).toBe(sourceReactions);
+    expect(JSON.parse(created?.content || '{}').activity).toHaveLength(1);
+  });
+
+  it('sin fichero de «me gusta» en el origen, el canal nuevo solo lleva el principal', async () => {
+    listResponse = [ownGist(GIST_ID, true)];
+
+    await ensureSecretSocialGist(TOKEN, GIST_ID);
+
+    expect(Object.keys(created?.files || {})).toEqual([SOCIAL_FILE]);
   });
 
   // LO QUE MÁS IMPORTA: clonar de más deja un huérfano y parte al usuario en dos canales. Es exactamente el fallo
@@ -263,7 +289,7 @@ describe('ensureSecretSocialGist — elección de la fuente', () => {
       }
       if (String(init?.method || 'GET').toUpperCase() === 'POST') {
         const body = JSON.parse(String(init?.body || '{}'));
-        created = { public: body.public, content: body.files?.[SOCIAL_FILE]?.content };
+        created = { public: body.public, content: body.files?.[SOCIAL_FILE]?.content, files: body.files };
         return new Response(JSON.stringify({ id: NUEVO_ID }), { status: 201, headers: { 'content-type': 'application/json' } });
       }
       leidos.push(target.split('/').pop() || '');
