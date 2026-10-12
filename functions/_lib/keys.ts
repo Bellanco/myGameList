@@ -147,10 +147,24 @@ export function dailyQuotaKey(uid: string, now: number): string {
   return `quota:${uid}:${new Date(now).toISOString().slice(0, 10)}`;
 }
 
-/** Lo que viaja en la `metadata` de `user:{uid}:{token}`: lo justo para pintar una fila y contar cuota. */
+/**
+ * Lo que viaja en la `metadata` de `user:{uid}:{token}`: lo justo para pintar una fila y contar cuota.
+ *
+ * El enlace del RESUMEN DEL AÑO comparte índice con las reseñas —así el censo, el veto con purga y el borrado de
+ * cuenta lo alcanzan sin código aparte— y se distingue por `kind: 'year'`. Lleva `gameId: 0` y un `gameName`
+ * legible («Resumen de 2026») para que cualquier pantalla que pinte filas sepa qué enseñar; NO cuenta para la cuota
+ * de reseñas (ver `readShareStatus`).
+ */
 export interface ShareIndexMetadata {
   gameId: number;
   gameName: string;
   createdAt: number;
   expiresAt: number;
+  kind?: 'year';
+  year?: number;
+}
+
+/** ¿Es la fila del enlace de un resumen del año? */
+export function isYearShareMeta(meta: ShareIndexMetadata | null | undefined): boolean {
+  return meta?.kind === 'year';
 }

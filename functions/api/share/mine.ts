@@ -28,6 +28,10 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
       .filter((row) => row.meta)
       .map((row) => ({ token: row.token, ...row.meta }))
       .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
+    // El enlace del resumen del año va aparte: no cuenta para la cuota ni sale en la lista de reseñas compartidas.
+    yearShares: status.yearShares
+      .filter((row) => row.meta)
+      .map((row) => ({ token: row.token, year: row.meta?.year || 0, createdAt: row.meta?.createdAt || 0, expiresAt: row.meta?.expiresAt || 0 })),
     quota: status.quota,
     ban: status.ban,
     // El nick con el que se FIRMARÍA la reseña. Se envía para que el diálogo pueda enseñarlo antes de publicar:

@@ -1,7 +1,7 @@
 // Crear, renovar y retirar enlaces. Es la única pieza que escribe en KV, para que las tres claves de un enlace
 // (artículo, propietario e índice) no puedan quedar descuadradas por dos endpoints que hagan las cosas distinto.
 // El índice de sugeridos (`relidx:{uid}`) lo mantiene `relatedIndex.ts`, y se le llama desde aquí por lo mismo.
-import { assertValidSharedReview } from '../../src/model/schemas/shareSchema';
+import { assertValidSharedReview, assertValidSharedYearSummary } from '../../src/model/schemas/shareSchema';
 import { shareExpiresAt, type ShareQuota } from '../../src/core/constants/tiers';
 import { newToken } from './http';
 import { ownerKey, shareKey, userShareKey, type KVNamespace, type ShareIndexMetadata } from './keys';
@@ -142,6 +142,52 @@ export async function publishShare(input: {
   );
 
   return { token, expiresAt, renewed: Boolean(input.existingToken) };
+}
+
+/**
+ * Publica o ACTUALIZA el enlace del resumen del año (docs/plan-resumen-del-ano.md, Fase 4).
+ *
+ * Crear son TRES escrituras —artículo, propietario e índice—, no las cinco de una reseña: sin contador diario (el
+ * tope es uno por año, que ya dice el índice) y sin índice de sugeridos (un resumen no sugiere reseñas).
+ *
+ * Actualizar es UNA: la caducidad es el cierre de la ventana, la misma para todo el año, así que propietario e
+ * índice no cambian y solo se reescribe el artículo, con el mismo token. El enlace que ya circula sigue siendo el
+ * mismo y enseña lo nuevo. La espera entre actualizaciones la comprueba quien llama, antes de llegar aquí.
+ */
+export async function publishYearShare(input: {
+  kv: KVNamespace;
+  uid: string;
+  year: number;
+  summary: unknown;
+  nick: string;
+  now: number;
+  /** Cierre de la ventana de ese año: caducidad del enlace. */
+  expiresAt: number;
+  /**
+   * El enlace que ya tenía ese año: entonces se reescribe sobre el mismo token. `indexed: false` cuando su
+   * artículo ya no estaba (caducó antes que el índice) y hay que volver a escribir las tres claves.
+   */
+  existing?: { token: string; createdAt: number; indexed: boolean } | null;
+}): Promise<{ token: string; createdAt: number; updatedAt: number; expiresAt: number; renewed: boolean }> {
+  const { kv, uid, year, nick, now, expiresAt, existing } = input;
+  const token = existing?.token || newToken();
+  const createdAt = existing?.createdAt || now;
+  const article = { v: 1 as const, kind: 'year' as const, year, summary: input.summary, authorNick: nick, createdAt, updatedAt: now, expiresAt };
+
+  try {
+    assertValidSharedYearSummary(article);
+  } catch (error) {
+    throw new InvalidShareError(error instanceof Error ? error.message : 'Resumen no publicable');
+  }
+
+  const expirationTtl = Math.max(60, Math.floor((expiresAt - now) / 1000));
+  await kv.put(shareKey(token), JSON.stringify(article), { expirationTtl });
+  if (!existing?.indexed) {
+    const metadata: ShareIndexMetadata = { gameId: 0, gameName: `Resumen de ${year}`, createdAt, expiresAt, kind: 'year', year };
+    await kv.put(ownerKey(token), uid, { expirationTtl });
+    await kv.put(userShareKey(uid, token), JSON.stringify(metadata), { expirationTtl, metadata });
+  }
+  return { token, createdAt, updatedAt: now, expiresAt, renewed: Boolean(existing) };
 }
 
 /**
