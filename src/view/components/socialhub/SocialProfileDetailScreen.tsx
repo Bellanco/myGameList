@@ -769,6 +769,9 @@ function SocialProfileDetailScreenBase({
                   ) : (
                   <GameTable
                     games={visibleGames}
+                    // El recuento, de TODOS los de la pestaña (los que casan con el filtro, si hay), no del lote de
+                    // 15 que se pinta: decía «15 juegos» con doscientos en la lista.
+                    totalCount={filteredGames.length}
                     currentTab={currentTab}
                     expandedId={expandedByTab[currentTab] ?? null}
                     onExpandedChange={(id) => setExpandedByTab((prev) => ({ ...prev, [currentTab]: id }))}
