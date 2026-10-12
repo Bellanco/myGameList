@@ -257,3 +257,20 @@ describe('assertValidSocialReactions', () => {
     expect(() => assertValidSocialReactions({ v: 1, updatedAt: NOW, items: [], extra: true })).toThrow();
   });
 });
+
+// FASE 6 de docs/plan-reacciones.md — el fichero de «me gusta» es canal público: la misma denylist que el principal.
+describe('writeSocialReactions y los campos privados', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('un campo privado no llega a GitHub', async () => {
+    const { writeSocialReactions } = await import('../../src/model/repository/socialReactionsGist');
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const file = { v: 1, updatedAt: NOW, items: [{ ...like(REVIEW, NOW), review: 'texto íntegro' }] } as never;
+
+    await expect(writeSocialReactions('ghp_0123456789abcdefghij', 'abcdef99', file)).rejects.toThrow(/review/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});

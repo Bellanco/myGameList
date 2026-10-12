@@ -89,6 +89,12 @@
 // datos que lo aceptado no contemplaba en público, así que la versión sube y todo el mundo vuelve a pasar por la
 // puerta (mismo criterio que con los enlaces de reseñas). A la vez, el aviso a tus amistades deja de salir al
 // consultar tu resumen y sale al compartirlo: eso es publicar menos y no la subiría por sí solo.
+// 2026-10-12, también: los «ME GUSTA» (docs/plan-reacciones.md). El canal social publica, en un fichero aparte, a qué
+// reseñas y publicaciones de tus amistades les das «me gusta» y cuándo; lo ven tus amistades que pueden ver lo mismo.
+// Es un dato nuevo sobre ti, así que pediría subir la versión, pero va en ESTA y no en una `b`: la 2026-10-12 aún no
+// ha salido en ninguna release (la 1.6.10 lleva la 2026-10-07b), así que nadie la ha aceptado todavía con el texto
+// anterior, y las dos novedades juntas cuestan a cada persona una sola vuelta por la puerta. La `b` se usó cuando la
+// primera del día ya había salido (2026-10-07); si esta llegara a salir antes que los «me gusta», tocaría subirla.
 export const LEGAL_VERSION = '2026-10-12';
 
 /**
@@ -149,10 +155,10 @@ export interface LegalDocument {
 /** Textos de la puerta de aceptación previa al espacio social. */
 export const LEGAL_CONSENT_UI = {
   title: 'Antes de continuar',
-  // La actividad se detalla un poco —«reseñas y movimientos de listas»— porque es lo que más gente lee de todo el
+  // La actividad se detalla un poco —reseñas, movimientos de listas y «me gusta»— porque es lo que más gente lee de todo el
   // aparato legal, y lo segundo es nuevo: quien lo acepte tiene que saber que la app va a contar sola cuándo
   // empieza o termina un juego, no solo lo que él escriba. En el registro formal de los documentos (2026-10-05).
-  body: 'Al activar el espacio social se publican el nombre de perfil, la fotografía y los logros, accesibles para cualquier usuario con sesión iniciada, así como la actividad (las reseñas y los movimientos de listas, con su fecha), accesible para las personas con las que se mantenga una relación de amistad. Para activarlo es necesario aceptar las Condiciones de uso y la Política de privacidad.',
+  body: 'Al activar el espacio social se publican el nombre de perfil, la fotografía y los logros, accesibles para cualquier usuario con sesión iniciada, así como la actividad (las reseñas, los movimientos de listas y los «me gusta» a lo que publican las amistades, con su fecha), accesible para las personas con las que se mantenga una relación de amistad. Para activarlo es necesario aceptar las Condiciones de uso y la Política de privacidad.',
   checkbox: 'He leído y acepto las Condiciones de uso y la Política de privacidad',
   termsLink: 'Condiciones de uso',
   privacyLink: 'Política de privacidad',

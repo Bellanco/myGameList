@@ -1,6 +1,6 @@
 # Plan: «Me gusta» en el feed
 
-> **Estado (12-10-2026): Fases 0 a 4 hechas (sin push); siguen la 5 y la 6.** Sale de la idea A1 de
+> **Estado (12-10-2026): Fases 0 a 6 cerradas (sin push). La 5, sin rótulo, por decisión del usuario.** Sale de la idea A1 de
 > `docs/investigacion-interaccion-social.md`. Las alternativas visuales que se compararon están en
 > `docs/maquetas/reacciones.html` (con el servidor de desarrollo); la elegida es la C, reducida a una sola reacción.
 >
@@ -186,7 +186,7 @@ llegaba a revalidarse con ETag.
   - las tarjetas de reseña y publicación del feed (`SocialFeedScreen`, props `likesFor` / `toggleLike`);
   - el detalle de una reseña (`SocialDetailScreen` → `ReviewScreen`, hueco `footer`).
 - **El botón:**
-  - Es de texto, con el pulgar de Lucía (`icon-thumbs-up`, en `IconSpriteRest`, a trazo).
+  - Es de texto, con el pulgar de Lucide (`icon-thumbs-up`, en `IconSpriteRest`, a trazo).
   - `aria-pressed`, y su nombre accesible dice de quién es lo que gusta.
   - No propaga ni el clic ni las teclas a la tarjeta, que abre el detalle.
 - **Al pulsar, al momento:**
@@ -207,17 +207,26 @@ llegaba a revalidarse con ETag.
 - **Medido:** arranque crítico 189,6 de 190 kB, sin cambios.
 - **No incluido:** la pestaña «Reseñas» del perfil de una amistad (`SocialProfileReviewScreen`) no lleva el botón.
 
-## Fase 5 · Saber que te han leído · S
+## Fase 5 · Saber que te han leído · S · cerrada sin rótulo (12-10-2026)
 
-- Que cuenten en «novedades desde tu última visita» (idea B1 de la investigación): los «me gusta» a lo tuyo
-  posteriores a la última vez que viste el feed.
-- Si B1 no existe todavía, como mínimo un rótulo en la tarjeta propia.
+- **Decisión del usuario: no hay etiqueta «Nuevo»** en la tarjeta propia.
+- Lo que hay es la frase en tus propias reseñas y publicaciones («A Marta y a Nacho les gusta»), que sale en cuanto el
+  feed lee los gists de tus amistades.
+- **Queda pendiente** un aviso de novedades fuera de la tarjeta (un número en la pestaña Social, «desde tu última
+  visita»). Es la idea B1 de la investigación. Para contar los «me gusta» sin abrir el social haría falta leer los
+  gists de las amistades fuera del hub, así que va con ella.
 
-## Fase 6 · Texto legal · S
+## Fase 6 · Texto legal · S · ✅ hecha (12-10-2026)
 
-- El aviso del espacio social (`legal.ts`) enumera lo que se publica. Hay que añadir los «me gusta» y subir
-  `LEGAL_VERSION`.
-- `audit:privacy` y `assertNoSocialPrivateFields` también tienen que cubrir el fichero nuevo.
+- **La puerta de aceptación** (`LEGAL_CONSENT_UI.body`, `legal.ts`) nombra los «me gusta» en lo que se publica.
+- **La política de privacidad** (`legalContent.ts`) dice qué se publica, quién lo ve y cuándo se retira.
+- **Los créditos** de los iconos citan a Lucide también para el pulgar.
+- **`LEGAL_VERSION` NO sube:** la 2026-10-12, del resumen anual por enlace, aún no ha salido en ninguna release (la
+  1.6.10 lleva la 2026-10-07b). Así, las dos novedades cuestan una sola vuelta por la puerta. Si el resumen saliera
+  antes que esto, habría que subirla. Está escrito junto a la constante.
+- **`writeSocialReactions`** pasa también la denylist (`assertNoSocialPrivateFields`) antes del esquema, con su test.
+- **`npm run audit:privacy`** cubre el fichero nuevo (lo detecta por el `PATCH`): sale con 0, y los dos avisos
+  informativos del correo están marcados con `audit-allow`.
 
 ## Verificación
 

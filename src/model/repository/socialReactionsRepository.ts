@@ -125,7 +125,7 @@ export async function getOwnSocialLikes(): Promise<SocialReactionEntry[]> {
   let published: SocialReactionEntry[] = [];
   try {
     const authUser = await getCurrentSocialAuthUser();
-    const resolved = authUser ? await resolveSocialChannel({ email: authUser.email }) : null;
+    const resolved = authUser ? await resolveSocialChannel({ email: authUser.email }) : null; // audit-allow: el correo solo resuelve el canal en local; no se escribe
     if (resolved?.status === 'ready') {
       published = normalizeReactions(await readSocialReactionsRaw(resolved.channel.token, resolved.channel.gistId), Date.now());
     }
@@ -164,7 +164,7 @@ export function flushSocialLikes(): Promise<SocialLikesFlushResult> {
     const authUser = await getCurrentSocialAuthUser();
     if (!authUser) return 'no-session';
     if (!(await canPublishSocialInBackground(authUser.uid))) return 'no-consent';
-    const resolved = await resolveSocialChannel({ email: authUser.email });
+    const resolved = await resolveSocialChannel({ email: authUser.email }); // audit-allow: el correo solo resuelve el canal en local; no se escribe
     if (resolved.status !== 'ready') return 'no-channel';
     const { token, gistId } = resolved.channel;
 

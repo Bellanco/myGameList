@@ -6,7 +6,7 @@ import { isValidGistId, isValidGithubToken } from '../../core/security/sanitize'
 import type { SocialReactionsFile } from '../../core/social/reactions';
 import { githubFetch } from './githubHttp';
 import { GIST_API_BASE, buildGithubError, getGithubAuthHeader } from './githubGistApi';
-import { SOCIAL_REACTIONS_FILENAME } from './socialProjection';
+import { SOCIAL_REACTIONS_FILENAME, assertNoSocialPrivateFields } from './socialProjection';
 
 /** Última lectura o escritura del fichero, por gist: con su ETag, una relectura sin cambios es un 304. */
 const contentCache = new Map<string, { content: string | null; etag: string | null }>();
@@ -77,8 +77,9 @@ export async function writeSocialReactions(token: string, gistId: string, file: 
   if (!isValidGithubToken(token) || !isValidGistId(gistId)) {
     throw new Error('No se pueden guardar tus «me gusta»: falta la conexión con GitHub.');
   }
+  assertNoSocialPrivateFields(file); // denylist síncrona, la misma que el fichero principal: canal público
   const assertValid = await loadReactionsValidator();
-  assertValid(file); // allowlist estricta: canal público
+  assertValid(file); // allowlist estricta (Zod): falla con cualquier campo de más
   const content = JSON.stringify(file);
   const response = await githubFetch(`${GIST_API_BASE}/${gistId}`, {
     method: 'PATCH',
