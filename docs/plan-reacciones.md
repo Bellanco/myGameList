@@ -261,6 +261,10 @@ Sale en la **1.7.0** (la crea el usuario), junto con todo lo que no salió en la
 - `npm run emulate:social` para ver lo que se lee y pinta.
 - **Arranque crítico sin cambios** (medido con el build): todo va en el chunk perezoso del social.
 - Suite completa y e2e en verde.
+- **Pasada de axe (12-10-2026):** sin fallos en 64 casos sobre la maqueta del social (pantallas reales): el feed y el
+  detalle de una reseña, en los 8 temas y los 2 modos, con el botón suelto y pulsado, analizando solo la barra del
+  «me gusta» (`.hub-like-bar`) y con las animaciones terminadas. axe no mide sombras de texto ni contraste no
+  textual: el contraste del activado se midió aparte en la Fase 4.
 
 ## Lo que NO se hace
 
