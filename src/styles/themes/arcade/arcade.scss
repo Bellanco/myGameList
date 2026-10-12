@@ -1099,6 +1099,12 @@
 :root[data-palette="arcade"] { --btn-friend: var(--arc-pink); }
 :root[data-palette="arcade"][data-theme="light"] { --btn-friend: var(--arc-pink); }
 
+/* El «Me gusta» activado (`.hub-like-button`), en el cian de la pantalla: el morado del acento se perdía sobre la tarjeta
+   morada. De día, el cian oscuro un punto más hondo, para pasar de 4,5:1 sobre el blanco lila. */
+:root[data-palette="arcade"] { --like: var(--arc-cyan-fg); }
+:root[data-palette="arcade"][data-theme="light"] { --like: color-mix(in srgb, var(--arc-cyan) 92%, #000); }
+
+
 /* ── EL TÍTULO DE PANTALLA (09-10-2026) ───────────────────────────────────────────────────────────────────────────
    Un gesto del juego en el título de cada pantalla del hub (`.hub-hub-title-wrap h2`), elegido con
    `docs/maquetas/titulos-temas.html`. Sin `text-transform`: las mayúsculas las pone la casilla de Apariencia, y

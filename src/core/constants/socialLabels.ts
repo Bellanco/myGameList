@@ -123,6 +123,49 @@ export const SOCIAL_UI = {
     title: SOCIAL_SHELL.feed.title,
     actionsAria: SOCIAL_SHELL.feed.actionsAria,
     activityListAria: 'Actividad social',
+    /**
+     * «ME GUSTA» (docs/plan-reacciones.md). Una sola reacción y sin números: la frase nombra a quien se lo ha dado, y
+     * no dice «tu reseña» porque se sobreentiende. Tu nombre no entra en la frase: eso lo dice el botón pulsado.
+     */
+    likes: {
+      button: 'Me gusta',
+      /** Nombre accesible del botón: dice a qué se le da, porque fuera de la tarjeta «Me gusta» solo no se entiende. */
+      buttonAria: (author: string) => `Me gusta lo de ${author}`,
+      /**
+       * La frase. `names` son los de tus amistades (del más reciente al más antiguo); `mine`, si te gusta a ti.
+       *
+       * - Sin ti: «A Marta le gusta», «A Marta y a Nacho les gusta» y, con tres o más, UN solo nombre: «A Nacho y a 5
+       *   más les gusta». En un móvil de 390 px la frase tiene ~225 px: dos nombres más la cuenta no caben en un renglón,
+       *   uno sí (medido en la maqueta, 12-10-2026).
+       * - Contigo, en cuanto pulsas y sin esperar a que se envíe: «Te gusta», «A ti y a Nacho os gusta», «A ti y a 5 más
+       *   os gusta». Lo pidió el usuario: que se vea al momento que el «me gusta» ha contado.
+       *
+       * Nunca se recortan con «…» (decisión del usuario): de cada nombre va la PRIMERA palabra, que es lo que lo mantiene
+       * corto. Solo un nombre de pila larguísimo podría llevar la frase a un segundo renglón.
+       */
+      phrase: (fullNames: readonly string[], mine = false): string => {
+        // Solo la PRIMERA palabra de cada nombre («Lucía R.» → «Lucía»): así la frase no crece con apellidos (decisión
+        // del usuario, 12-10-2026). Los nombres enteros siguen en `fullList`, para distinguir a dos Martas.
+        const names = fullNames.map((name) => name.trim().split(/\s+/)[0] || name);
+        if (mine) {
+          if (names.length === 0) return 'Te gusta';
+          if (names.length === 1) return `A ti y a ${names[0]} os gusta`;
+          return `A ti y a ${names.length} más os gusta`;
+        }
+        if (names.length === 0) return '';
+        if (names.length === 1) return `A ${names[0]} le gusta`;
+        if (names.length === 2) return `A ${names[0]} y a ${names[1]} les gusta`;
+        return `A ${names[0]} y a ${names.length - 1} más les gusta`;
+      },
+      /** La lista ENTERA, para el `title` de la frase cuando esta resume («y a 5 más»). */
+      fullList: (names: readonly string[], mine = false): string => {
+        const all = mine ? ['ti', ...names] : [...names];
+        if (all.length === 0) return '';
+        const verbo = mine ? 'os gusta' : all.length === 1 ? 'le gusta' : 'les gusta';
+        if (all.length === 1) return mine ? 'Te gusta' : `A ${all[0]} ${verbo}`;
+        return `A ${all.slice(0, -1).join(', ')} y a ${all[all.length - 1]} ${verbo}`;
+      },
+    },
     toolbarAria: 'Búsqueda y filtros de la actividad',
     feedRowAria: 'Actividad social',
     profile: 'Editar mi perfil',

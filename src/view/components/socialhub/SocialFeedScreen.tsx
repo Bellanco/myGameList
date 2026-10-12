@@ -19,6 +19,8 @@ import { FeedNotice } from './FeedNotice';
 import { FeedShell } from './FeedShell';
 import { FeedComposer } from './FeedComposer';
 import { FeedMoveCard } from './FeedMoveCard';
+import { FeedLikeBar } from './FeedLikeBar';
+import type { FeedLikes, LikeableFeedItem } from '../../../core/social/feedLikes';
 import { AchievementSprite } from '../AchievementSprite';
 
 /**
@@ -84,6 +86,8 @@ function SocialFeedScreenBase({
   hasFriends = false,
   feedReadFailed = false,
   githubReconnect = null,
+  likesFor,
+  toggleLike,
 }: {
   SOCIAL_UI: SocialUiLabels;
   socialDisplayName: string;
@@ -108,6 +112,12 @@ function SocialFeedScreenBase({
   hasMoreFeed: boolean;
   showMoreFeed: () => void;
   openActivityDetail: (entry: SocialActivityFeedItem) => void;
+  /**
+   * «Me gusta» (docs/plan-reacciones.md): quién se lo ha dado a cada reseña o publicación y si tú. Sin él (la maqueta
+   * de antes, los tests que no lo necesitan) no se pinta la barra.
+   */
+  likesFor?: (item: LikeableFeedItem) => FeedLikes;
+  toggleLike?: (item: LikeableFeedItem) => void;
   /**
    * F4 — abre el análisis del autor sobre ese juego desde el nombre del juego de un movimiento. El primer
    * argumento es el `actorProfileId` de la reseña (el del gist), NO el id de la entrada del directorio.
@@ -485,6 +495,15 @@ function SocialFeedScreenBase({
                               expandLabel={SOCIAL_UI.feed.postExpand}
                               collapseLabel={SOCIAL_UI.feed.postCollapse}
                             />
+                            {likesFor && toggleLike ? (
+                              <FeedLikeBar
+                                SOCIAL_UI={SOCIAL_UI}
+                                likes={likesFor(entry)}
+                                own={isOwnActivity}
+                                author={entry.profileDisplayName || entry.authorName}
+                                onToggle={() => toggleLike(entry)}
+                              />
+                            ) : null}
                           </article>
                         );
                       }
@@ -562,6 +581,15 @@ function SocialFeedScreenBase({
                                 : <NoScoreMedal />}
                             </div>
                             {reviewText ? <p className="hub-feed-review-text" title={reviewText}><ReviewParagraphs text={reviewText} /></p> : null}
+                            {likesFor && toggleLike && entry.type === 'review' ? (
+                              <FeedLikeBar
+                                SOCIAL_UI={SOCIAL_UI}
+                                likes={likesFor(entry)}
+                                own={isOwnActivity}
+                                author={entry.profileDisplayName}
+                                onToggle={() => toggleLike(entry)}
+                              />
+                            ) : null}
                           </article>
                         </ViewTransition>
                       );

@@ -1337,6 +1337,11 @@
   border-color: #47316a;
 }
 
+/* El «Me gusta» activado (`.hub-like-button`), en el mismo púrpura del temple: aquí el acento es el gris del acero y
+   el activado no se distinguía del apagado (1,09:1). 5,9:1 sobre la tarjeta en los dos modos. */
+:root[data-palette="witcher"] { --like: #b399d6; }
+:root[data-palette="witcher"][data-theme="light"] { --like: #6f539a; }
+
 /* ── EL TÍTULO DE PANTALLA (09-10-2026) ───────────────────────────────────────────────────────────────────────────
    Un gesto del juego en el título de cada pantalla del hub (`.hub-hub-title-wrap h2`), elegido con
    `docs/maquetas/titulos-temas.html`. Sin `text-transform`: las mayúsculas las pone la casilla de Apariencia, y

@@ -1,6 +1,6 @@
 # Plan: «Me gusta» en el feed
 
-> **Estado (12-10-2026): Fases 0 a 3 hechas (sin push); sigue la Fase 4.** Sale de la idea A1 de
+> **Estado (12-10-2026): Fases 0 a 4 hechas (sin push); siguen la 5 y la 6.** Sale de la idea A1 de
 > `docs/investigacion-interaccion-social.md`. Las alternativas visuales que se compararon están en
 > `docs/maquetas/reacciones.html` (con el servidor de desarrollo); la elegida es la C, reducida a una sola reacción.
 >
@@ -23,9 +23,10 @@ peticiones nuevas a GitHub. Los costes están detallados en la investigación (�
 | Juego de reacciones | **Solo «Me gusta».** Fuera «No me gusta», «Me encanta», «Discrepo», «Ánimo» y «Me lo apunto» | Lo negativo empeora la comunidad; dos intensidades obligan a elegir y abren la comparación; guardar no es una señal social y Deseados ya existe |
 | Alcance | Reseñas y publicaciones. **No** avisos de lista ni logros | «Me gusta» en «abandonó X» es incómodo; el objetivo es que quien escribe se sienta leído |
 | Icono | **Pulgar arriba** | El corazón ya es el botón «♥ Amigos» de la ficha (`FriendshipButton.tsx`) |
-| Texto | Botón «Me gusta»; frase «A Marta le gusta» / «A Marta y Nacho les gusta» / «A Marta, Nacho y 2 más les gusta». **Sin** «tu reseña»: se sobreentiende | — |
+| Texto | Botón «Me gusta». Frase sin ti: «A Marta le gusta» / «A Marta y a Nacho les gusta» / con tres o más, **un solo nombre**: «A Nacho y a 5 más les gusta». **Sin** «tu reseña»: se sobreentiende | Revisado el 12-10-2026: que no ocupe varios renglones. Medido: en un móvil de 390 px la frase tiene ~225 px y dos nombres más la cuenta no caben. Sin «…» (el recorte no le gustó al usuario): de cada nombre va **solo la primera palabra** («Lucía R.» → «Lucía»), que es lo que la mantiene corta. Los nombres enteros, en el `title` |
+| Activado | Píldora tintada + pulgar relleno + color `--like` (el acento por defecto) | Revisado el 12-10-2026: en Witcher el acento es el gris del acero (1,09:1 entre activado y apagado). `--like` propio en Witcher (púrpura del temple), Arcade (cian) y Mar de estrellas de día (el oro era invisible sobre el turquesa). Texto activado ≥ 4,5:1 sobre la píldora en los 16 casos |
 | Quién ve los nombres | Todas las amistades que ven la tarjeta | Invita a leer lo que a otros les ha gustado |
-| Lo tuyo | El botón queda marcado; tu nombre no entra en la frase | El botón ya lo dice |
+| Lo tuyo | **Al pulsar, al momento** (sin esperar a que se envíe): el botón se activa, el pulgar da un salto y la frase te cuenta: «Te gusta», «A ti y a Nacho os gusta», «A ti y a 5 más os gusta» | Revisado el 12-10-2026 a petición del usuario: que se vea la inmediatez. Antes tu nombre no entraba en la frase |
 | Vacío | Sin «me gusta» no se pinta nada: ni «0» ni «a nadie le gusta» | Enseñar la ausencia duele más que no enseñar nada |
 
 El razonamiento, con fuentes, quedó en la conversación del 12-10-2026. En resumen: un «me gusta» de alguien cercano
@@ -177,17 +178,34 @@ llegaba a revalidarse con ETag.
 - **Tests** en `socialReactionsRead.test.ts`: relectura con `If-None-Match`, también tras recargar, y servir la copia
   si GitHub limita. Los tres fallan sin el arreglo.
 
-## Fase 4 · Interfaz · M
+## Fase 4 · Interfaz · M · ✅ hecha (12-10-2026)
 
-- En las tarjetas de reseña y publicación del feed, y en el detalle de una actividad: el botón «Me gusta» con el
-  pulgar y la frase con nombres.
-- Accesibilidad:
-  - `aria-pressed` en el botón.
-  - Región viva al pulsar.
-  - La frase forma parte del texto de la tarjeta.
-- **La forma del botón la pone cada tema.** En la maqueta se neutralizó para comparar; ver «Botones por tema».
-- La maqueta del social (`docs/maquetas/social.tsx`) lleva «me gusta» en sus datos inventados, y se fotografía en
-  los 8 temas × 2 modos con `scripts/capturar-maqueta-social.mjs`.
+**Dónde quedó:**
+
+- **El componente** es `view/components/socialhub/FeedLikeBar.tsx`. Va al pie de:
+  - las tarjetas de reseña y publicación del feed (`SocialFeedScreen`, props `likesFor` / `toggleLike`);
+  - el detalle de una reseña (`SocialDetailScreen` → `ReviewScreen`, hueco `footer`).
+- **El botón:**
+  - Es de texto, con el pulgar de Lucía (`icon-thumbs-up`, en `IconSpriteRest`, a trazo).
+  - `aria-pressed`, y su nombre accesible dice de quién es lo que gusta.
+  - No propaga ni el clic ni las teclas a la tarjeta, que abre el detalle.
+- **Al pulsar, al momento:**
+  - El estado del view-model cambia antes de subir nada.
+  - El pulgar da un salto (`data-pop`; nada con `prefers-reduced-motion`).
+  - La frase te cuenta.
+- **El activado:**
+  - Píldora tintada + pulgar relleno + `--like`.
+  - `--like` propio en Witcher, Arcade y Mar de estrellas de día.
+  - Texto activado aclarado de noche y oscurecido de día para pasar de 4,5:1 sobre la píldora. Medido en los 16 casos.
+- **La frase** (`SOCIAL_UI.feed.likes.phrase` / `fullList`): primera palabra de cada nombre, un nombre con tres o más,
+  sin «…», lista entera en el `title`.
+- **Lo propio:** sin botón, solo la frase; nada si a nadie le gusta.
+- **Maquetas:**
+  - `docs/maquetas/social.tsx` lleva «me gusta» inventados (feed y detalle).
+  - `docs/maquetas/me-gusta.html` enseña los 8 temas × 2 modos con los cuatro casos y se puede pulsar.
+- **Tests:** `tests/component/FeedLikeBar.test.tsx`.
+- **Medido:** arranque crítico 189,6 de 190 kB, sin cambios.
+- **No incluido:** la pestaña «Reseñas» del perfil de una amistad (`SocialProfileReviewScreen`) no lleva el botón.
 
 ## Fase 5 · Saber que te han leído · S
 

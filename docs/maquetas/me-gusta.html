@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>«Me gusta» por tema</title>
+<!--
+  EL «ME GUSTA» EN LOS OCHO TEMAS, CLARO Y OSCURO (docs/plan-reacciones.md, Fase 4). Cada celda monta el feed REAL de
+  la maqueta del social (`social.html?pantalla=feed`) y deja a la vista solo cuatro tarjetas:
+    1. Una reseña de otra persona SIN «me gusta» (Marta, Outer Wilds): el botón apagado, sin frase.
+    2. Una publicación de otra persona con frase (Nacho): botón apagado + «A Paula G. le gusta».
+    3. Una reseña que YA te gusta (Iván, Disco Elysium): botón activado + «A Marta, Nacho y 2 más les gusta».
+    4. Una reseña TUYA (Hades): sin botón, solo la frase.
+  Los botones funcionan: pulsar alterna el estado en esa celda (la maqueta no tiene red). Nada de esto toca la app.
+  Se sirve con el servidor de desarrollo: /docs/maquetas/me-gusta.html
+-->
+<style>
+  :root { --bg: #15171a; --fg: #e8e6e1; --dim: #9a978f; --line: #2c2f34; --acc: #d8b45a; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+  h1 { font-size: 15px; margin: 0 8px 0 0; }
+  .grupo { display: flex; gap: 4px; align-items: center; }
+  .grupo span { color: var(--dim); margin-right: 4px; }
+  select { font: inherit; color: var(--fg); background: #22252a; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; }
+  #nota { flex-basis: 100%; color: var(--dim); margin: 2px 0 0; max-width: 130ch; }
+  #nota b { color: var(--fg); }
+  main { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 16px; padding: 16px; }
+  .tema { grid-column: 1 / -1; margin: 10px 0 -8px; font-size: 13px; color: var(--acc); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+  figure { margin: 0; min-width: 0; }
+  figcaption { color: var(--dim); margin-bottom: 6px; }
+  .marco { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: #000; }
+  iframe { border: 0; display: block; transform-origin: 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>«Me gusta» en todos los temas</h1>
+  <div class="grupo"><span>Ancho</span>
+    <select id="ancho"><option value="900">Escritorio (900)</option><option value="390">Móvil (390)</option></select>
+  </div>
+  <p id="nota">
+    En cada celda, cuatro tarjetas reales del feed: <b>reseña de Marta sin «me gusta»</b> (botón apagado),
+    <b>publicación de Nacho con frase</b> (con un nombre de 35 caracteres: solo sale la primera palabra), <b>tu reseña de Hades</b> (sin botón, solo la frase) y <b>reseña de Iván que ya
+    te gusta</b> (botón activado: «A ti y a 4 más os gusta»; la lista entera al pasar por encima). Pulsa los botones: el
+    estado y la frase cambian al momento, con un pequeño salto del pulgar.
+  </p>
+</header>
+<main id="lienzo"></main>
+<script type="module">
+const TEMAS = [
+  ['tierramedia', 'No puedes pasar'], ['arcade', 'Arcade'], ['witcher', 'Plata y acero'], ['persona', 'Persona'],
+  ['portal', 'Portal'], ['cyberpunk', 'Sin futuro'], ['seaofstars', 'Mar de estrellas'], ['grimdark', 'Solo hay guerra'],
+];
+const MODOS = [['dark', 'Oscuro'], ['light', 'Claro']];
+/** Las cuatro tarjetas que se dejan, por un trozo de su texto. Salen en el orden del feed. */
+const QUEDAN = ['Outer Wilds', 'Hollow Knight?', 'Disco Elysium', 'Cada intento fallido'];
+
+const params = new URLSearchParams(location.search);
+const ancho = Number(params.get('w')) || 900;
+document.getElementById('ancho').value = String(ancho);
+document.getElementById('ancho').onchange = (e) => { location.search = `?w=${e.target.value}`; };
+
+const CSS = `
+  /* Solo las cuatro tarjetas elegidas: fuera la cabecera, el compositor, los días y el resto del feed. */
+  .hub-feed-activity-list .hub-feed-card:not([data-mg]),
+  .hub-feed-day-header, .hub-feed-composer, .hub-feed-load-more, .hub-screen-actions, .hub-screen-header,
+  .fg > .flabel, form, .hub-feed-notice { display: none !important; }
+  .hub-feed-day-group { margin: 0 !important; }
+  body { min-height: 0 !important; }
+`;
+
+function recortar(frame) {
+  const doc = frame.contentDocument;
+  const cards = doc ? [...doc.querySelectorAll('.hub-feed-activity-list .hub-feed-card')] : [];
+  if (!cards.length) return false;
+  for (const card of cards) {
+    const orden = QUEDAN.findIndex((trozo) => card.textContent.includes(trozo) && card.querySelector('.hub-like-bar'));
+    if (orden >= 0) card.dataset.mg = '1';
+  }
+  if (!doc.getElementById('mg-css')) {
+    const s = doc.createElement('style'); s.id = 'mg-css'; s.textContent = CSS; doc.head.appendChild(s);
+  }
+  return doc.querySelectorAll('[data-mg]').length >= QUEDAN.length;
+}
+
+function encajar(frame) {
+  const doc = frame.contentDocument;
+  const hueco = frame.parentElement.clientWidth;
+  const escala = Math.min(1, hueco / ancho);
+  const cuerpo = doc?.querySelector('.hub-feed-activity-list');
+  const alto = cuerpo ? Math.ceil(cuerpo.getBoundingClientRect().bottom + 24) : 700;
+  frame.style.width = `${ancho}px`; frame.style.height = `${alto}px`;
+  frame.style.transform = `scale(${escala})`; frame.parentElement.style.height = `${alto * escala}px`;
+}
+
+const lienzo = document.getElementById('lienzo');
+for (const [tema, nombre] of TEMAS) {
+  const titulo = document.createElement('div'); titulo.className = 'tema'; titulo.textContent = nombre; lienzo.appendChild(titulo);
+  for (const [modo, nombreModo] of MODOS) {
+    const fig = document.createElement('figure');
+    fig.innerHTML = `<figcaption>${nombreModo}</figcaption><div class="marco"><iframe title="${nombre} · ${nombreModo}" loading="lazy"></iframe></div>`;
+    lienzo.appendChild(fig);
+    const frame = fig.querySelector('iframe');
+    frame.style.width = `${ancho}px`;
+    frame.addEventListener('load', () => {
+      let n = 0;
+      const t = setInterval(() => {
+        const listo = recortar(frame);
+        if (listo || ++n > 60) { clearInterval(t); setTimeout(() => encajar(frame), 200); }
+      }, 150);
+      // Al pulsar, la tarjeta puede cambiar de alto (aparece o se va la frase): se reencaja.
+      frame.contentDocument.addEventListener('click', () => setTimeout(() => { recortar(frame); encajar(frame); }, 60));
+    });
+    frame.src = `social.html?pantalla=feed&gl-palette=${tema}&gl-theme=${modo}&gl-effects=off&barra=0`;
+  }
+}
+addEventListener('resize', () => document.querySelectorAll('iframe').forEach(encajar));
+</script>
+</body>
+</html>

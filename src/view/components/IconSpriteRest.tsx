@@ -69,6 +69,13 @@ export function IconSpriteRest() {
         <circle cx="12" cy="8.4" r="3.75" />
         <path d="M4.6 20.2c0-4.1 3.3-6.7 7.4-6.7s7.4 2.6 7.4 6.7" />
       </symbol>
+      {/* Pulgar arriba (Lucide `thumbs-up`, ISC, © Lucide Contributors): el «Me gusta» del feed. A TRAZO, como la
+          persona, y SIN `fill`: lo pone el CSS (`.hub-like-button`), que lo rellena al estar pulsado. No es el
+          corazón a propósito: ese ya es el botón «Amigos» (docs/plan-reacciones.md, Fase 0). */}
+      <symbol id="icon-thumbs-up" viewBox="0 0 24 24" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M7 10v12" />
+        <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z" />
+      </symbol>
       {/* Corazón (Font Awesome Free 7.0.1, classic SOLID, `heart`): el botón «Amigos» de la ficha de alguien, en el
           rosa de la amistad (`.btn-friend`). Lo eligió el usuario el 09-10-2026. Misma licencia y misma cita que los
           demás de Font Awesome del sprite de arranque (CC BY 4.0, `core/constants/legalContent`). */}

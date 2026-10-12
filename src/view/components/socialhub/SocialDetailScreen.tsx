@@ -35,6 +35,7 @@ export function SocialDetailScreen({
   eventLoading = false,
   reviewLoading = false,
   related = null,
+  likeBar = null,
   backLabel,
   coversAllowed = false,
 }: {
@@ -63,6 +64,8 @@ export function SocialDetailScreen({
   /** El análisis completo todavía viene de camino, aunque la cabecera ya se pueda pintar. */
   reviewLoading?: boolean;
   related?: React.ReactNode;
+  /** El «Me gusta» de esta reseña, al pie de su tarjeta. Lo monta el hub, que es quien sabe de quién es. */
+  likeBar?: React.ReactNode;
   backLabel?: string;
   /** ¿Se puede pedir la carátula del juego para el fondo? Ver `useReviewCover`. */
   coversAllowed?: CoverAccess;
@@ -124,6 +127,7 @@ export function SocialDetailScreen({
         ? <ShareReviewButton game={gameItem} reviewText={reviewText} />
         : null}
       related={related}
+      footer={likeBar}
       coversAllowed={coversAllowed}
       screenLoading={eventLoading}
       bodyLoading={bodyLoading}

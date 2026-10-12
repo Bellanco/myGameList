@@ -22,6 +22,7 @@ import { SocialProfileReviewScreen } from './socialhub/SocialProfileReviewScreen
 import { RelatedReviews } from './socialhub/RelatedReviews';
 import { SocialProfilesScreen } from './socialhub/SocialProfilesScreen';
 import { SocialFeedScreen } from './socialhub/SocialFeedScreen';
+import { FeedLikeBar } from './socialhub/FeedLikeBar';
 import { SocialRequestsScreen } from './socialhub/SocialRequestsScreen';
 import { ShareReviewButton } from './stats/ShareReviewButton';
 import { HubStatus } from './socialhub/HubStatus';
@@ -100,7 +101,7 @@ const SocialHubInner = memo(function SocialHubInner({
   } = vm.directory;
   const {
     feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed, handleActivityItemKeyDown, handleProfileCardKeyDown,
-    yearSummarySignal, feedReadFailed, githubReconnectNeeded,
+    yearSummarySignal, feedReadFailed, githubReconnectNeeded, likesFor, toggleLike,
   } = vm.feed;
   const {
     profileDetailId, profileReviewsView, profilePostsView, profileAchievementsView, profileGlobalsView,
@@ -430,6 +431,15 @@ const SocialHubInner = memo(function SocialHubInner({
           /* La misma regla que la reseña leída desde el perfil, unas líneas más abajo: son el mismo detalle por
              dos caminos, y la franja tiene que salir en los dos. */
           coversAllowed="solo-cache"
+          likeBar={activeDetailEvent && activeDetailEvent.type === 'review' ? (
+            <FeedLikeBar
+              SOCIAL_UI={SOCIAL_UI}
+              likes={likesFor(activeDetailEvent)}
+              own={isOwnDetailEvent}
+              author={activeDetailEvent.profileDisplayName}
+              onToggle={() => toggleLike(activeDetailEvent)}
+            />
+          ) : null}
           related={(
             <RelatedReviews
               SOCIAL_UI={SOCIAL_UI}
@@ -642,6 +652,8 @@ const SocialHubInner = memo(function SocialHubInner({
         showMoreFeed={showMoreFeed}
         openActivityDetail={openActivityDetail}
         openMoveReview={openMoveReview}
+        likesFor={likesFor}
+        toggleLike={toggleLike}
         handleActivityItemKeyDown={handleActivityItemKeyDown}
         publishingPost={publishingPost}
         handlePublishPost={handlePublishPost}
