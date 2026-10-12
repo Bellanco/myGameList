@@ -311,5 +311,8 @@ compartir (no al consultar) y el borrado de cuenta. Fechas de los dos documentos
 - [x] Fase 3: proyección + esquema (la auditoría estática no cubre KV: ver «Fases 2 a 5»).
 - [x] Fase 4: servidor con 3 escrituras, ventana y renovación; probado con KV espía.
 - [x] Fase 5: panel, página pública (carátulas solo con social + preferencia; modo artículo sin carátulas ni Firebase); maqueta.
-- [ ] Probar el servidor con `wrangler pages dev` y KV local antes de desplegar (las pruebas usan un KV falso).
+- [x] Probar el servidor con `wrangler pages dev` y KV local (12-10-2026), con un artículo sembrado: `GET
+  /api/share/:token`, vista previa de `/r/:token`, `related` vacío, enlace inexistente y 401 sin sesión; la página
+  pública en Chromium, sin `/cover` ni terceros. Crear y actualizar con sesión real quedan para la ventana (abre el
+  14-12); hasta entonces las cubre el KV espía de `shareYearFunction.test.ts`.
 - [x] Fase 6: legal (`LEGAL_VERSION` 2026-10-12), CHANGELOG.
