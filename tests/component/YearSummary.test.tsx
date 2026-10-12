@@ -211,11 +211,12 @@ describe('YearSummary — el reto del jugador', () => {
     expect(screen.queryByText(YEAR_SUMMARY_UI.premios.kicker)).toBeNull();
   });
 
-  it('con puesto de trofeo, el puesto y el trofeo', () => {
-    render(<YearSummary summary={conReto({ rank: 2, seasonName: 'El reto 2025', place: null })} voice={own} />);
+  it('con puesto de trofeo, solo el puesto', () => {
+    const { container } = render(<YearSummary summary={conReto({ rank: 2, seasonName: 'El reto 2025', place: null })} voice={own} />);
     expect(screen.getByText(YEAR_SUMMARY_UI.premios.kicker)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Quedaste 2.º en El reto 2025' })).toBeInTheDocument();
-    expect(screen.getByText(YEAR_SUMMARY_UI.premios.text(own, 2))).toBeInTheDocument();
+    const title = screen.getByRole('heading', { name: 'Quedaste 2.º en El reto 2025' });
+    expect(title.nextElementSibling).toBeNull();
+    expect(container.textContent).not.toMatch(/palmarés/);
   });
 
   it('con participación, su puesto real si se sabe; si no, que jugó', () => {

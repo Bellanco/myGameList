@@ -131,10 +131,6 @@ export const YEAR_SUMMARY_UI = {
       if (!puesto) return v.own ? `Jugaste ${edition}` : `${v.name} jugó ${edition}`;
       return v.own ? `Quedaste ${puesto}.º en ${edition}` : `${v.name} quedó ${puesto}.º en ${edition}`;
     },
-    text: (v: SummaryVoice, rank: number) =>
-      rank > 0
-        ? `Entre los cinco primeros: ${v.own ? 'tienes' : 'tiene'} su trofeo en el palmarés.`
-        : `${v.own ? 'Participaste' : 'Participó'} en la votación: la medalla de participación ya está en ${v.own ? 'tu' : 'su'} palmarés.`,
   },
 
   previous: {

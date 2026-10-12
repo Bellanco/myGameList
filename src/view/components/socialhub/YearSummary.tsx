@@ -432,10 +432,7 @@ export const YearSummary = memo(function YearSummary({ summary, voice, coverAcce
       icon: ICONS.premios,
       kicker: L.premios.kicker,
       body: (
-        <>
-          <h4 className="ys-title">{L.premios.title(voice, seasonName, rank, place)}</h4>
-          <p className="ys-dim">{L.premios.text(voice, rank)}</p>
-        </>
+        <h4 className="ys-title">{L.premios.title(voice, seasonName, rank, place)}</h4>
       ),
     });
   }
