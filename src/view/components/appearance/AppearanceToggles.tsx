@@ -5,13 +5,14 @@ import { useUppercase } from '../../hooks/useUppercase';
 import { useShowSteamButton } from '../../hooks/useShowSteamButton';
 import { useEffects } from '../../hooks/useEffects';
 import { useCovers } from '../../hooks/useCovers';
+import { useGameScenes } from '../../hooks/useGameScenes';
 import { useShowWishlist } from '../../hooks/useShowWishlist';
 
 const A = APPEARANCE_UI;
 
 /**
- * LAS SEIS PREFERENCIAS DE DOS RESPUESTAS: claro u oscuro, versales o no, el botón de Steam Deck, los efectos,
- * las carátulas y la pestaña de la lista de deseos. Todas viven en este dispositivo (`localStorage`) y solo se copian a la nube si hay sesión,
+ * LAS SIETE PREFERENCIAS DE DOS RESPUESTAS: claro u oscuro, versales o no, el botón de Steam Deck, los efectos,
+ * las escenas de empezar y cerrar un juego, las carátulas y la pestaña de la lista de deseos. Todas viven en este dispositivo (`localStorage`) y solo se copian a la nube si hay sesión,
  * así que ninguna depende de tener cuenta.
  *
  * Cada una va en su caja: puestas en fila, cinco rótulos con su par de botones se leían como una tira de diez
@@ -23,6 +24,7 @@ export const AppearanceToggles = memo(function AppearanceToggles() {
   const { showSteamButton, setShowSteamButton } = useShowSteamButton();
   const { effects, setEffects } = useEffects();
   const { covers, setCovers } = useCovers();
+  const { gameScenes, setGameScenes } = useGameScenes();
   const { showWishlist, setShowWishlist } = useShowWishlist();
 
   return (
@@ -117,6 +119,30 @@ export const AppearanceToggles = memo(function AppearanceToggles() {
         </button>
       </div>
 
+      </div>
+
+      {/* Las escenas de empezar y cerrar un juego. Van detrás de los efectos porque cuelgan de ellos: con los
+          efectos apagados no salen aunque estén encendidas. */}
+      <div className="appearance-field">
+      <p className="settings-card-sub">{A.gameScenesLabel}</p>
+      <div className="theme-mode-row" role="group" aria-label={A.gameScenesAria}>
+        <button
+          type="button"
+          className={`btn btn-toggle${gameScenes ? ' active' : ''}`}
+          aria-pressed={gameScenes}
+          onClick={() => { if (!gameScenes) setGameScenes(true); }}
+        >
+          <span>{A.gameScenesOn}</span>
+        </button>
+        <button
+          type="button"
+          className={`btn btn-toggle${!gameScenes ? ' active' : ''}`}
+          aria-pressed={!gameScenes}
+          onClick={() => { if (gameScenes) setGameScenes(false); }}
+        >
+          <span>{A.gameScenesOff}</span>
+        </button>
+      </div>
       </div>
 
       {/* Carátulas. Lleva explicación y las demás no, a propósito: es la única de esta pantalla que hace que

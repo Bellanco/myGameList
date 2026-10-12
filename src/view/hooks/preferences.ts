@@ -6,7 +6,7 @@
 //
 // La lógica de aplicación debe seguir siendo IDÉNTICA a la de `public/theme-init.js`, que corre antes del primer
 // render para evitar el flash de tema/paleta/caja.
-import { COVERS_KEY, EFFECTS_KEY, GRID_SIZE_KEY, LIST_SHAPE_KEY, PALETTE_KEY, PALETTE_LOCK_KEY, STEAM_BUTTON_KEY, THEME_KEY, UPPERCASE_KEY, WISHLIST_KEY } from '../../core/constants/storageKeys';
+import { COVERS_KEY, EFFECTS_KEY, GAME_SCENES_KEY, GRID_SIZE_KEY, LIST_SHAPE_KEY, PALETTE_KEY, PALETTE_LOCK_KEY, STEAM_BUTTON_KEY, THEME_KEY, UPPERCASE_KEY, WISHLIST_KEY } from '../../core/constants/storageKeys';
 import { DEFAULT_PALETTE, paletteBg, parsePaletteId, type PaletteId } from '../../core/constants/palettes';
 import { createPreferenceStore, hydratePreferencesFromCloud } from '../../model/repository/preferenceStore';
 import { loadPaletteSkin } from './paletteSkin';
@@ -211,6 +211,23 @@ export const coversPreference = createPreferenceStore<boolean>({
   parse: (raw) => raw === 'on',
   serialize: onOff.serialize,
   cloudField: 'covers',
+  fromCloud: onOff.fromCloud,
+});
+
+/**
+ * LAS ESCENAS DE EMPEZAR Y CERRAR UN JUEGO (12-10-2026): lo que cada tema pinta encima de la pantalla cuando un
+ * juego pasa a En curso o a Completados (`useSignatureEffects`). Apagadas por defecto, como las carátulas: son
+ * escenas de dos o tres segundos que tapan lo que estás mirando, y eso se pide, no se da. Por eso `parse` exige
+ * el `'on'` explícito.
+ *
+ * Cuelgan además de los efectos visuales: con los efectos apagados (o con el sistema pidiendo menos movimiento)
+ * no salen aunque estén encendidas. Viajan con la cuenta, como el resto de la apariencia.
+ */
+export const gameScenesPreference = createPreferenceStore<boolean>({
+  key: GAME_SCENES_KEY,
+  parse: (raw) => raw === 'on',
+  serialize: onOff.serialize,
+  cloudField: 'gameScenes',
   fromCloud: onOff.fromCloud,
 });
 

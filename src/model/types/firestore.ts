@@ -197,6 +197,11 @@ export interface FirestorePublicConfig {
    */
   showWishlist?: boolean;
   /**
+   * Escenas de cada tema al empezar y al cerrar un juego. Por defecto AUSENTE, que se lee como apagadas: tapan
+   * la pantalla un par de segundos, así que se encienden a mano.
+   */
+  gameScenes?: boolean;
+  /**
    * F4 — de qué listas ve su dueño los mensajes de actividad, como letras en orden canónico ('cevp' = todas,
    * '' = ninguna). Ajuste de LECTURA: no cambia lo que se publica ni lo que ven los demás. Vive aquí (owner-only)
    * y no en el perfil público por lo mismo que el consentimiento: es dato del dueño, y así le sigue entre

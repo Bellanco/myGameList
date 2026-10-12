@@ -355,7 +355,10 @@ service cloud.firestore {
       // `showWishlist` (pestaña de la lista de deseos) entra ANTES de que ningún cliente la escriba: por lo mismo
       // de arriba, una clave que la regla no conoce deniega la escritura entera. Estas reglas tienen que estar
       // desplegadas antes que la versión que la escribe.
-      return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale", "palette", "theme", "uppercase", "showSteamButton", "effects", "consent", "feedMoveTabs", "listShape", "covers", "gridSize", "showWishlist"])
+      //
+      // `gameScenes` (las escenas de empezar y cerrar un juego, 12-10-2026) entra igual que `showWishlist`: antes
+      // que el cliente que la escribe. Desplegar estas reglas PRIMERO.
+      return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale", "palette", "theme", "uppercase", "showSteamButton", "effects", "consent", "feedMoveTabs", "listShape", "covers", "gridSize", "showWishlist", "gameScenes"])
         && (!("scoreScale" in request.resource.data)
             || request.resource.data.scoreScale in ["stars", "grade"])
         && (!("theme" in request.resource.data)
@@ -378,6 +381,8 @@ service cloud.firestore {
             || request.resource.data.covers is bool)
         && (!("showWishlist" in request.resource.data)
             || request.resource.data.showWishlist is bool)
+        && (!("gameScenes" in request.resource.data)
+            || request.resource.data.gameScenes is bool)
         // F4 — listas de las que su dueño ve los mensajes de actividad: letras de lista ('cvepd'), nunca más de
         // cinco. Cinco y no cuatro desde la lista de deseos: o van las cinco letras, o cuatro y la marca '~' de
         // «deseos apagada a propósito» (ver `core/social/moveTabsFilter`). Se acota el tamaño como en `palette`: es

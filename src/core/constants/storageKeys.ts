@@ -46,6 +46,8 @@ export const LIST_SHAPE_KEY = 'mis-listas-list-shape';
 export const COVERS_KEY = 'mis-listas-covers';
 /** Pestaña de la lista de deseos. Ausente = VISIBLE: es una lista más, y se esconde solo si se pide. */
 export const WISHLIST_KEY = 'mis-listas-wishlist';
+/** Escenas de cada tema al empezar y al cerrar un juego. Ausente = APAGADAS: se encienden a mano en Diseño. */
+export const GAME_SCENES_KEY = 'mis-listas-game-scenes';
 
 // TAMAÑO de los cuadros del mosaico: 'sm' | 'md' (por defecto) | 'lg'. Cuánto ocupa cada cuadro es cuestión de
 // gusto y de PANTALLA —ocho por fila en un monitor, dos en un teléfono—, así que vive en este aparato y no en
