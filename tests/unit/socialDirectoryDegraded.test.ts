@@ -143,8 +143,8 @@ describe('useSocialDirectory y los «me gusta»', () => {
 
     await result.current.hydrateSocialDirectory();
 
-    await waitFor(() => expect(idb.putCachedSocialDirectory).toHaveBeenCalled());
-    const ana = result.current.rawSocialDirectory.find((entry) => entry.uid === 'ana');
-    expect(ana?.reactions).toEqual([vivo]);
+    // Se espera a la ENTRADA, no a que se guarde la copia: guardar puede ir por delante del estado de React, y bajo
+    // carga (la suite entera) la entrada aún no estaba al leerla.
+    await waitFor(() => expect(result.current.rawSocialDirectory.find((entry) => entry.uid === 'ana')?.reactions).toEqual([vivo]));
   });
 });
