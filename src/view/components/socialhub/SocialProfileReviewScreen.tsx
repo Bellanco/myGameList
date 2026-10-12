@@ -38,6 +38,7 @@ export function SocialProfileReviewScreen({
   statusKind,
   actions = null,
   related = null,
+  likeBar = null,
   coversAllowed = false,
 }: {
   SOCIAL_UI: SocialUiLabels;
@@ -64,6 +65,11 @@ export function SocialProfileReviewScreen({
    * social del que tirar y no debe haberlo (funciona sin tenerlo montado).
    */
   related?: React.ReactNode;
+  /**
+   * El «Me gusta» de esta reseña, al pie de su tarjeta, como en el detalle del feed. Lo monta el hub, y solo si la
+   * reseña está publicada en lo social: el panel de estadísticas no pasa nada.
+   */
+  likeBar?: React.ReactNode;
   /** ¿Se puede pedir la carátula del juego para el fondo? Lo decide quien monta (ver `useReviewCover`). */
   coversAllowed?: CoverAccess;
 }) {
@@ -93,6 +99,7 @@ export function SocialProfileReviewScreen({
       statusKind={statusKind}
       actions={actions}
       related={related}
+      footer={likeBar}
       coversAllowed={coversAllowed}
       // Aquí no se espera a nadie: o la reseña está en las listas que ya tenemos, o no está.
       missingLabel={SOCIAL_UI.feed.detailMissing}

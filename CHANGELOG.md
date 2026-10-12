@@ -6,7 +6,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 ## [Unreleased]
 
 ### Added
-- **«Me gusta» en las reseñas y publicaciones de tus amigos.** Un solo botón, con un pulgar, y debajo quién: «A
+- **«Me gusta» en las reseñas y publicaciones de tus amigos**, en el feed, en el detalle de una reseña y en las
+  reseñas que abres desde la pestaña «Reseñas» de un perfil. Un solo botón, con un pulgar, y debajo quién: «A
   Marta le gusta», «A Marta y a Nacho les gusta» o, con tres o más, «A Nacho y a 5 más les gusta» (solo el primer
   nombre de cada persona, para que no ocupe más de un renglón). Al pulsar cambia al momento, aunque se envíe después,
   y la frase te cuenta: «A ti y a 5 más os gusta». En lo tuyo no hay botón, solo la frase. Se guarda en tu propio

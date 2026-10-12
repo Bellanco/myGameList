@@ -101,9 +101,9 @@ const SocialHubInner = memo(function SocialHubInner({
   } = vm.feed;
   const {
     profileDetailId, profileReviewsView, profilePostsView, profileAchievementsView, profileGlobalsView,
-    selectedProfileDetail, activeProfileReview, activeDetailEvent, detailEventLoading, profileDetailLoading,
-    detailReviewLoading, profileReviewLoading, getGameItemById, relatedReviews, openOwnProfileDetail,
-    isOwnProfileDetail, isOwnDetailEvent,
+    selectedProfileDetail, activeProfileReview, activeProfileReviewEvent, activeDetailEvent, detailEventLoading,
+    profileDetailLoading, detailReviewLoading, profileReviewLoading, getGameItemById, relatedReviews,
+    openOwnProfileDetail, isOwnProfileDetail, isOwnDetailEvent,
   } = vm.reading;
   const { ownAchievements, ownAchievementMirror } = vm.achievements;
   /**
@@ -563,6 +563,17 @@ const SocialHubInner = memo(function SocialHubInner({
              perfil: de la estantería de otra persona, lo ya resuelto y lo que quepa en el cupo de lo ajeno, y
              encima manda la preferencia de quien mira (ver `useReviewCover`). */
           coversAllowed="solo-cache"
+          // El mismo «Me gusta» que en el feed, porque es la misma reseña: va a su entrada en el gist social. Si no
+          // está publicada en lo social no hay entrada, y no hay botón.
+          likeBar={activeProfileReviewEvent ? (
+            <FeedLikeBar
+              SOCIAL_UI={SOCIAL_UI}
+              likes={likesFor(activeProfileReviewEvent)}
+              own={isOwnProfileDetail}
+              author={(selectedProfileDetail as { displayName?: string })?.displayName || activeProfileReviewEvent.profileDisplayName}
+              onToggle={() => toggleLike(activeProfileReviewEvent)}
+            />
+          ) : null}
           related={(
             <RelatedReviews
               SOCIAL_UI={SOCIAL_UI}

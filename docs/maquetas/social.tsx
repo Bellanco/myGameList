@@ -686,6 +686,7 @@ function Resena() {
 }
 
 function ResenaDePerfil() {
+  const { likesFor, toggleLike } = useMaquetaLikes();
   return (
     <SocialProfileReviewScreen
       SOCIAL_UI={SOCIAL_UI}
@@ -708,6 +709,8 @@ function ResenaDePerfil() {
       status=""
       statusKind=""
       coversAllowed={false}
+      // La misma reseña que el detalle del feed (`EVENTO`): su «me gusta» es el mismo.
+      likeBar={<FeedLikeBar SOCIAL_UI={SOCIAL_UI} likes={likesFor(EVENTO)} own={false} author={IVAN.displayName} onToggle={() => toggleLike(EVENTO)} />}
       related={<RelatedReviews SOCIAL_UI={SOCIAL_UI} items={RELACIONADAS} onOpen={avisar('abriría esa reseña')} coversAllowed={false} />}
     />
   );

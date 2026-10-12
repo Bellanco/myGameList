@@ -187,7 +187,12 @@ llegaba a revalidarse con ETag.
 
 - **El componente** es `view/components/socialhub/FeedLikeBar.tsx`. Va al pie de:
   - las tarjetas de reseña y publicación del feed (`SocialFeedScreen`, props `likesFor` / `toggleLike`);
-  - el detalle de una reseña (`SocialDetailScreen` → `ReviewScreen`, hueco `footer`).
+  - el detalle de una reseña (`SocialDetailScreen` → `ReviewScreen`, hueco `footer`);
+  - la reseña abierta desde la pestaña «Reseñas» de un perfil (`SocialProfileReviewScreen`, prop `likeBar`; añadido el
+    12-10-2026). El destino es la entrada de esa reseña en la actividad de su autor (`activeProfileReviewEvent` en
+    `useSocialReading`), la misma que pinta el feed: los dos botones marcan lo mismo. Sin la reseña publicada en lo
+    social no hay entrada y no hay botón. El panel de estadísticas (`/stats/resenas/…`) usa la misma pantalla para
+    tus reseñas y NO lo lleva, por decisión del usuario.
 - **El botón:**
   - Es de texto, con el pulgar de Lucide (`icon-thumbs-up`, en `IconSpriteRest`, a trazo).
   - `aria-pressed`, y su nombre accesible dice de quién es lo que gusta.
@@ -208,7 +213,6 @@ llegaba a revalidarse con ETag.
   - `docs/maquetas/me-gusta.html` enseña los 8 temas × 2 modos con los cuatro casos y se puede pulsar.
 - **Tests:** `tests/component/FeedLikeBar.test.tsx`.
 - **Medido:** arranque crítico 189,6 de 190 kB, sin cambios.
-- **No incluido:** la pestaña «Reseñas» del perfil de una amistad (`SocialProfileReviewScreen`) no lleva el botón.
 
 ## Fase 5 · Saber que te han leído · S · cerrada sin rótulo (12-10-2026)
 
