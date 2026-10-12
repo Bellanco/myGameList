@@ -4,7 +4,7 @@ import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { ReviewDetailBody } from './ReviewDetailBody';
 import { ReviewDetailHead } from './ReviewDetailHead';
 import { RelatedReviews } from './socialhub/RelatedReviews';
-import { lookupSharedReview, readSharedReviewSuggestions } from '../../model/repository/publicShareRepository';
+import { isSharedYearSummary, lookupSharedReview, readSharedReviewSuggestions } from '../../model/repository/publicShareRepository';
 import type { RelatedReview } from '../../core/social/relatedReviews';
 import type { SharedReview, SharedReviewSuggestion } from '../../model/types/share';
 // La hoja de la RESEÑA. Esta pantalla la pinta sin el hub social —en modo artículo no hay hub—, así que sin
@@ -41,7 +41,7 @@ export const PublicReviewScreen = memo(function PublicReviewScreen({ token, stan
       if (!alive) {
         return;
       }
-      setReview(result.status === 'ready' ? result.review : null);
+      setReview(result.status === 'ready' && !isSharedYearSummary(result.article) ? result.article : null);
       setState(result.status);
     });
     return () => {

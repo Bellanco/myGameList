@@ -10,6 +10,7 @@
 //                                      Firestore al leer tu rango, así funciona esté o no exigido App Check.
 import { initializeFirebaseServices } from './firebaseGateway';
 import type { MySharesResponse, SharedReview, SharedReviewIndexEntry } from '../types/share';
+import type { YearSummary } from '../../core/stats/yearSummary';
 import type { ShareQuota } from '../../core/constants/tiers';
 import { SHARE_DOWN_UNTIL_KEY, shareLastMineKey } from '../../core/constants/storageKeys';
 
@@ -178,6 +179,36 @@ export async function publishShare(
       body: JSON.stringify(draft),
     });
     return (await parse(response)) as unknown as PublishedShare;
+  } finally {
+    invalidateMySharesCache();
+  }
+}
+
+export interface PublishedYearShare {
+  token: string;
+  url: string;
+  year: number;
+  createdAt: number;
+  updatedAt: number;
+  expiresAt: number;
+  /** Desde cuándo se puede volver a actualizar: lo decide el servidor con la espera del rango. */
+  nextUpdateAt: number;
+  renewed: boolean;
+}
+
+/**
+ * Publica (o actualiza, sobre el mismo enlace) el resumen del año. `summary` es la proyección pública
+ * (`core/stats/publicYearSummary`); el servidor la vuelve a validar, pone el nick y decide ventana, caducidad y
+ * espera. Si aún no toca actualizar, el error trae `nextUpdateAt` en sus detalles.
+ */
+export async function publishYearShare(year: number, summary: YearSummary): Promise<PublishedYearShare> {
+  try {
+    const response = await shareFetch(`${API_BASE}/year`, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify({ year, summary }),
+    });
+    return (await parse(response)) as unknown as PublishedYearShare;
   } finally {
     invalidateMySharesCache();
   }

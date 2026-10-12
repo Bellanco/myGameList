@@ -61,10 +61,6 @@ export interface SharedYearSummary {
 /** Lo que puede haber detrás de un enlace `/r/`: una reseña (sin `kind`, la forma original) o un resumen del año. */
 export type SharedArticle = SharedReview | SharedYearSummary;
 
-export function isSharedYearSummary(article: SharedArticle | null | undefined): article is SharedYearSummary {
-  return Boolean(article && (article as Partial<SharedYearSummary>).kind === 'year');
-}
-
 /**
  * Una tarjeta del bloque «Análisis sugeridos» del pie de un enlace público (`GET /api/share/related/:token`).
  *
@@ -104,6 +100,14 @@ export interface SharedReviewIndexEntry {
   expiresAt: number;
 }
 
+/** Fila del enlace de un resumen del año en «mis enlaces» (`GET /api/share/mine`, campo `yearShares`). */
+export interface YearShareIndexEntry {
+  token: string;
+  year: number;
+  createdAt: number;
+  expiresAt: number;
+}
+
 /** Veto de compartir (`ban:{uid}`). Lo pone y lo quita el administrador; lo aplica la Function. */
 export interface ShareBan {
   reason?: string;
@@ -117,6 +121,8 @@ export interface ShareBan {
  */
 export interface MySharesResponse {
   shares: SharedReviewIndexEntry[];
+  /** El enlace del resumen del año, aparte: no cuenta para la cuota. Opcional por si responde una Function anterior. */
+  yearShares?: YearShareIndexEntry[];
   quota: ShareQuota;
   ban: ShareBan | null;
   /** Nick con el que se firmaría la reseña. Lo decide el servidor; el cliente solo lo enseña. */

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { assertValidSharedReview } from '../../src/model/schemas/shareSchema';
-import { readSharedReview } from '../../src/model/repository/publicShareRepository';
+import { isSharedYearSummary, lookupSharedReview, readSharedReview } from '../../src/model/repository/publicShareRepository';
 import type { SharedReview } from '../../src/model/types/share';
 
 function article(over: Partial<SharedReview> = {}): SharedReview {
@@ -132,5 +132,26 @@ describe('lectura de la página pública', () => {
     vi.stubGlobal('fetch', fetchMock);
     expect(await readSharedReview('')).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('lectura pública de un resumen del año', () => {
+  const year = { v: 1, kind: 'year', year: 2026, summary: {}, authorNick: 'Yo', createdAt: 1, updatedAt: 1, expiresAt: 2 };
+  const responde = (body: unknown) =>
+    vi.fn(async () => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } }));
+
+  it('el enlace lo abre como resumen; quien pide una reseña no lo recibe', async () => {
+    vi.stubGlobal('fetch', responde(year));
+    const result = await lookupSharedReview('TOKEN1234567890abcd');
+    expect(result.status).toBe('ready');
+    expect(result.status === 'ready' && isSharedYearSummary(result.article)).toBe(true);
+    expect(await readSharedReview('TOKEN1234567890abcd')).toBeNull();
+    vi.unstubAllGlobals();
+  });
+
+  it('una clase de artículo desconocida se trata como si no estuviera', async () => {
+    vi.stubGlobal('fetch', responde({ ...year, kind: 'otra' }));
+    expect((await lookupSharedReview('TOKEN1234567890abcd')).status).toBe('gone');
+    vi.unstubAllGlobals();
   });
 });

@@ -5,7 +5,12 @@
 // arrastre el SDK convertiría una página de lectura en una carga de app entera, que es justo lo que se evita.
 //
 // La escritura (publicar, retirar, cuota) vive en `shareRepository.ts`, que sí necesita sesión.
-import type { SharedReview, SharedReviewSuggestion, SharedReviewSuggestionsResponse } from '../types/share';
+import type { SharedArticle, SharedReview, SharedReviewSuggestion, SharedReviewSuggestionsResponse, SharedYearSummary } from '../types/share';
+
+/** ¿El artículo es un resumen del año y no una reseña? */
+export function isSharedYearSummary(article: SharedArticle | null | undefined): article is SharedYearSummary {
+  return Boolean(article && (article as Partial<SharedYearSummary>).kind === 'year');
+}
 
 /** El artículo, o `null` si el enlace no existe, ha caducado o lo retiraron. No lanza: no hay nada que reintentar. */
 export async function readSharedReview(token: string): Promise<SharedReview | null> {
@@ -21,7 +26,8 @@ export async function readSharedReview(token: string): Promise<SharedReview | nu
     // Comprobación mínima, sin Zod a propósito: meter el esquema aquí arrastraría la librería entera al chunk de
     // una página que se quiere mínima. Basta con confirmar que es un objeto de la versión que esta pantalla sabe
     // pintar; lo demás lo toleran los componentes (`MetaSection` ya ignora listas ausentes).
-    if (!body || typeof body !== 'object' || body.v !== 1) {
+    // Un resumen del año también es `v: 1`, pero no es una reseña: quien pide una reseña no lo recibe.
+    if (!body || typeof body !== 'object' || body.v !== 1 || (body as { kind?: unknown }).kind !== undefined) {
       return null;
     }
     return body as SharedReview;
@@ -30,9 +36,12 @@ export async function readSharedReview(token: string): Promise<SharedReview | nu
   }
 }
 
-/** Lo que puede pasar al abrir un enlace: la reseña, que ya no existe, o que ahora mismo no se puede saber. */
+/**
+ * Lo que puede pasar al abrir un enlace: el artículo (una reseña o un resumen del año), que ya no existe, o que
+ * ahora mismo no se puede saber.
+ */
 export type SharedReviewLookup =
-  | { status: 'ready'; review: SharedReview }
+  | { status: 'ready'; article: SharedArticle }
   | { status: 'gone' }
   | { status: 'unavailable' };
 
@@ -62,12 +71,14 @@ export async function lookupSharedReview(token: string): Promise<SharedReviewLoo
     return { status: 'gone' };
   }
   try {
-    const body = (await response.json()) as Partial<SharedReview> | null;
-    // La misma comprobación mínima que `readSharedReview`.
-    if (!body || typeof body !== 'object' || body.v !== 1) {
+    const body = (await response.json()) as Partial<SharedArticle> | null;
+    // La misma comprobación mínima que `readSharedReview`, aceptando también el resumen del año (`kind: 'year'`).
+    // Una clase de artículo que esta versión no sabe pintar se trata como si no estuviera.
+    const kind = (body as { kind?: unknown } | null)?.kind;
+    if (!body || typeof body !== 'object' || body.v !== 1 || (kind !== undefined && kind !== 'year')) {
       return { status: 'gone' };
     }
-    return { status: 'ready', review: body as SharedReview };
+    return { status: 'ready', article: body as SharedArticle };
   } catch {
     return { status: 'unavailable' };
   }
