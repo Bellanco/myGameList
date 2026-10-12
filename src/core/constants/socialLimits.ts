@@ -38,6 +38,23 @@ export const SOCIAL_ID_MAX = 200;
  */
 export const FEED_RECENT_DAYS = 30;
 
+/**
+ * Cuántos «me gusta» VIVOS guarda el fichero de reacciones de una persona (ver `core/social/reactions`). Los dos
+ * extremos lo aplican: al ESCRIBIR, para que el fichero no crezca sin techo, y al LEER, porque el gist de otro puede
+ * traer lo que sea.
+ *
+ * Es un tope y no una ventana de días, a propósito: un «me gusta» a una reseña de hace un año sigue diciendo lo
+ * mismo, y caducarlo dejaría a esa reseña sin los suyos. ~110 bytes por entrada: unos 33 kB como mucho.
+ */
+export const SOCIAL_REACTIONS_MAX = 300;
+
+/**
+ * Cuántas LÁPIDAS (un «me gusta» quitado) guarda el fichero, y cuántos días. Existen solo para que otro dispositivo
+ * de la misma persona no resucite lo que se quitó; pasado ese plazo ya se habrán cruzado, y sobran.
+ */
+export const SOCIAL_REACTION_TOMBSTONES_MAX = 300;
+export const SOCIAL_REACTION_TOMBSTONE_DAYS = 30;
+
 /** El instante desde el que algo entra en la ventana del feed. */
 export function feedRecentSince(now: number): number {
   return now - FEED_RECENT_DAYS * 24 * 60 * 60 * 1000;

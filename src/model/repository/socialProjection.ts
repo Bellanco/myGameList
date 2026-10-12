@@ -327,6 +327,14 @@ export function toPublicGame(game: GameItem, tab: TabId): PublicGame {
 // con gists planos (sin `chunkIndex`). La ESCRITURA va gated (ENABLE_SOCIAL_WRAPPER_WRITE) como hizo juegos.
 export const SOCIAL_SHARED_CHUNK_MAX_KB = 800;
 
+/**
+ * Fichero de los «me gusta» (ver `core/social/reactions`), en el MISMO gist que el social. Su nombre es parte del
+ * contrato con las versiones ya desplegadas: solo reescriben `myGameList.social.json` y solo borran lo que casa con
+ * `^myGameList\.social-chunk-.+\.json$`. Cualquier nombre que case con esa expresión lo borrarían como un chunk
+ * obsoleto; este no casa, y `tests/unit/socialReactions.test.ts` lo fija.
+ */
+export const SOCIAL_REACTIONS_FILENAME = 'myGameList.social-reactions.json';
+
 /** Nombre del fichero de overflow del gist social (sharedLists) para un `chunkId` (mismo gist, `gistId: null`). */
 export function socialChunkFilename(chunkId: string): string {
   return `myGameList.social-chunk-${chunkId}.json`;
