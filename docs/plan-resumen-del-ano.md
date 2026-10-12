@@ -146,6 +146,11 @@ hasta el 15 de enero, que será también la ventana de compartir.
    exista el botón (Fase 5).
 4. Cierre: `npm run build && npm run validate` (el crítico no debe subir de 188,6 kB), suite y CHANGELOG.
 
+**Hecha el 12-10-2026.** Medido con dos worktrees limpios (`d0c17a7f` y `9a55b2c4`, `vite build` + `ci-validate.js`
+de cada uno), porque el árbol de trabajo tenía cambios de otra sesión: chunk de entrada +61 B minificados (+14 B
+gzip), crítico **188,4 → 188,5/190 kB**. Suite: 335 ficheros, 3.762 tests en verde. `firestore.rules` solo cambia un
+comentario: no hace falta desplegar reglas por esta fase.
+
 ### Fase 2 — La tarjeta del feed sale al compartir · S
 
 - `useYearSummarySignal` deja de llamarse al pintar el resumen (`onOwnSummaryOpened`) y lo llama la acción de
@@ -239,7 +244,7 @@ Puro, en `src/core/stats/` (p. ej. `publicYearSummary.ts`), testeado como la pro
 
 - [x] Fase 0: línea base de KV (12-10-2026); freno descartado, vigilancia al 60 %. Falta el número de perfiles.
 - [x] Decisiones confirmadas (12-10-2026).
-- [ ] Fase 1: temporada hasta el 15 de enero; crítico ≤ 188,6 kB.
+- [x] Fase 1: temporada hasta el 15 de enero (`0780111d`, `fca12888`, `9a55b2c4`); crítico 188,4 → 188,5 kB.
 - [ ] Fase 2: tarjeta al compartir.
 - [ ] Fase 3: proyección + esquema + auditoría de privacidad.
 - [ ] Fase 4: servidor con 3 escrituras, ventana y renovación; probado con KV espía.

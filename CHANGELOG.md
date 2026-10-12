@@ -13,6 +13,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - **«Compartir» sale también sin lo social.** En el detalle de una reseña de Estadísticas, quien no tiene espacio
   social ve el botón; al pulsarlo, la guía le explica que compartir con enlace es de la parte social y con
   «Enséñame» le lleva a Social con el modo cooperativo en marcha.
+- **La temporada del resumen del año llega hasta el 15 de enero.** Se sigue estrenando el 15 de diciembre, pero
+  el aviso y la tarjeta en el feed de tus amistades ya no se cortan el 31: quien no abre la app en las fiestas lo
+  recibe a la vuelta, con el año que se estrenó. Es la ventana en la que, más adelante, se podrá compartir.
 
 ### Internal
 - **La auditoría de dependencias de desarrollo vuelve a 0.** Las once vulnerabilidades venían todas de
