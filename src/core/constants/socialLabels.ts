@@ -91,7 +91,9 @@ export const SOCIAL_UI = {
     lead: 'Mira lo que juegan tus amigos y que ellos vean lo tuyo. Son dos pasos.',
     /** Lo que se dice de un paso ya dado. Va en la marca, que es lo que se mira para saber por dónde vas. */
     stageDone: 'Hecho',
-    connectSync: 'Ir a Sincronización',
+    /** El paso 1 sin OAuth en el build: lleva a Ajustes, donde se conecta GitHub. Se nombra lo que se va a hacer
+        (GitHub, como dice el paso) y no la pantalla de destino. */
+    connectSync: 'Ir a GitHub',
     signIn: 'Entrar con Google',
     signingIn: 'Entrando...',
     resolveProfile: 'Comprobando tu espacio...',

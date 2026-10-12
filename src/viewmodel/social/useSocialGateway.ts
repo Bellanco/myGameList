@@ -260,7 +260,7 @@ export function useSocialGateway({
     // Paso 1: Conectar sincronización principal (token)
     if (!hasMainSync) {
       return {
-        icon: 'gear',
+        icon: 'cloud-sync', // el mismo que «Conectar con GitHub»: el paso se ve igual con OAuth y sin ella
         label: SOCIAL_UI.gateway.connectSync,
         // El contrato del CTA es `() => void`; `navigate` devuelve promesa, así que la flecha la propagaba y el
         // consumidor creía tener un manejador síncrono. Llaves + `void`: la intención queda escrita y el tipo cuadra.
