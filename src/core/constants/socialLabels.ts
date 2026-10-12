@@ -105,6 +105,19 @@ export const SOCIAL_UI = {
     gistRequired: 'Falta preparar tu espacio. Si no termina solo, créalo aquí.',
     gistReadySignIn: 'Ya tienes espacio. Entra y vuelves a tu actividad.',
     gistMissing: 'Tu espacio ya no está enlazado; vuelve a crearlo desde aquí.',
+    /* EL ATAJO DE GOOGLE del primer paso, para quien ya tiene espacio y llega a un dispositivo sin GitHub. La
+       pregunta usa la palabra de la pasarela —«espacio», la misma de «Ya tienes espacio» de arriba— y no «cuenta»
+       ni «otro dispositivo»: aquí hay dos cuentas (GitHub y Google) y no se sabe cuál se pregunta, y lo de otro
+       dispositivo deja fuera a quien borró los datos de este navegador. Lo que se recupera es justo eso: el espacio. */
+    recoverPrompt: '¿Ya tienes espacio social?',
+    recoverSignIn: 'Entrar con Google',
+    /** Con la sesión de Google ya abierta no se «entra»: se recupera lo que la cuenta guarda. */
+    recoverWithSession: 'Recuperar con Google',
+    recovering: 'Recuperando tu cuenta...',
+    /** El primer paso cuando la cuenta respondió que no tiene nada guardado. */
+    recoverNothingSaved: 'Tu cuenta de Google aún no tiene nada guardado. Conecta GitHub y terminamos.',
+    /** El segundo, con la sesión de Google ya abierta y GitHub por conectar: no queda nada que hacer en él. */
+    signedInAwaitingSync: 'Ya has entrado. Tu espacio se crea en cuanto conectes GitHub.',
     detailsSummary: 'Ver estado técnico',
     stateSync: 'Sincronización',
     stateGist: 'Espacio social',

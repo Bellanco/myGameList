@@ -7,7 +7,7 @@
 // `token: ''` al montar, y el hub mandaba a Ajustes o leía con 401.
 import { useEffect, useRef, useState } from 'react';
 import type { NavigateFunction } from 'react-router-dom';
-import { ensureSyncConfigLoaded, getSyncConfig } from '../../model/repository/gistRepository';
+import { ensureSyncConfigLoaded, getSyncConfig, subscribeSyncConfig } from '../../model/repository/gistRepository';
 import { getSocialSyncConfig, readSocialGist, saveSocialSyncConfig } from '../../model/repository/socialGistRepository';
 import {
   getCurrentSocialAuthUser,
@@ -37,6 +37,10 @@ export function useSocialSession({ lockProfileEditor, navigate }: SocialSessionI
   // Mantener la config en estado y refrescarla tras la hidratación evita la carrera en la que
   // getSyncConfig() devolvía token='' al montar (hasMainSync=false → gateway → /ajustes y lecturas 401).
   const [mainSyncConfig, setMainSyncConfig] = useState<SyncConfig | null>(() => getSyncConfig());
+  // Y se SIGUE, no solo se lee al montar: la pasarela puede conectar la sincronización sin recargar la página
+  // (el atajo de Google recupera el token y el gist de la cuenta). Con la foto del montaje el hub no se enteraba y
+  // se quedaba en el paso de GitHub con la sincronización ya conectada. OAuth no lo notaba porque vuelve recargando.
+  useEffect(() => subscribeSyncConfig(setMainSyncConfig), []);
 
   /**
    * LA SESIÓN, ESCUCHADA Y NO SOLO LEÍDA. La apertura lee el usuario UNA vez (`getCurrentSocialAuthUser`), y si el

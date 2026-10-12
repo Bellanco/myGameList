@@ -12,6 +12,7 @@ import { isServiceUnavailable } from '../core/utils/network';
 import { APP_LOCALE } from '../core/constants/locale';
 import { cargarMotorDeSync } from '../model/repository/syncEngine';
 import type { GistReadResponse } from '../model/repository/gistRepository';
+import type { GoogleRecovery, GoogleRecoveryOrigin } from './sync/githubConnection';
 import { hasGithubOAuthRedirect, isGithubOAuthConfigured } from '../model/repository/githubOAuthChecks';
 
 /**
@@ -989,15 +990,28 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     };
   }, []);
 
-  const recoverGistIdFromGoogle = useCallback(async () => {
+  /**
+   * RECUPERAR LA SINCRONIZACIÓN DESDE GOOGLE: el token (cifrado) y el gist de juegos que la cuenta guardó en
+   * `privateConfig`, y conectar con ellos. Lo piden dos sitios: Ajustes (`settings`, el botón de la conexión manual)
+   * y la pasarela del hub social (`social`, el atajo «¿Ya tienes espacio social?» del paso de GitHub).
+   *
+   * Desde el social, que la cuenta no tenga nada guardado NO es un error: es la respuesta que decide que toca
+   * conectar GitHub, y lo dice la pasarela en su paso. Por eso ahí no se marca la sincronización en error ni se
+   * manda a «conectar a mano con un token», que es lo que esa pantalla no ofrece. Devuelve qué pasó y con qué
+   * cuenta, para que quien llama pueda atar la respuesta a la sesión que la dio.
+   */
+  const recoverGistIdFromGoogle = useCallback(async (from: GoogleRecoveryOrigin = 'settings'): Promise<GoogleRecovery> => {
     const { readLegacyPlaintextToken } = await cargarMotorDeSync();
+    const fromSocial = from === 'social';
     setRecoveringGistId(true);
     let superseded = false;
+    let uid = '';
 
     try {
       // Si vuelve sin terminar la ventana de Google, el botón se devuelve enseguida (ver `core/utils/googleSignIn`).
       const user = (await getCurrentSocialAuthUser())
         || (await signInWithGoogle({ onAbandoned: () => setRecoveringGistId(false) }));
+      uid = user.uid;
 
       // Telemetría: vincula los eventos/errores posteriores a este usuario (uid opaco) y registra el login.
       void setAnalyticsUser(user.uid);
@@ -1023,52 +1037,55 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       // B1: preferir el token CIFRADO de privateConfig; fallback al campo legacy en claro (perfiles viejos).
       const recoveredToken = (await recoverGithubToken(user.uid)) || readLegacyPlaintextToken(profile ?? (await resolveOwnProfile(user)));
 
-      if (!recoveredGistId) {
+      if (!recoveredGistId || !recoveredToken) {
+        if (fromSocial) return { outcome: 'missing', uid };
+        if (recoveredGistId) setGistId(recoveredGistId);
+        const message = recoveredGistId ? SYNC_MESSAGES.recoverMissingTokenInProfile : SYNC_MESSAGES.recoverMissingInProfile;
         setStatus('error');
-        setStatusMessage(SYNC_MESSAGES.recoverMissingInProfile);
-        onNotice('err', SYNC_MESSAGES.recoverMissingInProfile);
-        return;
-      }
-
-      if (!recoveredToken) {
-        setGistId(recoveredGistId);
-        setStatus('error');
-        setStatusMessage(SYNC_MESSAGES.recoverMissingTokenInProfile);
-        onNotice('err', SYNC_MESSAGES.recoverMissingTokenInProfile);
-        return;
+        setStatusMessage(message);
+        onNotice('err', message);
+        return { outcome: 'missing', uid };
       }
 
       setToken(recoveredToken);
       setGistId(recoveredGistId);
       setStatusMessage('');
-      onNotice('ok', SYNC_MESSAGES.recoverSuccess);
+      // Desde el social no se anuncia: lo que se ve enseguida es el espacio abriéndose, y el hub ya dice que lo enlazó.
+      if (!fromSocial) onNotice('ok', SYNC_MESSAGES.recoverSuccess);
       const lock = acquireSyncLock(); // S2: no solapar el sync de conexión con otro ciclo en vuelo
-      if (lock) {
-        try {
-          await connectSyncWithCredentials(recoveredToken, recoveredGistId);
-        } finally {
-          lock.release();
-        }
+      if (!lock) {
+        onNotice('warn', SYNC_MESSAGES.syncInProgress);
+        return { outcome: 'failed', uid };
       }
+      try {
+        await connectSyncWithCredentials(recoveredToken, recoveredGistId);
+      } finally {
+        lock.release();
+      }
+      return { outcome: 'connected', uid };
     } catch (error) {
       // Volvió a pulsar con la ventana de Google aún pendiente: este intento lo canceló el nuevo, que es quien lleva
       // el botón ahora. No es un error que enseñar.
       if (isSupersededSignIn(error)) {
         superseded = true;
-        return;
+        return { outcome: 'superseded', uid };
       }
-      // Sin sincronización configurada, el fallo es de la RECUPERACIÓN (Google, Firestore sin cuota), no de una
-      // sincronización que no existe: se dice y no se marca como error de sync (fase 5 del plan de degradación).
+      // Sin sincronización configurada, el fallo es de la RECUPERACIÓN (Google, Firestore sin cuota, o un token
+      // guardado que GitHub ya no acepta), no de una sincronización que no existe: se dice y no se marca como error
+      // de sync (fase 5 del plan de degradación).
       if (!getSyncConfig()) {
         setStatus('idle');
-        const message = isServiceUnavailable(error) ? SYNC_MESSAGES.recoverUnavailable : SYNC_MESSAGES.recoverError;
-        setStatusMessage(message);
+        const message = fromSocial
+          ? (isServiceUnavailable(error) ? SYNC_MESSAGES.recoverUnavailableSocial : SYNC_MESSAGES.recoverErrorSocial)
+          : (isServiceUnavailable(error) ? SYNC_MESSAGES.recoverUnavailable : SYNC_MESSAGES.recoverError);
+        if (!fromSocial) setStatusMessage(message);
         onNotice('warn', message);
-        return;
+        return { outcome: 'failed', uid };
       }
       // H3: connectSyncWithCredentials deja la máquina en 'checking'/'merging' si lanza a mitad; sin un
       // transitionTo aquí el sync quedaría bloqueado hasta recargar. Mismo patrón de recuperación que connectSync.
       handleSyncError(error, { fallback: SYNC_MESSAGES.recoverError });
+      return { outcome: 'failed', uid };
     } finally {
       if (!superseded) setRecoveringGistId(false);
     }

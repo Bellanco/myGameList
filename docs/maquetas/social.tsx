@@ -12,6 +12,9 @@ import '../../src/styles/social.scss';
 import { IconSprite } from '../../src/view/components/IconSprite';
 import { IconSpriteRest } from '../../src/view/components/IconSpriteRest';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
+import { SocialGateway } from '../../src/view/components/socialhub/SocialGateway';
+import { resolveGateway } from '../../src/viewmodel/social/socialGateway';
+import type { GithubConnection } from '../../src/viewmodel/sync/githubConnection';
 import { parsePaletteId } from '../../src/core/constants/palettes';
 import { loadPaletteSkin } from '../../src/view/hooks/paletteSkin';
 import { useSocialFeed } from '../../src/viewmodel/social/socialFeed';
@@ -731,12 +734,70 @@ function Solicitudes({ vacia = false }: { vacia?: boolean }) {
   );
 }
 
+// ─── La pasarela (sin el espacio abierto) ────────────────────────────────────────────────────────────────────
+// La pasarela REAL (`SocialGateway`) en sus estados, con una conexión de GitHub inventada (OAuth encendido).
+// Variantes (`abrir`): `` dispositivo nuevo, con el atajo de Google · `recuperando` tras pulsarlo · `sin-nada` la
+// cuenta de Google no tenía nada guardado · `vuelves` este dispositivo ya tenía GitHub y el espacio.
+const CONEXION_GITHUB: GithubConnection = {
+  statusText: 'No sincronizado',
+  hasConfig: false,
+  connectedGistId: '',
+  token: '',
+  gistId: '',
+  errorMessage: '',
+  recoveringGistId: false,
+  oauthEnabled: true,
+  oauthLoggingIn: false,
+  onOAuthLogin: avisar('abriría la autorización de GitHub'),
+  onTokenChange: noop,
+  onGistIdChange: noop,
+  onConnect: noop,
+  onDisconnect: noop,
+  onCopyGistId: noop,
+  onRecoverGistId: noop,
+  recoverFromGoogle: async () => ({ outcome: 'superseded', uid: '' }),
+};
+
+function Pasarela({ caso }: { caso: string }) {
+  const github = caso === 'vuelves';
+  const sesion = caso === 'sin-nada';
+  const recuperando = caso === 'recuperando';
+  const { steps, currentStep } = resolveGateway({ hasMainSync: github, hasSocialSession: sesion, hasSocialGist: github });
+  return (
+    <SocialGateway
+      steps={steps}
+      currentStep={currentStep}
+      hasMainSync={github}
+      hasSocialSession={sesion}
+      hasSocialGist={github}
+      sessionName={sesion ? 'Ana P.' : ''}
+      primaryCta={github ? { icon: 'bottom-hub', label: SOCIAL_UI.gateway.signIn, action: avisar('entraría con Google'), disabled: false } : null}
+      githubConnection={{ ...CONEXION_GITHUB, hasConfig: github, recoveringGistId: recuperando }}
+      recovery={{
+        available: !github && !sesion,
+        accountHasNothing: sesion,
+        recovering: recuperando,
+        recover: avisar('entraría con Google y recuperaría GitHub y tu espacio'),
+      }}
+      offline={false}
+      serviceLimited={false}
+      legalConsentRequired={false}
+      savingConsent={false}
+      onAcceptLegalConsent={noop}
+      onSignOut={avisar('cerraría la sesión de Google')}
+      status=""
+      statusKind=""
+    />
+  );
+}
+
 const RUTA_MARTA = `/social/profiles/${MARTA.id}`;
 const RUTA_PROPIA = '/social/profiles/yo';
 const subruta = vista === 'resenas' ? '/reviews' : vista === 'publicaciones' ? '/posts' : '';
 
 /** Todas las pantallas del hub con sesión. La barra flotante (abajo) las recorre; `?barra=0` la quita para capturas. */
 const PANTALLAS: Record<string, { nombre: string; ruta: string; pintar: () => ReactElement }> = {
+  pasarela: { nombre: 'Pasarela (sin el espacio abierto)', ruta: '/social', pintar: () => <Pasarela caso={params.get('abrir') || ''} /> },
   feed: { nombre: 'Feed', ruta: '/social', pintar: () => <Feed /> },
   'feed-vacio': { nombre: 'Feed sin amigos', ruta: '/social', pintar: () => <Feed vacio /> },
   'feed-fallo': { nombre: 'Feed: no se pudo leer (sin copia)', ruta: '/social', pintar: () => <Feed vacio fallo /> },
@@ -785,6 +846,12 @@ const PANTALLAS: Record<string, { nombre: string; ruta: string; pintar: () => Re
 
 /** Las combinaciones de `vista` y `abrir` que tienen sentido, para la barra. */
 const VARIANTES: Record<string, Array<{ nombre: string; vista?: string; abrir?: string }>> = {
+  pasarela: [
+    { nombre: 'Dispositivo nuevo' },
+    { nombre: 'Recuperando desde Google', abrir: 'recuperando' },
+    { nombre: 'La cuenta no tenía nada', abrir: 'sin-nada' },
+    { nombre: 'Este dispositivo ya lo tenía', abrir: 'vuelves' },
+  ],
   perfil: [{ nombre: 'Listas' }, { nombre: 'Reseñas', vista: 'resenas' }, { nombre: 'Estadísticas', abrir: 'estadisticas' }, { nombre: 'Resumen del año', abrir: 'resumen' }],
   'compartir-resumen': [
     { nombre: 'Sin enlace' },

@@ -1014,6 +1014,7 @@ export default function App() {
     onDisconnect: syncVm.disconnectSync,
     onCopyGistId: handleCopyGistId,
     onRecoverGistId: handleRecoverGistId,
+    recoverFromGoogle: syncVm.recoverGistIdFromGoogle,
   }), [
     handleCopyGistId,
     handleRecoverGistId,
@@ -1027,6 +1028,7 @@ export default function App() {
     syncVm.githubLoggingIn,
     syncVm.githubOAuthEnabled,
     syncVm.hasConfig,
+    syncVm.recoverGistIdFromGoogle,
     syncVm.recoveringGistId,
     syncVm.setGistId,
     syncVm.setToken,

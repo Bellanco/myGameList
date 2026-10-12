@@ -27,6 +27,8 @@ export interface GithubSyncCardProps {
    * mismo sitio. Si la tarjeta lo impusiera, el primer paso tendría un aspecto y el segundo otro.
    */
   ctaClassName?: string;
+  /** Bloquea el botón de conectar mientras la pantalla hace otra cosa (la pasarela, recuperar desde Google). */
+  disabled?: boolean;
 }
 
 /**
@@ -45,6 +47,7 @@ export const GithubSyncCard = memo(function GithubSyncCard({
   connection,
   variant = 'settings',
   ctaClassName = 'btn btn-steam btn-connect',
+  disabled = false,
 }: GithubSyncCardProps) {
   const {
     statusText,
@@ -92,7 +95,7 @@ export const GithubSyncCard = memo(function GithubSyncCard({
       // Ancla de la guía de primeros pasos: el botón al que apunta «pulsa Conectar con GitHub» (solo en Ajustes).
       data-tour={isGateway ? undefined : 'sync-connect'}
       onClick={oauthEnabled ? onOAuthLogin : () => setShowManual(true)}
-      disabled={oauthLoggingIn}
+      disabled={oauthLoggingIn || disabled}
     >
       <Icon name="cloud-sync" />
       <span className="btn-label">

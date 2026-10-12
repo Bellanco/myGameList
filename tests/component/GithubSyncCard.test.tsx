@@ -33,6 +33,7 @@ function conexion(overrides: Partial<GithubConnection> = {}): GithubConnection {
     onDisconnect: vi.fn(),
     onCopyGistId: vi.fn(),
     onRecoverGistId: vi.fn(),
+    recoverFromGoogle: vi.fn(async () => ({ outcome: 'missing' as const, uid: '' })),
     ...overrides,
   };
 }

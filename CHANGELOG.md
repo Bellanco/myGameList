@@ -23,6 +23,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   casilla, y a quien la encendió y ya no tiene el rango se le apaga al entrar en Diseño. Viaja con la cuenta (`publicConfig.gameScenes`):
   **las reglas de Firestore tienen que desplegarse antes que el cliente** o se deniega la escritura de toda la
   apariencia. Ya desplegadas el 12-10-2026.
+- **Volver al espacio social solo con Google.** En un dispositivo o navegador sin GitHub conectado, el primer paso
+  de la puerta ofrece, debajo de «Conectar con GitHub», «¿Ya tienes espacio social? Entrar con Google»: recupera de
+  tu cuenta el token y el gist guardados, conecta la sincronización y abre tu espacio, sin volver a autorizar
+  GitHub. Si la cuenta no tenía nada guardado, el paso lo dice y queda el botón de GitHub. Antes ese atajo solo
+  existía en Ajustes, plegado dentro de la conexión manual.
 
 ### Changed
 - **Los textos legales y de privacidad, en lenguaje claro.** Las condiciones, la privacidad, las cookies y la
