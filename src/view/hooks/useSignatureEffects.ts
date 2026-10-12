@@ -27,7 +27,7 @@ import { gameScenesPreference } from './preferences';
  *    con «STAGE 1» (Inserte moneda); la franja de «nuevo contrato» con el cartel de la tabla (Plata y acero); la
  *    transición de día del calendario con la fecha de hoy (Ladrones de corazones); el cartel de la cámara que baja
  *    del techo (Cámara de pruebas); el escáner óptico (Sin futuro); el cartel de zona «Nueva aventura» (Sol y luna), y la
- *    transmisión astropática con la calavera alada (Solo hay guerra). El atardecer y el cartel se sorteaban con los de
+ *    transmisión astropática con el águila imperial (Solo hay guerra). El atardecer y el cartel se sorteaban con los de
  *    cerrar hasta el 12-10-2026; los demás se eligieron ese día con la maqueta de propuestas (la puerta redonda
  *    sustituyó esa misma tarde a las Puertas de Durin, que se leían a dibujo generado).
  *  Las escenas de empezar y cerrar van ADEMÁS detrás de su propia casilla de Diseño, apagada por defecto
@@ -455,36 +455,6 @@ export function useSignatureEffects(): void {
       return el;
     };
 
-    /**
-     * Solo hay guerra: la calavera alada del cogitador, en píxeles. `#` es hueso y `o` la lente roja del servocráneo;
-     * cada racha de una fila se vuelve un rectángulo, así que sale un `path` por color, nítido con `crispEdges`.
-     */
-    const CALAVERA = [
-      '.............#####.............',
-      '...........#########...........',
-      '...######.###########.######...',
-      '###############################',
-      '.....######...###...######.....',
-      '.##########.o.###.o.##########.',
-      '......######.##.##.######......',
-      '...###########...###########...',
-      '........#..#########..#........',
-      '.....####..#.#.#.#.#..####.....',
-      '............#.#.#.#............',
-      '............#######............',
-      '.............#####.............',
-    ];
-    const rachas = (c: string): string =>
-      CALAVERA.map((fila, y) => {
-        let d = '';
-        for (const m of fila.matchAll(new RegExp(`${c}+`, 'g'))) d += `M${m.index} ${y}h${m[0].length}v1h-${m[0].length}z`;
-        return d;
-      }).join('');
-    const CALAVERA_SVG =
-      `<svg class="fx-grim-tx-craneo" viewBox="0 0 ${CALAVERA[0].length} ${CALAVERA.length}" width="${CALAVERA[0].length * 3}" ` +
-      `height="${CALAVERA.length * 3}" shape-rendering="crispEdges" aria-hidden="true">` +
-      `<path class="is-hueso" d="${rachas('#')}"/><path class="is-lente" d="${rachas('o')}"/></svg>`;
-
     /** Solo hay guerra: la orden llega por el cogitador y se teclea línea a línea. `--n` = caracteres con el «> ». */
     const ORDEN_DE_CRUZADA = ['ORIGEN: CORO ASTROPÁTICO VII', 'ORDEN DE CRUZADA... RECIBIDA', 'OBJETIVO ASIGNADO.', 'EL EMPERADOR PROTEGE.'];
     const RETARDOS_DE_LA_ORDEN = [0.75, 1.15, 1.6, 2.0];
@@ -492,7 +462,7 @@ export function useSignatureEffects(): void {
       escena(
         'fx-grim-tx',
         '<span class="fx-grim-tx-hd">+++ TRANSMISIÓN ENTRANTE +++</span>' +
-          `<span class="fx-grim-tx-cuerpo">${CALAVERA_SVG}<span>` +
+          '<span class="fx-grim-tx-cuerpo"><span class="fx-grim-tx-aquila"></span><span>' +
           ORDEN_DE_CRUZADA.map(
             (t, i) =>
               `<p style="--n:${t.length + 2};--d:${RETARDOS_DE_LA_ORDEN[i]}s">&gt; ${t}` +

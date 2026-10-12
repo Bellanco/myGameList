@@ -17,7 +17,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   La puerta redonda de Bolsón Cerrado (No puedes pasar), el atardecer synthwave con «STAGE 1» (Inserte moneda), «Nuevo
   contrato» con el cartel de la tabla en rojo vivo (Plata y acero), el calendario con la fecha de hoy (Ladrones de
   corazones), el cartel de la cámara con «PRUEBA EN CURSO» (Cámara de pruebas), el escáner óptico (Sin futuro), el
-  cartel de zona «Nueva aventura» (Sol y luna) y la transmisión astropática con la calavera alada (Solo hay guerra).
+  cartel de zona «Nueva aventura» (Sol y luna) y la transmisión astropática con el águila imperial (Solo hay guerra).
 - **Casilla «Animaciones al cambiar de lista» en Diseño, apagada por defecto y solo de plata para arriba.** Las
   escenas tapan la pantalla un par de segundos, así que se encienden a mano, como las carátulas. Bronce no ve la
   casilla, y a quien la encendió y ya no tiene el rango se le apaga al entrar en Diseño. Viaja con la cuenta (`publicConfig.gameScenes`):
