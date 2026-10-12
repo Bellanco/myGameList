@@ -87,6 +87,44 @@ Sin ella, «~65 al día» es una cuenta, no una medida.
   50 %) × 3 escrituras. Comparar con `1.000 − (pico de carátulas + ~100)`.
 - **Salida:** decidir si hace falta el freno de temporada (Fase 4, punto 6). Anotarlo aquí.
 
+**Medido el 12-10-2026** (panel de Cloudflare, `mygamelist-shares`, del 1 al 12 de octubre):
+
+| Operación | Total (12 días) | Media diaria | Cupo diario |
+|---|---|---|---|
+| Lecturas | 2.300 | ~190 | 100.000 |
+| Escrituras | 159 | **~13** | 1.000 (de la cuenta) |
+| *List* | 195 | ~16 | 1.000 |
+| Borrados | 1 | — | 1.000 |
+
+19 claves vivas y 30,82 kB: unos pocos enlaces activos (3 claves por enlace, más índices y contadores). En las últimas
+24 h el máximo fue de ~0,002 escrituras/s en una hora (~7). Compartir gasta hoy un **1–2 % del cupo de escrituras**.
+
+Y `mygamelist-covers`, mismo periodo:
+
+| Operación | Total (12 días) | Media diaria | Cupo diario |
+|---|---|---|---|
+| Lecturas | 27.650 | ~2.300 | 100.000 |
+| Escrituras | 660 | **~55** | 1.000 (de la cuenta) |
+| *List* | 0 | 0 | 1.000 |
+
+2.110 claves y 362,74 kB. Entre los dos espacios, **~68 escrituras al día de media (~7 % del cupo)** y ~2.500 lecturas
+(~2,5 %). El panel solo da el total del mes y la curva de 24 h, no el máximo diario: los días con una biblioteca
+grande nueva pueden acercarse al tope de 700 de carátulas.
+
+**Decisión: freno de temporada descartado.**
+
+- Día medio: 1.000 − ~55 de carátulas − ~100 fijas − ~13 de reseñas ≈ **830 libres → ~275 enlaces de resumen** en
+  un día.
+- Peor día (carátulas al tope de 700): ≈ **185 libres → ~60 enlaces**. Para que algo falle tienen que coincidir en el
+  mismo día UTC una biblioteca grande nueva y más de 60 personas compartiendo por primera vez; con 19 claves vivas
+  en `mygamelist-shares` el uso real está muy lejos.
+- Si aun así pasa, falla blando: el enlace responde «inténtalo mañana» (503 del middleware) y la tarjeta del feed,
+  que va por Firestore, sale igualmente.
+- **Vigilancia** en la temporada: si algún día de la primera semana `mygamelist-covers` + `mygamelist-shares` pasan
+  de 600 escrituras (60 %, umbral de la Fase 5 de capacidad), se aplica el freno de la Fase 4 en la release siguiente.
+
+Pendiente, sin bloquear: el número de perfiles sociales activos, para afinar la estimación del pico.
+
 ### Fase 1 — Calendario · S
 
 `src/core/stats/summaryYear.ts` (arranque):
@@ -148,7 +186,7 @@ Puro, en `src/core/stats/` (p. ej. `publicYearSummary.ts`), testeado como la pro
 - `/api/share/related` con un token de resumen: `items: []` sin leer nada más.
 - Censo del admin (`/api/share/all`, `AdminUserShares`) y «mis enlaces» (`SharedReviewsCard`): pintar la fila de
   resumen (hoy dan por hecho `gameId`/`gameName`). Retirar y vetar funcionan igual (mismas tres claves).
-- **Freno de temporada (solo si la Fase 0 lo pide):** bajar `COVER_DAILY_BUDGET` en la ventana (p. ej. 700 → 550:
+- **Freno de temporada (descartado en la Fase 0; solo si la vigilancia lo pide):** bajar `COVER_DAILY_BUDGET` en la ventana (p. ej. 700 → 550:
   +150 escrituras, ~50 enlaces más al día). Las carátulas ya fallan blando y se completan otro día; un enlace que no
   se puede crear es peor. Constante y fechas juntas en `keys.ts`.
 - Actualizar el comentario de `COVER_DAILY_BUDGET` (la cuenta de lo que queda para compartir) y
@@ -198,7 +236,7 @@ Puro, en `src/core/stats/` (p. ej. `publicYearSummary.ts`), testeado como la pro
 
 ## Checklist
 
-- [ ] Fase 0: línea base de KV y perfiles; decisión sobre el freno.
+- [x] Fase 0: línea base de KV (12-10-2026); freno descartado, vigilancia al 60 %. Falta el número de perfiles.
 - [x] Decisiones confirmadas (12-10-2026).
 - [ ] Fase 1: calendario; crítico ≤ 188,6 kB.
 - [ ] Fase 2: tarjeta al compartir.
