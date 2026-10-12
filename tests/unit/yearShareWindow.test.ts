@@ -1,8 +1,7 @@
 // La ventana de compartir el resumen del año en el servidor (UTC, con holgura de husos) y la espera por rango
 // entre actualizaciones del enlace (docs/plan-resumen-del-ano.md, Fase 4).
 import { describe, expect, it } from 'vitest';
-import { nextYearShareUpdateAt, yearShareWindow } from '../../src/core/social/yearShareWindow';
-import { PROFILE_TIER_YEAR_SHARE_UPDATE_DAYS } from '../../src/core/constants/tiers';
+import { PROFILE_TIER_YEAR_SHARE_UPDATE_DAYS, nextYearShareUpdateAt, yearShareWindow } from '../../src/core/social/yearShareWindow';
 
 const utc = (y: number, m: number, d: number, h = 0) => Date.UTC(y, m, d, h);
 

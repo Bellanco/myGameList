@@ -11,8 +11,7 @@ import { fail, json, readJson } from '../../_lib/http';
 import { shareKey, type Env } from '../../_lib/keys';
 import { readShareStatus } from '../../_lib/quota';
 import { InvalidShareError, publishYearShare } from '../../_lib/shares';
-import { PROFILE_TIER_YEAR_SHARE_UPDATE_DAYS } from '../../../src/core/constants/tiers';
-import { nextYearShareUpdateAt, yearShareWindow } from '../../../src/core/social/yearShareWindow';
+import { PROFILE_TIER_YEAR_SHARE_UPDATE_DAYS, nextYearShareUpdateAt, yearShareWindow } from '../../../src/core/social/yearShareWindow';
 
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
   const caller = await requireUser(context.request, context.env);

@@ -5,8 +5,8 @@
 // las aplica la Function. Lo que aquí se calcula (si el resumen ha cambiado, desde cuándo se puede actualizar) es
 // solo para pintar el botón como toca; si se equivoca, el servidor responde con la fecha buena y se corrige.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { PROFILE_TIER_YEAR_SHARE_UPDATE_DAYS, normalizeTier } from '../core/constants/tiers';
-import { nextYearShareUpdateAt } from '../core/social/yearShareWindow';
+import { normalizeTier } from '../core/constants/tiers';
+import { PROFILE_TIER_YEAR_SHARE_UPDATE_DAYS, nextYearShareUpdateAt } from '../core/social/yearShareWindow';
 import type { YearSummary } from '../core/stats/yearSummary';
 import { isSharedYearSummary, lookupSharedReview } from '../model/repository/publicShareRepository';
 import { isShareUnavailable, listMyShares, publishYearShare, removeShare, type ShareError } from '../model/repository/shareRepository';
