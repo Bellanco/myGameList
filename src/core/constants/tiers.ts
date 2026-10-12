@@ -59,7 +59,7 @@ export const ADMIN_ONLY_TIER: ProfileTier = PROFILE_TIER.mithril;
  */
 export const PROFILE_TIER_FEED_TTL_MS: Record<ProfileTier, number> = {
   bronze: 30 * 60 * 1000, // lo mismo que antes de existir los rangos
-  silver: 15 * 60 * 1000,
+  silver: 20 * 60 * 1000, // 15 min hasta el 12-10-2026, decisión del usuario
   gold: 10 * 60 * 1000,
   mithril: 60_000,
 };
