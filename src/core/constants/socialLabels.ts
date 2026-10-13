@@ -391,14 +391,35 @@ export const SOCIAL_UI = {
     inviteAria: 'Invitar a un amigo',
     inviteTitle: 'Invita a un amigo',
   },
+  // LA PANTALLA DE LA CAMPANA (docs/plan-notificaciones-y-buscador.md): las solicitudes que te han hecho y los «me
+  // gusta» nuevos a lo tuyo. Sigue en `/social/requests`, que es donde estaba la bandeja de solicitudes.
   requests: {
-    sectionAria: 'Solicitudes de amistad',
-    title: 'Solicitudes de amistad',
-    actionsAria: 'Acciones de solicitudes de amistad',
+    sectionAria: 'Notificaciones',
+    title: 'Notificaciones',
+    actionsAria: 'Acciones de las notificaciones',
     back: 'Volver a la actividad',
-    incomingTitle: 'Recibidas',
-    // Solo se ve si entras sin nada pendiente o contestas la última: la campana no aparece sin peticiones.
-    empty: 'No tienes solicitudes pendientes.',
+    incomingTitle: 'Solicitudes de amistad',
+    likesTitle: 'Me gusta',
+    /**
+     * Una fila por reseña o publicación. La frase es la del feed («A Marta y a Nacho les gusta», con la primera palabra
+     * de cada nombre) más a qué: aquí sí hace falta decirlo, porque la fila no está debajo de la tarjeta.
+     */
+    likeWhat: (on: 'activity' | 'post') => (on === 'post' ? 'tu publicación' : 'tu reseña de'),
+    /** Adelanto de una publicación en su fila: lo justo para reconocerla, cortado por palabra entera. */
+    postExcerpt: (text: string) => {
+      const clean = text.replace(/\s+/g, ' ').trim();
+      if (clean.length <= 60) return clean;
+      const cut = clean.slice(0, 60);
+      const lastSpace = cut.lastIndexOf(' ');
+      return `${(lastSpace > 30 ? cut.slice(0, lastSpace) : cut).replace(/[\s.,;:]+$/, '')}…`;
+    },
+    /**
+     * Adónde lleva la fila, solo para el lector de pantalla y DETRÁS del texto visible: el nombre accesible tiene que
+     * empezar por lo que se ve (WCAG 2.5.3), así que no se sustituye por otro. Los nombres enteros van en el `title`.
+     */
+    likeRowHint: (on: 'activity' | 'post') => (on === 'post' ? '. Abrir tus publicaciones' : '. Abrir la reseña'),
+    // Solo se ve si contestas la última solicitud y no queda ningún «me gusta»: sin nada, la campana no aparece.
+    empty: 'No tienes nada nuevo.',
     loading: 'Cargando solicitudes...',
     accept: 'Aceptar',
     reject: 'Rechazar',

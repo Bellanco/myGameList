@@ -6,8 +6,15 @@ import type { ProfileTier } from '../../../core/constants/tiers';
 import { HubScreen } from './HubScreen';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
+import type { LikeNotification } from '../../../core/social/likeNotifications';
 
 /**
+ * La pantalla de la CAMPANA del feed: las solicitudes de amistad que te han hecho y los «me gusta» nuevos a lo tuyo
+ * (docs/plan-notificaciones-y-buscador.md). Los «me gusta» van en una fila por reseña o publicación, solo los nuevos:
+ * lo que ya se vio aquí sigue mientras no salgas del social y luego desaparece (lo decide `useLikeNotifications`).
+ *
+ * Lo que sigue es la historia de la bandeja de solicitudes, que es lo que era esta pantalla hasta el 13-10-2026.
+ *
  * Bandeja de solicitudes de amistad: SOLO las que te han hecho a ti, que son lo único que pide algo de tu parte.
  *
  * Aquí estaban también las que has enviado y la lista de amigos (09-10-2026), y las dos se repetían en «Perfiles»:
@@ -33,6 +40,8 @@ const REQUEST_ROWS_PER_PAGE = 4;
 export function SocialRequestsScreen({
   SOCIAL_UI,
   incomingRequests,
+  likeNotifications = [],
+  onOpenLike,
   loading,
   busyUid,
   onAccept,
@@ -44,6 +53,10 @@ export function SocialRequestsScreen({
 }: {
   SOCIAL_UI: SocialUiLabels;
   incomingRequests: RequestView[];
+  /** Filas de «me gusta» a lo tuyo que se enseñan en esta visita. */
+  likeNotifications?: readonly LikeNotification[];
+  /** Abre lo que ha gustado (la reseña o tus publicaciones). */
+  onOpenLike?: (row: LikeNotification) => void;
   loading: boolean;
   busyUid: string;
   onAccept: (otherUid: string) => void;
@@ -115,7 +128,41 @@ export function SocialRequestsScreen({
           )}
         />
 
-        {!loading && incomingRequests.length === 0 ? <p>{R.empty}</p> : null}
+        {likeNotifications.length > 0 ? (
+          <div className="fg">
+            <span className="flabel" id="hub-like-notices-title">
+              {R.likesTitle} <span className="hub-section-count">· {likeNotifications.length}</span>
+            </span>
+            <ul className="hub-like-notices" aria-labelledby="hub-like-notices-title">
+              {likeNotifications.map((row) => {
+                const isPost = row.own.on === 'post';
+                const what = isPost ? R.postExcerpt(row.own.text ?? '') : row.own.gameName ?? '';
+                const fullPhrase = SOCIAL_UI.feed.likes.fullList(row.names);
+                return (
+                  <li key={row.target}>
+                    <button
+                      type="button"
+                      className="hub-like-notice"
+                      data-new={row.hasNew ? '' : undefined}
+                      title={fullPhrase}
+                      onClick={() => onOpenLike?.(row)}
+                    >
+                      <Icon name="thumbs-up" className="ui-icon hub-like-notice-icon" />
+                      <span className="hub-like-notice-text">
+                        {SOCIAL_UI.feed.likes.phrase(row.names)} {R.likeWhat(row.own.on)}{' '}
+                        {isPost ? <q>{what}</q> : <strong>{what}</strong>}
+                        <span className="sr-only">{R.likeRowHint(row.own.on)}</span>
+                      </span>
+                      <Icon name="angle-right" className="ui-icon hub-like-notice-go" />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : null}
+
+        {!loading && incomingRequests.length === 0 && likeNotifications.length === 0 ? <p>{R.empty}</p> : null}
 
         <HubStatus status={status} statusKind={statusKind} />
     </HubScreen>

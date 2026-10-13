@@ -27,6 +27,7 @@ import { SocialFeedScreen } from '../../src/view/components/socialhub/SocialFeed
 import { FeedLikeBar } from '../../src/view/components/socialhub/FeedLikeBar';
 import { buildFeedLikes, likeTargetOf, type FeedLiker, type LikeableFeedItem } from '../../src/core/social/feedLikes';
 import { reactionTargetKey, setReaction, type SocialReactionEntry } from '../../src/core/social/reactions';
+import { buildLikeNotifications, ownLikeTargets } from '../../src/core/social/likeNotifications';
 import { LegalConsentToast } from '../../src/view/components/LegalConsentToast';
 import { SocialProfilesScreen } from '../../src/view/components/socialhub/SocialProfilesScreen';
 import { SocialProfileDetailScreen } from '../../src/view/components/socialhub/SocialProfileDetailScreen';
@@ -307,8 +308,9 @@ function Feed({ vacio = false, fallo = false, caducado = false }: { vacio?: bool
       openProfileSummary={avisar('abriría su resumen del año')}
       onOpenProfiles={avisar('abriría Perfiles')}
       onOpenOwnProfile={avisar('abriría tu ficha')}
-      onOpenRequests={avisar('abriría la bandeja')}
-      pendingIncomingCount={vacio ? 0 : 2}
+      onOpenRequests={avisar('abriría las notificaciones')}
+      bellVisible={!vacio}
+      bellCount={vacio ? 0 : 2 + AVISOS_ME_GUSTA.length}
       groupedFeedItems={groupedFeedItems}
       feedItems={feedItems}
       hasMoreFeed={hasMoreFeed}
@@ -720,12 +722,26 @@ function vistaDeSolicitud(p: Persona) {
   return { docId: `doc-${p.uid}`, otherUid: p.uid, name: p.displayName, photo: '', tier: p.tier };
 }
 
-/** `vacia`: lo que se ve al contestar la última estando dentro (sin peticiones, la campana del feed no sale). */
-function Solicitudes({ vacia = false }: { vacia?: boolean }) {
+// Los «me gusta» de la campana (docs/plan-notificaciones-y-buscador.md), con el MISMO cálculo que el hub: los de
+// `LIKERS` a lo tuyo (`MI_ACTIVIDAD`). Marta y Nacho en tu reseña de Hades, Lucía en tu publicación.
+const AVISOS_ME_GUSTA = buildLikeNotifications(LIKERS, ownLikeTargets(MI_ACTIVIDAD), { show: () => true, isNew: () => true });
+// Lo que queda tras abrirla: la reseña sigue nueva y la publicación ya vista en esta visita (pulgar de trazo).
+const AVISOS_ME_GUSTA_VISTOS = buildLikeNotifications(LIKERS, ownLikeTargets(MI_ACTIVIDAD), {
+  show: () => true,
+  isNew: (key) => !key.startsWith(`${LUCIA.uid}|`),
+});
+
+/**
+ * La pantalla de la campana. `vacia`: lo que se ve al contestar la última estando dentro sin «me gusta» (sin nada, la
+ * campana del feed no sale). `soloMeGusta`: sin solicitudes, con una fila ya vista en esta visita.
+ */
+function Solicitudes({ vacia = false, soloMeGusta = false }: { vacia?: boolean; soloMeGusta?: boolean }) {
   return (
     <SocialRequestsScreen
       SOCIAL_UI={SOCIAL_UI}
-      incomingRequests={vacia ? [] : [vistaDeSolicitud(CARMEN), vistaDeSolicitud(ALEX)]}
+      incomingRequests={vacia || soloMeGusta ? [] : [vistaDeSolicitud(CARMEN), vistaDeSolicitud(ALEX)]}
+      likeNotifications={vacia ? [] : soloMeGusta ? AVISOS_ME_GUSTA_VISTOS : AVISOS_ME_GUSTA}
+      onOpenLike={avisar('abriría lo que ha gustado')}
       loading={false}
       busyUid=""
       onAccept={avisar('aceptaría la petición')}
@@ -833,8 +849,9 @@ const PANTALLAS: Record<string, { nombre: string; ruta: string; pintar: () => Re
     ),
   },
   amigos: { nombre: 'Perfiles (directorio)', ruta: '/social/profiles', pintar: () => <Amigos /> },
-  solicitudes: { nombre: 'Solicitudes', ruta: '/social/requests', pintar: () => <Solicitudes /> },
-  'solicitudes-vacia': { nombre: 'Solicitudes (ninguna)', ruta: '/social/requests', pintar: () => <Solicitudes vacia /> },
+  solicitudes: { nombre: 'Notificaciones', ruta: '/social/requests', pintar: () => <Solicitudes /> },
+  'notificaciones-me-gusta': { nombre: 'Notificaciones (solo «me gusta»)', ruta: '/social/requests', pintar: () => <Solicitudes soloMeGusta /> },
+  'solicitudes-vacia': { nombre: 'Notificaciones (nada)', ruta: '/social/requests', pintar: () => <Solicitudes vacia /> },
   perfil: { nombre: 'Perfil de una amiga', ruta: RUTA_MARTA + subruta, pintar: () => <Perfil /> },
   'perfil-propio': { nombre: 'Tu perfil', ruta: RUTA_PROPIA + subruta, pintar: () => <Perfil propio /> },
   'compartir-resumen': { nombre: 'Compartir tu resumen (temporada)', ruta: RUTA_PROPIA, pintar: () => <CompartirResumen /> },

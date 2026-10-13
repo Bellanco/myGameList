@@ -41,7 +41,8 @@ function renderFeed(items: SocialFeedItem[] = []) {
       onOpenProfiles={() => {}}
       onOpenOwnProfile={() => {}}
       onOpenRequests={() => {}}
-      pendingIncomingCount={0}
+      bellVisible={false}
+      bellCount={0}
       groupedFeedItems={groups}
       feedItems={items}
       hasMoreFeed={false}

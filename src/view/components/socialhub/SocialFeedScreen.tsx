@@ -65,7 +65,8 @@ function SocialFeedScreenBase({
   onOpenProfiles,
   onOpenOwnProfile,
   onOpenRequests,
-  pendingIncomingCount,
+  bellVisible,
+  bellCount,
   groupedFeedItems,
   feedItems,
   hasMoreFeed,
@@ -106,7 +107,10 @@ function SocialFeedScreenBase({
   onOpenProfiles: () => void;
   onOpenOwnProfile: () => void;
   onOpenRequests: () => void;
-  pendingIncomingCount: number;
+  /** ¿Sale la campana? Ver `FeedShellActions.bellVisible`. */
+  bellVisible: boolean;
+  /** Lo nuevo de la campana: solicitudes pendientes más filas de «me gusta» sin ver. */
+  bellCount: number;
   groupedFeedItems: SocialFeedDayGroup[];
   feedItems: SocialFeedItem[];
   hasMoreFeed: boolean;
@@ -228,7 +232,7 @@ function SocialFeedScreenBase({
           <HubAvatar photoURL={ownVisiblePhotoURL} />
         </button>
       )}
-      actions={{ pendingIncomingCount, onOpenProfiles, onOpenRequests }}
+      actions={{ bellVisible, bellCount, onOpenProfiles, onOpenRequests }}
       notice={(
         <FeedNotice
           SOCIAL_UI={SOCIAL_UI}

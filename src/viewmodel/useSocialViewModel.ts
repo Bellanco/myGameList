@@ -38,6 +38,7 @@ import { useOwnProfileRank } from './social/useOwnProfileRank';
 import { useOwnPhotoHeal } from './social/useOwnPhotoHeal';
 import { useOwnProfileEditor } from './social/useOwnProfileEditor';
 import { useSocialLikes } from './social/useSocialLikes';
+import { useLikeNotifications } from './social/useLikeNotifications';
 import { useSocialFeedback } from './social/useSocialFeedback';
 import { useSocialSession } from './social/useSocialSession';
 import { useSocialFeed } from './social/socialFeed';
@@ -600,6 +601,24 @@ export function useSocialViewModel(options?: {
   });
   retireLikesRef.current = retireLikesOf;
 
+  // La campana: los «me gusta» de tus AMISTADES a lo tuyo (docs/plan-notificaciones-y-buscador.md). Solo amistades,
+  // aunque el directorio traiga a más gente: de quien no lo es no se avisa de nada.
+  const likeNotificationFriends = useMemo(
+    () => visibleSocialDirectory.filter((entry) => friendUidSet.has(String(entry.uid || ''))),
+    [visibleSocialDirectory, friendUidSet],
+  );
+  const ownDirectoryEntry = useMemo(
+    () => socialDirectory.find((entry) => isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId)) ?? null,
+    [socialDirectory, authUser?.uid, ownProfileId],
+  );
+  const { notifications: likeNotifications, newCount: newLikeNotifications } = useLikeNotifications({
+    enabled: hasReadyAccess && socialSpaceOpen,
+    uid: authUser?.uid || '',
+    friends: likeNotificationFriends,
+    ownEntry: ownDirectoryEntry,
+    screenOpen: activePanel === 'requests',
+  });
+
   const socialDisplayName = useMemo(() => {
     const preferred = profileName.trim();
     if (preferred) {
@@ -1076,6 +1095,9 @@ export function useSocialViewModel(options?: {
       friendshipBusyUid,
       pendingIncomingCount,
       incomingRequests,
+      // La campana también avisa de los «me gusta» a lo tuyo: las filas de la pantalla y cuántas son nuevas.
+      likeNotifications,
+      newLikeNotifications,
       outgoingRequests,
       friendsList,
       relationshipWith,

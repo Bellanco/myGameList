@@ -5,6 +5,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Added
+
+- **La campana del feed avisa de los «me gusta» a lo tuyo.** Además de las solicitudes de amistad, trae una fila por
+  cada reseña o publicación tuya que ha gustado: «A Marta y a Nacho les gusta tu reseña de *Hades*», y al pulsarla se
+  abre. Solo lo nuevo, una vez por persona y reseña: quitar y volver a poner el «me gusta» no vuelve a avisar. Lo visto
+  sigue en la pantalla mientras estés en el social y desaparece al salir. La campana solo sale con algo que ver, y su
+  número cuenta solo lo nuevo. No gasta Firestore ni peticiones a GitHub: los «me gusta» ya llegaban con el feed. Lo
+  visto se recuerda en cada dispositivo.
+
 ### Changed
 
 - **Publicar en el feed pasa a ser de oro para arriba.** Plata ya no ve el compositor; oro baja de 10.000 a 1.000

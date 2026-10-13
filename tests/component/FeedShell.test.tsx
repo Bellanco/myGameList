@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { SocialHubSkeleton } from '../../src/view/components/SocialHubSkeleton';
+import { FeedShell } from '../../src/view/components/socialhub/FeedShell';
 import { SOCIAL_SHELL } from '../../src/core/constants/socialShell';
 import { SOCIAL_CAN_POST_KEY } from '../../src/core/constants/storageKeys';
 
@@ -60,5 +61,35 @@ describe('armazón de la actividad social — el esqueleto promete lo que llega'
     // Es un hueco, no un compositor: ni se escribe en él ni se publica desde él.
     expect(hueco?.querySelector('textarea')).toBeDisabled();
     expect(hueco?.querySelector('button')).toBeDisabled();
+  });
+});
+
+/**
+ * LA CAMPANA (docs/plan-notificaciones-y-buscador.md): solo sale con algo que ver —solicitudes o «me gusta» nuevos—, y
+ * su número cuenta solo lo nuevo. Tras abrirla, lo visto sigue dentro hasta salir del social: campana sin número.
+ */
+describe('campana del feed', () => {
+  const acciones = (bellVisible: boolean, bellCount: number) => ({
+    bellVisible,
+    bellCount,
+    onOpenProfiles: () => {},
+    onOpenRequests: () => {},
+  });
+
+  it('sin nada que ver no sale', () => {
+    render(<FeedShell avatar={null} actions={acciones(false, 0)}>{null}</FeedShell>);
+    expect(screen.queryByRole('button', { name: /Notificaciones/ })).not.toBeInTheDocument();
+  });
+
+  it('con algo nuevo sale con su número y lo dice al lector de pantalla', () => {
+    const { container } = render(<FeedShell avatar={null} actions={acciones(true, 3)}>{null}</FeedShell>);
+    expect(screen.getByRole('button', { name: SOCIAL_SHELL.feed.openRequestsAria(3) })).toBeInTheDocument();
+    expect(container.querySelector('.hub-requests-count')).toHaveTextContent('3');
+  });
+
+  it('con lo ya visto en la visita sigue, pero sin número', () => {
+    const { container } = render(<FeedShell avatar={null} actions={acciones(true, 0)}>{null}</FeedShell>);
+    expect(screen.getByRole('button', { name: SOCIAL_SHELL.feed.openRequestsAria(0) })).toBeInTheDocument();
+    expect(container.querySelector('.hub-requests-count')).toBeNull();
   });
 });

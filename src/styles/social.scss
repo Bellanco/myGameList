@@ -1096,6 +1096,68 @@
 
 .hub-feed-card-detail .hub-like-bar { margin-top: 1rem; }
 
+/* LOS «ME GUSTA» DE LA CAMPANA (docs/plan-notificaciones-y-buscador.md): una fila por reseña o publicación, que abre lo
+   que ha gustado. Filas de texto con separador, sin tarjeta propia: van dentro de la del hub, como las del feed, y cada
+   tema las viste con su letra. El pulgar toma `--like`, el color del «me gusta» pulsado de cada tema; en lo nuevo va
+   relleno, y en lo ya visto de esta visita, de trazo, como el botón sin pulsar. */
+.hub-like-notices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.hub-like-notices li + li { border-top: 1px solid var(--hair); }
+
+.hub-like-notice {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  width: 100%;
+  min-height: 2.75rem; /* 44 px: objetivo táctil cómodo, la fila entera es el botón */
+  padding: .6rem .5rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--hub-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hub-like-notice:hover { background: var(--surface-hover); }
+
+.hub-like-notice:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-accent);
+}
+
+.hub-like-notice .hub-like-notice-icon {
+  flex: none;
+  width: 1.2em;
+  height: 1.2em;
+  fill: none;
+  stroke-width: 2;
+  color: var(--like, var(--steam));
+}
+
+.hub-like-notice[data-new] .hub-like-notice-icon { fill: currentColor; }
+
+.hub-like-notice-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Comillas españolas: `<q>` toma las del idioma del documento, y sin `lang` en la maqueta salían las inglesas. */
+.hub-like-notice-text q { font-style: italic; quotes: "«" "»"; }
+
+.hub-like-notice .hub-like-notice-go {
+  flex: none;
+  width: var(--ico-sm);
+  height: var(--ico-sm);
+  color: var(--hub-text-muted);
+}
+
 
 @media (max-width:980px) {
   .hub-status-grid {

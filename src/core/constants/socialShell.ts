@@ -21,9 +21,9 @@ export const SOCIAL_SHELL = {
     actionsAria: 'Acciones de la actividad',
     openProfiles: 'Ver perfiles',
     openOwnProfile: 'Ver mi perfil',
-    openRequests: 'Solicitudes',
+    openRequests: 'Notificaciones',
     openRequestsAria: (count: number) =>
-      count > 0 ? `Solicitudes de amistad, ${count} pendiente${count === 1 ? '' : 's'}` : 'Solicitudes de amistad',
+      count > 0 ? `Notificaciones, ${count} nueva${count === 1 ? '' : 's'}` : 'Notificaciones',
     activityTitle: 'Actividad',
     postsTitle: 'Publicaciones',
     postComposerLabel: 'Comparte una noticia o un enlace',
