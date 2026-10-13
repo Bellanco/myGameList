@@ -1297,7 +1297,9 @@ export default function App() {
           }`.trim()}
         >
           <h1 className="sr-only">{getPageHeading(activeSection, currentTab, settingsGroup)}</h1>
-          {activeSection === 'settings' && settingsGroup ? (
+          {/* En Diseño no: es la pantalla del selector de temas, y su primera tarjeta ya se titula «Temas» (13-10-2026,
+              decisión del usuario). */}
+          {activeSection === 'settings' && settingsGroup && settingsGroup !== 'design' ? (
             <ScreenHeader kicker={UI_MESSAGES.screenHeader.settings} title={UI_MESSAGES.settingsMenu[settingsGroup]} />
           ) : null}
           <Routes>

@@ -267,7 +267,7 @@
 
 /* ── §N · LA CABECERA DE PANTALLA ─────────────────────────────────────────────────────────────────────
    Este tema la enciende (`ScreenHeader` es neutra y en la base no se ve), solo con el título en Garamond: el
-   rótulo en versales de encima se apaga. Va en el flujo —se va al bajar, no es fija—. Va en el panel y en Ajustes, como primer hijo de `main`. En las listas no: la llevaron en la banda de
+   rótulo en versales de encima se apaga. Va en el flujo —se va al bajar, no es fija—. Va en el panel y en Ajustes (menos en Diseño), como primer hijo de `main`. En las listas no: la llevaron en la banda de
    las pestañas hasta el 05-10-2026, y se quitó porque la pestaña activa ya dice en qué lista estás. ── */
 :root[data-palette="tierramedia"] .screen-header {
   display: block;
