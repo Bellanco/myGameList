@@ -5,6 +5,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Changed
+
+- **El botón de volver es igual en todas las pantallas.** Dice «Volver» y va encima de la tarjeta de la pantalla,
+  alineado con su borde izquierdo: en el social, las estadísticas, los logros, la bandeja, Legal, el panel de
+  administración y «¿A qué juego ahora?», que estrena el suyo hacia los listados. A dónde lleva lo sigue diciendo el
+  lector de pantalla («Volver a la actividad»).
+
+### Fixed
+
+- **Cambiar un filtro ya no hace que la pantalla entera se vaya y vuelva a entrar.** Pasaba en «¿A qué juego
+  ahora?» y en los filtros de los listados: el cambio de pantalla se animaba también cuando solo cambiaba un filtro.
+  Ahora solo se anima al pasar de una pantalla a otra.
+
 ## [1.7.2] - 2026-10-13
 
 ### Added

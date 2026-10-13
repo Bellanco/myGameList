@@ -760,6 +760,8 @@ export default function App() {
 
     navigate('/ajustes');
   }, [navigate, setExpandedId]);
+  // «¿A qué juego ahora?» vuelve a los listados igual que la barra inferior.
+  const handlePickBack = useCallback(() => handleSectionChange('lists'), [handleSectionChange]);
 
   /**
    * ¿Está desplegado el menú de Ajustes? Lo abre y lo cierra el navegador (es un `popover`); esto es solo el eco,
@@ -799,6 +801,15 @@ export default function App() {
   // también son transiciones y fundían la primera pantalla (ver `useScreenTransitionsReady`).
   const mainRef = useScreenTransition<HTMLElement>(location.pathname);
   const transicionesDePantalla = useScreenTransitionsReady();
+  /* Y SOLO SI CAMBIA EL CAMINO. El router mete en una transición TODA navegación, también las que solo tocan la
+     query —los filtros de los listados y los de `/elegir` viven ahí—, y `<ViewTransition>` animaba cada una como
+     un cambio de pantalla: al pulsar un filtro la pantalla entera se iba y volvía a entrar. React decide la
+     animación con las props del render que se confirma, así que basta con comparar con el último camino pintado. */
+  const caminoPintado = useRef(location.pathname);
+  const cambiaDeCamino = caminoPintado.current !== location.pathname;
+  useEffect(() => {
+    caminoPintado.current = location.pathname;
+  }, [location.pathname]);
 
   // Destello de fila: id del juego recién guardado; se limpia tras la animación.
   const [recentlyChangedId, setRecentlyChangedId] = useState<number | null>(null);
@@ -1122,7 +1133,7 @@ export default function App() {
     pick: (
 
       <Suspense fallback={<ScreenSkeleton />}>
-        <PickNextScreen games={vm.data} onStart={handlePickStart} />
+        <PickNextScreen games={vm.data} onStart={handlePickStart} onBack={handlePickBack} />
       </Suspense>
     ),
     social: (
@@ -1319,7 +1330,7 @@ export default function App() {
         <UpdateNotice />
         <StatusBanner notice={vm.notice} />
       </div>
-      <ViewTransition default="none" update={transicionesDePantalla ? ANIMACION_DE_PANTALLA : 'none'}>
+      <ViewTransition default="none" update={transicionesDePantalla && cambiaDeCamino ? ANIMACION_DE_PANTALLA : 'none'}>
         <main
           id="contenido"
           ref={mainRef}

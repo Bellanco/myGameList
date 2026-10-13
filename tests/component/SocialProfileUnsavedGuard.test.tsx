@@ -38,7 +38,7 @@ describe('salir con cambios sin guardar', () => {
     const { onBack } = renderScreen(false);
     expect(screen.getByText(SOCIAL_UI.profile.statusSynced)).toBeInTheDocument();
 
-    await userEvent.setup().click(screen.getByRole('button', { name: SOCIAL_UI.profile.toFeed }));
+    await userEvent.setup().click(screen.getByRole('button', { name: SOCIAL_UI.feed.backToFeed }));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
@@ -47,7 +47,7 @@ describe('salir con cambios sin guardar', () => {
     const { onBack } = renderScreen(true);
     expect(screen.getByText(SOCIAL_UI.profile.statusUnsaved)).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: SOCIAL_UI.profile.toFeed }));
+    await user.click(screen.getByRole('button', { name: SOCIAL_UI.feed.backToFeed }));
     expect(onBack).not.toHaveBeenCalled();
     expect(screen.getByText(SOCIAL_UI.profile.leaveUnsavedTitle)).toBeInTheDocument();
 

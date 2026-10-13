@@ -5,7 +5,6 @@ import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import type { IconName } from '../../../core/constants/icons';
 import { HubScreen } from './HubScreen';
 import { HubStatus } from './HubStatus';
-import { HubBackButton } from './HubBackButton';
 import { useReviewCover, type CoverAccess } from './useReviewCover';
 // Ver `ProfileReviewsList`: esta pantalla la reutiliza el panel de estadísticas para TUS reseñas, y allí no se
 // carga el chunk del hub.
@@ -106,17 +105,19 @@ export function ReviewScreen({
   const coverOf = useReviewCover(coversAllowed);
   const cover = content ? coverOf(content.gameName, content.platforms) : null;
 
-  /** Fila de acciones bajo el encabezado. El encabezado en sí lo pone `HubScreen`. */
-  const actionsRow = (
+  /** Fila de acciones bajo el encabezado, a la derecha. El encabezado y el volver los pone `HubScreen`. */
+  const actionsRow = actions ? (
     <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.detailActionsAria}>
-      <div className="hub-screen-actions-left">
-        <HubBackButton onBack={onBack} label={backLabel} />
-      </div>
-      {actions ? <div className="hub-screen-actions-right">{actions}</div> : null}
+      <div className="hub-screen-actions-right">{actions}</div>
     </div>
-  );
+  ) : null;
 
-  const shell = { ariaLabel: SOCIAL_UI.feed.sectionAria, title, ...(icon ? { icon } : {}) };
+  const shell = {
+    ariaLabel: SOCIAL_UI.feed.sectionAria,
+    title,
+    back: { onBack, destination: backLabel },
+    ...(icon ? { icon } : {}),
+  };
 
   if (!content) {
     return (

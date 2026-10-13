@@ -5,7 +5,7 @@ import { GameTable } from '../GameTable';
 import { STATS_UI } from '../../../core/constants/statsLabels';
 import { type SocialUiLabels } from '../../../core/constants/socialLabels';
 import { HubStatus } from './HubStatus';
-import { HubBackButton } from './HubBackButton';
+import { HubBackRow } from './HubBackButton';
 import { HubAvatar } from './HubAvatar';
 import { TAB_IDS, type GameItem, type TabId, type TabSort } from '../../../model/types/game';
 import { DEFAULT_SORT, nextSort, sortGames } from '../../../core/utils/sortGames';
@@ -504,17 +504,13 @@ function SocialProfileDetailScreenBase({
   if (!activeProfileDetail) {
     return (
       <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
+        <HubBackRow onBack={onBack} destination={SOCIAL_UI.feed.backToFeed} />
         <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
           <header className="hub-screen-header">
             <div className="hub-hub-title-wrap">
               <h2><ScreenTitle text={SOCIAL_UI.feed.profileDetailTitle} /></h2>
             </div>
           </header>
-          <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.profileDetailActionsAria}>
-            <div className="hub-screen-actions-left">
-              <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeed} />
-            </div>
-          </div>
           {profileLoading ? (
             /* CARGANDO, NO «NO SE ENCONTRÓ»: al recargar, el perfil llega con el directorio. El esqueleto ocupa lo que
                la cabecera del perfil —avatar grande y nombre— para que no salte al llegar. */
@@ -535,6 +531,7 @@ function SocialProfileDetailScreenBase({
   }
   return (
     <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
+      <HubBackRow onBack={onBack} destination={SOCIAL_UI.feed.backToFeed} />
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
         <header className="hub-screen-header">
           <div className="hub-hub-title-wrap">
@@ -549,7 +546,6 @@ function SocialProfileDetailScreenBase({
         </header>
         <div className="hub-screen-actions hub-screen-actions-split hub-profile-detail-actions" aria-label={SOCIAL_UI.feed.profileDetailActionsAria}>
           <div className="hub-screen-actions-left">
-            <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeedShort} ariaLabel={SOCIAL_UI.feed.backToFeed} />
             {canSeeFullProfile ? (
               <>
                 <button

@@ -231,8 +231,6 @@ export const PREMIOS_UI = {
     podium: 'Podio',
     /** Un puesto compartido: los empatados van juntos en la misma tarjeta. */
     tie: 'Empate',
-    /** Deshace el paso: a la portada, al histórico del panel o a donde se estuviera. */
-    back: 'Volver',
     trophy: 'Ver mi trofeo',
     download: 'Descargar la lámina',
     // LA GALERÍA: desde la clasificación se MIRA, y quien quiera el archivo lo pide dentro.

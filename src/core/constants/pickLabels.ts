@@ -13,6 +13,8 @@ const LIST_TAG: Record<TabId, string> = {
 
 export const PICK_UI = {
   title: '¿A qué juego ahora?',
+  /** A dónde lleva el volver (su nombre accesible; el botón dice «Volver»). */
+  back: 'Volver a los listados',
   genres: 'Género',
   platforms: 'Plataforma',
   clear: 'Quitar',

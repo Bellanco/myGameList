@@ -259,7 +259,7 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
       {/* EL VOLVER, ARRIBA Y SOLO, como en el resto de pantallas del panel (`AdminAnnouncement`,
           `AdminAchievements`): mismo componente, mismo sitio y misma flecha. */}
       <div className="admin-ann-bar">
-        <HubBackButton onBack={onBack} label={L.back} />
+        <HubBackButton onBack={onBack} destination={L.back} />
       </div>
 
       <div className="admin-card">

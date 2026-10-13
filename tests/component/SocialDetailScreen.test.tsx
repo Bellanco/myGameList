@@ -223,6 +223,6 @@ describe('SocialDetailScreen — sin evento todavía', () => {
 
   it('se puede volver en los dos casos: el botón es navegación y no depende de ningún dato', () => {
     renderSinEvento(true);
-    expect(screen.getByText(SOCIAL_UI.feed.backToFeed)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: SOCIAL_UI.feed.backToFeed })).toBeInTheDocument();
   });
 });

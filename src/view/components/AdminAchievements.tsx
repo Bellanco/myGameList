@@ -563,7 +563,7 @@ export const AdminAchievements = memo(function AdminAchievements({
           pantalla que mide cincuenta fichas: sueltos en la cabecera obligaban a subir del todo cada vez que se
           quería cambiar de escalera. El recuento va con ellos porque es el resultado de la búsqueda. */}
       <div className="admin-ach-bar">
-        <HubBackButton onBack={onBack} label={A.back} />
+        <HubBackButton onBack={onBack} destination={A.back} />
         <label className="admin-ach-filter">
           {/* El rótulo va para lector de pantalla: el campo ya se explica con su marcador de posición y su
               icono de lupa, y escrito ocupaba una línea entera de la barra. */}

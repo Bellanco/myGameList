@@ -1,10 +1,9 @@
 import { memo, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { COMMON_ICONS } from '../../core/constants/icons';
 import { SETTINGS_UI } from '../../core/constants/settingsLabels';
 import { LEGAL_CONTACT_EMAIL, LEGAL_ROUTES, type LegalDocId } from '../../core/constants/legal';
 import { LEGAL_DOCUMENTS } from '../../core/constants/legalContent';
-import { Icon } from './Icon';
+import { HubBackButton } from './socialhub/HubBackButton';
 // La hoja de las pantallas de Ajustes viaja en los chunks perezosos que la usan y no en el bundle base (mismo
 // patrón que `stats.scss` y `social.scss`). Se importa desde CADA pantalla que la necesita: si se importara solo
 // desde una, entrar por otra ruta la dejaría sin estilo.
@@ -39,10 +38,7 @@ export const LegalScreen = memo(function LegalScreen({ docId }: LegalScreenProps
   return (
     <section className="legal-hub" aria-label={document.title}>
       <div className="legal-actions">
-        <button type="button" className="btn btn-secondary btn-back" onClick={goBack}>
-          <Icon name={COMMON_ICONS.arrowBack} />
-          <span>{L.back}</span>
-        </button>
+        <HubBackButton onBack={goBack} />
       </div>
 
       <div className="legal-card">

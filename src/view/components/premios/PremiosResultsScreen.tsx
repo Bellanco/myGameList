@@ -277,7 +277,7 @@ export function PremiosResultsScreen({
           cabecera —con su rótulo largo— compitiendo con el nombre de la edición por algo que se hace una vez al
           año. La dirección de esta edición sigue siendo pública y se puede copiar de la barra del navegador. */}
       <div className="premios-results__back">
-        <HubBackButton onBack={volver} label={L.back} />
+        <HubBackButton onBack={volver} />
       </div>
 
       <header className="premios-results__head">

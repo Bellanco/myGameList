@@ -199,6 +199,12 @@ export const APPEARANCE_UI = {
   wishlistHide: 'Ocultar',
 } as const;
 
+/**
+ * EL RÓTULO DE TODOS LOS BOTONES DE VOLVER: «Volver» a secas, en todas las pantallas (decisión del usuario,
+ * 13-10-2026). A dónde lleva lo dice el nombre accesible (ver `HubBackButton`).
+ */
+export const BACK_LABEL = 'Volver';
+
 export const UI_MESSAGES = {
   /** Lo que la app cuenta al guardar, borrar o mover un juego (el banner de estado de la página). */
   games: {
