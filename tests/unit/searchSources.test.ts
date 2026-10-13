@@ -5,6 +5,7 @@ import {
   gameSearchSources,
   ownReviewSearchSources,
   pageSearchSources,
+  pickSearchSources,
 } from '../../src/viewmodel/search/searchSources';
 
 // docs/plan-notificaciones-y-buscador.md, B1 — de dónde sale lo que encuentra el buscador, y adónde lleva.
@@ -82,11 +83,35 @@ describe('pageSearchSources', () => {
     expect(sin).not.toContain('Deseados');
     expect(sin).not.toContain('Perfiles');
     expect(sin).not.toContain('Diseño');
+    expect(sin).not.toContain('¿A qué juego ahora?');
 
     const con = pageSearchSources({ visibleTabs: ['c', 'v', 'e', 'p', 'd'], hasSocial: true, achievements: false }).map((page) => page.title);
     expect(con).toContain('Deseados');
     expect(con).toContain('Perfiles');
     expect(con).toContain('Diseño');
     expect(con).not.toContain('Logros');
+    expect(con).toContain('¿A qué juego ahora?');
+  });
+});
+
+describe('pickSearchSources', () => {
+  const conGeneros = (id: number, name: string, genres: string[], extra: Partial<GameItem> = {}): GameItem =>
+    ({ ...game(id, name), genres, ...extra }) as GameItem;
+  const BIBLIOTECA = {
+    c: [conGeneros(1, 'Doom', ['FPS'], { replayable: true }), conGeneros(2, 'Halo', ['FPS'])],
+    v: [conGeneros(3, 'Metro', ['FPS'], { retry: true })],
+    e: [],
+    p: [conGeneros(4, 'Hades', ['Roguelike'])],
+    d: [conGeneros(5, 'Quake', ['FPS'])],
+    deleted: [],
+    updatedAt: 0,
+  } as unknown as TabData;
+
+  it('un género por resultado, con cuántos se pueden empezar y hacia la pantalla con él marcado', () => {
+    // Halo no cuenta (completado sin «Rejugar») ni Quake (deseados): son los candidatos de la ruleta.
+    expect(pickSearchSources(BIBLIOTECA)).toEqual([
+      { id: 'pick:genre:FPS', title: 'FPS', detail: '2 opciones para empezar', path: '/elegir?genre=FPS' },
+      { id: 'pick:genre:Roguelike', title: 'Roguelike', detail: '1 opción para empezar', path: '/elegir?genre=Roguelike' },
+    ]);
   });
 });

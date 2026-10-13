@@ -318,6 +318,9 @@ export const STATS_UI = {
     pairs: 'Antes de comprar',
     youHave: 'ya tienes',
     saga: 'Misma saga',
+    /** Al pasar por el nombre o el chip, que llevan a Próximos: dicen adónde antes de pulsar. */
+    genreLink: (genre: string) => `Ver tus Próximos de ${genre}`,
+    gameLink: (name: string) => `Ver ${name} en Próximos`,
     /** Conector que la vista dice con los chips: solo lo oye un lector de pantalla («…, por Metroidvania»). */
     because: ', por ',
     noPairs: 'Por ahora, ninguno de tus deseos tiene pariente en Próximos.',

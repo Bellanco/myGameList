@@ -1,0 +1,178 @@
+/* ═══ «¿A QUÉ JUEGO AHORA?» (`/elegir`) ═══════════════════════════════════════════════════════════════════════
+   Entra con la pantalla, por `lazy()`: nadie más la usa.
+
+   LO QUE NO ESTÁ AQUÍ ES A PROPÓSITO. La caja es la del mosaico (`.game-card`, `_table.scss`), los filtros son botones
+   de encendido (`.btn-toggle`), «Empezar» es el teñido de pasar a En curso (`.btn-playing`) y el marco es el de las
+   pantallas del panel (`.hub-hub`). Los ocho temas ya visten esas piezas; esta hoja solo las coloca y añade lo único
+   nuevo, el CANTO DE COLOR de cada lista.
+
+   EL COLOR DE CADA LISTA ES EL DE «PASAR A…» DE CADA TEMA (`--move-c/-v/-p`, ver los botones por función en
+   `_forms-and-buttons.scss`): verde los completados y rojo los abandonados en todos, y el de próximos el que su tema
+   le da (azul de Aperture, oro de Lórien, el yrden de Witcher…). Decisión del usuario, 13-10-2026: que próximos siga
+   al tema y no un azul común. ══════════════════════════════════════════════════════════════════════════════════ */
+
+.pick-screen [data-list="p"] { --pick-tone: var(--move-p); }
+.pick-screen [data-list="v"] { --pick-tone: var(--move-v); }
+.pick-screen [data-list="c"] { --pick-tone: var(--move-c); }
+/* El texto del color de la lista: llevado hacia la tinta del modo, para el 4,5:1 sobre su velo. El mismo cálculo que
+   el teñido de los botones por función (`--role-t`). */
+.pick-screen [data-list] { --pick-ink: color-mix(in srgb, var(--pick-tone) 70%, #fff); }
+[data-theme="light"] .pick-screen [data-list] { --pick-ink: color-mix(in srgb, var(--pick-tone) 82%, #000); }
+
+/* ── Filtros ─────────────────────────────────────────────────────────────────────────────────────────────────── */
+.pick-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.pick-facet-head {
+  display: flex;
+  align-items: baseline;
+  gap: .9rem;
+  margin-bottom: .5rem;
+}
+/* Los dos enlaces de texto de la cabecera de cada filtro: acciones secundarias, en el color de los enlaces del tema. */
+.pick-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fg-link);
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+.pick-link:hover { text-decoration: underline; }
+.pick-link:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 2px; }
+
+.pick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+}
+/* El botón de encendido de siempre, en pequeño: hay treinta y tantos géneros y a tamaño de botón la nube se comía la
+   pantalla. Lo que lo viste (material, canto, el macizo al encenderse) sigue siendo cosa de cada tema. */
+.btn.pick-chip {
+  gap: .4rem;
+  padding: .3rem .7rem;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.pick-chip-count {
+  font-size: .85em;
+  font-weight: 500;
+  opacity: .7;
+  font-variant-numeric: tabular-nums;
+}
+.btn.pick-chip:disabled { opacity: .38; cursor: default; }
+
+/* ── La barra de la cuenta ───────────────────────────────────────────────────────────────────────────────────── */
+.pick-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .6rem 1.2rem;
+}
+.pick-count { margin: 0; color: var(--text-muted); }
+.pick-count strong { color: var(--text); }
+.pick-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .3rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+.pick-legend li { display: inline-flex; align-items: center; gap: .4rem; }
+.pick-legend li::before {
+  content: '';
+  width: .8rem;
+  height: .8rem;
+  border-radius: 3px;
+  border: 2px solid var(--pick-tone);
+  background: color-mix(in srgb, var(--pick-tone) 18%, transparent);
+}
+.pick-spin { margin-inline-start: auto; }
+
+/* ── Las cajas ───────────────────────────────────────────────────────────────────────────────────────────────── */
+.pick-grid {
+  display: grid;
+  /* El mismo mínimo de caja que el mosaico de los listados (`GRID_CARD_MIN_PX`). */
+  grid-template-columns: repeat(auto-fill, minmax(min(168px, 100%), 1fr));
+  gap: .9rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pick-grid > li { display: flex; min-width: 0; }
+.pick-card { flex: 1; }
+
+/* EL CANTO DE LA LISTA. Un contorno y no el borde: el borde lo dibuja cada tema a su manera (filete, placa, papel), y
+   pisarlo deshacía la pieza. El contorno va por dentro del canto (`outline-offset` negativo) para que no choque con
+   la caja de al lado ni con la sombra dura de los temas que la llevan. */
+.game-card.pick-card {
+  outline: 2px solid var(--pick-tone);
+  outline-offset: -2px;
+}
+
+/* La pastilla de la lista: el material «teñido» de los botones por función, que es el que ya dice «esta lista». Sobre
+   la carátula va en el CANTO DE ABAJO, donde el mosaico pone su insignia: arriba la plaquita de la nota crece con las
+   estrellas y se la comía. En la caja plana, encabezando la caja junto a la nota. */
+.pick-card-list {
+  display: inline-flex;
+  align-items: center;
+  padding: .12rem .5rem;
+  border: 1px solid color-mix(in srgb, var(--pick-tone) 60%, transparent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--pick-tone) 16%, var(--surface-elevated));
+  color: var(--pick-ink);
+  font-size: var(--fs-3xs);
+  font-weight: 800;
+  letter-spacing: .03em;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.game-card-art > .pick-card-list {
+  position: absolute;
+  bottom: .55rem;
+  left: .55rem;
+  z-index: 2;
+  box-shadow: var(--e2);
+}
+
+/* En la caja plana la pastilla y la nota comparten renglón, y «Otra oportunidad» con cinco estrellas no cabe en la
+   caja más estrecha: la nota baja a la línea de abajo en vez de salirse por el canto. */
+.pick-card .game-card-head { flex-wrap: wrap; row-gap: .35rem; }
+
+/* Las etiquetas, pegadas al nombre, y el botón al PIE: todas las cajas de una fila miden lo mismo y así los «Empezar»
+   quedan en línea aunque un nombre ocupe dos renglones y el de al lado uno. */
+.pick-card .game-card-tags { margin-top: 0; }
+
+/* El cuerpo de la caja no recibe pulsaciones (en el mosaico las recoge el botón que la cubre); aquí la única acción es
+   el botón de empezar, que sí las necesita. */
+.pick-card .pick-card-start {
+  pointer-events: auto;
+  align-self: flex-start;
+  margin-top: auto;
+  padding: .32rem .8rem;
+  font-size: var(--fs-xs);
+}
+/* En la caja plana el alto lo pone el contenido (no va en la rejilla de alto fijo de los listados). */
+.game-card.pick-card.is-flat { height: auto; }
+
+.pick-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .8rem;
+  margin: 0;
+  color: var(--text-muted);
+}
+.pick-empty p { margin: 0; }
+
+@media (max-width: 560px) {
+  .pick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
+  .pick-spin { margin-inline-start: 0; }
+}

@@ -6,7 +6,7 @@
 // petición, y lo que se escribe no sale de aquí: ni a la analítica ni a ningún otro sitio.
 import { matchesSearch, normalizeSearchText } from '../utils/searchText';
 
-export type SearchGroupKind = 'games' | 'reviews' | 'friends' | 'pages';
+export type SearchGroupKind = 'pick' | 'games' | 'reviews' | 'friends' | 'pages';
 
 /** Un resultado: lo que se pinta (título y detalle) y adónde lleva. */
 export interface SearchResult {
@@ -30,6 +30,8 @@ export interface SearchGroup {
 export type SearchSource = Omit<SearchResult, 'group'> & { keywords?: string };
 
 export interface SearchSources {
+  /** Los géneros que se pueden elegir en «¿A qué juego ahora?» (solo con espacio social; vacío si no). */
+  pick: readonly SearchSource[];
   games: readonly SearchSource[];
   reviews: readonly SearchSource[];
   friends: readonly SearchSource[];
@@ -39,7 +41,11 @@ export interface SearchSources {
 /** Resultados por grupo antes del «Ver más». */
 export const SEARCH_GROUP_LIMIT = 5;
 
-const GROUP_ORDER: readonly SearchGroupKind[] = ['games', 'reviews', 'friends', 'pages'];
+/**
+ * El orden de los grupos (decisión del usuario, 13-10-2026): lo tuyo primero —juegos y reseñas—, después «Elegir a qué
+ * jugar» (solo sale cuando lo escrito es un género, «FPS»), las pantallas y, al final, las amistades.
+ */
+const GROUP_ORDER: readonly SearchGroupKind[] = ['games', 'reviews', 'pick', 'pages', 'friends'];
 
 /**
  * Cuánto se parece un título a lo buscado (`query` ya normalizada); menos es mejor y `-1` es que no casa. Primero lo
@@ -56,7 +62,7 @@ export function searchRank(title: string, query: string): number {
 }
 
 /**
- * Los grupos con resultados, en orden fijo (juegos, reseñas, amistades, pantallas). `expanded` son los grupos en los
+ * Los grupos con resultados, en orden fijo (juegos, reseñas, elegir, pantallas, amistades). `expanded` son los grupos en los
  * que se ha pedido «Ver más»: esos van enteros. Sin nada escrito no hay resultados.
  */
 export function runSearch(

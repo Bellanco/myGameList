@@ -44,6 +44,12 @@ export interface WishKinPair {
   wish: WishKinGame;
   kin: WishKinGame;
   reason: WishKinReason;
+  /**
+   * El género bajo el que se enseña la pareja, con la grafía de PRÓXIMOS: es el valor exacto que filtra ese
+   * listado (`?genre=`). Uno de los géneros en común o, en una saga, uno del juego que ya tienes; `null` si es una
+   * saga cuyo juego no lleva géneros.
+   */
+  genre: string | null;
 }
 
 export interface WishKinGenre {
@@ -163,34 +169,94 @@ function countGenres(games: Prepared[], into: Map<string, WishKinGenre>, field: 
   }
 }
 
+interface Candidate {
+  match: Match;
+  kin: Prepared;
+}
+
+/** Claves de género bajo las que puede ir una pareja: las comunes o, en una saga, las del juego que ya tienes. */
+function genreKeys({ match, kin }: Candidate): string[] {
+  if (!match.saga) return match.shared.map(tagKey);
+  return [...kin.genres.keys()];
+}
+
+/**
+ * Las parejas que se enseñan, VARIADAS: ordenadas por interés, las parejas de un mismo género se comían la lista
+ * (cinco filas de RPG). Dos pasadas por los deseos, de más a menos interés:
+ *
+ * 1. Una pareja por GÉNERO: cada deseo toma su mejor pariente con un género aún sin enseñar.
+ * 2. Si quedan huecos, se repiten géneros, pero con un JUEGO de Próximos distinto: el mismo «ya tienes» cinco
+ *    veces no dice nada nuevo. Por eso un deseo cuyos parientes ya salen todos se queda fuera de la lista (sigue
+ *    contando en la cifra).
+ */
+function pickPairs(ranked: Array<{ wish: Prepared; candidates: Candidate[] }>): WishKinPair[] {
+  const pairs: WishKinPair[] = [];
+  const usedGenres = new Set<string>();
+  const usedKin = new Set<Prepared>();
+  const taken = new Set<Prepared>();
+
+  const take = (wish: Prepared, candidate: Candidate, key: string | null) => {
+    pairs.push({
+      wish: wish.game,
+      kin: candidate.kin.game,
+      reason: candidate.match.saga ? { kind: 'saga' } : { kind: 'genres', shared: candidate.match.shared },
+      genre: key ? candidate.kin.genres.get(key) ?? null : null,
+    });
+    if (key) usedGenres.add(key);
+    usedKin.add(candidate.kin);
+    taken.add(wish);
+  };
+
+  for (const { wish, candidates } of ranked) {
+    if (pairs.length >= WISH_KIN_MAX_PAIRS) break;
+    for (const candidate of candidates) {
+      if (usedKin.has(candidate.kin)) continue;
+      const key = genreKeys(candidate).find((genre) => !usedGenres.has(genre));
+      if (key) {
+        take(wish, candidate, key);
+        break;
+      }
+    }
+  }
+
+  for (const { wish, candidates } of ranked) {
+    if (pairs.length >= WISH_KIN_MAX_PAIRS) break;
+    if (taken.has(wish)) continue;
+    const candidate = candidates.find((option) => !usedKin.has(option.kin));
+    if (candidate) {
+      const keys = genreKeys(candidate);
+      take(wish, candidate, keys.find((genre) => !usedGenres.has(genre)) ?? keys[0] ?? null);
+    }
+  }
+
+  return pairs;
+}
+
 const named = (game: GameItem) => Boolean(game?.name?.trim());
 
 export function computeWishKin(data: TabData): WishKinSummary {
   const wishes = (data.d || []).filter(named).map(prepare);
   const waiting = (data.p || []).filter(named).map(prepare);
 
-  const pairs: Array<WishKinPair & { saga: boolean }> = [];
+  const ranked: Array<{ wish: Prepared; candidates: Candidate[] }> = [];
   for (const wish of wishes) {
-    let best: { match: Match; kin: Prepared } | null = null;
+    const candidates: Candidate[] = [];
     for (const kin of waiting) {
       // El mismo juego en las dos listas es una biblioteca corrupta, no un pariente.
       if (kin.name === wish.name) continue;
       const found = match(wish, kin);
-      if (found && (!best || better({ match: found, kin }, best))) best = { match: found, kin };
+      if (found) candidates.push({ match: found, kin });
     }
-    if (best) {
-      pairs.push({
-        wish: wish.game,
-        kin: best.kin.game,
-        reason: best.match.saga ? { kind: 'saga' } : { kind: 'genres', shared: best.match.shared },
-        saga: best.match.saga,
-      });
-    }
+    if (!candidates.length) continue;
+    candidates.sort((a, b) => (better(a, b) ? -1 : better(b, a) ? 1 : 0));
+    ranked.push({ wish, candidates });
   }
 
   // Primero lo que más te interesa: es la compra que más pesa. Luego las sagas, que son el parentesco más claro.
-  pairs.sort((a, b) =>
-    b.wish.grade - a.wish.grade || Number(b.saga) - Number(a.saga) || compareText(a.wish.name, b.wish.name));
+  ranked.sort((a, b) =>
+    b.wish.game.grade - a.wish.game.grade ||
+    Number(b.candidates[0].match.saga) - Number(a.candidates[0].match.saga) ||
+    compareText(a.wish.game.name, b.wish.game.name));
 
   const genres = new Map<string, WishKinGenre>();
   countGenres(wishes, genres, 'wished');
@@ -199,8 +265,8 @@ export function computeWishKin(data: TabData): WishKinSummary {
 
   return {
     wishes: wishes.length,
-    withKin: pairs.length,
-    pairs: pairs.slice(0, WISH_KIN_MAX_PAIRS).map(({ wish, kin, reason }) => ({ wish, kin, reason })),
+    withKin: ranked.length,
+    pairs: pickPairs(ranked),
     // Los géneros que más pesan en CUALQUIERA de las dos listas: compararlas exige ver los fuertes de las dos.
     genres: rows
       .filter((row) => row.wished > 0 || row.waiting > 0)

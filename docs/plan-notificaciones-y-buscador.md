@@ -167,7 +167,7 @@ Lo que se planeó (0,5 días + 4–6 días):
 `filterGames`. Así la caja de cada lista deja de distinguir acentos, también sin el buscador nuevo. Tests.
 
 **B1 · Índice y búsqueda puros.**
-- `core/search/`: fuentes → resultados por grupo (Juegos, Reseñas, Amistades, Ir a…).
+- `core/search/`: fuentes → resultados por grupo (Juegos, Reseñas, Elegir a qué jugar, Ir a…, Amistades; orden del 13-10-2026).
 - Orden: empieza por > empieza una palabra > contiene. Hasta 5 por grupo, con «Ver más».
 - Las reseñas, agrupadas por juego: «*Hades II* · Marta 92 · Nacho 85 · tú 90».
 - Tests.

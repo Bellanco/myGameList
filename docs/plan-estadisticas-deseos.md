@@ -40,8 +40,14 @@ Motivos, del más fuerte al más débil:
 3. **Misma plataforma.** Solo desempata; nunca es motivo por sí sola.
 
 Para cada deseo se queda la MEJOR pareja: saga > Jaccard > nº de géneros comunes > plataforma compartida > el de
-Próximos que lleva más tiempo esperando (`enteredAt.p`, y si no `listedAt`). Las parejas se ordenan por interés
-del deseo (su nota), luego las de saga primero, luego por nombre.
+Próximos que lleva más tiempo esperando (`enteredAt.p`, y si no `listedAt`). Los deseos se recorren por interés
+(su nota), luego los de saga primero, luego por nombre.
+
+**Parejas variadas (13-10-2026).** Ordenadas solo por interés, un género fuerte se comía la lista (cinco filas de
+RPG). Ahora se eligen en dos pasadas: primero una pareja por GÉNERO (cada deseo toma su mejor pariente con un género
+aún sin enseñar, de los comunes o, en una saga, de los del juego que ya tienes); si quedan huecos, se repiten
+géneros, pero nunca el mismo juego de Próximos. El chip de género lleva a `/proximos?genre=…` (con la grafía de
+Próximos, que es la que filtra) y el nombre del juego a `/proximos?q=…`, como el buscador.
 
 Límites conocidos, que van en un comentario y no en la interfaz: la saga por nombre falla con títulos que no
 siguen el patrón (Bloodborne y Dark Souls no son parientes), y un juego sin géneros solo puede emparentarse por
