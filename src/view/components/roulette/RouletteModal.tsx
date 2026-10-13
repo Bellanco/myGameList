@@ -389,7 +389,6 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
                   {onBrowseAll ? (
                     <button type="button" className="btn btn-open rl-browse" onClick={onBrowseAll}>
                       <span>{ROULETTE_UI.browseAll}</span>
-                      <Icon name="angle-right" className="ui-icon btn-open-go" />
                     </button>
                   ) : null}
                 </div>
