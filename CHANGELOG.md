@@ -7,7 +7,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ### Added
 
-- **Buscador general, como Spotlight.** Se abre con ⌘K (Ctrl+K fuera de Mac) o «/» desde cualquier pantalla, y con la
+- **Buscador general, como Spotlight.** Se abre con ⌘K (Ctrl+K fuera de Mac), Ctrl+Espacio o «/» desde cualquier pantalla, y con la
   lupa de arriba a la derecha, junto al botón del tema. Encuentra tus juegos en las cinco listas (te lleva a la suya, ya
   filtrada), las reseñas (las tuyas y las de tus amigos), a tus amigos por nombre y las pantallas de la app. No
   distingue acentos ni signos: «pokemon» encuentra «Pokémon» y «spiderman», «Spider-Man». Todo es local: lo que

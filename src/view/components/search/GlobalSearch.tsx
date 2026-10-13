@@ -1,6 +1,6 @@
 // EL BUSCADOR GENERAL, al estilo de Spotlight (docs/plan-notificaciones-y-buscador.md, B2).
 //
-// Se abre con ⌘K / Ctrl+K o `/` desde cualquier pantalla, y con la lupa flotante de arriba a la derecha, junto al botón
+// Se abre con ⌘K / Ctrl+K, Ctrl+Espacio o `/` desde cualquier pantalla, y con la lupa flotante de arriba a la derecha, junto al botón
 // del tema (decisión del usuario, 13-10-2026: encima del dado quedaba forzada y solo existía en los listados).
 // Encuentra tus juegos (sin distinguir acentos), las reseñas del espacio social (las de tus amistades y las tuyas), tus
 // amistades por nombre y las pantallas de la app. Todo es local (`viewmodel/search/searchSources`).
@@ -89,7 +89,11 @@ export function GlobalSearch({ games, visibleTabs }: GlobalSearchProps) {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.altKey) return;
       const mod = event.metaKey || event.ctrlKey;
-      if (mod && !event.shiftKey && event.key.toLowerCase() === 'k') {
+      // CTRL+ESPACIO también (lo pidió el usuario, 13-10-2026). Puede no llegar nunca: en macOS es «fuente de entrada
+      // anterior» si hay más de un teclado y el atajo está activo, y en Windows o Linux con un método de entrada
+      // asiático (o ibus/fcitx) enciende y apaga ese método. Ahí se lo queda el sistema y ⌘K sigue sirviendo.
+      const ctrlSpace = event.ctrlKey && !event.metaKey && !event.shiftKey && (event.code === 'Space' || event.key === ' ');
+      if ((mod && !event.shiftKey && event.key.toLowerCase() === 'k') || ctrlSpace) {
         if (!open && otherModalOpen()) return;
         event.preventDefault();
         setOpen((current) => !current);
@@ -114,7 +118,7 @@ export function GlobalSearch({ games, visibleTabs }: GlobalSearchProps) {
           type="button"
           aria-label={SEARCH_UI.launcher(mac)}
           title={SEARCH_UI.launcher(mac)}
-          aria-keyshortcuts={mac ? 'Meta+K /' : 'Control+K /'}
+          aria-keyshortcuts={mac ? 'Meta+K Control+Space /' : 'Control+K Control+Space /'}
           aria-haspopup="dialog"
           onClick={() => setOpen(true)}
         >

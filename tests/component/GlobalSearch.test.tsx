@@ -77,6 +77,21 @@ describe('GlobalSearch', () => {
     expect(dialog().open).toBe(true);
   });
 
+  it('Ctrl+Espacio también lo abre y lo cierra', () => {
+    renderSearch();
+    fireEvent.keyDown(window, { key: ' ', code: 'Space', ctrlKey: true });
+    expect(dialog().open).toBe(true);
+    fireEvent.keyDown(window, { key: ' ', code: 'Space', ctrlKey: true });
+    expect(dialog().open).toBe(false);
+  });
+
+  it('Espacio solo o ⌘Espacio no lo abren', () => {
+    renderSearch();
+    fireEvent.keyDown(window, { key: ' ', code: 'Space' });
+    fireEvent.keyDown(window, { key: ' ', code: 'Space', metaKey: true });
+    expect(dialog().open).toBe(false);
+  });
+
   it('«/» lo abre, salvo escribiendo en una caja', () => {
     renderSearch();
     fireEvent.keyDown(screen.getByLabelText('otra caja'), { key: '/' });

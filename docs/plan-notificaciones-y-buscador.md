@@ -145,6 +145,12 @@ Dónde quedó:
   en el hueco que deja `FloatingControls` (`search-launcher-slot`), gemela del botón del tema (`btn-icon`, mismo
   cristal). El id va escrito en los dos sitios: importarlo desde el trozo perezoso partía `FloatingControls` en un
   chunk aparte y el arranque subía a 190,8 kB.
+- **Ctrl+Espacio** (pedido por el usuario el 13-10-2026) abre y cierra igual que ⌘K. Puede no llegar a la página: en
+  macOS es «fuente de entrada anterior» si hay varios teclados y ese atajo está activo (en el Mac del usuario está
+  desactivado), y en Windows o Linux con un método de entrada asiático, o con ibus/fcitx, lo usa ese método. Ahí
+  sigue sirviendo ⌘K / Ctrl+K.
+- **Esc cierra a la primera** aunque haya texto: la caja es `type="text"` y Esc se atiende en ella (con `search`,
+  Chrome gastaba la primera pulsación en vaciarla).
 - **Panel mínimo (decisión del usuario, 13-10-2026):** sin pie de instrucciones de teclado, sin texto de ayuda, sin
   botón «Esc» y con «Buscar» como texto de la caja. Sin nada escrito, el panel es solo la caja. Se cierra con Esc,
   con ⌘K / Ctrl+K o tocando fuera; el atajo sigue en la descripción de la lupa («Buscar (⌘K)»).
