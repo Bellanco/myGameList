@@ -1,17 +1,19 @@
 import { memo, type CSSProperties } from 'react';
+import { Link } from 'react-router-dom';
 import { useStatsLabels } from './statsVoice';
 import { StatTile } from './StatTile';
 import { CountUp } from './CountUp';
 import { Dumbbell } from './Dumbbell';
 import { Icon } from '../Icon';
 import { categoryToneStyle } from '../../../core/constants/categoryTone';
+import { TAB_ROUTE } from '../../../core/constants/labels';
 import type { WishKinSummary } from '../../../core/stats/wishKin';
 
 /**
  * «Ya lo tienes en casa»: cada deseo frente a lo que ya espera en Próximos (`core/stats/wishKin`).
  *
  * Tres piezas, de la más directa a la más general: cuántos deseos tienen ya un pariente, cuáles son las parejas
- * y, por géneros, en qué se parecen y en qué no lo que deseas y lo que esperas. Sin parejas se queda la frase y
+ * (una por género mientras los haya; el juego y el género llevan a Próximos) y, por géneros, en qué se parecen y en qué no lo que deseas y lo que esperas. Sin parejas se queda la frase y
  * la comparación, que sigue diciendo algo: dónde un deseo cubriría un hueco.
  */
 export const WishKinCard = memo(function WishKinCard({ kin }: { kin: WishKinSummary }) {
@@ -36,14 +38,11 @@ export const WishKinCard = memo(function WishKinCard({ kin }: { kin: WishKinSumm
           <>
             <ol className="kin-pairs">
               {kin.pairs.map((pair, index) => {
-                // Los MISMOS chips que en los listados: el género con su tono, y la saga como los años (genérico).
-                const why = pair.reason.kind === 'saga'
-                  ? [{ tag: L.saga, className: 'chip-generic', tone: false }]
-                  : pair.reason.shared.map((tag) => ({ tag, className: 'chip-genre', tone: true }));
+                const saga = pair.reason.kind === 'saga';
                 return (
                   <li
                     key={pair.wish.id}
-                    className={`kin-pair${pair.reason.kind === 'saga' ? ' is-saga' : ''}`}
+                    className="kin-pair"
                     style={{ '--i': index } as CSSProperties}
                   >
                     {/* Texto de verdad y no un `aria-label`: la frase se lee entera porque los conectores que la
@@ -53,16 +52,35 @@ export const WishKinCard = memo(function WishKinCard({ kin }: { kin: WishKinSumm
                     <span className="kin-have">
                       <Icon name="angle-right" className="kin-arrow" />
                       <span className="kin-have-label">{L.youHave}</span>{' '}
-                      <span className="kin-have-name">{pair.kin.name}</span>
+                      {/* Al juego en su lista, como lo abre el buscador: Próximos con su nombre en el filtro. */}
+                      <Link
+                        to={`${TAB_ROUTE.p}?q=${encodeURIComponent(pair.kin.name)}`}
+                        className="kin-have-name"
+                        title={L.gameLink(pair.kin.name)}
+                      >
+                        {pair.kin.name}
+                      </Link>
                     </span>
                     <span className="sr-only">{L.because}</span>
+                    {/* Los MISMOS chips que en los listados: la saga como los años (genérico) y el género con su tono,
+                        que lleva a tus Próximos de ese género igual que el nombre lleva al juego. */}
                     <span className="chips kin-why">
-                      {why.map(({ tag, className, tone }, position) => (
-                        <span key={tag} className={`chip ${className}`} style={tone ? categoryToneStyle(tag) : undefined}>
-                          <span className="chip-text">{tag}</span>
-                          {position < why.length - 1 ? <span className="sr-only">, </span> : null}
+                      {saga ? (
+                        <span className="chip chip-generic">
+                          <span className="chip-text">{L.saga}</span>
+                          {pair.genre ? <span className="sr-only">, </span> : null}
                         </span>
-                      ))}
+                      ) : null}
+                      {pair.genre ? (
+                        <Link
+                          to={`${TAB_ROUTE.p}?genre=${encodeURIComponent(pair.genre)}`}
+                          className="chip chip-genre kin-chip-link"
+                          style={categoryToneStyle(pair.genre)}
+                          title={L.genreLink(pair.genre)}
+                        >
+                          <span className="chip-text">{pair.genre}</span>
+                        </Link>
+                      ) : null}
                     </span>
                   </li>
                 );

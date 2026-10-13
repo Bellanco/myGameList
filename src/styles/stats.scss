@@ -1557,20 +1557,24 @@
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas: "wish" "have" "why";
   gap: .2rem;
-  padding: .55rem .65rem;
-  border-radius: 8px;
-  border-left: 3px solid var(--stats-d);
-  background: var(--surface-soft);
+  padding: .6rem .75rem .6rem .9rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  /* El filete va del color de Deseos al de Próximos: arriba lo que quieres, abajo lo que ya tienes. Es una capa
+     de fondo y no un `border-left`, que no admite degradado sin perder el redondeo. */
+  background:
+    linear-gradient(var(--stats-d), var(--stats-p)) left / 3px 100% no-repeat,
+    var(--surface-soft);
   font-size: var(--fs-sm);
   animation: fade-in .4s ease-out both;
   animation-delay: calc(var(--i, 0) * 60ms);
-  transition: background .15s ease;
+  transition: background-color .15s ease, box-shadow .15s ease;
 }
 
-.kin-pair:hover { background: var(--overlay-hover); }
-
-/* La saga es el parentesco más claro: el filete lo dice con el color de Próximos, que es donde ya está. */
-.kin-pair.is-saga { border-left-color: var(--stats-p); }
+.kin-pair:hover {
+  background-color: var(--overlay-hover);
+  box-shadow: var(--e1);
+}
 
 .kin-wish {
   grid-area: wish;
@@ -1594,7 +1598,8 @@
   width: .55rem;
   height: .55rem;
   flex: 0 0 auto;
-  fill: currentColor;
+  /* Del color de Próximos, como el final del filete: la flecha apunta a lo que ya está en casa. */
+  fill: var(--stats-p);
   align-self: center;
 }
 
@@ -1602,6 +1607,7 @@
 
 .kin-have-name {
   min-width: 0;
+  font-weight: 500;
   color: var(--text);
   overflow-wrap: anywhere;
 }
@@ -1609,6 +1615,27 @@
 .kin-why {
   grid-area: why;
   margin-top: .15rem;
+}
+
+/* Lo que lleva a Próximos: el chip de género, el mismo de siempre, y el nombre del juego, con su subrayado al
+   pasar (como los enlaces de texto) para que se sepa que se puede pulsar sin cargar la frase en reposo. */
+.kin-chip-link {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+a.kin-have-name {
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+a.kin-have-name:hover { text-decoration: underline; }
+
+.kin-chip-link:focus-visible,
+a.kin-have-name:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 3px;
 }
 
 @container (width >= 34rem) {

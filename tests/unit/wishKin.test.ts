@@ -114,7 +114,8 @@ describe('la mejor pareja y el orden', () => {
 
   it('primero los deseos con más interés, y la cifra cuenta todos aunque solo se enseñen cinco', () => {
     const deseos = Array.from({ length: 7 }, (_, index) => juego(`Deseo ${index}`, { genres: ['Cartas'], grade: index * 10 }));
-    const kin = computeWishKin(listas([...deseos, juego('Sin pariente', { genres: ['Carreras'] })], [juego('Balatro', { genres: ['Cartas'] })]));
+    const proximos = Array.from({ length: 7 }, (_, index) => juego(`Baraja ${index}`, { genres: ['Cartas'] }));
+    const kin = computeWishKin(listas([...deseos, juego('Sin pariente', { genres: ['Carreras'] })], proximos));
 
     expect(kin.wishes).toBe(8);
     expect(kin.withKin).toBe(7);
@@ -124,6 +125,65 @@ describe('la mejor pareja y el orden', () => {
 
   it('el mismo juego en las dos listas no es su propio pariente', () => {
     expect(computeWishKin(listas([juego('Hades', { genres: ['RogueLike'] })], [juego('hades', { genres: ['RogueLike'] })])).pairs).toEqual([]);
+  });
+});
+
+describe('parejas variadas', () => {
+  it('una por género antes de repetir ninguno, aunque el interés pida otro orden', () => {
+    const kin = computeWishKin(listas(
+      [
+        juego('Rol 1', { genres: ['RPG'], grade: 90 }),
+        juego('Rol 2', { genres: ['RPG'], grade: 80 }),
+        juego('Disparos', { genres: ['FPS'], grade: 10 }),
+      ],
+      [juego('Rol A', { genres: ['RPG'] }), juego('Rol B', { genres: ['RPG'] }), juego('Disparos A', { genres: ['FPS'] })],
+    ));
+
+    expect(kin.pairs.map((pair) => [pair.wish.name, pair.genre])).toEqual([
+      ['Rol 1', 'RPG'],
+      ['Disparos', 'FPS'],
+      ['Rol 2', 'RPG'],
+    ]);
+  });
+
+  it('el género sale de los comunes que aún no se han enseñado, con la grafía de Próximos', () => {
+    const kin = computeWishKin(listas(
+      [juego('A', { genres: ['RPG', 'Acción'], grade: 90 }), juego('B', { genres: ['RPG', 'Acción'], grade: 80 })],
+      [juego('C', { genres: ['rpg', 'acción'] }), juego('D', { genres: ['RPG', 'Accion'] })],
+    ));
+
+    expect(kin.pairs.map((pair) => pair.genre)).toEqual(['rpg', 'Accion']);
+  });
+
+  it('nunca repite el juego de Próximos: si sus parientes ya salen, el deseo se queda fuera', () => {
+    const kin = computeWishKin(listas(
+      [juego('Uno', { genres: ['Cartas'], grade: 90 }), juego('Dos', { genres: ['Cartas'], grade: 80 })],
+      [juego('Balatro', { genres: ['Cartas'] })],
+    ));
+
+    expect(kin.withKin).toBe(2);
+    expect(kin.pairs.map((pair) => [pair.wish.name, pair.kin.name])).toEqual([['Uno', 'Balatro']]);
+  });
+
+  it('el deseo toma su segundo pariente si el primero ya sale', () => {
+    const kin = computeWishKin(listas(
+      [juego('Uno', { genres: ['Cartas'], grade: 90 }), juego('Dos', { genres: ['Cartas'], grade: 80 })],
+      [juego('Antiguo', { genres: ['Cartas'], enteredAt: { p: 1 } }), juego('Reciente', { genres: ['Cartas'], enteredAt: { p: 2 } })],
+    ));
+
+    expect(kin.pairs.map((pair) => pair.kin.name)).toEqual(['Antiguo', 'Reciente']);
+  });
+
+  it('una saga va bajo un género del juego que ya tienes, y sin géneros no lleva ninguno', () => {
+    const kin = computeWishKin(listas(
+      [juego('Doom: The Dark Ages', { grade: 90 }), juego('Dark Souls III', { grade: 80 })],
+      [juego('Doom: Eternal', { genres: ['FPS'] }), juego('Dark Souls Remastered')],
+    ));
+
+    expect(kin.pairs.map((pair) => [pair.reason.kind, pair.genre])).toEqual([
+      ['saga', 'FPS'],
+      ['saga', null],
+    ]);
   });
 });
 

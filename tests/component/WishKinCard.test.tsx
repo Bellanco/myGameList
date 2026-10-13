@@ -55,8 +55,13 @@ describe('«Ya lo tienes en casa» en tu panel', () => {
     // Lo que oye un lector de pantalla: la flecha y los chips llevan sus conectores ocultos a la vista.
     const [pareja] = card.getAllByRole('listitem').filter((item) => item.classList.contains('kin-pair'));
     expect(pareja.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      'Silksong: ya tienes Ori and the Will of the Wisps, por Metroidvania, Plataformas',
+      'Silksong: ya tienes Ori and the Will of the Wisps, por Metroidvania',
     );
+
+    // El juego lleva a él en Próximos, y el chip de género a tus Próximos de ese género.
+    expect(within(pareja).getByRole('link', { name: 'Ori and the Will of the Wisps' }))
+      .toHaveAttribute('href', '/proximos?q=Ori%20and%20the%20Will%20of%20the%20Wisps');
+    expect(within(pareja).getByRole('link', { name: 'Metroidvania' })).toHaveAttribute('href', '/proximos?genre=Metroidvania');
 
     // Carreras se desea y no hay nada esperando: es el hueco.
     expect(card.getByRole('heading', { name: L.gaps })).toBeInTheDocument();
@@ -98,18 +103,29 @@ describe('la tarjeta', () => {
   };
 
   it('sin parejas lo dice, y la comparación sigue', () => {
-    render(<WishKinCard kin={sinParejas} />);
+    render(<WishKinCard kin={sinParejas} />, { wrapper: MemoryRouter });
 
     expect(screen.getByText(L.noPairs)).toBeInTheDocument();
     expect(screen.getByText(L.legendWished)).toBeInTheDocument();
   });
 
   it('con más parejas de las que caben, avisa de cuántas quedan', () => {
-    const pair = { wish: { id: 1, name: 'A', grade: 0 }, kin: { id: 2, name: 'B', grade: 0 }, reason: { kind: 'saga' as const } };
-    render(<WishKinCard kin={{ ...sinParejas, withKin: 7, pairs: [pair] }} />);
+    const pair = { wish: { id: 1, name: 'A', grade: 0 }, kin: { id: 2, name: 'B', grade: 0 }, reason: { kind: 'saga' as const }, genre: 'FPS' };
+    render(<WishKinCard kin={{ ...sinParejas, withKin: 7, pairs: [pair] }} />, { wrapper: MemoryRouter });
 
     expect(screen.getByText(L.more(6))).toBeInTheDocument();
+    // Con género, la saga es una marca y el enlace es el género.
+    expect(screen.queryByRole('link', { name: L.saga })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'FPS' })).toHaveAttribute('href', '/proximos?genre=FPS');
+  });
+
+  it('una saga sin géneros no lleva chip enlazado: al juego se llega por su nombre', () => {
+    const pair = { wish: { id: 1, name: 'A', grade: 0 }, kin: { id: 2, name: 'Dark Souls', grade: 0 }, reason: { kind: 'saga' as const }, genre: null };
+    render(<WishKinCard kin={{ ...sinParejas, withKin: 1, pairs: [pair] }} />, { wrapper: MemoryRouter });
+
     expect(screen.getByText(L.saga)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: L.saga })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Dark Souls' })).toHaveAttribute('href', '/proximos?q=Dark%20Souls');
   });
 });
 
