@@ -24,6 +24,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   Cambian las reglas de Firestore: hay que desplegarlas con el cliente.
 - **Más espera para actualizar el enlace del resumen del año:** bronce 7 días (antes 5) y plata 5 (antes 3).
 - **El feed de plata relee los gists de sus amistades cada 25 minutos** (antes, 20).
+- **En «Cámara de pruebas» un botón desactivado sigue siendo un cubo, apagado**, en vez de una placa plana. El de
+  publicar del feed, que espera a que escribas algo, se leía como un botón de otro tema.
 
 ## [1.7.0] - 2026-10-12
 
