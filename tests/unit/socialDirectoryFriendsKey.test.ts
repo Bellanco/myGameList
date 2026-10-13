@@ -20,6 +20,7 @@ const { getCachedSocialDirectory, putCachedSocialDirectory, invalidateCachedSoci
 );
 const { socialDirectoryFriendsKey, useSocialDirectory } = await import('../../src/viewmodel/social/useSocialDirectory');
 const { act } = await import('@testing-library/react');
+const { friendUidsFromDirectoryKey } = await import('../../src/core/social/directoryFriendsKey');
 
 const GIST = 'gist-yo';
 
@@ -41,6 +42,15 @@ beforeEach(async () => {
 });
 
 describe('socialDirectoryFriendsKey', () => {
+  // El buscador general lee la huella para saber quiénes son tus amistades sin cargar Firebase
+  // (docs/plan-notificaciones-y-buscador.md). Si el formato cambia aquí, este test lo dice.
+  it('el lector de la huella devuelve los uid de las amistades, sin el profileId propio', () => {
+    const key = socialDirectoryFriendsKey([amigo('a', 'g1', 'j1'), amigo('b')], 'yo');
+    expect(friendUidsFromDirectoryKey(key)).toEqual(new Set(['a', 'b']));
+    expect(friendUidsFromDirectoryKey(socialDirectoryFriendsKey([], 'yo'))).toEqual(new Set());
+    expect(friendUidsFromDirectoryKey(undefined)).toBeNull();
+  });
+
   it('no depende del orden en que llegan las amistades', () => {
     expect(socialDirectoryFriendsKey([amigo('a', 'g1'), amigo('b', 'g2')], 'yo'))
       .toBe(socialDirectoryFriendsKey([amigo('b', 'g2'), amigo('a', 'g1')], 'yo'));

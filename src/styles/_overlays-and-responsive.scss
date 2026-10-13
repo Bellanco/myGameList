@@ -143,6 +143,8 @@ html:root .tag-inp-wrap .finput {
   gap: .5rem;
   transition: opacity .25s ease, transform .25s ease;
 }
+/* El hueco de la lupa del buscador: no ocupa sitio propio (ni el `gap` del grupo) hasta que la lupa llega. */
+.floating-controls-slot { display: contents; }
 /* Se ocultan al hacer scroll (reaparecen al volver arriba). */
 .floating-controls.is-hidden {
   opacity: 0;

@@ -1,0 +1,144 @@
+/* EL BUSCADOR GENERAL (docs/plan-notificaciones-y-buscador.md). Hoja del chunk perezoso de `GlobalSearch`: no viaja en
+   el CSS de arranque. El marco del panel es el de `.alert-dialog`, que cada tema ya viste; aquí van su sitio, su tamaño
+   y lo de dentro. */
+
+/* LA LUPA FLOTANTE, arriba a la derecha y junto al botón del tema (`FloatingControls`), que es su gemelo: mismo tamaño,
+   mismo cristal y mismo `btn-icon` debajo, que es lo que visten los temas que tocan el botón del tema (Arcade, Witcher).
+   Con `.floating-controls` delante para ganar a `.btn-icon`, que es del arranque. */
+.floating-controls .search-launcher {
+  width: 38px;
+  height: 38px;
+  color: var(--text-muted);
+  background: var(--surface-glass);
+  /* Transparente, como el del tema: a él se lo deja así `.btn-icon`, que va después en su hoja. */
+  border: 1px solid transparent;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--e2);
+}
+.floating-controls .search-launcher:hover {
+  color: var(--fg-link);
+  background: var(--steam-soft);
+  border-color: var(--steam-soft);
+}
+.floating-controls .search-launcher:focus-visible { outline: none; box-shadow: var(--ring-accent); }
+.search-launcher .ui-icon { width: var(--ico-md); height: var(--ico-md); fill: currentColor; }
+
+/* EL PANEL: arriba y no centrado, como Spotlight, para que crecer con los resultados no lo mueva. */
+dialog.alert-dialog.search-dialog {
+  top: max(1rem, 12vh);
+  transform: translateX(-50%);
+  width: min(40rem, calc(100vw - 2rem));
+  max-width: none;
+  max-height: min(36rem, calc(100vh - max(1rem, 12vh) - 1rem));
+  max-height: min(36rem, calc(100dvh - max(1rem, 12vh) - 1rem));
+}
+dialog.alert-dialog.search-dialog[open] { animation: searchDialogIn .2s cubic-bezier(.2, .9, .3, 1.05) both; }
+@keyframes searchDialogIn {
+  from { opacity: 0; transform: translate(-50%, -8px) scale(.98); }
+  to   { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  dialog.alert-dialog.search-dialog[open] { animation: none; }
+}
+
+.search-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+
+.search-panel-field {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: .85rem 1rem;
+}
+.search-panel-field > .ui-icon {
+  flex: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: currentColor;
+  color: var(--text-muted);
+}
+
+.search-panel-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-lg, 1.1rem);
+  outline: none;
+}
+.search-panel-input::placeholder { color: var(--text-muted); opacity: 1; }
+/* La equis nativa de `type="search"`: ya está el botón de cerrar al lado. */
+.search-panel-input::-webkit-search-cancel-button { display: none; }
+
+
+.search-panel-results[hidden] { display: none; }
+.search-panel-results {
+  border-top: 1px solid var(--hair, var(--border));
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: .35rem .5rem .5rem;
+}
+
+.search-panel-hint {
+  margin: .75rem .5rem;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.search-group + .search-group { margin-top: .35rem; }
+
+.search-group-title {
+  padding: .55rem .5rem .3rem;
+  color: var(--text-muted);
+  font-size: var(--fs-xs, .75rem);
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.search-option {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  min-height: 2.5rem; /* 40 px: objetivo táctil cómodo en móvil */
+  padding: .5rem .6rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+/* La activa (flechas o ratón) con el tinte del acento, y algo más que color: un filo a la izquierda. */
+.search-option[aria-selected="true"] {
+  background: color-mix(in srgb, var(--steam) 16%, transparent);
+  box-shadow: inset 3px 0 0 var(--steam);
+}
+
+.search-option-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.search-option-detail {
+  flex: none;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.search-option-more {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}

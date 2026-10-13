@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ### Added
 
+- **Buscador general, como Spotlight.** Se abre con ⌘K (Ctrl+K fuera de Mac) o «/» desde cualquier pantalla, y con la
+  lupa de arriba a la derecha, junto al botón del tema. Encuentra tus juegos en las cinco listas (te lleva a la suya, ya
+  filtrada), las reseñas (las tuyas y las de tus amigos), a tus amigos por nombre y las pantallas de la app. No
+  distingue acentos ni signos: «pokemon» encuentra «Pokémon» y «spiderman», «Spider-Man». Todo es local: lo que
+  escribes no sale del dispositivo.
+- **La caja de búsqueda de cada lista tampoco distingue ya acentos ni signos.**
 - **La campana del feed avisa de los «me gusta» a lo tuyo.** Además de las solicitudes de amistad, trae una fila por
   cada reseña o publicación tuya que ha gustado: «A Marta y a Nacho les gusta tu reseña de *Hades*», y al pulsarla se
   abre. Solo lo nuevo, una vez por persona y reseña: quitar y volver a poner el «me gusta» no vuelve a avisar. Lo visto

@@ -643,6 +643,22 @@ export async function getCachedSocialDirectory<T>(
   }
 }
 
+/**
+ * La copia del directorio TAL CUAL, con su huella de amistades y sin mirar si ha caducado. Es para quien lee lo que
+ * haya sin ir a red (el buscador general, docs/plan-notificaciones-y-buscador.md): ahí vale más lo de la última visita
+ * al hub que nada, igual que en los rescates sin conexión de arriba. `null` si no hay copia o no se puede leer.
+ */
+export async function peekCachedSocialDirectory<T>(ownGistId: string): Promise<{ entries: T[]; friendsKey?: string } | null> {
+  if (!ownGistId) return null;
+  try {
+    const rec = await idbGet<CachedSocialDirectory<T>>(PROFILE_CACHE_STORE, SOCIAL_DIRECTORY_KEY_PREFIX + ownGistId);
+    if (!rec || rec.version !== SOCIAL_DIRECTORY_CACHE_VERSION) return null;
+    return { entries: rec.entries, ...(rec.friendsKey !== undefined ? { friendsKey: rec.friendsKey } : {}) };
+  } catch {
+    return null;
+  }
+}
+
 export async function putCachedSocialDirectory<T>(ownGistId: string, entries: T[], friendsKey?: string): Promise<void> {
   if (!ownGistId) return;
   try {

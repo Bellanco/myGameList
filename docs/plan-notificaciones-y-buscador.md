@@ -1,6 +1,7 @@
 # Plan: «me gusta» en la campana y buscador general
 
-> **Estado (13-10-2026): notificaciones (N1–N4) hechas, sin comitear; el buscador, sin empezar.** Sale de las ideas B1 y C4 de
+> **Estado (13-10-2026): notificaciones hechas y comiteadas (f94da005); buscador B0–B2 hecho, sin comitear; de B3
+> falta el e2e.** Sale de las ideas B1 y C4 de
 > `docs/investigacion-interaccion-social.md`, con lo que el usuario decidió el 13-10-2026 (§2 y §4).
 >
 > ⚠️ **Documento vivo.** Si una línea no coincide con el código, manda el código: corrige esto en la misma pasada.
@@ -25,7 +26,7 @@
 | Qué enseña la pantalla | **Solo lo nuevo.** Lo visto se borra de la pantalla (el «me gusta» sigue debajo de la reseña); no hay «Anteriores» |
 | Forma de cada aviso | **Una fila por reseña** (o publicación), con la frase del feed: «A Marta y a Nacho les gusta tu reseña de *Hades II*» |
 | Elegir un juego de tus listas | Lleva a **su lista filtrada** (`?q=`), que se quita desde su chip |
-| Cómo se abre el buscador | **⌘K / Ctrl+K** y **`/`** (fuera de un campo de texto) en cualquier pantalla, y un **botón flotante con lupa, encima del dado** de la ruleta y más pequeño que él, **solo en las listas** |
+| Cómo se abre el buscador | **⌘K / Ctrl+K** y **`/`** (fuera de un campo de texto) en cualquier pantalla, y un **botón flotante con lupa arriba a la derecha, junto al botón del tema**, en todas las secciones. Empezó encima del dado de los listados; el usuario lo vio «muy forzado» y pidió moverlo (13-10-2026) |
 | Icono de la lupa | **`sistrix`** de Font Awesome (brands, https://fontawesome.com/icons/sistrix), elegido por el usuario el 13-10-2026. Font Awesome Free ya está acreditado en los créditos (`legalContent.ts`, CC BY 4.0). Es el logotipo de una marca (SISTRIX): ver la nota de §7 |
 | Cuándo se borra lo visto | **Al salir del social**, no al entrar en la pantalla: abrir un aviso y volver atrás no la deja vacía |
 
@@ -131,7 +132,30 @@ existen para que no crezcan sin fin. Si IndexedDB falla (modo privado), todo cue
 - Pasada de axe, y móvil a 390 px con texto grande.
 - Tests de componente de la campana: sale solo con algo nuevo y la suma es correcta.
 
-### Buscador · 0,5 días + 4–6 días
+### Buscador · B0–B2 HECHOS (13-10-2026)
+
+Dónde quedó:
+- **B0:** `core/utils/searchText.ts` (`normalizeSearchText`, `matchesSearch`), usado por `filterGames`.
+- **B1:** `core/search/globalSearch.ts` (puntuación y grupos) y `viewmodel/search/searchSources.ts` (fuentes). Lo social
+  sale de `peekCachedSocialDirectory` (copia del directorio sin mirar caducidad) y las amistades, de la huella guardada
+  con ella (`core/social/directoryFriendsKey.ts`, con test de ida y vuelta contra `socialDirectoryFriendsKey`). Tus
+  reseñas salen de tus listas y llevan a `/stats/resenas/:id-huella`, así que funcionan también sin social.
+- **B2:** `view/components/search/GlobalSearch.tsx` + `styles/search.scss`, montado en `App` por `lazy()` en ocioso
+  (con el resto del sprite). Los iconos van en línea en el componente, no en el sprite. La lupa se pinta con un portal
+  en el hueco que deja `FloatingControls` (`search-launcher-slot`), gemela del botón del tema (`btn-icon`, mismo
+  cristal). El id va escrito en los dos sitios: importarlo desde el trozo perezoso partía `FloatingControls` en un
+  chunk aparte y el arranque subía a 190,8 kB.
+- **Panel mínimo (decisión del usuario, 13-10-2026):** sin pie de instrucciones de teclado, sin texto de ayuda, sin
+  botón «Esc» y con «Buscar» como texto de la caja. Sin nada escrito, el panel es solo la caja. Se cierra con Esc,
+  con ⌘K / Ctrl+K o tocando fuera; el atajo sigue en la descripción de la lupa («Buscar (⌘K)»).
+- **Desviación del plan:** las reseñas van una por fila («Celeste · Reseña de Marta») y no agrupadas por juego: una
+  opción por destino es lo que pide el patrón de listbox, y sin nota (la escala la elige cada cual en Diseño).
+- **B3:** axe sin hallazgos en el panel y la lupa (5 combinaciones de tema y modo). Arranque: 189,5 → **189,8** de
+  190 kB (la normalización viaja con las listas; el hueco de la lupa, con los controles flotantes). **Falta:** el e2e.
+- Tests: `globalSearch`, `searchSources`, `toolbarFilters` (acentos), `socialDirectoryFriendsKey` (lector de la huella)
+  y `GlobalSearch` (componente).
+
+Lo que se planeó (0,5 días + 4–6 días):
 
 **B0 · Listas sin acentos (0,5 días).** Una sola función de normalización para buscar (`core/utils`), usada por
 `filterGames`. Así la caja de cada lista deja de distinguir acentos, también sin el buscador nuevo. Tests.
