@@ -5,6 +5,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-10-13
+
+Una versión para **encontrarlo todo**: un buscador general con ⌘K, la campana que avisa de los «me gusta», dos
+logros nuevos por ellos y medallas rehechas como orbes de vidrio.
+
 ### Added
 
 - **Dos logros nuevos por los «me gusta»:** «Palmadita en la espalda», por darlos a reseñas y publicaciones de tus
@@ -47,6 +52,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   titula «Temas».
 - **En «Cámara de pruebas» un botón desactivado sigue siendo un cubo, apagado**, en vez de una placa plana. El de
   publicar del feed, que espera a que escribas algo, se leía como un botón de otro tema.
+
+### Internal
+- **Dependencias al día dentro de su rango.** En el bundle viajan `zod` 4.6.5 → 4.6.7 y `@tanstack/react-virtual`
+  3.14.14 → 3.14.18; el resto es tooling (vitest 5.0.4, typescript-eslint 8.71.2…). Sin vulnerabilidades en
+  `npm audit`. TypeScript 7, ESLint 10, firebase 13 y `@firebase/rules-unit-testing` 6 son saltos de versión mayor
+  y se quedan fuera de un parche.
 
 ## [1.7.0] - 2026-10-12
 
