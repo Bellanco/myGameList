@@ -18,4 +18,6 @@ export const ROULETTE_UI = {
   openReviewAria: 'Ver la reseña completa',
   picking: 'Eligiendo…',
   placeholder: 'Tu próximo juego aparecerá aquí',
+  /** El enlace a «¿A qué juego ahora?», bajo el resultado: la misma pregunta, contestada a la vista. */
+  browseAll: '¿A qué juego ahora?',
 } as const;

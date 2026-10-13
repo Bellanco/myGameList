@@ -101,6 +101,11 @@
 
 /* Columna del resultado: espacio reservado a la derecha → la ruleta no se mueve al abrirlo. */
 .rl-result-col { width: 320px; min-height: 240px; display: flex; align-items: center; }
+/* En columna desde que lleva debajo el enlace a «¿A qué juego ahora?» (`.rl-browse`): la tarjeta, centrada en su hueco
+   como antes, y el enlace bajo ella. */
+.rl-result-col { flex-direction: column; justify-content: center; gap: 14px; }
+.rl-result-col > :not(.rl-browse) { width: 100%; }
+.rl-browse { font-size: var(--fs-sm); }
 
 /* Tarjeta "fantasma": llena el hueco reservado en reposo y mientras gira (antes del primer resultado).
    Es un botón: al pulsarla también gira la ruleta (para no dejar sensación de clic muerto). */

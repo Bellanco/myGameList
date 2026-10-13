@@ -27,6 +27,7 @@ interface ListsRouletteModalProps {
   title: string;
   tag?: (candidate: RouletteCandidate) => string;
   action?: RouletteAction | null;
+  onBrowseAll?: () => void;
 }
 
 export function ListsRouletteModal({ data, ...resto }: ListsRouletteModalProps) {

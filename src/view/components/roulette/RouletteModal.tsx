@@ -44,6 +44,11 @@ interface RouletteModalProps {
   /** Autor para el detalle de reseña (solo social: muestra avatar + nombre). En listados se omite. */
   reviewAuthor?: ReviewAuthor;
   action?: RouletteAction | null;
+  /**
+   * Lleva a «¿A qué juego ahora?» (`/elegir`), la misma pregunta contestada a la vista y con filtros. Solo la pasan los
+   * listados, y solo con espacio social; sin ella no se pinta nada.
+   */
+  onBrowseAll?: () => void;
 }
 
 // Geometría del tambor: ajustada para que se vean 7 nombres a la vez (aspecto circular).
@@ -87,7 +92,7 @@ function drumStyle(th: number, idle = false): CSSProperties {
   };
 }
 
-export function RouletteModal({ open, onClose, title, candidates, weight, tag, reviewAuthor, action }: RouletteModalProps) {
+export function RouletteModal({ open, onClose, title, candidates, weight, tag, reviewAuthor, action, onBrowseAll }: RouletteModalProps) {
   const dialogRef = useNativeDialog(open, onClose);
   const scoreScale = useScoreScale();
   const stageRef = useRef<HTMLDivElement>(null);
@@ -381,6 +386,12 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
                       </span>
                     </button>
                   )}
+                  {onBrowseAll ? (
+                    <button type="button" className="btn btn-open rl-browse" onClick={onBrowseAll}>
+                      <span>{ROULETTE_UI.browseAll}</span>
+                      <Icon name="angle-right" className="ui-icon btn-open-go" />
+                    </button>
+                  ) : null}
                 </div>
               </>
             )}
