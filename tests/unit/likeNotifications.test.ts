@@ -3,6 +3,7 @@ import {
   buildLikeNotifications,
   likeSeenKey,
   ownLikeTargets,
+  receivedLikesCount,
   type LikeNotificationLiker,
 } from '../../src/core/social/likeNotifications';
 import type { SocialReactionEntry } from '../../src/core/social/reactions';
@@ -102,5 +103,26 @@ describe('buildLikeNotifications', () => {
     expect(rows[0].names).toEqual(['Marta']);
     expect(rows[0].seenKeys).toHaveLength(1);
     expect(rows[0].at).toBe(3);
+  });
+});
+
+describe('receivedLikesCount', () => {
+  it('uno por persona y destino, solo a lo tuyo y sin lápidas', () => {
+    const likers = [
+      liker('ana', 'Ana', [like('activity', 'yo', 'yo:7:review'), like('post', 'yo', 'yo:p1'), like('post', 'otro', 'otro:p9')]),
+      // Quitado: no cuenta. Y la recomendación heredada no es destino.
+      liker('bea', 'Bea', [like('activity', 'yo', 'yo:7:review', 5, true), like('activity', 'yo', 'yo:8:recommendation')]),
+      liker('cris', 'Cris', [like('activity', 'yo', 'yo:7:review')]),
+    ];
+    expect(receivedLikesCount(likers, TARGETS)).toBe(3);
+  });
+
+  it('la misma persona dos veces en el mismo destino cuenta una', () => {
+    const likers = [liker('ana', 'Ana', [like('post', 'yo', 'yo:p1', 1), like('post', 'yo', 'yo:p1', 2)])];
+    expect(receivedLikesCount(likers, TARGETS)).toBe(1);
+  });
+
+  it('sin nada tuyo no hay nada que contar', () => {
+    expect(receivedLikesCount([liker('ana', 'Ana', [like('post', 'yo', 'yo:p1')])], [])).toBe(0);
   });
 });

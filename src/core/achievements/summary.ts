@@ -47,7 +47,8 @@ function scoringIdSet(): ReadonlySet<string> {
  * 46**. Las cifras van escritas aquí y probadas en `tests/unit/achievements.test.ts` justo para esto: al añadir
  * escalones hay que venir a mirar si la curva sigue teniendo sitio por encima, en vez de enterarse cuando
  * alguien llegue al final. Con el 46 quedan cuatro niveles del tramo cerrado y el abierto entero por detrás, así
- * que la curva aguanta la próxima ampliación sin retocarse.
+ * que la curva aguanta la próxima ampliación sin retocarse. Y la aguantó: con los «me gusta» dados y recibidos
+ * (13-10-2026, 416 escalones que puntúan) el techo son **7.655 puntos, nivel 47**.
  *
  * ⚑ Y EL NIVEL YA NO ES INFINITO. Antes lo era porque las metas abiertas no tenían techo; ahora cada escalón es
  * un logro y el catálogo es finito, así que los puntos también. Lo que sostenía «siempre hay un paso más» pasa a

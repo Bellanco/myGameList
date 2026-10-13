@@ -39,6 +39,10 @@ export interface OwnAchievementsInput {
   ownProfilePublished: boolean;
   /** ¿Se ha terminado de leer tu perfil? Antes, el espejo es solo el de este dispositivo. */
   tierResolved: boolean;
+  /** Tus «me gusta» vivos (`useSocialLikes`). */
+  likesGiven: number;
+  /** Los que ha recibido lo tuyo de tus amistades (`receivedLikesCount`). */
+  likesReceived: number;
 }
 
 export function useOwnAchievements({
@@ -54,6 +58,8 @@ export function useOwnAchievements({
   ownPublishedMirror,
   ownProfilePublished,
   tierResolved,
+  likesGiven,
+  likesReceived,
 }: OwnAchievementsInput) {
   /**
    * TUS logros para el feed. Salen del MISMO espejo que se publica (`ownMergedMirror`, más abajo) y se leen con
@@ -88,6 +94,8 @@ export function useOwnAchievements({
     return {
       friends: friendUidSet.size,
       postWeeks: weeks.size,
+      likesGiven,
+      likesReceived,
       // Tu fecha de alta, del documento de perfil (`profiles/{uid}.createdAt`). Es lo que hace verificables «De
       // la vieja escuela» y «Otro año más»: la sella el SERVIDOR al crear el perfil y las reglas la declaran
       // inmutable, así que no se puede adelantar desde el cliente. 0 mientras no se haya leído —o en un perfil
@@ -95,7 +103,7 @@ export function useOwnAchievements({
       profileCreatedAt: ownProfileCreatedAt,
       hasSync: Boolean(mainSyncGistId),
     };
-  }, [rawDirectory, ownUid, ownProfileId, friendUidSet, mainSyncGistId, ownProfileCreatedAt]);
+  }, [rawDirectory, ownUid, ownProfileId, friendUidSet, mainSyncGistId, ownProfileCreatedAt, likesGiven, likesReceived]);
 
   /**
    * Lo que el panel de administración decide para todo el mundo. Aquí solo hace falta la APERTURA COMUNITARIA: es

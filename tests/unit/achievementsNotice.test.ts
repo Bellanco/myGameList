@@ -45,7 +45,7 @@ function sembrarMarcaDeAgua(games: TabData): void {
   const estados = evaluateAchievements(
     {
       games,
-      social: { friends: 0, postWeeks: 0, profileCreatedAt: 0 },
+      social: { friends: 0, postWeeks: 0, likesGiven: 0, likesReceived: 0, profileCreatedAt: 0 },
       device: { hasSync: false, rouletteUsedAt: 0, themeChanged: false },
       now: NOW,
     },

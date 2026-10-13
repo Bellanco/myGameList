@@ -73,6 +73,26 @@ export function ownLikeTargets(entry: {
 }
 
 /**
+ * Cuántos «me gusta» han recibido tus reseñas y publicaciones: UNO POR PERSONA Y DESTINO, sin lápidas. Es la cifra del
+ * logro «Favorito del público» y sale del mismo cruce que la campana, pero sin «visto»: cuenta todo lo vivo, no lo
+ * nuevo. La misma persona dos veces en el mismo destino (deriva de gists) cuenta una.
+ */
+export function receivedLikesCount(
+  likers: readonly Pick<LikeNotificationLiker, 'key' | 'reactions'>[],
+  ownTargets: readonly Pick<OwnLikeTarget, 'on' | 'to' | 'item'>[],
+): number {
+  const targets = new Set(ownTargets.map((target) => reactionTargetKey(target)));
+  const counted = new Set<string>();
+  for (const liker of likers) {
+    for (const reaction of liker.reactions) {
+      if (reaction.del || !targets.has(reactionTargetKey(reaction))) continue;
+      counted.add(likeSeenKey(liker.key, reaction));
+    }
+  }
+  return counted.size;
+}
+
+/**
  * Las filas de la campana. `show` decide, por clave de visto, qué «me gusta» se enseñan (los nuevos y los que ya se
  * enseñaron en esta visita); `isNew`, cuáles cuentan como nuevos. Una fila sin nadie que enseñar no sale.
  */

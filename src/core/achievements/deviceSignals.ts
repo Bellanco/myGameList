@@ -54,15 +54,19 @@ export function markThemeChanged(now = Date.now()): void {
   }
 }
 
-/** Los cuatro contadores que solo conoce el hub, tal como se recordaron la última vez. */
+/** Los contadores que solo conoce el hub, tal como se recordaron la última vez. */
 export interface SocialCounters {
   friends: number;
   postWeeks: number;
+  likesGiven: number;
+  likesReceived: number;
   profileCreatedAt: number;
   hasSync: boolean;
 }
 
-const SIN_CONTADORES: SocialCounters = { friends: 0, postWeeks: 0, profileCreatedAt: 0, hasSync: false };
+const SIN_CONTADORES: SocialCounters = {
+  friends: 0, postWeeks: 0, likesGiven: 0, likesReceived: 0, profileCreatedAt: 0, hasSync: false,
+};
 
 /**
  * Lo que se recordó del último paso por el hub. Todo a cero si nunca se ha entrado, que es exactamente el
@@ -76,6 +80,8 @@ export function socialCounters(): SocialCounters {
     return {
       friends: Number(value.friends) || 0,
       postWeeks: Number(value.postWeeks) || 0,
+      likesGiven: Number(value.likesGiven) || 0,
+      likesReceived: Number(value.likesReceived) || 0,
       profileCreatedAt: Number(value.profileCreatedAt) || 0,
       hasSync: Boolean(value.hasSync),
     };
@@ -98,12 +104,16 @@ export function rememberSocialCounters(counters: SocialCounters): void {
   const fundido: SocialCounters = {
     friends: Math.max(previo.friends, counters.friends),
     postWeeks: Math.max(previo.postWeeks, counters.postWeeks),
+    likesGiven: Math.max(previo.likesGiven, counters.likesGiven),
+    likesReceived: Math.max(previo.likesReceived, counters.likesReceived),
     profileCreatedAt: counters.profileCreatedAt || previo.profileCreatedAt,
     hasSync: counters.hasSync,
   };
   if (
     fundido.friends === previo.friends
     && fundido.postWeeks === previo.postWeeks
+    && fundido.likesGiven === previo.likesGiven
+    && fundido.likesReceived === previo.likesReceived
     && fundido.profileCreatedAt === previo.profileCreatedAt
     && fundido.hasSync === previo.hasSync
   ) return;

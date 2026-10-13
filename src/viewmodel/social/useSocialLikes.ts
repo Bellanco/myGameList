@@ -35,6 +35,8 @@ export interface SocialLikes {
   toggleLike: (item: LikeableFeedItem) => void;
   /** Retira tus «me gusta» a una persona (al dejar de ser amigos). Por uid: es lo que conoce la pantalla de amistades. */
   retireLikesOf: (uid: string) => void;
+  /** Cuántos «me gusta» tuyos están vivos: uno por destino. Es la cifra del logro «Palmadita en la espalda». */
+  givenCount: number;
 }
 
 export function useSocialLikes({ enabled, others }: SocialLikesOptions): SocialLikes {
@@ -94,7 +96,7 @@ export function useSocialLikes({ enabled, others }: SocialLikesOptions): SocialL
     for (const id of ids) void retireSocialLikesTo(id).catch(() => {});
   }, []);
 
-  return { likesFor, canLike, toggleLike, retireLikesOf };
+  return { likesFor, canLike, toggleLike, retireLikesOf, givenCount: own.length };
 }
 
 /** Lo leído, salvo los destinos tocados en esta visita, que se quedan como están en el estado local. */

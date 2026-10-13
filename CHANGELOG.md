@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ### Added
 
+- **Dos logros nuevos por los «me gusta»:** «Palmadita en la espalda», por darlos a reseñas y publicaciones de tus
+  amistades, y «Favorito del público», por recibirlos en las tuyas. Siete escalones cada uno, de 5 a 250. Cada «me
+  gusta» cuenta una vez por persona y reseña: quitarlo y volver a ponerlo no suma. Se cuentan con lo que el feed ya
+  descarga, sin gastar Firestore ni peticiones a GitHub, y se conceden al abrir el social, como los otros logros
+  sociales.
 - **Buscador general, como Spotlight.** Se abre con ⌘K (Ctrl+K fuera de Mac), Ctrl+Espacio o «/» desde cualquier pantalla, y con la
   lupa de arriba a la derecha, junto al botón del tema. Encuentra tus juegos en las cinco listas (te lleva a la suya, ya
   filtrada), las reseñas (las tuyas y las de tus amigos), a tus amigos por nombre y las pantallas de la app. No

@@ -456,7 +456,7 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
     await userEvent.type(screen.getByRole('searchbox'), 'plataformas');
     expect(screen.getByText('key: plataformas')).toBeInTheDocument();
     expect(screen.queryByText('key: completados')).not.toBeInTheDocument();
-    expect(screen.getByText(/de 64 escaleras$/)).toBeInTheDocument();
+    expect(screen.getByText(/de 66 escaleras$/)).toBeInTheDocument();
   });
 
   it('una búsqueda sin resultados lo dice, en vez de dejar la página en blanco', async () => {

@@ -13,6 +13,7 @@ import { levelFromPoints, summarize } from '../../src/core/achievements/summary'
 import { ACHIEVEMENTS_LIST_MAX, MIRROR_ORDER, buildMirror, measureRarity, packAchievements, parseMirror } from '../../src/core/achievements/pack';
 import type { AchievementState } from '../../src/core/achievements/types';
 import { medalThreshold } from '../../src/core/constants/achievementLabels';
+import { SOCIAL_REACTIONS_MAX } from '../../src/core/constants/socialLimits';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
 const NOW = Date.parse('2026-09-06T12:00:00.000Z');
@@ -34,7 +35,7 @@ function library(partial: Partial<TabData> = {}): TabData {
   return { c: [], v: [], e: [], p: [], d: [], deleted: [], updatedAt: NOW, ...partial };
 }
 
-const NO_SOCIAL = { friends: 0, postWeeks: 0, profileCreatedAt: 0 };
+const NO_SOCIAL = { friends: 0, postWeeks: 0, likesGiven: 0, likesReceived: 0, profileCreatedAt: 0 };
 const NO_DEVICE = { hasSync: false, rouletteUsedAt: 0, themeChanged: false };
 
 function evaluate(games: TabData, peak = '', extra: Partial<typeof NO_SOCIAL> = {}) {
@@ -114,7 +115,7 @@ describe('catálogo — reglas que no se pueden romper sin avisar', () => {
     // nivel y su amistad —que lo reconstruye desde el espejo— le vería otro.
     expect(SCORING_ACHIEVEMENTS.some((def) => def.family === 'onboarding')).toBe(false);
     expect(SCORING_ACHIEVEMENTS.some((def) => def.retired)).toBe(false);
-    expect(SCORING_ACHIEVEMENTS.length).toBe(402);
+    expect(SCORING_ACHIEVEMENTS.length).toBe(416);
   });
 
   it('un excepcional no tiene escalera larga… salvo los que cuenta el calendario', () => {
@@ -675,8 +676,8 @@ describe('las dos cifras', () => {
     const todos = SCORING_ACHIEVEMENTS.map((def) => ({ id: def.id, level: 1, value: 0, next: null, unlockedAt: 0 }));
     const full = summarize(todos);
     expect(full.percent).toBe(100);
-    expect(full.points).toBe(7410);
-    expect(full.level).toBe(46);
+    expect(full.points).toBe(7655);
+    expect(full.level).toBe(47);
   });
 
   it('cada escalón suma una vez', () => {
@@ -773,11 +774,11 @@ describe('el espejo — mapa de bits y lectura defensiva', () => {
    * falla y no has añadido nada al final, lo que has hecho rompe los espejos de todo el mundo.
    */
   it('los primeros bits son los que eran, y la lista tiene la longitud que tenía', () => {
-    expect(MIRROR_ORDER.length).toBe(404);
+    expect(MIRROR_ORDER.length).toBe(418);
     expect(MIRROR_ORDER.slice(0, 4)).toEqual([
       'completados-10', 'completados-25', 'completados-50', 'completados-75',
     ]);
-    expect(MIRROR_ORDER[MIRROR_ORDER.length - 1]).toBe('vocabulario-75');
+    expect(MIRROR_ORDER[MIRROR_ORDER.length - 1]).toBe('me-gusta-recibidos-250');
   });
 
   /**
@@ -985,7 +986,9 @@ describe('la cifra no puede cambiar de una pantalla a otra', () => {
       id: i + 1, enteredAt: { c: NOW - i * 86_400_000 }, review: 'una reseña', score: 8, hours: 20,
     })),
   });
-  const DEL_HUB = { friends: 6, postWeeks: 4, profileCreatedAt: NOW - 400 * 86_400_000, hasSync: true };
+  const DEL_HUB = {
+    friends: 6, postWeeks: 4, likesGiven: 12, likesReceived: 7, profileCreatedAt: NOW - 400 * 86_400_000, hasSync: true,
+  };
   const cifra = (states: readonly AchievementState[]) => {
     const s = summarize(states);
     return `${s.earned}/${s.total}`;
@@ -1011,7 +1014,13 @@ describe('la cifra no puede cambiar de una pantalla a otra', () => {
     const panel = evaluateAchievements(
       {
         games,
-        social: { friends: recordados.friends, postWeeks: recordados.postWeeks, profileCreatedAt: recordados.profileCreatedAt },
+        social: {
+          friends: recordados.friends,
+          postWeeks: recordados.postWeeks,
+          likesGiven: recordados.likesGiven,
+          likesReceived: recordados.likesReceived,
+          profileCreatedAt: recordados.profileCreatedAt,
+        },
         device: { ...NO_DEVICE, hasSync: recordados.hasSync },
         now: NOW,
       },
@@ -1024,13 +1033,36 @@ describe('la cifra no puede cambiar de una pantalla a otra', () => {
     rememberSocialCounters(DEL_HUB);
     // Los primeros renders del hub traen ceros mientras llegan el grafo y el perfil: guardarlos tal cual dejaría
     // al panel contando de menos otra vez, hasta la siguiente visita.
-    rememberSocialCounters({ friends: 0, postWeeks: 0, profileCreatedAt: 0, hasSync: false });
+    rememberSocialCounters({ friends: 0, postWeeks: 0, likesGiven: 0, likesReceived: 0, profileCreatedAt: 0, hasSync: false });
     expect(socialCounters()).toEqual({ ...DEL_HUB, hasSync: false });
   });
 
   it('sin nada guardado —o con la clave corrupta— cuenta como que no hay contadores', () => {
-    expect(socialCounters()).toEqual({ friends: 0, postWeeks: 0, profileCreatedAt: 0, hasSync: false });
+    expect(socialCounters()).toEqual({ friends: 0, postWeeks: 0, likesGiven: 0, likesReceived: 0, profileCreatedAt: 0, hasSync: false });
     localStorage.setItem('mis-listas-achievements-social', '{no es json');
-    expect(socialCounters()).toEqual({ friends: 0, postWeeks: 0, profileCreatedAt: 0, hasSync: false });
+    expect(socialCounters()).toEqual({ friends: 0, postWeeks: 0, likesGiven: 0, likesReceived: 0, profileCreatedAt: 0, hasSync: false });
+  });
+});
+
+describe('los «me gusta» — dados y recibidos (13-10-2026)', () => {
+  it('las dos escaleras empiezan en 5: uno solo es un gesto, no un hábito', () => {
+    for (const key of ['me-gusta-dados', 'me-gusta-recibidos']) {
+      expect(LADDERS.find((ladder) => ladder.key === key)?.steps[0]).toBe(5);
+    }
+    expect(evaluate(library(), '', { likesGiven: 4 }).get('me-gusta-dados-5')?.level).toBe(0);
+    expect(evaluate(library(), '', { likesGiven: 5 }).get('me-gusta-dados-5')?.level).toBe(1);
+  });
+
+  it('cada una lee SU contador: dar no cuenta como recibir', () => {
+    const states = evaluate(library(), '', { likesGiven: 30 });
+    expect(states.get('me-gusta-dados-30')?.level).toBe(1);
+    expect(states.get('me-gusta-recibidos-5')?.level).toBe(0);
+    expect(evaluate(library(), '', { likesReceived: 15 }).get('me-gusta-recibidos-15')?.level).toBe(1);
+  });
+
+  it('el techo de los dados no pasa de los «me gusta» vivos que guarda el fichero', () => {
+    // Por encima, recortar el fichero bajaría el número solo: el escalón sería inalcanzable de forma estable.
+    const dados = LADDERS.find((ladder) => ladder.key === 'me-gusta-dados');
+    expect(Math.max(...(dados?.steps ?? []))).toBeLessThanOrEqual(SOCIAL_REACTIONS_MAX);
   });
 });
