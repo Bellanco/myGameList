@@ -49,6 +49,8 @@ export interface AchievementsInput {
   games: TabData;
   friends?: number;
   postWeeks?: number;
+  likesGiven?: number;
+  likesReceived?: number;
   profileCreatedAt?: number;
   hasSync?: boolean;
   /**
@@ -73,6 +75,8 @@ export function useAchievements({
   games,
   friends = 0,
   postWeeks = 0,
+  likesGiven = 0,
+  likesReceived = 0,
   profileCreatedAt = 0,
   hasSync = false,
   open = {},
@@ -87,7 +91,7 @@ export function useAchievements({
     const evaluated = evaluateAchievements(
       {
         games,
-        social: { friends, postWeeks, profileCreatedAt },
+        social: { friends, postWeeks, likesGiven, likesReceived, profileCreatedAt },
         device: {
           hasSync,
           rouletteUsedAt: rouletteUsedAt(),
@@ -129,7 +133,7 @@ export function useAchievements({
     // sitio, que es lo que evita tocar quince firmas—, así que sin esto la evaluación se quedaría con la foto de
     // antes de que llegara la configuración: el escalón nuevo no se conseguiría hasta recargar.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [games, friends, postWeeks, profileCreatedAt, hasSync, open, catalogEpoch()]);
+  }, [games, friends, postWeeks, likesGiven, likesReceived, profileCreatedAt, hasSync, open, catalogEpoch()]);
 }
 
 /**

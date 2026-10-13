@@ -8,7 +8,8 @@ import type { GameItem, TabData, TabId } from '../../model/types/game';
 import { useSocialViewModel } from '../../viewmodel/useSocialViewModel';
 import { useGithubConnection } from '../../viewmodel/sync/githubConnection';
 import { useGatewayRecovery } from '../../viewmodel/social/useGatewayRecovery';
-import { SOCIAL_ROUTES, matchSocialRoute, wantsYearSummary } from '../../viewmodel/social/socialRoutes';
+import { OWN_PROFILE_ALIAS, SOCIAL_ROUTES, matchSocialRoute, wantsYearSummary } from '../../viewmodel/social/socialRoutes';
+import type { LikeNotification } from '../../core/social/likeNotifications';
 import { ENABLE_ACHIEVEMENTS } from '../../core/achievements/flags';
 import { SocialHubSkeleton } from './SocialHubSkeleton';
 
@@ -128,6 +129,7 @@ const SocialHubInner = memo(function SocialHubInner({
   } = vm.nav;
   const {
     loadingFriendships, friendshipBusyUid, pendingIncomingCount, incomingRequests, friendsList,
+    likeNotifications, newLikeNotifications,
     relationshipWith, handleAddOrAcceptFriend, handleCancelFriendRequest, handleRejectFriendRequest,
     handleRemoveFriend, friendActionTarget, confirmFriendAction, cancelFriendAction,
   } = vm.friends;
@@ -195,6 +197,15 @@ const SocialHubInner = memo(function SocialHubInner({
   const goToProfileEdit = useCallback(() => navigate('/social/profile'), [navigate]);
   const goToProfiles = useCallback(() => navigate('/social/profiles'), [navigate]);
   const goToRequests = useCallback(() => navigate('/social/requests'), [navigate]);
+  // Una fila de «me gusta» de la campana abre lo tuyo que ha gustado: la reseña, con el mismo detalle que su tarjeta
+  // del feed, o tus publicaciones.
+  const openLikeNotification = useCallback(
+    (row: LikeNotification) => {
+      if (row.own.on === 'post') openProfilePosts(OWN_PROFILE_ALIAS);
+      else if (row.own.gameId) openActivityDetail({ actorProfileId: row.own.to, gameId: row.own.gameId, type: 'review' });
+    },
+    [openProfilePosts, openActivityDetail],
+  );
   const openDirectoryProfile = useCallback(
     (id: string) => {
       if (id === 'profile') {
@@ -591,6 +602,8 @@ const SocialHubInner = memo(function SocialHubInner({
           <SocialRequestsScreen
             SOCIAL_UI={SOCIAL_UI}
             incomingRequests={incomingRequests}
+            likeNotifications={likeNotifications}
+            onOpenLike={openLikeNotification}
             loading={loadingFriendships}
             busyUid={friendshipBusyUid}
             onAccept={handleAddOrAcceptFriend}
@@ -645,7 +658,8 @@ const SocialHubInner = memo(function SocialHubInner({
         onOpenProfiles={goToProfiles}
         onOpenOwnProfile={openOwnProfileDetail}
         onOpenRequests={goToRequests}
-        pendingIncomingCount={pendingIncomingCount}
+        bellVisible={pendingIncomingCount > 0 || likeNotifications.length > 0}
+        bellCount={pendingIncomingCount + newLikeNotifications}
         groupedFeedItems={groupedFeedItems}
         feedItems={feedItems}
         hasMoreFeed={hasMoreFeed}

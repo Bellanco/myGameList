@@ -25,8 +25,8 @@ describe('la ventana del servidor', () => {
 });
 
 describe('la espera entre actualizaciones', () => {
-  it('va por rango: mithril 1 día, oro 2, plata 3, bronce 5', () => {
-    expect(PROFILE_TIER_YEAR_SHARE_UPDATE_DAYS).toEqual({ mithril: 1, gold: 2, silver: 3, bronze: 5 });
+  it('va por rango: mithril 1 día, oro 2, plata 5, bronce 7', () => {
+    expect(PROFILE_TIER_YEAR_SHARE_UPDATE_DAYS).toEqual({ mithril: 1, gold: 2, silver: 5, bronze: 7 });
     expect(nextYearShareUpdateAt(utc(2026, 11, 20), PROFILE_TIER_YEAR_SHARE_UPDATE_DAYS.gold)).toBe(utc(2026, 11, 22));
   });
 });

@@ -21,7 +21,7 @@ const { useSocialCompose } = await import('../../src/viewmodel/social/useSocialC
 const { SOCIAL_UI } = await import('../../src/core/constants/socialLabels');
 const { PROFILE_TIER_POST_MAX_LENGTH } = await import('../../src/core/constants/tiers');
 
-function setup(tier: 'bronze' | 'silver' | 'gold' | 'mithril' = 'silver') {
+function setup(tier: 'bronze' | 'silver' | 'gold' | 'mithril' = 'gold') {
   const onPublished = vi.fn(async () => {});
   const onPostChanged = vi.fn();
   const setFeedback = vi.fn();
@@ -35,13 +35,13 @@ beforeEach(() => {
 
 describe('compositor de publicaciones', () => {
   it('publica con el límite del rango, dice que salió y refresca el feed', async () => {
-    const { result, onPublished, setFeedback } = setup('silver');
+    const { result, onPublished, setFeedback } = setup('gold');
 
     let salio: boolean | undefined;
     await act(async () => { salio = await result.current.handlePublishPost('  Hola feed  '); });
 
     // El texto va recortado; el máximo es el del rango, no un valor fijo.
-    expect(publishPost).toHaveBeenCalledWith({ text: 'Hola feed', maxLength: PROFILE_TIER_POST_MAX_LENGTH.silver });
+    expect(publishPost).toHaveBeenCalledWith({ text: 'Hola feed', maxLength: PROFILE_TIER_POST_MAX_LENGTH.gold });
     // `true` es la señal con la que el compositor vacía su cuadro.
     expect(salio).toBe(true);
     // El refresco va DESPUÉS de publicar: si no, el post recién escrito no saldría en el feed.
@@ -89,7 +89,7 @@ describe('compositor de publicaciones', () => {
   it('no publica dos veces si ya hay un envío en curso', async () => {
     let release: () => void = () => {};
     publishPost.mockImplementationOnce(() => new Promise<void>((resolve) => { release = resolve; }));
-    const { result } = setup('silver');
+    const { result } = setup('gold');
 
     let first: Promise<boolean>;
     act(() => { first = result.current.handlePublishPost('Doble clic'); });
@@ -103,7 +103,8 @@ describe('compositor de publicaciones', () => {
 
   it('expone los límites del rango que la pantalla necesita', () => {
     expect(setup('bronze').result.current.canPublishPosts).toBe(false);
-    expect(setup('silver').result.current.showPostCounter).toBe(true);
+    expect(setup('silver').result.current.canPublishPosts).toBe(false);
+    expect(setup('gold').result.current.showPostCounter).toBe(true);
     // Mithril no tiene límite práctico que enseñar, así que no lleva contador.
     expect(setup('mithril').result.current.showPostCounter).toBe(false);
     expect(setup('gold').result.current.postMaxLength).toBe(PROFILE_TIER_POST_MAX_LENGTH.gold);
@@ -112,12 +113,12 @@ describe('compositor de publicaciones', () => {
 
 describe('editar y borrar las publicaciones propias', () => {
   it('edita con el cupo del rango ACTUAL y refleja el texto guardado sin rehidratar', async () => {
-    const { result, onPublished, onPostChanged, setFeedback } = setup('silver');
+    const { result, onPublished, onPostChanged, setFeedback } = setup('gold');
 
     let salio: boolean | undefined;
     await act(async () => { salio = await result.current.handleEditPost('p1:1', '  Corregido  '); });
 
-    expect(editOwnPost).toHaveBeenCalledWith({ id: 'p1:1', text: 'Corregido', maxLength: PROFILE_TIER_POST_MAX_LENGTH.silver });
+    expect(editOwnPost).toHaveBeenCalledWith({ id: 'p1:1', text: 'Corregido', maxLength: PROFILE_TIER_POST_MAX_LENGTH.gold });
     expect(salio).toBe(true);
     // El cambio se pinta con lo que devolvió el gist (texto saneado y su `editedAt`), no con lo tecleado.
     expect(onPostChanged).toHaveBeenCalledWith({ kind: 'edit', id: 'p1:1', text: 'Corregido', editedAt: 99 });
@@ -130,7 +131,7 @@ describe('editar y borrar las publicaciones propias', () => {
   it('si la publicación se borró en otro dispositivo, lo dice y la quita de la vista', async () => {
     const { PostGoneError } = await import('../../src/core/social/postErrors');
     editOwnPost.mockRejectedValueOnce(new PostGoneError());
-    const { result, onPostChanged, setFeedback } = setup('silver');
+    const { result, onPostChanged, setFeedback } = setup('gold');
 
     let ok = true;
     await act(async () => { ok = await result.current.handleEditPost('p1:1', 'Corregido'); });

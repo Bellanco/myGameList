@@ -1163,6 +1163,38 @@ export const LADDERS: readonly AchievementLadder[] = [
       count(allGames(games).map(({ game }) => ({ ok: Boolean(game.shared), at: firstEnteredAt(game) }))),
   },
 
+  // ── AMPLIACIÓN (13-10-2026): los «me gusta», el que da y el que recibe. Van al final de la familia y sus `id`, al
+  // final de `mirrorOrder.ts`. Empiezan en 5 por decisión del usuario: uno solo es un gesto, no un hábito. El techo de
+  // los dados (250) queda por debajo de los 300 vivos que guarda el fichero de reacciones (`SOCIAL_REACTIONS_MAX`):
+  // por encima, el número bajaría solo al recortarse el fichero.
+  {
+    key: 'me-gusta-dados',
+    family: 'social',
+    steps: [5, 15, 30, 60, 100, 175, 250],
+    rarity: 'infrecuente',
+    icon: 'me-gusta-dados',
+    labels: { name: 'Palmadita en la espalda', condition: 'Reseñas y publicaciones de tus amistades a las que has dado «me gusta»' },
+    goal: (step) => `Da «me gusta» a ${step} reseñas o publicaciones de tus amistades`,
+    done: (step) => `Has dado «me gusta» a ${step} reseñas o publicaciones`,
+    // Cuenta DESTINOS, no gestos: el fichero guarda una entrada por destino, así que quitar y volver a poner el mismo
+    // «me gusta» no suma. Quitarlo sí resta, y la marca de agua sostiene lo ya conseguido.
+    metric: ({ social }) => ({ value: Math.max(0, social.likesGiven) }),
+  },
+  {
+    key: 'me-gusta-recibidos',
+    family: 'social',
+    steps: [5, 15, 30, 60, 100, 175, 250],
+    rarity: 'raro',
+    icon: 'me-gusta-recibidos',
+    labels: { name: 'Favorito del público', condition: '«Me gusta» que han recibido tus reseñas y publicaciones' },
+    goal: (step) => `Consigue ${step} «me gusta» en tus reseñas y publicaciones`,
+    done: (step) => `Tus reseñas y publicaciones suman ${step} «me gusta»`,
+    // Uno por persona y destino. Depende de los demás, así que no se infla desde tu cuenta; y solo se ven los de tus
+    // amistades, que son los únicos que existen. Si una amistad se va, sus «me gusta» se van con ella y la marca de
+    // agua sostiene lo conseguido.
+    metric: ({ social }) => ({ value: Math.max(0, social.likesReceived) }),
+  },
+
   // ─────────────────────────────────────────────────────────────────────────────────────────────────────────
   // ANUAL — el calendario fabrica contenido nuevo sin tocar el catálogo (§6.3).
   // ─────────────────────────────────────────────────────────────────────────────────────────────────────────

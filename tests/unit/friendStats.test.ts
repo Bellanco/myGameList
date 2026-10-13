@@ -24,13 +24,16 @@ describe('friendStats · qué ve cada rango', () => {
     expect(blocks).toEqual(['top', 'years', 'radar', 'genres', 'genreRanks']);
     expect(blocks).not.toContain('grades');
     expect(blocks).not.toContain('ratio');
-    // Cómo puntúa sigue siendo cosa de plata en adelante, también en sus dos formas nuevas.
+    // Cómo puntúa es cosa de oro en adelante, también en sus dos formas nuevas.
     expect(blocks).not.toContain('ridge');
     expect(blocks).not.toContain('demand');
   });
 
-  it('plata, oro y mithril ven lo mismo: todo lo que se puede calcular del canal social', () => {
-    expect(friendStatsBlocks('silver', false)).toEqual(friendStatsBlocks('gold', false));
+  it('plata se queda en el retrato, como bronce', () => {
+    expect(friendStatsBlocks('silver', false)).toEqual(friendStatsBlocks('bronze', false));
+  });
+
+  it('oro y mithril ven lo mismo: todo lo que se puede calcular del canal social', () => {
     expect(friendStatsBlocks('mithril', false)).toEqual(friendStatsBlocks('gold', false));
     expect(friendStatsBlocks('gold', false)).toContain('grades');
     expect(friendStatsBlocks('gold', false)).toContain('ratio');

@@ -5,6 +5,60 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-10-13
+
+Una versión para **encontrarlo todo**: un buscador general con ⌘K, la campana que avisa de los «me gusta», dos
+logros nuevos por ellos y medallas rehechas como orbes de vidrio.
+
+### Added
+
+- **Dos logros nuevos por los «me gusta»:** «Palmadita en la espalda», por darlos a reseñas y publicaciones de tus
+  amistades, y «Favorito del público», por recibirlos en las tuyas. Siete escalones cada uno, de 5 a 250. Cada «me
+  gusta» cuenta una vez por persona y reseña: quitarlo y volver a ponerlo no suma. Se cuentan con lo que el feed ya
+  descarga, sin gastar Firestore ni peticiones a GitHub, y se conceden al abrir el social, como los otros logros
+  sociales.
+- **Buscador general, como Spotlight.** Se abre con ⌘K (Ctrl+K fuera de Mac), Ctrl+Espacio o «/» desde cualquier pantalla, y con la
+  lupa de arriba a la derecha, junto al botón del tema. Encuentra tus juegos en las cinco listas (te lleva a la suya, ya
+  filtrada), las reseñas (las tuyas y las de tus amigos), a tus amigos por nombre y las pantallas de la app. No
+  distingue acentos ni signos: «pokemon» encuentra «Pokémon» y «spiderman», «Spider-Man». Todo es local: lo que
+  escribes no sale del dispositivo.
+- **La caja de búsqueda de cada lista tampoco distingue ya acentos ni signos.**
+- **La campana del feed avisa de los «me gusta» a lo tuyo.** Además de las solicitudes de amistad, trae una fila por
+  cada reseña o publicación tuya que ha gustado: «A Marta y a Nacho les gusta tu reseña de *Hades*», y al pulsarla se
+  abre. Solo lo nuevo, una vez por persona y reseña: quitar y volver a poner el «me gusta» no vuelve a avisar. Lo visto
+  sigue en la pantalla mientras estés en el social y desaparece al salir. La campana solo sale con algo que ver, y su
+  número cuenta solo lo nuevo. No gasta Firestore ni peticiones a GitHub: los «me gusta» ya llegaban con el feed. Lo
+  visto se recuerda en cada dispositivo.
+
+### Changed
+
+- **Medallas de logro nuevas.** Cada logro es ahora un orbe de vidrio del color de su rareza (gris, verde, morado o
+  naranja), con el dibujo en blanco y un brillo al pasar el ratón. Lo alto que está en su escalera ya no lo dice el
+  metal del borde (cobre, plata, oro), sino tres segmentos del aro que se encienden uno a uno: se cuentan de un
+  vistazo, también en el feed. Es la misma medalla en todos los temas, y los trofeos del palmarés de la porra la
+  comparten con el color de su puesto.
+- **Los botones flotantes de arriba (tema y buscador) llevan el diseño de cada tema**, sutil: piedra pulida en «No
+  puedes pasar», pegatina con sombra dura en Persona, los dos portales (naranja y azul) en Portal, placa de HUD en
+  Cyberpunk, moldura de códice en Grimdark y marco de píxel en Sea of Stars. Arcade y Witcher ya los tenían.
+- **Publicar en el feed pasa a ser de oro para arriba.** Plata ya no ve el compositor; oro baja de 10.000 a 1.000
+  caracteres por publicación y mithril sigue sin límite.
+- **Plata se queda en el retrato en las estadísticas de un amigo**, como bronce: las notas, el ratio y la exigencia
+  pasan a ser de oro para arriba.
+- **Menos oportunidades de papeleta en Premios:** bronce y plata 5, oro 10 y mithril 15 (antes 5, 10, 15 y 20).
+  Cambian las reglas de Firestore: hay que desplegarlas con el cliente.
+- **Más espera para actualizar el enlace del resumen del año:** bronce 7 días (antes 5) y plata 5 (antes 3).
+- **El feed de plata relee los gists de sus amistades cada 25 minutos** (antes, 20).
+- **En «No puedes pasar», Ajustes › Diseño ya no lleva el título grande de pantalla:** la primera tarjeta ya se
+  titula «Temas».
+- **En «Cámara de pruebas» un botón desactivado sigue siendo un cubo, apagado**, en vez de una placa plana. El de
+  publicar del feed, que espera a que escribas algo, se leía como un botón de otro tema.
+
+### Internal
+- **Dependencias al día dentro de su rango.** En el bundle viajan `zod` 4.6.5 → 4.6.7 y `@tanstack/react-virtual`
+  3.14.14 → 3.14.18; el resto es tooling (vitest 5.0.4, typescript-eslint 8.71.2…). Sin vulnerabilidades en
+  `npm audit`. TypeScript 7, ESLint 10, firebase 13 y `@firebase/rules-unit-testing` 6 son saltos de versión mayor
+  y se quedan fuera de un parche.
+
 ## [1.7.0] - 2026-10-12
 
 Una versión para **sentirse leído**: «Me gusta» en lo que escriben tus amigos, los textos legales en lenguaje claro,

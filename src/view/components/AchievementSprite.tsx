@@ -12,9 +12,9 @@
 // que el empaquetador lo sacará a un chunk compartido. Como son rutas distintas, nunca hay dos sprites a la vez y
 // no hay colisión de `id` que temer; el prefijo `ach-` tampoco choca con el `icon-` del sprite general.
 //
-// EL DEGRADADO `#ach-lux` vive aquí y no en la hoja porque un `stroke` sólo puede referenciar un gradiente que
-// esté en el documento. Es el que convierte un icono de línea en metal iluminado: marfil arriba a la izquierda,
-// oro en el medio, pardo casi negro en la esquina que queda a la sombra.
+// SIN COLOR PROPIO. Los dibujos son trazo sin `fill` ni `stroke`: el color lo pone la medalla (blanco, desde el
+// 13-10-2026). Hasta entonces aquí vivían los degradados de oro y de los metales del palmarés (`#ach-lux-*`),
+// porque un `stroke` sólo puede referenciar un gradiente del documento; con el orbe dejaron de usarse.
 import { crearRelevoDeSprite } from './spriteRelay';
 
 /** Un solo sprite de medallas en el documento, aunque lo pidan varias pantallas a la vez (ver `spriteRelay`). */
@@ -27,42 +27,6 @@ export function AchievementSprite() {
 
   return (
     <svg aria-hidden="true" className="svg-sprite">
-      <defs>
-        <linearGradient id="ach-lux" x1="14%" y1="0%" x2="86%" y2="100%">
-          <stop offset="0" stopColor="#ffeec2" />
-          <stop offset="0.34" stopColor="#eab545" />
-          <stop offset="0.72" stopColor="#8e5c20" />
-          <stop offset="1" stopColor="#412a0f" />
-        </linearGradient>
-        {/* Los otros metales del PALMARÉS de la porra: el trofeo del segundo puesto es de plata, el del tercero de
-            bronce, el del cuarto y el quinto de cobre, y el de participar azul (ver `PalmaresMedal`). Misma
-            receta que `#ach-lux` —claro arriba a la izquierda, sombra casi negra en la esquina contraria— para que
-            el relieve sea el mismo y solo cambie la aleación. */}
-        <linearGradient id="ach-lux-plata" x1="14%" y1="0%" x2="86%" y2="100%">
-          <stop offset="0" stopColor="#ffffff" />
-          <stop offset="0.34" stopColor="#c9d2de" />
-          <stop offset="0.72" stopColor="#6d7684" />
-          <stop offset="1" stopColor="#2a2f37" />
-        </linearGradient>
-        <linearGradient id="ach-lux-bronce" x1="14%" y1="0%" x2="86%" y2="100%">
-          <stop offset="0" stopColor="#f3dcb0" />
-          <stop offset="0.34" stopColor="#b38a4e" />
-          <stop offset="0.72" stopColor="#6b4e25" />
-          <stop offset="1" stopColor="#2e210f" />
-        </linearGradient>
-        <linearGradient id="ach-lux-cobre" x1="14%" y1="0%" x2="86%" y2="100%">
-          <stop offset="0" stopColor="#ffd2b8" />
-          <stop offset="0.34" stopColor="#d8683c" />
-          <stop offset="0.72" stopColor="#86351a" />
-          <stop offset="1" stopColor="#3a160a" />
-        </linearGradient>
-        <linearGradient id="ach-lux-azul" x1="14%" y1="0%" x2="86%" y2="100%">
-          <stop offset="0" stopColor="#e2efff" />
-          <stop offset="0.34" stopColor="#6fa6ea" />
-          <stop offset="0.72" stopColor="#2f5d9c" />
-          <stop offset="1" stopColor="#142844" />
-        </linearGradient>
-      </defs>
         {/* Clapperboard */}
         <symbol id="ach-completados" viewBox="0 0 24 24"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z" /><path d="m6.2 5.3 3.1 3.9" /><path d="m12.4 3.4 3.1 4" /><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /></symbol>
         {/* DoorOpen */}
@@ -194,6 +158,10 @@ export function AchievementSprite() {
         <symbol id="ach-palabra" viewBox="0 0 24 24"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" /><path d="m9 12 2 2 4-4" /></symbol>
         {/* RefreshCcwDot */}
         <symbol id="ach-otra-oportunidad" viewBox="0 0 24 24"><path d="M3 2v6h6" /><path d="M21 12A9 9 0 0 0 6 5.3L3 8" /><path d="M21 22v-6h-6" /><path d="M3 12a9 9 0 0 0 15 6.7l3-2.7" /><circle cx="12" cy="12" r="1" /></symbol>
+        {/* ThumbsUp — los «me gusta» que DAS: el mismo pulgar que el botón del feed. */}
+        <symbol id="ach-me-gusta-dados" viewBox="0 0 24 24"><path d="M7 10v12" /><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z" /></symbol>
+        {/* MessageCircleHeart — los que RECIBES: lo que escribiste, querido. */}
+        <symbol id="ach-me-gusta-recibidos" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /><path d="M15.8 9.2a2.5 2.5 0 0 0-3.5 0l-.3.4-.35-.3a2.42 2.42 0 1 0-3.2 3.6l3.6 3.5 3.6-3.5c1.2-1.2 1.1-2.7.2-3.7" /></symbol>
         {/* Trophy — el PALMARÉS de la porra de premios. No es un logro del catálogo (aquello se deriva de la
             biblioteca; esto lo concede el administrador al publicar una edición), pero se enseña con la misma
             medalla y por eso su símbolo vive aquí, con los demás. Ver `PalmaresMedal`. */}

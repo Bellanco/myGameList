@@ -23,8 +23,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * que exporta y alguien usa viaja con él aunque solo lo lea una pantalla perezosa (medido el 12-10-2026).
  */
 export const PROFILE_TIER_YEAR_SHARE_UPDATE_DAYS: Record<ProfileTier, number> = {
-  bronze: 5,
-  silver: 3,
+  bronze: 7, // 5 hasta el 13-10-2026, decisión del usuario
+  silver: 5, // 3 hasta el 13-10-2026
   gold: 2,
   mithril: 1,
 };

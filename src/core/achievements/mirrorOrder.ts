@@ -117,4 +117,10 @@ export const MIRROR_IDS: readonly string[] = [
   // nuevo, ninguno intermedio, y aun así van AL FINAL: aquí no se ordena nada, se numeran bits.
   'anadas-15', 'otra-oportunidad-7', 'otra-oportunidad-8', 'otra-oportunidad-10', 'mania-75', 'firma-200',
   'reencuentro-15', 'palabra-30', 'palabra-40', 'vocabulario-60', 'vocabulario-75',
+
+  // ── CUARTA AMPLIACIÓN (13-10-2026): los «me gusta», dados y recibidos.
+  'me-gusta-dados-5', 'me-gusta-dados-15', 'me-gusta-dados-30', 'me-gusta-dados-60', 'me-gusta-dados-100',
+  'me-gusta-dados-175', 'me-gusta-dados-250', 'me-gusta-recibidos-5', 'me-gusta-recibidos-15',
+  'me-gusta-recibidos-30', 'me-gusta-recibidos-60', 'me-gusta-recibidos-100', 'me-gusta-recibidos-175',
+  'me-gusta-recibidos-250',
 ];

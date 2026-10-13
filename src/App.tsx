@@ -113,6 +113,9 @@ const AchievementToast = lazy(() => import('./view/components/stats/AchievementT
  * piden llevan rato en el documento.
  */
 const IconSpriteRest = lazy(() => import('./view/components/IconSpriteRest').then((module) => ({ default: module.IconSpriteRest })));
+/* EL BUSCADOR GENERAL (⌘K / Ctrl+K, `/` y la lupa junto al botón del tema): llega con el resto del sprite, en ocioso, y no en el
+   arranque, al que le quedaba medio kB (docs/plan-notificaciones-y-buscador.md). */
+const GlobalSearch = lazy(() => import('./view/components/search/GlobalSearch').then((module) => ({ default: module.GlobalSearch })));
 
 /**
  * EL AVISO DEL ADMINISTRADOR, perezoso por lo mismo: comparte carril y forma con el de logro, se monta desde el
@@ -1214,6 +1217,11 @@ export default function App() {
           {/* El trabajo de fondo: efectos de firma por interacción (wipe P5 al navegar, apertura de portal al
               clic, sol↔luna, boot-up 40K), estrellas fugaces, histórico del backlog y recorrido de carátulas.
               No pinta nada. */}
+          <SilentBoundary source="global-search">
+            <Suspense fallback={null}>
+              <GlobalSearch games={vm.data} visibleTabs={visibleTabs} />
+            </Suspense>
+          </SilentBoundary>
           <SilentBoundary source="idle-work">
             <Suspense fallback={null}>
               <IdleWork data={vm.data} />
@@ -1289,7 +1297,9 @@ export default function App() {
           }`.trim()}
         >
           <h1 className="sr-only">{getPageHeading(activeSection, currentTab, settingsGroup)}</h1>
-          {activeSection === 'settings' && settingsGroup ? (
+          {/* En Diseño no: es la pantalla del selector de temas, y su primera tarjeta ya se titula «Temas» (13-10-2026,
+              decisión del usuario). */}
+          {activeSection === 'settings' && settingsGroup && settingsGroup !== 'design' ? (
             <ScreenHeader kicker={UI_MESSAGES.screenHeader.settings} title={UI_MESSAGES.settingsMenu[settingsGroup]} />
           ) : null}
           <Routes>

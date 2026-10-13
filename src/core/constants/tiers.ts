@@ -59,7 +59,7 @@ export const ADMIN_ONLY_TIER: ProfileTier = PROFILE_TIER.mithril;
  */
 export const PROFILE_TIER_FEED_TTL_MS: Record<ProfileTier, number> = {
   bronze: 30 * 60 * 1000, // lo mismo que antes de existir los rangos
-  silver: 20 * 60 * 1000, // 15 min hasta el 12-10-2026, decisión del usuario
+  silver: 25 * 60 * 1000, // 15 min hasta el 12-10-2026 y 20 hasta el 13-10-2026, decisión del usuario
   gold: 10 * 60 * 1000,
   mithril: 60_000,
 };
@@ -114,12 +114,12 @@ export const POST_HARD_CEILING = 100_000;
  */
 export const PROFILE_TIER_POST_MAX_LENGTH: Record<ProfileTier, number> = {
   bronze: 0,
-  silver: 1_000,
-  gold: 10_000,
+  silver: 0, // 1.000 hasta el 13-10-2026: publicar pasa a ser de oro para arriba, decisión del usuario
+  gold: 1_000, // 10.000 hasta el 13-10-2026
   mithril: POST_HARD_CEILING,
 };
 
-/** ¿Este rango puede publicar en el feed? Bronce no. */
+/** ¿Este rango puede publicar en el feed? Bronce y plata no. */
 export function canPublishPosts(tier: ProfileTier): boolean {
   return PROFILE_TIER_POST_MAX_LENGTH[tier] > 0;
 }

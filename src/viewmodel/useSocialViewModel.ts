@@ -38,6 +38,8 @@ import { useOwnProfileRank } from './social/useOwnProfileRank';
 import { useOwnPhotoHeal } from './social/useOwnPhotoHeal';
 import { useOwnProfileEditor } from './social/useOwnProfileEditor';
 import { useSocialLikes } from './social/useSocialLikes';
+import { useLikeNotifications } from './social/useLikeNotifications';
+import { ownLikeTargets, receivedLikesCount } from '../core/social/likeNotifications';
 import { useSocialFeedback } from './social/useSocialFeedback';
 import { useSocialSession } from './social/useSocialSession';
 import { useSocialFeed } from './social/socialFeed';
@@ -594,11 +596,38 @@ export function useSocialViewModel(options?: {
   }, [authUser?.uid, ownProfileId, socialDirectory]);
 
   // «Me gusta»: los de tus amistades salen del directorio; los tuyos, de tu fichero y de la cola (ver el hook).
-  const { likesFor, canLike, toggleLike, retireLikesOf } = useSocialLikes({
+  const { likesFor, canLike, toggleLike, retireLikesOf, givenCount: likesGiven } = useSocialLikes({
     enabled: hasReadyAccess && socialSpaceOpen,
     others: visibleSocialDirectory,
   });
   retireLikesRef.current = retireLikesOf;
+
+  // La campana: los «me gusta» de tus AMISTADES a lo tuyo (docs/plan-notificaciones-y-buscador.md). Solo amistades,
+  // aunque el directorio traiga a más gente: de quien no lo es no se avisa de nada.
+  const likeNotificationFriends = useMemo(
+    () => visibleSocialDirectory.filter((entry) => friendUidSet.has(String(entry.uid || ''))),
+    [visibleSocialDirectory, friendUidSet],
+  );
+  const ownDirectoryEntry = useMemo(
+    () => socialDirectory.find((entry) => isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId)) ?? null,
+    [socialDirectory, authUser?.uid, ownProfileId],
+  );
+  // Los «me gusta» que ha recibido lo tuyo, para el logro «Favorito del público». Mismo cruce que la campana: solo
+  // de tus amistades y solo a tus reseñas y publicaciones.
+  const likesReceived = useMemo(
+    () => receivedLikesCount(
+      likeNotificationFriends.map((entry) => ({ key: entry.uid || entry.id, reactions: entry.reactions ?? [] })),
+      ownLikeTargets(ownDirectoryEntry),
+    ),
+    [likeNotificationFriends, ownDirectoryEntry],
+  );
+  const { notifications: likeNotifications, newCount: newLikeNotifications } = useLikeNotifications({
+    enabled: hasReadyAccess && socialSpaceOpen,
+    uid: authUser?.uid || '',
+    friends: likeNotificationFriends,
+    ownEntry: ownDirectoryEntry,
+    screenOpen: activePanel === 'requests',
+  });
 
   const socialDisplayName = useMemo(() => {
     const preferred = profileName.trim();
@@ -657,6 +686,8 @@ export function useSocialViewModel(options?: {
     ownPublishedMirror,
     ownProfilePublished,
     tierResolved,
+    likesGiven,
+    likesReceived,
   });
 
   const { feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed } = useSocialFeed(
@@ -1076,6 +1107,9 @@ export function useSocialViewModel(options?: {
       friendshipBusyUid,
       pendingIncomingCount,
       incomingRequests,
+      // La campana también avisa de los «me gusta» a lo tuyo: las filas de la pantalla y cuántas son nuevas.
+      likeNotifications,
+      newLikeNotifications,
       outgoingRequests,
       friendsList,
       relationshipWith,

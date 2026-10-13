@@ -3,6 +3,7 @@ import { HOURS_RANGES } from '../core/constants/uiConfig';
 import { compareText } from '../core/utils/compare';
 import { resolveStars } from '../core/utils/scoreScale';
 import type { GameItem, TabId, ToolbarFilters } from '../model/types/game';
+import { matchesSearch, normalizeSearchText } from '../core/utils/searchText';
 
 // Filtros de la Toolbar como funciones puras: testeables sin montar el hook y reutilizables tanto por
 // el view-model (filtrado) como por el hook de URL (parse/serialize). Fuente única de la semántica.
@@ -68,15 +69,16 @@ export function countActiveFilters(filters: ToolbarFilters): number {
 }
 
 // Filtra (sin ordenar; el orden lo aplica el view-model). Género/plataforma: igualdad exacta + OR
-// dentro de cada dimensión. El texto libre (`search`) sí usa subcadena, que es lo correcto.
+// dentro de cada dimensión. El texto libre (`search`) sí usa subcadena, que es lo correcto, y sin distinguir acentos
+// ni signos (`matchesSearch`): «pokemon» encuentra «Pokémon».
 export function filterGames(games: GameItem[], filters: ToolbarFilters, tab: TabId): GameItem[] {
   const config = FILTER_BOOL[tab];
-  const search = filters.search.trim().toLowerCase();
+  const search = normalizeSearchText(filters.search);
   const minScore = filters.score ? Number(filters.score) : 0;
   const range = filters.hours ? HOURS_RANGES.find((entry) => entry.key === filters.hours) : undefined;
 
   return games.filter((game) => {
-    if (search && !game.name.toLowerCase().includes(search)) return false;
+    if (search && !matchesSearch(game.name, search)) return false;
     if (filters.genres.length && !game.genres.some((value) => filters.genres.includes(value))) return false;
     if (filters.platforms.length && !game.platforms.some((value) => filters.platforms.includes(value))) return false;
     if (filters.deck && !game.steamDeck) return false;

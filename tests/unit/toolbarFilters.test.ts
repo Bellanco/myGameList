@@ -60,6 +60,20 @@ describe('filterGames', () => {
     expect(filterGames(games, withFilters({ search: 'mario' }), 'c').map((g) => g.id)).toEqual([1]);
   });
 
+  // docs/plan-notificaciones-y-buscador.md, B0: sin acentos, apóstrofes ni guiones de por medio.
+  it('búsqueda por nombre no distingue acentos, apóstrofes ni guiones', () => {
+    const games = [
+      game({ id: 1, name: 'Pokémon Escarlata' }),
+      game({ id: 2, name: "Marvel's Spider-Man" }),
+      game({ id: 3, name: 'Zelda' }),
+    ];
+    expect(filterGames(games, withFilters({ search: 'pokemon' }), 'c').map((g) => g.id)).toEqual([1]);
+    expect(filterGames(games, withFilters({ search: 'POKÉMON' }), 'c').map((g) => g.id)).toEqual([1]);
+    expect(filterGames(games, withFilters({ search: 'marvels' }), 'c').map((g) => g.id)).toEqual([2]);
+    expect(filterGames(games, withFilters({ search: 'spiderman' }), 'c').map((g) => g.id)).toEqual([2]);
+    expect(filterGames(games, withFilters({ search: 'spider man' }), 'c').map((g) => g.id)).toEqual([2]);
+  });
+
   it('puntuación filtra por umbral mínimo (≥)', () => {
     const games = [game({ id: 1, score: 5 }), game({ id: 2, score: 3 }), game({ id: 3, score: 4 })];
     expect(filterGames(games, withFilters({ score: '4' }), 'c').map((g) => g.id)).toEqual([1, 3]);

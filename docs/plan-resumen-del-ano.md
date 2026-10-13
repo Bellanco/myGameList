@@ -18,7 +18,7 @@
 | Cuándo sale la tarjeta del feed | **Al compartir**, no al abrir el resumen (hoy se publica sola al abrirlo del 15 al 31 de diciembre) |
 | Caducidad del enlace | **Al cerrar la ventana**: 16 de enero, 12:00 UTC, sea cual sea el rango |
 | Cita de la mejor reseña | **Fuera.** El enlace no lleva `best.quote` (la propuesta de incluirla no se aceptó) |
-| Actualizar el enlace | **Manual**: botón «Actualizar enlace» cuando tu resumen ha cambiado desde que lo compartiste. Mismo enlace siempre. Espera entre actualizaciones **por rango: mithril 1 día, oro 2, plata 3, bronce 5** |
+| Actualizar el enlace | **Manual**: botón «Actualizar enlace» cuando tu resumen ha cambiado desde que lo compartiste. Mismo enlace siempre. Espera entre actualizaciones **por rango: mithril 1 día, oro 2, plata 5, bronce 7** (plata 3 y bronce 5 hasta el 13-10-2026) |
 | Carátulas en la página pública | **Solo para quien tenga el feed social activado y las carátulas encendidas** en ese navegador. Sin cuenta (modo artículo) o con las carátulas apagadas, no sale ninguna imagen |
 
 La ventana de compartir empieza el 15 de **diciembre** (confirmado: en la primera respuesta se coló un
@@ -185,8 +185,8 @@ Puro, en `src/core/stats/` (p. ej. `publicYearSummary.ts`), testeado como la pro
     de esa temporada. Fuera, 409 con mensaje claro.
   - **Uno por persona y año**: si en el listado ya hay una fila `kind: 'year'` de ese año, se renueva sobre el mismo
     token: **el enlace no cambia nunca** y solo se reescribe el artículo (1 escritura). Espera mínima entre
-    actualizaciones **por rango**, `PROFILE_TIER_YEAR_SHARE_UPDATE_DAYS` en `src/core/constants/tiers.ts`
-    (mithril 1, oro 2, plata 3, bronce 5 días), mirando el `updatedAt` del propio artículo (1 lectura). Si aún no
+    actualizaciones **por rango**, `PROFILE_TIER_YEAR_SHARE_UPDATE_DAYS` en `src/core/social/yearShareWindow.ts`
+    (mithril 1, oro 2, plata 5, bronce 7 días), mirando el `updatedAt` del propio artículo (1 lectura). Si aún no
     toca, 429 con `nextUpdateAt` para que el cliente diga «podrás actualizarlo el día X».
   - El enlace es una **foto** del momento en que se comparte: lo que completes después no entra hasta que lo
     actualices. Dentro de la app, las amistades ven siempre el resumen vivo (sale de tu gist).

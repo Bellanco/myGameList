@@ -73,6 +73,12 @@ export interface LocalMeta {
   pendingReactionPurges?: string[];
   /** De qué cuenta (uid) es esa cola: si entra otra en este navegador, se descarta en vez de subirla a su gist. */
   pendingReactionsUid?: string;
+  /**
+   * «Me gusta» recibidos que ya se han enseñado en la campana del feed, como claves quién + a qué (`likeSeenKey`), de
+   * la más antigua a la más reciente. Con el `uid`, como la cola de arriba: si entra otra cuenta en este navegador,
+   * no hereda lo visto. Solo de este dispositivo (docs/plan-notificaciones-y-buscador.md).
+   */
+  seenLikes?: { uid: string; keys: string[] };
   // Último gist social ya propagado a MIS docs de amistad DESDE LA RUTA DE PUBLICACIÓN. Sigue vivo junto a
   // `friendshipIdentityFingerprint` porque acota una ruta que la huella no puede acotar: la publicación no sabe
   // descartar el monograma genérico de Google, así que se le fija a una pasada por id de gist para que no se

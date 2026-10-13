@@ -868,3 +868,19 @@
 @keyframes sos-zona-teclea { to { clip-path: inset(-10% 0 -10% 0); } }
 @keyframes sos-zona-on { to { opacity: 1; } }
 @keyframes sos-zona-tw { 0%, 100% { opacity: 0; transform: scale(.4); } 50% { opacity: 1; transform: scale(1.1); } }
+
+/* ── LOS DOS BOTONES FLOTANTES DE ARRIBA (tema y buscador): el marco escalonado de píxel de los diálogos, en pequeño
+   y cuadrado. El turquesa va en el aro de fuera, no en el icono: sobre el fondo claro el turquesa se pierde. ── */
+:root[data-palette="seaofstars"] .floating-controls .btn-icon {
+  border-radius: 0;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  color: var(--text);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px color-mix(in srgb, var(--sos-turq) 45%, var(--border));
+}
+:root[data-palette="seaofstars"] .floating-controls .btn-icon:hover {
+  background: var(--surface);
+  border-color: color-mix(in srgb, var(--sos-turq) 70%, var(--border));
+  color: var(--text);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--sos-turq), 0 0 12px color-mix(in srgb, var(--sos-turq) 35%, transparent);
+}

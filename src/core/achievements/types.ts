@@ -76,6 +76,13 @@ export interface AchievementInput {
     friends: number;
     /** Semanas distintas con publicación (posts + reseñas) en el gist social PROPIO (§7.5). */
     postWeeks: number;
+    /** Reseñas y publicaciones distintas a las que has dado «me gusta»: los vivos de tu fichero de reacciones. */
+    likesGiven: number;
+    /**
+     * «Me gusta» recibidos en tus reseñas y publicaciones: uno por persona y destino, leídos de los ficheros de
+     * reacciones de tus amistades, que el feed ya baja (`receivedLikesCount`).
+     */
+    likesReceived: number;
     /** `profiles.createdAt`, sellado por el servidor e inmutable por reglas. 0 si aún no se ha leído. */
     profileCreatedAt: number;
   };

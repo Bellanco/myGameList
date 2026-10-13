@@ -267,7 +267,7 @@
 
 /* ── §N · LA CABECERA DE PANTALLA ─────────────────────────────────────────────────────────────────────
    Este tema la enciende (`ScreenHeader` es neutra y en la base no se ve), solo con el título en Garamond: el
-   rótulo en versales de encima se apaga. Va en el flujo —se va al bajar, no es fija—. Va en el panel y en Ajustes, como primer hijo de `main`. En las listas no: la llevaron en la banda de
+   rótulo en versales de encima se apaga. Va en el flujo —se va al bajar, no es fija—. Va en el panel y en Ajustes (menos en Diseño), como primer hijo de `main`. En las listas no: la llevaron en la banda de
    las pestañas hasta el 05-10-2026, y se quitó porque la pestaña activa ya dice en qué lista estás. ── */
 :root[data-palette="tierramedia"] .screen-header {
   display: block;
@@ -470,3 +470,22 @@
 :root[data-palette="tierramedia"][data-theme="light"] .fx-tm-puerta b { background-image: linear-gradient(100deg, var(--steam) 0 42%, #c8962e 50%, var(--steam) 58% 100%); }
 @keyframes tm-puerta-asoma { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes tm-puerta-entra { to { opacity: 1; transform: none; } }
+
+/* ── LOS DOS BOTONES FLOTANTES DE ARRIBA (tema y buscador, `FloatingControls`): piedra pulida con su filete, como los
+   botones neutros, y redondos, porque un icono solo no es una hoja. El oro, solo al pasar por encima. Sutiles a
+   propósito: están encima de todo el contenido. ── */
+:root[data-palette="tierramedia"] .floating-controls .btn-icon {
+  background: linear-gradient(160deg, var(--tm-piedra-top), var(--tm-piedra-bot));
+  border-color: color-mix(in srgb, var(--tm-piedra-edge) 75%, transparent);
+  color: color-mix(in srgb, var(--tm-piedra-ink) 80%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), var(--e2);
+}
+:root[data-palette="tierramedia"][data-theme="light"] .floating-controls .btn-icon {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), var(--e2);
+}
+:root[data-palette="tierramedia"] .floating-controls .btn-icon:hover {
+  background: linear-gradient(160deg, var(--tm-piedra-top), var(--tm-piedra-bot));
+  border-color: color-mix(in srgb, var(--steam) 60%, var(--tm-piedra-edge));
+  color: var(--steam);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 0 10px color-mix(in srgb, var(--steam) 22%, transparent);
+}

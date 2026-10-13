@@ -39,7 +39,7 @@ export type FriendStatsBlock = Exclude<StatsBlock, 'reviews' | 'activity'>;
 /**
  * QUÉ VE CADA RANGO. Manda el rango de QUIEN MIRA.
  *
- * Bronce se queda en los bloques de retrato —quién es en su biblioteca y qué juega—; plata, oro y mithril ven
+ * Bronce y plata se quedan en los bloques de retrato —quién es en su biblioteca y qué juega—; oro y mithril ven
  * además cómo puntúa y cuánto termina. EL PANEL COMPLETO, el mismo que tiene en su propio perfil, no lo da ningún
  * rango: es de la cuenta de administración, y lo decide el claim `admin` (ver `friendStatsBlocks`). Mithril se
  * queda en lo general porque el resto de bloques necesita los datos completos, que solo recibe la administración.
@@ -63,11 +63,13 @@ const GENERAL_BLOCKS: readonly FriendStatsBlock[] = [
 /** El panel entero: lo que ve la administración, y el orden en que se pinta lo decide `StatsPanel`. */
 const ALL_BLOCKS: readonly FriendStatsBlock[] = [...GENERAL_BLOCKS, 'backlog', 'shame', 'wishlist', 'replay'];
 
+// El retrato: quién es en su biblioteca y qué juega. La evolución del gusto entra aquí porque es la misma pregunta
+// contada en el tiempo, no un dato más fino.
+const PORTRAIT_BLOCKS: readonly FriendStatsBlock[] = ['top', 'years', 'radar', 'genres', 'genreRanks'];
+
 const TIER_BLOCKS: Record<ProfileTier, readonly FriendStatsBlock[]> = {
-  // Bronce se queda en el retrato: quién es en su biblioteca y qué juega. La evolución del gusto entra aquí
-  // porque es la misma pregunta contada en el tiempo, no un dato más fino.
-  bronze: ['top', 'years', 'radar', 'genres', 'genreRanks'],
-  silver: GENERAL_BLOCKS,
+  bronze: PORTRAIT_BLOCKS,
+  silver: PORTRAIT_BLOCKS, // GENERAL_BLOCKS hasta el 13-10-2026, decisión del usuario
   gold: GENERAL_BLOCKS,
   mithril: GENERAL_BLOCKS,
 };

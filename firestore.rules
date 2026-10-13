@@ -750,7 +750,7 @@ service cloud.firestore {
      * TENER CUENTA SOCIAL es tener canal (`social.enabled`); la cuenta ligera que se crea al votar no lo es. Ese
      * campo lo escribe su propio dueño, así que quien manipule su cliente puede marcárselo y pasar de 1 a 5:
      * queda en que se cuela en el cupo de bronce —y se delata como perfil roto en el hub de todos, por la señal
-     * `enabled-without-gist`—. El `tier`, que es lo que abre 10, 15 y 20, NO puede autoasignárselo: lo impide
+     * `enabled-without-gist`—. El `tier`, que es lo que abre 10 y 15, NO puede autoasignárselo: lo impide
      * `profileTierNotSelfAssigned()`.
      */
     function premiosOpportunities(userId) {
@@ -758,7 +758,7 @@ service cloud.firestore {
       let tier = profile.get('tier', 'bronze');
       return profile.get(['social', 'enabled'], false) != true
         ? 1
-        : (tier == 'mithril' ? 20 : (tier == 'gold' ? 15 : (tier == 'silver' ? 10 : 5)));
+        : (tier == 'mithril' ? 15 : (tier == 'gold' ? 10 : (tier == 'silver' ? 5 : 5)));
     }
 
     /** Correcciones permitidas DESPUÉS del envío inicial: una oportunidad menos, la que gastó al enviar. */

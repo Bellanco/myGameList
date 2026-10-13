@@ -66,7 +66,7 @@ unificación no está terminada mientras alguna falle.
 | 6 | Identidad al votar | **Cuenta ligera sin GitHub** (`profiles/{uid}` sin canal social) |
 | 7 | Resultados | **Públicos con enlace, sin indexar** (como `/r/{token}`) |
 | 8 | Avatares en la clasificación | Sí, **con las reglas de reciprocidad del hub social** |
-| 9 | Qué desbloquea el rango | La lámina del trofeo **y las oportunidades de envío**: 5/10/15/20 por rango, y **1 sin cuenta social**. El voto sigue valiendo lo mismo para todos (§5.1) |
+| 9 | Qué desbloquea el rango | La lámina del trofeo **y las oportunidades de envío**: 5/5/10/15 por rango (5/10/15/20 hasta el 13-10-2026), y **1 sin cuenta social**. El voto sigue valiendo lo mismo para todos (§5.1) |
 | 10 | Trofeo | **Palmarés aparte** (`profiles/{uid}.palmares`), escrito solo por el admin |
 | 11 | Quién ve el palmarés | Todo el que pueda ver ese perfil, igual que las medallas |
 | 12 | Capa visual | **Reescritura a SCSS** con los 8 temas y los tokens de la casa |
@@ -303,9 +303,9 @@ Vive en `profiles/{uid}.palmares` (array, tope 50 entradas). Tres decisiones:
   `["schemaVersion", "uid", "profileId", "displayName", "photoURL", "social", "updatedAt", "tier", "createdAt",
   "achievements"]`. Sin tocar esa lista, **toda escritura del perfil sería denegada** en cuanto el documento tenga
   el campo: recuérdese que en un `update` por merge lo que se valida es el documento RESULTANTE.
-- **Se pinta con la receta de la medalla** (`docs/logros/receta-medalla.md`): disco en penumbra, icono de Lucide,
-  temple del filo. No abre una dirección visual nueva. La lámina descargable de GA se conserva aparte, como
-  «póster», que es otra cosa y se comparte distinto.
+- **Se pinta con la receta de la medalla** (`docs/logros/receta-medalla.md`): orbe de vidrio (desde el 13-10-2026;
+  antes, disco en penumbra), icono de Lucide, y el metal del puesto como color. No abre una dirección visual nueva.
+  La lámina descargable de GA se conserva aparte, como «póster», que es otra cosa y se comparte distinto.
 
 Y tres más que salieron al usarlo:
 
@@ -559,7 +559,7 @@ justo el momento de más carga del año, así que la avalancha de papeletas sigu
 son **dos** pares duplicados cliente/reglas más (`PREMIOS_OPPORTUNITIES_BY_TIER` y
 `PREMIOS_OPPORTUNITIES_WITHOUT_SOCIAL`), atados por `tests/integration/firestore.rules.test.ts`.
 
-**Lo que el usuario NO puede darse a sí mismo:** el `tier`, que es lo que abre 10, 15 y 20, lo asigna el
+**Lo que el usuario NO puede darse a sí mismo:** el `tier`, que es lo que abre 10 y 15, lo asigna el
 administrador y `profileTierNotSelfAssigned()` lo impide. El `social.enabled` sí lo escribe su dueño, así que
 quien manipule su cliente puede colarse en el cupo de bronce (de 1 a 5) — y aparecer como perfil roto en el hub
 de todos, por la señal `enabled-without-gist`. Se asume: no hay nada que robar más allá de cuatro correcciones.

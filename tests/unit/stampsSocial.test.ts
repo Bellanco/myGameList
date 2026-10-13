@@ -102,7 +102,7 @@ describe('el panel de otra persona', () => {
     const stats = computeStats(toFriendTabData({ c: publicGames }, ['c'], 'public'));
     expect(stats.demand.count).toBe(1);
     expect(stats.demand.avgGrade).toBe(90);
-    expect(friendStatsBlocks('silver', false)).toContain('demand');
+    expect(friendStatsBlocks('gold', false)).toContain('demand');
   });
 
   it('la evolución del gusto también: género y año viajan por el canal', () => {

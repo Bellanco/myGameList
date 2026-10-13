@@ -216,7 +216,7 @@ export const ANNOUNCEMENT_SEEN_KEY = 'mis-listas-announcement-seen';
 // El ARMAZÓN de la actividad social — ¿podía publicar esta persona la última vez que entró?
 //
 // Es una PISTA de pintado, no un permiso: sirve para que el esqueleto de la actividad reserve (o no) el hueco del
-// compositor de publicaciones, que solo existe a partir del rango plata. El rango no se sabe hasta que el hub
+// compositor de publicaciones, que solo existe a partir del rango oro. El rango no se sabe hasta que el hub
 // resuelve el perfil, o sea, justo después de la espera que el esqueleto está cubriendo: sin esta pista había que
 // elegir entre dos saltos, hacia abajo para quien sí publica o hacia arriba para quien no.
 //

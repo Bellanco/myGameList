@@ -35,7 +35,13 @@ import { ScreenTitle } from './ScreenTitle';
  * Su CSS tuvo que bajar de `social.scss` a `_layout.scss` por lo mismo (ver la nota allí).
  */
 export interface FeedShellActions {
-  pendingIncomingCount: number;
+  /**
+   * ¿Hay algo en la campana? Solicitudes pendientes o «me gusta» a lo tuyo que enseñar en esta visita. Puede haberlo
+   * con `bellCount` a 0: lo ya visto sigue en la pantalla hasta salir del social (docs/plan-notificaciones-y-buscador.md).
+   */
+  bellVisible: boolean;
+  /** Lo NUEVO de la campana: solicitudes pendientes más filas de «me gusta» sin ver. */
+  bellCount: number;
   onOpenProfiles: () => void;
   onOpenRequests: () => void;
 }
@@ -96,21 +102,25 @@ export function FeedShell({
               {F.openProfiles}
               <Icon name="angle-right" className="ui-icon btn-open-go" />
             </button>
-            {/* LA CAMPANA SOLO CON ALGO QUE CONTESTAR (09-10-2026). Dentro ya solo están las peticiones que te han hecho;
-                sin ninguna, el botón llevaba a una pantalla vacía. Tampoco sale en el esqueleto, donde aún no se sabe
-                cuántas hay: aparece a la derecha de «Ver perfiles» y no desplaza nada al llegar. */}
-            {!inert && actions && actions.pendingIncomingCount > 0 ? (
+            {/* LA CAMPANA SOLO CON ALGO QUE VER (09-10-2026; con los «me gusta», 13-10-2026). Dentro están las
+                peticiones que te han hecho y los «me gusta» nuevos a lo tuyo; sin nada, el botón llevaba a una pantalla
+                vacía. Tampoco sale en el esqueleto, donde aún no se sabe: aparece a la derecha de «Ver perfiles» y no
+                desplaza nada al llegar. El número cuenta solo lo nuevo: tras abrirla, lo visto sigue dentro hasta salir
+                del social, y la campana con ello, pero sin número. */}
+            {!inert && actions && actions.bellVisible ? (
               <button
                 className="btn btn-secondary hub-requests-btn"
                 type="button"
                 onClick={actions.onOpenRequests}
-                aria-label={F.openRequestsAria(actions.pendingIncomingCount)}
+                aria-label={F.openRequestsAria(actions.bellCount)}
                 title={F.openRequests}
               >
                 <Icon name="bell" />
-                <span className="hub-requests-count is-active" aria-hidden="true">
-                  {actions.pendingIncomingCount}
-                </span>
+                {actions.bellCount > 0 ? (
+                  <span className="hub-requests-count is-active" aria-hidden="true">
+                    {actions.bellCount}
+                  </span>
+                ) : null}
               </button>
             ) : null}
           </div>

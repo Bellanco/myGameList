@@ -53,7 +53,7 @@
 | Denominador | El catálogo cuenta **logros**, no niveles: la fracción se puede terminar (§6.3.1) |
 | Puntos del nivel | Por **rareza**, escala suave 5 / 10 / 25 / 60 por nivel alcanzado (§6.10.2) |
 | Nombres | **Con guiño a juegos concretos**, los temas de la app incluidos (eran seis; hoy son ocho paletas); la descripción siempre dice la condición (§6.11) |
-| Medalla | ⚑ **Disco en penumbra** (`styles/achievements.scss`; empezó cuadrada, de esquinas redondeadas), con un dibujo de Lucide por escalera en sprite perezoso: 66 símbolos (§8.5, `docs/logros/receta-medalla.md`) |
+| Medalla | ⚑ **Orbe de vidrio** desde el 13-10-2026 (`styles/achievements.scss`; empezó cuadrada, de esquinas redondeadas, y luego fue un disco en penumbra), con un dibujo de Lucide por escalera en sprite perezoso: 66 símbolos (§8.5, `docs/logros/receta-medalla.md`) |
 | Superficies, en detalle | Apartado en `/stats` bajo «Lo mejor de tu biblioteca» · tira **solo-imagen** bajo el nombre en la ficha · listado estilo Steam en `/logros` (§8.1, §8.1b, §8.2) |
 | El feed | Una entrada **por persona y día**, con todos sus logros dentro; sin filtro de rareza (§8.4) |
 | El momento | El desbloqueo se dice **cuando ocurre**, en la región viva que ya existe (§7.4) |
@@ -1679,7 +1679,7 @@ Es la misma idea que sostiene todo el documento —derivar en vez de registrar�
 > caché (`getCachedSocialDirectory`) es un **caché con TTL, no un registro**, y las tres propiedades que la hacen
 > buena para su trabajo la inhabilitan para este:
 >
-> 1. **Caduca, y el TTL lo pone el rango de quien mira** (`PROFILE_TIER_FEED_TTL_MS`: 30 min bronce, 20 plata, 10
+> 1. **Caduca, y el TTL lo pone el rango de quien mira** (`PROFILE_TIER_FEED_TTL_MS`: 30 min bronce, 25 plata, 10
 >    oro, **60 s mithril**). Pasado el TTL devuelve `null`, que para el §8.4 significa «no hay foto previa» y por
 >    tanto «sembrar y callar». El resultado sería exactamente el revés de lo que el rango promete: **cuanto más
 >    alto el rango, menos logros de amigos se anuncian**, y un mithril no vería ninguno jamás.

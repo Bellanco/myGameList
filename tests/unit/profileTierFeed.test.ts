@@ -28,8 +28,8 @@ describe('rangos de perfil', () => {
     expect(new Set(ttls).size).toBe(PROFILE_TIERS.length); // sin empates: cada rango se nota
   });
 
-  it('las cadencias acordadas: 30 / 20 / 10 min y mithril con suelo de 60 s', () => {
-    expect(PROFILE_TIER_FEED_TTL_MS.silver).toBe(20 * 60 * 1000);
+  it('las cadencias acordadas: 30 / 25 / 10 min y mithril con suelo de 60 s', () => {
+    expect(PROFILE_TIER_FEED_TTL_MS.silver).toBe(25 * 60 * 1000);
     expect(PROFILE_TIER_FEED_TTL_MS.gold).toBe(10 * 60 * 1000);
     // El suelo de mithril lo fija el RATE-LIMIT de GitHub, no el gusto: cada hidratación son ~51 peticiones
     // (1 Firestore + hasta 50 gists de amigos) contra un cupo de 5.000/hora que se comparte con el sync de la
@@ -54,17 +54,17 @@ describe('rangos de perfil', () => {
   });
 
   describe('cupo de publicación por rango', () => {
-    it('bronce no publica; el resto sí', () => {
+    it('bronce y plata no publican; oro y mithril sí', () => {
       expect(canPublishPosts('bronze')).toBe(false);
       expect(PROFILE_TIER_POST_MAX_LENGTH.bronze).toBe(0);
-      expect(canPublishPosts('silver')).toBe(true);
+      expect(canPublishPosts('silver')).toBe(false);
+      expect(PROFILE_TIER_POST_MAX_LENGTH.silver).toBe(0);
       expect(canPublishPosts('gold')).toBe(true);
       expect(canPublishPosts('mithril')).toBe(true);
     });
 
-    it('los cupos acordados: 1.000 plata, 10.000 oro, sin límite mithril', () => {
-      expect(PROFILE_TIER_POST_MAX_LENGTH.silver).toBe(1_000);
-      expect(PROFILE_TIER_POST_MAX_LENGTH.gold).toBe(10_000);
+    it('los cupos acordados: 1.000 oro, sin límite mithril', () => {
+      expect(PROFILE_TIER_POST_MAX_LENGTH.gold).toBe(1_000);
       // Mithril no tiene límite de producto: se queda en el techo del saneador, que solo existe para que un
       // payload manipulado no meta un texto desmedido en el gist.
       expect(PROFILE_TIER_POST_MAX_LENGTH.mithril).toBe(POST_HARD_CEILING);
@@ -72,7 +72,7 @@ describe('rangos de perfil', () => {
 
     it('solo se enseña contador a quien tiene un límite que mostrar', () => {
       expect(hasPostLengthLimit('bronze')).toBe(false); // no publica: no hay contador que enseñar
-      expect(hasPostLengthLimit('silver')).toBe(true);
+      expect(hasPostLengthLimit('silver')).toBe(false); // tampoco publica
       expect(hasPostLengthLimit('gold')).toBe(true);
       expect(hasPostLengthLimit('mithril')).toBe(false); // sin límite → sin contador
     });
