@@ -135,7 +135,7 @@ html:root .tag-inp-wrap .finput {
    Fondo de cristal para que floten legibles sobre cualquier contenido. El FAB queda abajo-dcha. */
 .floating-controls {
   position: fixed;
-  top: calc(.75rem + env(safe-area-inset-top, 0px));
+  top: calc(.6rem + env(safe-area-inset-top, 0px));
   right: .9rem;
   z-index: 120;
   display: inline-flex;
@@ -151,6 +151,12 @@ html:root .tag-inp-wrap .finput {
   transform: translateY(-12px);
   pointer-events: none;
 }
+/* MÁS PEQUEÑOS QUE UN `.btn-icon` SUELTO (36 y no 42 px), y más arriba: el contenido de casi todas las pantallas
+   empieza a 3,4rem (54 px), y a 42 px desde .75rem los dos botones acababan justo ahí, pegados al canto de la
+   primera tarjeta en los temas con sombra o aro por fuera (Persona, Arcade, Sea of Stars). Así quedan ~8 px de aire
+   sin mover el contenido (13-10-2026). Vale para los dos: el del tema y la lupa del buscador. */
+.floating-controls .btn-icon { width: 36px; height: 36px; }
+.floating-controls .theme-toggle-btn .ui-icon { width: var(--ico-md); height: var(--ico-md); }
 .floating-controls .theme-toggle-btn {
   background: var(--surface-glass);
   backdrop-filter: blur(10px);
@@ -365,9 +371,12 @@ body.settings-menu-open .consent-banner {
 }
 
 
-/* Sin barra superior: Social y Ajustes dejan hueco arriba para los controles flotantes. */
-.main-social,
-.main-settings { padding-top: 3.4rem; }
+/* Sin barra superior: Social y Ajustes dejan hueco arriba para los controles flotantes.
+   `.main.main-*` y no la clase sola, por la misma trampa que el relleno lateral de `.main.main-social` (`_layout.scss`):
+   la regla de `.main` de 721–1100 px va después y, a igual especificidad, dejaba el hueco en 1rem; en tableta o ventana
+   mediana la primera tarjeta subía hasta debajo del botón del tema y la lupa (13-10-2026). */
+.main.main-social,
+.main.main-settings { padding-top: 3.4rem; }
 
 /* Number inputs (sin flechitas) */
 input[type=number]::-webkit-inner-spin-button,
