@@ -5,8 +5,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.7.2] - 2026-10-13
+
 ### Added
 
+- **«¿A qué juego ahora?»: elige el siguiente juego viendo todas las opciones.** Una pantalla nueva (`/elegir`) con
+  todo lo que puedes empezar: tus próximos, los abandonados con «¿Dar otra oportunidad?» y los completados con
+  «Rejugar», los mismos juegos que entran en la ruleta. Se filtra por género y por plataforma, con varios a la vez y
+  sin obligar a ninguno, y cada opción dice cuántos juegos quedarían. Cada caja lleva el canto del color de su
+  lista. Arriba sale lo que la ruleta elegiría más a menudo. «Empezar» pasa el juego a En curso, y «Gira ahora» abre
+  la ruleta solo con lo filtrado. Se llega desde la ruleta («¿A qué juego ahora?», bajo el resultado) y desde el
+  buscador: escribir un género («FPS») ofrece elegir entre los tuyos de ese género. Necesita espacio social.
 - **La ruleta enseña la carátula del juego elegido.** Si tienes las carátulas encendidas en Diseño y el juego tiene
   una, sale a la izquierda de su nombre y entra con el mismo fundido que en el mosaico. Si no tiene, la tarjeta queda
   como siempre, sin hueco. Vale para la ruleta de tus listados y para «Gira ahora» de «¿A qué juego ahora?». En la de
@@ -14,6 +23,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ### Changed
 
+- **«Ya lo tienes en casa» enseña géneros distintos.** «Antes de comprar» ya no se llena de parejas del mismo
+  género: primero sale una por género y, si no hay bastantes, se repiten géneros pero nunca el mismo juego que ya
+  tienes. El chip de género te lleva a tus Próximos filtrados por ese género, y el nombre del juego, a él. Las filas
+  se ven más cuidadas, con un filete que va del color de Deseos al de Próximos.
 - **El botón de volver es igual en todas las pantallas.** Dice «Volver» y va encima de la tarjeta de la pantalla,
   alineado con su borde izquierdo: en el social, las estadísticas, los logros, la bandeja, Legal, el panel de
   administración y «¿A qué juego ahora?», que estrena el suyo hacia los listados. A dónde lleva lo sigue diciendo el
@@ -28,25 +41,6 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   «comenzó» y el «finalizó» juntos: pasaba si el «finalizó» se publicaba al guardar una reseña, o con avisos de una
   versión anterior. Ahora se corrige al publicar y también al leer, así que se limpia lo ya publicado. En días
   distintos siguen saliendo los dos.
-
-## [1.7.2] - 2026-10-13
-
-### Added
-
-- **«¿A qué juego ahora?»: elige el siguiente juego viendo todas las opciones.** Una pantalla nueva (`/elegir`) con
-  todo lo que puedes empezar: tus próximos, los abandonados con «¿Dar otra oportunidad?» y los completados con
-  «Rejugar», los mismos juegos que entran en la ruleta. Se filtra por género y por plataforma, con varios a la vez y
-  sin obligar a ninguno, y cada opción dice cuántos juegos quedarían. Cada caja lleva el canto del color de su
-  lista. Arriba sale lo que la ruleta elegiría más a menudo. «Empezar» pasa el juego a En curso, y «Gira ahora» abre
-  la ruleta solo con lo filtrado. Se llega desde la ruleta («¿A qué juego ahora?», bajo el resultado) y desde el
-  buscador: escribir un género («FPS») ofrece elegir entre los tuyos de ese género. Necesita espacio social.
-
-### Changed
-
-- **«Ya lo tienes en casa» enseña géneros distintos.** «Antes de comprar» ya no se llena de parejas del mismo
-  género: primero sale una por género y, si no hay bastantes, se repiten géneros pero nunca el mismo juego que ya
-  tienes. El chip de género te lleva a tus Próximos filtrados por ese género, y el nombre del juego, a él. Las filas
-  se ven más cuidadas, con un filete que va del color de Deseos al de Próximos.
 
 ## [1.7.1] - 2026-10-13
 
