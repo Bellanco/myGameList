@@ -38,7 +38,10 @@ const REVIEWABLE_TABS = TAB_IDS.filter((tab) => !UNPLAYED_TAB_IDS.includes(tab))
 //       para que los gists que ya existen los lleven en cuanto su dueño abra el hub con esta versión.
 //   9 = F4: el canal solo guarda los avisos de los últimos 30 días (`FEED_RECENT_DAYS`), en los dos campos. Sube para
 //       que los gists que ya existen suelten lo más viejo en cuanto su dueño abra el hub, no al caducar el sello.
-export const RECONCILE_LOGIC_VERSION = 9;
+//  10 = F4: el colapso por juego y día se aplica también a lo que ya estaba publicado, no solo a lo proyectado
+//       (ver `keepLatestPerGameDay`). Sube para que los «comenzó» que quedaron junto a su «finalizó» del mismo día
+//       —los dejaba la publicación a rebufo— se retiren en cuanto su dueño abra el hub.
+export const RECONCILE_LOGIC_VERSION = 10;
 
 
 export type LocalReview = {

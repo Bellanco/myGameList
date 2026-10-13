@@ -10,7 +10,7 @@
 //  4. Que el campo `enteredAt` en crudo sigue sin poder llegar al gist, por mucho mensaje que se publique.
 //  5. Que los mensajes no le roban el sitio a las reseñas ni se pierden en el round-trip del gist.
 import { describe, expect, it, vi } from 'vitest';
-import { deriveHiddenMoveActivity, deriveMoveActivity, LIBRARY_ENTRIES_PUBLISHED_FROM, MOVE_ACTIVITY_MAX, reconcileMoveActivity, reconcileMoveChannels, reviewActorsByGame, withHiddenMoves, type SocialMoveEntry } from '../../src/core/social/moveActivity';
+import { deriveHiddenMoveActivity, deriveMoveActivity, LIBRARY_ENTRIES_PUBLISHED_FROM, MOVE_ACTIVITY_MAX, reconcileMoveActivity, reconcileMoveChannels, reviewActorsByGame, withHiddenMoves, keepLatestPerGameDay, type SocialMoveEntry } from '../../src/core/social/moveActivity';
 import {
   mergeSocialGistData,
   readPublicSocialGistById,
@@ -692,3 +692,53 @@ describe('la ventana de 30 días — al publicar', () => {
   });
 });
 
+
+describe('un juego, un mensaje al día — también con lo ya publicado', () => {
+  const manana = Date.parse('2026-08-20T09:00:00');
+  const tarde = Date.parse('2026-08-20T20:00:00');
+  const otroDia = Date.parse('2026-08-22T20:00:00');
+  const aviso = (gameId: number, tab: TabId, at: number): SocialMoveEntry =>
+    ({ id: buildId(gameId, tab), gameId, gameName: `Juego ${gameId}`, tab, at });
+  const buildId = (gameId: number, tab: TabId) => `${gameId}:${tab}`;
+
+  it('el «finalizó» que llega a rebufo retira el «comenzó» ya publicado de ese mismo día', () => {
+    // Por la mañana se abrió el hub y se publicó «comenzó»; por la tarde se terminó y se escribió la reseña, que
+    // publica a rebufo (sin auditar). Antes salían los dos.
+    const resultado = reconcileMoveActivity({
+      derived: [aviso(1, 'c', tarde)],
+      published: [aviso(1, 'e', manana)],
+      knownGameIds: new Set(),
+      localUpdatedAt: 0,
+    });
+
+    expect(resultado.map((entry) => entry.id)).toEqual(['1:c']);
+  });
+
+  it('un aparato con la biblioteca atrasada no tapa con su «comenzó» el «abandonó» que publicó otro', () => {
+    const resultado = reconcileMoveActivity({
+      derived: [aviso(2, 'e', manana)],
+      published: [aviso(2, 'v', tarde)],
+      knownGameIds: new Set(),
+      localUpdatedAt: 0,
+    });
+
+    expect(resultado.map((entry) => entry.id)).toEqual(['2:v']);
+  });
+
+  it('en días distintos se conservan los dos', () => {
+    const resultado = reconcileMoveActivity({
+      derived: [aviso(3, 'c', otroDia)],
+      published: [aviso(3, 'e', manana)],
+      knownGameIds: new Set(),
+      localUpdatedAt: 0,
+    });
+
+    expect(resultado.map((entry) => entry.id)).toEqual(['3:c', '3:e']);
+  });
+
+  it('al leer, el canal de una versión anterior con los dos del mismo día enseña solo el último', () => {
+    const canal = [aviso(4, 'e', manana), aviso(4, 'c', tarde), aviso(5, 'e', manana), aviso(4, 'p', Date.parse('2026-08-10T12:00:00'))];
+
+    expect(keepLatestPerGameDay(canal).map((entry) => entry.id).sort()).toEqual(['4:c', '4:p', '5:e']);
+  });
+});

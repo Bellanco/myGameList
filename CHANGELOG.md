@@ -17,6 +17,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - **Cambiar un filtro ya no hace que la pantalla entera se vaya y vuelva a entrar.** Pasaba en «¿A qué juego
   ahora?» y en los filtros de los listados: el cambio de pantalla se animaba también cuando solo cambiaba un filtro.
   Ahora solo se anima al pasar de una pantalla a otra.
+- **En el feed, un juego empezado y terminado (o abandonado) el mismo día sale solo con lo último.** Podían salir el
+  «comenzó» y el «finalizó» juntos: pasaba si el «finalizó» se publicaba al guardar una reseña, o con avisos de una
+  versión anterior. Ahora se corrige al publicar y también al leer, así que se limpia lo ya publicado. En días
+  distintos siguen saliendo los dos.
 
 ## [1.7.2] - 2026-10-13
 
