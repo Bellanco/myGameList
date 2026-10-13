@@ -121,7 +121,13 @@ const root = path.join(__dirname, '..');
 //
 // SUBIR EL CRÍTICO ES LO ÚLTIMO, y sigue exigiendo lo de siempre: rehacer las tres mediciones de arriba y
 // escribir aquí el resultado. Lo que hay que hacer ANTES está en la lista de palancas, por orden.
-const BOOT_CRITICAL_BUDGET_KB = 190;
+//
+// DE 190 A 195 (13-10-2026), POR DECISIÓN DEL USUARIO y SIN rehacer las tres mediciones: con el buscador general
+// dentro, el crítico estaba en 189,8 kB y quedaban 0,2 de margen, que no daban ni para un cambio normal. Lo nuevo
+// de ese día se hizo para no tocar el arranque (el buscador y su lupa llegan por `lazy()` en ocioso; ver
+// `GlobalSearch`), así que el número no subió por un pasajero. Las palancas de arriba siguen pendientes: la próxima
+// vez que el margen se acabe, toca medirlas antes de volver a subirlo.
+const BOOT_CRITICAL_BUDGET_KB = 195;
 const BOOT_TOTAL_BUDGET_KB = 240;
 const publicDir = path.join(root, 'public');
 const requiredFiles = [
