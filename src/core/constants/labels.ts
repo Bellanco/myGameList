@@ -236,6 +236,7 @@ export const UI_MESSAGES = {
   // evaluar el orden de encabezados. El resto de las vistas ya empiezan en h2, así que la jerarquía encaja.
   pageHeading: {
     lists: (tabTitle: string) => `Mis listas de juegos — ${tabTitle}`,
+    pick: '¿A qué juego ahora?',
     social: 'Social',
     settings: 'Ajustes',
     inbox: 'Bandeja de importados',

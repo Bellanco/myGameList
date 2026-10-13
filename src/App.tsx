@@ -81,6 +81,8 @@ const PremiosHub = lazy(() => import('./view/components/premios/PremiosHub').the
 // Panel "Perfil" (estadísticas). Perezoso como el resto de hubs: su código y su hoja de estilos solo se
 // descargan al entrar en la pestaña, así que no pesan en el arranque de los listados.
 const StatsHub = lazy(() => import('./view/components/stats/StatsHub').then((module) => ({ default: module.StatsHub })));
+// «¿A qué juego ahora?» (`/elegir`). Perezosa: su lógica, sus textos y su hoja solo bajan al entrar.
+const PickNextScreen = lazy(() => import('./view/components/pick/PickNextScreen').then((module) => ({ default: module.PickNextScreen })));
 // Las tres pantallas de Ajustes. Perezosas como el resto de hubs: sus textos (`settingsLabels`, 11 kB) y su
 // maquetación solo se descargan al entrar, no en el arranque de los listados.
 const PersonalizationSettings = lazy(() => import('./view/components/settings/PersonalizationSettings').then((module) => ({ default: module.PersonalizationSettings })));
@@ -162,6 +164,13 @@ const TOUR_SECTIONS: ReadonlySet<AppSection> = new Set<AppSection>(['lists', 'so
 const DevAnnouncement = import.meta.env.DEV
   ? lazy(() => import('./dev/DevAnnouncementScreen').then((module) => ({ default: module.DevAnnouncementScreen })))
   : null;
+
+/**
+ * «¿A QUÉ JUEGO AHORA?» ES DE QUIEN TIENE ESPACIO SOCIAL (decisión del usuario, 13-10-2026), salvo EN LOCAL: en el
+ * servidor de desarrollo no hay Firebase —las claves solo están en el despliegue—, así que nadie tiene sesión y la
+ * pantalla no se podría ver mientras se hace. En producción `DEV` es falso y la puerta queda solo en lo social.
+ */
+const PICK_OPEN_WITHOUT_SOCIAL = import.meta.env.DEV;
 
 /** Lo más que se espera a las carátulas de la lista nueva antes de cambiar de lista (ver `handleTabChange`). */
 const PLAZO_PRECARGA_MS = 160;
@@ -305,6 +314,17 @@ export default function App() {
       navigate(SETTINGS_ROUTES.data, { replace: true });
     }
   }, [authReady, hasSocialProfile, location.pathname, navigate]);
+  /**
+   * LA PUERTA DE «¿A QUÉ JUEGO AHORA?», en la ruta como la de Diseño: las dos entradas (el enlace de la ruleta y el
+   * buscador) ya no se ofrecen sin espacio social, pero la dirección se puede teclear. Se manda a Próximos, que es
+   * la lista de lo que se va a jugar.
+   */
+  const canPick = hasSocialProfile || PICK_OPEN_WITHOUT_SOCIAL;
+  useEffect(() => {
+    if (authReady && !canPick && activeSection === 'pick') {
+      navigate(TAB_ROUTE.p, { replace: true });
+    }
+  }, [authReady, canPick, activeSection, navigate]);
   /** Cuál de los tres grupos de Ajustes pide el camino; `null` es la portada. */
   const settingsGroup = matchSettingsGroup(location.pathname);
   const { filters, setFilter, toggleFilterValue, clearFilter, clearAllFilters } = useToolbarFilters();
@@ -701,6 +721,17 @@ export default function App() {
     handleTabChange('e');
   }, [vm, handleTabChange]);
 
+  // «¿A qué juego ahora?»: empezar un juego es lo mismo que hacerlo desde la ruleta —pasa a En curso y se va allí—.
+  const handlePickStart = useCallback((candidate: RouletteCandidate) => {
+    vm.moveGameToTab(candidate.sourceTab, candidate.game.id, 'e');
+    handleTabChange('e');
+  }, [vm, handleTabChange]);
+  // El enlace de la ruleta a la pantalla: se cierra el dado y se va con los filtros vacíos.
+  const handleRouletteBrowse = useCallback(() => {
+    setRouletteOpen(false);
+    navigate('/elegir');
+  }, [navigate]);
+
   const handleSectionChange = useCallback((section: AppSection) => {
     setExpandedId(null);
     if (section !== 'lists') {
@@ -1088,6 +1119,12 @@ export default function App() {
         />
       </>
     ),
+    pick: (
+
+      <Suspense fallback={<ScreenSkeleton />}>
+        <PickNextScreen games={vm.data} onStart={handlePickStart} />
+      </Suspense>
+    ),
     social: (
 
       // `fallback` con esqueleto, no `null`: el chunk del hub es lo primero que hay que descargar al entrar en
@@ -1361,7 +1398,8 @@ export default function App() {
           heredaría el apagado. Por lo mismo está fuera la barra inferior. */}
       <SettingsMenu hasSocialProfile={hasSocialProfile} onToggle={setSettingsMenuOpen} />
       <BottomNavigation
-        currentSection={activeSection}
+        // «¿A qué juego ahora?» cuelga de Listados: es de ahí de donde se llega y adonde se vuelve.
+        currentSection={activeSection === 'pick' ? 'lists' : activeSection}
         onSectionChange={handleSectionChange}
         settingsMenuOpen={settingsMenuOpen}
         socialStatus={socialStatus}
@@ -1415,6 +1453,7 @@ export default function App() {
             title={UI_MESSAGES.fab.roulette}
             data={vm.data}
             tag={(candidate) => TAB_TITLES[candidate.sourceTab]}
+            onBrowseAll={canPick ? handleRouletteBrowse : undefined}
             action={() => ({
               btnClass: 'btn-complete',
               icon: 'play',

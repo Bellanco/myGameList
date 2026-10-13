@@ -11,7 +11,7 @@ import { matchRoutes } from 'react-router-dom';
 import { LEGAL_ROUTES } from './legal';
 
 /** Zona de la app; decide la navegación inferior, el encabezado y el cromo alrededor del contenido. */
-export type AppSection = 'lists' | 'social' | 'stats' | 'settings' | 'inbox' | 'legal' | 'admin' | 'shared-review' | 'premios';
+export type AppSection = 'lists' | 'pick' | 'social' | 'stats' | 'settings' | 'inbox' | 'legal' | 'admin' | 'shared-review' | 'premios';
 
 export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = [
   { path: '/completados', section: 'lists' },
@@ -19,6 +19,10 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
   { path: '/en-curso', section: 'lists' },
   { path: '/proximos', section: 'lists' },
   { path: '/deseados', section: 'lists' },
+  // «¿A qué juego ahora?»: lo que se puede empezar, filtrado por género y plataforma. Sección propia y no una lista
+  // más, porque no lo es —ningún juego «está» ahí— y con la de listados saldrían las pestañas con una marcada. La
+  // barra de abajo la enciende como Listados (ver `App`). Solo con espacio social: la puerta la pone `App`.
+  { path: '/elegir', section: 'pick' },
   // Comodín: las sub-rutas sociales (perfil, directorio, solicitudes, detalle de reseña…) las resuelve el propio
   // hub con `matchSocialRoute`. Declararlas aquí una a una era la causa de la clase de fallo descrita arriba:
   // añadir una pantalla social obligaba a tocar este fichero o la ruta quedaba inaccesible.
