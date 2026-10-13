@@ -1171,3 +1171,24 @@
 @keyframes gl-type { to { width: calc(var(--n) * 1ch + .7ch); } }
 @keyframes gl-blink { 50% { opacity: 0; } }
 @keyframes gl-panel { 0% { opacity: 0; } 6%, 90% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ── LOS DOS BOTONES FLOTANTES DE ARRIBA: LOS DOS PORTALES. El del tema, naranja; la lupa del buscador, azul. Un aro
+   fino con un halo apenas, sobre la superficie: sutiles, como el resto de lo que flota. Al pasar por encima el aro se
+   enciende. ── */
+:root[data-palette="portal"] .floating-controls .btn-icon {
+  --portal-ring: var(--portal-orange);
+  background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--portal-ring) 10%, var(--surface)), var(--surface) 72%);
+  border-color: transparent;
+  box-shadow:
+    inset 0 0 0 1.5px color-mix(in srgb, var(--portal-ring) 55%, transparent),
+    0 0 10px color-mix(in srgb, var(--portal-ring) 16%, transparent),
+    var(--e2);
+}
+:root[data-palette="portal"] .floating-controls .search-launcher { --portal-ring: #29b6f6; }
+:root[data-palette="portal"] .floating-controls .btn-icon:hover {
+  color: var(--text);
+  background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--portal-ring) 18%, var(--surface)), var(--surface) 72%);
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--portal-ring) 85%, transparent),
+    0 0 16px color-mix(in srgb, var(--portal-ring) 35%, transparent);
+}

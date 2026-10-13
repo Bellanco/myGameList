@@ -22,6 +22,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ### Changed
 
+- **Los botones flotantes de arriba (tema y buscador) llevan el diseño de cada tema**, sutil: piedra pulida en «No
+  puedes pasar», pegatina con sombra dura en Persona, los dos portales (naranja y azul) en Portal, placa de HUD en
+  Cyberpunk, moldura de códice en Grimdark y marco de píxel en Sea of Stars. Arcade y Witcher ya los tenían.
 - **Publicar en el feed pasa a ser de oro para arriba.** Plata ya no ve el compositor; oro baja de 10.000 a 1.000
   caracteres por publicación y mithril sigue sin límite.
 - **Plata se queda en el retrato en las estadísticas de un amigo**, como bronce: las notas, el ratio y la exigencia

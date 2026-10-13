@@ -953,3 +953,29 @@
 @keyframes p5cal-hoy { to { transform: none; } }
 @keyframes p5cal-gira { to { transform: rotate(180deg); } }
 @keyframes p5cal-letra { from { opacity: 0; transform: scale(1.8) rotate(0); } }
+
+/* ── LOS DOS BOTONES FLOTANTES DE ARRIBA (tema y buscador): la pegatina de los botones (§3) en pequeño, redonda y con
+   la sombra dura corta, para que no le quite protagonismo a nada de lo que hay debajo. Al pasar por encima se
+   rellena de rojo, como los botones principales. ── */
+:root[data-palette="persona"] .floating-controls .btn-icon {
+  background: var(--surface);
+  border: 2px solid #0a0a0a;
+  color: var(--text);
+  box-shadow: 2px 2px 0 rgba(255, 78, 100, .55);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:root[data-palette="persona"][data-theme="light"] .floating-controls .btn-icon {
+  border-color: #151011;
+  box-shadow: 2px 2px 0 rgba(230, 0, 18, .3);
+}
+:root[data-palette="persona"] .floating-controls .btn-icon:hover {
+  background: var(--steam);
+  border-color: #0a0a0a;
+  color: #fff;
+  box-shadow: 3px 3px 0 rgba(255, 78, 100, .7);
+}
+:root[data-palette="persona"][data-theme="light"] .floating-controls .btn-icon:hover {
+  border-color: #151011;
+  box-shadow: 3px 3px 0 #151011;
+}

@@ -1108,3 +1108,19 @@
   30% { transform: translateX(calc(-50% + 3px)); }
   45%, 100% { opacity: 1; transform: translateX(-50%); }
 }
+
+/* ── LOS DOS BOTONES FLOTANTES DE ARRIBA (tema y buscador): una placa del HUD, casi cuadrada, con el filo cian tenue y
+   un brillo mínimo. Más apagada que los botones (el usuario pidió bajar el neón); al pasar por encima se enciende. ── */
+:root[data-palette="cyberpunk"] .floating-controls .btn-icon {
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--cyber-cyan) 6%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--cyber-cyan) 38%, transparent);
+  color: var(--cyber-cyan-fg, var(--cyber-cyan));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--cyber-cyan) 12%, transparent);
+}
+:root[data-palette="cyberpunk"] .floating-controls .btn-icon:hover {
+  background: color-mix(in srgb, var(--cyber-cyan) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--cyber-cyan) 75%, transparent);
+  color: var(--cyber-cyan-fg, var(--cyber-cyan));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--cyber-cyan) 30%, transparent);
+}

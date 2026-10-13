@@ -6,8 +6,7 @@
    mismo cristal y mismo `btn-icon` debajo, que es lo que visten los temas que tocan el botón del tema (Arcade, Witcher).
    Con `.floating-controls` delante para ganar a `.btn-icon`, que es del arranque. */
 .floating-controls .search-launcher {
-  width: 38px;
-  height: 38px;
+  /* Sin tamaño propio: el de `.btn-icon` (42 px), que es el que acaba teniendo el del tema. */
   color: var(--text-muted);
   background: var(--surface-glass);
   /* Transparente, como el del tema: a él se lo deja así `.btn-icon`, que va después en su hoja. */
