@@ -79,7 +79,7 @@ let pendingNotice: ReturnType<typeof setTimeout> | null = null;
 let noticeGiven = false;
 
 /** La versión que ejecuta ESTE documento. Cadena vacía cuando no se puede saber (desarrollo, HTML sin parchear). */
-function documentBuild(): string {
+export function documentBuild(): string {
   const meta = document.querySelector('meta[name="app-build"]');
   const value = meta?.getAttribute('content')?.trim() || '';
   return value === BUILD_TOKEN ? '' : value;

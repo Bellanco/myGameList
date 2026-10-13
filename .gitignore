@@ -10,6 +10,8 @@ erratas-biblioteca.md
 /yarn-debug.log*
 /yarn-error.log*
 /pnpm-debug.log*
+# Caché incremental de TypeScript (la deja `tsc -b`; `npm run typecheck` no la usa)
+*.tsbuildinfo
 
 # Ignorar build output (autogenerado por Vite)
 /dist/
