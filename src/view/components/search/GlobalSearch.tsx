@@ -225,6 +225,11 @@ function SearchPanel({ onClose, games, visibleTabs }: {
     } else if (event.key === 'Enter') {
       event.preventDefault();
       choose(options[activeIndex]);
+    } else if (event.key === 'Escape') {
+      // Cierra a la primera, como Spotlight. Sin esto, con texto escrito, Chrome gasta la primera pulsación en
+      // vaciar la caja y hacía falta una segunda para cerrar.
+      event.preventDefault();
+      onClose();
     }
   };
 
@@ -239,7 +244,8 @@ function SearchPanel({ onClose, games, visibleTabs }: {
         <input
           id={`${baseId}-input`}
           className="search-panel-input"
-          type="search"
+          type="text"
+          enterKeyHint="search"
           role="combobox"
           aria-expanded={options.length > 0}
           aria-controls={listId}

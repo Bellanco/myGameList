@@ -73,8 +73,6 @@ dialog.alert-dialog.search-dialog[open] { animation: searchDialogIn .2s cubic-be
   outline: none;
 }
 .search-panel-input::placeholder { color: var(--text-muted); opacity: 1; }
-/* La equis nativa de `type="search"`: ya está el botón de cerrar al lado. */
-.search-panel-input::-webkit-search-cancel-button { display: none; }
 
 
 .search-panel-results[hidden] { display: none; }

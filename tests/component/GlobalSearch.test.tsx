@@ -85,6 +85,14 @@ describe('GlobalSearch', () => {
     expect(dialog().open).toBe(true);
   });
 
+  it('Esc en la caja lo cierra a la primera, aunque haya texto', () => {
+    renderSearch();
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
+    fireEvent.change(input(), { target: { value: 'hades' } });
+    fireEvent.keyDown(input(), { key: 'Escape' });
+    expect(dialog().open).toBe(false);
+  });
+
   it('Esc lo cierra', () => {
     renderSearch();
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
