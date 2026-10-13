@@ -2,59 +2,75 @@
 
 Todo lo que hay que saber para añadir logros **sin volver a decidir nada**. El porqué de cada decisión está en
 [`../plan-logros.md`](../plan-logros.md); esto es el manual de la casa, escrito el día que la medalla dejó de ser
-un cuadro y pasó a ser un disco.
+un cuadro y pasó a ser un disco, y puesto al día cuando el disco pasó a ser un orbe (13-10-2026).
 
 ---
 
 ## 1. Cómo se ve una medalla, hoy
 
-**Un disco en penumbra.** Fondo pardo casi negro con un foco cálido entrando por arriba a la izquierda y el
-dibujo en oro recogiendo esa luz. La referencia es el tenebrismo —Caravaggio, Ribera— y no es un capricho: un
-disco oscuro con **una sola cosa iluminada dentro** es lo que aguanta los 28 px de la tira del feed sin volverse
-una mancha. Se eligió tras comparar seis direcciones (renacimiento, Witcher, cyberpunk, superrealismo, Like a
-Dragon y óleo generativo) sobre los mismos cuatro logros.
+**Un orbe de vidrio.** Una esfera oscura llena del color de su rareza —reflejo puntual arriba a la izquierda,
+cáustica abajo—, el dibujo en blanco encima y tres segmentos de luz en el canto. Es **la misma en los ocho temas y
+en los dos modos**: una medalla es un objeto, no cromo de la app, y el vidrio oscuro es lo que la hace legible sobre
+cualquier fondo. Sustituyó al disco en penumbra (fondo pardo y dibujo en oro) el 13-10-2026.
+
+**Cómo se llegó.** Se vieron en maqueta, sobre los cuatro tamaños reales y los ocho temas, cinco direcciones comunes
+—penumbra pulida como moneda, esmalte, cristal, plana y escudo hexagonal— y después cinco hermanas del cristal
+—con segmentos, tintado, gema, orbe y neón—. Se descartó antes **un material distinto por tema**: el usuario quiere
+la misma medalla en todos. Ganó el **orbe**, con el tramo contado en segmentos finos del color de su rareza.
 
 | Pieza | Valor |
 |---|---|
-| Forma | **Círculo**. El filo continuo es lo que permite que el grado se lea a 28 px |
-| Lado | **48 px** en el listado y en la tira de una ficha · 28 px en la tarjeta del feed · 72 px (`lg`) sin uso hoy |
-| Fondo | `radial-gradient` de tres pardos, foco al 27 % / 17 % — tokens `--ach-gnd-*` |
-| Dibujo | Trazo de **Lucide** sobre `viewBox` 24, al 54 % del disco, centrado al 45 % de alto |
-| Relieve | **Tres pasadas del mismo símbolo**: sombra negra (+0,5 / +0,7), oro (`#ach-lux`) y chispa clara (−0,3 / −0,4) |
-| Aura | Halo exterior de color: dice la **rareza** |
-| Temple | Filo interior en tres tramos: dice el **tramo de la escalera** |
+| Forma | **Círculo**. El canto continuo es donde viven los segmentos y lo que se lee a 28 px |
+| Lado | **34 px** en el listado · **48 px** en la tira de una ficha · **64 px** en el aviso · 28 px en la tarjeta del feed · 72 px (`lg`) sin uso hoy |
+| Volumen | Dos `radial-gradient` sobre `--rc`: la esfera (foco al 38 % / 30 %, hundida a casi negro en el canto) y la cáustica abajo |
+| Dibujo | Trazo de **Lucide** sobre `viewBox` 24, al 54 % del disco, centrado al 45 % de alto, en **blanco** |
+| Relieve | **Dos pasadas del mismo símbolo**: sombra negra (+0,25 / +0,55, grosor 3) y blanco (grosor 1,8), más un `drop-shadow` blanco leve |
+| Vidrio | `.ach-light`: el reflejo puntual, su halo y el oscurecido del canto. Al pasar el ratón, una franja de brillo la cruza |
+| Color | El de la **rareza** (`--rc`): llena la esfera, enciende los segmentos y hace el halo |
+| Segmentos | Tres arcos de 110° en el canto: dicen el **tramo de la escalera** |
 | Píldora | Cifra del escalón montada en el **canto de abajo**, sin unidad. No sale en `sm` (28 px) |
 
-**Las unidades del relieve son del `viewBox`, no píxeles de pantalla.** Es lo que hace que el desplazamiento
-encoja con el disco en vez de comerse el dibujo en la tira pequeña.
+**Las unidades del relieve son del `viewBox`, no píxeles de pantalla.** Es lo que hace que la sombra encoja con el
+disco en vez de comerse el dibujo en la tira pequeña.
 
 ### Las tres señales, y por qué van donde van
 
-- **Aura exterior → la rareza.** Escala de loot de RPG: gris común, verde infrecuente, morado raro, naranja
-  excepcional. Se salta el azul porque el azul es el acento de la app.
-- **Temple del filo → el tramo.** Cobre hasta 1/3 de la escalera, plata hasta 0,7, oro por encima
-  (`temperClass()` en `core/constants/achievementLabels.ts`).
+- **Color → la rareza.** Escala de loot de RPG: gris común, verde infrecuente, morado raro, naranja
+  excepcional. Se salta el azul porque el azul es el acento de la app. Es la misma escala que el canto de la fila
+  del listado, el chip y la sombra del aviso.
+- **Segmentos → el tramo.** Uno encendido hasta 1/3 de la escalera, dos hasta 0,7, los tres por encima
+  (`temperClass()` en `core/constants/achievementLabels.ts`; las clases siguen llamándose `is-temple-*`). Sin
+  tramo —primeros pasos, palmarés— el aro va entero.
 - **Píldora del canto → la cifra del escalón.** `×100` para lo que cuenta cosas, `≤5` en las descendentes, `75%`
   en la única de porcentaje y **la cifra sola** en las de racha —«12 meses seguidos» no son doce cosas contadas,
   así que ahí el aspa mentiría—. Va **sin unidad**: dentro de una escalera la unidad es siempre la misma, y la
   escribe la condición de la fila. Montada en el borde de abajo y no dentro, que es lo que la hace caber a 48 px:
-  centrada tapa el dibujo y en la esquina se sale por la curva. `medalThreshold()`.
+  centrada tapa el dibujo y en la esquina se sale por la curva. Tapa justo el hueco de abajo entre segmentos.
+  `medalThreshold()`.
 
-**El orden de los anillos es la mitad del diseño.** De fuera adentro: halo difuso → anillo de rareza → **canto
-negro** → filo del temple → cuerpo. Sin ese canto de por medio, a 48 px las dos señales se leen como una sola y
-el temple desaparece.
+**Por qué segmentos y no metal.** El filo de cobre, plata y oro obligaba a distinguir metales a 28 px, y además
+convivía en la ficha del hub con los metales del rango de perfil (`_tiers.scss`): dos escalas de metal a dos
+centímetros. Contados, el tramo se lee sin comparar colores y la colisión desaparece.
+
+**Los segmentos apagados son un SURCO oscuro, no un blanco tenue, y no llevan resplandor.** Las dos cosas se
+probaron: con apagados blancos y un halo desenfocado detrás, los tres se fundían en un aro entero y dejaban de
+contarse. Que sean finos (3 % del lado, con suelo de 1,5 px) es lo que los hace parte de la esfera y no un marco.
 
 **Tres tramos y no once no es una pérdida.** La cifra exacta ya la dicen el nombre del logro («Créditos finales
-V») y la condición de su fila. El temple es «vas empezando / por la mitad / estás arriba», de un vistazo y sin
-leer. Sustituye al numeral romano, que no sobrevivía a los 28 px.
+V») y la condición de su fila. Los segmentos son «vas empezando / por la mitad / estás arriba», de un vistazo y sin
+leer. Sustituyen al numeral romano, que no sobrevivía a los 28 px.
 
-**El bloqueado sí lleva temple, el oculto no.** De un logro bloqueado se enseña a propósito de qué va y por dónde
-va su escalera —es lo que hace útil la mitad de abajo del listado—; del oculto no se enseña nada. En el bloqueado
-el filo se queda en **peltre**: misma gradación, sin metal, para que no se lea como conseguido.
+**El bloqueado sí lleva tramo, el oculto no.** De un logro bloqueado se enseña a propósito de qué va y por dónde
+va su escalera —es lo que hace útil la mitad de abajo del listado—; del oculto no se enseña nada: sin dibujo, sin
+color (sale como común) y con los tres segmentos apagados. En el bloqueado el vidrio pierde el color y el halo, el
+dibujo queda a media luz y los segmentos en gris: **misma gradación, sin color**, para que no se lea como
+conseguido.
 
-> **⚑ Ojo con los metales del rango.** `_tiers.scss` usa bronce/plata/oro/mithril para el rango de perfil, y en la
-> ficha del hub esa muesca convive con la tira de medallas. Por eso el temple se queda en el **filo** —un hilo de
-> 2-3 px— y **nunca tiñe el cuerpo del disco**. Si algún día chirría, es esto lo que hay que revisar.
+**El brillo es a demanda.** Solo al pasar el ratón por una medalla conseguida. En bucle, sobre los cientos de la
+vista global, sería pintado continuo, que ya se midió caro en el scroll.
+
+**El palmarés de la porra usa la misma medalla** (`PalmaresMedal`): ahí `--rc` es el metal del puesto —oro,
+plata, bronce, cobre, azul de participar— en vez de la rareza, y el aro va entero.
 
 ---
 
@@ -69,7 +85,7 @@ Para añadir uno:
 1. Busca el icono en <https://lucide.dev/icons> y quédate con su nombre en PascalCase (`Trophy`, `Hourglass`).
 2. Saca sus paths del paquete UMD y pégalos como un `symbol` más, con `id="ach-<key de la escalera>"` y
    `viewBox="0 0 24 24"`. Los atributos van en camelCase (JSX): `strokeWidth`, `strokeLinecap`.
-3. **Sin `fill` y sin `stroke` propios.** El trazo lo pone la medalla; un `fill` codificado rompe las tres pasadas.
+3. **Sin `fill` y sin `stroke` propios.** El trazo lo pone la medalla; un `fill` codificado rompe las dos pasadas.
 
 ```bash
 # los paths de un icono, listos para pegar
@@ -112,14 +128,14 @@ En `core/achievements/catalog.ts`, un objeto en `LADDERS`:
 2. **Un `id` no se renombra ni se reutiliza jamás.** El nombre visible sí se puede retocar.
 3. **El orden de `LADDERS` es contrato**: el espejo que viaja al gist es un mapa de bits posicional, y reordenar
    reescribe la vitrina de todo el mundo. Los logros nuevos van **al final**.
-4. **Un dibujo por escalera, no por logro.** Los escalones comparten icono y los distingue el temple.
+4. **Un dibujo por escalera, no por logro.** Los escalones comparten icono y los distinguen los segmentos y la cifra.
 5. **La métrica es pura y se prueba con fechas fijas.** Nada de `Date.now()` dentro: `now` llega por parámetro.
 6. **Nada se compara contra `listedAt`.** En un juego catalogado hacia atrás esa fecha es la de catalogarlo, no la
    de que pasara nada: la definición ingenua de «Speedrun» daba 42 aciertos y los 42 eran falsos.
 7. **Guarda la ausencia de dato.** Si la métrica lee un campo que puede faltar, decide qué significa faltar: sin
    eso, «Lo terminé por orgullo» cuenta todos los completados *sin nota* y «Exterminatus» salta con la biblioteca
    vacía. En descendentes, el valor de respaldo es `UNREACHABLE`, nunca 0.
-8. **Los primeros pasos (`onboarding`) no puntúan ni se publican**, y con un solo escalón no llevan temple.
+8. **Los primeros pasos (`onboarding`) no puntúan ni se publican**, y con un solo escalón no tienen tramo: su aro va entero.
 
 ### Cómo se escribe la condición
 
@@ -170,6 +186,7 @@ es `compareEarned()` en `viewmodel/useAchievements.ts` y lo comparten la tira y 
 - [ ] `npx tsc --noEmit` y `npx eslint src tests`
 - [ ] Míralo **a 28 px** en la tarjeta del feed, no sólo en el listado: es el tamaño que mata dibujos
 - [ ] Míralo **bloqueado**: el dibujo tiene que seguir diciendo de qué va
+- [ ] Míralo en las **cuatro rarezas**: el dibujo blanco tiene que despegarse también del gris del común
 - [ ] Comprueba que el umbral es alcanzable de verdad — los del catálogo están **medidos** sobre una biblioteca
       real de 302 juegos, no supuestos (§6.8 del plan)
 - [ ] Si la escalera necesita un sello que no existe en bibliotecas antiguas, anótala como **dormida** y di qué le

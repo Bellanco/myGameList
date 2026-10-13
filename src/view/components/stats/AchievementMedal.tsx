@@ -20,7 +20,7 @@ export type MedalSize = 'lg' | 'toast' | 'md' | 'list' | 'sm';
 // cuatro filas —rótulo, nombre, descripción y, en el hito, la barra—. Con 48 entraban pegadas unas a otras.
 // `list` son 34: el listado se apretó a una fila de dos renglones —nombre y condición— y con los 48 de antes la
 // medalla mandaba en el alto de la fila y estiraba la lista a lo largo de quince pantallas. A 34 sigue teniendo
-// dibujo, filo y píldora legibles, que es lo que la distingue de la miniatura de 28 de la tira.
+// dibujo, segmentos y píldora legibles, que es lo que la distingue de la miniatura de 28 de la tira.
 const SIZES: Record<MedalSize, number> = { lg: 72, toast: 64, md: 48, list: 34, sm: 28 };
 
 interface AchievementMedalProps {
@@ -35,31 +35,30 @@ interface AchievementMedalProps {
 }
 
 /**
- * La medalla. UN DISCO EN PENUMBRA: fondo pardo casi negro con un foco cálido entrando por arriba a la
- * izquierda, y el dibujo en oro recogiendo esa luz. La referencia es el tenebrismo —Caravaggio, Ribera—, y no es
- * un capricho: un disco oscuro con una sola cosa iluminada dentro es lo que aguanta los 28 px de la tira de
- * novedades sin volverse una mancha.
+ * La medalla. UN ORBE DE VIDRIO: una esfera oscura llena del color de su rareza, con el reflejo arriba a la
+ * izquierda, el dibujo en blanco encima y tres segmentos de luz en el canto. Es la misma en los ocho temas y en
+ * los dos modos —un objeto, no cromo de la app—, y el vidrio oscuro es lo que la hace legible sobre cualquier
+ * fondo y a los 28 px de la tira de novedades (receta en `docs/logros/receta-medalla.md`).
  *
  * EL DIBUJO NO SE DIBUJA. Sale del sprite (`AchievementSprite`), que a su vez copia los trazos de Lucide, y aquí
- * se pinta TRES VECES sobre el mismo símbolo: una en negro desplazada hacia abajo —la sombra que proyecta—, otra
- * con el degradado de oro y una tercera, finísima y clara, desplazada al contrario. Esas tres pasadas son todo el
- * relieve; no hay filtro, no hay imagen y no hay coste por icono.
+ * se pinta DOS VECES sobre el mismo símbolo: una en negro desplazada hacia abajo —la sombra que lo despega del
+ * color— y otra en blanco. No hay imagen y no hay coste por icono.
  *
  * TRES SEÑALES Y CADA UNA EN SU CANAL, que es lo que impide que se pisen:
- *   · **aura exterior** → la RAREZA (escala de loot de RPG, saltándose el azul porque el azul es el acento)
- *   · **temple del filo** → el TRAMO de la escalera: cobre abajo, plata en medio, oro arriba
+ *   · **color del orbe y del aro** → la RAREZA (escala de loot de RPG, saltándose el azul porque es el acento)
+ *   · **segmentos del aro** → el TRAMO de la escalera: 1, 2 o 3 encendidos
  *   · **píldora del canto** → LA CIFRA de ese escalón: «×100», «≤5», «75%»
  *
  * LA PÍLDORA VA MONTADA EN EL BORDE DE ABAJO, no dentro. Es lo que la hace caber: a 48 px una pastilla centrada
- * en el disco tapaba el dibujo, y en la esquina se salía por la curva. Cruzando el canto se apoya en el filo,
- * deja el dibujo entero y gana el fondo oscuro que necesita para leerse.
+ * en el disco tapaba el dibujo, y en la esquina se salía por la curva. Cruzando el canto tapa justo el hueco de
+ * abajo entre segmentos, deja el dibujo entero y gana el fondo oscuro que necesita para leerse.
  *
  * Y VA SIN UNIDAD: dentro de una escalera la unidad es siempre la misma, así que «52» dice lo mismo que «52 sem»
  * en la mitad de sitio. La unidad la pone la fila del listado, que escribe la condición entera.
  *
  * NO SALE EN `sm` (28 px). Ahí no cabe nada legible y la tarjeta del feed no es un sitio donde se comparen
- * escalones; la señal de escalón que sí sobrevive a ese tamaño es el temple, que es del tamaño del disco entero.
- * Es también la razón por la que se retiró el numeral romano: el romano no sobrevivía a la tira y el filo sí.
+ * escalones; la señal de escalón que sí sobrevive a ese tamaño son los segmentos, que dan la vuelta al disco.
+ * Es también la razón por la que se retiró el numeral romano: el romano no sobrevivía a la tira y el canto sí.
  *
  * TODAS MIDEN EXACTAMENTE LO MISMO, tenga el logro el grado que tenga y esté conseguido, bloqueado u oculto: una
  * rejilla de medallas de distinto tamaño no cuadricula.
@@ -74,15 +73,15 @@ export const AchievementMedal = memo(function AchievementMedal({
   const side = SIZES[size];
   const locked = level < 1;
 
-  // EL TEMPLE DICE QUÉ ESCALÓN ES, no en qué nivel está: el nivel de un escalón solo puede ser 0 o 1, así que
-  // sacarlo del estado dejaría todas las medallas con el mismo filo.
+  // EL TEMPLE (los segmentos encendidos) DICE QUÉ ESCALÓN ES, no en qué nivel está: el nivel de un escalón solo
+  // puede ser 0 o 1, así que sacarlo del estado dejaría todas las medallas con el mismo aro.
   //
-  // Y EL OCULTO NO LO LLEVA, por lo mismo que no lleva su aura (§6.7): un filo de oro sobre un «?» dice que hay
-  // una escalera larga detrás y que estás al final de ella, que es media pista.
+  // Y EL OCULTO NO LO LLEVA, por lo mismo que no lleva su color (§6.7): tres segmentos encendidos sobre un «?»
+  // dicen que hay una escalera larga detrás y que estás al final de ella, que es media pista.
   const temper = masked ? '' : temperClass(def.grade, def.grades);
   // El OCULTO no la lleva —la cifra de un «?» dice cuántos escalones tiene la escalera y por dónde vas, que es
   // media pista (§6.7)—, y el bloqueado sí: ahí la cifra es el objetivo, que es lo que hace útil la mitad de
-  // abajo del listado. Lo que cambia en el bloqueado es el tono, como con el temple.
+  // abajo del listado. Lo que cambia en el bloqueado es el tono, como con los segmentos.
   const threshold = masked || size === 'sm' ? '' : medalThreshold(def.ladder, def.step, def.grades, def.descending);
 
   // El nombre accesible lo lleva la MEDALLA, no un `title`: el `title` no sale con teclado, no sale en táctil y
@@ -96,14 +95,14 @@ export const AchievementMedal = memo(function AchievementMedal({
 
   const classes = [
     'ach-medal',
-    // EL OCULTO NO LLEVA SU AURA. El aura dice la rareza, y la rareza de un oculto es una pista de cuál es: con
-    // seis excepcionales en el catálogo, un halo naranja sobre un «?» reduce la adivinanza a seis casillas. La
-    // regla del §6.7 es «nunca una pista», y esto lo era. Al conseguirlo aparece el aura como en cualquier otro.
+    // EL OCULTO NO LLEVA SU COLOR. El color dice la rareza, y la rareza de un oculto es una pista de cuál es: con
+    // seis excepcionales en el catálogo, un orbe naranja con un «?» reduce la adivinanza a seis casillas. La
+    // regla del §6.7 es «nunca una pista», y esto lo era. Al conseguirlo aparece el color como en cualquier otro.
     masked ? 'is-comun' : `is-${def.rarity}`,
     // EL BLOQUEADO SÍ LLEVA TEMPLE, y el oculto no. No es una excepción caprichosa: de un logro bloqueado se
     // enseña a propósito de qué va y por dónde va su escalera —es lo que hace útil la mitad de abajo del
-    // listado—, mientras que del oculto no se enseña nada. Lo que cambia en el bloqueado es el tono: el filo se
-    // queda en peltre, con la misma gradación pero sin metal, para que no se lea como conseguido.
+    // listado—, mientras que del oculto no se enseña nada. Lo que cambia en el bloqueado es el tono: los
+    // segmentos se quedan en gris, con la misma gradación pero sin color, para que no se lea como conseguido.
     masked ? '' : temper,
     locked ? 'is-locked' : '',
     masked ? 'is-hidden' : '',
@@ -124,11 +123,9 @@ export const AchievementMedal = memo(function AchievementMedal({
           <svg className="ach-art" viewBox="0 0 24 24">
             <g className="ach-sh"><use href={icon} /></g>
             <g className="ach-fg"><use href={icon} /></g>
-            <g className="ach-hl"><use href={icon} /></g>
           </svg>
         )}
         <span className="ach-light" />
-        <span className="ach-grain" />
       </span>
       {/* Decorativa: lo que dice el escalón a un lector de pantalla es el nombre del logro, que ya trae su
           romano del catálogo («Créditos finales V»). */}

@@ -720,8 +720,9 @@ export const AdminAchievements = memo(function AdminAchievements({
             return (
             <article className="admin-card admin-ach-ladder" key={ladder.key}>
               <header className="admin-ach-head">
-                {/* La medalla del ÚLTIMO escalón: es la que lleva el temple más alto, así que de un vistazo se ve
-                    el dibujo y hasta dónde llega la escalera. Bloqueada da igual — aquí no se mide a nadie. */}
+                {/* La medalla del ÚLTIMO escalón: es la que lleva el tramo más alto (los tres segmentos), así que de
+                    un vistazo se ve el dibujo y hasta dónde llega la escalera. Bloqueada da igual — aquí no se mide a
+                    nadie. */}
                 {steps.length > 0 ? (
                   <AchievementMedal def={steps[steps.length - 1]} level={1} size="md" />
                 ) : null}

@@ -53,7 +53,7 @@
 | Denominador | El catálogo cuenta **logros**, no niveles: la fracción se puede terminar (§6.3.1) |
 | Puntos del nivel | Por **rareza**, escala suave 5 / 10 / 25 / 60 por nivel alcanzado (§6.10.2) |
 | Nombres | **Con guiño a juegos concretos**, los temas de la app incluidos (eran seis; hoy son ocho paletas); la descripción siempre dice la condición (§6.11) |
-| Medalla | ⚑ **Disco en penumbra** (`styles/achievements.scss`; empezó cuadrada, de esquinas redondeadas), con un dibujo de Lucide por escalera en sprite perezoso: 66 símbolos (§8.5, `docs/logros/receta-medalla.md`) |
+| Medalla | ⚑ **Orbe de vidrio** desde el 13-10-2026 (`styles/achievements.scss`; empezó cuadrada, de esquinas redondeadas, y luego fue un disco en penumbra), con un dibujo de Lucide por escalera en sprite perezoso: 66 símbolos (§8.5, `docs/logros/receta-medalla.md`) |
 | Superficies, en detalle | Apartado en `/stats` bajo «Lo mejor de tu biblioteca» · tira **solo-imagen** bajo el nombre en la ficha · listado estilo Steam en `/logros` (§8.1, §8.1b, §8.2) |
 | El feed | Una entrada **por persona y día**, con todos sus logros dentro; sin filtro de rareza (§8.4) |
 | El momento | El desbloqueo se dice **cuando ocurre**, en la región viva que ya existe (§7.4) |

@@ -140,19 +140,28 @@ oro. Cambian tres cosas y cada una por una razón medida:
 3. **El grado**: **temple del filo** (cobre / plata / oro por tramos) en vez de numeral romano, que no sobrevivía
    a la tira pequeña.
 
-Los dos activos de arriba marcados como *históricos* describen el diseño anterior y se dejan como registro de lo
-que se probó. **La referencia viva es [`receta-medalla.md`](receta-medalla.md)**, que es también el manual para
-añadir logros nuevos sin volver a decidir nada.
+## ⚑ Revisión 13-10-2026: la penumbra se va, entra el orbe
+
+El disco se queda; cambia el material. La medalla es **un orbe de vidrio**: una esfera oscura llena del color de su
+rareza, con el dibujo en **blanco** y el tramo **contado** en tres segmentos finos del canto, en vez del filo de
+cobre, plata u oro. Sigue siendo la misma en los ocho temas y en los dos modos. Se eligió en maqueta entre once
+variantes (penumbra pulida, esmalte, cristal, plana, escudo hexagonal y cinco hermanas del cristal); el porqué de
+cada pieza está en la receta.
+
+Los activos de arriba marcados como *históricos* describen diseños anteriores y se dejan como registro de lo que se
+probó. **La referencia viva es [`receta-medalla.md`](receta-medalla.md)**, que es también el manual para añadir
+logros nuevos sin volver a decidir nada.
 
 ## La medalla, en corto
 
-Sólo lleva dos señales encima, cada una en su canal:
+Lleva tres señales, cada una en su canal:
 
-- **Aura exterior → la rareza.** Escala de loot de RPG: gris el común, verde el infrecuente, morado el raro,
-  naranja de legendario el excepcional. Se salta el azul de la escala clásica porque el azul es el acento de la
-  app y aparece por todas partes.
-- **Temple del filo → el tramo de la escalera**: cobre hasta un tercio, plata hasta 0,7, oro por encima. Entre el
-  aura y el filo va un canto negro, porque sin él las dos señales se leen como una sola.
+- **Color del orbe y del aro → la rareza.** Escala de loot de RPG: gris el común, verde el infrecuente, morado el
+  raro, naranja de legendario el excepcional. Se salta el azul de la escala clásica porque el azul es el acento de
+  la app y aparece por todas partes.
+- **Segmentos del aro → el tramo de la escalera**: uno encendido hasta un tercio, dos hasta 0,7, tres por encima.
+  Los apagados son un surco oscuro, no un blanco tenue, para que se cuenten sin dudar.
+- **Píldora del canto → la cifra del escalón** («×100»), salvo a 28 px.
 
 **Todas miden exactamente lo mismo**, tenga el logro el grado que tenga y esté conseguido, bloqueado u oculto.
 

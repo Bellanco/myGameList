@@ -12,9 +12,9 @@
 // que el empaquetador lo sacará a un chunk compartido. Como son rutas distintas, nunca hay dos sprites a la vez y
 // no hay colisión de `id` que temer; el prefijo `ach-` tampoco choca con el `icon-` del sprite general.
 //
-// EL DEGRADADO `#ach-lux` vive aquí y no en la hoja porque un `stroke` sólo puede referenciar un gradiente que
-// esté en el documento. Es el que convierte un icono de línea en metal iluminado: marfil arriba a la izquierda,
-// oro en el medio, pardo casi negro en la esquina que queda a la sombra.
+// SIN COLOR PROPIO. Los dibujos son trazo sin `fill` ni `stroke`: el color lo pone la medalla (blanco, desde el
+// 13-10-2026). Hasta entonces aquí vivían los degradados de oro y de los metales del palmarés (`#ach-lux-*`),
+// porque un `stroke` sólo puede referenciar un gradiente del documento; con el orbe dejaron de usarse.
 import { crearRelevoDeSprite } from './spriteRelay';
 
 /** Un solo sprite de medallas en el documento, aunque lo pidan varias pantallas a la vez (ver `spriteRelay`). */
@@ -27,42 +27,6 @@ export function AchievementSprite() {
 
   return (
     <svg aria-hidden="true" className="svg-sprite">
-      <defs>
-        <linearGradient id="ach-lux" x1="14%" y1="0%" x2="86%" y2="100%">
-          <stop offset="0" stopColor="#ffeec2" />
-          <stop offset="0.34" stopColor="#eab545" />
-          <stop offset="0.72" stopColor="#8e5c20" />
-          <stop offset="1" stopColor="#412a0f" />
-        </linearGradient>
-        {/* Los otros metales del PALMARÉS de la porra: el trofeo del segundo puesto es de plata, el del tercero de
-            bronce, el del cuarto y el quinto de cobre, y el de participar azul (ver `PalmaresMedal`). Misma
-            receta que `#ach-lux` —claro arriba a la izquierda, sombra casi negra en la esquina contraria— para que
-            el relieve sea el mismo y solo cambie la aleación. */}
-        <linearGradient id="ach-lux-plata" x1="14%" y1="0%" x2="86%" y2="100%">
-          <stop offset="0" stopColor="#ffffff" />
-          <stop offset="0.34" stopColor="#c9d2de" />
-          <stop offset="0.72" stopColor="#6d7684" />
-          <stop offset="1" stopColor="#2a2f37" />
-        </linearGradient>
-        <linearGradient id="ach-lux-bronce" x1="14%" y1="0%" x2="86%" y2="100%">
-          <stop offset="0" stopColor="#f3dcb0" />
-          <stop offset="0.34" stopColor="#b38a4e" />
-          <stop offset="0.72" stopColor="#6b4e25" />
-          <stop offset="1" stopColor="#2e210f" />
-        </linearGradient>
-        <linearGradient id="ach-lux-cobre" x1="14%" y1="0%" x2="86%" y2="100%">
-          <stop offset="0" stopColor="#ffd2b8" />
-          <stop offset="0.34" stopColor="#d8683c" />
-          <stop offset="0.72" stopColor="#86351a" />
-          <stop offset="1" stopColor="#3a160a" />
-        </linearGradient>
-        <linearGradient id="ach-lux-azul" x1="14%" y1="0%" x2="86%" y2="100%">
-          <stop offset="0" stopColor="#e2efff" />
-          <stop offset="0.34" stopColor="#6fa6ea" />
-          <stop offset="0.72" stopColor="#2f5d9c" />
-          <stop offset="1" stopColor="#142844" />
-        </linearGradient>
-      </defs>
         {/* Clapperboard */}
         <symbol id="ach-completados" viewBox="0 0 24 24"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z" /><path d="m6.2 5.3 3.1 3.9" /><path d="m12.4 3.4 3.1 4" /><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /></symbol>
         {/* DoorOpen */}

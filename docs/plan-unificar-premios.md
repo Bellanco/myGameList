@@ -303,9 +303,9 @@ Vive en `profiles/{uid}.palmares` (array, tope 50 entradas). Tres decisiones:
   `["schemaVersion", "uid", "profileId", "displayName", "photoURL", "social", "updatedAt", "tier", "createdAt",
   "achievements"]`. Sin tocar esa lista, **toda escritura del perfil sería denegada** en cuanto el documento tenga
   el campo: recuérdese que en un `update` por merge lo que se valida es el documento RESULTANTE.
-- **Se pinta con la receta de la medalla** (`docs/logros/receta-medalla.md`): disco en penumbra, icono de Lucide,
-  temple del filo. No abre una dirección visual nueva. La lámina descargable de GA se conserva aparte, como
-  «póster», que es otra cosa y se comparte distinto.
+- **Se pinta con la receta de la medalla** (`docs/logros/receta-medalla.md`): orbe de vidrio (desde el 13-10-2026;
+  antes, disco en penumbra), icono de Lucide, y el metal del puesto como color. No abre una dirección visual nueva.
+  La lámina descargable de GA se conserva aparte, como «póster», que es otra cosa y se comparte distinto.
 
 Y tres más que salieron al usarlo:
 

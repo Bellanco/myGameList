@@ -27,6 +27,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ### Changed
 
+- **Medallas de logro nuevas.** Cada logro es ahora un orbe de vidrio del color de su rareza (gris, verde, morado o
+  naranja), con el dibujo en blanco y un brillo al pasar el ratón. Lo alto que está en su escalera ya no lo dice el
+  metal del borde (cobre, plata, oro), sino tres segmentos del aro que se encienden uno a uno: se cuentan de un
+  vistazo, también en el feed. Es la misma medalla en todos los temas, y los trofeos del palmarés de la porra la
+  comparten con el color de su puesto.
 - **Los botones flotantes de arriba (tema y buscador) llevan el diseño de cada tema**, sutil: piedra pulida en «No
   puedes pasar», pegatina con sombra dura en Persona, los dos portales (naranja y azul) en Portal, placa de HUD en
   Cyberpunk, moldura de códice en Grimdark y marco de píxel en Sea of Stars. Arcade y Witcher ya los tenían.
