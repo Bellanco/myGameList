@@ -5,6 +5,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Added
+
+- **La ruleta enseña la carátula del juego elegido.** Si tienes las carátulas encendidas en Diseño y el juego tiene
+  una, sale a la izquierda de su nombre y entra con el mismo fundido que en el mosaico. Si no tiene, la tarjeta queda
+  como siempre, sin hueco. Vale para la ruleta de tus listados y para «Gira ahora» de «¿A qué juego ahora?». En la de
+  un perfil del social, solo para rango mithril.
+
 ### Changed
 
 - **El botón de volver es igual en todas las pantallas.** Dice «Volver» y va encima de la tarjeta de la pantalla,

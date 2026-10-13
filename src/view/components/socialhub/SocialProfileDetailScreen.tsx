@@ -37,7 +37,7 @@ import { isShareSeason } from '../../../core/stats/summaryYear';
 import { publicYearSummary } from '../../../core/stats/publicYearSummary';
 import { withFinishedOn, type FinishedGame } from '../../../core/utils/finishDates';
 import type { ProfileTier } from '../../../core/constants/tiers';
-import { DEFAULT_PROFILE_TIER } from '../../../core/constants/tiers';
+import { DEFAULT_PROFILE_TIER, canSeeSocialRouletteCovers } from '../../../core/constants/tiers';
 import type { RelationshipState } from '../../../model/types/social';
 import type { YearSummarySignal } from '../../../viewmodel/social/useYearSummarySignal';
 import { ScreenTitle } from './ScreenTitle';
@@ -840,6 +840,9 @@ function SocialProfileDetailScreenBase({
         title={SOCIAL_UI.feed.roulettePick}
         candidates={roulettePool}
         weight={profileWeight}
+        // La carátula del elegido, solo para mithril (decisión del usuario, 13-10-2026), y pedida como la tabla de
+        // este perfil: de lo ya resuelto y reaprovechando lo descargado.
+        cover={canSeeSocialRouletteCovers(viewerTier) ? { preferirConocidas: true, soloCache: true } : undefined}
         reviewAuthor={{ name: activeProfileDetail.displayName, photoURL: activeProfileDetail.photoURL }}
         action={
           onAddGame

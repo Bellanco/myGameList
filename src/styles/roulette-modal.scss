@@ -165,6 +165,28 @@
   from { opacity: 0; transform: translateX(-18px) scale(.97); }
   to { opacity: 1; transform: none; }
 }
+/* LA CARÁTULA DEL ELEGIDO, a la izquierda de su nombre (`RouletteCover`). El hueco está desde que sale el juego —con
+   la tarjeta, sin saltos del texto— y la imagen ENTRA igual que en la caja del mosaico: a cero mientras baja y, al
+   llegar, el mismo fundido con acercamiento (`coverIn`, `_table.scss`). La opacidad final la pone la regla, no la
+   animación, así que sin movimiento se ve igual. Si no llega, el hueco se va. Proporción de la imagen: 508×720. */
+.rl-card-top { display: flex; align-items: flex-start; gap: 16px; }
+.rl-card-head { flex: 1; min-width: 0; }
+/* Con carátula, lo que sigue (las etiquetas) se separa de ella lo mismo que se separaba de las estrellas. */
+.rl-card-top:has(.rl-card-cover) { margin-bottom: 13px; }
+.rl-card-cover {
+  flex: 0 0 auto;
+  width: 84px;
+  aspect-ratio: 508 / 720;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface-elevated);
+  box-shadow: var(--e2);
+}
+.rl-card-cover img { display: block; width: 100%; height: 100%; object-fit: cover; opacity: 0; }
+.rl-card-cover[data-carga="lista"] img { opacity: 1; }
+@media (prefers-reduced-motion: no-preference) {
+  .rl-card-cover[data-carga="lista"] img { animation: coverIn 1.8s ease-out; }
+}
 .rl-card-tag { font-size: var(--fs-3xs); letter-spacing: .14em; text-transform: uppercase; color: var(--fg-link); font-weight: 700; }
 .rl-card-name { font-size: var(--fs-2xl); line-height: 1.1; margin: 4px 0 6px; letter-spacing: -.01em; }
 .rl-card-stars { display: flex; align-items: center; gap: 6px; font-size: var(--fs-sm); margin-bottom: 13px; }

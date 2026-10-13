@@ -6,6 +6,7 @@ import {
   PROFILE_TIER,
   PROFILE_TIER_LABELS,
   PROFILE_TIERS,
+  canSeeSocialRouletteCovers,
 } from '../../src/core/constants/tiers';
 
 /**
@@ -39,5 +40,10 @@ describe('constantes de rango', () => {
     for (const tier of PROFILE_TIERS.filter((value) => value !== DEFAULT_PROFILE_TIER)) {
       expect(rulesFile, tier).toContain(`tier == '${tier}'`);
     }
+  });
+
+  // Decisión del usuario (13-10-2026): en la ruleta de un perfil del social, la carátula del elegido solo la ve mithril.
+  it('la carátula de la ruleta del social es solo de mithril', () => {
+    expect(PROFILE_TIERS.filter(canSeeSocialRouletteCovers)).toEqual([PROFILE_TIER.mithril]);
   });
 });

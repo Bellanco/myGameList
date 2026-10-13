@@ -172,6 +172,7 @@ export function PickNextScreen({ games, onStart, onBack }: PickNextScreenProps) 
           title={PICK_UI.spinTitle}
           candidates={shown}
           weight={weight}
+          cover={PEDIDO}
           tag={(candidate) => PICK_UI.listTag(candidate.sourceTab)}
           action={() => ({
             btnClass: 'btn-playing',
