@@ -40,9 +40,9 @@ const ligera: PremiosVoterStanding = { hasSocialAccount: false, tier: 'bronze' }
 describe('getOpportunities', () => {
   it('reparte el cupo por rango a quien tiene cuenta social', () => {
     expect(getOpportunities(social('bronze'))).toBe(5);
-    expect(getOpportunities(social('silver'))).toBe(10);
-    expect(getOpportunities(social('gold'))).toBe(15);
-    expect(getOpportunities(social('mithril'))).toBe(20);
+    expect(getOpportunities(social('silver'))).toBe(5);
+    expect(getOpportunities(social('gold'))).toBe(10);
+    expect(getOpportunities(social('mithril'))).toBe(15);
   });
 
   // LA LÍNEA DEL REQUISITO: sin cuenta social se vota una vez, aunque el admin le haya puesto rango a la cuenta
@@ -56,13 +56,13 @@ describe('getOpportunities', () => {
   it('el tope de correcciones es una oportunidad menos: la del envío', () => {
     expect(getMaxBallotEdits(ligera)).toBe(0);
     expect(getMaxBallotEdits(social('bronze'))).toBe(PREMIOS_OPPORTUNITIES_BY_TIER.bronze - 1);
-    expect(getMaxBallotEdits(social('mithril'))).toBe(19);
+    expect(getMaxBallotEdits(social('mithril'))).toBe(14);
   });
 });
 
 describe('getRemainingOpportunities', () => {
   it('sin papeleta están todas por gastar', () => {
-    expect(getRemainingOpportunities(null, social('silver'))).toBe(10);
+    expect(getRemainingOpportunities(null, social('gold'))).toBe(10);
   });
 
   it('descuenta el envío y las correcciones ya usadas', () => {

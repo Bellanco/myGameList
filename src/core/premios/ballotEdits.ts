@@ -8,9 +8,9 @@
  *
  *   sin cuenta social ......  1  (envía y queda como está)
  *   bronce .................  5  (el envío y 4 correcciones)
- *   plata .................. 10
- *   oro .................... 15
- *   mithril ................ 20
+ *   plata ..................  5  (lo mismo que bronce desde el 13-10-2026, decisión del usuario)
+ *   oro .................... 10
+ *   mithril ................ 15
  *
  * QUÉ ES «TENER CUENTA SOCIAL»: un perfil con canal (`social.enabled`). La CUENTA LIGERA que se crea al votar
  * —nombre, foto y pseudónimo, sin canal— no lo es, y por eso se queda en una oportunidad aunque exista su
@@ -32,9 +32,9 @@ import { isVotingOpenNow } from './votingSchedule';
 /** Oportunidades de quien tiene canal social, por rango. Espejo de `firestore.rules`. */
 export const PREMIOS_OPPORTUNITIES_BY_TIER: Record<ProfileTier, number> = {
   bronze: 5,
-  silver: 10,
-  gold: 15,
-  mithril: 20,
+  silver: 5,
+  gold: 10,
+  mithril: 15,
 };
 
 /** Oportunidades de quien vota sin cuenta social: una, la del envío. Espejo de `firestore.rules`. */

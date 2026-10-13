@@ -5,6 +5,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Changed
+
+- **Publicar en el feed pasa a ser de oro para arriba.** Plata ya no ve el compositor; oro baja de 10.000 a 1.000
+  caracteres por publicación y mithril sigue sin límite.
+- **Plata se queda en el retrato en las estadísticas de un amigo**, como bronce: las notas, el ratio y la exigencia
+  pasan a ser de oro para arriba.
+- **Menos oportunidades de papeleta en Premios:** bronce y plata 5, oro 10 y mithril 15 (antes 5, 10, 15 y 20).
+  Cambian las reglas de Firestore: hay que desplegarlas con el cliente.
+- **Más espera para actualizar el enlace del resumen del año:** bronce 7 días (antes 5) y plata 5 (antes 3).
+- **El feed de plata relee los gists de sus amistades cada 25 minutos** (antes, 20).
+
 ## [1.7.0] - 2026-10-12
 
 Una versión para **sentirse leído**: «Me gusta» en lo que escriben tus amigos, los textos legales en lenguaje claro,
