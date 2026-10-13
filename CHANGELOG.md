@@ -5,6 +5,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.7.2] - 2026-10-13
+
 ### Added
 
 - **«¿A qué juego ahora?»: elige el siguiente juego viendo todas las opciones.** Una pantalla nueva (`/elegir`) con
