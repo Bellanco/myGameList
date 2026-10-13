@@ -474,6 +474,15 @@
   gap: 1rem;
 }
 
+/* La fila del botón de volver, ENCIMA de la tarjeta (`HubBackRow`): mide y se centra como ella para que el botón
+   arranque en su borde izquierdo. */
+.hub-back-row {
+  grid-column: 1;
+  display: flex;
+  width: 100%;
+  margin-inline: auto;
+}
+
 .hub-hub-card {
   grid-column: 1;
   width: 100%;
@@ -497,7 +506,8 @@
   border-top: 2px solid rgba(var(--steam-rgb),.3);
 }@media (min-width: 62rem) {
 
-  .hub-hub-card {
+  .hub-hub-card,
+  .hub-back-row {
     width: min(92vw, 100%);
   }
 }
@@ -554,6 +564,10 @@
   gap: .6rem;
   align-items: center;
   min-width: 0;
+}
+/* Con el volver ya fuera de la fila (`HubBackRow`), hay pantallas que solo tienen el lado derecho: sigue a la derecha. */
+.hub-screen-actions-right:only-child {
+  margin-inline-start: auto;
 }
 
 .hub-requests-count {

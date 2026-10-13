@@ -111,7 +111,7 @@ export function AdminAnnouncement(props: AdminAnnouncementProps) {
     return (
       <section className="admin-hub admin-ann" aria-label={A.sectionAria}>
         <div className="admin-ann-bar">
-          <HubBackButton onBack={onBack} label={A.back} />
+          <HubBackButton onBack={onBack} destination={A.back} />
         </div>
         <div className="admin-card">
           <h2>{A.title}</h2>
@@ -212,7 +212,7 @@ function AnnouncementEditor({ current, onSave, onBack }: AdminAnnouncementProps 
       {/* Los dibujos de la rejilla no están en el sprite del arranque: viajan con esta pantalla. */}
       <AnnouncementSprite />
       <div className="admin-ann-bar">
-        <HubBackButton onBack={onBack} label={A.back} />
+        <HubBackButton onBack={onBack} destination={A.back} />
       </div>
 
       <div className="admin-card">

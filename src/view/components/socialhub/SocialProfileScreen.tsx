@@ -8,7 +8,6 @@ import { TAB_ORDER, TAB_TOOLTIPS } from '../../../core/constants/labels';
 import { type SocialUiLabels } from '../../../core/constants/socialLabels';
 import { HubScreen } from './HubScreen';
 import { HubStatus } from './HubStatus';
-import { HubBackButton } from './HubBackButton';
 import { PUBLIC_NAME_MAX_LENGTH } from '../../../core/security/sanitize';
 import type { TabId } from '../../../model/types/game';
 import type { ProfileTier } from '../../../core/constants/tiers';
@@ -143,6 +142,8 @@ export function SocialProfileScreen({
       ariaLabel={SOCIAL_UI.profile.sectionAria}
       title={SOCIAL_UI.profile.title}
       cardClassName="hub-profile-card"
+      // Sin perfil creado no hay actividad a la que volver: la pantalla es la puerta de entrada al social.
+      back={hasCreatedProfile ? { onBack: handleBack, destination: SOCIAL_UI.feed.backToFeed } : undefined}
       titleExtra={
         // Sin perfil creado manda «Sin publicar»: todo lo escrito está, por definición, sin guardar.
         <span
@@ -157,9 +158,6 @@ export function SocialProfileScreen({
     >
         <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.profile.actionsAria}>
           <div className="hub-screen-actions-left">
-            {hasCreatedProfile ? (
-              <HubBackButton onBack={handleBack} label={SOCIAL_UI.profile.toFeed} />
-            ) : null}
             <button
               className="btn btn-primary"
               type="button"

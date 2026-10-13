@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AchievementRow } from './AchievementRow';
 import { AchievementFigures } from './AchievementFigures';
 import { AchievementSprite } from '../AchievementSprite';
-import { HubBackButton } from '../socialhub/HubBackButton';
+import { HubBackRow } from '../socialhub/HubBackButton';
 import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 import { Icon } from '../Icon';
 import type { RarityMeasure } from '../../../core/achievements/pack';
@@ -51,6 +51,7 @@ interface AchievementsScreenProps {
   /** Texto bajo el título. */
   lead?: string;
   onBack?: () => void;
+  /** A dónde lleva el volver («Volver al panel»): el nombre accesible; el botón dice siempre «Volver». */
   backLabel?: string;
   /**
    * Ir y volver de los logros globales. Es el ÚNICO acceso a esa vista, y solo lo pasa el HUB SOCIAL.
@@ -130,6 +131,7 @@ export const AchievementsScreen = memo(function AchievementsScreen({
   return (
     <section className="hub-hub hub-screen ach-screen" aria-label={title}>
       <AchievementSprite />
+      {onBack ? <HubBackRow onBack={onBack} destination={backLabel || ACHIEVEMENTS_UI.back} /> : null}
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
         <header className="hub-screen-header">
           <div className="hub-hub-title-wrap">
@@ -138,16 +140,15 @@ export const AchievementsScreen = memo(function AchievementsScreen({
           <p>{subtitle}</p>
         </header>
 
-        <div className="hub-screen-actions" aria-label={title}>
-          <div className="hub-screen-actions-left">
-            {onBack ? <HubBackButton onBack={onBack} label={backLabel || ACHIEVEMENTS_UI.back} /> : null}
-            {/* LOS LOGROS GLOBALES se abren DESDE AQUÍ y solo desde aquí. Estuvieron en la barra de la ficha, y
-                ahí competían con «sus reseñas» y «sus estadísticas» sin ser de la misma familia: aquello dice
-                QUÉ mirar de esa persona, y esto es otra vista de la pantalla en la que ya estás.
+        {onToggleGlobals ? (
+          <div className="hub-screen-actions" aria-label={title}>
+            <div className="hub-screen-actions-left">
+              {/* LOS LOGROS GLOBALES se abren DESDE AQUÍ y solo desde aquí. Estuvieron en la barra de la ficha, y
+                  ahí competían con «sus reseñas» y «sus estadísticas» sin ser de la misma familia: aquello dice
+                  QUÉ mirar de esa persona, y esto es otra vista de la pantalla en la que ya estás.
 
-                Y «desde aquí» quiere decir desde esta pantalla EN EL HUB: en `/logros`, que es esta misma
-                pantalla montada por el panel, no llega `onToggleGlobals` y el botón no existe. */}
-            {onToggleGlobals ? (
+                  Y «desde aquí» quiere decir desde esta pantalla EN EL HUB: en `/logros`, que es esta misma
+                  pantalla montada por el panel, no llega `onToggleGlobals` y el botón no existe. */}
               <button
                 className={`btn btn-secondary ${global ? 'is-active' : ''}`.trim()}
                 type="button"
@@ -159,9 +160,9 @@ export const AchievementsScreen = memo(function AchievementsScreen({
                     sigues en los logros: lo que cambia es cuáles. */}
                 {global ? globalsBackLabel : ACHIEVEMENTS_UI.globalButton}
               </button>
-            ) : null}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <article className="hub-feed-card hub-feed-card-detail">
           <div className="hub-detail-metadata">

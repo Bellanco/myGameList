@@ -154,8 +154,8 @@ function libraryEntryTab(stamps: Partial<Record<TabId, number>> | undefined): Ta
  * Empate a milisegundos: gana el primero en `TAB_IDS` (`c`, `v`, `e`, `p`, `d`), que va del estado más avanzado al menos
  * avanzado. Guardar y mover en la misma operación estampa el mismo instante, y ahí lo que cuenta es el destino.
  */
-function keepLatestPerDay(entries: SocialMoveEntry[]): SocialMoveEntry[] {
-  const byDay = new Map<string, SocialMoveEntry>();
+function keepLatestPerDay<T extends SocialMoveEntry>(entries: readonly T[]): T[] {
+  const byDay = new Map<string, T>();
 
   for (const entry of entries) {
     const day = localDayKey(entry.at);
@@ -316,6 +316,24 @@ export function tabsShownOf(hiddenTabs: readonly TabId[]): TabId[] {
 }
 
 /**
+ * «Un juego, un mensaje al día: el último» sobre mensajes YA PUBLICADOS de UN autor (ver `keepLatestPerDay`).
+ *
+ * La proyección ya lo cumple, pero el canal no siempre es una proyección limpia: lo que publicó una versión anterior,
+ * lo que dos aparatos escribieron cada uno con su biblioteca, o un «comenzó» de por la mañana que sigue ahí cuando
+ * el «finalizó» de la tarde llega a rebufo de una reseña. Por eso se vuelve a aplicar al reconciliar el canal y al
+ * leerlo en el feed: quien empieza un juego y lo termina el mismo día tiene que salir terminándolo, y nada más.
+ */
+export function keepLatestPerGameDay<T extends SocialMoveEntry>(entries: readonly T[]): T[] {
+  const byGame = new Map<number, T[]>();
+  for (const entry of entries) {
+    const list = byGame.get(entry.gameId);
+    if (list) list.push(entry);
+    else byGame.set(entry.gameId, [entry]);
+  }
+  return [...byGame.values()].flatMap((list) => keepLatestPerDay(list));
+}
+
+/**
  * Une los mensajes visibles de UN autor con los de sus listas ocultas, para la cuenta de administración.
  *
  * Vuelve a aplicar «un juego, un mensaje al día: el último» sobre la unión, porque cada mitad se colapsó sin ver la
@@ -323,16 +341,7 @@ export function tabsShownOf(hiddenTabs: readonly TabId[]): TabId[] {
  * es el mismo con el que el feed titula los grupos, así que lo que queda junto bajo un día es lo que se ve junto.
  */
 export function withHiddenMoves<T extends SocialMoveEntry>(moves: readonly T[], hiddenMoves: readonly T[]): T[] {
-  if (hiddenMoves.length === 0) {
-    return [...moves];
-  }
-  const byGame = new Map<number, T[]>();
-  for (const entry of [...moves, ...hiddenMoves]) {
-    const list = byGame.get(entry.gameId);
-    if (list) list.push(entry);
-    else byGame.set(entry.gameId, [entry]);
-  }
-  return [...byGame.values()].flatMap((entries) => keepLatestPerDay(entries) as T[]);
+  return keepLatestPerGameDay([...moves, ...hiddenMoves]);
 }
 
 export interface ReconcileMoveChannelsInput {
@@ -450,5 +459,9 @@ export function reconcileMoveActivity(input: ReconcileMoveActivityInput): Social
     byId.set(entry.id, entry);
   }
 
-  return sortMoveEntries([...byId.values()]).slice(0, MOVE_ACTIVITY_MAX);
+  // Y lo que queda, un mensaje por juego y día. Lo conservado sin autoridad para juzgarlo puede chocar con lo
+  // proyectado: el «comenzó» de esta mañana sigue publicado cuando el «finalizó» de la tarde llega a rebufo de una
+  // reseña, que no retira nada. Gana el más reciente venga de donde venga, así que un aparato con la biblioteca
+  // atrasada tampoco puede tapar con su «comenzó» el «finalizó» que ya publicó otro.
+  return sortMoveEntries(keepLatestPerGameDay([...byId.values()])).slice(0, MOVE_ACTIVITY_MAX);
 }

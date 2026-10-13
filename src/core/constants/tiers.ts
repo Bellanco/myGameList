@@ -130,6 +130,23 @@ export function hasPostLengthLimit(tier: ProfileTier): boolean {
 }
 
 /**
+ * LA CARÁTULA EN LA RULETA DE UN PERFIL DEL SOCIAL (decisión del usuario, 13-10-2026): qué rangos la ven en el
+ * resultado de «Elige tu próximo juego». Solo mithril. En tus listados la ve todo el mundo con la preferencia de
+ * carátulas encendida; en el social cada tirada es un juego de otra biblioteca que resolver con el cupo de lo ajeno.
+ */
+export const PROFILE_TIER_ROULETTE_COVERS: Record<ProfileTier, boolean> = {
+  bronze: false,
+  silver: false,
+  gold: false,
+  mithril: true,
+};
+
+/** ¿Este rango ve la carátula del juego elegido en la ruleta de un perfil del social? */
+export function canSeeSocialRouletteCovers(tier: ProfileTier): boolean {
+  return PROFILE_TIER_ROULETTE_COVERS[tier];
+}
+
+/**
  * LAS ESCENAS DE EMPEZAR Y CERRAR UN JUEGO (decisión del usuario, 12-10-2026): qué rangos ven su casilla en Diseño.
  * Bronce no: a quien no la tiene no se le enseña ni la casilla, y nada en pantalla dice por qué (los rangos no se
  * nombran ante quien no administra).

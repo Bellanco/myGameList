@@ -10,6 +10,8 @@ import type { GameItem } from '../../../model/types/game';
 import { pickWeighted, type RouletteCandidate } from '../../../core/roulette/roulette';
 import { resolveGrade, resolveStars, STARS_MAX } from '../../../core/utils/scoreScale';
 import { useScoreScale } from '../../hooks/useScoreScale';
+import { useCovers } from '../../hooks/useCovers';
+import { coverDeCaja, type PedidoDePortada } from '../../../core/utils/coverDelListado';
 // La hoja del MODAL se importa AQUÍ y no desde `index.scss`: como el modal entra por `lazy()`, Vite emite su CSS
 // en el mismo chunk perezoso. El botón lanzador se queda en `_roulette.scss`, que sí va en el arranque: lo pinta
 // `App` desde el primer render.
@@ -49,6 +51,12 @@ interface RouletteModalProps {
    * listados, y solo con espacio social; sin ella no se pinta nada.
    */
   onBrowseAll?: () => void;
+  /**
+   * Cómo se pide la carátula del juego elegido (la misma política que el mosaico del sitio: los tuyos con el cupo
+   * entero, los de un perfil ajeno solo de caché). Sin ella no se pinta ninguna; con ella, manda además la
+   * preferencia de carátulas de Diseño.
+   */
+  cover?: PedidoDePortada;
 }
 
 // Geometría del tambor: ajustada para que se vean 7 nombres a la vez (aspecto circular).
@@ -92,9 +100,10 @@ function drumStyle(th: number, idle = false): CSSProperties {
   };
 }
 
-export function RouletteModal({ open, onClose, title, candidates, weight, tag, reviewAuthor, action, onBrowseAll }: RouletteModalProps) {
+export function RouletteModal({ open, onClose, title, candidates, weight, tag, reviewAuthor, action, onBrowseAll, cover }: RouletteModalProps) {
   const dialogRef = useNativeDialog(open, onClose);
   const scoreScale = useScoreScale();
+  const { covers } = useCovers();
   const stageRef = useRef<HTMLDivElement>(null);
   const posRef = useRef(0);
   const rafRef = useRef<number | null>(null);
@@ -254,6 +263,7 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
   const winnerGame = winner?.game ?? null;
   const resolvedAction = winnerGame && action ? action(winnerGame) : null;
   const tagText = winner && tag ? tag(winner) : ROULETTE_UI.defaultTag;
+  const winnerCover = winnerGame && cover ? coverDeCaja(covers, winnerGame, cover) : null;
 
   const handleAct = useCallback(() => {
     if (!winner || acted) return;
@@ -323,17 +333,25 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
                 <div className="rl-result-col">
                   {phase === 'result' && winnerGame ? (
                     <div className="rl-card">
-                      <div className="rl-card-tag">{tagText}</div>
-                      <h3 className="rl-card-name">{winnerGame.name}</h3>
-                      <div className="rl-card-stars" aria-label={resolveGrade(winnerGame) > 0 ? (scoreScale === 'grade' ? SCORE_UI.gradeAria(resolveGrade(winnerGame)) : SCORE_UI.starsOfAria(resolveStars(winnerGame), STARS_MAX)) : SCORE_UI.unscored}>
-                        {resolveGrade(winnerGame) > 0 ? (
-                          <>
-                            <ScoreDisplay game={winnerGame} />
-                            {scoreScale === 'stars' ? <small>{resolveStars(winnerGame)}/{STARS_MAX}</small> : null}
-                          </>
-                        ) : (
-                          <small>{SCORE_UI.unscored}</small>
-                        )}
+                      <div className="rl-card-top">
+                        {winnerCover?.src ? (
+                          // `key`: cada tirada estrena su imagen, y la carga empieza de cero (sin la anterior encima).
+                          <RouletteCover key={winnerCover.src} src={winnerCover.src} src2x={winnerCover.src2x} />
+                        ) : null}
+                        <div className="rl-card-head">
+                          <div className="rl-card-tag">{tagText}</div>
+                          <h3 className="rl-card-name">{winnerGame.name}</h3>
+                          <div className="rl-card-stars" aria-label={resolveGrade(winnerGame) > 0 ? (scoreScale === 'grade' ? SCORE_UI.gradeAria(resolveGrade(winnerGame)) : SCORE_UI.starsOfAria(resolveStars(winnerGame), STARS_MAX)) : SCORE_UI.unscored}>
+                            {resolveGrade(winnerGame) > 0 ? (
+                              <>
+                                <ScoreDisplay game={winnerGame} />
+                                {scoreScale === 'stars' ? <small>{resolveStars(winnerGame)}/{STARS_MAX}</small> : null}
+                              </>
+                            ) : (
+                              <small>{SCORE_UI.unscored}</small>
+                            )}
+                          </div>
+                        </div>
                       </div>
                       {winnerGame.platforms.length || winnerGame.genres.length ? (
                         <div className="rl-chips">
@@ -399,5 +417,27 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
         </div>
       ) : null}
     </dialog>
+  );
+}
+
+/**
+ * LA CARÁTULA DEL ELEGIDO, SOLO SI LA HAY. A diferencia de la caja del mosaico (`GameCover`), aquí no hay portada de
+ * casa de relleno: un juego sin carátula sale como siempre, sin hueco. Por eso no ocupa sitio hasta que la imagen
+ * llega, y si la petición falla (no tiene, o no hay cupo para resolverla) no aparece.
+ */
+function RouletteCover({ src, src2x }: { src: string; src2x: string | null }) {
+  const [estado, setEstado] = useState<'cargando' | 'lista' | 'sin'>('cargando');
+  if (estado === 'sin') return null;
+  return (
+    <div className="rl-card-cover" data-carga={estado} aria-hidden="true">
+      <img
+        src={src}
+        srcSet={src2x ? `${src} 1x, ${src2x} 2x` : undefined}
+        alt=""
+        decoding="async"
+        onLoad={() => setEstado('lista')}
+        onError={() => setEstado('sin')}
+      />
+    </div>
   );
 }

@@ -5,7 +5,7 @@ import { GameTable } from '../GameTable';
 import { STATS_UI } from '../../../core/constants/statsLabels';
 import { type SocialUiLabels } from '../../../core/constants/socialLabels';
 import { HubStatus } from './HubStatus';
-import { HubBackButton } from './HubBackButton';
+import { HubBackRow } from './HubBackButton';
 import { HubAvatar } from './HubAvatar';
 import { TAB_IDS, type GameItem, type TabId, type TabSort } from '../../../model/types/game';
 import { DEFAULT_SORT, nextSort, sortGames } from '../../../core/utils/sortGames';
@@ -37,7 +37,7 @@ import { isShareSeason } from '../../../core/stats/summaryYear';
 import { publicYearSummary } from '../../../core/stats/publicYearSummary';
 import { withFinishedOn, type FinishedGame } from '../../../core/utils/finishDates';
 import type { ProfileTier } from '../../../core/constants/tiers';
-import { DEFAULT_PROFILE_TIER } from '../../../core/constants/tiers';
+import { DEFAULT_PROFILE_TIER, canSeeSocialRouletteCovers } from '../../../core/constants/tiers';
 import type { RelationshipState } from '../../../model/types/social';
 import type { YearSummarySignal } from '../../../viewmodel/social/useYearSummarySignal';
 import { ScreenTitle } from './ScreenTitle';
@@ -504,17 +504,13 @@ function SocialProfileDetailScreenBase({
   if (!activeProfileDetail) {
     return (
       <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
+        <HubBackRow onBack={onBack} destination={SOCIAL_UI.feed.backToFeed} />
         <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
           <header className="hub-screen-header">
             <div className="hub-hub-title-wrap">
               <h2><ScreenTitle text={SOCIAL_UI.feed.profileDetailTitle} /></h2>
             </div>
           </header>
-          <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.profileDetailActionsAria}>
-            <div className="hub-screen-actions-left">
-              <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeed} />
-            </div>
-          </div>
           {profileLoading ? (
             /* CARGANDO, NO «NO SE ENCONTRÓ»: al recargar, el perfil llega con el directorio. El esqueleto ocupa lo que
                la cabecera del perfil —avatar grande y nombre— para que no salte al llegar. */
@@ -535,6 +531,7 @@ function SocialProfileDetailScreenBase({
   }
   return (
     <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
+      <HubBackRow onBack={onBack} destination={SOCIAL_UI.feed.backToFeed} />
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
         <header className="hub-screen-header">
           <div className="hub-hub-title-wrap">
@@ -549,7 +546,6 @@ function SocialProfileDetailScreenBase({
         </header>
         <div className="hub-screen-actions hub-screen-actions-split hub-profile-detail-actions" aria-label={SOCIAL_UI.feed.profileDetailActionsAria}>
           <div className="hub-screen-actions-left">
-            <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeedShort} ariaLabel={SOCIAL_UI.feed.backToFeed} />
             {canSeeFullProfile ? (
               <>
                 <button
@@ -844,6 +840,9 @@ function SocialProfileDetailScreenBase({
         title={SOCIAL_UI.feed.roulettePick}
         candidates={roulettePool}
         weight={profileWeight}
+        // La carátula del elegido, solo para mithril (decisión del usuario, 13-10-2026), y pedida como la tabla de
+        // este perfil: de lo ya resuelto y reaprovechando lo descargado.
+        cover={canSeeSocialRouletteCovers(viewerTier) ? { preferirConocidas: true, soloCache: true } : undefined}
         reviewAuthor={{ name: activeProfileDetail.displayName, photoURL: activeProfileDetail.photoURL }}
         action={
           onAddGame

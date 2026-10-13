@@ -15,7 +15,7 @@ import { useFeedMoveTabs } from '../../view/hooks/useFeedMoveTabs';
 import { TAB_ORDER } from '../../core/constants/labels';
 import { achievementFeedEntries, type AchievementFeedEntry } from '../../core/achievements/feed';
 import { yearSummaryFeedEntries, type YearSummaryFeedEntry } from '../../core/social/yearSummaryFeed';
-import { withHiddenMoves } from '../../core/social/moveActivity';
+import { keepLatestPerGameDay, withHiddenMoves } from '../../core/social/moveActivity';
 import { feedRecentSince } from '../../core/constants/socialLimits';
 import { ENABLE_ACHIEVEMENTS } from '../../core/achievements/flags';
 import type { ProfileTier } from '../../core/constants/tiers';
@@ -274,8 +274,12 @@ export function useSocialFeed(
       ? []
       : groupMovesByAuthorTabDay(
         directory
-          // La unión va por AUTOR: el colapso por día es por juego, y el mismo juego de dos personas son dos historias.
-          .flatMap((entry) => (isAdmin ? withHiddenMoves(entry.moves || [], entry.hiddenMoves || []) : entry.moves || []))
+          // Por AUTOR: el colapso por día es por juego, y el mismo juego de dos personas son dos historias. Y para TODOS,
+          // no solo con las ocultas: el canal de quien publicó con una versión anterior, o a rebufo de una reseña, puede
+          // traer el «comenzó» y el «finalizó» del mismo día, y de ese día solo cuenta lo último que hizo.
+          .flatMap((entry) => (isAdmin
+            ? withHiddenMoves(entry.moves || [], entry.hiddenMoves || [])
+            : keepLatestPerGameDay(entry.moves || [])))
           .filter((move) => visibleTabs.has(move.tab) && move.updatedAt >= movesSince),
       )
         // El agrupado va DESPUÉS del filtro de listas: un renglón cuenta solo juegos de una lista que se mira.

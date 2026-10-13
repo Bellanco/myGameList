@@ -1,8 +1,12 @@
 import { useMemo } from 'react';
 import { buildListsPool, buildListsWeigher } from '../../../core/roulette/roulette';
 import { RouletteModal, type RouletteAction } from './RouletteModal';
+import type { PedidoDePortada } from '../../../core/utils/coverDelListado';
 import type { RouletteCandidate } from '../../../core/roulette/roulette';
 import type { TabData } from '../../../model/types/game';
+
+/** Las carátulas son de TU biblioteca: se piden con el cupo entero, como en el mosaico de los listados. */
+const PEDIDO_PROPIO: PedidoDePortada = { preferirConocidas: false, soloCache: false };
 
 /**
  * LA RULETA DE LOS LISTADOS: el mismo modal de siempre, con el sorteo de los listados ya puesto.
@@ -33,5 +37,5 @@ interface ListsRouletteModalProps {
 export function ListsRouletteModal({ data, ...resto }: ListsRouletteModalProps) {
   const candidates = useMemo(() => buildListsPool(data), [data]);
   const weight = useMemo(() => buildListsWeigher(data), [data]);
-  return <RouletteModal candidates={candidates} weight={weight} {...resto} />;
+  return <RouletteModal candidates={candidates} weight={weight} cover={PEDIDO_PROPIO} {...resto} />;
 }

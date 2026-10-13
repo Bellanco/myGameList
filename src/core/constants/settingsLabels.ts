@@ -64,7 +64,6 @@ export const SETTINGS_UI = {
   legal: {
     title: 'Legal',
     subtitle: 'Condiciones de uso, tratamiento de datos, cookies y créditos.',
-    back: 'Volver',
     updated: (version: string) => `Última actualización: ${version}`,
     contact: 'Contacto',
   },

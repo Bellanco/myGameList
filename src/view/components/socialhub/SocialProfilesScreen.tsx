@@ -4,7 +4,6 @@ import { HubUserSection } from './HubUserSection';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import { HubScreen } from './HubScreen';
 import { HubStatus } from './HubStatus';
-import { HubBackButton } from './HubBackButton';
 import { FriendshipButton } from './FriendshipButton';
 import type { RelationshipState } from '../../../model/types/social';
 import type { SocialDirectoryEntry } from '../../../viewmodel/useSocialViewModel';
@@ -108,13 +107,8 @@ function SocialProfilesScreenBase({
     <HubScreen
       ariaLabel={SOCIAL_UI.profiles.sectionAria}
       title={SOCIAL_UI.profiles.title}
+      back={{ onBack, destination: SOCIAL_UI.profiles.back }}
     >
-        <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.profiles.actionsAria}>
-          <div className="hub-screen-actions-left">
-            <HubBackButton onBack={onBack} label={SOCIAL_UI.profiles.back} />
-          </div>
-        </div>
-
         <div className="hub-feed-toolbar" aria-label={SOCIAL_UI.profiles.toolbarAria}>
           <label className="hub-feed-search">
             <span>{SOCIAL_UI.profiles.searchLabel}</span>

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { HubBackRow, type HubBackButtonProps } from './HubBackButton';
 import { ScreenTitle } from './ScreenTitle';
 
 /**
@@ -8,8 +9,9 @@ import { ScreenTitle } from './ScreenTitle';
  * de ellas, una para el estado vacío y otra para el estado con datos—, siempre con el mismo marcado y la misma
  * jerarquía de clases. Va en la línea de `HubStatus`, `HubAvatar` y `HubBackButton`, que ya viven aquí.
  *
- * Lo que va debajo del encabezado —la fila de acciones con el botón "Atrás", el contenido, el `HubStatus`— lo
- * pone cada pantalla como `children`: es lo que de verdad cambia entre unas y otras.
+ * El botón de volver va ENCIMA de la tarjeta (`back`, ver `HubBackRow`). Lo que va debajo del encabezado —la fila
+ * de acciones, el contenido, el `HubStatus`— lo pone cada pantalla como `children`: es lo que de verdad cambia
+ * entre unas y otras.
  *
  * Tres pantallas se quedan fuera, y ninguna por olvido:
  *
@@ -29,6 +31,8 @@ export interface HubScreenProps {
   titleExtra?: ReactNode;
   /** Clase extra de la tarjeta. Casi todas usan la del feed; el perfil propio tiene la suya. */
   cardClassName?: string;
+  /** El botón de volver, encima de la tarjeta. Sin él, la pantalla no lo lleva. */
+  back?: HubBackButtonProps;
   children: ReactNode;
 }
 
@@ -37,10 +41,12 @@ export function HubScreen({
   title,
   titleExtra,
   cardClassName = 'hub-feed-card-shell',
+  back,
   children,
 }: HubScreenProps) {
   return (
     <section className="hub-hub hub-screen" aria-label={ariaLabel}>
+      {back ? <HubBackRow {...back} /> : null}
       <div className={`hub-hub-card hub-screen-card ${cardClassName}`.trim()}>
         <header className="hub-screen-header">
           <div className="hub-hub-title-wrap">

@@ -6,6 +6,7 @@ import { COMMON_ICONS } from '../../../core/constants/icons';
 import { normalizeName } from '../../../core/utils/normalizeName';
 import { copyText } from '../../../core/utils/clipboard';
 import { Icon } from '../Icon';
+import { HubBackButton } from '../socialhub/HubBackButton';
 import { ImportFieldPrefsCard } from './ImportFieldPrefsCard';
 import { ImportInboxTable } from './ImportInboxTable';
 import '../../../styles/import.scss';
@@ -75,10 +76,7 @@ function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, on
 
   const backRow = (
     <div className="import-actions">
-      <button type="button" className="btn btn-secondary btn-back" onClick={onBack}>
-        <Icon name={COMMON_ICONS.arrowBack} />
-        <span>{IMPORT_UI.back}</span>
-      </button>
+      <HubBackButton onBack={onBack} />
     </div>
   );
 

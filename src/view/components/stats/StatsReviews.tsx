@@ -1,7 +1,7 @@
 import { memo, useMemo } from 'react';
 import { STATS_UI } from '../../../core/constants/statsLabels';
 import { SOCIAL_UI } from '../../../core/constants/socialLabels';
-import { HubBackButton } from '../socialhub/HubBackButton';
+import { HubBackRow } from '../socialhub/HubBackButton';
 import { ProfileReviewsList, type ReviewEntry } from '../socialhub/ProfileReviewsList';
 import { SocialProfileReviewScreen } from '../socialhub/SocialProfileReviewScreen';
 import { RelatedReviews } from '../socialhub/RelatedReviews';
@@ -199,6 +199,7 @@ export const StatsReviews = memo(function StatsReviews({
 
   return (
     <section className="hub-hub hub-screen" aria-label={L.screenTitle}>
+      <HubBackRow onBack={onBack} destination={L.backToStats} />
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
         <header className="hub-screen-header">
           <div className="hub-hub-title-wrap">
@@ -206,12 +207,6 @@ export const StatsReviews = memo(function StatsReviews({
           </div>
           <p>{L.screenSubtitle}</p>
         </header>
-
-        <div className="hub-screen-actions" aria-label={L.screenTitle}>
-          <div className="hub-screen-actions-left">
-            <HubBackButton onBack={onBack} label={L.backToStats} />
-          </div>
-        </div>
 
         <article className="hub-feed-card hub-feed-card-detail">
           <div className="hub-detail-metadata">

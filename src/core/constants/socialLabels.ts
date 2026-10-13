@@ -349,9 +349,6 @@ export const SOCIAL_UI = {
     profileListTabPlanned: 'Próximos',
     profileListTabWished: 'Deseados',
     backToFeed: 'Volver a la actividad',
-    // En la fila de la ficha va corto: con «Volver a la actividad» Persona no cabía en una línea a 1280 junto a
-    // «Amigos». El nombre accesible sigue siendo el largo (`backToFeed`).
-    backToFeedShort: 'Volver',
     // Rótulos del volver cuando se ha llegado saltando de un análisis a otro por el bloque de relacionados: el
     // botón nombra el sitio al que de verdad se vuelve, no el que la pantalla tiene por defecto.
     backToReview: 'Volver al análisis',
@@ -459,7 +456,6 @@ export const SOCIAL_UI = {
     sectionAria: 'Social',
     actionsAria: 'Acciones del perfil social',
     title: 'Mi perfil social',
-    toFeed: 'Ir a la actividad',
     save: 'Guardar perfil',
     saving: 'Guardando perfil...',
     signOut: 'Cerrar sesión',

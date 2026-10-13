@@ -16,6 +16,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   lista. Arriba sale lo que la ruleta elegiría más a menudo. «Empezar» pasa el juego a En curso, y «Gira ahora» abre
   la ruleta solo con lo filtrado. Se llega desde la ruleta («¿A qué juego ahora?», bajo el resultado) y desde el
   buscador: escribir un género («FPS») ofrece elegir entre los tuyos de ese género. Necesita espacio social.
+- **La ruleta enseña la carátula del juego elegido.** Si tienes las carátulas encendidas en Diseño y el juego tiene
+  una, sale a la izquierda de su nombre y entra con el mismo fundido que en el mosaico. Si no tiene, la tarjeta queda
+  como siempre, sin hueco. Vale para la ruleta de tus listados y para «Gira ahora» de «¿A qué juego ahora?». En la de
+  un perfil del social, solo para rango mithril.
 
 ### Changed
 
@@ -23,6 +27,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   género: primero sale una por género y, si no hay bastantes, se repiten géneros pero nunca el mismo juego que ya
   tienes. El chip de género te lleva a tus Próximos filtrados por ese género, y el nombre del juego, a él. Las filas
   se ven más cuidadas, con un filete que va del color de Deseos al de Próximos.
+- **El botón de volver es igual en todas las pantallas.** Dice «Volver» y va encima de la tarjeta de la pantalla,
+  alineado con su borde izquierdo: en el social, las estadísticas, los logros, la bandeja, Legal, el panel de
+  administración y «¿A qué juego ahora?», que estrena el suyo hacia los listados. A dónde lleva lo sigue diciendo el
+  lector de pantalla («Volver a la actividad»).
+
+### Fixed
+
+- **Cambiar un filtro ya no hace que la pantalla entera se vaya y vuelva a entrar.** Pasaba en «¿A qué juego
+  ahora?» y en los filtros de los listados: el cambio de pantalla se animaba también cuando solo cambiaba un filtro.
+  Ahora solo se anima al pasar de una pantalla a otra.
+- **En el feed, un juego empezado y terminado (o abandonado) el mismo día sale solo con lo último.** Podían salir el
+  «comenzó» y el «finalizó» juntos: pasaba si el «finalizó» se publicaba al guardar una reseña, o con avisos de una
+  versión anterior. Ahora se corrige al publicar y también al leer, así que se limpia lo ya publicado. En días
+  distintos siguen saliendo los dos.
 
 ## [1.7.1] - 2026-10-13
 

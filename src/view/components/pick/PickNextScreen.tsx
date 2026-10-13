@@ -36,6 +36,7 @@ import { useCovers } from '../../hooks/useCovers';
 import { GameCover } from '../GameCover';
 import { Icon } from '../Icon';
 import { ScoreDisplay } from '../ScoreDisplay';
+import { HubBackRow } from '../socialhub/HubBackButton';
 import { ScreenTitle } from '../socialhub/ScreenTitle';
 import { RouletteModal } from '../roulette/RouletteModal';
 
@@ -52,9 +53,11 @@ interface PickNextScreenProps {
   games: TabData;
   /** Pasa el juego a En curso y lleva allí; es lo mismo que hace la ruleta de los listados. */
   onStart: (candidate: RouletteCandidate) => void;
+  /** Vuelve a los listados, de donde se llega (la ruleta y el buscador). */
+  onBack: () => void;
 }
 
-export function PickNextScreen({ games, onStart }: PickNextScreenProps) {
+export function PickNextScreen({ games, onStart, onBack }: PickNextScreenProps) {
   const [params, setParams] = useSearchParams();
   const filters = useMemo(() => parsePickFilters(params), [params]);
   const [allGenres, setAllGenres] = useState(false);
@@ -85,6 +88,7 @@ export function PickNextScreen({ games, onStart }: PickNextScreenProps) {
 
   return (
     <section className="hub-hub hub-screen pick-screen" aria-label={PICK_UI.title}>
+      <HubBackRow onBack={onBack} destination={PICK_UI.back} />
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
         {/* Solo el título: las pantallas no llevan subtítulo (decisión del usuario, 13-10-2026). */}
         <header className="hub-screen-header">
@@ -168,6 +172,7 @@ export function PickNextScreen({ games, onStart }: PickNextScreenProps) {
           title={PICK_UI.spinTitle}
           candidates={shown}
           weight={weight}
+          cover={PEDIDO}
           tag={(candidate) => PICK_UI.listTag(candidate.sourceTab)}
           action={() => ({
             btnClass: 'btn-playing',

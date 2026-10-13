@@ -7,7 +7,6 @@
 import type { ImportField } from '../../model/types/import';
 
 export const IMPORT_UI = {
-  back: 'Volver',
   integrations: {
     title: 'Integraciones',
     /* CINCO FRASES SEGUIDAS ERAN UN MURO. Decían cosas distintas —qué hace, qué necesitas, de dónde trae,

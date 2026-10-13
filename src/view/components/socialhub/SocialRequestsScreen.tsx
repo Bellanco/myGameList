@@ -5,7 +5,6 @@ import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import type { ProfileTier } from '../../../core/constants/tiers';
 import { HubScreen } from './HubScreen';
 import { HubStatus } from './HubStatus';
-import { HubBackButton } from './HubBackButton';
 import type { LikeNotification } from '../../../core/social/likeNotifications';
 
 /**
@@ -73,11 +72,7 @@ export function SocialRequestsScreen({
   const R = SOCIAL_UI.requests;
 
   return (
-    <HubScreen ariaLabel={R.sectionAria} title={R.title}>
-
-        <div className="hub-screen-actions" aria-label={R.actionsAria}>
-          <HubBackButton onBack={onBack} label={R.back} />
-        </div>
+    <HubScreen ariaLabel={R.sectionAria} title={R.title} back={{ onBack, destination: R.back }}>
 
         {loading ? (
           <div className="hub-user-grid" aria-hidden="true">
