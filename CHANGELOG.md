@@ -34,6 +34,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ### Fixed
 
+- **«Sin conexión» con la red funcionando tras un despliegue.** Con la aplicación abierta mucho tiempo (la PWA de la
+  tablet), el segundo despliegue ya no recargaba la página al entrar en una sección que no estaba cargada (el social,
+  las estadísticas): la pieza ya no existía en el servidor y el aviso lo contaba como falta de conexión. Ahora se
+  recarga una vez por versión, no una vez por pestaña.
 - **Cambiar un filtro ya no hace que la pantalla entera se vaya y vuelva a entrar.** Pasaba en «¿A qué juego
   ahora?» y en los filtros de los listados: el cambio de pantalla se animaba también cuando solo cambiaba un filtro.
   Ahora solo se anima al pasar de una pantalla a otra.

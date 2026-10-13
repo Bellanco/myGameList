@@ -8,7 +8,7 @@ import { readPublicShareToken } from './model/repository/publicShareRepository';
 import { runMigration } from './model/repository/dataMigrationRepository';
 import { runWhenIdle } from './core/utils/idle';
 import { vigilarAlmacenamientoDuradero } from './core/utils/durableStorage';
-import { registerServiceWorker } from './core/utils/appUpdate';
+import { documentBuild, registerServiceWorker } from './core/utils/appUpdate';
 import { readAnalyticsConsent } from './model/repository/analyticsConsentRepository';
 import { listenForInstallPrompt } from './model/repository/installPromptRepository';
 import { isOffline } from './core/utils/network';
@@ -77,9 +77,13 @@ function bootApp(): void {
 
   // Tras un despliegue, un index.html cacheado apunta a chunks que ya no existen: cualquier `import()` diferido
   // (modales, hub social, y con él la publicación de actividad de reseña) falla en silencio hasta recargar.
-  // Vite emite `vite:preloadError` en ese caso: se recarga UNA vez por pestaña (el flag evita el bucle si el
-  // fallo no era de caché sino de red persistente).
+  // Vite emite `vite:preloadError` en ese caso: se recarga UNA vez POR BUILD. La marca guarda la versión que
+  // ejecutaba la página al recargar: si tras la recarga vuelve a fallar la MISMA versión, el fallo no era de
+  // caché sino de red persistente y se corta el bucle. Antes era una vez por pestaña, y en una PWA que no se
+  // cierra nunca el segundo despliegue ya no recargaba: el chunk fantasma caía al boundary raíz, que lo contaba
+  // como «sin conexión» con la red funcionando (13-10-2026, dos despliegues el mismo día).
   const PRELOAD_RELOAD_FLAG = 'myGameList.preloadReloaded';
+  const pageBuild = documentBuild();
   window.addEventListener('vite:preloadError', (event) => {
     // SIN RED no se recarga: el chunk no falló por un despliegue nuevo, sino porque no hay conexión y todavía no
     // estaba en la caché del service worker. Recargar no lo traería —y además tira el estado de la pantalla y la
@@ -89,10 +93,10 @@ function bootApp(): void {
       return;
     }
     try {
-      if (sessionStorage.getItem(PRELOAD_RELOAD_FLAG)) {
-        return; // ya se recargó en esta pestaña: dejar que el error siga su curso normal
+      if (sessionStorage.getItem(PRELOAD_RELOAD_FLAG) === pageBuild) {
+        return; // esta versión ya recargó y sigue fallando: dejar que el error siga su curso normal
       }
-      sessionStorage.setItem(PRELOAD_RELOAD_FLAG, '1');
+      sessionStorage.setItem(PRELOAD_RELOAD_FLAG, pageBuild);
     } catch {
       return; // sin sessionStorage no hay forma de acotar el bucle: mejor no recargar
     }
