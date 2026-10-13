@@ -16,6 +16,7 @@ export const SEARCH_UI = {
   // Corto a propósito (decisión del usuario, 13-10-2026): sin instrucciones dentro del panel.
   placeholder: 'Buscar',
   groups: {
+    pick: 'Elegir a qué jugar',
     games: 'Tus juegos',
     reviews: 'Reseñas',
     friends: 'Amistades',
@@ -32,8 +33,11 @@ export const SEARCH_UI = {
     friend: 'Perfil de tu amistad',
     page: 'Pantalla',
     settings: 'Ajustes',
+    /** Un género en «Elegir a qué jugar»: cuántos juegos de ese género se pueden empezar. */
+    pickGenre: (count: number) => `${count} ${count === 1 ? 'opción' : 'opciones'} para empezar`,
   },
   pages: {
+    pick: '¿A qué juego ahora?',
     stats: 'Estadísticas',
     achievements: 'Logros',
     reviews: 'Mis reseñas',

@@ -7,6 +7,7 @@ import { SETTINGS_ROUTES } from '../../core/constants/routes';
 import { STATS_REVIEWS_ROUTE, statsReviewPath } from '../../core/utils/reviewPath';
 import { friendUidsFromDirectoryKey } from '../../core/social/directoryFriendsKey';
 import type { SearchSource } from '../../core/search/globalSearch';
+import { buildPickPool, pickOptions, pickPath, EMPTY_PICK_FILTERS, PICK_ROUTE } from '../../core/pick/pickNext';
 import { TAB_IDS, type TabData, type TabId } from '../../model/types/game';
 import { getSocialSyncConfig } from '../../model/repository/gistConfigRepository';
 import { getLocalMeta, peekCachedSocialDirectory } from '../../model/repository/indexedDbRepository';
@@ -35,6 +36,19 @@ export function ownReviewSearchSources(data: TabData): SearchSource[] {
       detail: SEARCH_UI.details.ownReview,
       path: statsReviewPath(game.id, game.name),
     })));
+}
+
+/**
+ * Los géneros de «¿A qué juego ahora?»: uno por género que tenga algo que empezar, con cuántos, y que lleva a la
+ * pantalla con ese género ya marcado. Lo que se busca es el género («FPS»), no la frase.
+ */
+export function pickSearchSources(data: TabData): SearchSource[] {
+  return pickOptions(buildPickPool(data), EMPTY_PICK_FILTERS, 'genres').map(({ value, count }) => ({
+    id: `pick:genre:${value}`,
+    title: value,
+    detail: SEARCH_UI.details.pickGenre(count),
+    path: pickPath({ genres: [value], platforms: [] }),
+  }));
 }
 
 /** Lo justo de una entrada del directorio guardado. */
@@ -92,10 +106,12 @@ export function friendSearchSources(
  * Las pantallas, con las mismas puertas que la navegación: Deseados solo si la lista está activa, y lo que exige espacio
  * social (Perfiles, Diseño) solo con él. Las palabras clave encuentran la pantalla por lo que hay en ella.
  */
-export function pageSearchSources({ visibleTabs, hasSocial, achievements }: {
+export function pageSearchSources({ visibleTabs, hasSocial, achievements, pick = hasSocial }: {
   visibleTabs: readonly TabId[];
   hasSocial: boolean;
   achievements: boolean;
+  /** «¿A qué juego ahora?». Va con lo social, salvo en desarrollo (ver `GlobalSearch`). */
+  pick?: boolean;
 }): SearchSource[] {
   const P = SEARCH_UI.pages;
   const D = SEARCH_UI.details;
@@ -106,6 +122,7 @@ export function pageSearchSources({ visibleTabs, hasSocial, achievements }: {
     path: TAB_ROUTE[tab],
     keywords: 'lista listados',
   }));
+  if (pick) pages.push({ id: 'page:pick', title: P.pick, detail: D.page, path: PICK_ROUTE, keywords: 'elegir siguiente juego jugar ruleta dado empezar' });
   pages.push({ id: 'page:stats', title: P.stats, detail: D.page, path: '/stats', keywords: 'resumen numeros graficas' });
   pages.push({ id: 'page:reviews', title: P.reviews, detail: D.page, path: STATS_REVIEWS_ROUTE, keywords: 'reseñas analisis' });
   if (achievements) pages.push({ id: 'page:achievements', title: P.achievements, detail: D.page, path: '/logros', keywords: 'medallas trofeos' });

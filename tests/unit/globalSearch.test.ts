@@ -11,7 +11,7 @@ const src = (id: string, title: string, extra: { detail?: string; keywords?: str
   path: `/${id}`,
   ...(extra.keywords ? { keywords: extra.keywords } : {}),
 });
-const EMPTY: SearchSources = { games: [], reviews: [], friends: [], pages: [] };
+const EMPTY: SearchSources = { pick: [], games: [], reviews: [], friends: [], pages: [] };
 
 describe('normalizeSearchText', () => {
   it('quita acentos, mayúsculas, apóstrofes y signos', () => {
@@ -49,6 +49,7 @@ describe('runSearch', () => {
 
   it('agrupa en orden fijo y ordena por parecido', () => {
     const groups = runSearch({
+      pick: [],
       games: [src('g2', 'The Hades Game'), src('g1', 'Hades')],
       reviews: [src('r1', 'Hades', { detail: 'Reseña de Marta' })],
       friends: [src('f1', 'Marta')],
@@ -76,5 +77,17 @@ describe('runSearch', () => {
       pages: [src('diseno', 'Diseño', { keywords: 'ajustes tema' }), src('ajustes', 'Ajustes de algo')],
     }, 'ajustes');
     expect(pages.results.map((result) => result.id)).toEqual(['ajustes', 'diseno']);
+  });
+
+  it('orden: juegos, reseñas, «Elegir a qué jugar», pantallas y, al final, amistades', () => {
+    const groups = runSearch({
+      pick: [src('pick-fps', 'FPS', { detail: '25 opciones para empezar' })],
+      games: [src('g1', 'FPS Chess')],
+      reviews: [src('r1', 'FPS Chess', { detail: 'Reseña de Marta' })],
+      friends: [src('f1', 'FPS Fan')],
+      pages: [src('p1', 'Filtros', { keywords: 'fps' })],
+    }, 'fps');
+    expect(groups.map((group) => group.kind)).toEqual(['games', 'reviews', 'pick', 'pages', 'friends']);
+    expect(groups[2].results[0]).toMatchObject({ group: 'pick', title: 'FPS', path: '/pick-fps' });
   });
 });

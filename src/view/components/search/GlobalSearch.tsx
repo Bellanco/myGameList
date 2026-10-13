@@ -25,7 +25,14 @@ import {
   loadSocialSearchSources,
   ownReviewSearchSources,
   pageSearchSources,
+  pickSearchSources,
 } from '../../../viewmodel/search/searchSources';
+
+/**
+ * «¿A qué juego ahora?» es de quien tiene espacio social, salvo en el servidor de desarrollo, donde no hay Firebase ni,
+ * por tanto, sesión: es la misma excepción que hace `App` con la ruta. En producción `DEV` es falso.
+ */
+const PICK_WITHOUT_SOCIAL = import.meta.env.DEV;
 
 /**
  * La lupa del botón flotante: «sistrix», de la colección de marcas de Font Awesome Free 7 (elección del usuario,
@@ -183,12 +190,16 @@ function SearchPanel({ onClose, games, visibleTabs }: {
     };
   }, []);
 
-  const sources = useMemo(() => ({
-    games: gameSearchSources(games, visibleTabs),
-    reviews: [...ownReviewSearchSources(games), ...social.reviews],
-    friends: social.friends,
-    pages: pageSearchSources({ visibleTabs, hasSocial: social.hasSocial, achievements: ENABLE_ACHIEVEMENTS }),
-  }), [games, visibleTabs, social]);
+  const sources = useMemo(() => {
+    const pick = social.hasSocial || PICK_WITHOUT_SOCIAL;
+    return {
+      pick: pick ? pickSearchSources(games) : [],
+      games: gameSearchSources(games, visibleTabs),
+      reviews: [...ownReviewSearchSources(games), ...social.reviews],
+      friends: social.friends,
+      pages: pageSearchSources({ visibleTabs, hasSocial: social.hasSocial, achievements: ENABLE_ACHIEVEMENTS, pick }),
+    };
+  }, [games, visibleTabs, social]);
 
   const groups = useMemo(() => runSearch(sources, query, expanded), [sources, query, expanded]);
 
