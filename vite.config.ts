@@ -6,7 +6,11 @@ import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 // El MISMO saneado que usan el cliente y la Pages Function: el servidor de desarrollo no puede ser más
 // permisivo que producción, o se prueba con textos que en la web real se recortan.
-import { sanitizeAnnouncement } from './src/core/announcement/announcement';
+import {
+  pushAnnouncementHistory,
+  sanitizeAnnouncement,
+  sanitizeAnnouncementHistory,
+} from './src/core/announcement/announcement';
 import { githubOAuthDevMiddleware } from './scripts/devGithubOAuth';
 // Y el MISMO saneado de la foto del calendario de la porra, por lo mismo: el servidor de desarrollo no puede
 // guardar algo que la Pages Function rechazaría.
@@ -204,10 +208,20 @@ function notFoundShell(): Plugin {
  * levantado el servidor en su propia máquina.
  *
  * EL AVISO VIVE EN UN FICHERO IGNORADO (`.announcement.local.json`), no en memoria: así sobrevive al reinicio
- * del servidor, se puede editar a mano y se borra solo con borrar el fichero.
+ * del servidor, se puede editar a mano y se borra solo con borrar el fichero. El HISTORIAL (`?history=1`), en otro
+ * (`.announcement.history.local.json`), con la misma regla que la función: entra el anterior solo si cambia la
+ * campaña.
  */
 function localAnnouncementApi(): Plugin {
   const FILE = new URL('./.announcement.local.json', import.meta.url);
+  const HISTORY_FILE = new URL('./.announcement.history.local.json', import.meta.url);
+  const readJson = (file: URL): unknown => {
+    try {
+      return JSON.parse(readFileSync(file, 'utf-8'));
+    } catch {
+      return null;
+    }
+  };
   const ROUTE = '/api/announcement';
 
   const send = (res: ServerResponse, status: number, body: unknown): void => {
@@ -231,13 +245,12 @@ function localAnnouncementApi(): Plugin {
         }
 
         if (req.method === 'GET') {
-          let stored: unknown = null;
-          try {
-            stored = JSON.parse(readFileSync(FILE, 'utf-8'));
-          } catch {
-            // No hay aviso publicado en este entorno, que es el estado normal.
+          if (new URL(req.url, 'http://localhost').searchParams.get('history') === '1') {
+            send(res, 200, sanitizeAnnouncementHistory(readJson(HISTORY_FILE)));
+            return;
           }
-          send(res, 200, sanitizeAnnouncement(stored));
+          // Sin fichero no hay aviso publicado en este entorno, que es el estado normal.
+          send(res, 200, sanitizeAnnouncement(readJson(FILE)));
           return;
         }
 
@@ -269,7 +282,10 @@ function localAnnouncementApi(): Plugin {
             send(res, 400, { error: 'El aviso necesita un identificador, un título y un enlace http(s)' });
             return;
           }
+          const previous = sanitizeAnnouncement(readJson(FILE));
+          const history = pushAnnouncementHistory(sanitizeAnnouncementHistory(readJson(HISTORY_FILE)), previous, clean);
           writeFileSync(FILE, `${JSON.stringify(clean, null, 2)}\n`);
+          if (history) writeFileSync(HISTORY_FILE, `${JSON.stringify(history, null, 2)}\n`);
           send(res, 200, clean);
         });
       });

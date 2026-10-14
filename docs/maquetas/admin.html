@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#10140f">
+    <title>Maqueta · panel de administración</title>
+    <!-- MAQUETA DEL PANEL DE ADMINISTRACIÓN: monta las pantallas REALES (`src/view/components/admin/`) con un contexto de
+         mentira y datos inventados, sin red. En local no hay Firebase y `/admin` rebota: esto es lo que deja verlo.
+         No entra en el build; la sirve el servidor de desarrollo en `/docs/maquetas/admin.html`.
+
+         Una barra flotante (abajo a la derecha) cambia de pantalla, tema y modo. Parámetros:
+           ?pantalla=hoy|usuarios|comunidad|capacidad|registro|aviso
+           &ficha=<id>        (abre la ficha lateral de esa persona, p. ej. uid-4)
+           &gl-palette=<id>   (tierramedia, arcade, witcher, persona, portal, cyberpunk, seaofstars, grimdark)
+           &gl-theme=dark|light
+           &barra=0           (sin la barra, para capturas)
+
+         El bloque de abajo es el mismo anti-flash que `social.html`: lee el tema de la URL sin escribir nada. -->
+    <script>(function () {
+  var BG = {
+    tierramedia: { dark: '#10140f', light: '#ece3cc' },
+    witcher: { dark: '#141922', light: '#d8e0e7' },
+    persona: { dark: '#0d0d0d', light: '#f4f1ee' },
+    portal: { dark: '#12171b', light: '#e7dabd' },
+    cyberpunk: { dark: '#08090d', light: '#e7eaee' },
+    grimdark: { dark: '#060b08', light: '#e7ddc3' },
+    seaofstars: { dark: '#0e0c24', light: '#a6e9ec' },
+    arcade: { dark: '#150a24', light: '#eee2fb' }
+  };
+  var params = new URLSearchParams(window.location.search);
+  var root = document.documentElement;
+  var theme = params.get('gl-theme') === 'light' ? 'light' : 'dark';
+  if (theme === 'light') {
+    root.setAttribute('data-theme', 'light');
+  }
+  var palette = params.get('gl-palette');
+  if (!BG[palette]) {
+    palette = 'tierramedia';
+  }
+  root.setAttribute('data-palette', palette);
+  if (params.get('gl-effects') !== 'off') {
+    root.setAttribute('data-effects', 'on');
+  }
+  root.setAttribute('data-list-shape', 'list');
+  root.setAttribute('data-grid-size', 'md');
+  var meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) {
+    meta.setAttribute('content', BG[palette][theme]);
+  }
+})();</script>
+    <script type="module" src="/docs/maquetas/admin.tsx"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

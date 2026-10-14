@@ -52,7 +52,8 @@ const L = PREMIOS_UI.admin;
  * histórico— llegan después; sin estas dos no se puede ni empezar.
  */
 export interface AdminPremiosProps {
-  onBack: () => void;
+  /** Sin él no hay botón de volver: dentro del panel, el menú lateral ya lleva a todas partes. */
+  onBack?: () => void;
 }
 
 export function AdminPremios({ onBack }: AdminPremiosProps) {
@@ -259,7 +260,7 @@ export function AdminPremios({ onBack }: AdminPremiosProps) {
       {/* EL VOLVER, ARRIBA Y SOLO, como en el resto de pantallas del panel (`AdminAnnouncement`,
           `AdminAchievements`): mismo componente, mismo sitio y misma flecha. */}
       <div className="admin-ann-bar">
-        <HubBackButton onBack={onBack} destination={L.back} />
+        {onBack ? <HubBackButton onBack={onBack} destination={L.back} /> : null}
       </div>
 
       <div className="admin-card">

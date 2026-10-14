@@ -364,7 +364,8 @@ export default function App() {
   // EL AVISO DEL ADMINISTRADOR (`appConfig/announcement`): un texto y un enlace a otra web, dichos en la misma
   // cápsula del carril de abajo a la izquierda. Se decide una vez al abrir la app y se insiste como mucho N
   // veces mientras nadie pulse; la política entera vive en `core/announcement/announcement`.
-  const announcement = useAnnouncement();
+  // Con quién habla: los avisos dirigidos (solo con / sin espacio social) esperan a que se sepa (`pending` = no se sabe).
+  const announcement = useAnnouncement(socialStatus === 'pending' ? null : socialStatus === 'active');
 
   // Bandeja de importados (local, no sincroniza). Se monta aquí para exponer su contador en los controles
   // flotantes y cablear la graduación (clasificar → formulario → retirar de la bandeja).

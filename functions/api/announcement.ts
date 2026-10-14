@@ -1,4 +1,5 @@
 // GET    /api/announcement — el aviso en curso. PÚBLICO y sin sesión.
+// GET    /api/announcement?history=1 — los avisos anteriores (el más reciente primero). Solo el administrador.
 // PUT    /api/announcement — lo escribe el administrador.
 // DELETE /api/announcement — lo retira del todo.
 //
@@ -18,10 +19,22 @@
 import { requireAdmin } from '../_lib/context';
 import { fail, json, readJson } from '../_lib/http';
 import type { Env } from '../_lib/keys';
-import { sanitizeAnnouncement } from '../../src/core/announcement/announcement';
+import {
+  pushAnnouncementHistory,
+  sanitizeAnnouncement,
+  sanitizeAnnouncementHistory,
+} from '../../src/core/announcement/announcement';
 
 /** La clave de KV. Una sola: hay un aviso a la vez, y publicar uno nuevo sustituye al anterior. */
 const KEY = 'announcement';
+
+/**
+ * EL HISTORIAL: los avisos anteriores, el más reciente primero (como mucho `ANNOUNCEMENT_HISTORY_MAX`). Se escribe
+ * SOLO cuando cambia la campaña —el aviso guardado tenía otro `id`—: corregir una errata, encender o apagar no lo
+ * tocan, así que cuesta una escritura de KV más por campaña nueva, que son unas pocas al año. Lo lee solo el panel,
+ * para reutilizar una redacción.
+ */
+const HISTORY_KEY = 'announcement:history';
 
 /**
  * Cuánto puede quedarse el aviso en las cachés del borde y del navegador.
@@ -32,7 +45,16 @@ const KEY = 'announcement';
  */
 const CACHE_SECONDS = 300;
 
-export async function onRequestGet(context: { env: Env }): Promise<Response> {
+export async function onRequestGet(context: { request: Request; env: Env }): Promise<Response> {
+  if (new URL(context.request.url).searchParams.get('history') === '1') {
+    const caller = await requireAdmin(context.request, context.env);
+    if (caller instanceof Response) {
+      return caller;
+    }
+    // `requireAdmin` ya exige KV; aquí no hay caché pública que valga: es del panel y cambia al publicar.
+    return json(sanitizeAnnouncementHistory(await context.env.SHARES.get(HISTORY_KEY, 'json')));
+  }
+
   if (!context.env.SHARES) {
     // Sin KV no hay aviso, y no es un error del que llama: se responde «no hay» y la app sigue como si nada.
     return json(null, 200, { 'Cache-Control': `public, max-age=${CACHE_SECONDS}` });
@@ -58,7 +80,21 @@ export async function onRequestPut(context: { request: Request; env: Env }): Pro
     return fail(400, 'El aviso necesita un identificador, un título y un enlace http(s)');
   }
 
+  const previous = sanitizeAnnouncement(await context.env.SHARES.get(KEY, 'json'));
   await context.env.SHARES.put(KEY, JSON.stringify(clean));
+  // Después de guardar el aviso, y sin dejar que un fallo aquí lo deshaga: el historial es un extra del panel.
+  const history = pushAnnouncementHistory(
+    sanitizeAnnouncementHistory(previous && previous.id !== clean.id ? await context.env.SHARES.get(HISTORY_KEY, 'json') : []),
+    previous,
+    clean,
+  );
+  if (history) {
+    try {
+      await context.env.SHARES.put(HISTORY_KEY, JSON.stringify(history));
+    } catch {
+      // Sin cupo de escrituras, por ejemplo: el aviso ya está publicado, y eso es lo que importa.
+    }
+  }
   // Se devuelve lo que ha quedado GUARDADO, no lo que llegó: el panel pinta eso y así no puede creerse un
   // recorte que no se hizo.
   return json(clean);

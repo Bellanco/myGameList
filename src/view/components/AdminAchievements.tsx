@@ -218,7 +218,8 @@ export const AdminAchievements = memo(function AdminAchievements({
   onResetAll,
   censusSize = 0,
 }: {
-  onBack: () => void;
+  /** Sin él no hay botón de volver: dentro del panel, el menú lateral ya lleva a todas partes. */
+  onBack?: () => void;
   /**
    * Los espejos publicados que el censo ya se ha bajado. Vacío = sin muestra, y entonces la columna de
    * «alcanzado» se calla en vez de pintar un 0 % que parecería un dato.
@@ -563,7 +564,7 @@ export const AdminAchievements = memo(function AdminAchievements({
           pantalla que mide cincuenta fichas: sueltos en la cabecera obligaban a subir del todo cada vez que se
           quería cambiar de escalera. El recuento va con ellos porque es el resultado de la búsqueda. */}
       <div className="admin-ach-bar">
-        <HubBackButton onBack={onBack} destination={A.back} />
+        {onBack ? <HubBackButton onBack={onBack} destination={A.back} /> : null}
         <label className="admin-ach-filter">
           {/* El rótulo va para lector de pantalla: el campo ya se explica con su marcador de posición y su
               icono de lupa, y escrito ocupaba una línea entera de la barra. */}

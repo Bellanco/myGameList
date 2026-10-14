@@ -41,5 +41,6 @@
 /ajustes/*        / 200
 /legal/*          / 200
 /premios/*        / 200
+/admin/*          / 200
 /perfil/*         / 200
 /r/*              / 200

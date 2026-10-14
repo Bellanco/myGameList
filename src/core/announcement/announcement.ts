@@ -108,6 +108,13 @@ export const ANNOUNCEMENT_ICONS = [
 
 export type AnnouncementIcon = (typeof ANNOUNCEMENT_ICONS)[number];
 
+/**
+ * A QUIÉN SE LE DICE. Por si tiene ESPACIO SOCIAL o no, y por nada más: nunca por rango, porque los rangos no se
+ * le enseñan a nadie (un aviso «solo para Oro» diría que existen). `all` es lo de siempre.
+ */
+export const ANNOUNCEMENT_AUDIENCES = ['all', 'social', 'no-social'] as const;
+export type AnnouncementAudience = (typeof ANNOUNCEMENT_AUDIENCES)[number];
+
 /** El megáfono: un aviso es un anuncio, y es el dibujo que lo dice sin leer nada. */
 export const DEFAULT_ANNOUNCEMENT_ICON: AnnouncementIcon = 'megafono';
 
@@ -137,6 +144,15 @@ export interface Announcement {
   repeats: number;
   /** Horas de espera entre dos avisos del mismo aviso. */
   intervalHours: number;
+  /**
+   * LA VENTANA (ms). Antes de `startsAt` no se dice; desde `endsAt`, tampoco. 0 = sin límite por ese lado. Es lo que
+   * deja programar un aviso la víspera («el sábado hay mantenimiento») sin tener que acordarse de encenderlo y
+   * apagarlo a mano a la hora.
+   */
+  startsAt: number;
+  endsAt: number;
+  /** A quién: todos, solo con espacio social o solo sin él. */
+  audience: AnnouncementAudience;
   /** Cuándo se guardó por última vez (ms). Solo informativo, lo pinta el panel. */
   updatedAt: number;
 }
@@ -157,6 +173,12 @@ export const NO_SEEN: AnnouncementSeen = { id: '', shown: 0, lastAt: 0, clicked:
 
 function text(value: unknown, max: number): string {
   return String(value ?? '').trim().slice(0, max);
+}
+
+/** Un instante en ms, o 0 (sin límite) si no es un número finito y positivo. */
+function instant(value: unknown): number {
+  const number = Math.floor(Number(value));
+  return Number.isFinite(number) && number > 0 ? number : 0;
 }
 
 function whole(value: unknown, fallback: number, max: number): number {
@@ -183,6 +205,11 @@ export function sanitizeAnnouncement(raw: unknown): Announcement | null {
   if (!id || !title || !isValidHttpUrl(url)) return null;
 
   const icon = ANNOUNCEMENT_ICONS.find((name) => name === data.icon) || DEFAULT_ANNOUNCEMENT_ICON;
+  const startsAt = instant(data.startsAt);
+  let endsAt = instant(data.endsAt);
+  // Una ventana que acaba antes de empezar no existe: se queda sin fin en vez de no salir nunca, que sería un aviso
+  // encendido y mudo sin que el panel lo dijera.
+  if (startsAt > 0 && endsAt > 0 && endsAt <= startsAt) endsAt = 0;
 
   return {
     id,
@@ -196,7 +223,49 @@ export function sanitizeAnnouncement(raw: unknown): Announcement | null {
     repeats: whole(data.repeats, DEFAULT_REPEATS, ANNOUNCEMENT_LIMITS.repeats),
     intervalHours: whole(data.intervalHours, DEFAULT_INTERVAL_HOURS, ANNOUNCEMENT_LIMITS.intervalHours),
     updatedAt: Number.isFinite(Number(data.updatedAt)) ? Number(data.updatedAt) : 0,
+    startsAt,
+    endsAt,
+    // Lo desconocido es `all`: un documento anterior a esto no tenía público y se le decía a todo el mundo.
+    audience: ANNOUNCEMENT_AUDIENCES.find((value) => value === data.audience) || 'all',
   };
+}
+
+/** ¿Está dentro de su ventana en este instante? */
+export function isWithinWindow(announcement: Pick<Announcement, 'startsAt' | 'endsAt'>, now: number): boolean {
+  if (announcement.startsAt > 0 && now < announcement.startsAt) return false;
+  if (announcement.endsAt > 0 && now >= announcement.endsAt) return false;
+  return true;
+}
+
+/**
+ * EL HISTORIAL de avisos anteriores (el más reciente primero), tal y como lo sirve la función al panel. Lo que no
+ * sea un aviso entero se descarta; nunca más de `ANNOUNCEMENT_HISTORY_MAX`.
+ */
+export const ANNOUNCEMENT_HISTORY_MAX = 20;
+
+export function sanitizeAnnouncementHistory(raw: unknown): Announcement[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((entry) => sanitizeAnnouncement(entry))
+    .filter((entry): entry is Announcement => entry !== null)
+    .slice(0, ANNOUNCEMENT_HISTORY_MAX);
+}
+
+/**
+ * El historial tras sustituir `previous` por `next`: si cambia la campaña, la anterior entra la primera. Si es la
+ * misma (corregir una errata, encender, apagar), el historial no cambia — y quien escribe se ahorra una escritura.
+ * Devuelve `null` cuando no hay nada que escribir.
+ */
+export function pushAnnouncementHistory(
+  history: readonly Announcement[],
+  previous: Announcement | null,
+  next: Announcement,
+): Announcement[] | null {
+  if (!previous || previous.id === next.id) return null;
+  return [previous, ...history.filter((entry) => entry.id !== previous.id && entry.id !== next.id)].slice(
+    0,
+    ANNOUNCEMENT_HISTORY_MAX,
+  );
 }
 
 /** Lo mismo para lo que este dispositivo tenga guardado: un JSON viejo o a medias vale como «no he visto nada». */
@@ -221,7 +290,7 @@ export function parseSeen(raw: string | null): AnnouncementSeen {
  * ¿TOCA DECIRLO AHORA MISMO? La política entera, en una función pura, que es lo que permite probar «la tercera
  * vez ya no» sin abrir un navegador.
  *
- * Cuatro condiciones, y las cuatro tienen su porqué:
+ * Seis condiciones, y las seis tienen su porqué:
  *
  *   1. **Encendido.** Un aviso apagado no existe para nadie.
  *   2. **No se ha pulsado.** Quien ya entró en la web no necesita que se le siga diciendo; ESE es el gesto que
@@ -230,6 +299,11 @@ export function parseSeen(raw: string | null): AnnouncementSeen {
  *      convierte en una cápsula perpetua, que es la forma más rápida de que la gente deje de leer los avisos.
  *   4. **Ha pasado el rato.** `intervalHours` desde la última vez. Sin esto, abrir y cerrar la app tres veces
  *      seguidas gastaría las tres veces en un minuto.
+ *   5. **Está en su ventana** (`startsAt`–`endsAt`). Uno programado para mañana no sale hoy, y uno que ya acabó
+ *      no sale aunque nadie lo haya apagado.
+ *   6. **Es para ti.** Un aviso dirigido (`social` / `no-social`) solo sale si se SABE si tienes espacio social:
+ *      mientras la sesión no ha contestado, `hasSocial` es desconocido y se calla. Callar un rato es inocuo; decir
+ *      «conecta tu espacio social» a quien ya lo tiene no.
  *
  * La cuenta es de ESTE DISPOSITIVO (localStorage, como la marca de agua de los logros): quien use móvil y
  * ordenador lo verá en los dos. Es el precio de no escribir en Firestore una vez por usuario y por aviso.
@@ -238,8 +312,14 @@ export function isAnnouncementDue(
   announcement: Announcement | null,
   seen: AnnouncementSeen,
   now: number,
+  viewer: { hasSocial?: boolean | null } = {},
 ): boolean {
   if (!announcement || !announcement.active) return false;
+  if (!isWithinWindow(announcement, now)) return false;
+  if (announcement.audience !== 'all') {
+    if (viewer.hasSocial === null || viewer.hasSocial === undefined) return false;
+    if (viewer.hasSocial !== (announcement.audience === 'social')) return false;
+  }
   // Una campaña nueva empieza de cero aunque el aparato recuerde la anterior.
   const mine = seen.id === announcement.id ? seen : NO_SEEN;
   if (mine.clicked) return false;

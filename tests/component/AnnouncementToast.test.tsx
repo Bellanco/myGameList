@@ -19,6 +19,9 @@ const AVISO: Announcement = {
   active: true,
   repeats: 3,
   intervalHours: 24,
+  startsAt: 0,
+  endsAt: 0,
+  audience: 'all',
   updatedAt: 0,
 };
 
