@@ -5,6 +5,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.7.7] - 2026-10-14
+
 ### Changed
 
 - **Las sugerencias del formulario de juego hacen ahora de autocompletado.** Al escribir en plataformas, géneros o
