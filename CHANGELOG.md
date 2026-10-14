@@ -5,6 +5,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.7.5] - 2026-10-14
+
 ### Changed
 
 - **Las medallas de logro son ahora escudos.** El mismo vidrio del color de su rareza, el mismo dibujo en blanco y
