@@ -5,11 +5,6 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
-### Fixed
-
-- **Capacidad dice por qué no puede leer Firestore.** Si Cloud Monitoring rechaza la consulta, el medidor muestra el
-  motivo que da Google (API deshabilitada, permiso que falta…) y no solo el código de error.
-
 ## [1.7.4] - 2026-10-14
 
 ### Added
@@ -43,6 +38,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   reposo lleva el color de firma de cada tema; en la pestaña activa, el del rótulo.
 - **«Listados» vuelve a la última lista que mirabas**, en vez de llevar siempre a Completados. Y volver a pulsar la
   pestaña en la que estás sube al principio de la pantalla.
+
+### Fixed
+
+- **Capacidad dice por qué no puede leer Firestore.** Si Cloud Monitoring rechaza la consulta, el medidor muestra el
+  motivo que da Google (API deshabilitada, permiso que falta…) y no solo el código de error.
 
 ## [1.7.3] - 2026-10-13
 
