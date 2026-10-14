@@ -5,6 +5,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.7.4] - 2026-10-14
+
 ### Added
 
 - **Panel de administración rediseñado.** El panel pasa a tener secciones con su propia dirección (`/admin/*`) y un
