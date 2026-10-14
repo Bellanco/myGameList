@@ -5,6 +5,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Fixed
+
+- **Capacidad dice por qué no puede leer Firestore.** Si Cloud Monitoring rechaza la consulta, el medidor muestra el
+  motivo que da Google (API deshabilitada, permiso que falta…) y no solo el código de error.
+
 ## [1.7.4] - 2026-10-14
 
 ### Added
