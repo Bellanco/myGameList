@@ -1,7 +1,7 @@
 # Rediseño del panel de administración
 
-Estado: **F1–F7 hechas** en `develop` (14-10-2026, sin push). F8 (denuncias) pendiente de decisión. Falta, del lado del
-usuario, desplegar las reglas nuevas y crear las credenciales de Capacidad (ver al final).
+Estado: **F1–F7 hechas** en `develop` (14-10-2026, sin push). F8 (denuncias) pendiente de decisión. Reglas desplegadas y
+secretos de Capacidad subidos a producción el 14-10-2026; el resto llega con la release del cliente.
 
 Ver el panel sin sesión: `docs/maquetas/admin.html` en el servidor de desarrollo. Monta las pantallas REALES con un
 contexto de mentira (censo de 42 personas, fotos diarias, enlaces, medidores, registro) y deja cambiar tema y modo.
@@ -64,8 +64,13 @@ campaña nueva.
 
 ## Credenciales de Capacidad
 
+**Hecho el 14-10-2026** en el entorno de producción de Pages: `GCP_MONITORING_SA`, `CF_ACCOUNT_ID` y
+`CF_ANALYTICS_TOKEN`. La lectura de Cloudflare se comprobó en local con el token real; la de Firestore se verá en
+`/admin/capacidad` tras el despliegue. Los pasos quedan aquí por si hay que rehacerlos (cambiar la clave, otra cuenta).
+
 Sin ellas, Capacidad enseña las carátulas (como antes) y los demás medidores salen «Sin conectar». Con ellas, el
-panel compara cada cifra con su techo diario y avisa en Hoy al pasar del 70 %.
+panel compara cada cifra con su techo diario y avisa en Hoy al pasar del 70 %. En `npm run dev` el endpoint no
+existe (lo sirve Pages) y la pantalla lo dice.
 
 ### Firestore (lecturas, escrituras y borrados del día)
 
@@ -97,7 +102,8 @@ Los secretos se aplican en el siguiente despliegue. Para la vista previa, repeti
 
 ## Para desplegar
 
-- Reglas: `npx firebase deploy --only firestore:rules --project mylists-f7313` (añaden `adminPanel` y `adminLog`;
-  no cambian nada de lo que ya existía). Las consultas nuevas usan índices de un solo campo, que Firestore crea
-  solo.
+- Reglas: **desplegadas el 14-10-2026** (`npx firebase deploy --only firestore:rules --project mylists-f7313`;
+  añaden `adminPanel` y `adminLog` y no cambian nada de lo que ya existía). Las consultas nuevas usan índices de un
+  solo campo, que Firestore crea solo.
+- El registro de acciones empieza vacío: el panel no apuntaba nada antes de este cambio.
 - El resto va con el cliente (release del usuario).
