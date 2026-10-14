@@ -13,6 +13,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   carátulas del mosaico. Lo que ya se había visto en la sesión se enseña quieto, sin repetir el gesto, y con
   «reducir movimiento» la imagen sale sin fundido pero nunca a medio bajar. Un test vigila que cualquier imagen nueva
   use el mismo mecanismo.
+- **El formulario de añadir y editar juego, rehecho para meter juegos rápido.** Lo obligatorio va arriba —el nombre,
+  con la puntuación al lado, y debajo plataformas, géneros y años en una sola fila— y lo opcional en una bandeja más
+  ligera, sin asteriscos ni «opcional» escrito. Cada campo de etiquetas cabe en una línea y lleva debajo sugerencias de
+  un toque sacadas de tu biblioteca: tus plataformas y géneros más usados, el año actual y el anterior, y los puntos
+  fuertes y débiles que más usas con los géneros que hayas elegido. «Añadir otro» guarda y deja el formulario abierto
+  para el siguiente, con las plataformas y el año ya puestos y la cuenta de los que llevas (⌘↵ o Ctrl+↵ hace lo
+  mismo). La puntuación es ahora obligatoria en todas las listas y empieza en 3 estrellas, o en 50 con la nota de 0 a
+  100, que se elige en una barra de una línea; en la lista de la vergüenza ya no hay «Puntuar este juego». Steam
+  Deck y Rejugar pasan al pie, solo con su icono, y en el móvil el formulario ocupa la pantalla entera.
 
 ### Fixed
 

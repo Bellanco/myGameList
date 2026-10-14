@@ -172,7 +172,7 @@ describe('App · guardar un juego y el canal social', () => {
     render(<MemoryRouter initialEntries={['/completados']}><App /></MemoryRouter>);
 
     await abrirEdicion(user);
-    const nombre = screen.getByLabelText('Nombre *');
+    const nombre = screen.getByLabelText('Nombre');
     await user.clear(nombre);
     await user.click(screen.getByRole('button', { name: 'Guardar' }));
 
@@ -200,7 +200,7 @@ describe('App · clasificar un importado', () => {
     await user.click(await screen.findByRole('button', { name: /En curso/ }));
 
     // El formulario se abre precargado con el importado.
-    const nombre = await screen.findByLabelText('Nombre *');
+    const nombre = await screen.findByLabelText('Nombre');
     expect((nombre as HTMLInputElement).value).toBe(IMPORTADO.name);
     await user.click(screen.getByRole('button', { name: 'Guardar' }));
 

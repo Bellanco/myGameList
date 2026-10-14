@@ -5,7 +5,7 @@ import { reabrirLaPregunta } from '../core/utils/coverDone';
 import { tagKey } from '../core/utils/tags';
 import { DEFAULT_SORT, nextSort, sortGames } from '../core/utils/sortGames';
 import { normalizeHours } from '../core/utils/normalize';
-import { clampGrade, gradeFromStars, resolveGrade, resolveStars, starsFromGrade } from '../core/utils/scoreScale';
+import { DEFAULT_GRADE, DEFAULT_STARS, clampGrade, gradeFromStars, resolveGrade, resolveStars, starsFromGrade } from '../core/utils/scoreScale';
 import { resolveReviewedAt } from '../core/utils/reviewDate';
 import { nextVersion, resolveGradedAt, stampEntry } from '../core/utils/gameStamps';
 import { mapTabDataTags, type TagCategory } from '../core/utils/tagMutations';
@@ -16,6 +16,7 @@ import { emitMoment } from '../core/effects/moments';
 import { loadLocalState, loadLocalStateAsync, normalizeData, saveLocalState } from '../model/repository/localRepository';
 import { getGamesAsTabData, getLocalMeta, mirrorTabDataToGames } from '../model/repository/indexedDbRepository';
 import { markDirty } from '../model/repository/syncStateRepository';
+import { getScoreScale } from '../model/repository/scorePreferenceRepository';
 import { trackAnalyticsEvent } from '../model/repository/firebaseGateway';
 import { transitionTo } from '../model/repository/syncMachineRepository';
 import type { TabAction as LabelsTabAction } from '../core/constants/labels';
@@ -58,7 +59,7 @@ const EMPTY_DRAFT: GameDraft = {
   genres: [],
   platforms: [],
   steamDeck: false,
-  score: 3, // puntuación por defecto al añadir: 3★ ≡ nota 60 (evita partir de 0)
+  score: 3, // puntuación por defecto al añadir: 3★ ≡ nota 60 (evita partir de 0). Con la escala 0–100, 50: `newDraft`.
   grade: 60,
   years: [],
   strengths: [],
@@ -70,6 +71,19 @@ const EMPTY_DRAFT: GameDraft = {
   scored: false,
   review: '',
 };
+
+/** El borrador de un alta. La nota por defecto depende de la escala: la nota es obligatoria y nunca parte de 0. */
+function newDraft(keep: Partial<Pick<GameDraft, 'platforms' | 'years'>> = {}): GameDraft {
+  const defaults = getScoreScale() === 'grade'
+    ? { score: starsFromGrade(DEFAULT_GRADE), grade: DEFAULT_GRADE }
+    : { score: DEFAULT_STARS, grade: gradeFromStars(DEFAULT_STARS) };
+  return { ...EMPTY_DRAFT, ...defaults, ...keep };
+}
+
+/** Opciones del guardado. `keepOpen`: «Guardar y añadir otro» (el formulario sigue abierto con un alta nueva). */
+export interface SaveDraftOptions {
+  keepOpen?: boolean;
+}
 
 function toNormalizedDraft(game?: Partial<GameItem>): GameDraft {
   return {
@@ -369,7 +383,7 @@ export function useGameListViewModel() {
       return;
     }
     setEditingTab(tab);
-    setDraft(EMPTY_DRAFT);
+    setDraft(newDraft());
     setFormModalOpen(true);
   }, [wishlistFull, notify]);
 
@@ -467,7 +481,7 @@ export function useGameListViewModel() {
    * de otro juego sin error ni rastro.
    */
   const saveDraft = useCallback(
-    (tab: TabId, nextDraft: GameDraft): { id: number; previous: GameItem | undefined } | null => {
+    (tab: TabId, nextDraft: GameDraft, options: SaveDraftOptions = {}): { id: number; previous: GameItem | undefined } | null => {
       const now = Date.now();
       const id = nextDraft.id || Math.max(0, ...TAB_IDS.flatMap((key) => data[key].map((item) => item.id))) + 1;
       const existing = data[tab].find((item) => item.id === id);
@@ -586,8 +600,14 @@ export function useGameListViewModel() {
          día y el porqué de todo esto están en `reabrirLaPregunta`; aquí solo se le avisa. Si el juego ya tiene
          carátula, o si su «no» es de hace un rato, no hace nada. */
       reabrirLaPregunta(base.name, base.platforms);
-      setFormModalOpen(false);
-      setDraft(EMPTY_DRAFT);
+      if (options.keepOpen) {
+        /* «GUARDAR Y AÑADIR OTRO»: el formulario sigue abierto con un alta nueva. Se quedan las plataformas y los
+           años, que es lo que se repite en una tanda (ponerse al día de lo jugado); el resto vuelve a vacío. */
+        setDraft(newDraft({ platforms: base.platforms, years: base.years }));
+      } else {
+        setFormModalOpen(false);
+        setDraft(EMPTY_DRAFT);
+      }
       notify('ok', UI_MESSAGES.games.saved);
       void trackAnalyticsEvent('game_saved', { tab, is_edit: Boolean(existing), has_review: Boolean(base.review) });
       /* Los momentos que cada tema celebra a su manera (ver `core/effects/moments`). CERRAR un juego es llegar

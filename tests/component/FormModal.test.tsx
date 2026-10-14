@@ -47,7 +47,7 @@ describe('FormModal — draft local (P3)', () => {
       />,
     );
 
-    await user.type(screen.getByPlaceholderText('Ej: The Witcher 3'), 'Halo');
+    await user.type(screen.getByLabelText('Nombre'), 'Halo');
 
     // Ningún callback del padre se dispara por tecla.
     expect(onSave).not.toHaveBeenCalled();
@@ -70,7 +70,7 @@ describe('FormModal — draft local (P3)', () => {
       />,
     );
 
-    const nameInput = screen.getByPlaceholderText('Ej: The Witcher 3');
+    const nameInput = screen.getByLabelText('Nombre');
     await user.clear(nameInput);
     await user.type(nameInput, 'Halo Infinite');
     await user.click(screen.getByRole('button', { name: 'Guardar' }));
@@ -101,7 +101,7 @@ describe('FormModal — nombre repetido', () => {
         onSave={onSave}
       />,
     );
-    return { onSave, nameInput: screen.getByPlaceholderText('Ej: The Witcher 3') };
+    return { onSave, nameInput: screen.getByLabelText('Nombre') };
   }
 
   it('avisa mientras se escribe un nombre que ya está en las listas', async () => {
@@ -165,7 +165,7 @@ describe('FormModal — etiquetas', () => {
         onSave={onSave}
       />,
     );
-    return { onSave, genres: screen.getByPlaceholderText('Ej: Acción') };
+    return { onSave, genres: screen.getByLabelText('Géneros') };
   }
 
   it('adopta la grafía que ya existe en las listas aunque se escriba sin tilde ni mayúsculas', async () => {
@@ -246,7 +246,7 @@ describe('FormModal — etiquetas', () => {
     expect(onSave).not.toHaveBeenCalled();
     expect(screen.getByText('Aventura')).toBeTruthy();
 
-    await user.type(screen.getByPlaceholderText('Ej: The Witcher 3'), 'Halo');
+    await user.type(screen.getByLabelText('Nombre'), 'Halo');
     await user.click(screen.getByRole('button', { name: 'Guardar' }));
     expect(onSave.mock.calls[0][0].genres).toEqual(['Aventura']);
   });
@@ -254,7 +254,7 @@ describe('FormModal — etiquetas', () => {
   it('un año mal escrito no entra y explica qué se espera', async () => {
     const user = userEvent.setup();
     const { onSave } = renderTags();
-    const years = screen.getByPlaceholderText(`Ej: ${new Date().getFullYear()}`);
+    const years = screen.getByLabelText('Años completado');
 
     await user.type(years, '20{Enter}');
 
@@ -281,7 +281,7 @@ describe('FormModal — horas jugadas', () => {
         onSave={onSave}
       />,
     );
-    return { onSave, hours: screen.getByPlaceholderText('Ej: 120') };
+    return { onSave, hours: screen.getByLabelText('Horas jugadas') };
   }
 
   it('descarta el signo menos al teclearlo y lo dice', async () => {
@@ -340,13 +340,14 @@ describe('FormModal — mensajes de error', () => {
     await user.click(screen.getByRole('button', { name: 'Guardar' }));
 
     expect(onSave).not.toHaveBeenCalled();
-    expect(screen.getByText('Faltan 5 cosas para poder guardar:')).toBeTruthy();
+    expect(screen.getByText('Faltan 4 cosas para poder guardar:')).toBeTruthy();
     expect(screen.getAllByText('Escribe el nombre del juego.').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Añade al menos un género.').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Añade al menos una plataforma.').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Añade al menos un año de finalización.').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Selecciona una puntuación.').length).toBeGreaterThan(0);
-    expect(document.activeElement).toBe(screen.getByPlaceholderText('Ej: The Witcher 3'));
+    // La nota no falta nunca: nace en 3★ (o 50) aunque el borrador llegue sin ella.
+    expect(screen.queryByText('Selecciona una puntuación.')).toBeNull();
+    expect(document.activeElement).toBe(screen.getByLabelText('Nombre'));
   });
 
   it('el resumen del pie se retira solo a los 5 s, pero el mensaje de cada campo se queda', async () => {
@@ -365,13 +366,13 @@ describe('FormModal — mensajes de error', () => {
       );
 
       fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
-      expect(screen.getByText('Faltan 5 cosas para poder guardar:')).toBeTruthy();
+      expect(screen.getByText('Faltan 4 cosas para poder guardar:')).toBeTruthy();
 
       act(() => {
         vi.advanceTimersByTime(5000);
       });
 
-      expect(screen.queryByText('Faltan 5 cosas para poder guardar:')).toBeNull();
+      expect(screen.queryByText('Faltan 4 cosas para poder guardar:')).toBeNull();
       expect(screen.getByText('Escribe el nombre del juego.')).toBeTruthy();
     } finally {
       vi.useRealTimers();
@@ -396,7 +397,7 @@ describe('FormModal — mensajes de error', () => {
     await user.click(screen.getByRole('button', { name: 'Guardar' }));
     expect(screen.getAllByText('Añade al menos un género.').length).toBeGreaterThan(0);
 
-    await user.type(screen.getByPlaceholderText('Ej: Acción'), 'RPG{Enter}');
+    await user.type(screen.getByLabelText('Géneros'), 'RPG{Enter}');
     expect(screen.queryByText('Añade al menos un género.')).toBeNull();
   });
 });
@@ -453,7 +454,7 @@ describe('FormModal — el 0 en horas es el hueco', () => {
         onSave={onSave}
       />,
     );
-    return { onSave, hoursInput: screen.getByPlaceholderText('Ej: 120') as HTMLInputElement };
+    return { onSave, hoursInput: screen.getByLabelText('Horas jugadas') as HTMLInputElement };
   }
 
   it('guarda null cuando se escribe un 0', async () => {

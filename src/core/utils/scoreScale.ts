@@ -12,6 +12,10 @@
 //  - `clampRating` → dominio de ESTRELLAS (0–5), campo `score`, en `core/utils/normalize`.
 
 export const GRADE_MAX = 100;
+
+/** Nota con la que nace un juego nuevo según la escala: 3★ con estrellas, 50 con la nota 0–100 (es obligatoria). */
+export const DEFAULT_STARS = 3;
+export const DEFAULT_GRADE = 50;
 export const STARS_MAX = 5;
 /** Puntos de nota por estrella: 100 / 5 = 20 (representa la nota "llena" de cada estrella al elegir con el picker). */
 export const GRADE_PER_STAR = GRADE_MAX / STARS_MAX;

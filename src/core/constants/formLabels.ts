@@ -6,42 +6,59 @@
 import { APP_LOCALE } from './locale';
 
 export const FORM_UI = {
-  // El hint también hace de "spacer" invisible (aria-hidden) en los campos que no son de etiquetas, para que
-  // las columnas de una misma fila queden alineadas aunque solo una lleve texto de ayuda.
-  enterToAddHint: 'Pulsa Enter o separa con comas',
   newTitle: 'Nuevo juego',
   editTitle: 'Editar juego',
-  nameLabel: 'Nombre *',
-  namePlaceholder: 'Ej: The Witcher 3',
+  // Sin asterisco: lo obligatorio va arriba con campos rellenos y lo opcional en la bandeja de abajo, más ligera.
+  nameLabel: 'Nombre',
+  // Nunca un ejemplo dentro del campo: «The Witcher 3» o «40» se pueden tomar por un valor ya escrito. Los campos
+  // de etiquetas dicen la acción, empezando por el verbo («Añadir etiqueta» es la convención).
+  namePlaceholder: 'Nombre del juego',
+  platformsPlaceholder: 'Añade una plataforma',
+  genresPlaceholder: 'Añade un género',
   genresLabel: 'Géneros',
-  genresPlaceholder: 'Ej: Acción',
   platformsLabel: 'Plataformas',
-  platformsPlaceholder: 'Ej: PC',
   scoreLabel: 'Puntuación',
-  scoreToggle: 'Puntuar este juego',
-  scoreToggleHint: 'Si no lo puntúas, no cuenta en la ruleta.',
   interestLabel: 'Interés',
   yearsLabel: 'Años completado',
-  yearsPlaceholder: (year: number) => `Ej: ${year}`,
+  yearsPlaceholder: 'Añade un año',
   hoursLabel: 'Horas jugadas',
-  hoursPlaceholder: 'Ej: 120',
+  hoursPlaceholder: 'Horas',
   strengthsLabel: 'Puntos fuertes',
-  strengthsPlaceholder: 'Ej: Combate',
+  strengthsPlaceholder: 'Lo que más te ha gustado',
   weaknessesLabel: 'Puntos débiles',
-  weaknessesPlaceholder: 'Ej: Repetitivo',
+  weaknessesPlaceholder: 'Lo que menos te ha gustado',
   reasonsLabel: 'Razones',
-  reasonsPlaceholder: 'Ej: Falta de tiempo',
+  reasonsPlaceholder: '¿Por qué lo dejaste?',
   steamDeck: 'Steam Deck',
   reviewLabel: 'Análisis',
-  reviewPlaceholder: 'Ej: La historia engancha, pero el combate se hace repetitivo.',
+  reviewPlaceholder: 'Un pequeño análisis del juego.',
   charCount: (count: number, max: number) => `${count.toLocaleString(APP_LOCALE)} / ${max.toLocaleString(APP_LOCALE)} caracteres`,
   // A11y-3: mensajes de umbral para lectores de pantalla (texto constante por banda → se anuncian una vez al
   // cruzar el umbral, no en cada pulsación). El conteo numérico se deja como texto visible SIN aria-live.
   charNearLimit: 'Te acercas al límite de caracteres del análisis.',
   charLimitReached: 'Has alcanzado el límite de caracteres del análisis.',
+  // Sugerencias de un toque bajo cada campo de etiquetas (nombre del grupo y de cada botón, para el lector).
+  quickPicks: {
+    platforms: 'Tus plataformas más usadas',
+    genres: 'Tus géneros más usados',
+    years: 'Años recientes',
+    strengths: 'Puntos fuertes sugeridos',
+    weaknesses: 'Puntos débiles sugeridos',
+    reasons: 'Razones sugeridas',
+    add: (value: string | number) => `Añadir ${value}`,
+  },
+  gradeAria: 'Nota',
+  gradeNumberAria: 'Nota, en número',
   close: 'Cerrar',
   cancel: 'Cancelar',
   save: 'Guardar',
+  // «Añadir otro»: guarda y deja el formulario abierto con un alta nueva. Botón secundario: Guardar manda.
+  addAnother: 'Añadir otro',
+  batchCount: (count: number) => (count === 1 ? '1 añadido' : `${count} añadidos`),
+  savedKeepNotice: (name: string, keepsYears: boolean) =>
+    `«${name}» guardado. Se mantienen ${keepsYears ? 'plataformas y año' : 'las plataformas'}.`,
+  // El atajo de teclado no se enseña en el pie: solo en la descripción (al pasar por encima) del botón que dispara.
+  shortcutTitle: (action: string, isMac: boolean) => `${action} (${isMac ? '⌘' : 'Ctrl'} + Enter)`,
 } as const;
 
 export const STAR_PICKER_UI = {
