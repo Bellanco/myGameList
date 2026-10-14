@@ -1,5 +1,7 @@
 ---
 applyTo: "src/view/**"
+paths:
+  - "src/view/**"
 ---
 
 # View layer (`src/view/`)

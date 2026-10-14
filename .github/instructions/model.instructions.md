@@ -1,5 +1,7 @@
 ---
 applyTo: "src/model/**"
+paths:
+  - "src/model/**"
 ---
 
 # Model layer (`src/model/`)

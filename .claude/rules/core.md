@@ -1,0 +1,1 @@
+../../.github/instructions/core.instructions.md
