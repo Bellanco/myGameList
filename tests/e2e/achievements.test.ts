@@ -639,7 +639,8 @@ test.describe('logros · bibliotecas grandes y avalanchas', () => {
     await expect(toast(page)).toBeVisible();
 
     // Segunda escritura mientras la primera cápsula vive: se sustituye, no se apila.
-    await page.getByRole('button', { name: /^Listados/ }).first().click();
+    // Por la pestaña de la lista y no por «Listados»: la barra vuelve a la última lista, que aquí es En curso.
+    await page.locator('[aria-label^="Lista del completista"]').click();
     await page.getByRole('button', { name: /Cerrado 1\b/ }).first().click();
     await page.getByRole('button', { name: /^Editar - / }).first().click();
     await page.getByRole('button', { name: /^Guardar/i }).first().click();
