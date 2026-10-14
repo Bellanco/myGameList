@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetState
 import type { NavigateFunction } from 'react-router-dom';
 import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { APP_LOCALE } from '../../core/constants/locale';
-import { isOffline, isServiceUnavailable } from '../../core/utils/network';
+import { isNetworkFailure, isOffline, isServiceUnavailable } from '../../core/utils/network';
 import { ensureSyncConfigLoaded } from '../../model/repository/gistRepository';
 import { useSingleFlight } from '../useSingleFlight';
 import {
@@ -293,6 +293,12 @@ export function useOwnProfileEditor({
         const stale = await getCachedSocialProfile(socialCfgGistId, { allowExpired: true }).catch(() => null);
         if (stale) {
           applyCachedProfile(stale);
+          // CON COPIA, SIN AVISAR, como el feed (`useSocialDirectory`): si el servicio no atiende —GitHub limitando o
+          // con un 5xx pasajero— el perfil de hace un rato se ve igual y la próxima entrada lo releerá. Avisar aquí
+          // encendía el «servicio limitado», que solo apaga una recarga del feed sin un fallo; servida la del feed
+          // desde su caché, el aviso se quedaba toda la visita por un tropiezo de una lectura. Sin RED sí se cuenta:
+          // ese aviso dice algo que el usuario puede comprobar.
+          if (!isNetworkFailure(error) && !isOffline()) return;
         }
       }
       reportFailure(error, SOCIAL_UI.status.loadProfileFailed);

@@ -15,6 +15,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   Bajo cada campo vuelve, en muy pequeño, «Pulsa Enter o separa con comas», y el formulario se ha compactado (título
   más pequeño, menos aire entre bloques y en el pie) para que quepa sin desplazarse también en una ventana baja.
 
+### Fixed
+
+- **El aviso de «Servicio limitado» del espacio social ya no sale por un tropiezo pasajero.** Al entrar, si GitHub
+  fallaba un momento al releer tu canal, el aviso se encendía aunque tu perfil guardado se viera igual, y se quedaba
+  toda la visita. Ahora, con lo guardado a mano, se sigue sin avisar, como ya hacía el feed. Cuando sí sale, dice
+  solo lo justo en una línea: «Sin actualizar · Estás viendo lo último guardado; se actualizará en breve.».
+
 ## [1.7.6] - 2026-10-14
 
 ### Changed

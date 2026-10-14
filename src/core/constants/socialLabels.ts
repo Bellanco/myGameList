@@ -58,13 +58,13 @@ export const SOCIAL_UI = {
   },
   // Aviso PERSISTENTE de SERVICIO LIMITADO: hay red, pero un servicio no atiende (el cupo diario de Firestore
   // agotado, GitHub limitando peticiones). Mismo trato que el de sin conexión: se ve lo guardado y se dice que se
-  // pondrá al día solo, sin el error de librería (docs/plan-degradacion-servicios.md).
+  // pondrá al día solo, sin el error de librería (docs/plan-degradacion-servicios.md). UNA LÍNEA y sin titular: a
+  // quien lo lee le basta saber qué está viendo y que se arreglará; qué servicio no atiende no le sirve de nada.
   limited: {
-    sectionAria: 'Servicio limitado',
-    badge: 'Servicio limitado',
-    title: 'Lo social va con lo guardado por ahora',
-    body: 'Uno de los servicios que usa el espacio social no responde en este momento. Estás viendo lo último guardado en este dispositivo; tus listas funcionan con normalidad y esto se pondrá al día solo.',
-    bodyEmpty: 'Uno de los servicios que usa el espacio social no responde en este momento. Tus listas funcionan con normalidad; la actividad aparecerá en cuanto vuelva.',
+    sectionAria: 'Sin actualizar',
+    badge: 'Sin actualizar',
+    body: 'Estás viendo lo último guardado; se actualizará en breve.',
+    bodyEmpty: 'La actividad aparecerá en breve.',
   },
   errorBoundary: {
     sectionAria: 'Error del espacio social',
@@ -545,7 +545,7 @@ export const SOCIAL_UI = {
     missingSocialToken: 'No se pudo cargar tu espacio social. Vuelve a intentarlo.',
     firestoreCheckFailed: 'No se pudo verificar tu perfil social.',
     // Un servicio no atiende (ver `limited`): aviso breve, el persistente lo pone el aviso de servicio limitado.
-    serviceLimited: 'Ahora mismo no se puede actualizar el espacio social. Te enseñamos lo último guardado.',
+    serviceLimited: 'Ahora mismo no se ha podido actualizar.',
     channelCheckUnavailable: 'Ahora mismo no podemos comprobar tu espacio social. No se ha tocado nada; lo intentaremos más tarde.',
     createGistFailed: 'No se pudo crear tu espacio social.',
     signInFailed: 'No se pudo iniciar sesión con Google.',
