@@ -238,6 +238,33 @@ export function isWithinWindow(announcement: Pick<Announcement, 'startsAt' | 'en
 }
 
 /**
+ * LO QUE VE EL PÚBLICO de un aviso, y cuánto puede cachearse esa respuesta.
+ *
+ * ⚑ LA VENTANA SE APLICA TAMBIÉN EN EL SERVIDOR, y no solo en el cliente: tras desplegar, el service worker sirve
+ * un rato el JavaScript anterior, que no sabe de `startsAt` ni de `endsAt`. Si la función devolviera un aviso
+ * programado para mañana, ese cliente viejo lo enseñaría hoy. Fuera de su ventana, para el público no hay aviso.
+ *
+ * La caché se acorta para que el aviso aparezca (o desaparezca) a su hora y no hasta cinco minutos después: como
+ * mucho `maxAge`, y nunca más allá del próximo cambio de la ventana.
+ *
+ * El PÚBLICO (con / sin espacio social) no se puede filtrar aquí: la función no sabe quién pregunta. Eso lo decide
+ * el cliente, y un cliente anterior a este campo lo enseñaría a todos.
+ */
+export function publicAnnouncementView(
+  announcement: Announcement | null,
+  now: number,
+  maxAge: number,
+): { value: Announcement | null; maxAge: number } {
+  if (!announcement) return { value: null, maxAge };
+  const secondsUntil = (millis: number) => Math.max(1, Math.ceil((millis - now) / 1000));
+  if (announcement.startsAt > 0 && now < announcement.startsAt) {
+    return { value: null, maxAge: Math.min(maxAge, secondsUntil(announcement.startsAt)) };
+  }
+  if (!isWithinWindow(announcement, now)) return { value: null, maxAge };
+  return { value: announcement, maxAge: announcement.endsAt > 0 ? Math.min(maxAge, secondsUntil(announcement.endsAt)) : maxAge };
+}
+
+/**
  * EL HISTORIAL de avisos anteriores (el más reciente primero), tal y como lo sirve la función al panel. Lo que no
  * sea un aviso entero se descarta; nunca más de `ANNOUNCEMENT_HISTORY_MAX`.
  */

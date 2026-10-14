@@ -263,7 +263,9 @@ export function parseUserFilters(
 /** Escribe los filtros en la dirección. Lo que está en su valor de fábrica no se escribe: la URL limpia es la normal. */
 export function serializeUserFilters(filters: AdminUserFilters, sort: AdminUserSort): URLSearchParams {
   const params = new URLSearchParams();
-  if (filters.text.trim()) params.set(PARAM.text, filters.text.trim());
+  // Se escribe TAL CUAL, sin recortar: la caja de búsqueda lee de aquí, y recortarlo se comía el espacio en cuanto
+  // se tecleaba («Juan » volvía como «Juan» y no había forma de escribir «Juan Carlos»). Vacío o en blanco, fuera.
+  if (filters.text.trim()) params.set(PARAM.text, filters.text);
   if (filters.signal !== 'all') params.set(PARAM.signal, SIGNAL_NAMES[filters.signal] || filters.signal);
   if (filters.tiers.length) params.set(PARAM.tiers, filters.tiers.join(','));
   if (filters.activity !== 'any') params.set(PARAM.activity, ACTIVITY_NAMES[filters.activity]);

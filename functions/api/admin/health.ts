@@ -57,19 +57,23 @@ export async function onRequestGet(context: { request: Request; env: HealthEnv }
   }
   const now = Date.now();
   const covers = context.env.COVERS;
+  // Cada lectura de KV, por su cuenta: si KV no responde (sin cupo de lecturas, justo el día que más interesa mirar
+  // esto), se pierde el medidor de carátulas y no la respuesta entera.
+  const readCounter = (at: number) =>
+    covers ? covers.get(coverDailyQuotaKey(at)).then((value) => Number(value) || 0, () => null) : Promise.resolve(null);
   const [firestore, cloudflare, coversSpent, coversYesterday] = await Promise.all([
     readFirestoreUsage(context.env, now),
     readCloudflareUsage(context.env, now),
-    covers ? covers.get(coverDailyQuotaKey(now)).then((value) => Number(value) || 0) : Promise.resolve(null),
+    readCounter(now),
     // El contador del día vive 48 h (ver `/cover`): el de ayer aún está, y da con qué comparar.
-    covers ? covers.get(coverDailyQuotaKey(now - 86_400_000)).then((value) => Number(value) || 0) : Promise.resolve(null),
+    readCounter(now - 86_400_000),
   ]);
 
   const firestoreStatus: HealthStatus = !firestore.configured ? 'not-configured' : firestore.error ? 'error' : 'ok';
   const cloudflareStatus: HealthStatus = !cloudflare.configured ? 'not-configured' : cloudflare.error ? 'error' : 'ok';
   const L = FREE_TIER_LIMITS;
   const meters: HealthMeterPayload[] = [
-    { id: 'covers', source: 'covers', used: coversSpent, limit: COVER_DAILY_BUDGET, status: coversSpent === null ? 'not-configured' : 'ok', resetsAt: cloudflare.resetsAt, previous: coversYesterday },
+    { id: 'covers', source: 'covers', used: coversSpent, limit: COVER_DAILY_BUDGET, status: !covers ? 'not-configured' : coversSpent === null ? 'error' : 'ok', resetsAt: cloudflare.resetsAt, previous: coversYesterday },
     { id: 'firestore-reads', source: 'firestore', used: firestore.values.read, limit: L.firestoreReads, status: firestoreStatus, resetsAt: firestore.resetsAt, error: firestore.error },
     { id: 'firestore-writes', source: 'firestore', used: firestore.values.write, limit: L.firestoreWrites, status: firestoreStatus, resetsAt: firestore.resetsAt, error: firestore.error },
     { id: 'firestore-deletes', source: 'firestore', used: firestore.values.delete, limit: L.firestoreDeletes, status: firestoreStatus, resetsAt: firestore.resetsAt, error: firestore.error },

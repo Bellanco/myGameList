@@ -13,6 +13,14 @@ describe('Cloud Monitoring (Firestore)', () => {
     expect(new Date(pacificMidnight(Date.UTC(2026, 11, 14, 3))).toISOString()).toBe('2026-12-13T08:00:00.000Z');
   });
 
+  // Los dos días de cambio de hora, el desfase de la tarde no es el de la medianoche: la cuenta se movía una hora.
+  it('acierta también los días de cambio de hora', () => {
+    // 1 nov 2026 (fin del horario de verano a las 2:00): la medianoche aún es PDT.
+    expect(new Date(pacificMidnight(Date.UTC(2026, 10, 1, 20))).toISOString()).toBe('2026-11-01T07:00:00.000Z');
+    // 8 mar 2026 (empieza a las 2:00): la medianoche aún es PST.
+    expect(new Date(pacificMidnight(Date.UTC(2026, 2, 8, 20))).toISOString()).toBe('2026-03-08T08:00:00.000Z');
+  });
+
   it('suma todos los puntos de todas las series, y sin series dice que no sabe', () => {
     expect(sumTimeSeries({ timeSeries: [{ points: [{ value: { int64Value: '1200' } }, { value: { int64Value: '30' } }] }, { points: [{ value: { int64Value: '5' } }] }] })).toBe(1235);
     expect(sumTimeSeries({})).toBeNull();

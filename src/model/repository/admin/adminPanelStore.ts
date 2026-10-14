@@ -109,7 +109,10 @@ export interface AdminLogEntry {
    * Lo necesario para deshacerla, si se puede. `null` = no tiene vuelta atrás (borrar, purgar…). Solo valores
    * escalares: el registro no guarda copias de documentos.
    */
-  undo: { action: 'tier'; profileDocId: string; tier: string } | { action: 'social'; profileDocId: string; enabled: boolean } | null;
+  undo:
+    | { action: 'tier'; profileDocId: string; tier: string; to?: string }
+    | { action: 'social'; profileDocId: string; enabled: boolean; to?: boolean }
+    | null;
   /** Ya se deshizo: no se ofrece otra vez. */
   undone: boolean;
 }
@@ -129,8 +132,10 @@ export function sanitizeLogEntry(id: string, raw: unknown): AdminLogEntry | null
   let undo: AdminLogEntry['undo'] = null;
   if (rawUndo && rawUndo.action === 'tier' && rawUndo.profileDocId) {
     undo = { action: 'tier', profileDocId: String(rawUndo.profileDocId), tier: String(rawUndo.tier || '') };
+    if (typeof rawUndo.to === 'string') undo.to = rawUndo.to;
   } else if (rawUndo && rawUndo.action === 'social' && rawUndo.profileDocId) {
     undo = { action: 'social', profileDocId: String(rawUndo.profileDocId), enabled: rawUndo.enabled === true };
+    if (typeof rawUndo.to === 'boolean') undo.to = rawUndo.to;
   }
   return {
     id,

@@ -75,6 +75,13 @@ describe('filtros de la tabla en la URL', () => {
     expect(parseUserFilters(params, SIGNALS)).toEqual({ filters, sort });
   });
 
+  // La caja de búsqueda lee de la dirección: si se recortara al escribir, no se podría teclear «Juan Carlos».
+  it('el texto de búsqueda conserva los espacios mientras se escribe', () => {
+    const params = serializeUserFilters({ ...DEFAULT_USER_FILTERS, text: 'Juan ' }, DEFAULT_USER_SORT);
+    expect(parseUserFilters(params, SIGNALS).filters.text).toBe('Juan ');
+    expect(serializeUserFilters({ ...DEFAULT_USER_FILTERS, text: '   ' }, DEFAULT_USER_SORT).toString()).toBe('');
+  });
+
   it('lo de fábrica no ensucia la dirección', () => {
     expect(serializeUserFilters(DEFAULT_USER_FILTERS, DEFAULT_USER_SORT).toString()).toBe('');
   });

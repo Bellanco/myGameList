@@ -361,11 +361,23 @@ export default function App() {
     navigate('/logros', destino ? { state: { anclaje: destino } } : undefined);
   }, [achievementFlash, clearAchievementFlash, navigate]);
 
+  /**
+   * ¿TIENE ESTE DISPOSITIVO UN ESPACIO SOCIAL? Cerrar sesión no borra la configuración del gist social, así que
+   * «sin sesión y con espacio» es quien ya tenía lo social y ha perdido la sesión (la misma señal con la que la
+   * pasarela dice «Ya tienes espacio»). Se relee al navegar y al cambiar la sesión: se escribe al crear o enlazar
+   * el espacio, que pasa en lo social.
+   */
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const hasSocialSpace = useMemo(() => Boolean(getSocialSyncConfig()?.gistId?.trim()), [location.pathname, scoreScaleUid]);
+
   // EL AVISO DEL ADMINISTRADOR (`appConfig/announcement`): un texto y un enlace a otra web, dichos en la misma
   // cápsula del carril de abajo a la izquierda. Se decide una vez al abrir la app y se insiste como mucho N
   // veces mientras nadie pulse; la política entera vive en `core/announcement/announcement`.
   // Con quién habla: los avisos dirigidos (solo con / sin espacio social) esperan a que se sepa (`pending` = no se sabe).
-  const announcement = useAnnouncement(socialStatus === 'pending' ? null : socialStatus === 'active');
+  // Cuenta como «con espacio social» también quien lo tiene en este aparato aunque su perfil esté a medias o haya
+  // perdido la sesión: es la misma frontera que usa `withoutSocial` más abajo, y sin ella le llegaría un aviso de
+  // «crea tu espacio social» a quien ya lo tiene.
+  const announcement = useAnnouncement(socialStatus === 'pending' ? null : socialStatus === 'active' || hasSocialSpace);
 
   // Bandeja de importados (local, no sincroniza). Se monta aquí para exponer su contador en los controles
   // flotantes y cablear la graduación (clasificar → formulario → retirar de la bandeja).
@@ -960,15 +972,7 @@ export default function App() {
     if (!spriteRestoListo || tourState || HUELLA_AL_ARRANCAR || gameCount > 0 || activeSection !== 'lists') return;
     saveTourState(offeredTour());
   }, [activeSection, gameCount, spriteRestoListo, tourState]);
-  /**
-   * ¿TIENE ESTE DISPOSITIVO UN ESPACIO SOCIAL? Cerrar sesión no borra la configuración del gist social, así que
-   * «sin sesión y con espacio» es quien ya tenía lo social y ha perdido la sesión (la misma señal con la que la
-   * pasarela dice «Ya tienes espacio»). Se relee al navegar y al cambiar la sesión: se escribe al crear o enlazar
-   * el espacio, que pasa en lo social.
-   */
   const socialSignedIn = Boolean(scoreScaleUid);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const hasSocialSpace = useMemo(() => Boolean(getSocialSyncConfig()?.gistId?.trim()), [location.pathname, scoreScaleUid]);
   const reloginNeeded = authReady && !socialSignedIn && hasSocialSpace && activeSection === 'social';
   /**
    * ¿NO HAY LO SOCIAL, NI SIQUIERA UN ESPACIO EN ESTE DISPOSITIVO? Se le pasa al hub para las reseñas abiertas desde

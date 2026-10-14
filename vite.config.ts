@@ -9,6 +9,7 @@ import react from '@vitejs/plugin-react';
 import {
   pushAnnouncementHistory,
   sanitizeAnnouncement,
+  publicAnnouncementView,
   sanitizeAnnouncementHistory,
 } from './src/core/announcement/announcement';
 import { githubOAuthDevMiddleware } from './scripts/devGithubOAuth';
@@ -249,8 +250,11 @@ function localAnnouncementApi(): Plugin {
             send(res, 200, sanitizeAnnouncementHistory(readJson(HISTORY_FILE)));
             return;
           }
-          // Sin fichero no hay aviso publicado en este entorno, que es el estado normal.
-          send(res, 200, sanitizeAnnouncement(readJson(FILE)));
+          // Sin fichero no hay aviso publicado en este entorno, que es el estado normal. Igual que la Function: el
+          // panel (`?all=1`) lo recibe tal cual y el público, solo dentro de su ventana.
+          const stored = sanitizeAnnouncement(readJson(FILE));
+          const all = new URL(req.url, 'http://localhost').searchParams.get('all') === '1';
+          send(res, 200, all ? stored : publicAnnouncementView(stored, Date.now(), 300).value);
           return;
         }
 
