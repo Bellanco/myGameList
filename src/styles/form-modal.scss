@@ -9,12 +9,14 @@
    campo de etiquetas va en UNA línea (lo que no cabe se desplaza en horizontal) para que no crezca hacia abajo.
    Los temas que visten los campos o los rótulos con su forma siguen mandando sobre esto (pesan más). */
 .modal.form-modal { max-width: 1000px; max-height: 94vh; }
-/* Cabecera comprimida: en este formulario el título solo nombra lo que se hace («Nuevo juego»), así que va con la
-   mitad del relleno de los demás modales y no se lleva espacio al contenido. */
-.form-modal .modal-hd { justify-content: flex-start; padding-block: var(--sp-3); }
-.form-modal .modal-hd .btn-icon { width: 40px; height: 40px; min-height: 40px; }
+/* Cabecera comprimida: en este formulario el título solo nombra lo que se hace («Nuevo juego»), así que va pequeño,
+   con poco relleno, y no se lleva espacio al contenido. Cabecera, separaciones y pie van apretados para que el
+   formulario quepa entero sin desplazarse también en una ventana baja (con la barra de marcadores del portátil). */
+.form-modal .modal-hd { justify-content: flex-start; padding-block: var(--sp-2); }
+.form-modal .modal-title { font-size: var(--fs-md); }
+.form-modal .modal-hd .btn-icon { width: 36px; height: 36px; min-height: 36px; }
 .form-modal .modal-hd .btn-icon { margin-left: auto; }
-.form-modal .modal-body { gap: var(--sp-5); padding: var(--sp-5) var(--sp-6); }
+.form-modal .modal-body { gap: var(--sp-4); padding: var(--sp-4) var(--sp-6); }
 .form-modal .flabel { font-size: var(--fs-xs); font-weight: 700; letter-spacing: 0; text-transform: none; }
 
 /* Cabeza: el nombre como titular; la nota (estrellas o barra 0–100) al lado, en una línea las dos. */
@@ -28,7 +30,12 @@
 .form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4) var(--sp-5); align-items: start; }
 .form-row.is-three { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, .7fr); }
 .form-row.has-hours { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 8.5rem; }
-.form-field { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.form-field { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+/* «Pulsa Enter o separa con comas»: una nota al pie del campo, pegada a él y en la letra más pequeña. Los errores
+   y avisos (que usan la misma clase) conservan su tamaño. */
+.form-modal .tag-hint:not(.is-error, .is-warning) {
+  margin-top: calc(var(--sp-1) * -1); min-height: 0; font-size: var(--fs-3xs); opacity: .7;
+}
 .form-modal .tag-inp-wrap {
   flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; min-height: 46px;
 }
@@ -50,6 +57,20 @@
   font: inherit; font-size: var(--fs-2xs); font-weight: 500; cursor: pointer;
 }
 .quick-pick span { opacity: .7; }
+/* Filtradas por lo escrito: cuanto más cerca está lo escrito del nombre y cuantas menos quedan (`--pick-glow`, de 0
+   a 1, ver `matchGlow`), más se enciende: fondo, contorno y un halo que solo asoma al final. La que coincide del todo
+   queda casi como un chip puesto. Antes que el hover, que sigue mandando. */
+.quick-pick.is-matching {
+  opacity: calc(.85 + var(--pick-glow, 0) * .15);
+  color: color-mix(in srgb, var(--text) calc(var(--pick-glow, 0) * 100%), var(--text-dim));
+  background: rgba(var(--steam-rgb), calc(.06 + var(--pick-glow, 0) * .26));
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--steam-rgb), calc(var(--pick-glow, 0) * .6)),
+    0 0 calc(var(--pick-glow, 0) * 12px) rgba(var(--steam-rgb), calc(var(--pick-glow, 0) * var(--pick-glow, 0) * .45));
+}
+@media (prefers-reduced-motion: no-preference) {
+  .quick-pick.is-matching { transition: background-color .15s, box-shadow .15s, color .15s; }
+}
 .quick-pick:hover, .quick-pick:focus-visible { opacity: 1; }
 .quick-pick:hover, .quick-pick:focus-visible { color: var(--text); background: var(--surface-hover); outline: none; }
 .quick-pick:focus-visible { box-shadow: var(--ring-accent-soft); }
@@ -92,7 +113,7 @@
 .grade-line-num:focus { outline: none; border-color: var(--focus-ring); box-shadow: var(--ring-accent-soft); }
 
 /* Pie: los interruptores (Steam Deck, rejugar…) solo con icono a la izquierda y el aviso de lo guardado en medio. */
-.form-ft { align-items: center; }
+.form-ft { align-items: center; padding-block: var(--sp-3); }
 .form-ft-toggles { display: flex; gap: var(--sp-2); }
 .form-ft .btn-icon-only { width: 44px; min-height: 44px; padding: 0; justify-content: center; }
 .form-saved { margin-right: auto; color: var(--fg-green); font-size: var(--fs-xs); font-weight: 700; }

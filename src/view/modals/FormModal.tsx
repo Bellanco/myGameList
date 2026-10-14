@@ -17,7 +17,7 @@ import { TagInput } from '../components/TagInput';
 import { useNativeDialog } from './useNativeDialog';
 import { useScoreScale } from '../hooks/useScoreScale';
 import { DEFAULT_GRADE, DEFAULT_STARS, gradeFromStars, resolveGrade, starsFromGrade } from '../../core/utils/scoreScale';
-import { EMPTY_FORM_SUGGESTIONS, buildFormSuggestions, suggestForGenres } from '../../core/utils/formSuggestions';
+import { EMPTY_FORM_SUGGESTIONS, buildFormSuggestions, filterSuggestions, matchCloseness, matchGlow, suggestForGenres } from '../../core/utils/formSuggestions';
 
 interface FormModalProps {
   open: boolean;
@@ -449,35 +449,55 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
   const currentYear = new Date().getFullYear();
   const pointsTaken = [...draft.strengths, ...draft.weaknesses];
 
-  /** Un campo de etiquetas con sus sugerencias de un toque debajo. */
+  /**
+   * Un campo de etiquetas con sus sugerencias de un toque debajo. Hacen también de autocompletado: mientras se
+   * escribe, la fila se queda con las de `pool` que casan con lo escrito (`filterSuggestions`), cada una más
+   * iluminada cuanto más se acerca lo escrito a su nombre y cuantas menos quedan; tocar una la añade y vacía el campo.
+   */
   const tagField = (
     key: TextTagField,
     label: string,
     placeholder: string,
     chipClassName: string,
-    listId: string | undefined,
-    picks: ReadonlyArray<string>,
+    pool: ReadonlyArray<string>,
+    limit: number,
     picksLabel: string,
     taken: ReadonlyArray<string> = draft[key],
     errorMessage?: string,
-  ) => (
-    <div className="form-field">
-      <TagInput
-        label={label}
-        inputId={`draft-${key}`}
-        listId={listId}
-        placeholder={placeholder}
-        values={draft[key]}
-        pendingValue={pending[key]}
-        onPendingValueChange={(value) => setPendingValue(key, value)}
-        onAdd={(values) => addTextTags(key, values)}
-        onRemove={(value) => removeTextTag(key, value)}
-        chipClassName={chipClassName}
-        errorMessage={errorMessage}
-      />
-      <QuickPicks options={picks} taken={taken} label={picksLabel} fieldId={`draft-${key}`} onPick={(value) => addTextTags(key, [value])} />
-    </div>
-  );
+  ) => {
+    const query = pending[key].trim();
+    // Todas las que casan (no solo las que caben): cuantas menos quedan, más se encienden.
+    const matches = filterSuggestions(pool, query, taken, query ? Infinity : limit);
+    return (
+      <div className="form-field">
+        <TagInput
+          label={label}
+          inputId={`draft-${key}`}
+          placeholder={placeholder}
+          values={draft[key]}
+          pendingValue={pending[key]}
+          onPendingValueChange={(value) => setPendingValue(key, value)}
+          onAdd={(values) => addTextTags(key, values)}
+          onRemove={(value) => removeTextTag(key, value)}
+          chipClassName={chipClassName}
+          hint={FORM_UI.enterToAddHint}
+          errorMessage={errorMessage}
+        />
+        <QuickPicks
+          options={matches.slice(0, limit)}
+          taken={taken}
+          label={query ? FORM_UI.quickPicks.matching : picksLabel}
+          fieldId={`draft-${key}`}
+          returnToField={Boolean(query)}
+          glow={query ? (value) => matchGlow(matchCloseness(value, query), matches.length) : undefined}
+          onPick={(value) => {
+            addTextTags(key, [value]);
+            if (query) setPendingValue(key, '');
+          }}
+        />
+      </div>
+    );
+  };
 
   const scoreField = supportsScore(currentTab) ? (
     <div className="fg form-score">
@@ -590,10 +610,10 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
           </div>
 
           <div className={`form-row ${supportsYears(currentTab) ? 'is-three' : ''}`.trim()}>
-            {tagField('platforms', FORM_UI.platformsLabel, FORM_UI.platformsPlaceholder, 'chip-plat', 'dl-platforms',
-              suggestions.ranked.platforms.slice(0, QUICK_PICKS.platforms), FORM_UI.quickPicks.platforms, draft.platforms, fieldErrors.platforms)}
-            {tagField('genres', FORM_UI.genresLabel, FORM_UI.genresPlaceholder, 'chip-genre', 'dl-genres',
-              suggestions.ranked.genres.slice(0, QUICK_PICKS.genres), FORM_UI.quickPicks.genres, draft.genres, fieldErrors.genres)}
+            {tagField('platforms', FORM_UI.platformsLabel, FORM_UI.platformsPlaceholder, 'chip-plat', suggestions.ranked.platforms,
+              QUICK_PICKS.platforms, FORM_UI.quickPicks.platforms, draft.platforms, fieldErrors.platforms)}
+            {tagField('genres', FORM_UI.genresLabel, FORM_UI.genresPlaceholder, 'chip-genre', suggestions.ranked.genres,
+              QUICK_PICKS.genres, FORM_UI.quickPicks.genres, draft.genres, fieldErrors.genres)}
             {supportsYears(currentTab) ? (
               <div className="form-field">
                 <TagInput
@@ -608,6 +628,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
                     setLocalDraft({ ...draft, years: draft.years.filter((entry) => entry !== Number(value)) });
                   }}
                   chipClassName="chip-generic"
+                  hint={FORM_UI.enterToAddHint}
                   errorMessage={fieldErrors.years}
                 />
                 <QuickPicks options={[currentYear, currentYear - 1]} taken={draft.years} label={FORM_UI.quickPicks.years}
@@ -621,18 +642,18 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, libr
               {hasPoints || hoursField ? (
                 <div className={`form-row ${hoursField ? 'has-hours' : ''}`.trim()}>
                   {supportsStrengths(currentTab)
-                    ? tagField('strengths', FORM_UI.strengthsLabel, FORM_UI.strengthsPlaceholder, 'chip-pf', 'dl-strengths',
-                      suggestForGenres(suggestions, 'strengths', draft.genres, pointsTaken, QUICK_PICKS.points),
+                    ? tagField('strengths', FORM_UI.strengthsLabel, FORM_UI.strengthsPlaceholder, 'chip-pf',
+                      suggestForGenres(suggestions, 'strengths', draft.genres, pointsTaken, Infinity), QUICK_PICKS.points,
                       FORM_UI.quickPicks.strengths, pointsTaken)
                     : null}
                   {supportsWeaknesses(currentTab)
-                    ? tagField('weaknesses', FORM_UI.weaknessesLabel, FORM_UI.weaknessesPlaceholder, 'chip-pd', 'dl-weaknesses',
-                      suggestForGenres(suggestions, 'weaknesses', draft.genres, pointsTaken, QUICK_PICKS.points),
+                    ? tagField('weaknesses', FORM_UI.weaknessesLabel, FORM_UI.weaknessesPlaceholder, 'chip-pd',
+                      suggestForGenres(suggestions, 'weaknesses', draft.genres, pointsTaken, Infinity), QUICK_PICKS.points,
                       FORM_UI.quickPicks.weaknesses, pointsTaken)
                     : null}
                   {supportsReasons(currentTab)
-                    ? tagField('reasons', FORM_UI.reasonsLabel, FORM_UI.reasonsPlaceholder, 'chip-pd', 'dl-weaknesses',
-                      suggestForGenres(suggestions, 'reasons', draft.genres, draft.reasons, QUICK_PICKS.points),
+                    ? tagField('reasons', FORM_UI.reasonsLabel, FORM_UI.reasonsPlaceholder, 'chip-pd',
+                      suggestForGenres(suggestions, 'reasons', draft.genres, draft.reasons, Infinity), QUICK_PICKS.points,
                       FORM_UI.quickPicks.reasons)
                     : null}
                   {hoursField}

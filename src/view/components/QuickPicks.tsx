@@ -1,4 +1,4 @@
-import { memo, useRef } from 'react';
+import { memo, useRef, type CSSProperties } from 'react';
 import { FORM_UI } from '../../core/constants/formLabels';
 
 /**
@@ -6,13 +6,18 @@ import { FORM_UI } from '../../core/constants/formLabels';
  * desplaza en horizontal). Solo salen las que aún no están puestas, así que al tocar una «salta» al campo.
  *
  * Como el botón tocado desaparece, el foco se iría al `body` —y con él el Tab y ⌘↵—: pasa al botón que ocupa su
- * sitio, o al campo si ya no queda ninguno.
+ * sitio, o al campo si ya no queda ninguno. Si la fila estaba filtrada por lo escrito (`returnToField`), vuelve
+ * siempre al campo: lo escrito se vacía al elegir y lo natural es seguir tecleando la siguiente.
+ *
+ * `glow` ilumina cada sugerencia según lo cerca que esté lo escrito de su nombre (de 0 a 1, en `--pick-glow`).
  */
 export const QuickPicks = memo(function QuickPicks({
   options,
   taken,
   label,
   fieldId,
+  returnToField = false,
+  glow,
   onPick,
 }: {
   options: ReadonlyArray<string | number>;
@@ -22,6 +27,10 @@ export const QuickPicks = memo(function QuickPicks({
   label: string;
   /** El campo al que vuelve el foco cuando no quedan sugerencias. */
   fieldId: string;
+  /** Al elegir, el foco vuelve al campo en vez de pasar a la sugerencia siguiente. */
+  returnToField?: boolean;
+  /** Brillo de cada sugerencia, de 0 (apagada, como siempre) a 1 (lo escrito es justo esa). */
+  glow?: (value: string) => number;
   onPick: (value: string) => void;
 }) {
   const groupRef = useRef<HTMLDivElement>(null);
@@ -32,7 +41,7 @@ export const QuickPicks = memo(function QuickPicks({
   const pick = (value: string, index: number) => {
     onPick(value);
     requestAnimationFrame(() => {
-      const buttons = groupRef.current?.querySelectorAll<HTMLButtonElement>('.quick-pick');
+      const buttons = returnToField ? undefined : groupRef.current?.querySelectorAll<HTMLButtonElement>('.quick-pick');
       const next = buttons?.length ? buttons[Math.min(index, buttons.length - 1)] : undefined;
       (next ?? document.getElementById(fieldId))?.focus();
     });
@@ -44,7 +53,8 @@ export const QuickPicks = memo(function QuickPicks({
         <button
           key={option}
           type="button"
-          className="quick-pick"
+          className={glow ? 'quick-pick is-matching' : 'quick-pick'}
+          style={glow ? ({ '--pick-glow': glow(String(option)).toFixed(2) } as CSSProperties) : undefined}
           aria-label={FORM_UI.quickPicks.add(option)}
           onClick={() => pick(String(option), index)}
         >
