@@ -9,6 +9,7 @@
 // Pulsar se ve al momento (estado local) y la subida va después, agrupada (`setSocialLike`). Al abrir el hub se
 // reintenta lo que hubiera quedado en la cola de otra visita (`flushSocialLikes`).
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ADMIN_ONLY_TIER } from '../../core/constants/tiers';
 import { buildFeedLikes, likeTargetOf, type FeedLikes, type LikeableFeedItem } from '../../core/social/feedLikes';
 import { reactionTargetKey, setReaction, type SocialReactionEntry } from '../../core/social/reactions';
 import {
@@ -23,7 +24,7 @@ export interface SocialLikesOptions {
   /** ¿Está abierto el espacio social, con sesión y canal? Fuera de él no se lee ni se sube nada. */
   enabled: boolean;
   /** El directorio SIN tu propia entrada: de aquí salen los «me gusta» de tus amistades y sus nombres. */
-  others: readonly Pick<SocialDirectoryEntry, 'id' | 'uid' | 'displayName' | 'reactions' | 'activity' | 'posts'>[];
+  others: readonly Pick<SocialDirectoryEntry, 'id' | 'uid' | 'displayName' | 'tier' | 'reactions' | 'activity' | 'posts'>[];
 }
 
 export interface SocialLikes {
@@ -64,7 +65,14 @@ export function useSocialLikes({ enabled, others }: SocialLikesOptions): SocialL
   const likers = useMemo(
     () => others
       .filter((entry) => entry.reactions?.length)
-      .map((entry) => ({ key: entry.uid || entry.id, name: entry.displayName, reactions: entry.reactions ?? [] })),
+            // El rango reservado a la cuenta del administrador es lo que la distingue en el directorio: el claim solo lo ve
+      // ella misma. Solo ordena la frase; no se nombra en ningún sitio (los rangos no se enseñan a nadie más).
+      .map((entry) => ({
+        key: entry.uid || entry.id,
+        name: entry.displayName,
+        admin: entry.tier === ADMIN_ONLY_TIER,
+        reactions: entry.reactions ?? [],
+      })),
     [others],
   );
   const likesFor = useMemo(() => buildFeedLikes(likers, own), [likers, own]);

@@ -51,7 +51,7 @@ import { YearSummaryToast } from '../../src/view/components/YearSummaryToast';
 import { packAchievements } from '../../src/core/achievements/pack';
 import { LADDERS } from '../../src/core/achievements/catalog';
 import type { AchievementState } from '../../src/core/achievements/types';
-import type { ProfileTier } from '../../src/core/constants/tiers';
+import { ADMIN_ONLY_TIER, type ProfileTier } from '../../src/core/constants/tiers';
 import type { RelationshipState, SocialSharedGame } from '../../src/model/types/social';
 import type { GameItem, TabId } from '../../src/model/types/game';
 import type { RelatedReview } from '../../src/core/social/relatedReviews';
@@ -253,7 +253,8 @@ const MI_ACTIVIDAD = {
 
 // ─── «Me gusta» (docs/plan-reacciones.md) ──────────────────────────────────────────────────────────────────────
 // Los de tus amistades, con el MISMO cruce que el hub (`buildFeedLikes`). Fechas distintas para que el orden de los
-// nombres (del más reciente al más antiguo) se vea; el de Iván ya lo tienes dado, para ver el botón pulsado.
+// nombres (por llegada, del primero que pulsó al último) se vea; el de Iván ya lo tienes dado, para ver el botón
+// pulsado. Iván es la cuenta del administrador (mithril): en la reseña de Marta llega el último y sale el primero.
 function gustan(items: readonly LikeableFeedItem[], desde: number): SocialReactionEntry[] {
   return items.flatMap((item, index) => {
     const target = likeTargetOf(item);
@@ -261,15 +262,18 @@ function gustan(items: readonly LikeableFeedItem[], desde: number): SocialReacti
   });
 }
 const RESENA_IVAN = ACTIVIDAD[IVAN.id][0];
+const RESENA_MARTA = ACTIVIDAD[MARTA.id][0];
 const LIKERS: FeedLiker[] = [
   { key: MARTA.uid, name: MARTA.displayName, reactions: gustan([MI_ACTIVIDAD.activity[0], RESENA_IVAN], hace(0, 9, 0)) },
-  { key: NACHO.uid, name: NACHO.displayName, reactions: gustan([MI_ACTIVIDAD.activity[0], RESENA_IVAN], hace(0, 8, 0)) },
+  { key: NACHO.uid, name: NACHO.displayName, reactions: gustan([MI_ACTIVIDAD.activity[0], RESENA_IVAN, RESENA_MARTA], hace(0, 8, 0)) },
   // Las publicaciones, con su `kind`: es el que les pone el feed al mezclarlas, y lo que las distingue de una reseña.
-  { key: LUCIA.uid, name: LUCIA.displayName, reactions: gustan([{ ...MI_ACTIVIDAD.posts[0], kind: 'post' }, RESENA_IVAN], hace(0, 7, 0)) },
+  { key: LUCIA.uid, name: LUCIA.displayName, reactions: gustan([{ ...MI_ACTIVIDAD.posts[0], kind: 'post' }, RESENA_IVAN, RESENA_MARTA], hace(0, 7, 0)) },
   { key: PAULA.uid, name: PAULA.displayName, reactions: gustan([{ ...PUBLICACIONES[NACHO.id][0], kind: 'post' }, RESENA_IVAN], hace(0, 6, 0)) },
-  // Un nombre al tope de 35 caracteres, el más reciente en la publicación de Nacho: la frase solo usa la primera palabra
-  // («Maximiliano»), así que sigue cabiendo; el nombre entero queda en el `title`.
-  { key: 'uid-maqueta-largo', name: 'Maximiliano Fernández-Villaverde', reactions: gustan([{ ...PUBLICACIONES[NACHO.id][0], kind: 'post' }], hace(0, 10, 0)) },
+  // Un nombre al tope de 35 caracteres, el primero en llegar a la publicación de Nacho: la frase solo usa la primera
+  // palabra («Maximiliano»), así que sigue cabiendo; el nombre entero queda en el `title`.
+  { key: 'uid-maqueta-largo', name: 'Maximiliano Fernández-Villaverde', reactions: gustan([{ ...PUBLICACIONES[NACHO.id][0], kind: 'post' }], hace(0, 5, 0)) },
+  // Como en el hub, el administrador se reconoce por su rango (`useSocialLikes`): «A Iván y a 2 más les gusta».
+  { key: IVAN.uid, name: IVAN.displayName, admin: IVAN.tier === ADMIN_ONLY_TIER, reactions: gustan([RESENA_MARTA], hace(0, 11, 0)) },
 ];
 
 /** El estado de tus «me gusta» de la maqueta: pulsar cambia de verdad, sin red. */
