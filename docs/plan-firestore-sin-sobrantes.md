@@ -1,8 +1,8 @@
 # Plan 1.6.9: la amistad nueva, Firestore sin sobrantes y la fecha de alta
 
-> **Estado (10-10-2026): Fases 1–4 hechas en `develop`, sin push y sin release (la rama de release la crea el
-> usuario; el CHANGELOG queda en `[Unreleased]`). Reglas del depósito DESPLEGADAS (10-10-2026). Relleno de
-> `createdAt` HECHO en los 12 perfiles de producción (comprobado con el MCP).** Medido leyendo producción (MCP de
+> **Estado (revisado el 14-10-2026): publicado entero en la 1.6.9** (Fases 1–4; p. ej. `c42b5aba`, `20525718`).
+> **Reglas del depósito DESPLEGADAS (10-10-2026). Relleno de `createdAt` HECHO en los 12 perfiles de producción
+> (comprobado con el MCP).** Medido leyendo producción (MCP de
 > Firebase) y el código de `develop`. Los casos ya rotos y los datos sobrantes que ya existen se arreglan **cuando su dueño entra**, sin
 > scripts. La única excepción es la fecha de alta (Fase 3): entrar la sellaría con la fecha de ese día, así que se
 > rellena una vez con su fecha real.

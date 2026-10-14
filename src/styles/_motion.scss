@@ -211,3 +211,24 @@
    detalle de un juego que está a punto de no existir. */
 tbody tr.main-row.is-leaving,
 tbody tr.detail-row.is-leaving { pointer-events: none; }
+
+/* ══ 5 · IMÁGENES QUE LLEGAN ═══════════════════════════════════════════════════════════════════════════════
+   Toda imagen ENTRA, ninguna aparece: el avatar, la carátula de fondo de un renglón, la foto de una publicación.
+   El estado lo pone `refEntradaDeImagen` / `refEntradaDeFondo` (`core/utils/entradaDeImagen.ts`) en
+   `data-entrada`; aquí, el de los `<img>`, y las capas de fondo lo toman del mixin de `_entrada.scss`.
+
+   ES LA EXCEPCIÓN AL PRESUPUESTO DE ARRIBA, y a propósito: no es una transición de interfaz que haya que quitarse
+   de en medio, es la imagen instalándose. A medio segundo el fundido pasaba tan rápido que volvía a leerse como un
+   salto (lo mismo que se midió con las carátulas del mosaico, `coverIn` en `_table.scss`). Solo opacidad: un
+   avatar o una franja de fondo que crecen se leen como un tirón, no como una llegada.
+
+   La opacidad final la pone la regla, no el último fotograma: bajo `prefers-reduced-motion` la imagen se enseña
+   al llegar, sin fundido, pero tampoco a medio bajar. */
+img[data-entrada="cargando"] { opacity: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  img[data-entrada="lista"] { animation: imagenEntra 1.8s ease-out; }
+}
+@keyframes imagenEntra {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

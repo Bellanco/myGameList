@@ -1,6 +1,6 @@
 # Plan (a futuro): amistades incrementales
 
-> **Estado: sin empezar, aparcado a propósito (04-10-2026).** Antes de abordarlo hay que medir el consumo real
+> **Estado: sin empezar, aparcado a propósito (04-10-2026; revisado el 14-10-2026: sigue sin código).** Antes de abordarlo hay que medir el consumo real
 > (Fase 0 de `docs/plan-capacidad-gratuita.md`): si el techo que aprieta es Cloudflare y no Firestore, esto no lo
 > sube. Las cifras de aquí son estimaciones leyendo el código.
 

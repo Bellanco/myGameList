@@ -1,7 +1,7 @@
 # Copilot instructions — myGameList ("Mis Listas")
 
 > **Read this first.** This file describes the app **exactly as it exists in the code today**.
-> Everything here was verified against `src/` on 2026-10-10. If a suggestion you are about to make
+> Everything here was verified against `src/` on 2026-10-14. If a suggestion you are about to make
 > relies on a function, file, script or field, confirm it appears in the actual source — **do not invent
 > APIs**. If this document and the code disagree, **the code wins** (and this file should be fixed).
 
@@ -15,7 +15,7 @@ optionally share a social profile with friends.
 
 - **Sync**: each user's data lives in **their own GitHub Gists** (a secret gist for games, another for the social channel). Conflict‑free merge (CRDT‑style) on every cycle.
 - **Social**: optional Google sign‑in; profiles, mutual **friendships** (Firestore) and a feed of reviews, posts and list moves (social gist), public review links (`/r/:token`), invites and a year summary.
-- **Also**: stats, achievements (*logros*), the seasonal awards (`/premios`), Playnite import, eight themes × light/dark, an onboarding tour.
+- **Also**: stats, achievements (*logros*), the seasonal awards (`/premios`), Playnite import, eight themes × light/dark, an onboarding tour, a global search (⌘K / `/`, `core/search/` + `viewmodel/search/`) and an admin panel under `/admin/*` (custom claim `admin` only — `hasAdminClaim` in `core/security/admin.ts`).
 - **Offline‑first**: dual local storage (IndexedDB primary, localStorage fallback) + service worker.
 - **Hosting**: static build + a few Pages Functions (`functions/`) on **Cloudflare Pages**.
 - **Next‑game picker** (*"Elige tu próximo juego"*): a score‑weighted roulette that suggests what to play next. In the lists it draws from completed‑with‑replayable + abandoned‑with‑retry + all next (biased toward next); in a social profile it draws from that user's completed games. Shared UI + pure weighting (see §3 / §7).
@@ -36,7 +36,7 @@ Major versions only — the exact ranges live in `package.json` and move with ev
 |------|------|---------|
 | UI | React + React DOM (pinned, no `^`: the pair must match) | 19 |
 | Routing | react-router-dom | 7 |
-| Virtualized table | @tanstack/react-virtual | 3 |
+| Virtualized table | `@tanstack/react-virtual` | 3 |
 | Backend SDK | firebase (modular API: Auth, Firestore, Analytics, App Check) | 12 |
 | Schemas | zod (`src/model/schemas/`) | 4 |
 | Language | TypeScript | 6 |
@@ -62,6 +62,9 @@ src/
     security/                   # sanitize.ts (input sanitization + limits), crypto.ts (token at rest), admin.ts
     utils/                      # compare, renderStars, normalize, dateTime, gistCompression, … (pure helpers)
     roulette/                   # roulette.ts — pure next-game picker (pool builders + context weighting)
+    pick/                       # pickNext.ts — «¿A qué juego ahora?» (/elegir)
+    search/                     # globalSearch.ts — pure ranking for the ⌘K search
+    admin/                      # admin routes, attention signals, community stats, user filters
     achievements/ stats/ premios/ social/ import/ onboarding/ announcement/ effects/   # pure logic per domain
   model/
     types/                      # shared contracts: game.ts, social.ts, firestore.ts, gist.ts, local.ts, share.ts, premios.ts, import.ts
@@ -69,11 +72,13 @@ src/
     migration/                  # legacy gist / localStorage formats and their reassembly
     schemas/                    # Zod schemas: gamesGistSchema, socialGistSchema, shareSchema
   viewmodel/                    # hooks: useGameListViewModel, useSyncViewModel, useSocialViewModel, useStatsViewModel,
-                                #   useAdminViewModel, useShareViewModel, …; social/, premios/, sync/ subfolders
+                                #   useAdminViewModel + useAdmin*, useShareViewModel, …; social/, premios/, sync/, search/ subfolders
   view/
     components/                 # GameTable, Toolbar, TabBar, SocialHub, SettingsHub, AdminHub, Icon, …
     components/socialhub/       # SocialFeedScreen, SocialProfileScreen, SocialProfileDetailScreen, SocialDetailScreen, …
     components/roulette/        # RouletteModal / ListsRouletteModal — shared "next game" roulette
+    components/admin/           # /admin/* screens (Hoy, Usuarios, Comunidad, Capacidad, Registro) over AdminPanelContext
+    components/{pick,search}/   # PickNextScreen (/elegir) · GlobalSearch (⌘K)
     components/{stats,settings,premios,onboarding,import,invite,sync,appearance}/
     modals/                     # FormModal, ConfirmModal, ShareReviewModal (+ useNativeDialog)
     hooks/                      # UI hooks (theme, palette, preferences…) and the use*Session hooks (see §1)
@@ -198,7 +203,7 @@ IndexedDB, the Gist API, or Firestore directly.
 - Table is virtualized via `@tanstack/react-virtual`. Icons use the existing `<Icon name="…" />` (`Icon.tsx` + `IconSprite.tsx` / `IconSpriteRest.tsx`).
 - The **next‑game roulette** is `view/components/roulette/RouletteModal.tsx` — one shared, lazy‑loaded modal used from the lists (via `ListsRouletteModal`) and from the social profile detail (`SocialProfileDetailScreen`). It takes `candidates`, a context `weight` function, and an `action` resolver; the **pure** pool building + weighting live in `core/roulette/roulette.ts` (`buildListsPool`, `buildProfilePool`, `buildListsWeigher`, `listsWeight`, `profileWeight`, `pickWeighted`). Change weighting there, not in the component.
 - Styling is **SCSS** in `src/styles/` (see `.github/instructions/styles.instructions.md` and `DESIGN.md`): neutral components built from tokens; a theme's character goes in `styles/themes/<id>/<id>.scss`. Mobile‑first; verify at **360 / 768 / 1024 / 1440 px**. Accessibility: ARIA labels, semantic roles, keyboard nav (jsx‑a11y is enforced by ESLint; `tests/e2e/a11y.test.ts` runs axe on every theme × mode).
-- Social hub screens need a Google + GitHub session; to review their design use `docs/maquetas/social.html` (dev server) and `node scripts/capturar-maqueta-social.mjs`. **A new hub screen or view must be added to that mock‑up too.**
+- Social hub screens need a Google + GitHub session; to review their design use `docs/maquetas/social.html` (dev server) and `node scripts/capturar-maqueta-social.mjs`. **A new hub screen or view must be added to that mock‑up too.** Same for `/admin`: it needs the admin claim and there is no Firebase locally, so `docs/maquetas/admin.html` mounts its real screens over a fake context — a new admin screen goes there too.
 
 ---
 
@@ -267,9 +272,13 @@ rules and indexes (`firebase deploy --only firestore:rules,firestore:indexes`), 
 
 ## 10. How the `.github/` context is organized
 
-- `copilot-instructions.md` *(this file)* — global, always‑on context. Mirrors `CLAUDE.md` and the README; the code is the source of truth.
-- `instructions/*.instructions.md` — path‑scoped rules auto‑applied by `applyTo` glob (model / viewmodel / view / core / styles / tests).
+- `copilot-instructions.md` *(this file)* — global, always‑on context. **Shared with Claude Code**: `CLAUDE.md`
+  imports it (`@.github/copilot-instructions.md`), so a fix here reaches both assistants. The code is the source of truth.
+- `instructions/*.instructions.md` — path‑scoped rules (model / viewmodel / view / core / styles / tests). Each one
+  carries both `applyTo:` (Copilot) and `paths:` (Claude Code), and `.claude/rules/*.md` are symlinks to them:
+  **edit them here (the symlinks follow) and keep both globs equal.**
 - `prompts/*.prompt.md` — task templates for real work: `new-component`, `new-feature`, `fix-bug`, `refactor`, `add-test`.
 - `prompts/remediation-plan.prompt.md` — **historical** phased fix plan (June 2026 audit). Most of it is done; the
   current open findings and plan live in `docs/revision-general-2026-09.md`. Don't run it blindly.
-- `agents/{dev,debug,review}.agent.md` — working agents that reflect the real stack.
+- `agents/{dev,debug,review}.agent.md` — Copilot agents. Claude Code has its own equivalents in `.claude/agents/`
+  (`revisor`, `depurador`) and step‑by‑step recipes in `.claude/skills/`.

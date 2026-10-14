@@ -1,4 +1,5 @@
 import type React from 'react';
+import { refEntradaDeFondo } from '../../../core/utils/entradaDeImagen';
 import { HubAvatar } from './HubAvatar';
 
 /**
@@ -59,7 +60,7 @@ export function HubPersonRow({
       onKeyDown={onKeyDown}
     >
       {coverUrl ? (
-        <span className="hub-person-row-cover" style={{ '--person-cover': `url("${coverUrl}")` } as React.CSSProperties} aria-hidden="true" />
+        <span ref={refEntradaDeFondo(coverUrl)} className="hub-person-row-cover" style={{ '--person-cover': `url("${coverUrl}")` } as React.CSSProperties} aria-hidden="true" />
       ) : null}
       <HubAvatar photoURL={photoURL} />
       <div className="hub-person-row-text">

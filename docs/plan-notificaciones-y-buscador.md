@@ -1,7 +1,7 @@
 # Plan: «me gusta» en la campana y buscador general
 
-> **Estado (13-10-2026): notificaciones hechas y comiteadas (f94da005); buscador B0–B2 hecho, sin comitear; de B3
-> falta el e2e.** Sale de las ideas B1 y C4 de
+> **Estado (revisado el 14-10-2026): notificaciones y buscador B0–B2 publicados en la 1.7.1** (`f94da005`,
+> `37806d43`, `640498e6`)**; de B3 sigue faltando el e2e** (no hay ninguno del buscador en `tests/e2e`). Sale de las ideas B1 y C4 de
 > `docs/investigacion-interaccion-social.md`, con lo que el usuario decidió el 13-10-2026 (§2 y §4).
 >
 > ⚠️ **Documento vivo.** Si una línea no coincide con el código, manda el código: corrige esto en la misma pasada.
@@ -85,10 +85,10 @@
 1. **Lo visto se borra al salir del social (aceptado).** Si se borrara al entrar, abrir un aviso para ver la reseña
    y volver atrás dejaría la pantalla vacía. Lo nuevo se queda mientras sigas dentro del hub y se borra al salir de
    él (o al recargar); la campana desaparece en ese momento.
-2. **La lupa en todas las secciones (descartado por ahora).** El dado y el «+» solo se pintan en las listas
-   (`activeSection === 'lists'`, `App.tsx:1322`), y la lupa va con ellos. Fuera de las listas el buscador se abre
-   solo con el teclado, así que **en móvil no se puede buscar desde el social ni desde las estadísticas**: se
-   acepta así y se revisa con el uso.
+2. **La lupa solo en las listas (superado).** Empezó junto al dado y el «+», que solo se pintan en las listas, y
+   fuera de ellas el buscador solo se abría con el teclado. El 13-10-2026 se movió a los controles flotantes, junto
+   al botón del tema (`SEARCH_LAUNCHER_SLOT_ID` en `FloatingControls.tsx`), y desde entonces sale en todas las
+   secciones, también en móvil (revisado el 14-10-2026).
 3. **Ctrl+F con salida al navegador (descartado).** Sustituido por ⌘K / Ctrl+K y `/`.
 
 ## 5. Fases
@@ -174,7 +174,7 @@ Lo que se planeó (0,5 días + 4–6 días):
 
 **B2 · El panel.**
 - Diálogo modal con el patrón combobox + listbox: flechas, Enter, Esc, y el foco vuelve a donde estaba.
-- Se abre con ⌘K / Ctrl+K o `/` en cualquier pantalla, y con la lupa flotante en las listas. El panel se carga
+- Se abre con ⌘K / Ctrl+K o `/` en cualquier pantalla, y con la lupa flotante, que sale en todas las secciones. El panel se carga
   perezoso; en el arranque solo entran el botón y el atajo. El atajo se enseña en la descripción de la lupa
   («Buscar · ⌘K», o Ctrl+K fuera de Mac) y en el pie del panel.
 - Qué abre cada resultado:
@@ -197,7 +197,7 @@ Lo que se planeó (0,5 días + 4–6 días):
 
 ## 6. Fuera de este plan
 
-- La lupa fuera de las listas (§4.2).
+- ~~La lupa fuera de las listas (§4.2).~~ Hecho: está en los controles flotantes de todas las secciones.
 - Aviso fuera del hub (punto en la pestaña Social, refresco en segundo plano de los «me gusta»): 1–2 días si se
   pide más adelante.
 - Sincronizar lo visto entre dispositivos.

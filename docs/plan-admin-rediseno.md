@@ -1,7 +1,7 @@
 # Rediseño del panel de administración
 
-Estado: **F1–F7 hechas** en `develop` (14-10-2026, sin push). F8 (denuncias) pendiente de decisión. Reglas desplegadas y
-secretos de Capacidad subidos a producción el 14-10-2026; el resto llega con la release del cliente.
+Estado: **F1–F7 publicadas en la 1.7.4** (`5e7f8f36`; revisado el 14-10-2026). F8 (denuncias) pendiente de decisión.
+Reglas desplegadas y secretos de Capacidad subidos a producción el 14-10-2026.
 
 Ver el panel sin sesión: `docs/maquetas/admin.html` en el servidor de desarrollo. Monta las pantallas REALES con un
 contexto de mentira (censo de 42 personas, fotos diarias, enlaces, medidores, registro) y deja cambiar tema y modo.

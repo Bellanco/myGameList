@@ -9,6 +9,8 @@
    `--font-display`…), así que el resumen se viste con el tema que haya sin un selector con su nombre. La rueda de
    la nota (rojo → verde) es común a todos, como en el resto de la app. */
 
+@use './entrada';
+
 .ys {
   display: grid;
   gap: 1.1rem;
@@ -136,6 +138,7 @@
   background-repeat: no-repeat;
   background-size: cover, cover;
   background-position: center, center 35%;
+  @include entrada.de-fondo;
 }
 
 .ys-head {
@@ -232,7 +235,18 @@
   text-shadow: 0 1px 2px rgb(0 0 0 / .5);
 
   &.has-cover {
-    background: var(--ys-cover) center / cover no-repeat, var(--surface);
+    position: relative;
+    background: var(--surface);
+
+    /* La carátula en una capa propia y no en el fondo de la caja, para que pueda ENTRAR con fundido sobre la
+       superficie en vez de aparecer de golpe (`refEntradaDeFondo` en `YearSummary`). */
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--ys-cover) center / cover no-repeat;
+    }
+    @include entrada.de-fondo('::before');
 
     span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   }

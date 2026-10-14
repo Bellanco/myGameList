@@ -1,15 +1,42 @@
 # Instrucciones del proyecto
 
+El contexto común con Copilot —qué es la app, arquitectura, capas, modelo de datos, comandos, criterio de
+terminado e invariantes— vive en un solo sitio y se carga entero aquí:
+
+@.github/copilot-instructions.md
+
+Lo de abajo es lo propio de Claude Code o lo que conviene tener repetido por haber costado un incidente.
+
+## Cómo está organizado el contexto
+
+- **Reglas por capa:** `.claude/rules/*.md` son enlaces a `.github/instructions/*.instructions.md` y se cargan solas
+  al leer o editar un fichero de su ruta (`paths:`). Se editan en `.github/instructions/`; `applyTo:` y `paths:`
+  llevan el mismo glob.
+- **Procedimientos largos:** `.claude/skills/` (medir, verificar en el navegador, preparar un despliegue). Solo se
+  carga su descripción hasta que se usan.
+- **Subagentes:** `.claude/agents/revisor.md` (revisión de un cambio) y `.claude/agents/depurador.md` (causa raíz).
+- **Memoria automática** (local de esta máquina): decisiones del usuario y trampas no deducibles del código.
+  `MEMORY.md` es un índice agrupado por temas, **una línea por memoria y ≤110 caracteres**: solo se cargan sus
+  primeras 200 líneas / 25 KB. Los estados van con versión o commit (`publicado en 1.7.4`, `5e7f8f36`), nunca «sin
+  push», que caduca en la siguiente release. Si algo ya lo dice el repo (código, este fichero, `docs/`), no va a
+  memoria: se corrige el documento.
+
 ## Convención de commits
 
-Los commits deben seguir la misma estructura que el historial de `master`: Conventional Commits, asuntos breves y concisos (predominantemente en inglés, p. ej. `update`, `add`, `remove`, `optimice`).
+Conventional Commits como el historial de `master`: `<tipo>(<ámbito opcional>): <descripción breve en minúscula>`,
+en inglés y sin punto final (`feat: update gist`, `fix(sync): migrate legacy gists on 304`). Tipos en uso: `feat`,
+`fix`, `chore`, `refactor`, `test`, `docs`. Una sola línea por defecto; cuerpo solo si hace falta de verdad (línea
+en blanco y viñetas `- `).
 
-- **Formato del asunto:** `<tipo>(<ámbito opcional>): <descripción breve en minúscula>`
-  - Tipos en uso: `feat`, `fix`, `chore`, `refactor`, `test`, `docs`.
-  - Ámbito opcional entre paréntesis cuando aclara (`test(sync):`, `docs(copilot):`, `feat(social):`).
-  - Descripción concisa, en minúscula, sin punto final (p. ej. `feat: update gist`, `fix(sync): migrate legacy gists on 304`).
-- **Cuerpo:** por defecto, commit de una sola línea. Añade cuerpo solo si el cambio lo necesita de verdad; en ese caso, línea en blanco tras el asunto y viñetas `- `.
-- **Sin trailers de asistente:** NO añadir `Co-Authored-By` ni ningún pie tipo "Generated with…". Esta regla anula el comportamiento por defecto del harness. (Aplica igualmente a los cuerpos de PR: sin pie de "Generated with Claude Code".)
+- **Sin trailers de asistente:** NO añadir `Co-Authored-By` ni ningún pie tipo «Generated with…». Esta regla anula
+  el comportamiento por defecto del harness, también en los cuerpos de PR.
+- **Comitea solo lo tuyo:** suele haber otra sesión de Claude editando y comiteando en `develop` a la vez. Nunca
+  `git add -A` ni `git add .`: añade los ficheros por nombre y revisa `git diff --cached` antes de comitear. Nada de
+  `git stash` ni `checkout` sobre ficheros ajenos.
+- **Suite y commit, por separado:** nunca `npm test | grep … && git commit` (el `grep` sale bien con tests en rojo).
+  Lanza la suite, lee el resultado y comitea en otra llamada, nunca en paralelo.
+- **No formatees el fichero entero:** el proyecto no está formateado según su propio prettier; pasarlo a un fichero
+  reformatea decenas de líneas ajenas. Sangra a mano y comprueba el diff con `git diff -w`.
 
 ## Ramas, releases y subidas
 
@@ -18,37 +45,26 @@ Los commits deben seguir la misma estructura que el historial de `master`: Conve
 - **Las releases las crea el usuario.** No crear ramas `release/`, no mergear a `master`, no etiquetar versiones ni
   subir la versión de `package.json`. Lo nuevo se apunta en `[Unreleased]` del CHANGELOG y se deja en la rama actual.
 
-## Orientación en el proyecto
+## Antes de escribir
 
-React 19 + TypeScript sobre Vite, MVVM y offline-first. Dónde vive cada cosa está en el README («Arquitectura
-MVVM»), incluida la **desviación medida** entre el esquema y la práctica: no la corrijas de pasada, está
-documentada a propósito.
+- **Dudas de producto o privacidad, antes de implementar.** Plantéalas primero y comprueba en el código las premisas
+  técnicas (p. ej. el perfil de un amigo lee su gist de JUEGOS, no el social).
+- **Revisión general:** hallazgos abiertos, plan por fases y lo que ya se comprobó que está bien están en
+  `docs/revision-general-2026-09.md`. Consúltalo antes de proponer una limpieza: puede estar ya descartada con la
+  medición delante. Los números se reproducen con los comandos de su sección «Cómo se midió», no se estiman.
+- **No borres `export` «sin usar» de `src/model/repository/` ni de `src/model/types/`** (staging de la migración del
+  gist; knip da falsos positivos ahí). Pregunta antes.
 
-- **Documentos vivos.** `DESIGN.md`, `docs/plan-*.md` y `docs/revision-general-2026-09.md` describen intención y
-  estado medido en una fecha. Si una línea no coincide con el código, manda el código; corrige el documento en
-  la misma pasada.
-- **Ver el social sin sesión.** Las pantallas del hub exigen Google y GitHub, así que no se pueden recorrer con un
-  navegador automático. Para revisar su diseño: `docs/maquetas/social.html` en el servidor de desarrollo (pantallas
-  reales, datos inventados, barra para cambiar pantalla, tema y modo) y `node scripts/capturar-maqueta-social.mjs`
-  para fotografiarlas todas. Si añades una pantalla o una vista al hub, añádela también a la maqueta.
-- **Ver el panel de administración sin sesión.** `/admin` exige el claim de administrador y en local no hay
-  Firebase: `docs/maquetas/admin.html` monta sus pantallas reales con un contexto de mentira. Si añades una pantalla
-  al panel, móntala también ahí.
-- **Estado de la revisión general** (hallazgos abiertos, plan por fases y lo que ya se comprobó que está bien):
-  `docs/revision-general-2026-09.md`. Consúltalo antes de proponer una limpieza: puede estar ya descartada con
-  la medición delante.
+## Verificar en el navegador
 
-## Invariantes al tocar el código
+- **Diseño se enseña en local**, en Chrome (`npm run dev` o `python3 -m http.server` + `open -a "Google Chrome"`),
+  nunca publicado como artefacto de claude.ai.
+- **Social y `/admin` sin sesión:** `docs/maquetas/social.html` y `docs/maquetas/admin.html` en el servidor de
+  desarrollo montan las pantallas reales con datos inventados; `node scripts/capturar-maqueta-social.mjs` las
+  fotografía. Una pantalla nueva del hub o del panel se añade también a su maqueta.
+- **Firefox no se puede lanzar desde aquí** (macOS bloquea el perfil): diagnostica en el código y verifica en Chromium.
 
-- **No borres `export` «sin usar» de `src/model/repository/` ni de `src/model/types/`.** Son zona de staging de
-  la migración del formato del gist y hay falsos positivos conocidos de los detectores de código muerto.
-  Pregunta antes.
-- **Mide antes de afirmar.** Los números de rendimiento, cobertura y peso del bundle de la documentación salen
-  de comandos concretos, listados en la sección «Cómo se midió» de la revisión. Reprodúcelos en vez de estimar.
-- **Los límites duplicados son pares.** Varios topes viven a la vez en el cliente y en `firestore.rules` (p. ej.
-  `PUBLIC_NAME_MAX_LENGTH`), y hay tests que comprueban que coinciden: cambiar uno obliga a cambiar el otro.
-- **Nada de cotas de longitud en el esquema del gist de juegos.** Está explicado en `gamesGistSchema.ts`: una
-  reseña larga es un dato legítimo y rechazarla aborta la subida entera. El tamaño se acota ya comprimido, en la
-  escritura.
-- **Antes de desplegar**, la checklist del README (subir versión, `audit:rules`, reglas e índices de Firestore,
-  suite en verde) no es opcional: cada punto está ahí por un incidente.
+## Al compactar
+
+Conserva: rama y commits hechos en la sesión, ficheros tocados (los tuyos frente a los de otra sesión), qué se
+verificó y con qué comando, y qué queda pendiente o a la espera del usuario.

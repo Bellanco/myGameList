@@ -5,6 +5,34 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.7.6] - 2026-10-14
+
+### Changed
+
+- **Las imágenes entran con un fundido en vez de aparecer de golpe.** Los avatares, la carátula de fondo de los
+  renglones de «Perfiles», del listado y de las reseñas, las del resumen del año, las fotos de las publicaciones y
+  las imágenes sueltas (invitación, logo de los textos legales) se instalan suavemente al llegar, como ya hacían las
+  carátulas del mosaico. Lo que ya se había visto en la sesión se enseña quieto, sin repetir el gesto, y con
+  «reducir movimiento» la imagen sale sin fundido pero nunca a medio bajar. Un test vigila que cualquier imagen nueva
+  use el mismo mecanismo.
+- **El formulario de añadir y editar juego, rehecho para meter juegos rápido.** Lo obligatorio va arriba —el nombre,
+  con la puntuación al lado, y debajo plataformas, géneros y años en una sola fila— y lo opcional en una bandeja más
+  ligera, sin asteriscos ni «opcional» escrito. Cada campo de etiquetas cabe en una línea y lleva debajo sugerencias de
+  un toque sacadas de tu biblioteca: tus plataformas y géneros más usados, el año actual y el anterior, y los puntos
+  fuertes y débiles que más usas con los géneros que hayas elegido. «Añadir otro» guarda y deja el formulario abierto
+  para el siguiente, con las plataformas y el año ya puestos y la cuenta de los que llevas (⌘↵ o Ctrl+↵ hace lo
+  mismo). La puntuación es ahora obligatoria en todas las listas y empieza en 3 estrellas, o en 50 con la nota de 0 a
+  100, que se elige en una barra de una línea; en la lista de la vergüenza ya no hay «Puntuar este juego». Steam
+  Deck y Rejugar pasan al pie, solo con su icono, y en el móvil el formulario ocupa la pantalla entera.
+
+### Fixed
+
+- **Lo que escribes al reabrir la edición de un juego ya no se pierde ni va a otro juego.** El formulario se abría
+  un instante con lo que tenía la vez anterior y, si tecleabas en ese momento (en Chrome, Edge y demás navegadores
+  basados en Chromium), lo escrito iba sobre eso: tras guardar, sobre un formulario vacío que ya no se podía guardar;
+  tras cancelar otro juego, sobre ese otro juego, que se guardaba con tu texto. Ahora se abre ya con el juego que has
+  elegido.
+
 ## [1.7.5] - 2026-10-14
 
 ### Changed

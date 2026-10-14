@@ -7,6 +7,10 @@
 > ⚠️ **Documento vivo.** Las cifras son estimaciones leyendo el código, no medición en producción. Si una línea no
 > coincide con el código, manda el código: corrige esto en la misma pasada.
 
+> **Estado (revisado el 14-10-2026): publicado entero en la 1.5.1** (`f0423bbd`, `800fccb1`). La comprobación en la
+> vista previa de que «Perfiles» no pide índice no consta; la consulta (`social.enabled` + `updatedAt`) la cubre el
+> índice ya desplegado y tiene respaldo sin ordenar. El siguiente paso (amistades incrementales) sigue aparcado.
+
 ## Decisiones del usuario (04-10-2026)
 
 1. **El feed lee solo a tus amigos**, y de ellos a los recientes: quien lleva mucho sin usar la app no debe costar.

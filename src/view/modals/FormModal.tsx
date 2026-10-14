@@ -1,18 +1,23 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import '../../styles/form-modal.scss';
 import { FILTER_BOOL, TAB_TOOLTIPS, VALIDATION_MESSAGES } from '../../core/constants/labels';
 import { FORM_UI } from '../../core/constants/formLabels';
+import { isMacPlatform } from '../../core/constants/searchLabels';
 import { COMMON_ICONS } from '../../core/constants/icons';
-import { UNPLAYED_TAB_IDS, type GameItem, type TabId } from '../../model/types/game';
-import type { GameDraft } from '../../viewmodel/useGameListViewModel';
+import { UNPLAYED_TAB_IDS, type GameItem, type TabData, type TabId } from '../../model/types/game';
+// Solo TIPOS del ViewModel: un import de valor arrastraría su módulo (que va en el arranque) al chunk del modal.
+import type { GameDraft, SaveDraftOptions } from '../../viewmodel/useGameListViewModel';
 import { mergeTags, splitTagInput } from '../../core/utils/tags';
 import { normalizeHours } from '../../core/utils/normalize';
 import { Icon } from '../components/Icon';
 import { StarPicker } from '../components/StarPicker';
-import { ScoreDial } from '../components/ScoreDial';
+import { GradeLine } from '../components/GradeLine';
+import { QuickPicks } from '../components/QuickPicks';
 import { TagInput } from '../components/TagInput';
 import { useNativeDialog } from './useNativeDialog';
 import { useScoreScale } from '../hooks/useScoreScale';
-import { gradeFromStars, resolveGrade, starsFromGrade } from '../../core/utils/scoreScale';
+import { DEFAULT_GRADE, DEFAULT_STARS, gradeFromStars, resolveGrade, starsFromGrade } from '../../core/utils/scoreScale';
+import { EMPTY_FORM_SUGGESTIONS, buildFormSuggestions, suggestForGenres } from '../../core/utils/formSuggestions';
 
 interface FormModalProps {
   open: boolean;
@@ -24,15 +29,24 @@ interface FormModalProps {
     strengths: string[];
     weaknesses: string[];
   };
+  /**
+   * La biblioteca, de la que salen las sugerencias de un toque (lo más usado y los puntos por género). Se calculan
+   * AQUÍ y solo con el modal abierto: el modal llega en un chunk perezoso, así que ni el código ni el recorrido de la
+   * biblioteca pesan en el arranque. Sin ella, no hay sugerencias.
+   */
+  library?: Pick<TabData, TabId>;
   /** Busca un juego ya guardado con ese nombre en cualquier lista, ignorando el id del que se está editando. */
   findDuplicate: (name: string, ignoreId?: number) => { tab: TabId; game: GameItem } | null;
   onClose: () => void;
-  onSave: (draft: GameDraft) => void;
+  /** Devuelve `false` si el guardado no se hizo (validación del ViewModel); con `keepOpen` el formulario sigue abierto. */
+  onSave: (draft: GameDraft, options?: SaveDraftOptions) => boolean | void;
 }
 
 // Próximos y deseados llevan la nota de INTERÉS (no se han jugado): mismos campos en las dos.
 const isUnplayed = (tab: TabId) => UNPLAYED_TAB_IDS.includes(tab);
-const supportsScore = (tab: TabId) => tab === 'c' || isUnplayed(tab);
+// La nota es OBLIGATORIA en todas las listas que la llevan y nace en 3★ / 50 (ver `withDefaultScore`). La vergüenza
+// dejó de tener el «Puntuar este juego» opcional: se puntúa siempre, como las demás.
+const supportsScore = (tab: TabId) => tab === 'c' || tab === 'v' || isUnplayed(tab);
 // La vergüenza puede registrar horas siempre (no afecta a la ruleta); su puntuación va tras el check `scored`.
 const supportsHours = (tab: TabId) => tab === 'c' || tab === 'v';
 const supportsYears = (tab: TabId) => tab === 'c';
@@ -78,7 +92,8 @@ const FORM_SUMMARY_TIMEOUT_MS = 5000;
 type FieldKey = 'name' | 'genres' | 'platforms' | 'years' | 'score' | 'hours';
 type FieldErrorMap = Partial<Record<FieldKey, string>>;
 
-const FIELD_ORDER: FieldKey[] = ['name', 'genres', 'platforms', 'years', 'score', 'hours'];
+// En el orden en que se ven: el nombre y la nota arriba; plataformas, géneros y años en la fila de debajo.
+const FIELD_ORDER: FieldKey[] = ['name', 'score', 'platforms', 'genres', 'years', 'hours'];
 
 /** Id del control de cada campo, para llevar el foco al primero que falle. La puntuación no es un `input`. */
 const FIELD_INPUT_ID: Partial<Record<FieldKey, string>> = {
@@ -111,17 +126,31 @@ function parseHours(text: string): { invalid: boolean; value: number | null } {
   return { invalid: false, value: normalizeHours(parsed) };
 }
 
+/** Cuántas sugerencias de un toque se ofrecen por campo (en una línea; lo que no cabe se desplaza). */
+const QUICK_PICKS = { platforms: 6, genres: 8, points: 8 } as const;
+
+/**
+ * La nota es obligatoria y nunca parte de 0: un borrador sin nota (un alta, o una vergüenza o un próximo que se
+ * guardaron sin puntuar) se abre con la de por defecto de la escala del usuario.
+ */
+function withDefaultScore(draft: GameDraft, tab: TabId, scale: 'stars' | 'grade'): GameDraft {
+  if (!supportsScore(tab) || resolveGrade({ grade: draft.grade, score: draft.score }) > 0) return draft;
+  return scale === 'grade'
+    ? { ...draft, grade: DEFAULT_GRADE, score: starsFromGrade(DEFAULT_GRADE) }
+    : { ...draft, score: DEFAULT_STARS, grade: gradeFromStars(DEFAULT_STARS) };
+}
+
 /** Texto del campo de horas a partir del borrador (vacío cuando no hay dato, y el 0 no lo es). */
 function hoursToText(hours: number | null | undefined): string {
   return normalizeHours(hours) === null ? '' : String(hours);
 }
 
-export function FormModal({ open, draft: initialDraft, currentTab, lookups, findDuplicate, onClose, onSave }: FormModalProps) {
+export function FormModal({ open, draft: initialDraft, currentTab, lookups, library, findDuplicate, onClose, onSave }: FormModalProps) {
   const boolField = getTabBoolField(currentTab);
   const scoreScale = useScoreScale();
   // P3: el borrador vive LOCAL al modal y solo se emite en `onSave`. Antes cada pulsación llamaba a `onDraftChange`
   // (estado del VM) → re-render de todo el árbol (App/GameTable). Ahora solo re-renderiza el propio modal.
-  const [draft, setLocalDraft] = useState<GameDraft>(initialDraft);
+  const [draft, setLocalDraft] = useState<GameDraft>(() => withDefaultScore(initialDraft, currentTab, scoreScale));
   const [pending, setPending] = useState<PendingTagFields>(EMPTY_PENDING);
   const [fieldErrors, setFieldErrors] = useState<FieldErrorMap>({});
   // El resumen del pie solo sale DESPUÉS de intentar guardar: mientras se rellena el formulario, un mensaje bajo
@@ -136,6 +165,9 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
   // Aviso (no error) de que se ha descartado un signo menos. Va aparte de `fieldErrors` a propósito: NO impide
   // guardar —el número que queda es válido— así que no debe engrosar la lista de "lo que falta" del pie.
   const [hoursNotice, setHoursNotice] = useState('');
+  // «Añadir otro»: cuántos van en esta tanda y qué se acaba de guardar. Se olvidan al cerrar el modal.
+  const [batchCount, setBatchCount] = useState(0);
+  const [savedNotice, setSavedNotice] = useState('');
   // A11y-1: `<dialog>` nativo en modo modal → focus trap, restauración de foco, `::backdrop` y Esc → onClose.
   const dialogRef = useNativeDialog(open, onClose);
   const reviewCount = draft.review.length;
@@ -144,6 +176,12 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
   // A11y-3: mensaje anunciado por SR solo en umbrales (texto constante por banda → no se reanuncia por tecla).
   const reviewLiveMessage =
     reviewProgress >= 100 ? FORM_UI.charLimitReached : reviewProgress >= 90 ? FORM_UI.charNearLimit : '';
+  const isNew = !initialDraft.id;
+  const mac = isMacPlatform();
+  const suggestions = useMemo(
+    () => (open && library ? buildFormSuggestions([library.c, library.v, library.e, library.p, library.d]) : EMPTY_FORM_SUGGESTIONS),
+    [open, library],
+  );
 
   /**
    * Juego ya guardado con este mismo nombre (en cualquier lista, ignorando el que se está editando). Se calcula
@@ -154,15 +192,36 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
     ? VALIDATION_MESSAGES.duplicateName(duplicate.game.name, TAB_TOOLTIPS[duplicate.tab])
     : '';
 
-  useEffect(() => {
-    // Re-seedea el borrador local desde la prop al abrir o cambiar de juego/pestaña (la prop solo cambia entonces).
-    setLocalDraft(initialDraft);
+  // RE-SIEMBRA DURANTE EL RENDER, no en un efecto, al abrir o cambiar de juego/pestaña (la prop solo cambia entonces).
+  // El modal sigue MONTADO entre aperturas (`useMountedOnceOpen`), así que con un `useEffect` el commit que abre el
+  // `<dialog>` pintaba todavía el borrador del cierre anterior —el vacío que deja Guardar, o el juego que se
+  // canceló— y la siembra llegaba en otra tarea. En Chromium una pulsación cabía en ese hueco: se aplicaba sobre el
+  // borrador rancio («Nuevo juego» sin nombre, no validaba) y lo tecleado se perdía. Ajustando el estado aquí, React
+  // repite el render antes de pintar y el primer commit con `open` ya lleva el borrador bueno (mismo patrón que
+  // `useMountedOnceOpen`). Test: `tests/component/FormModal.reopen.test.tsx`.
+  const [seededFrom, setSeededFrom] = useState({ open, initialDraft, currentTab });
+  if (seededFrom.open !== open || seededFrom.initialDraft !== initialDraft || seededFrom.currentTab !== currentTab) {
+    // La tanda es de UNA apertura: se olvida al abrir o cerrar, no al pasar al siguiente juego de la misma tanda.
+    if (seededFrom.open !== open) {
+      setBatchCount(0);
+      setSavedNotice('');
+    }
+    setSeededFrom({ open, initialDraft, currentTab });
+    setLocalDraft(withDefaultScore(initialDraft, currentTab, scoreScale));
     setPending(EMPTY_PENDING);
     setFieldErrors({});
     setSummaryVisible(false);
     setHoursText(hoursToText(initialDraft.hours));
     setHoursNotice('');
-  }, [open, initialDraft, currentTab]);
+  }
+
+  // Al abrir para AÑADIR, el foco va al nombre: se escribe sin tocar nada antes. No vale `autoFocus`: React enfoca al
+  // montar el campo, con el `<dialog>` aún cerrado, y se pierde. Va DESPUÉS de `useNativeDialog`, cuyo efecto es el
+  // que llama a `showModal()`, así que aquí el diálogo ya está abierto. Al editar, el foco queda donde lo deja el
+  // `<dialog>` (el primer control), para no sacar el teclado del móvil sin que se pida.
+  useEffect(() => {
+    if (open && isNew) document.getElementById('draft-name')?.focus();
+  }, [open, isNew]);
 
   useEffect(() => {
     if (!summaryVisible) return;
@@ -269,7 +328,8 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
     if (inputId) document.getElementById(inputId)?.focus();
   };
 
-  const runSave = () => {
+  /** `another`: «Añadir otro» (solo en las altas): guarda y deja el formulario abierto con un alta nueva. */
+  const runSave = (another = false) => {
     const nextDraft: GameDraft = {
       ...draft,
       genres: [...draft.genres],
@@ -280,12 +340,8 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
       reasons: [...draft.reasons],
     };
 
-    // Vergüenza con la puntuación desactivada: nota y espejo a 0 antes de emitir. Así la ruleta la trata como
-    // neutra y la actividad social la publica "sin puntuar" (misma fuente de verdad que el guardado del VM).
-    if (currentTab === 'v' && !nextDraft.scored) {
-      nextDraft.score = 0;
-      nextDraft.grade = 0;
-    }
+    // La vergüenza se puntúa siempre, como las demás listas: el flag que antes encendía el check queda fijo.
+    if (currentTab === 'v') nextDraft.scored = true;
 
     const errors: FieldErrorMap = {};
 
@@ -312,7 +368,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
 
     // Si algo de abajo para el guardado, lo que se acaba de sacar de los campos tiene que quedarse como etiqueta:
     // el campo ya se ha vaciado, y tirar `nextDraft` sin más lo hacía desaparecer de los dos sitios. Solo las
-    // etiquetas: el resto de `nextDraft` (la nota a 0 de Vergüenza, las horas) es cosa del guardado.
+    // etiquetas: el resto de `nextDraft` (las horas) es cosa del guardado.
     const keepTypedTags = () => {
       setLocalDraft((current) => {
         const kept = { ...current };
@@ -341,8 +397,8 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
     if (!nextDraft.genres.length) errors.genres = VALIDATION_MESSAGES.genresRequired;
     if (!nextDraft.platforms.length) errors.platforms = VALIDATION_MESSAGES.platformsRequired;
     if (supportsYears(currentTab) && !nextDraft.years.length && !errors.years) errors.years = VALIDATION_MESSAGES.yearsRequired;
-    // Completados requieren puntuación: vale la nota efectiva (estrellas o dial), sea cual sea la escala.
-    if (currentTab === 'c' && resolveGrade({ grade: nextDraft.grade, score: nextDraft.score }) <= 0) {
+    // La nota es obligatoria en toda lista que la lleve: vale la efectiva (estrellas o barra), sea cual sea la escala.
+    if (supportsScore(currentTab) && resolveGrade({ grade: nextDraft.grade, score: nextDraft.score }) <= 0) {
       errors.score = VALIDATION_MESSAGES.scoreRequired;
     }
 
@@ -355,18 +411,102 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
     }
 
     setSummaryVisible(false);
+    if (another) {
+      const saved = onSave(nextDraft, { keepOpen: true });
+      if (saved === false) return;
+      // El ViewModel ya ha dejado un alta nueva (con plataformas y años) y la siembra de arriba la recoge.
+      setBatchCount((count) => count + 1);
+      setSavedNotice(FORM_UI.savedKeepNotice(nextDraft.name.trim(), supportsYears(currentTab)));
+      requestAnimationFrame(() => document.getElementById('draft-name')?.focus());
+      return;
+    }
     setLocalDraft(nextDraft);
     setHoursText(hoursToText(nextDraft.hours));
     setHoursNotice('');
     onSave(nextDraft);
   };
 
+  // ⌘↵ / Ctrl+↵ guarda desde cualquier campo: en un alta, «Añadir otro» (lo habitual en una tanda); al
+  // editar, «Guardar». En el documento y no en el modal: si el foco se ha ido al `body` (un botón que desaparece),
+  // el atajo sigue valiendo, y con el `<dialog>` modal abierto no hay nada más que pueda recibirlo.
+  const runSaveRef = useRef(runSave);
+  runSaveRef.current = runSave;
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Enter' || !(event.metaKey || event.ctrlKey) || event.isComposing) return;
+      event.preventDefault();
+      runSaveRef.current(isNew);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open, isNew]);
+
   const errorSummary = summaryVisible
     ? FIELD_ORDER.map((key) => fieldErrors[key]).filter((message): message is string => Boolean(message))
     : [];
 
-  const hoursField = (
-    <div className="fg">
+  const currentYear = new Date().getFullYear();
+  const pointsTaken = [...draft.strengths, ...draft.weaknesses];
+
+  /** Un campo de etiquetas con sus sugerencias de un toque debajo. */
+  const tagField = (
+    key: TextTagField,
+    label: string,
+    placeholder: string,
+    chipClassName: string,
+    listId: string | undefined,
+    picks: ReadonlyArray<string>,
+    picksLabel: string,
+    taken: ReadonlyArray<string> = draft[key],
+    errorMessage?: string,
+  ) => (
+    <div className="form-field">
+      <TagInput
+        label={label}
+        inputId={`draft-${key}`}
+        listId={listId}
+        placeholder={placeholder}
+        values={draft[key]}
+        pendingValue={pending[key]}
+        onPendingValueChange={(value) => setPendingValue(key, value)}
+        onAdd={(values) => addTextTags(key, values)}
+        onRemove={(value) => removeTextTag(key, value)}
+        chipClassName={chipClassName}
+        errorMessage={errorMessage}
+      />
+      <QuickPicks options={picks} taken={taken} label={picksLabel} fieldId={`draft-${key}`} onPick={(value) => addTextTags(key, [value])} />
+    </div>
+  );
+
+  const scoreField = supportsScore(currentTab) ? (
+    <div className="fg form-score">
+      <span className="flabel">{isUnplayed(currentTab) ? FORM_UI.interestLabel : FORM_UI.scoreLabel}</span>
+      <div className={`score-input-shell ${fieldErrors.score ? 'has-error' : ''}`.trim()}>
+        {scoreScale === 'grade' ? (
+          <GradeLine
+            value={typeof draft.grade === 'number' ? draft.grade : gradeFromStars(draft.score)}
+            onChange={(g) => {
+              clearFieldError('score');
+              setLocalDraft({ ...draft, grade: g, score: starsFromGrade(g) });
+            }}
+          />
+        ) : (
+          <StarPicker
+            value={draft.score}
+            onChange={(v) => {
+              clearFieldError('score');
+              setLocalDraft({ ...draft, score: v, grade: gradeFromStars(v) });
+            }}
+          />
+        )}
+      </div>
+      {fieldErrors.score ? <small className="tag-hint is-error">{fieldErrors.score}</small> : null}
+    </div>
+  ) : null;
+
+  const hoursField = supportsHours(currentTab) ? (
+    <div className="fg form-hours">
       <label htmlFor="draft-hours" className="flabel">{FORM_UI.hoursLabel}</label>
       <input
         id="draft-hours"
@@ -386,11 +526,14 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
         <small id="draft-hours-error" className={`tag-hint ${fieldErrors.hours ? 'is-error' : 'is-warning'}`}>
           {fieldErrors.hours || hoursNotice}
         </small>
-      ) : (
-        <small className="tag-hint tag-hint--spacer" aria-hidden="true">{FORM_UI.enterToAddHint}</small>
-      )}
+      ) : null}
     </div>
-  );
+  ) : null;
+
+  const hasPoints = supportsStrengths(currentTab) || supportsWeaknesses(currentTab) || supportsReasons(currentTab);
+  const hasExtras = hasPoints || Boolean(hoursField) || supportsReview(currentTab);
+  const toggleActive = boolField === 'replayable' ? draft.replayable : draft.retry;
+  const boolLabel = FILTER_BOOL[currentTab]?.label ?? '';
 
   return (
     <dialog
@@ -403,9 +546,10 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
       }}
     >
       {open ? (
-      <div className="modal">
+      <div className="modal form-modal">
         <div className="modal-hd">
           <div className="modal-title">{draft.id ? FORM_UI.editTitle : FORM_UI.newTitle}</div>
+          {batchCount ? <span className="form-batch">{FORM_UI.batchCount(batchCount)}</span> : null}
           <button
             className="btn-icon"
             type="button"
@@ -416,15 +560,19 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
             <Icon name={COMMON_ICONS.close} />
           </button>
         </div>
+        {/* LO OBLIGATORIO ARRIBA, LO OPCIONAL EN LA BANDEJA. Sin asteriscos ni «opcional» escrito: la diferencia la
+            pone el diseño (campos rellenos arriba; abajo, una bandeja de fondo apenas distinto, rótulos apagados y
+            campos de contorno discontinuo). Ver `.form-extra` en `_overlays-and-responsive.scss`. */}
         <div className="modal-body">
-          <div className="frow">
-            <div className="fg">
+          <div className={`form-head ${scoreField ? '' : 'is-solo'}`.trim()}>
+            <div className="fg form-name">
               <label htmlFor="draft-name" className="flabel">{FORM_UI.nameLabel}</label>
               <input
                 id="draft-name"
                 className={`finput ${fieldErrors.name || duplicate ? 'has-error' : ''}`.trim()}
                 value={draft.name}
                 placeholder={FORM_UI.namePlaceholder}
+                autoComplete="off"
                 aria-invalid={duplicate || fieldErrors.name ? true : undefined}
                 aria-describedby={duplicate || fieldErrors.name ? 'draft-name-error' : undefined}
                 onChange={(event) => {
@@ -436,245 +584,125 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
                 <small id="draft-name-error" className="tag-hint is-error" role="alert">
                   {duplicateMessage || fieldErrors.name}
                 </small>
-              ) : (
-                <small className="tag-hint tag-hint--spacer" aria-hidden="true">{FORM_UI.enterToAddHint}</small>
-              )}
+              ) : null}
             </div>
-            <TagInput
-              label={FORM_UI.genresLabel}
-              required
-              inputId="draft-genres"
-              listId="dl-genres"
-              placeholder={FORM_UI.genresPlaceholder}
-              values={draft.genres}
-              pendingValue={pending.genres}
-              onPendingValueChange={(value) => setPendingValue('genres', value)}
-              onAdd={(values) => addTextTags('genres', values)}
-              onRemove={(value) => removeTextTag('genres', value)}
-              chipClassName="chip-genre"
-              hint={FORM_UI.enterToAddHint}
-              errorMessage={fieldErrors.genres}
-            />
+            {scoreField}
           </div>
 
-          <div className="frow">
-            <TagInput
-              label={FORM_UI.platformsLabel}
-              required
-              inputId="draft-platforms"
-              listId="dl-platforms"
-              placeholder={FORM_UI.platformsPlaceholder}
-              values={draft.platforms}
-              pendingValue={pending.platforms}
-              onPendingValueChange={(value) => setPendingValue('platforms', value)}
-              onAdd={(values) => addTextTags('platforms', values)}
-              onRemove={(value) => removeTextTag('platforms', value)}
-              chipClassName="chip-plat"
-              hint={FORM_UI.enterToAddHint}
-              errorMessage={fieldErrors.platforms}
-            />
-            {supportsScore(currentTab) ? (
-              <div className="fg fg-score-field">
-                <label className="flabel">{isUnplayed(currentTab) ? FORM_UI.interestLabel : FORM_UI.scoreLabel} {currentTab === 'c' ? '*' : ''}</label>
-                <div className={`score-input-shell ${fieldErrors.score ? 'has-error' : ''}`.trim()}>
-                  {scoreScale === 'grade' ? (
-                    <ScoreDial
-                      value={typeof draft.grade === 'number' ? draft.grade : gradeFromStars(draft.score)}
-                      onChange={(g) => {
-                        clearFieldError('score');
-                        setLocalDraft({ ...draft, grade: g, score: starsFromGrade(g) });
-                      }}
-                    />
-                  ) : (
-                    <StarPicker
-                      value={draft.score}
-                      onChange={(v) => {
-                        clearFieldError('score');
-                        setLocalDraft({ ...draft, score: v, grade: gradeFromStars(v) });
-                      }}
-                    />
-                  )}
-                </div>
-                {fieldErrors.score ? <small className="tag-hint is-error">{fieldErrors.score}</small> : null}
-                {!fieldErrors.score ? <small className="tag-hint tag-hint--spacer" aria-hidden="true">{FORM_UI.enterToAddHint}</small> : null}
-              </div>
-            ) : null}
-          </div>
-
-          {supportsYears(currentTab) ? (
-            <div className="frow">
-              <TagInput
-                label={FORM_UI.yearsLabel}
-                required
-                inputId="draft-years"
-                placeholder={FORM_UI.yearsPlaceholder(new Date().getFullYear())}
-                values={draft.years}
-                pendingValue={pending.years}
-                onPendingValueChange={(value) => setPendingValue('years', value)}
-                onAdd={(values) => addYearTags(values)}
-                onRemove={(value) => {
-                  setLocalDraft({ ...draft, years: draft.years.filter((entry) => entry !== Number(value)) });
-                }}
-                chipClassName="chip-generic"
-                hint={FORM_UI.enterToAddHint}
-                errorMessage={fieldErrors.years}
-              />
-              {supportsHours(currentTab) ? hoursField : null}
-            </div>
-          ) : null}
-
-          {supportsStrengths(currentTab) || supportsWeaknesses(currentTab) || supportsReasons(currentTab) ? (
-            <div className="frow">
-              {supportsStrengths(currentTab) ? (
+          <div className={`form-row ${supportsYears(currentTab) ? 'is-three' : ''}`.trim()}>
+            {tagField('platforms', FORM_UI.platformsLabel, FORM_UI.platformsPlaceholder, 'chip-plat', 'dl-platforms',
+              suggestions.ranked.platforms.slice(0, QUICK_PICKS.platforms), FORM_UI.quickPicks.platforms, draft.platforms, fieldErrors.platforms)}
+            {tagField('genres', FORM_UI.genresLabel, FORM_UI.genresPlaceholder, 'chip-genre', 'dl-genres',
+              suggestions.ranked.genres.slice(0, QUICK_PICKS.genres), FORM_UI.quickPicks.genres, draft.genres, fieldErrors.genres)}
+            {supportsYears(currentTab) ? (
+              <div className="form-field">
                 <TagInput
-                  label={FORM_UI.strengthsLabel}
-                  inputId="draft-strengths"
-                  listId="dl-strengths"
-                  placeholder={FORM_UI.strengthsPlaceholder}
-                  values={draft.strengths}
-                  pendingValue={pending.strengths}
-                  onPendingValueChange={(value) => setPendingValue('strengths', value)}
-                  onAdd={(values) => addTextTags('strengths', values)}
-                  onRemove={(value) => removeTextTag('strengths', value)}
-                  chipClassName="chip-pf"
-                  hint={FORM_UI.enterToAddHint}
-                />
-              ) : null}
-
-              {supportsWeaknesses(currentTab) ? (
-                <TagInput
-                  label={FORM_UI.weaknessesLabel}
-                  inputId="draft-weaknesses"
-                  listId="dl-weaknesses"
-                  placeholder={FORM_UI.weaknessesPlaceholder}
-                  values={draft.weaknesses}
-                  pendingValue={pending.weaknesses}
-                  onPendingValueChange={(value) => setPendingValue('weaknesses', value)}
-                  onAdd={(values) => addTextTags('weaknesses', values)}
-                  onRemove={(value) => removeTextTag('weaknesses', value)}
-                  chipClassName="chip-pd"
-                  hint={FORM_UI.enterToAddHint}
-                />
-              ) : null}
-
-              {supportsReasons(currentTab) ? (
-                <TagInput
-                  label={FORM_UI.reasonsLabel}
-                  inputId="draft-reasons"
-                  listId="dl-weaknesses"
-                  placeholder={FORM_UI.reasonsPlaceholder}
-                  values={draft.reasons}
-                  pendingValue={pending.reasons}
-                  onPendingValueChange={(value) => setPendingValue('reasons', value)}
-                  onAdd={(values) => addTextTags('reasons', values)}
-                  onRemove={(value) => removeTextTag('reasons', value)}
-                  chipClassName="chip-pd"
-                  hint={FORM_UI.enterToAddHint}
-                />
-              ) : null}
-            </div>
-          ) : null}
-
-          {currentTab === 'v' ? (
-            <div className="frow">
-              <div className="fg fg-score-field">
-                <label className="flabel">{FORM_UI.scoreLabel}</label>
-                <button
-                  type="button"
-                  className={`btn btn-toggle ${draft.scored ? 'active' : ''}`.trim()}
-                  aria-pressed={draft.scored}
-                  onClick={() =>
-                    setLocalDraft((prev) => {
-                      const scored = !prev.scored;
-                      if (!scored) return { ...prev, scored: false };
-                      // Al activar: conserva la nota si ya la había (p. ej. migrada), si no parte de 3★ ≡ nota 60.
-                      const hasScore = (typeof prev.grade === 'number' && prev.grade > 0) || prev.score > 0;
-                      return hasScore ? { ...prev, scored: true } : { ...prev, scored: true, score: 3, grade: 60 };
-                    })
-                  }
-                >
-                  <Icon name={COMMON_ICONS.star} />
-                  <span>{FORM_UI.scoreToggle}</span>
-                </button>
-                {draft.scored ? (
-                  <div className="score-input-shell">
-                    {scoreScale === 'grade' ? (
-                      <ScoreDial
-                        value={typeof draft.grade === 'number' ? draft.grade : gradeFromStars(draft.score)}
-                        onChange={(g) => setLocalDraft({ ...draft, grade: g, score: starsFromGrade(g) })}
-                      />
-                    ) : (
-                      <StarPicker value={draft.score} onChange={(v) => setLocalDraft({ ...draft, score: v, grade: gradeFromStars(v) })} />
-                    )}
-                  </div>
-                ) : (
-                  <small className="tag-hint">{FORM_UI.scoreToggleHint}</small>
-                )}
-              </div>
-              {hoursField}
-            </div>
-          ) : null}
-
-          <div className="frow">
-            <div className="fg">
-              <button
-                className={`btn btn-toggle btn-toggle-deck ${draft.steamDeck ? 'active' : ''}`}
-                type="button"
-                aria-label={FORM_UI.steamDeck}
-                onClick={() => setLocalDraft({ ...draft, steamDeck: !draft.steamDeck })}
-              >
-                <Icon name={COMMON_ICONS.steamDeck} />
-                <span>{FORM_UI.steamDeck}</span>
-              </button>
-            </div>
-            {boolField ? (
-              <div className="fg">
-                <button
-                  className={`btn btn-toggle ${
-                    (boolField === 'replayable' ? draft.replayable : draft.retry) ? 'active' : ''
-                  }`}
-                  type="button"
-                  aria-label={FILTER_BOOL[currentTab]?.label}
-                  onClick={() => {
-                    if (boolField === 'replayable') setLocalDraft({ ...draft, replayable: !draft.replayable });
-                    if (boolField === 'retry') setLocalDraft({ ...draft, retry: !draft.retry });
+                  label={FORM_UI.yearsLabel}
+                  inputId="draft-years"
+                  placeholder={FORM_UI.yearsPlaceholder}
+                  values={draft.years}
+                  pendingValue={pending.years}
+                  onPendingValueChange={(value) => setPendingValue('years', value)}
+                  onAdd={(values) => addYearTags(values)}
+                  onRemove={(value) => {
+                    setLocalDraft({ ...draft, years: draft.years.filter((entry) => entry !== Number(value)) });
                   }}
-                >
-                  <Icon name={boolField === 'replayable' ? COMMON_ICONS.repeat : COMMON_ICONS.undo} />
-                  <span>{FILTER_BOOL[currentTab]?.label}</span>
-                </button>
+                  chipClassName="chip-generic"
+                  errorMessage={fieldErrors.years}
+                />
+                <QuickPicks options={[currentYear, currentYear - 1]} taken={draft.years} label={FORM_UI.quickPicks.years}
+                  fieldId="draft-years" onPick={(value) => addYearTags([value])} />
               </div>
             ) : null}
           </div>
 
-          {supportsReview(currentTab) ? (
-            <div className="fg">
-              <label htmlFor="draft-review" className="flabel">{FORM_UI.reviewLabel}</label>
-              <textarea
-                id="draft-review"
-                className="ftextarea"
-                maxLength={REVIEW_MAX_LENGTH}
-                value={draft.review}
-                placeholder={FORM_UI.reviewPlaceholder}
-                onChange={(event) => {
-                  const nextReview = event.target.value.slice(0, REVIEW_MAX_LENGTH);
-                  setLocalDraft({ ...draft, review: nextReview });
-                }}
-              />
-              <div className="field-footer">
-                {/* A11y-3: conteo visible sin aria-live (ya no se anuncia por pulsación). */}
-                <small className={`tag-hint ${reviewProgressClass}`.trim()}>
-                  {FORM_UI.charCount(reviewCount, REVIEW_MAX_LENGTH)}
-                </small>
-                {/* Región viva exclusiva para SR: solo lleva texto en los umbrales (90% / 100%). */}
-                <span className="sr-only" role="status" aria-live="polite">
-                  {reviewLiveMessage}
-                </span>
-              </div>
+          {hasExtras ? (
+            <div className="form-extra">
+              {hasPoints || hoursField ? (
+                <div className={`form-row ${hoursField ? 'has-hours' : ''}`.trim()}>
+                  {supportsStrengths(currentTab)
+                    ? tagField('strengths', FORM_UI.strengthsLabel, FORM_UI.strengthsPlaceholder, 'chip-pf', 'dl-strengths',
+                      suggestForGenres(suggestions, 'strengths', draft.genres, pointsTaken, QUICK_PICKS.points),
+                      FORM_UI.quickPicks.strengths, pointsTaken)
+                    : null}
+                  {supportsWeaknesses(currentTab)
+                    ? tagField('weaknesses', FORM_UI.weaknessesLabel, FORM_UI.weaknessesPlaceholder, 'chip-pd', 'dl-weaknesses',
+                      suggestForGenres(suggestions, 'weaknesses', draft.genres, pointsTaken, QUICK_PICKS.points),
+                      FORM_UI.quickPicks.weaknesses, pointsTaken)
+                    : null}
+                  {supportsReasons(currentTab)
+                    ? tagField('reasons', FORM_UI.reasonsLabel, FORM_UI.reasonsPlaceholder, 'chip-pd', 'dl-weaknesses',
+                      suggestForGenres(suggestions, 'reasons', draft.genres, draft.reasons, QUICK_PICKS.points),
+                      FORM_UI.quickPicks.reasons)
+                    : null}
+                  {hoursField}
+                </div>
+              ) : null}
+
+              {supportsReview(currentTab) ? (
+                <div className="fg form-review">
+                  <label htmlFor="draft-review" className="flabel">{FORM_UI.reviewLabel}</label>
+                  <textarea
+                    id="draft-review"
+                    className="ftextarea"
+                    rows={2}
+                    maxLength={REVIEW_MAX_LENGTH}
+                    value={draft.review}
+                    placeholder={FORM_UI.reviewPlaceholder}
+                    onChange={(event) => {
+                      const nextReview = event.target.value.slice(0, REVIEW_MAX_LENGTH);
+                      setLocalDraft({ ...draft, review: nextReview });
+                    }}
+                  />
+                  {/* El conteo solo aparece al escribir: con el campo vacío, una cifra «0 / 25.000» sugería que
+                      había que llenarlo. A11y-3: conteo visible sin aria-live (no se anuncia por pulsación). */}
+                  {reviewCount ? (
+                    <div className="field-footer">
+                      <small className={`tag-hint ${reviewProgressClass}`.trim()}>
+                        {FORM_UI.charCount(reviewCount, REVIEW_MAX_LENGTH)}
+                      </small>
+                    </div>
+                  ) : null}
+                  {/* Región viva exclusiva para SR: solo lleva texto en los umbrales (90% / 100%). */}
+                  <span className="sr-only" role="status" aria-live="polite">
+                    {reviewLiveMessage}
+                  </span>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>
-        <div className="modal-ft">
+        <div className="modal-ft form-ft">
+          {/* Los interruptores, en el pie y SOLO CON ICONO: están a mano sin competir con los campos. El nombre lo
+              dicen la descripción (al pasar por encima) y el `aria-label`; el estado, `aria-pressed` y el tema. */}
+          <div className="form-ft-toggles">
+            <button
+              className={`btn btn-toggle btn-toggle-deck btn-icon-only ${draft.steamDeck ? 'active' : ''}`.trim()}
+              type="button"
+              aria-label={FORM_UI.steamDeck}
+              title={FORM_UI.steamDeck}
+              aria-pressed={draft.steamDeck}
+              onClick={() => setLocalDraft({ ...draft, steamDeck: !draft.steamDeck })}
+            >
+              <Icon name={COMMON_ICONS.steamDeck} />
+            </button>
+            {boolField ? (
+              <button
+                className={`btn btn-toggle btn-icon-only ${toggleActive ? 'active' : ''}`.trim()}
+                type="button"
+                aria-label={boolLabel}
+                title={boolLabel}
+                aria-pressed={toggleActive}
+                onClick={() => {
+                  if (boolField === 'replayable') setLocalDraft({ ...draft, replayable: !draft.replayable });
+                  if (boolField === 'retry') setLocalDraft({ ...draft, retry: !draft.retry });
+                }}
+              >
+                <Icon name={boolField === 'replayable' ? COMMON_ICONS.repeat : COMMON_ICONS.undo} />
+              </button>
+            ) : null}
+          </div>
+          <span className="form-saved" role="status">{savedNotice}</span>
           {/* El resumen vive en el PIE, junto a Guardar: es donde está la mirada al pulsar y no se pierde aunque
               el cuerpo del formulario esté desplazado. Cada línea repite el mensaje que hay bajo su campo. */}
           {errorSummary.length ? (
@@ -687,10 +715,26 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
               </ul>
             </div>
           ) : null}
-          <button className="btn btn-quiet" type="button" onClick={onClose}>
+          <button className="btn btn-quiet form-cancel" type="button" onClick={onClose}>
             {FORM_UI.cancel}
           </button>
-          <button className="btn btn-steam" type="button" onClick={runSave}>
+          {isNew ? (
+            // Secundario: guarda igual que Guardar, pero el que manda es Guardar (el botón de color del tema).
+            <button
+              className="btn form-another"
+              type="button"
+              title={FORM_UI.shortcutTitle(FORM_UI.addAnother, mac)}
+              onClick={() => runSave(true)}
+            >
+              {FORM_UI.addAnother}
+            </button>
+          ) : null}
+          <button
+            className="btn btn-steam"
+            type="button"
+            title={isNew ? undefined : FORM_UI.shortcutTitle(FORM_UI.save, mac)}
+            onClick={() => runSave(false)}
+          >
             {FORM_UI.save}
           </button>
         </div>

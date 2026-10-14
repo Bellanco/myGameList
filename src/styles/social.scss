@@ -15,6 +15,8 @@
 //
 // Se importa desde `SocialHub.tsx`, igual que `stats.scss` desde `StatsHub` y `admin.scss` desde `AdminHub`.
 
+@use './entrada';
+
 /* L4 — puerta de aceptación de condiciones en el gateway social. */
 .hub-gateway-consent {
   display: grid;
@@ -635,6 +637,8 @@
   background-size: cover;
   /* Un poco por encima del centro: el tercio superior de una portada es donde suelen estar la cara y el logotipo. */
   background-position: center 35%;
+  /* Entra con fundido al llegar, no de golpe detrás del nombre (`refEntradaDeFondo` en `HubPersonRow`). */
+  @include entrada.de-fondo;
 }
 
 .hub-person-row-cover::after {
@@ -813,6 +817,11 @@
   min-width: 6rem;
   min-height: 11rem;
   background: var(--surface-hover);
+}
+/* Y AL LLEGAR, ENTRA: el fundido de toda imagen (`_motion.scss`, «IMÁGENES QUE LLEGAN»). Aquí no se esconde mientras
+   baja, que es lo que hace `refEntradaDeImagen`: la superficie tenue de arriba es el aviso de que viene algo. */
+@media (prefers-reduced-motion: no-preference) {
+  .hub-post-media[data-carga="lista"] { animation: imagenEntra 1.8s ease-out; }
 }
 
 .hub-post-hint {

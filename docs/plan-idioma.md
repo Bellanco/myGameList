@@ -1,6 +1,6 @@
 # Idioma — la aplicación en español e inglés
 
-Estado: **F0 hecha** (2026-09-25; ver §4.1), el resto sin empezar (revisado el 01-10-2026). Recoge lo medido en el código ese día y las decisiones tomadas con el
+Estado: **F0 publicada en la 1.4.5** (`dbd7e710`, 2026-09-25; ver §4.1), el resto sin empezar (revisado el 14-10-2026: desde F0 han vuelto tres `'es-ES'` fuera de `locale.ts`, en `githubHttp.ts`, `AdminCharts.tsx` y `useSignatureEffects.ts`). Recoge lo medido en el código ese día y las decisiones tomadas con el
 propietario (§6). Si una cifra no cuadra con el código, manda el código: corrígela aquí.
 
 ---
@@ -131,7 +131,8 @@ antes de dar la fase por cerrada, sobre todo el tono de las voces de tema y los 
 - **Un solo locale.** `core/constants/locale.ts` (`APP_LOCALE`). Sustituye las 31 apariciones de `'es-ES'` y los 5
   `localeCompare(…, 'es')`, da locale a los dos `toLocaleString()` que no lo tenían y a dos `localeCompare` sobre
   nombres visibles. `sortEs` pasa a `compareText`. Los meses a mano del feed (`socialFeed.ts`) salen de `Intl`.
-  `grep "'es-ES'" src` solo encuentra `locale.ts`.
+  `grep "'es-ES'" src` solo encontraba `locale.ts` al cerrar F0; el 14-10-2026 hay tres más (`githubHttp.ts`,
+  `AdminCharts.tsx`, `useSignatureEffects.ts`) que habrá que pasar a `APP_LOCALE`.
 - **Textos sueltos a sus módulos**, unos 80 visibles (el recuento de ≈96 de §2.1 incluía falsos positivos):
   avisos de juego, importación y sync, chips de filtros, cabeceras y medallas de la tabla, estado del banner,
   «Usuario» del hub, el botón de la ruleta, «Retos» del panel, la semana de la racha y el «Ver todos los logros».

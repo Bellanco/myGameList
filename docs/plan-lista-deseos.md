@@ -1,6 +1,6 @@
 # Plan: la lista de deseos
 
-Estado: implementado en `develop`, pendiente de desplegar (05-10-2026). Documento vivo: si una línea no coincide
+Estado: publicado entero en la 1.6.0 (`cef7e2f2`; revisado el 14-10-2026). Documento vivo: si una línea no coincide
 con el código, manda el código.
 
 ## Qué es

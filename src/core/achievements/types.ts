@@ -104,9 +104,9 @@ export interface AchievementInput {
 }
 
 /**
- * Lo que declara una ESCALERA: su nombre y su condición genérica, sin cifra («Juegos que te has terminado»).
+ * Lo que declara una ESCALERA: su nombre y su condición genérica, sin cifra («Juegos que has terminado»).
  *
- * No lleva `done` porque en la escalera el hecho es una FUNCIÓN del umbral (`done(step)`): sin la cifra, «Te has
+ * No lleva `done` porque en la escalera el hecho es una FUNCIÓN del umbral (`done(step)`): sin la cifra, «Has
  * terminado juegos» no dice nada. Los textos con cifra los compone `expand()` para cada escalón.
  */
 export interface LadderLabels {
@@ -125,7 +125,8 @@ export interface AchievementLabels {
    */
   condition: string;
   /**
-   * EL HECHO: lo mismo contado en pasado y de tú a tú («Te has terminado 100 juegos»).
+   * EL HECHO: lo mismo contado en pasado y de tú a tú («Has terminado 100 juegos»; sin el dativo «te has» cuando el
+   * verbo no es pronominal: «te has soltado» sí, «te has terminado» no).
    *
    * Existe porque una sola frase no puede hacer los dos trabajos: en imperativo, un logro CONSEGUIDO se lee como
    * una tarea pendiente («Termina 100 juegos» debajo de una medalla que ya tienes), y en pasado, uno que te falta

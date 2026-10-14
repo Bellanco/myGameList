@@ -1,6 +1,6 @@
 # F5 — Las dos formas del listado (lista y caja)
 
-Estado: **fusionado** el 16-09-2026 (rama `feat/formas-listado`, `fab460e2`; entró en la 1.3.0). Nació como
+Estado: **fusionado** el 16-09-2026 (rama `feat/formas-listado`, `fab460e2`; entró en la 1.3.0; revisado el 14-10-2026). Nació como
 cuaderno de un trabajo en curso —dónde se quedó, qué se decidió y qué faltaba, para poder retomarlo sin
 reconstruir el razonamiento— y lo que sigue abierto está en la lista de pendientes de la §2.
 

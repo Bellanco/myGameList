@@ -8,6 +8,10 @@
 > ⚠️ **Documento vivo.** Guía de diseño, no contrato. Al abordar cada fase, verifica el estado real del código y
 > actualiza este `.md`. Escrito el 12-10-2026 sobre `da15bfc7` (release 1.6.10).
 
+> **Estado (revisado el 14-10-2026): fases 0 a 6 publicadas en la 1.6.11** (`9a55b2c4`, `23fb4fa6`…`9b98d353`,
+> `2f6c13e2`). Pendiente: el número de perfiles sociales activos (Fase 0) y probar crear y actualizar con sesión real
+> cuando abra la ventana (14-12).
+
 ## Decisiones tomadas (usuario, 12-10-2026)
 
 | Decisión | Valor |
@@ -230,7 +234,7 @@ Puro, en `src/core/stats/` (p. ej. `publicYearSummary.ts`), testeado como la pro
 
 ### Fases 2 a 5 — hechas el 12-10-2026
 
-Commits en `develop` (sin push): `23fb4fa6` (tarjeta al compartir), `8276316b` y `26287f29` (proyección y
+Commits publicados en la 1.6.11: `23fb4fa6` (tarjeta al compartir), `8276316b` y `26287f29` (proyección y
 esquema), `f73bbf2f`, `3d03e9e0`, `aa2b5dda` y `562a0761` (servidor), `231542eb`, `9fcf469e`, `e514f1e9`,
 `4b8cca67`, `85be8da8`, `09d7d3bf` y `9b98d353` (cliente, e2e, maqueta y peso).
 

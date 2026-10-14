@@ -1,0 +1,121 @@
+// El formulario de juego (`FormModal`). Hoja de ÁREA: la importa el propio modal, así que viaja en su chunk perezoso
+// y no en el arranque (el presupuesto crítico de `scripts/ci-validate.js`). Lo común de los campos (`.finput`,
+// `.tag-inp-wrap`, `.flabel`…) sigue en `_overlays-and-responsive.scss`, porque lo usan también otras pantallas.
+
+/* ═══ FORMULARIO DE JUEGO (`FormModal`) ═══════════════════════════════════════════════════════════════════════
+   Lo obligatorio arriba —el nombre como titular, con la nota al lado; plataformas, géneros y años en una fila— y lo
+   opcional en una BANDEJA más ligera. La diferencia la pone el diseño, sin asteriscos ni «opcional» escrito: arriba,
+   campos rellenos; en la bandeja, fondo apenas distinto, rótulos apagados y campos de contorno discontinuo. Cada
+   campo de etiquetas va en UNA línea (lo que no cabe se desplaza en horizontal) para que no crezca hacia abajo.
+   Los temas que visten los campos o los rótulos con su forma siguen mandando sobre esto (pesan más). */
+.modal.form-modal { max-width: 1000px; max-height: 94vh; }
+/* Cabecera comprimida: en este formulario el título solo nombra lo que se hace («Nuevo juego»), así que va con la
+   mitad del relleno de los demás modales y no se lleva espacio al contenido. */
+.form-modal .modal-hd { justify-content: flex-start; padding-block: var(--sp-3); }
+.form-modal .modal-hd .btn-icon { width: 40px; height: 40px; min-height: 40px; }
+.form-modal .modal-hd .btn-icon { margin-left: auto; }
+.form-modal .modal-body { gap: var(--sp-5); padding: var(--sp-5) var(--sp-6); }
+.form-modal .flabel { font-size: var(--fs-xs); font-weight: 700; letter-spacing: 0; text-transform: none; }
+
+/* Cabeza: el nombre como titular; la nota (estrellas o barra 0–100) al lado, en una línea las dos. */
+.form-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-5); align-items: end; }
+.form-head.is-solo { grid-template-columns: minmax(0, 1fr); }
+.form-name .finput { min-height: 52px; font-family: var(--font-display); font-size: var(--fs-xl); }
+.form-score .score-input-shell { min-height: 52px; justify-content: flex-start; padding: 0; }
+.form-score .star-inp-field { justify-content: flex-start; flex-wrap: nowrap; }
+
+/* Filas: plataformas · géneros (· años) y, en la bandeja, fuertes · débiles (· horas). */
+.form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4) var(--sp-5); align-items: start; }
+.form-row.is-three { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, .7fr); }
+.form-row.has-hours { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 8.5rem; }
+.form-field { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.form-modal .tag-inp-wrap {
+  flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; min-height: 46px;
+}
+.form-modal .tag-inp-wrap::-webkit-scrollbar { display: none; }
+.form-modal .tag-inp-wrap > .chip { flex: none; }
+.form-modal .tag-inp-wrap input { min-width: 9ch; }
+
+/* Sugerencias de un toque: texto apagado, sin contorno, en una línea que se desplaza y se desvanece por la
+   derecha. Son una ayuda: no compiten con los campos ni con los chips ya puestos. */
+.quick-picks {
+  display: flex; gap: var(--sp-1); overflow-x: auto; scrollbar-width: none; padding-bottom: 2px;
+  -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent);
+}
+.quick-picks::-webkit-scrollbar { display: none; }
+.quick-pick {
+  flex: none; display: inline-flex; align-items: center; gap: var(--sp-1);
+  min-height: 26px; padding: 0 var(--sp-2); border: 0; border-radius: var(--radius-pill);
+  background: rgba(var(--steam-rgb), .06); color: var(--text-dim); opacity: .85;
+  font: inherit; font-size: var(--fs-2xs); font-weight: 500; cursor: pointer;
+}
+.quick-pick span { opacity: .7; }
+.quick-pick:hover, .quick-pick:focus-visible { opacity: 1; }
+.quick-pick:hover, .quick-pick:focus-visible { color: var(--text); background: var(--surface-hover); outline: none; }
+.quick-pick:focus-visible { box-shadow: var(--ring-accent-soft); }
+
+/* La bandeja de lo opcional. */
+.form-extra {
+  display: flex; flex-direction: column; gap: var(--sp-4);
+  margin-inline: calc(var(--sp-3) * -1); padding: var(--sp-4) var(--sp-3) var(--sp-3);
+  border-radius: var(--radius-lg); background: rgba(var(--steam-rgb), .035);
+}
+.form-extra .flabel { color: var(--text-dim); font-weight: 600; }
+.form-extra .tag-inp-wrap, .form-extra .finput, .form-extra .ftextarea { border-style: dashed; box-shadow: none; }
+.form-extra .tag-inp-wrap .finput { border-style: none; }
+.form-extra .tag-inp-wrap:focus-within, .form-extra .finput:focus, .form-extra .ftextarea:focus { border-style: solid; }
+
+/* El análisis: a la vista pero ligero. Empieza en dos líneas y crece con lo escrito (`field-sizing`, Chromium;
+   donde no existe se queda en su alto mínimo y se puede estirar). Con un tope bajo: una reseña larga se desplaza
+   DENTRO del campo y el formulario cabe sin desplazarse. */
+.form-review .ftextarea { min-height: 76px; max-height: 22vh; field-sizing: content; line-height: 1.6; overflow-y: auto; }
+
+/* La nota 0–100 en una línea: barra con el color del aro (`--score-hue`, de rojo a verde) y la cifra al lado. */
+.grade-line { display: flex; align-items: center; gap: var(--sp-3); min-width: 15rem; }
+.grade-line-range {
+  flex: 1; height: 8px; margin: 0; border-radius: var(--radius-pill); cursor: pointer; appearance: none; -webkit-appearance: none;
+  background: linear-gradient(90deg, hsl(var(--score-hue, 0) 58% var(--acc-l)) var(--grade-pct), var(--score-track) var(--grade-pct));
+}
+.grade-line-range::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 20px; height: 20px; border: 1px solid var(--border); border-radius: 50%;
+  background: var(--text); box-shadow: var(--e2);
+}
+.grade-line-range::-moz-range-thumb {
+  width: 20px; height: 20px; border: 1px solid var(--border); border-radius: 50%; background: var(--text);
+}
+.grade-line-range:focus-visible { outline: none; box-shadow: var(--ring-accent-soft); }
+.grade-line-num {
+  width: 4.6ch; min-height: 36px; padding: 0 var(--sp-1); text-align: center; box-sizing: border-box;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); color: var(--text);
+  font: inherit; font-size: var(--fs-md); font-weight: 800; font-variant-numeric: tabular-nums;
+}
+.grade-line-num:focus { outline: none; border-color: var(--focus-ring); box-shadow: var(--ring-accent-soft); }
+
+/* Pie: los interruptores (Steam Deck, rejugar…) solo con icono a la izquierda y el aviso de lo guardado en medio. */
+.form-ft { align-items: center; }
+.form-ft-toggles { display: flex; gap: var(--sp-2); }
+.form-ft .btn-icon-only { width: 44px; min-height: 44px; padding: 0; justify-content: center; }
+.form-saved { margin-right: auto; color: var(--fg-green); font-size: var(--fs-xs); font-weight: 700; }
+.form-batch {
+  padding: 2px var(--sp-3); border-radius: var(--radius-pill); background: rgba(var(--steam-rgb), .12);
+  color: var(--text-muted); font-size: var(--fs-xs); font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .form-row, .form-row.is-three, .form-row.has-hours { grid-template-columns: minmax(0, 1fr); }
+}
+/* Móvil: hoja a pantalla completa con el pie fijo. Cancelar sobra: está la X. */
+@media (max-width: 600px) {
+  dialog.modal-dialog[open]:has(.form-modal) { padding: 0; align-items: stretch; }
+  .modal.form-modal { max-width: none; max-height: none; height: 100dvh; border-radius: 0; }
+  .form-modal .modal-body { padding: var(--sp-4); }
+  .form-head { grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); }
+  .grade-line { min-width: 0; width: 100%; }
+  .form-score .score-input-shell { width: 100%; }
+  .form-ft { padding: var(--sp-3) var(--sp-4) calc(var(--sp-3) + env(safe-area-inset-bottom)); gap: var(--sp-2); }
+  .form-cancel { display: none; }
+  /* Dos filas: los interruptores con el aviso de lo guardado y, debajo, los dos botones de guardar a partes iguales.
+     En una sola fila no caben con las letras y las formas de botón de algunos temas (Witcher partía el texto). */
+  .form-saved { flex: 1 1 50%; margin: 0; text-align: right; }
+  .form-ft > .btn { flex: 1 1 40%; white-space: nowrap; }
+}

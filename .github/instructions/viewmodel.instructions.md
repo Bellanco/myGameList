@@ -1,5 +1,7 @@
 ---
 applyTo: "src/viewmodel/**"
+paths:
+  - "src/viewmodel/**"
 ---
 
 # ViewModel layer (`src/viewmodel/`)

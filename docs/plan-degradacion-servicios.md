@@ -8,6 +8,9 @@
 > hallazgos graves comprobados a mano). Las líneas citadas se mueven: si una no coincide, manda el código y se
 > corrige esto en la misma pasada.
 
+> **Estado (revisado el 14-10-2026): las cinco fases publicadas en la 1.5.1** (`59c37530`, `4d866aeb`, `78a8bf0e`…).
+> Pages está en «Fail open» desde el principio (lo confirmó el usuario el 14-10-2026): no queda nada pendiente del plan.
+
 ## Cómo falla cada servicio
 
 | Servicio | Al agotarse | Se reinicia |
@@ -89,8 +92,8 @@ con el cupo agotado (falla abierto).
 - Apuntar «no tiene» solo con una cabecera propia (`X-Cover: no-tiene`) y nunca con HTML: con «fail open», `/cover`
   devolvería `404.html` y se apuntaría 90 días.
 - `/cover` con `try/catch` → 503 `no-store`.
-- **Después** de esto, poner Pages en «Fail open» (*Settings → Runtime*): la web sigue entera y solo se pierde lo
-  que necesita Functions.
+- Pages ya estaba en «Fail open» (*Settings → Runtime*) desde el principio: la web sigue entera y solo se pierde lo
+  que necesita Functions. Por eso importa lo de arriba: sin ello, un `/cover` caído apuntaba «no tiene».
 
 ## Fase 5 — Menores · S · ✅ hecha (04-10-2026)
 
@@ -134,7 +137,7 @@ con el cupo agotado (falla abierto).
       solo con un 404 que no sea HTML (no se exige `X-Cover`, para no desconocer los 404 ya cacheados una semana
       en el borde, que no la llevan). `/cover` firma su 404 con `X-Cover: no-tiene` y convierte excepciones en 503
       `no-store` con `Retry-After`.
-- [ ] Poner Pages en «Fail open» (*Settings → Runtime*): ya es seguro. Es un ajuste del panel, lo hace el usuario.
+- [x] Pages en «Fail open» (*Settings → Runtime*): ya lo estaba desde el principio (confirmado el 14-10-2026).
 - [x] Fase 5 (04-10-2026): escala de nota con copia local (`78a8bf0e`), rango propio con copia mínima del perfil
       (`b509ad63`), aviso con copia local (`b3e23cac`), edición de Premios con copia (`4af7b2da`, `throwOnError` en sus
       tres lecturas), `.catch` en el guardado suelto de preferencias, tope de 4 s en `getAppCheckToken`

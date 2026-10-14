@@ -21,7 +21,7 @@
 
 > **Regla de este plan:** si un cambio obliga a enseñarle algo al usuario, no es de este plan.
 
-> **Estado (2026-09-17; revisado el 01-10-2026):** los dos pasos están hechos y en producción desde la 1.3.1. Firestore queda aplazado con un
+> **Estado (2026-09-17; revisado el 01-10-2026 y el 14-10-2026):** los dos pasos están hechos y en producción desde la 1.3.1 (`b7de4c60`, `1d91af20`). Firestore queda aplazado con un
 > criterio escrito para reabrirlo. Ningún cambio de los hechos añade UI, toca el esquema ni mueve datos.
 
 ## El problema

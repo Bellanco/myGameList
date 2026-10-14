@@ -9,6 +9,9 @@
 > real del código (las líneas citadas pueden haberse movido), confirma en la consola lo marcado como
 > *(por confirmar)* y actualiza este `.md`. Trátalo como código: se revisa con la implementación.
 
+> **Estado (revisado el 14-10-2026): pasos 1–7 publicados desde la 1.0.0** (`5867c707`). Falta solo la QA de las
+> tarjetas en clientes reales (paso 7).
+
 ## Decisiones tomadas
 
 | Decisión | Valor |

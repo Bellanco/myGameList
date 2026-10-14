@@ -31,7 +31,7 @@ import { ShareTargetEntry } from './view/components/ShareTargetEntry';
 import { LaneBanners } from './view/components/LaneBanners';
 import { SocialHubSkeleton } from './view/components/SocialHubSkeleton';
 import { ScreenSkeleton } from './view/components/ScreenSkeleton';
-import { useGameListViewModel, type GameDraft } from './viewmodel/useGameListViewModel';
+import { useGameListViewModel, type GameDraft, type SaveDraftOptions } from './viewmodel/useGameListViewModel';
 import { useToolbarFilters } from './viewmodel/useToolbarFilters';
 import { computeTabOptions, countActiveFilters } from './viewmodel/toolbarFilters';
 import { useSyncViewModel } from './viewmodel/useSyncViewModel';
@@ -861,7 +861,8 @@ export default function App() {
     if (removeTimer.current) clearTimeout(removeTimer.current);
   }, []);
 
-  const handleSaveDraft = useCallback((nextDraft: GameDraft) => {
+  /** Devuelve si se ha guardado: el formulario lo usa para contar la tanda de «Guardar y añadir otro». */
+  const handleSaveDraft = useCallback((nextDraft: GameDraft, options?: SaveDraftOptions): boolean => {
     // Si una validación corta el guardado (campos obligatorios, nombre ya en las listas) no hay nada que
     // encadenar: ni retirar el importado de la bandeja, ni destellar la fila, ni tocar el canal social.
     //
@@ -869,8 +870,8 @@ export default function App() {
     // (`max(ids) + 1`): dos copias de la misma decisión, y la de aquí es la que elige sobre qué juego publica el
     // canal social. Mientras coincidieran no se notaba nada; en cuanto dejaran de coincidir, la reseña se colgaba
     // de otro juego sin error ni rastro. Ver el docblock de `saveDraft`.
-    const guardado = saveDraft(editingTab, nextDraft);
-    if (guardado === null) return;
+    const guardado = saveDraft(editingTab, nextDraft, options);
+    if (guardado === null) return false;
     const { id: savedId, previous: previousGame } = guardado;
 
     // Graduación desde la bandeja: si este guardado viene de clasificar un importado, se retira de la bandeja.
@@ -897,6 +898,7 @@ export default function App() {
       publication: publicacion,
       onDeferred: () => notify('warn', UI_MESSAGES.games.reviewPublishDeferred),
     });
+    return true;
   }, [editingTab, inboxRemoveItem, notify, saveDraft]);
 
   const handleEditTag = useCallback((key: 'genres' | 'platforms' | 'strengths' | 'weaknesses', oldValue: string, newValue: string) => {
@@ -1466,6 +1468,7 @@ export default function App() {
             draft={vm.draft}
             currentTab={vm.editingTab}
             lookups={vm.lookups}
+            library={vm.data}
             findDuplicate={vm.findGameByName}
             onClose={handleCloseFormModal}
             onSave={handleSaveDraft}

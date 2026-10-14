@@ -1,5 +1,6 @@
 import { memo, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { resolveGrade, reviewAccent } from '../../../core/utils/scoreScale';
+import { refEntradaDeFondo } from '../../../core/utils/entradaDeImagen';
 import { useScoreScale } from '../../hooks/useScoreScale';
 import { useReviewCover, type CoverAccess } from './useReviewCover';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
@@ -151,6 +152,7 @@ export const RelatedReviews = memo(function RelatedReviews({
           return (
             <article
               key={entry.key}
+              ref={refEntradaDeFondo(cover)}
               className={`hub-feed-card hub-feed-activity-item is-review hub-review-entry hub-related-entry ${hasRating ? '' : 'is-noscore'} ${cover ? 'has-cover' : ''}`.replace(/\s+/g, ' ').trim()}
               role="listitem"
               style={hasRating || cover ? ({

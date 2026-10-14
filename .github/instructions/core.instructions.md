@@ -1,5 +1,7 @@
 ---
 applyTo: "src/core/**"
+paths:
+  - "src/core/**"
 ---
 
 # Core layer (`src/core/`)

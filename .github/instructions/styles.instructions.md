@@ -1,5 +1,7 @@
 ---
 applyTo: "src/styles/**"
+paths:
+  - "src/styles/**"
 ---
 
 # Styles (`src/styles/`)

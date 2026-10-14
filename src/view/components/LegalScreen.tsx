@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { SETTINGS_UI } from '../../core/constants/settingsLabels';
 import { LEGAL_CONTACT_EMAIL, LEGAL_ROUTES, type LegalDocId } from '../../core/constants/legal';
 import { LEGAL_DOCUMENTS } from '../../core/constants/legalContent';
+import { refEntradaDeImagen } from '../../core/utils/entradaDeImagen';
 import { HubBackButton } from './socialhub/HubBackButton';
 // La hoja de las pantallas de Ajustes viaja en los chunks perezosos que la usan y no en el bundle base (mismo
 // patrón que `stats.scss` y `social.scss`). Se importa desde CADA pantalla que la necesita: si se importara solo
@@ -54,6 +55,7 @@ export const LegalScreen = memo(function LegalScreen({ docId }: LegalScreenProps
               —nunca al arrancar la app—. Tamaño declarado para que no mueva el texto al llegar. */}
           {section.logo ? (
             <img
+              ref={refEntradaDeImagen(section.logo.src)}
               className="legal-logo"
               src={section.logo.src}
               alt={section.logo.alt}

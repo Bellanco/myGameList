@@ -1,6 +1,7 @@
 import { memo, useEffect, useState } from 'react';
 import { useGenericPhoto } from '../../hooks/useGenericPhoto';
 import { googlePhotoAtSize } from '../../../core/social/googlePhoto';
+import { refEntradaDeImagen } from '../../../core/utils/entradaDeImagen';
 
 /**
  * Avatar del hub social: muestra la foto (`photoURL`) y, si no hay o la imagen falla al cargar (p. ej. una URL de
@@ -50,6 +51,8 @@ export const HubAvatar = memo(function HubAvatar({
     const triple = highDensity ? googlePhotoAtSize(photoURL, 288) : null;
     return (
       <img
+        // Entra con fundido en vez de saltar sobre el hueco (`core/utils/entradaDeImagen`).
+        ref={refEntradaDeImagen(photoURL)}
         className={`hub-avatar hub-avatar-img ${sizeClass}`.trim()}
         src={photoURL}
         srcSet={double && triple ? `${photoURL} 1x, ${double} 2x, ${triple} 3x` : undefined}
