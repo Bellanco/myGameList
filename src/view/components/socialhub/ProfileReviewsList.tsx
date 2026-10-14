@@ -3,6 +3,7 @@ import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
 import { useScoreScale } from '../../hooks/useScoreScale';
 import { resolveGrade, reviewAccent } from '../../../core/utils/scoreScale';
+import { refEntradaDeFondo } from '../../../core/utils/entradaDeImagen';
 import { useReviewCover, type CoverAccess } from './useReviewCover';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 // La hoja de la RESEÑA se importa AQUÍ y no desde `social.scss`: esta lista la pintan el hub social y también
@@ -149,6 +150,7 @@ export const ProfileReviewsList = memo(function ProfileReviewsList({
             return (
               <ViewTransition key={review.id} name={nombreDeResena(review.id)} share="resena" default="none">
                 <article
+                  ref={refEntradaDeFondo(cover)}
                   className={`hub-feed-card hub-feed-activity-item is-review hub-review-entry ${hasRating ? '' : 'is-noscore'} ${cover ? 'has-cover' : ''}`.replace(/\s+/g, ' ').trim()}
                   role="listitem"
                   style={hasRating || cover ? style : undefined}

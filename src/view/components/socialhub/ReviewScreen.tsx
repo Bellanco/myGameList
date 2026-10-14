@@ -3,6 +3,7 @@ import { ReviewDetailBody } from '../ReviewDetailBody';
 import { ReviewDetailHead, type ReviewAuthor } from '../ReviewDetailHead';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import type { IconName } from '../../../core/constants/icons';
+import { refEntradaDeFondo } from '../../../core/utils/entradaDeImagen';
 import { HubScreen } from './HubScreen';
 import { HubStatus } from './HubStatus';
 import { useReviewCover, type CoverAccess } from './useReviewCover';
@@ -150,6 +151,7 @@ export function ReviewScreen({
       {actionsRow}
       <ViewTransition name={morphName} share="resena" default="none">
         <article
+          ref={refEntradaDeFondo(cover)}
           className={`hub-feed-card hub-feed-card-detail${cover ? ' has-cover' : ''}`}
           style={cover ? ({ '--row-cover': `url("${cover}")` } as CSSProperties) : undefined}
         >

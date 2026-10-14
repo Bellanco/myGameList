@@ -1,0 +1,15 @@
+/* LA ENTRADA DE UNA IMAGEN DE FONDO. El estado lo pone `refEntradaDeFondo` (`core/utils/entradaDeImagen.ts`) en
+   `data-entrada` del elemento que lleva el `ref`; la capa que se funde es de cada pieza —el propio elemento, su
+   `::before`—, así que se dice al incluirlo:
+
+     .hub-person-row-cover { @include entrada.de-fondo; }
+     td:first-child { @include entrada.de-fondo('::before'); }
+
+   El fotograma (`imagenEntra`) y el porqué de su duración viven en `_motion.scss`, que va en el arranque: una hoja
+   perezosa no puede quedarse sin él. */
+@mixin de-fondo($capa: '') {
+  &[data-entrada="cargando"]#{$capa} { opacity: 0; }
+  @media (prefers-reduced-motion: no-preference) {
+    &[data-entrada="lista"]#{$capa} { animation: imagenEntra 1.8s ease-out; }
+  }
+}

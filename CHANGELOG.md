@@ -5,6 +5,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Changed
+
+- **Las imágenes entran con un fundido en vez de aparecer de golpe.** Los avatares, la carátula de fondo de los
+  renglones de «Perfiles», del listado y de las reseñas, las del resumen del año, las fotos de las publicaciones y
+  las imágenes sueltas (invitación, logo de los textos legales) se instalan suavemente al llegar, como ya hacían las
+  carátulas del mosaico. Lo que ya se había visto en la sesión se enseña quieto, sin repetir el gesto, y con
+  «reducir movimiento» la imagen sale sin fundido pero nunca a medio bajar. Un test vigila que cualquier imagen nueva
+  use el mismo mecanismo.
+
 ## [1.7.5] - 2026-10-14
 
 ### Changed

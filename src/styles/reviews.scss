@@ -17,6 +17,8 @@
 // Lo que NO está aquí: el armazón de pantalla, la tarjeta del feed y el cuerpo del detalle (`hub-detail-body`,
 // `hub-detail-metadata`, `hub-feed-card*`), que siguen en `_layout.scss` porque los comparten más pantallas.
 
+@use './entrada';
+
 // `.hub-screen-actions-split` ESTABA AQUÍ y se mudó a `_layout.scss`: la usa también el armazón de la actividad
 // (`FeedShell`), que lo pinta el esqueleto del arranque. Con la regla en esta hoja perezosa, ese armazón salía con
 // los tres botones agrupados a la izquierda y, al llegar el chunk, "Cerrar sesión" saltaba al otro extremo.
@@ -395,6 +397,9 @@
      logotipo, y el inferior, los créditos y las marcas de tienda. */
   background-position: center, center 35%;
 }
+/* Velo e imagen van en la misma capa y entran juntos: el velo es casi la superficie de la tarjeta, así que lo que se
+   ve llegar es el dibujo (`refEntradaDeFondo` en la lista y en las relacionadas). */
+.hub-review-entry.has-cover { @include entrada.de-fondo('::after'); }
 
 /* EN EL EPÍLOGO, EL VELO CIERRA MÁS. Las relacionadas son tarjetas de 17 rem donde el texto ocupa el ancho
    entero —no hay mitad derecha libre como en la lista—, y además van tres o cuatro seguidas: con el velo de la
@@ -436,6 +441,7 @@
      imagen por ahí se ve el dibujo entero en vez de su cintura. */
   background-position: center, center top;
 }
+.hub-feed-card-detail.has-cover { @include entrada.de-fondo('::before'); }
 
 /* En el teléfono la capa cierra más, por lo mismo que en el renglón: allí el texto ocupa la tarjeta entera y no
    queda mitad libre donde enseñar el dibujo. */

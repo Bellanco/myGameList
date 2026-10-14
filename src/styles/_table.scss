@@ -1,4 +1,7 @@
 /* Table */
+
+@use './entrada';
+
 .table-wrap {
   background: var(--surface); border-radius: var(--radius-md);
   overflow: auto; overflow-x: auto; border: 1px solid var(--hair); box-shadow: var(--e2), var(--edge);
@@ -560,6 +563,8 @@ table.is-cards tbody tr.main-row.has-cover > td:first-child::before {
      logotipo, y el inferior, los créditos y las marcas de tienda. */
   background-position: center 35%;
 }
+/* Entra con fundido al llegar, no de golpe detrás del texto: la celda lleva `refEntradaDeFondo` (`GameTable`). */
+table.is-cards tbody tr.main-row.has-cover > td:first-child { @include entrada.de-fondo('::before'); }
 table.is-cards tbody tr.main-row.has-cover > td:first-child::after {
   content: "";
   position: absolute;

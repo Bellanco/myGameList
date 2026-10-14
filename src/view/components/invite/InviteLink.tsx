@@ -1,6 +1,7 @@
 import { Fragment, useState, type ReactNode } from 'react';
 import { INVITE_UI } from '../../../core/constants/inviteLabels';
 import { copyText } from '../../../core/utils/clipboard';
+import { refEntradaDeImagen } from '../../../core/utils/entradaDeImagen';
 import { Icon } from '../Icon';
 // Viaja con el componente: lo montan dos chunks perezosos distintos (la guía y el hub social), y una regla metida
 // en la hoja de uno dejaría al otro sin estilo.
@@ -62,7 +63,7 @@ export function InviteLink({ onShared, secondary, buttonClassName = '', variant 
   return (
     <div className={`invite-link${compact ? ' is-compact' : ''}`}>
       <figure className="invite-preview">
-        <img src="/share-card.jpg" width={1200} height={630} alt={INVITE_UI.previewAlt} decoding="async" loading="lazy" />
+        <img ref={refEntradaDeImagen('/share-card.jpg')} src="/share-card.jpg" width={1200} height={630} alt={INVITE_UI.previewAlt} decoding="async" loading="lazy" />
         <figcaption className="invite-preview-link">
           {/* LA DIRECCIÓN TAMBIÉN COPIA al pulsarla: es lo primero que se toca para copiar un enlace. Es un botón con
               aspecto de texto, y no un texto con `onClick`, para que llegue también con teclado y lector de pantalla.

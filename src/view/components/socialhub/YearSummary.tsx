@@ -3,6 +3,7 @@ import { YEAR_SUMMARY_ICONS as ICONS, YEAR_SUMMARY_UI as L, type SummaryVoice } 
 import type { IconName } from '../../../core/constants/icons';
 import { Icon } from '../Icon';
 import { hueFromGrade, type ScoreScale } from '../../../core/utils/scoreScale';
+import { refEntradaDeFondo } from '../../../core/utils/entradaDeImagen';
 import type { YearSummary as YearSummaryData } from '../../../core/stats/yearSummary';
 import { useScoreScale } from '../../hooks/useScoreScale';
 import { formatDecimal } from '../stats/format';
@@ -251,7 +252,7 @@ export const YearSummary = memo(function YearSummary({ summary, voice, coverAcce
         // nombre repetía el título de al lado y se leía como una imagen que no ha cargado.
         <div className={cover ? 'ys-two' : undefined}>
           {cover ? (
-            <div className="ys-boxart has-cover" style={{ '--ys-cover': `url("${cover}")` } as CSSProperties}>
+            <div ref={refEntradaDeFondo(cover)} className="ys-boxart has-cover" style={{ '--ys-cover': `url("${cover}")` } as CSSProperties}>
               <span>{best.name}</span>
             </div>
           ) : null}
@@ -453,7 +454,7 @@ export const YearSummary = memo(function YearSummary({ summary, voice, coverAcce
         <>
           {common.names.length ? (
             <>
-              {commonCover ? <span className="ys-card-cover" aria-hidden="true" style={{ '--ys-cover': `url("${commonCover}")` } as CSSProperties} /> : null}
+              {commonCover ? <span ref={refEntradaDeFondo(commonCover)} className="ys-card-cover" aria-hidden="true" style={{ '--ys-cover': `url("${commonCover}")` } as CSSProperties} /> : null}
               <h4 className="ys-title">{affinity !== null ? L.common.titleAffinity(common.names.length, affinity) : L.common.title(common.names.length)}</h4>
               {affinity !== null ? (
                 <span className="ys-affinity" aria-hidden="true">
@@ -498,6 +499,7 @@ export const YearSummary = memo(function YearSummary({ summary, voice, coverAcce
                   return (
                     <li key={pick.name} className="ys-pick">
                       <div
+                        ref={refEntradaDeFondo(pickCover)}
                         className={`ys-boxart ys-pick-art ${pickCover ? 'has-cover' : ''}`.trim()}
                         style={pickCover ? ({ '--ys-cover': `url("${pickCover}")` } as CSSProperties) : undefined}
                         aria-hidden="true"

@@ -9,6 +9,7 @@ import { COMPACT_TABLE_MAX_WIDTH } from '../../core/constants/uiConfig';
 import { FilePickerButton } from './FilePickerButton';
 import { GameCover } from './GameCover';
 import { coverDeCaja, coverDeRenglon, type PedidoDePortada } from '../../core/utils/coverDelListado';
+import { refEntradaDeFondo } from '../../core/utils/entradaDeImagen';
 import { UNPLAYED_TAB_IDS, type GameItem, type TabId, type TabSort } from '../../model/types/game';
 import type { TabAction } from '../../viewmodel/useGameListViewModel';
 import { hueFromGrade, resolveGrade } from '../../core/utils/scoreScale';
@@ -1312,7 +1313,8 @@ export const GameTable = memo(function GameTable({
                         }
                       }}
                     >
-                      <td>
+                      {/* La carátula de fondo es el `::before` de esta celda: aquí se marca su entrada con fundido. */}
+                      <td ref={refEntradaDeFondo(rowCover)}>
                         <button
                           type="button"
                           className="row-toggle"
