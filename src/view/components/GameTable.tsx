@@ -1104,7 +1104,6 @@ export const GameTable = memo(function GameTable({
                         <button type="button" className="btn btn-open" onClick={onOpenInbox}>
                           <Icon name={COMMON_ICONS.download} />
                           <span>{IMPORT_UI.viewInbox(inboxCount)}</span>
-                          <Icon name="angle-right" className="ui-icon btn-open-go" />
                         </button>
                       ) : null}
                     </div>
@@ -1502,7 +1501,6 @@ export const GameTable = memo(function GameTable({
                               >
                                 <Icon name={COMMON_ICONS.arrowsToEye} />
                                 <span>{UI_MESSAGES.detail.reviewLink}</span>
-                                <Icon name="angle-right" className="ui-icon btn-open-go" />
                               </Link>
                             </div>
                           </div>

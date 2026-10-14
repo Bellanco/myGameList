@@ -633,7 +633,6 @@ function SocialProfileDetailScreenBase({
               <button className="btn btn-open" type="button" onClick={onEditProfile}>
                 <Icon name="edit" />
                 {SOCIAL_UI.feed.profile}
-                <Icon name="angle-right" className="ui-icon btn-open-go" />
               </button>
             </div>
           ) : !isOwnProfile && onAddOrAcceptFriend ? (
