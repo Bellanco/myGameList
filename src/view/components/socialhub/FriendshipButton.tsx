@@ -15,6 +15,9 @@ import type { SocialUiLabels } from '../../../core/constants/socialLabels';
  * estrecha, se oculta y queda solo el icono (el `aria-label` sigue diciendo la acción entera). "Pendiente" es un
  * rótulo y no un botón: nombra un ESTADO, que es lo que hay que poder leer siempre.
  * Todos llevan además `title`: con el rótulo oculto, es lo que descubre la acción al pasar por encima.
+ *
+ * `compact` es el del renglón de «Perfiles»: allí el estado de la solicitud ya va escrito debajo del nombre, así que
+ * con una enviada sale solo «Retirar», y «Añadir amigo» se queda en «Añadir» para no comerle el sitio al texto.
  */
 export function FriendshipButton({
   SOCIAL_UI,
@@ -24,6 +27,7 @@ export function FriendshipButton({
   onAddOrAccept,
   onCancel,
   onRemove,
+  compact = false,
 }: {
   SOCIAL_UI: SocialUiLabels;
   state: RelationshipState;
@@ -32,6 +36,7 @@ export function FriendshipButton({
   onAddOrAccept: () => void;
   onCancel: () => void;
   onRemove?: () => void;
+  compact?: boolean;
 }) {
   const F = SOCIAL_UI.friendship;
 
@@ -76,20 +81,24 @@ export function FriendshipButton({
     /* EL ESTADO Y LA ACCIÓN, POR SEPARADO. Era un solo botón que decía «Pendiente» y, al pulsarlo, retiraba la
        petición: se leía como un estado, y en varios temas era además lo más llamativo de la tarjeta (09-10-2026).
        Ahora el estado es un rótulo y retirarla, una acción callada con su nombre. */
+    const withdraw = (
+      <button
+        className="btn btn-quiet btn-sm"
+        type="button"
+        disabled={busy}
+        aria-label={F.cancelAria(name)}
+        title={F.cancelAria(name)}
+        onClick={onCancel}
+      >
+        <Icon name="close" />
+        <span className="btn-label">{F.withdraw}</span>
+      </button>
+    );
+    if (compact) return withdraw;
     return (
       <>
         <span className="hub-pending-chip">{F.pending}</span>
-        <button
-          className="btn btn-quiet btn-sm"
-          type="button"
-          disabled={busy}
-          aria-label={F.cancelAria(name)}
-          title={F.cancelAria(name)}
-          onClick={onCancel}
-        >
-          <Icon name="close" />
-          <span className="btn-label">{F.withdraw}</span>
-        </button>
+        {withdraw}
       </>
     );
   }
@@ -104,7 +113,7 @@ export function FriendshipButton({
       onClick={onAddOrAccept}
     >
       <Icon name="plus" />
-      <span className="btn-label">{F.add}</span>
+      <span className="btn-label">{compact ? F.addShort : F.add}</span>
     </button>
   );
 }

@@ -1012,6 +1012,9 @@
     inset 0 0 0 3px var(--surface),
     inset 0 0 0 4px rgba(224, 169, 43, .4);
 }
+/* La carátula del renglón de un amigo (`.hub-person-row-cover`) se queda DENTRO de la moldura: a todo el renglón
+   tapaba el segundo filete, que es una sombra interior y se pinta por debajo de los hijos. */
+:root[data-palette="grimdark"] .hub-person-row-cover { inset: 4px; }
 
 /* ── §18 · LAS ESTRELLAS: el oro imperial con el resplandor del tubo detrás; en claro no hay tubo. ── */
 :root[data-palette="grimdark"] .stars .f,

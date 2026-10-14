@@ -104,7 +104,7 @@ const SocialHubInner = memo(function SocialHubInner({
     profileDetailId, profileReviewsView, profilePostsView, profileAchievementsView, profileGlobalsView,
     selectedProfileDetail, activeProfileReview, activeProfileReviewEvent, activeDetailEvent, detailEventLoading,
     profileDetailLoading, detailReviewLoading, profileReviewLoading, getGameItemById, relatedReviews,
-    openOwnProfileDetail, isOwnProfileDetail, isOwnDetailEvent,
+    openOwnProfileDetail, isOwnProfileDetail, isOwnDetailEvent, lastCompletedByProfile,
   } = vm.reading;
   const { ownAchievements, ownAchievementMirror } = vm.achievements;
   /**
@@ -635,7 +635,8 @@ const SocialHubInner = memo(function SocialHubInner({
             onBack={goToSocial}
             status={status}
             statusKind={statusKind}
-            showTiers={isAdmin}
+            showLastSeen={isAdmin}
+            lastCompletedByProfile={lastCompletedByProfile}
           />
           {/* Aquí el botón "Pendiente" retira la petición enviada, y eso ahora se confirma. */}
           {friendActionDialog}

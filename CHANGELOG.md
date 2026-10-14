@@ -11,6 +11,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   la misma cifra, en la punta, con silueta de escudo redondeado. Los tres segmentos del tramo siguen el contorno:
   suben por la izquierda, cruzan por arriba y bajan por la derecha. Los trofeos del palmarés de la porra y la baldosa
   del «+N» de la tira también; la cifra de la baldosa encoge según sus dígitos para no salirse nunca.
+- **«Perfiles» en renglones, con lo que juega cada amigo.** Cada persona es un renglón con su avatar, su nombre y
+  una línea de estado. La de un amigo dice a qué juega o qué acaba de terminar; si no hay nada de eso, lo último que
+  añadió o abandonó, y si tampoco, su última reseña. La administración ve además, cuando no hay nada de eso, su último
+  completado. Con las carátulas encendidas, lleva la portada de ese juego recortada detrás, como el renglón del
+  listado. «Descubrir» va también en renglones, ordenado por lo que se puede hacer: primero las solicitudes
+  recibidas, luego el resto y al final las enviadas, con «Solicitud recibida» y «Solicitud enviada» escritos en el
+  renglón. El buscador cabe en una línea y la muesca de rango ya no sale en esta pantalla. Solo la administración ve
+  además la última conexión de cada persona.
+- **Sin flecha en los botones que ya llevan icono.** La › de «abrir» queda solo en los botones sin icono: «Ver
+  perfiles», «Editar mi perfil», «Ver bandeja» y los demás que tenían los dos dibujos ya no la llevan.
 
 ### Removed
 

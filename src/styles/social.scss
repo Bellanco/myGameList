@@ -483,32 +483,175 @@
 }
 
 
-/* El buscador del directorio y de solicitudes, SIN CAJA alrededor: el campo ya tiene la suya, y la tarjeta de
-   pantalla es la de fuera. Queda el campo y el recuento. */
-.hub-feed-toolbar {
-  display: grid;
-  gap: .6rem;
+/* EL BUSCADOR DE «PERFILES», EN UNA LÍNEA (14-10-2026): la lupa dentro del campo y el rótulo solo para lectores de
+   pantalla. Sin caja alrededor: el campo ya tiene la suya, y la tarjeta de pantalla es la de fuera. */
+.hub-person-search {
+  position: relative;
+  display: block;
 }
 
+.hub-person-search > .ui-icon {
+  position: absolute;
+  inset-inline-start: .85rem;
+  top: 50%;
+  translate: 0 -50%;
+  width: 1rem;
+  height: 1rem;
+  color: var(--text-muted);
+  pointer-events: none;
+}
 
-.hub-feed-search {
+.hub-person-search > .finput {
+  width: 100%;
+  padding-inline-start: 2.5rem;
+}
+
+/* ── EL RENGLÓN DE PERSONA (`HubPersonRow`) ──────────────────────────────────────────────────────────────────────
+   Avatar, nombre, una línea de estado y, fuera de los amigos, la acción a la derecha. Lleva la clase de la tarjeta de
+   persona para heredar la piel de cada tema; aquí solo se le cambia la forma, de columna a fila.
+
+   La rejilla, con `auto-fill` por lo mismo que la de tarjetas (ver `.hub-user-grid`): pocas filas mantienen su ancho
+   en vez de estirarse. Una columna en el teléfono, y en escritorio tantas como quepan de 21rem: con el botón al lado,
+   el renglón necesita ese ancho para que el texto no se corte. */
+.hub-person-rows {
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(21rem, 100%), 1fr));
+  gap: .6rem;
+  padding: .35rem 0 .55rem;
+}
+
+.hub-user-card.hub-person-row {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  flex-direction: row;
+  align-items: center;
+  text-align: start;
+  gap: .75rem;
+  padding: .75rem .85rem;
+  min-height: 4.1rem;
+}
+
+.hub-person-row > .hub-avatar {
+  flex: none;
+  width: 2.7rem;
+  height: 2.7rem;
+}
+
+.hub-person-row-text {
+  flex: 1 1 auto;
+  display: grid;
+  gap: .15rem;
+  min-width: 0;
+}
+
+/* Una línea y con puntos suspensivos: en fila, un nombre largo no puede empujar la acción fuera del renglón. */
+.hub-user-card.hub-person-row .hub-user-card-name {
+  display: block;
+  min-height: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.hub-person-row-action { flex: none; }
+
+.hub-person-row-action .btn {
+  padding: .32rem .6rem;
+  font-size: var(--fs-xs);
   gap: .3rem;
 }
 
-.hub-feed-search span {
-  color: var(--text-muted);
-  font-size: var(--fs-2xs);
-  text-transform: uppercase;
-  letter-spacing: .03em;
-  font-weight: 700;
-}
+.hub-person-row-action .btn .ui-icon { width: var(--ico-sm); height: var(--ico-sm); }
 
+/* Quien te ha enviado una solicitud se distingue también por el filete, no solo por el botón. */
+.hub-user-card.hub-person-row.is-incoming { border-color: color-mix(in srgb, var(--success) 50%, var(--border)); }
 
-.hub-feed-result-count {
-  margin: 0;
+/* LA LÍNEA DE ESTADO. Qué ha hecho un amigo —con el punto del color de la lista, como el canto de las listas; el de
+   una reseña, el del enlace— o en qué punto está una solicitud. */
+.hub-person-row-status {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--fs-xs);
   color: var(--text-muted);
+}
+
+.hub-person-row-status b { color: var(--text); font-weight: 600; }
+
+.hub-person-row-status::before {
+  content: "";
+  display: inline-block;
+  width: .5rem;
+  height: .5rem;
+  margin-inline-end: .4rem;
+  border-radius: 50%;
+  vertical-align: .05em;
+  background: var(--move-e);
+}
+
+.hub-person-row-status.is-c::before { background: var(--move-c); }
+.hub-person-row-status.is-v::before { background: var(--move-v); }
+.hub-person-row-status:is(.is-p, .is-d)::before { background: var(--move-p); }
+.hub-person-row-status.is-review::before { background: var(--fg-link); }
+.hub-person-row-status.is-incoming { color: color-mix(in srgb, var(--success) 72%, var(--text)); font-weight: 600; }
+.hub-person-row-status.is-incoming::before { background: var(--success); }
+/* La enviada, en el ámbar de espera y con el punto discontinuo: como el rótulo «Pendiente», aún no se ha cerrado. */
+.hub-person-row-status.is-outgoing { color: color-mix(in srgb, var(--fg-amber), var(--text) 30%); }
+.hub-person-row-status.is-outgoing::before { background: transparent; border: 1px dashed currentColor; }
+
+/* SOLO PARA LA ADMINISTRACIÓN: la última conexión, con el punto del mithril (`.tier-mithril` le da `--tier`) —el sello
+   de lo que solo ve la administración—, para que no se confunda con algo que ve todo el mundo. Puede partirse en
+   dos líneas: con el botón al lado, en un teléfono estrecho no cabe entera, y cortada no dice nada. */
+.hub-person-row-seen {
+  display: block;
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+}
+
+.hub-person-row-seen::before {
+  content: "";
+  display: inline-block;
+  width: .4rem;
+  height: .4rem;
+  margin-inline-end: .4rem;
+  border-radius: 50%;
+  vertical-align: .1em;
+  background: var(--tier);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tier) 45%, transparent);
+}
+
+/* LA CARÁTULA DEL AMIGO: la receta del renglón del listado (`_table.scss`). La portada recortada en franja detrás de
+   la fila y, encima, la superficie de la tarjeta casi opaca por la izquierda —donde va el texto— y abriéndose hacia
+   la derecha: se tiñe con la paleta que esté puesta y no canta en ninguna. */
+.hub-person-row-cover {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: var(--person-cover);
+  background-repeat: no-repeat;
+  background-size: cover;
+  /* Un poco por encima del centro: el tercio superior de una portada es donde suelen estar la cara y el logotipo. */
+  background-position: center 35%;
+}
+
+.hub-person-row-cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--surface-elevated) var(--person-veil-a, 96%), transparent) 0%,
+    color-mix(in srgb, var(--surface-elevated) var(--person-veil-b, 86%), transparent) 50%,
+    color-mix(in srgb, var(--surface-elevated) var(--person-veil-c, 45%), transparent) 100%
+  );
+}
+
+/* En el teléfono el velo cierra más, como en el listado: allí el texto ocupa la fila entera. */
+@container social-card (max-width: 36rem) {
+  .hub-person-row { --person-veil-b: 90%; --person-veil-c: 68%; }
 }
 
 

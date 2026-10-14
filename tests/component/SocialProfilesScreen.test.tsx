@@ -1,20 +1,28 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SocialProfilesScreen } from '../../src/view/components/socialhub/SocialProfilesScreen';
-import type { ProfileTier } from '../../src/core/constants/tiers';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { PROFILE_TIER_LABELS } from '../../src/core/constants/tiers';
 import type { RelationshipState } from '../../src/model/types/social';
+import type { SocialMoveFeedItem } from '../../src/viewmodel/social/socialFeed';
+import type { TabId } from '../../src/model/types/game';
+import { coversPreference } from '../../src/view/hooks/preferences';
 import { INVITE_UI } from '../../src/core/constants/inviteLabels';
 import { INVITE_UNTIL_FRIENDS } from '../../src/core/social/invite';
 
-// `tier` va explícito: el modelo lo declara OBLIGATORIO justamente para que olvidarlo sea un error de
-// compilación y no un directorio entero pintado de bronce por descuido. `lastActiveAt` (último uso de la app)
-// es obligatorio por lo mismo: sin él, la lista de amigos saldría en orden arbitrario.
-function entry(uid: string, displayName: string, tier: ProfileTier = 'bronze', lastActiveAt = 0) {
-  return { id: uid, uid, displayName, photoURL: '', tier, lastActiveAt };
+// `lastActiveAt` (último uso de la app) va explícito: el modelo lo declara OBLIGATORIO para que olvidarlo sea un
+// error de compilación y no una lista de amigos en orden arbitrario.
+function entry(uid: string, displayName: string, lastActiveAt = 0, moves: SocialMoveFeedItem[] = []) {
+  return { id: uid, uid, displayName, photoURL: '', lastActiveAt, moves };
 }
+
+/** Un mensaje de lista tal y como llega hidratado al directorio (solo lo que lee el renglón importa aquí). */
+function move(gameId: number, gameName: string, tab: TabId, at: number) {
+  return { id: `${gameId}:${tab}`, gameId, gameName, tab, at, updatedAt: at } as SocialMoveFeedItem;
+}
+
+const DAY = 86_400_000;
 
 const baseProps = {
   SOCIAL_UI,
@@ -70,97 +78,118 @@ describe('SocialProfilesScreen — división amigos / no-amigos', () => {
     expect(within(others).getByLabelText(SOCIAL_UI.friendship.addAria('Bob'))).toBeInTheDocument();
   });
 
-  // El punto de rango es la única señal visible del tier en el directorio. Como el color por sí solo no informa
-  // a quien no lo distingue, el nombre del rango tiene que estar en el texto accesible. Y es solo de tus AMIGOS:
-  // de quien no lo es se enseña el nombre y nada más (decisión del 04-10-2026).
-  describe('punto de rango', () => {
-    // De cara al usuario los rangos no se nombran: solo la administración ve la muesca (`showTiers`).
-    it('sin showTiers no se pinta ningún rango', () => {
-      const { container } = render(
-        <SocialProfilesScreen
-          {...baseProps}
-          relationshipWith={() => 'friends'}
-          filteredSocialDirectory={[{ ...entry('ada', 'Ada'), tier: 'gold' }, entry('cid', 'Cid')]}
-        />,
-      );
+  // EL RANGO YA NO SALE EN ESTA PANTALLA (14-10-2026), ni siquiera para la administración: la muesca se quitó con
+  // el paso a renglones.
+  it('no pinta el rango de nadie, tampoco a la administración', () => {
+    const { container } = render(
+      <SocialProfilesScreen
+        {...baseProps}
+        showLastSeen
+        relationshipWith={() => 'friends'}
+        filteredSocialDirectory={[entry('ada', 'Ada'), entry('bob', 'Bob')]}
+      />,
+    );
 
-      expect(container.querySelector('.hub-tier-notch')).toBeNull();
-      expect(screen.queryByText(PROFILE_TIER_LABELS.gold)).not.toBeInTheDocument();
-      expect(screen.queryByText(PROFILE_TIER_LABELS.bronze)).not.toBeInTheDocument();
-    });
-
-    function renderWithTiers() {
-      return render(
-        <SocialProfilesScreen
-          {...baseProps}
-          showTiers
-          relationshipWith={() => 'friends'}
-          filteredSocialDirectory={[
-            { ...entry('ada', 'Ada'), tier: 'gold' },
-            { ...entry('bob', 'Bob'), tier: 'mithril' },
-            entry('cid', 'Cid'), // sin tier → bronce
-          ]}
-        />,
-      );
+    expect(container.querySelector('.hub-tier-notch')).toBeNull();
+    for (const label of Object.values(PROFILE_TIER_LABELS)) {
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
     }
+  });
 
-    it('pinta un punto por perfil con la clase de color de su rango', () => {
-      const { container } = renderWithTiers();
+  // La última conexión es solo para la administración, y de TODOS: amigos y el resto.
+  describe('última conexión', () => {
+    const now = Date.now();
+    const directorio = [entry('ada', 'Ada', now), entry('bob', 'Bob', now - 2 * DAY), entry('cid', 'Cid', 0)];
+    const relationshipWith = (uid: string): RelationshipState => (uid === 'ada' ? 'friends' : 'none');
 
-      expect(container.querySelectorAll('.hub-tier-notch')).toHaveLength(3);
-      expect(container.querySelector('.hub-tier-notch.tier-gold')).toBeInTheDocument();
-      expect(container.querySelector('.hub-tier-notch.tier-mithril')).toBeInTheDocument();
-      // Quien no tiene rango asignado sale como bronce, no sin punto.
-      expect(container.querySelector('.hub-tier-notch.tier-bronze')).toBeInTheDocument();
+    it('sin showLastSeen no se dice', () => {
+      render(<SocialProfilesScreen {...baseProps} relationshipWith={relationshipWith} filteredSocialDirectory={directorio} />);
+      expect(screen.queryByText(/Última conexión/)).not.toBeInTheDocument();
     });
 
-    it('nombra el rango en texto, no solo con el color', () => {
-      renderWithTiers();
-
-      expect(screen.getByText(PROFILE_TIER_LABELS.gold)).toBeInTheDocument();
-      expect(screen.getByText(PROFILE_TIER_LABELS.mithril)).toBeInTheDocument();
-      expect(screen.getByText(PROFILE_TIER_LABELS.bronze)).toBeInTheDocument();
-    });
-
-    it('un rango desconocido en el documento se pinta como bronce', () => {
-      const { container } = render(
-        <SocialProfilesScreen
-          {...baseProps}
-          showTiers
-          relationshipWith={() => 'friends'}
-          // Rango inventado: el `as` es la prueba. Simula un documento con un valor que el tipo no admite
-          // (dato viejo o manipulado) para comprobar que `normalizeTier` lo degrada a bronce en vez de romper.
-          filteredSocialDirectory={[{ ...entry('ada', 'Ada'), tier: 'adamantium' as ProfileTier }]}
-        />,
-      );
-
-      expect(container.querySelector('.hub-tier-notch.tier-bronze')).toBeInTheDocument();
-    });
-  
-    it('de quien no es tu amigo no se pinta el rango', () => {
-      const { container } = render(
-        <SocialProfilesScreen
-          {...baseProps}
-          showTiers
-          relationshipWith={(uid) => (uid === 'ada' ? 'friends' : uid === 'bob' ? 'outgoing' : 'none')}
-          filteredSocialDirectory={[
-            { ...entry('ada', 'Ada'), tier: 'gold' },
-            { ...entry('bob', 'Bob'), tier: 'mithril' },
-            { ...entry('cid', 'Cid'), tier: 'silver' },
-          ]}
-        />,
-      );
-
-      // Solo el de Ada, la amiga. Ni una petición enviada cuenta como amistad.
-      expect(container.querySelectorAll('.hub-tier-notch')).toHaveLength(1);
-      expect(container.querySelector('.hub-tier-notch.tier-gold')).toBeInTheDocument();
-      expect(screen.queryByText(PROFILE_TIER_LABELS.mithril)).not.toBeInTheDocument();
-      expect(screen.queryByText(PROFILE_TIER_LABELS.silver)).not.toBeInTheDocument();
+    it('con showLastSeen, la de cada uno, sin hora; sin dato, nada', () => {
+      render(<SocialProfilesScreen {...baseProps} showLastSeen relationshipWith={relationshipWith} filteredSocialDirectory={directorio} />);
+      expect(screen.getByText(SOCIAL_UI.profiles.lastSeen(0))).toBeInTheDocument();
+      expect(screen.getByText(SOCIAL_UI.profiles.lastSeen(2))).toBeInTheDocument();
+      expect(screen.getAllByText(/Última conexión/)).toHaveLength(2);
     });
   });
 
-  // La rejilla sustituyó al carrusel horizontal: las tarjetas envuelven en filas en vez de irse a la derecha.
-  it('pinta las tarjetas en una rejilla, no en un carrusel horizontal', () => {
+  // A QUÉ JUEGA, de sus mensajes de lista: solo de tus amigos (de los demás no se lee el canal, y aunque llegara algo,
+  // no se enseña).
+  describe('a qué juega', () => {
+    const now = Date.now();
+    const directorio = [
+      entry('ada', 'Ada', now, [move(1, 'Hades', 'e', now - DAY), move(2, 'Celeste', 'c', now - 3 * DAY)]),
+      entry('bob', 'Bob', now, [move(3, 'Tunic', 'e', now - DAY)]),
+    ];
+    const relationshipWith = (uid: string): RelationshipState => (uid === 'ada' ? 'friends' : 'none');
+
+    afterEach(() => coversPreference.set(false));
+
+    it('dice lo último que empezó o terminó un amigo, y nada de quien no lo es', () => {
+      render(<SocialProfilesScreen {...baseProps} relationshipWith={relationshipWith} filteredSocialDirectory={directorio} />);
+      expect(screen.getByText('Hades')).toBeInTheDocument();
+      expect(screen.getByText('Hades').parentElement).toHaveTextContent(`${SOCIAL_UI.profiles.activity.e} Hades`);
+      expect(screen.queryByText('Celeste')).not.toBeInTheDocument();
+      expect(screen.queryByText('Tunic')).not.toBeInTheDocument();
+    });
+
+    // El cuarto respaldo (solo llega relleno para la administración): el último completado, si el canal no cuenta nada.
+    it('sin nada en su canal, el último completado que llegue; con algo, no se usa', () => {
+      render(
+        <SocialProfilesScreen
+          {...baseProps}
+          relationshipWith={() => 'friends'}
+          filteredSocialDirectory={[...directorio, entry('cid', 'Cid', now)]}
+          lastCompletedByProfile={{ ada: 'Outer Wilds', cid: 'Disco Elysium' }}
+        />,
+      );
+      expect(screen.getByText('Disco Elysium').parentElement).toHaveTextContent(`${SOCIAL_UI.profiles.activity.c} Disco Elysium`);
+      expect(screen.queryByText('Outer Wilds')).not.toBeInTheDocument();
+    });
+
+    it('la carátula, solo con la preferencia encendida y solo de los amigos', () => {
+      const { container, unmount } = render(
+        <SocialProfilesScreen {...baseProps} relationshipWith={relationshipWith} filteredSocialDirectory={directorio} />,
+      );
+      expect(container.querySelector('.hub-person-row-cover')).toBeNull();
+      unmount();
+
+      coversPreference.set(true);
+      const { container: withCovers } = render(
+        <SocialProfilesScreen {...baseProps} relationshipWith={relationshipWith} filteredSocialDirectory={directorio} />,
+      );
+      const covers = withCovers.querySelectorAll<HTMLElement>('.hub-person-row-cover');
+      expect(covers).toHaveLength(1);
+      // De lo ajeno, la marca de «solo lo ya resuelto o lo que quepa en el cupo de lo ajeno», y el tamaño del renglón.
+      expect(covers[0].style.getPropertyValue('--person-cover')).toMatch(/\/cover\?n=Hades.*s=medio.*c=2/);
+    });
+  });
+
+  describe('descubrir', () => {
+    const relationshipWith = (uid: string): RelationshipState =>
+      ({ ana: 'outgoing', ben: 'none', cris: 'incoming', dani: 'none' } as Record<string, RelationshipState>)[uid] || 'none';
+    const directorio = [entry('ana', 'Ana'), entry('ben', 'Ben'), entry('cris', 'Cris')];
+
+    it('primero las solicitudes recibidas, luego el resto y al final las enviadas', () => {
+      render(<SocialProfilesScreen {...baseProps} relationshipWith={relationshipWith} filteredSocialDirectory={directorio} />);
+      const nombres = [...document.querySelectorAll('.hub-user-card-name')].map((el) => el.textContent);
+      expect(nombres).toEqual(['Cris', 'Ben', 'Ana']);
+    });
+
+    it('dice en qué punto está cada solicitud, y el botón de añadir va corto', () => {
+      render(<SocialProfilesScreen {...baseProps} relationshipWith={relationshipWith} filteredSocialDirectory={directorio} />);
+      expect(screen.getByText(SOCIAL_UI.profiles.incomingNote)).toBeInTheDocument();
+      expect(screen.getByText(SOCIAL_UI.profiles.outgoingNote)).toBeInTheDocument();
+      // El estado de la enviada ya va escrito: no se repite el rótulo «Pendiente».
+      expect(screen.queryByText(SOCIAL_UI.friendship.pending)).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: SOCIAL_UI.friendship.addAria('Ben') })).toHaveTextContent(SOCIAL_UI.friendship.addShort);
+    });
+  });
+
+  // Renglones en rejilla (14-10-2026): una columna en el teléfono y varias en escritorio, nunca un carrusel.
+  it('pinta a cada persona en un renglón dentro de una rejilla, no en un carrusel horizontal', () => {
     const { container } = render(
       <SocialProfilesScreen
         {...baseProps}
@@ -168,13 +197,13 @@ describe('SocialProfilesScreen — división amigos / no-amigos', () => {
         filteredSocialDirectory={[entry('ada', 'Ada'), entry('bob', 'Bob')]}
       />,
     );
-    expect(container.querySelectorAll('.hub-user-grid').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('.hub-person-rows .hub-person-row')).toHaveLength(2);
     expect(container.querySelector('.hub-feed-row')).not.toBeInTheDocument();
   });
 
-  // PAGINACIÓN POR FILAS (3). En jsdom no hay layout, así que `gridTemplateColumns` no resuelve pistas y el
-  // número de columnas se queda en 1 → página de 3 filas × 1 columna = 3 tarjetas. Es el peor caso posible; en
-  // un móvil de verdad la rejilla garantiza dos columnas.
+  // PAGINACIÓN POR FILAS (6). En jsdom no hay layout, así que `gridTemplateColumns` no resuelve pistas y el
+  // número de columnas se queda en 1 → página de 6 filas × 1 columna = 6 renglones, que es justo lo que se ve en un
+  // teléfono, donde los renglones van en una sola columna.
   describe('paginación por filas', () => {
     const muchos = Array.from({ length: 11 }, (_, i) => entry(`u${i}`, `Perfil ${i}`));
 
@@ -184,11 +213,11 @@ describe('SocialProfilesScreen — división amigos / no-amigos', () => {
       );
 
       expect(screen.getByText('Perfil 0')).toBeInTheDocument();
-      expect(screen.getByText('Perfil 2')).toBeInTheDocument();
-      expect(screen.queryByText('Perfil 3')).not.toBeInTheDocument();
+      expect(screen.getByText('Perfil 5')).toBeInTheDocument();
+      expect(screen.queryByText('Perfil 6')).not.toBeInTheDocument();
       // El recuento de la sección refleja el TOTAL, no lo visible.
       expect(screen.getByText('· 11')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: SOCIAL_UI.profiles.showMore(8) })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: SOCIAL_UI.profiles.showMore(5) })).toBeInTheDocument();
     });
 
     it('"mostrar más" añade otra página y desaparece al llegar al final', async () => {
@@ -197,12 +226,7 @@ describe('SocialProfilesScreen — división amigos / no-amigos', () => {
         <SocialProfilesScreen {...baseProps} relationshipWith={() => 'none'} filteredSocialDirectory={muchos} />,
       );
 
-      await user.click(screen.getByRole('button', { name: SOCIAL_UI.profiles.showMore(8) }));
-      expect(screen.getByText('Perfil 5')).toBeInTheDocument();
-      expect(screen.queryByText('Perfil 6')).not.toBeInTheDocument();
-
       await user.click(screen.getByRole('button', { name: SOCIAL_UI.profiles.showMore(5) }));
-      await user.click(screen.getByRole('button', { name: SOCIAL_UI.profiles.showMore(2) }));
       expect(screen.getByText('Perfil 10')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /Mostrar más/ })).not.toBeInTheDocument();
     });
@@ -213,8 +237,8 @@ describe('SocialProfilesScreen — división amigos / no-amigos', () => {
       const { rerender } = render(
         <SocialProfilesScreen {...baseProps} relationshipWith={() => 'none'} filteredSocialDirectory={muchos} />,
       );
-      await user.click(screen.getByRole('button', { name: SOCIAL_UI.profiles.showMore(8) }));
-      expect(screen.getByText('Perfil 5')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: SOCIAL_UI.profiles.showMore(5) }));
+      expect(screen.getByText('Perfil 8')).toBeInTheDocument();
 
       rerender(
         <SocialProfilesScreen
@@ -224,7 +248,7 @@ describe('SocialProfilesScreen — división amigos / no-amigos', () => {
           filteredSocialDirectory={muchos}
         />,
       );
-      expect(screen.queryByText('Perfil 5')).not.toBeInTheDocument();
+      expect(screen.queryByText('Perfil 8')).not.toBeInTheDocument();
       expect(screen.getByText('Perfil 0')).toBeInTheDocument();
     });
   });
@@ -237,11 +261,10 @@ describe('SocialProfilesScreen — división amigos / no-amigos', () => {
       <SocialProfilesScreen
         {...baseProps}
         relationshipWith={() => 'friends'}
-        // Tres y no más: en jsdom la rejilla no resuelve pistas, así que la primera página son 3 tarjetas.
         filteredSocialDirectory={[
-          entry('vieja', 'Vieja', 'bronze', 1_000),
-          entry('reciente', 'Reciente', 'bronze', 9_000),
-          entry('sin-dato', 'Sin dato', 'bronze', 0),
+          entry('vieja', 'Vieja', 1_000),
+          entry('reciente', 'Reciente', 9_000),
+          entry('sin-dato', 'Sin dato', 0),
         ]}
       />,
     );
