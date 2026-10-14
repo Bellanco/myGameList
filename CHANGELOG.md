@@ -14,6 +14,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   «reducir movimiento» la imagen sale sin fundido pero nunca a medio bajar. Un test vigila que cualquier imagen nueva
   use el mismo mecanismo.
 
+### Fixed
+
+- **Lo que escribes al reabrir la edición de un juego ya no se pierde ni va a otro juego.** El formulario se abría
+  un instante con lo que tenía la vez anterior y, si tecleabas en ese momento (en Chrome, Edge y demás navegadores
+  basados en Chromium), lo escrito iba sobre eso: tras guardar, sobre un formulario vacío que ya no se podía guardar;
+  tras cancelar otro juego, sobre ese otro juego, que se guardaba con tu texto. Ahora se abre ya con el juego que has
+  elegido.
+
 ## [1.7.5] - 2026-10-14
 
 ### Changed

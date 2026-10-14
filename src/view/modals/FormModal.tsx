@@ -154,15 +154,23 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
     ? VALIDATION_MESSAGES.duplicateName(duplicate.game.name, TAB_TOOLTIPS[duplicate.tab])
     : '';
 
-  useEffect(() => {
-    // Re-seedea el borrador local desde la prop al abrir o cambiar de juego/pestaña (la prop solo cambia entonces).
+  // RE-SIEMBRA DURANTE EL RENDER, no en un efecto, al abrir o cambiar de juego/pestaña (la prop solo cambia entonces).
+  // El modal sigue MONTADO entre aperturas (`useMountedOnceOpen`), así que con un `useEffect` el commit que abre el
+  // `<dialog>` pintaba todavía el borrador del cierre anterior —el vacío que deja Guardar, o el juego que se
+  // canceló— y la siembra llegaba en otra tarea. En Chromium una pulsación cabía en ese hueco: se aplicaba sobre el
+  // borrador rancio («Nuevo juego» sin nombre, no validaba) y lo tecleado se perdía. Ajustando el estado aquí, React
+  // repite el render antes de pintar y el primer commit con `open` ya lleva el borrador bueno (mismo patrón que
+  // `useMountedOnceOpen`). Test: `tests/component/FormModal.reopen.test.tsx`.
+  const [seededFrom, setSeededFrom] = useState({ open, initialDraft, currentTab });
+  if (seededFrom.open !== open || seededFrom.initialDraft !== initialDraft || seededFrom.currentTab !== currentTab) {
+    setSeededFrom({ open, initialDraft, currentTab });
     setLocalDraft(initialDraft);
     setPending(EMPTY_PENDING);
     setFieldErrors({});
     setSummaryVisible(false);
     setHoursText(hoursToText(initialDraft.hours));
     setHoursNotice('');
-  }, [open, initialDraft, currentTab]);
+  }
 
   useEffect(() => {
     if (!summaryVisible) return;
