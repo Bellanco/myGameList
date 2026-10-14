@@ -146,8 +146,24 @@ async function sumMetric(projectId: string, token: string, metric: string, start
     `https://monitoring.googleapis.com/v3/projects/${encodeURIComponent(projectId)}/timeSeries?${params}`,
     { headers: { Authorization: `Bearer ${token}` } },
   );
-  if (!response.ok) throw new Error(`Cloud Monitoring respondió ${response.status}`);
+  if (!response.ok) {
+    const detail = describeGoogleError(await response.json().catch(() => null));
+    throw new Error(`Cloud Monitoring respondió ${response.status}${detail ? ` (${detail})` : ''}`);
+  }
   return sumTimeSeries(await response.json());
+}
+
+/**
+ * El motivo de un error de una API de Google, para el panel: un 403 a secas no distingue «la API está apagada en el
+ * proyecto» (`SERVICE_DISABLED`) de «la cuenta no tiene el rol» (`IAM_PERMISSION_DENIED`), y se arreglan en sitios
+ * distintos de la consola.
+ */
+export function describeGoogleError(body: unknown): string {
+  const error = (body as { error?: { status?: string; message?: string; details?: Array<{ reason?: string }> } } | null)?.error;
+  if (!error) return '';
+  const reason = error.details?.find((entry) => typeof entry?.reason === 'string')?.reason || error.status || '';
+  const message = String(error.message || '').slice(0, 240);
+  return [reason, message].filter(Boolean).join(': ');
 }
 
 export interface FirestoreUsage {

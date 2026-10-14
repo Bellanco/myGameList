@@ -147,7 +147,8 @@ export const SOCIAL_UI = {
       /** Nombre accesible del botón: dice a qué se le da, porque fuera de la tarjeta «Me gusta» solo no se entiende. */
       buttonAria: (author: string) => `Me gusta lo de ${author}`,
       /**
-       * La frase. `names` son los de tus amistades (del más reciente al más antiguo); `mine`, si te gusta a ti.
+       * La frase. `names` son los de tus amistades (el administrador primero y luego por orden de
+       * llegada); `mine`, si te gusta a ti.
        *
        * - Sin ti: «A Marta le gusta», «A Marta y a Nacho les gusta» y, con tres o más, UN solo nombre: «A Nacho y a 5
        *   más les gusta». En un móvil de 390 px la frase tiene ~225 px: dos nombres más la cuenta no caben en un renglón,

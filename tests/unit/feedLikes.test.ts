@@ -32,17 +32,29 @@ describe('likeTargetOf', () => {
 });
 
 describe('buildFeedLikes', () => {
-  it('nombra a quien le ha dado «me gusta», del más reciente al más antiguo', () => {
+  it('nombra a quien le ha dado «me gusta» por orden de llegada: los últimos son los que se quedan en «y a N más»', () => {
     const likesFor = buildFeedLikes(
       [
-        { key: 'uid-nacho', name: 'Nacho', reactions: [like('activity', 'pm', REVIEW.id, 100)] },
         { key: 'uid-lucia', name: 'Lucía', reactions: [like('activity', 'pm', REVIEW.id, 300)] },
+        { key: 'uid-nacho', name: 'Nacho', reactions: [like('activity', 'pm', REVIEW.id, 100)] },
         { key: 'uid-ivan', name: 'Iván', reactions: [like('post', 'pi', POST.id, 200)] },
       ],
       [],
     );
-    expect(likesFor(REVIEW)).toEqual({ names: ['Lucía', 'Nacho'], mine: false });
+    expect(likesFor(REVIEW)).toEqual({ names: ['Nacho', 'Lucía'], mine: false });
     expect(likesFor(POST)).toEqual({ names: ['Iván'], mine: false });
+  });
+
+  it('el administrador va el primero si le ha dado, aunque llegara el último', () => {
+    const likesFor = buildFeedLikes(
+      [
+        { key: 'uid-nacho', name: 'Nacho', reactions: [like('activity', 'pm', REVIEW.id, 100)] },
+        { key: 'uid-admin', name: 'Diego', admin: true, reactions: [like('activity', 'pm', REVIEW.id, 900)] },
+        { key: 'uid-lucia', name: 'Lucía', reactions: [like('activity', 'pm', REVIEW.id, 300)] },
+      ],
+      [],
+    );
+    expect(likesFor(REVIEW).names).toEqual(['Diego', 'Nacho', 'Lucía']);
   });
 
   it('las lápidas no cuentan, y la misma persona no sale dos veces', () => {

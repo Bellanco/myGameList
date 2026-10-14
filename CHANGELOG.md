@@ -38,6 +38,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   reposo lleva el color de firma de cada tema; en la pestaña activa, el del rótulo.
 - **«Listados» vuelve a la última lista que mirabas**, en vez de llevar siempre a Completados. Y volver a pulsar la
   pestaña en la que estás sube al principio de la pantalla.
+- **«Me gusta» del hub: el orden de los nombres.** El administrador va el primero si le ha dado, y el resto por orden
+  de llegada, del primero que pulsó al último: los que quedan dentro de «y a N más» son los últimos. La campana
+  mantiene su orden (lo más reciente primero).
+
+### Fixed
+
+- **Capacidad dice por qué no puede leer Firestore.** Si Cloud Monitoring rechaza la consulta, el medidor muestra el
+  motivo que da Google (API deshabilitada, permiso que falta…) y no solo el código de error.
 
 ## [1.7.3] - 2026-10-13
 
