@@ -63,6 +63,9 @@
 :root[data-palette="tierramedia"] .chip,
 :root[data-palette="tierramedia"] .bottom-nav-btn,
 :root[data-palette="tierramedia"] thead th { font-weight: 600; }
+/* En la barra inferior, 600 es el de la pestaña activa; las demás bajan a 500 para que la jerarquía la marque
+   dónde estás (ver `_layout`). */
+:root[data-palette="tierramedia"] .bottom-nav-btn:not(.active) { font-weight: 500; }
 
 /* ── §2 · Las cifras, en la mono. Son las mismas piezas que numeran los demás temas: la nota del aro y del
    dial, el contador de las pestañas, la medalla de una reseña y las fechas del feed. ── */
@@ -489,3 +492,6 @@
   color: var(--steam);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 0 10px color-mix(in srgb, var(--steam) 22%, transparent);
 }
+
+/* El chevrón de Ajustes en la barra inferior (ver `_layout`): el oro de la casa. */
+:root[data-palette="tierramedia"] { --nav-caret: var(--steam); }

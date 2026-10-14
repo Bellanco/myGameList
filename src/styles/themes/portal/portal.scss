@@ -1192,3 +1192,6 @@
     inset 0 0 0 2px color-mix(in srgb, var(--portal-ring) 85%, transparent),
     0 0 16px color-mix(in srgb, var(--portal-ring) 35%, transparent);
 }
+
+/* El chevrón de Ajustes en la barra inferior (ver `_layout`): el naranja del canto de la barra. */
+:root[data-palette="portal"] { --nav-caret: var(--portal-orange); }

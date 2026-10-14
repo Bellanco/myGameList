@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AdminAnnouncement } from '../view/components/AdminAnnouncement';
-import { loadAnnouncement, saveAnnouncement } from '../model/repository/announcementRepository';
+import { loadAnnouncementForAdmin, saveAnnouncement } from '../model/repository/announcementRepository';
 import type { Announcement } from '../core/announcement/announcement';
 
 /**
@@ -32,7 +32,8 @@ export function DevAnnouncementScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    void loadAnnouncement(true)
+    // Tal cual, también fuera de su ventana: es lo que se va a editar (ver `loadAnnouncementForAdmin`).
+    void loadAnnouncementForAdmin()
       .then((value) => {
         if (cancelled) return;
         setCurrent(value);

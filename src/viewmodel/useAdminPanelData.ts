@@ -7,7 +7,7 @@
 //
 // Cada fuente puede no llegar (otro Worker, otra colección): mientras falte, su valor es `null` y quien lo pinta no
 // afirma nada —un cero sin datos diría que no hay ningún enlace ni ningún veto—.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Announcement } from '../core/announcement/announcement';
 import type { ShareQuotaOverride } from '../core/constants/tiers';
 import { listAllShares, type AdminShareRow } from '../model/repository/shareAdminRepository';
@@ -23,6 +23,9 @@ export interface AdminSharesState {
   /** Total y si la respuesta vino completa. `null` = no llegó (y entonces sus totales no se pintan). */
   summary: { total: number; complete: boolean } | null;
 }
+
+/** Una lectura de los retos de hace menos de esto se da por buena al volver a la portada. */
+const PREMIOS_FRESH_MS = 5000;
 
 const NO_SHARES: AdminSharesState = { byUser: {}, banned: new Set(), overrides: {}, summary: null };
 
@@ -53,11 +56,14 @@ export function useAdminPanelData(enabled: boolean) {
     }
   }, []);
 
-  /** El aviso publicado, sin la caché del dispositivo: aquí se está a punto de reescribirlo. */
+  /**
+   * El aviso guardado TAL CUAL (también si está programado para más adelante), sin cachés: aquí se está a punto de
+   * reescribirlo, y la vista pública lo escondería fuera de su ventana.
+   */
   const loadAnnouncement = useCallback(async () => {
     try {
       const module = await import('../model/repository/announcementRepository');
-      setAnnouncement(await module.loadAnnouncement(true));
+      setAnnouncement(await module.loadAnnouncementForAdmin());
     } catch {
       // Sin documento (o sin red) se abre en blanco, que es lo que hay: un aviso por escribir.
       setAnnouncement(null);
@@ -65,18 +71,35 @@ export function useAdminPanelData(enabled: boolean) {
   }, []);
 
   /** Los retos, que cambia su propia pantalla: se releen al volver a la portada. Es UN documento. */
+  // Cuándo se pidió por última vez, y cuál es la última petición: dos lecturas a la vez (entrar al panel y volver a
+  // Hoy) pueden contestar en desorden, y la que llega tarde no puede pisar a la más nueva.
+  const premiosAskedAt = useRef(0);
+  const premiosSeq = useRef(0);
   const loadPremiosStatus = useCallback(async () => {
+    premiosAskedAt.current = Date.now();
+    const seq = ++premiosSeq.current;
     try {
       const [season, schedule] = await Promise.all([
         import('../model/repository/premios/premiosSeasonRepository'),
         import('../core/premios/votingSchedule'),
       ]);
       const config = await season.fetchVotingConfig();
+      if (seq !== premiosSeq.current) return;
       setPremiosStatus({ stage: schedule.getSeasonStage(config), closesAt: config?.closesAtMillis ?? null });
     } catch {
       // Sin lectura, sin línea: no se afirma nada.
     }
   }, []);
+
+  /**
+   * Lee los retos SI la última lectura no es de hace un momento. Lo usa la portada al montarse: así se leen al
+   * entrar y otra vez al volver de la pantalla de los retos (donde se cierran o publican), pero no dos veces seguidas
+   * por un remontaje (el modo estricto de desarrollo monta dos veces).
+   */
+  const refreshPremiosStatus = useCallback(() => {
+    if (Date.now() - premiosAskedAt.current < PREMIOS_FRESH_MS) return;
+    void loadPremiosStatus();
+  }, [loadPremiosStatus]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -85,8 +108,9 @@ export function useAdminPanelData(enabled: boolean) {
        está llenando, no el número al segundo. */
     void leerGastoDeCaratulas().then(setCoverStats);
     void loadAnnouncement();
-    void loadPremiosStatus();
-  }, [enabled, loadShares, loadAnnouncement, loadPremiosStatus]);
+    // Los retos NO se piden aquí: solo los enseña la portada, y los pide ella al montarse (`refreshPremiosStatus`).
+    // Pedirlos también aquí eran dos lecturas a la vez al entrar por la portada.
+  }, [enabled, loadShares, loadAnnouncement]);
 
   return {
     shares,
@@ -94,6 +118,7 @@ export function useAdminPanelData(enabled: boolean) {
     coverStats,
     premiosStatus,
     loadPremiosStatus,
+    refreshPremiosStatus,
     announcement,
     setAnnouncement,
     loadAnnouncement,

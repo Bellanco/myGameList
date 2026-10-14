@@ -41,22 +41,31 @@ export function parseServiceAccount(raw: string | undefined): ServiceAccount | n
  * (cubre el cambio de hora sin tablas a mano).
  */
 export function pacificMidnight(now: number): number {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Los_Angeles',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(new Date(now));
-  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value || 0);
-  // La hora de pared en Los Ángeles leída como si fuera UTC; la diferencia con `now` es el desfase.
-  const wallAsUtc = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second'));
-  const offset = wallAsUtc - Math.floor(now / 1000) * 1000;
-  const midnightWallAsUtc = Date.UTC(get('year'), get('month') - 1, get('day'));
-  return midnightWallAsUtc - offset;
+  const wall = (at: number) => {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Los_Angeles',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(new Date(at));
+    const get = (type: string) => Number(parts.find((part) => part.type === type)?.value || 0);
+    return { y: get('year'), m: get('month'), d: get('day'), h: get('hour'), min: get('minute'), s: get('second') };
+  };
+  // El desfase de la zona EN UN INSTANTE: la hora de pared leída como si fuera UTC, menos ese instante.
+  const offsetAt = (at: number) => {
+    const w = wall(at);
+    return Date.UTC(w.y, w.m - 1, w.d, w.h, w.min, w.s) - Math.floor(at / 1000) * 1000;
+  };
+  const today = wall(now);
+  const midnightAsUtc = Date.UTC(today.y, today.m - 1, today.d);
+  // Primero con el desfase de AHORA y luego con el de la medianoche candidata: los dos días de cambio de hora, el de
+  // ahora no es el de las 00:00 y la cuenta se desplazaba una hora.
+  const guess = midnightAsUtc - offsetAt(now);
+  return midnightAsUtc - offsetAt(guess);
 }
 
 function base64Url(bytes: ArrayBuffer | Uint8Array): string {

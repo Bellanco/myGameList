@@ -88,6 +88,9 @@
 :root[data-palette="arcade"] .chip,
 :root[data-palette="arcade"] .bottom-nav-btn,
 :root[data-palette="arcade"] thead th { font-weight: 600; }
+/* En la barra inferior, 600 es el de la pestaña activa; las demás bajan a 500 para que la jerarquía la marque
+   dónde estás (ver `_layout`). */
+:root[data-palette="arcade"] .bottom-nav-btn:not(.active) { font-weight: 500; }
 :root[data-palette="arcade"] .score-ring-num,
 :root[data-palette="arcade"] .score-dial-num,
 :root[data-palette="arcade"] .count-badge,
@@ -1125,3 +1128,6 @@
   background-image: linear-gradient(180deg, #c2005f 0%, #9b1fd0 50%, #065c6b 100%);
   filter: none;
 }
+
+/* El chevrón de Ajustes en la barra inferior (ver `_layout`): el rosa de neón. */
+:root[data-palette="arcade"] { --nav-caret: var(--arc-pink); }

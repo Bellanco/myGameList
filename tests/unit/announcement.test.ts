@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  publicAnnouncementView,
   ANNOUNCEMENT_ICONS,
   ANNOUNCEMENT_LIMITS,
   DEFAULT_ANNOUNCEMENT_ICON,
@@ -254,5 +255,31 @@ describe('historial de avisos', () => {
   it('el saneado del historial descarta lo que no es un aviso entero', () => {
     expect(sanitizeAnnouncementHistory('x')).toEqual([]);
     expect(sanitizeAnnouncementHistory([aviso(), { id: 'roto' }, null]).map((entry) => entry.id)).toEqual(['av-1']);
+  });
+});
+
+// LA VENTANA TAMBIÉN EN EL SERVIDOR: un cliente con el JavaScript anterior (servido un rato por el service worker
+// tras desplegar) no sabe de fechas, así que la función no le da lo que no toca todavía.
+describe('publicAnnouncementView', () => {
+  const NOW = Date.UTC(2026, 9, 14, 12);
+  const base = sanitizeAnnouncement({ id: 'c', title: 'T', url: 'https://example.com', active: true })!;
+
+  it('sin ventana, el aviso tal cual y la caché de siempre', () => {
+    expect(publicAnnouncementView(base, NOW, 300)).toEqual({ value: base, maxAge: 300 });
+    expect(publicAnnouncementView(null, NOW, 300)).toEqual({ value: null, maxAge: 300 });
+  });
+
+  it('antes de empezar no hay aviso, y la caché no pasa de la hora de inicio', () => {
+    const later = { ...base, startsAt: NOW + 60_000 };
+    expect(publicAnnouncementView(later, NOW, 300)).toEqual({ value: null, maxAge: 60 });
+  });
+
+  it('dentro de la ventana sí, con la caché recortada hasta el final', () => {
+    const ending = { ...base, startsAt: NOW - 1000, endsAt: NOW + 90_000 };
+    expect(publicAnnouncementView(ending, NOW, 300)).toEqual({ value: ending, maxAge: 90 });
+  });
+
+  it('terminado, no hay aviso', () => {
+    expect(publicAnnouncementView({ ...base, endsAt: NOW - 1 }, NOW, 300).value).toBeNull();
   });
 });

@@ -127,6 +127,9 @@ export function useAnnouncement(hasSocial: boolean | null = null): AnnouncementS
     /** Pinta la cápsula, o espera a que la pestaña se mire si ahora mismo está de fondo. */
     const pintar = (value: Announcement): void => {
       if (cancelled) return;
+      // Se vuelve a mirar al pintar, no solo al pedir: entre medias ha podido saberse si tiene espacio social (y el
+      // aviso es para el otro público) o haber pasado su hora de fin.
+      if (!isAnnouncementDue(value, seenRef.current, Date.now(), { hasSocial: hasSocialRef.current })) return;
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
         const alVolver = () => {
           if (document.visibilityState === 'hidden') return;
@@ -156,6 +159,9 @@ export function useAnnouncement(hasSocial: boolean | null = null): AnnouncementS
         .then((value) => {
           // `isAnnouncementDue` ya descarta el `null`; se comprueba aparte para que el tipo lo sepa.
           if (cancelled || !value || !isAnnouncementDue(value, seenRef.current, Date.now(), { hasSocial: hasSocialRef.current })) {
+            // Lo que se programó con la consulta anterior ya no vale.
+            if (timer) clearTimeout(timer);
+            timer = null;
             return;
           }
           if (timer) clearTimeout(timer);

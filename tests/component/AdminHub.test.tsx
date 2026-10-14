@@ -112,6 +112,7 @@ const loadAnnouncementMock = vi.fn<(...args: unknown[]) => Promise<unknown>>(asy
 const saveAnnouncementMock = vi.fn(async (next: unknown) => next);
 vi.mock('../../src/model/repository/announcementRepository', () => ({
   loadAnnouncement: (...args: unknown[]) => loadAnnouncementMock(...args),
+  loadAnnouncementForAdmin: (...args: unknown[]) => loadAnnouncementMock(...args),
   saveAnnouncement: (next: unknown) => saveAnnouncementMock(next),
   loadAnnouncementHistory: vi.fn(async () => []),
 }));
@@ -1046,6 +1047,18 @@ describe('AdminHub — portada (Hoy)', () => {
     expect(namesInTable()).toEqual(['Cleo']);
   });
 
+  // Cada acción relee su ficha, y el censo cambia: las fotos NO pueden ir detrás (eran hasta 90 lecturas por acción).
+  it('cambiar un rango no vuelve a pedir las fotos diarias', async () => {
+    renderHub();
+    signInAsAdmin();
+    const detalle = await ficha();
+    await waitFor(() => expect(loadDailySnapshotsMock).toHaveBeenCalledTimes(1));
+
+    await userEvent.click(within(detalle.getByRole('group', { name: ADMIN_PANEL_UI.tier.selectAria('Ada') })).getByRole('button', { name: PROFILE_TIER_LABELS.gold }));
+    await waitFor(() => expect(readAdminCensusRowMock).toHaveBeenCalled());
+    expect(loadDailySnapshotsMock).toHaveBeenCalledTimes(1);
+  });
+
   it('toma la foto del día si aún no existe, y solo entonces', async () => {
     renderHub(ADMIN_PATHS.today);
     signInAsAdmin();
@@ -1199,15 +1212,17 @@ describe('AdminHub — tabla de usuarios', () => {
     expect(namesInTable()).toEqual(['Ada', 'Cleo', 'Bob']);
   });
 
-  it('cambia el rango de varias personas a la vez, tras confirmar, y apunta cada una', async () => {
-    loadAdminCensusMock.mockResolvedValue(census([user(), user({ id: 'uid-b', uid: 'uid-b', displayName: 'Bob' })]));
+  it('cambia el rango de varias personas a la vez, tras confirmar, y apunta cada una (sin tocar Mithril)', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([user(), user({ id: 'uid-b', uid: 'uid-b', displayName: 'Bob' }), user({ id: 'uid-admin', uid: 'uid-admin', displayName: 'Jefe', tier: 'mithril' })]),
+    );
     renderHub(ADMIN_PATHS.users);
     signInAsAdmin();
     await screen.findByRole('table');
 
     await userEvent.click(screen.getByRole('checkbox', { name: ADMIN_SHELL_UI.users.selectAll }));
     const lote = within(screen.getByRole('region', { name: ADMIN_SHELL_UI.users.bulk.aria }));
-    expect(lote.getByText(ADMIN_SHELL_UI.users.bulk.selected(2))).toBeInTheDocument();
+    expect(lote.getByText(ADMIN_SHELL_UI.users.bulk.selected(3))).toBeInTheDocument();
     await userEvent.selectOptions(lote.getByRole('combobox', { name: ADMIN_SHELL_UI.users.bulk.tier }), 'silver');
     expect(setUserTierMock).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.confirmAccept }));
@@ -1259,17 +1274,37 @@ describe('AdminHub — registro y deshacer', () => {
     renderHub();
     signInAsAdmin();
     const detalle = await ficha();
+    // La relectura tras la acción trae lo que se escribió (el mock no guarda nada por sí solo).
+    loadAdminCensusMock.mockResolvedValue(census([user({ tier: 'gold' })]));
 
     await userEvent.click(within(detalle.getByRole('group', { name: ADMIN_PANEL_UI.tier.selectAria('Ada') })).getByRole('button', { name: PROFILE_TIER_LABELS.gold }));
     await waitFor(() => expect(setUserTierMock).toHaveBeenCalledWith('uid-a', 'gold'));
     expect(appendAdminLogMock).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: 'tier', targetUid: 'uid-a', undo: { action: 'tier', profileDocId: 'uid-a', tier: 'bronze' } }),
+      expect.objectContaining({ kind: 'tier', targetUid: 'uid-a', undo: { action: 'tier', profileDocId: 'uid-a', tier: 'bronze', to: 'gold' } }),
     );
 
     const aviso = within(await screen.findByRole('status'));
     await userEvent.click(aviso.getByRole('button', { name: ADMIN_SHELL_UI.toast.undo }));
     await waitFor(() => expect(setUserTierMock).toHaveBeenLastCalledWith('uid-a', 'bronze'));
     expect(markAdminLogUndoneMock).toHaveBeenCalled();
+  });
+
+  // Deshacer escribe el valor de ANTES: si después cambió otra vez, pisaría ese cambio. Se niega y lo dice.
+  it('no deshace un rango que ya cambió después', async () => {
+    renderHub();
+    signInAsAdmin();
+    const detalle = await ficha();
+    // La relectura tras la acción trae otro rango: alguien (u otra acción) lo cambió entre medias.
+    loadAdminCensusMock.mockResolvedValue(census([user({ tier: 'silver' })]));
+
+    await userEvent.click(within(detalle.getByRole('group', { name: ADMIN_PANEL_UI.tier.selectAria('Ada') })).getByRole('button', { name: PROFILE_TIER_LABELS.gold }));
+    await waitFor(() => expect(readAdminCensusRowMock).toHaveBeenCalled());
+    setUserTierMock.mockClear();
+
+    const aviso = within(await screen.findByRole('status'));
+    await userEvent.click(aviso.getByRole('button', { name: ADMIN_SHELL_UI.toast.undo }));
+    expect(await screen.findByText(ADMIN_SHELL_UI.log.undoStale)).toBeInTheDocument();
+    expect(setUserTierMock).not.toHaveBeenCalled();
   });
 
   it('lo que no tiene vuelta atrás no ofrece deshacer', async () => {

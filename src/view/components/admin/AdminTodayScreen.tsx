@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, type FormEvent } from 'react';
+import { memo, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ADMIN_PATHS, adminUserPath } from '../../../core/admin/adminRoutes';
 import { buildAttention, type AttentionItem } from '../../../core/admin/attention';
@@ -39,6 +39,12 @@ interface Entry {
  */
 export const AdminTodayScreen = memo(function AdminTodayScreen() {
   const { vm, data, insights, confirm, health } = useAdminPanel();
+  // Los retos los cambia su propia pantalla (cerrar, publicar): al volver aquí se releen, o la bandeja seguiría
+  // pidiendo lo que ya está hecho. Es UN documento.
+  const { refreshPremiosStatus } = data;
+  useEffect(() => {
+    refreshPremiosStatus();
+  }, [refreshPremiosStatus]);
   const totals = insights.totals;
   const yesterday = insights.yesterday;
   const census = vm.census;
@@ -58,9 +64,14 @@ export const AdminTodayScreen = memo(function AdminTodayScreen() {
     [census, data.coverStats, data.premiosStatus, insights.now, insights.dueTodos, health.meters],
   );
 
-  const entries = attention.map((item) => toEntry(item, () =>
-    confirm({ title: A.strayPhoto.bulkConfirm(item.code === 'stray-photo' ? item.count : 0), tone: 'primary', run: () => vm.clearAllStrayPhotos() }),
-  ));
+  const entries = attention.map((item) =>
+    toEntry(item, {
+      clearPhotos: () =>
+        confirm({ title: A.strayPhoto.bulkConfirm(item.code === 'stray-photo' ? item.count : 0), tone: 'primary', run: () => vm.clearAllStrayPhotos() }),
+      // Los pendientes están en esta misma pantalla: se baja hasta ellos (un `#ancla` en un `Link` no desplaza).
+      showTodos: () => document.getElementById('pendientes')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+    }),
+  );
 
   const activeSeries = useMemo(
     () => (insights.snapshots ? seriesByDay(insights.snapshots, (snapshot) => snapshot.active24h, insights.now, 30).map((point) => point.value) : []),
@@ -100,8 +111,14 @@ export const AdminTodayScreen = memo(function AdminTodayScreen() {
                       {entry.action.tone === 'open' ? <Icon name="angle-right" className="ui-icon btn-open-go" /> : null}
                     </Link>
                   ) : (
-                    <button type="button" className={`btn btn-${entry.action.tone} adm-sm`} disabled={vm.clearingStrayPhotos} onClick={entry.action.run}>
-                      {vm.clearingStrayPhotos ? A.working : entry.action.label}
+                    <button
+                      type="button"
+                      className={`btn btn-${entry.action.tone} adm-sm`}
+                      disabled={item.code === 'stray-photo' && vm.clearingStrayPhotos}
+                      onClick={entry.action.run}
+                    >
+                      {item.code === 'stray-photo' && vm.clearingStrayPhotos ? A.working : entry.action.label}
+                      {entry.action.tone === 'open' ? <Icon name="angle-right" className="ui-icon btn-open-go" /> : null}
                     </button>
                   )}
                 </li>
@@ -262,7 +279,7 @@ function KpiLink({ label, value, to, bad = false }: { label: string; value: numb
   );
 }
 
-function toEntry(item: AttentionItem, clearPhotos: () => void): Entry {
+function toEntry(item: AttentionItem, actions: { clearPhotos: () => void; showTodos: () => void }): Entry {
   const I = T.items;
   switch (item.code) {
     case 'legacy-token':
@@ -273,7 +290,7 @@ function toEntry(item: AttentionItem, clearPhotos: () => void): Entry {
         action: { label: I.legacyTokenAction, to: item.count === 1 ? adminUserPath(item.firstUserId) : `${ADMIN_PATHS.users}?senal=legacy-token`, tone: 'danger' },
       };
     case 'stray-photo':
-      return { icon: 'eye-off', title: I.strayPhoto(item.count), detail: I.strayPhotoDetail, action: { label: A.strayPhoto.bulkBtn(item.count), run: clearPhotos, tone: 'secondary' } };
+      return { icon: 'eye-off', title: I.strayPhoto(item.count), detail: I.strayPhotoDetail, action: { label: A.strayPhoto.bulkBtn(item.count), run: actions.clearPhotos, tone: 'secondary' } };
     case 'gist-drift':
       return { icon: 'share-nodes', title: I.gistDrift(item.count), detail: I.gistDriftDetail, action: { label: I.review, to: `${ADMIN_PATHS.users}?senal=gist-drift`, tone: 'open' } };
     case 'covers':
@@ -295,7 +312,7 @@ function toEntry(item: AttentionItem, clearPhotos: () => void): Entry {
     case 'premios-pending':
       return { icon: 'star-olive-branches', title: I.premiosPending, detail: I.premiosPendingDetail, action: { label: I.open, to: ADMIN_PATHS.premios, tone: 'open' } };
     case 'todos-due':
-      return { icon: 'check', title: I.todosDue(item.count), action: { label: I.review, to: `${ADMIN_PATHS.today}#pendientes`, tone: 'open' } };
+      return { icon: 'check', title: I.todosDue(item.count), action: { label: I.review, run: actions.showTodos, tone: 'open' } };
     case 'census-truncated':
       return { icon: 'bottom-hub', title: I.truncated(item.count), detail: I.truncatedDetail, action: { label: I.open, to: ADMIN_PATHS.users, tone: 'open' } };
   }
@@ -339,11 +356,14 @@ function TodosCard() {
           ))}
         </ul>
       )}
+      {/* Sin la lista leída no se ofrece añadir: guardar reescribe el documento entero. */}
+      {insights.todos === null ? null : (
       <form className="adm-todo-form" onSubmit={submit}>
         <input className="finput" aria-label={P.textLabel} placeholder={P.textPlaceholder} value={text} maxLength={140} onChange={(event) => setText(event.target.value)} />
         <input className="finput" type="date" aria-label={P.dueLabel} value={due} onChange={(event) => setDue(event.target.value)} />
         <button type="submit" className="btn btn-secondary adm-sm" disabled={!text.trim()}>{P.add}</button>
       </form>
+      )}
     </section>
   );
 }

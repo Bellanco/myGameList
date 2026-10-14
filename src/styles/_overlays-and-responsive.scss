@@ -188,10 +188,9 @@ html:root .tag-inp-wrap .finput {
      crece con ella (rótulo apilado, franja del gesto inferior). El valor de reserva es su alto en escritorio,
      por si el menú se pinta antes de que la barra se haya medido. */
   bottom: calc(var(--bottom-nav-h, 4.6rem) + .55rem);
-  /* ALINEADO CON LA COLUMNA DE SU PESTAÑA: la barra se centra a 760px, así que su borde derecho cae en
-     `50% - 380px`, y dentro queda el relleno de la pastilla (.4rem). En una pantalla estrecha manda el margen
-     lateral de la barra (.9rem) más ese mismo relleno. */
-  right: max(1.3rem, calc(50% - 380px + .4rem));
+  /* ALINEADO CON LA COLUMNA DE SU PESTAÑA: el borde derecho de la pastilla lo publica `BottomNavigation` en
+     `--bottom-nav-right` (ya no mide 760 px fijos, sino lo que piden sus botones), y dentro queda su relleno. */
+  right: max(.6rem, calc(var(--bottom-nav-right, 1rem) + .3rem));
   flex-direction: column;
   align-items: flex-end;
   gap: .1rem;

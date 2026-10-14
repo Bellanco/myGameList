@@ -49,9 +49,12 @@ async function abrir(page: Page, ancho: number): Promise<void> {
    */
   // `load()` y no solo esperar: PIDE la cara que hace falta y resuelve cuando está puesta. Esperar a secas
   // dependería de que algo más la hubiera pedido ya.
+  // Y EL PESO TAMBIÉN: las pestañas inactivas van a medio peso y la activa no, así que se pide la cara del
+  // rótulo que se mide —«Estadísticas»—, no una negrita que en los temas con un fichero por peso es otra fuente.
   const cara = await page.evaluate(() => {
-    const rotulo = document.querySelector('.bottom-nav-btn span') ?? document.querySelector('.bottom-nav-btn');
-    return `700 12px ${rotulo ? getComputedStyle(rotulo).fontFamily.split(',')[0].trim() : 'sans-serif'}`;
+    const rotulo = document.querySelector('[data-tour="nav-stats"] span') ?? document.querySelector('.bottom-nav-btn');
+    const estilo = rotulo ? getComputedStyle(rotulo) : null;
+    return `${estilo?.fontWeight ?? '500'} 12px ${estilo ? estilo.fontFamily.split(',')[0].trim() : 'sans-serif'}`;
   });
   await page.evaluate((f) => document.fonts.load(f, 'Estadísticas').catch(() => []), cara);
   await expect

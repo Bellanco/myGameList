@@ -180,6 +180,17 @@ export function useAdminViewModel(log?: AdminLogPort) {
     async (entry: AdminLogEntry) => {
       const port = logRef.current;
       if (!port || !entry.undo) return;
+      // SOLO SI SIGUE COMO LA DEJÓ ESA ACCIÓN. Deshacer escribe el valor de ANTES; si después hubo otro cambio (otra
+      // acción, o el propio usuario), escribirlo pisaría ese cambio. Con el censo delante se comprueba y se niega.
+      const current = censusRef.current?.users.find((user) => user.id === entry.undo?.profileDocId);
+      const undo = entry.undo;
+      const stillThere =
+        !current ||
+        (undo.action === 'tier' ? undo.to === undefined || current.tier === undo.to : undo.to === undefined || current.socialEnabled === undo.to);
+      if (!stillThere) {
+        setStatus({ kind: 'warn', text: ADMIN_SHELL_UI.log.undoStale });
+        return;
+      }
       try {
         await port.undo(entry);
         if (!mountedRef.current) return;
@@ -229,7 +240,7 @@ export function useAdminViewModel(log?: AdminLogPort) {
         return {
           kind: 'ok',
           text: next ? ADMIN_PANEL_UI.okEnabled : ADMIN_PANEL_UI.okDisabled,
-          log: logDraft(row, 'social', next ? L.socialOn : L.socialOff, { action: 'social', profileDocId: row.id, enabled: !next }),
+          log: logDraft(row, 'social', next ? L.socialOn : L.socialOff, { action: 'social', profileDocId: row.id, enabled: !next, to: next }),
         };
       }),
     [runAction],
@@ -253,6 +264,7 @@ export function useAdminViewModel(log?: AdminLogPort) {
             action: 'tier',
             profileDocId: row.id,
             tier: row.tier,
+            to: tier,
           }),
         };
       }),
@@ -428,17 +440,19 @@ export function useAdminViewModel(log?: AdminLogPort) {
   const bulkSetTier = useCallback(
     (rows: readonly AdminUserRow[], tier: ProfileTier) =>
       runBulk(
-        rows.filter((row) => row.tier !== tier && (tier !== ADMIN_ONLY_TIER || row.uid === ownUid)),
+        // Ni se da Mithril en lote ni se quita: «seleccionar todo» y «Oro» rebajaba también la cuenta del administrador.
+        rows.filter((row) => row.tier !== tier && row.tier !== ADMIN_ONLY_TIER && tier !== ADMIN_ONLY_TIER),
         async (row) => {
           await setUserTier(row.id, tier);
           return logDraft(row, 'tier', L.tier(PROFILE_TIER_LABELS[row.tier], PROFILE_TIER_LABELS[tier]), {
             action: 'tier',
             profileDocId: row.id,
             tier: row.tier,
+            to: tier,
           });
         },
       ),
-    [ownUid, runBulk],
+    [runBulk],
   );
 
   /** Suspende el social de varias personas (las que ya lo tienen suspendido se saltan). */
@@ -446,7 +460,7 @@ export function useAdminViewModel(log?: AdminLogPort) {
     (rows: readonly AdminUserRow[]) =>
       runBulk(rows.filter((row) => row.socialEnabled), async (row) => {
         await setUserSocialEnabled(row.id, false);
-        return logDraft(row, 'social', L.socialOff, { action: 'social', profileDocId: row.id, enabled: true });
+        return logDraft(row, 'social', L.socialOff, { action: 'social', profileDocId: row.id, enabled: true, to: false });
       }),
     [runBulk],
   );

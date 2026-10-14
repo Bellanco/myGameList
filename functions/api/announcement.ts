@@ -22,6 +22,7 @@ import type { Env } from '../_lib/keys';
 import {
   pushAnnouncementHistory,
   sanitizeAnnouncement,
+  publicAnnouncementView,
   sanitizeAnnouncementHistory,
 } from '../../src/core/announcement/announcement';
 
@@ -63,7 +64,20 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
   const raw = await context.env.SHARES.get(KEY, 'json');
   // Se sanea TAMBIÉN al leer: lo que hay en KV lo escribió esta misma función, pero un valor de una versión
   // anterior (o escrito a mano desde el panel de Cloudflare) no puede llegar al navegador sin pasar el filtro.
-  return json(sanitizeAnnouncement(raw), 200, { 'Cache-Control': `public, max-age=${CACHE_SECONDS}` });
+  const clean = sanitizeAnnouncement(raw);
+
+  // EL PANEL lo quiere TAL CUAL, también fuera de su ventana: es lo que va a editar. Sin caché y solo con sesión de
+  // administrador; el público recibe la vista de abajo.
+  if (new URL(context.request.url).searchParams.get('all') === '1') {
+    const caller = await requireAdmin(context.request, context.env);
+    if (caller instanceof Response) {
+      return caller;
+    }
+    return json(clean);
+  }
+
+  const view = publicAnnouncementView(clean, Date.now(), CACHE_SECONDS);
+  return json(view.value, 200, { 'Cache-Control': `public, max-age=${view.maxAge}` });
 }
 
 export async function onRequestPut(context: { request: Request; env: Env }): Promise<Response> {

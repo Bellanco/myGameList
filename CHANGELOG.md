@@ -5,6 +5,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.7.4] - 2026-10-14
+
 ### Added
 
 - **Panel de administración rediseñado.** El panel pasa a tener secciones con su propia dirección (`/admin/*`) y un
@@ -29,6 +31,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 ### Changed
 
 - **Borrar un perfil desde el panel exige escribir su nombre**, porque es lo único que no tiene vuelta atrás.
+- **Barra inferior más discreta.** Sin el velo opaco que tapaba una franja a lo ancho de la pantalla: solo queda la
+  pastilla. En escritorio mide lo que ocupan sus botones (unos 590 px en vez de 760), con una sombra más fina y algo
+  más baja. Las pestañas inactivas van a medio peso y la activa es la que destaca.
+- **Ajustes lleva un chevrón** que indica que despliega un menú en vez de navegar, y se da la vuelta al abrirlo. En
+  reposo lleva el color de firma de cada tema; en la pestaña activa, el del rótulo.
+- **«Listados» vuelve a la última lista que mirabas**, en vez de llevar siempre a Completados. Y volver a pulsar la
+  pestaña en la que estás sube al principio de la pantalla.
 
 ## [1.7.3] - 2026-10-13
 

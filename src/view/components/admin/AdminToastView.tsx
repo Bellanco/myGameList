@@ -20,12 +20,15 @@ export const AdminToastView = memo(function AdminToastView({ toast, onDismiss }:
           className="btn btn-secondary adm-xs"
           disabled={undoing}
           onClick={async () => {
+            // Se cierra ANTES de deshacer: lo que diga el deshacer («Deshecho…», o por qué no se puede) llega como
+            // aviso nuevo, y cerrar después lo tapaba.
+            const undo = toast.undo;
             setUndoing(true);
+            onDismiss();
             try {
-              await toast.undo?.();
+              await undo?.();
             } finally {
               setUndoing(false);
-              onDismiss();
             }
           }}
         >

@@ -1084,6 +1084,7 @@ export const ADMIN_SHELL_UI = {
     noUndo: 'sin vuelta atrás',
     undone: (text: string) => `Deshecho: ${text.charAt(0).toLowerCase()}${text.slice(1)}.`,
     undoFailed: 'No se ha podido deshacer. Vuelve a intentarlo.',
+    undoStale: 'No se deshace: después de esa acción cambió otra vez. Cámbialo desde su ficha si hace falta.',
     today: 'Hoy',
     yesterday: 'Ayer',
     filters: {

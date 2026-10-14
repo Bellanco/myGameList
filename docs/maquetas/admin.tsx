@@ -330,6 +330,7 @@ function useFakePanel(notify: (toast: AdminToast) => void): Omit<AdminPanelConte
     coverStats: { dia: localDayKey(AHORA), gastado: 588, techo: 700, quedan: 112 },
     premiosStatus: { stage: 'open', closesAt: AHORA + 3 * DIA },
     loadPremiosStatus: async () => {},
+    refreshPremiosStatus: () => {},
     announcement,
     setAnnouncement,
     loadAnnouncement: async () => {},

@@ -37,18 +37,32 @@ export function useAdminInsights(census: AdminCensus | null, loadedAt: number) {
   const now = loadedAt || Date.now();
   const totals = useMemo(() => (census ? communityTotals(census.users, now) : null), [census, now]);
 
-  // Las fotos: se leen una vez por censo y, si falta la de hoy, se toma con este censo.
+  // El censo y sus cifras, para el efecto de las fotos: se leen por ref para que el efecto NO dependa de ellos.
+  const latest = useRef({ census, totals });
   useEffect(() => {
-    if (!census || !totals) return;
-    let cancelled = false;
+    latest.current = { census, totals };
+  }, [census, totals]);
+  /** El día cuyas fotos ya se han leído. */
+  const readDay = useRef('');
+
+  // Las fotos: se leen UNA VEZ AL DÍA, con la primera lectura completa del censo, y si falta la de hoy se toma con
+  // ese censo. NO dependen del censo en sí: el censo cambia tras cada acción (se relee la ficha tocada), y atarlas a
+  // él releía hasta 90 documentos por cada cambio de rango. Una relectura completa (`loadedAt`) del mismo día
+  // tampoco vuelve a pedirlas: la historia no ha cambiado y las cifras de hoy se calculan del censo en vivo.
+  useEffect(() => {
+    const { census: current, totals: currentTotals } = latest.current;
+    if (!loadedAt || !current || !currentTotals) return;
+    const today = localDayKey(loadedAt);
+    if (readDay.current === today) return;
+    readDay.current = today;
+    // SIN `cancelled`: con la guarda del día, el segundo montaje del modo estricto no vuelve a pedir nada, así que
+    // cancelar el primero dejaba la gráfica vacía para siempre (la misma trampa que tuvo `useAnnouncement`).
     void (async () => {
       try {
-        const loaded = await loadDailySnapshots(localDayKey(now - (SNAPSHOT_DAYS - 1) * DAY_MS));
-        if (cancelled) return;
-        const today = localDayKey(now);
+        const loaded = await loadDailySnapshots(localDayKey(loadedAt - (SNAPSHOT_DAYS - 1) * DAY_MS));
         if (!loaded.some((snapshot) => snapshot.day === today) && savedToday.current !== today) {
           savedToday.current = today;
-          const snapshot = buildDailySnapshot(totals, census.totals.friendships, now);
+          const snapshot = buildDailySnapshot(currentTotals, current.totals.friendships, loadedAt);
           try {
             await saveDailySnapshot(snapshot);
             loaded.push(snapshot);
@@ -56,17 +70,16 @@ export function useAdminInsights(census: AdminCensus | null, loadedAt: number) {
             console.warn('[admin] no se pudo guardar la foto diaria:', error);
           }
         }
-        if (!cancelled) setSnapshots(loaded);
+        setSnapshots(loaded);
       } catch (error) {
         // Sin fotos (reglas sin desplegar, sin red): la portada sigue con las cifras de hoy.
         console.warn('[admin] no se pudieron leer las fotos diarias:', error);
-        if (!cancelled) setSnapshots([]);
+        // Se podrá reintentar con la siguiente relectura del censo.
+        readDay.current = '';
+        setSnapshots([]);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [census, totals, now]);
+  }, [loadedAt]);
 
   // Una vez: los pendientes no dependen del censo, solo esperan a que haya sesión de administrador.
   const hasCensus = census !== null;
@@ -79,7 +92,8 @@ export function useAdminInsights(census: AdminCensus | null, loadedAt: number) {
       })
       .catch((error: unknown) => {
         if (cancelled) return;
-        setTodos([]);
+        // Se quedan SIN LEER (`null`), no vacíos: guardar reescribe el documento entero, y una lista vacía por un
+        // fallo de red borraría los pendientes de verdad al añadir uno. Sin lectura, el formulario no se ofrece.
         setTodosError(error instanceof Error ? error.message : String(error));
       });
     return () => {
@@ -90,6 +104,7 @@ export function useAdminInsights(census: AdminCensus | null, loadedAt: number) {
   /** Guarda la lista y se queda con lo guardado. Si falla, vuelve a la de antes y lo dice. */
   const writeTodos = useCallback(async (next: AdminTodo[]) => {
     const before = todos;
+    if (before === null) return; // sin la lista leída no se escribe nada (ver la lectura)
     setTodos(next);
     try {
       setTodos(await saveAdminTodos(next));
