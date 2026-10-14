@@ -1422,19 +1422,24 @@ derivado la pierde con una facilidad alarmante: marcas un juego como terminado, 
 emocionalmente nulo.
 
 **La regla: se reevalúa después de cada escritura de la biblioteca, y si un nivel ha subido EN ESA escritura, se
-dice ahí mismo.** No hace falta inventar nada para decirlo: el aviso va por el mismo sitio que «Juego guardado»
-—`StatusBanner`, que ya tiene su región viva siempre montada y su `role="status"` de cortesía— con el texto
-«Logro conseguido: Créditos finales IV». Un aviso más de los que ya existen, no una capa nueva.
+dice ahí mismo.** Lo dice una tarjeta propia con la medalla, `AchievementToast` (`view/components/stats/`), en el
+carril de avisos de abajo a la izquierda, sobre la barra inferior; la alimenta `useAchievementNotice`
+(`view/hooks/`), que devuelve lo que ha pasado (`AchievementFlash`). El texto («Logro conseguido: Créditos finales
+IV») sigue yendo además a `StatusBanner`, porque su región viva `role="status"` es la que lo anuncia a un lector de
+pantalla. *(Revisado el 14-10-2026: la primera versión iba solo por el banner, como una línea más de «Juego
+guardado» y sin la medalla; se sustituyó por la tarjeta en la 1.2.0.)* La misma tarjeta avisa también de los hitos
+de una escalera, al 50 % y al 85 % del siguiente escalón.
 
 Cinco condiciones para que no se vuelva molesto:
 
 - **Solo lo que sube en ESTA escritura**, comparando contra el estado inmediatamente anterior. Nunca el arrastre
   de retroactividad del §7.3: quien importa una biblioteca entera no recibe veinte avisos, recibe la tira de
   novedades al entrar en el panel.
-- **Uno por escritura.** Si una edición sube tres logros a la vez, el aviso es «3 logros conseguidos» y el
-  detalle está en el panel. Misma regla que el §8.4 y por el mismo motivo.
-- **Nunca bloquea.** Es el banner de siempre, con su `role="status"` y no `alert`: no interrumpe al lector de
-  pantalla ni se pone delante del formulario que el usuario estaba rellenando.
+- **Uno por escritura.** Si una edición sube tres logros a la vez, es UNA tarjeta con sus medallas solapadas
+  (hasta tres; de la cuarta en adelante lo dice la cuenta) y el detalle está en el panel. Misma regla que el §8.4 y por el mismo motivo.
+- **Nunca bloquea.** Ni modal, ni foco robado, ni botón de cerrar: la tarjeta se va sola a los cinco segundos, y el
+  anuncio va por `role="status"` y no `alert`, así que no interrumpe al lector de pantalla ni se pone delante del
+  formulario que el usuario estaba rellenando.
 - **El destello, detrás de `data-effects` y de `prefers-reduced-motion`** (§8.5). Sin efectos, el aviso sigue
   saliendo: lo decorativo es el brillo, no la noticia.
 - **Lo que ya se ha contado no se cuenta otra vez**, venga de donde venga. Y eso lo recuerda una clave propia
