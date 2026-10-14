@@ -215,11 +215,9 @@ const medidor = (id: keyof typeof K.meters, source: HealthMeterView['source'], u
 });
 const MEDIDORES: HealthMeterView[] = [
   medidor('covers', 'covers', 588, 700),
-  medidor('firestore-reads', 'firestore', 31_240, 50_000, true),
-  medidor('firestore-writes', 'firestore', 4_130, 20_000),
-  medidor('firestore-deletes', 'firestore', 210, 20_000),
-  medidor('kv-reads', 'cloudflare', null, 100_000),
-  medidor('kv-writes', 'cloudflare', null, 1_000, true),
+  medidor('kv-reads', 'cloudflare', 18_420, 100_000),
+  medidor('kv-writes', 'cloudflare', 742, 1_000, true),
+  medidor('functions', 'cloudflare', 9_870, 100_000),
 ];
 
 // ─── El contexto de mentira ──────────────────────────────────────────────────────────────────────────────────

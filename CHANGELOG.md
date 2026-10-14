@@ -5,6 +5,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Removed
+
+- **Capacidad ya no enseña lecturas, escrituras y borrados de Firestore.** Solo se pueden leer de Cloud Monitoring, y
+  su API exige tener la facturación activada: con el plan gratuito, los tres medidores solo decían «No se pudo
+  medir». Quedan los de KV, Functions y carátulas.
+
 ## [1.7.4] - 2026-10-14
 
 ### Added

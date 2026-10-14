@@ -7,7 +7,7 @@ import { loadAdminHealth, type AdminHealth, type HealthMeter } from '../model/re
 const H = ADMIN_SHELL_UI.capacity;
 
 /** Los que salen también en la portada (además de las carátulas, que tienen su contador propio). */
-const HOME_METERS = new Set(['firestore-reads', 'kv-writes']);
+const HOME_METERS = new Set(['kv-writes']);
 
 export interface HealthMeterView extends HealthMeter {
   label: string;

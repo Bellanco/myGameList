@@ -1042,9 +1042,6 @@ export const ADMIN_SHELL_UI = {
     unreachable: 'El endpoint de capacidad no responde: en desarrollo no existe (lo sirve Pages) y en producción puede no estar desplegado.',
     meters: {
       covers: 'Carátulas nuevas',
-      'firestore-reads': 'Lecturas de Firestore',
-      'firestore-writes': 'Escrituras de Firestore',
-      'firestore-deletes': 'Borrados de Firestore',
       'kv-reads': 'Lecturas de KV',
       'kv-writes': 'Escrituras de KV',
       'kv-deletes': 'Borrados de KV',
@@ -1053,12 +1050,10 @@ export const ADMIN_SHELL_UI = {
     },
     sources: {
       covers: 'Worker de carátulas',
-      firestore: 'Cloud Monitoring',
       cloudflare: 'Cloudflare',
     },
     notConfigured: 'Sin conectar',
     notConfiguredHint: {
-      firestore: 'Falta el secreto GCP_MONITORING_SA (cuenta de servicio con permiso de lectura de Monitoring).',
       cloudflare: 'Faltan CF_ACCOUNT_ID y el secreto CF_ANALYTICS_TOKEN (token con «Account Analytics: Read»).',
       covers: 'El Worker de carátulas no está configurado en este entorno.',
     },

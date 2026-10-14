@@ -9,7 +9,7 @@ export type HealthStatus = 'ok' | 'not-configured' | 'error';
 
 export interface HealthMeter {
   id: string;
-  source: 'covers' | 'firestore' | 'cloudflare';
+  source: 'covers' | 'cloudflare';
   used: number | null;
   limit: number;
   status: HealthStatus;
@@ -24,7 +24,7 @@ export interface AdminHealth {
   meters: HealthMeter[];
 }
 
-const SOURCES = ['covers', 'firestore', 'cloudflare'] as const;
+const SOURCES = ['covers', 'cloudflare'] as const;
 const STATUSES = ['ok', 'not-configured', 'error'] as const;
 
 /** Lo que venga raro del servidor no se pinta: un medidor sin id o sin techo sobra. */
