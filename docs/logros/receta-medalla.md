@@ -2,36 +2,59 @@
 
 Todo lo que hay que saber para añadir logros **sin volver a decidir nada**. El porqué de cada decisión está en
 [`../plan-logros.md`](../plan-logros.md); esto es el manual de la casa, escrito el día que la medalla dejó de ser
-un cuadro y pasó a ser un disco, y puesto al día cuando el disco pasó a ser un orbe (13-10-2026).
+un cuadro y pasó a ser un disco, y puesto al día cuando el disco pasó a ser un orbe (13-10-2026) y el orbe un
+escudo (14-10-2026).
 
 ---
 
 ## 1. Cómo se ve una medalla, hoy
 
-**Un orbe de vidrio.** Una esfera oscura llena del color de su rareza —reflejo puntual arriba a la izquierda,
-cáustica abajo—, el dibujo en blanco encima y tres segmentos de luz en el canto. Es **la misma en los ocho temas y
-en los dos modos**: una medalla es un objeto, no cromo de la app, y el vidrio oscuro es lo que la hace legible sobre
-cualquier fondo. Sustituyó al disco en penumbra (fondo pardo y dibujo en oro) el 13-10-2026.
+**Un escudo de vidrio.** Un escudo redondeado —hombros anchos, flancos curvos y punta roma— de vidrio oscuro lleno
+del color de su rareza —reflejo puntual arriba a la izquierda, cáustica abajo—, el dibujo en blanco encima y tres
+segmentos de luz por el contorno. Es **la misma en los ocho temas y en los dos modos**: una medalla es un objeto, no
+cromo de la app, y el vidrio oscuro es lo que la hace legible sobre cualquier fondo. Sustituyó al disco en penumbra
+(fondo pardo y dibujo en oro) el 13-10-2026 como orbe, y tomó la forma de escudo el 14-10-2026.
 
 **Cómo se llegó.** Se vieron en maqueta, sobre los cuatro tamaños reales y los ocho temas, cinco direcciones comunes
 —penumbra pulida como moneda, esmalte, cristal, plana y escudo hexagonal— y después cinco hermanas del cristal
 —con segmentos, tintado, gema, orbe y neón—. Se descartó antes **un material distinto por tema**: el usuario quiere
-la misma medalla en todos. Ganó el **orbe**, con el tramo contado en segmentos finos del color de su rareza.
+la misma medalla en todos. Ganó el **orbe**, con el tramo contado en segmentos finos del color de su rareza. Un día
+después, para darle personalidad, se probaron tres siluetas de escudo con ese mismo vidrio —suavizado, redondo y
+con arista— y ganó el **redondo**, con la condición de que no costara más que el orbe (ver *Lo que cuesta*).
 
 | Pieza | Valor |
 |---|---|
-| Forma | **Círculo**. El canto continuo es donde viven los segmentos y lo que se lee a 28 px |
+| Forma | **Escudo redondeado** sobre un lienzo de 100 × 100 (`$ach-escudo`): más alto que ancho, ocupa el mismo cuadrado que el orbe |
 | Lado | **34 px** en el listado · **48 px** en la tira de una ficha · **64 px** en el aviso · 28 px en la tarjeta del feed · 72 px (`lg`) sin uso hoy |
-| Volumen | Dos `radial-gradient` sobre `--rc`: la esfera (foco al 38 % / 30 %, hundida a casi negro en el canto) y la cáustica abajo |
-| Dibujo | Trazo de **Lucide** sobre `viewBox` 24, al 54 % del disco, centrado al 45 % de alto, en **blanco** |
+| Silueta | **Máscara** SVG sobre `.ach-canvas`; el canto oscuro es el mismo contorno trazado como fondo, con media línea fuera de la máscara |
+| Volumen | Dos `radial-gradient` sobre `--rc`: el vidrio (foco al 36 % / 24 %, hundido a casi negro en el canto) y la cáustica abajo; más una banda tenue del color por dentro del contorno |
+| Dibujo | Trazo de **Lucide** sobre `viewBox` 24, al 52 % del lado, centrado al 44 % de alto, en **blanco** |
 | Relieve | **Dos pasadas del mismo símbolo**: sombra negra (+0,25 / +0,55, grosor 3) y blanco (grosor 1,8), más un `drop-shadow` blanco leve |
-| Vidrio | `.ach-light`: el reflejo puntual, su halo y el oscurecido del canto. Al pasar el ratón, una franja de brillo la cruza |
-| Color | El de la **rareza** (`--rc`): llena la esfera, enciende los segmentos y hace el halo |
-| Segmentos | Tres arcos de 110° en el canto: dicen el **tramo de la escalera** |
-| Píldora | Cifra del escalón montada en el **canto de abajo**, sin unidad. No sale en `sm` (28 px) |
+| Vidrio | `.ach-light`: el reflejo puntual y su halo. Al pasar el ratón, una franja de brillo la cruza |
+| Color | El de la **rareza** (`--rc`): llena el vidrio, enciende los segmentos y hace el halo |
+| Halo | Un `radial-gradient` en `::before`, detrás del escudo. **No** `drop-shadow`: ver *Lo que cuesta* |
+| Segmentos | Tres tramos de 110° de un `conic-gradient` recortado por un **anillo con forma de escudo** al 92 %: flanco izquierdo, arriba, flanco derecho. Grosor 4,5 del lienzo; 6,5 en `list` y `sm` (`data-size`), para no bajar de 2 px |
+| Píldora | Cifra del escalón montada en la **punta**, sin unidad. No sale en `sm` (28 px) |
 
-**Las unidades del relieve son del `viewBox`, no píxeles de pantalla.** Es lo que hace que la sombra encoja con el
-disco en vez de comerse el dibujo en la tira pequeña.
+### Lo que cuesta
+
+El escudo se aceptó **a condición de que rindiera como el orbe**, y por eso no lleva ni un nodo más que él ni un
+solo `filter` nuevo: la silueta es una máscara, el halo un degradado y los segmentos el mismo `conic-gradient` del
+orbe con otra máscara. Medido el 14-10-2026 sobre la vista global de la maqueta del social (238 medallas, 1512 × 945
+@2x, Chrome con la GPU de verdad —`--use-angle=metal`, Apple M3 Pro—, 80 golpes de rueda, tres pasadas):
+
+| | Raster (ms) | Paint (ms) | Fotogramas perdidos |
+|---|---|---|---|
+| Orbe | 61 / 57 / 69 | 72 / 62 / 66 | 4,9 / 1,7 / 6,8 % |
+| Escudo | 66 / 60 / 61 | 89 / 76 / 77 | 1,0 / 1,9 / 1,5 % |
+| Escudo con halo por `drop-shadow` | 64 / 66 / 68 | 77 / 66 / 68 | 5,4 / 4,9 / 4,9 % |
+
+Pintar las 238 de cero cuesta ~6 ms de *paint* frente a ~4 ms del orbe, y el raster sigue en medio milisegundo. Es
+decir: dentro del ruido. Si algún día se toca la medalla, la vara de medir es esta; el `drop-shadow` tampoco se
+disparó, pero sí movía más los fotogramas perdidos y no aporta nada que el degradado no dé.
+
+**Las unidades del relieve son del `viewBox`, no píxeles de pantalla.** Es lo que hace que la sombra encoja con la
+medalla en vez de comerse el dibujo en la tira pequeña.
 
 ### Las tres señales, y por qué van donde van
 
@@ -40,12 +63,13 @@ disco en vez de comerse el dibujo en la tira pequeña.
   del listado, el chip y la sombra del aviso.
 - **Segmentos → el tramo.** Uno encendido hasta 1/3 de la escalera, dos hasta 0,7, los tres por encima
   (`temperClass()` en `core/constants/achievementLabels.ts`; las clases siguen llamándose `is-temple-*`). Sin
-  tramo —primeros pasos, palmarés— el aro va entero.
-- **Píldora del canto → la cifra del escalón.** `×100` para lo que cuenta cosas, `≤5` en las descendentes, `75%`
+  tramo —primeros pasos, palmarés— el contorno va entero. Se encienden en el orden en que se lee el escudo:
+  flanco izquierdo, arriba, flanco derecho.
+- **Píldora de la punta → la cifra del escalón.** `×100` para lo que cuenta cosas, `≤5` en las descendentes, `75%`
   en la única de porcentaje y **la cifra sola** en las de racha —«12 meses seguidos» no son doce cosas contadas,
   así que ahí el aspa mentiría—. Va **sin unidad**: dentro de una escalera la unidad es siempre la misma, y la
-  escribe la condición de la fila. Montada en el borde de abajo y no dentro, que es lo que la hace caber a 48 px:
-  centrada tapa el dibujo y en la esquina se sale por la curva. Tapa justo el hueco de abajo entre segmentos.
+  escribe la condición de la fila. Montada en la punta y no dentro, que es lo que la hace caber a 48 px: centrada
+  tapa el dibujo y en una esquina se sale por la curva. Tapa justo la punta, donde los segmentos se cortan.
   `medalThreshold()`.
 
 **Por qué segmentos y no metal.** El filo de cobre, plata y oro obligaba a distinguir metales a 28 px, y además
@@ -54,7 +78,8 @@ centímetros. Contados, el tramo se lee sin comparar colores y la colisión desa
 
 **Los segmentos apagados son un SURCO oscuro, no un blanco tenue, y no llevan resplandor.** Las dos cosas se
 probaron: con apagados blancos y un halo desenfocado detrás, los tres se fundían en un aro entero y dejaban de
-contarse. Que sean finos (3 % del lado, con suelo de 1,5 px) es lo que los hace parte de la esfera y no un marco.
+contarse. Que sean finos es lo que los hace parte del vidrio y no un marco; pero en el escudo, con el color
+asomando por dentro del contorno, el 3 % del orbe no se contaba: van al 4,5 % y a 2 px como mínimo.
 
 **Tres tramos y no once no es una pérdida.** La cifra exacta ya la dicen el nombre del logro («Créditos finales
 V») y la condición de su fila. Los segmentos son «vas empezando / por la mitad / estás arriba», de un vistazo y sin
@@ -70,7 +95,7 @@ conseguido.
 vista global, sería pintado continuo, que ya se midió caro en el scroll.
 
 **El palmarés de la porra usa la misma medalla** (`PalmaresMedal`): ahí `--rc` es el metal del puesto —oro,
-plata, bronce, cobre, azul de participar— en vez de la rareza, y el aro va entero.
+plata, bronce, cobre, azul de participar— en vez de la rareza, y el contorno va entero.
 
 ---
 
@@ -135,7 +160,7 @@ En `core/achievements/catalog.ts`, un objeto en `LADDERS`:
 7. **Guarda la ausencia de dato.** Si la métrica lee un campo que puede faltar, decide qué significa faltar: sin
    eso, «Lo terminé por orgullo» cuenta todos los completados *sin nota* y «Exterminatus» salta con la biblioteca
    vacía. En descendentes, el valor de respaldo es `UNREACHABLE`, nunca 0.
-8. **Los primeros pasos (`onboarding`) no puntúan ni se publican**, y con un solo escalón no tienen tramo: su aro va entero.
+8. **Los primeros pasos (`onboarding`) no puntúan ni se publican**, y con un solo escalón no tienen tramo: su contorno va entero.
 
 ### Cómo se escribe la condición
 
@@ -156,7 +181,7 @@ Las reglas de la casa, sacadas de reescribir las cincuenta:
 - **Cuidado con los verbos que no se dicen.** «Cerrar un año natural» no existe; lo que se hace es «tener
   actividad los doce meses de un año natural».
 - **Las descendentes se dicen hacia abajo**: «Dejar Próximos en 5 juegos o menos», nunca «Próximos: 5».
-- **La unidad va en la frase, no en la medalla.** La píldora del disco lleva la cifra sola; quien pone «semanas»,
+- **La unidad va en la frase, no en la medalla.** La píldora de la medalla lleva la cifra sola; quien pone «semanas»,
   «meses» o «horas» es esta condición.
 
 ### Cuánto vale cada rareza

@@ -5,6 +5,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Changed
+
+- **Las medallas de logro son ahora escudos.** El mismo vidrio del color de su rareza, el mismo dibujo en blanco y
+  la misma cifra, en la punta, con silueta de escudo redondeado. Los tres segmentos del tramo siguen el contorno:
+  suben por la izquierda, cruzan por arriba y bajan por la derecha. Los trofeos del palmarés de la porra y la baldosa
+  del «+N» de la tira también; la cifra de la baldosa encoge según sus dígitos para no salirse nunca.
+
 ### Removed
 
 - **Capacidad ya no enseña lecturas, escrituras y borrados de Firestore.** Solo se pueden leer de Cloud Monitoring, y

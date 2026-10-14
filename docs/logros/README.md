@@ -152,16 +152,24 @@ Los activos de arriba marcados como *históricos* describen diseños anteriores 
 probó. **La referencia viva es [`receta-medalla.md`](receta-medalla.md)**, que es también el manual para añadir
 logros nuevos sin volver a decidir nada.
 
+## ⚑ Revisión 14-10-2026: el orbe pasa a escudo
+
+El material se queda; cambia la silueta. La medalla es **un escudo redondeado** —hombros anchos, flancos curvos y
+punta roma— con el mismo vidrio, el mismo color y las mismas tres señales. Los segmentos del tramo siguen el
+contorno (flanco izquierdo, arriba, flanco derecho) y la píldora va en la punta. Se eligió en maqueta entre tres
+escudos (suavizado, redondo y con arista) y se aceptó solo después de medir que no costaba más que el orbe; las
+cifras están en la receta.
+
 ## La medalla, en corto
 
 Lleva tres señales, cada una en su canal:
 
-- **Color del orbe y del aro → la rareza.** Escala de loot de RPG: gris el común, verde el infrecuente, morado el
+- **Color del vidrio y del halo → la rareza.** Escala de loot de RPG: gris el común, verde el infrecuente, morado el
   raro, naranja de legendario el excepcional. Se salta el azul de la escala clásica porque el azul es el acento de
   la app y aparece por todas partes.
-- **Segmentos del aro → el tramo de la escalera**: uno encendido hasta un tercio, dos hasta 0,7, tres por encima.
+- **Segmentos del contorno → el tramo de la escalera**: uno encendido hasta un tercio, dos hasta 0,7, tres por encima.
   Los apagados son un surco oscuro, no un blanco tenue, para que se cuenten sin dudar.
-- **Píldora del canto → la cifra del escalón** («×100»), salvo a 28 px.
+- **Píldora de la punta → la cifra del escalón** («×100»), salvo a 28 px.
 
 **Todas miden exactamente lo mismo**, tenga el logro el grado que tenga y esté conseguido, bloqueado u oculto.
 
