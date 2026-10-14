@@ -1,6 +1,6 @@
 # Arranque, view-model social y móvil — plan
 
-Estado: **sin empezar** (escrito el 08-10-2026 sobre `9c343f1d`, la 1.6.5). Reúne los trabajos que se pidieron
+Estado: **F0, F2, F3 y F5 publicadas en la 1.6.6**; F1 descartada al medirla y F4 (Google Play) aparcada (revisado el 14-10-2026; escrito el 08-10-2026 sobre `9c343f1d`, la 1.6.5). Reúne los trabajos que se pidieron
 juntos: el parpadeo de las carátulas al abrir (ya hecho), quitar peso del chunk de entrada (descartado al medirlo), partir `useSocialViewModel`, `share_target` y View Transitions. Publicar en Google Play queda escrito pero
 aparcado. Si una cifra no cuadra con el código, manda el
 código: corrígela aquí.
@@ -24,7 +24,7 @@ desliza hacia el lado de la pestaña; la barra inferior y los botones flotantes 
 `<main>` los tapaba); las carátulas de arriba se descodifican antes de deslizar (`precargaDeCaratulas`, plazo 160 ms);
 y Firefox 144–146 / Safari < 18.2, que tienen la API sin los tipos, conservan el fundido de antes. Comprobado en
 Safari (escritorio e iPhone) y Chrome Android; Firefox ≥ 147 según su documentación (no arranca automatizado aquí).
-F2, partir `useSocialViewModel`: de 2.541 a **1.028 líneas**, en once hooks de `viewmodel/social/` (lectura,
+F2, partir `useSocialViewModel`: de 2.541 a **1.028 líneas** (1.125 el 14-10-2026), en once hooks de `viewmodel/social/` (lectura,
 logros propios, pasarela, migración a secreto, rango, foto, editor de perfil, avisos y sesión; más `gistErrors`) y
 devolviendo el hub en doce PIEZAS por dominio que `SocialHub` desestructura. Repintados: 0 al escribir en el
 compositor y 0 al volver a ejecutar el view-model sin datos nuevos, fijado en `socialHubRepaints.test.tsx` (que
@@ -35,7 +35,8 @@ cuándo rehidratar y reconciliar— y el contrato de piezas (~150 líneas). Hech
 Lo que se descartó en la misma conversación, con la medición delante, y no conviene volver a levantar:
 
 - **React Compiler.** Probado en un worktree (`react({ compiler: true })` + `oxc-transform-react`): el crítico
-  sube de 184,5 a **191,6/190 kB** y `validate` falla; la latencia medida no cambia (búsqueda 24 ms y pestañas
+  sube de 184,5 a **191,6/190 kB** y `validate` falla (el tope es 195 desde el 13-10-2026, pero +7 kB sobre el crítico
+  de hoy tampoco caben); la latencia medida no cambia (búsqueda 24 ms y pestañas
   16 ms de mediana en los dos, 400 juegos, 390 px, CPU ×4); y se salta justo los hooks pesados de sync y social
   porque leen refs en el render a propósito. La suite pasaba entera (3534).
 - **Preact.** Medido el 25-09 (−57 kB, −21 % en móvil frío), pero se mantiene React por ser lo más común.

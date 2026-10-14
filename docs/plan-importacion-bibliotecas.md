@@ -8,6 +8,9 @@
 > los formatos/endpoints reales y **actualiza este `.md` en consecuencia** (marca lo confirmado,
 > corrige lo que cambie, anota decisiones).
 
+> **Estado (revisado el 14-10-2026):** la Entrega 1 (Playnite y la Bandeja) está publicada desde la 1.0.0
+> (`7317901f`). Los añadidos futuros (IGDB para enriquecer, Steam, Xbox, PlayStation, GOG, EGS) siguen sin empezar.
+
 ## Enfoque (TL;DR)
 
 - **La primera integración es Playnite** — la más sencilla y la que más cubre con menos riesgo:

@@ -4,6 +4,13 @@
 > en `09fc2c0`. Al abordar cada paso, verifica el estado real del código y actualiza este `.md` con lo que
 > cambie. Los números se miden con los comandos de «Cómo se midió» de `docs/revision-general-2026-09.md`.
 
+> **Estado (revisado el 14-10-2026):** Fase 1, pasos 1 y 2 publicados desde la 1.4.4 (`0d0ee545`; el borde sigue en
+> `monitor`); el 3 sigue en pausa (`popupRedirectResolver` aún va en `initializeAuth` y App Check no se enciende antes
+> de Auth) y el 4 y el 5, sin hacer. Fase 2 (Trusted Types), sin empezar: la CSP no lo pide. Fase 3: `useSocialViewModel`
+> se partió en la 1.6.6 (hoy 1125 líneas, por encima del criterio de 800, como `useSyncViewModel` con 1167) y el React
+> Compiler se midió y se descartó (08-10-2026); el sprite externo, `web-vitals` y la cobertura de sync, sin hacer.
+> Fase 4 (Steam), sin empezar. Fase 5: no hay `useKeyboardShortcuts`; solo existen `/` y ⌘K del buscador (1.7.1).
+
 ## Orden y por qué
 
 | Fase | Qué | Riesgo | Depende de |

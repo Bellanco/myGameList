@@ -1,6 +1,6 @@
 # Plan — reseñas que no salen en el feed de actividad (usuarios recién llegados)
 
-> **Estado:** TODOS los pasos implementados (1, 1b, 1c, 2, 3, 4 + 4bis y 5). La Fase 0 sigue siendo útil para
+> **Estado:** TODOS los pasos implementados (1, 1b, 1c, 2, 3, 4 + 4bis y 5) y publicados desde la 1.0.0 (`e00360ca`…`85486403`; revisado el 14-10-2026). La Fase 0 sigue siendo útil para
 > confirmar en los usuarios ya afectados que su actividad se recupera. *(Revisado el 01-10-2026: el paso 5 quedó
 > superado por `feeda33c`, que retiró la maquinaria de visibilidad; ver el paso 5.)*
 >

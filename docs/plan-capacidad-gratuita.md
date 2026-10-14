@@ -21,9 +21,11 @@
 
 Orden recomendado: 0 → 1 → 2 → 3 (con su prueba previa) → 4. Cada fase es un commit independiente y reversible.
 
-**Estado (revisado el 01-10-2026):** fases 1 (`10094472`), 2 (`fc666e23`), 3 (`7d84a1f6`), 4 (`e6848d7b`) y 4b
-(`2a5364de`) hechas el 30-09-2026. Pendientes: la Fase 0, la Fase 5 y la comprobación de la Fase 3 en la vista
-previa de Cloudflare.
+**Estado (revisado el 14-10-2026):** fases 1 (`10094472`), 2 (`fc666e23`), 3 (`7d84a1f6`), 4 (`e6848d7b`) y 4b
+(`2a5364de`) publicadas en la 1.5.0. Pendientes: la Fase 0 (solo KV medido, el 12-10-2026; faltan Functions y
+Firestore) y la Fase 5 (el README sigue sin los umbrales; la pantalla Capacidad del panel, en la 1.7.4, avisa al 70
+y al 90 % de los cupos de Cloudflare, no al 60 %). La comprobación de la Fase 3 en la vista previa no consta, pero
+lleva en producción desde la 1.5.0.
 
 ---
 

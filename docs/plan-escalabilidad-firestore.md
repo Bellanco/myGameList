@@ -7,6 +7,9 @@
 > ⚠️ **Documento vivo.** Es una guía de diseño, no un contrato. Las líneas citadas pueden moverse:
 > verifica el estado real del código antes de tocar nada y actualiza este `.md` con lo que cambie.
 
+> **Estado (revisado el 14-10-2026):** fases 1 y 2 y la corrección del orden de la bandeja publicadas desde la 1.0.0
+> (`8a597fe5`). La Fase 3 sigue documentada y sin implementar, a propósito.
+
 ## TL;DR
 
 - **Una amistad = un documento.** No hay duplicación que quitar, y no hay nada que rediseñar.

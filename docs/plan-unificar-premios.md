@@ -16,8 +16,8 @@
 > **F0 COMPLETA** (rama `feature/unificar-premios`, 20-09-2026): el criterio de administrador es el custom claim,
 > el claim está concedido en producción y las reglas nuevas están desplegadas en `mylists-f7313`, en ese orden
 > (§3.1).
-> **Estado real (revisado el 01-10-2026):** F0 a F4 hechas; F5 casi hecha (faltan las caras en la clasificación, ver
-> §8); F6 —retirar GA— no se puede comprobar desde este repositorio. Ya hay histórico importado: 2018–2023 y 2025.
+> **Estado real (revisado el 14-10-2026):** F0 a F4 hechas y publicadas desde la 1.4.0 (`068b7508`); F5 casi hecha
+> (siguen faltando las caras en la clasificación, ver §8: hoy solo nombre con enlace al perfil); F6 —retirar GA— no se puede comprobar desde este repositorio. Ya hay histórico importado: 2018–2023 y 2025.
 
 ---
 

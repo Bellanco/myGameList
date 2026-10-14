@@ -3,6 +3,9 @@
 Plan de diseño, no de implementación: aquí está el orden de los pasos, lo que puede fallar a medias y lo que
 NO resuelve. Nace de lo anotado en [`SECURITY.md`](../SECURITY.md) § «El identificador de un Gist ES la llave».
 
+Estado (revisado el 14-10-2026): **sin implementar**; ni la Fase A ni la B tienen código, y la decisión del §8 sigue
+pendiente.
+
 ## 1. El problema, en una frase
 
 Un Gist «secreto» no tiene lista de permitidos: quien conoce su identificador lo lee, con cualquier token o sin

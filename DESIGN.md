@@ -97,8 +97,9 @@ le toca a cada género. Las reglas y de dónde sale cada rampa están en la cabe
 | `--font-display` | Titulares | **EB Garamond** | Orbitron | **Cinzel** | Oswald | Rajdhani | **UnifrakturCook** | = cuerpo |
 | `--font-mono` | Cifras y fechas | **Atkinson Hyperlegible Mono** | Share Tech Mono | IBM Plex Mono | Share Tech Mono | Share Tech Mono | **VT323** | SoS Digits |
 
-*Ladrones de corazones* no trae webfont propia: el cuerpo se queda en DM Sans, la letra de la casa, y el
-display (y con él los rótulos) es `'Arial Black', Impact`, de sistema.
+*Ladrones de corazones* trae su propia pareja desde la 1.6.7 (`44d10f18`), servida desde el propio origen y solo
+con su skin: **Noto Sans** de cuerpo y **Anton** de titulares, que también hace de rótulos (`--font-label:
+var(--font-display)`). Antes era `'Arial Black', Impact`, de sistema, y en iOS caía a la letra del sistema.
 
 ### Escala
 

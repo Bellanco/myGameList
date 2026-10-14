@@ -1,7 +1,9 @@
 # Premios: los votos de cada uno, a la vista hasta la siguiente edición
 
-Estado (05-10-2026): **hecho en `develop`**, sin publicar en la app. Reglas desplegadas el 05-10-2026. Los votos de
-2025 se cargan con `scripts/premios-2025-votos-por-persona.mjs` (lo lanza el usuario con su clave).
+Estado (revisado el 14-10-2026): **publicado en la 1.6.0** (`7bea2e17`); la vista del administrador con todas las
+papeletas, en la 1.6.5 (`b9bbde10`). Reglas desplegadas el 05-10-2026. Los votos de 2025 ya están cargados con
+`scripts/premios-2025-votos-por-persona.mjs` (`premiosConfig/voting.votesSeasonId = '2025'` en producción, escrito el
+05-10-2026). Los dos puntos de «Pendiente» están cumplidos.
 
 ## Qué se quiere
 

@@ -116,13 +116,13 @@ De `docs/plan-persistencia-caratulas.md`, sin cambios:
 
 ---
 
-## Estado y orden (revisado el 01-10-2026)
+## Estado y orden (revisado el 14-10-2026)
 
 | | |
 |---|---|
-| 1. El scroll al navegar | ✅ hecho (`fcea1d2`, `26115c1`) |
+| 1. El scroll al navegar | ✅ publicado en la 1.3.1 (`1237c738`, `e489dc05`; `fcea1d2` y `26115c1` son de antes de reescribir el historial y no están en ninguna rama) |
 | 2. Purgar los perfiles | ✅ hecho — ver `SECURITY.md`, «Restos legacy: purgados» |
-| 3. `IconSprite` externo | ⬜ aplazado — solo cuando el margen de arranque apriete (cifras por volver a medir) |
+| 3. `IconSprite` externo | ⬜ aplazado — solo cuando el margen de arranque apriete (remedido el 12-10-2026, ver §3; sigue sin `sprite.svg`) |
 | 4. Desplegar la 1.3.1 | ✅ hecho |
 | 5. Comprobación del criterio de las carátulas | ⬜ pendiente — justo después de desplegar |
 

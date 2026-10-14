@@ -10,6 +10,12 @@
 > **Revisado el 01-10-2026** (`4a68dc73`): las 12 altas están cerradas; de las medias quedan abiertas la mayoría
 > de las de sync, view-model social y vista, y la baja sigue entera salvo un punto. Las líneas citadas pueden
 > haberse movido (p. ej. `GameTable.tsx:1396` → `:1439`, `useSyncViewModel.ts:116-163` → `:142-191`).
+>
+> **Revisado el 14-10-2026** (1.7.5), solo una muestra de las medias: se cierra la de `preferenceStore`/`ScoreScaleCard`
+> (`78a8bf0e`, 1.5.1) y la de `accountDeletion` queda a medias (desde la 1.5.1 borra varias copias locales por
+> prefijo, pero no `achievementsPublishedKey(uid)`). Siguen abiertas, comprobado en el código: `achievementsConfig`
+> (`setDoc` con `merge`), `gistCompression`, `StarPicker`, `GameTable` (`game.scored`), `ExplodedRose`,
+> `AdminPremiosVotos` y las dos de `igdbCover`. El resto no se ha vuelto a mirar.
 
 ## Cómo se hizo
 
@@ -23,7 +29,7 @@
 1. **Sync y pérdida de datos:** A1, A2, M-githubHttp, M-legacyGamesFormat. · ✅ hecho (25-09-2026)
 2. **Social:** A3–A7, M-socialGist ilegible, M-profileHeal. · ✅ hecho (25-09-2026)
 3. **Borde y admin:** A8, A10, A11, M-achievementsConfig, M-AdminPremios. · ⏳ parcial: las altas ✅, las medias no
-4. **Privacidad:** A12, M-accountDeletion. · ⏳ parcial: A12 ✅, `accountDeletion` abierto
+4. **Privacidad:** A12, M-accountDeletion. · ⏳ parcial: A12 ✅, `accountDeletion` a medias (revisado el 14-10-2026)
 5. **Formularios y accesibilidad:** A9, M-StarPicker, M-feed con teclado. · ⏳ parcial: A9 ✅, las medias no
 6. Resto de media; la baja en bloque.
 
@@ -61,8 +67,8 @@ Cada arreglo de los grupos 1 y 2 va con un test que reproduce el fallo antes de 
 | ✅ 313da37 | `src/model/repository/socialGistRepository.ts:1063-1102` | Gist ilegible → se devuelve vacío y se cachea con su ETag; `openSocialWrite`/`reconcileReviewActivity` reescriben el canal. Arreglado con él `assembleChunkedSocial`, que saltaba chunks ausentes o corruptos (ahora aborta en la lectura del canal propio; las de solo mirar siguen con lo disponible). |
 | | `src/model/repository/premios/premiosSeasonRepository.ts:301`, `:506` | Dos ediciones con el mismo nombre o año dan el mismo id; la segunda pisa el archivo de la primera. |
 | | `src/model/repository/premios/premiosPalmaresRepository.ts:223`, `:254` | `grant`/`revokePalmares` escriben `updatedAt` en el perfil y falsean «última vez visto». |
-| | `src/model/repository/accountDeletionRepository.ts:151-157` | Tras borrar la cuenta quedan ~12 claves locales (votos, `achievementsPublishedKey(uid)`…) pese a que el comentario promete lo contrario. |
-| | `src/model/repository/preferenceStore.ts:102`; `ScoreScaleCard.tsx:42` | `void setPublicConfig(...)` sin `.catch` → `unhandledrejection` sin red. |
+| ⏳ parcial (1.5.1) | `src/model/repository/accountDeletionRepository.ts:151-157` | Tras borrar la cuenta quedan ~12 claves locales (votos, `achievementsPublishedKey(uid)`…) pese a que el comentario promete lo contrario. |
+| ✅ 78a8bf0e | `src/model/repository/preferenceStore.ts:102`; `ScoreScaleCard.tsx:42` | `void setPublicConfig(...)` sin `.catch` → `unhandledrejection` sin red. |
 | | `src/core/utils/gistCompression.ts:45-46` | `void writer.write/close` sin capturar: gzip corrupto → `unhandledrejection` a telemetría. |
 
 ### View-model social

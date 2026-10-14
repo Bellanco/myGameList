@@ -21,7 +21,9 @@
 > publica una magnitud, no un dato. El razonamiento y lo único que sí obliga —una frase en la política de
 > privacidad— están en el **§5.3bis**.
 
-> 🔎 **Revisado el 01-10-2026** (develop en `4a68dc73`, versión 1.5.0). **Estado real de las fases:** F0, F1, F2
+> 🔎 **Revisado el 01-10-2026** (develop en `4a68dc73`, versión 1.5.0; **estado de las fases comprobado de nuevo el
+> 14-10-2026**: sigue igual, todo lo hecho está publicado —núcleo y espejo desde la 1.2.0, `ea3bf354`; F5 desde la
+> 1.4.7, `a9f473dd`— y lo pendiente sigue sin código). **Estado real de las fases:** F0, F1, F2
 > y F5 están hechas; F3 también, salvo el opt-out `showAchievements` (no aparece ni en `firestore.rules` ni en
 > `src`) y la señal de `/admin`; F4 está hecha salvo elegir destacados; F6, salvo el foco rotatorio; F7 sigue sin
 > empezar. **El catálogo ya no es el de 32:** son 64 escaleras y 412 escalones, de los que 404 son publicables (los

@@ -1,6 +1,6 @@
 # Plan: que el feed no parezca vacío cuando hay amistades activas
 
-> **Estado (10-10-2026): las seis fases hechas en `develop` (sin push).** Pendiente solo retirar la cota de logros a partir del 28-10-2026 (hallazgo 15 de la revisión general). Diagnóstico hecho leyendo
+> **Estado (revisado el 14-10-2026): las seis fases publicadas en la 1.6.8** (`ab725757`, `8b984e39`, `b8130d8e`, `10b3d325`, `3cc5c797`, `0eda13d0`). Pendiente solo retirar la cota de logros (`ACHIEVEMENT_DATES_RELIABLE_FROM`, sigue en el código) a partir del 28-10-2026 (hallazgo 15 de la revisión general). Diagnóstico hecho leyendo
 > el código de `develop` (después de `4e178363`). Cada fase empieza escribiendo el test que demuestra el fallo.
 >
 > Fase 1, dónde quedó: `useSocialDirectory.ts` (`readToken`, `REJECTED_TOKEN`, `rejectedTokenRef`,

@@ -1,6 +1,6 @@
 # Plan: «Ya lo tienes en casa» — los deseos frente a Próximos
 
-Estado: implementado en `develop` (05-10-2026). Documento vivo: si una línea no coincide con el código, manda el código.
+Estado: publicado entero en la 1.6.0 (`2a817a45`; revisado el 14-10-2026). Documento vivo: si una línea no coincide con el código, manda el código.
 Depende de la lista de deseos (`docs/plan-lista-deseos.md`).
 
 ## Qué es

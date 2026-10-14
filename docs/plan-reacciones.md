@@ -1,6 +1,6 @@
 # Plan: «Me gusta» en el feed
 
-> **Estado (12-10-2026): Fases 0 a 6 cerradas (sin push). La 5, sin rótulo, por decisión del usuario.** Sale de la idea A1 de
+> **Estado (revisado el 14-10-2026): Fases 0 a 6 publicadas en la 1.7.0 (`f9f8b441`, `af3cd66c`, `bc3acc31`). La 5, sin rótulo, por decisión del usuario.** Sale de la idea A1 de
 > `docs/investigacion-interaccion-social.md`. Las alternativas visuales que se compararon están en
 > `docs/maquetas/reacciones.html` (con el servidor de desarrollo); la elegida es la C, reducida a una sola reacción.
 >
@@ -70,7 +70,7 @@ En la práctica:
    un fichero de reacciones con una `v` mayor que la suya (`canRewriteReactionsFile`). Si algún día hay más tipos de
    reacción, la versión sube y los clientes viejos dejan de escribir en vez de borrar lo que no entienden.
 
-## Fase 1 · Modelo y almacenamiento · S
+## Fase 1 · Modelo y almacenamiento · S · ✅ hecha (12-10-2026)
 
 - `core/social/reactions.ts` (puro, sin dependencias pesadas):
   - Tipos.

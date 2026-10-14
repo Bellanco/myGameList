@@ -8,6 +8,9 @@
 > hallazgos graves comprobados a mano). Las líneas citadas se mueven: si una no coincide, manda el código y se
 > corrige esto en la misma pasada.
 
+> **Estado (revisado el 14-10-2026): las cinco fases publicadas en la 1.5.1** (`59c37530`, `4d866aeb`, `78a8bf0e`…).
+> Pages está en «Fail open» desde el principio (lo confirmó el usuario el 14-10-2026): no queda nada pendiente del plan.
+
 ## Cómo falla cada servicio
 
 | Servicio | Al agotarse | Se reinicia |
