@@ -745,14 +745,33 @@ export default function App() {
     navigate('/elegir');
   }, [navigate]);
 
+  /**
+   * LA ÚLTIMA LISTA QUE SE MIRÓ. «Listados» en la barra llevaba siempre a Completados, así que ir un momento a
+   * Estadísticas desde Pendientes y volver te dejaba en otra lista. Es de la sesión y no se guarda: al abrir la
+   * aplicación en frío se empieza por Completados, como siempre.
+   */
+  const ultimaLista = useRef<TabId>('c');
+  useEffect(() => {
+    if (activeSection === 'lists') ultimaLista.current = currentTab;
+  }, [activeSection, currentTab]);
+
   const handleSectionChange = useCallback((section: AppSection) => {
     setExpandedId(null);
+    /* VOLVER A PULSAR LA PESTAÑA EN LA QUE ESTÁS SUBE AL PRINCIPIO, que es lo que hace cualquier barra inferior
+       de móvil. Antes no hacía nada (o, en Listados, te cambiaba de lista). La tabla puede tener su propio scroll
+       en algunos anchos, así que se sube también ella. */
+    if (section === activeSection) {
+      const behavior: ScrollBehavior = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+      window.scrollTo({ top: 0, behavior });
+      document.querySelectorAll<HTMLElement>('.table-wrap').forEach((el) => el.scrollTo({ top: 0, behavior }));
+      return;
+    }
     if (section !== 'lists') {
       setFiltersOpen(false);
     }
 
     if (section === 'lists') {
-      navigate('/completados');
+      navigate(TAB_ROUTE[ultimaLista.current]);
       return;
     }
 
@@ -772,7 +791,7 @@ export default function App() {
     }
 
     navigate('/ajustes');
-  }, [navigate, setExpandedId]);
+  }, [navigate, setExpandedId, activeSection]);
   // «¿A qué juego ahora?» vuelve a los listados igual que la barra inferior.
   const handlePickBack = useCallback(() => handleSectionChange('lists'), [handleSectionChange]);
 

@@ -267,26 +267,36 @@
   right: 0;
   bottom: 0;
   z-index: 120;
-  padding: .55rem .9rem calc(.55rem + env(safe-area-inset-bottom,0px));
-  background: linear-gradient(180deg, transparent 0%, var(--bg) 45%, var(--bg) 100%);
+  padding: .5rem .9rem calc(.7rem + env(safe-area-inset-bottom,0px));
+  /* SIN VELO. Aquí había un degradado a todo el ancho que se volvía opaco a media altura: tapaba una franja de
+     ~5rem en cada pantalla aunque la pastilla fuera más estrecha, y era lo que más pesaba de la barra. Lo de
+     detrás ahora se ve alrededor de la pastilla, y los clics le llegan: la caja de la barra no los recoge, solo
+     la pastilla. */
+  pointer-events: none;
 }
 
 .bottom-nav-inner {
+  pointer-events: auto;
   position: relative;
-  max-width: 760px;
+  /* MIDE LO QUE PIDEN SUS BOTONES, no 760 px fijos: en una pantalla ancha la isla de 760 px era lo que más se
+     veía de la página. Las columnas siguen siendo iguales (la más ancha manda), que es con lo que cuenta el
+     medidor de `BottomNavigation`, y se encogen solas cuando no caben. */
+  width: fit-content;
+  max-width: 100%;
   margin: 0 auto;
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
   background: var(--surface-glass);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(14px) saturate(1.2);
   border-radius: var(--radius-pill);
-  box-shadow: var(--e3);
+  /* Una sombra que la despega sin anunciarla: `--e3` es la de un diálogo. */
+  box-shadow: var(--e2);
   display: grid;
   /* Una columna por botón (3 o 4 según haya sesión de "Cuenta"): siempre en UNA fila, anchos iguales.
      Con `repeat(3, …)` fijo, el 4º botón saltaba a una segunda fila. */
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
-  gap: .4rem;
-  padding: .4rem;
+  gap: .2rem;
+  padding: .3rem;
 }
 
 .bottom-nav-btn {
@@ -297,11 +307,14 @@
   color: var(--text-muted);
   border-radius: var(--radius-pill);
   min-height: 48px;
+  /* El aire de cada pestaña: con la pastilla a medida, es lo que separa un nombre del siguiente. */
+  padding-inline: 1.15rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: .5rem;
-  font-weight: 700;
+  /* La jerarquía la pone la pestaña en la que estás: las demás, a medio peso. */
+  font-weight: 500;
   font-size: var(--fs-sm);
   letter-spacing: .01em;
   transition: background .2s, color .2s, transform .2s;
@@ -309,6 +322,7 @@
 
 .bottom-nav-btn.active {
   color: var(--fg-link);
+  font-weight: 650;
   /* El fondo/relieve del activo lo dibuja ahora la pastilla deslizante `.bottom-nav-ind`. */
 }
 
@@ -351,6 +365,27 @@
 .bottom-nav.is-tight .bottom-nav-btn span {
   font-size: var(--fs-3xs);
 }
+
+/* EL CHEVRÓN DE AJUSTES: dice que la pestaña despliega en vez de navegar, y se da la vuelta mientras el menú está
+   abierto. EL COLOR LO PONE CADA TEMA en `--nav-caret` (su color de firma, que ya tiene su versión de claro y de
+   oscuro); sin tema, el del rótulo. */
+.bottom-nav-caret {
+  width: .8em;
+  height: .8em;
+  margin-left: .25em;
+  vertical-align: -.02em;
+  color: var(--nav-caret, currentColor);
+  /* El símbolo del sprite no trae relleno propio (lo pone `.ui-icon`, que aquí no está): sin esto salía NEGRO. */
+  fill: currentColor;
+  transition: transform .2s ease;
+}
+.bottom-nav-btn[aria-expanded="true"] .bottom-nav-caret { transform: rotate(180deg); }
+/* EN LA PESTAÑA ACTIVA, EL COLOR DEL RÓTULO. Allí el rótulo ya lleva el color de «estás aquí» (el del enlace, o
+   la tinta sobre la placa en los temas que la tienen), y un segundo color de firma al lado se leía como dos avisos
+   que no casan: naranja junto al azul en «Cámara de pruebas», rojo apagado sobre rojo en «Ladrones de
+   corazones». */
+.bottom-nav-btn.active .bottom-nav-caret { color: currentColor; }
+.bottom-nav-btn[aria-expanded="true"] { color: var(--text); }
 
 /* SOLO ICONO: sin texto que mirar, el icono crece para seguir siendo una diana clara de un vistazo. */
 .bottom-nav.is-icons .bottom-nav-icon {
@@ -777,7 +812,7 @@
 
 /* Navegación inferior: pastilla deslizante tras la sección activa + icono que sube. */
 .bottom-nav-ind {
-  position: absolute; top: .4rem; bottom: .4rem; left: 0; z-index: 0;
+  position: absolute; top: .3rem; bottom: .3rem; left: 0; z-index: 0;
   border-radius: var(--radius-pill);
   background: linear-gradient(180deg, rgba(var(--steam-rgb),.18), rgba(var(--steam-rgb),.1));
   box-shadow: inset 0 0 0 1px rgba(var(--steam-rgb),.25);
@@ -1708,8 +1743,15 @@ html:root .hub-screen-card .hub-feed-card-detail:not(.has-cover) {
     padding-right: .7rem;
   }
 
+  /* En móvil la pastilla sigue ocupando todo el ancho, como siempre, y los botones no llevan aire propio: aquí
+     el sitio lo reparten las columnas y cada píxel cuenta para que los nombres quepan. */
   .bottom-nav-inner {
+    width: auto;
     gap: .3rem;
+  }
+
+  .bottom-nav-btn {
+    padding-inline: 0;
   }
 
   /* El espaciado entre letras es un acabado para el cuerpo de una línea; en el rótulo apilado —11,7px— no se

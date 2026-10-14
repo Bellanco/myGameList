@@ -979,3 +979,6 @@
   border-color: #151011;
   box-shadow: 3px 3px 0 #151011;
 }
+
+/* El chevrón de Ajustes en la barra inferior (ver `_layout`): el rojo pop. */
+:root[data-palette="persona"] { --nav-caret: var(--steam); }

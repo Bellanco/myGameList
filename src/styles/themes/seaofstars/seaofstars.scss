@@ -884,3 +884,9 @@
   color: var(--text);
   box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--sos-turq), 0 0 12px color-mix(in srgb, var(--sos-turq) 35%, transparent);
 }
+
+/* El chevrón de Ajustes en la barra inferior (ver `_layout`): el turquesa del doble marco. */
+:root[data-palette="seaofstars"] { --nav-caret: var(--sos-turq); }
+/* En claro la barra es cian y el turquesa se pierde en ella (1,6:1): se oscurece con la tinta del tema hasta
+   ~4:1, sin dejar de ser turquesa. */
+:root[data-palette="seaofstars"][data-theme="light"] { --nav-caret: color-mix(in srgb, var(--sos-turq) 45%, var(--sos-line)); }
