@@ -4,6 +4,7 @@ import { SocialProfileDetailScreen } from '../../src/view/components/socialhub/S
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { ADMIN_ONLY_TIER } from '../../src/core/constants/tiers';
 import { YEAR_SUMMARY_UI } from '../../src/core/constants/yearSummaryLabels';
+import { STATS_UI } from '../../src/core/constants/statsLabels';
 
 /* La preferencia de carátulas se replica a la nube cuando hay sesión; aquí no hay ninguna, y lo que se mira es
    qué pide la pantalla, no dónde se guarda el ajuste. */
@@ -241,6 +242,38 @@ describe('SocialProfileDetailScreen — gating por amistad', () => {
     expect(screen.getByText('Halo')).toBeInTheDocument();
     // Y ofrece eliminar amistad.
     expect(screen.getByLabelText(SOCIAL_UI.friendship.removeAria('Ada'))).toBeInTheDocument();
+  });
+
+  // EL ORDEN DE LOS BOTONES (14-10-2026): estadísticas, publicaciones, reseñas, resumen del año y la ruleta. Las
+  // publicaciones y el resumen no siempre salen, así que se mira el orden relativo de los que haya.
+  it('amigo: los botones van en orden estadísticas, publicaciones, reseñas, resumen y ruleta', () => {
+    const { container } = render(
+      <SocialProfileDetailScreen
+        SOCIAL_UI={SOCIAL_UI}
+        activeProfileDetail={{ ...foreignProfile, posts: [{ id: 'p1', text: 'Hola', updatedAt: 1 }] }}
+        onTogglePosts={vi.fn()}
+        friendshipState="friends"
+        onAddOrAcceptFriend={vi.fn()}
+        onCancelFriendRequest={vi.fn()}
+        onRemoveFriend={vi.fn()}
+        onBack={vi.fn()}
+        showReviews={false}
+        onToggleReviews={vi.fn()}
+        onOpenReview={vi.fn()}
+        status=""
+        statusKind=""
+      />,
+    );
+
+    const rotulos = [...container.querySelectorAll('.hub-screen-actions-left > button')].map((b) => b.textContent);
+    const esperado = [
+      STATS_UI.friend.button, SOCIAL_UI.feed.postsButton, SOCIAL_UI.feed.reviewsButton, YEAR_SUMMARY_UI.button,
+      SOCIAL_UI.feed.roulettePick,
+    ]
+      .filter((rotulo) => rotulos.includes(rotulo));
+    expect(rotulos).toEqual(esperado);
+    expect(rotulos.slice(0, 3)).toEqual([STATS_UI.friend.button, SOCIAL_UI.feed.postsButton, SOCIAL_UI.feed.reviewsButton]);
+    expect(rotulos.at(-1)).toBe(SOCIAL_UI.feed.roulettePick);
   });
 });
 

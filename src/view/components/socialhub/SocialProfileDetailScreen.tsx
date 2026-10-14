@@ -548,36 +548,8 @@ function SocialProfileDetailScreenBase({
           <div className="hub-screen-actions-left">
             {canSeeFullProfile ? (
               <>
-                <button
-                  className={`btn btn-secondary ${showReviews ? 'is-active' : ''}`.trim()}
-                  type="button"
-                  aria-pressed={showReviews}
-                  onClick={() => {
-                    // Las vistas del perfil —listas, reseñas, estadísticas y resumen del año— son excluyentes:
-                    // abrir una devuelve las otras a su estado de reposo.
-                    setShowStats(false);
-                    setShowSummary(false);
-                    onToggleReviews();
-                  }}
-                >
-                  <Icon name={showReviews ? 'grav' : 'signature'} />
-                  {showReviews ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.reviewsButton}
-                </button>
-                {hasPosts && onTogglePosts ? (
-                  <button
-                    className={`btn btn-secondary ${postsOpen ? 'is-active' : ''}`.trim()}
-                    type="button"
-                    aria-pressed={postsOpen}
-                    onClick={() => {
-                      setShowStats(false);
-                      setShowSummary(false);
-                      onTogglePosts();
-                    }}
-                  >
-                    <Icon name={postsOpen ? 'grav' : 'edit'} />
-                    {postsOpen ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.postsButton}
-                  </button>
-                ) : null}
+                {/* EL ORDEN (14-10-2026, a petición del usuario): estadísticas, publicaciones, reseñas, resumen del año
+                    y la ruleta. */}
                 {!isOwnProfile && hasSharedLists ? (
                   <button
                     className={`btn btn-secondary ${showStats ? 'is-active' : ''}`.trim()}
@@ -595,6 +567,36 @@ function SocialProfileDetailScreenBase({
                     {showStats ? FRIEND_STATS_BACK : FRIEND_STATS_BUTTON}
                   </button>
                 ) : null}
+                {hasPosts && onTogglePosts ? (
+                  <button
+                    className={`btn btn-secondary ${postsOpen ? 'is-active' : ''}`.trim()}
+                    type="button"
+                    aria-pressed={postsOpen}
+                    onClick={() => {
+                      setShowStats(false);
+                      setShowSummary(false);
+                      onTogglePosts();
+                    }}
+                  >
+                    <Icon name={postsOpen ? 'grav' : 'edit'} />
+                    {postsOpen ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.postsButton}
+                  </button>
+                ) : null}
+                <button
+                  className={`btn btn-secondary ${showReviews ? 'is-active' : ''}`.trim()}
+                  type="button"
+                  aria-pressed={showReviews}
+                  onClick={() => {
+                    // Las vistas del perfil —listas, reseñas, estadísticas y resumen del año— son excluyentes:
+                    // abrir una devuelve las otras a su estado de reposo.
+                    setShowStats(false);
+                    setShowSummary(false);
+                    onToggleReviews();
+                  }}
+                >
+                  <Icon name={showReviews ? 'grav' : 'signature'} />
+                  {showReviews ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.reviewsButton}
+                </button>
                 {yearSummary ? (
                   <button
                     className={`btn btn-secondary ${showSummary ? 'is-active' : ''}`.trim()}

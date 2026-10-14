@@ -19,6 +19,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   recibidas, luego el resto y al final las enviadas, con «Solicitud recibida» y «Solicitud enviada» escritos en el
   renglón. El buscador cabe en una línea y la muesca de rango ya no sale en esta pantalla. Solo la administración ve
   además la última conexión de cada persona.
+- **Nuevo orden en los botones de la ficha de un perfil:** Estadísticas, Publicaciones, Reseñas, Resumen del año y
+  «Elige tu próximo juego».
 - **Sin flecha en los botones que ya llevan icono.** La › de «abrir» queda solo en los botones sin icono: «Ver
   perfiles», «Editar mi perfil», «Ver bandeja» y los demás que tenían los dos dibujos ya no la llevan.
 
