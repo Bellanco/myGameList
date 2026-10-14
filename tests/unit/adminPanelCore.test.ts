@@ -223,10 +223,12 @@ describe('lo que el panel guarda para sí', () => {
       fetchedAt: 1,
       meters: [
         { id: 'kv-writes', source: 'cloudflare', used: 412, limit: 1000, status: 'ok' },
-        { id: 'firestore-reads', source: 'firestore', used: null, limit: 50000, status: 'not-configured' },
+        { id: 'kv-reads', source: 'cloudflare', used: null, limit: 100000, status: 'not-configured' },
+        // Firestore se retiró (Cloud Monitoring exige facturación): una respuesta vieja que aún lo traiga no se pinta.
+        { id: 'firestore-reads', source: 'firestore', used: null, limit: 50000, status: 'error' },
         { id: 'roto', source: 'cloudflare', used: 1, limit: 0, status: 'ok' },
       ],
     });
-    expect(health?.meters.map((meter) => [meter.id, meter.used])).toEqual([['kv-writes', 412], ['firestore-reads', null]]);
+    expect(health?.meters.map((meter) => [meter.id, meter.used])).toEqual([['kv-writes', 412], ['kv-reads', null]]);
   });
 });

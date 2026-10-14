@@ -100,7 +100,6 @@ export function FeedShell({
             >
               <Icon name="bottom-hub" />
               {F.openProfiles}
-              <Icon name="angle-right" className="ui-icon btn-open-go" />
             </button>
             {/* LA CAMPANA SOLO CON ALGO QUE VER (09-10-2026; con los «me gusta», 13-10-2026). Dentro están las
                 peticiones que te han hecho y los «me gusta» nuevos a lo tuyo; sin nada, el botón llevaba a una pantalla

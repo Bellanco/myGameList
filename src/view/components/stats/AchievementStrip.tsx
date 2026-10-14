@@ -69,6 +69,10 @@ export const AchievementStrip = memo(function AchievementStrip({
 }: AchievementStripProps) {
   const shown = typeof limit === 'number' ? items.slice(0, limit) : items;
   if (shown.length === 0) return null;
+  // LA CUENTA DE LO QUE NO CABE, y cuántos caracteres tiene: la hoja dimensiona la cifra con eso para que «+7» y
+  // «+1234» quepan los dos dentro del escudo.
+  const rest = `+${items.length - shown.length}`;
+  const restStyle = { '--sz': `${size === 'sm' ? 28 : 48}px`, '--chars': rest.length } as CSSProperties;
 
   return (
     <ul className="ach-strip" data-size={size}>
@@ -114,12 +118,12 @@ export const AchievementStrip = memo(function AchievementStrip({
           <button
             type="button"
             className="ach-strip-all"
-            style={{ '--sz': `${size === 'sm' ? 28 : 48}px` } as CSSProperties}
+            style={restStyle}
             onClick={(event) => { event.stopPropagation(); onSeeAll(); }}
             aria-label={seeAllLabel}
           >
             {items.length > shown.length ? (
-              <span className="ach-strip-all-count">+{items.length - shown.length}</span>
+              <span className="ach-strip-all-count">{rest}</span>
             ) : (
               <Icon name="angle-right" />
             )}
@@ -130,8 +134,8 @@ export const AchievementStrip = memo(function AchievementStrip({
         // medalla más en la fila; decorativo, porque los nombres de lo que no cabe viven en el `aria-label` de
         // quien contiene la tira.
         <li className="ach-strip-item" aria-hidden="true">
-          <span className="ach-strip-more" style={{ '--sz': `${size === 'sm' ? 28 : 48}px` } as CSSProperties}>
-            +{items.length - shown.length}
+          <span className="ach-strip-more" style={restStyle}>
+            {rest}
           </span>
         </li>
       ) : null}

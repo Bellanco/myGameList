@@ -347,7 +347,11 @@ function Amigos() {
   const directorio = useMemo(
     () => GENTE
       .filter((p) => p.displayName.toLowerCase().includes(busqueda.trim().toLowerCase()))
-      .map((p) => ({ id: p.id, uid: p.uid, displayName: p.displayName, photoURL: '', tier: p.tier, lastActiveAt: p.lastActiveAt })),
+      // Los mensajes de lista y las reseñas solo de los amigos, como en la app: de quien no lo es no se lee el canal.
+      .map((p) => ({
+        id: p.id, uid: p.uid, displayName: p.displayName, photoURL: '', lastActiveAt: p.lastActiveAt,
+        moves: MOVIMIENTOS[p.id] || [], activity: ACTIVIDAD[p.id] || [],
+      })),
     [busqueda],
   );
   const relationshipWith = useCallback((uid: string) => RELACION.get(uid) || 'none', []);
@@ -367,6 +371,7 @@ function Amigos() {
       onBack={avisar('volvería al feed')}
       status=""
       statusKind=""
+      showLastSeen={params.get('abrir') === 'admin'}
     />
   );
 }
@@ -876,6 +881,8 @@ const VARIANTES: Record<string, Array<{ nombre: string; vista?: string; abrir?: 
     { nombre: 'La cuenta no tenía nada', abrir: 'sin-nada' },
     { nombre: 'Este dispositivo ya lo tenía', abrir: 'vuelves' },
   ],
+  // La carátula de lo que juega cada amigo no sale aquí: la maqueta va sin carátulas (ver la cabecera).
+  amigos: [{ nombre: 'Como cualquiera' }, { nombre: 'Como administración (última conexión)', abrir: 'admin' }],
   perfil: [{ nombre: 'Listas' }, { nombre: 'Reseñas', vista: 'resenas' }, { nombre: 'Estadísticas', abrir: 'estadisticas' }, { nombre: 'Resumen del año', abrir: 'resumen' }],
   'compartir-resumen': [
     { nombre: 'Sin enlace' },

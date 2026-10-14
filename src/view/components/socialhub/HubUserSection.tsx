@@ -22,6 +22,7 @@ export function HubUserSection<T>({
   showMoreLabel,
   rowsPerPage,
   resetKey = '',
+  gridClassName = 'hub-user-grid',
 }: {
   title: string;
   items: readonly T[];
@@ -39,6 +40,11 @@ export function HubUserSection<T>({
   rowsPerPage: number;
   /** Al cambiar (p. ej. el texto de búsqueda) se vuelve a la primera página. */
   resetKey?: string;
+  /**
+   * La rejilla. Por defecto la de tarjetas; «Perfiles» pasa la de renglones (`hub-person-rows`). La paginación vale
+   * para las dos, porque cuenta las columnas que el CSS haya resuelto, sean del ancho que sean.
+   */
+  gridClassName?: string;
 }) {
   // CUÁNTAS COLUMNAS HAY DE VERDAD. Se lee del propio layout (`grid-template-columns` resuelto) y no se deduce de
   // un breakpoint: quien decide el número de columnas es el CSS —con `auto-fill` sobre el ancho de la TARJETA, no
@@ -96,7 +102,7 @@ export function HubUserSection<T>({
         <>
           <div
             ref={gridRef}
-            className="hub-user-grid"
+            className={gridClassName}
             aria-label={groupAriaLabel(title, items.length)}
             role="group"
           >

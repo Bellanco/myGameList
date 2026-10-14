@@ -7,10 +7,10 @@
 // sin estilos y SIN QUE SALTE NINGÚN ERROR. Es el fallo mudo del §12.
 //
 // TRES SEÑALES, TRES CANALES:
-//   · color del orbe y del aro → la RAREZA (escala de loot de RPG)
-//   · segmentos del aro        → el TRAMO de la escalera: 1, 2 o 3 encendidos
-//   · píldora del canto        → LA CIFRA del escalón («×100»), sin unidad y salvo en sm
-// El disco es redondo y el dibujo va centrado, sin tocar ninguna de las tres.
+//   · color del vidrio y del halo → la RAREZA (escala de loot de RPG)
+//   · segmentos del contorno      → el TRAMO de la escalera: 1, 2 o 3 encendidos
+//   · píldora de la punta         → LA CIFRA del escalón («×100»), sin unidad y salvo en sm
+// La medalla es un escudo y el dibujo va centrado, sin tocar ninguna de las tres.
 //
 // ⚑ REVISIÓN 6-sep-2026 — clases con prefijo `ach-` (una hoja global con `.medal` o `.num` se pisa con otro
 //   chunk), tokens `--text`/`--text-muted` (no `--ink`, que no existe en `_base.scss`) y pila mono del sistema
@@ -26,6 +26,9 @@
 //   rareza con el dibujo en blanco, y el tramo CONTADO en tres segmentos en vez del filo de cobre, plata u oro (que
 //   a 28 px había que distinguir por el metal, y que rozaba los metales del rango de perfil). Se eligió entre once
 //   variantes vistas en maqueta; el porqué de cada pieza está en `docs/logros/receta-medalla.md`.
+//
+// ⚑ REVISIÓN 14-oct-2026 — EL ORBE PASA A ESCUDO. Mismo vidrio, mismas señales; la silueta es un escudo redondeado
+//   recortado con máscara, y el halo y los segmentos se rehicieron sin filtros para que la vista global no lo pague.
 //
 // LA FORMA DE LA CÁPSULA DEL AVISO VIVE EN `_capsule.scss`, no aquí. Se extrajo el 12-sep-2026, al aparecer un
 // SEGUNDO inquilino del mismo carril: el aviso del administrador (`AnnouncementToast`), que reutiliza la cápsula
@@ -48,17 +51,36 @@
 }
 
 // ── La medalla ───────────────────────────────────────────────────────────
-/* UN ORBE DE VIDRIO. Una esfera oscura llena del color de su rareza —reflejo puntual arriba a la izquierda,
-   cáustica abajo—, el dibujo en blanco encima y, en el canto, tres segmentos de luz que cuentan el tramo de la
-   escalera. La MISMA en los ocho temas y en los dos modos: una medalla es un objeto, no cromo de la app, y el
-   vidrio oscuro es lo que la hace legible sobre cualquier fondo. Sustituyó al disco en penumbra el 13-10-2026,
-   elegido entre once variantes (`docs/logros/receta-medalla.md`).
+/* UN ESCUDO DE VIDRIO. Vidrio oscuro lleno del color de su rareza —reflejo puntual arriba a la izquierda, cáustica
+   abajo—, el dibujo en blanco encima y, por el contorno, tres segmentos de luz que cuentan el tramo de la escalera.
+   La MISMA en los ocho temas y en los dos modos: una medalla es un objeto, no cromo de la app, y el vidrio oscuro es
+   lo que la hace legible sobre cualquier fondo. Fue un orbe del 13 al 14-10-2026; el escudo redondeado le dio
+   personalidad sin tocar el material ni las señales (`docs/logros/receta-medalla.md`).
 
    TRES SEÑALES, TRES CANALES:
-     · COLOR del orbe y del aro → la rareza (escala de loot de RPG)
-     · SEGMENTOS del aro        → el tramo de la escalera: 1, 2 o 3 encendidos
-     · PÍLDORA del canto        → la cifra del escalón, montada en el borde de abajo
-   El dibujo va en el centro y no lo toca ninguna de las tres. ──────────── */
+     · COLOR del vidrio y del halo → la rareza (escala de loot de RPG)
+     · SEGMENTOS del contorno      → el tramo de la escalera: 1, 2 o 3 encendidos
+     · PÍLDORA de la punta         → la cifra del escalón, montada en el borde de abajo
+   El dibujo va en el centro y no lo toca ninguna de las tres.
+
+   SIN `filter` Y SIN NODOS DE MÁS, que es lo que decide si el escudo compensa: la vista global pinta cientos. La
+   silueta es una MÁSCARA (una imagen fija que se rasteriza al pintar, no en cada fotograma), el halo un degradado
+   radial detrás y los segmentos el mismo `conic-gradient` del orbe recortado por un anillo con forma de escudo. Un
+   `drop-shadow` habría seguido la silueta mejor, pero obliga a pintar cada medalla en una capa aparte.
+
+   LA SILUETA, sobre un lienzo de 100 × 100: hombros anchos, flancos curvos y punta roma. Es más alta que ancha y
+   ocupa el mismo cuadrado que el orbe, así que ninguna rejilla se descuadra. ──────────── */
+$ach-escudo: 'M50 95 Q46 95 42.5 92.5 C21 78 8.5 55 8 28 Q7.5 15 19 11 C28 7.5 38 6 50 6 C62 6 72 7.5 81 11 Q92.5 15 92 28 C91.5 55 79 78 57.5 92.5 Q54 95 50 95 Z';
+// El contorno encogido al 92 % sobre el centro: ahí van los segmentos, un poco hacia dentro del canto.
+$ach-dentro: "transform='translate(50 50) scale(.92) translate(-50 -50)'";
+
+@function ach-svg($contenido) {
+  @return url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E#{$contenido}%3C/svg%3E");
+}
+@function ach-anillo($grosor, $extra: '') {
+  @return ach-svg("%3Cpath #{$extra} fill='none' stroke='%23000' stroke-width='#{$grosor}' d='#{$ach-escudo}'/%3E");
+}
+
 .ach-medal {
   // EL COLOR DE LA RAREZA, del que sale todo lo demás: el volumen, la cáustica, el halo y la luz de los segmentos.
   --rc: #96a2b2;
@@ -66,46 +88,69 @@
   // oscuro, que es lo que deja contar 1, 2 y 3 sin dudar (con apagados blancos se leía un aro entero).
   --on: color-mix(in srgb, var(--rc) 45%, #fff);
   --off: rgba(0, 0, 0, .5);
-  // Sin tramo —primeros pasos, palmarés—, el aro entero: no hay escalera que contar.
+  // Sin tramo —primeros pasos, palmarés—, el contorno entero: no hay escalera que contar.
   --s1: var(--on); --s2: var(--on); --s3: var(--on);
   --halo: color-mix(in srgb, var(--rc) 45%, transparent);
+  // EL GROSOR DE LOS SEGMENTOS, en unidades del lienzo (100). Al 4,5 % del lado y no al 3 % del orbe: sobre el
+  // contorno del escudo, con el color asomando por dentro, al 3 % no se contaban. En las dos medallas pequeñas
+  // (34 y 28 px) sube, para no bajar de 2 px.
+  --ach-anillo: #{ach-anillo(4.5, $ach-dentro)};
   position: relative;
   /* UNA CAPA, Y LO QUE PASA DENTRO SE QUEDA DENTRO.
-     La píldora de la cifra va absoluta con `z-index: 6` para montarse en el canto del disco, y `position:
-     relative` SIN `z-index` no crea contexto de apilado: ese 6 competía con toda la página. Resultado visible al
-     desplazarse: el disco desaparecía correctamente bajo la barra fija del panel (`z-index: 2`) o bajo cualquier
-     cabecera pegajosa, pero la píldora se pintaba ENCIMA, flotando sola sobre la barra. Con `isolation` la
-     medalla pasa a ser una sola capa —su interior conserva su orden— y no puede colarse por encima de nada.
-     Los tres discos solapados del aviso siguen ordenándose porque su `z-index` está en las MEDALLAS, no dentro. */
+     La píldora de la cifra va absoluta con `z-index: 6` para montarse en el canto, y `position: relative` SIN
+     `z-index` no crea contexto de apilado: ese 6 competía con toda la página. Resultado visible al desplazarse: la
+     medalla desaparecía correctamente bajo la barra fija del panel (`z-index: 2`) o bajo cualquier cabecera
+     pegajosa, pero la píldora se pintaba ENCIMA, flotando sola sobre la barra. Con `isolation` la medalla pasa a
+     ser una sola capa —su interior conserva su orden, y el halo puede ir detrás con `z-index: -1` sin salirse— y
+     no puede colarse por encima de nada. Los tres escudos solapados del aviso siguen ordenándose porque su
+     `z-index` está en las MEDALLAS, no dentro. */
   isolation: isolate;
   display: block;
   width: var(--sz); height: var(--sz);
-  border-radius: 50%;
   flex: none;
-  // El volumen: la rareza llena la esfera y se hunde hacia el canto; abajo, la luz que atraviesa el vidrio y
-  // rebota (la cáustica), que es lo que la hace esfera y no disco.
+}
+.ach-medal[data-size="list"], .ach-medal[data-size="sm"] { --ach-anillo: #{ach-anillo(6.5, $ach-dentro)}; }
+
+/* EL HALO · la rareza por fuera, detrás del escudo. Un degradado y no una sombra: `box-shadow` seguiría la caja
+   cuadrada y `drop-shadow` es un filtro por medalla. Más ancho que alto, como el escudo, y subido hacia los hombros. */
+.ach-medal::before {
+  content: ""; position: absolute; z-index: -1; pointer-events: none;
+  inset: -12% -9% -6%;
+  background: radial-gradient(closest-side at 50% 44%, var(--halo) 62%, transparent);
+}
+
+/* EL VIDRIO · recortado con la silueta. Encima de los dos degradados del volumen va el canto oscuro, dibujado con
+   el mismo contorno: media línea queda fuera de la máscara y lo que se ve es un filo fino que sigue la forma. */
+.ach-medal .ach-canvas {
+  position: absolute; inset: 0; overflow: hidden;
+  -webkit-mask: #{ach-svg("%3Cpath d='#{$ach-escudo}'/%3E")} center / 100% 100% no-repeat;
+  mask: #{ach-svg("%3Cpath d='#{$ach-escudo}'/%3E")} center / 100% 100% no-repeat;
+  // El volumen: la rareza llena el vidrio y se hunde hacia el canto; abajo, la luz que lo atraviesa y rebota (la
+  // cáustica), que es lo que le da cuerpo.
   background:
-    radial-gradient(60% 40% at 50% 92%, color-mix(in srgb, var(--rc) 70%, #fff) 0%, transparent 70%),
-    radial-gradient(100% 100% at 38% 30%,
+    #{ach-anillo(5)} center / 100% 100% no-repeat,
+    radial-gradient(52% 26% at 50% 80%, color-mix(in srgb, var(--rc) 70%, #fff) 0%, transparent 70%),
+    radial-gradient(110% 100% at 36% 24%,
       color-mix(in srgb, var(--rc) 55%, #2a2f3a) 0%,
       color-mix(in srgb, var(--rc) 30%, #0d0f14) 45%,
-      #050608 85%);
-  // Un canto oscuro muy fino —donde se apoyan los segmentos—, el color asomando por dentro del borde y el halo de
-  // la rareza por fuera.
-  box-shadow:
-    inset 0 0 0 max(1px, calc(var(--sz) * .02)) rgba(0, 0, 0, .6),
-    inset 0 0 calc(var(--sz) * .2) color-mix(in srgb, var(--rc) 30%, transparent),
-    0 1px 2px rgba(0, 0, 0, .5),
-    0 0 calc(var(--sz) * .2) calc(var(--sz) * .01) var(--halo);
+      #050608 88%);
 }
-.ach-medal .ach-canvas { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; }
+// EL COLOR ASOMANDO POR DENTRO DEL CANTO, lo que en el orbe era una sombra interior: una banda ancha del contorno,
+// tenue, con el color de la rareza.
+.ach-medal .ach-canvas::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: color-mix(in srgb, var(--rc) 30%, transparent);
+  -webkit-mask: #{ach-anillo(14)} center / 100% 100% no-repeat;
+  mask: #{ach-anillo(14)} center / 100% 100% no-repeat;
+}
 
 /* EL DIBUJO · blanco, con una sombra oscura debajo para despegarlo del color y un resplandor blanco leve.
    Las unidades de `transform` y `stroke-width` son del viewBox 24, no píxeles de pantalla: así la sombra
-   encoge con el disco en vez de comerse el dibujo en la tira de 28 px. */
+   encoge con la medalla en vez de comerse el dibujo en la tira de 28 px. Algo por encima del centro, que es donde
+   el escudo tiene el peso. */
 .ach-medal .ach-art {
-  position: absolute; left: 50%; top: 45%;
-  width: 54%; height: 54%;
+  position: absolute; left: 50%; top: 44%;
+  width: 52%; height: 52%;
   transform: translate(-50%, -50%);
   display: block;
   filter: drop-shadow(0 0 calc(var(--sz) * .05) rgba(255, 255, 255, .35));
@@ -114,13 +159,12 @@
 .ach-medal .ach-art .ach-sh { stroke: rgba(0, 0, 0, .5); stroke-width: 3; transform: translate(.25px, .55px); }
 .ach-medal .ach-art .ach-fg { stroke: #fff; stroke-width: 1.8; }
 
-/* EL VIDRIO · el reflejo puntual de arriba a la izquierda, su halo y el oscurecido del canto de la esfera. */
+/* EL REFLEJO · el puntual de arriba a la izquierda y su halo. Lo recorta la máscara del vidrio. */
 .ach-medal .ach-light {
-  position: absolute; inset: 0; pointer-events: none; border-radius: 50%;
+  position: absolute; inset: 0; pointer-events: none;
   background:
-    radial-gradient(22% 14% at 30% 18%, rgba(255, 255, 255, .75), rgba(255, 255, 255, 0) 100%),
-    radial-gradient(70% 50% at 40% 22%, rgba(255, 255, 255, .14), rgba(255, 255, 255, 0) 70%),
-    radial-gradient(closest-side, transparent 78%, rgba(0, 0, 0, .45));
+    radial-gradient(20% 12% at 31% 19%, rgba(255, 255, 255, .75), rgba(255, 255, 255, 0) 100%),
+    radial-gradient(70% 45% at 40% 22%, rgba(255, 255, 255, .14), rgba(255, 255, 255, 0) 70%);
 }
 /* EL BRILLO AL PASAR · una franja de luz cruza la medalla conseguida al pasar el ratón. SOLO A DEMANDA: un
    brillo en bucle en la vista global —cientos de medallas— sería pintado continuo, que ya se midió caro en el
@@ -137,36 +181,37 @@
   }
 }
 
-/* EL TRAMO · tres segmentos finos de 120° en el canto, con el hueco de abajo detrás de la píldora; se encienden
-   1, 2 o 3 según `temperClass()`. Les toca la misma luz que a la esfera: el de abajo a la derecha queda un punto
-   en sombra. Contados y no por metal, que es lo que hacía el filo de cobre, plata y oro: así no hay que distinguir
-   cobre de oro a 28 px, ni se cruza con los metales del rango de perfil (`_tiers.scss`), que viven en la misma
-   ficha. SIN resplandor detrás: desenfocados, los tres se funden en un aro entero y dejan de contarse. */
+/* EL TRAMO · tres segmentos sobre el contorno, recortados por el anillo con forma de escudo: el primero sube por el
+   flanco izquierdo, el segundo cruza por arriba y el tercero baja por el derecho, así que el escudo se llena de
+   izquierda a derecha. Los cortes caen en los hombros y en la punta, donde está la píldora. Se encienden 1, 2 o 3
+   según `temperClass()`; el de la derecha queda un punto en sombra, con la misma luz que el vidrio. Contados y no
+   por metal: así no hay que distinguir cobre de oro a 28 px, ni se cruza con los metales del rango de perfil
+   (`_tiers.scss`), que viven en la misma ficha. SIN resplandor detrás: desenfocados, los tres se funden en un
+   contorno entero y dejan de contarse. */
 .ach-medal::after {
-  content: ""; position: absolute; z-index: 1; border-radius: 50%; pointer-events: none;
-  inset: calc(var(--sz) * .035);
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background:
     linear-gradient(135deg, rgba(5, 6, 8, 0) 45%, rgba(5, 6, 8, .25)),
-    conic-gradient(from -60deg,
-      var(--s1) 0 110deg, transparent 0 120deg,
-      var(--s2) 0 230deg, transparent 0 240deg,
-      var(--s3) 0 350deg, transparent 0);
-  -webkit-mask: radial-gradient(closest-side, transparent calc(100% - max(1.5px, calc(var(--sz) * .03))), #000 0);
-  mask: radial-gradient(closest-side, transparent calc(100% - max(1.5px, calc(var(--sz) * .03))), #000 0);
+    conic-gradient(from 180deg,
+      transparent 0 5deg, var(--s1) 0 115deg,
+      transparent 0 125deg, var(--s2) 0 235deg,
+      transparent 0 245deg, var(--s3) 0 355deg, transparent 0);
+  -webkit-mask: var(--ach-anillo) center / 100% 100% no-repeat;
+  mask: var(--ach-anillo) center / 100% 100% no-repeat;
 }
 .ach-medal.is-temple-1 { --s2: var(--off); --s3: var(--off); }
 .ach-medal.is-temple-2 { --s3: var(--off); }
 
-/* LA PÍLDORA · la cifra del escalón, montada en el canto de abajo.
-   Ahí y no dentro por una razón de tamaño: a 48 px una pastilla centrada tapa el dibujo y en la esquina se sale
-   por la curva del disco. Cruzando el borde se apoya en el canto, respeta el dibujo entero y tapa justo el hueco
-   de abajo entre segmentos.
+/* LA PÍLDORA · la cifra del escalón, montada en la punta.
+   Ahí y no dentro por una razón de tamaño: a 48 px una pastilla centrada tapa el dibujo y en una esquina se sale
+   por la curva. Cruzando el borde de abajo respeta el dibujo entero y tapa justo la punta, donde los segmentos se
+   cortan.
 
-   El tipo NO escala del todo con el disco: `max()` le pone un suelo de 9 px, que es donde una cifra deja de
+   El tipo NO escala del todo con la medalla: `max()` le pone un suelo de 9 px, que es donde una cifra deja de
    leerse. Por eso tampoco se pinta en `sm` — ver `AchievementMedal`. */
 .ach-medal .ach-step {
   position: absolute; z-index: 6;
-  left: 50%; bottom: -3%;
+  left: 50%; bottom: -5%;
   transform: translateX(-50%);
   padding: 2px 5px 3px;
   border-radius: 999px;
@@ -192,8 +237,13 @@
   --on: rgba(255, 255, 255, .38);
   --off: rgba(0, 0, 0, .45);
   --halo: transparent;
-  background: radial-gradient(90% 90% at 35% 25%, #262a31, #111318 65%, #08090b);
 }
+.ach-medal.is-locked .ach-canvas {
+  background:
+    #{ach-anillo(5)} center / 100% 100% no-repeat,
+    radial-gradient(90% 90% at 35% 25%, #262a31, #111318 65%, #08090b);
+}
+.ach-medal.is-locked .ach-canvas::before { display: none; }
 .ach-medal.is-locked .ach-art { filter: none; }
 .ach-medal.is-locked .ach-art .ach-sh { display: none; }
 .ach-medal.is-locked .ach-art .ach-fg { stroke: rgba(255, 255, 255, .38); }
@@ -263,7 +313,7 @@
 
 // ── Coste de pintado · el fallback plano ─────────────────────────────────
 // Lo caro de cada medalla es el `drop-shadow` del dibujo y la capa del vidrio, y en la vista global son cientos a
-// la vez. Quien apaga los efectos se lleva la esfera sin reflejo ni resplandor: el color, el dibujo y los
+// la vez. Quien apaga los efectos se lleva el escudo sin reflejo ni resplandor: el color, el dibujo y los
 // segmentos siguen, que es todo lo que se lee. Es el mismo interruptor que ya gobierna el destello del
 // desbloqueo (§7.4), no uno nuevo.
 /* OJO AL SELECTOR: se apaga con `:not([data-effects="on"])` y NO con `[data-effects="off"]`. Al desactivar los
@@ -311,21 +361,27 @@
   .ach-strip-btn:focus-visible .ach-strip-tip { opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .ach-strip-tip { transition: none; } }
-// EL «+N» ES UNA MEDALLA MÁS, no una nota al margen. Mismo disco, mismo tamaño y mismo sitio en la fila: lo que
+// EL «+N» ES UNA MEDALLA MÁS, no una nota al margen. Mismo escudo, mismo tamaño y mismo sitio en la fila: lo que
 // cuenta son medallas, así que tiene que pesar lo mismo que ellas o la fila se descuadra al final. Sin color y
-// sin segmentos —no es un logro— pero con el mismo vidrio oscuro y el mismo canto.
+// sin segmentos —no es un logro— pero con el mismo vidrio oscuro y un filo claro por el contorno. La silueta va en
+// sus dos pseudoelementos (ver `.ach-strip-all`, que es la misma pieza pulsable).
 .ach-strip-more {
+  --vidrio: radial-gradient(90% 90% at 35% 25%, #262a31, #111318 65%, #08090b);
+  --filo: rgba(255, 255, 255, .14);
+  position: relative; isolation: isolate;
   display: grid; place-items: center;
   width: var(--sz); height: var(--sz);
-  border-radius: 50%;
-  background: radial-gradient(90% 90% at 35% 25%, #262a31, #111318 65%, #08090b);
-  box-shadow:
-    inset 0 0 0 max(1px, calc(var(--sz) * .02)) rgba(0, 0, 0, .6),
-    inset 0 0 0 max(2px, calc(var(--sz) * .05)) rgba(255, 255, 255, .1);
   color: rgba(255, 255, 255, .78);
   font-family: var(--ach-mono); font-weight: 600; font-variant-numeric: tabular-nums;
-  font-size: max(10px, calc(var(--sz) * .3));
+  font-size: var(--ach-cifra);
   line-height: 1;
+}
+// LA CIFRA CABE SIEMPRE, tenga los dígitos que tenga. Va en la pila mono —todos los caracteres miden lo mismo, ~0,6
+// de su cuerpo— y el componente pasa cuántos lleva (`--chars`, el «+» incluido): el cuerpo es el menor entre el 30 %
+// del lado, que es como se ve una cuenta corta, y el que hace que la cifra entera ocupe el 64 % del lado, que es lo
+// que el escudo tiene de ancho a media altura con aire a los dos lados. «+7» sale grande y «+1234» encoge a su sitio.
+:is(.ach-strip-all, .ach-strip-more) {
+  --ach-cifra: min(calc(var(--sz) * .3), calc(var(--sz) * .64 / (var(--chars, 3) * .62)));
 }
 
 // ── LA CIFRA ─────────────────────────────────────────────────────────────
@@ -334,7 +390,7 @@
 //
 // LA FIGURA OCUPA EL ANCHO Y LA BARRA TAMBIÉN. Era una columna de `min-width: 8.5em` con todo dentro, así que la
 // barra medía 130 px y a su derecha quedaba media tarjeta vacía —el hueco se veía especialmente en el panel, que
-// es ancho—. Ahora es una rejilla de dos columnas: la cifra a la izquierda, el «% del catálogo» al otro extremo
+// es ancho—. Ahora es una rejilla de dos columnas: la cifra a la izquierda, el «% de los logros» al otro extremo
 // de su misma línea base, y la barra cruzando las dos de lado a lado.
 //
 // Y la barra gana con ello más de lo que parece: un 48 % en 130 px es un muñón que no se lee; en el ancho de la
@@ -704,40 +760,65 @@
 //
 // SE VE COMO UN HUECO Y NO COMO UNA MEDALLA, a propósito: si se pareciera a un logro, se leería como uno más.
 .ach-strip-all {
-  display: grid; place-items: center;
-  width: var(--sz); height: var(--sz);
-  padding: 0; border-radius: 50%;
-  // El MISMO vidrio oscuro que la medalla y que el «+N»: en una fila de discos oscuros, una baldosa clara se lee
+  // El MISMO vidrio oscuro que la medalla y que el «+N»: en una fila de escudos oscuros, una baldosa clara se lee
   // como un hueco. Lo que la separa de un logro es el borde DISCONTINUO —«aquí hay más, y esto se pulsa»—, no el
   // color, que es lo que la ataba al resto de la fila.
-  background: radial-gradient(90% 90% at 35% 25%, #262a31, #111318 65%, #08090b);
-  border: 1px dashed rgba(255, 255, 255, .26);
+  --vidrio: radial-gradient(90% 90% at 35% 25%, #262a31, #111318 65%, #08090b);
+  --filo: rgba(255, 255, 255, .3);
+  position: relative; isolation: isolate;
+  display: grid; place-items: center;
+  width: var(--sz); height: var(--sz);
+  padding: 0; border: 0; background: none;
   color: rgba(255, 255, 255, .78);
   cursor: pointer;
-  transition: background .15s ease, color .15s ease, border-color .15s ease;
+  transition: color .15s ease;
 }
 .ach-strip-all:hover, .ach-strip-all:focus-visible {
-  border-color: rgba(255, 255, 255, .6);
+  --filo: rgba(255, 255, 255, .65);
   color: #fff;
 }
+// CON LA FORMA DE LA MEDALLA, y la forma va en los pseudoelementos y no en el botón: una máscara sobre el propio
+// botón recortaría también su anillo de foco. Detrás, el vidrio recortado con el escudo; encima, el filo —discontinuo
+// en la baldosa, continuo en el «+N»—, pintado con el color de `--filo` a través de un anillo con su forma. Con
+// `isolation` el `z-index: -1` del vidrio se queda dentro de la pieza.
+:is(.ach-strip-all, .ach-strip-more)::before,
+:is(.ach-strip-all, .ach-strip-more)::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+}
+:is(.ach-strip-all, .ach-strip-more)::before {
+  z-index: -1;
+  background: var(--vidrio);
+  -webkit-mask: #{ach-svg("%3Cpath d='#{$ach-escudo}'/%3E")} center / 100% 100% no-repeat;
+  mask: #{ach-svg("%3Cpath d='#{$ach-escudo}'/%3E")} center / 100% 100% no-repeat;
+}
+:is(.ach-strip-all, .ach-strip-more)::after {
+  background: var(--filo);
+  transition: background .15s ease;
+  -webkit-mask: #{ach-anillo(3, "transform='translate(50 50) scale(.97) translate(-50 -50)' stroke-dasharray='7 5'")} center / 100% 100% no-repeat;
+  mask: #{ach-anillo(3, "transform='translate(50 50) scale(.97) translate(-50 -50)' stroke-dasharray='7 5'")} center / 100% 100% no-repeat;
+}
+.ach-strip-more::after {
+  -webkit-mask: #{ach-anillo(6, "transform='translate(50 50) scale(.94) translate(-50 -50)'")} center / 100% 100% no-repeat;
+  mask: #{ach-anillo(6, "transform='translate(50 50) scale(.94) translate(-50 -50)'")} center / 100% 100% no-repeat;
+}
 .ach-strip-all-count {
-  font-size: calc(var(--sz) * .3); font-weight: 700;
+  font-family: var(--ach-mono); font-size: var(--ach-cifra); font-weight: 700;
   font-variant-numeric: tabular-nums; line-height: 1;
 }
 .ach-strip-all .ui-icon { width: calc(var(--sz) * .42); height: calc(var(--sz) * .42); }
-@media (prefers-reduced-motion: reduce) { .ach-strip-all { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .ach-strip-all, .ach-strip-all::after { transition: none; } }
 
 // DE DÍA, LA BALDOSA Y EL «+N» SON DE VIDRIO CLARO (09-10-2026; vidrio desde el 13-10). El vidrio oscuro de arriba
 // es el de la MEDALLA, y la medalla lo conserva en los dos modos porque es un objeto
 // (`docs/logros/receta-medalla.md`); pero estas dos piezas no son logros —una cuenta, la otra lleva al listado— y
 // en el modo claro eran lo único negro de la ficha, una placa de noche. De día son el mismo vidrio, esmerilado.
 :root[data-theme="light"] :is(.ach-strip-all, .ach-strip-more) {
-  background: radial-gradient(90% 90% at 35% 25%, #ffffff 0%, #eceef2 58%, #d9dde4 100%);
+  --vidrio: radial-gradient(90% 90% at 35% 25%, #ffffff 0%, #eceef2 58%, #d9dde4 100%);
   color: #2b3038;
 }
-:root[data-theme="light"] .ach-strip-all { border-color: rgba(43, 48, 56, .45); }
-:root[data-theme="light"] .ach-strip-more { box-shadow: inset 0 0 0 max(1px, calc(var(--sz) * .03)) rgba(43, 48, 56, .3); }
-:root[data-theme="light"] .ach-strip-all:is(:hover, :focus-visible) { border-color: rgba(43, 48, 56, .85); color: #111418; }
+:root[data-theme="light"] .ach-strip-all { --filo: rgba(43, 48, 56, .45); }
+:root[data-theme="light"] .ach-strip-more { --filo: rgba(43, 48, 56, .3); }
+:root[data-theme="light"] .ach-strip-all:is(:hover, :focus-visible) { --filo: rgba(43, 48, 56, .85); color: #111418; }
 
 .ach-toast.is-comun       { --glow: 150, 162, 178; }
 .ach-toast.is-infrecuente { --glow: 63, 190, 114; }

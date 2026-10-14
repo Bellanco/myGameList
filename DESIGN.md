@@ -146,7 +146,7 @@ preparada para un «compacto / cómodo» que no se ha construido.
 - **Fila de tabla**: cada fila es una pieza (superficie + `--hair` + el canto del tema) con aire entre una y otra.
   **Sin lomo de color** a la izquierda, en ningún tema ni en la caja del mosaico: el color lo llevan los chips.
 - **Anillo de nota**: `conic-gradient` con la rampa roja→verde (`--acc-l` fija la luminosidad por tema).
-- **Medalla**: orbe de vidrio del color de su rareza, dibujo de Lucide en blanco y el tramo en tres segmentos del aro;
+- **Medalla**: escudo redondeado de vidrio del color de su rareza, dibujo de Lucide en blanco y el tramo en tres segmentos del contorno;
   la misma en todos los temas. Receta en `docs/logros/receta-medalla.md`.
 - **Cápsula** (`.ach-toast`, `_capsule.scss`): la pieza con la que la app dice algo. Disco a la izquierda +
   rótulo / nombre / descripción, radio = media altura, anillo y halo de color, barrido bajo `data-effects`. Tres

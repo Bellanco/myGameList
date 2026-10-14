@@ -22,6 +22,10 @@
 //  3. UN FALLO SE APUNTA. Sin esa marca, el detalle esperaba para siempre el análisis completo de alguien cuyo
 //     gist no se pudo leer, con el adelanto de 160 caracteres tapado por un esqueleto eterno. Apuntado, la
 //     pantalla deja de esperar y enseña lo que hay, que a partir de ese momento es la verdad.
+//  4. LA EXCEPCIÓN DE «PERFILES», SOLO PARA LA ADMINISTRACIÓN (14-10-2026). Allí el renglón de un amigo dice qué ha
+//     hecho últimamente, y si su canal no cuenta nada —ni mensajes de lista en 30 días ni reseñas, o es un amigo
+//     inactivo cuyo canal no se lee—, la administración ve su último completado, que solo está en su biblioteca. Se
+//     baja la de esos amigos y de nadie más, con la misma carga (caché de 24 horas) y la misma regla 1.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getSocialSyncConfig } from '../../model/repository/socialGistRepository';
 import { loadForeignProfileGames } from '../../model/repository/foreignProfileRepository';
@@ -30,6 +34,7 @@ import type { GameItem, TabData, TabId } from '../../model/types/game';
 import type { SocialProfileVisibility } from '../../model/types/social';
 import { isOwnProfileIdentity } from './socialIdentity';
 import { isVisibilityKnown, type SocialDirectoryEntry } from './socialFeed';
+import { rowActivity } from '../../core/social/directoryRow';
 
 /** Los listados de un perfil ajeno, ya filtrados por su visibilidad. */
 export type ForeignGames = Record<string, Record<TabId, GameItem[]>>;
@@ -68,6 +73,9 @@ export interface ForeignProfileGamesOptions {
 /** Las tres pantallas que piden los listados de otra persona. */
 const PANELS_QUE_PIDEN = ['detail', 'profile-detail', 'profile-review'];
 
+/** Cuántas bibliotecas se bajan a la vez en «Perfiles» (regla 4): pocas, son ficheros grandes. */
+const PROFILES_COMPLETED_CONCURRENCY = 2;
+
 export function useForeignProfileGames(options: ForeignProfileGamesOptions): ForeignProfileGames {
   const {
     activePanel, profileDetailId, detailProfileId, ownUid, ownProfileId, directory,
@@ -88,9 +96,12 @@ export function useForeignProfileGames(options: ForeignProfileGamesOptions): For
   /* OTRA CUENTA, OTRAS AMISTADES. Lo bajado es de las amistades de quien tenía la sesión: si cambia (cerrar sesión y
      entrar con otra cuenta en el mismo navegador), se olvida. SOLO AL CAMBIAR, no al montar. */
   const listsOwnerRef = useRef(ownUid);
+  /** Los perfiles cuya biblioteca ya se pidió para «Perfiles» (regla 4), para no pedirla dos veces a la vez. */
+  const completedRequestedRef = useRef(new Set<string>());
   useEffect(() => {
     if (listsOwnerRef.current === ownUid) return;
     listsOwnerRef.current = ownUid;
+    completedRequestedRef.current = new Set();
     setRawForeignGames({});
     setForeignProfileFailed({});
   }, [ownUid]);
@@ -151,6 +162,43 @@ export function useForeignProfileGames(options: ForeignProfileGamesOptions): For
       cancelled = true;
     };
   }, [activePanel, detailProfileId, directory, fallbackToken, ownProfileId, ownUid, profileDetailId, rawForeignGames, relationshipWith]);
+
+  // REGLA 4: en «Perfiles» y solo con el claim, los amigos de los que su canal no cuenta nada (`rowActivity` sin
+  // respuesta). Se pide su biblioteca de dos en dos y sin indicador de carga: la pantalla ya está pintada y la línea
+  // aparece cuando llega. Una carga sin resultado (sin token ni caché) se olvida, y se reintenta si llega el token.
+  const completedTargets = useMemo(() => {
+    if (activePanel !== 'profiles' || !isAdmin) return [];
+    return directory
+      .filter((entry) => entry.gamesGistId
+        && !isOwnProfileIdentity(entry.id, ownUid, ownProfileId)
+        && relationshipWith(entry.uid) === 'friends'
+        && !rowActivity(entry.moves || [], entry.activity || []))
+      .map((entry) => ({ profileId: entry.id, gamesGistId: entry.gamesGistId }));
+  }, [activePanel, directory, isAdmin, ownProfileId, ownUid, relationshipWith]);
+
+  useEffect(() => {
+    const pending = completedTargets.filter(({ profileId }) =>
+      !rawForeignGames[profileId] && !completedRequestedRef.current.has(profileId));
+    if (pending.length === 0) return;
+    const owner = ownUid;
+    const token = getSocialSyncConfig()?.token || fallbackToken || null;
+    for (const { profileId } of pending) completedRequestedRef.current.add(profileId);
+    const queue = [...pending];
+    const worker = async () => {
+      for (let next = queue.shift(); next; next = queue.shift()) {
+        const { profileId, gamesGistId } = next;
+        const games = await loadForeignProfileGames({ profileId, gamesGistId, token }).catch(() => null);
+        // Otra cuenta entró mientras tanto: lo bajado era de las amistades de la anterior.
+        if (listsOwnerRef.current !== owner) return;
+        if (!games) {
+          completedRequestedRef.current.delete(profileId);
+          continue;
+        }
+        setRawForeignGames((prev) => (prev[profileId] ? prev : { ...prev, [profileId]: games }));
+      }
+    };
+    for (let i = 0; i < PROFILES_COMPLETED_CONCURRENCY; i += 1) void worker();
+  }, [completedTargets, fallbackToken, ownUid, rawForeignGames]);
 
   /**
    * Obtiene un `GameItem` para un evento del feed. Para perfiles ajenos usa su lista bajada (ya filtrada por su

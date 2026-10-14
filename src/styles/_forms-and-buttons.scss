@@ -534,7 +534,7 @@ a.btn, a.btn:hover { text-decoration: none; }
    principal salían del mismo color, y la navegación alternaba dos tonos según la POSICIÓN en la fila (medido el
    09-10-2026: entre 6 y 9 aspectos distintos de 15 variantes, según el tema). Cada función lleva un MATERIAL:
 
-     MACIZO   confirmar (`.btn-primary`) · abrir / ir (`.btn-open`, con su › detrás) · encendido
+     MACIZO   confirmar (`.btn-primary`) · abrir / ir (`.btn-open`, con su › detrás si no lleva icono) · encendido
               (`.btn-toggle.active`, `.btn.is-active`) · destruir (`.btn-danger`)
      TEÑIDO   mover de lista (`.btn-playing/-upcoming/-complete/-abandoned`, el color de su lista) · positivo social
               (`.btn-social`) · salir, que se deshace (`.btn-exit`) · lo ya hecho, «Copiado» (`.btn-done`) · la
@@ -582,7 +582,8 @@ html:root .btn.btn-friend > .ui-icon {
   background: linear-gradient(180deg, var(--role-c), color-mix(in srgb, var(--role-c) 86%, #000));
   color: var(--role-ink); border-color: color-mix(in srgb, var(--role-c) 60%, #000);
 }
-/* El › de «abrir» va detrás del rótulo y se aparta un pelo al pasar por encima: dice «te llevo». */
+/* El › de «abrir» va detrás del rótulo y se aparta un pelo al pasar por encima: dice «te llevo». SOLO EN LOS BOTONES SIN
+   ICONO (14-10-2026): con un icono delante y la flecha detrás, el botón llevaba dos dibujos y se leía cargado. */
 .btn-open > .btn-open-go { width: 1em; height: 1em; margin-inline-start: -.15rem; transition: transform .15s ease; }
 .btn-open:not(:disabled):hover > .btn-open-go { transform: translateX(2px); }
 

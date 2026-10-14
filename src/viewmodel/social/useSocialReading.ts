@@ -21,6 +21,7 @@ import { isVisibilityKnown, type SocialActivityFeedItem, type SocialDirectoryEnt
 import { LOCKED_VISIBILITY } from '../../core/utils/profileVisibility';
 import { OWN_PROFILE_ALIAS, type SocialRouteState } from './socialRoutes';
 import { useForeignProfileGames } from './useForeignProfileGames';
+import { lastCompletedGame } from '../../core/social/directoryRow';
 import { useRelatedReviews } from './useRelatedReviews';
 
 export interface SocialReadingInput {
@@ -115,6 +116,20 @@ export function useSocialReading({
     defaultVisibility,
     fallbackToken,
   });
+
+  /**
+   * EL ÚLTIMO COMPLETADO DE CADA AMIGO cuya biblioteca está bajada, para el renglón de «Perfiles» (regla 4 de
+   * `useForeignProfileGames`). Solo para la administración: es la que la baja, y la única que lo ve.
+   */
+  const lastCompletedByProfile = useMemo(() => {
+    const out: Record<string, string> = {};
+    if (!isAdmin) return out;
+    for (const [profileId, lists] of Object.entries(foreignGames)) {
+      const name = lastCompletedGame(lists.c || []);
+      if (name) out[profileId] = name;
+    }
+    return out;
+  }, [foreignGames, isAdmin]);
 
   const selectedProfileDetail = useMemo(() => {
     // La vista de perfil, la de reseñas y el detalle de una reseña comparten el mismo perfil seleccionado.
@@ -415,6 +430,7 @@ export function useSocialReading({
 
   return {
     activeDetailEvent,
+    lastCompletedByProfile,
     selectedProfileDetail,
     activeProfileReview,
     activeProfileReviewEvent,

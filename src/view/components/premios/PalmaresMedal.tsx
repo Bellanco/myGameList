@@ -15,19 +15,19 @@ export type PalmaresMedalSize = keyof typeof SIZES;
 /**
  * EL TROFEO DE UNA EDICIÓN GANADA, con forma de logro.
  *
- * Es una medalla como las del catálogo —mismo orbe de vidrio, mismo dibujo blanco, mismo aro— y eso es
+ * Es una medalla como las del catálogo —mismo escudo de vidrio, mismo dibujo blanco, mismo contorno— y eso es
  * deliberado: para quien la mira es un logro más de su perfil. Lo que cambia por dentro es de dónde sale
  * el dato (ver `PalmaresEntry`): esto lo concede el administrador al publicar, no se deriva de la biblioteca, y
  * por eso no entra en el catálogo ni en su mapa de bits.
  *
  * QUÉ LA HACE ESPECIAL, y se nota sin leer nada:
  *
- *  · **EL METAL DICE EL PUESTO, y lo dice entero**: el color del orbe, del aro y del halo. Oro el primero, plata
+ *  · **EL METAL DICE EL PUESTO, y lo dice entero**: el color del vidrio, del contorno y del halo. Oro el primero, plata
  *    el segundo, bronce el tercero, cobre el cuarto y el quinto —más rojizo que el bronce, para que no se
  *    confundan— y azul la participación (decisiones del 28-09-2026). Ese color, en el catálogo, es la rareza; aquí
- *    no la mide, porque solo hay cinco puestos por edición y medirla no diría nada. El aro va entero: no hay
+ *    no la mide, porque solo hay cinco puestos por edición y medirla no diría nada. El contorno va entero: no hay
  *    escalera que contar. Los metales viven en la hoja de premios.
- *  · **La píldora del canto lleva el puesto** («3.º»), no un umbral. El AÑO va en el rótulo de debajo («3.º en
+ *  · **La píldora de la punta lleva el puesto** («3.º»), no un umbral. El AÑO va en el rótulo de debajo («3.º en
  *    Game Awards 2021»), que es lo que separa las ediciones de la hoja de cálculo (2020–2024) de las jugadas
  *    aquí, y ordena la vitrina.
  *
@@ -59,6 +59,7 @@ export const PalmaresMedal = memo(function PalmaresMedal({ entry, size = 'md' }:
     <span
       className={`ach-medal premios-palmares-medal ${clase}`}
       style={{ '--sz': `${side}px` } as CSSProperties}
+      data-size={size}
       role="img"
       aria-label={L.medalAria(entry.rank, entry.seasonName, palmaresPlace(entry))}
       data-rarity={participa ? L.rarityParticipation : L.rarity}
@@ -70,7 +71,7 @@ export const PalmaresMedal = memo(function PalmaresMedal({ entry, size = 'md' }:
         </svg>
         <span className="ach-light" />
       </span>
-      {/* La píldora del canto, con el PUESTO (o el año, si es de participar). Fuera del lienzo, como en las
+      {/* La píldora de la punta, con el PUESTO (o el año, si es de participar). Fuera del lienzo, como en las
           medallas del catálogo: montada en el borde de abajo es lo que la hace caber a 48 px sin tapar el dibujo.
           A 28 no sale, que es donde no cabe nada legible. */}
       {size === 'sm' ? null : (

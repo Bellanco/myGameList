@@ -370,11 +370,27 @@ export const SOCIAL_UI = {
     refresh: 'Actualizar',
     refreshing: 'Actualizando...',
     searchLabel: 'Buscar por nombre',
-    searchPlaceholder: 'Filtrar perfiles por nombre',
-    resultCount: (count: number) => (count === 1 ? '1 perfil visible' : `${count} perfiles visibles`),
+    searchPlaceholder: 'Buscar por nombre',
     loading: 'Cargando perfiles...',
     empty: 'No hay perfiles que mostrar.',
     openProfileAria: (name: string) => `Abrir perfil social de ${name}`,
+    // EL RENGLÓN DE CADA PERSONA (14-10-2026). Con un amigo, qué ha hecho últimamente —a qué juega, qué terminó, qué
+    // añadió o qué analizó; ver `rowActivity`—; con el resto, en qué punto está la solicitud, con las palabras de
+    // cualquier red social y en pareja. Los verbos, cortos: van delante del juego en un renglón estrecho.
+    activity: { e: 'Jugando a', c: 'Terminó', v: 'Abandonó', p: 'Añadió', d: 'Añadió', review: 'Analizó' },
+    incomingNote: 'Solicitud recibida',
+    outgoingNote: 'Solicitud enviada',
+    // Solo para la administración. Sin hora: basta con la idea («hace 2 días», «hace 2 meses»).
+    lastSeen: (daysAgo: number) => {
+      const months = Math.floor(daysAgo / 30);
+      const years = Math.floor(daysAgo / 365);
+      const when = daysAgo <= 0 ? 'hoy'
+        : daysAgo === 1 ? 'ayer'
+          : daysAgo < 30 ? `hace ${daysAgo} días`
+            : daysAgo < 365 ? (months === 1 ? 'hace un mes' : `hace ${months} meses`)
+              : years === 1 ? 'hace un año' : `hace ${years} años`;
+      return `Última conexión: ${when}`;
+    },
     friendsTitle: 'Amigos',
     othersTitle: 'Descubrir',
     // El recuento por sección se muestra porque con muchos amigos es la única forma de saber a qué te enfrentas
@@ -431,6 +447,9 @@ export const SOCIAL_UI = {
   },
   friendship: {
     add: 'Añadir amigo',
+    // En el renglón de «Perfiles», al lado del nombre: «Añadir amigo» le quitaba el sitio al texto en el móvil. El
+    // nombre accesible sigue diciendo la acción entera (`addAria`).
+    addShort: 'Añadir',
     accept: 'Aceptar',
     pending: 'Pendiente',
     withdraw: 'Retirar',

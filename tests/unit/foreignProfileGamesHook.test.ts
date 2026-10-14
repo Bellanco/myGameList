@@ -191,3 +191,37 @@ describe('listados de otra persona', () => {
     expect(applyProfileVisibility).toHaveBeenLastCalledWith(LISTAS, LOCKED_VISIBILITY, true);
   });
 });
+
+// REGLA 4 (14-10-2026): en «Perfiles», y solo con el claim, se baja la biblioteca de los amigos de los que su canal no
+// cuenta nada, para enseñar su último completado. Nadie más paga esa descarga.
+describe('«Perfiles»: el último completado, solo para la administración', () => {
+  const enPerfiles = { activePanel: 'profiles', profileDetailId: '' };
+  const conMovimiento = entrada({
+    id: 'perfil-bea', uid: 'uid-bea', gamesGistId: 'cccc3333',
+    moves: [{ id: '1:e', gameId: 1, gameName: 'Hades', tab: 'e', at: 100, updatedAt: 100 }],
+  });
+
+  it('a la administración le baja la biblioteca de los amigos sin nada que contar, y solo la de ellos', async () => {
+    const { result } = setup({ ...enPerfiles, isAdmin: true, directory: [entrada(), conMovimiento] as never });
+
+    await waitFor(() => expect(result.current.foreignGames['perfil-ana']).toBeTruthy());
+    expect(loadForeignProfileGames).toHaveBeenCalledTimes(1);
+    expect(loadForeignProfileGames).toHaveBeenCalledWith({
+      profileId: 'perfil-ana', gamesGistId: 'bbbb2222', token: 'ghp_0123456789abcdefghij',
+    });
+    // Sin indicador de carga: la pantalla ya está pintada y la línea aparece al llegar.
+    expect(result.current.loadingForeignProfile).toBe(false);
+  });
+
+  it('sin el claim no se baja nada', async () => {
+    setup({ ...enPerfiles, isAdmin: false });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(loadForeignProfileGames).not.toHaveBeenCalled();
+  });
+
+  it('ni siquiera la administración baja la de quien no es amigo', async () => {
+    setup({ ...enPerfiles, isAdmin: true, relationshipWith: () => 'none' });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(loadForeignProfileGames).not.toHaveBeenCalled();
+  });
+});

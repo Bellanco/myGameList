@@ -30,7 +30,7 @@ const MODOS = (args.modos || 'dark,light').split(',');
 // Las mismas claves que `PANTALLAS` y `VARIANTES` de `docs/maquetas/social.tsx`.
 const TODAS = [
   'pasarela', 'pasarela&abrir=recuperando', 'pasarela&abrir=sin-nada', 'pasarela&abrir=vuelves',
-  'feed', 'feed-vacio', 'feed-fallo', 'feed-fallo-parcial', 'feed-github', 'aviso-legal', 'aviso-resumen', 'amigos', 'solicitudes', 'notificaciones-me-gusta', 'solicitudes-vacia',
+  'feed', 'feed-vacio', 'feed-fallo', 'feed-fallo-parcial', 'feed-github', 'aviso-legal', 'aviso-resumen', 'amigos', 'amigos&abrir=admin', 'solicitudes', 'notificaciones-me-gusta', 'solicitudes-vacia',
   'perfil', 'perfil&vista=resenas', 'perfil&abrir=estadisticas', 'perfil&abrir=resumen',
   'perfil-propio', 'perfil-propio&vista=publicaciones', 'ajustes', 'logros', 'globales', 'resena', 'resena-perfil',
   'compartir-resumen', 'compartir-resumen&abrir=al-dia', 'compartir-resumen&abrir=cambiado', 'compartir-resumen&abrir=espera',

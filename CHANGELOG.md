@@ -5,6 +5,35 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.7.5] - 2026-10-14
+
+### Changed
+
+- **Las medallas de logro son ahora escudos.** El mismo vidrio del color de su rareza, el mismo dibujo en blanco y
+  la misma cifra, en la punta, con silueta de escudo redondeado. Los tres segmentos del tramo siguen el contorno:
+  suben por la izquierda, cruzan por arriba y bajan por la derecha. Los trofeos del palmarés de la porra y la baldosa
+  del «+N» de la tira también; la cifra de la baldosa encoge según sus dígitos para no salirse nunca.
+- **«Perfiles» en renglones, con lo que juega cada amigo.** Cada persona es un renglón con su avatar, su nombre y
+  una línea de estado. La de un amigo dice a qué juega o qué acaba de terminar; si no hay nada de eso, lo último que
+  añadió o abandonó, y si tampoco, su última reseña. La administración ve además, cuando no hay nada de eso, su último
+  completado. Con las carátulas encendidas, lleva la portada de ese juego recortada detrás, como el renglón del
+  listado. «Descubrir» va también en renglones, ordenado por lo que se puede hacer: primero las solicitudes
+  recibidas, luego el resto y al final las enviadas, con «Solicitud recibida» y «Solicitud enviada» escritos en el
+  renglón. El buscador cabe en una línea y la muesca de rango ya no sale en esta pantalla. Solo la administración ve
+  además la última conexión de cada persona.
+- **Nuevo orden en los botones de la ficha de un perfil:** Estadísticas, Publicaciones, Reseñas, Resumen del año y
+  «Elige tu próximo juego».
+- **El porcentaje de logros dice de qué es.** «76 % del catálogo» pasa a «76 % de los logros» en la ficha, y en
+  Estadísticas, «… de los logros que hay hoy».
+- **Sin flecha en los botones que ya llevan icono.** La › de «abrir» queda solo en los botones sin icono: «Ver
+  perfiles», «Editar mi perfil», «Ver bandeja» y los demás que tenían los dos dibujos ya no la llevan.
+
+### Removed
+
+- **Capacidad ya no enseña lecturas, escrituras y borrados de Firestore.** Solo se pueden leer de Cloud Monitoring, y
+  su API exige tener la facturación activada: con el plan gratuito, los tres medidores solo decían «No se pudo
+  medir». Quedan los de KV, Functions y carátulas.
+
 ## [1.7.4] - 2026-10-14
 
 ### Added

@@ -92,7 +92,6 @@ function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, on
           <button type="button" className="btn btn-open import-card-action" onClick={onGoSettings}>
             <Icon name={COMMON_ICONS.upload} />
             <span>{M.goSettings}</span>
-            <Icon name="angle-right" className="ui-icon btn-open-go" />
           </button>
         </div>
       </div>

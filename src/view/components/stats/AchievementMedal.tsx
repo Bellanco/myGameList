@@ -35,8 +35,8 @@ interface AchievementMedalProps {
 }
 
 /**
- * La medalla. UN ORBE DE VIDRIO: una esfera oscura llena del color de su rareza, con el reflejo arriba a la
- * izquierda, el dibujo en blanco encima y tres segmentos de luz en el canto. Es la misma en los ocho temas y en
+ * La medalla. UN ESCUDO DE VIDRIO: vidrio oscuro lleno del color de su rareza, con el reflejo arriba a la
+ * izquierda, el dibujo en blanco encima y tres segmentos de luz por el contorno. Es la misma en los ocho temas y en
  * los dos modos —un objeto, no cromo de la app—, y el vidrio oscuro es lo que la hace legible sobre cualquier
  * fondo y a los 28 px de la tira de novedades (receta en `docs/logros/receta-medalla.md`).
  *
@@ -45,19 +45,19 @@ interface AchievementMedalProps {
  * color— y otra en blanco. No hay imagen y no hay coste por icono.
  *
  * TRES SEÑALES Y CADA UNA EN SU CANAL, que es lo que impide que se pisen:
- *   · **color del orbe y del aro** → la RAREZA (escala de loot de RPG, saltándose el azul porque es el acento)
- *   · **segmentos del aro** → el TRAMO de la escalera: 1, 2 o 3 encendidos
- *   · **píldora del canto** → LA CIFRA de ese escalón: «×100», «≤5», «75%»
+ *   · **color del vidrio y del halo** → la RAREZA (escala de loot de RPG, saltándose el azul porque es el acento)
+ *   · **segmentos del contorno** → el TRAMO de la escalera: 1, 2 o 3 encendidos
+ *   · **píldora de la punta** → LA CIFRA de ese escalón: «×100», «≤5», «75%»
  *
- * LA PÍLDORA VA MONTADA EN EL BORDE DE ABAJO, no dentro. Es lo que la hace caber: a 48 px una pastilla centrada
- * en el disco tapaba el dibujo, y en la esquina se salía por la curva. Cruzando el canto tapa justo el hueco de
- * abajo entre segmentos, deja el dibujo entero y gana el fondo oscuro que necesita para leerse.
+ * LA PÍLDORA VA MONTADA EN LA PUNTA, no dentro. Es lo que la hace caber: a 48 px una pastilla centrada tapaba el
+ * dibujo, y en una esquina se salía por la curva. Cruzando el borde de abajo tapa justo la punta, donde los
+ * segmentos se cortan, deja el dibujo entero y gana el fondo oscuro que necesita para leerse.
  *
  * Y VA SIN UNIDAD: dentro de una escalera la unidad es siempre la misma, así que «52» dice lo mismo que «52 sem»
  * en la mitad de sitio. La unidad la pone la fila del listado, que escribe la condición entera.
  *
  * NO SALE EN `sm` (28 px). Ahí no cabe nada legible y la tarjeta del feed no es un sitio donde se comparen
- * escalones; la señal de escalón que sí sobrevive a ese tamaño son los segmentos, que dan la vuelta al disco.
+ * escalones; la señal de escalón que sí sobrevive a ese tamaño son los segmentos, que dan la vuelta al escudo.
  * Es también la razón por la que se retiró el numeral romano: el romano no sobrevivía a la tira y el canto sí.
  *
  * TODAS MIDEN EXACTAMENTE LO MISMO, tenga el logro el grado que tenga y esté conseguido, bloqueado u oculto: una
@@ -74,7 +74,7 @@ export const AchievementMedal = memo(function AchievementMedal({
   const locked = level < 1;
 
   // EL TEMPLE (los segmentos encendidos) DICE QUÉ ESCALÓN ES, no en qué nivel está: el nivel de un escalón solo
-  // puede ser 0 o 1, así que sacarlo del estado dejaría todas las medallas con el mismo aro.
+  // puede ser 0 o 1, así que sacarlo del estado dejaría todas las medallas con el mismo contorno.
   //
   // Y EL OCULTO NO LO LLEVA, por lo mismo que no lleva su color (§6.7): tres segmentos encendidos sobre un «?»
   // dicen que hay una escalera larga detrás y que estás al final de ella, que es media pista.
@@ -86,7 +86,7 @@ export const AchievementMedal = memo(function AchievementMedal({
 
   // El nombre accesible lo lleva la MEDALLA, no un `title`: el `title` no sale con teclado, no sale en táctil y
   // los lectores de pantalla lo tratan de forma desigual. Sin esto, la tira solo-imagen de la ficha social sería
-  // ilegible para quien no ve el disco.
+  // ilegible para quien no ve la medalla.
   const label = masked
     ? ACHIEVEMENTS_UI.medalHiddenAria
     : locked
@@ -96,7 +96,7 @@ export const AchievementMedal = memo(function AchievementMedal({
   const classes = [
     'ach-medal',
     // EL OCULTO NO LLEVA SU COLOR. El color dice la rareza, y la rareza de un oculto es una pista de cuál es: con
-    // seis excepcionales en el catálogo, un orbe naranja con un «?» reduce la adivinanza a seis casillas. La
+    // seis excepcionales en el catálogo, un escudo naranja con un «?» reduce la adivinanza a seis casillas. La
     // regla del §6.7 es «nunca una pista», y esto lo era. Al conseguirlo aparece el color como en cualquier otro.
     masked ? 'is-comun' : `is-${def.rarity}`,
     // EL BLOQUEADO SÍ LLEVA TEMPLE, y el oculto no. No es una excepción caprichosa: de un logro bloqueado se
@@ -114,6 +114,8 @@ export const AchievementMedal = memo(function AchievementMedal({
     <span
       className={classes}
       style={{ '--sz': `${side}px` } as CSSProperties}
+      // El tamaño con nombre, además del lado: en las dos pequeñas la hoja engorda los segmentos.
+      data-size={size}
       role="img"
       aria-label={label}
       data-rarity={masked ? undefined : ACHIEVEMENT_RARITY_LABELS[def.rarity]}
