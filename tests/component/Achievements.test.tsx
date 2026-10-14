@@ -424,7 +424,7 @@ describe('el listado propio', () => {
     expect(screen.queryByText(/sello de las dos listas/)).not.toBeInTheDocument();
   });
 
-  it('la cabecera dice cuántos del catálogo, con esas palabras', () => {
+  it('la cabecera dice cuántos de los logros que hay hoy, con esas palabras', () => {
     const summary = summarize([{ id: 'completados-25', level: 1, value: 60, next: null, unlockedAt: 0 }]);
     render(<AchievementsScreen items={lista} summary={summary} rarity={null} />);
     // El denominador SALE DEL RESUMEN y no se escribe a mano: cuenta lo que hoy está ABIERTO, no el catálogo
@@ -432,7 +432,7 @@ describe('el listado propio', () => {
     // tocar este test cada vez que se añade un escalón, sin comprobar nada a cambio.
     expect(screen.getByText(`${summary.earned}/${summary.total}`)).toBeInTheDocument();
     expect(summary.earned).toBe(1);
-    expect(screen.getByText(`${summary.percent}% del catálogo actual`)).toBeInTheDocument();
+    expect(screen.getByText(`${summary.percent} % de los logros que hay hoy`)).toBeInTheDocument();
   });
 
   it('el NIVEL de perfil no se enseña, aunque siga calculándose', () => {

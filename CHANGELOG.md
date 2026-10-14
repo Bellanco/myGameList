@@ -21,6 +21,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   además la última conexión de cada persona.
 - **Nuevo orden en los botones de la ficha de un perfil:** Estadísticas, Publicaciones, Reseñas, Resumen del año y
   «Elige tu próximo juego».
+- **El porcentaje de logros dice de qué es.** «76 % del catálogo» pasa a «76 % de los logros» en la ficha, y en
+  Estadísticas, «… de los logros que hay hoy».
 - **Sin flecha en los botones que ya llevan icono.** La › de «abrir» queda solo en los botones sin icono: «Ver
   perfiles», «Editar mi perfil», «Ver bandeja» y los demás que tenían los dos dibujos ya no la llevan.
 

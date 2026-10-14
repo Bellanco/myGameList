@@ -29,12 +29,16 @@ export const ACHIEVEMENTS_UI = {
   cardAction: 'Ver todos tus logros',
   seeAll: 'Ver todos los logros',
 
-  /** Las dos cifras (§6.10). El denominador dice «del catálogo actual» con esas palabras, y no es un adorno. */
+  /**
+   * Las dos cifras (§6.10). El porcentaje dice DE QUÉ es: de los logros conseguidos sobre los que hay. Decía «del
+   * catálogo», que es la palabra de quien lo programa, no la de quien lo lee (14-10-2026). En la cabecera lleva
+   * «que hay hoy», que es lo que decía «actual» y no es un adorno: añadir logros baja la fracción de todo el mundo.
+   */
   count: (earned: number, total: number) => `${earned}/${total}`,
-  countHint: (percent: number) => `${percent}% del catálogo actual`,
+  countHint: (percent: number) => `${percent} % de los logros que hay hoy`,
   countLabel: 'Logros',
   /** Pie de la tira de la ficha: la cifra sola («77 %») no decía de qué era (09-10-2026). */
-  catalogShare: (percent: number) => `${percent} % del catálogo`,
+  catalogShare: (percent: number) => `${percent} % de los logros`,
   // LOS TEXTOS DEL NIVEL DE PERFIL SE RETIRAN AQUÍ Y NO EN EL NÚCLEO. Los puntos por rareza y la curva por
   // tramos siguen calculándose y probándose (`core/achievements/summary`), pero no se enseñan mientras no esté
   // decidido cómo se presentan. Cuando lo esté, estos cuatro textos son lo que hace falta:

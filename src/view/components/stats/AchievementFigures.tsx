@@ -22,7 +22,7 @@ export const AchievementFigures = memo(function AchievementFigures({ summary }: 
       <p className="ach-figure">
         <span className="ach-figure-label">{ACHIEVEMENTS_UI.countLabel}</span>
         <strong className="ach-figure-value">{ACHIEVEMENTS_UI.count(summary.earned, summary.total)}</strong>
-        {/* «del catálogo actual», con esas palabras: añadir logros baja la fracción de todo el mundo —el mismo
+        {/* «de los logros que hay hoy», con esas palabras: añadir logros baja la fracción de todo el mundo —el mismo
             efecto que tiene en Steam publicar logros de DLC— y eso se asume y se dice, no se disimula congelando
             la fracción por versión, que sería inventarse un número. */}
         <span className="ach-figure-hint">{ACHIEVEMENTS_UI.countHint(summary.percent)}</span>
