@@ -2,7 +2,7 @@
 // `fetch` de mentira, y lo que se comprueba es lo que DECIDE —el día que cuenta, cómo se suman las series, qué
 // pasa sin credenciales o con la API caída—.
 import { describe, expect, it } from 'vitest';
-import { pacificMidnight, readFirestoreUsage, sumTimeSeries } from '../../functions/_lib/gcpMonitoring';
+import { describeGoogleError, pacificMidnight, readFirestoreUsage, sumTimeSeries } from '../../functions/_lib/gcpMonitoring';
 import { parseCloudflareUsage, readCloudflareUsage } from '../../functions/_lib/cloudflareAnalytics';
 
 describe('Cloud Monitoring (Firestore)', () => {
@@ -43,6 +43,23 @@ describe('Cloud Monitoring (Firestore)', () => {
     expect(usage.configured).toBe(true);
     expect(usage.error).toBeTruthy();
     expect(usage.values.read).toBeNull();
+  });
+
+  it('un error de Google dice su motivo, que es lo que separa API apagada de rol que falta', () => {
+    expect(
+      describeGoogleError({
+        error: {
+          code: 403,
+          status: 'PERMISSION_DENIED',
+          message: 'Cloud Monitoring API has not been used in project 123 before or it is disabled.',
+          details: [{ '@type': 'type.googleapis.com/google.rpc.ErrorInfo', reason: 'SERVICE_DISABLED' }],
+        },
+      }),
+    ).toBe('SERVICE_DISABLED: Cloud Monitoring API has not been used in project 123 before or it is disabled.');
+    expect(describeGoogleError({ error: { status: 'PERMISSION_DENIED', message: 'Permission denied' } })).toBe(
+      'PERMISSION_DENIED: Permission denied',
+    );
+    expect(describeGoogleError(null)).toBe('');
   });
 });
 
