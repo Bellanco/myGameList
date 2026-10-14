@@ -8,10 +8,11 @@
 // El repositorio se importa de forma estática y no por la fachada perezosa (`firebaseGateway`): este módulo solo
 // lo carga `AdminHub`, que ya es un chunk `lazy`, así que el SDK no entra en el grafo del arranque.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ADMIN_PANEL_UI } from '../core/constants/adminLabels';
+import { ADMIN_PANEL_UI, ADMIN_SHELL_UI } from '../core/constants/adminLabels';
 import { readAdminClaim, subscribeSocialAuth } from '../model/repository/firebaseGateway';
 import { ADMIN_ONLY_TIER, PROFILE_TIER_LABELS, type ProfileTier } from '../core/constants/tiers';
 import {
+  clearProfileAchievements,
   clearStrayProfilePhoto,
   deleteUserProfile,
   healUserFriendshipIdentity,
@@ -29,70 +30,54 @@ import {
   type LegacyProfileField,
 } from '../model/repository/firebaseAdminRepository';
 import type { AdminAnomaly } from '../model/types/firestore';
+import type { AdminLogEntry, AdminLogKind } from '../model/repository/admin/adminPanelStore';
+import type { AdminLogDraft } from './useAdminLog';
 
 export type AdminAccess = 'checking' | 'denied' | 'granted';
 
-export type AdminStatus = { kind: 'ok' | 'warn' | 'err'; text: string } | null;
+export type AdminStatus = {
+  kind: 'ok' | 'warn' | 'err';
+  text: string;
+  /** Si la acción es reversible y quedó apuntada en el registro, esto la deshace (el aviso lleva «Deshacer»). */
+  undo?: () => Promise<void>;
+} | null;
 
-/**
- * Señales que no son "estado raro" sino un problema con consecuencias hoy: un token en claro que cualquiera puede
- * leer, una foto a la vista que su dueño quiso ocultar, unas reseñas que no llegan al feed, o fechas imposibles. La ficha las destaca y la lista las pone primero,
- * para que no se pierdan entre las informativas (esquema antiguo, inactividad).
- */
-export const SEVERE_ANOMALIES: ReadonlySet<AdminAnomaly> = new Set<AdminAnomaly>([
-  'legacy-token',
-  'gist-drift',
-  'future-activity',
-  'created-after-activity',
-  'stray-photo',
-]);
+/** Lo que devuelve cada acción: su resultado y, si salió bien, lo que se apunta en el registro. */
+type ActionResult = NonNullable<AdminStatus> & { log?: AdminLogDraft };
 
-/** Qué fichas se enseñan: todas, las que tienen alguna señal, o las que tienen UNA señal concreta. */
-export type AdminSignalFilter = 'all' | 'flagged' | AdminAnomaly;
-
-function matchesSignal(user: AdminUserRow, filter: AdminSignalFilter): boolean {
-  if (filter === 'all') return true;
-  if (filter === 'flagged') return user.anomalies.length > 0;
-  return user.anomalies.includes(filter);
+/** Lo que el ViewModel necesita del registro (ver `useAdminLog`). Opcional: sin él, las acciones no se apuntan. */
+export interface AdminLogPort {
+  record: (draft: AdminLogDraft) => Promise<AdminLogEntry | null>;
+  undo: (entry: AdminLogEntry) => Promise<void>;
 }
 
-function isSevere(user: AdminUserRow): boolean {
-  return user.anomalies.some((code) => SEVERE_ANOMALIES.has(code));
+// Las señales graves y el filtro de la tabla viven en el núcleo (`core/admin/userFilters`): los filtros van en la
+// URL y la portada los necesita para enlazar con la tabla ya filtrada. Se reexportan aquí por compatibilidad.
+export { SEVERE_ANOMALIES } from '../core/admin/userFilters';
+
+const L = ADMIN_SHELL_UI.log.texts;
+
+/** La entrada del registro de una acción sobre `row`, con el nombre que se le veía en ese momento. */
+function logDraft(row: AdminUserRow, kind: AdminLogKind, text: string, undo: AdminLogEntry['undo'] = null): AdminLogDraft {
+  return { kind, text, targetUid: row.uid, targetName: row.displayName.trim() || row.knownAs.trim(), undo };
 }
 
-function matchesSearch(user: AdminUserRow, term: string): boolean {
-  if (!term) {
-    return true;
-  }
-  const needle = term.trim().toLowerCase();
-  // Se busca por TODO lo que identifica una fila en la pantalla, no solo por el nick del perfil: a quien lo tiene
-  // vacío la ficha lo identifica con el nombre que le dan sus amigos, y sin eso aquí era imposible encontrarlo
-  // escribiendo el nombre que se está leyendo. El pseudónimo entra por lo mismo: es lo que aparece en el gist y en
-  // las entradas del feed, así que es el término con el que se llega desde un dato publicado.
-  return (
-    user.displayName.toLowerCase().includes(needle) ||
-    user.knownAs.toLowerCase().includes(needle) ||
-    user.friendKnownNames.some((known) => known.toLowerCase().includes(needle)) ||
-    user.profileId.toLowerCase().includes(needle) ||
-    user.uid.toLowerCase().includes(needle) ||
-    user.id.toLowerCase().includes(needle)
-  );
-}
-
-export function useAdminViewModel() {
+export function useAdminViewModel(log?: AdminLogPort) {
+  // En una ref: el registro no tiene que rehacer las acciones (ni sus `useCallback`) cada vez que cambia.
+  const logRef = useRef(log);
+  useEffect(() => {
+    logRef.current = log;
+  }, [log]);
   const [access, setAccess] = useState<AdminAccess>('checking');
   // uid de la sesión: es lo que permite saber cuál de las filas es la del propio admin (la única a la que el
   // panel ofrece Mithril). Los documentos ya no publican el email, así que no hay otra forma de identificarla.
   const [ownUid, setOwnUid] = useState('');
   const [census, setCensus] = useState<AdminCensus | null>(null);
+  /** Cuándo se leyó el censo que se está enseñando (ms). 0 = aún nada. Lo pinta la línea de frescura. */
+  const [loadedAt, setLoadedAt] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [status, setStatus] = useState<AdminStatus>(null);
-  const [search, setSearch] = useState('');
-  // Filtro de atención. El censo crece y la búsqueda por texto no sirve para la pregunta que se hace al abrir el
-  // panel, que no es "¿dónde está fulano?" sino "¿hay algo que mirar hoy?" — y, en cuanto hay algo, "¿quién más
-  // tiene ESTO?", que es lo que responde filtrar por una señal concreta.
-  const [signalFilter, setSignalFilter] = useState<AdminSignalFilter>('all');
   const [busyId, setBusyId] = useState('');
   const mountedRef = useRef(true);
 
@@ -150,6 +135,7 @@ export function useAdminViewModel() {
       const next = await loadAdminCensus();
       if (!mountedRef.current) return;
       setCensus(next);
+      setLoadedAt(Date.now());
     } catch (loadError) {
       if (!mountedRef.current) return;
       setCensus(null);
@@ -189,14 +175,45 @@ export function useAdminViewModel() {
    * ha cambiado (releer es más honesto que parchear el estado). `scope`: su ficha, o el censo entero cuando la acción
    * cambia también filas ajenas (ver `readAdminCensusRow`).
    */
+  /** Deshace una acción apuntada y relee la ficha afectada. Lo usan el aviso de la acción y la pantalla del registro. */
+  const undoLogged = useCallback(
+    async (entry: AdminLogEntry) => {
+      const port = logRef.current;
+      if (!port || !entry.undo) return;
+      // SOLO SI SIGUE COMO LA DEJÓ ESA ACCIÓN. Deshacer escribe el valor de ANTES; si después hubo otro cambio (otra
+      // acción, o el propio usuario), escribirlo pisaría ese cambio. Con el censo delante se comprueba y se niega.
+      const current = censusRef.current?.users.find((user) => user.id === entry.undo?.profileDocId);
+      const undo = entry.undo;
+      const stillThere =
+        !current ||
+        (undo.action === 'tier' ? undo.to === undefined || current.tier === undo.to : undo.to === undefined || current.socialEnabled === undo.to);
+      if (!stillThere) {
+        setStatus({ kind: 'warn', text: ADMIN_SHELL_UI.log.undoStale });
+        return;
+      }
+      try {
+        await port.undo(entry);
+        if (!mountedRef.current) return;
+        setStatus({ kind: 'ok', text: ADMIN_SHELL_UI.log.undone(entry.text) });
+      } catch (undoError) {
+        console.warn('[admin] no se pudo deshacer:', undoError);
+        if (mountedRef.current) setStatus({ kind: 'err', text: ADMIN_SHELL_UI.log.undoFailed });
+      }
+      if (mountedRef.current) await refreshRow(entry.undo.profileDocId);
+    },
+    [refreshRow],
+  );
+
   const runAction = useCallback(
-    async (row: AdminUserRow, action: () => Promise<AdminStatus>, scope: 'row' | 'census' = 'row') => {
+    async (row: AdminUserRow, action: () => Promise<ActionResult>, scope: 'row' | 'census' = 'row') => {
       setBusyId(row.id);
       setStatus(null);
       try {
-        const result = await action();
+        const { log: draft, ...result } = await action();
+        // Se apunta lo que salió bien (también a medias: lo hecho, hecho está). El fallo del registro no para nada.
+        const entry = draft && result.kind !== 'err' && logRef.current ? await logRef.current.record(draft) : null;
         if (!mountedRef.current) return;
-        setStatus(result);
+        setStatus(entry?.undo ? { ...result, undo: () => undoLogged(entry) } : result);
       } catch (actionError) {
         console.warn('[admin] acción fallida:', actionError);
         if (!mountedRef.current) return;
@@ -212,7 +229,7 @@ export function useAdminViewModel() {
         }
       }
     },
-    [refresh, refreshRow],
+    [refresh, refreshRow, undoLogged],
   );
 
   const toggleSocial = useCallback(
@@ -220,7 +237,11 @@ export function useAdminViewModel() {
       runAction(row, async () => {
         const next = !row.socialEnabled;
         await setUserSocialEnabled(row.id, next);
-        return { kind: 'ok', text: next ? ADMIN_PANEL_UI.okEnabled : ADMIN_PANEL_UI.okDisabled };
+        return {
+          kind: 'ok',
+          text: next ? ADMIN_PANEL_UI.okEnabled : ADMIN_PANEL_UI.okDisabled,
+          log: logDraft(row, 'social', next ? L.socialOn : L.socialOff, { action: 'social', profileDocId: row.id, enabled: !next, to: next }),
+        };
       }),
     [runAction],
   );
@@ -236,7 +257,16 @@ export function useAdminViewModel() {
           return { kind: 'warn', text: ADMIN_PANEL_UI.tierReservedWarning };
         }
         await setUserTier(row.id, tier);
-        return { kind: 'ok', text: ADMIN_PANEL_UI.okTier(PROFILE_TIER_LABELS[tier]) };
+        return {
+          kind: 'ok',
+          text: ADMIN_PANEL_UI.okTier(PROFILE_TIER_LABELS[tier]),
+          log: logDraft(row, 'tier', L.tier(PROFILE_TIER_LABELS[row.tier], PROFILE_TIER_LABELS[tier]), {
+            action: 'tier',
+            profileDocId: row.id,
+            tier: row.tier,
+            to: tier,
+          }),
+        };
       }),
     [ownUid, runAction],
   );
@@ -250,7 +280,7 @@ export function useAdminViewModel() {
           return { kind: 'warn', text: ADMIN_PANEL_UI.legacyEmailLocked };
         }
         await purgeLegacyProfileFields(row.id, [field]);
-        return { kind: 'ok', text: ADMIN_PANEL_UI.okPurged };
+        return { kind: 'ok', text: ADMIN_PANEL_UI.okPurged, log: logDraft(row, 'legacy', L.legacy(field)) };
       }),
     [runAction],
   );
@@ -273,6 +303,7 @@ export function useAdminViewModel() {
         }
         const result = await migrateForeignProfileDoc(row.id, row.uid);
         return {
+          log: logDraft(row, 'cutover', L.cutover),
           kind: 'ok',
           text: result.outcome === 'moved'
             ? ADMIN_PANEL_UI.cutover.okMoved
@@ -297,9 +328,9 @@ export function useAdminViewModel() {
         const result = await healUserFriendshipIdentity(row.uid, { name, photoURL: row.photoURL });
         if (!result.ok) {
           console.warn('[admin] propagación incompleta:', result.failures);
-          return { kind: 'warn', text: ADMIN_PANEL_UI.healIdentity.partial };
+          return { kind: 'warn', text: ADMIN_PANEL_UI.healIdentity.partial, log: logDraft(row, 'identity', L.identity) };
         }
-        return { kind: 'ok', text: ADMIN_PANEL_UI.healIdentity.ok(result.touched) };
+        return { kind: 'ok', text: ADMIN_PANEL_UI.healIdentity.ok(result.touched), log: logDraft(row, 'identity', L.identity) };
       }),
     [runAction],
   );
@@ -321,9 +352,9 @@ export function useAdminViewModel() {
         const result = await setUserDisplayName(row.id, row.uid, clean, row.photoURL);
         if (!result.ok) {
           console.warn('[admin] no se pudo fijar el nombre:', result.failures);
-          return { kind: 'warn', text: ADMIN_PANEL_UI.chooseName.partial };
+          return { kind: 'warn', text: ADMIN_PANEL_UI.chooseName.partial, log: logDraft(row, 'identity', L.name(clean)) };
         }
-        return { kind: 'ok', text: ADMIN_PANEL_UI.chooseName.ok(clean, result.touched) };
+        return { kind: 'ok', text: ADMIN_PANEL_UI.chooseName.ok(clean, result.touched), log: logDraft(row, 'identity', L.name(clean)) };
       }),
     [runAction],
   );
@@ -335,9 +366,9 @@ export function useAdminViewModel() {
         const result = await clearStrayProfilePhoto(row.id, row.uid, row.photoURL);
         if (!result.ok) {
           console.warn('[admin] retirada de foto incompleta:', result.failures);
-          return { kind: 'warn', text: ADMIN_PANEL_UI.strayPhoto.partial };
+          return { kind: 'warn', text: ADMIN_PANEL_UI.strayPhoto.partial, log: logDraft(row, 'photo', L.photo) };
         }
-        return { kind: 'ok', text: ADMIN_PANEL_UI.strayPhoto.ok };
+        return { kind: 'ok', text: ADMIN_PANEL_UI.strayPhoto.ok, log: logDraft(row, 'photo', L.photo) };
       }),
     [runAction],
   );
@@ -359,7 +390,10 @@ export function useAdminViewModel() {
         const result = await clearStrayProfilePhoto(target.id, target.uid, target.photoURL);
         if (!result.ok) console.warn('[admin] retirada de foto incompleta:', target.id, result.failures);
         // El perfil es lo que se ve en el directorio: si ese se escribió, la foto ya no está a la vista.
-        if (result.profileCleared) done += 1;
+        if (result.profileCleared) {
+          done += 1;
+          await logRef.current?.record(logDraft(target, 'photo', L.photo));
+        }
       } catch (error) {
         console.warn('[admin] no se pudo retirar la foto:', target.id, error);
       }
@@ -373,6 +407,64 @@ export function useAdminViewModel() {
     await refresh();
   }, [refresh]);
 
+  /**
+   * ACCIONES EN LOTE de la tabla: la misma escritura que la de una ficha, una detrás de otra —no en paralelo— para
+   * que un fallo a mitad deje un recuento honesto de cuántas salieron. Un perfil que no se deja escribir no para a
+   * los demás. Al acabar se relee el censo entero (son varias filas).
+   */
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const runBulk = useCallback(
+    async (rows: readonly AdminUserRow[], action: (row: AdminUserRow) => Promise<AdminLogDraft | null>) => {
+      if (rows.length === 0) return;
+      setBulkBusy(true);
+      setStatus(null);
+      let done = 0;
+      for (const row of rows) {
+        try {
+          const draft = await action(row);
+          done += 1;
+          if (draft && logRef.current) await logRef.current.record(draft);
+        } catch (error) {
+          console.warn('[admin] acción en lote fallida:', row.id, error);
+        }
+      }
+      if (!mountedRef.current) return;
+      setBulkBusy(false);
+      setStatus({ kind: done === rows.length ? 'ok' : 'warn', text: ADMIN_SHELL_UI.users.bulk.done(done, rows.length) });
+      await refresh();
+    },
+    [refresh],
+  );
+
+  /** Cambia el rango de varias personas. Mithril nunca entra en lote: es solo del administrador. */
+  const bulkSetTier = useCallback(
+    (rows: readonly AdminUserRow[], tier: ProfileTier) =>
+      runBulk(
+        // Ni se da Mithril en lote ni se quita: «seleccionar todo» y «Oro» rebajaba también la cuenta del administrador.
+        rows.filter((row) => row.tier !== tier && row.tier !== ADMIN_ONLY_TIER && tier !== ADMIN_ONLY_TIER),
+        async (row) => {
+          await setUserTier(row.id, tier);
+          return logDraft(row, 'tier', L.tier(PROFILE_TIER_LABELS[row.tier], PROFILE_TIER_LABELS[tier]), {
+            action: 'tier',
+            profileDocId: row.id,
+            tier: row.tier,
+            to: tier,
+          });
+        },
+      ),
+    [runBulk],
+  );
+
+  /** Suspende el social de varias personas (las que ya lo tienen suspendido se saltan). */
+  const bulkDisableSocial = useCallback(
+    (rows: readonly AdminUserRow[]) =>
+      runBulk(rows.filter((row) => row.socialEnabled), async (row) => {
+        await setUserSocialEnabled(row.id, false);
+        return logDraft(row, 'social', L.socialOff, { action: 'social', profileDocId: row.id, enabled: true, to: false });
+      }),
+    [runBulk],
+  );
+
   /** Borra sus solicitudes enviadas que llevan más de 180 días pendientes. */
   const purgeFossilRequests = useCallback(
     (row: AdminUserRow) =>
@@ -380,10 +472,23 @@ export function useAdminViewModel() {
         const result = await purgeFossilFriendshipRequests(row.uid);
         if (!result.ok) {
           console.warn('[admin] purga incompleta:', result.failures);
-          return { kind: 'warn', text: ADMIN_PANEL_UI.fossil.partial };
+          return { kind: 'warn', text: ADMIN_PANEL_UI.fossil.partial, log: logDraft(row, 'requests', L.requests(result.touched)) };
         }
-        return { kind: 'ok', text: ADMIN_PANEL_UI.fossil.ok(result.touched) };
+        return { kind: 'ok', text: ADMIN_PANEL_UI.fossil.ok(result.touched), log: logDraft(row, 'requests', L.requests(result.touched)) };
       }, 'census'),
+    [runAction],
+  );
+
+  /**
+   * Borra el espejo de logros publicado de UNA persona. No le quita ningún logro: los suyos se derivan de su
+   * biblioteca en su propio aparato, y los volverá a publicar en cuanto abra la app (lo dice la confirmación).
+   */
+  const clearAchievements = useCallback(
+    (row: AdminUserRow) =>
+      runAction(row, async () => {
+        await clearProfileAchievements(row.id);
+        return { kind: 'ok', text: ADMIN_PANEL_UI.achievementsDone, log: logDraft(row, 'achievements', L.achievements) };
+      }),
     [runAction],
   );
 
@@ -393,21 +498,11 @@ export function useAdminViewModel() {
         const result = await deleteUserProfile(row.id, row.uid);
         if (!result.ok) {
           console.warn('[admin] borrado incompleto:', result.failures);
-          return { kind: 'warn', text: ADMIN_PANEL_UI.partialDeleted };
+          return { kind: 'warn', text: ADMIN_PANEL_UI.partialDeleted, log: logDraft(row, 'delete', L.deleted) };
         }
-        return { kind: 'ok', text: ADMIN_PANEL_UI.okDeleted };
+        return { kind: 'ok', text: ADMIN_PANEL_UI.okDeleted, log: logDraft(row, 'delete', L.deleted) };
       }, 'census'),
     [runAction],
-  );
-
-  // LO GRAVE PRIMERO. Dentro de cada grupo se respeta el orden del censo (actividad más reciente arriba): `sort` es
-  // estable, así que basta con comparar la gravedad.
-  const users = useMemo(
-    () =>
-      (census?.users || [])
-        .filter((user) => matchesSearch(user, search) && matchesSignal(user, signalFilter))
-        .sort((a, b) => Number(isSevere(b)) - Number(isSevere(a))),
-    [census, search, signalFilter],
   );
 
   /** Cuántas fichas tiene cada señal, para el desplegable del filtro: solo se ofrecen las que hay. */
@@ -423,14 +518,10 @@ export function useAdminViewModel() {
     access,
     ownUid,
     census,
-    users,
+    loadedAt,
     loading,
     error,
     status,
-    search,
-    setSearch,
-    signalFilter,
-    setSignalFilter,
     signalCounts,
     busyId,
     refresh,
@@ -444,6 +535,11 @@ export function useAdminViewModel() {
     clearStrayPhoto,
     clearAllStrayPhotos,
     clearingStrayPhotos,
+    clearAchievements,
     deleteUser,
+    undoLogged,
+    bulkBusy,
+    bulkSetTier,
+    bulkDisableSocial,
   };
 }

@@ -5,6 +5,40 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.7.4] - 2026-10-14
+
+### Added
+
+- **Panel de administración rediseñado.** El panel pasa a tener secciones con su propia dirección (`/admin/*`) y un
+  menú lateral (una tira arriba en el móvil). Recargar o ir atrás ya no saca del panel. Ver
+  `docs/plan-admin-rediseno.md`.
+  - **Hoy**: una bandeja con lo que pide atención (tokens en claro, fotos a la vista, cupos cerca del techo, retos
+    por cerrar o por publicar, pendientes vencidos), las cifras de comunidad, moderación y capacidad, los rangos,
+    el estado de las notificaciones y los retos, una lista de pendientes con fecha y las últimas acciones.
+  - **Usuarios**: el censo como tabla ordenable, con filtros por señales, rango, actividad y estado que se guardan
+    en la dirección. Se pueden seleccionar varias personas para cambiarles el rango o suspenderles el social. La
+    ficha de cada uno se abre en un panel lateral, con las mismas acciones que antes.
+  - **Comunidad**: activos por día, altas por semana, amigos por persona y cuántos siguen activos según su mes de
+    alta.
+  - **Capacidad**: el gasto del día frente a los techos del plan gratuito (Firestore, KV, Functions y carátulas),
+    con la proyección al final del día. Firestore y Cloudflare necesitan credenciales (ver el plan).
+  - **Registro** de todo lo que hace el panel. El rango y el social se pueden deshacer desde el aviso de la acción
+    o desde el registro.
+  - **Buscador** propio con ⌘K o Ctrl+K: personas, pantallas y acciones.
+- **Notificaciones programadas.** Se les puede poner fecha de inicio y de fin, y elegir si las ve todo el mundo,
+  solo quien tiene espacio social o solo quien no lo tiene. Hay un historial de las anteriores para reutilizarlas.
+
+### Changed
+
+- **Borrar un perfil desde el panel exige escribir su nombre**, porque es lo único que no tiene vuelta atrás.
+- **Barra inferior más discreta.** Sin el velo opaco que tapaba una franja a lo ancho de la pantalla: solo queda la
+  pastilla. En escritorio mide lo que ocupan sus botones (unos 590 px en vez de 760), con una sombra más fina y algo
+  más baja. Las pestañas inactivas van a medio peso y la activa es la que destaca.
+- **Ajustes lleva un chevrón** que indica que despliega un menú en vez de navegar, y se da la vuelta al abrirlo. En
+  reposo lleva el color de firma de cada tema; en la pestaña activa, el del rótulo.
+- **«Listados» vuelve a la última lista que mirabas**, en vez de llevar siempre a Completados. Y volver a pulsar la
+  pestaña en la que estás sube al principio de la pantalla.
+
 ## [1.7.3] - 2026-10-13
 
 ### Fixed

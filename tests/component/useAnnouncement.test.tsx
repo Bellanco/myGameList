@@ -23,6 +23,9 @@ const AVISO: Announcement = {
   active: true,
   repeats: 3,
   intervalHours: 24,
+  startsAt: 0,
+  endsAt: 0,
+  audience: 'all',
   updatedAt: 0,
 };
 
@@ -258,4 +261,29 @@ describe('el aviso del administrador en una apertura de la app', () => {
     await llegaLaCapsula();
     expect(result.current.announcement).toBeNull();
   });
+
+  /**
+   * UN AVISO DIRIGIDO ESPERA A SABER A QUIÉN LE HABLA. La sesión contesta después de la primera pregunta: mientras
+   * no se sabe si hay espacio social se calla, y en cuanto se sabe se vuelve a decidir sin pedir nada a la red.
+   */
+  it('un aviso solo para quien tiene espacio social sale cuando se sabe, y no a quien no lo tiene', async () => {
+    loadAnnouncement.mockResolvedValue({ ...AVISO, audience: 'social' });
+    const { result, rerender } = renderHook(({ hasSocial }: { hasSocial: boolean | null }) => useAnnouncement(hasSocial), {
+      initialProps: { hasSocial: null as boolean | null },
+    });
+    await llegaLaCapsula();
+    expect(result.current.announcement, 'sin saberlo, se calla').toBeNull();
+
+    rerender({ hasSocial: true });
+    await llegaLaCapsula();
+    expect(result.current.announcement?.id).toBe('av-1');
+  });
+
+  it('y a quien no tiene espacio social no se lo dice', async () => {
+    loadAnnouncement.mockResolvedValue({ ...AVISO, audience: 'social' });
+    const { result } = renderHook(() => useAnnouncement(false));
+    await llegaLaCapsula();
+    expect(result.current.announcement).toBeNull();
+  });
 });
+

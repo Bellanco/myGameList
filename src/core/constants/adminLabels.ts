@@ -729,14 +729,9 @@ export const ADMIN_ANNOUNCEMENT_UI = {
   // NOTIFICACIONES en el panel, aunque por dentro siga siendo el aviso de la aplicación: es el nombre con el que
   // se busca esta pantalla. El texto de abajo sigue aclarando que no es una notificación del móvil.
   open: 'Notificaciones',
+  // SIN SUBTÍTULO (decisión del 13-10-2026: una pantalla lleva solo su título). Hubo una línea que aclaraba que no
+  // es una notificación del móvil; lo que hay que saber lo dicen ahora los propios campos y la muestra.
   title: 'Notificaciones',
-  /**
-   * UNA LÍNEA, Y LA ÚNICA QUE HACE FALTA. Aquí hubo un párrafo y cinco notas —qué se ve, quién lo ve, cómo se
-   * insiste, cuánto tarda— y sobraban: la pantalla la usa quien hizo la función, y lo demás lo dicen los propios
-   * campos («Veces que se insiste», «Horas entre avisos») o se ve en la muestra. Lo que NO se deduce de nada de
-   * eso es que esto no es una notificación del móvil, así que es lo que se queda escrito.
-   */
-  subtitle: 'Se ve al abrir la app, no como notificación del móvil.',
   back: 'Volver al censo',
   sectionAria: 'Aviso a los usuarios',
 
@@ -755,6 +750,41 @@ export const ADMIN_ANNOUNCEMENT_UI = {
     repeatsHelp: 'Si nadie pulsa.',
     interval: 'Horas entre avisos',
     intervalHelp: '24 = una vez al día.',
+    startsAt: 'Desde',
+    startsAtHelp: 'En blanco, ya.',
+    endsAt: 'Hasta',
+    endsAtHelp: 'En blanco, sin fin.',
+    audience: 'Para',
+  },
+
+  /** A quién se le dice. Nunca por rango: los rangos no se le enseñan a nadie. */
+  audiences: {
+    all: 'Todos',
+    social: 'Con espacio social',
+    'no-social': 'Sin espacio social',
+  },
+
+  /** La línea de la ventana: cuándo empieza y cuándo acaba, dicho en el orden en que va a pasar. */
+  window: {
+    now: 'Ahora',
+    starts: (date: string) => `Empieza el ${date}`,
+    started: 'Ya en marcha',
+    ends: (date: string) => `Termina el ${date}`,
+    ended: (date: string) => `Terminó el ${date}`,
+    noEnd: 'Sin fecha de fin',
+    /** Una ventana al revés no se guarda como tal: el saneado la deja sin fin, y se avisa antes de pulsar. */
+    badRange: '«Hasta» es anterior a «Desde»: se guardará sin fecha de fin.',
+  },
+
+  /** Los avisos anteriores, para reutilizar una redacción. */
+  history: {
+    title: 'Historial',
+    empty: 'Aún no hay avisos anteriores.',
+    reuse: 'Reutilizar',
+    reuseAria: (title: string) => `Reutilizar «${title}»`,
+    reused: 'Redacción cargada como aviso nuevo: revisa las fechas y guarda.',
+    anyTime: 'sin fechas',
+    range: (from: string, to: string) => `${from} – ${to}`,
   },
 
   /** Nombre de cada icono: es lo que oye quien no ve el dibujo, y el `title` al pasar el ratón. */
@@ -817,4 +847,288 @@ export const ADMIN_ANNOUNCEMENT_UI = {
   currentId: (id: string) => `campaña ${id}`,
   /** El mismo conteo que el de las reseñas, para que se lea igual en los dos sitios. */
   counter: (used: number, max: number) => `${used} / ${max} caracteres`,
+} as const;
+
+/**
+ * EL ARMAZÓN DEL PANEL REDISEÑADO (docs/plan-admin-rediseno.md): el menú, la tabla de usuarios y la ficha lateral.
+ * Los textos de cada acción de moderación siguen en `ADMIN_PANEL_UI`: la acción no ha cambiado, solo dónde vive.
+ */
+export const ADMIN_SHELL_UI = {
+  nav: {
+    aria: 'Pantallas del panel',
+    title: 'Administración',
+    search: 'Buscar',
+    screens: {
+      today: 'Hoy',
+      users: 'Usuarios',
+      community: 'Comunidad',
+      capacity: 'Capacidad',
+      log: 'Registro',
+      // Como la pantalla (`ADMIN_ANNOUNCEMENT_UI.title`): es el nombre con el que se busca.
+      announcement: 'Notificaciones',
+      achievements: 'Logros',
+      premios: 'Retos',
+    },
+  },
+  /** La frescura del censo, junto al botón de releerlo. */
+  freshness: {
+    now: 'Censo recién leído',
+    ago: (minutes: number) => (minutes < 1 ? 'Censo recién leído' : minutes === 1 ? 'Censo de hace 1 min' : `Censo de hace ${minutes} min`),
+    reading: 'Leyendo el censo…',
+  },
+  users: {
+    title: 'Usuarios',
+    searchAria: 'Buscar usuarios',
+    searchPlaceholder: 'Nombre, nombre según sus amigos o identificador',
+    rows: { signal: 'Señales', tier: 'Rango', activity: 'Actividad', only: 'Solo' },
+    signal: { all: 'Todas', flagged: 'Con señales', severe: 'Graves' },
+    activity: { any: 'Cualquiera', today: 'Hoy', '7': '7 días', '30': '30 días', inactive: 'Inactivos' },
+    only: {
+      new: 'Altas de esta semana',
+      'no-friends': 'Sin amigos',
+      'social-off': 'Social suspendido',
+      banned: 'Vetados',
+      quota: 'Cuota ajustada',
+    },
+    /** Las señales sueltas, en un desplegable aparte: son quince y como fichas no caben. */
+    oneSignal: 'Una señal concreta…',
+    clear: 'Quitar filtros',
+    count: (shown: number, total: number) => `${shown} de ${total}`,
+    columns: {
+      user: 'Usuario',
+      tier: 'Rango',
+      state: 'Estado',
+      friends: 'Amigos',
+      shares: 'Enlaces',
+      activity: 'Actividad',
+      created: 'Alta',
+      signals: 'Señales',
+    },
+    sortBy: (column: string) => `Ordenar por ${column.toLowerCase()}`,
+    selectAll: 'Seleccionar todos',
+    selectOne: (name: string) => `Seleccionar a ${name}`,
+    openOne: (name: string) => `Abrir la ficha de ${name}`,
+    state: { active: 'Activo', suspended: 'Suspendido', banned: 'Vetado' },
+    you: 'tú',
+    quotaMark: 'cuota ajustada',
+    emptyFiltered: 'Nadie coincide con estos filtros.',
+    emptySignal: 'Nadie con esas señales: no hay nada que revisar.',
+    bulk: {
+      aria: 'Acciones sobre la selección',
+      selected: (count: number) => (count === 1 ? '1 seleccionado' : `${count} seleccionados`),
+      tier: 'Cambiar rango…',
+      tierConfirm: (count: number, tier: string) =>
+        `¿Pasar ${count === 1 ? 'a 1 persona' : `a ${count} personas`} a ${tier}?`,
+      suspend: 'Suspender social',
+      suspendConfirm: (count: number) =>
+        `¿Suspender el social ${count === 1 ? 'de 1 persona' : `de ${count} personas`}? Salen del directorio y del feed, pero conservan perfil y amistades.`,
+      clear: 'Quitar selección',
+      done: (done: number, total: number) =>
+        done === total ? `Hecho en ${done === 1 ? '1 perfil' : `${done} perfiles`}.` : `Hecho en ${done} de ${total}: revisa la consola para el resto.`,
+    },
+  },
+  search: {
+    aria: 'Buscar en el panel',
+    placeholder: 'Persona, pantalla o acción…',
+    empty: 'Nada coincide',
+    groups: { people: 'Personas', screens: 'Ir a', actions: 'Acciones' },
+    actions: {
+      severe: 'Ver quién tiene señales graves',
+      newcomers: 'Ver las altas de esta semana',
+      refresh: 'Releer el censo',
+    },
+  },
+  charts: {
+    ceiling: (value: string) => `techo ${value}`,
+    meter: (used: string, limit: string, percent: number) => `${used} / ${limit} · ${percent} %`,
+    same: 'igual',
+  },
+  today: {
+    title: 'Hoy',
+    attention: 'Necesita atención',
+    nothing: 'Nada que mirar hoy.',
+    items: {
+      legacyToken: (count: number) => (count === 1 ? 'Token de GitHub en claro' : `${count} tokens de GitHub en claro`),
+      legacyTokenDetail: 'En un documento que lee cualquiera con sesión',
+      legacyTokenAction: 'Ver',
+      strayPhoto: (count: number) => (count === 1 ? '1 foto publicada de más' : `${count} fotos publicadas de más`),
+      strayPhotoDetail: 'Sus dueños las ocultaron y siguen a la vista en el directorio',
+      gistDrift: (count: number) => (count === 1 ? '1 perfil con el gist dividido' : `${count} perfiles con el gist dividido`),
+      gistDriftDetail: 'Sus reseñas pueden no llegar al feed de sus amigos hasta que abran el espacio social',
+      covers: (spent: string, cap: string, percent: number) => `Carátulas: ${spent} de ${cap} hoy (${percent} %)`,
+      coversDetail: 'El cupo de escrituras de KV lo comparten las carátulas y los enlaces',
+      capacity: (metric: string, percent: number) => `${metric}: ${percent} % del techo de hoy`,
+      capacityDetail: 'Plan gratuito: al llegar al techo, el servicio deja de responder hasta mañana',
+      premiosClosing: (day: string) => `Los retos cierran el ${day}`,
+      premiosClosingDetail: 'La votación sigue abierta',
+      premiosPending: 'Retos cerrados sin publicar',
+      premiosPendingDetail: 'Falta publicar los resultados',
+      todosDue: (count: number) => (count === 1 ? '1 pendiente para hoy o ya vencido' : `${count} pendientes para hoy o ya vencidos`),
+      truncated: (count: number) => `El censo llega al tope de ${count} perfiles`,
+      truncatedDetail: 'Puede haber perfiles que no se ven: toca paginar el censo',
+      open: 'Abrir',
+      review: 'Revisar',
+    },
+    groups: { community: 'Comunidad', moderation: 'Moderación', capacity: 'Capacidad' },
+    detail: 'Detalle',
+    kpi: {
+      active24h: 'Activos (24 h)',
+      active7: 'Activos 7 días',
+      new7: 'Altas 7 días',
+      noFriends: 'Sin ningún amigo',
+      severe: 'Señales graves',
+      flagged: 'Con alguna señal',
+      shares: 'Enlaces activos',
+      banned: 'Vetados',
+      profiles: 'Perfiles',
+      friendships: 'Amistades',
+      pending: 'Solicitudes pendientes',
+      legacy: 'Con restos legacy',
+    },
+    vsYesterday: 'vs. ayer',
+    covers: 'Carátulas nuevas',
+    coversFoot: 'Día UTC · se apunta por lotes de 50',
+    capacityMore: 'Firestore y Cloudflare, en Capacidad',
+    tiers: 'Rangos',
+    tiersTotal: (count: number) => (count === 1 ? '1 perfil' : `${count} perfiles`),
+    published: 'Notificaciones y retos',
+    announcementLabel: 'Notificación',
+    premiosLabel: 'Retos',
+    todos: {
+      title: 'Pendientes',
+      empty: 'Sin pendientes.',
+      add: 'Añadir',
+      textLabel: 'Nuevo pendiente',
+      textPlaceholder: 'Qué hay que hacer',
+      dueLabel: 'Para cuándo (opcional)',
+      noDate: 'sin fecha',
+      remove: (text: string) => `Quitar «${text}»`,
+      toggle: (text: string) => `Hecho: ${text}`,
+    },
+    lastActions: 'Últimas acciones',
+    seeAll: 'Ver todo',
+  },
+  community: {
+    title: 'Comunidad',
+    today: 'hoy',
+    kpi: {
+      active24h: 'Activos (24 h)',
+      active7: 'Activos 7 días',
+      active30: 'Activos 30 días',
+      stickiness: 'Vuelven a diario',
+      stickinessHint: 'Activos en las últimas 24 horas sobre activos en 30 días: cuánta de la gente habitual entra cada día.',
+      new30: 'Altas 30 días',
+    },
+    daily: 'Activos por día',
+    dailyAria: 'Activos en las 24 horas anteriores, por día',
+    legendActive: 'Activos (24 h)',
+    legendAverage: 'Media de 7 días',
+    dailyEmpty: 'Aún no hay fotos diarias: la gráfica empieza a llenarse desde hoy, un punto por cada día que se abre el panel.',
+    dailyFew: (days: number) => (days === 1 ? 'Solo hay 1 día con foto: la gráfica se llena día a día.' : `Solo hay ${days} días con foto: la gráfica se llena día a día.`),
+    weekly: 'Altas por semana',
+    weeklyAria: 'Altas por semana, últimas 12 semanas',
+    friends: 'Amigos por persona',
+    friendsAria: 'Reparto de amigos por persona',
+    seeNoFriends: (count: number) => `Ver los ${count} sin amigos`,
+    retention: 'Siguen activos, por mes de alta',
+    retentionCols: { month: 'Alta', signups: 'Personas', active: 'Activos 30 días', share: 'Siguen' },
+    retentionNote: 'De quienes se dieron de alta cada mes, cuántos han estado activos en los últimos 30 días. Es lo que el censo puede decir: guarda la última actividad, no el historial.',
+  },
+  capacity: {
+    title: 'Capacidad',
+    ceilings: 'Hoy, frente a los techos del plan gratuito',
+    refresh: 'Volver a medir',
+    measured: (minutes: number) => (minutes < 1 ? 'Medido ahora' : `Medido hace ${minutes} min`),
+    unreachable: 'El endpoint de capacidad no responde: en desarrollo no existe (lo sirve Pages) y en producción puede no estar desplegado.',
+    meters: {
+      covers: 'Carátulas nuevas',
+      'firestore-reads': 'Lecturas de Firestore',
+      'firestore-writes': 'Escrituras de Firestore',
+      'firestore-deletes': 'Borrados de Firestore',
+      'kv-reads': 'Lecturas de KV',
+      'kv-writes': 'Escrituras de KV',
+      'kv-deletes': 'Borrados de KV',
+      'kv-lists': 'Listados de KV',
+      functions: 'Peticiones a Functions',
+    },
+    sources: {
+      covers: 'Worker de carátulas',
+      firestore: 'Cloud Monitoring',
+      cloudflare: 'Cloudflare',
+    },
+    notConfigured: 'Sin conectar',
+    notConfiguredHint: {
+      firestore: 'Falta el secreto GCP_MONITORING_SA (cuenta de servicio con permiso de lectura de Monitoring).',
+      cloudflare: 'Faltan CF_ACCOUNT_ID y el secreto CF_ANALYTICS_TOKEN (token con «Account Analytics: Read»).',
+      covers: 'El Worker de carátulas no está configurado en este entorno.',
+    },
+    failed: (message: string) => `No se pudo medir: ${message}`,
+    resets: (time: string) => `se reinicia a las ${time}`,
+    projection: (percent: number) => `a este ritmo, ${percent} % al acabar el día`,
+    yesterday: (value: string) => `ayer: ${value}`,
+    panelCost: 'Lo que cuesta este panel',
+    panelCostRows: {
+      census: 'Abrir el censo',
+      censusValue: (profiles: number, friendships: number) => `${profiles} perfiles + ${friendships} amistades = ${profiles + friendships} lecturas`,
+      snapshot: 'Foto diaria',
+      snapshotValue: '1 escritura al día',
+      health: 'Medir la capacidad',
+      healthValue: 'Una petición a Functions',
+    },
+  },
+  log: {
+    title: 'Registro',
+    empty: 'Aún no hay acciones apuntadas.',
+    undo: 'Deshacer',
+    undoneMark: 'Deshecho',
+    noUndo: 'sin vuelta atrás',
+    undone: (text: string) => `Deshecho: ${text.charAt(0).toLowerCase()}${text.slice(1)}.`,
+    undoFailed: 'No se ha podido deshacer. Vuelve a intentarlo.',
+    undoStale: 'No se deshace: después de esa acción cambió otra vez. Cámbialo desde su ficha si hace falta.',
+    today: 'Hoy',
+    yesterday: 'Ayer',
+    filters: {
+      all: 'Todo',
+      tier: 'Rangos',
+      moderation: 'Moderación',
+      shares: 'Enlaces',
+      announcement: 'Notificaciones',
+    },
+    texts: {
+      tier: (from: string, to: string) => `Rango: ${from} → ${to}`,
+      socialOff: 'Social suspendido',
+      socialOn: 'Social reactivado',
+      legacy: (field: string) => `Resto legacy purgado: ${field}`,
+      cutover: 'Identidad migrada a su documento canónico',
+      identity: 'Nombre y foto propagados a sus amistades',
+      name: (name: string) => `Nombre fijado: «${name}»`,
+      photo: 'Foto de más retirada',
+      requests: (count: number) => (count === 1 ? '1 solicitud fosilizada borrada' : `${count} solicitudes fosilizadas borradas`),
+      achievements: 'Espejo de logros borrado',
+      deleted: 'Perfil borrado con sus amistades',
+      announcement: (title: string) => `Notificación guardada: «${title}»`,
+    },
+  },
+  confirm: {
+    typeName: (name: string) => `Escribe «${name}» para confirmar`,
+  },
+  toast: {
+    undo: 'Deshacer',
+    dismiss: 'Cerrar el aviso',
+  },
+  detail: {
+    aria: (name: string) => `Ficha de ${name}`,
+    close: 'Cerrar',
+    closeAria: 'Cerrar la ficha',
+    notFound: 'Esa ficha no está en el censo: puede que se haya borrado o que el censo venga recortado.',
+    signup: (date: string) => `Alta el ${date}`,
+    signupEstimated: (date: string) => `Alta hacia el ${date}`,
+    activity: (ago: string) => `activo ${ago}`,
+    facts: { friends: 'Amigos', shares: 'Enlaces', pending: 'Solicitudes' },
+    sections: { fix: 'Por resolver', tier: 'Rango', shares: 'Enlaces compartidos', data: 'Datos', more: 'Más acciones' },
+    openProfile: 'Ver su perfil',
+    /** La consola de Firebase no abre un usuario por uid: se llega a la lista y se pega el identificador copiado. */
+    openAuth: 'Abrir Firebase Auth',
+    openAuthHint: 'Abre la lista de usuarios de Firebase Auth; pega allí el identificador (se copia al pulsar).',
+  },
 } as const;

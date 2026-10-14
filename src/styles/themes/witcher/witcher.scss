@@ -1399,3 +1399,6 @@
 @keyframes wt-nuevo-filo { to { transform: none; } }
 @keyframes wt-nuevo-asoma { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
 @keyframes wt-nuevo-cae { from { opacity: 0; transform: translateY(-14px) rotate(-16deg); } to { opacity: 1; transform: rotate(-4deg); } }
+
+/* El chevrón de Ajustes en la barra inferior (ver `_layout`): el filo de Igni, el mismo que ribetea la sección activa. */
+:root[data-palette="witcher"] { --nav-caret: var(--wt-igni); }

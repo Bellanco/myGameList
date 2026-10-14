@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  publicAnnouncementView,
   ANNOUNCEMENT_ICONS,
   ANNOUNCEMENT_LIMITS,
   DEFAULT_ANNOUNCEMENT_ICON,
@@ -8,9 +9,12 @@ import {
   NO_SEEN,
   afterClicked,
   afterShown,
+  ANNOUNCEMENT_HISTORY_MAX,
   isAnnouncementDue,
   parseSeen,
+  pushAnnouncementHistory,
   sanitizeAnnouncement,
+  sanitizeAnnouncementHistory,
   type Announcement,
   type AnnouncementSeen,
 } from '../../src/core/announcement/announcement';
@@ -29,6 +33,9 @@ function aviso(partial: Partial<Announcement> = {}): Announcement {
     active: true,
     repeats: DEFAULT_REPEATS,
     intervalHours: DEFAULT_INTERVAL_HOURS,
+    startsAt: 0,
+    endsAt: 0,
+    audience: 'all',
     updatedAt: NOW,
     ...partial,
   };
@@ -172,5 +179,107 @@ describe('la cuenta del dispositivo', () => {
     expect(parseSeen(null)).toEqual(NO_SEEN);
     expect(parseSeen('{"id":"","shown":9}')).toEqual(NO_SEEN);
     expect(parseSeen('{"id":"av-1","shown":"tres","lastAt":-5}')).toEqual(visto());
+  });
+});
+
+describe('aviso programado: ventana y público', () => {
+  it('sanea la ventana: números finitos y positivos, o sin límite', () => {
+    const limpio = sanitizeAnnouncement({ ...aviso(), startsAt: 'mañana', endsAt: -5 });
+    expect(limpio?.startsAt).toBe(0);
+    expect(limpio?.endsAt).toBe(0);
+    expect(sanitizeAnnouncement(aviso({ startsAt: NOW, endsAt: NOW + HORA }))).toMatchObject({ startsAt: NOW, endsAt: NOW + HORA });
+  });
+
+  /** Una ventana al revés no puede dejar un aviso encendido y mudo: se queda sin fin. */
+  it('una ventana que acaba antes de empezar se queda sin fin', () => {
+    expect(sanitizeAnnouncement(aviso({ startsAt: NOW, endsAt: NOW - HORA }))?.endsAt).toBe(0);
+    expect(sanitizeAnnouncement(aviso({ startsAt: NOW, endsAt: NOW }))?.endsAt).toBe(0);
+  });
+
+  /** Un documento de antes de esto no tenía público: se le decía a todo el mundo, y así sigue. */
+  it('un público desconocido o ausente es «todos»', () => {
+    expect(sanitizeAnnouncement({ ...aviso(), audience: undefined })?.audience).toBe('all');
+    expect(sanitizeAnnouncement({ ...aviso(), audience: 'oro' })?.audience).toBe('all');
+    expect(sanitizeAnnouncement(aviso({ audience: 'social' }))?.audience).toBe('social');
+  });
+
+  it('antes de empezar no sale; al llegar la hora, sí; al acabar, ya no', () => {
+    const programado = aviso({ startsAt: NOW + HORA, endsAt: NOW + 5 * HORA });
+    expect(isAnnouncementDue(programado, NO_SEEN, NOW)).toBe(false);
+    expect(isAnnouncementDue(programado, NO_SEEN, NOW + HORA)).toBe(true);
+    expect(isAnnouncementDue(programado, NO_SEEN, NOW + 5 * HORA)).toBe(false);
+  });
+
+  it('sin decir a quién, un aviso para todos se comporta como siempre', () => {
+    expect(isAnnouncementDue(aviso(), NO_SEEN, NOW)).toBe(true);
+    expect(isAnnouncementDue(aviso(), NO_SEEN, NOW, { hasSocial: null })).toBe(true);
+  });
+
+  it('un aviso dirigido solo sale a quien toca', () => {
+    const social = aviso({ audience: 'social' });
+    const sinSocial = aviso({ audience: 'no-social' });
+    expect(isAnnouncementDue(social, NO_SEEN, NOW, { hasSocial: true })).toBe(true);
+    expect(isAnnouncementDue(social, NO_SEEN, NOW, { hasSocial: false })).toBe(false);
+    expect(isAnnouncementDue(sinSocial, NO_SEEN, NOW, { hasSocial: false })).toBe(true);
+    expect(isAnnouncementDue(sinSocial, NO_SEEN, NOW, { hasSocial: true })).toBe(false);
+  });
+
+  /** El lado seguro de no saberlo es callar: decir «conecta tu espacio social» a quien ya lo tiene no lo es. */
+  it('con público dirigido y sin saber si hay espacio social, se calla', () => {
+    expect(isAnnouncementDue(aviso({ audience: 'social' }), NO_SEEN, NOW)).toBe(false);
+    expect(isAnnouncementDue(aviso({ audience: 'no-social' }), NO_SEEN, NOW, { hasSocial: null })).toBe(false);
+  });
+});
+
+describe('historial de avisos', () => {
+  it('al cambiar de campaña, la anterior entra la primera', () => {
+    const viejo = aviso({ id: 'av-0' });
+    const anterior = aviso({ id: 'av-1' });
+    const nuevo = aviso({ id: 'av-2' });
+    expect(pushAnnouncementHistory([viejo], anterior, nuevo)?.map((entry) => entry.id)).toEqual(['av-1', 'av-0']);
+  });
+
+  /** Corregir una errata, encender o apagar no tocan el historial: ni una escritura de más. */
+  it('con la misma campaña, o sin aviso anterior, no hay nada que escribir', () => {
+    expect(pushAnnouncementHistory([], aviso(), aviso({ title: 'Corregido' }))).toBeNull();
+    expect(pushAnnouncementHistory([], null, aviso())).toBeNull();
+  });
+
+  it('no repite campañas y no pasa del tope', () => {
+    const muchos = Array.from({ length: ANNOUNCEMENT_HISTORY_MAX + 5 }, (_, index) => aviso({ id: `av-h${index}` }));
+    const siguiente = pushAnnouncementHistory([aviso({ id: 'av-1' }), ...muchos], aviso({ id: 'av-1' }), aviso({ id: 'av-9' }));
+    expect(siguiente).toHaveLength(ANNOUNCEMENT_HISTORY_MAX);
+    expect(siguiente?.filter((entry) => entry.id === 'av-1')).toHaveLength(1);
+  });
+
+  it('el saneado del historial descarta lo que no es un aviso entero', () => {
+    expect(sanitizeAnnouncementHistory('x')).toEqual([]);
+    expect(sanitizeAnnouncementHistory([aviso(), { id: 'roto' }, null]).map((entry) => entry.id)).toEqual(['av-1']);
+  });
+});
+
+// LA VENTANA TAMBIÉN EN EL SERVIDOR: un cliente con el JavaScript anterior (servido un rato por el service worker
+// tras desplegar) no sabe de fechas, así que la función no le da lo que no toca todavía.
+describe('publicAnnouncementView', () => {
+  const NOW = Date.UTC(2026, 9, 14, 12);
+  const base = sanitizeAnnouncement({ id: 'c', title: 'T', url: 'https://example.com', active: true })!;
+
+  it('sin ventana, el aviso tal cual y la caché de siempre', () => {
+    expect(publicAnnouncementView(base, NOW, 300)).toEqual({ value: base, maxAge: 300 });
+    expect(publicAnnouncementView(null, NOW, 300)).toEqual({ value: null, maxAge: 300 });
+  });
+
+  it('antes de empezar no hay aviso, y la caché no pasa de la hora de inicio', () => {
+    const later = { ...base, startsAt: NOW + 60_000 };
+    expect(publicAnnouncementView(later, NOW, 300)).toEqual({ value: null, maxAge: 60 });
+  });
+
+  it('dentro de la ventana sí, con la caché recortada hasta el final', () => {
+    const ending = { ...base, startsAt: NOW - 1000, endsAt: NOW + 90_000 };
+    expect(publicAnnouncementView(ending, NOW, 300)).toEqual({ value: ending, maxAge: 90 });
+  });
+
+  it('terminado, no hay aviso', () => {
+    expect(publicAnnouncementView({ ...base, endsAt: NOW - 1 }, NOW, 300).value).toBeNull();
   });
 });

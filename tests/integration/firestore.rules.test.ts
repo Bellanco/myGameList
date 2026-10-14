@@ -1880,6 +1880,29 @@ describe('firestore.rules', () => {
       });
     });
 
+  // LO QUE EL PANEL GUARDA PARA SÍ (docs/plan-admin-rediseno.md): pendientes, foto diaria y registro de acciones.
+  // Nadie más que el administrador lee ni escribe ahí; ni siquiera con sesión.
+  describe('adminPanel y adminLog (solo el panel)', () => {
+    it('los pendientes y la foto diaria solo los toca el administrador', async () => {
+      await seed('adminPanel', 'todos', { items: [] });
+      await assertFails(getDoc(doc(anonDb(), 'adminPanel', 'todos')));
+      await assertFails(getDoc(doc(ownerDb('uid-a'), 'adminPanel', 'todos')));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'adminPanel', 'todos'), { items: [] }));
+      await assertSucceeds(getDoc(doc(adminDb(), 'adminPanel', 'todos')));
+      await assertSucceeds(setDoc(doc(adminDb(), 'adminPanel', 'stats', 'days', '2026-10-14'), { day: '2026-10-14' }));
+      await assertFails(getDoc(doc(ownerDb('uid-a'), 'adminPanel', 'stats', 'days', '2026-10-14')));
+    });
+
+    it('el registro de acciones solo lo toca el administrador', async () => {
+      await seed('adminLog', 'e1', { kind: 'tier', text: 'Rango cambiado', at: 1 });
+      await assertFails(getDoc(doc(anonDb(), 'adminLog', 'e1')));
+      await assertFails(getDoc(doc(ownerDb('uid-a'), 'adminLog', 'e1')));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'adminLog', 'e2'), { kind: 'tier', text: 'x', at: 2 }));
+      await assertSucceeds(getDoc(doc(adminDb(), 'adminLog', 'e1')));
+      await assertSucceeds(setDoc(doc(adminDb(), 'adminLog', 'e2'), { kind: 'tier', text: 'x', at: 2 }));
+    });
+  });
+
   describe('catch-all', () => {
     it('deniega cualquier otra colección', async () => {
       await assertFails(getDoc(doc(ownerDb('uid-a'), 'whatever', 'x')));

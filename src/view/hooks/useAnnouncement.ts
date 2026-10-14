@@ -87,8 +87,16 @@ function writeSeen(seen: AnnouncementSeen): void {
   }
 }
 
-export function useAnnouncement(): AnnouncementState {
+/**
+ * @param hasSocial si quien mira tiene espacio social: `null` mientras no se sabe. Solo lo usan los avisos dirigidos
+ *                  (`audience`); con uno dirigido y esto sin saber, se calla hasta que se sepa.
+ */
+export function useAnnouncement(hasSocial: boolean | null = null): AnnouncementState {
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  // En un `ref`: el efecto de abajo no tiene dependencias (una vez por montaje) y tiene que leer el valor de AHORA.
+  const hasSocialRef = useRef(hasSocial);
+  // La forma de volver a preguntar desde fuera del efecto (al saberse `hasSocial`). La pone el efecto.
+  const askRef = useRef<((espera: number) => void) | null>(null);
   // La cuenta de este dispositivo, en un `ref`: cambia como efecto de pintar, no es algo que se pinte.
   const seenRef = useRef<AnnouncementSeen>(readSeen());
   // El mismo aviso, a mano y sin esperar al siguiente render: es lo que leen `markShown` y `markClicked`.
@@ -119,6 +127,9 @@ export function useAnnouncement(): AnnouncementState {
     /** Pinta la cápsula, o espera a que la pestaña se mire si ahora mismo está de fondo. */
     const pintar = (value: Announcement): void => {
       if (cancelled) return;
+      // Se vuelve a mirar al pintar, no solo al pedir: entre medias ha podido saberse si tiene espacio social (y el
+      // aviso es para el otro público) o haber pasado su hora de fin.
+      if (!isAnnouncementDue(value, seenRef.current, Date.now(), { hasSocial: hasSocialRef.current })) return;
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
         const alVolver = () => {
           if (document.visibilityState === 'hidden') return;
@@ -147,7 +158,12 @@ export function useAnnouncement(): AnnouncementState {
         .then((module) => module.loadAnnouncement(force))
         .then((value) => {
           // `isAnnouncementDue` ya descarta el `null`; se comprueba aparte para que el tipo lo sepa.
-          if (cancelled || !value || !isAnnouncementDue(value, seenRef.current, Date.now())) return;
+          if (cancelled || !value || !isAnnouncementDue(value, seenRef.current, Date.now(), { hasSocial: hasSocialRef.current })) {
+            // Lo que se programó con la consulta anterior ya no vale.
+            if (timer) clearTimeout(timer);
+            timer = null;
+            return;
+          }
           if (timer) clearTimeout(timer);
           timer = setTimeout(() => pintar(value), espera);
         })
@@ -157,6 +173,9 @@ export function useAnnouncement(): AnnouncementState {
     };
 
     const cancelIdle = runWhenIdle(() => preguntar(SHOW_DELAY_MS));
+    askRef.current = (espera: number) => {
+      if (!cancelled) preguntar(espera);
+    };
 
     /**
      * AL VOLVER A LA APP se vuelve a mirar, si ha pasado el rato. Es lo que hace que un aviso publicado hoy le
@@ -199,6 +218,7 @@ export function useAnnouncement(): AnnouncementState {
 
     return () => {
       cancelled = true;
+      askRef.current = null;
       cancelIdle();
       if (timer) clearTimeout(timer);
       esperandoVista?.();
@@ -208,6 +228,17 @@ export function useAnnouncement(): AnnouncementState {
       canal?.close();
     };
   }, []);
+
+  /**
+   * AL SABERSE SI HAY ESPACIO SOCIAL se vuelve a decidir: la sesión contesta después de la primera pregunta, y un
+   * aviso dirigido se había callado por no saberlo. No cuesta red (la caché de sesión del repositorio ya lo tiene),
+   * y no repite uno que ya se esté enseñando ni uno recién enseñado: eso lo sigue decidiendo la cuenta.
+   */
+  useEffect(() => {
+    const before = hasSocialRef.current;
+    hasSocialRef.current = hasSocial;
+    if (hasSocial !== null && hasSocial !== before && !currentRef.current) askRef.current?.(SHOW_DELAY_MS);
+  }, [hasSocial]);
 
   const markShown = useCallback(() => {
     const current = currentRef.current;

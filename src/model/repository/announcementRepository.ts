@@ -20,6 +20,7 @@ import {
   ANNOUNCEMENT_CHANNEL,
   ANNOUNCEMENT_PUBLISHED_EVENT,
   sanitizeAnnouncement,
+  sanitizeAnnouncementHistory,
   type Announcement,
 } from '../../core/announcement/announcement';
 import { shareAuthHeaders } from './shareRepository';
@@ -93,6 +94,25 @@ export function loadAnnouncement(force = false): Promise<Announcement | null> {
 }
 
 /**
+ * EL AVISO TAL CUAL, para el PANEL: también fuera de su ventana —uno programado para mañana es justo lo que se está
+ * editando—. El GET público ya no lo devuelve en ese caso (ver `publicAnnouncementView`), así que el panel pide la
+ * versión completa (`?all=1`), que la función reserva al administrador. Sin caché, y como la lectura pública, NUNCA
+ * LANZA: sin respuesta, `null` (no hay nada que editar encima).
+ */
+export async function loadAnnouncementForAdmin(): Promise<Announcement | null> {
+  try {
+    // Igual que al guardar: en `npm run dev` no hay sesión que mandar y lo atiende el plugin de Vite.
+    const headers = import.meta.env.DEV ? undefined : await shareAuthHeaders(() => new Error('Necesitas iniciar sesión'));
+    const response = await fetch(`${API}?all=1`, { cache: 'no-store', headers });
+    const isHtml = (response.headers?.get?.('content-type') || '').includes('text/html');
+    if (!response.ok || isHtml) return null;
+    return sanitizeAnnouncement(await response.json());
+  } catch {
+    return null;
+  }
+}
+
+/**
  * GUARDA EL AVISO. Quién puede NO lo decide este fichero: lo decide la Pages Function, comprobando en el ID
  * token verificado que quien llama es el administrador (`requireAdmin`). Cualquier comprobación que se hiciera
  * aquí sería cosmética — es el mismo reparto que en la moderación de enlaces.
@@ -139,4 +159,22 @@ export async function saveAnnouncement(next: Announcement): Promise<Announcement
   }
 
   return saved;
+}
+
+/**
+ * LOS AVISOS ANTERIORES, el más reciente primero, para que el panel pueda reutilizar una redacción. Solo el
+ * administrador: la función lo exige (`requireAdmin`). Sin caché —cambia cada vez que se publica uno nuevo— y, como
+ * la lectura del aviso, NUNCA LANZA: sin respuesta, el historial está vacío y el panel sigue siendo útil.
+ */
+export async function loadAnnouncementHistory(): Promise<Announcement[]> {
+  try {
+    // Igual que al guardar: en `npm run dev` no hay sesión que mandar y lo atiende el plugin de Vite.
+    const headers = import.meta.env.DEV ? undefined : await shareAuthHeaders(() => new Error('Necesitas iniciar sesión'));
+    const response = await fetch(`${API}?history=1`, { cache: 'no-store', headers });
+    const isHtml = (response.headers?.get?.('content-type') || '').includes('text/html');
+    if (!response.ok || isHtml) return [];
+    return sanitizeAnnouncementHistory(await response.json());
+  } catch {
+    return [];
+  }
 }

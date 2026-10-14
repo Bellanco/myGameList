@@ -15,6 +15,9 @@ const AVISO: Announcement = {
   active: true,
   repeats: 3,
   intervalHours: 24,
+  startsAt: 0,
+  endsAt: 0,
+  audience: 'all',
   updatedAt: 0,
 };
 
@@ -167,5 +170,31 @@ describe('escritura del aviso', () => {
     const { saveAnnouncement } = await repo();
 
     await expect(saveAnnouncement(AVISO)).rejects.toThrow('Solo el administrador');
+  });
+});
+
+describe('historial de avisos', () => {
+  it('lo pide con sesión, sin caché, y lo sanea', async () => {
+    vi.stubEnv('DEV', false);
+    fetchMock.mockResolvedValue(ok([AVISO, { id: 'roto' }]));
+    const { loadAnnouncementHistory } = await repo();
+
+    const history = await loadAnnouncementHistory();
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/announcement?history=1', {
+      cache: 'no-store',
+      headers: { Authorization: 'Bearer t', 'Content-Type': 'application/json' },
+    });
+    expect(history.map((entry) => entry.id)).toEqual(['av-1']);
+  });
+
+  /** Como la lectura del aviso: el historial es un extra del panel, y su fallo no puede romperlo. */
+  it('sin respuesta, o con un error, el historial está vacío y no lanza', async () => {
+    fetchMock.mockResolvedValueOnce(ok({ error: 'Solo el administrador' }, 403));
+    const { loadAnnouncementHistory } = await repo();
+    await expect(loadAnnouncementHistory()).resolves.toEqual([]);
+
+    fetchMock.mockRejectedValueOnce(new Error('sin red'));
+    await expect(loadAnnouncementHistory()).resolves.toEqual([]);
   });
 });

@@ -261,10 +261,26 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
       setIndicator(null);
       return;
     }
-    const update = () => setIndicator({ left: active.offsetLeft, width: active.offsetWidth });
+    const update = () => setIndicator((prev) => (
+      prev && prev.left === active.offsetLeft && prev.width === active.offsetWidth
+        ? prev
+        : { left: active.offsetLeft, width: active.offsetWidth }
+    ));
     update();
+    /* LA PASTILLA SIGUE AL BOTÓN AUNQUE LA VENTANA NO SE MUEVA. Desde que la barra mide lo que piden sus botones,
+       sus columnas cambian de ancho con la letra: al cambiar de tema (otra tipografía, otro peso) o al llegar la
+       fuente, el botón activo se movía y la pastilla se quedaba donde estaba, asomando por fuera de la barra.
+       Un `ResizeObserver` sobre la barra y sobre el botón lo ve todo; el `resize` queda para donde no exista. */
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(update) : null;
+    if (observer) {
+      observer.observe(container);
+      observer.observe(active);
+    }
     window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', update);
+    };
   }, [currentSection, layout]);
 
   /**
@@ -288,18 +304,27 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
     const root = document.documentElement;
     const publish = () => {
       root.style.setProperty('--bottom-nav-h', `${Math.round(node.getBoundingClientRect().height)}px`);
+      // Y DÓNDE ACABA LA PASTILLA por la derecha: ya no mide 760 px fijos sino lo que piden sus botones, así que
+      // el menú de Ajustes, que se alinea con su columna, no puede deducirlo de una cuenta en la hoja de estilos.
+      const inner = innerRef.current;
+      if (inner) root.style.setProperty('--bottom-nav-right', `${Math.round(root.clientWidth - inner.getBoundingClientRect().right)}px`);
     };
     publish();
 
     const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(publish) : null;
-    if (observer) observer.observe(node);
-    else window.addEventListener('resize', publish);
+    if (observer) {
+      observer.observe(node);
+      if (innerRef.current) observer.observe(innerRef.current);
+    }
+    // El ancho de la pastilla puede no cambiar aunque se mueva su borde (la ventana crece y ella sigue centrada).
+    window.addEventListener('resize', publish);
 
     return () => {
-      if (observer) observer.disconnect();
-      else window.removeEventListener('resize', publish);
+      observer?.disconnect();
+      window.removeEventListener('resize', publish);
       // La barra no está en todas las pantallas: al irse, quien se apartaba vuelve a su valor de reserva.
       root.style.removeProperty('--bottom-nav-h');
+      root.style.removeProperty('--bottom-nav-right');
     };
   }, [layout]);
 
@@ -399,6 +424,10 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
                   ella— y queda pegado a su final, que es donde se lee como un exponente y no como un adorno
                   suelto en la pastilla. */}
               {piloto ? <span className={`bottom-nav-pip is-${piloto}`} aria-hidden="true" /> : null}
+              {/* AJUSTES DESPLIEGA, NO NAVEGA, y eso hay que verlo antes de pulsar: un chevrón hacia arriba —que es
+                  hacia donde se abre el menú— que se da la vuelta mientras está abierto. Va dentro del rótulo por
+                  lo mismo que el piloto: viaja con la palabra y entra en la medida de si los nombres caben. */}
+              {abreMenu ? <Icon name="chevron-up" className="bottom-nav-caret" /> : null}
             </span>
             {/* Y EN MODO ICONO EL PILOTO NO SE VA CON EL RÓTULO. Ahí el rótulo está fuera de la pantalla, así que
                 el punto de arriba se va con él; este otro se planta en la esquina del icono, como la insignia de

@@ -1124,3 +1124,6 @@
   color: var(--cyber-cyan-fg, var(--cyber-cyan));
   box-shadow: 0 0 12px color-mix(in srgb, var(--cyber-cyan) 30%, transparent);
 }
+
+/* El chevrón de Ajustes en la barra inferior (ver `_layout`): el amarillo de la casa (en claro, su versión legible). */
+:root[data-palette="cyberpunk"] { --nav-caret: var(--cyber-yellow-fg); }

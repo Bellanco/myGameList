@@ -1,438 +1,155 @@
-import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { Navigate } from 'react-router-dom';
-import { ADMIN_ACHIEVEMENTS_UI, ADMIN_ANNOUNCEMENT_UI, ADMIN_PANEL_UI } from '../../core/constants/adminLabels';
-import { createLocalDateFormat } from '../../core/utils/dateTime';
-// SOLO EL RÓTULO, y desde los textos del panel: importar `PREMIOS_UI` traería todos los textos de la porra al
-// chunk del panel, y este botón necesita exactamente una palabra.
-const PREMIOS_ADMIN_OPEN = ADMIN_PANEL_UI.premiosOpen;
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { ADMIN_PATHS, matchAdminPath, type AdminScreen } from '../../core/admin/adminRoutes';
 import type { Announcement } from '../../core/announcement/announcement';
-import type { HiddenOverrides, OpenFrontier } from '../../core/achievements/visibility';
 import type { ExtraSteps } from '../../core/achievements/types';
+import type { HiddenOverrides, OpenFrontier } from '../../core/achievements/visibility';
+import { ADMIN_PANEL_UI, ADMIN_SHARES_UI, ADMIN_SHELL_UI } from '../../core/constants/adminLabels';
+import { copyText } from '../../core/utils/clipboard';
+import { clearAllAchievements } from '../../model/repository/firebaseAdminRepository';
+import { useAdminHealth } from '../../viewmodel/useAdminHealth';
+import { useAdminInsights } from '../../viewmodel/useAdminInsights';
+import { useAdminLog } from '../../viewmodel/useAdminLog';
+import { useAdminPanelData } from '../../viewmodel/useAdminPanelData';
+import { useAdminViewModel } from '../../viewmodel/useAdminViewModel';
+import { AdminCapacityScreen } from './admin/AdminCapacityScreen';
+import { AdminCommunityScreen } from './admin/AdminCommunityScreen';
+import { AdminLogScreen } from './admin/AdminLogScreen';
+import { AdminTodayScreen } from './admin/AdminTodayScreen';
+import { AdminConfirmDialog } from './admin/AdminConfirmDialog';
+import { AdminNav } from './admin/AdminNav';
 import {
-  ADMIN_ONLY_TIER,
-  PROFILE_TIERS,
-  PROFILE_TIER_LABELS,
-  resolveShareQuota,
-  type ProfileTier,
-  type ShareQuotaOverride,
-} from '../../core/constants/tiers';
-import {
-  ADMIN_PROFILES_LIMIT,
-  clearAllAchievements,
-  clearProfileAchievements,
-  type AdminUserRow,
-  type LegacyProfileField,
-} from '../../model/repository/firebaseAdminRepository';
-import type { AdminAnomaly } from '../../model/types/firestore';
-import { healedFriendPhoto } from '../../core/social/friendPhoto';
-import { SEVERE_ANOMALIES, useAdminViewModel, type AdminSignalFilter } from '../../viewmodel/useAdminViewModel';
-import { ConfirmModal } from '../modals/ConfirmModal';
-import { AdminUserShares, type ShareActionRequest } from './AdminUserShares';
-import { ADMIN_SHARES_UI } from '../../core/constants/adminLabels';
-import {
-  adminRemoveShare,
-  banUser,
-  clearQuotaOverride,
-  listAllShares,
-  setQuotaOverride,
-  unbanUser,
-  type AdminShareRow,
-} from '../../model/repository/shareAdminRepository';
-import { leerGastoDeCaratulas, type GastoDeCaratulas } from '../../model/repository/coverStatsRepository';
-import { HubAvatar } from './socialhub/HubAvatar';
-import { Icon } from './Icon';
+  AdminPanelContext,
+  useAdminPanel,
+  type AdminConfirmRequest,
+  type AdminPanelContextValue,
+  type AdminToast,
+} from './admin/AdminPanelContext';
+import { AdminSearch } from './admin/AdminSearch';
+import { AdminToastView } from './admin/AdminToastView';
+import { AdminUsersScreen } from './admin/AdminUsersScreen';
 // La hoja del panel se importa AQUÍ y no desde `index.scss`: como el panel entra por `lazy()`, Vite emite su CSS
 // en el mismo chunk perezoso y el arranque no carga ni un byte de estilos de esta pantalla (igual que `stats.scss`).
 import '../../styles/admin.scss';
-import { copyText } from '../../core/utils/clipboard';
-// La hoja de las pantallas de Ajustes viaja en los chunks perezosos que la usan y no en el bundle base (mismo
-// patrón que `stats.scss` y `social.scss`). Se importa desde CADA pantalla que la necesita: si se importara solo
-// desde una, entrar por otra ruta la dejaría sin estilo.
+// La hoja de las pantallas de Ajustes viaja en los chunks perezosos que la usan y no en el bundle base. Se importa
+// desde CADA pantalla que la necesita: si se importara solo desde una, entrar por otra ruta la dejaría sin estilo.
 import '../../styles/settings.scss';
 
 const A = ADMIN_PANEL_UI;
 
-/**
- * El catálogo de logros, aparte y perezoso: son 250 escalones y los 50 símbolos del sprite, y el censo de
- * usuarios —que es a lo que se entra— no tiene por qué cargarlos para nada.
- */
+/** El catálogo de logros, aparte y perezoso: son 250 escalones y los 50 símbolos del sprite. */
 const AdminAchievements = lazy(() =>
   import('./AdminAchievements').then((module) => ({ default: module.AdminAchievements })));
 
-/**
- * El aviso a los usuarios, también aparte y perezoso: trae la cápsula de verdad para la muestra —con su hoja— y
- * el censo, que es a lo que se entra, no tiene por qué cargarla.
- */
+/** El aviso a los usuarios, también aparte: trae la cápsula de verdad para la muestra, con su hoja. */
 const AdminAnnouncement = lazy(() =>
   import('./AdminAnnouncement').then((module) => ({ default: module.AdminAnnouncement })));
 
-// LA PORRA, como una vista más de este panel: no hay un segundo `/admin` ni una segunda guarda de acceso. Su
-// chunk es aparte, así que quien entra al censo no se descarga el panel de la edición.
+/** LA PORRA, como una pantalla más del panel: no hay un segundo `/admin` ni una segunda guarda de acceso. */
 const AdminPremios = lazy(() =>
   import('./premios/AdminPremios').then((module) => ({ default: module.AdminPremios })));
 
-const DATE_FORMAT = createLocalDateFormat({ dateStyle: 'medium', timeStyle: 'short' });
-/** Para fechas de alta: el día basta y ocupa la mitad. */
-const DAY_FORMAT = createLocalDateFormat({ dateStyle: 'medium' });
+/** Cuánto se queda a la vista el aviso de una acción. Con «Deshacer», más: hay que darle tiempo a arrepentirse. */
+const TOAST_MS = 4000;
+const TOAST_UNDO_MS = 8000;
 
 /**
- * Señales que el pie de la ficha ya representa como botón de purga. No se pintan además como píldora informativa:
- * sería el mismo texto y el mismo color dos veces en la misma ficha. Cuentan igual para el total de señalados.
- */
-const LEGACY_ANOMALIES = new Set<AdminAnomaly>(['legacy-token', 'legacy-fields']);
-
-/** Acción pendiente de confirmar: la ejecuta el modal, no el botón de la fila. */
-type PendingAction = { title: string; run: () => void } | null;
-
-/**
- * Los tres restos legacy, cada uno con su etiqueta y su texto de confirmación. Se purgan POR SEPARADO: borrar el
- * token en claro es urgente y borrar el id del gist apenas aporta y puede costarle una reconexión a su dueño.
- * Meterlos en el mismo botón obligaría a aceptar lo segundo para conseguir lo primero.
- */
-const LEGACY_FIELDS = [
-  { field: 'email', label: A.legacyEmail, confirm: A.legacyConfirm.email },
-  { field: 'gamesGistId', label: A.legacyGamesGist, confirm: A.legacyConfirm.gamesGistId },
-  { field: 'token', label: A.legacyToken, confirm: A.legacyConfirm.token },
-] as const satisfies ReadonlyArray<{ field: LegacyProfileField; label: string; confirm: (name: string) => string }>;
-
-function formatActivity(updatedAt: number): string {
-  return updatedAt > 0 ? DATE_FORMAT.format(new Date(updatedAt)) : A.never;
-}
-
-/** Estado de los retos para el menú: solo lo que decide si hay algo que hacer allí. */
-type PremiosStatus = { stage: 'none' | 'open' | 'pending'; closesAt: number | null };
-
-/** La línea de estado del aviso, o nada mientras no se ha leído. */
-function describeAnnouncement(announcement: Announcement | null | undefined): string {
-  if (announcement === undefined) return '';
-  if (!announcement) return A.menuStatus.announcementNone;
-  return announcement.active ? A.menuStatus.announcementActive(announcement.title) : A.menuStatus.announcementOff;
-}
-
-/** La línea de estado de los retos, o nada mientras no se ha leído. */
-function describePremios(status: PremiosStatus | null): string {
-  if (!status) return '';
-  if (status.stage === 'open') {
-    return A.menuStatus.premiosOpen(status.closesAt ? formatDate(status.closesAt) : A.field.none);
-  }
-  return status.stage === 'pending' ? A.menuStatus.premiosPending : A.menuStatus.premiosNone;
-}
-
-function formatDate(millis: number): string {
-  return DAY_FORMAT.format(new Date(millis));
-}
-
-/**
- * Con qué nombre se identifica una fila. Si el perfil no tiene `displayName` (perfil a medias), se cae al que
- * guardaron sus amistades: es el mismo nick público, y sin él la fila es un uid anónimo imposible de reconocer.
- */
-function displayNameOf(user: AdminUserRow): string {
-  return user.displayName.trim() || user.knownAs.trim() || A.noName;
-}
-
-/**
- * Cuántos canales suyos hay en circulación, dicho en palabras. Sustituye a la lista de ids: con uno está sano,
- * con más de uno hay deriva (y entonces la ficha ya trae el bloque que la explica), y los identificadores en sí
- * no permiten hacer nada desde esta pantalla.
- */
-function describeChannels(count: number, emptyLabel: string): string {
-  if (count === 0) {
-    return emptyLabel;
-  }
-  return count === 1 ? A.field.channelSingle : A.field.channelMany(count);
-}
-
-/**
- * Estado de la foto, DEDUCIDO de lo que el panel puede ver.
+ * Panel de administración (`/admin/*`, sin enlace en la navegación). Ver docs/plan-admin-rediseno.md.
  *
- * El interruptor de verdad (`showPhoto`) vive en el gist social del usuario, que estas reglas no dejan leer. Lo
- * que sí se ve son dos hechos: si su perfil publica `photoURL` (es lo que el opt-out borra, ver
- * `updateProfilePhoto`) y qué guardan sus amistades denormalizado de él.
- *
- *   - publica foto                                        → activada
- *   - no publica, pero sus amigos guardan una suya        → la tuvo y la quitó: oculta
- *   - no publica y sus amigos tampoco tienen ninguna suya → desactivada
- *   - no publica y NO TIENE AMISTADES                     → sin datos
- *
- * El cuarto caso es el que no se puede afirmar y por eso no se afirma: sin nadie que guarde una foto suya de
- * antes, quien apagó el interruptor se ve exactamente igual que quien nunca tuvo foto en su cuenta de Google.
- * Llamarlo "desactivada" sería inventarse el motivo; el `title` de cada estado explica de dónde sale.
- */
-function describePhoto(user: AdminUserRow): {
-  label: string;
-  hint: string;
-  kind: 'on' | 'hidden' | 'off' | 'unknown';
-} {
-  if (user.hasPhoto) {
-    return { label: A.field.photoOn, hint: A.field.photoOnHint, kind: 'on' };
-  }
-  if (user.friendKnownPhotos.some((known) => known.trim())) {
-    return { label: A.field.photoHidden, hint: A.field.photoHiddenHint, kind: 'hidden' };
-  }
-  // Con amistades, que ninguna guarde foto suya SÍ dice algo: no publicó ninguna desde que se hicieron amigos.
-  // El testigo son las amistades, no las fotos: `friendKnownPhotos` puede venir vacío de un amigo sin foto suya.
-  if (user.friends > 0 || user.pendingOut > 0 || user.pendingIn > 0) {
-    return { label: A.field.photoOff, hint: A.field.photoOffHint, kind: 'off' };
-  }
-  return { label: A.field.photoUnknown, hint: A.field.photoUnknownHint, kind: 'unknown' };
-}
-
-/**
- * Panel de administración (`/admin`, sin enlace en la navegación).
- *
- * Enseña el censo de perfiles sociales y permite tres cosas: suspender el social de alguien, purgarle los restos
- * legacy del documento público (email / gist de juegos / token en claro) y borrar su perfil con sus amistades.
+ * Es el armazón: la puerta (solo con el claim `admin`), el menú y las sub-rutas, y lo que comparten todas —el censo
+ * y sus acciones, los enlaces y demás fuentes, el aviso de cada acción y la confirmación—. Cada pantalla vive en
+ * `./admin/`, salvo las tres que ya existían (logros, aviso y retos), que se montan tal cual en su ruta.
  *
  * Todo se apoya en `isAdmin()` de firestore.rules; esta pantalla solo evita que quien no manda vea una tabla rota.
  */
 export const AdminHub = memo(function AdminHub() {
-  const vm = useAdminViewModel();
-  // Dos vistas y no dos rutas: `/admin` es una ruta oculta que ya cuelga de la guarda de `isAdmin()`, y partirla
-  // en dos obligaría a repetir esa guarda y a inventar un «volver» que no lleva a ninguna sección de la app.
-  const [view, setView] = useState<'users' | 'achievements' | 'announcement' | 'premios'>('users');
-  // La configuración de ocultación de logros: se lee al entrar en su vista y se reescribe al pulsar. Vive aquí
-  // —y no en la pantalla— porque es este componente el que ya habla con Firestore.
-  const [hiddenAchievements, setHiddenAchievements] = useState<HiddenOverrides>({});
-  // La apertura comunitaria PUBLICADA. Llega con la misma lectura que la ocultación (mismo documento) y sirve
-  // para que el catálogo pueda decir si lo que mide ahora es lo que la gente está viendo.
-  const [openFrontier, setOpenFrontier] = useState<OpenFrontier>({});
-  // Los escalones que el panel ha añadido a una escalera sin desplegar (§6.4bis). Llegan con la MISMA lectura
-  // que los dos de arriba —mismo documento— y sí son catálogo: al leerlos se reconstruye (`applyExtraSteps`).
-  const [extraSteps, setExtraSteps] = useState<ExtraSteps>({});
-  // El aviso a los usuarios que hay publicado ahora mismo. Se lee al entrar en su vista, saltándose la caché del
-  // dispositivo: aquí se está a punto de reescribirlo, y ver una versión de hace horas sería un fallo.
-  // `undefined` = aún sin leer: el formulario espera (ver `AdminAnnouncement`).
-  const [announcement, setAnnouncement] = useState<Announcement | null | undefined>(undefined);
-  const [pending, setPending] = useState<PendingAction>(null);
-  // Los enlaces de TODOS se piden una vez y se agrupan por usuario: el panel pinta decenas de fichas y una
-  // petición por ficha sería absurda para un dato que cabe en una sola respuesta.
-  const [sharesByUser, setSharesByUser] = useState<Record<string, AdminShareRow[]>>({});
-  const [bannedUsers, setBannedUsers] = useState<Set<string>>(new Set());
-  // Ajustes individuales de cuota, por uid. Vienen en la misma respuesta que los enlaces y son lo que permite
-  // enseñar en cada ficha la cuota REAL de esa persona, y no la que le tocaría por su rango.
-  const [overridesByUser, setOverridesByUser] = useState<Record<string, ShareQuotaOverride>>({});
-  // Estado de ESA respuesta (la del Worker, no la del censo de Firestore): si no llegó, sus totales no se pintan
-  // —un cero sin datos afirmaría que no hay ningún enlace ni ningún veto—, y si vino paginada se dice.
-  const [sharesSummary, setSharesSummary] = useState<{ total: number; complete: boolean } | null>(null);
-  /* Gasto de carátulas del día. Sale del Worker de carátulas, así que puede no llegar; mientras sea `null` la
-     fila no se pinta, igual que con el censo de enlaces. */
-  const [coverStats, setCoverStats] = useState<GastoDeCaratulas | null>(null);
-  // Estado de los retos, para su línea del menú. `null` = sin leer (o sin poder leerse): la línea no se pinta.
-  const [premiosStatus, setPremiosStatus] = useState<PremiosStatus | null>(null);
-  const [notice, setNotice] = useState('');
-  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  /**
-   * Carga la configuración de ocultación al entrar en la vista del catálogo, y solo entonces: el censo de
-   * usuarios —que es a lo que se entra— no la necesita para nada.
-   */
+  const log = useAdminLog();
+  const { record, undo: undoEntry, load: loadLog } = log;
+  const logPort = useMemo(() => ({ record, undo: undoEntry }), [record, undoEntry]);
+  const vm = useAdminViewModel(logPort);
+  const granted = vm.access === 'granted';
+  const data = useAdminPanelData(granted);
+  const insights = useAdminInsights(vm.census, vm.loadedAt);
+  const health = useAdminHealth(granted);
   useEffect(() => {
-    if (view !== 'achievements') return;
-    let cancelled = false;
-    void import('../../model/repository/achievementsConfigRepository')
-      .then((module) => module.loadAchievementsConfig(true))
-      .then((value) => {
-        if (cancelled) return;
-        setHiddenAchievements(value.hidden);
-        setOpenFrontier(value.open);
-        setExtraSteps(value.extraSteps);
-      })
-      .catch(() => {
-        // Sin configuración manda el catálogo; la pantalla lo enseña tal cual.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [view]);
+    if (granted) void loadLog();
+  }, [granted, loadLog]);
+  const location = useLocation();
+  const { screen } = matchAdminPath(location.pathname);
 
-  /** El aviso publicado, al entrar en su vista y solo entonces. `force`: sin caché, ver arriba. */
-  useEffect(() => {
-    if (view !== 'announcement') return;
-    let cancelled = false;
-    // Cada entrada vuelve a leer, y hasta entonces no hay formulario: no se edita sobre la foto de la visita anterior.
-    setAnnouncement(undefined);
-    void import('../../model/repository/announcementRepository')
-      .then((module) => module.loadAnnouncement(true))
-      .then((value) => {
-        if (!cancelled) setAnnouncement(value);
-      })
-      .catch(() => {
-        // Sin documento (o sin red) la pantalla abre en blanco, que es lo que hay: un aviso por escribir.
-        if (!cancelled) setAnnouncement(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [view]);
+  const [toast, setToast] = useState<AdminToast | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [pending, setPending] = useState<AdminConfirmRequest | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
 
-  /**
-   * El aviso, para su línea del menú: se lee al volver al censo SOLO si no se tiene ya. Al salir de su pantalla se
-   * tiene —la lectura o el guardado de allí—, así que la línea dice lo que se acaba de ver sin volver a pedirlo.
-   */
-  useEffect(() => {
-    if (view !== 'users' || announcement !== undefined) return;
-    let cancelled = false;
-    void import('../../model/repository/announcementRepository')
-      .then((module) => module.loadAnnouncement(true))
-      .then((value) => {
-        if (!cancelled) setAnnouncement(value);
-      })
-      .catch(() => {
-        // Sin respuesta no se afirma nada: la línea del menú se queda sin pintar.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [view, announcement]);
-
-  /**
-   * Los retos, para su línea del menú. Se releen cada vez que se vuelve al censo: la pantalla de los retos es la que
-   * los cambia, y sin tocar su estado no se sabría si lo que se ha hecho allí ha cambiado la etapa. Es UN documento.
-   */
-  useEffect(() => {
-    if (view !== 'users') return;
-    let cancelled = false;
-    void Promise.all([
-      import('../../model/repository/premios/premiosSeasonRepository'),
-      import('../../core/premios/votingSchedule'),
-    ])
-      .then(async ([season, schedule]) => {
-        const config = await season.fetchVotingConfig();
-        if (cancelled) return;
-        setPremiosStatus({ stage: schedule.getSeasonStage(config), closesAt: config?.closesAtMillis ?? null });
-      })
-      .catch(() => {
-        // Igual que el aviso: sin lectura, sin línea.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [view]);
-
-  /**
-   * Guarda el aviso y se queda con lo que de verdad ha quedado escrito. Igual que los interruptores de logros:
-   * lo escribe esto —que es quien habla con Firestore— y si falla LANZA, que la pantalla lo dice.
-   */
-  const saveAnnouncement = useCallback(async (next: Announcement): Promise<Announcement> => {
-    const module = await import('../../model/repository/announcementRepository');
-    const saved = await module.saveAnnouncement(next);
-    setAnnouncement(saved);
-    return saved;
+  const dismissToast = useCallback(() => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast(null);
   }, []);
-
-  /** Guarda el cambio y se queda con lo que de verdad ha quedado escrito. Si falla, LANZA: la ficha lo dice. */
-  const toggleHiddenAchievement = useCallback(async (ladderKey: string, hidden: boolean) => {
-    const module = await import('../../model/repository/achievementsConfigRepository');
-    setHiddenAchievements(await module.setLadderHidden(ladderKey, hidden));
-  }, []);
-
-  /**
-   * Amplía una escalera con escalones nuevos, para todo el mundo. Igual que el interruptor de ocultación: lo
-   * escribe esto —que es quien habla con Firestore— y si falla LANZA, que la ficha lo dice.
-   */
-  const saveExtraSteps = useCallback(async (ladderKey: string, steps: readonly number[]) => {
-    const module = await import('../../model/repository/achievementsConfigRepository');
-    setExtraSteps(await module.setExtraSteps(ladderKey, steps));
-  }, []);
-
-  /**
-   * Publica hasta dónde ha abierto cada escalera la comunidad. Es lo que decide qué escalones se le enseñan a
-   * TODO EL MUNDO, así que la mide el catálogo (que tiene los espejos delante) y la escribe esto. Si falla,
-   * LANZA: la ficha del catálogo lo dice.
-   */
-  /**
-   * Borra el espejo publicado de UNA persona y lo cuenta. No le quita ningún logro: los suyos se derivan de su
-   * biblioteca en su propio aparato, y los volverá a publicar en cuanto abra la app (lo dice la confirmación).
-   */
-  const clearAchievements = useCallback(async (profileDocId: string) => {
-    try {
-      await clearProfileAchievements(profileDocId);
-      setNotice(A.achievementsDone);
-      await vm.refresh();
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : ADMIN_SHARES_UI.failed);
+  const notify = useCallback((next: AdminToast) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast(next);
+    // Los errores no se van solos: hay que leerlos.
+    if (next.kind !== 'err') {
+      toastTimer.current = setTimeout(() => setToast(null), next.undo ? TOAST_UNDO_MS : TOAST_MS);
     }
-  }, [vm]);
-
-  const publishOpenFrontier = useCallback(async (open: OpenFrontier) => {
-    const module = await import('../../model/repository/achievementsConfigRepository');
-    setOpenFrontier(await module.publishOpenFrontier(open));
   }, []);
-
-  /**
-   * Borra el espejo de TODO el censo y, con él, la apertura publicada — que se mide sobre esos espejos y sin
-   * ellos no significa nada. Devuelve cuántos se borraron para que la pantalla lo diga.
-   */
-  const resetAllAchievements = useCallback(async (): Promise<number> => {
-    const ids = (vm.census?.users || []).map((entry) => entry.id);
-    const cleared = await clearAllAchievements(ids);
-    const module = await import('../../model/repository/achievementsConfigRepository');
-    setOpenFrontier(await module.publishOpenFrontier({}));
-    await vm.refresh();
-    return cleared;
-  }, [vm]);
-
   useEffect(() => () => {
-    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
   }, []);
+
+  // El resultado de cada acción del censo llega como `vm.status`: se dice en el aviso.
+  useEffect(() => {
+    if (vm.status) notify({ text: vm.status.text, kind: vm.status.kind, undo: vm.status.undo });
+  }, [vm.status, notify]);
 
   const copyUid = useCallback(async (uid: string) => {
-    // Sin permiso de portapapeles no hay nada que decir: el uid está a la vista y se puede seleccionar.
-    if (!(await copyText(uid))) {
-      return;
-    }
-    setNotice(A.copiedUid);
-    // El acuse se retira solo: es una confirmación de un gesto, no un estado de la pantalla, y dejarlo fijo
-    // hace dudar de a qué copia se refiere tras el segundo clic.
-    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
-    noticeTimerRef.current = setTimeout(() => setNotice(''), 2500);
-  }, []);
+    // Sin permiso de portapapeles no hay nada que decir.
+    if (await copyText(uid)) notify({ text: A.copiedUid, kind: 'ok' });
+  }, [notify]);
 
-  const loadShares = useCallback(async () => {
+  const { loadShares } = data;
+  const runShareAction = useCallback(async (action: () => Promise<string>, target?: { uid: string; name: string }) => {
     try {
-      const page = await listAllShares();
-      const grouped: Record<string, AdminShareRow[]> = {};
-      for (const row of page.shares) {
-        (grouped[row.uid] ||= []).push(row);
-      }
-      setSharesByUser(grouped);
-      setBannedUsers(new Set(page.bans));
-      setOverridesByUser(page.overrides);
-      setSharesSummary({ total: page.shares.length, complete: page.complete });
+      const text = await action();
+      notify({ text, kind: 'ok' });
+      // Se apunta con el texto del resultado: dice ya qué se hizo («Enlace retirado», «Vetado; 3 retirados»…).
+      if (target) void record({ kind: 'shares', text: text.replace(/\.$/, ''), targetUid: target.uid, targetName: target.name, undo: null });
     } catch {
-      // Sin enlaces que enseñar, el resto del panel sigue siendo útil: no se rompe la pantalla por esto.
+      notify({ text: ADMIN_SHARES_UI.failed, kind: 'err' });
     }
-  }, []);
+    await loadShares();
+  }, [notify, loadShares, record]);
 
+  const openSearch = useCallback(() => setSearchOpen(true), []);
+  const closeSearch = useCallback(() => setSearchOpen(false), []);
+
+  // ⌘K / Ctrl+K DENTRO DEL PANEL abre su buscador y no el general de la app. Se escucha en la fase de CAPTURA y se
+  // marca el evento (`preventDefault`): el buscador general mira `defaultPrevented` y no se abre encima.
   useEffect(() => {
-    void loadShares();
-  }, [loadShares]);
+    if (vm.access !== 'granted') return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.altKey || event.shiftKey || !(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') return;
+      event.preventDefault();
+      setSearchOpen((open) => !open);
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [vm.access]);
 
-  /* Una sola vez al abrir el panel y sin botón de recargar: es un contador que se mueve despacio —lotes de 50—
-     y lo que se mira aquí es si el día se está llenando, no el número al segundo. Volver a abrir el panel lo
-     vuelve a pedir, que es toda la frescura que esto necesita. */
-  useEffect(() => {
-    void leerGastoDeCaratulas().then(setCoverStats);
-  }, []);
-
-  /** Acciones de moderación de enlaces: ejecutan, avisan y recargan. La confirmación la pone quien llama. */
-  const runShareAction = useCallback(
-    async (action: () => Promise<string>) => {
-      try {
-        setNotice(await action());
-      } catch {
-        setNotice(ADMIN_SHARES_UI.failed);
-      }
-      await loadShares();
-    },
-    [loadShares],
+  const context = useMemo<AdminPanelContextValue>(
+    () => ({ vm, data, insights, health, log, notify, confirm: setPending, copyUid, runShareAction, openSearch }),
+    [vm, data, insights, health, log, notify, copyUid, runShareAction, openSearch],
   );
 
-  const closeConfirm = useCallback(() => setPending(null), []);
-  const acceptConfirm = useCallback(() => {
-    pending?.run();
-    setPending(null);
-  }, [pending]);
+  const counts = useMemo<Partial<Record<AdminScreen, { value: number; soft?: boolean }>>>(
+    () => ({
+      // La portada se marca en rojo con lo grave y lo vencido: es lo que pide entrar hoy.
+      today: { value: (insights.totals?.severe || 0) + insights.dueTodos },
+      users: { value: vm.census?.totals.flagged || 0, soft: true },
+    }),
+    [vm.census, insights.totals, insights.dueTodos],
+  );
 
   if (vm.access === 'checking') {
     return (
@@ -449,736 +166,101 @@ export const AdminHub = memo(function AdminHub() {
     return <Navigate to="/completados" replace />;
   }
 
-  // El catálogo de logros va DESPUÉS de las dos guardas de arriba: quien no manda aquí no lo ve tampoco.
-  if (view === 'achievements') {
-    return (
-      <Suspense fallback={null}>
-        {/* Los espejos ya vienen en el censo (un campo más del documento que se baja de todos modos), así que
-            medir el reparto no cuesta ni una petición. Vacío = sin muestra, y la pantalla lo dice. */}
-        <AdminAchievements
-          onBack={() => setView('users')}
-          mirrors={vm.census?.mirrors}
-          hiddenOverrides={hiddenAchievements}
-          onToggleHidden={toggleHiddenAchievement}
-          openFrontier={openFrontier}
-          onPublishFrontier={publishOpenFrontier}
-          extraSteps={extraSteps}
-          onSetExtraSteps={saveExtraSteps}
-          onResetAll={resetAllAchievements}
-          censusSize={vm.census?.users.length || 0}
-        />
-      </Suspense>
-    );
-  }
-
-  if (view === 'announcement') {
-    return (
-      <Suspense fallback={null}>
-        <AdminAnnouncement
-          current={announcement}
-          onSave={saveAnnouncement}
-          onBack={() => setView('users')}
-        />
-      </Suspense>
-    );
-  }
-
-  if (view === 'premios') {
-    return (
-      <Suspense fallback={null}>
-        <AdminPremios onBack={() => setView('users')} />
-      </Suspense>
-    );
-  }
-
-  const totals = vm.census?.totals;
-  const strayPhotoCount = vm.signalCounts.get('stray-photo') || 0;
-
-  // Tarjeta contenedora propia y NO `.settings-hub`/`.settings-card`: ese hub reparte sus tarjetas en una rejilla
-  // de dos columnas a partir de 48rem, y eso partía el panel por la mitad. Aquí ocupa el ancho entero, y dentro va
-  // la rejilla de fichas de usuario.
   return (
-    <section className="admin-hub" aria-label={A.sectionAria}>
-      {/* ═══ LAS OTRAS PANTALLAS DEL PANEL, EN SU PROPIA TARJETA ═══════════════════════════════════════════
-          Eran tres botones metidos entre las notas del censo y la tabla de totales, con la misma forma que los
-          botones de acción de una ficha de usuario: no se leían como «ir a otra pantalla» sino como «hacer algo
-          aquí». Sacados a su tarjeta, con su rótulo, son lo que son — el menú del panel. */}
-      <nav className="admin-card admin-menu" aria-label={A.menuAria}>
-        <h2>{A.menuTitle}</h2>
-        {/* Cada destino con su estado debajo, cuando lo tiene: es lo que dice si hace falta entrar. El catálogo de
-            logros no lleva línea: no tiene un estado que pida atención. */}
-        <ul className="admin-menu-links">
-          <li>
-            <button type="button" className="btn btn-open" onClick={() => setView('achievements')}>
-              {ADMIN_ACHIEVEMENTS_UI.open}
-              <Icon name="angle-right" className="ui-icon btn-open-go" />
-            </button>
-          </li>
-          <li>
-            <button type="button" className="btn btn-open" onClick={() => setView('announcement')}>
-              {ADMIN_ANNOUNCEMENT_UI.open}
-              <Icon name="angle-right" className="ui-icon btn-open-go" />
-            </button>
-            {describeAnnouncement(announcement) ? (
-              <span className="admin-menu-status">{describeAnnouncement(announcement)}</span>
-            ) : null}
-          </li>
-          <li>
-            <button type="button" className="btn btn-open" onClick={() => setView('premios')}>
-              {PREMIOS_ADMIN_OPEN}
-              <Icon name="angle-right" className="ui-icon btn-open-go" />
-            </button>
-            {premiosStatus ? (
-              <span className={`admin-menu-status${premiosStatus.stage === 'pending' ? ' is-pending' : ''}`}>
-                {describePremios(premiosStatus)}
-              </span>
-            ) : null}
-          </li>
-        </ul>
-      </nav>
-
-      <div className="admin-card">
-        <h2>{A.title}</h2>
-        <p className="admin-card-sub">{A.subtitle}</p>
-        {/* Las notas, plegadas: se leen una vez. La de los restos legacy solo sale si hay alguno que purgar. */}
-        <details className="admin-notes">
-          <summary>{A.notesSummary}</summary>
-          <p className="admin-card-note">{A.scopeNote}</p>
-          {totals && totals.legacy > 0 ? <p className="admin-card-note">{A.legacyNote}</p> : null}
-        </details>
-
-        {totals ? (
-          <dl className="admin-totals" aria-label={A.totals.aria}>
-            <div><dt>{A.totals.profiles}</dt><dd>{totals.profiles}</dd></div>
-            <div><dt>{A.totals.socialEnabled}</dt><dd>{totals.socialEnabled}</dd></div>
-            <div><dt>{A.totals.friendships}</dt><dd>{totals.friendships}</dd></div>
-            <div><dt>{A.totals.pending}</dt><dd>{totals.pending}</dd></div>
-            <div><dt>{A.totals.legacy}</dt><dd>{totals.legacy}</dd></div>
-            <div className={totals.flagged > 0 ? 'admin-total-flagged' : undefined}>
-              <dt>{A.totals.flagged}</dt><dd>{totals.flagged}</dd>
-            </div>
-            {/* Los dos del Worker de enlaces, solo si su respuesta llegó. */}
-            {sharesSummary ? (
-              <>
-                <div>
-                  <dt>{A.totals.activeShares}</dt>
-                  <dd title={sharesSummary.complete ? undefined : A.totals.partialHint}>
-                    {sharesSummary.complete ? sharesSummary.total : A.totals.partialCount(sharesSummary.total)}
-                  </dd>
-                </div>
-                <div className={bannedUsers.size > 0 ? 'admin-total-flagged' : undefined}>
-                  <dt>{A.totals.banned}</dt><dd>{bannedUsers.size}</dd>
-                </div>
-              </>
-            ) : null}
-            {/* Carátulas del día, del otro Worker. Se resalta al acercarse al tope —no al llegar— porque para
-                cuando se llene ya no hay nada que decidir: lo que se quiere es verlo venir. */}
-            {coverStats ? (
-              <div className={coverStats.gastado >= coverStats.techo * 0.8 ? 'admin-total-flagged' : undefined}>
-                <dt>{A.totals.covers}</dt>
-                <dd title={A.totals.coversHint}>{A.totals.coversValue(coverStats.gastado, coverStats.techo)}</dd>
-              </div>
-            ) : null}
-            {PROFILE_TIERS.map((tier) => (
-              <div key={tier} className={`admin-total-tier tier-${tier}`}>
-                <dt>{PROFILE_TIER_LABELS[tier]}</dt>
-                <dd>{totals.byTier[tier]}</dd>
-              </div>
-            ))}
-          </dl>
-        ) : null}
-
-        <div className="admin-toolbar">
-          <label className="admin-search">
-            <span>{A.searchLabel}</span>
-            <input
-              type="text"
-              className="finput"
-              value={vm.search}
-              placeholder={A.searchPlaceholder}
-              onChange={(event) => vm.setSearch(event.target.value)}
-            />
-          </label>
-          {/* El filtro que responde a "¿hay algo que mirar hoy?" y, después, "¿quién más tiene esto?". Va junto a la
-              búsqueda porque los dos recortan la misma lista, y el recuento de al lado dice cuánto queda tras
-              aplicarlos. Solo se ofrecen las señales que alguna ficha tiene, en el orden del catálogo de textos. */}
-          <label className="admin-signal-filter">
-            <span>{A.signalFilter.label}</span>
-            <select
-              className="finput"
-              value={vm.signalFilter}
-              onChange={(event) => vm.setSignalFilter(event.target.value as AdminSignalFilter)}
-            >
-              <option value="all">{A.signalFilter.all}</option>
-              <option value="flagged">{A.signalFilter.flagged}</option>
-              {(Object.keys(A.anomalies) as Array<AdminAnomaly | 'aria'>)
-                .filter((code): code is AdminAnomaly => code !== 'aria' && vm.signalCounts.has(code))
-                .map((code) => (
-                  <option key={code} value={code}>
-                    {A.signalFilter.one(A.anomalies[code].label, vm.signalCounts.get(code) || 0)}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <p className="admin-result-count">{A.resultCount(vm.users.length)}</p>
-          {/* Actualizar y NADA MÁS. La salida del panel («volver a mis listas») se retiró de aquí: la cabecera de
-              secciones sigue montada en `/admin` —`App` no la esconde en esta ruta—, así que era un segundo
-              camino a lo mismo compitiendo por sitio con la búsqueda y el filtro. */}
-          <button type="button" className="btn btn-secondary" onClick={() => void vm.refresh()} disabled={vm.loading}>
-            <Icon name="refresh" />
-            <span>{A.refresh}</span>
-          </button>
+    <AdminPanelContext.Provider value={context}>
+      <section className="admin-hub adm-shell" aria-label={A.sectionAria}>
+        <AdminNav current={screen} counts={counts} onSearch={openSearch} />
+        <div className="adm-main">
+          <Suspense fallback={null}>
+            <Routes>
+              <Route index element={<AdminTodayScreen />} />
+              <Route path="usuarios" element={<AdminUsersScreen />} />
+              <Route path="usuarios/:userId" element={<AdminUsersScreen />} />
+              <Route path="comunidad" element={<AdminCommunityScreen />} />
+              <Route path="capacidad" element={<AdminCapacityScreen />} />
+              <Route path="registro" element={<AdminLogScreen />} />
+              <Route path="logros" element={<AchievementsRoute />} />
+              <Route path="aviso" element={<AnnouncementRoute />} />
+              <Route path="retos" element={<AdminPremios />} />
+              <Route path="*" element={<Navigate to={ADMIN_PATHS.today} replace />} />
+            </Routes>
+          </Suspense>
         </div>
-
-        {vm.census?.truncated ? <p className="admin-warning">{A.truncated(ADMIN_PROFILES_LIMIT)}</p> : null}
-        {vm.error ? <p className="admin-feedback err">{vm.error}</p> : null}
-        {vm.status ? <p className={`admin-feedback ${vm.status.kind}`}>{vm.status.text}</p> : null}
-        {notice ? <p className="admin-feedback ok">{notice}</p> : null}
-
-        {/* Las fotos publicadas de más, todas de una vez: es un resto de un fallo ya arreglado, no una decisión ficha a
-            ficha, y retirarlas de una en una obligaba a buscarlas por el censo. Cada ficha conserva su botón. */}
-        {strayPhotoCount > 0 ? (
-          <div className="admin-gist-drift" role="group" aria-label={A.strayPhoto.bulkTitle(strayPhotoCount)}>
-            <span className="admin-field-label">{A.strayPhoto.bulkTitle(strayPhotoCount)}</span>
-            <p className="admin-card-note">{A.strayPhoto.hint}</p>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              disabled={vm.clearingStrayPhotos || vm.loading}
-              onClick={() =>
-                setPending({
-                  title: A.strayPhoto.bulkConfirm(strayPhotoCount),
-                  run: () => void vm.clearAllStrayPhotos(),
-                })
-              }
-            >
-              {vm.clearingStrayPhotos ? A.working : A.strayPhoto.bulkBtn(strayPhotoCount)}
-            </button>
-          </div>
-        ) : null}
-
-        {vm.loading && !vm.census ? (
-          <p>{A.loading}</p>
-        ) : vm.error ? (
-          // Con un fallo de carga NO se dice además "no hay ningún perfil": la lista está vacía porque no se
-          // pudo leer, y afirmar que no hay usuarios sería mentir sobre el estado del servicio.
-          null
-        ) : vm.users.length === 0 ? (
-          // Con el filtro de señales puesto, la lista vacía es una BUENA noticia y no un "no se encontró nada":
-          // decirlo con el texto de la búsqueda hacía dudar de si el censo se había cargado.
-          <p>
-            {!vm.census?.users.length
-              ? A.empty
-              : vm.search.trim() || vm.signalFilter === 'all'
-                ? A.emptyFiltered
-                : vm.signalFilter === 'flagged'
-                  ? A.emptyFlagged
-                  : A.emptySignal}
-          </p>
-        ) : (
-          <ul className="admin-user-grid" aria-label={A.table.aria}>
-            {vm.users.map((user) => {
-              const name = displayNameOf(user);
-              const busy = vm.busyId === user.id;
-              const legacyTags = LEGACY_FIELDS.filter((entry) => user.legacy[entry.field]);
-              const visibleAnomalies = user.anomalies.filter((code) => !LEGACY_ANOMALIES.has(code));
-              // Solo se puede migrar si el documento dice de quién es: cuando no trae `uid`, el censo lo iguala al
-              // id del propio documento y no hay destino que proponer.
-              const cutoverTargetKnown = Boolean(user.uid) && user.uid !== user.id;
-              // Nombres que sus amistades guardan y que ya no son el que publica: es lo que le ven sus amigos. Sin
-              // nick publicado no hay con qué comparar, y el nombre de sus amigos ya identifica la ficha arriba.
-              const staleNames = user.displayName.trim()
-                ? user.friendKnownNames.filter((known) => known !== user.displayName.trim())
-                : [];
-              // La foto denormalizada se queda rancia por la misma vía que el nombre. Rancia = la que el panel
-              // ESCRIBIRÍA no es la que hay (`healedFriendPhoto`): una amistad sin foto no cuenta aunque el perfil
-              // publique una, porque podría ser una que ocultó y el panel no se la pone. Con otro criterio, el aviso
-              // pedía propagar algo que la acción se niega a escribir y no se iba nunca.
-              const photoIsStale = user.friendKnownPhotos.some(
-                (known) => known !== healedFriendPhoto(known, user.photoURL),
-              );
-              // El botón de propagar solo aparece cuando hay algo que propagar de verdad.
-              const identityIsStale = staleNames.length > 0 || photoIsStale;
-              // Cuota REAL de esta persona: su rango, ya resuelto con su ajuste individual si lo tiene. Es la
-              // misma función que aplica el servidor, así que la ficha no puede decir una cifra y el Worker otra.
-              const override = overridesByUser[user.uid];
-              const hasQuotaOverride = Boolean(override && (override.maxActive || override.ttlDays));
-              const quota = resolveShareQuota(user.tier, override);
-              const photoState = describePhoto(user);
-
-              return (
-                <li key={user.id} className={`admin-user-card${busy ? ' is-busy' : ''}`}>
-                  <header className="admin-user-head">
-                    <HubAvatar photoURL={user.photoURL} />
-                    <span className="admin-user-text">
-                      <b>
-                        {name}
-                        {/* Se avisa de que ese nombre no sale de su perfil, sino de sus amistades. */}
-                        {!user.displayName.trim() && user.knownAs.trim() ? (
-                          <em className="admin-known-as"> · {A.knownAsHint}</em>
-                        ) : null}
-                      </b>
-                      {/* El uid es la única identidad que queda en el cliente y sigue haciendo falta para
-                          buscar a alguien en Firebase Auth, que es donde vive el correo. Se COPIA, pero ya no se
-                          pinta: enseñado en cada ficha era una cadena ilegible que tapaba los datos que sí se
-                          leen, y no hay nada que se pueda hacer con él en esta pantalla. */}
-                      <button
-                        type="button"
-                        className="admin-uid"
-                        aria-label={A.copyUidAria(name)}
-                        onClick={() => void copyUid(user.uid)}
-                      >
-                        <Icon name="content-copy" />
-                        <span>{A.copyUid}</span>
-                      </button>
-                    </span>
-                    <span className={`admin-badge ${user.socialEnabled ? 'on' : 'off'}`}>
-                      {user.socialEnabled ? A.enabled : A.disabled}
-                    </span>
-                  </header>
-
-                  {/* El cambio de rango no pasa por el modal de confirmación: es reversible de un clic y no
-                      destruye nada, al contrario que suspender, purgar o borrar. */}
-                  <label className="admin-tier-row">
-                    <span className="admin-field-label">{A.tier.column}</span>
-                    <select
-                      className={`finput admin-tier-select tier-${user.tier}`}
-                      aria-label={A.tier.selectAria(name)}
-                      value={user.tier}
-                      disabled={busy}
-                      onChange={(event) => void vm.changeTier(user, event.target.value as ProfileTier)}
-                    >
-                      {PROFILE_TIERS.map((tier) => {
-                        // Mithril solo en la fila del propio admin. Se pinta igualmente (deshabilitado) para
-                        // que se vea que el rango existe y no parezca que falta una opción.
-                        const reserved = tier === ADMIN_ONLY_TIER && user.uid !== vm.ownUid;
-                        return (
-                          <option key={tier} value={tier} disabled={reserved}>
-                            {PROFILE_TIER_LABELS[tier]}
-                            {reserved ? ` · ${A.tier.reservedHint}` : ''}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </label>
-
-                  {/* Señales primero: es lo que dice si hay que mirar esta ficha o pasar de largo.
-                      Las de restos legacy se omiten AQUÍ porque el pie de la ficha ya las muestra —con el mismo
-                      color de peligro y su explicación— convertidas en el botón que las purga: repetir la misma
-                      píldora dos veces en la misma ficha solo hace dudar de si son dos cosas distintas. Siguen
-                      contando para el total de perfiles con señales. */}
-                  {visibleAnomalies.length > 0 ? (
-                    <ul className="admin-anomalies" aria-label={A.anomalies.aria}>
-                      {visibleAnomalies.map((code) => (
-                        <li key={code} className={`admin-anomaly${SEVERE_ANOMALIES.has(code) ? ' is-severe' : ''}`} title={A.anomalies[code].hint}>
-                          {A.anomalies[code].label}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-
-                  {/* Enlaces compartidos de ESTE usuario, plegados. La moderación vive en su ficha porque la
-                      pregunta siempre es "¿qué ha publicado esta persona?", no "¿qué enlaces hay en total". */}
-                  <AdminUserShares
-                    uid={user.uid}
-                    shares={sharesByUser[user.uid] || []}
-                    banned={bannedUsers.has(user.uid)}
-                    tier={user.tier}
-                    quota={quota}
-                    hasOverride={hasQuotaOverride}
-                    onConfirm={(request: ShareActionRequest) => setPending({ title: request.title, run: () => void request.run() })}
-                    onRemove={(token) => runShareAction(async () => {
-                      await adminRemoveShare(token);
-                      return ADMIN_SHARES_UI.removed;
-                    })}
-                    onBan={(uid, options) => runShareAction(async () => {
-                      const purged = await banUser(uid, options);
-                      return ADMIN_SHARES_UI.banned(purged);
-                    })}
-                    onUnban={(uid) => runShareAction(async () => {
-                      await unbanUser(uid);
-                      return ADMIN_SHARES_UI.unbanned;
-                    })}
-                    onQuota={(uid, values) => runShareAction(async () => {
-                      // Los dos valores son ABSOLUTOS y van siempre juntos: el formulario los trae rellenos, así
-                      // que "no tocar este campo" ya no necesita ninguna convención — se deja como está.
-                      await setQuotaOverride(uid, values);
-                      return ADMIN_SHARES_UI.quotaSet;
-                    })}
-                    onQuotaClear={(uid) => runShareAction(async () => {
-                      await clearQuotaOverride(uid);
-                      return ADMIN_SHARES_UI.quotaCleared;
-                    })}
-                  />
-
-                  {/* Ficha completa: todo lo que las reglas dejan leer. `dl` y no tabla, para que en móvil
-                      caiga a una columna sin scroll horizontal. */}
-                  <dl className="admin-user-data">
-                    <div>
-                      <dt>{user.createdAt > 0 ? A.field.createdAt : A.field.createdAtEstimated}</dt>
-                      <dd title={user.createdAt > 0 ? undefined : A.field.estimatedHint}>
-                        {user.createdAt > 0
-                          ? formatDate(user.createdAt)
-                          : user.estimatedFirstSeenAt > 0
-                            ? `~ ${formatDate(user.estimatedFirstSeenAt)}`
-                            : A.field.createdAtUnknown}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>{A.field.lastActivity}</dt>
-                      <dd title={user.updatedAt > 0 ? formatActivity(user.updatedAt) : undefined}>
-                        {user.updatedAt > 0 ? A.field.lastActivityAgo(user.updatedAt, Date.now()) : A.never}
-                      </dd>
-                    </div>
-                    <div><dt>{A.field.friends}</dt><dd>{user.friends}</dd></div>
-                    {/* Las peticiones, solo si hay alguna: un «0» en cada ficha no decía nada. */}
-                    {user.pendingOut > 0 ? <div><dt>{A.field.pendingOut}</dt><dd>{user.pendingOut}</dd></div> : null}
-                    {user.pendingIn > 0 ? <div><dt>{A.field.pendingIn}</dt><dd>{user.pendingIn}</dd></div> : null}
-                    {/* El id del canal ya no se publica en el perfil, así que este campo solo existe como resto
-                        legacy: pintarlo siempre enseñaba un "—" a todo el mundo. El canal de alguien se ve ahora
-                        por lo que guardan sus amistades, que es el dato de abajo. El id EN SÍ no se enseña: no se
-                        puede abrir un gist ajeno desde aquí, y lo accionable es que lo siga publicando. */}
-                    {user.socialGistId ? (
-                      <div><dt>{A.field.socialGist}</dt><dd>{A.field.socialGistPresent}</dd></div>
-                    ) : null}
-                    {/* El canal SOCIAL ya no se pinta como campo: con uno está sano y no dice nada, y con más de uno
-                        sale el bloque de deriva de abajo, que lo cuenta con su explicación. */}
-                    {/* El otro canal: con él un amigo carga sus LISTAS compartidas. Solo cuando no es el caso sano
-                        (uno): vacío no es un fallo —no tiene la sincronización de listas configurada—, pero sí es un
-                        dato; con más de uno es la señal `games-gist-drift`, dicha con el número. */}
-                    {user.friendGamesGistIds.length !== 1 ? (
-                      <div>
-                        <dt>{A.field.friendGamesGists}</dt>
-                        <dd>{describeChannels(user.friendGamesGistIds.length, A.field.listsNone)}</dd>
-                      </div>
-                    ) : null}
-                    {/* Solo cuando alguno de sus amigos le ve con otro nombre: en el caso normal repetir el nick
-                        que ya está arriba no aporta nada. */}
-                    {/* Los DOS nombres, etiquetados por origen. Antes solo se pintaba el de las amistades como "el
-                        viejo", y eso era afirmar lo que el panel no puede saber: el nick vigente vive en su gist. */}
-                    {staleNames.length > 0 ? (
-                      <>
-                        <div><dt>{A.field.profileNameSource}</dt><dd>{user.displayName.trim()}</dd></div>
-                        <div><dt>{A.field.staleFriendNames}</dt><dd>{staleNames.join(', ')}</dd></div>
-                      </>
-                    ) : null}
-                    {/* La foto de sus amistades ya no es un campo: al día no decía nada, y desactualizada la cuenta el
-                        bloque de identidad de abajo, que es donde está el botón que la arregla. */}
-                    {user.stalePendingOut > 0 ? (
-                      <div>
-                        <dt>{A.field.stalePending}</dt>
-                        <dd>{A.field.stalePendingDetail(user.stalePendingOut, user.fossilPendingOut)}</dd>
-                      </div>
-                    ) : null}
-                    {/* Sin «ETag del gist»: un dato de caché interno, sin nada que decidir con él. */}
-                    {/* Tres estados en vez de un sí/no: "no" se leía como "no tiene", cuando lo más frecuente es
-                        que la haya ocultado. Cuál de los tres es y por qué, en el `title`. */}
-                    <div>
-                      <dt>{A.field.photo}</dt>
-                      <dd className={`admin-photo-state is-${photoState.kind}`} title={photoState.hint}>
-                        {photoState.label}
-                      </dd>
-                    </div>
-                    {/* Sin campo de esquema: solo importa cuando es antiguo, y entonces ya lo dice su señal. */}
-                  </dl>
-
-                  {/* Deriva de gist: DE DÓNDE sale (su perfil, sus amistades, o las dos) y cuántos canales hay.
-                      Los ids no se enseñan porque no hay nada que decidir con ellos: la deriva la resuelve su
-                      dueño al abrir el hub, y desde aquí no hay acción posible ni con id ni sin él. */}
-                  {user.anomalies.includes('gist-drift') ? (
-                    <div className="admin-gist-drift" role="group" aria-label={A.gist.driftTitle}>
-                      <span className="admin-field-label">{A.gist.driftTitle}</span>
-                      <p className="admin-card-note">{A.gist.driftHint}</p>
-                      <dl className="admin-user-data">
-                        <div>
-                          <dt>{A.gist.profileGist}</dt>
-                          {/* Lo habitual desde la purga: el perfil ya no publica id y la deriva se ve entre las
-                              propias amistades. Decirlo evita leer el hueco como un dato que no se pudo cargar. */}
-                          <dd>{user.socialGistId ? A.gist.profileGistOwn : A.gist.profileGistPurged}</dd>
-                        </div>
-                        <div>
-                          <dt>{A.gist.friendGist}</dt>
-                          <dd>{describeChannels(user.friendSocialGistIds.length, A.field.channelNone)}</dd>
-                        </div>
-                      </dl>
-                    </div>
-                  ) : null}
-
-                  {/* Identidad denormalizada rancia: sus amigos le ven con el nombre (o la foto) de cuando se
-                      hicieron amigos. Su cliente lo arregla solo al abrir el espacio social, guardar el perfil o
-                      publicar; quien no pasa por ahí lo arrastra, y esta es la única vía que no depende de él. */}
-                  {identityIsStale ? (
-                    <div className="admin-gist-drift" role="group" aria-label={A.healIdentity.title}>
-                      {/* El título dice QUÉ no cuadra. Con el nombre bien y la foto rancia, un «identidad» a secas
-                          se leía como que había que relanzar el nombre, que ya era el mismo. */}
-                      <span className="admin-field-label">
-                        {staleNames.length > 0 && photoIsStale
-                          ? A.healIdentity.titleBoth
-                          : staleNames.length > 0
-                            ? A.healIdentity.titleName
-                            : A.healIdentity.titlePhoto}
-                      </span>
-                      <p className="admin-card-note">{A.healIdentity.hint}</p>
-                      {/* Aviso cuando los nombres no coinciden: propagar escribe el del PERFIL, que puede ser el
-                          viejo. Sin esto, el botón deshacía en las amistades un nombre que ya era el correcto. */}
-                      {staleNames.length > 0 ? (
-                        <p className="admin-warning">{A.field.nameMismatchHint}</p>
-                      ) : null}
-                      {/* DESEMPATE A MANO: los nombres en circulación, cada uno con su origen, para elegir el bueno.
-                          El panel no puede saberlo (el nick vive en el gist), pero quien mira sí puede decidirlo. */}
-                      {staleNames.length > 0 ? (
-                        <div className="admin-name-choice" role="group" aria-label={A.chooseName.title}>
-                          <span className="admin-field-label">{A.chooseName.title}</span>
-                          <p className="admin-card-note">{A.chooseName.hint}</p>
-                          <div className="admin-actions">
-                            {[
-                              { value: user.displayName.trim(), origin: A.chooseName.current },
-                              ...staleNames.map((known) => ({ value: known, origin: A.chooseName.fromFriends })),
-                            ]
-                              .filter((option) => option.value)
-                              .map((option) => (
-                                <button
-                                  key={`${option.origin}-${option.value}`}
-                                  type="button"
-                                  className="btn btn-secondary"
-                                  disabled={busy}
-                                  aria-label={A.chooseName.btnAria(option.value, name)}
-                                  onClick={() =>
-                                    setPending({
-                                      title: A.chooseName.confirm(name, option.value),
-                                      run: () => void vm.chooseDisplayName(user, option.value),
-                                    })
-                                  }
-                                >
-                                  {`${A.chooseName.btn(option.value)} (${option.origin})`}
-                                </button>
-                              ))}
-                          </div>
-                        </div>
-                      ) : null}
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        disabled={busy}
-                        onClick={() =>
-                          setPending({
-                            /**
-                             * La confirmación dice el nombre EXACTO que se va a escribir… pero SOLO cuando el
-                             * nombre es lo que está en disputa.
-                             *
-                             * Este bloque sale también con la foto rancia y el nick impecable, y ahí preguntar
-                             * «¿escribir «Ada» como nombre de Ada?» es señalar un problema que no existe: el
-                             * administrador lee dos veces el mismo nombre y no entiende qué se le está pidiendo
-                             * (y de paso no se entera de que lo que se va a arreglar es la foto).
-                             */
-                            title: staleNames.length > 0
-                              ? A.healIdentity.confirmWithName(name, user.displayName.trim() || user.knownAs.trim())
-                              : A.healIdentity.confirmPhoto(name),
-                            run: () => void vm.healIdentity(user),
-                          })
-                        }
-                      >
-                        {busy ? A.working : staleNames.length > 0 ? A.healIdentity.btn : A.healIdentity.btnPhoto}
-                      </button>
-                    </div>
-                  ) : null}
-
-                  {/* Solicitudes que envió y nadie aceptó en 180 días. El botón solo aparece cuando de verdad hay
-                      alguna purgable: la señal avisa a los 90 días, pero borrar espera al doble de margen. */}
-                  {user.fossilPendingOut > 0 ? (
-                    <div className="admin-gist-drift" role="group" aria-label={A.fossil.title}>
-                      <span className="admin-field-label">{A.fossil.title}</span>
-                      <p className="admin-card-note">{A.fossil.hint}</p>
-                      <button
-                        type="button"
-                        className="btn btn-danger"
-                        disabled={busy}
-                        onClick={() =>
-                          setPending({
-                            title: A.fossil.confirm(name, user.fossilPendingOut),
-                            run: () => void vm.purgeFossilRequests(user),
-                          })
-                        }
-                      >
-                        {busy ? A.working : A.fossil.btn(user.fossilPendingOut)}
-                      </button>
-                    </div>
-                  ) : null}
-
-                  {/* Foto publicada de más: la retira del perfil y de las amistades que guarden esa misma foto. */}
-                  {user.anomalies.includes('stray-photo') ? (
-                    <div className="admin-gist-drift" role="group" aria-label={A.strayPhoto.title}>
-                      {/* Sin la explicación larga: ya la da el bloque de encima del censo, y la píldora la trae en
-                          su `title`. Repetida en cada ficha afectada era un muro. */}
-                      <span className="admin-field-label">{A.strayPhoto.title}</span>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        disabled={busy || vm.clearingStrayPhotos}
-                        onClick={() =>
-                          setPending({
-                            title: A.strayPhoto.confirm(name),
-                            run: () => void vm.clearStrayPhoto(user),
-                          })
-                        }
-                      >
-                        {busy ? A.working : A.strayPhoto.btn}
-                      </button>
-                    </div>
-                  ) : null}
-
-                  {/* Cutover de identidad: el documento no vive en `profiles/{uid}`. Lo que hace falta saber antes
-                      de pulsar no son los ids —da igual cuál sea el actual: el destino es siempre el canónico—,
-                      sino si hay destino y qué va a pasar con lo que hay allí. Sin uid en el documento no hay
-                      destino: el botón se bloquea con el motivo, que no es un fallo sino el turno del dueño. */}
-                  {user.anomalies.includes('foreign-doc-id') ? (
-                    <div className="admin-gist-drift" role="group" aria-label={A.cutover.title}>
-                      <span className="admin-field-label">{A.cutover.title}</span>
-                      <p className="admin-card-note">{A.cutover.hint}</p>
-                      <dl className="admin-user-data">
-                        <div>
-                          <dt>{A.cutover.targetLabel}</dt>
-                          {/* El destino es siempre `profiles/{uid}`: enseñar el id no daba nada que comprobar
-                              que no diga ya "su documento canónico". Lo que decide es la línea de abajo. */}
-                          <dd>{cutoverTargetKnown ? A.cutover.targetCanonical : A.field.none}</dd>
-                        </div>
-                        {/* Mover y fusionar no son la misma operación y no tienen las mismas consecuencias: quien
-                            pulsa el botón debe saber cuál de las dos va a ocurrir ANTES de pulsarlo. Sale del censo
-                            ya cargado, pero si viene recortado la ausencia de gemelo no prueba nada. */}
-                        {cutoverTargetKnown ? (
-                          <div>
-                            <dt>{A.cutover.outcomeLabel}</dt>
-                            <dd>
-                              {user.canonicalTwinFound
-                                ? A.cutover.outcomeMerge
-                                : vm.census?.truncated
-                                  ? A.cutover.outcomeUnknown
-                                  : A.cutover.outcomeMove}
-                            </dd>
-                          </div>
-                        ) : null}
-                      </dl>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        disabled={busy || !cutoverTargetKnown}
-                        title={cutoverTargetKnown ? undefined : A.cutover.unknownUid}
-                        // Igual que en los restos legacy: el motivo del bloqueo va en el nombre accesible, porque
-                        // con `aria-label` presente el `title` no se anuncia.
-                        aria-label={cutoverTargetKnown ? A.cutover.btn : `${A.cutover.btn}. ${A.cutover.unknownUid}`}
-                        onClick={() =>
-                          setPending({
-                            title: A.cutover.confirm(name),
-                            run: () => void vm.migrateIdentity(user),
-                          })
-                        }
-                      >
-                        {busy ? A.working : A.cutover.btn}
-                      </button>
-                    </div>
-                  ) : null}
-
-                  <div className="admin-card-actions">
-                    {legacyTags.length === 0 ? (
-                      <span className="admin-legacy-clean">{A.legacyNone}</span>
-                    ) : (
-                      <span className="admin-legacy" aria-label={A.legacyAria}>
-                        {legacyTags.map((tag) => {
-                          // El email de un perfil que no se identifica por el uid NO se purga: es su única
-                          // vía de recuperación. Se muestra bloqueado y con el motivo en el `title`.
-                          const locked = tag.field === 'email' && !user.idMatchesUid;
-                          return (
-                            <button
-                              key={tag.field}
-                              type="button"
-                              className="admin-legacy-tag"
-                              disabled={busy || locked}
-                              title={locked ? A.legacyEmailLocked : A.legacyPurgeAria(tag.label, name)}
-                              // El motivo del bloqueo va en el NOMBRE accesible, no solo en `title`: con un
-                              // `aria-label` presente, el `title` no se anuncia y quedaría un botón
-                              // deshabilitado sin explicación para quien usa lector de pantalla.
-                              aria-label={
-                                locked
-                                  ? `${A.legacyPurgeAria(tag.label, name)}. ${A.legacyEmailLocked}`
-                                  : A.legacyPurgeAria(tag.label, name)
-                              }
-                              onClick={() =>
-                                setPending({
-                                  title: tag.confirm(name),
-                                  run: () => void vm.purgeLegacy(user, tag.field),
-                                })
-                              }
-                            >
-                              {tag.label}
-                            </button>
-                          );
-                        })}
-                      </span>
-                    )}
-                    {/* Las acciones que no arreglan una señal, plegadas: estaban a la vista en todas las fichas y
-                        competían con lo que sí pide atención. Los restos legacy de la izquierda siguen fuera: son
-                        una señal, y el botón que la purga. */}
-                    <details className="admin-more-actions">
-                      <summary>{A.moreActions}</summary>
-                      <div className="admin-actions">
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          disabled={busy}
-                          onClick={() =>
-                            setPending({
-                              title: user.socialEnabled ? A.confirmDisable(name) : A.confirmEnable(name),
-                              run: () => void vm.toggleSocial(user),
-                            })
-                          }
-                        >
-                          {busy ? A.working : user.socialEnabled ? A.disableBtn : A.enableBtn}
-                        </button>
-                        {/* Borrar SU vitrina publicada. Va con los demás botones de la ficha porque es una acción
-                            sobre esta persona, y no en la pantalla del catálogo, que decide para todo el mundo. */}
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          disabled={busy}
-                          onClick={() =>
-                            setPending({
-                              title: A.achievementsConfirm(name),
-                              run: () => void clearAchievements(user.id),
-                            })
-                          }
-                        >
-                          {A.achievementsBtn}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-danger"
-                          disabled={busy}
-                          onClick={() =>
-                            setPending({
-                              title: `${A.confirmDelete(name)} ${A.deleteScope}`,
-                              run: () => void vm.deleteUser(user),
-                            })
-                          }
-                        >
-                          {A.deleteBtn}
-                        </button>
-                      </div>
-                    </details>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
-
-      <ConfirmModal
-        open={pending !== null}
-        title={pending?.title || ''}
-        confirmLabel={A.confirmAccept}
-        onCancel={closeConfirm}
-        onConfirm={acceptConfirm}
-      />
-    </section>
+        <AdminSearch open={searchOpen} onClose={closeSearch} />
+        <AdminConfirmDialog request={pending} onClose={() => setPending(null)} />
+        <AdminToastView toast={toast} onDismiss={dismissToast} />
+      </section>
+    </AdminPanelContext.Provider>
   );
 });
+
+/**
+ * El catálogo de logros con su configuración: se lee al entrar en su ruta y solo entonces (el censo, que es a lo
+ * que se entra, no la necesita). Los espejos ya vienen en el censo, así que medir el reparto no cuesta ni una
+ * petición.
+ */
+function AchievementsRoute() {
+  const { vm } = useAdminPanel();
+  const [hidden, setHidden] = useState<HiddenOverrides>({});
+  const [open, setOpen] = useState<OpenFrontier>({});
+  const [extraSteps, setExtraSteps] = useState<ExtraSteps>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    void import('../../model/repository/achievementsConfigRepository')
+      .then((module) => module.loadAchievementsConfig(true))
+      .then((value) => {
+        if (cancelled) return;
+        setHidden(value.hidden);
+        setOpen(value.open);
+        setExtraSteps(value.extraSteps);
+      })
+      .catch(() => {
+        // Sin configuración manda el catálogo; la pantalla lo enseña tal cual.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const repository = () => import('../../model/repository/achievementsConfigRepository');
+  return (
+    <AdminAchievements
+      mirrors={vm.census?.mirrors}
+      hiddenOverrides={hidden}
+      onToggleHidden={async (ladderKey, value) => setHidden(await (await repository()).setLadderHidden(ladderKey, value))}
+      openFrontier={open}
+      onPublishFrontier={async (next) => setOpen(await (await repository()).publishOpenFrontier(next))}
+      extraSteps={extraSteps}
+      onSetExtraSteps={async (ladderKey, steps) => setExtraSteps(await (await repository()).setExtraSteps(ladderKey, steps))}
+      onResetAll={async () => {
+        // Borra el espejo de TODO el censo y, con él, la apertura publicada, que sin espejos no significa nada.
+        const cleared = await clearAllAchievements((vm.census?.users || []).map((entry) => entry.id));
+        setOpen(await (await repository()).publishOpenFrontier({}));
+        await vm.refresh();
+        return cleared;
+      }}
+      censusSize={vm.census?.users.length || 0}
+    />
+  );
+}
+
+/** El aviso publicado: el formulario espera a tenerlo leído (sin caché) para no editar sobre una foto vieja. */
+function AnnouncementRoute() {
+  const { data, log } = useAdminPanel();
+  const { loadAnnouncement, setAnnouncement } = data;
+  const { record } = log;
+  // Cada entrada vuelve a leer: aquí se está a punto de reescribirlo.
+  useEffect(() => {
+    setAnnouncement(undefined);
+    void loadAnnouncement();
+  }, [loadAnnouncement, setAnnouncement]);
+  const save = useCallback(async (next: Announcement): Promise<Announcement> => {
+    const module = await import('../../model/repository/announcementRepository');
+    const saved = await module.saveAnnouncement(next);
+    setAnnouncement(saved);
+    void record({ kind: 'announcement', text: ADMIN_SHELL_UI.log.texts.announcement(saved.title), targetUid: '', targetName: '', undo: null });
+    return saved;
+  }, [setAnnouncement, record]);
+  return <AdminAnnouncement current={data.announcement} onSave={save} />;
+}

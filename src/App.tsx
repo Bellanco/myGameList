@@ -361,10 +361,23 @@ export default function App() {
     navigate('/logros', destino ? { state: { anclaje: destino } } : undefined);
   }, [achievementFlash, clearAchievementFlash, navigate]);
 
+  /**
+   * ¿TIENE ESTE DISPOSITIVO UN ESPACIO SOCIAL? Cerrar sesión no borra la configuración del gist social, así que
+   * «sin sesión y con espacio» es quien ya tenía lo social y ha perdido la sesión (la misma señal con la que la
+   * pasarela dice «Ya tienes espacio»). Se relee al navegar y al cambiar la sesión: se escribe al crear o enlazar
+   * el espacio, que pasa en lo social.
+   */
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const hasSocialSpace = useMemo(() => Boolean(getSocialSyncConfig()?.gistId?.trim()), [location.pathname, scoreScaleUid]);
+
   // EL AVISO DEL ADMINISTRADOR (`appConfig/announcement`): un texto y un enlace a otra web, dichos en la misma
   // cápsula del carril de abajo a la izquierda. Se decide una vez al abrir la app y se insiste como mucho N
   // veces mientras nadie pulse; la política entera vive en `core/announcement/announcement`.
-  const announcement = useAnnouncement();
+  // Con quién habla: los avisos dirigidos (solo con / sin espacio social) esperan a que se sepa (`pending` = no se sabe).
+  // Cuenta como «con espacio social» también quien lo tiene en este aparato aunque su perfil esté a medias o haya
+  // perdido la sesión: es la misma frontera que usa `withoutSocial` más abajo, y sin ella le llegaría un aviso de
+  // «crea tu espacio social» a quien ya lo tiene.
+  const announcement = useAnnouncement(socialStatus === 'pending' ? null : socialStatus === 'active' || hasSocialSpace);
 
   // Bandeja de importados (local, no sincroniza). Se monta aquí para exponer su contador en los controles
   // flotantes y cablear la graduación (clasificar → formulario → retirar de la bandeja).
@@ -732,14 +745,33 @@ export default function App() {
     navigate('/elegir');
   }, [navigate]);
 
+  /**
+   * LA ÚLTIMA LISTA QUE SE MIRÓ. «Listados» en la barra llevaba siempre a Completados, así que ir un momento a
+   * Estadísticas desde Pendientes y volver te dejaba en otra lista. Es de la sesión y no se guarda: al abrir la
+   * aplicación en frío se empieza por Completados, como siempre.
+   */
+  const ultimaLista = useRef<TabId>('c');
+  useEffect(() => {
+    if (activeSection === 'lists') ultimaLista.current = currentTab;
+  }, [activeSection, currentTab]);
+
   const handleSectionChange = useCallback((section: AppSection) => {
     setExpandedId(null);
+    /* VOLVER A PULSAR LA PESTAÑA EN LA QUE ESTÁS SUBE AL PRINCIPIO, que es lo que hace cualquier barra inferior
+       de móvil. Antes no hacía nada (o, en Listados, te cambiaba de lista). La tabla puede tener su propio scroll
+       en algunos anchos, así que se sube también ella. */
+    if (section === activeSection) {
+      const behavior: ScrollBehavior = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+      window.scrollTo({ top: 0, behavior });
+      document.querySelectorAll<HTMLElement>('.table-wrap').forEach((el) => el.scrollTo({ top: 0, behavior }));
+      return;
+    }
     if (section !== 'lists') {
       setFiltersOpen(false);
     }
 
     if (section === 'lists') {
-      navigate('/completados');
+      navigate(TAB_ROUTE[ultimaLista.current]);
       return;
     }
 
@@ -759,7 +791,7 @@ export default function App() {
     }
 
     navigate('/ajustes');
-  }, [navigate, setExpandedId]);
+  }, [navigate, setExpandedId, activeSection]);
   // «¿A qué juego ahora?» vuelve a los listados igual que la barra inferior.
   const handlePickBack = useCallback(() => handleSectionChange('lists'), [handleSectionChange]);
 
@@ -959,15 +991,7 @@ export default function App() {
     if (!spriteRestoListo || tourState || HUELLA_AL_ARRANCAR || gameCount > 0 || activeSection !== 'lists') return;
     saveTourState(offeredTour());
   }, [activeSection, gameCount, spriteRestoListo, tourState]);
-  /**
-   * ¿TIENE ESTE DISPOSITIVO UN ESPACIO SOCIAL? Cerrar sesión no borra la configuración del gist social, así que
-   * «sin sesión y con espacio» es quien ya tenía lo social y ha perdido la sesión (la misma señal con la que la
-   * pasarela dice «Ya tienes espacio»). Se relee al navegar y al cambiar la sesión: se escribe al crear o enlazar
-   * el espacio, que pasa en lo social.
-   */
   const socialSignedIn = Boolean(scoreScaleUid);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const hasSocialSpace = useMemo(() => Boolean(getSocialSyncConfig()?.gistId?.trim()), [location.pathname, scoreScaleUid]);
   const reloginNeeded = authReady && !socialSignedIn && hasSocialSpace && activeSection === 'social';
   /**
    * ¿NO HAY LO SOCIAL, NI SIQUIERA UN ESPACIO EN ESTE DISPOSITIVO? Se le pasa al hub para las reseñas abiertas desde

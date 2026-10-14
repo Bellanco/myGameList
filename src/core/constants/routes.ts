@@ -58,6 +58,9 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
   { path: '/premios/*', section: 'premios' },
   { path: '/premios', section: 'premios' },
   // Ruta OCULTA (sin enlace en la navegación); quien decide el acceso son las reglas de Firestore, no esta tabla.
+  // Comodín, como social y premios: las pantallas del panel (usuarios, la ficha de cada uno, comunidad…) las
+  // resuelve el propio `AdminHub` con su enrutador de dentro, detrás de una sola guarda de acceso.
+  { path: '/admin/*', section: 'admin' },
   { path: '/admin', section: 'admin' },
   // Reseña compartida con enlace público. Quien NO tiene la app en este navegador ni llega aquí: `main.tsx` monta
   // una pantalla suelta antes del enrutador (modo artículo). Esta entrada es para quien SÍ la tiene, y sin ella

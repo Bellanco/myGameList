@@ -952,6 +952,18 @@ service cloud.firestore {
       allow read, write, delete: if isAdmin();
     }
 
+    // ===== adminPanel / adminLog: lo que el panel guarda para sí =====
+    //
+    // Pendientes (`adminPanel/todos`), la foto diaria del censo (`adminPanel/stats/days/{AAAA-MM-DD}`) y el registro
+    // de acciones (`adminLog/{id}`). Solo el administrador: son el censo resumido y lo que él hace con él, y nadie
+    // más tiene nada que leer ahí. Ver docs/plan-admin-rediseno.md.
+    match /adminPanel/{document=**} {
+      allow read, write, delete: if isAdmin();
+    }
+    match /adminLog/{entryId} {
+      allow read, write, delete: if isAdmin();
+    }
+
     // ==========================================
     // REGLA DE CIERRE
     // ==========================================

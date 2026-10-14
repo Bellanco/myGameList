@@ -1,12 +1,14 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ADMIN_ANNOUNCEMENT_UI } from '../../core/constants/adminLabels';
 import {
+  ANNOUNCEMENT_AUDIENCES,
   ANNOUNCEMENT_ICONS,
   ANNOUNCEMENT_LIMITS,
   DEFAULT_ANNOUNCEMENT_ICON,
   DEFAULT_INTERVAL_HOURS,
   DEFAULT_REPEATS,
   type Announcement,
+  type AnnouncementAudience,
   type AnnouncementIcon as IconId,
 } from '../../core/announcement/announcement';
 import { isValidHttpUrl } from '../../core/security/sanitize';
@@ -25,6 +27,39 @@ import { createLocalDateFormat } from '../../core/utils/dateTime';
 const A = ADMIN_ANNOUNCEMENT_UI;
 
 const DATE_FORMAT = createLocalDateFormat({ dateStyle: 'medium', timeStyle: 'short' });
+/** «15 oct, 9:00»: lo que dice la línea de la ventana y el historial. */
+const WINDOW_FORMAT = createLocalDateFormat({ day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+const DAY_FORMAT = createLocalDateFormat({ day: 'numeric', month: 'short' });
+
+/** ms → el valor de un `<input type="datetime-local">` (hora LOCAL, sin segundos). 0 → vacío. */
+function toLocalInput(millis: number): string {
+  if (!millis) return '';
+  const date = new Date(millis);
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** Lo contrario: vacío o ilegible → 0 (sin límite por ese lado). `new Date` lee el valor en hora local. */
+function fromLocalInput(value: string): number {
+  if (!value) return 0;
+  const millis = new Date(value).getTime();
+  return Number.isFinite(millis) && millis > 0 ? millis : 0;
+}
+
+/** Cuándo empieza y cuándo acaba, dicho en el orden en que va a pasar: «Ahora · Empieza el 15 oct… · Termina…». */
+function describeWindow(startsAt: number, endsAt: number, now: number): string {
+  const parts: string[] = [A.window.now];
+  parts.push(startsAt > now ? A.window.starts(WINDOW_FORMAT.format(new Date(startsAt))) : A.window.started);
+  if (!endsAt) parts.push(A.window.noEnd);
+  else parts.push(endsAt > now ? A.window.ends(WINDOW_FORMAT.format(new Date(endsAt))) : A.window.ended(WINDOW_FORMAT.format(new Date(endsAt))));
+  return parts.join(' · ');
+}
+
+/** El historial por defecto: la función del propio origen. Se puede inyectar (pruebas, `/dev/aviso`). */
+async function defaultLoadHistory(): Promise<Announcement[]> {
+  const module = await import('../../model/repository/announcementRepository');
+  return module.loadAnnouncementHistory();
+}
 
 /**
  * LA PANTALLA DONDE SE ESCRIBE EL AVISO (`/admin` → «Aviso a los usuarios»).
@@ -50,7 +85,10 @@ interface AdminAnnouncementProps {
   current: Announcement | null | undefined;
   /** Guarda y devuelve lo que de verdad ha quedado escrito. Si falla, LANZA: esta pantalla lo dice. */
   onSave: (next: Announcement) => Promise<Announcement>;
-  onBack: () => void;
+  /** Sin él no hay botón de volver: dentro del panel, el menú lateral ya lleva a todas partes. */
+  onBack?: () => void;
+  /** Los avisos anteriores. Por defecto, los de `/api/announcement?history=1`. */
+  loadHistory?: () => Promise<Announcement[]>;
 }
 
 /** Identificador de campaña. La hora en base 36: corto, único de sobra y legible en el panel. */
@@ -69,6 +107,9 @@ function draftFrom(current: Announcement | null) {
     active: current?.active ?? true,
     repeats: String(current?.repeats ?? DEFAULT_REPEATS),
     intervalHours: String(current?.intervalHours ?? DEFAULT_INTERVAL_HOURS),
+    startsAt: toLocalInput(current?.startsAt || 0),
+    endsAt: toLocalInput(current?.endsAt || 0),
+    audience: (current?.audience || 'all') as AnnouncementAudience,
   };
 }
 
@@ -111,7 +152,7 @@ export function AdminAnnouncement(props: AdminAnnouncementProps) {
     return (
       <section className="admin-hub admin-ann" aria-label={A.sectionAria}>
         <div className="admin-ann-bar">
-          <HubBackButton onBack={onBack} destination={A.back} />
+          {onBack ? <HubBackButton onBack={onBack} destination={A.back} /> : null}
         </div>
         <div className="admin-card">
           <h2>{A.title}</h2>
@@ -123,8 +164,23 @@ export function AdminAnnouncement(props: AdminAnnouncementProps) {
   return <AnnouncementEditor {...props} current={current} />;
 }
 
-function AnnouncementEditor({ current, onSave, onBack }: AdminAnnouncementProps & { current: Announcement | null }) {
+function AnnouncementEditor({
+  current,
+  onSave,
+  onBack,
+  loadHistory = defaultLoadHistory,
+}: AdminAnnouncementProps & { current: Announcement | null }) {
   const [draft, setDraft] = useState(() => draftFrom(current));
+  // `null` mientras se lee: no se dice «no hay ninguno» antes de saberlo.
+  const [history, setHistory] = useState<Announcement[] | null>(null);
+  const refreshHistory = useCallback(() => {
+    loadHistory()
+      .then(setHistory)
+      .catch(() => setHistory([]));
+  }, [loadHistory]);
+  useEffect(() => {
+    refreshHistory();
+  }, [refreshHistory]);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   // Publicar de nuevo es lo único de esta pantalla que le vuelve a salir a quien ya lo había despachado, así que
@@ -155,7 +211,20 @@ function AnnouncementEditor({ current, onSave, onBack }: AdminAnnouncementProps 
     repeats: Number(draft.repeats) || DEFAULT_REPEATS,
     intervalHours: Number(draft.intervalHours) || DEFAULT_INTERVAL_HOURS,
     updatedAt: Date.now(),
+    startsAt: fromLocalInput(draft.startsAt),
+    // Al revés no se guarda como tal: el saneado del servidor lo dejaría sin fin, así que aquí también.
+    endsAt: (() => {
+      const start = fromLocalInput(draft.startsAt);
+      const end = fromLocalInput(draft.endsAt);
+      return start && end && end <= start ? 0 : end;
+    })(),
+    audience: draft.audience,
   }), [draft]);
+  const badRange = (() => {
+    const start = fromLocalInput(draft.startsAt);
+    const end = fromLocalInput(draft.endsAt);
+    return Boolean(start && end && end <= start);
+  })();
 
   /**
    * LO QUE PINTA LA MUESTRA. Es `composed` con los huecos rellenos: mientras el título está vacío, la cápsula se
@@ -175,12 +244,14 @@ function AnnouncementEditor({ current, onSave, onBack }: AdminAnnouncementProps 
       const saved = await onSave(next);
       setDraft(draftFrom(saved));
       setNotice(done);
+      // Una campaña nueva manda la anterior al historial (lo hace la función): se relee para que se vea ya.
+      if (saved.id !== current?.id) refreshHistory();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : A.failed);
     } finally {
       setBusy(false);
     }
-  }, [onSave]);
+  }, [onSave, current?.id, refreshHistory]);
 
   const save = useCallback(() => {
     void run({ ...composed, id: draft.id || newCampaignId() }, A.saved);
@@ -202,6 +273,15 @@ function AnnouncementEditor({ current, onSave, onBack }: AdminAnnouncementProps 
     void run({ ...composed, id: newCampaignId(), active: true }, A.savedNew);
   }, [composed, run]);
 
+  /**
+   * REUTILIZAR UN AVISO ANTERIOR: carga su redacción como campaña NUEVA (sin `id`: al guardar se estrena una, y se
+   * le dice a todo el mundo). Las fechas no se copian —las de entonces ya pasaron— y sale encendido.
+   */
+  const reuse = useCallback((entry: Announcement) => {
+    setDraft({ ...draftFrom(entry), id: '', active: true, startsAt: '', endsAt: '' });
+    setNotice(A.history.reused);
+  }, []);
+
   const toggleActive = useCallback(() => {
     const active = !draft.active;
     void run({ ...composed, id: draft.id || newCampaignId(), active }, active ? A.saved : A.retired);
@@ -212,12 +292,11 @@ function AnnouncementEditor({ current, onSave, onBack }: AdminAnnouncementProps 
       {/* Los dibujos de la rejilla no están en el sprite del arranque: viajan con esta pantalla. */}
       <AnnouncementSprite />
       <div className="admin-ann-bar">
-        <HubBackButton onBack={onBack} destination={A.back} />
+        {onBack ? <HubBackButton onBack={onBack} destination={A.back} /> : null}
       </div>
 
       <div className="admin-card">
         <h2>{A.title}</h2>
-        <p className="admin-card-sub">{A.subtitle}</p>
         <p className="admin-card-note">
           {!current
             ? A.currentNone
@@ -342,6 +421,46 @@ function AnnouncementEditor({ current, onSave, onBack }: AdminAnnouncementProps 
           </label>
         </div>
 
+        {/* LA VENTANA Y EL PÚBLICO. Vacío = sin límite: «Desde» en blanco es ya, «Hasta» en blanco es para siempre. */}
+        <div className="admin-ann-pair">
+          <label className="admin-ann-field">
+            <span>{A.field.startsAt}</span>
+            <input
+              type="datetime-local"
+              className="finput"
+              value={draft.startsAt}
+              onChange={(event) => set('startsAt', event.target.value)}
+            />
+            <small>{A.field.startsAtHelp}</small>
+          </label>
+          <label className="admin-ann-field">
+            <span>{A.field.endsAt}</span>
+            <input
+              type="datetime-local"
+              className="finput"
+              value={draft.endsAt}
+              onChange={(event) => set('endsAt', event.target.value)}
+            />
+            <small>{A.field.endsAtHelp}</small>
+          </label>
+        </div>
+        <label className="admin-ann-field">
+          <span>{A.field.audience}</span>
+          <select
+            className="finput"
+            value={draft.audience}
+            onChange={(event) => set('audience', event.target.value as AnnouncementAudience)}
+          >
+            {ANNOUNCEMENT_AUDIENCES.map((audience) => (
+              <option key={audience} value={audience}>{A.audiences[audience]}</option>
+            ))}
+          </select>
+        </label>
+        <p className="admin-card-note" data-testid="announcement-window">
+          {describeWindow(composed.startsAt, composed.endsAt, Date.now())}
+        </p>
+        {badRange ? <p className="admin-ann-warn">{A.window.badRange}</p> : null}
+
         {/* LA MUESTRA VA AQUÍ ABAJO, entre el último campo y los botones, y no arriba del todo como estaba: es lo
             último que se mira antes de publicar, y arriba obligaba a subir y bajar la pantalla entera para
             comprobar cada cambio. Se enseña con lo que haya escrito, aunque esté a medias. */}
@@ -374,6 +493,44 @@ function AnnouncementEditor({ current, onSave, onBack }: AdminAnnouncementProps 
         <p className="admin-ann-notice" role="status" aria-live="polite">{notice}</p>
 
         <p className="admin-card-note">{A.actionsHelp}</p>
+      </div>
+
+      <div className="admin-card" aria-labelledby="admin-ann-history">
+        <h3 id="admin-ann-history">{A.history.title}</h3>
+        {history === null ? null : history.length === 0 ? (
+          <p className="admin-card-note">{A.history.empty}</p>
+        ) : (
+          <dl className="adm-rows">
+            {history.map((entry) => (
+              <div key={entry.id}>
+                <dt>
+                  <b>{entry.title}</b>
+                  <br />
+                  <small>
+                    {entry.startsAt || entry.endsAt
+                      ? A.history.range(
+                        entry.startsAt ? DAY_FORMAT.format(new Date(entry.startsAt)) : '…',
+                        entry.endsAt ? DAY_FORMAT.format(new Date(entry.endsAt)) : '…',
+                      )
+                      : A.history.anyTime}
+                    {' · '}
+                    {A.audiences[entry.audience]}
+                  </small>
+                </dt>
+                <dd>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    aria-label={A.history.reuseAria(entry.title)}
+                    onClick={() => reuse(entry)}
+                  >
+                    {A.history.reuse}
+                  </button>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
       </div>
 
       <ConfirmModal
