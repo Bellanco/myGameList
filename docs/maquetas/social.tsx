@@ -292,7 +292,7 @@ function useMaquetaLikes() {
 
 
 // ─── Pantallas ───────────────────────────────────────────────────────────────────────────────────────────────
-function Feed({ vacio = false, fallo = false, caducado = false }: { vacio?: boolean; fallo?: boolean; caducado?: boolean }) {
+function Feed({ vacio = false, fallo = false, caducado = false, limitado = false }: { vacio?: boolean; fallo?: boolean; caducado?: boolean; limitado?: boolean }) {
   // El MISMO derivado que usa el hub: mezcla, orden, cupo de movimientos y agrupado por día con sus cabeceras.
   // `vacio`: quien acaba de entrar y aún no tiene amigos (el estado vacío con «Descubrir amigos»).
   // `fallo`: no se ha podido leer nada y no hay copia (el vacío con el error genérico; con `vacio` falso y actividad,
@@ -332,7 +332,8 @@ function Feed({ vacio = false, fallo = false, caducado = false }: { vacio?: bool
       status=""
       statusKind=""
       offline={false}
-      offlineHasCachedData={false}
+      serviceLimited={limitado}
+      offlineHasCachedData={limitado && !vacio}
       hasFriends={!vacio || fallo}
       feedReadFailed={fallo}
       githubReconnect={reconectar}
@@ -831,6 +832,7 @@ const PANTALLAS: Record<string, { nombre: string; ruta: string; pintar: () => Re
   'feed-fallo': { nombre: 'Feed: no se pudo leer (sin copia)', ruta: '/social', pintar: () => <Feed vacio fallo /> },
   'feed-fallo-parcial': { nombre: 'Feed: un amigo sin leer', ruta: '/social', pintar: () => <Feed fallo /> },
   'feed-github': { nombre: 'Feed: GitHub caducado', ruta: '/social', pintar: () => <Feed caducado /> },
+  'feed-limitado': { nombre: 'Feed: sin actualizar (servicio limitado)', ruta: '/social', pintar: () => <Feed limitado /> },
   // No es del hub —vive en el carril de `App`, fuera del espacio social—, pero así se ve en los ocho temas sin sesión.
   'aviso-legal': {
     nombre: 'Carril: condiciones nuevas',

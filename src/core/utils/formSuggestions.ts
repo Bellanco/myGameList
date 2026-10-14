@@ -1,4 +1,5 @@
 import type { GameItem } from '../../model/types/game';
+import { tagKey } from './tags';
 
 /** Campos de etiquetas del formulario que llevan sugerencias de un toque. */
 export type SuggestedTagField = 'genres' | 'platforms' | 'strengths' | 'weaknesses' | 'reasons';
@@ -99,4 +100,65 @@ export function suggestForGenres(
     if (result.length >= limit) break;
   }
   return result;
+}
+
+/** Lo que separa palabras dentro de una etiqueta («Acción/Aventura», «Hack'n'slash», «Shoot 'em up»). */
+const WORD_BREAK = /[\s/\-'(]/;
+
+/**
+ * LAS SUGERENCIAS FILTRADAS POR LO QUE SE ESTÁ ESCRIBIENDO, que sustituyen al autocompletado: de `pool` (ya en orden
+ * de preferencia), las que contienen lo escrito sin distinguir mayúsculas ni tildes (`tagKey`). Primero las que
+ * EMPIEZAN por ello, luego las que tienen una palabra que empieza por ello y al final las que lo llevan en medio;
+ * dentro de cada grupo se respeta el orden de `pool`. Sin repetir y sin lo de `exclude`. Sin nada escrito, las
+ * primeras `limit` de `pool` tal cual.
+ */
+export function filterSuggestions(
+  pool: ReadonlyArray<string>,
+  query: string,
+  exclude: ReadonlyArray<string | number>,
+  limit: number,
+): string[] {
+  const needle = tagKey(query);
+  const seen = new Set(exclude.map((value) => tagKey(value)));
+  const groups: [string[], string[], string[]] = [[], [], []];
+  for (const value of pool) {
+    const key = tagKey(value);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (!needle) {
+      groups[0].push(value);
+      continue;
+    }
+    const at = key.indexOf(needle);
+    if (at < 0) continue;
+    groups[at === 0 ? 0 : WORD_BREAK.test(key[at - 1]) ? 1 : 2].push(value);
+  }
+  return groups.flat().slice(0, limit);
+}
+
+/**
+ * CUÁNTO SE ACERCA lo escrito a una etiqueta, de 0 a 1, para que la sugerencia se ilumine más cuanto más cerca se
+ * esté de su nombre: la parte del nombre que ya se ha escrito (al cuadrado), rebajada si no casa por el principio (por el inicio de
+ * otra palabra, o en medio). 1 solo cuando lo escrito ES la etiqueta. 0 sin nada escrito o si no casa.
+ */
+export function matchCloseness(value: string, query: string): number {
+  const needle = tagKey(query);
+  const key = tagKey(value);
+  if (!needle || !key) return 0;
+  const at = key.indexOf(needle);
+  if (at < 0) return 0;
+  const covered = needle.length / key.length;
+  // Al cuadrado: lo que apenas casa se queda casi apagado y el salto hasta la que se está terminando se nota.
+  return (at === 0 ? covered : covered * (WORD_BREAK.test(key[at - 1]) ? 0.75 : 0.5)) ** 2;
+}
+
+/**
+ * EL BRILLO DE UNA SUGERENCIA FILTRADA, de 0 a 1: su cercanía (`matchCloseness`) más un empujón por quedar pocas.
+ * Cuantas menos casan con lo escrito (`remaining`, todas las que casan, no solo las que caben en la fila), más se
+ * encienden: si solo queda una, casi del todo aunque falte mucho por escribir; con dos, la mitad del camino que les
+ * falta; con ocho o más, apenas nada.
+ */
+export function matchGlow(closeness: number, remaining: number): number {
+  const scarcity = remaining > 0 ? 1 / remaining : 0;
+  return closeness + (1 - closeness) * scarcity * 0.85;
 }

@@ -37,6 +37,8 @@ export const FORM_UI = {
   // cruzar el umbral, no en cada pulsación). El conteo numérico se deja como texto visible SIN aria-live.
   charNearLimit: 'Te acercas al límite de caracteres del análisis.',
   charLimitReached: 'Has alcanzado el límite de caracteres del análisis.',
+  // Bajo cada campo de etiquetas, siempre: cómo pasa lo escrito a etiqueta (y que con comas entran varias).
+  enterToAddHint: 'Pulsa Enter o separa con comas',
   // Sugerencias de un toque bajo cada campo de etiquetas (nombre del grupo y de cada botón, para el lector).
   quickPicks: {
     platforms: 'Tus plataformas más usadas',
@@ -45,6 +47,8 @@ export const FORM_UI = {
     strengths: 'Puntos fuertes sugeridos',
     weaknesses: 'Puntos débiles sugeridos',
     reasons: 'Razones sugeridas',
+    /** La fila cuando está filtrada por lo que se está escribiendo. */
+    matching: 'Coincidencias con lo escrito',
     add: (value: string | number) => `Añadir ${value}`,
   },
   gradeAria: 'Nota',

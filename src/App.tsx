@@ -1502,28 +1502,6 @@ export default function App() {
           />
         ) : null}
       </Suspense>
-
-      <datalist id="dl-genres">
-        {vm.lookups.genres.map((tag) => (
-          <option key={tag} value={tag} />
-        ))}
-      </datalist>
-      <datalist id="dl-platforms">
-        {vm.lookups.platforms.map((tag) => (
-          <option key={tag} value={tag} />
-        ))}
-      </datalist>
-      <datalist id="dl-strengths">
-        {vm.lookups.strengths.map((tag) => (
-          <option key={tag} value={tag} />
-        ))}
-      </datalist>
-      <datalist id="dl-weaknesses">
-        {vm.lookups.weaknesses.map((tag) => (
-          <option key={tag} value={tag} />
-        ))}
-      </datalist>
-
     </GithubConnectionProvider>
   );
 }

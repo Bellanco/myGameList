@@ -165,6 +165,60 @@ describe('FormModal — sugerencias de un toque', () => {
   });
 });
 
+describe('FormModal — las sugerencias filtran lo escrito', () => {
+  const platforms = () => screen.getByLabelText('Plataformas');
+
+  it('cada campo de etiquetas explica debajo cómo se añade', () => {
+    renderForm();
+    for (const label of ['Plataformas', 'Géneros', 'Años completado']) {
+      expect(screen.getByLabelText(label).getAttribute('aria-describedby')).toBeTruthy();
+    }
+    expect(screen.getAllByText('Pulsa Enter o separa con comas').length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('al escribir solo quedan las que casan, más encendidas cuanto más cerca', async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.type(platforms(), 'st');
+    expect(screen.getByRole('group', { name: 'Coincidencias con lo escrito' })).toBeTruthy();
+    const steam = screen.getByRole('button', { name: 'Añadir Steam' });
+    expect(screen.queryByRole('button', { name: 'Añadir PC' })).toBeNull();
+    const before = Number(steam.style.getPropertyValue('--pick-glow'));
+    await user.type(platforms(), 'eam');
+    expect(Number(screen.getByRole('button', { name: 'Añadir Steam' }).style.getPropertyValue('--pick-glow'))).toBeGreaterThan(before);
+  });
+
+  it('si solo queda una, se enciende casi del todo aunque falte nombre por escribir', async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.type(platforms(), 's');
+    expect(Number(screen.getByRole('button', { name: 'Añadir Steam' }).style.getPropertyValue('--pick-glow'))).toBeGreaterThan(0.85);
+  });
+
+  it('tocar una filtrada la añade, vacía el campo y devuelve el foco para seguir', async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.type(platforms(), 'ste');
+    await user.click(screen.getByRole('button', { name: 'Añadir Steam' }));
+    expect(screen.getByText('Steam')).toBeTruthy();
+    expect((platforms() as HTMLInputElement).value).toBe('');
+    // Sin filtro, vuelve la fila de siempre (sin lo ya puesto).
+    expect(screen.getByRole('group', { name: 'Tus plataformas más usadas' })).toBeTruthy();
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(document.activeElement).toBe(platforms());
+  });
+
+  it('si no casa ninguna, la fila desaparece y la coma la añade como nueva', async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.type(platforms(), 'Game Boy');
+    expect(screen.queryByRole('group', { name: 'Coincidencias con lo escrito' })).toBeNull();
+    await user.type(platforms(), ',');
+    expect(screen.getByText('Game Boy')).toBeTruthy();
+    expect((platforms() as HTMLInputElement).value).toBe('');
+  });
+});
+
 describe('FormModal — interruptores del pie', () => {
   it('solo con icono, con su nombre para el lector y su estado en aria-pressed', async () => {
     const user = userEvent.setup();

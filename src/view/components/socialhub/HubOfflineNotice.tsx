@@ -18,7 +18,7 @@ export function HubOfflineNotice({ hasCachedData, variant = 'offline' }: {
   /**
    * `limited`: HAY red, pero un servicio no atiende (cupo de Firestore agotado, GitHub limitando). Mismo aviso y
    * mismo trato —lo guardado se ve, se pondrá al día solo—, con su propio texto: decir «sin conexión» a quien tiene
-   * conexión le mandaría a revisar el wifi.
+   * conexión le mandaría a revisar el wifi. Va en una línea, sin titular.
    */
   variant?: 'offline' | 'limited';
 }) {
@@ -36,7 +36,7 @@ export function HubOfflineNotice({ hasCachedData, variant = 'offline' }: {
       role="status"
       aria-label={labels.sectionAria}
       kicker={labels.badge}
-      title={limited ? SOCIAL_UI.limited.title : SOCIAL_UI.offline.leadByPalette[palette]}
+      title={limited ? undefined : SOCIAL_UI.offline.leadByPalette[palette]}
     >
       {hasCachedData ? labels.body : labels.bodyEmpty}
     </Notice>

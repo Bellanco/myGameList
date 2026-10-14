@@ -116,10 +116,13 @@ vi.mock('../../src/model/repository/localRepository', () => localMocks);
 // tests que lo necesitan lo sobrescriben.
 const metaMocks = vi.hoisted(() => ({
   getLocalMeta: vi.fn(async (): Promise<unknown> => null),
+  // El perfil propio guardado: sin IndexedDB no hay ninguno, salvo en los tests que lo siembran.
+  getCachedSocialProfile: vi.fn(async (_gistId: string, _options?: { allowExpired?: boolean }): Promise<unknown> => null),
 }));
 vi.mock('../../src/model/repository/indexedDbRepository', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/model/repository/indexedDbRepository')>()),
   getLocalMeta: metaMocks.getLocalMeta,
+  getCachedSocialProfile: metaMocks.getCachedSocialProfile,
 }));
 
 // El botón de compartir trae su propio view-model, que habla con `/api/share` y con Firebase. Aquí interesa DÓNDE
@@ -1776,6 +1779,27 @@ describe('SocialHub — servicio limitado', () => {
     expect(screen.queryByText('Quota exceeded.')).not.toBeInTheDocument();
     // El feed sigue a mano: no se ha cerrado el espacio social por un cupo.
     expect(await findFeedScreen()).toBeInTheDocument();
+  });
+
+  // El aviso salía a menudo: cualquier tropiezo de GitHub al releer tu canal lo encendía aunque tu perfil guardado se
+  // viera igual, y no se apagaba hasta una recarga del feed sin fallos —que no llega mientras se sirve de su caché—.
+  it('con tu perfil guardado (aunque caducado), un tropiezo de GitHub no avisa de nada', async () => {
+    const caido = Object.assign(new Error('No se ha podido leer el gist social: 502 Bad Gateway'), { status: 502 });
+    const leerDeVerdad = gistMocks.readSocialGist.getMockImplementation()!;
+    gistMocks.readSocialGist.mockImplementation(async () => { throw caido; });
+    onTestFinished(() => { gistMocks.readSocialGist.mockImplementation(leerDeVerdad); });
+    // Dentro de su ventana no hay perfil (caducado); como rescate, sí.
+    metaMocks.getCachedSocialProfile.mockImplementation(async (_gistId, options) => (options?.allowExpired
+      ? { name: 'Me', hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true, profileExists: true, activity: [] }
+      : null));
+    onTestFinished(() => { metaMocks.getCachedSocialProfile.mockImplementation(async () => null); });
+
+    renderHub('/social');
+
+    expect(await findFeedScreen()).toBeInTheDocument();
+    await waitFor(() => expect(metaMocks.getCachedSocialProfile).toHaveBeenCalledWith('my-social-limitado', { allowExpired: true }));
+    expect(screen.queryByText(SOCIAL_UI.status.serviceLimited)).not.toBeInTheDocument();
+    expect(screen.queryByText(SOCIAL_UI.limited.body)).not.toBeInTheDocument();
   });
 });
 
