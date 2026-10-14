@@ -5,6 +5,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.7.6] - 2026-10-14
+
 ### Changed
 
 - **Las imágenes entran con un fundido en vez de aparecer de golpe.** Los avatares, la carátula de fondo de los
