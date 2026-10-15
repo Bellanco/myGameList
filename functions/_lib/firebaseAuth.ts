@@ -2,7 +2,8 @@
 //
 // POR QUÉ AQUÍ Y NO CON EL ADMIN SDK: el Admin SDK no corre en Workers, y una cuenta de servicio en el Worker
 // sería una llave maestra (se salta reglas y App Check) guardada para algo que no la necesita. Un ID token es
-// un JWT firmado por Google: verificarlo son ~80 líneas y no exige ningún secreto nuestro.
+// un JWT firmado por Google: verificarlo son ~80 líneas y no exige ningún secreto nuestro. (La única cuenta de
+// servicio del borde es la de `serviceAccount.ts`, y solo la usan el panel y la baja de cuenta: ahí sí hace falta.)
 //
 // QUÉ SE COMPRUEBA (todo o se rechaza): algoritmo RS256, que el `kid` esté entre las claves públicas vigentes de
 // Google, la firma, el emisor, la audiencia (= projectId), que no haya caducado y que traiga `sub`. Sin alguna de
