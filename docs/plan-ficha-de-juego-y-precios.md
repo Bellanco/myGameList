@@ -207,7 +207,11 @@ Para que «quién lo tiene» incluya también a quien lo tiene sin reseñar ni h
 - **Cuándo:** al abrir la primera ficha de la sesión, en segundo plano. Mientras tanto, se pinta lo de F3, y lo
   demás va entrando con fundido.
 - **Coste:**
-  - **GitHub:** como mucho una lectura por amistad cada 24 h (TTL de `profileCache`); con ETag, casi siempre 304.
+  - **GitHub:** una lectura por amistad en cada refresco, con el plazo del rango: plata 24 h, oro 12 h y mithril
+    30 min. Bronce no tiene índice: su ficha se queda con lo de F3. Las lecturas son condicionales (ETag), así que
+    casi siempre vuelve un 304. `foreignProfileRepository` ya pregunta siempre con `If-None-Match` cuando hay token,
+    de modo que un plazo más corto que las 24 h de `profileCache` no obliga a cambiar la caché: el índice decide
+    cuándo volver a preguntar. Mithril con 100 amistades: unas 200 peticiones por hora, frente a las 5.000 del token.
   - **Firestore, KV y Functions:** 0.
 - **Sin almacén nuevo:** el índice se deriva de `profileCache`, que ya persiste los gists.
 - **Regla 1 intacta:** solo amistades. Lo vigila un test que pase un perfil `'none'` y compruebe que no se lee.
@@ -569,7 +573,7 @@ hay (`PROFILE_TIER_SHARE_MAX_ACTIVE`, `PROFILE_TIER_FEED_TTL_MS`).
 |---|---|---|---|---|---|---|
 | Ficha: tus datos, saga y precio | Sí (sin precio) | Sí | Sí | Sí | Sí | Propuesta |
 | Ficha: reseñas y avisos de tus amistades (F3) | — | Sí | Sí | Sí | Sí | Propuesta |
-| Ficha: índice completo de sus bibliotecas (F4), cada | — | No | 24 h | 12 h | 1 h | Propuesta. ¿Doblar también, como los precios? |
+| Ficha: índice completo de sus bibliotecas (F4), cada | — | **No** | **24 h** | **12 h** | **30 min** | **Decidido** (15-10-2026) |
 | Interruptor «IsThereAnyDeal» | **No aparece** | Sí | Sí | Sí | Sí | **Decidido** (P0.1, P0.2) |
 | Precios: refresco cada | — | **18 h** | **12 h** | **6 h** | **15 min** | **Decidido** (P0.7) |
 | Precios: aviso de bajada al abrir (P4) | — | No | Sí | Sí | Sí | Propuesta |
@@ -661,7 +665,7 @@ fase y se borra de aquí.
 - Si algo de la ficha depende también del rango (hoy no se ha planteado).
 
 **Precios:**
-- Las cifras que siguen como propuesta en «Límites por rango»: el índice F4 (¿se dobla también?), el aviso de
+- Las cifras que siguen como propuesta en «Límites por rango»: el aviso de
   bajada, el desglose por tienda, si bronce puede importar de ITAD, y los topes de importación.
 - P0.3: España/EUR fijo, o elegible.
 - P0.4: preferencia solo local, o sincronizada (esta pide desplegar reglas de Firestore).
