@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ### Changed
 
+- **«No puedes pasar» estrena colores.** De noche, el fondo es el verde hondo del bosque de Lórien, la hoja es más
+  luminosa y el oro más vivo, y la pestaña activa y las letras de los títulos van en plata. De día, el pergamino
+  pasa a piedra enana, con tintas de oro viejo, cobre y granate. Cada color tiene ahora nombre en la Tierra Media, y
+  el texto se lee con más contraste en los dos modos.
+
 - **El análisis pide al menos 200 caracteres.** Si escribes uno, tiene que tener al menos 200 caracteres. Mientras
   no llega, debajo del campo se ve cuántos faltan. Dejarlo vacío sigue valiendo, y los análisis más cortos que ya
   tenías se conservan aunque edites el juego: el mínimo solo se pide si cambias su texto.

@@ -9,9 +9,9 @@ import type { ThemeDefinition } from './theme';
 export const tierramedia = {
   id: 'tierramedia',
   label: 'No puedes pasar',
-  accent: '#e3b04b',
-  accent2: '#9bd27c',
-  bg: { dark: '#10140f', light: '#ece3cc' },
+  accent: '#ffc43d',
+  accent2: '#c0ec84',
+  bg: { dark: '#040f07', light: '#e0ddd5' },
   voice: {
     /* lo que se rompe no es la aplicación: es la compañía que iba de camino. */
     appError: 'La Compañía se ha roto por el camino.',
