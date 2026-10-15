@@ -407,7 +407,9 @@
 }
 :root[data-palette="tierramedia"] .fx-tm-fin .fx-tm-dicho { max-width: 30em; }
 :root[data-palette="tierramedia"] .fx-tm-anillo { width: min(170px, 42vw); height: auto; overflow: visible; }
-:root[data-palette="tierramedia"] .fx-tm-oro { fill: #c8962e; stroke: #6b4a12; stroke-width: 1.2; }
+:root[data-palette="tierramedia"] .fx-tm-oro { fill: #e0a52a; stroke: #6b4a12; stroke-width: 1.2; }
+/* A la luz, un oro un punto más hondo: el del Anillo de noche se lavaba sobre la piedra clara. */
+:root[data-palette="tierramedia"][data-theme="light"] .fx-tm-oro { fill: #c99a2e; }
 :root[data-palette="tierramedia"] .fx-tm-oro-luz { fill: none; stroke: #fff1c0; stroke-width: 2.4; stroke-linecap: round; opacity: .8; }
 :root[data-palette="tierramedia"] .fx-tm-anillo-cae { animation: tm-anillo-cae .35s .1s cubic-bezier(.5, 0, .9, .6) both; }
 :root[data-palette="tierramedia"] .fx-tm-anillo-gira { transform-box: fill-box; transform-origin: 50% 100%; animation: tm-anillo-gira 1.45s .45s cubic-bezier(.3, .6, .5, 1) forwards; }
@@ -459,17 +461,19 @@
   opacity: 0; animation: tm-puerta-asoma .5s .1s forwards;
 }
 :root[data-palette="tierramedia"] .fx-tm-puerta-svg { width: min(190px, 46vw); height: auto; opacity: 0; transform: scale(.94); animation: tm-puerta-entra .5s .1s ease-out forwards; }
-/* La madera y el latón son los mismos de día y de noche (es un objeto); el marco y las juntas siguen a la tinta. */
+/* La madera y el latón van con el modo: verde de la hoja y oro del Anillo de noche, un punto más hondos a la luz. El
+   marco y las juntas siguen a la tinta. */
 :root[data-palette="tierramedia"] .fx-tm-marco { fill: #4a3823; stroke: #d6c59a; stroke-width: 1.2; }
 :root[data-palette="tierramedia"] .fx-tm-junta { fill: none; stroke: rgba(214, 197, 154, .55); stroke-width: 1; }
-:root[data-palette="tierramedia"] .fx-tm-madera { fill: #2f5a30; }
-:root[data-palette="tierramedia"] .fx-tm-tablas { fill: none; stroke: #234525; stroke-width: 1.4; }
-:root[data-palette="tierramedia"] .fx-tm-tirador { fill: #c8962e; stroke: #6b4a12; stroke-width: 1.2; }
+:root[data-palette="tierramedia"] .fx-tm-madera { fill: #2f7a34; }
+:root[data-palette="tierramedia"] .fx-tm-tablas { fill: none; stroke: #225a26; stroke-width: 1.4; }
+:root[data-palette="tierramedia"] .fx-tm-tirador { fill: #e0a52a; stroke: #6b4a12; stroke-width: 1.2; }
 :root[data-palette="tierramedia"] .fx-tm-tirador-luz { fill: #fff3cf; opacity: .7; }
 :root[data-palette="tierramedia"][data-theme="light"] .fx-tm-marco { fill: #a88355; stroke: #4b3a1d; }
 :root[data-palette="tierramedia"][data-theme="light"] .fx-tm-junta { stroke: rgba(75, 58, 29, .55); }
-:root[data-palette="tierramedia"][data-theme="light"] .fx-tm-madera { fill: #3f7a3c; }
-:root[data-palette="tierramedia"][data-theme="light"] .fx-tm-tablas { stroke: #2f5f2d; }
+:root[data-palette="tierramedia"][data-theme="light"] .fx-tm-madera { fill: #3a6b2c; }
+:root[data-palette="tierramedia"][data-theme="light"] .fx-tm-tablas { stroke: #2b5220; }
+:root[data-palette="tierramedia"][data-theme="light"] .fx-tm-tirador { fill: #c99a2e; }
 /* «Comienza el Viaje»: la letra, la plata y el destello de oro de «Juego Terminado» (`tm-fin-tinta`, `tm-fin-luz`). La
    máscara empieza corrida, así que hasta que le toca la tinta no se ve. */
 :root[data-palette="tierramedia"] .fx-tm-puerta b {
