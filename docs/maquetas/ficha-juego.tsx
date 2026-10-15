@@ -441,6 +441,9 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
   const tab = g ? listaDe(g.id) : 'd';
   const amistades = g && conSocial ? AMISTADES[g.name] || [] : [];
   const precio = g && tab === 'd' && conPrecio ? PRECIOS[g.name] : undefined;
+  // EL ANCHO SIGUE AL CONTENIDO; EL ALTO, SIEMPRE ENTERO. La segunda columna solo existe si hay amistades que
+  // enseñar; sin ellas, una sola columna en un panel estrecho, con la saga debajo de tus datos.
+  const dosColumnas = amistades.length > 0;
   return (
     <dialog
       ref={dialogRef}
@@ -451,7 +454,7 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
       }}
     >
       {open && g ? (
-        <div className="modal gs-panel">
+        <div className={`modal gs-panel ${dosColumnas ? 'is-ancho' : 'is-estrecho'}`}>
           <button className="btn-icon gs-close" type="button" onClick={onClose} aria-label="Cerrar" title="Cerrar">
             <Icon name="close" />
           </button>
@@ -463,11 +466,14 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
                 <Cabecera g={g} tab={tab} amistades={amistades} />
                 {precio ? <PrecioBloque p={precio} /> : null}
                 <TusDatos g={g} tab={tab} />
+                {dosColumnas ? null : <Saga g={g} onOpen={onOpen} />}
               </div>
-              <div className="gs-side">
-                <Amistades amistades={amistades} />
-                <Saga g={g} onOpen={onOpen} />
-              </div>
+              {dosColumnas ? (
+                <div className="gs-side">
+                  <Amistades amistades={amistades} />
+                  <Saga g={g} onOpen={onOpen} />
+                </div>
+              ) : null}
             </div>
           </div>
           <BarraDeAcciones g={g} tab={tab} />

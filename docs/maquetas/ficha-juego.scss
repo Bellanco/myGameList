@@ -11,16 +11,21 @@
 // Velo más ligero que el de un modal: lo que se quiere es seguir viendo de dónde se vino.
 dialog.modal-dialog.gs-dialog::backdrop { background: rgba(0, 0, 0, .4); backdrop-filter: none; }
 
+// Siempre a todo el alto, pegado a la derecha (decisión del usuario, 15-10-2026). Lo que se adapta es el ANCHO.
 dialog.modal-dialog.gs-dialog[open] { padding: 0; justify-content: flex-end; align-items: stretch; }
 
 dialog.modal-dialog.gs-dialog[open] .gs-panel {
-  width: min(1120px, 80vw);
   max-width: none;
   height: 100dvh;
   max-height: none;
   border-radius: var(--radius-lg) 0 0 var(--radius-lg);
   animation: gsDesdeDerecha .28s cubic-bezier(.2, .9, .3, 1) both;
 }
+
+// El ancho sigue al contenido: con amistades, dos columnas y panel ancho; sin ellas, una columna en un panel
+// estrecho, con los componentes más juntos en lugar de estirados.
+dialog.modal-dialog.gs-dialog[open] .gs-panel.is-ancho { width: min(1120px, 80vw); }
+dialog.modal-dialog.gs-dialog[open] .gs-panel.is-estrecho { width: min(600px, 92vw); }
 
 @keyframes gsDesdeDerecha { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
@@ -30,7 +35,7 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel {
 
 // En el móvil, la pantalla entera: el panel sigue entrando por la derecha. Se cierra con la X, con «atrás» o con Esc.
 @media (max-width: 600px) {
-  dialog.modal-dialog.gs-dialog[open] .gs-panel { width: 100%; border-radius: 0; }
+  dialog.modal-dialog.gs-dialog[open] .gs-panel:is(.is-ancho, .is-estrecho) { width: 100%; border-radius: 0; }
 }
 
 // Lo que se desplaza es el cuerpo; la barra de botones se queda abajo.
@@ -38,7 +43,7 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding: 1.4rem 1.6rem 1.2rem;
+  padding: 1.1rem 1.6rem .8rem;
   container-type: inline-size;
   scrollbar-width: thin;
 }
@@ -49,7 +54,7 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel {
 
 // La X, en la esquina del panel: fuera del scroll, siempre a mano.
 .gs-panel { position: relative; }
-.gs-close { position: absolute; top: .6rem; right: .6rem; z-index: 2; }
+.gs-close { position: absolute; top: .5rem; right: .5rem; z-index: 2; }
 
 // ─── El reparto: una columna en el móvil, dos con ancho ──────────────────────────────────────────────────────
 .gs-layout { display: flex; flex-direction: column; }
@@ -187,7 +192,7 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel {
 
 // Amistades: renglones de persona más prietos que en el directorio, para que quepan más sin bajar.
 .gs-friends { display: grid; gap: .4rem; margin: 0; padding: 0; list-style: none; }
-.gs-friends .hub-person-row { padding-block: .5rem; }
+.gs-friends .hub-person-row { padding-block: .4rem; }
 
 // El adelanto de su reseña, en una línea bajo el estado; entero, en su reseña.
 .gs-snippet {
@@ -280,7 +285,7 @@ dialog.modal-dialog.gs-dialog[open] .gs-panel {
   .gs-head-text { padding-right: 0; }
   .gs-title { font-size: var(--fs-2xl); }
   // La columna de la derecha empieza por debajo de la X.
-  .gs-side { padding-top: 2rem; }
+  .gs-side { padding-top: 2.2rem; }
   .gs-side > .hub-detail-metadata:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
   .gs-saga { grid-auto-columns: 6rem; }
 }
