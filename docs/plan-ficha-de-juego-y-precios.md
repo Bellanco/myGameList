@@ -60,6 +60,7 @@ aciertan siempre con su precio porque llegan con su id.
 |---|---|
 | F0.1 | **Modal, no pantalla.** Se abre sobre la pantalla en la que estás y pone `?juego=<clave>` en la URL. «Atrás» lo cierra, y recargar o compartir la URL lo vuelve a abrir. Sin ruta nueva ni línea en `_redirects`. Funciona sin social: tus datos, la saga y el precio |
 | F0.6 | **Sustituye al detalle desplegado de la fila.** Tocar una fila o una caja del mosaico abre la ficha; el doble clic sigue abriendo la edición. Una sola vista por juego, se abra desde donde se abra |
+| F0.10 | **La ficha abre siempre, con o sin red.** Lo tuyo (datos, acciones, saga de tu biblioteca) sale siempre. Lo que viene de fuera (amistades, índice, precios, carátulas) es opcional: si no llega, por falta de conexión, un servicio caído o un cupo agotado, **esa sección no se pinta**, sin error ni hueco. Vale para todas las piezas de fuera. Ver «Sin conexión y servicios caídos» |
 
 **Propuestas pendientes de confirmar:**
 
@@ -126,6 +127,58 @@ Lo que se ve:
 Revisada a 390 y 1280 px en tierramedia, persona (claro) y oscuro: no desborda ni da errores de consola. Abrir, la
 saga, «atrás» y Esc se comprobaron con Playwright. Se borra al implementar F2/F6.
 
+## Sin conexión y servicios caídos
+
+Decisión del usuario (15-10-2026, F0.10): **la ficha se mantiene; lo que no llega, no se enseña.** Es la regla que ya
+sigue la app (memoria `degradacion-servicios`: degradar a lo local sin errores; con copia, no avisar).
+
+### Lo que sale siempre (local)
+
+Cabecera con tu entrada, «Tus datos», las acciones y la saga **dentro de tu biblioteca**. Ninguna de estas piezas
+puede depender de la red, de Firebase ni de un chunk que pueda faltar.
+
+### El riesgo del chunk perezoso (comprobado en el código)
+
+- El service worker solo precachea el grafo **estático** del arranque. El plugin `service-worker-precache` de
+  `vite.config.ts` deja fuera los `dynamicImports` a propósito.
+- Los chunks perezosos se guardan la primera vez que se usan, y la caché se estrena en cada despliegue.
+- **Chromium no reintenta un `import()` que falló** hasta recargar (memoria `chromium-cachea-import-fallido`).
+
+Si el modal fuera un chunk perezoso más, sin red y justo después de publicar, **tocar una fila no abriría nada**. Hoy
+el detalle va dentro de `GameTable` y siempre funciona, así que sería ir a peor.
+
+**Cómo se evita:**
+- **El modal con lo propio va precacheado.** El plugin añade a `precachePaths` el chunk del modal (por su
+  `facadeModuleId`) y su CSS, además del grafo estático. Así está disponible sin red desde la instalación del
+  service worker, pero **no pesa en el arranque crítico**: solo en el total de `ci-validate`, que mide lo que cuesta
+  quedar listo sin red. Es la alternativa a meterlo en el arranque, donde ocupa el sitio del detalle que sale de
+  `GameTable`; se elige midiendo las dos (skill `medir`).
+- **Lo de fuera va en sus propios chunks, sin precachear:** las amistades (F3/F4) y el precio (P5). Si su `import()`
+  falla, la sección no se pinta durante esa sesión. Es lo mismo que si no hubiera datos.
+
+### Cada pieza de fuera, cuando no llega
+
+| Pieza | Sin red, caída o sin cupo | Con copia guardada |
+|---|---|---|
+| Amistades (F3, directorio cacheado) | Sin sección «Tus amistades», sin «Lo quieren» y sin las cifras de la cabecera | Se enseña la copia, sin aviso |
+| Índice de bibliotecas (F4) | La ficha se queda con lo de F3 | `profileCache` caducada, como ya hace `foreignProfileRepository` |
+| Cifras «Media» y «Lo tienen» | No se pintan. Nunca «0 amistades» | Calculadas con lo que haya |
+| Saga | Solo con tu biblioteca. Con una sola entrega, no sale | Suma lo que haya de tus amistades |
+| Carátula | La portada de casa (`GameCover` ya lo hace) | — |
+| Precio (P5) | Sin bloque de precio | Ver P0.8 |
+| Rango (para los límites) | Se usa el último conocido en el dispositivo; sin ninguno, el más bajo. El borde vuelve a comprobarlo | — |
+| «Traer de IsThereAnyDeal» (P7) | El botón sigue; al pulsarlo sin red, aviso en una línea | — |
+
+**Mientras carga:** un esqueleto en la sección como mucho unos segundos. Si no ha llegado nada, desaparece sin
+dejar hueco. Nunca un esqueleto que se queda para siempre.
+
+**Tests:**
+- de componente: cada sección de fuera, con su fuente fallando, no se pinta y lo propio sigue entero;
+- e2e contra el build: sin red y con el service worker recién instalado, tocar una fila abre la ficha con lo propio.
+
+Ojo: `setOffline` de Playwright no cambia `navigator.onLine` (memoria `offline-detection-two-signals`). Hay que cortar
+las peticiones con `page.route`.
+
 ## Fase F1 · Núcleo puro · S
 
 - `core/utils/gameSheetPath.ts`:
@@ -147,7 +200,8 @@ saga, «atrás» y Esc se comprobaron con Playwright. Se borra al implementar F2
 ## Fase F2 · El modal, con lo propio, en lugar del detalle · M–L
 
 - **El modal.** `view/components/gameSheet/GameSheetModal.tsx`, con `<dialog>` nativo y `useNativeDialog`. Va lazy
-  en `App.tsx`, montado **una vez** para toda la app, como la ruleta. El `<dialog>` se queda montado, como pide el
+  en `App.tsx`, montado **una vez** para toda la app, como la ruleta, y **precacheado** por el service worker
+  (ver «Sin conexión y servicios caídos»): sin eso, sin red tras un despliegue no se abriría. El `<dialog>` se queda montado, como pide el
   hook, para devolver el foco a la fila al cerrar. Mientras carga el chunk la primera vez, la fila no se mueve. El
   chunk se precarga en reposo al entrar en una lista (`requestIdleCallback`).
 - **`?juego=` en la URL.** `viewmodel/gameSheet/useGameSheetParam.ts` lee y escribe el parámetro con react-router
@@ -241,6 +295,7 @@ Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=
   - recargar con `?juego=<slug>` lo abre (chunk perezoso en frío);
   - Esc cierra y el foco vuelve a la fila;
   - en el mosaico, igual;
+  - **sin red** y con el service worker recién instalado, la ficha abre con lo propio y sin las secciones de fuera;
   - el modal entra en el barrido de axe de `tests/e2e/a11y.test.ts`.
 - Medir que el arranque crítico no sube más que `gameSheetPath` y la lectura de `?juego=` (skill `medir`). Quitar
   el detalle de `GameTable` debería **bajarlo**: medirlo también.
@@ -285,6 +340,7 @@ Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=
 | P0.3 | ¿País y moneda? | **España/EUR fijo** en la primera entrega. La preferencia de región, más adelante (P8) |
 | P0.4 | ¿La preferencia se sincroniza entre dispositivos? | **No, al principio.** Sincronizarla exige ampliar `FirestorePublicConfig` y el `hasOnly` de `firestore.rules`, con despliegue de reglas. Se puede añadir después, como `covers` |
 | P0.5 | ¿Aviso de bajada de precio? | **Sí, al abrir la app:** una cápsula del carril y la campana, solo con un mínimo histórico nuevo o una bajada ≥ 50 % desde la última vez. Sin push: Pages no tiene cron (investigación §B6) |
+| P0.8 | Sin red, ¿se enseña el **último precio guardado**? | **Sí, mientras sea reciente:** hasta el doble del plazo de su rango (36 h en bronce), sin aviso. Más viejo, no se enseña: un precio caducado puede llevar a error, que es peor que no ver ninguno |
 | P0.6 | ¿Qué tiendas? | **Todas las que devuelve ITAD.** Filtrar a «solo tiendas oficiales» se valora si salen tiendas de claves grises |
 
 **Preparación (la hace el usuario):** registrar la app en ITAD, guardar la clave como secreto de Pages
@@ -658,6 +714,7 @@ fase y se borra de aquí.
 - F0.7: qué abre una fila en el perfil de una amistad (propuesta: la ficha con su bloque arriba).
 - F0.8: borrar los estilos del detalle de los skins de Persona, Arcade y Cyberpunk.
 - F0.9: que pasar de una ficha a otra no sume pasos a «atrás».
+- P0.8: sin red, enseñar el último precio guardado si no tiene más del doble del plazo del rango.
 - F0.2: si se enseña la media de notas de las amistades, y con qué mínimo (propuesta: 3).
 - F0.3: si el buscador ⌘K abre la ficha en vez de llevar a la lista.
 - F0.4: si sale la sección «Lo quieren» (los Deseados de tus amistades).
@@ -697,6 +754,7 @@ fase y se borra de aquí.
   precios va solo en el cliente.
 - **En F3, mirando el código:** si el directorio cacheado (`peekCachedSocialDirectory`) trae la visibilidad y el
   estado de amistad de cada perfil. Si no, la ficha solo enseña lo del canal social.
-- **Medir el arranque crítico** con la ruta y `gameSheetPath` añadidas (hoy, 187,7 de 190 kB).
+- **Medir el arranque crítico** con `gameSheetPath` añadido (hoy, 187,7 de 190 kB), y comparar el modal
+  precacheado con el modal dentro del arranque.
 - **El tope por usuario y hora de `/api/precios` y `/api/itad/token`** (el de respaldo, en memoria del aislado).
 
