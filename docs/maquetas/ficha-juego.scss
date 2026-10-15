@@ -2,13 +2,90 @@
 // carácter de cada tema lo ponen el modal (`.modal`, que ya visten los skins) y las clases del hub que la ficha
 // reutiliza (renglón de persona, metadatos), así que aquí no hay nada por tema.
 
-// ─── El modal: centrado con ancho, hoja a pantalla completa en el móvil (como el formulario) ─────────────────
-.gs-dialog .gs-modal { width: min(94vw, 960px); max-width: 960px; max-height: 92vh; }
+// TRES FORMAS PARA COMPARAR (`?forma=`), todas con el mismo `<dialog>` modal: el fondo atenuado, Esc y pulsar
+// fuera cierran, y el foco vuelve a la fila. Solo cambia por dónde entra y cuánto tapa.
+
+// ─── Modal: centrado con ancho, hoja a pantalla completa en el móvil (como el formulario) ────────────────────
+.gs-dialog.is-modal .gs-modal { width: min(94vw, 960px); max-width: 960px; max-height: 92vh; }
 
 @media (max-width: 600px) {
-  dialog.modal-dialog[open]:has(.gs-modal) { padding: 0; align-items: stretch; }
-  .gs-dialog .gs-modal { width: 100%; max-width: none; max-height: none; height: 100dvh; border-radius: 0; }
+  dialog.modal-dialog.gs-dialog.is-modal[open] { padding: 0; align-items: stretch; }
+  .gs-dialog.is-modal .gs-modal { width: 100%; max-width: none; max-height: none; height: 100dvh; border-radius: 0; }
+}
+
+@media (max-width: 600px) {
   .gs-body { padding: 1rem; }
+}
+
+// ─── Lateral: entra por la derecha y deja ver la lista a la izquierda; en el móvil, sube desde abajo ─────────
+// El velo es más ligero que el del modal: lo que se quiere es seguir viendo de dónde se vino.
+dialog.modal-dialog.gs-dialog:is(.is-lateral, .is-abajo)::backdrop { background: rgba(0, 0, 0, .35); backdrop-filter: none; }
+
+dialog.modal-dialog.gs-dialog.is-lateral[open] { padding: 0; justify-content: flex-end; align-items: stretch; }
+
+dialog.modal-dialog.gs-dialog.is-lateral[open] .gs-modal {
+  width: min(600px, 92vw);
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  animation: gsDesdeDerecha .28s cubic-bezier(.2, .9, .3, 1) both;
+}
+
+// ─── Desde abajo: una hoja que sube y tapa hasta el 85 % del alto ────────────────────────────────────────────
+dialog.modal-dialog.gs-dialog.is-abajo[open] { padding: 0; justify-content: center; align-items: flex-end; }
+
+dialog.modal-dialog.gs-dialog.is-abajo[open] .gs-modal {
+  width: min(100%, 960px);
+  max-width: none;
+  height: auto;
+  max-height: 85dvh;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  animation: gsDesdeAbajo .3s cubic-bezier(.2, .9, .3, 1) both;
+}
+
+// El asa de la hoja: dice «esto se puede bajar». Solo cuando entra desde abajo.
+.gs-asa { display: none; }
+
+dialog.gs-dialog.is-abajo .gs-asa {
+  display: block;
+  flex: none;
+  width: 2.5rem;
+  height: .3rem;
+  margin: .55rem auto 0;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--text) 30%, transparent);
+}
+
+@media (max-width: 600px) {
+  dialog.modal-dialog.gs-dialog.is-lateral[open] { justify-content: center; align-items: flex-end; }
+
+  dialog.modal-dialog.gs-dialog.is-lateral[open] .gs-modal {
+    width: 100%;
+    height: auto;
+    max-height: 88dvh;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    animation-name: gsDesdeAbajo;
+  }
+
+  dialog.gs-dialog.is-lateral .gs-asa {
+    display: block;
+    flex: none;
+    width: 2.5rem;
+    height: .3rem;
+    margin: .55rem auto 0;
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--text) 30%, transparent);
+  }
+
+  dialog.modal-dialog.gs-dialog.is-abajo[open] .gs-modal { max-height: 88dvh; }
+}
+
+@keyframes gsDesdeDerecha { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes gsDesdeAbajo { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  dialog.modal-dialog.gs-dialog:is(.is-lateral, .is-abajo)[open] .gs-modal { animation: none; }
 }
 
 .gs-card { container-type: inline-size; }

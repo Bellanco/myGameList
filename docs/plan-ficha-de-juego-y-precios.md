@@ -58,7 +58,7 @@ aciertan siempre con su precio porque llegan con su id.
 
 | # | Decisión |
 |---|---|
-| F0.1 | **Modal, no pantalla.** Se abre sobre la pantalla en la que estás y pone `?juego=<clave>` en la URL. «Atrás» lo cierra, y recargar o compartir la URL lo vuelve a abrir. Sin ruta nueva ni línea en `_redirects`. Funciona sin social: tus datos, la saga y el precio |
+| F0.1 | **Por encima, no como pantalla** (modal o panel: la forma es F0.11). Se abre sobre la pantalla en la que estás y pone `?juego=<clave>` en la URL. «Atrás» lo cierra, y recargar o compartir la URL lo vuelve a abrir. Sin ruta nueva ni línea en `_redirects`. Funciona sin social: tus datos, la saga y el precio |
 | F0.6 | **Sustituye al detalle desplegado de la fila.** Tocar una fila o una caja del mosaico abre la ficha; el doble clic sigue abriendo la edición. Una sola vista por juego, se abra desde donde se abra |
 | F0.10 | **La ficha abre siempre, con o sin red.** Lo tuyo (datos, acciones, saga de tu biblioteca) sale siempre. Lo que viene de fuera (amistades, índice, precios, carátulas) es opcional: si no llega, por falta de conexión, un servicio caído o un cupo agotado, **esa sección no se pinta**, sin error ni hueco. Vale para todas las piezas de fuera. Ver «Sin conexión y servicios caídos» |
 
@@ -72,6 +72,7 @@ aciertan siempre con su precio porque llegan con su id.
 | F0.5 | ¿Saga dentro de la ficha en la primera versión? | **Sí**, con `sharedSagaName` sobre tu biblioteca y lo que ya esté indexado de tus amistades. Sin IGDB (C5) |
 | F0.7 | En el **perfil de una amistad**, ¿qué abre tocar una fila de sus listas? (hoy despliega **sus** datos) | **La misma ficha, con un bloque «De Marta» arriba** (sus datos, como «Tus datos» pero suyos y filtrados por su visibilidad) y luego lo de siempre: tus datos si lo tienes, el resto de amistades, saga y precio |
 | F0.8 | ¿Qué se hace con los estilos del detalle en los skins de Persona, Arcade y Cyberpunk? | **Borrarlos.** El modal ya lleva el carácter de cada tema (`.modal`, botones, renglones), como se ve en la maqueta. Si a algún tema le falta algo, se añade sobre `.gs-*` en su hoja |
+| F0.11 | **¿Por dónde entra?** El usuario plantea un panel en vez del modal centrado (15-10-2026). La maqueta tiene las tres formas (`?forma=`) | **Lateral:** desde la derecha en escritorio (600 px, la lista sigue a la vista) y como hoja desde abajo en el móvil (hasta el 88 % del alto, con asa). Es la que mejor conserva el contexto, y en el móvil es el gesto que ya se espera. Por dentro es el mismo `<dialog>` modal, así que cuesta lo mismo: velo, Esc, pulsar fuera y el foco de vuelta a la fila |
 | F0.9 | Saltar de una ficha a otra (la saga, una amistad), ¿suma pasos al historial? | **No:** se **reemplaza** el `?juego=`, así que «atrás» siempre vuelve a la lista y no recorre las fichas vistas |
 
 ## Qué enseña la ficha
@@ -95,7 +96,13 @@ con «Añadir a deseados».
 
 ## Diseño (maqueta del 15-10-2026)
 
-`docs/maquetas/ficha-juego.html` con el servidor de desarrollo (`npx vite --port 8001`).
+`docs/maquetas/ficha-juego.html` con el servidor de desarrollo (`npx vite --port 8001`). Tiene **tres formas** para
+comparar (`?forma=`, F0.11):
+- **lateral**, la de por defecto: desde la derecha en escritorio y desde abajo en el móvil;
+- **abajo**: una hoja que sube en todos los tamaños;
+- **modal**: centrado.
+
+`?precio=0` simula que el servicio de precios no responde.
 - **Detrás va la tabla real** (`GameTable`) con una biblioteca inventada. Tocar una fila abre la ficha.
 - **La URL hace lo que haría la app:** abrir pone `?juego=` y «atrás» o Esc lo cierran; desde la saga se reemplaza.
 - **La barra de abajo a la derecha** cambia de lista (Deseados con precio, Completados), con o sin social, y el tema
@@ -104,10 +111,15 @@ con «Añadir a deseados».
   `StarRating` y `ScoreDisplay`. Lo único propio es `ficha-juego.scss`, que sería `src/styles/gameSheet.scss`.
 
 Lo que se ve:
-- **El modal:**
-  - centrado, hasta 960 px de ancho y 92 vh de alto;
-  - en el móvil (≤ 600 px), hoja a pantalla completa, como el formulario;
-  - título del modal: el nombre del juego, con la X.
+- **El contenedor:**
+  - lateral: 600 px de ancho y todo el alto, pegado a la derecha, con el velo más ligero (35 %) para seguir viendo
+    la lista;
+  - abajo: hasta 960 px de ancho y el 85 % del alto, con asa y las esquinas de arriba redondeadas;
+  - modal: centrado, hasta 960 px de ancho y 92 vh de alto, y a pantalla completa en el móvil, como el formulario;
+  - en el móvil (≤ 600 px), lateral y abajo son la misma hoja (88 % del alto);
+  - en todas, el título es el nombre del juego, con la X, y pulsar fuera cierra.
+- **Ancho estrecho:** en el lateral, la cabecera apila el precio debajo, por la container query de 40 rem, igual
+  que en el móvil.
 - **Cabecera:**
   - carátula 3:4;
   - plataformas y géneros;
@@ -125,7 +137,8 @@ Lo que se ve:
 - **«Saga»:** una tira de carátulas con «Tú: …» y cuántas amistades lo tienen. Sale solo con dos entregas o más.
 
 Revisada a 390 y 1280 px en tierramedia, persona (claro) y oscuro: no desborda ni da errores de consola. Abrir, la
-saga, «atrás» y Esc se comprobaron con Playwright. Se borra al implementar F2/F6.
+saga, «atrás» y Esc se comprobaron con Playwright. Las formas lateral y abajo, a 390 y 1280 px, también; pulsar
+fuera cierra y quita `?juego=`. Se borra al implementar F2/F6.
 
 ## Sin conexión y servicios caídos
 
@@ -165,7 +178,7 @@ el detalle va dentro de `GameTable` y siempre funciona, así que sería ir a peo
 | Cifras «Media» y «Lo tienen» | No se pintan. Nunca «0 amistades» | Calculadas con lo que haya |
 | Saga | Solo con tu biblioteca. Con una sola entrega, no sale | Suma lo que haya de tus amistades |
 | Carátula | La portada de casa (`GameCover` ya lo hace) | — |
-| Precio (P5) | Sin bloque de precio | Ver P0.8 |
+| Precio (P3, P5) | Sin bloque de precio | **No se enseña** (P0.8): solo con conexión y dentro del plazo de su rango |
 | Rango (para los límites) | Se usa el último conocido en el dispositivo; sin ninguno, el más bajo. El borde vuelve a comprobarlo | — |
 | «Traer de IsThereAnyDeal» (P7) | El botón sigue; al pulsarlo sin red, aviso en una línea | — |
 
@@ -331,6 +344,7 @@ Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=
 |---|---|
 | P0.1 | **Un solo interruptor, «IsThereAnyDeal», en Ajustes, apagado por defecto.** Enciende toda la integración: los precios (P2–P5) y el botón «Traer de IsThereAnyDeal» (P7). Apagado, no se pide nada a ITAD. Es el precedente de las carátulas, que permitió no subir `LEGAL_VERSION` con IGDB (`5c58166a`) |
 | P0.2 | **Solo con espacio social.** Sin social, el interruptor no aparece. Así el borde siempre sabe quién pide (`requireUser`) y aplica su rango; no hace falta limitar por IP |
+| P0.8 | **Si el servicio no está, el precio no se muestra** (15-10-2026). Sin conexión, con ITAD caído o sin cupo, el bloque no sale, aunque haya un precio guardado. Con conexión y dentro del plazo de su rango, el guardado vale: es el funcionamiento normal, y no se pregunta a ITAD |
 | P0.7 | **Precios para todos los rangos, desde bronce. El refresco depende del rango:** bronce 18 h, plata 12 h, oro 6 h y mithril 15 min. Ver «Límites por rango» |
 
 **Propuestas pendientes de confirmar:**
@@ -340,7 +354,6 @@ Todos abren el mismo modal sobre la pantalla en la que estás, poniendo `?juego=
 | P0.3 | ¿País y moneda? | **España/EUR fijo** en la primera entrega. La preferencia de región, más adelante (P8) |
 | P0.4 | ¿La preferencia se sincroniza entre dispositivos? | **No, al principio.** Sincronizarla exige ampliar `FirestorePublicConfig` y el `hasOnly` de `firestore.rules`, con despliegue de reglas. Se puede añadir después, como `covers` |
 | P0.5 | ¿Aviso de bajada de precio? | **Sí, al abrir la app:** una cápsula del carril y la campana, solo con un mínimo histórico nuevo o una bajada ≥ 50 % desde la última vez. Sin push: Pages no tiene cron (investigación §B6) |
-| P0.8 | Sin red, ¿se enseña el **último precio guardado**? | **Sí, mientras sea reciente:** hasta el doble del plazo de su rango (36 h en bronce), sin aviso. Más viejo, no se enseña: un precio caducado puede llevar a error, que es peor que no ver ninguno |
 | P0.6 | ¿Qué tiendas? | **Todas las que devuelve ITAD.** Filtrar a «solo tiendas oficiales» se valora si salen tiendas de claves grises |
 
 **Preparación (la hace el usuario):** registrar la app en ITAD, guardar la clave como secreto de Pages
@@ -714,7 +727,7 @@ fase y se borra de aquí.
 - F0.7: qué abre una fila en el perfil de una amistad (propuesta: la ficha con su bloque arriba).
 - F0.8: borrar los estilos del detalle de los skins de Persona, Arcade y Cyberpunk.
 - F0.9: que pasar de una ficha a otra no sume pasos a «atrás».
-- P0.8: sin red, enseñar el último precio guardado si no tiene más del doble del plazo del rango.
+- F0.11: la forma, lateral (propuesta), desde abajo o modal centrado. Verla en la maqueta con `?forma=`.
 - F0.2: si se enseña la media de notas de las amistades, y con qué mínimo (propuesta: 3).
 - F0.3: si el buscador ⌘K abre la ficha en vez de llevar a la lista.
 - F0.4: si sale la sección «Lo quieren» (los Deseados de tus amistades).

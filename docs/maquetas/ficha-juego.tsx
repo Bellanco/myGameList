@@ -1,5 +1,5 @@
-// MAQUETA DESECHABLE de la ficha de juego como MODAL (`docs/plan-ficha-de-juego-y-precios.md`). Ver
-// `ficha-juego.html` para los parámetros.
+// MAQUETA DESECHABLE de la ficha de juego (`docs/plan-ficha-de-juego-y-precios.md`), en tres formas para comparar:
+// lateral (por defecto), desde abajo y modal centrado. Ver `ficha-juego.html` para los parámetros.
 //
 // Detrás va la tabla REAL (`GameTable`) con una biblioteca inventada. Tocar una fila ya no despliega el detalle:
 // abre la ficha, que lo sustituye. Abrirla añade `?juego=<clave>` a la URL con `pushState`, así que «atrás» la cierra
@@ -42,6 +42,11 @@ loadPaletteSkin(parsePaletteId(document.documentElement.dataset.palette));
 const params = new URLSearchParams(window.location.search);
 const lista: 'c' | 'd' = params.get('lista') === 'c' ? 'c' : 'd';
 const conSocial = params.get('social') !== '0';
+const FORMAS = ['lateral', 'abajo', 'modal'] as const;
+type Forma = (typeof FORMAS)[number];
+const forma: Forma = (FORMAS as readonly string[]).includes(params.get('forma') || '') ? (params.get('forma') as Forma) : 'lateral';
+// `?precio=0`: el servicio de precios no responde (sin red, ITAD caído o sin cupo). El bloque no se pinta.
+const conPrecio = params.get('precio') !== '0';
 const avisar = (que: string) => () => window.alert(`En la app: ${que}`);
 
 // ─── Biblioteca inventada ────────────────────────────────────────────────────────────────────────────────────
@@ -340,11 +345,11 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
   const g = TODOS.find((x) => x.id === id) || null;
   const tab = g ? listaDe(g.id) : 'd';
   const amistades = g && conSocial ? AMISTADES[g.name] || [] : [];
-  const precio = g && tab === 'd' ? PRECIOS[g.name] : undefined;
+  const precio = g && tab === 'd' && conPrecio ? PRECIOS[g.name] : undefined;
   return (
     <dialog
       ref={dialogRef}
-      className="modal-dialog gs-dialog"
+      className={`modal-dialog gs-dialog is-${forma}`}
       aria-label={g ? `Ficha de ${g.name}` : 'Ficha de juego'}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
@@ -352,6 +357,7 @@ function FichaModal({ id, onClose, onOpen }: { id: number | null; onClose: () =>
     >
       {open && g ? (
         <div className="modal gs-modal">
+          <span className="gs-asa" aria-hidden="true" />
           <div className="modal-hd">
             <div className="modal-title">{g.name}</div>
             <button className="btn-icon" type="button" onClick={onClose} aria-label="Cerrar" title="Cerrar">
@@ -457,6 +463,15 @@ function Barra() {
       <select aria-label="Lista" style={caja} value={lista} onChange={(e) => ir({ lista: e.target.value, juego: '' })}>
         <option value="d">Deseados (con precio)</option>
         <option value="c">Completados</option>
+      </select>
+      <select aria-label="Forma" style={caja} value={forma} onChange={(e) => ir({ forma: e.target.value })}>
+        <option value="lateral">Lateral (abajo en móvil)</option>
+        <option value="abajo">Desde abajo</option>
+        <option value="modal">Modal centrado</option>
+      </select>
+      <select aria-label="Precio" style={caja} value={conPrecio ? '1' : '0'} onChange={(e) => ir({ precio: e.target.value === '0' ? '0' : '' })}>
+        <option value="1">Precio: responde</option>
+        <option value="0">Precio: sin servicio</option>
       </select>
       <select aria-label="Social" style={caja} value={conSocial ? '1' : '0'} onChange={(e) => ir({ social: e.target.value === '0' ? '0' : '' })}>
         <option value="1">Con social</option>
