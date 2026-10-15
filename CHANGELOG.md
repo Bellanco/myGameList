@@ -16,6 +16,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   no llega, debajo del campo se ve cuántos faltan. Dejarlo vacío sigue valiendo, y los análisis más cortos que ya
   tenías se conservan aunque edites el juego: el mínimo solo se pide si cambias su texto.
 
+### Fixed
+
+- **El tabulador va de campo a campo al añadir o editar un juego.** Ya no se detiene en cada sugerencia de debajo
+  de plataformas, géneros o años. Para elegir una con el teclado, pulsa ↓ desde el campo, recórrelas con ← → y
+  vuelve con ↑.
+
 ## [1.7.9] - 2026-10-15
 
 ### Added
