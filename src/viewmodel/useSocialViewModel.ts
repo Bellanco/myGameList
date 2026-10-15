@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useYearSummarySignal } from './social/useYearSummarySignal';
 import { writeCanPublishHint } from '../model/repository/socialShellHint';
 import { reconcileReviewActivity } from '../model/repository/socialActivityReconcile';
+import { withOwnLiveActivity } from './social/ownLiveActivity';
 import { PUBLIC_NAME_MAX_LENGTH, safeTrim } from '../core/security/sanitize';
 import { useOnlineStatus } from '../view/hooks/useOnlineStatus';
 import { resolveViewer, withVisiblePhotos } from '../core/social/photoVisibility';
@@ -382,14 +383,36 @@ export function useSocialViewModel(options?: {
     defaultSocialVisibility,
     reportFailure,
   });
+
+  // Se relee al ABRIR el espacio social, no solo al montar. De aquí sale `hasCompletedGames`, y con la foto del
+  // montaje bastaba con que la biblioteca aún no estuviera en localStorage en ese instante (dispositivo nuevo, otro
+  // origen, o la sincronización terminando después) para que el perfil se considerase incompleto y el usuario
+  // acabara en el editor teniéndolo bien configurado. Sin refresco, el rebote no se deshacía ni al sincronizar.
+  // `socialSpaceOpen` es el DISPARADOR, no una entrada del cálculo: `loadLocalState()` no lo lee, y por eso
+  // ESLint lo da por sobrante. Quitarlo devolvería el bug que este memo vino a arreglar (la relectura al abrir).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const localState = useMemo(() => loadLocalState(), [socialSpaceOpen]);
+  /**
+   * TUS LISTAS VIVAS: las de la app si el contenedor las pasa (cambian al guardar, borrar o sincronizar); si no, la foto
+   * de arriba. Todo lo que pinta algo TUYO en el hub sale de aquí para que tu propio cambio se vea al instante.
+   */
+  const liveGames = options?.games ?? localState;
+
+  // TU PROPIO BORRADO SE VE YA. Tu actividad sale de tu gist social, que se reescribe después (y, si falla, en la
+  // reconciliación): hasta entonces tu feed seguía enseñando la reseña o el juego que acababas de borrar. Se filtra
+  // aquí, contra tus listas vivas, para que lo vean igual el feed, tu ficha y el detalle (`social/ownLiveActivity`).
+  const liveFeedDirectory = useMemo(
+    () => withOwnLiveActivity(feedDirectory, (entryId) => isOwnProfileIdentity(entryId, authUser?.uid, ownProfileId), liveGames),
+    [feedDirectory, liveGames, authUser?.uid, ownProfileId],
+  );
   const rawSocialDirectory = useMemo(() => {
-    if (discoverEntries.length === 0) return feedDirectory;
-    const known = new Set(feedDirectory.map((entry) => entry.uid));
+    if (discoverEntries.length === 0) return liveFeedDirectory;
+    const known = new Set(liveFeedDirectory.map((entry) => entry.uid));
     const strangers = discoverEntries.filter(
       (entry) => !known.has(entry.uid) && !isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId),
     );
-    return strangers.length > 0 ? [...feedDirectory, ...strangers] : feedDirectory;
-  }, [feedDirectory, discoverEntries, authUser?.uid, ownProfileId]);
+    return strangers.length > 0 ? [...liveFeedDirectory, ...strangers] : liveFeedDirectory;
+  }, [liveFeedDirectory, discoverEntries, authUser?.uid, ownProfileId]);
 
 
   /**
@@ -422,15 +445,6 @@ export function useSocialViewModel(options?: {
   }, [hasReadyAccess, showSocialSpace, navigate, setShowSocialSpace]);
 
 
-
-  // Se relee al ABRIR el espacio social, no solo al montar. De aquí sale `hasCompletedGames`, y con la foto del
-  // montaje bastaba con que la biblioteca aún no estuviera en localStorage en ese instante (dispositivo nuevo, otro
-  // origen, o la sincronización terminando después) para que el perfil se considerase incompleto y el usuario
-  // acabara en el editor teniéndolo bien configurado. Sin refresco, el rebote no se deshacía ni al sincronizar.
-  // `socialSpaceOpen` es el DISPARADOR, no una entrada del cálculo: `loadLocalState()` no lo lee, y por eso
-  // ESLint lo da por sobrante. Quitarlo devolvería el bug que este memo vino a arreglar (la relectura al abrir).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const localState = useMemo(() => loadLocalState(), [socialSpaceOpen]);
 
   // P1: resuelve el profileId canónico del usuario actual (best-effort) para la detección de propiedad por identidad.
   useEffect(() => {
@@ -662,7 +676,7 @@ export function useSocialViewModel(options?: {
     ownProfileId,
     ownDisplayName: socialDisplayName,
     relationshipWith,
-    localGames: localState,
+    localGames: liveGames,
     isAdmin,
     defaultVisibility: defaultSocialVisibility,
     fallbackToken: mainSyncConfig?.token || null,
@@ -773,7 +787,7 @@ export function useSocialViewModel(options?: {
     hydrateSocialProfile,
     handleSaveProfile,
   } = useOwnProfileEditor({
-    games: options?.games ?? localState,
+    games: liveGames,
     socialSpaceOpen,
     authUser,
     socialCfgGistId,
@@ -905,7 +919,7 @@ export function useSocialViewModel(options?: {
   }, [online, setNetworkFailure]);
 
   // Listados con los que reconciliar: los vivos de la app si el contenedor los pasa; si no, la foto del mount.
-  const reconcileGames = options?.games ?? localState;
+  const reconcileGames = liveGames;
 
   // RECONCILIACIÓN DE ACTIVIDAD (una vez por sesión de hub). La publicación de una reseña es un efecto colateral
   // de guardarla y se perdía en silencio si el canal social no estaba armado en ese dispositivo, si el chunk del

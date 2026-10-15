@@ -12,6 +12,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   amigos sigue siendo el de todos aunque aún no se vean, y «Descubrir» ya no lleva número: su lista sale de los
   perfiles recientes, con tope, así que decía cuántos cupieron y no cuánta gente hay.
 
+### Fixed
+
+- **Lo que borras deja de verse en tu Social al momento.** Al borrar un juego, vaciar su reseña o pasarlo a próximos
+  o deseados, tu feed, tu ficha y el detalle seguían enseñando la reseña (y los avisos de lista del juego borrado)
+  hasta que el canal social se reescribía, a veces hasta la siguiente vez que entrabas. Ahora el hub los quita en
+  cuanto tus listas cambian, sin esperar a la red. Y borrar un juego con reseña la retira también del canal en ese
+  mismo momento: antes solo lo hacía la revisión al abrir Social, así que tus amistades la seguían viendo hasta
+  entonces.
+
 ## [1.7.7] - 2026-10-14
 
 ### Changed

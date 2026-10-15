@@ -23,6 +23,7 @@ import type { TabAction as LabelsTabAction } from '../core/constants/labels';
 import { LIBRARY_TAB_IDS, TAB_IDS, type GameItem, type StatusNotice, type TabData, type TabId, type TabSort, type ToolbarFilters } from '../model/types/game';
 import { filterGames } from './toolbarFilters';
 import { markExternalLibrary } from './libraryOrigin';
+import { applyReviewPublication } from './applyReviewPublication';
 
 export interface LookupData {
   genres: string[];
@@ -640,6 +641,13 @@ export function useGameListViewModel() {
           persist(nextData);
           setExpandedId(null);
           notify('ok', UI_MESSAGES.games.deleted);
+          // Su reseña sale también del canal social, como al vaciarla en el formulario. Antes solo la retiraba la
+          // reconciliación al abrir el hub, así que tus amistades la seguían viendo hasta que entraras. En tu propio
+          // hub ya no se ve aunque esto tarde (`social/ownLiveActivity`), y si no llega queda pendiente para la
+          // reconciliación: no hay nada que avisar, el borrado ya está hecho.
+          if (safeTrim(game.review)) {
+            void applyReviewPublication({ id, publication: { kind: 'unpublish' }, onDeferred: () => {} });
+          }
         },
       });
     },
